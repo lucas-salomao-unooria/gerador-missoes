@@ -1,0 +1,139 @@
+"""Módulo de processamento de documentos de entrada (PDF e DOCX/DOC).
+- PDFs são mantidos em bytes brutos para consumo multimodal nativo do Gemini 3.7.
+- Documentos DOCX/DOC são convertidos para Markdown estruturado via Microsoft MarkItDown.
+- Validação estrita: Até 10 arquivos e no máximo 25 MB no total.
+"""
+
+from dataclasses import dataclass, field
+import io
+import os
+from typing import Any, List, Optional, Tuple
+from markitdown import MarkItDown
+
+MAX_FILES: int = 10
+MAX_TOTAL_BYTES: int = 25 * 1024 * 1024  # 25 Megabytes
+
+
+@dataclass
+class ProcessedDocument:
+    """Representação de um documento pronto para consumo pelo modelo."""
+
+    name: str
+    file_type: str
+    size_bytes: int
+    is_native_pdf: bool = False
+    pdf_bytes: Optional[bytes] = None
+    markdown_text: Optional[str] = None
+
+    @property
+    def size_mb(self) -> float:
+        return self.size_bytes / (1024 * 1024)
+
+
+@dataclass
+class DocumentBatch:
+    """Lote validado de documentos para alimentar o pipeline."""
+
+    documents: List[ProcessedDocument] = field(default_factory=list)
+    total_bytes: int = 0
+
+    @property
+    def total_mb(self) -> float:
+        return self.total_bytes / (1024 * 1024)
+
+    @property
+    def files_count(self) -> int:
+        return len(self.documents)
+
+    @property
+    def pdf_count(self) -> int:
+        return sum(1 for d in self.documents if d.is_native_pdf)
+
+    @property
+    def docx_count(self) -> int:
+        return sum(1 for d in self.documents if not d.is_native_pdf)
+
+
+def process_document(file_name: str, file_bytes: bytes) -> ProcessedDocument:
+    """Processa um arquivo individual conforme seu tipo (PDF nativo ou DOCX via MarkItDown)."""
+    ext = os.path.splitext(file_name)[1].lower()
+    size_bytes = len(file_bytes)
+
+    if ext == ".pdf":
+        return ProcessedDocument(
+            name=file_name,
+            file_type="pdf",
+            size_bytes=size_bytes,
+            is_native_pdf=True,
+            pdf_bytes=file_bytes,
+            markdown_text=None,
+        )
+
+    if ext in (".docx", ".doc"):
+        md = MarkItDown()
+        stream = io.BytesIO(file_bytes)
+        try:
+            converted = md.convert_stream(stream, file_extension=ext)
+            text_content = converted.text_content.strip()
+        except Exception as e:
+            # Fallback gracioso com aviso
+            text_content = f"*(Aviso: Erro ao converter documento Word {file_name}: {str(e)})*"
+
+        return ProcessedDocument(
+            name=file_name,
+            file_type=ext.replace(".", ""),
+            size_bytes=size_bytes,
+            is_native_pdf=False,
+            pdf_bytes=None,
+            markdown_text=text_content,
+        )
+
+    raise ValueError(f"Formato de arquivo não suportado: {ext}. Envie apenas PDF ou DOCX/DOC.")
+
+
+def validate_and_process_batch(uploaded_files: List[Any]) -> Tuple[Optional[DocumentBatch], Optional[str]]:
+    """Valida os limites (até 10 arquivos e até 25MB no total) e processa todos os documentos.
+
+    Args:
+        uploaded_files: Lista de objetos de arquivo (ex: UploadedFile do Streamlit).
+
+    Returns:
+        Tupla (DocumentBatch, error_message). Se error_message for None, o lote é válido.
+    """
+    if not uploaded_files:
+        return None, None
+
+    if len(uploaded_files) > MAX_FILES:
+        return None, f"⚠️ Limite de arquivos excedido: você enviou {len(uploaded_files)} arquivos. O limite máximo é de {MAX_FILES} arquivos."
+
+    total_bytes = 0
+    file_tuples = []
+
+    for f in uploaded_files:
+        f_name = getattr(f, "name", "documento")
+        if hasattr(f, "getvalue"):
+            b = f.getvalue()
+        elif hasattr(f, "read"):
+            b = f.read()
+            if hasattr(f, "seek"):
+                f.seek(0)
+        else:
+            b = bytes(f)
+
+        total_bytes += len(b)
+        file_tuples.append((f_name, b))
+
+    if total_bytes > MAX_TOTAL_BYTES:
+        total_mb = total_bytes / (1024 * 1024)
+        return None, f"⚠️ Tamanho total excedido: os documentos somam {total_mb:.2f} MB. O limite máximo é de 25.0 MB."
+
+    batch = DocumentBatch(total_bytes=total_bytes)
+
+    for f_name, f_bytes in file_tuples:
+        try:
+            doc = process_document(f_name, f_bytes)
+            batch.documents.append(doc)
+        except Exception as e:
+            return None, f"Erro ao processar '{f_name}': {str(e)}"
+
+    return batch, None
