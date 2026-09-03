@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -272,9 +273,11 @@ async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_co
     return result
 
 
-def render_pipeline_details(result: PipelineExecutionResult):
+def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = ""):
     st.markdown("---")
     gates = result.gates
+    sid = str(getattr(result, "session_id", None) or "session")
+    prefix = f"{key_prefix}_{sid}" if key_prefix else f"{sid}_{id(result)}"
     if gates:
         st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS[k]}" for k, v in gates.items() if k in GATE_LABELS))
     tabs = st.tabs(["📘 PRD", "🧭 Produto", "🎨 Design", "🛠️ Dev", "🧠 Aprendizado", "💭 Pensamentos", "📦 Artefatos & Figma", "🔍 Estado (JSON)"])
@@ -328,7 +331,7 @@ def render_pipeline_details(result: PipelineExecutionResult):
                     with st.container(border=True):
                         st.markdown(f"**{link.get('title', 'Arquivo Figma')}**")
                         st.caption(f"Origem: `{link.get('source_agent_key', 'design')}`")
-                        st.link_button("Abrir no Figma ↗", link["url"], use_container_width=True)
+                        st.link_button("Abrir no Figma ↗", link["url"], key=f"figma_{prefix}_{idx}", use_container_width=True)
             st.markdown("---")
         else:
             st.info("🎨 Nenhum link direto do Figma/FigJam registrado nesta execução (artefatos gerados em Markdown/Mermaid).")
@@ -345,8 +348,9 @@ def render_pipeline_details(result: PipelineExecutionResult):
                 st.download_button(
                     "📦 Baixar Todos os Artefatos (.ZIP)",
                     data=zip_bytes,
-                    file_name=f"artefatos_{result.session_id[:12]}.zip",
+                    file_name=f"artefatos_{sid[:12]}.zip",
                     mime="application/zip",
+                    key=f"zip_{prefix}",
                     use_container_width=True,
                 )
             st.markdown("")
@@ -355,9 +359,9 @@ def render_pipeline_details(result: PipelineExecutionResult):
             for item in manifest:
                 grouped.setdefault(item["category"], []).append(item)
 
-            for cat, items in grouped.items():
+            for cat_idx, (cat, items) in enumerate(grouped.items()):
                 with st.expander(f"{cat} ({len(items)} arquivos)", expanded=True):
-                    for it in items:
+                    for item_idx, it in enumerate(items):
                         c_name, c_size, c_dl = st.columns([3, 1, 1.5])
                         c_name.markdown(f"📄 `{it['path']}`")
                         c_size.caption(it["size_str"])
@@ -365,12 +369,13 @@ def render_pipeline_details(result: PipelineExecutionResult):
                         if full_fpath.exists():
                             with c_dl:
                                 file_bytes = full_fpath.read_bytes()
+                                clean_path = re.sub(r"[^a-zA-Z0-9_-]", "_", str(it.get("path", "")))
                                 st.download_button(
                                     "📥 Baixar",
                                     data=file_bytes,
                                     file_name=it["filename"],
                                     mime=it["mime_type"],
-                                    key=f"dl_{result.session_id}_{it['path']}",
+                                    key=f"dl_{prefix}_{cat_idx}_{item_idx}_{clean_path}",
                                     use_container_width=True,
                                 )
         else:
@@ -382,12 +387,33 @@ def render_pipeline_details(result: PipelineExecutionResult):
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.download_button("📥 PRD (Markdown)", data=result.state.get("prd_final") or result.final_output, file_name=f"PRD_{result.session_id[:8]}.md", mime="text/markdown", use_container_width=True)
+        st.download_button(
+            "📥 PRD (Markdown)",
+            data=result.state.get("prd_final") or result.final_output,
+            file_name=f"PRD_{sid[:8]}.md",
+            mime="text/markdown",
+            key=f"prd_{prefix}",
+            use_container_width=True,
+        )
     with c2:
-        st.download_button("📥 Spec da missão", data=result.state.get("spec_missao") or "(spec não gerada)", file_name=f"spec_{result.session_id[:8]}.md", mime="text/markdown", use_container_width=True)
+        st.download_button(
+            "📥 Spec da missão",
+            data=result.state.get("spec_missao") or "(spec não gerada)",
+            file_name=f"spec_{sid[:8]}.md",
+            mime="text/markdown",
+            key=f"spec_{prefix}",
+            use_container_width=True,
+        )
     with c3:
         export = {"session_id": result.session_id, "prompt": result.prompt, "attached_files": result.attached_files, "duration_seconds": result.duration_seconds, "gates": gates, "output_dir": result.output_dir, "state": result.state}
-        st.download_button("📥 Estado completo (JSON)", data=json.dumps(export, indent=2, ensure_ascii=False, default=str), file_name=f"missao_{result.session_id[:8]}.json", mime="application/json", use_container_width=True)
+        st.download_button(
+            "📥 Estado completo (JSON)",
+            data=json.dumps(export, indent=2, ensure_ascii=False, default=str),
+            file_name=f"missao_{sid[:8]}.json",
+            mime="application/json",
+            key=f"state_{prefix}",
+            use_container_width=True,
+        )
     if result.output_dir:
         st.caption(f"Artefatos gravados em `{result.output_dir}`")
 
@@ -451,11 +477,11 @@ def main():
     tab_chat, tab_prompts = st.tabs(["💬 Pipeline", "📝 Prompts e referências"])
 
     with tab_chat:
-        for msg in st.session_state.messages:
+        for idx, msg in enumerate(st.session_state.messages):
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
                 if msg.get("pipeline_result"):
-                    render_pipeline_details(msg["pipeline_result"])
+                    render_pipeline_details(msg["pipeline_result"], key_prefix=f"msg_{idx}")
 
         doc_batch: Optional[DocumentBatch] = None
         with st.expander("📎 Anexar one-pager / documentos de apoio (PDF ou Word — até 10 arquivos / 25 MB)", expanded=False):
@@ -493,7 +519,7 @@ def main():
                 if result:
                     summary = result.state.get("prd_final") and "📘 **PRD gerado.** Veja as abas abaixo." or result.final_output
                     st.markdown(summary if len(summary) < 4000 else summary[:4000] + "\n\n…")
-                    render_pipeline_details(result)
+                    render_pipeline_details(result, key_prefix="live")
                     st.session_state.messages.append({"role": "assistant", "content": summary if len(summary) < 4000 else "Resultado do pipeline:", "pipeline_result": result})
                     if result.output_dir:
                         dir_name = Path(result.output_dir).name
