@@ -1,0 +1,88 @@
+name: CI/CD - Gerador de Missões (Streamlit + Google ADK)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: 🧪 Testes Automatizados do Pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Instalar Dependências
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: 🔍 Rodar Testes de Pipeline e Sessões
+        run: |
+          pytest test_pipeline.py test_session_artifacts.py -v
+
+  deploy:
+    name: 🚀 Build & Deploy no Cloud Run (DEV)
+    needs: validate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Necessário para Workload Identity Federation (OIDC)
+    steps:
+      - name: 📥 Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: 🔐 Autenticar no Google Cloud via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER || 'projects/250979926981/locations/global/workloadIdentityPools/plataforma-unooria-dev-gh-pool/providers/github-oidc' }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SA || 'plataforma-unooria-dev-deploye@entre-redes-dev.iam.gserviceaccount.com' }}
+
+      - name: ☁️ Configurar Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: 🐳 Configurar Docker Auth no Artifact Registry
+        run: gcloud auth configure-docker us-east1-docker.pkg.dev --quiet
+
+      - name: 🏗️ Build e Push da Imagem Docker
+        env:
+          REGISTRY: us-east1-docker.pkg.dev/entre-redes-dev/plataforma-unooria-dev
+          IMAGE_NAME: gerador-missoes
+        run: |
+          IMAGE_TAG="$REGISTRY/$IMAGE_NAME:${{ github.sha }}"
+          IMAGE_LATEST="$REGISTRY/$IMAGE_NAME:latest"
+          docker build -t "$IMAGE_TAG" -t "$IMAGE_LATEST" .
+          docker push "$IMAGE_TAG"
+          docker push "$IMAGE_LATEST"
+          echo "IMAGE=$IMAGE_TAG" >> "$GITHUB_ENV"
+
+      - name: 🚀 Atualizar Revisão no Cloud Run com Volume Persistente GCS
+        run: |
+          gcloud run deploy gerador-missoes \
+            --image="$IMAGE" \
+            --region=us-east1 \
+            --project=entre-redes-dev \
+            --allow-unauthenticated \
+            --port=8080 \
+            --memory=4Gi \
+            --cpu=2 \
+            --timeout=3600 \
+            --session-affinity \
+            --add-volume=name=artifacts-vol,type=cloud-storage,bucket=entre-redes-dev-adk-artifacts \
+            --add-volume-mount=volume=artifacts-vol,mount-path=/app/output \
+            --quiet

@@ -1,0 +1,15 @@
+.venv/
+.git/
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+output/
+.adk_artifacts/
+temp*
+.DS_Store
+.agent_engine_config.json
+scripts/deploy_agent_engine.sh
+scripts/client_agent_engine.py
