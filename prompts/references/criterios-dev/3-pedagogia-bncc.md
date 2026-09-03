@@ -12,11 +12,9 @@ competência ou descritor; BNCC aparece só como texto livre em
 forma rastreável. Toda promessa de "relatório por habilidade" na spec é escopo
 novo de plataforma e deve ser sinalizada como tal no relatório.
 
-## PED-01 [BLOQUEANTE] — Habilidades BNCC com código explícito
-A spec lista as habilidades alvo com código oficial (ex.: `EF04HI01`,
-`EM13CHS106`), poucas e priorizadas (uma missão que "cobre" dez habilidades
-não mede nenhuma). Competências gerais da BNCC, se citadas, vêm com número.
-"Trabalha pensamento crítico" sem código = ❌.
+## PED-01 [BLOQUEANTE para Letramento Digital] — Habilidades BNCC com código explícito
+A spec lista as habilidades alvo com código oficial (ex.: `EFxxCOxx`), poucas e priorizadas (uma missão que "cobre" dez habilidades não mede nenhuma).
+**Regra de bloqueio da BNCC:** As **únicas regras da BNCC que bloqueiam de fato são as de letramento digital** (BNCC Computação — Cultura Digital / uso crítico, seguro e consciente de tecnologias). Falha ou ausência nessas habilidades = ❌ bloqueante. Habilidades de disciplinas tradicionais ou competências gerais citadas sem código verificado **não bloqueiam** a missão: passam com ressalvas no relatório, registradas como itens de alerta (⚠️).
 
 ## PED-02 [BLOQUEANTE] — Matriz habilidade → evidência → interação → dado
 Para CADA habilidade: qual comportamento observável evidencia a habilidade,

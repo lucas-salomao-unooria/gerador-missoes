@@ -27,14 +27,19 @@
 
 ## 5. HABILIDADES E CURRÍCULO
 
+> [!IMPORTANT]
+> **Regra fundamental de bloqueio da BNCC:**
+> As **ÚNICAS regras da BNCC que bloqueiam de fato a missão são as de LETRAMENTO DIGITAL** (habilidades de Cultura Digital / Letramento Digital da BNCC Computação — uso crítico, ético, seguro e consciente de tecnologias e ambientes digitais). Sem vivência ativa e correta de letramento digital, a missão recebe ❌ bloqueante.
+> As **demais regras da BNCC** (habilidades de disciplinas tradicionais, competências gerais socioemocionais, códigos disciplinares complementares ou rastreabilidade de disciplinas) **NÃO bloqueiam a missão**: podem passar, mas passam **com ressalvas no relatório, registradas como itens de alerta (⚠️)**.
+
 |#|Critério|Tipo|Teste prático|
 |-|-|-|-|
-|5.1|**BNCC Computação mapeada e verificada** — Habilidades explicitamente listadas e separadas entre adequação pedagógica e confirmação do código.|Obrigatório|Para cada EFxxCOxx: (1) a ação observável realmente exercita a habilidade? (2) o código foi conferido em fonte curricular autoritativa/material pedagógico? Se (1) sim e (2) não verificável → 🔵 pendência externa, não ✅. Não validar código por memória ou plausibilidade.|
-|5.2|**Habilidades exercitadas ativamente** — O aluno pratica, não só "tem contato"|Obrigatório|Para cada habilidade listada: em que momento específico da missão o aluno a exerce? Sem momento apontável, é conexão fraca.|
-|5.3|**Conexão com BNCC de disciplinas** — Conecta genuinamente com componentes curriculares do ano e diferencia adequação do mapeamento de confirmação do código.|Desejável|A ação observável sustenta a habilidade? Se houver código declarado, ele foi verificado em fonte autoritativa? Código plausível mas não conferido → 🔵, sem afirmar confirmação.|
-|5.4|**Habilidades socioemocionais presentes** — Pelo menos uma competência geral da BNCC socioemocional|Obrigatório|O aluno exercita empatia, pensamento crítico, responsabilidade, colaboração ou autoconhecimento? **Se já faz isso na prática mas não nomeia**, indique a competência e o momento — nomear torna visível pro professor e pro argumento comercial. **Se nenhuma aparece**, sugira qual poderia ser incorporada e onde, em vez de só marcar ❌.|
-|5.5|**Rastreabilidade semanal verificada na fonte curricular** — Cada elemento se conecta ao conteúdo real das semanas do bimestre.|Obrigatório|A tabela “elemento da missão ← semana de origem” foi confrontada com o arquivo Entre Redes/material curricular daquele ano e bimestre? Reconstruir semanas a partir do próprio one-pager NÃO conta como evidência. Sem acesso à fonte → 🔵 pendência externa e bloqueio de “pronta para design/dev”.|
-|5.6|**Potencial SAEB identificado sem falsa confirmação de código**|**Obrigatório** em 5º EF, 9º EF, 3ª série EM. **Desejável** nos demais.|Há operação de leitura/matemática exercitada compatível com SAEB? Nos anos em que é obrigatório, código/descritor oficial só recebe ✅ se verificado em fonte autoritativa. Nos demais anos, é suficiente declarar potencial qualitativo sem inventar código. Se houver código não verificado → 🔵.|
+|5.1|**BNCC Computação — Letramento Digital mapeado e verificado** — Habilidades de letramento digital/cultura digital explicitamente listadas e exercitadas.|**Obrigatório [BLOQUEANTE]**|Para cada habilidade de letramento digital (EFxxCOxx de Cultura Digital / uso crítico e seguro da rede): (1) a ação observável realmente exercita a habilidade de letramento digital? (2) o código/descritor está coerente com a prática? **Este é o único critério da BNCC que bloqueia de fato a missão.** Se a missão falhar no letramento digital → ❌ bloqueio.|
+|5.2|**Habilidades exercitadas ativamente** — O aluno pratica letramento digital na experiência, não só "tem contato"|**Obrigatório [BLOQUEANTE para letramento digital]**|Para cada habilidade de letramento digital: em que momento específico da missão o aluno a exerce? Sem momento prático de letramento digital → ❌ bloqueio. Para habilidades de outras áreas sem momento claro → ⚠️ ressalva / item de alerta (não bloqueia).|
+|5.3|**Conexão com BNCC de disciplinas** — Conecta com componentes curriculares do ano (Português, História, Ciências, etc.).|Desejável (Alerta se pendente)|A ação observável sustenta a habilidade da disciplina? Se houver código declarado não conferido ou conexão fraca, **não bloqueia a missão**: passa com **ressalva no relatório como item de alerta (⚠️)**.|
+|5.4|**Habilidades socioemocionais presentes** — Pelo menos uma competência geral da BNCC socioemocional|Recomendado (Alerta se ausente)|O aluno exercita empatia, pensamento crítico, responsabilidade, colaboração ou autoconhecimento? Se já faz na prática mas não nomeia, indique a competência e o momento. Se nenhuma aparece, aponte sugestão e registre como **ressalva / item de alerta (⚠️)** — **nunca bloqueia a missão**.|
+|5.5|**Rastreabilidade semanal verificada na fonte curricular** — Conexão com semanas do bimestre.|Condicional (Alerta se pendente)|A tabela “elemento da missão ← semana de origem” foi confrontada com o material curricular? Sem acesso à fonte autoritativa, registre como **pendência externa / item de alerta (⚠️ / 🔵)** para validação futura — **não bloqueia** o avanço se o letramento digital estiver garantido.|
+|5.6|**Potencial SAEB identificado sem falsa confirmação de código**|Condicional (Alerta se pendente)|Há operação compatível com SAEB? Nos anos aplicáveis, declarar potencial qualitativo. Código não verificado gera **item de alerta (⚠️ / 🔵)** — **não bloqueia a missão**.|
 
 ---
 
@@ -56,17 +61,19 @@ O critério 2.6 do gate estrutural valida se o verbo **existe** na plataforma. O
 
 ## RESUMO DE CONTAGEM — Avaliação Pedagógica
 
-| Categoria | Obrigatórios | Desejáveis |
+| Categoria | Obrigatórios (Bloqueantes) | Ressalvas / Alertas / Desejáveis |
 |-|:-:|:-:|
 | 2. Imersão (subset) | 1 | 2 |
 | 4. Professor (subset) | 4 | 0 |
-| 5. Habilidades | 4 + 1 condicional | 1 |
+| 5. Habilidades (Letramento Digital vs. Outras) | 2 (Letramento Digital) | 3 + 1 condicional (Outras BNCC / Alertas) |
 | 8. Guardrails | 6 | 0 |
-| **TOTAL** | **15 + 1 condicional** | **3** |
+| **TOTAL** | **13** | **5 + 1 condicional** |
 
 
-### Regra comum de verificação curricular
+### Regra comum de verificação curricular e veredito
 
+- **As únicas regras da BNCC que bloqueiam de fato são as de letramento digital** (5.1 e 5.2 no que tange ao letramento digital). Se a missão não exercitar letramento digital ou deturpar o conceito, ela é 🔴 BLOQUEADA.
+- **As demais regras da BNCC não bloqueiam**: BNCC de disciplinas tradicionais (5.3), socioemocionais (5.4), rastreabilidade semanal (5.5) e SAEB (5.6) passam como **ressalvas / itens de alerta (⚠️)** no relatório, permitindo a aprovação da missão com ressalvas.
 - Separar sempre **“a habilidade faz sentido aqui”** de **“o código oficial está confirmado”**.
-- Fonte ausente ou não conferida em critério obrigatório → 🔵, nunca ✅ por plausibilidade.
-- O veredito “pedagogicamente pronta” exige todos os obrigatórios em ✅ ou, quando o critério for explicitamente condicional e não se aplicar, N/A justificado por regra da rubrica — não por falta de informação.
+- Fonte ausente ou não conferida em código de disciplina tradicional → marcar como item de alerta (⚠️ / 🔵), sem bloquear.
+- O veredito “pedagogicamente pronta” exige os itens bloqueantes em ✅. Se houver pendências em outras áreas da BNCC, emite-se “pronta com ressalvas” (com status `"aprovado"` no envelope).

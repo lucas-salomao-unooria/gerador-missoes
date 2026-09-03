@@ -5,7 +5,7 @@ Este gate não substitui as três avaliações anteriores. Ele valida a **coerê
 |#|Critério|Tipo|Teste prático|
 |-|-|-|-|
 |F1|**Cobertura da esteira** — Gate estrutural, avaliação pedagógica e experiência do estudante foram executados sobre a mesma versão da missão.|Obrigatório|Os três vereditos existem e apontam para a mesma versão? Se uma skill avaliou versão anterior às correções, → ❌ e rerodar a skill afetada.|
-|F2|**Nenhum obrigatório aberto** — Não há ❌, 🔵 ou N/A por falta de informação em critério obrigatório.|Obrigatório|Varra os três relatórios. ⚠️ só pode passar se for risco consciente que não deixa regra/fonte obrigatória aberta. Qualquer obrigatório ❌/🔵/N/A-falta-info → ❌ final.|
+|F2|**Nenhum obrigatório aberto** — Não há ❌, 🔵 ou N/A por falta de informação em critério obrigatório.|Obrigatório|Varra os três relatórios. **Na dimensão BNCC, apenas habilidades de letramento digital são bloqueantes**; pendências ou ressalvas em BNCC de disciplinas tradicionais/socioemocionais passam como riscos aceitos / itens de alerta (⚠️) e não impedem a liberação. Qualquer outro obrigatório ❌/🔵/N/A-falta-info → ❌ final.|
 |F3|**Correções incorporadas** — Toda correção que sustentou mudança de veredito aparece de fato na missão final.|Obrigatório|Compare a missão final com as correções exigidas. Não aceite “corrigido” apenas no relatório; a redação/regra precisa estar no one-pager.|
 |F4|**Coerência entre missão e vereditos** — Nenhum relatório afirma algo contradito pelo documento final.|Obrigatório|Ex.: relatório diz “exatamente 4 com bloqueio” mas missão só diz “escolha 4”; relatório diz “BNCC confirmada” sem fonte; missão diz “pronta” e mantém pendência obrigatória. Contradição → ❌.|
 |F5|**Fechamento de implementação** — A versão final continua passando no teste de implementação cega depois das correções pedagógicas/etárias.|Obrigatório|Reaplique apenas o núcleo do 9.1: cardinalidade/bloqueio, geração de outputs, estados incompletos, quem termina cedo, conta/ator publicador, permissões/handoffs e fallbacks. Correções posteriores podem ter reaberto uma decisão de produto.|
@@ -20,6 +20,6 @@ O gate final é conservador: ele **não cria novas soluções de produto por con
 ## Roteamento da falha
 
 - Estrutura, estados, cardinalidade, ownership, fallback → `gate-estrutural-unooria`.
-- BNCC, rastreabilidade, professor, guardrails → `avaliacao-pedagogica-unooria`.
+- BNCC (Letramento Digital), rastreabilidade, professor, guardrails → `avaliacao-pedagogica-unooria`.
 - Carga, linguagem, ritmo, espera, complexidade etária → `experiencia-aluno-unooria`.
 - Contradição entre relatórios ou correção não incorporada → corrigir a missão e rerodar apenas as skills afetadas antes de repetir o gate final.

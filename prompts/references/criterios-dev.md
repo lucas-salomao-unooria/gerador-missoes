@@ -25,7 +25,7 @@ Reconferir a cada emenda da nossa rubrica, e atualizar a versão lida acima.
 | PROD-08 | Decisão sobre a revelação | `brief-oficio` + `copy-ptbr` |
 | DES-01 | Seção do DS nomeada e existente | `ambientes.md` + spec bloco 0 |
 | DES-02 | Mapa "quem está falando", tela a tela | coluna `seção` no sheet |
-| PED-01 | Códigos BNCC explícitos | spec bloco 11 *(trava em `marco-legal.md`)* |
+| PED-01 | Códigos BNCC de Letramento Digital | spec bloco 11 *(bloqueia apenas em letramento digital; outras regras passam como alerta)* |
 | PED-02 | Matriz habilidade → evidência → interação → dado | `handoff-dev`, seção 3 |
 | PED-04 | Gabarito com autor e revisor, só no servidor | spec bloco 9 *(precisa de dois nomes de pessoa)* |
 | PED-06 | Graus de medida | spec bloco 9 |

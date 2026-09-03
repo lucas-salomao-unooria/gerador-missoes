@@ -32,8 +32,17 @@ contar classe por missão sem reconstruir à mão.
 - **[código] Título curto** — o problema em uma frase.
   **Corrigir:** a ação, em uma linha. *(custo: baixo/médio/alto)*
 
-## 🟡 ATENÇÃO — não bloqueiam, mas precisam de ajuste (n)
-- mesmo formato
+## 💡 Sugestões e Recomendações para Itens Bloqueados (Como Sanar)
+Para cada item 🔴 bloqueado:
+- **[código] Como sanar:** orientação prática, acionável e direta de como ajustar a mecânica, narrativa ou regra.
+- **Alternativa recomendada:** affordance nativa, copy ou mecânica sugerida para destravar o critério sem reabrir decisão de produto.
+- **Exemplo de aplicação / redação:** texto ou especificação pronta para o revisor colar e sanar o bloqueio.
+
+## 🟡 ATENÇÃO / ITENS DE ALERTA — não bloqueiam, mas precisam de ajuste (n)
+- mesmo formato (inclui ressalvas e itens de alerta da BNCC de disciplinas tradicionais, socioemocionais ou pendências documentais).
+
+> [!NOTE]
+> **Regra curricular de bloqueio da BNCC:** apenas habilidades relativas a **letramento digital** (BNCC Computação — Cultura Digital) têm o poder de bloquear a missão (🔴 NO GO). As demais regras da BNCC (disciplinas curriculares tradicionais, socioemocionais, códigos complementares) entram obrigatoriamente nesta seção como **itens de alerta (🟡 ATENÇÃO)** com ressalvas, permitindo o avanço da missão.
 
 ## 🔵 DECISÃO DE PRODUTO — fora do alcance do QA (n)
 - **[código] Título curto** — a escolha que precisa ser feita e por quem.

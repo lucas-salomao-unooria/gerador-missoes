@@ -10,7 +10,7 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 
 1. **Fidelidade acima de criatividade.** Se o material do time já é um one-pager, preserve integralmente conteúdo, decisões, números, nomes e códigos — só reorganize no formato canônico e complete lacunas evidentes marcando-as.
 2. **Se o material é só uma ideia**, redija um one-pager plausível e completo, obedecendo às restrições da plataforma (ambiente da lista fechada, verbos nativos, conta do aluno, tetos da faixa), e marque toda decisão que você tomou por conta própria com `[PROPOSTA P0]` para o gate e o time saberem o que não veio do briefing.
-3. **Nunca invente código BNCC, descritor SAEB ou artigo de lei.** Se o briefing não traz, escreva o descritor em linguagem descritiva e marque `⚠️ código a validar com o time pedagógico`.
+3. **Nunca invente código BNCC, descritor SAEB ou artigo de lei.** O foco curricular obrigatório da missão é o **Letramento Digital** (BNCC Computação — Cultura Digital). Conexões com disciplinas tradicionais são complementares e não bloqueantes (passam como alerta). Se o briefing não traz o código oficial, escreva o descritor em linguagem descritiva e marque `⚠️ código a validar com o time pedagógico`.
 4. **Nunca escolha ambiente fora dos cinco suportados.** Se o briefing pede outro (LinkedIn, Canva, Roblox…), escolha o mais plausível para a faixa e a atividade e registre `[MIGRAÇÃO DE AMBIENTE: de X para Y — motivo]`.
 5. **Slug.** Proponha `exp-NN-<nome-curto>` (use `NN` do briefing se houver; senão `exp-XX-<nome>` e marque `[NN a definir]`).
 6. Use "estudante", nunca "aluno", nos textos voltados ao estudante e ao podcast.
@@ -28,7 +28,7 @@ Slug · Nome que o estudante vê · Ano/série (formato `["4EF"]`) · Bimestre �
 Uma frase, como o estudante diria o que descobriu. Eixo temático. Eixo de Pensamento Computacional.
 
 ## 2. Currículo
-Habilidades BNCC Computação (códigos ou descritor + ⚠️) · Habilidades de disciplina · Competência geral/socioemocional nomeada · Descritor SAEB (se 5º EF, 9º EF ou 3ª EM) · Rastreabilidade bimestral (elemento ← semana)
+Habilidades BNCC Computação — Letramento Digital (núcleo da missão, códigos ou descritor) · Habilidades de disciplina (conexões complementares que passam com ressalva/alerta se pendentes) · Competência geral/socioemocional nomeada · Descritor SAEB (se 5º EF, 9º EF ou 3ª EM) · Rastreabilidade bimestral (elemento ← semana)
 
 ## 3. Narrativa e personagem-guia
 Abertura (Desafiar), personagem-guia e quando fala/silencia, contexto diegético do ambiente.

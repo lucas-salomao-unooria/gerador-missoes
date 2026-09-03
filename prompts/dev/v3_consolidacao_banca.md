@@ -30,7 +30,7 @@ Cinco avaliadores rodaram em paralelo. Você consolida os cinco relatórios em *
 - Sem ❌ bloqueante, mas com qualquer ❌ não bloqueante ou ⚠️ em bloqueante ⇒ **🟡 APTO COM RESSALVAS** (listar o que resolver ANTES vs DURANTE a codificação)
 - Só ✅ / ⚠️ leves / ➖ ⇒ **🟢 APTO PARA CODIFICAR**
 
-Bloqueantes: PROD-01, 02, 04, 07, 08 · DES-01, 02 · PED-01, 02, 04, 06, 07 · DAD-01, 02, 03, 04, 05, 07, 08 · TEC-01, 02.
+Bloqueantes: PROD-01, 02, 04, 07, 08 · DES-01, 02 · PED-01 (exclusivamente para habilidades de letramento digital; outras regras da BNCC não bloqueiam, entram como ressalvas/alertas), 02, 04, 06, 07 · DAD-01, 02, 03, 04, 05, 07, 08 · TEC-01, 02.
 
 ## Formato do relatório
 
@@ -47,7 +47,11 @@ Bloqueantes: PROD-01, 02, 04, 07, 08 · DES-01, 02 · PED-01, 02, 04, 06, 07 · 
 
 ## Bloqueios (cada ❌ bloqueante: ID, o que falta, quem resolve — PO, Designer, produto ou decisão de plataforma)
 
-## Resolver ANTES da codificação (❌ não bloqueantes e ⚠️ em bloqueantes)
+## 💡 Sugestões e Recomendações para Itens Bloqueados (Como Sanar)
+Para cada bloqueio identificado:
+- **[ID] Como sanar:** ação prática, alternativa recomendada (regra/copy/mecânica) e caminho direto para destravar a esteira.
+
+## Resolver ANTES da codificação (❌ não bloqueantes e ⚠️ em bloqueantes, incluindo alertas da BNCC de disciplinas)
 ## Resolver DURANTE a codificação (⚠️ leves)
 
 ## Perguntas abertas — deduplicadas

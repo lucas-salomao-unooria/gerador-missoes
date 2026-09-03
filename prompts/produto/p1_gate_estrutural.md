@@ -75,6 +75,10 @@ Formato: **ONDE** (etapa/seção, documento citado) · **POR QUÊ** (teste que f
 ### `L<n>` — <critério>
 CLASSE · ONDE · POR QUÊ · IMPACTO · COMO (alternativas) · Recomendação
 
+## 💡 Sugestões e Recomendações para Itens Bloqueados (Como Sanar)
+Orientações práticas e acionáveis para sanar cada bloqueio (vazio se aprovado):
+- **L<n> (<critério>):** Diagnóstico rápido do que destrava o item · Sugestão recomendada de mecânica/copy/regra · Exemplo concreto ou passo a passo de como sanar sem alterar a descoberta central.
+
 ## Decisões de implementação ainda abertas
 (vazio quando 9.1 = ✅)
 
