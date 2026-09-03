@@ -1,135 +1,108 @@
-"""Módulo orquestrador sequencial do Google ADK (SequentialAgent).
-Monta o pipeline padrão ouro composto pelos 8 LLM Agents especializados.
+"""Orquestrador do Gerador de Missões Unooria (Google ADK).
+
+Árvore de agentes:
+
+    MissionPipelineOrchestrator (SequentialAgent)
+    ├── ProdutoStage   (SequentialAgent)  one-pager → gate estrutural (loop) → avaliações (paralelo) → gate final → spec
+    ├── DesignStage    (SequentialAgent)  briefing → jornada 🎨 → fluxo 🎨 → copy → wireframes 🎨 → copy 2 → QA
+    ├── DevStage       (SequentialAgent)  handoff ∥ assets → banca (5 ∥) → consolidação → PRD
+    └── AprendizadoAgent (transversal)
+
+Controle de fluxo determinístico: os `EnvelopeGateAgent` leem o envelope JSON dos
+relatórios e gravam o status no `session.state`; os agentes a jusante carregam o
+`before_agent_callback` `skip_if_blocked`, que os pula quando um gate de produto
+bloqueou a missão em modo estrito.
+
+Nota: `SequentialAgent`/`ParallelAgent`/`LoopAgent` estão marcados como deprecated no
+ADK 2.x em favor de `Workflow`; continuam funcionais e são a base desta estrutura.
+A migração para `Workflow` (rotas condicionais nativas) é o próximo passo natural.
 """
 
-from typing import Any, Dict, List
+from __future__ import annotations
+
+import warnings
+from typing import Any, Dict, List, Optional
+
 from google.adk.agents.sequential_agent import SequentialAgent
-from agents import (
-    get_requirements_agent,
-    get_figma_inspector_agent,
-    get_mission_architect_agent,
-    get_mechanics_agent,
-    get_ui_ux_designer_agent,
-    get_tech_architect_agent,
-    get_code_generator_agent,
-    get_qa_validator_agent,
-)
+
+from agents.design import DESIGN_METADATA, build_design_stage
+from agents.dev import DEV_METADATA, build_dev_stage
+from agents.produto import PRODUTO_METADATA, build_produto_stage
+from agents.transversal import TRANSVERSAL_METADATA, get_aprendizado_agent
 from config import get_settings
 
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="google.adk")
 
-def get_pipeline_agents_metadata() -> List[Dict[str, Any]]:
-    """Retorna a lista de metadados das 8 etapas do pipeline para exibição e monitoramento."""
-    return [
-        {
-            "step": 1,
-            "id": "RequirementsAgent",
-            "name": "1. Analisador de Requisitos",
-            "icon": "📋",
-            "output_key": "requirements_spec",
-            "prompt_file": "a1_requirements.md",
-            "description": "Extrai metas, regras funcionais e escopo a partir do briefing.",
-        },
-        {
-            "step": 2,
-            "id": "FigmaInspectorAgent",
-            "name": "2. Inspetor de Design Figma",
-            "icon": "🎨",
-            "output_key": "figma_design_context",
-            "prompt_file": "a2_figma_inspector.md",
-            "description": "Conecta via MCP para inspecionar componentes, cores e tipografia.",
-        },
-        {
-            "step": 3,
-            "id": "MissionArchitectAgent",
-            "name": "3. Arquiteto da Missão & Narrativa",
-            "icon": "🗺️",
-            "output_key": "mission_architecture",
-            "prompt_file": "a3_mission_architect.md",
-            "description": "Elabora lore, fases da jornada e matriz de objetivos e recompensas.",
-        },
-        {
-            "step": 4,
-            "id": "MechanicsAgent",
-            "name": "4. Motor de Regras & Mecânicas",
-            "icon": "⚙️",
-            "output_key": "game_mechanics",
-            "prompt_file": "a4_mechanics.md",
-            "description": "Define máquina de estados (FSM), fórmulas de pontuação e lógica.",
-        },
-        {
-            "step": 5,
-            "id": "UIUXDesignerAgent",
-            "name": "5. Designer de Telas UI/UX",
-            "icon": "📱",
-            "output_key": "ui_ux_flow",
-            "prompt_file": "a5_ui_ux.md",
-            "description": "Mapeia fluxo de telas, layout do HUD e vínculo com o Figma.",
-        },
-        {
-            "step": 6,
-            "id": "TechArchitectAgent",
-            "name": "6. Arquiteto de Software",
-            "icon": "🏗️",
-            "output_key": "technical_blueprint",
-            "prompt_file": "a6_tech_architect.md",
-            "description": "Projeta schemas de dados (JSON/Pydantic), APIs e barramento de eventos.",
-        },
-        {
-            "step": 7,
-            "id": "CodeGeneratorAgent",
-            "name": "7. Gerador de Código & Configs",
-            "icon": "💻",
-            "output_key": "generated_implementation",
-            "prompt_file": "a7_code_generator.md",
-            "description": "Gera código Python da máquina de estados, configs JSON e testes.",
-        },
-        {
-            "step": 8,
-            "id": "QAValidatorAgent",
-            "name": "8. Auditor de QA & Validação Final",
-            "icon": "🏆",
-            "output_key": "final_delivery_report",
-            "prompt_file": "a8_qa_validator.md",
-            "description": "Audita todas as etapas, valida consistência e emite o relatório ouro.",
-        },
-    ]
+STAGES: List[Dict[str, Any]] = [
+    {"key": "produto", "name": "Produto", "icon": "🧭", "container": "ProdutoStage", "agents": PRODUTO_METADATA},
+    {"key": "design", "name": "Design", "icon": "🎨", "container": "DesignStage", "agents": DESIGN_METADATA},
+    {"key": "dev", "name": "Dev", "icon": "🛠️", "container": "DevStage", "agents": DEV_METADATA},
+    {"key": "transversal", "name": "Transversal", "icon": "🧠", "container": None, "agents": TRANSVERSAL_METADATA},
+]
+
+FINAL_OUTPUT_KEY = "prd_final"
+
+
+def get_pipeline_stages(active_only: bool = True) -> List[Dict[str, Any]]:
+    """Etapas do pipeline com seus agentes (para UI e testes)."""
+    settings = get_settings()
+    active = set(settings.pipeline_stages) | {"transversal"}
+    stages = []
+    for stage in STAGES:
+        if active_only and stage["key"] not in active:
+            continue
+        stages.append(stage)
+    return stages
+
+
+def get_pipeline_agents_metadata(active_only: bool = True) -> List[Dict[str, Any]]:
+    """Lista plana de agentes (com `stage` e `step`) para exibição e monitoramento."""
+    flat: List[Dict[str, Any]] = []
+    step = 0
+    for stage in get_pipeline_stages(active_only):
+        for meta in stage["agents"]:
+            step += 1
+            item = dict(meta)
+            item.update({"step": step, "stage": stage["key"], "stage_name": stage["name"], "stage_icon": stage["icon"]})
+            flat.append(item)
+    return flat
 
 
 def create_mission_orchestrator(
     name: str = "MissionPipelineOrchestrator",
     thinking_budget: Optional[int] = None,
     include_thoughts: Optional[bool] = None,
+    modo_estrito: Optional[bool] = None,
+    stages: Optional[List[str]] = None,
 ) -> SequentialAgent:
-    """Cria a instância do orquestrador SequentialAgent do Google ADK contendo os 8 agentes em sequência estrita.
-    
-    A execução passa o InvocationContext compartilhado entre todos os subagentes,
-    permitindo que as chaves de saída (output_key) alimentem os passos seguintes via {chave}.
-    O orçamento de raciocínio (thinking_budget) é aplicado uniformemente a cada subagente.
-    """
+    """Cria o orquestrador raiz com as etapas Produto → Design → Dev → Aprendizado."""
     settings = get_settings()
-    t_budget = thinking_budget if thinking_budget is not None else getattr(settings, "thinking_budget", 2048)
-    inc_thoughts = include_thoughts if include_thoughts is not None else getattr(settings, "include_thoughts", True)
+    t_budget = thinking_budget if thinking_budget is not None else settings.thinking_budget
+    inc_thoughts = include_thoughts if include_thoughts is not None else settings.include_thoughts
+    active = stages or settings.pipeline_stages
 
-    # Instanciação dos 8 subagentes especializados com o controle de Thinking
-    a1 = get_requirements_agent(thinking_budget=t_budget, include_thoughts=inc_thoughts)
-    a2 = get_figma_inspector_agent(thinking_budget=t_budget, include_thoughts=inc_thoughts)
-    a3 = get_mission_architect_agent(thinking_budget=t_budget, include_thoughts=inc_thoughts)
-    a4 = get_mechanics_agent(thinking_budget=t_budget, include_thoughts=inc_thoughts)
-    a5 = get_ui_ux_designer_agent(thinking_budget=t_budget, include_thoughts=inc_thoughts)
-    a6 = get_tech_architect_agent(thinking_budget=t_budget, include_thoughts=inc_thoughts)
-    a7 = get_code_generator_agent(thinking_budget=t_budget, include_thoughts=inc_thoughts)
-    a8 = get_qa_validator_agent(thinking_budget=t_budget, include_thoughts=inc_thoughts)
+    sub_agents = []
+    if "produto" in active:
+        sub_agents.append(build_produto_stage(t_budget, inc_thoughts, modo_estrito=modo_estrito))
+    if "design" in active:
+        sub_agents.append(build_design_stage(t_budget, inc_thoughts))
+    if "dev" in active:
+        sub_agents.append(build_dev_stage(t_budget, inc_thoughts))
+    sub_agents.append(get_aprendizado_agent(t_budget, inc_thoughts))
 
-    sub_agents = [a1, a2, a3, a4, a5, a6, a7, a8]
-
-    orchestrator = SequentialAgent(
+    return SequentialAgent(
         name=name,
-        sub_agents=sub_agents,
         description=(
-            "Orquestrador sequencial de 8 agentes para geração de missões completas, "
-            "integrando requisitos, design Figma via MCP, narrativa, mecânicas, UI/UX, "
-            "arquitetura técnica, geração de código e validação de QA."
+            "Orquestrador do Gerador de Missões Unooria: valida e especifica a missão (Produto), "
+            "constrói jornada, fluxo, copy e wireframes com o MCP do Figma (Design) e entrega um PRD "
+            "padrão ouro validado pela banca de dev (Dev), com o contexto arquitetural da plataforma."
         ),
+        sub_agents=sub_agents,
     )
 
-    return orchestrator
+
+def iter_agent_tree(agent, depth: int = 0):
+    """Percorre a árvore de agentes (para testes e depuração)."""
+    yield depth, agent
+    for sub in getattr(agent, "sub_agents", []) or []:
+        yield from iter_agent_tree(sub, depth + 1)

@@ -138,3 +138,9 @@ temp/
 tmp/
 *.tmp
 *.bak
+# ------------------------------------------------------------------------------
+# Artefatos gerados pelo pipeline e tokens OAuth do Figma MCP
+# ------------------------------------------------------------------------------
+output/*
+!output/.gitkeep
+.figma_mcp_tokens.json

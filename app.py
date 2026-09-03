@@ -1,21 +1,26 @@
-"""Aplicação Streamlit: Interface Chatbot com Orquestrador de 8 Agentes do Google ADK e Figma MCP.
-Padrão Ouro de arquitetura para visualização interativa do pipeline sequencial.
+"""Interface Streamlit do Gerador de Missões Unooria.
+
+Pipeline Produto → Design (com MCP do Figma) → Dev, orquestrado pelo Google ADK,
+com acompanhamento em tempo real por etapa, inspeção dos artefatos e editor de prompts.
 """
+
+from __future__ import annotations
 
 import asyncio
 import json
 import os
 import time
 from typing import Any, Dict, List, Optional
-import streamlit as st
-from config import get_settings
-from pipeline.orchestrator import get_pipeline_agents_metadata
-from pipeline.runner import run_orchestrator_pipeline_stream, PipelineExecutionResult
-from prompts import get_prompt_raw, save_prompt
-from PIL import Image
-from tools.doc_parser import validate_and_process_batch, DocumentBatch
 
-# Carregamento do Favicon a partir da pasta images/
+import streamlit as st
+from PIL import Image
+
+from config import get_settings
+from pipeline.orchestrator import STAGES, get_pipeline_agents_metadata, get_pipeline_stages
+from pipeline.runner import PipelineExecutionResult, run_orchestrator_pipeline_stream
+from prompts import get_prompt_raw, list_prompt_files, load_prompt, save_prompt
+from tools.doc_parser import DocumentBatch, validate_and_process_batch
+
 favicon = None
 if os.path.exists("images/logo.png"):
     try:
@@ -23,621 +28,360 @@ if os.path.exists("images/logo.png"):
     except Exception:
         favicon = None
 
-# Configuração da página Streamlit
-st.set_page_config(
-    page_title="Gerador de Missões",
-    page_icon=favicon or "🌌",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+st.set_page_config(page_title="Gerador de Missões", page_icon=favicon or "🌌", layout="wide", initial_sidebar_state="expanded")
 
-# Estilização CSS customizada para acabamento premium
 st.markdown(
     """
     <style>
-    .main-header {
-        font-family: 'Inter', sans-serif;
-        font-weight: 700;
-        background: linear-gradient(135deg, #6366F1 0%, #A855F7 50%, #EC4899 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.2rem;
-    }
-    .badge-step {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 0.78rem;
-        font-weight: 600;
-        margin-right: 6px;
-    }
-    .badge-pending {
-        background-color: rgba(107, 114, 128, 0.15);
-        color: inherit;
-        border: 1px solid rgba(107, 114, 128, 0.3);
-    }
-    .badge-running {
-        background-color: rgba(59, 130, 246, 0.15);
-        color: #2563EB;
-        border: 1px solid rgba(59, 130, 246, 0.35);
-    }
-    .badge-done {
-        background-color: rgba(16, 185, 129, 0.15);
-        color: #059669;
-        border: 1px solid rgba(16, 185, 129, 0.35);
-    }
-    .stChatMessage {
-        border-radius: 12px;
-        margin-bottom: 0.8rem;
-    }
-    .agent-card {
-        padding: 12px 14px;
-        border-radius: 10px;
-        border: 1px solid rgba(128, 128, 128, 0.2);
-        background-color: var(--secondary-background-color);
-        color: var(--text-color);
-        margin-bottom: 8px;
-    }
+    .main-header { font-family: 'Inter', sans-serif; font-weight: 700;
+      background: linear-gradient(135deg, #7FA5E2 0%, #716C98 60%, #0E1039 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.2rem; }
+    .badge-step { display:inline-block; padding:3px 9px; border-radius:12px; font-size:0.74rem; font-weight:600; }
+    .badge-pending { background: rgba(107,114,128,.15); border:1px solid rgba(107,114,128,.3); }
+    .badge-running { background: rgba(59,130,246,.15); color:#2563EB; border:1px solid rgba(59,130,246,.35); }
+    .badge-done { background: rgba(16,185,129,.15); color:#059669; border:1px solid rgba(16,185,129,.35); }
+    .badge-skipped { background: rgba(245,158,11,.15); color:#B45309; border:1px solid rgba(245,158,11,.35); }
+    .agent-card { padding:8px 10px; border-radius:10px; border:1px solid rgba(128,128,128,.2);
+      background: var(--secondary-background-color); margin-bottom:6px; font-size:0.82rem; }
+    .stage-title { font-weight:700; margin: 10px 0 4px 0; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
+GATE_LABELS = {
+    "gate_estrutural_status": "Gate estrutural",
+    "gate_final_status": "Gate final de produto",
+    "design_status": "QA de design",
+    "dev_status": "Banca de dev",
+}
+
+
+def _status_icon(value: Any) -> str:
+    return {"aprovado": "🟢", "bloqueado": "🔴", "indefinido": "⚪"}.get(str(value), "⚪")
+
 
 def init_session_state():
-    """Inicializa as variáveis de estado de sessão do Streamlit."""
     if "messages" not in st.session_state:
         st.session_state.messages = [
             {
                 "role": "assistant",
                 "content": (
-                    "👋 Olá! Sou o seu **Orquestrador de Missões Google ADK**.\n\n"
-                    "Possuo um pipeline sequencial de **8 Agentes LLM Especializados** "
-                    "com integração ao **Figma MCP** para transformar qualquer ideia em uma "
-                    "especificação completa de missão, design, mecânica, código e validação de QA.\n\n"
-                    "💡 *Experimente enviar uma ideia como:* 'Missão de infiltração cibernética em uma megacorporação' "
-                    "ou 'Missão medieval de escolta de caravana com emboscadas dinâmicas'."
+                    "👋 Olá! Sou o **Gerador de Missões Unooria**.\n\n"
+                    "Envie o one-pager (ou a ideia) de uma missão. O pipeline passa por **Produto** "
+                    "(gate estrutural, avaliação pedagógica, experiência do estudante, gate final e spec), "
+                    "**Design** (briefing de ofício, jornada e fluxo no FigJam, copy e wireframes lo-fi no Figma, QA) "
+                    "e **Dev** (handoff, brief de assets, banca de validação em 5 dimensões) e entrega um "
+                    "**PRD padrão ouro** com o contexto arquitetural da plataforma, pronto para um agente de codificação.\n\n"
+                    "💡 *Anexe o one-pager em PDF/DOCX ou descreva: ano/série, ambiente simulado "
+                    "(Instagram, YouTube, ChatGPT, TikTok ou WhatsApp), descoberta central e a decisão do estudante.*"
                 ),
                 "pipeline_result": None,
             }
         ]
 
-    if "current_pipeline_status" not in st.session_state:
-        st.session_state.current_pipeline_status = {}
 
-
-def render_sidebar():
-    """Renderiza a barra lateral limpa com status dos agentes e atalhos."""
+def render_sidebar() -> Dict[str, Any]:
     settings = get_settings()
-
     with st.sidebar:
-        # Marca da aplicação no topo da sidebar
         if os.path.exists("images/marca.png"):
             st.image("images/marca.png", use_container_width=True)
         elif os.path.exists("images/logo.png"):
             st.image("images/logo.png", use_container_width=True)
 
-        st.markdown("### ⚙️ Pipeline")
-        st.markdown("---")
-
-        # Status do Ambiente carregado do .env
-        st.markdown("#### 📡 Status do Ambiente (`.env`)")
-        
-        gemini_status = "🟢 Configurada" if settings.is_gemini_configured() else "🔴 Ausente no .env"
-        figma_status = "🟢 Conectado" if settings.is_figma_configured() else "🟡 Não configurado"
-        
+        st.markdown("#### 📡 Ambiente (`.env`)")
         with st.container(border=True):
             st.markdown(f"🤖 **Modelo:** `{settings.gemini_model}`")
-            st.markdown(f"🔑 **Gemini API:** {gemini_status}")
-            st.markdown(f"🎨 **Figma MCP:** {figma_status}")
+            st.markdown(f"🔑 **Gemini API:** {'🟢 configurada' if settings.is_gemini_configured() else '🔴 ausente'}")
+            st.markdown(f"🎨 **Figma MCP:** {settings.figma_status_label()}")
 
-        # Controle de Nível de Raciocínio (User-Friendly)
         st.markdown("---")
-        st.markdown("#### 🧠 Nível de Raciocínio")
+        st.markdown("#### ⚙️ Execução")
+        stage_options = {"Produto": "produto", "Design": "design", "Dev": "dev"}
+        default_stages = [k for k, v in stage_options.items() if v in settings.pipeline_stages]
+        chosen = st.multiselect("Etapas ativas", list(stage_options), default=default_stages, help="Desligue etapas para testar só parte do pipeline.")
+        stages = [stage_options[c] for c in chosen] or ["produto"]
 
-        thinking_presets = {
-            "Desativado": 0,
-            "Rápido": 1024,
-            "Equilibrado": 2048,
-            "Aprofundado": 4096,
-            "Avançado": 8192,
-            "Máximo": 16384,
-            "Automático": -1,
-        }
-        presets_by_val = {v: k for k, v in thinking_presets.items()}
-
-        current_val = getattr(settings, "thinking_budget", 2048)
-        default_label = presets_by_val.get(current_val, "Equilibrado")
-
-        selected_label = st.select_slider(
-            "Profundidade de Reflexão:",
-            options=list(thinking_presets.keys()),
-            value=default_label,
-            help="Define o nível de análise e reflexão de cada agente antes de gerar o resultado.",
+        modo_estrito = st.toggle(
+            "Modo estrito dos gates de produto",
+            value=settings.produto_modo_estrito,
+            help="Ligado: missão bloqueada no gate estrutural (após as rodadas) ou no gate final interrompe design e dev. "
+            "Desligado: o pipeline segue e o PRD registra as pendências.",
         )
-        selected_budget = thinking_presets[selected_label]
-        st.session_state.thinking_budget = selected_budget
-        os.environ["THINKING_BUDGET"] = str(selected_budget)
 
-        include_thoughts_toggle = st.toggle(
-            "Exibir pensamentos dos agentes",
-            value=getattr(settings, "include_thoughts", True),
-            help="Exibe o passo a passo da reflexão interna de cada agente na aba de resultados.",
-        )
-        st.session_state.include_thoughts = include_thoughts_toggle
-        os.environ["INCLUDE_THOUGHTS"] = str(include_thoughts_toggle).lower()
+        thinking_presets = {"Desativado": 0, "Rápido": 1024, "Equilibrado": 2048, "Aprofundado": 4096, "Avançado": 8192, "Máximo": 16384, "Automático": -1}
+        by_val = {v: k for k, v in thinking_presets.items()}
+        selected_label = st.select_slider("Nível de raciocínio", options=list(thinking_presets), value=by_val.get(settings.thinking_budget, "Equilibrado"))
+        include_thoughts = st.toggle("Exibir pensamentos dos agentes", value=settings.include_thoughts)
 
-        folder_url = getattr(settings, "figma_default_folder_url", os.getenv("FIGMA_DEFAULT_FOLDER_URL", ""))
-        if folder_url:
-            st.link_button("📁 Abrir Pasta no Figma ↗", folder_url, use_container_width=True)
+        if settings.figma_default_folder_url:
+            st.link_button("📁 Abrir pasta no Figma ↗", settings.figma_default_folder_url, use_container_width=True)
 
         st.markdown("---")
-        # Mapa dos 8 Agentes
-        st.markdown("#### 🤖 Etapas do Pipeline")
-        metadata = get_pipeline_agents_metadata()
-        for agent_meta in metadata:
-            st.markdown(
-                f"<div style='font-size: 0.83rem; margin-bottom: 8px;'>"
-                f"{agent_meta.get('icon', '🤖')} <b>{agent_meta.get('name', '')}</b><br>"
-                f"<span style='opacity: 0.7; font-size: 0.74rem;'>State: <code>{agent_meta.get('output_key', '')}</code></span>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
+        st.markdown("#### 🧩 Etapas e agentes")
+        for stage in get_pipeline_stages(active_only=False):
+            if stage["key"] not in stages and stage["key"] != "transversal":
+                continue
+            st.markdown(f"<div class='stage-title'>{stage['icon']} {stage['name']}</div>", unsafe_allow_html=True)
+            for meta in stage["agents"]:
+                st.markdown(
+                    f"<div style='font-size:0.78rem;margin-left:6px;'>{meta['icon']} {meta['name']}"
+                    f"<br><span style='opacity:.65;font-size:.7rem'>state: <code>{meta['output_key']}</code></span></div>",
+                    unsafe_allow_html=True,
+                )
 
         st.markdown("---")
-        if st.button("🗑️ Limpar Conversa", use_container_width=True):
+        if st.button("🗑️ Limpar conversa", use_container_width=True):
             st.session_state.messages = []
-            st.session_state.current_pipeline_status = {}
             st.rerun()
 
+    return {"stages": stages, "modo_estrito": modo_estrito, "thinking_budget": thinking_presets[selected_label], "include_thoughts": include_thoughts}
 
-async def execute_adk_pipeline(
-    prompt: str,
-    progress_placeholder,
-    steps_container,
-    doc_batch: Optional[DocumentBatch] = None,
-):
-    """Executa o pipeline ADK assincronamente e atualiza a UI do Streamlit com o progresso de cada agente."""
-    settings = get_settings()
-    metadata = get_pipeline_agents_metadata()
-    agent_id_map = {m["id"]: m for m in metadata}
 
-    # Inicializa estados visuais para cada um dos 8 agentes
-    agent_statuses = {
-        m["id"]: {
-            "status": "pending",
-            "icon": m["icon"],
-            "name": m["name"],
-            "output_key": m["output_key"],
-            "output": "",
-            "time_taken": 0.0,
-        }
-        for m in metadata
-    }
+async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_container, doc_batch: Optional[DocumentBatch]):
+    active = set(opts["stages"]) | {"transversal"}
+    stages = [s for s in STAGES if s["key"] in active]
+    status: Dict[str, str] = {m["id"]: "pending" for s in stages for m in s["agents"]}
+    gates: Dict[str, Any] = {}
+    tool_log: List[str] = []
 
-    def update_steps_ui():
+    def render():
         with steps_container.container():
-            st.markdown("#### ⚡ Execução do Pipeline ADK em Tempo Real")
-            cols = st.columns(4)
-            for idx, m in enumerate(metadata):
-                col_idx = idx % 4
-                agent_id = m["id"]
-                info = agent_statuses[agent_id]
-                status = info["status"]
+            cols = st.columns(len(stages))
+            for col, stage in zip(cols, stages):
+                with col:
+                    st.markdown(f"**{stage['icon']} {stage['name']}**")
+                    for m in stage["agents"]:
+                        s = status.get(m["id"], "pending")
+                        badge = {
+                            "pending": "<span class='badge-step badge-pending'>⏳</span>",
+                            "running": "<span class='badge-step badge-running'>🔄</span>",
+                            "done": "<span class='badge-step badge-done'>✅</span>",
+                            "skipped": "<span class='badge-step badge-skipped'>⏭️</span>",
+                        }[s]
+                        st.markdown(f"<div class='agent-card'>{badge} {m['icon']} {m['name']}</div>", unsafe_allow_html=True)
+            if gates:
+                st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS.get(k, k)}" for k, v in gates.items() if k in GATE_LABELS))
 
-                if status == "pending":
-                    badge = "<span class='badge-step badge-pending'>⏳ Pendente</span>"
-                elif status == "running":
-                    badge = "<span class='badge-step badge-running'>🔄 Executando...</span>"
-                else:
-                    badge = "<span class='badge-step badge-done'>✅ Concluído</span>"
-
-                with cols[col_idx]:
-                    st.markdown(
-                        f"<div class='agent-card'>"
-                        f"<div>{info['icon']} <b>{m['step']}. {m['name'].split('. ')[-1]}</b></div>"
-                        f"<div style='margin-top: 6px;'>{badge}</div>"
-                        f"</div>",
-                        unsafe_allow_html=True,
-                    )
-
-    update_steps_ui()
-
-    final_result: Optional[PipelineExecutionResult] = None
+    render()
+    result: Optional[PipelineExecutionResult] = None
     active_agent: Optional[str] = None
-    agent_start_time = time.time()
-
-    t_budget = st.session_state.get("thinking_budget", getattr(settings, "thinking_budget", 2048))
-    inc_thoughts = st.session_state.get("include_thoughts", getattr(settings, "include_thoughts", True))
 
     async for event in run_orchestrator_pipeline_stream(
         prompt=prompt,
-        thinking_budget=t_budget,
-        include_thoughts=inc_thoughts,
+        thinking_budget=opts["thinking_budget"],
+        include_thoughts=opts["include_thoughts"],
+        modo_estrito=opts["modo_estrito"],
+        stages=opts["stages"],
         doc_batch=doc_batch,
     ):
-        event_type = event.get("type")
-
-        if event_type == "agent_started":
-            agent_name = event.get("agent_name")
-            if active_agent and active_agent in agent_statuses:
-                agent_statuses[active_agent]["status"] = "done"
-                agent_statuses[active_agent]["time_taken"] = time.time() - agent_start_time
-
-            active_agent = agent_name
-            agent_start_time = time.time()
-            if active_agent in agent_statuses:
-                agent_statuses[active_agent]["status"] = "running"
-            
-            progress_placeholder.info(f"🔄 Executando Agente: **{active_agent}**...")
-            update_steps_ui()
-
-        elif event_type == "agent_chunk":
-            agent_name = event.get("agent_name")
-            if agent_name in agent_statuses:
-                agent_statuses[agent_name]["output"] = event.get("accumulated", "")
-
-        elif event_type == "agent_thought_chunk":
-            agent_name = event.get("agent_name")
-            progress_placeholder.info(f"🧠 Agente **{agent_name}** raciocinando...")
-
-        elif event_type == "pipeline_completed":
-            if active_agent and active_agent in agent_statuses:
-                agent_statuses[active_agent]["status"] = "done"
-                agent_statuses[active_agent]["time_taken"] = time.time() - agent_start_time
-
-            # Marca todos os agentes como concluídos
-            for a_id in agent_statuses:
-                if agent_statuses[a_id]["status"] != "done":
-                    agent_statuses[a_id]["status"] = "done"
-
-            final_result = event.get("result")
-            progress_placeholder.success(
-                f"🎉 Pipeline concluído com sucesso em **{final_result.duration_seconds:.2f}s**!"
-            )
-            update_steps_ui()
-
-        elif event_type == "pipeline_error":
-            progress_placeholder.error(f"❌ Erro durante a execução: {event.get('error')}")
-            final_result = event.get("result")
-            update_steps_ui()
-
-    return final_result
+        et = event.get("type")
+        if et == "agent_started":
+            name = event["agent_name"]
+            if active_agent and status.get(active_agent) == "running":
+                status[active_agent] = "done"
+            active_agent = name
+            if name in status:
+                status[name] = "running"
+            progress.info(f"🔄 Executando **{name}**…")
+            render()
+        elif et == "agent_chunk":
+            name = event["agent_name"]
+            if "não executado" in (event.get("chunk") or "") and name in status:
+                status[name] = "skipped"
+        elif et == "agent_tool_call":
+            tool_log.append(f"{event['agent_name']} → {', '.join(event['tools'])}")
+            progress.info(f"🎨 **{event['agent_name']}** chamou Figma MCP: `{', '.join(event['tools'])}`")
+        elif et == "agent_thought_chunk":
+            progress.info(f"🧠 **{event['agent_name']}** raciocinando…")
+        elif et == "gate_status":
+            gates.update(event["status"])
+            render()
+        elif et == "pipeline_completed":
+            result = event["result"]
+            for k in status:
+                if status[k] == "running":
+                    status[k] = "done"
+                if result.bloqueado and status[k] == "pending":
+                    status[k] = "skipped"
+            render()
+            if result.bloqueado:
+                progress.warning(f"⛔ Missão bloqueada nos gates de produto em **{result.duration_seconds:.0f}s** — veja o relatório e o alerta.")
+            else:
+                progress.success(f"🎉 Pipeline concluído em **{result.duration_seconds:.0f}s**. Artefatos em `{result.output_dir}`.")
+        elif et == "pipeline_error":
+            result = event["result"]
+            progress.error(f"❌ Erro: {event.get('error')}")
+            render()
+    if tool_log:
+        with st.expander(f"🎨 Chamadas ao Figma MCP ({len(tool_log)})"):
+            st.code("\n".join(tool_log))
+    return result
 
 
 def render_pipeline_details(result: PipelineExecutionResult):
-    """Exibe o resultado detalhado com abas para cada etapa e opções de exportação."""
     st.markdown("---")
-    st.markdown("### 📦 Resultados Consolidados do Pipeline")
+    gates = result.gates
+    if gates:
+        st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS[k]}" for k, v in gates.items() if k in GATE_LABELS))
+    tabs = st.tabs(["📘 PRD", "🧭 Produto", "🎨 Design", "🛠️ Dev", "🧠 Aprendizado", "💭 Pensamentos", "🔍 Estado (JSON)"])
 
-    tab_titles = [
-        "🏆 Relatório Final",
-        "🧠 Reflexão dos Agentes",
-        "📋 1. Requisitos",
-        "🎨 2. Figma MCP",
-        "🗺️ 3. Narrativa",
-        "⚙️ 4. Mecânicas",
-        "📱 5. UI/UX",
-        "🏗️ 6. Arquitetura",
-        "💻 7. Código Gerado",
-        "🔍 Estado Raw (ADK State)",
-    ]
-
-    tabs = st.tabs(tab_titles)
-
-    # 1. Relatório Final
     with tabs[0]:
-        st.markdown(result.final_output)
+        if result.state.get("prd_final"):
+            st.markdown(result.state["prd_final"])
+        else:
+            st.info("O PRD não foi gerado (pipeline bloqueado ou etapa Dev desligada). Abaixo, a saída mais relevante:")
+            st.markdown(result.final_output)
 
-    # 2. Reflexão dos Agentes
+    def stage_tab(stage_key: str):
+        stage = next(s for s in STAGES if s["key"] == stage_key)
+        shown = False
+        for meta in stage["agents"]:
+            key = meta["output_key"]
+            value = result.state.get(key)
+            if not value or not isinstance(value, str):
+                continue
+            shown = True
+            with st.expander(f"{meta['icon']} {meta['name']}", expanded=False):
+                st.markdown(value)
+        if not shown:
+            st.caption("Nenhuma saída registrada para esta etapa.")
+
     with tabs[1]:
-        step_thoughts = getattr(result, "step_thoughts", {})
-        if step_thoughts and any(step_thoughts.values()):
-            st.markdown("#### 🧠 Reflexão e Planejamento dos Agentes:")
-            for agent_name, thoughts in step_thoughts.items():
+        stage_tab("produto")
+    with tabs[2]:
+        stage_tab("design")
+    with tabs[3]:
+        stage_tab("dev")
+    with tabs[4]:
+        stage_tab("transversal")
+    with tabs[5]:
+        if any(result.step_thoughts.values()):
+            for agent, thoughts in result.step_thoughts.items():
                 if thoughts.strip():
-                    with st.expander(f"🧠 Reflexão de **{agent_name}**", expanded=False):
+                    with st.expander(f"🧠 {agent}"):
                         st.markdown(thoughts)
         else:
-            st.info("Nenhuma reflexão detalhada foi registrada para esta execução.")
-
-    # 3. Requisitos
-    with tabs[2]:
-        output_req = result.state.get("requirements_spec") or result.step_outputs.get("RequirementsAgent", "Nenhum dado registrado.")
-        st.markdown(output_req)
-
-    # 4. Figma MCP
-    with tabs[3]:
-        output_figma = result.state.get("figma_design_context") or result.step_outputs.get("FigmaInspectorAgent", "Nenhum dado registrado.")
-        st.markdown(output_figma)
-
-    # 5. Narrativa
-    with tabs[4]:
-        output_narr = result.state.get("mission_architecture") or result.step_outputs.get("MissionArchitectAgent", "Nenhum dado registrado.")
-        st.markdown(output_narr)
-
-    # 6. Mecânicas
-    with tabs[5]:
-        output_mec = result.state.get("game_mechanics") or result.step_outputs.get("MechanicsAgent", "Nenhum dado registrado.")
-        st.markdown(output_mec)
-
-    # 7. UI/UX
+            st.info("Nenhum pensamento registrado.")
     with tabs[6]:
-        output_ui = result.state.get("ui_ux_flow") or result.step_outputs.get("UIUXDesignerAgent", "Nenhum dado registrado.")
-        st.markdown(output_ui)
+        st.json({k: v for k, v in result.state.items()})
 
-    # 8. Arquitetura
-    with tabs[7]:
-        output_tech = result.state.get("technical_blueprint") or result.step_outputs.get("TechArchitectAgent", "Nenhum dado registrado.")
-        st.markdown(output_tech)
-
-    # 9. Código
-    with tabs[8]:
-        output_code = result.state.get("generated_implementation") or result.step_outputs.get("CodeGeneratorAgent", "Nenhum dado registrado.")
-        st.markdown(output_code)
-
-    # 10. Estado Raw
-    with tabs[9]:
-        st.json(result.state)
-
-    # Botões de Download
     st.markdown("---")
-    col_dl1, col_dl2 = st.columns(2)
-    with col_dl1:
-        attached_str = f"\nDocumentos Anexados: {', '.join(result.attached_files)}" if getattr(result, "attached_files", None) else ""
-        full_markdown = f"""# Relatório Consolidado de Missão - Google ADK Pipeline
-Prompt: {result.prompt}{attached_str}
-Duração: {result.duration_seconds:.2f}s
-Session ID: {result.session_id}
-
-{result.final_output}
-
----
-## 1. Requisitos
-{result.state.get('requirements_spec', '')}
-
----
-## 2. Figma Design Context
-{result.state.get('figma_design_context', '')}
-
----
-## 3. Arquitetura da Missão
-{result.state.get('mission_architecture', '')}
-
----
-## 4. Mecânicas e Regras
-{result.state.get('game_mechanics', '')}
-
----
-## 5. Fluxo UI/UX
-{result.state.get('ui_ux_flow', '')}
-
----
-## 6. Blueprint Técnico
-{result.state.get('technical_blueprint', '')}
-
----
-## 7. Implementação em Código
-{result.state.get('generated_implementation', '')}
-"""
-        st.download_button(
-            label="📥 Baixar Pacote Completo (Markdown)",
-            data=full_markdown,
-            file_name=f"missao_{result.session_id[:8]}.md",
-            mime="text/markdown",
-            use_container_width=True,
-        )
-
-    with col_dl2:
-        export_json = {
-            "session_id": result.session_id,
-            "prompt": result.prompt,
-            "attached_files": getattr(result, "attached_files", []),
-            "duration_seconds": result.duration_seconds,
-            "state": result.state,
-            "step_outputs": result.step_outputs,
-        }
-        st.download_button(
-            label="📥 Baixar Estado Completo (JSON)",
-            data=json.dumps(export_json, indent=2, ensure_ascii=False),
-            file_name=f"missao_{result.session_id[:8]}.json",
-            mime="application/json",
-            use_container_width=True,
-        )
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.download_button("📥 PRD (Markdown)", data=result.state.get("prd_final") or result.final_output, file_name=f"PRD_{result.session_id[:8]}.md", mime="text/markdown", use_container_width=True)
+    with c2:
+        st.download_button("📥 Spec da missão", data=result.state.get("spec_missao") or "(spec não gerada)", file_name=f"spec_{result.session_id[:8]}.md", mime="text/markdown", use_container_width=True)
+    with c3:
+        export = {"session_id": result.session_id, "prompt": result.prompt, "attached_files": result.attached_files, "duration_seconds": result.duration_seconds, "gates": gates, "output_dir": result.output_dir, "state": result.state}
+        st.download_button("📥 Estado completo (JSON)", data=json.dumps(export, indent=2, ensure_ascii=False, default=str), file_name=f"missao_{result.session_id[:8]}.json", mime="application/json", use_container_width=True)
+    if result.output_dir:
+        st.caption(f"Artefatos gravados em `{result.output_dir}`")
 
 
 def render_prompt_manager():
-    """Renderiza a interface para visualização, edição e salvamento dos prompts dos 8 agentes."""
-    st.markdown("### 📝 Gerenciador de Prompts dos Agentes (.md)")
-    st.markdown(
-        "Visualize e edite as instruções do sistema de cada um dos **8 agentes** do pipeline. "
-        "As alterações são salvas diretamente nos arquivos `.md` na pasta `prompts/` e aplicadas imediatamente."
-    )
-    st.markdown("---")
+    st.markdown("### 📝 Prompts dos agentes")
+    st.markdown("Cada agente lê um arquivo Markdown em `prompts/<área>/`. Diretivas `<!-- include: references/… -->` inserem conhecimento compartilhado em tempo de carga; `{chave}` / `{chave?}` são interpoladas pelo ADK a partir do estado da sessão.")
+    areas = list_prompt_files()
+    metadata = {m["prompt_file"]: m for m in get_pipeline_agents_metadata(active_only=False) if m.get("prompt_file")}
+    area = st.selectbox("Área", list(areas), format_func=lambda a: {"produto": "🧭 Produto", "design": "🎨 Design", "dev": "🛠️ Dev", "transversal": "🧠 Transversal"}.get(a, a))
+    fname = st.selectbox("Arquivo", areas[area], format_func=lambda f: f"{metadata.get(f'{area}/{f}', {}).get('name', f)}  ({f})")
+    rel = f"{area}/{fname}"
+    meta = metadata.get(rel)
+    if meta:
+        c1, c2, c3 = st.columns(3)
+        c1.markdown(f"**Agente:** `{meta['id']}`")
+        c2.markdown(f"**Chave de saída:** `{meta['output_key']}`")
+        c3.markdown(f"**Arquivo:** `prompts/{rel}`")
+        st.info(f"💡 {meta['description']}")
 
-    DEFAULT_PROMPT_FILES = {
-        "RequirementsAgent": "a1_requirements.md",
-        "FigmaInspectorAgent": "a2_figma_inspector.md",
-        "MissionArchitectAgent": "a3_mission_architect.md",
-        "MechanicsAgent": "a4_mechanics.md",
-        "UIUXDesignerAgent": "a5_ui_ux.md",
-        "TechArchitectAgent": "a6_tech_architect.md",
-        "CodeGeneratorAgent": "a7_code_generator.md",
-        "QAValidatorAgent": "a8_qa_validator.md",
-    }
-
-    metadata = get_pipeline_agents_metadata()
-    agent_options = {}
-    for m in metadata:
-        agent_id = m.get("id", "")
-        p_file = m.get("prompt_file") or DEFAULT_PROMPT_FILES.get(agent_id, f"a{m.get('step', 1)}.md")
-        m["prompt_file"] = p_file
-        label = f"{m.get('icon', '🤖')} {m.get('name', agent_id)} ({p_file})"
-        agent_options[label] = m
-
-    selected_label = st.selectbox(
-        "Selecione o Agente para visualizar/editar o prompt:",
-        list(agent_options.keys()),
-        index=0,
-    )
-    agent_meta = agent_options[selected_label]
-    prompt_file = agent_meta.get("prompt_file") or DEFAULT_PROMPT_FILES.get(agent_meta.get("id", ""), "a1_requirements.md")
-
-    # Metadados e informações do Agente selecionado
-    col_info1, col_info2, col_info3 = st.columns(3)
-    with col_info1:
-        st.markdown(f"**Identificador:** `{agent_meta['id']}`")
-    with col_info2:
-        st.markdown(f"**Chave de Saída (State):** `{agent_meta['output_key']}`")
-    with col_info3:
-        st.markdown(f"**Arquivo no Disco:** `prompts/{prompt_file}`")
-
-    st.info(f"💡 **Propósito:** {agent_meta['description']}")
-
-    # Lê o conteúdo bruto do arquivo
-    try:
-        raw_prompt = get_prompt_raw(prompt_file)
-    except Exception as e:
-        st.error(f"Erro ao ler prompt: {e}")
-        raw_prompt = ""
-
-    tab_edit, tab_preview = st.tabs(["✏️ Editor de Texto (Markdown)", "👁️ Visualização Renderizada"])
-
+    raw = get_prompt_raw(rel)
+    tab_edit, tab_final = st.tabs(["✏️ Editar (fonte)", "👁️ Prompt final (includes resolvidos)"])
     with tab_edit:
-        edited_prompt = st.text_area(
-            label="Conteúdo do Prompt do Sistema:",
-            value=raw_prompt,
-            height=460,
-            key=f"text_area_{prompt_file}",
-            help="Edite o prompt em Markdown. Variáveis como {requirements_spec} ou {figma_design_context} são interpoladas dinamicamente pelo Google ADK.",
-        )
+        edited = st.text_area("Conteúdo", value=raw, height=520, key=f"ta_{rel}")
+        c_save, c_reload, _ = st.columns([1.5, 1.5, 4])
+        if c_save.button("💾 Salvar", type="primary", key=f"save_{rel}", use_container_width=True):
+            save_prompt(rel, edited)
+            st.success(f"✅ `{rel}` salvo. As próximas execuções usarão esta versão.")
+        if c_reload.button("🔄 Recarregar", key=f"reload_{rel}", use_container_width=True):
+            st.rerun()
+    with tab_final:
+        s = get_settings()
+        try:
+            final = load_prompt(rel, figma_mcp_mode=s.figma_mcp_mode, figma_folder_url=s.figma_default_folder_url or "(não configurada)", figma_ds_file_key=s.figma_ds_file_key, figma_ds_v02_file_key=s.figma_ds_v02_file_key)
+            st.caption(f"{len(final):,} caracteres após includes")
+            st.code(final, language="markdown")
+        except Exception as exc:
+            st.error(f"Erro ao resolver includes: {exc}")
 
-        col_save, col_reload, col_space = st.columns([1.5, 1.5, 4])
-        with col_save:
-            if st.button("💾 Salvar Prompt", type="primary", key=f"btn_save_{prompt_file}", use_container_width=True):
-                save_prompt(prompt_file, edited_prompt)
-                st.success(f"✅ Prompt `{prompt_file}` salvo com sucesso! Os próximos disparos usarão esta instrução.")
+    st.markdown("---")
+    st.markdown("#### 📚 Referências compartilhadas (`prompts/references/`)")
+    from prompts import REFERENCES_DIR
 
-        with col_reload:
-            if st.button("🔄 Recarregar do Disco", key=f"btn_reload_{prompt_file}", use_container_width=True):
-                st.rerun()
-
-    with tab_preview:
-        st.markdown("#### Pré-visualização do Prompt Formatado:")
-        st.markdown(edited_prompt)
+    refs = sorted(p.relative_to(REFERENCES_DIR).as_posix() for p in REFERENCES_DIR.rglob("*.md"))
+    ref = st.selectbox("Referência", refs)
+    ref_raw = get_prompt_raw(f"references/{ref}")
+    ref_edit = st.text_area("Conteúdo da referência", value=ref_raw, height=380, key=f"ref_{ref}")
+    if st.button("💾 Salvar referência", key=f"save_ref_{ref}"):
+        save_prompt(f"references/{ref}", ref_edit)
+        st.success(f"✅ `references/{ref}` salva.")
 
 
 def main():
-    """Função principal da interface Streamlit."""
     init_session_state()
-    render_sidebar()
+    opts = render_sidebar()
 
-    # Cabeçalho Principal
     st.markdown("<h1 class='main-header'>Gerador de Missões</h1>", unsafe_allow_html=True)
-    st.markdown(
-        "**Pipeline Sequencial de 8 Agentes LLM** integrado com **Figma MCP** para especificação, design e implementação automatizada de missões."
-    )
+    st.markdown("**Produto → Design (Figma MCP) → Dev** · pipeline multiagente no Google ADK que transforma um one-pager em um **PRD padrão ouro** pronto para codificação.")
     st.markdown("---")
 
-    # Abas principais: Chatbot vs Editor de Prompts
-    tab_chat, tab_prompts = st.tabs(["💬 Chatbot do Pipeline", "📝 Editor de Prompts (8 Agentes)"])
+    tab_chat, tab_prompts = st.tabs(["💬 Pipeline", "📝 Prompts e referências"])
 
     with tab_chat:
-        # Renderiza mensagens anteriores do histórico
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
                 if msg.get("pipeline_result"):
                     render_pipeline_details(msg["pipeline_result"])
 
-        # Seletor e Validador de Documentos de Apoio (PDF Nativo e DOCX/DOC via MarkItDown)
         doc_batch: Optional[DocumentBatch] = None
-        with st.expander("📎 Anexar Documentos de Apoio (PDF ou Word — até 10 arquivos / 25 MB)", expanded=False):
-            uploaded_files = st.file_uploader(
-                "Arraste ou selecione arquivos para alimentar o Agente 1 (Requisitos):",
-                type=["pdf", "docx", "doc"],
-                accept_multiple_files=True,
-                help=(
-                    "• PDFs são processados nativamente pelo Gemini 3.7 (visão multimodal, tabelas e diagramas).\n"
-                    "• Documentos Word (.docx/.doc) são convertidos via Microsoft MarkItDown.\n"
-                    "• Limite: máximo de 10 arquivos e até 25 MB no total."
-                ),
-                key="attached_mission_docs",
-            )
-            if uploaded_files:
-                batch_result, error_msg = validate_and_process_batch(uploaded_files)
-                if error_msg:
-                    st.error(error_msg)
-                elif batch_result:
-                    doc_batch = batch_result
-                    st.success(
-                        f"✅ **{doc_batch.files_count} arquivo(s)** anexado(s) com sucesso "
-                        f"({doc_batch.total_mb:.2f} MB / 25.0 MB)."
-                    )
-                    cols_docs = st.columns(min(doc_batch.files_count, 3))
-                    for idx, doc in enumerate(doc_batch.documents):
-                        col_target = cols_docs[idx % len(cols_docs)]
-                        type_badge = "🎨 PDF Nativo" if doc.is_native_pdf else "📝 Word (MarkItDown)"
-                        with col_target.container(border=True):
-                            st.markdown(f"**{doc.name}**")
-                            st.caption(f"{type_badge} • {doc.size_mb:.2f} MB")
+        with st.expander("📎 Anexar one-pager / documentos de apoio (PDF ou Word — até 10 arquivos / 25 MB)", expanded=False):
+            uploaded = st.file_uploader("Arquivos para o agente P0 (one-pager):", type=["pdf", "docx", "doc"], accept_multiple_files=True, key="docs")
+            if uploaded:
+                batch, err = validate_and_process_batch(uploaded)
+                if err:
+                    st.error(err)
+                elif batch:
+                    doc_batch = batch
+                    st.success(f"✅ {batch.files_count} arquivo(s) — {batch.total_mb:.2f} MB")
 
-        # Entrada de Chat
-        user_prompt = st.chat_input("Descreva a missão ou funcionalidade que deseja gerar...")
-
+        user_prompt = st.chat_input("Descreva a missão (ano, ambiente, descoberta central, decisão do estudante) ou envie o one-pager…")
         if user_prompt:
-            # Validação da Chave API
             settings = get_settings()
-            if not settings.is_gemini_configured() and not os.getenv("GOOGLE_API_KEY"):
-                st.warning(
-                    "⚠️ **Atenção:** A chave `GOOGLE_API_KEY` do Gemini não foi configurada! "
-                    "Por favor, configure-a no arquivo `.env` para executar os agentes."
-                )
-
-            # Adiciona mensagem do usuário com indicação de documentos se houver
-            display_content = user_prompt
+            if not settings.is_gemini_configured():
+                st.warning("⚠️ `GOOGLE_API_KEY` não configurada no `.env`.")
+            display = user_prompt
             if doc_batch and doc_batch.documents:
-                files_badge_list = [
-                    f"`{d.name}` ({'PDF Nativo' if d.is_native_pdf else 'Word Convertido'})"
-                    for d in doc_batch.documents
-                ]
-                display_content += f"\n\n📎 **Anexos ({doc_batch.files_count}):** " + ", ".join(files_badge_list)
-
-            st.session_state.messages.append({"role": "user", "content": display_content})
+                display += "\n\n📎 **Anexos:** " + ", ".join(f"`{d.name}`" for d in doc_batch.documents)
+            st.session_state.messages.append({"role": "user", "content": display})
             with st.chat_message("user"):
-                st.markdown(display_content)
+                st.markdown(display)
 
-            # Resposta do Assistente / Pipeline
             with st.chat_message("assistant"):
-                progress_placeholder = st.empty()
-                steps_container = st.empty()
-
-                progress_placeholder.info("🚀 Iniciando o orquestrador sequencial do Google ADK...")
-
-                # Executa o loop assíncrono
+                progress = st.empty()
+                steps = st.empty()
+                progress.info("🚀 Iniciando o orquestrador…")
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                result = loop.run_until_complete(
-                    execute_adk_pipeline(
-                        user_prompt,
-                        progress_placeholder,
-                        steps_container,
-                        doc_batch=doc_batch,
-                    )
-                )
-
+                try:
+                    result = loop.run_until_complete(execute_pipeline(user_prompt, opts, progress, steps, doc_batch))
+                finally:
+                    loop.close()
                 if result:
-                    st.markdown(result.final_output)
+                    summary = result.state.get("prd_final") and "📘 **PRD gerado.** Veja as abas abaixo." or result.final_output
+                    st.markdown(summary if len(summary) < 4000 else summary[:4000] + "\n\n…")
                     render_pipeline_details(result)
-
-                    # Salva a resposta no histórico
-                    st.session_state.messages.append(
-                        {
-                            "role": "assistant",
-                            "content": result.final_output,
-                            "pipeline_result": result,
-                        }
-                    )
+                    st.session_state.messages.append({"role": "assistant", "content": summary if len(summary) < 4000 else "Resultado do pipeline:", "pipeline_result": result})
 
     with tab_prompts:
         render_prompt_manager()

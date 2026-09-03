@@ -1,0 +1,98 @@
+# Modelo de insumo — especificação de missão imersiva
+
+Entregue este documento preenchido (PO + Designer, juntos) para a banca de
+validação (`/validar-missao`). Cada seção espelha os critérios que serão
+avaliados; seção vazia = NOK na validação. Onde houver dúvida, escreva a
+dúvida — dúvida declarada é melhor que lacuna silenciosa.
+
+## 1. Identificação
+- **Slug**: `exp-NN-<nome>`
+- **Nome da missão** (título que o estudante vê):
+- **Série(s)**: `["4EF"]` / `["2EM"]` / `[]` (transversal)
+- **Unidade da trilha**:
+- **Software clonado** (ou "mundo próprio"):
+- **Seção do design system**: existente (`instanooria`/`unitube`/`chatgpt`/
+  `whatsappmobile`/`tiktooria`) ou nova (listar componentes a criar no
+  storybook-unooria, com responsável e prazo)
+
+## 2. Premissa e objetivos
+- **Premissa em UMA frase**:
+- **Objetivo do estudante DENTRO da ficção**:
+- **Objetivo pedagógico** (o que de fato se quer que aconteça):
+
+## 3. Habilidades e evidências (a matriz)
+| Habilidade BNCC (código) | Evidência observável | Interação que a captura | Dado gravado (evento/tabela) |
+|---|---|---|---|
+
+- **O que é medida e o que é cosmético** (item a item):
+- **Gabarito**: fonte da verdade, autor, revisor:
+- **Nota/score**: existe? qual, em que escala? Se não existe, por quê:
+- **Graus de medida**: o que conta como scored / indicative / zero / none:
+
+## 4. Fluxo da missão
+- **Estados nomeados, em ordem** (entrada → … → conclusão → pós):
+- **Reentrada**: F5 no meio / voltar noutro dia / reiniciar:
+- **Estados latch** (o que nunca regride) e **o que congela** após o score:
+- **Conclusão**: quem fecha, como, o que reporta:
+- **Segunda aplicação**: o que re-sorteia, o que preserva, o que "zerar turma"
+  apaga:
+- **Dependências de outras missões** + comportamento sem elas:
+
+## 5. Revelação (escolher UMA)
+- [ ] **No software** — roteiro tela a tela em anexo, com as variações por
+      situação real do estudante (a revelação não pode mentir)
+- [ ] **No debate do professor** — roteiro do debate em anexo (perguntas, o que
+      projetar, tempo)
+- [ ] **Híbrida** — descrever
+
+## 6. Papel do professor
+- **Preparo** (o que configura/valida antes):
+- **Largada/relógio coletivo** (se síncrona): ações e efeitos:
+- **Acompanhamento ao vivo**: o que vê, e O QUE PEDE AÇÃO:
+- **Leitura individual** (por criança) vs **visão de turma** vs **gestor (só
+  agregado)**:
+- **Ações destrutivas** (zerar turma: apaga o quê, preserva o quê):
+
+## 7. Design
+- **Referências visuais do clone** e o que deliberadamente difere:
+- **Mapa "quem está falando"** por tela (clone × plataforma):
+- **Viewport**: casca de aparelho 375×812 ou desktop, e por quê:
+- **Permissões de iframe** (forms? pointer-lock?), derivadas das interações:
+- **Estados de cada tela**: vazio / carregando / erro / ponto cego ("não
+  sabemos", nunca "0"):
+- **Copy final** (não placeholder), com tom para a série:
+- **Assets**: inventário com pesos (>2MB → bucket):
+- **Interações instrumentadas** (as que viram dado — não mudar sem avisar):
+
+## 8. Dados
+- **Vocabulário de telemetria** (verbo / objeto / dados / significado):
+- **Canal de cada dado**: tempo real (rota operacional) × análise (SDK):
+- **Entidades a persistir** (tabelas `exp_NN_`, campos principais):
+- **Lista do que NUNCA vai ao bundle** (gabarito, parâmetros, calibragem,
+  prompts) — será verificada por grep no dist/:
+- **Payload bruto + versão do instrumento** (reprocessamento):
+- **Texto livre de menor**: existe? por quê? quem lê?:
+- **Dado sensível (art. 11)?** Se sim, regras de acesso:
+- **Retenção** por tabela (ou lacuna assumida por escrito):
+
+## 9. IA (se houver)
+- **Onde a IA entra** e o que ela NUNCA decide (números vêm de motor
+  determinístico?):
+- **Comportamento sem IA** (mock/quota esgotada/erro) dentro da ficção:
+- **Estimativa de tokens por sessão** (para os tetos):
+
+## 10. Modos de erro
+- O que o estudante vê quando: a rede cai / a IA falha / a quota acaba —
+  sempre na voz da ficção:
+
+## 11. Conteúdo autoral
+- **Inventário** (quantos vídeos/fontes/mensagens/personas), quem produz,
+  critério de revisão:
+
+## 12. Validação pedagógica
+- **Plano de playtest** (papel/piloto), critérios de sucesso:
+
+## 13. Anexos
+- Roteiro da revelação OU do debate
+- Wireframes/protótipo
+- Conteúdo autoral (rascunho)

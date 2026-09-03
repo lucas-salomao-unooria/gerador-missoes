@@ -1,5 +1,23 @@
-"""Pacote de prompts em Markdown para os agentes do Google ADK."""
+"""Pacote de prompts dos agentes (Markdown) e utilitários de carga."""
 
-from .loader import load_prompt, get_prompt_raw, save_prompt, PROMPTS_DIR
+from .loader import (
+    PROMPTS_DIR,
+    REFERENCES_DIR,
+    get_prompt_raw,
+    list_prompt_files,
+    list_state_variables,
+    load_prompt,
+    resolve_includes,
+    save_prompt,
+)
 
-__all__ = ["load_prompt", "get_prompt_raw", "save_prompt", "PROMPTS_DIR"]
+__all__ = [
+    "PROMPTS_DIR",
+    "REFERENCES_DIR",
+    "get_prompt_raw",
+    "list_prompt_files",
+    "list_state_variables",
+    "load_prompt",
+    "resolve_includes",
+    "save_prompt",
+]

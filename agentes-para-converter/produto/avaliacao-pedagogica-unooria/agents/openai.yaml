@@ -1,0 +1,3 @@
+interface:
+  display_name: "Avaliação Pedagógica Unooria"
+  short_description: "Valida pedagogia, professor, currículo, BNCC e guardrails."

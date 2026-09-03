@@ -1,0 +1,3 @@
+interface:
+  display_name: "Gate Final Unooria"
+  short_description: "Valida coerência final e libera ou bloqueia a missão para design/dev."

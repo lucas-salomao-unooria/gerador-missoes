@@ -1,0 +1,3 @@
+interface:
+  display_name: "Gate Estrutural Unooria"
+  short_description: "Valida completude e fechamento de spec antes das avaliações de conteúdo."
