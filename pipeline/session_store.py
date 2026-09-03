@@ -98,19 +98,43 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
                 mtime = entry.stat().st_mtime
                 timestamp_str = time.strftime("%d/%m/%Y %H:%M", time.localtime(mtime))
 
+        # Gates conhecidos
+        gates = dict(conversa_data.get("gates") or {})
+        for k in ("gate_estrutural_status", "gate_final_status", "design_status", "dev_status"):
+            if k in state and k not in gates:
+                gates[k] = state[k]
+
+        has_blocked_gate = any(
+            str(v).strip().lower() in ("bloqueado", "blocked", "reprovado", "vermelho", "🔴")
+            for v in gates.values()
+        )
+        is_pipeline_blocked = bool(state.get("pipeline_bloqueado"))
+        has_prd = (entry / "PRD.md").exists() or bool(state.get("prd_final"))
+
         # Status
         status = conversa_data.get("status")
         if not status:
-            if state.get("pipeline_bloqueado"):
+            if is_pipeline_blocked:
                 status = "bloqueado"
-            elif (entry / "PRD.md").exists() or state.get("prd_final"):
-                status = "aprovado"
-            elif (entry / "produto/04-gate-final.md").exists():
+            elif has_prd:
+                status = "bypassed" if has_blocked_gate else "aprovado"
+            elif (entry / "produto/04-gate-final.md").exists() or has_blocked_gate:
                 status = "bloqueado"
             else:
                 status = "indefinido"
+        else:
+            # Se já havia status gravado, mas tinha gate bloqueado e o PRD foi gerado (ou modo estrito desligado):
+            if status in ("success", "aprovado") and has_blocked_gate and (has_prd or not is_pipeline_blocked):
+                status = "bypassed"
 
-        status_icon = "🟢" if status in ("aprovado", "success") else ("🔴" if status in ("bloqueado", "blocked") else "⚪")
+        if status in ("bypassed", "bypass", "warning"):
+            status_icon = "🟡"
+        elif status in ("aprovado", "success"):
+            status_icon = "🟢"
+        elif status in ("bloqueado", "blocked"):
+            status_icon = "🔴"
+        else:
+            status_icon = "⚪"
 
         # Prompt original
         prompt = conversa_data.get("prompt") or ""
@@ -201,8 +225,34 @@ def load_saved_session(dir_name_or_id: str) -> Optional[Tuple[List[Dict[str, Any
     # Importa PipelineExecutionResult tardiamente para evitar imports circulares
     from pipeline.runner import PipelineExecutionResult
 
+    gates = dict(conversa_data.get("gates") or {})
+    for k in ("gate_estrutural_status", "gate_final_status", "design_status", "dev_status"):
+        if k in state and k not in gates:
+            gates[k] = state[k]
+
+    has_blocked_gate = any(
+        str(v).strip().lower() in ("bloqueado", "blocked", "reprovado", "vermelho", "🔴")
+        for v in gates.values()
+    )
+    is_pipeline_blocked = bool(state.get("pipeline_bloqueado"))
+    has_prd = (target_dir / "PRD.md").exists() or bool(state.get("prd_final"))
+
     final_output = state.get("prd_final") or state.get("spec_missao") or state.get("gate_final_report") or ""
-    status = conversa_data.get("status") or ("blocked" if state.get("pipeline_bloqueado") else "success")
+    saved_status = conversa_data.get("status")
+    if not saved_status:
+        if is_pipeline_blocked or (not has_prd and has_blocked_gate):
+            status = "blocked"
+        elif has_prd and has_blocked_gate:
+            status = "bypassed"
+        elif has_prd:
+            status = "success"
+        else:
+            status = "blocked" if (target_dir / "produto/04-gate-final.md").exists() else "success"
+    else:
+        if saved_status in ("success", "aprovado") and has_blocked_gate and (has_prd or not is_pipeline_blocked):
+            status = "bypassed"
+        else:
+            status = saved_status
 
     result = PipelineExecutionResult(
         session_id=conversa_data.get("session_id") or target_dir.name,
@@ -231,7 +281,14 @@ def load_saved_session(dir_name_or_id: str) -> Optional[Tuple[List[Dict[str, Any
         # Reconstrói mensagens padrão se não havia conversa.json
         if prompt:
             messages.append({"role": "user", "content": prompt})
-        summary = state.get("prd_final") and "📘 **PRD gerado.** Veja as abas abaixo." or final_output
+        if state.get("prd_final"):
+            summary = (
+                "🟡 **PRD gerado com ressalvas (gates bypassados).** Veja as abas abaixo."
+                if (status == "bypassed" or (has_blocked_gate and not is_pipeline_blocked))
+                else "📘 **PRD gerado.** Veja as abas abaixo."
+            )
+        else:
+            summary = final_output
         messages.append({
             "role": "assistant",
             "content": summary if len(summary) < 4000 else "Resultado do pipeline:",

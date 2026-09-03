@@ -67,7 +67,14 @@ GATE_LABELS = {
 
 
 def _status_icon(value: Any) -> str:
-    return {"aprovado": "🟢", "bloqueado": "🔴", "indefinido": "⚪"}.get(str(value), "⚪")
+    val = str(value).strip().lower()
+    if val in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
+        return "🟢"
+    if val in ("bloqueado", "blocked", "bloqueada", "devolvido", "nao_apto", "não apto", "vermelho", "🔴"):
+        return "🔴"
+    if val in ("bypassed", "bypass", "amarelo", "🟡", "ressalvas", "ressalva", "alerta", "warning", "apto_com_ressalvas"):
+        return "🟡"
+    return "⚪"
 
 
 def init_session_state():
@@ -261,6 +268,8 @@ async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_co
             render()
             if result.bloqueado:
                 progress.warning(f"⛔ Missão bloqueada nos gates de produto em **{result.duration_seconds:.0f}s** — veja o relatório e o alerta.")
+            elif getattr(result, "bypassed", False):
+                progress.warning(f"⚠️ Pipeline concluído com gates bypassados em **{result.duration_seconds:.0f}s**. PRD gerado com pendências — artefatos em `{result.output_dir}`.")
             else:
                 progress.success(f"🎉 Pipeline concluído em **{result.duration_seconds:.0f}s**. Artefatos em `{result.output_dir}`.")
         elif et == "pipeline_error":
@@ -280,6 +289,8 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
     prefix = f"{key_prefix}_{sid}" if key_prefix else f"{sid}_{id(result)}"
     if gates:
         st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS[k]}" for k, v in gates.items() if k in GATE_LABELS))
+    if getattr(result, "bypassed", False):
+        st.warning("⚠️ **Atenção:** Esta missão avançou com gates bloqueados (modo estrito desativado / bypass). Verifique as pendências nos relatórios e na seção 20 do PRD.")
     tabs = st.tabs(["📘 PRD", "🧭 Produto", "🎨 Design", "🛠️ Dev", "🧠 Aprendizado", "💭 Pensamentos", "📦 Artefatos & Figma", "🔍 Estado (JSON)"])
 
     with tabs[0]:
@@ -517,7 +528,13 @@ def main():
                 finally:
                     loop.close()
                 if result:
-                    summary = result.state.get("prd_final") and "📘 **PRD gerado.** Veja as abas abaixo." or result.final_output
+                    if result.state.get("prd_final"):
+                        if getattr(result, "bypassed", False):
+                            summary = "🟡 **PRD gerado com ressalvas (gates bypassados).** Veja as abas abaixo."
+                        else:
+                            summary = "📘 **PRD gerado.** Veja as abas abaixo."
+                    else:
+                        summary = result.final_output
                     st.markdown(summary if len(summary) < 4000 else summary[:4000] + "\n\n…")
                     render_pipeline_details(result, key_prefix="live")
                     st.session_state.messages.append({"role": "assistant", "content": summary if len(summary) < 4000 else "Resultado do pipeline:", "pipeline_result": result})

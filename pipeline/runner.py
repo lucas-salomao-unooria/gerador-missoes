@@ -63,8 +63,29 @@ class PipelineExecutionResult:
         return {k: self.state.get(k) for k in STATUS_KEYS if k in self.state}
 
     @property
+    def has_blocked_gate(self) -> bool:
+        return any(
+            str(v).strip().lower() in ("bloqueado", "blocked", "reprovado", "vermelho", "🔴")
+            for v in self.gates.values()
+        )
+
+    @property
     def bloqueado(self) -> bool:
-        return bool(self.state.get(KEY_PIPELINE_BLOQUEADO))
+        return bool(self.state.get(KEY_PIPELINE_BLOQUEADO)) or self.status in ("blocked", "bloqueado")
+
+    @property
+    def bypassed(self) -> bool:
+        return not self.bloqueado and (self.status == "bypassed" or self.has_blocked_gate)
+
+    @property
+    def status_icon(self) -> str:
+        if self.bloqueado:
+            return "🔴"
+        if self.bypassed:
+            return "🟡"
+        if self.status in ("success", "aprovado"):
+            return "🟢"
+        return "⚪"
 
 
 def _build_user_message(prompt: str, doc_batch: Optional[DocumentBatch]) -> types.Content:
@@ -261,6 +282,20 @@ async def run_orchestrator_pipeline_stream(
             except Exception as exc:  # pragma: no cover - disco
                 logger.warning("Falha ao gravar artefatos: %s", exc)
 
+        is_blocked = bool(final_state.get(KEY_PIPELINE_BLOQUEADO))
+        gates_dict = {k: final_state.get(k) for k in STATUS_KEYS if k in final_state}
+        has_blocked_gate = any(
+            str(v).strip().lower() in ("bloqueado", "blocked", "reprovado", "vermelho", "🔴")
+            for v in gates_dict.values()
+        )
+
+        if is_blocked:
+            run_status = "blocked"
+        elif has_blocked_gate:
+            run_status = "bypassed"
+        else:
+            run_status = "success"
+
         result = PipelineExecutionResult(
             session_id=session_id,
             user_id=user_id,
@@ -274,18 +309,23 @@ async def run_orchestrator_pipeline_stream(
             figma_links=figma_links,
             artifacts_manifest=artifacts_manifest,
             duration_seconds=duration,
-            status="blocked" if final_state.get(KEY_PIPELINE_BLOQUEADO) else "success",
+            status=run_status,
             output_dir=str(output_dir) if output_dir else None,
         )
 
         if output_dir and save_artifacts:
             try:
                 from pipeline.session_store import save_session_record
+                assistant_msg = (
+                    "🟡 **PRD gerado com ressalvas (gates bypassados).** Veja as abas abaixo."
+                    if result.bypassed and result.state.get("prd_final")
+                    else (result.state.get("prd_final") and "📘 **PRD gerado.** Veja as abas abaixo." or result.final_output)
+                )
                 initial_msgs = [
                     {"role": "user", "content": prompt},
                     {
                         "role": "assistant",
-                        "content": result.state.get("prd_final") and "📘 **PRD gerado.** Veja as abas abaixo." or result.final_output,
+                        "content": assistant_msg,
                     },
                 ]
                 save_session_record(

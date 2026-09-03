@@ -9,6 +9,7 @@ from pathlib import Path
 
 from config import _detect_figma_mode, get_settings
 from pipeline.artifacts import extract_figma_links, generate_artifact_manifest, save_run_artifacts
+from pipeline.runner import PipelineExecutionResult
 from pipeline.session_store import (
     create_session_zip,
     delete_saved_session,
@@ -125,6 +126,8 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
         self.assertEqual(len(msgs), 2)
         self.assertEqual(res.session_id, "sess_vulcao")
         self.assertEqual(meta["title"], "Detetives do Vulcão")
+        self.assertFalse(res.bypassed)
+        self.assertEqual(res.status_icon, "🟢")
 
         # Create zip
         zip_bytes = create_session_zip(run_dir)
@@ -134,6 +137,116 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
         ok = delete_saved_session(sessions[0]["dir_name"])
         self.assertTrue(ok)
         self.assertEqual(len(list_saved_sessions()), 0)
+
+    def test_session_bypassed_shows_yellow_icon(self):
+        """Quando um gate é bloqueado mas o pipeline avança (bypass) e gera PRD, status deve ser amarelo (🟡)."""
+        state = {
+            "one_pager": "# One-pager — Missão Bypass\n* **Nome que o estudante vê:** Detetives da Ilha\n* **Slug:** `exp-03-ilha`",
+            "gate_estrutural_status": "aprovado",
+            "gate_final_status": "bloqueado",
+            "prd_final": "# PRD com pendências gerado em bypass",
+        }
+        run_dir = save_run_artifacts(state, session_id="sess_bypass", prompt="Missão com bypass")
+        self.assertIsNotNone(run_dir)
+
+        res_obj = PipelineExecutionResult(
+            session_id="sess_bypass",
+            user_id="user_test",
+            prompt="Missão com bypass",
+            final_output="PRD",
+            status="bypassed",
+            duration_seconds=50.0,
+            state=state,
+            step_outputs={},
+            step_thoughts={},
+            attached_files=[],
+        )
+
+        save_session_record(
+            run_dir=run_dir,
+            session_id="sess_bypass",
+            user_id="user_test",
+            prompt="Missão com bypass",
+            result=res_obj,
+            messages=[
+                {"role": "user", "content": "Missão com bypass"},
+                {"role": "assistant", "content": "🟡 **PRD gerado com ressalvas (gates bypassados).** Veja as abas abaixo."},
+            ],
+        )
+
+        sessions = list_saved_sessions()
+        self.assertEqual(len(sessions), 1)
+        self.assertEqual(sessions[0]["status_icon"], "🟡")
+        self.assertEqual(sessions[0]["status"], "bypassed")
+
+        loaded = load_saved_session(sessions[0]["dir_name"])
+        self.assertIsNotNone(loaded)
+        msgs, res, meta = loaded
+        self.assertEqual(res.status, "bypassed")
+        self.assertTrue(res.bypassed)
+        self.assertEqual(res.status_icon, "🟡")
+        self.assertIn("🟡", msgs[1]["content"])
+
+        delete_saved_session(sessions[0]["dir_name"])
+
+    def test_session_blocked_shows_red_icon(self):
+        """Quando o pipeline é bloqueado em modo estrito e não gera PRD, status deve ser vermelho (🔴)."""
+        state = {
+            "one_pager": "# One-pager — Missão Bloqueada\n* **Nome que o estudante vê:** Detetives da Floresta\n* **Slug:** `exp-04-floresta`",
+            "gate_estrutural_status": "bloqueado",
+            "pipeline_bloqueado": True,
+        }
+        run_dir = save_run_artifacts(state, session_id="sess_bloqueada", prompt="Missão bloqueada")
+        self.assertIsNotNone(run_dir)
+
+        res_obj = PipelineExecutionResult(
+            session_id="sess_bloqueada",
+            user_id="user_test",
+            prompt="Missão bloqueada",
+            final_output="Gate estrutural bloqueado.",
+            status="blocked",
+            duration_seconds=20.0,
+            state=state,
+            step_outputs={},
+            step_thoughts={},
+            attached_files=[],
+        )
+
+        save_session_record(
+            run_dir=run_dir,
+            session_id="sess_bloqueada",
+            user_id="user_test",
+            prompt="Missão bloqueada",
+            result=res_obj,
+            messages=[
+                {"role": "user", "content": "Missão bloqueada"},
+                {"role": "assistant", "content": "Gate estrutural bloqueado."},
+            ],
+        )
+
+        sessions = list_saved_sessions()
+        self.assertEqual(len(sessions), 1)
+        self.assertEqual(sessions[0]["status_icon"], "🔴")
+        self.assertIn(sessions[0]["status"], ("blocked", "bloqueado"))
+
+        loaded = load_saved_session(sessions[0]["dir_name"])
+        self.assertIsNotNone(loaded)
+        msgs, res, meta = loaded
+        self.assertTrue(res.bloqueado)
+        self.assertEqual(res.status_icon, "🔴")
+
+        delete_saved_session(sessions[0]["dir_name"])
+
+    def test_status_icon_helper(self):
+        from app import _status_icon
+        self.assertEqual(_status_icon("aprovado"), "🟢")
+        self.assertEqual(_status_icon("success"), "🟢")
+        self.assertEqual(_status_icon("bypassed"), "🟡")
+        self.assertEqual(_status_icon("bypass"), "🟡")
+        self.assertEqual(_status_icon("ressalvas"), "🟡")
+        self.assertEqual(_status_icon("bloqueado"), "🔴")
+        self.assertEqual(_status_icon("blocked"), "🔴")
+        self.assertEqual(_status_icon("desconhecido"), "⚪")
 
 
 if __name__ == "__main__":
