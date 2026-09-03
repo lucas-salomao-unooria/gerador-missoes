@@ -23,6 +23,24 @@ def _env_bool(name: str, default: str) -> bool:
     return os.getenv(name, default).strip().lower() in ("true", "1", "yes", "sim")
 
 
+def _detect_figma_mode() -> str:
+    """Detecta automaticamente o modo do Figma MCP baseado no ambiente."""
+    raw = os.getenv("FIGMA_MCP_MODE", "").strip().lower()
+    if raw and raw not in ("auto", ""):
+        return raw
+
+    # 1. Modo remoto (OAuth oficial) se houver tokens salvos ou bearer estático
+    oauth_file = PROJECT_ROOT / os.getenv("FIGMA_MCP_OAUTH_TOKENS_FILE", ".figma_mcp_tokens.json")
+    if oauth_file.exists() or os.getenv("FIGMA_MCP_BEARER_TOKEN"):
+        return "remote"
+
+    # 2. Modo stdio automático se houver Personal Access Token / API Key
+    if os.getenv("FIGMA_API_KEY") or os.getenv("FIGMA_PERSONAL_ACCESS_TOKEN"):
+        return "stdio"
+
+    return "off"
+
+
 class AppSettings(BaseSettings):
     """Configurações da aplicação e dos agentes ADK."""
 
@@ -71,8 +89,8 @@ class AppSettings(BaseSettings):
 
     # ------------------------------------------------------------ Figma MCP
     figma_mcp_mode: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_MCP_MODE", "off").strip().lower(),
-        description="off | remote (mcp.figma.com, OAuth) | desktop (app Figma local) | stdio (figma-developer-mcp, só leitura)",
+        default_factory=_detect_figma_mode,
+        description="auto | off | remote (mcp.figma.com, OAuth) | desktop (app Figma local) | stdio (figma-developer-mcp, só leitura)",
     )
     figma_mcp_remote_url: str = Field(
         default_factory=lambda: os.getenv("FIGMA_MCP_REMOTE_URL", "https://mcp.figma.com/mcp"),
@@ -90,11 +108,17 @@ class AppSettings(BaseSettings):
     )
     figma_api_key: str = Field(
         default_factory=lambda: os.getenv("FIGMA_API_KEY", "") or os.getenv("FIGMA_PERSONAL_ACCESS_TOKEN", ""),
-        description="Personal Access Token do Figma (usado só pelo modo stdio)",
+        description="Personal Access Token do Figma (usado pelo modo stdio)",
     )
     figma_mcp_command: str = Field(default_factory=lambda: os.getenv("FIGMA_MCP_COMMAND", "npx"))
+    figma_mcp_package: str = Field(
+        default_factory=lambda: os.getenv("FIGMA_MCP_PACKAGE", "figma-developer-mcp"),
+    )
     figma_mcp_args_raw: str = Field(
         default_factory=lambda: os.getenv("FIGMA_MCP_ARGS", "-y,figma-developer-mcp,--stdio"),
+    )
+    enable_figma_mcp_mock_fallback: bool = Field(
+        default_factory=lambda: _env_bool("ENABLE_FIGMA_MCP_MOCK_FALLBACK", "true"),
     )
     mcp_timeout_seconds: int = Field(default_factory=lambda: int(os.getenv("MCP_TIMEOUT_SECONDS", "60")))
     mcp_read_timeout_seconds: int = Field(default_factory=lambda: int(os.getenv("MCP_READ_TIMEOUT_SECONDS", "600")))
@@ -103,6 +127,12 @@ class AppSettings(BaseSettings):
     figma_default_folder_url: str = Field(
         default_factory=lambda: os.getenv("FIGMA_DEFAULT_FOLDER_URL", ""),
         description="URL da pasta/projeto do Figma onde os arquivos das missões são criados",
+    )
+    figma_folder_id: str = Field(
+        default_factory=lambda: os.getenv("FIGMA_FOLDER_ID", ""),
+    )
+    figma_team_id: str = Field(
+        default_factory=lambda: os.getenv("FIGMA_TEAM_ID", ""),
     )
     figma_ds_file_key: str = Field(
         default_factory=lambda: os.getenv("FIGMA_DS_FILE_KEY", "mPw4Hhx9ptkgcHtySaSilO"),
@@ -146,7 +176,7 @@ class AppSettings(BaseSettings):
         if mode == "desktop":
             return f"🟢 Desktop ({self.figma_mcp_desktop_url})"
         if mode == "stdio":
-            return "🟡 stdio (figma-developer-mcp, só leitura)" if self.figma_api_key else "🔴 stdio sem FIGMA_API_KEY"
+            return "🟢 stdio (figma-developer-mcp, automático)" if self.figma_api_key else "🔴 stdio sem FIGMA_API_KEY"
         return f"🔴 Modo desconhecido: {mode}"
 
 

@@ -10,14 +10,22 @@ import asyncio
 import json
 import os
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import streamlit as st
 from PIL import Image
 
 from config import get_settings
+from pipeline.artifacts import extract_figma_links, generate_artifact_manifest
 from pipeline.orchestrator import STAGES, get_pipeline_agents_metadata, get_pipeline_stages
 from pipeline.runner import PipelineExecutionResult, run_orchestrator_pipeline_stream
+from pipeline.session_store import (
+    create_session_zip,
+    delete_saved_session,
+    list_saved_sessions,
+    load_saved_session,
+)
 from prompts import get_prompt_raw, list_prompt_files, load_prompt, save_prompt
 from tools.doc_parser import DocumentBatch, validate_and_process_batch
 
@@ -62,6 +70,8 @@ def _status_icon(value: Any) -> str:
 
 
 def init_session_state():
+    if "current_session_id" not in st.session_state:
+        st.session_state.current_session_id = None
     if "messages" not in st.session_state:
         st.session_state.messages = [
             {
@@ -89,6 +99,49 @@ def render_sidebar() -> Dict[str, Any]:
         elif os.path.exists("images/logo.png"):
             st.image("images/logo.png", use_container_width=True)
 
+        if st.button("➕ Nova Missão", type="primary", use_container_width=True):
+            st.session_state.current_session_id = None
+            st.session_state.messages = []
+            init_session_state()
+            st.rerun()
+
+        st.markdown("---")
+        st.markdown("#### 🗂️ Histórico de Missões")
+        saved_sessions = list_saved_sessions()
+        if not saved_sessions:
+            st.caption("Nenhuma missão gravada ainda.")
+        else:
+            for s in saved_sessions[:15]:
+                is_active = st.session_state.get("current_session_id") == s["dir_name"]
+                col_btn, col_del = st.columns([5, 1])
+                disp_title = s["title"]
+                if len(disp_title) > 24:
+                    disp_title = disp_title[:22] + "…"
+                btn_label = f"{s['status_icon']} {disp_title}"
+                with col_btn:
+                    if st.button(
+                        btn_label,
+                        key=f"sess_{s['dir_name']}",
+                        use_container_width=True,
+                        type="primary" if is_active else "secondary",
+                        help=f"{s['title']}\n📅 {s['created_at']} | Status: {s['status']} | 📄 {s['files_count']} arquivos",
+                    ):
+                        loaded = load_saved_session(s["dir_name"])
+                        if loaded:
+                            msgs, res, meta = loaded
+                            st.session_state.current_session_id = s["dir_name"]
+                            st.session_state.messages = msgs
+                            st.rerun()
+                with col_del:
+                    if st.button("🗑️", key=f"del_{s['dir_name']}", help=f"Excluir {s['title']}"):
+                        delete_saved_session(s["dir_name"])
+                        if st.session_state.get("current_session_id") == s["dir_name"]:
+                            st.session_state.current_session_id = None
+                            st.session_state.messages = []
+                            init_session_state()
+                        st.rerun()
+
+        st.markdown("---")
         st.markdown("#### 📡 Ambiente (`.env`)")
         with st.container(border=True):
             st.markdown(f"🤖 **Modelo:** `{settings.gemini_model}`")
@@ -224,7 +277,7 @@ def render_pipeline_details(result: PipelineExecutionResult):
     gates = result.gates
     if gates:
         st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS[k]}" for k, v in gates.items() if k in GATE_LABELS))
-    tabs = st.tabs(["📘 PRD", "🧭 Produto", "🎨 Design", "🛠️ Dev", "🧠 Aprendizado", "💭 Pensamentos", "🔍 Estado (JSON)"])
+    tabs = st.tabs(["📘 PRD", "🧭 Produto", "🎨 Design", "🛠️ Dev", "🧠 Aprendizado", "💭 Pensamentos", "📦 Artefatos & Figma", "🔍 Estado (JSON)"])
 
     with tabs[0]:
         if result.state.get("prd_final"):
@@ -263,7 +316,67 @@ def render_pipeline_details(result: PipelineExecutionResult):
                         st.markdown(thoughts)
         else:
             st.info("Nenhum pensamento registrado.")
+
     with tabs[6]:
+        # 1. Links do Figma & FigJam
+        links = getattr(result, "figma_links", []) or extract_figma_links(result.state)
+        if links:
+            st.markdown("#### 🎨 Links do Figma & FigJam")
+            cols = st.columns(min(len(links), 3) or 1)
+            for idx, link in enumerate(links):
+                with cols[idx % len(cols)]:
+                    with st.container(border=True):
+                        st.markdown(f"**{link.get('title', 'Arquivo Figma')}**")
+                        st.caption(f"Origem: `{link.get('source_agent_key', 'design')}`")
+                        st.link_button("Abrir no Figma ↗", link["url"], use_container_width=True)
+            st.markdown("---")
+        else:
+            st.info("🎨 Nenhum link direto do Figma/FigJam registrado nesta execução (artefatos gerados em Markdown/Mermaid).")
+
+        # 2. Manifesto de Arquivos
+        st.markdown("#### 📁 Arquivos da Missão")
+        if result.output_dir and os.path.exists(result.output_dir):
+            output_path = Path(result.output_dir)
+            manifest = getattr(result, "artifacts_manifest", []) or generate_artifact_manifest(output_path)
+
+            col_zip, _ = st.columns([2, 2])
+            with col_zip:
+                zip_bytes = create_session_zip(output_path)
+                st.download_button(
+                    "📦 Baixar Todos os Artefatos (.ZIP)",
+                    data=zip_bytes,
+                    file_name=f"artefatos_{result.session_id[:12]}.zip",
+                    mime="application/zip",
+                    use_container_width=True,
+                )
+            st.markdown("")
+
+            grouped: Dict[str, List[Dict[str, Any]]] = {}
+            for item in manifest:
+                grouped.setdefault(item["category"], []).append(item)
+
+            for cat, items in grouped.items():
+                with st.expander(f"{cat} ({len(items)} arquivos)", expanded=True):
+                    for it in items:
+                        c_name, c_size, c_dl = st.columns([3, 1, 1.5])
+                        c_name.markdown(f"📄 `{it['path']}`")
+                        c_size.caption(it["size_str"])
+                        full_fpath = output_path / it["path"]
+                        if full_fpath.exists():
+                            with c_dl:
+                                file_bytes = full_fpath.read_bytes()
+                                st.download_button(
+                                    "📥 Baixar",
+                                    data=file_bytes,
+                                    file_name=it["filename"],
+                                    mime=it["mime_type"],
+                                    key=f"dl_{result.session_id}_{it['path']}",
+                                    use_container_width=True,
+                                )
+        else:
+            st.caption("Diretório de saída não localizado para carregar os arquivos.")
+
+    with tabs[7]:
         st.json({k: v for k, v in result.state.items()})
 
     st.markdown("---")
@@ -382,6 +495,22 @@ def main():
                     st.markdown(summary if len(summary) < 4000 else summary[:4000] + "\n\n…")
                     render_pipeline_details(result)
                     st.session_state.messages.append({"role": "assistant", "content": summary if len(summary) < 4000 else "Resultado do pipeline:", "pipeline_result": result})
+                    if result.output_dir:
+                        dir_name = Path(result.output_dir).name
+                        st.session_state.current_session_id = dir_name
+                        try:
+                            from pipeline.session_store import save_session_record
+                            save_session_record(
+                                run_dir=Path(result.output_dir),
+                                session_id=result.session_id,
+                                user_id=result.user_id,
+                                prompt=user_prompt,
+                                result=result,
+                                messages=st.session_state.messages,
+                                attached_files=[d.name for d in doc_batch.documents] if doc_batch else [],
+                            )
+                        except Exception as exc:
+                            pass
 
     with tab_prompts:
         render_prompt_manager()

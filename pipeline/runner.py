@@ -14,13 +14,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
+from google.adk.artifacts import FileArtifactService
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from agents.callbacks import KEY_PIPELINE_BLOQUEADO, KEY_PIPELINE_MOTIVO
 from config import get_settings
-from pipeline.artifacts import save_run_artifacts
+from pipeline.artifacts import extract_figma_links, generate_artifact_manifest, save_run_artifacts
 from pipeline.orchestrator import FINAL_OUTPUT_KEY, create_mission_orchestrator
 from tools.doc_parser import DocumentBatch
 
@@ -50,6 +51,8 @@ class PipelineExecutionResult:
     attached_files: List[str] = field(default_factory=list)
     state: Dict[str, Any] = field(default_factory=dict)
     events_log: List[Dict[str, Any]] = field(default_factory=list)
+    figma_links: List[Dict[str, Any]] = field(default_factory=list)
+    artifacts_manifest: List[Dict[str, Any]] = field(default_factory=list)
     duration_seconds: float = 0.0
     status: str = "success"
     error_message: Optional[str] = None
@@ -144,7 +147,16 @@ async def run_orchestrator_pipeline_stream(
             session_id=session_id,
             state={},
         )
-        runner = Runner(app_name=orchestrator_name, agent=orchestrator, session_service=session_service)
+        adk_artifacts_dir = settings.output_path / ".adk_artifacts"
+        adk_artifacts_dir.mkdir(parents=True, exist_ok=True)
+        artifact_service = FileArtifactService(adk_artifacts_dir)
+
+        runner = Runner(
+            app_name=orchestrator_name,
+            agent=orchestrator,
+            session_service=session_service,
+            artifact_service=artifact_service,
+        )
         user_message = _build_user_message(prompt, doc_batch)
 
         step_outputs: Dict[str, str] = {}
@@ -231,9 +243,21 @@ async def run_orchestrator_pipeline_stream(
         duration = time.time() - start_time
 
         output_dir: Optional[Path] = None
+        figma_links: List[Dict[str, Any]] = []
+        artifacts_manifest: List[Dict[str, Any]] = []
         if save_artifacts:
             try:
-                output_dir = save_run_artifacts(final_state, session_id, prompt)
+                output_dir = save_run_artifacts(
+                    state=final_state,
+                    session_id=session_id,
+                    prompt=prompt,
+                    artifact_service=artifact_service,
+                    app_name=orchestrator_name,
+                    user_id=user_id,
+                )
+                if output_dir:
+                    figma_links = extract_figma_links(final_state)
+                    artifacts_manifest = generate_artifact_manifest(output_dir)
             except Exception as exc:  # pragma: no cover - disco
                 logger.warning("Falha ao gravar artefatos: %s", exc)
 
@@ -247,10 +271,35 @@ async def run_orchestrator_pipeline_stream(
             attached_files=attached_names,
             state=final_state,
             events_log=events_log,
+            figma_links=figma_links,
+            artifacts_manifest=artifacts_manifest,
             duration_seconds=duration,
             status="blocked" if final_state.get(KEY_PIPELINE_BLOQUEADO) else "success",
             output_dir=str(output_dir) if output_dir else None,
         )
+
+        if output_dir and save_artifacts:
+            try:
+                from pipeline.session_store import save_session_record
+                initial_msgs = [
+                    {"role": "user", "content": prompt},
+                    {
+                        "role": "assistant",
+                        "content": result.state.get("prd_final") and "📘 **PRD gerado.** Veja as abas abaixo." or result.final_output,
+                    },
+                ]
+                save_session_record(
+                    run_dir=output_dir,
+                    session_id=session_id,
+                    user_id=user_id,
+                    prompt=prompt,
+                    result=result,
+                    messages=initial_msgs,
+                    attached_files=attached_names,
+                )
+            except Exception as exc:
+                logger.warning("Falha ao registrar histórico de conversa: %s", exc)
+
         yield {"type": "pipeline_completed", "result": result, "duration": duration, "timestamp": time.time()}
 
     except Exception as exc:
