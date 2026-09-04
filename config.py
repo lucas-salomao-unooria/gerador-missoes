@@ -53,11 +53,11 @@ class AppSettings(BaseSettings):
         description="Chave de API do Google Gemini",
     )
     gemini_model: str = Field(
-        default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.7-flash"),
+        default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
         description="Modelo padrão para os agentes",
     )
     gemini_model_prd: str = Field(
-        default_factory=lambda: os.getenv("GEMINI_MODEL_PRD", "") or os.getenv("GEMINI_MODEL", "gemini-3.7-flash"),
+        default_factory=lambda: os.getenv("GEMINI_MODEL_PRD", "") or os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
         description="Modelo usado pelo redator do PRD (pode ser mais forte que o padrão)",
     )
     thinking_budget: int = Field(
