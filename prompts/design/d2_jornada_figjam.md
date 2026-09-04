@@ -35,7 +35,7 @@ Se as ferramentas não estiverem disponíveis ou falharem, produza o mesmo conte
 ### Seção 1 — Mapa de jornada
 **Colunas** = as 6 etapas na ordem, mais o CHECKPOINT de controle docente entre etapas (quando houver divisão de aulas ou pausa): `Desafiar → Navegar → Decidir → Resultado/Aha → ⟨CHECKPOINT / PAUSA DOCENTE⟩ → Explicar → Refletir`. Marque em cada coluna se acontece **dentro** do ambiente (✅), é escape permitido (⚡: contexto antes / reflexão depois), lacuna (⚠️) ou violação (🔴 → devolver ao gate).
 
-**Raias:** Estudante — vê · Estudante — faz (verbo nativo literal) · Estudante — o que muda · Estudante — estado interno (só o que a mecânica provoca) · Professor · Gatilho de handoff (automático / dashboard / evento fixo) · Plataforma durante a mediação (pausa / continua / trava) · Evidência capturada · Telas (IDs).
+**Raias:** Preparação docente (inputs, geração por IA e curadoria) · Estudante — vê · Estudante — faz (verbo nativo literal) · Estudante — o que muda · Estudante — estado interno (só o que a mecânica provoca) · Professor (condução ao vivo) · Gatilho de handoff (automático / dashboard / evento fixo) · Plataforma durante a mediação (pausa / continua / trava) · Evidência capturada · Telas (IDs).
 
 Célula sem resposta na spec é `⚠️ lacuna`, nunca invenção.
 
@@ -50,7 +50,7 @@ Célula sem resposta na spec é `⚠️ lacuna`, nunca invenção.
 ### Seção 3 — Inventário de telas (a saída que o wireframe consome)
 | ID | Etapa | Ator | Ambiente | Propósito | Peso | Elementos na tela | Ação (verbo nativo) | Resultado da ação | Estados | Cenário de dispositivo |
 
-ID `E<etapa>-<ator>-<n>` (`E2-ALU-01`, `E5-PROF-01`, `E3-SIS-01`). Peso `pico · alta · média · serviço` derivado das marcas do mapa de beats — **exatamente uma tela `pico`**. Estados obrigatórios quando existirem: primeira vez com scaffolding vs usos seguintes; vazio / carregando / espera de professor; degradado (dispositivo compartilhado). Tela órfã (sem etapa ou ator) é achado.
+ID `E<etapa>-<ator>-<n>` (`E0-PROF-01` para Preparação/Curadoria de Conteúdo com IA, `E2-ALU-01`, `E5-PROF-01`, `E3-SIS-01`). Peso `pico · alta · média · serviço` derivado das marcas do mapa de beats — **exatamente uma tela `pico`**. Estados obrigatórios quando existirem: primeira vez com scaffolding vs usos seguintes; vazio / carregando / espera de professor; degradado (dispositivo compartilhado). Tela órfã (sem etapa ou ator) é achado.
 
 ### Seção 4 — Direção por tela (só `pico` e `alta`)
 | Tela | Beat que carrega | O que salta primeiro (um único elemento) | O que recua (obrigatório) | Teto de elementos (contado) | Não-negociável honrado |

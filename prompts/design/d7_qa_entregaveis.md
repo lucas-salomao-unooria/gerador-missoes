@@ -40,7 +40,7 @@ Colete toda lacuna aberta declarada nos relatórios de jornada, fluxo, copy e wi
 
 **D1 — Fidelidade à spec.** Matriz por tela: existe na jornada · existe no Figma · string no sheet · verbo bate nos três · critério que sustenta. Procure divergências: tela no Figma fora do inventário; tela sem frame; string sem tela ou `[[placeholder]]`; verbo diferente entre jornada/wireframe/copy; **contagem de decisões maior no Figma que na jornada**; handoff automático virou botão (ou o inverso); ausência declarada que reapareceu.
 
-**D1b — Diff de strings (mecânico).** Todo nó de texto dos frames classificado em: ✅ string de UI (casa **caractere a caractere** com o sheet) · ✅ placeholder de asset marcado · ✅ anotação de spec · 🔴 divergente (chave existe, texto difere) · 🔴 inventada. Reporte a contagem: n nós · n casadas · n placeholders · n anotações · n divergentes · n inventadas.
+**D1b — Diff de strings (mecânico).** Todo nó de texto dos frames classificado em: ✅ string fixa de UI do sistema (casa **caractere a caractere** com o sheet) · ✅ conteúdo dinâmico/simulado por IA (auditado como template/schema e amostra do banco curado default correspondente ao sheet de copy) · ✅ placeholder de asset marcado · ✅ anotação de spec · 🔴 divergente (chave existe, texto fixo difere) · 🔴 inventada. Reporte a contagem: n nós · n casadas fixas · n dinâmicas/banco default · n placeholders · n anotações · n divergentes · n inventadas.
 
 **D2 — Preservação curricular.** O momento em tela de cada habilidade da spec (bloco 11) existe na tela nomeada com a ação descrita.
 
@@ -50,7 +50,7 @@ Colete toda lacuna aberta declarada nos relatórios de jornada, fluxo, copy e wi
 
 **D5 — Fluxo.** 6 etapas na ordem com checkpoints modulares e salvamento de estado; permanência no ambiente etapa a etapa (especialmente Resultado e Explicar); caminhos diferentes chegam a telas diferentes; Aha com affordance nativa; reflexão com cenário novo; sem dead end; estados de erro e espera existem; 3 cenários de dispositivo construídos.
 
-**D6 — Controle do professor.** Gatilho em tela e comportamento da plataforma durante a mediação e pausas; controle de avanço e congelamento de tela; dashboard com os dados da raia de evidência (nada além, nada a menos); customização construída; roteiro ≥ 3 perguntas; nenhuma comparação nominal; nenhuma métrica como avaliação formal.
+**D6 — Controle do professor.** Tela de preparação docente (`E0-PROF-01`) construída com formulário de parâmetros (tema, palavras-chave, calibragem de IA), prévia/curadoria do pacote gerado por IA e botão de ativação do banco curado padrão; gatilho em tela e comportamento da plataforma durante a mediação e pausas em sala; controle de avanço e congelamento de tela; dashboard com os dados da raia de evidência (nada além, nada a menos); roteiro ≥ 3 perguntas; nenhuma comparação nominal; nenhuma métrica como avaliação formal.
 
 **D6b — A professora como usuária.** Em quantos segundos ela entende onde a turma está? O que faz quando a turma dessincroniza? A tela diz o que fazer agora? Conduz sem ter feito a missão antes? Se errar, dá para voltar? A tela projetada expõe algo indevido? (🟡 salvo gatilho obrigatório sem tela.)
 

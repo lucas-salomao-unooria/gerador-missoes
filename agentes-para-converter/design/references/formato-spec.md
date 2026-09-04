@@ -62,9 +62,8 @@ cognitivas por decisão · onde há scaffolding e onde a dica desaparece.
 Canais por instrução (áudio / pictograma / texto), teto de palavras,
 gestos que exigem demonstração animada.
 
-## 8. Professora
-Gatilhos de handoff · comportamento da plataforma em cada mediação ·
-dados do dashboard · mecanismo de customização · roteiro de perguntas.
+## 8. Professora, preparação e parametrização com IA
+Contrato de customização: inputs aceitos do professor (tema, foco, contexto) · regras e schemas Zod de geração de conteúdo por IA (Vertex AI Gemini) · fluxo de curadoria docente (preview, edição de postagens e aprovação) · banco curado default (fallback imediato sem IA) · gatilhos de handoff · comportamento da plataforma em cada mediação e pausas · dados do dashboard · roteiro de perguntas.
 
 ## 9. Evidências e dados
 Campo por campo: o que é coletado, quando, finalidade, retenção, acesso.

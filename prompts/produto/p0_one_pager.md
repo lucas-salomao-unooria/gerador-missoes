@@ -4,7 +4,7 @@ Sua função é transformar o que o time entregou — um briefing curto, uma ide
 
 ## Contexto da plataforma
 
-A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão** é uma experiência imersiva de letramento digital que simula, com fidelidade, um de **cinco ambientes suportados** — Instagram (seção do DS `instanooria`), YouTube (`unitube`), ChatGPT (`chatgpt`), TikTok (`tiktooria`), WhatsApp (`whatsappmobile`) — dentro de um **framework de 6 etapas**: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. A conta dentro da simulação é do próprio estudante; os verbos são nativos da plataforma real; a experiência inteira acontece dentro do ambiente (escapes permitidos: tela de contexto antes e reflexão depois). O professor conduz com gatilhos de handoff, dashboard e roteiro de debate. Missões estruturadas em etapas modulares com tempos sugeridos de execução, checkpoints de salvamento de estado e controle soberano do professor sobre o andamento, adaptáveis à aula escolar de 50 min (aula única, duas aulas ou sessões fracionadas de 20–40 min) e com podcast de recapitulação.
+A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão** é uma experiência imersiva de letramento digital que simula, com fidelidade, um de **cinco ambientes suportados** — Instagram (seção do DS `instanooria`), YouTube (`unitube`), ChatGPT (`chatgpt`), TikTok (`tiktooria`), WhatsApp (`whatsappmobile`) — dentro de um **framework de 6 etapas**: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. A conta dentro da simulação é do próprio estudante; os verbos são nativos da plataforma real; a experiência inteira acontece dentro do ambiente (escapes permitidos: tela de contexto antes e reflexão depois). A missão é projetada em **duas camadas**: (1) **Engine imersiva estrutural fixa** (framework das 6 etapas, mecânica de plataforma, verbos nativos, checkpoints com salvamento de estado e banco curado padrão/fallback); (2) **Camada de parametrização e autoria assistida por IA na preparação docente** (o professor insere tema, contexto e foco curricular; a IA da plataforma gera rascunhos de posts, comentários e mídias via Vertex Gemini; e o professor cura, edita e aprova antes de liberar para a turma). O professor conduz com autonomia e controle sobre o andamento em aulas de 50 min (aula única, 2 aulas ou sessões fracionadas de 20–40 min), com dashboard, roteiro de debate e podcast de recapitulação.
 
 ## Regras
 
@@ -48,8 +48,8 @@ Não escolheu nada · escolheu tudo · não usou a ferramenta · exploração m�
 ## 8. Estados de falha
 Conexão cai · sessão expira · mídia não carrega · professor não libera — o que o estudante vê (na voz da ficção), o que ele faz, o que se preserva.
 
-## 9. Papel do professor
-Antes / durante / depois; gatilhos de handoff (automático, dashboard ou timer); comportamento da plataforma durante a mediação; quem terminou cedo; customização; dashboard (dados); roteiro de perguntas do debate (≥ 3, escritas).
+## 9. Papel do professor e parametrização com IA
+Preparo e customização assistida por IA (inputs do professor: tema/contexto, geração de posts/mídias pela IA na preparação, curadoria/edição docente antes da aula, ativação para a turma e fallback para banco curado default); antes / durante / depois na sala de aula; gatilhos de handoff (automático, dashboard ou timer); comportamento da plataforma durante a mediação; quem terminou cedo; dashboard (dados); roteiro de perguntas do debate (≥ 3, escritas).
 
 ## 10. Modularidade, tempos sugeridos e controle do professor (etapas, checkpoints e flexibilidade de aulas)
 Tabela das etapas/blocos com tempos sugeridos de execução e sobreposições declaradas (preparação fora do tempo em tela dos estudantes); checkpoints explícitos de pausa e salvamento de estado no servidor; controle docente sobre o avanço e congelamento da turma; cenários de aplicação sugeridos: aula única (50 min), 2 aulas (2x 50 min) e sessões fracionadas (20–40 min).
@@ -63,14 +63,14 @@ O que é capturado, quando, finalidade, retenção, acesso; o que NÃO é coleta
 ## 13. Cenários de dispositivo
 1:1 · 2–4 por dispositivo · projeção única — o que muda e se a descoberta chega.
 
-## 14. Guardrails
-IA (papel e limites, ou N/A), privacidade, sem rotulação do estudante, tom sem julgamento, affordance × guardrail.
+## 14. Guardrails e IA
+IA na preparação docente (papel de assistente de autoria com structured output, curadoria obrigatória do professor antes da liberação da turma, sem geração aberta não-supervisionada para o estudante em tempo real), privacidade, sem rotulação do estudante, tom sem julgamento, affordance × guardrail.
 
 ## 15. Tetos aplicados à faixa
 Decisões do mesmo tipo (conta), opções por decisão, duração por ato, etapas cognitivas por decisão, teto de palavras por string.
 
 ## 16. Requisitos técnicos e escopo
-V1 mínimo jogável vs V2; assets necessários; integrações; persistência entre etapas e sessões.
+V1 mínimo jogável vs V2; motor de geração assistida por IA (Vertex AI Gemini com structured output Zod); persistência de conteúdo curado da turma (exp_NN_conteudo_turma); banco curado default (fallback); assets necessários; integrações; persistência entre etapas e sessões.
 
 ## 17. Hipóteses de validação
 O que se assume, o que observar no teste, o que indica falha.

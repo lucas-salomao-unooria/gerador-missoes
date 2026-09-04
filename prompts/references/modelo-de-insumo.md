@@ -46,9 +46,9 @@ dúvida — dúvida declarada é melhor que lacuna silenciosa.
 - [ ] **Híbrida** — descrever
 
 ## 6. Papel do professor
-- **Preparo** (o que configura/valida antes):
-- **Largada/relógio coletivo** (se síncrona): ações e efeitos:
-- **Acompanhamento ao vivo**: o que vê, e O QUE PEDE AÇÃO:
+- **Preparo e parametrização** (tela `E0-PROF-01`): inputs do professor (tema/contexto local, palavras-chave, restrições e nível de desafio), geração de pacote de conteúdo imersivo via IA com curadoria humana (aprovar / regenerar / editar posts e personas), ativação do banco curado padrão (`default_fallback`):
+- **Largada/relógio coletivo e ritmo** (se síncrona): ações, controle de liberação de etapas/checkpoints e efeitos:
+- **Acompanhamento ao vivo**: o que vê, controle de pausas/congelamento de tela e O QUE PEDE AÇÃO:
 - **Leitura individual** (por criança) vs **visão de turma** vs **gestor (só
   agregado)**:
 - **Ações destrutivas** (zerar turma: apaga o quê, preserva o quê):
@@ -67,19 +67,20 @@ dúvida — dúvida declarada é melhor que lacuna silenciosa.
 ## 8. Dados
 - **Vocabulário de telemetria** (verbo / objeto / dados / significado):
 - **Canal de cada dado**: tempo real (rota operacional) × análise (SDK):
-- **Entidades a persistir** (tabelas `exp_NN_`, campos principais):
+- **Entidades a persistir** (tabelas `exp_NN_`, `exp_NN_conteudo_turma`, campos principais):
 - **Lista do que NUNCA vai ao bundle** (gabarito, parâmetros, calibragem,
-  prompts) — será verificada por grep no dist/:
+  prompts de geração) — será verificada por grep no dist/:
 - **Payload bruto + versão do instrumento** (reprocessamento):
 - **Texto livre de menor**: existe? por quê? quem lê?:
 - **Dado sensível (art. 11)?** Se sim, regras de acesso:
 - **Retenção** por tabela (ou lacuna assumida por escrito):
 
-## 9. IA (se houver)
-- **Onde a IA entra** e o que ela NUNCA decide (números vêm de motor
-  determinístico?):
-- **Comportamento sem IA** (mock/quota esgotada/erro) dentro da ficção:
-- **Estimativa de tokens por sessão** (para os tetos):
+## 9. IA e Geração de Conteúdo
+- **Onde a IA entra**: geração de conteúdo e postagens na preparação docente (`POST /<slug>/preparar/gerar-conteudo`), com curadoria humana antes da aula (nunca durante a execução do aluno sem supervisão); motor determinístico em sala:
+- **Contrato de geração**: prompt de sistema, schema Zod de saída validado estritamente, variáveis injetadas:
+- **O que a IA NUNCA decide**: avaliação formal do aluno, pontuação/score, verdades curriculares determinísticas:
+- **Comportamento sem IA e Fallback**: ativação automática ou manual do banco curado padrão (`banco_default`), garantindo execução 100% offline ou sem quota:
+- **Estimativa de tokens por turma/sessão de preparação** (para tetos de quota Vertex AI Gemini):
 
 ## 10. Modos de erro
 - O que o estudante vê quando: a rede cai / a IA falha / a quota acaba —

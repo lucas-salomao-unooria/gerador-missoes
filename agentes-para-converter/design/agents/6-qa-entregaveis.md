@@ -95,16 +95,17 @@ Extraia **todo nó de texto** dos frames construídos e classifique cada um em e
 | Categoria | Regra |
 |---|---|
 | ✅ String de UI | Casa **caractere a caractere** com uma entrada do sheet de copy — acento, pontuação, maiúscula, espaço |
+| ✅ Conteúdo IA / Banco Default | Conteúdo simulado gerado por IA ou amostra do banco curado padrão — auditado contra o template/schema estruturado e amostra homologada no sheet |
 | ✅ Placeholder de asset | Marcado como tal (`[asset · …]`) e aponta para um item do inventário de assets |
 | ✅ Anotação de spec | Anotação do frame, fora da simulação |
-| 🔴 Divergente | Casa uma chave mas o texto difere |
+| 🔴 Divergente | Casa uma chave de UI fixa mas o texto difere |
 | 🔴 Inventada | Não casa nada e não é placeholder marcado |
 
-**Compare por igualdade exata, não por semelhança.** "Versao A" e "Versão A" são strings diferentes; um humano lê as duas e não percebe, um diff percebe sempre. Idem "bloqueado até 4 de 4" contra a string aprovada: parece razoável e não está no sheet.
+**Compare strings de UI por igualdade exata, não por semelhança.** "Versao A" e "Versão A" são strings diferentes; um humano lê as duas e não percebe, um diff percebe sempre. Para nós de conteúdo dinâmico da simulação, verifique conformidade com o schema Zod e com o banco default aprovado.
 
 String 🔴 vira ticket para `copy-ptbr` (chave existe, texto divergiu) ou para `wireframes-figma` (inventada no lugar de placeholder).
 
-Reporte a contagem: *n nós de texto · n de UI casadas · n placeholders · n anotações · n divergentes · n inventadas*. Sem a contagem, o check não foi feito.
+Reporte a contagem: *n nós de texto · n de UI casadas · n de conteúdo dinâmico/default · n placeholders · n anotações · n divergentes · n inventadas*. Sem a contagem, o check não foi feito.
 
 ### D2 — Preservação curricular
 
@@ -144,9 +145,9 @@ O piso do 6.2 é tão importante quanto o teto: se a leitura em tela consumiu o 
 
 ### D6 — Controle do professor
 
+- Tela de preparação docente (`E0-PROF-01`) construída: formulário de parâmetros (tema, palavras-chave, restrições), card de prévia e curadoria do pacote de posts/mídias gerado por IA (com botões de aprovar/regenerar/editar) e opção de ativar o banco curado padrão (`default_fallback`) (4.3, 8.2)
 - Para **cada** momento de mediação: o gatilho existe em tela (automático, botão no dashboard, ou timer) **e** o comportamento da plataforma durante a mediação está construído (tela de espera, trava, continua)
 - Dashboard existe e mostra os dados da raia de evidência da jornada — nada além, nada a menos
-- Customização do professor construída (4.3): existe o mecanismo, não só a menção
 - Roteiro de perguntas do fechamento escrito na íntegra, mínimo 3 (4.2)
 - Nenhuma tela de professor expõe comparação nominal de mérito entre alunos (8.5). Agregado e anonimizado onde a modalidade é individual
 - Nenhuma métrica da simulação apresentada como avaliação formal (7.2)

@@ -80,9 +80,9 @@ O que a story não comporta sem virar documento.
 | Item | V1 (mínimo jogável) | V2 | Por quê |
 |---|---|---|---|
 
-V1 é o menor recorte que **entrega a descoberta central e passa nos obrigatórios da rubrica**. Não é "metade das telas": é a missão inteira com menos variação. Corte variação, nunca conformidade — um 🔒 fora do V1 significa que o V1 reprova na rubrica.
+V1 é o menor recorte que **entrega a descoberta central e passa nos obrigatórios da rubrica**. Não é "metade das telas": é a missão inteira com menos variação. Corte variação, nunca conformidade — um 🔒 fora do V1 significa que o V1 reprova na rubrica. Em missões com IA na preparação, o V1 inclui o banco curado padrão (`banco_default`) homologado para contingência e uso imediato.
 
-Feche com uma lista de requisitos técnicos em linguagem de escopo: quantas telas, quantos estados, quantos assets, integrações, persistência entre aulas, dashboard.
+Feche com uma lista de requisitos técnicos em linguagem de escopo: quantas telas, quantos estados, quantos assets, integrações, persistência entre etapas/aulas, dashboard.
 
 ### Protocolo de negociação
 
@@ -126,7 +126,7 @@ significado declarado não serve: "`completed` = dossiê visto" é útil;
 
 **Entidades a persistir**, com os campos principais. O dev não deve
 descobrir o modelo de dados durante a codificação. Prefixo, tenancy e RLS
-são decisão deles; a **lista de entidades é sua**.
+são decisão deles; a **lista de entidades é sua** (incluindo `exp_NN_conteudo_turma` com parâmetros e JSON aprovado de posts/mídias se houver customização por IA).
 
 **O que o dev precisa e ninguém perguntou.** Nove campos que nenhum outro
 agente cobre, e cada um ausente rebaixa a aprovação:

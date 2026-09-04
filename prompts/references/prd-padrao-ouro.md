@@ -61,28 +61,28 @@ Estados com nome próprio (viram enum), tabela de transições (estado inicial �
 Uma por tela do inventário: Como/Quero/Para · frame do Figma · chaves de string · etapa · critérios sustentados · estados · dependências. Itens 🔒 = requisito de conformidade (rubrica/BNCC/acessibilidade), não negociável.
 
 # 8. Requisitos funcionais
-Tabela `RF-xxx` · título · descrição (necessidade, não mecanismo) · prioridade P0/P1/P2 · rastreio (objetivo, story, critério da rubrica) · **critérios de aceite EARS/Gherkin** · casos de borda. Mínimo obrigatório: estudante, professor (dashboard, gatilhos, customização, roteiro), plataforma (persistência, reentrada, falhas).
+Tabela `RF-xxx` · título · descrição (necessidade, não mecanismo) · prioridade P0/P1/P2 · rastreio (objetivo, story, critério da rubrica) · **critérios de aceite EARS/Gherkin** · casos de borda. Mínimo obrigatório: estudante, professor (tela de preparação docente `E0-PROF-01` com parametrização de tema/palavras-chave, geração de conteúdo via IA com curadoria e aprovação humana, ativação do banco curado padrão `banco_default`, dashboard, gatilhos, roteiro), plataforma (persistência de conteúdo por turma, reentrada, falhas).
 
 # 9. Requisitos não funcionais
-Checklist com meta numérica e método de medição por categoria: performance (p95, peso do bundle, mídia >2MB em bucket) · disponibilidade/recuperabilidade (F5, sessão expirada, offline) · segurança (gabarito server-side, nada no bundle, identidade do token) · **privacidade e LGPD para menores** (art. 14; `estudante_id` opaco; PII zero; texto livre em tabela própria; graus de medida scored/indicative/zero/none; retenção declarada ou lacuna assumida) · acessibilidade (WCAG 2.2 AA; áudio + pictograma em anos iniciais; contraste; teclado; `prefers-reduced-motion`) · usabilidade por faixa (tetos de palavras, decisões, duração de ato) · observabilidade (eventos, logs com `codigo`, OTel) · compatibilidade (Chromebook/desktop; viewport) · i18n (pt-BR único) · custo (IA: teto de tokens por sessão; Cloud Run).
+Checklist com meta numérica e método de medição por categoria: performance (p95, peso do bundle, mídia >2MB em bucket) · disponibilidade/recuperabilidade (F5, sessão expirada, offline) · segurança (gabarito server-side, nada no bundle, identidade do token) · **privacidade e LGPD para menores** (art. 14; `estudante_id` opaco; PII zero; texto livre em tabela própria; graus de medida scored/indicative/zero/none; retenção declarada ou lacuna assumida) · acessibilidade (WCAG 2.2 AA; áudio + pictograma em anos iniciais; contraste; teclado; `prefers-reduced-motion`) · usabilidade por faixa (tetos de palavras, decisões, duração de ato) · observabilidade (eventos, logs com `codigo`, OTel) · compatibilidade (Chromebook/desktop; viewport) · i18n (pt-BR único) · custo (IA: teto de tokens por turma/preparação; Cloud Run).
 
 # 10. UX, telas e design
 Inventário de telas (ID `E<etapa>-<ator>-<n>`, peso, elementos, estados) · direção por tela (pico/alta) · links dos frames Figma (fileKey + nodeId) · sheet de strings (chave `eN.tipo.nome`, seção `clone|unooria`, redundância) · mapa "quem está falando" tela a tela · viewport · permissões de iframe · assets com peso · interações instrumentadas.
 
 # 11. Modelo de dados
-Entidades `exp_NN_*` com campos, tipos, sensibilidade (PII de menor?), retenção, canal (operacional × analítico), `escola_id NOT NULL` + RLS. Enums de estado. Tabelas-contrato entre experiências. O que **nunca** vai ao bundle. Diagrama Mermaid `erDiagram`.
+Entidades `exp_NN_*` com campos, tipos, sensibilidade (PII de menor?), retenção, canal (operacional × analítico), `escola_id NOT NULL` + RLS. Entidade `exp_NN_conteudo_turma` (parâmetros de customização do professor, status de curadoria `PENDENTE|APROVADO|DEFAULT`, payload JSON do pacote de posts/mídias aprovado). Enums de estado. Tabelas-contrato entre experiências. O que **nunca** vai ao bundle. Diagrama Mermaid `erDiagram`.
 
 # 12. Contratos de API
-Rotas por papel (`/<slug>/*`), método, guards, `@Roles`, schema Zod de entrada e **de resposta**, códigos de erro de domínio nomeados (409 `LIMITE_SALVOS`…), idempotência e locks (relógio coletivo, cliques duplos). Formato OpenAPI resumido.
+Rotas por papel (`/<slug>/*`), método, guards, `@Roles`, schema Zod de entrada e **de resposta** (incluindo endpoints de preparação docente `POST /<slug>/preparar/gerar-conteudo` e `POST /<slug>/preparar/ativar-conteudo`), códigos de erro de domínio nomeados (409 `LIMITE_SALVOS`…), idempotência e locks (relógio coletivo, cliques duplos). Formato OpenAPI resumido.
 
 # 13. Eventos, telemetria e analytics
 Tabela `EVT-xxx` · verbo (`attempted|interacted|progressed|completed|scored`) · objeto · quando dispara · campos (`dados` só número/booleano/vocabulário fechado) · canal · aparece no dashboard como · retenção · KPI que alimenta. Volume estimado por sessão × turma. Métricas proibidas. Versão do instrumento.
 
 # 14. Pedagogia e conformidade
-Matriz habilidade BNCC (código, confirmado ou 🔵 a validar) → evidência observável → interação → dado gravado. Competência socioemocional nomeada. Rastreabilidade curricular. Gabarito (autor e revisor nomeados; só no servidor). Graus de medida. Guardrails de IA (8.1/8.2) e éticos (8.3–8.6). Papel do erro. O que cada adulto vê.
+Matriz habilidade BNCC (código, confirmado ou 🔵 a validar) → evidência observável → interação → dado gravado. Competência socioemocional nomeada. Rastreabilidade curricular. Gabarito (autor e revisor nomeados; só no servidor). Graus de medida. Guardrails de IA (8.1/8.2: geração restrita à preparação docente com curadoria humana obrigatória antes do consumo pelo estudante; IA nunca avalia formalmente o estudante; fallback para banco curado padrão) e éticos (8.3–8.6). Papel do erro. O que cada adulto vê.
 
 # 15. Dependências e integrações
-Seção do DS e componentes faltantes (com responsável e prazo) · versão do `@unooria/design-system` · SDK · módulos da api reutilizados · IA (provider, quota, mock) · outras missões (contrato e fallback) · conteúdo autoral (inventário, quem produz).
+Seção do DS e componentes faltantes (com responsável e prazo) · versão do `@unooria/design-system` · SDK · módulos da api reutilizados · IA (Vertex AI Gemini no backend NestJS via `apps/api/src/ai`, quota, banco default curado para contingência) · outras missões (contrato e fallback) · conteúdo autoral (inventário, quem produz).
 
 # 16. Arquitetura da solução (plano técnico)
 Contexto da plataforma resumido (monorepo, hub + api + experiência estática, SDK/postMessage, tenancy, canais de dado). Diagrama C4 nível 1–2 (Mermaid). Alternativas consideradas e trade-offs. Decisões que exigem ADR nova.

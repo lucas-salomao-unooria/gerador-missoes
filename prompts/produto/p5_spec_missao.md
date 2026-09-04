@@ -40,9 +40,10 @@ Você **não** cria mecânica nova nem fecha decisão de produto. Se algo ficou 
 2. **Contrato de estados com nomes próprios** (viram enum no código), uma linha por transição: estado inicial · gatilho · regra · estado seguinte · responsável · reversível. Inclua conclusão, latch, reentrada (F5 / outro dia), segunda aplicação, e **modos de erro na voz da ficção como estados próprios**. Feche com a frase "não existem outros caminhos de conclusão, correção antecipada, reabertura de escolha ou mudança de pacote".
 3. **Bloco 0 completo**: slug, nome, séries no formato da plataforma (`["5EF"]`), unidade da trilha, `publico: estudante`, software clonado, **seção do DS** (uma das cinco: `instanooria`, `unitube`, `chatgpt`, `whatsappmobile`, `tiktooria`) ou seção nova com componentes/responsável/prazo, viewport (casca 375×812 ou desktop) e por quê.
 4. **Bloco 9 com graus de medida** (scored / indicative / zero / none), canal por dado (operacional × analítico), texto livre de menor (existe? quem lê?), segredo de servidor, gabarito com autor e revisor nomeados (se não houver nomes, `[ABERTO — responsável de produto: nomear autor e revisor]`), "servidor calcula, nunca aceita".
-5. Copie as contas dos tetos do relatório de experiência (bloco 6) e as habilidades confirmadas/pendentes do relatório pedagógico (bloco 11), marcando 🔵 o que não foi confirmado.
-6. **Bloco 12 — decisões fechadas neste gate**: decisão · quem decidiu · data · alternativas descartadas. Mais a lista `[ABERTO — dono]` consolidada.
-7. Nunca invente código BNCC, componente de DS, rota ou tabela.
+5. **Bloco 8 completo**: formalize o contrato de customização e preparação docente — parâmetros de input aceitos (tema, foco, contexto), regras e schema Zod de geração por IA (Vertex AI Gemini), fluxo de curadoria docente com preview e edição antes da aula, banco curado default (fallback imediato sem IA), e gatilhos de controle/pausas da turma.
+6. Copie as contas dos tetos do relatório de experiência (bloco 6) e as habilidades confirmadas/pendentes do relatório pedagógico (bloco 11), marcando 🔵 o que não foi confirmado.
+7. **Bloco 12 — decisões fechadas neste gate**: decisão · quem decidiu · data · alternativas descartadas. Mais a lista `[ABERTO — dono]` consolidada.
+8. Nunca invente código BNCC, componente de DS, rota ou tabela.
 
 ## Saída
 

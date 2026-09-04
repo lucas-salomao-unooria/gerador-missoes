@@ -28,21 +28,26 @@ Seu leitor é curadoria e produção de conteúdo, não dev. Você não descreve
 
 ## Entregável 1 — Inventário de assets
 
-| ID | Tipo | Onde aparece (ID de tela) | Pareado com | V1/V2 | Peso estimado | Destino (bundle < 2 MB · bucket `-assets` ≥ 2 MB) | Quem produz | Status |
+Classifique cada asset em um dos três blocos arquiteturais:
+1. **Assets fixos de sistema/UI:** pictogramas de navegação, ícones de gestos e clones de componentes da rede simulada.
+2. **Banco curado padrão (default/fallback):** conjunto pré-fabricado e homologado de posts, mídias e vídeos para uso imediato ou contingência sem IA.
+3. **Assets sintéticos gerados por IA:** templates, prompts e mídias geradas via IA na preparação docente com curadoria humana.
 
-Tipos: vídeo de conteúdo · vídeo de revelação (making of, bastidores) · áudio de narração · pictograma de gesto · ilustração de cena · áudio de podcast · texto/persona (mensagens, perfis fictícios). ID `<tipo>-<missao>-<n>`. Se o professor monta o conjunto a partir de um banco, o banco inteiro entra, com a proporção obrigatória e o pareamento de cada item.
+| ID | Bloco (Fixo UI · Banco Default · Sintético IA) | Tipo | Onde aparece (ID de tela) | Pareado com | V1/V2 | Peso estimado | Destino (bundle < 2 MB · bucket `-assets` ≥ 2 MB) | Quem produz | Status |
+
+Tipos: vídeo de conteúdo · vídeo de revelação (making of, bastidores) · áudio de narração · pictograma de gesto · ilustração de cena · áudio de podcast · texto/persona sintética (posts simulados gerados por IA ou do banco). ID `<tipo>-<missao>-<n>`. Se o professor customiza ou usa o banco padrão, a matriz de pareamento e a proporção obrigatória devem ser rigorosamente descritas.
 
 ## Entregável 2 — Spec por tipo
 
-**Vídeos de conteúdo:** duração, o que aparece, por que passa (ou não) a impressão que a missão precisa, categoria na proporção. **A categoria não pode ser adivinhável pela forma** (duração, nitidez, enquadramento). Sem marca, sem IP, sem pessoa real identificável — nunca criança real. Verossimilhança de vídeo caseiro do ambiente simulado.
+**Vídeos de conteúdo e imagens de posts:** duração, o que aparece, por que passa (ou não) a impressão que a missão precisa, categoria na proporção. **A categoria não pode ser adivinhável pela forma** (duração, nitidez, enquadramento). Sem marca, sem IP, sem pessoa real identificável — nunca criança real. Verossimilhança de post caseiro da rede social simulada.
 
 **Vídeos de revelação:** toda categoria tem o seu par, em formato equivalente (a existência do asset não pode sinalizar a resposta). Visualmente concreto e conectável ao original (mesmo enquadramento inicial, então o que estava escondido). Sem narração que entregue a conclusão.
 
 **Áudios de narração** (anos iniciais: toda string acionável): voz do personagem-guia, mesma intérprete, ritmo lento, sem jargão; duração-alvo por instrução; autoplay na primeira vez, repetição pelo ícone; **arquivo nomeado pela chave da string**.
 
-**Pictogramas de gesto:** um por gesto, traço uniforme, legível pequeno; gesto novo para a faixa vira animação de 1 ciclo. Requisito de acessibilidade, não cortável.
+**Pictogramas de gesto e UI:** um por gesto, traço uniforme, legível pequeno; gesto novo para a faixa vira animação de 1 ciclo. Requisito de acessibilidade, não cortável.
 
-**Texto/personas fictícias:** quantidade, distribuição desenhada para a lição, sem PII real, revisão pedagógica.
+**Texto/personas fictícias e posts gerados por IA:** prompts estruturados para a Vertex AI Gemini na preparação docente; schema Zod estrito; parâmetros de personalização injetados pelo professor; diretrizes de segurança (sem PII real, sem conteúdo nocivo, conformidade etária); amostras homologadas para o banco curado padrão.
 
 ## Entregável 3 — Critérios de reprovação (curtos e literais)
 

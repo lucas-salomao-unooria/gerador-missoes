@@ -53,28 +53,28 @@ Você fecha os critérios 9.1, 9.2 e 9.3 da rubrica. Seu leitor é o dev — e o
 ## Entregáveis
 
 ### 1. Modelo de insumo preenchido (primário)
-As 13 seções, com a origem indicada: 1 ← spec bloco 0 · 2 ← bloco 1 · 3 ← bloco 11 + sua tabela de eventos, como **uma** matriz habilidade → evidência observável → interação que captura → dado gravado · 4 ← bloco 2 + grafo do fluxo · 5 ← escolha do briefing + roteiro da copy · 6 ← bloco 8 + copy da professora + **ações destrutivas** · 7 ← direção por tela + cobertura + coluna `seção` · 8 ← bloco 9 + vocabulário de telemetria, entidades, versão do instrumento · 9 ← spec + rubrica 8.1/8.2 · 10 ← bloco 2 (falhas na voz da ficção) · 11 ← inventário de assets · 12 ← hipóteses 9.3 · 13 ← anexos (FigJam, Figma, sheet, roteiros).
+As 13 seções, com a origem indicada: 1 ← spec bloco 0 · 2 ← bloco 1 · 3 ← bloco 11 + sua tabela de eventos, como **uma** matriz habilidade → evidência observável → interação que captura → dado gravado · 4 ← bloco 2 + grafo do fluxo · 5 ← escolha do briefing + roteiro da copy · 6 ← bloco 8 + tela E0-PROF-01 + copy da professora + **ações destrutivas** · 7 ← direção por tela + cobertura + coluna `seção` · 8 ← bloco 9 + vocabulário de telemetria, entidades (`exp_NN_conteudo_turma`), versão do instrumento · 9 ← spec bloco 8 + rubrica 8.1/8.2 + contrato de geração Vertex AI Gemini / Zod e fallback padrão · 10 ← bloco 2 (falhas na voz da ficção) · 11 ← inventário de assets · 12 ← hipóteses 9.3 · 13 ← anexos (FigJam, Figma, sheet, roteiros).
 
 ### 2. User stories — uma por tela do inventário
 ```
 ### [ID da tela] — <título>
 **Como** estudante | professor **Quero** <ação com o verbo nativo> **Para** <o que resolve>
-**Frame:** <nodeId> · **Strings:** <chaves> · **Etapa:** <1–6> · **Sustenta:** <critérios>
+**Frame:** <nodeId> · **Strings:** <chaves> · **Etapa:** <0–6> · **Sustenta:** <critérios>
 **Critérios de aceite**
 - [ ] <verificável, um por linha>
 - [ ] 🔒 <requisito de conformidade — de onde vem>
 **Estados:** … · **Dependências:** …
 ```
-A marca 🔒 é o núcleo: scaffolding no primeiro uso, áudio + pictograma em instrução acionável, verbo nativo exato, ausência deliberada de UI, teto de decisões — o dev "simplifica" isso por bom senso e reprova a missão. Critério bom: *"o long press desacelera o vídeo enquanto o dedo permanece e retoma ao soltar"*; ruim: *"a câmera lenta funciona bem"*. Referencie chaves de string, nunca transcreva copy.
+A marca 🔒 é o núcleo: tela E0-PROF-01 de preparação com curadoria humana e fallback para banco default, scaffolding no primeiro uso, áudio + pictograma em instrução acionável, verbo nativo exato, ausência deliberada de UI, teto de decisões — o dev "simplifica" isso por bom senso e reprova a missão. Critério bom: *"o long press desacelera o vídeo enquanto o dedo permanece e retoma ao soltar"*; ruim: *"a câmera lenta funciona bem"*. Referencie chaves de string, nunca transcreva copy.
 
 ### 3. Spec de interação e eventos
 Máquina de estados por tela (estado, gatilho, destino, o que persiste) · gatilhos de handoff com a condição exata copiada da spec · tabela de eventos `| Evento | Verbo xAPI | Quando dispara | Campos | Canal (operacional·analítico) | Aparece no dashboard como | Retenção |` — **exatamente o mesmo conjunto de campos, graus de medida, canais e destino de texto livre do bloco 9 da spec** · **métricas proibidas** (escore total, taxa de acerto, ranking) listadas explicitamente.
 
 ### 4. Escopo V1 / V2 (9.1, 9.2)
-`| Item | V1 (mínimo jogável) | V2 | Por quê |`. V1 = a missão inteira com menos variação, entregando a descoberta central e passando nos obrigatórios; **nenhum 🔒 fora do V1**. Lista de requisitos técnicos em linguagem de escopo (telas, estados, assets, integrações, persistência, dashboard). Protocolo de negociação: corte se troca por corte; três níveis (negociável · com troca · não negociável = 🔒).
+`| Item | V1 (mínimo jogável) | V2 | Por quê |`. V1 = a missão inteira com menos variação, entregando a descoberta central e passando nos obrigatórios (inclui banco curado padrão em V1 e endpoint de IA na preparação se aplicável; **nenhum 🔒 fora do V1**). Lista de requisitos técnicos em linguagem de escopo (telas, estados, assets, rota de geração de IA com schema Zod, persistência de turma, dashboard). Protocolo de negociação: corte se troca por corte; três níveis (negociável · com troca · não negociável = 🔒).
 
 ### 5. Telemetria, entidades e o que ninguém perguntou
-Vocabulário xAPI (`attempted`, `interacted`, `progressed`, `completed`, `scored`) com o significado **nesta missão** · entidades a persistir (`exp_NN_*`, campos principais, `escola_id`, RLS) · os nove campos: relógio coletivo · dependências entre missões · tema claro/escuro · versão do instrumento · concorrência · sobrevive a F5 · volume de eventos por sessão × turma · esforço e risco · segunda aplicação.
+Vocabulário xAPI (`attempted`, `interacted`, `progressed`, `completed`, `scored`) com o significado **nesta missão** · entidades a persistir (`exp_NN_*`, `exp_NN_conteudo_turma` com campos de parametrização e JSON curado, `escola_id`, RLS) · os nove campos: relógio coletivo · dependências entre missões · tema claro/escuro · versão do instrumento · concorrência · sobrevive a F5 · volume de eventos por sessão × turma · esforço e risco · segunda aplicação.
 
 ### 6. Hipóteses de validação (9.3)
 O que se assume · o que observar · o que indica falha — priorize o que a construção introduziu de novo.

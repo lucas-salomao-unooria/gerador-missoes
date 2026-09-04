@@ -52,6 +52,7 @@ Marque em cada coluna se ela acontece **dentro** do ambiente simulado ou é um e
 
 | Raia | O que vai nela |
 |---|---|
+| **Preparação docente** | Inputs do professor (tema/contexto), geração de posts/mídias por IA e curadoria/aprovação antes da sessão |
 | **Estudante — vê** | O que está na tela naquele momento |
 | **Estudante — faz** | O verbo nativo exato (desliza, toca, segura, digita) |
 | **Estudante — o que muda** | A consequência visível na tela depois da ação |
@@ -84,7 +85,7 @@ A saída que o próximo agente consome. Uma linha por tela, numerada.
 | ID | Etapa | Ator | Ambiente | Propósito | Peso | Elementos na tela | Ação do aluno (verbo nativo) | Resultado da ação | Estados | Cenário de dispositivo |
 |---|---|---|---|---|---|---|---|---|---|
 
-Convenção de ID: `E<etapa>-<ator>-<n>` — `E2-ALU-01`, `E5-PROF-01`.
+Convenção de ID: `E<etapa>-<ator>-<n>` — `E0-PROF-01` (Preparação e Curadoria de Conteúdo com IA), `E2-ALU-01`, `E5-PROF-01`.
 
 `Peso`: `pico` · `alta` · `média` · `serviço`. Não é gosto — vem das marcas
 do mapa de beats. **Exatamente uma tela recebe `pico`.** `serviço` é espera,
