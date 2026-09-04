@@ -248,6 +248,98 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
         self.assertEqual(_status_icon("blocked"), "🔴")
         self.assertEqual(_status_icon("desconhecido"), "⚪")
 
+    def test_update_pipeline_step_status_revisor_turns_done_on_gate_approval(self):
+        from app import update_pipeline_step_status
+        from pipeline.runner import PipelineExecutionResult
+
+        status = {
+            "OnePagerAgent": "done",
+            "GateEstruturalAgent": "done",
+            "GateEstruturalCheck": "running",
+            "RevisorOnePagerAgent": "pending",
+            "AvaliacaoPedagogicaAgent": "pending",
+        }
+        gates = {}
+        active_agent = "GateEstruturalCheck"
+
+        # GateEstruturalCheck aprova o gate estrutural na rodada 1
+        active_agent = update_pipeline_step_status(
+            status,
+            active_agent,
+            {"type": "gate_status", "status": {"gate_estrutural_status": "aprovado"}},
+            gates,
+        )
+        self.assertEqual(status["GateEstruturalCheck"], "done")
+        self.assertEqual(status["RevisorOnePagerAgent"], "done", "Revisor deve ficar verde (done) ao aprovar o gate")
+
+        # Início do próximo agente (AvaliacaoPedagogicaAgent)
+        active_agent = update_pipeline_step_status(
+            status,
+            active_agent,
+            {"type": "agent_started", "agent_name": "AvaliacaoPedagogicaAgent"},
+            gates,
+        )
+        self.assertEqual(active_agent, "AvaliacaoPedagogicaAgent")
+        self.assertEqual(status["RevisorOnePagerAgent"], "done")
+        self.assertEqual(status["AvaliacaoPedagogicaAgent"], "running")
+
+        # Conclusão do pipeline
+        res = PipelineExecutionResult(
+            session_id="test",
+            user_id="user",
+            prompt="p",
+            final_output="out",
+            state={"gate_estrutural_status": "aprovado"},
+        )
+        update_pipeline_step_status(
+            status,
+            active_agent,
+            {"type": "pipeline_completed", "result": res},
+            gates,
+        )
+        self.assertEqual(status["RevisorOnePagerAgent"], "done")
+        self.assertEqual(status["AvaliacaoPedagogicaAgent"], "done")
+        self.assertNotIn("pending", status.values(), "Nenhum agente ativo deve ficar como pending (ampulheta)")
+
+    def test_update_pipeline_step_status_revisor_runs_when_gate_blocked(self):
+        from app import update_pipeline_step_status
+
+        status = {
+            "OnePagerAgent": "done",
+            "GateEstruturalAgent": "done",
+            "GateEstruturalCheck": "running",
+            "RevisorOnePagerAgent": "pending",
+        }
+        gates = {}
+        active_agent = "GateEstruturalCheck"
+
+        # Gate bloqueado na rodada 1: revisor ainda pendente até iniciar
+        active_agent = update_pipeline_step_status(
+            status,
+            active_agent,
+            {"type": "gate_status", "status": {"gate_estrutural_status": "bloqueado"}},
+            gates,
+        )
+        self.assertEqual(status["RevisorOnePagerAgent"], "pending")
+
+        # Revisor inicia a execução
+        active_agent = update_pipeline_step_status(
+            status,
+            active_agent,
+            {"type": "agent_started", "agent_name": "RevisorOnePagerAgent"},
+            gates,
+        )
+        self.assertEqual(status["RevisorOnePagerAgent"], "running")
+
+        # Próxima rodada do gate inicia
+        active_agent = update_pipeline_step_status(
+            status,
+            active_agent,
+            {"type": "agent_started", "agent_name": "GateEstruturalAgent"},
+            gates,
+        )
+        self.assertEqual(status["RevisorOnePagerAgent"], "done")
+
 
 if __name__ == "__main__":
     unittest.main()

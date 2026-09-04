@@ -199,6 +199,81 @@ def render_sidebar() -> Dict[str, Any]:
     return {"stages": stages, "modo_estrito": modo_estrito, "thinking_budget": thinking_presets[selected_label], "include_thoughts": include_thoughts}
 
 
+def update_pipeline_step_status(
+    status: Dict[str, str],
+    active_agent: Optional[str],
+    event: Dict[str, Any],
+    gates: Dict[str, Any],
+) -> Optional[str]:
+    """Atualiza o status dos agentes (pending, running, done, skipped) com base no evento do pipeline.
+    
+    Garante que agentes como o Revisor do one-pager (que só roda em caso de reprovação no gate)
+    fiquem verdes (done) quando o gate estrutural aprova de primeira sem necessidade de correções.
+    """
+    et = event.get("type")
+    if et == "agent_started":
+        name = event.get("agent_name", "")
+        if active_agent and status.get(active_agent) == "running":
+            status[active_agent] = "done"
+        active_agent = name
+        if name in status:
+            status[name] = "running"
+
+        # Se avançou para agentes posteriores ao gate estrutural e o revisor ainda está pendente:
+        if name not in ("OnePagerAgent", "GateEstruturalAgent", "GateEstruturalCheck", "RevisorOnePagerAgent"):
+            ge_st = str(gates.get("gate_estrutural_status", "")).strip().lower()
+            if ge_st in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
+                if status.get("RevisorOnePagerAgent") == "pending":
+                    status["RevisorOnePagerAgent"] = "done"
+            if status.get("GateEstruturalCheck") == "running":
+                status["GateEstruturalCheck"] = "done"
+
+    elif et == "agent_chunk":
+        name = event.get("agent_name", "")
+        if "não executado" in (event.get("chunk") or "") and name in status:
+            status[name] = "skipped"
+
+    elif et == "gate_status":
+        new_status = event.get("status") or {}
+        gates.update(new_status)
+        ge_st = str(new_status.get("gate_estrutural_status") or gates.get("gate_estrutural_status") or "").strip().lower()
+        if ge_st in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
+            if status.get("RevisorOnePagerAgent") == "pending":
+                status["RevisorOnePagerAgent"] = "done"
+            if status.get("GateEstruturalCheck") == "running":
+                status["GateEstruturalCheck"] = "done"
+        if new_status.get("gate_final_status") and status.get("GateFinalProdutoCheck") == "running":
+            status["GateFinalProdutoCheck"] = "done"
+        if new_status.get("design_status") and status.get("QaEntregaveisCheck") == "running":
+            status["QaEntregaveisCheck"] = "done"
+        if new_status.get("dev_status") and status.get("ValidacaoDevCheck") == "running":
+            status["ValidacaoDevCheck"] = "done"
+
+    elif et == "pipeline_completed":
+        result = event.get("result")
+        is_blocked = getattr(result, "bloqueado", False) if result else False
+        res_state = getattr(result, "state", {}) if result else {}
+
+        for k in status:
+            if status[k] == "running":
+                status[k] = "done"
+
+        # Se o gate estrutural foi aprovado (ou o pipeline avançou), o revisor fica concluído (verde):
+        ge_st = str(gates.get("gate_estrutural_status") or res_state.get("gate_estrutural_status") or "").strip().lower()
+        if status.get("RevisorOnePagerAgent") == "pending":
+            if ge_st in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢") or not is_blocked:
+                status["RevisorOnePagerAgent"] = "done"
+            else:
+                status["RevisorOnePagerAgent"] = "skipped"
+
+        # Nenhum agente deve permanecer indefinidamente com ícone de ampulheta (pending) após conclusão:
+        for k in status:
+            if status[k] == "pending":
+                status[k] = "skipped" if is_blocked else "done"
+
+    return active_agent
+
+
 async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_container, doc_batch: Optional[DocumentBatch]):
     active = set(opts["stages"]) | {"transversal"}
     stages = [s for s in STAGES if s["key"] in active]
@@ -237,34 +312,24 @@ async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_co
         doc_batch=doc_batch,
     ):
         et = event.get("type")
+        active_agent = update_pipeline_step_status(status, active_agent, event, gates)
+
         if et == "agent_started":
             name = event["agent_name"]
-            if active_agent and status.get(active_agent) == "running":
-                status[active_agent] = "done"
-            active_agent = name
-            if name in status:
-                status[name] = "running"
             progress.info(f"🔄 Executando **{name}**…")
             render()
         elif et == "agent_chunk":
-            name = event["agent_name"]
-            if "não executado" in (event.get("chunk") or "") and name in status:
-                status[name] = "skipped"
+            if "não executado" in (event.get("chunk") or ""):
+                render()
         elif et == "agent_tool_call":
             tool_log.append(f"{event['agent_name']} → {', '.join(event['tools'])}")
             progress.info(f"🎨 **{event['agent_name']}** chamou Figma MCP: `{', '.join(event['tools'])}`")
         elif et == "agent_thought_chunk":
             progress.info(f"🧠 **{event['agent_name']}** raciocinando…")
         elif et == "gate_status":
-            gates.update(event["status"])
             render()
         elif et == "pipeline_completed":
             result = event["result"]
-            for k in status:
-                if status[k] == "running":
-                    status[k] = "done"
-                if result.bloqueado and status[k] == "pending":
-                    status[k] = "skipped"
             render()
             if result.bloqueado:
                 progress.warning(f"⛔ Missão bloqueada nos gates de produto em **{result.duration_seconds:.0f}s** — veja o relatório e o alerta.")
@@ -310,6 +375,8 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
                 continue
             shown = True
             with st.expander(f"{meta['icon']} {meta['name']}", expanded=False):
+                if meta.get("id") == "RevisorOnePagerAgent" and "RevisorOnePagerAgent" not in (result.step_outputs or {}):
+                    st.caption("ℹ️ *One-pager aprovado no gate estrutural sem necessidade de revisão. Exibindo a versão aprovada:*")
                 st.markdown(value)
         if not shown:
             st.caption("Nenhuma saída registrada para esta etapa.")
