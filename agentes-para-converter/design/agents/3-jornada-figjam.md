@@ -42,9 +42,9 @@ Um único arquivo FigJam por missão, com três seções.
 
 ### Seção 1 — Mapa de jornada (a grade principal)
 
-**Colunas** = as 6 etapas, na ordem, mais o breakpoint quando a missão tem mais de uma aula:
+**Colunas** = as 6 etapas, na ordem, mais o checkpoint de controle docente quando a missão prevê pausa ou divisão em aulas:
 
-`Desafiar → Navegar → Decidir → Resultado/Aha → ⟨BREAKPOINT⟩ → Explicar → Refletir`
+`Desafiar → Navegar → Decidir → Resultado/Aha → ⟨CHECKPOINT / PAUSA DOCENTE⟩ → Explicar → Refletir`
 
 Marque em cada coluna se ela acontece **dentro** do ambiente simulado ou é um escape permitido (tela de contexto na abertura, campo de reflexão no fechamento). Use a mesma marcação da tabela "Verificação de ambiente" do one-pager. Se alguma etapa estiver fora do ambiente sem ser um dos dois escapes, **pare e devolva ao QA** — é violação do 2.1 que passou despercebida.
 

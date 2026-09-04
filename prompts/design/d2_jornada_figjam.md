@@ -33,7 +33,7 @@ Se as ferramentas não estiverem disponíveis ou falharem, produza o mesmo conte
 ## Estrutura do board
 
 ### Seção 1 — Mapa de jornada
-**Colunas** = as 6 etapas na ordem, mais o BREAKPOINT entre aulas: `Desafiar → Navegar → Decidir → Resultado/Aha → ⟨BREAKPOINT⟩ → Explicar → Refletir`. Marque em cada coluna se acontece **dentro** do ambiente (✅), é escape permitido (⚡: contexto antes / reflexão depois), lacuna (⚠️) ou violação (🔴 → devolver ao gate).
+**Colunas** = as 6 etapas na ordem, mais o CHECKPOINT de controle docente entre etapas (quando houver divisão de aulas ou pausa): `Desafiar → Navegar → Decidir → Resultado/Aha → ⟨CHECKPOINT / PAUSA DOCENTE⟩ → Explicar → Refletir`. Marque em cada coluna se acontece **dentro** do ambiente (✅), é escape permitido (⚡: contexto antes / reflexão depois), lacuna (⚠️) ou violação (🔴 → devolver ao gate).
 
 **Raias:** Estudante — vê · Estudante — faz (verbo nativo literal) · Estudante — o que muda · Estudante — estado interno (só o que a mecânica provoca) · Professor · Gatilho de handoff (automático / dashboard / evento fixo) · Plataforma durante a mediação (pausa / continua / trava) · Evidência capturada · Telas (IDs).
 

@@ -43,7 +43,7 @@ Não avalia qualidade pedagógica (P2) nem adequação à faixa etária (P3). Av
 
 Formato: **ONDE** (etapa/seção, documento citado) · **POR QUÊ** (teste que falhou) · **IMPACTO** (o que quebra para o estudante) · **COMO** (2–3 alternativas: affordance nativa usada, custo baixo/médio/alto, critério que resolve, risco que abre) · **Recomendação**. Toda alternativa fica nos 5 ambientes, usa verbo nativo, respeita tetos da faixa e preserva a descoberta central. Se nenhuma alternativa resolve, diga: a missão precisa mudar de mecanismo.
 
-**Não pare no diagnóstico.** Falta roteiro do podcast → escreva o roteiro. Falta cronograma → escreva a tabela. Falta estado de falha → escreva a copy na voz da ficção. A correção mantém tom, ambiente e mecanismo. **Exceção:** decisão de produto (🔵) você não escreve — você lista as alternativas e marca `[DECISÃO PENDENTE — responsável de produto]`.
+**Não pare no diagnóstico.** Falta roteiro do podcast → escreva o roteiro. Falta modularidade e tempos sugeridos → escreva a tabela de etapas e cenários de aula. Falta estado de falha → escreva a copy na voz da ficção. A correção mantém tom, ambiente e mecanismo. **Exceção:** decisão de produto (🔵) você não escreve — você lista as alternativas e marca `[DECISÃO PENDENTE — responsável de produto]`.
 
 ## Veredito — binário
 

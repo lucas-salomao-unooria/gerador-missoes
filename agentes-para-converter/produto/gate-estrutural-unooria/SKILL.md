@@ -1,6 +1,6 @@
 ---
 name: gate-estrutural-unooria
-description: "Gate de completude estrutural e fechamento de spec de missões Unooria — checa se o documento está completo, o ambiente é válido, os verbos são nativos, cronograma/podcast/dispositivos estão mapeados e, principalmente, se designer e dev conseguem implementar sem inventar regra de produto. Use sempre que Vini pedir para validar uma missão, rodar a rubrica ou checar se está pronta. Roda PRIMEIRO, antes de avaliacao-pedagogica-unooria e experiencia-aluno-unooria; missão com obrigatório aberto não segue na esteira."
+description: "Gate de completude estrutural e fechamento de spec de missões Unooria — checa se o documento está completo, o ambiente é válido, os verbos são nativos, modularidade/tempos sugeridos/checkpoints/dispositivos estão mapeados e, principalmente, se designer e dev conseguem implementar sem inventar regra de produto. Use sempre que Vini pedir para validar uma missão, rodar a rubrica ou checar se está pronta. Roda PRIMEIRO, antes de avaliacao-pedagogica-unooria e experiencia-aluno-unooria; missão com obrigatório aberto não segue na esteira."
 ---
 
 # Gate Estrutural — Missões Unooria
@@ -17,7 +17,7 @@ A tabela completa de critérios está em `references/criterios-gate.md` — leia
 |---|---|---|
 | 1. Estrutura (6 etapas) | 1.1–1.7 | Obrigatório |
 | 2. Ambiente e verbos | 2.1, 2.6 | Obrigatório |
-| 4. Logística de aula | 4.5, 4.6, 4.7 | Obrigatório |
+| 4. Logística de aula e modularidade | 4.5, 4.6, 4.7 | Obrigatório |
 | 7. Evidência e registro | 7.1–7.4 | Obrigatório (7.4 como sugestão) |
 | 9. Viabilidade e fechamento de spec | 9.1 obrigatório; 9.2–9.4 (9.4 obrigatório, 9.2–9.3 desejáveis) | Implementabilidade sem decisão aberta |
 | 10. Infraestrutura | 10.1–10.3 | Obrigatório (10.3 desejável) |
@@ -85,7 +85,7 @@ A tabela completa de critérios está em `references/criterios-gate.md` — leia
 
    Se **nenhuma** alternativa dentro dos 6 ambientes resolver, diga isso explicitamente: a missão precisa mudar de mecanismo, não forçar encaixe.
 
-   Não pare no diagnóstico. Não pare em "falta roteiro do podcast" — escreva o roteiro. Não pare em "falta cronograma" — escreva a tabela. A correção mantém o tom, o ambiente e o mecanismo da missão.
+   Não pare no diagnóstico. Não pare em "falta roteiro do podcast" — escreva o roteiro. Não pare em "falta modularidade/tempos sugeridos" — escreva a tabela de etapas e cenários de aula. A correção mantém o tom, o ambiente e o mecanismo da missão.
 
 ## Veredito — binário
 

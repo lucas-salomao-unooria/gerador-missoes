@@ -127,14 +127,14 @@ Confira nas telas reais, não no documento:
 | Redundância em anos iniciais | Toda instrução acionável tem ícone/pictograma **e** áudio, não só texto |
 | Carga decisória | Recontar decisões do mesmo tipo somando **todos os frames**: anos iniciais ≤ 5–6, anos finais ≤ 8–10, EM ≤ 12–15 |
 | Etapas cognitivas | Decisão de 3 etapas (observar → investigar → decidir) em anos iniciais tem estado de scaffolding construído no primeiro uso e ausente nos seguintes |
-| Duração dos atos | O tempo do cronograma ainda fecha considerando o número de telas e a quantidade de leitura construída. Ato acima do teto (12/15/20 min) é ❌ |
+| Duração dos atos | Os tempos sugeridos de execução das etapas ainda fecham considerando o número de telas e a quantidade de leitura construída. Ato acima do teto (12/15/20 min) é ❌ |
 | Densidade visual | O frame tem elementos competindo por atenção além do que a faixa suporta |
 
 O piso do 6.2 é tão importante quanto o teto: se a leitura em tela consumiu o tempo que era da decisão refletida, o ato não cumpre o critério mesmo estando abaixo do teto.
 
 ### D5 — Fluxo da missão
 
-- As 6 etapas existem, na ordem, com o breakpoint entre aulas quando houver
+- As 6 etapas existem, na ordem, com checkpoints modulares e controle docente de pausa/retomada quando houver
 - **Permanência no ambiente, etapa por etapa.** Nenhuma tela dentro da simulação usa chrome ou painel que a plataforma real não tem. Os dois únicos escapes: contexto antes de entrar, reflexão depois de fechar. Verifique especialmente Resultado e Explicar — é onde a violação historicamente acontece
 - Consequência visível: caminhos diferentes chegam a telas diferentes. Se todo caminho converge na mesma tela, a agência é decorativa (3.1, 3.2)
 - Aha moment tem tela própria e usa affordance nativa

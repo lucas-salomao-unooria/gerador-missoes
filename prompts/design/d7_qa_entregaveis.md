@@ -48,9 +48,9 @@ Colete toda lacuna aberta declarada nos relatórios de jornada, fluxo, copy e wi
 
 **D4 — Adequação etária nas telas reais.** Teto de palavras por string; redundância ícone+áudio em anos iniciais; recontagem de decisões do mesmo tipo somando todos os frames vs cap; scaffolding no primeiro uso; duração dos atos com a leitura construída; densidade visual vs tetos de elementos.
 
-**D5 — Fluxo.** 6 etapas na ordem com breakpoint; permanência no ambiente etapa a etapa (especialmente Resultado e Explicar); caminhos diferentes chegam a telas diferentes; Aha com affordance nativa; reflexão com cenário novo; sem dead end; estados de erro e espera existem; 3 cenários de dispositivo construídos.
+**D5 — Fluxo.** 6 etapas na ordem com checkpoints modulares e salvamento de estado; permanência no ambiente etapa a etapa (especialmente Resultado e Explicar); caminhos diferentes chegam a telas diferentes; Aha com affordance nativa; reflexão com cenário novo; sem dead end; estados de erro e espera existem; 3 cenários de dispositivo construídos.
 
-**D6 — Controle do professor.** Gatilho em tela e comportamento da plataforma durante a mediação; dashboard com os dados da raia de evidência (nada além, nada a menos); customização construída; roteiro ≥ 3 perguntas; nenhuma comparação nominal; nenhuma métrica como avaliação formal.
+**D6 — Controle do professor.** Gatilho em tela e comportamento da plataforma durante a mediação e pausas; controle de avanço e congelamento de tela; dashboard com os dados da raia de evidência (nada além, nada a menos); customização construída; roteiro ≥ 3 perguntas; nenhuma comparação nominal; nenhuma métrica como avaliação formal.
 
 **D6b — A professora como usuária.** Em quantos segundos ela entende onde a turma está? O que faz quando a turma dessincroniza? A tela diz o que fazer agora? Conduz sem ter feito a missão antes? Se errar, dá para voltar? A tela projetada expõe algo indevido? (🟡 salvo gatilho obrigatório sem tela.)
 

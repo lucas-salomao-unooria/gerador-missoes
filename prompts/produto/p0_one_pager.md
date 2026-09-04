@@ -4,7 +4,7 @@ Sua função é transformar o que o time entregou — um briefing curto, uma ide
 
 ## Contexto da plataforma
 
-A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão** é uma experiência imersiva de letramento digital que simula, com fidelidade, um de **cinco ambientes suportados** — Instagram (seção do DS `instanooria`), YouTube (`unitube`), ChatGPT (`chatgpt`), TikTok (`tiktooria`), WhatsApp (`whatsappmobile`) — dentro de um **framework de 6 etapas**: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. A conta dentro da simulação é do próprio estudante; os verbos são nativos da plataforma real; a experiência inteira acontece dentro do ambiente (escapes permitidos: tela de contexto antes e reflexão depois). O professor conduz com gatilhos de handoff, dashboard e roteiro de debate. Duas aulas de 30–35 min com breakpoint e podcast de recapitulação.
+A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão** é uma experiência imersiva de letramento digital que simula, com fidelidade, um de **cinco ambientes suportados** — Instagram (seção do DS `instanooria`), YouTube (`unitube`), ChatGPT (`chatgpt`), TikTok (`tiktooria`), WhatsApp (`whatsappmobile`) — dentro de um **framework de 6 etapas**: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. A conta dentro da simulação é do próprio estudante; os verbos são nativos da plataforma real; a experiência inteira acontece dentro do ambiente (escapes permitidos: tela de contexto antes e reflexão depois). O professor conduz com gatilhos de handoff, dashboard e roteiro de debate. Missões estruturadas em etapas modulares com tempos sugeridos de execução, checkpoints de salvamento de estado e controle soberano do professor sobre o andamento, adaptáveis à aula escolar de 50 min (aula única, duas aulas ou sessões fracionadas de 20–40 min) e com podcast de recapitulação.
 
 ## Regras
 
@@ -22,7 +22,7 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 # One-pager — <nome da missão> v<x>
 
 ## 0. Identificação
-Slug · Nome que o estudante vê · Ano/série (formato `["4EF"]`) · Bimestre · Unidade da trilha · Ambiente simulado (um dos 5) · Seção do DS · Modalidade (individual/dupla/grupo) · Duração (2 aulas de 30–35 min) · Público: estudante
+Slug · Nome que o estudante vê · Ano/série (formato `["4EF"]`) · Bimestre · Unidade da trilha · Ambiente simulado (um dos 5) · Seção do DS · Modalidade (individual/dupla/grupo) · Tempo sugerido de execução (ex.: ~30–45 min total em etapas modulares) · Arranjo pedagógico sugerido (aula única de 50 min, 2 aulas de 50 min ou sessões fracionadas) · Público: estudante
 
 ## 1. Descoberta central
 Uma frase, como o estudante diria o que descobriu. Eixo temático. Eixo de Pensamento Computacional.
@@ -51,8 +51,8 @@ Conexão cai · sessão expira · mídia não carrega · professor não libera �
 ## 9. Papel do professor
 Antes / durante / depois; gatilhos de handoff (automático, dashboard ou timer); comportamento da plataforma durante a mediação; quem terminou cedo; customização; dashboard (dados); roteiro de perguntas do debate (≥ 3, escritas).
 
-## 10. Cronograma e formato de 2 aulas
-Tabela dos 7 blocos (preparação fora do tempo, ambiente, laboratório, explicação, debate, mediação, reflexão) com minutos e sobreposições; breakpoint e tela de encerramento; estado salvo entre aulas; modo aula única com trade-offs.
+## 10. Modularidade, tempos sugeridos e controle do professor (etapas, checkpoints e flexibilidade de aulas)
+Tabela das etapas/blocos com tempos sugeridos de execução e sobreposições declaradas (preparação fora do tempo em tela dos estudantes); checkpoints explícitos de pausa e salvamento de estado no servidor; controle docente sobre o avanço e congelamento da turma; cenários de aplicação sugeridos: aula única (50 min), 2 aulas (2x 50 min) e sessões fracionadas (20–40 min).
 
 ## 11. Podcast de recapitulação
 Roteiro completo, 2 apresentadores, 5 blocos (abertura ~30s, recapitulação ~1–1,5 min, revelação ~1–1,5 min, provocação ~30s–1 min, encerramento ~15s), 3–5 min.
@@ -70,7 +70,7 @@ IA (papel e limites, ou N/A), privacidade, sem rotulação do estudante, tom sem
 Decisões do mesmo tipo (conta), opções por decisão, duração por ato, etapas cognitivas por decisão, teto de palavras por string.
 
 ## 16. Requisitos técnicos e escopo
-V1 mínimo jogável vs V2; assets necessários; integrações; persistência entre aulas.
+V1 mínimo jogável vs V2; assets necessários; integrações; persistência entre etapas e sessões.
 
 ## 17. Hipóteses de validação
 O que se assume, o que observar no teste, o que indica falha.

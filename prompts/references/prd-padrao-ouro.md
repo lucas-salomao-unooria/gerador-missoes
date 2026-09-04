@@ -52,7 +52,7 @@ Lista explícita com motivo. Inclui V2 (o que fica para depois) e o que a rubric
 Estudante (ano, faixa etária, perfil cognitivo — caps de decisão e leitura), Professor (preparo, condução, leitura), Gestor (só agregado). Cenários de dispositivo (1:1, 2–4 por aparelho, projeção única).
 
 # 5. Experiência — narrativa e mecânica (as 6 etapas)
-Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. Por etapa: o que o sistema apresenta, ordena, bloqueia e garante; verbo nativo; ator. Descoberta central e o beat exato. Breakpoint entre aulas, podcast, cronograma de 7 blocos. Ausências declaradas do ambiente. Briefing de ofício (aposta, pico, beat memorável, não-negociáveis).
+Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. Por etapa: o que o sistema apresenta, ordena, bloqueia e garante; verbo nativo; ator. Descoberta central e o beat exato. Checkpoints modulares entre etapas com persistência de estado, tempos sugeridos de execução, controle docente de ritmo, podcast de recapitulação e flexibilidade para formatos de aula (50 min, 2 aulas ou sessões fracionadas). Ausências declaradas do ambiente. Briefing de ofício (aposta, pico, beat memorável, não-negociáveis).
 
 # 6. Fluxo e máquina de estados
 Estados com nome próprio (viram enum), tabela de transições (estado inicial · gatilho · regra · estado seguinte · responsável · reversível?), caminhos degenerados com rota, gates de professora, estados de falha na voz da ficção, reentrada (F5, outro dia), latch, conclusão, segunda aplicação. Diagrama Mermaid `stateDiagram-v2` + link do FigJam.
