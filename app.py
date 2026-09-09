@@ -24,6 +24,9 @@ from pipeline.runner import PipelineExecutionResult, run_orchestrator_pipeline_s
 from pipeline.session_store import (
     create_session_zip,
     delete_saved_session,
+    extrair_metadados_frontmatter,
+    extrair_titulo_missao,
+    formatar_status_label,
     list_saved_sessions,
     load_saved_session,
 )
@@ -165,7 +168,7 @@ def render_sidebar() -> Dict[str, Any]:
                                 key=f"sess_{s['dir_name']}",
                                 use_container_width=True,
                                 type="primary" if is_active else "secondary",
-                                help=f"{s['title']}\n📅 {s['created_at']} | Status: {s['status']} | 📄 {s['files_count']} arquivos",
+                                help=f"{s['title']}\n📅 {s['created_at']} | Status: {s.get('status_label', s['status'])} | 📄 {s['files_count']} arquivos",
                             ):
                                 loaded = load_saved_session(s["dir_name"])
                                 if loaded:
@@ -390,6 +393,23 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
     gates = result.gates
     sid = str(getattr(result, "session_id", None) or "session")
     prefix = f"{key_prefix}_{sid}" if key_prefix else f"{sid}_{id(result)}"
+
+    # Título principal da missão e status amigável
+    mission_title = extrair_titulo_missao(result.state, fallback="Missão")
+    mission_status = getattr(result, "status", "success")
+    prd_text = result.state.get("prd_final") or result.final_output
+    prd_meta, _ = extrair_metadados_frontmatter(prd_text)
+    if prd_meta.get("status"):
+        mission_status = prd_meta["status"]
+
+    status_label = formatar_status_label(mission_status)
+
+    col_t1, col_t2 = st.columns([4, 1.5])
+    with col_t1:
+        st.markdown(f"### 🎯 {mission_title}")
+    with col_t2:
+        st.markdown(f"**Status:** {status_label}")
+
     if gates:
         st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS[k]}" for k, v in gates.items() if k in GATE_LABELS))
     if getattr(result, "bypassed", False):
@@ -397,8 +417,24 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
     tabs = st.tabs(["📘 PRD", "🧭 Produto", "🎨 Design", "🛠️ Dev", "🧠 Aprendizado", "💭 Pensamentos", "📦 Artefatos & Figma", "🔍 Estado (JSON)"])
 
     with tabs[0]:
-        if result.state.get("prd_final"):
-            st.markdown(result.state["prd_final"])
+        if prd_text:
+            meta, body = extrair_metadados_frontmatter(prd_text)
+            if meta:
+                with st.expander("📋 Metadados do PRD", expanded=False):
+                    m_c1, m_c2, m_c3 = st.columns(3)
+                    m_c1.markdown(f"**ID:** `{meta.get('prd_id', '-')}`")
+                    m_c1.markdown(f"**Versão:** `{meta.get('versao', '0.1.0')}`")
+                    m_c2.markdown(f"**Série:** `{meta.get('serie', '-')}`")
+                    m_c2.markdown(f"**Ambiente:** `{meta.get('ambiente_simulado', '-')}`")
+                    m_c3.markdown(f"**Data:** `{meta.get('data', '-')}`")
+                    m_c3.markdown(f"**Slug:** `{meta.get('slug_experiencia', '-')}`")
+                    if "owners" in meta:
+                        st.markdown(f"**Owners:** `{meta['owners']}`")
+                    if "links" in meta:
+                        st.markdown(f"**Links:** `{meta['links']}`")
+                st.markdown(body)
+            else:
+                st.markdown(prd_text)
         else:
             st.info("O PRD não foi gerado (pipeline bloqueado ou etapa Dev desligada). Abaixo, a saída mais relevante:")
             st.markdown(result.final_output)
@@ -618,7 +654,8 @@ def main():
             display = user_prompt
             if doc_batch and doc_batch.documents:
                 display += "\n\n📎 **Anexos:** " + ", ".join(f"`{d.name}`" for d in doc_batch.documents)
-            st.session_state.messages.append({"role": "user", "content": display})
+            # Inicia conversa limpa para a nova missão (evita acumular sessões anteriores)
+            st.session_state.messages = [{"role": "user", "content": display}]
             with st.chat_message("user"):
                 st.markdown(display)
 

@@ -13,7 +13,9 @@ from pipeline.runner import PipelineExecutionResult
 from pipeline.session_store import (
     create_session_zip,
     delete_saved_session,
+    extrair_metadados_frontmatter,
     extrair_titulo_missao,
+    formatar_status_label,
     list_saved_sessions,
     load_saved_session,
     save_session_record,
@@ -247,6 +249,104 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
         self.assertEqual(_status_icon("bloqueado"), "🔴")
         self.assertEqual(_status_icon("blocked"), "🔴")
         self.assertEqual(_status_icon("desconhecido"), "⚪")
+
+    def test_extrair_titulo_frontmatter_yaml(self):
+        prd_text = (
+            "---\n"
+            "prd_id: PRD-exp-15-autoria-ia\n"
+            "titulo: \"O Diário de Criação com IA: Quem é o Autor?\"\n"
+            "versao: 0.1.0\n"
+            "status: em-revisao\n"
+            "slug_experiencia: exp-15-autoria-ia\n"
+            "serie: [\"3EM\"]\n"
+            "ambiente_simulado: chatgpt\n"
+            "---\n\n"
+            "# 0. Resumo executivo\n"
+            "Conteúdo da missão..."
+        )
+        # Teste com prd_final no state
+        title = extrair_titulo_missao({"prd_final": prd_text})
+        self.assertEqual(title, "O Diário de Criação com IA: Quem é o Autor?")
+
+        # Teste com fallback recebendo texto de frontmatter bruto
+        title_from_fallback = extrair_titulo_missao({}, fallback=prd_text)
+        self.assertEqual(title_from_fallback, "O Diário de Criação com IA: Quem é o Autor?")
+
+    def test_extrair_metadados_frontmatter(self):
+        prd_text = (
+            "---\n"
+            "prd_id: PRD-exp-15-autoria-ia\n"
+            "titulo: \"O Diário de Criação com IA: Quem é o Autor?\"\n"
+            "status: em-revisao\n"
+            "---\n\n"
+            "# 0. Resumo executivo\n"
+            "Conteúdo"
+        )
+        meta, body = extrair_metadados_frontmatter(prd_text)
+        self.assertEqual(meta.get("prd_id"), "PRD-exp-15-autoria-ia")
+        self.assertEqual(meta.get("titulo"), "O Diário de Criação com IA: Quem é o Autor?")
+        self.assertEqual(meta.get("status"), "em-revisao")
+        self.assertTrue(body.startswith("# 0. Resumo executivo"))
+        self.assertNotIn("prd_id:", body)
+
+    def test_load_saved_session_prevents_duplication(self):
+        state = {
+            "prd_final": (
+                "---\n"
+                "prd_id: PRD-exp-15-autoria-ia\n"
+                "titulo: \"O Diário de Criação com IA: Quem é o Autor?\"\n"
+                "status: em-revisao\n"
+                "---\n\n"
+                "# 0. Resumo executivo"
+            )
+        }
+        run_dir = save_run_artifacts(state, session_id="sess_dup_test", prompt="Missão com IA")
+
+        class MockResult:
+            session_id = "sess_dup_test"
+            user_id = "user_test"
+            status = "success"
+            duration_seconds = 10.0
+            gates = {}
+            attached_files = []
+            step_thoughts = {}
+
+        # Simula salvar histórico com a mensagem de boas-vindas acidentalmente incluída
+        save_session_record(
+            run_dir=run_dir,
+            session_id="sess_dup_test",
+            user_id="user_test",
+            prompt="Missão com IA",
+            result=MockResult(),
+            messages=[
+                {"role": "assistant", "content": "👋 Olá! Sou o Gerador de Missões Unooria."},
+                {"role": "user", "content": "Missão com IA"},
+                {"role": "assistant", "content": "📘 PRD gerado."},
+            ],
+        )
+
+        sessions = list_saved_sessions()
+        self.assertEqual(len(sessions), 1)
+        self.assertEqual(sessions[0]["title"], "O Diário de Criação com IA: Quem é o Autor?")
+
+        # Ao carregar, a mensagem de boas-vindas deve ter sido removida e apenas a resposta final tem pipeline_result
+        loaded = load_saved_session(sessions[0]["dir_name"])
+        self.assertIsNotNone(loaded)
+        msgs, res, meta = loaded
+
+        # Deve conter apenas 2 mensagens: 1 do usuário e 1 do assistente
+        self.assertEqual(len(msgs), 2)
+        self.assertEqual(msgs[0]["role"], "user")
+        self.assertIsNone(msgs[0]["pipeline_result"])
+
+        self.assertEqual(msgs[1]["role"], "assistant")
+        self.assertIsNotNone(msgs[1]["pipeline_result"], "Somente a mensagem final do assistente deve ter pipeline_result")
+
+        # Metadados limpos
+        self.assertEqual(meta["title"], "O Diário de Criação com IA: Quem é o Autor?")
+        self.assertEqual(meta["status_label"], "🟡 Em revisão")
+
+        delete_saved_session(sessions[0]["dir_name"])
 
     def test_update_pipeline_step_status_revisor_turns_done_on_gate_approval(self):
         from app import update_pipeline_step_status

@@ -23,30 +23,134 @@ def _safe_str(val: Any) -> str:
     return str(val) if val is not None else ""
 
 
+def extrair_metadados_frontmatter(texto: str) -> Tuple[Dict[str, str], str]:
+    """Separa o frontmatter YAML (se houver) do restante do documento Markdown.
+    
+    Retorna (metadados_dict, corpo_sem_frontmatter).
+    """
+    if not texto or not isinstance(texto, str):
+        return {}, _safe_str(texto)
+
+    m = re.match(r"^\s*---\s*\n(.*?)\n---\s*\n?(.*)$", texto, re.DOTALL)
+    if not m:
+        return {}, texto
+
+    raw_frontmatter, body = m.groups()
+    meta: Dict[str, str] = {}
+    for line in raw_frontmatter.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split(":", 1)
+        if len(parts) == 2:
+            k = parts[0].strip()
+            v = parts[1].strip().strip("\"'")
+            meta[k] = v
+
+    return meta, body.strip()
+
+
+def formatar_status_label(status: str) -> str:
+    """Retorna um label formatado com emoji amigável para o status da missão."""
+    s = (status or "").strip().lower()
+    if s in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
+        return "🟢 Aprovado"
+    if s in ("em-revisao", "em_revisao", "em revisão", "revisao", "revisão"):
+        return "🟡 Em revisão"
+    if s in ("bypassed", "bypass", "amarelo", "🟡", "ressalvas", "ressalva", "alerta", "warning", "apto_com_ressalvas"):
+        return "🟡 Aprovado com ressalvas"
+    if s in ("bloqueado", "bloqueada", "blocked", "reprovado", "vermelho", "🔴", "nao_apto"):
+        return "🔴 Bloqueado"
+    if s in ("draft", "rascunho"):
+        return "⚪ Rascunho"
+    if s in ("em-implementacao", "em_implementacao", "em implementação"):
+        return "🔵 Em implementação"
+    if s in ("lancado", "lançado"):
+        return "🟣 Lançado"
+    return f"⚪ {status.capitalize()}" if status else "⚪ Indefinido"
+
+
 def extrair_titulo_missao(state: Dict[str, Any], fallback: str = "Missão Sem Título") -> str:
-    """Extrai o título amigável da missão a partir do one-pager ou spec."""
-    spec = _safe_str(state.get("spec_missao") or state.get("one_pager"))
-    if not spec:
-        return fallback
+    """Extrai o título amigável da missão a partir do prd_final, spec_missao, one_pager ou fallback."""
+    fontes = [
+        state.get("prd_final"),
+        state.get("spec_missao"),
+        state.get("one_pager"),
+    ]
 
-    # Procura 'Nome que o estudante vê: ...'
-    m_nome = re.search(r"\*?\*?Nome que o estudante vê:\*?\*?\s*([^\n\r]+)", spec, re.IGNORECASE)
-    if m_nome:
-        clean = m_nome.group(1).strip().strip("*_`\"'")
-        if clean:
-            return clean
+    # Prioridade 1: 'Nome que o estudante vê: ...' em qualquer das fontes
+    for fonte in fontes:
+        txt = _safe_str(fonte).strip()
+        if not txt:
+            continue
+        m_nome = re.search(r"\*?\*?Nome que o estudante vê:\*?\*?\s*([^\n\r]+)", txt, re.IGNORECASE)
+        if m_nome:
+            clean = m_nome.group(1).strip().strip("*_`\"'")
+            if clean:
+                return clean
 
-    # Procura '# One-pager — ...' ou '# Spec — ...'
-    m_header = re.search(r"^#\s+(?:One-pager|Spec)\s+[—-]\s+([^\n\r]+)", spec, re.MULTILINE | re.IGNORECASE)
-    if m_header:
-        clean = m_header.group(1).strip().strip("*_`\"'")
-        # remove versão no final ex: v1.0
-        clean = re.sub(r"\s+v\d+(?:\.\d+)?.*$", "", clean).strip()
-        if clean:
-            return clean
+    # Prioridade 2: Frontmatter YAML 'titulo: ...'
+    for fonte in fontes:
+        txt = _safe_str(fonte).strip()
+        if not txt:
+            continue
+        meta, _ = extrair_metadados_frontmatter(txt)
+        if meta.get("titulo"):
+            clean = meta["titulo"].strip().strip("*_`\"'")
+            if clean:
+                return clean
+        m_tit = re.search(r"^\s*titulo:\s*[\"']?([^\"'\n\r]+)[\"']?", txt, re.MULTILINE | re.IGNORECASE)
+        if m_tit:
+            clean = m_tit.group(1).strip().strip("*_`\"'")
+            if clean:
+                return clean
 
-    slug = extrair_slug(spec)
-    return slug or fallback
+    # Prioridade 3: '# One-pager — ...' ou '# Spec — ...' ou '# PRD — ...'
+    for fonte in fontes:
+        txt = _safe_str(fonte).strip()
+        if not txt:
+            continue
+        m_header = re.search(r"^#\s+(?:One-pager|Spec|PRD|0\.\s+Resumo executivo)\s+[—-]\s+([^\n\r]+)", txt, re.MULTILINE | re.IGNORECASE)
+        if m_header:
+            clean = m_header.group(1).strip().strip("*_`\"'")
+            clean = re.sub(r"\s+v\d+(?:\.\d+)?.*$", "", clean).strip()
+            if clean:
+                return clean
+
+    # Prioridade 4: Fallback se contiver metadados
+    fallback_str = _safe_str(fallback).strip()
+    if fallback_str:
+        m_nome = re.search(r"\*?\*?Nome que o estudante vê:\*?\*?\s*([^\n\r]+)", fallback_str, re.IGNORECASE)
+        if m_nome:
+            clean = m_nome.group(1).strip().strip("*_`\"'")
+            if clean:
+                return clean
+
+        meta, _ = extrair_metadados_frontmatter(fallback_str)
+        if meta.get("titulo"):
+            return meta["titulo"].strip().strip("*_`\"'")
+
+        m_tit = re.search(r"^\s*titulo:\s*[\"']?([^\"'\n\r]+)[\"']?", fallback_str, re.MULTILINE | re.IGNORECASE)
+        if m_tit:
+            return m_tit.group(1).strip().strip("*_`\"'")
+
+        m_header = re.search(r"^#\s+(?:One-pager|Spec|PRD|0\.\s+Resumo executivo)\s+[—-]\s+([^\n\r]+)", fallback_str, re.MULTILINE | re.IGNORECASE)
+        if m_header:
+            clean = m_header.group(1).strip().strip("*_`\"'")
+            clean = re.sub(r"\s+v\d+(?:\.\d+)?.*$", "", clean).strip()
+            if clean:
+                return clean
+
+        if "prd_id:" not in fallback_str and "\n" not in fallback_str:
+            return fallback_str[:60]
+
+    # Prioridade 5: Slug
+    for fonte in fontes:
+        slug = extrair_slug(_safe_str(fonte))
+        if slug:
+            return slug
+
+    return "Missão Sem Título"
 
 
 def list_saved_sessions() -> List[Dict[str, Any]]:
@@ -82,9 +186,22 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
             except Exception as exc:
                 logger.warning("Falha ao ler %s: %s", estado_file, exc)
 
-        # Determina o título
-        title = conversa_data.get("title") or extrair_titulo_missao(state, fallback=entry.name)
-        slug = conversa_data.get("slug") or extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or entry.name
+        # Se houver PRD.md no disco e state não tiver prd_final, injeta para extração de título/metadados
+        prd_file = entry / "PRD.md"
+        if prd_file.exists() and not state.get("prd_final"):
+            try:
+                state["prd_final"] = prd_file.read_text(encoding="utf-8")
+            except Exception:
+                pass
+
+        prd_meta, _ = extrair_metadados_frontmatter(state.get("prd_final") or "")
+
+        # Determina o título limpo
+        title = conversa_data.get("title")
+        if not title or "prd_id:" in str(title) or "titulo:" in str(title) or "\n" in str(title):
+            title = prd_meta.get("titulo") or extrair_titulo_missao(state, fallback=entry.name)
+
+        slug = conversa_data.get("slug") or prd_meta.get("slug_experiencia") or extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or state.get("prd_final") or "")) or entry.name
 
         # Timestamp de criação
         timestamp_str = conversa_data.get("created_at")
@@ -111,30 +228,37 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
         is_pipeline_blocked = bool(state.get("pipeline_bloqueado"))
         has_prd = (entry / "PRD.md").exists() or bool(state.get("prd_final"))
 
-        # Status
-        status = conversa_data.get("status")
-        if not status:
-            if is_pipeline_blocked:
-                status = "bloqueado"
-            elif has_prd:
-                status = "bypassed" if has_blocked_gate else "aprovado"
-            elif (entry / "produto/04-gate-final.md").exists() or has_blocked_gate:
-                status = "bloqueado"
-            else:
-                status = "indefinido"
+        # Status: prioriza bloqueio do pipeline ou status declarado no frontmatter do PRD
+        prd_status = prd_meta.get("status")
+        if is_pipeline_blocked:
+            status = "bloqueado"
+        elif prd_status:
+            status = prd_status
         else:
-            # Se já havia status gravado, mas tinha gate bloqueado e o PRD foi gerado (ou modo estrito desligado):
-            if status in ("success", "aprovado") and has_blocked_gate and (has_prd or not is_pipeline_blocked):
-                status = "bypassed"
+            status = conversa_data.get("status")
+            if not status:
+                if has_prd:
+                    status = "bypassed" if has_blocked_gate else "aprovado"
+                elif (entry / "produto/04-gate-final.md").exists() or has_blocked_gate:
+                    status = "bloqueado"
+                else:
+                    status = "indefinido"
+            else:
+                if status in ("success", "aprovado") and has_blocked_gate and (has_prd or not is_pipeline_blocked):
+                    status = "bypassed"
 
-        if status in ("bypassed", "bypass", "warning"):
+        if status in ("bypassed", "bypass", "warning", "em-revisao", "em_revisao", "em revisão"):
             status_icon = "🟡"
         elif status in ("aprovado", "success"):
             status_icon = "🟢"
         elif status in ("bloqueado", "blocked"):
             status_icon = "🔴"
+        elif status in ("em-implementacao", "em_implementacao"):
+            status_icon = "🔵"
         else:
             status_icon = "⚪"
+
+        status_label = formatar_status_label(status)
 
         # Prompt original
         prompt = conversa_data.get("prompt") or ""
@@ -156,6 +280,7 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
                 "session_id": conversa_data.get("session_id") or entry.name,
                 "created_at": timestamp_str,
                 "status": status,
+                "status_label": status_label,
                 "status_icon": status_icon,
                 "has_prd": (entry / "PRD.md").exists(),
                 "prompt": prompt,
@@ -239,8 +364,21 @@ def load_saved_session(dir_name_or_id: str) -> Optional[Tuple[List[Dict[str, Any
 
     final_output = state.get("prd_final") or state.get("spec_missao") or state.get("gate_final_report") or ""
     saved_status = conversa_data.get("status")
-    if not saved_status:
-        if is_pipeline_blocked or (not has_prd and has_blocked_gate):
+    prd_raw = state.get("prd_final")
+    if not prd_raw and (target_dir / "PRD.md").exists():
+        try:
+            prd_raw = (target_dir / "PRD.md").read_text(encoding="utf-8")
+        except Exception:
+            prd_raw = ""
+    prd_meta, _ = extrair_metadados_frontmatter(str(prd_raw or ""))
+    prd_status = prd_meta.get("status")
+
+    if is_pipeline_blocked:
+        status = "bloqueado"
+    elif prd_status:
+        status = prd_status
+    elif not saved_status:
+        if not has_prd and has_blocked_gate:
             status = "blocked"
         elif has_prd and has_blocked_gate:
             status = "bypassed"
@@ -268,17 +406,36 @@ def load_saved_session(dir_name_or_id: str) -> Optional[Tuple[List[Dict[str, Any
         output_dir=str(target_dir),
     )
 
-    # Reconstrói messages
+    # Reconstrói messages limpando mensagens de boas-vindas e evitando duplicações
+    raw_messages = conversa_data.get("messages") or []
+    cleaned_messages: List[Dict[str, Any]] = []
+
+    for m in raw_messages:
+        content = str(m.get("content") or "").strip()
+        if content.startswith("👋 Olá!") or "Gerador de Missões Unooria" in content:
+            continue
+        cleaned_messages.append({
+            "role": m.get("role", "user"),
+            "content": content,
+        })
+
     messages: List[Dict[str, Any]] = []
-    if conversa_data.get("messages"):
-        for m in conversa_data["messages"]:
+    if cleaned_messages:
+        # Encontra o índice da ÚLTIMA mensagem do assistente para anexar o pipeline_result
+        last_assistant_idx = -1
+        for i, m in enumerate(cleaned_messages):
+            if m.get("role") == "assistant":
+                last_assistant_idx = i
+
+        for i, m in enumerate(cleaned_messages):
+            is_target_assistant = (i == last_assistant_idx)
             messages.append({
-                "role": m.get("role", "user"),
-                "content": m.get("content", ""),
-                "pipeline_result": result if m.get("role") == "assistant" else None,
+                "role": m["role"],
+                "content": m["content"],
+                "pipeline_result": result if is_target_assistant else None,
             })
     else:
-        # Reconstrói mensagens padrão se não havia conversa.json
+        # Se não havia mensagens salvas válidas, reconstrói o par [user, assistant] padrão
         if prompt:
             messages.append({"role": "user", "content": prompt})
         if state.get("prd_final"):
@@ -295,13 +452,19 @@ def load_saved_session(dir_name_or_id: str) -> Optional[Tuple[List[Dict[str, Any
             "pipeline_result": result,
         })
 
+    # Garante que o título e slug sejam limpos
+    title = conversa_data.get("title")
+    if not title or "prd_id:" in str(title) or "titulo:" in str(title) or "\n" in str(title):
+        title = extrair_titulo_missao(state, target_dir.name)
+
     metadata = {
         "dir_name": target_dir.name,
         "path": str(target_dir),
-        "title": conversa_data.get("title") or extrair_titulo_missao(state, target_dir.name),
+        "title": title,
         "slug": conversa_data.get("slug") or extrair_slug(str(state.get("spec_missao") or "")),
         "session_id": result.session_id,
         "status": status,
+        "status_label": formatar_status_label(status),
         "created_at": conversa_data.get("created_at"),
     }
 
@@ -326,14 +489,28 @@ def save_session_record(
             state = {}
 
     title = extrair_titulo_missao(state, fallback=prompt[:60].strip() or "Missão")
-    slug = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or session_id[:12]
+    if "prd_id:" in title or "titulo:" in title or "\n" in title:
+        title = extrair_titulo_missao({"prd_final": title}, fallback="Missão")
 
-    # Serializa mensagens sem o pipeline_result interno
+    slug = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or state.get("prd_final") or "")) or session_id[:12]
+
+    # Serializa mensagens sem o pipeline_result interno e excluindo mensagens de boas-vindas
     serializable_messages = []
     for m in messages:
+        content = str(m.get("content") or "").strip()
+        if content.startswith("👋 Olá!") or "Gerador de Missões Unooria" in content:
+            continue
         serializable_messages.append({
             "role": m.get("role", "user"),
-            "content": m.get("content", ""),
+            "content": content,
+        })
+
+    if not serializable_messages:
+        if prompt:
+            serializable_messages.append({"role": "user", "content": prompt})
+        serializable_messages.append({
+            "role": "assistant",
+            "content": "📘 **PRD gerado.** Veja as abas abaixo." if getattr(result, "state", {}).get("prd_final") else "Resultado do pipeline:",
         })
 
     data = {
