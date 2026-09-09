@@ -396,11 +396,18 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
 
     # Título principal da missão e status amigável
     mission_title = extrair_titulo_missao(result.state, fallback="Missão")
-    mission_status = getattr(result, "status", "success")
     prd_text = result.state.get("prd_final") or result.final_output
     prd_meta, _ = extrair_metadados_frontmatter(prd_text)
-    if prd_meta.get("status"):
-        mission_status = prd_meta["status"]
+
+    # O status da missão reflete o veredito dos gates do pipeline
+    if getattr(result, "bloqueado", False):
+        mission_status = "bloqueado"
+    elif getattr(result, "bypassed", False):
+        mission_status = "bypassed"
+    elif getattr(result, "status", None) in ("success", "aprovado"):
+        mission_status = "aprovado"
+    else:
+        mission_status = getattr(result, "status", "aprovado")
 
     status_label = formatar_status_label(mission_status)
 

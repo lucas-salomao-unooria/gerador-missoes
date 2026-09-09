@@ -342,9 +342,9 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
         self.assertEqual(msgs[1]["role"], "assistant")
         self.assertIsNotNone(msgs[1]["pipeline_result"], "Somente a mensagem final do assistente deve ter pipeline_result")
 
-        # Metadados limpos
+        # Metadados limpos e status refletindo aprovação dos gates
         self.assertEqual(meta["title"], "O Diário de Criação com IA: Quem é o Autor?")
-        self.assertEqual(meta["status_label"], "🟡 Em revisão")
+        self.assertEqual(meta["status_label"], "🟢 Aprovado")
 
         delete_saved_session(sessions[0]["dir_name"])
 

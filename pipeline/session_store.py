@@ -228,31 +228,26 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
         is_pipeline_blocked = bool(state.get("pipeline_bloqueado"))
         has_prd = (entry / "PRD.md").exists() or bool(state.get("prd_final"))
 
-        # Status: prioriza bloqueio do pipeline ou status declarado no frontmatter do PRD
-        prd_status = prd_meta.get("status")
+        # Status: determinado pelo veredito dos gates e pela geração do PRD
         if is_pipeline_blocked:
             status = "bloqueado"
-        elif prd_status:
-            status = prd_status
+        elif has_prd and has_blocked_gate:
+            status = "bypassed"
+        elif has_prd or conversa_data.get("status") in ("success", "aprovado"):
+            status = "aprovado"
+        elif (entry / "produto/04-gate-final.md").exists() or has_blocked_gate:
+            status = "bloqueado"
         else:
-            status = conversa_data.get("status")
-            if not status:
-                if has_prd:
-                    status = "bypassed" if has_blocked_gate else "aprovado"
-                elif (entry / "produto/04-gate-final.md").exists() or has_blocked_gate:
-                    status = "bloqueado"
-                else:
-                    status = "indefinido"
-            else:
-                if status in ("success", "aprovado") and has_blocked_gate and (has_prd or not is_pipeline_blocked):
-                    status = "bypassed"
+            status = conversa_data.get("status") or prd_meta.get("status") or "indefinido"
 
-        if status in ("bypassed", "bypass", "warning", "em-revisao", "em_revisao", "em revisão"):
+        if status in ("bypassed", "bypass", "warning", "ressalvas"):
             status_icon = "🟡"
         elif status in ("aprovado", "success"):
             status_icon = "🟢"
         elif status in ("bloqueado", "blocked"):
             status_icon = "🔴"
+        elif status in ("em-revisao", "em_revisao", "em revisão"):
+            status_icon = "🟡"
         elif status in ("em-implementacao", "em_implementacao"):
             status_icon = "🔵"
         else:
@@ -375,22 +370,14 @@ def load_saved_session(dir_name_or_id: str) -> Optional[Tuple[List[Dict[str, Any
 
     if is_pipeline_blocked:
         status = "bloqueado"
-    elif prd_status:
-        status = prd_status
-    elif not saved_status:
-        if not has_prd and has_blocked_gate:
-            status = "blocked"
-        elif has_prd and has_blocked_gate:
-            status = "bypassed"
-        elif has_prd:
-            status = "success"
-        else:
-            status = "blocked" if (target_dir / "produto/04-gate-final.md").exists() else "success"
+    elif has_prd and has_blocked_gate:
+        status = "bypassed"
+    elif has_prd or saved_status in ("success", "aprovado"):
+        status = "success"
+    elif (target_dir / "produto/04-gate-final.md").exists() or has_blocked_gate:
+        status = "blocked"
     else:
-        if saved_status in ("success", "aprovado") and has_blocked_gate and (has_prd or not is_pipeline_blocked):
-            status = "bypassed"
-        else:
-            status = saved_status
+        status = saved_status or prd_status or "indefinido"
 
     result = PipelineExecutionResult(
         session_id=conversa_data.get("session_id") or target_dir.name,
