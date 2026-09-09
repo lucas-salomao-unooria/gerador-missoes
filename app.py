@@ -183,25 +183,30 @@ def render_sidebar() -> Dict[str, Any]:
                                 st.rerun()
 
         st.markdown("---")
-        st.markdown("#### 📡 Ambiente (`.env`)")
-        with st.container(border=True):
-            st.markdown(f"🤖 **Modelo:** `{settings.gemini_model}`")
-            st.markdown(f"🔑 **Gemini API:** {'🟢 configurada' if settings.is_gemini_configured() else '🔴 ausente'}")
-            st.markdown(f"🎨 **Figma MCP:** {settings.figma_status_label()}")
+        # st.markdown("#### 📡 Ambiente (`.env`)")
+        # with st.container(border=True):
+        #     st.markdown(f"🤖 **Modelo:** `{settings.gemini_model}`")
+        #     st.markdown(f"🔑 **Gemini API:** {'🟢 configurada' if settings.is_gemini_configured() else '🔴 ausente'}")
+        #     st.markdown(f"🎨 **Figma MCP:** {settings.figma_status_label()}")
 
-        st.markdown("---")
-        st.markdown("#### ⚙️ Execução")
-        stage_options = {"Produto": "produto", "Design": "design", "Dev": "dev"}
-        default_stages = [k for k, v in stage_options.items() if v in settings.pipeline_stages]
-        chosen = st.multiselect("Etapas ativas", list(stage_options), default=default_stages, help="Desligue etapas para testar só parte do pipeline.")
-        stages = [stage_options[c] for c in chosen] or ["produto"]
+        # st.markdown("---")
+        # st.markdown("#### ⚙️ Execução")
+        # stage_options = {"Produto": "produto", "Design": "design", "Dev": "dev"}
+        # default_stages = [k for k, v in stage_options.items() if v in settings.pipeline_stages]
+        # chosen = st.multiselect("Etapas ativas", list(stage_options), default=default_stages, help="Desligue etapas para testar só parte do pipeline.")
+        # stages = [stage_options[c] for c in chosen] or ["produto"]
 
-        modo_estrito = st.toggle(
-            "Modo estrito dos gates de produto",
-            value=settings.produto_modo_estrito,
-            help="Ligado: missão bloqueada no gate estrutural (após as rodadas) ou no gate final interrompe design e dev. "
-            "Desligado: o pipeline segue e o PRD registra as pendências.",
-        )
+        stages = ["produto", "design", "dev"]
+
+        # modo_estrito = st.toggle(
+        #     "Modo estrito dos gates de produto",
+        #     value=settings.produto_modo_estrito,
+        #     help="Ligado: missão bloqueada no gate estrutural (após as rodadas) ou no gate final interrompe design e dev. "
+        #     "Desligado: o pipeline segue e o PRD registra as pendências.",
+        # )
+
+        modo_estrito=True
+            
 
         thinking_presets = {"Desativado": 0, "Rápido": 1024, "Equilibrado": 2048, "Aprofundado": 4096, "Avançado": 8192, "Máximo": 16384, "Automático": -1}
         by_val = {v: k for k, v in thinking_presets.items()}
