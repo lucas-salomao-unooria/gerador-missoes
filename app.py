@@ -211,10 +211,10 @@ def render_sidebar() -> Dict[str, Any]:
         thinking_presets = {"Desativado": 0, "Rápido": 1024, "Equilibrado": 2048, "Aprofundado": 4096, "Avançado": 8192, "Máximo": 16384, "Automático": -1}
         by_val = {v: k for k, v in thinking_presets.items()}
         selected_label = st.select_slider("Nível de raciocínio", options=list(thinking_presets), value=by_val.get(settings.thinking_budget, "Equilibrado"))
-        include_thoughts = st.toggle("Exibir pensamentos dos agentes", value=settings.include_thoughts)
-
-        if settings.figma_default_folder_url:
-            st.link_button("📁 Abrir pasta no Figma ↗", settings.figma_default_folder_url, use_container_width=True)
+        # include_thoughts = st.toggle("Exibir pensamentos dos agentes", value=settings.include_thoughts)
+        include_thoughts=True
+        # if settings.figma_default_folder_url:
+        #     st.link_button("📁 Abrir pasta no Figma ↗", settings.figma_default_folder_url, use_container_width=True)
 
         st.markdown("---")
         st.markdown("#### 🧩 Etapas e agentes")
