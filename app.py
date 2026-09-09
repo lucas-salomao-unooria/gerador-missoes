@@ -53,6 +53,17 @@ st.markdown(
     .agent-card { padding:8px 10px; border-radius:10px; border:1px solid rgba(128,128,128,.2);
       background: var(--secondary-background-color); margin-bottom:6px; font-size:0.82rem; }
     .stage-title { font-weight:700; margin: 10px 0 4px 0; }
+    div[data-testid="stVerticalBlockBorderWrapper"] ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] ::-webkit-scrollbar-thumb {
+      background: rgba(128, 128, 128, 0.35);
+      border-radius: 4px;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] ::-webkit-scrollbar-thumb:hover {
+      background: rgba(128, 128, 128, 0.6);
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -114,40 +125,62 @@ def render_sidebar() -> Dict[str, Any]:
             st.rerun()
 
         st.markdown("---")
-        st.markdown("#### 🗂️ Histórico de Missões")
         saved_sessions = list_saved_sessions()
+        total_sessions = len(saved_sessions)
+        header_title = f"#### 🗂️ Histórico de Missões ({total_sessions})" if total_sessions > 0 else "#### 🗂️ Histórico de Missões"
+        st.markdown(header_title)
+
         if not saved_sessions:
             st.caption("Nenhuma missão gravada ainda.")
         else:
-            for s in saved_sessions[:15]:
-                is_active = st.session_state.get("current_session_id") == s["dir_name"]
-                col_btn, col_del = st.columns([5, 1])
-                disp_title = s["title"]
-                if len(disp_title) > 24:
-                    disp_title = disp_title[:22] + "…"
-                btn_label = f"{s['status_icon']} {disp_title}"
-                with col_btn:
-                    if st.button(
-                        btn_label,
-                        key=f"sess_{s['dir_name']}",
-                        use_container_width=True,
-                        type="primary" if is_active else "secondary",
-                        help=f"{s['title']}\n📅 {s['created_at']} | Status: {s['status']} | 📄 {s['files_count']} arquivos",
-                    ):
-                        loaded = load_saved_session(s["dir_name"])
-                        if loaded:
-                            msgs, res, meta = loaded
-                            st.session_state.current_session_id = s["dir_name"]
-                            st.session_state.messages = msgs
-                            st.rerun()
-                with col_del:
-                    if st.button("🗑️", key=f"del_{s['dir_name']}", help=f"Excluir {s['title']}"):
-                        delete_saved_session(s["dir_name"])
-                        if st.session_state.get("current_session_id") == s["dir_name"]:
-                            st.session_state.current_session_id = None
-                            st.session_state.messages = []
-                            init_session_state()
-                        st.rerun()
+            filtered_sessions = saved_sessions
+            if total_sessions > 5:
+                search_query = st.text_input(
+                    "Filtrar missões",
+                    placeholder="🔍 Filtrar histórico...",
+                    label_visibility="collapsed",
+                    key="history_search_query",
+                ).strip().lower()
+                if search_query:
+                    filtered_sessions = [
+                        s for s in saved_sessions
+                        if search_query in s.get("title", "").lower() or search_query in s.get("dir_name", "").lower()
+                    ]
+
+            if not filtered_sessions:
+                st.caption("Nenhuma missão encontrada com o filtro.")
+            else:
+                container_height = min(360, max(120, len(filtered_sessions) * 52))
+                with st.container(height=container_height, border=True):
+                    for s in filtered_sessions:
+                        is_active = st.session_state.get("current_session_id") == s["dir_name"]
+                        col_btn, col_del = st.columns([5, 1])
+                        disp_title = s["title"]
+                        if len(disp_title) > 24:
+                            disp_title = disp_title[:22] + "…"
+                        btn_label = f"{s['status_icon']} {disp_title}"
+                        with col_btn:
+                            if st.button(
+                                btn_label,
+                                key=f"sess_{s['dir_name']}",
+                                use_container_width=True,
+                                type="primary" if is_active else "secondary",
+                                help=f"{s['title']}\n📅 {s['created_at']} | Status: {s['status']} | 📄 {s['files_count']} arquivos",
+                            ):
+                                loaded = load_saved_session(s["dir_name"])
+                                if loaded:
+                                    msgs, res, meta = loaded
+                                    st.session_state.current_session_id = s["dir_name"]
+                                    st.session_state.messages = msgs
+                                    st.rerun()
+                        with col_del:
+                            if st.button("🗑️", key=f"del_{s['dir_name']}", help=f"Excluir {s['title']}"):
+                                delete_saved_session(s["dir_name"])
+                                if st.session_state.get("current_session_id") == s["dir_name"]:
+                                    st.session_state.current_session_id = None
+                                    st.session_state.messages = []
+                                    init_session_state()
+                                st.rerun()
 
         st.markdown("---")
         st.markdown("#### 📡 Ambiente (`.env`)")
