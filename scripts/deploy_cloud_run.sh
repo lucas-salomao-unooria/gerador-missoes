@@ -37,6 +37,9 @@ echo "=================================================================="
 echo "☁️ 3. Executando deploy no Cloud Run com montagem GCS..."
 echo "=================================================================="
 
+# --max-instances 1 é obrigatório: o Streamlit guarda os arquivos de download na
+# memória do processo, e um GET em /media que caia em outra instância responde 404
+# mesmo com os artefatos íntegros no bucket.
 gcloud run deploy "$SERVICE_NAME" \
   --source . \
   --region "$REGION" \
@@ -47,8 +50,6 @@ gcloud run deploy "$SERVICE_NAME" \
   --cpu 2 \
   --timeout 3600 \
   --session-affinity \
-  # Uma instância só: o Streamlit guarda os arquivos de download na memória do
-  # processo, e um GET em /media que caia em outra instância responde 404.
   --max-instances 1 \
   --add-volume "name=artifacts-vol,type=cloud-storage,bucket=$ARTIFACT_BUCKET" \
   --add-volume-mount "volume=artifacts-vol,mount-path=/app/output" \
