@@ -47,6 +47,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --cpu 2 \
   --timeout 3600 \
   --session-affinity \
+  --max-instances 1 \
   --add-volume "name=artifacts-vol,type=cloud-storage,bucket=$ARTIFACT_BUCKET" \
   --add-volume-mount "volume=artifacts-vol,mount-path=/app/output" \
   --env-vars-file .env.yaml \
