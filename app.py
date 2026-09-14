@@ -29,6 +29,7 @@ from pipeline.session_store import (
     formatar_status_label,
     list_saved_sessions,
     load_saved_session,
+    resolve_session_dir,
 )
 from prompts import get_prompt_raw, list_prompt_files, load_prompt, save_prompt
 from tools.doc_parser import DocumentBatch, validate_and_process_batch
@@ -388,6 +389,60 @@ async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_co
     return result
 
 
+def _supports_deferred_download() -> bool:
+    """Informa se esta versão do Streamlit sabe gerar o arquivo só no clique."""
+    try:
+        from streamlit.runtime.media_file_manager import MediaFileManager
+    except Exception:
+        return False
+    return hasattr(MediaFileManager, "add_deferred")
+
+
+_DEFERRED_DOWNLOADS = _supports_deferred_download()
+
+
+def download_button_lazy(
+    label: str,
+    data_fn,
+    *,
+    file_name: str,
+    mime: str,
+    key: str,
+    help: Optional[str] = None,
+    use_container_width: bool = True,
+) -> bool:
+    """Botão de download que materializa os bytes apenas quando o usuário clica.
+
+    O modo antigo (bytes prontos a cada render) guardava o arquivo inteiro no
+    MediaFileManager do Streamlit, que vive só na memória da instância. Quando a
+    instância do Cloud Run reiniciava ou o coletor de mídia descartava o blob, a URL
+    `/media/<hash>` que o navegador tinha respondia 404 — o erro de "arquivo não
+    encontrado" mesmo com tudo íntegro no Cloud Storage.
+
+    `on_click="ignore"` evita que o clique dispare um rerun; é o rerun que limpa as
+    referências de mídia ainda em uso e leva o arquivo à coleta.
+    """
+    common = {
+        "label": label,
+        "file_name": file_name,
+        "mime": mime,
+        "key": key,
+        "help": help,
+        "use_container_width": use_container_width,
+    }
+    if _DEFERRED_DOWNLOADS:
+        return st.download_button(data=data_fn, on_click="ignore", **common)
+
+    # Streamlit antigo: sem geração adiada, resta materializar agora. Uma falha de
+    # leitura aqui não pode derrubar a página inteira.
+    try:
+        payload = data_fn()
+    except Exception as exc:
+        st.error(f"❌ Falha ao preparar `{file_name}`: {exc}")
+        return False
+    return st.download_button(data=payload, **common)
+
+
 def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = ""):
     st.markdown("---")
     gates = result.gates
@@ -497,48 +552,56 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
 
         # 2. Manifesto de Arquivos
         st.markdown("#### 📁 Arquivos da Missão")
-        if result.output_dir and os.path.exists(result.output_dir):
-            output_path = Path(result.output_dir)
-            manifest = getattr(result, "artifacts_manifest", []) or generate_artifact_manifest(output_path)
+        # Resolve o diretório pelo nome sob o OUTPUT_DIR corrente quando o caminho
+        # absoluto gravado na execução não existe mais (troca de ambiente, redeploy).
+        output_path = resolve_session_dir(result.output_dir)
+        if output_path is None:
+            st.error(
+                "❌ Não foi possível localizar a pasta desta missão para montar os downloads.\n\n"
+                f"- Caminho registrado: `{result.output_dir or '(vazio)'}`\n"
+                f"- `OUTPUT_DIR` em uso: `{get_settings().output_path}`"
+            )
+        else:
+            manifest = generate_artifact_manifest(output_path)
 
-            col_zip, _ = st.columns([2, 2])
-            with col_zip:
-                zip_bytes = create_session_zip(output_path)
-                st.download_button(
-                    "📦 Baixar Todos os Artefatos (.ZIP)",
-                    data=zip_bytes,
-                    file_name=f"artefatos_{sid[:12]}.zip",
-                    mime="application/zip",
-                    key=f"zip_{prefix}",
-                    use_container_width=True,
-                )
-            st.markdown("")
+            if not manifest:
+                st.warning(f"Nenhum artefato legível em `{output_path}`.")
+            else:
+                total_bytes = sum(it["size_bytes"] for it in manifest)
+                col_zip, col_info = st.columns([2, 2])
+                with col_zip:
+                    download_button_lazy(
+                        "📦 Baixar Todos os Artefatos (.ZIP)",
+                        lambda p=output_path: create_session_zip(p),
+                        file_name=f"artefatos_{sid[:12]}.zip",
+                        mime="application/zip",
+                        key=f"zip_{prefix}",
+                        help="O pacote é montado no momento do clique, a partir dos arquivos da missão.",
+                    )
+                with col_info:
+                    st.caption(f"{len(manifest)} arquivos · {total_bytes / 1024:.0f} KB")
+                st.markdown("")
 
-            grouped: Dict[str, List[Dict[str, Any]]] = {}
-            for item in manifest:
-                grouped.setdefault(item["category"], []).append(item)
+                grouped: Dict[str, List[Dict[str, Any]]] = {}
+                for item in manifest:
+                    grouped.setdefault(item["category"], []).append(item)
 
-            for cat_idx, (cat, items) in enumerate(grouped.items()):
-                with st.expander(f"{cat} ({len(items)} arquivos)", expanded=True):
-                    for item_idx, it in enumerate(items):
-                        c_name, c_size, c_dl = st.columns([3, 1, 1.5])
-                        c_name.markdown(f"📄 `{it['path']}`")
-                        c_size.caption(it["size_str"])
-                        full_fpath = output_path / it["path"]
-                        if full_fpath.exists():
+                for cat_idx, (cat, items) in enumerate(grouped.items()):
+                    with st.expander(f"{cat} ({len(items)} arquivos)", expanded=True):
+                        for item_idx, it in enumerate(items):
+                            c_name, c_size, c_dl = st.columns([3, 1, 1.5])
+                            c_name.markdown(f"📄 `{it['path']}`")
+                            c_size.caption(it["size_str"])
+                            full_fpath = output_path / it["path"]
                             with c_dl:
-                                file_bytes = full_fpath.read_bytes()
                                 clean_path = re.sub(r"[^a-zA-Z0-9_-]", "_", str(it.get("path", "")))
-                                st.download_button(
+                                download_button_lazy(
                                     "📥 Baixar",
-                                    data=file_bytes,
+                                    lambda f=full_fpath: f.read_bytes(),
                                     file_name=it["filename"],
                                     mime=it["mime_type"],
                                     key=f"dl_{prefix}_{cat_idx}_{item_idx}_{clean_path}",
-                                    use_container_width=True,
                                 )
-        else:
-            st.caption("Diretório de saída não localizado para carregar os arquivos.")
 
     with tabs[7]:
         st.json({k: v for k, v in result.state.items()})

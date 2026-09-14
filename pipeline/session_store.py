@@ -542,16 +542,128 @@ def delete_saved_session(dir_name_or_id: str) -> bool:
     return False
 
 
+
+
+def resolve_session_dir(dir_or_path: str | Path | None) -> Optional[Path]:
+    """Resolve o diretório real de uma sessão, tolerando caminhos obsoletos.
+
+    O caminho gravado em `PipelineExecutionResult.output_dir` é absoluto e pode ter sido
+    produzido com outro `OUTPUT_DIR` (por exemplo, execução local versus `/app/output`
+    montado do Cloud Storage). Nesse caso, procura o mesmo nome de pasta dentro do
+    `output_path` configurado no momento da chamada.
+    """
+    if not dir_or_path:
+        return None
+
+    candidate = Path(dir_or_path)
+    try:
+        if candidate.is_dir():
+            return candidate
+    except OSError as exc:
+        logger.warning("Falha ao verificar %s: %s", candidate, exc)
+
+    base = get_settings().output_path
+    try:
+        fallback = base / candidate.name
+        if fallback.is_dir():
+            logger.info("Diretório %s não existe; usando %s", candidate, fallback)
+            return fallback
+    except OSError as exc:
+        logger.warning("Falha ao verificar %s: %s", base, exc)
+
+    return None
+
+
+def list_session_files(run_dir: Path) -> List[Path]:
+    """Lista, em ordem estável, todos os arquivos visíveis de uma sessão.
+
+    Entradas que desaparecem ou falham no `stat` durante a varredura (comum em
+    sistemas de arquivos montados via FUSE) são ignoradas em vez de abortar a listagem.
+    """
+    files: List[Path] = []
+    for path in run_dir.rglob("*"):
+        if path.name.startswith("."):
+            continue
+        try:
+            if path.is_file():
+                files.append(path)
+        except OSError as exc:
+            logger.warning("Ignorando %s ao listar a sessão: %s", path, exc)
+    files.sort(key=lambda p: p.relative_to(run_dir).as_posix())
+    return files
+
+
+def session_dir_signature(run_dir: Path) -> str:
+    """Impressão digital do conteúdo da pasta, usada como chave de cache."""
+    parts: List[str] = []
+    for path in list_session_files(run_dir):
+        try:
+            stat = path.stat()
+            parts.append(f"{path.relative_to(run_dir).as_posix()}:{stat.st_size}:{int(stat.st_mtime)}")
+        except OSError:
+            continue
+    return "|".join(parts)
+
+
+def _zip_timestamp(path: Path) -> Tuple[int, int, int, int, int, int]:
+    """Data/hora do arquivo no formato do ZIP, limitada ao mínimo aceito (1980)."""
+    try:
+        mtime = time.localtime(path.stat().st_mtime)
+    except OSError:
+        mtime = time.localtime()
+    if mtime.tm_year < 1980:
+        return (1980, 1, 1, 0, 0, 0)
+    return (mtime.tm_year, mtime.tm_mon, mtime.tm_mday, mtime.tm_hour, mtime.tm_min, mtime.tm_sec)
+
+
 def create_session_zip(run_dir_path: str | Path) -> bytes:
-    """Gera um arquivo ZIP em memória com todos os artefatos da missão."""
-    run_dir = Path(run_dir_path)
+    """Gera um arquivo ZIP em memória com todos os artefatos da missão.
+
+    Lê o conteúdo de cada arquivo explicitamente (em vez de delegar a leitura ao
+    `zipfile`), de modo que um arquivo ilegível seja pulado com aviso em vez de
+    derrubar o pacote inteiro. A ordem das entradas e os carimbos de tempo são
+    estáveis, então chamadas repetidas com o mesmo conteúdo produzem bytes idênticos.
+
+    Levanta `FileNotFoundError` se o diretório não for encontrado ou estiver vazio.
+    """
+    run_dir = resolve_session_dir(run_dir_path)
+    if run_dir is None:
+        raise FileNotFoundError(
+            f"Diretório da sessão não encontrado: {run_dir_path} "
+            f"(OUTPUT_DIR atual: {get_settings().output_path})"
+        )
+
+    files = list_session_files(run_dir)
+    if not files:
+        raise FileNotFoundError(f"Nenhum artefato legível em {run_dir}")
+
+    skipped: List[str] = []
     buffer = io.BytesIO()
 
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for file_path in run_dir.rglob("*"):
-            if file_path.is_file() and not file_path.name.startswith("."):
-                rel_path = file_path.relative_to(run_dir)
-                zf.write(file_path, arcname=str(rel_path))
+        for file_path in files:
+            rel_path = file_path.relative_to(run_dir).as_posix()
+            try:
+                data = file_path.read_bytes()
+            except OSError as exc:
+                logger.warning("Não foi possível ler %s para o ZIP: %s", file_path, exc)
+                skipped.append(rel_path)
+                continue
 
-    buffer.seek(0)
+            info = zipfile.ZipInfo(rel_path, date_time=_zip_timestamp(file_path))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            zf.writestr(info, data)
+
+        if skipped:
+            zf.writestr(
+                "ARQUIVOS-NAO-INCLUIDOS.txt",
+                "Os arquivos abaixo estavam no diretório da missão mas não puderam ser lidos:\n\n"
+                + "\n".join(f"- {p}" for p in skipped)
+                + "\n",
+            )
+
+    if len(skipped) == len(files):
+        raise FileNotFoundError(f"Nenhum artefato pôde ser lido em {run_dir}")
+
     return buffer.getvalue()

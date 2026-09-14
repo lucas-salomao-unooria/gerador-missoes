@@ -1,10 +1,12 @@
 """Testes para a camada de persistência de artefatos, histórico de sessões e Figma MCP automático."""
 
+import io
 import json
 import os
 import shutil
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 from config import _detect_figma_mode, get_settings
@@ -18,6 +20,7 @@ from pipeline.session_store import (
     formatar_status_label,
     list_saved_sessions,
     load_saved_session,
+    resolve_session_dir,
     save_session_record,
 )
 
@@ -439,6 +442,81 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
             gates,
         )
         self.assertEqual(status["RevisorOnePagerAgent"], "done")
+
+
+
+class TestSessionZip(unittest.TestCase):
+    """Regressões do pacote .ZIP de artefatos.
+
+    O download em massa passou a falhar com "arquivo não encontrado" mesmo com os
+    artefatos íntegros no bucket, porque os bytes eram materializados a cada render e
+    ficavam sujeitos à coleta de mídia do Streamlit. A geração precisa ser estável,
+    tolerante a arquivos ilegíveis e capaz de reencontrar a pasta quando o caminho
+    absoluto registrado na execução pertence a outro ambiente.
+    """
+
+    def setUp(self):
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.original_output = os.environ.get("OUTPUT_DIR")
+        os.environ["OUTPUT_DIR"] = str(self.temp_dir)
+
+        self.run_dir = self.temp_dir / "20260914-120000-exp-01-teste"
+        (self.run_dir / "produto").mkdir(parents=True)
+        (self.run_dir / "PRD.md").write_text("# PRD\n", encoding="utf-8")
+        (self.run_dir / "produto" / "00-one-pager.md").write_text("# One-pager\n", encoding="utf-8")
+        (self.run_dir / ".oculto.md").write_text("ignorar\n", encoding="utf-8")
+
+    def tearDown(self):
+        if self.original_output is not None:
+            os.environ["OUTPUT_DIR"] = self.original_output
+        else:
+            os.environ.pop("OUTPUT_DIR", None)
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def _names(self, blob: bytes):
+        return sorted(zipfile.ZipFile(io.BytesIO(blob)).namelist())
+
+    def test_zip_contains_visible_files_only(self):
+        names = self._names(create_session_zip(self.run_dir))
+        self.assertEqual(names, ["PRD.md", "produto/00-one-pager.md"])
+
+    def test_zip_is_byte_identical_across_calls(self):
+        """Bytes estáveis mantêm o mesmo hash de mídia no Streamlit entre reruns."""
+        self.assertEqual(create_session_zip(self.run_dir), create_session_zip(self.run_dir))
+
+    def test_zip_resolves_stale_absolute_path(self):
+        """Caminho de outro ambiente (ex.: /app/output) resolve pelo OUTPUT_DIR atual."""
+        stale = Path("/app/output") / self.run_dir.name
+        self.assertEqual(resolve_session_dir(stale), self.run_dir)
+        self.assertEqual(self._names(create_session_zip(stale)), ["PRD.md", "produto/00-one-pager.md"])
+
+    def test_missing_directory_raises_clear_error(self):
+        with self.assertRaises(FileNotFoundError) as ctx:
+            create_session_zip(self.temp_dir / "nao-existe")
+        self.assertIn("não encontrado", str(ctx.exception))
+
+    def test_empty_directory_raises(self):
+        vazia = self.temp_dir / "20260914-130000-vazia"
+        vazia.mkdir()
+        with self.assertRaises(FileNotFoundError):
+            create_session_zip(vazia)
+
+    def test_unreadable_file_is_skipped_not_fatal(self):
+        """Um arquivo ilegível não pode derrubar o pacote inteiro."""
+        protegido = self.run_dir / "produto" / "01-gate-estrutural.md"
+        protegido.write_text("# Gate\n", encoding="utf-8")
+        protegido.chmod(0o000)
+        try:
+            if os.access(protegido, os.R_OK):
+                self.skipTest("execução com privilégios que ignoram permissões de arquivo")
+
+            names = self._names(create_session_zip(self.run_dir))
+        finally:
+            protegido.chmod(0o644)
+
+        self.assertIn("PRD.md", names)
+        self.assertNotIn("produto/01-gate-estrutural.md", names)
+        self.assertIn("ARQUIVOS-NAO-INCLUIDOS.txt", names)
 
 
 if __name__ == "__main__":
