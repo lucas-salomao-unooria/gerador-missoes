@@ -74,6 +74,7 @@ st.markdown(
 )
 
 GATE_LABELS = {
+    "micro_gate_status": "Micro-gate do núcleo",
     "gate_estrutural_status": "Gate estrutural",
     "gate_final_status": "Gate final de produto",
     "design_status": "QA de design",
@@ -262,7 +263,15 @@ def update_pipeline_step_status(
             status[name] = "running"
 
         # Se avançou para agentes posteriores ao gate estrutural e o revisor ainda está pendente:
-        if name not in ("OnePagerAgent", "GateEstruturalAgent", "GateEstruturalCheck", "RevisorOnePagerAgent"):
+        if name not in (
+            "NucleoNarrativoAgent",
+            "MicroGateAgent",
+            "MicroGateCheck",
+            "SecoesApoioAgent",
+            "GateEstruturalAgent",
+            "GateEstruturalCheck",
+            "RevisorOnePagerAgent",
+        ):
             ge_st = str(gates.get("gate_estrutural_status", "")).strip().lower()
             if ge_st in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
                 if status.get("RevisorOnePagerAgent") == "pending":

@@ -38,6 +38,7 @@ from agents.callbacks import (  # noqa: E402
     skip_if_blocked,
 )
 from agents.checkers import EnvelopeGateAgent  # noqa: E402
+from agents.produto import MICRO_GATE_MAX_RODADAS  # noqa: E402
 from config import get_settings  # noqa: E402
 from pipeline.orchestrator import (  # noqa: E402
     create_mission_orchestrator,
@@ -48,6 +49,7 @@ from prompts import list_prompt_files, list_state_variables, load_prompt  # noqa
 
 # Chaves que existem no session.state em algum ponto do pipeline
 KNOWN_STATE_KEYS = {
+    "briefing", "nucleo_narrativo", "micro_gate_report", "micro_gate_status", "micro_gate_rodada",
     "one_pager", "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_rodada",
     "avaliacao_pedagogica_report", "experiencia_aluno_report", "gate_final_report", "gate_final_status",
     "spec_missao", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
@@ -61,10 +63,11 @@ KNOWN_STATE_KEYS = {
 CONFIG_VARS = {"figma_mcp_mode": "off", "figma_folder_url": "x", "figma_ds_file_key": "k", "figma_ds_v02_file_key": "k2"}
 
 # Chaves obrigatórias (sem `?`) permitidas por área: existem sempre antes do agente rodar
-REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report"}
+REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
 
 EXPECTED_AGENTS = {
-    "OnePagerAgent", "GateEstruturalLoop", "GateEstruturalAgent", "GateEstruturalCheck", "RevisorOnePagerAgent",
+    "NucleoNarrativoLoop", "NucleoNarrativoAgent", "MicroGateAgent", "MicroGateCheck", "SecoesApoioAgent",
+    "GateEstruturalLoop", "GateEstruturalAgent", "GateEstruturalCheck", "RevisorOnePagerAgent",
     "AvaliacoesParalelas", "AvaliacaoPedagogicaAgent", "ExperienciaAlunoAgent", "GateFinalProdutoAgent",
     "GateFinalProdutoCheck", "SpecMissaoAgent", "DesignStage", "BriefOficioAgent", "JornadaFigJamAgent",
     "FluxoFigJamAgent", "CopyPtBrAgent", "CaaAgent", "WireframesFigmaAgent", "CopyRevisaoAgent", "QaEntregaveisAgent",
@@ -128,6 +131,10 @@ def test_arvore_de_agentes():
     assert set(keys) <= KNOWN_STATE_KEYS
 
     # loop e paralelos
+    micro = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "NucleoNarrativoLoop")
+    assert isinstance(micro, LoopAgent) and micro.max_iterations == MICRO_GATE_MAX_RODADAS
+    assert [a.name for a in micro.sub_agents] == ["NucleoNarrativoAgent", "MicroGateAgent", "MicroGateCheck"]
+
     loop = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "GateEstruturalLoop")
     assert isinstance(loop, LoopAgent) and loop.max_iterations == settings.gate_estrutural_max_rodadas
     assert [a.name for a in loop.sub_agents] == ["GateEstruturalAgent", "GateEstruturalCheck", "RevisorOnePagerAgent"]

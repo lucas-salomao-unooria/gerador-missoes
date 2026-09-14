@@ -48,9 +48,9 @@ def inferir_status(texto: str, envelope: Optional[Dict[str, Any]] = None) -> str
     """Normaliza o veredito de um relatório em aprovado | bloqueado | indefinido."""
     if envelope:
         status = str(envelope.get("status") or envelope.get("veredito") or "").strip().lower()
-        if status in ("aprovado", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
+        if status in ("aprovado", "concluido", "concluído", "liberada", "apto", "passa", "verde", "🟢"):
             return STATUS_APROVADO
-        if status in ("bloqueado", "bloqueada", "devolvido", "nao_apto", "não apto", "vermelho", "🔴"):
+        if status in ("bloqueado", "bloqueada", "devolvido", "nao_apto", "não apto", "nao_passa", "não passa", "vermelho", "🔴"):
             return STATUS_BLOQUEADO
         if status in ("apto_com_ressalvas", "ressalvas", "amarelo", "🟡"):
             return STATUS_APROVADO

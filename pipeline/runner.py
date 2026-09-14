@@ -28,6 +28,8 @@ from tools.doc_parser import DocumentBatch
 logger = logging.getLogger("pipeline_runner")
 
 STATUS_KEYS = [
+    "micro_gate_status",
+    "micro_gate_rodada",
     "gate_estrutural_status",
     "gate_estrutural_rodada",
     "gate_final_status",
@@ -166,7 +168,8 @@ async def run_orchestrator_pipeline_stream(
             app_name=orchestrator_name,
             user_id=user_id,
             session_id=session_id,
-            state={},
+            # `briefing` alimenta o `{briefing?}` do P0b, que não vê a mensagem original
+            state={"briefing": prompt or ""},
         )
         adk_artifacts_dir = settings.output_path / ".adk_artifacts"
         adk_artifacts_dir.mkdir(parents=True, exist_ok=True)

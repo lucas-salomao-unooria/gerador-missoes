@@ -76,7 +76,8 @@ flowchart TD
     subgraph PIPELINE["🌌 MissionPipelineOrchestrator (Google ADK SequentialAgent)"]
         
         subgraph STAGE_PROD["🧭 Etapa de Produto (ProdutoStage)"]
-            P0["P0: OnePagerAgent\n(Normalização Canônica)"]:::stageStyle
+            LOOP_P0{"Loop Núcleo Narrativo ↔ Micro-gate\n(≤ 2 rodadas)"}:::gateStyle
+            P0B["P0b: SecoesApoioAgent\n(One-pager canônico + Brief)"]:::stageStyle
             LOOP_P1{"Loop Gate Estrutural\n(≤ 3 rodadas)"}:::gateStyle
             PAR_AVAL["Paralelo: Avaliação Pedagógica (P2)\n∥ Experiência do Estudante (P3)"]:::stageStyle
             P4_GATE{"Gate Final de Produto (P4c)\nLiberada ou Bloqueada?"}:::gateStyle
@@ -118,13 +119,14 @@ flowchart TD
         UI_STREAMLIT["Streamlit Web App (app.py)\n(Streaming de Thoughts & Eventos)"]:::outputStyle
     end
 
-    IN_TXT --> P0
-    IN_PDF --> P0
-    IN_DOCX --> P0
+    IN_TXT --> LOOP_P0
+    IN_PDF --> LOOP_P0
+    IN_DOCX --> LOOP_P0
     GEMINI_API -.-> PIPELINE
     FIGMA_MCP -.-> D2 & D3 & D5 & D7
 
-    P0 --> LOOP_P1
+    LOOP_P0 -->|Núcleo aprovado| P0B
+    P0B --> LOOP_P1
     LOOP_P1 -->|Aprovado| PAR_AVAL
     PAR_AVAL --> P4_GATE
     P4_GATE -->|Liberada| P5
@@ -152,7 +154,16 @@ graph TD
     subgraph ORCH["MissionPipelineOrchestrator (SequentialAgent)"]
         
         subgraph PROD["ProdutoStage (SequentialAgent)"]
-            P0["P0: OnePagerAgent\noutput_key: one_pager"]
+            subgraph LOOP_P0["NucleoNarrativoLoop (LoopAgent ≤ 2 iterações)"]
+                P0a["P0a: NucleoNarrativoAgent\noutput_key: nucleo_narrativo"]
+                P0mg["P0mg: MicroGateAgent\noutput_key: micro_gate_report"]
+                P0mgc["P0mgc: MicroGateCheck (EnvelopeGateAgent)\nstatus_key: micro_gate_status"]
+
+                P0a --> P0mg --> P0mgc
+                P0mgc -->|Não passa| P0a
+            end
+
+            P0B["P0b: SecoesApoioAgent\noutput_key: one_pager"]
             
             subgraph LOOP_P1["GateEstruturalLoop (LoopAgent ≤ 3 iterações)"]
                 P1["P1: GateEstruturalAgent\noutput_key: gate_estrutural_report"]
@@ -170,7 +181,8 @@ graph TD
             P4c["P4c: GateFinalProdutoCheck (EnvelopeGateAgent)\nstatus_key: gate_final_status"]
             P5["P5: SpecMissaoAgent\noutput_key: spec_missao"]
 
-            P0 --> LOOP_P1
+            P0mgc -->|Escalate on Approve| P0B
+            P0B --> LOOP_P1
             P1c -->|Escalate on Approve| PAR_AVAL
             PAR_AVAL --> P4 --> P4c --> P5
         end
@@ -266,7 +278,10 @@ A área de Produto garante que nenhuma missão siga para concepção visual ou c
 
 | Agente | ID | Tipo / Container | Insumos (`session.state`) | Saída (`output_key`) | Responsabilidade Central |
 |---|---|---|---|---|---|
-| **One-pager da missão** | `P0` | `LlmAgent` | `user_message` (Prompt + PDFs/DOCX) | `one_pager` | Normaliza a ideia em um documento canônico de 18 seções. É o **único** agente com `include_contents="default"` para receber os anexos originais. |
+| **Núcleo narrativo** | `P0a` | `LlmAgent` (Loop) | `user_message` (Prompt + PDFs/DOCX), `{micro_gate_report?}` | `nucleo_narrativo` | Escreve só as seções 0, 1, 3 e 4 — descoberta central, narrativa e as 6 etapas — para isolar o raciocínio criativo da formatação. É o **único** agente com `include_contents="default"` para receber os anexos originais. Reescreve o trecho apontado quando o micro-gate reprova. |
+| **Micro-gate do núcleo** | `P0mg` | `LlmAgent` (Loop) | `{nucleo_narrativo}` | `micro_gate_report` | Quatro verificações binárias: spoiler (4 padrões), gap de informação real, escolha significativa (4 testes) e job-to-be-done no Desafiar. Emite o envelope JSON com `passa`/`nao_passa`. |
+| **Veredito do micro-gate** | `P0mgc` | Determinístico | `{micro_gate_report}` | `micro_gate_status` | Aprovado encerra o loop e libera o P0b; reprovado devolve o núcleo ao P0a. Teto de 2 rodadas; esgotado, segue com o achado registrado — quem bloqueia a missão é o gate estrutural. |
+| **Seções de apoio e brief** | `P0b` | `LlmAgent` | `{nucleo_narrativo}`, `{briefing?}` | `one_pager` | Completa o one-pager canônico (seções 2 e 5–18) sobre o núcleo aprovado, sem alterar as seções validadas, e entrega junto o brief de escopo para leitura rápida. |
 | **Gate estrutural** | `P1` | `LlmAgent` (Loop) | `{one_pager}` | `gate_estrutural_report` | Avalia **23 critérios** obrigatórios agrupados em: Estrutura, Ambiente simulado, Logística e tempo, Evidências e Fechamento de spec. Emite o envelope JSON. |
 | **Veredito do gate estrutural** | `P1c` | `EnvelopeGateAgent` (Determinístico) | `gate_estrutural_report` | `gate_estrutural_status` | Analisa o envelope. Se aprovado, encerra o loop; se reprovado, aciona o revisor; se esgotar as 3 rodadas em modo estrito, bloqueia o pipeline. |
 | **Revisor do one-pager** | `P1b` | `LlmAgent` (Loop) | `{one_pager}`, `{gate_estrutural_report}` | `one_pager` | Aplica as correções sugeridas no relatório do gate estrutural ("complemento pronto para colar"). **Nunca inventa decisões de negócio (marcadas como 🔵)**. |
@@ -358,7 +373,7 @@ Para garantir que o pipeline funcione como uma esteira industrial confiável, ad
 
 1. **Isolamento Total de Contexto (`include_contents="none"`):**
    - No Google ADK, agentes configurados com `include_contents="default"` herdam o histórico completo de conversação do runner, gerando poluição contextual e alucinações cumulativas.
-   - No Gerador de Missões, **todos os agentes (exceto P0) operam com `include_contents="none"`**. Eles recebem única e exclusivamente os dados necessários explicitamente interpolados em seu prompt de sistema através das variáveis `{chave}` do `session.state`.
+   - No Gerador de Missões, **todos os agentes (exceto P0a) operam com `include_contents="none"`**. Eles recebem única e exclusivamente os dados necessários explicitamente interpolados em seu prompt de sistema através das variáveis `{chave}` do `session.state`.
 2. **Interpolação Segura com Fallback (`{chave?}`):**
    - Variáveis com `{chave}` estrita falham imediatamente se a chave não existir no estado.
    - Variáveis marcadas com `{chave?}` degradam graciosamente se a etapa correspondente não tiver sido executada (ex.: rodar diretamente a etapa de Dev).
@@ -417,7 +432,9 @@ output/20260904-143000-exp-04-fake-news/
 ├── estado.json                        # 🔍 Estado completo serializado (session.state)
 ├── manifesto-artefatos.json           # 📋 Metadados de todos os arquivos gerados
 ├── produto/
-│   ├── 00-one-pager.md                # One-pager normalizado canônico
+│   ├── 00a-nucleo-narrativo.md        # Seções 0, 1, 3 e 4 (núcleo criativo)
+│   ├── 00b-micro-gate.md              # Spoiler, gap, escolha e job-to-be-done
+│   ├── 00-one-pager.md                # One-pager canônico + brief de escopo
 │   ├── 01-gate-estrutural.md          # Relatório de 23 critérios e envelope
 │   ├── 02-avaliacao-pedagogica.md     # Parecer BNCC e mediação docente
 │   ├── 03-experiencia-aluno.md        # Parecer de adequação etária e agência
