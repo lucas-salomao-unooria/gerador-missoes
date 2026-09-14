@@ -609,32 +609,40 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.download_button(
+        download_button_lazy(
             "📥 PRD (Markdown)",
-            data=result.state.get("prd_final") or result.final_output,
+            lambda: result.state.get("prd_final") or result.final_output,
             file_name=f"PRD_{sid[:8]}.md",
             mime="text/markdown",
             key=f"prd_{prefix}",
-            use_container_width=True,
         )
     with c2:
-        st.download_button(
+        download_button_lazy(
             "📥 Spec da missão",
-            data=result.state.get("spec_missao") or "(spec não gerada)",
+            lambda: result.state.get("spec_missao") or "(spec não gerada)",
             file_name=f"spec_{sid[:8]}.md",
             mime="text/markdown",
             key=f"spec_{prefix}",
-            use_container_width=True,
         )
     with c3:
-        export = {"session_id": result.session_id, "prompt": result.prompt, "attached_files": result.attached_files, "duration_seconds": result.duration_seconds, "gates": gates, "output_dir": result.output_dir, "state": result.state}
-        st.download_button(
+        def _exportar_estado() -> str:
+            export = {
+                "session_id": result.session_id,
+                "prompt": result.prompt,
+                "attached_files": result.attached_files,
+                "duration_seconds": result.duration_seconds,
+                "gates": gates,
+                "output_dir": result.output_dir,
+                "state": result.state,
+            }
+            return json.dumps(export, indent=2, ensure_ascii=False, default=str)
+
+        download_button_lazy(
             "📥 Estado completo (JSON)",
-            data=json.dumps(export, indent=2, ensure_ascii=False, default=str),
+            _exportar_estado,
             file_name=f"missao_{sid[:8]}.json",
             mime="application/json",
             key=f"state_{prefix}",
-            use_container_width=True,
         )
     if result.output_dir:
         st.caption(f"Artefatos gravados em `{result.output_dir}`")
