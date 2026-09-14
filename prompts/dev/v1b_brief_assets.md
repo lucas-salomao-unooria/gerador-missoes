@@ -22,6 +22,10 @@ Seu leitor é curadoria e produção de conteúdo, não dev. Você não descreve
 
 {wireframes_cobertura?}
 
+**Camada CAA (quando aplicável) — pictogramas por conceito, prancha imprimível e áudios por símbolo:**
+
+{camada_caa?}
+
 **One-pager (banco de conteúdo, proporções, pareamentos):**
 
 {one_pager?}

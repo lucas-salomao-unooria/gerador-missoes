@@ -1,6 +1,6 @@
 ---
 name: pronto
-description: Definição de pronto por agente — só o que se conta. Verificada pelo próprio agente antes de entregar, e declarada no envelope. Lido por jornada-figjam, fluxo-figjam, copy-ptbr, wireframes-figma e pelo gate de ofício.
+description: Definição de pronto por agente — só o que se conta. Verificada pelo próprio agente antes de entregar, e declarada no envelope. Lido por jornada-figjam, fluxo-figjam, copy-ptbr, caa, wireframes-figma e pelo gate de ofício.
 sources: [chat]
 ---
 
@@ -49,6 +49,24 @@ Isto não é uma dimensão de auditoria. É a lista que impede o gate de ofício
 | Chave fora da convenção `eN.tipo.nome` | O dev usa a chave |
 | Tela com dois registros de voz | Guia, plataforma e Unooria não se misturam na mesma tela |
 | Registro sem régua com exemplo e contraexemplo no glossário | Proibição não produz voz |
+
+## caa
+
+Só conta quando o gate de aplicabilidade deu "roda". Em `nao_aplicavel`, a contagem é a própria condição verificada.
+
+| Conta | Zero significa |
+|---|---|
+| Decisão da raia "Estudante — faz" sem modo de resposta alternativo | A faixa não consegue responder |
+| Conceito com mais de um símbolo na missão | Um conceito, um símbolo |
+| Símbolo sem o texto junto | Símbolo sozinho é substituição, não redundância |
+| Símbolo acionável sem chave de string indicada para o áudio | Rota não-leitora incompleta |
+| Prancha CAA dentro do clone | DES-13: quebra a ficção do ambiente simulado |
+| Símbolo abaixo de 64×64 px no aparelho, 88×88 na projeção, ou vão menor que 16 px | Restrição de build, não sugestão |
+| Símbolos numa tela acima do teto de elementos da Seção 4 | O teto é da jornada |
+| Tela coberta sem linha no mapa CAA | Cobertura incompleta |
+| Célula do mapa sem resposta na spec e sem `⚠️ lacuna` | Vazio é invenção; lacuna é achado |
+| Momento de mediação sem linha de instrução para a professora | Prancha sem quem a conduza |
+| Marcador que distingue "respondeu por CAA" na evidência | Rotular estudante (8.4) |
 
 ## wireframes-figma
 

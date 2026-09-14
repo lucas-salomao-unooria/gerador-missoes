@@ -16,6 +16,10 @@ Na passada 1 você escreveu as strings a partir do inventário. Agora cada strin
 
 {jornada_telas?}
 
+**Camada CAA (quando aplicável) — o que ela pediu para revisar no frame: strings lidas em áudio, rótulo junto do símbolo, falas de mediação:**
+
+{camada_caa?}
+
 **Spec (tetos de palavras, canais por instrução):**
 
 {spec_missao?}

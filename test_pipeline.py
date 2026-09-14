@@ -50,7 +50,7 @@ from prompts import list_prompt_files, list_state_variables, load_prompt  # noqa
 KNOWN_STATE_KEYS = {
     "one_pager", "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_rodada",
     "avaliacao_pedagogica_report", "experiencia_aluno_report", "gate_final_report", "gate_final_status",
-    "spec_missao", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
+    "spec_missao", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
     "wireframes_cobertura", "copy_strings_revisada", "qa_entregaveis_report", "design_status",
     "handoff_dev", "brief_assets", "validacao_produto_narrativa", "validacao_design_imersao",
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
@@ -67,7 +67,7 @@ EXPECTED_AGENTS = {
     "OnePagerAgent", "GateEstruturalLoop", "GateEstruturalAgent", "GateEstruturalCheck", "RevisorOnePagerAgent",
     "AvaliacoesParalelas", "AvaliacaoPedagogicaAgent", "ExperienciaAlunoAgent", "GateFinalProdutoAgent",
     "GateFinalProdutoCheck", "SpecMissaoAgent", "DesignStage", "BriefOficioAgent", "JornadaFigJamAgent",
-    "FluxoFigJamAgent", "CopyPtBrAgent", "WireframesFigmaAgent", "CopyRevisaoAgent", "QaEntregaveisAgent",
+    "FluxoFigJamAgent", "CopyPtBrAgent", "CaaAgent", "WireframesFigmaAgent", "CopyRevisaoAgent", "QaEntregaveisAgent",
     "QaEntregaveisCheck", "DevStage", "HandoffParalelo", "HandoffDevAgent", "BriefAssetsAgent",
     "BancaValidacaoDev", "ValidacaoProdutoNarrativaAgent", "ValidacaoDesignImersaoAgent",
     "ValidacaoPedagogiaBnccAgent", "ValidacaoDadosLgpdAgent", "ValidacaoTecnicaArquiteturaAgent",

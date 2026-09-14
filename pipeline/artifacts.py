@@ -28,6 +28,7 @@ ARTIFACT_FILES = [
     ("jornada_telas", "design/02-jornada-telas.md"),
     ("fluxo_arestas", "design/03-fluxo-arestas.md"),
     ("copy_strings", "design/04-copy-strings.md"),
+    ("camada_caa", "design/04b-camada-caa.md"),
     ("wireframes_cobertura", "design/05-wireframes-cobertura.md"),
     ("copy_strings_revisada", "design/06-copy-strings-revisada.md"),
     ("qa_entregaveis_report", "design/07-qa-entregaveis.md"),

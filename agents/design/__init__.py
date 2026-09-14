@@ -5,6 +5,7 @@ Ordem (SequentialAgent), com o MCP do Figma nos agentes marcados 🎨:
   d2  JornadaFigJamAgent   🎨 → jornada_telas   (mapa de jornada + inventário + direção)
   d3  FluxoFigJamAgent     🎨 → fluxo_arestas   (grafo de telas + 5 testes)
   d4  CopyPtBrAgent           → copy_strings    (passada 1)
+  d4b CaaAgent                → camada_caa      (camada CAA; ele mesmo decide se roda)
   d5  WireframesFigmaAgent 🎨 → wireframes_cobertura
   d6  CopyRevisaoAgent        → copy_strings_revisada (passada 2)
   d7  QaEntregaveisAgent   🎨 → qa_entregaveis_report (gate de design)
@@ -88,6 +89,17 @@ def get_copy_ptbr_agent(**kw) -> LlmAgent:
     )
 
 
+def get_caa_agent(**kw) -> LlmAgent:
+    return create_llm_agent(
+        name="CaaAgent",
+        description="Camada CAA: símbolos, modos de resposta alternativos e pranchas para quem não lê ou não fala. Aplica o gate de aplicabilidade e devolve `nao_aplicavel` quando a missão não justifica.",
+        instruction=load_prompt("design/d4b_caa.md"),
+        output_key="camada_caa",
+        before_agent_callback=skip_if_blocked,
+        **kw,
+    )
+
+
 def get_wireframes_figma_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="WireframesFigmaAgent",
@@ -130,13 +142,14 @@ def build_design_stage(
     kw = {"thinking_budget": thinking_budget, "include_thoughts": include_thoughts}
     return SequentialAgent(
         name="DesignStage",
-        description="Área de Design: briefing de ofício → jornada e fluxo (FigJam) → copy → wireframes (Figma) → QA de entregáveis.",
+        description="Área de Design: briefing de ofício → jornada e fluxo (FigJam) → copy → camada CAA → wireframes (Figma) → QA de entregáveis.",
         before_agent_callback=skip_if_blocked,
         sub_agents=[
             get_brief_oficio_agent(**kw),
             get_jornada_figjam_agent(**kw),
             get_fluxo_figjam_agent(**kw),
             get_copy_ptbr_agent(**kw),
+            get_caa_agent(**kw),
             get_wireframes_figma_agent(**kw),
             get_copy_revisao_agent(**kw),
             get_qa_entregaveis_agent(**kw),
@@ -158,6 +171,7 @@ DESIGN_METADATA = [
     {"id": "JornadaFigJamAgent", "name": "D2 · Jornada (FigJam) 🎨", "icon": "🗺️", "output_key": "jornada_telas", "prompt_file": "design/d2_jornada_figjam.md", "description": "Raias × 6 etapas, cenários de dispositivo, inventário de telas e direção por tela."},
     {"id": "FluxoFigJamAgent", "name": "D3 · Fluxo de telas (FigJam) 🎨", "icon": "🕸️", "output_key": "fluxo_arestas", "prompt_file": "design/d3_fluxo_figjam.md", "description": "Grafo de telas com condições, gates e os 5 testes de fluxo."},
     {"id": "CopyPtBrAgent", "name": "D4 · Copy PT-BR (passada 1)", "icon": "✍️", "output_key": "copy_strings", "prompt_file": "design/d4_copy_ptbr.md", "description": "Sheet de strings por tela, calibrado à faixa etária."},
+    {"id": "CaaAgent", "name": "D4b · Camada CAA", "icon": "🔣", "output_key": "camada_caa", "prompt_file": "design/d4b_caa.md", "description": "Símbolos, modos de resposta alternativos e pranchas; só roda quando a faixa ou a spec pedem."},
     {"id": "WireframesFigmaAgent", "name": "D5 · Wireframes lo-fi (Figma) 🎨", "icon": "📐", "output_key": "wireframes_cobertura", "prompt_file": "design/d5_wireframes_figma.md", "description": "Telas em escala de cinza sobre a seção do DS do ambiente."},
     {"id": "CopyRevisaoAgent", "name": "D6 · Copy PT-BR (passada 2)", "icon": "🔍", "output_key": "copy_strings_revisada", "prompt_file": "design/d6_copy_revisao.md", "description": "Revisão em contexto de tela."},
     {"id": "QaEntregaveisAgent", "name": "D7 · QA de entregáveis 🎨", "icon": "🧪", "output_key": "qa_entregaveis_report", "prompt_file": "design/d7_qa_entregaveis.md", "description": "Fidelidade à spec, diff de strings, currículo, faixa, fluxo, professor, briefing."},

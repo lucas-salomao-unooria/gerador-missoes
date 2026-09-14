@@ -88,6 +88,7 @@ flowchart TD
             D2["D2: Jornada no FigJam 🎨"]:::stageStyle
             D3["D3: Fluxo de Telas no FigJam 🎨"]:::stageStyle
             D4["D4: Copy PT-BR (Passada 1)"]:::stageStyle
+            D4B["D4b: Camada CAA\n(Condicional à faixa e à spec)"]:::stageStyle
             D5["D5: Wireframes Lo-Fi no Figma 🎨"]:::stageStyle
             D6["D6: Copy PT-BR (Passada 2 - Contexto)"]:::stageStyle
             D7["D7: QA de Entregáveis 🎨\n(Fidelidade à Spec & DS)"]:::gateStyle
@@ -130,7 +131,7 @@ flowchart TD
     P4_GATE -.->|Bloqueada em Modo Estrito| BLOCK_STOP["⛔ Interrompe Design e Dev"]:::gateStyle
     P5 --> D1
 
-    D1 --> D2 --> D3 --> D4 --> D5 --> D6 --> D7
+    D1 --> D2 --> D3 --> D4 --> D4B --> D5 --> D6 --> D7
     D7 --> PAR_HANDOFF
     PAR_HANDOFF --> BANCA_DEV --> V3 --> V4 --> T
 
@@ -179,12 +180,13 @@ graph TD
             D2["D2: JornadaFigJamAgent 🎨\noutput_key: jornada_telas"]
             D3["D3: FluxoFigJamAgent 🎨\noutput_key: fluxo_arestas"]
             D4["D4: CopyPtBrAgent\noutput_key: copy_strings"]
+            D4B["D4b: CaaAgent\noutput_key: camada_caa"]
             D5["D5: WireframesFigmaAgent 🎨\noutput_key: wireframes_cobertura"]
             D6["D6: CopyRevisaoAgent\noutput_key: copy_strings_revisada"]
             D7["D7: QaEntregaveisAgent 🎨\noutput_key: qa_entregaveis_report"]
             D7c["D7c: QaEntregaveisCheck (EnvelopeGateAgent)\nstatus_key: design_status"]
 
-            D1 --> D2 --> D3 --> D4 --> D5 --> D6 --> D7 --> D7c
+            D1 --> D2 --> D3 --> D4 --> D4B --> D5 --> D6 --> D7 --> D7c
         end
 
         subgraph DEV["DevStage (SequentialAgent)"]
@@ -286,6 +288,7 @@ A área de Design recebe a `spec_missao` e a transforma em especificações de i
 | **Jornada no FigJam** | `D2` | 🎨 `FIGMA_TOOLS_JORNADA` | `jornada_telas` | Constrói a matriz de jornada (Raias × 6 Etapas), define cenários por dispositivo, inventário completo de telas e direção de arte por tela. |
 | **Fluxo de telas no FigJam** | `D3` | 🎨 `FIGMA_TOOLS_FLUXO` | `fluxo_arestas` | Modela o grafo de estados e transições de tela com condições, gates de validação e execução dos **5 testes de fluxo** (caminho feliz, erro, desistência, recálculo e retorno). |
 | **Copy PT-BR (Passada 1)** | `D4` | — | `copy_strings` | Redige todas as strings e microtextos da interface organizados por identificador de tela, calibrados para a linguagem da faixa etária. |
+| **Camada CAA** | `D4b` | — | `camada_caa` | Comunicação aumentativa e alternativa: aplica um gate de aplicabilidade (faixa 1º–2º ano, ou spec/briefing que citem pré-leitores, CAA ou PEI) e, quando roda, define símbolo por conceito, modo de resposta alternativo por decisão, pranchas nos escapes e restrições de toque para o wireframe. Fora dessas condições devolve `nao_aplicavel`. |
 | **Wireframes lo-fi no Figma** | `D5` | 🎨 `FIGMA_TOOLS_WIREFRAMES` | `wireframes_cobertura` | Monta os wireframes em escala de cinza sobre os componentes do Design System do ambiente simulado (`@unooria/design-system`). |
 | **Copy PT-BR (Passada 2)** | `D6` | — | `copy_strings_revisada` | Revisa cada texto inserido no contexto da tela montada, ajustando densidade, quebras de linha e tom de voz. |
 | **QA de entregáveis** | `D7` | 🎨 `FIGMA_TOOLS_QA` | `qa_entregaveis_report` | Auditoria rigorosa de conformidade contra a spec original, diff de strings, respeito ao Design System e critérios de ofício O1–O5. |
@@ -425,6 +428,7 @@ output/20260904-143000-exp-04-fake-news/
 │   ├── 02-jornada-telas.md            # Raias × 6 etapas e inventário
 │   ├── 03-fluxo-arestas.md            # Grafo de estados e os 5 testes
 │   ├── 04-copy-strings.md             # Dicionário de strings (passada 1)
+│   ├── 04b-camada-caa.md              # Símbolos, modos de resposta e pranchas (se aplicável)
 │   ├── 05-wireframes-cobertura.md     # Cobertura dos wireframes e DS
 │   ├── 06-copy-strings-revisada.md    # Revisão contextualizada de copy
 │   └── 07-qa-entregaveis.md           # Auditoria de fidelidade e ofício

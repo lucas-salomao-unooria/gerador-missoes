@@ -20,6 +20,10 @@ Você constrói todas as telas do inventário — estudante e professor — em *
 
 {copy_strings?}
 
+**Camada CAA (quando aplicável) — restrições de build: símbolo por conceito, alvo de toque, posição fixa das opções, pranchas nos escapes:**
+
+{camada_caa?}
+
 **Briefing de ofício (não-negociáveis):**
 
 {brief_oficio?}
