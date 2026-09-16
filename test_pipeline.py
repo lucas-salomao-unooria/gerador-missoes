@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+from pathlib import Path
 from typing import AsyncGenerator
 
 os.environ.setdefault("FIGMA_MCP_MODE", "off")
@@ -56,7 +57,9 @@ KNOWN_STATE_KEYS = {
     "ambiente_simulado", "ambiente_status",
     "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
     "wireframes_cobertura", "copy_strings_revisada", "qa_entregaveis_report", "design_status",
-    "handoff_dev", "brief_assets", "validacao_produto_narrativa", "validacao_design_imersao",
+    "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
+    "rastro_lacunas_status", "rastro_lacunas_report", "prd_status", "prd_check_report",
+    "validacao_produto_narrativa", "validacao_design_imersao",
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
     "validacao_dev_report", "dev_status", "prd_final", "aprendizado_registro",
     "pipeline_bloqueado", "pipeline_bloqueio_motivo",
@@ -74,7 +77,8 @@ EXPECTED_AGENTS = {
     "GateFinalProdutoCheck", "SpecMissaoAgent", "BnccCheck", "DesignStage", "FechaLacunasAgent", "FechaLacunasSplit",
     "AmbienteSimuladoAgent", "AmbienteSimuladoSplit", "BriefOficioAgent", "JornadaFigJamAgent",
     "FluxoFigJamAgent", "CopyPtBrAgent", "CaaAgent", "WireframesFigmaAgent", "CopyRevisaoAgent", "QaEntregaveisAgent",
-    "QaEntregaveisCheck", "DevStage", "HandoffParalelo", "HandoffDevAgent", "BriefAssetsAgent",
+    "QaEntregaveisCheck", "DevStage", "ManifestoCheck", "HandoffParalelo", "HandoffDevAgent", "BriefAssetsAgent",
+    "TelemetriaCheck", "LacunaCheck", "PrdCheck",
     "BancaValidacaoDev", "ValidacaoProdutoNarrativaAgent", "ValidacaoDesignImersaoAgent",
     "ValidacaoPedagogiaBnccAgent", "ValidacaoDadosLgpdAgent", "ValidacaoTecnicaArquiteturaAgent",
     "ConsolidacaoBancaAgent", "ValidacaoDevCheck", "PrdWriterAgent", "AprendizadoAgent", "ProdutoStage",
@@ -426,6 +430,130 @@ def test_bncc_validador_e_gate():
     print("   ✓ BNCC: 130 habilidades; EF bloqueia código inexistente, ano errado, sem letramento e sem série; EM exige ≥1 EM13; gate trava a esteira")
 
 
+# --------------------------------------------------------------------------- 7. rastro (manifesto · telemetria · lacunas)
+_SPEC_MANIFESTO_OK = """# Spec — Teste v1
+
+## 0. Identificação de plataforma
+Nome: Teste. Ficha do manifesto:
+- `id: exp-77-teste`
+- `produto: entre-redes`
+- `series: ["5EF"]`
+- `unidade: 2`
+- `publico: estudante`
+- `viewport: 375x812`
+- `permissoes: [forms]`
+- `capabilities: [telemetria, progresso]`
+- `secao_ds: unitube`
+- `liberacao: por-turma`
+
+## 1. Descoberta central
+x
+"""
+
+_HANDOFF_OK = """# Handoff — teste
+## 3. Spec de interação e eventos
+| EVT | verbo | objeto | quando dispara | resultado | contexto | caminho | onde é lido |
+|---|---|---|---|---|---|---|---|
+| EVT-001 | interacted | video:escolha | ao tocar | {"escolhido": true} | {"etapa": 3} | analítico | exp_77_sessoes · GET /teste/turmas/:turmaId/painel |
+## 5. Telemetria e entidades
+Tabelas: `exp_77_sessoes`, `exp_77_gates_turma` (polling curto).
+"""
+
+
+def test_rastro_manifesto_telemetria_lacunas():
+    from agents.checkers import RastroCheckAgent
+    from tools.rastro import classificar_dono, validar_manifesto, validar_telemetria, varrer_lacunas
+
+    ok = validar_manifesto(_SPEC_MANIFESTO_OK)
+    assert ok["status"] == "aprovado", ok["achados"]
+    ruim = validar_manifesto(_SPEC_MANIFESTO_OK.replace("- `produto: entre-redes`\n", "").replace("`unidade: 2`", "`unidade: 7`").replace("`permissoes: [forms]`", "`permissoes: [camera]`"))
+    campos = {a["campo"] for a in ruim["achados"] if a["severidade"] == "bloqueio"}
+    assert ruim["status"] == "bloqueado" and {"produto", "unidade", "permissoes"} <= campos, campos
+    tiktok = validar_manifesto(_SPEC_MANIFESTO_OK.replace("secao_ds: unitube", "secao_ds: tiktooria"))
+    assert tiktok["status"] == "amarelo" and tiktok["achados"][0]["etapa"] == "plataforma"
+
+    t_ok = validar_telemetria(_HANDOFF_OK)
+    assert t_ok["status"] == "aprovado", t_ok["achados"]
+    t_ruim = validar_telemetria(_HANDOFF_OK.replace("| resultado | contexto |", "| dados | canal |").replace("polling curto", "WebSocket hub:pause") + "\n@Roles(\"admin-contrato\")")
+    cods = {a["codigo"] for a in t_ruim["achados"] if a["severidade"] == "bloqueio"}
+    assert t_ruim["status"] == "bloqueado" and {"resultado-contexto", "campo-dados", "websocket", "papeis"} <= cods, cods
+    assert validar_telemetria("sem tabela nenhuma")["status"] == "bloqueado"
+
+    assert classificar_dono("jornada", "dev") == "design"
+    assert classificar_dono("gate-estrutural", "dev") == "produto"
+    assert classificar_dono("plataforma", "dev") == "plataforma"
+    assert classificar_dono("dono: input", "dev") == "input"
+    assert classificar_dono("qualquer coisa", "design") == "design"
+    st = {
+        "spec_missao": "spec [ABERTO — gate-estrutural] e RS-2 pendente",
+        "handoff_dev": "handoff [LACUNA — dono: wireframes] e [verificar no repositório: nome da tabela] e [LACUNA — dono: plataforma]",
+        "prd_final": "prd [NEEDS CLARIFICATION: qual ADR?, dono: plataforma]",
+    }
+    fontes = [
+        {"chave": "spec_missao", "rotulo": "spec", "etapa_padrao": "produto"},
+        {"chave": "handoff_dev", "rotulo": "handoff", "etapa_padrao": "dev"},
+    ]
+    r = varrer_lacunas(fontes, st)
+    assert r["status"] == "bloqueado" and r["por_etapa"] == {"input": 0, "produto": 2, "design": 1, "dev": 1, "plataforma": 1}, r["por_etapa"]
+    so_plat = varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], st)
+    assert so_plat["status"] == "amarelo" and so_plat["por_etapa"]["plataforma"] == 1
+    assert varrer_lacunas(fontes, {"spec_missao": "limpo", "handoff_dev": "limpo"})["status"] == "aprovado"
+
+    # gate: lacuna de design bloqueia e pula o jusante; só plataforma segue com 🟡
+    root = SequentialAgent(
+        name="Root",
+        sub_agents=[
+            FakeAgent(name="Spec", key="spec_missao", text="# Spec\nSlug: exp-77-teste\n"),
+            FakeAgent(name="Handoff", key="handoff_dev", text=st["handoff_dev"]),
+            RastroCheckAgent(name="LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
+            FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=skip_if_blocked),
+        ],
+    )
+    _, state = asyncio.run(_run(root))
+    assert state["rastro_lacunas_status"] == "bloqueado" and state.get(KEY_PIPELINE_BLOQUEADO) is True and "prd_final" not in state
+    assert "**design `1`**" in state["rastro_lacunas_report"]
+    root2 = SequentialAgent(
+        name="Root2",
+        sub_agents=[
+            FakeAgent(name="Handoff", key="handoff_dev", text="[LACUNA — dono: plataforma] ponte tiktooria"),
+            RastroCheckAgent(name="LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
+            FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=skip_if_blocked),
+        ],
+    )
+    _, state2 = asyncio.run(_run(root2))
+    assert state2["rastro_lacunas_status"] == "amarelo" and state2.get("prd_final") == "prd" and not state2.get(KEY_PIPELINE_BLOQUEADO)
+    root3 = SequentialAgent(
+        name="Root3",
+        sub_agents=[
+            FakeAgent(name="Spec", key="spec_missao", text=_SPEC_MANIFESTO_OK.replace("- `liberacao: por-turma`\n", "")),
+            RastroCheckAgent(name="ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
+            FakeAgent(name="Jusante", key="handoff_dev", text="h", before_agent_callback=skip_if_blocked),
+        ],
+    )
+    _, state3 = asyncio.run(_run(root3))
+    assert state3["manifesto_status"] == "bloqueado" and "handoff_dev" not in state3
+    print("   ✓ rastro: manifesto, telemetria e lacunas por dono; bloqueio impede o jusante; só plataforma segue 🟡")
+
+
+# --------------------------------------------------------------------------- 8. cópias da plataforma
+def test_referencias_plataforma_sincronizadas():
+    import json
+    import subprocess
+    from prompts import REFERENCES_DIR
+
+    pasta = REFERENCES_DIR / "plataforma"
+    manifesto = json.loads((pasta / "versao-lida.json").read_text(encoding="utf-8"))
+    faltando = [a["destino"] for a in manifesto["arquivos"] if not (pasta / a["destino"]).exists()]
+    assert not faltando, f"cópias ausentes: {faltando} — rode scripts/sincronizar_plataforma.py"
+    assert len(manifesto["arquivos"]) >= 40
+    plataforma = Path(manifesto["plataforma_dir"])
+    if (plataforma / ".git").exists():
+        head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=plataforma, capture_output=True, text=True).stdout.strip()
+        if head and head != manifesto["commit"]:
+            print(f"   ⚠️ plataforma-unooria está em {head}, cópias lidas de {manifesto['commit']} — considere rodar scripts/sincronizar_plataforma.py")
+    print(f"   ✓ {len(manifesto['arquivos'])} cópias da plataforma presentes (commit {manifesto['commit']}, {manifesto['data_commit']})")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")
@@ -441,6 +569,8 @@ if __name__ == "__main__":
         test_modo_nao_estrito_nao_bloqueia,
         test_secao_split_d0_e_d9,
         test_bncc_validador_e_gate,
+        test_rastro_manifesto_telemetria_lacunas,
+        test_referencias_plataforma_sincronizadas,
     ]
     failed = 0
     for t in tests:

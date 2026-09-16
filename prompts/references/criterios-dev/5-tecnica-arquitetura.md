@@ -2,24 +2,29 @@
 
 Referências do gabarito: `AGENTS.md` raiz, `apps/experiencias/AGENTS.md`,
 `apps/api/AGENTS.md`, `apps/experiencias/_template/`,
-`apps/api/src/unootube/` (o exemplar do padrão de módulo),
+`apps/api/src/manifesto-ia/` e `apps/api/src/rastro-boato/` (exemplares
+atuais do padrão de módulo; `unootube` é de agosto e ficou para trás),
 `apps/api/src/ai/` (provider + quota). O avaliador confere no repositório o
 que a spec pressupõe existir.
 
 ## TEC-01 [BLOQUEANTE] — Manifesto derivável da spec
 Com o insumo em mãos dá para preencher o `public/experiencia.json` inteiro:
-`id`, `nome`, `versao` inicial, `series` (`[]` = transversal), `capabilities`
-(`telemetria`, `progresso`, `ia`…), `viewport` (só se casca de aparelho),
-`permissoes` (só o que o iframe precisa) e `verbos`. Campo indecidível pela
-spec = lacuna dela.
+`id`, `nome`, `versao` inicial, **`produto`** (ADR-87 — o CI recusa manifesto
+sem ele), `series` (`[]` = transversal), **`unidade`** (1–4, ordena a grade da
+sala, ADR-69), `publico`, `capabilities` (`telemetria`, `progresso`, `ia`,
+`avaliacao`, `tempo-real`), `viewport` (só se casca de aparelho), `permissoes`
+(`pointer-lock`, `forms`, `downloads` — só o que o iframe precisa) e `verbos`.
+Campo indecidível pela spec = lacuna dela.
 
 ## TEC-02 [BLOQUEANTE] — Módulo da api desenhado
 Se há gabarito, estado de missão ou visão de professor (quase sempre há):
 módulo próprio `apps/api/src/<slug-curto>/` com `catalogo.ts` (dados),
 `regras.ts` (funções PURAS, sem Prisma/HTTP — testáveis), service com
 `comTenancy`, e controllers SEPARADOS por papel (nunca `@Roles` misto com
-exceção por método). A spec permite escrever o esqueleto: entidades do
-catálogo, regras principais, rotas por papel.
+exceção por método; seis papéis via grupos de `auth/claims.ts`), com
+`exigirMissaoLiberada` no funil de estudante (ADR-69) e relógio coletivo por
+polling em `exp_NN_gates_turma` (ADR-93/94), nunca WebSocket. A spec permite
+escrever o esqueleto: entidades do catálogo, regras principais, rotas por papel.
 
 ## TEC-03 — Rotas e erros de domínio enumerados
 Lista de rotas por papel com códigos de erro de domínio nomeados (409

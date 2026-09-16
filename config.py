@@ -74,6 +74,10 @@ class AppSettings(BaseSettings):
         default_factory=lambda: os.getenv("PIPELINE_STAGES", "produto,design,dev"),
         description="Etapas ativas do pipeline, separadas por vírgula (produto, design, dev)",
     )
+    esteira_estrita: bool = Field(
+        default_factory=lambda: _env_bool("ESTEIRA_ESTRITA", "true"),
+        description="Se true, QA de design 🔴, banca de dev 🔴 e os gates de rastro (manifesto, telemetria, lacunas) impedem o PRD; lacuna de plataforma só deixa o PRD 🟡",
+    )
     bncc_check_estrito: bool = Field(
         default_factory=lambda: _env_bool("BNCC_CHECK_ESTRITO", "true"),
         description="Se true, spec com habilidade BNCC inexistente, de outro ano ou sem letramento digital bloqueia design e dev",

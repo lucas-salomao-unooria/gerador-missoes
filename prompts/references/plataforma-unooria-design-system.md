@@ -1,13 +1,15 @@
 # Unooria Design System — referência para design e código
 
-> Gerado a partir do repo `storybook-unooria` (tag 0.1.18, set/2026), `prototipos/` e `Manual de Marca/`. Fonte de verdade: `AGENTS.md` do storybook e o Storybook publicado em `https://storybook.unooria.com/`.
+> **Atenção à versão.** O inventário de tokens e componentes abaixo foi lido do repo `storybook-unooria` na tag **0.1.18**; a plataforma consome **`@unooria/design-system@^0.2.2`** (compilado contra React 19) desde 11/09/2026. Onde houver divergência, vale o Storybook publicado (`https://storybook.unooria.com/`) e as regras da plataforma copiadas ao final deste arquivo (`regras-design-system.md`, `agents-ui.md`). Reconferir o inventário na próxima sincronização do storybook.
+>
+> **Pontes existentes em `@edu/ui`:** `ds` (unooria), `ds-insta` (instanooria), `ds-unootube` (unitube, CSS `--uni-*`), `ds-chatgpt`, `ds-whatsapp` (whatsappmobile, **só tema escuro**, ADR-68; usada por exp-06 e exp-07). **`tiktooria` não tem ponte** — criar a ponte é pré-requisito de qualquer missão TikTok. Componente de UI local continua proibido; compensação local marcada nunca vira componente (ADR-68/72).
 
 ## 1. Pacote
 
 | Item | Valor |
 |---|---|
 | Nome npm | `@unooria/design-system` |
-| Versão | `0.1.18` |
+| Versão | `0.1.18` (inventário lido) · **`^0.2.2` em uso na plataforma** |
 | Peer deps | `react >=18`, `react-dom >=18` |
 | Publicação | GitHub Actions por tag `v*`; Storybook em Cloud Run |
 
@@ -127,3 +129,9 @@ export { Button, Card, Badge, Modal, TextField, Table, Stepper, ProgressBar,
 CSS: `@unooria/design-system/unooria.css` + `@unooria/design-system/fonts/unooria.css`. Para clone, segunda ponte com o subpath dele. No monorepo, usar as pontes `@edu/ui/ds*`.
 
 **Riscos a declarar em PRD**: (1) sem tokens de radius; (2) sem camada semântica de cor; (3) sem Code Connect; (4) `prefers-reduced-motion` ausente; (5) a11y não bloqueia CI; (6) README do DS desatualizado — `AGENTS.md` é a fonte.
+
+## Regras da plataforma sobre o DS (cópias sincronizadas)
+
+<!-- include: references/plataforma/regras-design-system.md -->
+
+<!-- include: references/plataforma/agents-ui.md -->

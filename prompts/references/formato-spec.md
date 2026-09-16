@@ -14,14 +14,25 @@ Emitida pelo agente 1 junto com o veredito 🟢. É a **fonte da verdade da cons
 **Ano/faixa · Ambiente · Rubrica vX.X · Gate 0 aprovado em <data>**
 
 ## 0. Identificação de plataforma
-Slug `exp-NN-<nome>` · nome que o estudante vê · série(s) no formato da
-plataforma (`["5EF"]`, `["2EM"]`, `[]` = transversal) · unidade da trilha ·
-`publico: estudante` · software clonado · **seção do DS** (uma das cinco de
-`references/ambientes.md`, ou seção nova com componentes, responsável e
-prazo) · viewport (casca 375×812 ou desktop) e por quê.
+Nome que o estudante vê · software clonado · por que este viewport · o que a
+seção do DS já traz.
 
-Campo em branco aqui é ❌ em PROD-01 e TEC-01 do gate de dev, e sem série a
-api não aplica regra por ano.
+**Ficha do manifesto — obrigatória, uma linha por campo, neste formato exato**
+(um gate determinístico lê estas linhas; campo fora do formato conta como ausente):
+- `id: exp-NN-<nome>`
+- `produto: entre-redes | plano-de-aula | plano-de-ensino | bem-estar`
+- `series: ["5EF"]` (formato da plataforma; `[]` = transversal/todas)
+- `unidade: 1 | 2 | 3 | 4 | nenhuma` (`nenhuma` só em transversal ou ferramenta de professor)
+- `publico: estudante | professor`
+- `viewport: 375x812 | desktop | <largura>x<altura>`
+- `permissoes: [forms, pointer-lock, downloads]` ou `permissoes: []` (só o que o iframe precisa)
+- `capabilities: [telemetria, progresso, ia, avaliacao, tempo-real]` (só as usadas)
+- `secao_ds: instanooria | unitube | chatgpt | whatsappmobile | tiktooria | nova:<nome> | minijogo:<nome>` (nova exige componentes, responsável e prazo; `tiktooria` ainda não tem ponte em `@edu/ui`)
+- `liberacao: por-turma` (ADR-69 — a missão só abre na turma em que a professora liberou; o funil de estudante passa por `exigirMissaoLiberada`)
+
+Campo em branco aqui é ❌ em PROD-01 e TEC-01 do gate de dev; sem série a api
+não aplica regra por ano; sem `produto` o CI recusa o manifesto (ADR-87); sem
+`unidade` a grade da sala não ordena (ADR-69).
 
 ## 1. Descoberta central
 <frase única> — e o beat exato em que ela é vivida.
@@ -63,7 +74,7 @@ Canais por instrução (áudio / pictograma / texto), teto de palavras,
 gestos que exigem demonstração animada.
 
 ## 8. Professora, preparação e parametrização com IA
-Contrato de customização: inputs aceitos do professor (tema, foco, contexto) · regras e schemas Zod de geração de conteúdo por IA (Vertex AI Gemini) · fluxo de curadoria docente (preview, edição de postagens e aprovação) · banco curado default (fallback imediato sem IA) · gatilhos de handoff · comportamento da plataforma em cada mediação e pausas · dados do dashboard · roteiro de perguntas.
+Contrato de customização: inputs aceitos do professor (tema, foco, contexto) · regras e schemas Zod de geração de conteúdo por IA (Vertex AI Gemini, só via `apps/api/src/ai`) · fluxo de curadoria docente (preview, edição de postagens e aprovação **antes da aula**, ADR-66/67) · banco curado default (fallback imediato sem IA) · **perfil de quota de IA consumido** (`ia_quotas` por perfil, ADR-105) e o que o estudante e a professora veem sem saldo (429, na voz da ficção) · gatilhos de handoff · comportamento da plataforma em cada mediação e pausas (relógio coletivo = tabela `exp_NN_gates_turma` por polling, ADR-93/94 — nunca WebSocket) · dados do painel docente · roteiro de perguntas.
 
 ## 9. Evidências e dados
 Campo por campo: o que é coletado, quando, finalidade, retenção, acesso.
@@ -99,6 +110,37 @@ exclusivamente no servidor.
 
 **Servidor calcula, nunca aceita.** O que o cliente envia (medidas brutas)
 e o que o servidor deriva.
+
+**Eventos — o contrato real da plataforma.** Cada evento é
+`track(verbo, objeto, <resultado?, contexto?>)`: `verbo` e `objeto` são strings
+(objeto na convenção `namespace:slug`, ex.: `chat:amara`, `missao:concluida`);
+`resultado` e `contexto` são objetos JSON com número, booleano ou vocabulário
+fechado. **Não existe campo `dados`** — a api descarta chave desconhecida em
+silêncio. A spec traz a tabela de eventos com estas colunas: verbo · objeto ·
+quando dispara · `resultado` · `contexto` · caminho · **onde é lido** (tabela
+`exp_NN_*` e rota/tela do professor). Ninguém lê `telemetria_eventos` para
+relatório de missão: toda medida que a professora vê nasce de tabela própria
+do módulo, gravada pela rota operacional.
+
+**Cinco caminhos de dado, não dois.** Analítico (`track` →
+`/telemetry/batch|beacon` → Pub/Sub, sem ordem); operacional (rota síncrona do
+próprio módulo gravando em `exp_NN_sessoes` — missão nova **não herda**
+`POST /runs/:id/eventos`, que é do motor da exp-01); erros de cliente; Web
+Vitals; traces OTLP (atributo fora da allowlist do proxy some). Declare o
+caminho de cada dado.
+
+**Versão do instrumento e segunda aplicação.** `versao_instrumento` inicial
+na linha da sessão, o que acontece com linhas antigas quando sobe, e se
+"zerar turma" apaga ou incrementa `tentativa`.
+
+**Tabelas e RLS.** Toda tabela `exp_NN_*` com `escola_id NOT NULL`, `ENABLE`
++ `FORCE ROW LEVEL SECURITY` e policy por `app.escola_id`; exceção de RLS só
+justificada por escrito. Estado é **string com CHECK na migration**, nunca
+enum Prisma. Texto livre de menor em tabela própria com `chars_count`, fora de
+log e de telemetria.
+
+**Fuso.** Toda data vem de `config.fuso` do handshake / `FUSO_DA_PLATAFORMA`
+(ADR-98/99); proibido formatar data na mão.
 
 ## 10. Cenários de dispositivo
 Os três, com o que muda e a garantia de que a descoberta chega.

@@ -9,7 +9,10 @@ dúvida — dúvida declarada é melhor que lacuna silenciosa.
 - **Slug**: `exp-NN-<nome>`
 - **Nome da missão** (título que o estudante vê):
 - **Série(s)**: `["4EF"]` / `["2EM"]` / `[]` (transversal)
-- **Unidade da trilha**:
+- **Produto** (manifesto, ADR-87): `entre-redes` / `plano-de-aula` / `plano-de-ensino` / `bem-estar`
+- **Unidade da trilha** (manifesto `unidade` 1–4, ordena a grade da sala — ADR-69):
+- **Público**: `estudante` / `professor`
+- **Liberação**: por turma (ADR-69) — como a professora libera e o que o estudante vê bloqueado
 - **Software clonado** (ou "mundo próprio"):
 - **Seção do design system**: existente (`instanooria`/`unitube`/`chatgpt`/
   `whatsappmobile`/`tiktooria`) ou nova (listar componentes a criar no
@@ -57,7 +60,7 @@ dúvida — dúvida declarada é melhor que lacuna silenciosa.
 - **Referências visuais do clone** e o que deliberadamente difere:
 - **Mapa "quem está falando"** por tela (clone × plataforma):
 - **Viewport**: casca de aparelho 375×812 ou desktop, e por quê:
-- **Permissões de iframe** (forms? pointer-lock?), derivadas das interações:
+- **Permissões de iframe** (`forms`? `pointer-lock`? `downloads`?), derivadas das interações (a rota do hub precisa repassar ao `ExpFrame`, ADR-76):
 - **Estados de cada tela**: vazio / carregando / erro / ponto cego ("não
   sabemos", nunca "0"):
 - **Copy final** (não placeholder), com tom para a série:
@@ -65,9 +68,10 @@ dúvida — dúvida declarada é melhor que lacuna silenciosa.
 - **Interações instrumentadas** (as que viram dado — não mudar sem avisar):
 
 ## 8. Dados
-- **Vocabulário de telemetria** (verbo / objeto / dados / significado):
-- **Canal de cada dado**: tempo real (rota operacional) × análise (SDK):
-- **Entidades a persistir** (tabelas `exp_NN_`, `exp_NN_conteudo_turma`, campos principais):
+- **Vocabulário de telemetria** (`verbo` / `objeto` em `namespace:slug` / `resultado` / `contexto` / significado — **não existe campo `dados`**) e **onde cada medida é lida** (tabela `exp_NN_*` + rota do professor):
+- **Caminho de cada dado**: operacional (rota do próprio módulo → `exp_NN_sessoes`) × analítico (`track` → Pub/Sub) × erro × vital × trace:
+- **Relógio coletivo** (largada, pausa, virada): existe? → `exp_NN_gates_turma` por polling curto (ADR-93/94), etapas e quem transiciona:
+- **Entidades a persistir** (tabelas `exp_NN_*` com PK, `turma_id` denormalizado, `versao_instrumento`, `tentativa`; `exp_NN_conteudo_turma` quando há preparação docente; exceções de RLS justificadas):
 - **Lista do que NUNCA vai ao bundle** (gabarito, parâmetros, calibragem,
   prompts de geração) — será verificada por grep no dist/:
 - **Payload bruto + versão do instrumento** (reprocessamento):
@@ -80,7 +84,7 @@ dúvida — dúvida declarada é melhor que lacuna silenciosa.
 - **Contrato de geração**: prompt de sistema, schema Zod de saída validado estritamente, variáveis injetadas:
 - **O que a IA NUNCA decide**: avaliação formal do aluno, pontuação/score, verdades curriculares determinísticas:
 - **Comportamento sem IA e Fallback**: ativação automática ou manual do banco curado padrão (`banco_default`), garantindo execução 100% offline ou sem quota:
-- **Estimativa de tokens por turma/sessão de preparação** (para tetos de quota Vertex AI Gemini):
+- **Estimativa de tokens por turma/sessão de preparação** e **perfil de quota consumido** (`ia_quotas` por perfil, editável só pelo `admin` — ADR-105); o que acontece sem saldo (429):
 
 ## 10. Modos de erro
 - O que o estudante vê quando: a rede cai / a IA falha / a quota acaba —

@@ -17,6 +17,10 @@ spec com bloco 14). Lê o envelope e grava um status **informativo**; nunca bloq
 `BnccCheckAgent` é um BaseAgent que confere o bloco 11 da spec contra a lista oficial da
 BNCC Computação (`tools/bncc.py`): código existe, é do ano da missão, e há letramento
 digital. Não conforme → bloqueia o pipeline (design e dev pulados) quando `estrito`.
+
+`RastroCheckAgent` generaliza o padrão para as verificações de `tools/rastro.py`
+(`lacunas` · `manifesto` · `telemetria`): status `aprovado | amarelo | bloqueado`; bloqueado
+trava o pipeline quando `estrito`; amarelo (só pendência de plataforma) segue e o PRD sai 🟡.
 """
 
 from __future__ import annotations
@@ -32,6 +36,14 @@ from pydantic import Field
 from typing_extensions import override
 
 from tools.bncc import relatorio_markdown, validar_spec
+from tools.rastro import (
+    relatorio_lacunas,
+    relatorio_manifesto,
+    relatorio_telemetria,
+    validar_manifesto,
+    validar_telemetria,
+    varrer_lacunas,
+)
 
 from .callbacks import (
     KEY_PIPELINE_BLOQUEADO,
@@ -237,6 +249,71 @@ class BnccCheckAgent(BaseAgent):
                 )
             else:
                 msg = f"⚠️ {self.rotulo}: {len(bloqueios)} achado(s) — modo não estrito, o pipeline segue.\n{itens}"
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta=delta),
+        )
+
+
+class RastroCheckAgent(BaseAgent):
+    """Gate determinístico de rastro: `modo` decide a verificação de `tools/rastro.py`.
+
+    - ``lacunas``: varre `fontes` (documentos do estado) atrás de marcadores de lacuna e
+      atribui cada um a `input · produto · design · dev · plataforma`;
+    - ``manifesto``: ficha do manifesto no bloco 0 da spec (`spec_key`);
+    - ``telemetria``: contrato de evento e proibições de arquitetura no handoff (`fonte_key`).
+
+    `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
+    """
+
+    modo: str  # lacunas | manifesto | telemetria
+    report_key: str
+    status_key: str
+    rotulo: str = "Rastro"
+    estrito: bool = True
+    spec_key: str = "spec_missao"
+    fonte_key: str = "handoff_dev"
+    fontes: List[Dict[str, str]] = Field(default_factory=list)
+    agente: str = "rastro-lacunas"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        state = ctx.session.state
+        missao = extrair_slug(str(state.get("spec_missao", "") or "")) or ""
+        if self.modo == "manifesto":
+            resultado = validar_manifesto(str(state.get(self.spec_key, "") or ""))
+            relatorio = relatorio_manifesto(resultado, missao)
+        elif self.modo == "telemetria":
+            resultado = validar_telemetria(str(state.get(self.fonte_key, "") or ""))
+            relatorio = relatorio_telemetria(resultado, missao)
+        else:
+            resultado = varrer_lacunas(self.fontes, dict(state))
+            relatorio = relatorio_lacunas(resultado, self.rotulo, missao, agente=self.agente)
+
+        status = resultado["status"]  # aprovado | amarelo | bloqueado
+        delta: Dict[str, Any] = {
+            self.report_key: relatorio,
+            self.status_key: status,
+            f"{self.status_key}_envelope": extrair_envelope(relatorio) or {},
+        }
+        bloqueios = [a for a in resultado["achados"] if a["severidade"] == "bloqueio"]
+        avisos = [a for a in resultado["achados"] if a["severidade"] != "bloqueio"]
+        if status == "aprovado":
+            msg = f"✅ {self.rotulo}: conforme."
+        elif status == "amarelo":
+            msg = f"🟡 {self.rotulo}: {len(avisos)} pendência(s) de plataforma — o pipeline segue e o PRD sai 🟡, não verde.\n" + "\n".join(f"- ⚠️ {a.get('resumo') or a.get('trecho', '')}" for a in avisos)
+        else:
+            itens = "\n".join(f"- ⛔ [{a.get('etapa', 'dev')}] {a.get('resumo') or a.get('trecho', '')}" for a in bloqueios)
+            if self.estrito:
+                delta[KEY_PIPELINE_BLOQUEADO] = True
+                delta[KEY_PIPELINE_MOTIVO] = f"{self.rotulo} bloqueado ({len(bloqueios)} lacuna(s))"
+                msg = f"⛔ {self.rotulo}: bloqueado — {len(bloqueios)} lacuna(s). A esteira para aqui; o PRD não sai.\n{itens}"
+            else:
+                msg = f"⚠️ {self.rotulo}: {len(bloqueios)} lacuna(s) — modo não estrito, o pipeline segue.\n{itens}"
 
         yield Event(
             invocation_id=ctx.invocation_id,

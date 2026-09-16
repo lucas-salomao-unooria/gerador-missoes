@@ -37,7 +37,11 @@ STATUS_KEYS = [
     "lacunas_status",
     "ambiente_status",
     "design_status",
+    "manifesto_status",
+    "telemetria_status",
+    "rastro_lacunas_status",
     "dev_status",
+    "prd_status",
     KEY_PIPELINE_BLOQUEADO,
     KEY_PIPELINE_MOTIVO,
 ]

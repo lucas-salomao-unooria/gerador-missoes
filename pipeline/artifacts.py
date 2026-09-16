@@ -39,8 +39,11 @@ ARTIFACT_FILES = [
     ("wireframes_cobertura", "design/05-wireframes-cobertura.md"),
     ("copy_strings_revisada", "design/06-copy-strings-revisada.md"),
     ("qa_entregaveis_report", "design/07-qa-entregaveis.md"),
+    ("manifesto_report", "dev/00-ficha-manifesto.md"),
     ("handoff_dev", "dev/01-handoff-dev.md"),
     ("brief_assets", "dev/01b-brief-assets.md"),
+    ("telemetria_report", "dev/01c-telemetria-check.md"),
+    ("rastro_lacunas_report", "dev/01d-rastro-lacunas.md"),
     ("validacao_produto_narrativa", "dev/02a-banca-produto-narrativa.md"),
     ("validacao_design_imersao", "dev/02b-banca-design-imersao.md"),
     ("validacao_pedagogia_bncc", "dev/02c-banca-pedagogia-bncc.md"),
@@ -48,6 +51,7 @@ ARTIFACT_FILES = [
     ("validacao_tecnica_arquitetura", "dev/02e-banca-tecnica-arquitetura.md"),
     ("validacao_dev_report", "dev/03-banca-consolidada.md"),
     ("prd_final", "PRD.md"),
+    ("prd_check_report", "dev/04-pendencias-do-prd.md"),
     ("aprendizado_registro", "aprendizado.md"),
 ]
 

@@ -6,21 +6,29 @@ canais), `secoes/08-modelo-de-dados.tex`, `packages/sdk/src/types.ts`
 
 ## DAD-01 [BLOQUEANTE] — Vocabulário de telemetria documentado
 Verbos do contrato xAPI simplificado (`attempted`, `interacted`, `progressed`,
-`completed`, `scored`) + objetos + campos de `dados`, com o significado de cada
-um (na exp-01: `attempted` = entrou no aparelho, `completed` = dossiê visto).
+`completed`, `scored` — sugeridos; a api aceita qualquer string) + objetos na
+convenção `namespace:slug` + o que vai em `resultado` e `contexto` (objetos
+JSON; **não existe campo `dados`**, chave desconhecida é descartada em
+silêncio), com o significado de cada um (na exp-01: `attempted` = entrou no
+aparelho, `completed` = dossiê visto). E **onde cada medida é lida**: tabela
+`exp_NN_*` + rota do professor — `telemetria_eventos` não tem leitor de missão.
 Esse vocabulário vai no `experiencia.json` (`verbos`) e no README da
 experiência. Spec sem vocabulário = ❌.
 
 ## DAD-02 [BLOQUEANTE] — Canal certo para cada dado
 Dois canais que não se misturam: dado que ALIMENTA a mecânica em tempo real
 (curadoria, adaptação) vai por rota operacional própria, síncrona e
-transacional (como `POST /runs/:id/eventos`); dado de análise posterior vai
+transacional **do próprio módulo**, gravando em `exp_NN_sessoes` (`POST
+/runs/:id/eventos` é do motor da exp-01, não genérica); dado de análise posterior vai
 pelo SDK (`track` → batch 50/10s → Pub/Sub, sem garantia de ordem). Dwell nunca
 passa pelo Pub/Sub. A spec classifica cada dado num dos dois canais; adaptação
 em tempo real desenhada sobre o canal analítico = ❌.
 
 ## DAD-03 [BLOQUEANTE] — Tabelas com prefixo, tenancy e RLS
-Tabelas novas com prefixo `exp_NN_`, `escola_id NOT NULL` + RLS; tabela que é
+Tabelas novas com prefixo `exp_NN_`, `escola_id NOT NULL` + `ENABLE` +
+`FORCE ROW LEVEL SECURITY` + policy por `app.escola_id` (exceção só
+justificada por escrito); estado como string com CHECK na migration, nunca
+enum; tabela que é
 contrato entre duas experiências carrega os DOIS números
 (`exp_01_exp_70_perfis_importados`). A spec lista as entidades a persistir com
 seus campos principais — o dev não deve descobrir o modelo de dados durante a

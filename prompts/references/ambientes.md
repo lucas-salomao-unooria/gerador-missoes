@@ -15,10 +15,10 @@ Isto substitui a ideia de "biblioteca de ambiente por missão": não existe bibl
 | Ambiente | Seção do DS | Versão publicada | Componentes | Missões que usam |
 |---|---|---|---|---|
 | Instagram | `instanooria` | `[storybook]` | `[storybook]` | exp-01 Instanooria |
-| YouTube | `unitube` | `[storybook]` | `[storybook]` | exp-02 UnooTube |
+| YouTube | `unitube` (ponte `@edu/ui/ds-unootube`, CSS `--uni-*`) | `[storybook]` | `[storybook]` | exp-02 UnooTube |
 | ChatGPT | `chatgpt` | `[storybook]` | `[storybook]` | exp-03 unooGPT |
-| WhatsApp | `whatsappmobile` | `[storybook]` | `[storybook]` | — *(existe sem consumidor)* |
-| TikTok | `tiktooria` | `[storybook]` | `[storybook]` | — *(existe sem consumidor)* |
+| WhatsApp | `whatsappmobile` (ponte `@edu/ui/ds-whatsapp`, **só tema escuro** — ADR-68) | `[storybook]` | `[storybook]` | exp-06 Rastro do Boato · exp-07 O Eco no Grupo |
+| TikTok | `tiktooria` | `[storybook]` | `[storybook]` | — *(existe no DS, **sem ponte em `@edu/ui`**; criar a ponte é pré-requisito declarado)* |
 
 `[storybook]` = preencher a partir de `https://storybook.unooria.com/`. Nome da seção é fato do repositório e está confirmado por DES-01 do gate de dev; versão e inventário de componentes só o storybook dá.
 

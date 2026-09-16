@@ -99,10 +99,13 @@ flowchart TD
         end
 
         subgraph STAGE_DEV["🛠️ Etapa de Dev (DevStage)"]
+            V0{"V0: Ficha do Manifesto\n(determinístico — impede o PRD)"}:::gateStyle
             PAR_HANDOFF["Paralelo: Handoff Dev (V1)\n∥ Brief de Assets (V1b)"]:::stageStyle
+            V1D{"V1c/V1d: Telemetria + Rastro de Lacunas\n(determinísticos — o que faltou de produto/design/dev)"}:::gateStyle
             BANCA_DEV["Banca Multidisciplinar /validar-missao\n(5 dimensões paralelas: V2a–V2e)"]:::stageStyle
             V3["V3: Consolidação da Banca\n(Veredito 🟢 / 🟡 / 🔴)"]:::gateStyle
             V4["V4: PrdWriterAgent\n(PRD Padrão Ouro de 25 Seções)"]:::stageStyle
+            V4C{"V4c: Pendências do PRD\n(só plataforma → 🟡)"}:::gateStyle
         end
 
         subgraph STAGE_TRANS["🧠 Etapa Transversal"]
@@ -139,8 +142,9 @@ flowchart TD
     P5C -.->|Não conforme| BLOCK_STOP
 
     D0 --> D9 --> D1 --> D2 --> D3 --> D4 --> D4B --> D5 --> D6 --> D7
-    D7 --> PAR_HANDOFF
-    PAR_HANDOFF --> BANCA_DEV --> V3 --> V4 --> T
+    D7 --> V0 --> PAR_HANDOFF --> V1D --> BANCA_DEV --> V3
+    V3 -->|🟢/🟡| V4 --> V4C --> T
+    V0 & V1D & V3 & V4C -.->|Não conforme| BLOCK_STOP
 
     T --> DIR_OUT
     V4 --> PRD_FILE
@@ -212,6 +216,7 @@ graph TD
         end
 
         subgraph DEV["DevStage (SequentialAgent)"]
+            V0["V0: ManifestoCheck (RastroCheckAgent)\nstatus_key: manifesto_status"]
             subgraph PAR_HANDOFF["HandoffParalelo (ParallelAgent)"]
                 V1["V1: HandoffDevAgent\noutput_key: handoff_dev"]
                 V1b["V1b: BriefAssetsAgent\noutput_key: brief_assets"]
@@ -225,11 +230,14 @@ graph TD
                 V2e["V2e: Técnica & Arquitetura\noutput_key: validacao_tecnica_arquitetura"]
             end
 
+            V1c["V1c: TelemetriaCheck (RastroCheckAgent)\nstatus_key: telemetria_status"]
+            V1d["V1d: LacunaCheck (RastroCheckAgent)\nstatus_key: rastro_lacunas_status"]
             V3["V3: ConsolidacaoBancaAgent\noutput_key: validacao_dev_report"]
             V3c["V3c: ValidacaoDevCheck (EnvelopeGateAgent)\nstatus_key: dev_status"]
             V4["V4: PrdWriterAgent\noutput_key: prd_final"]
+            V4c["V4c: PrdCheck (RastroCheckAgent)\nstatus_key: prd_status"]
 
-            PAR_HANDOFF --> BANCA --> V3 --> V3c --> V4
+            V0 --> PAR_HANDOFF --> V1c --> V1d --> BANCA --> V3 --> V3c --> V4 --> V4c
         end
 
         T["T: AprendizadoAgent (Transversal)\noutput_key: aprendizado_registro"]
@@ -324,11 +332,13 @@ Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as 
 | **Wireframes lo-fi no Figma** | `D5` | 🎨 `FIGMA_TOOLS_WIREFRAMES` | `wireframes_cobertura` | Monta os wireframes em escala de cinza sobre os componentes do Design System do ambiente simulado (`@unooria/design-system`). |
 | **Copy PT-BR (Passada 2)** | `D6` | — | `copy_strings_revisada` | Revisa cada texto inserido no contexto da tela montada, ajustando densidade, quebras de linha e tom de voz. |
 | **QA de entregáveis** | `D7` | 🎨 `FIGMA_TOOLS_QA` | `qa_entregaveis_report` | Auditoria rigorosa de conformidade contra a spec original, diff de strings, respeito ao Design System e critérios de ofício O1–O5. |
-| **Veredito de design** | `D7c` | Determinístico | `design_status` | Lê o envelope do QA de design. Não bloqueia a etapa de dev; eventuais ressalvas são herdadas pelo PRD. |
+| **Veredito de design** | `D7c` | Determinístico | `design_status` | Lê o envelope do QA de design. Com `ESTEIRA_ESTRITA=true`, 🔴 impede dev e PRD; ressalvas entram no PRD. |
 
 ---
 
 ### 🛠️ Área de Dev & Banca de Validação
+
+**Contexto da plataforma por cópia sincronizada.** Os agentes de Dev não leem resumos escritos à mão: leem cópias dos `AGENTS.md`, das regras (`docs/regras/*`), dos ADRs e dos contratos Zod do monorepo `plataforma-unooria`, em `prompts/references/plataforma/` (46 arquivos, commit e data em `versao-lida.json`). Quando a plataforma mudar, rode `python scripts/sincronizar_plataforma.py`; o teste estrutural avisa quando o HEAD local da plataforma difere do commit lido. Os arquivos `plataforma-unooria-software.md`, `-infra.md` e `-design-system.md` viraram índices sobre essas cópias, com a lista do que mais muda num PRD (liberação por turma, `produto`/`unidade` no manifesto, seis papéis, evento `verbo · objeto · resultado · contexto`, cinco caminhos de dado, sala por polling, currículo no servidor, quota em `ia_quotas`, fuso único, fluxo `dev-local → dev → hml → main`).
 
 A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a missão a uma **banca multidisciplinar com 72 critérios de validação (21 bloqueantes)** antes de lavrar o PRD padrão ouro.
 
@@ -357,16 +367,20 @@ A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a mis
 
 | Agente | ID | Critérios / Rubrica | Saída (`output_key`) | Descrição |
 |---|---|---|---|---|
+| **Ficha do manifesto** | `V0` | Determinístico (`RastroCheckAgent`) | `manifesto_status`, `manifesto_report` | Lê a ficha do bloco 0 da spec e confere cada campo contra as listas fechadas da plataforma (`produto`, `series`, `unidade`, `publico`, `viewport`, `permissoes`, `capabilities`, `secao_ds`, `liberacao: por-turma`). Campo ausente ou inválido impede o PRD; `tiktooria` ou seção nova viram pendência de plataforma (🟡). |
 | **Handoff para dev** | `V1` | Modelo de Insumo | `handoff_dev` | Preenche o modelo de insumo com User Stories fechadas (com travas 🔒), catálogo de eventos de telemetria e escopo V1 vs V2. |
 | **Brief de assets** | `V1b` | Rubrica de Assets | `brief_assets` | Inventário completo de produção: imagens, áudios, mockups, critérios de reprovação e ordem de criação. |
+| **Telemetria e arquitetura** | `V1c` | Determinístico | `telemetria_status`, `telemetria_report` | Confere no handoff o contrato real de evento (`verbo · objeto · resultado · contexto`, sem campo `dados`), tabela `exp_NN_*` de leitura das medidas, ausência de WebSocket/`hub:pause` (ADR-93/94), seis papéis (ADR-80) e quota em `ia_quotas` (ADR-105). |
+| **Rastro de lacunas** | `V1d` | Determinístico | `rastro_lacunas_status`, `rastro_lacunas_report` | Conta os marcadores `[LACUNA — dono]`, `[ABERTO — dono]`, `[NEEDS CLARIFICATION]`, `[verificar no repositório]`, `RS-n pendente` e `🔵` em spec, design, handoff e assets, e diz **o que faltou de input, produto, design ou dev** — qualquer um impede o PRD. Lacuna cuja dona é a **plataforma** (ADR nova, componente de DS, ponte) vira pendência humana e deixa o PRD 🟡. |
 | **Banca: Produto & Narrativa** | `V2a` | `PROD-01` a `16` (4 bloqueantes) | `validacao_produto_narrativa` | Avalia clareza do problema, coerência narrativa, loop de engajamento e métricas de sucesso. |
 | **Banca: Design & Imersão** | `V2b` | `DES-01` a `13` (4 bloqueantes) | `validacao_design_imersao` | Avalia fidelidade ao ambiente simulado, consistência de layout e acessibilidade visual. |
 | **Banca: Pedagogia & BNCC** | `V2c` | `PED-01` a `15` (5 bloqueantes) | `validacao_pedagogia_bncc` | Avalia alinhamento rigoroso à BNCC, profundidade conceitual e rubricas de avaliação formativa. |
 | **Banca: Dados & LGPD** | `V2d` | `DAD-01` a `15` (4 bloqueantes) | `validacao_dados_lgpd` | Avalia telemetria analítica (xAPI), proteção de dados de menores (LGPD Art. 14) e retenção. |
 | **Banca: Técnica & Arquitetura** | `V2e` | `TEC-01` a `13` (4 bloqueantes) | `validacao_tecnica_arquitetura` | Avalia compatibilidade com o monorepo NestJS/Next.js 16, performance e contratos de API. |
 | **Consolidação da banca** | `V3` | Matriz de Decisão | `validacao_dev_report` | Consolida os relatórios em veredito único determinístico (🟢 / 🟡 / 🔴). |
-| **Veredito de dev** | `V3c` | Determinístico | `dev_status` | Normaliza e registra o status da banca no estado da sessão. |
+| **Veredito de dev** | `V3c` | Determinístico | `dev_status` | Lê o veredito da banca. Com `ESTEIRA_ESTRITA=true`, 🔴 impede o PRD e a consolidação diz o que falta e quem resolve (PO, Designer, produto ou decisão de plataforma); 🟡 segue. |
 | **Redator do PRD** | `V4` | Gabarito de 25 seções | `prd_final` | **O grande entregável do pipeline**: PRD completo com contexto arquitetural real da plataforma Unooria. |
+| **Pendências do PRD** | `V4c` | Determinístico | `prd_status`, `prd_check_report` | Conta os marcadores que o redator deixou no PRD. Lacuna de produto/design/dev marca o PRD como não pronto; só pendência de plataforma deixa 🟡 (`aprovado-com-pendencias-de-plataforma`). |
 
 ---
 
@@ -479,7 +493,11 @@ output/20260904-143000-exp-04-fake-news/
 │   ├── 02c-banca-pedagogia-bncc.md    # Validação PED-01…15
 │   ├── 02d-banca-dados-lgpd.md        # Validação DAD-01…15
 │   ├── 02e-banca-tecnica-arquitetura.md # Validação TEC-01…13
-│   └── 03-banca-consolidada.md        # Veredito consolidado da banca
+│   ├── 00-ficha-manifesto.md          # V0: bloco 0 × listas fechadas da plataforma
+│   ├── 01c-telemetria-check.md        # V1c: contrato de evento e proibições de arquitetura
+│   ├── 01d-rastro-lacunas.md          # V1d: o que faltou de input/produto/design/dev/plataforma
+│   ├── 03-banca-consolidada.md        # Veredito consolidado da banca
+│   └── 04-pendencias-do-prd.md        # V4c: marcadores deixados no PRD
 └── figma/                             # (Opcional, quando Figma MCP ativo)
     ├── figma-links.md                 # Sumário de URLs, fileKeys e node IDs
     └── figma-links.json               # Metadados estruturados dos links
@@ -552,6 +570,7 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `INCLUDE_THOUGHTS` | `true` | Exibe o fluxo de pensamentos dos agentes na interface gráfica. |
 | `PIPELINE_STAGES` | `produto,design,dev` | Etapas ativas separadas por vírgula (a etapa de aprendizado roda sempre). |
 | `PRODUTO_MODO_ESTRITO` | `true` | Se `true`, bloqueio em gate de produto encerra o pipeline impedindo design e dev. |
+| `ESTEIRA_ESTRITA` | `true` | QA de design 🔴, banca de dev 🔴 e gates de rastro (manifesto, telemetria, lacunas) impedem o PRD. Lacuna de plataforma não impede: o PRD sai 🟡. |
 | `BNCC_CHECK_ESTRITO` | `true` | Gate determinístico depois da spec: habilidade inexistente, de outro ano ou sem letramento digital trava a esteira. |
 | `GATE_ESTRUTURAL_MAX_RODADAS` | `3` | Número máximo de ciclos entre o Gate Estrutural e o Revisor do One-pager. |
 | `OUTPUT_DIR` | `output` | Diretório local para gravação persistente dos artefatos. |

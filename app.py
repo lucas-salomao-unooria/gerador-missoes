@@ -81,7 +81,11 @@ GATE_LABELS = {
     "lacunas_status": "Fechamento de lacunas (D0)",
     "ambiente_status": "Ambiente simulado (D9)",
     "design_status": "QA de design",
+    "manifesto_status": "Ficha do manifesto (V0)",
+    "telemetria_status": "Telemetria e arquitetura (V1c)",
+    "rastro_lacunas_status": "Rastro de lacunas (V1d)",
     "dev_status": "Banca de dev",
+    "prd_status": "Pendências do PRD (V4c)",
 }
 
 

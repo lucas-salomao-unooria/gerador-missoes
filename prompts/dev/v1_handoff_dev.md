@@ -85,7 +85,9 @@ O que se assume · o que observar · o que indica falha — priorize o que a con
 
 ## Regras
 
-- Não invente mecânica: lacuna volta para cima como `[LACUNA — dono: gate-estrutural | jornada | copy | wireframes | produto]`.
+- Não invente mecânica: lacuna volta para cima como `[LACUNA — dono: <agente>]`, onde o agente é um destes: `input` (o briefing não trouxe) · `gate-estrutural | spec | produto` (produto) · `jornada | fluxo | copy | wireframes | caa | ambiente-simulado | brief-oficio` (design) · `handoff-dev | brief-assets` (dev) · `plataforma` (decisão de ADR ou componente de DS que a plataforma ainda não tem). Um gate determinístico conta esses marcadores: qualquer lacuna de input, produto, design ou dev **impede o PRD**; lacuna de `plataforma` vira pendência humana e deixa o PRD 🟡.
+- **Telemetria é `track(verbo, objeto, <resultado, contexto>)`.** Não existe campo `dados`. Tabela de eventos com as colunas verbo · objeto (`namespace:slug`) · quando dispara · `resultado` · `contexto` · caminho (analítico · operacional do módulo · erro · vital · trace) · **onde é lido** (tabela `exp_NN_*` + rota do professor). Sem tabela de leitura nomeada, a medida não existe.
+- **Manifesto completo** no entregável 4: `id, nome, versao, produto, series, unidade, publico, capabilities, viewport, permissoes, verbos` — copiado da ficha do bloco 0 da spec. **Liberação por turma** (ADR-69) e `exigirMissaoLiberada` no funil. **Seis papéis** (`estudante · professor · gestor_escola · gestor_regional · gestor_contrato · admin`). Relógio coletivo só por polling em `exp_NN_gates_turma` (ADR-93/94) — nunca WebSocket nem `hub:pause`.
 - Não aceite campo de evento que não está no tratamento de dados da spec.
 - Carregue as pendências do QA de design como `[PENDÊNCIA DE DESIGN Tn]` nas stories afetadas.
 - Use nomes reais de rota, tabela, módulo e arquivo do monorepo quando existirem na referência; marque `[verificar no repositório]` quando não puder confirmar.

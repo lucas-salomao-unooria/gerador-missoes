@@ -24,13 +24,15 @@
 prd_id: PRD-<slug>
 titulo: <nome da missão>
 versao: 0.1.0
-status: draft | em-revisao | aprovado | em-implementacao | lancado
+status: draft | em-revisao | aprovado-com-pendencias-de-plataforma | aprovado | em-implementacao | lancado
 slug_experiencia: exp-NN-<nome>
+produto: entre-redes | plano-de-aula | plano-de-ensino | bem-estar
 serie: ["4EF"]            # formato da plataforma; [] = transversal
-ambiente_simulado: <instagram|youtube|chatgpt|tiktok|whatsapp>
-secao_ds: <instanooria|unitube|chatgpt|tiktooria|whatsappmobile>
+unidade: 1 | 2 | 3 | 4 | nenhuma
+ambiente_simulado: <o ambiente da spec (bloco 14): clone da lista fechada, ambiente novo ou mini-jogo>
+secao_ds: <instanooria|unitube|chatgpt|tiktooria|whatsappmobile|nova:<nome>|minijogo:<nome>>
 owners: {produto: <nome>, design: <nome>, dev: <nome>, pedagogico: <nome>}
-gates: {estrutural: 🟢|🔴, pedagogico: ..., experiencia: ..., final: ..., design: ..., dev: 🟢|🟡|🔴}
+gates: {estrutural: 🟢|🔴, pedagogico: ..., experiencia: ..., final: ..., bncc: 🟢|🔴, lacunas: 🟢|🟡|🔴, ambiente: ..., design: ..., dev: 🟢|🟡|🔴}
 links: {figjam: <url>, figma: <url>, spec: spec/<slug>-spec.md, one_pager: ...}
 needs_clarification: 0
 data: AAAA-MM-DD
@@ -70,13 +72,13 @@ Checklist com meta numérica e método de medição por categoria: performance (
 Inventário de telas (ID `E<etapa>-<ator>-<n>`, peso, elementos, estados) · direção por tela (pico/alta) · links dos frames Figma (fileKey + nodeId) · sheet de strings (chave `eN.tipo.nome`, seção `clone|unooria`, redundância) · mapa "quem está falando" tela a tela · viewport · permissões de iframe · assets com peso · interações instrumentadas.
 
 # 11. Modelo de dados
-Entidades `exp_NN_*` com campos, tipos, sensibilidade (PII de menor?), retenção, canal (operacional × analítico), `escola_id NOT NULL` + RLS. Entidade `exp_NN_conteudo_turma` (parâmetros de customização do professor, status de curadoria `PENDENTE|APROVADO|DEFAULT`, payload JSON do pacote de posts/mídias aprovado). Enums de estado. Tabelas-contrato entre experiências. O que **nunca** vai ao bundle. Diagrama Mermaid `erDiagram`.
+Entidades `exp_NN_*` com campos, tipos, PK (sessão: `[escolaId, estudanteId]`), `turma_id` denormalizado, `versao_instrumento`, `tentativa`, sensibilidade (PII de menor?), retenção (ou lacuna assumida por escrito), `escola_id NOT NULL` + RLS (`ENABLE` + `FORCE`, policy `app.escola_id`) e exceções justificadas. Estado = **string com CHECK na migration**, nunca enum Prisma. `exp_NN_conteudo_turma` quando há preparação docente (molde `exp_08_conteudo_turma`: pacote `Json`, `aprovado_por_professor`, `usou_banco_default`). `exp_NN_gates_turma` quando há relógio coletivo (ADR-93/94). Texto livre de menor em tabela própria com `chars_count`, fora de log e telemetria. Tabelas-contrato entre experiências. O que **nunca** vai ao bundle. Diagrama Mermaid `erDiagram`. Moldes: `references/plataforma/exemplo-schema-exp.md` e `exemplo-migration-exp-04.md`.
 
 # 12. Contratos de API
-Rotas por papel (`/<slug>/*`), método, guards, `@Roles`, schema Zod de entrada e **de resposta** (incluindo endpoints de preparação docente `POST /<slug>/preparar/gerar-conteudo` e `POST /<slug>/preparar/ativar-conteudo`), códigos de erro de domínio nomeados (409 `LIMITE_SALVOS`…), idempotência e locks (relógio coletivo, cliques duplos). Formato OpenAPI resumido.
+Rotas por papel na forma consagrada pelas missões recentes (exp-06/07/08): `GET /<slug>/sessao`, ações do estudante, `GET /<slug>/gate`, `GET /<slug>/turmas`, `GET /<slug>/turmas/:turmaId/painel`, `POST /<slug>/turmas/:turmaId/gate`, `POST /<slug>/turmas/:turmaId/gerar-conteudo`, `POST /<slug>/turmas/:turmaId/homologar` (ou `/aprovar-pacote`), `DELETE /<slug>/turmas/:turmaId` (zerar). Para cada rota: método, `@UseGuards(OidcGuard, RolesGuard)`, `@Roles` com os grupos de `auth/claims.ts` (seis papéis: `estudante · professor · gestor_escola · gestor_regional · gestor_contrato · admin`), `@Contrato` com Zod de entrada e **de resposta**, `exigirMissaoLiberada` no funil de estudante (403 `missao-nao-liberada`, ADR-69), códigos de erro de domínio nomeados, idempotência e locks (largada, cliques duplos). Rotas de plataforma consumidas sem criar (`/progresso/:expId`, `/telemetry/batch`, `/ai/gerar`, `/salas/minhas`). Formato OpenAPI resumido; índice real em `references/plataforma/openapi-indice.md`.
 
 # 13. Eventos, telemetria e analytics
-Tabela `EVT-xxx` · verbo (`attempted|interacted|progressed|completed|scored`) · objeto · quando dispara · campos (`dados` só número/booleano/vocabulário fechado) · canal · aparece no dashboard como · retenção · KPI que alimenta. Volume estimado por sessão × turma. Métricas proibidas. Versão do instrumento.
+Tabela `EVT-xxx` · `verbo` (sugerido `attempted|interacted|progressed|completed|scored`; não imposto pela api) · `objeto` (`namespace:slug`, estável) · quando dispara · `resultado` · `contexto` (objetos JSON; só número, booleano ou vocabulário fechado; nunca texto de menor, nome, e-mail) · caminho (analítico `track` · operacional rota do módulo · erro · vital · trace) · **onde é lido** (tabela `exp_NN_*` + rota/tela do professor — `telemetria_eventos` não tem leitor de missão; "aparece no dashboard" sem tabela nomeada é fantasia) · retenção · KPI que alimenta. **Não existe campo `dados`.** Volume por sessão (cabe em 50 eventos/10 s?) e o que é agregado no cliente. `experiencia.json#verbos` com o significado nesta missão + lista de objetos. Métricas proibidas (dwell no analítico, ranking). Versão do instrumento. Clarity recebe só `verbo:objeto`. Molde: `references/plataforma/exemplo-telemetria-exp-08.md`.
 
 # 14. Pedagogia e conformidade
 Matriz habilidade BNCC (código, confirmado ou 🔵 a validar) → evidência observável → interação → dado gravado. Competência socioemocional nomeada. Rastreabilidade curricular. Gabarito (autor e revisor nomeados; só no servidor). Graus de medida. Guardrails de IA (8.1/8.2: geração restrita à preparação docente com curadoria humana obrigatória antes do consumo pelo estudante; IA nunca avalia formalmente o estudante; fallback para banco curado padrão) e éticos (8.3–8.6). Papel do erro. O que cada adulto vê.
@@ -85,10 +87,10 @@ Matriz habilidade BNCC (código, confirmado ou 🔵 a validar) → evidência ob
 Seção do DS e componentes faltantes (com responsável e prazo) · versão do `@unooria/design-system` · SDK · módulos da api reutilizados · IA (Vertex AI Gemini no backend NestJS via `apps/api/src/ai`, quota, banco default curado para contingência) · outras missões (contrato e fallback) · conteúdo autoral (inventário, quem produz).
 
 # 16. Arquitetura da solução (plano técnico)
-Contexto da plataforma resumido (monorepo, hub + api + experiência estática, SDK/postMessage, tenancy, canais de dado). Diagrama C4 nível 1–2 (Mermaid). Alternativas consideradas e trade-offs. Decisões que exigem ADR nova.
+Contexto da plataforma resumido (monorepo, hub + api + experiência estática, SDK/postMessage `PROTOCOL_VERSION`, tenancy com seis papéis, três trancas catálogo → disponibilidade → liberação por turma, cinco caminhos de dado, sala por polling curto ADR-93/94, fuso único ADR-98/99). Diagrama C4 nível 1–2 (Mermaid). Alternativas consideradas e trade-offs. Decisões que exigem ADR nova.
 
 # 17. Plano de implementação — arquivos e convenções
-Lista de **arquivos a criar/alterar com caminho completo**, módulo a imitar (exemplar canônico), bibliotecas permitidas/proibidas, comandos exatos (`pnpm new:exp`, `pnpm turbo typecheck lint test build`, `node scripts/e2e/rodar.mjs estudante`), variáveis de ambiente, manifesto `experiencia.json` completo, entrada no catálogo, migration, porta de dev. Seção **"O que NÃO fazer"** técnica.
+Lista de **arquivos a criar/alterar com caminho completo**; módulo a imitar (`apps/api/src/manifesto-ia/` + `apps/experiencias/exp-08-manifesto-ia/`; `apps/api/src/rastro-boato/` para texto livre de menor — `unootube` ficou para trás); o que o `_template` **não** traz (DS `@unooria/design-system@^0.2.2`, `@edu/ui`, testes) e precisa ser adicionado; bibliotecas permitidas/proibidas; comandos exatos (`pnpm worktree criar exp-NN-slug --fatia api/<mod>,hub/<rota>,exp/<id>` sobre `origin/dev-local`, `pnpm new:exp`, `pnpm turbo typecheck lint test build`, `node scripts/e2e/rodar.mjs estudante`); variáveis de ambiente; manifesto `experiencia.json` completo (com `produto`, `unidade`, `permissoes`); versão em três lugares (`experiencia.json`, `package.json`, `EXP_VERSION` + `versao.test.ts`); entrada em `apps/hub/lib/entre-redes/catalogo.ts` (`ficha` + copy de estudante — sem copy não vai à tela) e rota em `lib/rotas-da-missao.ts` (ADR-100); porta em `apps/hub/lib/experiencias-dev.ts` (próxima livre, `strictPort`, também em `CORS_ORIGINS`); migration; seed em `prisma/catalogo-e-liberacoes.ts`; `midia-externa.json` se houver mídia ≥ 2 MB (ADR-63); `AGENTS.md` + `CLAUDE.md` + `README.md` da pasta; LaTeX (`12-experiencias`, `13-api`, `08-modelo-de-dados`, `18-adr`). Seção **"O que NÃO fazer"** técnica.
 
 # 18. Tarefas (decompostas e ordenadas)
 `T-xxx` · descrição atômica · RFs cobertos · arquivos · dependências · `[P]` se paralelizável · **comando de verificação**. Ordem: contratos → testes → implementação → docs.
@@ -97,13 +99,13 @@ Lista de **arquivos a criar/alterar com caminho completo**, módulo a imitar (ex
 Tabela risco · probabilidade · impacto · mitigação · dono. Pre-mortem curto.
 
 # 20. Decisões (ADR) e questões abertas
-Log ADR (título · status · contexto · decisão · alternativas · consequências). Questões abertas com dono e prazo — **deve estar vazia para status aprovado**. Marcadores `[NEEDS CLARIFICATION]` consolidados aqui.
+Log ADR (título · status · contexto · decisão · alternativas · consequências). Questões abertas com dono e prazo — **deve estar vazia para status aprovado**. Marcadores `[NEEDS CLARIFICATION: <pergunta>, dono: <produto|design|dev|plataforma>]` consolidados aqui. Pendência cujo dono é **plataforma** (decisão de ADR nova, componente de DS a criar) é pendência humana resolvida na codificação: o PRD sai `aprovado-com-pendencias-de-plataforma` (🟡), nunca `aprovado`. Pendência de produto, design ou dev impede o PRD.
 
 # 21. Testes e Definition of Done
 Estratégia (unit de regras puras, contrato, tenancy, sanitizador com grep no `dist/`, smoke e2e por papel com asserções que falham quando quebra) · matriz de rastreabilidade RF → critério → teste → tarefa · DoD do monorepo (typecheck+lint+test, e2e do papel, Zod nas fronteiras, tenancy, sem segredo no client, `AGENTS.md`, LaTeX + ADR) · evidências exigidas.
 
 # 22. Plano de lançamento
-Fases (dev → hml → main), feature flag/`status` no catálogo (`em-breve` → `disponivel`), critérios de avanço e rollback (`versaoAtiva`), comunicação a professores, playtest piloto.
+Fases `dev-local → dev → hml → main` (ADR-101; PR `--base dev-local`; tag semver só em `main`), `status` no catálogo (`em-breve` → `disponivel`), disponibilidade no painel `/unooria` (a DoD exige provar que a experiência **desliga**, ADR-87/88), liberação por turma pela professora (ADR-69), critérios de avanço e rollback (`node apps/hub/scripts/publicar-manifesto.mjs <exp> --versao x.y.z`), comunicação a professores, playtest piloto.
 
 # 23. Glossário
 Termos de domínio com definição única (aluno/estudante, missão/experiência/atividade, ato/etapa, handoff, gate, latch, seção do DS, canal operacional/analítico, graus de medida).

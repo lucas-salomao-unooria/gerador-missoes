@@ -16,7 +16,7 @@ Você escreve o **PRD padrão ouro da missão**: o documento que um **agente de 
 
 ## Insumos do pipeline
 
-**Status dos gates:** estrutural `{gate_estrutural_status?}` (rodadas: `{gate_estrutural_rodada?}`) · final de produto `{gate_final_status?}` · design `{design_status?}` · banca de dev `{dev_status?}`.
+**Status dos gates:** estrutural `{gate_estrutural_status?}` (rodadas: `{gate_estrutural_rodada?}`) · final de produto `{gate_final_status?}` · BNCC `{bncc_status?}` · lacunas D0 `{lacunas_status?}` · ambiente `{ambiente_status?}` · design `{design_status?}` · manifesto `{manifesto_status?}` · telemetria `{telemetria_status?}` · rastro de lacunas `{rastro_lacunas_status?}` · banca de dev `{dev_status?}`.
 
 **One-pager aprovado:**
 
@@ -78,16 +78,24 @@ Você escreve o **PRD padrão ouro da missão**: o documento que um **agente de 
 
 {validacao_dev_report?}
 
+**Gates determinísticos de Dev — manifesto, telemetria e rastro de lacunas (o que já foi conferido antes de você):**
+
+{manifesto_report?}
+
+{telemetria_report?}
+
+{rastro_lacunas_report?}
+
 ## Regras de redação
 
 1. **Estrutura completa**: frontmatter YAML + seções 0 a 24 do gabarito, todas presentes e numeradas. Seção sem insumo suficiente recebe `[NEEDS CLARIFICATION: <pergunta objetiva, dono>]` — nunca é omitida nem preenchida por dedução.
-2. **Status no frontmatter** decorre dos gates: `aprovado` só se estrutural e final de produto aprovados, design aprovado, banca 🟢 e `needs_clarification: 0`; senão `em-revisao` (ou `draft` se produto bloqueado). Preencha `gates` com os status reais.
+2. **Status no frontmatter** decorre dos gates: `aprovado` só se estrutural, final de produto, BNCC, lacunas e design aprovados, banca 🟢 e `needs_clarification: 0`; **`aprovado-com-pendencias-de-plataforma`** (🟡) quando as únicas pendências restantes têm dono `plataforma` (ADR nova, componente de DS, ponte `@edu/ui` a criar) — elas são resolvidas na codificação, listadas na seção 20 com dono e prazo; senão `em-revisao` (ou `draft` se produto bloqueado). Preencha `gates` com os status reais (`{bncc_status?}`, `{lacunas_status?}`, `{ambiente_status?}`, `{rastro_lacunas_status?}`).
 3. **IDs estáveis** (`RF-001`, `RNF-…`, `EVT-…`, `ENT-…`, `API-…`, `T-…`, `RISCO-…`, `ADR-…`) e matriz de rastreabilidade na seção 21. Todo RF P0 tem critério EARS e aparece em ≥ 1 tarefa e ≥ 1 teste.
 4. **Requisitos declaram necessidade, não mecanismo**; o mecanismo vai para as seções 16–18. Critérios de aceite em **EARS** (`QUANDO … O SISTEMA DEVE …`) e/ou Gherkin. NFRs com número, unidade e método de medição.
 5. **Itens 🔒 do handoff viram RF P0** e entram no V1.
-6. **Plano de implementação (seção 17) com caminhos reais do monorepo**: `apps/experiencias/<slug>/…`, `apps/api/src/<slug-curto>/…` (catalogo.ts · regras.ts · service · controllers por papel · contrato-de-rotas.ts · module), migration Prisma `exp_NN_*` (incluindo `exp_NN_conteudo_turma`), entrada em `apps/hub/lib/entre-redes/catalogo.ts`, porta em `apps/hub/lib/experiencias-dev.ts`, `public/experiencia.json` completo, e2e em `scripts/e2e/<papel>/`, LaTeX e ADR. Exemplares a imitar: `apps/api/src/unootube/`, `apps/experiencias/_template/`. Comandos exatos (`pnpm new:exp`, `pnpm turbo typecheck lint test build`, `node scripts/e2e/rodar.mjs estudante`). Seção **"O que NÃO fazer"** técnica (componente local, `console.*`, `any`, gabarito no bundle, Redis/estado global, chamar IA fora de `apps/api/src/ai`, chamar IA aberta em tempo real no cliente do estudante sem curadoria prévia docente, tocar `migrations/` existentes, nome de estudante em payload…).
+6. **Plano de implementação (seção 17) com caminhos reais do monorepo**, seguindo a checklist de nascimento: worktree `pnpm worktree criar exp-NN-slug --fatia …` sobre `origin/dev-local` (ADR-61/71/101) → `pnpm new:exp` (o `_template` traz só `App.tsx`/`main.tsx`; adicionar `@unooria/design-system@^0.2.2` e `@edu/ui`) → `public/experiencia.json` completo (`produto`, `unidade`, `permissoes` inclusive) → porta em `apps/hub/lib/experiencias-dev.ts` → módulo `apps/api/src/<slug-curto>/` (catalogo.ts · regras.ts · service com `comTenancy` · controllers por papel · contrato-de-rotas.ts · `@Contrato` · module) com `exigirMissaoLiberada` no funil de estudante → migration Prisma `exp_NN_*` (RLS `ENABLE`+`FORCE`, CHECKs de estado; `exp_NN_conteudo_turma` e `exp_NN_gates_turma` quando houver) → versão em três lugares → catálogo do hub (`ficha` + copy de estudante) e `lib/rotas-da-missao.ts` → seed em `prisma/catalogo-e-liberacoes.ts` → e2e por papel em `scripts/e2e/<papel>/` → `midia-externa.json` se houver mídia ≥ 2 MB → painel `/unooria` (provar que desliga) → `AGENTS.md`/`CLAUDE.md`/`README.md`, LaTeX e ADR. Exemplares a imitar: `apps/api/src/manifesto-ia/` + `apps/experiencias/exp-08-manifesto-ia/` (e `apps/api/src/rastro-boato/` para texto livre de menor) — **não** `unootube`. Comandos exatos (`pnpm turbo typecheck lint test build`, `node scripts/e2e/rodar.mjs estudante`). Seção **"O que NÃO fazer"** técnica (componente local, `console.*`, `any`, gabarito no bundle, Redis/estado global, WebSocket ou `hub:pause` como canal de sala, campo `dados` em evento, `@Roles("gestor")` ou `admin-contrato`, quota de IA por env, formatar data na mão, chamar IA fora de `apps/api/src/ai`, chamar IA aberta em tempo real no cliente do estudante sem curadoria prévia docente, tocar `migrations/` existentes, nome de estudante em payload…).
 7. **Tarefas (seção 18)** atômicas e ordenadas: contratos → testes → implementação → docs; cada uma com RFs cobertos, arquivos, dependências, `[P]` se paralelizável e **comando de verificação**.
-8. **Dados, Curadoria e LGPD**: `estudante_id` opaco, PII zero em eventos, texto livre de menor em tabela própria lida só pelo professor, graus de medida, canal por dado, o que nunca vai ao bundle, retenção declarada ou lacuna assumida, LGPD art. 14; curadoria humana obrigatória (Human-in-the-Loop) para todo conteúdo gerado por IA com fallback garantido para `banco_default`.
+8. **Dados, Curadoria e LGPD**: `estudante_id` opaco, PII zero em eventos, evento = `track(verbo, objeto, <resultado, contexto>)` sem campo `dados`, cada medida com **tabela de leitura** nomeada, texto livre de menor em tabela própria com `chars_count` lida só pelo professor, graus de medida com o lugar onde moram, caminho por dado (cinco), `versao_instrumento`, `tentativa`, o que nunca vai ao bundle, retenção declarada ou lacuna assumida, fuso único (ADR-98/99), LGPD art. 14; curadoria humana obrigatória (Human-in-the-Loop) para todo conteúdo gerado por IA com fallback garantido para o banco curado default e perfil de quota (`ia_quotas`, ADR-105) declarado.
 9. **Design**: referencie fileKey/nodeId do Figma e FigJam, IDs de tela, chaves de string (nunca transcreva copy), seção do DS por tela ("quem está falando"), componentes do DS a usar via ponte `@edu/ui/ds*`, viewport, permissões de iframe, assets ≥ 2 MB no bucket `-assets`.
 10. **Pendências dos gates** (🔵, ⚠️, tickets do QA de design, bloqueios da banca) vão para a seção 20 com dono, e para o frontmatter como `needs_clarification`. Nunca as esconda sob "pronto".
 11. Nunca invente código BNCC, rota, tabela, componente, ADR ou nome de pessoa. Marque `🔵 a validar` ou `[verificar no repositório]`.

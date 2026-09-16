@@ -217,7 +217,7 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
 
         # Gates conhecidos
         gates = dict(conversa_data.get("gates") or {})
-        for k in ("micro_gate_status", "gate_estrutural_status", "gate_final_status", "bncc_status", "lacunas_status", "ambiente_status", "design_status", "dev_status"):
+        for k in ("micro_gate_status", "gate_estrutural_status", "gate_final_status", "bncc_status", "lacunas_status", "ambiente_status", "design_status", "manifesto_status", "telemetria_status", "rastro_lacunas_status", "dev_status", "prd_status"):
             if k in state and k not in gates:
                 gates[k] = state[k]
 
@@ -346,7 +346,7 @@ def load_saved_session(dir_name_or_id: str) -> Optional[Tuple[List[Dict[str, Any
     from pipeline.runner import PipelineExecutionResult
 
     gates = dict(conversa_data.get("gates") or {})
-    for k in ("micro_gate_status", "gate_estrutural_status", "gate_final_status", "bncc_status", "lacunas_status", "ambiente_status", "design_status", "dev_status"):
+    for k in ("micro_gate_status", "gate_estrutural_status", "gate_final_status", "bncc_status", "lacunas_status", "ambiente_status", "design_status", "manifesto_status", "telemetria_status", "rastro_lacunas_status", "dev_status", "prd_status"):
         if k in state and k not in gates:
             gates[k] = state[k]
 

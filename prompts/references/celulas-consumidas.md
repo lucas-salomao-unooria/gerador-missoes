@@ -20,6 +20,9 @@ Notação: `bloco.campo`. Blocos são os de `references/formato-spec.md` (0–12
 | 0.unidade da trilha / bimestre | catálogo, V1 | Diferenciação 2.5 e bimestre do card sem base |
 | 0.software clonado + **seção do DS** | D9 (dormente ou não), D2, D5, D7 (D8) | D9 decide; se nem D9 puder, é vermelho |
 | 0.viewport (celular 375×812 dentro do desktop · desktop cheio) e por quê | D2 (cenários), D5 (frames), D9 | Frames no tamanho errado |
+| 0.produto (`entre-redes` …) e 0.unidade (1–4) — ficha do manifesto | V1, `ManifestoCheck`, TEC-01 | O CI recusa o manifesto (ADR-87) e a grade da sala não ordena (ADR-69) |
+| 0.permissoes do iframe (`forms`, `pointer-lock`, `downloads`) | D5, V1, TEC-01 | Submit ou download bloqueado em silêncio pelo sandbox |
+| 0.liberacao por turma (ADR-69) | D2 (estado bloqueada/liberada/encerrada), V1 (`exigirMissaoLiberada`) | Missão que não abre na sala |
 
 ## Bloco 1 — Descoberta central
 

@@ -15,7 +15,7 @@ Ordem (SequentialAgent), com o MCP do Figma nos agentes marcados 🎨:
   d5  WireframesFigmaAgent 🎨 → wireframes_cobertura
   d6  CopyRevisaoAgent        → copy_strings_revisada (passada 2)
   d7  QaEntregaveisAgent   🎨 → qa_entregaveis_report (gate de design)
-  d7c QaEntregaveisCheck      → design_status
+  d7c QaEntregaveisCheck      → design_status (🔴 impede dev e PRD quando ESTEIRA_ESTRITA)
 
 D0 e D9 emitem dois documentos numa única resposta (a spec consolidada e o próprio
 relatório). Um `LlmAgent` grava uma só chave, então cada um é seguido por um
@@ -259,11 +259,11 @@ def build_design_stage(
             get_qa_entregaveis_agent(**kw),
             EnvelopeGateAgent(
                 name="QaEntregaveisCheck",
-                description="Lê o veredito do QA de entregáveis; não bloqueia o dev — o PRD registra as pendências.",
+                description="Lê o veredito do QA de entregáveis: 🔴 impede o dev e o PRD (modo estrito); ressalvas entram no PRD.",
                 rotulo="QA de entregáveis (design)",
                 report_key="qa_entregaveis_report",
                 status_key="design_status",
-                block_pipeline_on_fail=False,
+                block_pipeline_on_fail=get_settings().esteira_estrita,
                 treat_indefinido_as_blocked=False,
             ),
         ],
