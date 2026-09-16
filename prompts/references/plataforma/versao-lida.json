@@ -1,285 +1,285 @@
 {
  "plataforma_dir": "/Users/lucassalomao/Documents/Unooria/plataforma-unooria",
- "commit": "ba0de35",
+ "commit": "4578555",
  "branch": "dev-local",
  "data_commit": "2026-09-16",
- "sincronizado_em": "2026-09-16T18:55:49+00:00",
+ "sincronizado_em": "2026-09-16T19:41:47+00:00",
  "arquivos": [
   {
    "origem": "AGENTS.md",
    "destino": "agents-raiz.md",
-   "sha256": "ed3d6e14f0e150b1",
+   "sha256": "ba0098baa9d00430",
    "bytes": 12475
   },
   {
    "origem": "CONTEXT.md",
    "destino": "contexto.md",
-   "sha256": "47c1d7e96e879eca",
+   "sha256": "b888e03a4ad7c320",
    "bytes": 5207
   },
   {
    "origem": "apps/api/AGENTS.md",
    "destino": "agents-api.md",
-   "sha256": "5f36391bf89d7023",
+   "sha256": "3455ab30ac17696d",
    "bytes": 9507
   },
   {
    "origem": "apps/experiencias/AGENTS.md",
    "destino": "agents-experiencias.md",
-   "sha256": "34b82e82f4457516",
-   "bytes": 7910
+   "sha256": "2dcff98405621d0f",
+   "bytes": 8437
   },
   {
    "origem": "apps/hub/AGENTS.md",
    "destino": "agents-hub.md",
-   "sha256": "4119f531e5df5871",
+   "sha256": "d93fbfbeb5f892ef",
    "bytes": 8271
   },
   {
    "origem": "packages/sdk/AGENTS.md",
    "destino": "agents-sdk.md",
-   "sha256": "d7e88c3023b25859",
+   "sha256": "0f692f0d72fddfbc",
    "bytes": 9911
   },
   {
    "origem": "packages/ui/AGENTS.md",
    "destino": "agents-ui.md",
-   "sha256": "b8624ad4b1d5ca61",
+   "sha256": "538cfc2024565523",
    "bytes": 13784
   },
   {
    "origem": "apps/api/src/telemetry/AGENTS.md",
    "destino": "agents-api-telemetry.md",
-   "sha256": "f9a7dcfb766995d9",
+   "sha256": "28d78e406d809f51",
    "bytes": 2723
   },
   {
    "origem": "apps/api/src/salas/AGENTS.md",
    "destino": "agents-api-salas.md",
-   "sha256": "7cfe196f4ed22b4b",
+   "sha256": "ebdc787102f8b6e4",
    "bytes": 9713
   },
   {
    "origem": "apps/api/src/ai/AGENTS.md",
    "destino": "agents-api-ai.md",
-   "sha256": "bb8a6a32aee732d8",
+   "sha256": "3717ce946a59441e",
    "bytes": 7468
   },
   {
    "origem": "apps/api/src/experiencias/AGENTS.md",
    "destino": "agents-api-experiencias.md",
-   "sha256": "d52af26b86784897",
+   "sha256": "ac19cbf6e4542418",
    "bytes": 3696
   },
   {
    "origem": "apps/api/src/recursos/AGENTS.md",
    "destino": "agents-api-recursos.md",
-   "sha256": "71d475f44647c823",
+   "sha256": "46777d8d0ed9bb86",
    "bytes": 12698
   },
   {
    "origem": "scripts/e2e/AGENTS.md",
    "destino": "agents-e2e.md",
-   "sha256": "73bb13f975af9c02",
+   "sha256": "52d4b1dac4ccf553",
    "bytes": 4443
   },
   {
    "origem": "docs/agents/domain.md",
    "destino": "glossario-dominio.md",
-   "sha256": "9a6993ab572df8d2",
+   "sha256": "93edec89604e0f76",
    "bytes": 3466
   },
   {
    "origem": "docs/DECISOES.md",
    "destino": "decisoes-adr.md",
-   "sha256": "ab25a16371c62784",
+   "sha256": "38a279111d9ed166",
    "bytes": 15591
   },
   {
    "origem": "docs/ARQUITETURA.md",
    "destino": "arquitetura.md",
-   "sha256": "696c8ee68270f6f4",
+   "sha256": "deb85795b420999b",
    "bytes": 2364
   },
   {
    "origem": "docs/INFRA.md",
    "destino": "infra.md",
-   "sha256": "2cfb7400e8ac9ccb",
+   "sha256": "e40e28a53d559b28",
    "bytes": 21592
   },
   {
    "origem": "apps/api/src/telemetry/contrato-de-rotas.ts",
    "destino": "contrato-telemetria.md",
-   "sha256": "f42d2cb6d1e5e1de",
+   "sha256": "f792624190fcfd60",
    "bytes": 1831
   },
   {
    "origem": "apps/api/src/experiencias/contrato-de-rotas.ts",
    "destino": "contrato-manifesto.md",
-   "sha256": "6851be1807d60e02",
+   "sha256": "50b87ad3d7aa9e72",
    "bytes": 3949
   },
   {
    "origem": "apps/api/src/progress/contrato-de-rotas.ts",
    "destino": "contrato-progresso.md",
-   "sha256": "5f36ade77f0af7ff",
+   "sha256": "414f765d13270681",
    "bytes": 1299
   },
   {
    "origem": "apps/api/src/comum/liberacao.ts",
    "destino": "guarda-liberacao.md",
-   "sha256": "8eea47824a6ab4f1",
+   "sha256": "35ffd0aa32129732",
    "bytes": 5934
   },
   {
    "origem": "apps/api/src/auth/claims.ts",
    "destino": "perfis-claims.md",
-   "sha256": "5b8f3fdf45619325",
+   "sha256": "c4fdbc73406eb33a",
    "bytes": 4160
   },
   {
    "origem": "apps/api/src/recursos/catalogo.ts",
    "destino": "produtos-catalogo.md",
-   "sha256": "de6c02ed404df1a2",
+   "sha256": "d68511f33d16f702",
    "bytes": 3806
   },
   {
    "origem": "apps/api/src/comum/series.ts",
    "destino": "series.md",
-   "sha256": "61cf10debaf9410c",
+   "sha256": "5906ff91325246dd",
    "bytes": 1024
   },
   {
    "origem": "packages/sdk/src/types.ts",
    "destino": "sdk-types.md",
-   "sha256": "d423a77abfc95a46",
+   "sha256": "f559a32da0ec7b48",
    "bytes": 5134
   },
   {
    "origem": "apps/hub/lib/experiencias-dev.ts",
    "destino": "experiencias-dev-portas.md",
-   "sha256": "c404a768baf406b1",
+   "sha256": "12dfa116cbe4ad44",
    "bytes": 3032
   },
   {
    "origem": "apps/experiencias/exp-08-manifesto-ia/public/experiencia.json",
    "destino": "exemplo-manifesto-exp-08.md",
-   "sha256": "866848584d1abb6f",
+   "sha256": "e67530a212224fd4",
    "bytes": 1004
   },
   {
    "origem": "apps/api/src/manifesto-ia/contrato-de-rotas.ts",
    "destino": "exemplo-contrato-rotas-exp-08.md",
-   "sha256": "64d59f8953ff7a52",
+   "sha256": "d3b3ab703cb20dc0",
    "bytes": 12168
   },
   {
    "origem": "apps/api/src/manifesto-ia/invariantes.ts",
    "destino": "exemplo-invariantes-exp-08.md",
-   "sha256": "5d5c15cc51d30519",
+   "sha256": "9e3371014c7ea355",
    "bytes": 4559
   },
   {
    "origem": "apps/experiencias/exp-08-manifesto-ia/src/lib/telemetria.ts",
    "destino": "exemplo-telemetria-exp-08.md",
-   "sha256": "bf0893a98a5343cc",
+   "sha256": "dff51e3c6a3415a3",
    "bytes": 3212
   },
   {
    "origem": "apps/api/prisma/migrations/20260910150000_exp_04_o_que_a_foto_conta/migration.sql",
    "destino": "exemplo-migration-exp-04.md",
-   "sha256": "b3bf0cee7c879bfe",
+   "sha256": "d8ec741f67a26123",
    "bytes": 8338
   },
   {
    "origem": "docs/regras/arquivos-de-instrucao.md",
    "destino": "regras-arquivos-de-instrucao.md",
-   "sha256": "5c199a672d0d05de",
+   "sha256": "c09b631dbf04bd1d",
    "bytes": 7305
   },
   {
    "origem": "docs/regras/bridge-postmessage.md",
    "destino": "regras-bridge-postmessage.md",
-   "sha256": "2c6bc640ea2c2024",
+   "sha256": "a15929af3ec82df7",
    "bytes": 5264
   },
   {
    "origem": "docs/regras/comandos.md",
    "destino": "regras-comandos.md",
-   "sha256": "b3db634ee8dd4afa",
+   "sha256": "1e3a5fcf841e6072",
    "bytes": 10584
   },
   {
    "origem": "docs/regras/convencoes-de-codigo.md",
    "destino": "regras-convencoes-de-codigo.md",
-   "sha256": "0d15d290359a149d",
-   "bytes": 4066
+   "sha256": "d8767cb31ac52363",
+   "bytes": 4287
   },
   {
    "origem": "docs/regras/definition-of-done.md",
    "destino": "regras-definition-of-done.md",
-   "sha256": "ef82bcd38c2f3618",
+   "sha256": "84e2c647e22a8fa5",
    "bytes": 2239
   },
   {
    "origem": "docs/regras/design-system.md",
    "destino": "regras-design-system.md",
-   "sha256": "a9a9ee502cf8370d",
+   "sha256": "e80b2fc5789ff693",
    "bytes": 4287
   },
   {
    "origem": "docs/regras/documentacao-latex.md",
    "destino": "regras-documentacao-latex.md",
-   "sha256": "3b74c88ea8ebef27",
+   "sha256": "790c490b897e52fc",
    "bytes": 3492
   },
   {
    "origem": "docs/regras/ferramentas-externas.md",
    "destino": "regras-ferramentas-externas.md",
-   "sha256": "024a6ce87898d684",
+   "sha256": "aa67b9719ec186ff",
    "bytes": 1470
   },
   {
    "origem": "docs/regras/git-e-branches.md",
    "destino": "regras-git-e-branches.md",
-   "sha256": "6888673969a9eb57",
+   "sha256": "bfccf8970e14fe80",
    "bytes": 10984
   },
   {
    "origem": "docs/regras/idioma-da-interface.md",
    "destino": "regras-idioma-da-interface.md",
-   "sha256": "ee7ffece27219422",
+   "sha256": "c8f0c2d787d013f8",
    "bytes": 3383
   },
   {
    "origem": "docs/regras/infra.md",
    "destino": "regras-infra.md",
-   "sha256": "475097c66212a322",
+   "sha256": "c738eabbbdbdf726",
    "bytes": 676
   },
   {
    "origem": "docs/regras/manifesto-de-experiencias.md",
    "destino": "regras-manifesto-de-experiencias.md",
-   "sha256": "b3cf65871fbc3d78",
+   "sha256": "a45dc906f7fd664d",
    "bytes": 9272
   },
   {
    "origem": "docs/regras/o-que-nao-fazer.md",
    "destino": "regras-o-que-nao-fazer.md",
-   "sha256": "d308bc9ada115ea4",
+   "sha256": "827843ad207f48f0",
    "bytes": 4366
   },
   {
    "origem": "apps/api/prisma/schema.prisma",
    "destino": "exemplo-schema-exp.md",
-   "sha256": "ee3b89ff49070097",
+   "sha256": "86309b89def9ac9f",
    "bytes": 27200,
    "modelos": 16
   },
   {
    "origem": "docs/openapi.json",
    "destino": "openapi-indice.md",
-   "sha256": "6f01208834e19358",
+   "sha256": "9b7771df1f74db2c",
    "bytes": 24935,
    "caminhos": 223
   }

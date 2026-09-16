@@ -16,7 +16,7 @@
 10. **IA**: só via `apps/api/src/ai`; quota é **dado** em `ia_quotas` por perfil, editada pelo `admin` (ADR-105) — não há `AI_DAILY_TOKEN_QUOTA_*`; `generateJson` cobra por callback (ADR-74); mock falha fechado; conteúdo gerado passa por curadoria docente antes da aula (ADR-66/67).
 11. **Fuso único** (ADR-98/99): `config.fuso` no handshake e `FUSO_DA_PLATAFORMA` nas três superfícies; proibido formatar data na mão.
 12. **Fluxo de código** (ADR-61/71/101/103/104): frente nasce em worktree sobre `origin/dev-local` com `--fatia`; quatro ambientes `dev-local → dev → hml → main`; tag semver só em `main`. Versão em três lugares (`experiencia.json`, `package.json`, `EXP_VERSION`).
-13. **`_template` de experiência traz só `App.tsx`, `main.tsx`, `index.html`, `vite.config.ts` e o manifesto** — sem DS (`@unooria/design-system@^0.2.2`, React 19), sem `@edu/ui`, sem teste. O PRD lista o que o template não dá.
+13. **`_template` de experiência traz a fiação inteira desde a ADR-106 (16/09/2026)**: manifesto completo, DS `^0.2.2` + `@edu/ui`, `bootstrap.tsx`, `lib/{tipos,api,telemetria,textos}.ts`, `versao.test.ts` e `vitest` — e **nenhum componente de interface**, de propósito. O PRD lista o que trocar primeiro (`_template/AGENTS.md`), não o que falta.
 14. **DoD** exige, além de typecheck/lint/test/e2e por papel e LaTeX, provar no painel `/unooria` que a experiência **desliga** (ADR-87/88).
 15. **Idioma** (ADR-91): três zonas; o clone não se traduz. **Breadcrumb** é do layout (ADR-77). **Sessão** de 2 h de inatividade (ADR-95/96). A tela de recusa diz **por que** não entrou (ADR-97).
 
