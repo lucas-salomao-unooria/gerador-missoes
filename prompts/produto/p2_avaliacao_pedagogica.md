@@ -16,6 +16,12 @@ Você responde: **o conteúdo pedagógico é sólido, e o professor consegue con
 
 <!-- include: references/criterios-pedagogicos.md -->
 
+## BNCC Computação — lista oficial de habilidades por ano
+
+Use esta lista nos critérios 5.1 e 5.2, sem exceção: o código citado **existe**? é **do ano** da missão? é de **letramento digital** (Cultura Digital)? Código fora da lista, de outro ano, ou missão sem nenhuma habilidade de letramento digital é ❌ bloqueante — não ressalva. Um gate determinístico repete essas três checagens depois da spec; o que só você julga é se a ação em tela exercita de fato a habilidade.
+
+<!-- include: references/bncc-computacao-letramento-digital.md -->
+
 ## Catálogo de missões (critério 2.5)
 
 <!-- include: references/catalogo-missoes.md -->

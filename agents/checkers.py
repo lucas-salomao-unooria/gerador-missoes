@@ -8,17 +8,30 @@
   4. quando dentro de um LoopAgent, encerra o loop (escalate) ao aprovar ou ao
      esgotar as rodadas; quando o gate falha em modo estrito, marca o pipeline
      como bloqueado para que os agentes a jusante sejam pulados.
+
+`SecaoSplitAgent` é um BaseAgent que copia seções (delimitadas por headings) de um
+relatório para chaves próprias do estado — usado depois de agentes que emitem mais de
+um documento numa única resposta (D0: spec consolidada + relatório de lacunas; D9:
+spec com bloco 14). Lê o envelope e grava um status **informativo**; nunca bloqueia.
+
+`BnccCheckAgent` é um BaseAgent que confere o bloco 11 da spec contra a lista oficial da
+BNCC Computação (`tools/bncc.py`): código existe, é do ano da missão, e há letramento
+digital. Não conforme → bloqueia o pipeline (design e dev pulados) quando `estrito`.
 """
 
 from __future__ import annotations
 
-from typing import AsyncGenerator, Optional
+import re
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from google.adk.agents.base_agent import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event, EventActions
 from google.genai import types
+from pydantic import Field
 from typing_extensions import override
+
+from tools.bncc import relatorio_markdown, validar_spec
 
 from .callbacks import (
     KEY_PIPELINE_BLOQUEADO,
@@ -26,6 +39,7 @@ from .callbacks import (
     STATUS_APROVADO,
     STATUS_BLOQUEADO,
     extrair_envelope,
+    extrair_slug,
     inferir_status,
 )
 
@@ -92,4 +106,142 @@ class EnvelopeGateAgent(BaseAgent):
             branch=ctx.branch,
             content=types.Content(role="model", parts=[types.Part(text=msg)]),
             actions=EventActions(state_delta=delta, escalate=escalate or None),
+        )
+
+
+def extrair_secao(texto: str, inicio: str, fim: Optional[str] = None) -> Optional[str]:
+    """Devolve o trecho entre o heading `inicio` (regex, multiline) e o heading `fim` (ou o fim do texto)."""
+    m = re.search(inicio, texto, re.MULTILINE)
+    if not m:
+        return None
+    start = m.end()
+    end = len(texto)
+    if fim:
+        m2 = re.search(fim, texto[start:], re.MULTILINE)
+        if m2:
+            end = start + m2.start()
+    return texto[start:end].strip()
+
+
+class SecaoSplitAgent(BaseAgent):
+    """Copia seções de um relatório para chaves próprias do estado e registra um status informativo.
+
+    Cada item de `extracoes` é um dict:
+      chave         → chave do estado que recebe a seção
+      inicio        → regex (multiline) do heading que abre a seção; o texto começa depois dele
+      fim           → regex (multiline) do heading que fecha a seção (opcional)
+      exigir        → regex que a seção precisa conter para ser aceita (opcional)
+      minimo_chars  → tamanho mínimo aceito (padrão 0)
+      backup        → chave onde o valor anterior de `chave` é preservado antes de sobrescrever (opcional)
+
+    Seção ausente, curta ou sem o conteúdo exigido → a chave é mantida como está e o evento avisa.
+    """
+
+    source_key: str
+    status_key: str
+    rotulo: str = "Split"
+    extracoes: List[Dict[str, Any]] = Field(default_factory=list)
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        state = ctx.session.state
+        texto = str(state.get(self.source_key, "") or "")
+        delta: Dict[str, Any] = {}
+        linhas: List[str] = []
+
+        if not texto.strip():
+            linhas.append(f"⏭️ {self.rotulo}: `{self.source_key}` vazio — nada a extrair.")
+        else:
+            for ex in self.extracoes:
+                chave = ex["chave"]
+                secao = extrair_secao(texto, ex["inicio"], ex.get("fim"))
+                motivo: Optional[str] = None
+                if secao is None:
+                    motivo = "seção não encontrada no relatório"
+                elif len(secao) < int(ex.get("minimo_chars", 0) or 0):
+                    motivo = f"seção curta demais ({len(secao)} caracteres)"
+                elif ex.get("exigir") and not re.search(ex["exigir"], secao, re.MULTILINE | re.IGNORECASE):
+                    motivo = "seção sem o conteúdo exigido"
+                if motivo:
+                    linhas.append(f"⚠️ `{chave}` mantido como estava — {motivo}.")
+                    continue
+                backup = ex.get("backup")
+                if backup and state.get(chave) and not state.get(backup):
+                    delta[backup] = state.get(chave)
+                delta[chave] = secao
+                linhas.append(f"✅ `{chave}` gravado a partir de `{self.source_key}` ({len(secao)} caracteres).")
+
+            envelope = extrair_envelope(texto)
+            status = inferir_status(texto, envelope)
+            if status not in (STATUS_APROVADO, STATUS_BLOQUEADO):
+                status = STATUS_APROVADO
+            delta[self.status_key] = status
+            delta[f"{self.status_key}_envelope"] = envelope or {}
+            bruto = (envelope or {}).get("status") or status
+            icone = "🔴" if status == STATUS_BLOQUEADO else "🟢"
+            linhas.append(f"{icone} {self.rotulo}: status `{bruto}` (informativo — o pipeline segue).")
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text="\n".join(linhas))]),
+            actions=EventActions(state_delta=delta),
+        )
+
+
+
+class BnccCheckAgent(BaseAgent):
+    """Gate determinístico de conformidade com a BNCC Computação, aplicado à spec.
+
+    Três regras mecânicas (ver `tools/bncc.py`): todo código do bloco 11 existe na lista
+    oficial; todo código é compatível com a série do bloco 0; há pelo menos uma habilidade
+    de letramento digital. Falha em qualquer uma → `bncc_status = bloqueado`; com `estrito`,
+    o pipeline é marcado como bloqueado e design/dev são pulados.
+    """
+
+    spec_key: str = "spec_missao"
+    report_key: str = "bncc_report"
+    status_key: str = "bncc_status"
+    rotulo: str = "Conformidade BNCC Computação"
+    estrito: bool = True
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        state = ctx.session.state
+        spec = str(state.get(self.spec_key, "") or "")
+        missao = extrair_slug(spec) or ""
+        resultado = validar_spec(spec)
+        relatorio = relatorio_markdown(resultado, missao)
+        status = STATUS_APROVADO if resultado["status"] == "aprovado" else STATUS_BLOQUEADO
+
+        delta: Dict[str, Any] = {
+            self.report_key: relatorio,
+            self.status_key: status,
+            f"{self.status_key}_envelope": extrair_envelope(relatorio) or {},
+        }
+        bloqueios = [a for a in resultado["achados"] if a["severidade"] == "bloqueio"]
+        if status == STATUS_APROVADO:
+            msg = (
+                f"✅ {self.rotulo}: conforme — {len(resultado['codigos'])} código(s) do bloco 11 existem, "
+                f"são da série identificada e incluem letramento digital."
+            )
+        else:
+            itens = "\n".join(f"- ⛔ {a['resumo']}" for a in bloqueios)
+            if self.estrito:
+                delta[KEY_PIPELINE_BLOQUEADO] = True
+                delta[KEY_PIPELINE_MOTIVO] = f"{self.rotulo} bloqueada ({len(bloqueios)} achado(s))"
+                msg = (
+                    f"⛔ {self.rotulo}: bloqueada — {len(bloqueios)} achado(s). "
+                    f"A esteira para aqui; design e dev não serão executados.\n{itens}"
+                )
+            else:
+                msg = f"⚠️ {self.rotulo}: {len(bloqueios)} achado(s) — modo não estrito, o pipeline segue.\n{itens}"
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta=delta),
         )

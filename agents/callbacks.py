@@ -50,9 +50,12 @@ def inferir_status(texto: str, envelope: Optional[Dict[str, Any]] = None) -> str
         status = str(envelope.get("status") or envelope.get("veredito") or "").strip().lower()
         if status in ("aprovado", "concluido", "concluído", "liberada", "apto", "passa", "verde", "🟢"):
             return STATUS_APROVADO
-        if status in ("bloqueado", "bloqueada", "devolvido", "nao_apto", "não apto", "nao_passa", "não passa", "vermelho", "🔴"):
+        if status in ("bloqueado", "bloqueada", "devolvido", "nao_apto", "não apto", "nao_passa", "não passa", "vermelho", "🔴", "aguarda_gate"):
             return STATUS_BLOQUEADO
         if status in ("apto_com_ressalvas", "ressalvas", "amarelo", "🟡"):
+            return STATUS_APROVADO
+        # D0 (fecha-lacunas): segue | segue_com_pendencias · D9 (ambiente-simulado): dormente | existente | novo
+        if status in ("segue", "segue_com_pendencias", "dormente", "existente", "novo", "nao_aplicavel", "não aplicável"):
             return STATUS_APROVADO
     cabecalho = (texto or "")[:1500].upper()
     if any(tok in cabecalho for tok in _BLOQUEADO_TOKENS):

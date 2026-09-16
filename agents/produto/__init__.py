@@ -19,6 +19,8 @@ Ordem (SequentialAgent):
   p4  GateFinalProdutoAgent    → gate_final_report
   p4c GateFinalCheck           → gate_final_status
   p5  SpecMissaoAgent          → spec_missao   (saída final de Produto)
+  p5c BnccCheck                → bncc_status   (determinístico: bloco 11 × BNCC Computação oficial;
+                                 não conforme bloqueia design e dev)
 """
 
 from __future__ import annotations
@@ -33,7 +35,7 @@ from google.adk.agents.sequential_agent import SequentialAgent
 
 from agents.base import create_llm_agent
 from agents.callbacks import skip_if_blocked
-from agents.checkers import EnvelopeGateAgent
+from agents.checkers import BnccCheckAgent, EnvelopeGateAgent
 from config import get_settings
 from prompts import load_prompt
 
@@ -220,6 +222,12 @@ def build_produto_stage(
                 block_pipeline_on_fail=estrito,
             ),
             get_spec_missao_agent(**kw),
+            BnccCheckAgent(
+                name="BnccCheck",
+                description="Confere o bloco 11 da spec contra a lista oficial da BNCC Computação: código existe, é do ano da missão e há letramento digital. Não conforme trava a esteira.",
+                estrito=settings.bncc_check_estrito,
+                before_agent_callback=skip_if_blocked,
+            ),
         ],
     )
 
@@ -237,4 +245,5 @@ PRODUTO_METADATA = [
     {"id": "GateFinalProdutoAgent", "name": "P4 · Gate final de produto", "icon": "🏁", "output_key": "gate_final_report", "prompt_file": "produto/p4_gate_final.md", "description": "Coerência entre missão e vereditos; libera ou bloqueia para design/dev."},
     {"id": "GateFinalProdutoCheck", "name": "P4c · Veredito final (determinístico)", "icon": "🔀", "output_key": "gate_final_status", "prompt_file": None, "description": "Lê o envelope do gate final."},
     {"id": "SpecMissaoAgent", "name": "P5 · Spec da missão", "icon": "📜", "output_key": "spec_missao", "prompt_file": "produto/p5_spec_missao.md", "description": "Os 12 blocos da spec — contrato contra o qual design e dev constroem."},
+    {"id": "BnccCheck", "name": "P5c · Conformidade BNCC Computação (determinístico)", "icon": "📚", "output_key": "bncc_report", "prompt_file": None, "description": "Bloco 11 × lista oficial do MEC: código existe, é do ano da missão e inclui letramento digital. Não conforme bloqueia design e dev."},
 ]

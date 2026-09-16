@@ -82,9 +82,12 @@ flowchart TD
             PAR_AVAL["Paralelo: Avaliação Pedagógica (P2)\n∥ Experiência do Estudante (P3)"]:::stageStyle
             P4_GATE{"Gate Final de Produto (P4c)\nLiberada ou Bloqueada?"}:::gateStyle
             P5["P5: SpecMissaoAgent\n(Contrato dos 12 Blocos)"]:::stageStyle
+            P5C{"P5c: Conformidade BNCC Computação\n(determinístico — bloqueia)"}:::gateStyle
         end
 
         subgraph STAGE_DES["🎨 Etapa de Design (DesignStage)"]
+            D0["D0: Fechamento de Lacunas\n(Spec consolidada + bloco 13)"]:::stageStyle
+            D9["D9: Ambiente Simulado 🎨\n(Condicional: app clonado ou mini-jogo; bloco 14)"]:::stageStyle
             D1["D1: Briefing de Ofício\n(Arco, Pico e Não-Negociáveis)"]:::stageStyle
             D2["D2: Jornada no FigJam 🎨"]:::stageStyle
             D3["D3: Fluxo de Telas no FigJam 🎨"]:::stageStyle
@@ -123,7 +126,7 @@ flowchart TD
     IN_PDF --> LOOP_P0
     IN_DOCX --> LOOP_P0
     GEMINI_API -.-> PIPELINE
-    FIGMA_MCP -.-> D2 & D3 & D5 & D7
+    FIGMA_MCP -.-> D9 & D2 & D3 & D5 & D7
 
     LOOP_P0 -->|Núcleo aprovado| P0B
     P0B --> LOOP_P1
@@ -131,9 +134,11 @@ flowchart TD
     PAR_AVAL --> P4_GATE
     P4_GATE -->|Liberada| P5
     P4_GATE -.->|Bloqueada em Modo Estrito| BLOCK_STOP["⛔ Interrompe Design e Dev"]:::gateStyle
-    P5 --> D1
+    P5 --> P5C
+    P5C -->|Conforme| D0
+    P5C -.->|Não conforme| BLOCK_STOP
 
-    D1 --> D2 --> D3 --> D4 --> D4B --> D5 --> D6 --> D7
+    D0 --> D9 --> D1 --> D2 --> D3 --> D4 --> D4B --> D5 --> D6 --> D7
     D7 --> PAR_HANDOFF
     PAR_HANDOFF --> BANCA_DEV --> V3 --> V4 --> T
 
@@ -180,14 +185,19 @@ graph TD
             P4["P4: GateFinalProdutoAgent\noutput_key: gate_final_report"]
             P4c["P4c: GateFinalProdutoCheck (EnvelopeGateAgent)\nstatus_key: gate_final_status"]
             P5["P5: SpecMissaoAgent\noutput_key: spec_missao"]
+            P5c["P5c: BnccCheck (BnccCheckAgent)\nstatus_key: bncc_status"]
 
             P0mgc -->|Escalate on Approve| P0B
             P0B --> LOOP_P1
             P1c -->|Escalate on Approve| PAR_AVAL
-            PAR_AVAL --> P4 --> P4c --> P5
+            PAR_AVAL --> P4 --> P4c --> P5 --> P5c
         end
 
         subgraph DES["DesignStage (SequentialAgent)"]
+            D0["D0: FechaLacunasAgent\noutput_key: fechamento_lacunas"]
+            D0c["D0c: FechaLacunasSplit (SecaoSplitAgent)\nspec_missao ← spec consolidada · relatorio_lacunas · lacunas_status"]
+            D9["D9: AmbienteSimuladoAgent 🎨\noutput_key: ambiente_simulado"]
+            D9c["D9c: AmbienteSimuladoSplit (SecaoSplitAgent)\nspec_missao ← bloco 14 · ambiente_status"]
             D1["D1: BriefOficioAgent\noutput_key: brief_oficio"]
             D2["D2: JornadaFigJamAgent 🎨\noutput_key: jornada_telas"]
             D3["D3: FluxoFigJamAgent 🎨\noutput_key: fluxo_arestas"]
@@ -198,7 +208,7 @@ graph TD
             D7["D7: QaEntregaveisAgent 🎨\noutput_key: qa_entregaveis_report"]
             D7c["D7c: QaEntregaveisCheck (EnvelopeGateAgent)\nstatus_key: design_status"]
 
-            D1 --> D2 --> D3 --> D4 --> D4B --> D5 --> D6 --> D7 --> D7c
+            D0 --> D0c --> D9 --> D9c --> D1 --> D2 --> D3 --> D4 --> D4B --> D5 --> D6 --> D7 --> D7c
         end
 
         subgraph DEV["DevStage (SequentialAgent)"]
@@ -290,6 +300,7 @@ A área de Produto garante que nenhuma missão siga para concepção visual ou c
 | **Gate final de produto** | `P4` | `LlmAgent` | `{one_pager}`, relatórios de P1, P2 e P3 | `gate_final_report` | Valida a coerência cruzada entre todos os pareceres anteriores. Emite o veredito definitivo: 🟢 LIBERADA ou 🔴 BLOQUEADA. |
 | **Veredito final de produto** | `P4c` | `EnvelopeGateAgent` (Determinístico) | `gate_final_report` | `gate_final_status` | Registra a liberação ou bloqueio no estado global e sinaliza `skip_if_blocked` se modo estrito estiver ativo. |
 | **Spec da missão** | `P5` | `LlmAgent` | `{one_pager}`, `{gate_final_report}` | `spec_missao` | Converte o one-pager aprovado no contrato técnico dos **12 blocos de construção**, contra o qual Design e Dev construirão. |
+| **Conformidade BNCC Computação** | `P5c` | Determinístico (`BnccCheckAgent`) | `spec_missao` | `bncc_status`, `bncc_report` | Confere o bloco 11 contra `references/bncc-computacao.json` (transcrição do anexo oficial do MEC, 130 habilidades): todo código existe, é da série do bloco 0 (`EF0n` = ano n · `EF15` = 1º–5º · `EF69` = 6º–9º · `EM13` = qualquer série do Médio) e, no Fundamental, há pelo menos uma habilidade de **letramento digital** (Cultura Digital). No Médio o anexo não tem eixo: basta pelo menos uma habilidade `EM13`, e a marca de letramento é orientação. Não conforme → 🔴 e a esteira para; design e dev não rodam. |
 
 ---
 
@@ -297,8 +308,14 @@ A área de Produto garante que nenhuma missão siga para concepção visual ou c
 
 A área de Design recebe a `spec_missao` e a transforma em especificações de interface e jornada, gerando arquivos reais ou boards no Figma/FigJam quando o MCP está conectado.
 
+Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as lacunas que a esteira redescobriria seis vezes (decisões `[D0-n]` com base declarada, pedidos de re-spec `[RS-n]` ao Gate 0) e o **D9** decide o ambiente simulado quando a spec cala (app clonado da lista fechada, app novo ou, em 1º–5º ano, mini-jogo). Cada um emite a spec consolidada dentro do próprio relatório; um `SecaoSplitAgent` determinístico copia essa seção para `spec_missao` (a original do Gate 0 fica em `spec_missao_gate0`), de modo que D1–D7 leem a spec com os blocos 13 e 14 sem saber que D0/D9 existiram. Os status `lacunas_status` e `ambiente_status` são informativos: não há loop de re-spec com o Gate 0 na esteira, então `aguarda_gate` aparece como 🔴 na UI e o pipeline segue com os `RS-n` carimbados como pendentes.
+
 | Agente | ID | Ferramentas | Saída (`output_key`) | Responsabilidade Central |
 |---|---|---|---|---|
+| **Fechamento de lacunas** | `D0` | — | `fechamento_lacunas` | Varre a spec contra `references/celulas-consumidas.md`, classifica cada lacuna (verde · amarelo · vermelho) e preenche só ausências deriváveis da missão (padrões de `references/defaults-missao.md`, catálogo, one-pager). Emite a spec consolidada com o **bloco 13** e um relatório de preenchimento em PT-BR para a PM e a professora. |
+| **Spec consolidada + relatório** | `D0c` | Determinístico | `relatorio_lacunas` (+ `spec_missao`, `spec_missao_gate0`, `lacunas_status`) | Copia a seção "Spec consolidada" do D0 para `spec_missao`, separa o relatório de preenchimento e lê o envelope. |
+| **Ambiente simulado** | `D9` | 🎨 `FIGMA_TOOLS_AMBIENTE` | `ambiente_simulado` | Condicional: dormente quando a spec já nomeia um ambiente com seção no DS (mesmo assim emite a ficha do **bloco 14**: verbos com rótulo literal, chrome, estados, o que a plataforma real não tem). Quando decide, testa os cinco ambientes, aplica o gate de mini-jogo (1º–5º) e, se cria ambiente novo, monta a seção no arquivo do DS só com tokens existentes. |
+| **Spec com bloco 14** | `D9c` | Determinístico | `ambiente_status` (+ `spec_missao`) | Copia a spec com o bloco 14 para `spec_missao` e lê o envelope (`dormente` · `existente` · `novo` · `aguarda_gate`). |
 | **Briefing de ofício** | `D1` | — | `brief_oficio` | Extrai o arco dramático da missão: gancho inicial, pico de engajamento, beat memorável de ofício e não-negociáveis de imersão. |
 | **Jornada no FigJam** | `D2` | 🎨 `FIGMA_TOOLS_JORNADA` | `jornada_telas` | Constrói a matriz de jornada (Raias × 6 Etapas), define cenários por dispositivo, inventário completo de telas e direção de arte por tela. |
 | **Fluxo de telas no FigJam** | `D3` | 🎨 `FIGMA_TOOLS_FLUXO` | `fluxo_arestas` | Modela o grafo de estados e transições de tela com condições, gates de validação e execução dos **5 testes de fluxo** (caminho feliz, erro, desistência, recálculo e retorno). |
@@ -439,8 +456,13 @@ output/20260904-143000-exp-04-fake-news/
 │   ├── 02-avaliacao-pedagogica.md     # Parecer BNCC e mediação docente
 │   ├── 03-experiencia-aluno.md        # Parecer de adequação etária e agência
 │   ├── 04-gate-final.md               # Liberação formal de produto
-│   └── 05-spec-missao.md              # Contrato dos 12 blocos de construção
+│   ├── 05-spec-missao.md              # Contrato de construção (12 blocos + 13 do D0 + 14 do D9)
+│   ├── 05a-spec-missao-gate0.md       # Cópia da spec original do Gate 0 (antes do D0)
+│   └── 05b-conformidade-bncc.md       # P5c: bloco 11 × lista oficial da BNCC Computação
 ├── design/
+│   ├── 00-fechamento-lacunas.md       # D0: varredura, decisões [D0-n], re-specs [RS-n]
+│   ├── 00a-relatorio-lacunas.md       # D0: relatório de preenchimento em PT-BR (PM, professora)
+│   ├── 00b-ambiente-simulado.md       # D9: ficha do ambiente (bloco 14) e decisão de classe
 │   ├── 01-briefing-oficio.md          # Arco dramático e picos de engajamento
 │   ├── 02-jornada-telas.md            # Raias × 6 etapas e inventário
 │   ├── 03-fluxo-arestas.md            # Grafo de estados e os 5 testes
@@ -530,6 +552,7 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `INCLUDE_THOUGHTS` | `true` | Exibe o fluxo de pensamentos dos agentes na interface gráfica. |
 | `PIPELINE_STAGES` | `produto,design,dev` | Etapas ativas separadas por vírgula (a etapa de aprendizado roda sempre). |
 | `PRODUTO_MODO_ESTRITO` | `true` | Se `true`, bloqueio em gate de produto encerra o pipeline impedindo design e dev. |
+| `BNCC_CHECK_ESTRITO` | `true` | Gate determinístico depois da spec: habilidade inexistente, de outro ano ou sem letramento digital trava a esteira. |
 | `GATE_ESTRUTURAL_MAX_RODADAS` | `3` | Número máximo de ciclos entre o Gate Estrutural e o Revisor do One-pager. |
 | `OUTPUT_DIR` | `output` | Diretório local para gravação persistente dos artefatos. |
 | `FIGMA_MCP_MODE` | `auto` | Modo do Figma MCP: `auto`, `remote`, `desktop`, `stdio` ou `off`. |
@@ -538,6 +561,7 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `FIGMA_MCP_DESKTOP_URL` | `http://127.0.0.1:3845/mcp` | Endpoint local do aplicativo Figma Desktop. |
 | `FIGMA_DS_FILE_KEY` | `mPw4Hhx9ptkgcHtySaSilO` | fileKey do Design System Unooria no Figma. |
 | `FIGMA_DS_V02_FILE_KEY` | `i0HRQSBtQQ9ZXDYiJPRnGv` | fileKey do Design System v0.2 no Figma. |
+| `GDRIVE_FOLDER_URL` | — | Pasta do Google Drive onde o D0 gravaria o relatório de lacunas como Google Docs. Sem toolset do Drive na esteira, o agente registra `GDOCS: indisponível` e entrega só o Markdown. |
 
 ---
 

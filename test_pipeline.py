@@ -52,7 +52,9 @@ KNOWN_STATE_KEYS = {
     "briefing", "nucleo_narrativo", "micro_gate_report", "micro_gate_status", "micro_gate_rodada",
     "one_pager", "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_rodada",
     "avaliacao_pedagogica_report", "experiencia_aluno_report", "gate_final_report", "gate_final_status",
-    "spec_missao", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
+    "spec_missao", "spec_missao_gate0", "bncc_status", "bncc_report", "fechamento_lacunas", "relatorio_lacunas", "lacunas_status",
+    "ambiente_simulado", "ambiente_status",
+    "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
     "wireframes_cobertura", "copy_strings_revisada", "qa_entregaveis_report", "design_status",
     "handoff_dev", "brief_assets", "validacao_produto_narrativa", "validacao_design_imersao",
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
@@ -60,7 +62,7 @@ KNOWN_STATE_KEYS = {
     "pipeline_bloqueado", "pipeline_bloqueio_motivo",
 }
 # Variáveis estáticas substituídas pelo loader antes do ADK
-CONFIG_VARS = {"figma_mcp_mode": "off", "figma_folder_url": "x", "figma_ds_file_key": "k", "figma_ds_v02_file_key": "k2"}
+CONFIG_VARS = {"figma_mcp_mode": "off", "figma_folder_url": "x", "figma_ds_file_key": "k", "figma_ds_v02_file_key": "k2", "gdrive_folder_url": "g"}
 
 # Chaves obrigatórias (sem `?`) permitidas por área: existem sempre antes do agente rodar
 REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
@@ -69,7 +71,8 @@ EXPECTED_AGENTS = {
     "NucleoNarrativoLoop", "NucleoNarrativoAgent", "MicroGateAgent", "MicroGateCheck", "SecoesApoioAgent",
     "GateEstruturalLoop", "GateEstruturalAgent", "GateEstruturalCheck", "RevisorOnePagerAgent",
     "AvaliacoesParalelas", "AvaliacaoPedagogicaAgent", "ExperienciaAlunoAgent", "GateFinalProdutoAgent",
-    "GateFinalProdutoCheck", "SpecMissaoAgent", "DesignStage", "BriefOficioAgent", "JornadaFigJamAgent",
+    "GateFinalProdutoCheck", "SpecMissaoAgent", "BnccCheck", "DesignStage", "FechaLacunasAgent", "FechaLacunasSplit",
+    "AmbienteSimuladoAgent", "AmbienteSimuladoSplit", "BriefOficioAgent", "JornadaFigJamAgent",
     "FluxoFigJamAgent", "CopyPtBrAgent", "CaaAgent", "WireframesFigmaAgent", "CopyRevisaoAgent", "QaEntregaveisAgent",
     "QaEntregaveisCheck", "DevStage", "HandoffParalelo", "HandoffDevAgent", "BriefAssetsAgent",
     "BancaValidacaoDev", "ValidacaoProdutoNarrativaAgent", "ValidacaoDesignImersaoAgent",
@@ -275,6 +278,154 @@ def test_modo_nao_estrito_nao_bloqueia():
     print("   ✓ modo não estrito registra o bloqueio e segue")
 
 
+# --------------------------------------------------------------------------- 5. split D0/D9
+def test_secao_split_d0_e_d9():
+    from agents.design import get_ambiente_simulado_split, get_fecha_lacunas_split
+
+    spec_original = "# Spec — Teste v1\n\n**1EF · instanooria**\n\n## 0. Identificação de plataforma\n" + ("Slug exp-99-teste. " * 90) + "\n\n## 12. Decisões fechadas neste gate\nnenhuma\n"
+    spec_consolidada = spec_original + "\n## 13. Decisões D0\n[D0-1] 2.estado_espera — Decisão: tela congela.\n"
+    d0_out = (
+        "# Fechamento de lacunas — teste\n**Veredito: 🟢 SEGUE PARA D1**\n\n## Passo 1 — Varredura\n...\n"
+        "## Passo 5 — Spec consolidada (texto original do Gate 0, blocos 0–12 intocados, + bloco 13)\n" + spec_consolidada +
+        "\n## Passo 5b — Relatório de preenchimento — `relatorio-preenchimento.md` · Google Docs: GDOCS indisponível\n"
+        "### [D0-1] Tela de espera\n**O que faltava:** o que a criança vê enquanto a professora fala.\n**O que entrou:** a tela congela.\n\n"
+        "## Passo 6 — Devolutiva ao produto\n- nada\n\n## Testes 1–6 — resultado\nok\n\n"
+        '```json\n{"agente": "fecha-lacunas", "missao": "exp-99-teste", "status": "segue_com_pendencias", "decisoes": [], "respec": []}\n```'
+    )
+    root = SequentialAgent(
+        name="Root",
+        sub_agents=[
+            FakeAgent(name="Spec", key="spec_missao", text=spec_original),
+            FakeAgent(name="D0", key="fechamento_lacunas", text=d0_out),
+            get_fecha_lacunas_split(),
+        ],
+    )
+    _, state = asyncio.run(_run(root))
+    assert state["spec_missao"].startswith("# Spec — Teste v1"), state["spec_missao"][:80]
+    assert "## 13. Decisões D0" in state["spec_missao"] and "Passo 5b" not in state["spec_missao"]
+    assert state["spec_missao_gate0"] == spec_original
+    assert state["relatorio_lacunas"].startswith("### [D0-1]") and "Passo 6" not in state["relatorio_lacunas"]
+    assert state["lacunas_status"] == "aprovado"
+    assert not state.get(KEY_PIPELINE_BLOQUEADO)
+
+    # D9 dormente: reemite a spec (blocos 1–13 + bloco 14); o split troca spec_missao e não bloqueia
+    spec_com_14 = spec_consolidada + "\n## 14. Ambiente simulado (D9)\ninstanooria · dormente\n"
+    d9_out = (
+        "# Ambiente simulado — teste\n**Veredito: ⚪ DORMENTE (spec já nomeia instanooria)**\n\n"
+        "## Passo 4 — Spec consolidada (blocos 1–13 do D0 intocados + bloco 14)\n" + spec_com_14 +
+        "\n## Bloco 14 — Ficha do ambiente\nnome: instanooria\n\n## Testes — resultado\nok\n\n"
+        '```json\n{"agente": "ambiente-simulado", "missao": "exp-99-teste", "status": "dormente"}\n```'
+    )
+    root2 = SequentialAgent(
+        name="Root2",
+        sub_agents=[
+            FakeAgent(name="Spec", key="spec_missao", text=spec_consolidada),
+            FakeAgent(name="D9", key="ambiente_simulado", text=d9_out),
+            get_ambiente_simulado_split(),
+        ],
+    )
+    _, state2 = asyncio.run(_run(root2))
+    assert "## 14. Ambiente simulado" in state2["spec_missao"] and "## 13. Decisões D0" in state2["spec_missao"]
+    assert "Bloco 14 — Ficha" not in state2["spec_missao"]
+    assert state2["ambiente_status"] == "aprovado"
+
+    # D9 sem a seção de spec (saída fora do formato) e com aguarda_gate: mantém a spec, marca 🔴, pipeline segue
+    d9_ruim = '# Ambiente simulado\n**Veredito: 🔴 AGUARDA GATE 0**\n\n```json\n{"agente": "ambiente-simulado", "status": "aguarda_gate"}\n```'
+    root3 = SequentialAgent(
+        name="Root3",
+        sub_agents=[
+            FakeAgent(name="Spec", key="spec_missao", text=spec_consolidada),
+            FakeAgent(name="D9", key="ambiente_simulado", text=d9_ruim),
+            get_ambiente_simulado_split(),
+            FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=skip_if_blocked),
+        ],
+    )
+    _, state3 = asyncio.run(_run(root3))
+    assert state3["spec_missao"] == spec_consolidada
+    assert state3["ambiente_status"] == "bloqueado"
+    assert state3.get("brief_oficio") == "brief" and not state3.get(KEY_PIPELINE_BLOQUEADO)
+    print("   ✓ split D0/D9: spec consolidada, cópia da original, relatório separado, status informativo")
+
+
+# --------------------------------------------------------------------------- 6. BNCC Computação
+_SPEC_BNCC = """# Spec — Teste v1
+
+**5EF · unitube · Rubrica v1.17**
+
+## 0. Identificação de plataforma
+Slug `exp-77-teste` · séries `["5EF"]` · unidade B2 · `publico: estudante` · unitube · viewport 375×812.
+
+## 1. Descoberta central
+Popularidade não é confiabilidade.
+
+## 11. Currículo
+- {codigos}
+
+## 12. Decisões fechadas neste gate
+nenhuma
+"""
+
+
+def test_bncc_validador_e_gate():
+    from agents.checkers import BnccCheckAgent
+    from tools.bncc import extrair_serie, habilidades, validar_spec
+
+    assert len(habilidades()) == 130
+    assert extrair_serie('séries `["5EF"]`')["anos"] == {5}
+    assert extrair_serie("1º–2º ano · tiktooria")["anos"] == {1, 2}
+    assert extrair_serie("2ª série do Ensino Médio")["em"] is True
+
+    ok = validar_spec(_SPEC_BNCC.format(codigos="EF05CO08 — momento em tela: escolher vídeo · EF05CO02 — grafo do canal"))
+    assert ok["status"] == "aprovado" and ok["anos"] == [5] and ok["tem_letramento"], ok["achados"]
+
+    ruim = validar_spec(_SPEC_BNCC.format(codigos="EF04CO08 · EF05CO02 · EF05CO99"))
+    cods = {a["codigo"] for a in ruim["achados"] if a["severidade"] == "bloqueio"}
+    assert ruim["status"] == "bloqueado" and {"EF04CO08", "EF05CO99", "letramento"} <= cods, cods
+
+    so_pc = validar_spec(_SPEC_BNCC.format(codigos="EF05CO02 · EF15CO02"))
+    assert so_pc["status"] == "bloqueado" and any(a["codigo"] == "letramento" for a in so_pc["achados"])
+
+    em_ok = validar_spec(_SPEC_BNCC.replace('`["5EF"]`', '`["2EM"]`').replace("5EF", "2EM").format(codigos="EM13CO14 · EM13CO01"))
+    assert em_ok["status"] == "aprovado" and em_ok["em"] is True, em_ok["achados"]
+    em_sem_letramento = validar_spec(_SPEC_BNCC.replace('`["5EF"]`', '`["2EM"]`').replace("5EF", "2EM").format(codigos="EM13CO01"))
+    assert em_sem_letramento["status"] == "aprovado", "no EM (sem eixo oficial) basta uma habilidade EM13 existente"
+    assert any(a["codigo"] == "letramento" and a["severidade"] == "atencao" for a in em_sem_letramento["achados"])
+    em_ano_errado = validar_spec(_SPEC_BNCC.replace('`["5EF"]`', '`["2EM"]`').replace("5EF", "2EM").format(codigos="EF09CO10"))
+    assert em_ano_errado["status"] == "bloqueado", "habilidade do Fundamental em missão de EM bloqueia"
+    em_vazio = validar_spec(_SPEC_BNCC.replace('`["5EF"]`', '`["2EM"]`').replace("5EF", "2EM").format(codigos="(nenhuma)"))
+    assert em_vazio["status"] == "bloqueado", "missão de EM sem nenhuma habilidade EM13 bloqueia"
+
+    sem_serie = validar_spec("# Spec\n## 0. Identificação\nslug x\n## 11. Currículo\nEF05CO08\n## 12.\n")
+    assert sem_serie["status"] == "bloqueado" and any(a["codigo"] == "serie" for a in sem_serie["achados"])
+
+    # gate estrito: spec não conforme bloqueia o pipeline e pula o jusante
+    root = SequentialAgent(
+        name="Root",
+        sub_agents=[
+            FakeAgent(name="Spec", key="spec_missao", text=_SPEC_BNCC.format(codigos="EF04CO08 · EF05CO02")),
+            BnccCheckAgent(name="BnccCheck", estrito=True),
+            FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=skip_if_blocked),
+        ],
+    )
+    _, state = asyncio.run(_run(root))
+    assert state["bncc_status"] == "bloqueado" and state.get(KEY_PIPELINE_BLOQUEADO) is True
+    assert "brief_oficio" not in state and "🔴 BLOQUEADO" in state["bncc_report"]
+    assert state["bncc_status_envelope"]["agente"] == "bncc-check"
+
+    # spec conforme: segue
+    root2 = SequentialAgent(
+        name="Root2",
+        sub_agents=[
+            FakeAgent(name="Spec", key="spec_missao", text=_SPEC_BNCC.format(codigos="EF05CO08 · EF05CO02")),
+            BnccCheckAgent(name="BnccCheck", estrito=True),
+            FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=skip_if_blocked),
+        ],
+    )
+    _, state2 = asyncio.run(_run(root2))
+    assert state2["bncc_status"] == "aprovado" and state2.get("brief_oficio") == "brief" and not state2.get(KEY_PIPELINE_BLOQUEADO)
+    print("   ✓ BNCC: 130 habilidades; EF bloqueia código inexistente, ano errado, sem letramento e sem série; EM exige ≥1 EM13; gate trava a esteira")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")
@@ -288,6 +439,8 @@ if __name__ == "__main__":
         test_gate_loop_bloqueia_e_pula_jusante,
         test_gate_loop_aprova_e_segue,
         test_modo_nao_estrito_nao_bloqueia,
+        test_secao_split_d0_e_d9,
+        test_bncc_validador_e_gate,
     ]
     failed = 0
     for t in tests:

@@ -30,6 +30,10 @@ Você fecha os critérios 9.1, 9.2 e 9.3 da rubrica. Seu leitor é o dev — e o
 
 {brief_oficio?}
 
+**Ambiente simulado (D9) — a casca que o dev implementa: seção do DS, verbos com rótulo literal, chrome, estados e o que a plataforma real não tem. `dormente` = a spec já nomeava o ambiente; vazio = use o bloco 0 da spec:**
+
+{ambiente_simulado?}
+
 **QA de entregáveis (status `{design_status?}`) — pendências de design a carregar:**
 
 {qa_entregaveis_report?}

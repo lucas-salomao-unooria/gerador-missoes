@@ -1,6 +1,6 @@
 ---
 name: pronto
-description: Definição de pronto por agente — só o que se conta. Verificada pelo próprio agente antes de entregar, e declarada no envelope. Lido por jornada-figjam, fluxo-figjam, copy-ptbr, caa, wireframes-figma e pelo gate de ofício.
+description: Definição de pronto por agente — só o que se conta. Verificada pelo próprio agente antes de entregar, e declarada no envelope. Lido por fecha-lacunas, ambiente-simulado, jornada-figjam, fluxo-figjam, copy-ptbr, caa, wireframes-figma e pelo gate de ofício.
 sources: [chat]
 ---
 
@@ -86,6 +86,40 @@ Só conta quando o gate de aplicabilidade deu "roda". Em `nao_aplicavel`, a cont
 | Pictograma de gesto ou botão de áudio como caixa cinza | Requisito de acessibilidade |
 | `[[placeholder]]` não resolvido na entrega final | |
 | Elemento contado acima do teto da tela na Seção 4 | Conta como em `rubrica-oficio.md` |
+
+## fecha-lacunas
+
+| Conta | Zero significa |
+|---|---|
+| Célula do checklist (`celulas-consumidas.md`) sem ✅, `[D0-n]` ou `RS-n pendente` | Varredura completa — nenhuma ⚠️ solta |
+| Decisão `[D0-n]` que reescreve texto já presente na spec | Preenche ausência, nunca altera presença |
+| Decisão com base "inferência" sem frase ancorada na descoberta ou na faixa | Inferência sem âncora é invenção — vira vermelho |
+| Decisão que aumenta decisões do estudante, telas ou dados coletados | O cap é do produto |
+| Lacuna de classe `mecanica` ou `curriculo` decidida em verde ou amarelo | As duas classes são sempre vermelhas |
+| `[RS-n]` sem "Bloqueia" preenchido | Sem bloqueio não é re-spec, é anotação |
+| Bloco 0–12 da spec consolidada diferente do texto do Gate 0 | A spec original é intocada |
+| `[D0-n]` do bloco 13 sem entrada no relatório de preenchimento, ou vice-versa | Os dois documentos dizem a mesma coisa |
+| Termo em inglês no relatório de preenchimento | Quem lê é a PM e a professora |
+| Decisão em voz de opinião ("sugiro", "acho") | A spec é contrato |
+
+## ambiente-simulado
+
+Dormente conta só as três primeiras linhas; o resto é para quando decidiu.
+
+| Conta | Zero significa |
+|---|---|
+| Verbo do bloco 4 sem rótulo literal e componente do DS na ficha | Ficha incompleta — D2 e D4 vão inventar |
+| Bloco 1–13 da spec consolidada alterado (inclusive o bloco 13 do D0) | Regenerar do original apaga o D0 |
+| Decisões, telas ou dados coletados diferentes de antes do bloco 14 | O cap é do produto |
+| Ambiente novo sem a Passada 1 mostrando em qual critério **cada** um dos cinco falhou | Falha só em (3) ou (4) não justifica criar |
+| Missão de 1º–5º sem a tabela da Passada 1b preenchida (mesmo com resposta "não") | O próximo agente precisa saber que foi considerado |
+| Mini-jogo com uma das quatro condições da 1b falhando | Uma só que falhe e a classe é app clonado |
+| Token, cor ou fonte fora do DS na seção do ambiente | A marca é forma e chrome, não paleta |
+| Componente local novo sem busca no DS registrada e sem marca de candidato | `aprendizado` decide se sobe |
+| Nome do ambiente ou texto lido por pessoa em inglês | Identificadores de contrato ficam; o resto traduz |
+| Mini-jogo: fase desenhada pelo D9 (quantas, ordem, regra) | Fases são da jornada |
+| Mini-jogo: placar entre estudantes, tempo como nota, vida que expulsa, poder permanente | 🔴 por 8.5 e PED-07 |
+| Mini-jogo: nome, personagem, som, ícone ou forma de jogo comercial | A referência é a gramática, nunca a marca |
 
 ## Regra de manutenção
 

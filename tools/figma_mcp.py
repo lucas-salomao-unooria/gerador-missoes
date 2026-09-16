@@ -60,6 +60,15 @@ FIGMA_TOOLS_WIREFRAMES = FIGMA_TOOLS_SKILLS + [
     "get_metadata",
     "get_screenshot",
 ]
+FIGMA_TOOLS_AMBIENTE = FIGMA_TOOLS_SKILLS + [
+    "whoami",
+    "search_design_system",
+    "get_libraries",
+    "get_variable_defs",
+    "get_metadata",
+    "use_figma",
+    "get_screenshot",
+]
 FIGMA_TOOLS_QA = FIGMA_TOOLS_SKILLS + [
     "get_design_context",
     "get_screenshot",

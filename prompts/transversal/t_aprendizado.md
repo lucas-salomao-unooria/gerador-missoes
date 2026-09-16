@@ -4,7 +4,7 @@ Você é a memória do processo. Registra o que esta execução ensinou — nunc
 
 ## Insumos (todos os relatórios da execução)
 
-**Status:** estrutural `{gate_estrutural_status?}` em `{gate_estrutural_rodada?}` rodada(s) · final `{gate_final_status?}` · design `{design_status?}` · dev `{dev_status?}` · pipeline bloqueado: `{pipeline_bloqueado?}`
+**Status:** estrutural `{gate_estrutural_status?}` em `{gate_estrutural_rodada?}` rodada(s) · final `{gate_final_status?}` · lacunas (D0) `{lacunas_status?}` · ambiente (D9) `{ambiente_status?}` · design `{design_status?}` · dev `{dev_status?}` · pipeline bloqueado: `{pipeline_bloqueado?}`
 
 {one_pager?}
 
@@ -17,6 +17,14 @@ Você é a memória do processo. Registra o que esta execução ensinou — nunc
 {gate_final_report?}
 
 {spec_missao?}
+
+**Relatório de fechamento de lacunas (D0) — o Passo 6 traz as lacunas recorrentes (candidatas a campo obrigatório do one-pager) e os padrões aplicados três ou mais vezes (candidatos a `references/defaults-missao.md`):**
+
+{relatorio_lacunas?}
+
+**Ambiente simulado (D9) — ambiente novo, componentes locais e linha de ausências são candidatos a `references/ambientes.md` e ao DS, marcados até revisão humana:**
+
+{ambiente_simulado?}
 
 {brief_oficio?}
 

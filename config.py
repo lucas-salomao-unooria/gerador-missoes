@@ -74,6 +74,10 @@ class AppSettings(BaseSettings):
         default_factory=lambda: os.getenv("PIPELINE_STAGES", "produto,design,dev"),
         description="Etapas ativas do pipeline, separadas por vírgula (produto, design, dev)",
     )
+    bncc_check_estrito: bool = Field(
+        default_factory=lambda: _env_bool("BNCC_CHECK_ESTRITO", "true"),
+        description="Se true, spec com habilidade BNCC inexistente, de outro ano ou sem letramento digital bloqueia design e dev",
+    )
     produto_modo_estrito: bool = Field(
         default_factory=lambda: _env_bool("PRODUTO_MODO_ESTRITO", "true"),
         description="Se verdadeiro, missão bloqueada nos gates de produto interrompe design e dev",
@@ -141,6 +145,12 @@ class AppSettings(BaseSettings):
     figma_ds_v02_file_key: str = Field(
         default_factory=lambda: os.getenv("FIGMA_DS_V02_FILE_KEY", "i0HRQSBtQQ9ZXDYiJPRnGv"),
         description="fileKey do Unooria_DS_v0.2",
+    )
+
+    # Google Drive (relatório de lacunas do D0 em Google Docs — sem toolset ainda; o prompt tem fallback)
+    gdrive_folder_url: str = Field(
+        default_factory=lambda: os.getenv("GDRIVE_FOLDER_URL", ""),
+        description="URL da pasta do Google Drive onde o D0 gravaria o relatório de lacunas como Google Docs",
     )
 
     # ----------------------------------------------------------- Derivados

@@ -77,6 +77,9 @@ GATE_LABELS = {
     "micro_gate_status": "Micro-gate do núcleo",
     "gate_estrutural_status": "Gate estrutural",
     "gate_final_status": "Gate final de produto",
+    "bncc_status": "Conformidade BNCC Computação",
+    "lacunas_status": "Fechamento de lacunas (D0)",
+    "ambiente_status": "Ambiente simulado (D9)",
     "design_status": "QA de design",
     "dev_status": "Banca de dev",
 }

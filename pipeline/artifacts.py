@@ -26,6 +26,11 @@ ARTIFACT_FILES = [
     ("experiencia_aluno_report", "produto/03-experiencia-aluno.md"),
     ("gate_final_report", "produto/04-gate-final.md"),
     ("spec_missao", "produto/05-spec-missao.md"),
+    ("spec_missao_gate0", "produto/05a-spec-missao-gate0.md"),
+    ("bncc_report", "produto/05b-conformidade-bncc.md"),
+    ("fechamento_lacunas", "design/00-fechamento-lacunas.md"),
+    ("relatorio_lacunas", "design/00a-relatorio-lacunas.md"),
+    ("ambiente_simulado", "design/00b-ambiente-simulado.md"),
     ("brief_oficio", "design/01-briefing-oficio.md"),
     ("jornada_telas", "design/02-jornada-telas.md"),
     ("fluxo_arestas", "design/03-fluxo-arestas.md"),
@@ -68,6 +73,7 @@ def extract_figma_links(state: Dict[str, Any]) -> List[Dict[str, Any]]:
     found_urls: Dict[str, Dict[str, Any]] = {}
 
     keys_to_scan = [
+        "ambiente_simulado",
         "jornada_telas",
         "fluxo_arestas",
         "wireframes_cobertura",
