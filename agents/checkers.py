@@ -144,6 +144,11 @@ class SecaoSplitAgent(BaseAgent):
       fim           → regex (multiline) do heading que fecha a seção (opcional)
       exigir        → regex que a seção precisa conter para ser aceita (opcional)
       minimo_chars  → tamanho mínimo aceito (padrão 0)
+      minimo_fracao → fração mínima do tamanho do valor ATUAL de `chave` (padrão 0 = desligado).
+                      Protege contra o agente devolver só o pedaço novo no lugar do documento
+                      inteiro: a spec consolidada é a spec ANTERIOR mais um bloco, então nunca
+                      encolhe. Sem isso, o D9 já substituiu uma spec de 35 KB por um fragmento
+                      de 5 KB, e o dev perdeu a ficha do manifesto e todos os blocos.
       backup        → chave onde o valor anterior de `chave` é preservado antes de sobrescrever (opcional)
 
     Seção ausente, curta ou sem o conteúdo exigido → a chave é mantida como está e o evento avisa.
@@ -174,6 +179,14 @@ class SecaoSplitAgent(BaseAgent):
                     motivo = f"seção curta demais ({len(secao)} caracteres)"
                 elif ex.get("exigir") and not re.search(ex["exigir"], secao, re.MULTILINE | re.IGNORECASE):
                     motivo = "seção sem o conteúdo exigido"
+                else:
+                    fracao = float(ex.get("minimo_fracao", 0) or 0)
+                    atual = len(str(state.get(chave, "") or ""))
+                    if fracao and atual and len(secao) < fracao * atual:
+                        motivo = (
+                            f"seção com {len(secao)} caracteres contra {atual} do documento atual "
+                            f"({len(secao) / atual:.0%}) — parece o pedaço novo, não o documento consolidado"
+                        )
                 if motivo:
                     linhas.append(f"⚠️ `{chave}` mantido como estava — {motivo}.")
                     continue
@@ -247,12 +260,19 @@ class ArtefatosDesignAgent(BaseAgent):
 
         try:
             from config import get_settings
-            from tools.stitch_cliente import coletar_links, extrair_project_id, montar_folha_de_links
+            from tools.stitch_cliente import (
+                coletar_links,
+                extrair_project_id,
+                extrair_screen_ids,
+                montar_folha_de_links,
+            )
 
             if get_settings().is_stitch_enabled:
-                pid = extrair_project_id(str(state.get(self.fonte_wireframes, "") or ""))
+                relatorio = str(state.get(self.fonte_wireframes, "") or "")
+                pid = extrair_project_id(relatorio)
                 if pid:
-                    dados = coletar_links(pid)
+                    # Os ids do relatório só são usados se o `list_screens` vier vazio.
+                    dados = coletar_links(pid, ids_de_reserva=extrair_screen_ids(relatorio))
                     delta[self.links_key] = montar_folha_de_links(dados, titulo)
                     linhas.append(f"🔗 Stitch: {len(dados['telas'])} tela(s) no projeto `{pid}` — link no relatório e no PRD.")
                 else:

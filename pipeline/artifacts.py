@@ -77,6 +77,32 @@ def _safe(name: str) -> str:
     return re.sub(r"[^a-z0-9-]+", "-", name.lower()).strip("-") or "missao"
 
 
+# Só `markdown`/`md`: é assim que o agente embrulha o documento. Uma cerca externa de
+# outra linguagem (```json, ```sql) é o conteúdo do arquivo, não um invólucro.
+_CERCA_EXTERNA = re.compile(r"\A\s*```(?:markdown|md)\s*\n(.*)\n\s*```\s*\Z", re.DOTALL | re.IGNORECASE)
+
+
+def desembrulhar_cerca(texto: str) -> str:
+    """Tira a cerca de código que envolve o documento INTEIRO.
+
+    O agente às vezes entrega o documento dentro de ```markdown para deixar claro onde
+    ele começa e termina. Salvo como está, o `.md` abre como um bloco de código e o
+    front matter do PRD deixa de ser front matter. Só remove quando a cerca abre na
+    primeira linha e fecha na última: cerca no meio do texto é conteúdo.
+    """
+    if not isinstance(texto, str):
+        return texto
+    m = _CERCA_EXTERNA.match(texto)
+    if not m:
+        return texto
+    miolo = m.group(1)
+    # O documento pode ter blocos de código legítimos dentro (json, sql, mermaid). Eles
+    # vêm aos pares, então um miolo com número PAR de cercas é conteúdo balanceado e o
+    # invólucro externo é real. Ímpar é ambíguo — aí não se mexe.
+    internas = len(re.findall(r"^\s*```", miolo, re.MULTILINE))
+    return miolo if internas % 2 == 0 else texto
+
+
 def e_mensagem_de_pulo(valor: Any) -> bool:
     """O ADK grava no `output_key` o texto do callback que pulou o agente.
 
@@ -250,7 +276,7 @@ def save_run_artifacts(
         path = run_dir / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         text = value if isinstance(value, str) else json.dumps(value, indent=2, ensure_ascii=False)
-        path.write_text(text.strip() + "\n", encoding="utf-8")
+        path.write_text(desembrulhar_cerca(text).strip() + "\n", encoding="utf-8")
         written += 1
 
     # Extrai e grava links do Figma/FigJam encontrados nos artefatos

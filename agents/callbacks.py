@@ -153,7 +153,7 @@ def _chave_do_orcamento(agent_name: str) -> str:
     return f"temp:mcp_gasto_{agent_name}"
 
 
-def limitar_resposta_de_ferramenta(tool: Any, args: Dict[str, Any], context: Any, tool_response: Any) -> Optional[Dict[str, Any]]:
+def limitar_resposta_de_ferramenta(tool: Any, args: Dict[str, Any], tool_context: Any, tool_response: Any) -> Optional[Dict[str, Any]]:
     """after_tool_callback: poda a resposta e debita o orçamento do agente.
 
     Devolver um dict SUBSTITUI o que o modelo recebe. Imagem nunca volta ao contexto:
@@ -173,26 +173,26 @@ def limitar_resposta_de_ferramenta(tool: Any, args: Dict[str, Any], context: Any
             "trecho": texto,
         }
 
-    gasto = int(context.state.get(_chave_do_orcamento(context.agent_name), 0) or 0) + _tamanho(resposta)
-    context.state[_chave_do_orcamento(context.agent_name)] = gasto
+    gasto = int(tool_context.state.get(_chave_do_orcamento(tool_context.agent_name), 0) or 0) + _tamanho(resposta)
+    tool_context.state[_chave_do_orcamento(tool_context.agent_name)] = gasto
     if bruto > MCP_RESPOSTA_MAX:
         logger.info(
             "%s: resposta de %s podada de %d para %d caracteres (gasto acumulado: %d)",
-            context.agent_name, getattr(tool, "name", "?"), bruto, _tamanho(resposta), gasto,
+            tool_context.agent_name, getattr(tool, "name", "?"), bruto, _tamanho(resposta), gasto,
         )
     return resposta if resposta is not tool_response else None
 
 
-def barrar_ferramenta_sem_orcamento(tool: Any, args: Dict[str, Any], context: Any) -> Optional[Dict[str, Any]]:
+def barrar_ferramenta_sem_orcamento(tool: Any, args: Dict[str, Any], tool_context: Any) -> Optional[Dict[str, Any]]:
     """before_tool_callback: quando o orçamento do agente acaba, recusa e manda concluir.
 
     Devolver um dict PULA a ferramenta. É melhor o agente entregar o markdown com o
     board pela metade do que a execução inteira morrer com 400 do modelo.
     """
-    gasto = int(context.state.get(_chave_do_orcamento(context.agent_name), 0) or 0)
+    gasto = int(tool_context.state.get(_chave_do_orcamento(tool_context.agent_name), 0) or 0)
     if gasto < MCP_ORCAMENTO_POR_AGENTE:
         return None
-    logger.warning("%s: orçamento de MCP esgotado (%d caracteres) — recusando %s", context.agent_name, gasto, getattr(tool, "name", "?"))
+    logger.warning("%s: orçamento de MCP esgotado (%d caracteres) — recusando %s", tool_context.agent_name, gasto, getattr(tool, "name", "?"))
     return {
         "recusado": True,
         "motivo": (

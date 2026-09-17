@@ -84,6 +84,21 @@ _MARCADORES = [
     ("a_validar", re.compile(r"🔵[^\n]{0,120}")),
 ]
 
+# Os prompts citam o formato do marcador para ensinar o agente a usá-lo — e a citação
+# tem a mesma forma do marcador. Um documento que diz "Lista de pendências
+# `[ABERTO — dono]` consolidada:" seguido de "Nenhuma pendência em aberto" era lido
+# como pendência de produto e barrava o PRD. O que separa a citação da pendência é o
+# conteúdo: aqui está o rótulo do campo, não quem tem de fechá-lo.
+_PLACEHOLDERS = frozenset({
+    "dono", "x", "y", "…", "...", "quem", "etapa", "nome", "responsavel", "responsável",
+    "dono: x", "dono: …", "dono: ...", "dono: nome", "dono: etapa",
+})
+
+
+def _e_citacao_do_formato(dono_raw: str) -> bool:
+    return dono_raw.strip().strip("`*_ ").lower() in _PLACEHOLDERS
+
+
 _TOKENS_ETAPA: Dict[str, tuple] = {
     "plataforma": ("plataforma", "adr", "design-system", "storybook", "infra", "ponte", "@edu/ui", "componente do ds", "componente de ds"),
     "dev": ("handoff-dev", "handoff", "brief-assets", "banca", "tech", "arquitetura", "dev"),
@@ -119,6 +134,8 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
             for m in regex.finditer(texto):
                 trecho = m.group(0).strip()
                 dono_raw = m.group(1).strip() if m.groups() and m.group(1) else ""
+                if tipo in ("lacuna", "aberto", "needs_clarification") and _e_citacao_do_formato(dono_raw):
+                    continue
                 if tipo == "rs_pendente":
                     etapa = "produto"
                 elif tipo == "verificar_repositorio":
@@ -394,14 +411,58 @@ def relatorio_manifesto(resultado: Dict[str, Any], missao: str = "") -> str:
 
 # ------------------------------------------------------------------ telemetria (handoff de dev)
 _CABECALHO_TABELA = re.compile(r"^\|[^\n]*\|\s*$", re.MULTILINE)
+# Um bloco de tabela markdown inteiro: cabeçalho, separador e linhas, até a primeira
+# linha que não começa com `|`.
+_BLOCO_TABELA = re.compile(r"(?:^\|[^\n]*$\n?){2,}", re.MULTILINE)
+
+
+def _tabelas_de_evento(texto: str) -> List[str]:
+    """Blocos de tabela que descrevem eventos de telemetria.
+
+    Olha o BLOCO, não só o cabeçalho: o contrato é `track(verbo, objeto, resultado,
+    contexto)`, mas nada obriga o handoff a dar uma coluna a cada campo — é comum
+    `| Evento | Verbo | ... | Campos |` com `objeto`/`resultado`/`contexto` dentro da
+    célula de campos. Exigir tudo no cabeçalho reprovava handoff correto.
+    """
+    blocos = []
+    for m in _BLOCO_TABELA.finditer(texto):
+        bloco = m.group(0)
+        cabecalho = bloco.split("\n", 1)[0].lower()
+        if ("verbo" in cabecalho or "evento" in cabecalho) and "objeto" in bloco.lower():
+            blocos.append(bloco)
+    return blocos
+
+
+# Handoff bom REPETE a proibição para o dev não errar ("Proibido campo `dados`",
+# "nunca WebSocket", "papel `admin-contrato` não existe mais"). Procurar só o termo
+# transformava a regra citada em violação e barrava o PRD por cumpri-la.
+_NEGACAO = re.compile(
+    r"proibid|vedado|nunca|jamais|evit[ae]|descartad|obsolet|legad|"
+    r"n[ãa]o\s+(existe|existem|use|usar|usamos|h[áa]|aceita|pode|deve|ser[áa]|suporta)|"
+    r"em vez de|ao inv[ée]s|fora de escopo|removid|deprecia|"
+    r"sem\s+(campo|coluna|chave|payload|uso)|nada de|dispensa",
+    re.IGNORECASE,
+)
+
+
+def _linha_de(texto: str, pos: int) -> str:
+    inicio = texto.rfind("\n", 0, pos) + 1
+    fim = texto.find("\n", pos)
+    return texto[inicio : fim if fim != -1 else len(texto)]
+
+
+def _usado_afirmativamente(texto: str, padrao: str) -> bool:
+    """O termo aparece propondo algo, e não numa frase que o proíbe."""
+    for m in re.finditer(padrao, texto, re.IGNORECASE):
+        if not _NEGACAO.search(_linha_de(texto, m.start())):
+            return True
+    return False
 
 
 def validar_telemetria(handoff: str) -> Dict[str, Any]:
     texto = handoff or ""
     achados: List[Dict[str, str]] = []
-    cabecalhos = [l.lower() for l in _CABECALHO_TABELA.findall(texto)]
-    com_verbo = [c for c in cabecalhos if "verbo" in c]
-    tabela_eventos = [c for c in com_verbo if "objeto" in c]
+    tabela_eventos = _tabelas_de_evento(texto)
 
     def bloqueio(codigo: str, resumo: str) -> None:
         achados.append({"severidade": "bloqueio", "codigo": codigo, "etapa": "dev", "resumo": resumo})
@@ -411,21 +472,28 @@ def validar_telemetria(handoff: str) -> Dict[str, Any]:
 
     if not tabela_eventos:
         bloqueio("tabela-eventos", "Nenhuma tabela de eventos com as colunas `verbo` e `objeto`. O contrato real é `track(verbo, objeto, resultado, contexto)`.")
-    elif not any(("resultado" in c or "contexto" in c) for c in tabela_eventos):
+    elif not any(("resultado" in b.lower() or "contexto" in b.lower()) for b in tabela_eventos):
         bloqueio("resultado-contexto", "A tabela de eventos não tem coluna `resultado` nem `contexto` — são os dois únicos campos de payload que a api aceita.")
-    if re.search(r"\|\s*`?dados`?\s*\|", texto, re.IGNORECASE) or re.search(r"campos?\s+`dados`", texto, re.IGNORECASE):
+    if _usado_afirmativamente(texto, r"\|\s*`?dados`?\s*\|") or _usado_afirmativamente(texto, r"[`\"']?\bdados\b[`\"']?\s*:"):
         bloqueio("campo-dados", "Evento com campo `dados`: a api não tem esse campo e descarta a chave em silêncio. Use `resultado` e `contexto`.")
     if not re.search(r"\bexp_\d{2}_[a-z][a-z0-9_]*", texto):
         bloqueio("tabela-leitura", "Nenhuma tabela `exp_NN_*` nomeada. Toda medida que a professora vê nasce de tabela própria do módulo — sem tabela de leitura, a medida não existe (`telemetria_eventos` não tem leitor).")
-    if re.search(r"websocket|socket\.io|hub:pause", texto, re.IGNORECASE):
-        bloqueio("websocket", "WebSocket ou `hub:pause` como canal de sala: a plataforma sincroniza por polling HTTP curto em `exp_NN_gates_turma` (ADR-93/94).")
-    if re.search(r"admin-contrato|@Roles\([^)]*[\"']gestor[\"']", texto):
+    # O que importa é o canal DECLARADO, não a palavra. Handoff correto cita WebSocket
+    # justamente para descartá-lo ("Cloud Run não sustenta WebSocket, ADR-93/94") ou
+    # para colocá-lo como futuro fora de escopo — e era bloqueado por isso.
+    canal_correto = bool(re.search(r"polling", texto, re.IGNORECASE) and re.search(r"exp_\d{2}_gates_turma", texto))
+    if _usado_afirmativamente(texto, r"websocket|socket\.io|hub:pause"):
+        if canal_correto:
+            atencao("websocket-mencao", "WebSocket ou `hub:pause` aparece no texto. O canal de sala declarado é o correto (polling em `exp_NN_gates_turma`), então é só conferir se a menção é mesmo comparativa e não uma segunda via de sincronização.")
+        else:
+            bloqueio("websocket", "WebSocket ou `hub:pause` como canal de sala, sem polling em `exp_NN_gates_turma` declarado: a plataforma sincroniza por polling HTTP curto (ADR-93/94).")
+    if _usado_afirmativamente(texto, r"admin-contrato|@Roles\([^)]*[\"']gestor[\"']"):
         bloqueio("papeis", "Papel antigo (`admin-contrato`, `gestor`): a plataforma tem seis papéis — `estudante · professor · gestor_escola · gestor_regional · gestor_contrato · admin` (ADR-80).")
-    if re.search(r"/runs/(:id|\{?\w*[iI]d\}?)/eventos", texto):
+    if _usado_afirmativamente(texto, r"/runs/(:id|\{?\w*[iI]d\}?)/eventos"):
         atencao("rota-motor", "`POST /runs/:id/eventos` é a rota do motor da exp-01, não um canal genérico. Missão nova grava trilha na rota do próprio módulo.")
-    if re.search(r"AI_DAILY_TOKEN_QUOTA", texto):
+    if _usado_afirmativamente(texto, r"AI_DAILY_TOKEN_QUOTA"):
         atencao("quota-env", "Quota de IA por env não existe mais: é linha em `ia_quotas` por perfil (ADR-105).")
-    if re.search(r"\benum\b[^\n]{0,60}\b(estado|status)\b", texto, re.IGNORECASE):
+    if _usado_afirmativamente(texto, r"\benum\b[^\n]{0,60}\b(estado|status)\b"):
         atencao("enum-estado", "Estado como enum: na plataforma é string com CHECK na migration, nunca enum Prisma.")
 
     status = "bloqueado" if any(a["severidade"] == "bloqueio" for a in achados) else ("amarelo" if achados else "aprovado")

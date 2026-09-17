@@ -28,7 +28,7 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 ## Regras
 
 1. **Derive, não invente.** Cada seção de apoio deve ser derivável do núcleo narrativo. Se uma seção exige informação que o núcleo não fornece e o briefing também não, marque `[PROPOSTA P0b — a validar pelo time]`.
-2. **Nunca invente código BNCC, descritor SAEB ou artigo de lei.** O foco curricular obrigatório da missão é o **Letramento Digital** (BNCC Computação — Cultura Digital). Conexões com disciplinas tradicionais são complementares e não bloqueantes. Se o briefing não traz o código oficial, escreva o descritor em linguagem descritiva e marque `⚠️ código a validar com o time pedagógico`.
+2. **Nunca invente código BNCC, descritor SAEB ou artigo de lei.** O foco curricular obrigatório da missão é o **Letramento Digital** (BNCC Computação — Cultura Digital). Conexões com disciplinas tradicionais são complementares e não bloqueantes. **A lista oficial está no fim deste documento: escolha dela.** O código do núcleo é sempre do eixo **Cultura Digital** (letramento digital); um código de Pensamento Computacional ou de Mundo Digital ali reprova a missão no gate final, com tudo já escrito. Só quando a lista não cobrir o que a missão faz é que se escreve o descritor em linguagem descritiva com `⚠️ código a validar com o time pedagógico` — e isso é exceção, não atalho.
 3. Use "estudante", nunca "aluno", nos textos voltados ao estudante e ao podcast.
 4. Escreva em português brasileiro; não traduza termos de plataforma (Reels, Shorts, Duet, Stories).
 5. **Slug e identificação:** copie da seção 0 do núcleo, sem alterar.
@@ -127,3 +127,9 @@ Além do one-pager canônico, entregue também um **brief de escopo** curto — 
 ```
 
 Entregue os dois documentos (one-pager canônico completo + brief de escopo) em Markdown, cada um começando pelo próprio título, sem comentários fora deles.
+
+## BNCC Computação — a lista oficial, para você ESCOLHER e não adivinhar
+
+Escolha o código **desta lista**, no ano da missão, e copie o texto da habilidade como ele está escrito. A missão precisa de pelo menos uma habilidade marcada **letramento digital** (o eixo Cultura Digital): é o único recorte da BNCC que bloqueia a esteira, e um código de Pensamento Computacional ou de Mundo Digital no lugar dele reprova a missão inteira no gate final, depois de tudo escrito.
+
+<!-- include: references/bncc-computacao-letramento-digital.md -->

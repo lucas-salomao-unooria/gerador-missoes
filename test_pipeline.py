@@ -335,6 +335,29 @@ def test_secao_split_d0_e_d9():
     assert "Bloco 14 — Ficha" not in state2["spec_missao"]
     assert state2["ambiente_status"] == "aprovado"
 
+    # D9 devolvendo SÓ o bloco 14 sob o heading do Passo 4: é o pedaço novo, não a spec
+    # consolidada. Aceitá-lo apagava blocos 0–13 — a ficha do manifesto sumia e o dev
+    # bloqueava com 10 campos ausentes (visto em 2026-09-17: spec de 35 KB virou 5 KB).
+    spec_grande = spec_consolidada + ("Bloco de spec com conteúdo real. " * 400)
+    so_o_bloco = "## 14. Ambiente simulado (D9)\n" + ("instanooria, chrome, verbos e tokens. " * 60)
+    d9_fragmento = (
+        "# Ambiente simulado — teste\n\n"
+        "## Passo 4 — Spec consolidada (blocos 1–13 + bloco 14)\n" + so_o_bloco +
+        "\n## Bloco 14 — Ficha do ambiente\nnome: instanooria\n"
+    )
+    # o fragmento passa em `minimo_chars`; é a comparação com o documento atual que o pega
+    assert len(so_o_bloco) > 1500
+    root_frag = SequentialAgent(
+        name="RootFrag",
+        sub_agents=[
+            FakeAgent(name="Spec", key="spec_missao", text=spec_grande),
+            FakeAgent(name="D9", key="ambiente_simulado", text=d9_fragmento),
+            get_ambiente_simulado_split(),
+        ],
+    )
+    _, state_frag = asyncio.run(_run(root_frag))
+    assert state_frag["spec_missao"] == spec_grande, "a spec foi trocada por um fragmento"
+
     # D9 sem a seção de spec (saída fora do formato) e com aguarda_gate: mantém a spec, marca 🔴, pipeline segue
     d9_ruim = '# Ambiente simulado\n**Veredito: 🔴 AGUARDA GATE 0**\n\n```json\n{"agente": "ambiente-simulado", "status": "aguarda_gate"}\n```'
     root3 = SequentialAgent(
@@ -481,6 +504,45 @@ def test_rastro_manifesto_telemetria_lacunas():
     assert t_ruim["status"] == "bloqueado" and {"resultado-contexto", "campo-dados", "websocket", "papeis"} <= cods, cods
     assert validar_telemetria("sem tabela nenhuma")["status"] == "bloqueado"
 
+    # falso positivo 1: `objeto`/`resultado`/`contexto` vivem na célula de campos, e não
+    # cada um na sua coluna. O contrato está cumprido; exigir o layout reprovava handoff
+    # correto (visto em 2026-09-17 no exp-08).
+    layout_livre = """# Handoff
+| Evento | Verbo xAPI | Quando dispara | Campos | Canal |
+|---|---|---|---|---|
+| `publicar:postagem:capa` | `scored` | ao tocar Compartilhar | `objeto: "postagem:capa"`, `resultado: { focoId: "B" }`, `contexto: { zoom }` | Operacional |
+Tabelas: `exp_08_gates_turma` lida por polling HTTP de 3s.
+"""
+    assert validar_telemetria(layout_livre)["status"] == "aprovado", validar_telemetria(layout_livre)["achados"]
+
+    # falso positivo 2: citar WebSocket para DESCARTÁ-LO é o comportamento correto.
+    # Com o canal certo declarado, vira atenção; sem ele, continua bloqueio.
+    nega = layout_livre + "\n| Sincronização | Polling de 3s | WebSocket dedicado só se a infra mudar | Cloud Run não sustenta WebSocket (ADR-93/94) |\n"
+    r_nega = validar_telemetria(nega)
+    assert r_nega["status"] == "amarelo", r_nega["achados"]
+    assert {a["codigo"] for a in r_nega["achados"]} == {"websocket-mencao"}
+    sem_canal = layout_livre.replace("Tabelas: `exp_08_gates_turma` lida por polling HTTP de 3s.", "Sala sincroniza por WebSocket dedicado.")
+    assert validar_telemetria(sem_canal)["status"] == "bloqueado"
+
+    # falso positivo 3: handoff bom REPETE as proibições para o dev não errar. Citar a
+    # regra não é violá-la — e cada termo proibido tinha esse mesmo furo.
+    repete_regras = layout_livre + """
+- **Vocabulário de telemetria**: `track(verbo, objeto, { resultado, contexto })` estrito. Proibido campo `dados`.
+- Papel `admin-contrato` não existe mais: são seis papéis desde o ADR-80.
+- `AI_DAILY_TOKEN_QUOTA` foi removida; a quota vive em `ia_quotas` por perfil.
+- Estado nunca é `enum` Prisma: é string com CHECK na migration.
+- `POST /runs/:id/eventos` é do motor da exp-01 e não deve ser usado aqui.
+"""
+    r_repete = validar_telemetria(repete_regras)
+    assert r_repete["status"] == "aprovado", r_repete["achados"]
+
+    # mas USAR de verdade continua pegando. O sinal é a chave no payload ou a coluna na
+    # tabela — não a frase em prosa, que é onde a regra aparece citada.
+    propoe = layout_livre + '\npayload do evento: `{ "dados": { "foco": "A" } }`\n'
+    assert {a["codigo"] for a in validar_telemetria(propoe)["achados"]} == {"campo-dados"}
+    coluna = layout_livre.replace("| Campos | Canal |", "| dados | Canal |")
+    assert {a["codigo"] for a in validar_telemetria(coluna)["achados"]} == {"campo-dados"}
+
     assert classificar_dono("jornada", "dev") == "design"
     assert classificar_dono("gate-estrutural", "dev") == "produto"
     assert classificar_dono("plataforma", "dev") == "plataforma"
@@ -500,6 +562,20 @@ def test_rastro_manifesto_telemetria_lacunas():
     so_plat = varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], st)
     assert so_plat["status"] == "amarelo" and so_plat["por_etapa"]["plataforma"] == 1
     assert varrer_lacunas(fontes, {"spec_missao": "limpo", "handoff_dev": "limpo"})["status"] == "aprovado"
+
+    # citar o formato do marcador não é ter uma pendência. A spec e o D9 fecham com
+    # "Lista de pendências `[ABERTO — dono]` consolidada: nenhuma" e isso barrava o PRD
+    # por lacuna de produto e de design (visto em 2026-09-17 no exp-08).
+    citacao = {
+        "spec_missao": "**Lista de pendências `[ABERTO — dono]` consolidada:**\n*Nenhuma pendência em aberto.*",
+        "handoff_dev": "Marque o que faltar como `[LACUNA — dono: x]` ou `[NEEDS CLARIFICATION: …]`.",
+    }
+    assert varrer_lacunas(fontes, citacao)["status"] == "aprovado", varrer_lacunas(fontes, citacao)["achados"]
+
+    # e um marcador de verdade, com dono preenchido, continua bloqueando
+    real = {"spec_missao": "decisão pendente [ABERTO — gate-estrutural]", "handoff_dev": "limpo"}
+    r_real = varrer_lacunas(fontes, real)
+    assert r_real["status"] == "bloqueado" and r_real["por_etapa"]["produto"] == 1, r_real["por_etapa"]
 
     # gate: lacuna de design bloqueia e pula o jusante; só plataforma segue com 🟡
     root = SequentialAgent(
@@ -665,23 +741,40 @@ def test_contencao_de_resposta_de_ferramenta():
 
     # imagem nunca volta ao contexto
     imagem = {"content": [{"mimeType": "image/png", "data": "A" * 900_000}]}
-    r = limitar_resposta_de_ferramenta(_Tool(), {}, ctx, imagem)
+    r = limitar_resposta_de_ferramenta(tool=_Tool(), args={}, tool_context=ctx, tool_response=imagem)
     assert len(_json.dumps(r)) < 1_000 and "captura de 900000" in _json.dumps(r)
 
     # dump grande de board é truncado, e a estrutura some em favor de um trecho
     grande = {"nodes": [{"id": f"n{i}", "texto": "x" * 400} for i in range(500)]}
-    r = limitar_resposta_de_ferramenta(_Tool(), {}, ctx, grande)
+    r = limitar_resposta_de_ferramenta(tool=_Tool(), args={}, tool_context=ctx, tool_response=grande)
     assert len(_json.dumps(r)) <= MCP_RESPOSTA_MAX + 2_000
 
     # resposta pequena passa intacta (None = não substitui)
-    assert limitar_resposta_de_ferramenta(_Tool(), {}, _Ctx(), {"ok": True}) is None
+    assert limitar_resposta_de_ferramenta(tool=_Tool(), args={}, tool_context=_Ctx(), tool_response={"ok": True}) is None
 
     # o gasto é debitado por agente, e o orçamento esgotado recusa a próxima chamada
     assert ctx.state[f"temp:mcp_gasto_{ctx.agent_name}"] > 0
-    assert barrar_ferramenta_sem_orcamento(_Tool(), {}, ctx) is None
+    assert barrar_ferramenta_sem_orcamento(tool=_Tool(), args={}, tool_context=ctx) is None
     ctx.state[f"temp:mcp_gasto_{ctx.agent_name}"] = MCP_ORCAMENTO_POR_AGENTE + 1
-    recusa = barrar_ferramenta_sem_orcamento(_Tool(), {}, ctx)
+    recusa = barrar_ferramenta_sem_orcamento(tool=_Tool(), args={}, tool_context=ctx)
     assert recusa and recusa["recusado"] and "entregue o documento" in recusa["motivo"]
+
+    # trava de assinatura: o ADK chama todo callback por keyword, e o nome do
+    # parâmetro é parte do contrato. Um nome errado só falha em tempo de execução,
+    # no meio de uma esteira — então a conferência tem que ser aqui.
+    import inspect
+
+    from agents.callbacks import skip_if_blocked
+
+    contrato = {
+        skip_if_blocked: ("before_agent_callback", ["callback_context"]),
+        barrar_ferramenta_sem_orcamento: ("before_tool_callback", ["tool", "args", "tool_context"]),
+        limitar_resposta_de_ferramenta: ("after_tool_callback", ["tool", "args", "tool_context", "tool_response"]),
+    }
+    for fn, (papel, exigidos) in contrato.items():
+        params = list(inspect.signature(fn).parameters)
+        faltando = [p for p in exigidos if p not in params]
+        assert not faltando, f"{fn.__name__} como {papel}: o ADK passa {exigidos}, faltam {faltando} (tem {params})"
 
     # a contenção entra sozinha em todo agente COM ferramentas, e só neles
     def _ferramenta_de_teste() -> str:
@@ -699,7 +792,7 @@ def test_artefatos_html_e_links():
     """Protótipo, diagramas e links: o HTML nunca entra em prompt, e o link sim."""
     from agents.checkers import ArtefatosDesignAgent
     from tools.artefatos_html import extrair_prototipo, montar_folha_de_diagramas
-    from tools.stitch_cliente import extrair_project_id
+    from tools.stitch_cliente import extrair_project_id, extrair_screen_ids, listar_telas
 
     doc = "<!doctype html><html><body><main>tela</main></body></html>"
     html, relatorio = extrair_prototipo(f"antes\n```html\n{doc}\n```\n# Protótipo\nTelas: 3")
@@ -719,6 +812,48 @@ def test_artefatos_html_e_links():
     ]:
         assert extrair_project_id(texto) == esperado, texto
 
+    # o `list_screens` do Stitch devolve `{}` mesmo para projeto COM telas (visto em
+    # 2026-09-17). Sem a reserva por id, a folha de links sai vazia e o PRD perde a
+    # prévia de todas as telas, embora elas existam.
+    relatorio_d5 = """
+    | `E4-PROF-01` | PICO | `dc2b98d9a9ae4608b955be811da3c2ca` | `DESKTOP` |
+    | `E1-ALU-01` | Inicial | `9d1964dd932e4cc59e9c9ee2dd209491` | `MOBILE` |
+    | repetida | — | `DC2B98D9A9AE4608B955BE811DA3C2CA` | — |
+    """
+    assert extrair_screen_ids(relatorio_d5) == [
+        "dc2b98d9a9ae4608b955be811da3c2ca",
+        "9d1964dd932e4cc59e9c9ee2dd209491",
+    ]
+    assert extrair_screen_ids("sem id nenhum") == [] and extrair_screen_ids(None) == []
+
+    chamadas = []
+
+    def _falso_chamar(ferramenta, argumentos, timeout=180):
+        chamadas.append((ferramenta, argumentos))
+        if ferramenta == "list_screens":
+            return {}  # o vazio que o Stitch devolve de verdade
+        i = argumentos["name"].rsplit("/", 1)[-1]
+        return {"name": argumentos["name"], "title": f"tela {i[:4]}", "width": 780, "height": 2332,
+                "deviceType": "MOBILE", "screenshot": {"downloadUrl": f"https://img/{i}"}}
+
+    import tools.stitch_cliente as _sc
+
+    original = _sc.chamar
+    try:
+        _sc.chamar = _falso_chamar
+        telas = listar_telas("555", ["aa" * 16, "bb" * 16])
+    finally:
+        _sc.chamar = original
+    assert [t["id"] for t in telas] == ["aa" * 16, "bb" * 16]
+    assert telas[0]["url_imagem"] == f"https://img/{'aa' * 16}"
+    assert chamadas[0][0] == "list_screens" and len(chamadas) == 3
+    # sem ids reportados não há a quem recorrer: devolve vazio em vez de inventar
+    try:
+        _sc.chamar = _falso_chamar
+        assert listar_telas("555") == []
+    finally:
+        _sc.chamar = original
+
     # o agente separa o HTML do relatório e monta os diagramas, sem rede e sem Stitch
     root = SequentialAgent(
         name="Root",
@@ -734,6 +869,31 @@ def test_artefatos_html_e_links():
     assert state["diagramas_html"].count("<section>") == 1
     assert "prototipo_arquivo" not in "".join(load_prompt(f"design/{n}", **CONFIG_VARS) for n in ["d7_qa_entregaveis.md"])
     print("   ✓ artefatos: protótipo separado do relatório, diagramas montados do Mermaid, projeto do Stitch reconhecido")
+
+
+def test_desembrulhar_cerca_do_documento():
+    """O PRD vem dentro de ```markdown; salvo assim, o .md abre como bloco de código.
+
+    O agente embrulha o documento inteiro para marcar onde ele começa e termina. Sem
+    desembrulhar, o front matter do PRD deixa de ser front matter (visto em 2026-09-17:
+    PRD de 79 KB inteiro dentro de uma cerca).
+    """
+    from pipeline.artifacts import desembrulhar_cerca
+
+    # invólucro real, com blocos de código legítimos dentro
+    doc = "```markdown\n---\nprd_id: X\n---\n# T\n\n```json\n{\"a\": 1}\n```\n\nfim\n```"
+    limpo = desembrulhar_cerca(doc)
+    assert limpo.startswith("---\nprd_id: X") and limpo.endswith("fim")
+    assert limpo.count("```") == 2, "comeu os blocos internos"
+
+    # o que NÃO pode ser tocado
+    assert desembrulhar_cerca("# Documento normal\ntexto") == "# Documento normal\ntexto"
+    sql = "```sql\nSELECT 1;\n```"
+    assert desembrulhar_cerca(sql) == sql, "um arquivo que É um bloco de código"
+    impar = "```markdown\n# A\n```\nsolto\n"
+    assert desembrulhar_cerca(impar) == impar, "cerca desbalanceada é ambígua"
+    assert desembrulhar_cerca(None) is None and desembrulhar_cerca("") == ""
+    print("   ✓ cerca externa do documento removida; blocos internos, sql e casos ambíguos intactos")
 
 
 def test_one_pager_pedagogico_em_docx():
@@ -866,6 +1026,7 @@ if __name__ == "__main__":
         test_mensagem_de_pulo_nao_vira_prd,
         test_contencao_de_resposta_de_ferramenta,
         test_artefatos_html_e_links,
+        test_desembrulhar_cerca_do_documento,
         test_one_pager_pedagogico_em_docx,
         test_schema_de_ferramenta_saneado,
         test_referencias_plataforma_sincronizadas,

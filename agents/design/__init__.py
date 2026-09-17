@@ -112,6 +112,7 @@ def get_fecha_lacunas_split() -> SecaoSplitAgent:
                 "fim": D0_SPEC_FIM,
                 "exigir": r"13",
                 "minimo_chars": SPEC_MINIMO_CHARS,
+                "minimo_fracao": 0.8,
                 "backup": "spec_missao_gate0",
             },
             {
@@ -150,6 +151,7 @@ def get_ambiente_simulado_split() -> SecaoSplitAgent:
                 "fim": D9_SPEC_FIM,
                 "exigir": r"14",
                 "minimo_chars": SPEC_MINIMO_CHARS,
+                "minimo_fracao": 0.8,
             },
         ],
     )
