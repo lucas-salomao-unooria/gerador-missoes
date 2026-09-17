@@ -558,10 +558,32 @@ Tabelas: `exp_08_gates_turma` lida por polling HTTP de 3s.
         {"chave": "handoff_dev", "rotulo": "handoff", "etapa_padrao": "dev"},
     ]
     r = varrer_lacunas(fontes, st)
-    assert r["status"] == "bloqueado" and r["por_etapa"] == {"input": 0, "produto": 2, "design": 1, "dev": 1, "plataforma": 1}, r["por_etapa"]
+    assert r["status"] == "bloqueado" and r["por_etapa"] == {"input": 0, "produto": 2, "design": 1, "dev": 1, "plataforma": 1, "externo": 0}, r["por_etapa"]
     so_plat = varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], st)
     assert so_plat["status"] == "amarelo" and so_plat["por_etapa"]["plataforma"] == 1
     assert varrer_lacunas(fontes, {"spec_missao": "limpo", "handoff_dev": "limpo"})["status"] == "aprovado"
+
+    # dono humano FORA da esteira (coordenação pedagógica, rede parceira, consultoria)
+    # não trava o PRD: a validação humana acontece DEPOIS, com o PRD na mão. E a mesma
+    # pendência propagada para outro documento conta uma vez só — o D9 reemite a spec
+    # inteira, e isso fazia 1 pendência de produto virar "1 produto + 1 design".
+    externo = "`[ABERTO — Coordenação Pedagógica / Designer Instrucional Externo]`: validar a semana da unidade na grade."
+    st_ext = {"spec_missao": "spec\n" + externo, "handoff_dev": "handoff limpo"}
+    r_ext = varrer_lacunas(fontes, st_ext)
+    assert r_ext["status"] == "amarelo", r_ext["achados"]
+    assert r_ext["por_etapa"]["externo"] == 1 and r_ext["por_etapa"]["produto"] == 0
+    assert r_ext["achados"][0]["severidade"] == "atencao"
+
+    fontes_com_d9 = fontes + [{"chave": "ambiente_simulado", "rotulo": "ambiente simulado (D9)", "etapa_padrao": "design"}]
+    st_dup = dict(st_ext, ambiente_simulado="spec reemitida\n" + externo)
+    r_dup = varrer_lacunas(fontes_com_d9, st_dup)
+    assert len(r_dup["achados"]) == 1, "a mesma pendência contou duas vezes"
+    assert r_dup["achados"][0]["documento"] == "spec"
+    assert r_dup["achados"][0]["tambem_em"] == ["ambiente simulado (D9)"]
+
+    # e dono de etapa da esteira continua bloqueando, em qualquer documento
+    st_dev = {"spec_missao": "spec [ABERTO — gate-estrutural]", "handoff_dev": "limpo"}
+    assert varrer_lacunas(fontes, st_dev)["status"] == "bloqueado"
 
     # citar o formato do marcador não é ter uma pendência. A spec e o D9 fecham com
     # "Lista de pendências `[ABERTO — dono]` consolidada: nenhuma" e isso barrava o PRD

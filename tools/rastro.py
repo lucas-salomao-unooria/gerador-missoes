@@ -72,7 +72,9 @@ CAPACIDADES_DE_EXTENSAO = {
 CAPTURA_DE_MIDIA = ("microphone", "camera", "display-capture")
 SECOES_DS = ("instanooria", "unitube", "chatgpt", "whatsappmobile", "tiktooria")
 PUBLICOS = ("estudante", "professor")
-ETAPAS = ("input", "produto", "design", "dev", "plataforma")
+ETAPAS = ("input", "produto", "design", "dev", "plataforma", "externo")
+# Etapas cuja pendência é resolvida por gente, fora da esteira: registram 🟡 e o PRD sai.
+ETAPAS_NAO_BLOQUEANTES = ("plataforma", "externo")
 
 # ------------------------------------------------------------------ marcadores de lacuna
 _MARCADORES = [
@@ -100,6 +102,11 @@ def _e_citacao_do_formato(dono_raw: str) -> bool:
 
 
 _TOKENS_ETAPA: Dict[str, tuple] = {
+    # Dono que não é etapa da esteira: coordenação da escola, rede parceira, consultor.
+    # Cai aqui antes de "produto" porque "pedagóg" também é token de produto.
+    "externo": ("coordena", "rede parceira", "escola parceira", "designer instrucional",
+                "consultor", "time pedag", "externo", "externa", "cliente", "secretaria",
+                "jur[ií]dico", "dpo"),
     "plataforma": ("plataforma", "adr", "design-system", "storybook", "infra", "ponte", "@edu/ui", "componente do ds", "componente de ds"),
     "dev": ("handoff-dev", "handoff", "brief-assets", "banca", "tech", "arquitetura", "dev"),
     "design": ("jornada", "fluxo", "copy", "wireframe", "caa", "ambiente-simulado", "ambiente", "brief-oficio", "briefing de ofício", "qa-entregaveis", "figma", "design"),
@@ -114,7 +121,7 @@ def classificar_dono(texto_dono: str, etapa_padrao: str) -> str:
     m = re.search(r"dono:\s*([a-z0-9_@/\-\. ]+)", t)
     if m:
         t = m.group(1)
-    for etapa in ("plataforma", "dev", "design", "produto", "input"):
+    for etapa in ("externo", "plataforma", "dev", "design", "produto", "input"):
         for tok in _TOKENS_ETAPA[etapa]:
             if re.search(r"(?<![a-z0-9-])" + re.escape(tok) + r"s?(?![a-z0-9-])", t):
                 return etapa
@@ -125,6 +132,7 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
     """`fontes` = [{"chave": <state key>, "rotulo": <nome legível>, "etapa_padrao": <etapa>}]."""
     achados: List[Dict[str, Any]] = []
     documentos_lidos: List[str] = []
+    vistos: Dict[tuple, Dict[str, Any]] = {}
     for fonte in fontes:
         texto = state.get(fonte["chave"])
         if not texto or not isinstance(texto, str):
@@ -144,14 +152,22 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                     etapa = classificar_dono(trecho, "produto")
                 else:
                     etapa = classificar_dono(dono_raw or trecho, fonte.get("etapa_padrao", "dev"))
-                achados.append({
+                chave = (tipo, " ".join(trecho.split()).lower())
+                if chave in vistos:
+                    # Mesma pendência propagada para outro documento: conta uma vez, no
+                    # documento de origem, e os demais ficam registrados ao lado.
+                    vistos[chave].setdefault("tambem_em", []).append(fonte["rotulo"])
+                    continue
+                achado = {
                     "tipo": tipo,
                     "trecho": trecho[:160],
                     "documento": fonte["rotulo"],
                     "dono": dono_raw[:80] or "—",
                     "etapa": etapa,
-                    "severidade": "atencao" if etapa == "plataforma" else "bloqueio",
-                })
+                    "severidade": "atencao" if etapa in ETAPAS_NAO_BLOQUEANTES else "bloqueio",
+                }
+                vistos[chave] = achado
+                achados.append(achado)
     por_etapa = {e: sum(1 for a in achados if a["etapa"] == e) for e in ETAPAS}
     if any(a["severidade"] == "bloqueio" for a in achados):
         status = "bloqueado"
@@ -164,12 +180,13 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
 
 def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", agente: str = "rastro-lacunas") -> str:
     r = resultado
-    icone = {"aprovado": "🟢 SEM LACUNAS", "amarelo": "🟡 SÓ PENDÊNCIAS DE PLATAFORMA", "bloqueado": "🔴 BLOQUEADO"}[r["status"]]
+    icone = {"aprovado": "🟢 SEM LACUNAS", "amarelo": "🟡 SÓ PENDÊNCIAS HUMANAS", "bloqueado": "🔴 BLOQUEADO"}[r["status"]]
     linhas = [f"# {rotulo} — {missao or 'missão'}", "", f"**Veredito: {icone}**", ""]
     pe = r["por_etapa"]
     linhas.append(
         f"**O que faltou:** input `{pe['input']}` · **produto `{pe['produto']}`** · **design `{pe['design']}`** · dev `{pe['dev']}` · "
-        f"plataforma (pendência humana, não bloqueia) `{pe['plataforma']}`"
+        f"plataforma `{pe['plataforma']}` · externo `{pe['externo']}` "
+        f"_(plataforma e externo são pendências humanas: ficam registradas e não impedem o PRD)_"
     )
     linhas.append(f"**Documentos lidos:** {', '.join(r['documentos']) or '— nenhum'}")
     linhas.append("")
@@ -177,10 +194,10 @@ def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", 
         faltou = [e for e in ("input", "produto", "design", "dev") if pe[e]]
         linhas.append(
             "O PRD **não sai** enquanto houver lacuna de " + " e ".join(f"**{e}**" for e in faltou)
-            + ". Cada linha abaixo diz o documento onde a lacuna está e quem tem de fechá-la. Lacuna de plataforma fica registrada como pendência humana e não impede."
+            + ". Cada linha abaixo diz o documento onde a lacuna está e quem tem de fechá-la. Lacuna de plataforma ou de dono externo fica registrada como pendência humana e não impede."
         )
     elif r["status"] == "amarelo":
-        linhas.append("Só restam pendências cuja dona é a **plataforma** (ADR nova, componente de DS, ponte). Elas são resolvidas na codificação; o PRD sai `aprovado-com-pendencias-de-plataforma` (🟡), nunca `aprovado`.")
+        linhas.append("Só restam pendências humanas: da **plataforma** (ADR nova, componente de DS, ponte), resolvidas na codificação, e/ou **externas** (coordenação pedagógica, rede parceira, consultoria), resolvidas fora da esteira. O PRD sai `aprovado-com-pendencias` (🟡), nunca `aprovado`.")
     else:
         linhas.append("Nenhum marcador de lacuna nos documentos lidos.")
     linhas.append("")
