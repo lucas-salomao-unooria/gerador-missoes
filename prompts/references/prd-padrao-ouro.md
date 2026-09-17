@@ -33,7 +33,7 @@ ambiente_simulado: <o ambiente da spec (bloco 14): clone da lista fechada, ambie
 secao_ds: <instanooria|unitube|chatgpt|tiktooria|whatsappmobile|nova:<nome>|minijogo:<nome>>
 owners: {produto: <nome>, design: <nome>, dev: <nome>, pedagogico: <nome>}
 gates: {estrutural: 🟢|🔴, pedagogico: ..., experiencia: ..., final: ..., bncc: 🟢|🔴, lacunas: 🟢|🟡|🔴, ambiente: ..., design: ..., dev: 🟢|🟡|🔴}
-links: {figjam: <url>, figma: <url>, spec: spec/<slug>-spec.md, one_pager: ...}
+links: {stitch: <url do projeto>, prototipo: design/08-prototipo.html, diagramas: design/09-diagramas.html, figjam: <url>, figma: <url>, spec: spec/<slug>-spec.md, one_pager: ...}
 needs_clarification: 0
 data: AAAA-MM-DD
 ---
@@ -69,7 +69,7 @@ Tabela `RF-xxx` · título · descrição (necessidade, não mecanismo) · prior
 Checklist com meta numérica e método de medição por categoria: performance (p95, peso do bundle, mídia >2MB em bucket) · disponibilidade/recuperabilidade (F5, sessão expirada, offline) · segurança (gabarito server-side, nada no bundle, identidade do token) · **privacidade e LGPD para menores** (art. 14; `estudante_id` opaco; PII zero; texto livre em tabela própria; graus de medida scored/indicative/zero/none; retenção declarada ou lacuna assumida) · acessibilidade (WCAG 2.2 AA; áudio + pictograma em anos iniciais; contraste; teclado; `prefers-reduced-motion`) · usabilidade por faixa (tetos de palavras, decisões, duração de ato) · observabilidade (eventos, logs com `codigo`, OTel) · compatibilidade (Chromebook/desktop; viewport) · i18n (pt-BR único) · custo (IA: teto de tokens por turma/preparação; Cloud Run).
 
 # 10. UX, telas e design
-Inventário de telas (ID `E<etapa>-<ator>-<n>`, peso, elementos, estados) · direção por tela (pico/alta) · links dos frames Figma (fileKey + nodeId) · sheet de strings (chave `eN.tipo.nome`, seção `clone|unooria`, redundância) · mapa "quem está falando" tela a tela · viewport · permissões de iframe · assets com peso · interações instrumentadas.
+Inventário de telas (ID `E<etapa>-<ator>-<n>`, peso, elementos, estados) · direção por tela (pico/alta) · **link do projeto no Stitch e a tabela de telas**, mais o protótipo navegável (`design/08-prototipo.html`) e a folha de diagramas (`design/09-diagramas.html`) · **como a experiência é embedada** (casca de aparelho pelo `viewport` do manifesto, ou janela do hub) · links dos frames Figma quando houver (fileKey + nodeId) · sheet de strings (chave `eN.tipo.nome`, seção `clone|unooria`, redundância) · mapa "quem está falando" tela a tela · viewport · permissões de iframe · assets com peso · interações instrumentadas.
 
 # 11. Modelo de dados
 Entidades `exp_NN_*` com campos, tipos, PK (sessão: `[escolaId, estudanteId]`), `turma_id` denormalizado, `versao_instrumento`, `tentativa`, sensibilidade (PII de menor?), retenção (ou lacuna assumida por escrito), `escola_id NOT NULL` + RLS (`ENABLE` + `FORCE`, policy `app.escola_id`) e exceções justificadas. Estado = **string com CHECK na migration**, nunca enum Prisma. `exp_NN_conteudo_turma` quando há preparação docente (molde `exp_08_conteudo_turma`: pacote `Json`, `aprovado_por_professor`, `usou_banco_default`). `exp_NN_gates_turma` quando há relógio coletivo (ADR-93/94). Texto livre de menor em tabela própria com `chars_count`, fora de log e telemetria. Tabelas-contrato entre experiências. O que **nunca** vai ao bundle. Diagrama Mermaid `erDiagram`. Moldes: `references/plataforma/exemplo-schema-exp.md` e `exemplo-migration-exp-04.md`.

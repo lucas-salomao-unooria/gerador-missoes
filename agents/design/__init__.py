@@ -14,6 +14,9 @@ Ordem (SequentialAgent), com o MCP do Figma nos agentes marcados 🎨:
   d4b CaaAgent                → camada_caa      (camada CAA; ele mesmo decide se roda)
   d5  WireframesFigmaAgent 🎨 → wireframes_cobertura
   d6  CopyRevisaoAgent        → copy_strings_revisada (passada 2)
+  d8  PrototipoAgent          → prototipo_html  (protótipo navegável)
+  d8c ArtefatosDesign         → prototipo_arquivo (.html) · prototipo_relatorio · stitch_links
+                                 · diagramas_html — determinístico, o HTML nunca entra em prompt
   d7  QaEntregaveisAgent   🎨 → qa_entregaveis_report (gate de design)
   d7c QaEntregaveisCheck      → design_status (🔴 impede dev e PRD quando ESTEIRA_ESTRITA)
 
@@ -34,9 +37,10 @@ from google.adk.agents.sequential_agent import SequentialAgent
 
 from agents.base import create_llm_agent
 from agents.callbacks import skip_if_blocked
-from agents.checkers import EnvelopeGateAgent, SecaoSplitAgent
+from agents.checkers import ArtefatosDesignAgent, EnvelopeGateAgent, SecaoSplitAgent
 from config import get_settings
 from prompts import load_prompt
+from tools.stitch_mcp import STITCH_TOOLS_QA, STITCH_TOOLS_WIREFRAMES, stitch_tools_or_empty
 from tools.figma_mcp import (
     FIGMA_TOOLS_AMBIENTE,
     FIGMA_TOOLS_FLUXO,
@@ -55,6 +59,14 @@ D0_RELATORIO_FIM = _H + r"Passo 6\b.*$"      # "## Passo 6 — Devolutiva ao pro
 D9_SPEC_INICIO = _H + r"Passo 4\b.*$"        # "## Passo 4 — Spec consolidada (blocos 1–13 ... + bloco 14)"
 D9_SPEC_FIM = _H + r"Bloco 14\b.*$"          # "## Bloco 14 — Ficha do ambiente"
 SPEC_MINIMO_CHARS = 1500
+
+
+def _stitch_vars() -> dict:
+    s = get_settings()
+    return {
+        "stitch_mcp_mode": s.stitch_mcp_mode,
+        "stitch_project_url_base": s.stitch_project_url_base,
+    }
 
 
 def _figma_vars() -> dict:
@@ -204,9 +216,11 @@ def get_wireframes_figma_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="WireframesFigmaAgent",
         description="Wireframes lo-fi em escala de cinza no Figma, montados sobre a seção do DS do ambiente simulado.",
-        instruction=load_prompt("design/d5_wireframes_figma.md", **_figma_vars()),
+        instruction=load_prompt("design/d5_wireframes_figma.md", **_figma_vars(), **_stitch_vars()),
         output_key="wireframes_cobertura",
-        tools=figma_tools_or_empty(FIGMA_TOOLS_WIREFRAMES),
+        # Stitch primeiro: é ele que gera as telas hoje. O Figma continua aceito para
+        # quem tiver assento Full e OAuth, e os dois podem coexistir.
+        tools=stitch_tools_or_empty(STITCH_TOOLS_WIREFRAMES) + figma_tools_or_empty(FIGMA_TOOLS_WIREFRAMES),
         before_agent_callback=skip_if_blocked,
         **kw,
     )
@@ -223,13 +237,24 @@ def get_copy_revisao_agent(**kw) -> LlmAgent:
     )
 
 
+def get_prototipo_agent(**kw) -> LlmAgent:
+    return create_llm_agent(
+        name="PrototipoAgent",
+        description="Protótipo HTML lo-fi navegável: arquivo único, sem dependências, que a revisão humana abre no navegador e o agente de codificação lê como referência de layout.",
+        instruction=load_prompt("design/d8_prototipo.md"),
+        output_key="prototipo_html",
+        before_agent_callback=skip_if_blocked,
+        **kw,
+    )
+
+
 def get_qa_entregaveis_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="QaEntregaveisAgent",
         description="Gate final de design: fidelidade à spec, diff de strings, currículo, faixa etária, fluxo, professor, briefing, ambiente simulado e CAA.",
-        instruction=load_prompt("design/d7_qa_entregaveis.md", **_figma_vars()),
+        instruction=load_prompt("design/d7_qa_entregaveis.md", **_figma_vars(), **_stitch_vars()),
         output_key="qa_entregaveis_report",
-        tools=figma_tools_or_empty(FIGMA_TOOLS_QA),
+        tools=stitch_tools_or_empty(STITCH_TOOLS_QA) + figma_tools_or_empty(FIGMA_TOOLS_QA),
         before_agent_callback=skip_if_blocked,
         **kw,
     )
@@ -242,7 +267,7 @@ def build_design_stage(
     kw = {"thinking_budget": thinking_budget, "include_thoughts": include_thoughts}
     return SequentialAgent(
         name="DesignStage",
-        description="Área de Design: fechamento de lacunas → ambiente simulado → briefing de ofício → jornada e fluxo (FigJam) → copy → camada CAA → wireframes (Figma) → QA de entregáveis.",
+        description="Área de Design: fechamento de lacunas → ambiente simulado → briefing de ofício → jornada e fluxo → copy → camada CAA → wireframes (Stitch) → protótipo navegável → QA de entregáveis.",
         before_agent_callback=skip_if_blocked,
         sub_agents=[
             get_fecha_lacunas_agent(**kw),
@@ -256,6 +281,12 @@ def build_design_stage(
             get_caa_agent(**kw),
             get_wireframes_figma_agent(**kw),
             get_copy_revisao_agent(**kw),
+            get_prototipo_agent(**kw),
+            ArtefatosDesignAgent(
+                name="ArtefatosDesign",
+                description="Separa o HTML do protótipo do relatório que o acompanha, colhe os links das telas no Stitch e monta a folha de diagramas da jornada e do fluxo.",
+                before_agent_callback=skip_if_blocked,
+            ),
             get_qa_entregaveis_agent(**kw),
             EnvelopeGateAgent(
                 name="QaEntregaveisCheck",
@@ -285,6 +316,8 @@ DESIGN_METADATA = [
     {"id": "CaaAgent", "name": "D4b · Camada CAA", "icon": "🔣", "output_key": "camada_caa", "prompt_file": "design/d4b_caa.md", "description": "Símbolos, modos de resposta alternativos e pranchas; só roda quando a faixa ou a spec pedem."},
     {"id": "WireframesFigmaAgent", "name": "D5 · Wireframes lo-fi (Figma) 🎨", "icon": "📐", "output_key": "wireframes_cobertura", "prompt_file": "design/d5_wireframes_figma.md", "description": "Telas em escala de cinza sobre a seção do DS do ambiente."},
     {"id": "CopyRevisaoAgent", "name": "D6 · Copy PT-BR (passada 2)", "icon": "🔍", "output_key": "copy_strings_revisada", "prompt_file": "design/d6_copy_revisao.md", "description": "Revisão em contexto de tela."},
+    {"id": "PrototipoAgent", "name": "D8 · Protótipo navegável (HTML)", "icon": "🖥️", "output_key": "prototipo_html", "prompt_file": "design/d8_prototipo.md", "description": "Arquivo HTML único e sem dependências com as telas navegáveis, o painel da etapa vindo do one-pager e as cadências do pico. Salvo como `design/08-prototipo.html`."},
+    {"id": "ArtefatosDesign", "name": "D8c · Artefatos e links (determinístico)", "icon": "🔗", "output_key": "stitch_links", "prompt_file": None, "description": "Separa o HTML do protótipo do relatório, colhe os links das telas no Stitch e monta a folha de diagramas."},
     {"id": "QaEntregaveisAgent", "name": "D7 · QA de entregáveis 🎨", "icon": "🧪", "output_key": "qa_entregaveis_report", "prompt_file": "design/d7_qa_entregaveis.md", "description": "Fidelidade à spec, diff de strings, currículo, faixa, fluxo, professor, briefing, ambiente (D8) e CAA (D8b)."},
     {"id": "QaEntregaveisCheck", "name": "D7c · Veredito de design (determinístico)", "icon": "🔀", "output_key": "design_status", "prompt_file": None, "description": "Lê o envelope do QA de entregáveis."},
 ]

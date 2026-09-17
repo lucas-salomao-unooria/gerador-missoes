@@ -12,6 +12,10 @@ SERVICE_NAME="gerador-missoes"
 PROJECT_ID="entre-redes-dev"
 REGION="us-east1"
 ARTIFACT_BUCKET="entre-redes-dev-adk-artifacts"
+# A chave de API do Stitch NUNCA entra em arquivo: ela vive no Secret Manager, o
+# recurso é declarado no Terraform (`gerador_missoes.tf`) e o valor é injetado por
+# `gcloud secrets versions add`. Aqui só se referencia a versão mais recente.
+STITCH_SECRET="plataforma-unooria-dev-stitch-api-key"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -54,6 +58,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --add-volume "name=artifacts-vol,type=cloud-storage,bucket=$ARTIFACT_BUCKET" \
   --add-volume-mount "volume=artifacts-vol,mount-path=/app/output" \
   --env-vars-file .env.yaml \
+  --update-secrets "STITCH_API_KEY=$STITCH_SECRET:latest" \
   --quiet
 
 echo "=================================================================="

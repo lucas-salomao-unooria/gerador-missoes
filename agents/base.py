@@ -23,6 +23,8 @@ def create_llm_agent(
     include_contents: str = "none",
     before_agent_callback: Any = None,
     after_agent_callback: Any = None,
+    before_tool_callback: Any = None,
+    after_tool_callback: Any = None,
 ) -> LlmAgent:
     """Cria um LlmAgent com ThinkingConfig e callbacks padronizados.
 
@@ -37,6 +39,11 @@ def create_llm_agent(
         include_contents: 'none' (padrão — o agente trabalha só com a instrução interpolada
             e o turno corrente) ou 'default' (recebe o histórico completo da conversa).
         before_agent_callback / after_agent_callback: callbacks do ADK.
+        before_tool_callback / after_tool_callback: idem para ferramentas. Quando há
+            `tools` e nada é passado, entram os limitadores de contexto de
+            `agents.callbacks` — resposta de ferramenta MCP é a maior fonte de estouro
+            do teto do modelo, e o histórico de chamada não é descartado por
+            `include_contents="none"`.
     """
     settings = get_settings()
     selected_model = model or settings.gemini_model
@@ -66,6 +73,18 @@ def create_llm_agent(
         kwargs["output_key"] = output_key
     if tools:
         kwargs["tools"] = tools
+        # Contenção padrão: sem ela, um agente que constrói board no FigJam acumula
+        # dezenas de respostas de `use_figma`, o dump do board e a imagem do
+        # screenshot no mesmo turno, e o modelo recusa a requisição com 400.
+        from agents.callbacks import barrar_ferramenta_sem_orcamento, limitar_resposta_de_ferramenta
+
+        kwargs["before_tool_callback"] = before_tool_callback or barrar_ferramenta_sem_orcamento
+        kwargs["after_tool_callback"] = after_tool_callback or limitar_resposta_de_ferramenta
+    else:
+        if before_tool_callback is not None:
+            kwargs["before_tool_callback"] = before_tool_callback
+        if after_tool_callback is not None:
+            kwargs["after_tool_callback"] = after_tool_callback
     if before_agent_callback is not None:
         kwargs["before_agent_callback"] = before_agent_callback
     if after_agent_callback is not None:

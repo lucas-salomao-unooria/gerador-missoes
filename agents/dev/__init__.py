@@ -22,9 +22,13 @@ Ordem (SequentialAgent):
   └────────────────────────────────────────────────────────────────┘
   v3  ConsolidacaoBancaAgent → validacao_dev_report (veredito 🟢/🟡/🔴)
   v3c ValidacaoDevCheck      → dev_status   (🔴 impede o PRD quando ESTEIRA_ESTRITA)
-  v4  PrdWriterAgent         → prd_final   ← entregável do pipeline
+  v4  PrdWriterAgent         → prd_final   ← entregável para o agente de codificação
   v4c PrdCheck               → prd_status  (marcadores que o redator deixou no PRD; lacuna de
                                produto/design/dev marca o PRD como não pronto)
+  v5  OnePagerPedagogicoAgent → one_pager_pedagogico ← entregável para GENTE: o documento
+                               que o time pedagógico lê para aprovar a missão antes de
+                               alguém codificar. Sem jargão, com os links do protótipo,
+                               exportado também em `.docx`.
 """
 
 from __future__ import annotations
@@ -116,6 +120,17 @@ def get_prd_writer_agent(**kw) -> LlmAgent:
     )
 
 
+def get_one_pager_pedagogico_agent(**kw) -> LlmAgent:
+    return create_llm_agent(
+        name="OnePagerPedagogicoAgent",
+        description="O documento de validação humana: a missão inteira em linguagem de sala de aula, com o papel do professor, os links do protótipo e as perguntas que só o time pedagógico responde.",
+        instruction=load_prompt("dev/v5_one_pager_pedagogico.md"),
+        output_key="one_pager_pedagogico",
+        before_agent_callback=skip_if_blocked,
+        **kw,
+    )
+
+
 def build_dev_stage(
     thinking_budget: Optional[int] = None,
     include_thoughts: Optional[bool] = None,
@@ -135,7 +150,7 @@ def build_dev_stage(
     ]
     return SequentialAgent(
         name="DevStage",
-        description="Área de Dev: ficha do manifesto → handoff + brief de assets → telemetria e rastro de lacunas → banca de validação (5 dimensões em paralelo) → consolidação → PRD → pendências do PRD.",
+        description="Área de Dev: ficha do manifesto → handoff + brief de assets → telemetria e rastro de lacunas → banca de validação (5 dimensões em paralelo) → consolidação → PRD → pendências do PRD → one-pager pedagógico para validação humana.",
         before_agent_callback=skip_if_blocked,
         sub_agents=[
             RastroCheckAgent(
@@ -210,6 +225,7 @@ def build_dev_stage(
                 estrito=estrito,
                 before_agent_callback=skip_if_blocked,
             ),
+            get_one_pager_pedagogico_agent(**kw),
         ],
     )
 
@@ -228,5 +244,6 @@ DEV_METADATA = [
     {"id": "ConsolidacaoBancaAgent", "name": "V3 · Consolidação da banca", "icon": "⚖️", "output_key": "validacao_dev_report", "prompt_file": "dev/v3_consolidacao_banca.md", "description": "Veredito determinístico 🟢/🟡/🔴 e bloqueios."},
     {"id": "ValidacaoDevCheck", "name": "V3c · Veredito de dev (determinístico)", "icon": "🔀", "output_key": "dev_status", "prompt_file": None, "description": "Lê o envelope da banca."},
     {"id": "PrdWriterAgent", "name": "V4 · PRD padrão ouro", "icon": "📘", "output_key": "prd_final", "prompt_file": "dev/v4_prd_writer.md", "description": "PRD completo com contexto arquitetural da plataforma — entregável do pipeline."},
+    {"id": "OnePagerPedagogicoAgent", "name": "V5 · One-pager pedagógico (validação humana)", "icon": "🧑‍🏫", "output_key": "one_pager_pedagogico", "prompt_file": "dev/v5_one_pager_pedagogico.md", "description": "A missão inteira em linguagem de sala de aula, com o papel do professor, os links do protótipo e as perguntas de aprovação. Salvo em Markdown e `.docx`."},
     {"id": "PrdCheck", "name": "V4c · Pendências do PRD (determinístico)", "icon": "🧭", "output_key": "prd_check_report", "prompt_file": None, "description": "Conta os marcadores que o redator deixou no PRD; lacuna de produto/design/dev marca o PRD como não pronto, plataforma deixa 🟡."},
 ]

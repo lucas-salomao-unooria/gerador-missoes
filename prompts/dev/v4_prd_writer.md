@@ -74,6 +74,14 @@ Você escreve o **PRD padrão ouro da missão**: o documento que um **agente de 
 
 {handoff_dev?}
 
+**Telas no Stitch — o link que o dev e a revisão humana abrem. Leve-o para a seção 10 e para `links` no frontmatter:**
+
+{stitch_links?}
+
+**Protótipo navegável — relatório do que foi construído. O arquivo `.html` está entre os artefatos da execução:**
+
+{prototipo_relatorio?}
+
 **Brief de assets:**
 
 {brief_assets?}

@@ -57,15 +57,16 @@ KNOWN_STATE_KEYS = {
     "ambiente_simulado", "ambiente_status",
     "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
     "wireframes_cobertura", "copy_strings_revisada", "qa_entregaveis_report", "design_status",
+    "prototipo_html", "prototipo_arquivo", "prototipo_relatorio", "stitch_links", "diagramas_html",
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
-    "validacao_dev_report", "dev_status", "prd_final", "aprendizado_registro",
+    "validacao_dev_report", "dev_status", "prd_final", "one_pager_pedagogico", "aprendizado_registro",
     "pipeline_bloqueado", "pipeline_bloqueio_motivo",
 }
 # Variáveis estáticas substituídas pelo loader antes do ADK
-CONFIG_VARS = {"figma_mcp_mode": "off", "figma_folder_url": "x", "figma_ds_file_key": "k", "figma_ds_v02_file_key": "k2", "gdrive_folder_url": "g"}
+CONFIG_VARS = {"figma_mcp_mode": "off", "figma_folder_url": "x", "figma_ds_file_key": "k", "figma_ds_v02_file_key": "k2", "gdrive_folder_url": "g", "stitch_mcp_mode": "off", "stitch_project_url_base": "u"}
 
 # Chaves obrigatórias (sem `?`) permitidas por área: existem sempre antes do agente rodar
 REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
@@ -77,11 +78,12 @@ EXPECTED_AGENTS = {
     "GateFinalProdutoCheck", "SpecMissaoAgent", "BnccCheck", "DesignStage", "FechaLacunasAgent", "FechaLacunasSplit",
     "AmbienteSimuladoAgent", "AmbienteSimuladoSplit", "BriefOficioAgent", "JornadaFigJamAgent",
     "FluxoFigJamAgent", "CopyPtBrAgent", "CaaAgent", "WireframesFigmaAgent", "CopyRevisaoAgent", "QaEntregaveisAgent",
-    "QaEntregaveisCheck", "DevStage", "ManifestoCheck", "HandoffParalelo", "HandoffDevAgent", "BriefAssetsAgent",
+    "PrototipoAgent", "ArtefatosDesign", "QaEntregaveisCheck", "DevStage", "ManifestoCheck", "HandoffParalelo", "HandoffDevAgent", "BriefAssetsAgent",
     "TelemetriaCheck", "LacunaCheck", "PrdCheck",
     "BancaValidacaoDev", "ValidacaoProdutoNarrativaAgent", "ValidacaoDesignImersaoAgent",
     "ValidacaoPedagogiaBnccAgent", "ValidacaoDadosLgpdAgent", "ValidacaoTecnicaArquiteturaAgent",
-    "ConsolidacaoBancaAgent", "ValidacaoDevCheck", "PrdWriterAgent", "AprendizadoAgent", "ProdutoStage",
+    "ConsolidacaoBancaAgent", "ValidacaoDevCheck", "PrdWriterAgent", "OnePagerPedagogicoAgent",
+    "AprendizadoAgent", "ProdutoStage",
 }
 
 
@@ -632,6 +634,153 @@ def test_mensagem_de_pulo_nao_vira_prd():
     print("   ✓ mensagem de pulo não vira PRD.md nem 'PRD gerado' na tela; o motivo do bloqueio é o do gate que travou")
 
 
+def test_contencao_de_resposta_de_ferramenta():
+    """Resposta de ferramenta MCP não pode estourar o teto de contexto do modelo.
+
+    O D2 construindo um board no FigJam acumula dezenas de respostas de `use_figma`,
+    o dump de `get_figjam` e a imagem de `get_screenshot` no MESMO turno —
+    `include_contents="none"` não descarta histórico de chamada de ferramenta. Foi
+    assim que um prompt de 22 KB estourou 1.048.576 tokens.
+    """
+    import json as _json
+
+    from agents.base import create_llm_agent
+    from agents.callbacks import (
+        MCP_ORCAMENTO_POR_AGENTE,
+        MCP_RESPOSTA_MAX,
+        barrar_ferramenta_sem_orcamento,
+        limitar_resposta_de_ferramenta,
+    )
+
+    class _Tool:
+        name = "get_screenshot"
+
+    class _Ctx:
+        agent_name = "JornadaFigJamAgent"
+
+        def __init__(self):
+            self.state = {}
+
+    ctx = _Ctx()
+
+    # imagem nunca volta ao contexto
+    imagem = {"content": [{"mimeType": "image/png", "data": "A" * 900_000}]}
+    r = limitar_resposta_de_ferramenta(_Tool(), {}, ctx, imagem)
+    assert len(_json.dumps(r)) < 1_000 and "captura de 900000" in _json.dumps(r)
+
+    # dump grande de board é truncado, e a estrutura some em favor de um trecho
+    grande = {"nodes": [{"id": f"n{i}", "texto": "x" * 400} for i in range(500)]}
+    r = limitar_resposta_de_ferramenta(_Tool(), {}, ctx, grande)
+    assert len(_json.dumps(r)) <= MCP_RESPOSTA_MAX + 2_000
+
+    # resposta pequena passa intacta (None = não substitui)
+    assert limitar_resposta_de_ferramenta(_Tool(), {}, _Ctx(), {"ok": True}) is None
+
+    # o gasto é debitado por agente, e o orçamento esgotado recusa a próxima chamada
+    assert ctx.state[f"temp:mcp_gasto_{ctx.agent_name}"] > 0
+    assert barrar_ferramenta_sem_orcamento(_Tool(), {}, ctx) is None
+    ctx.state[f"temp:mcp_gasto_{ctx.agent_name}"] = MCP_ORCAMENTO_POR_AGENTE + 1
+    recusa = barrar_ferramenta_sem_orcamento(_Tool(), {}, ctx)
+    assert recusa and recusa["recusado"] and "entregue o documento" in recusa["motivo"]
+
+    # a contenção entra sozinha em todo agente COM ferramentas, e só neles
+    def _ferramenta_de_teste() -> str:
+        """Ferramenta qualquer, só para o agente nascer com `tools`."""
+        return "ok"
+
+    com = create_llm_agent(name="ComTools", instruction="x", description="d", tools=[_ferramenta_de_teste])
+    sem = create_llm_agent(name="SemTools", instruction="x", description="d")
+    assert com.before_tool_callback and com.after_tool_callback
+    assert not sem.before_tool_callback and not sem.after_tool_callback
+    print("   ✓ contenção de MCP: imagem fora do contexto, dump truncado, orçamento por agente, aplicada a todo agente com ferramentas")
+
+
+def test_artefatos_html_e_links():
+    """Protótipo, diagramas e links: o HTML nunca entra em prompt, e o link sim."""
+    from agents.checkers import ArtefatosDesignAgent
+    from tools.artefatos_html import extrair_prototipo, montar_folha_de_diagramas
+    from tools.stitch_cliente import extrair_project_id
+
+    doc = "<!doctype html><html><body><main>tela</main></body></html>"
+    html, relatorio = extrair_prototipo(f"antes\n```html\n{doc}\n```\n# Protótipo\nTelas: 3")
+    assert html == doc and relatorio.startswith("antes") and "Telas: 3" in relatorio
+    assert extrair_prototipo("só um relatório, sem documento")[0] is None
+    # sem cerca, mas com documento inteiro
+    assert extrair_prototipo(f"nota\n{doc}\nfim")[0] == doc
+
+    folha = montar_folha_de_diagramas("Missão", "a\n```mermaid\nflowchart LR\nA-->B\n```", "b\n```mermaid\nstateDiagram-v2\n[*] --> S\n```")
+    assert folha and folha.count("<section>") == 2 and "flowchart LR" in folha
+    assert montar_folha_de_diagramas("M", "sem diagrama", None) is None
+
+    for texto, esperado in [
+        ("**Projeto:** `12041009326340699841`", "12041009326340699841"),
+        ("projects/9988776655443322", "9988776655443322"),
+        ("nada", None),
+    ]:
+        assert extrair_project_id(texto) == esperado, texto
+
+    # o agente separa o HTML do relatório e monta os diagramas, sem rede e sem Stitch
+    root = SequentialAgent(
+        name="Root",
+        sub_agents=[
+            FakeAgent(name="Jornada", key="jornada_telas", text="j\n```mermaid\nflowchart LR\nA-->B\n```"),
+            FakeAgent(name="Proto", key="prototipo_html", text=f"```html\n{doc}\n```\n# Relatório do protótipo"),
+            ArtefatosDesignAgent(name="ArtefatosDesign"),
+        ],
+    )
+    _, state = asyncio.run(_run(root))
+    assert state["prototipo_arquivo"] == doc
+    assert "Relatório do protótipo" in state["prototipo_relatorio"]
+    assert state["diagramas_html"].count("<section>") == 1
+    assert "prototipo_arquivo" not in "".join(load_prompt(f"design/{n}", **CONFIG_VARS) for n in ["d7_qa_entregaveis.md"])
+    print("   ✓ artefatos: protótipo separado do relatório, diagramas montados do Mermaid, projeto do Stitch reconhecido")
+
+
+def test_one_pager_pedagogico_em_docx():
+    """O documento de validação humana sai também em .docx — o time que o aprova não lê Markdown."""
+    import tempfile
+
+    from tools.docx_export import markdown_para_docx
+
+    md = (
+        "# O Detetive da Legenda\n\n"
+        "**Para o 2º ano** · **50 minutos**\n\n"
+        "## Em uma frase\n"
+        "A criança descobre que a legenda muda o que a foto **parece** dizer.\n\n"
+        "## O que você faz\n"
+        "- Antes: escolhe o tema\n"
+        "- Durante: para a turma para conversar\n\n"
+        "## O que precisamos que você aprove\n"
+        "1. A conversa final fecha a descoberta com crianças de sete anos?\n"
+        "2. O tempo de cada etapa cabe numa aula?\n\n"
+        "| Etapa | O que acontece |\n|---|---|\n| Começo | A criança vê a foto |\n| Fim | Ela escolhe a legenda |\n\n"
+        "---\n```json\n{\"agente\": \"one-pager-pedagogico\", \"status\": \"concluido\"}\n```\n"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        destino = Path(tmp) / "one-pager-pedagogico.docx"
+        assert markdown_para_docx(md, destino, "Missão") == destino and destino.exists()
+
+        from docx import Document
+
+        doc = Document(str(destino))
+        titulos = [p.text for p in doc.paragraphs if p.style.name.startswith("Heading")]
+        texto = "\n".join(p.text for p in doc.paragraphs)
+        assert "O Detetive da Legenda" in titulos and "O que precisamos que você aprove" in titulos
+        assert len(doc.tables) == 1 and doc.tables[0].cell(0, 0).text == "Etapa"
+        assert [p.text for p in doc.paragraphs if p.style.name == "List Number"]
+        assert [p.text for p in doc.paragraphs if p.style.name == "List Bullet"]
+        # o envelope de roteamento é da esteira, não do leitor
+        assert "one-pager-pedagogico" not in texto and "```" not in texto
+        # negrito preservado, marcação não
+        assert "**" not in texto and "parece" in texto
+
+    # a mensagem de pulo não vira documento
+    from pipeline.artifacts import e_mensagem_de_pulo
+
+    assert e_mensagem_de_pulo("⏭️ `OnePagerPedagogicoAgent` não executado — pipeline bloqueado (x).")
+    print("   ✓ one-pager pedagógico: .docx com títulos, listas e tabela; envelope e marcação fora do documento")
+
+
 # --------------------------------------------------------------------------- 8. cópias da plataforma
 def test_referencias_plataforma_sincronizadas():
     import json
@@ -669,6 +818,9 @@ if __name__ == "__main__":
         test_rastro_manifesto_telemetria_lacunas,
         test_capacidade_de_plataforma_nao_bloqueia,
         test_mensagem_de_pulo_nao_vira_prd,
+        test_contencao_de_resposta_de_ferramenta,
+        test_artefatos_html_e_links,
+        test_one_pager_pedagogico_em_docx,
         test_referencias_plataforma_sincronizadas,
     ]
     failed = 0

@@ -38,6 +38,10 @@ ARTIFACT_FILES = [
     ("camada_caa", "design/04b-camada-caa.md"),
     ("wireframes_cobertura", "design/05-wireframes-cobertura.md"),
     ("copy_strings_revisada", "design/06-copy-strings-revisada.md"),
+    ("prototipo_relatorio", "design/08-prototipo.md"),
+    ("prototipo_arquivo", "design/08-prototipo.html"),
+    ("diagramas_html", "design/09-diagramas.html"),
+    ("stitch_links", "design/10-stitch-telas.md"),
     ("qa_entregaveis_report", "design/07-qa-entregaveis.md"),
     ("manifesto_report", "dev/00-ficha-manifesto.md"),
     ("handoff_dev", "dev/01-handoff-dev.md"),
@@ -51,6 +55,7 @@ ARTIFACT_FILES = [
     ("validacao_tecnica_arquitetura", "dev/02e-banca-tecnica-arquitetura.md"),
     ("validacao_dev_report", "dev/03-banca-consolidada.md"),
     ("prd_final", "PRD.md"),
+    ("one_pager_pedagogico", "one-pager-pedagogico.md"),
     ("prd_check_report", "dev/04-pendencias-do-prd.md"),
     ("aprendizado_registro", "aprendizado.md"),
 ]
@@ -165,6 +170,10 @@ def generate_artifact_manifest(run_dir: Path) -> List[Dict[str, Any]]:
         mime_type, _ = mimetypes.guess_type(path.name)
         if not mime_type:
             mime_type = "text/markdown" if path.suffix == ".md" else "application/json"
+        if path.suffix == ".html":
+            mime_type = "text/html"
+        elif path.suffix == ".docx":
+            mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
         manifest.append(
             {
@@ -261,6 +270,16 @@ def save_run_artifacts(
                 md_lines.append(f"- **Node ID:** `{link['node_id']}`")
             md_lines.append(f"- **Origem:** `{link['source_agent_key']}`\n")
         (figma_dir / "figma-links.md").write_text("\n".join(md_lines) + "\n", encoding="utf-8")
+
+    # O one-pager pedagógico também em .docx: o time que o valida não lê Markdown.
+    pedagogico = state.get("one_pager_pedagogico")
+    if pedagogico and isinstance(pedagogico, str) and not e_mensagem_de_pulo(pedagogico):
+        try:
+            from tools.docx_export import markdown_para_docx
+
+            markdown_para_docx(pedagogico, run_dir / "one-pager-pedagogico.docx", titulo_fallback=slug)
+        except Exception as exc:
+            logger.warning("Não consegui gerar o .docx do one-pager pedagógico: %s", exc)
 
     # Estado serializável
     serializable = {k: v for k, v in state.items() if not str(k).startswith("temp:")}

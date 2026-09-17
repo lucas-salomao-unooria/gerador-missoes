@@ -23,6 +23,14 @@ def _env_bool(name: str, default: str) -> bool:
     return os.getenv(name, default).strip().lower() in ("true", "1", "yes", "sim")
 
 
+def _detect_stitch_mode() -> str:
+    """`auto` (padrão): liga o modo remoto quando há chave, senão desliga."""
+    modo = os.getenv("STITCH_MCP_MODE", "auto").strip().lower()
+    if modo != "auto":
+        return modo
+    return "remote" if os.getenv("STITCH_API_KEY") or os.getenv("STITCH_ACCESS_TOKEN") else "off"
+
+
 def _detect_figma_mode() -> str:
     """Detecta automaticamente o modo do Figma MCP baseado no ambiente."""
     raw = os.getenv("FIGMA_MCP_MODE", "").strip().lower()
@@ -151,6 +159,31 @@ class AppSettings(BaseSettings):
         description="fileKey do Unooria_DS_v0.2",
     )
 
+    # ------------------------------------------------------------- Google Stitch
+    # Gera as telas do D5 e serve de conferência ao D7, no lugar do Figma. O endpoint
+    # MCP é oficial (`stitch.googleapis.com/mcp`) e autentica por chave de API.
+    stitch_mcp_mode: str = Field(
+        default_factory=lambda: _detect_stitch_mode(),
+        description="off | remote (stitch.googleapis.com/mcp, X-Goog-Api-Key) | proxy (npx @_davideast/stitch-mcp, conserta os schemas)",
+    )
+    stitch_api_key: str = Field(
+        default_factory=lambda: os.getenv("STITCH_API_KEY", ""),
+        description="Chave de API do Stitch (Google Labs). Não expira e dispensa projeto no Google Cloud",
+    )
+    stitch_access_token: str = Field(default_factory=lambda: os.getenv("STITCH_ACCESS_TOKEN", ""))
+    stitch_quota_project_id: str = Field(default_factory=lambda: os.getenv("STITCH_QUOTA_PROJECT_ID", ""))
+    stitch_mcp_remote_url: str = Field(
+        default_factory=lambda: os.getenv("STITCH_MCP_REMOTE_URL", "https://stitch.googleapis.com/mcp"),
+    )
+    stitch_mcp_command: str = Field(default_factory=lambda: os.getenv("STITCH_MCP_COMMAND", "npx"))
+    stitch_mcp_args_raw: str = Field(
+        default_factory=lambda: os.getenv("STITCH_MCP_ARGS", "-y,@_davideast/stitch-mcp,proxy"),
+    )
+    stitch_project_url_base: str = Field(
+        default_factory=lambda: os.getenv("STITCH_PROJECT_URL_BASE", "https://stitch.withgoogle.com/projects"),
+        description="Base da URL pública de um projeto, usada nos relatórios e no PRD",
+    )
+
     # Google Drive (relatório de lacunas do D0 em Google Docs — sem toolset ainda; o prompt tem fallback)
     gdrive_folder_url: str = Field(
         default_factory=lambda: os.getenv("GDRIVE_FOLDER_URL", ""),
@@ -162,6 +195,26 @@ class AppSettings(BaseSettings):
     def pipeline_stages(self) -> List[str]:
         stages = [s.strip().lower() for s in self.pipeline_stages_raw.split(",") if s.strip()]
         return [s for s in stages if s in ("produto", "design", "dev")] or ["produto", "design", "dev"]
+
+    @property
+    def stitch_mcp_args(self) -> List[str]:
+        if not self.stitch_mcp_args_raw:
+            return ["-y", "@_davideast/stitch-mcp", "proxy"]
+        return [a.strip() for a in self.stitch_mcp_args_raw.split(",") if a.strip()]
+
+    @property
+    def is_stitch_enabled(self) -> bool:
+        return self.stitch_mcp_mode in ("remote", "proxy")
+
+    @property
+    def stitch_status_label(self) -> str:
+        if self.stitch_mcp_mode == "off":
+            return "⚪ Desligado (defina STITCH_API_KEY)"
+        if self.stitch_mcp_mode == "remote":
+            return "🟢 Remoto (chave de API)" if self.stitch_api_key else "🔴 Remoto sem STITCH_API_KEY"
+        if self.stitch_mcp_mode == "proxy":
+            return "🟢 Proxy (npx @_davideast/stitch-mcp)"
+        return f"🔴 Modo desconhecido ({self.stitch_mcp_mode})"
 
     @property
     def figma_mcp_args(self) -> List[str]:

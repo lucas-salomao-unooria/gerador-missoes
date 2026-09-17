@@ -89,4 +89,6 @@ jobs:
             --max-instances=1 \
             --add-volume=name=artifacts-vol,type=cloud-storage,bucket=entre-redes-dev-adk-artifacts \
             --add-volume-mount=volume=artifacts-vol,mount-path=/app/output \
+            --update-env-vars=STITCH_MCP_MODE=remote \
+            --update-secrets=STITCH_API_KEY=plataforma-unooria-dev-stitch-api-key:latest \
             --quiet

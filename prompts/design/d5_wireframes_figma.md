@@ -38,6 +38,38 @@ Você constrói todas as telas do inventário — estudante e professor — em *
 
 {camada_caa?}
 
+## Ferramentas Stitch (modo: `{stitch_mcp_mode}`) — é aqui que as telas nascem
+
+O **Google Stitch** gera as telas a partir de descrição em texto. Ele não conhece o Design System da Unooria, e é por isso que o primeiro passo ensina a ele a escala de cinza: o que sai de lá é **referência visual navegável**, e a especificação de componente continua sendo a sua cobertura em Markdown, que nomeia o componente do DS por zona.
+
+Se disponível, nesta ordem exata:
+
+1. `create_project` com o título `<missão> — wireframes lo-fi`. Guarde o `projectId` (o número do fim de `projects/<id>`, sem o prefixo).
+2. `upload_design_md` com um DESIGN.md em base64 declarando **os nove tokens** e as regras do lo-fi: escala de cinza apenas, sem cor, sem sombra, sem gradiente, sem imagem decorativa; retângulo `superficie/midia` com um X marca mídia; alvo de toque mínimo de 64 px (88 na projeção); tipografia única. Os nomes dos tokens são exatamente os nove da referência abaixo.
+3. `list_design_systems` para pegar o `assetId` do design system que o Stitch montou a partir do seu DESIGN.md.
+4. `generate_screen_from_text` **por estado declarado**, sempre passando `designSystem: <assetId>` e `deviceType` (`MOBILE` para a casca 375×812, `DESKTOP` para a projeção). Sem o `designSystem`, cada tela sai com um tema diferente e o conjunto perde o sentido.
+   - O `prompt` de cada tela começa pelo **ID e nome** (`E2-ALU-01 — Feed, estado padrão`), depois as zonas de cima para baixo, os elementos com o texto **literal do sheet de copy**, e o estado. Não peça estilo: o design system já o define.
+   - **`deviceType` sai do `viewport` do bloco 0, não do gosto.** Tela de estudante com casca de aparelho declarada é `MOBILE`; tela sem `viewport`, e toda tela de professor ou de projeção, é `DESKTOP`. Gere a tela **como ela é por dentro**: a moldura de aparelho quem desenha é o hub, e pedir ao Stitch um "celular dentro de um desktop" produz uma foto de celular em cima de um fundo, que não é tela nenhuma.
+   - A geração leva alguns minutos por tela. **Não** peça variações, não regenere para "melhorar": cota é finita e a tela é wireframe, não arte final.
+5. `list_screens` ao final, uma vez, para colher `title` e o identificador de cada tela. A tela aparece com atraso: se a lista vier curta, é assincronia, não falha.
+
+**Economia de contexto, que é regra e não conselho:** não peça o HTML nem a imagem de tela nenhuma. Você precisa do **link**, não do arquivo. Pedir o código ou a captura de todas as telas estoura o contexto da etapa e derruba a execução inteira.
+
+**Priorize** quando o inventário for grande: pico, aha, uma tela por etapa, depois os estados degenerados. Declare o que ficou fora.
+
+No relatório, entregue **esta tabela**, que é o que vai ao PRD:
+
+```
+## Stitch
+**Projeto:** `<projectId>` · {stitch_project_url_base}/<projectId>
+**Design system:** `<assetId>` (do DESIGN.md desta missão)
+
+| ID da tela | Estado | screenId | Dispositivo |
+|---|---|---|---|
+```
+
+Se indisponível ou se falhar: siga para a cobertura em Markdown e registre `STITCH: indisponível — <motivo>`. A cobertura é o entregável que o dev consome de qualquer forma.
+
 ## Ferramentas Figma (modo: `{figma_mcp_mode}`)
 
 Se disponíveis:

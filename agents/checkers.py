@@ -203,6 +203,72 @@ class SecaoSplitAgent(BaseAgent):
 
 
 
+class ArtefatosDesignAgent(BaseAgent):
+    """Determinístico: separa o protótipo do relatório, colhe os links do Stitch e monta os diagramas.
+
+    Três coisas que não precisam de modelo e não podem passar por ele:
+
+    - o HTML do protótipo tem dezenas de KB e não pode entrar no prompt do QA nem do
+      PRD, então é separado do relatório que o acompanha;
+    - os links do Stitch vêm da api, não da memória do agente;
+    - a folha de diagramas é remontagem do Mermaid que a jornada e o fluxo já
+      escreveram.
+    """
+
+    prototipo_key: str = "prototipo_html"
+    arquivo_key: str = "prototipo_arquivo"
+    relatorio_key: str = "prototipo_relatorio"
+    links_key: str = "stitch_links"
+    diagramas_key: str = "diagramas_html"
+    fonte_wireframes: str = "wireframes_cobertura"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools.artefatos_html import extrair_prototipo, montar_folha_de_diagramas
+
+        state = ctx.session.state
+        delta: Dict[str, Any] = {}
+        linhas: List[str] = []
+        titulo = extrair_slug(str(state.get("spec_missao", "") or "")) or "missão"
+
+        documento, relatorio = extrair_prototipo(str(state.get(self.prototipo_key, "") or ""))
+        if documento:
+            delta[self.arquivo_key] = documento
+            delta[self.relatorio_key] = relatorio
+            linhas.append(f"🖥️ Protótipo separado: {len(documento) // 1024} KB de HTML + relatório.")
+        elif state.get(self.prototipo_key):
+            delta[self.relatorio_key] = str(state.get(self.prototipo_key))
+            linhas.append("⚠️ Não achei um documento HTML na saída do protótipo — guardei tudo como relatório.")
+
+        diagramas = montar_folha_de_diagramas(titulo, state.get("jornada_telas"), state.get("fluxo_arestas"))
+        if diagramas:
+            delta[self.diagramas_key] = diagramas
+            linhas.append("🗺️ Folha de diagramas montada a partir do Mermaid da jornada e do fluxo.")
+
+        try:
+            from config import get_settings
+            from tools.stitch_cliente import coletar_links, extrair_project_id, montar_folha_de_links
+
+            if get_settings().is_stitch_enabled:
+                pid = extrair_project_id(str(state.get(self.fonte_wireframes, "") or ""))
+                if pid:
+                    dados = coletar_links(pid)
+                    delta[self.links_key] = montar_folha_de_links(dados, titulo)
+                    linhas.append(f"🔗 Stitch: {len(dados['telas'])} tela(s) no projeto `{pid}` — link no relatório e no PRD.")
+                else:
+                    linhas.append("⚠️ Stitch ligado, mas o relatório de wireframes não trouxe o identificador do projeto.")
+        except Exception as exc:  # a coleta é conveniência: nunca derruba a esteira
+            linhas.append(f"⚠️ Não consegui colher os links do Stitch: {exc}")
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text="\n".join(linhas) or "Nada a coletar.")]),
+            actions=EventActions(state_delta=delta),
+        )
+
+
 class BnccCheckAgent(BaseAgent):
     """Gate determinístico de conformidade com a BNCC Computação, aplicado à spec.
 
