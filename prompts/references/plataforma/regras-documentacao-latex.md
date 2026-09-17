@@ -1,4 +1,4 @@
-<!-- CÓPIA SINCRONIZADA de plataforma-unooria@4578555 (2026-09-16) · origem: docs/regras/documentacao-latex.md · não edite: rode scripts/sincronizar_plataforma.py · placeholders entre chaves aparecem como «nome» por limitação de interpolação do ADK; no código real use chaves -->
+<!-- CÓPIA SINCRONIZADA de plataforma-unooria@29afc8f (2026-09-16) · origem: docs/regras/documentacao-latex.md · não edite: rode scripts/sincronizar_plataforma.py · placeholders entre chaves aparecem como «nome» por limitação de interpolação do ADK; no código real use chaves -->
 
 ---
 paths:
@@ -19,7 +19,7 @@ casos de uso, **arquitetura de software nos 4 níveis do C4**, **arquitetura de
 nuvem e implantação em GCP**, multi-tenancy e segurança, modelo de dados,
 contratos de integração, telemetria, camada de IA, catálogo de experiências,
 especificação da API, design system, entrega, qualidade, **observabilidade**,
-**106 ADRs**, riscos e evolução. Todos os diagramas são TikZ vetorial, com fonte Mermaid equivalente no
+**107 ADRs**, riscos e evolução. Todos os diagramas são TikZ vetorial, com fonte Mermaid equivalente no
 Apêndice A.
 
 **REGRA: toda implementação nova atualiza esta documentação NO MESMO COMMIT, e

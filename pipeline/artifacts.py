@@ -72,6 +72,19 @@ def _safe(name: str) -> str:
     return re.sub(r"[^a-z0-9-]+", "-", name.lower()).strip("-") or "missao"
 
 
+def e_mensagem_de_pulo(valor: Any) -> bool:
+    """O ADK grava no `output_key` o texto do callback que pulou o agente.
+
+    Sem este filtro, um pipeline bloqueado produz um `PRD.md` de 88 bytes dizendo
+    "PrdWriterAgent não executado" — e a interface, que só testa se a chave existe,
+    anuncia "PRD gerado".
+    """
+    if not isinstance(valor, str):
+        return False
+    inicio = valor.strip()[:200]
+    return inicio.startswith("⏭️") and "não executado" in inicio
+
+
 def extract_figma_links(state: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Extrai URLs, fileKeys e referências ao Figma/FigJam das saídas dos agentes."""
     found_urls: Dict[str, Dict[str, Any]] = {}
@@ -223,7 +236,7 @@ def save_run_artifacts(
     written = 0
     for key, rel in ARTIFACT_FILES:
         value = state.get(key)
-        if not value:
+        if not value or e_mensagem_de_pulo(value):
             continue
         path = run_dir / rel
         path.parent.mkdir(parents=True, exist_ok=True)

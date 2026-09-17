@@ -1,4 +1,4 @@
-<!-- CÓPIA SINCRONIZADA de plataforma-unooria@4578555 (2026-09-16) · origem: docs/regras/git-e-branches.md · não edite: rode scripts/sincronizar_plataforma.py · placeholders entre chaves aparecem como «nome» por limitação de interpolação do ADK; no código real use chaves -->
+<!-- CÓPIA SINCRONIZADA de plataforma-unooria@29afc8f (2026-09-16) · origem: docs/regras/git-e-branches.md · não edite: rode scripts/sincronizar_plataforma.py · placeholders entre chaves aparecem como «nome» por limitação de interpolação do ADK; no código real use chaves -->
 
 # Git e branches — o resumo operacional
 
@@ -92,8 +92,11 @@ abri-lo.
   vez: `pnpm dev`/`docker:dev`, a suíte e2e, migração. **Nunca**
   `pnpm docker:dev` de um worktree — ele recria os containers da stack
   principal. Arquivos que toda frente toca e brigam no merge: número da ADR
-  (a PRÓXIMA é a **106**: a **105 é a quota de IA como dado, editável
-      só pelo `admin`**, a **104 o realinhamento automático da
+  (a PRÓXIMA é a **108**: a **107 é o site público portado para o hub,
+      com o cadastro de interesse passando pela api**, a **106 o `_template`
+      com a fiação inteira** — que gastou o número sem corrigir esta linha, o
+      modo de falhar que ela mesma descreve —, a **105 a quota de IA como dado,
+      editável só pelo `admin`**, a **104 o realinhamento automático da
       base depois da promoção**, a **103 a poda automática da frente
       mergeada**, a **102 a doutrina numa fonte só, lida por
       quatro agentes**, a **101 o fluxo de quatro ambientes, com

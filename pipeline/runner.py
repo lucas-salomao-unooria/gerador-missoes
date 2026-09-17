@@ -21,7 +21,12 @@ from google.genai import types
 
 from agents.callbacks import KEY_PIPELINE_BLOQUEADO, KEY_PIPELINE_MOTIVO
 from config import get_settings
-from pipeline.artifacts import extract_figma_links, generate_artifact_manifest, save_run_artifacts
+from pipeline.artifacts import (
+    e_mensagem_de_pulo,
+    extract_figma_links,
+    generate_artifact_manifest,
+    save_run_artifacts,
+)
 from pipeline.orchestrator import FINAL_OUTPUT_KEY, create_mission_orchestrator
 from tools.doc_parser import DocumentBatch
 
@@ -85,6 +90,17 @@ class PipelineExecutionResult:
     @property
     def bypassed(self) -> bool:
         return not self.bloqueado and (self.status == "bypassed" or self.has_blocked_gate)
+
+    @property
+    def prd_gerado(self) -> Optional[str]:
+        """O PRD, quando ele existe de fato — não a mensagem de pulo do agente."""
+        prd = self.state.get("prd_final")
+        return None if not prd or e_mensagem_de_pulo(prd) else prd
+
+    @property
+    def gate_que_bloqueou(self) -> Optional[str]:
+        """O motivo registrado pelo primeiro gate a bloquear, para a tela não inventar culpado."""
+        return self.state.get(KEY_PIPELINE_MOTIVO) or None
 
     @property
     def status_icon(self) -> str:

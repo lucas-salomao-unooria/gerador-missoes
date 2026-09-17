@@ -20,6 +20,12 @@ Não avalia qualidade pedagógica (P2) nem adequação à faixa etária (P3). Av
 
 <!-- include: references/criterios-gate-estrutural.md -->
 
+## Capacidades do aparelho — informativo, NÃO é critério de bloqueio
+
+Uma missão pode pedir capacidade que a plataforma ainda não concede (gravar voz, câmera, vídeo). Isso **não reprova** a missão: vira pré-requisito de plataforma, entra no PRD e é construído junto. O que você faz é **registrar** como risco de escopo, com uma linha, quando a mecânica depender de algo da seção 3 abaixo — para ninguém descobrir isso só na codificação.
+
+<!-- include: references/capacidades-plataforma.md -->
+
 ## Referências de apoio
 
 <!-- include: references/padroes-aprendidos.md -->

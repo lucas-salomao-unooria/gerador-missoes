@@ -1,4 +1,4 @@
-<!-- CÓPIA SINCRONIZADA de plataforma-unooria@4578555 (2026-09-16) · origem: docs/regras/comandos.md · não edite: rode scripts/sincronizar_plataforma.py · placeholders entre chaves aparecem como «nome» por limitação de interpolação do ADK; no código real use chaves -->
+<!-- CÓPIA SINCRONIZADA de plataforma-unooria@29afc8f (2026-09-16) · origem: docs/regras/comandos.md · não edite: rode scripts/sincronizar_plataforma.py · placeholders entre chaves aparecem como «nome» por limitação de interpolação do ADK; no código real use chaves -->
 
 # Comandos
 

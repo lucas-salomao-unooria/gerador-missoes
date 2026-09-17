@@ -14,7 +14,10 @@ sem ele), `series` (`[]` = transversal), **`unidade`** (1–4, ordena a grade da
 sala, ADR-69), `publico`, `capabilities` (`telemetria`, `progresso`, `ia`,
 `avaliacao`, `tempo-real`), `viewport` (só se casca de aparelho), `permissoes`
 (`pointer-lock`, `forms`, `downloads` — só o que o iframe precisa) e `verbos`.
-Campo indecidível pela spec = lacuna dela.
+Campo indecidível pela spec = lacuna dela. **Permissão que a plataforma ainda
+não concede não é erro da spec**: é pré-requisito de plataforma (a tabela está
+em `references/capacidades-plataforma.md`), avaliado como ⚠️ com o caminho de
+implementação, nunca ❌.
 
 ## TEC-02 [BLOQUEANTE] — Módulo da api desenhado
 Se há gabarito, estado de missão ou visão de professor (quase sempre há):

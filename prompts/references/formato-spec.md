@@ -25,7 +25,7 @@ seção do DS já traz.
 - `unidade: 1 | 2 | 3 | 4 | nenhuma` (`nenhuma` só em transversal ou ferramenta de professor)
 - `publico: estudante | professor`
 - `viewport: 375x812 | desktop | <largura>x<altura>`
-- `permissoes: [forms, pointer-lock, downloads]` ou `permissoes: []` (só o que o iframe precisa)
+- `permissoes: [forms, pointer-lock, downloads]` ou `permissoes: []` — **tudo o que a missão precisa do aparelho, inclusive o que a plataforma ainda não concede**. Tocar áudio e vídeo já é nativo e não se declara; gravar voz (`microphone`), usar a câmera (`camera`) ou gravar a tela (`display-capture`) são pré-requisitos de plataforma: declare, e o PRD sai 🟡 com o caminho de implementação. A tabela das três categorias está em `references/capacidades-plataforma.md`
 - `capabilities: [telemetria, progresso, ia, avaliacao, tempo-real]` (só as usadas)
 - `secao_ds: instanooria | unitube | chatgpt | whatsappmobile | tiktooria | nova:<nome> | minijogo:<nome>` (nova exige componentes, responsável e prazo; `tiktooria` ainda não tem ponte em `@edu/ui`)
 - `liberacao: por-turma` (ADR-69 — a missão só abre na turma em que a professora liberou; o funil de estudante passa por `exigirMissaoLiberada`)
@@ -110,6 +110,16 @@ exclusivamente no servidor.
 
 **Servidor calcula, nunca aceita.** O que o cliente envia (medidas brutas)
 e o que o servidor deriva.
+
+**Mídia capturada do estudante.** Se a missão grava voz, foto, vídeo ou tela
+(`microphone`, `camera`, `display-capture` no bloco 0), este bloco declara, sem
+exceção: **onde a mídia é gravada** (tabela `exp_NN_*` com `escola_id` e RLS,
+ou arquivo no bucket com caminho não adivinhável), **quanto tempo fica**
+(retenção ou lacuna assumida por escrito), **quem lê** (só a professora da
+escola — nunca rota de gestor, nunca telemetria, nunca Clarity) e **o que
+acontece quando a família não autoriza ou o aparelho não tem o recurso**. Voz e
+imagem de criança são dado pessoal e não são coletados por padrão: sem esses
+quatro campos a missão não passa pela banca de dados.
 
 **Eventos — o contrato real da plataforma.** Cada evento é
 `track(verbo, objeto, <resultado?, contexto?>)`: `verbo` e `objeto` são strings

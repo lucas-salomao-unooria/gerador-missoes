@@ -265,6 +265,9 @@ def build_design_stage(
                 status_key="design_status",
                 block_pipeline_on_fail=get_settings().esteira_estrita,
                 treat_indefinido_as_blocked=False,
+                # Com o pipeline já bloqueado ele leria a mensagem de pulo do QA
+                # e sobrescreveria o motivo do bloqueio original.
+                before_agent_callback=skip_if_blocked,
             ),
         ],
     )

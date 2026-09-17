@@ -390,7 +390,11 @@ async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_co
             result = event["result"]
             render()
             if result.bloqueado:
-                progress.warning(f"⛔ Missão bloqueada nos gates de produto em **{result.duration_seconds:.0f}s** — veja o relatório e o alerta.")
+                motivo = getattr(result, "gate_que_bloqueou", None) or "gate de produto"
+                progress.warning(
+                    f"⛔ Missão bloqueada em **{result.duration_seconds:.0f}s** — **{motivo}**. "
+                    f"O PRD não foi gerado; o relatório do gate diz o que faltou e de quem."
+                )
             elif getattr(result, "bypassed", False):
                 progress.warning(f"⚠️ Pipeline concluído com gates bypassados em **{result.duration_seconds:.0f}s**. PRD gerado com pendências — artefatos em `{result.output_dir}`.")
             else:
@@ -467,7 +471,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
 
     # Título principal da missão e status amigável
     mission_title = extrair_titulo_missao(result.state, fallback="Missão")
-    prd_text = result.state.get("prd_final") or result.final_output
+    prd_text = getattr(result, "prd_gerado", None) or result.final_output
     prd_meta, _ = extrair_metadados_frontmatter(prd_text)
 
     # O status da missão reflete o veredito dos gates do pipeline
@@ -627,7 +631,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
     with c1:
         download_button_lazy(
             "📥 PRD (Markdown)",
-            lambda: result.state.get("prd_final") or result.final_output,
+            lambda: getattr(result, "prd_gerado", None) or result.final_output,
             file_name=f"PRD_{sid[:8]}.md",
             mime="text/markdown",
             key=f"prd_{prefix}",
@@ -764,11 +768,17 @@ def main():
                 finally:
                     loop.close()
                 if result:
-                    if result.state.get("prd_final"):
+                    if getattr(result, "prd_gerado", None):
                         if getattr(result, "bypassed", False):
                             summary = "🟡 **PRD gerado com ressalvas (gates bypassados).** Veja as abas abaixo."
                         else:
                             summary = "📘 **PRD gerado.** Veja as abas abaixo."
+                    elif getattr(result, "bloqueado", False):
+                        motivo = getattr(result, "gate_que_bloqueou", None) or "um gate da esteira"
+                        summary = (
+                            f"⛔ **PRD não gerado — {motivo}.** A esteira parou no gate que faltou informação; "
+                            f"o relatório dele, nas abas abaixo, diz o que faltou e quem resolve."
+                        )
                     else:
                         summary = result.final_output
                     st.markdown(summary if len(summary) < 4000 else summary[:4000] + "\n\n…")

@@ -535,6 +535,103 @@ def test_rastro_manifesto_telemetria_lacunas():
     print("   ✓ rastro: manifesto, telemetria e lacunas por dono; bloqueio impede o jusante; só plataforma segue 🟡")
 
 
+_BLOCO9_COMPLETO = (
+    "A gravação vai para `exp_77_audios` (escola_id, RLS). Retenção de 60 dias. "
+    "Quem lê: só a professora da escola, nunca rota de gestor."
+)
+
+
+def test_capacidade_de_plataforma_nao_bloqueia():
+    """Capacidade que a plataforma ainda não concede é pré-requisito, não impedimento.
+
+    A missão declara o que precisa (gravar voz, câmera, vídeo); o gate marca dono
+    `plataforma`, o PRD sai 🟡 e o pipeline segue. Só é bloqueio quando o valor não
+    existe no navegador, quando já é concedido a todas (declarar derruba o deploy)
+    ou quando a missão captura mídia de criança sem dizer onde ela fica.
+    """
+    from agents.checkers import RastroCheckAgent
+    from tools.rastro import validar_manifesto
+
+    def spec(permissoes: str, bloco9: str = "sem coleta de mídia") -> str:
+        return (
+            "# Spec — Teste v1\n\n## 0. Identificação de plataforma\n"
+            "- `id: exp-77-teste`\n- `produto: entre-redes`\n- `series: [\"2EF\"]`\n"
+            "- `unidade: 1`\n- `publico: estudante`\n- `viewport: 375x812`\n"
+            f"- `permissoes: {permissoes}`\n"
+            "- `capabilities: [telemetria, progresso]`\n- `secao_ds: instanooria`\n"
+            "- `liberacao: por-turma`\n\n"
+            f"## 9. Evidências e dados\n{bloco9}\n\n## 10. Cenários\nx\n"
+        )
+
+    # o que já funciona hoje: nada a declarar além das três permissões
+    assert validar_manifesto(spec("[forms]"))["status"] == "aprovado"
+
+    # gravar voz: pendência de PLATAFORMA, e o bloco 9 diz onde a mídia fica
+    r = validar_manifesto(spec("[forms, microphone]", _BLOCO9_COMPLETO))
+    assert r["status"] == "amarelo", r["achados"]
+    donos = {a["etapa"] for a in r["achados"]}
+    assert donos == {"plataforma"}, donos
+    assert all(a["severidade"] == "atencao" for a in r["achados"])
+    assert any("capacidades-plataforma" in a["resumo"] for a in r["achados"])
+
+    # gravar vídeo = câmera + microfone, mesma regra
+    assert validar_manifesto(spec("[camera, microphone]", _BLOCO9_COMPLETO))["status"] == "amarelo"
+
+    # capturar mídia de criança sem dizer onde fica é problema de PRODUTO
+    r = validar_manifesto(spec("[microphone]"))
+    assert r["status"] == "bloqueado"
+    assert any(a["etapa"] == "produto" and "bloco 9" in a["resumo"] for a in r["achados"])
+
+    # já concedido a todas: declarar derruba o deploy com 400
+    r = validar_manifesto(spec("[autoplay]"))
+    assert r["status"] == "amarelo" and r["achados"][0]["etapa"] == "dev"
+    assert "já é concedido" in r["achados"][0]["resumo"]
+
+    # valor que não existe no navegador continua bloqueio
+    assert validar_manifesto(spec("[telepatia]"))["status"] == "bloqueado"
+
+    # capability fora do vocabulário: pendência de plataforma, não bloqueio
+    r = validar_manifesto(spec("[forms]").replace("[telemetria, progresso]", "[telemetria, realidade-aumentada]"))
+    assert r["status"] == "amarelo" and r["achados"][0]["etapa"] == "plataforma"
+
+    # o gate com amarelo NÃO impede o jusante
+    root = SequentialAgent(
+        name="Root",
+        sub_agents=[
+            FakeAgent(name="Spec", key="spec_missao", text=spec("[forms, microphone]", _BLOCO9_COMPLETO)),
+            RastroCheckAgent(name="ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
+            FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=skip_if_blocked),
+        ],
+    )
+    _, state = asyncio.run(_run(root))
+    assert state["manifesto_status"] == "amarelo"
+    assert state.get("prd_final") == "prd" and not state.get(KEY_PIPELINE_BLOQUEADO)
+    assert "pré-requisito" in state["manifesto_report"]
+    print("   ✓ capacidades: microfone/câmera viram pendência de plataforma (🟡) e o PRD segue; sem bloco 9 é produto; inventado é bloqueio")
+
+
+def test_mensagem_de_pulo_nao_vira_prd():
+    """O texto que o ADK grava ao pular um agente não pode virar PRD nem artefato."""
+    from pipeline.artifacts import e_mensagem_de_pulo
+
+    pulo = "⏭️ `PrdWriterAgent` não executado — pipeline bloqueado (Ficha do manifesto bloqueado (1 lacuna(s)))."
+    assert e_mensagem_de_pulo(pulo)
+    assert not e_mensagem_de_pulo("# PRD — missão\n\nconteúdo de verdade")
+    assert not e_mensagem_de_pulo(None) and not e_mensagem_de_pulo("")
+
+    from pipeline.runner import PipelineExecutionResult
+
+    bloqueado = PipelineExecutionResult(
+        session_id="s", user_id="u", prompt="p", final_output="",
+        state={"prd_final": pulo, "pipeline_bloqueado": True, "pipeline_bloqueio_motivo": "Ficha do manifesto bloqueado"},
+    )
+    assert bloqueado.prd_gerado is None
+    assert bloqueado.gate_que_bloqueou == "Ficha do manifesto bloqueado"
+    ok = PipelineExecutionResult(session_id="s", user_id="u", prompt="p", final_output="", state={"prd_final": "# PRD\n..."})
+    assert ok.prd_gerado and ok.gate_que_bloqueou is None
+    print("   ✓ mensagem de pulo não vira PRD.md nem 'PRD gerado' na tela; o motivo do bloqueio é o do gate que travou")
+
+
 # --------------------------------------------------------------------------- 8. cópias da plataforma
 def test_referencias_plataforma_sincronizadas():
     import json
@@ -570,6 +667,8 @@ if __name__ == "__main__":
         test_secao_split_d0_e_d9,
         test_bncc_validador_e_gate,
         test_rastro_manifesto_telemetria_lacunas,
+        test_capacidade_de_plataforma_nao_bloqueia,
+        test_mensagem_de_pulo_nao_vira_prd,
         test_referencias_plataforma_sincronizadas,
     ]
     failed = 0

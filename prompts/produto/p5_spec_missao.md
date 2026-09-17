@@ -34,6 +34,10 @@ Você **não** cria mecânica nova nem fecha decisão de produto. Se algo ficou 
 
 <!-- include: references/ambientes.md -->
 
+## Capacidades do aparelho (o bloco 0 declara tudo o que a missão precisa, inclusive o que ainda não existe)
+
+<!-- include: references/capacidades-plataforma.md -->
+
 ## BNCC Computação — lista oficial (o bloco 11 só aceita o que está aqui)
 
 <!-- include: references/bncc-computacao-letramento-digital.md -->

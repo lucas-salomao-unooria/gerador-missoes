@@ -1,4 +1,4 @@
-<!-- CÓPIA SINCRONIZADA de plataforma-unooria@4578555 (2026-09-16) · origem: apps/hub/AGENTS.md · não edite: rode scripts/sincronizar_plataforma.py · placeholders entre chaves aparecem como «nome» por limitação de interpolação do ADK; no código real use chaves -->
+<!-- CÓPIA SINCRONIZADA de plataforma-unooria@29afc8f (2026-09-16) · origem: apps/hub/AGENTS.md · não edite: rode scripts/sincronizar_plataforma.py · placeholders entre chaves aparecem como «nome» por limitação de interpolação do ADK; no código real use chaves -->
 
 <!-- BEGIN:nextjs-agent-rules -->
 
@@ -17,16 +17,23 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Complementa o `AGENTS.md` da raiz.
 
-**A raiz (`/`) é a LANDING pública** (2026-08-29, ADR-40): sem sessão, renderiza
-`components/landing/` — porte da tela do Stitch com a estrutura, a copy e o
-movimento do modelo, e a cor, a tipografia, os ícones, o logo e os botões do DS
-(nunca a paleta/fontes que o Stitch gera). Com sessão, `/` continua roteando
-para a home do papel: o `login-form` e o `trocar-senha` fazem
-`router.replace("/")` e dependem disso. Duas armadilhas medidas: o cleanup do
-shader NÃO pode chamar `loseContext()` (o Strict Mode remonta o efeito no mesmo
-canvas e o contexto volta perdido — fundo em branco), e cor de ícone vai pela
-prop `color` do `Icon`, não por classe (a folha do DS vence e o ícone sai preto).
-Suíte: `node scripts/e2e/rodar.mjs publico` (a landing e o login; só o hub).
+**A raiz (`/`) é o SITE PÚBLICO ENTRE REDES** (2026-09-16, ADR-107): sem sessão,
+renderiza `components/site/` — porte 1:1 de um material aprovado fora deste
+repositório, com CSS, tipografia e movimento PRÓPRIOS. **O DS não vale ali**: ele
+começa na porta do login. As regras do porte (o que é cópia literal, o que
+mudou de dono e como conferir por medida) estão em
+[`components/site/AGENTS.md`](components/site/AGENTS.md). Com sessão, `/`
+continua roteando para a home do papel: o `login-form` e o `trocar-senha` fazem
+`router.replace("/")` e dependem disso.
+
+**A landing ANTERIOR (ADR-40) não foi apagada**: ela responde em
+`/landing-anterior`, com `noindex`, e `components/landing/` continua no lugar —
+`/privacidade` e `/termos` montam o `FundoAnimado` e a folha dela. Duas
+armadilhas medidas continuam valendo para esse componente: o cleanup do shader
+NÃO pode chamar `loseContext()` (o Strict Mode remonta o efeito no mesmo canvas
+e o contexto volta perdido — fundo em branco), e cor de ícone vai pela prop
+`color` do `Icon`, não por classe (a folha do DS vence e o ícone sai preto).
+Suíte: `node scripts/e2e/rodar.mjs publico` (o site e o login; só o hub).
 
 **`/privacidade` e `/termos` são a MESMA superfície pública da landing**
 (ADR-70), alcançadas pelo rodapé dela. `components/legal/` importa
@@ -83,6 +90,7 @@ sessão abre a pasta:
 | [`app/(plataforma)/unooria/`](<app/(plataforma)/unooria/AGENTS.md>) | o painel da fornecedora e o interruptor na porta do produto |
 | [`app/exp/`](app/exp/AGENTS.md) | o embed da experiência, e a allowlist do BFF |
 | [`components/`](components/AGENTS.md) | a casca e as medidas: marca, fontes, alturas, rolagem |
+| [`components/site/`](components/site/AGENTS.md) | o site público: o que é porte literal e como conferir |
 | [`lib/`](lib/AGENTS.md) | log, OpenTelemetry, Clarity e os sinais do navegador |
 
 **Área nova ganha `AGENTS.md` + `CLAUDE.md` de uma linha**, e entra nesta tabela

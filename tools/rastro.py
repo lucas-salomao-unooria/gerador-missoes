@@ -27,7 +27,49 @@ from typing import Any, Dict, List, Optional
 PRODUTOS = ("entre-redes", "plano-de-aula", "plano-de-ensino", "bem-estar")
 SERIES = ("1EF", "2EF", "3EF", "4EF", "5EF", "6EF", "7EF", "8EF", "9EF", "1EM", "2EM", "3EM")
 CAPABILITIES = ("telemetria", "progresso", "ia", "avaliacao", "tempo-real")
+
+# `permissoes` do manifesto: o que a plataforma concede HOJE, por declaração.
 PERMISSOES = ("pointer-lock", "forms", "downloads")
+
+# Já delegadas a TODAS as experiências pelo `allow` do `ExpFrame`. Declarar uma
+# delas derruba o `PUT /experiencias/:expId` do deploy com 400, depois de os
+# bundles terem subido — o vocabulário do manifesto não as aceita.
+PERMISSOES_JA_DELEGADAS = {
+    "autoplay": "tocar áudio ou vídeo começando sozinho",
+    "fullscreen": "tela cheia",
+    "clipboard-write": "copiar texto para a área de transferência",
+}
+
+# Capacidade real do navegador que a plataforma ainda NÃO concede. A missão pode
+# pedir: vira pré-requisito de plataforma (🟡) com o caminho em
+# `references/capacidades-plataforma.md`, e o PRD sai amarelo em vez de barrar.
+CAPACIDADES_DE_EXTENSAO = {
+    "microphone": "gravar a voz do estudante",
+    "camera": "usar a câmera (foto, vídeo, leitura de código)",
+    "display-capture": "gravar a tela",
+    "geolocation": "localização do aparelho",
+    "accelerometer": "sensor de aceleração",
+    "gyroscope": "giroscópio",
+    "magnetometer": "bússola",
+    "screen-wake-lock": "manter a tela acesa",
+    "web-share": "compartilhar pelo aparelho",
+    "picture-in-picture": "vídeo em janela flutuante",
+    "midi": "instrumento MIDI",
+    "xr-spatial-tracking": "realidade aumentada ou virtual",
+    "encrypted-media": "mídia protegida por DRM",
+    "idle-detection": "detectar que a pessoa parou",
+    "local-fonts": "fontes instaladas no aparelho",
+    "window-management": "várias janelas",
+    "usb": "dispositivo USB",
+    "serial": "porta serial",
+    "bluetooth": "Bluetooth",
+    "hid": "dispositivo de entrada",
+    "payment": "pagamento",
+    "publickey-credentials-get": "chave de segurança",
+}
+
+# Capturar mídia do estudante não é só permissão de iframe: é contrato de dados.
+CAPTURA_DE_MIDIA = ("microphone", "camera", "display-capture")
 SECOES_DS = ("instanooria", "unitube", "chatgpt", "whatsappmobile", "tiktooria")
 PUBLICOS = ("estudante", "professor")
 ETAPAS = ("input", "produto", "design", "dev", "plataforma")
@@ -213,17 +255,53 @@ def validar_manifesto(spec: str) -> Dict[str, Any]:
 
     v = _campo(texto, "permissoes"); campos["permissoes"] = v
     perms = _lista(v) if v else None
+    extensoes: List[str] = []
     if perms is None:
         falta("permissoes", f"`permissoes` ausente ou fora do formato `[forms]` / `[]` (lido: {v!r}).")
-    elif any(p.lower() not in PERMISSOES for p in perms):
-        falta("permissoes", f"`permissoes` com valor fora de {list(PERMISSOES)}: {perms}.")
+    else:
+        for bruto in perms:
+            p_ = bruto.lower().strip()
+            if p_ in PERMISSOES:
+                continue
+            if p_ in PERMISSOES_JA_DELEGADAS:
+                achados.append({
+                    "severidade": "atencao", "campo": "permissoes", "etapa": "dev",
+                    "resumo": (
+                        f"`{p_}` ({PERMISSOES_JA_DELEGADAS[p_]}) **já é concedido a todas as experiências** pelo `allow` do `ExpFrame`. "
+                        f"Declará-lo no manifesto derruba o `PUT /experiencias/:expId` do deploy com 400, depois de os bundles subirem. Remova da lista."
+                    ),
+                })
+            elif p_ in CAPACIDADES_DE_EXTENSAO:
+                extensoes.append(p_)
+                achados.append({
+                    "severidade": "atencao", "campo": "permissoes", "etapa": "plataforma",
+                    "resumo": (
+                        f"`{p_}` ({CAPACIDADES_DE_EXTENSAO[p_]}) é capacidade que a plataforma ainda não concede ao iframe. "
+                        f"**Pré-requisito de plataforma**, não impedimento: o PRD sai 🟡 e leva o caminho de implementação "
+                        f"(contrato da api, migration do CHECK, `allow` derivado do manifesto no `ExpFrame`, teste, repasse nas rotas do hub) "
+                        f"de `references/capacidades-plataforma.md`."
+                    ),
+                })
+            else:
+                falta("permissoes", (
+                    f"`{bruto}` não é permissão de iframe reconhecida. As concedidas hoje são {list(PERMISSOES)}; "
+                    f"capacidade nova do navegador vai na seção 3 de `references/capacidades-plataforma.md`."
+                ), etapa="dev")
 
     v = _campo(texto, "capabilities"); campos["capabilities"] = v
     caps = _lista(v) if v else None
     if caps is None:
         falta("capabilities", f"`capabilities` ausente ou fora do formato `[telemetria, progresso]` (lido: {v!r}).")
-    elif any(c.lower() not in CAPABILITIES for c in caps):
-        falta("capabilities", f"`capabilities` com valor fora de {list(CAPABILITIES)}: {caps}.")
+    else:
+        for c in caps:
+            if c.lower().strip() not in CAPABILITIES:
+                achados.append({
+                    "severidade": "atencao", "campo": "capabilities", "etapa": "plataforma",
+                    "resumo": (
+                        f"`{c}` não está no vocabulário de capabilities da plataforma ({list(CAPABILITIES)}). "
+                        f"Se a missão precisa mesmo dela, é capability nova: pré-requisito de plataforma (contrato da api, hub, seed), com ADR."
+                    ),
+                })
 
     v = _campo(texto, "secao_ds"); campos["secao_ds"] = v
     if not v or not (v.lower() in SECOES_DS or re.match(r"^(nova|minijogo)\s*:\s*\S+", v, re.IGNORECASE)):
@@ -236,6 +314,41 @@ def validar_manifesto(spec: str) -> Dict[str, Any]:
     v = _campo(texto, "liberacao"); campos["liberacao"] = v
     if not v or "por-turma" not in v.lower():
         falta("liberacao", f"`liberacao: por-turma` ausente (lido: {v!r}). Sem liberação por turma a missão não abre (ADR-69).")
+
+    # Capturar voz ou imagem de criança é contrato de dados, não só permissão de
+    # iframe: o bloco 9 tem de dizer onde a mídia fica, por quanto tempo e quem lê.
+    capturas = [p for p in extensoes if p in CAPTURA_DE_MIDIA]
+    if capturas:
+        bloco9 = secao_bloco(spec or "", 9) or ""
+        # Detectores amplos de propósito: o gate pega a ausência gritante, não julga
+        # a qualidade do contrato de dados — isso é da banca (DAD-07/08). Regex
+        # estreito aqui produz falso positivo e barra missão que declarou tudo.
+        menciona_midia = bool(re.search(r"[áa]udio|voz|oralidade|foto|imagem|v[íi]deo|grava[çc]|grava[dç]", bloco9, re.IGNORECASE))
+        tem_destino = bool(re.search(r"\bexp_\d{2}_[a-z][a-z0-9_]*|bucket|-assets|tabela", bloco9, re.IGNORECASE))
+        tem_leitor = bool(re.search(r"quem l[êe]|lid[ao]|restrit[oa]|acesso|professor", bloco9, re.IGNORECASE))
+        tem_retencao = bool(re.search(r"reten[çc][ãa]o|expurgo|apagad[ao]|prazo|\b\d+\s*(dias|meses|anos)\b", bloco9, re.IGNORECASE))
+        if not menciona_midia:
+            falta("permissoes", (
+                f"A missão captura mídia do estudante ({', '.join(capturas)}) e o bloco 9 não fala dela. "
+                f"Voz e imagem de criança são dado pessoal e não são coletados por padrão: o bloco 9 declara onde a mídia é gravada, "
+                f"quanto tempo fica, quem lê e o que acontece sem o recurso."
+            ))
+            faltando = []
+        else:
+            faltando = [r for r, ok in (("onde a mídia é gravada", tem_destino), ("quem lê", tem_leitor), ("retenção", tem_retencao)) if not ok]
+        if faltando:
+            falta("permissoes", (
+                f"A missão captura mídia do estudante ({', '.join(capturas)}), e o bloco 9 não declara: {', '.join(faltando)}. "
+                f"Voz e imagem de criança são dado pessoal e não são coletados por padrão — sem destino, leitor e prazo escritos, a banca de dados reprova."
+            ))
+        elif menciona_midia:
+            achados.append({
+                "severidade": "atencao", "campo": "permissoes", "etapa": "plataforma",
+                "resumo": (
+                    f"Captura de mídia ({', '.join(capturas)}) exige, além da permissão: componente de gravação no design system (não existe hoje) "
+                    f"e caminho alternativo para quem não tem o recurso ou não autoriza. Os dois vão ao PRD como pré-requisito."
+                ),
+            })
 
     status = "bloqueado" if any(a["severidade"] == "bloqueio" for a in achados) else ("amarelo" if achados else "aprovado")
     return {"status": status, "campos": campos, "achados": achados, "bloco0_encontrado": secao_bloco(spec or "", 0) is not None}
@@ -259,6 +372,13 @@ def relatorio_manifesto(resultado: Dict[str, Any], missao: str = "") -> str:
             linhas.append(f"- {'⛔' if a['severidade']=='bloqueio' else '⚠️'} **{a['campo']}** (dono: {a['etapa']}) — {a['resumo']}")
     else:
         linhas.append("- Nenhum. O manifesto `experiencia.json` é derivável da spec (TEC-01).")
+    if r["status"] == "amarelo":
+        linhas.append("")
+        linhas.append(
+            "As pendências acima **não impedem o PRD**: capacidade que a plataforma ainda não concede é pré-requisito, "
+            "e o documento sai `aprovado-com-pendencias-de-plataforma` com o caminho de implementação escrito "
+            "(`references/capacidades-plataforma.md`). Quem constrói a missão estende a plataforma junto."
+        )
     linhas.append("")
     envelope = {
         "agente": "manifesto-check", "missao": missao or "", "rodada": 1,

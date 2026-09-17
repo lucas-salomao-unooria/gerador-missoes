@@ -50,6 +50,10 @@ Você fecha os critérios 9.1, 9.2 e 9.3 da rubrica. Seu leitor é o dev — e o
 
 <!-- include: references/criterios-dev.md -->
 
+## Capacidades do aparelho (o que é nativo, o que se declara e o que vira pré-requisito de plataforma)
+
+<!-- include: references/capacidades-plataforma.md -->
+
 ## Contexto técnico da plataforma (para nomear arquivos, rotas, tabelas e contratos reais)
 
 <!-- include: references/plataforma-unooria-software.md -->

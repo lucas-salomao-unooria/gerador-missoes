@@ -1,8 +1,8 @@
-<!-- CÓPIA SINCRONIZADA de plataforma-unooria@4578555 (2026-09-16) · origem: docs/openapi.json · não edite: rode scripts/sincronizar_plataforma.py · placeholders entre chaves aparecem como «nome» por limitação de interpolação do ADK; no código real use chaves -->
+<!-- CÓPIA SINCRONIZADA de plataforma-unooria@29afc8f (2026-09-16) · origem: docs/openapi.json · não edite: rode scripts/sincronizar_plataforma.py · placeholders entre chaves aparecem como «nome» por limitação de interpolação do ADK; no código real use chaves -->
 
 # `docs/openapi.json` — índice de rotas (método · caminho · resumo · tags)
 
-223 caminhos. O contrato completo (Zod → OpenAPI) está no repositório; aqui só o mapa.
+226 caminhos. O contrato completo (Zod → OpenAPI) está no repositório; aqui só o mapa.
 
 | Método | Caminho | Resumo | Tags |
 |---|---|---|---|
@@ -153,6 +153,9 @@
 | GET | `/progresso/«expId»` | O progresso do estudante autenticado nesta experiência. | progresso |
 | POST | `/progresso/«expId»` | Salva o progresso da experiência. | progresso |
 | POST | `/progresso/«expId»/concluir` | Registra a conclusão da experiência. | progresso |
+| GET | `/prospeccao/cadastros` | Os cadastros de interesse recebidos pelo site público. | prospeccao |
+| GET | `/prospeccao/cadastros/exportacao` | Os mesmos cadastros, em CSV. | prospeccao |
+| POST | `/prospeccao/publico/cadastros` | Registra um cadastro de interesse feito no site público. | prospeccao |
 | POST | `/rastro-boato/auditoria` | Registra a abertura da janela "Dados da mensagem". | rastro-boato |
 | POST | `/rastro-boato/decisao` | A intervenção no grupo — irrevogável (latch). | rastro-boato |
 | POST | `/rastro-boato/entrar` | Sai da tela de contexto e abre a lista de conversas. | rastro-boato |

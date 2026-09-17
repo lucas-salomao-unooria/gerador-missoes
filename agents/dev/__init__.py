@@ -191,6 +191,11 @@ def build_dev_stage(
                 status_key="dev_status",
                 block_pipeline_on_fail=estrito,
                 treat_indefinido_as_blocked=False,
+                # Sem isto ele roda com o pipeline já bloqueado, lê a mensagem de
+                # pulo da consolidação ("não executado — pipeline bloqueado"),
+                # infere "bloqueado" e SOBRESCREVE o motivo real: a tela passa a
+                # culpar a banca por um bloqueio do gate de manifesto.
+                before_agent_callback=skip_if_blocked,
             ),
             get_prd_writer_agent(**kw),
             RastroCheckAgent(
