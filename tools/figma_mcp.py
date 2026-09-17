@@ -28,6 +28,8 @@ from google.adk.tools.mcp_tool.mcp_session_manager import (
     StreamableHTTPConnectionParams,
 )
 from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
+
+from tools.mcp_saneado import McpToolsetSaneado
 from mcp import StdioServerParameters
 
 from config import PROJECT_ROOT, get_settings
@@ -162,7 +164,7 @@ def get_figma_toolset(tool_filter: Optional[List[str]] = None) -> Optional[McpTo
 
     if mode == "remote":
         logger.info("Figma MCP remoto: %s", settings.figma_mcp_remote_url)
-        return McpToolset(
+        return McpToolsetSaneado(
             connection_params=StreamableHTTPConnectionParams(
                 url=settings.figma_mcp_remote_url,
                 timeout=settings.mcp_timeout_seconds,
@@ -174,7 +176,7 @@ def get_figma_toolset(tool_filter: Optional[List[str]] = None) -> Optional[McpTo
 
     if mode == "desktop":
         logger.info("Figma MCP desktop: %s", settings.figma_mcp_desktop_url)
-        return McpToolset(
+        return McpToolsetSaneado(
             connection_params=StreamableHTTPConnectionParams(
                 url=settings.figma_mcp_desktop_url,
                 timeout=settings.mcp_timeout_seconds,
@@ -189,7 +191,7 @@ def get_figma_toolset(tool_filter: Optional[List[str]] = None) -> Optional[McpTo
             env_vars["FIGMA_API_KEY"] = settings.figma_api_key
             env_vars["FIGMA_PERSONAL_ACCESS_TOKEN"] = settings.figma_api_key
         logger.info("Figma MCP stdio: %s %s", settings.figma_mcp_command, settings.figma_mcp_args)
-        return McpToolset(
+        return McpToolsetSaneado(
             connection_params=StdioConnectionParams(
                 server_params=StdioServerParameters(
                     command=settings.figma_mcp_command,

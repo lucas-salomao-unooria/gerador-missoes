@@ -40,6 +40,8 @@ from google.adk.tools.mcp_tool.mcp_session_manager import (
     StreamableHTTPConnectionParams,
 )
 from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
+
+from tools.mcp_saneado import McpToolsetSaneado
 from mcp import StdioServerParameters
 
 from config import get_settings
@@ -109,7 +111,7 @@ def get_stitch_toolset(tool_filter: Optional[List[str]] = None) -> Optional[McpT
             logger.warning("STITCH_MCP_MODE=remote sem STITCH_API_KEY; Stitch desligado.")
             return None
         logger.info("Stitch MCP remoto: %s", settings.stitch_mcp_remote_url)
-        return McpToolset(
+        return McpToolsetSaneado(
             connection_params=StreamableHTTPConnectionParams(
                 url=settings.stitch_mcp_remote_url,
                 timeout=settings.mcp_timeout_seconds,
@@ -124,7 +126,7 @@ def get_stitch_toolset(tool_filter: Optional[List[str]] = None) -> Optional[McpT
         if settings.stitch_api_key:
             env_vars["STITCH_API_KEY"] = settings.stitch_api_key
         logger.info("Stitch MCP proxy: %s %s", settings.stitch_mcp_command, settings.stitch_mcp_args)
-        return McpToolset(
+        return McpToolsetSaneado(
             connection_params=StdioConnectionParams(
                 server_params=StdioServerParameters(
                     command=settings.stitch_mcp_command,

@@ -781,6 +781,52 @@ def test_one_pager_pedagogico_em_docx():
     print("   ✓ one-pager pedagógico: .docx com títulos, listas e tabela; envelope e marcação fora do documento")
 
 
+def test_schema_de_ferramenta_saneado():
+    """Schema de servidor MCP chega quebrado e o modelo recusa a requisição inteira.
+
+    O Stitch publica `$ref` para `$defs` que ele mesmo omite. O ADK repassa o schema
+    de resposta ao Gemini como `response_json_schema`, e a requisição volta com
+    `400 reference to undefined schema at properties.variantScreenInstance` — no
+    agente que estava no ar quando a lista foi montada, que pode nem usar a ferramenta.
+    """
+    from mcp.types import Tool
+
+    from tools.mcp_saneado import _sanear, remendar_entrada
+
+    # referência órfã na ENTRADA é remendada, não removida: ali o schema é necessário
+    entrada = {
+        "type": "object",
+        "properties": {"a": {"$ref": "#/$defs/Faltante"}, "b": {"$ref": "#/$defs/Existe"}},
+        "$defs": {"Existe": {"type": "string"}},
+    }
+    remendada = remendar_entrada(entrada)
+    assert sorted(remendada["$defs"]) == ["Existe", "Faltante"]
+    assert sorted(entrada["$defs"]) == ["Existe"], "o schema original não pode ser mutado"
+    assert remendar_entrada({"type": "object"}) == {"type": "object"}
+    assert remendar_entrada(None) is None
+
+    # schema de RESPOSTA é descartado: o modelo não precisa dele e é ele que quebra
+    t = Tool(
+        name="upload_design_md",
+        description="d",
+        inputSchema={"type": "object", "properties": {"p": {"$ref": "#/$defs/Orfa"}}},
+        outputSchema={"type": "object", "properties": {"variantScreenInstance": {"$ref": "#/$defs/Sumida"}}},
+    )
+    mexidos = _sanear(t)
+    assert t.outputSchema is None
+    assert "Orfa" in (t.inputSchema.get("$defs") or {})
+    assert len(mexidos) == 2
+
+    # os dois toolsets da esteira usam a versão saneada
+    from tools.mcp_saneado import McpToolsetSaneado
+
+    for modulo in ("tools.stitch_mcp", "tools.figma_mcp"):
+        fonte = Path(modulo.replace(".", "/") + ".py").read_text(encoding="utf-8")
+        assert "McpToolsetSaneado(" in fonte and "= McpToolset(" not in fonte, modulo
+    assert issubclass(McpToolsetSaneado, __import__("google.adk.tools.mcp_tool.mcp_toolset", fromlist=["McpToolset"]).McpToolset)
+    print("   ✓ schema saneado: resposta descartada, referência órfã remendada na entrada, nos dois toolsets")
+
+
 # --------------------------------------------------------------------------- 8. cópias da plataforma
 def test_referencias_plataforma_sincronizadas():
     import json
@@ -821,6 +867,7 @@ if __name__ == "__main__":
         test_contencao_de_resposta_de_ferramenta,
         test_artefatos_html_e_links,
         test_one_pager_pedagogico_em_docx,
+        test_schema_de_ferramenta_saneado,
         test_referencias_plataforma_sincronizadas,
     ]
     failed = 0
