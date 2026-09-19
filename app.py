@@ -692,7 +692,10 @@ def render_prompt_manager():
         achado = re.match(r"\s*(\d+)([a-z]*)", nome)
         return (int(achado.group(1)), achado.group(2)) if achado else (999, "")
 
-    area = st.selectbox("Área", list(areas), format_func=lambda a: {"produto": "🧭 Produto", "design": "🎨 Design", "dev": "🛠️ Dev", "transversal": "🧠 Transversal"}.get(a, a))
+    # Ordem da esteira, não alfabética: alfabética abria o editor em Design, no meio do pipeline.
+    ordem_das_areas = ["produto", "design", "dev", "transversal"]
+    lista_areas = sorted(areas, key=lambda a: ordem_das_areas.index(a) if a in ordem_das_areas else 99)
+    area = st.selectbox("Área", lista_areas, format_func=lambda a: {"produto": "🧭 Produto", "design": "🎨 Design", "dev": "🛠️ Dev", "transversal": "🧠 Transversal"}.get(a, a))
     arquivos = sorted(areas[area], key=lambda f: _ordem_do_agente(f"{area}/{f}"))
     fname = st.selectbox("Arquivo", arquivos, format_func=lambda f: f"{metadata.get(f'{area}/{f}', {}).get('name', f)}  ({f})")
     rel = f"{area}/{fname}"
@@ -770,6 +773,82 @@ def render_prompt_manager():
         st.success(f"✅ `references/{ref}` salva.")
 
 
+def render_guia_de_uso() -> None:
+    """Como usar o gerador, acima do anexo — é onde a decisão de escrever o briefing acontece.
+
+    A esteira é boa em estruturar, auditar e formalizar, e ruim em adivinhar o que não foi dito:
+    por desenho ela prefere marcar uma lacuna a inventar conteúdo. Por isso a qualidade da entrada
+    é o que mais mexe no resultado, e o lugar de dizer isso é aqui, não só na documentação.
+    """
+    st.markdown(
+        "**Como usar:** ① anexe o material do bimestre (`.docx`/`.pdf`) — é dele que saem os "
+        "códigos da BNCC e o contexto real · ② escreva no chat abaixo um briefing com **ano, "
+        "bimestre, ambiente, a descoberta e o mecanismo** · ③ acompanhe as etapas e baixe o **PRD** "
+        "e o **one-pager pedagógico** no fim. Portão reprovado **não** interrompe a execução: ela "
+        "vai até o fim e o diagnóstico diz onde atuar."
+    )
+    with st.expander("🥇 Como escrever um bom briefing (padrão ouro) e o que evitar"):
+        st.markdown("**Um briefing que funciona:**")
+        st.code(
+            """Missão para o 5º ano do Fundamental, 3º bimestre, no ambiente do YouTube (unitube).
+
+Tema do bimestre (material Entre Redes anexado): como a recomendação de conteúdo
+funciona e por que duas pessoas veem coisas diferentes.
+
+O que quero que a criança descubra: que o que ela vê no feed não é "o que existe",
+e sim o que o sistema aprendeu que ela costuma assistir.
+
+Ideia de mecanismo: ela monta a playlist de um personagem a partir de um banco de
+vídeos. Depois vê o feed que aquele personagem passa a receber. Dois colegas com
+playlists diferentes recebem feeds diferentes, e isso fica visível na tela.
+
+Restrições: 50 minutos, aula única, dois estudantes por tablet.
+A professora precisa conseguir pausar a turma antes da revelação.
+
+Em aberto: não sei se o banco deve ter 8 ou 12 vídeos.""",
+            language="text",
+        )
+        st.markdown(
+            "**Por que funciona:** ano e bimestre explícitos (sem eles o primeiro portão já "
+            "reprova) · a descoberta está escrita **como descoberta**, não como objetivo de aula "
+            "(*\"o que ela vê não é o que existe\"*, e não *\"vai aprender sobre algoritmos\"*) · "
+            "há um **mecanismo**, uma cadeia de ações, não uma intenção · as **restrições de sala** "
+            "aparecem (tempo, dispositivo, controle da professora) · a **dúvida está declarada**, "
+            "então a esteira decide e registra a decisão em vez de decidir sem você saber."
+        )
+        st.markdown("---")
+        st.markdown("**O que evitar:**")
+        st.markdown(
+            "| Entrada problemática | O que acontece |\n"
+            "| --- | --- |\n"
+            "| *\"Missão sobre fake news para o Fundamental.\"* | Sem ano, bimestre, ambiente nem "
+            "mecanismo. A esteira inventa os quatro, e inventa o mais genérico possível. "
+            "**Pior caso de uso da ferramenta.** |\n"
+            "| *\"O estudante navega por um feed com posts falsos e descobre que foram "
+            "manipulados.\"* | O briefing **entrega a virada**. Há um portão só para isso (agente "
+            "02), mas o estrago já aconteceu: a ideia nasceu sem segredo. |\n"
+            "| *\"Uma missão que desenvolva pensamento crítico e cidadania digital.\"* | Intenção "
+            "sem mecanismo. Se você remover a frase, a missão continua igual — então ela não "
+            "descreve nada construível. |\n"
+            "| *\"O estudante avalia 15 perfis e classifica cada um como confiável ou não.\"* | "
+            "15 decisões do mesmo tipo excedem o teto da faixa etária. Vira ressalva ou reprovação "
+            "no agente 09. |\n"
+            "| *\"Fazer no Roblox, que as crianças amam.\"* | Ambiente fora da lista fechada "
+            "(Instagram, YouTube, ChatGPT, TikTok, WhatsApp). Não existe seção de design system "
+            "para construir. |\n"
+            "| *\"A criança conversa com a IA e reflete sobre o que aprendeu.\"* | Reflexão "
+            "genérica. O critério pede uma **provocação concreta**: alguém que não fez a missão "
+            "consegue responder? Se sim, não serve. |\n"
+            "| Briefing de oito páginas com todas as telas já desenhadas. | A esteira vira "
+            "transcritora — você paga ~50 chamadas para formatar o que já tinha. |\n"
+        )
+        st.info(
+            "📎 **Anexos valem mais que adjetivos.** Dois parágrafos do material real do bimestre "
+            "valem mais que uma página de descrição: é de lá que vêm os códigos da BNCC, que a "
+            "esteira confere contra o anexo oficial do MEC."
+        )
+
+
 def main():
     init_session_state()
     opts = render_sidebar()
@@ -786,6 +865,8 @@ def main():
                 st.markdown(msg["content"])
                 if msg.get("pipeline_result"):
                     render_pipeline_details(msg["pipeline_result"], key_prefix=f"msg_{idx}")
+
+        render_guia_de_uso()
 
         doc_batch: Optional[DocumentBatch] = None
         with st.expander("📎 Anexar one-pager / documentos de apoio (PDF ou Word — até 10 arquivos / 25 MB)", expanded=False):
