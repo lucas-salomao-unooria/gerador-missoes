@@ -881,6 +881,25 @@ o número delas cresce no mesmo prompt, e o PRD é o documento com mais restriç
 esteira. Acrescentar ênfase ao prompt não resolveria --- por isso a resposta foi um verificador
 determinístico fora do modelo, mais o ciclo que devolve o relatório para a reescrita.
 
+\paragraph{Um achado que não faz sentido é pior que nenhum achado.} A quarta execução derrubou os
+impedimentos de cinco para um, e o que sobrou era falso: o verificador acusava um requisito P0 ``sem
+rastro'' que estava declarado, estava na matriz e estava coberto por duas tarefas. A regra contava
+ocorrências do identificador e exigia três; mas um PRD bem escrito cita o requisito \emph{duas}
+vezes --- na declaração e na matriz --- porque é a matriz que nomeia a tarefa. E a cobertura costuma
+vir por intervalo (\cod{RF-001..RF-014}), que não repete o identificador do meio.
+
+O mais instrutivo é o que essa cegueira \emph{escondia}. Ao ler intervalos, o verificador passou a
+enxergar cinco tarefas cobrindo os catorze requisitos cada uma --- ou seja, o plano de implementação
+não estava decomposto, que é um defeito bem mais sério do que o falso que ele apontava. A regra de
+atomicidade existia, mas só reconhecia a ausência de decomposição quando escrita por extenso
+(``todos os RFs''); escrita como intervalo, passava batido.
+
+Vale como princípio de escrita de verificador determinístico: \textbf{contar ocorrências é uma
+aproximação de rastreabilidade, não rastreabilidade}. O teste certo não é quantas vezes o
+identificador aparece, e sim se existe uma linha que ligue o requisito a uma tarefa. Trocar a
+contagem pela relação corrigiu o falso positivo e, no mesmo movimento, apertou a régua em vez de
+baixá-la: o impedimento inventado virou cinco ressalvas verdadeiras.
+
 \paragraph{Evidência tem que caber no relatório.} Um dos achados citava a linha defeituosa cortada
 em 90 caracteres, e o corte caía justamente antes do identificador do evento: o relatório dizia que
 havia um evento errado sem dizer qual. O achado passou a nomear o identificador e a carregar a linha

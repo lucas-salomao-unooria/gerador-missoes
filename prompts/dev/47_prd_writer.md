@@ -124,7 +124,9 @@ acaso, e a partir daí o resto do PRD deixa de valer contra o que foi escrito.
    menos uma tarefa. Requisito bloqueante sem teste nomeado não é requisito, é intenção.
 5. **Todo evento tem tabela leitora nomeada.** "Onde é lido: Pub/Sub" ou "telemetria_eventos" é
    bloqueio — toda medida que a professora vê nasce de tabela própria do módulo.
-6. **Tarefa é atômica.** `T-013 — todos os RFs` não é tarefa: é a ausência de decomposição.
+6. **Tarefa é atômica.** `T-013 — todos os RFs` não é tarefa: é a ausência de decomposição — e
+   escrever o mesmo como intervalo (`T-005 — RF-001..RF-014`) não muda nada. Cada tarefa nomeia os
+   requisitos que entrega, no máximo meia dúzia. Se a tarefa precisa de mais, ela é duas.
 7. **Inventário de conteúdo autoral.** Toda mídia e todo texto que a missão exibe entra numa tabela
    com nome do arquivo, caminho no bucket, peso aproximado e quem produz. Sem isso, quem codifica
    inventa caminho de asset — e o brief de assets, que já existe nesta execução, é a sua fonte.

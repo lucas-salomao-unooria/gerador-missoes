@@ -1465,3 +1465,30 @@ def test_prd_tem_ciclo_de_correcao():
     dentro = {a.name for a in achatar(loop[0].sub_agents)}
     assert {"A47PrdWriter", "A48PrdCheck", "A48PrdRodada"} <= dentro, sorted(dentro)
     print("   ✓ redator do PRD e gate de consistência estão no mesmo loop, com saída por rodada")
+
+
+def test_cobertura_por_intervalo_conta_como_rastro():
+    """`RF-001..RF-014` cobre requisito tanto quanto listá-los um a um.
+
+    Contar ocorrências do identificador acusava ausência de rastro onde o rastro existia — um PRD
+    bem escrito cita o requisito na declaração e na matriz, e é a matriz que nomeia a tarefa. Pior:
+    a mesma cegueira deixava passar a tarefa que engole a missão inteira, que é o defeito de
+    verdade escondido atrás da notação.
+    """
+    from tools.rastro import validar_prd
+
+    prd = (
+        "| **RF-013** | Reentrada resiliente | P0 | DADO que recarregue, O SISTEMA DEVE restaurar |\n"
+        "| `T-005` | Implementar serviço | RF-011, RF-012, RF-013 | src/api.ts |\n"
+        "| `RF-013` | Reentrada resiliente | `T-005` | `test/reentrada.spec.ts` |\n"
+    )
+    assert not [a for a in validar_prd(prd)["achados"] if a["codigo"] == "rf-sem-rastro"]
+
+    por_intervalo = prd.replace("RF-011, RF-012, RF-013", "RF-001..RF-014")
+    achados = validar_prd(por_intervalo)["achados"]
+    assert not [a for a in achados if a["codigo"] == "rf-sem-rastro"], achados
+    nao_atomica = [a for a in achados if a["codigo"] == "tarefa-nao-atomica"]
+    assert nao_atomica, achados
+    assert nao_atomica[0]["severidade"] == "atencao"
+    assert "14 requisitos" in nao_atomica[0]["resumo"]
+    print("   ✓ intervalo conta como rastro, e a tarefa que cobre 14 requisitos vira ressalva")

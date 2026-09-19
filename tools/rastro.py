@@ -643,6 +643,29 @@ def relatorio_telemetria(resultado: Dict[str, Any], missao: str = "") -> str:
 
 
 # ------------------------------------------------------------------ consistência interna do PRD
+#: Requisitos que uma única tarefa pode cobrir antes de deixar de ser tarefa. Convenção de
+#: produto para forçar decomposição — não há achado de literatura atrás deste número.
+TETO_RF_POR_TAREFA = 6
+
+#: `RF-001..RF-014`, `RF-001 a RF-014`, `RF-001 até RF-014`, `RF-001–RF-014`.
+_RE_INTERVALO_RF = re.compile(r"\bRF-(\d{3})\s*(?:\.\.\.?|--?|–|—|a|at[ée])\s*(?:RF-)?(\d{3})\b", re.I)
+
+
+def _rfs_da_linha(linha: str) -> set[str]:
+    """Todos os requisitos que a linha menciona, com os intervalos já expandidos.
+
+    Cobertura de requisito é escrita das duas formas — `RF-003, RF-004` e `RF-001..RF-014` — e ler
+    só a primeira faz o verificador acusar ausência de rastro onde o rastro existe, e deixar passar
+    a tarefa que engole a missão inteira.
+    """
+    rfs = {f"RF-{n}" for n in re.findall(r"\bRF-(\d{3})\b", linha)}
+    for ini, fim in _RE_INTERVALO_RF.findall(linha):
+        a, b = int(ini), int(fim)
+        if a <= b and b - a <= 200:
+            rfs.update(f"RF-{n:03d}" for n in range(a, b + 1))
+    return rfs
+
+
 def validar_prd(prd: str) -> Dict[str, Any]:
     """Confere se o PRD é coerente consigo mesmo antes de ir para quem codifica.
 
@@ -668,15 +691,21 @@ def validar_prd(prd: str) -> Dict[str, Any]:
     elif len(prefixos) > 1:
         falha("prefixo-tabela", f"Mais de um prefixo de tabela no mesmo PRD: {sorted(prefixos)}.")
 
-    # 2. requisito P0 sem teste e sem tarefa
+    # 2. requisito P0 sem tarefa que o implemente
+    #
+    # Contar ocorrências do identificador não serve: um PRD bem escrito lista o requisito uma vez na
+    # declaração e outra na matriz, e a matriz é justamente quem nomeia as tarefas. Além disso a
+    # cobertura costuma vir por intervalo (`RF-001..RF-014`), que não repete o identificador do meio.
+    # O que importa é se existe alguma linha que ligue o requisito a uma tarefa.
     p0 = set(re.findall(r"\b(RF-\d{3})\b[^\n]*\bP0\b", texto))
     for rf in sorted(p0):
-        depois = texto.split(rf, 1)[-1] if rf in texto else ""
-        ocorrencias = len(re.findall(rf, texto))
-        if ocorrencias < 3:  # declaração + matriz + tarefa
+        coberto = any(rf in _rfs_da_linha(linha) and re.search(r"\bT-\d{3}\b", linha)
+                      for linha in texto.splitlines())
+        if not coberto:
             falha("rf-sem-rastro",
-                  f"`{rf}` é P0 e aparece {ocorrencias}x no PRD. Requisito bloqueante precisa estar na "
-                  f"declaração, na matriz de rastreabilidade e em pelo menos uma tarefa.")
+                  f"`{rf}` é P0 e nenhuma linha do PRD o liga a uma tarefa `T-NNN`. Requisito bloqueante "
+                  f"precisa aparecer na matriz de rastreabilidade ou no escopo de uma tarefa — por "
+                  f"identificador ou por intervalo.")
 
     # 3. evento sem tabela de leitura nomeada
     for linha in texto.splitlines():
@@ -695,6 +724,23 @@ def validar_prd(prd: str) -> Dict[str, Any]:
         falha("tarefa-nao-atomica",
               f"`{m.group(1)}` cobre \"{m.group(2)}\". Tarefa que fecha tudo não é verificável nem divisível.",
               severidade="atencao")
+
+    # 4b. a mesma ausência de decomposição escrita como intervalo
+    #
+    # `T-005 | RF-001..RF-014` diz o mesmo que "todos os RFs" sem usar a palavra, e escapava da regra
+    # acima. O teto é convenção de produto, não achado de literatura: serve para separar tarefa de
+    # lista de tarefas.
+    for linha in texto.splitlines():
+        tarefa = re.search(r"\bT-\d{3}\b", linha)
+        if not tarefa or "|" not in linha:
+            continue
+        cobertos = _rfs_da_linha(linha)
+        if len(cobertos) > TETO_RF_POR_TAREFA:
+            falha("tarefa-nao-atomica",
+                  f"`{tarefa.group(0)}` cobre {len(cobertos)} requisitos "
+                  f"({min(cobertos)}…{max(cobertos)}). Tarefa que implementa a missão inteira não é "
+                  f"estimável nem verificável: divida por entrega.",
+                  severidade="atencao")
 
     # 5. identificador de código inválido
     for m in re.finditer(r"`?([A-Za-z0-9_-]*-[A-Za-z0-9_-]*(?:Module|Service|Controller))`?", texto):

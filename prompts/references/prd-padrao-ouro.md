@@ -12,7 +12,7 @@
 6. **Não-objetivos explícitos e "o que NÃO fazer" técnico.** É a defesa contra scope creep do agente (Google, Augment Code).
 7. **Priorização com barra alta.** P0 = sem isso a missão não lança (e reprova na rubrica); P1 = necessário para o release; P2 = desejável. Rank-order dentro de cada classe.
 8. **Contratos antes de código.** Rotas (OpenAPI/Zod), eventos, entidades e enums de estado definidos no PRD; o agente implementa contra eles.
-9. **Tarefas atômicas, ordenadas, com verificação.** Cada tarefa cita os RFs que cobre, os arquivos que toca e o comando que prova que ficou pronta. `[P]` marca o que pode rodar em paralelo. Ordem: contratos → testes → implementação.
+9. **Tarefas atômicas, ordenadas, com verificação.** Cada tarefa cita os RFs que cobre, os arquivos que toca e o comando que prova que ficou pronta. Tarefa que cobre o intervalo inteiro de requisitos (`RF-001..RF-014`) não é tarefa: é a lista de tarefas que ainda não foi escrita, e nenhum comando prova que ela ficou pronta. `[P]` marca o que pode rodar em paralelo. Ordem: contratos → testes → implementação.
 10. **Documento vivo e versionado** com frontmatter, changelog e status; dono humano nomeado.
 11. **Economia de contexto.** Resumo executivo de uma página no topo; detalhe em seções hierárquicas; referências por caminho de arquivo, não por cópia.
 12. **Evidência de conclusão, não afirmação.** A Definition of Done exige saída de testes, comandos rodados e evidências e2e.
