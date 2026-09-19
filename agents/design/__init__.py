@@ -45,6 +45,7 @@ from agents.checkers import (
     ArtefatosDesignAgent,
     DespachoTicketsAgent,
     EnvelopeGateAgent,
+    EspelhoMiroAgent,
     SecaoSplitAgent,
 )
 from config import get_settings
@@ -158,10 +159,10 @@ def get_brief_oficio_agent(**kw) -> LlmAgent:
     )
 
 
-def get_jornada_figjam_agent(**kw) -> LlmAgent:
+def get_jornada_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A22Jornada",
-        description="Mapa de jornada no FigJam (raias × 6 etapas), cenários de dispositivo, inventário de telas e direção por tela.",
+        description="Mapa de jornada em Mermaid (raias × 6 etapas), cenários de dispositivo, inventário de telas e direção por tela.",
         instruction=load_prompt("design/22_jornada.md"),
         output_key="jornada_telas",
         before_agent_callback=marcar_heranca,
@@ -169,10 +170,10 @@ def get_jornada_figjam_agent(**kw) -> LlmAgent:
     )
 
 
-def get_fluxo_figjam_agent(**kw) -> LlmAgent:
+def get_fluxo_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A23Fluxo",
-        description="Grafo de fluxo de telas no FigJam: transições com condição, gates, estados de erro e os 5 testes.",
+        description="Grafo de fluxo de telas em Mermaid: transições com condição, gates, estados de erro e os 5 testes.",
         instruction=load_prompt("design/23_fluxo.md"),
         output_key="fluxo_arestas",
         before_agent_callback=marcar_heranca,
@@ -202,14 +203,14 @@ def get_caa_agent(**kw) -> LlmAgent:
     )
 
 
-def get_wireframes_figma_agent(**kw) -> LlmAgent:
+def get_wireframes_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A26Telas",
-        description="Wireframes lo-fi em escala de cinza no Figma, montados sobre a seção do DS do ambiente simulado.",
+        description="Wireframes lo-fi em escala de cinza no Stitch, montados sobre a seção do DS do ambiente simulado.",
         instruction=load_prompt("design/26_telas.md", **_stitch_vars()),
         output_key="wireframes_cobertura",
-        # Stitch primeiro: é ele que gera as telas hoje. O Figma continua aceito para
-        # quem tiver assento Full e OAuth, e os dois podem coexistir.
+        # O Stitch é quem gera as telas. Sem chave, o toolset vem vazio e o prompt
+        # manda o agente registrar "STITCH: indisponível" e seguir só com o Markdown.
         tools=stitch_tools_or_empty(STITCH_TOOLS_WIREFRAMES),
         before_agent_callback=marcar_heranca,
         **kw,
@@ -285,7 +286,7 @@ MAPA_RETRABALHO = {
 
 #: Roda depois de qualquer retrabalho. O protótipo deriva de jornada, copy, CAA e telas —
 #: deixá-lo de fora faria o QA auditar, na rodada seguinte, um protótipo da rodada anterior.
-POSFIXO_RETRABALHO = ["A28PrototipoRetrabalho", "A29ArtefatosDesignRetrabalho"]
+POSFIXO_RETRABALHO = ["A28PrototipoRetrabalho", "A29ArtefatosDesignRetrabalho", "A29bEspelhoMiroRetrabalho"]
 
 #: Tickets endereçados a estes donos não são desta etapa: o QA está devolvendo ao produto.
 RETRABALHO_EXTERNO = ["gate-estrutural"]
@@ -300,11 +301,11 @@ def _agentes_de_retrabalho(**kw) -> list:
     pares = [
         (get_fecha_lacunas_agent, "A17FechaLacunasRetrabalho"),
         (get_ambiente_simulado_agent, "A19AmbienteSimuladoRetrabalho"),
-        (get_jornada_figjam_agent, "A22JornadaRetrabalho"),
-        (get_fluxo_figjam_agent, "A23FluxoRetrabalho"),
+        (get_jornada_agent, "A22JornadaRetrabalho"),
+        (get_fluxo_agent, "A23FluxoRetrabalho"),
         (get_copy_revisao_agent, "A27CopyRevisaoRetrabalho"),
         (get_caa_agent, "A25CaaRetrabalho"),
-        (get_wireframes_figma_agent, "A26TelasRetrabalho"),
+        (get_wireframes_agent, "A26TelasRetrabalho"),
         (get_prototipo_agent, "A28PrototipoRetrabalho"),
     ]
     agentes = []
@@ -326,6 +327,10 @@ def _agentes_de_retrabalho(**kw) -> list:
         ArtefatosDesignAgent(
             name="A29ArtefatosDesignRetrabalho",
             description="Reextrai o HTML do protótipo, os links do Stitch e a folha de diagramas depois de uma rodada de retrabalho.",
+        ),
+        EspelhoMiroAgent(
+            name="A29bEspelhoMiroRetrabalho",
+            description="Reenvia ao mesmo board do Miro os diagramas corrigidos na rodada de retrabalho.",
         ),
     ]
     return agentes
@@ -393,16 +398,21 @@ def build_design_stage(
             get_ambiente_simulado_agent(**kw),
             get_ambiente_simulado_split(),
             get_brief_oficio_agent(**kw),
-            get_jornada_figjam_agent(**kw),
-            get_fluxo_figjam_agent(**kw),
+            get_jornada_agent(**kw),
+            get_fluxo_agent(**kw),
             get_copy_ptbr_agent(**kw),
             get_caa_agent(**kw),
-            get_wireframes_figma_agent(**kw),
+            get_wireframes_agent(**kw),
             get_copy_revisao_agent(**kw),
             get_prototipo_agent(**kw),
             ArtefatosDesignAgent(
                 name="A29ArtefatosDesign",
                 description="Separa o HTML do protótipo do relatório que o acompanha, colhe os links das telas no Stitch e monta a folha de diagramas da jornada e do fluxo.",
+                before_agent_callback=marcar_heranca,
+            ),
+            EspelhoMiroAgent(
+                name="A29bEspelhoMiro",
+                description="Espelha no Miro os diagramas Mermaid da jornada e do fluxo e devolve o link do board.",
                 before_agent_callback=marcar_heranca,
             ),
             build_qa_design_loop(**kw),
@@ -424,6 +434,7 @@ DESIGN_METADATA = [
     {"id": "A27CopyRevisao", "name": "27 · Copy PT-BR (passada 2)", "icon": "🔍", "output_key": "copy_strings_revisada", "prompt_file": "design/27_copy_revisao.md", "description": "Revisão em contexto de tela."},
     {"id": "A28Prototipo", "name": "28 · Protótipo navegável (HTML)", "icon": "🖥️", "output_key": "prototipo_html", "prompt_file": "design/28_prototipo.md", "description": "Arquivo HTML único e sem dependências com as telas navegáveis, o painel da etapa vindo do one-pager e as cadências do pico. Salvo como `design/08-prototipo.html`."},
     {"id": "A29ArtefatosDesign", "name": "29 · Artefatos e links (determinístico)", "icon": "🔗", "output_key": "stitch_links", "prompt_file": None, "description": "Separa o HTML do protótipo do relatório, colhe os links das telas no Stitch e monta a folha de diagramas."},
+    {"id": "A29bEspelhoMiro", "name": "29b · Espelho no Miro (determinístico)", "icon": "🪞", "output_key": "miro_links", "prompt_file": None, "description": "Publica no Miro, como board navegável, os mesmos diagramas Mermaid da jornada e do fluxo. O Mermaid continua sendo a fonte; Miro indisponível não interrompe a esteira."},
     {"id": "A30QaEntregaveis", "name": "30 · QA de entregáveis", "icon": "🧪", "output_key": "qa_entregaveis_report", "prompt_file": "design/30_qa_entregaveis.md", "description": "Fidelidade à spec, diff de strings, currículo, faixa, fluxo, professor, briefing, ambiente (D8) e CAA (D8b)."},
     {"id": "A31QaEntregaveisCheck", "name": "31 · Veredito de design (determinístico)", "icon": "🔀", "output_key": "design_status", "prompt_file": None, "description": "Lê o envelope do QA de entregáveis."},
     {"id": "A32DespachoDesign", "name": "32 · Retrabalho de design (determinístico)", "icon": "🔁", "output_key": "tickets_retrabalho", "prompt_file": None, "description": "Reexecuta só os agentes com ticket do QA, na ordem de precedência do prompt, e refaz o protótipo depois."},

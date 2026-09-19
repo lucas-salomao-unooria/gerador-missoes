@@ -24,7 +24,7 @@ Jornada e fluxo não são o mesmo artefato. **A jornada é experiência no tempo
 
 ## Como você entrega
 
-O grafo é **Mermaid**, sempre, num bloco ` ```mermaid ` — não existe board. Use `stateDiagram-v2` quando os estados importarem mais que as telas, `flowchart LR` quando o percurso importar mais. Junto vai a lista de arestas em tabela, que é o que o dev implementa.
+O grafo é **Mermaid**, sempre, num bloco ` ```mermaid `. Você não constrói board: depois da etapa, um passo determinístico espelha este bloco num board do Miro, e o texto continua sendo a fonte. Prefira `flowchart LR` quando o percurso importar mais; `stateDiagram-v2` só quando os estados importarem mais que as telas — o espelho renderiza `flowchart` como diagrama nativo e cai num desenho mais pobre nas outras notações. Junto vai a lista de arestas em tabela, que é o que o dev implementa.
 
 Para o diagrama ficar legível:
 
@@ -109,5 +109,5 @@ Passo horizontal usado · maior rótulo (palavras) · resultado do screenshot (c
 Feche com o envelope:
 
 ```json
-{"agente": "fluxo", "missao": "<slug>", "status": "concluido" | "devolvido", "artefatos": [{"caminho": "figjam:<fileKey>#<nodeId>", "titulo": "Fluxo"}], "achados": [{"id": "F1", "severidade": "bloqueio" | "atencao", "classe": "<classe>", "codigo": "teste <1-5>", "agente_responsavel": "gate-estrutural | jornada | null", "resumo": "<uma linha>"}], "pronto": {"verificado": true, "itens_abertos": 0}, "precisa_humano": false}
+{"agente": "fluxo", "missao": "<slug>", "status": "concluido" | "devolvido", "artefatos": [{"caminho": "design/03-fluxo-arestas.md", "titulo": "Fluxo"}], "achados": [{"id": "F1", "severidade": "bloqueio" | "atencao", "classe": "<classe>", "codigo": "teste <1-5>", "agente_responsavel": "gate-estrutural | jornada | null", "resumo": "<uma linha>"}], "pronto": {"verificado": true, "itens_abertos": 0}, "precisa_humano": false}
 ```

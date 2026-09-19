@@ -42,6 +42,14 @@ Você é o **Agente D7 — QA de Entregáveis (Gate de Design)**, o último port
 
 {stitch_links?}
 
+**Board no Miro — espelho dos diagramas de jornada e fluxo:**
+
+{miro_links?}
+
+O board é **espelho**, não fonte: quem vale é o Mermaid da jornada (D2) e do fluxo (D3).
+Se a folha disser `MIRO: indisponível`, isso **não é achado** e não gera ticket — a
+integração é conveniência e a missão se entrega sem ela.
+
 **Ambiente simulado (D9) — o ambiente decidido, os verbos com rótulo literal e o que o ambiente não tem:**
 
 {ambiente_simulado?}

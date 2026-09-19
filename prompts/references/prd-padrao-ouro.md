@@ -33,7 +33,7 @@ ambiente_simulado: <o ambiente da spec (bloco 14): clone da lista fechada, ambie
 secao_ds: <instanooria|unitube|chatgpt|tiktooria|whatsappmobile|nova:<nome>|minijogo:<nome>>
 owners: {produto: <nome>, design: <nome>, dev: <nome>, pedagogico: <nome>}
 gates: {estrutural: 🟢|🔴, pedagogico: ..., experiencia: ..., final: ..., bncc: 🟢|🔴, lacunas: 🟢|🟡|🔴, ambiente: ..., design: ..., dev: 🟢|🟡|🔴}
-links: {stitch: <url do projeto>, prototipo: design/08-prototipo.html, diagramas: design/09-diagramas.html, spec: spec/<slug>-spec.md, one_pager: ...}
+links: {stitch: <url do projeto>, miro: <url do board — omita se indisponível>, prototipo: design/08-prototipo.html, diagramas: design/09-diagramas.html, spec: spec/<slug>-spec.md, one_pager: ...}
 needs_clarification: 0
 data: AAAA-MM-DD
 ---

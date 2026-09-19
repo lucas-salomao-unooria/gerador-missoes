@@ -33,7 +33,7 @@ def create_llm_agent(
         instruction: prompt de sistema; `{chave}` é interpolada do session.state pelo ADK.
         description: propósito do agente (observabilidade).
         output_key: chave do session.state onde a resposta final é gravada.
-        tools: ferramentas/toolsets (ex.: McpToolset do Figma).
+        tools: ferramentas/toolsets (ex.: McpToolset do Stitch).
         model: modelo Gemini (padrão: AppSettings.gemini_model).
         thinking_budget / include_thoughts: controle de raciocínio.
         include_contents: 'none' (padrão — o agente trabalha só com a instrução interpolada
@@ -81,9 +81,9 @@ def create_llm_agent(
         kwargs["output_key"] = output_key
     if tools:
         kwargs["tools"] = tools
-        # Contenção padrão: sem ela, um agente que constrói board no FigJam acumula
-        # dezenas de respostas de `use_figma`, o dump do board e a imagem do
-        # screenshot no mesmo turno, e o modelo recusa a requisição com 400.
+        # Contenção padrão: sem ela, um agente que constrói artefato por MCP acumula
+        # dezenas de respostas de ferramenta, dumps e imagens no mesmo turno, e o
+        # modelo recusa a requisição com 400.
         from agents.callbacks import barrar_ferramenta_sem_orcamento, limitar_resposta_de_ferramenta
 
         kwargs["before_tool_callback"] = before_tool_callback or barrar_ferramenta_sem_orcamento

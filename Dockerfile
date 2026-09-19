@@ -13,7 +13,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Instala curl, git e Node.js para suporte ao MCP do Figma em modo stdio (npx)
+# Instala curl, git e Node.js para o proxy do MCP do Stitch (npx)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \

@@ -127,7 +127,7 @@ Um ticket vai para **um** agente. Se a correção exige dois, quebre em dois com
 **Missão:** [nome] — [ano] — [ambiente]
 **Status:** APROVADO PARA REVISÃO HUMANA | IMPASSE APÓS 3 RODADAS
 
-**Links:** folha de diagramas · projeto no Stitch · sheet de copy
+**Links:** folha de diagramas · board no Miro · projeto no Stitch · sheet de copy
 
 **Veredito por dimensão:** D1 ✅ · D2 ⚠️ · D3 ✅ · D4 ✅ · D5 ✅ · D6 ✅
 

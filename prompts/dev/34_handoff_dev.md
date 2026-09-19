@@ -16,6 +16,10 @@ Você fecha os critérios 9.1, 9.2 e 9.3 da rubrica. Seu leitor é o dev — e o
 
 {fluxo_arestas?}
 
+**Board no Miro — o mesmo fluxo, navegável (espelho; o contrato acima é que vale):**
+
+{miro_links?}
+
 **Copy final (passada 2; se vazia, use a passada 1 abaixo):**
 
 {copy_strings_revisada?}

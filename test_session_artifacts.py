@@ -9,7 +9,9 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from config import _detect_stitch_mode, get_settings
+from unittest import mock
+
+from config import AppSettings, _detect_miro_mode, _detect_stitch_mode, get_settings
 from pipeline.artifacts import generate_artifact_manifest, save_run_artifacts
 from pipeline.runner import PipelineExecutionResult
 from pipeline.session_store import (
@@ -38,6 +40,147 @@ class TestStitchModeAutoDetect(unittest.TestCase):
         self.assertEqual(_detect_stitch_mode(), "off")
         os.environ["STITCH_MCP_MODE"] = "proxy"
         self.assertEqual(_detect_stitch_mode(), "proxy")
+
+    def test_modo_auto_chega_resolvido_ao_settings(self):
+        """O `auto` tem de virar `remote` no campo, não sobrar como string literal.
+
+        Sem o par campo `_raw` + propriedade, o pydantic-settings populava o campo
+        direto de STITCH_MCP_MODE e o `default_factory` nunca rodava: o modo saía
+        "auto", que não é nem `remote` nem `proxy`, e o Stitch ficava desligado com a
+        chave no lugar — silenciosamente, porque o rótulo da UI dizia só "desconhecido".
+        """
+        with mock.patch.dict(os.environ, {"STITCH_MCP_MODE": "auto", "STITCH_API_KEY": "chave-de-teste"}):
+            self.assertEqual(AppSettings().stitch_mcp_mode, "remote")
+            self.assertTrue(AppSettings().is_stitch_enabled)
+
+
+class TestMiroModeAutoDetect(unittest.TestCase):
+    """O Miro espelha jornada e fluxo; o Mermaid continua sendo a fonte."""
+
+    def test_auto_vira_remote(self):
+        """Não há credencial no ambiente para consultar: quem autoriza é o navegador."""
+        with mock.patch.dict(os.environ, {"MIRO_MODE": "auto"}):
+            self.assertEqual(_detect_miro_mode(), "remote")
+            self.assertTrue(AppSettings().is_miro_enabled)
+
+    def test_ausencia_de_variavel_tambem_liga(self):
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("MIRO_MODE", None)
+            self.assertEqual(_detect_miro_mode(), "remote")
+
+    def test_off_desliga(self):
+        with mock.patch.dict(os.environ, {"MIRO_MODE": "off"}):
+            self.assertEqual(_detect_miro_mode(), "off")
+            s = AppSettings()
+            self.assertFalse(s.is_miro_enabled)
+            self.assertIn("Desligado", s.miro_status_label)
+
+
+class TestMiroTokenStore(unittest.TestCase):
+    """A conexão do Miro em disco, sem tocar a rede.
+
+    O arquivo guarda um refresh token de 60 dias: quem o tiver entra nos boards do time
+    sem passar pelo navegador. Por isso permissão e atomicidade são asserção, não zelo.
+    """
+
+    def setUp(self):
+        from tools.miro_oauth import MiroTokenStore
+
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.store = MiroTokenStore(self.temp_dir / ".miro_mcp_tokens.json")
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_sem_arquivo_nao_ha_conexao(self):
+        self.assertEqual(self.store.load(), {})
+        self.assertIsNone(self.store.client())
+        self.assertFalse(self.store.status()["conectado"])
+        with self.assertRaises(RuntimeError):
+            self.store.access_token()
+
+    def test_round_trip_de_client_e_tokens(self):
+        self.store.gravar_client({"client_id": "cli-sintetico", "client_secret": "seg", "redirect_uri": "http://localhost:8501"})
+        self.store.gravar_tokens({"access_token": "access-sintetico", "refresh_token": "refresh-sintetico", "expires_in": 3600})
+
+        self.assertEqual(self.store.client()["client_id"], "cli-sintetico")
+        self.assertEqual(self.store.access_token(), "access-sintetico")
+
+        estado = self.store.status()
+        self.assertTrue(estado["conectado"])
+        self.assertTrue(estado["renovavel"])
+        self.assertGreater(estado["expira_em_min"], 55)
+
+    def test_arquivo_protegido_e_sem_temporario_residual(self):
+        self.store.gravar_tokens({"access_token": "a", "expires_in": 3600})
+        self.assertEqual(oct(self.store.path.stat().st_mode)[-3:], "600")
+        self.assertEqual(list(self.temp_dir.glob("*.tmp")), [])
+
+    def test_arquivo_corrompido_vale_como_sem_conexao(self):
+        """Um JSON quebrado não pode derrubar a sidebar inteira."""
+        self.store.path.write_text("{ isto não é json", encoding="utf-8")
+        self.assertEqual(self.store.load(), {})
+        self.assertFalse(self.store.status()["conectado"])
+
+    def test_token_vencido_renova_e_guarda_o_refresh_rotacionado(self):
+        """O Miro rotaciona o refresh a cada renovação: perder o novo é perder a conexão."""
+        from tools import miro_oauth
+
+        self.store.gravar_client({"client_id": "cli", "client_secret": "seg", "redirect_uri": "u"})
+        self.store.gravar_tokens({"access_token": "velho", "refresh_token": "refresh-1", "expires_in": 3600})
+        # Força o vencimento sem esperar uma hora.
+        dados = self.store.load()
+        dados["expires_at"] = 0
+        self.store._save(dados)
+
+        resposta = mock.Mock()
+        resposta.json.return_value = {"access_token": "novo", "refresh_token": "refresh-2", "expires_in": 3600}
+        resposta.raise_for_status.return_value = None
+
+        with mock.patch.object(miro_oauth, "descobrir_endpoints", return_value={"token_endpoint": "https://mcp.miro.com/token"}), \
+             mock.patch.object(miro_oauth.httpx, "post", return_value=resposta) as post:
+            self.assertEqual(self.store.access_token(), "novo")
+
+        self.assertEqual(post.call_args.kwargs["data"]["grant_type"], "refresh_token")
+        self.assertEqual(self.store.load()["tokens"]["refresh_token"], "refresh-2")
+
+    def test_refresh_omitido_preserva_o_anterior(self):
+        """Quando o servidor não manda refresh novo, o antigo continua valendo."""
+        self.store.gravar_tokens({"access_token": "a1", "refresh_token": "refresh-1", "expires_in": 3600})
+        self.store.gravar_tokens({"access_token": "a2", "expires_in": 3600})
+        self.assertEqual(self.store.load()["tokens"]["refresh_token"], "refresh-1")
+
+    def test_pendente_guarda_o_pkce_entre_duas_sessoes(self):
+        """Ir ao Miro e voltar abre sessão nova no Streamlit: o verifier tem de estar em disco."""
+        self.store.gravar_pendente("state-abc", "verifier-xyz")
+        self.assertEqual(self.store.ler_pendente()["code_verifier"], "verifier-xyz")
+        self.store.limpar_pendente()
+        self.assertIsNone(self.store.ler_pendente())
+
+    def test_pendente_expira(self):
+        self.store.gravar_pendente("state-abc", "verifier-xyz")
+        dados = self.store.load()
+        dados["pendente"]["criado_em"] = 0
+        self.store._save(dados)
+        self.assertIsNone(self.store.ler_pendente())
+
+    def test_state_divergente_descarta_a_autorizacao(self):
+        """Resposta que não corresponde ao pedido que fizemos não vira conexão."""
+        from tools import miro_oauth
+
+        self.store.gravar_pendente("state-certo", "verifier")
+        with mock.patch.object(miro_oauth, "token_store", return_value=self.store), \
+             mock.patch.object(miro_oauth, "trocar_codigo") as trocar:
+            with self.assertRaises(RuntimeError):
+                miro_oauth.concluir_conexao("codigo", "state-forjado")
+        trocar.assert_not_called()
+        self.assertIsNone(self.store.ler_pendente())
+
+    def test_apagar_derruba_a_conexao(self):
+        self.store.gravar_tokens({"access_token": "a", "expires_in": 3600})
+        self.store.apagar()
+        self.assertFalse(self.store.path.exists())
+        self.assertFalse(self.store.status()["conectado"])
 
 
 class TestArtifactsAndSessionStore(unittest.TestCase):

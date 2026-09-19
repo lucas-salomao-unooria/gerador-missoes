@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from config import get_settings
-from pipeline.artifacts import ARTIFACT_FILES, extrair_slug
+from pipeline.artifacts import extrair_slug
 
 logger = logging.getLogger("session_store")
 
@@ -208,39 +208,53 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
 
         estado_file = entry / "estado.json"
         conversa_file = entry / "conversa.json"
+        prd_file = entry / "PRD.md"
 
-        # Carrega dados do estado ou da conversa salva
-        state: Dict[str, Any] = {}
         conversa_data: Dict[str, Any] = {}
-
         if conversa_file.exists():
             try:
                 conversa_data = json.loads(conversa_file.read_text(encoding="utf-8"))
             except Exception as exc:
                 logger.warning("Falha ao ler %s: %s", conversa_file, exc)
 
-        if estado_file.exists():
-            try:
-                state = json.loads(estado_file.read_text(encoding="utf-8"))
-            except Exception as exc:
-                logger.warning("Falha ao ler %s: %s", estado_file, exc)
+        # `estado.json` tem ~1 MB por missão e o PRD.md, 60–90 KB. Antes ambos eram lidos
+        # para *toda* sessão em *todo* rerun do Streamlit, o que fazia a listagem crescer
+        # linearmente com o histórico (e, no Cloud Run com GCS-FUSE, virar segundos).
+        # Agora só são lidos quando o `conversa.json` não traz a informação — o caso das
+        # sessões gravadas antes de `save_session_record` passar a registrar esses campos.
+        _cache: Dict[str, Any] = {}
 
-        # Se houver PRD.md no disco e state não tiver prd_final, injeta para extração de título/metadados
-        prd_file = entry / "PRD.md"
-        if prd_file.exists() and not state.get("prd_final"):
-            try:
-                state["prd_final"] = prd_file.read_text(encoding="utf-8")
-            except Exception:
-                pass
+        def carregar_state() -> Dict[str, Any]:
+            if "state" not in _cache:
+                state: Dict[str, Any] = {}
+                if estado_file.exists():
+                    try:
+                        state = json.loads(estado_file.read_text(encoding="utf-8"))
+                    except Exception as exc:
+                        logger.warning("Falha ao ler %s: %s", estado_file, exc)
+                if prd_file.exists() and not state.get("prd_final"):
+                    try:
+                        state["prd_final"] = prd_file.read_text(encoding="utf-8")
+                    except Exception:
+                        pass
+                _cache["state"] = state
+            return _cache["state"]
 
-        prd_meta, _ = extrair_metadados_frontmatter(state.get("prd_final") or "")
+        def carregar_prd_meta() -> Dict[str, Any]:
+            if "prd_meta" not in _cache:
+                meta, _ = extrair_metadados_frontmatter(carregar_state().get("prd_final") or "")
+                _cache["prd_meta"] = meta
+            return _cache["prd_meta"]
 
         # Determina o título limpo
         title = conversa_data.get("title")
         if not title or "prd_id:" in str(title) or "titulo:" in str(title) or "\n" in str(title):
-            title = prd_meta.get("titulo") or extrair_titulo_missao(state, fallback=entry.name)
+            title = carregar_prd_meta().get("titulo") or extrair_titulo_missao(carregar_state(), fallback=entry.name)
 
-        slug = conversa_data.get("slug") or prd_meta.get("slug_experiencia") or extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or state.get("prd_final") or "")) or entry.name
+        slug = conversa_data.get("slug")
+        if not slug:
+            state = carregar_state()
+            slug = carregar_prd_meta().get("slug_experiencia") or extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or state.get("prd_final") or "")) or entry.name
 
         # Timestamp de criação
         timestamp_str = conversa_data.get("created_at")
@@ -254,18 +268,30 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
                 mtime = entry.stat().st_mtime
                 timestamp_str = time.strftime("%d/%m/%Y %H:%M", time.localtime(mtime))
 
-        # Gates conhecidos
+        # Gates conhecidos. O `conversa.json` já grava `gates`; o estado só é consultado
+        # para sessões antigas, que não têm esse campo.
         gates = dict(conversa_data.get("gates") or {})
-        for k in ("micro_gate_status", "gate_estrutural_status", "gate_final_status", "bncc_status", "lacunas_status", "ambiente_status", "design_status", "manifesto_status", "telemetria_status", "rastro_lacunas_status", "dev_status", "prd_status"):
-            if k in state and k not in gates:
-                gates[k] = state[k]
+        if not gates:
+            state = carregar_state()
+            for k in ("micro_gate_status", "gate_estrutural_status", "gate_final_status", "bncc_status", "lacunas_status", "ambiente_status", "design_status", "manifesto_status", "telemetria_status", "rastro_lacunas_status", "dev_status", "prd_status"):
+                if k in state:
+                    gates[k] = state[k]
 
         has_blocked_gate = any(
             str(v).strip().lower() in ("bloqueado", "blocked", "reprovado", "vermelho", "🔴")
             for v in gates.values()
         )
-        is_pipeline_blocked = bool(state.get("pipeline_bloqueado"))
-        has_prd = (entry / "PRD.md").exists() or bool(state.get("prd_final"))
+        if "pipeline_bloqueado" in conversa_data:
+            is_pipeline_blocked = bool(conversa_data.get("pipeline_bloqueado"))
+        else:
+            is_pipeline_blocked = bool(carregar_state().get("pipeline_bloqueado"))
+
+        if prd_file.exists():
+            has_prd = True
+        elif "has_prd" in conversa_data:
+            has_prd = bool(conversa_data["has_prd"])
+        else:
+            has_prd = bool(carregar_state().get("prd_final"))
 
         # Status: determinado pelo veredito dos gates e pela geração do PRD
         if is_pipeline_blocked:
@@ -277,7 +303,7 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
         elif (entry / "produto/04-gate-final.md").exists() or has_blocked_gate:
             status = "bloqueado"
         else:
-            status = conversa_data.get("status") or prd_meta.get("status") or "indefinido"
+            status = conversa_data.get("status") or carregar_prd_meta().get("status") or "indefinido"
 
         if status in ("bypassed", "bypass", "warning", "ressalvas"):
             status_icon = "🟡"
@@ -302,8 +328,11 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
             except Exception:
                 prompt = ""
 
-        # Contagem de arquivos úteis
-        md_files = list(entry.glob("**/*.md"))
+        # Contagem de arquivos úteis. O `glob("**/*.md")` recursivo só roda para sessões
+        # antigas, que não gravaram `files_count` no conversa.json.
+        files_count = conversa_data.get("files_count")
+        if files_count is None:
+            files_count = len(list(entry.glob("**/*.md")))
 
         sessions.append(
             {
@@ -316,9 +345,9 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
                 "status": status,
                 "status_label": status_label,
                 "status_icon": status_icon,
-                "has_prd": (entry / "PRD.md").exists(),
+                "has_prd": prd_file.exists(),
                 "prompt": prompt,
-                "files_count": len(md_files),
+                "files_count": files_count,
                 "mtime": entry.stat().st_mtime,
             }
         )
@@ -370,16 +399,12 @@ def load_saved_session(dir_name_or_id: str) -> Optional[Tuple[List[Dict[str, Any
         except Exception:
             prompt = ""
 
-    # Constrói step_outputs a partir dos arquivos salvos se não estiver no conversa_data
+    # `step_outputs` vem do conversa.json quando existe. Não é reconstruído a partir do
+    # disco: em execução ele é indexado pelo id do agente (ver `runner.py`), enquanto
+    # ARTIFACT_FILES usa `output_key` — as chaves nunca batiam com o único consumidor
+    # (`app.py`), e a reconstrução custava 43 leituras de arquivo por clique no histórico
+    # (no Cloud Run, 43 RPCs no GCS-FUSE). O render lê tudo de `result.state`.
     step_outputs = conversa_data.get("step_outputs", {})
-    if not step_outputs:
-        for key, rel in ARTIFACT_FILES:
-            fpath = target_dir / rel
-            if fpath.exists():
-                try:
-                    step_outputs[key] = fpath.read_text(encoding="utf-8")
-                except Exception:
-                    pass
 
     # Importa PipelineExecutionResult tardiamente para evitar imports circulares
     from pipeline.runner import PipelineExecutionResult
@@ -552,6 +577,11 @@ def save_session_record(
         "gates": getattr(result, "gates", {}),
         "messages": serializable_messages,
         "step_thoughts": getattr(result, "step_thoughts", {}),
+        # Campos de índice: permitem que `list_saved_sessions` monte a sidebar lendo só
+        # este arquivo (~2 KB), sem abrir o `estado.json` de ~1 MB a cada rerun.
+        "pipeline_bloqueado": bool(state.get("pipeline_bloqueado")),
+        "has_prd": bool(state.get("prd_final")) or (run_dir / "PRD.md").exists(),
+        "files_count": len(list(run_dir.glob("**/*.md"))),
     }
 
     conversa_path = run_dir / "conversa.json"

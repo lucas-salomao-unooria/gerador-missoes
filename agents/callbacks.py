@@ -6,8 +6,8 @@
   quando o pipeline foi bloqueado por um gate de produto em modo estrito.
 - `limitar_resposta_de_ferramenta` / `barrar_ferramenta_sem_orcamento`: contenção do
   que as ferramentas MCP devolvem ao contexto do turno. Sem elas, um agente de design
-  que pede telas ao Stitch acumula dezenas de respostas grandes, o dump
-  de `get_figjam` e a imagem de `get_screenshot` — tudo no MESMO turno, porque o
+  que pede telas ao Stitch acumula dezenas de respostas grandes, dumps de board e
+  imagens de screenshot — tudo no MESMO turno, porque o
   histórico de chamada de ferramenta não é conversa e `include_contents="none"` não o
   descarta. Foi assim que o D2 estourou o teto de 1.048.576 tokens do Gemini com um
   prompt de 22 KB.

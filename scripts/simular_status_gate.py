@@ -19,7 +19,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Configura variáveis de ambiente antes de carregar o ADK
-os.environ.setdefault("FIGMA_MCP_MODE", "off")
+os.environ.setdefault("STITCH_MCP_MODE", "off")
+os.environ.setdefault("MIRO_MODE", "off")
 os.environ.setdefault("GOOGLE_API_KEY", "teste-simulacao")
 
 from google.adk.agents.base_agent import BaseAgent

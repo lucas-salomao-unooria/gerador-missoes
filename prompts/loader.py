@@ -20,6 +20,8 @@ Variáveis:
 from __future__ import annotations
 
 import re
+import time
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -42,9 +44,26 @@ def _resolve(filename: str) -> Path:
     return path
 
 
+@lru_cache(maxsize=512)
+def _ler_arquivo(path: Path, _mtime: float) -> str:
+    """Leitura memoizada. O `_mtime` entra na chave para o cache cair sozinho na edição."""
+    return path.read_text(encoding="utf-8")
+
+
 def get_prompt_raw(filename: str) -> str:
-    """Conteúdo bruto do arquivo (sem resolver includes nem interpolar)."""
-    return _resolve(filename).read_text(encoding="utf-8")
+    """Conteúdo bruto do arquivo (sem resolver includes nem interpolar).
+
+    Memoizado por (caminho, mtime): o editor de prompts e a construção dos ~40 agentes
+    reliam o mesmo arquivo — e cada include dele, recursivamente — a cada chamada.
+    """
+    path = _resolve(filename)
+    return _ler_arquivo(path, path.stat().st_mtime)
+
+
+def limpar_cache_prompts() -> None:
+    """Descarta as leituras e expansões memoizadas de prompts."""
+    _ler_arquivo.cache_clear()
+    _expandir_includes.cache_clear()
 
 
 def save_prompt(filename: str, content: str) -> bool:
@@ -56,6 +75,9 @@ def save_prompt(filename: str, content: str) -> bool:
         raise ValueError(f"Caminho de prompt fora da pasta prompts/: {filename}")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content.strip() + "\n", encoding="utf-8")
+    # O mtime já invalidaria a leitura deste arquivo, mas não a expansão dos prompts que o
+    # incluem — por isso o cache inteiro cai aqui.
+    limpar_cache_prompts()
     return True
 
 
@@ -73,13 +95,46 @@ def resolve_includes(content: str, _depth: int = 0) -> str:
     return _INCLUDE_RE.sub(_repl, content)
 
 
+@lru_cache(maxsize=256)
+def _expandir_includes(filename: str, _assinatura: str) -> str:
+    """Expansão memoizada dos includes de um prompt.
+
+    A expansão de um prompt grande chega a 380 KB e era refeita a cada chamada — no editor
+    de prompts, a cada rerun do Streamlit.
+    """
+    return resolve_includes(get_prompt_raw(filename))
+
+
+_ASSINATURA_TTL = 2.0
+_assinatura_cache: tuple[float, str] = (0.0, "")
+
+
+def _assinatura_prompts() -> str:
+    """Maior mtime da árvore de prompts — invalida as expansões memoizadas.
+
+    Cobre tanto a edição pelo editor da UI quanto a edição direta do `.md` no disco, que é
+    como os prompts são trabalhados no dia a dia. O TTL evita repetir o walk de ~109 stats
+    nas ~40 chamadas seguidas que a construção dos agentes faz.
+    """
+    global _assinatura_cache
+    agora = time.monotonic()
+    if agora - _assinatura_cache[0] < _ASSINATURA_TTL:
+        return _assinatura_cache[1]
+    try:
+        marca = str(max(p.stat().st_mtime_ns for p in PROMPTS_DIR.rglob("*.md")))
+    except ValueError:
+        marca = "0"
+    _assinatura_cache = (agora, marca)
+    return marca
+
+
 def load_prompt(filename: str, **kwargs: Any) -> str:
     """Carrega um prompt: resolve includes e substitui variáveis estáticas de configuração.
 
     As variáveis dinâmicas de estado do ADK (`{one_pager}`, `{spec_missao?}`…) são
     preservadas para interpolação em tempo de execução.
     """
-    content = resolve_includes(get_prompt_raw(filename))
+    content = _expandir_includes(filename, _assinatura_prompts())
     for key, val in kwargs.items():
         content = content.replace(f"{{{key}}}", str(val))
     return content.strip()

@@ -78,8 +78,9 @@ Adotamos o **Princípio da Responsabilidade Única (SRP)** da engenharia de soft
 | **Design** | `A21BriefOficio` & `A22Jornada` | Modela o ofício da criança e as curvas emocionais | D0 e D9 | Documento de jornada do aluno |
 | **Design** | `A23FluxoTelas` | Modela o grafo de navegação em diagrama Mermaid | Jornada | Grafo formal de telas |
 | **Design** | `A24CopyPtBr` & `A25Caa` | Redação acolhedora e **Camada de Acessibilidade CAA** | Fluxo de telas | Textos finais e pranchas de símbolos |
-| **Design** | `A26TelasStitch` & `A27CopyRevisao` | Wireframes no Stitch e revisão textual final | Copy e CAA | Telas visuais desenhadas |
+| **Design** | `A26Telas` & `A27CopyRevisao` | Wireframes no Stitch e revisão textual final | Copy e CAA | Telas visuais desenhadas |
 | **Design** | `A28Prototipo` & `A29Artefatos` | **Escreve o protótipo navegável em HTML/CSS/JS** | Telas e fluxo | Arquivo `.html` testável no navegador |
+| **Design** | `A29bEspelhoMiro` | Publica no Miro um board com os diagramas de jornada e fluxo | Jornada e fluxo | Link do board espelho |
 | **Design** | `A30QaEntregaveis` & `A31Check` | Auditoria para checar se todas as telas foram feitas | Protótipo e telas | Veredito de QA de Design |
 | **Dev** | `A34HandoffDev` & `A35BriefAssets` | Histórias de usuário, arquitetura e lista de assets | Spec, Telas e Protótipo | Handoff de engenharia e assets |
 | **Dev** | `A36TelemetriaCheck` | Audita eventos de telemetria xAPI | Handoff | Contrato de dados validado |
@@ -220,7 +221,8 @@ flowchart TD
     D4 & D4b --> D5[A26 Wireframes Visuais no Stitch]
     D5 --> D6[A27 Revisão de Copy]
     D6 --> D8[A28 & A29 Protótipo Interativo em HTML]
-    D8 --> D7[A30 & A31 QA de Entregáveis de Design]
+    D8 --> D8b[A29b Espelho dos diagramas no Miro]
+    D8b --> D7[A30 & A31 QA de Entregáveis de Design]
     D7 --> DesignPronto([Artefatos e Protótipo Prontos])
 
     style D8 fill:#eafaf1,stroke:#27ae60,stroke-width:3px

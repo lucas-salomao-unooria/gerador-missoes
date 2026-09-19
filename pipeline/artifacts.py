@@ -44,6 +44,7 @@ ARTIFACT_FILES = [
     ("prototipo_arquivo", "design/08-prototipo.html"),
     ("diagramas_html", "design/09-diagramas.html"),
     ("stitch_links", "design/10-stitch-telas.md"),
+    ("miro_links", "design/11-miro-boards.md"),
     ("qa_entregaveis_report", "design/07-qa-entregaveis.md"),
     ("manifesto_report", "dev/00-ficha-manifesto.md"),
     ("handoff_dev", "dev/01-handoff-dev.md"),
@@ -195,6 +196,63 @@ async def _save_adk_artifacts(
     return count
 
 
+# Os dois documentos que saem da esteira para gente ler, e a etiqueta com que cada um
+# se apresenta na capa. O resto dos artefatos é insumo de trabalho e fica em Markdown.
+ONE_PAGERS_COM_MARCA = [
+    ("one_pager", "produto/00-one-pager", "One-pager de produto", "Documento de produto · Unooria"),
+    (
+        "one_pager_pedagogico",
+        "one-pager-pedagogico",
+        "One-pager pedagógico",
+        "Para leitura e aprovação do time pedagógico",
+    ),
+]
+
+
+def exportar_one_pagers(state: Dict[str, Any], run_dir: Path, slug: str) -> List[Path]:
+    """Grava cada one-pager em `.docx` e `.html` com a identidade visual da Unooria.
+
+    Dois formatos porque são dois usos: o `.docx` abre no Word e no Google Docs para o
+    time comentar e editar; o `.html` abre no navegador e vira PDF pelo "Imprimir", que
+    é como a missão é apresentada para fora. O Markdown continua salvo do lado, porque é
+    dele que os dois saem e é ele que a esteira lê.
+
+    Falha aqui não derruba a execução: o documento em Markdown já está no disco, e o que
+    se perde é a formatação, não o conteúdo.
+    """
+    gerados: List[Path] = []
+    for chave, base, etiqueta, subtitulo in ONE_PAGERS_COM_MARCA:
+        documento = state.get(chave)
+        if not documento or not isinstance(documento, str) or e_mensagem_de_pulo(documento):
+            continue
+
+        destino_docx = run_dir / f"{base}.docx"
+        try:
+            from tools.docx_export import markdown_para_docx
+
+            if markdown_para_docx(
+                documento, destino_docx, titulo_fallback=slug, etiqueta=etiqueta, subtitulo=subtitulo
+            ):
+                gerados.append(destino_docx)
+        except Exception as exc:
+            logger.warning("Não consegui gerar o .docx de %s: %s", base, exc)
+
+        destino_html = run_dir / f"{base}.html"
+        try:
+            from tools.onepager_html import markdown_para_html
+
+            pagina = markdown_para_html(
+                documento, titulo_fallback=slug, etiqueta=etiqueta, subtitulo=subtitulo
+            )
+            destino_html.parent.mkdir(parents=True, exist_ok=True)
+            destino_html.write_text(pagina, encoding="utf-8")
+            gerados.append(destino_html)
+        except Exception as exc:
+            logger.warning("Não consegui gerar o .html de %s: %s", base, exc)
+
+    return gerados
+
+
 def save_run_artifacts(
     state: Dict[str, Any],
     session_id: str,
@@ -222,15 +280,9 @@ def save_run_artifacts(
         written += 1
 
 
-    # O one-pager pedagógico também em .docx: o time que o valida não lê Markdown.
-    pedagogico = state.get("one_pager_pedagogico")
-    if pedagogico and isinstance(pedagogico, str) and not e_mensagem_de_pulo(pedagogico):
-        try:
-            from tools.docx_export import markdown_para_docx
-
-            markdown_para_docx(pedagogico, run_dir / "one-pager-pedagogico.docx", titulo_fallback=slug)
-        except Exception as exc:
-            logger.warning("Não consegui gerar o .docx do one-pager pedagógico: %s", exc)
+    # Os dois one-pagers também com a marca: quem os lê não lê Markdown, e são eles que
+    # circulam fora do time — a PM encaminha o de produto, a professora aprova o outro.
+    exportar_one_pagers(state, run_dir, slug)
 
     # Estado serializável
     serializable = {k: v for k, v in state.items() if not str(k).startswith("temp:")}

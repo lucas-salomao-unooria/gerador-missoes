@@ -336,9 +336,16 @@ duplo clique. Fecha com o QA de entregáveis, que audita fidelidade à spec.
 
 \begin{quote}\small
 \textbf{Nota sobre ferramentas.} A esteira não usa mais o Figma --- não há cliente oficial que o
-sirva neste ambiente, e board em ferramenta que ninguém abre não é entregável. Jornada e fluxo
+sirva neste ambiente, e board que ninguém consegue gerar não é entregável. Jornada e fluxo
 saem em Mermaid, as telas saem no Stitch e como especificação em Markdown, e o artefato visual
 é o protótipo HTML.
+
+Com o Miro conectado, a jornada e o fluxo ganham também um \emph{board espelho}: um passo
+determinístico publica os mesmos blocos Mermaid como board navegável e grava o link em
+\texttt{design/11-miro-boards.md}. A palavra espelho é literal --- quem manda continua sendo o
+texto versionado, o board não alimenta gate nem PRD, e a sua ausência não é achado de QA. A
+publicação é feita por código, fora do turno do agente: deixar um modelo construir board item a
+item foi justamente o que estourou o teto de contexto quando os diagramas viviam no FigJam.
 \end{quote}
 
 \subsection{Dev (33--49): isso é implementável?}
@@ -643,6 +650,10 @@ novos por tela~\cite{sweller2019}. \\
 28 Protótipo & HTML navegável com CSS e JS embutidos &
 \textit{Convenção}. É o artefato que a revisão humana abre; a exigência de arquivo único e offline
 é operacional. \\
+\addlinespace
+29b Espelho no Miro & Board que reproduz os diagramas de jornada e fluxo &
+\textit{Convenção}. Publicação determinística do Mermaid já escrito; o texto continua sendo a
+fonte e a integração indisponível não interrompe a esteira. \\
 \addlinespace
 30 QA de entregáveis & Audita fidelidade da construção à \emph{spec} &
 \textit{Convenção}, com uma regra de \textit{evidência}: a proibição de reportar número não medido

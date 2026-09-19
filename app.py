@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import streamlit as st
+import streamlit.components.v1 as components
 from PIL import Image
 
 from config import get_settings
@@ -73,6 +74,18 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+st.markdown(
+    """
+    <style>
+    [data-testid="stSidebar"] {
+        min-width: 400px;
+        max-width: 600px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 GATE_LABELS = {
     "micro_gate_status": "Micro-gate do núcleo",
     "gate_estrutural_status": "Gate estrutural",
@@ -123,6 +136,131 @@ def init_session_state():
         ]
 
 
+@st.cache_data(show_spinner=False)
+def _listar_sessoes_cached(_assinatura: str) -> List[Dict[str, Any]]:
+    return list_saved_sessions()
+
+
+def listar_sessoes() -> List[Dict[str, Any]]:
+    """Histórico da sidebar, cacheado por uma assinatura barata do diretório de saída.
+
+    `list_saved_sessions()` era chamada a cada rerun — inclusive ao digitar no filtro ou
+    mexer em qualquer widget. A assinatura é (nome, mtime) das subpastas: muda quando uma
+    missão é criada, removida ou regravada, e custa um `scandir` sem ler nenhum arquivo.
+    """
+    try:
+        base = get_settings().output_path
+        assinatura = repr(sorted(
+            (p.name, int(p.stat().st_mtime))
+            for p in base.iterdir()
+            if p.is_dir() and not p.name.startswith(".")
+        ))
+    except (FileNotFoundError, NotADirectoryError):
+        assinatura = "[]"
+    return _listar_sessoes_cached(assinatura)
+
+
+@st.cache_data(show_spinner=False)
+def _manifesto_cached(_assinatura: str, output_path: str) -> List[Dict[str, Any]]:
+    return generate_artifact_manifest(Path(output_path))
+
+
+def manifesto_da_sessao(output_path: Path) -> List[Dict[str, Any]]:
+    """Manifesto de artefatos cacheado pelo mtime da pasta da missão.
+
+    O `rglob` + `stat` de ~47 arquivos é barato em disco local, mas vira 47 RPCs quando o
+    `OUTPUT_DIR` está montado via GCS-FUSE no Cloud Run — e rodava a cada rerun.
+    """
+    try:
+        assinatura = f"{output_path}:{int(output_path.stat().st_mtime)}"
+    except OSError:
+        assinatura = str(output_path)
+    return _manifesto_cached(assinatura, str(output_path))
+
+
+def invalidar_cache_sessoes() -> None:
+    """Limpa os caches de histórico após qualquer escrita em `output/`."""
+    _listar_sessoes_cached.clear()
+    _manifesto_cached.clear()
+
+
+def tratar_retorno_oauth_miro() -> None:
+    """Fecha a conexão com o Miro quando o navegador volta com `?code=…`.
+
+    Roda antes de qualquer coisa desenhar: o retorno do OAuth é uma sessão nova do
+    Streamlit, e a query string precisa ser consumida e limpa antes do primeiro rerun,
+    senão o código de autorização fica preso na URL e é reapresentado (já usado) a cada
+    interação.
+    """
+    params = st.query_params
+    code = params.get("code")
+    if not code:
+        return
+
+    from tools import miro_oauth
+
+    try:
+        estado = miro_oauth.concluir_conexao(code, params.get("state", ""))
+        st.session_state["miro_aviso"] = (
+            "success",
+            f"✅ Miro conectado — o token expira em {estado.get('expira_em_min', '?')} min e renova sozinho.",
+        )
+    except Exception as exc:  # a UI não pode quebrar por causa de uma conexão externa
+        st.session_state["miro_aviso"] = ("error", f"❌ Não deu para conectar ao Miro: {exc}")
+
+    st.query_params.clear()
+
+
+def render_integracoes(settings) -> None:
+    """Card de integrações: status do Stitch e conexão OAuth do Miro."""
+    from tools import miro_oauth
+
+    st.markdown("#### 🔌 Integrações")
+    with st.container(border=True):
+        st.markdown(f"🎨 **Stitch (telas):** {settings.stitch_status_label}")
+
+        aviso = st.session_state.pop("miro_aviso", None)
+        if aviso:
+            (st.success if aviso[0] == "success" else st.error)(aviso[1])
+
+        if not settings.is_miro_enabled:
+            st.markdown(f"🪞 **Miro (diagramas):** {settings.miro_status_label}")
+            return
+
+        try:
+            estado = miro_oauth.token_store().status()
+            rotulo = miro_oauth.status_label()
+        except Exception as exc:
+            st.markdown(f"🪞 **Miro (diagramas):** 🔴 {exc}")
+            return
+
+        st.markdown(f"🪞 **Miro (diagramas):** {rotulo}")
+
+        if estado.get("conectado"):
+            if st.button("Desconectar do Miro", use_container_width=True, key="miro_desconectar"):
+                miro_oauth.token_store().apagar()
+                st.rerun()
+            return
+
+        if st.button("🔗 Conectar ao Miro", use_container_width=True, key="miro_conectar"):
+            try:
+                st.session_state["miro_url_autorizacao"] = miro_oauth.iniciar_conexao()
+            except Exception as exc:
+                st.error(f"❌ Não deu para preparar a conexão: {exc}")
+
+        url = st.session_state.get("miro_url_autorizacao")
+        if url:
+            # Link sem `target`: a autorização tem de acontecer NESTA aba. Numa aba nova,
+            # o retorno cairia numa janela diferente da que o usuário está olhando.
+            st.markdown(
+                f'<a href="{url}" style="display:block;text-align:center;padding:.5rem;'
+                'border-radius:.5rem;background:#4262ff;color:#fff;text-decoration:none;font-weight:600">'
+                "Autorizar no Miro →</a>",
+                unsafe_allow_html=True,
+            )
+            st.caption("Você escolhe o time no Miro e volta para cá automaticamente.")
+
+
 def render_sidebar() -> Dict[str, Any]:
     settings = get_settings()
     with st.sidebar:
@@ -138,7 +276,7 @@ def render_sidebar() -> Dict[str, Any]:
             st.rerun()
 
         st.markdown("---")
-        saved_sessions = list_saved_sessions()
+        saved_sessions = listar_sessoes()
         total_sessions = len(saved_sessions)
         header_title = f"#### 🗂️ Histórico de Missões ({total_sessions})" if total_sessions > 0 else "#### 🗂️ Histórico de Missões"
         st.markdown(header_title)
@@ -189,11 +327,15 @@ def render_sidebar() -> Dict[str, Any]:
                         with col_del:
                             if st.button("🗑️", key=f"del_{s['dir_name']}", help=f"Excluir {s['title']}"):
                                 delete_saved_session(s["dir_name"])
+                                invalidar_cache_sessoes()
                                 if st.session_state.get("current_session_id") == s["dir_name"]:
                                     st.session_state.current_session_id = None
                                     st.session_state.messages = []
                                     init_session_state()
                                 st.rerun()
+
+        st.markdown("---")
+        render_integracoes(settings)
 
         st.markdown("---")
         # st.markdown("#### 📡 Ambiente (`.env`)")
@@ -461,6 +603,33 @@ def download_button_lazy(
     return st.download_button(data=payload, **common)
 
 
+def render_saida_agente(value: str, output_key: str, prefix: str):
+    """Renderiza a saída de um agente na aba da etapa.
+
+    Saídas em HTML (o protótipo) não passam por `st.markdown`: são 80 KB+ de HTML cru que o
+    parser de markdown do Streamlit reprocessava e reenviava a cada rerun. Aqui o HTML só é
+    montado quando o usuário pede a pré-visualização.
+    """
+    if output_key in ("prototipo_html", "prototipo_arquivo") or value.lstrip()[:15].lower().startswith("<!doctype html"):
+        st.caption(f"Protótipo em HTML · {len(value) / 1024:.0f} KB")
+        col_prev, col_dl = st.columns([1, 1])
+        with col_prev:
+            mostrar = st.toggle("👁️ Pré-visualizar", key=f"prev_{prefix}")
+        with col_dl:
+            download_button_lazy(
+                "📥 Baixar HTML",
+                lambda v=value: v,
+                file_name=f"{output_key}.html",
+                mime="text/html",
+                key=f"dlhtml_{prefix}",
+            )
+        if mostrar:
+            components.html(value, height=600, scrolling=True)
+        return
+
+    st.markdown(value)
+
+
 def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = ""):
     st.markdown("---")
     gates = result.gates
@@ -494,9 +663,29 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
         st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS[k]}" for k, v in gates.items() if k in GATE_LABELS))
     if getattr(result, "bypassed", False):
         st.warning("⚠️ **Atenção:** Esta missão avançou com gates bloqueados (modo estrito desativado / bypass). Verifique as pendências nos relatórios e na seção 20 do PRD.")
-    tabs = st.tabs(["📘 PRD", "🧭 Produto", "🎨 Design", "🛠️ Dev", "🧠 Aprendizado", "💭 Pensamentos", "📦 Artefatos", "🔍 Estado (JSON)"])
+    # As seções são montadas sob demanda. `st.tabs` renderiza *todas* as abas no servidor —
+    # uma aba fechada custa o mesmo que uma aberta — e isso fazia cada rerun enviar ~2 MB
+    # (estado JSON + 48 expanders de markdown) ao navegador.
+    ABAS = ["📘 PRD", "🧭 Produto", "🎨 Design", "🛠️ Dev", "🧠 Aprendizado", "💭 Pensamentos", "📦 Artefatos", "🔍 Estado (JSON)"]
+    aba = st.segmented_control("Seções", ABAS, default=ABAS[0], key=f"aba_{prefix}", label_visibility="collapsed") or ABAS[0]
 
-    with tabs[0]:
+    def stage_tab(stage_key: str):
+        stage = next(s for s in STAGES if s["key"] == stage_key)
+        shown = False
+        for meta in stage["agents"]:
+            key = meta["output_key"]
+            value = result.state.get(key)
+            if not value or not isinstance(value, str):
+                continue
+            shown = True
+            with st.expander(f"{meta['icon']} {meta['name']}", expanded=False):
+                if meta.get("id") == "A07RevisorOnePager" and "A07RevisorOnePager" not in (result.step_outputs or {}):
+                    st.caption("ℹ️ *One-pager aprovado no gate estrutural sem necessidade de revisão. Exibindo a versão aprovada:*")
+                render_saida_agente(value, output_key=key, prefix=f"{prefix}_{key}")
+        if not shown:
+            st.caption("Nenhuma saída registrada para esta etapa.")
+
+    if aba == ABAS[0]:
         if prd_text:
             meta, body = extrair_metadados_frontmatter(prd_text)
             if meta:
@@ -519,31 +708,15 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
             st.info("O PRD não foi gerado (pipeline bloqueado ou etapa Dev desligada). Abaixo, a saída mais relevante:")
             st.markdown(result.final_output)
 
-    def stage_tab(stage_key: str):
-        stage = next(s for s in STAGES if s["key"] == stage_key)
-        shown = False
-        for meta in stage["agents"]:
-            key = meta["output_key"]
-            value = result.state.get(key)
-            if not value or not isinstance(value, str):
-                continue
-            shown = True
-            with st.expander(f"{meta['icon']} {meta['name']}", expanded=False):
-                if meta.get("id") == "A07RevisorOnePager" and "A07RevisorOnePager" not in (result.step_outputs or {}):
-                    st.caption("ℹ️ *One-pager aprovado no gate estrutural sem necessidade de revisão. Exibindo a versão aprovada:*")
-                st.markdown(value)
-        if not shown:
-            st.caption("Nenhuma saída registrada para esta etapa.")
-
-    with tabs[1]:
+    elif aba == ABAS[1]:
         stage_tab("produto")
-    with tabs[2]:
+    elif aba == ABAS[2]:
         stage_tab("design")
-    with tabs[3]:
+    elif aba == ABAS[3]:
         stage_tab("dev")
-    with tabs[4]:
+    elif aba == ABAS[4]:
         stage_tab("transversal")
-    with tabs[5]:
+    elif aba == ABAS[5]:
         if any(result.step_thoughts.values()):
             for agent, thoughts in result.step_thoughts.items():
                 if thoughts.strip():
@@ -552,7 +725,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
         else:
             st.info("Nenhum pensamento registrado.")
 
-    with tabs[6]:
+    elif aba == ABAS[6]:
         # 1. Diagramas e telas geradas
         links = []
         if links:
@@ -580,7 +753,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
                 f"- `OUTPUT_DIR` em uso: `{get_settings().output_path}`"
             )
         else:
-            manifest = generate_artifact_manifest(output_path)
+            manifest = manifesto_da_sessao(output_path)
 
             if not manifest:
                 st.warning(f"Nenhum artefato legível em `{output_path}`.")
@@ -621,8 +794,39 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
                                     key=f"dl_{prefix}_{cat_idx}_{item_idx}_{clean_path}",
                                 )
 
-    with tabs[7]:
-        st.json({k: v for k, v in result.state.items()})
+    elif aba == ABAS[7]:
+        # O estado é uma cópia integral de todos os artefatos (~1 MB). `st.json` o enviava
+        # inteiro e expandido a cada rerun; aqui vai o índice das chaves e a inspeção de
+        # uma por vez, com o JSON completo disponível por download.
+        chaves = sorted(result.state.keys(), key=lambda k: len(str(result.state.get(k, ""))), reverse=True)
+        total_kb = sum(len(str(v)) for v in result.state.values()) / 1024
+        col_est1, col_est2 = st.columns([2, 2])
+        with col_est1:
+            download_button_lazy(
+                "📥 Baixar estado completo (.json)",
+                lambda: json.dumps(result.state, indent=2, ensure_ascii=False, default=str),
+                file_name=f"estado_{sid[:12]}.json",
+                mime="application/json",
+                key=f"estado_{prefix}",
+            )
+        with col_est2:
+            st.caption(f"{len(chaves)} chaves · {total_kb:.0f} KB no total")
+
+        if chaves:
+            chave = st.selectbox(
+                "Inspecionar chave",
+                chaves,
+                format_func=lambda k: f"{k} · {len(str(result.state.get(k, ''))) / 1024:.1f} KB",
+                key=f"estadokey_{prefix}",
+            )
+            valor = result.state.get(chave)
+            if isinstance(valor, str):
+                LIMITE = 20000
+                st.code(valor[:LIMITE] + ("\n\n… (truncado — use o download acima)" if len(valor) > LIMITE else ""))
+            else:
+                st.json(valor, expanded=False)
+        else:
+            st.caption("Estado vazio.")
 
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
@@ -850,6 +1054,7 @@ Em aberto: não sei se o banco deve ter 8 ou 12 vídeos.""",
 
 
 def main():
+    tratar_retorno_oauth_miro()
     init_session_state()
     opts = render_sidebar()
 
@@ -857,9 +1062,13 @@ def main():
     st.markdown("**Produto → Design → Dev** · pipeline multiagente no Google ADK que transforma um one-pager em um **PRD padrão ouro** pronto para codificação.")
     st.markdown("---")
 
-    tab_chat, tab_prompts = st.tabs(["💬 Pipeline", "📝 Prompts e referências"])
+    # Mesmo motivo das seções de `render_pipeline_details`: com `st.tabs`, o editor de
+    # prompts era montado a cada rerun mesmo fechado — e ele resolve includes, chegando a
+    # ~380 KB de payload por interação.
+    SECOES = ["💬 Pipeline", "📝 Prompts e referências"]
+    secao = st.segmented_control("Seção", SECOES, default=SECOES[0], key="secao_principal", label_visibility="collapsed") or SECOES[0]
 
-    with tab_chat:
+    if secao == SECOES[0]:
         for idx, msg in enumerate(st.session_state.messages):
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
@@ -933,10 +1142,11 @@ def main():
                                 messages=st.session_state.messages,
                                 attached_files=[d.name for d in doc_batch.documents] if doc_batch else [],
                             )
+                            invalidar_cache_sessoes()
                         except Exception as exc:
                             pass
 
-    with tab_prompts:
+    else:
         render_prompt_manager()
 
 

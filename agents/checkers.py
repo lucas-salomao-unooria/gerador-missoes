@@ -350,6 +350,71 @@ class ArtefatosDesignAgent(BaseAgent):
         )
 
 
+class EspelhoMiroAgent(BaseAgent):
+    """Determinístico: espelha no Miro o Mermaid que a jornada e o fluxo já escreveram.
+
+    Separado do `ArtefatosDesignAgent` por dois motivos práticos. O primeiro é
+    idempotência: o board tem de ser o mesmo entre as rodadas de QA, o que exige guardar
+    os identificadores dos widgets e reenviá-los — sem isso, três rodadas produzem três
+    pares de diagramas no mesmo board. O segundo é que a folha de diagramas e o
+    protótipo têm de sair sempre, enquanto o espelho é condicional à conexão.
+
+    O board é **espelho**, nunca fonte: quem manda é o Mermaid versionado. Por isso todo
+    o corpo roda sob `try/except` e, quando o Miro não responde, grava-se a folha de
+    indisponibilidade em vez de nada — artefato ausente vira achado no QA, e uma
+    integração desligada não é defeito da missão.
+    """
+
+    jornada_key: str = "jornada_telas"
+    fluxo_key: str = "fluxo_arestas"
+    links_key: str = "miro_links"
+    board_key: str = "miro_board"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from config import get_settings
+        from tools.miro_cliente import (
+            folha_de_indisponibilidade,
+            montar_folha_de_links,
+            motivo_de_indisponibilidade,
+            publicar_diagramas,
+        )
+
+        state = ctx.session.state
+        delta: Dict[str, Any] = {}
+        titulo = extrair_slug(str(state.get("spec_missao", "") or "")) or "missão"
+
+        jornada = str(state.get(self.jornada_key, "") or "")
+        fluxo = str(state.get(self.fluxo_key, "") or "")
+
+        if not get_settings().is_miro_enabled:
+            delta[self.links_key] = folha_de_indisponibilidade("MIRO_MODE=off", titulo)
+            mensagem = "⚪ Miro desligado — a folha registra a ausência e a esteira segue."
+        elif not (jornada or fluxo):
+            delta[self.links_key] = folha_de_indisponibilidade("jornada e fluxo vazios", titulo)
+            mensagem = "⚠️ Nada a espelhar: jornada e fluxo não produziram diagrama."
+        else:
+            try:
+                dados = publicar_diagramas(titulo, jornada, fluxo, board=state.get(self.board_key))
+                delta[self.links_key] = montar_folha_de_links(dados, titulo)
+                delta[self.board_key] = {"url_board": dados["url_board"], "widgets": dados["widgets"]}
+                mensagem = f"🪞 Miro: {len(dados['diagramas'])} diagrama(s) — board {dados['modo']} em {dados['url_board']}"
+                if dados["ressalvas"]:
+                    mensagem += "\n" + "\n".join(f"⚠️ {r}" for r in dados["ressalvas"])
+            except Exception as exc:  # o espelho é conveniência: nunca derruba a esteira
+                motivo = motivo_de_indisponibilidade(exc)
+                delta[self.links_key] = folha_de_indisponibilidade(motivo, titulo)
+                mensagem = f"⚠️ Não consegui espelhar no Miro: {motivo}"
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=mensagem)]),
+            actions=EventActions(state_delta=delta),
+        )
+
+
 class BnccCheckAgent(BaseAgent):
     """Gate determinístico de conformidade com a BNCC Computação, aplicado à spec.
 
@@ -506,7 +571,7 @@ class DespachoTicketsAgent(BaseAgent):
     ninguém os aplica — o relatório vira documento, não correção.
 
     Este agente fecha o ciclo, e o faz **seletivamente**: reexecutar a etapa inteira
-    para consertar uma string custaria todas as chamadas de Figma de novo. Só roda
+    para consertar uma string custaria todas as chamadas de MCP de novo. Só roda
     quem tem ticket, na ordem de precedência declarada no prompt do gate.
 
     - `mapa`: slug do envelope → `name` do sub-agente de correção, ou **lista** de nomes

@@ -75,6 +75,10 @@ Se você precisar de uma palavra técnica porque não existe outra, explique-a n
 
 {stitch_links?}
 
+**Board no Miro — o mapa da jornada que a coordenação abre sem instalar nada:**
+
+{miro_links?}
+
 **Protótipo navegável — o relatório do que foi construído:**
 
 {prototipo_relatorio?}

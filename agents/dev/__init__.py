@@ -174,16 +174,16 @@ def _agentes_de_retrabalho_banca(**kw) -> list:
     """Instâncias que a banca aciona: quatro de design e duas de dev, com nome próprio."""
     from agents.design import (
         get_copy_revisao_agent,
-        get_fluxo_figjam_agent,
-        get_jornada_figjam_agent,
-        get_wireframes_figma_agent,
+        get_fluxo_agent,
+        get_jornada_agent,
+        get_wireframes_agent,
     )
 
     pares = [
-        (get_jornada_figjam_agent, "A22JornadaRetrabalhoBanca"),
-        (get_fluxo_figjam_agent, "A23FluxoRetrabalhoBanca"),
+        (get_jornada_agent, "A22JornadaRetrabalhoBanca"),
+        (get_fluxo_agent, "A23FluxoRetrabalhoBanca"),
         (get_copy_revisao_agent, "A27CopyRevisaoRetrabalhoBanca"),
-        (get_wireframes_figma_agent, "A26TelasRetrabalhoBanca"),
+        (get_wireframes_agent, "A26TelasRetrabalhoBanca"),
         (get_handoff_dev_agent, "A34HandoffDevRetrabalhoBanca"),
         (get_brief_assets_agent, "A35BriefAssetsRetrabalhoBanca"),
     ]

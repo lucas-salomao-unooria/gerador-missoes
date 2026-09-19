@@ -62,6 +62,7 @@ KNOWN_STATE_KEYS = {
     "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
     "wireframes_cobertura", "copy_strings_revisada", "qa_entregaveis_report", "design_status",
     "prototipo_html", "prototipo_arquivo", "prototipo_relatorio", "stitch_links", "diagramas_html",
+    "miro_links", "miro_board",
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
@@ -90,7 +91,7 @@ EXPECTED_AGENTS = {
     "A12GateFinalProdutoCheck", "A13SpecMissao", "A14BnccCheck", "DesignStage", "A17FechaLacunas", "A18FechaLacunasSplit",
     "A19AmbienteSimulado", "A20AmbienteSimuladoSplit", "A21BriefOficio", "A22Jornada",
     "A23Fluxo", "A24CopyPtBr", "A25Caa", "A26Telas", "A27CopyRevisao", "A30QaEntregaveis",
-    "A28Prototipo", "A29ArtefatosDesign", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets",
+    "A28Prototipo", "A29ArtefatosDesign", "A29bEspelhoMiro", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets",
     "A36TelemetriaCheck", "A38LacunaCheck", "A48PrdCheck",
     "BancaValidacaoDev", "A39BancaProdutoNarrativa", "A40BancaDesignImersao",
     "A41BancaPedagogiaBncc", "A42BancaDadosLgpd", "A43BancaTecnicaArquitetura",
@@ -921,6 +922,140 @@ def test_artefatos_html_e_links():
     print("   ✓ artefatos: protótipo separado do relatório, diagramas montados do Mermaid, projeto do Stitch reconhecido")
 
 
+def test_miro_espelha_o_mermaid_sem_rede():
+    """O espelho publica o mesmo Mermaid da folha HTML e reusa o board entre rodadas."""
+    import re
+
+    from agents.checkers import EspelhoMiroAgent
+    from tools.miro_cliente import ids_dos_widgets, montar_svg
+
+    # O corpo do diagrama vai escapado: sem isso o `-->` de cada aresta viraria tag.
+    svg = montar_svg([{"id": "fluxo", "titulo": "Fluxo & cia", "mermaid": "flowchart TD\n A[Um] --> B[Dois]"}])
+    assert "--&gt;" in svg and "-->" not in svg
+    assert 'data-type="diagram"' in svg and "Fluxo &amp; cia" in svg
+    assert "data-miro-id" not in svg  # primeira publicação não tem id do servidor
+
+    # Com o mapa de ids, o mesmo SVG vira update em vez de duplicata.
+    svg2 = montar_svg([{"id": "fluxo", "titulo": "F", "mermaid": "flowchart TD\n A-->B"}], {"fluxo": "345"})
+    assert 'data-miro-id="345"' in svg2
+    assert ids_dos_widgets('<svg><foreignObject id="fluxo" data-type="diagram" data-miro-id="345">x</foreignObject></svg>') == {"fluxo": "345"}
+
+    chamadas = []
+
+    def _falsa_sessao(*_a, **_kw):
+        class _S:
+            def __enter__(self_):
+                return self_
+
+            def __exit__(self_, *_e):
+                return False
+
+            def chamar(self_, ferramenta, argumentos):
+                chamadas.append((ferramenta, argumentos))
+                if ferramenta == "board_create":
+                    return {"miro_url": "https://miro.com/app/board/uXjTESTE=/", "name": argumentos["name"]}
+                # O servidor devolve o SVG carimbado com um id por elemento; é daí que
+                # sai o mapa que a rodada seguinte reenvia.
+                locais = re.findall(r'<foreignObject id="([^"]+)"', argumentos["svg"])
+                carimbados = "".join(
+                    f'<foreignObject id="{i}" data-type="diagram" data-miro-id="77{n}">m</foreignObject>'
+                    for n, i in enumerate(locais)
+                )
+                return {"success": True, "result_svg": f"<svg>{carimbados}</svg>"}
+
+        return _S()
+
+    import tools.miro_cliente as _mc
+
+    original = _mc.SessaoMiro
+    try:
+        _mc.SessaoMiro = _falsa_sessao
+        root = SequentialAgent(
+            name="Root",
+            sub_agents=[
+                FakeAgent(name="Jornada", key="jornada_telas", text="j\n```mermaid\nflowchart TD\nA-->B\n```"),
+                FakeAgent(name="Fluxo", key="fluxo_arestas", text="f\n```mermaid\nflowchart LR\nC-->D\n```"),
+                EspelhoMiroAgent(name="A29bEspelhoMiro"),
+            ],
+        )
+        _, state = asyncio.run(_run(root))
+    finally:
+        _mc.SessaoMiro = original
+
+    assert "uXjTESTE" in state["miro_links"]
+    assert state["miro_board"]["widgets"] == {"jornada": "770", "fluxo": "771"}
+    assert [c[0] for c in chamadas] == ["board_create", "canvas_create_from_svg"]
+    # o board nasce uma vez: a rodada seguinte atualiza o que já existe
+    assert chamadas[1][1]["svg"].count('data-type="diagram"') == 2
+
+    # Duas passagens na mesma sessão é o que acontece numa rodada de QA com retrabalho:
+    # a segunda tem de ATUALIZAR o board da primeira, não criar outro.
+    chamadas.clear()
+    try:
+        _mc.SessaoMiro = _falsa_sessao
+        root = SequentialAgent(
+            name="Root2",
+            sub_agents=[
+                FakeAgent(name="Jornada", key="jornada_telas", text="j\n```mermaid\nflowchart TD\nA-->B\n```"),
+                EspelhoMiroAgent(name="A29bEspelhoMiro"),
+                EspelhoMiroAgent(name="A29bEspelhoMiroRetrabalho"),
+            ],
+        )
+        _, state = asyncio.run(_run(root))
+    finally:
+        _mc.SessaoMiro = original
+
+    assert [c[0] for c in chamadas] == ["board_create", "canvas_create_from_svg", "canvas_update_from_svg"], chamadas
+    # O id que o servidor devolveu na criação volta no update: é o que evita a duplicata.
+    assert 'data-miro-id="770"' in chamadas[2][1]["svg"]
+    assert chamadas[2][1]["miro_url"] == "https://miro.com/app/board/uXjTESTE=/"
+    print("   ✓ miro: Mermaid escapado, board reusado entre rodadas, ids de widget preservados")
+
+
+def test_miro_indisponivel_nao_derruba_a_esteira():
+    """Integração fora do ar vira folha com a nota, nunca bloqueio nem artefato ausente."""
+    import httpx
+
+    from agents.checkers import EspelhoMiroAgent
+    from tools.miro_cliente import folha_de_indisponibilidade, motivo_de_indisponibilidade
+
+    resposta = httpx.Response(401, request=httpx.Request("POST", "https://mcp.miro.com/"))
+    erro = httpx.HTTPStatusError("401", request=resposta.request, response=resposta)
+    assert "reconecte" in motivo_de_indisponibilidade(erro)
+    assert "limite de uso" in motivo_de_indisponibilidade(
+        httpx.HTTPStatusError("429", request=resposta.request, response=httpx.Response(429, request=resposta.request))
+    )
+    assert "tempo esgotado" in motivo_de_indisponibilidade(httpx.TimeoutException("t"))
+
+    folha = folha_de_indisponibilidade("sem conexão", "missão x")
+    assert "MIRO: indisponível — sem conexão" in folha
+    assert "não é um achado de QA" in folha
+
+    def _explode(*_a, **_kw):
+        raise erro
+
+    import tools.miro_cliente as _mc
+
+    original = _mc.SessaoMiro
+    try:
+        _mc.SessaoMiro = _explode
+        root = SequentialAgent(
+            name="Root",
+            sub_agents=[
+                FakeAgent(name="Jornada", key="jornada_telas", text="j\n```mermaid\nflowchart TD\nA-->B\n```"),
+                EspelhoMiroAgent(name="A29bEspelhoMiro"),
+            ],
+        )
+        _, state = asyncio.run(_run(root))
+    finally:
+        _mc.SessaoMiro = original
+
+    # A folha SAI mesmo na falha: chave vazia em ARTIFACT_FILES vira "ausente" no diagnóstico.
+    assert "MIRO: indisponível" in state["miro_links"]
+    assert "design_status" not in state and "pipeline_bloqueado" not in state
+    print("   ✓ miro: falha vira folha de indisponibilidade, sem bloquear a esteira")
+
+
 def test_desembrulhar_cerca_do_documento():
     """O PRD vem dentro de ```markdown; salvo assim, o .md abre como bloco de código.
 
@@ -975,8 +1110,12 @@ def test_one_pager_pedagogico_em_docx():
         doc = Document(str(destino))
         titulos = [p.text for p in doc.paragraphs if p.style.name.startswith("Heading")]
         texto = "\n".join(p.text for p in doc.paragraphs)
-        assert "O Detetive da Legenda" in titulos and "O que precisamos que você aprove" in titulos
-        assert len(doc.tables) == 1 and doc.tables[0].cell(0, 0).text == "Etapa"
+        # O nome da missão abre o documento na capa da marca; as seções seguem como
+        # `Heading`, que é o que dá navegação no Word e sumário no Google Docs.
+        capa = doc.tables[0].cell(0, 0).text
+        assert "O Detetive da Legenda" in capa and "ONE-PAGER" in capa.upper()
+        assert "O que precisamos que você aprove" in titulos and "Em uma frase" in titulos
+        assert len(doc.tables) == 2 and doc.tables[1].cell(0, 0).text == "Etapa"
         assert [p.text for p in doc.paragraphs if p.style.name == "List Number"]
         assert [p.text for p in doc.paragraphs if p.style.name == "List Bullet"]
         # o envelope de roteamento é da esteira, não do leitor
@@ -989,6 +1128,57 @@ def test_one_pager_pedagogico_em_docx():
 
     assert e_mensagem_de_pulo("⏭️ `A49OnePagerPedagogico` não executado — pipeline bloqueado (x).")
     print("   ✓ one-pager pedagógico: .docx com títulos, listas e tabela; envelope e marcação fora do documento")
+
+
+def test_one_pagers_com_identidade_visual():
+    """Os dois one-pagers saem em `.docx` e `.html` com a marca — são eles que circulam fora do time."""
+    import tempfile
+    import zipfile
+
+    from pipeline.artifacts import exportar_one_pagers
+    from tools import marca
+
+    estado = {
+        "one_pager": "# One-pager — Missão Ilha\n\n## 0. Identificação\n* **Slug:** `exp03ilha`\n",
+        "one_pager_pedagogico": (
+            "# Detetives da Ilha\n\n"
+            "> **O que pedimos a você:** aprovar ou recusar.\n\n"
+            "## As telas\n- Protótipo: [abrir](design/08-prototipo.html)\n"
+        ),
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp)
+        gerados = exportar_one_pagers(estado, run_dir, "exp03ilha")
+        nomes = sorted(p.relative_to(run_dir).as_posix() for p in gerados)
+        assert nomes == [
+            "one-pager-pedagogico.docx",
+            "one-pager-pedagogico.html",
+            "produto/00-one-pager.docx",
+            "produto/00-one-pager.html",
+        ]
+
+        # O `.html` abre sozinho depois de baixado: logotipo embutido, nada em disco ao lado.
+        pagina = (run_dir / "one-pager-pedagogico.html").read_text(encoding="utf-8")
+        assert f"#{marca.NAVY}" in pagina and "data:image/png;base64," in pagina
+        assert "Detetives da Ilha" in pagina and 'href="design/08-prototipo.html"' in pagina
+        assert "<blockquote>" in pagina  # o pedido de aprovação abre o documento
+
+        # O `.docx` carrega a marca: fundo navy na capa, Montserrat nos títulos, link clicável.
+        with zipfile.ZipFile(run_dir / "one-pager-pedagogico.docx") as z:
+            documento = z.read("word/document.xml").decode()
+            assert f'w:fill="{marca.NAVY}"' in documento and "<w:hyperlink" in documento
+            assert marca.FONTE_CORPO in z.read("word/styles.xml").decode()
+            assert any(n.startswith("word/media/") for n in z.namelist())
+
+    # Sem o documento, nada é escrito: a esteira bloqueada não produz capa de missão nenhuma.
+    with tempfile.TemporaryDirectory() as tmp:
+        vazio = exportar_one_pagers(
+            {"one_pager_pedagogico": "⏭️ `A49OnePagerPedagogico` não executado — pipeline bloqueado (x)."},
+            Path(tmp),
+            "exp03ilha",
+        )
+        assert vazio == [] and not list(Path(tmp).iterdir())
+    print("   ✓ one-pagers de produto e pedagógico: .docx e .html com a identidade visual da Unooria")
 
 
 def test_schema_de_ferramenta_saneado():

@@ -8,7 +8,9 @@ from dataclasses import dataclass, field
 import io
 import os
 from typing import Any, List, Optional, Tuple
-from markitdown import MarkItDown
+
+# `markitdown` é importado dentro de `process_document`: ele arrasta o pandas (~320 ms de
+# import) e só é necessário quando alguém anexa um .docx — mas era pago em todo start do app.
 
 MAX_FILES: int = 10
 MAX_TOTAL_BYTES: int = 25 * 1024 * 1024  # 25 Megabytes
@@ -70,6 +72,8 @@ def process_document(file_name: str, file_bytes: bytes) -> ProcessedDocument:
         )
 
     if ext in (".docx", ".doc"):
+        from markitdown import MarkItDown
+
         md = MarkItDown()
         stream = io.BytesIO(file_bytes)
         try:

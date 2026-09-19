@@ -1,14 +1,17 @@
 # 🌌 Gerador de Missões Unooria — Produto → Design → Dev
 
 
-> 📘 **Guia de uso:** [`documentacao-latex/guia-do-gerador-de-missoes.pdf`](documentacao-latex/guia-do-gerador-de-missoes.pdf) — como escrever a entrada (com exemplos bons e ruins), o que cada etapa faz, os seis ciclos de correção e como ler o diagnóstico. É a documentação para **usar** a esteira; este README é a referência técnica do repositório.
+> 📘 **Manual do Gerador de Missões:** [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 55 páginas com identidade visual Unooria. É a documentação para **usar e entender** a esteira; este README é a referência técnica do repositório. Prévia das páginas logo abaixo, em [Manual](#-manual).
+>
+> O manual unifica e substitui os dois documentos anteriores — o [guia de funcionamento](documentacao-latex/guia-do-gerador-de-missoes.pdf) (operação) e o [manual completo e explicativo](manual-gerador-missoes/manual_gerador_missoes.pdf) (fundamentação), mantidos no repositório como histórico.
 
-Pipeline multiagente de nível de produção construído com o **Google ADK (Agent Development Kit)** e modelos **Google Gemini** (com suporte a *Thinking Mode* nativo). O sistema traduz a ideia bruta ou o *one-pager* de uma missão de letramento digital em um **PRD (Product Requirements Document) padrão ouro com 25 seções**, complementado por especificações de design, jornada e fluxo em Mermaid, telas no Stitch, protótipo HTML navegável e validação técnica por banca multidisciplinar, pronto para alimentar agentes de codificação no monorepo `plataforma-unooria`.
+Pipeline multiagente de nível de produção construído com o **Google ADK (Agent Development Kit)** e modelos **Google Gemini** (com suporte a *Thinking Mode* nativo). O sistema traduz a ideia bruta ou o *one-pager* de uma missão de letramento digital em um **PRD (Product Requirements Document) padrão ouro com 25 seções**, complementado por especificações de design, jornada e fluxo em Mermaid (espelhados em board do Miro), telas no Stitch, protótipo HTML navegável e validação técnica por banca multidisciplinar, pronto para alimentar agentes de codificação no monorepo `plataforma-unooria`.
 
 ---
 
 ## 📑 Sumário
 
+- [Manual](#-manual)
 - [Visão Geral e Proposta de Valor](#-visão-geral-e-proposta-de-valor)
 - [Diagramas de Arquitetura](#-diagramas-de-arquitetura)
   - [1. Macroarquitetura End-to-End](#1-macroarquitetura-end-to-end)
@@ -16,18 +19,72 @@ Pipeline multiagente de nível de produção construído com o **Google ADK (Age
   - [3. Ciclo de Gates e Controle Determinístico](#3-ciclo-de-gates-e-controle-determinístico)
 - [Detalhamento das Áreas e Agentes](#-detalhamento-das-áreas-e-agentes)
   - [🧭 Área de Produto](#-área-de-produto)
-  - [🎨 Área de Design & Integração Stitch MCP](#-área-de-design--integração-stitch-mcp)
+  - [🎨 Área de Design & Integrações MCP](#-área-de-design--integrações-mcp)
   - [🛠️ Área de Dev & Banca de Validação](#-área-de-dev--banca-de-validação)
   - [🧠 Área Transversal de Aprendizado](#-área-transversal-de-aprendizado)
 - [Controle de Fluxo Determinístico e Anti-Alucinação](#-controle-de-fluxo-determinístico-e-anti-alucinação)
 - [Processamento Multimodal de Documentos](#-processamento-multimodal-de-documentos)
-- [Integração Stitch MCP (Model Context Protocol)](#-integração-stitch-mcp-model-context-protocol)
+- [Integrações MCP (Model Context Protocol)](#-integrações-mcp-model-context-protocol)
 - [Artefatos Gerados e o PRD Padrão Ouro](#-artefatos-gerados-e-o-prd-padrão-ouro)
 - [Contexto da Plataforma Unooria](#-contexto-da-plataforma-unooria)
 - [Interface Streamlit e Histórico de Sessões](#-interface-streamlit-e-histórico-de-sessões)
 - [Configuração e Variáveis de Ambiente](#-configuração-e-variáveis-de-ambiente)
 - [Guia Operacional: Instalação, Execução e Testes](#-guia-operacional-instalação-execução-e-testes)
 - [Docker e Deploy no Cloud Run](#-docker-e-deploy-no-cloud-run)
+
+---
+
+## 📘 Manual
+
+O manual único da esteira vive em [`manual-unooria/`](manual-unooria/): fonte LaTeX, assets de marca e o PDF.
+Compila com `tectonic -X compile manual-gerador-missoes.tex`.
+
+| | |
+|---|---|
+| 📄 **PDF** | [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 55 páginas |
+| 📝 **Fonte** | [`manual-unooria/manual-gerador-missoes.tex`](manual-unooria/manual-gerador-missoes.tex) |
+| 🎨 **Identidade** | Paleta e tipografia do *brandbook*, documentadas em [`manual-unooria/README.md`](manual-unooria/README.md) |
+
+Sete partes, que não precisam ser lidas na ordem:
+
+| Parte | Título | Responde a |
+|:-:|---|---|
+| I | O que a esteira faz | Que documentos saem, para quem, e o que significa a esteira não abortar. |
+| II | Como usar | O que colocar no briefing, como rodar, como ler o diagnóstico quando algo trava. |
+| III | Como é construída | Por que 54 agentes e não um prompt grande; portões, ciclos e o controle anti-alucinação. |
+| IV | Por que funciona | A jornada de seis etapas, a carga cognitiva e a régua por idade — com os números e as fontes. |
+| V | O que protege | BNCC e o primado do letramento digital, LGPD art. 14, ética de acolhimento. |
+| VI | Os agentes, um a um | O catálogo completo, com o que cada um faz e em que se apoia. |
+| VII | O que a operação ensinou | As correções que só apareceram ao rodar a esteira inteira sobre material real. |
+
+> Toda descrição de agente, portão, variável de ambiente e artefato no manual foi conferida contra o
+> código deste repositório — `agents/`, `config.py`, `prompts/` — e não contra a documentação anterior.
+> Ao mudar a esteira, o catálogo da Parte VI é o primeiro trecho a revisar.
+
+### Prévia
+
+<table>
+<tr>
+<td width="33%"><img width="100%" src="manual-unooria/previews/capa.png" alt="Capa do manual"></td>
+<td width="33%"><img width="100%" src="manual-unooria/previews/o-que-a-esteira-faz.png" alt="O que a esteira faz: entrada, esteira e os seis artefatos de saída"></td>
+<td width="33%"><img width="100%" src="manual-unooria/previews/seis-etapas.png" alt="O framework de seis etapas da missão"></td>
+</tr>
+<tr>
+<td align="center"><sub><b>Capa</b></sub></td>
+<td align="center"><sub><b>Parte I</b> — o que entra e o que sai</sub></td>
+<td align="center"><sub><b>Parte I</b> — as seis etapas da jornada</sub></td>
+</tr>
+<tr>
+<td><img width="100%" src="manual-unooria/previews/mapa-dos-agentes.png" alt="Mapa dos 54 agentes numerados na ordem de execução"></td>
+<td><img width="100%" src="manual-unooria/previews/regua-por-idade.png" alt="A régua por idade: tetos de opções e de duração por faixa"></td>
+<td><img width="100%" src="manual-unooria/previews/catalogo-de-agentes.png" alt="Catálogo de agentes com a natureza da fundamentação de cada regra"></td>
+</tr>
+<tr>
+<td align="center"><sub><b>Parte III</b> — o mapa dos 54 agentes</sub></td>
+<td align="center"><sub><b>Parte IV</b> — a régua por idade, com as fontes</sub></td>
+<td align="center"><sub><b>Parte VI</b> — o catálogo, agente a agente</sub></td>
+</tr>
+</table>
 
 ---
 
@@ -118,6 +175,7 @@ flowchart TD
 
     subgraph INTEGRATION["🔌 Integrações Externas"]
         STITCH_MCP["Stitch MCP Server\n(remote / proxy)"]:::mcpStyle
+        MIRO_MCP["Miro MCP Server\n(OAuth pelo Streamlit)"]:::mcpStyle
         GEMINI_API["Google Gemini API\n(Gemini 3.8 Flash / Thinking Mode)"]:::mcpStyle
     end
 
@@ -125,6 +183,7 @@ flowchart TD
         DIR_OUT["output/YYYYMMDD-HHMMSS-slug/\n(23+ Arquivos Markdown & JSON)"]:::outputStyle
         PRD_FILE["PRD.md (Padrão Ouro)"]:::outputStyle
         DIAGRAMAS["design/09-diagramas.html"]:::outputStyle
+        ESPELHO["Board no Miro\n(espelho de D2 e D3)"]:::outputStyle
         UI_STREAMLIT["Streamlit Web App (app.py)\n(Streaming de Thoughts & Eventos)"]:::outputStyle
     end
 
@@ -132,7 +191,8 @@ flowchart TD
     IN_PDF --> LOOP_P0
     IN_DOCX --> LOOP_P0
     GEMINI_API -.-> PIPELINE
-    STITCH_MCP -.-> D9 & D2 & D3 & D5 & D7
+    STITCH_MCP -.-> D5 & D7
+    MIRO_MCP -.-> ESPELHO
 
     LOOP_P0 -->|Núcleo aprovado| P0B
     P0B --> LOOP_P1
@@ -315,9 +375,9 @@ A área de Produto garante que nenhuma missão siga para concepção visual ou c
 
 ---
 
-### 🎨 Área de Design & Integração Stitch MCP
+### 🎨 Área de Design & Integrações MCP
 
-A área de Design recebe a `spec_missao` e a transforma em especificações de interface e jornada, gerando arquivos reais ou boards no Stitch/Mermaid quando o MCP está conectado.
+A área de Design recebe a `spec_missao` e a transforma em especificações de interface e jornada: diagramas em Mermaid, telas no Stitch e um protótipo HTML navegável. Com o Miro conectado, a jornada e o fluxo ganham também um board espelho.
 
 Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as lacunas que a esteira redescobriria seis vezes (decisões `[D0-n]` com base declarada, pedidos de re-spec `[RS-n]` ao Gate 0) e o **D9** decide o ambiente simulado quando a spec cala (app clonado da lista fechada, app novo ou, em 1º–5º ano, mini-jogo). Cada um emite a spec consolidada dentro do próprio relatório; um `SecaoSplitAgent` determinístico copia essa seção para `spec_missao` (a original do Gate 0 fica em `spec_missao_gate0`), de modo que D1–D7 leem a spec com os blocos 13 e 14 sem saber que D0/D9 existiram. Os status `lacunas_status` e `ambiente_status` são informativos: não há loop de re-spec com o Gate 0 na esteira, então `aguarda_gate` aparece como 🔴 na UI e o pipeline segue com os `RS-n` carimbados como pendentes.
 
@@ -334,6 +394,7 @@ Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as 
 | **Camada CAA** | `D4b` | — | `camada_caa` | Comunicação aumentativa e alternativa: aplica um gate de aplicabilidade (faixa 1º–2º ano, ou spec/briefing que citem pré-leitores, CAA ou PEI) e, quando roda, define símbolo por conceito, modo de resposta alternativo por decisão, pranchas nos escapes e restrições de toque para o wireframe. Fora dessas condições devolve `nao_aplicavel`. |
 | **Wireframes lo-fi no Stitch** | `D5` | `STITCH_TOOLS` | `wireframes_cobertura` | Monta os wireframes em escala de cinza sobre os componentes do Design System do ambiente simulado (`@unooria/design-system`). |
 | **Copy PT-BR (Passada 2)** | `D6` | — | `copy_strings_revisada` | Revisa cada texto inserido no contexto da tela montada, ajustando densidade, quebras de linha e tom de voz. |
+| **Espelho no Miro** | `D7b` | Determinístico | `miro_links` | Publica no Miro, como board navegável, os mesmos diagramas Mermaid de D2 e D3, e grava o link em `design/11-miro-boards.md`. Reusa o board entre as rodadas de retrabalho. Miro fora do ar não interrompe a etapa. |
 | **QA de entregáveis** | `D7` | `STITCH_TOOLS` | `qa_entregaveis_report` | Auditoria rigorosa de conformidade contra a spec original, diff de strings, respeito ao Design System e critérios de ofício O1–O5. |
 | **Veredito de design** | `D7c` | Determinístico | `design_status` | Lê o envelope do QA de design. Com `ESTEIRA_ESTRITA=true`, 🔴 impede dev e PRD; ressalvas entram no PRD. |
 
@@ -343,13 +404,15 @@ Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as 
 
 **Dois entregáveis, dois leitores.** O `PRD.md` é para o agente de codificação: caminhos de arquivo, contratos, tarefas ordenadas. O `one-pager-pedagogico.docx` é para o time pedagógico aprovar a missão **antes** de alguém codificar, e por isso não tem uma linha de jargão. Os dois saem da mesma execução e contam a mesma missão para públicos que não se misturam.
 
+**Os dois one-pagers saem com a identidade visual da Unooria.** O de produto e o pedagógico são os documentos que circulam fora do time — a PM encaminha um, a professora aprova o outro —, então cada um sai também em `.docx` e em `.html`, com capa navy, logotipo, títulos em azul profundo com régua lavanda e tabelas com as cores da marca. O `.docx` abre no Word e no Google Docs para comentar e editar, com as seções como `Heading` (navegação e sumário prontos) e os links do protótipo clicáveis; o `.html` abre no navegador e vira PDF pelo "Imprimir → Salvar como PDF", com logotipo embutido, sem depender de rede nem de LaTeX. A paleta, a tipografia e os logotipos ficam em [`tools/marca.py`](tools/marca.py), na mesma fonte da verdade do manual em LaTeX; a leitura do Markdown, em [`tools/markdown_blocos.py`](tools/markdown_blocos.py). O Markdown continua salvo do lado, porque é dele que os dois saem.
+
 **A missão pede, a plataforma cresce.** Tocar áudio e vídeo já é nativo no iframe. Gravar voz, usar câmera, gravar vídeo ou tela e pedir localização são capacidades que a plataforma ainda não concede, e por isso **não barram a missão**: a spec declara o que a mecânica precisa, o gate marca como pré-requisito de plataforma, e o PRD sai `aprovado-com-pendencias-de-plataforma` (🟡) com a tabela de implementação, o componente de design system a criar, a ADR necessária e a degradação sem o recurso. A tabela das três categorias, com o caminho de cada extensão, está em [`references/capacidades-plataforma.md`](prompts/references/capacidades-plataforma.md). Capturar mídia de criança cobra também o contrato de dados no bloco 9 da spec: onde fica, quanto tempo, quem lê. Decisão contrária já registrada, como WebSocket em vez de polling, continua bloqueando, porque a alternativa existe.
 
-**Design sem Stitch: Google Stitch e artefatos próprios.** O Stitch exige assento Full e OAuth para escrever no arquivo, e o cliente de comunidade que estava configurado só lê. A esteira passou a usar o **Google Stitch** pelo endpoint MCP oficial do Google, autenticado por chave de API. O agente de wireframes cria o projeto, ensina a ele a escala de cinza do lo-fi por `DESIGN.md`, gera uma tela por estado declarado e reporta o identificador do projeto. Um passo determinístico colhe os links das telas, separa o HTML do protótipo do relatório que o acompanha e monta a folha de diagramas a partir do Mermaid que a jornada e o fluxo já escreveram. Saem quatro artefatos por execução: o protótipo navegável, a folha de diagramas, a tabela de telas com o link do projeto e o relatório. O projeto no Stitch nasce privado, e o compartilhamento com outras pessoas é concedido na interface dele; a imagem de cada tela tem endereço público e serve de prévia enquanto isso.
+**Design sem Figma: Google Stitch, Miro e artefatos próprios.** O Figma exigia assento Full e OAuth para escrever no arquivo, e o cliente de comunidade que estava configurado só lia — board que ninguém consegue gerar não é entregável. As telas passaram a sair no **Google Stitch**, pelo endpoint MCP oficial do Google, autenticado por chave de API; a jornada e o fluxo saem em **Mermaid** e são espelhados num board do **Miro**. O agente de wireframes cria o projeto, ensina a ele a escala de cinza do lo-fi por `DESIGN.md`, gera uma tela por estado declarado e reporta o identificador do projeto. Um passo determinístico colhe os links das telas, separa o HTML do protótipo do relatório que o acompanha e monta a folha de diagramas a partir do Mermaid que a jornada e o fluxo já escreveram. Saem cinco artefatos por execução: o protótipo navegável, a folha de diagramas, a tabela de telas com o link do projeto, a folha do board no Miro e o relatório. O projeto no Stitch nasce privado, e o compartilhamento com outras pessoas é concedido na interface dele; a imagem de cada tela tem endereço público e serve de prévia enquanto isso.
 
 **A experiência é um iframe no hub desktop.** O protótipo desenha a casca de aparelho centralizada numa página desktop quando o manifesto declara `viewport`, e a janela cheia quando não declara. Telas de professor e de projeção são sempre desktop. É a diferença entre o protótipo mostrar o que a criança vê num Chromebook e mostrar um celular que não existe.
 
-**Schema de servidor MCP chega quebrado, e o erro aparece longe da causa.** O Stitch publica referências para definições que ele mesmo omite, e o ADK repassa esse schema ao Gemini, que recusa a requisição inteira com um 400 sobre "undefined schema". Pior: o erro estoura no agente que estava no ar quando a lista de ferramentas foi montada, que pode nem usar a ferramenta. [`tools/mcp_saneado.py`](tools/mcp_saneado.py) sanea antes de o schema chegar ao modelo: descarta o schema de resposta, que o modelo não usa para chamar a ferramenta e que ainda carrega enums de centenas de valores, e remenda as referências órfãs no schema de entrada, onde elas são necessárias. Vale para o Stitch e para o Stitch.
+**Schema de servidor MCP chega quebrado, e o erro aparece longe da causa.** O Stitch publica referências para definições que ele mesmo omite, e o ADK repassa esse schema ao Gemini, que recusa a requisição inteira com um 400 sobre "undefined schema". Pior: o erro estoura no agente que estava no ar quando a lista de ferramentas foi montada, que pode nem usar a ferramenta. [`tools/mcp_saneado.py`](tools/mcp_saneado.py) sanea antes de o schema chegar ao modelo: descarta o schema de resposta, que o modelo não usa para chamar a ferramenta e que ainda carrega enums de centenas de valores, e remenda as referências órfãs no schema de entrada, onde elas são necessárias. Vale para qualquer toolset MCP que a esteira venha a montar.
 
 **Contenção do que as ferramentas devolvem.** As respostas das ferramentas MCP entram no mesmo turno do agente, e `include_contents="none"` não as descarta: um agente que monta telas acumula dezenas de respostas de escrita, o dump do arquivo e a captura até o modelo recusar a requisição. Foi assim que a jornada estourou o teto de um milhão de tokens com um prompt de 22 KB. Todo agente com ferramentas nasce com dois limitadores em [`agents/callbacks.py`](agents/callbacks.py): a resposta é podada antes de voltar ao modelo (captura de tela sai do contexto, texto longo é truncado) e cada agente tem orçamento acumulado; esgotado, as chamadas seguintes são recusadas com a instrução de entregar o documento com o que já construiu. Vale mais o markdown com o board pela metade do que a execução inteira morrendo.
 
@@ -395,7 +458,7 @@ A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a mis
 | **Consolidação da banca** | `V3` | Matriz de Decisão | `validacao_dev_report` | Consolida os relatórios em veredito único determinístico (🟢 / 🟡 / 🔴). |
 | **Veredito de dev** | `V3c` | Determinístico | `dev_status` | Lê o veredito da banca. Com `ESTEIRA_ESTRITA=true`, 🔴 impede o PRD e a consolidação diz o que falta e quem resolve (PO, Designer, produto ou decisão de plataforma); 🟡 segue. |
 | **Redator do PRD** | `V4` | Gabarito de 25 seções | `prd_final` | **O grande entregável do pipeline**: PRD completo com contexto arquitetural real da plataforma Unooria. |
-| **One-pager pedagógico** | `V5` | — | `one_pager_pedagogico` | **O entregável para gente.** A missão inteira em linguagem de sala de aula: o que a criança faz e descobre, as seis etapas contadas como história, o que a professora faz antes, durante e depois com as perguntas da roda escritas para ler em voz alta, os links do protótipo e das telas, o que a missão não faz de propósito, o que pode dar errado na sala, e de três a seis perguntas objetivas que só o time pedagógico responde. Proibido jargão: o prompt carrega uma tabela do que não se escreve e do que se escreve no lugar. Salvo em Markdown e em **`.docx`**. |
+| **One-pager pedagógico** | `V5` | — | `one_pager_pedagogico` | **O entregável para gente.** A missão inteira em linguagem de sala de aula: o que a criança faz e descobre, as seis etapas contadas como história, o que a professora faz antes, durante e depois com as perguntas da roda escritas para ler em voz alta, os links do protótipo e das telas, o que a missão não faz de propósito, o que pode dar errado na sala, e de três a seis perguntas objetivas que só o time pedagógico responde. Proibido jargão: o prompt carrega uma tabela do que não se escreve e do que se escreve no lugar. Salvo em Markdown e, com a identidade visual da Unooria, em **`.docx`** e **`.html`** (este imprime em PDF). |
 | **Pendências do PRD** | `V4c` | Determinístico | `prd_status`, `prd_check_report` | Conta os marcadores que o redator deixou no PRD. Lacuna de produto/design/dev marca o PRD como não pronto; só pendência de plataforma deixa 🟡 (`aprovado-com-pendencias-de-plataforma`). |
 
 ---
@@ -451,15 +514,39 @@ O módulo [`tools/doc_parser.py`](file:///Users/lucassalomao/Documents/Unooria/g
 
 ---
 
-## 🎨 Integração Stitch MCP (Model Context Protocol)
+## 🔌 Integrações MCP (Model Context Protocol)
 
-O módulo [`tools/stitch_mcp.py`](tools/stitch_mcp.py) conecta os agentes de design ao **Google Stitch** pelo Model Context Protocol. O MCP do Figma foi removido da esteira: não há cliente oficial que o sirva neste ambiente, e board em ferramenta que ninguém abre não é entregável. Jornada e fluxo saem em **Mermaid** (remontados em `design/09-diagramas.html`), as telas saem no **Stitch** e como especificação em Markdown, e o artefato visual da revisão humana é o **protótipo HTML** (`design/08-prototipo.html`), com CSS e JS embutidos.
+Dois servidores MCP, com papéis distintos. O **Stitch** gera as telas; o **Miro** espelha os diagramas. O MCP do Figma saiu da esteira: não há cliente oficial que o sirva neste ambiente, e board que ninguém consegue gerar não é entregável.
+
+Nenhuma das duas integrações é caminho crítico. Fora do ar, cada uma registra a própria indisponibilidade no artefato e a esteira entrega a missão assim mesmo — porque o que vale é sempre o texto versionado: a especificação de telas em Markdown, e o Mermaid da jornada e do fluxo.
+
+### 🎨 Stitch — as telas (D5 e D7)
+
+O módulo [`tools/stitch_mcp.py`](tools/stitch_mcp.py) entrega o toolset aos agentes de wireframe e de QA. Aqui o modelo **usa ferramentas**: é ele que decide quais telas gerar.
 
 | Modo | Transporte | Quando usar |
 |---|---|---|
 | `remote` | `stitch.googleapis.com/mcp` com `X-Goog-Api-Key` | Padrão quando há `STITCH_API_KEY`. |
 | `proxy` | `npx @_davideast/stitch-mcp` | Quando o schema do servidor precisa de saneamento. |
-| `off` | — | Sem chave: a esteira segue e registra `STITCH: indisponível`. A especificação de telas em Markdown é entregável válido sozinha. |
+| `off` | — | Sem chave: a esteira segue e registra `STITCH: indisponível`. |
+
+### 🪞 Miro — o espelho dos diagramas (D2 e D3)
+
+A jornada e o fluxo saem em **Mermaid**, e é o Mermaid que entra no PRD, nos gates e no `design/09-diagramas.html`. Depois da etapa, um passo determinístico publica esse mesmo bloco como board navegável e grava o link em `design/11-miro-boards.md`. **O board é espelho, nunca fonte**: editá-lo não altera a missão, e a ausência dele não é achado de QA.
+
+Aqui o modelo **não** usa ferramenta nenhuma. Quem publica é [`tools/miro_cliente.py`](tools/miro_cliente.py), chamando o MCP por JSON-RPC fora do turno do agente. O motivo é concreto: deixar um LLM construir board item a item foi o que estourou o teto de contexto no D2 quando os diagramas viviam no FigJam. O espelho aproveita que `canvas_create_from_svg` aceita Mermaid nativo dentro de um `<foreignObject data-type="diagram">` — então não há parser, nem layout a manter.
+
+**Autenticação, e por que ela é diferente de tudo o mais aqui.** `https://mcp.miro.com/` é o seu próprio authorization server: publica `/authorize`, `/token` e `/register`, e só aceita clients que ele mesmo emitiu por registro dinâmico (RFC 7591). O `client_id` de um app criado no dev portal do Miro é **recusado**. Não há, portanto, "cole a chave no `.env`": [`tools/miro_oauth.py`](tools/miro_oauth.py) registra o client, conduz o authorization code com PKCE pelo navegador e guarda os tokens em `.miro_mcp_tokens.json`, renovando sozinho. O fluxo começa no botão **🔗 Conectar ao Miro**, no card de integrações da barra lateral.
+
+Dois detalhes que custam caro quando esquecidos:
+
+- O `MIRO_REDIRECT_URI` precisa bater com o endereço em que o Streamlit atende, e a autorização acontece **na mesma aba** — o PKCE fica em disco justamente porque ir ao Miro e voltar abre uma sessão nova do Streamlit.
+- O Miro **rotaciona o refresh token** a cada renovação: dois processos com o mesmo arquivo de tokens se invalidam mutuamente. No Cloud Run, onde o disco é efêmero e a conexão se perderia a cada deploy, o padrão do `.env.yaml` é `MIRO_MODE: "off"`.
+
+| Modo | Transporte | Quando usar |
+|---|---|---|
+| `remote` | `mcp.miro.com` com OAuth 2.1 + registro dinâmico | Padrão local (`auto` resolve para cá). |
+| `off` | — | Deploy, CI e testes: a folha sai com `MIRO: indisponível` e a esteira segue. |
 
 ## 📦 Artefatos Gerados e o PRD Padrão Ouro
 
@@ -476,6 +563,8 @@ output/20260904-143000-exp-04-fake-news/
 │   ├── 00a-nucleo-narrativo.md        # Seções 0, 1, 3 e 4 (núcleo criativo)
 │   ├── 00b-micro-gate.md              # Spoiler, gap, escolha e job-to-be-done
 │   ├── 00-one-pager.md                # One-pager canônico + brief de escopo
+│   ├── 00-one-pager.docx              # o mesmo, com a identidade visual, para editar
+│   ├── 00-one-pager.html              # o mesmo, para apresentar e imprimir em PDF
 │   ├── 01-gate-estrutural.md          # Relatório de 23 critérios e envelope
 │   ├── 02-avaliacao-pedagogica.md     # Parecer BNCC e mediação docente
 │   ├── 03-experiencia-aluno.md        # Parecer de adequação etária e agência
@@ -494,7 +583,11 @@ output/20260904-143000-exp-04-fake-news/
 │   ├── 04b-camada-caa.md              # Símbolos, modos de resposta e pranchas (se aplicável)
 │   ├── 05-wireframes-cobertura.md     # Cobertura dos wireframes e DS
 │   ├── 06-copy-strings-revisada.md    # Revisão contextualizada de copy
-│   └── 07-qa-entregaveis.md           # Auditoria de fidelidade e ofício
+│   ├── 07-qa-entregaveis.md           # Auditoria de fidelidade e ofício
+│   ├── 08-prototipo.html              # Protótipo navegável, CSS e JS embutidos
+│   ├── 09-diagramas.html              # Jornada e fluxo remontados do Mermaid
+│   ├── 10-stitch-telas.md             # Tabela de telas e link do projeto no Stitch
+│   └── 11-miro-boards.md              # Link do board que espelha jornada e fluxo
 ├── dev/
 │   ├── 01-handoff-dev.md              # User stories fechadas e telemetria
 │   ├── 01b-brief-assets.md            # Especificação para produção de assets
@@ -509,10 +602,8 @@ output/20260904-143000-exp-04-fake-news/
 │   ├── 03-banca-consolidada.md        # Veredito consolidado da banca
 │   └── 04-pendencias-do-prd.md        # V4c: marcadores deixados no PRD
 ├── one-pager-pedagogico.md            # V5: o documento de validação humana
-├── one-pager-pedagogico.docx          # o mesmo, para quem não lê Markdown
-└── Stitch/                             # (Opcional, quando Stitch MCP ativo)
-    ├── Stitch-links.md                 # Sumário de URLs, fileKeys e node IDs
-    └── Stitch-links.json               # Metadados estruturados dos links
+├── one-pager-pedagogico.docx          # o mesmo, com a marca, para quem não lê Markdown
+└── one-pager-pedagogico.html          # o mesmo, para apresentar e imprimir em PDF
 ```
 
 ### As 25 Seções do PRD Padrão Ouro
@@ -529,7 +620,7 @@ O arquivo **`PRD.md`** segue rigorosamente a especificação definida em [`promp
 8. **User Stories (INVEST & 🔒):** Histórias com critérios de aceite inequívocos.
 9. **Requisitos Funcionais (RF) com EARS:** Requisitos com sintaxe formal EARS.
 10. **Requisitos Não-Funcionais (RNF):** Performance, acessibilidade WCAG e disponibilidade.
-11. **UX & UI:** Links do Stitch/Mermaid e mapeamento de componentes do Design System.
+11. **UX & UI:** Links do Stitch, do board no Miro e dos diagramas Mermaid, e mapeamento de componentes do Design System.
 12. **Modelo de Dados (Prisma/PostgreSQL):** Esquema relacional das entidades da missão.
 13. **Contratos de API (Zod/OpenAPI):** DTOs e endpoints documentados.
 14. **Telemetria & Eventos (xAPI):** Dicionário de eventos analíticos e operacionais.
@@ -563,7 +654,8 @@ A aplicação conta com uma interface visual completa em [Streamlit](file:///Use
 
 - **Streaming em Tempo Real:** Acompanhamento da execução nó a nó, com separação clara entre a saída final de cada agente e seu **fluxo de pensamento (*thinking*)**.
 - **Indicadores de Status dos Gates:** Badges coloridas (🟢 Aprovado, 🟡 Aprovado com Ressalvas / Bypass, 🔴 Bloqueado, ⚪ Pendente).
-- **Abas Especializadas:** Navegação entre PRD renderizado, relatórios de Produto, especificações de Design, banca de Dev, registro de Aprendizado e links do Stitch.
+- **Abas Especializadas:** Navegação entre PRD renderizado, relatórios de Produto, especificações de Design, banca de Dev, registro de Aprendizado e os links do Stitch e do Miro.
+- **Card de Integrações:** Na barra lateral, o status do Stitch e do Miro, com o botão que conduz o OAuth do Miro sem sair do app.
 - **Histórico Persistente de Missões:** As execuções salvas em `output/` são carregadas na barra lateral, permitindo revisitar missões anteriores, inspecionar estados passados, excluir execuções ou baixar um **arquivo ZIP completo** com todos os artefatos.
 - **Editor de Prompts com Includes Resolvidos:** Uma aba dedicada permite inspecionar e editar qualquer arquivo `.md` de prompt ou referência, com pré-visualização em tempo real das diretivas `<!-- include: references/... -->` expandidas.
 
@@ -586,9 +678,16 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `BNCC_CHECK_ESTRITO` | `true` | Gate determinístico depois da spec: habilidade inexistente, de outro ano ou sem letramento digital trava a esteira. |
 | `GATE_ESTRUTURAL_MAX_RODADAS` | `3` | Número máximo de ciclos entre o Gate Estrutural e o Revisor do One-pager. |
 | `OUTPUT_DIR` | `output` | Diretório local para gravação persistente dos artefatos. |
-| `STITCH_MCP_MODE` | `auto` | Modo do Stitch MCP: `auto`, `remote`, `desktop`, `stdio` ou `off`. |
-| `STITCH_MCP_REMOTE_URL` | `https://mcp.Stitch.com/mcp` | Endpoint oficial do servidor MCP remoto do Stitch. |
-| `STITCH_MCP_DESKTOP_URL` | `http://127.0.0.1:3845/mcp` | Endpoint local do aplicativo Stitch Desktop. |
+| `STITCH_MCP_MODE` | `auto` | Modo do Stitch MCP: `auto`, `remote`, `proxy` ou `off`. Em `auto`, liga `remote` se houver chave. |
+| `STITCH_API_KEY` | — | Chave do Google Stitch. Sem ela o modo `remote` degrada para desligado, com aviso no log. |
+| `STITCH_MCP_REMOTE_URL` | `https://stitch.googleapis.com/mcp` | Endpoint oficial do servidor MCP do Stitch. |
+| `STITCH_ACCESS_TOKEN` / `STITCH_QUOTA_PROJECT_ID` | — | Alternativa à chave: bearer OAuth e projeto de cota. |
+| `MIRO_MODE` | `auto` | Espelho dos diagramas no Miro: `auto` (= `remote`), `remote` ou `off`. |
+| `MIRO_MCP_URL` | `https://mcp.miro.com/` | Endpoint do MCP do Miro, que também é o authorization server e o `resource` do token. |
+| `MIRO_REDIRECT_URI` | `http://localhost:8501` | Para onde o Miro devolve o código do OAuth. Precisa bater com o endereço do Streamlit. |
+| `MIRO_OAUTH_TOKENS_FILE` | `.miro_mcp_tokens.json` | Onde ficam o client registrado e os tokens. Fora do versionamento. |
+| `MIRO_TEAM_ID` | — | Time onde os boards nascem. Vazio = o time escolhido ao conectar. |
+| `MIRO_MAX_ITENS` | `80` | Teto de itens por board, para não bater no rate limit do Miro. |
 | `GDRIVE_FOLDER_URL` | — | Pasta do Google Drive onde o D0 gravaria o relatório de lacunas como Google Docs. Sem toolset do Drive na esteira, o agente registra `GDOCS: indisponível` e entrega só o Markdown. |
 
 ---
@@ -597,7 +696,7 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 
 ### Pré-requisitos
 - **Python 3.11+**
-- **Node.js 20+** (necessário apenas se for utilizar o Stitch MCP em modo `stdio` via `npx`)
+- **Node.js 20+** (necessário apenas para o Stitch MCP em modo `proxy`, que roda via `npx`)
 
 ### 1. Clonar e Instalar Dependências
 
@@ -658,7 +757,7 @@ print(f"Gates: {resultado.gates}")
 
 ## 🐳 Docker e Deploy no Cloud Run
 
-O projeto conta com um [`Dockerfile`](file:///Users/lucassalomao/Documents/Unooria/gerador-missoes/Dockerfile) otimizado em multi-stage baseado em `python:3.11-slim`, já incluindo Node.js 20 para suporte integral ao Stitch MCP.
+O projeto conta com um [`Dockerfile`](file:///Users/lucassalomao/Documents/Unooria/gerador-missoes/Dockerfile) otimizado em multi-stage baseado em `python:3.11-slim`, já incluindo Node.js 20 para o modo `proxy` do Stitch MCP.
 
 ### Construir e Rodar Localmente com Docker
 
@@ -696,7 +795,7 @@ gcloud run deploy gerador-missoes \
   --memory 2Gi \
   --cpu 2 \
   --set-secrets="GOOGLE_API_KEY=GEMINI_API_KEY:latest" \
-  --set-env-vars="STITCH_MCP_MODE=off,PRODUTO_MODO_ESTRITO=true"
+  --set-env-vars="STITCH_MCP_MODE=off,MIRO_MODE=off,PRODUTO_MODO_ESTRITO=true"
 ```
 
 ---

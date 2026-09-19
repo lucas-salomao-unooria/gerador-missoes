@@ -78,6 +78,10 @@ Você escreve o **PRD padrão ouro da missão**: o documento que um **agente de 
 
 {stitch_links?}
 
+**Board no Miro — espelho navegável da jornada e do fluxo. Leve o link para a seção 10 e para `links` no frontmatter; se a folha disser `MIRO: indisponível`, omita o campo em vez de inventar url:**
+
+{miro_links?}
+
 **Protótipo navegável — relatório do que foi construído. O arquivo `.html` está entre os artefatos da execução:**
 
 {prototipo_relatorio?}
