@@ -6,7 +6,7 @@ Referências do gabarito: `documentacao-latex/secoes/12-experiencias.tex`,
 exp-01/02/03/70.
 
 ## PROD-01 [BLOQUEANTE] — Identificação completa
-A spec declara: slug (`exp-NN-nome`), nome da missão, série(s) alvo no formato
+A spec declara: slug (`expNNefNb`), nome da missão, série(s) alvo no formato
 da plataforma (`["4EF"]`, `["2EM"]`… ou `[]` = transversal a TODAS as séries),
 unidade da trilha, e `publico: estudante`. Sem série definida não há como a api
 aplicar regras por ano (a exp-70 não serve a bolha B em 1EF–5EF porque a API

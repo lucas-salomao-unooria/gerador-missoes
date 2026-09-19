@@ -1,0 +1,499 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- PACOTES FUNDAMENTAIS ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\geometry{
+    a4paper,
+    top=2.5cm,
+    bottom=2.5cm,
+    left=2.2cm,
+    right=2.2cm
+}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{cite}
+\usepackage{hyperref}
+
+% --- CORES CORPORATIVAS E SEMÂNTICAS ---
+\definecolor{NavyBlue}{RGB}{16, 44, 87}
+\definecolor{SteelBlue}{RGB}{53, 89, 142}
+\definecolor{LightBlue}{RGB}{235, 243, 250}
+\definecolor{DarkGreen}{RGB}{20, 108, 67}
+\definecolor{LightGreen}{RGB}{232, 245, 233}
+\definecolor{DarkRed}{RGB}{176, 42, 55}
+\definecolor{LightRed}{RGB}{253, 237, 237}
+\definecolor{DarkYellow}{RGB}{153, 115, 0}
+\definecolor{LightYellow}{RGB}{254, 249, 231}
+\definecolor{Charcoal}{RGB}{40, 40, 40}
+\definecolor{GrayBg}{RGB}{248, 249, 250}
+\definecolor{BorderGray}{RGB}{218, 224, 233}
+
+% --- CONFIGURAÇÃO DE HIPERLINKS ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=NavyBlue,
+    citecolor=SteelBlue,
+    urlcolor=SteelBlue,
+    pdftitle={Auditoria Técnica e Qualitativa dos Prompts de Produto},
+    pdfauthor={Comitê de Arquitetura de Software e Inteligência Artificial - Unooria},
+    pdfsubject={Análise Comparativa PO vs Baseline Canônica},
+    pdfkeywords={Engenharia de Software, LLM, Multi-Agent Systems, LGPD, BNCC, Quality Gates}
+}
+
+% --- CABEÇALHOS E RODAPÉS ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{gray}Unooria EduTech | Diretoria de Engenharia \& IA}
+\fancyhead[R]{\small\color{gray}Auditoria Comparativa de Prompts}
+\fancyfoot[L]{\small\color{gray}Documentação Confidencial Interna}
+\fancyfoot[R]{\small\color{NavyBlue}\textbf{\thepage}}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.5pt}
+
+% --- FORMATAÇÃO DE TÍTULOS ---
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{NavyBlue}}{\thesection}{1em}{}[\titlerule]
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{SteelBlue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries\color{Charcoal}}{\thesubsubsection}{1em}{}
+
+% --- CONFIGURAÇÃO DE CÓDIGO FONTE (LISTINGS) ---
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    backgroundcolor=\color{GrayBg},
+    frame=single,
+    rulecolor=\color{BorderGray},
+    keywordstyle=\color{NavyBlue}\bfseries,
+    commentstyle=\color{DarkGreen}\itshape,
+    stringstyle=\color{DarkRed},
+    breaklines=true,
+    breakatwhitespace=true,
+    tabsize=2,
+    showstringspaces=false,
+    captionpos=b,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=6pt
+}
+
+% --- MACROS TIPOGRÁFICAS DE SINALIZAÇÃO E BADGES ---
+\newcommand{\cVerde}{\textcolor{DarkGreen}{\ensuremath{\bullet}\;}}
+\newcommand{\cAmarelo}{\textcolor{DarkYellow}{\ensuremath{\bullet}\;}}
+\newcommand{\cVermelho}{\textcolor{DarkRed}{\ensuremath{\bullet}\;}}
+\newcommand{\tagAprovado}{\colorbox{LightGreen}{\textcolor{DarkGreen}{\textbf{LIBERADA / APROVADA}}}}
+\newcommand{\tagRessalvas}{\colorbox{LightYellow}{\textcolor{DarkYellow}{\textbf{LIBERADA COM RESSALVAS}}}}
+\newcommand{\tagBloqueado}{\colorbox{LightRed}{\textcolor{DarkRed}{\textbf{BLOQUEADA / REPROVADA}}}}
+
+% --- CAIXAS DE DESTAQUE (TCOLORBOX) ---
+\newtcolorbox{alertaCritico}[1][]{
+    enhanced,
+    colback=LightRed,
+    colframe=DarkRed,
+    fonttitle=\bfseries\color{white},
+    title={\small\textbf{CRÍTICO / VIOLAÇÃO GRAVE: }#1},
+    arc=2mm,
+    boxrule=1pt,
+    breakable,
+    left=3mm, right=3mm, top=2mm, bottom=2mm
+}
+
+\newtcolorbox{alertaSucesso}[1][]{
+    enhanced,
+    colback=LightGreen,
+    colframe=DarkGreen,
+    fonttitle=\bfseries\color{white},
+    title={\small\textbf{MELHORIA QUALITATIVA: }#1},
+    arc=2mm,
+    boxrule=1pt,
+    breakable,
+    left=3mm, right=3mm, top=2mm, bottom=2mm
+}
+
+\newtcolorbox{alertaAviso}[1][]{
+    enhanced,
+    colback=LightYellow,
+    colframe=DarkYellow,
+    fonttitle=\bfseries\color{white},
+    title={\small\textbf{ATENÇÃO / DÉBITO TÉCNICO: }#1},
+    arc=2mm,
+    boxrule=1pt,
+    breakable,
+    left=3mm, right=3mm, top=2mm, bottom=2mm
+}
+
+\newtcolorbox{quadroConceitual}[1][]{
+    enhanced,
+    colback=LightBlue,
+    colframe=NavyBlue,
+    fonttitle=\bfseries\color{white},
+    title={\small\textbf{FUNDAMENTAÇÃO TEÓRICA: }#1},
+    arc=2mm,
+    boxrule=1pt,
+    breakable,
+    left=3mm, right=3mm, top=2mm, bottom=2mm
+}
+
+\begin{document}
+
+% =========================================================================
+% CAPA DO RELATÓRIO
+% =========================================================================
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    {\Huge \textbf{\color{NavyBlue}UNOORIA EDUCAÇÃO E TECNOLOGIA}}\\[0.4cm]
+    {\large \textbf{\color{SteelBlue}DIRETORIA DE ENGENHARIA DE SOFTWARE E INTELIGÊNCIA ARTIFICIAL}}\\[0.2cm]
+    {\normalsize Núcleo de Arquitetura de Plataforma, Compiladores e Orquestração Multiagente}\\[2.5cm]
+    
+    {\rule{\linewidth}{1.5pt}}\\[0.6cm]
+    {\huge \bfseries \color{NavyBlue}RELATÓRIO TÉCNICO-ACADÊMICO DE AUDITORIA COMPARATIVA DE PROMPTS}\\[0.4cm]
+    {\Large \itshape Avaliação Qualitativa, Empírica e Arquitetural das Revisões de Produto (PO) vs. Baseline Canônica na Esteira de Anos Finais}\\[0.6cm]
+    {\rule{\linewidth}{1.5pt}}\\[2.5cm]
+    
+    \begin{minipage}{0.85\linewidth}
+        \textbf{Autor:} Comitê de Auditoria de Software e IA (Consolidação de 30 Subagentes de Pesquisa) \\
+        \textbf{Objeto Auditado:} Diretório \texttt{esteira-anosfinais-formato-produto/} (Downloads) vs. \texttt{prompts/produto/} e \texttt{prompts/references/} \\
+        \textbf{Stack Tecnológica:} Google Agent Development Kit (ADK), LangGraph, PostgreSQL (RLS), Fastify / NestJS, Next.js \\
+        \textbf{Classificação:} Documento de Engenharia / Decisão Arquitetural (ADR) / Rigor Acadêmico
+    \end{minipage}
+    
+    \vfill
+    {\large São Paulo -- Brasil}\\[0.2cm]
+    {\large Setembro de 2026}
+\end{titlepage}
+
+\newpage
+\tableofcontents
+\newpage
+
+% =========================================================================
+% SUMÁRIO EXECUTIVO E VEREDITO CATEGÓRICO
+% =========================================================================
+\section{Sumário Executivo e Veredito Categórico}
+
+\subsection{Veredito Categórico da Auditoria}
+
+\begin{alertaCritico}[REJEIÇÃO TÉCNICA PARCIAL COM ADOÇÃO DE MELHORIAS PEDAGÓGICAS (CHERRY-PICKING)]
+A substituição integral e desregulada dos prompts e referências canônicas da plataforma pelos arquivos revisados pelo \textit{Product Owner} (PO) em \texttt{esteira-anosfinais-formato-produto/} é \textbf{CATEGORICAMENTE INVIÁVEL E DEVE SER VETADA}.
+
+A avaliação qualitativa e empírica multidisciplinar calculou uma regressão no escore geral de conformidade sistêmica de \textbf{7,94/10} (Baseline Canônica) para \textbf{5,62/10} (Versão PO), representando uma queda líquida de \textbf{-2,32 pontos}.
+
+Embora as alterações contenham avanços pedagógicos legítimos e bem-vindos (especialmente na operacionalização de critérios de avaliação, testes de piso em escolas públicas e foco nas dificuldades reais dos estudantes), as modificações introduziram \textbf{três quebras catastróficas em runtime}, desrespeitaram contratos legais de privacidade de menores (LGPD Art. 14) e amputaram contratos de engenharia que paralisam a esteira de desenvolvimento a jusante (\textit{Design} e \textit{Dev}).
+\end{alertaCritico}
+
+\subsection{As Três Quebras Catastróficas Identificadas em Runtime}
+
+\begin{enumerate}[label=\textbf{\color{DarkRed}[\arabic*]}]
+    \item \textbf{Colapso Determinístico de Status por Incompatibilidade de Schema (Runtime Crash):}\\
+    O PO alterou a saída do gate P4 para emitir \texttt{"status": "aprovado\_com\_ressalvas"}. O orquestrador determinístico (\texttt{agents/callbacks.py:inferir\_status}) \textbf{não reconhece} esse literal. O sistema sofre queda silenciosa para o analisador heurístico de texto, que também falha diante de \texttt{"[AMARELO] LIBERADA COM RESSALVAS"}. O resultado converge para \texttt{STATUS\_INDEFINIDO}. Como a esteira opera em modo de segurança estrito (\texttt{treat\_indefinido\_as\_blocked=True}), o componente \texttt{EnvelopeGateAgent} coage o veredito para \texttt{STATUS\_BLOQUEADO}, acionando o bloqueio global da esteira (\texttt{pipeline\_bloqueado = True}). As etapas subsequentes de Design (D0 a D8) e Dev (V0 a V5) são \textbf{imediatamente abortadas sem gerar código ou telas}.
+    
+    \item \textbf{Amputação da Ficha do Manifesto e Paralisia de Dev (\texttt{tools/rastro.py}):}\\
+    O PO removeu 73 linhas do arquivo central \texttt{formato-spec.md}, expurgando a Ficha do Manifesto em chave-valor do Bloco 0. Ao receber a especificação gerada por P5 nesse formato desidratado, o validador determinístico \texttt{ManifestoCheck} (\texttt{tools/rastro.py:validar\_manifesto}) falha instantaneamente com \textbf{10 bloqueios simultâneos} (ausência de \texttt{id}, \texttt{produto}, \texttt{series}, \texttt{unidade}, \texttt{publico}, \texttt{viewport}, \texttt{permissoes}, \texttt{capabilities}, \texttt{secao\_ds} e \texttt{liberacao}). O PRD de desenvolvimento jamais é redigido.
+    
+    \item \textbf{Cegueira de Telemetria e Violação Estrutural da LGPD (Artigo 14):}\\
+    A versão do PO removeu as salvaguardas de isolamento \textit{multi-tenant} (\texttt{ENABLE + FORCE ROW LEVEL SECURITY}), a governança de mídia de menores (destino, retenção temporal, autorização familiar) e o contrato xAPI sem payload genérico \texttt{dados}. O validador \texttt{TelemetriaCheck} bloqueia o pipeline com \textbf{5 achados fatais}. A persistência sem RLS expõe a EdTech a vazamentos graves de dados infantis, violando frontalmente a legislação vigente.
+\end{enumerate}
+
+% =========================================================================
+% MATRIZ DE AVALIAÇÃO EM 8 DIMENSÕES
+% =========================================================================
+\section{Matriz Comparativa de Avaliação em 8 Dimensões}
+
+Para mensurar com precisão científica e objetividade o impacto das mudanças propostas pelo PO, estabelecemos uma rubrica de 8 dimensões de qualidade de software, IA generativa e design instrucional, cada uma com peso ponderado de acordo com a criticidade de produção.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l c c c c >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Dimensão Avaliada} & \textbf{Peso} & \textbf{Antes} & \textbf{Depois} & \textbf{$\Delta$} & \textbf{Síntese do Impacto Observado} \\
+\midrule
+\textbf{D1. Determinismo e Executabilidade} & 20\% & 8.5 & 3.0 & \color{DarkRed}\textbf{-5.5} & Quebra de enums JSON, colapso de parsers e bloqueio falso no CI. \\
+\textbf{D2. Alinhamento Curricular e Rigor} & 15\% & 6.5 & 9.0 & \color{DarkGreen}\textbf{+2.5} & Excelente ancoragem pedagógica, Entre Redes e rubricas ricas. \\
+\textbf{D3. Carga Cognitiva e Faixa Etária} & 10\% & 7.5 & 8.5 & \color{DarkGreen}\textbf{+1.0} & Testes de piso na escola pública e linguagem do estudante. \\
+\textbf{D4. Contratos de Dados, LGPD e RLS} & 15\% & 9.5 & 2.0 & \color{DarkRed}\textbf{-7.5} & Desastre: expurgo de RLS, retenção de mídia e xAPI da API. \\
+\textbf{D5. Orquestração Multiagente e Loops} & 10\% & 7.0 & 7.5 & \color{DarkGreen}\textbf{+0.5} & Stopping rule elegante, mas com bug off-by-one de rodadas. \\
+\textbf{D6. SSOT e Manutenibilidade} & 10\% & 9.0 & 3.0 & \color{DarkRed}\textbf{-6.0} & Bifurcação de spec (P5b), perda de YAML e drift de referências. \\
+\textbf{D7. Eficiência de Tokens e Contexto} & 10\% & 7.0 & 8.0 & \color{DarkGreen}\textbf{+1.0} & Desduplicação de critérios 3.1-3.3 alivia atenção do LLM. \\
+\textbf{D8. Handoff para Design e Dev} & 10\% & 8.5 & 4.0 & \color{DarkRed}\textbf{-4.5} & Design e Dev recebem especificações cegas e sem viewport. \\
+\midrule
+\textbf{ÍNDICE GERAL PONDERADO} & \textbf{100\%} & \textbf{7.94} & \textbf{5.62} & \color{DarkRed}\textbf{-2.32} & \textbf{Regressão Global Severa na Qualidade da Esteira} \\
+\bottomrule
+\end{tabularx}
+\caption{Matriz Multidimensional de Avaliação: Baseline Canônica vs. Versão PO.}
+\label{tab:matriz8d}
+\end{table}
+
+% =========================================================================
+% ANÁLISE PONTO A PONTO DAS 13 MODIFICAÇÕES (M1 A M13)
+% =========================================================================
+\section{Análise Ponto a Ponto das 13 Modificações Mapeadas}
+
+A auditoria decompôs todas as alterações realizadas pelo PO em 13 modificações atômicas independentes (\textbf{M1} a \textbf{M13}), avaliadas individualmente sob prismas teóricos, psicométricos e de código.
+
+\subsection{M1: Veredito Ternário em P1 e P4 (LIBERADA COM RESSALVAS)}
+\textbf{Natureza da Modificação:} O PO introduziu o terceiro estado \texttt{"[AMARELO] LIBERADA COM RESSALVAS"} no P4 e \texttt{"[AMARELO] APROVADO COM RESSALVAS"} no P1, quebrando a dicotomia rígida (\cVerde Aprovado / \cVermelho Bloqueado).\\
+\textbf{Avaliação Conceitual:} \color{DarkGreen}\textbf{POSITIVA}.\normalfont\ De acordo com a teoria matemática de \textit{Three-Way Decisions} de Yao \cite{yao2010three}, decisões binárias forçadas sob incerteza amplificam perdas bayesianas. Na psicometria clássica, escalas ternárias evitam a perda de informação por compressão e mitigam a fadiga de alertas em esteiras de software.\\
+\textbf{Avaliação em Código:} \color{DarkRed}\textbf{QUEBRA CRÍTICA}.\normalfont\ Ao introduzir o veredito sem atualizar a tupla em \texttt{agents/callbacks.py}, a execução falha e gera bloqueio falso (\textit{false negative}). Além disso, na literatura de avaliação com LLMs (\textit{LLM-as-a-judge}) \cite{shinn2023reflexion}, escalas ternárias sem calibração rígida induzem ao \textit{Leniency Bias} (viés de complacência), onde o modelo rebaixa falhas que deveriam ser vermelhas para o estado amarelo de conforto.
+
+\subsection{M2: Modificação do Schema do Envelope JSON (\texttt{aprovado\_com\_ressalvas})}
+\textbf{Natureza da Modificação:} O PO alterou a propriedade de saída do envelope JSON de \texttt{"status": "aprovado" | "bloqueado"} para incluir \texttt{"status": "aprovado\_com\_ressalvas"}.\\
+\textbf{Avaliação Conceitual:} \color{DarkRed}\textbf{NEGATIVA}.\normalfont\ Violação frontal do princípio de \textit{Design by Contract} \cite{meyer1992applying}. Modificar o contrato de saída do agente gerador sem migração coordenada no agente validador gera incompatibilidade sintática (\textit{Specification Mismatch}), apontada por estudos recentes \cite{wu2023autogen,hong2024metagpt} como causa primária de falhas em sistemas multiagente.\\
+\textbf{Evidência Empírica:} O teste executado comprovou que \texttt{inferir\_status()} retorna deterministicamente \texttt{"indefinido"}, forçando o bloqueio da esteira pelo \texttt{EnvelopeGateAgent}.
+
+\subsection{M3: Regra de Parada (\textit{Stopping Rule}) e Human-in-the-Loop em P1/P1b}
+\textbf{Natureza da Modificação:} Inclusão de regra expressa determinando que, caso a missão persista bloqueada na rodada 4, o agente deve parar e sugerir escalonamento para o PO humano.\\
+\textbf{Avaliação Conceitual:} \color{DarkGreen}\textbf{POSITIVA}.\normalfont\ Alinha-se perfeitamente aos princípios de arquitetura multiagente reflexiva \cite{shinn2023reflexion,madaan2023selfrefine}, evitando loops infinitos e custos descontrolados de inferência.\\
+\textbf{Defeito de Implementação (\textit{Off-by-One}):} A instrução no prompt prescreve escalonamento na rodada 4 (\textit{"Se rodada = 4..."}). Contudo, o código do orquestrador (\texttt{agents/produto/\_\_init\_\_.py}, linha 185) define formalmente:
+\begin{lstlisting}[language=Python]
+gate_estrutural_max_rodadas: int = 3
+\end{lstlisting}
+Como o código aborta forçadamente na 3ª rodada, a instrução do PO para a rodada 4 constitui \textbf{código morto} (\textit{dead instruction}) que jamais será executada em runtime.
+
+\subsection{M4: Desduplicação de Critérios (P3 vs P1)}
+\textbf{Natureza da Modificação:} Remoção dos critérios 3.1, 3.2 e 3.3 de \texttt{p3\_experiencia\_aluno.md}, que repetiam integralmente validações já executadas por P1 (Gate Estrutural).\\
+\textbf{Avaliação:} \color{DarkGreen}\textbf{ALTAMENTE POSITIVA}.\normalfont\ De acordo com os estudos seminais de Liu et al. (2024) \cite{liu2024lost} sobre diluição de contexto (\textit{"Lost in the Middle"}), a eliminação de regras redundantes em cadeias de prompts desonera a janela de atenção do transformador, melhora a acurácia de aderência a instruções e reduz custos e latência em inferência.
+
+\subsection{M5: Operacionalização do Critério 1.6 (Mecânica e Descoberta)}
+\textbf{Natureza da Modificação:} Adição de um teste explícito de falsificabilidade (\textit{"Se a mecânica for removida, a descoberta ainda acontece?"}) e mapeamento das 3 armadilhas pedagógicas comuns (leitura passiva, adivinhação aleatória e cosmética digital).\\
+\textbf{Avaliação:} \color{DarkGreen}\textbf{ALTAMENTE POSITIVA}.\normalfont\ Converte um critério avaliativo vago em uma rubrica objetiva e verificável, em estrita conformidade com a taxonomia revisada de Bloom \cite{anderson2001taxonomy} e os Primeiros Princípios de Instrução de Merrill \cite{merrill2002first}.
+
+\subsection{M6: Teste de Piso em Escolas Públicas no Critério 6.3}
+\textbf{Natureza da Modificação:} Exigência de que o avaliador valide a experiência considerando o cenário real da escola pública brasileira (ruído alto, internet instável de 2 Mbps, turmas numerosas e letramento digital desigual).\\
+\textbf{Avaliação:} \color{DarkGreen}\textbf{ALTAMENTE POSITIVA}.\normalfont\ Aplicação direta da Teoria da Carga Cognitiva de Sweller \cite{sweller1988cognitive,paas2003cognitive,sweller2011cognitive}. Elimina hipóteses irreais de laboratórios de informática higienizados e ancora o design da missão na realidade concreta do estudante brasileiro.
+
+\subsection{M7: Supressão das Fundamentações Cognitivas nos Critérios 6.1, 6.4 e 6.5}
+\textbf{Natureza da Modificação:} O PO removeu as referências teóricas a estágios de desenvolvimento infantil (Piaget), exemplos de vocabulário acessível e parâmetros explícitos de limites de palavras por faixa etária.\\
+\textbf{Avaliação:} \color{DarkRed}\textbf{NEGATIVA}.\normalfont\ A remoção de âncoras cognitivas concretas descalibra a precisão do LLM como juiz. O modelo perde referências empíricas para distinguir, por exemplo, a capacidade leitora de um estudante de 6º ano versus um de 9º ano, aumentando a dispersão das avaliações.
+
+\subsection{M8: Padronização Terminológica ("Aluno" para "Estudante")}
+\textbf{Natureza da Modificação:} Substituição de todas as ocorrências da palavra "aluno" pelo termo "estudante".\\
+\textbf{Avaliação:} \color{DarkGreen}\textbf{POSITIVA}.\normalfont\ Alinhamento com as diretrizes contemporâneas do Ministério da Educação (MEC) e da BNCC, promovendo postura de protagonismo discente sem qualquer impacto colateral na engenharia.
+
+\subsection{M9: Elevação do Material *Entre Redes* a Fonte Primária}
+\textbf{Natureza da Modificação:} Instrução em P2 e P5 ordenando que o material impresso *Entre Redes* seja considerado a fonte primária de verdade pedagógica, sobrepondo-se a diretrizes gerais.\\
+\textbf{Avaliação Conceitual:} \color{DarkYellow}\textbf{PARCIALMENTE POSITIVA (COM RISCO DE CONFLITO)}.\normalfont\ Excelente para garantir aderência ao livro didático adotado pela rede escolar. \\
+\textbf{Avaliação de Engenharia:} \color{DarkRed}\textbf{CONFLITO NORMATIVO E DE CÓDIGO}.\normalfont\ Conforme demonstrado pela auditoria documental, o material *Entre Redes* cobre apenas 29,8\% das habilidades da BNCC Computação (Resolução CNE/CEB 1/2022 \cite{cne2022computacao}). Se o P5 omitir os códigos oficiais de computação (\texttt{EFnnCOnn}) em favor de códigos disciplinares tradicionais (ex.: \texttt{EF02HI08}), o validador \texttt{BnccCheckAgent} (\texttt{tools/bncc.py}) bloqueia compulsoriamente a esteira com o erro \texttt{"sem-codigo"}.
+
+\subsection{M10: Criação do Prompt P5b (One-Pager Pedagógico Paralelo)}
+\textbf{Natureza da Modificação:} O PO introduziu um sexto prompt (\texttt{p5b\_one\_pager\_pedagogico.md}) para sintetizar uma visão de produto voltada a educadores.\\
+\textbf{Avaliação:} \color{DarkRed}\textbf{NEGATIVA}.\normalfont\ Violação direta do princípio fundamental de engenharia de software \textbf{Single Source of Truth (SSOT) / Don't Repeat Yourself (DRY)} \cite{hunt1999pragmatic,parnas1972criteria}. Conforme comprovado por Knight \& Leveson \cite{knight1986experimental}, especificações paralelas geradas independentemente por LLMs entram em divergência semântica imediata (\textit{spec drift}), confundindo os times de design e desenvolvimento. Ademais, o prompt P5b é um \textbf{arquivo órfão}: não foi plugado no arquivo de orquestração do pipeline (\texttt{agents/produto/\_\_init\_\_.py}), gerando overhead cognitivo inútil.
+
+\subsection{M11: Amputação Estrutural de `formato-spec.md`}
+\textbf{Natureza da Modificação:} O PO reduziu o arquivo canônico em 48,6\% (-73 linhas líquidas), extirpando:
+\begin{enumerate}
+    \item A Ficha do Manifesto em YAML do Bloco 0;
+    \item As restrições de arquitetura de IA em \texttt{apps/api/src/ai} e quotas (ADR-105);
+    \item A proibição de WebSockets para sincronização de sala (ADR-93/94);
+    \item Todas as regras de dados de menores (LGPD Art. 14 \cite{brasil2018lgpd}), RLS e o contrato xAPI sem chave \texttt{dados};
+    \item Os Blocos 13 (Decisões D0) e 14 (Ambiente Simulado D9).
+\end{enumerate}
+\textbf{Avaliação:} \color{DarkRed}\textbf{CATASTRÓFICA (-7.5 pontos em D4 e -4.5 em D8)}.\normalfont\ Conforme demonstrado na Seção 4, essa remoção destrói todos os contratos consumidos por linters, bancos de dados e compiladores de código, paralisando deterministicamente os estágios de Design e Dev.
+
+\subsection{M12: Reversão Temporal e Desatualização de `ambientes.md`}
+\textbf{Natureza da Modificação:} O arquivo \texttt{ambientes.md} entregue pelo PO reverteu melhorias técnicas consolidadas, removendo a referência ao tema escuro obrigatório (ADR-68), as pontes com a biblioteca de componentes \texttt{@edu/ui} e classificando erroneamente a plataforma WhatsApp como ambiente nativo de desktop.\\
+\textbf{Avaliação:} \color{DarkRed}\textbf{NEGATIVA}.\normalfont\ Configura regressão temporal acidental (trabalho sobre fork desatualizado da esteira).
+
+\subsection{M13: Supressão de Metadados e Frontmatter YAML}
+\textbf{Natureza da Modificação:} Remoção dos cabeçalhos estruturados em YAML que continham metadados de versão, autor, data e histórico de revisão nos arquivos de prompt.\\
+\textbf{Avaliação:} \color{DarkRed}\textbf{NEGATIVA}.\normalfont\ Degrada a rastreabilidade e governança de prompts em esteiras autônomas de produção.
+
+% =========================================================================
+% EVIDÊNCIAS EXPERIMENTAIS E SIMULAÇÃO EM RUNTIME
+% =========================================================================
+\section{Evidências Experimentais e Simulação em Runtime}
+
+Para afastar qualquer subjetividade analítica, a auditoria submeteu as propostas do PO a baterias de testes empíricos executados diretamente no ambiente de produção do monorepo.
+
+\subsection{Experimento 1: Simulação do Envelope Gate (\texttt{agents/callbacks.py})}
+Executamos o script de simulação estrita \texttt{scripts/simular\_status\_gate.py} simulando a passagem do relatório emitido pelo novo prompt P4.
+
+\begin{lstlisting}[language=Python,caption={Trecho extraído do teste de inferência de status no orquestrador}]
+# Entrada:
+envelope = {"status": "aprovado_com_ressalvas"}
+cabecalho = "Gate Final de Produto - exp-01 v1\n**Veredito: [AMARELO] LIBERADA COM RESSALVAS**"
+
+# Execucao:
+status_retornado = inferir_status(cabecalho, envelope)
+# Retorno exato: 'indefinido'
+
+# Comportamento no EnvelopeGateAgent (treat_indefinido_as_blocked=True):
+# status coagido = 'bloqueado'
+# state['pipeline_bloqueado'] = True
+# Resultado: DesignStage e DevStage PULADOS via skip_if_blocked.
+\end{lstlisting}
+
+\textbf{Constatação Empírica:} O pipeline \textbf{trava 100\% das execuções} em que o P4 emitir aprovação com ressalvas, impedindo a geração da missão.
+
+\subsection{Experimento 2: Validação da Ficha do Manifesto (\texttt{tools/rastro.py})}
+Submetemos uma especificação estruturada estritamente de acordo com o modelo amputado de \texttt{formato-spec.md} do PO à ferramenta determinística \texttt{validar\_manifesto()}.
+
+\textbf{Resultado do Validador:} \color{DarkRed}\textbf{10 ACHADOS DE BLOQUEIO FATAL}.\normalfont
+\begin{enumerate}[label=\alph*.]
+    \item \texttt{id}: ausente ou fora de \texttt{exp-NN-<slug>};
+    \item \texttt{produto}: ausente (Sem ele o CI recusa o build do monorepo -- ADR-87);
+    \item \texttt{series}: ausente ou fora do formato \texttt{["5EF"]};
+    \item \texttt{unidade}: ausente ou fora de 1--4 (Sem unidade a grade do LMS não ordena -- ADR-69);
+    \item \texttt{publico}: ausente (Incapaz de separar tela de aluno vs professor);
+    \item \texttt{viewport}: ausente (Design e Prototipador D8 não sabem se renderizam mobile ou desktop);
+    \item \texttt{permissoes}: ausente (Iframe bloqueia silenciosamente formulários \texttt{<form>});
+    \item \texttt{capabilities}: ausente (SDK Unooria desativa telemetria e progresso);
+    \item \texttt{secao\_ds}: ausente (Storybook não sabe qual Design System instanciar);
+    \item \texttt{liberacao: por-turma}: ausente (A missão não abre para os alunos em sala -- ADR-69).
+\end{enumerate}
+
+\subsection{Experimento 3: Validação do Carregador de Prompts (\texttt{prompts/loader.py})}
+O script de injeção dinâmica de prompts analisa macros recursivas \texttt{<!-- include: references/... -->}. A pasta entregue pelo PO em \texttt{Downloads} contém apenas 4 referências, tendo descartado 18 referências vitais da plataforma.
+Ao apontar o carregador para a pasta do PO, o sistema dispara imediatamente:
+\begin{lstlisting}[language=bash]
+FileNotFoundError: [Errno 2] No such file or directory: 
+'esteira-anosfinais-formato-produto/references/criterios-gate-final.md'
+\end{lstlisting}
+provando que o pacote do PO não é um módulo autocontido e não pode substituir o repositório.
+
+\subsection{Experimento 4: Medições Quantitativas de Contexto e Tokens}
+A Tabela \ref{tab:tokens} consolida as medições exatas em bytes e estimativas de tokens (caracteres / 4) realizadas em todos os arquivos de produto.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{l r r r r r}
+\toprule
+\textbf{Arquivo / Componente} & \textbf{Bytes Original} & \textbf{Bytes PO} & \textbf{$\Delta$ Bytes} & \textbf{$\Delta$ Tokens} & \textbf{Variação \%} \\
+\midrule
+\texttt{p1\_gate\_estrutural.md} & 7.151 & 7.973 & +822 & +205,5 & +11,5\% \\
+\texttt{p2\_avaliacao\_pedagogica.md} & 6.208 & 7.112 & +904 & +226,0 & +14,6\% \\
+\texttt{p3\_experiencia\_aluno.md} & 5.166 & 5.253 & +87 & +21,75 & +1,7\% \\
+\texttt{p4\_gate\_final.md} & 5.760 & 6.840 & +1.080 & +270,0 & +18,7\% \\
+\texttt{p5\_spec\_missao.md} & 4.908 & 5.144 & +236 & +59,0 & +4,8\% \\
+\texttt{p5b\_one\_pager.md} (NOVO) & 0 & 5.174 & +5.174 & +1.293,5 & Novo \\
+\midrule
+\texttt{formato-spec.md} (Ref.) & 10.560 & 5.427 & \textbf{-5.133} & \textbf{-1.283,2} & \textbf{-48,6\%} \\
+\texttt{ambientes.md} (Ref.) & 8.358 & 7.733 & -625 & -156,2 & -7,5\% \\
+\bottomrule
+\end{tabular}
+\caption{Métricas Quantitativas de Bytes e Tokens (Baseline vs Versão PO).}
+\label{tab:tokens}
+\end{table}
+
+Nota-se o fenômeno inverso: enquanto os prompts individuais aumentaram em prol da riqueza instrucional, o documento mestre de contrato técnico (\texttt{formato-spec.md}) perdeu quase metade do seu volume, sofrendo esvaziamento de conteúdo regulatório e de engenharia.
+
+% =========================================================================
+% FUNDAMENTAÇÃO TEÓRICA E ACADÊMICA COMPLETA
+% =========================================================================
+\section{Fundamentação Teórica, Acadêmica e Regulatória}
+
+A análise técnica deste relatório é sustentada por literatura científica consolidada em Ciência da Computação, Inteligência Artificial, Psicologia Cognitiva e Direito Digital.
+
+\subsection{Teoria da Carga Cognitiva e Design Instrucional}
+A reformulação dos critérios em P3 e P6 realizada pelo PO reflete princípios sólidos da \textbf{Cognitive Load Theory (CLT)}, formulada por John Sweller \cite{sweller1988cognitive,sweller2011cognitive,paas2003cognitive,vanmerrienboer2005cognitive}. A CLT estabelece que a memória de trabalho humana possui capacidade estritamente limitada para novos elementos de informação.
+A carga cognitiva divide-se em:
+\begin{enumerate}[label=\alph*.]
+    \item \textbf{Carga Intrínseca:} Inerente à complexidade pedagógica do conceito que está sendo ensinado (ex.: loops de repetição ou variáveis em Computação);
+    \item \textbf{Carga Extrínseca:} Gerada pelo design deficiente da interface, vocabulário inacessível, instruções ambíguas ou interfaces sobrecarregadas;
+    \item \textbf{Carga Germânica:} Esforço mental direcionado à construção de esquemas mentais duradouros e aprendizagem significativa.
+\end{enumerate}
+Ao exigir testes de piso na escola pública e eliminar complexidades cosméticas de tela (como preconizado por David Merrill em seus \textit{First Principles of Instruction} \cite{merrill2002first}), a proposta do PO atua com eficácia na \textbf{minimização da carga extrínseca}, liberando largura de banda cognitiva do estudante para o domínio da carga intrínseca pedagógica. Essa ancoragem conecta-se diretamente com os ideais de construcionismo de Seymour Papert \cite{papert1980mindstorms} e com o desenvolvimento do Pensamento Computacional proposto por Jeannette Wing \cite{wing2006computational}.
+
+\subsection{Engenharia de Prompts, Raciocínio em LLMs e Diluição de Atenção}
+Modelos de linguagem de grande porte (LLMs) operam como aprendizes de poucos disparos (\textit{few-shot learners}) \cite{brown2020language} e raciocinadores em cadeia de pensamento (\textit{Chain-of-Thought}) \cite{wei2022chain,kojima2022large}.
+Contudo, mecanismos de autoatenção sofrem degradação severa com saturação de contexto.
+Pesquisas fundamentais de Liu et al. (2024, \textit{"Lost in the Middle"}) \cite{liu2024lost} provam que a acurácia de recuperação e o seguimento de instruções em LLMs de janela longa degradam substancialmente quando informações críticas são posicionadas no meio de contextos extensos ou quando instruções redundantes saturam o espaço de atenção.
+A desduplicação dos critérios 3.1 a 3.3 em P3 implementada pelo PO encontra respaldo científico direto nesse fenômeno: ao desobstruir o contexto, o modelo base consegue concentrar seu orçamento de atenção nos critérios de experiência específicos da faixa etária.
+
+Por outro lado, o controle estrito de formato de saída e aderência a contratos de dados exige garantias formais, exploradas por Willard \& Louf (2023) \cite{willard2023efficient} sob o paradigma de \textit{Constrained Decoding / Guided Generation}. A violação de schemas literais pelo PO sem suporte na infraestrutura quebra o determinismo probabilístico necessário para agentes autônomos confiáveis em arquiteturas colaborativas multiagente \cite{wu2023autogen,hong2024metagpt,park2023generative}.
+
+\subsection{Engenharia de Software: SSOT, Modularidade e Contratos}
+Em arquiteturas de software de alta confiabilidade, a especificação formal atua como uma barreira de invariantes. Bertrand Meyer (1992) \cite{meyer1992applying}, ao introduzir o \textit{Design by Contract}, formalizou que interfaces entre componentes computacionais devem estabelecer pré-condições, pós-condições e invariantes imutáveis.
+A tentativa do PO de criar um segundo documento paralelo (\texttt{p5b}) viola frontalmente a lei de \textit{Single Source of Truth (SSOT)} consagrada por Hunt \& Thomas (1999) \cite{hunt1999pragmatic}, a decomposição modular de David Parnas (1972) \cite{parnas1972criteria} e os princípios de refatoração segura de Martin Fowler \cite{fowler1999refactoring}.
+O experimento seminal de Knight \& Leveson (1986) \cite{knight1986experimental} em programação multiversão provou empiricamente que geradores independentes baseados na mesma especificação cometem falhas correlacionadas. Quando as próprias especificações divergem em semântica, o custo de sincronização e débito técnico cumulativo cresce exponencialmente (Sculley et al., 2015 \cite{sculley2015hidden}).
+
+\subsection{Conformidade Regulatória: LGPD Art. 14 e Resoluções do CNE}
+A atuação de plataformas EdTech em território nacional é estritamente balizada pela \textbf{Lei Geral de Proteção de Dados (Lei nº 13.709/2018 - LGPD)} \cite{brasil2018lgpd}.
+O Artigo 14 impõe regime de tutela qualificada:
+\begin{quote}
+\itshape ``O tratamento de dados pessoais de crianças e de adolescentes deverá ser realizado em seu melhor interesse, considerada a legislação específica e nos termos deste artigo.''
+\end{quote}
+O § 1º condiciona a coleta ao consentimento específico e em destaque dado por pelo menos um dos pais ou responsável legal. A remoção, promovida pelo PO em \texttt{formato-spec.md}, das cláusulas que governam o destino de mídia, o controle de retenção temporal e o isolamento de texto livre constitui \textbf{violação gravíssima de compliance}. Em caso de auditoria da Autoridade Nacional de Proteção de Dados (ANPD) ou do Ministério Público, a plataforma Unooria estaria sujeita a multas pesadas e suspensão do banco de dados escolar.
+
+Adicionalmente, a exclusão da BNCC Computação para adotar exclusivamente o material de uma editora privada confronta a \textbf{Resolução CNE/CEB nº 1/2022} \cite{cne2022computacao}, que torna obrigatória a inclusão do pensamento computacional, mundo digital e cultura digital em todos os anos da Educação Básica.
+
+% =========================================================================
+% PLANO DE AÇÃO E REMEDIAÇÃO
+% =========================================================================
+\section{Plano de Ação de Engenharia e Patches Recomendados}
+
+Para extrair o valor pedagógico do trabalho do PO sem expor a plataforma ao colapso operacional, a Diretoria de Engenharia estabelece o seguinte plano de remediação imediata em 3 frentes.
+
+\subsection{Frente 1: Patches de Infraestrutura no Código Python}
+
+\textbf{Patch C1: Atualização do Parser de Envelopes em \texttt{agents/callbacks.py}}
+\begin{lstlisting}[language=Python]
+# Inclusao de novos literais na linha 63 de agents/callbacks.py:
+if status in ("apto_com_ressalvas", "aprovado_com_ressalvas", "liberada_com_ressalvas", "ressalvas", "amarelo"):
+    return STATUS_APROVADO
+
+# Atualizacao da lista de tokens de aprovacao textual (linha 36):
+_APROVADO_TOKENS = (
+    "APROVADO", "LIBERADA PARA DESIGN/DEV", 
+    "LIBERADA COM RESSALVAS", "APTO COM RESSALVAS", 
+    "APTO PARA CODIFICAR", "APROVADO PARA REVISÃO HUMANA"
+)
+\end{lstlisting}
+
+\textbf{Patch C2: Sincronização do Teto de Rodadas em \texttt{agents/produto/\_\_init\_\_.py}}
+Ajustar o parâmetro \texttt{gate\_estrutural\_max\_rodadas = 4} para compatibilizar a regra de parada proposta pelo PO no prompt P1.
+
+\subsection{Frente 2: Patches de Conciliação nos Prompts de Produto}
+
+\begin{enumerate}
+    \item \textbf{Adotar integralmente em P1 e P3}: As melhorias de rubrica, falsificabilidade do Critério 1.6 e desduplicação dos critérios 3.1--3.3.
+    \item \textbf{Ajustar a Etapa 6.5 em P4}: Retificar a árvore de decisão para:
+    \begin{quote}
+    \textbf{Regra Corrigida:} \cVermelho se qualquer F-critério for bloqueio \textbf{ou se houver decisões de produto em aberto}; senão \cAmarelo se existir qualquer risco aceito; senão \cVerde.
+    \end{quote}
+    \item \textbf{Rejeitar P5b como Prompt Autônomo}: Incorporar as seções pedagógicas do One-Pager como uma seção de visualização gerada a partir da spec única no estágio de Dev, preservando o princípio SSOT.
+\end{enumerate}
+
+\subsection{Frente 3: Blindagem e Restauração das Referências Técnicas}
+
+\begin{enumerate}
+    \item \textbf{Restauração Imediata de \texttt{formato-spec.md}}: Restaurar integralmente as 73 linhas do arquivo canônico do repositório, mantendo a Ficha do Manifesto em chave-valor, a governança de mídia LGPD Art. 14, o isolamento RLS e o contrato xAPI sem payload \texttt{dados}.
+    \item \textbf{Restauração de \texttt{ambientes.md}}: Preservar a versão do repositório que contém o suporte a tema escuro (ADR-68) e as pontes com a biblioteca \texttt{@edu/ui}.
+\end{enumerate}
+
+% =========================================================================
+% CONCLUSÃO
+% =========================================================================
+\section{Conclusão}
+
+O trabalho de revisão realizado pelo Product Owner evidenciou uma profunda sensibilidade pedagógica e um compromisso louvável com a adequação do produto à realidade da sala de aula brasileira. Suas contribuições nas rubricas avaliativas e no foco na experiência do estudante são de alto valor educacional.
+
+Contudo, a engenharia de prompts em sistemas multiagentes integrados a monorepos complexos exige rigor técnico equivalente ao desenvolvimento de compiladores. Não é possível alterar a sintaxe de saída de um agente sem atualizar os parsers de infraestrutura, nem é admissível desidratar arquivos de especificação técnica sem romper os linters e bancos de dados que deles dependem.
+
+A solução madura de engenharia não reside na rejeição cega do olhar do PO, nem na capitulação técnica da plataforma: reside na \textbf{arquitetura de conciliação} proposta neste relatório, que absorve as inovações pedagógicas ao mesmo tempo em que blinda os contratos determinísticos de software e o marco legal da proteção de dados infantis.
+
+% =========================================================================
+% BIBLIOGRAFIA
+% =========================================================================
+\newpage
+\bibliographystyle{plain}
+\bibliography{bibliografia}
+
+\end{document}

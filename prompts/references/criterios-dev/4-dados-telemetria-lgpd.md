@@ -11,21 +11,21 @@ convenção `namespace:slug` + o que vai em `resultado` e `contexto` (objetos
 JSON; **não existe campo `dados`**, chave desconhecida é descartada em
 silêncio), com o significado de cada um (na exp-01: `attempted` = entrou no
 aparelho, `completed` = dossiê visto). E **onde cada medida é lida**: tabela
-`exp_NN_*` + rota do professor — `telemetria_eventos` não tem leitor de missão.
+`expNNefNb_*` + rota do professor — `telemetria_eventos` não tem leitor de missão.
 Esse vocabulário vai no `experiencia.json` (`verbos`) e no README da
 experiência. Spec sem vocabulário = ❌.
 
 ## DAD-02 [BLOQUEANTE] — Canal certo para cada dado
 Dois canais que não se misturam: dado que ALIMENTA a mecânica em tempo real
 (curadoria, adaptação) vai por rota operacional própria, síncrona e
-transacional **do próprio módulo**, gravando em `exp_NN_sessoes` (`POST
+transacional **do próprio módulo**, gravando em `expNNefNb_sessoes` (`POST
 /runs/:id/eventos` é do motor da exp-01, não genérica); dado de análise posterior vai
 pelo SDK (`track` → batch 50/10s → Pub/Sub, sem garantia de ordem). Dwell nunca
 passa pelo Pub/Sub. A spec classifica cada dado num dos dois canais; adaptação
 em tempo real desenhada sobre o canal analítico = ❌.
 
 ## DAD-03 [BLOQUEANTE] — Tabelas com prefixo, tenancy e RLS
-Tabelas novas com prefixo `exp_NN_`, `escola_id NOT NULL` + `ENABLE` +
+Tabelas novas com prefixo `expNNefNb_`, `escola_id NOT NULL` + `ENABLE` +
 `FORCE ROW LEVEL SECURITY` + policy por `app.escola_id` (exceção só
 justificada por escrito); estado como string com CHECK na migration, nunca
 enum; tabela que é

@@ -6,18 +6,19 @@ Cobre:
   1. carga de todos os prompts, resolução de includes e segurança da interpolação do ADK;
   2. montagem da árvore de agentes (Sequential / Parallel / Loop) e unicidade de output_keys;
   3. parsing do envelope JSON e inferência de status;
-  4. controle de fluxo determinístico (EnvelopeGateAgent + skip_if_blocked) com agentes falsos.
+  4. controle de fluxo determinístico (EnvelopeGateAgent + marcar_heranca) com agentes falsos.
 """
 
 from __future__ import annotations
 
+import json
 import asyncio
 import os
 import sys
 from pathlib import Path
 from typing import AsyncGenerator
 
-os.environ.setdefault("FIGMA_MCP_MODE", "off")
+os.environ.setdefault("STITCH_MCP_MODE", "off")
 os.environ.setdefault("GOOGLE_API_KEY", os.getenv("GOOGLE_API_KEY", "teste"))
 
 from google.adk.agents.base_agent import BaseAgent  # noqa: E402
@@ -32,11 +33,14 @@ from google.genai import types  # noqa: E402
 from typing_extensions import override  # noqa: E402
 
 from agents.callbacks import (  # noqa: E402
+    KEY_AGENTES_DEGRADADOS,
+    KEY_DEGRADACOES,
+    KEY_HERANCA,
     KEY_PIPELINE_BLOQUEADO,
     extrair_envelope,
     extrair_slug,
     inferir_status,
-    skip_if_blocked,
+    marcar_heranca,
 )
 from agents.checkers import EnvelopeGateAgent  # noqa: E402
 from agents.produto import MICRO_GATE_MAX_RODADAS  # noqa: E402
@@ -64,26 +68,30 @@ KNOWN_STATE_KEYS = {
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
     "validacao_dev_report", "dev_status", "prd_final", "one_pager_pedagogico", "aprendizado_registro",
     "pipeline_bloqueado", "pipeline_bloqueio_motivo",
+    "diagnostico_execucao", "diagnostico_status", "qa_design_rodada", "tickets_retrabalho",
+    "one_pager_gate0", "spec_rodada", "handoff_rodada", "banca_rodada", "reexecucoes",
+    "degradacoes", "heranca_degradada", "agentes_degradados",
 }
 # Variáveis estáticas substituídas pelo loader antes do ADK
-CONFIG_VARS = {"figma_mcp_mode": "off", "figma_folder_url": "x", "figma_ds_file_key": "k", "figma_ds_v02_file_key": "k2", "gdrive_folder_url": "g", "stitch_mcp_mode": "off", "stitch_project_url_base": "u"}
+CONFIG_VARS = {"gdrive_folder_url": "g", "stitch_mcp_mode": "off", "stitch_project_url_base": "u", "gate_max_rodadas": 3, "qa_max_rodadas": 1}
 
 # Chaves obrigatórias (sem `?`) permitidas por área: existem sempre antes do agente rodar
 REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
 
 EXPECTED_AGENTS = {
-    "NucleoNarrativoLoop", "NucleoNarrativoAgent", "MicroGateAgent", "MicroGateCheck", "SecoesApoioAgent",
-    "GateEstruturalLoop", "GateEstruturalAgent", "GateEstruturalCheck", "RevisorOnePagerAgent",
-    "AvaliacoesParalelas", "AvaliacaoPedagogicaAgent", "ExperienciaAlunoAgent", "GateFinalProdutoAgent",
-    "GateFinalProdutoCheck", "SpecMissaoAgent", "BnccCheck", "DesignStage", "FechaLacunasAgent", "FechaLacunasSplit",
-    "AmbienteSimuladoAgent", "AmbienteSimuladoSplit", "BriefOficioAgent", "JornadaFigJamAgent",
-    "FluxoFigJamAgent", "CopyPtBrAgent", "CaaAgent", "WireframesFigmaAgent", "CopyRevisaoAgent", "QaEntregaveisAgent",
-    "PrototipoAgent", "ArtefatosDesign", "QaEntregaveisCheck", "DevStage", "ManifestoCheck", "HandoffParalelo", "HandoffDevAgent", "BriefAssetsAgent",
-    "TelemetriaCheck", "LacunaCheck", "PrdCheck",
-    "BancaValidacaoDev", "ValidacaoProdutoNarrativaAgent", "ValidacaoDesignImersaoAgent",
-    "ValidacaoPedagogiaBnccAgent", "ValidacaoDadosLgpdAgent", "ValidacaoTecnicaArquiteturaAgent",
-    "ConsolidacaoBancaAgent", "ValidacaoDevCheck", "PrdWriterAgent", "OnePagerPedagogicoAgent",
-    "AprendizadoAgent", "ProdutoStage",
+    "NucleoNarrativoLoop", "A01NucleoNarrativo", "A02MicroGate", "A03MicroGateCheck", "A04SecoesApoio",
+    "GateEstruturalLoop", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager",
+    "AvaliacoesParalelas", "A08AvaliacaoPedagogica", "A09ExperienciaEstudante", "A10GateFinalProduto",
+    "A11GateFinalProdutoCheck", "A12SpecMissao", "A13BnccCheck", "DesignStage", "A16FechaLacunas", "A17FechaLacunasSplit",
+    "A18AmbienteSimulado", "A19AmbienteSimuladoSplit", "A20BriefOficio", "A21Jornada",
+    "A22Fluxo", "A23CopyPtBr", "A24Caa", "A25Telas", "A26CopyRevisao", "A29QaEntregaveis",
+    "A27Prototipo", "A28ArtefatosDesign", "A30QaEntregaveisCheck", "DevStage", "A32ManifestoCheck", "HandoffParalelo", "A33HandoffDev", "A34BriefAssets",
+    "A35TelemetriaCheck", "A37LacunaCheck", "A47PrdCheck",
+    "BancaValidacaoDev", "A38BancaProdutoNarrativa", "A39BancaDesignImersao",
+    "A40BancaPedagogiaBncc", "A41BancaDadosLgpd", "A42BancaTecnicaArquitetura",
+    "A43ConsolidacaoBanca", "A44ValidacaoDevCheck", "A46PrdWriter", "A48OnePagerPedagogico",
+    "A50Aprendizado",
+    "A49Diagnostico", "ProdutoStage",
 }
 
 
@@ -118,7 +126,6 @@ def test_prompts_carregam_e_interpolacao_segura():
 # --------------------------------------------------------------------------- 2. árvore
 def test_arvore_de_agentes():
     settings = get_settings()
-    assert settings.figma_mcp_mode == "off"
     orchestrator = create_mission_orchestrator(stages=["produto", "design", "dev"])
     assert isinstance(orchestrator, SequentialAgent)
 
@@ -133,20 +140,26 @@ def test_arvore_de_agentes():
     missing = EXPECTED_AGENTS - set(names)
     assert not missing, f"agentes ausentes: {missing}"
 
-    # output_keys: únicos exceto one_pager (P0 e revisor escrevem a mesma chave de propósito)
-    keys = [a.output_key for a in llm_agents if a.output_key]
+    # output_keys: únicos exceto one_pager (P0b e revisor escrevem a mesma chave de propósito) e
+    # as instâncias de retrabalho, que reescrevem a chave do agente original — é o que faz a
+    # correção do QA chegar a quem consome o artefato.
+    e_retrabalho = lambda nome: "Retrabalho" in nome
+    keys = [a.output_key for a in llm_agents if a.output_key and not e_retrabalho(a.name)]
     dupes = {k for k in keys if keys.count(k) > 1} - {"one_pager"}
     assert not dupes, f"output_keys duplicados: {dupes}"
+    retrabalho = {a.name: a.output_key for a in llm_agents if e_retrabalho(a.name)}
+    originais = {a.output_key for a in llm_agents if not e_retrabalho(a.name)}
+    assert set(retrabalho.values()) <= originais, "retrabalho tem de reescrever a chave do agente original"
     assert set(keys) <= KNOWN_STATE_KEYS
 
     # loop e paralelos
     micro = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "NucleoNarrativoLoop")
     assert isinstance(micro, LoopAgent) and micro.max_iterations == MICRO_GATE_MAX_RODADAS
-    assert [a.name for a in micro.sub_agents] == ["NucleoNarrativoAgent", "MicroGateAgent", "MicroGateCheck"]
+    assert [a.name for a in micro.sub_agents] == ["A01NucleoNarrativo", "A02MicroGate", "A03MicroGateCheck"]
 
     loop = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "GateEstruturalLoop")
     assert isinstance(loop, LoopAgent) and loop.max_iterations == settings.gate_estrutural_max_rodadas
-    assert [a.name for a in loop.sub_agents] == ["GateEstruturalAgent", "GateEstruturalCheck", "RevisorOnePagerAgent"]
+    assert [a.name for a in loop.sub_agents] == ["A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager"]
     banca = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "BancaValidacaoDev")
     assert len(banca.sub_agents) == 5
 
@@ -162,7 +175,7 @@ def test_arvore_de_agentes():
 
     # etapas desligáveis
     so_produto = create_mission_orchestrator(stages=["produto"])
-    assert [a.name for a in so_produto.sub_agents] == ["ProdutoStage", "AprendizadoAgent"]
+    assert [a.name for a in so_produto.sub_agents] == ["ProdutoStage", "A49Diagnostico", "A50Aprendizado"]
     print(f"   ✓ árvore com {len(names)} agentes ({len(llm_agents)} LLM); loop, paralelos e metadados coerentes")
 
 
@@ -178,12 +191,13 @@ def test_envelope_e_status():
     assert inferir_status("**Veredito: 🟢 LIBERADA PARA DESIGN/DEV**") == "aprovado"
     assert inferir_status("Veredito global: 🟡 APTO COM RESSALVAS", {"status": "aprovado", "veredito": "amarelo"}) == "aprovado"
     assert inferir_status("texto sem veredito") == "indefinido"
-    assert extrair_slug("Slug: exp-12-magia-ou-truque · nome") == "exp-12-magia-ou-truque"
+    assert extrair_slug("Slug: exp06ef4b · nome") == "exp06ef4b"
     print("   ✓ envelope JSON e inferência de status")
 
 
 # --------------------------------------------------------------------------- 4. fluxo determinístico
 class FakeAgent(BaseAgent):
+    extra_delta: dict = {}
     """Agente falso: grava um texto no estado (como faria output_key) e emite um evento."""
 
     key: str
@@ -200,7 +214,7 @@ class FakeAgent(BaseAgent):
             author=self.name,
             branch=ctx.branch,
             content=types.Content(role="model", parts=[types.Part(text=self.text[:40])]),
-            actions=EventActions(state_delta=delta),
+            actions=EventActions(state_delta={**delta, **(self.extra_delta or {})}),
         )
 
 
@@ -216,7 +230,7 @@ async def _run(root: BaseAgent):
     return events, dict(final.state)
 
 
-def test_gate_loop_bloqueia_e_pula_jusante():
+def test_gate_loop_reprova_e_jusante_segue_marcado():
     bloqueado = 'x\n```json\n{"agente": "g", "status": "bloqueado"}\n```'
     loop = LoopAgent(
         name="Loop",
@@ -230,7 +244,7 @@ def test_gate_loop_bloqueia_e_pula_jusante():
             FakeAgent(name="Revisor", key="one_pager", text="revisado", marker_key="revisoes"),
         ],
     )
-    jusante = FakeAgent(name="Jusante", key="spec_missao", text="spec", before_agent_callback=skip_if_blocked)
+    jusante = FakeAgent(name="Jusante", key="spec_missao", text="spec", before_agent_callback=marcar_heranca)
     root = SequentialAgent(name="Root", sub_agents=[loop, jusante])
     events, state = asyncio.run(_run(root))
 
@@ -238,10 +252,14 @@ def test_gate_loop_bloqueia_e_pula_jusante():
     assert state["gate_estrutural_rodada"] == 2
     assert state.get("revisoes") == 1, "o revisor deve rodar só na rodada 1 (na última o check escala)"
     assert state.get(KEY_PIPELINE_BLOQUEADO) is True
-    assert "spec_missao" not in state, "agente a jusante deveria ter sido pulado"
-    textos = [p.text for e in events if e.author == "Jusante" for p in e.content.parts]
-    assert textos and "não executado" in textos[0]
-    print("   ✓ loop bloqueia após 2 rodadas, revisor roda 1x, jusante pulado")
+    # A esteira não aborta mais: o agente a jusante roda, e o que o diagnóstico precisa
+    # (quem reprovou, quem herdou a reprovação) fica registrado no estado.
+    assert state.get("spec_missao") == "spec", "o agente a jusante deve rodar mesmo com gate reprovado"
+    assert "Jusante" in (state.get(KEY_AGENTES_DEGRADADOS) or []), "o jusante deve ficar marcado como degradado"
+    degradacoes = state.get(KEY_DEGRADACOES) or []
+    assert degradacoes and degradacoes[0]["gate"] == "Gate"
+    assert "Gate" in (state.get(KEY_HERANCA) or ""), "o aviso de herança precisa citar o gate que reprovou"
+    print("   ✓ loop reprova após 2 rodadas, revisor roda 1x, jusante segue marcado")
 
 
 def test_gate_loop_aprova_e_segue():
@@ -258,7 +276,7 @@ def test_gate_loop_aprova_e_segue():
             FakeAgent(name="Revisor", key="one_pager", text="revisado", marker_key="revisoes"),
         ],
     )
-    jusante = FakeAgent(name="Jusante", key="spec_missao", text="spec", before_agent_callback=skip_if_blocked)
+    jusante = FakeAgent(name="Jusante", key="spec_missao", text="spec", before_agent_callback=marcar_heranca)
     root = SequentialAgent(name="Root", sub_agents=[loop, jusante])
     _, state = asyncio.run(_run(root))
     assert state["gate_estrutural_status"] == "aprovado"
@@ -276,7 +294,7 @@ def test_modo_nao_estrito_nao_bloqueia():
         sub_agents=[
             FakeAgent(name="Gate", key="gate_final_report", text=bloqueado),
             EnvelopeGateAgent(name="Check", rotulo="Gate final", report_key="gate_final_report", status_key="gate_final_status", block_pipeline_on_fail=False),
-            FakeAgent(name="Jusante", key="spec_missao", text="spec", before_agent_callback=skip_if_blocked),
+            FakeAgent(name="Jusante", key="spec_missao", text="spec", before_agent_callback=marcar_heranca),
         ],
     )
     _, state = asyncio.run(_run(root))
@@ -366,7 +384,7 @@ def test_secao_split_d0_e_d9():
             FakeAgent(name="Spec", key="spec_missao", text=spec_consolidada),
             FakeAgent(name="D9", key="ambiente_simulado", text=d9_ruim),
             get_ambiente_simulado_split(),
-            FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=skip_if_blocked),
+            FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=marcar_heranca),
         ],
     )
     _, state3 = asyncio.run(_run(root3))
@@ -382,7 +400,7 @@ _SPEC_BNCC = """# Spec — Teste v1
 **5EF · unitube · Rubrica v1.17**
 
 ## 0. Identificação de plataforma
-Slug `exp-77-teste` · séries `["5EF"]` · unidade B2 · `publico: estudante` · unitube · viewport 375×812.
+Slug `exp05ef2b` · séries `["5EF"]` · unidade B2 · `publico: estudante` · unitube · viewport 375×812.
 
 ## 1. Descoberta central
 Popularidade não é confiabilidade.
@@ -432,13 +450,15 @@ def test_bncc_validador_e_gate():
         name="Root",
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text=_SPEC_BNCC.format(codigos="EF04CO08 · EF05CO02")),
-            BnccCheckAgent(name="BnccCheck", estrito=True),
-            FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=skip_if_blocked),
+            BnccCheckAgent(name="A13BnccCheck", estrito=True),
+            FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=marcar_heranca),
         ],
     )
     _, state = asyncio.run(_run(root))
     assert state["bncc_status"] == "bloqueado" and state.get(KEY_PIPELINE_BLOQUEADO) is True
-    assert "brief_oficio" not in state and "🔴 BLOQUEADO" in state["bncc_report"]
+    # O currículo reprovado não interrompe o design: ele segue marcado, e o diagnóstico registra.
+    assert state.get("brief_oficio") == "brief" and "🔴 BLOQUEADO" in state["bncc_report"]
+    assert "Jusante" in (state.get(KEY_AGENTES_DEGRADADOS) or [])
     assert state["bncc_status_envelope"]["agente"] == "bncc-check"
 
     # spec conforme: segue
@@ -446,8 +466,8 @@ def test_bncc_validador_e_gate():
         name="Root2",
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text=_SPEC_BNCC.format(codigos="EF05CO08 · EF05CO02")),
-            BnccCheckAgent(name="BnccCheck", estrito=True),
-            FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=skip_if_blocked),
+            BnccCheckAgent(name="A13BnccCheck", estrito=True),
+            FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=marcar_heranca),
         ],
     )
     _, state2 = asyncio.run(_run(root2))
@@ -460,7 +480,7 @@ _SPEC_MANIFESTO_OK = """# Spec — Teste v1
 
 ## 0. Identificação de plataforma
 Nome: Teste. Ficha do manifesto:
-- `id: exp-77-teste`
+- `id: exp05ef2b`
 - `produto: entre-redes`
 - `series: ["5EF"]`
 - `unidade: 2`
@@ -479,9 +499,9 @@ _HANDOFF_OK = """# Handoff — teste
 ## 3. Spec de interação e eventos
 | EVT | verbo | objeto | quando dispara | resultado | contexto | caminho | onde é lido |
 |---|---|---|---|---|---|---|---|
-| EVT-001 | interacted | video:escolha | ao tocar | {"escolhido": true} | {"etapa": 3} | analítico | exp_77_sessoes · GET /teste/turmas/:turmaId/painel |
+| EVT-001 | interacted | video:escolha | ao tocar | {"escolhido": true} | {"etapa": 3} | analítico | exp05ef2b_sessoes · GET /teste/turmas/:turmaId/painel |
 ## 5. Telemetria e entidades
-Tabelas: `exp_77_sessoes`, `exp_77_gates_turma` (polling curto).
+Tabelas: `exp05ef2b_sessoes`, `exp05ef2b_gates_turma` (polling curto).
 """
 
 
@@ -511,7 +531,7 @@ def test_rastro_manifesto_telemetria_lacunas():
 | Evento | Verbo xAPI | Quando dispara | Campos | Canal |
 |---|---|---|---|---|
 | `publicar:postagem:capa` | `scored` | ao tocar Compartilhar | `objeto: "postagem:capa"`, `resultado: { focoId: "B" }`, `contexto: { zoom }` | Operacional |
-Tabelas: `exp_08_gates_turma` lida por polling HTTP de 3s.
+Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
 """
     assert validar_telemetria(layout_livre)["status"] == "aprovado", validar_telemetria(layout_livre)["achados"]
 
@@ -521,7 +541,7 @@ Tabelas: `exp_08_gates_turma` lida por polling HTTP de 3s.
     r_nega = validar_telemetria(nega)
     assert r_nega["status"] == "amarelo", r_nega["achados"]
     assert {a["codigo"] for a in r_nega["achados"]} == {"websocket-mencao"}
-    sem_canal = layout_livre.replace("Tabelas: `exp_08_gates_turma` lida por polling HTTP de 3s.", "Sala sincroniza por WebSocket dedicado.")
+    sem_canal = layout_livre.replace("Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.", "Sala sincroniza por WebSocket dedicado.")
     assert validar_telemetria(sem_canal)["status"] == "bloqueado"
 
     # falso positivo 3: handoff bom REPETE as proibições para o dev não errar. Citar a
@@ -603,21 +623,23 @@ Tabelas: `exp_08_gates_turma` lida por polling HTTP de 3s.
     root = SequentialAgent(
         name="Root",
         sub_agents=[
-            FakeAgent(name="Spec", key="spec_missao", text="# Spec\nSlug: exp-77-teste\n"),
+            FakeAgent(name="Spec", key="spec_missao", text="# Spec\nSlug: exp05ef2b\n"),
             FakeAgent(name="Handoff", key="handoff_dev", text=st["handoff_dev"]),
-            RastroCheckAgent(name="LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
-            FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=skip_if_blocked),
+            RastroCheckAgent(name="A37LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
+            FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=marcar_heranca),
         ],
     )
     _, state = asyncio.run(_run(root))
-    assert state["rastro_lacunas_status"] == "bloqueado" and state.get(KEY_PIPELINE_BLOQUEADO) is True and "prd_final" not in state
+    assert state["rastro_lacunas_status"] == "bloqueado" and state.get(KEY_PIPELINE_BLOQUEADO) is True
+    # O PRD sai mesmo com o rastro reprovado — sem ele não há o que diagnosticar.
+    assert state.get("prd_final") == "prd"
     assert "**design `1`**" in state["rastro_lacunas_report"]
     root2 = SequentialAgent(
         name="Root2",
         sub_agents=[
             FakeAgent(name="Handoff", key="handoff_dev", text="[LACUNA — dono: plataforma] ponte tiktooria"),
-            RastroCheckAgent(name="LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
-            FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=skip_if_blocked),
+            RastroCheckAgent(name="A37LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
+            FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=marcar_heranca),
         ],
     )
     _, state2 = asyncio.run(_run(root2))
@@ -626,17 +648,18 @@ Tabelas: `exp_08_gates_turma` lida por polling HTTP de 3s.
         name="Root3",
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text=_SPEC_MANIFESTO_OK.replace("- `liberacao: por-turma`\n", "")),
-            RastroCheckAgent(name="ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
-            FakeAgent(name="Jusante", key="handoff_dev", text="h", before_agent_callback=skip_if_blocked),
+            RastroCheckAgent(name="A32ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
+            FakeAgent(name="Jusante", key="handoff_dev", text="h", before_agent_callback=marcar_heranca),
         ],
     )
     _, state3 = asyncio.run(_run(root3))
-    assert state3["manifesto_status"] == "bloqueado" and "handoff_dev" not in state3
-    print("   ✓ rastro: manifesto, telemetria e lacunas por dono; bloqueio impede o jusante; só plataforma segue 🟡")
+    # Manifesto reprovado não impede o handoff: ele sai marcado, e o diagnóstico aponta o dono.
+    assert state3["manifesto_status"] == "bloqueado" and state3.get("handoff_dev") == "h"
+    print("   ✓ rastro: manifesto, telemetria e lacunas por dono; reprovado marca a herança e segue; só plataforma 🟡")
 
 
 _BLOCO9_COMPLETO = (
-    "A gravação vai para `exp_77_audios` (escola_id, RLS). Retenção de 60 dias. "
+    "A gravação vai para `exp05ef2b_audios` (escola_id, RLS). Retenção de 60 dias. "
     "Quem lê: só a professora da escola, nunca rota de gestor."
 )
 
@@ -655,7 +678,7 @@ def test_capacidade_de_plataforma_nao_bloqueia():
     def spec(permissoes: str, bloco9: str = "sem coleta de mídia") -> str:
         return (
             "# Spec — Teste v1\n\n## 0. Identificação de plataforma\n"
-            "- `id: exp-77-teste`\n- `produto: entre-redes`\n- `series: [\"2EF\"]`\n"
+            "- `id: exp02ef1b`\n- `produto: entre-redes`\n- `series: [\"2EF\"]`\n"
             "- `unidade: 1`\n- `publico: estudante`\n- `viewport: 375x812`\n"
             f"- `permissoes: {permissoes}`\n"
             "- `capabilities: [telemetria, progresso]`\n- `secao_ds: instanooria`\n"
@@ -699,8 +722,8 @@ def test_capacidade_de_plataforma_nao_bloqueia():
         name="Root",
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text=spec("[forms, microphone]", _BLOCO9_COMPLETO)),
-            RastroCheckAgent(name="ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
-            FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=skip_if_blocked),
+            RastroCheckAgent(name="A32ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
+            FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=marcar_heranca),
         ],
     )
     _, state = asyncio.run(_run(root))
@@ -714,7 +737,7 @@ def test_mensagem_de_pulo_nao_vira_prd():
     """O texto que o ADK grava ao pular um agente não pode virar PRD nem artefato."""
     from pipeline.artifacts import e_mensagem_de_pulo
 
-    pulo = "⏭️ `PrdWriterAgent` não executado — pipeline bloqueado (Ficha do manifesto bloqueado (1 lacuna(s)))."
+    pulo = "⏭️ `A46PrdWriter` não executado — pipeline bloqueado (Ficha do manifesto bloqueado (1 lacuna(s)))."
     assert e_mensagem_de_pulo(pulo)
     assert not e_mensagem_de_pulo("# PRD — missão\n\nconteúdo de verdade")
     assert not e_mensagem_de_pulo(None) and not e_mensagem_de_pulo("")
@@ -735,7 +758,7 @@ def test_mensagem_de_pulo_nao_vira_prd():
 def test_contencao_de_resposta_de_ferramenta():
     """Resposta de ferramenta MCP não pode estourar o teto de contexto do modelo.
 
-    O D2 construindo um board no FigJam acumula dezenas de respostas de `use_figma`,
+    O D5 pedindo tela ao Stitch acumula respostas grandes,
     o dump de `get_figjam` e a imagem de `get_screenshot` no MESMO turno —
     `include_contents="none"` não descarta histórico de chamada de ferramenta. Foi
     assim que um prompt de 22 KB estourou 1.048.576 tokens.
@@ -754,7 +777,7 @@ def test_contencao_de_resposta_de_ferramenta():
         name = "get_screenshot"
 
     class _Ctx:
-        agent_name = "JornadaFigJamAgent"
+        agent_name = "A21Jornada"
 
         def __init__(self):
             self.state = {}
@@ -786,10 +809,10 @@ def test_contencao_de_resposta_de_ferramenta():
     # no meio de uma esteira — então a conferência tem que ser aqui.
     import inspect
 
-    from agents.callbacks import skip_if_blocked
+    from agents.callbacks import marcar_heranca
 
     contrato = {
-        skip_if_blocked: ("before_agent_callback", ["callback_context"]),
+        marcar_heranca: ("before_agent_callback", ["callback_context"]),
         barrar_ferramenta_sem_orcamento: ("before_tool_callback", ["tool", "args", "tool_context"]),
         limitar_resposta_de_ferramenta: ("after_tool_callback", ["tool", "args", "tool_context", "tool_response"]),
     }
@@ -882,14 +905,14 @@ def test_artefatos_html_e_links():
         sub_agents=[
             FakeAgent(name="Jornada", key="jornada_telas", text="j\n```mermaid\nflowchart LR\nA-->B\n```"),
             FakeAgent(name="Proto", key="prototipo_html", text=f"```html\n{doc}\n```\n# Relatório do protótipo"),
-            ArtefatosDesignAgent(name="ArtefatosDesign"),
+            ArtefatosDesignAgent(name="A28ArtefatosDesign"),
         ],
     )
     _, state = asyncio.run(_run(root))
     assert state["prototipo_arquivo"] == doc
     assert "Relatório do protótipo" in state["prototipo_relatorio"]
     assert state["diagramas_html"].count("<section>") == 1
-    assert "prototipo_arquivo" not in "".join(load_prompt(f"design/{n}", **CONFIG_VARS) for n in ["d7_qa_entregaveis.md"])
+    assert "prototipo_arquivo" not in "".join(load_prompt(f"design/{n}", **CONFIG_VARS) for n in ["29_qa_entregaveis.md"])
     print("   ✓ artefatos: protótipo separado do relatório, diagramas montados do Mermaid, projeto do Stitch reconhecido")
 
 
@@ -959,7 +982,7 @@ def test_one_pager_pedagogico_em_docx():
     # a mensagem de pulo não vira documento
     from pipeline.artifacts import e_mensagem_de_pulo
 
-    assert e_mensagem_de_pulo("⏭️ `OnePagerPedagogicoAgent` não executado — pipeline bloqueado (x).")
+    assert e_mensagem_de_pulo("⏭️ `A48OnePagerPedagogico` não executado — pipeline bloqueado (x).")
     print("   ✓ one-pager pedagógico: .docx com títulos, listas e tabela; envelope e marcação fora do documento")
 
 
@@ -1002,7 +1025,7 @@ def test_schema_de_ferramenta_saneado():
     # os dois toolsets da esteira usam a versão saneada
     from tools.mcp_saneado import McpToolsetSaneado
 
-    for modulo in ("tools.stitch_mcp", "tools.figma_mcp"):
+    for modulo in ("tools.stitch_mcp",):
         fonte = Path(modulo.replace(".", "/") + ".py").read_text(encoding="utf-8")
         assert "McpToolsetSaneado(" in fonte and "= McpToolset(" not in fonte, modulo
     assert issubclass(McpToolsetSaneado, __import__("google.adk.tools.mcp_tool.mcp_toolset", fromlist=["McpToolset"]).McpToolset)
@@ -1033,7 +1056,7 @@ if __name__ == "__main__":
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")
     print("=" * 64)
     s = get_settings()
-    print(f"   modelo: {s.gemini_model} · Figma MCP: {s.figma_mcp_mode} · etapas: {s.pipeline_stages} · estrito: {s.produto_modo_estrito}")
+    print(f"   modelo: {s.gemini_model} · Stitch MCP: {s.stitch_mcp_mode} · etapas: {s.pipeline_stages} · estrito: {s.produto_modo_estrito}")
     tests = [
         test_prompts_carregam_e_interpolacao_segura,
         test_arvore_de_agentes,
@@ -1068,3 +1091,274 @@ if __name__ == "__main__":
         print(f"❌ {failed} teste(s) falharam")
         sys.exit(1)
     print("✅ TODOS OS TESTES ESTRUTURAIS PASSARAM")
+
+
+# --------------------------------------------------------------------------- esteira que não aborta
+def test_esteira_nao_aborta_e_emite_diagnostico():
+    """Gate reprovado não pode custar os documentos: é deles que sai o diagnóstico.
+
+    Antes, um 🔴 gravava `pipeline_bloqueado` e todo agente a jusante era pulado — não
+    saía PRD, one-pager nem relatório, e não havia o que analisar. Este teste trava o
+    comportamento novo: tudo é produzido, marcado, e o dossiê explica o que houve.
+    """
+    from agents.checkers import DiagnosticoAgent
+
+    reprovado = 'x\n```json\n{"agente": "g", "status": "bloqueado", "achados": [{"id": "L1", "severidade": "bloqueio", "codigo": "1.4", "agente_responsavel": "gate-estrutural", "resumo": "sem tratamento para quem nao escolhe"}], "precisa_humano": true}\n```'
+    root = SequentialAgent(
+        name="Root",
+        sub_agents=[
+            FakeAgent(name="Gate", key="gate_estrutural_report", text=reprovado),
+            EnvelopeGateAgent(
+                name="Check", rotulo="Gate estrutural", report_key="gate_estrutural_report",
+                status_key="gate_estrutural_status", block_pipeline_on_fail=True,
+            ),
+            FakeAgent(name="Spec", key="spec_missao", text="# Spec\nSlug: exp05ef2b\n", before_agent_callback=marcar_heranca),
+            FakeAgent(name="Prd", key="prd_final", text="# PRD", before_agent_callback=marcar_heranca),
+            FakeAgent(name="OnePager", key="one_pager_pedagogico", text="# One-pager", before_agent_callback=marcar_heranca),
+            DiagnosticoAgent(name="A49Diagnostico", description="d"),
+        ],
+    )
+    _, state = asyncio.run(_run(root))
+
+    # 1. os documentos existem, apesar do gate reprovado
+    for chave in ("spec_missao", "prd_final", "one_pager_pedagogico"):
+        assert state.get(chave), f"{chave} deveria ter sido produzido mesmo com gate reprovado"
+
+    # 2. quem rodou depois da reprovação ficou marcado
+    assert set(state[KEY_AGENTES_DEGRADADOS]) == {"Spec", "Prd", "OnePager"}
+    assert "Gate estrutural" in state[KEY_HERANCA]
+
+    # 3. o diagnóstico saiu e é acionável
+    dossie = state["diagnostico_execucao"]
+    assert "# Diagnóstico da execução" in dossie
+    assert "sem tratamento para quem nao escolhe" in dossie, "o achado precisa aparecer no dossiê"
+    assert "gate-estrutural" in dossie, "o dono do conserto precisa aparecer"
+    assert "Por onde começar" in dossie
+    assert state["diagnostico_status"] == "bloqueado"
+    assert state["diagnostico_status_envelope"]["precisa_humano"] is True
+    print("   ✓ gate reprovado: documentos saem, herança marcada, diagnóstico acionável emitido")
+
+
+def test_status_desconhecido_nao_vira_bloqueio_silencioso():
+    """Valor de envelope fora do vocabulário tem de ser visível, não virar 🔴 sem aviso.
+
+    Foi assim que `aprovado_com_ressalvas` quase derrubou a esteira: os prompts passaram a
+    emiti-lo, `inferir_status` não o conhecia, e a decisão caía numa heurística de texto que
+    testa os tokens de bloqueio primeiro.
+    """
+    from agents.callbacks import inferir_status
+
+    for valor in ("aprovado", "aprovado_com_ressalvas", "apto_com_ressalvas", "amarelo"):
+        assert inferir_status("", {"status": valor}) == "aprovado", f"{valor} deveria contar como aprovado"
+    assert inferir_status("", {"status": "bloqueado"}) == "bloqueado"
+
+    # Todo `status` citado nos prompts precisa ser reconhecido pelo código.
+    import re as _re
+
+    from prompts.loader import get_prompt_raw, list_prompt_files
+
+    vocabulario = set()
+    for area, arquivos in list_prompt_files().items():
+        for nome in arquivos:
+            for linha in get_prompt_raw(f"{area}/{nome}").splitlines():
+                # Só o `status` do envelope raiz: é o que `inferir_status` lê. Objetos
+                # aninhados têm vocabulário próprio (ex.: `respec.status: aceito|negado`).
+                if '"agente"' not in linha:
+                    continue
+                depois = linha.split('"agente"', 1)[1]
+                m = _re.search(r'"status":\s*((?:"[a-z_]+"\s*\|?\s*)+)', depois)
+                if m:
+                    vocabulario |= {v.strip().strip('"') for v in m.group(1).split("|") if v.strip()}
+    ignorados = {"concluido", "devolvido", "nao_aplicavel", "parcial", "segue", "segue_com_pendencias",
+                 "dormente", "existente", "novo", "aguarda_gate", "passa", "nao_passa", "amarelo"}
+    for valor in sorted(vocabulario - ignorados):
+        assert inferir_status("", {"status": valor}) in ("aprovado", "bloqueado"), (
+            f"prompt emite status '{valor}' que inferir_status não reconhece — "
+            "a decisão cairia na heurística de texto"
+        )
+    print(f"   ✓ vocabulário de status dos prompts ({len(vocabulario)} valores) reconhecido pelo código")
+
+
+def test_despacho_reexecuta_so_quem_tem_ticket():
+    """O QA endereça cada ticket a um dono; só esses donos rodam de novo — mais o pósfixo.
+
+    Reexecutar a etapa inteira para consertar uma string custaria todas as chamadas de
+    ferramenta outra vez. E a correção de quem emite dois documentos numa resposta só
+    (D0, D9) precisa do split logo atrás, senão fica presa no relatório.
+    """
+    from agents.checkers import DespachoTicketsAgent
+
+    envelope_qa = {
+        "agente": "qa-entregaveis",
+        "status": "bloqueado",
+        "achados": [
+            {"id": "T1", "severidade": "bloqueio", "codigo": "D4", "agente_responsavel": "copy-ptbr-revisao", "resumo": "texto longo demais"},
+            {"id": "T2", "severidade": "bloqueio", "codigo": "D8", "agente_responsavel": "ambiente-simulado", "resumo": "verbo sem rotulo literal"},
+            {"id": "T3", "severidade": "bloqueio", "codigo": "D2", "agente_responsavel": "gate-estrutural", "resumo": "mecanica da missao"},
+            {"id": "T4", "severidade": "atencao", "codigo": "D1", "agente_responsavel": "jornada", "resumo": "so atencao, nao dispara"},
+        ],
+    }
+    qa = "QA\n```json\n" + json.dumps(envelope_qa, ensure_ascii=False) + "\n```"
+    despacho = DespachoTicketsAgent(
+        name="Despacho",
+        rotulo="Retrabalho",
+        report_key="qa_entregaveis_report",
+        mapa={
+            "copy-ptbr-revisao": ["CopyRet"],
+            "ambiente-simulado": ["AmbienteRet", "AmbienteSplitRet"],
+            "jornada": ["JornadaRet"],
+        },
+        ordem=["ambiente-simulado", "jornada", "copy-ptbr-revisao"],
+        externos=["gate-estrutural"],
+        posfixo=["PrototipoRet"],
+        sub_agents=[
+            FakeAgent(name="AmbienteRet", key="ambiente_simulado", text="amb", marker_key="n_amb"),
+            FakeAgent(name="AmbienteSplitRet", key="spec_missao", text="spec com bloco 14", marker_key="n_split"),
+            FakeAgent(name="JornadaRet", key="jornada_telas", text="jor", marker_key="n_jornada"),
+            FakeAgent(name="CopyRet", key="copy_strings_revisada", text="copy", marker_key="n_copy"),
+            FakeAgent(name="PrototipoRet", key="prototipo_html", text="html", marker_key="n_proto"),
+        ],
+    )
+    root = SequentialAgent(
+        name="Root",
+        sub_agents=[FakeAgent(name="Qa", key="qa_entregaveis_report", text=qa), despacho],
+    )
+    _, state = asyncio.run(_run(root))
+
+    # os dois donos de bloqueio rodaram; o split do ambiente veio junto
+    assert state.get("n_amb") == 1 and state.get("n_split") == 1, "cadeia do ambiente incompleta"
+    assert state.get("n_copy") == 1
+    # severidade 'atencao' não dispara retrabalho
+    assert state.get("n_jornada") is None, "ticket de atenção não deve reexecutar ninguém"
+    # o pósfixo roda porque houve retrabalho
+    assert state.get("n_proto") == 1, "o protótipo precisa ser refeito quando algo de que ele deriva mudou"
+    print("   ✓ despacho seletivo: cadeia completa, atenção não dispara, pósfixo roda, externo não")
+
+
+def test_despacho_nao_roda_quando_aprovado():
+    from agents.checkers import DespachoTicketsAgent
+
+    qa = "QA\n```json\n" + json.dumps({"agente": "qa-entregaveis", "status": "aprovado", "achados": []}) + "\n```"
+    despacho = DespachoTicketsAgent(
+        name="Despacho", rotulo="Retrabalho", report_key="qa_entregaveis_report",
+        mapa={"caa": ["CaaRet"]}, ordem=["caa"], posfixo=["ProtoRet"],
+        sub_agents=[
+            FakeAgent(name="CaaRet", key="camada_caa", text="caa", marker_key="n_caa"),
+            FakeAgent(name="ProtoRet", key="prototipo_html", text="h", marker_key="n_proto"),
+        ],
+    )
+    root = SequentialAgent(name="Root", sub_agents=[FakeAgent(name="Qa", key="qa_entregaveis_report", text=qa), despacho])
+    _, state = asyncio.run(_run(root))
+    assert state.get("n_caa") is None and state.get("n_proto") is None
+    print("   ✓ QA aprovado: nenhum retrabalho, nem o pósfixo")
+
+
+def test_orcamento_global_freia_o_retrabalho():
+    """Os tetos por loop somam; o orçamento global é o freio da conta total."""
+    from agents.checkers import KEY_REEXECUCOES, DespachoTicketsAgent
+
+    envelope = {
+        "agente": "qa-entregaveis", "status": "bloqueado",
+        "achados": [{"id": "T1", "severidade": "bloqueio", "codigo": "D1", "agente_responsavel": "caa", "resumo": "x"}],
+    }
+    qa = "QA\n```json\n" + json.dumps(envelope) + "\n```"
+    despacho = DespachoTicketsAgent(
+        name="Despacho", rotulo="Retrabalho", report_key="qa_entregaveis_report",
+        mapa={"caa": ["CaaRet"]}, ordem=["caa"],
+        sub_agents=[FakeAgent(name="CaaRet", key="camada_caa", text="caa", marker_key="n_caa")],
+    )
+    # estado já no limite do orçamento
+    gasto = FakeAgent(name="Gasto", key="_tmp", text="x")
+    gasto.extra_delta = {KEY_REEXECUCOES: get_settings().orcamento_reexecucoes}
+    root = SequentialAgent(
+        name="Root",
+        sub_agents=[FakeAgent(name="Qa", key="qa_entregaveis_report", text=qa), gasto, despacho],
+    )
+    _, state = asyncio.run(_run(root))
+    assert state.get("n_caa") is None, "com o orçamento estourado, nenhum agente pode ser reexecutado"
+    print("   ✓ orçamento global esgotado: retrabalho vira pendência humana, esteira segue")
+
+
+def test_loop_da_spec_corrige_na_segunda_rodada():
+    """O gate determinístico reprova, o autor reescreve, o gate confere de novo — sem humano.
+
+    É o padrão que a Onda 2 generalizou: quem julga não conserta, quem conserta não julga,
+    e quem decide repetir é o orquestrador — não uma instrução em prosa dentro do prompt.
+    """
+    from agents.checkers import BnccCheckAgent, SaidaDeLoopAgent
+
+    class SpecQueAprende(BaseAgent):
+        """Primeira passada com código inexistente; na segunda, lê o relatório e corrige."""
+
+        @override
+        async def _run_async_impl(self, ctx) -> AsyncGenerator[Event, None]:
+            state = ctx.session.state
+            corrigindo = bool(str(state.get("bncc_report") or ""))
+            codigo = "EF02CO05" if corrigindo else "EF02CO99"
+            spec = (
+                "# Spec — exp02ef1b\n\n## 0. Identificação de plataforma\n"
+                "- `id: exp02ef1b`\n- `series: [\"2EF\"]`\n\n"
+                f"## 11. Currículo\n| {codigo} | Cultura Digital | momento em tela |\n"
+            )
+            yield Event(
+                invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                content=types.Content(role="model", parts=[types.Part(text="spec")]),
+                actions=EventActions(state_delta={
+                    "spec_missao": spec,
+                    "n_spec": int(state.get("n_spec", 0) or 0) + 1,
+                }),
+            )
+
+    loop = LoopAgent(
+        name="SpecLoop",
+        max_iterations=2,
+        sub_agents=[
+            SpecQueAprende(name="Spec", description="spec"),
+            BnccCheckAgent(name="A13BnccCheck", description="bncc", estrito=True),
+            SaidaDeLoopAgent(
+                name="A15SpecCheck", description="saida", rotulo="Spec",
+                status_keys=["bncc_status"], rodada_key="spec_rodada", max_rounds=2,
+            ),
+        ],
+    )
+    _, state = asyncio.run(_run(SequentialAgent(name="Root", sub_agents=[loop])))
+
+    assert state["n_spec"] == 2, "a spec tinha de ser reescrita uma vez"
+    assert state["bncc_status"] == "aprovado", "a segunda versão tinha de passar no gate"
+    assert state["spec_rodada"] == 2
+    assert not state.get(KEY_PIPELINE_BLOQUEADO), "corrigido dentro do loop não deixa resíduo de bloqueio"
+    print("   ✓ loop da spec: gate reprova, autor corrige com o relatório, gate aprova na 2ª rodada")
+
+
+def test_id_da_experiencia_carrega_ano_e_bimestre():
+    """`exp05ef3b` = 5º ano do Fundamental, 3º bimestre — e `series`/`unidade` têm de concordar."""
+    from tools.rastro import decompor_id, validar_manifesto
+
+    assert decompor_id("exp01ef1b") == {"serie": "1EF", "unidade": 1}
+    assert decompor_id("exp05ef3b") == {"serie": "5EF", "unidade": 3}
+    assert decompor_id("exp02em2b") == {"serie": "2EM", "unidade": 2}
+    assert decompor_id("exp04em1b") is None, "o Ensino Médio tem três anos, não quatro"
+    assert decompor_id("exp05ef5b") is None, "o ano letivo tem quatro bimestres"
+    assert decompor_id("exp-06-rastro-do-boato") is None
+
+    def ficha(idm, series, unidade):
+        return (
+            "# Spec\n\n## 0. Identificação de plataforma\n"
+            f"- `id: {idm}`\n- `produto: entre-redes`\n- `series: [\"{series}\"]`\n"
+            f"- `unidade: {unidade}`\n- `publico: estudante`\n- `viewport: 375x812`\n"
+            "- `permissoes: [forms]`\n- `capabilities: [telemetria]`\n"
+            "- `secao_ds: unitube`\n- `liberacao: por-turma`\n"
+        )
+
+    ok = validar_manifesto(ficha("exp05ef3b", "5EF", 3))
+    assert not [a for a in ok["achados"] if a["campo"] in ("id", "series", "unidade")], ok["achados"]
+
+    serie_errada = validar_manifesto(ficha("exp05ef3b", "7EF", 3))
+    assert any(a["campo"] == "series" for a in serie_errada["achados"]), "id e series divergentes têm de travar"
+
+    bimestre_errado = validar_manifesto(ficha("exp05ef3b", "5EF", 1))
+    assert any(a["campo"] == "unidade" for a in bimestre_errado["achados"]), "id e unidade divergentes têm de travar"
+
+    formato_velho = validar_manifesto(ficha("exp-77-teste", "5EF", 3))
+    assert any(a["campo"] == "id" for a in formato_velho["achados"]), "missão com ano e bimestre não usa o formato antigo"
+    print("   ✓ id carrega ano e bimestre; series e unidade são conferidas contra ele")

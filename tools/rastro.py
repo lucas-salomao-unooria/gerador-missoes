@@ -109,7 +109,7 @@ _TOKENS_ETAPA: Dict[str, tuple] = {
                 "jur[ií]dico", "dpo"),
     "plataforma": ("plataforma", "adr", "design-system", "storybook", "infra", "ponte", "@edu/ui", "componente do ds", "componente de ds"),
     "dev": ("handoff-dev", "handoff", "brief-assets", "banca", "tech", "arquitetura", "dev"),
-    "design": ("jornada", "fluxo", "copy", "wireframe", "caa", "ambiente-simulado", "ambiente", "brief-oficio", "briefing de ofício", "qa-entregaveis", "figma", "design"),
+    "design": ("jornada", "fluxo", "copy", "wireframe", "caa", "ambiente-simulado", "ambiente", "brief-oficio", "briefing de ofício", "qa-entregaveis", "mermaid", "stitch", "design"),
     "produto": ("gate-estrutural", "gate estrutural", "gate 0", "gate0", "spec", "produto", "one-pager", "pm", "gate-final", "gate final", "pedagog", "experiencia-aluno", "fecha-lacunas", "responsável de dados", "dados"),
     "input": ("input", "briefing", "insumo", "solicitante"),
 }
@@ -178,6 +178,32 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
     return {"status": status, "achados": achados, "por_etapa": por_etapa, "documentos": documentos_lidos}
 
 
+#: Slugs de agente que um despacho sabe acionar. O texto do marcador é livre
+#: (`[LACUNA — dono: wireframes]`), então normalizamos para o slug do envelope.
+_DONOS_ROTEAVEIS = {
+    "jornada": "jornada", "jornada": "jornada",
+    "fluxo": "fluxo", "fluxo": "fluxo",
+    "copy": "copy-ptbr-revisao", "copy-ptbr": "copy-ptbr-revisao", "copy-ptbr-revisao": "copy-ptbr-revisao",
+    "wireframe": "telas", "wireframes": "telas", "telas": "telas",
+    "caa": "caa",
+    "ambiente": "ambiente-simulado", "ambiente-simulado": "ambiente-simulado",
+    "lacunas": "fecha-lacunas", "fecha-lacunas": "fecha-lacunas",
+    "handoff": "handoff-dev", "handoff-dev": "handoff-dev",
+    "assets": "brief-assets", "brief-assets": "brief-assets",
+    "spec": "spec-missao", "spec-missao": "spec-missao",
+    "gate-estrutural": "gate-estrutural",
+}
+
+
+def _dono_roteavel(achado: Dict[str, Any]) -> str:
+    """Slug do agente quando dá para reconhecer; senão a etapa, que ao menos nomeia o time."""
+    bruto = str(achado.get("dono") or "").strip().lower()
+    for chave, slug in _DONOS_ROTEAVEIS.items():
+        if chave in bruto:
+            return slug
+    return str(achado.get("etapa") or "produto")
+
+
 def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", agente: str = "rastro-lacunas") -> str:
     r = resultado
     icone = {"aprovado": "🟢 SEM LACUNAS", "amarelo": "🟡 SÓ PENDÊNCIAS HUMANAS", "bloqueado": "🔴 BLOQUEADO"}[r["status"]]
@@ -221,7 +247,7 @@ def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", 
         "veredito": {"aprovado": "verde", "amarelo": "amarelo", "bloqueado": "vermelho"}[r["status"]],
         "por_etapa": pe,
         "achados": [
-            {"severidade": a["severidade"], "classe": a["tipo"], "codigo": a["etapa"], "agente_responsavel": a["dono"], "documento": a["documento"], "resumo": a["trecho"][:120]}
+            {"severidade": a["severidade"], "classe": a["tipo"], "codigo": a["etapa"], "agente_responsavel": _dono_roteavel(a), "documento": a["documento"], "resumo": a["trecho"][:120]}
             for a in r["achados"]
         ],
         "precisa_humano": r["status"] != "aprovado",
@@ -246,6 +272,28 @@ def _lista(valor: str) -> Optional[List[str]]:
     return [i for i in itens if i]
 
 
+#: `expNNefNb`: NN = ano, `ef`/`em` = etapa, dígito antes do `b` = bimestre.
+#: O identificador passou a carregar ano e bimestre porque a ordem da grade da sala saía
+#: errada quando caía no número da experiência — o 7º ano vinha depois do 8º.
+RE_ID = re.compile(r"^exp(0[1-9])(ef|em)([1-4])b$")
+#: Transversal (`series: []`) e ferramenta de professor não têm ano nem bimestre: seguem
+#: no formato antigo, que é o único que comporta a ausência dos dois.
+RE_ID_TRANSVERSAL = re.compile(r"^exp-\d{2}-[a-z0-9][a-z0-9-]*$")
+
+
+def decompor_id(identificador: str) -> Optional[Dict[str, Any]]:
+    """Devolve `{"serie": "5EF", "unidade": 3}` a partir de `exp05ef3b`, ou None."""
+    m = RE_ID.match((identificador or "").strip().lower())
+    if not m:
+        return None
+    ano, etapa, bimestre = int(m.group(1)), m.group(2).upper(), int(m.group(3))
+    if etapa == "EF" and not 1 <= ano <= 9:
+        return None
+    if etapa == "EM" and not 1 <= ano <= 3:
+        return None
+    return {"serie": f"{ano}{etapa}", "unidade": bimestre}
+
+
 def validar_manifesto(spec: str) -> Dict[str, Any]:
     from tools.bncc import secao_bloco  # bloco 0 da spec, mesmo parser
 
@@ -258,8 +306,18 @@ def validar_manifesto(spec: str) -> Dict[str, Any]:
 
     v = _campo(texto, "id")
     campos["id"] = v
-    if not v or not re.match(r"^exp-\d{2}-[a-z0-9][a-z0-9-]*$", v):
-        falta("id", f"`id` ausente ou fora de `exp-NN-<slug>` (lido: {v!r}).")
+    id_decomposto = decompor_id(v or "")
+    if not v:
+        falta("id", "`id` ausente no bloco 0.")
+    elif not id_decomposto and not RE_ID_TRANSVERSAL.match(v):
+        falta(
+            "id",
+            f"`id` fora de `expNNefNb` / `expNNemNb` (lido: {v!r}). "
+            "O número é o ANO e o dígito antes do `b` é o BIMESTRE: `exp01ef1b` = 1º ano do "
+            "Fundamental, 1º bimestre; `exp02em2b` = 2º ano do Médio, 2º bimestre. "
+            "Missão transversal ou ferramenta de professor, que não têm ano nem bimestre, "
+            "usam o formato antigo `exp-NN-<slug>`."
+        )
 
     v = _campo(texto, "produto"); campos["produto"] = v
     if not v or v.lower() not in PRODUTOS:
@@ -279,6 +337,35 @@ def validar_manifesto(spec: str) -> Dict[str, Any]:
     v = _campo(texto, "publico"); campos["publico"] = v
     if not v or v.lower() not in PUBLICOS:
         falta("publico", f"`publico` ausente ou fora de {list(PUBLICOS)} (lido: {v!r}).")
+
+    # O formato antigo existe só para quem não tem ano nem bimestre. Missão de estudante
+    # com série declarada tem os dois — e precisa carregá-los no id.
+    # `v` é reutilizado por cada campo lido acima — o id vive em `campos["id"]`.
+    identificador = campos.get("id") or ""
+    if identificador and not id_decomposto and RE_ID_TRANSVERSAL.match(identificador):
+        if series and (campos.get("publico") or "").lower() == "estudante":
+            falta(
+                "id",
+                f"`id: {identificador}` está no formato antigo, mas a missão declara série {series} e público estudante. "
+                "Use `expNNefNb` — por exemplo, 5º ano do Fundamental no 3º bimestre é `exp05ef3b`.",
+            )
+
+    # O id carrega ano e bimestre, e `series`/`unidade` continuam campos próprios porque é
+    # assim que a plataforma os lê. Duas fontes para o mesmo fato só servem se concordarem.
+    if id_decomposto:
+        esperada = id_decomposto["serie"]
+        if series is not None and [s.upper() for s in series] != [esperada]:
+            falta(
+                "series",
+                f"`id: {campos['id']}` diz {esperada}, mas `series` traz {series}. "
+                "Um dos dois está errado — e o id é o que nomeia arquivos, tabelas e branch.",
+            )
+        u = (campos.get("unidade") or "").strip()
+        if u and u != str(id_decomposto["unidade"]):
+            falta(
+                "unidade",
+                f"`id: {campos['id']}` diz bimestre {id_decomposto['unidade']}, mas `unidade` traz {u!r}.",
+            )
 
     if campos.get("unidade") and campos["unidade"].lower() == "nenhuma" and series and (campos.get("publico") or "").lower() == "estudante":
         falta("unidade", "`unidade: nenhuma` só vale para transversal (`series: []`) ou ferramenta de professor; missão de estudante com série precisa de unidade 1–4.")
@@ -358,7 +445,7 @@ def validar_manifesto(spec: str) -> Dict[str, Any]:
         # a qualidade do contrato de dados — isso é da banca (DAD-07/08). Regex
         # estreito aqui produz falso positivo e barra missão que declarou tudo.
         menciona_midia = bool(re.search(r"[áa]udio|voz|oralidade|foto|imagem|v[íi]deo|grava[çc]|grava[dç]", bloco9, re.IGNORECASE))
-        tem_destino = bool(re.search(r"\bexp_\d{2}_[a-z][a-z0-9_]*|bucket|-assets|tabela", bloco9, re.IGNORECASE))
+        tem_destino = bool(re.search(r"\bexp\d{2}e[fm]\db_[a-z][a-z0-9_]*|bucket|-assets|tabela", bloco9, re.IGNORECASE))
         tem_leitor = bool(re.search(r"quem l[êe]|lid[ao]|restrit[oa]|acesso|professor", bloco9, re.IGNORECASE))
         tem_retencao = bool(re.search(r"reten[çc][ãa]o|expurgo|apagad[ao]|prazo|\b\d+\s*(dias|meses|anos)\b", bloco9, re.IGNORECASE))
         if not menciona_midia:
@@ -493,17 +580,17 @@ def validar_telemetria(handoff: str) -> Dict[str, Any]:
         bloqueio("resultado-contexto", "A tabela de eventos não tem coluna `resultado` nem `contexto` — são os dois únicos campos de payload que a api aceita.")
     if _usado_afirmativamente(texto, r"\|\s*`?dados`?\s*\|") or _usado_afirmativamente(texto, r"[`\"']?\bdados\b[`\"']?\s*:"):
         bloqueio("campo-dados", "Evento com campo `dados`: a api não tem esse campo e descarta a chave em silêncio. Use `resultado` e `contexto`.")
-    if not re.search(r"\bexp_\d{2}_[a-z][a-z0-9_]*", texto):
-        bloqueio("tabela-leitura", "Nenhuma tabela `exp_NN_*` nomeada. Toda medida que a professora vê nasce de tabela própria do módulo — sem tabela de leitura, a medida não existe (`telemetria_eventos` não tem leitor).")
+    if not re.search(r"\bexp\d{2}e[fm]\db_[a-z][a-z0-9_]*", texto):
+        bloqueio("tabela-leitura", "Nenhuma tabela `expNNefNb_*` nomeada. Toda medida que a professora vê nasce de tabela própria do módulo — sem tabela de leitura, a medida não existe (`telemetria_eventos` não tem leitor).")
     # O que importa é o canal DECLARADO, não a palavra. Handoff correto cita WebSocket
     # justamente para descartá-lo ("Cloud Run não sustenta WebSocket, ADR-93/94") ou
     # para colocá-lo como futuro fora de escopo — e era bloqueado por isso.
-    canal_correto = bool(re.search(r"polling", texto, re.IGNORECASE) and re.search(r"exp_\d{2}_gates_turma", texto))
+    canal_correto = bool(re.search(r"polling", texto, re.IGNORECASE) and re.search(r"exp\d{2}e[fm]\db_gates_turma", texto))
     if _usado_afirmativamente(texto, r"websocket|socket\.io|hub:pause"):
         if canal_correto:
-            atencao("websocket-mencao", "WebSocket ou `hub:pause` aparece no texto. O canal de sala declarado é o correto (polling em `exp_NN_gates_turma`), então é só conferir se a menção é mesmo comparativa e não uma segunda via de sincronização.")
+            atencao("websocket-mencao", "WebSocket ou `hub:pause` aparece no texto. O canal de sala declarado é o correto (polling em `expNNefNb_gates_turma`), então é só conferir se a menção é mesmo comparativa e não uma segunda via de sincronização.")
         else:
-            bloqueio("websocket", "WebSocket ou `hub:pause` como canal de sala, sem polling em `exp_NN_gates_turma` declarado: a plataforma sincroniza por polling HTTP curto (ADR-93/94).")
+            bloqueio("websocket", "WebSocket ou `hub:pause` como canal de sala, sem polling em `expNNefNb_gates_turma` declarado: a plataforma sincroniza por polling HTTP curto (ADR-93/94).")
     if _usado_afirmativamente(texto, r"admin-contrato|@Roles\([^)]*[\"']gestor[\"']"):
         bloqueio("papeis", "Papel antigo (`admin-contrato`, `gestor`): a plataforma tem seis papéis — `estudante · professor · gestor_escola · gestor_regional · gestor_contrato · admin` (ADR-80).")
     if _usado_afirmativamente(texto, r"/runs/(:id|\{?\w*[iI]d\}?)/eventos"):

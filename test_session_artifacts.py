@@ -1,4 +1,4 @@
-"""Testes para a camada de persistência de artefatos, histórico de sessões e Figma MCP automático."""
+"""Testes da persistência de artefatos, do histórico de sessões e da detecção do MCP do Stitch."""
 
 import io
 import json
@@ -9,8 +9,8 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from config import _detect_figma_mode, get_settings
-from pipeline.artifacts import extract_figma_links, generate_artifact_manifest, save_run_artifacts
+from config import _detect_stitch_mode, get_settings
+from pipeline.artifacts import generate_artifact_manifest, save_run_artifacts
 from pipeline.runner import PipelineExecutionResult
 from pipeline.session_store import (
     create_session_zip,
@@ -25,21 +25,19 @@ from pipeline.session_store import (
 )
 
 
-class TestFigmaModeAutoDetect(unittest.TestCase):
-    def test_auto_detect_stdio_when_key_present(self):
-        os.environ["FIGMA_MCP_MODE"] = "auto"
-        os.environ["FIGMA_API_KEY"] = "figd_teste123"
-        mode = _detect_figma_mode()
-        self.assertEqual(mode, "stdio")
+class TestStitchModeAutoDetect(unittest.TestCase):
+    """O Figma saiu da esteira (sem cliente oficial); o Stitch é o MCP que restou."""
+
+    def test_auto_detect_remote_when_key_present(self):
+        os.environ["STITCH_MCP_MODE"] = "auto"
+        os.environ["STITCH_API_KEY"] = "chave-de-teste"
+        self.assertEqual(_detect_stitch_mode(), "remote")
 
     def test_explicit_mode_honored(self):
-        os.environ["FIGMA_MCP_MODE"] = "off"
-        mode = _detect_figma_mode()
-        self.assertEqual(mode, "off")
-
-        os.environ["FIGMA_MCP_MODE"] = "stdio"
-        mode = _detect_figma_mode()
-        self.assertEqual(mode, "stdio")
+        os.environ["STITCH_MCP_MODE"] = "off"
+        self.assertEqual(_detect_stitch_mode(), "off")
+        os.environ["STITCH_MCP_MODE"] = "proxy"
+        self.assertEqual(_detect_stitch_mode(), "proxy")
 
 
 class TestArtifactsAndSessionStore(unittest.TestCase):
@@ -55,23 +53,10 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
             os.environ.pop("OUTPUT_DIR", None)
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_extract_figma_links(self):
-        state = {
-            "jornada_telas": "Board no FigJam: https://www.figma.com/board/mPw4Hhx9ptkgcHtySaSilO/Jornada-Teste?node-id=1-23",
-            "wireframes_cobertura": "Telas no Figma: https://www.figma.com/design/i0HRQSBtQQ9ZXDYiJPRnGv/Wireframes-Teste",
-            "prd_final": "Consulte o FigJam em https://www.figma.com/board/mPw4Hhx9ptkgcHtySaSilO/Jornada-Teste",
-        }
-        links = extract_figma_links(state)
-        self.assertEqual(len(links), 2)
-        urls = [l["url"] for l in links]
-        self.assertTrue(any("mPw4Hhx9ptkgcHtySaSilO" in u for u in urls))
-        self.assertTrue(any("i0HRQSBtQQ9ZXDYiJPRnGv" in u for u in urls))
-
     def test_save_run_artifacts_and_manifest(self):
         state = {
-            "one_pager": "# One-pager — Missão Astronomia v1.0\n* **Nome que o estudante vê:** Caçadores de Cometas\n* **Slug:** `exp-01-cacadores-cometas`",
-            "spec_missao": "# Spec — Missão Astronomia v1.0\n* **Slug:** `exp-01-cacadores-cometas`",
-            "jornada_telas": "https://www.figma.com/board/abc12345/Jornada-Cometas",
+            "one_pager": "# One-pager — Missão Astronomia v1.0\n* **Nome que o estudante vê:** Caçadores de Cometas\n* **Slug:** `exp03ef1b`",
+            "spec_missao": "# Spec — Missão Astronomia v1.0\n* **Slug:** `exp03ef1b`",
             "prd_final": "# PRD Padrão Ouro — Caçadores de Cometas",
         }
         run_dir = save_run_artifacts(state, session_id="test_sess_01", prompt="Criar missão de cometas")
@@ -79,7 +64,6 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
         self.assertTrue((run_dir / "PRD.md").exists())
         self.assertTrue((run_dir / "produto/00-one-pager.md").exists())
         self.assertTrue((run_dir / "produto/05-spec-missao.md").exists())
-        self.assertTrue((run_dir / "figma/figma-links.json").exists())
         self.assertTrue((run_dir / "manifesto-artefatos.json").exists())
 
         manifest = generate_artifact_manifest(run_dir)
@@ -256,11 +240,11 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
     def test_extrair_titulo_frontmatter_yaml(self):
         prd_text = (
             "---\n"
-            "prd_id: PRD-exp-15-autoria-ia\n"
+            "prd_id: PRD-exp08ef2b\n"
             "titulo: \"O Diário de Criação com IA: Quem é o Autor?\"\n"
             "versao: 0.1.0\n"
             "status: em-revisao\n"
-            "slug_experiencia: exp-15-autoria-ia\n"
+            "slug_experiencia: exp08ef2b\n"
             "serie: [\"3EM\"]\n"
             "ambiente_simulado: chatgpt\n"
             "---\n\n"
@@ -278,7 +262,7 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
     def test_extrair_metadados_frontmatter(self):
         prd_text = (
             "---\n"
-            "prd_id: PRD-exp-15-autoria-ia\n"
+            "prd_id: PRD-exp08ef2b\n"
             "titulo: \"O Diário de Criação com IA: Quem é o Autor?\"\n"
             "status: em-revisao\n"
             "---\n\n"
@@ -286,7 +270,7 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
             "Conteúdo"
         )
         meta, body = extrair_metadados_frontmatter(prd_text)
-        self.assertEqual(meta.get("prd_id"), "PRD-exp-15-autoria-ia")
+        self.assertEqual(meta.get("prd_id"), "PRD-exp08ef2b")
         self.assertEqual(meta.get("titulo"), "O Diário de Criação com IA: Quem é o Autor?")
         self.assertEqual(meta.get("status"), "em-revisao")
         self.assertTrue(body.startswith("# 0. Resumo executivo"))
@@ -296,7 +280,7 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
         state = {
             "prd_final": (
                 "---\n"
-                "prd_id: PRD-exp-15-autoria-ia\n"
+                "prd_id: PRD-exp08ef2b\n"
                 "titulo: \"O Diário de Criação com IA: Quem é o Autor?\"\n"
                 "status: em-revisao\n"
                 "---\n\n"
@@ -357,34 +341,34 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
 
         status = {
             "OnePagerAgent": "done",
-            "GateEstruturalAgent": "done",
-            "GateEstruturalCheck": "running",
-            "RevisorOnePagerAgent": "pending",
-            "AvaliacaoPedagogicaAgent": "pending",
+            "A05GateEstrutural": "done",
+            "A06GateEstruturalCheck": "running",
+            "A07RevisorOnePager": "pending",
+            "A08AvaliacaoPedagogica": "pending",
         }
         gates = {}
-        active_agent = "GateEstruturalCheck"
+        active_agent = "A06GateEstruturalCheck"
 
-        # GateEstruturalCheck aprova o gate estrutural na rodada 1
+        # A06GateEstruturalCheck aprova o gate estrutural na rodada 1
         active_agent = update_pipeline_step_status(
             status,
             active_agent,
             {"type": "gate_status", "status": {"gate_estrutural_status": "aprovado"}},
             gates,
         )
-        self.assertEqual(status["GateEstruturalCheck"], "done")
-        self.assertEqual(status["RevisorOnePagerAgent"], "done", "Revisor deve ficar verde (done) ao aprovar o gate")
+        self.assertEqual(status["A06GateEstruturalCheck"], "done")
+        self.assertEqual(status["A07RevisorOnePager"], "done", "Revisor deve ficar verde (done) ao aprovar o gate")
 
-        # Início do próximo agente (AvaliacaoPedagogicaAgent)
+        # Início do próximo agente (A08AvaliacaoPedagogica)
         active_agent = update_pipeline_step_status(
             status,
             active_agent,
-            {"type": "agent_started", "agent_name": "AvaliacaoPedagogicaAgent"},
+            {"type": "agent_started", "agent_name": "A08AvaliacaoPedagogica"},
             gates,
         )
-        self.assertEqual(active_agent, "AvaliacaoPedagogicaAgent")
-        self.assertEqual(status["RevisorOnePagerAgent"], "done")
-        self.assertEqual(status["AvaliacaoPedagogicaAgent"], "running")
+        self.assertEqual(active_agent, "A08AvaliacaoPedagogica")
+        self.assertEqual(status["A07RevisorOnePager"], "done")
+        self.assertEqual(status["A08AvaliacaoPedagogica"], "running")
 
         # Conclusão do pipeline
         res = PipelineExecutionResult(
@@ -400,8 +384,8 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
             {"type": "pipeline_completed", "result": res},
             gates,
         )
-        self.assertEqual(status["RevisorOnePagerAgent"], "done")
-        self.assertEqual(status["AvaliacaoPedagogicaAgent"], "done")
+        self.assertEqual(status["A07RevisorOnePager"], "done")
+        self.assertEqual(status["A08AvaliacaoPedagogica"], "done")
         self.assertNotIn("pending", status.values(), "Nenhum agente ativo deve ficar como pending (ampulheta)")
 
     def test_update_pipeline_step_status_revisor_runs_when_gate_blocked(self):
@@ -409,12 +393,12 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
 
         status = {
             "OnePagerAgent": "done",
-            "GateEstruturalAgent": "done",
-            "GateEstruturalCheck": "running",
-            "RevisorOnePagerAgent": "pending",
+            "A05GateEstrutural": "done",
+            "A06GateEstruturalCheck": "running",
+            "A07RevisorOnePager": "pending",
         }
         gates = {}
-        active_agent = "GateEstruturalCheck"
+        active_agent = "A06GateEstruturalCheck"
 
         # Gate bloqueado na rodada 1: revisor ainda pendente até iniciar
         active_agent = update_pipeline_step_status(
@@ -423,25 +407,25 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
             {"type": "gate_status", "status": {"gate_estrutural_status": "bloqueado"}},
             gates,
         )
-        self.assertEqual(status["RevisorOnePagerAgent"], "pending")
+        self.assertEqual(status["A07RevisorOnePager"], "pending")
 
         # Revisor inicia a execução
         active_agent = update_pipeline_step_status(
             status,
             active_agent,
-            {"type": "agent_started", "agent_name": "RevisorOnePagerAgent"},
+            {"type": "agent_started", "agent_name": "A07RevisorOnePager"},
             gates,
         )
-        self.assertEqual(status["RevisorOnePagerAgent"], "running")
+        self.assertEqual(status["A07RevisorOnePager"], "running")
 
         # Próxima rodada do gate inicia
         active_agent = update_pipeline_step_status(
             status,
             active_agent,
-            {"type": "agent_started", "agent_name": "GateEstruturalAgent"},
+            {"type": "agent_started", "agent_name": "A05GateEstrutural"},
             gates,
         )
-        self.assertEqual(status["RevisorOnePagerAgent"], "done")
+        self.assertEqual(status["A07RevisorOnePager"], "done")
 
 
 
@@ -460,7 +444,7 @@ class TestSessionZip(unittest.TestCase):
         self.original_output = os.environ.get("OUTPUT_DIR")
         os.environ["OUTPUT_DIR"] = str(self.temp_dir)
 
-        self.run_dir = self.temp_dir / "20260914-120000-exp-01-teste"
+        self.run_dir = self.temp_dir / "20260914-120000-exp03ef1b"
         (self.run_dir / "produto").mkdir(parents=True)
         (self.run_dir / "PRD.md").write_text("# PRD\n", encoding="utf-8")
         (self.run_dir / "produto" / "00-one-pager.md").write_text("# One-pager\n", encoding="utf-8")

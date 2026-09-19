@@ -23,7 +23,6 @@ from agents.callbacks import KEY_PIPELINE_BLOQUEADO, KEY_PIPELINE_MOTIVO
 from config import get_settings
 from pipeline.artifacts import (
     e_mensagem_de_pulo,
-    extract_figma_links,
     generate_artifact_manifest,
     save_run_artifacts,
 )
@@ -47,6 +46,7 @@ STATUS_KEYS = [
     "rastro_lacunas_status",
     "dev_status",
     "prd_status",
+    "diagnostico_status",
     KEY_PIPELINE_BLOQUEADO,
     KEY_PIPELINE_MOTIVO,
 ]
@@ -65,7 +65,6 @@ class PipelineExecutionResult:
     attached_files: List[str] = field(default_factory=list)
     state: Dict[str, Any] = field(default_factory=dict)
     events_log: List[Dict[str, Any]] = field(default_factory=list)
-    figma_links: List[Dict[str, Any]] = field(default_factory=list)
     artifacts_manifest: List[Dict[str, Any]] = field(default_factory=list)
     duration_seconds: float = 0.0
     status: str = "success"
@@ -290,7 +289,6 @@ async def run_orchestrator_pipeline_stream(
         duration = time.time() - start_time
 
         output_dir: Optional[Path] = None
-        figma_links: List[Dict[str, Any]] = []
         artifacts_manifest: List[Dict[str, Any]] = []
         if save_artifacts:
             try:
@@ -303,7 +301,6 @@ async def run_orchestrator_pipeline_stream(
                     user_id=user_id,
                 )
                 if output_dir:
-                    figma_links = extract_figma_links(final_state)
                     artifacts_manifest = generate_artifact_manifest(output_dir)
             except Exception as exc:  # pragma: no cover - disco
                 logger.warning("Falha ao gravar artefatos: %s", exc)
@@ -332,7 +329,6 @@ async def run_orchestrator_pipeline_stream(
             attached_files=attached_names,
             state=final_state,
             events_log=events_log,
-            figma_links=figma_links,
             artifacts_manifest=artifacts_manifest,
             duration_seconds=duration,
             status=run_status,

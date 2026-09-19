@@ -1,6 +1,6 @@
 """Interface Streamlit do Gerador de Missões Unooria.
 
-Pipeline Produto → Design (com MCP do Figma) → Dev, orquestrado pelo Google ADK,
+Pipeline Produto → Design (Mermaid + Stitch) → Dev, orquestrado pelo Google ADK,
 com acompanhamento em tempo real por etapa, inspeção dos artefatos e editor de prompts.
 """
 
@@ -18,7 +18,7 @@ import streamlit as st
 from PIL import Image
 
 from config import get_settings
-from pipeline.artifacts import extract_figma_links, generate_artifact_manifest
+from pipeline.artifacts import generate_artifact_manifest
 from pipeline.orchestrator import STAGES, get_pipeline_agents_metadata, get_pipeline_stages
 from pipeline.runner import PipelineExecutionResult, run_orchestrator_pipeline_stream
 from pipeline.session_store import (
@@ -78,14 +78,15 @@ GATE_LABELS = {
     "gate_estrutural_status": "Gate estrutural",
     "gate_final_status": "Gate final de produto",
     "bncc_status": "Conformidade BNCC Computação",
-    "lacunas_status": "Fechamento de lacunas (D0)",
-    "ambiente_status": "Ambiente simulado (D9)",
+    "lacunas_status": "Fechamento de lacunas",
+    "ambiente_status": "Ambiente simulado",
     "design_status": "QA de design",
-    "manifesto_status": "Ficha do manifesto (V0)",
-    "telemetria_status": "Telemetria e arquitetura (V1c)",
-    "rastro_lacunas_status": "Rastro de lacunas (V1d)",
+    "manifesto_status": "Ficha do manifesto",
+    "telemetria_status": "Telemetria e arquitetura",
+    "rastro_lacunas_status": "Rastro de lacunas",
     "dev_status": "Banca de dev",
-    "prd_status": "Pendências do PRD (V4c)",
+    "prd_status": "Pendências do PRD",
+    "diagnostico_status": "Diagnóstico da execução",
 }
 
 
@@ -111,7 +112,7 @@ def init_session_state():
                     "👋 Olá! Sou o **Gerador de Missões Unooria**.\n\n"
                     "Envie o one-pager (ou a ideia) de uma missão. O pipeline passa por **Produto** "
                     "(gate estrutural, avaliação pedagógica, experiência do estudante, gate final e spec), "
-                    "**Design** (briefing de ofício, jornada e fluxo no FigJam, copy e wireframes lo-fi no Figma, QA) "
+                    "**Design** (briefing de ofício, jornada e fluxo em Mermaid, copy, telas no Stitch, protótipo HTML, QA) "
                     "e **Dev** (handoff, brief de assets, banca de validação em 5 dimensões) e entrega um "
                     "**PRD padrão ouro** com o contexto arquitetural da plataforma, pronto para um agente de codificação.\n\n"
                     "💡 *Anexe o one-pager em PDF/DOCX ou descreva: ano/série, ambiente simulado "
@@ -199,7 +200,6 @@ def render_sidebar() -> Dict[str, Any]:
         # with st.container(border=True):
         #     st.markdown(f"🤖 **Modelo:** `{settings.gemini_model}`")
         #     st.markdown(f"🔑 **Gemini API:** {'🟢 configurada' if settings.is_gemini_configured() else '🔴 ausente'}")
-        #     st.markdown(f"🎨 **Figma MCP:** {settings.figma_status_label()}")
 
         # st.markdown("---")
         # st.markdown("#### ⚙️ Execução")
@@ -225,8 +225,6 @@ def render_sidebar() -> Dict[str, Any]:
         selected_label = st.select_slider("Nível de raciocínio", options=list(thinking_presets), value=by_val.get(settings.thinking_budget, "Equilibrado"))
         # include_thoughts = st.toggle("Exibir pensamentos dos agentes", value=settings.include_thoughts)
         include_thoughts=True
-        # if settings.figma_default_folder_url:
-        #     st.link_button("📁 Abrir pasta no Figma ↗", settings.figma_default_folder_url, use_container_width=True)
 
         st.markdown("---")
         st.markdown("#### 🧩 Etapas e agentes")
@@ -271,20 +269,20 @@ def update_pipeline_step_status(
 
         # Se avançou para agentes posteriores ao gate estrutural e o revisor ainda está pendente:
         if name not in (
-            "NucleoNarrativoAgent",
-            "MicroGateAgent",
-            "MicroGateCheck",
-            "SecoesApoioAgent",
-            "GateEstruturalAgent",
-            "GateEstruturalCheck",
-            "RevisorOnePagerAgent",
+            "A01NucleoNarrativo",
+            "A02MicroGate",
+            "A03MicroGateCheck",
+            "A04SecoesApoio",
+            "A05GateEstrutural",
+            "A06GateEstruturalCheck",
+            "A07RevisorOnePager",
         ):
             ge_st = str(gates.get("gate_estrutural_status", "")).strip().lower()
             if ge_st in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
-                if status.get("RevisorOnePagerAgent") == "pending":
-                    status["RevisorOnePagerAgent"] = "done"
-            if status.get("GateEstruturalCheck") == "running":
-                status["GateEstruturalCheck"] = "done"
+                if status.get("A07RevisorOnePager") == "pending":
+                    status["A07RevisorOnePager"] = "done"
+            if status.get("A06GateEstruturalCheck") == "running":
+                status["A06GateEstruturalCheck"] = "done"
 
     elif et == "agent_chunk":
         name = event.get("agent_name", "")
@@ -296,16 +294,16 @@ def update_pipeline_step_status(
         gates.update(new_status)
         ge_st = str(new_status.get("gate_estrutural_status") or gates.get("gate_estrutural_status") or "").strip().lower()
         if ge_st in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
-            if status.get("RevisorOnePagerAgent") == "pending":
-                status["RevisorOnePagerAgent"] = "done"
-            if status.get("GateEstruturalCheck") == "running":
-                status["GateEstruturalCheck"] = "done"
-        if new_status.get("gate_final_status") and status.get("GateFinalProdutoCheck") == "running":
-            status["GateFinalProdutoCheck"] = "done"
-        if new_status.get("design_status") and status.get("QaEntregaveisCheck") == "running":
-            status["QaEntregaveisCheck"] = "done"
-        if new_status.get("dev_status") and status.get("ValidacaoDevCheck") == "running":
-            status["ValidacaoDevCheck"] = "done"
+            if status.get("A07RevisorOnePager") == "pending":
+                status["A07RevisorOnePager"] = "done"
+            if status.get("A06GateEstruturalCheck") == "running":
+                status["A06GateEstruturalCheck"] = "done"
+        if new_status.get("gate_final_status") and status.get("A11GateFinalProdutoCheck") == "running":
+            status["A11GateFinalProdutoCheck"] = "done"
+        if new_status.get("design_status") and status.get("A30QaEntregaveisCheck") == "running":
+            status["A30QaEntregaveisCheck"] = "done"
+        if new_status.get("dev_status") and status.get("A44ValidacaoDevCheck") == "running":
+            status["A44ValidacaoDevCheck"] = "done"
 
     elif et == "pipeline_completed":
         result = event.get("result")
@@ -317,17 +315,17 @@ def update_pipeline_step_status(
                 status[k] = "done"
 
         # Se o gate estrutural foi aprovado (ou o pipeline avançou), o revisor fica concluído (verde):
-        ge_st = str(gates.get("gate_estrutural_status") or res_state.get("gate_estrutural_status") or "").strip().lower()
-        if status.get("RevisorOnePagerAgent") == "pending":
-            if ge_st in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢") or not is_blocked:
-                status["RevisorOnePagerAgent"] = "done"
-            else:
-                status["RevisorOnePagerAgent"] = "skipped"
+        # O revisor do one-pager só roda quando o gate reprova: aprovado de primeira, ele
+        # não tem o que corrigir — e isso é sucesso, não passo pulado.
+        if status.get("A07RevisorOnePager") == "pending":
+            status["A07RevisorOnePager"] = "done"
 
-        # Nenhum agente deve permanecer indefinidamente com ícone de ampulheta (pending) após conclusão:
+        # Nenhum agente deve permanecer indefinidamente com ícone de ampulheta (pending) após
+        # conclusão. A esteira não pula mais ninguém por causa de gate reprovado: quem ficou
+        # pendente aqui é agente condicional que não se aplicava à missão.
         for k in status:
             if status[k] == "pending":
-                status[k] = "skipped" if is_blocked else "done"
+                status[k] = "skipped"
 
     return active_agent
 
@@ -381,7 +379,7 @@ async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_co
                 render()
         elif et == "agent_tool_call":
             tool_log.append(f"{event['agent_name']} → {', '.join(event['tools'])}")
-            progress.info(f"🎨 **{event['agent_name']}** chamou Figma MCP: `{', '.join(event['tools'])}`")
+            progress.info(f"🧰 **{event['agent_name']}** chamou `{', '.join(event['tools'])}`")
         elif et == "agent_thought_chunk":
             progress.info(f"🧠 **{event['agent_name']}** raciocinando…")
         elif et == "gate_status":
@@ -404,7 +402,7 @@ async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_co
             progress.error(f"❌ Erro: {event.get('error')}")
             render()
     if tool_log:
-        with st.expander(f"🎨 Chamadas ao Figma MCP ({len(tool_log)})"):
+        with st.expander(f"🧰 Chamadas de ferramenta ({len(tool_log)})"):
             st.code("\n".join(tool_log))
     return result
 
@@ -496,7 +494,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
         st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS[k]}" for k, v in gates.items() if k in GATE_LABELS))
     if getattr(result, "bypassed", False):
         st.warning("⚠️ **Atenção:** Esta missão avançou com gates bloqueados (modo estrito desativado / bypass). Verifique as pendências nos relatórios e na seção 20 do PRD.")
-    tabs = st.tabs(["📘 PRD", "🧭 Produto", "🎨 Design", "🛠️ Dev", "🧠 Aprendizado", "💭 Pensamentos", "📦 Artefatos & Figma", "🔍 Estado (JSON)"])
+    tabs = st.tabs(["📘 PRD", "🧭 Produto", "🎨 Design", "🛠️ Dev", "🧠 Aprendizado", "💭 Pensamentos", "📦 Artefatos", "🔍 Estado (JSON)"])
 
     with tabs[0]:
         if prd_text:
@@ -531,7 +529,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
                 continue
             shown = True
             with st.expander(f"{meta['icon']} {meta['name']}", expanded=False):
-                if meta.get("id") == "RevisorOnePagerAgent" and "RevisorOnePagerAgent" not in (result.step_outputs or {}):
+                if meta.get("id") == "A07RevisorOnePager" and "A07RevisorOnePager" not in (result.step_outputs or {}):
                     st.caption("ℹ️ *One-pager aprovado no gate estrutural sem necessidade de revisão. Exibindo a versão aprovada:*")
                 st.markdown(value)
         if not shown:
@@ -555,20 +553,20 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
             st.info("Nenhum pensamento registrado.")
 
     with tabs[6]:
-        # 1. Links do Figma & FigJam
-        links = getattr(result, "figma_links", []) or extract_figma_links(result.state)
+        # 1. Diagramas e telas geradas
+        links = []
         if links:
-            st.markdown("#### 🎨 Links do Figma & FigJam")
+            st.markdown("#### 🗺️ Diagramas e telas")
             cols = st.columns(min(len(links), 3) or 1)
             for idx, link in enumerate(links):
                 with cols[idx % len(cols)]:
                     with st.container(border=True):
-                        st.markdown(f"**{link.get('title', 'Arquivo Figma')}**")
+                        st.markdown(f"**{link.get('title', 'Artefato')}**")
                         st.caption(f"Origem: `{link.get('source_agent_key', 'design')}`")
-                        st.link_button("Abrir no Figma ↗", link["url"], key=f"figma_{prefix}_{idx}", use_container_width=True)
+                        st.link_button("Abrir ↗", link["url"], key=f"link_{prefix}_{idx}", use_container_width=True)
             st.markdown("---")
         else:
-            st.info("🎨 Nenhum link direto do Figma/FigJam registrado nesta execução (artefatos gerados em Markdown/Mermaid).")
+            st.info("🗺️ A jornada e o fluxo saem em Mermaid (`design/09-diagramas.html`) e as telas, no Stitch.")
 
         # 2. Manifesto de Arquivos
         st.markdown("#### 📁 Arquivos da Missão")
@@ -697,7 +695,7 @@ def render_prompt_manager():
     with tab_final:
         s = get_settings()
         try:
-            final = load_prompt(rel, figma_mcp_mode=s.figma_mcp_mode, figma_folder_url=s.figma_default_folder_url or "(não configurada)", figma_ds_file_key=s.figma_ds_file_key, figma_ds_v02_file_key=s.figma_ds_v02_file_key)
+            final = load_prompt(rel, gdrive_folder_url=s.gdrive_folder_url or "(não configurada)", stitch_mcp_mode=s.stitch_mcp_mode, stitch_project_url_base=s.stitch_project_url_base, gate_max_rodadas=s.gate_estrutural_max_rodadas, qa_max_rodadas=s.qa_design_max_rodadas)
             st.caption(f"{len(final):,} caracteres após includes")
             st.code(final, language="markdown")
         except Exception as exc:
@@ -721,7 +719,7 @@ def main():
     opts = render_sidebar()
 
     st.markdown("<h1 class='main-header'>Gerador de Missões</h1>", unsafe_allow_html=True)
-    st.markdown("**Produto → Design (Figma MCP) → Dev** · pipeline multiagente no Google ADK que transforma um one-pager em um **PRD padrão ouro** pronto para codificação.")
+    st.markdown("**Produto → Design → Dev** · pipeline multiagente no Google ADK que transforma um one-pager em um **PRD padrão ouro** pronto para codificação.")
     st.markdown("---")
 
     tab_chat, tab_prompts = st.tabs(["💬 Pipeline", "📝 Prompts e referências"])

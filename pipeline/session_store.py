@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from config import get_settings
-from pipeline.artifacts import ARTIFACT_FILES, extract_figma_links, extrair_slug
+from pipeline.artifacts import ARTIFACT_FILES, extrair_slug
 
 logger = logging.getLogger("session_store")
 
@@ -57,7 +57,7 @@ def formatar_status_label(status: str) -> str:
         return "🟢 Aprovado"
     if s in ("em-revisao", "em_revisao", "em revisão", "revisao", "revisão"):
         return "🟡 Em revisão"
-    if s in ("bypassed", "bypass", "amarelo", "🟡", "ressalvas", "ressalva", "alerta", "warning", "apto_com_ressalvas"):
+    if s in ("bypassed", "bypass", "amarelo", "🟡", "ressalvas", "ressalva", "alerta", "warning", "apto_com_ressalvas", "aprovado_com_ressalvas"):
         return "🟡 Aprovado com ressalvas"
     if s in ("bloqueado", "bloqueada", "blocked", "reprovado", "vermelho", "🔴", "nao_apto"):
         return "🔴 Bloqueado"

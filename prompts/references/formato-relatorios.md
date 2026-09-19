@@ -112,7 +112,7 @@ Se nenhuma alternativa dentro da lista fechada resolver, diga isso: a missão pr
 
 ```markdown
 ### [ID] — [D1–D7] — [🔴 bloqueia / 🟡 ressalva]
-**Agente responsável:** jornada-figjam | fluxo-figjam | wireframes-figma | copy-ptbr | qa-conformidade
+**Agente responsável:** jornada | fluxo | telas | copy-ptbr | qa-conformidade
 **ONDE:** frame, ID de tela, chave de string, aresta ou célula da jornada
 **O QUÊ:** a divergência, com o que existe hoje citado
 **POR QUÊ:** critério da rubrica, bloco da spec, ou direção do briefing afetada
@@ -127,7 +127,7 @@ Um ticket vai para **um** agente. Se a correção exige dois, quebre em dois com
 **Missão:** [nome] — [ano] — [ambiente]
 **Status:** APROVADO PARA REVISÃO HUMANA | IMPASSE APÓS 3 RODADAS
 
-**Links:** FigJam · Figma · sheet de copy
+**Links:** folha de diagramas · projeto no Stitch · sheet de copy
 
 **Veredito por dimensão:** D1 ✅ · D2 ⚠️ · D3 ✅ · D4 ✅ · D5 ✅ · D6 ✅
 
@@ -148,7 +148,7 @@ Não encha o alerta com o que passou. O que passou está no relatório.
 ```markdown
 ### `O<n>` — [O1–O5] — 🔁 devolve
 
-**Agente responsável:** copy-ptbr | wireframes-figma | fluxo-figjam
+**Agente responsável:** copy-ptbr | telas | fluxo
 **DIREÇÃO:** a linha de `jornada/<missao>-direcao.md`, citada literalmente
 **CONSTRUÍDO:** o que existe hoje, com frame ou chave de string
 **ITEM DA RÉGUA:** O1–O5, e o "devolve quando" que se aplica

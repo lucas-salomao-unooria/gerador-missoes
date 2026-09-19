@@ -6,7 +6,7 @@ avaliados; seção vazia = NOK na validação. Onde houver dúvida, escreva a
 dúvida — dúvida declarada é melhor que lacuna silenciosa.
 
 ## 1. Identificação
-- **Slug**: `exp-NN-<nome>`
+- **Slug**: `expNNefNb`
 - **Nome da missão** (título que o estudante vê):
 - **Série(s)**: `["4EF"]` / `["2EM"]` / `[]` (transversal)
 - **Produto** (manifesto, ADR-87): `entre-redes` / `plano-de-aula` / `plano-de-ensino` / `bem-estar`
@@ -68,10 +68,10 @@ dúvida — dúvida declarada é melhor que lacuna silenciosa.
 - **Interações instrumentadas** (as que viram dado — não mudar sem avisar):
 
 ## 8. Dados
-- **Vocabulário de telemetria** (`verbo` / `objeto` em `namespace:slug` / `resultado` / `contexto` / significado — **não existe campo `dados`**) e **onde cada medida é lida** (tabela `exp_NN_*` + rota do professor):
-- **Caminho de cada dado**: operacional (rota do próprio módulo → `exp_NN_sessoes`) × analítico (`track` → Pub/Sub) × erro × vital × trace:
-- **Relógio coletivo** (largada, pausa, virada): existe? → `exp_NN_gates_turma` por polling curto (ADR-93/94), etapas e quem transiciona:
-- **Entidades a persistir** (tabelas `exp_NN_*` com PK, `turma_id` denormalizado, `versao_instrumento`, `tentativa`; `exp_NN_conteudo_turma` quando há preparação docente; exceções de RLS justificadas):
+- **Vocabulário de telemetria** (`verbo` / `objeto` em `namespace:slug` / `resultado` / `contexto` / significado — **não existe campo `dados`**) e **onde cada medida é lida** (tabela `expNNefNb_*` + rota do professor):
+- **Caminho de cada dado**: operacional (rota do próprio módulo → `expNNefNb_sessoes`) × analítico (`track` → Pub/Sub) × erro × vital × trace:
+- **Relógio coletivo** (largada, pausa, virada): existe? → `expNNefNb_gates_turma` por polling curto (ADR-93/94), etapas e quem transiciona:
+- **Entidades a persistir** (tabelas `expNNefNb_*` com PK, `turma_id` denormalizado, `versao_instrumento`, `tentativa`; `expNNefNb_conteudo_turma` quando há preparação docente; exceções de RLS justificadas):
 - **Lista do que NUNCA vai ao bundle** (gabarito, parâmetros, calibragem,
   prompts de geração) — será verificada por grep no dist/:
 - **Payload bruto + versão do instrumento** (reprocessamento):

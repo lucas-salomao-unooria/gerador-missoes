@@ -19,7 +19,13 @@ seção do DS já traz.
 
 **Ficha do manifesto — obrigatória, uma linha por campo, neste formato exato**
 (um gate determinístico lê estas linhas; campo fora do formato conta como ausente):
-- `id: exp-NN-<nome>`
+- `id: expNNefNb` — **o identificador carrega o ano e o bimestre.** `NN` é o ano (01–09 no
+  Fundamental, 01–03 no Médio), `ef`/`em` é a etapa, e o dígito antes do `b` é o bimestre
+  (1–4). Exemplos: `exp01ef1b` = 1º ano do Fundamental, 1º bimestre; `exp05ef3b` = 5º ano do
+  Fundamental, 3º bimestre; `exp02em2b` = 2º ano do Médio, 2º bimestre. Um gate determinístico
+  confere que `series` e `unidade` abaixo **concordam** com o id — divergência trava, porque
+  é o id que nomeia tabela, pasta e branch. Missão transversal (`series: []`) e ferramenta de
+  professor não têm ano nem bimestre: essas seguem no formato antigo `exp-NN-<slug>`
 - `produto: entre-redes | plano-de-aula | plano-de-ensino | bem-estar`
 - `series: ["5EF"]` (formato da plataforma; `[]` = transversal/todas)
 - `unidade: 1 | 2 | 3 | 4 | nenhuma` (`nenhuma` só em transversal ou ferramenta de professor)
@@ -74,7 +80,7 @@ Canais por instrução (áudio / pictograma / texto), teto de palavras,
 gestos que exigem demonstração animada.
 
 ## 8. Professora, preparação e parametrização com IA
-Contrato de customização: inputs aceitos do professor (tema, foco, contexto) · regras e schemas Zod de geração de conteúdo por IA (Vertex AI Gemini, só via `apps/api/src/ai`) · fluxo de curadoria docente (preview, edição de postagens e aprovação **antes da aula**, ADR-66/67) · banco curado default (fallback imediato sem IA) · **perfil de quota de IA consumido** (`ia_quotas` por perfil, ADR-105) e o que o estudante e a professora veem sem saldo (429, na voz da ficção) · gatilhos de handoff · comportamento da plataforma em cada mediação e pausas (relógio coletivo = tabela `exp_NN_gates_turma` por polling, ADR-93/94 — nunca WebSocket) · dados do painel docente · roteiro de perguntas.
+Contrato de customização: inputs aceitos do professor (tema, foco, contexto) · regras e schemas Zod de geração de conteúdo por IA (Vertex AI Gemini, só via `apps/api/src/ai`) · fluxo de curadoria docente (preview, edição de postagens e aprovação **antes da aula**, ADR-66/67) · banco curado default (fallback imediato sem IA) · **perfil de quota de IA consumido** (`ia_quotas` por perfil, ADR-105) e o que o estudante e a professora veem sem saldo (429, na voz da ficção) · gatilhos de handoff · comportamento da plataforma em cada mediação e pausas (relógio coletivo = tabela `expNNefNb_gates_turma` por polling, ADR-93/94 — nunca WebSocket) · dados do painel docente · roteiro de perguntas.
 
 ## 9. Evidências e dados
 Campo por campo: o que é coletado, quando, finalidade, retenção, acesso.
@@ -113,7 +119,7 @@ e o que o servidor deriva.
 
 **Mídia capturada do estudante.** Se a missão grava voz, foto, vídeo ou tela
 (`microphone`, `camera`, `display-capture` no bloco 0), este bloco declara, sem
-exceção: **onde a mídia é gravada** (tabela `exp_NN_*` com `escola_id` e RLS,
+exceção: **onde a mídia é gravada** (tabela `expNNefNb_*` com `escola_id` e RLS,
 ou arquivo no bucket com caminho não adivinhável), **quanto tempo fica**
 (retenção ou lacuna assumida por escrito), **quem lê** (só a professora da
 escola — nunca rota de gestor, nunca telemetria, nunca Clarity) e **o que
@@ -128,13 +134,13 @@ quatro campos a missão não passa pela banca de dados.
 fechado. **Não existe campo `dados`** — a api descarta chave desconhecida em
 silêncio. A spec traz a tabela de eventos com estas colunas: verbo · objeto ·
 quando dispara · `resultado` · `contexto` · caminho · **onde é lido** (tabela
-`exp_NN_*` e rota/tela do professor). Ninguém lê `telemetria_eventos` para
+`expNNefNb_*` e rota/tela do professor). Ninguém lê `telemetria_eventos` para
 relatório de missão: toda medida que a professora vê nasce de tabela própria
 do módulo, gravada pela rota operacional.
 
 **Cinco caminhos de dado, não dois.** Analítico (`track` →
 `/telemetry/batch|beacon` → Pub/Sub, sem ordem); operacional (rota síncrona do
-próprio módulo gravando em `exp_NN_sessoes` — missão nova **não herda**
+próprio módulo gravando em `expNNefNb_sessoes` — missão nova **não herda**
 `POST /runs/:id/eventos`, que é do motor da exp-01); erros de cliente; Web
 Vitals; traces OTLP (atributo fora da allowlist do proxy some). Declare o
 caminho de cada dado.
@@ -143,7 +149,7 @@ caminho de cada dado.
 na linha da sessão, o que acontece com linhas antigas quando sobe, e se
 "zerar turma" apaga ou incrementa `tentativa`.
 
-**Tabelas e RLS.** Toda tabela `exp_NN_*` com `escola_id NOT NULL`, `ENABLE`
+**Tabelas e RLS.** Toda tabela `expNNefNb_*` com `escola_id NOT NULL`, `ENABLE`
 + `FORCE ROW LEVEL SECURITY` e policy por `app.escola_id`; exceção de RLS só
 justificada por escrito. Estado é **string com CHECK na migration**, nunca
 enum Prisma. Texto livre de menor em tabela própria com `chars_count`, fora de

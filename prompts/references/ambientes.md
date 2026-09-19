@@ -1,6 +1,6 @@
 ---
 name: ambientes
-description: Registro dos ambientes simulados — seção do design system, versão publicada, e a fronteira entre o que é fixo na biblioteca e o que cada missão possui. Lido por wireframes-figma e jornada-figjam.
+description: Registro dos ambientes simulados — seção do design system, versão publicada, e a fronteira entre o que é fixo na biblioteca e o que cada missão possui. Lido por telas e jornada.
 sources: [chat]
 ---
 
@@ -30,7 +30,7 @@ Isto substitui a ideia de "biblioteca de ambiente por missão": não existe bibl
 
 Missão que precisa de seção ou componente novo **não o cria na experiência** — é a regra de ouro do DS, e violá-la é ❌ em DES-01 e DES-09.
 
-O caminho é: a missão lista os componentes faltantes como **pré-requisito**, com responsável e prazo, e eles chegam por versão publicada antes de a codificação começar. O `wireframes-figma` monta contra a seção; o que não existir nela é pré-requisito declarado, não improviso local.
+O caminho é: a missão lista os componentes faltantes como **pré-requisito**, com responsável e prazo, e eles chegam por versão publicada antes de a codificação começar. O `telas` monta contra a seção; o que não existir nela é pré-requisito declarado, não improviso local.
 
 ## A fronteira — um teste, não uma lista
 
@@ -43,7 +43,7 @@ Caso que não couber nos dois lados é zona de negociação, não improviso: a m
 
 ## Ausências por ambiente — o que a plataforma real NÃO tem
 
-É markdown, não Figma, e é o que mais reduz achado de fidelidade. Uma tabela por seção, para ninguém "completar" a interface por realismo. **A preencher — é o item mais barato e mais valioso deste arquivo.**
+É markdown, e é o que mais reduz achado de fidelidade. Uma tabela por seção, para ninguém "completar" a interface por realismo. **A preencher — é o item mais barato e mais valioso deste arquivo.**
 
 | Seção | Não tem |
 |---|---|

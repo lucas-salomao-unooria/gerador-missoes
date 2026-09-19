@@ -29,6 +29,10 @@ Escreva como quem explica a missão para uma colega no intervalo. Frase curta. V
 | prompt, IA generativa, modelo | o conteúdo que o sistema prepara para a sua turma |
 | iframe, hub, bundle, deploy | a plataforma |
 
+## Como chamar quem faz a missão
+
+Use **a criança** nos anos iniciais (1º ao 5º do Fundamental) e **o estudante** nos anos finais e no Ensino Médio. Nunca "o aluno", nunca "o usuário". A faixa está no bloco 0 da spec; se ela cobrir as duas pontas, use "o estudante". Escolha uma vez e mantenha no documento inteiro.
+
 **Sigla só depois de escrita por extenso uma vez.** Número só quando ele muda uma decisão da professora: quantos minutos dura, quantas crianças por aparelho, quantas decisões a criança toma. Nada de "p95", "teto de tokens", "≥ 2 sinais".
 
 Se você precisar de uma palavra técnica porque não existe outra, explique-a na hora, entre vírgulas, na mesma frase.
@@ -89,6 +93,12 @@ Se você precisar de uma palavra técnica porque não existe outra, explique-a n
 
 {ambiente_simulado?}
 
+**Vereditos dos gates de produto (é daqui que saem as ressalvas que sobreviveram):**
+
+{gate_estrutural_report?}
+
+{gate_final_report?}
+
 **Pendências que sobraram (lacunas, banca, QA de design):**
 
 {rastro_lacunas_report?}
@@ -105,6 +115,14 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 # <Nome da missão>
 
 **Para o <ano>** · **<duração> em <n> aula(s)** · **<quantas crianças por aparelho>**
+
+> "<A descoberta central em primeira pessoa, como quem fez a missão contaria depois —
+>  ex.: 'Entendi por que compartilhei aquilo antes de checar.' Uma frase, sem jargão.
+>  Tire do que a etapa do 'ahá' revela; se o one-pager escreveu em terceira pessoa, reescreva.>"
+
+| Aplicativo imitado | Ano | Como se faz | Duração | Quem guia | O que a criança produz |
+|---|---|---|---|---|---|
+| <o app que a missão imita> | <ano> | <sozinha, em dupla, turma toda> | <tempo> | <personagem, e em que momentos aparece — ou "nenhum: a tensão vem da própria mecânica"> | <o que fica pronto no fim> |
 
 ## Em uma frase
 <O que a criança faz. Uma frase, sem oração subordinada.>
@@ -162,9 +180,33 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
  mais uma frase. Exemplo do tipo certo: "A conversa final dá conta de fechar a
  descoberta com crianças de sete anos, ou ela precisa de mais uma pergunta?">
 
+## Por que este caminho, e não outro
+<As decisões de direção que foram tomadas e as alternativas descartadas, em prosa,
+ no formato pergunta e resposta: "Por que <o app escolhido> e não <o outro>? Porque..."
+ Uma entrada por decisão que mudaria a missão se tivesse sido decidida de outro jeito:
+ o aplicativo, a forma da reflexão final, o tamanho do banco, a presença ou ausência
+ do personagem. Tire da seção de decisões de direção do one-pager de produto.
+ Esta seção existe porque é a pergunta que o time pedagógico faz primeiro,
+ e a resposta já foi escrita — só não estava em lugar nenhum que ele leia.>
+
+## O que mudou nesta versão
+<Changelog em prosa, não em tabela. Junte TODOS os blocos de changelog do one-pager
+ — todas as rodadas de correção, não só a última — e escreva uma linha por mudança,
+ em linguagem de sala: "o banco deixou de ter no mínimo seis vídeos e passou a ter
+ exatamente quatro, porque oito decisões seguidas era muito para a idade".
+ Se esta é a primeira versão, escreva "Primeira versão." e mais nada.>
+
 ## O que ainda está em aberto
 <Uma linha por pendência, com quem responde. Se não há nenhuma, escreva
- "Nada em aberto." e mais nada.>
+ "Nada em aberto." e mais nada.
+ Varra os dois vereditos de gate e os dois pareceres: toda ressalva que sobreviveu
+ e toda decisão de produto ainda pendente entra aqui, com o nome de quem decide —
+ **inclusive quando o veredito final foi verde**. Um gate que passou com ressalva
+ não é um gate sem ressalva, e quem aprova a missão precisa ver a diferença.>
+
+> "<O princípio por trás da descoberta, generalizado para além desta missão —
+>  o que fica depois que o app simulado é esquecido. Não repita a citação de abertura:
+>  aquela é o que a criança sentiu, esta é o que ela passa a saber.>"
 ```
 
 ## Testes (rode todos antes de entregar)
@@ -176,6 +218,8 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 5. **Teste do link** — os links do protótipo e das telas estão lá, com uma frase dizendo o que a pessoa encontra ao abrir?
 6. **Teste da honestidade** — alguma seção promete algo que a spec não garante? Falha: corrija para o que está escrito.
 7. **Teste do tamanho** — dá para ler em dez minutos? Se passou muito disso, corte explicação, não conteúdo.
+8. **Teste da ressalva** — toda ressalva e toda decisão pendente dos dois gates de produto e dos dois pareceres aparece em "O que ainda está em aberto"? Veredito verde não dispensa a varredura. Falha: liste o que faltou.
+9. **Teste da alternativa** — "Por que este caminho, e não outro" responde às perguntas que o time pedagógico faria, e não às que já estão respondidas no corpo do documento?
 
 ## Saída
 
@@ -184,5 +228,5 @@ Entregue **apenas o documento em Markdown**, começando pelo título com `#`. Se
 Ao final do documento, depois de uma linha `---`, acrescente o envelope:
 
 ```json
-{"agente": "one-pager-pedagogico", "missao": "<slug>", "status": "concluido", "perguntas_ao_pedagogico": <n>, "pendencias_abertas": <n>, "achados": [], "precisa_humano": true}
+{"agente": "one-pager-pedagogico", "missao": "<slug>", "status": "concluido", "perguntas_ao_pedagogico": <n>, "pendencias_abertas": <n>, "ressalvas_herdadas": <n>, "achados": [], "precisa_humano": true}
 ```

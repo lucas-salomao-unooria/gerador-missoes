@@ -76,7 +76,7 @@ Aqui a plataforma **já decidiu** não fazer assim, e existe alternativa. Escrev
 
 | Se aparecer | A alternativa |
 |---|---|
-| WebSocket, `socket.io`, "tempo real", `hub:pause` como canal de sala | Tabela `exp_NN_gates_turma` lida por polling HTTP curto (ADR-93/94). Cloud Run não sustenta WebSocket de aplicação |
+| WebSocket, `socket.io`, "tempo real", `hub:pause` como canal de sala | Tabela `expNNefNb_gates_turma` lida por polling HTTP curto (ADR-93/94). Cloud Run não sustenta WebSocket de aplicação |
 | Componente de interface local (botão, campo, diálogo, aba, etiqueta) | Pedido no `storybook-unooria` mais compensação local marcada |
 | Chamada a provedor de IA fora de `apps/api/src/ai` | O módulo de IA, com quota |
 | IA aberta em tempo real na tela do estudante | Preparação docente com curadoria antes da aula, e banco curado como fallback |

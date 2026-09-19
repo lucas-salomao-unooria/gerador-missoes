@@ -74,4 +74,4 @@ Além do documento em markdown, devolva no fim da resposta um bloco
 | `achados[].id` | Rastreia o achado do markdown ao envelope |
 
 - `pronto: null` de um agente de construção é erro de execução, não "não verificado". A esteira deve falhar alto.
-- `severidade: "oficio"` roteia sempre para `jornada-figjam`, nunca para o staff.
+- `severidade: "oficio"` roteia sempre para `jornada`, nunca para o staff.

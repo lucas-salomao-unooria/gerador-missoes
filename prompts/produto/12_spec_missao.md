@@ -40,7 +40,30 @@ Você **não** cria mecânica nova nem fecha decisão de produto. Se algo ficou 
 
 ## BNCC Computação — lista oficial (o bloco 11 só aceita o que está aqui)
 
+**Prioridade:** quando o material do Entre Redes do bimestre/ano vier anexado nesta geração, ele é a fonte primária de código e habilidade — cheque contra ele antes desta lista. Esta lista oficial funciona como verificação e fallback para quando não houver material do Entre Redes anexado.
+
 <!-- include: references/bncc-computacao-letramento-digital.md -->
+
+## Rodada de correção — só quando houver relatório abaixo
+
+**Conformidade curricular (gate determinístico sobre o bloco 11):**
+
+{bncc_report?}
+
+**Ficha do manifesto (gate determinístico sobre o bloco 0):**
+
+{manifesto_report?}
+
+Se os dois blocos estiverem vazios, esta é a primeira passada: escreva a spec normalmente.
+
+Se algum deles apontar achado, **reemita a spec inteira** corrigindo exatamente o que foi apontado. Os dois gates são mecânicos e a correção costuma ser literal:
+
+- **Código BNCC** que não existe, é de outro ano, ou falta letramento digital → troque pelo código certo da lista oficial acima, com o texto literal da habilidade. Não invente; se nenhum código servir, marque `[ABERTO — dono: produto]` e diga por quê.
+- **Campo do manifesto** fora do vocabulário fechado → o relatório traz a lista válida na própria mensagem do achado. Copie de lá.
+- Achado com dono `plataforma` **não é seu**: é pendência de quem constrói a plataforma. Deixe declarado e siga — ele não impede a spec.
+
+Não aproveite a rodada para melhorar outra coisa: mudança não pedida invalida o que os gates já aprovaram.
+
 
 ## Regras
 
@@ -51,8 +74,8 @@ Você **não** cria mecânica nova nem fecha decisão de produto. Se algo ficou 
 5. **Bloco 8 completo**: formalize o contrato de customização e preparação docente — parâmetros de input aceitos (tema, foco, contexto), regras e schema Zod de geração por IA (Vertex AI Gemini), fluxo de curadoria docente com preview e edição antes da aula, banco curado default (fallback imediato sem IA), e gatilhos de controle/pausas da turma.
 6. Copie as contas dos tetos do relatório de experiência (bloco 6) e as habilidades confirmadas/pendentes do relatório pedagógico (bloco 11), marcando 🔵 o que não foi confirmado.
 7. **Bloco 12 — decisões fechadas neste gate**: decisão · quem decidiu · data · alternativas descartadas. Mais a lista `[ABERTO — dono]` consolidada.
-8. Nunca invente código BNCC, componente de DS, rota ou tabela. **O bloco 11 passa por um gate determinístico logo depois de você:** código fora da lista oficial acima, código de outro ano que não a série do bloco 0, ou bloco sem nenhuma habilidade de **letramento digital** trava a esteira. Escreva cada código exatamente como está na lista, com o eixo, o texto literal da habilidade e o momento em tela; marque qual é a de letramento digital.
+8. Nunca invente código BNCC, componente de DS, rota ou tabela. **O bloco 11 passa por um gate determinístico logo depois de você:** código fora da lista oficial acima, código de outro ano que não a série do bloco 0, ou bloco sem nenhuma habilidade de **letramento digital** trava a esteira. Escreva cada código exatamente como está na lista (ou no material do Entre Redes anexado, quando prioritário), com o eixo, o texto literal da habilidade e o momento em tela; marque qual é a de letramento digital.
 
 ## Saída
 
-Entregue **apenas** a spec em Markdown, começando por `# Spec — <missão> v<x>`, com a linha de identificação (`**Ano/faixa · Ambiente · Rubrica v1.17 · Gate final: <🟢/🔴> em <data>**`) e os 12 blocos numerados.
+Entregue **apenas** a spec em Markdown, começando por `# Spec — <missão> v<x>`, com a linha de identificação (`**Ano/faixa · Ambiente · Rubrica v1.17 · Gate final: <🟢/🟡/🔴> em <data>**`) e os 12 blocos numerados.

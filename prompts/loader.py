@@ -96,7 +96,8 @@ def list_prompt_files() -> Dict[str, List[str]]:
     for area_dir in sorted(PROMPTS_DIR.iterdir()):
         if not area_dir.is_dir() or area_dir.name in {"references", "__pycache__"}:
             continue
-        files = sorted(p.name for p in area_dir.glob("*.md"))
+        # `_arquivo.md` é fragmento incluído por outro prompt, não agente: fora do dropdown.
+        files = sorted(p.name for p in area_dir.glob("*.md") if not p.name.startswith("_"))
         if files:
             areas[area_dir.name] = files
     return areas

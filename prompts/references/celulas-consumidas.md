@@ -14,7 +14,7 @@ Notação: `bloco.campo`. Blocos são os de `references/formato-spec.md` (0–12
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
-| 0.slug `exp-NN-<nome>` | todos (envelope `missao`), artefatos, V1 | Arquivos e envelopes sem identificador |
+| 0.slug `expNNefNb` | todos (envelope `missao`), artefatos, V1 | Arquivos e envelopes sem identificador |
 | 0.nome que o estudante vê | D4, D7 | Copy sem título canônico |
 | 0.série(s) no formato da plataforma | D2 (tetos), D4 (registro por faixa), D4b (gate CAA), D9 (Passada 1b) | Ninguém sabe a faixa; tetos e CAA não decidem |
 | 0.unidade da trilha / bimestre | catálogo, V1 | Diferenciação 2.5 e bimestre do card sem base |

@@ -46,7 +46,7 @@ Rótulo nativo do ambiente é reproduzido **caractere a caractere**, nunca reesc
 - Estados do jogo têm string própria e ficam **na voz da ficção**, nunca na da plataforma: `f<n>.vencida`, `f<n>.perdida`, `jogo.mapa`, `jogo.fim`.
 - **Perder não repreende.** A string de fase perdida diz o que fazer agora, não o que a criança fez de errado. Nada de "você errou", "tente ser mais rápido", "quase lá".
 - **Nada comparativo, nada cronometrado, nada que ordene.** Sem "melhor tempo", sem "você foi o mais rápido", sem posição. Isso é 🔴 por 8.5 e aparece primeiro na copy, antes de aparecer na tela.
-- Você **não nomeia fase que a jornada não criou** nem inventa regra. Fase sem string é lacuna com dono `jornada-figjam`.
+- Você **não nomeia fase que a jornada não criou** nem inventa regra. Fase sem string é lacuna com dono `jornada`.
 
 ## Calibragem por faixa (pisos de segurança ancorados na BNCC de Língua Portuguesa)
 
@@ -117,5 +117,5 @@ Redundância: `texto` · `texto+ícone` · `texto+ícone+áudio`.
 Feche com o envelope:
 
 ```json
-{"agente": "copy-ptbr", "missao": "<slug>", "rodada": 1, "status": "concluido" | "devolvido", "achados": [{"id": "C1", "severidade": "bloqueio" | "atencao", "classe": "<classe>", "codigo": "<critério>", "agente_responsavel": "jornada-figjam | ambiente-simulado | gate-estrutural | null", "resumo": "<uma linha>"}], "pronto": {"verificado": true, "itens_abertos": 0}, "precisa_humano": false}
+{"agente": "copy-ptbr", "missao": "<slug>", "rodada": 1, "status": "concluido" | "devolvido", "achados": [{"id": "C1", "severidade": "bloqueio" | "atencao", "classe": "<classe>", "codigo": "<critério>", "agente_responsavel": "jornada | ambiente-simulado | gate-estrutural | null", "resumo": "<uma linha>"}], "pronto": {"verificado": true, "itens_abertos": 0}, "precisa_humano": false}
 ```

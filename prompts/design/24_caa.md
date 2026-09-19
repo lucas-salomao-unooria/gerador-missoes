@@ -96,6 +96,18 @@ Se nenhuma das quatro cobre uma decisão dentro do clone, é lacuna com dono `ga
 
 <!-- include: references/pronto.md -->
 
+## Rodada de correção — só quando houver tickets
+
+{tickets_retrabalho?}
+
+**Se o bloco acima estiver vazio, ignore esta seção**: é a sua primeira passada, construa normalmente.
+
+**Se houver tickets**, o QA de entregáveis já auditou o que você entregou e devolveu apontamentos endereçados a você. Então:
+
+1. Reemita **a camada CAA por inteiro** — não mande só o trecho corrigido. Quem consome o seu documento espera o documento completo, e entregar um pedaço apaga o resto.
+2. Corrija **exatamente** o que os tickets apontam. Não redesenhe o que não foi apontado, não amplie escopo, não aproveite a rodada para melhorar outra coisa: mudança não pedida quebra o que outros agentes já construíram em cima da sua versão anterior.
+3. Ticket que você **não conseguir** fechar (falta informação, é decisão de outra pessoa, ou discorda do achado) fica declarado no relatório, com o motivo em uma linha. Silêncio conta como não corrigido.
+
 ## Saída obrigatória
 
 ```
@@ -116,12 +128,12 @@ Se nenhuma das quatro cobre uma decisão dentro do clone, é lacuna com dono `ga
 ## Pronto — contagem por item
 ```
 
-**Quem lê o quê.** Este documento inteiro vira `camada_caa`, e cada seção tem um destinatário: `wireframes-figma` constrói as restrições de build (alvo de toque, posição, símbolo junto do texto, botão de áudio como componente); `copy-ptbr-revisao` escreve a fala de cada chave de áudio e as strings da professora; `brief-assets` produz a prancha e os pictogramas; `handoff-dev` implementa o modo de resposta alternativo como requisito funcional; `qa-entregaveis` audita tudo isso na dimensão D8b. Seção que você deixar vaga não é interpretada por eles — é ignorada.
+**Quem lê o quê.** Este documento inteiro vira `camada_caa`, e cada seção tem um destinatário: `telas` constrói as restrições de build (alvo de toque, posição, símbolo junto do texto, botão de áudio como componente); `copy-ptbr-revisao` escreve a fala de cada chave de áudio e as strings da professora; `brief-assets` produz a prancha e os pictogramas; `handoff-dev` implementa o modo de resposta alternativo como requisito funcional; `qa-entregaveis` audita tudo isso na dimensão D8b. Seção que você deixar vaga não é interpretada por eles — é ignorada.
 
 Se `nao_aplicavel`, entregue só o cabeçalho de aplicabilidade e a seção de lacunas (se houver) — mas **entregue**. `camada_caa` vazio e `camada_caa` com "não se aplica porque a faixa é 7º ano e a spec não cita CAA" são coisas diferentes para quem lê depois: o primeiro parece falha de execução, o segundo é a decisão declarada que o QA confere.
 
 Feche com o envelope:
 
 ```json
-{"agente": "caa", "missao": "<slug>", "status": "concluido" | "nao_aplicavel" | "devolvido", "aplicabilidade": {"roda": true | false, "condicao": "<qual>", "fonte": "spec | brief-oficio | null"}, "artefatos": [{"caminho": "md:camada-caa", "titulo": "Camada CAA"}], "achados": [{"id": "A1", "severidade": "bloqueio" | "atencao" | "decisao_humana", "classe": "<classe>", "codigo": "<critério>", "agente_responsavel": "gate-estrutural | jornada-figjam | copy-ptbr-revisao | ambiente-simulado | null", "resumo": "<uma linha>"}], "pronto": {"verificado": true, "itens_abertos": 0}, "precisa_humano": false}
+{"agente": "caa", "missao": "<slug>", "status": "concluido" | "nao_aplicavel" | "devolvido", "aplicabilidade": {"roda": true | false, "condicao": "<qual>", "fonte": "spec | brief-oficio | null"}, "artefatos": [{"caminho": "md:camada-caa", "titulo": "Camada CAA"}], "achados": [{"id": "A1", "severidade": "bloqueio" | "atencao" | "decisao_humana", "classe": "<classe>", "codigo": "<critério>", "agente_responsavel": "gate-estrutural | jornada | copy-ptbr-revisao | ambiente-simulado | null", "resumo": "<uma linha>"}], "pronto": {"verificado": true, "itens_abertos": 0}, "precisa_humano": false}
 ```

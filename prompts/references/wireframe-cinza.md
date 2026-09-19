@@ -1,6 +1,6 @@
 ---
 name: wireframe-cinza
-description: Paleta e regras da coleção de variáveis em escala de cinza usada nos wireframes lo-fi. Lido por wireframes-figma.
+description: Paleta e regras da coleção de variáveis em escala de cinza usada nos wireframes lo-fi. Lido por telas.
 sources: [chat]
 ---
 

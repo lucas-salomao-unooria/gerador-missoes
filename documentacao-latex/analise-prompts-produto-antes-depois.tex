@@ -1,0 +1,1092 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{caption}
+
+\definecolor{verde}{RGB}{22,128,60}
+\definecolor{ambar}{RGB}{176,116,0}
+\definecolor{vermelho}{RGB}{176,26,26}
+\definecolor{cinza}{RGB}{90,90,90}
+\definecolor{fundocodigo}{RGB}{246,246,246}
+
+\newcommand{\Verde}[1]{\textcolor{verde}{\textbf{#1}}}
+\newcommand{\Ambar}[1]{\textcolor{ambar}{\textbf{#1}}}
+\newcommand{\Vermelho}[1]{\textcolor{vermelho}{\textbf{#1}}}
+\newcommand{\cod}[1]{\texttt{\small #1}}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{fundocodigo},
+  frame=single,
+  rulecolor=\color{cinza!40},
+  breaklines=true,
+  columns=fullflexible,
+  showstringspaces=false,
+  xleftmargin=4pt,
+  framexleftmargin=4pt,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ã}{{\~a}}1 {õ}{{\~o}}1 {â}{{\^a}}1 {ê}{{\^e}}1 {ô}{{\^o}}1
+           {ç}{{\c c}}1 {Á}{{\'A}}1 {É}{{\'E}}1 {Ã}{{\~A}}1 {Ç}{{\c C}}1
+           {à}{{\`a}}1 {º}{{\textordmasculine}}1 {ª}{{\textordfeminine}}1
+}
+
+\title{\textbf{Análise qualitativa da revisão dos prompts de Produto}\\[0.3em]
+\large Comparação antes/depois do pacote \textit{esteira-anosfinais-formato-produto}\\
+e avaliação da granularidade da esteira (9 agentes \textit{versus} 5)}
+\author{Análise técnica --- repositório \texttt{gerador-missoes} (Unooria)}
+\date{18 de setembro de 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent
+Este relatório compara, arquivo a arquivo, os prompts da área de Produto vigentes no repositório
+\texttt{gerador-missoes} (\textit{HEAD} \cod{914f05b}) com o pacote revisado entregue pelo \textit{Product Owner}
+(pasta \texttt{esteira-anosfinais-formato-produto}, 18/09/2026). Foram analisadas 13 mudanças distintas
+distribuídas em 11 arquivos. O resultado não é homogêneo: seis mudanças são melhorias substantivas e
+tecnicamente defensáveis --- uma delas corrige um erro de desenho de avaliação que a literatura de
+tolerância a falhas prevê desde 1986 ---, duas são regressões graves que quebram contratos determinísticos
+a jusante, e duas exigem alteração de código para funcionar. A recomendação é \textbf{integração seletiva},
+não adoção em bloco nem rejeição em bloco. O relatório inclui ainda uma avaliação da granularidade da
+esteira, concluindo que a decomposição atual em nove agentes é superior a uma consolidação em cinco ---
+mas por um motivo diferente do senso comum de que ``mais especialistas é melhor''.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Sumário executivo}
+
+\subsection{Veredito}
+
+O \textit{Product Owner} entregou um pacote de qualidade técnica \textbf{acima} do que a desconfiança inicial
+sugeria. As mudanças conceituais --- veredito ternário, desduplicação de critérios, regra de parada de
+\textit{loop}, operacionalização de rubrica --- são corretas, bem argumentadas e sustentadas por literatura
+consolidada. O problema não está no julgamento pedagógico; está em \textbf{higiene de integração}:
+o pacote foi editado sobre um \textit{snapshot} desatualizado do repositório e desfaz, sem intenção aparente,
+dois \textit{commits} de sincronização de contratos de plataforma.
+
+\begin{table}[h]
+\centering
+\caption{Distribuição das 13 mudanças identificadas}
+\begin{tabular}{lcl}
+\toprule
+\textbf{Classe} & \textbf{Qtd.} & \textbf{Ação recomendada} \\
+\midrule
+Melhoria substantiva            & 5 & Integrar \\
+Melhoria com ajuste necessário  & 3 & Integrar após correção pontual \\
+Regressão grave                 & 2 & \textbf{Descartar} (reverter para o estado atual) \\
+Regressão leve                  & 2 & Descartar ou revisar caso a caso \\
+Neutra                          & 1 & Indiferente \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Os três achados que importam}
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{A revisão do \cod{formato-spec.md} é uma reversão, não uma revisão} (Seção~\ref{sec:m11}).
+  O arquivo revisado é bit-a-bit equivalente à versão do \textit{commit} \cod{4dcdb18} (16/09), \textbf{anterior}
+  ao \cod{262f160} que sincronizou os contratos da plataforma. Ele remove 73 linhas, entre elas a ficha do
+  manifesto --- cujos dez campos são lidos por um validador determinístico (\cod{tools/rastro.py}) que emite
+  severidade \textit{bloqueio} para cada campo ausente. Adotar este arquivo faz \textbf{toda} missão nova
+  travar no gate de manifesto da etapa de Dev.
+
+  \item \textbf{O novo valor de envelope \cod{aprovado\_com\_ressalvas} não existe no código} (Seção~\ref{sec:m2}).
+  A função \cod{agents/callbacks.py::inferir\_status} reconhece \cod{apto\_com\_ressalvas}, \cod{ressalvas},
+  \cod{amarelo} e o emoji amarelo, mas não \cod{aprovado\_com\_ressalvas}. O envelope cai no \textit{fallback}
+  textual, cujo teste de bloqueio é avaliado \textbf{antes} do teste de aprovação --- o que abre um caminho
+  concreto de falso bloqueio. Correção: duas linhas.
+
+  \item \textbf{A desduplicação dos critérios 3.1--3.3 é o melhor achado do pacote} (Seção~\ref{sec:m4}).
+  O PO identificou que três critérios obrigatórios do agente P3 eram testes idênticos aos critérios 1.3, 1.4
+  e 7.2 do agente P1. A verificação no repositório confirma a equivalência literal. Redundância cujos
+  avaliadores falham de forma correlacionada não adiciona cobertura --- é o resultado clássico de
+  Knight e Leveson~\cite{knight1986} sobre programação multiversão, e vale com ainda mais força quando os
+  dois ``avaliadores independentes'' são \textit{prompts} diferentes do mesmo modelo.
+\end{enumerate}
+
+\subsection{Resposta direta às duas perguntas feitas}
+
+\begin{description}[leftmargin=1.2cm,style=nextline]
+  \item[Os prompts melhoraram ou pioraram?] Os \textbf{prompts de agente} (\cod{p1}--\cod{p5} e o novo
+  \cod{p5b}) melhoraram. Os \textbf{arquivos de referência} que eles incluem pioraram, e é por eles que a
+  esteira quebra.
+  \item[Ajudam ou dificultam a construção da missão?] As mudanças de veredito e de \textit{loop} ajudam a
+  construção e, principalmente, a auditoria. As mudanças nos arquivos de referência dificultam de forma
+  determinística: o contrato que Design e Dev consomem fica incompleto.
+\end{description}
+
+\newpage
+\section{Método e escopo}
+
+\subsection{O que foi comparado}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Linha de base:} \texttt{prompts/produto/} e \texttt{prompts/references/} no \textit{HEAD}
+  \cod{914f05b} da \textit{branch} \texttt{main}, com a árvore de trabalho limpa para esses caminhos.
+  \item \textbf{Revisão:} os 6 arquivos de \textit{prompt} e os 10 arquivos de referência da pasta
+  \texttt{\textasciitilde/Downloads/esteira-anosfinais-formato-produto} (carimbo de tempo 18/09/2026, 18h43).
+\end{itemize}
+
+\subsection{Procedimento}
+
+A análise combinou quatro instrumentos, nesta ordem:
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Diferencial textual completo} (\cod{diff -u}) de cada par de arquivos, com quantificação de
+  linhas removidas e adicionadas.
+  \item \textbf{Arqueologia de versão}: comparação de cada arquivo revisado contra as versões históricas do
+  \textit{git}, para distinguir \textit{edição} de \textit{reversão}. Este passo isolou os achados M11 e M12.
+  \item \textbf{Verificação contra o código executável}: leitura dos consumidores de cada contrato alterado
+  (\cod{agents/callbacks.py}, \cod{agents/checkers.py}, \cod{agents/produto/\_\_init\_\_.py},
+  \cod{tools/rastro.py}, \cod{tools/bncc.py}, \cod{pipeline/session\_store.py}, \cod{config.py}), para
+  determinar se a mudança de \textit{prompt} tem contraparte no código.
+  \item \textbf{Teste empírico} onde a leitura de código deixava dúvida. Duas hipóteses foram testadas
+  executando o próprio validador do repositório; uma foi confirmada e \textbf{outra foi refutada}
+  (Seção~\ref{sec:m9}) --- registrada aqui porque a refutação muda o veredito daquela mudança.
+  \item \textbf{Medição de densidade de instrução} por agente, com resolução das diretivas
+  \cod{<!-- include: ... -->}, para fundamentar a discussão de granularidade (Seção~\ref{sec:granularidade}).
+\end{enumerate}
+
+\subsection{Limites desta análise}
+
+Esta é uma análise \textbf{estática e de contrato}. Ela não executa a esteira ponta a ponta com os prompts
+revisados, e portanto não mede efeito sobre a qualidade final das missões geradas --- o que exigiria um
+experimento com $n$ missões, dois braços e avaliação cega por especialistas humanos (proposto na
+Seção~\ref{sec:recomendacoes}, item R7). As afirmações sobre bloqueio determinístico são verificáveis por
+leitura de código e foram confirmadas; as afirmações sobre qualidade de julgamento do modelo são
+argumentos fundamentados, não medições.
+
+\newpage
+\section{Contexto: o que a esteira faz e onde estão os pontos de controle}
+
+A etapa de Produto é um \cod{SequentialAgent} com nove agentes e dois \textit{loops} de correção:
+
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+  \item \textbf{P0a} --- núcleo narrativo (seções 0, 1, 3 e 4 do \textit{one-pager});
+  \item \textbf{P0mg} --- micro-gate de \textit{spoiler}, \textit{gap} de informação e escolha significativa
+  (\textit{loop} com P0a, teto de 2 rodadas);
+  \item \textbf{P0b} --- seções de apoio (completa as 18 seções do \textit{one-pager} canônico);
+  \item \textbf{P1} --- gate estrutural (23 critérios);
+  \item \textbf{P1b} --- revisor do \textit{one-pager} (\textit{loop} com P1, teto de 3 rodadas por
+  \cod{GATE\_ESTRUTURAL\_MAX\_RODADAS});
+  \item \textbf{P2} --- avaliação pedagógica (20 critérios) --- em paralelo com P3;
+  \item \textbf{P3} --- experiência do estudante (11 critérios hoje, 8 na revisão);
+  \item \textbf{P4} --- gate final de produto;
+  \item \textbf{P5} --- \textit{spec} da missão (12 blocos), o contrato contra o qual Design e Dev constroem.
+\end{enumerate}
+
+Entre cada agente e o seguinte há um \cod{EnvelopeGateAgent}, que lê o bloco JSON final do relatório,
+normaliza o veredito e decide se o \textit{pipeline} segue, repete ou para. Com
+\cod{PRODUTO\_MODO\_ESTRITO=true} (o padrão em \texttt{.env}), um gate bloqueado impede a execução de Design
+e Dev. \textbf{É esse envelope que o pacote revisado altera} --- e é por isso que uma mudança aparentemente
+redacional tem consequência operacional.
+
+A jusante, na etapa de Dev, há três gates \textbf{determinísticos} (não são modelos de linguagem, são
+funções Python): \cod{lacunas}, \cod{manifesto} e \cod{telemetria}. O gate de manifesto lê a ficha do bloco~0
+da \textit{spec} produzida pelo P5. Esse é o ponto exato onde a regressão M11 se manifesta.
+
+\newpage
+\section{Análise mudança a mudança}
+
+\subsection{Visão geral}
+
+\begin{longtable}{p{0.6cm}p{6.1cm}p{3.2cm}p{4.6cm}}
+\caption{As 13 mudanças identificadas, com classificação}\label{tab:mudancas}\\
+\toprule
+\textbf{\#} & \textbf{Mudança} & \textbf{Onde} & \textbf{Veredito} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{\#} & \textbf{Mudança} & \textbf{Onde} & \textbf{Veredito} \\
+\midrule
+\endhead
+M1 & Veredito binário $\rightarrow$ ternário & p1, p2, p3, p4 & \Verde{Melhoria} (com salvaguarda) \\
+M2 & Envelope \cod{aprovado\_com\_ressalvas} & p1, p2, p3, p4 & \Ambar{Melhoria bloqueada por código} \\
+M3 & Regra de parada do \textit{loop} P1$\leftrightarrow$P1b & p1 & \Verde{Melhoria} (com \textit{off-by-one}) \\
+M4 & Remoção dos critérios 3.1--3.3 do P3 & p3, criterios-experiencia & \Verde{Melhoria forte} \\
+M5 & Operacionalização do critério 1.6 & criterios-gate-estrutural & \Verde{Melhoria forte} \\
+M6 & ``Teste de cenário real'' no critério 6.3 & criterios-experiencia & \Ambar{Melhoria parcial} \\
+M7 & Poda de ancoragem em 6.1, 6.4, 6.5 & criterios-experiencia & \Vermelho{Regressão leve} \\
+M8 & ``aluno'' $\rightarrow$ ``estudante'' & vários & Neutra/positiva \\
+M9 & Material \textit{Entre Redes} como fonte primária BNCC & p2, p5 & \Ambar{Risco condicional} \\
+M10 & Novo agente P5b (\textit{one-pager} pedagógico) & arquivo novo & \Verde{Melhoria} (falta \textit{wiring}) \\
+M11 & \cod{formato-spec.md} revertido (--73 linhas) & references & \Vermelho{Regressão grave} \\
+M12 & \cod{ambientes.md} revertido (--9 linhas) & references & \Vermelho{Regressão} \\
+M13 & Remoção do \textit{frontmatter} YAML & 4 references & \Vermelho{Regressão leve} \\
+\bottomrule
+\end{longtable}
+
+\subsection{M1 --- Veredito binário para ternário}
+\label{sec:m1}
+
+\paragraph{O que mudou.} Os quatro agentes avaliadores passam de um veredito de duas categorias
+(APROVADO / BLOQUEADO) para três (APROVADO / APROVADO COM RESSALVAS / BLOQUEADO). O texto anterior do P1
+era explícito na direção oposta: \textit{``Aprovado com ressalvas não existe''}.
+
+\paragraph{Por que é uma melhoria.} O sistema anterior não eliminava o estado intermediário --- ele o
+\textbf{comprimia}. O P2 anterior instruía, literalmente: \textit{``Use \cod{aprovado} para `pedagogicamente
+pronta' e `pronta com ressalvas'\,''}, e o P3 fazia o mesmo. Ou seja, a distinção existia no relatório em
+prosa e era destruída no campo que o código lê. Um consumidor a jusante --- outro agente ou uma pessoa
+olhando o painel --- via ``aprovado'' sem forma de saber se havia risco aceito.
+
+Isso é perda de informação por desenho. Na literatura psicométrica, escalas de 2 e 3 pontos apresentam
+desempenho sistematicamente inferior em confiabilidade, validade e poder discriminante quando comparadas a
+escalas com mais categorias; Preston e Colman~\cite{preston2000} mediram os índices subindo de forma
+significativa até cerca de sete categorias. A passagem de 2 para 3 é um ganho de discriminação com custo
+baixo de concordância.
+
+\paragraph{O risco que isso cria.} A categoria intermediária é também a categoria de fuga. A literatura
+clássica sobre erros de avaliador descreve dois vieses convergentes aqui: \textit{leniency} (tendência
+sistemática a pontuar acima do devido) e \textit{central tendency} (evitar os extremos da escala), ambos
+catalogados por Saal, Downey e Lahey~\cite{saal1980}. O fenômeno é documentado especificamente em
+avaliadores baseados em modelos de linguagem: Zheng et al.~\cite{zheng2023} caracterizam vieses de posição,
+verbosidade e autopreferência, e trabalhos posteriores registram \textit{leniency} como viés recorrente ---
+consequência particularmente séria em rubricas dominadas por critérios negativos, exatamente o caso desta
+esteira, onde o sinal que a rubrica existe para capturar é a \textbf{taxa de erro}.
+
+Sem salvaguarda, o resultado esperado é deriva: o \Ambar{AMARELO} vira o veredito confortável, e a proporção
+de \Verde{VERDE} puro cai sem que ninguém decida isso.
+
+\paragraph{Salvaguarda recomendada.} O pacote já traz metade da proteção: o campo \cod{ressalvas: <n>} no
+envelope, que torna a contagem observável. Falta a outra metade --- uma política explícita. Sugestão mínima:
+
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+  \item registrar \cod{ressalvas} por missão e monitorar a série temporal (se a média subir sem queda
+  correspondente em \cod{bloqueios\_obrigatorios}, é deriva, não melhoria de qualidade);
+  \item definir um teto por missão acima do qual \Ambar{AMARELO} escala para decisão humana
+  (\cod{precisa\_humano: true}), em vez de seguir;
+  \item manter a exigência --- que o pacote preserva corretamente --- de que cada ressalva sobrevivente
+  nomeie os agentes a jusante e demonstre que nenhum precisa daquilo.
+\end{enumerate}
+
+\subsection{M2 --- O envelope \cod{aprovado\_com\_ressalvas} não tem contraparte no código}
+\label{sec:m2}
+
+\paragraph{O problema.} O pacote introduz o valor \cod{"status": "aprovado\_com\_ressalvas"} nos envelopes
+de P1, P2, P3 e P4. A função que normaliza esse campo é:
+
+\begin{lstlisting}[caption={\cod{agents/callbacks.py}, linhas 55--73 (estado atual)}]
+def inferir_status(texto, envelope=None):
+    if envelope:
+        status = str(envelope.get("status") or envelope.get("veredito") or "").strip().lower()
+        if status in ("aprovado", "concluido", "concluído", "liberada", "apto", "passa", "verde", "<verde>"):
+            return STATUS_APROVADO
+        if status in ("bloqueado", "bloqueada", "devolvido", "nao_apto", ...):
+            return STATUS_BLOQUEADO
+        if status in ("apto_com_ressalvas", "ressalvas", "amarelo", "<amarelo>"):
+            return STATUS_APROVADO
+        ...
+    cabecalho = (texto or "")[:1500].upper()
+    if any(tok in cabecalho for tok in _BLOQUEADO_TOKENS):   # testado PRIMEIRO
+        return STATUS_BLOQUEADO
+    if any(tok in cabecalho for tok in _APROVADO_TOKENS):
+        return STATUS_APROVADO
+    return STATUS_INDEFINIDO
+\end{lstlisting}
+
+O vocabulário aceito contempla \cod{apto\_com\_ressalvas} e \cod{amarelo} --- mas \textbf{não}
+\cod{aprovado\_com\_ressalvas}. O envelope, que é o caminho robusto e estruturado, deixa de decidir, e a
+decisão cai no \textit{fallback} heurístico sobre os primeiros 1.500 caracteres do texto.
+
+\paragraph{Por que o \textit{fallback} é perigoso aqui.} Os tokens de bloqueio são testados antes dos de
+aprovação, e a linha de cabeçalho que o próprio \textit{prompt} manda emitir é:
+
+\begin{lstlisting}
+**Veredito: <verde> APROVADO | <amarelo> APROVADO COM RESSALVAS | <vermelho> BLOQUEADO** ...
+\end{lstlisting}
+
+Se o modelo reproduzir a linha do gabarito em vez de escolher uma opção --- comportamento comum quando o
+gabarito lista alternativas na mesma linha ---, o cabeçalho contém o emoji vermelho e \cod{BLOQUEADO}, e a missão é
+classificada como bloqueada. Com \cod{PRODUTO\_MODO\_ESTRITO=true}, isso mata a esteira: Design e Dev são
+pulados e o PRD não sai.
+
+Esse risco já existia no formato binário, mas ali o caminho do envelope funcionava e absorvia o erro. Ao
+introduzir um valor não reconhecido, a revisão \textbf{remove a rede de proteção} e deixa apenas a heurística.
+É uma violação de contrato no sentido de Meyer~\cite{meyer1992}: o produtor passou a emitir um valor fora do
+domínio que o consumidor declara aceitar, e a falha resultante não é local --- é silenciosa e a jusante.
+
+\paragraph{Impacto secundário.} \cod{pipeline/session\_store.py::formatar\_status\_label} também não conhece
+o valor: a interface exibiria ``(sem cor) Aprovado\_com\_ressalvas'' em vez do rótulo amarelo correto.
+
+\paragraph{Correção.} Trivial, duas linhas --- acrescentar \cod{aprovado\_com\_ressalvas} às duas listas que
+já contêm \cod{apto\_com\_ressalvas}. A alternativa (padronizar os prompts em \cod{apto\_com\_ressalvas},
+valor que o código já aceita) evita tocar no código, mas desalinha o vocabulário dos prompts entre si.
+\textbf{Recomenda-se corrigir o código}, que é a fonte mais estável.
+
+\subsection{M3 --- Regra de parada do \textit{loop} P1$\leftrightarrow$P1b}
+\label{sec:m3}
+
+\paragraph{O que mudou.} O P1 revisado ganha uma seção nova: teto de três rodadas de correção; ao avaliar a
+rodada seguinte com a missão ainda bloqueada, o agente deixa de emitir o bloco ``Complemento --- pronto pra
+colar'' e passa a emitir ``Limite de rodadas atingido --- decisão humana necessária'', marcando
+\cod{precisa\_humano: true}. A justificativa escrita no próprio \textit{prompt} é precisa: o P1b nunca decide
+questões de produto (é regra dele), logo, se o bloqueio for uma decisão pendente, mais uma rodada não pode
+resolvê-lo por construção.
+
+\paragraph{Por que é uma melhoria.} Terminação e verificação são categorias inteiras da taxonomia de falhas
+de sistemas multiagente de Cemri et al.~\cite{cemri2025}, construída sobre mais de 1.600 traços anotados em
+sete \textit{frameworks} e validada com concordância entre anotadores de $\kappa = 0{,}88$. Uma das famílias
+de falha é justamente o sistema insistir em ciclos de correção que não podem convergir, porque a informação
+necessária não está disponível para nenhum dos agentes. Tornar essa condição explícita e escalá-la para um
+humano é o tratamento correto.
+
+A regra também distingue as duas causas do bloqueio persistente --- falta de mecanismo (o P1b poderia ter
+resolvido e não resolveu) \textit{versus} decisão de produto em aberto (nenhuma rodada resolve). Essa
+distinção é o que transforma ``o \textit{loop} estourou'' em informação acionável.
+
+\paragraph{O defeito.} A regra é escrita para disparar ``ao avaliar a \textbf{rodada 4} (ou além)''. O
+\textit{loop} é um \cod{LoopAgent} com \cod{max\_iterations = GATE\_ESTRUTURAL\_MAX\_RODADAS}, cujo padrão em
+\texttt{.env} e em \texttt{config.py} é \textbf{3}. A rodada 4 nunca ocorre: o \textit{loop} encerra na
+terceira. A instrução, como escrita, é letra morta, e o \cod{precisa\_humano: true} que ela pretendia
+garantir nunca é emitido por esse caminho.
+
+\paragraph{Correção.} Trocar o gatilho para a rodada final --- ``na 3.\textsuperscript{a} rodada, se a missão
+continuar bloqueada'' --- ou, melhor, parametrizar o texto do \textit{prompt} pelo mesmo valor de
+configuração, já que \cod{load\_prompt} suporta substituição de variáveis estáticas via \textit{kwargs}.
+Isso elimina a possibilidade de o \textit{prompt} e o \textit{runner} divergirem de novo quando alguém
+mudar a variável de ambiente.
+
+\subsection{M4 --- Remoção dos critérios 3.1--3.3 do P3}
+\label{sec:m4}
+
+\paragraph{O que mudou.} O agente P3 perde três critérios obrigatórios --- 3.1 (ação com significado),
+3.2 (o resultado reflete a ação) e 3.3 (sem julgamento do estudante como pessoa) --- e passa de 11 para
+8 critérios (5 obrigatórios + 1 condicional + 2 desejáveis). A justificativa registrada no arquivo de
+referência é que eram testes idênticos aos critérios 1.3, 1.4 e 7.2 do gate estrutural.
+
+\paragraph{Verificação.} A alegação foi conferida contra \cod{prompts/references/criterios-gate-estrutural.md}
+e é \textbf{literalmente verdadeira}:
+
+\begin{longtable}{p{1.1cm}p{6.0cm}p{1.1cm}p{6.0cm}}
+\caption{Equivalência entre os critérios removidos do P3 e os do P1}\\
+\toprule
+\textbf{P3} & \textbf{Teste prático (removido)} & \textbf{P1} & \textbf{Teste prático (mantido)} \\
+\midrule
+\endfirsthead
+3.1 & ``Se tirar a ação do estudante, a missão continua chegando no mesmo lugar? Se sim $\rightarrow$ falha'' & 1.3 & ``Se tirar a decisão, a missão continua funcionando igual? (se sim, falha)'' \\
+\addlinespace
+3.2 & ``O estudante percebe a relação entre o que fez e o que aconteceu?'' & 1.4 & ``O aluno vê o impacto da sua escolha? Caminhos diferentes geram resultados diferentes?'' \\
+\addlinespace
+3.3 & ``Alguma métrica nascida na simulação vaza pra avaliação formal fora dela?'' & 7.2 & ``Alguma métrica da simulação vaza para avaliação formal (boletim, conceito)?'' \\
+\bottomrule
+\end{longtable}
+
+\paragraph{Por que é uma melhoria forte.} A intuição contrária --- ``duas verificações são melhores que
+uma'' --- pressupõe independência de falhas. Knight e Leveson~\cite{knight1986} testaram exatamente essa
+premissa em 27 implementações independentes do mesmo requisito, submetidas a um milhão de testes, e
+encontraram correlação estatisticamente significativa entre as falhas: programas escritos separadamente
+erravam nos \textit{mesmos} casos, com frequência muito acima do previsto pela hipótese de independência.
+A conclusão é que redundância só compra confiabilidade na medida em que as falhas são descorrelacionadas.
+
+No caso desta esteira, a premissa de independência é ainda mais frágil: P1 e P3 não são implementações
+independentes --- são \textit{prompts} distintos executados pelo \textbf{mesmo modelo}, sobre o
+\textbf{mesmo artefato}, com o \textbf{mesmo texto de teste}. A probabilidade condicional de o P3 detectar
+uma violação de 3.1 que o P1 deixou passar em 1.3 é baixa por construção. O que a duplicata efetivamente
+produzia não era cobertura extra, e sim três itens ocupando espaço de atenção no P3.
+
+\paragraph{O ganho secundário é o principal.} O P3 existe, segundo o texto do próprio \textit{prompt},
+porque \textit{``a rubrica original errava sistematicamente aqui: os critérios de faixa etária competiam por
+atenção com $\sim$30 critérios de outra natureza''}. Retirar três itens redundantes devolve capacidade de
+atenção à lente que só o P3 tem --- carga cognitiva, adequação etária, simulação do estudante real. O
+mecanismo é o mesmo que motivou a criação do agente, e é consistente com a evidência de que a aderência a
+instruções degrada de forma não linear com a densidade: no \textit{benchmark} IFScale, de
+Jaroslawicz et al.~\cite{ifscale2025}, os melhores modelos de fronteira atingem apenas 68\% de acurácia na
+densidade máxima testada, com viés sistemático em favor das instruções iniciais.
+
+\paragraph{Ressalva.} A remoção é segura \textbf{apenas enquanto} P1 e P3 permanecerem ambos no
+\textit{pipeline} e na ordem atual. Se algum dia o P1 for reorganizado, esses três critérios saem da esteira
+sem aviso. Recomenda-se registrar a dependência explicitamente no cabeçalho de
+\cod{criterios-gate-estrutural.md} --- o pacote já a documenta do lado do P3, falta o lado do P1.
+
+\subsection{M5 --- Operacionalização do critério 1.6 (reflexão final)}
+\label{sec:m5}
+
+\paragraph{O que mudou.} O critério 1.6 ganha uma enumeração de três armadilhas (campo aberto genérico,
+quiz de múltipla escolha, e --- nova --- provocação que contém a resposta na própria pergunta) e, sobretudo,
+um \textbf{teste de falseabilidade}: \textit{``um estudante que NÃO fez a missão consegue responder
+corretamente só pela pergunta? Se sim, a provocação não testa aplicação --- testa leitura.''}
+
+\paragraph{Por que é uma melhoria forte.} Esta é a mudança mais bem construída do pacote do ponto de vista
+de instrumento de avaliação. A revisão sistemática de Jonsson e Svingby~\cite{jonsson2007}, sobre 75 estudos
+empíricos de rubricas, conclui que a confiabilidade de pontuação melhora com rubricas \textbf{analíticas e
+específicas ao tópico}, complementadas por exemplos concretos --- que é precisamente a forma da mudança:
+sai um critério declarativo, entra um procedimento com contraexemplos nomeados e um teste de decisão.
+
+O teste proposto tem uma propriedade rara em rubrica: é \textbf{falseável sem consultar a intenção do autor}.
+O avaliador não precisa julgar se a provocação ``é boa''; precisa executar um experimento mental com
+resultado binário. Isso reduz a variância entre execuções, que é a fonte principal de ruído quando o
+avaliador é um modelo de linguagem.
+
+\subsection{M6 --- ``Teste de cenário real'' no critério 6.3}
+
+\paragraph{O que mudou.} O critério de complexidade da decisão ganha uma terceira dimensão: a calibração
+deve ser feita para o \textbf{cenário de piso} (escola pública brasileira, estudante possivelmente sem
+familiaridade com a plataforma simulada, sem dispositivo próprio, sem compreensão de instruções implícitas)
+e não para o cenário ideal.
+
+\paragraph{Avaliação.} A intenção é correta e pedagogicamente relevante: calibrar para o cenário ideal é uma
+forma silenciosa de excluir a maior parte do público-alvo real, e a preocupação conversa diretamente com a
+teoria da carga cognitiva --- a carga extrínseca imposta pela interface e pelas instruções compete pelos
+mesmos recursos que a tarefa de aprendizagem~\cite{sweller1988}, e essa competição é maior justamente para
+quem tem menos familiaridade prévia.
+
+O problema é de \textbf{operacionalização}, e o contraste com M5 é instrutivo. Enquanto o 1.6 revisado
+entrega um teste binário executável, o 6.3 revisado entrega uma pergunta aberta (``foi calibrada para o
+ideal ou para o piso?'') cujo resultado depende inteiramente do julgamento não ancorado do avaliador. Em
+rubrica, isso tende a produzir ruído: o mesmo artefato recebe vereditos diferentes em execuções diferentes,
+que é o modo de falha que a rubrica analítica existe para evitar~\cite{jonsson2007}.
+
+\paragraph{Sugestão.} Converter em uma \textit{checklist} de três perguntas verificáveis, no mesmo formato
+do 1.6: (a) a missão declara o que acontece quando o estudante não conhece a plataforma simulada?
+(b) existe caminho de conclusão com dispositivo compartilhado? (c) alguma instrução é implícita, isto é,
+depende de um gesto que a missão nunca demonstra? Cada uma tem resposta objetiva no \textit{one-pager}.
+
+\subsection{M7 --- Poda de ancoragem nos critérios 6.1, 6.4 e 6.5}
+
+\paragraph{O que mudou.} Ao reescrever \cod{criterios-experiencia.md}, o pacote encurtou o texto de vários
+testes práticos, removendo: a fundamentação cognitiva do critério 6.1 (a referência a Piaget e o argumento
+de que a decodificação de texto compete com a atenção disponível para decisão em crianças de 6--7 anos); o
+exemplo concreto do critério 6.4 (``usar WhatsApp para uma atividade que a criança faria no Instagram'');
+e a explicitação do 6.5 (``passa em todos os obrigatórios individualmente mas resolve rápido demais'').
+
+\paragraph{Por que conta como regressão.} São exatamente os elementos que a literatura identifica como
+responsáveis pela confiabilidade de uma rubrica: exemplos, contraexemplos e justificativa do
+limiar~\cite{jonsson2007}. A economia de texto é pequena --- o arquivo inteiro encolheu cerca de 300
+caracteres --- e o que se perde é a âncora que faz dois avaliadores convergirem. Vale notar que a
+fundamentação removida do 6.1 não é decorativa: ela é a razão pela qual a exigência de narração em áudio
+existe para 1.\textsuperscript{o}--2.\textsuperscript{o} ano, e sem ela o critério vira uma regra arbitrária
+que um avaliador pode considerar dispensável.
+
+\paragraph{Nuance.} Parte da poda é defensável como redução de densidade (Seção~\ref{sec:m4}). A diferença
+é que em M4 removeu-se \textbf{redundância}, e aqui removeu-se \textbf{ancoragem}. Recomenda-se rejeitar
+esta parte do \textit{diff} e manter o texto atual, adotando apenas as substituições terminológicas.
+
+\subsection{M8 --- ``aluno'' para ``estudante''}
+
+Padronização consistente com a regra já vigente no P0a/P0b e reafirmada na regra 2 do novo P5b. Sem efeito
+técnico. Observação de completude: a substituição foi aplicada em \cod{criterios-experiencia.md} e no
+critério 1.6, mas não nos demais critérios de \cod{criterios-gate-estrutural.md} (1.3 e 1.4 seguem com
+``aluno''), o que deixa o vocabulário misto. Se a padronização for para valer, convém completá-la.
+
+\subsection{M9 --- Material \textit{Entre Redes} como fonte primária de BNCC}
+\label{sec:m9}
+
+\paragraph{O que mudou.} P2 e P5 recebem um parágrafo novo: quando o material do \textit{Entre Redes} do
+bimestre vier anexado, ele é a \textbf{fonte primária} de código e habilidade, e a lista oficial passa a
+funcionar como verificação e \textit{fallback}.
+
+\paragraph{Hipótese inicial e sua refutação.} A leitura do P5 sugeria um conflito grave: a esteira tem um
+gate determinístico (\cod{tools/bncc.py::validar\_spec}) que valida os códigos do bloco 11 da \textit{spec}
+contra \cod{bncc-computacao.json}, transcrição do anexo oficial do MEC~\cite{cne2022}, e emite
+\textit{bloqueio} para código inexistente. Autorizar o P5 a copiar códigos de outra fonte pareceria abrir
+caminho para bloqueio sistemático.
+
+A hipótese foi \textbf{testada e refutada}. Extraindo os códigos do material \cod{entre\_redes\_2ano\_1\_bimestre.docx}
+presente na raiz do repositório, encontram-se oito códigos, dos quais apenas dois são de Computação:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Código} & \textbf{Situação na lista oficial} & \textbf{Efeito no gate} \\
+\midrule
+EF02CO01 & presente (eixo PC, 2.\textsuperscript{o} ano) & validado \\
+EF02CO05 & presente (eixo CD, 2.\textsuperscript{o} ano) & validado, conta como letramento digital \\
+EF02HI08, EF12LP11, EF12LP14 & fora da lista de Computação & \textbf{ignorado} pelo gate \\
+EF15AR01, EF15AR04, EF15LP07 & fora da lista de Computação & \textbf{ignorado} pelo gate \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A razão é que a expressão regular do extrator casa somente códigos \cod{EFnnCOnn} e \cod{EM13COnn}. Uma
+execução do próprio \cod{validar\_spec} sobre uma \textit{spec} sintética contendo EF02CO05, EF12LP11 e
+EF02HI08 retorna \cod{status: aprovado}, sem achados. \textbf{Não há bloqueio}, e o alarme inicial era
+infundado.
+
+\paragraph{O que permanece como risco.} Dois pontos, ambos condicionais e de severidade moderada:
+
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+  \item \textbf{Divergência de ano em código de Computação.} Se algum material do \textit{Entre Redes}
+  atribuir um código \cod{CO} a um ano diferente do anexo oficial, o gate bloqueia com ``habilidade de outro
+  ano'' --- e o \textit{prompt} revisado instrui explicitamente a preferir o material. No material de
+  2.\textsuperscript{o} ano testado isso não ocorre; em outros bimestres e anos, não foi verificado.
+  \item \textbf{Assimetria de validação.} Os códigos de componentes tradicionais entram na \textit{spec} sem
+  nenhuma verificação determinística --- o gate simplesmente não os enxerga. Elevar o material a fonte
+  primária aumenta o volume desses códigos não verificados. Não é uma regressão introduzida pelo PO, mas a
+  mudança amplia a exposição a uma lacuna preexistente.
+\end{enumerate}
+
+\paragraph{Recomendação.} Aceitar a mudança e acrescentar dois itens ao plano: rodar a extração de códigos
+sobre \textbf{todos} os materiais do \textit{Entre Redes} disponíveis e conferir os \cod{CO} contra o JSON
+oficial (tarefa de minutos, com o instrumento que já existe); e avaliar estender o extrator para validar
+também os códigos não-\cod{CO} contra a BNCC geral, fechando a lacuna.
+
+\subsection{M10 --- O novo agente P5b}
+\label{sec:m10}
+
+\paragraph{O que é.} Um agente novo que roda ao lado do P5 e produz, a partir da mesma missão aprovada, um
+documento em prosa para quem vai avaliar pedagogia e não precisa ler máquina de estados, \textit{schema} Zod
+ou cardinalidade. Estrutura fixa de dez seções, citação de abertura em primeira pessoa, e uma regra de
+honestidade explícita: toda ressalva sobrevivente e toda decisão de produto pendente aparecem no documento,
+mesmo que o gate final tenha saído \Verde{VERDE}.
+
+\paragraph{Por que é uma boa adição.} É separação de audiência, não duplicação de conteúdo. A \textit{spec}
+do P5 é um contrato de construção, escrito para Design e Dev; usá-la como documento de avaliação pedagógica
+obriga o leitor pedagógico a atravessar 12 blocos técnicos para extrair o que lhe interessa. São públicos com
+necessidades de informação distintas, e o critério de decomposição de Parnas~\cite{parnas1972} --- separar
+por \textit{decisão de projeto encapsulada}, não por etapa de processo --- se aplica também a artefatos
+documentais: o P5b encapsula ``como esta missão se explica para quem avalia pedagogia'', que é uma decisão
+independente de ``como esta missão se constrói''.
+
+A regra de não esconder ressalvas é o complemento correto de M1: se o veredito ternário torna o risco
+visível no envelope, o P5b garante que ele também fique visível no documento que a pessoa lê.
+
+\paragraph{O que falta para funcionar.} O arquivo é, hoje, um \textit{prompt} órfão:
+
+\begin{itemize}[leftmargin=*,itemsep=1pt]
+  \item não há entrada correspondente em \cod{agents/produto/\_\_init\_\_.py} --- nem uma função
+  \cod{get\_one\_pager\_pedagogico\_agent}, nem registro no catálogo de agentes usado pela interface;
+  \item não está incluído no \cod{SequentialAgent} da etapa de Produto, e portanto nunca executa;
+  \item as chaves de estado que ele interpola existem e estão corretas (\cod{gate\_estrutural\_status},
+  \cod{gate\_final\_status}, \cod{avaliacao\_pedagogica\_report}, \cod{experiencia\_aluno\_report},
+  \cod{gate\_final\_report}), o que indica que o autor conhecia o contrato --- só não fez o \textit{wiring};
+  \item as referências internas do \textit{prompt} (seções 15 e 18 do \textit{one-pager}, blocos
+  \cod{\#\# Changelog} do P1b, estrutura de 18 seções) foram conferidas e \textbf{existem} nos artefatos
+  correspondentes.
+\end{itemize}
+
+\paragraph{Decisão de desenho pendente.} O P5b consome \cod{gate\_final\_report}, portanto roda depois do P4,
+como o P5. Como são independentes entre si, o lugar natural é um \cod{ParallelAgent} com o P5 --- ambos leem
+os mesmos insumos e nenhum consome a saída do outro. Isso adiciona um agente à etapa sem adicionar latência
+significativa.
+
+\subsection{M11 --- \cod{formato-spec.md}: a regressão grave}
+\label{sec:m11}
+
+\paragraph{O achado.} Este não é um arquivo revisado: é um arquivo \textbf{revertido}. A comparação contra o
+histórico do \textit{git} mostra que a versão entregue difere da versão do \textit{commit} \cod{4dcdb18}
+(16/09) em apenas 13 linhas --- o \textit{frontmatter} YAML e o parágrafo final sobre os blocos 13 e 14. Ou
+seja, o PO trabalhou sobre um \textit{snapshot} anterior ao \cod{262f160} (17/09), que sincronizou os
+contratos da plataforma, e o resultado desfaz aquele trabalho.
+
+O saldo é de \textbf{73 linhas removidas contra 8 adicionadas}.
+
+\paragraph{O que se perde.} Cinco blocos de contrato, dos quais dois com consequência determinística
+imediata:
+
+\begin{enumerate}[leftmargin=*,itemsep=3pt]
+  \item \textbf{A ficha do manifesto (bloco 0).} O formato atual especifica dez campos em formato fixo, um
+  por linha. O formato revisado substitui isso por prosa (``Slug \cod{exp-NN-<nome>} $\cdot$ nome que o
+  estudante vê $\cdot$ série(s)\ldots''). O validador \cod{tools/rastro.py::validar\_manifesto} lê
+  exatamente estes dez campos por expressão regular:
+
+  \begin{center}
+  \cod{id} $\cdot$ \cod{produto} $\cdot$ \cod{series} $\cdot$ \cod{unidade} $\cdot$ \cod{publico} $\cdot$
+  \cod{viewport} $\cdot$ \cod{permissoes} $\cdot$ \cod{capabilities} $\cdot$ \cod{secao\_ds} $\cdot$ \cod{liberacao}
+  \end{center}
+
+  Cada campo ausente ou fora do formato gera um achado de severidade \textbf{bloqueio}. O próprio
+  \textit{prompt} atual avisa: \textit{``um gate determinístico lê estas linhas; campo fora do formato conta
+  como ausente''}. O gate \cod{ManifestoCheck} roda na etapa de Dev, com \cod{estrito} ligado por padrão.
+  \textbf{Consequência:} adotando este arquivo, toda \textit{spec} gerada perde a ficha, e toda missão trava
+  no início da etapa de Dev --- depois de já ter consumido a etapa de Produto inteira e boa parte da de
+  Design.
+
+  \item \textbf{O bloco de mídia capturada do estudante.} O formato atual exige, sem exceção, quando a
+  missão usa \cod{microphone}, \cod{camera} ou \cod{display-capture}: onde a mídia é gravada (tabela com
+  \cod{escola\_id} e RLS, ou \textit{bucket} com caminho não adivinhável), por quanto tempo fica, quem lê
+  (apenas a professora da escola --- nunca rota de gestor, nunca telemetria) e o que acontece quando a
+  família não autoriza. O texto é explícito: \textit{``Voz e imagem de criança são dado pessoal e não são
+  coletados por padrão''}. A revisão remove o bloco inteiro. Trata-se de dado pessoal de criança e
+  adolescente, com tratamento específico na LGPD; a exigência não é burocracia interna, é o registro
+  documental de uma obrigação legal.
+
+  \item \textbf{O contrato de eventos.} A assinatura \cod{track(verbo, objeto, <resultado?, contexto?>)},
+  a advertência de que \textbf{não existe campo \cod{dados}} (a API descarta chave desconhecida em silêncio)
+  e a regra de que nenhum relatório de missão nasce de \cod{telemetria\_eventos}. Remover isto não bloqueia
+  nada --- produz \textbf{falha silenciosa}, que é pior: a missão é construída, a telemetria é escrita, e o
+  dado simplesmente não aparece.
+
+  \item \textbf{Os cinco caminhos de dado, RLS e fuso.} A distinção entre caminho analítico e operacional
+  (incluindo o aviso de que missão nova \textbf{não herda} \cod{POST /runs/:id/eventos}), a exigência de
+  \cod{escola\_id NOT NULL} com \cod{FORCE ROW LEVEL SECURITY} em toda tabela \cod{exp\_NN\_*}, e a regra de
+  que toda data vem do \textit{handshake}.
+
+  \item \textbf{Os blocos 13 e 14.} A declaração de que a esteira de Design anexa dois blocos à \textit{spec}
+  (decisões D0 e ambiente simulado) e de que a ausência deles indica que D0 ou D9 não rodaram --- ou seja,
+  a instrumentação que permite detectar que uma etapa foi pulada.
+\end{enumerate}
+
+\paragraph{Classificação.} Na taxonomia de Cemri et al.~\cite{cemri2025}, isto é uma falha de especificação
+de sistema combinada com omissão de informação entre agentes: o produtor (P5) deixa de emitir campos que o
+consumidor (gate de Dev) exige, e a detecção ocorre longe da origem. É também o cenário que o próprio
+\cod{sincronizar\_plataforma.py} foi escrito para evitar --- a diferença é que aquele \textit{script}
+sincroniza apenas \cod{references/plataforma/}, de modo que \textbf{esta regressão não seria recuperada
+automaticamente}. Se o arquivo for adotado, o conteúdo perdido só volta por reversão manual.
+
+\paragraph{Recomendação.} \Vermelho{Descartar integralmente} o \cod{formato-spec.md} revisado. Se houver
+mudança desejada dentro dele, reaplicar sobre a versão atual.
+
+\subsection{M12 --- \cod{ambientes.md}: reversão e erro factual}
+
+\paragraph{O achado.} Mesmo padrão: a versão entregue está a seis linhas da versão de \cod{59b52d8}
+(02/09), desfazendo a sincronização de 16/09. Perde-se a identificação das pontes em \cod{@edu/ui}
+(\cod{ds-unootube}, \cod{ds-whatsapp}), a restrição registrada em ADR-68 (WhatsApp disponível apenas em tema
+escuro) e a marcação de que o TikTok existe no \textit{design system} mas \textbf{sem ponte}, sendo a
+criação da ponte um pré-requisito declarado.
+
+\paragraph{O erro factual.} A versão revisada marca o ambiente WhatsApp como ``\textit{existe sem
+consumidor}''. A versão atual registra duas missões que o usam: exp-06 (Rastro do Boato) e exp-07 (O Eco no
+Grupo). Um agente de Design que leia esta tabela concluirá que não há precedente de uso, quando há dois.
+
+\paragraph{Recomendação.} \Vermelho{Descartar}.
+
+\subsection{M13 --- Remoção do \textit{frontmatter} YAML}
+
+Quatro arquivos de referência perdem o bloco \cod{---\ name / description / sources\ ---}. Verificação:
+\cod{prompts/loader.py} não lê \textit{frontmatter} --- \cod{resolve\_includes} injeta o texto como está ---,
+portanto \textbf{não há quebra funcional}, e o efeito colateral é até levemente positivo (menos ruído no
+\textit{prompt} final).
+
+O que se perde é metadado de proveniência: quem escreve o arquivo, quem o lê e de onde veio o conteúdo.
+Em \cod{padroes-aprendidos.md}, por exemplo, o \textit{frontmatter} registrava que o arquivo é escrito pelo
+agente de aprendizado e lido pelo de QA de conformidade --- informação que não está em nenhum outro lugar.
+Impacto baixo; mas, somado a M11 e M12, é mais um indício de que o pacote foi montado fora do fluxo de
+versionamento do repositório.
+
+\newpage
+\section{Efeito líquido sobre a construção da missão}
+
+\subsection{Quantificação}
+
+\begin{table}[h]
+\centering
+\caption{Densidade de instrução por agente: atual \textit{versus} revisado}
+\label{tab:densidade}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Agente} & \textbf{Tokens (atual)} & \textbf{Tokens (rev.)} & \textbf{Critérios (atual)} & \textbf{Critérios (rev.)} \\
+\midrule
+P0a núcleo narrativo   & 13.074 & --- & 0 & --- \\
+P0mg micro-gate        &  1.332 & --- & 0 & --- \\
+P0b seções de apoio    & 11.661 & --- & 0 & --- \\
+P1 gate estrutural     &  8.986 &  9.300 & 23 & 23 \\
+P1b revisor            &    427 & --- & 0 & --- \\
+P2 avaliação pedagógica& 14.311 & 14.292 & 20 & 20 \\
+P3 experiência         &  5.970 &  5.892 & 11 & \textbf{8} \\
+P4 gate final          &  1.886 &  1.952 & 0 & 0 \\
+P5 \textit{spec}       & 16.100 & \textbf{14.728} & 0 & 0 \\
+P5b \textit{one-pager} ped. & --- & 1.228 & --- & 0 \\
+\midrule
+\textbf{Total}         & \textbf{73.747} & --- & \textbf{54} & \textbf{51} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+Dois números merecem leitura cuidadosa:
+
+\begin{itemize}[leftmargin=*]
+  \item A redução de \textbf{11 para 8 critérios no P3} é o ganho pretendido de M4 e é legítima.
+  \item A redução de \textbf{1.372 \textit{tokens} no P5} \textbf{não} é ganho de eficiência: é exatamente o
+  conteúdo de contrato removido por M11. O \textit{prompt} ficou menor porque perdeu a parte que o gate de
+  Dev exige. Neste caso, ``mais enxuto'' significa ``incompleto''.
+\end{itemize}
+
+\subsection{Matriz de decisão}
+
+\begin{longtable}{p{0.7cm}p{7.6cm}p{6.4cm}}
+\caption{Recomendação por mudança}\\
+\toprule
+\textbf{\#} & \textbf{Recomendação} & \textbf{Condição} \\
+\midrule
+\endfirsthead
+M1 & Integrar & junto com a salvaguarda de contagem (R2) \\
+M2 & Integrar & \textbf{depois} de corrigir \cod{callbacks.py} e \cod{session\_store.py} \\
+M3 & Integrar & corrigindo o gatilho de rodada 4 para 3 \\
+M4 & Integrar & documentando a dependência no lado do P1 \\
+M5 & Integrar & --- \\
+M6 & Integrar & preferencialmente reescrito como \textit{checklist} objetiva \\
+M7 & \textbf{Descartar} & manter o texto atual; aplicar só a troca terminológica \\
+M8 & Integrar & completando a padronização nos critérios 1.3 e 1.4 \\
+M9 & Integrar & após validar os códigos \cod{CO} de todos os materiais \\
+M10 & Integrar & exige \textit{wiring} em \cod{agents/produto/\_\_init\_\_.py} \\
+M11 & \Vermelho{Descartar integralmente} & reaplicar qualquer mudança desejada sobre a versão atual \\
+M12 & \Vermelho{Descartar integralmente} & --- \\
+M13 & Descartar & restaurar o \textit{frontmatter} \\
+\bottomrule
+\end{longtable}
+
+\subsection{Como o pacote ajuda a construção}
+
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+  \item \textbf{Risco deixa de ser invisível.} Hoje, uma missão com três ressalvas aceitas e uma com nenhuma
+  chegam ao Design com o mesmo rótulo. Depois, não. Isso muda o que a etapa seguinte sabe.
+  \item \textbf{O \textit{loop} deixa de girar em falso.} A regra de parada transforma ``bloqueado de novo''
+  em ``bloqueado por decisão de produto, e o dono é fulano''.
+  \item \textbf{O P3 volta a fazer só o que só ele faz.} Três critérios a menos, dedicados a carga cognitiva
+  e faixa etária.
+  \item \textbf{O critério de reflexão fica testável.} A pergunta ``um estudante que não fez a missão
+  consegue responder?'' é aplicável sem conhecer a intenção do autor.
+  \item \textbf{O time pedagógico ganha um documento próprio.} O P5b elimina a necessidade de ler a
+  \textit{spec} técnica para avaliar pedagogia.
+\end{enumerate}
+
+\subsection{Como o pacote dificulta}
+
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+  \item \textbf{A \textit{spec} deixa de satisfazer o gate de manifesto} (M11) --- bloqueio determinístico
+  no início da etapa de Dev, para todas as missões, depois de todo o custo de Produto e Design.
+  \item \textbf{O envelope deixa de ser decidido pelo caminho estruturado} (M2) --- a decisão passa a
+  depender de heurística sobre texto, com caminho concreto de falso bloqueio.
+  \item \textbf{Obrigações de dado pessoal de criança saem do contrato} (M11) --- sem bloqueio, o que
+  significa que a ausência não é detectada.
+  \item \textbf{Fatos de plataforma regridem} (M12) --- incluindo uma afirmação factualmente errada sobre
+  ambientes sem consumidor.
+  \item \textbf{A rubrica de experiência perde âncoras} (M7) --- mais variância entre execuções.
+\end{enumerate}
+
+\newpage
+\section{Granularidade da esteira: nove agentes ou cinco?}
+\label{sec:granularidade}
+
+\subsection{A pergunta}
+
+A hipótese de trabalho é que ``mais agentes especialistas é melhor do que um que agrega muita coisa''.
+A conclusão desta análise é que \textbf{a hipótese está certa para esta esteira, mas o motivo usualmente
+invocado está errado} --- e a diferença importa, porque é o motivo que diz onde a regra deixa de valer.
+
+\subsection{O argumento a favor da decomposição}
+
+\paragraph{1. Densidade de instrução degrada a aderência, de forma não linear.}
+O \textit{benchmark} IFScale~\cite{ifscale2025} avaliou 20 modelos de fronteira de sete provedores em
+densidades de 10 a 500 instruções simultâneas. Mesmo os melhores modelos atingem apenas \textbf{68\% de
+acurácia} na densidade máxima, com três padrões distintos de degradação e viés sistemático em favor das
+instruções apresentadas mais cedo. Liu et al.~\cite{liu2024} documentam o efeito correlato em contexto
+longo: o desempenho é mais alto quando a informação relevante está no início ou no fim, e cai
+significativamente quando ela está no meio --- inclusive em modelos projetados para contexto longo.
+
+A Tabela~\ref{tab:densidade} mostra que a etapa de Produto carrega hoje $\approx$73.700 \textit{tokens} de
+instrução e 54 critérios tabelados. Uma consolidação em cinco agentes produziria unidades como
+[P0a+P0mg+P0b] com $\approx$26.100 \textit{tokens} e [P2+P3] com $\approx$20.300 \textit{tokens} e
+\textbf{31 critérios em uma única chamada}. É precisamente a faixa em que a degradação é documentada.
+
+\paragraph{2. O projeto já rodou este experimento --- e o resultado está escrito no próprio código.}
+O \textit{prompt} do P3 abre justificando a própria existência: \textit{``Esta avaliação existe porque a
+rubrica original errava sistematicamente aqui: os critérios de faixa etária competiam por atenção com
+$\sim$30 critérios de outra natureza. Aqui eles têm o espaço todo.''} Este é um experimento natural já
+realizado no domínio real, com o modelo real e a rubrica real: a versão agregada falhava de forma
+sistemática e reprodutível; a versão decomposta corrigiu a falha. Nenhuma evidência externa é mais relevante
+que essa.
+
+\paragraph{3. Cada agente tem critério de aceitação próprio e verificável.}
+Este é o teste que realmente decide a questão. O critério de decomposição de Parnas~\cite{parnas1972} ---
+o artigo que estabeleceu o conceito --- é explícito em que \textbf{não se decompõe por etapa cronológica do
+processo}, e sim por decisão de projeto encapsulada: cada módulo esconde algo que pode mudar sem afetar os
+demais. Aplicado aqui: o P1 encapsula ``a missão tem estrutura construível?''; o P2, ``a missão cumpre
+currículo e guardrails?''; o P3, ``um estudante desta idade consegue viver isto?''. São perguntas que podem
+ser respondidas, e erradas, independentemente. Cada uma emite um envelope JSON verificável, e cada envelope
+é lido por um \cod{EnvelopeGateAgent} que decide seguir, repetir ou parar.
+
+\paragraph{4. Localização de falha e custo de correção.}
+Com nove envelopes, a pergunta ``onde isto quebrou?'' tem resposta. Com cinco agregadores, a falha fica
+dentro de um agente e o \textit{loop} de correção perde alvo. Mais importante: os dois \textit{loops}
+existentes (P0a$\leftrightarrow$P0mg e P1$\leftrightarrow$P1b) só são economicamente viáveis porque a unidade
+regenerada é pequena. Reexecutar um agregador de 26 mil \textit{tokens} para corrigir um \textit{spoiler} na
+seção 4 é desperdício por construção.
+
+\paragraph{5. Separar quem julga de quem corrige reduz autopreferência.}
+O P1b (427 \textit{tokens}) parece pequeno demais para ser um agente. Mas fundi-lo ao P1 faria o mesmo
+contexto avaliar a própria correção. Zheng et al.~\cite{zheng2023} documentam viés de autopreferência em
+avaliadores baseados em modelos de linguagem; manter contextos separados entre o avaliador e o corretor é
+uma mitigação barata. O tamanho do \textit{prompt} não é o critério --- o papel é.
+
+\subsection{O argumento contrário, e por que ele não se aplica aqui}
+
+Honestidade intelectual exige registrar que a literatura recente é \textbf{cética} quanto a sistemas
+multiagente, e por boas razões.
+
+\paragraph{Ganhos frequentemente explicados por computação extra.}
+Tran e Kiela~\cite{tran2026} apresentam um argumento informacional, baseado na desigualdade do processamento
+de dados, de que sob orçamento fixo de \textit{tokens} de raciocínio e com utilização perfeita de contexto, o
+sistema de agente único é mais eficiente em informação --- e confirmam empiricamente, em três famílias de
+modelos, que o agente único iguala ou supera arquiteturas multiagente em raciocínio \textit{multi-hop} quando
+a computação é normalizada. A conclusão dos autores é direta: muitas vantagens relatadas de sistemas
+multiagente se explicam melhor por computação não contabilizada do que por benefício arquitetural.
+
+\textbf{Por que não se aplica.} O próprio artigo enuncia a condição de contorno: sistemas multiagente
+\textit{``tornam-se competitivos quando a utilização efetiva de contexto de um agente único está
+degradada''}. Com 73.700 \textit{tokens} de instrução e 54 critérios, a esteira está claramente nesse regime
+--- é o caso previsto pelo paper, não o contraexemplo. Além disso, a tarefa medida ali é raciocínio
+\textit{multi-hop} com resposta única e verificável; esta esteira produz \textbf{artefatos intermediários
+auditáveis} com critérios de aceitação heterogêneos, onde o valor da decomposição não está na acurácia final
+e sim na atribuição de responsabilidade.
+
+\paragraph{Mais fronteiras significam mais modos de falha.}
+Cemri et al.~\cite{cemri2025} catalogam 14 modos de falha em três categorias, e duas delas ---
+especificação de sistema e desalinhamento entre agentes --- são consequência direta de ter fronteiras.
+Este relatório é, ele próprio, evidência: M2 e M11 são exatamente falhas de contrato de interface, do tipo
+que não existiria em um agente monolítico.
+
+\textbf{A leitura correta} não é ``decomponha menos''; é ``decomponha e \textbf{trate as interfaces como
+contratos de primeira classe}'', no sentido de Meyer~\cite{meyer1992}. O custo da decomposição é ter de
+manter contratos; quem decompõe sem manter contrato paga os dois preços.
+
+\subsection{O critério de decisão}
+
+Da análise resulta uma regra operacional em três testes. \textbf{Decomponha} quando os três forem
+verdadeiros:
+
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+  \item \textbf{Aceitação independente} --- o sub-resultado tem critério de aceitação verificável sem
+  consultar os demais agentes (na prática: emite um envelope próprio que um gate consegue ler);
+  \item \textbf{Correção localizável} --- quando falha, existe uma ação de correção que não obriga a refazer
+  o restante;
+  \item \textbf{Densidade} --- a fusão colocaria o agente resultante acima da faixa segura de instruções
+  simultâneas.
+\end{enumerate}
+
+\noindent
+E \textbf{não decomponha} quando: a divisão for apenas cronológica (``primeiro faz X, depois Y'' sem que X
+tenha aceitação própria); os dois avaliadores aplicarem o \textbf{mesmo teste} (é o caso de M4 --- ali a
+resposta certa foi remover, não separar melhor); ou a fronteira criar um contrato que ninguém vai manter.
+
+\subsection{Conclusão e recomendação}
+
+\textbf{Nove é melhor que cinco nesta esteira} --- não porque especialização seja um bem em si, mas porque
+os nove passam nos três testes, enquanto as fusões plausíveis para chegar a cinco reprovam no primeiro e no
+terceiro.
+
+Vale ir além da pergunta feita: \textbf{a direção correta é aumentar a granularidade, não reduzi-la}. Dois
+movimentos concretos:
+
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+  \item \textbf{O P5b já move a esteira para dez agentes}, e por motivo correto (separação de audiência).
+  O PO está aplicando a mesma lógica que este relatório defende.
+  \item \textbf{O P2 é o próximo candidato natural a divisão.} Com 14.311 \textit{tokens} e 20 critérios, é
+  hoje o maior avaliador, e mistura três lentes distintas: conformidade curricular (BNCC, letramento
+  digital), mediação docente (gatilhos, painel, roteiro de perguntas) e guardrails de proteção do estudante
+  (exposição, comparação nominal, IA em tempo real). São três perguntas com critérios de aceitação distintos
+  e correção localizável --- exatamente o perfil que justificou a criação do P3. Separar currículo de
+  guardrails é o movimento com melhor relação custo-benefício disponível hoje na etapa.
+\end{itemize}
+
+\noindent
+\textbf{Contrapartida obrigatória:} cada novo agente adiciona uma interface, e interface sem contrato
+mantido é dívida. Antes de dividir o P2, vale fechar a dívida que M2 e M11 expõem --- um teste automatizado
+que valide que todo valor de \cod{status} emitido pelos \textit{prompts} pertence ao vocabulário que
+\cod{inferir\_status} reconhece custa poucas linhas e teria capturado M2 antes da entrega.
+
+\newpage
+\section{Recomendações}
+\label{sec:recomendacoes}
+
+\begin{description}[leftmargin=1.4cm,style=nextline,itemsep=4pt]
+  \item[R1 --- Reverter M11 e M12 antes de qualquer outra coisa.]
+  Descartar \cod{formato-spec.md} e \cod{ambientes.md} do pacote. São reversões de contrato, não revisões.
+  Se houver mudança desejada neles, reaplicá-la sobre a versão em \cod{main}.
+
+  \item[R2 --- Corrigir o vocabulário de \textit{status} no código.]
+  Acrescentar \cod{aprovado\_com\_ressalvas} às listas de \cod{agents/callbacks.py::inferir\_status} e de
+  \cod{pipeline/session\_store.py::formatar\_status\_label}. Duas linhas, e destrava M1.
+
+  \item[R3 --- Fechar a lacuna de contrato com um teste.]
+  Teste automatizado que extraia todos os valores de \cod{status} declarados nos \textit{prompts} e afirme
+  que cada um é reconhecido por \cod{inferir\_status}. Isso transforma a classe inteira de falha em erro de
+  CI.
+
+  \item[R4 --- Ajustar o gatilho da regra de parada.]
+  Trocar ``rodada 4'' por ``rodada final'' ou parametrizar pelo valor de \cod{GATE\_ESTRUTURAL\_MAX\_RODADAS}
+  via \cod{load\_prompt(**kwargs)}, eliminando a possibilidade de divergência futura.
+
+  \item[R5 --- Fazer o \textit{wiring} do P5b.]
+  Registrar o agente em \cod{agents/produto/\_\_init\_\_.py}, adicioná-lo ao catálogo e colocá-lo em
+  \cod{ParallelAgent} com o P5.
+
+  \item[R6 --- Instrumentar a contagem de ressalvas.]
+  Persistir \cod{ressalvas} por missão e acompanhar a série. Se a média subir sem queda correspondente em
+  bloqueios, é deriva de leniência --- o risco previsto na Seção~\ref{sec:m1}.
+
+  \item[R7 --- Medir, em vez de argumentar, o efeito sobre a qualidade final.]
+  Este relatório avalia contratos e desenho de instrumento; não mede qualidade de missão. O teste adequado é
+  executar $n \geq 6$ missões do mesmo bimestre nos dois braços (prompts atuais \textit{versus} revisados com
+  R1--R4 aplicados) e submeter os \textit{one-pagers} a avaliação cega por dois especialistas pedagógicos,
+  medindo concordância. Com a infraestrutura de execução por etapa isolada que já existe no projeto, o custo
+  é baixo.
+
+  \item[R8 --- Estabelecer higiene de revisão de \textit{prompt}.]
+  A causa raiz de M11, M12 e M13 não é julgamento ruim --- é ter editado uma cópia desatualizada fora do
+  \textit{git}. Revisões de \textit{prompt} devem sair de \textit{branch} do repositório e chegar como
+  \textit{pull request}, onde o \textit{diff} contra \cod{main} torna uma reversão de 73 linhas
+  imediatamente visível.
+\end{description}
+
+\section{Conclusão}
+
+A desconfiança em relação ao pacote não se confirma no plano que importava verificar. O julgamento
+pedagógico e de desenho de avaliação do \textit{Product Owner} é sólido: das treze mudanças, oito são
+melhorias, e duas delas --- a desduplicação de critérios correlacionados e a operacionalização do critério
+de reflexão --- são o tipo de correção que costuma passar despercebida por quem não conhece o instrumento a
+fundo.
+
+O que o pacote não tem é disciplina de integração. As duas regressões graves não são erros de conteúdo: são
+o resultado mecânico de editar uma cópia desatualizada fora do controle de versão. É um problema de processo
+com solução de processo (R8), não um problema de competência.
+
+Quanto à arquitetura: a intuição de que mais agentes especialistas é melhor está correta para esta esteira,
+e o próprio repositório já contém a evidência --- a nota no \textit{prompt} do P3 registra que a rubrica
+agregada falhava sistematicamente e a decomposição resolveu. Mas a regra não é ``mais é melhor''; é
+``decomponha onde há critério de aceitação próprio, correção localizável e densidade excessiva, e trate cada
+fronteira criada como um contrato que alguém precisa manter''. Os dois defeitos de integração descritos
+neste relatório são a fatura dessa última cláusula.
+
+\begin{thebibliography}{99}
+
+\bibitem{cemri2025}
+CEMRI, M.; PAN, M. Z.; YANG, S. et al.
+\textit{Why Do Multi-Agent LLM Systems Fail?}
+Advances in Neural Information Processing Systems 38 (NeurIPS 2025), Datasets and Benchmarks Track, 2025.
+arXiv:2503.13657. Disponível em: \url{https://arxiv.org/abs/2503.13657}.
+
+\bibitem{cne2022}
+BRASIL. Conselho Nacional de Educação. Câmara de Educação Básica.
+\textit{Resolução CNE/CEB n.\textsuperscript{o} 1, de 4 de outubro de 2022}: estabelece normas sobre
+Computação na Educação Básica --- Complemento à Base Nacional Comum Curricular (BNCC).
+Brasília: MEC, 2022. Disponível em:
+\url{https://www.gov.br/mec/pt-br/cne/pdf/bncc-ensino-medio/resolucao-cne-ceb-no-1-de-4-de-outubro-de-2022}.
+
+\bibitem{cowan2001}
+COWAN, N. The magical number 4 in short-term memory: a reconsideration of mental storage capacity.
+\textit{Behavioral and Brain Sciences}, v. 24, n. 1, p. 87--114, 2001.
+
+\bibitem{ifscale2025}
+JAROSLAWICZ, D.; WHITING, B.; SHAH, P.; MAAMARI, K.
+\textit{How Many Instructions Can LLMs Follow at Once?}
+arXiv:2507.11538, jul. 2025. Disponível em: \url{https://arxiv.org/abs/2507.11538}.
+
+\bibitem{jonsson2007}
+JONSSON, A.; SVINGBY, G. The use of scoring rubrics: reliability, validity and educational consequences.
+\textit{Educational Research Review}, v. 2, n. 2, p. 130--144, 2007. DOI: 10.1016/j.edurev.2007.05.002.
+
+\bibitem{khot2023}
+KHOT, T.; TRIVEDI, H.; FINLAYSON, M. et al.
+\textit{Decomposed Prompting: A Modular Approach for Solving Complex Tasks}.
+International Conference on Learning Representations (ICLR), 2023. arXiv:2210.02406.
+
+\bibitem{knight1986}
+KNIGHT, J. C.; LEVESON, N. G. An experimental evaluation of the assumption of independence in multiversion
+programming. \textit{IEEE Transactions on Software Engineering}, v. SE-12, n. 1, p. 96--109, 1986.
+
+\bibitem{liu2024}
+LIU, N. F.; LIN, K.; HEWITT, J. et al. Lost in the middle: how language models use long contexts.
+\textit{Transactions of the Association for Computational Linguistics}, v. 12, p. 157--173, 2024.
+DOI: 10.1162/tacl\_a\_00638.
+
+\bibitem{meyer1992}
+MEYER, B. Applying ``design by contract''. \textit{IEEE Computer}, v. 25, n. 10, p. 40--51, 1992.
+
+\bibitem{miller1956}
+MILLER, G. A. The magical number seven, plus or minus two: some limits on our capacity for processing
+information. \textit{Psychological Review}, v. 63, n. 2, p. 81--97, 1956.
+
+\bibitem{parnas1972}
+PARNAS, D. L. On the criteria to be used in decomposing systems into modules.
+\textit{Communications of the ACM}, v. 15, n. 12, p. 1053--1058, 1972.
+
+\bibitem{preston2000}
+PRESTON, C. C.; COLMAN, A. M. Optimal number of response categories in rating scales: reliability, validity,
+discriminating power, and respondent preferences. \textit{Acta Psychologica}, v. 104, n. 1, p. 1--15, 2000.
+
+\bibitem{saal1980}
+SAAL, F. E.; DOWNEY, R. G.; LAHEY, M. A. Rating the ratings: assessing the psychometric quality of rating
+data. \textit{Psychological Bulletin}, v. 88, n. 2, p. 413--428, 1980.
+
+\bibitem{sweller1988}
+SWELLER, J. Cognitive load during problem solving: effects on learning.
+\textit{Cognitive Science}, v. 12, n. 2, p. 257--285, 1988.
+
+\bibitem{tran2026}
+TRAN, D.; KIELA, D.
+\textit{Single-Agent LLMs Outperform Multi-Agent Systems on Multi-Hop Reasoning Under Equal Thinking Token
+Budgets}. arXiv:2604.02460, abr. 2026. Disponível em: \url{https://arxiv.org/abs/2604.02460}.
+
+\bibitem{wu2022}
+WU, T.; TERRY, M.; CAI, C. J. AI Chains: transparent and controllable human-AI interaction by chaining
+large language model prompts. In: \textit{Proceedings of the 2022 CHI Conference on Human Factors in
+Computing Systems (CHI '22)}. Nova Orleans: ACM, 2022. DOI: 10.1145/3491102.3517582.
+
+\bibitem{zheng2023}
+ZHENG, L.; CHIANG, W.-L.; SHENG, Y. et al. Judging LLM-as-a-judge with MT-Bench and Chatbot Arena.
+Advances in Neural Information Processing Systems 36 (NeurIPS 2023), 2023. arXiv:2306.05685.
+
+\end{thebibliography}
+
+\appendix
+\section{Evidências verificadas}
+
+\begin{longtable}{p{4.6cm}p{10.2cm}}
+\caption{Afirmações deste relatório e como foram verificadas}\\
+\toprule
+\textbf{Afirmação} & \textbf{Verificação} \\
+\midrule
+\endfirsthead
+\cod{formato-spec.md} revisado é a versão de \cod{4dcdb18} &
+\cod{git show 4dcdb18:prompts/references/formato-spec.md} difere do arquivo entregue em 13 linhas
+(\textit{frontmatter} + parágrafo dos blocos 13/14). \\
+\addlinespace
+\cod{ambientes.md} revisado é a versão de \cod{59b52d8} & Mesmo procedimento; 6 linhas de diferença. \\
+\addlinespace
+Os dez campos do manifesto são lidos por validador determinístico &
+\cod{grep '\_campo(texto, "' tools/rastro.py} retorna \cod{capabilities, id, liberacao, permissoes,
+produto, publico, secao\_ds, series, unidade, viewport}; cada ausência chama \cod{falta()}, severidade
+\cod{bloqueio}. \\
+\addlinespace
+\cod{aprovado\_com\_ressalvas} não é reconhecido &
+Leitura de \cod{agents/callbacks.py:55--73} e \cod{pipeline/session\_store.py:53--68}. \\
+\addlinespace
+Tokens de bloqueio são testados antes dos de aprovação &
+\cod{agents/callbacks.py:69--72}. \\
+\addlinespace
+O teto do \textit{loop} é 3 &
+\cod{config.py:97} (\cod{GATE\_ESTRUTURAL\_MAX\_RODADAS}, padrão 3) e \cod{.env}; usado como
+\cod{max\_iterations} em \cod{agents/produto/\_\_init\_\_.py:182}. \\
+\addlinespace
+3.1$\equiv$1.3, 3.2$\equiv$1.4, 3.3$\equiv$7.2 &
+Comparação literal dos testes práticos em \cod{criterios-gate-estrutural.md:9,10,54} e
+\cod{criterios-experiencia.md} (versão atual). \\
+\addlinespace
+O gate BNCC ignora códigos não-\cod{CO} &
+\cod{tools/bncc.py:47} (expressão regular) e execução de \cod{validar\_spec} sobre \textit{spec} sintética
+com EF02CO05 + EF12LP11 + EF02HI08 $\rightarrow$ \cod{status: aprovado}. \\
+\addlinespace
+O material de 2.\textsuperscript{o} ano usa EF02CO01 e EF02CO05 &
+Extração dos códigos de \cod{entre\_redes\_2ano\_1\_bimestre.docx} e conferência contra
+\cod{bncc-computacao.json} (130 habilidades). \\
+\addlinespace
+P5b não está registrado &
+Ausência do arquivo em \cod{load\_prompt(...)} e no catálogo de agentes de
+\cod{agents/produto/\_\_init\_\_.py}. \\
+\addlinespace
+Densidade por agente (Tabela~\ref{tab:densidade}) &
+\cod{prompts.loader.load\_prompt} com resolução de \textit{includes}; contagem de critérios por
+correspondência de linhas de tabela \cod{|n.n|}; \textit{tokens} estimados em \cod{chars/4}. \\
+\bottomrule
+\end{longtable}
+
+\end{document}

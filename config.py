@@ -1,6 +1,6 @@
 """Configuração centralizada do Gerador de Missões Unooria (Google ADK).
 
-Carrega e valida variáveis de ambiente para os modelos Gemini, o MCP do Figma,
+Carrega e valida variáveis de ambiente para os modelos Gemini, o MCP do Stitch,
 a política dos gates e a persistência dos artefatos gerados.
 """
 
@@ -31,22 +31,6 @@ def _detect_stitch_mode() -> str:
     return "remote" if os.getenv("STITCH_API_KEY") or os.getenv("STITCH_ACCESS_TOKEN") else "off"
 
 
-def _detect_figma_mode() -> str:
-    """Detecta automaticamente o modo do Figma MCP baseado no ambiente."""
-    raw = os.getenv("FIGMA_MCP_MODE", "").strip().lower()
-    if raw and raw not in ("auto", ""):
-        return raw
-
-    # 1. Modo remoto (OAuth oficial) se houver tokens salvos ou bearer estático
-    oauth_file = PROJECT_ROOT / os.getenv("FIGMA_MCP_OAUTH_TOKENS_FILE", ".figma_mcp_tokens.json")
-    if oauth_file.exists() or os.getenv("FIGMA_MCP_BEARER_TOKEN"):
-        return "remote"
-
-    # 2. Modo stdio automático se houver Personal Access Token / API Key
-    if os.getenv("FIGMA_API_KEY") or os.getenv("FIGMA_PERSONAL_ACCESS_TOKEN"):
-        return "stdio"
-
-    return "off"
 
 
 class AppSettings(BaseSettings):
@@ -82,85 +66,57 @@ class AppSettings(BaseSettings):
         default_factory=lambda: os.getenv("PIPELINE_STAGES", "produto,design,dev"),
         description="Etapas ativas do pipeline, separadas por vírgula (produto, design, dev)",
     )
+    # Os três modos estritos NÃO interrompem mais a esteira: a execução vai sempre até o fim, para
+    # que o diagnóstico final tenha todos os insumos. O que eles controlam é a severidade — com
+    # estrito, o gate reprovado marca a herança como degradada, tudo que deriva dele sai
+    # `[PROVISÓRIO]` e o veredito final é 🔴; sem estrito, o mesmo achado vira ressalva 🟡.
     esteira_estrita: bool = Field(
         default_factory=lambda: _env_bool("ESTEIRA_ESTRITA", "true"),
-        description="Se true, QA de design 🔴, banca de dev 🔴 e os gates de rastro (manifesto, telemetria, lacunas) impedem o PRD; lacuna de plataforma só deixa o PRD 🟡",
+        description="Se true, QA de design 🔴, banca de dev 🔴 e os gates de rastro (manifesto, telemetria, lacunas) marcam a herança como degradada e o PRD sai 🔴; lacuna de plataforma só deixa o PRD 🟡",
     )
     bncc_check_estrito: bool = Field(
         default_factory=lambda: _env_bool("BNCC_CHECK_ESTRITO", "true"),
-        description="Se true, spec com habilidade BNCC inexistente, de outro ano ou sem letramento digital bloqueia design e dev",
+        description="Se true, spec com habilidade BNCC inexistente, de outro ano ou sem letramento digital marca a herança como degradada em design e dev",
     )
     produto_modo_estrito: bool = Field(
         default_factory=lambda: _env_bool("PRODUTO_MODO_ESTRITO", "true"),
-        description="Se verdadeiro, missão bloqueada nos gates de produto interrompe design e dev",
+        description="Se verdadeiro, missão reprovada nos gates de produto marca a herança como degradada para design e dev",
     )
     gate_estrutural_max_rodadas: int = Field(
         default_factory=lambda: int(os.getenv("GATE_ESTRUTURAL_MAX_RODADAS", "3")),
         description="Rodadas máximas do loop gate estrutural ↔ revisor do one-pager",
+    )
+    spec_max_rodadas: int = Field(
+        default_factory=lambda: int(os.getenv("SPEC_MAX_RODADAS", "2")),
+        description="Rodadas máximas do loop spec ↔ conformidade BNCC e ficha do manifesto. 1 = sem correção automática",
+    )
+    handoff_max_rodadas: int = Field(
+        default_factory=lambda: int(os.getenv("HANDOFF_MAX_RODADAS", "2")),
+        description="Rodadas máximas do loop handoff de dev ↔ contrato de telemetria. 1 = sem correção automática",
+    )
+    banca_max_rodadas: int = Field(
+        default_factory=lambda: int(os.getenv("BANCA_MAX_RODADAS", "2")),
+        description="Rodadas máximas do loop banca de dev ↔ retrabalho do dono do achado (inclusive donos da etapa de design). 1 = sem correção automática",
+    )
+    orcamento_reexecucoes: int = Field(
+        default_factory=lambda: int(os.getenv("ORCAMENTO_REEXECUCOES", "8")),
+        description="Teto de agentes reexecutados por retrabalho na execução inteira, somando todos os loops. Estourado, a esteira para de tentar, marca pendência humana e segue até o fim",
+    )
+    qa_design_max_rodadas: int = Field(
+        default_factory=lambda: int(os.getenv("QA_DESIGN_MAX_RODADAS", "2")),
+        description="Rodadas máximas do loop QA de entregáveis ↔ retrabalho dos agentes com ticket. 1 = uma passada só, sem retrabalho",
     )
     output_dir: str = Field(
         default_factory=lambda: os.getenv("OUTPUT_DIR", "output"),
         description="Pasta onde os artefatos de cada execução são gravados",
     )
 
-    # ------------------------------------------------------------ Figma MCP
-    figma_mcp_mode: str = Field(
-        default_factory=_detect_figma_mode,
-        description="auto | off | remote (mcp.figma.com, OAuth) | desktop (app Figma local) | stdio (figma-developer-mcp, só leitura)",
-    )
-    figma_mcp_remote_url: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_MCP_REMOTE_URL", "https://mcp.figma.com/mcp"),
-    )
-    figma_mcp_desktop_url: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_MCP_DESKTOP_URL", "http://127.0.0.1:3845/mcp"),
-    )
-    figma_mcp_bearer_token: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_MCP_BEARER_TOKEN", ""),
-        description="Bearer estático para o MCP remoto (alternativa ao arquivo de tokens OAuth)",
-    )
-    figma_mcp_oauth_tokens_file: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_MCP_OAUTH_TOKENS_FILE", ".figma_mcp_tokens.json"),
-        description="Arquivo gerado por scripts/figma_oauth.py com os tokens OAuth do MCP remoto",
-    )
-    figma_api_key: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_API_KEY", "") or os.getenv("FIGMA_PERSONAL_ACCESS_TOKEN", ""),
-        description="Personal Access Token do Figma (usado pelo modo stdio)",
-    )
-    figma_mcp_command: str = Field(default_factory=lambda: os.getenv("FIGMA_MCP_COMMAND", "npx"))
-    figma_mcp_package: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_MCP_PACKAGE", "figma-developer-mcp"),
-    )
-    figma_mcp_args_raw: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_MCP_ARGS", "-y,figma-developer-mcp,--stdio"),
-    )
-    enable_figma_mcp_mock_fallback: bool = Field(
-        default_factory=lambda: _env_bool("ENABLE_FIGMA_MCP_MOCK_FALLBACK", "true"),
-    )
+    # ------------------------------------------------------------------- MCP
     mcp_timeout_seconds: int = Field(default_factory=lambda: int(os.getenv("MCP_TIMEOUT_SECONDS", "60")))
     mcp_read_timeout_seconds: int = Field(default_factory=lambda: int(os.getenv("MCP_READ_TIMEOUT_SECONDS", "600")))
 
-    # Contexto Figma da Unooria
-    figma_default_folder_url: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_DEFAULT_FOLDER_URL", ""),
-        description="URL da pasta/projeto do Figma onde os arquivos das missões são criados",
-    )
-    figma_folder_id: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_FOLDER_ID", ""),
-    )
-    figma_team_id: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_TEAM_ID", ""),
-    )
-    figma_ds_file_key: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_DS_FILE_KEY", "mPw4Hhx9ptkgcHtySaSilO"),
-        description="fileKey do Design System Unooria (tokens e componentes)",
-    )
-    figma_ds_v02_file_key: str = Field(
-        default_factory=lambda: os.getenv("FIGMA_DS_V02_FILE_KEY", "i0HRQSBtQQ9ZXDYiJPRnGv"),
-        description="fileKey do Unooria_DS_v0.2",
-    )
-
-    # ------------------------------------------------------------- Google Stitch
-    # Gera as telas do D5 e serve de conferência ao D7, no lugar do Figma. O endpoint
+    # ----------------------------------------------------------- Google Stitch
+    # Gera as telas do D5 e serve de conferência ao D7. O endpoint
     # MCP é oficial (`stitch.googleapis.com/mcp`) e autentica por chave de API.
     stitch_mcp_mode: str = Field(
         default_factory=lambda: _detect_stitch_mode(),
@@ -216,11 +172,6 @@ class AppSettings(BaseSettings):
             return "🟢 Proxy (npx @_davideast/stitch-mcp)"
         return f"🔴 Modo desconhecido ({self.stitch_mcp_mode})"
 
-    @property
-    def figma_mcp_args(self) -> List[str]:
-        if not self.figma_mcp_args_raw:
-            return ["-y", "figma-developer-mcp", "--stdio"]
-        return [a.strip() for a in self.figma_mcp_args_raw.split(",") if a.strip()]
 
     @property
     def output_path(self) -> Path:
@@ -230,21 +181,7 @@ class AppSettings(BaseSettings):
     def is_gemini_configured(self) -> bool:
         return bool(self.google_api_key and not self.google_api_key.startswith("SUA_CHAVE"))
 
-    def is_figma_enabled(self) -> bool:
-        return self.figma_mcp_mode in ("remote", "desktop", "stdio")
 
-    def figma_status_label(self) -> str:
-        mode = self.figma_mcp_mode
-        if mode == "off":
-            return "⚪ Desligado (artefatos de design em Markdown/Mermaid)"
-        if mode == "remote":
-            tokens = (PROJECT_ROOT / self.figma_mcp_oauth_tokens_file).exists() or bool(self.figma_mcp_bearer_token)
-            return "🟢 Remoto (OAuth)" if tokens else "🟡 Remoto sem token — rode `python scripts/figma_oauth.py`"
-        if mode == "desktop":
-            return f"🟢 Desktop ({self.figma_mcp_desktop_url})"
-        if mode == "stdio":
-            return "🟢 stdio (figma-developer-mcp, automático)" if self.figma_api_key else "🔴 stdio sem FIGMA_API_KEY"
-        return f"🔴 Modo desconhecido: {mode}"
 
 
 def get_settings() -> AppSettings:

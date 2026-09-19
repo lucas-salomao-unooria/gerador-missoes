@@ -26,7 +26,7 @@ módulo próprio `apps/api/src/<slug-curto>/` com `catalogo.ts` (dados),
 `comTenancy`, e controllers SEPARADOS por papel (nunca `@Roles` misto com
 exceção por método; seis papéis via grupos de `auth/claims.ts`), com
 `exigirMissaoLiberada` no funil de estudante (ADR-69) e relógio coletivo por
-polling em `exp_NN_gates_turma` (ADR-93/94), nunca WebSocket. A spec permite
+polling em `expNNefNb_gates_turma` (ADR-93/94), nunca WebSocket. A spec permite
 escrever o esqueleto: entidades do catálogo, regras principais, rotas por papel.
 
 ## TEC-03 — Rotas e erros de domínio enumerados

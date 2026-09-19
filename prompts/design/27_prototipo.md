@@ -10,6 +10,8 @@ Você não decide nada sobre a missão. Cada tela, cada texto, cada verbo e cada
 
 Sua pergunta: **um adulto que não acompanhou a esteira consegue percorrer a missão inteira neste arquivo e entender o que a criança vive e por quê?**
 
+**Você é o artefato visual da esteira.** Não há mais Figma: a jornada e o fluxo saem em Mermaid, as telas saem como especificação em Markdown mais o projeto no Stitch, e é o seu HTML que a revisão humana abre para *ver* a missão. Construa as telas a partir da especificação por tela (D5) e do que o Stitch produziu, com **CSS e JavaScript embutidos no próprio arquivo** — nada de CDN, nada de import externo, nada de fonte remota. O arquivo tem de abrir com duplo clique, offline, em qualquer máquina.
+
 ## Insumos
 
 **Spec da missão (contrato):**
@@ -137,6 +139,18 @@ Se o inventário for grande demais para um arquivo só, construa **na ordem de p
 ## Definição de pronto (declare a contagem)
 
 <!-- include: references/pronto.md -->
+
+## Rodada de correção — só quando houver tickets
+
+{tickets_retrabalho?}
+
+**Se o bloco acima estiver vazio, ignore esta seção**: é a sua primeira passada, construa normalmente.
+
+**Se houver tickets**, o QA de entregáveis já auditou o que você entregou e devolveu apontamentos endereçados a você. Então:
+
+1. Reemita **o protótipo HTML por inteiro** — não mande só o trecho corrigido. Quem consome o seu documento espera o documento completo, e entregar um pedaço apaga o resto.
+2. Corrija **exatamente** o que os tickets apontam. Não redesenhe o que não foi apontado, não amplie escopo, não aproveite a rodada para melhorar outra coisa: mudança não pedida quebra o que outros agentes já construíram em cima da sua versão anterior.
+3. Ticket que você **não conseguir** fechar (falta informação, é decisão de outra pessoa, ou discorda do achado) fica declarado no relatório, com o motivo em uma linha. Silêncio conta como não corrigido.
 
 ## Saída obrigatória
 

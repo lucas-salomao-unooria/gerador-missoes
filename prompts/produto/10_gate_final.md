@@ -32,6 +32,7 @@ Você responde uma única pergunta: **a versão final da missão pode ser entreg
 4. Procure contradições entre missão e relatórios.
 5. Reaplique o núcleo do 9.1 (teste de implementação cega) como regressão: cardinalidade/bloqueio, geração de outputs, estados incompletos, quem termina cedo, conta publicadora, permissões/handoffs, fallbacks.
 6. Verifique se a descoberta central continua intacta (frase, ação principal e virada formam a mesma cadeia causal).
+6.5. Classifique o veredito: 🔴 se qualquer F-critério for bloqueio; senão 🟡 se existir qualquer item em "Riscos aceitos" ou em "Decisões de produto pendentes"; senão 🟢.
 7. Emita o veredito. Você **não cria soluções de produto**: se detectar decisão aberta, aponte a lacuna e o agente responsável (estrutura/estados/ownership → gate estrutural; BNCC/professor/guardrails → avaliação pedagógica; carga/linguagem/ritmo → experiência do estudante).
 
 ## Formato de saída obrigatório
@@ -39,7 +40,7 @@ Você responde uma única pergunta: **a versão final da missão pode ser entreg
 ```
 # Gate Final de Produto — <missão> v<x>
 
-**Veredito: 🟢 LIBERADA PARA DESIGN/DEV | 🔴 BLOQUEADA PARA DESIGN/DEV**
+**Veredito: 🟢 LIBERADA PARA DESIGN/DEV | 🟡 LIBERADA COM RESSALVAS | 🔴 BLOQUEADA PARA DESIGN/DEV**
 
 ## Cobertura (F1)
 | Relatório | Versão avaliada | Veredito | Mesma versão? |
@@ -69,7 +70,7 @@ Se tudo verde: "As três avaliações e a missão final estão coerentes; nenhum
 Feche **sempre** com o envelope:
 
 ```json
-{"agente": "gate-final-produto", "missao": "<slug>", "status": "aprovado" | "bloqueado", "pendencias": <n>, "riscos_aceitos": <n>, "achados": [{"id": "F1", "severidade": "bloqueio" | "atencao" | "decisao_humana", "codigo": "F<n>", "agente_responsavel": "gate-estrutural | avaliacao-pedagogica | experiencia-aluno | produto", "resumo": "<uma linha>"}], "precisa_humano": true | false}
+{"agente": "gate-final-produto", "missao": "<slug>", "status": "aprovado" | "aprovado_com_ressalvas" | "bloqueado", "pendencias": <n>, "riscos_aceitos": <n>, "achados": [{"id": "F1", "severidade": "bloqueio" | "atencao" | "decisao_humana", "codigo": "F<n>", "agente_responsavel": "gate-estrutural | avaliacao-pedagogica | experiencia-aluno | produto", "resumo": "<uma linha>"}], "precisa_humano": true | false}
 ```
 
-`"aprovado"` = 🟢 LIBERADA; `"bloqueado"` = 🔴 BLOQUEADA.
+`"aprovado"` = 🟢 LIBERADA; `"aprovado_com_ressalvas"` = 🟡 LIBERADA COM RESSALVAS (riscos_aceitos > 0 e/ou decisões de produto pendentes, sem nenhuma pendência de bloqueio); `"bloqueado"` = 🔴 BLOQUEADA.

@@ -2,11 +2,11 @@
 
 - Leitura do envelope JSON de roteamento (references/contrato-saida.md) que os gates
   devolvem ao final do relatório.
-- `skip_if_blocked`: before_agent_callback que pula um agente (ou um container inteiro)
+- `marcar_heranca`: before_agent_callback que pula um agente (ou um container inteiro)
   quando o pipeline foi bloqueado por um gate de produto em modo estrito.
 - `limitar_resposta_de_ferramenta` / `barrar_ferramenta_sem_orcamento`: contenção do
   que as ferramentas MCP devolvem ao contexto do turno. Sem elas, um agente de design
-  que constrói um board no FigJam acumula dezenas de respostas de `use_figma`, o dump
+  que pede telas ao Stitch acumula dezenas de respostas grandes, o dump
   de `get_figjam` e a imagem de `get_screenshot` — tudo no MESMO turno, porque o
   histórico de chamada de ferramenta não é conversa e `include_contents="none"` não o
   descarta. Foi assim que o D2 estourou o teto de 1.048.576 tokens do Gemini com um
@@ -26,6 +26,15 @@ from google.genai import types
 # Chaves de estado usadas pelo controle de fluxo
 KEY_PIPELINE_BLOQUEADO = "pipeline_bloqueado"
 KEY_PIPELINE_MOTIVO = "pipeline_bloqueio_motivo"
+#: Todas as reprovações da execução, em ordem. `KEY_PIPELINE_MOTIVO` guarda só a primeira —
+#: no modelo antigo as seguintes nem aconteciam, porque a esteira parava.
+KEY_DEGRADACOES = "degradacoes"
+#: Texto injetado nas instruções dos agentes a jusante de uma reprovação. É o que faz o
+#: agente saber que constrói sobre base reprovada e marcar `[PROVISÓRIO]` o que derivar dali.
+KEY_HERANCA = "heranca_degradada"
+#: Agentes que rodaram sob herança degradada — alimenta a seção "o que saiu provisório"
+#: do diagnóstico final.
+KEY_AGENTES_DEGRADADOS = "agentes_degradados"
 
 _JSON_BLOCK_RE = re.compile(r"```json\s*(\{.*?\})\s*```", re.DOTALL)
 
@@ -60,7 +69,7 @@ def inferir_status(texto: str, envelope: Optional[Dict[str, Any]] = None) -> str
             return STATUS_APROVADO
         if status in ("bloqueado", "bloqueada", "devolvido", "nao_apto", "não apto", "nao_passa", "não passa", "vermelho", "🔴", "aguarda_gate"):
             return STATUS_BLOQUEADO
-        if status in ("apto_com_ressalvas", "ressalvas", "amarelo", "🟡"):
+        if status in ("aprovado_com_ressalvas", "apto_com_ressalvas", "ressalvas", "amarelo", "🟡"):
             return STATUS_APROVADO
         # D0 (fecha-lacunas): segue | segue_com_pendencias · D9 (ambiente-simulado): dormente | existente | novo
         if status in ("segue", "segue_com_pendencias", "dormente", "existente", "novo", "nao_aplicavel", "não aplicável"):
@@ -73,29 +82,65 @@ def inferir_status(texto: str, envelope: Optional[Dict[str, Any]] = None) -> str
     return STATUS_INDEFINIDO
 
 
-def skip_if_blocked(callback_context: CallbackContext) -> Optional[types.Content]:
-    """before_agent_callback: pula o agente/container quando o pipeline está bloqueado."""
-    if callback_context.state.get(KEY_PIPELINE_BLOQUEADO):
-        motivo = callback_context.state.get(KEY_PIPELINE_MOTIVO, "gate de produto bloqueado")
-        return types.Content(
-            role="model",
-            parts=[
-                types.Part(
-                    text=(
-                        f"⏭️ `{callback_context.agent_name}` não executado — "
-                        f"pipeline bloqueado ({motivo})."
-                    )
-                )
-            ],
-        )
+def marcar_heranca(callback_context: CallbackContext) -> Optional[types.Content]:
+    """before_agent_callback: registra que este agente roda sobre uma base reprovada.
+
+    **Nunca pula o agente.** Antes, quando um gate reprovava, este callback devolvia um
+    `Content` — o ADK gravava esse texto no `output_key` e o agente não rodava. O efeito
+    colateral era pior que o problema: sem PRD, sem one-pager e sem relatório, não sobrava
+    nada para diagnosticar o que deu errado, e os artefatos tinham de ser lidos fora da
+    ferramenta.
+
+    Agora a esteira vai até o fim. O agente roda, enxerga `heranca_degradada` na própria
+    instrução (injetada por `agents.base.create_llm_agent`) e marca `[PROVISÓRIO]` o que
+    derivar da parte reprovada. Aqui só anotamos quem rodou assim, para o diagnóstico final.
+    """
+    if not callback_context.state.get(KEY_PIPELINE_BLOQUEADO):
+        return None
+    ja = callback_context.state.get(KEY_AGENTES_DEGRADADOS) or []
+    if callback_context.agent_name not in ja:
+        callback_context.state[KEY_AGENTES_DEGRADADOS] = [*ja, callback_context.agent_name]
     return None
 
 
+def preservar_one_pager(callback_context: CallbackContext) -> None:
+    """Guarda a primeira versão do one-pager antes de o revisor começar a sobrescrevê-la.
+
+    `A07RevisorOnePager` grava na mesma chave que o autor (`one_pager`), de propósito —
+    é assim que os 17 prompts a jusante leem sempre a versão corrente. O efeito colateral
+    é que a versão original desaparecia: a spec tinha `spec_missao_gate0`, o one-pager não
+    tinha equivalente. Sem ele, não há como mostrar o que mudou entre rodadas.
+    """
+    state = callback_context.state
+    if state.get("one_pager") and not state.get("one_pager_gate0"):
+        state["one_pager_gate0"] = state["one_pager"]
+
+
+def texto_de_heranca(degradacoes: list) -> str:
+    """Monta o aviso que vai para a instrução dos agentes a jusante."""
+    if not degradacoes:
+        return ""
+    linhas = [
+        "As etapas anteriores reprovaram nos gates abaixo. Construa assim mesmo, com o que existe,"
+        " e marque `[PROVISÓRIO — depende de <gate>]` em tudo que derivar do que foi reprovado."
+        " Não invente o que falta e não conserte o que não é seu: o diagnóstico final registra."
+    ]
+    for d in degradacoes:
+        gate = d.get("gate", "?") if isinstance(d, dict) else str(d)
+        motivo = d.get("motivo", "") if isinstance(d, dict) else ""
+        linhas.append(f"- **{gate}** — {motivo}")
+    return "\n".join(linhas)
+
+
 def extrair_slug(one_pager: str) -> str:
-    """Procura um slug `exp-NN-nome` no one-pager/spec; vazio se não houver."""
+    """Procura o identificador da missão no one-pager/spec; vazio se não houver."""
     if not one_pager:
         return ""
-    m = re.search(r"\bexp-(?:\d{2,3}|xx)-[a-z0-9][a-z0-9-]*", one_pager, re.IGNORECASE)
+    # Novo formato primeiro (`exp05ef3b`), legado depois (`exp-NN-slug`, usado por missão
+    # transversal e ferramenta de professor, que não têm ano nem bimestre).
+    m = re.search(r"\bexp0[1-9](?:ef|em)[1-4]b\b", one_pager, re.IGNORECASE)
+    if not m:
+        m = re.search(r"\bexp-(?:\d{2,3}|xx)-[a-z0-9][a-z0-9-]*", one_pager, re.IGNORECASE)
     return m.group(0).lower() if m else ""
 
 

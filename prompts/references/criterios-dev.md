@@ -20,7 +20,7 @@ Reconferir a cada emenda da nossa rubrica, e atualizar a versão lida acima.
 |---|---|---|
 | PROD-01 | Identificação completa | spec bloco 0 |
 | PROD-02 | Premissa em uma frase | spec bloco 1 |
-| PROD-04 | Fluxo com estados nomeados | spec bloco 2 + `fluxo-figjam` |
+| PROD-04 | Fluxo com estados nomeados | spec bloco 2 + `fluxo` |
 | PROD-07 | Momento de conclusão | spec bloco 2 |
 | PROD-08 | Decisão sobre a revelação | `brief-oficio` + `copy-ptbr` |
 | DES-01 | Seção do DS nomeada e existente | `ambientes.md` + spec bloco 0 |

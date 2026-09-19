@@ -1,6 +1,6 @@
 ---
 name: pronto
-description: Definição de pronto por agente — só o que se conta. Verificada pelo próprio agente antes de entregar, e declarada no envelope. Lido por fecha-lacunas, ambiente-simulado, jornada-figjam, fluxo-figjam, copy-ptbr, caa, wireframes-figma e pelo gate de ofício.
+description: Definição de pronto por agente — só o que se conta. Verificada pelo próprio agente antes de entregar, e declarada no envelope. Lido por fecha-lacunas, ambiente-simulado, jornada, fluxo, copy-ptbr, caa, telas e pelo gate de ofício.
 sources: [chat]
 ---
 
@@ -12,7 +12,7 @@ Isto não é uma dimensão de auditoria. É a lista que impede o gate de ofício
 
 **Declare a contagem no envelope** (`pronto` em `references/contrato-saida.md`). Contagem ausente equivale a contagem falhada: sem ela ninguém sabe se o zero foi verificado ou presumido.
 
-## jornada-figjam
+## jornada
 
 | Conta | Zero significa |
 |---|---|
@@ -25,7 +25,7 @@ Isto não é uma dimensão de auditoria. É a lista que impede o gate de ofício
 | Verbo na jornada fora da lista de verbos do bloco 4 da spec | Verbo inventado |
 | Cenário de dispositivo com "descoberta chega?" em branco | 10.2 sem resposta |
 
-## fluxo-figjam
+## fluxo
 
 | Conta | Zero significa |
 |---|---|
@@ -68,7 +68,7 @@ Só conta quando o gate de aplicabilidade deu "roda". Em `nao_aplicavel`, a cont
 | Momento de mediação sem linha de instrução para a professora | Prancha sem quem a conduza |
 | Marcador que distingue "respondeu por CAA" na evidência | Rotular estudante (8.4) |
 
-## wireframes-figma
+## telas
 
 | Conta | Zero significa |
 |---|---|

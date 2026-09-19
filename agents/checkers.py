@@ -25,6 +25,7 @@ trava o pipeline quando `estrito`; amarelo (só pendência de plataforma) segue 
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
@@ -46,6 +47,9 @@ from tools.rastro import (
 )
 
 from .callbacks import (
+    KEY_AGENTES_DEGRADADOS,
+    KEY_DEGRADACOES,
+    KEY_HERANCA,
     KEY_PIPELINE_BLOQUEADO,
     KEY_PIPELINE_MOTIVO,
     STATUS_APROVADO,
@@ -53,7 +57,61 @@ from .callbacks import (
     extrair_envelope,
     extrair_slug,
     inferir_status,
+    texto_de_heranca,
 )
+
+
+#: Quantos agentes já foram reexecutados por retrabalho nesta execução.
+KEY_REEXECUCOES = "reexecucoes"
+
+
+def orcamento_disponivel(state, quantos: int) -> bool:
+    """Cabe mais uma rodada de retrabalho no orçamento da execução?
+
+    Cada loop tem seu teto, mas os tetos somam: design 2 × banca 2 × handoff 2 já são
+    muitas reexecuções numa missão ruim. O orçamento global é o freio que impede a soma
+    de virar uma conta imprevisível.
+    """
+    from config import get_settings
+
+    gastos = int(state.get(KEY_REEXECUCOES, 0) or 0)
+    return gastos + quantos <= get_settings().orcamento_reexecucoes
+
+
+def limpar_degradacao(state, delta: Dict[str, Any], gate: str) -> None:
+    """Apaga a reprovação de um gate que passou a aprovar.
+
+    Antes dos loops de correção isto não fazia falta: reprovou, parou. Agora um gate pode
+    reprovar na rodada 1 e aprovar na 2, e a marca da primeira não pode sobreviver — senão
+    a missão consertada sai com veredito de reprovada e tudo a jusante vira `[PROVISÓRIO]`
+    sem motivo.
+    """
+    anteriores = list(state.get(KEY_DEGRADACOES) or [])
+    restantes = [d for d in anteriores if (d or {}).get("gate") != gate]
+    if len(restantes) == len(anteriores):
+        return
+    delta[KEY_DEGRADACOES] = restantes
+    delta[KEY_HERANCA] = texto_de_heranca(restantes)
+    if not restantes:
+        delta[KEY_PIPELINE_BLOQUEADO] = False
+        delta[KEY_PIPELINE_MOTIVO] = ""
+
+
+def registrar_degradacao(state, delta: Dict[str, Any], gate: str, motivo: str) -> None:
+    """Anota a reprovação e reescreve o aviso de herança para os agentes a jusante.
+
+    Não interrompe nada: a esteira segue até o fim justamente para que o diagnóstico final
+    tenha todos os insumos. `KEY_PIPELINE_BLOQUEADO` continua existindo, mas só como
+    veredito da execução — não como ordem de parada.
+    """
+    anteriores = list(state.get(KEY_DEGRADACOES) or [])
+    anteriores.append({"gate": gate, "motivo": motivo})
+    delta[KEY_DEGRADACOES] = anteriores
+    delta[KEY_HERANCA] = texto_de_heranca(anteriores)
+    delta[KEY_PIPELINE_BLOQUEADO] = True
+    # O motivo original é o primeiro; a lista completa fica em KEY_DEGRADACOES.
+    if not state.get(KEY_PIPELINE_MOTIVO):
+        delta[KEY_PIPELINE_MOTIVO] = motivo
 
 
 class EnvelopeGateAgent(BaseAgent):
@@ -86,6 +144,7 @@ class EnvelopeGateAgent(BaseAgent):
         escalate = False
         if status == STATUS_APROVADO:
             msg = f"✅ {self.rotulo}: aprovado" + (f" na rodada {rodada}." if self.round_key else ".")
+            limpar_degradacao(state, delta, self.rotulo)
             escalate = self.escalate_on_approve
         else:
             bloqueia_agora = self.block_pipeline_on_fail and (esgotou or not self.round_key)
@@ -96,21 +155,21 @@ class EnvelopeGateAgent(BaseAgent):
                 )
             elif bloqueia_agora:
                 msg = (
-                    f"⛔ {self.rotulo}: bloqueado"
+                    f"⛔ {self.rotulo}: reprovado"
                     + (f" após {rodada} rodada(s)" if self.round_key else "")
-                    + ". Modo estrito ativo — design e dev não serão executados. "
-                    "Veja o alerta e o relatório executivo do gate."
+                    + ". A esteira segue até o fim: o que derivar daqui sai marcado "
+                    "`[PROVISÓRIO]` e o diagnóstico final registra o que travou e de quem é."
                 )
-                delta[KEY_PIPELINE_BLOQUEADO] = True
-                delta[KEY_PIPELINE_MOTIVO] = f"{self.rotulo} bloqueado"
-                escalate = True
+                registrar_degradacao(state, delta, self.rotulo, f"{self.rotulo} reprovado")
             else:
                 msg = (
-                    f"⚠️ {self.rotulo}: bloqueado"
+                    f"⚠️ {self.rotulo}: reprovado"
                     + (f" após {rodada} rodada(s)" if self.round_key else "")
-                    + ". Modo estrito desligado — o pipeline segue e o PRD registrará as pendências."
+                    + ". Modo estrito desligado — segue como ressalva e entra no PRD."
                 )
-                escalate = bool(self.round_key)
+            # `escalate` serve para sair de um LoopAgent, nunca para abortar a esteira:
+            # num SequentialAgent ele pularia todo o resto da etapa.
+            escalate = bool(self.round_key) and esgotou
 
         yield Event(
             invocation_id=ctx.invocation_id,
@@ -324,17 +383,20 @@ class BnccCheckAgent(BaseAgent):
                 f"✅ {self.rotulo}: conforme — {len(resultado['codigos'])} código(s) do bloco 11 existem, "
                 f"são da série identificada e incluem letramento digital."
             )
+            limpar_degradacao(state, delta, self.rotulo)
         else:
             itens = "\n".join(f"- ⛔ {a['resumo']}" for a in bloqueios)
             if self.estrito:
-                delta[KEY_PIPELINE_BLOQUEADO] = True
-                delta[KEY_PIPELINE_MOTIVO] = f"{self.rotulo} bloqueada ({len(bloqueios)} achado(s))"
+                registrar_degradacao(
+                    state, delta, self.rotulo,
+                    f"{self.rotulo} reprovada ({len(bloqueios)} achado(s))",
+                )
                 msg = (
-                    f"⛔ {self.rotulo}: bloqueada — {len(bloqueios)} achado(s). "
-                    f"A esteira para aqui; design e dev não serão executados.\n{itens}"
+                    f"⛔ {self.rotulo}: reprovada — {len(bloqueios)} achado(s). "
+                    f"Design e dev seguem, marcando `[PROVISÓRIO]` o que depender do currículo.\n{itens}"
                 )
             else:
-                msg = f"⚠️ {self.rotulo}: {len(bloqueios)} achado(s) — modo não estrito, o pipeline segue.\n{itens}"
+                msg = f"⚠️ {self.rotulo}: {len(bloqueios)} achado(s) — modo não estrito, segue como ressalva.\n{itens}"
 
         yield Event(
             invocation_id=ctx.invocation_id,
@@ -390,16 +452,22 @@ class RastroCheckAgent(BaseAgent):
         avisos = [a for a in resultado["achados"] if a["severidade"] != "bloqueio"]
         if status == "aprovado":
             msg = f"✅ {self.rotulo}: conforme."
+            limpar_degradacao(state, delta, self.rotulo)
         elif status == "amarelo":
             msg = f"🟡 {self.rotulo}: {len(avisos)} pendência(s) de plataforma — o pipeline segue e o PRD sai 🟡, não verde.\n" + "\n".join(f"- ⚠️ {a.get('resumo') or a.get('trecho', '')}" for a in avisos)
         else:
             itens = "\n".join(f"- ⛔ [{a.get('etapa', 'dev')}] {a.get('resumo') or a.get('trecho', '')}" for a in bloqueios)
             if self.estrito:
-                delta[KEY_PIPELINE_BLOQUEADO] = True
-                delta[KEY_PIPELINE_MOTIVO] = f"{self.rotulo} bloqueado ({len(bloqueios)} lacuna(s))"
-                msg = f"⛔ {self.rotulo}: bloqueado — {len(bloqueios)} lacuna(s). A esteira para aqui; o PRD não sai.\n{itens}"
+                registrar_degradacao(
+                    state, delta, self.rotulo,
+                    f"{self.rotulo} reprovado ({len(bloqueios)} lacuna(s))",
+                )
+                msg = (
+                    f"⛔ {self.rotulo}: reprovado — {len(bloqueios)} lacuna(s). "
+                    f"O PRD sai mesmo assim, marcado, e o diagnóstico final lista cada lacuna com o dono.\n{itens}"
+                )
             else:
-                msg = f"⚠️ {self.rotulo}: {len(bloqueios)} lacuna(s) — modo não estrito, o pipeline segue.\n{itens}"
+                msg = f"⚠️ {self.rotulo}: {len(bloqueios)} lacuna(s) — modo não estrito, segue como ressalva.\n{itens}"
 
         yield Event(
             invocation_id=ctx.invocation_id,
@@ -407,4 +475,260 @@ class RastroCheckAgent(BaseAgent):
             branch=ctx.branch,
             content=types.Content(role="model", parts=[types.Part(text=msg)]),
             actions=EventActions(state_delta=delta),
+        )
+
+
+class DespachoTicketsAgent(BaseAgent):
+    """Re-executa **apenas** os agentes endereçados pelos tickets de um gate.
+
+    O QA de entregáveis (D7) já escreve cada ticket com um dono (`agente_responsavel`
+    no envelope) e declara a ordem em que dois donos se resolvem. O que faltava era
+    quem executa esse despacho: sem ele, o gate emite "rodada 1", endereça tickets e
+    ninguém os aplica — o relatório vira documento, não correção.
+
+    Este agente fecha o ciclo, e o faz **seletivamente**: reexecutar a etapa inteira
+    para consertar uma string custaria todas as chamadas de Figma de novo. Só roda
+    quem tem ticket, na ordem de precedência declarada no prompt do gate.
+
+    - `mapa`: slug do envelope → `name` do sub-agente de correção, ou **lista** de nomes
+      quando o conserto exige mais de um passo (o D0 e o D9 emitem dois documentos numa
+      resposta só, então precisam do `SecaoSplitAgent` logo atrás para a correção chegar
+      à spec — sem isso o agente reescreve e ninguém lê).
+    - `posfixo`: nomes que rodam depois de **qualquer** retrabalho. É o que mantém o
+      protótipo coerente: ele deriva de jornada, copy, CAA e telas, e auditar um protótipo
+      construído sobre a versão anterior é pior que não auditar.
+    - `ordem`: slugs na ordem em que devem rodar quando há mais de um dono.
+    - `externos`: slugs que pertencem a outra etapa (ex.: `gate-estrutural`); não são
+      reexecutados aqui — viram pendência humana registrada no relatório.
+    - `tickets_key`: chave de estado onde cada agente lê os tickets dirigidos a ele.
+    """
+
+    report_key: str
+    rotulo: str = "Retrabalho"
+    mapa: Dict[str, Any] = Field(default_factory=dict)
+    ordem: List[str] = Field(default_factory=list)
+    externos: List[str] = Field(default_factory=list)
+    posfixo: List[str] = Field(default_factory=list)
+    severidades: List[str] = Field(default_factory=lambda: ["bloqueio"])
+    tickets_key: str = "tickets_retrabalho"
+
+    def _formatar(self, achados: List[Dict[str, Any]]) -> str:
+        linhas = ["## Tickets do QA endereçados a você nesta rodada", ""]
+        for a in achados:
+            cod = a.get("codigo") or a.get("id") or "—"
+            classe = a.get("classe") or ""
+            resumo = a.get("resumo") or ""
+            linhas.append(f"- **{a.get('id', '?')}** · `{cod}`{f' · {classe}' if classe else ''} — {resumo}")
+        linhas.append("")
+        linhas.append(
+            "Corrija **exatamente** estes pontos e reemita o seu documento completo. "
+            "Não redesenhe o que não foi apontado; não amplie escopo."
+        )
+        return "\n".join(linhas)
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        state = ctx.session.state
+        relatorio = str(state.get(self.report_key, "") or "")
+        envelope = extrair_envelope(relatorio) or {}
+        status = inferir_status(relatorio, envelope)
+
+        if status == STATUS_APROVADO:
+            return
+
+        por_slug: Dict[str, List[Dict[str, Any]]] = {}
+        pendentes_externos: List[str] = []
+        for achado in envelope.get("achados") or []:
+            if not isinstance(achado, dict):
+                continue
+            if str(achado.get("severidade", "")).strip().lower() not in self.severidades:
+                continue
+            slug = str(achado.get("agente_responsavel") or "").strip().lower()
+            if not slug or slug in ("null", "none"):
+                continue
+            if slug in self.externos:
+                pendentes_externos.append(f"`{achado.get('id', '?')}` → `{slug}`")
+                continue
+            if slug in self.mapa:
+                por_slug.setdefault(slug, []).append(achado)
+
+        slugs_na_ordem = [s for s in self.ordem if s in por_slug]
+        slugs_na_ordem += [s for s in por_slug if s not in slugs_na_ordem]
+
+        # cada slug vira a cadeia de agentes que o conserto exige, sem repetir nome
+        nomes_na_ordem: List[str] = []
+        por_agente: Dict[str, List[Dict[str, Any]]] = {}
+        for slug in slugs_na_ordem:
+            alvo = self.mapa[slug]
+            for nome in ([alvo] if isinstance(alvo, str) else list(alvo)):
+                if nome not in nomes_na_ordem:
+                    nomes_na_ordem.append(nome)
+                por_agente.setdefault(nome, []).extend(por_slug[slug])
+
+        if not nomes_na_ordem:
+            msg = f"⏭️ {self.rotulo}: nenhum ticket com dono executável nesta etapa."
+            if pendentes_externos:
+                msg += " Devolução a outra etapa: " + ", ".join(pendentes_externos) + "."
+            yield Event(
+                invocation_id=ctx.invocation_id,
+                author=self.name,
+                branch=ctx.branch,
+                content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            )
+            return
+
+        for nome in self.posfixo:
+            if nome not in nomes_na_ordem:
+                nomes_na_ordem.append(nome)
+                por_agente.setdefault(nome, [])
+
+        if not orcamento_disponivel(state, len(nomes_na_ordem)):
+            gastos = int(state.get(KEY_REEXECUCOES, 0) or 0)
+            yield Event(
+                invocation_id=ctx.invocation_id,
+                author=self.name,
+                branch=ctx.branch,
+                content=types.Content(role="model", parts=[types.Part(text=(
+                    f"⛔ {self.rotulo}: orçamento de retrabalho esgotado ({gastos} agente(s) já reexecutado(s) "
+                    f"nesta execução). Os {len(nomes_na_ordem)} conserto(s) desta rodada ficam para uma pessoa; "
+                    "a esteira segue e o diagnóstico final lista cada um com o dono."
+                ))]),
+                actions=EventActions(state_delta={KEY_PIPELINE_BLOQUEADO: True}),
+            )
+            return
+
+        resumo = ", ".join(f"{n} ({len(por_agente[n])})" for n in nomes_na_ordem)
+        aviso = f"🔁 {self.rotulo}: reexecutando {len(nomes_na_ordem)} agente(s) com ticket — {resumo}."
+        if pendentes_externos:
+            aviso += " Fora desta etapa (não reexecutado): " + ", ".join(pendentes_externos) + "."
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=aviso)]),
+        )
+
+        for nome in nomes_na_ordem:
+            sub = next((s for s in self.sub_agents if s.name == nome), None)
+            if sub is None:
+                continue
+            achados_do_agente = por_agente.get(nome) or []
+            tickets = (
+                self._formatar(achados_do_agente)
+                if achados_do_agente
+                else "## Reconstrução\n\nUm documento do qual você deriva mudou nesta rodada. "
+                     "Refaça o seu a partir da versão nova, sem alterar nada além do que a mudança exigir."
+            )
+            state[self.tickets_key] = tickets
+            yield Event(
+                invocation_id=ctx.invocation_id,
+                author=self.name,
+                branch=ctx.branch,
+                actions=EventActions(state_delta={self.tickets_key: tickets}),
+            )
+            async for evento in sub.run_async(ctx):
+                yield evento
+
+        state[self.tickets_key] = ""
+        gastos = int(state.get(KEY_REEXECUCOES, 0) or 0) + len(nomes_na_ordem)
+        state[KEY_REEXECUCOES] = gastos
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            actions=EventActions(state_delta={self.tickets_key: "", KEY_REEXECUCOES: gastos}),
+        )
+
+
+class DiagnosticoAgent(BaseAgent):
+    """Fecha a execução com o dossiê do que passou, do que passou com ressalva e do que travou.
+
+    Roda **sempre**, e é o único que não depende de nenhum agente ter dado certo: lê os
+    envelopes que os gates já gravaram no estado (`tools/diagnostico.py`). Como a esteira
+    deixou de abortar na primeira reprovação, este é o documento que diz onde atuar sem
+    obrigar ninguém a abrir doze artefatos e o `estado.json`.
+    """
+
+    status_key: str = "diagnostico_status"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from pipeline.artifacts import ARTIFACT_FILES
+        from tools.diagnostico import artefatos_esperados, coletar, envelope, relatorio_markdown
+
+        state = dict(ctx.session.state)
+        missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or ""))
+        dossie = coletar(state)
+        artefatos = artefatos_esperados(state, ARTIFACT_FILES)
+        texto = relatorio_markdown(dossie, missao, artefatos)
+        env = envelope(dossie, missao)
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=texto)]),
+            actions=EventActions(
+                state_delta={
+                    "diagnostico_execucao": texto + "\n```json\n" + json.dumps(env, ensure_ascii=False) + "\n```\n",
+                    self.status_key: env["status"],
+                    f"{self.status_key}_envelope": env,
+                }
+            ),
+        )
+
+
+class SaidaDeLoopAgent(BaseAgent):
+    """Encerra um `LoopAgent` quando todos os gates da rodada passaram — ou quando o teto caiu.
+
+    Os gates determinísticos (`BnccCheckAgent`, `RastroCheckAgent`) sabem julgar, mas não
+    sabem rotear: cada um lê uma coisa e grava um status. Este agente lê o conjunto e toma
+    a única decisão que falta — repetir ou seguir.
+
+    É o que transforma "o gate reprovou" em "o autor do documento reescreve e o gate confere
+    de novo", sem depender de o modelo decidir isso por conta própria dentro do prompt.
+    """
+
+    status_keys: List[str] = Field(default_factory=list)
+    rodada_key: str = ""
+    max_rounds: int = 2
+    rotulo: str = "Loop"
+    #: Status que contam como "pode seguir". `amarelo` é pendência de plataforma: repetir não resolve.
+    aceitos: List[str] = Field(default_factory=lambda: ["aprovado", "amarelo"])
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        state = ctx.session.state
+        rodada = int(state.get(self.rodada_key, 0) or 0) + 1
+        reprovados = [
+            k for k in self.status_keys
+            if str(state.get(k, "")).strip().lower() not in self.aceitos and k in state
+        ]
+        esgotou = rodada >= self.max_rounds
+        delta: Dict[str, Any] = {self.rodada_key: rodada}
+
+        if not reprovados:
+            msg = f"✅ {self.rotulo}: tudo conforme na rodada {rodada}."
+            escalate = True
+        elif esgotou:
+            nomes = ", ".join(f"`{k}`" for k in reprovados)
+            msg = (
+                f"⛔ {self.rotulo}: {len(reprovados)} gate(s) ainda reprovado(s) após {rodada} rodada(s) — {nomes}. "
+                "Não há mais rodada: a esteira segue e o diagnóstico final registra o que ficou."
+            )
+            escalate = True
+        else:
+            nomes = ", ".join(f"`{k}`" for k in reprovados)
+            msg = (
+                f"🔁 {self.rotulo}: rodada {rodada}/{self.max_rounds} — {nomes} reprovado(s). "
+                "O autor do documento recebe o relatório e reescreve."
+            )
+            escalate = False
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta=delta, escalate=escalate or None),
         )

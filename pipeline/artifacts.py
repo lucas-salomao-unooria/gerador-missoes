@@ -1,4 +1,4 @@
-"""Persistência dos artefatos de uma execução em `output/<data>-<slug>/` com suporte a ADK Artifacts e links Figma."""
+"""Persistência dos artefatos de uma execução em `output/<data>-<slug>/`, com suporte a ADK Artifacts."""
 
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ ARTIFACT_FILES = [
     ("experiencia_aluno_report", "produto/03-experiencia-aluno.md"),
     ("gate_final_report", "produto/04-gate-final.md"),
     ("spec_missao", "produto/05-spec-missao.md"),
+    ("one_pager_gate0", "produto/00c-one-pager-original.md"),
     ("spec_missao_gate0", "produto/05a-spec-missao-gate0.md"),
     ("bncc_report", "produto/05b-conformidade-bncc.md"),
     ("fechamento_lacunas", "design/00-fechamento-lacunas.md"),
@@ -57,6 +58,7 @@ ARTIFACT_FILES = [
     ("prd_final", "PRD.md"),
     ("one_pager_pedagogico", "one-pager-pedagogico.md"),
     ("prd_check_report", "dev/04-pendencias-do-prd.md"),
+    ("diagnostico_execucao", "diagnostico-execucao.md"),
     ("aprendizado_registro", "aprendizado.md"),
 ]
 
@@ -64,13 +66,8 @@ STAGE_NAMES = {
     "produto": "🧭 Produto",
     "design": "🎨 Design",
     "dev": "🛠️ Dev",
-    "figma": "🎨 Figma",
 }
 
-FIGMA_URL_PATTERN = re.compile(
-    r"https?://(?:www\.)?figma\.com/(?:file|design|board)/([a-zA-Z0-9]+)(?:/[^ \n\r\t\)\"\`\<\>]+)?",
-    re.IGNORECASE,
-)
 
 
 def _safe(name: str) -> str:
@@ -107,7 +104,7 @@ def e_mensagem_de_pulo(valor: Any) -> bool:
     """O ADK grava no `output_key` o texto do callback que pulou o agente.
 
     Sem este filtro, um pipeline bloqueado produz um `PRD.md` de 88 bytes dizendo
-    "PrdWriterAgent não executado" — e a interface, que só testa se a chave existe,
+    "A46PrdWriter não executado" — e a interface, que só testa se a chave existe,
     anuncia "PRD gerado".
     """
     if not isinstance(valor, str):
@@ -115,62 +112,6 @@ def e_mensagem_de_pulo(valor: Any) -> bool:
     inicio = valor.strip()[:200]
     return inicio.startswith("⏭️") and "não executado" in inicio
 
-
-def extract_figma_links(state: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Extrai URLs, fileKeys e referências ao Figma/FigJam das saídas dos agentes."""
-    found_urls: Dict[str, Dict[str, Any]] = {}
-
-    keys_to_scan = [
-        "ambiente_simulado",
-        "jornada_telas",
-        "fluxo_arestas",
-        "wireframes_cobertura",
-        "qa_entregaveis_report",
-        "brief_oficio",
-        "spec_missao",
-        "prd_final",
-    ]
-
-    for key in keys_to_scan:
-        content = state.get(key)
-        if not content or not isinstance(content, str):
-            continue
-
-        for line in content.splitlines():
-            matches = FIGMA_URL_PATTERN.finditer(line)
-            for m in matches:
-                url = m.group(0).rstrip(".,;:)")
-                file_key = m.group(1)
-
-                # Extrai node-id se houver
-                node_match = re.search(r"node-id=([a-zA-Z0-9%:-]+)", line)
-                node_id = node_match.group(1) if node_match else None
-
-                # Se já temos esse arquivo e a ocorrência atual não tem node_id, mantém a existente
-                if file_key in found_urls and not node_id:
-                    continue
-
-                # Tenta inferir título do link
-                title = "Link Figma"
-                if "board" in url or "figjam" in url.lower() or "jornada" in line.lower():
-                    title = "Board no FigJam (Jornada)"
-                elif "fluxo" in line.lower():
-                    title = "Diagrama de Fluxo (FigJam)"
-                elif "wireframe" in line.lower() or "design" in url:
-                    title = "Wireframes no Figma"
-                elif "ds" in line.lower() or "design system" in line.lower():
-                    title = "Design System Unooria"
-
-                found_urls[file_key] = {
-                    "url": url,
-                    "file_key": file_key,
-                    "node_id": node_id,
-                    "title": title,
-                    "source_agent_key": key,
-                    "snippet": line.strip()[:160],
-                }
-
-    return list(found_urls.values())
 
 
 def generate_artifact_manifest(run_dir: Path) -> List[Dict[str, Any]]:
@@ -261,7 +202,7 @@ def save_run_artifacts(
     app_name: str = "GeradorMissoesUnooria",
     user_id: str = "usuario",
 ) -> Optional[Path]:
-    """Grava cada saída do pipeline como Markdown, links do Figma, manifesto e estado completo em JSON."""
+    """Grava cada saída do pipeline como Markdown, mais o manifesto e o estado completo em JSON."""
     settings = get_settings()
     base = settings.output_path
     slug = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or _safe(session_id[:12])
@@ -279,23 +220,6 @@ def save_run_artifacts(
         path.write_text(desembrulhar_cerca(text).strip() + "\n", encoding="utf-8")
         written += 1
 
-    # Extrai e grava links do Figma/FigJam encontrados nos artefatos
-    figma_links = extract_figma_links(state)
-    if figma_links:
-        figma_dir = run_dir / "figma"
-        figma_dir.mkdir(parents=True, exist_ok=True)
-        (figma_dir / "figma-links.json").write_text(
-            json.dumps(figma_links, indent=2, ensure_ascii=False), encoding="utf-8"
-        )
-        md_lines = ["# 🎨 Links e Artefatos do Figma\n"]
-        for link in figma_links:
-            md_lines.append(f"### [{link['title']}]({link['url']})")
-            md_lines.append(f"- **URL:** `{link['url']}`")
-            md_lines.append(f"- **FileKey:** `{link['file_key']}`")
-            if link.get("node_id"):
-                md_lines.append(f"- **Node ID:** `{link['node_id']}`")
-            md_lines.append(f"- **Origem:** `{link['source_agent_key']}`\n")
-        (figma_dir / "figma-links.md").write_text("\n".join(md_lines) + "\n", encoding="utf-8")
 
     # O one-pager pedagógico também em .docx: o time que o valida não lê Markdown.
     pedagogico = state.get("one_pager_pedagogico")

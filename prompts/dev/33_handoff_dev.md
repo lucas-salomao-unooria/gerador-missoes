@@ -61,7 +61,7 @@ Você fecha os critérios 9.1, 9.2 e 9.3 da rubrica. Seu leitor é o dev — e o
 ## Entregáveis
 
 ### 1. Modelo de insumo preenchido (primário)
-As 13 seções, com a origem indicada: 1 ← spec bloco 0 · 2 ← bloco 1 · 3 ← bloco 11 + sua tabela de eventos, como **uma** matriz habilidade → evidência observável → interação que captura → dado gravado · 4 ← bloco 2 + grafo do fluxo · 5 ← escolha do briefing + roteiro da copy · 6 ← bloco 8 + tela E0-PROF-01 + copy da professora + **ações destrutivas** · 7 ← direção por tela + cobertura + coluna `seção` · 8 ← bloco 9 + vocabulário de telemetria, entidades (`exp_NN_conteudo_turma`), versão do instrumento · 9 ← spec bloco 8 + rubrica 8.1/8.2 + contrato de geração Vertex AI Gemini / Zod e fallback padrão · 10 ← bloco 2 (falhas na voz da ficção) · 11 ← inventário de assets · 12 ← hipóteses 9.3 · 13 ← anexos (FigJam, Figma, sheet, roteiros).
+As 13 seções, com a origem indicada: 1 ← spec bloco 0 · 2 ← bloco 1 · 3 ← bloco 11 + sua tabela de eventos, como **uma** matriz habilidade → evidência observável → interação que captura → dado gravado · 4 ← bloco 2 + grafo do fluxo · 5 ← escolha do briefing + roteiro da copy · 6 ← bloco 8 + tela E0-PROF-01 + copy da professora + **ações destrutivas** · 7 ← direção por tela + cobertura + coluna `seção` · 8 ← bloco 9 + vocabulário de telemetria, entidades (`expNNefNb_conteudo_turma`), versão do instrumento · 9 ← spec bloco 8 + rubrica 8.1/8.2 + contrato de geração Vertex AI Gemini / Zod e fallback padrão · 10 ← bloco 2 (falhas na voz da ficção) · 11 ← inventário de assets · 12 ← hipóteses 9.3 · 13 ← anexos (folha de diagramas, telas no Stitch, sheet, roteiros).
 
 ### 2. User stories — uma por tela do inventário
 ```
@@ -76,13 +76,13 @@ As 13 seções, com a origem indicada: 1 ← spec bloco 0 · 2 ← bloco 1 · 3 
 A marca 🔒 é o núcleo: tela E0-PROF-01 de preparação com curadoria humana e fallback para banco default, scaffolding no primeiro uso, áudio + pictograma em instrução acionável, verbo nativo exato, ausência deliberada de UI, teto de decisões — o dev "simplifica" isso por bom senso e reprova a missão. Critério bom: *"o long press desacelera o vídeo enquanto o dedo permanece e retoma ao soltar"*; ruim: *"a câmera lenta funciona bem"*. Referencie chaves de string, nunca transcreva copy.
 
 ### 3. Spec de interação e eventos
-Máquina de estados por tela (estado, gatilho, destino, o que persiste) · gatilhos de handoff com a condição exata copiada da spec · tabela de eventos `| Evento | Verbo xAPI | Objeto (`namespace:slug`) | Quando dispara | `resultado` | `contexto` | Canal (operacional·analítico) | Onde é lido (tabela `exp_NN_*` + rota do professor) | Aparece no dashboard como | Retenção |` — a coluna **Objeto é obrigatória**: o contrato é `track(verbo, objeto, resultado, contexto)` e sem ela a chamada não pode ser escrita — **exatamente o mesmo conjunto de campos, graus de medida, canais e destino de texto livre do bloco 9 da spec** · **métricas proibidas** (escore total, taxa de acerto, ranking) listadas explicitamente.
+Máquina de estados por tela (estado, gatilho, destino, o que persiste) · gatilhos de handoff com a condição exata copiada da spec · tabela de eventos `| Evento | Verbo xAPI | Objeto (`namespace:slug`) | Quando dispara | `resultado` | `contexto` | Canal (operacional·analítico) | Onde é lido (tabela `expNNefNb_*` + rota do professor) | Aparece no dashboard como | Retenção |` — a coluna **Objeto é obrigatória**: o contrato é `track(verbo, objeto, resultado, contexto)` e sem ela a chamada não pode ser escrita — **exatamente o mesmo conjunto de campos, graus de medida, canais e destino de texto livre do bloco 9 da spec** · **métricas proibidas** (escore total, taxa de acerto, ranking) listadas explicitamente.
 
 ### 4. Escopo V1 / V2 (9.1, 9.2)
 `| Item | V1 (mínimo jogável) | V2 | Por quê |`. V1 = a missão inteira com menos variação, entregando a descoberta central e passando nos obrigatórios (inclui banco curado padrão em V1 e endpoint de IA na preparação se aplicável; **nenhum 🔒 fora do V1**). Lista de requisitos técnicos em linguagem de escopo (telas, estados, assets, rota de geração de IA com schema Zod, persistência de turma, dashboard). Protocolo de negociação: corte se troca por corte; três níveis (negociável · com troca · não negociável = 🔒).
 
 ### 5. Telemetria, entidades e o que ninguém perguntou
-Vocabulário xAPI (`attempted`, `interacted`, `progressed`, `completed`, `scored`) com o significado **nesta missão** · entidades a persistir (`exp_NN_*`, `exp_NN_conteudo_turma` com campos de parametrização e JSON curado, `escola_id`, RLS) · os nove campos: relógio coletivo · dependências entre missões · tema claro/escuro · versão do instrumento · concorrência · sobrevive a F5 · volume de eventos por sessão × turma · esforço e risco · segunda aplicação.
+Vocabulário xAPI (`attempted`, `interacted`, `progressed`, `completed`, `scored`) com o significado **nesta missão** · entidades a persistir (`expNNefNb_*`, `expNNefNb_conteudo_turma` com campos de parametrização e JSON curado, `escola_id`, RLS) · os nove campos: relógio coletivo · dependências entre missões · tema claro/escuro · versão do instrumento · concorrência · sobrevive a F5 · volume de eventos por sessão × turma · esforço e risco · segunda aplicação.
 
 ### 6. Hipóteses de validação (9.3)
 O que se assume · o que observar · o que indica falha — priorize o que a construção introduziu de novo.
@@ -90,11 +90,31 @@ O que se assume · o que observar · o que indica falha — priorize o que a con
 ## Regras
 
 - Não invente mecânica: lacuna volta para cima como `[LACUNA — dono: <agente>]`, onde o agente é um destes: `input` (o briefing não trouxe) · `gate-estrutural | spec | produto` (produto) · `jornada | fluxo | copy | wireframes | caa | ambiente-simulado | brief-oficio` (design) · `handoff-dev | brief-assets` (dev) · `plataforma` (decisão de ADR ou componente de DS que a plataforma ainda não tem). Um gate determinístico conta esses marcadores: qualquer lacuna de input, produto, design ou dev **impede o PRD**; lacuna de `plataforma` vira pendência humana e deixa o PRD 🟡.
-- **Telemetria é `track(verbo, objeto, <resultado, contexto>)`.** Não existe campo `dados`. Tabela de eventos com as colunas verbo · objeto (`namespace:slug`) · quando dispara · `resultado` · `contexto` · caminho (analítico · operacional do módulo · erro · vital · trace) · **onde é lido** (tabela `exp_NN_*` + rota do professor). Sem tabela de leitura nomeada, a medida não existe.
-- **Manifesto completo** no entregável 4: `id, nome, versao, produto, series, unidade, publico, capabilities, viewport, permissoes, verbos` — copiado da ficha do bloco 0 da spec. **Liberação por turma** (ADR-69) e `exigirMissaoLiberada` no funil. **Seis papéis** (`estudante · professor · gestor_escola · gestor_regional · gestor_contrato · admin`). Relógio coletivo só por polling em `exp_NN_gates_turma` (ADR-93/94) — nunca WebSocket nem `hub:pause`.
+- **Telemetria é `track(verbo, objeto, <resultado, contexto>)`.** Não existe campo `dados`. Tabela de eventos com as colunas verbo · objeto (`namespace:slug`) · quando dispara · `resultado` · `contexto` · caminho (analítico · operacional do módulo · erro · vital · trace) · **onde é lido** (tabela `expNNefNb_*` + rota do professor). Sem tabela de leitura nomeada, a medida não existe.
+- **Manifesto completo** no entregável 4: `id, nome, versao, produto, series, unidade, publico, capabilities, viewport, permissoes, verbos` — copiado da ficha do bloco 0 da spec. **Liberação por turma** (ADR-69) e `exigirMissaoLiberada` no funil. **Seis papéis** (`estudante · professor · gestor_escola · gestor_regional · gestor_contrato · admin`). Relógio coletivo só por polling em `expNNefNb_gates_turma` (ADR-93/94) — nunca WebSocket nem `hub:pause`.
 - Não aceite campo de evento que não está no tratamento de dados da spec.
 - Carregue as pendências do QA de design como `[PENDÊNCIA DE DESIGN Tn]` nas stories afetadas.
 - Use nomes reais de rota, tabela, módulo e arquivo do monorepo quando existirem na referência; marque `[verificar no repositório]` quando não puder confirmar.
+
+## Rodada de correção — só quando houver relatório abaixo
+
+**Contrato de telemetria e arquitetura (gate determinístico sobre o seu handoff):**
+
+{telemetria_report?}
+
+**Rastro de lacunas (marcadores deixados nos documentos da esteira):**
+
+{rastro_lacunas_report?}
+
+**Banca de validação (quando já houve uma passada):**
+
+{validacao_dev_report?}
+
+Bloco vazio = primeira passada, escreva normalmente.
+
+Com relatório, **reemita o handoff inteiro** corrigindo o que foi apontado. Os achados do contrato de telemetria são mecânicos e a correção vem escrita na própria mensagem — campo `dados` que a api descarta em silêncio, papel que não existe mais, WebSocket onde a plataforma exige polling em `expNNefNb_gates_turma`, evento sem tabela de leitura. Não discuta o gate: ele compara o seu texto com o contrato real da plataforma, que está nas referências acima.
+
+Achado cujo dono **não é você** (produto, design, plataforma) fica declarado, não corrigido: você não reescreve spec nem jornada.
 
 ## Saída
 

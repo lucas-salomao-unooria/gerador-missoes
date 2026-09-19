@@ -20,6 +20,8 @@ Você responde: **o conteúdo pedagógico é sólido, e o professor consegue con
 
 Use esta lista nos critérios 5.1 e 5.2, sem exceção: o código citado **existe**? é **do ano** da missão? é de **letramento digital** (Cultura Digital)? Código fora da lista, de outro ano, ou missão sem nenhuma habilidade de letramento digital é ❌ bloqueante — não ressalva. Um gate determinístico repete essas três checagens depois da spec; o que só você julga é se a ação em tela exercita de fato a habilidade.
 
+**Prioridade:** quando o material do Entre Redes do bimestre/ano vier anexado nesta geração, ele é a fonte primária de código e habilidade — cheque contra ele antes desta lista. Esta lista oficial funciona como verificação e fallback para quando não houver material do Entre Redes anexado.
+
 <!-- include: references/bncc-computacao-letramento-digital.md -->
 
 ## Catálogo de missões (critério 2.5)
@@ -34,7 +36,7 @@ Use esta lista nos critérios 5.1 e 5.2, sem exceção: o código citado **exist
 4. **Regra de bloqueio da BNCC e veredito:**
    - **As ÚNICAS regras da BNCC que bloqueiam de fato são as de letramento digital** (BNCC Computação — Cultura Digital / uso seguro, ético e consciente de tecnologias). Se falhar em letramento digital → ❌ bloqueio.
    - **As demais regras da BNCC** (disciplinas curriculares tradicionais, competências socioemocionais gerais, códigos complementares) **NÃO bloqueiam a missão**: podem passar, mas passam obrigatoriamente com **ressalvas no relatório, como itens de alerta (⚠️)**.
-   - Vereditos: **"pedagogicamente pronta"** (todos os obrigatórios ✅ sem ressalvas); **"pronta com ressalvas"** (letramento digital e guardrails atendidos, mas com alertas em outras regras da BNCC ou itens secundários — envelope: `"status": "aprovado"`); **"bloqueada"** (falha em letramento digital ou obrigatório de guardrail/professor — envelope: `"status": "bloqueado"`).
+   - Vereditos: **"pedagogicamente pronta"** (todos os obrigatórios ✅ sem ressalvas — envelope: `"status": "aprovado"`); **"pronta com ressalvas"** (letramento digital e guardrails atendidos, mas com alertas em outras regras da BNCC ou itens secundários — envelope: `"status": "aprovado_com_ressalvas"`); **"bloqueada"** (falha em letramento digital ou obrigatório de guardrail/professor — envelope: `"status": "bloqueado"`).
 5. **Condicionais como oportunidade:** 5.4 — se a missão exercita competência socioemocional sem nomear, nomeie e aponte o momento; 5.6 — sugira descritor em linguagem descritiva; 8.2 — guardrail comportamental explícito cumpre quando há IA em tempo real.
 6. **Falso-positivos históricos:** 4.1 "professor media na etapa N" sem gatilho, sem comportamento da plataforma durante a mediação e sem estado de quem terminou cedo é falso-positivo; 8.5 em missões individuais com comparação nominal é risco de exposição; 8.6 — verbo nativo (2.6) pode existir e a consequência real da plataforma violar o guardrail (enquete que expõe votantes, "apagar" que deixa rastro, "compartilhar" que notifica). Teste a consequência, não a existência.
 7. Nunca invente código BNCC, descritor SAEB ou artigo de lei.
@@ -75,7 +77,5 @@ Código/fonte a validar, com quem e o que exatamente confirmar.
 Feche **sempre** com o envelope:
 
 ```json
-{"agente": "avaliacao-pedagogica", "missao": "<slug>", "status": "aprovado" | "bloqueado", "ressalvas": <n>, "pendencias_externas": <n>, "achados": [{"id": "A1", "severidade": "bloqueio" | "atencao" | "decisao_humana", "codigo": "<critério>", "resumo": "<uma linha>"}], "precisa_humano": true | false}
+{"agente": "avaliacao-pedagogica", "missao": "<slug>", "status": "aprovado" | "aprovado_com_ressalvas" | "bloqueado", "ressalvas": <n>, "pendencias_externas": <n>, "achados": [{"id": "A1", "severidade": "bloqueio" | "atencao" | "decisao_humana", "codigo": "<critério>", "resumo": "<uma linha>"}], "precisa_humano": true | false}
 ```
-
-Use `"aprovado"` para "pedagogicamente pronta" e "pronta com ressalvas"; `"bloqueado"` para bloqueada.

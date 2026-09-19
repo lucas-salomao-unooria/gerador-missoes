@@ -1,6 +1,9 @@
 # 🌌 Gerador de Missões Unooria — Produto → Design → Dev
 
-Pipeline multiagente de nível de produção construído com o **Google ADK (Agent Development Kit)** e modelos **Google Gemini** (com suporte a *Thinking Mode* nativo). O sistema traduz a ideia bruta ou o *one-pager* de uma missão de letramento digital em um **PRD (Product Requirements Document) padrão ouro com 25 seções**, complementado por especificações de design, fluxos no FigJam, wireframes no Figma e validação técnica por banca multidisciplinar, pronto para alimentar agentes de codificação no monorepo `plataforma-unooria`.
+
+> 📘 **Guia de uso:** [`documentacao-latex/guia-do-gerador-de-missoes.pdf`](documentacao-latex/guia-do-gerador-de-missoes.pdf) — como escrever a entrada (com exemplos bons e ruins), o que cada etapa faz, os seis ciclos de correção e como ler o diagnóstico. É a documentação para **usar** a esteira; este README é a referência técnica do repositório.
+
+Pipeline multiagente de nível de produção construído com o **Google ADK (Agent Development Kit)** e modelos **Google Gemini** (com suporte a *Thinking Mode* nativo). O sistema traduz a ideia bruta ou o *one-pager* de uma missão de letramento digital em um **PRD (Product Requirements Document) padrão ouro com 25 seções**, complementado por especificações de design, jornada e fluxo em Mermaid, telas no Stitch, protótipo HTML navegável e validação técnica por banca multidisciplinar, pronto para alimentar agentes de codificação no monorepo `plataforma-unooria`.
 
 ---
 
@@ -13,12 +16,12 @@ Pipeline multiagente de nível de produção construído com o **Google ADK (Age
   - [3. Ciclo de Gates e Controle Determinístico](#3-ciclo-de-gates-e-controle-determinístico)
 - [Detalhamento das Áreas e Agentes](#-detalhamento-das-áreas-e-agentes)
   - [🧭 Área de Produto](#-área-de-produto)
-  - [🎨 Área de Design & Integração Figma MCP](#-área-de-design--integração-figma-mcp)
+  - [🎨 Área de Design & Integração Stitch MCP](#-área-de-design--integração-stitch-mcp)
   - [🛠️ Área de Dev & Banca de Validação](#-área-de-dev--banca-de-validação)
   - [🧠 Área Transversal de Aprendizado](#-área-transversal-de-aprendizado)
 - [Controle de Fluxo Determinístico e Anti-Alucinação](#-controle-de-fluxo-determinístico-e-anti-alucinação)
 - [Processamento Multimodal de Documentos](#-processamento-multimodal-de-documentos)
-- [Integração Figma MCP (Model Context Protocol)](#-integração-figma-mcp-model-context-protocol)
+- [Integração Stitch MCP (Model Context Protocol)](#-integração-stitch-mcp-model-context-protocol)
 - [Artefatos Gerados e o PRD Padrão Ouro](#-artefatos-gerados-e-o-prd-padrão-ouro)
 - [Contexto da Plataforma Unooria](#-contexto-da-plataforma-unooria)
 - [Interface Streamlit e Histórico de Sessões](#-interface-streamlit-e-histórico-de-sessões)
@@ -36,7 +39,7 @@ Criar uma missão educacional interativa de alta imersão para a plataforma Unoo
 3. **Engenharia de Software & Arquitetura:** modelo de dados em três camadas (Missão, Etapa, Desafio), contratos de API Zod/OpenAPI, protocolo de comunicação iframe via `postMessage`, telemetria operacional/analítica e conformidade estrita com o Art. 14 da LGPD (dados de menores).
 4. **Viabilidade Técnica do Monorepo:** caminhos reais de código em Next.js 16, NestJS, Prisma/PostgreSQL, TypeScript e Docker.
 
-O **Gerador de Missões** automatiza essa cadeia por meio de uma equipe de **19 agentes especializados** organizados em uma estrutura hierárquica sequencial, com loops de autocorreção, bifurcações paralelas de validação e *gates* determinísticos sem inferência de LLM.
+O **Gerador de Missões** automatiza essa cadeia por meio de uma equipe de **50 agentes numerados na ordem de execução**, com **seis ciclos de correção automática**, bifurcações paralelas de validação e *gates* determinísticos sem inferência de LLM. A esteira **não aborta** quando um portão reprova: segue até o fim, marca como `[PROVISÓRIO]` o que derivou da parte reprovada e fecha com um diagnóstico do que travou e de quem é cada conserto.
 
 ```
 Briefing / Ideia (+ PDF / DOCX)
@@ -77,11 +80,11 @@ flowchart TD
         
         subgraph STAGE_PROD["🧭 Etapa de Produto (ProdutoStage)"]
             LOOP_P0{"Loop Núcleo Narrativo ↔ Micro-gate\n(≤ 2 rodadas)"}:::gateStyle
-            P0B["P0b: SecoesApoioAgent\n(One-pager canônico + Brief)"]:::stageStyle
+            P0B["P0b: A04SecoesApoio\n(One-pager canônico + Brief)"]:::stageStyle
             LOOP_P1{"Loop Gate Estrutural\n(≤ 3 rodadas)"}:::gateStyle
             PAR_AVAL["Paralelo: Avaliação Pedagógica (P2)\n∥ Experiência do Estudante (P3)"]:::stageStyle
             P4_GATE{"Gate Final de Produto (P4c)\nLiberada ou Bloqueada?"}:::gateStyle
-            P5["P5: SpecMissaoAgent\n(Contrato dos 12 Blocos)"]:::stageStyle
+            P5["P5: A12SpecMissao\n(Contrato dos 12 Blocos)"]:::stageStyle
             P5C{"P5c: Conformidade BNCC Computação\n(determinístico — bloqueia)"}:::gateStyle
         end
 
@@ -89,11 +92,11 @@ flowchart TD
             D0["D0: Fechamento de Lacunas\n(Spec consolidada + bloco 13)"]:::stageStyle
             D9["D9: Ambiente Simulado 🎨\n(Condicional: app clonado ou mini-jogo; bloco 14)"]:::stageStyle
             D1["D1: Briefing de Ofício\n(Arco, Pico e Não-Negociáveis)"]:::stageStyle
-            D2["D2: Jornada no FigJam 🎨"]:::stageStyle
-            D3["D3: Fluxo de Telas no FigJam 🎨"]:::stageStyle
+            D2["D2: Jornada no Mermaid 🎨"]:::stageStyle
+            D3["D3: Fluxo de Telas no Mermaid 🎨"]:::stageStyle
             D4["D4: Copy PT-BR (Passada 1)"]:::stageStyle
             D4B["D4b: Camada CAA\n(Condicional à faixa e à spec)"]:::stageStyle
-            D5["D5: Wireframes Lo-Fi no Figma 🎨"]:::stageStyle
+            D5["D5: Telas lo-fi no Stitch"]:::stageStyle
             D6["D6: Copy PT-BR (Passada 2 - Contexto)"]:::stageStyle
             D7["D7: QA de Entregáveis 🎨\n(Fidelidade à Spec & DS)"]:::gateStyle
         end
@@ -104,24 +107,24 @@ flowchart TD
             V1D{"V1c/V1d: Telemetria + Rastro de Lacunas\n(determinísticos — o que faltou de produto/design/dev)"}:::gateStyle
             BANCA_DEV["Banca Multidisciplinar /validar-missao\n(5 dimensões paralelas: V2a–V2e)"]:::stageStyle
             V3["V3: Consolidação da Banca\n(Veredito 🟢 / 🟡 / 🔴)"]:::gateStyle
-            V4["V4: PrdWriterAgent\n(PRD Padrão Ouro de 25 Seções)"]:::stageStyle
+            V4["V4: A46PrdWriter\n(PRD Padrão Ouro de 25 Seções)"]:::stageStyle
             V4C{"V4c: Pendências do PRD\n(só plataforma → 🟡)"}:::gateStyle
         end
 
         subgraph STAGE_TRANS["🧠 Etapa Transversal"]
-            T["T: AprendizadoAgent\n(Catálogo, Lacunas & Emendas)"]:::stageStyle
+            T["T: A50Aprendizado\n(Catálogo, Lacunas & Emendas)"]:::stageStyle
         end
     end
 
     subgraph INTEGRATION["🔌 Integrações Externas"]
-        FIGMA_MCP["Figma MCP Server\n(OAuth 2.1 PKCE / Desktop / stdio)"]:::mcpStyle
+        STITCH_MCP["Stitch MCP Server\n(remote / proxy)"]:::mcpStyle
         GEMINI_API["Google Gemini API\n(Gemini 3.8 Flash / Thinking Mode)"]:::mcpStyle
     end
 
     subgraph SAIDA["📦 Artefatos & Observabilidade"]
         DIR_OUT["output/YYYYMMDD-HHMMSS-slug/\n(23+ Arquivos Markdown & JSON)"]:::outputStyle
         PRD_FILE["PRD.md (Padrão Ouro)"]:::outputStyle
-        FIGMA_LINKS["figma/figma-links.md"]:::outputStyle
+        DIAGRAMAS["design/09-diagramas.html"]:::outputStyle
         UI_STREAMLIT["Streamlit Web App (app.py)\n(Streaming de Thoughts & Eventos)"]:::outputStyle
     end
 
@@ -129,7 +132,7 @@ flowchart TD
     IN_PDF --> LOOP_P0
     IN_DOCX --> LOOP_P0
     GEMINI_API -.-> PIPELINE
-    FIGMA_MCP -.-> D9 & D2 & D3 & D5 & D7
+    STITCH_MCP -.-> D9 & D2 & D3 & D5 & D7
 
     LOOP_P0 -->|Núcleo aprovado| P0B
     P0B --> LOOP_P1
@@ -148,7 +151,7 @@ flowchart TD
 
     T --> DIR_OUT
     V4 --> PRD_FILE
-    D7 -.-> FIGMA_LINKS
+    D7 -.-> DIAGRAMAS
     PIPELINE --> UI_STREAMLIT
 ```
 
@@ -164,32 +167,32 @@ graph TD
         
         subgraph PROD["ProdutoStage (SequentialAgent)"]
             subgraph LOOP_P0["NucleoNarrativoLoop (LoopAgent ≤ 2 iterações)"]
-                P0a["P0a: NucleoNarrativoAgent\noutput_key: nucleo_narrativo"]
-                P0mg["P0mg: MicroGateAgent\noutput_key: micro_gate_report"]
-                P0mgc["P0mgc: MicroGateCheck (EnvelopeGateAgent)\nstatus_key: micro_gate_status"]
+                P0a["P0a: A01NucleoNarrativo\noutput_key: nucleo_narrativo"]
+                P0mg["P0mg: A02MicroGate\noutput_key: micro_gate_report"]
+                P0mgc["P0mgc: A03MicroGateCheck (EnvelopeGateAgent)\nstatus_key: micro_gate_status"]
 
                 P0a --> P0mg --> P0mgc
                 P0mgc -->|Não passa| P0a
             end
 
-            P0B["P0b: SecoesApoioAgent\noutput_key: one_pager"]
+            P0B["P0b: A04SecoesApoio\noutput_key: one_pager"]
             
             subgraph LOOP_P1["GateEstruturalLoop (LoopAgent ≤ 3 iterações)"]
-                P1["P1: GateEstruturalAgent\noutput_key: gate_estrutural_report"]
-                P1c["P1c: GateEstruturalCheck (EnvelopeGateAgent)\nstatus_key: gate_estrutural_status"]
-                P1b["P1b: RevisorOnePagerAgent\noutput_key: one_pager (corrigido)"]
+                P1["P1: A05GateEstrutural\noutput_key: gate_estrutural_report"]
+                P1c["P1c: A06GateEstruturalCheck (EnvelopeGateAgent)\nstatus_key: gate_estrutural_status"]
+                P1b["P1b: A07RevisorOnePager\noutput_key: one_pager (corrigido)"]
                 P1 --> P1c -->|Se reprovado & iteração < max| P1b --> P1
             end
 
             subgraph PAR_AVAL["AvaliacoesParalelas (ParallelAgent)"]
-                P2["P2: AvaliacaoPedagogicaAgent\noutput_key: avaliacao_pedagogica_report"]
-                P3["P3: ExperienciaAlunoAgent\noutput_key: experiencia_aluno_report"]
+                P2["P2: A08AvaliacaoPedagogica\noutput_key: avaliacao_pedagogica_report"]
+                P3["P3: A09ExperienciaEstudante\noutput_key: experiencia_aluno_report"]
             end
 
-            P4["P4: GateFinalProdutoAgent\noutput_key: gate_final_report"]
-            P4c["P4c: GateFinalProdutoCheck (EnvelopeGateAgent)\nstatus_key: gate_final_status"]
-            P5["P5: SpecMissaoAgent\noutput_key: spec_missao"]
-            P5c["P5c: BnccCheck (BnccCheckAgent)\nstatus_key: bncc_status"]
+            P4["P4: A10GateFinalProduto\noutput_key: gate_final_report"]
+            P4c["P4c: A11GateFinalProdutoCheck (EnvelopeGateAgent)\nstatus_key: gate_final_status"]
+            P5["P5: A12SpecMissao\noutput_key: spec_missao"]
+            P5c["P5c: A13BnccCheck (BnccCheckAgent)\nstatus_key: bncc_status"]
 
             P0mgc -->|Escalate on Approve| P0B
             P0B --> LOOP_P1
@@ -198,28 +201,28 @@ graph TD
         end
 
         subgraph DES["DesignStage (SequentialAgent)"]
-            D0["D0: FechaLacunasAgent\noutput_key: fechamento_lacunas"]
-            D0c["D0c: FechaLacunasSplit (SecaoSplitAgent)\nspec_missao ← spec consolidada · relatorio_lacunas · lacunas_status"]
-            D9["D9: AmbienteSimuladoAgent 🎨\noutput_key: ambiente_simulado"]
-            D9c["D9c: AmbienteSimuladoSplit (SecaoSplitAgent)\nspec_missao ← bloco 14 · ambiente_status"]
-            D1["D1: BriefOficioAgent\noutput_key: brief_oficio"]
-            D2["D2: JornadaFigJamAgent 🎨\noutput_key: jornada_telas"]
-            D3["D3: FluxoFigJamAgent 🎨\noutput_key: fluxo_arestas"]
-            D4["D4: CopyPtBrAgent\noutput_key: copy_strings"]
-            D4B["D4b: CaaAgent\noutput_key: camada_caa"]
-            D5["D5: WireframesFigmaAgent 🎨\noutput_key: wireframes_cobertura"]
-            D6["D6: CopyRevisaoAgent\noutput_key: copy_strings_revisada"]
-            D7["D7: QaEntregaveisAgent 🎨\noutput_key: qa_entregaveis_report"]
-            D7c["D7c: QaEntregaveisCheck (EnvelopeGateAgent)\nstatus_key: design_status"]
+            D0["D0: A16FechaLacunas\noutput_key: fechamento_lacunas"]
+            D0c["D0c: A17FechaLacunasSplit (SecaoSplitAgent)\nspec_missao ← spec consolidada · relatorio_lacunas · lacunas_status"]
+            D9["D9: A18AmbienteSimulado 🎨\noutput_key: ambiente_simulado"]
+            D9c["D9c: A19AmbienteSimuladoSplit (SecaoSplitAgent)\nspec_missao ← bloco 14 · ambiente_status"]
+            D1["D1: A20BriefOficio\noutput_key: brief_oficio"]
+            D2["D2: A21Jornada 🎨\noutput_key: jornada_telas"]
+            D3["D3: A22Fluxo 🎨\noutput_key: fluxo_arestas"]
+            D4["D4: A23CopyPtBr\noutput_key: copy_strings"]
+            D4B["D4b: A24Caa\noutput_key: camada_caa"]
+            D5["D5: A25Telas 🎨\noutput_key: wireframes_cobertura"]
+            D6["D6: A26CopyRevisao\noutput_key: copy_strings_revisada"]
+            D7["D7: A29QaEntregaveis 🎨\noutput_key: qa_entregaveis_report"]
+            D7c["D7c: A30QaEntregaveisCheck (EnvelopeGateAgent)\nstatus_key: design_status"]
 
             D0 --> D0c --> D9 --> D9c --> D1 --> D2 --> D3 --> D4 --> D4B --> D5 --> D6 --> D7 --> D7c
         end
 
         subgraph DEV["DevStage (SequentialAgent)"]
-            V0["V0: ManifestoCheck (RastroCheckAgent)\nstatus_key: manifesto_status"]
+            V0["V0: A32ManifestoCheck (RastroCheckAgent)\nstatus_key: manifesto_status"]
             subgraph PAR_HANDOFF["HandoffParalelo (ParallelAgent)"]
-                V1["V1: HandoffDevAgent\noutput_key: handoff_dev"]
-                V1b["V1b: BriefAssetsAgent\noutput_key: brief_assets"]
+                V1["V1: A33HandoffDev\noutput_key: handoff_dev"]
+                V1b["V1b: A34BriefAssets\noutput_key: brief_assets"]
             end
 
             subgraph BANCA["BancaValidacaoDev (ParallelAgent)"]
@@ -230,17 +233,17 @@ graph TD
                 V2e["V2e: Técnica & Arquitetura\noutput_key: validacao_tecnica_arquitetura"]
             end
 
-            V1c["V1c: TelemetriaCheck (RastroCheckAgent)\nstatus_key: telemetria_status"]
-            V1d["V1d: LacunaCheck (RastroCheckAgent)\nstatus_key: rastro_lacunas_status"]
-            V3["V3: ConsolidacaoBancaAgent\noutput_key: validacao_dev_report"]
-            V3c["V3c: ValidacaoDevCheck (EnvelopeGateAgent)\nstatus_key: dev_status"]
-            V4["V4: PrdWriterAgent\noutput_key: prd_final"]
-            V4c["V4c: PrdCheck (RastroCheckAgent)\nstatus_key: prd_status"]
+            V1c["V1c: A35TelemetriaCheck (RastroCheckAgent)\nstatus_key: telemetria_status"]
+            V1d["V1d: A37LacunaCheck (RastroCheckAgent)\nstatus_key: rastro_lacunas_status"]
+            V3["V3: A43ConsolidacaoBanca\noutput_key: validacao_dev_report"]
+            V3c["V3c: A44ValidacaoDevCheck (EnvelopeGateAgent)\nstatus_key: dev_status"]
+            V4["V4: A46PrdWriter\noutput_key: prd_final"]
+            V4c["V4c: A47PrdCheck (RastroCheckAgent)\nstatus_key: prd_status"]
 
             V0 --> PAR_HANDOFF --> V1c --> V1d --> BANCA --> V3 --> V3c --> V4 --> V4c
         end
 
-        T["T: AprendizadoAgent (Transversal)\noutput_key: aprendizado_registro"]
+        T["T: A50Aprendizado (Transversal)\noutput_key: aprendizado_registro"]
 
         PROD --> DES --> DEV --> T
     end
@@ -273,7 +276,7 @@ sequenceDiagram
         Gate-->>Downstream: Libera execução do próximo estágio
     else Status == BLOQUEADO (em Loop e rodada < max_rodadas)
         Gate->>State: Incrementa state[round_key]
-        Gate-->>LLM: Re-executa RevisorOnePagerAgent aplicando correções prontas
+        Gate-->>LLM: Re-executa A07RevisorOnePager aplicando correções prontas
     else Status == BLOQUEADO (Esgotou rodadas ou Gate Final)
         Gate->>State: Grava state[status_key] = "bloqueado"
         opt Modo Estrito Ativo (PRODUTO_MODO_ESTRITO=true)
@@ -312,9 +315,9 @@ A área de Produto garante que nenhuma missão siga para concepção visual ou c
 
 ---
 
-### 🎨 Área de Design & Integração Figma MCP
+### 🎨 Área de Design & Integração Stitch MCP
 
-A área de Design recebe a `spec_missao` e a transforma em especificações de interface e jornada, gerando arquivos reais ou boards no Figma/FigJam quando o MCP está conectado.
+A área de Design recebe a `spec_missao` e a transforma em especificações de interface e jornada, gerando arquivos reais ou boards no Stitch/Mermaid quando o MCP está conectado.
 
 Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as lacunas que a esteira redescobriria seis vezes (decisões `[D0-n]` com base declarada, pedidos de re-spec `[RS-n]` ao Gate 0) e o **D9** decide o ambiente simulado quando a spec cala (app clonado da lista fechada, app novo ou, em 1º–5º ano, mini-jogo). Cada um emite a spec consolidada dentro do próprio relatório; um `SecaoSplitAgent` determinístico copia essa seção para `spec_missao` (a original do Gate 0 fica em `spec_missao_gate0`), de modo que D1–D7 leem a spec com os blocos 13 e 14 sem saber que D0/D9 existiram. Os status `lacunas_status` e `ambiente_status` são informativos: não há loop de re-spec com o Gate 0 na esteira, então `aguarda_gate` aparece como 🔴 na UI e o pipeline segue com os `RS-n` carimbados como pendentes.
 
@@ -322,16 +325,16 @@ Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as 
 |---|---|---|---|---|
 | **Fechamento de lacunas** | `D0` | — | `fechamento_lacunas` | Varre a spec contra `references/celulas-consumidas.md`, classifica cada lacuna (verde · amarelo · vermelho) e preenche só ausências deriváveis da missão (padrões de `references/defaults-missao.md`, catálogo, one-pager). Emite a spec consolidada com o **bloco 13** e um relatório de preenchimento em PT-BR para a PM e a professora. |
 | **Spec consolidada + relatório** | `D0c` | Determinístico | `relatorio_lacunas` (+ `spec_missao`, `spec_missao_gate0`, `lacunas_status`) | Copia a seção "Spec consolidada" do D0 para `spec_missao`, separa o relatório de preenchimento e lê o envelope. |
-| **Ambiente simulado** | `D9` | 🎨 `FIGMA_TOOLS_AMBIENTE` | `ambiente_simulado` | Condicional: dormente quando a spec já nomeia um ambiente com seção no DS (mesmo assim emite a ficha do **bloco 14**: verbos com rótulo literal, chrome, estados, o que a plataforma real não tem). Quando decide, testa os cinco ambientes, aplica o gate de mini-jogo (1º–5º) e, se cria ambiente novo, monta a seção no arquivo do DS só com tokens existentes. |
+| **Ambiente simulado** | `D9` | — | `ambiente_simulado` | Condicional: dormente quando a spec já nomeia um ambiente com seção no DS (mesmo assim emite a ficha do **bloco 14**: verbos com rótulo literal, chrome, estados, o que a plataforma real não tem). Quando decide, testa os cinco ambientes, aplica o gate de mini-jogo (1º–5º) e, se cria ambiente novo, monta a seção no arquivo do DS só com tokens existentes. |
 | **Spec com bloco 14** | `D9c` | Determinístico | `ambiente_status` (+ `spec_missao`) | Copia a spec com o bloco 14 para `spec_missao` e lê o envelope (`dormente` · `existente` · `novo` · `aguarda_gate`). |
 | **Briefing de ofício** | `D1` | — | `brief_oficio` | Extrai o arco dramático da missão: gancho inicial, pico de engajamento, beat memorável de ofício e não-negociáveis de imersão. |
-| **Jornada no FigJam** | `D2` | 🎨 `FIGMA_TOOLS_JORNADA` | `jornada_telas` | Constrói a matriz de jornada (Raias × 6 Etapas), define cenários por dispositivo, inventário completo de telas e direção de arte por tela. |
-| **Fluxo de telas no FigJam** | `D3` | 🎨 `FIGMA_TOOLS_FLUXO` | `fluxo_arestas` | Modela o grafo de estados e transições de tela com condições, gates de validação e execução dos **5 testes de fluxo** (caminho feliz, erro, desistência, recálculo e retorno). |
+| **Jornada no Mermaid** | `D2` | — | `jornada_telas` | Constrói a matriz de jornada (Raias × 6 Etapas), define cenários por dispositivo, inventário completo de telas e direção de arte por tela. |
+| **Fluxo de telas no Mermaid** | `D3` | — | `fluxo_arestas` | Modela o grafo de estados e transições de tela com condições, gates de validação e execução dos **5 testes de fluxo** (caminho feliz, erro, desistência, recálculo e retorno). |
 | **Copy PT-BR (Passada 1)** | `D4` | — | `copy_strings` | Redige todas as strings e microtextos da interface organizados por identificador de tela, calibrados para a linguagem da faixa etária. |
 | **Camada CAA** | `D4b` | — | `camada_caa` | Comunicação aumentativa e alternativa: aplica um gate de aplicabilidade (faixa 1º–2º ano, ou spec/briefing que citem pré-leitores, CAA ou PEI) e, quando roda, define símbolo por conceito, modo de resposta alternativo por decisão, pranchas nos escapes e restrições de toque para o wireframe. Fora dessas condições devolve `nao_aplicavel`. |
-| **Wireframes lo-fi no Figma** | `D5` | 🎨 `FIGMA_TOOLS_WIREFRAMES` | `wireframes_cobertura` | Monta os wireframes em escala de cinza sobre os componentes do Design System do ambiente simulado (`@unooria/design-system`). |
+| **Wireframes lo-fi no Stitch** | `D5` | `STITCH_TOOLS` | `wireframes_cobertura` | Monta os wireframes em escala de cinza sobre os componentes do Design System do ambiente simulado (`@unooria/design-system`). |
 | **Copy PT-BR (Passada 2)** | `D6` | — | `copy_strings_revisada` | Revisa cada texto inserido no contexto da tela montada, ajustando densidade, quebras de linha e tom de voz. |
-| **QA de entregáveis** | `D7` | 🎨 `FIGMA_TOOLS_QA` | `qa_entregaveis_report` | Auditoria rigorosa de conformidade contra a spec original, diff de strings, respeito ao Design System e critérios de ofício O1–O5. |
+| **QA de entregáveis** | `D7` | `STITCH_TOOLS` | `qa_entregaveis_report` | Auditoria rigorosa de conformidade contra a spec original, diff de strings, respeito ao Design System e critérios de ofício O1–O5. |
 | **Veredito de design** | `D7c` | Determinístico | `design_status` | Lê o envelope do QA de design. Com `ESTEIRA_ESTRITA=true`, 🔴 impede dev e PRD; ressalvas entram no PRD. |
 
 ---
@@ -342,11 +345,11 @@ Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as 
 
 **A missão pede, a plataforma cresce.** Tocar áudio e vídeo já é nativo no iframe. Gravar voz, usar câmera, gravar vídeo ou tela e pedir localização são capacidades que a plataforma ainda não concede, e por isso **não barram a missão**: a spec declara o que a mecânica precisa, o gate marca como pré-requisito de plataforma, e o PRD sai `aprovado-com-pendencias-de-plataforma` (🟡) com a tabela de implementação, o componente de design system a criar, a ADR necessária e a degradação sem o recurso. A tabela das três categorias, com o caminho de cada extensão, está em [`references/capacidades-plataforma.md`](prompts/references/capacidades-plataforma.md). Capturar mídia de criança cobra também o contrato de dados no bloco 9 da spec: onde fica, quanto tempo, quem lê. Decisão contrária já registrada, como WebSocket em vez de polling, continua bloqueando, porque a alternativa existe.
 
-**Design sem Figma: Google Stitch e artefatos próprios.** O Figma exige assento Full e OAuth para escrever no arquivo, e o cliente de comunidade que estava configurado só lê. A esteira passou a usar o **Google Stitch** pelo endpoint MCP oficial do Google, autenticado por chave de API. O agente de wireframes cria o projeto, ensina a ele a escala de cinza do lo-fi por `DESIGN.md`, gera uma tela por estado declarado e reporta o identificador do projeto. Um passo determinístico colhe os links das telas, separa o HTML do protótipo do relatório que o acompanha e monta a folha de diagramas a partir do Mermaid que a jornada e o fluxo já escreveram. Saem quatro artefatos por execução: o protótipo navegável, a folha de diagramas, a tabela de telas com o link do projeto e o relatório. O projeto no Stitch nasce privado, e o compartilhamento com outras pessoas é concedido na interface dele; a imagem de cada tela tem endereço público e serve de prévia enquanto isso.
+**Design sem Stitch: Google Stitch e artefatos próprios.** O Stitch exige assento Full e OAuth para escrever no arquivo, e o cliente de comunidade que estava configurado só lê. A esteira passou a usar o **Google Stitch** pelo endpoint MCP oficial do Google, autenticado por chave de API. O agente de wireframes cria o projeto, ensina a ele a escala de cinza do lo-fi por `DESIGN.md`, gera uma tela por estado declarado e reporta o identificador do projeto. Um passo determinístico colhe os links das telas, separa o HTML do protótipo do relatório que o acompanha e monta a folha de diagramas a partir do Mermaid que a jornada e o fluxo já escreveram. Saem quatro artefatos por execução: o protótipo navegável, a folha de diagramas, a tabela de telas com o link do projeto e o relatório. O projeto no Stitch nasce privado, e o compartilhamento com outras pessoas é concedido na interface dele; a imagem de cada tela tem endereço público e serve de prévia enquanto isso.
 
 **A experiência é um iframe no hub desktop.** O protótipo desenha a casca de aparelho centralizada numa página desktop quando o manifesto declara `viewport`, e a janela cheia quando não declara. Telas de professor e de projeção são sempre desktop. É a diferença entre o protótipo mostrar o que a criança vê num Chromebook e mostrar um celular que não existe.
 
-**Schema de servidor MCP chega quebrado, e o erro aparece longe da causa.** O Stitch publica referências para definições que ele mesmo omite, e o ADK repassa esse schema ao Gemini, que recusa a requisição inteira com um 400 sobre "undefined schema". Pior: o erro estoura no agente que estava no ar quando a lista de ferramentas foi montada, que pode nem usar a ferramenta. [`tools/mcp_saneado.py`](tools/mcp_saneado.py) sanea antes de o schema chegar ao modelo: descarta o schema de resposta, que o modelo não usa para chamar a ferramenta e que ainda carrega enums de centenas de valores, e remenda as referências órfãs no schema de entrada, onde elas são necessárias. Vale para o Stitch e para o Figma.
+**Schema de servidor MCP chega quebrado, e o erro aparece longe da causa.** O Stitch publica referências para definições que ele mesmo omite, e o ADK repassa esse schema ao Gemini, que recusa a requisição inteira com um 400 sobre "undefined schema". Pior: o erro estoura no agente que estava no ar quando a lista de ferramentas foi montada, que pode nem usar a ferramenta. [`tools/mcp_saneado.py`](tools/mcp_saneado.py) sanea antes de o schema chegar ao modelo: descarta o schema de resposta, que o modelo não usa para chamar a ferramenta e que ainda carrega enums de centenas de valores, e remenda as referências órfãs no schema de entrada, onde elas são necessárias. Vale para o Stitch e para o Stitch.
 
 **Contenção do que as ferramentas devolvem.** As respostas das ferramentas MCP entram no mesmo turno do agente, e `include_contents="none"` não as descarta: um agente que monta telas acumula dezenas de respostas de escrita, o dump do arquivo e a captura até o modelo recusar a requisição. Foi assim que a jornada estourou o teto de um milhão de tokens com um prompt de 22 KB. Todo agente com ferramentas nasce com dois limitadores em [`agents/callbacks.py`](agents/callbacks.py): a resposta é podada antes de voltar ao modelo (captura de tela sai do contexto, texto longo é truncado) e cada agente tem orçamento acumulado; esgotado, as chamadas seguintes são recusadas com a instrução de entregar o documento com o que já construiu. Vale mais o markdown com o board pela metade do que a execução inteira morrendo.
 
@@ -355,8 +358,8 @@ Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as 
 A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a missão a uma **banca multidisciplinar com 72 critérios de validação (21 bloqueantes)** antes de lavrar o PRD padrão ouro.
 
 ```
-                    ┌─ HandoffDevAgent (V1)
-                    │  BriefAssetsAgent (V1b)
+                    ┌─ A33HandoffDev (V1)
+                    │  A34BriefAssets (V1b)
                     │
                     ▼
 ┌───────────────────────────────────────────────────────────┐
@@ -370,11 +373,11 @@ A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a mis
 └───────────────────────────────────────────────────────────┘
                     │
                     ▼
-         ConsolidacaoBancaAgent (V3)
+         A43ConsolidacaoBanca (V3)
          Veredito: 🟢 APTO | 🟡 APTO C/ RESSALVAS | 🔴 NÃO APTO
                     │
                     ▼
-         PrdWriterAgent (V4) ──▶ PRD.md (25 Seções)
+         A46PrdWriter (V4) ──▶ PRD.md (25 Seções)
 ```
 
 | Agente | ID | Critérios / Rubrica | Saída (`output_key`) | Descrição |
@@ -382,7 +385,7 @@ A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a mis
 | **Ficha do manifesto** | `V0` | Determinístico (`RastroCheckAgent`) | `manifesto_status`, `manifesto_report` | Lê a ficha do bloco 0 da spec e confere cada campo contra as listas fechadas da plataforma (`produto`, `series`, `unidade`, `publico`, `viewport`, `permissoes`, `capabilities`, `secao_ds`, `liberacao: por-turma`). Campo ausente ou inválido impede o PRD. **Capacidade que a plataforma ainda não concede** (gravar voz, câmera, vídeo, localização) **não impede**: vira pré-requisito de plataforma e o PRD sai 🟡 com o caminho de implementação. `tiktooria` e seção de DS nova seguem a mesma regra. |
 | **Handoff para dev** | `V1` | Modelo de Insumo | `handoff_dev` | Preenche o modelo de insumo com User Stories fechadas (com travas 🔒), catálogo de eventos de telemetria e escopo V1 vs V2. |
 | **Brief de assets** | `V1b` | Rubrica de Assets | `brief_assets` | Inventário completo de produção: imagens, áudios, mockups, critérios de reprovação e ordem de criação. |
-| **Telemetria e arquitetura** | `V1c` | Determinístico | `telemetria_status`, `telemetria_report` | Confere no handoff o contrato real de evento (`verbo · objeto · resultado · contexto`, sem campo `dados`), tabela `exp_NN_*` de leitura das medidas, ausência de WebSocket/`hub:pause` (ADR-93/94), seis papéis (ADR-80) e quota em `ia_quotas` (ADR-105). |
+| **Telemetria e arquitetura** | `V1c` | Determinístico | `telemetria_status`, `telemetria_report` | Confere no handoff o contrato real de evento (`verbo · objeto · resultado · contexto`, sem campo `dados`), tabela `expNNefNb_*` de leitura das medidas, ausência de WebSocket/`hub:pause` (ADR-93/94), seis papéis (ADR-80) e quota em `ia_quotas` (ADR-105). |
 | **Rastro de lacunas** | `V1d` | Determinístico | `rastro_lacunas_status`, `rastro_lacunas_report` | Conta os marcadores `[LACUNA — dono]`, `[ABERTO — dono]`, `[NEEDS CLARIFICATION]`, `[verificar no repositório]`, `RS-n pendente` e `🔵` em spec, design, handoff e assets, e diz **o que faltou de input, produto, design ou dev** — qualquer um impede o PRD. Lacuna cuja dona é a **plataforma** (ADR nova, componente de DS, ponte) vira pendência humana e deixa o PRD 🟡. |
 | **Banca: Produto & Narrativa** | `V2a` | `PROD-01` a `16` (4 bloqueantes) | `validacao_produto_narrativa` | Avalia clareza do problema, coerência narrativa, loop de engajamento e métricas de sucesso. |
 | **Banca: Design & Imersão** | `V2b` | `DES-01` a `13` (4 bloqueantes) | `validacao_design_imersao` | Avalia fidelidade ao ambiente simulado, consistência de layout e acessibilidade visual. |
@@ -399,7 +402,7 @@ A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a mis
 
 ### 🧠 Área Transversal de Aprendizado
 
-- **Agente de Aprendizado (`AprendizadoAgent` / `T`):**
+- **Agente de Aprendizado (`A50Aprendizado` / `T`):**
   - Roda ao final de toda execução (mesmo que haja bloqueios ou ressalvas).
   - Atualiza o registro em `output/<execucao>/aprendizado.md`.
   - Extrai:
@@ -448,21 +451,15 @@ O módulo [`tools/doc_parser.py`](file:///Users/lucassalomao/Documents/Unooria/g
 
 ---
 
-## 🎨 Integração Figma MCP (Model Context Protocol)
+## 🎨 Integração Stitch MCP (Model Context Protocol)
 
-O módulo [`tools/figma_mcp.py`](file:///Users/lucassalomao/Documents/Unooria/gerador-missoes/tools/figma_mcp.py) conecta os agentes de design ao ecossistema do Figma através da especificação aberta do **Model Context Protocol (MCP)**:
+O módulo [`tools/stitch_mcp.py`](tools/stitch_mcp.py) conecta os agentes de design ao **Google Stitch** pelo Model Context Protocol. O MCP do Figma foi removido da esteira: não há cliente oficial que o sirva neste ambiente, e board em ferramenta que ninguém abre não é entregável. Jornada e fluxo saem em **Mermaid** (remontados em `design/09-diagramas.html`), as telas saem no **Stitch** e como especificação em Markdown, e o artefato visual da revisão humana é o **protótipo HTML** (`design/08-prototipo.html`), com CSS e JS embutidos.
 
-| Modo (`FIGMA_MCP_MODE`) | Transporte | Permissões | Como Configurar |
-|---|---|---|---|
-| **`remote`** | Streamable HTTP (`https://mcp.figma.com/mcp`) | **Escrita total & Leitura** (`use_figma`, `create_new_file`, `generate_diagram`, FigJam, skills) | Execute `python scripts/figma_oauth.py` uma vez. O token OAuth 2.1 com PKCE é gravado em `.figma_mcp_tokens.json` e renovado automaticamente. |
-| **`desktop`** | HTTP Local (`http://127.0.0.1:3845/mcp`) | Leitura de contexto e seleção ativa via app Figma Desktop | Ative a opção "Start Desktop MCP Server" nas configurações do aplicativo desktop do Figma. |
-| **`stdio`** | Processo local via `npx` (`figma-developer-mcp`) | Leitura (`get_figma_data`, `download_figma_images`) | Configure `FIGMA_API_KEY` (Personal Access Token) no `.env`. Requer Node.js 20+. |
-| **`off`** *(padrão)* | Sem conexão | Nenhuma ferramenta externa | Agentes operam em modo desacoplado, gerando diagramas em sintaxe **Mermaid** e especificações completas em Markdown. |
-| **`auto`** | Detecção dinâmica | Adaptativo | Escolhe `remote` se houver tokens salvos; senão `stdio` se houver `FIGMA_API_KEY`; senão `off`. |
-
-*Nota:* Os links e nós gerados no Figma são automaticamente rastreados e consolidados em `figma/figma-links.md` e `figma/figma-links.json`.
-
----
+| Modo | Transporte | Quando usar |
+|---|---|---|
+| `remote` | `stitch.googleapis.com/mcp` com `X-Goog-Api-Key` | Padrão quando há `STITCH_API_KEY`. |
+| `proxy` | `npx @_davideast/stitch-mcp` | Quando o schema do servidor precisa de saneamento. |
+| `off` | — | Sem chave: a esteira segue e registra `STITCH: indisponível`. A especificação de telas em Markdown é entregável válido sozinha. |
 
 ## 📦 Artefatos Gerados e o PRD Padrão Ouro
 
@@ -513,9 +510,9 @@ output/20260904-143000-exp-04-fake-news/
 │   └── 04-pendencias-do-prd.md        # V4c: marcadores deixados no PRD
 ├── one-pager-pedagogico.md            # V5: o documento de validação humana
 ├── one-pager-pedagogico.docx          # o mesmo, para quem não lê Markdown
-└── figma/                             # (Opcional, quando Figma MCP ativo)
-    ├── figma-links.md                 # Sumário de URLs, fileKeys e node IDs
-    └── figma-links.json               # Metadados estruturados dos links
+└── Stitch/                             # (Opcional, quando Stitch MCP ativo)
+    ├── Stitch-links.md                 # Sumário de URLs, fileKeys e node IDs
+    └── Stitch-links.json               # Metadados estruturados dos links
 ```
 
 ### As 25 Seções do PRD Padrão Ouro
@@ -532,7 +529,7 @@ O arquivo **`PRD.md`** segue rigorosamente a especificação definida em [`promp
 8. **User Stories (INVEST & 🔒):** Histórias com critérios de aceite inequívocos.
 9. **Requisitos Funcionais (RF) com EARS:** Requisitos com sintaxe formal EARS.
 10. **Requisitos Não-Funcionais (RNF):** Performance, acessibilidade WCAG e disponibilidade.
-11. **UX & UI:** Links do Figma/FigJam e mapeamento de componentes do Design System.
+11. **UX & UI:** Links do Stitch/Mermaid e mapeamento de componentes do Design System.
 12. **Modelo de Dados (Prisma/PostgreSQL):** Esquema relacional das entidades da missão.
 13. **Contratos de API (Zod/OpenAPI):** DTOs e endpoints documentados.
 14. **Telemetria & Eventos (xAPI):** Dicionário de eventos analíticos e operacionais.
@@ -566,7 +563,7 @@ A aplicação conta com uma interface visual completa em [Streamlit](file:///Use
 
 - **Streaming em Tempo Real:** Acompanhamento da execução nó a nó, com separação clara entre a saída final de cada agente e seu **fluxo de pensamento (*thinking*)**.
 - **Indicadores de Status dos Gates:** Badges coloridas (🟢 Aprovado, 🟡 Aprovado com Ressalvas / Bypass, 🔴 Bloqueado, ⚪ Pendente).
-- **Abas Especializadas:** Navegação entre PRD renderizado, relatórios de Produto, especificações de Design, banca de Dev, registro de Aprendizado e links do Figma.
+- **Abas Especializadas:** Navegação entre PRD renderizado, relatórios de Produto, especificações de Design, banca de Dev, registro de Aprendizado e links do Stitch.
 - **Histórico Persistente de Missões:** As execuções salvas em `output/` são carregadas na barra lateral, permitindo revisitar missões anteriores, inspecionar estados passados, excluir execuções ou baixar um **arquivo ZIP completo** com todos os artefatos.
 - **Editor de Prompts com Includes Resolvidos:** Uma aba dedicada permite inspecionar e editar qualquer arquivo `.md` de prompt ou referência, com pré-visualização em tempo real das diretivas `<!-- include: references/... -->` expandidas.
 
@@ -589,12 +586,9 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `BNCC_CHECK_ESTRITO` | `true` | Gate determinístico depois da spec: habilidade inexistente, de outro ano ou sem letramento digital trava a esteira. |
 | `GATE_ESTRUTURAL_MAX_RODADAS` | `3` | Número máximo de ciclos entre o Gate Estrutural e o Revisor do One-pager. |
 | `OUTPUT_DIR` | `output` | Diretório local para gravação persistente dos artefatos. |
-| `FIGMA_MCP_MODE` | `auto` | Modo do Figma MCP: `auto`, `remote`, `desktop`, `stdio` ou `off`. |
-| `FIGMA_API_KEY` | — | Personal Access Token do Figma (necessário para o modo `stdio`). |
-| `FIGMA_MCP_REMOTE_URL` | `https://mcp.figma.com/mcp` | Endpoint oficial do servidor MCP remoto do Figma. |
-| `FIGMA_MCP_DESKTOP_URL` | `http://127.0.0.1:3845/mcp` | Endpoint local do aplicativo Figma Desktop. |
-| `FIGMA_DS_FILE_KEY` | `mPw4Hhx9ptkgcHtySaSilO` | fileKey do Design System Unooria no Figma. |
-| `FIGMA_DS_V02_FILE_KEY` | `i0HRQSBtQQ9ZXDYiJPRnGv` | fileKey do Design System v0.2 no Figma. |
+| `STITCH_MCP_MODE` | `auto` | Modo do Stitch MCP: `auto`, `remote`, `desktop`, `stdio` ou `off`. |
+| `STITCH_MCP_REMOTE_URL` | `https://mcp.Stitch.com/mcp` | Endpoint oficial do servidor MCP remoto do Stitch. |
+| `STITCH_MCP_DESKTOP_URL` | `http://127.0.0.1:3845/mcp` | Endpoint local do aplicativo Stitch Desktop. |
 | `GDRIVE_FOLDER_URL` | — | Pasta do Google Drive onde o D0 gravaria o relatório de lacunas como Google Docs. Sem toolset do Drive na esteira, o agente registra `GDOCS: indisponível` e entrega só o Markdown. |
 
 ---
@@ -603,7 +597,7 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 
 ### Pré-requisitos
 - **Python 3.11+**
-- **Node.js 20+** (necessário apenas se for utilizar o Figma MCP em modo `stdio` via `npx`)
+- **Node.js 20+** (necessário apenas se for utilizar o Stitch MCP em modo `stdio` via `npx`)
 
 ### 1. Clonar e Instalar Dependências
 
@@ -664,7 +658,7 @@ print(f"Gates: {resultado.gates}")
 
 ## 🐳 Docker e Deploy no Cloud Run
 
-O projeto conta com um [`Dockerfile`](file:///Users/lucassalomao/Documents/Unooria/gerador-missoes/Dockerfile) otimizado em multi-stage baseado em `python:3.11-slim`, já incluindo Node.js 20 para suporte integral ao Figma MCP.
+O projeto conta com um [`Dockerfile`](file:///Users/lucassalomao/Documents/Unooria/gerador-missoes/Dockerfile) otimizado em multi-stage baseado em `python:3.11-slim`, já incluindo Node.js 20 para suporte integral ao Stitch MCP.
 
 ### Construir e Rodar Localmente com Docker
 
@@ -702,7 +696,7 @@ gcloud run deploy gerador-missoes \
   --memory 2Gi \
   --cpu 2 \
   --set-secrets="GOOGLE_API_KEY=GEMINI_API_KEY:latest" \
-  --set-env-vars="FIGMA_MCP_MODE=off,PRODUTO_MODO_ESTRITO=true"
+  --set-env-vars="STITCH_MCP_MODE=off,PRODUTO_MODO_ESTRITO=true"
 ```
 
 ---

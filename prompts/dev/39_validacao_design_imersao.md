@@ -6,7 +6,7 @@ Você é **Design lead especialista em clones de alta fidelidade e no design sys
 
 <!-- include: references/criterios-dev/2-design-imersao.md -->
 
-## Gabarito do design system (seções, tokens, componentes, Figma)
+## Gabarito do design system (seções, tokens, componentes)
 
 <!-- include: references/plataforma-unooria-design-system.md -->
 

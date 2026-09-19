@@ -54,7 +54,15 @@ def create_llm_agent(
     kwargs: dict[str, Any] = {
         "name": name,
         "model": selected_model,
-        "instruction": instruction.strip() + f"\n\n---\nData de hoje: {time.strftime('%Y-%m-%d')}. Use esta data em cabeçalhos, changelogs e frontmatter.",
+        # O bloco de herança entra em TODOS os agentes de uma vez, em vez de ser repetido em
+        # ~30 prompts. Fica vazio na execução saudável; quando um gate reprova, é por ele que
+        # o agente a jusante descobre que constrói sobre base reprovada — e é o que permite a
+        # esteira seguir até o fim sem fingir que está tudo certo.
+        "instruction": (
+            instruction.strip()
+            + "\n\n---\n## Herança desta execução\n\n{heranca_degradada?}\n"
+            + f"\n---\nData de hoje: {time.strftime('%Y-%m-%d')}. Use esta data em cabeçalhos, changelogs e frontmatter."
+        ),
         "description": description.strip(),
         "include_contents": include_contents,
     }
