@@ -1,0 +1,592 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- PACOTES FUNDAMENTAIS E TIPOGRAFIA ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\geometry{
+  a4paper,
+  top=2.2cm,
+  bottom=2.4cm,
+  left=2.3cm,
+  right=2.3cm,
+  headheight=15pt,
+  footskip=1.2cm
+}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{cite}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+\usepackage[hidelinks,pdfusetitle]{hyperref}
+
+% --- PALETA DE CORES INSTITUCIONAL UNOORIA ---
+\definecolor{UnooriaNavy}{RGB}{18, 38, 58}
+\definecolor{UnooriaTeal}{RGB}{0, 150, 166}
+\definecolor{UnooriaBlue}{RGB}{41, 128, 185}
+\definecolor{UnooriaGold}{RGB}{212, 143, 24}
+\definecolor{UnooriaGreen}{RGB}{39, 174, 96}
+\definecolor{UnooriaRed}{RGB}{192, 57, 43}
+\definecolor{UnooriaGreyLight}{RGB}{247, 249, 250}
+\definecolor{UnooriaGreyBorder}{RGB}{220, 224, 230}
+\definecolor{UnooriaGreyText}{RGB}{85, 95, 110}
+
+% --- CABEÇALHOS E RODAPÉS ---
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{UnooriaNavy}\textbf{Unooria EdTech} \textbar{} Manual do Gerador de Missões}
+\fancyhead[R]{\small\color{UnooriaGreyText}Arquitetura Global e Lógica Pedagógica}
+\fancyfoot[L]{\small\color{UnooriaGreyText}Documento Oficial de Engenharia e Design Instrucional}
+\fancyfoot[R]{\small\color{UnooriaNavy}\textbf{\thepage}}
+
+% --- ESTILO DE SEÇÕES ---
+\titleformat{\section}
+  {\Large\bfseries\color{UnooriaNavy}}
+  {\thesection.}{0.8em}{}[\titlerule]
+\titleformat{\subsection}
+  {\large\bfseries\color{UnooriaTeal}}
+  {\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{UnooriaNavy}}
+  {\thesubsubsection}{0.5em}{}
+
+% --- CAIXAS DE DESTAQUE DIDÁTICAS ---
+\newtcolorbox{caixaConceito}[1]{
+  colback=UnooriaGreyLight,
+  colframe=UnooriaTeal,
+  coltitle=white,
+  fonttitle=\bfseries\sffamily,
+  title={#1},
+  arc=3mm,
+  boxrule=1pt,
+  left=12pt, right=12pt, top=10pt, bottom=10pt,
+  breakable
+}
+
+\newtcolorbox{caixaGuardrail}[1]{
+  colback=UnooriaGreyLight,
+  colframe=UnooriaRed,
+  coltitle=white,
+  fonttitle=\bfseries\sffamily,
+  title={#1},
+  arc=3mm,
+  boxrule=1.2pt,
+  left=12pt, right=12pt, top=10pt, bottom=10pt,
+  breakable
+}
+
+\newtcolorbox{caixaBNCC}[1]{
+  colback=UnooriaGreyLight,
+  colframe=UnooriaGold,
+  coltitle=white,
+  fonttitle=\bfseries\sffamily,
+  title={#1},
+  arc=3mm,
+  boxrule=1pt,
+  left=12pt, right=12pt, top=10pt, bottom=10pt,
+  breakable
+}
+
+\newtcolorbox{caixaMecanica}[1]{
+  colback=UnooriaGreyLight,
+  colframe=UnooriaNavy,
+  coltitle=white,
+  fonttitle=\bfseries\sffamily,
+  title={#1},
+  arc=3mm,
+  boxrule=1pt,
+  left=12pt, right=12pt, top=10pt, bottom=10pt,
+  breakable
+}
+
+% --- MACROS VISUAIS ---
+\newcommand{\tagEstagio}[1]{\colorbox{UnooriaNavy}{\small\bfseries\color{white}\,\MakeUppercase{#1}\,}}
+\newcommand{\cVerde}{\textcolor{UnooriaGreen}{\textbf{[APROVADO]}}}
+\newcommand{\cAmarelo}{\textcolor{UnooriaGold}{\textbf{[RESSALVA]}}}
+\newcommand{\cVermelho}{\textcolor{UnooriaRed}{\textbf{[BLOQUEIO]}}}
+
+\begin{document}
+
+% ==============================================================================
+% CAPA INSTITUCIONAL E SUMÁRIO EXECUTIVO
+% ==============================================================================
+\begin{titlepage}
+  \centering
+  \vspace*{1.0cm}
+  {\Large\scshape\color{UnooriaTeal} Plataforma Unooria de Aprendizagem Interativa \par}
+  \vspace{0.4cm}
+  {\Huge\bfseries\color{UnooriaNavy} MANUAL COMPLETO E EXPLICATIVO DO GERADOR DE MISSÕES \par}
+  \vspace{0.6cm}
+  {\large\bfseries\color{UnooriaNavy} Arquitetura Global Multiagente, Lógica Pedagógica, Guardrails Éticos\\e o Primado do Letramento Digital na Educação Básica \par}
+  \vspace{1.2cm}
+  
+  \begin{tcolorbox}[colback=white,colframe=UnooriaNavy,arc=3mm,width=0.92\textwidth]
+    \centering
+    \small\sffamily\color{UnooriaNavy}
+    \textbf{Guia Sistêmico de Referência para Educadores, Designers Instrucionais,\\Gerentes de Produto (POs) e Engenheiros de Software}\\
+    \vspace{0.2cm}
+    \textit{Uma análise aprofundada de ponta a ponta: do briefing pedagógico ao PRD executivo,\\fundamentada nas ciências da aprendizagem e na Resolução CNE/CEB nº 1/2022.}
+  \end{tcolorbox}
+
+  \vspace{1.5cm}
+  \begin{tabularx}{0.85\textwidth}{lX}
+    \textbf{Autor institucional:} & Diretoria de Tecnologia e Design Instrucional Unooria \\
+    \textbf{Framework de Orquestração:} & Google ADK (\textit{Agent Development Kit}) 2.x \\
+    \textbf{Âmbito Curricular:} & Ensino Fundamental (1º ao 9º ano) e Ensino Médio \\
+    \textbf{Norma Regulamentadora:} & BNCC Computação (Resolução CNE/CEB nº 1/2022) \\
+    \textbf{Legislação Protetiva:} & LGPD (Lei nº 13.709/2018, Art. 14) e ECA (Lei nº 8.069/1990) \\
+    \textbf{Data da Publicação:} & Setembro de 2026 \\
+    \textbf{Versão da Arquitetura:} & v2.4 (Esteira Saneada com Gates Determinísticos) \\
+  \end{tabularx}
+
+  \vfill
+  {\footnotesize\color{UnooriaGreyText} Unooria Educação e Tecnologia S.A. --- Todos os direitos reservados. \par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ==============================================================================
+% CAPÍTULO 1: O QUE É O GERADOR DE MISSÕES?
+% ==============================================================================
+\section{O que é o Gerador de Missões Unooria?}
+\label{sec:intro}
+
+O \textbf{Gerador de Missões Unooria} é um sistema avançado de inteligência artificial multiagente concebido para resolver um dos desafios mais complexos da tecnologia educacional (\textit{EdTech}): \textbf{como transformar uma intencionalidade pedagógica aberta em uma experiência digital interativa, lúdica, curricularmente rigorosa, segura para menores e tecnicamente pronta para programação em escala}.
+
+Na educação contemporânea, o processo tradicional de criação de jogos educacionais sofre de um dilema crônico de fragmentação:
+\begin{itemize}[noitemsep]
+  \item Educadores concebem ricas propostas pedagógicas, mas muitas vezes carecem de vocabulário técnico para estruturar regras formais de sistemas interativos;
+  \item Designers de jogos criam interfaces atraentes, mas correm o risco de priorizar a estética em detrimento do objetivo de aprendizagem, gerando o chamado ``efeito cosmético'';
+  \item Engenheiros de software desenvolvem sistemas robustos, mas podem desconsiderar restrições da sala de aula real, como a velocidade da internet em escolas públicas ou a necessidade de autonomia docente.
+\end{itemize}
+
+O Gerador de Missões foi desenhado exatamente para ser a \textbf{ponte colaborativa} entre essas dimensões. Ele opera como uma ``fábrica pedagógica autônoma'', na qual mais de 50 agentes especialistas colaboram, revisam e auditam o trabalho uns dos outros em um fluxo sequencial, iterativo e protegido por barreiras formais de segurança (\textit{guardrails}).
+
+\begin{caixaConceito}{A Metáfora da Redação e do Estúdio de Cinema}
+Pense no Gerador de Missões não como uma única máquina que gera textos mágicos, mas como um \textbf{estúdio integrado de criação}. 
+Primeiro, o time de roteiristas e pedagogos (\textbf{Área de Produto}) debate e afia a ideia da missão, garantindo que o estudante viva um dilema real e não uma aula expositiva disfarçada. 
+Em seguida, o estúdio de arte e cenografia (\textbf{Área de Design}) projeta as telas, os fluxos, a linguagem acessível e o protótipo navegável. 
+Por fim, os arquitetos e diretores técnicos (\textbf{Área de Dev}) transformam toda essa arte em especificações milimétricas de engenharia, histórias de usuário e testes de conformidade legal. 
+Se em qualquer momento a proposta violar as normas éticas ou pedagógicas, os inspetores (\textit{Checkers}) travam a produção para correção imediata.
+\end{caixaConceito}
+
+% ==============================================================================
+% CAPÍTULO 2: ARQUITETURA GLOBAL E A DIVISÃO DOS AGENTES
+% ==============================================================================
+\section{Arquitetura Global: A Divisão dos Agentes Especialistas}
+\label{sec:arquitetura}
+
+\subsection{Por que Dividir o Trabalho em Dezenas de Agentes?}
+Um erro comum em projetos de inteligência artificial é utilizar um único agente (\textit{prompt monolítico}) e pedir-lhe: \textit{``Gere um jogo pedagógico completo para o 6º ano sobre segurança na internet, com telas, código e regras''}.
+
+A literatura científica contemporânea demonstra que Modelos de Linguagem de Grande Porte (LLMs) sofrem de severa degradação de desempenho quando sobrecarregados com múltiplas responsabilidades simultâneas. Estudos fundamentais sobre atenção em LLMs, como os de Liu et al.~\cite{liu2024lost}, revelam o efeito \textit{``Lost in the Middle''} (Perdido no Meio): instruções colocadas no meio de contextos muito extensos são sistematicamente esquecidas ou ignoradas pelo modelo. Além disso, a engenharia de software clássica, desde os trabalhos pioneiros de David Parnas~\cite{parnas1972criteria} e Robert C. Martin~\cite{martin2002agile}, consagra o **Princípio da Responsabilidade Única** (\textit{Single Responsibility Principle - SRP}): cada módulo deve ter apenas uma razão para mudar.
+
+No Gerador de Missões Unooria, aplicamos essa ciência à orquestração multiagente~\cite{wu2023autogen, hong2024metagpt}:
+\begin{enumerate}
+  \item \textbf{Especialização Radical:} Cada agente executa uma tarefa cognitiva muito precisa (ex.: apenas verificar spoilers narrativos, apenas desenhar o grafo de fluxo, ou apenas validar a LGPD).
+  \item \textbf{Redução de Carga de Contexto:} O agente recebe estritamente a informação necessária para o seu trabalho, operando em sua faixa máxima de atenção e fidelidade instrucional.
+  \item \textbf{Triangulação e Contraponto:} Agentes de criação são sempre contrapostos por agentes de auditoria (\textit{Adversarial Evaluation}). O agente que redige a narrativa não é o mesmo que a avalia, eliminando a complacência e o autoelogio natural das IAs.
+\end{enumerate}
+
+\subsection{O Fluxo Macro dos Quatro Estágios}
+A esteira organiza-se em quatro grandes estágios integrados, orquestrados pela classe\\ \texttt{MissionPipelineOrchestrator} do framework Google ADK:
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    stageNode/.style={rectangle, rounded corners=3mm, draw=UnooriaNavy, fill=UnooriaGreyLight, thick, minimum width=3.2cm, minimum height=1.3cm, align=center, font=\small\sffamily},
+    gateNode/.style={diamond, draw=UnooriaGold, fill=white, thick, minimum width=1.5cm, minimum height=1.5cm, align=center, font=\footnotesize\sffamily},
+    arrowLine/.style={-{Stealth[scale=1.2]}, thick, draw=UnooriaNavy}
+  ]
+    \node (briefing) [circle, draw=UnooriaTeal, fill=UnooriaTeal!20, thick, font=\small\bfseries] {Briefing};
+    \node (produto) [stageNode, right=0.8cm of briefing] {\textbf{1. PRODUTO}\\\footnotesize Núcleo \& Spec};
+    \node (gateProd) [gateNode, right=0.8cm of produto] {\textbf{Gate}\\\footnotesize Final};
+    \node (design) [stageNode, right=0.8cm of gateProd] {\textbf{2. DESIGN}\\\footnotesize Telas \& Protótipo};
+    \node (dev) [stageNode, below=1.2cm of design] {\textbf{3. DEV}\\\footnotesize Banca 5D \& PRD};
+    \node (transversal) [stageNode, left=0.8cm of dev] {\textbf{4. TRANSVERSAL}\\\footnotesize Aprendizado \& QA};
+    \node (entrega) [circle, draw=UnooriaGreen, fill=UnooriaGreen!20, thick, left=0.8cm of transversal, font=\small\bfseries] {PRD Pronto};
+
+    \draw [arrowLine] (briefing) -- (produto);
+    \draw [arrowLine] (produto) -- (gateProd);
+    \draw [arrowLine] (gateProd) -- node[above]{\footnotesize [Liberado]} (design);
+    \draw [arrowLine] (gateProd) |- node[right, near start]{\footnotesize [Bloqueado]} ++(0,-1.0) -| (transversal);
+    \draw [arrowLine] (design) -- (dev);
+    \draw [arrowLine] (dev) -- (transversal);
+    \draw [arrowLine] (transversal) -- (entrega);
+  \end{tikzpicture}
+  \caption{Visão macro do fluxo de execução do Gerador de Missões Unooria.}
+  \label{fig:macro_fluxo}
+\end{figure}
+
+\subsection{Detalhamento dos Estágios e Agentes}
+
+\subsubsection{Estágio 1: Área de Produto (A01 a A16) --- Do Briefing à Especificação Formal}
+O objetivo da Área de Produto é garantir a densidade pedagógica e a clareza lúdica da missão antes que qualquer tela comece a ser desenhada.
+\begin{itemize}
+  \item \textbf{A01 Núcleo Narrativo (\texttt{A01NucleoNarrativo}):} É o único agente que lê os anexos do usuário. Ele gera as seções fundamentais: a descoberta central, o dilema cognitivo e as 6 etapas da jornada.
+  \item \textbf{A02 Micro-Gate \& A03 MicroGateCheck:} Auditoria imediata do núcleo. Verifica se a descoberta não deu ``spoiler'' (revelar o conceito antes de a criança experimentar) e se há uma escolha verdadeiramente significativa. Se reprovado, o núcleo volta para reescrita (máximo 2 rodadas).
+  \item \textbf{A04 Seções de Apoio (\texttt{A04SecoesApoio}):} Constrói o chamado \textit{One-Pager} Canônico (seções de contexto escolar, público-alvo, logística e materiais).
+  \item \textbf{A05 Gate Estrutural, A06 Check \& A07 Revisor (\texttt{GateEstruturalLoop}):} Um loop refinador de alta precisão. O A05 audita 23 critérios (viabilidade de sala de aula, clareza logística, ausência de materiais caros). Caso haja falhas, o agente A07 revisa o documento aplicando correções prontas sem inventar regras novas.
+  \item \textbf{Banca de Avaliação Paralela (A08, A09 e A10):} Três agentes executam simultaneamente uma avaliação cruzada:
+    \begin{itemize}[noitemsep]
+      \item \textbf{A08 Avaliação Pedagógica:} Foco em descoberta, papel do professor e BNCC.
+      \item \textbf{A09 Experiência do Estudante:} Foco em carga decisória, linguagem da idade e diversão.
+      \item \textbf{A10 Adequação Pedagógica:} Foco na realidade da escola pública brasileira, equidade e inclusão.
+    \end{itemize}
+  \item \textbf{A11 Gate Final \& A12 GateFinalProdutoCheck:} Consolidação dos pareceres e emissão do veredito formal de liberação da missão.
+  \item \textbf{A13 Spec da Missão \& A14/A15/A16 Checks Determinísticos:} O A13 redige a especificação técnica formal (o ``contrato'' da missão). Imediatamente, dois guardrails matemáticos rodam: o \textbf{A14 BnccCheck} (que confere se o código BNCC existe e é oficial) e o \textbf{A15 ManifestoCheck} (que confere os metadados do sistema).
+\end{itemize}
+
+\subsubsection{Estágio 2: Área de Design (A17 a A31) --- Da Ideia ao Protótipo Navegável}
+A Área de Design recebe a especificação de produto e materializa a experiência visual e interativa.
+\begin{itemize}
+  \item \textbf{A17 Fechamento de Lacunas (D0) \& A18 Split:} Faz uma varredura célula a célula da especificação. Se houver qualquer dúvida visual ou mecânica, registra uma decisão explícita antes do desenho.
+  \item \textbf{A19 Ambiente Simulado (D9) \& A20 Split:} Modela o ambiente diegético onde a missão ocorre (uma rede social simulada, uma central de jornalismo, um painel espacial, etc.).
+  \item \textbf{A21 Brief de Ofício \& A22 Jornada do Estudante:} Define os papéis que a criança assume (o ``ofício'' lúdico) e mapeia cada passo da jornada emocional e cognitiva.
+  \item \textbf{A23 Fluxo de Telas:} Modela a navegação completa em forma de grafo visual (Mermaid), garantindo que nenhuma tela fique isolada ou em beco sem saída.
+  \item \textbf{A24 Copy PT-BR \& A25 Camada CAA (Inclusão):} O A24 redige os textos com linguagem acolhedora, enquanto o **A25 CAA** projeta a Comunicação Aumentativa e Alternativa (pranchas de comunicação, símbolos e linguagem simples para estudantes neurodivergentes e com deficiência).
+  \item \textbf{A26 Telas (Stitch/Wireframes) \& A27 Revisão de Copy:} Geração das telas de baixa fidelidade e revisão ortográfica/pedagógica dos textos finais.
+  \item \textbf{A28 Protótipo \& A29 Artefatos de Design:} O A28 escreve o código de um \textbf{protótipo interativo em HTML/CSS/JS}. O A29 salva esse arquivo no disco, permitindo que educadores e desenvolvedores abram o jogo no navegador e testem a missão antes de programá-la!
+  \item \textbf{A30 QA de Entregáveis \& A31 Check:} Gate de qualidade do design para assegurar que todas as telas descritas foram prototipadas.
+\end{itemize}
+
+\subsubsection{Estágio 3: Área de Desenvolvimento (A33 a A49) --- A Engenharia e a Banca 5D}
+A Área de Dev prepara todo o material para os engenheiros de software e a liderança educacional.
+\begin{itemize}
+  \item \textbf{A33 ManifestoCheck \& A34 Handoff Dev:} Organização da arquitetura de software, portas de comunicação com a plataforma Unooria e histórias de usuário (\textit{User Stories}).
+  \item \textbf{A35 Brief de Assets:} Lista completa de ilustrações, ícones, sons e mídias que os artistas precisam produzir.
+  \item \textbf{A36 TelemetriaCheck \& A38 LacunaCheck:} Validação minuciosa de eventos de telemetria xAPI (para que a plataforma saiba exatamente onde o aluno teve dúvida) e eliminação de lacunas de projeto.
+  \item \textbf{A Banca Multidisciplinar de 5 Dimensões (A39 a A43):} Uma banca examinadora simulada avalia a missão de forma estritamente independente em 5 áreas:
+    \begin{enumerate}[noitemsep]
+      \item \textit{A39 Dimensão Produto e Narrativa} (visão de PO sênior);
+      \item \textit{A40 Dimensão Design e Imersão} (visão de Design Lead);
+      \item \textit{A41 Dimensão Pedagogia e BNCC} (visão de especialista em avaliação educacional);
+      \item \textit{A42 Dimensão Dados e LGPD} (visão de Engenheiro de Dados e DPO);
+      \item \textit{A43 Dimensão Técnica e Arquitetura} (visão de Tech Lead de sistemas).
+    \end{enumerate}
+  \item \textbf{A44 Consolidação da Banca \& A45 DevCheck:} Unificação dos 5 pareceres com atribuição do veredito final de engenharia.
+  \item \textbf{A47 PRD Writer (\texttt{A47PrdWriter}):} Redige o \textbf{Documento de Requisitos de Produto (PRD)}, um artefato técnico de altíssima precisão consumido pelos agentes de programação e desenvolvedores humanos.
+  \item \textbf{A49 One-Pager Pedagógico (\texttt{A49OnePagerPedagogico}):} O entregável feito sob medida para seres humanos. Um resumo executivo elegante, sem jargões de programação, com os links do protótipo e roteiro da aula, exportado automaticamente em formato \texttt{.docx} para a coordenação pedagógica da escola.
+\end{itemize}
+
+\subsubsection{Estágio 4: Área Transversal (A50 e A51) --- Diagnóstico e Memória Corporativa}
+A esteira não termina sem autoaprendizado. O **A50 Diagnóstico** gera um dossiê analítico de todo o percurso da missão, e o **A51 Aprendizado** extrai padrões bem-sucedidos e falhas recorrentes, gravando novos aprendizados na memória da plataforma para que as próximas missões geradas fiquem progressivamente mais inteligentes e refinadas.
+
+% ==============================================================================
+% CAPÍTULO 3: FUNDAMENTAÇÃO PEDAGÓGICA E SENTIDO DIDÁTICO
+% ==============================================================================
+\section{Fundamentação Pedagógica: Por que essa Lógica Faz Sentido?}
+\label{sec:pedagogia}
+
+\subsection{O Princípio da Descoberta Ativa vs. Instrucionismo}
+O Gerador de Missões foi estruturado sobre os alicerces teóricos da \textbf{Aprendizagem Pela Ação} (\textit{Learning by Doing}) de John Dewey~\cite{dewey1938experience}, da \textbf{Aprendizagem pela Descoberta} de Jerome Bruner~\cite{bruner1961discovery} e do \textbf{Construcionismo} de Seymour Papert~\cite{papert1980mindstorms}.
+
+Na educação bancária tradicional (instrucionismo), a criança é posicionada como receptora passiva: primeiro ela lê uma regra moral ou técnica (ex.: \textit{``não compartilhe sua senha''}), e depois responde a um questionário de múltipla escolha. Estudos mostram que essa abordagem tem baixíssima retenção e quase nenhum impacto na mudança real de comportamento~\cite{merrill2002first}.
+
+No modelo Unooria, a ordem é invertida:
+\begin{enumerate}
+  \item A criança é colocada dentro de uma simulação diegética segura;
+  \item Ela toma decisões reais com consequências observáveis na tela;
+  \item Ao vivenciar o resultado de suas escolhas, ela atinge o momento \textit{``Aha!''} (a descoberta central);
+  \item Apenas após a experimentação, na mediação docente, o conceito formal é nomeado e consolidado.
+\end{enumerate}
+
+\subsection{A Jornada Narrativa em 6 Etapas}
+Todas as missões geradas seguem rigorosamente uma estrutura de 6 etapas, mapeada na literatura de design instrucional e neurociência da aprendizagem:
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabularx}{\textwidth}{>{\bfseries}l>{\raggedright\arraybackslash}p{3.2cm}X>{\raggedright\arraybackslash}p{3.4cm}}
+    \toprule
+    Etapa & Objetivo Psicológico & O que o Estudante Faz na Tela? & Referência Teórica \\
+    \midrule
+    1. Despertar & Curiosidade e engajamento inicial & Assume um papel profissional (detetive, cientista, jornalista) e recebe um mistério ou incidente. & Merrill (2002)~\cite{merrill2002first} \\
+    \addlinespace
+    2. Conectar & Ancoragem em vivências prévias & Conecta o problema com elementos do seu cotidiano (redes sociais, jogos, hábitos escolares). & Vygotsky (1978)~\cite{vygotsky1978mind} \\
+    \addlinespace
+    3. Explorar & Manipulação livre e hipóteses & Interage com dados, mensagens ou ferramentas do ambiente simulado, testando o que acontece. & Bruner (1961)~\cite{bruner1961discovery} \\
+    \addlinespace
+    4. Desafiar & O dilema da escolha significativa & Enfrenta um momento crítico onde precisa tomar uma decisão difícil sem resposta óbvia. & Dewey (1938)~\cite{dewey1938experience} \\
+    \addlinespace
+    5. Sintetizar & Consolidação da descoberta & Observa o impacto da sua decisão e formula em suas próprias palavras o que aprendeu. & Anderson (2001)~\cite{anderson2001taxonomy} \\
+    \addlinespace
+    6. Celebrar & Reconhecimento e fechamento & Visualiza a conquista da missão, seu distintivo de ofício e prepara-se para o debate em turma. & Kafai \& Resnick~\cite{kafai1996constructionism} \\
+    \bottomrule
+  \end{tabularx}
+  \caption{As 6 etapas da jornada narrativa das missões Unooria.}
+  \label{tab:6_etapas}
+\end{table}
+
+\subsection{Teoria da Carga Cognitiva e o ``Teste da Escola Pública''}
+O design das missões é fundamentado na \textbf{Teoria da Carga Cognitiva} (\textit{Cognitive Load Theory - CLT}) de John Sweller~\cite{sweller1988cognitive, sweller2011cognitive} e nos princípios de aprendizagem multimídia de Richard Mayer~\cite{mayer2002multimedia}.
+
+A CLT ensina que a memória de trabalho do ser humano é estritamente limitada. Existem três tipos de carga cognitiva durante o uso de um software:
+\begin{enumerate}
+  \item \textbf{Carga Intrínseca:} A complexidade real do conceito que está sendo ensinado (ex.: entender o que é privacidade de dados);
+  \item \textbf{Carga Estranha (Acidental):} O esforço mental desperdiçado tentando entender uma interface confusa, botões escondidos, textos longos ou gráficos poluídos;
+  \item \textbf{Carga Germânica:} O esforço mental benéfico dedicado a construir esquemas mentais duradouros na memória de longo prazo.
+\end{enumerate}
+
+No Gerador de Missões, os agentes de Produto (A05 e A10) e Design (A24 e A26) aplicam o que chamamos de \textbf{Teste de Piso da Escola Pública}:
+\begin{caixaConceito}{O Teste de Piso da Escola Pública}
+Uma missão nunca é projetada para o cenário ideal de laboratório particular com computadores de última geração e silêncio absoluto. Ela é avaliada considerando a realidade da escola pública brasileira:
+\begin{itemize}[noitemsep]
+  \item Uma sala com 35 estudantes e alto nível de ruído;
+  \item Internet compartilhada com velocidade oscilante (2 Mbps);
+  \item Telas pequenas (Chromebooks simples, celulares ou tablets compartilhados);
+  \item Estudantes com diferentes níveis de fluência leitora e concentração.
+\end{itemize}
+Por essa razão, os agentes exigem: telas limpas, blocos de texto com no máximo 4 linhas, vocabulário acessível, feedback sonoro e visual imediato, e ausência total de downloads pesados.
+\end{caixaConceito}
+
+\subsection{O Papel do Professor: Autonomia e Human-in-the-Loop}
+Uma das maiores falhas em ferramentas de EdTech é tentar substituir ou ignorar a figura docente. Na plataforma Unooria, \textbf{o professor é o maestro insubstituível da experiência}. O Gerador de Missões garante essa centralidade através de quatro pilares auditados pelo critério 4.1 da avaliação pedagógica:
+\begin{enumerate}
+  \item \textbf{Antes da Missão (Customização Assistida por IA):} O professor tem total autonomia para alterar temas, adicionar exemplos locais da sua cidade ou escolher conteúdos. Ele utiliza a IA da Unooria como assistente para gerar rascunhos, mas nada entra na sala de aula sem a sua aprovação explícita (\textit{curadoria docente prévia}).
+  \item \textbf{Durante a Missão (Dashboard em Tempo Real):} Enquanto os estudantes navegam na missão, o professor acompanha em seu painel os caminhos escolhidos, identificando quem terminou mais cedo e quem está enfrentando dificuldades.
+  \item \textbf{Depois da Missão (Roda de Conversa Guiada):} Toda missão entrega um roteiro de perguntas abertas para o debate pós-jogo. A missão digital não encerra a aula; ela é o estopim para a conversa humana reflexiva em sala.
+  \item \textbf{Ritmos Diferentes (Gestão de Sala):} A plataforma prevê atividades pedagógicas complementares para os alunos rápidos, evitando que fiquem ociosos ou dêem spoilers para os colegas.
+\end{enumerate}
+
+% ==============================================================================
+% CAPÍTULO 4: BNCC E O PRIMADO DO LETRAMENTO DIGITAL
+% ==============================================================================
+\section{Alinhamento Curricular e o Primado do Letramento Digital}
+\label{sec:bncc}
+
+\subsection{O Contexto Normativo: A Resolução CNE/CEB nº 1/2022}
+Em outubro de 2022, o Conselho Nacional de Educação homologou a \textbf{Resolução CNE/CEB nº 1/2022}, que instituiu as Normas sobre Computação na Educação Básica como complemento oficial à Base Nacional Comum Curricular (BNCC)~\cite{brasil2018bncc, cne2022computacao}.
+
+A norma estabeleceu que o ensino de computação nas escolas brasileiras deve estruturar-se em três eixos integrados:
+\begin{enumerate}
+  \item \textbf{Pensamento Computacional:} Resolução de problemas por meio de algoritmos, decomposição, abstração e identificação de padrões;
+  \item \textbf{Mundo Digital:} Compreensão da infraestrutura tecnológica, hardware, software, codificação de dados e inteligência artificial;
+  \item \textbf{Cultura Digital (Letramento Digital):} Uso ético, crítico, responsável, consciente e reflexivo das tecnologias digitais na sociedade.
+\end{enumerate}
+
+\subsection{Por que o Letramento Digital é a Única Regra Bloqueante da BNCC?}
+Uma das decisões de engenharia e pedagogia mais importantes do Gerador de Missões é a seguinte regra de ouro:
+\begin{caixaGuardrail}{A Regra de Ouro do Gate Curricular}
+Na esteira Unooria, \textbf{a ÚNICA regra da BNCC que tem o poder de BLOQUEAR a missão é o cumprimento ativo das habilidades de LETRAMENTO DIGITAL (Eixo Cultura Digital)}.
+Habilidades de disciplinas tradicionais (Português, História, Matemática), socioemocionais ou do eixo Pensamento Computacional recebem notas, sugestões e alertas amigáveis (\cAmarelo), mas \textbf{nunca travam a esteira}. Sem Letramento Digital comprovado na prática, a missão recebe \cVermelho.
+\end{caixaGuardrail}
+
+Essa decisão pedagógica é fundamentada em três pilares essenciais:
+\begin{enumerate}
+  \item \textbf{Combate à Ilusão do Tecnologismo Vazio:} Muitas plataformas de programação infantil ensinam apenas a arrastar blocos para mover um bonequinho na tela (\textit{Pensamento Computacional superficial}), ignorando completamente as consequências sociais da tecnologia. Criar um robô sem saber discernir uma notícia falsa (\textit{fake news}) ou sem entender o valor dos seus dados pessoais não educa cidadãos para o século XXI~\cite{buckingham2007digital, unesco2018digital}.
+  \item \textbf{Urgência Social de Proteção à Infância:} As crianças brasileiras passam horas conectadas diariamente em redes sociais e jogos online. A escola tem o dever cívico e legal de prepará-las contra o assédio digital, o vazamento de fotos, os golpes online e a manipulação algorítmica. O Letramento Digital é, antes de tudo, uma competência de autoproteção e cidadania~\cite{livingstone2017children}.
+  \item \textbf{Vivência Prática vs. Teoria Abstrata:} O critério 5.2 do sistema exige que o estudante **pratique ativamente** o letramento digital. Apenas ``ler uma dica de segurança'' reprova a missão. A criança precisa, na interface, identificar se um site é seguro, configurar permissões, reportar um comportamento inadequado ou analisar a confiabilidade de uma fonte.
+\end{enumerate}
+
+\subsection{Como o Guardrail Determinístico \texttt{BnccCheck} Funciona}
+Para evitar que a IA invente códigos inexistentes (as chamadas alucinações de LLM), a esteira não confia na memória do modelo. Criamos o validador em código Python puro **\texttt{BnccCheckAgent}** (\texttt{tools/bncc.py}), que consulta o arquivo oficial \texttt{bncc-computacao.json}:
+\begin{itemize}[noitemsep]
+  \item \textbf{Regra 1 (Existência Real):} Todo código citado na missão (ex.: \texttt{EF06CO06}) precisa existir de fato na lista oficial do Ministério da Educação. Códigos inventados causam bloqueio automático.
+  \item \textbf{Regra 2 (Ano Compatível):} O código deve corresponder estritamente à faixa etária do estudante. Uma missão para o 3º ano não pode citar uma habilidade exclusiva do 9º ano.
+  \item \textbf{Regra 3 (Presença Obrigatória de Letramento Digital):} No Ensino Fundamental (1º ao 9º ano), a missão é sumariamente reprovada se não contiver pelo menos uma habilidade classificada no eixo Cultura Digital / Letramento Digital.
+\end{itemize}
+
+% ==============================================================================
+% CAPÍTULO 5: GUARDRAILS, ÉTICA E SEGURANÇA DE MENORES
+% ==============================================================================
+\section{Guardrails, Ética e Proteção Integral de Menores}
+\label{sec:guardrails}
+
+Projetar ambientes digitais para crianças e adolescentes impõe uma responsabilidade jurídica e moral incomparavelmente superior à de softwares comuns. O Gerador de Missões implementa uma densa camada de salvaguardas nos âmbitos pedagógico, ético, jurídico e computacional.
+
+\subsection{Salvaguardas de Inteligência Artificial: O Princípio Human-in-the-Loop}
+A literatura contemporânea sobre segurança em IA destaca os riscos graves de alucinação, vieses tóxicos e manipulação psicológica quando crianças interagem diretamente com modelos generativos abertos~\cite{bommasani2021opportunities}.
+
+Por essa razão, a plataforma Unooria adota uma diretriz inegociável de **Human-in-the-Loop (Humano no Controle)**:
+\begin{itemize}
+  \item \textbf{Geração na Preparação, Nunca em Tempo Real Sem Filtro:} A inteligência artificial atua exclusivamente como ferramenta de produtividade para o professor durante o planejamento da aula. Os conteúdos gerados por IA (textos, personagens, postagens simuladas) são revisados, ajustados e aprovados pelo docente antes de serem publicados.
+  \item \textbf{Crianças Interagem com Conteúdo 100\% Curado:} O estudante em sala de aula interage com um banco de dados fechado e seguro, garantindo imunidade total contra respostas impróprias, discurso de ódio ou incentivo à automutilação.
+  \item \textbf{Chatbots Fechados:} Quando uma missão utiliza um personagem interativo com IA (ex.: um robô historiador), o modelo opera sob guardrails rígidos de sistema (\textit{system prompts} restritivos que o impedem de fugir do tópico pedagógico ou emitir opiniões pessoais).
+\end{itemize}
+
+\subsection{Privacidade de Dados: Conformidade com o Artigo 14 da LGPD}
+O tratamento de dados pessoais de menores no Brasil é regulado com rigor pelo **Artigo 14 da Lei Geral de Proteção de Dados (Lei nº 13.709/2018)**~\cite{brasil2018lgpd}, bem como pelo Estatuto da Criança e do Adolescente (Lei nº 8.069/1990)~\cite{brasil1990eca}:
+\begin{quote}
+  \textit{``O tratamento de dados pessoais de crianças e adolescentes deverá ser realizado em seu melhor interesse, considerados os direitos fundamentais à vida, à privacidade e ao pleno desenvolvimento.''} (\S\ 1º, Art. 14 da LGPD).
+\end{quote}
+
+A esteira de desenvolvimento audita e impõe essa exigência legal:
+\begin{enumerate}
+  \item \textbf{Proibição de Captura Abusiva de Mídias:} É expressamente proibido exigir que estudantes gravem vídeos de seus rostos, fotos de suas casas ou áudios abertos sem consentimento prévio dos responsáveis e justificativa pedagógica indispensável.
+  \item \textbf{Isolamento Multi-Tenant (\textit{Row Level Security}):} O sistema exige que todo banco de dados execute políticas estritas de isolamento por turma e escola (\texttt{FORCE ROW LEVEL SECURITY}). Dados de crianças de uma escola municipal nunca podem, sob nenhuma hipótese de falha de software, ser acessados ou visualizados por outra instituição.
+  \item \textbf{Telemetria Anonimizada:} Os dados de telemetria xAPI coletados pela plataforma registram apenas o progresso na missão (ex.: \textit{``aluno acertou o quiz de senhas na segunda tentativa''}), nunca rastreando a localização geográfica ou identificadores de publicidade da criança.
+\end{enumerate}
+
+\subsection{Ética de Acolhimento e Não-Rotulação}
+Ambientes escolares devem ser acolhedores e promotores da autoestima dos estudantes. Os critérios 8.4 e 8.5 do sistema estabelecem barreiras éticas severas:
+\begin{itemize}
+  \item \textbf{Proibição Absoluta de Rotulação:} O sistema é proibido de classificar o estudante com rótulos como \textit{``aluno lento''}, \textit{``perfil desatento''} ou qualquer categorização de cunho ideológico, psicológico ou moral.
+  \item \textbf{Julgamento da Escolha, Nunca da Pessoa:} Se o estudante toma uma decisão incorreta dentro da simulação (ex.: cai em um golpe de phishing simulado), o sistema mostra a consequência dentro da história com humor e empatia (ex.: \textit{``Opa! O computador travou com vírus! Que pista deixamos passar?''}), sem jamais fazer o aluno se sentir culpado ou incapaz.
+\end{itemize}
+
+% ==============================================================================
+% CAPÍTULO 6: DIAGRAMAS DE FLUXO VISUAIS E FUNCIONAMENTO
+% ==============================================================================
+\section{Diagramas de Fluxo Visuais: Como os Agentes Funcionam}
+\label{sec:diagramas}
+
+Nesta seção, apresentamos os diagramas de funcionamento dos três principais estágios operacionais da esteira.
+
+\subsection{Fluxo do Estágio 1: Área de Produto e Seus Loops de Refinamento}
+O estágio de Produto opera com ciclos contínuos de correção autônoma: se uma proposta for fraca, ela é consertada internamente antes de seguir para os estágios seguintes.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    node distance=1.0cm and 1.2cm,
+    agentBox/.style={rectangle, rounded corners=2mm, draw=UnooriaNavy, fill=UnooriaGreyLight, thick, minimum width=3.0cm, minimum height=1.1cm, align=center, font=\footnotesize\sffamily},
+    gateBox/.style={diamond, draw=UnooriaGold, fill=white, thick, minimum width=1.4cm, minimum height=1.4cm, align=center, font=\scriptsize\sffamily},
+    flowArrow/.style={-{Stealth[scale=1.1]}, thick, draw=UnooriaNavy}
+  ]
+    \node (p0a) [agentBox] {\textbf{A01 Núcleo Narrativo}\\Descoberta \& 6 etapas};
+    \node (p0mg) [agentBox, right=0.8cm of p0a] {\textbf{A02 Micro-Gate}\\Auditoria de spoilers};
+    \node (p0mgc) [gateBox, right=0.8cm of p0mg] {\textbf{A03 Check}\\Passou?};
+    \node (p0b) [agentBox, below=1.0cm of p0a] {\textbf{A04 Seções Apoio}\\One-Pager Canônico};
+    \node (p1) [agentBox, right=0.8cm of p0b] {\textbf{A05 Gate Estrutural}\\23 critérios didáticos};
+    \node (p1c) [gateBox, right=0.8cm of p1] {\textbf{A06 Check}\\Veredito};
+    \node (p1b) [agentBox, above=0.8cm of p1] {\textbf{A07 Revisor}\\Aplica correções};
+    \node (banca) [agentBox, below=1.0cm of p0b, minimum width=7.0cm] {\textbf{A08 / A09 / A10 Banca Paralela de Avaliações}\\Pedagogia \textbar{} Experiência da Criança \textbar{} Escola Pública};
+    \node (p5) [agentBox, below=0.9cm of banca] {\textbf{A13 Spec da Missão}\\Contrato formal em 12 blocos};
+    \node (checks) [agentBox, right=0.8cm of p5, fill=UnooriaGreen!10, draw=UnooriaGreen] {\textbf{A14 BnccCheck \& A15 Manifesto}\\Validação determinística pura};
+
+    \draw [flowArrow] (p0a) -- (p0mg);
+    \draw [flowArrow] (p0mg) -- (p0mgc);
+    \draw [flowArrow] (p0mgc) -- node[right]{\footnotesize Reprovou} ++(0,1.2) -| (p0a);
+    \draw [flowArrow] (p0mgc) |- node[right, near start]{\footnotesize Aprovado} (p0b);
+    \draw [flowArrow] (p0b) -- (p1);
+    \draw [flowArrow] (p1) -- (p1c);
+    \draw [flowArrow] (p1c) -- node[right]{\footnotesize Ressalva} (p1b);
+    \draw [flowArrow] (p1b) -- (p1);
+    \draw [flowArrow] (p1c) |- node[left, near start]{\footnotesize Aprovado} (banca);
+    \draw [flowArrow] (banca) -- (p5);
+    \draw [flowArrow] (p5) -- (checks);
+  \end{tikzpicture}
+  \caption{Fluxo operacional da Área de Produto com loops de autocorreção.}
+  \label{fig:fluxo_produto}
+\end{figure}
+
+\subsection{Fluxo do Estágio 2: Área de Design e Geração do Protótipo}
+O estágio de Design recebe a especificação fechada e a converte em artefatos concretos e testáveis por humanos.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    node distance=0.9cm and 1.0cm,
+    stepBox/.style={rectangle, rounded corners=2mm, draw=UnooriaTeal, fill=UnooriaGreyLight, thick, minimum width=2.8cm, minimum height=1.0cm, align=center, font=\footnotesize\sffamily},
+    protoBox/.style={rectangle, rounded corners=2mm, draw=UnooriaGreen, fill=UnooriaGreen!15, very thick, minimum width=3.4cm, minimum height=1.2cm, align=center, font=\small\sffamily\bfseries},
+    arrow/.style={-{Stealth[scale=1.1]}, thick, draw=UnooriaTeal}
+  ]
+    \node (d0) [stepBox] {\textbf{D0 Fecha Lacunas}\\Decisões visuais};
+    \node (d9) [stepBox, right=0.6cm of d0] {\textbf{D9 Ambiente}\\Cenário simulado};
+    \node (d2) [stepBox, right=0.6cm of d9] {\textbf{D2 Jornada}\\Etapas emocionais};
+    \node (d3) [stepBox, below=0.8cm of d0] {\textbf{D3 Fluxo de Telas}\\Grafo de navegação};
+    \node (d4) [stepBox, right=0.6cm of d3] {\textbf{D4 Copy \& D4b CAA}\\Linguagem e inclusão};
+    \node (d5) [stepBox, right=0.6cm of d4] {\textbf{D5 Wireframes}\\Telas no Stitch};
+    \node (d8) [protoBox, below=1.0cm of d4] {\textbf{A28 / A29 Protótipo HTML}\\Navegável no navegador!};
+    \node (d7) [stepBox, right=0.8cm of d8] {\textbf{A30 QA de Design}\\Auditoria de entrega};
+
+    \draw [arrow] (d0) -- (d9);
+    \draw [arrow] (d9) -- (d2);
+    \draw [arrow] (d2) |- (d3);
+    \draw [arrow] (d3) -- (d4);
+    \draw [arrow] (d4) -- (d5);
+    \draw [arrow] (d5) |- (d8);
+    \draw [arrow] (d8) -- (d7);
+  \end{tikzpicture}
+  \caption{Fluxo de construção de telas, acessibilidade CAA e protótipo interativo navegável.}
+  \label{fig:fluxo_design}
+\end{figure}
+
+\subsection{Fluxo do Estágio 3: A Banca Multidisciplinar de 5 Dimensões de Dev}
+No estágio de desenvolvimento, cinco agentes independentes assumem o papel de avaliadores críticos seniores antes da geração do documento final de engenharia:
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    bancaBox/.style={rectangle, rounded corners=2mm, draw=UnooriaBlue, fill=white, thick, minimum width=2.4cm, minimum height=1.0cm, align=center, font=\scriptsize\sffamily},
+    finalBox/.style={rectangle, rounded corners=2mm, draw=UnooriaNavy, fill=UnooriaGreyLight, thick, minimum width=3.2cm, minimum height=1.2cm, align=center, font=\small\sffamily},
+    line/.style={-{Stealth[scale=1.1]}, thick, draw=UnooriaBlue}
+  ]
+    \node (bancaLabel) [circle, draw=UnooriaBlue, fill=UnooriaBlue!20, thick, font=\footnotesize\bfseries] {Banca 5D};
+    \node (dimA) [bancaBox, above right=0.4cm and 1.0cm of bancaLabel] {\textbf{Dimensão A}\\Produto \& Narrativa};
+    \node (dimB) [bancaBox, right=1.0cm of bancaLabel] {\textbf{Dimensão B}\\Design \& Imersão};
+    \node (dimC) [bancaBox, below right=0.4cm and 1.0cm of bancaLabel] {\textbf{Dimensão C}\\Pedagogia \& BNCC};
+    \node (dimD) [bancaBox, above right=1.5cm and 1.0cm of bancaLabel] {\textbf{Dimensão D}\\Telemetria \& LGPD};
+    \node (dimE) [bancaBox, below right=1.5cm and 1.0cm of bancaLabel] {\textbf{Dimensão E}\\Técnica \& Arquitetura};
+    
+    \node (consolida) [finalBox, right=1.2cm of dimB] {\textbf{A44 Consolidação}\\Relatório Unificado};
+    \node (prd) [finalBox, right=1.0cm of consolida, draw=UnooriaGreen, fill=UnooriaGreen!10] {\textbf{A47 PRD Final}\\Para Codificação};
+    \node (onepager) [finalBox, below=0.8cm of prd, draw=UnooriaGold, fill=UnooriaGold!10] {\textbf{A49 One-Pager}\\Para os Professores};
+
+    \draw [line] (bancaLabel) -- (dimA);
+    \draw [line] (bancaLabel) -- (dimB);
+    \draw [line] (bancaLabel) -- (dimC);
+    \draw [line] (bancaLabel) -- (dimD);
+    \draw [line] (bancaLabel) -- (dimE);
+
+    \draw [line] (dimA) -- (consolida);
+    \draw [line] (dimB) -- (consolida);
+    \draw [line] (dimC) -- (consolida);
+    \draw [line] (dimD) -- (consolida);
+    \draw [line] (dimE) -- (consolida);
+
+    \draw [line] (consolida) -- (prd);
+    \draw [line] (consolida) |- (onepager);
+  \end{tikzpicture}
+  \caption{A Banca Multidisciplinar de 5 Dimensões e a geração dos dois entregáveis finais.}
+  \label{fig:fluxo_dev}
+\end{figure}
+
+% ==============================================================================
+% CAPÍTULO 7: CONCLUSÃO E BOAS PRÁTICAS
+% ==============================================================================
+\section{Conclusão e Guia Rápido de Boas Práticas}
+\label{sec:conclusao}
+
+\subsection{Síntese da Análise Global}
+A análise global de todo o ecossistema do Gerador de Missões Unooria revela uma arquitetura altamente madura, balanceada e inovadora no panorama internacional de EdTech:
+\begin{enumerate}
+  \item \textbf{Sentido Pedagógico Robusto:} A esteira não gera jogos vazios. Ela constrói jornadas de aprendizagem pela ação, com papéis profissionais claros, ancoragem em problemas reais e respeto absoluto à capacidade intelectual dos estudantes.
+  \item \textbf{Divisão Correta dos Agentes:} A separação de responsabilidades em mais de 50 agentes protege a qualidade contra alucinações de LLM e garante que cada etapa seja inspecionada por agentes de auditoria com critérios objetivos.
+  \item \textbf{Primado do Letramento Digital:} Ao colocar as habilidades de Cultura Digital da BNCC como o único critério bloqueante curricular, a Unooria assegura que nenhuma missão seja entregue sem promover o pensamento crítico, a segurança e a cidadania digital nas escolas.
+  \item \textbf{Proteção Integral da Criança:} O compromisso com a LGPD (Art. 14) e com a arquitetura \textit{Human-in-the-Loop} garante que os estudantes jamais sejam expostos a riscos de privacidade ou a interações inadequadas com modelos generativos sem filtro.
+\end{enumerate}
+
+\subsection{Checklist de Ouro para a Equipe de Criação}
+Ao submeter um novo briefing pedagógico para a esteira, recomenda-se verificar:
+\begin{itemize}[noitemsep]
+  \item[$\square$] \textbf{Descoberta sem Spoiler:} O conceito pedagógico é algo que a criança descobre agindo, ou já está escrito no título?
+  \item[$\square$] \textbf{Ofício Lúdico Claro:} Qual é o papel que o aluno assume na narrativa? Esse papel justifica as ferramentas que ele utiliza?
+  \item[$\square$] \textbf{Letramento Digital Ativo:} Em qual tela o estudante exercita ativamente a segurança, a ética ou o discernimento de informações na rede?
+  \item[$\square$] \textbf{Piso de Realidade Escolar:} Esta missão pode ser jogada em uma escola com computadores modestos e internet de 2 Mbps?
+  \item[$\square$] \textbf{Roda de Conversa Docente:} O roteiro de mediação final permite ao professor aprofundar o debate com a turma?
+\end{itemize}
+
+% ==============================================================================
+% BIBLIOGRAFIA ACADÊMICA E NORMATIVA
+% ==============================================================================
+\newpage
+\bibliographystyle{plain}
+\bibliography{bibliografia_manual}
+
+\end{document}
