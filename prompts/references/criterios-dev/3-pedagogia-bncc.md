@@ -8,7 +8,7 @@ Referências do gabarito: `documentacao-latex/secoes/12-experiencias.tex`
 **Fato de plataforma que o avaliador precisa saber:** hoje NÃO existe
 modelagem estruturada de BNCC no servidor — nenhuma tabela de habilidade,
 competência ou descritor; BNCC aparece só como texto livre em
-`exp_90_referencias` e em prompts. Nenhuma experiência declara habilidade de
+`exp90ef1b_referencias` e em prompts. Nenhuma experiência declara habilidade de
 forma rastreável. Toda promessa de "relatório por habilidade" na spec é escopo
 novo de plataforma e deve ser sinalizada como tal no relatório.
 

@@ -98,6 +98,37 @@ Você escreve o **PRD padrão ouro da missão**: o documento que um **agente de 
 
 {rastro_lacunas_report?}
 
+## Reescrita — o que o gate de consistência apontou na rodada anterior
+
+Se o bloco abaixo estiver preenchido, **este PRD já foi escrito e reprovado**: reescreva o documento
+inteiro corrigindo cada achado, sem desfazer o que passou. Achado de consistência interna (caminho,
+prefixo de tabela, requisito P0 sem rastro, evento sem tabela leitora, tarefa não atômica,
+identificador inválido) é **defeito seu e tem correção certa** — não vire `[NEEDS CLARIFICATION]` nem
+justificativa: aplique a correção em todas as ocorrências, inclusive nas seções que o relatório não
+cita. Lacuna de insumo com dono de outra etapa continua sendo marcador, não invente o conteúdo.
+
+{prd_check_report?}
+
+## Consistência interna — um gate determinístico confere isto depois de você
+
+Estas regras não são estilo: um documento que se contradiz faz quem codifica escolher um caminho ao
+acaso, e a partir daí o resto do PRD deixa de valer contra o que foi escrito.
+
+1. **Um caminho só por experiência.** Escolha `apps/experiencias/<id>/` e repita exatamente isso em
+   toda seção, tarefa e comando. Duas grafias do mesmo diretório é bloqueio.
+2. **Um prefixo de tabela só, e ele é o identificador inteiro.** `exp05ef3b_sessoes` — nunca
+   `exp_05ef3b_`, nunca `exp_05_`. Vale na DDL, na migration, no `@@map` e na tabela de eventos.
+3. **Identificador de código é identificador válido.** Nome de módulo, serviço ou controller em
+   PascalCase sem hífen: `DetalheQueMudaTudoModule`, não `O-detalhe-que-muda-tudoModule`.
+4. **Todo requisito P0 aparece três vezes:** na declaração, na matriz de rastreabilidade e em pelo
+   menos uma tarefa. Requisito bloqueante sem teste nomeado não é requisito, é intenção.
+5. **Todo evento tem tabela leitora nomeada.** "Onde é lido: Pub/Sub" ou "telemetria_eventos" é
+   bloqueio — toda medida que a professora vê nasce de tabela própria do módulo.
+6. **Tarefa é atômica.** `T-013 — todos os RFs` não é tarefa: é a ausência de decomposição.
+7. **Inventário de conteúdo autoral.** Toda mídia e todo texto que a missão exibe entra numa tabela
+   com nome do arquivo, caminho no bucket, peso aproximado e quem produz. Sem isso, quem codifica
+   inventa caminho de asset — e o brief de assets, que já existe nesta execução, é a sua fonte.
+
 ## Regras de redação
 
 1. **Estrutura completa**: frontmatter YAML + seções 0 a 24 do gabarito, todas presentes e numeradas. Seção sem insumo suficiente recebe `[NEEDS CLARIFICATION: <pergunta objetiva, dono>]` — nunca é omitida nem preenchida por dedução.

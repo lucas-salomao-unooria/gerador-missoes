@@ -34,6 +34,13 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "prd_status", "rotulo": "Pendências do PRD", "etapa": "dev", "rodada": None},
 ]
 
+#: Relatórios que não têm portão próprio: o parecer entra no dossiê como ressalva, nunca como
+#: impedimento. É o caso da adequação pedagógica — avalia, aponta ajustes, e quem decide bloquear
+#: continua sendo o gate estrutural e a avaliação pedagógica.
+CONSULTIVOS = [
+    {"chave": "adequacao_report", "rotulo": "Adequação pedagógica", "etapa": "produto"},
+]
+
 _ICONE = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴", "devolvido": "🔴"}
 
 #: Artefatos dos dois agentes transversais, que rodam depois deste diagnóstico.
@@ -106,6 +113,44 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
             "rodadas": rodada,
             "achados": len(deste_gate),
             "bloqueios": sum(1 for a in deste_gate if a["severidade"] in _BLOQUEIA),
+        })
+
+    # pareceres consultivos: envelope lido do próprio texto, e todo achado rebaixado a ressalva
+    from agents.callbacks import extrair_envelope
+
+    for consultivo in CONSULTIVOS:
+        texto = str(state.get(consultivo["chave"]) or "")
+        if not texto.strip():
+            continue
+        envelope = extrair_envelope(texto) or {}
+        status = str(envelope.get("status") or "")
+        deste = []
+        for achado in envelope.get("achados") or []:
+            if not isinstance(achado, dict):
+                continue
+            severidade = str(achado.get("severidade") or "").strip().lower()
+            deste.append({
+                "gate": consultivo["rotulo"],
+                "etapa": consultivo["etapa"],
+                "id": achado.get("id") or "—",
+                "codigo": achado.get("codigo") or "—",
+                "classe": "parecer",
+                # bloqueio de parecer consultivo vira ressalva: ele aconselha, não impede
+                "severidade": "decisao_humana" if severidade in _HUMANO else "atencao",
+                "dono": _dono(achado, consultivo["etapa"]),
+                "resumo": (achado.get("resumo") or "").strip(),
+            })
+        achados.extend(deste)
+        if envelope.get("precisa_humano"):
+            precisa_humano = True
+        gates.append({
+            "rotulo": consultivo["rotulo"] + " (parecer)",
+            "etapa": consultivo["etapa"],
+            "status": status or "emitido",
+            "icone": _icone(status),
+            "rodadas": None,
+            "achados": len(deste),
+            "bloqueios": 0,
         })
 
     degradacoes = list(state.get("degradacoes") or [])

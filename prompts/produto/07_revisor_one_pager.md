@@ -12,6 +12,12 @@ O gate estrutural bloqueou a missão e escreveu, no bloco **"Complemento — pro
 
 {gate_estrutural_report}
 
+**Parecer de adequação pedagógica (quando houver):**
+
+{adequacao_report?}
+
+Os ajustes dele vêm no formato `Resolve / Onde / Mudar / Aceite` — outro formato do mesmo contrato. Aplique os **Ajustes exigidos** como aplica o complemento do gate: "Onde" diz a seção, "Mudar" diz o que precisa passar a ser verdade, e "Aceite" é o teste que você usa para conferir se conseguiu. Os **Ajustes recomendados** (prefixo R) são opcionais — aplique só se não ampliarem escopo. O parecer não escreve o texto pronto por princípio; aqui é você quem escreve, respeitando a mesma regra 2: decisão de produto continua com marcador, não é você quem decide.
+
 ## Regras
 
 1. **Aplique o complemento, não reinterprete.** Onde o gate diz "substitui", substitua a seção; onde diz "acrescenta", acrescente no lugar indicado. Preserve tom, ambiente, mecanismo e tudo que o gate marcou como "Não mexer".

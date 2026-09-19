@@ -4,24 +4,24 @@ Ordem (SequentialAgent). O MCP do Figma foi removido — não há cliente oficia
 aqui, e board em ferramenta que ninguém abre não é entregável. A jornada e o fluxo saem em
 Mermaid (remontados em `design/09-diagramas.html`), as telas saem no Stitch, e o protótipo
 HTML é o que a revisão humana de fato abre.
-  d0  A16FechaLacunas       → fechamento_lacunas   (varredura, decisões [D0-n], re-specs [RS-n])
-  d0c A17FechaLacunasSplit       → spec_missao (consolidada, bloco 13) · spec_missao_gate0 (cópia
+  d0  A17FechaLacunas       → fechamento_lacunas   (varredura, decisões [D0-n], re-specs [RS-n])
+  d0c A18FechaLacunasSplit       → spec_missao (consolidada, bloco 13) · spec_missao_gate0 (cópia
                                  da original) · relatorio_lacunas · lacunas_status
-  d9  A18AmbienteSimulado    → ambiente_simulado   (condicional: decide o ambiente quando a
+  d9  A19AmbienteSimulado    → ambiente_simulado   (condicional: decide o ambiente quando a
                                  spec cala; dormente emite só a ficha do bloco 14)
-  d9c A19AmbienteSimuladoSplit   → spec_missao (com bloco 14) · ambiente_status
-  d1  A20BriefOficio        → brief_oficio
-  d2  A21Jornada      → jornada_telas   (mapa de jornada + inventário + direção)
-  d3  A22Fluxo        → fluxo_arestas   (grafo de telas + 5 testes)
-  d4  A23CopyPtBr           → copy_strings    (passada 1)
-  d4b A24Caa                → camada_caa      (camada CAA; ele mesmo decide se roda)
-  d5  A25Telas    → wireframes_cobertura
-  d6  A26CopyRevisao        → copy_strings_revisada (passada 2)
-  d8  A27Prototipo          → prototipo_html  (protótipo navegável)
-  d8c A28ArtefatosDesign         → prototipo_arquivo (.html) · prototipo_relatorio · stitch_links
+  d9c A20AmbienteSimuladoSplit   → spec_missao (com bloco 14) · ambiente_status
+  d1  A21BriefOficio        → brief_oficio
+  d2  A22Jornada      → jornada_telas   (mapa de jornada + inventário + direção)
+  d3  A23Fluxo        → fluxo_arestas   (grafo de telas + 5 testes)
+  d4  A24CopyPtBr           → copy_strings    (passada 1)
+  d4b A25Caa                → camada_caa      (camada CAA; ele mesmo decide se roda)
+  d5  A26Telas    → wireframes_cobertura
+  d6  A27CopyRevisao        → copy_strings_revisada (passada 2)
+  d8  A28Prototipo          → prototipo_html  (protótipo navegável)
+  d8c A29ArtefatosDesign         → prototipo_arquivo (.html) · prototipo_relatorio · stitch_links
                                  · diagramas_html — determinístico, o HTML nunca entra em prompt
-  d7  A29QaEntregaveis      → qa_entregaveis_report (gate de design)
-  d7c A30QaEntregaveisCheck      → design_status (🔴 impede dev e PRD quando ESTEIRA_ESTRITA)
+  d7  A30QaEntregaveis      → qa_entregaveis_report (gate de design)
+  d7c A31QaEntregaveisCheck      → design_status (🔴 impede dev e PRD quando ESTEIRA_ESTRITA)
 
 D0 e D9 emitem dois documentos numa única resposta (a spec consolidada e o próprio
 relatório). Um `LlmAgent` grava uma só chave, então cada um é seguido por um
@@ -80,9 +80,9 @@ def _gdrive_vars() -> dict:
 
 def get_fecha_lacunas_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A16FechaLacunas",
+        name="A17FechaLacunas",
         description="Fechamento de lacunas da spec antes do design: varredura célula a célula, decisões [D0-n] com base declarada, pedidos de re-spec [RS-n] e spec consolidada com bloco 13.",
-        instruction=load_prompt("design/16_fechamento_lacunas.md", **_gdrive_vars()),
+        instruction=load_prompt("design/17_fechamento_lacunas.md", **_gdrive_vars()),
         output_key="fechamento_lacunas",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -91,7 +91,7 @@ def get_fecha_lacunas_agent(**kw) -> LlmAgent:
 
 def get_fecha_lacunas_split() -> SecaoSplitAgent:
     return SecaoSplitAgent(
-        name="A17FechaLacunasSplit",
+        name="A18FechaLacunasSplit",
         description="Copia a spec consolidada (bloco 13) do D0 para `spec_missao`, preserva a original em `spec_missao_gate0`, separa o relatório de preenchimento em `relatorio_lacunas` e registra `lacunas_status`.",
         rotulo="Fechamento de lacunas (D0)",
         source_key="fechamento_lacunas",
@@ -118,9 +118,9 @@ def get_fecha_lacunas_split() -> SecaoSplitAgent:
 
 def get_ambiente_simulado_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A18AmbienteSimulado",
+        name="A19AmbienteSimulado",
         description="Ambiente simulado (condicional): decide em que casca a missão acontece quando a spec cala — app clonado da lista fechada, app novo ou mini-jogo em anos iniciais — e emite a ficha do bloco 14 mesmo quando dormente.",
-        instruction=load_prompt("design/18_ambiente_simulado.md"),
+        instruction=load_prompt("design/19_ambiente_simulado.md"),
         output_key="ambiente_simulado",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -129,7 +129,7 @@ def get_ambiente_simulado_agent(**kw) -> LlmAgent:
 
 def get_ambiente_simulado_split() -> SecaoSplitAgent:
     return SecaoSplitAgent(
-        name="A19AmbienteSimuladoSplit",
+        name="A20AmbienteSimuladoSplit",
         description="Copia a spec consolidada com o bloco 14 do D9 para `spec_missao` e registra `ambiente_status` (dormente | existente | novo | aguarda_gate).",
         rotulo="Ambiente simulado (D9)",
         source_key="ambiente_simulado",
@@ -149,9 +149,9 @@ def get_ambiente_simulado_split() -> SecaoSplitAgent:
 
 def get_brief_oficio_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A20BriefOficio",
+        name="A21BriefOficio",
         description="Briefing de ofício: aposta, forma do arco, pico, beat memorável, mapa de beats e não-negociáveis.",
-        instruction=load_prompt("design/20_brief_oficio.md"),
+        instruction=load_prompt("design/21_brief_oficio.md"),
         output_key="brief_oficio",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -160,9 +160,9 @@ def get_brief_oficio_agent(**kw) -> LlmAgent:
 
 def get_jornada_figjam_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A21Jornada",
+        name="A22Jornada",
         description="Mapa de jornada no FigJam (raias × 6 etapas), cenários de dispositivo, inventário de telas e direção por tela.",
-        instruction=load_prompt("design/21_jornada.md"),
+        instruction=load_prompt("design/22_jornada.md"),
         output_key="jornada_telas",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -171,9 +171,9 @@ def get_jornada_figjam_agent(**kw) -> LlmAgent:
 
 def get_fluxo_figjam_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A22Fluxo",
+        name="A23Fluxo",
         description="Grafo de fluxo de telas no FigJam: transições com condição, gates, estados de erro e os 5 testes.",
-        instruction=load_prompt("design/22_fluxo.md"),
+        instruction=load_prompt("design/23_fluxo.md"),
         output_key="fluxo_arestas",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -182,9 +182,9 @@ def get_fluxo_figjam_agent(**kw) -> LlmAgent:
 
 def get_copy_ptbr_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A23CopyPtBr",
+        name="A24CopyPtBr",
         description="Copy PT-BR passada 1: sheet de strings por tela, calibrado à faixa etária.",
-        instruction=load_prompt("design/23_copy_ptbr.md"),
+        instruction=load_prompt("design/24_copy_ptbr.md"),
         output_key="copy_strings",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -193,9 +193,9 @@ def get_copy_ptbr_agent(**kw) -> LlmAgent:
 
 def get_caa_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A24Caa",
+        name="A25Caa",
         description="Camada CAA: símbolos, modos de resposta alternativos e pranchas para quem não lê ou não fala. Aplica o gate de aplicabilidade e devolve `nao_aplicavel` quando a missão não justifica.",
-        instruction=load_prompt("design/24_caa.md"),
+        instruction=load_prompt("design/25_caa.md"),
         output_key="camada_caa",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -204,9 +204,9 @@ def get_caa_agent(**kw) -> LlmAgent:
 
 def get_wireframes_figma_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A25Telas",
+        name="A26Telas",
         description="Wireframes lo-fi em escala de cinza no Figma, montados sobre a seção do DS do ambiente simulado.",
-        instruction=load_prompt("design/25_telas.md", **_stitch_vars()),
+        instruction=load_prompt("design/26_telas.md", **_stitch_vars()),
         output_key="wireframes_cobertura",
         # Stitch primeiro: é ele que gera as telas hoje. O Figma continua aceito para
         # quem tiver assento Full e OAuth, e os dois podem coexistir.
@@ -218,9 +218,9 @@ def get_wireframes_figma_agent(**kw) -> LlmAgent:
 
 def get_copy_revisao_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A26CopyRevisao",
+        name="A27CopyRevisao",
         description="Copy PT-BR passada 2: revisão de cada string dentro da tela construída.",
-        instruction=load_prompt("design/26_copy_revisao.md"),
+        instruction=load_prompt("design/27_copy_revisao.md"),
         output_key="copy_strings_revisada",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -229,9 +229,9 @@ def get_copy_revisao_agent(**kw) -> LlmAgent:
 
 def get_prototipo_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A27Prototipo",
+        name="A28Prototipo",
         description="Protótipo HTML lo-fi navegável: arquivo único, sem dependências, que a revisão humana abre no navegador e o agente de codificação lê como referência de layout.",
-        instruction=load_prompt("design/27_prototipo.md"),
+        instruction=load_prompt("design/28_prototipo.md"),
         output_key="prototipo_html",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -243,10 +243,10 @@ def get_qa_entregaveis_agent(max_rodadas: Optional[int] = None, **kw) -> LlmAgen
     # retrabalho que o LoopAgent nunca vai executar (mesmo motivo do gate estrutural).
     rodadas = max_rodadas or get_settings().qa_design_max_rodadas
     return create_llm_agent(
-        name="A29QaEntregaveis",
+        name="A30QaEntregaveis",
         description="Gate final de design: fidelidade à spec, diff de strings, currículo, faixa etária, fluxo, professor, briefing, ambiente simulado e CAA.",
         instruction=load_prompt(
-            "design/29_qa_entregaveis.md",
+            "design/30_qa_entregaveis.md",
             qa_max_rodadas=rodadas,
             **_stitch_vars(),
         ),
@@ -274,18 +274,18 @@ ORDEM_RETRABALHO = [
 #: D0 e D9 emitem dois documentos numa resposta só: sem o split logo atrás, a correção
 #: fica presa no relatório e nunca chega à `spec_missao` que o resto da esteira lê.
 MAPA_RETRABALHO = {
-    "fecha-lacunas": ["A16FechaLacunasRetrabalho", "A17FechaLacunasSplitRetrabalho"],
-    "ambiente-simulado": ["A18AmbienteSimuladoRetrabalho", "A19AmbienteSimuladoSplitRetrabalho"],
-    "jornada": ["A21JornadaRetrabalho"],
-    "fluxo": ["A22FluxoRetrabalho"],
-    "copy-ptbr-revisao": ["A26CopyRevisaoRetrabalho"],
-    "caa": ["A24CaaRetrabalho"],
-    "telas": ["A25TelasRetrabalho"],
+    "fecha-lacunas": ["A17FechaLacunasRetrabalho", "A18FechaLacunasSplitRetrabalho"],
+    "ambiente-simulado": ["A19AmbienteSimuladoRetrabalho", "A20AmbienteSimuladoSplitRetrabalho"],
+    "jornada": ["A22JornadaRetrabalho"],
+    "fluxo": ["A23FluxoRetrabalho"],
+    "copy-ptbr-revisao": ["A27CopyRevisaoRetrabalho"],
+    "caa": ["A25CaaRetrabalho"],
+    "telas": ["A26TelasRetrabalho"],
 }
 
 #: Roda depois de qualquer retrabalho. O protótipo deriva de jornada, copy, CAA e telas —
 #: deixá-lo de fora faria o QA auditar, na rodada seguinte, um protótipo da rodada anterior.
-POSFIXO_RETRABALHO = ["A27PrototipoRetrabalho", "A28ArtefatosDesignRetrabalho"]
+POSFIXO_RETRABALHO = ["A28PrototipoRetrabalho", "A29ArtefatosDesignRetrabalho"]
 
 #: Tickets endereçados a estes donos não são desta etapa: o QA está devolvendo ao produto.
 RETRABALHO_EXTERNO = ["gate-estrutural"]
@@ -298,14 +298,14 @@ def _agentes_de_retrabalho(**kw) -> list:
     o nome com sufixo mantém a árvore válida e deixa o retrabalho visível no log.
     """
     pares = [
-        (get_fecha_lacunas_agent, "A16FechaLacunasRetrabalho"),
-        (get_ambiente_simulado_agent, "A18AmbienteSimuladoRetrabalho"),
-        (get_jornada_figjam_agent, "A21JornadaRetrabalho"),
-        (get_fluxo_figjam_agent, "A22FluxoRetrabalho"),
-        (get_copy_revisao_agent, "A26CopyRevisaoRetrabalho"),
-        (get_caa_agent, "A24CaaRetrabalho"),
-        (get_wireframes_figma_agent, "A25TelasRetrabalho"),
-        (get_prototipo_agent, "A27PrototipoRetrabalho"),
+        (get_fecha_lacunas_agent, "A17FechaLacunasRetrabalho"),
+        (get_ambiente_simulado_agent, "A19AmbienteSimuladoRetrabalho"),
+        (get_jornada_figjam_agent, "A22JornadaRetrabalho"),
+        (get_fluxo_figjam_agent, "A23FluxoRetrabalho"),
+        (get_copy_revisao_agent, "A27CopyRevisaoRetrabalho"),
+        (get_caa_agent, "A25CaaRetrabalho"),
+        (get_wireframes_figma_agent, "A26TelasRetrabalho"),
+        (get_prototipo_agent, "A28PrototipoRetrabalho"),
     ]
     agentes = []
     for getter, nome in pares:
@@ -317,14 +317,14 @@ def _agentes_de_retrabalho(**kw) -> list:
     # Determinísticos: sem eles a correção do D0/D9 não vira `spec_missao` e o HTML do
     # protótipo não é separado do relatório que o acompanha.
     split_lacunas = get_fecha_lacunas_split()
-    split_lacunas.name = "A17FechaLacunasSplitRetrabalho"
+    split_lacunas.name = "A18FechaLacunasSplitRetrabalho"
     split_ambiente = get_ambiente_simulado_split()
-    split_ambiente.name = "A19AmbienteSimuladoSplitRetrabalho"
+    split_ambiente.name = "A20AmbienteSimuladoSplitRetrabalho"
     agentes += [
         split_lacunas,
         split_ambiente,
         ArtefatosDesignAgent(
-            name="A28ArtefatosDesignRetrabalho",
+            name="A29ArtefatosDesignRetrabalho",
             description="Reextrai o HTML do protótipo, os links do Stitch e a folha de diagramas depois de uma rodada de retrabalho.",
         ),
     ]
@@ -348,7 +348,7 @@ def build_qa_design_loop(**kw) -> LoopAgent:
         sub_agents=[
             get_qa_entregaveis_agent(max_rodadas=rodadas, **kw),
             EnvelopeGateAgent(
-                name="A30QaEntregaveisCheck",
+                name="A31QaEntregaveisCheck",
                 description="Lê o veredito do QA de entregáveis: aprovado encerra o loop; 🔴 na última rodada impede o dev e o PRD (modo estrito).",
                 rotulo="QA de entregáveis (design)",
                 report_key="qa_entregaveis_report",
@@ -363,7 +363,7 @@ def build_qa_design_loop(**kw) -> LoopAgent:
                 before_agent_callback=marcar_heranca,
             ),
             DespachoTicketsAgent(
-                name="A31DespachoDesign",
+                name="A32DespachoDesign",
                 description="Lê os tickets do QA e reexecuta apenas os agentes endereçados, na ordem de precedência do prompt.",
                 rotulo="Retrabalho de design",
                 report_key="qa_entregaveis_report",
@@ -401,7 +401,7 @@ def build_design_stage(
             get_copy_revisao_agent(**kw),
             get_prototipo_agent(**kw),
             ArtefatosDesignAgent(
-                name="A28ArtefatosDesign",
+                name="A29ArtefatosDesign",
                 description="Separa o HTML do protótipo do relatório que o acompanha, colhe os links das telas no Stitch e monta a folha de diagramas da jornada e do fluxo.",
                 before_agent_callback=marcar_heranca,
             ),
@@ -411,20 +411,20 @@ def build_design_stage(
 
 
 DESIGN_METADATA = [
-    {"id": "A16FechaLacunas", "name": "16 · Fechamento de lacunas", "icon": "🧩", "output_key": "fechamento_lacunas", "prompt_file": "design/16_fechamento_lacunas.md", "description": "Varredura da spec célula a célula, decisões [D0-n] com base declarada, pedidos de re-spec [RS-n], spec consolidada (bloco 13) e relatório de preenchimento."},
-    {"id": "A17FechaLacunasSplit", "name": "17 · Relatório de lacunas + spec consolidada (determinístico)", "icon": "✂️", "output_key": "relatorio_lacunas", "prompt_file": None, "description": "Copia a spec consolidada para `spec_missao` (original preservada em `spec_missao_gate0`), separa o relatório e registra `lacunas_status`."},
-    {"id": "A18AmbienteSimulado", "name": "18 · Ambiente simulado", "icon": "🏝️", "output_key": "ambiente_simulado", "prompt_file": "design/18_ambiente_simulado.md", "description": "Condicional: decide o ambiente (app clonado existente, app novo ou mini-jogo) quando a spec cala; dormente emite só a ficha do bloco 14 que D1, D2, D4, D5 e o QA consomem."},
-    {"id": "A19AmbienteSimuladoSplit", "name": "19 · Spec com bloco 14 (determinístico)", "icon": "✂️", "output_key": "ambiente_status", "prompt_file": None, "description": "Copia a spec com o bloco 14 para `spec_missao` e registra `ambiente_status`."},
-    {"id": "A20BriefOficio", "name": "20 · Briefing de ofício", "icon": "🎯", "output_key": "brief_oficio", "prompt_file": "design/20_brief_oficio.md", "description": "Aposta, forma do arco, pico, beat memorável, mapa de beats, não-negociáveis."},
-    {"id": "A21Jornada", "name": "21 · Jornada (Mermaid)", "icon": "🗺️", "output_key": "jornada_telas", "prompt_file": "design/21_jornada.md", "description": "Raias × 6 etapas, cenários de dispositivo, inventário de telas e direção por tela."},
-    {"id": "A22Fluxo", "name": "22 · Fluxo de telas (Mermaid)", "icon": "🕸️", "output_key": "fluxo_arestas", "prompt_file": "design/22_fluxo.md", "description": "Grafo de telas com condições, gates e os 5 testes de fluxo."},
-    {"id": "A23CopyPtBr", "name": "23 · Copy PT-BR (passada 1)", "icon": "✍️", "output_key": "copy_strings", "prompt_file": "design/23_copy_ptbr.md", "description": "Sheet de strings por tela, calibrado à faixa etária."},
-    {"id": "A24Caa", "name": "24 · Camada CAA", "icon": "🔣", "output_key": "camada_caa", "prompt_file": "design/24_caa.md", "description": "Símbolos, modos de resposta alternativos e pranchas; só roda quando a faixa ou a spec pedem."},
-    {"id": "A25Telas", "name": "25 · Wireframes lo-fi (Stitch)", "icon": "📐", "output_key": "wireframes_cobertura", "prompt_file": "design/25_telas.md", "description": "Telas em escala de cinza sobre a seção do DS do ambiente."},
-    {"id": "A26CopyRevisao", "name": "26 · Copy PT-BR (passada 2)", "icon": "🔍", "output_key": "copy_strings_revisada", "prompt_file": "design/26_copy_revisao.md", "description": "Revisão em contexto de tela."},
-    {"id": "A27Prototipo", "name": "27 · Protótipo navegável (HTML)", "icon": "🖥️", "output_key": "prototipo_html", "prompt_file": "design/27_prototipo.md", "description": "Arquivo HTML único e sem dependências com as telas navegáveis, o painel da etapa vindo do one-pager e as cadências do pico. Salvo como `design/08-prototipo.html`."},
-    {"id": "A28ArtefatosDesign", "name": "28 · Artefatos e links (determinístico)", "icon": "🔗", "output_key": "stitch_links", "prompt_file": None, "description": "Separa o HTML do protótipo do relatório, colhe os links das telas no Stitch e monta a folha de diagramas."},
-    {"id": "A29QaEntregaveis", "name": "29 · QA de entregáveis", "icon": "🧪", "output_key": "qa_entregaveis_report", "prompt_file": "design/29_qa_entregaveis.md", "description": "Fidelidade à spec, diff de strings, currículo, faixa, fluxo, professor, briefing, ambiente (D8) e CAA (D8b)."},
-    {"id": "A30QaEntregaveisCheck", "name": "30 · Veredito de design (determinístico)", "icon": "🔀", "output_key": "design_status", "prompt_file": None, "description": "Lê o envelope do QA de entregáveis."},
-    {"id": "A31DespachoDesign", "name": "31 · Retrabalho de design (determinístico)", "icon": "🔁", "output_key": "tickets_retrabalho", "prompt_file": None, "description": "Reexecuta só os agentes com ticket do QA, na ordem de precedência do prompt, e refaz o protótipo depois."},
+    {"id": "A17FechaLacunas", "name": "17 · Fechamento de lacunas", "icon": "🧩", "output_key": "fechamento_lacunas", "prompt_file": "design/17_fechamento_lacunas.md", "description": "Varredura da spec célula a célula, decisões [D0-n] com base declarada, pedidos de re-spec [RS-n], spec consolidada (bloco 13) e relatório de preenchimento."},
+    {"id": "A18FechaLacunasSplit", "name": "18 · Relatório de lacunas + spec consolidada (determinístico)", "icon": "✂️", "output_key": "relatorio_lacunas", "prompt_file": None, "description": "Copia a spec consolidada para `spec_missao` (original preservada em `spec_missao_gate0`), separa o relatório e registra `lacunas_status`."},
+    {"id": "A19AmbienteSimulado", "name": "19 · Ambiente simulado", "icon": "🏝️", "output_key": "ambiente_simulado", "prompt_file": "design/19_ambiente_simulado.md", "description": "Condicional: decide o ambiente (app clonado existente, app novo ou mini-jogo) quando a spec cala; dormente emite só a ficha do bloco 14 que D1, D2, D4, D5 e o QA consomem."},
+    {"id": "A20AmbienteSimuladoSplit", "name": "20 · Spec com bloco 14 (determinístico)", "icon": "✂️", "output_key": "ambiente_status", "prompt_file": None, "description": "Copia a spec com o bloco 14 para `spec_missao` e registra `ambiente_status`."},
+    {"id": "A21BriefOficio", "name": "21 · Briefing de ofício", "icon": "🎯", "output_key": "brief_oficio", "prompt_file": "design/21_brief_oficio.md", "description": "Aposta, forma do arco, pico, beat memorável, mapa de beats, não-negociáveis."},
+    {"id": "A22Jornada", "name": "22 · Jornada (Mermaid)", "icon": "🗺️", "output_key": "jornada_telas", "prompt_file": "design/22_jornada.md", "description": "Raias × 6 etapas, cenários de dispositivo, inventário de telas e direção por tela."},
+    {"id": "A23Fluxo", "name": "23 · Fluxo de telas (Mermaid)", "icon": "🕸️", "output_key": "fluxo_arestas", "prompt_file": "design/23_fluxo.md", "description": "Grafo de telas com condições, gates e os 5 testes de fluxo."},
+    {"id": "A24CopyPtBr", "name": "24 · Copy PT-BR (passada 1)", "icon": "✍️", "output_key": "copy_strings", "prompt_file": "design/24_copy_ptbr.md", "description": "Sheet de strings por tela, calibrado à faixa etária."},
+    {"id": "A25Caa", "name": "25 · Camada CAA", "icon": "🔣", "output_key": "camada_caa", "prompt_file": "design/25_caa.md", "description": "Símbolos, modos de resposta alternativos e pranchas; só roda quando a faixa ou a spec pedem."},
+    {"id": "A26Telas", "name": "26 · Wireframes lo-fi (Stitch)", "icon": "📐", "output_key": "wireframes_cobertura", "prompt_file": "design/26_telas.md", "description": "Telas em escala de cinza sobre a seção do DS do ambiente."},
+    {"id": "A27CopyRevisao", "name": "27 · Copy PT-BR (passada 2)", "icon": "🔍", "output_key": "copy_strings_revisada", "prompt_file": "design/27_copy_revisao.md", "description": "Revisão em contexto de tela."},
+    {"id": "A28Prototipo", "name": "28 · Protótipo navegável (HTML)", "icon": "🖥️", "output_key": "prototipo_html", "prompt_file": "design/28_prototipo.md", "description": "Arquivo HTML único e sem dependências com as telas navegáveis, o painel da etapa vindo do one-pager e as cadências do pico. Salvo como `design/08-prototipo.html`."},
+    {"id": "A29ArtefatosDesign", "name": "29 · Artefatos e links (determinístico)", "icon": "🔗", "output_key": "stitch_links", "prompt_file": None, "description": "Separa o HTML do protótipo do relatório, colhe os links das telas no Stitch e monta a folha de diagramas."},
+    {"id": "A30QaEntregaveis", "name": "30 · QA de entregáveis", "icon": "🧪", "output_key": "qa_entregaveis_report", "prompt_file": "design/30_qa_entregaveis.md", "description": "Fidelidade à spec, diff de strings, currículo, faixa, fluxo, professor, briefing, ambiente (D8) e CAA (D8b)."},
+    {"id": "A31QaEntregaveisCheck", "name": "31 · Veredito de design (determinístico)", "icon": "🔀", "output_key": "design_status", "prompt_file": None, "description": "Lê o envelope do QA de entregáveis."},
+    {"id": "A32DespachoDesign", "name": "32 · Retrabalho de design (determinístico)", "icon": "🔁", "output_key": "tickets_retrabalho", "prompt_file": None, "description": "Reexecuta só os agentes com ticket do QA, na ordem de precedência do prompt, e refaz o protótipo depois."},
 ]

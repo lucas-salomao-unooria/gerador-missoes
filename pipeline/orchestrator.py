@@ -6,7 +6,7 @@
     ├── ProdutoStage   (SequentialAgent)  one-pager → gate estrutural (loop) → avaliações (paralelo) → gate final → spec
     ├── DesignStage    (SequentialAgent)  briefing → jornada 🎨 → fluxo 🎨 → copy → wireframes 🎨 → copy 2 → QA
     ├── DevStage       (SequentialAgent)  handoff ∥ assets → banca (5 ∥) → consolidação → PRD
-    └── A50Aprendizado (transversal)
+    └── A51Aprendizado (transversal)
 
 Controle de fluxo determinístico: os `EnvelopeGateAgent` leem o envelope JSON dos
 relatórios e gravam o status no `session.state`; os agentes a jusante carregam o

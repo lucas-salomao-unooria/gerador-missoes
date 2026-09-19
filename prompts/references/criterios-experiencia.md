@@ -12,45 +12,40 @@ Ver `literatura-cognitiva.md` para a fundamentação de cada cap numérico e a c
 |#|Critério|Tipo|Teste prático|
 |-|-|-|-|
 |3.4|**Pensamento crítico, não lição de moral** — A ação exercita análise/curadoria/criação, não obediência a mensagem pré-definida|Desejável|O estudante sai com uma pergunta ou com resposta pronta? Se resposta pronta → ⚠️.|
-|3.5|**Carga decisória calibrada à faixa (comparação simultânea + volume sequencial)** — Ver sub-faixas abaixo|Obrigatório|Dois testes distintos, aplicados juntos: comparação simultânea (quantas opções numa única decisão) e volume sequencial (quantas decisões do mesmo tipo, somando toda a missão).|
+|3.5|**Carga decisória calibrada à faixa** — quantas opções o estudante compara ao mesmo tempo numa decisão|Obrigatório|**Os tetos por ano vivem em `literatura-cognitiva.md` §1 — não repita número aqui.** Resumo: 2 no 1º-2º · 3 no 3º-5º · 3-4 no 6º-9º · 4 no EM. **Opção visível não é opção lembrada:** se todas as alternativas ficam na tela enquanto ele decide, o gargalo é atenção e não memória, e o teto sobe +1; se ele precisa lembrar de opção que saiu da tela, vale o teto puro. A base é span complexo de memória de trabalho (Gathercole 2004 convertido por Cowan 2016), **não** choice overload — esse efeito não replicou e aponta na direção contrária (ver §7 do mesmo arquivo).|
 |3.6|**Tamanho do banco ou ritmo de investigação progressiva** — Explorar um banco maior ou coletar informação sob demanda no próprio ritmo, antes de decisão final entre poucas opções, não é sobrecarga por si só|Desejável|O estudante explora/coleta no próprio ritmo antes de decidir, ou precisa avaliar tudo de uma vez? Coleta livre e sequencial não é violação — o que importa é a decisão final ser entre um número gerenciável de opções, não quantos dados foram consultados no caminho.|
 
-### 3.5 — Detalhamento por sub-faixa (v1.15)
+### 3.5 — de onde vêm os tetos
 
-**Teste de comparação simultânea** (quantas opções o estudante compara lado a lado numa única decisão):
+A tabela por ano está em **`references/literatura-cognitiva.md` §1**, que é a fonte única. Ela existe
+para que dois avaliadores não citem números diferentes sobre a mesma tela.
 
-| Faixa | Opções por decisão | Decisões significativas | Fundamentação |
-|---|:-:|:-:|---|
-| 1º-2º EF | ≤ 2 opções | 1 decisão | Pascual-Leone: M-capacity ~2-3 unidades aos 6-7 anos |
-| 3º-5º EF | ≤ 2-3 opções | 1-2 decisões | Pascual-Leone: M-capacity ~3-4 unidades aos 8-10 anos |
-| Anos finais (6º-9º EF) | ≤ 3-4 opções | 2-3 decisões | Pascual-Leone: M-capacity ~4-6 unidades; Gathercole: memória de trabalho já modularmente madura |
-| Ensino Médio | ≤ 4-5 opções | 3-4 decisões | Pascual-Leone: M-capacity ~6-7 (próxima do teto adulto); Cowan: teto adulto ~4 (âncora de referência) |
+O que mudou na revisão de setembro de 2026, e importa na hora de aplicar:
 
-Não se aplica a bancos de conteúdo navegados em ritmo próprio (ver 3.6).
+- **O Ensino Médio caiu de 4-5 para 4.** Aos 16 anos a capacidade visual de trabalho medida é 2,72,
+  ainda abaixo do adulto (3,16) — tratar o EM como capacidade adulta superestimava.
+- **Opção visível ≠ opção lembrada** (+1 quando tudo fica na tela).
+- **O teste de volume sequencial virou desejável.** Ele era atribuído a *decision fatigue*, que não
+  sobreviveu à replicação. Missão com muitas decisões repetidas continua sendo sinal, mas por
+  **monotonia** — argumento de design instrucional, não de esgotamento medido. Registre como ⚠️, e
+  prefira apontar falta de variedade de tarefa a citar fadiga.
 
-**Teste de volume sequencial** (quando a missão pede o mesmo tipo de decisão repetidamente — salvar/pular, classificar, aprovar/rejeitar):
-
-| Faixa | Cap de decisões do mesmo tipo | Fundamentação |
-|---|:-:|---|
-| 1º-2º EF | ≤ 4-5 decisões | Extrapolação de decision fatigue + M-capacity mais baixa (ver literatura-cognitiva.md — número não é medição pediátrica direta) |
-| 3º-5º EF | ≤ 5-6 decisões | Idem |
-| Anos finais (6º-9º EF) | ≤ 8-10 decisões | Idem, calibrado pra cima com maturidade de autorregulação |
-| Ensino Médio | ≤ 12-15 decisões | Idem, mais próximo de capacidade adulta de sustentar atenção repetida |
-
-**3.6 protege volume de exploração** (quantos itens o estudante pode ver), não volume de decisão (quantos ele precisa julgar). Se o estudante vê 10 itens mas decide sobre 3, o volume de decisão é 3.
+**3.6 continua valendo e protege o volume de exploração**, não o de decisão: o estudante pode ver
+dez itens e decidir sobre três — o volume de decisão é três.
 
 ### Falso-negativo frequente em 3.5:
-Missão usa feed/banco onde o estudante faz a mesma decisão binária item a item (salvar/pular, real/falso) e o teste de comparação simultânea passa (cada decisão é individual, ≤ 2-3 opções). Mas o volume total de decisões do mesmo tipo, somando todas as etapas, excede o cap da faixa. **Aplicar sempre os dois testes — comparação simultânea sozinho não basta.**
+A missão usa feed ou banco em que o estudante repete a mesma decisão binária item a item
+(salvar/pular, real/falso). Cada decisão passa no teto de comparação, mas a missão inteira vira uma
+sequência monótona. Aponte pela variedade da tarefa, não pelo número.
 
----
 
 ## 6. ADEQUAÇÃO ETÁRIA
 
 |#|Critério|Tipo|Teste prático|
 |-|-|-|-|
-|6.1|**Linguagem adequada** — Vocabulário e extensão dos textos compatíveis com a faixa|Obrigatório|Um estudante mediano daquele ano consegue ler e entender sem ajuda do professor? **Sub-critério 1º-2º EF (v1.15) — teste de canal de áudio:** para essa faixa, o one-pager precisa declarar que todos os textos voltados ao estudante são narrados em áudio (autoplay) — texto na tela é reforço visual, não o canal principal. Labels curtas com ícone (ex: "Curtir", "Salvar") não exigem narração. Sem essa declaração, ⚠️ mesmo que o vocabulário em si esteja adequado — a fundamentação é que crianças de 6-7 anos ainda estão consolidando leitura fluente (Piaget: fase inicial do operacional concreto; a decodificação de texto ainda compete com a atenção disponível pra decisão).|
-|6.2|**Duração e ritmo dos atos calibrados (teto, piso e espera)** — Nenhum ato ultrapassa o limite de atenção, há tempo real para completar com qualidade e handoffs coletivos não criam espera passiva longa.|Obrigatório|**Teto** — Anos iniciais: ≤ 12 min. Anos finais: ≤ 15 min. EM: ≤ 20 min. **Piso** — considerar consumo + navegação + negociação em grupo, não só duração teórica. **Espera:** se o estudante termina antes do handoff, há ação útil coerente (revisar, explorar, preparar evidência) sem liberar a virada antecipadamente? Espera passiva significativa sem função → ⚠️ ou ❌ conforme duração/impacto.|
-|6.3|**Complexidade da decisão adequada** — Desafiadora mas acessível ao desenvolvimento cognitivo do ano, considerando tipo de raciocínio, número de etapas cognitivas E contexto real de uso|Obrigatório|**Teste de abstração:** a decisão exige raciocínio abstrato em anos iniciais? Se sim → ❌ (precisa ser mais concreta — ver Piaget em literatura-cognitiva.md). **Teste de demanda metacognitiva:** a decisão exige ferramenta de verificação/investigação (consultar pista, checar fonte, comparar dados) antes de decidir? Se sim, contar etapas: (a) observar, (b) investigar/verificar, (c) decidir. **Anos iniciais:** máximo 2 etapas sem scaffolding (observar → decidir). 3 etapas exigem scaffolding explícito (instrução visual do gesto/ferramenta no primeiro uso, removida depois). Sem scaffolding → ⚠️ (a maioria pula a investigação e decide direto). **Anos finais e EM:** 3 etapas acessíveis sem scaffolding. **Teste de cenário real:** a complexidade foi calibrada para o cenário ideal (estudante familiarizado com a plataforma, dispositivo 1:1, atenção plena) ou para o cenário de piso (escola pública brasileira, estudante que pode não ter familiaridade com a plataforma simulada, pode não ter dispositivo próprio, pode não entender instruções implícitas)? O cenário de teste é o piso, não o ideal. Missão que só funciona no cenário perfeito → ⚠️.|
+|6.1|**Linguagem adequada** — Vocabulário e extensão dos textos compatíveis com a faixa|Obrigatório|Um estudante mediano daquele ano consegue ler e entender sem ajuda do professor? **Sub-critério 1º-2º EF — canal de áudio:** o one-pager precisa declarar que todo texto voltado ao estudante é narrado (autoplay), porque nessa idade decodificar é em si uma tarefa cara e o áudio a descarrega. Três condições, sem as quais a narração deixa de ajudar e passa a atrapalhar: **(a)** nada de animação ou vídeo concorrente disputando o olhar durante a narração; **(b)** segmentos curtos; **(c)** replay sob controle do estudante. Labels curtas com ícone não exigem narração. **A partir do 3º ano a narração obrigatória sai** — scaffolding que não é removido vira ruído para quem já lê (*expertise reversal*). Fundamentação em `literatura-cognitiva.md` §5.|
+|6.2|**Duração e ritmo (teto por ato, teto da missão, piso, espera e formato)**|Obrigatório|**Teto por ato** — 1º-2º: ≤ 6-8 min · 3º-5º: ≤ 8-10 · 6º-9º: ≤ 10-12 · EM: ≤ 12-15. **Teto da missão inteira:** ≤ 25 min de tempo-aluno em aula de 50 min, ≤ 20 min em aula de 45 — **some os atos e confira**; no Brasil só 64% do tempo de aula é atividade acadêmica, e ainda saem instrução inicial e distribuição de dispositivo. **Formato:** atividade de turma inteira sustenta menos atenção que individual ou pequeno grupo — ato longo em formato coletivo é ⚠️ mesmo dentro do teto. **Piso:** considerar consumo, navegação e negociação em grupo, não só duração teórica. **Espera:** quem termina antes do handoff tem ação útil, sem liberar a virada? E quem lê mais devagar consegue concluir, ou o ritmo é único? Fundamentação em `literatura-cognitiva.md` §3.|
+|6.3|**Complexidade da decisão adequada** — tipo de raciocínio, etapas cognitivas e contexto real de uso|Obrigatório|**Teste do objeto:** o que a decisão pede que o estudante entenda é visível, ou é um sistema que ele não vê (algoritmo, viés, intenção de terceiro)? Para sistema invisível valem as três portas de `literatura-cognitiva.md` §4 — **descrever** o comportamento a partir dos 8 anos, **explicar** o mecanismo aos 10-11, **criticar** a intenção aos 12-13 com apoio. Pedir crítica autônoma antes disso é ❌. **Teste de demanda metacognitiva:** exige ferramenta de verificação antes de decidir? Conte as etapas — observar, investigar, decidir. **Anos iniciais:** máximo 2 etapas sem scaffolding; 3 exigem andaime explícito no primeiro uso, **removido depois**. Sem scaffolding → ⚠️. **Anos finais e EM:** 3 etapas sem andaime. **Teste de cenário real:** calibrada para o cenário de piso da escola pública (§6) ou para o ideal? Só funciona no ideal → ⚠️.|
 |6.4|**Dentro dos 6 ambientes suportados, a escolha é onde o estudante daquela idade realmente faz aquilo**|Obrigatório|Para a atividade simulada (consumir, postar, conversar, pesquisar, jogar), qual dos 6 ambientes um estudante mediano daquele ano usaria de fato? Se o ambiente escolhido não é o mais plausível pra atividade/idade, ⚠️ ou ❌ conforme o quão forçado for o encaixe. **Se nenhum dos 6 é realista pra atividade**, sinalizar que a missão precisa mudar de mecanismo, não forçar encaixe fraco.|
 |6.5|**Repertório de ações calibrado à faixa** — Número e variedade de ações compatíveis com a maturidade|**Obrigatório** em anos finais e EM. **Desejável** em anos iniciais.|Um estudante da faixa consegue completar a missão inteira só lendo e escolhendo uma vez, sem repertório mais rico (investigar, comparar, revisar posição, justificar)? Se sim e a missão é de anos finais/EM → ❌ — passa em todos os obrigatórios individualmente mas resolve rápido demais pra maturidade da faixa.|
 

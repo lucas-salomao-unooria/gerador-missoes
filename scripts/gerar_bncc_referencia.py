@@ -51,7 +51,7 @@ def gerar() -> str:
     out.append("---")
     out.append("name: bncc-computacao-letramento-digital")
     out.append(
-        "description: Todas as habilidades da BNCC Computação por ano (Resolução CNE/CEB 1/2022), com eixo e a marca de letramento digital. Fonte única: references/bncc-computacao.json (gerado por scripts/gerar_bncc_referencia.py). Lido pela avaliação pedagógica (5.1/5.2), pela spec (bloco 11) e pelo QA de entregáveis (D2); o gate determinístico A13BnccCheck usa o JSON."
+        "description: Todas as habilidades da BNCC Computação por ano (Resolução CNE/CEB 1/2022), com eixo e a marca de letramento digital. Fonte única: references/bncc-computacao.json (gerado por scripts/gerar_bncc_referencia.py). Lido pela avaliação pedagógica (5.1/5.2), pela spec (bloco 11) e pelo QA de entregáveis (D2); o gate determinístico A14BnccCheck usa o JSON."
     )
     out.append(f"sources: [{fonte['url']}]")
     out.append("---")
@@ -77,7 +77,7 @@ def gerar() -> str:
     )
     out.append("")
     out.append(
-        "Essas três regras são conferidas por um gate **determinístico** (`A13BnccCheck`, depois da spec) que trava a esteira quando falham, e são lidas pelos agentes LLM (avaliação pedagógica 5.1/5.2, spec bloco 11, QA de entregáveis D2) para julgar o que a máquina não julga: se a ação em tela exercita de fato a habilidade."
+        "Essas três regras são conferidas por um gate **determinístico** (`A14BnccCheck`, depois da spec) que trava a esteira quando falham, e são lidas pelos agentes LLM (avaliação pedagógica 5.1/5.2, spec bloco 11, QA de entregáveis D2) para julgar o que a máquina não julga: se a ação em tela exercita de fato a habilidade."
     )
     out.append("")
     out.append("---")

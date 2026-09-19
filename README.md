@@ -39,7 +39,7 @@ Criar uma missão educacional interativa de alta imersão para a plataforma Unoo
 3. **Engenharia de Software & Arquitetura:** modelo de dados em três camadas (Missão, Etapa, Desafio), contratos de API Zod/OpenAPI, protocolo de comunicação iframe via `postMessage`, telemetria operacional/analítica e conformidade estrita com o Art. 14 da LGPD (dados de menores).
 4. **Viabilidade Técnica do Monorepo:** caminhos reais de código em Next.js 16, NestJS, Prisma/PostgreSQL, TypeScript e Docker.
 
-O **Gerador de Missões** automatiza essa cadeia por meio de uma equipe de **50 agentes numerados na ordem de execução**, com **seis ciclos de correção automática**, bifurcações paralelas de validação e *gates* determinísticos sem inferência de LLM. A esteira **não aborta** quando um portão reprova: segue até o fim, marca como `[PROVISÓRIO]` o que derivou da parte reprovada e fecha com um diagnóstico do que travou e de quem é cada conserto.
+O **Gerador de Missões** automatiza essa cadeia por meio de uma equipe de **54 agentes numerados na ordem de execução**, com **sete ciclos de correção automática**, bifurcações paralelas de validação e *gates* determinísticos sem inferência de LLM. A esteira **não aborta** quando um portão reprova: segue até o fim, marca como `[PROVISÓRIO]` o que derivou da parte reprovada e fecha com um diagnóstico do que travou e de quem é cada conserto.
 
 ```
 Briefing / Ideia (+ PDF / DOCX)

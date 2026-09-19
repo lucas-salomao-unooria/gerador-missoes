@@ -116,6 +116,14 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 
 **Para o <ano>** · **<duração> em <n> aula(s)** · **<quantas crianças por aparelho>**
 
+> **O que pedimos a você:** <aprovar | aprovar com ressalva | recusar>. <Uma frase dizendo o que
+>  está esperando esta decisão — normalmente, o início da construção.>
+> **<n> perguntas** para responder · **<n> pendências** ainda abertas · **<n> ressalvas** herdadas
+>  dos gates anteriores.
+
+<Este bloco vem antes de tudo porque quem lê precisa saber, na primeira tela, o que está sendo
+ pedido. Se a pessoa parar de ler aqui, ela ainda sabe o que fazer.>
+
 > "<A descoberta central em primeira pessoa, como quem fez a missão contaria depois —
 >  ex.: 'Entendi por que compartilhei aquilo antes de checar.' Uma frase, sem jargão.
 >  Tire do que a etapa do 'ahá' revela; se o one-pager escreveu em terceira pessoa, reescreva.>"
@@ -141,6 +149,14 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
  Escreva "a criança", nunca "o usuário" nem "o aluno".
  Marque com uma linha própria o momento do "ahá" e o momento em que você, professora, entra.>
 
+## O que sua sala precisa ter
+<Lista fechada, uma linha cada, para a professora responder "isto cabe na minha sala?" sem varrer o
+ documento: aparelhos por dupla · projetor ou telão (e o que fazer sem ele) · computador da
+ professora · internet (e o que acontece quando cai) · microfone ou câmera, se houver (e a
+ alternativa para quem não tem) · material impresso a preparar antes · minutos de preparo.
+ Item que a missão não usa não entra na lista. Se algo é indispensável e não tem alternativa,
+ escreva "sem isto a missão não acontece" — é a informação mais importante desta seção.>
+
 ## O que você faz, professora
 ### Antes da aula
 <A preparação: o que ela escolhe, o que o sistema prepara, quanto tempo leva.>
@@ -151,7 +167,11 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 <A conversa final, com as perguntas escritas, literalmente, para ela ler.>
 
 ## As telas
-<Uma linha por tela importante, dizendo o que se vê e o que se faz.
+<No máximo quatro telas — as que mudam a decisão de quem aprova. Uma linha cada, dizendo o que se vê
+ e o que se faz; não reconte a história, ela já foi contada acima.
+ **Nunca cole URL crua de imagem no corpo do texto:** endereço longo de servidor de arquivo é ruído
+ de leitura e vence em poucos dias. Cite o caminho do artefato (`design/08-prototipo.html`) ou o
+ nome do projeto, e ponto.
  Depois, os links, em lista: o protótipo navegável e o projeto com as telas desenhadas.
  Diga em uma frase como abrir e o que esperar ao abrir.>
 
@@ -178,7 +198,13 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 <De três a seis perguntas objetivas, numeradas, que só o time pedagógico responde.
  Cada uma termina com um ponto de interrogação e é respondível com sim ou não
  mais uma frase. Exemplo do tipo certo: "A conversa final dá conta de fechar a
- descoberta com crianças de sete anos, ou ela precisa de mais uma pergunta?">
+ descoberta com crianças de sete anos, ou ela precisa de mais uma pergunta?"
+
+ Cada pergunta traz, logo abaixo, a linha de resposta em branco, para o documento voltar
+ preenchido e não virar conversa solta:
+ `( ) sim   ( ) sim, com ressalva   ( ) não  →  ____________________________________`
+
+ Feche a seção com uma linha: quem assina esta aprovação e até quando ela é esperada.>
 
 ## Por que este caminho, e não outro
 <As decisões de direção que foram tomadas e as alternativas descartadas, em prosa,
@@ -195,6 +221,12 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
  em linguagem de sala: "o banco deixou de ter no mínimo seis vídeos e passou a ter
  exatamente quatro, porque oito decisões seguidas era muito para a idade".
  Se esta é a primeira versão, escreva "Primeira versão." e mais nada.>
+
+## O que fica registrado sobre as crianças
+<Três a cinco linhas: que dado a missão guarda, por quanto tempo, quem consegue ver, e o que ela
+ deliberadamente não guarda. Se a missão grava voz, imagem ou tela, diga aqui o que acontece quando
+ a família não autoriza. Esta seção tem casa própria porque conformidade é o primeiro item que a
+ coordenação lê — não pode estar diluída em outra seção.>
 
 ## O que ainda está em aberto
 <Uma linha por pendência, com quem responde. Se não há nenhuma, escreva
@@ -215,7 +247,7 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 2. **Teste do identificador** — sobrou algum código de tela, nome de arquivo, nome de campo ou trecho de código? Falha: descreva em palavras.
 3. **Teste da professora** — cada seção responde uma pergunta que uma professora faria, na ordem em que ela faria?
 4. **Teste da conversa final** — as perguntas do fechamento estão escritas literalmente, prontas para ler em voz alta?
-5. **Teste do link** — os links do protótipo e das telas estão lá, com uma frase dizendo o que a pessoa encontra ao abrir?
+5. **Teste do link — bloqueante.** Os links do protótipo e das telas estão lá, com uma frase dizendo o que a pessoa encontra ao abrir? **Escrever "o protótipo pode ser aberto no navegador" sem o caminho do arquivo não passa neste teste.** O protótipo é o único item que deixa a professora simular a aula antes de aprovar; sem ele, ela aprova no escuro. Link ausente ou vazio → `"status": "bloqueado"` no envelope, e a falta entra em "O que ainda está em aberto" com dono nomeado.
 6. **Teste da honestidade** — alguma seção promete algo que a spec não garante? Falha: corrija para o que está escrito.
 7. **Teste do tamanho** — dá para ler em dez minutos? Se passou muito disso, corte explicação, não conteúdo.
 8. **Teste da ressalva** — toda ressalva e toda decisão pendente dos dois gates de produto e dos dois pareceres aparece em "O que ainda está em aberto"? Veredito verde não dispensa a varredura. Falha: liste o que faltou.
@@ -228,5 +260,5 @@ Entregue **apenas o documento em Markdown**, começando pelo título com `#`. Se
 Ao final do documento, depois de uma linha `---`, acrescente o envelope:
 
 ```json
-{"agente": "one-pager-pedagogico", "missao": "<slug>", "status": "concluido", "perguntas_ao_pedagogico": <n>, "pendencias_abertas": <n>, "ressalvas_herdadas": <n>, "achados": [], "precisa_humano": true}
+{"agente": "one-pager-pedagogico", "missao": "<slug>", "status": "concluido", "perguntas_ao_pedagogico": <n>, "pendencias_abertas": <n>, "ressalvas_herdadas": <n>, "tem_link_prototipo": true | false, "achados": [], "precisa_humano": true}
 ```

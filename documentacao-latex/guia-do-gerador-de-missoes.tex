@@ -63,8 +63,8 @@
 \begin{abstract}
 \noindent
 O gerador transforma uma ideia de missão em um \textbf{PRD pronto para codificação} e um
-\textbf{one-pager que o time pedagógico aprova}, passando por 50 agentes organizados em três
-etapas e seis ciclos de correção automática. Este guia é para quem vai \emph{usar} a
+\textbf{one-pager que o time pedagógico aprova}, passando por 54 agentes organizados em três
+etapas e sete ciclos de correção automática. Este guia é para quem vai \emph{usar} a
 ferramenta: explica o que colocar na entrada, o que cada etapa faz, como ler o diagnóstico
 quando algo trava, e por que o sistema foi desenhado desta forma e não como um único
 prompt grande. A Seção~\ref{sec:entrada} --- com exemplos de briefing bom e ruim --- é a que
@@ -229,7 +229,7 @@ código curricular e de contexto: a esteira lê os códigos da BNCC dali e os co
 anexo oficial do MEC~\cite{cne2022}. Dois parágrafos de material real valem mais que uma
 página de descrição.
 
-\section{Por que 50 agentes, e não um prompt grande}
+\section{Por que muitos agentes, e não um prompt grande}
 
 A pergunta aparece sempre, e a resposta não é ``porque especialização é boa''.
 
@@ -317,17 +317,17 @@ contratos de interface. Por isso cada fronteira aqui tem envelope JSON verificad
 \node[font=\scriptsize\bfseries, text=azul, above=0.05cm of d1, xshift=0.1cm] {DESIGN};
 \node[font=\scriptsize\bfseries, text=ambar, above=0.05cm of v1] {DEV};
 \end{tikzpicture}
-\captionof{figure}{Os 50 agentes, numerados na ordem de execução}
+\captionof{figure}{Os agentes da esteira, numerados na ordem de execução}
 \end{center}
 
-\subsection{Produto (01--15): a missão pode ser construída?}
+\subsection{Produto (01--16): a missão pode ser construída?}
 
 Decide \emph{o que} a missão é. Começa pelo núcleo narrativo, passa por um micro-portão que
 caça \emph{spoiler} e ausência de escolha significativa, completa o one-pager de 18 seções,
 submete tudo aos 23 critérios do gate estrutural, avalia currículo e faixa etária em paralelo,
 e fecha com a \textbf{spec} --- o contrato de 12 blocos contra o qual Design e Dev constroem.
 
-\subsection{Design (16--31): como isso se constrói}
+\subsection{Design (17--32): como isso se constrói}
 
 Fecha as lacunas da spec, decide o ambiente simulado, escreve o briefing de ofício, e então
 constrói: jornada e fluxo em \textbf{diagramas Mermaid}, copy em duas passadas, camada de
@@ -341,19 +341,19 @@ saem em Mermaid, as telas saem no Stitch e como especificação em Markdown, e o
 é o protótipo HTML.
 \end{quote}
 
-\subsection{Dev (32--48): isso é implementável?}
+\subsection{Dev (33--49): isso é implementável?}
 
 Confere a ficha do manifesto, produz o handoff e o brief de assets, valida o contrato de
 telemetria, e submete tudo a uma banca de cinco dimensões em paralelo --- produto, design,
 pedagogia, dados/LGPD e arquitetura. Consolida, escreve o PRD e, por último, o one-pager
 pedagógico.
 
-\subsection{Transversal (49--50): o que aconteceu}
+\subsection{Transversal (50--51): o que aconteceu}
 
 O diagnóstico determinístico monta o dossiê a partir dos envelopes que os portões gravaram; o
 agente de aprendizado escreve a leitura em prosa e registra o que a execução ensinou.
 
-\section{Os seis ciclos de correção}
+\section{Os sete ciclos de correção}
 
 Quando um portão reprova, quem decide repetir é o \textbf{orquestrador}, em código --- não uma
 instrução em linguagem natural dentro do prompt, que o modelo pode ou não seguir.
@@ -369,7 +369,7 @@ instrução em linguagem natural dentro do prompt, que o modelo pode ou não seg
 \draw[seta] (g.north) to[out=45,in=135] node[font=\scriptsize, above] {aprova} (s.north);
 \draw[setavolta] (r.south) to[out=-90,in=-90] node[font=\scriptsize, below, text=ambar] {reavalia (teto de rodadas)} (g.south);
 \end{tikzpicture}
-\captionof{figure}{O padrão comum aos seis ciclos: quem julga não conserta, quem conserta não julga}
+\captionof{figure}{O padrão comum aos sete ciclos: quem julga não conserta, quem conserta não julga}
 \end{center}
 
 \begin{center}
@@ -389,6 +389,8 @@ QA de design & 29 $\rightarrow$ dono do ticket & Cada achado tem dono declarado;
 Handoff & telemetria $\rightarrow$ 33 & Contrato de eventos, papéis, canal de sala. O mais barato: a correção vem escrita na mensagem do portão. \\
 \addlinespace
 Banca & banca $\rightarrow$ dono do achado & Inclui donos da \emph{etapa anterior}: um erro de jornada detectado em Dev volta para o agente de jornada. \\
+\addlinespace
+PRD & 48 $\rightarrow$ 47 redator & Consistência interna do entregável final: prefixo de tabela, caminho do módulo, requisito P0 sem rastro, evento sem tabela leitora, tarefa não atômica, identificador inválido. \\
 \bottomrule
 \end{longtable}
 \end{center}
@@ -426,7 +428,10 @@ QA de design (29) & rubrica & Construção infiel à spec; diagrama ausente ou i
 Telemetria (35) & \textbf{código} & Evento fora do contrato real da API. \\
 Rastro de lacunas (37) & \textbf{código} & Marcadores de lacuna abertos nos documentos. \\
 Banca (38--44) & rubrica & Qualquer um dos critérios bloqueantes das cinco dimensões. \\
-Pendências do PRD (47) & \textbf{código} & Marcadores que o redator deixou por falta de informação. \\
+Pendências e consistência do PRD (48) & \textbf{código} & Marcadores que o redator deixou por falta de
+informação; e o documento se contradizendo: dois caminhos para o mesmo módulo, prefixo de tabela fora do
+padrão, requisito P0 sem teste nem tarefa, evento sem tabela leitora, tarefa que cobre tudo, identificador
+inválido em código. Reprovado, devolve ao redator (48b). \\
 \bottomrule
 \end{longtable}
 \end{center}
@@ -450,6 +455,11 @@ O \cod{diagnostico-execucao.md} é o primeiro arquivo a abrir. Ele tem sempre a 
 Regra prática: \Vermelho{impedimento} é o que impede construir; \Ambar{ressalva} é risco
 aceito e registrado; \textbf{decisão humana} é o que a esteira não tem autoridade para
 resolver --- escolha de produto, licença de imagem, validação pedagógica.
+
+\section{A régua por idade}
+\label{sec:regua}
+
+Os tetos que a esteira aplica — quantas opções o estudante compara numa decisão, quanto dura cada ato, o que se pode pedir que ele entenda — vivem num arquivo só: \cod{prompts/references/literatura-cognitiva.md}. Nenhum agente carrega régua própria, e cada número lá é marcado como \textbf{dado direto}, \textbf{extrapolação} ou \textbf{convenção}. A Seção~\ref{sec:fundamentacao} mostra em que cada agente se apoia, e o que mudou na última revisão.
 
 \section{O identificador da missão}
 \label{sec:id}
@@ -486,6 +496,7 @@ formato antigo \cod{exp-NN-<slug>}.
 \cod{QA\_DESIGN\_MAX\_RODADAS} & 2 & Ciclo QA $\leftrightarrow$ retrabalho de design. \\
 \cod{HANDOFF\_MAX\_RODADAS} & 2 & Ciclo handoff $\leftrightarrow$ telemetria. \\
 \cod{BANCA\_MAX\_RODADAS} & 2 & Ciclo banca $\leftrightarrow$ dono do achado. \\
+\cod{PRD\_MAX\_RODADAS} & 2 & Ciclo redator do PRD $\leftrightarrow$ consistência do documento. \\
 \cod{ORCAMENTO\_REEXECUCOES} & 8 & Teto global de agentes reexecutados. \\
 \cod{ESTEIRA\_ESTRITA} & true & Reprovação marca herança degradada e o PRD sai 🔴; desligado, vira ressalva. \\
 \cod{PIPELINE\_STAGES} & todas & Permite rodar só uma etapa, sobre um estado salvo. \\
@@ -505,6 +516,389 @@ Qualquer teto em 1 desliga o ciclo correspondente: a esteira avalia e reporta, s
   \item[Rode uma etapa isolada quando estiver iterando.] \cod{PIPELINE\_STAGES} sobre um estado
   salvo custa minutos em vez de uma execução inteira, e a entrada fica fixa entre tentativas.
 \end{description}
+
+
+\section{Os agentes, um a um: o que fazem e em que se apoiam}
+\label{sec:fundamentacao}
+
+Esta seção existe por uma razão específica: uma rubrica que não diz de onde tira os números acaba
+defendida por antiguidade. Cada agente aparece aqui com o que faz, a regra que aplica e a natureza
+da fundamentação dessa regra. São três naturezas, e confundi-las é o erro que esta revisão veio
+corrigir:
+
+\begin{description}[leftmargin=1.2cm,style=nextline,itemsep=2pt]
+  \item[Evidência] a regra deriva de pesquisa publicada, com citação. Marcada aqui com a fonte.
+  \item[Contrato] a regra deriva de um documento normativo --- a BNCC, a LGPD, o manifesto da
+  plataforma. Não é teoria e não se pesquisa: se confere contra o documento.
+  \item[Convenção] a equipe escolheu por consistência de produto, sem base empírica. É legítimo,
+  desde que declarado. O que não é legítimo é convenção apresentada como achado.
+\end{description}
+
+\subsection{Produto (01--16)}
+
+\begin{center}
+\begin{longtable}{p{2.5cm}p{5.4cm}p{6.6cm}}
+\toprule
+\textbf{Agente} & \textbf{O que faz} & \textbf{Em que se apoia} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Agente} & \textbf{O que faz} & \textbf{Em que se apoia} \\
+\midrule
+\endhead
+01 Núcleo narrativo & Descoberta central, narrativa e o mecanismo das seis etapas &
+\textit{Convenção} --- o framework de seis etapas é desenho de produto da Unooria. A exigência de
+\emph{gap} de informação tem lastro em curiosidade epistêmica: a lacuna percebida entre o que se
+sabe e o que se quer saber é o que move a busca~\cite{loewenstein1994}. \\
+\addlinespace
+02 Micro-gate & Caça \emph{spoiler}, ausência de segredo e escolha sem consequência &
+\textit{Convenção} derivada de 01. A separação entre quem escreve e quem critica reduz
+autopreferência, viés documentado em avaliadores baseados em modelos~\cite{zheng2023b}. \\
+\addlinespace
+04 Seções de apoio & Completa o \emph{one-pager} de 18 seções &
+\textit{Convenção} --- formato de produto. A decomposição em relação a 01 é deliberada: densidade
+de instrução degrada o cumprimento de forma não linear~\cite{ifscale2025b}. \\
+\addlinespace
+05 Gate estrutural & 23 critérios de estrutura, ambiente, logística e viabilidade &
+\textit{Convenção} com dois critérios de \textit{evidência}: o teto de decisões e a duração vêm da
+fonte única (Seção~\ref{sec:regua}). Rubrica analítica com teste prático e contraexemplo é o que
+sustenta concordância entre avaliadores~\cite{jonsson2007b}. \\
+\addlinespace
+07 Revisor & Aplica ao \emph{one-pager} a correção que o gate escreveu &
+\textit{Convenção}. Existe para separar julgar de consertar --- o mesmo motivo de 02. \\
+\addlinespace
+08 Avaliação pedagógica & Currículo, papel do professor e \emph{guardrails} &
+\textit{Contrato}: BNCC Computação, anexo do MEC~\cite{cne2022b}. A regra de que só letramento
+digital bloqueia é decisão de governança do produto, não achado --- e está declarada como tal. \\
+\addlinespace
+09 Experiência do estudante & Carga cognitiva, faixa etária, linguagem e duração &
+\textit{Evidência} --- é o agente mais ancorado da esteira. Capacidade por
+idade~\cite{gathercole2004,cowan2016}; duração e atenção na
+tarefa~\cite{godwin2016,betts2006}; redundância e narração~\cite{moreno2002,kalyuga2003}.
+Todos os números vêm da fonte única. \\
+\addlinespace
+10 Adequação pedagógica & Parecer em seis eixos, com ajustes acionáveis &
+\textit{Evidência} para a demanda cognitiva~\cite{biggs1982} e para o raciocínio sobre sistemas
+invisíveis~\cite{osterhaus2021,starks2024}; \textit{contrato} para a BNCC; \textit{convenção}
+declarada para o placar de 0 a 18. Não carrega régua numérica própria: defere à fonte única. \\
+\addlinespace
+11 Gate final & Coerência entre os pareceres e veredito de release &
+\textit{Convenção}. Existe porque avaliadores paralelos podem julgar versões diferentes do mesmo
+documento --- e isso é falha de sistema multiagente, não de avaliação~\cite{cemri2025b}. \\
+\addlinespace
+13 Spec da missão & Os 12 blocos do contrato de construção &
+\textit{Contrato} --- manifesto da plataforma, RLS, contrato de eventos. Nada aqui é teoria. \\
+\addlinespace
+14 Conformidade BNCC & Código existe, é do ano, e há letramento digital &
+\textit{Contrato}, verificado em código contra o anexo oficial~\cite{cne2022b}. Determinístico de
+propósito: é regra mecânica, e avaliador de modelo tem viés de leniência~\cite{zheng2023b}. \\
+\addlinespace
+15 Ficha do manifesto & Dez campos do bloco 0 contra vocabulário fechado &
+\textit{Contrato} da plataforma. Roda em Produto, não em Dev, porque o conserto ali custa uma
+reescrita da \emph{spec} em vez do descarte do Design inteiro. \\
+\addlinespace
+03 · 06 · 10b · 12 · 16 & Vereditos determinísticos que roteiam o fluxo &
+\textit{Contrato} interno: leem o envelope JSON e decidem repetir, seguir ou parar. Não julgam
+mérito --- é o que permite que a decisão de repetir seja do orquestrador, não do modelo. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\subsection{Design (17--32)}
+
+\begin{center}
+\begin{longtable}{p{2.5cm}p{5.4cm}p{6.6cm}}
+\toprule
+\textbf{Agente} & \textbf{O que faz} & \textbf{Em que se apoia} \\
+\midrule
+\endfirsthead
+17 Fechamento de lacunas & Preenche o que a \emph{spec} não decidiu, com base declarada &
+\textit{Convenção}. Preenche ausência, nunca altera presença --- a regra existe para que o Design
+não redecida produto. \\
+\addlinespace
+19 Ambiente simulado & Decide a casca quando a \emph{spec} cala &
+\textit{Contrato} (lista fechada de cinco seções do \emph{design system}) mais \textit{convenção}
+para o mini-jogo dos anos iniciais. \\
+\addlinespace
+21 Briefing de ofício & Arco, pico e beat memorável &
+\textit{Convenção} de ofício narrativo. É a parte menos fundamentável da esteira, e está declarada
+assim: são heurísticas de dramaturgia, não achados. \\
+\addlinespace
+22 Jornada · 23 Fluxo & Raias por etapa e grafo de estados, em Mermaid &
+\textit{Convenção}. O diagrama existe porque representação externa reduz a carga de manter a
+estrutura na cabeça --- princípio geral de carga cognitiva~\cite{sweller2019}. \\
+\addlinespace
+24 · 27 Copy (duas passadas) & Strings por tela, e revisão dentro da tela construída &
+\textit{Evidência} para a calibragem de linguagem por faixa (fonte única, §5) e
+\textit{convenção} para o formato de duas passadas. \\
+\addlinespace
+25 Camada CAA & Símbolos, modos alternativos de resposta e pranchas &
+\textit{Contrato} de acessibilidade. A regra de que símbolo vem \emph{junto} do texto, nunca no
+lugar dele, é redundância deliberada e benéfica para quem não decodifica~\cite{knoop2018}. \\
+\addlinespace
+26 Telas & Especificação por tela e construção no Stitch &
+\textit{Contrato} (tokens do \emph{design system}) mais \textit{evidência} para o teto de elementos
+novos por tela~\cite{sweller2019}. \\
+\addlinespace
+28 Protótipo & HTML navegável com CSS e JS embutidos &
+\textit{Convenção}. É o artefato que a revisão humana abre; a exigência de arquivo único e offline
+é operacional. \\
+\addlinespace
+30 QA de entregáveis & Audita fidelidade da construção à \emph{spec} &
+\textit{Convenção}, com uma regra de \textit{evidência}: a proibição de reportar número não medido
+(o \emph{diff} de \emph{strings} só conta se foi medido). \\
+\addlinespace
+18 · 20 · 29 · 31 · 32 & Determinísticos de extração, artefato e despacho &
+\textit{Contrato} interno. O despacho de retrabalho reexecuta só quem tem ticket, porque
+redundância com falhas correlacionadas não aumenta cobertura~\cite{knight1986b}. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\subsection{Dev (33--49) e Transversal (50--51)}
+
+\begin{center}
+\begin{longtable}{p{2.5cm}p{5.4cm}p{6.6cm}}
+\toprule
+\textbf{Agente} & \textbf{O que faz} & \textbf{Em que se apoia} \\
+\midrule
+\endfirsthead
+34 Handoff & Traduz a construção em requisito implementável &
+\textit{Contrato} da plataforma: assinatura de evento, papéis, canal de sala. \\
+\addlinespace
+35 Brief de assets & O que produzir, e o que reprova um asset &
+\textit{Convenção} de produção. \\
+\addlinespace
+39--43 Banca (5 dimensões) & Produto, design, pedagogia, dados e arquitetura, em paralelo &
+\textit{Contrato} em quatro das cinco dimensões; \textit{evidência} em pedagogia. A separação em
+cinco existe porque um avaliador único com 70 critérios erra de forma
+sistemática~\cite{ifscale2025b} --- e porque falhas correlacionadas não se
+compensam~\cite{knight1986b}. \\
+\addlinespace
+44 Consolidação & Veredito único a partir das cinco dimensões &
+\textit{Contrato}: regra determinística de bloqueio, sem bom senso. \\
+\addlinespace
+47 PRD & As 25 seções que alimentam quem codifica &
+\textit{Contrato} da plataforma e da LGPD (dado de criança e adolescente). \\
+\addlinespace
+49 One-pager pedagógico & A missão em linguagem de sala de aula, para aprovação humana &
+\textit{Convenção} de comunicação, com uma regra que vale citar: nenhuma ressalva sobrevivente pode
+ser omitida, mesmo com veredito verde. Avaliadores tendem à leniência~\cite{zheng2023b}; a regra
+existe contra isso. \\
+\addlinespace
+36 · 38 · 48 Rastro & Telemetria, lacunas, pendências e consistência interna do PRD, em código &
+\textit{Contrato}. Determinístico porque é comparação literal contra documento. O 48 também confere
+o documento contra si mesmo: um PRD sem lacuna nenhuma ainda faz quem codifica escolher ao acaso se
+nomeia o mesmo diretório de duas formas ou deixa um requisito bloqueante sem tarefa. Reprovado,
+devolve ao redator (48b) em vez de mandar o defeito para uma pessoa resolver. \\
+\addlinespace
+50 Diagnóstico & O dossiê da execução, sem modelo de linguagem &
+\textit{Contrato} interno. Roda sempre, inclusive quando tudo mais falhou --- é a peça que sustenta
+a decisão de não abortar. \\
+\addlinespace
+51 Aprendizado & A leitura em prosa e a memória do processo &
+\textit{Convenção}. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\subsection{Refino dos dois entregáveis finais}
+
+Uma revisão dedicada aos dois documentos que saem no fim --- o \emph{one-pager} pedagógico e o PRD
+--- perguntou o que a literatura recomenda acrescentar. A resposta, nos dois casos, foi a mesma:
+\textbf{nada de conteúdo novo}. Os dois já estão acima da média do gênero. O que faltava era
+\textbf{ordem, navegação e verificação}.
+
+\paragraph{One-pager: o problema era onde as coisas estavam.} A pesquisa sobre adoção de material
+didático converge num ponto: o professor decide por praticidade --- o material diz concretamente o
+que fazer, cabe na turma que ele tem, e compensa o esforço~\cite{doyle1977}. E em adoção de
+tecnologia escolar, a preocupação mais intensa é \emph{operacional}, não teórica~\cite{cbam2015}.
+Três consequências:
+
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+  \item \textbf{A decisão pedida subiu para o topo.} Ela aparecia a 80\% do documento. Quem lê
+  precisa saber na primeira tela o que está sendo pedido; se parar ali, ainda sabe o que fazer.
+  \item \textbf{Entrou ``O que sua sala precisa ter''}, em lista fechada --- aparelhos, projetor,
+  internet, material impresso, minutos de preparo. Antes isso estava disperso em prosa, e era
+  justamente a pergunta que o professor faz primeiro.
+  \item \textbf{As perguntas de aprovação viraram instrumento}, com opção de resposta e assinatura,
+  em vez de convite a opinião livre. Material sem expectativa clara de implementação não é usado.
+\end{itemize}
+
+\noindent
+E um defeito concreto que a execução real expôs: o documento dizia ``o protótipo pode ser aberto no
+navegador'' \emph{sem nenhum endereço}, e o teste que deveria pegar isso não bloqueava. O protótipo é
+o único item que deixa a professora simular a aula antes de aprovar --- o teste passou a ser
+bloqueante. Também saíram as URLs longas de servidor de arquivo coladas no corpo do texto: são
+ruído de leitura e vencem em poucos dias.
+
+\paragraph{PRD: o problema era que nada verificava o que ele afirmava.} Aqui a literatura foi mais
+direta ainda. Especificação bem escrita ajuda pouco; especificação \textbf{verificada contra o
+repositório} ajuda de forma mensurável~\cite{speckit2026}, e o que reduz alucinação em geração de
+código é símbolo e caminho verificáveis, não prosa mais detalhada~\cite{dehallucinator2024}. Somado
+a isso, documento longo não é vantagem: a recuperação piora no meio de contextos
+grandes~\cite{liu2024}.
+
+As 25 seções ficaram como estavam. O que entrou foi um \textbf{gate determinístico de consistência
+interna}, porque o gabarito já exigia essas regras em prosa e ninguém as conferia. Ele barra: mais
+de um prefixo de tabela no mesmo documento; requisito P0 que não aparece na matriz de
+rastreabilidade nem em tarefa; evento declarado com leitura em Pub/Sub em vez de tabela própria;
+tarefa que diz cobrir ``todos os requisitos''; nome de módulo que não é identificador válido; e dois
+caminhos diferentes para o mesmo diretório da experiência.
+
+Nenhum desses é lacuna de informação --- são contradições internas. Um PRD pode não ter marcador de
+pendência nenhum e ainda assim fazer quem codifica escolher um caminho ao acaso, e a partir daí o
+resto do documento deixa de valer contra o que foi escrito.
+
+\subsection{O que mudou nesta revisão, e por quê}
+
+A revisão de setembro de 2026 não ajustou números: trocou a fundamentação de quatro critérios, porque
+a pesquisa mostrou que as fontes citadas não sustentavam o que a rubrica afirmava.
+
+\begin{center}
+\begin{longtable}{p{4.2cm}p{4.6cm}p{5.7cm}}
+\toprule
+\textbf{Mudança} & \textbf{Antes} & \textbf{Por quê} \\
+\midrule
+\endfirsthead
+Teto de opções no Ensino Médio & 4 a 5 opções &
+A capacidade visual de trabalho aos 16 anos é 2,72 itens, ainda abaixo do adulto
+(3,16)~\cite{isbell2015}. Tratar o Médio como capacidade adulta superestimava. \\
+\addlinespace
+Fundamentação do teto de opções & \emph{choice overload} &
+O efeito não replicou (meta-análise de 63 condições, efeito médio nulo), em adultos o ponto de
+inflexão fica entre 12 e 24 opções, e em crianças não apareceu \emph{nem com 53
+opções}~\cite{castelo2023}. O que sustenta os tetos é span complexo de memória de
+trabalho~\cite{gathercole2004,cowan2016} --- outro construto. \\
+\addlinespace
+Volume de decisões & obrigatório, com teto por faixa &
+Vinha de \emph{decision fatigue}, que não sobreviveu à replicação~\cite{hagger2016}. Virou
+desejável e está marcado como convenção; o sinal real é monotonia, não esgotamento. \\
+\addlinespace
+Tetos de duração & 12 / 15 / 20 min &
+Observação de 52 salas mostra queda monotônica com a duração e efeito de série
+equívoco~\cite{godwin2016}: a duração importa mais que a idade. A escala foi achatada. \\
+\addlinespace
+Teto agregado da missão & não existia &
+Três atos no teto antigo somavam mais que uma aula inteira. E só 64\% do tempo de aula é atividade
+acadêmica no Brasil~\cite{bruns2018}. \\
+\addlinespace
+Formato da atividade & ignorado no julgamento de duração &
+Atividade individual ou em pequeno grupo sustenta atenção bem melhor que turma
+inteira~\cite{godwin2016}. \\
+\addlinespace
+Justificativa de abstração & Piaget &
+A parte citada --- idades fixas, sem abstração antes dos 11 --- é justamente a refutada. Substituída
+por ciclos de prioridade cognitiva~\cite{demetriou2022} e pela dependência de
+suporte~\cite{fischer1980}. \\
+\addlinespace
+Raciocínio sobre sistema invisível & não existia &
+É o núcleo do letramento digital e não tinha régua. Entrou com três portas: descrever aos 8 anos,
+explicar aos 10--11, criticar aos 12--13 com apoio~\cite{starks2024,rozendaal2011}. \\
+\addlinespace
+Cenário da escola pública & suposição & Substituído por dados de INEP, CETIC e Saeb. A turma é menor
+do que se supunha nos anos iniciais; a situação de dispositivo é pior. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\subsection{Correções vindas da primeira execução completa}
+
+Rodar a esteira inteira sobre um material real expôs três defeitos que nenhum teste unitário pegaria,
+porque não são erros de código: são lacunas de contrato. Os três foram corrigidos, e valem como
+princípio, não como conserto pontual.
+
+\begin{enumerate}[leftmargin=*,itemsep=4pt]
+  \item \textbf{Ato que só uma pessoa pratica não é lacuna de construção.} Homologar autoria,
+  indexar no material editorial, licenciar um acervo gráfico --- nenhum agente produz isso. Os
+  gates de rastro tratavam esses marcadores como impedimento, o que reprovava a missão por algo que
+  nenhuma rodada de correção poderia resolver. Pior: como o texto do marcador não nomeava uma etapa
+  da esteira, o achado caía na etapa padrão de quem o leu, e uma homologação editorial aparecia
+  endereçada ao time de desenvolvimento. Passou a existir a categoria \emph{humano}: severidade
+  \emph{decisão humana}, não bloqueio, e dono correto no dossiê.
+
+  \item \textbf{O prefixo da tabela é o identificador inteiro, sem separador interno.} Com o
+  identificador novo carregando ano e bimestre, as referências que ainda ensinavam o formato antigo
+  levaram um avaliador a pedir um prefixo híbrido, que não corresponde a nenhum dos dois padrões. A
+  regra passou a estar escrita no gabarito da \emph{spec}, com o contraexemplo.
+
+  \item \textbf{Insumo incompleto deve produzir pendência nomeada, não reprovação genérica.} Quando
+  o material de origem não traz autoria, revisão ou indexação curricular, isso é uma informação
+  ausente de quem forneceu o insumo --- e o relatório precisa dizer exatamente isso, com o dono, em
+  vez de devolver a missão como malfeita. A régua não baixa; o endereço do problema é que muda.
+\end{enumerate}
+
+\paragraph{Uma quarta, achada na segunda execução.} \textbf{Citação do formato não é pendência.}
+Um agente escreveu, como afirmação de conformidade, a frase ``nenhuma pendência
+\cod{[ABERTO --- <dono>]} sobrevive nesta spec''. O varredor de lacunas leu a citação como uma
+pendência real e ainda propagou o \emph{placeholder} como se fosse o responsável, produzindo no
+dossiê a linha sem sentido ``comece por: [ABERTO --- <dono>]''. A guarda contra citação de formato
+existia, mas não cobria \emph{placeholder} entre sinais de menor e maior --- que nunca é dono real.
+
+\paragraph{O efeito medido.} As correções foram verificadas rodando a mesma missão duas vezes:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+ & \textbf{Antes} & \textbf{Depois} \\
+\midrule
+Impedimentos & 5 & \textbf{1} \\
+Ressalvas & 13 & 14 \\
+Decisões para uma pessoa & 1 & 1 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Os quatro que sumiram eram atos humanos --- homologar autoria, indexar no material editorial,
+licenciar acervo --- que a esteira cobrava de si mesma. O que sobrou é pendência legítima. Nenhuma
+das correções baixou a régua: o que mudou foi o endereço do problema, não a exigência.
+
+\subsection{Correções vindas da terceira execução}
+
+A terceira execução completa não trouxe mais nenhum falso impedimento: os cinco achados que
+apareceram eram todos defeitos reais do documento final, e vinham do mesmo lugar --- o portão de
+consistência do PRD. Isso expôs um problema estrutural que as execuções anteriores escondiam,
+porque antes esse portão não existia.
+
+\paragraph{Um portão que julga precisa poder devolver.} O PRD é o último documento da esteira, e o
+seu portão era o único que \emph{detectava sem poder corrigir}: apontava o defeito e seguia para o
+\emph{one-pager} com o defeito intacto, deixando para uma pessoa o que tem correção certa e
+mecânica. Todos os outros seis ciclos já devolviam o achado ao autor. O do PRD passou a devolver
+também, com o mesmo padrão --- quem julga não conserta, quem conserta não julga --- e teto próprio
+de rodadas (\cod{PRD\_MAX\_RODADAS}, padrão 2).
+
+O princípio é geral e vale além deste caso: \textbf{gate sem ciclo de volta transfere para a pessoa
+um trabalho que a máquina sabe fazer}. Um achado determinístico com correção única --- prefixo de
+tabela fora do padrão, identificador inválido, requisito bloqueante sem rastro --- não é uma decisão:
+é uma reescrita. O que deve chegar ao humano é a pendência de insumo e a decisão de escopo, não o
+erro de contrato que o próprio documento já permite localizar.
+
+\paragraph{Por que o redator errou com a regra escrita no prompt.} As três regras violadas estavam,
+todas, escritas de forma explícita no gabarito do redator, com contraexemplo. Não é caso de
+instrução ausente, e sim de \emph{densidade de instrução}: o cumprimento de regras cai à medida que
+o número delas cresce no mesmo prompt, e o PRD é o documento com mais restrições simultâneas da
+esteira. Acrescentar ênfase ao prompt não resolveria --- por isso a resposta foi um verificador
+determinístico fora do modelo, mais o ciclo que devolve o relatório para a reescrita.
+
+\paragraph{Evidência tem que caber no relatório.} Um dos achados citava a linha defeituosa cortada
+em 90 caracteres, e o corte caía justamente antes do identificador do evento: o relatório dizia que
+havia um evento errado sem dizer qual. O achado passou a nomear o identificador e a carregar a linha
+inteira. Vale como regra de escrita de diagnóstico: \textbf{achado que não carrega a evidência
+obriga quem lê a refazer a investigação}, e um relatório assim é indistinguível de nenhum relatório.
+
+\subsection{Identificação no histórico}
+
+Os registros no histórico passaram a começar por ano e bimestre --- \cod{2EF-1B · O Detalhe que Muda
+Tudo}. O prefixo é lido do próprio identificador da missão, que carrega os dois desde a revisão do
+esquema de código, então não é campo novo a preencher. Quando não há como deduzir (missão
+transversal, formato legado), o título sai sem prefixo, em vez de inventar um.
+
+\noindent
+Uma consequência de método, e ela vale mais que qualquer número: a fonte única passou a ter uma
+seção de \textbf{registro negativo} --- o que não sustenta a régua e não deve voltar. Sem isso, uma
+fundamentação refutada tende a reaparecer na revisão seguinte, porque o argumento de autoridade
+sobrevive ao artigo que o derrubou.
 
 \begin{thebibliography}{99}
 
@@ -552,6 +946,121 @@ Reasoning Under Equal Thinking Token Budgets}. arXiv:2604.02460, 2026.
 \bibitem{zheng2023}
 ZHENG, L.; CHIANG, W.-L.; SHENG, Y. et al. Judging LLM-as-a-judge with MT-Bench and Chatbot
 Arena. NeurIPS 2023. arXiv:2306.05685.
+
+\bibitem{loewenstein1994}
+LOEWENSTEIN, G. The psychology of curiosity. \textit{Psychological Bulletin}, v. 116, n. 1,
+p. 75--98, 1994.
+
+\bibitem{zheng2023b}
+ZHENG, L. et al. Judging LLM-as-a-judge with MT-Bench and Chatbot Arena. NeurIPS 2023.
+arXiv:2306.05685.
+
+\bibitem{ifscale2025b}
+JAROSLAWICZ, D. et al. \textit{How Many Instructions Can LLMs Follow at Once?} arXiv:2507.11538, 2025.
+
+\bibitem{jonsson2007b}
+JONSSON, A.; SVINGBY, G. The use of scoring rubrics. \textit{Educational Research Review}, v. 2,
+n. 2, p. 130--144, 2007.
+
+\bibitem{cne2022b}
+BRASIL. CNE/CEB. \textit{Resolução n.\textsuperscript{o} 1, de 4 de outubro de 2022} --- Computação
+na Educação Básica.
+
+\bibitem{gathercole2004}
+GATHERCOLE, S. et al. The structure of working memory from 4 to 15 years of age.
+\textit{Developmental Psychology}, v. 40, n. 2, p. 177--190, 2004. DOI 10.1037/0012-1649.40.2.177
+
+\bibitem{cowan2016}
+COWAN, N. Working memory maturation. \textit{Perspectives on Psychological Science}, v. 11, n. 2,
+p. 239--264, 2016. DOI 10.1177/1745691615621279
+
+\bibitem{isbell2015}
+ISBELL, E. et al. \textit{Frontiers in Psychology}, v. 6, 696, 2015. DOI 10.3389/fpsyg.2015.00696
+
+\bibitem{godwin2016}
+GODWIN, K. et al. Off-task behavior in elementary school children. \textit{Learning and
+Instruction}, v. 44, p. 128--143, 2016.
+
+\bibitem{betts2006}
+BETTS, J. et al. The development of sustained attention in children. \textit{Child
+Neuropsychology}, v. 12, n. 3, p. 205--221, 2006. DOI 10.1080/09297040500488522
+
+\bibitem{bruns2018}
+BRUNS, B.; COSTA, L.; CUNHA, N. Through the looking glass. \textit{Economics of Education Review},
+v. 64, p. 214--250, 2018. DOI 10.1016/j.econedurev.2018.03.003
+
+\bibitem{moreno2002}
+MORENO, R.; MAYER, R. \textit{Journal of Educational Psychology}, v. 94, n. 1, p. 156--163, 2002.
+DOI 10.1037/0022-0663.94.1.156
+
+\bibitem{kalyuga2003}
+KALYUGA, S. et al. The expertise reversal effect. \textit{Educational Psychologist}, v. 38, n. 1,
+p. 23--31, 2003. DOI 10.1207/S15326985EP3801\_4
+
+\bibitem{knoop2018}
+KNOOP-VAN CAMPEN, C. et al. \textit{Dyslexia}, v. 24, n. 2, p. 140--155, 2018. DOI 10.1002/dys.1585
+
+\bibitem{sweller2019}
+SWELLER, J.; VAN MERRIËNBOER, J.; PAAS, F. Cognitive architecture and instructional design: 20 years
+later. \textit{Educational Psychology Review}, v. 31, n. 2, p. 261--292, 2019.
+DOI 10.1007/s10648-019-09465-5
+
+\bibitem{biggs1982}
+BIGGS, J.; COLLIS, K. \textit{Evaluating the Quality of Learning: the SOLO Taxonomy}. 1982.
+
+\bibitem{osterhaus2021}
+OSTERHAUS, C.; KOERBER, S. \textit{Child Development}, v. 92, n. 5, p. 1872--1888, 2021.
+DOI 10.1111/cdev.13627
+
+\bibitem{starks2024}
+STARKS, D.; REICH, J. \textit{Information and Learning Sciences}, v. 125, n. 9, p. 673--692, 2024.
+DOI 10.1108/ILS-12-2023-0201
+
+\bibitem{rozendaal2011}
+ROZENDAAL, E. et al. \textit{International Journal of Advertising}, v. 30, n. 2, p. 329--350.
+DOI 10.2501/IJA-30-2-329-350
+
+\bibitem{demetriou2022}
+DEMETRIOU, A. et al. \textit{Frontiers in Psychology}, v. 13, 954971, 2022.
+DOI 10.3389/fpsyg.2022.954971
+
+\bibitem{fischer1980}
+FISCHER, K. A theory of cognitive development. \textit{Psychological Review}, v. 87, n. 6,
+p. 477--531, 1980.
+
+\bibitem{castelo2023}
+CASTELO, N.; KIM, S.; CARLSON, S. \textit{Frontiers in Developmental Psychology}, 2023.
+DOI 10.3389/fdpys.2023.1317426
+
+\bibitem{hagger2016}
+HAGGER, M. et al. A multilab preregistered replication of the ego-depletion effect.
+\textit{Perspectives on Psychological Science}, 2016. DOI 10.1177/1745691616652873
+
+\bibitem{knight1986b}
+KNIGHT, J.; LEVESON, N. \textit{IEEE TSE}, v. SE-12, n. 1, p. 96--109, 1986.
+
+\bibitem{cemri2025b}
+CEMRI, M. et al. \textit{Why Do Multi-Agent LLM Systems Fail?} NeurIPS 2025. arXiv:2503.13657.
+
+\bibitem{doyle1977}
+DOYLE, W.; PONDER, G. The practicality ethic in teacher decision-making. \textit{Interchange},
+v. 8, n. 3, p. 1--12, 1977.
+
+\bibitem{cbam2015}
+HALL, G.; HORD, S. \textit{Implementing Change: Patterns, Principles and Potholes} (Concerns-Based
+Adoption Model). Estágios de preocupação em adoção de tecnologia escolar.
+
+\bibitem{davis2005}
+DAVIS, E.; KRAJCIK, J. Designing educative curriculum materials to promote teacher learning.
+\textit{Educational Researcher}, v. 34, n. 3, 2005. DOI 10.3102/0013189X034003003
+
+\bibitem{speckit2026}
+\textit{Spec Kit Agents}: grounding e validação contra o repositório em desenvolvimento dirigido por
+especificação. arXiv:2604.05278.
+
+\bibitem{dehallucinator2024}
+\textit{De-Hallucinator}: recuperação iterativa de referências de API do próprio projeto para reduzir
+alucinação em geração de código. arXiv:2401.01701.
 
 \end{thebibliography}
 

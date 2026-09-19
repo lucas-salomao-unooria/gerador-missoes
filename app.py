@@ -298,12 +298,12 @@ def update_pipeline_step_status(
                 status["A07RevisorOnePager"] = "done"
             if status.get("A06GateEstruturalCheck") == "running":
                 status["A06GateEstruturalCheck"] = "done"
-        if new_status.get("gate_final_status") and status.get("A11GateFinalProdutoCheck") == "running":
-            status["A11GateFinalProdutoCheck"] = "done"
-        if new_status.get("design_status") and status.get("A30QaEntregaveisCheck") == "running":
-            status["A30QaEntregaveisCheck"] = "done"
-        if new_status.get("dev_status") and status.get("A44ValidacaoDevCheck") == "running":
-            status["A44ValidacaoDevCheck"] = "done"
+        if new_status.get("gate_final_status") and status.get("A12GateFinalProdutoCheck") == "running":
+            status["A12GateFinalProdutoCheck"] = "done"
+        if new_status.get("design_status") and status.get("A31QaEntregaveisCheck") == "running":
+            status["A31QaEntregaveisCheck"] = "done"
+        if new_status.get("dev_status") and status.get("A45ValidacaoDevCheck") == "running":
+            status["A45ValidacaoDevCheck"] = "done"
 
     elif et == "pipeline_completed":
         result = event.get("result")

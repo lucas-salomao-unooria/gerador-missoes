@@ -98,9 +98,17 @@ class AppSettings(BaseSettings):
         default_factory=lambda: int(os.getenv("BANCA_MAX_RODADAS", "2")),
         description="Rodadas máximas do loop banca de dev ↔ retrabalho do dono do achado (inclusive donos da etapa de design). 1 = sem correção automática",
     )
+    prd_max_rodadas: int = Field(
+        default_factory=lambda: int(os.getenv("PRD_MAX_RODADAS", "2")),
+        description="Rodadas máximas do loop redator do PRD ↔ gate de consistência do PRD. 1 = sem correção automática",
+    )
     orcamento_reexecucoes: int = Field(
         default_factory=lambda: int(os.getenv("ORCAMENTO_REEXECUCOES", "8")),
         description="Teto de agentes reexecutados por retrabalho na execução inteira, somando todos os loops. Estourado, a esteira para de tentar, marca pendência humana e segue até o fim",
+    )
+    avaliacoes_max_rodadas: int = Field(
+        default_factory=lambda: int(os.getenv("AVALIACOES_MAX_RODADAS", "1")),
+        description="Rodadas do loop avaliações ↔ revisor do one-pager movido pelo parecer de adequação. 1 = sem correção automática (padrão, porque uma rodada extra reexecuta os três avaliadores)",
     )
     qa_design_max_rodadas: int = Field(
         default_factory=lambda: int(os.getenv("QA_DESIGN_MAX_RODADAS", "2")),

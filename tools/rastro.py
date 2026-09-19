@@ -72,9 +72,11 @@ CAPACIDADES_DE_EXTENSAO = {
 CAPTURA_DE_MIDIA = ("microphone", "camera", "display-capture")
 SECOES_DS = ("instanooria", "unitube", "chatgpt", "whatsappmobile", "tiktooria")
 PUBLICOS = ("estudante", "professor")
-ETAPAS = ("input", "produto", "design", "dev", "plataforma", "externo")
+ETAPAS = ("input", "produto", "design", "dev", "plataforma", "externo", "humano")
 # Etapas cuja pendência é resolvida por gente, fora da esteira: registram 🟡 e o PRD sai.
-ETAPAS_NAO_BLOQUEANTES = ("plataforma", "externo")
+#: Etapas cujo achado não impede a construção: ou é pré-requisito de plataforma, ou é
+#: ato humano. Bloquear por elas trava a esteira em algo que nenhum agente resolve.
+ETAPAS_NAO_BLOQUEANTES = ("plataforma", "externo", "humano")
 
 # ------------------------------------------------------------------ marcadores de lacuna
 _MARCADORES = [
@@ -98,10 +100,22 @@ _PLACEHOLDERS = frozenset({
 
 
 def _e_citacao_do_formato(dono_raw: str) -> bool:
-    return dono_raw.strip().strip("`*_ ").lower() in _PLACEHOLDERS
+    bruto = dono_raw.strip().strip("`*_ ").lower()
+    # `<dono>`, `<agente>`: o agente citou o formato do marcador em vez de abrir uma pendência —
+    # tipicamente numa frase de conformidade ("nenhuma pendência [ABERTO — <dono>] sobrevive").
+    # Placeholder entre sinais de menor/maior nunca é dono real.
+    if bruto.startswith("<") and bruto.endswith(">"):
+        return True
+    return bruto in _PLACEHOLDERS
 
 
 _TOKENS_ETAPA: Dict[str, tuple] = {
+    # Ato que só uma pessoa pratica — homologar, nomear autoria, licenciar, indexar no material
+    # editorial. Nenhum agente produz isso, então tratá-lo como lacuna de construção fazia o gate
+    # reprovar a missão por algo que nenhuma rodada de correção poderia resolver. Vai à frente das
+    # demais porque o texto costuma citar também a etapa ("homologação pelo produto").
+    "humano": ("homologa", "homologar", "editorial", "autoria", "autor e revisor", "nomear autor",
+               "licen[çc]a", "direitos de uso", "validar com o time", "aprova[çc][ãa]o human"),
     # Dono que não é etapa da esteira: coordenação da escola, rede parceira, consultor.
     # Cai aqui antes de "produto" porque "pedagóg" também é token de produto.
     "externo": ("coordena", "rede parceira", "escola parceira", "designer instrucional",
@@ -121,9 +135,11 @@ def classificar_dono(texto_dono: str, etapa_padrao: str) -> str:
     m = re.search(r"dono:\s*([a-z0-9_@/\-\. ]+)", t)
     if m:
         t = m.group(1)
-    for etapa in ("externo", "plataforma", "dev", "design", "produto", "input"):
+    for etapa in ("humano", "externo", "plataforma", "dev", "design", "produto", "input"):
         for tok in _TOKENS_ETAPA[etapa]:
-            if re.search(r"(?<![a-z0-9-])" + re.escape(tok) + r"s?(?![a-z0-9-])", t):
+            # tokens com classe de caractere (ex.: `licen[çc]a`) entram crus; os demais, escapados
+            padrao = tok if ("[" in tok or "(" in tok) else re.escape(tok)
+            if re.search(r"(?<![a-z0-9-])" + padrao + r"s?(?![a-z0-9-])", t):
                 return etapa
     return etapa_padrao if etapa_padrao in ETAPAS else "dev"
 
@@ -164,7 +180,8 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                     "documento": fonte["rotulo"],
                     "dono": dono_raw[:80] or "—",
                     "etapa": etapa,
-                    "severidade": "atencao" if etapa in ETAPAS_NAO_BLOQUEANTES else "bloqueio",
+                    "severidade": ("decisao_humana" if etapa == "humano"
+                                   else "atencao" if etapa in ETAPAS_NAO_BLOQUEANTES else "bloqueio"),
                 }
                 vistos[chave] = achado
                 achados.append(achado)
@@ -623,3 +640,92 @@ def relatorio_telemetria(resultado: Dict[str, Any], missao: str = "") -> str:
     }
     linhas.append("```json"); linhas.append(json.dumps(envelope, ensure_ascii=False)); linhas.append("```")
     return "\n".join(linhas)
+
+
+# ------------------------------------------------------------------ consistência interna do PRD
+def validar_prd(prd: str) -> Dict[str, Any]:
+    """Confere se o PRD é coerente consigo mesmo antes de ir para quem codifica.
+
+    O gabarito já exige tudo isto em prosa — o que faltava era alguém conferir. Um PRD que
+    declara dois prefixos de tabela, ou que deixa um requisito P0 sem teste, faz o agente de
+    codificação escolher um caminho ao acaso; e a partir daí o resto do documento deixa de
+    valer contra o que ele escreveu. São defeitos de consistência, não de conteúdo, e por
+    isso dá para pegá-los em código.
+    """
+    texto = prd or ""
+    achados: List[Dict[str, str]] = []
+
+    def falha(codigo: str, resumo: str, severidade: str = "bloqueio", etapa: str = "dev") -> None:
+        achados.append({"severidade": severidade, "codigo": codigo, "etapa": etapa, "resumo": resumo})
+
+    # 1. um prefixo de tabela só, e no formato do identificador
+    prefixos = {m.lower() for m in re.findall(r"\b(exp_?\d{2}_?e[fm]\d?b?)_[a-z][a-z0-9_]*", texto, re.I)}
+    fora = {p for p in prefixos if not re.fullmatch(r"exp\d{2}e[fm]\db", p)}
+    if fora:
+        falha("prefixo-tabela",
+              f"Prefixo de tabela fora do padrão: {sorted(fora)}. O prefixo é o id inteiro, sem separador "
+              f"interno (`exp05ef3b_sessoes`). Misturar formatos faz a migration divergir do Prisma.")
+    elif len(prefixos) > 1:
+        falha("prefixo-tabela", f"Mais de um prefixo de tabela no mesmo PRD: {sorted(prefixos)}.")
+
+    # 2. requisito P0 sem teste e sem tarefa
+    p0 = set(re.findall(r"\b(RF-\d{3})\b[^\n]*\bP0\b", texto))
+    for rf in sorted(p0):
+        depois = texto.split(rf, 1)[-1] if rf in texto else ""
+        ocorrencias = len(re.findall(rf, texto))
+        if ocorrencias < 3:  # declaração + matriz + tarefa
+            falha("rf-sem-rastro",
+                  f"`{rf}` é P0 e aparece {ocorrencias}x no PRD. Requisito bloqueante precisa estar na "
+                  f"declaração, na matriz de rastreabilidade e em pelo menos uma tarefa.")
+
+    # 3. evento sem tabela de leitura nomeada
+    for linha in texto.splitlines():
+        if re.search(r"\bEVT-\d+", linha) and "|" in linha:
+            if re.search(r"pub/?sub|telemetria_eventos", linha, re.I) and not re.search(r"exp\d{2}e[fm]\db_", linha, re.I):
+                evt = re.search(r"\bEVT-\d+", linha)
+                # O identificador do evento pode estar em qualquer coluna da linha, e a tabela é larga:
+                # citar só o começo da linha escondia a evidência de quem vai corrigir.
+                falha("evento-sem-leitor",
+                      f"`{evt.group(0) if evt else 'evento'}` aponta Pub/Sub ou `telemetria_eventos` como origem da "
+                      f"leitura, em vez da tabela `expNNefNb_*` do módulo. Toda medida que a professora vê nasce de "
+                      f"tabela própria do módulo. Linha: `{linha.strip()[:200]}`")
+
+    # 4. tarefa não atômica
+    for m in re.finditer(r"\b(T-\d{3})\b[^\n]*?(todos os RFs?|todas as RFs?|todos os requisitos)", texto, re.I):
+        falha("tarefa-nao-atomica",
+              f"`{m.group(1)}` cobre \"{m.group(2)}\". Tarefa que fecha tudo não é verificável nem divisível.",
+              severidade="atencao")
+
+    # 5. identificador de código inválido
+    for m in re.finditer(r"`?([A-Za-z0-9_-]*-[A-Za-z0-9_-]*(?:Module|Service|Controller))`?", texto):
+        falha("identificador-invalido",
+              f"`{m.group(1)}` tem hífen e não é identificador válido em TypeScript — o agente vai "
+              f"inventar um nome e divergir do módulo registrado.")
+
+    # 6. caminho de experiência declarado de duas formas
+    caminhos = {m.rstrip("/") for m in re.findall(r"apps/experiencias/([a-z0-9][a-z0-9-]*)/?", texto)}
+    if len(caminhos) > 1:
+        falha("caminho-divergente",
+              f"O PRD declara mais de um diretório para a mesma experiência: {sorted(caminhos)}.")
+
+    bloqueios = [a for a in achados if a["severidade"] == "bloqueio"]
+    status = "bloqueado" if bloqueios else ("amarelo" if achados else "aprovado")
+    return {"status": status, "achados": achados}
+
+
+def relatorio_prd(resultado: Dict[str, Any], missao: str = "") -> str:
+    icone = {"aprovado": "🟢 CONSISTENTE", "amarelo": "🟡 COM RESSALVAS", "bloqueado": "🔴 INCONSISTENTE"}[resultado["status"]]
+    linhas = [f"# Consistência interna do PRD — {missao or 'missão'}", "",
+              f"**Veredito: {icone}** · o PRD conferido contra o que ele mesmo declara.", ""]
+    if not resultado["achados"]:
+        linhas.append("- Nenhuma contradição interna: prefixo único, requisitos P0 rastreados, eventos com leitor nomeado.")
+    for a in resultado["achados"]:
+        marca = "⛔" if a["severidade"] == "bloqueio" else "⚠️"
+        linhas.append(f"- {marca} `{a['codigo']}` — {a['resumo']}")
+    envelope = {
+        "agente": "prd-consistencia", "missao": missao or "", "status": resultado["status"],
+        "achados": [{"severidade": a["severidade"], "classe": "consistencia", "codigo": a["codigo"],
+                     "agente_responsavel": "prd-writer", "resumo": a["resumo"]} for a in resultado["achados"]],
+        "precisa_humano": False,
+    }
+    return "\n".join(linhas) + "\n\n```json\n" + json.dumps(envelope, ensure_ascii=False) + "\n```\n"

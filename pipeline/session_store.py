@@ -70,7 +70,46 @@ def formatar_status_label(status: str) -> str:
     return f"⚪ {status.capitalize()}" if status else "⚪ Indefinido"
 
 
+def rotulo_serie_bimestre(state: Dict[str, Any]) -> str:
+    """`2EF-1B` a partir do identificador da missão, ou vazio quando não dá para deduzir.
+
+    O histórico ordenava por data, e duas missões do mesmo ano ficavam indistinguíveis na lista.
+    Com ano e bimestre na frente, a lista se organiza sozinha pelo que o time procura.
+    """
+    from tools.rastro import decompor_id
+
+    texto = " ".join(
+        str(state.get(k) or "")[:4000]
+        for k in ("spec_missao", "prd_final", "one_pager")
+    )
+    m = re.search(r"\bexp0[1-9](?:ef|em)[1-4]b\b", texto, re.IGNORECASE)
+    if m:
+        partes = decompor_id(m.group(0).lower())
+        if partes:
+            return f"{partes['serie']}-{partes['unidade']}B"
+
+    # Legado e transversal: tenta série e unidade declaradas soltas no bloco 0.
+    serie = re.search(r"\b([1-9])\s*(EF|EM)\b", texto, re.IGNORECASE)
+    unidade = re.search(r"unidade:\s*`?([1-4])", texto, re.IGNORECASE)
+    if serie and unidade:
+        return f"{serie.group(1)}{serie.group(2).upper()}-{unidade.group(1)}B"
+    return ""
+
+
 def extrair_titulo_missao(state: Dict[str, Any], fallback: str = "Missão Sem Título") -> str:
+    """Título amigável da missão, prefixado por ano e bimestre quando dedutíveis.
+
+    Ex.: `2EF-1B · O Detalhe que Muda Tudo`. O prefixo vem do identificador da missão, que
+    carrega ano e bimestre desde a revisão do esquema de código.
+    """
+    titulo = _titulo_bruto(state, fallback)
+    prefixo = rotulo_serie_bimestre(state)
+    if prefixo and not titulo.upper().startswith(prefixo):
+        return f"{prefixo} · {titulo}"
+    return titulo
+
+
+def _titulo_bruto(state: Dict[str, Any], fallback: str = "Missão Sem Título") -> str:
     """Extrai o título amigável da missão a partir do prd_final, spec_missao, one_pager ou fallback."""
     fontes = [
         state.get("prd_final"),

@@ -56,7 +56,7 @@ from prompts import list_prompt_files, list_state_variables, load_prompt  # noqa
 KNOWN_STATE_KEYS = {
     "briefing", "nucleo_narrativo", "micro_gate_report", "micro_gate_status", "micro_gate_rodada",
     "one_pager", "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_rodada",
-    "avaliacao_pedagogica_report", "experiencia_aluno_report", "gate_final_report", "gate_final_status",
+    "avaliacao_pedagogica_report", "experiencia_aluno_report", "adequacao_report", "gate_final_report", "gate_final_status",
     "spec_missao", "spec_missao_gate0", "bncc_status", "bncc_report", "fechamento_lacunas", "relatorio_lacunas", "lacunas_status",
     "ambiente_simulado", "ambiente_status",
     "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
@@ -70,6 +70,7 @@ KNOWN_STATE_KEYS = {
     "pipeline_bloqueado", "pipeline_bloqueio_motivo",
     "diagnostico_execucao", "diagnostico_status", "qa_design_rodada", "tickets_retrabalho",
     "one_pager_gate0", "spec_rodada", "handoff_rodada", "banca_rodada", "reexecucoes",
+    "adequacao_status", "avaliacoes_rodada",
     "degradacoes", "heranca_degradada", "agentes_degradados",
 }
 # Variáveis estáticas substituídas pelo loader antes do ADK
@@ -81,17 +82,21 @@ REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
 EXPECTED_AGENTS = {
     "NucleoNarrativoLoop", "A01NucleoNarrativo", "A02MicroGate", "A03MicroGateCheck", "A04SecoesApoio",
     "GateEstruturalLoop", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager",
-    "AvaliacoesParalelas", "A08AvaliacaoPedagogica", "A09ExperienciaEstudante", "A10GateFinalProduto",
-    "A11GateFinalProdutoCheck", "A12SpecMissao", "A13BnccCheck", "DesignStage", "A16FechaLacunas", "A17FechaLacunasSplit",
-    "A18AmbienteSimulado", "A19AmbienteSimuladoSplit", "A20BriefOficio", "A21Jornada",
-    "A22Fluxo", "A23CopyPtBr", "A24Caa", "A25Telas", "A26CopyRevisao", "A29QaEntregaveis",
-    "A27Prototipo", "A28ArtefatosDesign", "A30QaEntregaveisCheck", "DevStage", "A32ManifestoCheck", "HandoffParalelo", "A33HandoffDev", "A34BriefAssets",
-    "A35TelemetriaCheck", "A37LacunaCheck", "A47PrdCheck",
-    "BancaValidacaoDev", "A38BancaProdutoNarrativa", "A39BancaDesignImersao",
-    "A40BancaPedagogiaBncc", "A41BancaDadosLgpd", "A42BancaTecnicaArquitetura",
-    "A43ConsolidacaoBanca", "A44ValidacaoDevCheck", "A46PrdWriter", "A48OnePagerPedagogico",
-    "A50Aprendizado",
-    "A49Diagnostico", "ProdutoStage",
+    "AvaliacoesParalelas", "A08AvaliacaoPedagogica", "A09ExperienciaEstudante",
+    "A10AdequacaoPedagogica",
+    "A10bAdequacaoCheck",
+    "A07RevisorOnePagerParecer",
+    "AvaliacoesLoop", "A11GateFinalProduto",
+    "A12GateFinalProdutoCheck", "A13SpecMissao", "A14BnccCheck", "DesignStage", "A17FechaLacunas", "A18FechaLacunasSplit",
+    "A19AmbienteSimulado", "A20AmbienteSimuladoSplit", "A21BriefOficio", "A22Jornada",
+    "A23Fluxo", "A24CopyPtBr", "A25Caa", "A26Telas", "A27CopyRevisao", "A30QaEntregaveis",
+    "A28Prototipo", "A29ArtefatosDesign", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets",
+    "A36TelemetriaCheck", "A38LacunaCheck", "A48PrdCheck",
+    "BancaValidacaoDev", "A39BancaProdutoNarrativa", "A40BancaDesignImersao",
+    "A41BancaPedagogiaBncc", "A42BancaDadosLgpd", "A43BancaTecnicaArquitetura",
+    "A44ConsolidacaoBanca", "A45ValidacaoDevCheck", "A47PrdWriter", "A49OnePagerPedagogico",
+    "A51Aprendizado",
+    "A50Diagnostico", "ProdutoStage",
 }
 
 
@@ -175,7 +180,7 @@ def test_arvore_de_agentes():
 
     # etapas desligáveis
     so_produto = create_mission_orchestrator(stages=["produto"])
-    assert [a.name for a in so_produto.sub_agents] == ["ProdutoStage", "A49Diagnostico", "A50Aprendizado"]
+    assert [a.name for a in so_produto.sub_agents] == ["ProdutoStage", "A50Diagnostico", "A51Aprendizado"]
     print(f"   ✓ árvore com {len(names)} agentes ({len(llm_agents)} LLM); loop, paralelos e metadados coerentes")
 
 
@@ -450,7 +455,7 @@ def test_bncc_validador_e_gate():
         name="Root",
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text=_SPEC_BNCC.format(codigos="EF04CO08 · EF05CO02")),
-            BnccCheckAgent(name="A13BnccCheck", estrito=True),
+            BnccCheckAgent(name="A14BnccCheck", estrito=True),
             FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=marcar_heranca),
         ],
     )
@@ -466,7 +471,7 @@ def test_bncc_validador_e_gate():
         name="Root2",
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text=_SPEC_BNCC.format(codigos="EF05CO08 · EF05CO02")),
-            BnccCheckAgent(name="A13BnccCheck", estrito=True),
+            BnccCheckAgent(name="A14BnccCheck", estrito=True),
             FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=marcar_heranca),
         ],
     )
@@ -578,7 +583,7 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
         {"chave": "handoff_dev", "rotulo": "handoff", "etapa_padrao": "dev"},
     ]
     r = varrer_lacunas(fontes, st)
-    assert r["status"] == "bloqueado" and r["por_etapa"] == {"input": 0, "produto": 2, "design": 1, "dev": 1, "plataforma": 1, "externo": 0}, r["por_etapa"]
+    assert r["status"] == "bloqueado" and r["por_etapa"] == {"input": 0, "produto": 2, "design": 1, "dev": 1, "plataforma": 1, "externo": 0, "humano": 0}, r["por_etapa"]
     so_plat = varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], st)
     assert so_plat["status"] == "amarelo" and so_plat["por_etapa"]["plataforma"] == 1
     assert varrer_lacunas(fontes, {"spec_missao": "limpo", "handoff_dev": "limpo"})["status"] == "aprovado"
@@ -625,7 +630,7 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text="# Spec\nSlug: exp05ef2b\n"),
             FakeAgent(name="Handoff", key="handoff_dev", text=st["handoff_dev"]),
-            RastroCheckAgent(name="A37LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
+            RastroCheckAgent(name="A38LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
             FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=marcar_heranca),
         ],
     )
@@ -638,7 +643,7 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
         name="Root2",
         sub_agents=[
             FakeAgent(name="Handoff", key="handoff_dev", text="[LACUNA — dono: plataforma] ponte tiktooria"),
-            RastroCheckAgent(name="A37LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
+            RastroCheckAgent(name="A38LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
             FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=marcar_heranca),
         ],
     )
@@ -648,7 +653,7 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
         name="Root3",
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text=_SPEC_MANIFESTO_OK.replace("- `liberacao: por-turma`\n", "")),
-            RastroCheckAgent(name="A32ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
+            RastroCheckAgent(name="A33ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
             FakeAgent(name="Jusante", key="handoff_dev", text="h", before_agent_callback=marcar_heranca),
         ],
     )
@@ -722,7 +727,7 @@ def test_capacidade_de_plataforma_nao_bloqueia():
         name="Root",
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text=spec("[forms, microphone]", _BLOCO9_COMPLETO)),
-            RastroCheckAgent(name="A32ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
+            RastroCheckAgent(name="A33ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
             FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=marcar_heranca),
         ],
     )
@@ -737,7 +742,7 @@ def test_mensagem_de_pulo_nao_vira_prd():
     """O texto que o ADK grava ao pular um agente não pode virar PRD nem artefato."""
     from pipeline.artifacts import e_mensagem_de_pulo
 
-    pulo = "⏭️ `A46PrdWriter` não executado — pipeline bloqueado (Ficha do manifesto bloqueado (1 lacuna(s)))."
+    pulo = "⏭️ `A47PrdWriter` não executado — pipeline bloqueado (Ficha do manifesto bloqueado (1 lacuna(s)))."
     assert e_mensagem_de_pulo(pulo)
     assert not e_mensagem_de_pulo("# PRD — missão\n\nconteúdo de verdade")
     assert not e_mensagem_de_pulo(None) and not e_mensagem_de_pulo("")
@@ -777,7 +782,7 @@ def test_contencao_de_resposta_de_ferramenta():
         name = "get_screenshot"
 
     class _Ctx:
-        agent_name = "A21Jornada"
+        agent_name = "A22Jornada"
 
         def __init__(self):
             self.state = {}
@@ -905,14 +910,14 @@ def test_artefatos_html_e_links():
         sub_agents=[
             FakeAgent(name="Jornada", key="jornada_telas", text="j\n```mermaid\nflowchart LR\nA-->B\n```"),
             FakeAgent(name="Proto", key="prototipo_html", text=f"```html\n{doc}\n```\n# Relatório do protótipo"),
-            ArtefatosDesignAgent(name="A28ArtefatosDesign"),
+            ArtefatosDesignAgent(name="A29ArtefatosDesign"),
         ],
     )
     _, state = asyncio.run(_run(root))
     assert state["prototipo_arquivo"] == doc
     assert "Relatório do protótipo" in state["prototipo_relatorio"]
     assert state["diagramas_html"].count("<section>") == 1
-    assert "prototipo_arquivo" not in "".join(load_prompt(f"design/{n}", **CONFIG_VARS) for n in ["29_qa_entregaveis.md"])
+    assert "prototipo_arquivo" not in "".join(load_prompt(f"design/{n}", **CONFIG_VARS) for n in ["30_qa_entregaveis.md"])
     print("   ✓ artefatos: protótipo separado do relatório, diagramas montados do Mermaid, projeto do Stitch reconhecido")
 
 
@@ -982,7 +987,7 @@ def test_one_pager_pedagogico_em_docx():
     # a mensagem de pulo não vira documento
     from pipeline.artifacts import e_mensagem_de_pulo
 
-    assert e_mensagem_de_pulo("⏭️ `A48OnePagerPedagogico` não executado — pipeline bloqueado (x).")
+    assert e_mensagem_de_pulo("⏭️ `A49OnePagerPedagogico` não executado — pipeline bloqueado (x).")
     print("   ✓ one-pager pedagógico: .docx com títulos, listas e tabela; envelope e marcação fora do documento")
 
 
@@ -1115,7 +1120,7 @@ def test_esteira_nao_aborta_e_emite_diagnostico():
             FakeAgent(name="Spec", key="spec_missao", text="# Spec\nSlug: exp05ef2b\n", before_agent_callback=marcar_heranca),
             FakeAgent(name="Prd", key="prd_final", text="# PRD", before_agent_callback=marcar_heranca),
             FakeAgent(name="OnePager", key="one_pager_pedagogico", text="# One-pager", before_agent_callback=marcar_heranca),
-            DiagnosticoAgent(name="A49Diagnostico", description="d"),
+            DiagnosticoAgent(name="A50Diagnostico", description="d"),
         ],
     )
     _, state = asyncio.run(_run(root))
@@ -1314,9 +1319,9 @@ def test_loop_da_spec_corrige_na_segunda_rodada():
         max_iterations=2,
         sub_agents=[
             SpecQueAprende(name="Spec", description="spec"),
-            BnccCheckAgent(name="A13BnccCheck", description="bncc", estrito=True),
+            BnccCheckAgent(name="A14BnccCheck", description="bncc", estrito=True),
             SaidaDeLoopAgent(
-                name="A15SpecCheck", description="saida", rotulo="Spec",
+                name="A16SpecCheck", description="saida", rotulo="Spec",
                 status_keys=["bncc_status"], rodada_key="spec_rodada", max_rounds=2,
             ),
         ],
@@ -1362,3 +1367,101 @@ def test_id_da_experiencia_carrega_ano_e_bimestre():
     formato_velho = validar_manifesto(ficha("exp-77-teste", "5EF", 3))
     assert any(a["campo"] == "id" for a in formato_velho["achados"]), "missão com ano e bimestre não usa o formato antigo"
     print("   ✓ id carrega ano e bimestre; series e unidade são conferidas contra ele")
+
+
+def test_ato_humano_nao_bloqueia_a_esteira():
+    """Homologar, nomear autoria e licenciar não são lacunas de construção.
+
+    Nenhum agente produz esses atos, então tratá-los como bloqueio reprovava a missão por algo
+    que nenhuma rodada de correção poderia resolver — e empurrava para o dono errado, porque o
+    marcador caía na etapa padrão do gate que o leu.
+    """
+    from tools.rastro import classificar_dono, varrer_lacunas
+
+    for texto in ("responsável de produto: nomear autor e revisor",
+                  "responsável editorial Entre Redes",
+                  "homologação jurídica da licença de uso do acervo"):
+        assert classificar_dono(texto, "dev") == "humano", texto
+
+    estado = {
+        "prd_final": (
+            "[NEEDS CLARIFICATION: Homologação nominal dos autores do gabarito] "
+            "e [verificar no repositório: nome da tabela]"
+        )
+    }
+    r = varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], estado)
+    severidades = {a["etapa"]: a["severidade"] for a in r["achados"]}
+    assert severidades["humano"] == "decisao_humana", "ato humano é decisão, não impedimento"
+    assert severidades["dev"] == "bloqueio", "lacuna real de dev continua bloqueando"
+    print("   ✓ ato humano vira decisão humana; lacuna de construção continua bloqueio")
+
+
+def test_prd_inconsistente_consigo_mesmo_e_barrado():
+    """PRD sem lacuna nenhuma ainda pode ser inútil para quem codifica.
+
+    Dois prefixos de tabela, um requisito P0 sem teste, um evento lido no lugar errado — nada
+    disso é marcador de lacuna, e todos fazem o agente de codificação escolher um caminho ao
+    acaso. O gabarito já exigia essas regras em prosa; faltava alguém conferir.
+    """
+    from tools.rastro import validar_prd
+
+    limpo = (
+        "| RF-001 | P0 | o estudante escolhe |\n"
+        "Matriz: RF-001 coberto por `teste/rf001.spec.ts`.\n"
+        "T-001 implementa RF-001.\n"
+        "Tabela `exp02ef1b_sessoes`.\n"
+        "| EVT-001 | interacted | onde é lido: `exp02ef1b_sessoes` + painel |\n"
+        "Diretório `apps/experiencias/exp02ef1b/`.\n"
+    )
+    assert validar_prd(limpo)["status"] == "aprovado", validar_prd(limpo)["achados"]
+
+    quebrado = limpo + "Migration cria `exp_02ef1b_gates_turma`.\n"
+    r = validar_prd(quebrado)
+    assert r["status"] == "bloqueado"
+    assert any(a["codigo"] == "prefixo-tabela" for a in r["achados"])
+    print("   ✓ consistência interna do PRD: prefixo híbrido é barrado antes de chegar em quem codifica")
+
+
+def test_achado_de_evento_nomeia_o_evento_e_mostra_a_linha():
+    """O relatório precisa dizer QUAL evento está errado, não só que há um errado.
+
+    Numa tabela larga o identificador do evento cai no meio da linha: recortar o começo
+    escondia justamente a evidência de quem ia corrigir, e o achado chegava ao humano sem
+    o dado que o torna acionável.
+    """
+    from tools.rastro import validar_prd
+
+    linha = (
+        "| **Autonomia de Enquadramento** | 45% hesita | ≥ 85% em < 90s | Piloto | "
+        "`EVT-002` (`enquadrar:crop:foto`) | `telemetria_eventos` |\n"
+    )
+    achados = validar_prd(linha)["achados"]
+    evento = [a for a in achados if a["codigo"] == "evento-sem-leitor"]
+    assert evento, achados
+    assert "EVT-002" in evento[0]["resumo"]
+    assert "telemetria_eventos" in evento[0]["resumo"]
+    print("   ✓ achado de telemetria nomeia o evento e carrega a linha inteira como evidência")
+
+
+def test_prd_tem_ciclo_de_correcao():
+    """O gate do PRD julgava sem poder devolver — era o único beco da esteira.
+
+    Todo outro gate determinístico da esteira tem um ciclo que devolve o achado ao autor.
+    O do PRD não tinha: detectava defeito de contrato no entregável final e seguia para o
+    one-pager com o defeito intacto, deixando para o humano o que tem correção certa.
+    """
+    from agents.dev import DEV_METADATA, build_dev_stage
+
+    nomes = {m["id"] for m in DEV_METADATA}
+    assert {"A47PrdWriter", "A48PrdCheck", "A48PrdRodada"} <= nomes, sorted(nomes)
+
+    def achatar(agentes):
+        for a in agentes:
+            yield a
+            yield from achatar(getattr(a, "sub_agents", []) or [])
+
+    loop = [a for a in achatar([build_dev_stage()]) if a.name == "PrdLoop"]
+    assert loop, "PrdLoop não está montado na etapa de dev"
+    dentro = {a.name for a in achatar(loop[0].sub_agents)}
+    assert {"A47PrdWriter", "A48PrdCheck", "A48PrdRodada"} <= dentro, sorted(dentro)
+    print("   ✓ redator do PRD e gate de consistência estão no mesmo loop, com saída por rodada")

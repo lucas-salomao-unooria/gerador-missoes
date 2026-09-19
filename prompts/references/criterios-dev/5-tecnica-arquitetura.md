@@ -54,7 +54,7 @@ A spec identifica essas contas.
 
 ## TEC-06 — Relógio coletivo bem definido
 Se há aula síncrona: relógio por turma no servidor (tabela própria, como
-`exp_03_relogio_turma`), largada IDEMPOTENTE (dois cliques não rebobinam),
+`exp03ef1b_relogio_turma`), largada IDEMPOTENTE (dois cliques não rebobinam),
 "+tempo" com pivô (não recalcula o passado), estudante descobre por polling.
 Ações do professor: largada, +tempo, encerrar, modo livre, redefinir.
 

@@ -149,6 +149,8 @@ caminho de cada dado.
 na linha da sessão, o que acontece com linhas antigas quando sobe, e se
 "zerar turma" apaga ou incrementa `tentativa`.
 
+**O prefixo da tabela é o id inteiro, sem separador interno.** A missão `exp05ef3b` usa `exp05ef3b_sessoes`, nunca `exp_05ef3b_` nem `exp_05_`. O identificador já carrega ano e bimestre; quebrá-lo com underscore recria o formato antigo e desalinha migration, Prisma e o `@@map`.
+
 **Tabelas e RLS.** Toda tabela `expNNefNb_*` com `escola_id NOT NULL`, `ENABLE`
 + `FORCE ROW LEVEL SECURITY` e policy por `app.escola_id`; exceção de RLS só
 justificada por escrito. Estado é **string com CHECK na migration**, nunca

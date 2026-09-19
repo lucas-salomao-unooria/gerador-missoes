@@ -24,6 +24,7 @@ ARTIFACT_FILES = [
     ("gate_estrutural_report", "produto/01-gate-estrutural.md"),
     ("avaliacao_pedagogica_report", "produto/02-avaliacao-pedagogica.md"),
     ("experiencia_aluno_report", "produto/03-experiencia-aluno.md"),
+    ("adequacao_report", "produto/03b-adequacao-pedagogica.md"),
     ("gate_final_report", "produto/04-gate-final.md"),
     ("spec_missao", "produto/05-spec-missao.md"),
     ("one_pager_gate0", "produto/00c-one-pager-original.md"),
@@ -104,7 +105,7 @@ def e_mensagem_de_pulo(valor: Any) -> bool:
     """O ADK grava no `output_key` o texto do callback que pulou o agente.
 
     Sem este filtro, um pipeline bloqueado produz um `PRD.md` de 88 bytes dizendo
-    "A46PrdWriter não executado" — e a interface, que só testa se a chave existe,
+    "A47PrdWriter não executado" — e a interface, que só testa se a chave existe,
     anuncia "PRD gerado".
     """
     if not isinstance(valor, str):

@@ -251,13 +251,18 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
             "# 0. Resumo executivo\n"
             "Conteúdo da missão..."
         )
-        # Teste com prd_final no state
+        # O título vai para o histórico prefixado por ano e bimestre, tirados do identificador
+        # da missão — sem isso, duas missões do mesmo ano ficam indistinguíveis na lista.
         title = extrair_titulo_missao({"prd_final": prd_text})
-        self.assertEqual(title, "O Diário de Criação com IA: Quem é o Autor?")
+        self.assertEqual(title, "8EF-2B · O Diário de Criação com IA: Quem é o Autor?")
 
         # Teste com fallback recebendo texto de frontmatter bruto
         title_from_fallback = extrair_titulo_missao({}, fallback=prd_text)
         self.assertEqual(title_from_fallback, "O Diário de Criação com IA: Quem é o Autor?")
+
+        # Sem identificador dedutível, o título sai como antes — nada de prefixo inventado
+        sem_id = extrair_titulo_missao({"prd_final": "---\ntitulo: Missão Avulsa\n---\n"})
+        self.assertEqual(sem_id, "Missão Avulsa")
 
     def test_extrair_metadados_frontmatter(self):
         prd_text = (
@@ -314,7 +319,8 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
 
         sessions = list_saved_sessions()
         self.assertEqual(len(sessions), 1)
-        self.assertEqual(sessions[0]["title"], "O Diário de Criação com IA: Quem é o Autor?")
+        # o histórico mostra ano e bimestre na frente, para a lista se organizar sozinha
+        self.assertEqual(sessions[0]["title"], "8EF-2B · O Diário de Criação com IA: Quem é o Autor?")
 
         # Ao carregar, a mensagem de boas-vindas deve ter sido removida e apenas a resposta final tem pipeline_result
         loaded = load_saved_session(sessions[0]["dir_name"])
@@ -330,7 +336,7 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
         self.assertIsNotNone(msgs[1]["pipeline_result"], "Somente a mensagem final do assistente deve ter pipeline_result")
 
         # Metadados limpos e status refletindo aprovação dos gates
-        self.assertEqual(meta["title"], "O Diário de Criação com IA: Quem é o Autor?")
+        self.assertEqual(meta["title"], "8EF-2B · O Diário de Criação com IA: Quem é o Autor?")
         self.assertEqual(meta["status_label"], "🟢 Aprovado")
 
         delete_saved_session(sessions[0]["dir_name"])

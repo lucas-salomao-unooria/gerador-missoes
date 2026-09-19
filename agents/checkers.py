@@ -40,8 +40,10 @@ from tools.bncc import relatorio_markdown, validar_spec
 from tools.rastro import (
     relatorio_lacunas,
     relatorio_manifesto,
+    relatorio_prd,
     relatorio_telemetria,
     validar_manifesto,
+    validar_prd,
     validar_telemetria,
     varrer_lacunas,
 )
@@ -438,6 +440,23 @@ class RastroCheckAgent(BaseAgent):
         elif self.modo == "telemetria":
             resultado = validar_telemetria(str(state.get(self.fonte_key, "") or ""))
             relatorio = relatorio_telemetria(resultado, missao)
+        elif self.modo == "prd":
+            # Dois exames no mesmo passo: os marcadores que o redator deixou (lacunas) e as
+            # contradições que ele não viu (consistência). Um PRD pode não ter lacuna nenhuma e
+            # ainda declarar dois prefixos de tabela ou deixar um requisito P0 sem teste — e é o
+            # segundo caso que faz quem codifica escolher um caminho ao acaso.
+            r_lacunas = varrer_lacunas(self.fontes, dict(state))
+            r_consistencia = validar_prd(str(state.get("prd_final", "") or ""))
+            relatorio = (
+                relatorio_lacunas(r_lacunas, self.rotulo, missao, agente=self.agente)
+                + "\n\n---\n\n"
+                + relatorio_prd(r_consistencia, missao)
+            )
+            ordem = ("bloqueado", "amarelo", "aprovado")
+            resultado = {
+                "status": min((r_lacunas["status"], r_consistencia["status"]), key=ordem.index),
+                "achados": list(r_lacunas["achados"]) + list(r_consistencia["achados"]),
+            }
         else:
             resultado = varrer_lacunas(self.fontes, dict(state))
             relatorio = relatorio_lacunas(resultado, self.rotulo, missao, agente=self.agente)

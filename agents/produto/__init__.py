@@ -16,10 +16,10 @@ Ordem (SequentialAgent):
   │ p2  A08AvaliacaoPedagogica → avaliacao_pedagogica_report       │
   │ p3  A09ExperienciaEstudante    → experiencia_aluno_report          │
   └───────────────────────────────────────────────────────────────────┘
-  p4  A10GateFinalProduto    → gate_final_report
+  p4  A11GateFinalProduto    → gate_final_report
   p4c GateFinalCheck           → gate_final_status
-  p5  A12SpecMissao          → spec_missao   (saída final de Produto)
-  p5c A13BnccCheck                → bncc_status   (determinístico: bloco 11 × BNCC Computação oficial;
+  p5  A13SpecMissao          → spec_missao   (saída final de Produto)
+  p5c A14BnccCheck                → bncc_status   (determinístico: bloco 11 × BNCC Computação oficial;
                                  não conforme bloqueia design e dev)
 """
 
@@ -112,6 +112,17 @@ def get_avaliacao_pedagogica_agent(**kw) -> LlmAgent:
     )
 
 
+def get_adequacao_pedagogica_agent(**kw) -> LlmAgent:
+    return create_llm_agent(
+        name="A10AdequacaoPedagogica",
+        description="Parecer de adequação pedagógica em seis eixos: alinhamento curricular, demanda cognitiva, carga acidental, viabilidade na escola pública, evidência de aprendizagem e equidade.",
+        instruction=load_prompt("produto/10_adequacao_pedagogica.md"),
+        output_key="adequacao_report",
+        before_agent_callback=marcar_heranca,
+        **kw,
+    )
+
+
 def get_experiencia_aluno_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A09ExperienciaEstudante",
@@ -125,9 +136,9 @@ def get_experiencia_aluno_agent(**kw) -> LlmAgent:
 
 def get_gate_final_produto_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A10GateFinalProduto",
+        name="A11GateFinalProduto",
         description="Gate final de produto: coerência entre missão e vereditos; libera ou bloqueia para design/dev.",
-        instruction=load_prompt("produto/10_gate_final.md"),
+        instruction=load_prompt("produto/11_gate_final.md"),
         output_key="gate_final_report",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -136,9 +147,9 @@ def get_gate_final_produto_agent(**kw) -> LlmAgent:
 
 def get_spec_missao_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A12SpecMissao",
+        name="A13SpecMissao",
         description="Traduz o one-pager aprovado na especificação de missão (12 blocos) — o contrato da construção.",
-        instruction=load_prompt("produto/12_spec_missao.md"),
+        instruction=load_prompt("produto/13_spec_missao.md"),
         output_key="spec_missao",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -156,6 +167,7 @@ def build_produto_stage(
     estrito = settings.produto_modo_estrito if modo_estrito is None else modo_estrito
     rodadas = max(1, max_rodadas or settings.gate_estrutural_max_rodadas)
     rodadas_spec = max(1, settings.spec_max_rodadas)
+    rodadas_avaliacoes = max(1, settings.avaliacoes_max_rodadas)
     kw = {"thinking_budget": thinking_budget, "include_thoughts": include_thoughts}
 
     nucleo_loop = LoopAgent(
@@ -202,10 +214,25 @@ def build_produto_stage(
         ],
     )
 
+    # O revisor do one-pager vive no loop do gate estrutural, que fecha ANTES das avaliações —
+    # então o parecer de adequação chegaria a ele com o one-pager já congelado. Este segundo
+    # ciclo resolve: avalia, e se o parecer pede ajuste, o revisor aplica e as avaliações
+    # refazem sobre a versão nova. Desligado por padrão (teto 1), porque ligar custa
+    # reexecutar os três avaliadores; suba `AVALIACOES_MAX_RODADAS` para ativar.
+    revisor_pos_parecer = get_revisor_one_pager_agent(**kw)
+    revisor_pos_parecer.name = "A07RevisorOnePagerParecer"
+    revisor_pos_parecer.description = (
+        f"{revisor_pos_parecer.description} (rodada movida pelo parecer de adequação pedagógica)"
+    )
+
     avaliacoes = ParallelAgent(
         name="AvaliacoesParalelas",
-        description="Avaliação pedagógica e experiência do aluno rodam em paralelo sobre a mesma versão da missão.",
-        sub_agents=[get_avaliacao_pedagogica_agent(**kw), get_experiencia_aluno_agent(**kw)],
+        description="Avaliação pedagógica, experiência do estudante e adequação pedagógica rodam em paralelo sobre a mesma versão da missão.",
+        sub_agents=[
+            get_avaliacao_pedagogica_agent(**kw),
+            get_experiencia_aluno_agent(**kw),
+            get_adequacao_pedagogica_agent(**kw),
+        ],
         before_agent_callback=marcar_heranca,
     )
 
@@ -220,13 +247,13 @@ def build_produto_stage(
         sub_agents=[
             get_spec_missao_agent(**kw),
             BnccCheckAgent(
-                name="A13BnccCheck",
+                name="A14BnccCheck",
                 description="Confere o bloco 11 da spec contra a lista oficial da BNCC Computação: código existe, é do ano da missão e há letramento digital.",
                 estrito=settings.bncc_check_estrito,
                 before_agent_callback=marcar_heranca,
             ),
             RastroCheckAgent(
-                name="A14ManifestoCheckProduto",
+                name="A15ManifestoCheckProduto",
                 description="Ficha do manifesto no bloco 0 da spec, conferida ainda em Produto: campo fora do vocabulário fechado volta para quem escreveu a spec.",
                 modo="manifesto",
                 rotulo="Ficha do manifesto (produto)",
@@ -236,13 +263,34 @@ def build_produto_stage(
                 before_agent_callback=marcar_heranca,
             ),
             SaidaDeLoopAgent(
-                name="A15SpecCheck",
+                name="A16SpecCheck",
                 description="Currículo e manifesto conformes encerram o loop; reprovados devolvem a spec ao autor com os dois relatórios.",
                 rotulo="Spec da missão",
                 status_keys=["bncc_status", "manifesto_status"],
                 rodada_key="spec_rodada",
                 max_rounds=rodadas_spec,
             ),
+        ],
+    )
+
+    avaliacoes_loop = LoopAgent(
+        name="AvaliacoesLoop",
+        description="Avaliações em paralelo ↔ revisor do one-pager, quando o parecer de adequação pede ajuste.",
+        max_iterations=rodadas_avaliacoes,
+        before_agent_callback=marcar_heranca,
+        sub_agents=[
+            avaliacoes,
+            SaidaDeLoopAgent(
+                name="A10bAdequacaoCheck",
+                description="Parecer sem ajuste exigido encerra o loop; com ajuste, o revisor aplica e as avaliações refazem.",
+                rotulo="Adequação pedagógica",
+                status_keys=["adequacao_status"],
+                rodada_key="avaliacoes_rodada",
+                max_rounds=rodadas_avaliacoes,
+                # o parecer é consultivo: `aprovado_com_ressalvas` não obriga nova rodada
+                aceitos=["aprovado", "aprovado_com_ressalvas", "amarelo", ""],
+            ),
+            revisor_pos_parecer,
         ],
     )
 
@@ -253,10 +301,10 @@ def build_produto_stage(
             nucleo_loop,
             get_secoes_apoio_agent(**kw),
             gate_loop,
-            avaliacoes,
+            avaliacoes_loop,
             get_gate_final_produto_agent(**kw),
             EnvelopeGateAgent(
-                name="A11GateFinalProdutoCheck",
+                name="A12GateFinalProdutoCheck",
                 description="Lê o veredito do gate final de produto (🟢 liberada / 🔴 bloqueada).",
                 rotulo="Gate final de produto",
                 report_key="gate_final_report",
@@ -277,11 +325,14 @@ PRODUTO_METADATA = [
     {"id": "A06GateEstruturalCheck", "name": "06 · Veredito do gate (determinístico)", "icon": "🔀", "output_key": "gate_estrutural_status", "prompt_file": None, "description": "Lê o envelope JSON e decide repetir, seguir ou bloquear."},
     {"id": "A07RevisorOnePager", "name": "07 · Revisor do one-pager", "icon": "🩹", "output_key": "one_pager", "prompt_file": "produto/07_revisor_one_pager.md", "description": "Aplica o complemento pronto-pra-colar do gate; não inventa decisão de produto."},
     {"id": "A08AvaliacaoPedagogica", "name": "08 · Avaliação pedagógica", "icon": "🎓", "output_key": "avaliacao_pedagogica_report", "prompt_file": "produto/08_avaliacao_pedagogica.md", "description": "BNCC, professor, guardrails e affordance × guardrail (paralelo com P3)."},
-    {"id": "A09ExperienciaEstudante", "name": "09 · Experiência do aluno", "icon": "🧒", "output_key": "experiencia_aluno_report", "prompt_file": "produto/09_experiencia_estudante.md", "description": "Carga cognitiva, faixa etária e agência (paralelo com P2)."},
-    {"id": "A10GateFinalProduto", "name": "10 · Gate final de produto", "icon": "🏁", "output_key": "gate_final_report", "prompt_file": "produto/10_gate_final.md", "description": "Coerência entre missão e vereditos; libera ou bloqueia para design/dev."},
-    {"id": "A11GateFinalProdutoCheck", "name": "11 · Veredito final (determinístico)", "icon": "🔀", "output_key": "gate_final_status", "prompt_file": None, "description": "Lê o envelope do gate final."},
-    {"id": "A12SpecMissao", "name": "12 · Spec da missão", "icon": "📜", "output_key": "spec_missao", "prompt_file": "produto/12_spec_missao.md", "description": "Os 12 blocos da spec — contrato contra o qual design e dev constroem."},
-    {"id": "A13BnccCheck", "name": "13 · Conformidade BNCC Computação (determinístico)", "icon": "📚", "output_key": "bncc_report", "prompt_file": None, "description": "Bloco 11 × lista oficial do MEC: código existe, é do ano da missão e inclui letramento digital. Não conforme bloqueia design e dev."},
-    {"id": "A14ManifestoCheckProduto", "name": "14 · Ficha do manifesto (determinístico)", "icon": "🪪", "output_key": "manifesto_report", "prompt_file": None, "description": "Bloco 0 da spec × listas fechadas da plataforma, conferido ainda em Produto: campo errado volta para quem escreveu a spec, em vez de custar o design inteiro."},
-    {"id": "A15SpecCheck", "name": "15 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
+    {"id": "A09ExperienciaEstudante", "name": "09 · Experiência do estudante", "icon": "🧒", "output_key": "experiencia_aluno_report", "prompt_file": "produto/09_experiencia_estudante.md", "description": "Carga cognitiva, faixa etária e agência (paralelo com P2)."},
+    {"id": "A10AdequacaoPedagogica", "name": "10 · Adequação pedagógica", "icon": "⚖️", "output_key": "adequacao_report", "prompt_file": "produto/10_adequacao_pedagogica.md", "description": "Seis eixos com parecer e ajustes acionáveis: currículo, demanda cognitiva, carga acidental, viabilidade na escola pública, evidência de aprendizagem e equidade. Parecer entra como ressalva, não bloqueia."},
+    {"id": "A10bAdequacaoCheck", "name": "10b · Veredito do parecer (determinístico)", "icon": "🔀", "output_key": "avaliacoes_rodada", "prompt_file": None, "description": "Parecer sem ajuste exigido encerra o ciclo das avaliações; com ajuste, devolve ao revisor do one-pager."},
+    {"id": "A07RevisorOnePagerParecer", "name": "10c · Revisor movido pelo parecer", "icon": "🩹", "output_key": "one_pager", "prompt_file": "produto/07_revisor_one_pager.md", "description": "Aplica ao one-pager os ajustes exigidos pelo parecer de adequação. Só roda com AVALIACOES_MAX_RODADAS > 1."},
+    {"id": "A11GateFinalProduto", "name": "11 · Gate final de produto", "icon": "🏁", "output_key": "gate_final_report", "prompt_file": "produto/11_gate_final.md", "description": "Coerência entre missão e vereditos; libera ou bloqueia para design/dev."},
+    {"id": "A12GateFinalProdutoCheck", "name": "12 · Veredito final (determinístico)", "icon": "🔀", "output_key": "gate_final_status", "prompt_file": None, "description": "Lê o envelope do gate final."},
+    {"id": "A13SpecMissao", "name": "13 · Spec da missão", "icon": "📜", "output_key": "spec_missao", "prompt_file": "produto/13_spec_missao.md", "description": "Os 12 blocos da spec — contrato contra o qual design e dev constroem."},
+    {"id": "A14BnccCheck", "name": "14 · Conformidade BNCC Computação (determinístico)", "icon": "📚", "output_key": "bncc_report", "prompt_file": None, "description": "Bloco 11 × lista oficial do MEC: código existe, é do ano da missão e inclui letramento digital. Não conforme bloqueia design e dev."},
+    {"id": "A15ManifestoCheckProduto", "name": "15 · Ficha do manifesto (determinístico)", "icon": "🪪", "output_key": "manifesto_report", "prompt_file": None, "description": "Bloco 0 da spec × listas fechadas da plataforma, conferido ainda em Produto: campo errado volta para quem escreveu a spec, em vez de custar o design inteiro."},
+    {"id": "A16SpecCheck", "name": "16 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
 ]

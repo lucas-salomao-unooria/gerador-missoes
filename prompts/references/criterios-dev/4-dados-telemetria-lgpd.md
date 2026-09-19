@@ -30,7 +30,7 @@ Tabelas novas com prefixo `expNNefNb_`, `escola_id NOT NULL` + `ENABLE` +
 justificada por escrito); estado como string com CHECK na migration, nunca
 enum; tabela que é
 contrato entre duas experiências carrega os DOIS números
-(`exp_01_exp_70_perfis_importados`). A spec lista as entidades a persistir com
+(`exp01ef1b_exp70ef1b_perfis_importados`). A spec lista as entidades a persistir com
 seus campos principais — o dev não deve descobrir o modelo de dados durante a
 codificação.
 
