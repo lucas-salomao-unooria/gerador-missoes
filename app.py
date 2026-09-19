@@ -670,9 +670,31 @@ def render_prompt_manager():
     st.markdown("### 📝 Prompts dos agentes")
     st.markdown("Cada agente lê um arquivo Markdown em `prompts/<área>/`. Diretivas `<!-- include: references/… -->` inserem conhecimento compartilhado em tempo de carga; `{chave}` / `{chave?}` são interpoladas pelo ADK a partir do estado da sessão.")
     areas = list_prompt_files()
-    metadata = {m["prompt_file"]: m for m in get_pipeline_agents_metadata(active_only=False) if m.get("prompt_file")}
+
+    # Um mesmo prompt pode ser lido por mais de um nó: o revisor do one-pager (07) roda de novo como
+    # retrabalho dentro do loop de avaliações (10c). Vale a PRIMEIRA ocorrência, que é a posição
+    # canônica do agente na esteira — indexar pela última fazia o arquivo 07 aparecer rotulado "10c",
+    # e portanto fora de ordem no seletor.
+    metadata: Dict[str, Dict[str, Any]] = {}
+    reusos: Dict[str, List[str]] = {}
+    for m in get_pipeline_agents_metadata(active_only=False):
+        arquivo = m.get("prompt_file")
+        if not arquivo:
+            continue
+        if arquivo in metadata:
+            reusos.setdefault(arquivo, []).append(m["name"])
+        else:
+            metadata[arquivo] = m
+
+    def _ordem_do_agente(rel: str) -> tuple[int, str]:
+        """`12 · Veredito` → (12, ''), `10c · Revisor` → (10, 'c'). Ordena pela esteira, não pelo nome do arquivo."""
+        nome = metadata.get(rel, {}).get("name", rel)
+        achado = re.match(r"\s*(\d+)([a-z]*)", nome)
+        return (int(achado.group(1)), achado.group(2)) if achado else (999, "")
+
     area = st.selectbox("Área", list(areas), format_func=lambda a: {"produto": "🧭 Produto", "design": "🎨 Design", "dev": "🛠️ Dev", "transversal": "🧠 Transversal"}.get(a, a))
-    fname = st.selectbox("Arquivo", areas[area], format_func=lambda f: f"{metadata.get(f'{area}/{f}', {}).get('name', f)}  ({f})")
+    arquivos = sorted(areas[area], key=lambda f: _ordem_do_agente(f"{area}/{f}"))
+    fname = st.selectbox("Arquivo", arquivos, format_func=lambda f: f"{metadata.get(f'{area}/{f}', {}).get('name', f)}  ({f})")
     rel = f"{area}/{fname}"
     meta = metadata.get(rel)
     if meta:
@@ -681,6 +703,25 @@ def render_prompt_manager():
         c2.markdown(f"**Chave de saída:** `{meta['output_key']}`")
         c3.markdown(f"**Arquivo:** `prompts/{rel}`")
         st.info(f"💡 {meta['description']}")
+        if reusos.get(rel):
+            st.caption(f"♻️ Este mesmo prompt também roda como: {', '.join(f'**{n}**' for n in reusos[rel])} — editar aqui muda os dois.")
+
+    with st.expander(f"🔢 Por que a numeração pula números em {area.title()}?"):
+        st.markdown(
+            "A numeração é **global e segue a ordem de execução da esteira**, contando todos os "
+            "agentes. Os números ausentes são **agentes determinísticos**: regras em Python, sem "
+            "prompt para editar (vivem em `agents/checkers.py` e `tools/`). Eles aparecem abaixo em "
+            "cinza para você localizar o número que procura."
+        )
+        linhas = []
+        for m in get_pipeline_agents_metadata(active_only=False):
+            if m.get("stage") != area:
+                continue
+            if m.get("prompt_file"):
+                linhas.append(f"- {m['icon']} **{m['name']}** — `prompts/{m['prompt_file']}`")
+            else:
+                linhas.append(f"- {m['icon']} {m['name']} — _regra em código, não editável aqui_")
+        st.markdown("\n".join(linhas) or "_Nenhum agente nesta área._")
 
     raw = get_prompt_raw(rel)
     tab_edit, tab_final = st.tabs(["✏️ Editar (fonte)", "👁️ Prompt final (includes resolvidos)"])
@@ -705,11 +746,26 @@ def render_prompt_manager():
     st.markdown("#### 📚 Referências compartilhadas (`prompts/references/`)")
     from prompts import REFERENCES_DIR
 
-    refs = sorted(p.relative_to(REFERENCES_DIR).as_posix() for p in REFERENCES_DIR.rglob("*.md"))
-    ref = st.selectbox("Referência", refs)
+    # Os arquivos próprios vêm primeiro; as cópias da plataforma, agrupadas no fim. Ordenar tudo
+    # junto pelo caminho enterrava as referências editáveis no meio de 45 cópias sincronizadas.
+    todas = sorted(p.relative_to(REFERENCES_DIR).as_posix() for p in REFERENCES_DIR.rglob("*.md"))
+    refs = [r for r in todas if "/" not in r] + [r for r in todas if "/" in r]
+
+    def _rotulo_ref(r: str) -> str:
+        pasta, _, nome = r.rpartition("/")
+        return f"📁 {pasta} · {nome}" if pasta else f"📄 {r}"
+
+    ref = st.selectbox("Referência", refs, format_func=_rotulo_ref)
     ref_raw = get_prompt_raw(f"references/{ref}")
-    ref_edit = st.text_area("Conteúdo da referência", value=ref_raw, height=380, key=f"ref_{ref}")
-    if st.button("💾 Salvar referência", key=f"save_ref_{ref}"):
+    sincronizada = ref.startswith("plataforma/")
+    if sincronizada:
+        st.warning(
+            "🔒 Cópia sincronizada do repositório `plataforma-unooria`. Editar aqui **não** muda a "
+            "plataforma e a alteração é desfeita no próximo `python scripts/sincronizar_plataforma.py`. "
+            "Para mudar de verdade, altere na origem e rode o script."
+        )
+    ref_edit = st.text_area("Conteúdo da referência", value=ref_raw, height=380, key=f"ref_{ref}", disabled=sincronizada)
+    if st.button("💾 Salvar referência", key=f"save_ref_{ref}", disabled=sincronizada):
         save_prompt(f"references/{ref}", ref_edit)
         st.success(f"✅ `references/{ref}` salva.")
 

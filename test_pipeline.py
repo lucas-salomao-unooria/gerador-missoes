@@ -1492,3 +1492,41 @@ def test_cobertura_por_intervalo_conta_como_rastro():
     assert nao_atomica[0]["severidade"] == "atencao"
     assert "14 requisitos" in nao_atomica[0]["resumo"]
     print("   ✓ intervalo conta como rastro, e a tarefa que cobre 14 requisitos vira ressalva")
+
+
+def test_prompt_reusado_mantem_o_numero_canonico():
+    """Um prompt lido por dois nós não pode herdar o rótulo do segundo.
+
+    O revisor do one-pager (07) roda de novo como retrabalho dentro do loop de avaliações (10c).
+    Indexar os metadados por arquivo mantendo a última ocorrência fazia o arquivo 07 aparecer
+    rotulado "10c" no editor — no meio da lista e fora da ordem da esteira.
+    """
+    from pipeline.orchestrator import get_pipeline_agents_metadata
+
+    metadata, reusos = {}, {}
+    for m in get_pipeline_agents_metadata(active_only=False):
+        arquivo = m.get("prompt_file")
+        if not arquivo:
+            continue
+        if arquivo in metadata:
+            reusos.setdefault(arquivo, []).append(m["name"])
+        else:
+            metadata[arquivo] = m
+
+    revisor = metadata["produto/07_revisor_one_pager.md"]["name"]
+    assert revisor.startswith("07"), revisor
+    assert reusos["produto/07_revisor_one_pager.md"], "o reuso precisa ficar visível para quem edita"
+
+    # o número do rótulo tem que crescer junto com o nome do arquivo, dentro de cada área
+    import re
+
+    from prompts import list_prompt_files
+
+    for area, arquivos in list_prompt_files().items():
+        numeros = []
+        for f in sorted(arquivos):
+            nome = metadata.get(f"{area}/{f}", {}).get("name", f)
+            achado = re.match(r"\s*(\d+)", nome)
+            numeros.append(int(achado.group(1)) if achado else 999)
+        assert numeros == sorted(numeros), f"{area}: rótulos fora de ordem — {numeros}"
+    print("   ✓ prompt reusado mantém o número canônico e a lista do editor sai em ordem")
