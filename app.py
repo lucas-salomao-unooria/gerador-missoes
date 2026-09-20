@@ -34,6 +34,7 @@ from pipeline.session_store import (
 )
 from prompts import get_prompt_raw, list_prompt_files, load_prompt, save_prompt
 from tools.doc_parser import DocumentBatch, validate_and_process_batch
+from tools.markdown_blocos import sanear_para_streamlit
 
 favicon = None
 if os.path.exists("images/logo.png"):
@@ -364,7 +365,7 @@ def render_sidebar() -> Dict[str, Any]:
 
         thinking_presets = {"Desativado": 0, "Rápido": 1024, "Equilibrado": 2048, "Aprofundado": 4096, "Avançado": 8192, "Máximo": 16384, "Automático": -1}
         by_val = {v: k for k, v in thinking_presets.items()}
-        selected_label = st.select_slider("Nível de raciocínio", options=list(thinking_presets), value=by_val.get(settings.thinking_budget, "Equilibrado"))
+        selected_label = st.select_slider("Nível de raciocínio", options=list(thinking_presets), value=by_val.get(settings.thinking_budget, "Avançado"))
         # include_thoughts = st.toggle("Exibir pensamentos dos agentes", value=settings.include_thoughts)
         include_thoughts=True
 
@@ -627,7 +628,7 @@ def render_saida_agente(value: str, output_key: str, prefix: str):
             components.html(value, height=600, scrolling=True)
         return
 
-    st.markdown(value)
+    st.markdown(sanear_para_streamlit(value))
 
 
 def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = ""):
@@ -701,12 +702,12 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
                         st.markdown(f"**Owners:** `{meta['owners']}`")
                     if "links" in meta:
                         st.markdown(f"**Links:** `{meta['links']}`")
-                st.markdown(body)
+                st.markdown(sanear_para_streamlit(body))
             else:
-                st.markdown(prd_text)
+                st.markdown(sanear_para_streamlit(prd_text))
         else:
             st.info("O PRD não foi gerado (pipeline bloqueado ou etapa Dev desligada). Abaixo, a saída mais relevante:")
-            st.markdown(result.final_output)
+            st.markdown(sanear_para_streamlit(result.final_output))
 
     elif aba == ABAS[1]:
         stage_tab("produto")
@@ -721,7 +722,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
             for agent, thoughts in result.step_thoughts.items():
                 if thoughts.strip():
                     with st.expander(f"🧠 {agent}"):
-                        st.markdown(thoughts)
+                        st.markdown(sanear_para_streamlit(thoughts))
         else:
             st.info("Nenhum pensamento registrado.")
 

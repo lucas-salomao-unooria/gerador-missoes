@@ -83,6 +83,7 @@ _PAGINA = """<!doctype html>
   }}
   .palco {{ padding: 20px 18px; overflow-x: auto; }}
   .mermaid {{ font-size: 14px; }}
+  .erro {{ margin: 0; color: #a3232b; font-size: 13.5px; }}
   details {{ border-top: 1px dashed var(--borda); }}
   summary {{ padding: 10px 18px; cursor: pointer; color: var(--secundario); font-size: 13px; }}
   pre {{
@@ -100,10 +101,30 @@ _PAGINA = """<!doctype html>
 {secoes}
 <footer>Gerado pelo Gerador de Missões Unooria a partir dos documentos de design desta execução.</footer>
 <script type="module">
+  // Versão exata, não a tag flutuante `@11`: a página fica gravada em disco e busca a CDN a
+  // cada abertura, então um major novo quebraria execuções antigas retroativamente.
+  const abrir = (secao, motivo) => {{
+    const det = secao.querySelector("details");
+    if (det) det.open = true;
+    const palco = secao.querySelector(".palco");
+    if (palco) palco.innerHTML = '<p class="erro">Não foi possível desenhar este diagrama: '
+      + String(motivo).replace(/[<&]/g, c => c === "<" ? "&lt;" : "&amp;")
+      + "</p>";
+  }};
   try {{
-    const {{ default: mermaid }} = await import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs");
-    mermaid.initialize({{ startOnLoad: true, theme: "neutral", securityLevel: "strict" }});
+    const {{ default: mermaid }} = await import("https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs");
+    mermaid.initialize({{ startOnLoad: false, theme: "neutral", securityLevel: "strict" }});
+    // Um nó por vez: com `startOnLoad`, um diagrama de sintaxe inválida derrubava a renderização
+    // de todos os outros, e a página inteira aparecia vazia sem dizer qual deles falhou.
+    for (const no of document.querySelectorAll("pre.mermaid")) {{
+      try {{
+        await mermaid.run({{ nodes: [no] }});
+      }} catch (e) {{
+        abrir(no.closest("section"), e && e.message ? e.message : e);
+      }}
+    }}
   }} catch (e) {{
+    // Sem rede: nenhum diagrama desenha, mas o código-fonte de cada um continua legível.
     for (const el of document.querySelectorAll("details")) el.open = true;
   }}
 </script>

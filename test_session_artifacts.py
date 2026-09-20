@@ -407,6 +407,45 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
         sem_id = extrair_titulo_missao({"prd_final": "---\ntitulo: Missão Avulsa\n---\n"})
         self.assertEqual(sem_id, "Missão Avulsa")
 
+    def test_titulo_nao_arrasta_o_resumo_da_spec(self):
+        """Regressão de 2026-09-20: o cabeçalho da missão virava um parágrafo inteiro.
+
+        O bloco 0 da spec é prosa corrida (`references/formato-spec.md:17` pede
+        "Nome que o estudante vê · software clonado · por que este viewport"), e o regex de
+        `Nome que o estudante vê:` capturava a linha até o fim.
+        """
+        spec = (
+            "# Spec — exp06ef1b\n\n## 0. Identificação de plataforma\n"
+            "Nome que o estudante vê: O algoritmo que me formou. Software clonado: Instagram "
+            "(`instanooria`). Viewport: `375x812` (emulação mobile estrita em container "
+            "responsivo com proporção nativa de smartphone).\n"
+            "- `id: exp06ef1b`\n- `unidade: 1`\n"
+        )
+        self.assertEqual(
+            extrair_titulo_missao({"spec_missao": spec}),
+            "6EF-1B · O algoritmo que me formou",
+        )
+
+        # O núcleo narrativo traz o nome limpo e é lido antes da spec.
+        nucleo = "* **Nome que o estudante vê:** O algoritmo que me formou\n"
+        self.assertEqual(
+            extrair_titulo_missao({"nucleo_narrativo": nucleo, "spec_missao": spec}),
+            "6EF-1B · O algoritmo que me formou",
+        )
+
+        # Título já curto atravessa intacto; versão e viewport não são fim de frase.
+        self.assertEqual(
+            extrair_titulo_missao({"prd_final": "---\ntitulo: O Detalhe que Muda Tudo\n---\n"}),
+            "O Detalhe que Muda Tudo",
+        )
+
+        # Sem ponto nem separador, o corte é por tamanho, em fronteira de palavra.
+        longo = "---\ntitulo: " + "palavra " * 30 + "\n---\n"
+        curto = extrair_titulo_missao({"prd_final": longo})
+        self.assertLessEqual(len(curto), 71)
+        self.assertTrue(curto.endswith("…"))
+        self.assertNotIn("  ", curto)
+
     def test_extrair_metadados_frontmatter(self):
         prd_text = (
             "---\n"

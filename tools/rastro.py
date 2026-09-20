@@ -118,9 +118,14 @@ _TOKENS_ETAPA: Dict[str, tuple] = {
                "licen[çc]a", "direitos de uso", "validar com o time", "aprova[çc][ãa]o human"),
     # Dono que não é etapa da esteira: coordenação da escola, rede parceira, consultor.
     # Cai aqui antes de "produto" porque "pedagóg" também é token de produto.
+    # Calendário e semana letiva entram aqui por decisão de 2026-09-20: em que semana do ano a
+    # aula acontece é combinado com a rede na implantação, não é insumo de construção. O critério
+    # 5.5 de `references/criterios-pedagogicos.md` já diz que isso "não bloqueia"; o classificador
+    # é que discordava e barrava a missão por algo que nenhum agente resolve.
     "externo": ("coordena", "rede parceira", "escola parceira", "designer instrucional",
                 "consultor", "time pedag", "externo", "externa", "cliente", "secretaria",
-                "jur[ií]dico", "dpo"),
+                "jur[ií]dico", "dpo", "rede escolar", "rede de ensino", "semana letiva",
+                "calend[áa]rio letivo", "calend[áa]rio", "implanta[çc][ãa]o"),
     "plataforma": ("plataforma", "adr", "design-system", "storybook", "infra", "ponte", "@edu/ui", "componente do ds", "componente de ds"),
     "dev": ("handoff-dev", "handoff", "brief-assets", "banca", "tech", "arquitetura", "dev"),
     "design": ("jornada", "fluxo", "copy", "wireframe", "caa", "ambiente-simulado", "ambiente", "brief-oficio", "briefing de ofício", "qa-entregaveis", "mermaid", "stitch", "design"),
@@ -129,19 +134,60 @@ _TOKENS_ETAPA: Dict[str, tuple] = {
 }
 
 
-def classificar_dono(texto_dono: str, etapa_padrao: str) -> str:
-    """Mapeia o texto de dono de um marcador para uma etapa da esteira."""
-    t = (texto_dono or "").lower()
-    m = re.search(r"dono:\s*([a-z0-9_@/\-\. ]+)", t)
-    if m:
-        t = m.group(1)
+def _etapa_por_tokens(texto: str) -> Optional[str]:
+    """Primeira etapa cujos tokens aparecem em `texto`, na ordem de precedência. None se nenhuma."""
+    t = (texto or "").lower()
     for etapa in ("humano", "externo", "plataforma", "dev", "design", "produto", "input"):
         for tok in _TOKENS_ETAPA[etapa]:
             # tokens com classe de caractere (ex.: `licen[çc]a`) entram crus; os demais, escapados
             padrao = tok if ("[" in tok or "(" in tok) else re.escape(tok)
             if re.search(r"(?<![a-z0-9-])" + padrao + r"s?(?![a-z0-9-])", t):
                 return etapa
+    return None
+
+
+def classificar_dono(texto_dono: str, etapa_padrao: str, contexto: str = "") -> str:
+    """Mapeia o texto de dono de um marcador para uma etapa da esteira.
+
+    `contexto` é a linha inteira onde o marcador apareceu. O campo `dono:` decide primeiro, como
+    sempre; a linha só é consultada quando esse campo resultaria em bloqueio, e só é capaz de
+    **aliviar** o achado — nunca de agravá-lo. É o que separa o dono nominal de quem de fato
+    fecha a pendência: `[ABERTO — dono: produto]: confirmar a semana letiva junto à coordenação
+    pedagógica da rede parceira` tem dono `produto` escrito, mas quem fecha é gente fora da
+    esteira, e barrar a missão por isso trava a construção em algo que nenhuma rodada resolve.
+    """
+    t = (texto_dono or "").lower()
+    m = re.search(r"dono:\s*([a-z0-9_@/\-\. ]+)", t)
+    if m:
+        t = m.group(1)
+    pelo_dono = _etapa_por_tokens(t)
+    if pelo_dono in ETAPAS_NAO_BLOQUEANTES:
+        return pelo_dono
+    if contexto:
+        pelo_contexto = _etapa_por_tokens(contexto)
+        if pelo_contexto in ETAPAS_NAO_BLOQUEANTES:
+            return pelo_contexto
+    if pelo_dono:
+        return pelo_dono
     return etapa_padrao if etapa_padrao in ETAPAS else "dev"
+
+
+def _linha_e_contexto(texto: str, inicio: int, fim: int) -> tuple:
+    """Devolve ``(linha inteira, prosa ao redor do marcador)``.
+
+    O marcador raramente diz tudo: `[ABERTO — dono: produto]` cabe num colchete, e quem fecha a
+    pendência está na frase ao lado. Mas a linha crua não serve de contexto quando carrega mais
+    de um marcador — o `dono: plataforma` de um vizinho aliviaria indevidamente o marcador desta
+    iteração. A prosa é a linha com **todos** os marcadores removidos: sobra o texto que o autor
+    escreveu em volta, que é o que diz quem tem a caneta.
+    """
+    ini = texto.rfind("\n", 0, inicio) + 1
+    fim_linha = texto.find("\n", fim)
+    linha = texto[ini : fim_linha if fim_linha != -1 else len(texto)].strip()
+    prosa = linha
+    for _, regex in _MARCADORES:
+        prosa = regex.sub(" ", prosa)
+    return linha, prosa
 
 
 def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[str, Any]:
@@ -160,14 +206,19 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                 dono_raw = m.group(1).strip() if m.groups() and m.group(1) else ""
                 if tipo in ("lacuna", "aberto", "needs_clarification") and _e_citacao_do_formato(dono_raw):
                     continue
+                linha, contexto = _linha_e_contexto(texto, m.start(), m.end())
                 if tipo == "rs_pendente":
                     etapa = "produto"
                 elif tipo == "verificar_repositorio":
                     etapa = "dev"
                 elif tipo == "a_validar":
-                    etapa = classificar_dono(trecho, "produto")
+                    # Todo prompt que ensina o 🔵 o descreve como pendência externa a validar
+                    # (criterios-pedagogicos.md:41 · 47_prd_writer.md:151 · 11_gate_final.md:30).
+                    # O default era `produto`, bloqueante — o código contradizia o prompt. Um 🔵
+                    # que nomeie produto, design ou dev no texto continua bloqueando.
+                    etapa = classificar_dono(trecho, "externo", contexto=contexto)
                 else:
-                    etapa = classificar_dono(dono_raw or trecho, fonte.get("etapa_padrao", "dev"))
+                    etapa = classificar_dono(dono_raw or trecho, fonte.get("etapa_padrao", "dev"), contexto=contexto)
                 chave = (tipo, " ".join(trecho.split()).lower())
                 if chave in vistos:
                     # Mesma pendência propagada para outro documento: conta uma vez, no
@@ -177,6 +228,7 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                 achado = {
                     "tipo": tipo,
                     "trecho": trecho[:160],
+                    "contexto": linha[:200],
                     "documento": fonte["rotulo"],
                     "dono": dono_raw[:80] or "—",
                     "etapa": etapa,
@@ -228,8 +280,8 @@ def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", 
     pe = r["por_etapa"]
     linhas.append(
         f"**O que faltou:** input `{pe['input']}` · **produto `{pe['produto']}`** · **design `{pe['design']}`** · dev `{pe['dev']}` · "
-        f"plataforma `{pe['plataforma']}` · externo `{pe['externo']}` "
-        f"_(plataforma e externo são pendências humanas: ficam registradas e não impedem o PRD)_"
+        f"plataforma `{pe['plataforma']}` · externo `{pe['externo']}` · humano `{pe['humano']}` "
+        f"_(plataforma, externo e humano são pendências de gente: ficam registradas e não impedem o PRD)_"
     )
     linhas.append(f"**Documentos lidos:** {', '.join(r['documentos']) or '— nenhum'}")
     linhas.append("")
@@ -247,11 +299,13 @@ def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", 
     linhas.append("## Lacunas")
     linhas.append("")
     if r["achados"]:
-        linhas.append("| Etapa que falhou | Documento | Tipo | Dono declarado | Trecho |")
+        linhas.append("| Etapa que falhou | Documento | Tipo | Dono declarado | Linha do documento |")
         linhas.append("|---|---|---|---|---|")
         for a in sorted(r["achados"], key=lambda x: (ETAPAS.index(x["etapa"]), x["documento"])):
             sev = "⚠️" if a["severidade"] == "atencao" else "⛔"
-            trecho = a["trecho"].replace("|", "\\|").replace("\n", " ")
+            # A linha inteira, e não só o marcador: é ela que justifica a etapa escolhida, e
+            # `[ABERTO — dono: produto]` sozinho não diz a quem cobrar.
+            trecho = (a.get("contexto") or a["trecho"]).replace("|", "\\|").replace("\n", " ")
             linhas.append(f"| {sev} **{a['etapa']}** | {a['documento']} | `{a['tipo']}` | {a['dono']} | {trecho} |")
     else:
         linhas.append("_Nenhuma._")
@@ -264,7 +318,7 @@ def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", 
         "veredito": {"aprovado": "verde", "amarelo": "amarelo", "bloqueado": "vermelho"}[r["status"]],
         "por_etapa": pe,
         "achados": [
-            {"severidade": a["severidade"], "classe": a["tipo"], "codigo": a["etapa"], "agente_responsavel": _dono_roteavel(a), "documento": a["documento"], "resumo": a["trecho"][:120]}
+            {"severidade": a["severidade"], "classe": a["tipo"], "codigo": a["etapa"], "agente_responsavel": _dono_roteavel(a), "documento": a["documento"], "resumo": (a.get("contexto") or a["trecho"])[:120]}
             for a in r["achados"]
         ],
         "precisa_humano": r["status"] != "aprovado",

@@ -109,6 +109,37 @@ def extrair_titulo_missao(state: Dict[str, Any], fallback: str = "Missão Sem T�
     return titulo
 
 
+#: Onde a prosa começa depois do nome. O gabarito do bloco 0 (`references/formato-spec.md:17`)
+#: pede "Nome que o estudante vê · software clonado · por que este viewport", e o agente entrega
+#: tudo isso numa linha só. O nome é o que vem antes do primeiro separador ou do primeiro ponto
+#: final de frase.
+_CORTE_PROSA = re.compile(
+    r"\s+[·—–|]\s+"                        # separadores do gabarito
+    r"|(?<=[a-zà-ÿ0-9\)\"'])\.(?:\s+|$)"     # fim de frase: ponto após letra/dígito
+)
+_LIMITE_TITULO = 70
+
+
+def _encurtar_titulo(bruto: str) -> str:
+    """Reduz o título ao nome da missão, sem o resumo que costuma vir grudado.
+
+    `O algoritmo que me formou. Software clonado: Instagram (`instanooria`). Viewport: 375x812…`
+    vira `O algoritmo que me formou`. O corte é no primeiro separador do gabarito ou no primeiro
+    fim de frase — `375x812` e `v1.0` não são fim de frase porque o ponto não é seguido de espaço.
+    """
+    texto = " ".join((bruto or "").split()).strip().strip("*_`\"'")
+    if not texto:
+        return ""
+    m = _CORTE_PROSA.search(texto)
+    if m:
+        texto = texto[: m.start()].strip()
+    texto = texto.strip().strip("*_`\"'").rstrip(".,;:·—–|").strip()
+    if len(texto) > _LIMITE_TITULO:
+        corte = texto.rfind(" ", 0, _LIMITE_TITULO)
+        texto = texto[: corte if corte > 0 else _LIMITE_TITULO].rstrip(" ,;:.") + "…"
+    return texto
+
+
 def _titulo_bruto(state: Dict[str, Any], fallback: str = "Missão Sem Título") -> str:
     """Extrai o título amigável da missão a partir do prd_final, spec_missao, one_pager ou fallback."""
     fontes = [
@@ -116,15 +147,25 @@ def _titulo_bruto(state: Dict[str, Any], fallback: str = "Missão Sem Título") 
         state.get("spec_missao"),
         state.get("one_pager"),
     ]
+    # O núcleo narrativo e o one-pager trazem o nome como item de lista
+    # (`* **Nome que o estudante vê:** O algoritmo que me formou`); a spec o entrega em prosa,
+    # junto do software clonado e do viewport, porque o bloco 0 é um parágrafo corrido. Ler os
+    # documentos limpos primeiro evita depender só do corte.
+    fontes_nome = [
+        state.get("nucleo_narrativo"),
+        state.get("one_pager"),
+        state.get("prd_final"),
+        state.get("spec_missao"),
+    ]
 
-    # Prioridade 1: 'Nome que o estudante vê: ...' em qualquer das fontes
-    for fonte in fontes:
+    # Prioridade 1: 'Nome que o estudante vê: ...' nos documentos onde o nome vem limpo
+    for fonte in fontes_nome:
         txt = _safe_str(fonte).strip()
         if not txt:
             continue
         m_nome = re.search(r"\*?\*?Nome que o estudante vê:\*?\*?\s*([^\n\r]+)", txt, re.IGNORECASE)
         if m_nome:
-            clean = m_nome.group(1).strip().strip("*_`\"'")
+            clean = _encurtar_titulo(m_nome.group(1))
             if clean:
                 return clean
 
@@ -135,12 +176,12 @@ def _titulo_bruto(state: Dict[str, Any], fallback: str = "Missão Sem Título") 
             continue
         meta, _ = extrair_metadados_frontmatter(txt)
         if meta.get("titulo"):
-            clean = meta["titulo"].strip().strip("*_`\"'")
+            clean = _encurtar_titulo(meta["titulo"])
             if clean:
                 return clean
         m_tit = re.search(r"^\s*titulo:\s*[\"']?([^\"'\n\r]+)[\"']?", txt, re.MULTILINE | re.IGNORECASE)
         if m_tit:
-            clean = m_tit.group(1).strip().strip("*_`\"'")
+            clean = _encurtar_titulo(m_tit.group(1))
             if clean:
                 return clean
 
@@ -151,8 +192,8 @@ def _titulo_bruto(state: Dict[str, Any], fallback: str = "Missão Sem Título") 
             continue
         m_header = re.search(r"^#\s+(?:One-pager|Spec|PRD|0\.\s+Resumo executivo)\s+[—-]\s+([^\n\r]+)", txt, re.MULTILINE | re.IGNORECASE)
         if m_header:
-            clean = m_header.group(1).strip().strip("*_`\"'")
-            clean = re.sub(r"\s+v\d+(?:\.\d+)?.*$", "", clean).strip()
+            clean = re.sub(r"\s+v\d+(?:\.\d+)?.*$", "", m_header.group(1).strip()).strip()
+            clean = _encurtar_titulo(clean)
             if clean:
                 return clean
 
@@ -161,27 +202,27 @@ def _titulo_bruto(state: Dict[str, Any], fallback: str = "Missão Sem Título") 
     if fallback_str:
         m_nome = re.search(r"\*?\*?Nome que o estudante vê:\*?\*?\s*([^\n\r]+)", fallback_str, re.IGNORECASE)
         if m_nome:
-            clean = m_nome.group(1).strip().strip("*_`\"'")
+            clean = _encurtar_titulo(m_nome.group(1))
             if clean:
                 return clean
 
         meta, _ = extrair_metadados_frontmatter(fallback_str)
         if meta.get("titulo"):
-            return meta["titulo"].strip().strip("*_`\"'")
+            return _encurtar_titulo(meta["titulo"])
 
         m_tit = re.search(r"^\s*titulo:\s*[\"']?([^\"'\n\r]+)[\"']?", fallback_str, re.MULTILINE | re.IGNORECASE)
         if m_tit:
-            return m_tit.group(1).strip().strip("*_`\"'")
+            return _encurtar_titulo(m_tit.group(1))
 
         m_header = re.search(r"^#\s+(?:One-pager|Spec|PRD|0\.\s+Resumo executivo)\s+[—-]\s+([^\n\r]+)", fallback_str, re.MULTILINE | re.IGNORECASE)
         if m_header:
-            clean = m_header.group(1).strip().strip("*_`\"'")
-            clean = re.sub(r"\s+v\d+(?:\.\d+)?.*$", "", clean).strip()
+            clean = re.sub(r"\s+v\d+(?:\.\d+)?.*$", "", m_header.group(1).strip()).strip()
+            clean = _encurtar_titulo(clean)
             if clean:
                 return clean
 
         if "prd_id:" not in fallback_str and "\n" not in fallback_str:
-            return fallback_str[:60]
+            return _encurtar_titulo(fallback_str) or fallback_str[:60]
 
     # Prioridade 5: Slug
     for fonte in fontes:

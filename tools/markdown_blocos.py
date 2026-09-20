@@ -28,7 +28,10 @@ _SEPARADOR_TABELA = re.compile(r"^\s*\|[\s:|-]+\|\s*$")
 _DIVISORIA = re.compile(r"^\s*(-{3,}|\*{3,}|_{3,})\s*$")
 _CITACAO = re.compile(r"^\s*>\s?(.*)$")
 _CERCA = re.compile(r"^\s*```\s*([\w-]*)\s*$")
-_ENVELOPE = re.compile(r"```json.*?```", re.DOTALL)
+#: O envelope de contrato que o agente assina no fim do relatório. Ancorado no fim de propósito:
+#: sem a âncora, `limpar()` apagava QUALQUER bloco ```json do documento — inclusive o exemplo de
+#: payload que o one-pager cita — e o leitor recebia um buraco sem aviso.
+_ENVELOPE = re.compile(r"(?:\n\s*(?:-{3,}|\*{3,})\s*)?\n?```json\s(?:(?!```)[\s\S])*```\s*\Z")
 _FRONT_MATTER = re.compile(r"\A---\s*\n.*?\n---\s*\n", re.DOTALL)
 
 # **negrito** · *itálico* · `código` · [texto](url)
@@ -219,3 +222,55 @@ def analisar(markdown: str) -> List[Bloco]:
 
     fechar_paragrafo()
     return blocos
+
+
+# ------------------------------------------------------------------ saneamento para o Streamlit
+#: Uma cerca de bloco de código, abrindo ou fechando.
+_CERCA_QUALQUER = re.compile(r"^\s*```", re.MULTILINE)
+#: Código inline: o que estiver entre crases não é prosa e não se mexe.
+_INLINE = re.compile(r"`[^`\n]*`")
+
+
+def sanear_para_streamlit(texto: str) -> str:
+    """Prepara markdown de LLM para `st.markdown` sem que ele se desfaça na tela.
+
+    Duas correções, ambas de coisas que o agente escreve por direito e o renderizador entende
+    como outra coisa:
+
+    - **`$` vira LaTeX.** O Streamlit lê `$…$` como KaTeX inline e `$$…$$` como bloco. Numa
+      saída com "custa R$ 10, no máximo R$ 30", o trecho entre os dois cifrões vira itálico
+      matemático; um `DO $$ … END $$` de migration PL/pgSQL (há exemplos em
+      `references/plataforma/exemplo-migration-exp-04.md`) engole o corpo inteiro. Escapamos o
+      `$` só onde ele é texto — dentro de cerca ou de crase ele é código e fica como está.
+    - **Cerca aberta e não fechada.** O resto do documento vira um bloco de código gigante.
+      Uma cerca de fechamento no fim devolve a formatação ao que vem depois.
+
+    Não toca em HTML: `st.markdown` roda com `unsafe_allow_html=False`, que já o neutraliza.
+    """
+    if not texto or not isinstance(texto, str):
+        return texto or ""
+
+    partes: List[str] = []
+    dentro_de_cerca = False
+    for linha in texto.splitlines(keepends=True):
+        if _CERCA_QUALQUER.match(linha):
+            dentro_de_cerca = not dentro_de_cerca
+            partes.append(linha)
+            continue
+        if dentro_de_cerca or "$" not in linha:
+            partes.append(linha)
+            continue
+        # Fora de cerca: escapa o `$` da prosa e preserva o dos trechos entre crases.
+        pedacos: List[str] = []
+        fim = 0
+        for m in _INLINE.finditer(linha):
+            pedacos.append(linha[fim : m.start()].replace("$", r"\$"))
+            pedacos.append(m.group(0))
+            fim = m.end()
+        pedacos.append(linha[fim:].replace("$", r"\$"))
+        partes.append("".join(pedacos))
+
+    saneado = "".join(partes)
+    if dentro_de_cerca:
+        saneado = saneado.rstrip("\n") + "\n```\n"
+    return saneado

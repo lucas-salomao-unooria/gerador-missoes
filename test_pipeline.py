@@ -574,6 +574,17 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
     assert classificar_dono("plataforma", "dev") == "plataforma"
     assert classificar_dono("dono: input", "dev") == "input"
     assert classificar_dono("qualquer coisa", "design") == "design"
+
+    # O `dono:` cabe num colchete; quem fecha a pendência está na frase ao lado. A prosa em
+    # volta só é consultada quando o dono declarado resultaria em bloqueio, e só é capaz de
+    # aliviar o achado — jamais de agravá-lo.
+    assert classificar_dono(
+        "dono: produto", "produto",
+        contexto="Confirmação da semana letiva junto à coordenação pedagógica da rede parceira",
+    ) == "externo"
+    assert classificar_dono("dono: produto", "produto") == "produto"  # sem contexto, como antes
+    assert classificar_dono("dono: plataforma", "dev", contexto="responsabilidade do produto") == "plataforma"
+    assert classificar_dono("dono: wireframes", "dev", contexto="a jornada ainda não fechou") == "design"
     st = {
         "spec_missao": "spec [ABERTO — gate-estrutural] e RS-2 pendente",
         "handoff_dev": "handoff [LACUNA — dono: wireframes] e [verificar no repositório: nome da tabela] e [LACUNA — dono: plataforma]",
@@ -598,6 +609,36 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
     r_ext = varrer_lacunas(fontes, st_ext)
     assert r_ext["status"] == "amarelo", r_ext["achados"]
     assert r_ext["por_etapa"]["externo"] == 1 and r_ext["por_etapa"]["produto"] == 0
+
+    # Regressão de 2026-09-20 (sessão b2d9): a missão saía 🔴 por duas pendências sobre a semana
+    # letiva em que a aula seria dada — coisa que ninguém na esteira decide. `criterios-pedagogicos.md`
+    # (critério 5.5) já mandava registrar isso como 🔵 que "não bloqueia"; era o classificador que
+    # discordava. O 🔵 sem dono reconhecível passou a cair em `externo`, não em `produto`.
+    st_semana = {
+        "spec_missao": (
+            "* Rastreabilidade Bimestral: 6º ano, 1º bimestre. "
+            "🔵 (Pendência 5.5: alocação da semana letiva exata a ser confirmada na implantação da rede escolar).\n"
+            "* `[ABERTO — dono: produto]`: Confirmação da semana letiva exata junto à coordenação "
+            "pedagógica da rede parceira. Não impede a construção de software."
+        ),
+        "handoff_dev": "handoff limpo",
+    }
+    r_semana = varrer_lacunas(fontes, st_semana)
+    assert r_semana["status"] == "amarelo", r_semana["achados"]
+    assert r_semana["por_etapa"]["externo"] == 2 and r_semana["por_etapa"]["produto"] == 0
+
+    # Mas 🔵 que nomeia uma etapa da esteira continua barrando: o default mudou, o julgamento não.
+    r_azul_design = varrer_lacunas(fontes, {"spec_missao": "🔵 falta o wireframe da tela de perfil", "handoff_dev": "limpo"})
+    assert r_azul_design["status"] == "bloqueado" and r_azul_design["por_etapa"]["design"] == 1
+
+    # `RS-n pendente` e `[verificar no repositório:]` seguem fixos e bloqueantes, por decisão
+    # de produto — o primeiro é lacuna que o D0 carimbou, o segundo é conferência no código.
+    r_fixos = varrer_lacunas(fontes, {
+        "spec_missao": "RS-3 pendente conforme a coordenação da rede parceira",
+        "handoff_dev": "[verificar no repositório: nome da tabela] com a coordenação externa",
+    })
+    assert r_fixos["status"] == "bloqueado", r_fixos["achados"]
+    assert r_fixos["por_etapa"]["produto"] == 1 and r_fixos["por_etapa"]["dev"] == 1
     assert r_ext["achados"][0]["severidade"] == "atencao"
 
     fontes_com_d9 = fontes + [{"chave": "ambiente_simulado", "rotulo": "ambiente simulado (D9)", "etapa_padrao": "design"}]
@@ -839,6 +880,36 @@ def test_contencao_de_resposta_de_ferramenta():
     print("   ✓ contenção de MCP: imagem fora do contexto, dump truncado, orçamento por agente, aplicada a todo agente com ferramentas")
 
 
+def test_markdown_saneado_para_streamlit():
+    """O `$` da prosa não é LaTeX, e cerca aberta não engole o resto do documento.
+
+    Regressão de 2026-09-20: saídas de agente apareciam com trechos em itálico matemático ou
+    viravam um bloco de código gigante. O Streamlit lê `$…$` como KaTeX; "custa R$ 10, no
+    máximo R$ 30" some entre os dois cifrões.
+    """
+    from tools.markdown_blocos import limpar, sanear_para_streamlit
+
+    assert sanear_para_streamlit("custa R$ 10 ou R$ 30") == r"custa R\$ 10 ou R\$ 30"
+    # dentro de crase é código, e código fica como o agente escreveu
+    assert sanear_para_streamlit("use `$VAR` e R$ 5") == r"use `$VAR` e R\$ 5"
+    # dentro de cerca também: `DO $$ … END $$` é PL/pgSQL, não bloco LaTeX
+    cercado = "```sql\nDO $$ x $$;\n```\ndepois R$ 9\n"
+    assert "DO $$ x $$;" in sanear_para_streamlit(cercado)
+    assert r"depois R\$ 9" in sanear_para_streamlit(cercado)
+    # cerca aberta pelo agente ganha fechamento, senão o resto da página vira código
+    assert sanear_para_streamlit("texto\n```py\nx=1\n").endswith("```\n")
+    assert sanear_para_streamlit("sem cifrao") == "sem cifrao"
+
+    # `limpar()` tira só o envelope de contrato do fim — um ```json citado no meio do
+    # documento é conteúdo do leitor e sumia sem aviso no DOCX e no HTML do one-pager.
+    doc = (
+        "# Relatório\n\nExemplo de payload:\n\n```json\n{\"a\": 1}\n```\n\n"
+        "Segue o texto.\n\n---\n```json\n{\"agente\": \"x\"}\n```\n"
+    )
+    limpo = limpar(doc)
+    assert '"a": 1' in limpo and "Segue o texto" in limpo and "agente" not in limpo
+
+
 def test_artefatos_html_e_links():
     """Protótipo, diagramas e links: o HTML nunca entra em prompt, e o link sim."""
     from agents.checkers import ArtefatosDesignAgent
@@ -855,6 +926,13 @@ def test_artefatos_html_e_links():
     folha = montar_folha_de_diagramas("Missão", "a\n```mermaid\nflowchart LR\nA-->B\n```", "b\n```mermaid\nstateDiagram-v2\n[*] --> S\n```")
     assert folha and folha.count("<section>") == 2 and "flowchart LR" in folha
     assert montar_folha_de_diagramas("M", "sem diagrama", None) is None
+
+    # A página fica gravada em disco e busca a CDN a cada abertura: a versão vai pinada no
+    # patch, não na tag flutuante `@11`, senão um release novo quebra execuções antigas.
+    assert "mermaid@11.4.1" in folha and "mermaid@11/" not in folha
+    # E cada diagrama renderiza isolado: com `startOnLoad`, um Mermaid de sintaxe inválida
+    # derrubava o desenho de todos os outros e a página abria vazia, sem dizer qual falhou.
+    assert "startOnLoad: false" in folha and "mermaid.run(" in folha
 
     for texto, esperado in [
         ("**Projeto:** `12041009326340699841`", "12041009326340699841"),
@@ -1265,6 +1343,7 @@ if __name__ == "__main__":
         test_capacidade_de_plataforma_nao_bloqueia,
         test_mensagem_de_pulo_nao_vira_prd,
         test_contencao_de_resposta_de_ferramenta,
+        test_markdown_saneado_para_streamlit,
         test_artefatos_html_e_links,
         test_desembrulhar_cerca_do_documento,
         test_one_pager_pedagogico_em_docx,

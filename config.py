@@ -66,7 +66,7 @@ class AppSettings(BaseSettings):
         description="Modelo usado pelo redator do PRD (pode ser mais forte que o padrão)",
     )
     thinking_budget: int = Field(
-        default_factory=lambda: int(os.getenv("THINKING_BUDGET", "2048")),
+        default_factory=lambda: int(os.getenv("THINKING_BUDGET", "8192")),
         description="Orçamento de raciocínio (0 = off, -1 = dinâmico, >0 = tokens)",
     )
     include_thoughts: bool = Field(
