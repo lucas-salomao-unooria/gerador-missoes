@@ -1,0 +1,1422 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- PACOTES FUNDAMENTAIS ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\geometry{a4paper, top=2.5cm, bottom=2.5cm, left=2.2cm, right=2.2cm}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+% --- CORES (mesma identidade do relatório de auditoria) ---
+\definecolor{NavyBlue}{RGB}{16, 44, 87}
+\definecolor{SteelBlue}{RGB}{53, 89, 142}
+\definecolor{LightBlue}{RGB}{235, 243, 250}
+\definecolor{DarkGreen}{RGB}{20, 108, 67}
+\definecolor{LightGreen}{RGB}{232, 245, 233}
+\definecolor{DarkRed}{RGB}{176, 42, 55}
+\definecolor{LightRed}{RGB}{253, 237, 237}
+\definecolor{DarkYellow}{RGB}{153, 115, 0}
+\definecolor{LightYellow}{RGB}{254, 249, 231}
+\definecolor{Charcoal}{RGB}{40, 40, 40}
+\definecolor{GrayBg}{RGB}{248, 249, 250}
+\definecolor{BorderGray}{RGB}{218, 224, 233}
+\definecolor{Plum}{RGB}{94, 53, 120}
+\definecolor{LightPlum}{RGB}{243, 238, 248}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=NavyBlue,
+    citecolor=SteelBlue,
+    urlcolor=SteelBlue,
+    pdftitle={Proposta de Emendas: missoes imersivas, mensuraveis e adequadas a escola publica},
+    pdfauthor={Proposta tecnica - Unooria},
+    pdfsubject={Emendas aos prompts, referencias e criterios do gerador de missoes},
+    pdfkeywords={imersao, desafio, escola publica, BNCC, criterios, mensurabilidade}
+}
+
+% --- CABEÇALHOS ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{SteelBlue}Proposta de Emendas --- Gerador de Missões}
+\fancyhead[R]{\small\color{SteelBlue}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- TÍTULOS ---
+\titleformat{\section}{\Large\bfseries\color{NavyBlue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{SteelBlue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{Charcoal}}{\thesubsubsection}{1em}{}
+
+% --- CAIXAS SEMÂNTICAS ---
+\newtcolorbox{emendabox}[1]{
+  breakable, enhanced, colback=white, colframe=NavyBlue,
+  boxrule=1pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{antesbox}{
+  breakable, enhanced, colback=LightRed, colframe=DarkRed,
+  boxrule=0.5pt, arc=1pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+  title={\small\bfseries Redação atual}, fonttitle=\color{white}
+}
+\newtcolorbox{depoisbox}{
+  breakable, enhanced, colback=LightGreen, colframe=DarkGreen,
+  boxrule=0.5pt, arc=1pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+  title={\small\bfseries Redação proposta}, fonttitle=\color{white}
+}
+\newtcolorbox{notabox}[1]{
+  breakable, enhanced, colback=LightYellow, colframe=DarkYellow,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{tesebox}{
+  breakable, enhanced, colback=LightBlue, colframe=NavyBlue,
+  boxrule=1pt, arc=2pt, left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+% --- MARCADORES (texto, nunca emoji) ---
+\newcommand{\bloq}{\textcolor{DarkRed}{\textbf{bloqueante}}}
+\newcommand{\naobloq}{\textcolor{DarkYellow}{\textbf{não bloqueante}}}
+\newcommand{\obrig}{\textcolor{DarkRed}{\textbf{Obrigatório}}}
+\newcommand{\desej}{\textcolor{DarkYellow}{\textbf{Desejável}}}
+\newcommand{\rep}{\textcolor{DarkRed}{\textbf{reprova}}}
+\newcommand{\alerta}{\textcolor{DarkYellow}{\textbf{alerta}}}
+\newcommand{\passa}{\textcolor{DarkGreen}{\textbf{passa}}}
+\newcommand{\onda}[1]{\textcolor{SteelBlue}{\textbf{Onda #1}}}
+\newcommand{\dado}{\textbf{[DADO DIRETO]}}
+\newcommand{\extrap}{\textbf{[EXTRAPOLAÇÃO]}}
+\newcommand{\conv}{\textbf{[CONVENÇÃO]}}
+
+\setlist[itemize]{leftmargin=1.4em, itemsep=2pt, topsep=4pt}
+\setlist[enumerate]{leftmargin=1.6em, itemsep=2pt, topsep=4pt}
+
+\renewcommand{\arraystretch}{1.25}
+
+\sloppy
+\emergencystretch=3em
+
+\begin{document}
+
+% ======================= CAPA =======================
+\begin{titlepage}
+\centering
+\vspace*{2.5cm}
+
+{\color{SteelBlue}\large\scshape Unooria --- Gerador de Missões}\\[0.4cm]
+{\color{BorderGray}\rule{0.8\textwidth}{1.2pt}}\\[1.0cm]
+
+{\Huge\bfseries\color{NavyBlue} Proposta de Emendas}\\[0.5cm]
+{\LARGE\color{NavyBlue} para Missões Imersivas}\\[1.2cm]
+
+{\large\itshape Modificações nos prompts, referências e critérios para que a esteira}\\[0.2cm]
+{\large\itshape gere missões que prendem, que medem e que cabem na escola pública brasileira}\\[1.5cm]
+
+{\color{BorderGray}\rule{0.8\textwidth}{0.6pt}}\\[1.0cm]
+
+\begin{minipage}{0.8\textwidth}
+\centering
+\small
+\textbf{Responde a:} Auditoria de Imersão, versão 1.0, de 20 de setembro de 2026\\
+\textbf{Conteúdo:} 20 emendas em 3 ondas, com redação pronta, teste falsificável e indicador de campo\\
+\textbf{Tese:} acrescentar à régua do limite uma régua do agarre, sem inventar número sem fonte\\[0.6cm]
+\textbf{Data:} 20 de setembro de 2026 \quad\textbullet\quad \textbf{Versão:} 1.0
+\end{minipage}
+
+\vfill
+{\small\color{Charcoal} Documento de proposta. Não altera nenhum artefato da esteira; cada emenda
+está redigida para ser aplicada por decisão humana.}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ======================= 1. SUMÁRIO =======================
+\section{Sumário executivo}
+
+\subsection{O que esta proposta faz}
+
+A auditoria concluiu que a esteira tem uma boa \emph{teoria do limite} (o que não sobrecarrega a
+criança) e nenhuma \emph{teoria do agarre} (o que a prende), e que o cenário brasileiro está bem
+medido na infraestrutura e ausente no comportamento da criança. Esta proposta responde às duas
+lacunas com três compromissos:
+
+\begin{tesebox}
+\textbf{1. Um piso, além do teto.} Toda missão passa a ter que provar que exige o bastante da
+faixa, em todas as faixas, com um teste que não depende de gosto: o estudante que faz o mínimo
+chega a um resultado diferente do estudante que investiga. É a variável que a literatura associa à
+aprendizagem em jogos educacionais, e é a que a esteira hoje não mede.
+
+\textbf{2. Imersão como instrumento de medida, declarada e verificável.} A tese que já vive em um
+critério não bloqueante passa a ser premissa lida por todo agente que constrói ou julga tela. A
+fidelidade deixa de depender de uma tabela vazia e de uma intuição sobre ``o que a criança usa'': a
+tabela é preenchida e a intuição é substituída por levantamento nacional com desagregação por
+idade.
+
+\textbf{3. A escola pública como caminho principal, não como \emph{fallback}.} O banco curado
+vira o padrão nos anos iniciais; a conta compartilhada ganha protocolo; a defasagem de leitura do
+9\textordmasculine{} ano e do Médio ganha cláusula; e os cinco achados que convergem nos anos
+iniciais viram um pacote único com dono.
+\end{tesebox}
+
+Cada emenda carrega, além da redação, \textbf{um teste falsificável no gate} e \textbf{um
+indicador observável em campo}. Isso é o que torna a proposta mensurável: nenhum critério novo
+entra sem que se saiba, de antemão, o que confirmaria ou refutaria sua utilidade.
+
+\subsection{Do achado à emenda}
+
+\begin{longtable}{@{}p{1.5cm} p{6.7cm} p{1.9cm} p{3.4cm}@{}}
+\toprule
+\textbf{Achado} & \textbf{Emenda que o resolve} & \textbf{Onda} & \textbf{Decisão exigida} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Achado} & \textbf{Emenda que o resolve} & \textbf{Onda} & \textbf{Decisão exigida} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+A1  & E-01 Roblox sai da lista fechada em todos os lugares & \onda{1} & nenhuma \\
+A5  & E-02 Tabela de ausências preenchida, uma linha por seção & \onda{1} & conferência no storybook \\
+A7  & E-03 Catálogo atualizado, com colunas de progressão & \onda{1} & nenhuma \\
+A6  & E-04 A régua chega ao design por um resumo operacional gerado & \onda{1} & nenhuma \\
+novo & E-05 Deriva de números fora da fonte única & \onda{1} & nenhuma \\
+A11 & E-06 Uso de plataforma por idade entra na régua e nos testes 2.1 e 6.4 & \onda{1} & nenhuma \\
+A8  & E-07 Critério 2.7: a mecânica sustenta a descoberta (C1) & \onda{2} & priorização \\
+A8  & E-08 Falha de plataforma nunca vira decisão do estudante (C7) & \onda{2} & priorização \\
+A8  & E-09 Não-negociável de ofício com mecanismo, sem reordenar a esteira (C3) & \onda{2} & priorização \\
+A2  & E-10 A regra comparativa do pico passa a bloquear & \onda{3} & produto \\
+A4  & E-11 Simulação diegética obrigatória, com três testes & \onda{3} & produto \\
+A12 & E-12 Posse da conta no cenário compartilhado & \onda{3} & produto \\
+A9  & E-13 Piso de desafio por faixa, em todas as faixas & \onda{3} & produto e pedagogia \\
+\S4.3 & E-14 Premissa da imersão como instrumento, propagada & \onda{3} & produto \\
+\S5.6 & E-15 Banco curado como caminho principal nos anos iniciais & \onda{3} & produto \\
+\S5.5 & E-16 Leitura não monotônica: cláusula para 9\textordmasculine{} ano e Médio & \onda{3} & pedagogia \\
+A7, \S4.5 & E-17 Progressão na trilha como critério & \onda{3} & produto \\
+A9--A12 & E-18 Pacote anos iniciais, consolidado & \onda{3} & produto e pedagogia \\
+A10, A2 & E-19 Observação de campo com instrumento e protocolo & \onda{3} & campo \\
+A3  & E-20 O que a esteira faz com critérios que não são dela & \onda{3} & produto \\
+\end{longtable}
+
+\subsection{O que a proposta deliberadamente não faz}
+
+\begin{itemize}
+  \item \textbf{Não muda o framework de seis etapas.} O achado A10 é uma pergunta empírica, e a
+        resposta certa é medir (E-19), não redesenhar por precaução.
+  \item \textbf{Não reescreve os critérios do banco de dev.} \texttt{criterios-dev.md} declara que
+        os 72 critérios são ``do gate \texttt{/validar-missao} do time de dev'', lidos em uma
+        versão datada. Mudar a severidade de DES-03 lá é decisão de outro time; o que a esteira
+        pode fazer é garantir a mesma coisa a montante (E-20).
+  \item \textbf{Não inventa número novo.} Toda quantidade nova nesta proposta carrega a marca
+        \dado, \extrap{} ou \conv{}, na disciplina de \texttt{literatura-cognitiva.md}.
+  \item \textbf{Não promove O2--O5 a bloqueante antes da calibragem.} Só a regra comparativa do
+        pico, que não depende de número, sobe agora (E-10).
+  \item \textbf{Não infla o contexto dos prompts de design com a referência inteira.} A régua chega
+        por um resumo gerado da fonte única (E-04), no mesmo padrão em que a lista BNCC em
+        markdown é gerada do JSON.
+\end{itemize}
+
+% ======================= 2. COMO LER =======================
+\section{Como ler cada emenda}
+
+Toda emenda tem a mesma anatomia, para que possa ser aprovada, recusada ou adiada item a item:
+
+\begin{itemize}
+  \item \textbf{Resolve:} o achado da auditoria, e a seção onde está a evidência.
+  \item \textbf{Arquivos:} exatamente o que muda, com o nome do arquivo e, quando cabe, a linha.
+  \item \textbf{Redação atual / proposta:} o texto como está e o texto como ficaria. A proposta
+        preserva a forma da rubrica (número, negrito, tipo, teste prático) para ser colada sem
+        reformatar.
+  \item \textbf{Teste falsificável:} a pergunta que o avaliador responde com sim ou não, citando o
+        documento. Item que precisa de debate para responder está mal redigido, regra que a própria
+        rubrica de ofício impõe.
+  \item \textbf{Como medir se funcionou:} o indicador observável, nos relatórios da esteira ou em
+        campo, que confirmaria ou refutaria a emenda. Este bloco é o que separa proposta de
+        opinião.
+  \item \textbf{Custo e risco:} tamanho da mudança e o que pode dar errado.
+\end{itemize}
+
+Três regras de redação valem para tudo o que segue. \textbf{Um critério novo só entra com teste
+de trinta segundos}, no padrão de \texttt{candidatos-a-criterio.md}. \textbf{Severidade é
+proporcional à evidência}: dado direto sustenta reprovação, extrapolação sustenta alerta,
+convenção só sustenta reprovação quando é comparativa e não numérica. \textbf{A esteira lê
+\texttt{severidade: "bloqueio"}}: o filtro de retrabalho em \texttt{agents/checkers.py} roteia
+por essa string, então toda emenda que quer bloquear precisa fazer o agente emitir exatamente
+esse valor, e nenhuma emenda exige mudança no código Python.
+
+% ======================= 3. ONDA 1 =======================
+\section{Onda 1 --- Correções mecânicas, sem decisão pedagógica}
+
+Seis emendas que alinham o sistema ao que ele já decidiu. Nenhuma muda régua ou tese.
+
+\begin{emendabox}{E-01 --- Roblox sai da lista fechada em todos os lugares \hfill \onda{1}}
+\textbf{Resolve:} A1. \texttt{ambientes.md:27} já decidiu (``Roblox saiu''), o prompt do gate
+já avisa no passo 2, e o critério que o mesmo prompt inclui ainda lista Roblox como ambiente
+válido.
+
+\textbf{Arquivos:} \texttt{criterios-gate-estrutural.md} (linha 21 e lista de falso-positivos),
+\texttt{criterios-experiencia.md} (linha 49), \texttt{catalogo-missoes.md} (campo ``Ambiente
+simulado'', que cita LinkedIn).
+
+\begin{antesbox}\small
+2.1 \textbf{Ambiente é um dos 6 suportados, com conta própria e comportamento fiel} --- Lista
+fechada: Instagram, YouTube, Roblox, ChatGPT, TikTok, WhatsApp. Nenhum outro ambiente passa.
+\end{antesbox}
+
+\begin{depoisbox}\small
+2.1 \textbf{Ambiente é um dos 5 suportados, com conta própria e comportamento fiel} --- Lista
+fechada, com a seção do design system entre parênteses: Instagram (\texttt{instanooria}), YouTube
+(\texttt{unitube}), ChatGPT (\texttt{chatgpt}), TikTok (\texttt{tiktooria}), WhatsApp
+(\texttt{whatsappmobile}). Nenhum outro ambiente passa. Roblox não tem seção e reprova; se voltar,
+volta por \texttt{ambientes.md}, nunca por este critério. \textbf{Nota sobre TikTok:} a seção
+existe sem ponte em \texttt{@edu/ui}; a missão passa no 2.1 e declara a ponte como pré-requisito
+com responsável (DES-01).
+
+Falso-positivos: acrescentar ``\textbf{Roblox:} está fora da lista desde a revisão de setembro de
+2026; missão em Roblox reprova aqui, não em DES-01''.
+
+6.4: trocar ``Dentro dos 6 ambientes suportados'' e ``qual dos 6'' por ``5''.
+\end{depoisbox}
+
+\textbf{Teste falsificável:} uma busca por ``Roblox'', ``6 ambientes'' e ``dos 6'' em
+\texttt{prompts/references/} devolve zero linhas fora de \texttt{ambientes.md}.
+
+\textbf{Como medir se funcionou:} nenhuma execução da esteira chega ao banco de dev com ambiente
+Roblox. Hoje o custo de descobrir isso tarde é uma etapa de design inteira.
+
+\textbf{Custo e risco:} quatro linhas. Risco nulo.
+\end{emendabox}
+
+\begin{emendabox}{E-02 --- Tabela de ausências preenchida, uma linha por seção \hfill \onda{1}}
+\textbf{Resolve:} A5. O critério O3 da rubrica de ofício se declara desarmado enquanto a tabela
+estiver vazia, e ela está vazia.
+
+\textbf{Arquivos:} \texttt{ambientes.md}, seção ``Ausências por ambiente''.
+
+\textbf{Redação proposta.} Cada linha é \textbf{[PROPOSTA]} até conferência contra o storybook e
+contra o bloco 5 das specs já aprovadas; o que importa é que a tabela deixe de estar vazia, porque
+uma lista imperfeita é conferível e uma lista vazia não é.
+
+\begin{center}\small
+\begin{tabular}{@{}p{2.6cm} p{12.2cm}@{}}
+\toprule
+\textbf{Seção} & \textbf{Não tem (o que a plataforma real tem e a simulação deliberadamente não)} \\
+\midrule
+\texttt{instanooria} & Mensagens diretas · Stories e Reels, salvo quando a mecânica os pede ·
+anúncios e publicações patrocinadas · loja e compras · notificações fora da missão · busca aberta
+na internet · perfis fora do banco curado · contadores de seguidores ao vivo (todo número visível é
+gabarito ou cosmético declarado, PED-03) \\
+\texttt{unitube} & Anúncios · transmissão ao vivo e chat · monetização · autoplay infinito fora do
+banco · comentários de terceiros reais · download · histórico entre sessões fora do estado salvo \\
+\texttt{chatgpt} & Memória entre conversas · upload de arquivo ou imagem · navegação na web ·
+plugins e GPTs · modo de voz · histórico lateral fora da missão · resposta em tempo real sem
+curadoria (8.2) \\
+\texttt{whatsappmobile} & Chamadas de voz e vídeo · status · localização · pagamentos · contatos
+fora do grupo da missão · encaminhar para fora da simulação · tema claro (ADR-68) \\
+\texttt{tiktooria} & Transmissão ao vivo · loja · mensagens diretas · efeitos e filtros de criação
+· monetização · download · ``Para você'' infinito fora do banco \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Acrescentar abaixo da tabela: ``\textbf{Regra de leitura:} ausência desta tabela é ausência da
+seção, vale para toda missão. Ausência do bloco 5 da spec é da missão. O3 confere as duas; o D9
+copia a linha da seção para o bloco 14 e acrescenta as da missão.''
+
+\textbf{Teste falsificável:} O3 deixa de devolver ``por causa que não é do agente 5'' em
+qualquer missão dos cinco ambientes.
+
+\textbf{Como medir se funcionou:} contagem de tickets de fidelidade com classe ``reapareceu por
+realismo'' por missão, antes e depois. A tabela existe para essa contagem cair.
+
+\textbf{Custo e risco:} cinco linhas de markdown mais uma conferência no storybook. Risco: linha
+errada gera devolução falsa; por isso cada linha nasce marcada e o QA registra o desvio em vez de
+burlar.
+\end{emendabox}
+
+\begin{emendabox}{E-03 --- Catálogo atualizado, com colunas de progressão \hfill \onda{1}}
+\textbf{Resolve:} A7, e prepara E-17. O catálogo lista três missões; o banco de dev trata quatro
+outras como gabarito.
+
+\textbf{Arquivos:} \texttt{catalogo-missoes.md}.
+
+\textbf{Redação proposta.} Duas colunas novas e as linhas que faltam. As colunas novas são o que
+E-17 vai ler; sem elas, ``progressão'' não tem onde ser verificada.
+
+\begin{itemize}
+  \item Coluna \textbf{Porta de abstração}: \emph{descrever} · \emph{explicar} · \emph{criticar com
+        apoio} · \emph{criticar}, na escala de \texttt{literatura-cognitiva.md} \S4.
+  \item Coluna \textbf{Habilidade primária}: o código de letramento digital da Regra 12 do P0a.
+  \item Coluna \textbf{Observada em campo}: \emph{não} · \emph{piloto} · \emph{sim (data)}, que E-19
+        preenche.
+\end{itemize}
+
+Linhas a acrescentar, com o que os artefatos já dizem e o restante marcado para preenchimento a
+partir do manifesto de cada experiência:
+
+\begin{center}\small
+\begin{tabular}{@{}p{1.3cm} p{4.0cm} p{2.9cm} p{6.4cm}@{}}
+\toprule
+\textbf{Ano} & \textbf{Missão} & \textbf{Ambiente} & \textbf{Preencher do manifesto} \\
+\midrule
+1\textordmasculine{} EF & O Que a Foto Conta (exp-04) & [do manifesto] & eixo, descoberta, decisão, porta, habilidade \\
+6\textordmasculine{} EF & Rastro do Boato (exp-06) & WhatsApp & eixo, descoberta, decisão, porta, habilidade \\
+{[do manifesto]} & O Eco no Grupo (exp-07) & WhatsApp & ano, eixo, descoberta, decisão, porta, habilidade \\
+{[do manifesto]} & Manifesto IA (exp-08) & [do manifesto] & tudo \\
+1\textordmasculine{} EF & Magia ou Truque & TikTok & status (citada em \texttt{candidatos-a-criterio.md}) \\
+5\textordmasculine{} EF & A foto é real & [do one-pager] & idem \\
+7\textordmasculine{} EF & Quem ficou fora & WhatsApp & idem \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Remover ``LinkedIn'' da descrição do campo ``Ambiente simulado'' e substituir por ``um dos cinco
+de \texttt{ambientes.md}''.
+
+\textbf{Teste falsificável:} o critério 2.5 não devolve ``N/A --- catálogo incompleto'' para
+missão de ano coberto pelo catálogo.
+
+\textbf{Como medir se funcionou:} proporção de avaliações pedagógicas em que o 2.5 é de fato
+aplicado (hoje tende a zero, porque o catálogo se autoanula).
+
+\textbf{Custo e risco:} uma hora de preenchimento a partir dos manifestos. Risco: manter o
+catálogo exige que o agente de aprendizado proponha a linha e alguém a aceite; o prompt 51 já faz
+a primeira parte.
+\end{emendabox}
+
+\begin{emendabox}{E-04 --- A régua chega ao design por um resumo operacional gerado \hfill \onda{1}}
+\textbf{Resolve:} A6. A fonte única dos números é incluída em um único prompt; quem desenha tela
+recebe tetos ``a calibrar'' sem a explicação de quando não se aplicam.
+
+\textbf{Arquivos:} novo \texttt{references/literatura-cognitiva-resumo.md} (gerado); novo
+\texttt{scripts/gerar\_resumo\_literatura.py}; diretiva \texttt{include} em
+\texttt{22\_jornada.md}, \texttt{26\_telas.md}, \texttt{24\_copy\_ptbr.md},
+\texttt{19\_ambiente\_simulado.md} e \texttt{21\_brief\_oficio.md}.
+
+\textbf{Por que um resumo e não a referência inteira.} A referência tem 268 linhas e mais de vinte
+citações bibliográficas que quem desenha tela não precisa ler. Incluí-la em cinco prompts custa
+contexto e dilui a instrução. O padrão da casa para isso já existe: a lista BNCC em markdown é
+gerada de um JSON por script, com aviso de ``não edite à mão''. O resumo segue o mesmo padrão:
+uma página, só as tabelas e as regras de aplicação, gerada da fonte para não divergir.
+
+\textbf{Conteúdo do resumo (uma página):}
+\begin{enumerate}
+  \item Tabela de opções comparadas por faixa, com a regra ``opção visível não é opção lembrada''
+        e o $+1$, porque é uma regra de \emph{layout}.
+  \item Tabela de duração por ato e o teto agregado da missão.
+  \item As três portas de abstração por idade.
+  \item As condições em que narrar ajuda e em que atrapalha.
+  \item O cenário de piso da escola pública, seis linhas.
+  \item A tabela de uso de plataforma por idade (E-06).
+  \item Três frases do registro negativo: sem choice overload, sem decision fatigue, sem ``idade
+        igual a minutos''.
+\end{enumerate}
+
+\textbf{Teste falsificável:} o resumo não contém número que não esteja na fonte, e o script falha
+se a fonte mudar e o resumo não for regenerado (comparação de \emph{hash}, como o BNCC faz).
+
+\textbf{Como medir se funcionou:} tickets de D4 (adequação etária nas telas) que citam a regra
+``visível versus lembrada'' passam a existir; hoje não podem existir, porque a regra não chega a
+quem constrói.
+
+\textbf{Custo e risco:} um script pequeno e cinco linhas de include. Risco: duas fontes. O
+script e o hash existem para evitá-lo.
+\end{emendabox}
+
+\begin{emendabox}{E-05 --- Deriva de números fora da fonte única (achado novo) \hfill \onda{1}}
+\textbf{Resolve:} um achado que apareceu ao preparar esta proposta e que confirma o A6 por outro
+ângulo. \texttt{literatura-cognitiva.md} se declara fonte única e diz que existe ``porque números
+soltos em prompts divergem sem que ninguém perceba''. Divergiram.
+
+\textbf{Evidência:}
+\begin{itemize}
+  \item \texttt{defaults-missao.md}, classe \texttt{duracao}, padrão \texttt{teto-por-ato}: ``Ato
+        $\le$ 12 min em anos iniciais, $\le$ 15 nos anos finais, $\le$ 20 no EM''. São os tetos
+        \textbf{antigos}: a seção 8 da fonte registra a troca de ``12 / 15 / 20'' por ``6--8 /
+        8--10 / 10--12 / 12--15''. O D0 aplica o teto revogado como padrão verde.
+  \item \texttt{defaults-missao.md}, ``Tetos de referência'': Ensino Médio ``$\le$ 4--5'' opções.
+        A fonte corrigiu para 4 e explica por quê.
+  \item \texttt{10\_adequacao\_pedagogica.md}, ``Condições materiais'': ``30 a 40 estudantes''. A
+        fonte, seção 6, fixa 25 nos anos iniciais e 32 nos finais e Médio, e diz literalmente que
+        afirmar ``30 a 40'' infla a dificuldade. O mesmo prompt usa Bloom e DOK como régua, que a
+        seção 7 da fonte lista entre o que não usar para adequação etária.
+  \item \texttt{09\_experiencia\_estudante.md}, protocolo de simulação: ``o tipo de raciocínio é
+        compatível com o estágio (Piaget)?''. A seção 7 da fonte proíbe Piaget como veto de
+        abstração e manda usar Demetriou e Fischer. O mesmo protocolo manda aplicar ``os dois testes
+        do 3.5'', mas o teste de volume foi rebaixado a desejável na revisão de setembro.
+\end{itemize}
+
+\textbf{Redação proposta:} alinhar os quatro pontos à fonte, e acrescentar ao topo de
+\texttt{defaults-missao.md} a regra ``\textbf{nenhum número aqui: padrão de duração e de opções
+cita \texttt{literatura-cognitiva.md} pela seção, nunca pelo valor}''. No prompt 09, trocar a
+linha de Piaget por ``o nível de abstração que a decisão pede cabe na porta da faixa
+(\texttt{literatura-cognitiva.md} \S4)?''.
+
+\textbf{Teste falsificável:} uma busca por ``12 min'', ``4--5'', ``30 a 40'' e ``Piaget'' em
+\texttt{prompts/} devolve só a fonte única, onde aparecem como registro do que mudou.
+
+\textbf{Como medir se funcionou:} dois relatórios sobre a mesma missão citam o mesmo teto. Hoje o
+D0 e o P3 podem citar tetos diferentes para o mesmo ato.
+
+\textbf{Custo e risco:} dez linhas. Risco nulo. É a correção mais barata do documento e a que
+mais desmente a promessa de fonte única.
+\end{emendabox}
+
+\begin{emendabox}{E-06 --- Uso de plataforma por idade entra na régua e nos testes 2.1 e 6.4 \hfill \onda{1}}
+\textbf{Resolve:} A11 e a seção 5.2 da auditoria. Dois critérios obrigatórios perguntam o que a
+criança brasileira usa, e nenhum arquivo cita a fonte que responde.
+
+\textbf{Arquivos:} \texttt{literatura-cognitiva.md} (nova seção 10),
+\texttt{criterios-gate-estrutural.md} (2.1, teste de plataforma real),
+\texttt{criterios-experiencia.md} (6.4).
+
+\begin{depoisbox}\small
+\textbf{10. Que plataforma a criança brasileira usa, por idade}
+
+Fonte: TIC Kids Online Brasil 2024 (CETIC.br/NIC.br), amostra probabilística nacional,
+$N = 2.424$, 9 a 17 anos. \dado{} para 9--17; \textbf{a pesquisa não cobre 6 a 8 anos}, e
+qualquer afirmação sobre essa faixa é \extrap{}.
+
+\begin{center}
+\begin{tabular}{@{}l c c c c@{}}
+\toprule
+& 9--10 & 11--12 & 13--14 & 15--17 \\
+\midrule
+Tem perfil em alguma rede social & 60\,\% & 70\,\% & 93\,\% & 99\,\% \\
+Mais usada várias vezes ao dia & YouTube & transição & Instagram & Instagram \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Perfil declarado, 9 a 17 anos: WhatsApp 69\,\%, Instagram 63\,\%, TikTok 45\,\%, YouTube 42\,\%.
+
+\textbf{Regras de aplicação:} (a) \textbf{3\textordmasculine{}--5\textordmasculine{} ano}, o
+ambiente de consumo mais plausível é YouTube; WhatsApp é plausível como \emph{grupo da família ou
+da turma}, não como conta pessoal; (b) \textbf{6\textordmasculine{}--7\textordmasculine{} ano} é
+zona de transição: qualquer um dos cinco é defensável, e a spec justifica; (c)
+\textbf{8\textordmasculine{} ano em diante}, Instagram, TikTok e WhatsApp são os de maior uso; (d)
+\textbf{1\textordmasculine{}--2\textordmasculine{} ano}, sem dado: presumir uso mediado por adulto
+e sem perfil próprio, o que faz da ``primeira conta'' um evento diegético legítimo (E-18); (e) aos
+9--10 anos, 40\,\% \textbf{não têm} perfil algum: missão dessa faixa que pressupõe conta declara o
+que faz com quem nunca teve uma.
+\end{depoisbox}
+
+\begin{depoisbox}\small
+\textbf{2.1, teste de plataforma real (substitui ``o aluno diria eu uso isso?''):} consulte
+\texttt{literatura-cognitiva.md} \S10. O ambiente está entre os de maior uso para a faixa? Se está,
+\passa. Se é zona de transição, \passa{} com justificativa na seção 18. Se está fora (ex.: Instagram
+pessoal no 3\textordmasculine{} ano), \alerta{}; e \rep{} se além disso a missão pressupõe conta
+própria numa faixa em que a maioria não tem, sem tratar a primeira conta na ficção.
+
+\textbf{6.4 (substitui ``qual dos 5 um estudante mediano daquele ano usaria de fato?''):} a
+resposta sai da tabela de \S10, não da intuição do avaliador. Cite a linha. Se a atividade
+simulada (consumir, postar, conversar, pesquisar) não tem ambiente plausível na tabela para a
+faixa, a missão precisa mudar de mecanismo, não forçar encaixe.
+\end{depoisbox}
+
+\textbf{Teste falsificável:} todo relatório do P3 que aplica 6.4 cita a linha da tabela. Relatório
+sem citação é achado de F4 (coerência) no gate final.
+
+\textbf{Como medir se funcionou:} a distribuição de ambientes por faixa nas missões geradas passa
+a acompanhar a tabela; hoje ela acompanha a intuição do modelo. E-19 confronta a tabela com a
+turma real.
+
+\textbf{Custo e risco:} uma seção de vinte linhas e dois testes reescritos. Risco: a tabela
+envelhece; a TIC Kids é anual, e a seção declara a edição lida.
+\end{emendabox}
+
+% ======================= 4. ONDA 2 =======================
+\section{Onda 2 --- Emendas que a casa já aprovou}
+
+Os três itens marcados ``pronto pra emenda'' em \texttt{candidatos-a-criterio.md}. A decisão é
+de priorização, não de mérito. Uma observação antes: o C7 está \textbf{parcialmente} aplicado,
+porque o critério 9.4 (estados de falha) já existe e é obrigatório; o que falta é a cláusula que
+motivou o candidato.
+
+\begin{emendabox}{E-07 --- Critério 2.7: a mecânica sustenta a descoberta central (C1) \hfill \onda{2}}
+\textbf{Resolve:} A8. O caso de origem passou em 2.1, 2.2 e 2.4 com a frase dizendo ``o TikTok
+não avisa'' e a mecânica fazendo o TikTok avisar. Está implementado como passo 4.5 do agente 1,
+sem critério formal, o que significa que o gate estrutural confere por instrução de prompt e não
+por rubrica.
+
+\textbf{Arquivos:} \texttt{criterios-gate-estrutural.md}, seção 2 (o subset passa a ser 2.1, 2.6
+e 2.7); resumo de contagem; \texttt{candidatos-a-criterio.md} (C1 vira ``aplicado em v1.19'').
+
+\begin{depoisbox}\small
+2.7 \textbf{A mecânica sustenta a descoberta central} --- O que a plataforma simulada faz com o
+estudante na etapa Resultado não contradiz a frase da descoberta. \obrig{}. \textbf{Teste de 30
+segundos:} leia a frase-chave da seção 1; leia a regra do sistema da etapa Resultado na seção 4;
+uma nega a outra? Estenda ao podcast, às falas do guia e aos textos do professor. Se a frase diz
+``a plataforma não avisa'' e alguma etiqueta, alerta ou painel avisa, \rep. \textbf{Falso-positivo:}
+a verdade chegar por conteúdo de terceiro dentro da simulação (padrão P1) não é a plataforma
+avisando; é o estudante indo olhar.
+\end{depoisbox}
+
+\textbf{Teste falsificável:} o de trinta segundos acima; sim ou não com citação das duas seções.
+
+\textbf{Como medir se funcionou:} o agente de aprendizado registra ocorrências de C1 por missão.
+A emenda funciona quando a contagem para de crescer.
+
+\textbf{Custo e risco:} uma linha de tabela. Risco nulo; o passo 4.5 já faz isso, a emenda só
+tira a verificação da dependência de um parágrafo de prompt.
+\end{emendabox}
+
+\begin{emendabox}{E-08 --- Falha de plataforma nunca vira decisão do estudante (C7) \hfill \onda{2}}
+\textbf{Resolve:} A8, no agravante que o próprio candidato descreve: ``onde o estado alimenta a
+evidência, falha técnica pode ser gravada como decisão pedagógica''. Uma queda de conexão
+registrada como ``não encaminhou''.
+
+\textbf{Arquivos:} \texttt{criterios-gate-estrutural.md}, critério 9.4 (acrescentar um teste);
+\texttt{formato-spec.md}, bloco 9 (uma regra de grau); \texttt{defaults-missao.md}, padrão
+\texttt{erro-na-voz-da-ficcao} (uma frase).
+
+\begin{depoisbox}\small
+9.4, acrescentar ao teste prático: ``\textbf{Teste de contaminação:} para cada estado de falha
+(conexão, sessão expirada, mídia que não carregou), em qual estado do bloco 9 ele é registrado?
+Se cai em um estado de decisão do estudante (encaminhou / não encaminhou, salvou / pulou), \rep.
+Falha de plataforma alimenta o grau \texttt{none} (a oportunidade não chegou), nunca
+\texttt{zero} (teve a chance e não foi).''
+
+Bloco 9 da spec, graus de medida, acrescentar: ``Estado de falha de plataforma é sempre
+\texttt{none} para toda medida que dependia da tela que falhou.''
+\end{depoisbox}
+
+\textbf{Teste falsificável:} o de trinta segundos do candidato (procurar ``conexão'', ``offline'',
+``sessão'', ``falha'', ``carregar'' na spec) mais a pergunta ``em qual grau cai?''.
+
+\textbf{Como medir se funcionou:} a matriz PED-06 de toda spec nova tem uma linha por estado de
+falha com grau \texttt{none}. Em campo, E-19 compara quedas de conexão registradas contra
+``recusas'' registradas na mesma janela.
+
+\textbf{Custo e risco:} três frases. Risco nulo. É a emenda com maior consequência ética por
+linha escrita: evita que um adulto leia como recusa de uma criança o que foi falha de rede.
+\end{emendabox}
+
+\begin{emendabox}{E-09 --- Não-negociável de ofício com mecanismo, sem reordenar a esteira (C3) \hfill \onda{2}}
+\textbf{Resolve:} A8. O candidato diagnostica ordem de esteira errada: o briefing roda depois de o
+gate fechar a spec, então seus não-negociáveis nunca passam por verificação de mecanismo. Propõe
+reordenar. Esta emenda oferece uma alternativa mais barata e uma mais completa.
+
+\textbf{Opção A (recomendada) --- classificar, não reordenar.} A spec já tem um mecanismo para
+pedido de mudança depois do Gate 0: os pedidos de re-spec \texttt{[RS-n]} do bloco 13, que o D0
+registra e o gate estrutural fecha. Basta obrigar o D1 a usá-lo.
+
+\begin{depoisbox}\small
+Em \texttt{21\_brief\_oficio.md}, seção ``Não-negociáveis de ofício'': ``Cada não-negociável
+recebe \textbf{uma} de duas marcas: \texttt{[MECANISMO: bloco 2, regra <n>]} quando a spec já
+garante o comportamento por ordenação, bloqueio ou restrição de geração; ou
+\texttt{[RS-n $\to$ gate-estrutural]} quando depende de comportamento que a spec não garante.
+Não-negociável sem marca não é vinculante para jornada, copy e wireframes, e o QA (D7) o devolve
+com dono \texttt{brief-oficio}.''
+
+Em \texttt{30\_qa\_entregaveis.md}, D7: ``Não-negociável marcado \texttt{[RS-n]} ainda aberto
+quando o wireframe o honra é \rep{} com dono \texttt{gate-estrutural}: a construção materializou um
+comportamento que a spec não garante.''
+\end{depoisbox}
+
+\textbf{Opção B --- reordenar.} Rodar o D1 sobre o one-pager, antes do 13 (spec), para que os
+não-negociáveis entrem no Gate 0. Custo: o D1 perde o insumo do D9 (o que o ambiente não tem), que
+hoje é matéria-prima do ``sai de propósito''; seria preciso rodar o D9 também antes da spec. É
+mudança de orquestração em \texttt{agents/design/\_\_init\_\_.py}, não de prompt. Fica registrada
+como opção se a A não bastar.
+
+\textbf{Teste falsificável:} todo não-negociável do briefing tem uma das duas marcas; contagem de
+marcas igual à contagem de não-negociáveis.
+
+\textbf{Como medir se funcionou:} lacunas da classe ``não-negociável sem mecanismo'' encontradas
+pelo QA ou pela banca caem a zero, porque passam a ser encontradas pelo D1.
+
+\textbf{Custo e risco:} opção A, seis linhas de prompt. Risco: o D1 marca tudo como
+\texttt{[MECANISMO]} por conveniência; o D7 do QA é a segunda defesa.
+\end{emendabox}
+
+% ======================= 5. ONDA 3 =======================
+\section{Onda 3 --- Decisões de produto}
+
+Onze emendas que mudam tese. Cada uma diz quem decide e o que a decisão custa se estiver errada.
+
+\begin{emendabox}{E-10 --- A regra comparativa do pico passa a bloquear \hfill \onda{3}}
+\textbf{Resolve:} A2 e A3, na única parte que não depende de calibragem. A rubrica de ofício já
+diz: ``a tela \texttt{pico} tem menos elementos que suas vizinhas; essa é comparativa e vale mesmo
+se todos os números acima estiverem errados''. Hoje essa regra é emitida na faixa
+\texttt{"oficio"}, que a esteira não roteia como bloqueio.
+
+\textbf{Arquivos:} \texttt{rubrica-oficio.md} (O1, terceira linha); \texttt{30\_qa\_entregaveis.md}
+(instrução de severidade no gate de ofício); \texttt{22\_jornada.md} (seção 4, para o principal
+saber que é bloqueante). Nada muda em Python: o filtro de retrabalho já roteia
+\texttt{severidade: "bloqueio"}.
+
+\begin{depoisbox}\small
+Em \texttt{rubrica-oficio.md}, O1, linha ``A tela \texttt{pico} é a mais enxuta do trecho?'':
+acrescentar coluna ou nota ``\textbf{severidade: bloqueio}, agente \texttt{jornada}''. As demais
+linhas de O1--O5 continuam \texttt{oficio} até a calibragem de E-19.
+
+Em \texttt{30\_qa\_entregaveis.md}, ``Gate de ofício'': ``Achado O1--O5 sai com
+\texttt{severidade: "oficio"}, \textbf{exceto} a inversão de hierarquia (tela \texttt{pico} com
+mais elementos que qualquer vizinha no arco), que sai com \texttt{severidade: "bloqueio"},
+\texttt{codigo: "O1"}, dono \texttt{jornada}. A contagem é a da coluna ``Teto de elementos
+(contado)'' da seção 4 da jornada, sobre o frame construído, não sobre a intenção.''
+\end{depoisbox}
+
+\textbf{Por que só esta.} A auditoria mostra que todo critério de imersão que bloqueia é
+mecânico e todo que exige juízo não bloqueia. Esta regra é a exceção: exige juízo de composição
+mas se verifica por contagem comparativa. É a ponte entre as duas classes, e o lugar certo para
+começar a dar poder de veto ao ofício sem bloquear por número não calibrado.
+
+\textbf{Teste falsificável:} $n(\texttt{pico}) < \min(n(\text{vizinha anterior}), n(\text{vizinha
+seguinte}))$, com $n$ contado no frame. Empate é \alerta{}; maior é \rep.
+
+\textbf{Como medir se funcionou:} proporção de missões em que o pico é a tela mais cheia (padrão
+P5, já observado uma vez) vai a zero na saída do QA. Em campo, E-19 mede dwell e ação na tela de
+pico contra as vizinhas.
+
+\textbf{Custo e risco:} três parágrafos. Risco: uma rodada a mais de QA em missões que hoje
+passariam com o pico invertido; é o custo que a emenda quer.
+\end{emendabox}
+
+\begin{emendabox}{E-11 --- Simulação diegética obrigatória, com três testes \hfill \onda{3}}
+\textbf{Resolve:} A4. O único critério que pergunta se o mundo ficcional se sustenta é desejável e
+tem um teste binário fraco.
+
+\textbf{Arquivos:} \texttt{criterios-pedagogicos.md}, critério 2.3; resumo de contagem (Imersão
+passa a 2 obrigatórios e 1 desejável).
+
+\begin{antesbox}\small
+2.3 \textbf{Simulação diegética} --- O ambiente simulado existe por uma razão dentro da narrativa.
+Desejável. Teste: a narrativa justifica por que aquele ambiente existe, ou ele aparece ``do
+nada''?
+\end{antesbox}
+
+\begin{depoisbox}\small
+2.3 \textbf{Simulação diegética} --- O estudante entra no ambiente por uma razão que é dele, por
+uma ação que é do ambiente, e o ambiente não é trocável. \obrig{}. Três testes, todos precisam
+passar:
+
+\textbf{(a) Teste da porta:} o \emph{job-to-be-done} do Desafiar (Regra 9 do P0a) diz por que o
+estudante abre \emph{este} app \emph{agora}, e é algo que um estudante da faixa faria fora da
+missão (\texttt{literatura-cognitiva.md} \S10)? ``A Unooria te leva ao feed'' não é porta; ``o
+Léo mandou o link no grupo'' é.
+
+\textbf{(b) Teste da troca:} substitua mentalmente o ambiente por outro dos cinco. Se o Desafiar
+e o Decidir continuam válidos sem reescrita, o ambiente é cenário, não diegese: \rep.
+
+\textbf{(c) Teste da chegada:} a entrada no ambiente é uma ação nativa (abrir o app, abrir um
+grupo, tocar um link, receber uma notificação) e não uma transição da plataforma? Transição da
+Unooria dentro da simulação já reprova no 2.1 (permanência); aqui o que se testa é se a
+\emph{primeira} entrada tem verossimilhança.
+
+Falha em (a) ou (c) é \rep{}; falha só em (b) com justificativa na seção 18 é \alerta.
+\end{depoisbox}
+
+\textbf{Fundamento.} Transporte narrativo \cite{green2000, vanlaer2014} depende de o leitor ter um
+motivo para estar ali; a barreira de entrada de Brown e Cairns \cite{brown2004} é justamente a
+primeira. O teste (b) é o que separa ``imersão'' de ``tema'': se qualquer app serve, o app não é
+parte da descoberta.
+
+\textbf{Teste falsificável:} os três acima, com citação do Desafiar.
+
+\textbf{Como medir se funcionou:} na esteira, contagem de \alerta{} e \rep{} em 2.3 por rodada;
+no campo, minutos até a primeira ação (o D1 já pede esse número) caem quando a porta é boa.
+
+\textbf{Custo e risco:} um critério reescrito. Risco: reprovar missões boas cujo Desafiar é
+genérico; a correção é barata (reescrever o Desafiar), e é exatamente o que a Regra 9 já pede.
+\end{emendabox}
+
+\begin{emendabox}{E-12 --- Posse da conta no cenário compartilhado \hfill \onda{3}}
+\textbf{Resolve:} A12. O 2.1 reprova conta que não é do estudante; o 10.2 exige que a missão
+funcione com três estudantes num aparelho; ninguém diz de quem é a conta.
+
+\textbf{Arquivos:} \texttt{criterios-gate-estrutural.md} (2.1 teste de posse; 10.2);
+\texttt{defaults-missao.md} (padrão \texttt{2-4-decide-em-grupo-registra-por-grupo}, que já
+existe marcado como pendente de confirmação e ganha a parte da identidade).
+
+\textbf{A decisão proposta:} no cenário 2--4, \textbf{a conta é do grupo}, com identidade escolhida
+pelo grupo por affordance nativa (nome de usuário, nome no grupo, foto de perfil entre as do
+banco), e revezamento declarado por etapa. Das três opções que a auditoria lista, é a única que
+preserva agência (1.3) sem violar posse (2.1) e sem inventar tela que a plataforma real não tem
+(padrão P3).
+
+\begin{depoisbox}\small
+2.1, teste de posse: ``a conta é do estudante, ou, no cenário 2--4 por aparelho, do grupo que opera
+o aparelho, com identidade escolhida pelo grupo por affordance nativa. Conta de personagem da
+narrativa \rep{}. Conta ``da turma'' operada pelo professor só no cenário de projeção.''
+
+10.2, teste prático: ``\textbf{Protocolo de revezamento:} para cada etapa com decisão, a spec diz
+quem toca, como o grupo decide (alternância, consenso, voto por affordance nativa) e o que é
+registrado quando há desacordo. `Eles decidem juntos' sem protocolo é \alerta; nenhum protocolo é
+\rep. \textbf{Teste da descoberta:} com o protocolo aplicado, o grupo chega ao Resultado com
+consequência própria? Se a consequência só existe para quem tocou, a missão degrada para
+plateia.''
+\end{depoisbox}
+
+\textbf{Teste falsificável:} existe, na spec, uma tabela etapa $\times$ (quem toca, como decide,
+como registra) para o cenário 2--4.
+
+\textbf{Como medir se funcionou:} E-19 observa turmas em cenário compartilhado e conta quantos do
+grupo tocam a tela por etapa; hoje o dado que existe é ``53\,\% das escolas não fornecem
+computador'' \cite{ticedu2024}, e nada sobre o que acontece com o trio.
+
+\textbf{Custo e risco:} decisão de produto mais dois testes. Risco: a identidade de grupo
+funciona no WhatsApp (nome no grupo) e no Instagram (perfil), e menos no ChatGPT, onde não há
+perfil visível; o D9 registra a diferença por ambiente.
+\end{emendabox}
+
+\begin{emendabox}{E-13 --- Piso de desafio por faixa, em todas as faixas \hfill \onda{3}}
+\textbf{Resolve:} A9, e é a emenda central desta proposta. Nenhum critério pergunta se a missão é
+difícil o bastante, exceto o 6.5, e só a partir do 6\textordmasculine{} ano.
+
+\textbf{Arquivos:} \texttt{criterios-experiencia.md} (6.5 é absorvido por um 6.6 novo, obrigatório
+em todas as faixas); \texttt{literatura-cognitiva.md} (nova seção 11, com a marca de cada linha);
+\texttt{01\_nucleo\_narrativo.md} (Regra 14, para o P0a desenhar contra o piso e não descobri-lo no
+gate).
+
+\textbf{O fundamento, com a delimitação honesta.} Hamari e colegas \cite{hamari2016} encontraram
+desafio como preditor forte de aprendizagem percebida em dois jogos educacionais com estudantes de
+ensino médio e superior, e imersão sem efeito isolado. Cheng, She e Annetta \cite{cheng2015}
+encontraram o efeito da imersão mediado pelo desempenho. Nenhum dos dois mediu crianças de 6 a 10
+anos, e nenhum mediu letramento digital. O que se transfere é o princípio: \textbf{a decisão
+precisa discriminar}, no sentido do desenho centrado em evidência \cite{mislevy2003}: uma tarefa
+que qualquer estudante resolve igual não produz evidência sobre nenhum. Por isso o piso é
+redigido como \textbf{discriminação}, não como ``dificuldade'', e a tabela por faixa é marcada
+\extrap{} das portas de abstração de \S4 e \conv{} na redação exata.
+
+\begin{depoisbox}\small
+6.6 \textbf{Piso de desafio} --- A missão exige da faixa um repertório que a decisão principal
+discrimina. \obrig{} em todas as faixas (absorve o 6.5).
+
+\begin{center}
+\begin{tabular}{@{}p{1.9cm} p{7.4cm} p{2.3cm}@{}}
+\toprule
+\textbf{Faixa} & \textbf{Piso: a decisão principal exige, pelo menos,} & \textbf{Marca} \\
+\midrule
+1\textordmasculine{}--2\textordmasculine{} & \textbf{observar antes de decidir}: a opção certa não
+é identificável pela aparência (cor, tamanho, posição); é preciso abrir, rolar ou ouvir algo &
+\extrap{} de \S4 \\
+3\textordmasculine{}--5\textordmasculine{} & \textbf{investigar}: comparar dois itens ou abrir uma
+segunda fonte antes de decidir, com andaime no primeiro uso e removido depois (6.3) &
+\extrap{} de \S4 \\
+6\textordmasculine{}--9\textordmasculine{} & \textbf{investigar e revisar}: a missão devolve
+informação que pode mudar a escolha, e o estudante pode mudá-la antes de fechar; ou justificar a
+escolha & \extrap{} \\
+Ensino Médio & \textbf{justificar e confrontar}: a justificativa encontra contra-evidência dentro
+da simulação antes do Resultado & \extrap{} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Teste do estudante apressado (obrigatório):} simule o estudante que faz o mínimo
+(padrão P2) e o estudante que investiga. Os dois chegam ao \emph{mesmo} Resultado? Se sim, a
+decisão não discrimina: \rep. \textbf{Teste da resposta na cara:} a opção ``certa'' se identifica
+sem ler ou ouvir nada? \rep. \textbf{Teste dos dois erros (C8):} a revelação responde ao excesso e
+à falta (confiar demais e desconfiar demais), ou só ao erro que produz conteúdo visível? Só a um
+é \alerta. \textbf{Falso-positivo:} missão de 1\textordmasculine{}--2\textordmasculine{} ano em que
+``observar'' é ouvir a narração inteira antes de tocar: isso é andaime de leitura (6.1), não
+desafio; o piso pede que o \emph{conteúdo} observado mude a escolha.
+\end{depoisbox}
+
+\begin{depoisbox}\small
+\texttt{01\_nucleo\_narrativo.md}, Regra 14: ``\textbf{Desenhe contra o piso da faixa
+(\texttt{literatura-cognitiva.md} \S11).} Antes de fechar a seção 4, rode o estudante apressado e o
+estudante que investiga; se chegam ao mesmo Resultado, a decisão está fraca e o gate vai devolver.
+Registre na seção 18 o que o estudante apressado perde.''
+\end{depoisbox}
+
+\textbf{Teste falsificável:} o do estudante apressado. Duas simulações, um Resultado cada,
+iguais ou diferentes.
+
+\textbf{Como medir se funcionou:} o dado já existe na plataforma: os eventos de investigação
+(\texttt{abriu\_busca}, \texttt{buscou} na exp-01; ``tempo revendo antes de concluir'' do PROD-07).
+Missão que passa no 6.6 deve mostrar \textbf{variância} nesses eventos entre estudantes; missão
+onde todo mundo investiga zero ou todo mundo investiga tudo não discriminou. E-19 fixa o piso
+numérico depois de três turmas.
+
+\textbf{Custo e risco:} um critério, uma seção, uma regra. Risco maior do documento: elevar o
+piso nos anos iniciais pode colidir com o teto de etapas cognitivas do 6.3 (máximo duas sem
+andaime). A redação cuida disso: o piso do 3\textordmasculine{}--5\textordmasculine{} pede
+andaime no primeiro uso, e o do 1\textordmasculine{}--2\textordmasculine{} não pede etapa nova,
+pede que a observação importe.
+\end{emendabox}
+
+\begin{emendabox}{E-14 --- Premissa da imersão como instrumento, propagada \hfill \onda{3}}
+\textbf{Resolve:} a seção 4.3 da auditoria (detalhe sedutor) e o A3. A tese que resolve a tensão
+com a literatura aparece uma vez, num critério não bloqueante, num arquivo lido por um agente.
+
+\textbf{Arquivos:} novo \texttt{references/premissa-imersao.md} (meia página); diretiva
+\texttt{include} em \texttt{01\_nucleo\_narrativo.md}, \texttt{21\_brief\_oficio.md},
+\texttt{22\_jornada.md}, \texttt{26\_telas.md}, \texttt{30\_qa\_entregaveis.md} e
+\texttt{40\_validacao\_design\_imersao.md}.
+
+\begin{depoisbox}\small
+\textbf{Premissa: a imersão é o instrumento de medida}
+
+Na missão Unooria, a fidelidade ao ambiente real não é ornamento: é a condição de validade do
+que se mede. Um feed que se comporta como feed real é o que torna a decisão do estudante uma
+decisão sobre feeds reais. Isso tem quatro consequências, e toda tela, string e critério obedece
+a elas:
+
+\begin{enumerate}
+  \item \textbf{Constitutivo ou sedutor.} Um elemento é constitutivo quando o estudante toma alguma
+        decisão que depende dele, ou quando é chrome nativo que o ambiente real sempre tem. Fora
+        disso, é detalhe sedutor: a literatura mede seu custo em $g = -0{,}33$ sobre a aprendizagem
+        \cite{sundararajan2020}, e ele sai. \textbf{Teste:} ``que decisão muda se eu tirar isto?''
+        Nenhuma, e não é chrome: corta.
+  \item \textbf{Imersão se perde por barreira, não se ganha por enfeite.} As barreiras conhecidas
+        são: erro que vaza da ficção (PROD-13), marca institucional no disfarce (DES-13), estado
+        vazio que parece tela quebrada (DES-07, O5), voz que não se distingue (O2), spoiler (Regra
+        Zero do P0a). Construir é remover barreiras.
+  \item \textbf{Fidelidade tem lista.} O que o ambiente real tem e a simulação não tem está em
+        \texttt{ambientes.md}, por seção, e no bloco 5 da spec, por missão. Completar a interface
+        ``por realismo'' é violar a lista.
+  \item \textbf{Imersão não substitui desafio.} A evidência empírica associa aprendizagem a
+        desafio e engajamento, não a imersão isolada \cite{hamari2016, cheng2015}. O piso de
+        desafio (6.6) é a outra metade desta premissa.
+\end{enumerate}
+\end{depoisbox}
+
+\textbf{Teste falsificável:} o ``que decisão muda se eu tirar isto?'' por elemento, aplicado pelo
+D5 na seção 4 da jornada e pelo QA em D1.
+
+\textbf{Como medir se funcionou:} contagem de elementos por tela \texttt{pico} cai sem que a
+contagem de decisões caia; é o sinal de que saiu enfeite e não mecânica.
+
+\textbf{Custo e risco:} meia página e seis includes. Risco: agente que lê ``corta o sedutor'' e
+corta chrome nativo; a consequência 1 define chrome como constitutivo por padrão.
+\end{emendabox}
+
+\begin{emendabox}{E-15 --- Banco curado como caminho principal nos anos iniciais \hfill \onda{3}}
+\textbf{Resolve:} a seção 5.6 da auditoria. O 4.3 reprova missão ``100\,\% estática'' e trata o
+banco curado como \emph{fallback}, exigindo curadoria por IA do professor menos formado da rede
+(43\,\% com formação na rede municipal, 15\,\% de uso de IA pelos estudantes dos anos iniciais
+\cite{ticedu2024}).
+
+\textbf{Arquivos:} \texttt{criterios-pedagogicos.md}, critério 4.3; \texttt{01\_nucleo\_narrativo.md},
+Regra 11 (inverter a ordem: banco primeiro, parâmetro depois); \texttt{30\_qa\_entregaveis.md}, D6
+(a tela \texttt{E0-PROF-01} abre no banco padrão).
+
+\begin{antesbox}\small
+4.3 [\dots] além de banco curado padrão (default/fallback imediato). Teste: [\dots] Existe banco
+curado default caso o professor não queira customizar? Missão 100\,\% estática sem parametrização
+$\to$ reprova.
+\end{antesbox}
+
+\begin{depoisbox}\small
+4.3 \textbf{Banco curado padrão como caminho principal; parametrização por IA como camada} ---
+A missão roda inteira com o banco curado de fábrica; o professor pode, se quiser, parametrizar
+tema e contexto, e a IA gera rascunhos que ele cura antes de liberar. \obrig{}.
+\textbf{Teste do caminho curto:} a missão funciona por completo com o professor tocando apenas
+``usar banco padrão'' na tela de preparação? Se não, \rep. \textbf{Teste de ordem, anos
+iniciais:} a preparação \emph{abre} no banco padrão, com a parametrização a um toque e fora do
+caminho; nos anos finais e Médio, a ordem é livre. \textbf{Teste de completude da camada:} os
+prompts, os schemas e o fluxo de curadoria estão definidos? Sem eles, \alerta{} nos anos iniciais e
+\rep{} nos anos finais e Médio. Missão sem banco curado \rep{} em qualquer faixa.
+\end{depoisbox}
+
+\textbf{Teste falsificável:} o do caminho curto.
+
+\textbf{Como medir se funcionou:} a plataforma já registra a preparação docente; a proporção de
+turmas que rodam no banco padrão, por rede e por faixa, diz se o caminho principal é o que os
+professores usam. Se nos anos iniciais essa proporção for baixa, a emenda estava errada.
+
+\textbf{Custo e risco:} um critério reescrito e uma regra invertida. Risco: reduzir o incentivo a
+parametrizar; por isso a camada continua obrigatória nos anos finais e Médio, onde a base
+instalada existe.
+\end{emendabox}
+
+\begin{emendabox}{E-16 --- Leitura não monotônica: cláusula para 9\textordmasculine{} ano e Médio \hfill \onda{3}}
+\textbf{Resolve:} a seção 5.5 da auditoria. O 6.1 retira a narração a partir do
+3\textordmasculine{} ano por \emph{expertise reversal}, o que é correto, mas pressupõe fluência
+crescente, e no Brasil a defasagem é maior no 9\textordmasculine{} ano (62\,\% abaixo do adequado)
+e no Médio (65\,\%) do que no 5\textordmasculine{} (39\,\%) \cite{saeb2025, pisa2022}.
+
+\textbf{Arquivos:} \texttt{criterios-experiencia.md}, 6.1 (cláusula);
+\texttt{literatura-cognitiva.md}, \S5 (um parágrafo).
+
+\begin{depoisbox}\small
+6.1, acrescentar: ``\textbf{Cláusula de defasagem, 9\textordmasculine{} ano e Médio.} A retirada
+do andaime a partir do 3\textordmasculine{} ano é regra de \emph{expertise reversal}, não
+atestado de proficiência. Onde a maioria está abaixo do adequado em leitura (9\textordmasculine{}
+ano e Médio, Saeb 2025), valem três regras: (a) o teto de palavras por string é o do
+6\textordmasculine{}--9\textordmasculine{}, não maior \conv; (b) strings acima desse teto têm áudio
+\emph{sob demanda}, nunca autoplay, para não reintroduzir redundância a quem lê \extrap{} de
+Kalyuga; (c) o `estudante mediano' do teste é o mediano do Saeb para o ano, não o nominal. Missão
+de 9\textordmasculine{} ano ou Médio cujo Decidir exige ler um texto acima do teto sem áudio sob
+demanda é \alerta.''
+\end{depoisbox}
+
+\textbf{Teste falsificável:} amostra de strings do Decidir contra o teto; presença do botão de
+áudio nas que excedem.
+
+\textbf{Como medir se funcionou:} uso do áudio sob demanda por faixa, que a plataforma pode
+registrar como microinteração instrumentada (DES-12). Se ninguém toca no 9\textordmasculine{}
+ano, a cláusula pode sair.
+
+\textbf{Custo e risco:} uma cláusula. Risco: tratar o Médio como criança; a cláusula não muda a
+complexidade da decisão (6.3), só o canal de acesso ao texto.
+\end{emendabox}
+
+\begin{emendabox}{E-17 --- Progressão na trilha como critério \hfill \onda{3}}
+\textbf{Resolve:} A7 e a seção 4.5 da auditoria. A meta-análise de letramento midiático
+\cite{huang2024} encontra intervenções de múltiplas sessões superando as de sessão única; a
+esteira só pergunta se as missões são diferentes, nunca se acumulam.
+
+\textbf{Arquivos:} \texttt{criterios-pedagogicos.md} (critério 2.8, desejável até o catálogo cobrir
+a trilha do ano; obrigatório depois); \texttt{catalogo-missoes.md} (colunas de E-03).
+
+\begin{depoisbox}\small
+2.8 \textbf{Progressão na trilha} --- Quando o catálogo tem missão anterior do mesmo ano, ou do
+ano anterior no mesmo eixo, esta missão sobe pelo menos um degrau em uma de três escadas.
+\desej{} enquanto o catálogo não cobrir o ano; \obrig{} depois. \textbf{Escadas:} (1) porta de
+abstração, descrever $\to$ explicar $\to$ criticar com apoio $\to$ criticar (\S4); (2) piso de
+repertório (6.6); (3) ambiente, de mais familiar para menos familiar (\S10). \textbf{Teste:} cite
+a linha do catálogo e a escada. Mesmo degrau nas três é \alerta; degrau \emph{abaixo} da missão
+anterior é \rep.
+\end{depoisbox}
+
+\textbf{Teste falsificável:} comparação de duas linhas do catálogo em três colunas.
+
+\textbf{Como medir se funcionou:} é a emenda que precisa de campo: E-19 compara, na mesma turma,
+desempenho na segunda missão do bimestre contra a primeira. Sem catálogo (E-03), não é
+verificável, e por isso nasce desejável.
+
+\textbf{Custo e risco:} um critério e a dependência de E-03. Risco: trilha com missões de eixos
+diferentes não tem escada comum; a redação limita ao mesmo eixo.
+\end{emendabox}
+
+\begin{emendabox}{E-18 --- Pacote anos iniciais, consolidado \hfill \onda{3}}
+\textbf{Resolve:} a convergência que a auditoria aponta na seção 7.4: cinco achados independentes
+caem no 1\textordmasculine{}--5\textordmasculine{} ano, que é a faixa com menos critério próprio e
+mais fragilidade de rede. Esta emenda não cria critério novo; consolida o que as outras já fazem
+para essa faixa e acrescenta uma decisão de produto que só faz sentido aqui.
+
+\textbf{O que o pacote contém:}
+\begin{itemize}
+  \item E-06, regras (d) e (e): sem dado para 6--8 anos; 40\,\% sem perfil aos 9--10.
+  \item E-12: posse no cenário compartilhado, mais frequente na rede municipal.
+  \item E-13: piso de desafio para 1\textordmasculine{}--2\textordmasculine{} e
+        3\textordmasculine{}--5\textordmasculine{}.
+  \item E-15: banco curado como caminho principal.
+  \item E-19: a pergunta A10 (Explicar depois versus antes no
+        2\textordmasculine{}--5\textordmasculine{}) só se responde nessa faixa.
+  \item C2 de \texttt{candidatos-a-criterio.md} (redundância não textual), que o 6.1 e o padrão
+        \texttt{texto-icone-audio-anos-iniciais} já cobrem; registrar como aplicado.
+  \item Crédito: a Passada 1b do D9 (mini-jogo só para 1\textordmasculine{}--5\textordmasculine{},
+        com gate de quatro condições) já é a resposta certa ao problema ``clonar app que a criança
+        não usa''. O pacote não a altera.
+\end{itemize}
+
+\textbf{A decisão nova: a primeira conta como evento diegético.} Para 1\textordmasculine{} a
+5\textordmasculine{} ano, o Desafiar pode incluir \emph{criar a conta} dentro da simulação, com o
+cadastro simplificado que a plataforma real tem: escolher nome, foto entre as do banco, o que
+compartilhar. Isso resolve três coisas de uma vez: torna verdadeira a posse (2.1) numa faixa em que
+a maioria não tem conta; dá porta diegética (E-11) a quem nunca abriu o app; e exercita
+literalmente as habilidades de segurança e dados pessoais do 1\textordmasculine{} e
+2\textordmasculine{} ano (\texttt{EF01CO07}, \texttt{EF02CO06}), que hoje são difíceis de
+exercitar sem uma tela de cadastro.
+
+\begin{depoisbox}\small
+Em \texttt{01\_nucleo\_narrativo.md}, Regra 15 (só anos iniciais): ``Se a faixa é
+1\textordmasculine{}--5\textordmasculine{} e a missão pressupõe conta, considere a primeira conta
+como parte do Desafiar: cadastro nativo simplificado, dentro do teto de gestos novos por ato
+(\S5). Registre na seção 18 a decisão e o que ela custa em minutos.''
+\end{depoisbox}
+
+\textbf{Teste falsificável:} missão de 1\textordmasculine{}--5\textordmasculine{} ano que pressupõe
+conta declara, na seção 18, o que faz com quem nunca teve uma.
+
+\textbf{Como medir se funcionou:} E-19, com o dado que falta a todo mundo: o que a criança de 6 a 8
+anos de fato reconhece na tela.
+
+\textbf{Custo e risco:} uma regra e uma consolidação. Risco: o cadastro consome minutos do teto
+agregado; a regra o sujeita ao teto de gestos novos por ato.
+\end{emendabox}
+
+\begin{emendabox}{E-19 --- Observação de campo com instrumento e protocolo \hfill \onda{3}}
+\textbf{Resolve:} A10 e A2 (calibragem), e a seção 9 de \texttt{literatura-cognitiva.md}, que já
+reivindica isso: ``nenhum número desta página é medição feita com missões da Unooria''.
+
+\textbf{Arquivos:} novo \texttt{references/observacao-campo.md}; coluna ``Observada em campo'' no
+catálogo (E-03).
+
+\textbf{Protocolo mínimo (uma página):}
+\begin{enumerate}
+  \item \textbf{Amostra:} três turmas por faixa, rede pública, ao menos uma municipal nos anos
+        iniciais; uma em cenário 1:1 e uma em 2--4 por aparelho, porque é o cenário de 53\,\% das
+        escolas.
+  \item \textbf{Atenção na tarefa:} amostragem momentânea, a cada dois minutos, de quantos
+        estudantes estão na tarefa, no método de Godwin e colegas já citado na fonte única. É o
+        dado que calibra os tetos de duração e a tabela de densidade v0.1.
+  \item \textbf{Experiência:} questionário pós-missão de seis itens, um por fator do
+        \emph{Game Experience Questionnaire} revisto \cite{law2018}: competência, imersão,
+        \emph{flow}, tensão, afeto positivo e desafio; escala de três faces para anos iniciais,
+        de cinco pontos para os demais. Marcado \conv{} até validação.
+  \item \textbf{Telemetria que já existe:} tempo até a primeira ação; dwell na tela de pico contra
+        as vizinhas (E-10); eventos de investigação e sua variância entre estudantes (E-13); tempo
+        revendo antes de concluir (PROD-07); quedas de conexão contra recusas na mesma janela
+        (E-08).
+  \item \textbf{A pergunta A10:} nas turmas de 2\textordmasculine{} a 5\textordmasculine{} ano,
+        rodar a mesma missão em duas ordens, Explicar depois do Aha (framework atual) e uma
+        explicação curta antes do Navegar, e comparar a provocação do Refletir. É o único desenho
+        que responde se a inversão de efeito de Sinha e Kapur \cite{sinha2021} vale aqui.
+  \item \textbf{Saída:} cada número da rubrica de ofício v0.1 e da fonte única ganha, ao lado da
+        marca epistêmica, a marca \textbf{[OBSERVADO: $n$ turmas]} quando houver dado.
+\end{enumerate}
+
+\textbf{Teste falsificável:} o protocolo produz, por missão observada, os cinco números acima.
+
+\textbf{Como medir se funcionou:} é a emenda que mede as outras. Seu sucesso é a primeira
+correção de um teto v0.1 feita por dado e não por opinião.
+
+\textbf{Custo e risco:} o maior do documento em tempo de pessoa, o menor em linhas. Risco: a
+observação alterar o comportamento; o protocolo usa a telemetria que a missão já grava como linha
+de base.
+\end{emendabox}
+
+\begin{emendabox}{E-20 --- O que a esteira faz com critérios que não são dela \hfill \onda{3}}
+\textbf{Resolve:} A3, na parte que a esteira pode resolver. O banco de dev pertence ao time da
+plataforma; DES-03, DES-07, DES-08 e DES-13 são não bloqueantes lá, e mudar isso não é decisão
+desta esteira.
+
+\textbf{O que a esteira controla:} o que chega ao banco. Se os mesmos juízos forem bloqueantes
+\emph{a montante}, o banco recebe insumo que já passou por eles. A tabela abaixo mostra o
+equivalente, emenda por emenda:
+
+\begin{center}\small
+\begin{tabular}{@{}p{2.2cm} p{5.6cm} p{6.8cm}@{}}
+\toprule
+\textbf{Banco de dev} & \textbf{O que pergunta} & \textbf{Equivalente bloqueante a montante} \\
+\midrule
+DES-03 & O clone é fiel, com lista do que difere & O3 com a tabela de ausências (E-02) e a
+premissa (E-14); 2.3 diegese (E-11) \\
+DES-07 & Estados vazios parecem intencionais & O5 e o padrão \texttt{vazio-e-carregando}; 9.4 com
+o teste de contaminação (E-08) \\
+DES-08 & Copy real e adequada à série & 6.1 com a cláusula de defasagem (E-16); D4 do QA com o
+resumo da régua (E-04) \\
+DES-13 & Marca fora do disfarce & já bloqueante no QA por D8b e na regra de
+\texttt{ambientes.md}; sem emenda \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Redação proposta:} uma nota em \texttt{criterios-dev.md}, seção ``Duas coisas que o gate
+deles resolveu do nosso lado'', renomeada para ``O que o gate deles não bloqueia e o nosso
+bloqueia antes'', com a tabela acima. Serve para que a banca não relaxe a montante por achar que
+o banco pega depois.
+
+\textbf{Teste falsificável:} toda linha da tabela aponta um critério nosso com severidade
+bloqueante em vigor.
+
+\textbf{Como medir se funcionou:} achados DES-03/07/08 na consolidação da banca caem, porque o
+insumo chega limpo.
+
+\textbf{Custo e risco:} uma tabela. Risco nulo.
+\end{emendabox}
+
+% ======================= 6. MENSURABILIDADE =======================
+\section{Como saber se as emendas funcionaram}
+
+\subsection{O que ``missão mensurável'' significa aqui}
+
+Uma missão é mensurável quando cada afirmação sobre aprendizagem que ela faz tem uma tarefa que a
+evidencia, um dado que a captura e um grau de confiança declarado. A esteira já tem esse esqueleto:
+a matriz habilidade $\to$ evidência $\to$ interação $\to$ dado do PED-02, os graus de medida do
+PED-06, o vocabulário de telemetria do DAD-01. É desenho centrado em evidência
+\cite{mislevy2003} na prática, e é bom.
+
+O que falta é aplicar a mesma disciplina aos \textbf{critérios}, não só às missões. Um critério
+novo que não diga o que o confirmaria é opinião com número de série. Por isso cada emenda acima
+traz ``como medir se funcionou''. A tabela seguinte consolida isso.
+
+\subsection{Indicadores por emenda}
+
+\begin{longtable}{@{}p{0.9cm} p{4.6cm} p{4.6cm} p{4.4cm}@{}}
+\toprule
+\textbf{E} & \textbf{Teste no gate (sim ou não)} & \textbf{Indicador em campo ou na esteira} & \textbf{Dado que já existe} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{E} & \textbf{Teste no gate (sim ou não)} & \textbf{Indicador em campo ou na esteira} & \textbf{Dado que já existe} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+01 & busca sem Roblox fora de \texttt{ambientes.md} & zero missões Roblox chegam ao dev & relatórios da banca \\
+02 & O3 não devolve por lacuna de biblioteca & tickets ``reapareceu por realismo'' por missão & QA, classe do ticket \\
+03 & 2.5 sem ``N/A --- catálogo'' & proporção de 2.5 aplicados & relatórios do P2 \\
+04 & hash do resumo bate com a fonte & tickets D4 citam ``visível vs lembrada'' & QA \\
+05 & busca sem número revogado & D0 e P3 citam o mesmo teto & relatórios D0 e P3 \\
+06 & 6.4 cita linha da tabela & ambiente por faixa segue a tabela & seção 0 das specs \\
+07 & frase e Resultado não se negam & ocorrências de C1 param de crescer & agente de aprendizado \\
+08 & falha cai em \texttt{none} & quedas de conexão vs recusas na mesma janela & telemetria, estados \\
+09 & todo não-negociável tem marca & lacunas ``sem mecanismo'' no QA vão a zero & registro de lacunas \\
+10 & $n(\text{pico}) < n(\text{vizinhas})$ & dwell e ação na tela de pico & telemetria de tela \\
+11 & porta, troca, chegada & minutos até a primeira ação & briefing D1 e telemetria \\
+12 & tabela etapa $\times$ revezamento & toques por membro do grupo por etapa & observação (E-19) \\
+13 & apressado $\ne$ investigador & variância dos eventos de investigação & \texttt{abriu\_busca}, revisão antes de concluir \\
+14 & ``que decisão muda se tirar'' & elementos por pico caem, decisões não & seção 4 da jornada \\
+15 & caminho curto funciona & proporção de turmas no banco padrão, por rede & preparação docente \\
+16 & strings do Decidir vs teto & uso do áudio sob demanda por faixa & microinteração instrumentada \\
+17 & duas linhas do catálogo, três escadas & segunda missão do bimestre vs primeira & E-19 \\
+18 & seção 18 trata quem nunca teve conta & reconhecimento de tela aos 6--8 anos & E-19 \\
+19 & cinco números por missão observada & primeira correção de teto por dado & rubrica v0.1 \\
+20 & cada linha aponta critério bloqueante & achados DES-03/07/08 na banca caem & consolidação da banca \\
+\end{longtable}
+
+\subsection{A matriz de cobertura depois das emendas}
+
+A auditoria mostrou que todo critério de imersão que bloqueia é mecânico e todo que exige juízo
+não bloqueia. Depois das emendas, o quadro fica assim:
+
+\begin{center}\small
+\begin{tabular}{@{}p{1.6cm} p{6.4cm} p{2.6cm} p{2.2cm}@{}}
+\toprule
+\textbf{Código} & \textbf{O que pergunta} & \textbf{Severidade} & \textbf{Exige juízo?} \\
+\midrule
+2.1 & Ambiente na lista, posse (inclusive de grupo), fidelidade, permanência & \bloq & Pouco \\
+2.2 & É vivência e não leitura? & \bloq & Pouco \\
+\textbf{2.3} & \textbf{Porta, troca e chegada: o mundo se sustenta?} & \bloq & \textbf{Sim} \\
+2.4 & A descoberta cabe numa frase? & \bloq & Pouco \\
+2.5 & Diferencia-se do catálogo? & \naobloq & Sim \\
+2.6 & Verbos nativos? & \bloq & Não \\
+\textbf{2.7} & \textbf{A mecânica sustenta a frase?} & \bloq & \textbf{Sim} \\
+\textbf{2.8} & \textbf{Sobe um degrau na trilha?} & condicional & Sim \\
+\textbf{6.6} & \textbf{O apressado e o investigador divergem?} & \bloq & \textbf{Sim} \\
+\textbf{O1 (pico)} & \textbf{O pico é a tela mais enxuta?} & \bloq & \textbf{Sim, por contagem} \\
+O1--O5 & Hierarquia, voz, fidelidade, beat, legibilidade & faixa própria & Sim \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Quatro critérios que exigem juízo passam a bloquear, e cada um tem um teste que se responde com
+sim ou não. É o que a auditoria chamou de teoria do agarre: não uma régua de gosto, mas
+perguntas falsificáveis sobre se a missão prende.
+
+% ======================= 7. SEQUÊNCIA =======================
+\section{Sequência, esforço e riscos}
+
+\subsection{Ordem recomendada}
+
+\begin{enumerate}
+  \item \textbf{Onda 1 inteira, numa única emenda da rubrica (v1.19).} São correções sem decisão,
+        e E-05 mostra que a fonte única já divergiu; quanto mais se espera, mais diverge. E-06 é a
+        que mais muda o comportamento do avaliador por linha escrita.
+  \item \textbf{Onda 2 na mesma emenda ou na seguinte.} Já tem consenso documentado. E-08 é a de
+        maior consequência ética.
+  \item \textbf{Onda 3 em duas partes.} Primeiro as que não dependem de número: E-10, E-11, E-12,
+        E-14, E-20. Depois as que precisam de decisão pedagógica: E-13, E-15, E-16, E-17, E-18. E-19
+        começa em paralelo, porque tudo o que é \conv{} nesta proposta espera por ela.
+\end{enumerate}
+
+\subsection{Esforço por emenda}
+
+\begin{center}\small
+\begin{tabular}{@{}l p{6.4cm} c p{4.2cm}@{}}
+\toprule
+\textbf{E} & \textbf{Arquivos} & \textbf{Linhas} & \textbf{Quem decide} \\
+\midrule
+01 & 3 arquivos de critério e catálogo & 4 & ninguém \\
+02 & \texttt{ambientes.md} & 8 & conferência no storybook \\
+03 & \texttt{catalogo-missoes.md} & 10 & ninguém, uma hora de preenchimento \\
+04 & script novo, resumo gerado, 5 includes & 60 & ninguém \\
+05 & \texttt{defaults-missao.md}, prompts 09 e 10 & 10 & ninguém \\
+06 & fonte única, 2 testes & 25 & ninguém \\
+07 & gate estrutural, candidatos & 3 & priorização \\
+08 & 9.4, bloco 9, defaults & 4 & priorização \\
+09 & prompts 21 e 30 & 6 & priorização \\
+10 & rubrica de ofício, prompts 30 e 22 & 6 & produto \\
+11 & 2.3 & 12 & produto \\
+12 & 2.1, 10.2, defaults & 8 & produto \\
+13 & 6.6, \S11 da fonte, Regra 14 & 30 & produto e pedagogia \\
+14 & arquivo novo, 6 includes & 25 & produto \\
+15 & 4.3, Regra 11, D6 & 10 & produto \\
+16 & 6.1, \S5 da fonte & 8 & pedagogia \\
+17 & 2.8 & 8 & produto \\
+18 & Regra 15, consolidação & 6 & produto e pedagogia \\
+19 & arquivo novo, catálogo & 30 & campo, semanas de pessoa \\
+20 & \texttt{criterios-dev.md} & 10 & produto \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Fora E-19, o conjunto inteiro cabe em menos de trezentas linhas de markdown e um script pequeno.
+Nenhuma emenda toca o código Python da esteira: a severidade que o código lê já é a que as emendas
+usam.
+
+\subsection{Riscos da proposta como um todo}
+
+\begin{notabox}{Quatro riscos, e o que cada emenda faz com eles}
+\begin{itemize}
+  \item \textbf{Bloquear por número não calibrado.} A auditoria elogiou a esteira por não fazer
+        isso. Esta proposta só eleva a bloqueante o que é comparativo (E-10) ou o que se responde
+        por simulação de dois estudantes (E-13). Todo número novo está marcado, e E-19 existe para
+        calibrá-los.
+  \item \textbf{Inflar o contexto dos prompts.} Cinco includes novos de uma referência de 268
+        linhas seriam um custo real. E-04 resolve com um resumo de uma página, gerado, com hash.
+        E-14 tem meia página.
+  \item \textbf{Reprovar mais e produzir menos.} Quatro critérios novos com veto vão reprovar
+        missões que hoje passam. É o objetivo; mas a redação de cada um traz o falso-positivo
+        conhecido, e o gate estrutural já propõe a correção junto com o achado.
+  \item \textbf{Deriva.} A fonte única já divergiu (E-05). A proposta cria duas fontes novas
+        (premissa e resumo) e as protege do mesmo modo: uma é meia página sem número; a outra é
+        gerada e conferida por hash.
+\end{itemize}
+\end{notabox}
+
+\subsection{O que fica em aberto}
+
+Três coisas esta proposta não decide, e diz por quê:
+
+\begin{itemize}
+  \item \textbf{O framework de seis etapas nos anos iniciais (A10).} A evidência é moderada por
+        idade e vem de matemática e ciências; o ``Explicar'' da Unooria é mediado pelo professor.
+        E-19 desenha o teste; a decisão vem depois do dado.
+  \item \textbf{A severidade dos critérios do banco de dev.} Não são desta esteira. E-20 faz o que
+        cabe: garante o equivalente a montante.
+  \item \textbf{Os tetos numéricos da rubrica de ofício v0.1.} Continuam v0.1. Só a regra
+        comparativa sobe. Os demais esperam E-19.
+\end{itemize}
+
+% ======================= ANEXO =======================
+\section{Anexo --- Changelog proposto para a rubrica v1.19}
+
+Formato do changelog de \texttt{rubrica-oficio.md} e de \texttt{literatura-cognitiva.md} \S8, para
+entrar nos arquivos junto com as emendas aceitas.
+
+\begin{center}\small
+\begin{tabular}{@{}p{3.4cm} p{3.6cm} p{3.6cm} p{4.4cm}@{}}
+\toprule
+\textbf{Mudança} & \textbf{Antes} & \textbf{Agora} & \textbf{Motivo} \\
+\midrule
+Lista fechada & 6, com Roblox & 5, com seção do DS & Roblox saiu em \texttt{ambientes.md}; o critério não acompanhou \\
+Ausências por ambiente & tabela vazia & 5 linhas [PROPOSTA] & O3 estava desarmado \\
+Régua no design & 1 prompt & resumo gerado em 6 & regra de layout não chegava a quem faz layout \\
+Números fora da fonte & tetos revogados em defaults e prompts & só citação por seção & fonte única divergiu \\
+Uso por idade & intuição do avaliador & TIC Kids 2024, \S10 & dois obrigatórios eram decididos sem dado \\
+2.3 diegese & desejável, teste binário & obrigatório, 3 testes & único critério sobre o mundo ficcional \\
+2.7 mecânica sustenta & passo de prompt & critério & C1, pronto para emenda \\
+2.8 progressão & não existia & condicional & dose importa; catálogo permite \\
+6.5 repertório & obrigatório só 6\textordmasculine{}+ & 6.6 piso em todas as faixas & havia teto, não havia piso \\
+6.1 defasagem & retirada uniforme & cláusula 9\textordmasculine{} e EM & leitura não é monotônica no Brasil \\
+4.3 parametrização & IA principal, banco fallback & banco principal, IA camada & rede municipal, 43\,\% com formação \\
+2.1 posse & só do estudante & ou do grupo, com protocolo & 53\,\% das escolas compartilham \\
+9.4 falha & estados exigidos & falha nunca é decisão & C7, grau \texttt{none} \\
+O1 pico & faixa \texttt{oficio} & \texttt{bloqueio} & comparativa, sem calibragem \\
+Premissa & uma frase em DES-03 & arquivo lido por 6 agentes & detalhe sedutor vs fidelidade \\
+Campo & reivindicado em \S9 & protocolo e instrumento & todo número é extrapolação até lá \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ======================= BIBLIOGRAFIA =======================
+\begin{thebibliography}{99}
+\small
+
+\bibitem{brown2004}
+BROWN, E.; CAIRNS, P.
+\emph{A grounded investigation of game immersion}.
+In: CHI '04 Extended Abstracts on Human Factors in Computing Systems. ACM, 2004, p. 1297--1300.
+DOI 10.1145/985921.986048.
+
+\bibitem{cheng2015}
+CHENG, M.-T.; SHE, H.-C.; ANNETTA, L. A.
+\emph{Game immersion experience: its hierarchical structure and impact on game-based science
+learning}.
+Journal of Computer Assisted Learning, v. 31, n. 3, p. 232--253, 2015.
+DOI 10.1111/jcal.12066.
+
+\bibitem{green2000}
+GREEN, M. C.; BROCK, T. C.
+\emph{The role of transportation in the persuasiveness of public narratives}.
+Journal of Personality and Social Psychology, v. 79, n. 5, p. 701--721, 2000.
+DOI 10.1037/0022-3514.79.5.701.
+
+\bibitem{hamari2016}
+HAMARI, J.; SHERNOFF, D. J.; ROWE, E.; COLLER, B.; ASBELL-CLARKE, J.; EDWARDS, T.
+\emph{Challenging games help students learn: an empirical study on engagement, flow and immersion
+in game-based learning}.
+Computers in Human Behavior, v. 54, p. 170--179, 2016.
+DOI 10.1016/j.chb.2015.07.045.
+(Dois jogos educacionais; estudantes de ensino médio e superior; aprendizagem autorrelatada.)
+
+\bibitem{huang2024}
+HUANG, G.; JIA, W.; YU, W.
+\emph{Media literacy interventions improve resilience to misinformation: a meta-analytic
+investigation of overall effect and moderating factors}.
+Communication Research, 2024.
+DOI 10.1177/00936502241288103.
+
+\bibitem{law2018}
+LAW, E. L.-C.; BR\"UHLMANN, F.; MEKLER, E. D.
+\emph{Systematic review and validation of the Game Experience Questionnaire (GEQ): implications
+for citation and reporting practice}.
+In: Proceedings of the 2018 Annual Symposium on Computer-Human Interaction in Play (CHI PLAY).
+ACM, 2018, p. 257--270.
+DOI 10.1145/3242671.3242683.
+
+\bibitem{mislevy2003}
+MISLEVY, R. J.; ALMOND, R. G.; LUKAS, J. F.
+\emph{A brief introduction to evidence-centered design}.
+ETS Research Report Series, RR-03-16. Princeton: Educational Testing Service, 2003.
+DOI 10.1002/j.2333-8504.2003.tb01908.x.
+
+\bibitem{pisa2022}
+INEP --- INSTITUTO NACIONAL DE ESTUDOS E PESQUISAS EDUCACIONAIS ANÍSIO TEIXEIRA.
+\emph{Relatório Brasil no PISA 2022}. Brasília: Inep/MEC, 2023.
+(50\,\% dos estudantes brasileiros de 15 anos abaixo do Nível 2 em leitura; média OCDE 26\,\%.)
+
+\bibitem{saeb2025}
+INEP --- INSTITUTO NACIONAL DE ESTUDOS E PESQUISAS EDUCACIONAIS ANÍSIO TEIXEIRA.
+\emph{Sistema de Avaliação da Educação Básica --- Saeb 2025: resultados}.
+Brasília: Inep/MEC, 2026.
+
+\bibitem{sinha2021}
+SINHA, T.; KAPUR, M.
+\emph{When problem solving followed by instruction works: evidence for productive failure}.
+Review of Educational Research, v. 91, n. 5, p. 761--798, 2021.
+DOI 10.3102/00346543211019105.
+
+\bibitem{sundararajan2020}
+SUNDARARAJAN, N.; ADESOPE, O.
+\emph{Keep it coherent: a meta-analysis of the seductive details effect}.
+Educational Psychology Review, v. 32, p. 707--734, 2020.
+DOI 10.1007/s10648-020-09522-4.
+
+\bibitem{ticedu2024}
+CETIC.BR --- CENTRO REGIONAL DE ESTUDOS PARA O DESENVOLVIMENTO DA SOCIEDADE DA INFORMAÇÃO.
+\emph{TIC Educação 2024: pesquisa sobre o uso das tecnologias de informação e comunicação nas
+escolas brasileiras}. São Paulo: NIC.br, 2025.
+
+\bibitem{tickids2024}
+CETIC.BR --- CENTRO REGIONAL DE ESTUDOS PARA O DESENVOLVIMENTO DA SOCIEDADE DA INFORMAÇÃO.
+\emph{TIC Kids Online Brasil 2024: pesquisa sobre o uso da Internet por crianças e adolescentes
+no Brasil}. São Paulo: NIC.br, 2024. Amostra de 2.424 crianças e adolescentes de 9 a 17 anos.
+
+\bibitem{vanlaer2014}
+VAN LAER, T.; DE RUYTER, K.; VISCONTI, L. M.; WETZELS, M.
+\emph{The extended transportation-imagery model: a meta-analysis of the antecedents and
+consequences of consumers' narrative transportation}.
+Journal of Consumer Research, v. 40, n. 5, p. 797--817, 2014.
+DOI 10.1086/673383.
+
+\end{thebibliography}
+
+\vspace{1cm}
+\begin{center}
+{\color{BorderGray}\rule{0.6\textwidth}{0.6pt}}\\[0.4cm]
+{\small\color{Charcoal}
+Proposta redigida sobre o estado do repositório em 20 de setembro de 2026, em resposta à
+Auditoria de Imersão v1.0.\\
+Nenhum artefato da esteira foi alterado na produção deste documento.}
+\end{center}
+
+\end{document}

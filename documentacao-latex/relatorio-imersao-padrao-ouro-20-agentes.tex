@@ -1,0 +1,738 @@
+\documentclass[11pt,a4paper]{article}
+
+% ==============================================================================
+% PACOTES FUNDAMENTAIS E TIPOGRAFIA
+% ==============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{a4paper, top=2.5cm, bottom=2.5cm, left=2.2cm, right=2.2cm}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+% ==============================================================================
+% PALETA DE CORES INSTITUCIONAL (IDENTIDADE UNOORIA)
+% ==============================================================================
+\definecolor{NavyBlue}{RGB}{16, 44, 87}
+\definecolor{SteelBlue}{RGB}{53, 89, 142}
+\definecolor{LightBlue}{RGB}{235, 243, 250}
+\definecolor{DarkGreen}{RGB}{20, 108, 67}
+\definecolor{LightGreen}{RGB}{232, 245, 233}
+\definecolor{DarkRed}{RGB}{176, 42, 55}
+\definecolor{LightRed}{RGB}{253, 237, 237}
+\definecolor{DarkYellow}{RGB}{153, 115, 0}
+\definecolor{LightYellow}{RGB}{254, 249, 231}
+\definecolor{Charcoal}{RGB}{40, 40, 40}
+\definecolor{GrayBg}{RGB}{248, 249, 250}
+\definecolor{BorderGray}{RGB}{218, 224, 233}
+\definecolor{Plum}{RGB}{94, 53, 120}
+\definecolor{LightPlum}{RGB}{243, 238, 248}
+
+% ==============================================================================
+% CONFIGURAÇÃO DE HIPERLINKS
+% ==============================================================================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=NavyBlue,
+    citecolor=SteelBlue,
+    urlcolor=SteelBlue,
+    pdftitle={Auditoria de Imersao e Arquitetura de 20 Agentes para o Gerador de Missoes Unooria},
+    pdfauthor={Auditoria de Produto, Pedagogia e Engenharia de IA},
+    pdfsubject={Padrao Ouro de Imersao Educacional, Letramento Digital e Orquestracao Multiagente},
+    pdfkeywords={imersao, letramento digital, BNCC, game design, educacao publica, multi-agent systems, LLM}
+}
+
+% ==============================================================================
+% CABEÇALHOS E RODAPÉS
+% ==============================================================================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{SteelBlue}Unooria --- Relat\'orio de Auditoria \& Arquitetura de 20 Agentes}
+\fancyhead[R]{\small\color{SteelBlue}\thepage}
+\fancyfoot[C]{\footnotesize\color{Charcoal}Padr\~ao Ouro de Qualidade --- Imers\~ao \& Letramento Digital na Escola P\'ublica}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.2pt}
+
+% ==============================================================================
+% FORMATAÇÃO DE TÍTULOS
+% ==============================================================================
+\titleformat{\section}{\Large\bfseries\color{NavyBlue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{SteelBlue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{Charcoal}}{\thesubsubsection}{1em}{}
+
+% ==============================================================================
+% CAIXAS SEMÂNTICAS PERSONALIZADAS
+% ==============================================================================
+\newtcolorbox{tesebox}{
+  breakable, enhanced, colback=LightBlue, colframe=NavyBlue,
+  boxrule=1.2pt, arc=3pt, left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+\newtcolorbox{achadobox}[1]{
+  breakable, enhanced, colback=LightRed, colframe=DarkRed,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+
+\newtcolorbox{propostabox}[1]{
+  breakable, enhanced, colback=LightGreen, colframe=DarkGreen,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+
+\newtcolorbox{agentbox}[1]{
+  breakable, enhanced, colback=LightPlum, colframe=Plum,
+  boxrule=0.9pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+
+\newtcolorbox{notabox}[1]{
+  breakable, enhanced, colback=LightYellow, colframe=DarkYellow,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+
+% ==============================================================================
+% MACROS E COMANDOS
+% ==============================================================================
+\newcommand{\bloq}{\textcolor{DarkRed}{\textbf{Bloqueante}}}
+\newcommand{\naobloq}{\textcolor{DarkYellow}{\textbf{N\~ao Bloqueante}}}
+\newcommand{\sevalta}{\textcolor{DarkRed}{\textbf{ALTA}}}
+\newcommand{\sevmedia}{\textcolor{DarkYellow}{\textbf{M\'EDIA}}}
+\newcommand{\sevinv}{\textcolor{SteelBlue}{\textbf{A INVESTIGAR}}}
+\newcommand{\dado}{\textbf{[DADO DIRETO]}}
+\newcommand{\extrap}{\textbf{[EXTRAPOLA\c{C}\~AO]}}
+\newcommand{\conv}{\textbf{[CONVEN\c{C}\~AO]}}
+
+\setlist[itemize]{leftmargin=1.4em, itemsep=2pt, topsep=4pt}
+\setlist[enumerate]{leftmargin=1.6em, itemsep=2pt, topsep=4pt}
+\renewcommand{\arraystretch}{1.2}
+\sloppy
+\emergencystretch=3em
+
+% ==============================================================================
+% INÍCIO DO DOCUMENTO
+% ==============================================================================
+\begin{document}
+\shorthandoff{"}
+
+% ------------------------------------------------------------------------------
+% CAPA DO RELATÓRIO
+% ------------------------------------------------------------------------------
+\begin{titlepage}
+\centering
+\vspace*{1.5cm}
+
+{\color{SteelBlue}\large\scshape Unooria --- Tecnologias Educacionais \& Intelig\^encia Artificial}\\[0.3cm]
+{\color{BorderGray}\rule{0.85\textwidth}{1.5pt}}\\[0.8cm]
+
+{\Huge\bfseries\color{NavyBlue} Da Teoria do Limite \`a Teoria do Agarre}\\[0.4cm]
+{\LARGE\color{SteelBlue} Auditoria Epist\^emica, Cr\'itica Pedag\'ogica e Arquitetura de 20 Agentes}\\[0.3cm]
+{\Large\itshape Elevando o Gerador de Miss\~oes ao Padr\~ao Ouro de Imers\~ao e Letramento Digital}\\[1.2cm]
+
+{\color{BorderGray}\rule{0.85\textwidth}{0.8pt}}\\[0.8cm]
+
+\begin{minipage}{0.85\textwidth}
+\centering
+\small
+\textbf{Objeto de Auditoria:} 30 prompts de agentes, 25 refer\^encias de dom\'inio, 41 contratos de plataforma e 8 matrizes de crit\'erio (\texttt{gate-estrutural}, \texttt{avaliacao-pedagogica}, \texttt{experiencia-estudante}, \texttt{gate-final}, \texttt{banca-dev} e \texttt{rubrica-oficio}).\\[0.3cm]
+\textbf{Embasamento Te\'orico-Emp\'irico Brasileiro:} Paulo Freire, Dermeval Saviani, Lynn Alves, Jo\~ao Mattar, Eliane Schlemmer, Sociedade Brasileira de Computa\c{c}\~ao (SBC), Resolu\c{c}\~ao CNE/CP n\textordmasculine{} 1/2022 (BNCC Computa\c{c}\~ao), Cetic.br/NIC.br (TIC Kids Online Brasil 2024 e TIC Educa\c{c}\~ao 2024), Inep (Saeb 2025 e PISA 2022) e Lei Federal n\textordmasculine{} 15.100/2025 (Restri\c{c}\~ao de Celulares na Escola).\\[0.3cm]
+\textbf{Veredito Sint\'etico:} A esteira atual possui salvaguardas cognitivas excepcionais de limite, mas peca pela aus\^encia de uma teoria do engajamento l\'udico-narrativo e pelo isolamento entre o design e a realidade emp\'irica da escola p\'ublica brasileira.\\[0.3cm]
+\textbf{Solu\c{c}\~ao Proposta:} Reestrutura\c{c}\~ao completa dos crit\'erios com inclus\~ao do \emph{Piso de Desafio} e especifica\c{c}\~ao de um ecossistema operacional de \textbf{20 Agentes Colaborativos Especializados}.
+\end{minipage}
+
+\vfill
+{\small\color{Charcoal} Setembro de 2026 \quad\textbullet\quad S\~ao Paulo, Brasil}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ==============================================================================
+% SEÇÃO 1: SUMÁRIO EXECUTIVO & DIAGNÓSTICO GLOBAL
+% ==============================================================================
+\section{Sum\'ario Executivo e Diagn\'ostico Global}
+
+\subsection{O Veredito Epist\^emico: Limite sem Agarre}
+
+A presente auditoria avaliou a integralidade dos artefatos que governam a gera\c{c}\~ao de experi\^encias no \textbf{Gerador de Miss\~oes da Unooria}. O objetivo foi responder com rigor cient\'ifico e pr\'atico \`a quest\~ao fundamental: \emph{os prompts, refer\^encias e crit\'erios atuais sustentam a constru\c{c}\~ao de uma experi\^encia genuinamente imersiva para o estudante brasileiro?}
+
+\begin{tesebox}
+\textbf{A Tese Central da Auditoria:}
+A esteira possui uma r\'egua de controle de danos cognitivos de alt\'issimo n\'ivel --- uma \textbf{teoria do limite} rigorosa que impede a sobrecarga mental da crian\c{c}a. No entanto, ela \'e quase totalmente desprovida de uma \textbf{teoria do agarre} (o conjunto de for\c{c}as l\'udicas, narrativas, dilem\'aticas e sist\^emicas que capturam a aten\c{c}\~ao volunt\'aria, geram curiosidade epist\^emica e sustentam o fluxo psicol\'ogico).
+
+Al\'em disso, os crit\'erios revelam uma assimetria estrutural: dos 72 crit\'erios avaliados pela banca t\'ecnica de desenvolvimento, \textbf{apenas 2 crit\'erios de design e imers\~ao s\~ao bloqueantes} --- e ambos s\~ao meras checagens burocr\'aticas de invent\'ario. O "of\'icio" (a qualidade daquilo que a crian\c{c}a v\^e, sente e experimenta) foi confinado a uma faixa de severidade que, por constru\c{c}\~ao algor\'itmica, \textbf{nunca reprova uma miss\~ao med\'iocre}.
+\end{tesebox}
+
+A an\'alise emp\'irica demonstra que a esteira confunde, em v\'arios momentos, \textbf{mimetismo visual de interface} com \textbf{imers\~ao de aprendizagem}. Clonar o layout de uma rede social n\~ao produz imers\~ao por si s\'o; pode constituir apenas o que a literatura denomina "detalhe sedutor" ($g = -0{,}33$), aumentando a distra\c{c}\~ao se n\~ao houver ag\^encia real, consequ\^encia causal e tens\~ao dram\'atica.
+
+\subsection{O Paradoxo dos Crit\'erios e o "Teto sem Piso"}
+
+A an\'alise comparativa dos crit\'erios de produto, pedagogia e experi\^encia revela tr\^es anomalias de concep\c{c}\~ao:
+
+\begin{enumerate}
+    \item \textbf{O Paradoxo do Teto sem Piso:} Os crit\'erios definem com precis\~ao cir\'urgica os limites m\'aximos de span de mem\'oria de trabalho (Gathercole/Cowan), limites de dura\c{c}\~ao e tetos de op\c{c}\~oes simult\^aneas. Todavia, \textbf{n\~ao h\'a nenhum crit\'erio obrigat\'orio de piso de desafio para os anos iniciais (1\textordmasculine{} ao 5\textordmasculine{} ano)}. Uma miss\~ao inteira de 3\textordmasculine{} ano que se resuma a clicar em um \'unico bot\~ao \'obvio e ler um texto passa ilesa por todos os port\~oes de qualidade, embora seja pedagogicamente in\'util e emocionalmente entediante.
+    \item \textbf{O Isolamento da Coer\^encia Dieg\'etica:} O crit\'erio 2.3 ("Simula\c{c}\~ao dieg\'etica --- a narrativa justifica por que aquele ambiente existe"), que \'e a viga mestra da suspens\~ao de descren\c{c}a, \'e classificado como meramente \textbf{Desej\'avel}. Enquanto isso, conferir se as seis etapas do framework formal existem recebe sete crit\'erios \textbf{Obrigat\'orios}.
+    \item \textbf{O Descompasso com o Ch\~ao da Escola P\'ublica:} A esteira exige "conta pr\'opria do estudante" e veta "conta de personagem" (crit\'erio 2.1), ignorando que: (a) 40\% das crian\c{c}as de 9 a 10 anos no Brasil n\~ao possuem conta em nenhuma rede social (TIC Kids Online 2024); e (b) em 53\% das escolas p\'ublicas, 2 a 4 estudantes dividem o mesmo computador (TIC Educa\c{c}\~ao 2024). A esteira n\~ao define de quem \'e a conta quando tr\^es crian\c{c}as operam um \'unico Chromebook.
+\end{enumerate}
+
+% ==============================================================================
+% SEÇÃO 2: FUNDAMENTAÇÃO TEÓRICO-EMPÍRICA BRASILEIRA
+% ==============================================================================
+\section{Fundamenta\c{c}\~ao Te\'orico-Emp\'irica Brasileira e Internacional}
+
+Para que o gerador de miss\~oes alcance o padr\~ao ouro, suas decis\~oes de design devem estar alicer\c{c}adas nas maiores refer\^encias pedag\'ogicas e de game design do Brasil, cruzadas com a literatura cient\'ifica contempor\^anea.
+
+\subsection{Lynn Alves: A Narrativa como Sedu\c{c}\~ao e a Cr\'itica \`a Cartilha Digital}
+
+A professora e pesquisadora \textbf{Lynn Rosalina Gama Alves} (UFBA/UNEB), pioneira nos estudos de jogos digitais e aprendizagem no Brasil, estabelece que experi\^encias l\'udico-educativas fracassam quando adotam o modelo da "cartilha disfar\c{c}ada de jogo" (\emph{chocolate-covered broccoli}). Para Alves:
+
+\begin{itemize}
+    \item \textbf{A Narrativa \'e o Fio Condutor da Sedu\c{c}\~ao:} O estudante contempor\^aneo est\'a imerso na cultura audiovisual e dos games comerciais. O engajamento n\~ao decorre de recompensas extr\'insecas (pontos ou distintivos), mas da for\c{c}a do enredo e da identifica\c{c}\~ao afetiva com o universo ficcional.
+    \item \textbf{Desafio Aut\^entico vs. Didatismo Expl\'icito:} A aprendizagem ocorre na tens\~ao entre a curiosidade de resolver um mist\'erio e a capacidade de superar obst\'aculos dentro do jogo. Se o software entrega a resposta moral pronta, a ag\^encia do jogador \'e destru\'ida.
+    \item \textbf{A Insubstitu\'ivel Media\c{c}\~ao Docente:} O jogo n\~ao educa no vazio; a experi\^encia imersiva s\'o se cristaliza como aprendizagem cr\'itica quando mediada pelo professor, que desoculta as regras invis\'iveis e conecta a fic\c{c}\~ao \`a realidade social do aluno.
+\end{itemize}
+
+\subsection{Dermeval Saviani: A Dial\'etica da Pedagogia Hist\'orico-Cr\'itica}
+
+O framework das 6 etapas da Unooria (\emph{Desafiar $\rightarrow$ Navegar $\rightarrow$ Decidir $\rightarrow$ Resultado $\rightarrow$ Explicar $\rightarrow$ Refletir}) ganha consist\^encia epistemol\'ogica quando confrontado com os cinco passos da \textbf{Pedagogia Hist\'orico-Cr\'itica (PHC)} de \textbf{Dermeval Saviani}:
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}l p{4.8cm} X@{}}
+\toprule
+\textbf{Momento PHC} & \textbf{Conceito de Saviani} & \textbf{Correspond\^encia na Miss\~ao Unooria} \\
+\midrule
+1. Pr\'atica Social Inicial & Viv\^encia emp\'irica, sincr\'etica e cotidiana do estudante. & O estudante entra no clone da rede social que j\'a habita (Instagram, YouTube, TikTok). \\
+2. Problematiza\c{c}\~ao & Ruptura da aparente normalidade; detec\c{c}\~ao do conflito ou gap. & \textbf{Desafiar / Navegar:} Um evento cr\'itico ou dilema de informa\c{c}\~ao rompe a passividade. \\
+3. Instrumentaliza\c{c}\~ao & Apropria\c{c}\~ao das ferramentas te\'oricas e pr\'aticas de an\'alise. & \textbf{Decidir:} O estudante usa pistas, ferramentas de checagem e regras do sistema para agir. \\
+4. Catarse & Altera\c{c}\~ao qualitativa da compreens\~ao; s\'intese nova da realidade. & \textbf{Resultado / Aha Moment:} A revela\c{c}\~ao do mecanismo oculto (ex: o algoritmo lucra com a indigna\c{c}\~ao). \\
+5. Pr\'atica Social Final & A\c{c}\~ao consciente, cr\'itica e transformada no mundo real. & \textbf{Refletir / Provoca\c{c}\~ao:} Aplica\c{c}\~ao do aprendizado em um cen\'ario novo e no debate coletivo. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Essa conex\~ao prova que o framework da Unooria n\~ao \'e uma estrutura arbitr\'aria de marketing educacional: ele representa a transi\c{c}\~ao dial\'etica da s\'increse inicial (navega\c{c}\~ao ing\^enua) para a s\'intese cr\'itica (consci\^encia do mecanismo da plataforma).
+
+\subsection{Paulo Freire: Desocultamento dos Algoritmos como Temas Geradores}
+
+Na perspectiva de \textbf{Paulo Freire} (\emph{Pedagogia do Oprimido} e \emph{Pedagogia da Autonomia}), a imers\~ao emancipat\'oria se op\~oe frontalmente \`a "educa\c{c}\~ao banc\'aria":
+
+\begin{quote}
+\itshape "Ensinar n\~ao \'e transferir conhecimento, mas criar as possibilidades para a sua pr\'opria produ\c{c}\~ao ou a sua constru\c{c}\~ao. Quem ensina aprende ao ensinar e quem aprende ensina ao aprender." (FREIRE, 1996).
+\end{quote}
+
+Nas miss\~oes da Unooria, as plataformas digitais constituem os \textbf{temas geradores} do s\'eculo XXI. O letramento digital proposto n\~ao pode ser o treinamento operacional de cliques, mas o \textbf{desocultamento da l\'ogica de poder e monetiza\c{c}\~ao dos algoritmos}. O crit\'erio 3.4 da esteira ("Pensamento cr\'itico, n\~ao li\c{c}\~ao de moral") \'e puramente freiriano: a miss\~ao deve provocar a conscientiza\c{c}\~ao do estudante sobre como a interface o manipula, e n\~ao domestic\'a-lo com serm\~oes moralizantes.
+
+\subsection{Eliane Schlemmer, Jo\~ao Mattar e a Sociedade Brasileira de Computa\c{c}\~ao (SBC)}
+
+\textbf{Eliane Schlemmer} (UNISINOS) aponta que a presen\c{c}a em mundos digitais \'e fundamentalmente interacional e poliss\^emica. Quando a escola p\'ublica n\~ao disp\~oe de dispositivos 1:1, a imers\~ao precisa ser redimensionada de \emph{imers\~ao individual do avatar} para \textbf{imers\~ao dial\'ogica e colaborativa} entre pares.
+
+\textbf{Jo\~ao Mattar} (\emph{Games em Educa\c{c}\~ao}) sublinha que o engajamento l\'udico depende da permiss\~ao do erro sem puni\c{c}\~ao ontol\'ogica. A esteira acerta ao instituir em seu c\'odigo de conduta que as consequ\^encias negativas devem ocorrer \emph{dentro da diegese} da simula\c{c}\~ao, sem que o sistema jamais rotule ou puna o estudante na vida real.
+
+Por fim, as \textbf{Diretrizes da SBC} e a \textbf{BNCC Computa\c{c}\~ao (Resolu\c{c}\~ao CNE/CP n\textordmasculine{} 1/2022)} consagram tr\^es eixos indissoci\'aveis:
+\begin{enumerate}
+    \item \textbf{Pensamento Computacional:} Racioc\'inio algor\'itmico, decomposi\c{c}\~ao e reconhecimento de padr\~oes.
+    \item \textbf{Mundo Digital:} Arquiteturas de rede, processamento, seguran\c{c}a e armazenamento de dados.
+    \item \textbf{Cultura Digital:} Letramento cr\'itico, seguran\c{c}a da informa\c{c}\~ao, \'etica e impacto da tecnologia na cidadania.
+\end{enumerate}
+A esteira concentra-se legitimamente na Cultura Digital e no Letramento Digital, mas suas miss\~oes perdem pot\^encia quando n\~ao revelam os rudimentos de Mundo Digital que governam as redes sociais (ex.: como um banco de dados armazena o rastro de cliques).
+
+\subsection{Radiografia da Realidade Brasileira: Cetic.br, Inep e Legisla\c{c}\~ao}
+
+Para alicer\c{c}ar a esteira na realidade nacional, confrontamos seus pressupostos com dados p\'ublicos oficiais:
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}l p{5.5cm} X@{}}
+\toprule
+\textbf{Fonte Prim\'aria} & \textbf{Evid\^encia Emp\'irica Medida} & \textbf{Impacto Decisivo no Gerador de Miss\~oes} \\
+\midrule
+\textbf{TIC Kids Online 2024} & 
+\begin{itemize}[leftmargin=*]
+  \item 40\% das crian\c{c}as de 9--10 anos \textbf{n\~ao possuem conta} em rede social.
+  \item YouTube \'e a plataforma hegem\^onica aos 9--10 anos.
+  \item Instagram e TikTok lideram a partir dos 13 anos.
+\end{itemize} & 
+Veta a obrigatoriedade de conta pr\'opria nos anos iniciais. Valida o YouTube como ambiente preferencial do 1\textordmasculine{} ao 5\textordmasculine{} EF e restringe Instagram/TikTok para o 6\textordmasculine{}--9\textordmasculine{} EF e EM. \\
+\midrule
+\textbf{TIC Educa\c{c}\~ao 2024} & 
+\begin{itemize}[leftmargin=*]
+  \item Apenas 47\% das escolas possuem computadores para os estudantes.
+  \item Uso pedag\'ogico na rede municipal \'e de 27\%, contra 67\% na estadual.
+  \item M\'edia de 2 a 4 alunos por computador no laborat\'orio.
+\end{itemize} & 
+Obriga o gerador a desenhar a experi\^encia em modo de \textbf{dispositivo compartilhado} (tr\^es pap\'eis ativos: piloto, navegador e escriv\~ao cr\'itico), tratando o 1:1 como caso particular e n\~ao como regra. \\
+\midrule
+\textbf{Lei Federal 15.100/2025} & 
+Proibi\c{c}\~ao do uso de celulares pessoais em salas de aula em todo o pa\'is (refor\c{c}ada pelo Dec. 12.385/2025). & 
+A miss\~ao deve ser projetada para \textbf{telas de Chromebook / Desktop} (1366$\times$768), utilizando o viewport emulado de smartphone apenas dentro de uma casca dieg\'etica controlada. \\
+\midrule
+\textbf{PISA 2022 / Saeb 2025} & 
+\begin{itemize}[leftmargin=*]
+  \item 50\% dos jovens de 15 anos est\~ao abaixo do N\'ivel 2 em leitura.
+  \item A defasagem leitora \'e n\~ao-monot\^onica: piora no 9\textordmasculine{} ano e no Ensino M\'edio.
+\end{itemize} & 
+Refuta a remo\c{c}\~ao dogm\'atica de recursos de acessibilidade e narra\c{c}\~ao de \'audio em anos finais, exigindo que o suporte auditivo permane\c{c}a ativ\'avel sob demanda. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% ==============================================================================
+% SEÇÃO 3: AUDITORIA DETALHADA DOS PROMPTS E CRITÉRIOS
+% ==============================================================================
+\section{Auditoria Detalhada dos Prompts, Refer\^encias e Crit\'erios}
+
+A auditoria exaustiva dos 30 prompts de agentes e 8 arquivos de crit\'erios revelou pontos de for\c{c}a not\'aveis e 12 vulnerabilidades que impedem o gerador de atingir o padr\~ao ouro.
+
+\subsection{Pontos de Excel\^encia a Preservar}
+
+A esteira da Unooria possui diferenciativos raros na ind\'ustria de EdTech:
+\begin{itemize}
+    \item \textbf{Disciplina Epist\^emica:} \texttt{literatura-cognitiva.md} rotula todo par\^ametro como \dado, \extrap{} ou \conv{}, impedindo que dogmas sem comprova\c{c}\~ao guiem o desenvolvimento.
+    \item \textbf{Mem\'oria de Refuta\c{c}\~ao:} O sistema documenta expressamente o que a ci\^encia refutou (\emph{choice overload}, \emph{decision fatigue}, correspond\^encia linear entre idade e minutos de aten\c{c}\~ao).
+    \item \textbf{Engenharia Anti-Spoiler:} Os quatro padr\~oes codificados em \texttt{01\_nucleo\_narrativo.md} protegem com precis\~ao o suspense e a tens\~ao dram\'atica da miss\~ao.
+    \item \textbf{Integridade da Simula\c{c}\~ao:} Diretrizes como PROD-09 ("a revela\c{c}\~ao n\~ao pode mentir") e DES-13 ("a marca institucional nunca invade o disfarce") protegem a seriedade da avalia\c{c}\~ao.
+\end{itemize}
+
+\subsection{Os 12 Achados Cr\'iticos da Auditoria}
+
+\begin{achadobox}{A1 --- Incoer\^encia de Ambiente: Roblox na Lista Fechada e Ausente no Design System \hfill \sevalta}
+O crit\'erio 2.1 fixa a lista fechada contendo Roblox. Contudo, \texttt{ambientes.md} declara que o Roblox foi descontinuado e n\~ao possui biblioteca no Storybook. Uma miss\~ao em Roblox atravessa o gate estrutural, passa pela avalia\c{c}\~ao pedag\'ogica, consome todas as etapas de design e s\'o \'e reprovada no banco de dev em DES-01, gerando enorme desperd\'icio de processamento.
+\end{achadobox}
+
+\begin{achadobox}{A2 --- A Desconex\~ao do Of\'icio: Qualidade de Execu\c{c}\~ao N\~ao Reprova \hfill \sevalta}
+A \texttt{rubrica-oficio.md} define testes fundamentais de experi\^encia (regra do pico visual, voz e tom dos clones, legibilidade em 3 segundos). Por\'em, o envelope do agente QA (\texttt{30\_qa\_entregaveis.md}) atribui severidade \texttt{"oficio"}, que n\~ao gera bloqueio no orquestrador. Uma miss\~ao visualmente confusa ou com telas mon\'otonas \'e aprovada para codifica\c{c}\~ao.
+\end{achadobox}
+
+\begin{achadobox}{A3 --- Fragilidade Institucional da Imers\~ao no Banco de Dev \hfill \sevalta}
+Dos 72 crit\'erios da banca de desenvolvimento, a dimens\~ao \textbf{Design \& Imers\~ao} conta com apenas 2 crit\'erios bloqueantes (15\%), contra 7 em Dados e LGPD (47\%). Ambos os bloqueantes avaliam apenas conformidade documental (se a se\c{c}\~ao do DS existe e se h\'a mapa de falantes). A imers\~ao real n\~ao tem poder de veto na esteira t\'ecnica.
+\end{achadobox}
+
+\begin{achadobox}{A4 --- A Simula\c{c}\~ao Dieg\'etica Truncada como Desej\'avel \hfill \sevalta}
+Em \texttt{criterios-pedagogicos.md}, o crit\'erio 2.3 ("Simula\c{c}\~ao dieg\'etica: a narrativa justifica por que aquele ambiente existe") \'e classificado como \textbf{Desej\'avel}. O teste de que o ambiente ficcional faça sentido dentro da hist\'oria n\~ao bloqueia a miss\~ao, permitindo a gera\c{c}\~ao de ambientes artificiais e descontextualizados.
+\end{achadobox}
+
+\begin{achadobox}{A5 --- A Biblioteca de Aus\^encias Vazia Paralisando a Fidelidade \hfill \sevalta}
+A tabela de "Aus\^encias por ambiente" em \texttt{ambientes.md} cont\'em cinco linhas completamente vazias. Sem essa lista (que define o que a rede real tem mas a miss\~ao deliberadamente n\~ao imita para fins pedag\'ogicos), o crit\'erio O3 da rubrica de of\'icio se anula formalmente.
+\end{achadobox}
+
+\begin{achadobox}{A6 --- O Isolamento Cognitivo da Etapa de Design \hfill \sevmedia}
+\texttt{literatura-cognitiva.md} \'e lida exclusivamente pelo agente \texttt{09\_experiencia\_estudante.md}. Os agentes que desenham a jornada, fluxo, copy e telas (A22 a A28) nunca recebem a base de mem\'oria de trabalho, recebendo apenas tabelas secund\'arias sem os princ\'ipios que explicam quando uma regra se flexibiliza.
+\end{achadobox}
+
+\begin{achadobox}{A7 --- Cat\'alogo Obsoleto e Anula\c{c}\~ao da Diferencia\c{c}\~ao \hfill \sevmedia}
+O arquivo \texttt{catalogo-missoes.md} lista apenas tr\^es miss\~oes, enquanto a banca cita dezenas de experi\^encias-molde. Com o cat\'alogo desatualizado, o crit\'erio 2.5 ("Diferencia\c{c}\~ao no cat\'alogo") aciona sua cl\'ausula de escape e se autoanula marcando N/A.
+\end{achadobox}
+
+\begin{achadobox}{A8 --- Paralisia de Emendas Cr\'iticas Prontas \hfill \sevmedia}
+Em \texttt{candidatos-a-criterio.md}, tr\^es emendas fundamentais est\~ao aprovadas mas n\~ao aplicadas: C1 (a mec\^anica sustenta a descoberta central), C3 (verificar se requisitos de of\'icio possuem mecanismo t\'ecnico) e C7 (estados de falha de rede n\~ao podem ser gravados como escolha do estudante).
+\end{achadobox}
+
+\begin{achadobox}{A9 --- Aus\^encia de Piso de Desafio nos Anos Iniciais \hfill \sevalta}
+O crit\'erio 6.5 ("Repert\'orio de a\c{c}\~oes calibrado") \'e obrigat\'orio apenas para anos finais e Ensino M\'edio. No 1\textordmasculine{} ao 5\textordmasculine{} ano, ele \'e meramente desej\'avel. Como a meta-an\'alise de Hamari et al. (2016) demonstra, o desafio \'e o preditor determinante da aprendizagem em jogos; a esteira permite que miss\~oes infantis sejam triviais.
+\end{achadobox}
+
+\begin{achadobox}{A10 --- Framework Uniforme de 6 Etapas sem Modula\c{c}\~ao Dial\'etica \hfill \sevinv}
+O modelo de 6 etapas aplica rigorosamente a solu\c{c}\~ao de problemas antes da instru\c{c}\~ao formal (\emph{Problem Solving before Instruction} --- PS-I). A meta-an\'alise de Sinha \& Kapur (2021) comprova que o efeito \'e moderado por idade, podendo ser nulo ou contraproducente em crian\c{c}as do 1\textordmasculine{} ao 3\textordmasculine{} ano sem andaimes instrucionais pr\'evios.
+\end{achadobox}
+
+\begin{achadobox}{A11 --- Escolha de Plataforma por Suposi\c{c}\~ao sem Dados Cetic.br \hfill \sevalta}
+Os crit\'erios 2.1 e 6.4 exigem que o ambiente seja compat\'ivel com o uso real da idade, mas nenhum prompt cita o levantamento nacional da TIC Kids Online Brasil, deixando a decis\~ao a cargo da intui\c{c}\~ao isolada do modelo de linguagem.
+\end{achadobox}
+
+\begin{achadobox}{A12 --- Conflito Estrutural: Conta Pr\'opria vs. 3 Alunos por Máquina \hfill \sevmedia}
+O crit\'erio 2.1 reprova expressamente o uso de contas de personagens fict\'icios, exigindo conta pr\'opria do estudante. Em paralelo, o crit\'erio 10.2 exige que a miss\~ao funcione com tr\^es crian\c{c}as por computador. O sistema n\~ao arbitra de quem \'e a conta no uso compartilhado, quebrando a ag\^encia das duas crian\c{c}as que ficam como expectadoras.
+\end{achadobox}
+
+% ==============================================================================
+% SEÇÃO 4: ARQUITETURA PADRÃO OURO DE 20 AGENTES
+% ==============================================================================
+\section{A Arquitetura Padr\~ao Ouro: O Ecossistema dos 20 Agentes Colaborativos}
+
+Para sanar as lacunas identificadas e elevar o gerador de miss\~oes ao n\'ivel de refer\^encia internacional, projeta-se uma arquitetura multiagente com \textbf{exatamente 20 Agentes Colaborativos Especializados}. Cada agente opera com identidade, atribui\c{c}\~ao cognitiva, ferramentas e contratos de interface rigorosamente delimitados.
+
+A esteira \'e estruturada em quatro est\'agios sequenciais de cinco agentes, combinando execu\c{c}\~ao linear, paralelismo anal\'itico e loops de corre\c{c}\~ao prescritiva.
+
+\subsection{Vis\~ao Sin\'optica do Pipeline dos 20 Agentes}
+
+\begin{figure}[htbp]
+\centering
+\begin{tcolorbox}[colback=GrayBg, colframe=SteelBlue, arc=4pt, boxrule=1pt]
+\small\ttfamily
+\textbf{[ESTÁGIO 1: CONCEPÇÃO \& NÚCLEO NARRATIVO-LÚDICO]}\\
+A01 Curricular -> A02 Roteirista -> A03 GameDesigner -> A04 Cognitivo\\
+\quad $\llcorner$ [LOOP DE REFINAMENTO CRIATIVO] <--- A05 Gatekeeper P0\\[0.3cm]
+\textbf{[ESTÁGIO 2: ESTRUTURAÇÃO, MEDIAÇÃO \& CHÃO DE ESCOLA]}\\
+A06 OnePager -> A07 ContextoEscolar -> A08 OrquestracaoDocente\\
+\quad $\llcorner$ [LOOP DE FECHAMENTO DE SPEC] <--- A09 Auditor P1, A10 Reconciliador\\[0.3cm]
+\textbf{[ESTÁGIO 3: SEMIÓTICA DE INTERFACE \& PROTOTIPAGEM]}\\
+A11 Semiólogo -> A12 CartógrafoMermaid -> A13 Copywriter\\
+\quad -> A14 AcessibilidadeDUA -> A15 PrototipadorStitch\\[0.3cm]
+\textbf{[ESTÁGIO 4: GOVERNANÇA, ENGENHARIA \& PRD PADRÃO OURO]}\\
+A16 AuditorOficio -> A17 Telemetria -> A18 AuditorLGPD\\
+\quad -> A19 BancaConsensoGateFinal -> A20 SintetizadorPRD
+\end{tcolorbox}
+\caption{Fluxo de Orquestra\c{c}\~ao Colaborativa entre os 20 Agentes.}
+\end{figure}
+
+\subsection{Fichas T\'ecnicas dos 20 Agentes}
+
+% --- ESTÁGIO 1 ---
+\subsubsection{Est\'agio 1: Concep\c{c}\~ao Curricular, Narrativa \& Dilema L\'udico}
+
+\begin{agentbox}{Agente 01: Arquiteto Curricular \& BNCC Cr\'itica (\texttt{A01Curricular})}
+\textbf{Papel:} Mapeia as compet\^encias da BNCC Computa\c{c}\~ao (Res. CNE 1/2022) no eixo Cultura Digital e articula conex\~oes com componentes da base comum (Saviani/Freire). Define o tema gerador, o objeto de aprendizagem e a pergunta provocadora.\\
+\textbf{Entrada:} Tema da miss\~ao, s\'erie/ano escolar, bimestre letivo e objetivos pedag\'ogicos.\\
+\textbf{Sa\'ida Contratual:} \texttt{matriz\_pedagogica} (Habilidade EFxxCOxx principal, habilidades transdisciplinares, conceitos de letramento digital cr\'itico e pergunta geradora).\\
+\textbf{Crit\'erio Governado:} 5.1 e 5.2 (Letramento Digital Ativo).
+\end{agentbox}
+
+\begin{agentbox}{Agente 02: Roteirista \& Worldbuilder Dieg\'etico (\texttt{A02Roteirista})}
+\textbf{Papel:} Constr\'oi a premissa ficcional, a ambienta\c{c}\~ao dieg\'etica, o gancho de curiosidade e a tens\~ao dram\'atica (Lynn Alves; Green \& Brock). Assegura que o ambiente simulado surja por necessidade da hist\'oria, sem quebras de quarta parede.\\
+\textbf{Entrada:} \texttt{matriz\_pedagogica} do A01.\\
+\textbf{Sa\'ida Contratual:} \texttt{premissa\_diegetica} (Hist\'oria, contexto do personagem/situa\c{c}\~ao, justificativa do ambiente e gancho de abertura do Desafiar).\\
+\textbf{Crit\'erio Governado:} 1.1 (Desafiar) e 2.3 (Simula\c{c}\~ao Dieg\'etica Obrigat\'oria).
+\end{agentbox}
+
+\begin{agentbox}{Agente 03: Game Designer de Dilemas \& Ag\^encia (\texttt{A03GameDesigner})}
+\textbf{Papel:} Projeta a \emph{escolha significativa} (Sid Meier; Salen \& Zimmerman) no cora\c{c}\~ao da miss\~ao. Define caminhos divergentes com custos de oportunidade reais, eliminando decis\~oes bin\'arias \'obvias e garantindo o mist\'erio do mecanismo oculto.\\
+\textbf{Entrada:} \texttt{premissa\_diegetica} do A02.\\
+\textbf{Sa\'ida Contratual:} \texttt{mecanica\_decisao} (A\c{c}\~oes observ\'aveis, matriz de ramifica\c{c}\~ao causal, o gatilho da virada e a formula\c{c}\~ao exata do Aha Moment).\\
+\textbf{Crit\'erio Governado:} 1.3 (Decidir com Ag\^encia Real), 1.4 (Consequ\^encia Vis\'ivel) e 2.4 (Descoberta Articulada).
+\end{agentbox}
+
+\begin{agentbox}{Agente 04: Engenheiro Cognitivo \& Calibrador Et\'ario (\texttt{A04Cognitivo})}
+\textbf{Papel:} Aplica a r\'egua de carga cognitiva de Sweller e os spans de Cowan/Gathercole. Fixa os tetos m\'aximos de aten\c{c}\~ao e, crucialmente, estabelece o \textbf{Piso de Desafio M\'inimo} para a faixa et\'aria, impedindo que a miss\~ao seja uma experi\^encia passiva.\\
+\textbf{Entrada:} \texttt{mecanica\_decisao} do A03 e dados da \texttt{literatura-cognitiva.md}.\\
+\textbf{Sa\'ida Contratual:} \texttt{calibracao\_cognitiva} (Teto de op\c{c}\~oes simult\^aneas, dura\c{c}\~ao estimada dos atos, portas de abstra\c{c}\~ao e m\'etricas de desafio m\'inimo).\\
+\textbf{Crit\'erio Governado:} 3.5 (Carga Decis\'oria), 6.2 (Dura\c{c}\~ao/Ritmo) e 6.5 (Piso de Desafio por Faixa).
+\end{agentbox}
+
+\begin{agentbox}{Agente 05: Gatekeeper de Imers\~ao \& Anti-Spoiler P0 (\texttt{A05GatekeeperP0})}
+\textbf{Papel:} Primeiro guardi\~ao bloqueante da esteira. Executa os testes formais contra os 4 padr\~oes de spoiler, valida se a decis\~ao possui ag\^encia real e se h\'a consequ\^encia comprovada. Se houver falha, aciona o loop de retorno para A02/A03 com parecer cir\'urgico.\\
+\textbf{Entrada:} Concatena\c{c}\~ao de A01 a A04.\\
+\textbf{Sa\'ida Contratual:} \texttt{micro\_gate\_status} (Aprovado / Reprovado com lista de impedimentos e instru\c{c}\~oes de reparo).\\
+\textbf{Crit\'erio Governado:} Padr\~oes Anti-Spoiler 1 a 4 e Teste de Falsificabilidade de Escolha.
+\end{agentbox}
+
+% --- ESTÁGIO 2 ---
+\subsubsection{Est\'agio 2: Estrutura\c{c}\~ao, Media\c{c}\~ao \& Realidade Escolar}
+
+\begin{agentbox}{Agente 06: Redator do One-Pager Can\^onico (\texttt{A06OnePager})}
+\textbf{Papel:} Sintetiza o n\'ucleo aprovado nas 18 se\c{c}\~oes can\^onicas da miss\~ao, descrevendo o percurso tela a tela: o que o aluno v\^e na interface, a a\c{c}\~ao do aluno (clicar, arrastar, digitar) e o que muda na tela ap\'os a a\c{c}\~ao.\\
+\textbf{Entrada:} N\'ucleo aprovado pelo A05.\\
+\textbf{Sa\'ida Contratual:} \texttt{one\_pager\_master} (Especifica\c{c}\~ao unificada das 6 etapas estruturais).\\
+\textbf{Crit\'erio Governado:} 1.2 (Navega\c{c}\~ao com Filtro de Passividade e Detalhamento).
+\end{agentbox}
+
+\begin{agentbox}{Agente 07: Especialista em Ch\~ao de Escola \& Infraestrutura (\texttt{A07ContextoEscolar})}
+\textbf{Papel:} Reconcilia a miss\~ao com a realidade p\'ublica brasileira (TIC Educa\c{c}\~ao 2024 e Lei 15.100/2025). Desenha a din\^amica para o cen\'ario de 3 estudantes por computador (pap\'eis rotativos: Piloto, Navegador e Auditor) e especifica os estados de rede degradada.\\
+\textbf{Entrada:} \texttt{one\_pager\_master} do A06.\\
+\textbf{Sa\'ida Contratual:} \texttt{anexo\_infra\_escolar} (Protocolo de uso compartilhado, viewport Chromebook 1366$\times$768 e regras de conting\^encia offline).\\
+\textbf{Crit\'erio Governado:} 10.1 (Cen\'arios de Dispositivo) e 10.2 (Experi\^encia Degradada Funcional).
+\end{agentbox}
+
+\begin{agentbox}{Agente 08: Designer de Orquestra\c{c}\~ao Docente \& Handoffs (\texttt{A08OrquestracaoDocente})}
+\textbf{Papel:} Modela a media\c{c}\~ao do professor (Saviani/Vygotsky). Escreve o roteiro de debate socr\'atico p\'os-miss\~ao, os gatilhos de pausa na plataforma e garante o \textbf{Banco Curado Padr\~ao} como caminho principal nos anos iniciais, liberando o professor da cria\c{c}\~ao via IA.\\
+\textbf{Entrada:} \texttt{one\_pager\_master} e \texttt{anexo\_infra\_escolar}.\\
+\textbf{Sa\'ida Contratual:} \texttt{guia\_mediacao\_docente} (Roteiro de perguntas de debate, tempos de handoff e banco curado).\\
+\textbf{Crit\'erio Governado:} 4.1 (Handoffs Definidos), 4.2 (Roda de Conversa) e 4.3 (Banco Curado Default).
+\end{agentbox}
+
+\begin{agentbox}{Agente 09: Auditor Estrutural \& Fechamento de Spec P1 (\texttt{A09AuditorP1})}
+\textbf{Papel:} Port\~ao bloqueante da estrutura. Submete a miss\~ao ao \textbf{Teste de Implementa\c{c}\~ao Cega (9.1)}: cardinalidades, permiss\~oes de conta, a\c{c}\~ao de quem termina r\'apido, ownership de dados e estados de falha (C7). Sem especifica\c{c}\~ao fechada, impede o avan\c{c}o.\\
+\textbf{Entrada:} Documento consolidado (A06 + A07 + A08).\\
+\textbf{Sa\'ida Contratual:} \texttt{gate\_estrutural\_status} (Relat\'orio minucioso de lacunas de implementa\c{c}\~ao).\\
+\textbf{Crit\'erio Governado:} 9.1 (Spec Implement\'avel Fechada) e 9.4 (Estados de Falha Mapeados).
+\end{agentbox}
+
+\begin{agentbox}{Agente 10: Reconciliador \& Reparador de Produto (\texttt{A10Reconciliador})}
+\textbf{Papel:} Agente ativo de corre\c{c}\~ao. Recebe as prescri\c{c}\~oes de lacunas emitidas pelo A09 e reescreve cirurgicamente o One-Pager, preenchendo as inconsist\^encias sem inventar regras que descaracterizem o Aha Moment original.\\
+\textbf{Entrada:} Parecer do A09 e One-Pager original.\\
+\textbf{Sa\'ida Contratual:} \texttt{one\_pager\_revisado} (Spec fechada e pronta para o design de interface).\\
+\textbf{Crit\'erio Governado:} Ciclo de fechamento mec\^anico de spec antes da fase visual.
+\end{agentbox}
+
+% --- ESTÁGIO 3 ---
+\subsubsection{Est\'agio 3: Semi\'otica de Interface, UX \& Prototipagem}
+
+\begin{agentbox}{Agente 11: Semi\'ologo de Plataforma \& Aus\^encias (\texttt{A11Semiologo})}
+\textbf{Papel:} Confronta o ambiente escolhido com a TIC Kids Online 2024 (o que a faixa et\'aria realmente usa) e aplica a \textbf{Biblioteca de Aus\^encias} de \texttt{ambientes.md}. Garante que o clone imite a l\'ogica da rede sem incorporar funcionalidades sedutoras irrelevantes.\\
+\textbf{Entrada:} \texttt{one\_pager\_revisado}.\\
+\textbf{Sa\'ida Contratual:} \texttt{diretrizes\_semioticas} (Mapeamento de verbos nativos permitidos, restri\c{c}\~oes de clone e tabela de aus\^encias).\\
+\textbf{Crit\'erio Governado:} 2.1 (Ambiente Suportado e Plaus\'ivel), 2.6 (Verbos Nativos) e DES-03 (Fidelidade do Clone).
+\end{agentbox}
+
+\begin{agentbox}{Agente 12: Cart\'ografo de Fluxo \& Navega\c{c}\~ao Mermaid (\texttt{A12Cartografo})}
+\textbf{Papel:} Gera o grafo naveg\'avel completo de telas e transi\c{c}\~oes em sintaxe Mermaid (\texttt{stateDiagram-v2} ou \texttt{flowchart TD}). Sinaliza obrigatoriamente as \textbf{microintera\c{c}\~oes instrumentadas} que alimentam a medi\c{c}\~ao de telemetria.\\
+\textbf{Entrada:} \texttt{one\_pager\_revisado} e \texttt{diretrizes\_semioticas}.\\
+\textbf{Sa\'ida Contratual:} \texttt{diagramas\_fluxo\_mermaid} (Grafo de telas, branches condicionais e eventos instrumentados).\\
+\textbf{Crit\'erio Governado:} DES-12 (Microintera\c{c}\~oes Instrumentadas) e Cobertura de Fluxo.
+\end{agentbox}
+
+\begin{agentbox}{Agente 13: Roteirista de Copy Dieg\'etico \& Di\'alogos (\texttt{A13Copywriter})}
+\textbf{Papel:} Redige integralmente as strings e textos finais que aparecem nas telas (posts, coment\'arios, di\'alogos de chat, toasts). Garante adequa\c{c}\~ao sociolingu\'istica aut\^entica \`a juventude brasileira, sem artificialidade ou jarg\~oes burocr\'aticos.\\
+\textbf{Entrada:} Fluxo de telas do A12 e especificidades da s\'erie escolar.\\
+\textbf{Sa\'ida Contratual:} \texttt{copy\_strings\_final} (Tabela de textos dieg\'eticos categorizados por tela).\\
+\textbf{Crit\'erio Governado:} 6.1 (Linguagem Adequada) e DES-08 (Copy Real e Adequada \`a S\'erie).
+\end{agentbox}
+
+\begin{agentbox}{Agente 14: Especialista em Acessibilidade \& DUA / CAA (\texttt{A14Acessibilidade})}
+\textbf{Papel:} Aplica o Desenho Universal para a Aprendizagem (DUA) e Comunica\c{c}\~ao Alternativa e Aumentativa (CAA). Especifica narra\c{c}\~ao em \'audio com autoplay obrigat\'oria no 1\textordmasculine{}--2\textordmasculine{} EF, legendas, contrastes WCAG AAA e navega\c{c}\~ao acess\'ivel por teclado.\\
+\textbf{Entrada:} Telas do A12 e textos do A13.\\
+\textbf{Sa\'ida Contratual:} \texttt{especificacao\_acessibilidade} (Roteiro de \'audios, atributos ARIA e marca\c{c}\~oes de contraste).\\
+\textbf{Crit\'erio Governado:} 6.1 (Canal de \'Audio e Acessibilidade) e DES-11 (Acessibilidade e Requisitos F\'isicos).
+\end{agentbox}
+
+\begin{agentbox}{Agente 15: Construtor de Telas \& Prot\'otipo Naveg\'avel (\texttt{A15Prototipador})}
+\textbf{Papel:} Constr\'oi as telas lo-fi/mid-fi no Stitch e compila o prot\'otipo naveg\'avel HTML/CSS/JS autocontido. Configura o viewport de desktop com a casca do smartphone e simula as transi\c{c}\~oes reais para valida\c{c}\~ao humana imediata.\\
+\textbf{Entrada:} Pacote visual completo (A11 a A14).\\
+\textbf{Sa\'ida Contratual:} \texttt{prototipo\_html\_navegavel} e links diretos dos wireframes no Stitch.\\
+\textbf{Crit\'erio Governado:} DES-04 (Viewport Decidido) e DES-07 (Estados de Interface Completos).
+\end{agentbox}
+
+% --- ESTÁGIO 4 ---
+\subsubsection{Est\'agio 4: Governan\c{c}a de Of\'icio, Engenharia \& PRD Padr\~ao Ouro}
+
+\begin{agentbox}{Agente 16: Auditor de Of\'icio \& Teoria do Agarre (\texttt{A16AuditorOficio})}
+\textbf{Papel:} Transforma a Rubrica de Of\'icio em \textbf{port\~ao bloqueante}. Executa o teste de legibilidade em 3 segundos, audita a \textbf{regra do pico} (a tela de cl\'imax deve ser mais limpa que suas vizinhas) e veta elementos gr\'aficos da Unooria dentro do clone (DES-13).\\
+\textbf{Entrada:} \texttt{prototipo\_html\_navegavel} e telas do A15.\\
+\textbf{Sa\'ida Contratual:} \texttt{oficio\_qa\_status} (Veredito de aprova\c{c}\~ao estética e visual de imers\~ao).\\
+\textbf{Crit\'erio Governado:} O1--O5 (Rubrica de Of\'icio Promovida) e DES-13 (Marca Institucional Isolada).
+\end{agentbox}
+
+\begin{agentbox}{Agente 17: Engenheiro de Telemetria \& Rastro Cognitivo (\texttt{A17Telemetria})}
+\textbf{Papel:} Mapeia os contratos de eventos anal\'iticos (\texttt{mission\_started}, \texttt{dwell\_time}, \texttt{choice\_submitted}, \texttt{aha\_triggered}). Assegura que a medi\c{c}\~ao capture o aprendizado real do estudante sem gerar ranqueamentos punitivos.\\
+\textbf{Entrada:} Grafo de telas instrumentado e especifica\c{c}\~ao de a\c{c}\~oes.\\
+\textbf{Sa\'ida Contratual:} \texttt{schema\_telemetria} (Dicion\'ario de eventos, tabela leitora e integridade de sess\~ao).\\
+\textbf{Crit\'erio Governado:} 7.1 a 7.4 (Evid\^encia e Registro) e Dimens\~ao DAD de Dev.
+\end{agentbox}
+
+\begin{agentbox}{Agente 18: Auditor de Privacidade, \'Etica \& LGPD Escolar (\texttt{A18AuditorLGPD})}
+\textbf{Papel:} Realiza a auditoria de conformidade com o Artigo 14 da LGPD (prote\c{c}\~ao de dados de menores de idade). Veta qualquer mecanismo de profiling ideol\'ogico, rotula\c{c}\~ao psicol\'ogica ou vazamento de dados de crian\c{c}as.\\
+\textbf{Entrada:} Toda a documenta\c{c}\~ao de produto e telemetria.\\
+\textbf{Sa\'ida Contratual:} \texttt{parecer\_lgpd\_etica} (Certifica\c{c}\~ao de conformidade regulat\'oria).\\
+\textbf{Crit\'erio Governado:} 8.1 a 8.5 (Guardrails e \'Etica) e DAD-13 a DAD-15.
+\end{agentbox}
+
+\begin{agentbox}{Agente 19: Banca de Consensualiza\c{c}\~ao \& Gate Final (\texttt{A19BancaGateFinal})}
+\textbf{Papel:} Consolida os vereditos das cinco dimens\~oes da banca (Produto, Design, Pedagogia, Dados e Arquitetura). Aplica as regras de preserva\c{c}\~ao de descoberta (F6) e emite a chancela unificada: \textbf{LIBERADA} ou \textbf{BLOQUEADA}.\\
+\textbf{Entrada:} Relat\'orios de A05, A09, A16, A17 e A18.\\
+\textbf{Sa\'ida Contratual:} \texttt{gate\_final\_veredito} (Dossi\^e executivo consolidado).\\
+\textbf{Crit\'erio Governado:} Crit\'erios F1 a F8 do Gate Final.
+\end{agentbox}
+
+\begin{agentbox}{Agente 20: Sintetizador do PRD Padr\~ao Ouro (\texttt{A20SintetizadorPRD})}
+\textbf{Papel:} Compila o PRD execut\'avel final para o time de engenharia com matriz estrita de rastreabilidade bidirecional (Requisitos Funcionais $\leftrightarrow$ Tarefas de C\'odigo). Paralelamente, emite o One-Pager Pedag\'ogico limpo em \texttt{.docx} para a escola.\\
+\textbf{Entrada:} Dossi\^e completo aprovado pelo A19.\\
+\textbf{Sa\'ida Contratual:} \texttt{prd\_final\_ouro} (PRD t\'ecnico execut\'avel) e \texttt{one\_pager\_pedagogico.docx}.\\
+\textbf{Crit\'erio Governado:} Rastreabilidade total e conformidade com o padr\~ao de engenharia Unooria.
+\end{agentbox}
+
+% ==============================================================================
+% SEÇÃO 5: PROPOSTA DE MELHORIA OPERACIONAL E CRITÉRIOS
+% ==============================================================================
+\section{Proposta de Melhoria Operacional e Reestrutura\c{c}\~ao de Crit\'erios}
+
+Para que a arquitetura dos 20 agentes funcione com efic\'acia m\'axima, a matriz de crit\'erios e o orquestrador do reposit\'orio devem ser ajustados mediante uma estrat\'egia de implanta\c{c}\~ao em tr\^es ondas.
+
+\subsection{A F\'ormula do Piso de Desafio M\'inimo}
+
+Prop\~oe-se formalizar matematicamente o teste do crit\'erio 6.5, tornando-o obrigat\'orio em todas as faixas et\'arias sob a f\'ormula da \textbf{Raz\~ao de Ag\^encia e Consequ\^encia ($RAC$)}:
+
+\begin{equation}
+RAC = \frac{N_{\text{a\c{c}\~oes significativas}} \times N_{\text{caminhos divergentes}}}{T_{\text{leitura passiva}} + 1} \ge \tau_{\text{s\'erie}}
+\end{equation}
+
+Onde:
+\begin{itemize}
+    \item $N_{\text{a\c{c}\~oes significativas}}$ \'e a contagem de decis\~oes onde o estudante investiga ou escolhe com impacto na experi\^encia;
+    \item $N_{\text{caminhos divergentes}}$ \'e o n\'umero de desfechos ou rea\c{c}\~oes dieg\'eticas distintas;
+    \item $T_{\text{leitura passiva}}$ \'e o tempo estimado de leitura linear em minutos;
+    \item $\tau_{\text{s\'erie}}$ \'e o limiar m\'inimo calibrado por segmento: $\tau = 1{,}0$ (1\textordmasculine{}--2\textordmasculine{} EF), $\tau = 1{,}5$ (3\textordmasculine{}--5\textordmasculine{} EF), $\tau = 2{,}0$ (6\textordmasculine{}--9\textordmasculine{} EF) e $\tau = 2{,}5$ (EM).
+\end{itemize}
+
+Se $RAC < \tau_{\text{s\'erie}}$, a miss\~ao \'e \textbf{bloqueada por insufici\^encia de desafio}, impedindo a prolifera\c{c}\~ao de experi\^encias passivas.
+
+\subsection{O Protocolo para Dispositivos Compartilhados (1:3)}
+
+Para resolver a contradi\c{c}\~ao entre "conta pr\'opria" e "tr\^es alunos por computador", institui-se o \textbf{Protocolo de Tr\^es Pap\'eis Ativos}:
+\begin{enumerate}
+    \item \textbf{Piloto (Controle do Mouse/Teclado):} Opera a interface e executa os cliques deliberados pelo trio.
+    \item \textbf{Navegador (Analista de Pistas):} Identifica inconsist\^encias no feed, busca detalhes e consulta o material de apoio.
+    \item \textbf{Auditor Cr\'itico (Registrador de Hip\'oteses):} Desafia a decis\~ao do piloto, anota as pistas e formula a justificativa para a roda de conversa.
+\end{enumerate}
+Nas miss\~oes compartilhadas, o software da Unooria exibir\'a um prompt de revezamento de pap\'eis a cada transi\c{c}\~ao de etapa, garantindo que nenhum estudante seja relegado \`a passividade.
+
+\subsection{Plano de Transi\c{c}\~ao em Tr\^es Ondas}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}c p{4.2cm} X l@{}}
+\toprule
+\textbf{Onda} & \textbf{Objetivo Principal} & \textbf{A\c{c}\~oes Concretas} & \textbf{Prazo} \\
+\midrule
+\textbf{Onda 1} & Corre\c{c}\~oes Mec\^anicas Imediatas & 
+\begin{itemize}[leftmargin=*]
+  \item Remo\c{c}\~ao do Roblox do crit\'erio 2.1.
+  \item Preenchimento da tabela de aus\^encias de \texttt{ambientes.md}.
+  \item Atualiza\c{c}\~ao do cat\'alogo com as experi\^encias reais.
+  \item Inje\c{c}\~ao dos dados da TIC Kids Online 2024.
+\end{itemize} & 1 a 2 semanas \\
+\midrule
+\textbf{Onda 2} & Alinhamento de Crit\'erios e Severidades & 
+\begin{itemize}[leftmargin=*]
+  \item Promo\c{c}\~ao da simula\c{c}\~ao dieg\'etica (2.3) a Obrigat\'oria.
+  \item Promo\c{c}\~ao da regra do pico visual a bloqueante.
+  \item Ativa\c{c}\~ao das emendas de candidatos a crit\'erio (C1, C3, C7).
+  \item Aplica\c{c}\~ao do Piso de Desafio nos anos iniciais.
+\end{itemize} & 3 a 4 semanas \\
+\midrule
+\textbf{Onda 3} & Orquestra\c{c}\~ao dos 20 Agentes & 
+\begin{itemize}[leftmargin=*]
+  \item Refatora\c{c}\~ao de \texttt{pipeline/orchestrator.py} para o modelo de 20 agentes em ADK.
+  \item Implementa\c{c}\~ao dos loops de reconcilia\c{c}\~ao (A05 e A09).
+  \item Calibra\c{c}\~ao emp\'irica em campo com turmas de teste.
+\end{itemize} & 5 a 8 semanas \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% ==============================================================================
+% SEÇÃO 6: CONCLUSÃO
+% ==============================================================================
+\section{Conclus\~ao}
+
+A esteira de gera\c{c}\~ao de miss\~oes da Unooria possui fundamentos t\'ecnicos e de integridade documental raros no ecossistema global de EdTech. Contudo, para consolidar-se como \textbf{padr\~ao ouro de qualidade imersiva}, \'e imperativo superar a ilus\~ao de que a imers\~ao nasce unicamente do mimetismo gr\'afico de uma interface.
+
+Como nos ensinam Lynn Alves, Paulo Freire e Dermeval Saviani, a aprendizagem imersiva de verdade exige \textbf{desafio \'etico e cognitivo, tens\~ao narrativa, ag\^encia causal e media\c{c}\~ao cr\'itica}. Ao incorporar as evid\^encias da TIC Kids Online e da TIC Educa\c{c}\~ao, sanar as contradi\c{c}\~oes internas de crit\'erios e mobilizar o ecossistema de \textbf{20 Agentes Colaborativos Especializados}, a Unooria construir\'a miss\~oes que n\~ao apenas cumprem checklists burocr\'aticos, mas que capturam o cora\c{c}\~ao e a mente da juventude brasileira no ch\~ao real da escola p\'ublica.
+
+% ==============================================================================
+% REFERÊNCIAS BIBLIOGRÁFICAS
+% ==============================================================================
+\begin{thebibliography}{99}
+\small
+
+\bibitem{alves2014}
+ALVES, L. R. G.
+\emph{Jogos digitais e aprendizagem: fundamentos para uma pr\'atica baseada em evid\^encias}.
+Campinas: Papirus, 2014.
+
+\bibitem{alves2019}
+ALVES, L. R. G.; MINHO, P.; DINIZ, M.
+\emph{Gamifica\c{c}\~ao em di\'alogo com a educa\c{c}\~ao}.
+S\~ao Paulo: Editora Senac, 2019.
+
+\bibitem{brasil_bncc_comp}
+BRASIL. Conselho Nacional de Educa\c{c}\~ao.
+\emph{Resolu\c{c}\~ao CNE/CP n\textordmasculine{} 1, de 4 de outubro de 2022}. Normas sobre Computa\c{c}\~ao na Educa\c{c}\~ao B\'asica --- Complemento \`a BNCC.
+Bras\'ilia: CNE/MEC, 2022.
+
+\bibitem{brasil_lei15100}
+BRASIL.
+\emph{Lei n\textordmasculine{} 15.100, de 13 de janeiro de 2025}. Restri\c{c}\~ao do uso de aparelhos port\'ateis por estudantes em escolas da Educa\c{c}\~ao B\'asica. Regulamentada pelo Decreto n\textordmasculine{} 12.385/2025.
+Bras\'ilia: Presid\^encia da Rep\'ublica, 2025.
+
+\bibitem{brown2004}
+BROWN, E.; CAIRNS, P.
+\emph{A grounded investigation of game immersion}.
+In: CHI '04 Extended Abstracts on Human Factors in Computing Systems. ACM, 2004, p. 1297--1300.
+
+\bibitem{cetic_ticedu}
+CETIC.BR --- CENTRO REGIONAL DE ESTUDOS PARA O DESENVOLVIMENTO DA SOCIEDADE DA INFORMA\c{C}\~AO.
+\emph{TIC Educa\c{c}\~ao 2024: pesquisa sobre o uso das tecnologias de informa\c{c}\~ao e comunica\c{c}\~ao nas escolas brasileiras}.
+S\~ao Paulo: NIC.br, 2025.
+
+\bibitem{cetic_tickids}
+CETIC.BR --- CENTRO REGIONAL DE ESTUDOS PARA O DESENVOLVIMENTO DA SOCIEDADE DA INFORMA\c{C}\~AO.
+\emph{TIC Kids Online Brasil 2024: pesquisa sobre o uso da Internet por crian\c{c}as e adolescentes no Brasil}.
+S\~ao Paulo: NIC.br, 2024.
+
+\bibitem{cowan2016}
+COWAN, N.
+\emph{Working memory capacity: classical theories and new findings}.
+Current Directions in Psychological Science, v. 25, n. 4, p. 238--244, 2016.
+
+\bibitem{csikszentmihalyi1990}
+CSIKSZENTMIHALYI, M.
+\emph{Flow: The psychology of optimal experience}.
+New York: Harper \& Row, 1990.
+
+\bibitem{freire1996}
+FREIRE, P.
+\emph{Pedagogia da autonomia: saberes necess\'arios \`a pr\'atica educativa}.
+S\~ao Paulo: Paz e Terra, 1996.
+
+\bibitem{green2000}
+GREEN, M. C.; BROCK, T. C.
+\emph{The role of transportation in the persuasiveness of public narratives}.
+Journal of Personality and Social Psychology, v. 79, n. 5, p. 701--721, 2000.
+
+\bibitem{hamari2016}
+HAMARI, J. et al.
+\emph{Challenging games help students learn: an empirical study on engagement, flow and immersion in game-based learning}.
+Computers in Human Behavior, v. 54, p. 170--179, 2016.
+
+\bibitem{inep_pisa2022}
+INEP.
+\emph{Relat\'orio Brasil no PISA 2022}.
+Bras\'ilia: Inep/MEC, 2023.
+
+\bibitem{inep_saeb2025}
+INEP.
+\emph{Resultados do Sistema de Avalia\c{c}\~ao da Educa\c{c}\~ao B\'asica --- Saeb 2025}.
+Bras\'ilia: Inep/MEC, 2026.
+
+\bibitem{mattar2010}
+MATTAR, J.
+\emph{Games em educa\c{c}\~ao: como os jogos digitais podem transformar a aprendizagem}.
+S\~ao Paulo: Pearson Prentice Hall, 2010.
+
+\bibitem{salen2004}
+SALEN, K.; ZIMMERMAN, E.
+\emph{Rules of play: game design fundamentals}.
+Cambridge: MIT Press, 2004.
+
+\bibitem{saviani2013}
+SAVIANI, D.
+\emph{Pedagogia hist\'orico-cr\'itica: primeiras aproxima\c{c}\~oes}.
+11. ed. Campinas: Autores Associados, 2013.
+
+\bibitem{schlemmer2014}
+SCHLEMMER, E.
+\emph{Gamifica\c{c}\~ao em espa\c{c}os de conviv\^encia h\'ibridos e multimodais: design e presen\c{c}a pedag\'ogica}.
+Revista Educa\c{c}\~ao, v. 39, n. 3, p. 573--588, 2014.
+
+\bibitem{sinha2021}
+SINHA, T.; KAPUR, M.
+\emph{When problem solving followed by instruction works: evidence for productive failure}.
+Review of Educational Research, v. 91, n. 5, p. 761--798, 2021.
+
+\bibitem{sundararajan2020}
+SUNDARARAJAN, N.; ADESOPE, O.
+\emph{Keep it coherent: a meta-analysis of the seductive details effect}.
+Educational Psychology Review, v. 32, p. 707--734, 2020.
+
+\bibitem{sweller2011}
+SWELLER, J.; AYRES, P.; KALYUGA, S.
+\emph{Cognitive load theory}.
+New York: Springer, 2011.
+
+\end{thebibliography}
+
+\end{document}

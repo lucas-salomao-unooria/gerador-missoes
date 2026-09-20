@@ -1,0 +1,1260 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- PACOTES FUNDAMENTAIS ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\geometry{a4paper, top=2.5cm, bottom=2.5cm, left=2.2cm, right=2.2cm}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+% --- CORES ---
+\definecolor{NavyBlue}{RGB}{16, 44, 87}
+\definecolor{SteelBlue}{RGB}{53, 89, 142}
+\definecolor{LightBlue}{RGB}{235, 243, 250}
+\definecolor{DarkGreen}{RGB}{20, 108, 67}
+\definecolor{LightGreen}{RGB}{232, 245, 233}
+\definecolor{DarkRed}{RGB}{176, 42, 55}
+\definecolor{LightRed}{RGB}{253, 237, 237}
+\definecolor{DarkYellow}{RGB}{153, 115, 0}
+\definecolor{LightYellow}{RGB}{254, 249, 231}
+\definecolor{Charcoal}{RGB}{40, 40, 40}
+\definecolor{GrayBg}{RGB}{248, 249, 250}
+\definecolor{BorderGray}{RGB}{218, 224, 233}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=NavyBlue,
+    citecolor=SteelBlue,
+    urlcolor=SteelBlue,
+    pdftitle={Auditoria de Imersao dos Prompts, Referencias e Criterios do Gerador de Missoes},
+    pdfauthor={Auditoria tecnica - Unooria},
+    pdfsubject={Qualidade de experiencia imersiva na esteira de geracao de missoes},
+    pdfkeywords={imersao, letramento digital, BNCC, design instrucional, LLM, quality gates}
+}
+
+% --- CABECALHOS ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{SteelBlue}Auditoria de Imers\~ao --- Gerador de Miss\~oes}
+\fancyhead[R]{\small\color{SteelBlue}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- TITULOS ---
+\titleformat{\section}{\Large\bfseries\color{NavyBlue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{SteelBlue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{Charcoal}}{\thesubsubsection}{1em}{}
+
+% --- CAIXAS SEMANTICAS ---
+\newtcolorbox{achadobox}[1]{
+  breakable, enhanced, colback=LightRed, colframe=DarkRed,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{creditobox}[1]{
+  breakable, enhanced, colback=LightGreen, colframe=DarkGreen,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{notabox}[1]{
+  breakable, enhanced, colback=LightYellow, colframe=DarkYellow,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{tesebox}{
+  breakable, enhanced, colback=LightBlue, colframe=NavyBlue,
+  boxrule=1pt, arc=2pt, left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+% --- MARCADORES DE SEVERIDADE (texto, nunca emoji) ---
+\newcommand{\sevalta}{\textcolor{DarkRed}{\textbf{ALTA}}}
+\newcommand{\sevmedia}{\textcolor{DarkYellow}{\textbf{M\'EDIA}}}
+\newcommand{\sevinv}{\textcolor{SteelBlue}{\textbf{A INVESTIGAR}}}
+\newcommand{\bloq}{\textcolor{DarkRed}{\textbf{bloqueante}}}
+\newcommand{\naobloq}{\textcolor{DarkYellow}{\textbf{n\~ao bloqueante}}}
+
+\setlist[itemize]{leftmargin=1.4em, itemsep=2pt, topsep=4pt}
+\setlist[enumerate]{leftmargin=1.6em, itemsep=2pt, topsep=4pt}
+
+\renewcommand{\arraystretch}{1.25}
+
+% Nomes de arquivo em fonte monoespacada s\~ao palavras longas e indivis\'iveis: sem folga de
+% entrelinha o par\'agrafo estoura a margem em v\'arios cent\'imetros. Prefere-se espa\c{c}o
+% entre palavras um pouco mais solto a texto invadindo a borda.
+\sloppy
+\emergencystretch=3em
+
+\begin{document}
+
+% ======================= CAPA =======================
+\begin{titlepage}
+\centering
+\vspace*{2.5cm}
+
+{\color{SteelBlue}\large\scshape Unooria --- Gerador de Miss\~oes}\\[0.4cm]
+{\color{BorderGray}\rule{0.8\textwidth}{1.2pt}}\\[1.0cm]
+
+{\Huge\bfseries\color{NavyBlue} Auditoria de Imers\~ao}\\[0.5cm]
+{\LARGE\color{NavyBlue} dos Prompts, Refer\^encias e Crit\'erios}\\[1.2cm]
+
+{\large\itshape A esteira constr\'oi mesmo uma experi\^encia imersiva?}\\[0.3cm]
+{\large\itshape Confronto com a literatura emp\'irica e invent\'ario de lacunas}\\[1.5cm]
+
+{\color{BorderGray}\rule{0.8\textwidth}{0.6pt}}\\[1.0cm]
+
+\begin{minipage}{0.8\textwidth}
+\centering
+\small
+\textbf{Escopo:} 30 prompts de agente, 25 refer\^encias de dom\'inio e 8 arquivos de crit\'erio\\
+\textbf{Base emp\'irica:} 14 fontes prim\'arias --- 4 meta-an\'alises e 5 levantamentos nacionais\\
+\textbf{Veredito:} a esteira tem teoria do limite; falta-lhe teoria do agarre\\[0.6cm]
+\textbf{Data:} 20 de setembro de 2026 \quad\textbullet\quad \textbf{Vers\~ao:} 1.0
+\end{minipage}
+
+\vfill
+{\small\color{Charcoal} Documento de an\'alise. N\~ao altera nenhum artefato da esteira.}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ======================= 1. SUMARIO EXECUTIVO =======================
+\section{Sum\'ario executivo e veredito}
+
+\subsection{O veredito em um par\'agrafo}
+
+\begin{tesebox}
+\textbf{A esteira tem uma excelente teoria do limite e nenhuma teoria do agarre.}
+
+Toda a r\'egua emp\'irica do gerador --- e ela \'e boa, rigorosa e honesta --- responde \`a
+pergunta \emph{``o que n\~ao sobrecarrega esta crian\c{c}a?''}: tetos de mem\'oria de trabalho,
+tetos de dura\c{c}\~ao, portas de abstra\c{c}\~ao por idade. Nenhum crit\'erio bloqueante responde
+\`a pergunta \emph{``o que prende esta crian\c{c}a?''}. O of\'icio que responderia a essa segunda
+pergunta existe, est\'a escrito e \'e sofisticado --- mas vive numa faixa de severidade que, por
+constru\c{c}\~ao, n\~ao reprova.
+
+Isso importa porque a tese do produto \'e a imers\~ao, e a literatura emp\'irica \textbf{n\~ao}
+sustenta que imers\~ao produza aprendizagem por si s\'o. O preditor que aparece consistentemente
+\'e o \textbf{desafio} --- e desafio \'e exatamente o que a esteira n\~ao mede.
+
+No recorte brasileiro (Se\c{c}\~ao~\ref{sec:brasil}) o quadro se repete com outro sinal: o
+cen\'ario de piso da escola p\'ublica est\'a medido, correto e atualizado --- e o comportamento
+real da crian\c{c}a brasileira, que dois crit\'erios obrigat\'orios invocam, \textbf{n\~ao est\'a
+em lugar nenhum}.
+\end{tesebox}
+
+\subsection{Os doze achados}
+
+\begin{longtable}{@{}p{0.6cm} p{10.4cm} p{2.5cm}@{}}
+\toprule
+\textbf{\#} & \textbf{Achado} & \textbf{Gravidade} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{\#} & \textbf{Achado} & \textbf{Gravidade} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+A1 & \textbf{Roblox est\'a na lista fechada de ambientes e n\~ao tem se\c{c}\~ao de design
+system.} O mesmo prompt do gate carrega a afirma\c{c}\~ao e sua nega\c{c}\~ao. & \sevalta \\
+
+A2 & \textbf{Of\'icio n\~ao reprova, por constru\c{c}\~ao.} O envelope do QA tem
+\texttt{severidade: "oficio"} como faixa distinta de \texttt{"bloqueio"}. & \sevalta \\
+
+A3 & \textbf{Imers\~ao \'e a dimens\~ao com menos crit\'erios bloqueantes} do banco de dev --- e
+os dois que tem s\~ao checagens de infraestrutura. & \sevalta \\
+
+A4 & \textbf{S\'o dois crit\'erios obrigat\'orios de imers\~ao em produto}, ambos verific\'aveis
+sem julgar qualidade. O \'unico que testa coer\^encia ficcional \'e desej\'avel. & \sevalta \\
+
+A5 & \textbf{A tabela que habilita o crit\'erio de fidelidade est\'a vazia}, e a pr\'opria rubrica
+declara o crit\'erio desarmado enquanto ela assim estiver. & \sevalta \\
+
+A6 & \textbf{A r\'egua emp\'irica n\~ao chega ao design.} A fonte \'unica dos n\'umeros \'e
+inclu\'ida em um \'unico prompt de trinta. & \sevmedia \\
+
+A7 & \textbf{Cat\'alogo desatualizado desarma o crit\'erio de diferencia\c{c}\~ao}, que ainda se
+autoanula por cl\'ausula expl\'icita. & \sevmedia \\
+
+A8 & \textbf{Tr\^es emendas de crit\'erio est\~ao prontas e n\~ao aplicadas}, com ocorr\^encias
+contadas pela pr\'opria casa. & \sevmedia \\
+
+A9 & \textbf{H\'a teto, n\~ao h\'a piso.} Nenhum crit\'erio pergunta se a miss\~ao \'e dif\'icil o
+bastante, exceto um, e s\'o para anos finais e M\'edio. & \sevalta \\
+
+A10 & \textbf{O framework de seis etapas \'e aplicado sem varia\c{c}\~ao do 1\textordmasculine{}
+EF ao 3\textordmasculine{} EM}, e a evid\^encia que o apoia \'e moderada por idade. & \sevinv \\
+
+A11 & \textbf{A lista fechada de ambientes nunca foi confrontada com dado nacional de uso.} Existe
+levantamento probabil\'istico que responde exatamente \`a pergunta do crit\'erio 6.4, e nenhum
+arquivo da esteira o cita. & \sevalta \\
+
+A12 & \textbf{``Conta pr\'opria'' e ``tr\^es alunos por computador'' s\~ao exigidos juntos e nunca
+reconciliados.} O crit\'erio 2.1 reprova conta que n\~ao \'e do estudante; o 10.2 exige que a
+miss\~ao funcione compartilhada. & \sevmedia \\
+\end{longtable}
+
+\subsection{O que este documento n\~ao \'e}
+
+N\~ao \'e uma cr\'itica ao rigor da esteira. A Se\c{c}\~ao~\ref{sec:credito} documenta, com
+evid\^encia, por que v\'arias partes deste sistema j\'a est\~ao acima do que se v\^e em produtos
+educacionais compar\'aveis --- em particular a disciplina de marcar cada n\'umero como dado
+medido, extrapola\c{c}\~ao ou conven\c{c}\~ao, e de manter um registro do que foi
+\textbf{refutado}. Essa pr\'atica \'e rara e deve ser preservada.
+
+A cr\'itica \'e de \textbf{cobertura}, n\~ao de qualidade: o que a esteira mede, ela mede bem; o
+problema \'e o que ela n\~ao mede.
+
+% ======================= 2. METODO =======================
+\section{M\'etodo e escopo}
+
+\subsection{O que foi lido}
+
+Leitura integral dos artefatos que governam decis\~ao de qualidade:
+
+\begin{itemize}
+  \item \textbf{Crit\'erios (8 arquivos):} \texttt{criterios-gate-estrutural.md},
+        \texttt{criterios-pedagogicos.md}, \texttt{criterios-experiencia.md},
+        \texttt{criterios-gate-final.md} e os cinco de \texttt{criterios-dev/}.
+  \item \textbf{R\'eguas e registros:} \texttt{literatura-cognitiva.md},
+        \texttt{rubrica-oficio.md}, \texttt{ambientes.md}, \texttt{catalogo-missoes.md},
+        \texttt{candidatos-a-criterio.md}, \texttt{padroes-aprendidos.md}.
+  \item \textbf{Prompts de maior carga criativa:} \texttt{01\_nucleo\_narrativo.md},
+        \texttt{19\_ambiente\_simulado.md}, \texttt{30\_qa\_entregaveis.md}.
+  \item \textbf{Grafo de composi\c{c}\~ao:} todas as diretivas \texttt{include} dos 30 prompts,
+        para saber qual conhecimento chega a qual agente.
+\end{itemize}
+
+\subsection{A base emp\'irica consultada}
+
+Nove fontes internacionais --- quatro delas meta-an\'alises --- e cinco brasileiras:
+TIC Kids Online Brasil 2024 (uso de plataforma por crian\c{c}as e adolescentes), TIC
+Educa\c{c}\~ao 2024 (infraestrutura e uso nas escolas), PISA 2022, Saeb 2025 e a
+Lei n\textordmasculine{} 15.100/2025. As brasileiras respondem \`a pergunta que as
+internacionais n\~ao alcan\c{c}am: se a tese sobrevive \`a escola p\'ublica daqui.
+
+\subsection{Regra de evid\^encia}
+
+Nenhuma afirma\c{c}\~ao sobre o reposit\'orio entra neste documento sem localiza\c{c}\~ao
+verific\'avel (arquivo e linha). Nenhum n\'umero acad\^emico entra sem a delimita\c{c}\~ao do que
+a fonte de fato mediu --- a mesma disciplina que \texttt{literatura-cognitiva.md} j\'a imp\~oe a
+si mesma.
+
+\subsection{O que ficou fora}
+
+As 41 refer\^encias de \texttt{references/plataforma/} (contratos de API, ADRs, schemas,
+migrations) foram inventariadas mas n\~ao auditadas: governam corretude t\'ecnica, n\~ao qualidade
+de experi\^encia. O c\'odigo Python da esteira tamb\'em ficou fora, exceto onde determina
+severidade de gate.
+
+% ======================= 3. CREDITO =======================
+\section{O que j\'a est\'a no padr\~ao ouro}
+\label{sec:credito}
+
+Esta se\c{c}\~ao existe por honestidade metodol\'ogica: um laudo que s\'o lista falhas d\'a uma
+leitura falsa do sistema.
+
+\begin{creditobox}{C1 --- Marca\c{c}\~ao epist\^emica de cada n\'umero}
+\texttt{literatura-cognitiva.md} classifica todo valor como \textbf{[DADO DIRETO]} (a fonte mediu
+exatamente isso, nessa faixa), \textbf{[EXTRAPOLA\c{C}\~AO]} (limite pr\'atico derivado de
+princ\'ipio geral) ou \textbf{[CONVEN\c{C}\~AO]} (escolha da equipe, sem base emp\'irica). E
+declara a consequ\^encia: extrapola\c{c}\~ao justifica advert\^encia com mais frequ\^encia que
+reprova\c{c}\~ao.
+
+\textbf{Por que importa:} \'e a defesa contra a patologia mais comum de r\'ubrica educacional ---
+o n\'umero de origem desconhecida que ningu\'em ousa questionar. Documentos de refer\^encia
+raramente admitem qual das suas afirma\c{c}\~oes \'e conven\c{c}\~ao.
+\end{creditobox}
+
+\begin{creditobox}{C2 --- O registro negativo}
+A se\c{c}\~ao 7 do mesmo arquivo lista o que \textbf{n\~ao} sustenta a r\'egua, com o motivo:
+\emph{choice overload} (meta-an\'alise de 63 condi\c{c}\~oes, efeito m\'edio nulo, e em
+crian\c{c}as o sinal se inverte), \emph{decision fatigue} (dois multilabs registrados com efeito
+nulo), ``idade da crian\c{c}a igual a minutos de aten\c{c}\~ao'' (sem origem prim\'aria), e Piaget
+como veto de abstra\c{c}\~ao por idade --- justamente a parte refutada da teoria.
+
+\textbf{Por que importa:} impede que fundamenta\c{c}\~ao morta ressuscite na pr\'oxima revis\~ao.
+Poucos times mant\^em essa mem\'oria.
+\end{creditobox}
+
+\begin{creditobox}{C3 --- Os quatro padr\~oes anti-spoiler e o teste estrutural}
+\texttt{01\_nucleo\_narrativo.md} codifica quatro formas de entregar a descoberta antes da hora e
+d\'a a cada uma um par contraexemplo/exemplo. O quarto \'e o mais fino:
+
+\begin{quote}\small
+\textbf{Teste do Padr\~ao 4:} leia s\'o o Desafiar, depois o Resultado. O Resultado genuinamente
+surpreende, ou apenas confirma e explica algo que o Desafiar j\'a entregou? Se a resposta do
+estudante ao Resultado seria ``ah, faz sentido'' em vez de ``caramba, n\~ao sabia disso'', \'e
+spoiler estrutural.
+\end{quote}
+
+Acompanha uma lista de palavras-sentinela (``descobre'', ``percebe'', ``sem saber que'', ``na
+verdade''). \textbf{Isto \'e engenharia de suspense narrativo operacionalizada}, e \'e o ativo de
+imers\~ao mais valioso da esteira.
+\end{creditobox}
+
+\begin{creditobox}{C4 --- Gram\'atica de level design, sem a marca}
+\texttt{19\_ambiente\_simulado.md} deriva sete regras de \emph{Super Mario Bros.\ 3} tomando
+explicitamente ``a gram\'atica, nunca a marca'': uma ideia nova por fase, apresentada onde errar
+n\~ao custa, repetida com varia\c{c}\~ao e s\'o ent\~ao cobrada; fase curta e inteira; mapa de
+mundo vis\'ivel em vez de barra de progresso; aprender jogando, n\~ao lendo. E fecha a porta ao
+uso decorativo: ``mini-jogo n\~ao \'e recompensa nem intervalo''.
+\end{creditobox}
+
+\begin{creditobox}{C5 --- Integridade da revela\c{c}\~ao}
+\texttt{criterios-dev/1-produto-narrativa.md}, PROD-09: \emph{``A revela\c{c}\~ao n\~ao pode
+mentir''} --- se h\'a revela\c{c}\~ao, os textos variam conforme o que de fato aconteceu com
+aquele estudante. O exemplo citado \'e concreto: dizer ``escolhido a partir de como voc\^e jogou''
+a quem caiu no sorteio quebraria a \'unica tela que existe para n\~ao mentir.
+
+Junto com PROD-13 (``stack trace, branding da plataforma ou sil\^encio dentro do clone \'e
+imers\~ao quebrada'') e DES-12 (microintera\c{c}\~ao que vira dado fica marcada como
+instrumentada), forma um n\'ucleo de integridade que muitos produtos educacionais n\~ao t\^em.
+\end{creditobox}
+
+% ======================= 4. LITERATURA =======================
+\section{A tese de imers\~ao confrontada com a literatura}
+
+\subsection{A pergunta que a auditoria precisa responder}
+
+O produto se descreve como ``experi\^encia imersiva de letramento digital'' que simula com
+fidelidade um ambiente conhecido. A pergunta emp\'irica \'e direta: \textbf{imers\~ao produz
+aprendizagem?} A resposta da literatura \'e menos confort\'avel do que o produto assume.
+
+\subsection{Imers\~ao n\~ao prediz aprendizagem; desafio prediz}
+
+Hamari e colegas \cite{hamari2016} mediram engajamento, \emph{flow}, imers\~ao e desafio contra
+desempenho de aprendizagem em jogos educacionais. O engajamento previu aprendizagem. \textbf{A
+imers\~ao, isoladamente, n\~ao apresentou efeito significativo.} O preditor forte foi o
+\textbf{desafio} --- e os autores recomendam que o desafio acompanhe a habilidade crescente do
+aprendiz.
+
+Cheng, She e Annetta \cite{cheng2015} chegam a resultado compat\'ivel por outro caminho: a
+imers\~ao afeta a aprendizagem cient\'ifica, mas o efeito \'e \textbf{mediado pelo desempenho no
+jogo}. Imers\~ao que n\~ao se converte em desempenho n\~ao se converte em aprendizagem.
+
+\begin{notabox}{Consequ\^encia para a esteira}
+A esteira tem v\'arios crit\'erios que limitam carga e um \'unico que pergunta se a miss\~ao exige
+o bastante (6.5) --- e esse s\'o \'e obrigat\'orio em anos finais e Ensino M\'edio. Se a
+literatura est\'a certa, a vari\'avel mais correlacionada com aprendizagem \'e a que o gerador
+menos observa. Ver achado A9.
+\end{notabox}
+
+\subsection{A tens\~ao do detalhe sedutor}
+\label{sec:sedutor}
+
+Sundararajan e Adesope \cite{sundararajan2020} sintetizaram 68 estudos sobre \emph{seductive
+details} --- material interessante e irrelevante ao objetivo de aprendizagem. O efeito m\'edio
+sobre o desempenho \'e \textbf{negativo: $g = -0{,}33$}. Detalhe sedutor pode ser texto, imagem,
+anima\c{c}\~ao, narra\c{c}\~ao ou som.
+
+Isso \'e uma amea\c{c}a direta \`a tese de fidelidade: clonar o \emph{chrome} de uma rede social
+com precis\~ao \'e, pela defini\c{c}\~ao do constructo, adicionar detalhe rico e n\~ao
+instrucional.
+
+\begin{tesebox}
+\textbf{A esteira j\'a tem a resposta certa --- e n\~ao a fundamentou.}
+
+DES-03, em \texttt{criterios-dev/2-design-imersao.md}, diz: \emph{``A imers\~ao \'e o instrumento
+de medida: um detalhe fora do idioma do clone \'e ru\'ido no dado.''}
+
+Essa frase resolve a tens\~ao corretamente. Na miss\~ao Unooria, a fidelidade n\~ao \'e ornamento
+--- \'e a condi\c{c}\~ao de validade do que se mede. Um feed que se comporta como feed real \'e o
+que torna a decis\~ao do estudante uma decis\~ao sobre feeds reais. O detalhe deixa de ser sedutor
+e passa a ser constitutivo.
+
+O problema \'e que essa tese aparece \textbf{uma vez}, num crit\'erio \textbf{n\~ao bloqueante},
+num arquivo lido por \textbf{um} dos trinta agentes. Ela deveria ser a premissa declarada do
+sistema inteiro.
+\end{tesebox}
+
+\subsection{Imers\~ao \'e graduada, e as barreiras s\~ao conhecidas}
+
+Brown e Cairns \cite{brown2004} derivaram de entrevistas uma escala em tr\^es n\'iveis ---
+\emph{engagement}, \emph{engrossment} e \emph{total immersion} --- cada um com barreiras
+pr\'oprias, humanas e do sistema. O modelo \'e \'util aqui por uma raz\~ao pr\'atica: trata
+imers\~ao como algo que se \textbf{perde por barreira}, n\~ao que se ganha por enfeite.
+
+A esteira j\'a enumera barreiras sem as nomear como tal: PROD-13 (erro que vaza para fora da
+fic\c{c}\~ao), DES-13 (marca institucional dentro do disfarce), DES-07 (estado vazio que parece
+tela quebrada), O5 da rubrica de of\'icio (``estados de espera e vazio parecem intencionais?'').
+Falta o conceito que as une.
+
+O transporte narrativo \cite{green2000, vanlaer2014} oferece o vocabul\'ario complementar para o
+lado da hist\'oria --- aten\c{c}\~ao focada, imagem mental, aus\^encia de contra-argumenta\c{c}\~ao
+--- e \'e a base te\'orica que os padr\~oes anti-spoiler do P0a j\'a aplicam sem citar.
+
+\subsection{Dose importa: uma aula n\~ao \'e uma interven\c{c}\~ao}
+\label{sec:dose}
+
+Huang, Jia e Yu \cite{huang2024} sintetizaram 49 experimentos de letramento midi\'atico
+($N = 81.155$). O efeito geral sobre resili\^encia \`a desinforma\c{c}\~ao \'e $d = 0{,}60$;
+discernimento $d = 0{,}76$; redu\c{c}\~ao de compartilhamento $d = 1{,}04$. O moderador relevante
+para a Unooria: \textbf{interven\c{c}\~oes de m\'ultiplas sess\~oes superam as de sess\~ao
+\'unica}.
+
+\begin{notabox}{Consequ\^encia para a esteira}
+A unidade de dose da Unooria n\~ao \'e a miss\~ao de 50 minutos --- \'e a trilha do bimestre.
+Nenhum crit\'erio do gerador raciocina sobre progress\~ao entre miss\~oes. O \'unico que olha para
+fora da miss\~ao \'e o 2.5 (diferencia\c{c}\~ao no cat\'alogo), que pergunta se as miss\~oes s\~ao
+\textbf{diferentes} --- nunca se elas se \textbf{acumulam}. Ver achado A7.
+\end{notabox}
+
+\subsection{Medir imers\~ao \'e poss\'ivel, e a esteira n\~ao mede}
+
+Existem instrumentos validados para experi\^encia de jogo --- o \emph{Game Experience
+Questionnaire} e suas revis\~oes \cite{law2018} --- com fatores de \emph{flow}, imers\~ao,
+compet\^encia, afeto positivo e tens\~ao. O pr\'oprio campo reconhece problemas de validade na
+vers\~ao original, e h\'a vers\~ao revista de 25 itens em cinco fatores.
+
+Isso conecta com o que \texttt{literatura-cognitiva.md} j\'a admite na sua se\c{c}\~ao 9:
+\emph{``nenhum n\'umero desta p\'agina \'e medi\c{c}\~ao feita com miss\~oes da Unooria''}. O
+caminho de sa\'ida que o pr\'oprio arquivo aponta --- observa\c{c}\~ao de campo --- tem
+instrumento pronto para a dimens\~ao de experi\^encia.
+
+% ======================= 5. BRASIL =======================
+\section{A evid\^encia brasileira e a escola p\'ublica}
+\label{sec:brasil}
+
+A se\c{c}\~ao anterior \'e internacional. Esta pergunta outra coisa: \textbf{a tese de imers\~ao
+sobrevive \`a escola p\'ublica brasileira real?} A resposta \'e mista, e o que a esteira acerta
+aqui \'e t\~ao not\'avel quanto o que lhe falta.
+
+\subsection{O que a esteira j\'a acertou, e com dado corrente}
+
+\begin{creditobox}{C6 --- O cen\'ario de piso \'e brasileiro, recente e confere}
+A se\c{c}\~ao 6 de \texttt{literatura-cognitiva.md} substitui suposi\c{c}\~ao por medi\c{c}\~ao,
+citando INEP/Censo Escolar 2024, TALIS, TIC Educa\c{c}\~ao 2024 e Saeb 2025. Conferi os n\'umeros
+contra as fontes prim\'arias:
+
+\begin{center}\small
+\begin{tabular}{@{}p{5.6cm} p{4.2cm} p{5.0cm}@{}}
+\toprule
+\textbf{O que a esteira afirma} & \textbf{Fonte prim\'aria} & \textbf{Confere?} \\
+\midrule
+``s\'o 47\,\% das escolas disponibilizam computador ao aluno'' &
+TIC Educa\c{c}\~ao 2024 \cite{ticedu2024}: 47\,\% &
+\textcolor{DarkGreen}{\textbf{Exato}} \\
+``46\,\% dos professores n\~ao tiveram forma\c{c}\~ao recente'' &
+TIC Educa\c{c}\~ao 2024: 54\,\% tiveram &
+\textcolor{DarkGreen}{\textbf{Exato}} \\
+``50\,\% abaixo do N\'ivel 2 do PISA aos 15 anos'' &
+PISA 2022 \cite{pisa2022}: 50\,\% (OCDE: 26\,\%) &
+\textcolor{DarkGreen}{\textbf{Exato}} \\
+``96\,\% das escolas t\^em internet'' &
+TIC Educa\c{c}\~ao 2024: 96\,\% &
+\textcolor{DarkGreen}{\textbf{Exato}} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Por que importa:} a maioria dos produtos educacionais calibra para uma escola imagin\'aria.
+Este calibra para a escola medida, e a revis\~ao de setembro corrigiu \textbf{para baixo} a
+dificuldade suposta --- registrou que a turma \'e menor do que se imaginava (25 nos anos iniciais,
+n\~ao ``30 a 40'') e que o 5\textordmasculine{} ano tem 60,7\,\% de leitores adequados, contra a
+narrativa de defasagem generalizada. Corrigir uma suposi\c{c}\~ao que \emph{favorecia} o discurso
+do produto \'e sinal de honestidade metodol\'ogica.
+\end{creditobox}
+
+\begin{creditobox}{C7 --- O dispositivo real j\'a est\'a resolvido, e contra a intui\c{c}\~ao}
+Um erro previs\'ivel seria supor que uma miss\~ao que clona app de celular roda em celular. A
+esteira n\~ao comete esse erro. \texttt{28\_prototipo.md:76} \'e expl\'icito:
+
+\begin{quote}\small
+\emph{``A miss\~ao \textbf{n\~ao} roda numa tela de celular: ela roda \textbf{dentro do hub, que
+\'e desktop} (\dots) \'E o que a crian\c{c}a v\^e de verdade num Chromebook.''}
+\end{quote}
+
+E \texttt{26\_telas.md:111} fixa o alvo de build em 1366$\times$768, com o aparelho simulado de
+375$\times$812 desenhado \emph{dentro} do viewport desktop.
+
+Isso importa mais desde a \textbf{Lei n\textordmasculine{} 15.100/2025} \cite{lei15100}, que
+restringe o aparelho pessoal do estudante em toda a educa\c{c}\~ao b\'asica, com exce\c{c}\~ao
+para uso pedag\'ogico orientado pelo professor. A TIC Educa\c{c}\~ao 2024 j\'a registra o efeito:
+\textbf{39\,\% das escolas pro\'ibem o celular}, contra 28\,\% em 2023, e o acesso \`a internet
+pelo aparelho pessoal do aluno caiu de 55\,\% (2022) para 45\,\%.
+
+Some-se a isso uma diretriz que o prompt de adequa\c{c}\~ao pedag\'ogica j\'a carrega
+(\texttt{10\_adequacao\_pedagogica.md:43}) e que separa as duas coisas que quase todo mundo
+confunde: \emph{``Letramento digital $\neq$ familiaridade com celular.
+Usar rede social n\~ao implica saber navegar interface nova, ler \'icone fora de contexto (\dots)
+ou entender o que \'e um algoritmo.''}
+\end{creditobox}
+
+\subsection{O que falta: quem usa o qu\^e, e com que idade}
+\label{sec:ticklids}
+
+Aqui est\'a a lacuna mais consequente desta se\c{c}\~ao.
+
+O crit\'erio 6.4 pede ao avaliador que responda: \emph{``para a atividade simulada, qual dos
+ambientes um estudante mediano daquele ano usaria de fato?''}. O crit\'erio 2.1 aplica um ``teste
+de plataforma real'': \emph{``o aluno diria eu uso isso?''}. \textbf{Ambos s\~ao perguntas
+emp\'iricas com resposta nacional publicada --- e nenhum arquivo da esteira cita essa fonte.}
+
+A TIC Kids Online Brasil 2024 \cite{tickids2024} entrevistou 2.424 crian\c{c}as e adolescentes de
+9 a 17 anos em todo o territ\'orio nacional:
+
+\begin{center}
+\begin{tabular}{@{}l c c c c@{}}
+\toprule
+\textbf{Indicador} & \textbf{9--10} & \textbf{11--12} & \textbf{13--14} & \textbf{15--17} \\
+\midrule
+Tem perfil em alguma rede social & 60\,\% & 70\,\% & 93\,\% & 99\,\% \\
+Plataforma mais usada v\'arias vezes ao dia & YouTube & --- & Instagram & Instagram \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{@{}l c@{}}
+\toprule
+\textbf{Perfil declarado, 9 a 17 anos} & \textbf{\%} \\
+\midrule
+WhatsApp & 69\,\% \\
+Instagram & 63\,\% \\
+TikTok & 45\,\% \\
+YouTube & 42\,\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{notabox}{Tr\^es consequ\^encias diretas para o desenho das miss\~oes}
+\begin{enumerate}
+  \item \textbf{Nos anos iniciais, a premissa da conta pr\'opria \'e contrafactual para boa parte
+        da turma.} Aos 9--10 anos, 40\,\% \textbf{n\~ao t\^em} perfil em rede social nenhuma --- e
+        a pesquisa sequer cobre 6 a 8 anos, que \'e onde a Unooria abre a trilha. O crit\'erio 2.1
+        exige conta do pr\'oprio estudante e reprova conta de personagem; nos anos iniciais isso
+        pede que a crian\c{c}a habite um papel que ela ainda n\~ao ocupa na vida real.
+  \item \textbf{A escolha de ambiente por faixa tem resposta medida.} Aos 9--10, YouTube \'e a
+        plataforma mais visitada v\'arias vezes ao dia; dos 13 em diante, Instagram assume. Isso
+        \textbf{valida} a miss\~ao de 4\textordmasculine{} EF do cat\'alogo, que usa UnooTube, e d\'a
+        base emp\'irica --- em vez de intui\c{c}\~ao --- para o 6.4.
+  \item \textbf{O TikTok \'e o descompasso mais caro.} \'E a terceira plataforma em penetra\c{c}\~ao
+        (45\,\%) e \texttt{tiktooria} \'e justamente a se\c{c}\~ao que, segundo
+        \texttt{ambientes.md}, existe no design system \textbf{sem ponte em \texttt{@edu/ui}} e sem
+        nenhuma miss\~ao que a use. A plataforma mais associada \`a adolesc\^encia \'e a \'unica da
+        lista que ainda n\~ao \'e constru\'ivel.
+\end{enumerate}
+\end{notabox}
+
+\subsection{O piso de acesso \'e desigual por rede, e a desigualdade cai onde a esteira \'e mais fraca}
+
+A TIC Educa\c{c}\~ao 2024 \cite{ticedu2024} mede o uso efetivo, n\~ao s\'o a infraestrutura:
+
+\begin{center}
+\begin{tabular}{@{}p{8.4cm} c c@{}}
+\toprule
+\textbf{Indicador} & \textbf{Estadual} & \textbf{Municipal} \\
+\midrule
+Alunos usam a internet em atividades pedidas pelo professor & 67\,\% & \textbf{27\,\%} \\
+Forma\c{c}\~ao docente continuada em tecnologia (rede municipal, 2024) & --- & 43\,\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A rede municipal concentra os \textbf{anos iniciais}. A forma\c{c}\~ao docente municipal
+\textbf{caiu} de 62\,\% em 2021 para 43\,\% em 2024.
+
+\begin{tesebox}
+Isto se soma a um padr\~ao que atravessa o relat\'orio. Os anos iniciais s\~ao, simultaneamente:
+
+\begin{itemize}
+  \item a faixa onde o framework de seis etapas tem a evid\^encia mais fr\'agil (achado A10);
+  \item a faixa onde o piso de desafio \'e apenas desej\'avel, n\~ao obrigat\'orio (achado A9);
+  \item a faixa onde a premissa de conta pr\'opria \'e menos verdadeira (\S\ref{sec:ticklids});
+  \item a faixa com 27\,\% de uso efetivo de internet em atividade, contra 67\,\% na estadual;
+  \item a faixa cujo professor teve a maior queda de forma\c{c}\~ao.
+\end{itemize}
+
+Nenhuma dessas observa\c{c}\~oes \'e, isoladamente, um defeito da esteira --- v\'arias s\~ao fatos
+do pa\'is. Juntas, indicam que \textbf{a miss\~ao de anos iniciais \'e a que mais precisa de
+crit\'erio pr\'oprio, e \'e justamente a que tem menos}.
+\end{tesebox}
+
+\subsection{Leitura: o que PISA e Saeb imp\~oem ao texto da miss\~ao}
+
+O PISA 2022 \cite{pisa2022} registra \textbf{50\,\% dos estudantes brasileiros de 15 anos abaixo
+do N\'ivel 2} em leitura, contra 26\,\% na m\'edia da OCDE, e apenas 2\,\% no N\'ivel 5 ou
+superior. O Saeb 2025 \cite{saeb2025} traz a nuance que a esteira j\'a incorporou: o
+5\textordmasculine{} ano vai melhor do que a narrativa corrente sup\~oe, com alta de 7,5 pontos em
+l\'ingua portuguesa, enquanto a defasagem se confirma no 9\textordmasculine{} ano e no M\'edio.
+
+\begin{notabox}{Consequ\^encia}
+O crit\'erio 6.1 exige linguagem compat\'ivel com a faixa e narra\c{c}\~ao obrigat\'oria s\'o no
+1\textordmasculine{}--2\textordmasculine{} ano, retirando o andaime a partir do
+3\textordmasculine{} por \emph{expertise reversal}. A regra \'e teoricamente correta. Mas ela
+pressup\~oe flu\^encia crescente, e no Brasil a curva \textbf{n\~ao} \'e monot\^onica: a
+defasagem de leitura \'e \textbf{maior} no 9\textordmasculine{} ano e no M\'edio do que no
+5\textordmasculine{}. Um crit\'erio que retira apoio por s\'erie, num sistema onde a defasagem
+cresce com a s\'erie, merece ao menos uma cl\'ausula de exce\c{c}\~ao explicitada.
+\end{notabox}
+
+\subsection{A parametriza\c{c}\~ao por IA encontra a realidade da rede}
+
+O crit\'erio 4.3 \'e \textbf{obrigat\'orio} e exige que o professor parametrize tema e conte\'udo
+com gera\c{c}\~ao assistida por IA, reprovando miss\~ao ``100\,\% est\'atica sem
+parametriza\c{c}\~ao''. A TIC Educa\c{c}\~ao 2024 \cite{ticedu2024} mede a base instalada desse
+comportamento entre alunos usu\'arios de internet: \textbf{70\,\% no Ensino M\'edio, 39\,\% nos
+anos finais e 15\,\% nos anos iniciais}; apenas 32\,\% receberam orienta\c{c}\~ao escolar sobre o
+uso.
+
+Do lado docente, 54\,\% tiveram desenvolvimento profissional continuado --- 43\,\% na rede
+municipal. O crit\'erio exige do professor dos anos iniciais exatamente o trabalho de curadoria
+para o qual ele \'e o menos preparado da rede. O crit\'erio j\'a prev\^e a v\'alvula de escape
+correta (``banco curado padr\~ao, \emph{default}/\emph{fallback} imediato''); o que falta \'e
+tratar o banco padr\~ao como o \textbf{caminho principal} nos anos iniciais, e a
+parametriza\c{c}\~ao como o excepcional --- hoje a reda\c{c}\~ao inverte os dois.
+
+\subsection{Limite honesto desta se\c{c}\~ao}
+
+Procurei evid\^encia brasileira de efeito de aprendizagem para jogos digitais e letramento digital
+em escola p\'ublica. O que existe \'e sobretudo \textbf{relato de experi\^encia e estudo de caso}
+--- turmas \'unicas, sem grupo de controle, sem medida de transfer\^encia. N\~ao encontrei ensaio
+nacional em escala compar\'avel \`as meta-an\'alises da Se\c{c}\~ao 4.
+
+Isso corta nos dois sentidos, e a honestidade exige dizer os dois: \textbf{n\~ao h\'a evid\^encia
+brasileira que contradiga} a tese da Unooria, e \textbf{tamb\'em n\~ao h\'a que a sustente}. Os
+tamanhos de efeito citados na Se\c{c}\~ao 4 vêm de contextos majoritariamente
+norte-americanos e europeus, com infraestrutura e raz\~ao aluno/dispositivo que a
+Se\c{c}\~ao 5.3 mostra n\~ao valerem aqui. Transferi-los sem ressalva seria cometer, com fonte
+internacional, o mesmo erro que \texttt{literatura-cognitiva.md} \S7 j\'a pro\'ibe cometer com
+fonte antiga.
+
+% ======================= 6. MATRIZ =======================
+\section{Matriz de cobertura dos crit\'erios}
+
+\subsection{Crit\'erios bloqueantes do banco de dev, por dimens\~ao}
+
+\begin{center}
+\begin{tabular}{@{}l c c c@{}}
+\toprule
+\textbf{Dimens\~ao} & \textbf{Bloqueantes} & \textbf{Total} & \textbf{Propor\c{c}\~ao} \\
+\midrule
+Dados, telemetria e LGPD      & 7 & 15 & 47\,\% \\
+Produto e narrativa           & 5 & 16 & 31\,\% \\
+Pedagogia e BNCC              & 4 & 15 & 27\,\% \\
+\textbf{Design e imers\~ao}   & \textbf{2} & \textbf{13} & \textbf{15\,\%} \\
+T\'ecnica e arquitetura       & 2 & 13 & 15\,\% \\
+\midrule
+\textbf{Total}                & \textbf{20} & \textbf{72} & \textbf{28\,\%} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A imers\~ao --- tese central do produto --- empata na \'ultima posi\c{c}\~ao em poder de veto com
+a dimens\~ao mais puramente t\'ecnica.
+
+\subsection{Todo crit\'erio de imers\~ao do sistema, e o que ele exige}
+
+\begin{longtable}{@{}p{1.5cm} p{6.6cm} p{3.2cm} p{2.2cm}@{}}
+\toprule
+\textbf{C\'odigo} & \textbf{O que pergunta} & \textbf{Severidade} & \textbf{Exige ju\'izo?} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{C\'odigo} & \textbf{O que pergunta} & \textbf{Severidade} & \textbf{Exige ju\'izo?} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+2.1 & O ambiente est\'a na lista fechada? & \bloq & N\~ao \\
+2.2 & \'E viv\^encia e n\~ao leitura? & \bloq & Pouco \\
+2.3 & \textbf{A simula\c{c}\~ao \'e diegética?} & \naobloq & \textbf{Sim} \\
+2.4 & A descoberta cabe numa frase? & \bloq & Pouco \\
+2.5 & Diferencia-se do cat\'alogo? & \naobloq & Sim \\
+2.6 & Os verbos s\~ao nativos da plataforma? & \bloq & N\~ao \\
+DES-01 & A se\c{c}\~ao do DS existe? & \bloq & N\~ao \\
+DES-02 & H\'a mapa de quem est\'a falando? & \bloq & N\~ao \\
+DES-03 & \textbf{O clone \'e fiel?} & \naobloq & \textbf{Sim} \\
+DES-07 & \textbf{Estados vazios parecem intencionais?} & \naobloq & \textbf{Sim} \\
+DES-08 & \textbf{A copy \'e real e adequada \`a s\'erie?} & \naobloq & \textbf{Sim} \\
+DES-13 & \textbf{A marca ficou fora do disfarce?} & \naobloq & \textbf{Sim} \\
+O1--O5 & \textbf{Hierarquia, voz, fidelidade, beat, legibilidade} & \textbf{faixa pr\'opria}
+       & \textbf{Sim} \\
+\end{longtable}
+
+\begin{tesebox}
+\textbf{O padr\~ao \'e exato e n\~ao parece acidental:} todo crit\'erio de imers\~ao que
+\textbf{bloqueia} \'e verific\'avel por confer\^encia mec\^anica; todo crit\'erio que exige
+\textbf{ju\'izo de qualidade} n\~ao bloqueia.
+
+O sistema garante que a miss\~ao seja \emph{conforme}. N\~ao tem como garantir que ela seja
+\emph{boa}.
+\end{tesebox}
+
+% ======================= 6. ACHADOS =======================
+\section{Achados}
+
+\begin{achadobox}{A1 --- Roblox est\'a na lista fechada e n\~ao tem se\c{c}\~ao de design system \hfill \sevalta}
+\textbf{Evid\^encia.} \texttt{criterios-gate-estrutural.md:21}, crit\'erio 2.1: \emph{``Ambiente
+\'e um dos 6 suportados --- Lista fechada: Instagram, YouTube, \textbf{Roblox}, ChatGPT, TikTok,
+WhatsApp. Nenhum outro ambiente passa.''} O teste manda aplicar isso primeiro e reprovar direto
+quem estiver fora.
+
+\texttt{ambientes.md:27}, que \'e a fonte \'unica: \emph{``\textbf{Roblox saiu.} N\~ao tem
+se\c{c}\~ao de DS e n\~ao est\'a em uso. Miss\~ao em Roblox reprova em DES-01.''}
+
+\texttt{criterios-experiencia.md:49}, crit\'erio 6.4, repete ``dentro dos 6 ambientes
+suportados'' e pede ao avaliador que escolha \emph{``qual dos 6 um estudante mediano daquele ano
+usaria de fato''}. Para atividade de jogo, Roblox \'e de longe o mais plaus\'ivel --- ou seja, o
+crit\'erio pode ativamente \textbf{empurrar} para o ambiente que mata a miss\~ao.
+
+\textbf{O agravante.} \texttt{05\_gate\_estrutural.md} inclui o crit\'erio que lista Roblox
+\emph{e} diz no corpo, linha 38, que Roblox reprova em DES-01. \textbf{As duas afirma\c{c}\~oes
+chegam \`a mesma janela de contexto do mesmo agente}, e o modelo escolhe uma.
+
+\textbf{O que quebra.} Uma miss\~ao em Roblox atravessa o gate estrutural (passa no 2.1, que a
+lista literalmente ampara), passa a avalia\c{c}\~ao de experi\^encia, consome a etapa de design
+inteira --- ambiente simulado, jornada, fluxo, copy, wireframes, prot\'otipo --- e s\'o morre em
+DES-01, no banco de dev. \'E o ponto mais caro poss\'ivel para descobrir o erro.
+
+\textbf{Custo da corre\c{c}\~ao:} duas linhas.
+\end{achadobox}
+
+\begin{achadobox}{A2 --- Of\'icio n\~ao reprova, por constru\c{c}\~ao \hfill \sevalta}
+\textbf{Evid\^encia.} O envelope de sa\'ida do QA de entreg\'aveis
+(\texttt{30\_qa\_entregaveis.md:192}) define quatro faixas:
+
+\begin{center}\small
+\texttt{"severidade": "bloqueio" | "atencao" | "oficio" | "decisao\_humana"}
+\end{center}
+
+\texttt{"oficio"} \'e faixa pr\'opria, distinta de \texttt{"bloqueio"}. Nenhuma instru\c{c}\~ao do
+prompt converte achado O1--O5 em \texttt{status: "bloqueado"}.
+
+A pr\'opria rubrica declara a situa\c{c}\~ao na abertura:
+\begin{quote}\small
+\emph{``Conformidade \'e do agente 6. Aqui se mede \textbf{execu\c{c}\~ao}: uma entrega pode
+cumprir todo obrigat\'orio da v1.13 e ainda ser medíocre. \textbf{Hoje nada no pipeline reprova
+por isso.}''}
+\end{quote}
+
+\textbf{O que quebra.} A rubrica de of\'icio cont\'em precisamente os testes que separam uma
+miss\~ao envolvente de uma miss\~ao correta: se o que salta na tela \'e o que deveria saltar; se,
+cobrindo o nome do falante, d\'a para saber quem fala; se a tela de pico \'e a mais enxuta do
+trecho; se o beat memor\'avel tem tela pr\'opria; se d\'a para saber o que fazer em tr\^es
+segundos. \textbf{Nenhum desses testes tem poder de veto.}
+
+\textbf{Nota de justi\c{c}a.} A separa\c{c}\~ao foi provavelmente deliberada e prudente: a
+pr\'opria rubrica se declara v0.1, com tetos ``a calibrar''. Bloquear por n\'umero n\~ao calibrado
+seria pior. Mas h\'a ali uma regra que \textbf{n\~ao depende de calibragem} e poderia bloquear
+hoje: \emph{``a tela de pico tem menos elementos que suas vizinhas''} --- comparativa, e v\'alida
+mesmo se todos os n\'umeros estiverem errados.
+\end{achadobox}
+
+\begin{achadobox}{A3 --- Imers\~ao \'e a dimens\~ao com menos poder de veto \hfill \sevalta}
+\textbf{Evid\^encia.} Contagem direta sobre \texttt{criterios-dev/}: Design e imers\~ao tem
+\textbf{2 crit\'erios bloqueantes em 13}, contra 7 em 15 de Dados e LGPD.
+
+\textbf{O agravante.} Os dois bloqueantes n\~ao testam of\'icio:
+\begin{itemize}
+  \item \textbf{DES-01} pergunta se a se\c{c}\~ao do design system existe --- confer\^encia de
+        invent\'ario.
+  \item \textbf{DES-02} pergunta se h\'a mapa de quem fala em cada tela --- confer\^encia de
+        completude documental.
+\end{itemize}
+
+Ambos s\~ao respond\'iveis sem olhar se a experi\^encia \'e boa. Todo crit\'erio que olharia ---
+DES-03 fidelidade, DES-07 estados de ponto cego, DES-08 copy real, DES-12 microintera\c{c}\~ao
+instrumentada, DES-13 marca fora do disfarce --- \'e n\~ao bloqueante.
+\end{achadobox}
+
+\begin{achadobox}{A4 --- Dois crit\'erios obrigat\'orios de imers\~ao, ambos mec\^anicos \hfill \sevalta}
+\textbf{Evid\^encia.} \texttt{criterios-pedagogicos.md}, se\c{c}\~ao 2 (``IMERS\~AO E
+SIMULA\c{C}\~AO''), linhas 7--10, cont\'em quatro crit\'erios:
+
+\begin{itemize}
+  \item \textbf{2.2 Viv\^encia, n\~ao leitura} --- obrigat\'orio. Teste: \emph{``tirando todo
+        texto explicativo, o conceito ainda chega ao aluno pela experi\^encia?''}
+  \item \textbf{2.3 Simula\c{c}\~ao diegética} --- \textbf{desej\'avel}. Teste: \emph{``a
+        narrativa justifica por que aquele ambiente existe, ou ele aparece do nada?''}
+  \item \textbf{2.4 Descoberta articulada} --- obrigat\'orio. Teste: \emph{``d\'a pra resumir em
+        uma frase o que o aluno descobre?''}
+  \item \textbf{2.5 Diferencia\c{c}\~ao no cat\'alogo} --- desej\'avel.
+\end{itemize}
+
+\textbf{O que quebra.} O \'unico crit\'erio do sistema inteiro que pergunta se o mundo ficcional
+se sustenta --- se o ambiente tem raz\~ao de existir dentro da hist\'oria --- \'e
+\textbf{desej\'avel}, e seu teste \'e uma pergunta bin\'aria fraca. \'E a defini\c{c}\~ao de
+coer\^encia diegética tratada como enfeite. Note-se o contraste: o gate estrutural gasta
+\textbf{sete} crit\'erios obrigat\'orios (1.1--1.7) conferindo se as seis etapas existem, e nenhum
+conferindo se o mundo onde elas acontecem \'e cr\'ivel.
+\end{achadobox}
+
+\begin{achadobox}{A5 --- A tabela que habilita o crit\'erio de fidelidade est\'a vazia \hfill \sevalta}
+\textbf{Evid\^encia.} \texttt{ambientes.md} tem uma se\c{c}\~ao intitulada \emph{``Aus\^encias por
+ambiente --- o que a plataforma real N\~AO tem''}, descrita pelo pr\'oprio arquivo como \emph{``o
+que mais reduz achado de fidelidade''} e \emph{``o item mais barato e mais valioso deste
+arquivo''}. A tabela tem cinco linhas, uma por se\c{c}\~ao, \textbf{todas em branco}.
+
+\texttt{rubrica-oficio.md}, crit\'erio O3 (Fidelidade de ambiente), declara a consequ\^encia:
+\begin{quote}\small
+\emph{``Enquanto \texttt{references/ambientes.md} n\~ao tiver biblioteca do ambiente e lista de
+aus\^encias, \textbf{O3 devolve por causa que n\~ao \'e do agente 5}. Registre como lacuna de
+biblioteca, n\~ao como ticket, ou o staff paga por d\'ivida de produto.''}
+\end{quote}
+
+\textbf{O que quebra.} O3 cont\'em o teste mais direto de imers\~ao do sistema: \emph{``screenshot
+sem legenda: algu\'em do time diz que app \'e?''} e \emph{``aus\^encia declarada no bloco 5 da spec
+continua ausente?''}. Esse segundo teste existe para impedir que um agente ``complete'' a interface
+por realismo --- adicionando a funcionalidade que o app real tem mas a miss\~ao removeu de
+prop\'osito. Sem a lista de aus\^encias, \textbf{n\~ao h\'a contra o que conferir}.
+
+\textbf{Custo da corre\c{c}\~ao:} preencher cinco linhas de markdown. O pr\'oprio arquivo diz que
+\'e o item mais barato e mais valioso, e ele continua vazio.
+\end{achadobox}
+
+\begin{achadobox}{A6 --- A r\'egua emp\'irica n\~ao chega ao design \hfill \sevmedia}
+\textbf{Evid\^encia.} Mapa completo das diretivas \texttt{include} dos 30 prompts:
+\texttt{references/literatura-cognitiva.md} \'e inclu\'ida em \textbf{exatamente um} prompt ---
+\texttt{09\_experiencia\_estudante.md}.
+
+Os agentes de design (jornada, fluxo, copy, CAA, telas, prot\'otipo) recebem
+\texttt{rubrica-oficio.md} e \texttt{pronto.md}. A rubrica traz uma tabela de tetos de densidade
+por faixa e por \emph{tier} de tela --- e a declara assim:
+\begin{quote}\small
+\emph{``v0.1 --- n\'umeros a calibrar. S\~ao ponto de partida derivado dos caps de carga
+decis\'oria do 3.5, n\~ao medi\c{c}\~ao.''}
+\end{quote}
+
+\textbf{O que quebra.} Quem constr\'oi as telas recebe n\'umeros derivados e declaradamente n\~ao
+medidos, sem acesso \`a fonte que explica de onde vieram, o que significam e quando n\~ao se
+aplicam. A distin\c{c}\~ao mais importante da fonte --- \emph{``op\c{c}\~ao vis\'ivel n\~ao \'e
+op\c{c}\~ao lembrada''}, que muda o teto em $+1$ quando tudo permanece na tela ---
+\textbf{\'e exatamente uma distin\c{c}\~ao sobre layout}, e n\~ao chega a quem faz layout.
+\end{achadobox}
+
+\begin{achadobox}{A7 --- Cat\'alogo desatualizado desarma o crit\'erio de diferencia\c{c}\~ao \hfill \sevmedia}
+\textbf{Evid\^encia.} \texttt{catalogo-missoes.md} lista \textbf{tr\^es} miss\~oes. O pre\^ambulo
+do banco de dev (\texttt{\_banca\_preambulo.md:3}) trata \textbf{exp-04, exp-06, exp-07 e exp-08}
+como ``os moldes atuais'', e os prompts referenciam doze identificadores \texttt{exp-NN} distintos.
+Nenhuma das miss\~oes-gabarito est\'a no cat\'alogo.
+
+O crit\'erio 2.5 se autoanula por cl\'ausula expl\'icita: \emph{``Se cat\'alogo incompleto, marcar
+N/A --- cat\'alogo incompleto''}. O arquivo ainda cita ``LinkedIn'' como exemplo de ambiente ---
+fora da lista fechada, e caso de reprova\c{c}\~ao direta no 2.1.
+
+\textbf{O que quebra.} Some o \'unico mecanismo que impede duas miss\~oes de ensinarem a mesma
+coisa. E, pela Se\c{c}\~ao~\ref{sec:dose}, some tamb\'em o \'unico lugar onde a progress\~ao entre
+miss\~oes poderia ser raciocinada --- justamente a dimens\~ao em que a meta-an\'alise de
+letramento midi\'atico encontra seu moderador mais forte.
+\end{achadobox}
+
+\begin{achadobox}{A8 --- Tr\^es emendas prontas e n\~ao aplicadas \hfill \sevmedia}
+\textbf{Evid\^encia.} \texttt{candidatos-a-criterio.md} \'e um registro disciplinado: uma
+ocorr\^encia fica em observa\c{c}\~ao, duas viram proposta formal. Tr\^es itens est\~ao marcados
+\textbf{``pronto pra emenda''}:
+
+\begin{itemize}
+  \item \textbf{C1 --- a mec\^anica sustenta a descoberta central?} Caso de origem: a frase dizia
+        ``o TikTok n\~ao avisa'' e a mec\^anica fazia o TikTok avisar, com etiquetas coloridas, em
+        dois lugares independentes. Passou em tr\^es crit\'erios individualmente. Status:
+        ``implementado como Passo 4.5 do agente 1. Emenda formal pendente.''
+  \item \textbf{C3 --- n\~ao-negoci\'avel de of\'icio sem mecanismo}, 2 ocorr\^encias. Traz um
+        diagn\'ostico de ordem de esteira: \emph{``o briefing roda \textbf{depois} de o gate fechar
+        a spec, ent\~ao seus n\~ao-negoci\'aveis nunca passam por verifica\c{c}\~ao de mecanismo.
+        N\~ao \'e s\'o crit\'erio faltando: \'e ordem de esteira errada.''}
+  \item \textbf{C7 --- aus\^encia de estados de falha de plataforma}, 2 ocorr\^encias, com um
+        agravante grave: \emph{``onde o estado alimenta a evid\^encia, falha t\'ecnica pode ser
+        gravada como decis\~ao pedag\'ogica''} --- uma queda de conex\~ao registrada como escolha
+        do estudante.
+\end{itemize}
+
+\textbf{Observa\c{c}\~ao.} Este achado \'e de execu\c{c}\~ao, n\~ao de descoberta: a casa j\'a
+sabe. O mecanismo de aprendizado funciona; o de aplica\c{c}\~ao emperrou.
+\end{achadobox}
+
+\begin{achadobox}{A9 --- H\'a teto, n\~ao h\'a piso \hfill \sevalta}
+\textbf{Evid\^encia.} Varredura dos crit\'erios de experi\^encia e pedag\'ogicos: 3.5 (carga
+decis\'oria), 6.1 (linguagem), 6.2 (dura\c{c}\~ao e ritmo), 6.3 (complexidade da decis\~ao) ---
+todos definem \textbf{m\'aximos}. O \'unico que define um m\'inimo \'e o \textbf{6.5}:
+
+\begin{quote}\small
+\emph{``Um estudante da faixa consegue completar a miss\~ao inteira s\'o lendo e escolhendo uma
+vez, sem repert\'orio mais rico (investigar, comparar, revisar posi\c{c}\~ao, justificar)? Se sim
+e a miss\~ao \'e de anos finais/EM, reprova.''}
+\end{quote}
+
+Ele \'e obrigat\'orio \textbf{apenas em anos finais e Ensino M\'edio}; nos anos iniciais \'e
+desej\'avel.
+
+\textbf{O que quebra.} Uma miss\~ao de 3\textordmasculine{} ano pode passar em todos os
+obrigat\'orios do sistema sendo trivial. E, pela Se\c{c}\~ao 4.2, desafio \'e a vari\'avel com
+melhor suporte emp\'irico como preditor de aprendizagem em jogos educacionais.
+
+\textbf{Nuance a preservar.} A esteira \emph{tem} no\c{c}\~ao de dificuldade produtiva em outro
+lugar --- o crit\'erio 3.4 pede ``pensamento cr\'itico, n\~ao li\c{c}\~ao de moral'' e testa se o
+estudante sai com uma pergunta ou com resposta pronta; a regra 13 do P0a exige que a reflex\~ao
+aplique a cen\'ario novo; o crit\'erio 1.6 traz tr\^es armadilhas que passam por provoca\c{c}\~ao
+e n\~ao s\~ao. Falta converter isso em piso verific\'avel por faixa.
+\end{achadobox}
+
+\begin{achadobox}{A10 --- Framework uniforme do 1\textordmasculine{} EF ao 3\textordmasculine{} EM \hfill \sevinv}
+\textbf{O fato.} O framework das seis etapas --- Desafiar, Navegar, Decidir, Resultado/Aha,
+Explicar, Refletir --- coloca a explica\c{c}\~ao \textbf{depois} da viv\^encia e da revela\c{c}\~ao.
+\'E aplicado sem varia\c{c}\~ao do 1\textordmasculine{} ano do Fundamental ao
+3\textordmasculine{} do M\'edio (\texttt{01\_nucleo\_narrativo.md:16}).
+
+\textbf{A evid\^encia.} Essa \'e, estruturalmente, a \emph{problem solving before instruction}
+(PS-I) da literatura de falha produtiva. Sinha e Kapur \cite{sinha2021} sintetizaram 53 estudos e
+166 compara\c{c}\~oes experimentais ($N > 12.000$): PS-I supera instru\c{c}\~ao-primeiro em
+compreens\~ao conceitual e transfer\^encia, $d = 0{,}36$, chegando a $g$ entre $0{,}37$ e $0{,}58$
+quando implementada com fidelidade aos princ\'ipios.
+
+\textbf{Mas o efeito \'e moderado por idade}, e os autores reportam tend\^encia \textbf{contr\'aria}
+para aprendizes do 2\textordmasculine{} ao 5\textordmasculine{} ano, com tamanhos de efeito
+favorecendo instru\c{c}\~ao-primeiro.
+
+\begin{notabox}{Por que isto entra como pergunta, e n\~ao como defeito}
+Tr\^es delimita\c{c}\~oes honestas:
+\begin{enumerate}
+  \item A meta-an\'alise cobre sobretudo matem\'atica e ci\^encias, com estruturas conceituais
+        formais. Letramento digital pode se comportar de outro modo.
+  \item O ``Explicar'' da Unooria \'e \textbf{mediado pelo professor}, com roteiro de debate ---
+        mais pr\'oximo de instru\c{c}\~ao consolidadora bem desenhada do que do controle t\'ipico
+        dos estudos.
+  \item A esteira j\'a modula por idade em outro eixo: o crit\'erio 6.3 exige andaime expl\'icito
+        para tr\^es etapas cognitivas nos anos iniciais, e as tr\^es portas de abstra\c{c}\~ao de
+        \texttt{literatura-cognitiva.md} \S4 s\~ao sens\'iveis \`a faixa.
+\end{enumerate}
+
+\textbf{A pergunta que fica:} o framework foi escolhido como inevit\'avel, ou como decis\~ao de
+produto que vale para toda a faixa et\'aria? N\~ao h\'a, em nenhum dos 30 prompts, registro dessa
+delibera\c{c}\~ao --- e \texttt{literatura-cognitiva.md}, que \'e onde ela moraria, n\~ao trata do
+assunto. Isto \'e candidato natural \`a observa\c{c}\~ao de campo que a se\c{c}\~ao 9 daquele
+arquivo j\'a pede.
+\end{notabox}
+\end{achadobox}
+
+\begin{achadobox}{A11 --- A lista fechada nunca foi confrontada com dado nacional de uso \hfill \sevalta}
+\textbf{Evid\^encia.} Dois crit\'erios obrigat\'orios fazem perguntas emp\'iricas sobre o
+comportamento de crian\c{c}as brasileiras:
+
+\begin{itemize}
+  \item \textbf{2.1}, teste de plataforma real: \emph{``o aluno diria eu uso isso?''}
+  \item \textbf{6.4}: \emph{``qual dos ambientes um estudante mediano daquele ano usaria de
+        fato?''}
+\end{itemize}
+
+Varredura em todos os 30 prompts e 25 refer\^encias de dom\'inio: \textbf{nenhum arquivo cita a
+TIC Kids Online Brasil}, nem qualquer outra fonte de uso de plataforma por idade. A esteira tem
+TIC \emph{Educa\c{c}\~ao} (infraestrutura da escola) e n\~ao tem TIC \emph{Kids Online} (o que a
+crian\c{c}a de fato usa).
+
+\textbf{O que quebra.} Dois crit\'erios obrigat\'orios s\~ao decididos por intui\c{c}\~ao do
+modelo quando existe levantamento probabil\'istico nacional, com $N = 2.424$ e desagrega\c{c}\~ao
+por faixa et\'aria, que responde exatamente a essas perguntas \cite{tickids2024}. O resultado
+pr\'atico \'e que o ``estudante mediano'' invocado pelo 6.4 \'e uma fic\c{c}\~ao do avaliador ---
+e, como mostra o achado A1, essa fic\c{c}\~ao pode empurrar a miss\~ao para um ambiente que a mata
+na etapa seguinte.
+
+\textbf{O agravante espec\'ifico dos anos iniciais.} Aos 9--10 anos, 40\,\% das crian\c{c}as
+n\~ao t\^em perfil em rede social nenhuma, e a pesquisa nem cobre a faixa de 6 a 8 anos, onde a
+trilha come\c{c}a. A premissa de ``conta do pr\'oprio estudante'' n\~ao \'e neutra nessa idade:
+\'e uma proje\c{c}\~ao adulta sobre a crian\c{c}a.
+
+\textbf{Custo da corre\c{c}\~ao:} uma tabela em \texttt{ambientes.md} ou em
+\texttt{literatura-cognitiva.md}, com a penetra\c{c}\~ao por faixa e a fonte.
+\end{achadobox}
+
+\begin{achadobox}{A12 --- ``Conta pr\'opria'' e ``tr\^es por computador'' nunca s\~ao reconciliados \hfill \sevmedia}
+\textbf{Evid\^encia.} Dois crit\'erios obrigat\'orios do mesmo gate se cruzam sem que ningu\'em
+resolva o cruzamento:
+
+\begin{itemize}
+  \item \textbf{2.1, teste de posse} (\texttt{criterios-gate-estrutural.md:21}): \emph{``a conta
+        \'e do aluno ou de um personagem? Se personagem, reprova.''} O falso-positivo listado na
+        linha 28 refor\c{c}a: navegar o perfil de um personagem reprova.
+  \item \textbf{10.1 e 10.2} (linhas 78--79): a miss\~ao declara tr\^es cen\'arios de dispositivo,
+        entre eles \emph{``2--4 por dispositivo''}, e precisa entregar a descoberta central com
+        \emph{``3 alunos dividindo 1 computador''}.
+\end{itemize}
+
+\textbf{O que quebra.} Quando tr\^es estudantes dividem um Chromebook, \textbf{de quem \'e a
+conta}? Nenhum crit\'erio responde. As op\c{c}\~oes s\~ao todas custosas e nenhuma est\'a
+escolhida: a conta \'e de um dos tr\^es e os outros dois viram plateia --- o que contradiz a
+agência exigida pelo 1.3; ou a conta \'e do grupo --- o que \'e, pela letra do 2.1, uma conta que
+n\~ao \'e do estudante; ou a miss\~ao alterna --- e ningu\'em especificou o \emph{handoff}.
+
+\textbf{Por que importa para imers\~ao, e n\~ao s\'o para log\'istica.} O teste de posse existe
+porque habitar a pr\'opria conta \'e o que torna a decis\~ao pessoal --- \'e o mecanismo de
+transporte narrativo da miss\~ao. Num cen\'ario compartilhado, esse mecanismo \'e exatamente o que
+se perde primeiro, e \'e o cen\'ario que \textbf{53\,\% das escolas} enfrentam, j\'a que apenas
+47\,\% disponibilizam computador ao aluno \cite{ticedu2024}.
+
+\textbf{Nota de justi\c{c}a.} O padr\~ao aprendido P3 de \texttt{padroes-aprendidos.md} mostra que
+a casa sabe tratar caminho degenerado com \emph{affordance} nativa, aumentando a fidelidade em vez
+de custar. O mesmo racioc\'inio se aplicaria aqui --- falta algu\'em fazer a pergunta.
+\end{achadobox}
+
+% ======================= 7. PLANO =======================
+\section{Plano de a\c{c}\~ao priorizado}
+
+Tr\^es frentes, separadas pelo tipo de decis\~ao que cada uma exige.
+
+\subsection{Frente 1 --- Corre\c{c}\~oes mec\^anicas, sem decis\~ao pedag\'ogica}
+
+Defeitos inequ\'ivocos. N\~ao mudam r\'egua nem tese; alinham o sistema ao que ele j\'a decidiu.
+
+\begin{center}
+\begin{tabular}{@{}c p{9.6cm} l@{}}
+\toprule
+\textbf{\#} & \textbf{A\c{c}\~ao} & \textbf{Resolve} \\
+\midrule
+1 & Remover Roblox da lista do crit\'erio 2.1 e trocar ``6 ambientes'' por ``5'' em
+    \texttt{criterios-gate-estrutural.md} e \texttt{criterios-experiencia.md} & A1 \\
+2 & Preencher a tabela ``Aus\^encias por ambiente'' de \texttt{ambientes.md}, cinco linhas & A5 \\
+3 & Atualizar \texttt{catalogo-missoes.md} com as miss\~oes-gabarito e remover o exemplo LinkedIn
+  & A7 \\
+4 & Incluir \texttt{literatura-cognitiva.md} nos prompts de jornada e de telas & A6 \\
+5 & Acrescentar a \texttt{literatura-cognitiva.md} uma se\c{c}\~ao de penetra\c{c}\~ao de
+    plataforma por faixa, com os dados da TIC Kids Online Brasil, e referenci\'a-la nos
+    crit\'erios 2.1 e 6.4 & A11 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Frente 2 --- Emendas que a casa j\'a aprovou}
+
+Itens marcados ``pronto pra emenda'' em \texttt{candidatos-a-criterio.md}, com ocorr\^encias
+contadas. A decis\~ao aqui \'e de prioriza\c{c}\~ao, n\~ao de m\'erito.
+
+\begin{center}
+\begin{tabular}{@{}c p{9.6cm} l@{}}
+\toprule
+\textbf{\#} & \textbf{A\c{c}\~ao} & \textbf{Resolve} \\
+\midrule
+6 & Formalizar C1 como crit\'erio: a mec\^anica sustenta a descoberta central & A8 \\
+7 & Formalizar C7: o contrato de estados cobre falha de plataforma, e falha nunca vira decis\~ao
+    pedag\'ogica & A8 \\
+8 & Avaliar a reordena\c{c}\~ao de esteira proposta em C3 --- briefing de of\'icio antes do
+    fechamento da spec & A8 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Frente 3 --- Decis\~oes de produto}
+
+Mudan\c{c}as de tese. Exigem julgamento humano e, em tr\^es casos, medi\c{c}\~ao de campo.
+
+\begin{center}
+\begin{tabular}{@{}c p{9.6cm} l@{}}
+\toprule
+\textbf{\#} & \textbf{A\c{c}\~ao} & \textbf{Resolve} \\
+\midrule
+9 & Promover a regra comparativa da rubrica de of\'icio (``a tela de pico tem menos elementos que
+    suas vizinhas'') a bloqueante --- \'e a \'unica que n\~ao depende de calibragem & A2 \\
+10 & Elevar 2.3 (simula\c{c}\~ao diegética) a obrigat\'orio e reescrever seu teste em forma
+    falsific\'avel & A4 \\
+11 & Decidir a quest\~ao da posse em cen\'ario compartilhado e escrev\^e-la no 2.1 ou no 10.2 & A12 \\
+12 & Criar um piso de desafio por faixa, estendendo 6.5 aos anos iniciais & A9 \\
+13 & Declarar a tese de DES-03 (``a imers\~ao \'e o instrumento de medida'') como premissa do
+    sistema, propagando-a aos crit\'erios de produto & \S\ref{sec:sedutor} \\
+14 & Reescrever o 4.3 para que o banco curado seja o caminho principal nos anos iniciais, e a
+    parametriza\c{c}\~ao por IA o excepcional & \S\ref{sec:brasil} \\
+15 & Decidir se a trilha do bimestre \'e unidade de dose, e criar crit\'erio de progress\~ao entre
+    miss\~oes & A7 \\
+16 & Instrumentar observa\c{c}\~ao de campo com escala validada de experi\^encia de jogo, e usar os
+    dados para calibrar a rubrica v0.1 e responder A10 & A2, A10 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Sequ\^encia recomendada}
+
+A Frente 1 \'e barata, de risco nulo e destrava desperd\'icio imediato --- em particular o item 1,
+que hoje pode custar uma etapa de design inteira, e o item 5, que d\'a base emp\'irica a dois
+crit\'erios obrigat\'orios hoje decididos por intui\c{c}\~ao. A Frente 2 j\'a tem consenso interno
+documentado. A Frente 3 deveria come\c{c}ar pelos itens 9, 10, 11 e 13, que n\~ao dependem de
+n\'umero novo; os itens 12, 15 e 16 pedem a observa\c{c}\~ao de campo que
+\texttt{literatura-cognitiva.md} \S9 j\'a reivindica.
+
+\begin{notabox}{Um recorte que vale priorizar por si}
+Cinco achados independentes convergem nos \textbf{anos iniciais}: A9 (piso de desafio s\'o \'e
+obrigat\'orio a partir dos anos finais), A10 (a evid\^encia do framework se inverte no
+2\textordmasculine{}--5\textordmasculine{}), A11 (40\,\% das crian\c{c}as de 9--10 anos n\~ao t\^em
+conta), \S\ref{sec:brasil} (27\,\% de uso efetivo na rede municipal, contra 67\,\% na estadual) e o
+crit\'erio 4.3 exigindo curadoria por IA do professor menos formado da rede.
+
+Se houver capacidade para uma \'unica frente de trabalho, \textbf{uma revis\~ao dos crit\'erios
+espec\'ifica para 1\textordmasculine{}--5\textordmasculine{} ano} resolve mais do que qualquer
+item isolado das tabelas acima.
+\end{notabox}
+
+% ======================= 8. ANEXO =======================
+\section{Anexo --- invent\'ario quantitativo}
+
+\subsection{Volume dos artefatos}
+
+\begin{center}
+\begin{tabular}{@{}l c r@{}}
+\toprule
+\textbf{Categoria} & \textbf{Arquivos} & \textbf{Linhas} \\
+\midrule
+Prompts de agente (produto, design, dev, transversal) & 30 & $\approx$ 3.600 \\
+Refer\^encias de dom\'inio, exceto plataforma & 25 & $\approx$ 3.300 \\
+Refer\^encias de plataforma, fora do escopo & 41 & $\approx$ 5.500 \\
+Arquivos de crit\'erio & 8 & $\approx$ 660 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Crit\'erios por gate}
+
+\begin{center}
+\begin{tabular}{@{}l l l@{}}
+\toprule
+\textbf{Gate} & \textbf{Obrigat\'orios} & \textbf{Desej\'aveis} \\
+\midrule
+Gate estrutural & 19 + 1 condicional & 3 \\
+Avalia\c{c}\~ao pedag\'ogica & 13, dos quais 2 bloqueiam de fato & 5 + 1 condicional \\
+Experi\^encia do estudante & 5 + 1 condicional & 2 \\
+Gate final & 8 & 0 \\
+Banco de dev, 5 dimens\~oes & 20 bloqueantes de 72 & 52 \\
+Rubrica de of\'icio & 0 & O1--O5, em faixa pr\'opria \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Alcance das refer\^encias cr\'iticas}
+
+\begin{center}
+\begin{tabular}{@{}l c l@{}}
+\toprule
+\textbf{Refer\^encia} & \textbf{Prompts} & \textbf{Observa\c{c}\~ao} \\
+\midrule
+\texttt{pronto.md} & 7 & maior alcance entre as de of\'icio \\
+\texttt{plataforma-unooria-software.md} & 5 & --- \\
+\texttt{bncc-computacao-letramento-digital.md} & 4 & --- \\
+\texttt{ambientes.md} & 4 & tabela de aus\^encias vazia (A5) \\
+\texttt{catalogo-missoes.md} & 3 & desatualizado (A7) \\
+\texttt{rubrica-oficio.md} & 2 & jornada e QA \\
+\texttt{literatura-cognitiva.md} & \textbf{1} & fonte \'unica dos n\'umeros (A6) \\
+\texttt{candidatos-a-criterio.md} & 1 & s\'o o gate estrutural l\^e \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ======================= BIBLIOGRAFIA =======================
+\begin{thebibliography}{99}
+\small
+
+\bibitem{brown2004}
+BROWN, E.; CAIRNS, P.
+\emph{A grounded investigation of game immersion}.
+In: CHI '04 Extended Abstracts on Human Factors in Computing Systems. ACM, 2004, p. 1297--1300.
+DOI 10.1145/985921.986048.
+
+\bibitem{cheng2015}
+CHENG, M.-T.; SHE, H.-C.; ANNETTA, L. A.
+\emph{Game immersion experience: its hierarchical structure and impact on game-based science
+learning}.
+Journal of Computer Assisted Learning, v. 31, n. 3, p. 232--253, 2015.
+DOI 10.1111/jcal.12066.
+
+\bibitem{green2000}
+GREEN, M. C.; BROCK, T. C.
+\emph{The role of transportation in the persuasiveness of public narratives}.
+Journal of Personality and Social Psychology, v. 79, n. 5, p. 701--721, 2000.
+DOI 10.1037/0022-3514.79.5.701.
+
+\bibitem{hamari2016}
+HAMARI, J.; SHERNOFF, D. J.; ROWE, E.; COLLER, B.; ASBELL-CLARKE, J.; EDWARDS, T.
+\emph{Challenging games help students learn: an empirical study on engagement, flow and immersion
+in game-based learning}.
+Computers in Human Behavior, v. 54, p. 170--179, 2016.
+DOI 10.1016/j.chb.2015.07.045.
+
+\bibitem{huang2024}
+HUANG, G.; JIA, W.; YU, W.
+\emph{Media literacy interventions improve resilience to misinformation: a meta-analytic
+investigation of overall effect and moderating factors}.
+Communication Research, 2024.
+DOI 10.1177/00936502241288103.
+
+\bibitem{lei15100}
+BRASIL.
+\emph{Lei n\textordmasculine{} 15.100, de 13 de janeiro de 2025}. Disp\~oe sobre a utiliza\c{c}\~ao
+de aparelhos eletr\^onicos port\'ateis pessoais por estudantes nos estabelecimentos p\'ublicos e
+privados de ensino da educa\c{c}\~ao b\'asica. Regulamentada pelo Decreto n\textordmasculine{}
+12.385, de 18 de fevereiro de 2025. Bras\'ilia, 2025.
+
+\bibitem{law2018}
+LAW, E. L.-C.; BR\"UHLMANN, F.; MEKLER, E. D.
+\emph{Systematic review and validation of the Game Experience Questionnaire (GEQ): implications
+for citation and reporting practice}.
+In: Proceedings of the 2018 Annual Symposium on Computer-Human Interaction in Play (CHI PLAY).
+ACM, 2018, p. 257--270.
+DOI 10.1145/3242671.3242683.
+
+\bibitem{sinha2021}
+SINHA, T.; KAPUR, M.
+\emph{When problem solving followed by instruction works: evidence for productive failure}.
+Review of Educational Research, v. 91, n. 5, p. 761--798, 2021.
+DOI 10.3102/00346543211019105.
+
+\bibitem{sundararajan2020}
+SUNDARARAJAN, N.; ADESOPE, O.
+\emph{Keep it coherent: a meta-analysis of the seductive details effect}.
+Educational Psychology Review, v. 32, p. 707--734, 2020.
+DOI 10.1007/s10648-020-09522-4.
+
+\bibitem{pisa2022}
+INEP --- INSTITUTO NACIONAL DE ESTUDOS E PESQUISAS EDUCACIONAIS AN\'ISIO TEIXEIRA.
+\emph{Relat\'orio Brasil no PISA 2022}. Bras\'ilia: Inep/MEC, 2023.
+Dispon\'ivel em: \texttt{download.inep.gov.br/acoes\_internacionais/pisa}.
+(50\,\% dos estudantes brasileiros de 15 anos abaixo do N\'ivel 2 em leitura; m\'edia OCDE 26\,\%.)
+
+\bibitem{saeb2025}
+INEP --- INSTITUTO NACIONAL DE ESTUDOS E PESQUISAS EDUCACIONAIS AN\'ISIO TEIXEIRA.
+\emph{Sistema de Avalia\c{c}\~ao da Educa\c{c}\~ao B\'asica --- Saeb 2025: resultados}.
+Bras\'ilia: Inep/MEC, 2026. Aproximadamente 5,9 milh\~oes de estudantes em 73.767 escolas.
+Dispon\'ivel em: \texttt{saeb.inep.gov.br}.
+
+\bibitem{ticedu2024}
+CETIC.BR --- CENTRO REGIONAL DE ESTUDOS PARA O DESENVOLVIMENTO DA SOCIEDADE DA INFORMA\c{C}\~AO.
+\emph{TIC Educa\c{c}\~ao 2024: pesquisa sobre o uso das tecnologias de informa\c{c}\~ao e
+comunica\c{c}\~ao nas escolas brasileiras}. S\~ao Paulo: NIC.br, 2025.
+Dispon\'ivel em: \texttt{cetic.br/pt/pesquisa/educacao}.
+
+\bibitem{tickids2024}
+CETIC.BR --- CENTRO REGIONAL DE ESTUDOS PARA O DESENVOLVIMENTO DA SOCIEDADE DA INFORMA\c{C}\~AO.
+\emph{TIC Kids Online Brasil 2024: pesquisa sobre o uso da Internet por crian\c{c}as e
+adolescentes no Brasil}. S\~ao Paulo: NIC.br, 2024. Amostra de 2.424 crian\c{c}as e adolescentes
+de 9 a 17 anos, em todo o territ\'orio nacional.
+Dispon\'ivel em: \texttt{cetic.br/pt/tics/kidsonline}.
+
+\bibitem{vanlaer2014}
+VAN LAER, T.; DE RUYTER, K.; VISCONTI, L. M.; WETZELS, M.
+\emph{The extended transportation-imagery model: a meta-analysis of the antecedents and
+consequences of consumers' narrative transportation}.
+Journal of Consumer Research, v. 40, n. 5, p. 797--817, 2014.
+DOI 10.1086/673383.
+
+\end{thebibliography}
+
+\vspace{1cm}
+\begin{center}
+{\color{BorderGray}\rule{0.6\textwidth}{0.6pt}}\\[0.4cm]
+{\small\color{Charcoal}
+Auditoria conduzida sobre o estado do reposit\'orio em 20 de setembro de 2026.\\
+Nenhum artefato da esteira foi alterado na produ\c{c}\~ao deste documento.}
+\end{center}
+
+\end{document}
