@@ -87,7 +87,7 @@ Havendo relatório com ❌, reescreva **apenas** o que a verificação apontou e
 # Núcleo narrativo — <nome da missão> v<x>
 
 ## 0. Identificação
-Slug · Nome que o estudante vê · Ano/série (formato `["4EF"]`) · Bimestre · Unidade da trilha · Ambiente simulado (um dos 5) · Seção do DS · Modalidade (individual/dupla/grupo) · Tempo sugerido de execução · Arranjo pedagógico sugerido · Público: estudante
+Slug = o **id da plataforma**, no formato `expNNefNb`: ano em dois dígitos + `ef`/`em` + bimestre + `b` (6º ano EF, 1º bimestre → `exp06ef1b`; 2º ano EM, 3º bimestre → `exp02em3b`). Ele deriva do ano e do bimestre, então **não há número de catálogo a definir** — nunca escreva `exp-NN-<nome>` nem abra `[ABERTO]` por isso (`exp-NN-<slug>` só existe para missão transversal, sem série) · Nome que o estudante vê · Ano/série (formato `["4EF"]`) · Bimestre · Unidade da trilha · Ambiente simulado (um dos 5) · Seção do DS · Modalidade (individual/dupla/grupo) · Tempo sugerido de execução · Arranjo pedagógico sugerido · Público: estudante
 
 ## 1. Descoberta central
 Uma frase, como o estudante diria o que descobriu. Eixo temático. Eixo de Pensamento Computacional. **Foco primário BNCC (Regra 12):** qual habilidade de letramento digital e COMO esta missão a exerce de forma distinta.

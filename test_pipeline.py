@@ -782,6 +782,65 @@ def test_capacidade_de_plataforma_nao_bloqueia():
     print("   ✓ capacidades: microfone/câmera viram pendência de plataforma (🟡) e o PRD segue; sem bloco 9 é produto; inventado é bloqueio")
 
 
+def test_regressao_sessao_8f76_falsos_positivos():
+    """Sessão 8f76 (exp06ef1b, 2026-09-21): a missão saiu 🔴 por quatro leituras erradas dos
+    verificadores. A spec, o handoff e o PRD estavam como o gabarito manda — o defeito era do leitor."""
+    from tools.rastro import classificar_dono, validar_manifesto, validar_telemetria, varrer_lacunas
+
+    # 1. A prosa do bloco 0 repete "viewport:" ANTES da ficha; a linha da ficha é quem manda.
+    spec = _SPEC_MANIFESTO_OK.replace(
+        "Nome: Teste. Ficha do manifesto:",
+        "- **Software clonado:** Instagram (feed, perfis, DMs)\n"
+        "- **Por que este viewport:** Viewport mobile vertical padrão (`375x812`), fidelidade da rolagem.\n"
+        "**Ficha do manifesto — obrigatória, uma linha por campo, neste formato exato:**",
+    )
+    r_man = validar_manifesto(spec)
+    assert r_man["status"] == "aprovado", r_man["achados"]
+    assert r_man["campos"]["viewport"] == "375x812"
+    # e ficha com valor inválido continua reprovando, mesmo com a prosa por perto
+    assert validar_manifesto(spec.replace("`viewport: 375x812`", "`viewport: celular`"))["status"] == "bloqueado"
+
+    # 2. Dono flexionado ou acentuado: "coordenador pedagógico" é gente de fora, não produto.
+    assert classificar_dono("coordenador pedagógico: conferir rastreabilidade semanal com grade do Entre Redes", "produto") == "externo"
+    assert classificar_dono("Coordenação pedagógica da rede", "produto") == "externo"
+    assert classificar_dono("pedagógico", "dev") == "produto"  # o acento não apaga o token de produto
+
+    # 3. `dono: produto` no fim do marcador não esconde que o pedido é homologação (ato humano).
+    assert classificar_dono(
+        "Homologação cadastral definitiva do slug de catálogo (exp-NN vs exp06ef1b), dono: produto, prazo: release", "dev"
+    ) == "humano"
+    # o corpo do marcador só alivia: pedido de construção com dono produto segue produto
+    assert classificar_dono("Definir regra de cardinalidade do bloco 2, dono: produto", "dev") == "produto"
+
+    # Os três marcadores literais da spec da sessão, no rastro antes do PRD: nenhum bloqueia.
+    fontes = [{"chave": "spec_missao", "rotulo": "spec da missão", "etapa_padrao": "produto"}]
+    st = {"spec_missao": (
+        "- Bios das contas candidatas: `[ABERTO — produto: homologar teto de 120 caracteres para bios]`.\n"
+        "- Legendas dos posts: `[ABERTO — produto: homologar teto de 60 palavras por legenda]`.\n"
+        "- `[ABERTO — coordenador pedagógico: conferir rastreabilidade semanal com grade do Entre Redes]`\n"
+    )}
+    r = varrer_lacunas(fontes, st)
+    assert r["status"] == "amarelo", r["achados"]
+    assert r["por_etapa"] == {"input": 0, "produto": 0, "design": 0, "dev": 0, "plataforma": 0, "externo": 1, "humano": 2}, r["por_etapa"]
+
+    # e o PRD com o NEEDS CLARIFICATION do slug sai 🟡, como o gate estrutural e o gate final já diziam
+    prd = {"prd_final": "1. `[NEEDS CLARIFICATION: Homologação cadastral definitiva do slug de catálogo (exp-NN vs exp06ef1b), dono: produto, prazo: release]`."}
+    r_prd = varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], prd)
+    assert r_prd["status"] == "amarelo" and r_prd["por_etapa"]["humano"] == 1, r_prd["achados"]
+
+    # 4. Descartar WebSocket com "sem custos de", "(sem WebSockets)" e "sem suporte a" é seguir a plataforma.
+    handoff = _HANDOFF_OK + (
+        "\n| Sincronização de Sala | Polling HTTP curto (3–5s) na tabela `exp05ef2b_gates_turma`. | Polling atende ao Cloud Run sem custos de WebSocket ou infraestrutura durável. |\n"
+        "- Sincronização via polling HTTP em tabela de gates (sem WebSockets).\n"
+        "1. **Relógio coletivo:** polling de 3–5s em `exp05ef2b_gates_turma`. Sem suporte a WebSockets.\n"
+    )
+    r_tel = validar_telemetria(handoff)
+    assert r_tel["status"] == "aprovado", r_tel["achados"]
+    # propor WebSocket de verdade continua sendo pego
+    propoe = validar_telemetria(_HANDOFF_OK + "\nA sala usa WebSocket dedicado para o relógio coletivo.")
+    assert {a["codigo"] for a in propoe["achados"]} == {"websocket-mencao"}, propoe["achados"]
+
+
 def test_mensagem_de_pulo_nao_vira_prd():
     """O texto que o ADK grava ao pular um agente não pode virar PRD nem artefato."""
     from pipeline.artifacts import e_mensagem_de_pulo
@@ -1538,6 +1597,7 @@ if __name__ == "__main__":
         test_secao_split_d0_e_d9,
         test_bncc_validador_e_gate,
         test_rastro_manifesto_telemetria_lacunas,
+        test_regressao_sessao_8f76_falsos_positivos,
         test_capacidade_de_plataforma_nao_bloqueia,
         test_mensagem_de_pulo_nao_vira_prd,
         test_contencao_de_resposta_de_ferramenta,

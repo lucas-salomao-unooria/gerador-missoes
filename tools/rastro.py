@@ -122,14 +122,18 @@ _TOKENS_ETAPA: Dict[str, tuple] = {
     # aula acontece é combinado com a rede na implantação, não é insumo de construção. O critério
     # 5.5 de `references/criterios-pedagogicos.md` já diz que isso "não bloqueia"; o classificador
     # é que discordava e barrava a missão por algo que nenhum agente resolve.
-    "externo": ("coordena", "rede parceira", "escola parceira", "designer instrucional",
-                "consultor", "time pedag", "externo", "externa", "cliente", "secretaria",
+    # Os tokens exigem fim de palavra (`s?` opcional): "coordena" não casava "coordenador" nem
+    # "coordenação", e "pedagog" não casava "pedagógico" por causa do acento — o marcador
+    # `[ABERTO — coordenador pedagógico: …]` caía no default da spec (produto) e barrava o PRD
+    # por algo que o critério 5.5 manda registrar sem bloquear (sessão 8f76, 2026-09-21).
+    "externo": ("coordena(ção|cao|dor|dora|dores|doras)", "rede parceira", "escola parceira", "designer instrucional",
+                "consultor", "time pedag[oó]g[a-z]*", "externo", "externa", "cliente", "secretaria",
                 "jur[ií]dico", "dpo", "rede escolar", "rede de ensino", "semana letiva",
                 "calend[áa]rio letivo", "calend[áa]rio", "implanta[çc][ãa]o"),
     "plataforma": ("plataforma", "adr", "design-system", "storybook", "infra", "ponte", "@edu/ui", "componente do ds", "componente de ds"),
     "dev": ("handoff-dev", "handoff", "brief-assets", "banca", "tech", "arquitetura", "dev"),
     "design": ("jornada", "fluxo", "copy", "wireframe", "caa", "ambiente-simulado", "ambiente", "brief-oficio", "briefing de ofício", "qa-entregaveis", "mermaid", "stitch", "design"),
-    "produto": ("gate-estrutural", "gate estrutural", "gate 0", "gate0", "spec", "produto", "one-pager", "pm", "gate-final", "gate final", "pedagog", "experiencia-aluno", "fecha-lacunas", "responsável de dados", "dados"),
+    "produto": ("gate-estrutural", "gate estrutural", "gate 0", "gate0", "spec", "produto", "one-pager", "pm", "gate-final", "gate final", "pedag[oó]g[a-z]*", "experiencia-aluno", "fecha-lacunas", "responsável de dados", "dados"),
     "input": ("input", "briefing", "insumo", "solicitante"),
 }
 
@@ -157,16 +161,23 @@ def classificar_dono(texto_dono: str, etapa_padrao: str, contexto: str = "") -> 
     esteira, e barrar a missão por isso trava a construção em algo que nenhuma rodada resolve.
     """
     t = (texto_dono or "").lower()
+    corpo = t
     m = re.search(r"dono:\s*([a-z0-9_@/\-\. ]+)", t)
     if m:
         t = m.group(1)
     pelo_dono = _etapa_por_tokens(t)
     if pelo_dono in ETAPAS_NAO_BLOQUEANTES:
         return pelo_dono
-    if contexto:
-        pelo_contexto = _etapa_por_tokens(contexto)
-        if pelo_contexto in ETAPAS_NAO_BLOQUEANTES:
-            return pelo_contexto
+    # O `dono:` cabe em duas palavras; o que se pede está no resto do marcador:
+    # `[NEEDS CLARIFICATION: Homologação cadastral do slug, dono: produto]`. Homologar é ato de
+    # gente, e o gate estrutural e o gate final já registravam o mesmo item como decisão humana —
+    # só o prd-check, lendo apenas `dono:`, bloqueava (sessão 8f76, 2026-09-21). O corpo do
+    # marcador entra com a mesma regra da linha: só alivia, nunca agrava.
+    for alternativa in ((corpo if m else ""), contexto):
+        if alternativa:
+            pela_alternativa = _etapa_por_tokens(alternativa)
+            if pela_alternativa in ETAPAS_NAO_BLOQUEANTES:
+                return pela_alternativa
     if pelo_dono:
         return pelo_dono
     return etapa_padrao if etapa_padrao in ETAPAS else "dev"
@@ -331,7 +342,15 @@ def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", 
 
 # ------------------------------------------------------------------ manifesto (bloco 0 da spec)
 def _campo(texto: str, nome: str) -> Optional[str]:
-    m = re.search(r"`?\b" + nome + r"\s*:\s*`?\s*([^`\n|]+?)`?\s*(?:$|\||\(|—|·)", texto, re.IGNORECASE | re.MULTILINE)
+    # A ficha tem uma linha por campo, em item de lista: `- \`viewport: 375x812\``. A prosa do
+    # mesmo bloco repete o nome do campo com dois-pontos ("Por que este viewport: Viewport
+    # mobile…") e, por vir antes, era devolvida no lugar do valor — a spec estava certa e o
+    # gate reprovava (sessão 8f76, 2026-09-21). A linha de ficha manda; a busca solta é fallback.
+    valor = r"\s*:\s*[`*_]*\s*([^`\n|]+?)`?\s*(?:$|\||\(|—|·)"
+    ficha = re.search(r"^\s*[-*]\s*[`*_]*" + nome + valor, texto, re.IGNORECASE | re.MULTILINE)
+    if ficha:
+        return ficha.group(1).strip().strip("*_ ")
+    m = re.search(r"`?\b" + nome + valor, texto, re.IGNORECASE | re.MULTILINE)
     return m.group(1).strip() if m else None
 
 
@@ -615,7 +634,9 @@ _NEGACAO = re.compile(
     r"proibid|vedado|nunca|jamais|evit[ae]|descartad|obsolet|legad|"
     r"n[ãa]o\s+(existe|existem|use|usar|usamos|h[áa]|aceita|pode|deve|ser[áa]|suporta)|"
     r"em vez de|ao inv[ée]s|fora de escopo|removid|deprecia|"
-    r"sem\s+(campo|coluna|chave|payload|uso)|nada de|dispensa",
+    # "sem custos de WebSocket", "(sem WebSockets)", "sem suporte a WebSockets": três jeitos de
+    # descartar o canal que o handoff da sessão 8f76 usou e que viravam aviso (2026-09-21).
+    r"sem\s+(campo|coluna|chave|payload|uso|custos?|suporte|depend[êe]ncia|conex[õo]es?|websockets?|sockets?)|nada de|dispensa",
     re.IGNORECASE,
 )
 
