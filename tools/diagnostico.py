@@ -92,6 +92,12 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
                 if not isinstance(achado, dict):
                     continue
                 severidade = str(achado.get("severidade") or "").strip().lower()
+                # O veredito do gate manda. A banca aprova (`nok_bloqueantes: 0`), dá ❌ num
+                # critério não bloqueante e rotula o item `bloqueio`; contar isso como impedimento
+                # deixava a execução 🔴 com o gate 🟢 (2026-09-21, exp06ef1b, DES-14). Só gate
+                # reprovado tem impedimento; nos demais o item vira ressalva registrada.
+                if severidade in _BLOQUEIA and status.strip().lower() not in ("bloqueado", "devolvido"):
+                    severidade = "atencao"
                 normalizado = {
                     "gate": gate["rotulo"],
                     "etapa": gate["etapa"],

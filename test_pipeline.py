@@ -833,12 +833,69 @@ def test_regressao_sessao_8f76_falsos_positivos():
         "\n| Sincronização de Sala | Polling HTTP curto (3–5s) na tabela `exp05ef2b_gates_turma`. | Polling atende ao Cloud Run sem custos de WebSocket ou infraestrutura durável. |\n"
         "- Sincronização via polling HTTP em tabela de gates (sem WebSockets).\n"
         "1. **Relógio coletivo:** polling de 3–5s em `exp05ef2b_gates_turma`. Sem suporte a WebSockets.\n"
+        "Zero WebSockets ou `hub:pause` como canal de sincronização.\n"
     )
     r_tel = validar_telemetria(handoff)
     assert r_tel["status"] == "aprovado", r_tel["achados"]
     # propor WebSocket de verdade continua sendo pego
     propoe = validar_telemetria(_HANDOFF_OK + "\nA sala usa WebSocket dedicado para o relógio coletivo.")
     assert {a["codigo"] for a in propoe["achados"]} == {"websocket-mencao"}, propoe["achados"]
+
+
+def test_gate_amarelo_limpa_degradacao_da_rodada_anterior():
+    """Regressão de 2026-09-21 (exp06ef1b): o prd-check reprovou na rodada 1 e saiu 🟡 na 2, mas
+    só `aprovado` limpava a marca — a execução terminava `pipeline_bloqueado` com zero impedimento
+    e o diagnóstico listava o PRD como provisório."""
+    from agents.checkers import RastroCheckAgent
+
+    fontes = [{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}]
+
+    def check(nome):
+        return RastroCheckAgent(
+            name=nome, modo="lacunas", rotulo="Pendências do PRD", report_key="prd_check_report",
+            status_key="prd_status", fontes=fontes, agente="prd-check", estrito=True,
+        )
+
+    root = SequentialAgent(
+        name="Root",
+        sub_agents=[
+            FakeAgent(name="Prd1", key="prd_final", text="rascunho [NEEDS CLARIFICATION: qual cardinalidade?, dono: produto]"),
+            check("Check1"),
+            FakeAgent(name="Prd2", key="prd_final", text="rascunho [ABERTO — coordenação pedagógica: confirmar semana]"),
+            check("Check2"),
+        ],
+    )
+    _, state = asyncio.run(_run(root))
+    assert state["prd_status"] == "amarelo", state.get("prd_check_report")
+    assert state.get(KEY_PIPELINE_BLOQUEADO) is False, "a reprovação da rodada 1 não pode sobreviver ao 🟡 da rodada 2"
+    assert not state.get(KEY_DEGRADACOES), state.get(KEY_DEGRADACOES)
+    assert not state.get(KEY_HERANCA)
+    print("   ✓ gate 🔴 → 🟡 limpa a degradação e destrava a execução")
+
+
+def test_diagnostico_respeita_veredito_do_gate():
+    """Regressão de 2026-09-21 (exp06ef1b, DES-14): a banca aprovou com `nok_bloqueantes: 0`, mas
+    rotulou um ❌ de critério não bloqueante como `severidade: bloqueio`, e o diagnóstico contava
+    isso como impedimento — execução 🔴 com todos os gates 🟢/🟡."""
+    from tools.diagnostico import coletar
+
+    st = {
+        "dev_status": "aprovado",
+        "dev_status_envelope": {"status": "aprovado", "veredito": "amarelo", "achados": [
+            {"id": "DES-14", "severidade": "bloqueio", "agente_responsavel": "wireframes", "resumo": "telas docentes sem nós"},
+        ]},
+        "prd_status": "amarelo",
+        "prd_status_envelope": {"achados": [{"severidade": "bloqueio", "codigo": "x", "resumo": "y"}]},
+    }
+    d = coletar(st)
+    assert d["veredito"] != "bloqueado", d["veredito"]
+    assert not d["bloqueios"] and len(d["ressalvas"]) == 2, (d["bloqueios"], d["ressalvas"])
+
+    # gate reprovado continua produzindo impedimento
+    st_ruim = dict(st, prd_status="bloqueado")
+    d_ruim = coletar(st_ruim)
+    assert d_ruim["veredito"] == "bloqueado" and len(d_ruim["bloqueios"]) == 1
+    print("   ✓ diagnóstico: achado 'bloqueio' de gate aprovado vira ressalva; de gate reprovado, impedimento")
 
 
 def test_mensagem_de_pulo_nao_vira_prd():

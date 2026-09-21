@@ -268,12 +268,19 @@ def save_run_artifacts(
     artifact_service: Optional[Any] = None,
     app_name: str = "GeradorMissoesUnooria",
     user_id: str = "usuario",
+    run_dir: Optional[Path] = None,
 ) -> Optional[Path]:
-    """Grava cada saída do pipeline como Markdown, mais o manifesto e o estado completo em JSON."""
+    """Grava cada saída do pipeline como Markdown, mais o manifesto e o estado completo em JSON.
+
+    `run_dir` fixa a pasta de destino — é como uma etapa reexecutada sobre o estado salvo
+    (`scripts/rerodar_etapa.py`) sobrescreve a sessão original em vez de abrir outra.
+    """
     settings = get_settings()
     base = settings.output_path
     slug = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or _safe(session_id[:12])
-    run_dir = base / f"{time.strftime('%Y%m%d-%H%M%S')}-{_safe(slug)}"
+    if run_dir is None:
+        run_dir = base / f"{time.strftime('%Y%m%d-%H%M%S')}-{_safe(slug)}"
+    run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
 
     written = 0

@@ -159,6 +159,8 @@ async def run_orchestrator_pipeline_stream(
     stages: Optional[List[str]] = None,
     doc_batch: Optional[DocumentBatch] = None,
     save_artifacts: bool = True,
+    initial_state: Optional[Dict[str, Any]] = None,
+    run_dir: Optional[Path] = None,
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Executa o pipeline e emite eventos: pipeline_started, agent_started, agent_chunk,
     agent_thought_chunk, gate_status, pipeline_completed | pipeline_error."""
@@ -191,7 +193,9 @@ async def run_orchestrator_pipeline_stream(
             user_id=user_id,
             session_id=session_id,
             # `briefing` alimenta o `{briefing?}` do P0b, que não vê a mensagem original
-            state={"briefing": prompt or ""},
+            # `initial_state` reexecuta uma etapa sobre o estado salvo de uma execução anterior
+            # (`scripts/rerodar_etapa.py`): produto e design ficam fixos e só a etapa pedida roda.
+            state={**(initial_state or {}), "briefing": prompt or (initial_state or {}).get("briefing", "")},
         )
         adk_artifacts_dir = settings.output_path / ".adk_artifacts"
         adk_artifacts_dir.mkdir(parents=True, exist_ok=True)
@@ -299,6 +303,7 @@ async def run_orchestrator_pipeline_stream(
                     artifact_service=artifact_service,
                     app_name=orchestrator_name,
                     user_id=user_id,
+                    run_dir=run_dir,
                 )
                 if output_dir:
                     artifacts_manifest = generate_artifact_manifest(output_dir)

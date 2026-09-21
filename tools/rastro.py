@@ -631,7 +631,7 @@ def _tabelas_de_evento(texto: str) -> List[str]:
 # "nunca WebSocket", "papel `admin-contrato` não existe mais"). Procurar só o termo
 # transformava a regra citada em violação e barrava o PRD por cumpri-la.
 _NEGACAO = re.compile(
-    r"proibid|vedado|nunca|jamais|evit[ae]|descartad|obsolet|legad|"
+    r"proibid|vedado|nunca|jamais|evit[ae]|descartad|obsolet|legad|zero\s+|"
     r"n[ãa]o\s+(existe|existem|use|usar|usamos|h[áa]|aceita|pode|deve|ser[áa]|suporta)|"
     r"em vez de|ao inv[ée]s|fora de escopo|removid|deprecia|"
     # "sem custos de WebSocket", "(sem WebSockets)", "sem suporte a WebSockets": três jeitos de

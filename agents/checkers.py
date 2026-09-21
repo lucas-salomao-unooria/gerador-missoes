@@ -559,6 +559,11 @@ class RastroCheckAgent(BaseAgent):
                 f"- {'⛔' if a['severidade'] == 'bloqueio' else '⚠️'} {(a.get('resumo') or '').split(chr(10))[0]}" for a in todos
             )
         elif status == "amarelo":
+            # Amarelo é "passa com ressalvas": o gate deixou de reprovar. Se ele reprovou numa
+            # rodada anterior do mesmo loop (PRD 🔴 na 1, 🟡 na 2), a marca precisa cair aqui
+            # também — senão a execução sai `pipeline_bloqueado` com zero impedimento e o
+            # diagnóstico lista o PRD como provisório (visto em 2026-09-21, exp06ef1b).
+            limpar_degradacao(state, delta, self.rotulo)
             msg = f"🟡 {self.rotulo}: {len(avisos)} pendência(s) de plataforma — o pipeline segue e o PRD sai 🟡, não verde.\n" + "\n".join(f"- ⚠️ {a.get('resumo') or a.get('trecho', '')}" for a in avisos)
         else:
             itens = "\n".join(f"- ⛔ [{a.get('etapa', 'dev')}] {a.get('resumo') or a.get('trecho', '')}" for a in bloqueios)
