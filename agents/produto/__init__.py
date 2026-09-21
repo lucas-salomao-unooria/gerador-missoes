@@ -8,6 +8,9 @@ Ordem (SequentialAgent):
   └───────────────────────────────────────────────────────────────────┘
   p0b A04SecoesApoio         → one_pager  (núcleo + seções 2, 5–18 + brief)
   ┌─ LoopAgent (≤ N rodadas) ─────────────────────────────────────────┐
+  │ p0c A04bContratoProdutoCheck → contrato_produto_report (lint: canal │
+  │      de sala, estado no servidor, SAEB, números sem origem)       │
+  ┌─ LoopAgent (≤ N rodadas) ─────────────────────────────────────────┐
   │ p1  A05GateEstrutural    → gate_estrutural_report               │
   │ p1c A06GateEstruturalCheck    → gate_estrutural_status (escalate)    │
   │ p1b A07RevisorOnePager   → one_pager (corrigido)                │
@@ -21,6 +24,8 @@ Ordem (SequentialAgent):
   p5  A13SpecMissao          → spec_missao   (saída final de Produto)
   p5c A14BnccCheck                → bncc_status   (determinístico: bloco 11 × BNCC Computação oficial;
                                  não conforme bloqueia design e dev)
+  p6  A16bOnePagerResumido   → one_pager_resumido (o formato curto do time de produto para
+                                 avaliação pedagógica, derivado do canônico e da spec conferida)
 """
 
 from __future__ import annotations
@@ -156,6 +161,17 @@ def get_spec_missao_agent(**kw) -> LlmAgent:
     )
 
 
+def get_one_pager_resumido_agent(**kw) -> LlmAgent:
+    return create_llm_agent(
+        name="A16bOnePagerResumido",
+        description="One-pager resumido para avaliação pedagógica, no formato do time de produto: ficha, ideia em prosa, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário por habilidade e takeaway. Condensa o canônico e a spec aprovados; não decide nada novo.",
+        instruction=load_prompt("produto/16b_one_pager_resumido.md"),
+        output_key="one_pager_resumido",
+        before_agent_callback=marcar_heranca,
+        **kw,
+    )
+
+
 def build_produto_stage(
     thinking_budget: Optional[int] = None,
     include_thoughts: Optional[bool] = None,
@@ -198,6 +214,18 @@ def build_produto_stage(
         description="Gate estrutural ↔ revisor do one-pager até aprovar ou esgotar as rodadas.",
         max_iterations=rodadas,
         sub_agents=[
+            # Antes do gate, a cada rodada: WebSocket como canal de sala, estado em
+            # `localStorage`, SAEB fora do ano e número sem origem nasciam aqui e só eram pegos
+            # duas etapas depois (A36) ou nunca. O lint não bloqueia sozinho — o gate aplica.
+            RastroCheckAgent(
+                name="A04bContratoProdutoCheck",
+                description="Contrato de plataforma e origem dos parâmetros no one-pager: canal de sala por polling, estado no servidor, SAEB só nos anos avaliados, número com origem ou marcador. Alimenta o gate estrutural.",
+                modo="one_pager",
+                rotulo="Contrato de plataforma e origem dos parâmetros",
+                report_key="contrato_produto_report",
+                status_key="contrato_produto_status",
+                estrito=False,
+            ),
             get_gate_estrutural_agent(max_rodadas=rodadas, **kw),
             EnvelopeGateAgent(
                 name="A06GateEstruturalCheck",
@@ -296,7 +324,7 @@ def build_produto_stage(
 
     return SequentialAgent(
         name="ProdutoStage",
-        description="Área de Produto: núcleo narrativo ↔ micro-gate → seções de apoio → gate estrutural → avaliações → gate final → spec da missão ↔ currículo e manifesto.",
+        description="Área de Produto: núcleo narrativo ↔ micro-gate → seções de apoio → gate estrutural → avaliações → gate final → spec da missão ↔ currículo e manifesto → one-pager resumido.",
         sub_agents=[
             nucleo_loop,
             get_secoes_apoio_agent(**kw),
@@ -312,6 +340,9 @@ def build_produto_stage(
                 block_pipeline_on_fail=estrito,
             ),
             spec_loop,
+            # Depois da spec, de propósito: o bloco 11 já passou pelo A14, então o resumido
+            # copia códigos conferidos em vez dos que a seção 2 do canônico ainda podia trocar.
+            get_one_pager_resumido_agent(**kw),
         ],
     )
 
@@ -321,6 +352,7 @@ PRODUTO_METADATA = [
     {"id": "A02MicroGate", "name": "02 · Micro-gate do núcleo", "icon": "🕵️", "output_key": "micro_gate_report", "prompt_file": "produto/02_micro_gate.md", "description": "Spoiler, gap de informação, escolha significativa e job-to-be-done — binário, até 2 rodadas."},
     {"id": "A03MicroGateCheck", "name": "03 · Veredito do micro-gate (determinístico)", "icon": "🔀", "output_key": "micro_gate_status", "prompt_file": None, "description": "Lê o envelope do micro-gate e decide se o núcleo volta ao P0a ou segue."},
     {"id": "A04SecoesApoio", "name": "04 · Seções de apoio e brief", "icon": "📝", "output_key": "one_pager", "prompt_file": "produto/04_secoes_apoio.md", "description": "Completa o one-pager canônico (seções 2 e 5–18) e o brief de escopo sobre o núcleo aprovado."},
+    {"id": "A04bContratoProdutoCheck", "name": "04b · Contrato de plataforma e origem dos parâmetros (determinístico)", "icon": "📡", "output_key": "contrato_produto_report", "prompt_file": None, "description": "Lint do one-pager a cada rodada do gate: canal de sala por polling (nunca WebSocket), estado no servidor (sem localStorage/IndexedDB), SAEB só nos anos avaliados, número com origem ou marcador. O gate aplica; o revisor corrige."},
     {"id": "A05GateEstrutural", "name": "05 · Gate estrutural", "icon": "🚧", "output_key": "gate_estrutural_report", "prompt_file": "produto/05_gate_estrutural.md", "description": "23 critérios: estrutura, ambiente, logística, evidências, viabilidade e infraestrutura."},
     {"id": "A06GateEstruturalCheck", "name": "06 · Veredito do gate (determinístico)", "icon": "🔀", "output_key": "gate_estrutural_status", "prompt_file": None, "description": "Lê o envelope JSON e decide repetir, seguir ou bloquear."},
     {"id": "A07RevisorOnePager", "name": "07 · Revisor do one-pager", "icon": "🩹", "output_key": "one_pager", "prompt_file": "produto/07_revisor_one_pager.md", "description": "Aplica o complemento pronto-pra-colar do gate; não inventa decisão de produto."},
@@ -335,4 +367,5 @@ PRODUTO_METADATA = [
     {"id": "A14BnccCheck", "name": "14 · Conformidade BNCC Computação (determinístico)", "icon": "📚", "output_key": "bncc_report", "prompt_file": None, "description": "Bloco 11 × lista oficial do MEC: código existe, é do ano da missão e inclui letramento digital. Não conforme bloqueia design e dev."},
     {"id": "A15ManifestoCheckProduto", "name": "15 · Ficha do manifesto (determinístico)", "icon": "🪪", "output_key": "manifesto_report", "prompt_file": None, "description": "Bloco 0 da spec × listas fechadas da plataforma, conferido ainda em Produto: campo errado volta para quem escreveu a spec, em vez de custar o design inteiro."},
     {"id": "A16SpecCheck", "name": "16 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
+    {"id": "A16bOnePagerResumido", "name": "16b · One-pager resumido", "icon": "🗂️", "output_key": "one_pager_resumido", "prompt_file": "produto/16b_one_pager_resumido.md", "description": "O one-pager no formato do time de produto para avaliação pedagógica: ficha, ideia, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário e takeaway. Sai em .md, .docx e .html."},
 ]

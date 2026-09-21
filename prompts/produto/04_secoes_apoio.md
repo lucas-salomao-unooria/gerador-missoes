@@ -28,7 +28,12 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 ## Regras
 
 1. **Derive, não invente.** Cada seção de apoio deve ser derivável do núcleo narrativo. Se uma seção exige informação que o núcleo não fornece e o briefing também não, marque `[PROPOSTA P0b — a validar pelo time]`.
-2. **Nunca invente código BNCC, descritor SAEB ou artigo de lei.** O foco curricular obrigatório da missão é o **Letramento Digital** (BNCC Computação — Cultura Digital). Conexões com disciplinas tradicionais são complementares e não bloqueantes. **A lista oficial está no fim deste documento: escolha dela.** O código do núcleo é sempre do eixo **Cultura Digital** (letramento digital); um código de Pensamento Computacional ou de Mundo Digital ali reprova a missão no gate final, com tudo já escrito. Só quando a lista não cobrir o que a missão faz é que se escreve o descritor em linguagem descritiva com `⚠️ código a validar com o time pedagógico` — e isso é exceção, não atalho.
+   - **Origem dos parâmetros.** Todo número que vira regra de sistema (segundos de espera, mínimo de caracteres, tamanho de arquivo, intervalo de atualização, percentual) e que não está no núcleo nem no briefing sai como `[PARÂMETRO — a definir por produto: <o quê>]` ou dentro de um `[PROPOSTA P0b — …]` — **nunca como fato**. "Após 60 segundos de inatividade", "mínimo de 20 caracteres", "150 KB por imagem" escritos como se fossem decisão tomada são invenção, e o gate reprova a seção. Um lint determinístico lista cada número sem origem antes do gate ler.
+2. **Nunca invente código BNCC, descritor SAEB ou artigo de lei.** O foco curricular obrigatório da missão é o **Letramento Digital** (BNCC Computação — Cultura Digital). **A lista oficial está no fim deste documento: escolha dela.** O código do núcleo é sempre do eixo **Cultura Digital** (letramento digital); um código de Pensamento Computacional ou de Mundo Digital ali reprova a missão no gate final, com tudo já escrito. Quatro regras de aderência:
+   - (a) **Código de Computação, primário ou secundário, só entra com o momento em tela que exercita o texto oficial da habilidade.** Não liste um código porque o material do bimestre o cita: "transmissão de dados em pacotes" não é exercitado por "as requisições de feed trafegam", e "conduta e linguagem ao se comunicar" não é exercitado por escolher uma conta e ver o feed afunilar. Reinterpretar o texto para caber é o erro que o parecer pedagógico reprova.
+   - (b) **Conexão com disciplina tradicional (Língua Portuguesa, Ciências, Matemática…) só entra com uma ação observável que a sustente**, e sempre com o sufixo "(plausível, a confirmar em fonte oficial da BNCC)". Sem ação observável, a conexão não entra — ausência é melhor do que conexão forçada.
+   - (c) **SAEB só nos anos avaliados** — 2º, 5º e 9º do Fundamental e 3ª série do Médio. Fora deles, a linha da seção 2 é literalmente "Descritor SAEB: N/A — ano não avaliado pelo SAEB". Descritor de 9º ano numa missão de 6º é erro, não potencial.
+   - (d) **Se nenhuma habilidade de Cultura Digital do ano descreve a ação da missão, não escolha a menos ruim.** Copie da seção 1 do núcleo (ou escreva, se o núcleo não trouxe) `[DECISÃO PENDENTE — responsável de produto: nenhuma habilidade de Cultura Digital do <ano> descreve <ação>; alternativas: migrar para <ano> onde <código> descreve · ancorar em <disciplina/código>]`, na seção 2 e na 18. A esteira bloqueia e devolve ao time: é o comportamento decidido, não um defeito.
 3. Use "estudante", nunca "aluno", nos textos voltados ao estudante e ao podcast.
 4. Escreva em português brasileiro; não traduza termos de plataforma (Reels, Shorts, Duet, Stories).
 5. **Slug e identificação:** copie da seção 0 do núcleo, sem alterar.
@@ -127,6 +132,16 @@ Além do one-pager canônico, entregue também um **brief de escopo** curto — 
 ```
 
 Entregue os dois documentos (one-pager canônico completo + brief de escopo) em Markdown, cada um começando pelo próprio título, sem comentários fora deles.
+
+## Contrato de plataforma que as seções 8, 10, 12 e 16 obedecem
+
+As seções técnicas descrevem **capacidades e garantias**, não tecnologias. Três regras, e a tabela abaixo é a fonte delas:
+
+1. **A sala sincroniza por polling HTTP curto** (tabela `expNNefNb_gates_turma`, ADR-93/94). Nunca WebSocket, socket.io ou "tempo real" como canal de sala: Cloud Run não sustenta. Escreva "o professor libera a etapa e as telas da turma acompanham"; o intervalo do polling não é seu — não invente "a cada 3 segundos".
+2. **Estado de missão e checkpoints vivem no servidor** (critério 4.6). As seções 8 e 16 dizem *o que* se preserva quando a conexão cai ou a sessão expira — nunca *onde* no aparelho. `localStorage`, `IndexedDB`, `sessionStorage` e "cache de contingência" não aparecem no one-pager.
+3. **A seção 16 lista o que a missão precisa** (banco curado, geração assistida, telas de comparação, portfólio), e o que ainda não existe na plataforma vira pré-requisito declarado, com a linha da tabela abaixo — não vira arquitetura escolhida por você (protocolo, formato de imagem, CDN, tamanho de arquivo).
+
+<!-- include: references/capacidades-plataforma.md -->
 
 ## BNCC Computação — a lista oficial, para você ESCOLHER e não adivinhar
 

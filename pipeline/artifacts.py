@@ -21,6 +21,7 @@ ARTIFACT_FILES = [
     ("nucleo_narrativo", "produto/00a-nucleo-narrativo.md"),
     ("micro_gate_report", "produto/00b-micro-gate.md"),
     ("one_pager", "produto/00-one-pager.md"),
+    ("contrato_produto_report", "produto/00e-contrato-produto.md"),
     ("gate_estrutural_report", "produto/01-gate-estrutural.md"),
     ("avaliacao_pedagogica_report", "produto/02-avaliacao-pedagogica.md"),
     ("experiencia_aluno_report", "produto/03-experiencia-aluno.md"),
@@ -30,6 +31,7 @@ ARTIFACT_FILES = [
     ("one_pager_gate0", "produto/00c-one-pager-original.md"),
     ("spec_missao_gate0", "produto/05a-spec-missao-gate0.md"),
     ("bncc_report", "produto/05b-conformidade-bncc.md"),
+    ("one_pager_resumido", "produto/00d-one-pager-resumido.md"),
     ("fechamento_lacunas", "design/00-fechamento-lacunas.md"),
     ("relatorio_lacunas", "design/00a-relatorio-lacunas.md"),
     ("ambiente_simulado", "design/00b-ambiente-simulado.md"),
@@ -196,10 +198,16 @@ async def _save_adk_artifacts(
     return count
 
 
-# Os dois documentos que saem da esteira para gente ler, e a etiqueta com que cada um
-# se apresenta na capa. O resto dos artefatos é insumo de trabalho e fica em Markdown.
+# Os documentos que saem da esteira para gente ler, e a etiqueta com que cada um se
+# apresenta na capa. O resto dos artefatos é insumo de trabalho e fica em Markdown.
 ONE_PAGERS_COM_MARCA = [
     ("one_pager", "produto/00-one-pager", "One-pager de produto", "Documento de produto · Unooria"),
+    (
+        "one_pager_resumido",
+        "produto/00d-one-pager-resumido",
+        "One-pager resumido",
+        "Para avaliação pedagógica · Unooria",
+    ),
     (
         "one_pager_pedagogico",
         "one-pager-pedagogico",
@@ -280,8 +288,9 @@ def save_run_artifacts(
         written += 1
 
 
-    # Os dois one-pagers também com a marca: quem os lê não lê Markdown, e são eles que
-    # circulam fora do time — a PM encaminha o de produto, a professora aprova o outro.
+    # Os one-pagers também com a marca: quem os lê não lê Markdown, e são eles que circulam
+    # fora do time — a PM encaminha o de produto, o time de produto avalia pelo resumido e a
+    # professora aprova o pedagógico.
     exportar_one_pagers(state, run_dir, slug)
 
     # Estado serializável

@@ -56,6 +56,7 @@ from prompts import list_prompt_files, list_state_variables, load_prompt  # noqa
 KNOWN_STATE_KEYS = {
     "briefing", "nucleo_narrativo", "micro_gate_report", "micro_gate_status", "micro_gate_rodada",
     "one_pager", "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_rodada",
+    "contrato_produto_report", "contrato_produto_status",
     "avaliacao_pedagogica_report", "experiencia_aluno_report", "adequacao_report", "gate_final_report", "gate_final_status",
     "spec_missao", "spec_missao_gate0", "bncc_status", "bncc_report", "fechamento_lacunas", "relatorio_lacunas", "lacunas_status",
     "ambiente_simulado", "ambiente_status",
@@ -67,7 +68,7 @@ KNOWN_STATE_KEYS = {
     "rastro_lacunas_status", "rastro_lacunas_report", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
-    "validacao_dev_report", "dev_status", "prd_final", "one_pager_pedagogico", "aprendizado_registro",
+    "validacao_dev_report", "dev_status", "prd_final", "one_pager_pedagogico", "one_pager_resumido", "aprendizado_registro",
     "pipeline_bloqueado", "pipeline_bloqueio_motivo",
     "diagnostico_execucao", "diagnostico_status", "qa_design_rodada", "tickets_retrabalho",
     "one_pager_gate0", "spec_rodada", "handoff_rodada", "banca_rodada", "reexecucoes",
@@ -82,13 +83,13 @@ REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
 
 EXPECTED_AGENTS = {
     "NucleoNarrativoLoop", "A01NucleoNarrativo", "A02MicroGate", "A03MicroGateCheck", "A04SecoesApoio",
-    "GateEstruturalLoop", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager",
+    "GateEstruturalLoop", "A04bContratoProdutoCheck", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager",
     "AvaliacoesParalelas", "A08AvaliacaoPedagogica", "A09ExperienciaEstudante",
     "A10AdequacaoPedagogica",
     "A10bAdequacaoCheck",
     "A07RevisorOnePagerParecer",
     "AvaliacoesLoop", "A11GateFinalProduto",
-    "A12GateFinalProdutoCheck", "A13SpecMissao", "A14BnccCheck", "DesignStage", "A17FechaLacunas", "A18FechaLacunasSplit",
+    "A12GateFinalProdutoCheck", "A13SpecMissao", "A14BnccCheck", "A16bOnePagerResumido", "DesignStage", "A17FechaLacunas", "A18FechaLacunasSplit",
     "A19AmbienteSimulado", "A20AmbienteSimuladoSplit", "A21BriefOficio", "A22Jornada",
     "A23Fluxo", "A24CopyPtBr", "A25Caa", "A26Telas", "A27CopyRevisao", "A30QaEntregaveis",
     "A28Prototipo", "A29ArtefatosDesign", "A29bEspelhoMiro", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets",
@@ -165,7 +166,8 @@ def test_arvore_de_agentes():
 
     loop = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "GateEstruturalLoop")
     assert isinstance(loop, LoopAgent) and loop.max_iterations == settings.gate_estrutural_max_rodadas
-    assert [a.name for a in loop.sub_agents] == ["A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager"]
+    # O lint vem antes do gate, dentro do loop: cada rodada relê a versão corrente do one-pager.
+    assert [a.name for a in loop.sub_agents] == ["A04bContratoProdutoCheck", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager"]
     banca = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "BancaValidacaoDev")
     assert len(banca.sub_agents) == 5
 
@@ -1218,6 +1220,11 @@ def test_one_pagers_com_identidade_visual():
 
     estado = {
         "one_pager": "# One-pager — Missão Ilha\n\n## 0. Identificação\n* **Slug:** `exp03ilha`\n",
+        "one_pager_resumido": (
+            "# MISSÃO DIGITAL UNOORIA · 3º ANO EF\n\n## Detetives da Ilha\n\n"
+            "> **Descoberta central:** Eu escolhi a fonte antes de saber o peso da escolha.\n\n"
+            "| Campo | Valor |\n|---|---|\n| Ambiente simulado | YouTube (unitube) |\n"
+        ),
         "one_pager_pedagogico": (
             "# Detetives da Ilha\n\n"
             "> **O que pedimos a você:** aprovar ou recusar.\n\n"
@@ -1233,6 +1240,8 @@ def test_one_pagers_com_identidade_visual():
             "one-pager-pedagogico.html",
             "produto/00-one-pager.docx",
             "produto/00-one-pager.html",
+            "produto/00d-one-pager-resumido.docx",
+            "produto/00d-one-pager-resumido.html",
         ]
 
         # O `.html` abre sozinho depois de baixado: logotipo embutido, nada em disco ao lado.
@@ -1256,7 +1265,153 @@ def test_one_pagers_com_identidade_visual():
             "exp03ilha",
         )
         assert vazio == [] and not list(Path(tmp).iterdir())
-    print("   ✓ one-pagers de produto e pedagógico: .docx e .html com a identidade visual da Unooria")
+    print("   ✓ one-pagers de produto, resumido e pedagógico: .docx e .html com a identidade visual da Unooria")
+
+
+def test_one_pager_resumido_no_formato_do_time_de_produto():
+    """O resumido tem a forma do documento que o time de produto escrevia à mão: caixas e tabelas.
+
+    Três caixas (descoberta, diferenciação, takeaway) e três tabelas (ficha, etapas, marcadores)
+    é o mínimo que o formato exige — se o exportador perder qualquer uma, o `.docx` que o time
+    lê deixa de ser o formato deles.
+    """
+    import tempfile
+
+    import docx
+
+    from pipeline.artifacts import exportar_one_pagers
+
+    documento = (
+        "# MISSÃO DIGITAL UNOORIA · 6º ANO EF\n\n"
+        "One-pager para avaliação pedagógica — v1 (primeira versão gerada)\n\n"
+        "## O algoritmo que me formou\n\n"
+        "> **Descoberta central:** Eu só segui 1 conta e isso decidiu quase tudo que eu vi depois.\n\n"
+        "| Campo | Valor |\n|---|---|\n| Ambiente simulado | Instagram (instanooria) |\n| Duração | 2 aulas de 50 min |\n\n"
+        "## 1. A ideia\n\nO professor libera o início.\n\n"
+        "## 2. Componente curricular\n\n> **Diferenciação de mecanismo frente a \"A Seleção\":** cardinalidade 1, não 3.\n\n"
+        "## 4. As 6 etapas da missão\n\n| # | Etapa | Quem conduz | O que o estudante vive |\n|---|---|---|---|\n"
+        "| 1 | Desafiar | Léo | Recebe a DM. |\n| 2 | Navegar | Estudante | Segue 1 conta. |\n\n"
+        "## 6. Contrato de evidência por habilidade (ternário)\n\n"
+        "| Marcador | Critério | Status |\n|---|---|---|\n| Presente | Nomeia o risco | Atingiu |\n"
+        "| Genérico | Risco genérico | Em processo |\n| Ausente | Nenhum risco | Não atingiu |\n\n"
+        "## 7. O takeaway da missão\n\n> O algoritmo aprende com suas interações.\n\n"
+        "---\n\n```json\n{\"agente\": \"one-pager-resumido\", \"status\": \"concluido\"}\n```\n"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp)
+        gerados = exportar_one_pagers({"one_pager_resumido": documento}, run_dir, "exp06ef1b")
+        assert sorted(p.name for p in gerados) == ["00d-one-pager-resumido.docx", "00d-one-pager-resumido.html"]
+
+        pagina = (run_dir / "produto/00d-one-pager-resumido.html").read_text(encoding="utf-8")
+        assert pagina.count("<blockquote>") == 3, "as três caixas do formato viram blockquote"
+        assert pagina.count("<table>") == 3, "ficha, etapas e marcadores viram tabela"
+        assert "One-pager resumido" in pagina and "avaliação pedagógica" in pagina
+
+        doc = docx.Document(str(run_dir / "produto/00d-one-pager-resumido.docx"))
+        assert len(doc.tables) >= 4  # capa + ficha + etapas + marcadores
+        textos = "\n".join(p.text for p in doc.paragraphs)
+        assert "Descoberta central" in textos and "takeaway" in textos.lower()
+        assert '"agente"' not in textos, "o envelope não vai para o documento que o time lê"
+    print("   ✓ one-pager resumido: três caixas e três tabelas sobrevivem ao .docx e ao .html")
+
+
+# Trechos literais do one-pager gerado para "O algoritmo que me formou" (6º EF), que passou pelo
+# gate estrutural com estes erros. É o corpus de regressão do lint: se ele deixar de pegar um
+# destes, o erro volta a nascer em Produto e a ser descoberto no Dev.
+ONE_PAGER_COM_ERROS_CONHECIDOS = """# One-pager — O algoritmo que me formou v1
+
+## 0. Identificação
+* **Ano/série:** ["6EF"]
+* **Ambiente simulado:** Instagram (seção do DS: instanooria)
+
+## 1. Descoberta central
+"Eu só segui 1 conta — e isso decidiu, sem eu saber, quase tudo que eu ia ver depois."
+
+## 2. Currículo
+### Habilidades de Computação Complementares
+* EF06CO07 — Mundo Digital: Entender o processo de transmissão de dados, como a informação é quebrada em pedaços.
+  * Aplicação na missão: Serve de base para a compreensão técnica de como as requisições de feed trafegam.
+* EF06CO09 — Cultura Digital: Apresentar conduta e linguagem apropriadas ao se comunicar em ambiente digital.
+### Descritor SAEB (Língua Portuguesa — 9º ano / EFII)
+* D14: Distinguir um fato da opinião relativa a esse fato.
+
+## 4. As 6 etapas — mecanismo, não intenção
+* O feed é liberado em 3 blocos de exatamente 3 posts (9 de um banco de 12).
+
+## 7. Caminhos degenerados
+* Após 60 segundos de inatividade, uma pulsação visual suave destaca os 3 botões "Seguir".
+* O sistema exige um tempo mínimo de permanência técnica de 4 segundos por bloco.
+* Se o estudante digitar menos de 20 caracteres por campo, o botão exibe aviso.
+
+## 8. Estados de falha
+* O estado da conta seguida e as curtidas são retidos em localStorage. O app tenta reconexão a cada 5 segundos.
+
+## 16. Requisitos técnicos e escopo
+* Motor de distribuição do feed em 3 blocos rígidos controlados por WebSocket via dashboard docente.
+* Sincronização: WebSocket com protocolo de fallback para polling HTTP a cada 3 segundos.
+* Estado Local: Cache de contingência em IndexedDB no navegador.
+* Assets: WebP (peso máximo de 150 KB por imagem de post).
+
+## 17. Hipóteses de validação
+* H1: nada aqui.
+"""
+
+
+def test_lint_do_one_pager_pega_os_erros_conhecidos():
+    """Os quatro erros que o gate deixou passar viram achado antes de o gate ler."""
+    from tools.contrato_produto import relatorio_markdown, validar_one_pager
+
+    r = validar_one_pager(ONE_PAGER_COM_ERROS_CONHECIDOS, nucleo="3 blocos de exatamente 3 posts", briefing="")
+    por_codigo = {a["codigo"]: a for a in r["achados"]}
+
+    assert r["status"] == "bloqueado"
+    assert por_codigo["websocket"]["severidade"] == "bloqueio" and "16" in por_codigo["websocket"]["resumo"]
+    assert "8, 16" in por_codigo["estado-cliente"]["resumo"]
+    assert "6º" in por_codigo["saeb-fora-do-ano"]["resumo"]
+    numeros = por_codigo["numero-sem-origem"]["resumo"]
+    for esperado in ("60 segundos", "4 segundos", "20 caracteres", "5 segundos", "3 segundos", "150 kb"):
+        assert esperado in numeros, f"faltou {esperado} na lista de números sem origem"
+    assert "EF06CO07" in por_codigo["codigo-fora-do-eixo"]["resumo"]
+    assert "EF06CO09" not in por_codigo["codigo-fora-do-eixo"]["resumo"]  # Cultura Digital não é sinal
+
+    relatorio = relatorio_markdown(r, "exp06ef1b")
+    envelope = extrair_envelope(relatorio)
+    assert envelope["status"] == "bloqueado" and envelope["agente"] == "contrato-produto"
+    assert all(a["criterio"] for a in envelope["achados"])  # cada achado diz em que critério o gate aplica
+
+    # Número que tem origem no núcleo ou no briefing deixa de ser achado; marcador também.
+    r2 = validar_one_pager(
+        ONE_PAGER_COM_ERROS_CONHECIDOS.replace("de 4 segundos por bloco", "de 4 segundos por bloco [PARÂMETRO — a definir por produto: tempo mínimo]"),
+        nucleo="pulsação após 60 segundos",
+        briefing="mínimo de 20 caracteres por campo",
+    )
+    numeros2 = {a["codigo"]: a for a in r2["achados"]}["numero-sem-origem"]["resumo"]
+    for removido in ("60 segundos", "4 segundos", "20 caracteres"):
+        assert removido not in numeros2
+
+    # Menção proibitiva não é uso: o one-pager que cita WebSocket para descartá-lo passa limpo.
+    limpo = validar_one_pager(
+        "## 0. Identificação\n* Ano/série: [\"5EF\"]\n\n## 2. Currículo\n* EF05CO09 — Cultura Digital.\n\n"
+        "## 16. Requisitos técnicos e escopo\n* Sala sincronizada por polling HTTP em exp05ef1b_gates_turma; nunca WebSocket (ADR-93).\n"
+    )
+    assert limpo["status"] == "aprovado" and limpo["achados"] == []
+    print("   ✓ lint do one-pager: WebSocket, estado de cliente, SAEB fora do ano e números sem origem viram achado antes do gate")
+
+
+def test_bncc_reconhece_decisao_de_produto_pendente():
+    """Sem código porque o time ainda precisa decidir não é 'código faltando' — é a decisão."""
+    from tools.bncc import validar_spec
+
+    spec = (
+        "# Spec — O algoritmo que me formou v1\n\n## 0. Identificação de plataforma\n* Série(s): [\"6EF\"]\n\n"
+        "## 11. Currículo\n[ABERTO — dono: produto: nenhuma habilidade de Cultura Digital do 6º ano descreve escolher uma conta "
+        "e ver o feed afunilar; alternativas: migrar para o 8º ano · ancorar em EF69LP03]\n\n## 12. Decisões\n"
+    )
+    r = validar_spec(spec)
+    codigos = [a["codigo"] for a in r["achados"]]
+    assert r["status"] == "bloqueado"
+    assert "decisao-produto" in codigos and "sem-codigo" not in codigos and "letramento" not in codigos
+    print("   ✓ gate BNCC: decisão de produto pendente bloqueia com a mensagem certa, não como código faltando")
 
 
 def test_schema_de_ferramenta_saneado():
@@ -1347,6 +1502,10 @@ if __name__ == "__main__":
         test_artefatos_html_e_links,
         test_desembrulhar_cerca_do_documento,
         test_one_pager_pedagogico_em_docx,
+        test_one_pagers_com_identidade_visual,
+        test_one_pager_resumido_no_formato_do_time_de_produto,
+        test_lint_do_one_pager_pega_os_erros_conhecidos,
+        test_bncc_reconhece_decisao_de_produto_pendente,
         test_schema_de_ferramenta_saneado,
         test_referencias_plataforma_sincronizadas,
     ]

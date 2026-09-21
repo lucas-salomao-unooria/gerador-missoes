@@ -16,6 +16,12 @@ Não avalia qualidade pedagógica (P2) nem adequação à faixa etária (P3). Av
 
 {gate_estrutural_report?}
 
+**Contrato de plataforma e origem dos parâmetros (lint determinístico sobre esta mesma versão):**
+
+{contrato_produto_report?}
+
+Ele já leu o documento por você em quatro pontos mecânicos. **Não reavalie: aplique.** Cada ⛔ é ❌ direto no critério que ele indica (9.1 item h — WebSocket como canal de sala), com o complemento reescrevendo como polling HTTP em `expNNefNb_gates_turma` sem inventar intervalo. Cada ⚠️ entra no complemento pronto pra colar: estado de cliente sai do texto (4.6); SAEB fora do ano vira "N/A — ano não avaliado pelo SAEB"; número sem origem vira `[PARÂMETRO — a definir por produto: <o quê>]` ou é removido (9.1 item i); código de Computação sem etapa é sinal para o parecer pedagógico, você só registra.
+
 ## Critérios (leia antes de avaliar)
 
 <!-- include: references/criterios-gate-estrutural.md -->
@@ -42,6 +48,8 @@ Uma missão pode pedir capacidade que a plataforma ainda não concede (gravar vo
 6. **Passo 4.5 — A mecânica sustenta a descoberta?** Leia a frase da descoberta e o que a plataforma faz no Resultado; uma nega a outra? Estenda a podcast, falas do guia e textos do professor.
 7. **Teste de implementação cega (9.1).** Percorra cada ato como máquina de estados: pré-condição → ação → regra → mudança de estado → caminho incompleto → próximo estado → ator. Confira (a) cardinalidades e bloqueios; (b) regra de geração/seleção; (c) estados incompletos; (d) quem termina antes de handoff coletivo; (e) qual conta publica cada elemento; (f) permissões antes/durante/depois; (g) fallback de pré-condição. Se designer/dev precisam inventar regra que muda a experiência → ❌.
 8. **Estados de falha (9.4).** "Exibe mensagem de erro" sem dizer qual, o que o estudante faz e se o progresso se perde não é tratamento.
+8b. **Teste de origem dos números (9.1 item i).** Para cada número das seções 7, 8, 9, 10, 15 e 16 que vira regra de sistema (segundos, caracteres, KB, percentuais, intervalos): ele está no núcleo (seções 0, 1, 3, 4) ou no briefing, ou traz marcador `[PARÂMETRO — …]` / `[PROPOSTA P0b — …]`? Número apresentado como fato sem origem é decisão de produto tomada pelo redator → ❌ em 9.1, com o complemento trocando o número pelo marcador. O lint acima lista os candidatos; confira se algum tem origem que ele não viu.
+8c. **Contrato de plataforma (9.1 item h e 4.6).** Canal de sala é polling HTTP; estado é do servidor; a seção 16 não escolhe protocolo, formato de imagem nem CDN. Violação → ❌.
 9. **Tetos numéricos:** conte, não estime, e explicite a conta.
 10. **Segunda rodada em diante:** reverifique o que foi corrigido e diga por que agora cumpre; audite o que a correção introduziu; verifique se derrubou critério que passava; registre a mudança de veredito por critério. Rodada que só carimba não é auditoria.
 

@@ -30,6 +30,9 @@ JSON_PATH: Path = REFERENCES_DIR / "bncc-computacao.json"
 
 CODIGO_RE = re.compile(r"\bE[FM]\d{2}CO\d{2}\b")
 _BLOCO_RE = r"^#{1,4}\s*%d\s*[.—-]"  # "## 11. Currículo", "## 11 — Currículo"
+#: Marcador que o one-pager e a spec usam quando nenhuma habilidade de Cultura Digital do ano
+#: descreve a ação: `[DECISÃO PENDENTE — responsável de produto: …]` ou `[ABERTO — dono: produto…]`.
+_DECISAO_RE = re.compile(r"\[(?:DECIS[ÃA]O PENDENTE|ABERTO\s*[—–-]\s*dono:\s*produto)[^\]]*\]", re.IGNORECASE)
 
 AGENTE = "bncc-check"
 
@@ -136,7 +139,12 @@ def validar_spec(spec: str) -> Dict[str, Any]:
         serie = extrair_serie(spec)
     anos, em = serie["anos"], serie["em"]
 
-    if not codigos:
+    # Decisão de produto pendente no lugar do código: a mensagem certa é "o time precisa
+    # decidir", não "código faltando" — senão o autor da spec tenta preencher com aproximação.
+    decisao = _DECISAO_RE.search(fonte_codigos)
+    if decisao:
+        achados.append({"severidade": "bloqueio", "codigo": "decisao-produto", "resumo": f"Bloqueado por decisão de produto pendente no bloco 11: `{decisao.group(0)[:220]}`. Não é código faltando — nenhuma habilidade de Cultura Digital do ano descreve a ação, e cabe ao time decidir ano ou âncora curricular."})
+    elif not codigos:
         achados.append({"severidade": "bloqueio", "codigo": "sem-codigo", "resumo": "Nenhum código de habilidade da BNCC Computação no bloco 11. A missão não declara currículo."})
     if not anos and not em:
         achados.append({"severidade": "bloqueio", "codigo": "serie", "resumo": "Série da missão não identificada no bloco 0 (esperado `[\"5EF\"]`, `5º ano`, `2EM`…). Sem série não há como conferir o ano das habilidades."})
@@ -161,7 +169,7 @@ def validar_spec(spec: str) -> Dict[str, Any]:
             if hab["etapa"] == "EM":
                 achados.append({"severidade": "atencao", "codigo": c, "resumo": f"`{c}` conta como letramento digital pela leitura **proposta** do EM (sem eixo oficial) — validar com pedagogia."})
 
-    if codigos and (anos or em) and not tem_letramento:
+    if codigos and (anos or em) and not tem_letramento and not decisao:
         if anos and not em:
             achados.append({"severidade": "bloqueio", "codigo": "letramento", "resumo": "Nenhuma habilidade de letramento digital (Cultura Digital) compatível com a série. É o único recorte da BNCC que bloqueia — e falta."})
         else:

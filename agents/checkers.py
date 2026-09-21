@@ -37,6 +37,8 @@ from pydantic import Field
 from typing_extensions import override
 
 from tools.bncc import relatorio_markdown, validar_spec
+from tools.contrato_produto import relatorio_markdown as relatorio_contrato_produto
+from tools.contrato_produto import validar_one_pager
 from tools.rastro import (
     relatorio_lacunas,
     relatorio_manifesto,
@@ -485,7 +487,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria
+    modo: str  # lacunas | manifesto | telemetria | prd | one_pager
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -498,8 +500,18 @@ class RastroCheckAgent(BaseAgent):
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         state = ctx.session.state
-        missao = extrair_slug(str(state.get("spec_missao", "") or "")) or ""
-        if self.modo == "manifesto":
+        missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
+        if self.modo == "one_pager":
+            # Roda antes do gate estrutural, a cada rodada: contrato de plataforma (canal de
+            # sala, estado no servidor), SAEB no ano certo e origem dos números. Não bloqueia
+            # sozinho — o gate converte cada achado em ❌ pelo critério e o revisor aplica.
+            resultado = validar_one_pager(
+                str(state.get("one_pager", "") or ""),
+                nucleo=str(state.get("nucleo_narrativo", "") or ""),
+                briefing=str(state.get("briefing", "") or ""),
+            )
+            relatorio = relatorio_contrato_produto(resultado, missao)
+        elif self.modo == "manifesto":
             resultado = validar_manifesto(str(state.get(self.spec_key, "") or ""))
             relatorio = relatorio_manifesto(resultado, missao)
         elif self.modo == "telemetria":
@@ -537,6 +549,12 @@ class RastroCheckAgent(BaseAgent):
         if status == "aprovado":
             msg = f"✅ {self.rotulo}: conforme."
             limpar_degradacao(state, delta, self.rotulo)
+        elif self.modo == "one_pager":
+            # Aqui o veredito é do gate estrutural; este nó só entrega a lista para ele aplicar.
+            todos = bloqueios + avisos
+            msg = f"{'⛔' if bloqueios else '🟡'} {self.rotulo}: {len(todos)} achado(s) para o gate estrutural aplicar e o revisor corrigir.\n" + "\n".join(
+                f"- {'⛔' if a['severidade'] == 'bloqueio' else '⚠️'} {(a.get('resumo') or '').split(chr(10))[0]}" for a in todos
+            )
         elif status == "amarelo":
             msg = f"🟡 {self.rotulo}: {len(avisos)} pendência(s) de plataforma — o pipeline segue e o PRD sai 🟡, não verde.\n" + "\n".join(f"- ⚠️ {a.get('resumo') or a.get('trecho', '')}" for a in avisos)
         else:

@@ -12,6 +12,12 @@ O gate estrutural bloqueou a missão e escreveu, no bloco **"Complemento — pro
 
 {gate_estrutural_report}
 
+**Contrato de plataforma e origem dos parâmetros (lint determinístico da rodada corrente):**
+
+{contrato_produto_report?}
+
+Os achados dele já estão refletidos no relatório do gate; se algum não estiver, aplique do mesmo jeito: ⛔ WebSocket vira polling HTTP em `expNNefNb_gates_turma` sem inventar intervalo; ⚠️ estado de cliente sai do texto (o que se preserva fica, onde se guarda não); ⚠️ SAEB fora do ano vira "N/A — ano não avaliado pelo SAEB"; ⚠️ número sem origem vira `[PARÂMETRO — a definir por produto: <o quê>]` ou some, nunca fica como fato.
+
 **Parecer de adequação pedagógica (quando houver):**
 
 {adequacao_report?}

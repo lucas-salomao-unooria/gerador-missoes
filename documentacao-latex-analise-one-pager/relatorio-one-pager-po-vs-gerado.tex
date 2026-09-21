@@ -1,0 +1,358 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- PACOTES FUNDAMENTAIS ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\geometry{a4paper, top=2.5cm, bottom=2.5cm, left=2.2cm, right=2.2cm}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+% --- CORES ---
+\definecolor{NavyBlue}{RGB}{16, 44, 87}
+\definecolor{SteelBlue}{RGB}{53, 89, 142}
+\definecolor{LightBlue}{RGB}{235, 243, 250}
+\definecolor{DarkGreen}{RGB}{20, 108, 67}
+\definecolor{LightGreen}{RGB}{232, 245, 233}
+\definecolor{DarkRed}{RGB}{176, 42, 55}
+\definecolor{LightRed}{RGB}{253, 237, 237}
+\definecolor{DarkYellow}{RGB}{153, 115, 0}
+\definecolor{LightYellow}{RGB}{254, 249, 231}
+\definecolor{Charcoal}{RGB}{40, 40, 40}
+\definecolor{GrayBg}{RGB}{248, 249, 250}
+\definecolor{BorderGray}{RGB}{218, 224, 233}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=NavyBlue,
+    citecolor=SteelBlue,
+    urlcolor=SteelBlue,
+    pdftitle={One-pager do time de produto x one-pager gerado: analise comparativa e plano},
+    pdfauthor={Analise tecnica - Unooria},
+    pdfsubject={Comparacao entre o one-pager manual para avaliacao pedagogica e o one-pager canonico do Gerador de Missoes},
+    pdfkeywords={one-pager, avaliacao pedagogica, BNCC, gerador de missoes, gates}
+}
+
+% --- CABECALHOS ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{SteelBlue}One-pager do time \(\times\) one-pager gerado --- Gerador de Missões}
+\fancyhead[R]{\small\color{SteelBlue}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- TITULOS ---
+\titleformat{\section}{\Large\bfseries\color{NavyBlue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{SteelBlue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{Charcoal}}{\thesubsubsection}{1em}{}
+
+% --- CAIXAS SEMANTICAS ---
+\newtcolorbox{achadobox}[1]{
+  breakable, enhanced, colback=LightRed, colframe=DarkRed,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{creditobox}[1]{
+  breakable, enhanced, colback=LightGreen, colframe=DarkGreen,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{notabox}[1]{
+  breakable, enhanced, colback=LightYellow, colframe=DarkYellow,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{tesebox}{
+  breakable, enhanced, colback=LightBlue, colframe=NavyBlue,
+  boxrule=1pt, arc=2pt, left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+\newcommand{\presente}{\textcolor{DarkGreen}{\textbf{presente}}}
+\newcommand{\parcial}{\textcolor{DarkYellow}{\textbf{parcial}}}
+\newcommand{\ausente}{\textcolor{DarkRed}{\textbf{ausente}}}
+\newcommand{\arq}[1]{\texttt{\small #1}}
+
+\setlist[itemize]{leftmargin=1.4em, itemsep=2pt, topsep=4pt}
+\setlist[enumerate]{leftmargin=1.6em, itemsep=2pt, topsep=4pt}
+\renewcommand{\arraystretch}{1.25}
+\sloppy
+\emergencystretch=3em
+
+\begin{document}
+
+% ======================= CAPA =======================
+\begin{titlepage}
+\centering
+\vspace*{2.5cm}
+
+{\color{SteelBlue}\large\scshape Unooria --- Gerador de Missões}\\[0.4cm]
+{\color{BorderGray}\rule{0.8\textwidth}{1.2pt}}\\[1.0cm]
+
+{\Huge\bfseries\color{NavyBlue} O one-pager do time}\\[0.4cm]
+{\LARGE\color{NavyBlue} e o one-pager gerado}\\[1.2cm]
+
+{\large\itshape O documento menor é melhor?}\\[0.3cm]
+{\large\itshape Comparação item a item e o que entrou na esteira}\\[1.5cm]
+
+{\color{BorderGray}\rule{0.8\textwidth}{0.6pt}}\\[1.0cm]
+
+\begin{minipage}{0.8\textwidth}
+\centering
+\small
+\textbf{Corpus:} \arq{O\_algoritmo\_que\_me\_formou\_6ano\_one-pager\_v5.docx} (time de produto) e \arq{00-one-pager.docx} (gerador)\\
+\textbf{Missão:} ``O algoritmo que me formou'' --- 6º ano EF --- Instagram simulado (instanooria)\\
+\textbf{Veredito:} públicos diferentes; o gerado é superior em cobertura, o menor em leitura --- e a esteira passa a emitir os dois\\[0.6cm]
+\textbf{Data:} 21 de setembro de 2026 \quad\textbullet\quad \textbf{Versão:} 1.0
+\end{minipage}
+
+\vfill
+{\small\color{Charcoal} Documento de análise. As seções 7 e 8 descrevem as mudanças feitas no gerador em decorrência dela.}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ======================= 1. SUMARIO =======================
+\section{Sumário executivo e veredito}
+
+\begin{tesebox}
+\textbf{O documento menor não é melhor: é outro documento.} O one-pager que o time de produto escrevia à mão é um documento de \emph{avaliação pedagógica}: sete seções, prosa, uma ficha, a tabela das etapas e um contrato de evidência por habilidade. O one-pager do gerador é um documento de \emph{auditoria}: dezoito seções que respondem, uma a uma, aos 23 critérios do gate estrutural e aos 13 critérios bloqueantes da avaliação pedagógica, mais um brief de escopo. O gerado é superior em cobertura, rastreabilidade e capacidade de passar pelos gates --- sozinho, o menor reprovaria em pelo menos oito critérios. O menor é superior em legibilidade e em cinco itens que o gerado não tem: o componente curricular do bimestre, a diferenciação frente ao catálogo, as socioemocionais por etapa, o contrato de evidência ternário com frase-template para o professor e o takeaway.
+
+A conclusão prática é que os dois devem sair da mesma execução, do mesmo conteúdo, para leitores distintos. Foi o que se implementou: um novo agente ao fim da área de Produto emite o \textbf{one-pager resumido} no formato do time, em \arq{.md}, \arq{.docx} e \arq{.html} com a identidade visual da Unooria, sem tirar nada do que já era entregue.
+\end{tesebox}
+
+\subsection{Os dois documentos em números}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l r r X@{}}
+\toprule
+\textbf{Medida} & \textbf{Time de produto (v5)} & \textbf{Gerador (v1)} & \textbf{Leitura} \\
+\midrule
+Palavras & $\approx$ 2.556 & $\approx$ 8.675 & razão de 3,4 vezes \\
+Parágrafos & 53 & 425 & o gerado é quase todo em bullets \\
+Tabelas & 8 & 5 & o menor usa tabela como forma; o gerado, como exceção \\
+Seções de primeiro nível & 7 & 18 + brief de 8 & o gerado espelha a rubrica dos gates \\
+Imagens & 0 & 1 (logotipo da capa) & --- \\
+Tempo de leitura estimado & $\approx$ 10 min & $\approx$ 35 min & --- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ======================= 2. MATRIZ =======================
+\section{Matriz item a item}
+
+A tabela confronta cada item do documento do time com o que existe no gerado. ``Presente'' significa que a informação está lá; ``parcial'' que ela está, mas em outra forma ou incompleta; ``ausente'' que não há equivalente.
+
+\begin{small}
+\begin{longtable}{@{}p{0.30\textwidth} p{0.11\textwidth} p{0.53\textwidth}@{}}
+\toprule
+\textbf{Item do documento do time} & \textbf{No gerado} & \textbf{Onde e como} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Item do documento do time} & \textbf{No gerado} & \textbf{Onde e como} \\
+\midrule
+\endhead
+Cabeçalho ``Missão digital Unooria · 6º ano'' + subtítulo com versão e o que mudou & \parcial & Capa e título ``One-pager de produto''; changelog só aparece quando o revisor do gate roda. \\
+Caixa ``Descoberta central'' & \presente & Seção 1, mesma frase em primeira pessoa. \\
+Ficha: ambiente, ano, modalidade, duração, personagem-guia (onde aparece), produto final & \parcial & Seção 0 traz ambiente, ano, modalidade e tempo. ``Personagem-guia: onde aparece'' e ``Produto final'' estão diluídos na prosa das seções 3 e 4. \\
+``1. A ideia'': o mecanismo inteiro em três parágrafos & \parcial & Seções 3 e 4 têm todo o mecanismo, com as mesmas cardinalidades, mas em bullets por etapa e cinco vezes mais longo. \\
+``2. Componente curricular'': o que o bimestre ensina, ``em uma frase'', como a missão reencena o bimestre etapa a etapa & \ausente & Seção 2 lista códigos e rastreabilidade bimestral (unidade, capítulo), mas não diz o que o bimestre ensina nem mapeia etapa a conceito. \\
+Códigos BNCC com marcador de honestidade (``plausível, sem confirmação'') & \parcial & Códigos presentes; conexões disciplinares afirmadas como fato. \\
+Caixa ``Diferenciação de mecanismo frente a `A Seleção' (7º ano)'' & \ausente & Nenhuma comparação com o catálogo, embora o critério 2.5 da avaliação pedagógica a peça. \\
+``3. Habilidades socioemocionais'' com a etapa em que cada uma é exercida & \parcial & Seção 2 nomeia a Competência Geral 5 e uma competência socioemocional, sem o momento por etapa. \\
+``4. As 6 etapas'' em tabela (etapa, quem conduz, o que o estudante vive) & \parcial & Conteúdo completo na seção 4, sem a forma compacta. \\
+``5. Onde o professor atua'': antes, cada liberação, dashboard, depois & \presente & Seção 9 (mais detalhada: handoffs, quem terminou cedo, roteiro de debate). \\
+``6. Contrato de evidência por habilidade (ternário)'': ação observável, marcadores, frase-template, pendentes, quem calcula & \ausente & Seção 12 tem uma rubrica genérica de quatro níveis (abaixo, básico, proficiente, avançado) por ação e por reflexão, não por habilidade, sem frase para o professor e sem ``quem calcula''. \\
+``7. O takeaway'': princípio generalizável + fechamento & \ausente & O mais próximo é a própria descoberta central. \\
+\bottomrule
+\end{longtable}
+\end{small}
+
+\noindent Em contagem: de doze itens, dois estão presentes, seis parciais e quatro ausentes. Os quatro ausentes são exatamente os que dão ao documento do time o caráter de avaliação pedagógica --- e são os que o novo agente passa a produzir.
+
+% ======================= 3. ONDE O MENOR GANHA =======================
+\section{Onde o documento menor ganha}
+
+\begin{creditobox}{Legibilidade e forma}
+Lê-se em dez minutos. A ideia é contada em prosa, com as cardinalidades exatas (3 contas, 3 blocos de 3 posts, 9 de 12, 3 ocultos do ângulo oposto) e sem contradição interna. A tabela das seis etapas cabe numa página e responde, por linha, quem conduz e o que o estudante vive.
+\end{creditobox}
+
+\begin{creditobox}{Ancoragem no bimestre}
+A seção ``Componente curricular'' diz o que o material do Entre Redes ensina nas seis semanas, resume em uma frase e mostra como a missão reencena o percurso: seguir 1 conta é o comportamento que o algoritmo aprende; o Explorar reponderado é a personalização em ação; a comparação entre colegas é a comparação de bolhas que o bimestre pede. O gerado tem rastreabilidade (unidade, capítulo), mas não essa leitura.
+\end{creditobox}
+
+\begin{creditobox}{Contrato de evidência por habilidade}
+Para cada habilidade: a ação observável, três marcadores (atingiu, em processo, não atingiu) com critério explícito, e a frase que o professor lê em cada caso. Fecha com ``quem calcula o quê'' e separa o que é contrato do que é decisão de implementação. É diretamente utilizável pelo professor e pela plataforma. A rubrica do gerado é genérica e de quatro níveis.
+\end{creditobox}
+
+\begin{creditobox}{Honestidade declarada}
+Toda conexão disciplinar não confirmada vem marcada: ``plausíveis, mas ainda sem confirmação em fonte oficial da BNCC''. O gerado afirma as conexões como fato --- inclusive uma implausível (ver seção 5).
+\end{creditobox}
+
+\begin{creditobox}{Diferenciação e takeaway}
+A caixa de diferenciação frente a ``A Seleção'' (7º ano) responde ao critério 2.5 do catálogo com o teste certo: o que muda no tipo de decisão, na cardinalidade e no que é revelado, separado do que é convenção de plataforma. O takeaway generaliza a descoberta para além do app simulado.
+\end{creditobox}
+
+% ======================= 4. ONDE O GERADO GANHA =======================
+\section{Onde o documento gerado ganha}
+
+\begin{creditobox}{Cobertura dos gates}
+O canônico existe para passar pelos 23 critérios do gate estrutural e pelos 13 bloqueantes da avaliação pedagógica. Sozinho, o documento do time reprovaria em pelo menos oito: caminhos degenerados (seção 7 do canônico), estados de falha (critério 9.4), cenários de dispositivo (10.1 a 10.3), tetos da faixa (seção 15), evidências e dados pessoais (7.3 e seção 12), hipóteses de validação (9.3), podcast de recapitulação (4.7) e verificação de ambiente com verbos nativos (2.6). Nenhum desses blocos é supérfluo: cada um responde a uma pergunta que design ou dev fariam.
+\end{creditobox}
+
+\begin{creditobox}{Nível de tela}
+O critério 1.2 exige interação em nível de tela --- o que o estudante vê, o que faz, o que muda. O gerado cumpre isso etapa a etapa, com verbo nativo, regra do sistema e quem conduz. O documento do time descreve a experiência; o gerado descreve o sistema.
+\end{creditobox}
+
+\begin{creditobox}{Papel do professor operacional}
+A seção 9 do gerado tem o que o critério 4.1 chama de teste de handoff: o que aciona a entrada do professor, o que a plataforma faz enquanto ele media, o que acontece com quem terminou cedo, o roteiro de perguntas escrito. O documento do time tem a lista de liberações, que é o essencial, mas não o resto.
+\end{creditobox}
+
+\begin{creditobox}{Rastreabilidade e decisões}
+Seções 17 (hipóteses) e 18 (decisões de direção, trade-offs, propostas marcadas) registram por que a missão é assim e não de outro jeito. Essa memória não existe no documento do time.
+\end{creditobox}
+
+% ======================= 5. PROBLEMAS =======================
+\section{Problemas de cada um}
+
+\subsection{No gerado: detalhes inventados e contraditórios}
+
+\begin{achadobox}{Contradições internas e violações de contrato de plataforma}
+\begin{itemize}
+\item A seção 8 diz que o estado é retido em \arq{localStorage}; a seção 16 diz \arq{IndexedDB}. São afirmações diferentes sobre o mesmo mecanismo.
+\item A seção 16 prevê ``motor de distribuição controlado por WebSocket''. O contrato de plataforma proíbe WebSocket (a checagem determinística de telemetria da etapa de Dev reprova exatamente isso). O erro nasce em Produto e só seria pego duas etapas depois.
+\item Números sem origem no briefing: ``4 segundos por bloco'', ``menos de 20 caracteres'', ``sinal sonoro suave'', ``em menos de 15 segundos'', ``polling a cada 3 segundos'', ``150 KB por imagem''. Nenhum é decisão de produto registrada; todos parecem decisão.
+\end{itemize}
+\end{achadobox}
+
+\begin{achadobox}{Currículo afirmado com pouca base}
+\begin{itemize}
+\item Descritores SAEB D14 e D20 de Língua Portuguesa do 9º ano aplicados a uma missão de 6º ano, sem a ressalva que o critério 5.6 pede.
+\item EF06CI10 (``como o funcionamento do sistema nervoso pode ser afetado por substâncias psicoativas'') listado como conexão com Ciências.
+\item EF06CO07 citado com o texto oficial correto (transmissão de dados em pacotes) e justificado como ``compreensão técnica de como as requisições de feed trafegam'' --- uma racionalização, não uma aplicação.
+\item O foco primário em EF06CO09 (``conduta e linguagem apropriadas ao se comunicar em ambiente digital'') é o código de Cultura Digital disponível, não o que descreve a missão. Ver seção 6.
+\end{itemize}
+\end{achadobox}
+
+\subsection{No documento do time: os códigos BNCC estão com texto errado}
+
+\begin{achadobox}{Três códigos de Computação com a habilidade trocada}
+Confrontado com a lista oficial (\arq{prompts/references/bncc-computacao.json}, transcrição do anexo da Resolução CNE/CEB 1/2022), nenhum dos três códigos de Computação do documento do time corresponde ao texto que ele atribui:
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}l X X@{}}
+\toprule
+\textbf{Código} & \textbf{O que o documento do time diz} & \textbf{O que a norma diz} \\
+\midrule
+EF06CO07 & Impacto das tecnologias digitais na sociedade, cultura e relações humanas (foco primário) & Entender o processo de transmissão de dados em pacotes através de múltiplos equipamentos --- eixo Mundo Digital \\
+EF06CO03 & Compreensão do conceito de algoritmo e sua aplicação em contextos cotidianos & Descrever com precisão a solução de um problema, construindo o programa que a implementa --- eixo Pensamento Computacional \\
+EF06CO01 & Identificação de padrões em dados e processos & Classificar informações em coleções e associar cada coleção a um tipo de dados --- eixo Pensamento Computacional \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Nenhum dos três é de Cultura Digital. Pela regra da esteira, uma missão do Fundamental sem habilidade de letramento digital é bloqueada pelo gate determinístico de currículo. O documento do time, tal como está, não passaria.
+\end{achadobox}
+
+\begin{notabox}{De onde vem o erro}
+O relatório de análise do Entre Redes (\arq{Relatorio\_Analise\_BNCC\_Computacao\_EntreRedes.docx}) mostra que o material do 6º ano mapeia EF06CO01, 03, 05, 07 e 08 e ``foca em bolhas de algoritmos de feed''. O time herdou os códigos do livro e parafraseou as habilidades pelo tema tratado, não pelo texto da norma. É um erro de transcrição, não de julgamento pedagógico: a habilidade que o time descreve para EF06CO07 é a que a missão de fato exercita --- só não é a que o código nomeia.
+\end{notabox}
+
+% ======================= 6. PROBLEMA ESTRUTURAL =======================
+\section{Um problema que os dois compartilham}
+
+\begin{notabox}{A BNCC Computação do 6º ano não tem habilidade para esta missão}
+O eixo Cultura Digital do 6º ano tem duas habilidades: EF06CO09 (conduta e linguagem ao se comunicar em ambiente digital) e EF06CO10 (consumo de tecnologia e sustentabilidade). Nenhuma fala de recomendação algorítmica, personalização ou bolhas. O gerado força EF06CO09 como foco primário e escreve uma justificativa para caber; o time escolhe o código que o livro usa e descreve a habilidade certa com o texto errado. Os dois caminhos são sintomas do mesmo limite da norma.
+
+A postura correta, e a que o novo agente adota, combina os dois documentos: os códigos saem só do bloco 11 da spec, já conferido contra a lista oficial, e tudo o que não estiver na lista sai com a marca de honestidade do time --- ``plausível, a confirmar em fonte oficial''. Decidir se a missão deveria migrar para o 8º ano, onde ``O conteúdo que não chegou'' já ocupa o mesmo eixo, ou se a BNCC de Língua Portuguesa (EF69LP03, pontos de vista no campo jornalístico) deveria virar âncora declarada, é decisão do time, não do gerador.
+\end{notabox}
+
+% ======================= 7. O QUE ENTROU NA ESTEIRA =======================
+\section{O que entrou na esteira}
+
+\subsection{Um novo agente ao fim de Produto}
+
+O agente \arq{A16bOnePagerResumido} (prompt \arq{prompts/produto/16b\_one\_pager\_resumido.md}) roda depois do loop da spec, de propósito: o bloco 11 já passou pela checagem de currículo, então o resumido copia códigos conferidos em vez dos que a seção 2 do canônico ainda podia trocar. Ele recebe o one-pager canônico, a spec, o relatório de conformidade, os três pareceres, o gate final, o briefing (com o material do bimestre, quando anexado) e o catálogo de missões. Sua regra central é copiar, não reescrever: números, nomes, cardinalidades e códigos vêm da fonte; divergência entre canônico e spec é registrada, não resolvida.
+
+O formato de saída reproduz item a item o documento do time:
+
+\begin{enumerate}
+\item Cabeçalho ``Missão digital Unooria · ano'', subtítulo com versão e o que mudou, nome da missão.
+\item Caixa da descoberta central.
+\item Ficha em tabela: ambiente, ano, modalidade, duração, personagem-guia (onde aparece), produto final.
+\item ``1. A ideia'' em três parágrafos de prosa.
+\item ``2. Componente curricular'': o que o bimestre ensina (do material anexado; sem material, marcador ``a preencher'' em vez de invenção), ``em uma frase'', reencenação etapa a etapa, códigos com foco primário e secundárias, disciplinas ``a confirmar'', e a caixa de diferenciação frente ao catálogo.
+\item ``3. Habilidades socioemocionais'' com a etapa de cada uma.
+\item ``4. As 6 etapas'' em tabela.
+\item ``5. Onde o professor atua'': antes, cada liberação, dashboard, depois.
+\item ``6. Contrato de evidência por habilidade (ternário)'': por código confirmado, ação observável, tabela de marcadores, frase-template, habilidades pendentes, quem calcula o quê.
+\item ``7. O takeaway'' em caixa, com fechamento.
+\end{enumerate}
+
+\subsection{Arquivos e exportação}
+
+O documento sai em \arq{produto/00d-one-pager-resumido.md}, \arq{.docx} e \arq{.html}, com a identidade visual da Unooria (capa navy, logotipo, títulos com régua lavanda, tabelas com cabeçalho da marca), pelo mesmo exportador dos outros dois one-pagers (\arq{pipeline/artifacts.py}, lista \arq{ONE\_PAGERS\_COM\_MARCA}). Aparece na aba Produto da interface como ``16b · One-pager resumido'' e no manifesto de arquivos da missão. O brief de escopo (agente 04, para stakeholders) e o one-pager pedagógico (agente 49, para a professora aprovar ao fim do Dev) continuam como estavam.
+
+\subsection{Verificação feita}
+
+\begin{itemize}
+\item A suíte estrutural (\arq{test\_pipeline.py}) passa: árvore de agentes com o novo nó, chaves de estado, prompts interpoláveis, numeração canônica dos rótulos e exportação dos três one-pagers com marca.
+\item Teste novo: um documento no formato do time atravessa o exportador e chega ao \arq{.html} com as três caixas e as três tabelas, e ao \arq{.docx} com as tabelas e sem o envelope JSON.
+\item \arq{test\_session\_artifacts.py}: 33 testes passam.
+\end{itemize}
+
+\begin{notabox}{O que ainda não foi verificado}
+A execução real da esteira com o briefing de ``O algoritmo que me formou'' e o material do bimestre anexado --- a única forma de conferir se o modelo respeita a regra de copiar, se os códigos coincidem com o bloco 11 e se o contrato de evidência sai por habilidade. É o próximo passo, e custa uma rodada da área de Produto.
+\end{notabox}
+
+% ======================= 8. CORRECOES NA ESTEIRA =======================
+\section{Correções aplicadas na esteira}
+
+Os sete problemas da seção 5 não são do documento: nascem de lacunas em prompts, critérios e checagens da área de Produto, e se repetiriam na próxima missão. Cada um foi fechado na origem.
+
+\begin{small}
+\begin{longtable}{@{}p{0.34\textwidth} p{0.62\textwidth}@{}}
+\toprule
+\textbf{Problema} & \textbf{O que mudou} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Problema} & \textbf{O que mudou} \\
+\midrule
+\endhead
+WebSocket como canal de sala (\S 16) & O prompt das seções de apoio passa a incluir o contrato de plataforma (\arq{capacidades-plataforma.md}) com três regras: sala por polling HTTP, estado no servidor, seção 16 sem protocolo, formato ou CDN escolhidos pelo redator. Um lint determinístico novo (\arq{tools/contrato\_produto.py}, nó \arq{A04bContratoProdutoCheck}) roda dentro do loop do gate, antes de cada rodada, e marca WebSocket como \textcolor{DarkRed}{\textbf{BLOQUEIO}}; o critério 9.1 ganha o item (h) e o gate aplica \textcolor{DarkRed}{\textbf{REPROVA}} sem reavaliar. \\
+\arq{localStorage} \(\times\) \arq{IndexedDB} (\S 8 e \S 16) & Regra no prompt: as seções dizem o que se preserva, nunca onde no aparelho. O lint marca \textcolor{DarkYellow}{\textbf{AVISO}} qualquer armazenamento de cliente afirmado; o critério 4.6 ganha o teste correspondente. \\
+Números sem origem (60 s, 4 s, 20 caracteres, 5 s, 3 s, 150 KB) & Regra de origem dos parâmetros no prompt: número que não vem do núcleo nem do briefing sai como \arq{[PARÂMETRO --- a definir por produto]}. O lint lista, linha a linha, todo número com unidade nas seções 7, 8, 9, 10, 15 e 16 sem origem e sem marcador; o critério 9.1 ganha o item (i) e o gate tem um passo próprio para conferir. Sobre o documento real, o lint listou 11 parâmetros. \\
+SAEB D14/D20 do 9º ano no 6º & Anos avaliados explícitos nos prompts e nos critérios (2º, 5º e 9º EF; 3ª EM); fora deles, ``N/A --- ano não avaliado pelo SAEB''. O lint marca \textcolor{DarkYellow}{\textbf{AVISO}} quando a série da seção 0 não está entre eles. \\
+EF06CI10 como conexão de Ciências & Conexão disciplinar só entra com ação observável que a sustente, sempre com ``(plausível, a confirmar)''. Sem ação, o parecer pedagógico emite ajuste exigido de remoção --- ausência é melhor do que conexão forçada. \\
+EF06CO07 racionalizado & Código de Computação, primário ou secundário, só entra com o momento em tela que exercita o texto oficial; o parecer trata reinterpretação como ajuste exigido de remoção. O lint sinaliza código fora de Cultura Digital sem etapa na janela de texto. \\
+EF06CO09 forçado como foco & Decisão do time em 21/09/2026: \textbf{bloquear e devolver}. Os prompts do núcleo e das seções de apoio passam a exigir \arq{[DECISÃO PENDENTE --- responsável de produto: \ldots]} com alternativas quando nenhuma habilidade de Cultura Digital do ano descreve a ação; o parecer trata o caso como \textcolor{DarkRed}{\textbf{REPROVA}} com \textcolor{SteelBlue}{\textbf{DECISÃO}}; a spec copia o marcador como \arq{[ABERTO --- dono: produto]}, e o gate determinístico de currículo o reconhece e reporta ``bloqueado por decisão de produto pendente'' em vez de ``código faltando''. \\
+\bottomrule
+\end{longtable}
+\end{small}
+
+\begin{creditobox}{Verificação}
+A suíte estrutural passa com o novo nó na posição certa dentro do loop do gate. Um teste de regressão usa os trechos literais do one-pager gerado e confere que o lint devolve: um \textcolor{DarkRed}{\textbf{BLOQUEIO}} (WebSocket na seção 16), estado de cliente nas seções 8 e 16, SAEB fora do ano, os seis números sem origem e o código EF06CO07 sem etapa --- e que menção proibitiva (``nunca WebSocket'') e número com origem no núcleo ou com marcador não geram achado. Outro teste confere que o gate de currículo reporta a decisão pendente com a mensagem certa. Rodado sobre o texto integral do \arq{00-one-pager.docx}, o lint devolve \textbf{bloqueado}, com os achados acima e onze parâmetros sem origem.
+\end{creditobox}
+
+\begin{notabox}{Consequência para esta missão}
+Com a esteira corrigida, ``O algoritmo que me formou'' no 6º ano não passa mais: o esperado é \textcolor{DarkRed}{\textbf{VERMELHO}} no gate final com a decisão pendente para o time --- migrar para o 8º ano, onde o eixo já tem missão no catálogo, ou ancorar em Língua Portuguesa (EF69LP03). O bloqueio é o comportamento decidido, não um defeito da esteira.
+\end{notabox}
+
+\end{document}
