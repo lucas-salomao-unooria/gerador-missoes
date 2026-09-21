@@ -146,13 +146,24 @@ def listar_sessoes() -> List[Dict[str, Any]]:
     """Histórico da sidebar, cacheado por uma assinatura barata do diretório de saída.
 
     `list_saved_sessions()` era chamada a cada rerun — inclusive ao digitar no filtro ou
-    mexer em qualquer widget. A assinatura é (nome, mtime) das subpastas: muda quando uma
-    missão é criada, removida ou regravada, e custa um `scandir` sem ler nenhum arquivo.
+    mexer em qualquer widget. A assinatura é (nome, mtime da pasta, mtime do conversa.json)
+    das subpastas: muda quando uma missão é criada, removida ou regravada, e custa um
+    `scandir` mais um `stat` por sessão, sem ler nenhum arquivo.
+
+    O mtime do `conversa.json` entra porque, no bucket via GCS-FUSE, a "pasta" é um objeto
+    marcador cuja data não muda quando os arquivos dentro dela mudam — uma sessão reexecutada
+    por `scripts/rerodar_etapa.py` continuava 🔴 na lista até o processo reiniciar (2026-09-21).
     """
+    def _mtime(caminho: Path) -> int:
+        try:
+            return int(caminho.stat().st_mtime)
+        except OSError:
+            return 0
+
     try:
         base = get_settings().output_path
         assinatura = repr(sorted(
-            (p.name, int(p.stat().st_mtime))
+            (p.name, _mtime(p), _mtime(p / "conversa.json"))
             for p in base.iterdir()
             if p.is_dir() and not p.name.startswith(".")
         ))
