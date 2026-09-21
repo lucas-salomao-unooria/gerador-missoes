@@ -1002,6 +1002,49 @@ def test_artefatos_html_e_links():
     print("   ✓ artefatos: protótipo separado do relatório, diagramas montados do Mermaid, projeto do Stitch reconhecido")
 
 
+def test_visao_do_professor_nos_diagramas_e_na_folha_do_stitch():
+    """O segundo grafo (professor) vira diagrama nomeado; a folha do Stitch denuncia a ausência dele."""
+    from tools.artefatos_html import e_diagrama_do_professor, extrair_mermaid_com_titulos, montar_folha_de_diagramas
+    from tools.stitch_cliente import montar_folha_de_links
+
+    fluxo = (
+        "## Grafo (Mermaid — obrigatório)\n```mermaid\nstateDiagram-v2\n[*] --> E1\n```\n\n"
+        "## Fluxo do professor (Mermaid — obrigatório)\n```mermaid\nstateDiagram-v2\n[*] --> E0PROF01\n```\n"
+    )
+    blocos = extrair_mermaid_com_titulos(fluxo)
+    assert [t for t, _ in blocos] == ["Grafo", "Fluxo do professor"]
+    assert e_diagrama_do_professor(blocos[1][0]) and not e_diagrama_do_professor(blocos[0][0])
+
+    folha = montar_folha_de_diagramas("M", None, fluxo)
+    assert folha.count("<section>") == 2 and "<h2>Fluxo do professor</h2>" in folha
+
+    # No Miro, o grafo do professor é um widget próprio com id estável.
+    import tools.miro_cliente as _mc
+
+    diagramas = []
+    for chave, titulo_bloco, documento in (("fluxo", "Fluxo de telas", fluxo),):
+        b = _mc.extrair_mermaid_com_titulos(documento)
+        diagramas.append({"id": chave, "titulo": titulo_bloco, "mermaid": b[0][1]})
+        prof = next((m for t, m in b[1:] if _mc.e_diagrama_do_professor(t)), None)
+        if prof:
+            diagramas.append({"id": f"{chave}-professor", "titulo": "Fluxo do professor", "mermaid": prof})
+    svg = _mc.montar_svg(diagramas)
+    assert 'id="fluxo"' in svg and 'id="fluxo-professor"' in svg
+
+    dados = {"url_projeto": "https://stitch/p/1", "project_id": "1", "telas": [
+        {"titulo": "E2-ALU-01 — Feed", "dispositivo": "MOBILE", "largura": 780, "altura": 1768, "url_imagem": "https://img/a"},
+        {"titulo": "E4-PROF-01 — Telão", "dispositivo": "DESKTOP", "largura": 2732, "altura": 2048, "url_imagem": "https://img/b"},
+    ]}
+    sem_preparo = montar_folha_de_links(dados, "exp06ef1b")
+    assert "## Visão do professor" in sem_preparo and "E4-PROF-01" in sem_preparo
+    assert "[LACUNA — dono: telas]" in sem_preparo and "E0-PROF-01…05" in sem_preparo
+
+    dados["telas"].append({"titulo": "E0-PROF-02 — Recorte da aula", "dispositivo": "DESKTOP", "url_imagem": "https://img/c"})
+    com_preparo = montar_folha_de_links(dados, "exp06ef1b")
+    assert "[LACUNA" not in com_preparo and "E0-PROF-02" in com_preparo
+    print("   ✓ visão do professor: segundo grafo nomeado nos diagramas e no Miro; folha do Stitch denuncia preparo ausente")
+
+
 def test_miro_espelha_o_mermaid_sem_rede():
     """O espelho publica o mesmo Mermaid da folha HTML e reusa o board entre rodadas."""
     import re
@@ -1506,6 +1549,7 @@ if __name__ == "__main__":
         test_one_pager_resumido_no_formato_do_time_de_produto,
         test_lint_do_one_pager_pega_os_erros_conhecidos,
         test_bncc_reconhece_decisao_de_produto_pendente,
+        test_visao_do_professor_nos_diagramas_e_na_folha_do_stitch,
         test_schema_de_ferramenta_saneado,
         test_referencias_plataforma_sincronizadas,
     ]

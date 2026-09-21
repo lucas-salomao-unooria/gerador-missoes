@@ -77,7 +77,7 @@ Isto decide o layout do palco e é onde protótipo de missão costuma mentir. A 
 
 - **`viewport` declarado** (a casca de aparelho, tipicamente 375×812): a tela da criança é de celular, mas aparece **dentro de uma moldura de aparelho centralizada numa página desktop**. Desenhe assim: fundo de página desktop, a moldura do aparelho ao centro com cantos arredondados e uma borda de 8 a 10px em `borda/padrao`, e a tela por dentro nas medidas declaradas. É o que a criança vê de verdade num Chromebook.
 - **Sem `viewport`**: a experiência ocupa a janela inteira. O palco é a área útil do desktop, tipicamente 1366×768.
-- **Telas de professor e de projeção** são sempre desktop cheio, sem moldura de aparelho, mesmo numa missão cuja tela de estudante é de celular. Marque no trilho a qual ator cada tela pertence.
+- **Telas de professor e de projeção** são sempre desktop cheio, sem moldura de aparelho, mesmo numa missão cuja tela de estudante é de celular. Marque no trilho a qual ator cada tela pertence. **O trilho do professor é obrigatório e começa antes da aula:** `E0-PROF-01…05` navegáveis (escolher a missão → recorte da aula → geração em andamento → curadoria → ativar), com a tela de recorte e a de curadoria preenchidas com uma das três aulas da tabela do bloco 8 (disciplina diferente do banco default), e a transição "atividade ativada" levando à primeira tela do estudante. Quem revisa precisa conseguir percorrer o que o professor de Biologia ou de História faria, sem ler a spec.
 
 Uma linha de 11px abaixo da moldura diz o que ela é: `casca de aparelho 375×812 dentro do hub` ou `janela do hub, 1366×768`. Sem isso, quem revisa mede a tela errada e pede mudança que não existe.
 

@@ -83,7 +83,7 @@ _VALIDADORES = [
     ("A39BancaProdutoNarrativa", "validacao_produto_narrativa", "dev/39_validacao_produto_narrativa.md",
      "Dimensão A — PO sênior de EdTech: produto e narrativa (PROD-01…16)."),
     ("A40BancaDesignImersao", "validacao_design_imersao", "dev/40_validacao_design_imersao.md",
-     "Dimensão B — Design lead: design e imersão (DES-01…13)."),
+     "Dimensão B — Design lead: design e imersão (DES-01…14)."),
     ("A41BancaPedagogiaBncc", "validacao_pedagogia_bncc", "dev/41_validacao_pedagogia_bncc.md",
      "Dimensão C — Avaliação educacional e BNCC (PED-01…15)."),
     ("A42BancaDadosLgpd", "validacao_dados_lgpd", "dev/42_validacao_dados_lgpd.md",
@@ -211,6 +211,9 @@ def build_dev_stage(
         {"chave": "fluxo_arestas", "rotulo": "fluxo", "etapa_padrao": "design"},
         {"chave": "copy_strings_revisada", "rotulo": "copy revisada", "etapa_padrao": "design"},
         {"chave": "wireframes_cobertura", "rotulo": "telas", "etapa_padrao": "design"},
+        # A folha do Stitch registra `[LACUNA — dono: telas]` quando a visão do professor
+        # (E0-PROF-*) não foi construída — sem esta fonte a lacuna existiria e ninguém a leria.
+        {"chave": "stitch_links", "rotulo": "telas no Stitch", "etapa_padrao": "design"},
         {"chave": "camada_caa", "rotulo": "camada CAA", "etapa_padrao": "design"},
         {"chave": "ambiente_simulado", "rotulo": "ambiente simulado", "etapa_padrao": "design"},
         {"chave": "handoff_dev", "rotulo": "handoff de dev", "etapa_padrao": "dev"},
@@ -360,7 +363,7 @@ DEV_METADATA = [
     {"id": "A37HandoffCheck", "name": "37 · Veredito do handoff (determinístico)", "icon": "🔀", "output_key": "handoff_rodada", "prompt_file": None, "description": "Contrato de telemetria conforme encerra o loop; reprovado devolve o handoff ao V1 com o relatório."},
     {"id": "A38LacunaCheck", "name": "38 · Rastro de lacunas (determinístico)", "icon": "🧭", "output_key": "rastro_lacunas_report", "prompt_file": None, "description": "Marcadores de lacuna em spec, design, handoff e assets, por dono: o que faltou de input, produto, design ou dev impede o PRD; plataforma vira pendência humana (🟡)."},
     {"id": "A39BancaProdutoNarrativa", "name": "39 · Banca: Produto & Narrativa", "icon": "🅰️", "output_key": "validacao_produto_narrativa", "prompt_file": "dev/39_validacao_produto_narrativa.md", "description": "PROD-01…16."},
-    {"id": "A40BancaDesignImersao", "name": "40 · Banca: Design & Imersão", "icon": "🅱️", "output_key": "validacao_design_imersao", "prompt_file": "dev/40_validacao_design_imersao.md", "description": "DES-01…13."},
+    {"id": "A40BancaDesignImersao", "name": "40 · Banca: Design & Imersão", "icon": "🅱️", "output_key": "validacao_design_imersao", "prompt_file": "dev/40_validacao_design_imersao.md", "description": "DES-01…14."},
     {"id": "A41BancaPedagogiaBncc", "name": "41 · Banca: Pedagogia & BNCC", "icon": "🅲", "output_key": "validacao_pedagogia_bncc", "prompt_file": "dev/41_validacao_pedagogia_bncc.md", "description": "PED-01…15."},
     {"id": "A42BancaDadosLgpd", "name": "42 · Banca: Dados, Telemetria & LGPD", "icon": "🅳", "output_key": "validacao_dados_lgpd", "prompt_file": "dev/42_validacao_dados_lgpd.md", "description": "DAD-01…15."},
     {"id": "A43BancaTecnicaArquitetura", "name": "43 · Banca: Técnica & Arquitetura", "icon": "🅴", "output_key": "validacao_tecnica_arquitetura", "prompt_file": "dev/43_validacao_tecnica_arquitetura.md", "description": "TEC-01…13."},

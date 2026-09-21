@@ -85,6 +85,7 @@ One-pager para avaliação pedagógica — v<x> (<o que mudou nesta versão, em 
 | Duração | <n aulas de 50 min (total)> |
 | Personagem-guia | <nome (em que etapas aparece) — ou "nenhum: a tensão vem da mecânica"> |
 | Produto final | <o que o estudante produz e onde fica registrado> |
+| Quem customiza | Professor de qualquer disciplina, pelo recorte da aula (disciplina, tema, assuntos) — <o que a IA gera a partir dele> |
 
 ## 1. A ideia
 
@@ -131,7 +132,15 @@ Ao longo do bimestre, o estudante aprende:
 
 ## 5. Onde o professor atua
 
-**Antes da aula:** <o que ele insere, o que a IA gera, o que ele revisa e aprova, o banco default sem IA>.
+**Antes da aula:** <os cinco passos do preparo: escolher a missão · recorte da aula (disciplina, tema, assuntos) · geração pela IA · curadoria e edição · ativar; o banco default sem IA>.
+
+A mesma missão em três aulas (copiada da seção 9b do canônico):
+
+| Disciplina | Recorte do professor | O que a IA gera | O que não muda |
+|---|---|---|---|
+| <Português> | <…> | <…> | <…> |
+| <Ciências / Biologia> | <…> | <…> | <…> |
+| <História> | <…> | <…> | <…> |
 
 **Durante a missão**, o professor libera cada transição — o estudante nunca decide sozinho quando avançar:
 

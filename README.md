@@ -598,7 +598,7 @@ output/20260904-143000-exp-04-fake-news/
 │   ├── 01-handoff-dev.md              # User stories fechadas e telemetria
 │   ├── 01b-brief-assets.md            # Especificação para produção de assets
 │   ├── 02a-banca-produto-narrativa.md # Validação PROD-01…16
-│   ├── 02b-banca-design-imersao.md    # Validação DES-01…13
+│   ├── 02b-banca-design-imersao.md    # Validação DES-01…14
 │   ├── 02c-banca-pedagogia-bncc.md    # Validação PED-01…15
 │   ├── 02d-banca-dados-lgpd.md        # Validação DAD-01…15
 │   ├── 02e-banca-tecnica-arquitetura.md # Validação TEC-01…13

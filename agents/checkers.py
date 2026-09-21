@@ -338,6 +338,9 @@ class ArtefatosDesignAgent(BaseAgent):
                     dados = coletar_links(pid, ids_de_reserva=extrair_screen_ids(relatorio))
                     delta[self.links_key] = montar_folha_de_links(dados, titulo)
                     linhas.append(f"🔗 Stitch: {len(dados['telas'])} tela(s) no projeto `{pid}` — link no relatório e no PRD.")
+                    if dados["telas"] and not any("E0-PROF" in (t.get("titulo") or "").upper() for t in dados["telas"]):
+                        # A folha já carrega o marcador `[LACUNA — dono: telas]`; aqui só se avisa.
+                        linhas.append("⚠️ Nenhuma tela do preparo do professor (`E0-PROF-*`) no Stitch — lacuna registrada na folha com dono `telas`.")
                 else:
                     linhas.append("⚠️ Stitch ligado, mas o relatório de wireframes não trouxe o identificador do projeto.")
         except Exception as exc:  # a coleta é conveniência: nunca derruba a esteira

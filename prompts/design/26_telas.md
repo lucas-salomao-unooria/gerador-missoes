@@ -55,7 +55,7 @@ Se disponível, nesta ordem exata:
 
 **Economia de contexto, que é regra e não conselho:** não peça o HTML nem a imagem de tela nenhuma. Você precisa do **link**, não do arquivo. Pedir o código ou a captura de todas as telas estoura o contexto da etapa e derruba a execução inteira.
 
-**Priorize** quando o inventário for grande: pico, aha, uma tela por etapa, depois os estados degenerados. Declare o que ficou fora.
+**Priorize** quando o inventário for grande: pico, aha, uma tela por etapa, depois os estados degenerados. Declare o que ficou fora. **Exceção que não se prioriza para fora: as telas do professor no preparo (`E0-PROF-01…05`) e a de dashboard são obrigatórias** — a visão do professor é entregável, e sem elas o QA (D6) e o rastro de lacunas reprovam a etapa. Se a cota apertar, corte estados degenerados do estudante antes de cortar uma tela do professor; entre as do professor, as últimas a cair são `E0-PROF-02` (recorte) e `E0-PROF-04` (curadoria).
 
 No relatório, entregue **esta tabela**, que é o que vai ao PRD:
 
@@ -129,9 +129,13 @@ As restrições do mapa CAA são **restrição de build**, no mesmo nível do te
 
 Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica — a redundância `texto+ícone` que a copy já pede continua valendo por outro caminho.
 
-## Telas de professor — obrigatórias (4.4)
+## Telas de professor — obrigatórias (4.3 e 4.4)
 
-Dashboard em tempo real (quem está em que etapa, **o que pede ação**) · controles de handoff · evidências agregadas da turma · evidência individual (com o grau da medida ao lado). Dados vêm da raia "Evidência capturada". Nenhuma comparação nominal de mérito (8.5); nenhuma coluna ordenável com medida de criança (PED-07).
+**Preparo (Seção 1c da jornada — a missão é customizada pelo professor de qualquer disciplina):** `E0-PROF-01` catálogo/escolher a missão · `E0-PROF-02` recorte da aula (disciplina em `Selection`, tema, assuntos em lista, contexto; botão "usar banco padrão") · `E0-PROF-03` geração em andamento (progresso, e o estado sem saldo de IA) · `E0-PROF-04` curadoria do pacote (prévia dos itens gerados, editar qualquer texto, regenerar item, aprovar) · `E0-PROF-05` ativar/agendar. Estados a gerar: padrão · gerando · sem saldo · pacote pronto. **A tela de recorte e a de curadoria saem preenchidas com uma das três aulas da tabela "a mesma missão em três aulas" do bloco 8 — uma disciplina diferente do banco default**, para que quem lê veja o que o professor de Biologia ou de História faria.
+
+**Condução (4.4):** dashboard em tempo real (quem está em que etapa, **o que pede ação**) · controles de handoff · evidências agregadas da turma · evidência individual (com o grau da medida ao lado). Dados vêm da raia "Evidência capturada". Nenhuma comparação nominal de mérito (8.5); nenhuma coluna ordenável com medida de criança (PED-07).
+
+**Sobre que DS as telas do professor nascem:** não é a seção do ambiente simulado. Tela de professor vive no hub da Unooria e usa o **kit do DS da plataforma** (referência abaixo, "Kit por tipo de tela"): configuração → `TextField`/`Selection` + `Modal md`; monitor da turma → `Table` + `AvatarGroup` + `Tag` + `Snackbar`; catálogo → `Card interactive` + `Badge` + `SectionHeader` + `EmptyState`. `DESKTOP`, escala de cinza, os mesmos nove tokens. O DESIGN.md do passo 2 declara as duas superfícies (clone do ambiente para o estudante; hub para o professor) para o Stitch não vestir a tela do professor de Instagram.
 
 ## Definição de pronto (declare a contagem)
 

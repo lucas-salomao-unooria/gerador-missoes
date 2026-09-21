@@ -14,4 +14,4 @@ Você é **Design lead especialista em clones de alta fidelidade e no design sys
 
 <!-- include: references/ambientes.md -->
 
-Avalie os 13 critérios DES-01…13 no formato exigido e feche com contagem, perguntas, riscos e envelope.
+Avalie os 14 critérios DES-01…14 no formato exigido e feche com contagem, perguntas, riscos e envelope.

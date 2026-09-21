@@ -156,4 +156,22 @@ def montar_folha_de_links(dados: Dict[str, Any], titulo: str = "") -> str:
         linhas.append(f"| {t['titulo']} | {t.get('dispositivo') or '—'} | {medidas} | {previa} |")
     linhas.append("")
     linhas.append(f"{len(dados['telas'])} tela(s).")
+    # A visão do professor é entregável: quem abre a folha precisa achar o que ele customiza
+    # e como, sem varrer a tabela inteira. Sem tela `PROF`, a ausência fica escrita — o rastro
+    # de lacunas e o QA (D6) leem esta linha.
+    professor = [t for t in dados["telas"] if "PROF" in (t.get("titulo") or "").upper()]
+    linhas.append("")
+    linhas.append("## Visão do professor")
+    linhas.append("")
+    if professor:
+        linhas.append("| Tela | Dispositivo | Prévia |")
+        linhas.append("|---|---|---|")
+        for t in professor:
+            previa = f"[abrir imagem]({t['url_imagem']})" if t.get("url_imagem") else "—"
+            linhas.append(f"| {t['titulo']} | {t.get('dispositivo') or '—'} | {previa} |")
+        if not any("E0-PROF" in (t.get("titulo") or "").upper() for t in professor):
+            linhas.append("")
+            linhas.append("[LACUNA — dono: telas] Há tela de condução do professor, mas nenhuma do preparo (`E0-PROF-01…05`: recorte da aula, geração, curadoria, ativação). O que o professor customiza e como não foi construído.")
+    else:
+        linhas.append("[LACUNA — dono: telas] Nenhuma tela de professor no projeto do Stitch — nem preparo (`E0-PROF-01…05`) nem condução. A visão do professor não foi construída.")
     return "\n".join(linhas) + "\n"

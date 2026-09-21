@@ -46,6 +46,10 @@ Para o diagrama ficar legível:
 
 **Layout:** passo horizontal = largura do nó + 200 px; nós secundários em faixa própria abaixo (nunca sob o nó pai); notas e legenda só depois de o grafo estar dimensionado.
 
+## O segundo grafo — fluxo do professor (obrigatório)
+
+A visão do professor é entregável: quem prepara a missão é o professor de qualquer disciplina, e o board no Miro espelha este grafo ao lado do do estudante. Em **bloco Mermaid próprio**, sob o título fixo `## Fluxo do professor (Mermaid — obrigatório)`: nós `E0-PROF-01…05` (escolher a missão · recorte da aula · geração em andamento · curadoria do pacote · ativar/agendar) com os estados encostados `vazio`, `gerando`, `sem saldo de IA`, `falha da geração (503)`, `pacote pronto`, `editado`, `ativado`; a decisão `banco default × gerar com IA`; a volta `curadoria → editar → aprovar`; o gate `ativar atividade`, cuja saída liga ao grafo do estudante pela aresta `atividade ativada → E1-ALU-01`; e os gates de condução (liberar etapa, pausar, zerar turma) com as duas saídas. Os cinco testes abaixo valem para este grafo também. Rótulos de aresta vêm do bloco 8 da spec (`POST /atividades`, `gerar`, `progresso`, `aprovar`, `ativar`) — nada inventado.
+
 ## Os cinco testes (rode todos, sempre)
 
 1. **Toda tela tem saída** (exceção única: a tela final).
@@ -85,6 +89,12 @@ Inclua os **estados de falha** do bloco 2 da spec (conexão, sessão expirada, m
 
 
 ## Grafo (Mermaid — obrigatório)
+```mermaid
+stateDiagram-v2
+  ...
+```
+
+## Fluxo do professor (Mermaid — obrigatório)
 ```mermaid
 stateDiagram-v2
   ...

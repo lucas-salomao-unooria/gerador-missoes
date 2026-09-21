@@ -51,6 +51,33 @@ def extrair_mermaid(texto: Optional[str]) -> List[str]:
     return [b.strip() for b in _BLOCO_MERMAID.findall(texto) if b.strip()]
 
 
+_TITULO_MD = re.compile(r"^#{1,4}\s+(.+?)\s*$", re.MULTILINE)
+
+
+def extrair_mermaid_com_titulos(texto: Optional[str]) -> List[Tuple[str, str]]:
+    """Blocos Mermaid com o título do heading mais próximo acima de cada um.
+
+    O documento de fluxo passou a ter dois grafos — o do estudante e o do professor — e
+    tanto a folha de diagramas quanto o espelho no Miro precisam nomeá-los pelo que são,
+    não por "Fluxo · 2". O heading imediatamente acima do bloco é o nome; sem heading, vazio.
+    """
+    if not texto or not isinstance(texto, str):
+        return []
+    saida: List[Tuple[str, str]] = []
+    for m in _BLOCO_MERMAID.finditer(texto):
+        bloco = m.group(1).strip()
+        if not bloco:
+            continue
+        titulos = _TITULO_MD.findall(texto[: m.start()])
+        titulo = titulos[-1].strip() if titulos else ""
+        saida.append((re.sub(r"\s*\(.*?\)\s*$", "", titulo).strip(), bloco))
+    return saida
+
+
+def e_diagrama_do_professor(titulo: str) -> bool:
+    return bool(re.search(r"professor|docente", titulo or "", re.IGNORECASE))
+
+
 _PAGINA = """<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -137,9 +164,14 @@ def montar_folha_de_diagramas(titulo: str, jornada: Optional[str], fluxo: Option
     """Página única com os diagramas da jornada e do fluxo. ``None`` se não houver nenhum."""
     blocos: List[Tuple[str, str]] = []
     for rotulo, texto in (("Jornada", jornada), ("Fluxo de telas", fluxo)):
-        diagramas = extrair_mermaid(texto)
-        for i, d in enumerate(diagramas, 1):
-            nome = rotulo if len(diagramas) == 1 else f"{rotulo} · {i}"
+        diagramas = extrair_mermaid_com_titulos(texto)
+        for i, (titulo_bloco, d) in enumerate(diagramas, 1):
+            if len(diagramas) == 1:
+                nome = rotulo
+            elif e_diagrama_do_professor(titulo_bloco):
+                nome = "Fluxo do professor" if rotulo.startswith("Fluxo") else "Jornada do professor"
+            else:
+                nome = titulo_bloco or f"{rotulo} · {i}"
             blocos.append((nome, d))
     if not blocos:
         return None

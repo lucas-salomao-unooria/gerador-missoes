@@ -26,7 +26,7 @@ from xml.sax.saxutils import escape as escapar_xml
 import httpx
 
 from config import get_settings
-from tools.artefatos_html import extrair_mermaid
+from tools.artefatos_html import e_diagrama_do_professor, extrair_mermaid_com_titulos
 
 logger = logging.getLogger("miro_cliente")
 
@@ -233,13 +233,21 @@ def publicar_diagramas(
         ("jornada", "Jornada do estudante", jornada),
         ("fluxo", "Fluxo de telas", fluxo),
     ):
-        blocos = extrair_mermaid(documento)
+        blocos = extrair_mermaid_com_titulos(documento)
         if not blocos:
             ressalvas.append(f"{titulo_bloco}: nenhum bloco Mermaid no documento — nada a espelhar")
             continue
-        if len(blocos) > 1:
-            ressalvas.append(f"{titulo_bloco}: {len(blocos)} blocos Mermaid; espelhado o primeiro")
-        diagramas.append({"id": chave, "titulo": titulo_bloco, "mermaid": blocos[0]})
+        # O primeiro bloco é o do estudante. O documento de fluxo traz um segundo grafo, o do
+        # professor (preparo e condução), sob heading próprio: ele vira widget separado, com
+        # id estável, para o board mostrar a visão do professor ao lado da do estudante.
+        diagramas.append({"id": chave, "titulo": titulo_bloco, "mermaid": blocos[0][1]})
+        extras = blocos[1:]
+        professor = next((b for t, b in extras if e_diagrama_do_professor(t)), None)
+        if professor:
+            diagramas.append({"id": f"{chave}-professor", "titulo": f"{titulo_bloco.split(' ')[0]} do professor", "mermaid": professor})
+        sobrando = len(extras) - (1 if professor else 0)
+        if sobrando > 0:
+            ressalvas.append(f"{titulo_bloco}: {len(blocos)} blocos Mermaid; espelhados o do estudante{' e o do professor' if professor else ''}")
 
     if not diagramas:
         raise RuntimeError("nenhum diagrama Mermaid para publicar")
@@ -285,7 +293,12 @@ def montar_folha_de_links(dados: Dict[str, Any], titulo: str = "") -> str:
     linhas.append("")
     linhas.append("| Diagrama | Espelhado de |")
     linhas.append("| --- | --- |")
-    origem = {"jornada": "`design/02-jornada-telas.md`", "fluxo": "`design/03-fluxo-arestas.md`"}
+    origem = {
+        "jornada": "`design/02-jornada-telas.md`",
+        "fluxo": "`design/03-fluxo-arestas.md`",
+        "fluxo-professor": "`design/03-fluxo-arestas.md` (seção \"Fluxo do professor\")",
+        "jornada-professor": "`design/02-jornada-telas.md` (seção 1c)",
+    }
     for d in dados.get("diagramas", []):
         linhas.append(f"| {d['titulo']} | {origem.get(d['id'], '—')} |")
     linhas.append("")

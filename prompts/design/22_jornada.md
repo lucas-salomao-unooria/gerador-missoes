@@ -54,6 +54,9 @@ O arquivo `design/09-diagramas.html` é montado automaticamente a partir deste b
 
 Célula sem resposta na spec é `⚠️ lacuna`, nunca invenção.
 
+### Seção 1c — Jornada do professor (preparo e condução)
+A missão é aplicada pelo professor de **qualquer disciplina**, e a visão dele é entregável tanto quanto a do estudante. Tabela própria, **colunas** = os passos do preparo no hub mais a aula: `Escolher a missão → Recorte da aula (disciplina · tema · assuntos · contexto) → Geração pela IA → Curadoria do pacote → Ativar/agendar → Conduzir (gates) → Depois (relatório)`. **Raias:** Professor — vê · Professor — faz · O que muda na tela · O que a plataforma faz (geração assíncrona por polling de progresso, quota de IA e o que aparece sem saldo, banco default, congelamento do pacote) · Estado (vazio · gerando · sem saldo · pacote pronto · editado · ativado). Fonte: bloco 8 da spec (recorte, schema, rotas de Atividade, curadoria) e bloco 9 (dashboard). Célula sem resposta na spec é `⚠️ lacuna` com dono `gate-estrutural`. Feche com uma linha por disciplina da tabela "a mesma missão em três aulas" do bloco 8: o que muda na tela de curadoria em cada caso (é isso que o wireframe da tela de recorte vai mostrar preenchido).
+
 ### Seção 2 — Cenários de dispositivo
 | | 1 estudante/dispositivo | 2–4 por dispositivo | Projeção única |
 |---|---|---|---|
@@ -67,7 +70,7 @@ Célula sem resposta na spec é `⚠️ lacuna`, nunca invenção.
 
 **Coluna "Habilidade":** o código da spec cuja ação em tela acontece **nesta** tela, ou `—`. É aqui que nasce o "momento em tela" que o QA (D2) e a banca (PED-02) vão procurar — se você não escrever, eles vão inferir, e inferência de currículo é o que a esteira não pode ter. Toda habilidade do bloco 11 precisa aparecer em pelo menos uma tela; habilidade sem tela é lacuna com dono `gate-estrutural`, e tela `pico` sem habilidade é achado de ofício.
 
-ID `E<etapa>-<ator>-<n>` (`E0-PROF-01` para Preparação/Curadoria de Conteúdo com IA, `E2-ALU-01`, `E5-PROF-01`, `E3-SIS-01`). Peso `pico · alta · média · serviço` derivado das marcas do mapa de beats — **exatamente uma tela `pico`**. Estados obrigatórios quando existirem: primeira vez com scaffolding vs usos seguintes; vazio / carregando / espera de professor; degradado (dispositivo compartilhado). Tela órfã (sem etapa ou ator) é achado.
+ID `E<etapa>-<ator>-<n>` (`E2-ALU-01`, `E5-PROF-01`, `E3-SIS-01`). **As telas do professor no preparo são obrigatórias e são cinco**, uma por passo da Seção 1c, com Ambiente = `Unooria Hub (kit configuração)` e Peso `serviço` (ou `alta` para o recorte e a curadoria): `E0-PROF-01` Escolher a missão no catálogo · `E0-PROF-02` Recorte da aula (disciplina, tema, assuntos, contexto; banco default como alternativa) · `E0-PROF-03` Geração em andamento (progresso por polling; sem saldo de IA) · `E0-PROF-04` Curadoria do pacote (prévia, editar qualquer texto, regenerar item, aprovar) · `E0-PROF-05` Ativar ou agendar para a turma. As telas de condução (`E4-PROF-*`, dashboard) continuam como hoje. Peso `pico · alta · média · serviço` derivado das marcas do mapa de beats — **exatamente uma tela `pico`**. Estados obrigatórios quando existirem: primeira vez com scaffolding vs usos seguintes; vazio / carregando / espera de professor; degradado (dispositivo compartilhado). Tela órfã (sem etapa ou ator) é achado.
 
 ### Seção 4 — Direção por tela (só `pico` e `alta`)
 | Tela | Beat que carrega | O que salta primeiro (um único elemento) | O que recua (obrigatório) | Teto de elementos (contado) | Não-negociável honrado |
@@ -140,6 +143,7 @@ Colunas que não podem ficar vazias, e por quê:
 
 ## Seção 1 — Mapa de jornada (tabela raias × etapas)
 ## Seção 1b — Diagrama da jornada (bloco ```mermaid, obrigatório)
+## Seção 1c — Jornada do professor (preparo e condução) — tabela + a linha por disciplina
 ## Seção 2 — Cenários de dispositivo
 ## Seção 3 — Inventário de telas
 ## Seção 4 — Direção por tela + nota de aderência ao mapa de beats (cada marca, a tela que a carrega, e onde você se afastou e por quê)

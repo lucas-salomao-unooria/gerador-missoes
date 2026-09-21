@@ -74,7 +74,8 @@ Não escolheu nada · escolheu tudo · não usou a ferramenta · exploração m�
 Conexão cai · sessão expira · mídia não carrega · professor não libera — o que o estudante vê (na voz da ficção), o que ele faz, o que se preserva.
 
 ## 9. Papel do professor e parametrização com IA
-Preparo e customização assistida por IA; antes / durante / depois na sala de aula; gatilhos de handoff; comportamento da plataforma durante a mediação; quem terminou cedo; dashboard; roteiro de perguntas do debate (≥ 3, escritas).
+**9a. Preparo — o fluxo do professor em cinco passos**, na ordem em que ele os vive no hub da Unooria (Missão = catálogo; Atividade = a instância que ele configura): (1) escolher a missão no catálogo do ano · (2) **recorte da aula** — disciplina (lista dos componentes curriculares + "Projeto / interdisciplinar"), tema (título curto), assuntos da aula (3 a 6 itens), contexto opcional da turma · (3) geração do pacote pela IA (assíncrona; o que ele vê enquanto gera; o que vê sem saldo de IA) · (4) curadoria — prévia do pacote, edição de qualquer texto, regenerar item, aprovar · (5) ativar ou agendar para a turma. Banco curado default disponível sem IA em (2). Depois: antes / durante / depois na sala de aula; gatilhos de handoff; comportamento da plataforma durante a mediação; quem terminou cedo; dashboard; roteiro de perguntas do debate (≥ 3, escritas).
+**9b. A mesma missão em três aulas** — tabela obrigatória, derivada do teste das três disciplinas da seção 3: `| Disciplina | Recorte do professor | O que a IA gera (posts, mensagens, perfis…) | O que não muda |`, com Português, Ciências/Biologia e História (ou Geografia). Copie os exemplos do núcleo; se o núcleo trouxe `[LIMITE DE TRANSVERSALIDADE — …]`, a linha correspondente repete o marcador em vez de inventar um exemplo que a mecânica não sustenta.
 
 ## 10. Modularidade, tempos sugeridos e controle do professor
 Tabela das etapas com tempos sugeridos; checkpoints de pausa e salvamento; controle docente; cenários: aula única (50 min), 2 aulas (2x 50 min), sessões fracionadas (20–40 min).
@@ -83,7 +84,7 @@ Tabela das etapas com tempos sugeridos; checkpoints de pausa e salvamento; contr
 Roteiro completo, 2 apresentadores, 5 blocos (abertura ~30s, recapitulação ~1–1,5 min, revelação ~1–1,5 min, provocação ~30s–1 min, encerramento ~15s), 3–5 min.
 
 ## 12. Evidências e dados
-O que é capturado, quando, finalidade, retenção, acesso; o que NÃO é coletado; graus de medida; canal; texto livre de menor; segredo de servidor; gabarito.
+O que é capturado, quando, finalidade, retenção, acesso; o que NÃO é coletado; graus de medida; canal; texto livre de menor; segredo de servidor; gabarito. A Atividade guarda `disciplina` e o recorte da aula como metadados do professor (rótulo do relatório pós-aula); nunca são dado do estudante.
 
 ## 13. Cenários de dispositivo
 1:1 · 2–4 por dispositivo · projeção única — o que muda e se a descoberta chega.

@@ -85,3 +85,17 @@ instrumento, não de tela.
 Nenhum token, fonte, cor ou componente da seção `unooria` dentro das telas do
 clone (e vice-versa). Um `Button` da plataforma no feed quebra a ilusão que a
 experiência está medindo.
+
+## DES-14 — Visão do professor completa e transversal
+A missão é preparada pelo professor de qualquer disciplina. As cinco telas do
+preparo (`E0-PROF-01…05`: escolher a missão, recorte da aula com disciplina, tema
+e assuntos, geração em andamento, curadoria do pacote, ativar) existem na
+jornada (seção 1c), no fluxo (segundo grafo, "Fluxo do professor"), no Stitch
+(folha de links, seção "Visão do professor") e no protótipo (trilho do
+professor), sobre o kit do DS do hub — não sobre a seção do ambiente simulado.
+A tela de recorte e a de curadoria mostram uma aula de disciplina diferente do
+banco default, tirada da tabela "a mesma missão em três aulas" do bloco 8 da
+spec. Tela do preparo ausente do Stitch é `[LACUNA — dono: telas]`; fluxo do
+professor ausente é lacuna com dono `fluxo`; formulário que só aceita um tipo de
+conteúdo sem `[LIMITE DE TRANSVERSALIDADE]` declarado é achado com dono
+`gate-estrutural`.
