@@ -172,19 +172,69 @@ def get_one_pager_resumido_agent(**kw) -> LlmAgent:
     )
 
 
+def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
+    """Spec da missão ↔ BNCC e ficha do manifesto. Usado pela etapa inteira e pela correção a partir da spec."""
+    return LoopAgent(
+        name="SpecLoop",
+        description="Spec da missão ↔ conformidade curricular e ficha do manifesto, até passar ou esgotar as rodadas.",
+        max_iterations=rodadas_spec,
+        sub_agents=[
+            get_spec_missao_agent(**kw),
+            BnccCheckAgent(
+                name="A14BnccCheck",
+                description="Confere o bloco 11 da spec contra a lista oficial da BNCC Computação: código existe, é do ano da missão e há letramento digital.",
+                estrito=settings.bncc_check_estrito,
+                before_agent_callback=marcar_heranca,
+            ),
+            RastroCheckAgent(
+                name="A15ManifestoCheckProduto",
+                description="Ficha do manifesto no bloco 0 da spec, conferida ainda em Produto: campo fora do vocabulário fechado volta para quem escreveu a spec.",
+                modo="manifesto",
+                rotulo="Ficha do manifesto (produto)",
+                report_key="manifesto_report",
+                status_key="manifesto_status",
+                estrito=settings.esteira_estrita,
+                before_agent_callback=marcar_heranca,
+            ),
+            SaidaDeLoopAgent(
+                name="A16SpecCheck",
+                description="Currículo e manifesto conformes encerram o loop; reprovados devolvem a spec ao autor com os dois relatórios.",
+                rotulo="Spec da missão",
+                status_keys=["bncc_status", "manifesto_status"],
+                rodada_key="spec_rodada",
+                max_rounds=rodadas_spec,
+            ),
+        ],
+    )
+
+
 def build_produto_stage(
     thinking_budget: Optional[int] = None,
     include_thoughts: Optional[bool] = None,
     modo_estrito: Optional[bool] = None,
     max_rodadas: Optional[int] = None,
+    a_partir_de: Optional[str] = None,
 ) -> SequentialAgent:
-    """Monta a etapa de Produto como SequentialAgent aninhado."""
+    """Monta a etapa de Produto como SequentialAgent aninhado.
+
+    `a_partir_de="spec"` monta só o fim da etapa — SpecLoop e one-pager resumido — para o modo
+    correção: núcleo, one-pager e gates da execução anterior ficam como estão no estado.
+    """
     settings = get_settings()
     estrito = settings.produto_modo_estrito if modo_estrito is None else modo_estrito
     rodadas = max(1, max_rodadas or settings.gate_estrutural_max_rodadas)
     rodadas_spec = max(1, settings.spec_max_rodadas)
     rodadas_avaliacoes = max(1, settings.avaliacoes_max_rodadas)
     kw = {"thinking_budget": thinking_budget, "include_thoughts": include_thoughts}
+
+    if a_partir_de is not None:
+        if a_partir_de != "spec":
+            raise ValueError(f"a_partir_de inválido: {a_partir_de!r} (só 'spec' é suportado)")
+        return SequentialAgent(
+            name="ProdutoStage",
+            description="Área de Produto — correção a partir da spec: spec ↔ currículo e manifesto → one-pager resumido (núcleo, one-pager e gates preservados da execução anterior).",
+            sub_agents=[_build_spec_loop(kw, settings, rodadas_spec), get_one_pager_resumido_agent(**kw)],
+        )
 
     nucleo_loop = LoopAgent(
         name="NucleoNarrativoLoop",
@@ -268,38 +318,7 @@ def build_produto_stage(
     # determinísticos e baratos: currículo (BNCC) e ficha do manifesto. Antes, o manifesto
     # só era conferido no começo do dev — duas etapas depois de quem o escreveu, quando o
     # conserto já custava descartar o design inteiro. Aqui o autor da spec reescreve na hora.
-    spec_loop = LoopAgent(
-        name="SpecLoop",
-        description="Spec da missão ↔ conformidade curricular e ficha do manifesto, até passar ou esgotar as rodadas.",
-        max_iterations=rodadas_spec,
-        sub_agents=[
-            get_spec_missao_agent(**kw),
-            BnccCheckAgent(
-                name="A14BnccCheck",
-                description="Confere o bloco 11 da spec contra a lista oficial da BNCC Computação: código existe, é do ano da missão e há letramento digital.",
-                estrito=settings.bncc_check_estrito,
-                before_agent_callback=marcar_heranca,
-            ),
-            RastroCheckAgent(
-                name="A15ManifestoCheckProduto",
-                description="Ficha do manifesto no bloco 0 da spec, conferida ainda em Produto: campo fora do vocabulário fechado volta para quem escreveu a spec.",
-                modo="manifesto",
-                rotulo="Ficha do manifesto (produto)",
-                report_key="manifesto_report",
-                status_key="manifesto_status",
-                estrito=settings.esteira_estrita,
-                before_agent_callback=marcar_heranca,
-            ),
-            SaidaDeLoopAgent(
-                name="A16SpecCheck",
-                description="Currículo e manifesto conformes encerram o loop; reprovados devolvem a spec ao autor com os dois relatórios.",
-                rotulo="Spec da missão",
-                status_keys=["bncc_status", "manifesto_status"],
-                rodada_key="spec_rodada",
-                max_rounds=rodadas_spec,
-            ),
-        ],
-    )
+    spec_loop = _build_spec_loop(kw, settings, rodadas_spec)
 
     avaliacoes_loop = LoopAgent(
         name="AvaliacoesLoop",
@@ -347,6 +366,9 @@ def build_produto_stage(
     )
 
 
+#: Agentes do estágio parcial "spec" (correção a partir da spec), na ordem em que rodam.
+SPEC_AGENT_IDS = ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A16SpecCheck", "A16bOnePagerResumido"]
+
 PRODUTO_METADATA = [
     {"id": "A01NucleoNarrativo", "name": "01 · Núcleo narrativo", "icon": "🎬", "output_key": "nucleo_narrativo", "prompt_file": "produto/01_nucleo_narrativo.md", "description": "Seções 0, 1, 3 e 4 a partir do briefing e dos anexos: descoberta, narrativa e as 6 etapas."},
     {"id": "A02MicroGate", "name": "02 · Micro-gate do núcleo", "icon": "🕵️", "output_key": "micro_gate_report", "prompt_file": "produto/02_micro_gate.md", "description": "Spoiler, gap de informação, escolha significativa e job-to-be-done — binário, até 2 rodadas."},
@@ -369,3 +391,5 @@ PRODUTO_METADATA = [
     {"id": "A16SpecCheck", "name": "16 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
     {"id": "A16bOnePagerResumido", "name": "16b · One-pager resumido", "icon": "🗂️", "output_key": "one_pager_resumido", "prompt_file": "produto/16b_one_pager_resumido.md", "description": "O one-pager no formato do time de produto para avaliação pedagógica: ficha, ideia, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário e takeaway. Sai em .md, .docx e .html."},
 ]
+
+PRODUTO_METADATA_SPEC = [m for m in PRODUTO_METADATA if m["id"] in SPEC_AGENT_IDS]

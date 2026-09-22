@@ -74,6 +74,8 @@ KNOWN_STATE_KEYS = {
     "one_pager_gate0", "spec_rodada", "handoff_rodada", "banca_rodada", "reexecucoes",
     "adequacao_status", "avaliacoes_rodada",
     "degradacoes", "heranca_degradada", "agentes_degradados",
+    # modo correção (pipeline/reexecucao.py): pedido lido por todo agente, triagem e seu insumo
+    "pedido_correcao", "triagem_correcao", "mapa_da_missao",
 }
 # Variáveis estáticas substituídas pelo loader antes do ADK
 CONFIG_VARS = {"gdrive_folder_url": "g", "stitch_mcp_mode": "off", "stitch_project_url_base": "u", "gate_max_rodadas": 3, "qa_max_rodadas": 1}
@@ -805,6 +807,14 @@ def test_regressao_sessao_8f76_falsos_positivos():
     assert classificar_dono("Coordenação pedagógica da rede", "produto") == "externo"
     assert classificar_dono("pedagógico", "dev") == "produto"  # o acento não apaga o token de produto
 
+    # 2b. Dono escrito como slug com hífen (PRD de correção, 2026-09-21): a palavra continua valendo,
+    # e `design-system` continua caindo em plataforma antes de virar "design".
+    assert classificar_dono("Conferir rastreabilidade semanal, dono: coordenador-pedagogico, prazo: x", "dev") == "externo"
+    assert classificar_dono("Gravar o podcast no bucket, dono: estudio-audio, prazo: hml", "dev") == "externo"
+    assert classificar_dono("especialista curricular: confirmar alocação na matriz do Entre Redes", "produto") == "externo"
+    assert classificar_dono("dono: design-system", "dev") == "plataforma"
+    assert classificar_dono("dono: handoff-dev", "design") == "dev"
+
     # 3. `dono: produto` no fim do marcador não esconde que o pedido é homologação (ato humano).
     assert classificar_dono(
         "Homologação cadastral definitiva do slug de catálogo (exp-NN vs exp06ef1b), dono: produto, prazo: release", "dev"
@@ -896,6 +906,92 @@ def test_diagnostico_respeita_veredito_do_gate():
     d_ruim = coletar(st_ruim)
     assert d_ruim["veredito"] == "bloqueado" and len(d_ruim["bloqueios"]) == 1
     print("   ✓ diagnóstico: achado 'bloqueio' de gate aprovado vira ressalva; de gate reprovado, impedimento")
+
+
+def test_estagio_produto_parcial_spec():
+    """Modo correção a partir da spec: só SpecLoop + one-pager resumido, sem núcleo nem gates."""
+    from google.adk.agents.llm_agent import LlmAgent
+
+    from agents.produto import build_produto_stage
+    from pipeline.orchestrator import STAGE_SPEC, create_mission_orchestrator, iter_agent_tree, stages_para_ui
+
+    orch = create_mission_orchestrator(stages=["spec"])
+    assert [a.name for a in orch.sub_agents] == ["ProdutoStage", "A50Diagnostico", "A51Aprendizado"]
+    produto = orch.sub_agents[0]
+    assert [a.name for a in produto.sub_agents] == ["SpecLoop", "A16bOnePagerResumido"]
+    assert [a.name for a in produto.sub_agents[0].sub_agents] == ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A16SpecCheck"]
+    assert produto.sub_agents[0].max_iterations == max(1, get_settings().spec_max_rodadas)
+    nomes = [a.name for _, a in iter_agent_tree(orch)]
+    assert "A01NucleoNarrativo" not in nomes and "A05GateEstrutural" not in nomes
+    assert not any(getattr(a, "include_contents", "none") == "default" for _, a in iter_agent_tree(orch) if isinstance(a, LlmAgent)), \
+        "nenhum agente da correção lê a mensagem do usuário: o pedido viaja pelo estado"
+
+    completo = create_mission_orchestrator(stages=["spec", "design", "dev"])
+    assert [a.name for a in completo.sub_agents] == ["ProdutoStage", "DesignStage", "DevStage", "A50Diagnostico", "A51Aprendizado"]
+    todos = [a.name for _, a in iter_agent_tree(completo)]
+    assert len(todos) == len(set(todos)), "nome duplicado na árvore parcial"
+    # "produto" e "spec" juntos: a etapa inteira vence
+    assert "A01NucleoNarrativo" in [a.name for _, a in iter_agent_tree(create_mission_orchestrator(stages=["produto", "spec"]))]
+
+    try:
+        build_produto_stage(a_partir_de="design")
+        assert False, "a_partir_de inválido deveria falhar"
+    except ValueError:
+        pass
+
+    assert [s["key"] for s in stages_para_ui(["spec", "design", "dev"])] == ["spec", "design", "dev", "transversal"]
+    assert [s["key"] for s in stages_para_ui(["dev"])] == ["dev", "transversal"]
+    assert [s["key"] for s in stages_para_ui(["produto", "design", "dev"])] == ["produto", "design", "dev", "transversal"]
+    assert [m["id"] for m in STAGE_SPEC["agents"]] == ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A16SpecCheck", "A16bOnePagerResumido"]
+    print("   ✓ estágio parcial spec: SpecLoop + resumido, sem núcleo; stages_para_ui resolve spec")
+
+
+def test_bloco_de_correcao_em_todos_os_agentes():
+    """Modo correção: o pedido chega a todo agente LLM pelo rodapé de `agents/base.py`, como a herança."""
+    from google.adk.agents.llm_agent import LlmAgent
+
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+
+    llms = [a for _, a in iter_agent_tree(create_mission_orchestrator(stages=["produto", "design", "dev"])) if isinstance(a, LlmAgent)]
+    assert llms, "árvore sem agentes LLM?"
+    sem_bloco = [a.name for a in llms if "{pedido_correcao?}" not in str(a.instruction)]
+    assert not sem_bloco, f"agentes sem o bloco de correção: {sem_bloco}"
+    sem_heranca = [a.name for a in llms if "{heranca_degradada?}" not in str(a.instruction)]
+    assert not sem_heranca, sem_heranca
+    print(f"   ✓ {len(llms)} agentes LLM leem `pedido_correcao` e `heranca_degradada`")
+
+
+def test_agente_de_triagem_configurado():
+    """A triagem vê a mensagem e os anexos (como o A01), grava em `triagem_correcao` e fica fora da esteira."""
+    from agents.transversal import TRANSVERSAL_METADATA, get_triagem_correcao_agent
+    from prompts.loader import list_state_variables
+
+    agente = get_triagem_correcao_agent()
+    assert agente.include_contents == "default"
+    assert agente.output_key == "triagem_correcao"
+    instr = str(agente.instruction)
+    assert "{mapa_da_missao?}" in instr and "{briefing?}" in instr
+    assert '"etapa": "spec | design | dev | nenhuma"' in instr
+    assert all(m["id"] != "A00TriagemCorrecao" for m in TRANSVERSAL_METADATA)
+    for var in list_state_variables(instr):
+        assert var in KNOWN_STATE_KEYS, var
+    print("   ✓ triagem: include_contents=default, output triagem_correcao, fora dos metadados")
+
+
+def test_rotulos_de_gate_cobertos_pelo_mapa_de_heranca():
+    """Modo correção: a herança de gates não refeitos é preservada por rótulo. Se um rótulo da
+    árvore real não estiver em `ROTULOS_GATE_POR_ETAPA`, a reprovação dele cai em silêncio."""
+    from agents.checkers import BnccCheckAgent, EnvelopeGateAgent, RastroCheckAgent
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+    from pipeline.reexecucao import ROTULOS_GATE_POR_ETAPA
+
+    faltando = set()
+    for _, agente in iter_agent_tree(create_mission_orchestrator(stages=["produto", "design", "dev"])):
+        if isinstance(agente, (EnvelopeGateAgent, BnccCheckAgent, RastroCheckAgent)):
+            if agente.rotulo not in ROTULOS_GATE_POR_ETAPA:
+                faltando.add(agente.rotulo)
+    assert not faltando, f"rótulos sem etapa no mapa de herança: {sorted(faltando)}"
+    print("   ✓ todo gate da árvore tem etapa no mapa de herança do modo correção")
 
 
 def test_mensagem_de_pulo_nao_vira_prd():
@@ -1655,6 +1751,10 @@ if __name__ == "__main__":
         test_bncc_validador_e_gate,
         test_rastro_manifesto_telemetria_lacunas,
         test_regressao_sessao_8f76_falsos_positivos,
+        test_rotulos_de_gate_cobertos_pelo_mapa_de_heranca,
+        test_estagio_produto_parcial_spec,
+        test_bloco_de_correcao_em_todos_os_agentes,
+        test_agente_de_triagem_configurado,
         test_capacidade_de_plataforma_nao_bloqueia,
         test_mensagem_de_pulo_nao_vira_prd,
         test_contencao_de_resposta_de_ferramenta,

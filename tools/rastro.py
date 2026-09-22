@@ -127,8 +127,13 @@ _TOKENS_ETAPA: Dict[str, tuple] = {
     # `[ABERTO — coordenador pedagógico: …]` caía no default da spec (produto) e barrava o PRD
     # por algo que o critério 5.5 manda registrar sem bloquear (sessão 8f76, 2026-09-21).
     "externo": ("coordena(ção|cao|dor|dora|dores|doras)", "rede parceira", "escola parceira", "designer instrucional",
+                # `especialista` entrou em 2026-09-21 (exp08ef2b): `[ABERTO — especialista curricular:
+                # confirmar alocação na matriz do Entre Redes]` caía no padrão da spec (produto) e
+                # barrava o PRD, enquanto a linha irmã do MESMO assunto, marcada 🔵, ia para externo.
+                # Especialista, consultor e assessor são sempre gente de fora da esteira.
+                "especialista", "assessor", "assessoria", "parecerista",
                 "consultor", "time pedag[oó]g[a-z]*", "externo", "externa", "cliente", "secretaria",
-                "jur[ií]dico", "dpo", "rede escolar", "rede de ensino", "semana letiva",
+                "jur[ií]dico", "dpo", "rede escolar", "rede de ensino", "semana letiva", "est[uú]dio",
                 "calend[áa]rio letivo", "calend[áa]rio", "implanta[çc][ãa]o"),
     "plataforma": ("plataforma", "adr", "design-system", "storybook", "infra", "ponte", "@edu/ui", "componente do ds", "componente de ds"),
     "dev": ("handoff-dev", "handoff", "brief-assets", "banca", "tech", "arquitetura", "dev"),
@@ -141,11 +146,19 @@ _TOKENS_ETAPA: Dict[str, tuple] = {
 def _etapa_por_tokens(texto: str) -> Optional[str]:
     """Primeira etapa cujos tokens aparecem em `texto`, na ordem de precedência. None se nenhuma."""
     t = (texto or "").lower()
+    # O hífen conta como letra para que `design-system` não vire "design" e `handoff-dev` não
+    # vire "dev". Mas o redator também escreve donos como slug — `coordenador-pedagogico`,
+    # `estudio-audio` — e aí o hífen escondia a palavra (2026-09-21, PRD de correção da
+    # exp06ef1b: três pendências externas viraram lacuna de dev). Cada token é testado no
+    # texto cru e na variante com hífens trocados por espaço; a ordem das etapas continua
+    # decidindo, então `design-system` ainda casa `plataforma` antes de chegar a `design`.
+    variantes = (t, t.replace("-", " ")) if "-" in t else (t,)
     for etapa in ("humano", "externo", "plataforma", "dev", "design", "produto", "input"):
         for tok in _TOKENS_ETAPA[etapa]:
             # tokens com classe de caractere (ex.: `licen[çc]a`) entram crus; os demais, escapados
             padrao = tok if ("[" in tok or "(" in tok) else re.escape(tok)
-            if re.search(r"(?<![a-z0-9-])" + padrao + r"s?(?![a-z0-9-])", t):
+            regex = r"(?<![a-z0-9-])" + padrao + r"s?(?![a-z0-9-])"
+            if any(re.search(regex, v) for v in variantes):
                 return etapa
     return None
 

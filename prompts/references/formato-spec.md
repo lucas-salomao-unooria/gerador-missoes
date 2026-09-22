@@ -110,9 +110,9 @@ não está escrito.
 parâmetros ocultos, calibragem, vieses, prompt de sistema, e qualquer conta
 cujo resultado antecipe o desfecho.
 
-**Gabarito.** Fonte da verdade pedagógica, com **autor e revisor nomeados**
-(pessoas, não "time pedagógico"), e a declaração de que vive
-exclusivamente no servidor.
+**Gabarito.** Fonte da verdade pedagógica, com a declaração de que vive
+exclusivamente no servidor. Quem assina não se declara aqui: autoria e revisão
+são registro editorial, fechado fora da esteira.
 
 **Servidor calcula, nunca aceita.** O que o cliente envia (medidas brutas)
 e o que o servidor deriva.

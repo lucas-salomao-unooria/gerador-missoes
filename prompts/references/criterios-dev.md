@@ -27,7 +27,7 @@ Reconferir a cada emenda da nossa rubrica, e atualizar a versão lida acima.
 | DES-02 | Mapa "quem está falando", tela a tela | coluna `seção` no sheet |
 | PED-01 | Códigos BNCC de Letramento Digital | spec bloco 11, conferido pelo `BnccCheck` contra `references/bncc-computacao.json` *(bloqueia apenas em letramento digital; outras regras passam como alerta)* |
 | PED-02 | Matriz habilidade → evidência → interação → dado | `handoff-dev`, seção 3 |
-| PED-04 | Gabarito com autor e revisor, só no servidor | spec bloco 9 *(precisa de dois nomes de pessoa)* |
+| PED-04 | Gabarito definido, só no servidor | spec bloco 9 |
 | PED-06 | Graus de medida | spec bloco 9 |
 | PED-07 | Nenhum ranking de crianças | rubrica 3.3 / 7.2 / 8.5 |
 | DAD-01 | Vocabulário de telemetria (`verbo`, `objeto`, `resultado`, `contexto` — sem campo `dados`) | `handoff-dev`, entregável 5, conferido pelo `TelemetriaCheck` |
@@ -53,5 +53,4 @@ nosso 4.2 exige. Origem da emenda: o gate deles.
 ## O que continua fora do nosso alcance
 
 - Verificação no repositório deles: DES-01 (a seção existe?), TEC-11 (dependência de DS pendente?)
-- Dono humano nomeado: PED-04 pede pessoas, não "time pedagógico"
 - Deriva dos critérios: ver o aviso no topo

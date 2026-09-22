@@ -29,11 +29,17 @@ intencional (rótulos de views/inscritos — não aleatórios: o fake tem os
 números grandes, e há teste garantindo). Cada elemento numérico visível ao
 estudante classificado como um ou outro.
 
-## PED-04 [BLOQUEANTE] — Gabarito fechado, com autoria e revisão
+## PED-04 [BLOQUEANTE] — Gabarito fechado, só no servidor
 A fonte da verdade pedagógica (o que é correto/confiável/severo) está definida
-no insumo, com autor e revisor. E a spec reconhece que o gabarito vive
+no insumo. E a spec reconhece que o gabarito vive
 exclusivamente no servidor (regra 3) — se ela prevê o cliente sabendo a
 resposta "para dar feedback imediato", é ❌ aqui e em DAD-04.
+
+**Quem assina o gabarito não é exigência deste critério** (decisão de produto de
+2026-09-22). Pedir dois nomes de pessoa reprovava a missão por um ato que nenhum
+agente pratica: a spec escrevia `[ABERTO — responsável de produto: nomear autor e
+revisor]` porque o gabarito do bloco 9 mandava, e a banca bloqueava por esse mesmo
+marcador. Autoria e revisão são registro editorial, fechado fora da esteira.
 
 ## PED-05 — Nota e score declarados
 A missão produz nota? Qual, exatamente, e em que escala (na exp-02: fontes

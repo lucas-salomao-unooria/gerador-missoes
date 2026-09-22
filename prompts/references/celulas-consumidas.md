@@ -109,7 +109,6 @@ Notação: `bloco.campo`. Blocos são os de `references/formato-spec.md` (0–12
 | 9.canal por dado (operacional · analítico) | V1 | Latência e ordem indefinidas |
 | 9.texto livre de menor: existe? por quê? quem lê? | D4 (campo de reflexão), D7, banca DAD | Reflexão do 1.6 sem destino |
 | 9.segredo de servidor (gabarito, parâmetros, prompt) | V1, banca TEC | Gabarito no bundle |
-| 9.gabarito com autor e revisor nomeados | banca PED | Fonte pedagógica sem dono |
 
 ## Bloco 10 — Cenários de dispositivo
 

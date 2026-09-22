@@ -44,6 +44,24 @@ def get_aprendizado_agent(
     )
 
 
+def get_triagem_correcao_agent(thinking_budget: Optional[int] = 1024) -> LlmAgent:
+    """Decide de qual etapa uma correção recomeça (`spec | design | dev | nenhuma`).
+
+    Roda FORA da esteira, antes de montar o orquestrador (`pipeline/reexecucao.triar_pedido`).
+    É o único agente além do A01 com `include_contents="default"`: precisa ver a mensagem da
+    pessoa e os anexos, inclusive PDF como arquivo. Não entra em `TRANSVERSAL_METADATA`.
+    """
+    return create_llm_agent(
+        name="A00TriagemCorrecao",
+        description="Triagem de um pedido de correção numa missão já gerada: de qual etapa a esteira recomeça, e o resumo do pedido para quem executa.",
+        instruction=load_prompt("transversal/00_triagem_correcao.md"),
+        output_key="triagem_correcao",
+        include_contents="default",
+        thinking_budget=thinking_budget,
+        include_thoughts=False,
+    )
+
+
 TRANSVERSAL_METADATA = [
     {"id": "A50Diagnostico", "name": "50 · Diagnóstico da execução (determinístico)", "icon": "🩺", "output_key": "diagnostico_execucao", "prompt_file": None, "description": "Como cada portão se saiu, o que trava e de quem é cada conserto, o que saiu provisório e que documento faltou. Sem LLM — roda mesmo quando tudo o mais falhou."},
     {"id": "A51Aprendizado", "name": "51 · Aprendizado", "icon": "🧠", "output_key": "aprendizado_registro", "prompt_file": "transversal/51_aprendizado.md", "description": "A leitura em prosa do diagnóstico, mais catálogo, padrões aprendidos, lacunas com dono/classe e candidatos a critério."},

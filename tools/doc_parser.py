@@ -1,7 +1,9 @@
-"""Módulo de processamento de documentos de entrada (PDF e DOCX/DOC).
-- PDFs são mantidos em bytes brutos para consumo multimodal nativo do Gemini 3.7.
+"""Módulo de processamento de documentos de entrada (PDF, DOCX/DOC, Markdown e texto).
+- PDFs são mantidos em bytes brutos para consumo multimodal nativo do Gemini; o texto também é
+  extraído (MarkItDown) para os caminhos que só leem texto, como a correção de uma missão.
 - Documentos DOCX/DOC são convertidos para Markdown estruturado via Microsoft MarkItDown.
-- Validação estrita: Até 10 arquivos e no máximo 25 MB no total.
+- `.md`, `.markdown` e `.txt` entram como estão (UTF-8, com fallback Latin-1).
+- Validação estrita: até 60 arquivos e no máximo 25 MB no total.
 """
 
 from dataclasses import dataclass, field
@@ -12,8 +14,11 @@ from typing import Any, List, Optional, Tuple
 # `markitdown` é importado dentro de `process_document`: ele arrasta o pandas (~320 ms de
 # import) e só é necessário quando alguém anexa um .docx — mas era pago em todo start do app.
 
-MAX_FILES: int = 10
+MAX_FILES: int = 60
 MAX_TOTAL_BYTES: int = 25 * 1024 * 1024  # 25 Megabytes
+#: Extensões lidas como texto puro, sem conversor.
+TEXTO_PURO = {".md": "md", ".markdown": "md", ".txt": "txt"}
+EXTENSOES_ACEITAS = ("pdf", "docx", "doc", "md", "markdown", "txt")
 
 
 @dataclass
@@ -57,7 +62,7 @@ class DocumentBatch:
 
 
 def process_document(file_name: str, file_bytes: bytes) -> ProcessedDocument:
-    """Processa um arquivo individual conforme seu tipo (PDF nativo ou DOCX via MarkItDown)."""
+    """Processa um arquivo conforme o tipo: PDF nativo (+ texto), DOCX via MarkItDown, MD/TXT como texto."""
     ext = os.path.splitext(file_name)[1].lower()
     size_bytes = len(file_bytes)
 
@@ -68,7 +73,22 @@ def process_document(file_name: str, file_bytes: bytes) -> ProcessedDocument:
             size_bytes=size_bytes,
             is_native_pdf=True,
             pdf_bytes=file_bytes,
-            markdown_text=None,
+            # O A01 lê o PDF nativo; quem só lê texto (correção de missão) usa isto.
+            markdown_text=_texto_do_pdf(file_name, file_bytes),
+        )
+
+    if ext in TEXTO_PURO:
+        try:
+            texto = file_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            texto = file_bytes.decode("latin-1")
+        return ProcessedDocument(
+            name=file_name,
+            file_type=TEXTO_PURO[ext],
+            size_bytes=size_bytes,
+            is_native_pdf=False,
+            pdf_bytes=None,
+            markdown_text=texto.strip(),
         )
 
     if ext in (".docx", ".doc"):
@@ -92,11 +112,25 @@ def process_document(file_name: str, file_bytes: bytes) -> ProcessedDocument:
             markdown_text=text_content,
         )
 
-    raise ValueError(f"Formato de arquivo não suportado: {ext}. Envie apenas PDF ou DOCX/DOC.")
+    raise ValueError(f"Formato de arquivo não suportado: {ext}. Envie PDF, DOCX/DOC, Markdown (.md) ou texto (.txt).")
+
+
+def _texto_do_pdf(file_name: str, file_bytes: bytes) -> Optional[str]:
+    """Texto do PDF via MarkItDown (extra `pdf`). None quando não dá: o PDF nativo continua valendo."""
+    if not file_bytes.lstrip().startswith(b"%PDF"):
+        # sem cabeçalho de PDF o MarkItDown cai no conversor de texto puro e devolve lixo binário
+        return None
+    try:
+        from markitdown import MarkItDown
+
+        texto = MarkItDown().convert_stream(io.BytesIO(file_bytes), file_extension=".pdf").text_content.strip()
+        return texto or None
+    except Exception:
+        return None
 
 
 def validate_and_process_batch(uploaded_files: List[Any]) -> Tuple[Optional[DocumentBatch], Optional[str]]:
-    """Valida os limites (até 10 arquivos e até 25MB no total) e processa todos os documentos.
+    """Valida os limites (até 60 arquivos e até 25 MB no total) e processa todos os documentos.
 
     Args:
         uploaded_files: Lista de objetos de arquivo (ex: UploadedFile do Streamlit).

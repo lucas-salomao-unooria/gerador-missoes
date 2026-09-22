@@ -58,9 +58,13 @@ def create_llm_agent(
         # ~30 prompts. Fica vazio na execução saudável; quando um gate reprova, é por ele que
         # o agente a jusante descobre que constrói sobre base reprovada — e é o que permite a
         # esteira seguir até o fim sem fingir que está tudo certo.
+        # O pedido de correção segue o mesmo caminho: no modo correção (`pipeline/reexecucao.py`)
+        # o app grava `pedido_correcao` no estado e todo agente o lê — autores aplicam no que é
+        # seu, QA e banca conferem se foi atendido, o aprendizado registra. Vazio na execução normal.
         "instruction": (
             instruction.strip()
             + "\n\n---\n## Herança desta execução\n\n{heranca_degradada?}\n"
+            + "\n---\n## Pedido de correção desta execução\n\n{pedido_correcao?}\n"
             + f"\n---\nData de hoje: {time.strftime('%Y-%m-%d')}. Use esta data em cabeçalhos, changelogs e frontmatter."
         ),
         "description": description.strip(),

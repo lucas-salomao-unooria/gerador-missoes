@@ -558,6 +558,11 @@ def load_saved_session(dir_name_or_id: str) -> Optional[Tuple[List[Dict[str, Any
         "status": status,
         "status_label": formatar_status_label(status),
         "created_at": conversa_data.get("created_at"),
+        "historico_correcoes": (
+            conversa_data.get("historico_correcoes")
+            if isinstance(conversa_data.get("historico_correcoes"), list)
+            else conversa_data.get("reexecucoes") if isinstance(conversa_data.get("reexecucoes"), list) else []
+        ),
     }
 
     return messages, result, metadata
@@ -571,7 +576,14 @@ def save_session_record(
     result: Any,
     messages: List[Dict[str, Any]],
     attached_files: Optional[List[str]] = None,
+    created_at: Optional[str] = None,
+    historico_correcoes: Optional[List[Dict[str, Any]]] = None,
 ) -> Path:
+    """Grava `conversa.json`.
+
+    `created_at` e `historico_correcoes` existem para a correção de uma sessão
+    (`pipeline/reexecucao.py`): a data de criação é a original, e o histórico acumula.
+    """
     run_dir.mkdir(parents=True, exist_ok=True)
     state = getattr(result, "state", {}) or {}
     if not state and (run_dir / "estado.json").exists():
@@ -610,7 +622,7 @@ def save_session_record(
         "user_id": user_id,
         "title": title,
         "slug": slug,
-        "created_at": time.strftime("%d/%m/%Y %H:%M:%S"),
+        "created_at": created_at or time.strftime("%d/%m/%Y %H:%M:%S"),
         "prompt": prompt,
         "attached_files": attached_files or getattr(result, "attached_files", []),
         "status": getattr(result, "status", "success"),
@@ -622,8 +634,10 @@ def save_session_record(
         # este arquivo (~2 KB), sem abrir o `estado.json` de ~1 MB a cada rerun.
         "pipeline_bloqueado": bool(state.get("pipeline_bloqueado")),
         "has_prd": bool(state.get("prd_final")) or (run_dir / "PRD.md").exists(),
-        "files_count": len(list(run_dir.glob("**/*.md"))),
+        "files_count": sum(1 for p in list_session_files(run_dir) if p.suffix == ".md"),
     }
+    if historico_correcoes:
+        data["historico_correcoes"] = historico_correcoes
 
     conversa_path = run_dir / "conversa.json"
     conversa_path.write_text(json.dumps(data, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
@@ -684,6 +698,16 @@ def resolve_session_dir(dir_or_path: str | Path | None) -> Optional[Path]:
     return None
 
 
+#: Pastas que guardam versões anteriores de uma sessão corrigida: `.correcoes/` (atual) e
+#: `_reexecucoes/` (nome antigo do script). Não são artefatos: ficam fora do manifesto e do ZIP.
+PASTAS_DE_BACKUP = ("_reexecucoes",)
+
+
+def _oculto(rel: Path) -> bool:
+    """Caminho relativo com algum componente oculto (`.algo`) ou de backup."""
+    return any(parte.startswith(".") or parte in PASTAS_DE_BACKUP for parte in rel.parts)
+
+
 def list_session_files(run_dir: Path) -> List[Path]:
     """Lista, em ordem estável, todos os arquivos visíveis de uma sessão.
 
@@ -692,7 +716,7 @@ def list_session_files(run_dir: Path) -> List[Path]:
     """
     files: List[Path] = []
     for path in run_dir.rglob("*"):
-        if path.name.startswith("."):
+        if _oculto(path.relative_to(run_dir)):
             continue
         try:
             if path.is_file():

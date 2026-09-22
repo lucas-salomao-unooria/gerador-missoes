@@ -27,7 +27,7 @@ from google.adk.agents.sequential_agent import SequentialAgent
 
 from agents.design import DESIGN_METADATA, build_design_stage
 from agents.dev import DEV_METADATA, build_dev_stage
-from agents.produto import PRODUTO_METADATA, build_produto_stage
+from agents.produto import PRODUTO_METADATA, PRODUTO_METADATA_SPEC, build_produto_stage
 from agents.transversal import TRANSVERSAL_METADATA, get_aprendizado_agent, get_diagnostico_agent
 from config import get_settings
 
@@ -39,6 +39,11 @@ STAGES: List[Dict[str, Any]] = [
     {"key": "dev", "name": "Dev", "icon": "🛠️", "container": "DevStage", "agents": DEV_METADATA},
     {"key": "transversal", "name": "Transversal", "icon": "🧠", "container": None, "agents": TRANSVERSAL_METADATA},
 ]
+
+#: Etapa parcial do modo correção (`pipeline/reexecucao.py`): só spec ↔ gates → one-pager resumido.
+#: Fica fora de `STAGES` de propósito — não é uma etapa que a configuração liga, e listá-la
+#: duplicaria os agentes A13–A16b nos metadados da UI.
+STAGE_SPEC: Dict[str, Any] = {"key": "spec", "name": "Produto (spec)", "icon": "🧭", "container": "ProdutoStage", "agents": PRODUTO_METADATA_SPEC}
 
 FINAL_OUTPUT_KEY = "prd_final"
 
@@ -68,6 +73,22 @@ def get_pipeline_agents_metadata(active_only: bool = True) -> List[Dict[str, Any
     return flat
 
 
+def stages_para_ui(keys: List[str]) -> List[Dict[str, Any]]:
+    """Entradas de etapa (com agentes) para as chaves pedidas, mais a transversal, na ordem da esteira.
+
+    É o que a tela de progresso usa numa correção: só as etapas que vão rodar. `spec` resolve
+    para o estágio parcial de produto.
+    """
+    pedidas = set(keys or []) | {"transversal"}
+    resultado: List[Dict[str, Any]] = []
+    for stage in STAGES:
+        if stage["key"] == "produto" and "produto" not in pedidas and "spec" in pedidas:
+            resultado.append(STAGE_SPEC)
+        elif stage["key"] in pedidas:
+            resultado.append(stage)
+    return resultado
+
+
 def create_mission_orchestrator(
     name: str = "MissionPipelineOrchestrator",
     thinking_budget: Optional[int] = None,
@@ -84,6 +105,9 @@ def create_mission_orchestrator(
     sub_agents = []
     if "produto" in active:
         sub_agents.append(build_produto_stage(t_budget, inc_thoughts, modo_estrito=modo_estrito))
+    elif "spec" in active:
+        # correção a partir da spec: núcleo, one-pager e gates vêm do estado salvo
+        sub_agents.append(build_produto_stage(t_budget, inc_thoughts, modo_estrito=modo_estrito, a_partir_de="spec"))
     if "design" in active:
         sub_agents.append(build_design_stage(t_budget, inc_thoughts))
     if "dev" in active:

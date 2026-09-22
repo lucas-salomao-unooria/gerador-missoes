@@ -112,21 +112,25 @@ class PipelineExecutionResult:
         return "⚪"
 
 
-def _build_user_message(prompt: str, doc_batch: Optional[DocumentBatch]) -> types.Content:
-    """Mensagem do usuário: texto (+ DOCX convertidos) e PDFs como Parts binárias."""
+def build_user_message(prompt: str, doc_batch: Optional[DocumentBatch]) -> types.Content:
+    """Mensagem do usuário: texto (+ documentos de texto inline) e PDFs como Parts binárias.
+
+    DOCX, Markdown e TXT entram no próprio texto; o PDF vai como Part nativa (o modelo lê o
+    arquivo), então o texto extraído dele não é repetido aqui.
+    """
     enriched_prompt = prompt
     parts: List[types.Part] = []
 
     if doc_batch and doc_batch.documents:
-        docx_blocks = [
-            f"### 📄 Documento de apoio (Word/DOCX): {doc.name}\n\n{doc.markdown_text}"
+        blocos = [
+            f"### 📄 Documento de apoio ({doc.file_type.upper()}): {doc.name}\n\n{doc.markdown_text}"
             for doc in doc_batch.documents
             if not doc.is_native_pdf and doc.markdown_text
         ]
-        if docx_blocks:
+        if blocos:
             enriched_prompt = (
-                f"{prompt}\n\n---\n## 📎 Documentos de apoio anexados (convertidos do Word)\n\n"
-                + "\n\n".join(docx_blocks)
+                f"{prompt}\n\n---\n## 📎 Documentos de apoio anexados (texto)\n\n"
+                + "\n\n".join(blocos)
             )
 
     parts.append(types.Part.from_text(text=enriched_prompt))
@@ -137,6 +141,20 @@ def _build_user_message(prompt: str, doc_batch: Optional[DocumentBatch]) -> type
                 parts.append(types.Part.from_bytes(data=doc.pdf_bytes, mime_type="application/pdf"))
 
     return types.Content(role="user", parts=parts)
+
+
+_build_user_message = build_user_message  # nome antigo, mantido para quem já importava
+
+
+def briefing_inicial(initial_state: Optional[Dict[str, Any]], prompt: str) -> str:
+    """O `briefing` da sessão: o salvo vence o `prompt`.
+
+    Numa execução nova não há estado salvo e o prompt é o briefing. Numa correção o estado
+    traz o briefing original e o `prompt` repete-o; o pedido de correção viaja noutra chave
+    (`pedido_correcao`), nunca por aqui — senão `{briefing?}` e `briefing-original.md` passariam
+    a descrever a correção em vez da missão.
+    """
+    return str((initial_state or {}).get("briefing") or prompt or "")
 
 
 def _pick_final_output(state: Dict[str, Any], step_outputs: Dict[str, str], fallback: str) -> str:
@@ -161,6 +179,7 @@ async def run_orchestrator_pipeline_stream(
     save_artifacts: bool = True,
     initial_state: Optional[Dict[str, Any]] = None,
     run_dir: Optional[Path] = None,
+    registrar_conversa: bool = True,
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Executa o pipeline e emite eventos: pipeline_started, agent_started, agent_chunk,
     agent_thought_chunk, gate_status, pipeline_completed | pipeline_error."""
@@ -195,7 +214,7 @@ async def run_orchestrator_pipeline_stream(
             # `briefing` alimenta o `{briefing?}` do P0b, que não vê a mensagem original
             # `initial_state` reexecuta uma etapa sobre o estado salvo de uma execução anterior
             # (`scripts/rerodar_etapa.py`): produto e design ficam fixos e só a etapa pedida roda.
-            state={**(initial_state or {}), "briefing": prompt or (initial_state or {}).get("briefing", "")},
+            state={**(initial_state or {}), "briefing": briefing_inicial(initial_state, prompt)},
         )
         adk_artifacts_dir = settings.output_path / ".adk_artifacts"
         adk_artifacts_dir.mkdir(parents=True, exist_ok=True)
@@ -340,7 +359,9 @@ async def run_orchestrator_pipeline_stream(
             output_dir=str(output_dir) if output_dir else None,
         )
 
-        if output_dir and save_artifacts:
+        # A correção de uma sessão (`pipeline/reexecucao.py`) grava a conversa por conta própria,
+        # preservando histórico e data: aqui ela pede `registrar_conversa=False`.
+        if output_dir and save_artifacts and registrar_conversa:
             try:
                 from pipeline.session_store import save_session_record
                 assistant_msg = (

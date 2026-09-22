@@ -20,7 +20,20 @@ from PIL import Image
 
 from config import get_settings
 from pipeline.artifacts import generate_artifact_manifest
-from pipeline.orchestrator import STAGES, get_pipeline_agents_metadata, get_pipeline_stages
+from pipeline.orchestrator import STAGES, get_pipeline_agents_metadata, get_pipeline_stages, stages_para_ui
+from pipeline.reexecucao import (
+    ETAPA_PARA_STAGES,
+    PedidoCorrecao,
+    RegistroCorrecao,
+    Triagem,
+    carregar_sessao,
+    correcao_desfazivel,
+    desfazer_correcao,
+    executar_correcao_stream,
+    historico_de,
+    mensagem_de_correcao,
+    triar_pedido,
+)
 from pipeline.runner import PipelineExecutionResult, run_orchestrator_pipeline_stream
 from pipeline.session_store import (
     create_session_zip,
@@ -33,7 +46,7 @@ from pipeline.session_store import (
     resolve_session_dir,
 )
 from prompts import get_prompt_raw, list_prompt_files, load_prompt, save_prompt
-from tools.doc_parser import DocumentBatch, validate_and_process_batch
+from tools.doc_parser import EXTENSOES_ACEITAS, DocumentBatch, validate_and_process_batch
 from tools.markdown_blocos import sanear_para_streamlit
 
 favicon = None
@@ -118,6 +131,8 @@ def _status_icon(value: Any) -> str:
 def init_session_state():
     if "current_session_id" not in st.session_state:
         st.session_state.current_session_id = None
+    if "correcao_pendente" not in st.session_state:
+        st.session_state.correcao_pendente = None
     if "messages" not in st.session_state:
         st.session_state.messages = [
             {
@@ -130,7 +145,9 @@ def init_session_state():
                     "e **Dev** (handoff, brief de assets, banca de validação em 5 dimensões) e entrega um "
                     "**PRD padrão ouro** com o contexto arquitetural da plataforma, pronto para um agente de codificação.\n\n"
                     "💡 *Anexe o one-pager em PDF/DOCX ou descreva: ano/série, ambiente simulado "
-                    "(Instagram, YouTube, ChatGPT, TikTok ou WhatsApp), descoberta central e a decisão do estudante.*"
+                    "(Instagram, YouTube, ChatGPT, TikTok ou WhatsApp), descoberta central e a decisão do estudante.*\n\n"
+                    "🔧 *Com uma missão aberta no histórico, o campo de mensagem pede **correções nela**: a esteira "
+                    "recomeça só da etapa afetada, sobre o que já foi gerado.*"
                 ),
                 "pipeline_result": None,
             }
@@ -484,9 +501,12 @@ def update_pipeline_step_status(
     return active_agent
 
 
-async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_container, doc_batch: Optional[DocumentBatch]):
-    active = set(opts["stages"]) | {"transversal"}
-    stages = [s for s in STAGES if s["key"] in active]
+async def _acompanhar_esteira(stream, stages: List[Dict[str, Any]], progress, steps_container):
+    """Consome os eventos de uma execução — nova ou correção — e desenha o progresso.
+
+    Devolve `(result, registro)`: `registro` só existe numa correção (`correcao_completed` /
+    `correcao_error`); numa execução nova é `None`.
+    """
     status: Dict[str, str] = {m["id"]: "pending" for s in stages for m in s["agents"]}
     gates: Dict[str, Any] = {}
     tool_log: List[str] = []
@@ -511,17 +531,25 @@ async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_co
 
     render()
     result: Optional[PipelineExecutionResult] = None
+    registro: Optional[Dict[str, Any]] = None
     active_agent: Optional[str] = None
 
-    async for event in run_orchestrator_pipeline_stream(
-        prompt=prompt,
-        thinking_budget=opts["thinking_budget"],
-        include_thoughts=opts["include_thoughts"],
-        modo_estrito=opts["modo_estrito"],
-        stages=opts["stages"],
-        doc_batch=doc_batch,
-    ):
+    async for event in stream:
         et = event.get("type")
+        if et == "correcao_started":
+            progress.info(
+                f"🔧 Correção a partir de **{event['etapa']}** — etapas: {', '.join(event['stages'])}. "
+                f"Cópia do estado anterior em `{event['backup']}`."
+            )
+            continue
+        if et == "correcao_completed":
+            registro = event.get("registro")
+            result = event.get("result") or result
+            continue
+        if et == "correcao_error":
+            registro = event.get("registro")
+            progress.error(f"❌ Correção não aplicada: {event.get('error')}. A sessão voltou ao estado anterior.")
+            continue
         active_agent = update_pipeline_step_status(status, active_agent, event, gates)
 
         if et == "agent_started":
@@ -558,7 +586,130 @@ async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_co
     if tool_log:
         with st.expander(f"🧰 Chamadas de ferramenta ({len(tool_log)})"):
             st.code("\n".join(tool_log))
+    return result, registro
+
+
+async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_container, doc_batch: Optional[DocumentBatch]):
+    """Missão nova, do zero."""
+    stream = run_orchestrator_pipeline_stream(
+        prompt=prompt,
+        thinking_budget=opts["thinking_budget"],
+        include_thoughts=opts["include_thoughts"],
+        modo_estrito=opts["modo_estrito"],
+        stages=opts["stages"],
+        doc_batch=doc_batch,
+    )
+    result, _ = await _acompanhar_esteira(stream, stages_para_ui(opts["stages"]), progress, steps_container)
     return result
+
+
+async def execute_correcao(run_dir: Path, etapa: str, pedido: PedidoCorrecao, triagem: Optional[Triagem], opts: Dict[str, Any], progress, steps_container):
+    """Correção de uma sessão aberta: só as etapas a partir de `etapa`, na mesma pasta."""
+    stream = executar_correcao_stream(
+        run_dir, etapa, pedido, triagem,
+        thinking_budget=opts["thinking_budget"],
+        include_thoughts=opts["include_thoughts"],
+        modo_estrito=opts["modo_estrito"],
+    )
+    return await _acompanhar_esteira(stream, stages_para_ui(ETAPA_PARA_STAGES[etapa]), progress, steps_container)
+
+
+def _run_async(coro):
+    """Roda uma corrotina num loop próprio (o Streamlit não tem loop ativo no script)."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
+ETAPAS_DE_CORRECAO = ["spec", "design", "dev"]
+LEGENDAS_ETAPA = {"spec": "Spec + design + dev (~20 min)", "design": "Design + dev (~15 min)", "dev": "Só dev (~7 min)"}
+
+
+def _iniciar_correcao(user_prompt: str, doc_batch: Optional[DocumentBatch]) -> None:
+    """Mensagem enviada com uma sessão aberta: registra o pedido, roda a triagem e abre o card de confirmação."""
+    run_dir = get_settings().output_path / str(st.session_state.current_session_id)
+    display = user_prompt
+    if doc_batch and doc_batch.documents:
+        display += "\n\n📎 **Anexos:** " + ", ".join(f"`{d.name}`" for d in doc_batch.documents)
+    st.session_state.messages.append({"role": "user", "content": display})
+    pedido = PedidoCorrecao.de_doc_batch(user_prompt, doc_batch)
+    try:
+        estado, _, _ = carregar_sessao(run_dir)
+    except Exception:
+        estado = {}
+    with st.spinner("🧭 Triando o pedido…"):
+        triagem = _run_async(triar_pedido(pedido, doc_batch, estado))
+    st.session_state.correcao_pendente = {"pedido": pedido, "triagem": triagem, "run_dir": str(run_dir)}
+    st.rerun()
+
+
+def _render_card_correcao(pendente: Dict[str, Any], opts: Dict[str, Any]) -> None:
+    """Decisão da triagem, escolha final da etapa e botões Aplicar / Cancelar."""
+    triagem: Triagem = pendente["triagem"]
+    pedido: PedidoCorrecao = pendente["pedido"]
+    run_dir = Path(pendente["run_dir"])
+    with st.chat_message("assistant"):
+        if triagem.etapa in ETAPAS_DE_CORRECAO:
+            st.markdown(f"🧭 **Triagem:** recomeçar de **{triagem.etapa}** — {triagem.motivo}")
+            indice: Optional[int] = ETAPAS_DE_CORRECAO.index(triagem.etapa)
+        elif triagem.etapa == "nenhuma":
+            st.markdown(f"🧭 **Triagem:** o pedido não altera a missão — {triagem.motivo}\n\nSe ainda assim quiser refazer uma etapa, escolha abaixo.")
+            indice = None
+        else:
+            st.warning(f"🧭 A triagem não conseguiu decidir ({triagem.motivo or 'sem resposta'}). Escolha a etapa manualmente.")
+            indice = None
+        if triagem.resumo_pedido:
+            st.caption(f"**O que muda:** {triagem.resumo_pedido}")
+        if pedido.anexos_sem_texto:
+            st.caption("📎 Sem texto extraível: " + ", ".join(f"`{n}`" for n in pedido.anexos_sem_texto)
+                       + ". A triagem os leu como arquivo; para os agentes verem o texto integral, anexe .docx, .md ou .txt.")
+        escolha = st.radio(
+            "Recomeçar de", ETAPAS_DE_CORRECAO, index=indice, horizontal=True,
+            captions=[LEGENDAS_ETAPA[e] for e in ETAPAS_DE_CORRECAO], key="correcao_etapa",
+        )
+        st.caption("As etapas anteriores à escolhida não são reavaliadas: ficam como estão e servem de insumo.")
+        col_ok, col_nao = st.columns([1, 1])
+        aplicar = col_ok.button("▶️ Aplicar correção", type="primary", disabled=escolha is None, key="correcao_aplicar", use_container_width=True)
+        cancelar = col_nao.button("✖️ Cancelar", key="correcao_cancelar", use_container_width=True)
+    if cancelar:
+        if st.session_state.messages and st.session_state.messages[-1].get("role") == "user":
+            st.session_state.messages.pop()
+        st.session_state.correcao_pendente = None
+        st.rerun()
+    if aplicar and escolha:
+        st.session_state.correcao_pendente = None
+        _aplicar_correcao(run_dir, escolha, pedido, triagem, opts)
+
+
+def _aplicar_correcao(run_dir: Path, etapa: str, pedido: PedidoCorrecao, triagem: Triagem, opts: Dict[str, Any]) -> None:
+    with st.chat_message("assistant"):
+        progress = st.empty()
+        steps = st.empty()
+        progress.info(f"🔧 Iniciando a correção a partir de **{etapa}**…")
+        result, registro = _run_async(execute_correcao(run_dir, etapa, pedido, triagem, opts, progress, steps))
+        resumo = mensagem_de_correcao(RegistroCorrecao(**registro)) if registro else "❌ Correção não aplicada."
+        if result:
+            st.markdown(resumo)
+            render_pipeline_details(result, key_prefix="live")
+            st.session_state.messages.append({"role": "assistant", "content": resumo, "pipeline_result": result})
+        else:
+            st.error(resumo)
+            st.session_state.messages.append({"role": "assistant", "content": resumo})
+        invalidar_cache_sessoes()
+
+
+def _historico_da_sessao(result: PipelineExecutionResult) -> List[Dict[str, Any]]:
+    """Correções já aplicadas nesta sessão, lidas do `conversa.json` da pasta (arquivo pequeno)."""
+    pasta = getattr(result, "output_dir", None)
+    if not pasta:
+        return []
+    try:
+        return historico_de(json.loads((Path(pasta) / "conversa.json").read_text(encoding="utf-8")))
+    except Exception:
+        return []
 
 
 def _supports_deferred_download() -> bool:
@@ -675,6 +826,34 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
         st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS[k]}" for k, v in gates.items() if k in GATE_LABELS))
     if getattr(result, "bypassed", False):
         st.warning("⚠️ **Atenção:** Esta missão avançou com gates bloqueados (modo estrito desativado / bypass). Verifique as pendências nos relatórios e na seção 20 do PRD.")
+    historico = _historico_da_sessao(result)
+    if historico:
+        with st.expander(f"🔧 Histórico de correções ({len(historico)})", expanded=False):
+            for h in historico:
+                linha = f"- **{h.get('quando', '?')}** · recomeçou de `{h.get('etapa', '?')}` · {h.get('status', '?')}"
+                if h.get("etapa_sugerida") and h["etapa_sugerida"] != h.get("etapa"):
+                    linha += f" (triagem sugeriu `{h['etapa_sugerida']}`)"
+                linha += f" — {h['pedido']}" if h.get("pedido") else " — reexecução sem pedido"
+                if h.get("backup"):
+                    linha += f" · cópia anterior em `{h['backup']}`"
+                if h.get("desfeita_em"):
+                    linha += f" · desfeita em {h['desfeita_em']}"
+                st.markdown(linha)
+            pasta = Path(getattr(result, "output_dir", "") or "")
+            if correcao_desfazivel({"historico_correcoes": historico}) and pasta.is_dir():
+                st.caption("Desfazer restaura os documentos, o estado e a conversa de antes da última correção. A cópia fica guardada.")
+                if st.button("↩️ Desfazer a última correção", key=f"desfazer_{prefix}"):
+                    registro = desfazer_correcao(pasta)
+                    invalidar_cache_sessoes()
+                    if registro:
+                        recarregada = load_saved_session(pasta.name)
+                        if recarregada:
+                            st.session_state.messages = recarregada[0]
+                            st.session_state.current_session_id = pasta.name
+                        st.session_state.correcao_pendente = None
+                        st.rerun()
+                    else:
+                        st.warning("Não havia correção para desfazer.")
     # As seções são montadas sob demanda. `st.tabs` renderiza *todas* as abas no servidor —
     # uma aba fechada custa o mesmo que uma aberta — e isso fazia cada rerun enviar ~2 MB
     # (estado JSON + 48 expanders de markdown) ao navegador.
@@ -1089,9 +1268,20 @@ def main():
 
         render_guia_de_uso()
 
+        # Com uma sessão aberta, o campo de mensagem pede correções NELA: a esteira recomeça só
+        # da etapa afetada, sobre o estado salvo. Missão do zero é pelo botão "➕ Nova Missão".
+        modo_correcao = bool(st.session_state.get("current_session_id"))
+        if modo_correcao and st.session_state.get("correcao_pendente"):
+            _render_card_correcao(st.session_state.correcao_pendente, opts)
+
         doc_batch: Optional[DocumentBatch] = None
-        with st.expander("📎 Anexar one-pager / documentos de apoio (PDF ou Word — até 10 arquivos / 25 MB)", expanded=False):
-            uploaded = st.file_uploader("Arquivos para o agente P0 (one-pager):", type=["pdf", "docx", "doc"], accept_multiple_files=True, key="docs")
+        rotulo_anexos = (
+            "📎 Anexar material para a correção (PDF, Word, Markdown ou texto — até 60 arquivos / 25 MB)"
+            if modo_correcao else
+            "📎 Anexar one-pager / documentos de apoio (PDF, Word, Markdown ou texto — até 60 arquivos / 25 MB)"
+        )
+        with st.expander(rotulo_anexos, expanded=False):
+            uploaded = st.file_uploader("Arquivos para os agentes:" if modo_correcao else "Arquivos para o agente P0 (one-pager):", type=list(EXTENSOES_ACEITAS), accept_multiple_files=True, key="docs")
             if uploaded:
                 batch, err = validate_and_process_batch(uploaded)
                 if err:
@@ -1100,8 +1290,18 @@ def main():
                     doc_batch = batch
                     st.success(f"✅ {batch.files_count} arquivo(s) — {batch.total_mb:.2f} MB")
 
-        user_prompt = st.chat_input("Descreva a missão (ano, ambiente, descoberta central, decisão do estudante) ou envie o one-pager…")
-        if user_prompt:
+        placeholder = (
+            "Peça uma correção nesta missão (ex.: subir o teto de bio para 150; trocar a copy da tela 3; fixar o polling em 4 s)…"
+            if modo_correcao else
+            "Descreva a missão (ano, ambiente, descoberta central, decisão do estudante) ou envie o one-pager…"
+        )
+        user_prompt = st.chat_input(placeholder)
+        if user_prompt and modo_correcao:
+            settings = get_settings()
+            if not settings.is_gemini_configured():
+                st.warning("⚠️ `GOOGLE_API_KEY` não configurada no `.env`.")
+            _iniciar_correcao(user_prompt, doc_batch)
+        elif user_prompt:
             settings = get_settings()
             if not settings.is_gemini_configured():
                 st.warning("⚠️ `GOOGLE_API_KEY` não configurada no `.env`.")

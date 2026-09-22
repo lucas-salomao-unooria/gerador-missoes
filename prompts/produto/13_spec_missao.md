@@ -54,7 +54,7 @@ Você **não** cria mecânica nova nem fecha decisão de produto. Se algo ficou 
 
 {manifesto_report?}
 
-Se os dois blocos estiverem vazios, esta é a primeira passada: escreva a spec normalmente.
+Se os dois blocos estiverem vazios e não houver pedido de correção no fim desta instrução, esta é a primeira passada: escreva a spec normalmente. Com pedido de correção, você está reescrevendo uma spec já aprovada: aplique o pedido, preserve o resto e registre o que mudou.
 
 Se algum deles apontar achado, **reemita a spec inteira** corrigindo exatamente o que foi apontado. Os dois gates são mecânicos e a correção costuma ser literal:
 
@@ -70,7 +70,7 @@ Não aproveite a rodada para melhorar outra coisa: mudança não pedida invalida
 1. **Os 12 blocos são obrigatórios.** Bloco sem conteúdo é `[ABERTO — dono]`, nunca omitido.
 2. **Contrato de estados com nomes próprios** (viram enum no código), uma linha por transição: estado inicial · gatilho · regra · estado seguinte · responsável · reversível. Inclua conclusão, latch, reentrada (F5 / outro dia), segunda aplicação, e **modos de erro na voz da ficção como estados próprios**. Feche com a frase "não existem outros caminhos de conclusão, correção antecipada, reabertura de escolha ou mudança de pacote".
 3. **Bloco 0 completo**: slug, nome, séries no formato da plataforma (`["5EF"]`), unidade da trilha, `publico: estudante`, software clonado, **seção do DS** (uma das cinco: `instanooria`, `unitube`, `chatgpt`, `whatsappmobile`, `tiktooria`) ou seção nova com componentes/responsável/prazo, viewport (casca 375×812 ou desktop) e por quê.
-4. **Bloco 9 com graus de medida** (scored / indicative / zero / none), canal por dado (operacional × analítico), texto livre de menor (existe? quem lê?), segredo de servidor, gabarito com autor e revisor nomeados (se não houver nomes, `[ABERTO — responsável de produto: nomear autor e revisor]`), "servidor calcula, nunca aceita".
+4. **Bloco 9 com graus de medida** (scored / indicative / zero / none), canal por dado (operacional × analítico), texto livre de menor (existe? quem lê?), segredo de servidor, gabarito definido e vivendo só no servidor (não declare autor nem revisor: quem assina é registro editorial, fechado fora da esteira), "servidor calcula, nunca aceita".
 5. **Bloco 8 completo**: formalize o contrato de customização e preparação docente — o **recorte da aula** (disciplina, tema, assuntos, contexto, foco; a missão é transversal e quem prepara é o professor de qualquer disciplina), regras e schema Zod de geração por IA (Vertex AI Gemini) no molde da exp-08, as rotas instanciando o padrão de Atividade da plataforma (criar → gerar → progresso → aprovar → ativar; nunca rota nova por missão), fluxo de curadoria docente com preview e edição de qualquer texto antes da aula, banco curado default (fallback imediato sem IA), a **tabela "A mesma missão em três aulas"** copiada da seção 9b do one-pager, e gatilhos de controle/pausas da turma.
 6. Copie as contas dos tetos do relatório de experiência (bloco 6) e as habilidades confirmadas/pendentes do relatório pedagógico (bloco 11), marcando 🔵 o que não foi confirmado.
 7. **Bloco 12 — decisões fechadas neste gate**: decisão · quem decidiu · data · alternativas descartadas. Mais a lista `[ABERTO — dono]` consolidada.

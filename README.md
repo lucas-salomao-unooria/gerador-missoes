@@ -510,9 +510,10 @@ Para garantir que o pipeline funcione como uma esteira industrial confiável, ad
 
 O módulo [`tools/doc_parser.py`](file:///Users/lucassalomao/Documents/Unooria/gerador-missoes/tools/doc_parser.py) processa documentos anexados pelo usuário com alto desempenho:
 
-- **PDFs Nativos:** Injetados diretamente em formato binário como partes `types.Part.from_bytes(data, mime_type="application/pdf")`, aproveitando a capacidade multimodal nativa do Gemini para interpretação de diagramas, tabelas e layouts visuais.
+- **PDFs Nativos:** Injetados diretamente em formato binário como partes `types.Part.from_bytes(data, mime_type="application/pdf")`, aproveitando a capacidade multimodal nativa do Gemini para interpretação de diagramas, tabelas e layouts visuais. O texto também é extraído (`markitdown[pdf]`) para os caminhos que só leem texto, como o modo correção.
 - **Word (DOCX/DOC):** Convertidos para Markdown estruturado via **Microsoft MarkItDown**, preservando tabelas, listas e títulos sem perda semântica.
-- **Limites de Segurança:** Validação estrita de lote: máximo de **10 arquivos** e limite agregado de **25 MB**.
+- **Markdown e texto (`.md`, `.markdown`, `.txt`):** entram como estão (UTF-8, com fallback Latin-1), inline na mensagem.
+- **Limites de Segurança:** Validação estrita de lote: máximo de **60 arquivos** e limite agregado de **25 MB**.
 
 ---
 
@@ -667,6 +668,20 @@ A aplicação conta com uma interface visual completa em [Streamlit](file:///Use
 
 ---
 
+### 🔧 Corrigir uma missão já gerada (modo correção)
+
+Cada mensagem numa conversa **nova** é uma missão do zero. Para corrigir uma missão existente, abra-a no histórico da barra lateral: com uma sessão aberta, o campo de mensagem passa a **pedir correções nela**.
+
+1. Você escreve o pedido (com anexos opcionais: PDF, Word, Markdown ou texto).
+2. Um agente de triagem (`A00TriagemCorrecao`, fora da esteira) decide de qual etapa recomeçar — `spec`, `design`, `dev` ou `nenhuma` — e resume o pedido. O app mostra a decisão e o motivo; você confirma ou troca a etapa.
+3. A esteira roda **só dali em diante**, sobre o estado salvo (`estado.json`): `spec` refaz spec, design e dev (~20 min); `design` refaz design e dev (~15 min); `dev` só dev (~7 min). As etapas anteriores ficam como estão e servem de insumo.
+4. O pedido entra na chave de estado `pedido_correcao`, que **todo agente lê** (rodapé injetado em `agents/base.py`): os autores aplicam no que é seu e registram "O que mudou nesta versão" no documento; o QA e a banca conferem se foi atendido.
+5. O resultado sobrescreve a mesma pasta. Antes disso, o que seria perdido vai para `.correcoes/<data>-<etapa>/` (fora do manifesto e do ZIP). O `conversa.json` preserva a data original, acumula `historico_correcoes` e ganha a mensagem do pedido e do resultado; os detalhes da missão mostram o histórico num expander.
+
+6. Errou? No expander de histórico há **↩️ Desfazer a última correção**: restaura documentos, estado e conversa de antes da correção, a partir da cópia em `.correcoes/`, e registra o desfazer no histórico. O histórico também anota quando você trocou a etapa sugerida pela triagem.
+
+A lógica vive em `pipeline/reexecucao.py` e é a mesma do script `scripts/rerodar_etapa.py` (abaixo). Missão do zero continua pelo botão **➕ Nova Missão**.
+
 ## ⚙️ Configuração e Variáveis de Ambiente
 
 Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///Users/lucassalomao/Documents/Unooria/gerador-missoes/.env.example):
@@ -760,6 +775,19 @@ print(f"Gates: {resultado.gates}")
 ```
 
 ---
+
+### 5. Reexecutar uma etapa de uma sessão salva (`scripts/rerodar_etapa.py`)
+
+A versão de linha de comando do modo correção. Aceita uma pasta local ou a pasta da sessão no bucket do Cloud Run (`gs://…`), faz backup em `.correcoes/`, reexecuta a etapa pedida e as seguintes na mesma pasta e sobe de volta.
+
+```bash
+python scripts/rerodar_etapa.py gs://entre-redes-dev-adk-artifacts/<pasta-da-sessão> --etapa dev
+python scripts/rerodar_etapa.py output/<pasta-da-sessão> --etapa spec --pedido "subir o teto de bio para 150" --sem-upload
+python scripts/rerodar_etapa.py output/<pasta-da-sessão> --etapa transversal   # só diagnóstico + aprendizado (~30 s)
+python scripts/rerodar_etapa.py output/<pasta-da-sessão> --etapa design --so-esta-etapa   # depuração: sem as etapas seguintes
+```
+
+Passar `gs://` baixa o estado do bucket **por cima** da pasta local; para encadear reexecuções, use o caminho local e faça o `rsync` à mão. O app no Cloud Run lê as sessões desse bucket, então o upload atualiza a sessão nele.
 
 ## 🐳 Docker e Deploy no Cloud Run
 

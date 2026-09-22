@@ -126,7 +126,8 @@ def generate_artifact_manifest(run_dir: Path) -> List[Dict[str, Any]]:
         if not path.is_file():
             continue
         rel = path.relative_to(run_dir).as_posix()
-        if rel.startswith(".") or rel == "manifesto-artefatos.json":
+        # `.correcoes/` (backups de correção) e `_reexecucoes/` (nome antigo) não são artefatos
+        if rel.startswith(".") or rel.startswith("_reexecucoes/") or rel == "manifesto-artefatos.json":
             continue
 
         size = path.stat().st_size
