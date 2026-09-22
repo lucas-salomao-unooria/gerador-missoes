@@ -73,6 +73,7 @@ KNOWN_STATE_KEYS = {
     "diagnostico_execucao", "diagnostico_status", "qa_design_rodada", "tickets_retrabalho",
     "one_pager_gate0", "spec_rodada", "handoff_rodada", "banca_rodada", "reexecucoes",
     "adequacao_status", "avaliacoes_rodada",
+    "missoes_vizinhas", "catalogo_missoes", "ficha_catalogo", "catalogo_status",
     "degradacoes", "heranca_degradada", "agentes_degradados",
     # modo correção (pipeline/reexecucao.py): pedido lido por todo agente, triagem e seu insumo
     "pedido_correcao", "triagem_correcao", "mapa_da_missao",
@@ -164,7 +165,7 @@ def test_arvore_de_agentes():
     # loop e paralelos
     micro = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "NucleoNarrativoLoop")
     assert isinstance(micro, LoopAgent) and micro.max_iterations == MICRO_GATE_MAX_RODADAS
-    assert [a.name for a in micro.sub_agents] == ["A01NucleoNarrativo", "A02MicroGate", "A03MicroGateCheck"]
+    assert [a.name for a in micro.sub_agents] == ["A01NucleoNarrativo", "A01bVizinhasCatalogo", "A02MicroGate", "A03MicroGateCheck"]
 
     loop = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "GateEstruturalLoop")
     assert isinstance(loop, LoopAgent) and loop.max_iterations == settings.gate_estrutural_max_rodadas

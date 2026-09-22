@@ -750,6 +750,73 @@ class DespachoTicketsAgent(BaseAgent):
         )
 
 
+class VizinhasCatalogoAgent(BaseAgent):
+    """Põe as missões já geradas na frente de quem está inventando uma nova.
+
+    Antes disto, o agente que inventa a missão não via o catálogo: o primeiro a consultá-lo rodava
+    três agentes depois, com o one-pager inteiro escrito, e os critérios 2.5 e 2.8 são desejáveis.
+    Aqui a comparação chega antes de existir one-pager.
+
+    Roda duas vezes na etapa de produto. **Antes do loop**, quando só há briefing, filtra pelo ano
+    declarado. **Dentro do loop**, depois do núcleo, refiltra pelo que a missão realmente é
+    (ambiente, eixo, descoberta) — é essa lista que a verificação V5 do micro-gate julga.
+
+    A recuperação é mecânica e ordena por semelhança lexical; **quem reprova é o V5**, aplicando o
+    teste de 2 frases. Linha do índice com campo por preencher não sustenta reprovação, e o texto
+    abaixo diz isso ao avaliador.
+    """
+
+    limite: int = 5
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import catalogo as cat
+
+        state = dict(ctx.session.state)
+        nucleo = str(state.get("nucleo_narrativo") or "")
+        try:
+            indice = cat.carregar()
+            if nucleo.strip():
+                ficha, fonte = cat.ficha_da_execucao(state, sessao=""), "núcleo narrativo"
+            else:
+                from tools.bncc import extrair_serie
+
+                briefing = str(state.get("briefing") or "")[:6000]
+                serie = extrair_serie(briefing)
+                ano = f"{min(serie['anos'])}EF" if serie["anos"] else ("EM" if serie["em"] else "")
+                ficha = {"ano": ano, "ambiente": cat._ambiente(briefing), "eixo": "",
+                         "descoberta": "", "tipo_decisao": "", "sessao": ""}
+                fonte = "briefing"
+            proximas = cat.vizinhas(ficha, indice, n=self.limite)
+            total = len(indice.get("missoes", []))
+
+            if not proximas:
+                texto = (f"_Nenhuma missão próxima no índice ({total} registrada(s) ao todo, filtro pelo {fonte}: "
+                         f"ano, ambiente e eixo). Não há repetição a evitar — mas também não há comparação possível._")
+            else:
+                texto = "\n".join([
+                    f"Missões **já geradas** que mais se aproximam desta (memória do gerador · {total} no índice · filtro pelo {fonte}):",
+                    "",
+                    cat.tabela_markdown(proximas, com_semelhanca=True),
+                    "",
+                    "A coluna **Semelhança** é lexical: ela ordena, não decide. Duas missões podem dizer a mesma coisa "
+                    "com outras palavras e aparecer como `baixa`. Julgue pelo conteúdo.",
+                    "Linha com campo `—` ou `[preencher…]` **não sustenta reprovação**: registre como lacuna de catálogo e siga.",
+                ])
+            msg = f"🗂️ Catálogo: {len(proximas)} missão(ões) próxima(s) de {total} no índice (por {fonte})."
+        except Exception as exc:  # memória é conveniência: nunca derruba a esteira
+            texto = f"_Índice de missões indisponível nesta execução ({exc}). Sem comparação com missões anteriores._"
+            msg = f"⚠️ Catálogo: não consegui ler o índice ({exc})."
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta={"missoes_vizinhas": texto}),
+        )
+
+
 class RegistroCatalogoAgent(BaseAgent):
     """Registra a missão desta execução na memória do gerador, ao fim da esteira.
 

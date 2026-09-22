@@ -287,6 +287,10 @@ def vizinhas(ficha: Dict[str, Any], indice: Optional[Dict[str, Any]] = None, n: 
     for m in indice.get("missoes", []):
         if m.get("sessao") and m.get("sessao") == ficha.get("sessao"):
             continue
+        # A própria missão, quando já está no índice (reexecução da mesma sessão): a esteira rodando
+        # de novo não pode ver a si mesma como repetição.
+        if ficha.get("descoberta") and m.get("descoberta") == ficha.get("descoberta"):
+            continue
         if str(m.get("status", "")).lower() == "descartada":
             continue
         ano_m = _ano_num(m.get("ano", ""))

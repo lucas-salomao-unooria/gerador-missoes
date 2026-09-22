@@ -146,6 +146,16 @@ def build_user_message(prompt: str, doc_batch: Optional[DocumentBatch]) -> types
 _build_user_message = build_user_message  # nome antigo, mantido para quem já importava
 
 
+def catalogo_para_prompt() -> str:
+    """O índice de missões geradas, em tabela, para os prompts que comparam com o catálogo."""
+    try:
+        from tools.catalogo import carregar, tabela_markdown
+
+        return tabela_markdown(carregar().get("missoes", []))
+    except Exception:  # memória é conveniência: sem índice, os prompts seguem com o markdown
+        return ""
+
+
 def briefing_inicial(initial_state: Optional[Dict[str, Any]], prompt: str) -> str:
     """O `briefing` da sessão: o salvo vence o `prompt`.
 
@@ -214,7 +224,13 @@ async def run_orchestrator_pipeline_stream(
             # `briefing` alimenta o `{briefing?}` do P0b, que não vê a mensagem original
             # `initial_state` reexecuta uma etapa sobre o estado salvo de uma execução anterior
             # (`scripts/rerodar_etapa.py`): produto e design ficam fixos e só a etapa pedida roda.
-            state={**(initial_state or {}), "briefing": briefing_inicial(initial_state, prompt)},
+            state={
+                **(initial_state or {}),
+                "briefing": briefing_inicial(initial_state, prompt),
+                # A memória do gerador chega aos prompts pelo estado, não por include: o índice vive
+                # no bucket (`output/`), que persiste, enquanto `prompts/` vem da imagem do container.
+                "catalogo_missoes": catalogo_para_prompt(),
+            },
         )
         adk_artifacts_dir = settings.output_path / ".adk_artifacts"
         adk_artifacts_dir.mkdir(parents=True, exist_ok=True)

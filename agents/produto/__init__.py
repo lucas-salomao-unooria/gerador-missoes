@@ -40,7 +40,13 @@ from google.adk.agents.sequential_agent import SequentialAgent
 
 from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca, preservar_one_pager
-from agents.checkers import BnccCheckAgent, EnvelopeGateAgent, RastroCheckAgent, SaidaDeLoopAgent
+from agents.checkers import (
+    BnccCheckAgent,
+    EnvelopeGateAgent,
+    RastroCheckAgent,
+    SaidaDeLoopAgent,
+    VizinhasCatalogoAgent,
+)
 from config import get_settings
 from prompts import load_prompt
 
@@ -172,6 +178,16 @@ def get_one_pager_resumido_agent(**kw) -> LlmAgent:
     )
 
 
+def get_vizinhas_catalogo_agent(nome: str) -> VizinhasCatalogoAgent:
+    """Missões já geradas mais próximas desta. Roda em duas posições: antes do núcleo (filtrando
+    pelo briefing) e depois dele, dentro do loop (filtrando pelo que a missão é) — só a segunda
+    serve à verificação V5 do micro-gate."""
+    return VizinhasCatalogoAgent(
+        name=nome,
+        description="Recupera do índice as missões já geradas mais próximas desta, para o autor do núcleo não repetir e o micro-gate julgar. Determinístico.",
+    )
+
+
 def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
     """Spec da missão ↔ BNCC e ficha do manifesto. Usado pela etapa inteira e pela correção a partir da spec."""
     return LoopAgent(
@@ -242,6 +258,10 @@ def build_produto_stage(
         max_iterations=MICRO_GATE_MAX_RODADAS,
         sub_agents=[
             get_nucleo_narrativo_agent(**kw),
+            # Depois do núcleo: refiltra o índice pelo que a missão de fato é (ambiente, eixo,
+            # descoberta). É esta lista que a verificação V5 do micro-gate julga, e é ela que o
+            # autor relê na segunda rodada quando V5 reprova.
+            get_vizinhas_catalogo_agent("A01bVizinhasCatalogo"),
             get_micro_gate_agent(**kw),
             EnvelopeGateAgent(
                 name="A03MicroGateCheck",
@@ -345,6 +365,9 @@ def build_produto_stage(
         name="ProdutoStage",
         description="Área de Produto: núcleo narrativo ↔ micro-gate → seções de apoio → gate estrutural → avaliações → gate final → spec da missão ↔ currículo e manifesto → one-pager resumido.",
         sub_agents=[
+            # Antes de inventar: o que já existe no ano, lido do índice pelo briefing. Sem isto, a
+            # primeira geração nasce cega e a repetição só apareceria na segunda rodada do loop.
+            get_vizinhas_catalogo_agent("A00bVizinhasCatalogo"),
             nucleo_loop,
             get_secoes_apoio_agent(**kw),
             gate_loop,
@@ -370,7 +393,9 @@ def build_produto_stage(
 SPEC_AGENT_IDS = ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A16SpecCheck", "A16bOnePagerResumido"]
 
 PRODUTO_METADATA = [
+    {"id": "A00bVizinhasCatalogo", "name": "00b · Missões já geradas (determinístico)", "icon": "🗂️", "output_key": "missoes_vizinhas", "prompt_file": None, "description": "Lê o índice de missões e entrega ao núcleo as mais próximas do ano do briefing, para a missão nova não repetir uma anterior."},
     {"id": "A01NucleoNarrativo", "name": "01 · Núcleo narrativo", "icon": "🎬", "output_key": "nucleo_narrativo", "prompt_file": "produto/01_nucleo_narrativo.md", "description": "Seções 0, 1, 3 e 4 a partir do briefing e dos anexos: descoberta, narrativa e as 6 etapas."},
+    {"id": "A01bVizinhasCatalogo", "name": "01b · Missões já geradas, pelo núcleo (determinístico)", "icon": "🗂️", "output_key": "missoes_vizinhas", "prompt_file": None, "description": "Refiltra o índice pelo ambiente, eixo e descoberta do núcleo recém-escrito. É esta lista que a verificação V5 do micro-gate julga."},
     {"id": "A02MicroGate", "name": "02 · Micro-gate do núcleo", "icon": "🕵️", "output_key": "micro_gate_report", "prompt_file": "produto/02_micro_gate.md", "description": "Spoiler, gap de informação, escolha significativa e job-to-be-done — binário, até 2 rodadas."},
     {"id": "A03MicroGateCheck", "name": "03 · Veredito do micro-gate (determinístico)", "icon": "🔀", "output_key": "micro_gate_status", "prompt_file": None, "description": "Lê o envelope do micro-gate e decide se o núcleo volta ao P0a ou segue."},
     {"id": "A04SecoesApoio", "name": "04 · Seções de apoio e brief", "icon": "📝", "output_key": "one_pager", "prompt_file": "produto/04_secoes_apoio.md", "description": "Completa o one-pager canônico (seções 2 e 5–18) e o brief de escopo sobre o núcleo aprovado."},

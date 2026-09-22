@@ -13,6 +13,10 @@ Você faz **quatro verificações**, todas binárias (passa/não passa). Nada ma
 
 {nucleo_narrativo}
 
+## Missões que já existem (memória do gerador)
+
+{missoes_vizinhas?}
+
 ## Verificação 1 — Teste de spoiler (4 padrões)
 
 Leia **apenas** as descrições do Desafiar e do Navegar na seção 4. Depois leia o Resultado/Aha.
@@ -72,6 +76,15 @@ Qualquer falha → ❌ com o número do teste que falhou.
 
 **Verificação complementar:** o job-to-be-done aparece pela primeira vez no Desafiar, não no Decidir? Se o Decidir é a primeira vez que o estudante entende o que precisa fazer → ❌.
 
+## Verificação 5 — A missão não repete uma já gerada
+
+Contra **cada linha** da tabela de missões acima, aplique o **teste de 2 frases**: descreva em uma frase o que o estudante faz na missão deste núcleo e em uma frase o que ele faz na missão da linha. Se as duas frases forem intercambiáveis, ou uma contiver a outra, **V5 não passa**.
+
+- Repetir **ambiente** ou **eixo temático** não é falha: a trilha do ano volta ao mesmo app de propósito. O que reprova é repetir a **descoberta central** ou o **tipo de decisão**.
+- A coluna **Semelhança** é lexical e serve para ordenar, não para decidir: duas missões podem dizer a mesma coisa com outras palavras e aparecer como `baixa`. Julgue pelo conteúdo das colunas Descoberta central e Tipo de decisão.
+- **Válvula, e ela é obrigatória:** linha com campo `—` ou `[preencher…]` **não sustenta reprovação** — não dá para julgar contra dado furado. Nesse caso V5 passa, e você registra no relatório a linha incompleta como lacuna de catálogo (dono: produto).
+- Tabela vazia, ou aviso de índice indisponível: V5 passa, com uma linha dizendo que não houve comparação.
+
 ## Regra de parada
 
 **Máximo 2 rodadas.** Se na segunda rodada o núcleo ainda não passa, emita o relatório com `"precisa_humano": true` — o problema provavelmente não é de redação, é de mecanismo, e precisa de decisão de produto.
@@ -100,10 +113,15 @@ Qualquer falha → ❌ com o número do teste que falhou.
 ## V4 — Job-to-be-done
 **Status:** ✅ | ❌
 **Se ❌:** O Desafiar tem tarefa concreta ou só pergunta/curiosidade? · O job aparece primeiro no Desafiar ou no Decidir?
+
+## V5 — Não repete missão anterior
+**Status:** ✅ | ❌ | N/A (índice vazio ou linhas incompletas)
+**Se ❌:** contra qual missão (slug ou nome), e as duas frases do teste, lado a lado.
+**Lacuna de catálogo:** linhas com campo por preencher que impediram a comparação, se houver.
 ```
 
 Feche com o envelope:
 
 ```json
-{"agente": "micro-gate", "missao": "<slug>", "rodada": <n>, "status": "passa" | "nao_passa", "falhas": ["V1" | "V2" | "V3" | "V4"], "precisa_humano": false | true}
+{"agente": "micro-gate", "missao": "<slug>", "rodada": <n>, "status": "passa" | "nao_passa", "falhas": ["V1" | "V2" | "V3" | "V4" | "V5"], "precisa_humano": false | true}
 ```
