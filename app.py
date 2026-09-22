@@ -1256,7 +1256,8 @@ def main():
     # Mesmo motivo das seções de `render_pipeline_details`: com `st.tabs`, o editor de
     # prompts era montado a cada rerun mesmo fechado — e ele resolve includes, chegando a
     # ~380 KB de payload por interação.
-    SECOES = ["💬 Pipeline", "📝 Prompts e referências"]
+    # SECOES = ["💬 Pipeline", "📝 Prompts e referências"]
+    SECOES = ["💬 Pipeline"]
     secao = st.segmented_control("Seção", SECOES, default=SECOES[0], key="secao_principal", label_visibility="collapsed") or SECOES[0]
 
     if secao == SECOES[0]:
