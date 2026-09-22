@@ -17,6 +17,10 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 
 ---
 
+## Premissa que governa a imersão (leia antes de construir ou julgar tela)
+
+<!-- include: references/premissa-imersao.md -->
+
 ## REGRA ZERO — Proteção do gap de informação (leia antes de tudo)
 
 Esta é a regra mais importante do núcleo. As demais regras existem para apoiar a missão; esta define se a missão funciona.

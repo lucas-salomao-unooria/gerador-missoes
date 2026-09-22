@@ -139,7 +139,11 @@ Colete toda lacuna aberta declarada nos relatórios de **fechamento de lacunas, 
 
 **D8b — Camada CAA.** Só quando o `camada_caa` vier `concluido`. Cada decisão do mapa tem modo de resposta alternativo construído no frame? Um conceito, um símbolo, na missão inteira? Alvo de toque ≥ 64×64 (≥ 88×88 na projeção) e vão ≥ 16 px? Botão de áudio é componente e não caixa cinza? Cada símbolo acionável tem chave de áudio que existe no sheet da passada 2? **Prancha CAA dentro do clone é ❌ por DES-13.** Nenhum marcador no dashboard distingue "respondeu por CAA" (8.4) — se houver, é ❌. Se `camada_caa` vier `nao_aplicavel`, verifique só se a condição de não-aplicação declarada bate com a faixa da spec; se bater, D8b fecha ✅ com nota.
 
-**Gate de ofício (O1–O5).** Aplique a régua abaixo contra a direção por tela da jornada, em telas `pico`/`alta`:
+**Gate de ofício (O1–O5).** Aplique a régua abaixo contra a direção por tela da jornada, em telas `pico`/`alta`. Achado O1–O5 sai com `severidade: "oficio"`, **exceto a inversão de hierarquia**: tela `pico` com mais elementos do que qualquer vizinha na ordem do arco sai com `severidade: "bloqueio"`, `codigo: "O1"`, `agente_responsavel: "jornada"`. A contagem é a da coluna "Teto de elementos (contado)" da Seção 4 da jornada, conferida sobre o frame construído, não sobre a intenção; empate é `oficio`. É a única regra de ofício que bloqueia hoje, porque é comparativa e não depende de teto calibrado:
+
+## Premissa que governa a imersão (leia antes de construir ou julgar tela)
+
+<!-- include: references/premissa-imersao.md -->
 
 <!-- include: references/rubrica-oficio.md -->
 

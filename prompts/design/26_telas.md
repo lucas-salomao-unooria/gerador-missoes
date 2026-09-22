@@ -143,6 +143,10 @@ Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica — a redund
 
 <!-- include: references/literatura-cognitiva-resumo.md -->
 
+## Premissa que governa a imersão (leia antes de construir ou julgar tela)
+
+<!-- include: references/premissa-imersao.md -->
+
 <!-- include: references/pronto.md -->
 
 ## Rodada de correção — só quando houver tickets

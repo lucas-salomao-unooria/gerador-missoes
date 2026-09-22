@@ -27,7 +27,7 @@ Elementos por tela, por faixa e por tier. Conta como elemento: bloco de texto, a
 
 ⚠️ **v0.1 — números a calibrar.** São ponto de partida derivado dos caps de carga decisória do 3.5, não medição. A primeira missão que os aplicar gera a primeira correção; **registre o desvio em vez de burlar o número.**
 
-**Regra que não depende de calibragem:** a tela `pico` tem menos elementos que suas vizinhas na ordem do arco. Essa é comparativa e vale mesmo se todos os números acima estiverem errados. Se o pico é a tela mais cheia da missão, a hierarquia está invertida e o wireframe construiu a inversão fielmente.
+**Regra que não depende de calibragem:** a tela `pico` tem menos elementos que suas vizinhas na ordem do arco. Essa é comparativa e vale mesmo se todos os números acima estiverem errados. Se o pico é a tela mais cheia da missão, a hierarquia está invertida e o wireframe construiu a inversão fielmente. **Por isso, desde a v0.2, é a única linha desta rubrica que sai com `severidade: "bloqueio"`** (código `O1`, dono `jornada`): a contagem é a da coluna "Teto de elementos (contado)" da Seção 4 da jornada, sobre o frame construído; empate com uma vizinha é `oficio`; maior que qualquer vizinha na ordem do arco é bloqueio. As demais linhas de O1–O5 continuam `oficio` até a calibragem por observação de campo.
 
 ---
 
@@ -37,7 +37,7 @@ Elementos por tela, por faixa e por tier. Conta como elemento: bloco de texto, a
 |---|---|
 | O que salta primeiro na tela é o que a Seção 4 declarou? | Salta outra coisa, ou saltam duas |
 | O que a Seção 4 mandou recuar recuou de fato? | Continua no primeiro nível de leitura |
-| A tela `pico` é a mais enxuta do trecho? | É a mais cheia |
+| A tela `pico` é a mais enxuta do trecho? | É a mais cheia — **severidade `bloqueio`, dono `jornada`** (v0.2) |
 | Teto de elementos respeitado, por contagem? | Acima, sem desvio registrado |
 
 ## O2 — Voz
@@ -99,3 +99,4 @@ Devolução feita por preferência que não está aqui **nem** na direção que 
 | Versão | Mudança |
 |---|---|
 | v0.1 | Régua inicial. O1–O5 e tetos derivados dos caps do 3.5, a calibrar na primeira missão. Origem: o pipeline não tinha nenhum gate de execução — só de conformidade. |
+| v0.2 (22/09/2026) | A regra comparativa do pico (O1, "a tela pico é a mais enxuta") passa a `severidade: bloqueio`, dono `jornada`. Origem: auditoria de imersão A2 — ofício não reprovava por construção, e esta é a única regra que não depende de número calibrado. |

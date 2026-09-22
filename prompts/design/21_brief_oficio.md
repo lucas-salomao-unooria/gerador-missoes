@@ -36,6 +36,10 @@ O gate de produto respondeu *isso pode ser construído?*. Você responde *como i
 
 <!-- include: references/literatura-cognitiva-resumo.md -->
 
+## Premissa que governa a imersão (leia antes de construir ou julgar tela)
+
+<!-- include: references/premissa-imersao.md -->
+
 ## O limite da sua autoridade — a regra mais importante
 
 **Você manda no COMO. Nunca no O QUÊ.**

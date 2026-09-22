@@ -75,7 +75,7 @@ ID `E<etapa>-<ator>-<n>` (`E2-ALU-01`, `E5-PROF-01`, `E3-SIS-01`). **As telas do
 ### Seção 4 — Direção por tela (só `pico` e `alta`)
 | Tela | Beat que carrega | O que salta primeiro (um único elemento) | O que recua (obrigatório) | Teto de elementos (contado) | Não-negociável honrado |
 
-A tela `pico` tem teto **menor** que as vizinhas. Tetos por faixa e tier:
+A tela `pico` tem teto **menor** que as vizinhas. **A coluna "Teto de elementos (contado)" sai como número inteiro, sem texto** — o QA compara o pico com as vizinhas por esse número, e pico maior do que qualquer vizinha é `bloqueio` com dono `jornada` (rubrica de ofício v0.2). Tetos por faixa e tier:
 
 <!-- include: references/rubrica-oficio.md -->
 
@@ -123,6 +123,10 @@ Colunas que não podem ficar vazias, e por quê:
 ## Régua por idade (resumo gerado da fonte única — tetos, portas de abstração, piso da escola pública, uso por idade)
 
 <!-- include: references/literatura-cognitiva-resumo.md -->
+
+## Premissa que governa a imersão (leia antes de construir ou julgar tela)
+
+<!-- include: references/premissa-imersao.md -->
 
 <!-- include: references/pronto.md -->
 

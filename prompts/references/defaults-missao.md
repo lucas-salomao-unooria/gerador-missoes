@@ -54,7 +54,7 @@ Cada padrão diz de onde saiu. Padrão sem fonte não entra — vira candidato e
 |---|---|---|
 | `tres-cenarios` | Os três cenários existem sempre: **1:1**, **2–4 por aparelho**, **projeção única**. Para cada um a spec responde "o que muda" e "a descoberta chega?". | critério 10.1 |
 | `1-1-e-o-cenario-base` | O cenário 1:1 é o de referência: o wireframe é desenhado para ele e os outros dois derivam. | d2, d5 |
-| `2-4-decide-em-grupo-registra-por-grupo` 🟡 | Em 2–4 por aparelho, a decisão é do grupo e a evidência é **por grupo**, não por criança; a plataforma não tenta inferir quem tocou. | critério 10.1 · bloco 9 (não rotular estudante, 8.4) · confirmar com dados |
+| `2-4-decide-em-grupo-registra-por-grupo` 🟡 | Em 2–4 por aparelho, **a conta é do grupo**, com identidade escolhida pelo grupo por affordance nativa (nome de usuário, nome no grupo, foto entre as do banco); a decisão é do grupo e a evidência é **por grupo**, não por criança; a plataforma não tenta inferir quem tocou. O protocolo de revezamento por etapa (quem toca, como decide, como registra desacordo) é da spec (critério 10.2). | critério 10.1 · bloco 9 (não rotular estudante, 8.4) · confirmar com dados |
 | `projecao-e-conduzida-pela-professora` | Em projeção única, quem toca é a professora e a turma decide em voz alta; a tela usa o viewport docente/projeção 1366×768, alvos ≥ 88×88, e a descoberta precisa chegar **sem** a mecânica individual. Se não chega, a spec tem que dizer o que substitui. | critério 10.1 · d4b (88×88) · d5 |
 
 ## Classe `copy-fonte` — o que a professora diz e o que o guia fala (bloco 8)

@@ -5,7 +5,7 @@
 |#|Critério|Tipo|Teste prático|
 |-|-|-|-|
 |2.2|**Vivência, não leitura** — O aluno experimenta o conceito, não lê sobre ele|Obrigatório|Tirando todo texto explicativo, o conceito ainda chega ao aluno pela experiência?|
-|2.3|**Simulação diegética** — O ambiente simulado existe por uma razão dentro da narrativa|Desejável|A narrativa justifica por que aquele ambiente existe, ou ele aparece "do nada"?|
+|2.3|**Simulação diegética** — O estudante entra no ambiente por uma razão que é dele, por uma ação que é do ambiente, e o ambiente não é trocável|Obrigatório|Três testes, todos precisam passar. **(a) Teste da porta:** o *job-to-be-done* do Desafiar (Regra 9 do P0a) diz por que o estudante abre **este** app **agora**, e é algo que um estudante da faixa faria fora da missão (`literatura-cognitiva.md` §10)? "A Unooria te leva ao feed" não é porta; "o Léo mandou o link no grupo" é. **(b) Teste da troca:** substitua mentalmente o ambiente por outro dos cinco; se o Desafiar e o Decidir continuam válidos sem reescrita, o ambiente é cenário, não diegese. **(c) Teste da chegada:** a primeira entrada no ambiente é uma ação nativa (abrir o app, abrir um grupo, tocar um link, receber uma notificação), não uma transição da plataforma? Falha em (a) ou (c) → ❌; falha só em (b) com justificativa na seção 18 → ⚠️.|
 |2.4|**Descoberta central articulada** — Existe uma frase-chave que captura o "aha moment"|Obrigatório|Dá pra resumir em uma frase o que o aluno descobre? Se não dá, a descoberta não está clara.|
 |2.5|**Diferenciação no catálogo** — Quando o ambiente ou eixo temático é compartilhado com missão de outro ano, a descoberta central e o tipo de decisão são suficientemente distintos|Desejável|Consultar catálogo de missões: existe outra no mesmo ambiente ou eixo? Se sim, teste de 2 frases: descrever o que o aluno faz em cada missão em uma frase — se intercambiáveis, não diferencia. Se catálogo incompleto, marcar "N/A — catálogo incompleto".|
 
@@ -63,11 +63,11 @@ O critério 2.6 do gate estrutural valida se o verbo **existe** na plataforma. O
 
 | Categoria | Obrigatórios (Bloqueantes) | Ressalvas / Alertas / Desejáveis |
 |-|:-:|:-:|
-| 2. Imersão (subset) | 1 | 2 |
+| 2. Imersão (subset) | 3 | 1 |
 | 4. Professor (subset) | 4 | 0 |
 | 5. Habilidades (Letramento Digital vs. Outras) | 2 (Letramento Digital) | 3 + 1 condicional (Outras BNCC / Alertas) |
 | 8. Guardrails | 6 | 0 |
-| **TOTAL** | **13** | **5 + 1 condicional** |
+| **TOTAL** | **15** | **4 + 1 condicional** |
 
 
 ### Regra comum de verificação curricular e veredito

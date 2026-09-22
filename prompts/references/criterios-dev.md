@@ -1,12 +1,12 @@
 ---
 name: criterios-dev
-description: Os 72 critérios do gate `/validar-missao` do time de dev, com a versão em que os lemos e o que a nossa esteira produz para cada bloqueante. Lido por handoff-dev e formato-spec; mantido por aprendizado.
+description: Os 73 critérios do gate `/validar-missao` do time de dev, com a versão em que os lemos e o que a nossa esteira produz para cada bloqueante. Lido por handoff-dev e formato-spec; mantido por aprendizado.
 sources: [chat]
 ---
 
 # Critérios do gate de dev
 
-**Versão lida:** 02/09/2026 (critérios). **Gabarito da plataforma reconferido em 16/09/2026** contra `plataforma-unooria@ba0de35` — as cópias canônicas estão em `references/plataforma/` (`versao-lida.json`). 72 critérios, 5 dimensões, **21 bloqueantes**.
+**Versão lida:** 02/09/2026 (critérios). **Gabarito da plataforma reconferido em 16/09/2026** contra `plataforma-unooria@ba0de35` — as cópias canônicas estão em `references/plataforma/` (`versao-lida.json`). 73 critérios, 5 dimensões, **22 bloqueantes** (contagem real dos cinco arquivos: 16 + 14 + 15 + 15 + 13; DES-14 nasceu do lado de cá em 21/09/2026 e ganhou severidade em 22/09).
 Consolidação: 🟢 exige zero ❌ nos 72 — qualquer ❌ não bloqueante rebaixa
 para 🟡.
 
@@ -25,6 +25,7 @@ Reconferir a cada emenda da nossa rubrica, e atualizar a versão lida acima.
 | PROD-08 | Decisão sobre a revelação | `brief-oficio` + `copy-ptbr` |
 | DES-01 | Seção do DS nomeada e existente | `ambientes.md` + spec bloco 0 |
 | DES-02 | Mapa "quem está falando", tela a tela | coluna `seção` no sheet |
+| DES-14 | Visão do professor completa e transversal (cinco telas do preparo, segundo grafo) — **critério escrito e classificado por esta esteira**, não pelo time da plataforma | `22_jornada.md` §1c + `23_fluxo.md` segundo grafo + folha `stitch_links` (D6 do QA já bloqueia a montante) |
 | PED-01 | Códigos BNCC de Letramento Digital | spec bloco 11, conferido pelo `BnccCheck` contra `references/bncc-computacao.json` *(bloqueia apenas em letramento digital; outras regras passam como alerta)* |
 | PED-02 | Matriz habilidade → evidência → interação → dado | `handoff-dev`, seção 3 |
 | PED-04 | Gabarito definido, só no servidor | spec bloco 9 |
@@ -39,6 +40,20 @@ Reconferir a cada emenda da nossa rubrica, e atualizar a versão lida acima.
 | DAD-08 | Texto livre de menor | spec bloco 9 |
 | TEC-01 | Manifesto derivável (com `produto`, `unidade`, `permissoes`) | spec bloco 0 — ficha do manifesto, conferida pelo `ManifestoCheck` |
 | TEC-02 | Módulo da api desenhado | *verdade do lado deles* |
+
+## O que o gate deles não bloqueia e o nosso bloqueia antes
+
+O banco de dev é lido em versão datada e não é desta esteira — exceto DES-14, que nasceu do lado de cá. Quatro critérios de imersão são não bloqueantes lá; para cada um, o juízo equivalente já é bloqueante a montante, e a banca não pode relaxar por achar que "o banco pega depois":
+
+| Banco de dev | O que pergunta | Equivalente bloqueante a montante (nosso) |
+|---|---|---|
+| DES-03 | O clone é fiel, com lista do que difere | O3 da rubrica de ofício com a tabela de ausências de `ambientes.md`; 2.3 (diegese, obrigatório); `premissa-imersao.md` |
+| DES-07 | Estados vazios parecem intencionais | O5; padrão `vazio-e-carregando`; 9.4 com o teste de contaminação |
+| DES-08 | Copy real e adequada à série | 6.1 com a cláusula de defasagem; D4 do QA com `literatura-cognitiva-resumo.md` |
+| DES-13 | Marca fora do disfarce | D8b do QA e a regra de `ambientes.md` (já bloqueantes) |
+| DES-14 | Visão do professor completa e transversal | D6 e D6c do QA (bloqueio para tela do professor ausente) — e DES-14 é `[BLOQUEANTE]` também no banco, por decisão desta esteira |
+
+Se a esteira pode acrescentar critério ao banco (DES-14), a objeção "não é nosso" a promover DES-03 enfraquece: fica registrado como decisão de produto em aberto.
 
 ## Duas coisas que o gate deles resolveu do nosso lado
 
