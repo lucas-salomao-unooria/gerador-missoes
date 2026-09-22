@@ -2276,7 +2276,8 @@ def test_catalogo_vizinhas_filtra_por_ano_ambiente_e_eixo():
     from tools import catalogo as cat
 
     indice = {"versao": 1, "missoes": [
-        _ficha(sessao="s2", slug="exp07ef1b", ano="7EF"),                       # ano vizinho
+        _ficha(sessao="s2", slug="exp07ef1b", ano="7EF",
+               descoberta="o feed muda conforme quem eu sigo, e ninguém me avisa"),  # ano vizinho
         _ficha(sessao="s3", slug="exp01ef1b", ano="1EF", ambiente="tiktooria",
                eixo="privacidade", descoberta="outra coisa completamente", tipo_decisao="x"),  # longe
         _ficha(sessao="s4", slug="exp09ef1b", ano="9EF", status="descartada"),  # descartada sai
@@ -2285,6 +2286,9 @@ def test_catalogo_vizinhas_filtra_por_ano_ambiente_e_eixo():
     slugs = [m["slug"] for m in achadas]
     assert "exp07ef1b" in slugs and "exp01ef1b" not in slugs and "exp09ef1b" not in slugs, slugs
     assert achadas[0]["semelhanca"] >= achadas[-1]["semelhanca"]
+    # Reexecução: a mesma missão já registrada não pode aparecer como repetição de si mesma.
+    com_ela_mesma = {"versao": 1, "missoes": [_ficha(sessao="outra-sessao")]}
+    assert cat.vizinhas(_ficha(sessao=""), com_ela_mesma) == []
     print(f"   ✓ catálogo: vizinhas filtram por ano/ambiente/eixo e ignoram descartada ({slugs})")
 
 
