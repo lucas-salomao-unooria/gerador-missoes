@@ -46,6 +46,11 @@ Sua pergunta: **quem ler só este documento entende o mecanismo inteiro, sabe on
 
 <!-- include: references/catalogo-missoes.md -->
 
+**Missões já geradas (memória viva do gerador — índice atualizado a cada execução; vazio significa que não há comparação possível):**
+
+{catalogo_missoes?}
+
+
 ## Regras de linguagem
 
 O conteúdo já está decidido em outro lugar. O que você controla aqui é como ele soa — e é aqui que este documento mais reprova. Estas regras valem para **tudo**: prosa, bullets, células de tabela e caixas.

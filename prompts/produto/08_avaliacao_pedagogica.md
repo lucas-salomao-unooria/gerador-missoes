@@ -28,6 +28,11 @@ Use esta lista nos critérios 5.1 e 5.2, sem exceção: o código citado **exist
 
 <!-- include: references/catalogo-missoes.md -->
 
+**Missões já geradas (memória viva do gerador — índice atualizado a cada execução; vazio significa que não há comparação possível):**
+
+{catalogo_missoes?}
+
+
 ## Como avaliar
 
 1. **Fonte de verdade curricular:** o material do bimestre/ano (Entre Redes) quando disponível no one-pager. Letramento digital é o núcleo curricular da missão: a ação observável deve exercitar genuinamente o uso crítico, ético e consciente do ambiente digital.

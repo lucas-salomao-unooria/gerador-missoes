@@ -1,8 +1,15 @@
 # Catálogo de Missões Unooria
 
+> **A fonte viva deste catálogo não é este arquivo.** Desde 22/09/2026 as missões geradas são
+> registradas automaticamente num índice (`output/_catalogo.json`), que a esteira lê a cada execução
+> e entrega aos prompts pela variável `{catalogo_missoes?}`. Este arquivo define **as colunas, o
+> vocabulário e como comparar** — a regra, versionada aqui; o dado vive no índice, que persiste
+> entre execuções e entre revisões do serviço. A tabela ao fim é o **registro legado, congelado**:
+> ela alimentou a carga inicial do índice e não é mais mantida à mão.
+
 **Objetivo:** Registro vivo das missões criadas/aprovadas. A rubrica consulta este arquivo no critério 2.5 (diferenciação no catálogo) e no 2.8 (progressão na trilha) para detectar sobreposição de ambiente, eixo temático ou descoberta central entre missões, e para verificar se uma missão sobe um degrau em relação à anterior do mesmo ano ou eixo.
 
-**Como manter:** Sempre que uma missão for aprovada ou chegar perto de aprovação, adicionar uma linha na tabela abaixo. O agente de aprendizado (51) propõe a linha no formato exato desta tabela; alguém do produto a aceita. Campo desconhecido entra como `[preencher do manifesto]`, nunca em branco.
+**Como se mantém agora:** o agente 52 registra a missão ao fim de cada execução, com status derivado dos gates (`em criação` ou `bloqueada`) — registrar é fato. Promover para `validada`, `aprovada` ou `em produção` é ato humano: `python scripts/catalogo.py promover --sessao <pasta> --status aprovada`. O agente 51 continua redigindo os campos de julgamento (descoberta, eixo, tipo de decisão), que o 52 copia. Campo desconhecido entra como `[preencher do manifesto]`, nunca em branco — e linha com campo por preencher **não sustenta reprovação** na verificação V5 do micro-gate.
 
 **Campos:**
 - **Slug** — o id da plataforma, `expNNefNb` (ano em dois dígitos + `ef`/`em` + bimestre + `b`); `exp-NN-<nome>` só para missão transversal sem série
@@ -19,6 +26,11 @@
 - **Observada em campo** — `não` · `piloto` · `sim (AAAA-MM)`, preenchido pelo protocolo de `observacao-campo.md`
 
 \---
+
+## Registro legado (congelado em 22/09/2026)
+
+As linhas abaixo vieram do catálogo escrito à mão e já foram importadas para o índice
+(`scripts/catalogo.py importar-markdown`). Não acrescente linhas aqui: a esteira registra sozinha.
 
 |Slug|Ano|Bim|Nome|Ambiente|Eixo temático|Descoberta central (aha)|Tipo de decisão|Porta de abstração|Habilidade primária|Status|Observada em campo|
 |-|-|-|-|-|-|-|-|-|-|-|-|

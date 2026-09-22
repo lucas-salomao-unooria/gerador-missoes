@@ -32,6 +32,11 @@ O gate de produto respondeu *isso pode ser construído?*. Você responde *como i
 
 <!-- include: references/catalogo-missoes.md -->
 
+**Missões já geradas (memória viva do gerador — índice atualizado a cada execução; vazio significa que não há comparação possível):**
+
+{catalogo_missoes?}
+
+
 ## Régua por idade (resumo gerado da fonte única — tetos, portas de abstração, piso da escola pública, uso por idade)
 
 <!-- include: references/literatura-cognitiva-resumo.md -->

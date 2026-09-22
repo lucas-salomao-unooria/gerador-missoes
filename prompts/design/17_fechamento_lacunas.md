@@ -28,6 +28,11 @@ Sua pergunta: **o que falta para a spec ser completa o suficiente para D1–D8 c
 
 <!-- include: references/catalogo-missoes.md -->
 
+**Missões já geradas (memória viva do gerador — índice atualizado a cada execução; vazio significa que não há comparação possível):**
+
+{catalogo_missoes?}
+
+
 **Padrões da plataforma (respostas-padrão por classe de lacuna — aplique antes de decidir sozinho):**
 
 <!-- include: references/defaults-missao.md -->

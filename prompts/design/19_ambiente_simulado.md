@@ -28,6 +28,11 @@ D0 não decide ambiente (é vermelho para ele). Você é quem decide — mas só
 
 <!-- include: references/catalogo-missoes.md -->
 
+**Missões já geradas (memória viva do gerador — índice atualizado a cada execução; vazio significa que não há comparação possível):**
+
+{catalogo_missoes?}
+
+
 **Ambientes suportados e suas seções no DS (a lista fechada):**
 
 <!-- include: references/ambientes.md -->

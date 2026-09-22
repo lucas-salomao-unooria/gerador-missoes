@@ -61,6 +61,11 @@ Você tem duas funções, nesta ordem de importância:
 
 <!-- include: references/catalogo-missoes.md -->
 
+**Missões já geradas (memória viva do gerador — índice atualizado a cada execução; vazio significa que não há comparação possível):**
+
+{catalogo_missoes?}
+
+
 <!-- include: references/padroes-aprendidos.md -->
 
 <!-- include: references/candidatos-a-criterio.md -->
