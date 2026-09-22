@@ -1755,6 +1755,7 @@ if __name__ == "__main__":
         test_estagio_produto_parcial_spec,
         test_bloco_de_correcao_em_todos_os_agentes,
         test_agente_de_triagem_configurado,
+        test_prd_cita_experiencia_existente_sem_virar_caminho_divergente,
         test_capacidade_de_plataforma_nao_bloqueia,
         test_mensagem_de_pulo_nao_vira_prd,
         test_contencao_de_resposta_de_ferramenta,
@@ -2130,6 +2131,30 @@ def test_achado_de_evento_nomeia_o_evento_e_mostra_a_linha():
     assert "EVT-002" in evento[0]["resumo"]
     assert "telemetria_eventos" in evento[0]["resumo"]
     print("   ✓ achado de telemetria nomeia o evento e carrega a linha inteira como evidência")
+
+
+def test_prd_cita_experiencia_existente_sem_virar_caminho_divergente():
+    """Regressão de 2026-09-22 (exp08ef2b): o PRD manda imitar `apps/experiencias/exp-08-manifesto-ia/`
+    como exemplar canônico, e o gate lia isso como a missão declarando duas pastas."""
+    from tools.rastro import validar_prd
+
+    base = """---
+prd_id: PRD-exp08ef2b
+---
+## 12. Estrutura
+Bundle em `apps/experiencias/exp08ef2b/`.
+Imitar o exemplar canônico: `apps/experiencias/exp-08-manifesto-ia/` e `apps/api/src/manifesto-ia/`.
+Porta 5184 evita colisão com `exp-08-manifesto-ia` (5182) e `exp-04-o-que-a-foto-conta` (5183).
+"""
+    r = validar_prd(base)
+    assert "caminho-divergente" not in {a["codigo"] for a in r["achados"]}, r["achados"]
+
+    # mas a missão nova com duas pastas próprias continua sendo bloqueio: é o `exp-NN` vs `expNNefNb`
+    duas = base + "\nO bundle também aparece como `apps/experiencias/exp-08-rota-invisivel/`.\n"
+    achados = {a["codigo"]: a for a in validar_prd(duas)["achados"]}
+    assert "caminho-divergente" in achados, achados
+    assert achados["caminho-divergente"]["severidade"] == "bloqueio"
+    print("   ✓ PRD cita experiência existente sem virar caminho divergente")
 
 
 def test_prd_tem_ciclo_de_correcao():

@@ -71,6 +71,16 @@ CAPACIDADES_DE_EXTENSAO = {
 # Capturar mídia do estudante não é só permissão de iframe: é contrato de dados.
 CAPTURA_DE_MIDIA = ("microphone", "camera", "display-capture")
 SECOES_DS = ("instanooria", "unitube", "chatgpt", "whatsappmobile", "tiktooria")
+
+#: Experiências que já existem na plataforma (espelha `references/plataforma/`). O PRD as cita
+#: como exemplar a imitar (`apps/experiencias/exp-08-manifesto-ia/`) ou para não repetir porta —
+#: citar não é declarar o diretório da missão nova, e contar as duas coisas juntas reprovava o PRD
+#: justamente por seguir a referência (2026-09-22, exp08ef2b).
+EXPERIENCIAS_EXISTENTES = frozenset({
+    "exp-01-instanooria", "exp-02-unootube", "exp-03-unoogpt", "exp-04-o-que-a-foto-conta",
+    "exp-06-rastro-boato", "exp-07-o-eco-no-grupo", "exp-08-manifesto-ia", "exp-12-fracoes",
+    "exp-70-vila-do-lume", "exp-90-plano-de-aula", "exp-91-bem-estar", "exp-92-plano-de-ensino",
+})
 PUBLICOS = ("estudante", "professor")
 ETAPAS = ("input", "produto", "design", "dev", "plataforma", "externo", "humano")
 # Etapas cuja pendência é resolvida por gente, fora da esteira: registram 🟡 e o PRD sai.
@@ -836,8 +846,11 @@ def validar_prd(prd: str) -> Dict[str, Any]:
               f"`{m.group(1)}` tem hífen e não é identificador válido em TypeScript — o agente vai "
               f"inventar um nome e divergir do módulo registrado.")
 
-    # 6. caminho de experiência declarado de duas formas
+    # 6. caminho de experiência declarado de duas formas. O que se procura é a missão NOVA com dois
+    # nomes de pasta (o velho `exp-NN-<slug>` ao lado do `expNNefNb`); experiência que já existe na
+    # plataforma é referência, não declaração.
     caminhos = {m.rstrip("/") for m in re.findall(r"apps/experiencias/([a-z0-9][a-z0-9-]*)/?", texto)}
+    caminhos -= EXPERIENCIAS_EXISTENTES
     if len(caminhos) > 1:
         falha("caminho-divergente",
               f"O PRD declara mais de um diretório para a mesma experiência: {sorted(caminhos)}.")
