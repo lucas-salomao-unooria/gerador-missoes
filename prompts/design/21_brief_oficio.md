@@ -81,7 +81,9 @@ Exatamente um PICO, um MEMORÁVEL, um AHA. Se caem no mesmo beat, diga que foi d
 Os três registros — personagem-guia, plataforma simulada, Unooria — o que cada um faz e não faz nesta missão e em que beats aparece. **Se o ambiente for um mini-jogo, são dois:** não existe plataforma simulada, o jogo veste a identidade da Unooria, e a distinção que resta é entre o personagem-guia e a voz da Unooria. No PICO: o que ganha ênfase e o que precisa desaparecer. Endereçado ao principal (jornada), sem direção de tela.
 
 ## Não-negociáveis de ofício (3 a 5)
-- <item> — por que cortar isso mata a aposta
+- <item> — por que cortar isso mata a aposta — `[MECANISMO: bloco 2, regra <n>]` **ou** `[RS-n → gate-estrutural]`
+
+**Cada não-negociável recebe uma de duas marcas, obrigatoriamente.** `[MECANISMO: bloco 2, regra <n>]` quando a spec já garante o comportamento por ordenação, bloqueio ou restrição de geração — cite a regra. `[RS-n → gate-estrutural]` quando depende de comportamento que a spec **não** garante: emita o pedido no formato do envelope da triagem de correção (`00_triagem_correcao.md`), com `etapa: "spec"` e o `resumo_pedido` no imperativo, e marque `status: pendente` — nesta esteira não há resposta do Gate 0 dentro da execução. **Não-negociável sem marca não é vinculante** para jornada, copy e wireframes, e o QA (D7) o devolve com dono `brief-oficio`. Origem: candidato C3 (dois não-negociáveis sem mecanismo passaram no Gate 0 e foram pegos pelo fluxo).
 (Não repita requisito de conformidade — scaffolding, áudio, verbo nativo já são 🔒 por outro caminho.)
 
 ## Alternativas descartadas (as 3 formas e o trade-off)

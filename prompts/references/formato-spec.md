@@ -114,6 +114,8 @@ cujo resultado antecipe o desfecho.
 exclusivamente no servidor. Quem assina não se declara aqui: autoria e revisão
 são registro editorial, fechado fora da esteira.
 
+**Falha nunca é decisão.** Estado de falha de plataforma (conexão, sessão expirada, mídia que não carregou) é sempre `none` para toda medida que dependia da tela que falhou — nunca `zero`, nunca um estado de escolha do estudante. O contrato de estados do bloco 2 nomeia a falha; o bloco 9 diz em que grau ela cai.
+
 **Servidor calcula, nunca aceita.** O que o cliente envia (medidas brutas)
 e o que o servidor deriva.
 

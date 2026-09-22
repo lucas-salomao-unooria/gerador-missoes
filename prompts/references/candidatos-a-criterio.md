@@ -14,7 +14,7 @@ Uma ocorrência fica em observação. Duas ou mais viram proposta formal de emen
 **Ocorrências:** Magia ou Truque v1 — a frase dizia "o TikTok não avisa" e a mecânica fazia o TikTok avisar com etiquetas coloridas, em dois lugares independentes (Ato 4 e Bloco 2 do podcast). Passou em 2.1, 2.2 e 2.4 individualmente.
 **Formulação candidata:** *a descoberta central é sustentada pela mecânica — se o aluno descrevesse o que a plataforma fez com ele, a descrição não contradiz a frase-chave.*
 **Teste de 30s:** ler a frase-chave; ler o que a plataforma faz na etapa Resultado; verificar se uma nega a outra. Estender aos artefatos secundários (podcast, falas do guia, textos do professor).
-**Status:** implementado como Passo 4.5 do agente 1. Emenda formal pendente.
+**Status:** **aplicado na v1.19 (22/09/2026) como critério 2.7 do gate estrutural**, mantendo o Passo 4.5 do agente 1 como verificação do autor.
 
 ## C2 — Pressuposto de leitura autônoma nos anos de alfabetização · **1 ocorrência**
 
@@ -31,7 +31,7 @@ Uma ocorrência fica em observação. Duas ou mais viram proposta formal de emen
 - Quem ficou fora — "uma voz forte fica ausente das três versões". A regra de geração escolhia por contraste e podia cobrir os 8 relatos.
 **Formulação candidata:** *todo não-negociável de ofício que dependa de comportamento do sistema tem regra escrita (ordenação, bloqueio, restrição de geração) — intenção não basta.*
 **Causa raiz identificada:** o briefing (agente 2) roda **depois** de o gate fechar a spec, então seus não-negociáveis nunca passam por verificação de mecanismo. Não é só critério faltando: é ordem de esteira errada.
-**Status:** pronto pra emenda, **mais** proposta de reordenar 1↔2.
+**Status:** **aplicado na v1.19 (22/09/2026), opção A**: o briefing de ofício marca cada não-negociável com `[MECANISMO]` ou `[RS-n → gate-estrutural]` no formato da triagem de correção; o D7 do QA devolve os sem marca. A reordenação 1↔2 foi descartada — o modo de correção por etapa faz o `[RS-n]` chegar à spec sem mudar a orquestração.
 
 ## C4 — Affordance nativa em conflito com guardrail · **1 ocorrência**
 
@@ -49,7 +49,7 @@ Uma ocorrência fica em observação. Duas ou mais viram proposta formal de emen
 **Agravante:** onde o estado alimenta a evidência, falha técnica pode ser gravada como decisão pedagógica. Na missão do 5º ano existe `não concluída por encerramento` justamente para separar timer de escolha — e uma queda de conexão hoje cairia em `não encaminhada`.
 **Formulação candidata:** *o contrato de estados cobre falha de plataforma — perda de conexão, sessão expirada e falha de carregamento de mídia — e nenhum estado de falha é registrado como decisão do estudante.*
 **Teste de 30s:** procurar no documento as palavras conexão, offline, sessão, falha ou carregar. Se nenhuma aparecer numa missão com estado persistido, é ❌.
-**Status:** pronto pra emenda.
+**Status:** **aplicado na v1.19 (22/09/2026)**: teste de contaminação no 9.4, regra "falha nunca é decisão" no bloco 9 da spec e no padrão `erro-na-voz-da-ficcao`.
 
 ## C8 — Consequência assimétrica · **1 ocorrência**
 

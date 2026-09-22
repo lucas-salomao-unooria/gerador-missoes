@@ -23,7 +23,7 @@ Cada padrão diz de onde saiu. Padrão sem fonte não entra — vira candidato e
 
 | Nome | Padrão | Fonte |
 |---|---|---|
-| `erro-na-voz-da-ficcao` | Todo modo de erro (conexão, sessão expirada, mídia que não carrega) é um **estado próprio, nomeado**, com texto na voz da plataforma simulada — nunca mensagem técnica, nunca confundido com decisão do estudante. Estados mínimos: `<AMB>_SEM_CONEXAO`, `<AMB>_SESSAO_EXPIRADA`, `<AMB>_MIDIA_FALHOU`. | formato-spec bloco 2 · DES-13 |
+| `erro-na-voz-da-ficcao` | Todo modo de erro (conexão, sessão expirada, mídia que não carrega) é um **estado próprio, nomeado**, com texto na voz da plataforma simulada — nunca mensagem técnica, nunca confundido com decisão do estudante. Estados mínimos: `<AMB>_SEM_CONEXAO`, `<AMB>_SESSAO_EXPIRADA`, `<AMB>_MIDIA_FALHOU`. Cada um é registrado no bloco 9 como grau `none` para as medidas daquela tela — nunca como decisão do estudante (critério 9.4, teste de contaminação). | formato-spec bloco 2 · DES-13 |
 | `estado-salvo-no-servidor` | Reentrada (F5, voltar noutro dia) devolve o estudante **exatamente onde parou**: estado 100% salvo no servidor a cada transição. Nada se perde por recarregar. | critério 4.6 (gate estrutural) |
 | `espera-de-professor` | Toda tela ligada a um handoff tem o estado **"Espera de professor"**: a tela congela sem affordance de avanço e mostra, na voz da ficção, que a turma está junta agora. Nenhum botão de voltar, fechar ou áudio. | pronto.md (wireframes) · prompt-base (tela de congelamento) |
 | `vazio-e-carregando` | Toda lista, mural ou feed tem estado **vazio** e **carregando** na voz da ficção (indicador de carregamento do próprio ambiente, não da Unooria). | pronto.md (wireframes) · DES-13 |

@@ -14,12 +14,13 @@
 
 ---
 
-## 2. AMBIENTE E VERBOS (subset — 2.1 e 2.6 apenas)
+## 2. AMBIENTE E VERBOS (subset — 2.1, 2.6 e 2.7)
 
 |#|Critério|Tipo|Teste prático|
 |-|-|-|-|
 |2.1|**Ambiente é um dos 5 suportados, com conta própria e comportamento fiel** — Lista fechada, com a seção do design system entre parênteses: Instagram (`instanooria`), YouTube (`unitube`), ChatGPT (`chatgpt`), TikTok (`tiktooria`), WhatsApp (`whatsappmobile`). Nenhum outro ambiente passa. Roblox não tem seção e reprova aqui; se voltar, volta por `ambientes.md`, nunca por este critério. **TikTok:** a seção existe sem ponte em `@edu/ui` — a missão passa no 2.1 e declara a ponte como pré-requisito com responsável (DES-01).|Obrigatório|**Teste de lista fechada (aplicar PRIMEIRO):** o ambiente é literalmente um dos 5? Se não → ❌ direto, sem aplicar os demais testes. **Teste de plataforma real:** consulte `literatura-cognitiva.md` §10 (uso de plataforma por idade, TIC Kids Online Brasil 2024). O ambiente está entre os de maior uso para a faixa? Se está, ✅. Zona de transição (6º–7º ano) → ✅ com justificativa na seção 18. Fora da tabela (ex.: Instagram pessoal no 3º ano) → ⚠️; e ❌ se, além disso, a missão pressupõe conta própria numa faixa em que a maioria não tem perfil, sem tratar a primeira conta dentro da ficção. **Teste de posse:** a conta é do aluno ou de um personagem? Se personagem → ❌. **Teste de fidelidade comportamental:** a mecânica se comporta como a plataforma real (feed rola um post por vez, não vários lado a lado)? **Teste de permanência ponta a ponta:** a experiência inteira (6 etapas) acontece dentro do ambiente? Telas/painéis "da Unooria" no meio → ❌. Escapes aceitáveis: tela de contexto antes da simulação e campo de reflexão final depois.|
 |2.6|**Verbos nativos da plataforma** — As ações do aluno usam verbos/gestos que existem de fato na plataforma real (curtir, salvar, compartilhar, comentar, seguir, assistir, publicar)|Obrigatório|A ação existe na plataforma real, ou foi inventada pra servir à avaliação (ex: "marcar como suspeito", "taggear fonte")? Mecânica pedagógica inventada disfarçada de interação de plataforma → ❌.|
+|2.7|**A mecânica sustenta a descoberta central** — O que a plataforma simulada faz com o estudante na etapa Resultado não contradiz a frase da descoberta (seção 1).|Obrigatório|**Teste de 30 segundos:** leia a frase-chave da seção 1; leia a regra do sistema da etapa Resultado na seção 4; uma nega a outra? Estenda ao podcast, às falas do guia e aos textos do professor. Se a frase diz "a plataforma não avisa" e alguma etiqueta, alerta ou painel avisa → ❌. **Falso-positivo:** a verdade chegar por conteúdo de terceiro dentro da simulação (padrão P1 de `padroes-aprendidos.md`) não é a plataforma avisando — é o estudante indo olhar. Origem: candidato C1 (Magia ou Truque v1 passou em 2.1, 2.2 e 2.4 com a mecânica negando a frase).|
 
 ### Falso-positivos frequentes em 2.1:
 
@@ -65,7 +66,7 @@
 |9.1|**Spec implementável sem decisão de produto aberta** — Requisitos técnicos, regras de transição e ownership estão fechados o suficiente para designer/dev construírem sem inventar comportamento que altere a experiência.|Obrigatório|**Teste de implementação cega:** percorra cada ato e verifique obrigatoriamente: (a) cardinalidades, mínimos/máximos e bloqueios; (b) regra de geração/seleção de outputs (incluindo contrato de parametrização docente por IA, schemas de dados dos conteúdos dinâmicos e fallback para banco padrão curado); (c) estados incompletos e caminhos degenerados; (d) o que faz quem termina antes de um handoff coletivo; (e) qual conta/ator publica, envia ou altera cada elemento visível; (f) permissões antes/durante/depois de handoffs; (g) fallback quando pré-condições não são atendidas; (h) **contrato de plataforma:** sala sincronizada por polling HTTP em `expNNefNb_gates_turma` (nunca WebSocket, socket.io ou "tempo real" como canal), estado no servidor, seção 16 sem protocolo, formato de imagem ou CDN escolhidos pelo redator; (i) **origem dos parâmetros:** todo número que vira regra de sistema nas seções 7, 8, 9, 10, 15 e 16 (segundos, caracteres, KB, percentuais, intervalos) vem do núcleo ou do briefing, ou traz `[PARÂMETRO — a definir por produto: …]` / `[PROPOSTA P0b — …]`; número apresentado como fato sem origem é decisão de produto tomada pelo redator → ❌. Se designer/dev precisarem escolher uma regra que mude a experiência, → ❌. Uma lista de features sem essas regras não cumpre.|
 |9.2|**Estágio IA sinalizado** — V1 vs V2|Desejável|Se o dev perguntar "o que entra primeiro?", a resposta está no documento?|
 |9.3|**Hipóteses de validação listadas**|Desejável|O time sabe o que observar no teste?|
-|9.4|**Estados de falha mapeados** — Para cada pré-condição do fluxo, o documento descreve o que acontece quando ela não é atendida: plataforma fora do ar, conteúdo que não carrega, professor que não libera a tempo, aluno que perde conexão no meio de uma etapa.|Obrigatório|**Teste de falha:** para cada ato que depende de dado, conexão, conteúdo gerado ou ação de outro ator, existe tratamento explícito do caso em que a dependência falha? Se não há nenhum estado de falha em toda a missão → ❌. Se há pelo menos um mapeado mas outros evidentes foram omitidos → ⚠️.|
+|9.4|**Estados de falha mapeados** — Para cada pré-condição do fluxo, o documento descreve o que acontece quando ela não é atendida: plataforma fora do ar, conteúdo que não carrega, professor que não libera a tempo, aluno que perde conexão no meio de uma etapa.|Obrigatório|**Teste de falha:** para cada ato que depende de dado, conexão, conteúdo gerado ou ação de outro ator, existe tratamento explícito do caso em que a dependência falha? Se não há nenhum estado de falha em toda a missão → ❌. Se há pelo menos um mapeado mas outros evidentes foram omitidos → ⚠️. **Teste de contaminação:** para cada estado de falha (conexão, sessão expirada, mídia que não carregou), em qual estado do bloco 9 / seção 12 ele é registrado? Se cai em um estado de decisão do estudante (encaminhou / não encaminhou, salvou / pulou) → ❌: uma queda de conexão seria lida por um adulto como recusa da criança. Falha de plataforma alimenta o grau `none` (a oportunidade não chegou), nunca `zero` (teve a chance e não foi). Origem: candidato C7.|
 
 ### Falso-positivo frequente em 9.4:
 "A plataforma exibe mensagem de erro" sem dizer *qual* mensagem, *o que o aluno faz* depois, e *se o progresso se perde* — isso não é tratamento de falha, é declaração de intenção de tratar.
@@ -91,9 +92,9 @@
 | Categoria | Obrigatórios | Desejáveis |
 |-|:-:|:-:|
 | 1. Estrutura | 7 | 0 |
-| 2. Ambiente e verbos | 2 | 0 |
+| 2. Ambiente e verbos | 3 | 0 |
 | 4. Logística de aula | 3 | 0 |
 | 7. Evidência e registro | 3 + 1 condicional | 0 |
 | 9. Viabilidade | 2 | 2 |
 | 10. Infraestrutura | 2 | 1 |
-| **TOTAL** | **19 + 1 condicional** | **3** |
+| **TOTAL** | **20 + 1 condicional** | **3** |
