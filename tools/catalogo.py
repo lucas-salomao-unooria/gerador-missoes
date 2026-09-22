@@ -197,6 +197,16 @@ def _nome(textos: str) -> str:
     return _limpar(m.group(1))[:120] if m else ""
 
 
+def _porta(valor: str) -> str:
+    """Só a palavra da escala de §4. O agente costuma escrever a justificativa junto, e a coluna
+    do catálogo é comparada por igualdade — texto livre ali não compara com nada."""
+    baixo = (valor or "").lower()
+    for porta in sorted(PORTAS, key=len, reverse=True):  # "criticar com apoio" antes de "criticar"
+        if porta in baixo:
+            return porta
+    return ""
+
+
 def ficha_da_execucao(state: Dict[str, Any], sessao: str = "") -> Dict[str, Any]:
     """A ficha de catálogo desta execução, extraída do estado. Campo ausente sai vazio, nunca inventado."""
     from agents.callbacks import extrair_slug
@@ -231,7 +241,7 @@ def ficha_da_execucao(state: Dict[str, Any], sessao: str = "") -> Dict[str, Any]
         "eixo": proposta.get("eixo") or _campo_rotulado(bloco1, "Eixo temático", "Eixo"),
         "descoberta": proposta.get("descoberta") or _campo_rotulado(bloco1, "Descoberta central") or _primeira_frase(bloco1),
         "tipo_decisao": proposta.get("tipo_decisao") or _campo_rotulado(bloco1, "Tipo de decisão"),
-        "porta_abstracao": (proposta.get("porta_abstracao") or _campo_rotulado(bloco1, "Porta de abstração")).lower(),
+        "porta_abstracao": _porta(proposta.get("porta_abstracao") or _campo_rotulado(bloco1, "Porta de abstração")),
         "habilidade_primaria": proposta.get("habilidade_primaria") or _habilidade_primaria(spec, nucleo),
         "status": "bloqueada" if bloqueada else "em criação",
         "gates": gates,
