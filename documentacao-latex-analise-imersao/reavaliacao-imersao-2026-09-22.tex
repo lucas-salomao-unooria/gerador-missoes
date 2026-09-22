@@ -1,0 +1,1350 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- PACOTES FUNDAMENTAIS ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\geometry{a4paper, top=2.5cm, bottom=2.5cm, left=2.2cm, right=2.2cm}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+% --- CORES (mesma identidade dos dois relatórios anteriores) ---
+\definecolor{NavyBlue}{RGB}{16, 44, 87}
+\definecolor{SteelBlue}{RGB}{53, 89, 142}
+\definecolor{LightBlue}{RGB}{235, 243, 250}
+\definecolor{DarkGreen}{RGB}{20, 108, 67}
+\definecolor{LightGreen}{RGB}{232, 245, 233}
+\definecolor{DarkRed}{RGB}{176, 42, 55}
+\definecolor{LightRed}{RGB}{253, 237, 237}
+\definecolor{DarkYellow}{RGB}{153, 115, 0}
+\definecolor{LightYellow}{RGB}{254, 249, 231}
+\definecolor{Charcoal}{RGB}{40, 40, 40}
+\definecolor{GrayBg}{RGB}{248, 249, 250}
+\definecolor{BorderGray}{RGB}{218, 224, 233}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=NavyBlue,
+    citecolor=SteelBlue,
+    urlcolor=SteelBlue,
+    pdftitle={Reavaliacao do Gerador de Missoes: o que segue em aberto em 22 de setembro de 2026},
+    pdfauthor={Reavaliacao tecnica - Unooria},
+    pdfsubject={Estado dos 12 achados e das 20 emendas de imersao apos a evolucao da esteira},
+    pdfkeywords={imersao, reavaliacao, escola publica, BNCC, transversalidade, criterios}
+}
+
+% --- CABEÇALHOS ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{SteelBlue}Reavaliação de 22/09/2026 --- Gerador de Missões}
+\fancyhead[R]{\small\color{SteelBlue}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- TÍTULOS ---
+\titleformat{\section}{\Large\bfseries\color{NavyBlue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{SteelBlue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{Charcoal}}{\thesubsubsection}{1em}{}
+
+% --- CAIXAS SEMÂNTICAS ---
+\newtcolorbox{achadobox}[1]{
+  breakable, enhanced, colback=white, colframe=NavyBlue,
+  boxrule=1pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{creditobox}[1]{
+  breakable, enhanced, colback=LightGreen, colframe=DarkGreen,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{depoisbox}{
+  breakable, enhanced, colback=LightGreen, colframe=DarkGreen,
+  boxrule=0.5pt, arc=1pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+  title={\small\bfseries Redação proposta}, fonttitle=\color{white}
+}
+\newtcolorbox{antesbox}{
+  breakable, enhanced, colback=LightRed, colframe=DarkRed,
+  boxrule=0.5pt, arc=1pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+  title={\small\bfseries Redação atual}, fonttitle=\color{white}
+}
+\newtcolorbox{notabox}[1]{
+  breakable, enhanced, colback=LightYellow, colframe=DarkYellow,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{tesebox}{
+  breakable, enhanced, colback=LightBlue, colframe=NavyBlue,
+  boxrule=1pt, arc=2pt, left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+% --- MARCADORES (texto, nunca emoji) ---
+\newcommand{\aberto}{\textcolor{DarkRed}{\textbf{ABERTO}}}
+\newcommand{\agravado}{\textcolor{DarkRed}{\textbf{ABERTO, agravado}}}
+\newcommand{\parcial}{\textcolor{DarkYellow}{\textbf{PARCIAL}}}
+\newcommand{\revisar}{\textcolor{DarkYellow}{\textbf{REVISAR}}}
+\newcommand{\fechado}{\textcolor{DarkGreen}{\textbf{FECHADO}}}
+\newcommand{\campo}{\textcolor{SteelBlue}{\textbf{CAMPO}}}
+\newcommand{\bloq}{\textcolor{DarkRed}{\textbf{bloqueante}}}
+\newcommand{\naobloq}{\textcolor{DarkYellow}{\textbf{não bloqueante}}}
+\newcommand{\obrig}{\textcolor{DarkRed}{\textbf{Obrigatório}}}
+\newcommand{\rep}{\textcolor{DarkRed}{\textbf{reprova}}}
+\newcommand{\alerta}{\textcolor{DarkYellow}{\textbf{alerta}}}
+\newcommand{\onda}[1]{\textcolor{SteelBlue}{\textbf{Onda #1}}}
+\newcommand{\conv}{\textbf{[CONVENÇÃO]}}
+\newcommand{\extrap}{\textbf{[EXTRAPOLAÇÃO]}}
+
+\setlist[itemize]{leftmargin=1.4em, itemsep=2pt, topsep=4pt}
+\setlist[enumerate]{leftmargin=1.6em, itemsep=2pt, topsep=4pt}
+
+\renewcommand{\arraystretch}{1.25}
+\sloppy
+\emergencystretch=3em
+
+\begin{document}
+
+% ======================= CAPA =======================
+\begin{titlepage}
+\centering
+\vspace*{2.5cm}
+
+{\color{SteelBlue}\large\scshape Unooria --- Gerador de Missões}\\[0.4cm]
+{\color{BorderGray}\rule{0.8\textwidth}{1.2pt}}\\[1.0cm]
+
+{\Huge\bfseries\color{NavyBlue} Reavaliação e Auditoria Ampliada}\\[0.5cm]
+{\LARGE\color{NavyBlue} do Gerador de Missões}\\[1.2cm]
+
+{\large\itshape Parte I: o que os dois relatórios de 20 de setembro apontaram e o que segue em aberto.}\\[0.2cm]
+{\large\itshape Parte II: tudo o mais que separa o gerador de hoje do padrão ouro}\\[1.5cm]
+
+{\color{BorderGray}\rule{0.8\textwidth}{0.6pt}}\\[1.0cm]
+
+\begin{minipage}{0.8\textwidth}
+\centering
+\small
+\textbf{Parte I:} 12 achados e 20 emendas de 20/09 reconferidos contra 9 commits e 44 arquivos alterados\\
+\textbf{Parte II:} auditoria nova em três frentes --- 102 achados, 43 de gravidade alta, 11 pacotes de correção\\
+\textbf{Veredito:} a esteira ficou mais rigorosa em contrato e currículo; nenhum achado de imersão fechou;\\ há gates que aprovam sem ler, e a esteira não se lembra de si\\[0.6cm]
+\textbf{Data:} 22 de setembro de 2026 \quad\textbullet\quad \textbf{Versão:} 2.0
+\end{minipage}
+
+\vfill
+{\small\color{Charcoal} Documento de análise. Não altera nenhum artefato da esteira.}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ======================= 1. SUMÁRIO =======================
+\section{Sumário executivo}
+
+Este documento tem duas partes. A \textbf{Parte I} (Seções 1 a 6) reconfere os doze achados e as
+vinte emendas de 20 de setembro contra o repositório de hoje. A \textbf{Parte II}
+(Seção~\ref{sec:parteII} em diante) é auditoria nova: o que mais falta, em qualquer dimensão, para o
+padrão ouro.
+
+\subsection{O veredito em um parágrafo}
+
+\begin{tesebox}
+\textbf{A esteira evoluiu em três frentes que os relatórios de 20 de setembro não pediram, e não
+se moveu em nenhuma das que pediram.}
+
+Entre 20 e 22 de setembro entraram um lint determinístico de contrato de plataforma e de origem
+de números, uma régua curricular bem mais exigente, a visão do professor como entregável de
+primeira classe (cinco telas, segundo grafo, critério novo no banco de dev), um one-pager resumido
+em linguagem simples e um modo de correção por etapa. São avanços reais, e vários deles melhoram a
+\emph{mensurabilidade} que a proposta pedia.
+
+Mas \textbf{nenhum dos doze achados de imersão foi fechado} e \textbf{nenhuma das vinte emendas
+foi aplicada}. Os arquivos que os achados citam ou não mudaram, ou mudaram em outro ponto. Três
+achados ficaram mais consequentes: o banco de dev ganhou um critério de design não bloqueante
+(A3), o catálogo desatualizado passou a ser lido por mais um agente (A7), e a emenda do banco
+curado (E-15) colide com a transversalidade que virou obrigatória e precisa ser reescrita.
+
+O padrão que a auditoria descreveu se acentuou: \textbf{todo gate novo é mecânico e de contrato ou
+currículo; nenhum é de imersão}. A esteira ficou melhor em garantir que a missão seja conforme.
+Continua sem meio de garantir que ela prenda.
+\end{tesebox}
+
+\subsection{Farol dos doze achados}
+
+\small\begin{longtable}{@{}p{0.7cm} >{\raggedright\arraybackslash}p{4.4cm} p{2.5cm} >{\raggedright\arraybackslash}p{7.0cm}@{}}
+\toprule
+\textbf{\#} & \textbf{Achado} & \textbf{Estado 22/09} & \textbf{Evidência de hoje} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{\#} & \textbf{Achado} & \textbf{Estado 22/09} & \textbf{Evidência de hoje} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+A1 & Roblox na lista fechada & \aberto & \texttt{criterios-gate-estrutural.md:21}, \texttt{criterios-experiencia.md:49} ainda dizem ``6'' e listam Roblox \\
+A2 & Ofício não reprova & \aberto & envelope em \texttt{30\_qa\_entregaveis.md:194} intacto; \texttt{rubrica-oficio.md} sem alteração \\
+A3 & Imersão com menos veto no dev & \agravado & DES-14 entrou em \texttt{criterios-dev/2-design-imersao.md:89} sem \texttt{[BLOQUEANTE]}: Design passa a 2 em 14 \\
+A4 & Diegese é desejável & \aberto & \texttt{criterios-pedagogicos.md:8} intacto \\
+A5 & Tabela de ausências vazia & \aberto & \texttt{ambientes.md:48--54}, cinco linhas em branco \\
+A6 & Régua não chega ao design & \aberto & \texttt{literatura-cognitiva.md} incluída só em \texttt{09\_experiencia\_estudante.md} \\
+A7 & Catálogo desatualizado & \agravado & 3 missões, LinkedIn no campo; agora incluído também em \texttt{16b\_one\_pager\_resumido.md:47} \\
+A8 & Emendas prontas e não aplicadas & \aberto & \texttt{candidatos-a-criterio.md} sem alteração; C1, C3 e C7 ``pronto pra emenda'' \\
+A9 & Há teto, não há piso & \aberto & 6.5 em \texttt{criterios-experiencia.md:50} intacto, só anos finais e Médio \\
+A10 & Framework uniforme por idade & \campo & pergunta de observação; nenhum protocolo de campo criado \\
+A11 & Uso por idade sem fonte nacional & \aberto & zero ocorrências de ``Kids Online'' em \texttt{prompts/} \\
+A12 & Posse versus dispositivo compartilhado & \aberto & 2.1 e 10.2 em \texttt{criterios-gate-estrutural.md:21,79} intactos \\
+\end{longtable}\normalsize
+
+\subsection{Farol das vinte emendas}
+
+\begin{center}\small
+\begin{tabular}{@{}l p{6.2cm} p{2.4cm} p{5.4cm}@{}}
+\toprule
+\textbf{E} & \textbf{Emenda} & \textbf{Estado} & \textbf{O que a evolução muda nela} \\
+\midrule
+01 & Roblox sai em todos os lugares & \aberto & nada \\
+02 & Ausências preenchidas & \aberto & nada \\
+03 & Catálogo com colunas de progressão & \revisar & slug passou a ser \texttt{expNNefNb}; catálogo agora em 5 prompts \\
+04 & Resumo da régua no design & \aberto & nada \\
+05 & Deriva de números fora da fonte & \revisar & o lint de números do one-pager é o molde para conferir as referências \\
+06 & TIC Kids na régua e em 2.1/6.4 & \aberto & nada \\
+07 & 2.7 mecânica sustenta (C1) & \aberto & nada \\
+08 & Falha nunca é decisão (C7) & \aberto & nada \\
+09 & Não-negociável com mecanismo (C3) & \revisar & modo de correção barateia a opção A \\
+10 & Regra do pico bloqueia & \aberto & nada \\
+11 & 2.3 obrigatório & \aberto & nada \\
+12 & Posse no compartilhado & \aberto & nada \\
+13 & Piso de desafio por faixa & \aberto & 5.1 mais rigoroso é aliado natural \\
+14 & Premissa da imersão & \aberto & nada \\
+15 & Banco curado principal & \revisar & transversalidade obrigatória invalida a redação \\
+16 & Cláusula de leitura 9\textordmasculine{} e EM & \aberto & nada \\
+17 & Progressão na trilha & \aberto & depende de E-03 \\
+18 & Pacote anos iniciais & \revisar & ganha item: carga de preparo docente \\
+19 & Observação de campo & \aberto & nada \\
+20 & Equivalentes a montante & \revisar & DES-14 entra na tabela \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ======================= 2. MÉTODO =======================
+\section{Método}
+
+\begin{itemize}
+  \item \textbf{Diferença de repositório.} \texttt{git diff 5d7fcf9 HEAD} sobre \texttt{prompts/},
+        \texttt{agents/}, \texttt{pipeline/}, \texttt{tools/}, \texttt{scripts/} e \texttt{config.py}:
+        9 commits, 44 arquivos, 1.809 linhas acrescentadas e 129 removidas. Árvore de trabalho limpa.
+  \item \textbf{Reconferência achado a achado.} Para cada um dos doze achados e das vinte emendas, a
+        busca literal que o relatório anterior usou como evidência foi repetida sobre os arquivos de
+        hoje. Arquivo citado que não aparece no diff é tratado como idêntico; arquivo que aparece foi
+        lido na íntegra do diff.
+  \item \textbf{Leitura dos artefatos novos.} \texttt{tools/contrato\_produto.py} (185 linhas),
+        \texttt{prompts/produto/16b\_one\_pager\_resumido.md} (270), \texttt{prompts/transversal/00\_triagem\_correcao.md}
+        (43), \texttt{pipeline/reexecucao.py} (663), \texttt{scripts/rerodar\_etapa.py} (90), e a nova
+        orquestração em \texttt{agents/produto/\_\_init\_\_.py}.
+  \item \textbf{Regra de evidência.} Igual à dos dois relatórios: nenhuma afirmação sobre o
+        repositório sem arquivo e linha conferidos hoje; nenhum número acadêmico novo.
+  \item \textbf{Fora do escopo.} O relatório ``padrão ouro de 20 agentes'' em
+        \texttt{documentacao-latex/} repete os mesmos doze achados e propõe outra arquitetura; por
+        decisão do solicitante, não entra na comparação.
+\end{itemize}
+
+% ======================= 3. O QUE MUDOU =======================
+\section{O que mudou desde 20 de setembro}
+
+Seis frentes. Para cada uma, o que merece crédito e o que ela faz com os achados.
+
+\begin{creditobox}{F1 --- Contrato de plataforma e origem dos números virou gate determinístico}
+\textbf{O que entrou.} \texttt{tools/contrato\_produto.py} e o agente \texttt{A04bContratoProdutoCheck}
+(\texttt{agents/produto/\_\_init\_\_.py:271}), rodando antes do gate estrutural a cada rodada. Quatro
+regras: WebSocket como canal de sala reprova; estado em \texttt{localStorage} ou \texttt{IndexedDB}
+sai do texto; descritor SAEB só nos anos avaliados (\texttt{ANOS\_SAEB = \{2, 5, 9\}}, linha 29); e
+\textbf{número com unidade sem origem no núcleo nem no briefing vira marcador} (seções 7, 8, 9, 10,
+15 e 16, linha 27). O critério 9.1 ganhou os itens (h) e (i)
+(\texttt{criterios-gate-estrutural.md:64}); o 4.6 proíbe estado de cliente (linha 38); o P0b recebeu a
+regra ``Origem dos parâmetros'' (\texttt{04\_secoes\_apoio.md:31}) e uma seção de contrato de
+plataforma (linha 137); o gate recebe o relatório do lint e o aplica sem reavaliar
+(\texttt{05\_gate\_estrutural.md:21,51}).
+
+\textbf{Por que importa.} É a primeira vez na esteira que um número sem fonte \textbf{reprova}. A
+auditoria elogiou \texttt{literatura-cognitiva.md} por marcar cada número como dado, extrapolação ou
+convenção; agora o mesmo princípio vale para o one-pager, por máquina.
+
+\textbf{O que faz com os achados.} Nada, diretamente, mas oferece o molde para E-05: a deriva de
+números nas \emph{referências} (tetos revogados em \texttt{defaults-missao.md}) continua intocada, e
+o lint que a pegaria é o mesmo desenho apontado para outro alvo (Seção~\ref{sec:e05}).
+\end{creditobox}
+
+\begin{creditobox}{F2 --- A régua curricular ficou falsificável}
+\textbf{O que entrou.} 5.1 exige que \textbf{o texto oficial da habilidade descreva a ação em tela,
+sem reinterpretação}, e bloqueia com decisão pendente quando nenhuma habilidade de Cultura Digital
+do ano descreve a ação (\texttt{criterios-pedagogicos.md:37}); 5.2 manda \textbf{remover} código
+secundário sem momento em tela; 5.3 manda remover conexão disciplinar sem ação observável
+(``ausência é melhor do que conexão forçada''); 5.6 limita SAEB a 2\textordmasculine{},
+5\textordmasculine{}, 9\textordmasculine{} e 3\textordmasculine{} EM (linha 42). A Regra 12 do
+P0a (\texttt{01\_nucleo\_narrativo.md:67}) e as regras (a)--(d) do P0b (\texttt{04\_secoes\_apoio.md})
+proíbem ``escolher a menos ruim''; a spec copia o marcador de decisão pendente para o bloco 11 e o
+gate determinístico bloqueia por ele (\texttt{13\_spec\_missao.md}). PED-04 deixou de exigir autor e
+revisor nomeados (\texttt{criterios-dev/3-pedagogia-bncc.md:38}), decisão de 22/09 com justificativa
+registrada: reprovava por um ato que nenhum agente pratica.
+
+\textbf{Por que importa.} A proposta pedia mensurabilidade; aqui a esteira ganhou uma medida
+curricular que não aceita aproximação. A justificativa de PED-04 é exemplar: um critério que só
+produzia marcador aberto foi removido com o motivo escrito.
+
+\textbf{O que faz com os achados.} É aliado direto de E-13 (piso de desafio): uma decisão que
+discrimina estudantes e uma habilidade cujo texto descreve a ação são as duas metades do mesmo
+argumento de evidência. Nenhum achado fecha por isso.
+\end{creditobox}
+
+\begin{creditobox}{F3 --- A visão do professor virou entregável, e a missão virou transversal}
+\textbf{O que entrou.} A Regra 11 do P0a (\texttt{01\_nucleo\_narrativo.md:66}) define o
+\textbf{recorte da aula} (disciplina, tema, assuntos, contexto) e o teste das três disciplinas; o
+bloco 8 da spec fixa o contrato (\texttt{formato-spec.md:83}); o P0b ganha as seções 9a e 9b
+(\texttt{04\_secoes\_apoio.md:77--78}); o 4.3 ganha o teste das três disciplinas
+(\texttt{criterios-pedagogicos.md:20}); a jornada ganha a Seção 1c e \textbf{cinco telas obrigatórias
+do professor} \texttt{E0-PROF-01..05} (\texttt{22\_jornada.md:57,73}); o fluxo ganha o segundo grafo
+(\texttt{23\_fluxo.md:49}); as telas do professor não podem ser cortadas por cota
+(\texttt{26\_telas.md:58,132}); a copy ganha as strings do preparo; o QA ganha D6 reforçado e D6c
+(\texttt{30\_qa\_entregaveis.md:117,119}); o banco de dev ganha \textbf{DES-14}
+(\texttt{criterios-dev/2-design-imersao.md:89}); o coletor de links avisa quando não há tela do
+professor no Stitch (\texttt{agents/checkers.py}).
+
+\textbf{Por que importa.} A auditoria apontou que 46\,\% dos professores não tiveram formação recente
+e que a rede municipal caiu para 43\,\%. Tratar o professor como usuário com telas, fluxo e critério
+próprios é a resposta correta a esse dado.
+
+\textbf{O que faz com os achados.} Três coisas. \textbf{(1)} Invalida a redação de E-15: a
+parametrização deixou de ser camada opcional e virou contrato (Seção~\ref{sec:e15}).
+\textbf{(2)} Agrava A3: DES-14 entrou sem \texttt{[BLOQUEANTE]}, e o banco de dev passa a ter 2
+bloqueantes em 14 na dimensão de design. \textbf{(3)} Cria um item novo para o pacote dos anos
+iniciais: o professor menos formado da rede agora tem cinco telas de preparo obrigatórias, e nenhum
+critério mede quanto tempo isso leva (Seção~\ref{sec:novos}).
+\end{creditobox}
+
+\begin{creditobox}{F4 --- Um one-pager para quem vai ler}
+\textbf{O que entrou.} O agente \texttt{A16bOnePagerResumido} ao fim da etapa de Produto, com o
+prompt \texttt{16b\_one\_pager\_resumido.md}: sete seções, nove regras de linguagem (frase curta, voz
+ativa, verbo no lugar de substantivo abstrato, termo técnico com tradução na mesma frase, nada de
+jargão pedagógico), e um \textbf{contrato de evidência ternário por habilidade}. Sai em
+\texttt{.md}, \texttt{.docx} e \texttt{.html}. Roda \emph{depois} da spec, de propósito, para copiar
+códigos já conferidos.
+
+\textbf{Por que importa.} O relatório comparativo de 21/09 mostrou que o documento gerado tinha 3,4
+vezes mais palavras que o do time e 35 minutos de leitura. A esteira respondeu com um documento para
+o leitor real, sem tirar o de auditoria. E o contrato de evidência ternário é mensurabilidade
+pedagógica escrita para o professor.
+
+\textbf{O que faz com os achados.} Agrava A7: o catálogo, ainda com três missões e LinkedIn como
+exemplo, agora é incluído em \textbf{cinco} prompts (\texttt{16b:47}, \texttt{17:29},
+\texttt{19:29}, \texttt{21:33}, \texttt{51:62}), e alimenta a ``caixa de diferenciação'' do documento
+que o time de produto lê.
+\end{creditobox}
+
+\begin{creditobox}{F5 --- Modo de correção por etapa}
+\textbf{O que entrou.} \texttt{00\_triagem\_correcao.md} decide de qual etapa recomeçar (spec, design,
+dev, nenhuma) a partir de um pedido em linguagem natural; \texttt{pipeline/reexecucao.py} e
+\texttt{scripts/rerodar\_etapa.py} reexecutam uma etapa sobre o estado salvo; a etapa de Produto
+aceita \texttt{a\_partir\_de="spec"} e monta só o fim da etapa.
+
+\textbf{Por que importa para este relatório.} Muda o custo de aplicar as emendas. Uma emenda de
+critério de produto podia exigir rodar a esteira inteira para ser observada; agora se reroda a etapa.
+E-09, que oferecia reordenar a esteira como opção B, fica ainda mais inclinada à opção A: o
+não-negociável sem mecanismo vira pedido de correção com etapa \texttt{spec}, e o modo de correção
+faz o resto.
+\end{creditobox}
+
+\begin{creditobox}{F6 --- Miudezas que evitam retrabalho}
+O slug passou a ser o id da plataforma, \texttt{expNNefNb}, derivado de ano e bimestre
+(\texttt{01\_nucleo\_narrativo.md:90}), o que elimina o marcador aberto por número de catálogo; os
+validadores de rastro ganharam correções de falso-positivo; o PRD deixou de acusar caminho divergente
+para experiência que já existe na plataforma. Nada disso toca os achados, mas E-03 precisa adotar o
+slug novo no catálogo.
+\end{creditobox}
+
+\begin{notabox}{O que não mudou, e é o que os relatórios pediam}
+Nenhum arquivo de \texttt{prompts/references/} citado pelos achados de imersão foi alterado:
+\texttt{ambientes.md}, \texttt{catalogo-missoes.md}, \texttt{candidatos-a-criterio.md},
+\texttt{literatura-cognitiva.md}, \texttt{rubrica-oficio.md}, \texttt{defaults-missao.md},
+\texttt{criterios-experiencia.md} e \texttt{criterios-gate-final.md} têm o mesmo conteúdo de 20/09.
+\texttt{criterios-gate-estrutural.md} e \texttt{criterios-pedagogicos.md} mudaram em 4.3, 4.6, 5.x e
+9.1; as linhas 2.1, 2.3 e 10.2 são as mesmas.
+\end{notabox}
+
+% ======================= 4. ACHADO A ACHADO =======================
+\section{Achado a achado}
+
+Para cada achado: estado, evidência de hoje, o que mudou ao redor e a emenda vigente. Quando a
+redação da proposta continua válida, ela é citada e não repetida.
+
+\begin{achadobox}{A1 --- Roblox na lista fechada \hfill \aberto}
+\textbf{Evidência de hoje.} \texttt{criterios-gate-estrutural.md:21}: ``um dos 6 suportados
+\dots\ Instagram, YouTube, Roblox, ChatGPT, TikTok, WhatsApp''. \texttt{criterios-experiencia.md:49}:
+``Dentro dos 6 ambientes suportados \dots\ qual dos 6''. \texttt{ambientes.md:27} e
+\texttt{05\_gate\_estrutural.md:44} continuam dizendo o contrário no mesmo contexto do mesmo agente.
+
+\textbf{Ao redor.} O slug \texttt{expNNefNb} e a Regra 11 reforçam ``um dos 5'' no P0a; a
+contradição está só nos dois arquivos de critério.
+
+\textbf{Emenda vigente.} E-01, redação inalterada. Quatro linhas.
+\end{achadobox}
+
+\begin{achadobox}{A2 --- Ofício não reprova, por construção \hfill \aberto}
+\textbf{Evidência de hoje.} \texttt{30\_qa\_entregaveis.md:194} mantém as quatro faixas
+\texttt{"bloqueio" | "atencao" | "oficio" | "decisao\_humana"}; nenhuma instrução converte O1--O5 em
+bloqueio. \texttt{rubrica-oficio.md} continua v0.1, com a regra comparativa do pico declarada
+independente de calibragem e sem severidade.
+
+\textbf{Ao redor.} O QA ganhou D6 reforçado e D6c, ambos sobre o professor, ambos com marca de bloqueio
+(bloqueio) para tela ausente. Ou seja: \textbf{tela do professor ausente bloqueia; pico invertido não}.
+A assimetria que a auditoria descreveu ficou mais visível.
+
+\textbf{Emenda vigente.} E-10, redação inalterada. O filtro em \texttt{agents/checkers.py} continua
+roteando por \texttt{severidade == "bloqueio"}, então nada muda no código.
+\end{achadobox}
+
+\begin{achadobox}{A3 --- Imersão é a dimensão com menos veto no banco de dev \hfill \agravado}
+\textbf{Evidência de hoje.} \texttt{criterios-dev/2-design-imersao.md} tem 14 critérios; os
+bloqueantes continuam DES-01 e DES-02. \textbf{DES-14 (linha 89) entrou sem \texttt{[BLOQUEANTE]}},
+embora seu texto diga que ``tela do preparo ausente do Stitch é lacuna com dono \texttt{telas}''. A
+consolidação da banca exige zero reprovação nos 72 para verde, então DES-14 reprovado rebaixa para
+amarelo, não bloqueia.
+
+\textbf{Matriz atualizada.}
+\begin{center}\small
+\begin{tabular}{@{}l c c c@{}}
+\toprule
+\textbf{Dimensão} & \textbf{Bloqueantes} & \textbf{Total} & \textbf{Proporção} \\
+\midrule
+Dados, telemetria e LGPD & 7 & 15 & 47\,\% \\
+Produto e narrativa & 5 & 16 & 31\,\% \\
+Pedagogia e BNCC & 4 & 15 & 27\,\% \\
+\textbf{Design e imersão} & \textbf{2} & \textbf{14} & \textbf{14\,\%} \\
+Técnica e arquitetura & 2 & 13 & 15\,\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Nuance.} O banco de dev é do time da plataforma, e a esteira o lê em versão datada; DES-14
+foi acrescentado do lado de cá, o que mostra que a esteira \emph{pode} escrever nesse arquivo. Se
+pode acrescentar critério, pode marcar severidade, e a decisão de deixar DES-14 sem bloqueio é
+decisão desta esteira.
+
+\textbf{Emenda vigente.} E-20, com a tabela de equivalentes ganhando a linha DES-14
+(Seção~\ref{sec:e20}).
+\end{achadobox}
+
+\begin{achadobox}{A4 --- Simulação diegética é desejável \hfill \aberto}
+\textbf{Evidência de hoje.} \texttt{criterios-pedagogicos.md:8}: 2.3 Desejável, teste binário
+inalterado. O resumo de contagem continua ``Imersão: 1 obrigatório, 2 desejáveis''.
+
+\textbf{Ao redor.} O arquivo mudou em 4.3 e 5.x, na mesma tabela; a linha 8 não foi tocada.
+
+\textbf{Emenda vigente.} E-11, redação inalterada (porta, troca, chegada).
+\end{achadobox}
+
+\begin{achadobox}{A5 --- Tabela de ausências vazia \hfill \aberto}
+\textbf{Evidência de hoje.} \texttt{ambientes.md:48--54}: cinco linhas com a coluna ``Não tem'' em
+branco. O3 da rubrica de ofício continua se declarando desarmado.
+
+\textbf{Ao redor.} O D9 e o D5 seguem incluindo \texttt{ambientes.md}; a tabela vazia chega a mais
+dois agentes do que a auditoria contou, porque o QA de design e a banca a leem também.
+
+\textbf{Emenda vigente.} E-02, com as cinco linhas propostas marcadas \textbf{[PROPOSTA]}. Continua
+sendo a correção mais barata e mais valiosa do arquivo, nas palavras do próprio arquivo.
+\end{achadobox}
+
+\begin{achadobox}{A6 --- A régua empírica não chega ao design \hfill \aberto}
+\textbf{Evidência de hoje.} Mapa de includes reconferido: \texttt{literatura-cognitiva.md} continua
+incluída em exatamente um prompt (\texttt{09\_experiencia\_estudante.md:19}). Jornada e QA recebem
+\texttt{rubrica-oficio.md}; telas, copy e ambiente não recebem régua nenhuma.
+
+\textbf{Ao redor.} Os prompts de design cresceram (Seção 1c, cinco telas do professor, segundo
+grafo). Cada acréscimo torna mais caro incluir a referência inteira, e mais necessário o resumo
+gerado que E-04 propõe.
+
+\textbf{Emenda vigente.} E-04, redação inalterada.
+\end{achadobox}
+
+\begin{achadobox}{A7 --- Catálogo desatualizado desarma a diferenciação \hfill \agravado}
+\textbf{Evidência de hoje.} \texttt{catalogo-missoes.md}: três missões, ``LinkedIn'' na linha 11
+como exemplo de ambiente, nenhuma das missões-gabarito exp-04, 06, 07 e 08. O 2.5 continua se
+autoanulando por ``N/A --- catálogo incompleto''.
+
+\textbf{Ao redor.} O catálogo passou a alimentar também o one-pager resumido
+(\texttt{16b\_one\_pager\_resumido.md:47}), que tem uma caixa de diferenciação lida pelo time de
+produto. Um catálogo com três linhas produz uma caixa de diferenciação vazia no documento mais
+lido da esteira.
+
+\textbf{Emenda vigente.} E-03, com uma revisão: a coluna de identificação usa o slug da plataforma
+\texttt{expNNefNb} (Regra 0 do P0a), não ``exp-NN''. E-17 (progressão) continua dependente dela.
+\end{achadobox}
+
+\begin{achadobox}{A8 --- Emendas prontas e não aplicadas \hfill \aberto}
+\textbf{Evidência de hoje.} \texttt{candidatos-a-criterio.md} sem alteração: C1 ``implementado como
+Passo 4.5, emenda formal pendente''; C3 ``pronto pra emenda, mais proposta de reordenar''; C7
+``pronto pra emenda''.
+
+\textbf{Ao redor.} O 9.4 continua obrigatório e continua sem o teste de contaminação (falha
+registrada como decisão), que é o que motivou C7. O gate estrutural continua fazendo o passo 4.5
+por instrução de prompt (\texttt{05\_gate\_estrutural.md}), sem critério na rubrica.
+
+\textbf{Emenda vigente.} E-07 e E-08 inalteradas. E-09 revisada: o modo de correção favorece a opção
+A (Seção~\ref{sec:e09}).
+\end{achadobox}
+
+\begin{achadobox}{A9 --- Há teto, não há piso \hfill \aberto}
+\textbf{Evidência de hoje.} \texttt{criterios-experiencia.md:50}: 6.5 obrigatório só em anos finais
+e Médio, desejável nos iniciais. Nenhum critério novo pergunta se a missão exige o bastante.
+
+\textbf{Ao redor.} A frente F2 criou o aliado que faltava: 5.1 agora exige que o texto da
+habilidade descreva a ação. Habilidade que descreve a ação e decisão que discrimina estudantes são
+as duas condições do desenho centrado em evidência \cite{mislevy2003}; a esteira passou a exigir a
+primeira e continua sem a segunda.
+
+\textbf{Emenda vigente.} E-13, redação inalterada (6.6 com o teste do estudante apressado).
+\end{achadobox}
+
+\begin{achadobox}{A10 --- Framework uniforme do 1\textordmasculine{} EF ao 3\textordmasculine{} EM \hfill \campo}
+\textbf{Evidência de hoje.} As seis etapas seguem aplicadas sem variação por idade. Nenhum protocolo
+de observação de campo foi criado; \texttt{literatura-cognitiva.md} \S9 continua reivindicando.
+
+\textbf{Ao redor.} O modo de correção (F5) torna barato rodar a mesma missão em duas ordens para o
+teste que E-19 desenha, porque a variante é uma correção a partir da spec.
+
+\textbf{Emenda vigente.} E-19, redação inalterada. Continua sendo pergunta, não defeito.
+\end{achadobox}
+
+\begin{achadobox}{A11 --- Uso de plataforma por idade sem fonte nacional \hfill \aberto}
+\textbf{Evidência de hoje.} Busca por ``Kids Online'' e ``TIC Kids'' em \texttt{prompts/}: zero
+ocorrências. Os testes ``o aluno diria eu uso isso?'' (2.1) e ``qual dos 6 um estudante mediano
+usaria'' (6.4) continuam decididos por intuição.
+
+\textbf{Ao redor.} Nada. É a emenda de Onda 1 que mais muda o comportamento do avaliador por linha
+escrita, e a única que tem dado nacional pronto para colar.
+
+\textbf{Emenda vigente.} E-06, redação inalterada.
+\end{achadobox}
+
+\begin{achadobox}{A12 --- Conta própria e três por computador nunca reconciliados \hfill \aberto}
+\textbf{Evidência de hoje.} \texttt{criterios-gate-estrutural.md:21} (teste de posse: ``a conta é do
+aluno ou de um personagem?'') e linha 79 (10.2: ``3 alunos dividem 1 computador'') intactos. O
+padrão \texttt{2-4-decide-em-grupo-registra-por-grupo} de \texttt{defaults-missao.md} continua
+marcado como pendente de confirmação.
+
+\textbf{Ao redor.} A transversalidade (F3) adicionou uma pergunta nova ao mesmo cenário: no
+dispositivo compartilhado, o recorte da aula é um só por Atividade, então o grupo vê o mesmo
+conteúdo; isso favorece a decisão ``conta do grupo'' de E-12, porque o conteúdo já é coletivo por
+construção.
+
+\textbf{Emenda vigente.} E-12, redação inalterada.
+\end{achadobox}
+
+% ======================= 5. EMENDAS REVISADAS =======================
+\section{Emendas que a evolução obriga a revisar}
+
+Cinco emendas mudam de redação ou de custo. As outras quinze valem como estão na proposta.
+
+\subsection{E-15 --- Banco curado como caminho principal, reconciliada com a transversalidade}
+\label{sec:e15}
+
+\textbf{O conflito.} A proposta pedia que o banco curado fosse o caminho principal e a
+parametrização por IA uma camada opcional, obrigatória só nos anos finais e Médio. Desde 21/09 a
+parametrização é o \textbf{recorte da aula}, contrato do bloco 8 da spec, com cinco telas
+obrigatórias e teste das três disciplinas em 4.3, D6c e DES-14. A decisão de produto está tomada e
+registrada; a emenda não pode contrariá-la.
+
+\textbf{O que a evidência brasileira ainda sustenta.} O professor dos anos iniciais é o menos
+formado da rede (43\,\% na rede municipal \cite{ticedu2024}) e agora tem cinco telas de preparo. O
+risco que E-15 apontava não desapareceu: mudou de ``o professor precisa parametrizar'' para ``o
+professor precisa atravessar cinco telas antes de dar aula''.
+
+\textbf{A reconciliação.} Manter a transversalidade como está e exigir três coisas que hoje o 4.3
+não exige: que o banco padrão funcione \emph{sozinho}, que ele esteja a um toque na segunda tela, e
+que o caminho curto seja medido.
+
+\begin{depoisbox}\small
+4.3, acrescentar ao teste prático, depois do teste das três disciplinas:
+
+``\textbf{Teste do caminho curto:} a missão roda por completo com o professor tocando apenas
+`usar banco padrão' em \texttt{E0-PROF-02}, sem passar por geração nem curadoria (\texttt{E0-PROF-03}
+e \texttt{04} puladas)? Se não, \rep: o banco curado é \emph{fallback} de nome, não de fato.
+\textbf{Teste de posição, anos iniciais:} em missão de 1\textordmasculine{}--5\textordmasculine{} ano,
+o botão do banco padrão é a primeira ação visível de \texttt{E0-PROF-02}, e o recorte da aula vem
+depois; nos anos finais e Médio a ordem é livre. Ordem invertida nos anos iniciais é \alerta.
+\textbf{Contagem de preparo:} a seção 9a declara quantas telas e quantos toques o caminho curto e o
+caminho com IA exigem; sem a contagem, \alerta.''
+
+Em \texttt{26\_telas.md}, ``Telas de professor --- obrigatórias'': ``\texttt{E0-PROF-02} sai
+construída nos dois estados: com o banco padrão em primeiro nível (anos iniciais) e com o recorte em
+primeiro nível (anos finais e Médio).''
+
+Em \texttt{30\_qa\_entregaveis.md}, D6: acrescentar ``o caminho curto \texttt{E0-PROF-01} $\to$ \texttt{02} $\to$ \texttt{05}
+existe no fluxo do professor como aresta própria, rotulada `usar banco padrão'; ausência é ticket
+com dono \texttt{fluxo}.''
+\end{depoisbox}
+
+\textbf{Teste falsificável:} o caminho curto existe como aresta no segundo grafo Mermaid e a
+missão chega a \texttt{ativado} por ele.
+
+\textbf{Como medir se funcionou:} a plataforma registra a preparação por Atividade; a proporção de
+Atividades ativadas pelo caminho curto, por rede e por faixa, diz se a transversalidade está sendo
+usada ou contornada. Se nos anos iniciais a maioria usa o banco padrão, a decisão de posição estava
+certa; se ninguém usa, pode sair.
+
+\subsection{E-05 --- Deriva de números: o lint do one-pager é o molde para as referências}
+\label{sec:e05}
+
+\textbf{Estado.} Os quatro pontos de deriva continuam: \texttt{defaults-missao.md:90} (``Ato $\le$ 12
+min em anos iniciais, $\le$ 15 nos finais, $\le$ 20 no EM'', tetos revogados na revisão de setembro da
+fonte única), \texttt{defaults-missao.md:100} (``$\le$ 4--5'' opções no Médio, corrigido para 4 na
+fonte), \texttt{10\_adequacao\_pedagogica.md:44} (``30 a 40 estudantes'', contra 25 e 32 na fonte),
+\texttt{09\_experiencia\_estudante.md:27,36} (Piaget como estágio e ``os dois testes do 3.5'').
+
+\textbf{O que mudou.} A esteira agora tem um lint que lista número sem origem no one-pager
+(\texttt{tools/contrato\_produto.py}). O mesmo desenho, apontado para \texttt{prompts/references/} e
+\texttt{prompts/produto/}, resolve E-05 de forma permanente em vez de pontual.
+
+\begin{depoisbox}\small
+\textbf{Ampliação de E-05.} Além de alinhar os quatro pontos à fonte, criar
+\texttt{scripts/conferir\_referencias.py}, no molde de \texttt{contrato\_produto.py}: extrai da fonte
+única as tabelas de teto (opções por faixa, minutos por ato, teto agregado, alunos por turma) e
+procura em \texttt{references/} e \texttt{produto/} qualquer número com a mesma unidade que não
+esteja na fonte. Saída: lista de arquivo, linha e número divergente. Roda no mesmo lugar em que
+\texttt{gerar\_bncc\_referencia.py} confere o hash do JSON. Primeira execução deve devolver exatamente
+os quatro pontos acima; execução limpa é a condição de fechar E-05.
+\end{depoisbox}
+
+\subsection{E-09 --- Não-negociável com mecanismo, mais barata com o modo de correção}
+\label{sec:e09}
+
+A proposta oferecia duas opções: classificar os não-negociáveis do briefing de ofício
+(\texttt{[MECANISMO]} ou \texttt{[RS-n]}) ou reordenar a esteira. O modo de correção (F5) muda o
+custo relativo: um \texttt{[RS-n]} agora é literalmente um pedido de correção com etapa
+\texttt{spec}, que \texttt{00\_triagem\_correcao.md} sabe classificar e \texttt{reexecucao.py} sabe
+rodar. A opção A passa a ter caminho de execução pronto; a opção B continua exigindo mudança em
+\texttt{agents/design/\_\_init\_\_.py}. \textbf{Recomendação: só a opção A}, com uma frase a mais no D1:
+``todo \texttt{[RS-n]} é emitido no formato do envelope da triagem de correção, com etapa
+\texttt{spec}''.
+
+\subsection{E-20 --- Equivalentes a montante, com DES-14}
+\label{sec:e20}
+
+A tabela de equivalentes da proposta ganha uma linha. DES-14 pergunta se a visão do professor está
+completa e transversal; não bloqueia no banco; a montante, D6 e D6c do QA já bloqueiam tela do
+professor ausente. Ou seja, para DES-14 a esteira \emph{já} faz o que E-20 pede para os outros. O que
+falta é o inverso: registrar em \texttt{criterios-dev.md} que DES-14 nasceu do lado de cá e que a
+severidade dele é decisão desta esteira, não do time da plataforma. Se a esteira pode acrescentar
+critério ao banco, a objeção da auditoria a mudar DES-03 (``não é nosso'') enfraquece, e a decisão
+de promover DES-03 a bloqueante volta à mesa como decisão de produto.
+
+\subsection{E-03 e E-18 --- Ajustes menores}
+
+\textbf{E-03.} A coluna de identificação do catálogo usa \texttt{expNNefNb} (o id da plataforma
+fixado na Regra 0 do P0a), não ``exp-NN''. As linhas propostas na proposta continuam válidas; só o
+formato do slug muda. Acrescentar a coluna ``Observada em campo'' continua sendo o gancho de E-19.
+
+\textbf{E-18.} O pacote dos anos iniciais ganha um item: \textbf{carga de preparo docente}. Com cinco
+telas obrigatórias e o professor menos formado da rede, o pacote precisa da contagem de preparo de
+E-15 revisada e de um teste em D6b (``a professora como usuária'') que hoje é amarelo: ``conduz sem
+ter feito a missão antes?''. Para 1\textordmasculine{}--5\textordmasculine{} ano, esse teste deveria
+ser respondido com uma simulação de preparo em minutos, no mesmo espírito do protocolo de simulação
+do P3.
+
+% ======================= 6. ACHADOS NOVOS =======================
+\section{Quatro achados da reavaliação de imersão}
+\label{sec:novos}
+
+Quatro achados que surgiram ao reconferir os doze da auditoria. Entram nos pacotes da Parte II (N1 no Pacote I, N2 no E, N3 no G, N4 no D).
+
+\begin{achadobox}{N1 --- DES-14 entrou sem bloqueio, e a esteira escreveu nele}
+\textbf{Evidência.} \texttt{criterios-dev/2-design-imersao.md:89}, sem \texttt{[BLOQUEANTE]};
+\texttt{40\_validacao\_design\_imersao.md} passou a pedir ``14 critérios''. \texttt{criterios-dev.md}
+continua declarando os critérios como ``do gate do time de dev''.
+
+\textbf{O que quebra.} Missão sem tela do professor no Stitch reprova no QA de design (D6, bloqueio) e
+só rebaixa para amarelo na banca de dev. Duas severidades para o mesmo fato, em duas etapas
+consecutivas. E a premissa de que o banco de dev não é desta esteira ficou falsa por ação da própria
+esteira.
+
+\textbf{Correção.} Marcar DES-14 \texttt{[BLOQUEANTE]} ou explicar em \texttt{criterios-dev.md} por
+que não é; e registrar naquele arquivo quais critérios nasceram do lado de cá. Uma linha.
+\end{achadobox}
+
+\begin{achadobox}{N2 --- Cinco telas de preparo, nenhum teto de tempo de preparo}
+\textbf{Evidência.} \texttt{22\_jornada.md:73} fixa cinco telas obrigatórias; \texttt{04\_secoes\_apoio.md:77}
+descreve o fluxo em cinco passos; 4.3 testa completude e transversalidade; D6b pergunta ``em
+quantos segundos ela entende onde a turma está'' e é amarelo. Nenhum critério pergunta \textbf{quanto
+tempo o preparo leva} nem simula o professor sem formação em tecnologia.
+
+\textbf{O que quebra.} A régua do estudante tem teto por ato e teto agregado, com fonte. A régua do
+professor não tem nenhum número. Para a rede municipal (43\,\% com formação continuada, 27\,\% de uso
+efetivo em atividade \cite{ticedu2024}), o preparo é a barreira de entrada da missão inteira.
+
+\textbf{Correção.} A contagem de preparo de E-15 revisada (telas e toques do caminho curto e do
+caminho com IA, declarada na seção 9a) e o teste de simulação de preparo em E-18. Sem número novo: é
+contagem, marcada \conv{} até E-19 medir.
+\end{achadobox}
+
+\begin{achadobox}{N3 --- Todo gate determinístico novo é de contrato ou currículo}
+\textbf{Evidência.} Os gates determinísticos da esteira hoje: \texttt{BnccCheck} (currículo),
+\texttt{ManifestoCheck} (contrato), \texttt{TelemetriaCheck} (contrato), rastro de lacunas (contrato),
+checagem de PRD (contrato) e, desde 21/09, \texttt{ContratoProdutoCheck} (contrato e origem de
+números). Zero sobre imersão, ofício ou desafio.
+
+\textbf{O que quebra.} Nada quebra; é a auditoria confirmada com mais dados. O que se verifica por
+máquina bloqueia; o que exige juízo não. A proposta já apontou a exceção que permite começar a
+inverter isso sem número calibrado: a regra comparativa do pico (E-10), que é verificável por
+contagem sobre o frame e poderia até ser determinística, se a jornada emitir a contagem de elementos
+por tela em formato legível por máquina.
+
+\textbf{Correção.} E-10 como está, mais uma frase em \texttt{22\_jornada.md}: a coluna ``Teto de
+elementos (contado)'' da Seção 4 sai como número inteiro, sem texto, para que um checker futuro a
+leia.
+\end{achadobox}
+
+\begin{achadobox}{N4 --- A fonte única continua a divergir, e agora há molde para impedir}
+\textbf{Evidência.} Os quatro pontos de E-05, intactos, ao lado de um lint que faz exatamente isso
+para o one-pager.
+
+\textbf{O que quebra.} O D0 aplica como padrão verde um teto que a fonte única revogou; o P3 pode
+citar outro. Dois relatórios sobre a mesma missão podem discordar sobre o mesmo ato.
+
+\textbf{Correção.} E-05 ampliada (Seção~\ref{sec:e05}).
+\end{achadobox}
+
+% ======================= PARTE II =======================
+\section{Parte II --- Auditoria ampliada: o que mais falta para o padrão ouro}
+\label{sec:parteII}
+
+\subsection{Por que esta parte existe}
+
+As duas partes anteriores respondem à pergunta ``os achados de 20 de setembro fecharam?''. Esta
+responde a outra: \textbf{o que mais, além daqueles, separa o gerador de hoje do padrão ouro?} Para
+isso, a esteira inteira foi relida do zero, em três frentes paralelas, sem o recorte de imersão:
+produto (11 prompts, 2 transversais, 16 referências e a orquestração), design (11 prompts, 8
+referências, a orquestração e as ferramentas de Stitch, Miro e protótipo) e dev, código e governança
+(9 prompts, 6 referências, todo o código Python, testes, scripts, Dockerfile, CI e duas execuções
+reais em \texttt{output/}).
+
+\textbf{Regra de evidência.} Cada achado traz arquivo e linha. Os de maior gravidade de cada
+frente foram reconferidos por busca direta neste relatório (lista no anexo); os demais carregam a
+citação do auditor da frente. Nenhum achado repete A1--A12 nem E-01--E-20; quando reforça um deles,
+diz.
+
+\subsection{Os números}
+
+\begin{center}\small
+\begin{tabular}{@{}l c c c c@{}}
+\toprule
+\textbf{Frente} & \textbf{Achados} & \textbf{Alta} & \textbf{Média} & \textbf{Baixa} \\
+\midrule
+Produto (P) & 30 & 9 & 19 & 2 \\
+Design (D) & 37 & 15 & 21 & 1 \\
+Dev, código e governança (V) & 35 & 19 & 14 & 2 \\
+\midrule
+\textbf{Total novo} & \textbf{102} & \textbf{43} & \textbf{54} & \textbf{5} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Somados aos 12 achados da auditoria e aos 4 desta reavaliação, são \textbf{118 achados abertos}.
+O número assusta menos do que parece: a Seção~\ref{sec:padroes} mostra que quase todos são
+manifestações de seis padrões, e a Seção~\ref{sec:pacotes} os agrupa em onze pacotes de correção.
+
+\subsection{O que já está no padrão ouro, nas três frentes}
+
+Honestidade metodológica antes da lista de falhas. Os três auditores registraram, com evidência, o
+que está acima da média:
+
+\begin{itemize}
+  \item \textbf{A Regra Zero e os quatro padrões de spoiler} (\texttt{01\_nucleo\_narrativo.md:26--50}):
+        erro definido, par contraexemplo/exemplo, teste operacional e palavras-sentinela.
+  \item \textbf{O registro negativo da literatura} (\texttt{literatura-cognitiva.md:218--240}): o que
+        não sustenta a régua, com as replicações.
+  \item \textbf{O lint determinístico antes do gate} (\texttt{agents/produto/\_\_init\_\_.py:270--278}):
+        ``não reavalie: aplique''.
+  \item \textbf{O teste de acionabilidade dos ajustes} (\texttt{10\_adequacao\_pedagogica.md:186--194}):
+        ``ficou mais claro'' não é aceite.
+  \item \textbf{\texttt{celulas-consumidas.md} inteiro}: uma linha por célula da spec com quem consome
+        e o que acontece sem ela, mais a regra ``célula que nenhum agente consome sai''.
+  \item \textbf{A guarda \texttt{minimo\_fracao}} (\texttt{agents/checkers.py:208--214}): impede que um
+        fragmento substitua o documento, com o incidente que a motivou no docstring.
+  \item \textbf{Mermaid renderizado nó a nó com fallback sem rede}
+        (\texttt{tools/artefatos\_html.py:146--156}).
+  \item \textbf{``Consistência perfeita é sinal de alerta''} (\texttt{30\_qa\_entregaveis.md:101}): a
+        única heurística anti-eco entre agentes encadeados que os auditores conhecem.
+  \item \textbf{O teste de interpolação} (\texttt{test\_pipeline.py:108--131}): toda chave de prompt
+        precisa existir no estado. Impede a classe de falha mais cara desta arquitetura.
+  \item \textbf{O teste de vocabulário de status} (\texttt{test\_pipeline.py:1849--1874}): fecha a
+        distância prompt-código no ponto em que ela costuma abrir.
+  \item \textbf{Cópia sincronizada da plataforma com SHA e neutralização de chaves}
+        (\texttt{scripts/sincronizar\_plataforma.py:78--166}).
+  \item \textbf{Contenção de resposta de MCP com orçamento por agente}
+        (\texttt{agents/callbacks.py:201--249}).
+\end{itemize}
+
+% ======================= PADRÕES =======================
+\section{Os seis padrões por trás dos 102 achados}
+\label{sec:padroes}
+
+\begin{tesebox}
+\textbf{Padrão 1 --- Gates que falham para o lado do aprovado.} Quando o modelo devolve vazio,
+truncado ou sem envelope, três gates diferentes concluem ``aprovado'' (V-01 banca, D-27 QA de design,
+P-01 parecer de adequação, cuja chave de status nunca é escrita). Envelopes marcados ``bloqueante''
+não têm leitor (V-08, D-07, D-08). É o inverso do que um gate deve fazer.
+
+\textbf{Padrão 2 --- Escrito e nunca lido.} Colunas, envelopes, definições de pronto e propostas
+inteiras são produzidas a cada execução e descartadas: a coluna Tensão (D-05), a raia de evidência
+(D-24), os envelopes de D1--D8 (D-07), o brief de escopo (P-13), as propostas do agente de
+aprendizado (P-25, V-30). Custam contexto e não compram nada, e ensinam o agente a declarar sem
+verificar.
+
+\textbf{Padrão 3 --- Opinião onde cabia máquina.} A consolidação da banca é LLM (V-02); o
+frontmatter do PRD, a matriz habilidade--evidência--dado, os graus de medida e a estrutura do PRD não
+têm verificador (V-11, V-12, V-17); o QA audita o relatório sobre o protótipo e não o HTML (D-01); a
+fidelidade é aferida por um screenshot que o QA é proibido de pedir (D-02). Confirma o achado A3 da
+auditoria com mais dados: o que se verifica por máquina bloqueia, o que exige juízo não; e há muito
+do que se verifica por máquina que ainda é juízo.
+
+\textbf{Padrão 4 --- Vocabulário sem fonte única.} Versões de rubrica (v1.13 a v1.18 em arquivos
+diferentes, P-21, V-31), IDs de tela (três convenções, D-13), IDs de achado (P-07), status de
+envelope (P-05, P-06), etapas do framework (P-18), ``anos iniciais'' (1\textordmasculine{}--2\textordmasculine{}
+ou 1\textordmasculine{}--5\textordmasculine{}, D-20), contagem de critérios (72 ou 73, V-20), donos de
+ticket (V-05). Cada divergência é pequena; juntas, tornam o roteamento e a contagem não confiáveis.
+
+\textbf{Padrão 5 --- A escola pública é o primeiro corte.} O estado degradado (2--4 por aparelho) é
+o primeiro a sair quando a cota aperta (D-18); sem CAA não há piso de alvo de toque (D-19); o
+3\textordmasculine{}--5\textordmasculine{} ano fica sem áudio obrigatório (D-20); o piso ``sem
+dispositivo, sem sinal em sala'' que a fonte única declara não tem cenário (P-29); a exposição de
+dado de criança na projeção é pergunta de opinião com teto amarelo (D-23). É o mesmo padrão da
+auditoria (anos iniciais com menos critério), agora visto no design.
+
+\textbf{Padrão 6 --- A esteira não se lembra.} Sem temperatura, seed, modelo ou hash de prompt
+registrados (V-22); sem tokens contados (V-23); sem histórico entre execuções (V-30); sem fixture de
+missão-gabarito (V-28); referências vivas com um único commit desde 02/09 (P-25); versão da
+plataforma citada em dois lugares com dois commits (V-18). Não há como responder se o gerador
+melhora com o tempo.
+\end{tesebox}
+
+% ======================= FRENTE PRODUTO =======================
+\section{Frente Produto --- 30 achados}
+
+\small
+\begin{longtable}{@{}p{0.9cm} >{\raggedright\arraybackslash}p{8.6cm} p{1.1cm} >{\raggedright\arraybackslash}p{4.9cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Achado e evidência} & \textbf{Grav.} & \textbf{Correção} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Achado e evidência} & \textbf{Grav.} & \textbf{Correção} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+P-01 & \textbf{O status do parecer de adequação nunca é escrito.} O loop de avaliações lê \texttt{adequacao\_status} (\texttt{agents/produto/\_\_init\_\_.py:334}); nenhum agente o produz. Parecer INADEQUADA, com cinco vetos, não bloqueia nem reexecuta nada. & Alta & \texttt{EnvelopeGateAgent} após o A10 gravando a chave \\
+P-02 & \textbf{O gate final não lê o parecer.} \texttt{11\_gate\_final.md:5--21} lista só três relatórios; F1 fala de ``três''. Viabilidade na escola pública, evidência e equidade ficam fora do release. & Alta & \texttt{\{adequacao\_report?\}} no 11; F1--F3 com quatro relatórios \\
+P-03 & \textbf{A spec também não lê o parecer.} \texttt{13\_spec\_missao.md:7--27}; ``Ajustes exigidos'' (\texttt{10:141}) morrem; o revisor por parecer só roda com mais de uma rodada (\texttt{config.py:122}). & Alta & tornar o parecer bloqueante ou declará-lo consultivo \\
+P-04 & \textbf{Gate final: critério binário, prompt ternário.} F8 manda só verde ou vermelho (\texttt{criterios-gate-final.md:14}); o prompt manda amarelo (\texttt{11:35}). & Média & reescrever F8 com três vereditos \\
+P-05 & \textbf{Envelope fora do contrato.} \texttt{aprovado\_com\_ressalvas} não está no enum de \texttt{contrato-saida.md:23}; \texttt{artefatos}, \texttt{pronto} e \texttt{devolucao} nunca são emitidos em produto. & Média & atualizar o contrato ao vocabulário real \\
+P-06 & \textbf{Mesmo veredito, dois status.} \texttt{criterios-pedagogicos.md:79} diz \texttt{aprovado}; \texttt{08:39} diz \texttt{aprovado\_com\_ressalvas}. & Média & apagar o parêntese da linha 79 \\
+P-07 & \textbf{Esquema de IDs violado.} \texttt{formato-relatorios.md:11} define A como atenção; \texttt{08:84} usa A1 como bloqueio; 09 usa E1; 10 usa E2-A3. A contagem por classe do aprendizado sai errada. & Média & namespace por agente \\
+P-08 & \textbf{O gate estrutural não recebe a rodada.} \texttt{gate\_estrutural\_rodada} vai ao 11 e ao 51, não ao 05, cuja regra de parada depende dela (\texttt{05:74--80}). & Média & injetar a variável no A05 \\
+P-09 & \textbf{Ninguém a jusante do micro-gate testa spoiler.} Zero ocorrências de ``spoiler'' ou ``gap'' nos quatro arquivos de critério; o código afirma que o P1 audita (\texttt{agents/produto/\_\_init\_\_.py:255}). Reforça C3 da auditoria. & Alta & critério de gap no gate estrutural ou em F6 \\
+P-10 & \textbf{Bloco 7 da spec (acessibilidade) sem produtor.} Consumido por D4, D4b e D5 (\texttt{celulas-consumidas.md:86}); o one-pager não tem seção de acessibilidade e o único critério é o áudio de 1\textordmasculine{}--2\textordmasculine{}. & Alta & seção no 04 e critério na categoria 6 \\
+P-11 & \textbf{Ensino Médio bloqueado por eixo que não existe.} Prompts 01 e 04 exigem ``eixo Cultura Digital''; \texttt{bncc-computacao-letramento-digital.md:15} e \texttt{tools/bncc.py:176} dizem que o EM não tem eixo e emitem só atenção. & Média & exceção do EM nas Regras 12 e 2 e no 5.1 \\
+P-12 & \textbf{Triagem manda mecânica para \texttt{spec}, e a reexecução a partir da spec não toca o one-pager.} \texttt{00\_triagem:20}; \texttt{reexecucao.py:40} não tem etapa produto; \texttt{agents/produto:233}. Spec e one-pager divergem sem gate. & Alta & criar etapa \texttt{produto} na reexecução \\
+P-13 & \textbf{Brief de escopo some na primeira revisão.} Compartilha \texttt{output\_key} com o one-pager (\texttt{04:108}; \texttt{07:38}; \texttt{artifacts.py:22}) e nenhum critério o cobre. & Média & chave e artefato próprios \\
+P-14 & \textbf{O contrato de evidência nasce no último agente.} \texttt{16b:119} inventa marcadores ternários; \texttt{16b:9} diz que não decide nada; sem fonte na seção 12 nem no bloco 11; sem gate depois. & Alta & matriz na seção 12 e no bloco 11; 16b só copia \\
+P-15 & \textbf{``Esse produto distingue quem aprendeu?'' só no parecer sem poder} (\texttt{10:96}); 7.3 pede só que descreva o que captura (\texttt{criterios-gate-estrutural.md:55}). & Alta & novo 7.5 obrigatório \\
+P-16 & \textbf{Prompt 10 proíbe número próprio e fixa um.} \texttt{10:29} versus \texttt{10:68} (``três a quatro elementos''), o erro histórico que a fonte única registra (\texttt{literatura-cognitiva.md:5}). & Média & reportar contagem sem teto \\
+P-17 & \textbf{Três réguas de tempo incompatíveis.} 25 min (6.2), 50 min (4.5), mais de 50\,\% do declarado (\texttt{10:117}), ``aulas'' (\texttt{16b:150}); nenhum gate reconcilia. & Média & subordinar 4.5 e o veto 5 ao teto do 6.2 \\
+P-18 & \textbf{4.5 usa etapas que não existem no framework} (``ambientação, exploração, revelação'', \texttt{criterios-gate-estrutural.md:37}). & Média & reescrever nas seis etapas \\
+P-19 & \textbf{7.4 é ``Obrigatório --- aplicado como sugestão''} (\texttt{:56}); o tipo condicional só existe no resumo. & Baixa & tipo Desejável \\
+P-20 & \textbf{Resumo de contagem pedagógico errado.} Imersão ``1 obrigatório'' com 2.2 e 2.4 obrigatórios; 13 declarados, 14 reais (\texttt{criterios-pedagogicos.md:66,70}). & Média & recontar \\
+P-21 & \textbf{Versão de rubrica diverge em todo par prompt/critério} (v1.17 nos prompts, v1.16 nos critérios; v1.18; v1.15; v1.13). & Baixa & versão única incluída \\
+P-22 & \textbf{\texttt{formato-spec} proíbe campo aberto, \texttt{13\_spec} o obriga}; cabeçalhos diferentes (\texttt{formato-spec:14} e \texttt{13:81}); ``Gate 0, agente 1'' sem correspondente. & Média & atualizar \texttt{formato-spec.md} \\
+P-23 & \textbf{\texttt{modelo-de-insumo.md} contradiz a spec} em gabarito com autor (31), execução offline (86) e inputs do professor (52). & Média & alinhar ou marcar legado \\
+P-24 & \textbf{\texttt{celulas-consumidas.md:94} ainda cobra ``tema, foco, contexto''}; sem \texttt{disciplina} e \texttt{assuntos}, o D0 não cobra transversalidade. & Média & trocar a célula 8; acrescentar a tabela das três aulas \\
+P-25 & \textbf{Aprendizado sem aplicador.} \texttt{51:6,121} propõe; catálogo, padrões e candidatos têm um único commit (\texttt{59b52d8}, 02/09). Reforça A7 e A8 com datas. & Alta & arquivo versionado de pendências e passo humano \\
+P-26 & \textbf{Linha de catálogo proposta pelo 51 não encaixa no catálogo} (7 colunas em \texttt{51:71}, 8 no arquivo); status ``Gold standard'' fora do vocabulário. & Média & copiar o cabeçalho literal \\
+P-27 & \textbf{Aprendizado não recebe} \texttt{adequacao\_report}, \texttt{one\_pager\_resumido}, \texttt{micro\_gate\_report}, \texttt{contrato\_produto\_report} (\texttt{51:30--58}). & Média & acrescentar os quatro \\
+P-28 & \textbf{Rodada de correção do 09 espera um gate final que ainda não rodou} (avaliações antes do gate final, \texttt{agents/produto:347--360}). & Média & remover o bloco ou fechar o loop \\
+P-29 & \textbf{O piso ``sem dispositivo, sem sinal'' não tem cenário.} \texttt{literatura-cognitiva.md:208--209} o declara; 10.1 exige só 1:1, 2--4 e projeção. & Alta & cenário (d) conectividade intermitente \\
+P-30 & \textbf{Guia, voz, minutos até a primeira ação e tensão são exigidos no design e nunca no produto} (\texttt{21:56}; \texttt{30:123}). & Média & item no one-pager e no gate estrutural \\
+\end{longtable}
+\normalsize
+
+% ======================= FRENTE DESIGN =======================
+\section{Frente Design --- 37 achados}
+
+\small
+\begin{longtable}{@{}p{0.9cm} >{\raggedright\arraybackslash}p{8.6cm} p{1.1cm} >{\raggedright\arraybackslash}p{4.9cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Achado e evidência} & \textbf{Grav.} & \textbf{Correção} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Achado e evidência} & \textbf{Grav.} & \textbf{Correção} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+D-01 & \textbf{O QA audita o relatório sobre o protótipo, não o HTML} (\texttt{30:37,81,85}). ``Abre sozinho, sem placeholder'' é autodeclaração do D8. & Alta & lint determinístico do HTML no \texttt{ArtefatosDesignAgent} \\
+D-02 & \textbf{O3 exige screenshot} (\texttt{rubrica-oficio.md:58}) \textbf{e o QA é proibido de pedir imagem} (\texttt{30:73}). A fidelidade é aferida por opinião. & Alta & teste sobre duas telas do Stitch, ou mover O3 à revisão humana \\
+D-03 & \textbf{Sem inventário de affordances e microinterações por ambiente}; DES-12 sem produtor (``microinter'' tem zero ocorrências em design). & Alta & \texttt{affordances-por-ambiente.md}; coluna instrumentada no inventário \\
+D-04 & \textbf{Nenhum prompt trata áudio do ambiente clonado}; dois dos cinco ambientes são de vídeo. & Média & linha ``Áudio nativo'' na ficha do D9 \\
+D-05 & \textbf{A coluna Tensão do mapa de beats} (\texttt{21:72}) \textbf{não é consumida} pela jornada (\texttt{22:76}) nem pelo QA (\texttt{30:123}). & Média & coluna no inventário e item em D7 \\
+D-06 & \textbf{``Minutos até a primeira ação'' sem coluna de tempo} em tela ou aresta; o D7 confere contra nada. & Média & coluna minuto acumulado \\
+D-07 & \textbf{Envelopes de D1--D8 nunca lidos.} Diagnóstico lê três chaves (\texttt{diagnostico.py:22--35}); \texttt{pronto.itens\_abertos} não retém, contra \texttt{contrato-saida.md:72}. & Alta & checker leve por agente, ou remover a promessa \\
+D-08 & \textbf{\texttt{devolvido} da jornada não existe na execução} (\texttt{22:29}; Sequential puro); \texttt{brief-oficio} fora de \texttt{MAPA\_RETRABALHO} (\texttt{agents/design:277}): é o único documento que ninguém pode corrigir. & Alta & brief no mapa; gate registrador \\
+D-09 & \textbf{Ordem de retrabalho inverte a dependência}: copy-revisão antes de CAA e telas (\texttt{agents/design:264}), que ela consome (\texttt{27:19,35}). & Alta & reordenar \\
+D-10 & \textbf{Telas leem a copy da passada 1} (\texttt{26:25}) enquanto tickets de texto vão à revisão (\texttt{30:165}). & Média & consumir a revisada com queda \\
+D-11 & \textbf{Nenhum ticket é endereçável ao protótipo} (tabela \texttt{30:152--161}; mapa). & Média & dono \texttt{prototipo-navegavel} \\
+D-12 & \textbf{\texttt{atencao}, \texttt{oficio} e \texttt{decisao\_humana} nunca são despachados} (\texttt{checkers.py:622}) contra \texttt{contrato-saida.md:77}; o contrato não é incluído em prompt nenhum. Reforça A2. & Média & decidir e alinhar \\
+D-13 & \textbf{Três convenções de ID para a mesma tela}: \texttt{E2-ALU-01}, \texttt{E2A}, \texttt{E2} (\texttt{22:41}; \texttt{23:31}); o QA manda cruzar (\texttt{30:83}). & Média & ID único \texttt{E2\_ALU\_01} \\
+D-14 & \textbf{Template do fluxo usa \texttt{stateDiagram-v2}} (\texttt{23:92--101}) \textbf{contra a própria recomendação} (\texttt{23:27}). & Média & trocar o template \\
+D-15 & \textbf{Chaves de mini-jogo} (\texttt{24:45}) \textbf{violam o \texttt{pronto.md:49}} que fecha em zero. & Média & admitir o namespace \\
+D-16 & \textbf{D7 e O2 cobram três registros de voz em mini-jogo}, onde são dois (\texttt{30:123}; \texttt{rubrica-oficio.md:48}; \texttt{24:70}). & Média & exceção \\
+D-17 & \textbf{\texttt{pronto.md} sem seção para copy-revisão e protótipo}, que o incluem (\texttt{27:53}; \texttt{28:141}); \texttt{pronto.md:44} cita \texttt{rubrica-atual.md}, inexistente. & Média & criar seções; corrigir a referência \\
+D-18 & \textbf{O estado degradado (2--4 por aparelho) é o primeiro corte} em telas (\texttt{26:58}) e protótipo (\texttt{28:126}); o QA exige os três cenários (\texttt{30:115}). & Alta & degradado da pico e da decisão entre os intocáveis \\
+D-19 & \textbf{Sem CAA não há piso de alvo de toque nem verificação} (\texttt{26:130}; D8b só com CAA; \texttt{defaults:73} só chega ao D0). & Alta & incluir defaults no 26; linha no pronto \\
+D-20 & \textbf{``Anos iniciais'' é 1\textordmasculine{}--2\textordmasculine{} na copy} (\texttt{24:60}) \textbf{e 1\textordmasculine{}--5\textordmasculine{} nos defaults} (\texttt{:72,98}); o 3\textordmasculine{}--5\textordmasculine{} fica sem áudio obrigatório. & Alta & unificar; estender a redundância às decisões do 3\textordmasculine{}--5\textordmasculine{} \\
+D-21 & \textbf{Nenhum requisito de contraste, teclado ou leitor de tela} em design (uma ocorrência, \texttt{28:64}); DES-11 não entra em prompt de design. & Média & três itens contáveis no 26 e em D4 \\
+D-22 & \textbf{A régua DES-01\dots{}14 não entra em nenhum prompt de design} (único include em \texttt{40:7}); o design cita códigos que nunca viu. & Alta & incluir em 26 e 30 \\
+D-23 & \textbf{``A tela projetada expõe algo indevido?'' é opinião com teto amarelo} (\texttt{30:121}), e \texttt{atencao} não é despachada. É a única pergunta de privacidade da etapa. & Alta & item falsificável campo a campo; dado identificável reprova \\
+D-24 & \textbf{A raia ``Evidência capturada''} (\texttt{22:53}) \textbf{não chega ao inventário} (\texttt{22:69}), \textbf{ao fluxo} (\texttt{23:104}) \textbf{nem às telas}; D3 só confere o negativo. & Alta & coluna Evidência no inventário; dimensão no QA \\
+D-25 & \textbf{D6 emite bloqueio contra \texttt{telas} por tela ausente do Stitch} (\texttt{30:117}); o Stitch é \texttt{off} sem chave (\texttt{config.py:31}) e a folha nunca existe. & Alta & condicionar à disponibilidade \\
+D-26 & \textbf{D6c definida} (\texttt{30:119}) \textbf{e ausente do veredito obrigatório} (\texttt{30:182}). & Média & inserir \\
+D-27 & \textbf{Gate de design falha para o aprovado}: \texttt{treat\_indefinido\_as\_blocked=False} (\texttt{agents/design:365}); resposta truncada vira aprovado. & Alta & True, ou checagem prévia de envelope \\
+D-28 & \textbf{QA carrega 39 KB de BNCC} (\texttt{30:109}) para checagem já feita pelo A14. & Média & remover o include; passar \texttt{bncc\_report} \\
+D-29 & \textbf{Fallback da extração injeta o protótipo inteiro no prompt do QA} (\texttt{artefatos\_html.py:36}). & Média & truncar \\
+D-30 & \textbf{Miro como prova} (\texttt{30:117}) \textbf{e ``não é achado'' quando ausente}; diagrama \texttt{jornada-professor} mapeado sem prompt que o produza. & Média & conferir no documento de fluxo \\
+D-31 & \textbf{Fluxo carrega layout em px e ``screenshot''} de ferramenta que não existe (\texttt{23:46--47,112}); jornada tem ``Estrutura do board'' sem board. & Média & apagar resíduos \\
+D-32 & \textbf{D0 promete Google Docs sem toolset} (\texttt{17:114}; \texttt{config.py:201}). & Média & condicionar \\
+D-33 & \textbf{D9 ``condicional'' roda sempre} (\texttt{agents/design:398}) com o design system inteiro no prompt. & Baixa & checker do bloco 0 \\
+D-34 & \textbf{D0 e D9 negociam com um Gate 0 que não roda} (\texttt{17:86,155,160}; \texttt{19:194,255}) e reportam a resposta dele; o QA confia (\texttt{30:93}). & Alta & RS-n sempre pendente; remover os campos \\
+D-35 & \textbf{``Priorize para fora''} (\texttt{26:58}; \texttt{28:126}) \textbf{contradiz o pronto que exige zero} (\texttt{pronto.md:81--82}). & Média & ajustar os itens do pronto \\
+D-36 & \textbf{D5 gera N telas vezes M estados no Stitch e a especificação completa num só turno}, com sete insumos. & Média & separar telas-spec e telas-stitch \\
+D-37 & \textbf{ARASAAC (CC BY-NC-SA) como padrão} (\texttt{25:83}); \texttt{decisao\_humana} não retém nada. & Média & inverter o default \\
+\end{longtable}
+\normalsize
+
+% ======================= FRENTE DEV =======================
+\section{Frente Dev, código e governança --- 35 achados}
+
+\small
+\begin{longtable}{@{}p{0.9cm} >{\raggedright\arraybackslash}p{8.6cm} p{1.1cm} >{\raggedright\arraybackslash}p{4.9cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Achado e evidência} & \textbf{Grav.} & \textbf{Correção} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Achado e evidência} & \textbf{Grav.} & \textbf{Correção} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+V-01 & \textbf{Banca vazia ou ilegível vira aprovado}: \texttt{treat\_indefinido\_as\_blocked=False} (\texttt{agents/dev:308}); \texttt{limpar\_degradacao} apaga reprovações anteriores; o PRD sai verde sem dimensão avaliada. & Alta & vazio ou sem envelope é bloqueado \\
+V-02 & \textbf{A consolidação ``determinística'' (44) é um LLM} (\texttt{agents/dev:110}); ninguém recalcula veredito nem contagem. & Alta & \texttt{BancaCheckAgent} que varre os cinco relatórios \\
+V-03 & \textbf{O gate do PRD concatena dois relatórios e só o último envelope sobrevive} (\texttt{checkers.py:531--549}; \texttt{callbacks.py:53}); achados de lacuna não chegam ao diagnóstico. & Alta & envelope combinado em código \\
+V-04 & \textbf{\texttt{agentes\_degradados} nunca é limpo} (\texttt{checkers.py:85--102}); o dossiê chama de provisório o que já passou (visto em exp06ef1b). & Alta & limpar por gate \\
+V-05 & \textbf{Donos \texttt{wireframes}, \texttt{copy} e \texttt{spec} do prompt 44} (\texttt{44:66}) \textbf{não existem no roteador} (\texttt{agents/dev:149,170}); ticket descartado em silêncio, confirmado na execução real. & Alta & aplicar \texttt{\_DONOS\_ROTEAVEIS} \\
+V-06 & \textbf{Retrabalho da banca sem posfixo} (\texttt{agents/dev:312}): protótipo, links e diagramas ficam da versão anterior. & Alta & passar o posfixo \\
+V-07 & \textbf{Orçamento de retrabalho esgotado bloqueia sem motivo nem volta} (\texttt{checkers.py:696--708}). & Alta & \texttt{registrar\_degradacao} \\
+V-08 & \textbf{Envelopes sem leitor}: o 49 se declara bloqueante (\texttt{49:254}) sem checker; 34 e 35 sem \texttt{status\_key}. & Alta & \texttt{EnvelopeGate} ao fim do dev \\
+V-09 & \textbf{A banca julga imersão e acessibilidade sem receber} CAA, ambiente, protótipo, Stitch e QA (\texttt{\_banca\_preambulo.md:15--45}), com ``ausência é NOK'' (\texttt{:7}). & Alta & acrescentar os insumos \\
+V-10 & \textbf{Nada verifica que as cinco dimensões existem antes do 44} (\texttt{agents/dev:291--298}). & Alta & checker de presença \\
+V-11 & \textbf{Frontmatter do PRD não conferido}: \texttt{needs\_clarification: 2} com zero marcadores no corpo, na execução real. & Alta & parsear o frontmatter em \texttt{validar\_prd} \\
+V-12 & \textbf{PED-02 (matriz) e PED-06 (graus) só por LLM}: \texttt{scored} e \texttt{indicative} têm zero ocorrências no código. & Alta & \texttt{validar\_matriz} \\
+V-13 & \textbf{Missão transversal nunca passa no contrato de telemetria} (\texttt{rastro.py:698} exige \texttt{expNNefNb\_}). & Média & aceitar o padrão transversal \\
+V-14 & \textbf{Regex do campo \texttt{dados} casa ``Modelo de dados:''} (\texttt{rastro.py:696}) e bloqueia. & Média & restringir ao payload \\
+V-15 & \textbf{``Toda medida tem tabela leitora'' conferido como ``existe uma tabela''} (\texttt{rastro.py:698}). & Média & por linha de evento \\
+V-16 & \textbf{Identificador inválido bloqueante com regex largo} (\texttt{rastro.py:844}). & Média & ancorar ou rebaixar \\
+V-17 & \textbf{Estrutura do PRD não conferida}: 25 seções, EARS, matriz 21, assets (\texttt{rastro.py:767--860}). & Média & regras estruturais \\
+V-18 & \textbf{Duas versões da plataforma}: \texttt{versao-lida.json} (29afc8f) e \texttt{criterios-dev.md:9} (ba0de35); sem alerta de envelhecimento em produção. & Alta & ler no start; idade no preâmbulo; falhar o CI \\
+V-19 & \textbf{Listas fechadas da plataforma hard-coded} (\texttt{rastro.py:27--83}), não derivadas das cópias. & Média & derivar ou testar \\
+V-20 & \textbf{72 ou 73 critérios}: \texttt{criterios-dev.md:9} diz 72; a contagem real é 16+14+15+15+13. & Baixa & corrigir; teste de contagem \\
+V-21 & \textbf{O gabarito do PRD manda imitar \texttt{unootube}} (\texttt{prd-padrao-ouro.md:124}) \textbf{e o proíbe} (\texttt{:93}; \texttt{47:145}). & Média & apagar a menção \\
+V-22 & \textbf{Sem temperatura, seed, modelo ou hash de prompt registrados} (\texttt{base.py:79}; zero ocorrências). Duas execuções não são comparáveis. & Alta & bloco \texttt{execucao} em \texttt{estado.json} \\
+V-23 & \textbf{Tokens nunca contados} (\texttt{runner.py:238--306} ignora \texttt{usage\_metadata}). & Média & somar por agente \\
+V-24 & \textbf{A banca paralela carrega cerca de 1,2 MB de contexto quase idêntico} (39, 41, 42, 43: 275 a 323 KB; 47: 380 KB). & Média & fatiar a referência de software por papel \\
+V-25 & \textbf{Sem timeout nem retry na chamada de modelo}; exceção aborta tudo (\texttt{runner.py:238,393}). & Alta & retry e checkpoint por etapa \\
+V-26 & \textbf{O lint de contrato de produto está fora de \texttt{STATUS\_KEYS} e \texttt{GATES}} (\texttt{runner.py:34}; \texttt{diagnostico.py:22}). & Média & acrescentar \\
+V-27 & \textbf{\texttt{python test\_pipeline.py} quebra} (\texttt{NameError}, \texttt{:1747}) e 18 testes ficam fora do bloco principal. & Média & remover o bloco \\
+V-28 & \textbf{Sem missão-gabarito nem regressão sobre saída real}; as execuções em \texttt{output/} não são usadas por teste. & Alta & fixtures e \texttt{esperado.json} \\
+V-29 & \textbf{\texttt{teste\_empirico\_po\_vs\_original.py} sem assert e fora do CI.} & Baixa & converter \\
+V-30 & \textbf{Sem memória entre execuções}: nada agrega \texttt{aprendizado.md}; nenhuma métrica ao longo do tempo. & Alta & \texttt{\_historico.jsonl} \\
+V-31 & \textbf{Trilha de versão da rubrica inconsistente} (v1.13 a v1.18 por arquivo). & Média & arquivo único de versão \\
+V-32 & \textbf{Cloud Run com \texttt{-{}-allow-unauthenticated}} (\texttt{deploy.yml:83}): artefatos, briefings e editor de prompts expostos. & Alta & IAP ou IAM; editor atrás de flag \\
+V-33 & \textbf{\texttt{.dockerignore} não exclui \texttt{.env}, \texttt{.env.yaml}, \texttt{.miro\_mcp\_tokens.json}}; \texttt{COPY . .}. & Alta & acrescentar \\
+V-34 & \textbf{Gabarito do PRD pede nomes de pessoas} (\texttt{prd-padrao-ouro.md:34}; \texttt{49:211}); sem retenção declarada dos artefatos. & Média & papéis; política de retenção \\
+V-35 & \textbf{Falhas de gravação engolidas} (\texttt{artifacts.py:196} em debug; \texttt{:336} retorna sempre a pasta). & Média & warning e retorno None \\
+\end{longtable}
+\normalsize
+
+% ======================= PACOTES =======================
+\section{Onze pacotes de correção}
+\label{sec:pacotes}
+
+Cento e dezoito achados não se aplicam um a um. Agrupados por causa comum, viram onze pacotes.
+Cada pacote diz o que cobre, o que muda, quem decide e como se mede.
+
+\begin{achadobox}{Pacote A --- Segurança e dados dos próprios artefatos \hfill decisão: infra}
+\textbf{Cobre:} V-32, V-33, V-34, D-23.
+\textbf{O que muda:} \texttt{-{}-no-allow-unauthenticated} com IAP ou IAM no deploy; editor de prompts
+atrás de variável desligada em produção; \texttt{.env*} e tokens do Miro no \texttt{.dockerignore};
+\texttt{owners} por papel no gabarito do PRD; política de retenção do bucket declarada; item
+falsificável de exposição na tela projetada.
+\textbf{Esforço:} um dia. \textbf{Indicador:} \texttt{docker build} local não contém segredo; URL do
+app exige login.
+\textbf{Por que primeiro:} é o único pacote em que o risco é externo à qualidade da missão. Um
+briefing de rede parceira e pareceres com dados de escola estão hoje num endereço aberto.
+\end{achadobox}
+
+\begin{achadobox}{Pacote B --- Gates que mentem para o lado do aprovado \hfill decisão: nenhuma}
+\textbf{Cobre:} P-01, D-27, V-01, V-08, V-10, D-07, D-08, V-03, V-04, V-07, V-26.
+\textbf{O que muda:} relatório vazio ou sem envelope é bloqueado em todo \texttt{EnvelopeGateAgent};
+\texttt{adequacao\_status} passa a existir; o one-pager pedagógico e o handoff ganham gate; presença das
+cinco dimensões antes da consolidação; envelope combinado do PRD montado em código;
+\texttt{agentes\_degradados} limpo por gate; orçamento esgotado registrado como degradação; o lint de
+produto entra no painel.
+\textbf{Esforço:} dois a três dias de Python, com teste para cada caso (o padrão já existe em
+\texttt{test\_pipeline.py}).
+\textbf{Indicador:} nenhum status \texttt{aprovado} no estado sem envelope parseável correspondente;
+teste que trunca a resposta de cada gate e exige \texttt{bloqueado}.
+\end{achadobox}
+
+\begin{achadobox}{Pacote C --- Roteamento de tickets \hfill decisão: nenhuma}
+\textbf{Cobre:} V-05, V-06, D-09, D-10, D-11, D-12, D-25.
+\textbf{O que muda:} \texttt{\_DONOS\_ROTEAVEIS} aplicado no despacho e dono não roteável registrado;
+posfixo no retrabalho da banca; ordem de retrabalho com copy-revisão por último; telas consomem a copy
+revisada; dono \texttt{prototipo-navegavel}; decisão explícita sobre \texttt{atencao} e \texttt{oficio}
+(recomendação: despachar \texttt{oficio} para \texttt{jornada}, como o contrato já diz, e registrar
+\texttt{atencao} para humano); D6 condicionado à disponibilidade do Stitch.
+\textbf{Esforço:} um a dois dias.
+\textbf{Indicador:} zero tickets com dono fora do mapa em cinco execuções; nenhum ticket de
+\texttt{oficio} descartado.
+\end{achadobox}
+
+\begin{achadobox}{Pacote D --- Vocabulário e versões com fonte única \hfill decisão: nenhuma}
+\textbf{Cobre:} P-04 a P-08, P-18 a P-24, P-26, D-13 a D-17, D-26, D-31, D-34, V-20, V-21, V-31,
+E-05.
+\textbf{O que muda:} um \texttt{references/\_versao-rubrica.md} incluído por todos; contrato de saída
+com o enum real e namespace de IDs por agente; ID de nó único entre jornada e fluxo; template do
+fluxo em \texttt{flowchart}; seções faltantes do \texttt{pronto.md}; resíduos de FigJam e de Gate 0
+apagados; contagens corrigidas (14 e 73); \texttt{formato-spec}, \texttt{modelo-de-insumo} e
+\texttt{celulas-consumidas} alinhados ao recorte da aula; o script de conferência de referências de
+E-05 estendido a versões e contagens.
+\textbf{Esforço:} um dia de texto e um script de 80 linhas.
+\textbf{Indicador:} o script devolve zero divergências; teste que proíbe número de versão fora do
+arquivo único.
+\end{achadobox}
+
+\begin{achadobox}{Pacote E --- Escola pública e idade no design \hfill decisão: produto e pedagogia}
+\textbf{Cobre:} D-18, D-19, D-20, D-21, P-10, P-29, N2, e as emendas E-12, E-15, E-16, E-18 da
+proposta.
+\textbf{O que muda:} estado degradado das telas de pico e decisão entre os intocáveis; piso de alvo
+de toque independente de CAA, com linha contável; ``anos iniciais'' com um só significado e
+redundância texto-ícone-áudio nas decisões do 3\textordmasculine{}--5\textordmasculine{}; contraste,
+foco e ``nada só por cor'' como itens contáveis; seção de acessibilidade no one-pager com critério na
+categoria 6; cenário (d) de conectividade intermitente e sem dispositivo do estudante com o teste ``a
+descoberta chega?''; contagem de preparo docente.
+\textbf{Esforço:} dois dias de texto; decisão pedagógica sobre o 3\textordmasculine{}--5\textordmasculine{}.
+\textbf{Indicador:} toda missão gerada tem, no inventário, o estado degradado da tela de pico e o
+cenário (d) preenchido; E-19 mede em campo.
+\end{achadobox}
+
+\begin{achadobox}{Pacote F --- Imersão verificável \hfill decisão: produto}
+\textbf{Cobre:} D-01, D-02, D-03, D-04, D-05, D-06, D-22, P-09, P-30, e as emendas E-02, E-10, E-11,
+E-14 da proposta.
+\textbf{O que muda:} \texttt{affordances-por-ambiente.md} (o que cada app real tem, onde, com que
+gesto e microinteração), incluído no D9 e no D5, ao lado da tabela de ausências preenchida; lint
+determinístico do HTML do protótipo (placeholders, CDN externo, IDs de tela presentes); O3 como teste
+sobre duas telas do Stitch ou movido à revisão humana; coluna Tensão e minuto acumulado no
+inventário; áudio nativo na ficha do ambiente; a régua DES-01\dots{}14 incluída no D5 e no QA; critério
+de gap e spoiler no gate estrutural; guia, voz e minutos até a primeira ação no one-pager.
+\textbf{Esforço:} três dias, sendo um de conferência do design system real.
+\textbf{Indicador:} O3 deixa de ser inaplicável; tickets ``reapareceu por realismo'' caem; o
+protótipo passa no lint em toda execução.
+\end{achadobox}
+
+\begin{achadobox}{Pacote G --- Mensurabilidade pedagógica de ponta a ponta \hfill decisão: pedagogia}
+\textbf{Cobre:} P-02, P-03, P-14, P-15, D-24, V-12, V-11, V-17, N3, e a emenda E-13 da proposta.
+\textbf{O que muda:} o parecer de adequação entra no gate final e na spec; a matriz habilidade,
+ação observável, marcador e dado nasce na seção 12 do one-pager e no bloco 11 da spec, e o 16b só
+copia; novo critério 7.5 (``artefato observável por objetivo, com o que não conta''); coluna
+Evidência no inventário de telas e dimensão no QA cruzando bloco 9 e telas; \texttt{validar\_matriz}
+determinístico (toda habilidade com linha completa; toda medida com grau); frontmatter e estrutura do
+PRD conferidos; piso de desafio 6.6.
+\textbf{Esforço:} três dias; decisão pedagógica sobre os marcadores ternários.
+\textbf{Indicador:} o mesmo dado pode ser seguido do código BNCC até a coluna da tabela, por máquina,
+em toda missão gerada.
+\end{achadobox}
+
+\begin{achadobox}{Pacote H --- Confiabilidade, custo e reprodutibilidade \hfill decisão: nenhuma}
+\textbf{Cobre:} V-22, V-23, V-25, V-27, V-28, V-29, V-35, V-02.
+\textbf{O que muda:} temperatura e seed fixados; bloco \texttt{execucao} (modelo, orçamento de
+raciocínio, hash de cada prompt, commit) em \texttt{estado.json}; tokens somados por agente; retry
+exponencial por agente e checkpoint por etapa; consolidação da banca recalculada por código;
+fixtures de missão-gabarito a partir das execuções boas em \texttt{output/} com \texttt{esperado.json};
+bloco principal do teste removido; falhas de gravação visíveis.
+\textbf{Esforço:} três a quatro dias.
+\textbf{Indicador:} duas execuções do mesmo briefing produzem diagnóstico comparável; custo por
+missão e por agente aparece no dossiê.
+\end{achadobox}
+
+\begin{achadobox}{Pacote I --- Sincronia com a plataforma \hfill decisão: nenhuma}
+\textbf{Cobre:} V-18, V-19, V-13, V-14, V-15, V-16, N1, E-20.
+\textbf{O que muda:} \texttt{versao-lida.json} lido no start, idade injetada no preâmbulo da banca,
+CI falha acima de N dias; listas fechadas derivadas das cópias ou testadas contra elas; regexes de
+telemetria e PRD ajustados (transversal, campo \texttt{dados}, tabela por evento, identificador);
+DES-14 com severidade declarada e origem registrada; decisão sobre DES-03 reaberta.
+\textbf{Esforço:} dois dias.
+\textbf{Indicador:} zero falsos positivos nos gates determinísticos sobre as fixtures; alerta de
+deriva visível na UI.
+\end{achadobox}
+
+\begin{achadobox}{Pacote J --- Aprendizado e memória \hfill decisão: produto}
+\textbf{Cobre:} P-25, P-26, P-27, V-30, A7, A8, e as emendas E-03, E-07, E-08, E-09, E-17, E-19.
+\textbf{O que muda:} \texttt{output/\_historico.jsonl} escrito a cada execução (diagnóstico,
+contagens da banca, rodadas, duração, tokens); \texttt{references/pendencias-de-emenda.md}
+versionado, alimentado pelas propostas do agente 51, com passo humano de aceite no README; catálogo
+atualizado e no formato que o 51 propõe; C1, C3 e C7 aplicados; aprendizado recebendo todos os
+relatórios; protocolo de campo.
+\textbf{Esforço:} dois dias mais o ritual humano.
+\textbf{Indicador:} \texttt{git log} das três referências vivas deixa de ter um único commit;
+métrica de rodadas por gate ao longo das execuções.
+\end{achadobox}
+
+\begin{achadobox}{Pacote K --- Contexto e engenharia de prompt \hfill decisão: nenhuma}
+\textbf{Cobre:} V-24, D-28, D-29, D-33, D-36, D-35, D-32, P-13, P-16, P-17, P-28, P-12, e E-04.
+\textbf{O que muda:} referência de software fatiada por papel da banca; BNCC fora do QA de design;
+fallback do protótipo truncado; D9 acionado por checker do bloco 0; D5 separado em spec e Stitch;
+Google Docs condicionado ao toolset; brief de escopo com chave própria; réguas de tempo
+subordinadas ao 6.2; bloco morto do 09 removido; etapa \texttt{produto} na reexecução; resumo da
+régua cognitiva no design.
+\textbf{Esforço:} dois dias.
+\textbf{Indicador:} tamanho do prompt expandido de cada agente da banca cai abaixo de 100 KB;
+nenhuma execução aborta por contexto.
+\end{achadobox}
+
+% ======================= PLANO =======================
+\section{Plano consolidado para o padrão ouro}
+
+\subsection{Sequência}
+
+A ordem segue dois critérios: primeiro o que expõe dados ou faz o sistema mentir, depois o que
+melhora a missão. Tudo o que não exige decisão pedagógica vem antes do que exige.
+
+\begin{enumerate}
+  \item \textbf{Semana 1 --- parar de mentir e de vazar.} Pacote A (segurança) e Pacote B (gates que
+        falham para o aprovado). Sem isso, qualquer melhoria de critério pode ser aprovada por um
+        gate que não leu nada.
+  \item \textbf{Semana 2 --- rubrica v1.19 e roteamento.} Pacotes C e D, mais as Ondas 1 e 2 da
+        proposta (E-01 a E-09). É uma única emenda de texto com um script, e destrava o resto.
+  \item \textbf{Semanas 3 e 4 --- imersão, escola pública e mensurabilidade.} Pacotes E, F e G, com as
+        decisões de produto e pedagogia da Onda 3 (E-10 a E-18). É aqui que a missão gerada muda de
+        fato.
+  \item \textbf{Em paralelo, desde a semana 1 --- confiabilidade, sincronia, memória e contexto.}
+        Pacotes H, I, J e K, mais E-19. São trabalho de engenharia sem decisão de produto, e o
+        Pacote J é o que permite medir se as semanas 3 e 4 funcionaram.
+\end{enumerate}
+
+\subsection{Esforço por pacote}
+
+\begin{center}\small
+\begin{tabular}{@{}l p{5.2cm} c c p{4.2cm}@{}}
+\toprule
+\textbf{Pacote} & \textbf{Tema} & \textbf{Achados} & \textbf{Dias} & \textbf{Decisão} \\
+\midrule
+A & Segurança e dados & 4 & 1 & infra \\
+B & Gates que mentem & 11 & 2--3 & nenhuma \\
+C & Roteamento de tickets & 7 & 1--2 & nenhuma \\
+D & Vocabulário e versões & 22 + E-05 & 1 & nenhuma \\
+E & Escola pública e idade & 7 + 4 emendas & 2 & produto e pedagogia \\
+F & Imersão verificável & 9 + 4 emendas & 3 & produto \\
+G & Mensurabilidade & 9 + E-13 & 3 & pedagogia \\
+H & Confiabilidade e custo & 8 & 3--4 & nenhuma \\
+I & Sincronia com a plataforma & 8 + E-20 & 2 & nenhuma \\
+J & Aprendizado e memória & 6 + 6 emendas & 2 + ritual & produto \\
+K & Contexto e prompts & 13 + E-04 & 2 & nenhuma \\
+\midrule
+\textbf{Total} & & \textbf{118} & \textbf{22--25} & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Cerca de cinco semanas de uma pessoa, ou duas semanas e meia de duas, com as decisões de produto e
+pedagogia tomadas em paralelo. Fora E-19 (campo), nada depende de terceiros.
+
+\subsection{O que continua deliberadamente fora}
+
+\begin{itemize}
+  \item \textbf{O framework de seis etapas por idade (A10).} Continua pergunta de campo, e E-19 é o
+        único caminho honesto.
+  \item \textbf{A arquitetura de agentes.} Nenhum dos 118 achados pede trocar a esteira; todos pedem
+        que ela faça o que já diz fazer. A separação em três etapas com gates determinísticos está
+        certa; o que falta é fechar as alças abertas.
+  \item \textbf{Os tetos numéricos da rubrica de ofício.} Continuam v0.1 até haver dado de campo.
+\end{itemize}
+
+% ======================= MENSURABILIDADE =======================
+\section{Mensurabilidade: o que se pode medir depois dos pacotes}
+
+A tabela da reavaliação (Parte I) marcava cinco indicadores instrumentados e seis abertos. Depois
+dos pacotes, o quadro fica:
+
+\begin{center}\small
+\begin{tabular}{@{}p{4.6cm} p{5.8cm} p{1.6cm} p{3.2cm}@{}}
+\toprule
+\textbf{O que medir} & \textbf{Indicador} & \textbf{Pacote} & \textbf{Hoje} \\
+\midrule
+Gate aprovou sem ler & status aprovado sem envelope parseável & B & possível \\
+Ticket perdido & dono fora do mapa por execução & C & acontece \\
+Deriva de vocabulário & divergências do script de conferência & D & 4 conhecidas \\
+Escola pública no wireframe & estado degradado da pico presente & E & primeiro corte \\
+Fidelidade do clone & lint do protótipo; tickets ``reapareceu'' & F & inaplicável \\
+Rastreabilidade BNCC até o dado & \texttt{validar\_matriz} por missão & G & só LLM \\
+Reprodutibilidade & bloco \texttt{execucao} por artefato & H & inexistente \\
+Custo por missão e por agente & tokens no dossiê & H & inexistente \\
+Envelhecimento da plataforma & idade da cópia na UI e no CI & I & inexistente \\
+Melhoria ao longo do tempo & série do \texttt{\_historico.jsonl} & J & inexistente \\
+Contexto por agente & KB do prompt expandido & K & até 380 KB \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ======================= ANEXO =======================
+\section{Anexo}
+
+\subsection{Commits entre 20 e 22 de setembro}
+
+\begin{center}\small
+\begin{tabular}{@{}l l p{10.6cm}@{}}
+\toprule
+\textbf{Commit} & \textbf{Data} & \textbf{Assunto} \\
+\midrule
+\texttt{ce4dc95} & 20/09 & relatórios LaTeX de análise de imersão e padrão ouro \\
+\texttt{fa39727} & 21/09 & contrato de produto, one-pager resumido, relatório comparativo, critérios \\
+\texttt{702d972} & 21/09 & fluxo do professor e telas obrigatórias do professor na esteira de design \\
+\texttt{c305712} & 21/09 & validadores sem falso-positivo; formato de slug no núcleo narrativo \\
+\texttt{fc44d1d} & 21/09 & reexecução de etapas a partir de estado salvo \\
+\texttt{4afe2b7} & 21/09 & assinatura de cache da barra lateral \\
+\texttt{a44897a} & 22/09 & modo de correção na mesma sessão \\
+\texttt{d68ac1f} & 22/09 & regras de linguagem simples no one-pager resumido \\
+\texttt{f5b379c} & 22/09 & PRD deixa de acusar caminho divergente em experiência existente \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{O que foi reconferido por busca direta neste relatório}
+
+Além da Parte I, os seguintes achados da Parte II foram verificados diretamente, não só pelo
+auditor da frente: P-01 (\texttt{adequacao\_status} aparece uma única vez no código, como leitura);
+P-09 (zero ocorrências de spoiler ou gap nos quatro arquivos de critério); P-11
+(\texttt{tools/bncc.py} emite atenção no EM); P-25 (um único commit nas três referências vivas);
+D-25 (\texttt{config.py:31}, modo \texttt{off} sem chave); D-27 e V-01 (\texttt{treat\_indefinido\_as\_blocked=False}
+nas linhas 365 e 308); V-05 (\texttt{MAPA\_BANCA} e \texttt{BANCA\_EXTERNO} sem \texttt{wireframes},
+\texttt{copy} e \texttt{spec}; \texttt{44:66} os autoriza); V-20 (16+14+15+15+13 cabeçalhos); V-22
+(zero ocorrências de temperatura ou seed); V-27 (\texttt{NameError} na linha 1747); V-32
+(\texttt{-{}-allow-unauthenticated} na linha 83 do deploy); V-33 (\texttt{.dockerignore} sem
+\texttt{.env}; os três arquivos de segredo existem na raiz).
+
+\subsection{Changelog v1.19 revisto}
+
+Ao changelog da proposta e da Parte I acrescentam-se as linhas dos pacotes B, C e D, que são as que
+tocam a rubrica: versão única de rubrica; enum real de status no contrato de saída; namespace de IDs
+por agente; ID único de tela entre jornada e fluxo; contagens 14 e 73; 4.5 nas seis etapas; 7.4
+desejável; 7.5 novo (artefato observável); cenário (d) de conectividade; seção de acessibilidade no
+one-pager; \texttt{[RS-n]} sempre pendente; despacho de \texttt{oficio} para \texttt{jornada}.
+
+% ======================= BIBLIOGRAFIA =======================
+\begin{thebibliography}{99}
+\small
+
+\bibitem{brown2004}
+BROWN, E.; CAIRNS, P.
+\emph{A grounded investigation of game immersion}.
+In: CHI '04 Extended Abstracts on Human Factors in Computing Systems. ACM, 2004, p. 1297--1300.
+DOI 10.1145/985921.986048.
+
+\bibitem{cheng2015}
+CHENG, M.-T.; SHE, H.-C.; ANNETTA, L. A.
+\emph{Game immersion experience: its hierarchical structure and impact on game-based science
+learning}.
+Journal of Computer Assisted Learning, v. 31, n. 3, p. 232--253, 2015.
+DOI 10.1111/jcal.12066.
+
+\bibitem{hamari2016}
+HAMARI, J.; SHERNOFF, D. J.; ROWE, E.; COLLER, B.; ASBELL-CLARKE, J.; EDWARDS, T.
+\emph{Challenging games help students learn: an empirical study on engagement, flow and immersion
+in game-based learning}.
+Computers in Human Behavior, v. 54, p. 170--179, 2016.
+DOI 10.1016/j.chb.2015.07.045.
+
+\bibitem{huang2024}
+HUANG, G.; JIA, W.; YU, W.
+\emph{Media literacy interventions improve resilience to misinformation: a meta-analytic
+investigation of overall effect and moderating factors}.
+Communication Research, 2024.
+DOI 10.1177/00936502241288103.
+
+\bibitem{mislevy2003}
+MISLEVY, R. J.; ALMOND, R. G.; LUKAS, J. F.
+\emph{A brief introduction to evidence-centered design}.
+ETS Research Report Series, RR-03-16. Princeton: Educational Testing Service, 2003.
+DOI 10.1002/j.2333-8504.2003.tb01908.x.
+
+\bibitem{pisa2022}
+INEP --- INSTITUTO NACIONAL DE ESTUDOS E PESQUISAS EDUCACIONAIS ANÍSIO TEIXEIRA.
+\emph{Relatório Brasil no PISA 2022}. Brasília: Inep/MEC, 2023.
+
+\bibitem{saeb2025}
+INEP --- INSTITUTO NACIONAL DE ESTUDOS E PESQUISAS EDUCACIONAIS ANÍSIO TEIXEIRA.
+\emph{Sistema de Avaliação da Educação Básica --- Saeb 2025: resultados}.
+Brasília: Inep/MEC, 2026.
+
+\bibitem{sinha2021}
+SINHA, T.; KAPUR, M.
+\emph{When problem solving followed by instruction works: evidence for productive failure}.
+Review of Educational Research, v. 91, n. 5, p. 761--798, 2021.
+DOI 10.3102/00346543211019105.
+
+\bibitem{sundararajan2020}
+SUNDARARAJAN, N.; ADESOPE, O.
+\emph{Keep it coherent: a meta-analysis of the seductive details effect}.
+Educational Psychology Review, v. 32, p. 707--734, 2020.
+DOI 10.1007/s10648-020-09522-4.
+
+\bibitem{ticedu2024}
+CETIC.BR --- CENTRO REGIONAL DE ESTUDOS PARA O DESENVOLVIMENTO DA SOCIEDADE DA INFORMAÇÃO.
+\emph{TIC Educação 2024: pesquisa sobre o uso das tecnologias de informação e comunicação nas
+escolas brasileiras}. São Paulo: NIC.br, 2025.
+
+\bibitem{tickids2024}
+CETIC.BR --- CENTRO REGIONAL DE ESTUDOS PARA O DESENVOLVIMENTO DA SOCIEDADE DA INFORMAÇÃO.
+\emph{TIC Kids Online Brasil 2024: pesquisa sobre o uso da Internet por crianças e adolescentes
+no Brasil}. São Paulo: NIC.br, 2024.
+
+\end{thebibliography}
+
+\vspace{1cm}
+\begin{center}
+{\color{BorderGray}\rule{0.6\textwidth}{0.6pt}}\\[0.4cm]
+{\small\color{Charcoal}
+Reavaliação conduzida sobre o estado do repositório em 22 de setembro de 2026
+(\texttt{f5b379c}). Parte I responde à Auditoria de Imersão v1.0 e à Proposta de Emendas v1.0;
+Parte II é auditoria nova, em três frentes.\\
+Nenhum artefato da esteira foi alterado na produção deste documento.}
+\end{center}
+
+\end{document}
