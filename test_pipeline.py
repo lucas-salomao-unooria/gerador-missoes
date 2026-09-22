@@ -2244,3 +2244,98 @@ def test_prompt_reusado_mantem_o_numero_canonico():
             numeros.append(int(achado.group(1)) if achado else 999)
         assert numeros == sorted(numeros), f"{area}: rótulos fora de ordem — {numeros}"
     print("   ✓ prompt reusado mantém o número canônico e a lista do editor sai em ordem")
+
+
+# --------------------------------------------------------------------- catálogo de missões
+def _ficha(**kw):
+    base = {"sessao": "s1", "slug": "exp06ef1b", "nome": "N", "ano": "6EF", "bimestre": 1,
+            "ambiente": "instanooria", "eixo": "algoritmos e bolhas de informação",
+            "descoberta": "o feed esconde posts a partir das contas que eu sigo",
+            "tipo_decisao": "seguir uma conta e comparar o feed depois", "porta_abstracao": "explicar",
+            "habilidade_primaria": "EF06CO09", "status": "em criação", "gates": {}, "origem": "esteira"}
+    base.update(kw)
+    return base
+
+
+def test_catalogo_semelhanca_separa_repetida_de_distinta():
+    """O score recupera e ordena; quem reprova é o V5. Mas repetida tem de pontuar acima de distinta."""
+    from tools import catalogo as cat
+
+    igual = _ficha(sessao="s2", descoberta="o feed esconde posts por causa das contas que sigo")
+    outra = _ficha(sessao="s3", ano="4EF", ambiente="unitube", eixo="desinformação e credibilidade",
+                   descoberta="popularidade não é o mesmo que confiabilidade num vídeo",
+                   tipo_decisao="escolher 3 de 10 vídeos pela credibilidade")
+    s_igual, s_outra = cat.semelhanca(_ficha(), igual), cat.semelhanca(_ficha(), outra)
+    assert s_igual >= cat.LIMIAR_PARECIDA, s_igual
+    assert s_outra < 0.2, s_outra
+    print(f"   ✓ catálogo: missão repetida {s_igual:.2f} × distinta {s_outra:.2f}")
+
+
+def test_catalogo_vizinhas_filtra_por_ano_ambiente_e_eixo():
+    from tools import catalogo as cat
+
+    indice = {"versao": 1, "missoes": [
+        _ficha(sessao="s2", slug="exp07ef1b", ano="7EF"),                       # ano vizinho
+        _ficha(sessao="s3", slug="exp01ef1b", ano="1EF", ambiente="tiktooria",
+               eixo="privacidade", descoberta="outra coisa completamente", tipo_decisao="x"),  # longe
+        _ficha(sessao="s4", slug="exp09ef1b", ano="9EF", status="descartada"),  # descartada sai
+    ]}
+    achadas = cat.vizinhas(_ficha(), indice, n=5)
+    slugs = [m["slug"] for m in achadas]
+    assert "exp07ef1b" in slugs and "exp01ef1b" not in slugs and "exp09ef1b" not in slugs, slugs
+    assert achadas[0]["semelhanca"] >= achadas[-1]["semelhanca"]
+    print(f"   ✓ catálogo: vizinhas filtram por ano/ambiente/eixo e ignoram descartada ({slugs})")
+
+
+def test_catalogo_registra_detecta_slug_colidido_e_preserva_status_humano():
+    """O slug deriva de ano+bimestre, então duas missões do mesmo bimestre colidem — é achado, não erro."""
+    import tempfile
+    from pathlib import Path
+
+    from tools import catalogo as cat
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        cat.registrar(_ficha(sessao="s1"), base=base)
+        r = cat.registrar(_ficha(sessao="s2", descoberta="outra descoberta bem diferente daqui"), base=base)
+        assert "slug-colidido" in [a["codigo"] for a in r["achados"]], r["achados"]
+        assert r["total"] == 2
+
+        promovido = cat.carregar(base=base)
+        next(m for m in promovido["missoes"] if m["sessao"] == "s1")["status"] = "aprovada"
+        cat.gravar(promovido, base=base)
+        cat.registrar(_ficha(sessao="s1"), base=base)  # a esteira roda de novo sobre a mesma sessão
+        final = next(m for m in cat.carregar(base=base)["missoes"] if m["sessao"] == "s1")
+        assert final["status"] == "aprovada", final["status"]
+    print("   ✓ catálogo: slug colidido vira achado e status promovido por pessoa vence o derivado")
+
+
+def test_catalogo_lacuna_desarma_a_comparacao_e_tabela_vazia_avisa():
+    from tools import catalogo as cat
+
+    assert cat.tem_lacuna(_ficha(descoberta="[preencher do manifesto]"))
+    assert cat.tem_lacuna(_ficha(tipo_decisao=""))
+    assert not cat.tem_lacuna(_ficha())
+    vazia = cat.tabela_markdown([])
+    assert "|" not in vazia and "vazio" in vazia, vazia
+    print("   ✓ catálogo: campo por preencher desarma a comparação; índice vazio avisa em vez de tabela oca")
+
+
+def test_catalogo_ficha_le_slug_ano_ambiente_e_descoberta_do_estado():
+    from tools import catalogo as cat
+
+    state = {
+        "spec_missao": "# Spec — O feed que me escolheu v1\n\n## 0. Identificação de plataforma\n"
+                       "* Slug: `exp06ef1b` · Série(s): [\"6EF\"] · Seção do DS: `instanooria`\n\n"
+                       "## 1. Descoberta central\n- **Frase-síntese da descoberta:** \"Eu segui uma conta e o feed mudou sozinho.\"\n"
+                       "- Eixo temático: algoritmos de recomendação e bolhas\n\n"
+                       "## 11. Currículo\n| `EF06CO09` | Cultura Digital | letramento digital |\n",
+        "gate_final_status": "bloqueado",
+        "pipeline_bloqueado": True,
+    }
+    f = cat.ficha_da_execucao(state, sessao="20260922-000000-exp06ef1b")
+    assert f["slug"] == "exp06ef1b" and f["ano"] == "6EF" and f["bimestre"] == 1
+    assert f["ambiente"] == "instanooria" and f["habilidade_primaria"] == "EF06CO09"
+    assert f["descoberta"].startswith("Eu segui uma conta"), f["descoberta"]
+    assert f["status"] == "bloqueada", "missão bloqueada entra no índice — senão a mesma ideia volta"
+    print("   ✓ catálogo: ficha lê slug, ano, bimestre, ambiente, habilidade e descoberta da spec")

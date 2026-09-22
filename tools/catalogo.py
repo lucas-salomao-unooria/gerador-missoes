@@ -1,0 +1,417 @@
+"""Memória das missões já geradas — índice persistente, ficha por execução e vizinhas.
+
+**Por que existe.** A esteira não se lembrava do que já tinha gerado. O catálogo oficial
+(`references/catalogo-missoes.md`) é escrito à mão e ninguém o aplica; as sessões em `output/`
+contêm toda missão já produzida e nada as lia entre execuções. O resultado é que duas missões
+parecidas só eram percebidas por uma pessoa, ou nunca — e o agente que **inventa** a missão nunca
+via o catálogo: o primeiro a consultá-lo rodava três agentes depois, com o one-pager inteiro escrito.
+
+**Onde o dado vive.** `output/_catalogo.json`. É o único caminho que persiste: `/app/output` é o
+bucket montado no Cloud Run, enquanto `prompts/` vem da imagem e some a cada revisão. A instância é
+única (`--max-instances=1`), então não há concorrência; ainda assim a gravação é atômica.
+
+**As sessões são a memória; este índice é cache.** `scripts/catalogo.py reconstruir` o refaz do zero
+varrendo `output/*/estado.json`. Perder o índice não perde nada.
+
+**Semelhança sem embeddings, de propósito.** A recuperação é mecânica (ano, ambiente, eixo, e
+sobreposição de palavras da descoberta); o *julgamento* fica com o micro-gate, que já tem o teste de
+2 frases escrito. Com ~10 missões hoje e ~200 no limite (12 anos × 4 bimestres), embeddings seriam
+infraestrutura sem ganho. Revisar esta decisão se o índice passar de 200 missões.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import time
+import unicodedata
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+AGENTE = "registro-catalogo"
+VERSAO_INDICE = 1
+NOME_INDICE = "_catalogo.json"
+
+#: Vocabulário de status do catálogo. A esteira só escreve os dois primeiros — os demais são ato
+#: humano (`scripts/catalogo.py promover`), porque são juízo, e o registro automático é fato.
+STATUS_AUTOMATICOS = ("em criação", "bloqueada")
+STATUS_HUMANOS = ("validada", "aprovada", "em produção", "descartada")
+
+#: Seções do design system que nomeiam o ambiente simulado (`references/ambientes.md`).
+AMBIENTES = ("instanooria", "unitube", "chatgpt", "whatsappmobile", "tiktooria", "mini-jogo")
+#: Escala de abstração de `literatura-cognitiva.md` §4, usada pelo critério 2.8.
+PORTAS = ("descrever", "explicar", "criticar com apoio", "criticar")
+
+#: Acima disto, duas missões são parecidas o bastante para o registro avisar. Não bloqueia nada:
+#: quem reprova é o micro-gate (V5), por julgamento, não por número.
+LIMIAR_PARECIDA = 0.60
+
+_RE_SLUG_ANO = re.compile(r"^exp(\d{2})(ef|em)(\d)b$", re.IGNORECASE)
+_RE_LINHA_TABELA = re.compile(r"^\|(?!\s*[-:]+\s*\|).+\|\s*$")
+_STOPWORDS = {
+    "para", "pelo", "pela", "pelos", "pelas", "como", "mais", "menos", "muito", "sobre", "entre",
+    "quando", "onde", "porque", "cada", "todo", "toda", "todos", "todas", "isso", "esse", "essa",
+    "aquilo", "seu", "sua", "seus", "suas", "que", "com", "sem", "dos", "das", "nos", "nas", "uma",
+    "ele", "ela", "eles", "elas", "voce", "voces", "estudante", "aluno", "alunos", "missao", "app",
+    "nao", "sim", "ser", "ter", "fazer", "faz", "tem", "vai", "esta", "estao", "foi", "sao",
+}
+
+
+# --------------------------------------------------------------------- caminho e carga
+def caminho_indice(base: Optional[Path] = None) -> Path:
+    """`output/_catalogo.json`. `base` só existe para teste — em produção vem do settings."""
+    if base is not None:
+        return Path(base) / NOME_INDICE
+    from config import get_settings  # import tardio: `OUTPUT_DIR` muda em tempo de execução
+
+    return get_settings().output_path / NOME_INDICE
+
+
+def indice_vazio() -> Dict[str, Any]:
+    return {"versao": VERSAO_INDICE, "gerado_em": "", "missoes": []}
+
+
+def carregar(base: Optional[Path] = None) -> Dict[str, Any]:
+    """Lê o índice. Ausente, ilegível ou de versão futura devolve vazio — nunca levanta."""
+    caminho = caminho_indice(base)
+    try:
+        dados = json.loads(caminho.read_text(encoding="utf-8"))
+        if not isinstance(dados, dict) or int(dados.get("versao", 0)) > VERSAO_INDICE:
+            return indice_vazio()
+        dados.setdefault("missoes", [])
+        return dados
+    except Exception:
+        return indice_vazio()
+
+
+def gravar(indice: Dict[str, Any], base: Optional[Path] = None) -> Path:
+    """Gravação atômica (`.tmp` + `os.replace`), como os tokens do Miro."""
+    caminho = caminho_indice(base)
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    indice["versao"] = VERSAO_INDICE
+    indice["gerado_em"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+    tmp = caminho.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(indice, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(tmp, caminho)
+    return caminho
+
+
+# --------------------------------------------------------------------- extração da ficha
+def _limpar(valor: str) -> str:
+    v = re.sub(r"\s+", " ", (valor or "")).strip()
+    v = re.sub(r"^[*_`]+|[*_`]+$", "", v).strip()
+    return v
+
+
+def _primeira_frase(bloco: str, maximo: int = 220) -> str:
+    """Primeira linha de conteúdo de um bloco, sem heading, bullet ou rótulo em negrito."""
+    for linha in (bloco or "").splitlines():
+        t = _limpar(re.sub(r"^\s*[-*>]+\s+", "", linha))
+        if not t or t.startswith("#") or t.startswith("|"):
+            continue
+        # Rótulo em negrito à frente do valor: `**Frase-síntese da descoberta:** "…"`.
+        t = re.sub(r"^\*{0,2}[^:*]{3,60}:\*{0,2}\s*", "", t).strip()
+        t = _limpar(t.strip('"“”'))
+        if len(t) < 12:
+            continue
+        return t[:maximo]
+    return ""
+
+
+def _campo_rotulado(texto: str, *rotulos: str) -> str:
+    """Valor de `**Rótulo:** valor` ou `Rótulo: valor`, no primeiro rótulo que casar."""
+    for rotulo in rotulos:
+        m = re.search(rf"\*?\*?{re.escape(rotulo)}\*?\*?\s*[:—-]\s*(.+)", texto or "", re.IGNORECASE)
+        if m:
+            valor = _limpar(m.group(1).split("·")[0]).lstrip("*").strip().strip('"“”')
+            if valor and not valor.startswith("<"):
+                return valor[:220]
+    return ""
+
+
+def _ano_bimestre(slug: str, textos: str) -> Tuple[str, Optional[int]]:
+    """Do slug (`exp06ef1b` → 6EF, 1). Sem slug legível, cai na série declarada no texto."""
+    m = _RE_SLUG_ANO.match(slug or "")
+    if m:
+        return f"{int(m.group(1))}{m.group(2).upper()}", int(m.group(3))
+    from tools.bncc import extrair_serie
+
+    serie = extrair_serie(textos or "")
+    if serie["anos"]:
+        return f"{min(serie['anos'])}EF", None
+    return ("EM", None) if serie["em"] else ("", None)
+
+
+def _ambiente(textos: str) -> str:
+    baixo = (textos or "").lower()
+    for amb in AMBIENTES:
+        if amb in baixo:
+            return amb
+    return ""
+
+
+def _habilidade_primaria(spec: str, nucleo: str) -> str:
+    """Primeiro código de Cultura Digital do bloco 11 — o foco primário da Regra 12."""
+    from tools.bncc import extrair_codigos, habilidades, secao_bloco
+
+    for texto, bloco in ((spec, 11), (nucleo, 1)):
+        if not texto:
+            continue
+        alvo = secao_bloco(texto, bloco) or texto
+        for codigo in extrair_codigos(alvo):
+            hab = habilidades().get(codigo)
+            if hab and (hab.get("eixo") == "CD" or hab.get("letramento_digital")):
+                return codigo
+        codigos = extrair_codigos(alvo)
+        if codigos:
+            return codigos[0]
+    return ""
+
+
+def _linha_do_aprendizado(aprendizado: str) -> Dict[str, str]:
+    """Campos de julgamento da linha que o agente 51 propõe no formato do catálogo.
+
+    O 51 já monta essa linha hoje e ela era descartada. Aqui ela vira dado — e, quando ele não
+    a emite, a ficha cai na extração do núcleo.
+    """
+    for linha in (aprendizado or "").splitlines():
+        if not _RE_LINHA_TABELA.match(linha.strip()):
+            continue
+        celulas = [_limpar(c) for c in linha.strip().strip("|").split("|")]
+        if len(celulas) < 8 or celulas[0].lower() in ("slug", "missão", "missao"):
+            continue
+        if not re.search(r"exp\d{2}(ef|em)\d b?|exp-\d{2}", celulas[0], re.IGNORECASE):
+            continue
+        campos = ["slug", "ano", "bimestre", "nome", "ambiente", "eixo", "descoberta", "tipo_decisao",
+                  "porta_abstracao", "habilidade_primaria", "status", "observada_em_campo"]
+        return {campo: celulas[i] for i, campo in enumerate(campos) if i < len(celulas)}
+    return {}
+
+
+def _nome(textos: str) -> str:
+    m = re.search(r"^#\s*(?:N[úu]cleo narrativo|Spec|One-?pager)\s*[—–-]\s*(.+?)(?:\s+v\d|\s*$)", textos or "", re.MULTILINE | re.IGNORECASE)
+    if m:
+        return _limpar(m.group(1))[:120]
+    m = re.search(r"^#\s+(.+)$", textos or "", re.MULTILINE)
+    return _limpar(m.group(1))[:120] if m else ""
+
+
+def ficha_da_execucao(state: Dict[str, Any], sessao: str = "") -> Dict[str, Any]:
+    """A ficha de catálogo desta execução, extraída do estado. Campo ausente sai vazio, nunca inventado."""
+    from agents.callbacks import extrair_slug
+    from tools.bncc import secao_bloco
+
+    spec = str(state.get("spec_missao") or "")
+    nucleo = str(state.get("nucleo_narrativo") or "")
+    one_pager = str(state.get("one_pager") or "")
+    aprendizado = str(state.get("aprendizado_registro") or "")
+    juntos = "\n".join(t for t in (spec, nucleo, one_pager) if t)
+
+    proposta = _linha_do_aprendizado(aprendizado)
+    bloco1 = secao_bloco(nucleo, 1) or secao_bloco(spec, 1) or secao_bloco(one_pager, 1) or ""
+    bloco0 = secao_bloco(spec, 0) or secao_bloco(nucleo, 0) or ""
+
+    slug = extrair_slug(spec) or extrair_slug(nucleo) or extrair_slug(one_pager)
+    ano, bimestre = _ano_bimestre(slug, bloco0 or juntos[:3000])
+    gates = {
+        chave.removesuffix("_status"): str(state.get(chave) or "")
+        for chave in ("gate_estrutural_status", "gate_final_status", "bncc_status", "design_status", "dev_status")
+        if state.get(chave)
+    }
+    bloqueada = bool(state.get("pipeline_bloqueado")) or str(state.get("gate_final_status", "")).lower().startswith("bloq")
+
+    return {
+        "sessao": sessao,
+        "slug": slug,
+        "nome": proposta.get("nome") or _nome(nucleo or spec or one_pager),
+        "ano": proposta.get("ano") or ano,
+        "bimestre": bimestre,
+        "ambiente": (proposta.get("ambiente") or _ambiente(bloco0) or _ambiente(juntos[:6000])).lower(),
+        "eixo": proposta.get("eixo") or _campo_rotulado(bloco1, "Eixo temático", "Eixo"),
+        "descoberta": proposta.get("descoberta") or _campo_rotulado(bloco1, "Descoberta central") or _primeira_frase(bloco1),
+        "tipo_decisao": proposta.get("tipo_decisao") or _campo_rotulado(bloco1, "Tipo de decisão"),
+        "porta_abstracao": (proposta.get("porta_abstracao") or _campo_rotulado(bloco1, "Porta de abstração")).lower(),
+        "habilidade_primaria": proposta.get("habilidade_primaria") or _habilidade_primaria(spec, nucleo),
+        "status": "bloqueada" if bloqueada else "em criação",
+        "gates": gates,
+        "gerada_em": time.strftime("%Y-%m-%d"),
+        "origem": "esteira",
+    }
+
+
+# --------------------------------------------------------------------- semelhança
+def _tokens(texto: str) -> Set[str]:
+    sem_acento = "".join(c for c in unicodedata.normalize("NFD", (texto or "").lower()) if unicodedata.category(c) != "Mn")
+    return {t for t in re.findall(r"[a-z0-9]{4,}", sem_acento) if t not in _STOPWORDS}
+
+
+def _jaccard(a: Set[str], b: Set[str]) -> float:
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def _ano_num(ano: str) -> Optional[int]:
+    m = re.match(r"(\d)\s*EF", (ano or "").upper())
+    return int(m.group(1)) if m else None
+
+
+def semelhanca(a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    """0 a 1 — as quatro dimensões que os critérios 2.5 e 2.8 comparam.
+
+    **O score recupera e ordena; não decide.** Ele é lexical: duas missões que dizem a mesma coisa
+    com outras palavras ("segui uma conta e o feed afunilou" × "minhas escolhas escondem posts")
+    pontuam médio, não alto. Quem reprova é o micro-gate (V5), que aplica o teste de 2 frases sobre
+    as vizinhas que este score trouxe. Por isso o limiar abaixo serve a um aviso, nunca a um veto.
+    """
+    score = 0.35 * _jaccard(_tokens(a.get("descoberta", "")), _tokens(b.get("descoberta", "")))
+    if a.get("ambiente") and a.get("ambiente") == b.get("ambiente"):
+        score += 0.25
+    if a.get("eixo") and _jaccard(_tokens(a.get("eixo", "")), _tokens(b.get("eixo", ""))) >= 0.5:
+        score += 0.20
+    if a.get("ano") and _ano_num(a.get("ano", "")) is not None and _ano_num(a.get("ano", "")) == _ano_num(b.get("ano", "")):
+        score += 0.10  # mesmo ano é onde a repetição mais dói: é a trilha que o estudante vive
+    score += 0.10 * _jaccard(_tokens(a.get("tipo_decisao", "")), _tokens(b.get("tipo_decisao", "")))
+    return round(min(score, 1.0), 3)
+
+
+def vizinhas(ficha: Dict[str, Any], indice: Optional[Dict[str, Any]] = None, n: int = 5, base: Optional[Path] = None) -> List[Dict[str, Any]]:
+    """As missões do índice mais próximas desta, já ordenadas. Exclui a própria sessão.
+
+    Filtro: mesmo ano (ou vizinho), mesmo ambiente ou mesmo eixo. Missão descartada fica de fora.
+    """
+    indice = indice if indice is not None else carregar(base)
+    ano_alvo = _ano_num(ficha.get("ano", ""))
+    candidatas: List[Dict[str, Any]] = []
+    for m in indice.get("missoes", []):
+        if m.get("sessao") and m.get("sessao") == ficha.get("sessao"):
+            continue
+        if str(m.get("status", "")).lower() == "descartada":
+            continue
+        ano_m = _ano_num(m.get("ano", ""))
+        perto = ano_alvo is not None and ano_m is not None and abs(ano_alvo - ano_m) <= 1
+        mesmo_ambiente = bool(ficha.get("ambiente")) and ficha.get("ambiente") == m.get("ambiente")
+        mesmo_eixo = bool(ficha.get("eixo")) and _jaccard(_tokens(ficha.get("eixo", "")), _tokens(m.get("eixo", ""))) >= 0.5
+        if not (perto or mesmo_ambiente or mesmo_eixo):
+            continue
+        candidatas.append({**m, "semelhanca": semelhanca(ficha, m)})
+    candidatas.sort(key=lambda m: (-m["semelhanca"], m.get("slug", "")))
+    return candidatas[:n]
+
+
+def _rotulo_semelhanca(score: float) -> str:
+    return "alta" if score >= LIMIAR_PARECIDA else ("média" if score >= 0.35 else "baixa")
+
+
+def _celula(valor: Any) -> str:
+    texto = _limpar(str(valor if valor not in (None, "") else "—")).replace("|", "/")
+    return texto[:160]
+
+
+def tabela_markdown(missoes: List[Dict[str, Any]], com_semelhanca: bool = False) -> str:
+    """As colunas que os critérios 2.5 e 2.8 comparam. Vazio devolve o aviso, nunca tabela oca."""
+    if not missoes:
+        return "_Nenhuma missão registrada ainda — o índice está vazio, e nenhuma comparação é possível._"
+    cabecalho = ["Slug", "Ano", "Ambiente", "Eixo", "Descoberta central", "Tipo de decisão", "Porta", "Status"]
+    if com_semelhanca:
+        cabecalho.append("Semelhança")
+    linhas = ["| " + " | ".join(cabecalho) + " |", "|" + "---|" * len(cabecalho)]
+    for m in missoes:
+        celulas = [m.get("slug"), m.get("ano"), m.get("ambiente"), m.get("eixo"), m.get("descoberta"),
+                   m.get("tipo_decisao"), m.get("porta_abstracao"), m.get("status")]
+        if com_semelhanca:
+            celulas.append(f"{_rotulo_semelhanca(m.get('semelhanca', 0.0))} ({m.get('semelhanca', 0.0):.2f})")
+        linhas.append("| " + " | ".join(_celula(c) for c in celulas) + " |")
+    return "\n".join(linhas)
+
+
+def tem_lacuna(missao: Dict[str, Any]) -> bool:
+    """Linha que não sustenta reprovação em V5: campo de comparação vazio ou por preencher."""
+    for campo in ("descoberta", "tipo_decisao", "ambiente"):
+        valor = str(missao.get(campo) or "")
+        if not valor or valor == "—" or "preencher" in valor.lower():
+            return True
+    return False
+
+
+# --------------------------------------------------------------------- registro
+def registrar(ficha: Dict[str, Any], indice: Optional[Dict[str, Any]] = None, base: Optional[Path] = None, gravar_arquivo: bool = True) -> Dict[str, Any]:
+    """Insere ou atualiza a missão no índice, pela sessão. Devolve status e achados."""
+    indice = indice if indice is not None else carregar(base)
+    achados: List[Dict[str, str]] = []
+    missoes: List[Dict[str, Any]] = indice.setdefault("missoes", [])
+
+    if not ficha.get("slug") and not ficha.get("nome"):
+        achados.append({"severidade": "atencao", "codigo": "sem-identificacao",
+                        "resumo": "A execução não produziu slug nem nome — a missão não entra no índice."})
+        return {"status": "amarelo", "achados": achados, "ficha": ficha, "total": len(missoes), "vizinhas": []}
+
+    proximas = vizinhas(ficha, indice, n=3)
+    for m in proximas:
+        if m["semelhanca"] >= LIMIAR_PARECIDA and not tem_lacuna(m):
+            achados.append({"severidade": "atencao", "codigo": "missao-parecida",
+                            "resumo": f"Parecida com `{m.get('slug') or m.get('sessao')}` ({m['semelhanca']:.2f}): {m.get('descoberta', '')[:90]}"})
+
+    for m in missoes:
+        if m.get("slug") and m.get("slug") == ficha.get("slug") and m.get("sessao") != ficha.get("sessao") and str(m.get("status", "")).lower() != "descartada":
+            achados.append({"severidade": "atencao", "codigo": "slug-colidido",
+                            "resumo": f"O slug `{ficha['slug']}` já é da sessão `{m.get('sessao')}` — o id da plataforma deriva de ano e bimestre, então duas missões do mesmo bimestre colidem. Decisão de produto."})
+            break
+
+    anterior = next((m for m in missoes if m.get("sessao") and m.get("sessao") == ficha.get("sessao")), None)
+    if anterior:
+        # Status humano já atribuído vence o derivado: promover é ato de pessoa.
+        if str(anterior.get("status", "")) in STATUS_HUMANOS:
+            ficha = {**ficha, "status": anterior["status"]}
+        missoes[missoes.index(anterior)] = ficha
+    else:
+        missoes.append(ficha)
+
+    if gravar_arquivo:
+        gravar(indice, base)
+    return {"status": "amarelo" if achados else "aprovado", "achados": achados, "ficha": ficha,
+            "total": len(missoes), "vizinhas": proximas}
+
+
+def relatorio_markdown(resultado: Dict[str, Any], missao: str = "") -> str:
+    """Relatório legível + envelope JSON, no padrão dos demais gates determinísticos."""
+    f = resultado.get("ficha", {})
+    linhas = [f"# Registro no catálogo de missões — {missao or f.get('slug') or 'missão'}", ""]
+    linhas.append(f"**Registrada como:** `{f.get('status', '—')}` · índice com **{resultado.get('total', 0)}** missão(ões).")
+    linhas.append("")
+    linhas.append("O registro é fato, não juízo: toda execução entra, inclusive a bloqueada — senão a mesma ideia volta a ser gerada. Promover para `validada`, `aprovada` ou `em produção` é ato humano (`scripts/catalogo.py promover`).")
+    linhas.append("")
+    linhas.append("## Ficha desta missão")
+    linhas.append("")
+    linhas.append(tabela_markdown([f]))
+    linhas.append("")
+    if f and tem_lacuna(f):
+        linhas.append("> ⚠️ Campo de comparação vazio nesta ficha: o critério 2.5 e a verificação V5 não conseguem julgar contra ela nas próximas execuções. Preencher no núcleo narrativo ou na seção 1 do catálogo proposto pelo agente 51.")
+        linhas.append("")
+    linhas.append("## Missões mais próximas no índice")
+    linhas.append("")
+    linhas.append(tabela_markdown(resultado.get("vizinhas", []), com_semelhanca=True))
+    linhas.append("")
+    linhas.append("## Achados")
+    linhas.append("")
+    if resultado.get("achados"):
+        for a in resultado["achados"]:
+            linhas.append(f"- ⚠️ **{a['codigo']}** — {a['resumo']}")
+    else:
+        linhas.append("- Nenhum. A missão entrou no índice sem colisão de slug nem semelhança alta.")
+    linhas.append("")
+    envelope = {
+        "agente": AGENTE,
+        "missao": missao or f.get("slug", ""),
+        "rodada": 1,
+        "status": resultado.get("status", "aprovado"),
+        "registrada": bool(f.get("slug") or f.get("nome")),
+        "total_no_indice": resultado.get("total", 0),
+        "achados": resultado.get("achados", []),
+        "precisa_humano": False,
+    }
+    linhas.append("```json")
+    linhas.append(json.dumps(envelope, ensure_ascii=False))
+    linhas.append("```")
+    return "\n".join(linhas)
