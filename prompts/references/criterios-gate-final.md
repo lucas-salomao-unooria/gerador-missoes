@@ -1,4 +1,4 @@
-# Critérios do Gate Final Unooria — Rubrica v1.16
+# Critérios do Gate Final Unooria — Rubrica v1.19
 
 Este gate não substitui as três avaliações anteriores. Ele valida a **coerência da saída final** e decide se a missão pode ser liberada para design/dev.
 

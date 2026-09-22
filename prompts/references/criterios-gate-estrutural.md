@@ -1,4 +1,13 @@
-# Critérios do Gate Estrutural — Rubrica v1.16 — fechamento de spec incorporado
+# Critérios do Gate Estrutural — Rubrica v1.19 — fechamento de spec incorporado
+
+<!-- v1.19 — 22/09/2026 — o que mudou (auditoria de imersão + proposta de emendas):
+  2.1 lista fechada de 5 com seção do DS; teste de plataforma real consulta literatura-cognitiva §10; teste de posse admite conta do grupo em 2–4 por aparelho ·
+  2.7 novo, obrigatório: a mecânica sustenta a descoberta (C1) · 9.4 ganha o teste de contaminação: falha nunca é decisão (C7) ·
+  10.2 exige protocolo de revezamento e teste da descoberta em 2–4 por aparelho ·
+  Pedagógicos: 2.3 obrigatório com três testes; 2.8 progressão na trilha; 4.3 teste do caminho curto e de posição nos anos iniciais ·
+  Experiência: 6.4 pela tabela §10; 6.6 piso de desafio em todas as faixas (substitui 6.5); 6.1 cláusula de defasagem 9º/EM ·
+  Ofício v0.2: regra comparativa do pico bloqueia · Banco de dev: DES-14 bloqueante; 73 critérios ·
+  Referências: ausências por ambiente preenchidas [PROPOSTA]; catálogo com slug expNNefNb, porta de abstração e campo; premissa-imersao.md; literatura-cognitiva-resumo.md (gerado) nos prompts de design; observacao-campo.md; defaults sem número próprio. -->
 
 ## 1. ESTRUTURA — Alinhamento com o Framework de 6 Etapas
 

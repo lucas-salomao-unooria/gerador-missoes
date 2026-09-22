@@ -1,4 +1,4 @@
-# Critérios da Avaliação Pedagógica — Rubrica v1.16 — verificação curricular e handoffs reforçados
+# Critérios da Avaliação Pedagógica — Rubrica v1.19 — verificação curricular e handoffs reforçados
 
 ## 2. IMERSÃO E SIMULAÇÃO (subset — 2.2 a 2.5 e 2.8)
 

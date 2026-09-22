@@ -78,4 +78,4 @@ Não aproveite a rodada para melhorar outra coisa: mudança não pedida invalida
 
 ## Saída
 
-Entregue **apenas** a spec em Markdown, começando por `# Spec — <missão> v<x>`, com a linha de identificação (`**Ano/faixa · Ambiente · Rubrica v1.17 · Gate final: <🟢/🟡/🔴> em <data>**`) e os 12 blocos numerados.
+Entregue **apenas** a spec em Markdown, começando por `# Spec — <missão> v<x>`, com a linha de identificação (`**Ano/faixa · Ambiente · Rubrica v1.19 · Gate final: <🟢/🟡/🔴> em <data>**`) e os 12 blocos numerados.

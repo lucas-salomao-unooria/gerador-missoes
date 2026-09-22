@@ -266,6 +266,9 @@ DOI 10.1080/10627197.2011.634286).
 | Sistema não observável | não existia | **três portas por idade** | é o núcleo do letramento digital e não tinha régua |
 | Cenário de escola pública | suposição | **dados de INEP, CETIC, Saeb** | turma menor do que se supunha; dispositivo, pior |
 | Uso de plataforma por idade (§10) | intuição do avaliador | **TIC Kids Online 2024** | 2.1 e 6.4 eram decididos sem dado nacional |
+| Piso de desafio (§11) | não existia — só teto | **piso por faixa, redigido como discriminação** | desafio, não imersão, prediz aprendizagem (Hamari 2016); o 6.5 só valia do 6º ano em diante |
+| Cláusula de defasagem de leitura (§5) | retirada uniforme do andaime a partir do 3º | **áudio sob demanda e teto do 6º–9º para 9º ano e Médio** | Saeb 2025: a defasagem cresce com a série |
+| Preparo docente (§6) | não constava | **cinco telas, tempo não medido** | transversalidade de 21/09 criou o fluxo; a régua do professor não tem número |
 
 ---
 

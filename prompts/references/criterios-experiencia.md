@@ -5,6 +5,9 @@ Ver `literatura-cognitiva.md` para a fundamentação de cada cap numérico e a c
 > **Nota v1.18 — critérios de agência geral movidos para o P1.**
 > Os critérios 3.1 (ação com significado), 3.2 (resultado reflete ação) e 3.3 (sem julgamento formal) eram testes idênticos aos critérios 1.3, 1.4 e 7.2 do gate estrutural — mesma pergunta, mesmo modo de falha, avaliados pelo mesmo modelo. Redundância com falhas correlacionadas não adiciona cobertura. Foram removidos deste gate para que toda a atenção do P3 fique nos critérios que só ele faz: carga cognitiva, adequação etária e simulação do estudante real.
 
+> **Nota v1.19 (22/09/2026) — piso, uso por idade e defasagem.**
+> 6.4 passa a responder pela tabela §10 da fonte (TIC Kids Online 2024), não por intuição; 6.5 (só anos finais/EM) é substituído por **6.6 piso de desafio**, obrigatório em todas as faixas, com o teste do estudante apressado; 6.1 ganha a cláusula de defasagem para 9º ano e Médio. Origem: auditoria de imersão A9 e A11 e §5.5.
+
 ---
 
 ## 3. AGÊNCIA DO ALUNO (subset — calibração por faixa)
