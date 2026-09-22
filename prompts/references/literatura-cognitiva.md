@@ -256,6 +256,7 @@ DOI 10.1080/10627197.2011.634286).
 | Justificativa de abstração | Piaget | **Demetriou + Fischer** | a parte de Piaget que era citada é a refutada |
 | Sistema não observável | não existia | **três portas por idade** | é o núcleo do letramento digital e não tinha régua |
 | Cenário de escola pública | suposição | **dados de INEP, CETIC, Saeb** | turma menor do que se supunha; dispositivo, pior |
+| Uso de plataforma por idade (§10) | intuição do avaliador | **TIC Kids Online 2024** | 2.1 e 6.4 eram decididos sem dado nacional |
 
 ---
 
@@ -266,3 +267,36 @@ rigorosa a partir de medidas próximas; os piores são convenção declarada. A 
 transformá-los em dado é **observação de campo**: rodar a missão com turmas reais, registrar onde a
 atenção cai, onde a decisão trava e quanto tempo de fato leva. Até lá, tratar teto como sinal de
 alerta, não como veredito automático — e manter a marcação honesta de cada número.
+
+---
+
+## 10. Que plataforma a criança brasileira usa, por idade
+
+Dois critérios obrigatórios fazem perguntas empíricas — o 2.1 ("o estudante diria eu uso isso?") e o
+6.4 ("qual dos 5 um estudante mediano daquele ano usaria de fato?"). A resposta é esta tabela, não
+a intuição do avaliador.
+
+**Fonte:** TIC Kids Online Brasil 2024 (CETIC.br/NIC.br), amostra probabilística nacional, N = 2.424,
+9 a 17 anos. **[DADO DIRETO]** para 9–17 anos. **A pesquisa não cobre 6 a 8 anos**: qualquer afirmação
+sobre 1º–3º ano é **[EXTRAPOLAÇÃO]**. Edição lida: 2024; a pesquisa é anual — reconferir a cada edição.
+
+| Indicador | 9–10 | 11–12 | 13–14 | 15–17 |
+|---|:-:|:-:|:-:|:-:|
+| Tem perfil em alguma rede social | 60% | 70% | 93% | 99% |
+| Plataforma mais usada várias vezes ao dia | YouTube | transição | Instagram | Instagram |
+
+Perfil declarado, 9 a 17 anos: WhatsApp 69% · Instagram 63% · TikTok 45% · YouTube 42%.
+
+**Regras de aplicação (2.1 e 6.4):**
+
+- **(a) 3º–5º ano:** o ambiente de consumo mais plausível é YouTube (`unitube`); WhatsApp é plausível
+  como *grupo da família ou da turma*, não como conta pessoal.
+- **(b) 6º–7º ano:** zona de transição — qualquer um dos cinco é defensável, e a spec justifica na seção 18.
+- **(c) 8º ano em diante:** Instagram, TikTok e WhatsApp são os de maior uso.
+- **(d) 1º–2º ano:** sem dado. Presumir uso mediado por adulto e sem perfil próprio, o que faz da
+  "primeira conta" um evento diegético legítimo (ver Regra 15 do P0a). **[EXTRAPOLAÇÃO]**
+- **(e) Aos 9–10 anos, 40% não têm perfil algum.** Missão dessa faixa que pressupõe conta declara,
+  na seção 18, o que faz com quem nunca teve uma.
+
+Referência: CETIC.BR. *TIC Kids Online Brasil 2024: pesquisa sobre o uso da Internet por crianças e
+adolescentes no Brasil.* São Paulo: NIC.br, 2024.

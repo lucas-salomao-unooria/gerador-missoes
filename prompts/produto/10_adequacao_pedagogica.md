@@ -41,7 +41,7 @@ A referência não é o estudante nominal da série, é o estudante mediano da e
 
 - **Defasagem de proficiência.** É comum que a leitura da turma esteja abaixo do esperado para o ano. Uma atividade que só funciona se o estudante lê com fluência no nível da série é frágil.
 - **Letramento digital ≠ familiaridade com celular.** Usar rede social não implica saber navegar interface nova, ler ícone fora de contexto, digitar texto longo ou entender o que é um algoritmo.
-- **Condições materiais.** Aula de 45–50 min, 30 a 40 estudantes, um professor, dispositivo possivelmente compartilhado, internet instável, sala sem silêncio. Atividade que exige atenção contínua longa ou mediação individual não escala.
+- **Condições materiais.** Aula de 45–50 min, 25 estudantes nos anos iniciais e 32 nos anos finais e Médio (`literatura-cognitiva.md` §6 — afirmar "30 a 40" infla a dificuldade), um professor, dispositivo possivelmente compartilhado, internet instável, sala sem silêncio. Atividade que exige atenção contínua longa ou mediação individual não escala.
 - **Mediação docente.** O professor pode não ter formação em letramento digital e midiático. A atividade não pode depender de ele saber o conteúdo de antemão.
 - **Repertório cultural.** Referências a viagens, consumo, serviços pagos, vida urbana de classe média ou experiências familiares específicas excluem parte da turma.
 
@@ -65,7 +65,7 @@ Avalie cada eixo de 0 a 3 e justifique com citação literal do documento. Nota 
 ### Eixo 2 — Demanda cognitiva vs. capacidade da série
 
 - **Nível de abstração**: o conceito exige raciocínio sobre coisas não observáveis (sistema, intenção de terceiro, viés, incentivo econômico)? Isso é viável a partir de qual série? Justifique.
-- **Memória de trabalho**: quantos elementos o estudante precisa segurar simultaneamente para dar o próximo passo? Acima de três a quatro elementos interdependentes, sinalize.
+- **Memória de trabalho**: quantos elementos o estudante precisa segurar simultaneamente para dar o próximo passo? Reporte a contagem e o que cada elemento é; o teto por faixa não é seu — é do agente de experiência, pela tabela de `literatura-cognitiva.md` §1 (2 · 3 · 3–4 · 4).
 - **Encadeamento**: quantas decisões o estudante toma antes de receber qualquer devolutiva? Sequência longa sem retorno é ponto de abandono.
 - **Nível SOLO esperado**: o produto final pede resposta uniestrutural, multiestrutural, relacional ou abstrata estendida? O nível pedido é compatível com a série e com a habilidade BNCC? Aponte quando a tarefa pede relacional mas o enunciado só sustenta multiestrutural.
 - **Pressupostos de repertório**: liste todo conhecimento prévio que a atividade assume sem ensinar nem verificar. Cada pressuposto não declarado é um achado.

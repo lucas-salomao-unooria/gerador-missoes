@@ -43,15 +43,19 @@ Caso que não couber nos dois lados é zona de negociação, não improviso: a m
 
 ## Ausências por ambiente — o que a plataforma real NÃO tem
 
-É markdown, e é o que mais reduz achado de fidelidade. Uma tabela por seção, para ninguém "completar" a interface por realismo. **A preencher — é o item mais barato e mais valioso deste arquivo.**
+É markdown, e é o que mais reduz achado de fidelidade. Uma tabela por seção, para ninguém "completar" a interface por realismo. Preenchida em 22/09/2026 (emenda E-02) com linhas `[PROPOSTA]`, a conferir.
 
-| Seção | Não tem |
+| Seção | Não tem (o que a plataforma real tem e a simulação deliberadamente não) |
 |---|---|
-| `instanooria` | |
-| `unitube` | |
-| `chatgpt` | |
-| `whatsappmobile` | |
-| `tiktooria` | |
+| `instanooria` | [PROPOSTA] Mensagens diretas · Stories e Reels, salvo quando a mecânica os pede · anúncios e publicações patrocinadas · loja e compras · notificações fora da missão · busca aberta na internet · perfis fora do banco curado · contadores de seguidores ao vivo (todo número visível é gabarito ou cosmético declarado, PED-03) |
+| `unitube` | [PROPOSTA] Anúncios · transmissão ao vivo e chat · monetização · autoplay infinito fora do banco · comentários de terceiros reais · download · histórico entre sessões fora do estado salvo |
+| `chatgpt` | [PROPOSTA] Memória entre conversas · upload de arquivo ou imagem · navegação na web · plugins e GPTs · modo de voz · histórico lateral fora da missão · resposta em tempo real sem curadoria (8.2) |
+| `whatsappmobile` | [PROPOSTA] Chamadas de voz e vídeo · status · localização · pagamentos · contatos fora do grupo da missão · encaminhar para fora da simulação · tema claro (ADR-68) |
+| `tiktooria` | [PROPOSTA] Transmissão ao vivo · loja · mensagens diretas · efeitos e filtros de criação · monetização · download · "Para você" infinito fora do banco |
+
+Cada linha nasce marcada `[PROPOSTA]` até conferência contra o storybook e contra o bloco 5 das specs já aprovadas — uma lista imperfeita é conferível; uma lista vazia não é. Quem conferir tira a marca e registra a data.
+
+**Regra de leitura.** Ausência desta tabela é ausência **da seção** e vale para toda missão naquele ambiente. Ausência do bloco 5 da spec é **da missão**. O3 da rubrica de ofício confere as duas; o D9 copia a linha da seção para o bloco 14 e acrescenta as ausências da missão.
 
 ## Nomenclatura de slot
 

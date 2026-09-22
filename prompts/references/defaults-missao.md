@@ -9,6 +9,8 @@ status: rascunho v0 — validar com produto (PM) e pedagogia antes de tratar com
 
 **O que este arquivo é.** Quando a spec cala sobre algo que a esteira precisa e a resposta é a mesma para toda missão, a resposta está aqui. O D0 cita o padrão pelo nome (`padrão: <nome>`) na base da decisão `[D0-n]`, e a decisão é **verde** — não precisa de validação humana, porque a plataforma já decidiu.
 
+**Nenhum número aqui é fonte.** Padrão de duração, de opções ou de etapas cita `literatura-cognitiva.md` pela seção; o valor pode aparecer como lembrete, mas quem vale é a fonte. Foi assim que este arquivo carregou por semanas tetos de duração revogados (12/15/20 min) sem que ninguém percebesse.
+
 **O que este arquivo não é.** Padrão não substitui mecânica. Se aplicar um padrão exige inventar o que o estudante faz, quantas decisões toma ou que dado é coletado, a lacuna é vermelha e vai ao Gate 0 — não importa quão razoável o padrão pareça.
 
 **Ordem de preferência do D0:** padrão daqui → missão irmã no catálogo → one-pager → inferência. Padrão marcado 🟡 exige que a decisão saia **amarela** (reversível, com "Quem deve olhar" no relatório), porque a plataforma ainda não fechou a resposta.
@@ -87,7 +89,7 @@ Cada padrão diz de onde saiu. Padrão sem fonte não entra — vira candidato e
 
 | Nome | Padrão | Fonte |
 |---|---|---|
-| `teto-por-ato` | Ato ≤ 12 min em anos iniciais, ≤ 15 min em anos finais, ≤ 20 min no EM. Sem estimativa na spec, o D0 usa o teto da faixa como **máximo** e marca amarelo. | critério 6.2 |
+| `teto-por-ato` | Ato dentro do teto da faixa em `literatura-cognitiva.md` §3 (1º–2º: 6–8 min · 3º–5º: 8–10 · 6º–9º: 10–12 · EM: 12–15), e missão inteira ≤ 25 min de tempo-aluno em aula de 50. Sem estimativa na spec, o D0 usa o teto da faixa como **máximo** e marca amarelo. Os valores antigos (12/15/20) foram revogados na revisão de setembro de 2026 da fonte. | critério 6.2 · `literatura-cognitiva.md` §3 |
 | `piso-conta-consumo-e-negociacao` | A estimativa inclui consumo de conteúdo, navegação e negociação em grupo — não só a decisão. | critério 6.2 (piso) |
 | `fase-de-minijogo` | Mini-jogo: fase ≤ ~90 s em 1º–2º, ≤ ~180 s em 3º–5º. | d9 (adequação por faixa) |
 
@@ -97,9 +99,9 @@ Cada padrão diz de onde saiu. Padrão sem fonte não entra — vira candidato e
 |---|---|---|---|
 | Anos iniciais (1º–5º) | ≤ 2–3 | 1–2 | 2 (observar → decidir) |
 | Anos finais (6º–9º) | ≤ 3–4 | 2–3 | 3 |
-| Ensino Médio | ≤ 4–5 | 3–4 | 3+ |
+| Ensino Médio | ≤ 4 | 3–4 | 3+ |
 
-Fonte: critérios 3.5 e 6.3. Decisão `[D0-n]` que aproxime a missão desses tetos é sinal de que a lacuna era de mecânica — vermelha.
+Fonte: `literatura-cognitiva.md` §1 (opções) e §4 (etapas cognitivas), via critérios 3.5 e 6.3. **Nenhum número deste arquivo é fonte: quando a fonte única mudar, este arquivo muda junto** (`scripts/conferir_referencias.py` acusa a divergência). Decisão `[D0-n]` que aproxime a missão desses tetos é sinal de que a lacuna era de mecânica — vermelha.
 
 ## Regra de manutenção
 

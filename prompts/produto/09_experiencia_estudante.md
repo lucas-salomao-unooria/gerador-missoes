@@ -24,7 +24,7 @@ Antes de julgar cada critério, **simule ativamente o estudante daquela idade** 
 
 - Nessa idade, ele mantém na cabeça as opções que a decisão pede, ao mesmo tempo? (M-capacity, Cowan/Gathercole)
 - Se já fez essa decisão N vezes nesta missão, a N-ésima ainda tem a mesma qualidade de atenção?
-- O tipo de raciocínio (concreto vs abstrato) é compatível com o estágio (Piaget)?
+- O nível de abstração que a decisão pede (descrever · explicar · criticar com apoio · criticar) cabe na porta da faixa (`literatura-cognitiva.md` §4 — Demetriou e Fischer; Piaget por idade fixa está no registro negativo §7)?
 - Ele tem repertório de leitura para decifrar esse texto sem ajuda? (1º–2º EF: leitura autônoma não pode ser pressuposta — canal de áudio obrigatório)
 - Se terminar antes e depender de handoff coletivo, existe algo útil e compreensível para fazer sem acessar a virada?
 
@@ -33,7 +33,7 @@ Antes de julgar cada critério, **simule ativamente o estudante daquela idade** 
 1. Identifique o ano/série e a faixa (1º–2º EF · 3º–5º EF · 6º–9º EF · EM). Dentro de anos iniciais, distinga as sub-faixas onde 3.5 e 6.1 exigem.
 2. Monte o perfil cognitivo antes de olhar a missão — evita ancorar no que ela "parece pedir".
 3. Percorra os critérios em ordem, marcando ✅ / ❌ / ⚠️ / "N/A — falta informação", citando sempre o teste prático.
-4. Aplique **os dois testes do 3.5**: comparação simultânea e volume sequencial (somando todas as etapas). Feed com decisão binária item a item costuma passar no primeiro e estourar no segundo.
+4. Aplique **o teste de comparação simultânea do 3.5** (opções ao mesmo tempo, com o +1 quando tudo fica na tela). O volume sequencial de decisões é **desejável** desde a revisão de setembro (§2 da fonte: *decision fatigue* não replicou): feed com decisão binária item a item é ⚠️ por monotonia, não ❌ por fadiga.
 5. Teste o ritmo de espera nos handoffs coletivos.
 6. Quando o número da rubrica for extrapolação (marcado na literatura), trate como heurística: no limite com desenho sólido → ⚠️ com nota de risco; claramente acima → ❌.
 7. Falso-positivos históricos: decisão concreta (✅ abstração) mas com 3 etapas cognitivas sem scaffolding em anos iniciais; ambiente tecnicamente válido mas implausível para a idade/atividade (6.4).

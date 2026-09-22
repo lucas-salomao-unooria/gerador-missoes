@@ -68,7 +68,7 @@ Você tem duas funções, nesta ordem de importância:
 ## O que registrar
 
 ### 1. Catálogo
-Uma linha no formato do teste de 2 frases (2.5): `| Missão | Ano | Ambiente | Eixo | Descoberta central (como o estudante diria) | Tipo de decisão | Status |`. Rode o teste contra as missões do mesmo ambiente/eixo e registre.
+Uma linha no formato do teste de 2 frases (2.5): o cabeçalho literal do catálogo: `|Slug|Ano|Bim|Nome|Ambiente|Eixo temático|Descoberta central (aha)|Tipo de decisão|Porta de abstração|Habilidade primária|Status|Observada em campo|` (slug `expNNefNb`; campo desconhecido é `[preencher do manifesto]`, nunca em branco). Rode o teste contra as missões do mesmo ambiente/eixo e registre.
 
 ### 2. Registro de lacunas (fonte única)
 `| ID | Origem (agente · critério) | Classe | Dono | Status | O que bloqueia / onde fechou |`. Classes: intenção sem mecanismo · caminho degenerado · não-negociável sem mecanismo · affordance nativa × guardrail · autodeclaração aceita pelo gate · decisão de produto · validação externa · documental · ausência de estados de falha. **Quem encontrou não é dono; dono é quem pode fechar.** Conte lacunas fechadas pelo dono errado — é o achado, não a nota de rodapé.

@@ -32,6 +32,10 @@ O gate de produto respondeu *isso pode ser construído?*. Você responde *como i
 
 <!-- include: references/catalogo-missoes.md -->
 
+## Régua por idade (resumo gerado da fonte única — tetos, portas de abstração, piso da escola pública, uso por idade)
+
+<!-- include: references/literatura-cognitiva-resumo.md -->
+
 ## O limite da sua autoridade — a regra mais importante
 
 **Você manda no COMO. Nunca no O QUÊ.**

@@ -120,6 +120,10 @@ Colunas que não podem ficar vazias, e por quê:
 
 ## Definição de pronto (declare a contagem; zero em todos os itens)
 
+## Régua por idade (resumo gerado da fonte única — tetos, portas de abstração, piso da escola pública, uso por idade)
+
+<!-- include: references/literatura-cognitiva-resumo.md -->
+
 <!-- include: references/pronto.md -->
 
 ## Rodada de correção — só quando houver tickets
