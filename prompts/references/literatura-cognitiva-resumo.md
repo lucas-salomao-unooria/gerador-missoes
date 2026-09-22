@@ -6,7 +6,7 @@ sources: [literatura-cognitiva.md]
 
 # Régua por idade — resumo operacional
 
-> **Gerado automaticamente** de `literatura-cognitiva.md` por `scripts/gerar_resumo_literatura.py`. Não edite à mão: edite a fonte e regenere. SHA-256 da fonte: `d6203ee330bcc2c351982d32c044437af4800009e57386da756668fbe28068b5`.
+> **Gerado automaticamente** de `literatura-cognitiva.md` por `scripts/gerar_resumo_literatura.py`. Não edite à mão: edite a fonte e regenere. SHA-256 da fonte: `09e78129dc015f048d4228f53e000397d741bba22480184530ce85e543028a8d`.
 
 Esta é a **fonte única dos números** que a esteira usa para julgar se uma missão cabe na idade, em uma página. Todo número é **[DADO DIRETO]** (medido), **[EXTRAPOLAÇÃO]** (derivado de princípio) ou **[CONVENÇÃO]** (escolha da equipe); extrapolação justifica ⚠️ com mais frequência que ❌. A fundamentação e as citações estão na fonte — aqui só o que se aplica ao construir tela, copy e jornada.
 
@@ -60,7 +60,8 @@ Esta é a **fonte única dos números** que a esteira usa para julgar se uma mis
 | Leitura, 5º ano | 39% abaixo do adequado | **60,7% estão adequados** — tratar anos iniciais como majoritariamente defasados contraria o Saeb 2025 |
 | Leitura, 9º ano | **62% abaixo do adequado** | aqui a defasagem se confirma |
 | Leitura, Ensino Médio | **65% abaixo do adequado** | 50% abaixo do Nível 2 do PISA aos 15 anos |
-| Professor | sem formação recente em tecnologia | 46% não tiveram; só ~1/3 decide sobre uso de recurso digital |
+| Professor | sem formação recente em tecnologia | 46% não tiveram; só ~1/3 decide sobre uso de recurso digital; **43%** com formação continuada na rede municipal, que concentra os anos iniciais (TIC Educação 2024) |
+| Preparo docente | cinco telas obrigatórias (`E0-PROF-01…05`) | **sem tempo medido** até observação de campo; a contagem de telas e toques exigida pelo 4.3 é [CONVENÇÃO] |
 | Duração da aula | 50 min é **parâmetro de rede** | a LDB fixa carga anual (800h no EF, 1.000h no EM), não duração de aula |
 
 ## Que plataforma a criança usa, por idade (fonte §10)

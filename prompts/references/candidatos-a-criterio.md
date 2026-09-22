@@ -21,7 +21,7 @@ Uma ocorrência fica em observação. Duas ou mais viram proposta formal de emen
 **Problema:** o 6.1 testa vocabulário e extensão assumindo um aluno que decodifica. No 1º e 2º ano a alfabetização está em curso.
 **Ocorrência:** Magia ou Truque v1 — 1º ano, abertura de 48 palavras e todas as instruções acionáveis só em texto.
 **Formulação candidata:** *nos anos de alfabetização em curso, toda instrução acionável tem redundância não textual (áudio e pictograma).*
-**Status:** observação. Segunda ocorrência antes de propor.
+**Status:** **coberto na v1.19 (22/09/2026)** pelo sub-critério de áudio do 6.1 e pelo padrão `texto-icone-audio-anos-iniciais` de `defaults-missao.md`; a extensão da redundância ao 3º–5º fica registrada como pendência do pacote de anos iniciais.
 
 ## C3 — Não-negociável de ofício sem mecanismo · **2 ocorrências → pronto pra emenda**
 
@@ -56,4 +56,4 @@ Uma ocorrência fica em observação. Duas ou mais viram proposta formal de emen
 **Problema:** os critérios 1.4 e 3.2 pedem que o resultado reflita a ação, e são satisfeitos quando existe consequência para **uma** direção do erro. Missão de julgamento tem duas direções — confiar demais e desconfiar demais — e a revelação costuma responder só à primeira.
 **Ocorrência:** A foto é real (5º ano) — a consequência "recai sobre o conteúdo que chegou ao jornal", e quem encaminhou zero não recebe nada, apesar de a seção 18 declarar que o objetivo não é gerar desconfiança generalizada.
 **Formulação candidata:** *quando a missão pede julgamento, a revelação responde aos dois erros possíveis — o excesso e a falta —, e não só ao que produz conteúdo visível.*
-**Status:** observação. Provável recorrência em toda missão de classificar/curar.
+**Status:** **absorvido na v1.19 (22/09/2026)** pelo "teste dos dois erros" do critério 6.6 (piso de desafio): revelação que responde só ao excesso ou só à falta é ⚠️.

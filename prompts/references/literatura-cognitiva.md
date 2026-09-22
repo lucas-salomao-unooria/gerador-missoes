@@ -172,6 +172,14 @@ texto é longo e o ritmo é do sistema; o estudante já lê com fluência — a�
 **Consequência prática:** a exigência de narração vale para 1º–2º ano e **deve ser removida a partir
 do 3º**, ou quando houver sinal de fluência. Scaffolding que não é removido vira obstáculo.
 
+**Mas a curva de leitura no Brasil não é monotônica.** A retirada do andaime pressupõe fluência
+crescente; o Saeb 2025 (§6) mostra 39% abaixo do adequado no 5º ano, **62% no 9º** e **65% no Médio**
+(50% abaixo do Nível 2 do PISA 2022 aos 15 anos). Por isso o critério 6.1 carrega, desde a v1.19, uma
+**cláusula de defasagem** para 9º ano e Médio: teto de palavras por string igual ao do 6º–9º
+**[CONVENÇÃO]**; áudio **sob demanda** (nunca autoplay, que reintroduziria redundância a quem lê —
+Kalyuga) em string acima do teto **[EXTRAPOLAÇÃO]**; e o "estudante mediano" do teste é o mediano do
+Saeb, não o nominal. A cláusula não muda a complexidade da decisão (6.3), só o canal de acesso ao texto.
+
 - MORENO, R.; MAYER, R. *Journal of Educational Psychology*, v. 94, n. 1, p. 156–163, 2002.
   DOI 10.1037/0022-0663.94.1.156 — texto + narração **supera** narração sozinha quando não há visual
   concorrente. **[DADO DIRETO]**
@@ -210,7 +218,8 @@ Indicadores Sociais 2025*), TALIS 2024, TIC Educação 2024 (CETIC.br/NIC.br), S
 | Leitura, 5º ano | 39% abaixo do adequado | **60,7% estão adequados** — tratar anos iniciais como majoritariamente defasados contraria o Saeb 2025 |
 | Leitura, 9º ano | **62% abaixo do adequado** | aqui a defasagem se confirma |
 | Leitura, Ensino Médio | **65% abaixo do adequado** | 50% abaixo do Nível 2 do PISA aos 15 anos |
-| Professor | sem formação recente em tecnologia | 46% não tiveram; só ~1/3 decide sobre uso de recurso digital |
+| Professor | sem formação recente em tecnologia | 46% não tiveram; só ~1/3 decide sobre uso de recurso digital; **43%** com formação continuada na rede municipal, que concentra os anos iniciais (TIC Educação 2024) |
+| Preparo docente | cinco telas obrigatórias (`E0-PROF-01…05`) | **sem tempo medido** até observação de campo; a contagem de telas e toques exigida pelo 4.3 é [CONVENÇÃO] |
 | Duração da aula | 50 min é **parâmetro de rede** | a LDB fixa carga anual (800h no EF, 1.000h no EM), não duração de aula |
 
 ---
@@ -300,3 +309,34 @@ Perfil declarado, 9 a 17 anos: WhatsApp 69% · Instagram 63% · TikTok 45% · Yo
 
 Referência: CETIC.BR. *TIC Kids Online Brasil 2024: pesquisa sobre o uso da Internet por crianças e
 adolescentes no Brasil.* São Paulo: NIC.br, 2024.
+
+---
+
+## 11. Piso de desafio por faixa
+
+A régua até aqui é toda de **teto** (o que não sobrecarrega). Esta seção é o **piso**: o que a
+decisão principal precisa exigir para que a missão *discrimine* estudantes — no sentido do desenho
+centrado em evidência (Mislevy, Almond & Lukas, 2003): uma tarefa que qualquer estudante resolve igual
+não produz evidência sobre nenhum. É o que o critério 6.6 aplica.
+
+| Faixa | A decisão principal exige, pelo menos | Marca |
+|---|---|---|
+| 1º–2º EF | **observar antes de decidir**: a opção certa não é identificável pela aparência; é preciso abrir, rolar ou ouvir algo, e o conteúdo observado muda a escolha | [EXTRAPOLAÇÃO de §4: porta *descrever* ~8 anos] |
+| 3º–5º EF | **investigar**: comparar dois itens ou abrir uma segunda fonte antes de decidir, com andaime no primeiro uso e removido depois | [EXTRAPOLAÇÃO de §4: porta *explicar* 10–11 anos] |
+| 6º–9º EF | **investigar e revisar**: a missão devolve informação que pode mudar a escolha, e o estudante pode mudá-la antes de fechar; ou justificar | [EXTRAPOLAÇÃO de §4: porta *criticar com apoio* 12–13] |
+| Ensino Médio | **justificar e confrontar**: a justificativa encontra contra-evidência dentro da simulação antes do Resultado | [EXTRAPOLAÇÃO de §4: *criticar* 14+; Demetriou 13–15 controle de verdade] |
+
+A redação exata de cada linha é **[CONVENÇÃO]**: a ordinalidade vem de §4; a fronteira entre faixas, não.
+
+**De onde vem o princípio.** HAMARI, J. et al. *Computers in Human Behavior*, v. 54, 2016 — em dois jogos
+educacionais, engajamento previu aprendizagem percebida, **imersão isolada não**, e **desafio** foi o
+preditor forte. CHENG, M.-T.; SHE, H.-C.; ANNETTA, L. A. *Journal of Computer Assisted Learning*, v. 31,
+2015 — o efeito da imersão é mediado pelo desempenho. **Delimitação honesta:** ambos com estudantes de
+ensino médio e superior, em ciências; nenhum mediu crianças de 6 a 10 anos nem letramento digital.
+Transfere-se o princípio (a decisão precisa discriminar), não um número. Por isso o 6.6 é redigido como
+**discriminação** (teste do estudante apressado × estudante que investiga), e não como "dificuldade".
+
+**Como isto vira dado (ver §9 e `observacao-campo.md`):** os eventos de investigação que a plataforma já
+grava (`abriu_busca`, `buscou`, tempo revendo antes de concluir) devem mostrar **variância** entre
+estudantes numa missão que passa no 6.6. Todo mundo investiga zero, ou todo mundo investiga tudo, é
+sinal de que a decisão não discriminou.

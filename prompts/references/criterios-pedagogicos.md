@@ -1,6 +1,6 @@
 # Critérios da Avaliação Pedagógica — Rubrica v1.16 — verificação curricular e handoffs reforçados
 
-## 2. IMERSÃO E SIMULAÇÃO (subset — 2.2 a 2.5)
+## 2. IMERSÃO E SIMULAÇÃO (subset — 2.2 a 2.5 e 2.8)
 
 |#|Critério|Tipo|Teste prático|
 |-|-|-|-|
@@ -8,6 +8,7 @@
 |2.3|**Simulação diegética** — O estudante entra no ambiente por uma razão que é dele, por uma ação que é do ambiente, e o ambiente não é trocável|Obrigatório|Três testes, todos precisam passar. **(a) Teste da porta:** o *job-to-be-done* do Desafiar (Regra 9 do P0a) diz por que o estudante abre **este** app **agora**, e é algo que um estudante da faixa faria fora da missão (`literatura-cognitiva.md` §10)? "A Unooria te leva ao feed" não é porta; "o Léo mandou o link no grupo" é. **(b) Teste da troca:** substitua mentalmente o ambiente por outro dos cinco; se o Desafiar e o Decidir continuam válidos sem reescrita, o ambiente é cenário, não diegese. **(c) Teste da chegada:** a primeira entrada no ambiente é uma ação nativa (abrir o app, abrir um grupo, tocar um link, receber uma notificação), não uma transição da plataforma? Falha em (a) ou (c) → ❌; falha só em (b) com justificativa na seção 18 → ⚠️.|
 |2.4|**Descoberta central articulada** — Existe uma frase-chave que captura o "aha moment"|Obrigatório|Dá pra resumir em uma frase o que o aluno descobre? Se não dá, a descoberta não está clara.|
 |2.5|**Diferenciação no catálogo** — Quando o ambiente ou eixo temático é compartilhado com missão de outro ano, a descoberta central e o tipo de decisão são suficientemente distintos|Desejável|Consultar catálogo de missões: existe outra no mesmo ambiente ou eixo? Se sim, teste de 2 frases: descrever o que o aluno faz em cada missão em uma frase — se intercambiáveis, não diferencia. Se catálogo incompleto, marcar "N/A — catálogo incompleto".|
+|2.8|**Progressão na trilha** — Quando o catálogo tem missão anterior do mesmo ano, ou do ano anterior no mesmo eixo, esta missão sobe pelo menos um degrau em uma de três escadas|Desejável enquanto o catálogo não cobrir o ano da missão; **Obrigatório** depois|**Escadas:** (1) porta de abstração — descrever → explicar → criticar com apoio → criticar (`literatura-cognitiva.md` §4); (2) piso de repertório (6.6); (3) ambiente, de mais familiar para menos familiar (§10). **Teste:** cite a linha do catálogo comparada e a escada em que a missão nova sobe. Mesmo degrau nas três → ⚠️; degrau **abaixo** da missão anterior → ❌. Fundamento: intervenções de letramento midiático em múltiplas sessões superam as de sessão única (Huang, Jia & Yu, 2024) — a unidade de dose é a trilha, não a missão.|
 
 ---
 
@@ -17,7 +18,7 @@
 |-|-|-|-|
 |4.1|**Antes, durante e depois definidos, com gatilhos e ritmos de handoff** — O professor sabe o que fazer e a plataforma define o comportamento da turma em ritmos diferentes.|Obrigatório|**Teste de handoff:** para cada mediação: (a) o que aciona a entrada do professor; (b) o que a plataforma faz enquanto ele media; (c) o que acontece com quem ainda não terminou; (d) o que acontece com quem terminou cedo sem poder avançar; (e) o que muda quando a próxima etapa é liberada. A espera de quem termina cedo deve ter função pedagógica e preservar a descoberta; espera passiva indefinida → ❌.|
 |4.2|**Mediação pós-missão desenhada** — A roda de conversa tem roteiro de perguntas|Obrigatório|As perguntas estão escritas, ou o professor precisa inventar?|
-|4.3|**Customização e geração assistida por IA na preparação docente** — O professor tem autonomia para parametrizar tema, contexto e conteúdos da missão. A spec define a interface e o fluxo de preparação com IA (inputs do professor → geração de rascunhos por IA via Vertex AI Gemini → revisão e aprovação pelo professor), além de banco curado padrão (default/fallback imediato).|Obrigatório|Existe mecanismo para o professor parametrizar tema/conteúdo na preparação da missão? Os prompts e schemas de geração por IA estão definidos? Há fluxo de curadoria docente antes de liberar para a turma? Existe banco curado default caso o professor não queira customizar? Missão 100% estática sem parametrização → ❌. **Teste das três disciplinas (transversalidade):** o recorte da aula aceita disciplina, tema **e assuntos**; a tabela "a mesma missão em três aulas" (Português, Ciências/Biologia, História) existe e cada linha mantém mecânica, cardinalidades e descoberta central? Slot que só aceita um tipo de conteúdo sem marcador → ⚠️ com ajuste exigido; slot que quebra a mecânica em alguma disciplina → ❌; `[LIMITE DE TRANSVERSALIDADE — dono: produto]` declarado é decisão registrada, não achado.|
+|4.3|**Customização e geração assistida por IA na preparação docente** — O professor tem autonomia para parametrizar tema, contexto e conteúdos da missão. A spec define a interface e o fluxo de preparação com IA (inputs do professor → geração de rascunhos por IA via Vertex AI Gemini → revisão e aprovação pelo professor), além de banco curado padrão (default/fallback imediato).|Obrigatório|Existe mecanismo para o professor parametrizar tema/conteúdo na preparação da missão? Os prompts e schemas de geração por IA estão definidos? Há fluxo de curadoria docente antes de liberar para a turma? Existe banco curado default caso o professor não queira customizar? Missão 100% estática sem parametrização → ❌. **Teste das três disciplinas (transversalidade):** o recorte da aula aceita disciplina, tema **e assuntos**; a tabela "a mesma missão em três aulas" (Português, Ciências/Biologia, História) existe e cada linha mantém mecânica, cardinalidades e descoberta central? Slot que só aceita um tipo de conteúdo sem marcador → ⚠️ com ajuste exigido; slot que quebra a mecânica em alguma disciplina → ❌; `[LIMITE DE TRANSVERSALIDADE — dono: produto]` declarado é decisão registrada, não achado. **Teste do caminho curto:** a missão roda por completo com o professor tocando apenas "usar banco padrão" em `E0-PROF-02`, sem passar por geração nem curadoria (`E0-PROF-03` e `04` puladas)? Se não → ❌: o banco curado é *fallback* de nome, não de fato. **Teste de posição, anos iniciais:** em missão de 1º–5º ano, o botão do banco padrão é a primeira ação visível de `E0-PROF-02` e o recorte da aula vem depois (43% de formação continuada na rede municipal — TIC Educação 2024); nos anos finais e Médio a ordem é livre. Ordem invertida nos anos iniciais → ⚠️. **Contagem de preparo:** a seção 9a declara quantas telas e quantos toques o caminho curto e o caminho com IA exigem; sem a contagem → ⚠️.|
 |4.4|**Dashboard / visibilidade** — O professor acompanha o progresso durante a missão|Obrigatório|Tem dados em tempo real pra mediar, ou fica no escuro?|
 
 ### Falso-positivo frequente em 4.1:
@@ -63,11 +64,11 @@ O critério 2.6 do gate estrutural valida se o verbo **existe** na plataforma. O
 
 | Categoria | Obrigatórios (Bloqueantes) | Ressalvas / Alertas / Desejáveis |
 |-|:-:|:-:|
-| 2. Imersão (subset) | 3 | 1 |
+| 2. Imersão (subset) | 3 | 2 |
 | 4. Professor (subset) | 4 | 0 |
 | 5. Habilidades (Letramento Digital vs. Outras) | 2 (Letramento Digital) | 3 + 1 condicional (Outras BNCC / Alertas) |
 | 8. Guardrails | 6 | 0 |
-| **TOTAL** | **15** | **4 + 1 condicional** |
+| **TOTAL** | **15** | **5 + 1 condicional** |
 
 
 ### Regra comum de verificação curricular e veredito
