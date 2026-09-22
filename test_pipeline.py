@@ -185,7 +185,7 @@ def test_arvore_de_agentes():
 
     # etapas desligáveis
     so_produto = create_mission_orchestrator(stages=["produto"])
-    assert [a.name for a in so_produto.sub_agents] == ["ProdutoStage", "A50Diagnostico", "A51Aprendizado"]
+    assert [a.name for a in so_produto.sub_agents] == ["ProdutoStage", "A50Diagnostico", "A51Aprendizado", "A52RegistroCatalogo"]
     print(f"   ✓ árvore com {len(names)} agentes ({len(llm_agents)} LLM); loop, paralelos e metadados coerentes")
 
 
@@ -916,7 +916,7 @@ def test_estagio_produto_parcial_spec():
     from pipeline.orchestrator import STAGE_SPEC, create_mission_orchestrator, iter_agent_tree, stages_para_ui
 
     orch = create_mission_orchestrator(stages=["spec"])
-    assert [a.name for a in orch.sub_agents] == ["ProdutoStage", "A50Diagnostico", "A51Aprendizado"]
+    assert [a.name for a in orch.sub_agents] == ["ProdutoStage", "A50Diagnostico", "A51Aprendizado", "A52RegistroCatalogo"]
     produto = orch.sub_agents[0]
     assert [a.name for a in produto.sub_agents] == ["SpecLoop", "A16bOnePagerResumido"]
     assert [a.name for a in produto.sub_agents[0].sub_agents] == ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A16SpecCheck"]
@@ -927,7 +927,7 @@ def test_estagio_produto_parcial_spec():
         "nenhum agente da correção lê a mensagem do usuário: o pedido viaja pelo estado"
 
     completo = create_mission_orchestrator(stages=["spec", "design", "dev"])
-    assert [a.name for a in completo.sub_agents] == ["ProdutoStage", "DesignStage", "DevStage", "A50Diagnostico", "A51Aprendizado"]
+    assert [a.name for a in completo.sub_agents] == ["ProdutoStage", "DesignStage", "DevStage", "A50Diagnostico", "A51Aprendizado", "A52RegistroCatalogo"]
     todos = [a.name for _, a in iter_agent_tree(completo)]
     assert len(todos) == len(set(todos)), "nome duplicado na árvore parcial"
     # "produto" e "spec" juntos: a etapa inteira vence

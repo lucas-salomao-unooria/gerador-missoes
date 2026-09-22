@@ -326,6 +326,16 @@ async def run_orchestrator_pipeline_stream(
                 )
                 if output_dir:
                     artifacts_manifest = generate_artifact_manifest(output_dir)
+                    # Memória entre execuções: só aqui existe o nome da pasta, que é a chave da
+                    # entrada no índice. Falhar aqui não pode custar a execução inteira.
+                    try:
+                        from tools.catalogo import registrar as registrar_no_catalogo
+
+                        ficha = final_state.get("ficha_catalogo_dados")
+                        if isinstance(ficha, dict):
+                            registrar_no_catalogo({**ficha, "sessao": output_dir.name})
+                    except Exception as exc:  # pragma: no cover - disco
+                        logger.warning("Falha ao registrar a missão no catálogo: %s", exc)
             except Exception as exc:  # pragma: no cover - disco
                 logger.warning("Falha ao gravar artefatos: %s", exc)
 

@@ -354,7 +354,11 @@ def registrar(ficha: Dict[str, Any], indice: Optional[Dict[str, Any]] = None, ba
                             "resumo": f"Parecida com `{m.get('slug') or m.get('sessao')}` ({m['semelhanca']:.2f}): {m.get('descoberta', '')[:90]}"})
 
     for m in missoes:
-        if m.get("slug") and m.get("slug") == ficha.get("slug") and m.get("sessao") != ficha.get("sessao") and str(m.get("status", "")).lower() != "descartada":
+        # Mesma descoberta = mesma missão registrada de novo (reexecução), não colisão. O agente
+        # que roda dentro da esteira ainda não sabe o nome da pasta, então a sessão não basta.
+        mesma_missao = bool(ficha.get("descoberta")) and m.get("descoberta") == ficha.get("descoberta")
+        if m.get("slug") and m.get("slug") == ficha.get("slug") and m.get("sessao") != ficha.get("sessao") \
+                and not mesma_missao and str(m.get("status", "")).lower() != "descartada":
             achados.append({"severidade": "atencao", "codigo": "slug-colidido",
                             "resumo": f"O slug `{ficha['slug']}` já é da sessão `{m.get('sessao')}` — o id da plataforma deriva de ano e bimestre, então duas missões do mesmo bimestre colidem. Decisão de produto."})
             break

@@ -64,6 +64,7 @@ ARTIFACT_FILES = [
     ("prd_check_report", "dev/04-pendencias-do-prd.md"),
     ("diagnostico_execucao", "diagnostico-execucao.md"),
     ("aprendizado_registro", "aprendizado.md"),
+    ("ficha_catalogo", "catalogo-ficha.md"),
 ]
 
 STAGE_NAMES = {

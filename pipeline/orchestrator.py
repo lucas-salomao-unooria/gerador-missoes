@@ -28,7 +28,12 @@ from google.adk.agents.sequential_agent import SequentialAgent
 from agents.design import DESIGN_METADATA, build_design_stage
 from agents.dev import DEV_METADATA, build_dev_stage
 from agents.produto import PRODUTO_METADATA, PRODUTO_METADATA_SPEC, build_produto_stage
-from agents.transversal import TRANSVERSAL_METADATA, get_aprendizado_agent, get_diagnostico_agent
+from agents.transversal import (
+    TRANSVERSAL_METADATA,
+    get_aprendizado_agent,
+    get_diagnostico_agent,
+    get_registro_catalogo_agent,
+)
 from config import get_settings
 
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="google.adk")
@@ -117,6 +122,9 @@ def create_mission_orchestrator(
     # e mesmo que abortasse, estes dois são o que explica o que houve.
     sub_agents.append(get_diagnostico_agent())
     sub_agents.append(get_aprendizado_agent(t_budget, inc_thoughts))
+    # Por último, de propósito: a ficha de catálogo copia do aprendizado os campos de julgamento
+    # (descoberta, eixo, tipo de decisão) que só ele redige.
+    sub_agents.append(get_registro_catalogo_agent())
 
     return SequentialAgent(
         name=name,

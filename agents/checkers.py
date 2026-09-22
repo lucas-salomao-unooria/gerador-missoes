@@ -750,6 +750,59 @@ class DespachoTicketsAgent(BaseAgent):
         )
 
 
+class RegistroCatalogoAgent(BaseAgent):
+    """Registra a missão desta execução na memória do gerador, ao fim da esteira.
+
+    Fecha o laço que estava aberto: o agente 51 propunha a linha do catálogo e ninguém a aplicava,
+    e as sessões salvas — que contêm toda missão já gerada — não eram lidas entre execuções. Aqui a
+    ficha é extraída do estado (mecânica, da spec e do núcleo; de julgamento, da linha que o 51
+    escreveu) e comparada com o índice.
+
+    **Calcula e reporta; quem persiste é o runner**, depois de `save_run_artifacts`, porque só lá
+    existe o nome da pasta desta sessão — que é a chave da entrada. O agente grava a ficha em
+    `ficha_catalogo_dados` para o runner usar.
+
+    O registro é **fato, não juízo**: toda execução entra, inclusive a bloqueada — senão a mesma
+    ideia volta a ser gerada. Promover para `aprovada` é ato humano.
+    """
+
+    status_key: str = "catalogo_status"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import catalogo as cat
+
+        state = dict(ctx.session.state)
+        missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or ""))
+        try:
+            ficha = cat.ficha_da_execucao(state, sessao="")
+            # `gravar_arquivo=False`: o índice em disco é do runner, que sabe o nome da pasta.
+            resultado = cat.registrar(ficha, indice=cat.carregar(), gravar_arquivo=False)
+            texto = cat.relatorio_markdown(resultado, missao)
+            delta = {
+                "ficha_catalogo": texto,
+                "ficha_catalogo_dados": resultado["ficha"],
+                self.status_key: resultado["status"],
+                f"{self.status_key}_envelope": {"agente": cat.AGENTE, "missao": missao,
+                                                "status": resultado["status"],
+                                                "achados": resultado["achados"]},
+            }
+            msg = f"🗂️ Catálogo: missão registrada como `{resultado['ficha'].get('status')}` · {resultado['total']} no índice."
+            if resultado["achados"]:
+                msg += "\n" + "\n".join(f"- ⚠️ {a['resumo'][:120]}" for a in resultado["achados"])
+        except Exception as exc:  # o registro é memória, não gate: nunca derruba a execução
+            delta = {self.status_key: "aprovado"}
+            msg = f"⚠️ Catálogo: não consegui montar a ficha desta missão ({exc}). A execução segue."
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta=delta),
+        )
+
+
 class DiagnosticoAgent(BaseAgent):
     """Fecha a execução com o dossiê do que passou, do que passou com ressalva e do que travou.
 
