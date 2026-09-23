@@ -34,7 +34,9 @@ seção do DS já traz.
 - `permissoes: [forms, pointer-lock, downloads]` ou `permissoes: []` — **tudo o que a missão precisa do aparelho, inclusive o que a plataforma ainda não concede**. Tocar áudio e vídeo já é nativo e não se declara; gravar voz (`microphone`), usar a câmera (`camera`) ou gravar a tela (`display-capture`) são pré-requisitos de plataforma: declare, e o PRD sai 🟡 com o caminho de implementação. A tabela das três categorias está em `references/capacidades-plataforma.md`
 - `capabilities: [telemetria, progresso, ia, avaliacao, tempo-real]` (só as usadas)
 - `secao_ds: instanooria | unitube | chatgpt | whatsappmobile | tiktooria | nova:<nome> | minijogo:<nome>` (nova exige componentes, responsável e prazo; `tiktooria` ainda não tem ponte em `@edu/ui`)
-- `liberacao: por-turma` (ADR-69 — a missão só abre na turma em que a professora liberou; o funil de estudante passa por `exigirMissaoLiberada`)
+- `versao: 0.1.0` — semver inicial do `experiencia.json` (`versaoAtiva` no contrato da api). O PRD amarra a mesma versão em três lugares; aqui declara-se só a inicial
+- `verbos: {interacted: "…", scored: "…", completed: "…"}` — **o que cada verbo xAPI significa NESTA missão**, uma frase por verbo usado na tabela de eventos do bloco 9. É campo do manifesto real (`experiencia.json#verbos`), não invenção da esteira: sem ele o dado analítico chega sem tradução e ninguém sabe o que `scored` mediu nesta missão
+- `liberacao: por-turma` — **opcional, é o default e o único valor aceito** (ADR-69: a missão só abre na turma em que a professora liberou; o funil de estudante passa por `exigirMissaoLiberada`). Só escreva a linha se houver algo diferente a dizer, e aí ela será conferida.
 
 Campo em branco aqui é ❌ em PROD-01 e TEC-01 do gate de dev; sem série a api
 não aplica regra por ano; sem `produto` o CI recusa o manifesto (ADR-87); sem

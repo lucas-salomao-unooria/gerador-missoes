@@ -545,9 +545,12 @@ def validar_manifesto(spec: str) -> Dict[str, Any]:
     elif re.match(r"^(nova|minijogo)\s*:", v, re.IGNORECASE):
         achados.append({"severidade": "atencao", "campo": "secao_ds", "etapa": "plataforma", "resumo": f"Seção de DS nova (`{v}`): componentes, responsável e prazo são pendência de plataforma."})
 
-    v = _campo(texto, "liberacao"); campos["liberacao"] = v
-    if not v or "por-turma" not in v.lower():
-        falta("liberacao", f"`liberacao: por-turma` ausente (lido: {v!r}). Sem liberação por turma a missão não abre (ADR-69).")
+    # `por-turma` é o único valor que a plataforma aceita (ADR-69), então ausência é
+    # default, não defeito: cobrar uma linha que só pode ter um valor é cerimônia.
+    # O que ainda importa é denunciar quem declara OUTRA coisa — aí há divergência real.
+    v = _campo(texto, "liberacao"); campos["liberacao"] = v or "por-turma"
+    if v and "por-turma" not in v.lower():
+        falta("liberacao", f"`liberacao` declarada como {v!r}: a plataforma só abre missão liberada por turma (ADR-69).")
 
     # Capturar voz ou imagem de criança é contrato de dados, não só permissão de
     # iframe: o bloco 9 tem de dizer onde a mídia fica, por quanto tempo e quem lê.
@@ -654,12 +657,25 @@ def _tabelas_de_evento(texto: str) -> List[str]:
 # "nunca WebSocket", "papel `admin-contrato` não existe mais"). Procurar só o termo
 # transformava a regra citada em violação e barrava o PRD por cumpri-la.
 _NEGACAO = re.compile(
-    r"proibid|vedado|nunca|jamais|evit[ae]|descartad|obsolet|legad|zero\s+|"
-    r"n[ãa]o\s+(existe|existem|use|usar|usamos|h[áa]|aceita|pode|deve|ser[áa]|suporta)|"
+    # Radical curto e conjugação completa: `proibid` não casava "proibição", e a lista
+    # de verbos do "não" tinha `use|usar` mas não `usa`, `suporta` mas não `sustenta`.
+    # As 8 menções a WebSocket das 14 primeiras execuções eram TODAS negações escritas
+    # assim — "Cloud Run não sustenta", "Não usa WebSocket", "proibição de WebSockets",
+    # "eliminando qualquer dependência". Nenhuma era proposta (corte A4, 23/09/2026).
+    r"proibi|vedad|nunca|jamais|evit[ae]|descartad|obsolet|legad|zero\s+|elimina|abol|"
+    r"n[ãa]o\s+(existe|existem|usa|use|usar|usamos|utiliza|h[áa]|aceita|pode|deve|ser[áa]|"
+    r"suporta|sustenta|emprega|requer|depende|precisa|mant[ée]m|abre)|"
     r"em vez de|ao inv[ée]s|fora de escopo|removid|deprecia|"
     # "sem custos de WebSocket", "(sem WebSockets)", "sem suporte a WebSockets": três jeitos de
     # descartar o canal que o handoff da sessão 8f76 usou e que viravam aviso (2026-09-21).
-    r"sem\s+(campo|coluna|chave|payload|uso|custos?|suporte|depend[êe]ncia|conex[õo]es?|websockets?|sockets?)|nada de|dispensa",
+    r"sem\s+(campo|coluna|chave|payload|uso|custos?|suporte|depend[êe]ncia|conex[õo]es?|websockets?|sockets?)|nada de|dispensa|"
+    # Menção CONDICIONAL ou de roadmap não é proposta: "WebSocket só se a infra mudar",
+    # "fica para a fase 2", "se um dia a plataforma suportar". Era a forma de 5 dos 8
+    # achados de WebSocket das 14 primeiras execuções, todos em handoffs cujo canal
+    # declarado já era o polling correto — o achado pedia a um humano o julgamento que
+    # o regex não fazia, e nunca apontou defeito. Proposta afirmativa continua pega.
+    r"s[óo]\s+se|somente se|apenas se|caso\s+(a|o|venha|haja)|se\s+(a|o)\s+(infra|plataforma|arquitetura)|"
+    r"futur|fase\s*2|pr[óo]xima\s+vers[ãa]o|fora do mvp|n[ãa]o nesta|um dia|hipot[ée]tic|se um dia",
     re.IGNORECASE,
 )
 
@@ -703,7 +719,7 @@ def validar_telemetria(handoff: str) -> Dict[str, Any]:
     canal_correto = bool(re.search(r"polling", texto, re.IGNORECASE) and re.search(r"exp\d{2}e[fm]\db_gates_turma", texto))
     if _usado_afirmativamente(texto, r"websocket|socket\.io|hub:pause"):
         if canal_correto:
-            atencao("websocket-mencao", "WebSocket ou `hub:pause` aparece no texto. O canal de sala declarado é o correto (polling em `expNNefNb_gates_turma`), então é só conferir se a menção é mesmo comparativa e não uma segunda via de sincronização.")
+            atencao("websocket-mencao", "WebSocket ou `hub:pause` proposto como segunda via de sincronização, apesar de o canal de sala declarado ser o correto (polling em `expNNefNb_gates_turma`). Duas vias de sincronia é uma a mais.")
         else:
             bloqueio("websocket", "WebSocket ou `hub:pause` como canal de sala, sem polling em `expNNefNb_gates_turma` declarado: a plataforma sincroniza por polling HTTP curto (ADR-93/94).")
     if _usado_afirmativamente(texto, r"admin-contrato|@Roles\([^)]*[\"']gestor[\"']"):
@@ -854,6 +870,27 @@ def validar_prd(prd: str) -> Dict[str, Any]:
     if len(caminhos) > 1:
         falha("caminho-divergente",
               f"O PRD declara mais de um diretório para a mesma experiência: {sorted(caminhos)}.")
+
+    # 7. o plano de implementação nomeia o que só ele pode nomear. Estes quatro itens eram
+    # cobrados pela banca de dev sobre o HANDOFF (TEC-07/08/09/10) — e a banca roda ANTES do
+    # PRD, que é justamente quem os escreve: 24 dos 283 achados das 14 primeiras execuções
+    # apontavam ausência de algo que o PRD da mesma sessão já continha. Aqui a pergunta é
+    # verificável e cai no documento certo. Atenção, nunca bloqueio: a missão não está errada,
+    # o plano é que está incompleto, e quem codifica precisa saber disso sem travar a esteira.
+    plano = [
+        ("plano-sem-porta", r"experiencias-dev\.ts|strictPort|CORS_ORIGINS",
+         "porta de dev da missão (`apps/hub/lib/experiencias-dev.ts`, `strictPort`, `CORS_ORIGINS`)"),
+        ("plano-sem-versao", r"EXP_VERSION|versao\.test\.ts",
+         "amarração da versão nos três lugares (`experiencia.json`, `package.json`, `EXP_VERSION`)"),
+        ("plano-sem-e2e", r"scripts/e2e|rodar\.mjs|walkthrough|playwright",
+         "roteiro do smoke walkthrough (`node scripts/e2e/rodar.mjs`)"),
+        ("plano-sem-invariantes", r"invariantes\.ts|lista única de invariantes|invariantes de produto",
+         "lista única de invariantes de produto (padrão `unoogpt/invariantes.ts`)"),
+    ]
+    for codigo, padrao, o_que in plano:
+        if not re.search(padrao, texto, re.IGNORECASE):
+            falha(codigo, f"O plano de implementação não nomeia {o_que} — quem codifica vai decidir sozinho.",
+                  severidade="atencao")
 
     bloqueios = [a for a in achados if a["severidade"] == "bloqueio"]
     status = "bloqueado" if bloqueios else ("amarelo" if achados else "aprovado")

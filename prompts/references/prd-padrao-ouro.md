@@ -31,10 +31,7 @@ serie: ["4EF"]            # formato da plataforma; [] = transversal
 unidade: 1 | 2 | 3 | 4 | nenhuma
 ambiente_simulado: <o ambiente da spec (bloco 14): clone da lista fechada, ambiente novo ou mini-jogo>
 secao_ds: <instanooria|unitube|chatgpt|tiktooria|whatsappmobile|nova:<nome>|minijogo:<nome>>
-owners: {produto: <nome>, design: <nome>, dev: <nome>, pedagogico: <nome>}
-gates: {estrutural: 🟢|🔴, pedagogico: ..., experiencia: ..., final: ..., bncc: 🟢|🔴, lacunas: 🟢|🟡|🔴, ambiente: ..., design: ..., dev: 🟢|🟡|🔴}
 links: {stitch: <url do projeto>, miro: <url do board — omita se indisponível>, prototipo: design/08-prototipo.html, diagramas: design/09-diagramas.html, spec: spec/<slug>-spec.md, one_pager: ...}
-needs_clarification: 0
 data: AAAA-MM-DD
 ---
 
@@ -84,7 +81,7 @@ Tabela `EVT-xxx` · `verbo` (sugerido `attempted|interacted|progressed|completed
 Matriz habilidade BNCC (código, confirmado ou 🔵 a validar) → evidência observável → interação → dado gravado. Competência socioemocional nomeada. Rastreabilidade curricular. Gabarito (só no servidor). Graus de medida. Guardrails de IA (8.1/8.2: geração restrita à preparação docente com curadoria humana obrigatória antes do consumo pelo estudante; IA nunca avalia formalmente o estudante; fallback para banco curado padrão) e éticos (8.3–8.6). Papel do erro. O que cada adulto vê.
 
 # 15. Dependências, integrações e **pré-requisitos de plataforma**
-**Pré-requisitos de plataforma** — tabela própria e obrigatória quando a missão pede capacidade que a plataforma ainda não tem: capacidade · por que a mecânica precisa dela · arquivos a tocar (contrato da api, migration do CHECK, `ExpFrame`, teste, repasse nas rotas do hub) · componente de design system a criar · ADR necessária · o que acontece sem ela (degradação). Cada linha vira também item da seção 20, e o frontmatter sai `aprovado-com-pendencias-de-plataforma`. A tabela das capacidades, com o caminho de cada uma, está em `references/capacidades-plataforma.md`. Depois disso: seção do DS e componentes faltantes (com responsável e prazo) · versão do `@unooria/design-system` · SDK · módulos da api reutilizados · IA (Vertex AI Gemini no backend NestJS via `apps/api/src/ai`, quota, banco default curado para contingência) · outras missões (contrato e fallback) · conteúdo autoral (inventário, quem produz).
+**Pré-requisitos de plataforma** — tabela própria e obrigatória quando a missão pede capacidade que a plataforma ainda não tem: capacidade · por que a mecânica precisa dela · arquivos a tocar (contrato da api, migration do CHECK, `ExpFrame`, teste, repasse nas rotas do hub) · componente de design system a criar · ADR necessária · o que acontece sem ela (degradação). Cada linha vira também item da seção 19, e o frontmatter sai `aprovado-com-pendencias-de-plataforma`. A tabela das capacidades, com o caminho de cada uma, está em `references/capacidades-plataforma.md`. Depois disso: seção do DS e componentes faltantes (com responsável e prazo) · versão do `@unooria/design-system` · SDK · módulos da api reutilizados · IA (Vertex AI Gemini no backend NestJS via `apps/api/src/ai`, quota, banco default curado para contingência) · outras missões (contrato e fallback) · conteúdo autoral (inventário, quem produz).
 
 # 16. Arquitetura da solução (plano técnico)
 Contexto da plataforma resumido (monorepo, hub + api + experiência estática, SDK/postMessage `PROTOCOL_VERSION`, tenancy com seis papéis, três trancas catálogo → disponibilidade → liberação por turma, cinco caminhos de dado, sala por polling curto ADR-93/94, fuso único ADR-98/99). Diagrama C4 nível 1–2 (Mermaid). Alternativas consideradas e trade-offs. Decisões que exigem ADR nova.
@@ -95,23 +92,21 @@ Lista de **arquivos a criar/alterar com caminho completo**; módulo a imitar (`a
 # 18. Tarefas (decompostas e ordenadas)
 `T-xxx` · descrição atômica · RFs cobertos · arquivos · dependências · `[P]` se paralelizável · **comando de verificação**. Ordem: contratos → testes → implementação → docs.
 
-# 19. Riscos e mitigações
-Tabela risco · probabilidade · impacto · mitigação · dono. Pre-mortem curto.
-
-# 20. Decisões (ADR) e questões abertas
+# 19. Decisões (ADR) e questões abertas
 Log ADR (título · status · contexto · decisão · alternativas · consequências). Questões abertas com dono e prazo — **deve estar vazia para status aprovado**. Marcadores `[NEEDS CLARIFICATION: <pergunta>, dono: <produto|design|dev|plataforma>]` consolidados aqui. Pendência cujo dono é **plataforma** (decisão de ADR nova, componente de DS a criar) é pendência humana resolvida na codificação: o PRD sai `aprovado-com-pendencias-de-plataforma` (🟡), nunca `aprovado`. Pendência de produto, design ou dev impede o PRD.
 
-# 21. Testes e Definition of Done
+# 20. Testes e Definition of Done
 Estratégia (unit de regras puras, contrato, tenancy, sanitizador com grep no `dist/`, smoke e2e por papel com asserções que falham quando quebra) · matriz de rastreabilidade RF → critério → teste → tarefa · DoD do monorepo (typecheck+lint+test, e2e do papel, Zod nas fronteiras, tenancy, sem segredo no client, `AGENTS.md`, LaTeX + ADR) · evidências exigidas.
 
-# 22. Plano de lançamento
+# 21. Plano de lançamento
 Fases `dev-local → dev → hml → main` (ADR-101; PR `--base dev-local`; tag semver só em `main`), `status` no catálogo (`em-breve` → `disponivel`), disponibilidade no painel `/unooria` (a DoD exige provar que a experiência **desliga**, ADR-87/88), liberação por turma pela professora (ADR-69), critérios de avanço e rollback (`node apps/hub/scripts/publicar-manifesto.mjs <exp> --versao x.y.z`), comunicação a professores, playtest piloto.
 
-# 23. Glossário
-Termos de domínio com definição única (aluno/estudante, missão/experiência/atividade, ato/etapa, handoff, gate, latch, seção do DS, canal operacional/analítico, graus de medida).
-
-# 24. Apêndices e changelog
-Relatórios dos gates (resumos), spec, briefing de ofício, arestas do fluxo, sheet de strings, brief de assets, insumo de dev (modelo-de-insumo preenchido), relatório da banca de dev. Histórico de versões.
+# 22. Apêndices e changelog
+**Links, não cópias.** Os relatórios dos gates, a spec, o briefing de ofício, as arestas do fluxo, o
+sheet de strings, o brief de assets e o insumo de dev já são arquivos próprios da sessão: aponte
+para eles pelo caminho (`produto/01-gate-estrutural.md`, `design/03-fluxo-arestas.md`…). Copiá-los
+para dentro do PRD dobrava o documento sem acrescentar informação e envelhecia à primeira correção.
+Aqui fica só o histórico de versões deste PRD.
 ```
 
 ## C. Regras de redação para o agente escritor
@@ -132,11 +127,11 @@ Relatórios dos gates (resumos), spec, briefing de ofício, arestas do fluxo, sh
 | "Como" dentro do requisito | Seção 8 declara necessidade; mecanismo vai para 16–18 |
 | Métricas de vaidade | KPI exige baseline, alvo, prazo e EVT vinculado |
 | Escopo que cresce na mão do agente | Seções 3 e 17 ("O que NÃO fazer") obrigatórias e não vazias |
-| Lacuna resolvida por adivinhação | `[NEEDS CLARIFICATION]` + seção 20 vazia para aprovar |
+| Lacuna resolvida por adivinhação | `[NEEDS CLARIFICATION]` + seção 19 vazia para aprovar |
 | "Parece pronto" | Toda tarefa com comando de verificação; DoD exige evidência |
 | Tudo P0 | P0 restrito ao que a rubrica exige (🔒) e à descoberta central |
-| Sem rastreabilidade | IDs estáveis + matriz na seção 21 |
-| PRD estático | Frontmatter com versão/status + changelog na seção 24 |
+| Sem rastreabilidade | IDs estáveis + matriz na seção 20 |
+| PRD estático | Frontmatter com versão/status + changelog na seção 22 |
 
 ## E. Fontes
 
