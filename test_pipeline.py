@@ -3558,6 +3558,51 @@ def test_bncc_confere_eixo_texto_e_o_que_e_declarado():
     print("   ✓ BNCC: eixo e texto conferidos contra o oficial (ou o material), e letramento só do que é declarado")
 
 
+
+def test_rotas_citadas_em_modulo_da_plataforma_existem_nela():
+    """Nas 14 sessões, 22 afirmações de rota inexistente ou com verbo errado em módulos que a
+    plataforma já tem — `DELETE /turmas/:id` apagaria uma turma inteira a partir de uma missão. A
+    maioria vinha de um prompt que mandava "instanciar o padrão de Atividade que a plataforma já
+    tem (`POST /atividades` → … → aprovar)": `/atividades` é o motor da exp-01, e cada missão
+    construída tem o preparo no próprio módulo."""
+    import os
+    import tools.rotas_plataforma as rp
+    from tools.rastro import validar_prd
+
+    def cods(txt):
+        return [a["codigo"] for a in rp.validar_rotas(txt)]
+    rp._cache.clear()
+    assert cods("O professor chama `PUT /atividades/:id/revisar`.") == ["rota-inexistente"]
+    assert cods("Ao fim, `DELETE /turmas/:id`.") == ["rota-verbo-errado"]
+    assert cods("Libera com `PUT /salas/turma/:turmaId/missoes/exp09ef1b`.") == [], "slug no lugar do parâmetro casa"
+    assert cods("Módulo `apps/api/src/detetives-bento/`: `POST /detetives-bento/turmas/:id/gate`.") == [], "módulo novo é proposta"
+    assert cods("Módulo `apps/api/src/quem-mandou-isso/`: `POST /quem-mandou-isso/mural`.") == [], "o módulo que o documento declara é dele"
+    assert cods("`POST /atividades/:id/aprovar` — rota nova, pendência de plataforma.") == [], "proposta marcada não é afirmação"
+    assert cods("`GET /experiencias/exp07ef1b/sessao`") == ["rota-fora-do-modulo"]
+    assert "rota-inexistente" in [a["codigo"] for a in validar_prd("| RF-001 | P0 | `PUT /atividades/:id/revisar` | T-001 |")["achados"]]
+
+    # a URL vence quando responde; sem ela, ou se falhar, a cópia sincronizada serve
+    antes = os.environ.get("PLATAFORMA_OPENAPI_URL")
+    os.environ["PLATAFORMA_OPENAPI_URL"] = "http://127.0.0.1:9/docs-json"
+    try:
+        rp._cache.clear()
+        rotas, origem = rp.carregar()
+        assert rotas and "cópia sincronizada" in origem, origem
+    finally:
+        if antes is None:
+            os.environ.pop("PLATAFORMA_OPENAPI_URL", None)
+        else:
+            os.environ["PLATAFORMA_OPENAPI_URL"] = antes
+        rp._cache.clear()
+
+    from prompts import REFERENCES_DIR, load_prompt
+    for texto in ((REFERENCES_DIR / "formato-spec.md").read_text(encoding="utf-8"),
+                  load_prompt("produto/13_spec_missao.md"), load_prompt("dev/47_prd_writer.md")):
+        assert "instancie o padrão de Atividade" not in texto and "padrão de Atividade da plataforma" not in texto
+        assert "não se reusa" in texto
+    print("   ✓ rotas: inexistente e verbo errado acusados; proposta, módulo próprio e slug no parâmetro passam")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")

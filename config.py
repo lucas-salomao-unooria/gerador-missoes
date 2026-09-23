@@ -84,6 +84,12 @@ class AppSettings(BaseSettings):
         description="Seed fixo dos juízes: dois gates sobre o mesmo artefato devem dar o mesmo "
                     "veredito, senão não há como medir se uma mudança de critério funcionou.",
     )
+    # OpenAPI da plataforma servido pela api, para o gate de rotas ler sempre atualizado
+    # (`tools/rotas_plataforma.py`). Vazio: usa a cópia gerada do roteador por
+    # `scripts/sincronizar_plataforma.py --openapi`. Em 23/09/2026 o `/docs` da api de dev não era público.
+    plataforma_openapi_url: str = Field(default_factory=lambda: os.getenv("PLATAFORMA_OPENAPI_URL", ""))
+    plataforma_openapi_usuario: str = Field(default_factory=lambda: os.getenv("PLATAFORMA_OPENAPI_USUARIO", ""))
+    plataforma_openapi_senha: str = Field(default_factory=lambda: os.getenv("PLATAFORMA_OPENAPI_SENHA", ""))
     kpis_check_estrito: bool = Field(
         default_factory=lambda: _env_bool("KPIS_CHECK_ESTRITO", "true"),
         description="Coerência KPI ↔ evento ↔ tela trava a esteira. Nasceu desligado porque os 14 "

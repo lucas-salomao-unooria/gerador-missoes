@@ -801,6 +801,10 @@ def validar_telemetria(handoff: str) -> Dict[str, Any]:
     if _usado_afirmativamente(texto, r"\benum\b[^\n]{0,60}\b(estado|status)\b"):
         atencao("enum-estado", "Estado como enum: na plataforma é string com CHECK na migration, nunca enum Prisma.")
 
+    # rota citada num módulo que a plataforma já tem precisa existir nela (tools/rotas_plataforma.py)
+    from tools.rotas_plataforma import validar_rotas
+    achados.extend(validar_rotas(texto))
+
     status = "bloqueado" if any(a["severidade"] == "bloqueio" for a in achados) else ("amarelo" if achados else "aprovado")
     return {"status": status, "achados": achados, "tabelas_eventos": len(tabela_eventos)}
 
@@ -967,6 +971,10 @@ def validar_prd(prd: str) -> Dict[str, Any]:
         if not re.search(padrao, texto, re.IGNORECASE):
             falha(codigo, f"O plano de implementação não nomeia {o_que} — quem codifica vai decidir sozinho.",
                   severidade="atencao")
+
+    # rota citada num módulo que a plataforma já tem precisa existir nela (tools/rotas_plataforma.py)
+    from tools.rotas_plataforma import validar_rotas
+    achados.extend(validar_rotas(texto))
 
     bloqueios = [a for a in achados if a["severidade"] == "bloqueio"]
     status = "bloqueado" if bloqueios else ("amarelo" if achados else "aprovado")
