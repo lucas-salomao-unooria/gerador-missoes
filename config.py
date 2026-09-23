@@ -84,6 +84,12 @@ class AppSettings(BaseSettings):
         description="Seed fixo dos juízes: dois gates sobre o mesmo artefato devem dar o mesmo "
                     "veredito, senão não há como medir se uma mudança de critério funcionou.",
     )
+    kpis_check_estrito: bool = Field(
+        default_factory=lambda: _env_bool("KPIS_CHECK_ESTRITO", "false"),
+        description="Coerência KPI ↔ evento ↔ tela trava a esteira. Começa desligado: os 14 PRDs "
+                    "medidos reprovam todos, e ligar de saída faria o gate parecer quebrado em vez "
+                    "de mostrar o que ele encontrou. Ligar quando o formato novo estiver rodando.",
+    )
     tentativas_modelo: int = Field(
         default_factory=lambda: int(os.getenv("TENTATIVAS_MODELO", "4")),
         description="Tentativas por chamada ao modelo, com backoff exponencial e jitter. A esteira "

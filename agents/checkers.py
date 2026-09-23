@@ -682,6 +682,12 @@ class RastroCheckAgent(BaseAgent):
         if status == "aprovado":
             msg = f"✅ {self.rotulo}: conforme."
             limpar_degradacao(state, delta, self.rotulo)
+        elif self.modo == "kpis":
+            from tools import kpis as kp
+
+            resultado = kp.validar_kpis(str(state.get("prd_final", "") or ""),
+                                        str(state.get("spec_missao", "") or ""))
+            texto = kp.relatorio(resultado, missao)
         elif self.modo == "evidencia":
             from tools import evidencia as ev
 

@@ -115,6 +115,7 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Banca de dev": "dev",
     "Retrabalho da banca": "dev",
     "Pendências e consistência do PRD": "dev",
+    "Coerência KPI ↔ evento ↔ tela": "dev",
     "Consistência do PRD": "dev",
 }
 _ETAPAS_REFEITAS: Dict[str, frozenset] = {

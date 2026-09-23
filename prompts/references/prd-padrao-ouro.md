@@ -42,7 +42,26 @@ Problema · para quem · descoberta central em uma frase · solução em uma lin
 Trilha/ano/unidade · problema de aprendizagem · evidências · alinhamento com a plataforma (Entre Redes) · o que já existe no catálogo e como esta missão se diferencia (critério 2.5).
 
 # 2. Objetivos e métricas
-North star pedagógica · 2–4 KPIs com baseline, alvo, prazo e **evento que o alimenta** (EVT-xxx) · guardrail metrics (o que não pode piorar: tempo de ato, taxa de erro de plataforma, quebra de imersão) · hipóteses de validação (9.3) e plano de playtest.
+North star pedagógica · **tabela de KPIs no formato abaixo, lida por gate determinístico** ·
+guardrail metrics (o que não pode piorar) · hipóteses de validação.
+
+```
+| KPI | PQ | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |
+|---|---|---|---|---|---|---|---|---|---|---|
+| KPI-01 | T2 | quantas turmas chegam ao fim? | <50% → encurtar ou dividir | missao · serie | — | `EVT-U02`, `EVT-U09` | turmas com `EVT-U09` / turmas com `EVT-U02` | sem baseline — primeira medição | ≥ 70% | 2 meses |
+| KPI-02 | PQ-01 | ... | ... | turma | `E3-ALU-02` | `EVT-005` | count(`EVT-005` com `contexto.tempo_ms` ≥ 120000) | 45% (playtest 12/08, n=23) | ≥ 80% | piloto |
+```
+
+**Cada coluna existe por um motivo, e um gate confere:** sem `Pergunta` e `Decisão` o número é
+métrica de vaidade (34 dos 49 KPIs das primeiras execuções não tinham nenhuma das duas);
+`Tela` é o que permite conferir que o evento dispara onde o KPI diz — havia KPI de uma tela
+alimentado por evento de outra, e o número saía parecendo certo; `Baseline` traz o número com a
+**origem entre parênteses** ou o literal `sem baseline — primeira medição`, porque `0%` não é
+medida (20 dos 49 tinham `0%`); `Como calcula` cita os campos de `resultado`/`contexto` que o
+evento de fato carrega.
+
+KPI transversal (herdado de `T1`–`T8`) usa `Tela: —` e eventos `EVT-U*`.
+
 
 # 3. Não-objetivos e fora de escopo
 Lista explícita com motivo. Inclui V2 (o que fica para depois) e o que a rubrica proíbe (ranking de crianças, nota formal, IA sem curadoria…).

@@ -66,7 +66,7 @@ KNOWN_STATE_KEYS = {
     "miro_links", "miro_board",
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
-    "prototipo_lint_report", "evidencia_report", "evidencia_status", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
+    "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
     "validacao_dev_report", "dev_status", "prd_final", "one_pager_pedagogico", "one_pager_resumido", "aprendizado_registro",
@@ -2655,6 +2655,55 @@ def test_conteudo_imersao_e_escola_publica():
     assert i_degradado > i_excecao, "o 2–4 precisa estar DENTRO da exceção que não se corta"
 
     print("   ✓ conteúdo: contraste e foco contáveis, spoiler testado a jusante, cenário 2–4 blindado")
+
+
+def test_kpi_aponta_para_algo_que_o_mede():
+    """O KPI deixa de ser número solto (auditoria de 23/09/2026).
+
+    Nos 14 PRDs medidos: 34 KPIs sem pergunta e sem decisão — métrica de vaidade por
+    definição; 20 com baseline `0%`, que não é medida mas espaço em branco vestido de número;
+    KPI de uma tela alimentado por evento de OUTRA, com o número saindo parecendo certo; e
+    evento declarando leitura em `/telemetry/batch`, que é a fila de entrada, não um leitor.
+    O `telemetria-check` deu verde em cinco dessas sessões: confere o formato do evento, não
+    se o KPI fecha com ele.
+    """
+    from tools.kpis import validar_kpis, extrair_perguntas_do_briefing
+
+    bom = ("## 2. Objetivos\n"
+           "| KPI | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |\n"
+           "|---|---|---|---|---|---|---|---|---|---|\n"
+           "| KPI-01 | quantas turmas chegam ao fim? | <50% encurta | missao · serie | E3-ALU-02 | EVT-005 "
+           "| count(EVT-005) | sem baseline — primeira medição | 70% | 2 meses |\n"
+           "## 13. Eventos\n"
+           "| EVT | Quando dispara | resultado | contexto | Onde é lido |\n|---|---|---|---|---|\n"
+           "| EVT-005 | Toque em Salvar, na tela E3-ALU-02 | `{\"ok\": true}` | `{\"ms\": 1}` | `exp06ef1b_sessoes` |\n")
+    assert validar_kpis(bom)["status"] == "aprovado", validar_kpis(bom)["achados"]
+
+    def cods(txt):
+        return {a["codigo"] for a in validar_kpis(txt)["achados"]}
+
+    # o caso real: "Retenção na Mesa de Limpeza" alimentado por evento de "Salvar no Mural"
+    assert "kpi-tela-divergente" in cods(bom.replace("na tela E3-ALU-02", "na tela E3-ALU-01"))
+    # …mas o KPI que declara só a ETAPA casa com qualquer tela dela
+    assert "kpi-tela-divergente" not in cods(bom.replace("| E3-ALU-02 | EVT-005 |", "| E3 | EVT-005 |"))
+
+    assert "baseline-zero" in cods(bom.replace("sem baseline — primeira medição", "0%"))
+    assert "baseline-ausente" in cods(bom.replace("sem baseline — primeira medição", "—"))
+    assert "kpi-sem-pergunta" in cods(bom.replace("| quantas turmas chegam ao fim? |", "|  |"))
+    assert "kpi-sem-decisao" in cods(bom.replace("| <50% encurta |", "|  |"))
+    assert "payload-nao-computa" in cods(bom.replace("count(EVT-005)", "count(resultado.falso_neutro)"))
+    assert "kpi-evento-inexistente" in cods(bom.replace("| EVT-005 | count", "| EVT-099 | count"))
+    assert "leitura-sem-leitor" in cods(bom.replace("`exp06ef1b_sessoes` |", "`/telemetry/batch` |"))
+    assert "kpi-aponta-tabela-ou-rota" in cods(bom.replace("| EVT-005 | count", "| `exp06ef1b_sessoes` | count"))
+
+    # o PO escreve em português; a esteira normaliza
+    tabela = extrair_perguntas_do_briefing(
+        "## Perguntas de produto\nAulas: 1\nHerdar: T1, T2\n"
+        "- quantas duplas trocam de escolha? → decisão: se <20%, reforçar a mediação → corte: turma\n")
+    assert "declared_lessons: 1" in tabela and "PQ-01" in tabela and "| PO |" in tabela
+    assert extrair_perguntas_do_briefing("briefing sem o bloco") == ""
+
+    print("   ✓ KPI: pergunta, decisão, corte, evento na tela certa e baseline honesto — tudo conferido")
 
 
 if __name__ == "__main__":

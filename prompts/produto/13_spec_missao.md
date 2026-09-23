@@ -9,6 +9,10 @@ entram na spec; o parecer produzia achados que nenhum documento a jusante lia.
 
 {adequacao_report?}
 
+**Perguntas de produto declaradas pelo PO** (vazio = proponha 2, marcadas `[PROPOSTA — validar com PO]`):
+
+{perguntas_po?}
+
 ## Insumos
 
 **One-pager aprovado:**

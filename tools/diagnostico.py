@@ -36,6 +36,7 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "rastro_lacunas_status", "rotulo": "Rastro de lacunas", "etapa": "dev", "rodada": None},
     {"status": "dev_status", "rotulo": "Banca de dev", "etapa": "dev", "rodada": "banca_rodada"},
     {"status": "prd_status", "rotulo": "Pendências do PRD", "etapa": "dev", "rodada": None},
+    {"status": "kpis_status", "rotulo": "Coerência KPI ↔ evento ↔ tela", "etapa": "dev", "rodada": "prd_rodada"},
 ]
 
 #: Relatórios que não têm portão próprio: o parecer entra no dossiê como ressalva, nunca como

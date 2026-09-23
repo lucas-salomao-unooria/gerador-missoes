@@ -160,6 +160,26 @@ quando dispara · `resultado` · `contexto` · caminho · **onde é lido** (tabe
 relatório de missão: toda medida que a professora vê nasce de tabela própria
 do módulo, gravada pela rota operacional.
 
+**Perguntas de produto desta missão (sub-bloco 9f).** A missão declara o que se quer SABER
+sobre ela como produto — separado do que o professor lê sobre a turma. Três fichas e uma tabela:
+
+```
+- `declared_lessons: 1`        (quantas aulas a missão ocupa; 1, 2 ou fracionada→2)
+- `core_action: scored decisao:mural`   (o verbo:objeto que É a decisão central; um só)
+- `perguntas_herdadas: T1, T2, T3, T4, T7`
+
+| PQ | Pergunta | Decisão que dispara | Corte | Etapa | Ação (verbo:objeto) | Origem |
+|---|---|---|---|---|---|---|
+| PQ-01 | quantas duplas trocam de escolha depois do Aha? | <20% → o Aha não chega: reforçar a mediação | turma | E4 | `progressed aha:revelacao` | PO |
+```
+
+`declared_lessons` existe porque sem ele a missão de duas aulas aparece com metade de conclusão
+**por desenho**, e as melhores são lidas como as piores. `core_action` é o que separa "o aluno
+passou pela decisão" de "o aluno abriu a missão". `Origem` é `PO` quando veio do briefing, e
+`[PROPOSTA — validar com PO]` quando o agente propôs: proposta não bloqueia, mas fica visível.
+
+<!-- include: references/perguntas-de-produto.md -->
+
 **Cinco caminhos de dado, não dois.** Analítico (`track` →
 `/telemetry/batch|beacon` → Pub/Sub, sem ordem); operacional (rota síncrona do
 próprio módulo gravando em `expNNefNb_sessoes` — missão nova **não herda**

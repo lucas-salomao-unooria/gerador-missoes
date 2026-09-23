@@ -45,7 +45,7 @@ STATUS_KEYS = [
     "telemetria_status",
     "rastro_lacunas_status",
     "dev_status",
-    "prd_status",
+    "prd_status", "kpis_status", "kpis_report",
     "diagnostico_status",
     KEY_PIPELINE_BLOQUEADO,
     KEY_PIPELINE_MOTIVO,
@@ -110,6 +110,16 @@ class PipelineExecutionResult:
         if self.status in ("success", "aprovado"):
             return "🟢"
         return "⚪"
+
+
+def _perguntas_do_po(briefing: str) -> str:
+    """Bloco `## Perguntas de produto` do briefing. Falha aqui nunca derruba a execução."""
+    try:
+        from tools.kpis import extrair_perguntas_do_briefing
+
+        return extrair_perguntas_do_briefing(briefing)
+    except Exception:  # pragma: no cover - conveniência
+        return ""
 
 
 def build_user_message(prompt: str, doc_batch: Optional[DocumentBatch]) -> types.Content:
@@ -227,6 +237,10 @@ async def run_orchestrator_pipeline_stream(
             state={
                 **(initial_state or {}),
                 "briefing": briefing_inicial(initial_state, prompt),
+                # O PO declara as perguntas de produto no briefing, em português; a esteira as
+                # normaliza para a tabela do sub-bloco 9f. Sem o bloco, fica vazio e o agente
+                # propõe, marcando `[PROPOSTA — validar com PO]` — proposta não bloqueia.
+                "perguntas_po": _perguntas_do_po(briefing_inicial(initial_state, prompt)),
                 # A memória do gerador chega aos prompts pelo estado, não por include: o índice vive
                 # no bucket (`output/`), que persiste, enquanto `prompts/` vem da imagem do container.
                 "catalogo_missoes": catalogo_para_prompt(),

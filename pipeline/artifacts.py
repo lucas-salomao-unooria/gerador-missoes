@@ -63,6 +63,7 @@ ARTIFACT_FILES = [
     ("validacao_dev_report", "dev/03-banca-consolidada.md"),
     ("prd_final", "PRD.md"),
     ("one_pager_pedagogico", "one-pager-pedagogico.md"),
+    ("kpis_report", "dev/04b-kpis-check.md"),
     ("prd_check_report", "dev/04-pendencias-do-prd.md"),
     ("diagnostico_execucao", "diagnostico-execucao.md"),
     ("aprendizado_registro", "aprendizado.md"),
