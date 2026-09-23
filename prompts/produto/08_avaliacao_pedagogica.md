@@ -88,3 +88,8 @@ Feche **sempre** com o envelope:
 ```json
 {"agente": "avaliacao-pedagogica", "missao": "<slug>", "status": "aprovado" | "aprovado_com_ressalvas" | "bloqueado", "ressalvas": <n>, "pendencias_externas": <n>, "achados": [{"id": "A1", "severidade": "bloqueio" | "atencao" | "decisao_humana", "codigo": "<critério>", "resumo": "<uma linha>"}], "precisa_humano": true | false}
 ```
+
+<!-- include: references/padroes-achados.md -->
+
+**Todo achado leva o campo `padrao`** com um slug da tabela acima, no envelope. Sem nome
+estável, o mesmo defeito volta em toda execução com um id novo e nunca vira regra.

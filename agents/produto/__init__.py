@@ -244,11 +244,21 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
                 estrito=settings.esteira_estrita,
                 before_agent_callback=marcar_heranca,
             ),
+            RastroCheckAgent(
+                name="A15bEvidenciaCheck",
+                description="Matriz de evidência pedagógica: grau `scored` com dois sinais, toda habilidade do bloco 11 com momento em tela e medida do bloco 9, gabarito declarado no servidor.",
+                modo="evidencia",
+                rotulo="Matriz de evidência pedagógica",
+                report_key="evidencia_report",
+                status_key="evidencia_status",
+                estrito=settings.esteira_estrita,
+                before_agent_callback=marcar_heranca,
+            ),
             SaidaDeLoopAgent(
                 name="A16SpecCheck",
-                description="Currículo e manifesto conformes encerram o loop; reprovados devolvem a spec ao autor com os dois relatórios.",
+                description="Currículo, manifesto e matriz de evidência conformes encerram o loop; reprovados devolvem a spec ao autor com os relatórios.",
                 rotulo="Spec da missão",
-                status_keys=["bncc_status", "manifesto_status"],
+                status_keys=["bncc_status", "manifesto_status", "evidencia_status"],
                 rodada_key="spec_rodada",
                 max_rounds=rodadas_spec,
             ),
@@ -383,15 +393,44 @@ def build_produto_stage(
         before_agent_callback=marcar_heranca,
         sub_agents=[
             avaliacoes,
+            # Os três relatórios pedagógicos produziam veredito e NINGUÉM o lia: não havia
+            # `*_status` para eles em `tools/diagnostico.py`, e o `adequacao_status` que o
+            # `A10bAdequacaoCheck` consultava nunca era escrito por agente nenhum — o loop
+            # encerrava com aprovação sobre uma chave inexistente. Em 14 execuções, o parecer
+            # de adequação emitiu 40 achados de conteúdo real e nenhum foi fechado.
+            EnvelopeGateAgent(
+                name="A08bAvaliacaoCheck",
+                description="Lê o veredito da avaliação pedagógica (critérios 4.x, 5.1/5.2, 8.x).",
+                rotulo="Avaliação pedagógica",
+                report_key="avaliacao_pedagogica_report",
+                status_key="avaliacao_status",
+                block_pipeline_on_fail=estrito,
+            ),
+            EnvelopeGateAgent(
+                name="A09bExperienciaCheck",
+                description="Lê o veredito da experiência do estudante (3.x, 6.x). Sinaliza, não trava: os tetos desta dimensão são [EXTRAPOLAÇÃO], não medida.",
+                rotulo="Experiência do estudante",
+                report_key="experiencia_aluno_report",
+                status_key="experiencia_status",
+                block_pipeline_on_fail=False,
+            ),
+            EnvelopeGateAgent(
+                name="A10aAdequacaoCheck",
+                description="Lê o veredito do parecer de adequação pedagógica.",
+                rotulo="Adequação pedagógica",
+                report_key="adequacao_report",
+                status_key="adequacao_status",
+                block_pipeline_on_fail=False,
+            ),
             SaidaDeLoopAgent(
                 name="A10bAdequacaoCheck",
                 description="Parecer sem ajuste exigido encerra o loop; com ajuste, o revisor aplica e as avaliações refazem.",
                 rotulo="Adequação pedagógica",
-                status_keys=["adequacao_status"],
+                status_keys=["adequacao_status", "avaliacao_status"],
                 rodada_key="avaliacoes_rodada",
                 max_rounds=rodadas_avaliacoes,
-                # o parecer é consultivo: `aprovado_com_ressalvas` não obriga nova rodada
-                aceitos=["aprovado", "aprovado_com_ressalvas", "amarelo", ""],
+                # `""` saiu da lista: era o que fazia a chave nunca escrita valer aprovação.
+                aceitos=["aprovado", "aprovado_com_ressalvas", "amarelo"],
             ),
             revisor_pos_parecer,
         ],

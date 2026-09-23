@@ -698,6 +698,11 @@ _NEGACAO = re.compile(
     # assim — "Cloud Run não sustenta", "Não usa WebSocket", "proibição de WebSockets",
     # "eliminando qualquer dependência". Nenhuma era proposta (corte A4, 23/09/2026).
     r"proibi|vedad|nunca|jamais|evit[ae]|descartad|obsolet|legad|zero\s+|elimina|abol|"
+    # "Ausência total de pistas de gabarito no bundle" e "atributos retidos no servidor" são
+    # a spec CUMPRINDO a regra — e o detector de gabarito as lia como violação (23/09/2026).
+    # `retid` sozinho é ambíguo — "retidos NO SERVIDOR" nega o cliente, "retidos EM
+    # localStorage" o afirma. Só a forma com complemento entra.
+    r"aus[êe]nci|retid[oa]s?\s+no servidor|isolad[oa]s?\s+no servidor|fora do (bundle|cliente)|"
     r"n[ãa]o\s+(existe|existem|usa|use|usar|usamos|utiliza|h[áa]|aceita|pode|deve|ser[áa]|"
     r"suporta|sustenta|emprega|requer|depende|precisa|mant[ée]m|abre)|"
     r"em vez de|ao inv[ée]s|fora de escopo|removid|deprecia|"

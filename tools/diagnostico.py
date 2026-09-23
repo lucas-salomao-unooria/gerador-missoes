@@ -22,12 +22,16 @@ from typing import Any, Dict, List, Optional
 GATES: List[Dict[str, Optional[str]]] = [
     {"status": "micro_gate_status", "rotulo": "Micro-gate do núcleo", "etapa": "produto", "rodada": "micro_gate_rodada"},
     {"status": "gate_estrutural_status", "rotulo": "Gate estrutural", "etapa": "produto", "rodada": "gate_estrutural_rodada"},
+    {"status": "avaliacao_status", "rotulo": "Avaliação pedagógica", "etapa": "produto", "rodada": "avaliacoes_rodada"},
+    {"status": "experiencia_status", "rotulo": "Experiência do estudante", "etapa": "produto", "rodada": "avaliacoes_rodada"},
+    {"status": "adequacao_status", "rotulo": "Adequação pedagógica", "etapa": "produto", "rodada": "avaliacoes_rodada"},
     {"status": "gate_final_status", "rotulo": "Gate final de produto", "etapa": "produto", "rodada": None},
     {"status": "bncc_status", "rotulo": "Conformidade BNCC", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "lacunas_status", "rotulo": "Fechamento de lacunas (D0)", "etapa": "design", "rodada": None},
     {"status": "ambiente_status", "rotulo": "Ambiente simulado (D9)", "etapa": "design", "rodada": None},
     {"status": "design_status", "rotulo": "QA de entregáveis", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "manifesto_status", "rotulo": "Ficha do manifesto", "etapa": "produto", "rodada": "spec_rodada"},
+    {"status": "evidencia_status", "rotulo": "Matriz de evidência pedagógica", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "telemetria_status", "rotulo": "Contrato de telemetria", "etapa": "dev", "rodada": "handoff_rodada"},
     {"status": "rastro_lacunas_status", "rotulo": "Rastro de lacunas", "etapa": "dev", "rodada": None},
     {"status": "dev_status", "rotulo": "Banca de dev", "etapa": "dev", "rodada": "banca_rodada"},
@@ -38,7 +42,6 @@ GATES: List[Dict[str, Optional[str]]] = [
 #: impedimento. É o caso da adequação pedagógica — avalia, aponta ajustes, e quem decide bloquear
 #: continua sendo o gate estrutural e a avaliação pedagógica.
 CONSULTIVOS = [
-    {"chave": "adequacao_report", "rotulo": "Adequação pedagógica", "etapa": "produto"},
     # O lint de contrato de plataforma roda em modo não estrito por desenho (devolve ao autor
     # do one-pager em vez de travar), mas não aparecia em lugar nenhum do dossiê: os achados
     # dele — WebSocket na seção 8, número sem origem, SAEB fora do ano — eram invisíveis para

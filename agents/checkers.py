@@ -682,6 +682,11 @@ class RastroCheckAgent(BaseAgent):
         if status == "aprovado":
             msg = f"✅ {self.rotulo}: conforme."
             limpar_degradacao(state, delta, self.rotulo)
+        elif self.modo == "evidencia":
+            from tools import evidencia as ev
+
+            resultado = ev.validar(str(state.get("spec_missao", "") or ""))
+            texto = ev.relatorio(resultado, missao)
         elif self.modo == "one_pager":
             # Aqui o veredito é do gate estrutural; este nó só entrega a lista para ele aplicar.
             todos = bloqueios + avisos

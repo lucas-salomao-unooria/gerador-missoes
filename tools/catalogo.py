@@ -247,6 +247,15 @@ def ficha_da_execucao(state: Dict[str, Any], sessao: str = "") -> Dict[str, Any]
         "gates": gates,
         "gerada_em": time.strftime("%Y-%m-%d"),
         "origem": "esteira",
+        # Achados dos pareceres pedagógicos, com o slug de padrão, para `recorrencias()`
+        # perceber o que volta. Sem isto cada execução redescobria o mesmo defeito com um id
+        # novo: 40 achados de conteúdo em 14 execuções, nenhum fechado.
+        "achados_pedagogicos": [
+            {"padrao": a["padrao"], "resumo": str(a.get("resumo") or "")[:200]}
+            for chave in ("adequacao_status_envelope", "avaliacao_status_envelope", "experiencia_status_envelope")
+            for a in ((state.get(chave) or {}).get("achados") or [])
+            if isinstance(a, dict) and a.get("padrao")
+        ],
     }
 
 
@@ -390,6 +399,36 @@ def registrar(ficha: Dict[str, Any], indice: Optional[Dict[str, Any]] = None, ba
         gravar(indice, base)
     return {"status": "amarelo" if achados else "aprovado", "achados": achados, "ficha": ficha,
             "total": len(missoes), "vizinhas": proximas}
+
+
+def recorrencias(indice: Optional[Dict[str, Any]] = None, minimo: int = 3, janela: int = 20,
+                 base: Optional[Path] = None) -> List[Dict[str, Any]]:
+    """Padrões de achado pedagógico que voltaram — a base para virar regra do prompt.
+
+    Recorrente = aparece em `minimo` sessões DE PELO MENOS DUAS MISSÕES distintas, dentro das
+    últimas `janela`. Duas missões é o que separa "defeito daquela missão" de "defeito que a
+    esteira produz": reexecutar a mesma missão não conta como recorrência.
+
+    Existe porque em 14 execuções os pareceres emitiram 40 achados de conteúdo e nenhum foi
+    fechado — cada execução redescobria o mesmo problema com um id novo.
+    """
+    idx = indice if indice is not None else carregar(base)
+    fichas = (idx.get("missoes") or [])[-janela:]
+    por_padrao: Dict[str, Dict[str, Any]] = {}
+    for f in fichas:
+        slug = f.get("slug") or "—"
+        for achado in f.get("achados_pedagogicos") or []:
+            padrao = str(achado.get("padrao") or "outro")
+            reg = por_padrao.setdefault(padrao, {"padrao": padrao, "sessoes": 0, "slugs": set(), "exemplo": ""})
+            reg["sessoes"] += 1
+            reg["slugs"].add(slug)
+            if not reg["exemplo"]:
+                reg["exemplo"] = str(achado.get("resumo") or "")[:160]
+    fora = []
+    for reg in por_padrao.values():
+        if reg["sessoes"] >= minimo and len(reg["slugs"]) >= 2:
+            fora.append({**reg, "slugs": sorted(reg["slugs"]), "missoes": len(reg["slugs"])})
+    return sorted(fora, key=lambda r: -r["sessoes"])
 
 
 def saude_do_indice(indice: Optional[Dict[str, Any]] = None, base: Optional[Path] = None) -> Dict[str, Any]:

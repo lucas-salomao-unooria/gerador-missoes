@@ -95,6 +95,18 @@ sai da conta). Tratar "não teve chance" como "escolheu não" faz uma criança
 parecer ter recusado o que nunca lhe foi oferecido, e o número será lido
 por um adulto que decide sobre ela.
 
+**Tabela de medidas — obrigatória, cabeçalho exato (um gate determinístico a lê):**
+
+```
+| Medida | Grau | Sinais | Canal | Tabela.coluna | Habilidade |
+|---|---|---|---|---|---|
+| `posts_no_mural` | `scored` | `salvar:post` + `submeter:mural` | operacional | `expNNefNb_sessoes.posts` | `EF06CO09` |
+```
+
+Identificador entre crases, um por célula. `scored` com menos de dois sinais nomeados é
+reprovado: é a própria definição acima, e sem conferência o grau inflava — das 25 medidas
+`scored` das primeiras execuções, só 10 nomeavam dois sinais.
+
 **Canal por dado.** Cada dado em um de dois canais que não se misturam:
 **operacional** (alimenta a mecânica em tempo real, rota síncrona) ou
 **analítico** (análise posterior, em lote, sem garantia de ordem). Tempo de
@@ -111,6 +123,12 @@ não está escrito.
 **Segredo de servidor.** Lista do que nunca vai ao bundle: gabarito,
 parâmetros ocultos, calibragem, vieses, prompt de sistema, e qualquer conta
 cujo resultado antecipe o desfecho.
+
+**Ficha do gabarito — obrigatória, uma linha, lida por gate:**
+
+```
+- `gabarito_servidor: sim`
+```
 
 **Gabarito.** Fonte da verdade pedagógica, com a declaração de que vive
 exclusivamente no servidor. Quem assina não se declara aqui: autoria e revisão
@@ -169,6 +187,18 @@ Os três, com o que muda e a garantia de que a descoberta chega.
 
 ## 11. Currículo
 Habilidades e códigos **confirmados**, com o momento em tela de cada um.
+
+**Matriz de evidência — obrigatória, uma linha por código de Computação:**
+
+```
+| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Marcador |
+|---|---|---|---|---|---|
+| `EF06CO09` | `E3-ALU-01` (Decidir) | seleciona até 4 posts e fixa 1 | rolar o feed sem salvar | `posts_no_mural` | ternário |
+```
+
+A coluna «Medida do bloco 9» precisa nomear uma medida que existe lá — habilidade declarada que
+nada mede é currículo no papel, e some do relatório do professor. Nas primeiras execuções, 40
+códigos de Computação foram declarados e ~38 não tinham nenhum dado ligado.
 
 ## 12. Decisões fechadas neste gate
 Decisão · quem decidiu · data · alternativas descartadas.

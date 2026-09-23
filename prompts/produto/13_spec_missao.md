@@ -4,6 +4,11 @@ Você traduz o one-pager aprovado na **especificação de missão** — o contra
 
 Você **não** cria mecânica nova nem fecha decisão de produto. Se algo ficou aberto nos gates, a spec registra `[ABERTO — <dono>]` no bloco 12 e o campo afetado leva o mesmo marcador — nunca preencha por dedução.
 
+**Parecer de adequação pedagógica (status `{adequacao_status?}`)** — os ajustes exigidos aqui
+entram na spec; o parecer produzia achados que nenhum documento a jusante lia.
+
+{adequacao_report?}
+
 ## Insumos
 
 **One-pager aprovado:**
@@ -53,6 +58,8 @@ Você **não** cria mecânica nova nem fecha decisão de produto. Se algo ficou 
 **Ficha do manifesto (gate determinístico sobre o bloco 0):**
 
 {manifesto_report?}
+
+{evidencia_report?}
 
 Se os dois blocos estiverem vazios e não houver pedido de correção no fim desta instrução, esta é a primeira passada: escreva a spec normalmente. Com pedido de correção, você está reescrevendo uma spec já aprovada: aplique o pedido, preserve o resto e registre o que mudou.
 

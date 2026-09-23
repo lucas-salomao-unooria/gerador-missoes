@@ -49,6 +49,7 @@ ARTIFACT_FILES = [
     ("stitch_links", "design/10-stitch-telas.md"),
     ("miro_links", "design/11-miro-boards.md"),
     ("qa_entregaveis_report", "design/07-qa-entregaveis.md"),
+    ("evidencia_report", "produto/05c-matriz-evidencia.md"),
     ("manifesto_report", "dev/00-ficha-manifesto.md"),
     ("handoff_dev", "dev/01-handoff-dev.md"),
     ("brief_assets", "dev/01b-brief-assets.md"),

@@ -66,7 +66,7 @@ KNOWN_STATE_KEYS = {
     "miro_links", "miro_board",
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
-    "prototipo_lint_report", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
+    "prototipo_lint_report", "evidencia_report", "evidencia_status", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
     "validacao_dev_report", "dev_status", "prd_final", "one_pager_pedagogico", "one_pager_resumido", "aprendizado_registro",
@@ -952,7 +952,10 @@ def test_estagio_produto_parcial_spec():
     assert [a.name for a in orch.sub_agents] == ["ProdutoStage", "A50Diagnostico", "A51Aprendizado", "A52RegistroCatalogo"]
     produto = orch.sub_agents[0]
     assert [a.name for a in produto.sub_agents] == ["SpecLoop", "A16bOnePagerResumido"]
-    assert [a.name for a in produto.sub_agents[0].sub_agents] == ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A16SpecCheck"]
+    # `A15bEvidenciaCheck` entra desde 23/09/2026: grau `scored` com dois sinais, habilidade do
+    # bloco 11 com momento e medida, gabarito no servidor. Eram três exigências que a spec
+    # declarava em prosa e nenhuma verificação tocava — PED-04 é bloqueante e ninguém o conferia.
+    assert [a.name for a in produto.sub_agents[0].sub_agents] == ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck", "A16SpecCheck"]
     assert produto.sub_agents[0].max_iterations == max(1, get_settings().spec_max_rodadas)
     nomes = [a.name for _, a in iter_agent_tree(orch)]
     assert "A01NucleoNarrativo" not in nomes and "A05GateEstrutural" not in nomes
@@ -2581,6 +2584,54 @@ def test_gaps_estruturais_da_auditoria():
     assert "{gate_estrutural_rodada?}" in load_prompt("produto/05_gate_estrutural.md")
 
     print("   ✓ gaps estruturais: índice cego avisa, brief sobrevive ao revisor, protótipo é lido, gate sabe a rodada")
+
+
+def test_pedagogia_falsificavel():
+    """Os critérios pedagógicos deixam de valer só como prosa (auditoria de 23/09/2026)."""
+    from tools.evidencia import validar
+    from tools.catalogo import recorrencias
+    from tools.diagnostico import GATES
+
+    # os três pareceres pedagógicos passam a ter gate no dossiê
+    chaves = {g["status"] for g in GATES}
+    for k in ("avaliacao_status", "experiencia_status", "adequacao_status", "evidencia_status"):
+        assert k in chaves, f"{k} sem gate: o veredito existia e ninguém o lia"
+
+    base = ("## 9. Evidências\n"
+            "| Medida | Grau | Sinais | Canal | Tabela.coluna | Habilidade |\n|---|---|---|---|---|---|\n"
+            "| `posts_no_mural` | `scored` | `salvar:post` + `submeter:mural` | operacional | `exp06ef1b_sessoes.posts` | `EF06CO09` |\n"
+            "- `gabarito_servidor: sim`\n"
+            "## 11. Currículo\n"
+            "| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Marcador |\n|---|---|---|---|---|---|\n"
+            "| `EF06CO09` | `E3-ALU-01` (Decidir) | fixa 1 post | rolar o feed | `posts_no_mural` | ternário |\n")
+    assert validar(base)["status"] == "aprovado", validar(base)["achados"]
+
+    # (a) `scored` exige os dois sinais que a própria definição do bloco 9 pede
+    um_sinal = base.replace("`salvar:post` + `submeter:mural`", "`salvar:post`")
+    assert "scored-1-sinal" in {a["codigo"] for a in validar(um_sinal)["achados"]}
+
+    # (b) habilidade declarada sem dado que a meça é currículo no papel
+    sem_medida = base.replace("| `posts_no_mural` | ternário |", "| — | ternário |")
+    assert "habilidade-sem-medida" in {a["codigo"] for a in validar(sem_medida)["achados"]}
+
+    # (c) PED-04 é bloqueante e nada o conferia
+    assert "gabarito-nao-declarado" in {a["codigo"] for a in validar(base.replace("- `gabarito_servidor: sim`", ""))["achados"]}
+    assert "gabarito-no-cliente" in {a["codigo"] for a in validar(base + "\nO gabarito fica no bundle do cliente.\n")["achados"]}
+    # ...mas a spec que CUMPRE a regra falando do bundle não é acusada
+    cumpre = base + "\n**Garante:** ausência total de pistas de gabarito no bundle do cliente.\n"
+    assert "gabarito-no-cliente" not in {a["codigo"] for a in validar(cumpre)["achados"]}
+
+    # o achado que volta em duas missões diferentes vira candidato a regra
+    idx = {"missoes": [
+        {"slug": "a", "achados_pedagogicos": [{"padrao": "termo-sem-ancoragem", "resumo": "x"}]},
+        {"slug": "b", "achados_pedagogicos": [{"padrao": "termo-sem-ancoragem", "resumo": "y"}]},
+        {"slug": "a", "achados_pedagogicos": [{"padrao": "termo-sem-ancoragem", "resumo": "z"}]},
+        {"slug": "a", "achados_pedagogicos": [{"padrao": "so-desta", "resumo": "w"}]},
+        {"slug": "a", "achados_pedagogicos": [{"padrao": "so-desta", "resumo": "w"}]},
+        {"slug": "a", "achados_pedagogicos": [{"padrao": "so-desta", "resumo": "w"}]}]}
+    rec = recorrencias(idx)
+    assert [r["padrao"] for r in rec] == ["termo-sem-ancoragem"], rec
+    print("   ✓ pedagogia: 4 gates novos, grau/matriz/gabarito conferidos, achado recorrente identificado")
 
 
 if __name__ == "__main__":

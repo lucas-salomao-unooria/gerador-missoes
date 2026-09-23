@@ -78,3 +78,8 @@ Feche **sempre** com o envelope:
 ```
 
 Use `"aprovado"` para "experiência adequada à faixa"; `"aprovado_com_ressalvas"` para "adequada com ressalvas"; `"bloqueado"` para "bloqueada por <n> critérios".
+
+<!-- include: references/padroes-achados.md -->
+
+**Todo achado leva o campo `padrao`** com um slug da tabela acima, no envelope. Sem nome
+estável, o mesmo defeito volta em toda execução com um id novo e nunca vira regra.
