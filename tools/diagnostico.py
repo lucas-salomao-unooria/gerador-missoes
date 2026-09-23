@@ -221,7 +221,8 @@ def artefatos_esperados(state: Dict[str, Any], mapa: Any) -> Dict[str, List[str]
     return {"entregues": sorted(entregues), "ausentes": sorted(ausentes)}
 
 
-def relatorio_markdown(d: Dict[str, Any], missao: str = "", artefatos: Optional[Dict[str, List[str]]] = None) -> str:
+def relatorio_markdown(d: Dict[str, Any], missao: str = "", artefatos: Optional[Dict[str, List[str]]] = None,
+                       state: Optional[Dict[str, Any]] = None) -> str:
     """Dossiê legível. Sem chave de estado, sem nome de classe, sem log cru."""
     icone = _ICONE.get(d["veredito"], "⚪")
     linhas = [
@@ -305,7 +306,45 @@ def relatorio_markdown(d: Dict[str, Any], missao: str = "", artefatos: Optional[
     else:
         linhas.append("1. Nada travando. As ressalvas acima são opcionais e estão registradas para a próxima versão.")
 
+    bloco = bloco_de_execucao(state or {})
+    if bloco:
+        linhas += ["", bloco]
+
     return "\n".join(linhas) + "\n"
+
+
+def bloco_de_execucao(state: Dict[str, Any]) -> str:
+    """Custo, modelo e reprodutibilidade — o que permite comparar duas execuções.
+
+    O `usage_metadata` de cada evento era descartado: ninguém sabia quanto custa gerar uma
+    missão, qual agente pesa, nem se a esteira está melhorando. E sem registrar modelo e seed,
+    duas execuções da mesma missão não eram comparáveis.
+    """
+    exec_ = state.get("execucao") or {}
+    if not exec_:
+        return ""
+    t = exec_.get("tokens") or {}
+    total = t.get("entrada", 0) + t.get("saida", 0)
+
+    def _n(valor: int) -> str:
+        """Milhar com ponto, como se escreve em português."""
+        return f"{valor:,}".replace(",", ".")
+    linhas = ["## Execução", "",
+              f"- **Modelo:** `{exec_.get('modelo', '—')}`"
+              + (f" · PRD: `{exec_['modelo_prd']}`" if exec_.get("modelo_prd") and exec_["modelo_prd"] != exec_.get("modelo") else ""),
+              f"- **Reprodutibilidade:** seed `{exec_.get('seed_juiz', '—')}` · temperatura dos juízes `{exec_.get('temperatura_juiz', '—')}`",
+              f"- **Duração:** {exec_.get('duracao_s', 0)} s · **{t.get('chamadas', 0)} chamadas** ao modelo",
+              f"- **Tokens:** {_n(total)} ({_n(t.get('entrada', 0))} de entrada, {_n(t.get('saida', 0))} de saída"
+              + (f", {_n(t.get('pensamento', 0))} de raciocínio" if t.get("pensamento") else "") + ")",
+              ""]
+    por_agente = exec_.get("tokens_por_agente") or {}
+    if por_agente:
+        linhas += ["Os cinco agentes mais caros desta execução:", "",
+                   "| Agente | Entrada | Saída | Chamadas |", "|---|---:|---:|---:|"]
+        for nome, v in list(por_agente.items())[:5]:
+            linhas.append(f"| {nome} | {_n(v['entrada'])} | {_n(v['saida'])} | {v['chamadas']} |")
+        linhas.append("")
+    return "\n".join(linhas)
 
 
 def envelope(d: Dict[str, Any], missao: str = "") -> Dict[str, Any]:

@@ -1042,7 +1042,7 @@ class DiagnosticoAgent(BaseAgent):
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or ""))
         dossie = coletar(state)
         artefatos = artefatos_esperados(state, ARTIFACT_FILES)
-        texto = relatorio_markdown(dossie, missao, artefatos)
+        texto = relatorio_markdown(dossie, missao, artefatos, state=state)
         env = envelope(dossie, missao)
 
         yield Event(

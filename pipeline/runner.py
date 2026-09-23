@@ -264,9 +264,21 @@ async def run_orchestrator_pipeline_stream(
         final_text = ""
         current_agent: Optional[str] = None
         known_status: Dict[str, Any] = {}
+        # Custo por agente. O `usage_metadata` de cada evento era descartado, então ninguém
+        # sabia quanto custa gerar uma missão nem qual agente pesa — e sem isso não há como
+        # decidir onde cortar contexto, nem justificar o gasto.
+        tokens_por_agente: Dict[str, Dict[str, int]] = {}
 
         async for event in runner.run_async(user_id=user_id, session_id=session.id, new_message=user_message):
             author = getattr(event, "author", None) or "Orchestrator"
+
+            uso = getattr(event, "usage_metadata", None)
+            if uso is not None:
+                reg = tokens_por_agente.setdefault(author, {"entrada": 0, "saida": 0, "pensamento": 0, "chamadas": 0})
+                reg["entrada"] += int(getattr(uso, "prompt_token_count", 0) or 0)
+                reg["saida"] += int(getattr(uso, "candidates_token_count", 0) or 0)
+                reg["pensamento"] += int(getattr(uso, "thoughts_token_count", 0) or 0)
+                reg["chamadas"] += 1
 
             if author != current_agent and author != "user":
                 current_agent = author
@@ -341,6 +353,28 @@ async def run_orchestrator_pipeline_stream(
         final_state = dict(final_session.state) if final_session else {}
         duration = time.time() - start_time
 
+        # Bloco de execução: o que torna uma execução reproduzível e comparável com a seguinte.
+        # Sem ele não havia como responder "quanto custa gerar uma missão", "qual agente pesa"
+        # nem "estamos melhorando?" — os mesmos ~20 achados reapareciam sessão após sessão e
+        # nada media a tendência.
+        totais = {
+            "entrada": sum(v["entrada"] for v in tokens_por_agente.values()),
+            "saida": sum(v["saida"] for v in tokens_por_agente.values()),
+            "pensamento": sum(v["pensamento"] for v in tokens_por_agente.values()),
+            "chamadas": sum(v["chamadas"] for v in tokens_por_agente.values()),
+        }
+        settings_exec = get_settings()
+        final_state["execucao"] = {
+            "modelo": settings_exec.gemini_model,
+            "modelo_prd": settings_exec.gemini_model_prd,
+            "seed_juiz": settings_exec.seed_juiz,
+            "temperatura_juiz": settings_exec.temperatura_juiz,
+            "duracao_s": round(duration, 1),
+            "tokens": totais,
+            "tokens_por_agente": dict(sorted(tokens_por_agente.items(),
+                                             key=lambda kv: -(kv[1]["entrada"] + kv[1]["saida"]))),
+        }
+
         output_dir: Optional[Path] = None
         artifacts_manifest: List[Dict[str, Any]] = []
         if save_artifacts:
@@ -366,6 +400,15 @@ async def run_orchestrator_pipeline_stream(
                             registrar_no_catalogo({**ficha, "sessao": output_dir.name})
                     except Exception as exc:  # pragma: no cover - disco
                         logger.warning("Falha ao registrar a missão no catálogo: %s", exc)
+                    # Série temporal: os mesmos ~20 identificadores de achado reapareciam
+                    # sessão após sessão e nada media a tendência. Uma linha por execução,
+                    # append-only, ao lado do índice. Falhar aqui também não custa a execução.
+                    try:
+                        from tools.historico import registrar as registrar_no_historico
+
+                        registrar_no_historico(final_state, sessao=output_dir.name)
+                    except Exception as exc:  # pragma: no cover - disco
+                        logger.warning("Falha ao registrar no histórico: %s", exc)
             except Exception as exc:  # pragma: no cover - disco
                 logger.warning("Falha ao gravar artefatos: %s", exc)
 

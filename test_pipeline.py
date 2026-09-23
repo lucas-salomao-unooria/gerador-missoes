@@ -66,7 +66,7 @@ KNOWN_STATE_KEYS = {
     "miro_links", "miro_board",
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
-    "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
+    "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "execucao", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
     "validacao_dev_report", "dev_status", "prd_final", "one_pager_pedagogico", "one_pager_resumido", "aprendizado_registro",
@@ -2704,6 +2704,38 @@ def test_kpi_aponta_para_algo_que_o_mede():
     assert extrair_perguntas_do_briefing("briefing sem o bloco") == ""
 
     print("   ✓ KPI: pergunta, decisão, corte, evento na tela certa e baseline honesto — tudo conferido")
+
+
+def test_custo_e_tendencia_da_esteira():
+    """Quanto custa gerar uma missão, e estamos melhorando? Duas perguntas sem resposta até agora."""
+    import tempfile, pathlib as _p
+    from tools import historico
+    from tools.diagnostico import bloco_de_execucao
+
+    # O `usage_metadata` de cada evento era descartado: ninguém sabia o custo nem qual agente pesa
+    st = {"execucao": {"modelo": "gemini-3.8-flash", "seed_juiz": 20260923, "temperatura_juiz": 0.1,
+                       "duracao_s": 742.3, "tokens": {"entrada": 1_840_000, "saida": 210_000, "chamadas": 41},
+                       "tokens_por_agente": {"A47PrdWriter": {"entrada": 390_000, "saida": 48_000, "chamadas": 2}}}}
+    bloco = bloco_de_execucao(st)
+    assert "2.050.000" in bloco, "o total de tokens precisa aparecer no dossiê"
+    assert "seed `20260923`" in bloco, "sem seed e modelo, duas execuções não são comparáveis"
+    assert "A47PrdWriter" in bloco and "390.000" in bloco
+    assert bloco_de_execucao({}) == "", "execução sem o bloco não quebra o dossiê"
+
+    # série temporal: a queda de achados entre a primeira e a segunda metade da janela
+    base = _p.Path(tempfile.mkdtemp())
+    for i in range(6):
+        historico.registrar({"execucao": {"modelo": "m", "duracao_s": 700,
+                                          "tokens": {"entrada": 100_000, "saida": 10_000, "chamadas": 40}},
+                             "rastro_lacunas_status": "aprovado",
+                             "rastro_lacunas_status_envelope": {"achados": [{"x": 1}] * (5 - i)}},
+                            sessao=f"s{i}", base=base)
+    assert len(historico.carregar(base)) == 6
+    t = historico.tendencia(base)
+    assert t["suficiente"] and t["achados"]["depois"] < t["achados"]["antes"], t
+    assert historico.tendencia(_p.Path(tempfile.mkdtemp()))["suficiente"] is False
+
+    print("   ✓ custo por agente no dossiê, execução reproduzível e tendência de achados medida")
 
 
 if __name__ == "__main__":
