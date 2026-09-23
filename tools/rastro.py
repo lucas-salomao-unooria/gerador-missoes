@@ -817,6 +817,10 @@ def validar_telemetria(handoff: str) -> Dict[str, Any]:
         atencao("quota-env", "Quota de IA por env não existe mais: é linha em `ia_quotas` por perfil (ADR-105).")
     if _usado_afirmativamente(texto, r"\benum\b[^\n]{0,60}\b(estado|status)\b"):
         atencao("enum-estado", "Estado como enum: na plataforma é string com CHECK na migration, nunca enum Prisma.")
+    # A spec declara `gabarito_servidor: sim` e o evidencia-check confere; mas quem descreve a
+    # implementação é o handoff, e nada o lia: "o gabarito vai no bundle" passava aqui.
+    if _usado_afirmativamente(texto, r"gabarito[^\n]{0,90}\b(no cliente|bundle|front-?end|navegador|localstorage)"):
+        bloqueio("gabarito-no-cliente", "O handoff coloca o gabarito no cliente/bundle: gabarito no bundle é gabarito entregue ao estudante. Ele vive no servidor (PED-04).")
 
     # rota citada num módulo que a plataforma já tem precisa existir nela (tools/rotas_plataforma.py)
     from tools.rotas_plataforma import validar_rotas
