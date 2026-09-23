@@ -3218,6 +3218,65 @@ def test_todo_dono_que_um_gate_pode_escrever_tem_destino():
     print("   ✓ todo dono que o QA e a banca podem escrever tem rota ou vira externo; toda rota existe")
 
 
+
+# ── Quem reescreve lê o que o gate pediu (auditoria v3, 23/09/2026) ──────────────────────────
+# Duas perguntas feitas a todos os agentes de uma vez acharam dois agentes que reescreviam às
+# cegas: o brief de assets, reexecutado pela banca sem ler ticket nem relatório (A-16), e o
+# revisor do one-pager, que o loop das avaliações repetia por um relatório que ele não recebia
+# (A-17). Toda vez que um cruzamento assim foi feito sobre a árvore inteira, achou defeito.
+from google.adk.agents.llm_agent import LlmAgent
+from google.adk.agents.loop_agent import LoopAgent
+from agents.checkers import (BnccCheckAgent, DespachoTicketsAgent, EnvelopeGateAgent,
+                             RastroCheckAgent, SaidaDeLoopAgent)
+from pipeline.orchestrator import iter_agent_tree
+
+def _dentro(a):
+    for s in getattr(a, "sub_agents", []) or []:
+        yield s
+        yield from _dentro(s)
+
+def _reexecutados_sem_pedido(raiz):
+    """Agente que um despacho reexecuta e que não lê nem o ticket nem o relatório do gate."""
+    falhas = []
+    for _, d in iter_agent_tree(raiz):
+        if isinstance(d, DespachoTicketsAgent):
+            for s in d.sub_agents:
+                txt = str(getattr(s, "instruction", ""))
+                if isinstance(s, LlmAgent) and "{" + d.tickets_key not in txt and "{" + d.report_key not in txt:
+                    falhas.append(f"{d.name} → {s.name}")
+    return falhas
+
+def _gates_que_ninguem_le(raiz):
+    """Gate que faz o loop repetir, e cujo relatório nenhum autor do loop recebe."""
+    falhas = []
+    for _, loop in iter_agent_tree(raiz):
+        if not isinstance(loop, LoopAgent):
+            continue
+        dentro = list(_dentro(loop))
+        if any(isinstance(a, DespachoTicketsAgent) for a in dentro):
+            continue  # quem corrige é o despacho — coberto pela outra regra
+        gates = [g for g in dentro if isinstance(g, (EnvelopeGateAgent, RastroCheckAgent, BnccCheckAgent))]
+        repetem = {k for s in dentro if isinstance(s, SaidaDeLoopAgent) for k in s.status_keys}
+        repetem |= {g.status_key for g in gates if isinstance(g, EnvelopeGateAgent) and g.round_key}
+        relatorios = {getattr(g, "report_key", "") for g in gates}
+        autores = [a for a in dentro if isinstance(a, LlmAgent) and a.output_key not in relatorios]
+        for g in gates:
+            if g.status_key in repetem and getattr(g, "report_key", ""):
+                if not any("{" + g.report_key in str(a.instruction) for a in autores):
+                    falhas.append(f"{loop.name}: {g.name} reprova e nenhum de {[a.name for a in autores]} lê {{{g.report_key}}}")
+    return falhas
+
+
+def test_todo_agente_reexecutado_le_o_que_o_gate_pediu():
+    from pipeline.orchestrator import create_mission_orchestrator
+    orch = create_mission_orchestrator(stages=["produto", "design", "dev"])
+    falhas = _reexecutados_sem_pedido(orch)
+    assert not falhas, f"reexecutado sem ler o ticket nem o relatório do gate: {falhas}"
+    falhas = _gates_que_ninguem_le(orch)
+    assert not falhas, f"gate que repete o loop sem que nenhum autor leia o relatório: {falhas}"
+    print("   ✓ quem é reexecutado lê o ticket; todo gate que repete um loop tem um autor que o lê")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")
