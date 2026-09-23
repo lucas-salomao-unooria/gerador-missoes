@@ -546,12 +546,15 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
 """
     assert validar_telemetria(layout_livre)["status"] == "aprovado", validar_telemetria(layout_livre)["achados"]
 
-    # falso positivo 2: citar WebSocket para DESCARTÁ-LO é o comportamento correto.
-    # Com o canal certo declarado, vira atenção; sem ele, continua bloqueio.
+    # falso positivo 2: citar WebSocket para DESCARTÁ-LO é o comportamento correto, e
+    # menção CONDICIONAL ("só se a infra mudar", "fase 2") é descarte, não proposta.
+    # Era a forma de 5 dos 8 achados de WebSocket das 14 primeiras execuções — todos em
+    # handoffs cujo canal declarado já era o polling certo (corte A4, 23/09/2026).
     nega = layout_livre + "\n| Sincronização | Polling de 3s | WebSocket dedicado só se a infra mudar | Cloud Run não sustenta WebSocket (ADR-93/94) |\n"
     r_nega = validar_telemetria(nega)
-    assert r_nega["status"] == "amarelo", r_nega["achados"]
-    assert {a["codigo"] for a in r_nega["achados"]} == {"websocket-mencao"}
+    assert r_nega["status"] == "aprovado", r_nega["achados"]
+    roadmap = layout_livre + "\nWebSocket fica para a fase 2.\n"
+    assert validar_telemetria(roadmap)["status"] == "aprovado", validar_telemetria(roadmap)["achados"]
     sem_canal = layout_livre.replace("Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.", "Sala sincroniza por WebSocket dedicado.")
     assert validar_telemetria(sem_canal)["status"] == "bloqueado"
 
@@ -699,7 +702,9 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
     root3 = SequentialAgent(
         name="Root3",
         sub_agents=[
-            FakeAgent(name="Spec", key="spec_missao", text=_SPEC_MANIFESTO_OK.replace("- `liberacao: por-turma`\n", "")),
+            # `liberacao` ausente é default (corte A8); o que reprova é declarar outro
+            # valor — aqui a ficha perde o `id`, que não tem default nenhum.
+            FakeAgent(name="Spec", key="spec_missao", text=_SPEC_MANIFESTO_OK.replace("- `id: exp05ef2b`\n", "")),
             RastroCheckAgent(name="A33ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
             FakeAgent(name="Jusante", key="handoff_dev", text="h", before_agent_callback=marcar_heranca),
         ],
@@ -1735,60 +1740,6 @@ def test_referencias_plataforma_sincronizadas():
     print(f"   ✓ {len(manifesto['arquivos'])} cópias da plataforma presentes (commit {manifesto['commit']}, {manifesto['data_commit']})")
 
 
-if __name__ == "__main__":
-    print("=" * 64)
-    print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")
-    print("=" * 64)
-    s = get_settings()
-    print(f"   modelo: {s.gemini_model} · Stitch MCP: {s.stitch_mcp_mode} · etapas: {s.pipeline_stages} · estrito: {s.produto_modo_estrito}")
-    tests = [
-        test_prompts_carregam_e_interpolacao_segura,
-        test_arvore_de_agentes,
-        test_envelope_e_status,
-        test_gate_loop_bloqueia_e_pula_jusante,
-        test_gate_loop_aprova_e_segue,
-        test_modo_nao_estrito_nao_bloqueia,
-        test_secao_split_d0_e_d9,
-        test_bncc_validador_e_gate,
-        test_rastro_manifesto_telemetria_lacunas,
-        test_regressao_sessao_8f76_falsos_positivos,
-        test_rotulos_de_gate_cobertos_pelo_mapa_de_heranca,
-        test_estagio_produto_parcial_spec,
-        test_bloco_de_correcao_em_todos_os_agentes,
-        test_agente_de_triagem_configurado,
-        test_prd_cita_experiencia_existente_sem_virar_caminho_divergente,
-        test_capacidade_de_plataforma_nao_bloqueia,
-        test_mensagem_de_pulo_nao_vira_prd,
-        test_contencao_de_resposta_de_ferramenta,
-        test_markdown_saneado_para_streamlit,
-        test_artefatos_html_e_links,
-        test_desembrulhar_cerca_do_documento,
-        test_one_pager_pedagogico_em_docx,
-        test_one_pagers_com_identidade_visual,
-        test_one_pager_resumido_no_formato_do_time_de_produto,
-        test_lint_do_one_pager_pega_os_erros_conhecidos,
-        test_bncc_reconhece_decisao_de_produto_pendente,
-        test_visao_do_professor_nos_diagramas_e_na_folha_do_stitch,
-        test_schema_de_ferramenta_saneado,
-        test_referencias_plataforma_sincronizadas,
-    ]
-    failed = 0
-    for t in tests:
-        try:
-            t()
-        except AssertionError as exc:
-            failed += 1
-            print(f"   ✗ {t.__name__}: {exc}")
-        except Exception as exc:  # noqa: BLE001
-            failed += 1
-            print(f"   ✗ {t.__name__}: {type(exc).__name__}: {exc}")
-    print("=" * 64)
-    if failed:
-        print(f"❌ {failed} teste(s) falharam")
-        sys.exit(1)
-    print("✅ TODOS OS TESTES ESTRUTURAIS PASSARAM")
-
-
 # --------------------------------------------------------------------------- esteira que não aborta
 def test_esteira_nao_aborta_e_emite_diagnostico():
     """Gate reprovado não pode custar os documentos: é deles que sai o diagnóstico.
@@ -2103,6 +2054,12 @@ def test_prd_inconsistente_consigo_mesmo_e_barrado():
         "Tabela `exp02ef1b_sessoes`.\n"
         "| EVT-001 | interacted | onde é lido: `exp02ef1b_sessoes` + painel |\n"
         "Diretório `apps/experiencias/exp02ef1b/`.\n"
+        # Desde o corte A2 (23/09/2026) o plano de implementação também é conferido aqui:
+        # eram os TEC-07/08/09/10 que a banca cobrava do handoff, uma etapa antes de o PRD
+        # existir. PRD "limpo" passou a incluí-los.
+        "Porta em `apps/hub/lib/experiencias-dev.ts` (`strictPort`, `CORS_ORIGINS`).\n"
+        "Versão em `experiencia.json`, `package.json` e `EXP_VERSION` (`versao.test.ts`).\n"
+        "Walkthrough: `node scripts/e2e/rodar.mjs estudante`. Invariantes em `invariantes.ts`.\n"
     )
     assert validar_prd(limpo)["status"] == "aprovado", validar_prd(limpo)["achados"]
 
@@ -2344,3 +2301,78 @@ def test_catalogo_ficha_le_slug_ano_ambiente_e_descoberta_do_estado():
     assert f["descoberta"].startswith("Eu segui uma conta"), f["descoberta"]
     assert f["status"] == "bloqueada", "missão bloqueada entra no índice — senão a mesma ideia volta"
     print("   ✓ catálogo: ficha lê slug, ano, bimestre, ambiente, habilidade e descoberta da spec")
+
+
+def test_cortes_da_auditoria_de_23_09():
+    """Os cortes A2/A4/A8/A9 da auditoria de 23/09/2026, cada um com o caso real que o motivou.
+
+    Os três primeiros derrubam achado que nenhuma rodada de correção podia fechar; o quarto
+    põe no PRD uma pergunta que a banca fazia ao handoff — e que o PRD é quem responde.
+    """
+    from tools.rastro import validar_telemetria, validar_manifesto, validar_prd
+
+    base = (
+        "| Evento | Verbo xAPI | Objeto | resultado | contexto |\n"
+        "| E1 | interacted | `chat:amara` | `{\"ok\": true}` | `{\"n\": 1}` |\n"
+        "Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s. Grava em `exp08ef2b_sessoes`.\n"
+    )
+    # A4 — as cinco formas reais de descartar WebSocket nas 14 primeiras execuções
+    for forma in (
+        "Cloud Run é stateless e não sustenta conexões persistentes WebSocket com autoscaling.",
+        "/// Não usa WebSocket (ADR-93/94). Linha única por turma.",
+        "Comunicação síncrona operada unicamente por polling HTTP (proibição de WebSockets).",
+        "Relógio coletivo operado por polling. Não utiliza WebSocket.",
+        "Ratificado o uso exclusivo de polling, eliminando qualquer dependência de WebSockets.",
+    ):
+        r = validar_telemetria(base + forma + "\n")
+        assert r["status"] == "aprovado", (forma, r["achados"])
+    # …e propor de verdade continua sendo apontado
+    propoe = validar_telemetria(base + "A sala usa WebSocket dedicado para o relógio coletivo.\n")
+    assert {a["codigo"] for a in propoe["achados"]} == {"websocket-mencao"}, propoe["achados"]
+
+    # A8 — `liberacao` ausente é default; declarar outro valor é que reprova
+    sem_liberacao = _SPEC_MANIFESTO_OK.replace("- `liberacao: por-turma`\n", "")
+    assert validar_manifesto(sem_liberacao)["status"] == "aprovado", validar_manifesto(sem_liberacao)["achados"]
+    outra = _SPEC_MANIFESTO_OK.replace("- `liberacao: por-turma`", "- `liberacao: aberta`")
+    assert "liberacao" in {a.get("campo") for a in validar_manifesto(outra)["achados"]}
+
+    # A2 — o plano de implementação é conferido no PRD, com severidade de atenção
+    prd_sem_plano = "# PRD\n`exp06ef1b_sessoes` guarda a sessão.\n| RF-001 | P0 | T-001 |\n"
+    cods = {a["codigo"]: a["severidade"] for a in validar_prd(prd_sem_plano)["achados"]}
+    for esperado in ("plano-sem-porta", "plano-sem-versao", "plano-sem-e2e", "plano-sem-invariantes"):
+        assert cods.get(esperado) == "atencao", (esperado, cods)
+    prd_com_plano = prd_sem_plano + (
+        "Porta em `apps/hub/lib/experiencias-dev.ts` com `strictPort`. `EXP_VERSION` e `versao.test.ts`.\n"
+        "`node scripts/e2e/rodar.mjs estudante`. Invariantes em `invariantes.ts`.\n"
+    )
+    assert not [a for a in validar_prd(prd_com_plano)["achados"] if a["codigo"].startswith("plano-sem-")]
+
+    print("   ✓ cortes de 23/09: WebSocket descartado não é achado, liberação é default, plano de implementação confere no PRD")
+
+
+if __name__ == "__main__":
+    print("=" * 64)
+    print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")
+    print("=" * 64)
+    s = get_settings()
+    print(f"   modelo: {s.gemini_model} · Stitch MCP: {s.stitch_mcp_mode} · etapas: {s.pipeline_stages} · estrito: {s.produto_modo_estrito}")
+    # Descoberta automática: a lista literal ficou defasada (um nome inexistente
+    # derrubava a suíte inteira com NameError, e 25 dos 51 testes nunca rodavam).
+    # `globals()` é a fonte da verdade — teste novo entra sozinho.
+    tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
+    print(f"   {len(tests)} testes descobertos")
+    failed = 0
+    for t in tests:
+        try:
+            t()
+        except AssertionError as exc:
+            failed += 1
+            print(f"   ✗ {t.__name__}: {exc}")
+        except Exception as exc:  # noqa: BLE001
+            failed += 1
+            print(f"   ✗ {t.__name__}: {type(exc).__name__}: {exc}")
+    print("=" * 64)
+    if failed:
+        print(f"❌ {failed} teste(s) falharam")
+        sys.exit(1)
+    print("✅ TODOS OS TESTES ESTRUTURAIS PASSARAM")
