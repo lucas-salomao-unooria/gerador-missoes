@@ -1692,8 +1692,11 @@ def test_lint_do_one_pager_pega_os_erros_conhecidos():
 
     # Menção proibitiva não é uso: o one-pager que cita WebSocket para descartá-lo passa limpo.
     limpo = validar_one_pager(
-        "## 0. Identificação\n* Ano/série: [\"5EF\"]\n\n## 2. Currículo\n* EF05CO09 — Cultura Digital.\n\n"
-        "## 16. Requisitos técnicos e escopo\n* Sala sincronizada por polling HTTP em exp05ef1b_gates_turma; nunca WebSocket (ADR-93).\n"
+        # 6º ano, com o N/A do SAEB: desde 23/09/2026 o 5º ano sem descritor é amarelo, e este teste
+        # não é sobre SAEB — é sobre a menção proibitiva ao WebSocket não contar como uso.
+        "## 0. Identificação\n* Ano/série: [\"6EF\"]\n\n## 2. Currículo\n* EF06CO09 — Cultura Digital.\n"
+        "* **Descritor SAEB:** N/A — ano não avaliado pelo SAEB.\n\n"
+        "## 16. Requisitos técnicos e escopo\n* Sala sincronizada por polling HTTP em exp06ef1b_gates_turma; nunca WebSocket (ADR-93).\n"
     )
     assert limpo["status"] == "aprovado" and limpo["achados"] == []
     print("   ✓ lint do one-pager: WebSocket, estado de cliente, SAEB fora do ano e números sem origem viram achado antes do gate")
