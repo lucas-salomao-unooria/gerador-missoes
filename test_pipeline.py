@@ -3277,6 +3277,56 @@ def test_todo_agente_reexecutado_le_o_que_o_gate_pediu():
     print("   ✓ quem é reexecutado lê o ticket; todo gate que repete um loop tem um autor que o lê")
 
 
+
+def test_correcao_parcial_apaga_tudo_que_a_etapa_vai_regravar():
+    """Toda chave que um agente da etapa grava é apagada quando a correção recomeça dali.
+
+    Em 23/09/2026 seis gates novos tinham ficado fora das listas: o contador do juiz das perguntas
+    sobrevivia (a correção começava com as rodadas esgotadas) e o veredito da execução anterior
+    podia aparecer no dossiê da nova. Gate novo que nascer sem entrar na lista falha aqui.
+    """
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+    from pipeline.reexecucao import CHAVES_EXECUCAO, CHAVES_POR_ETAPA, ETAPA_PARA_STAGES
+
+    anteriores = {"spec": frozenset(), "design": CHAVES_POR_ETAPA["spec"] - CHAVES_POR_ETAPA["design"],
+                  "dev": CHAVES_POR_ETAPA["spec"] - CHAVES_POR_ETAPA["dev"]}
+    for etapa in ("spec", "design", "dev"):
+        escritas = set()
+        for _, a in iter_agent_tree(create_mission_orchestrator(stages=ETAPA_PARA_STAGES[etapa])):
+            if a.name in ("A50Diagnostico", "A51Aprendizado", "A52RegistroCatalogo"):
+                continue  # transversal: refeitos em toda execução
+            for attr in ("output_key", "report_key", "status_key", "round_key", "rodada_key"):
+                if getattr(a, attr, None):
+                    escritas.add(getattr(a, attr))
+            if getattr(a, "status_key", None):
+                escritas.add(a.status_key + "_envelope")
+        # o retrabalho da banca reescreve documentos de design: numa correção de dev eles são o
+        # insumo, e apagá-los apagaria o design
+        fora = escritas - CHAVES_POR_ETAPA[etapa] - CHAVES_EXECUCAO - anteriores[etapa]
+        assert not fora, f"correção a partir de `{etapa}` não apaga o que a etapa regrava: {sorted(fora)}"
+        rodadas = {k for k in escritas if "rodada" in k} - anteriores[etapa]
+        assert rodadas <= CHAVES_POR_ETAPA[etapa], f"contador de rodada sobrevive à correção: {sorted(rodadas)}"
+    assert "tickets_sem_rota" in CHAVES_EXECUCAO
+    print("   ✓ correção parcial apaga tudo que a etapa regrava, contadores de rodada inclusive")
+
+
+
+def test_criterios_da_rubrica_declaram_a_mesma_versao():
+    """Os quatro arquivos de critério da rubrica de produto dizem, no título, qual versão vale.
+    `criterios-experiencia.md` tinha as notas v1.18 e v1.19 e nenhum título dizendo qual das duas
+    estava em vigor — o único dos quatro que o versionamento de 22/09/2026 deixou de fora."""
+    import re as _re
+    from prompts import REFERENCES_DIR
+    versoes = {}
+    for nome in ("criterios-gate-estrutural.md", "criterios-pedagogicos.md",
+                 "criterios-experiencia.md", "criterios-gate-final.md"):
+        m = _re.search(r"Rubrica v(\d+\.\d+)", (REFERENCES_DIR / nome).read_text(encoding="utf-8").splitlines()[0])
+        versoes[nome] = m.group(1) if m else None
+    assert None not in versoes.values(), f"critério sem versão no título: {versoes}"
+    assert len(set(versoes.values())) == 1, f"versões divergentes: {versoes}"
+    print(f"   ✓ os quatro critérios da rubrica de produto declaram v{next(iter(versoes.values()))}")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")

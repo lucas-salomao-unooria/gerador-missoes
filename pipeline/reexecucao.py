@@ -49,6 +49,9 @@ CHAVES_DEV = frozenset({
     "dev_status", "dev_status_envelope", "banca_rodada",
     "prd_final", "prd_check_report", "prd_status", "prd_status_envelope", "prd_rodada",
     "one_pager_pedagogico",
+    # gate de KPI do PRD (23/09/2026): sem apagar, uma correção que caísse antes dele deixava
+    # no dossiê o veredito da execução anterior como se fosse desta
+    "kpis_report", "kpis_status", "kpis_status_envelope",
 })
 #: `miro_board` fica de fora de propósito: o espelho atualiza o mesmo board em vez de abrir outro.
 CHAVES_DESIGN = frozenset({
@@ -58,6 +61,7 @@ CHAVES_DESIGN = frozenset({
     "wireframes_cobertura", "copy_strings_revisada", "prototipo_html", "prototipo_arquivo",
     "prototipo_relatorio", "diagramas_html", "stitch_links", "miro_links",
     "qa_entregaveis_report", "design_status", "design_status_envelope", "qa_design_rodada",
+    "prototipo_lint_report", "prototipo_lint_status", "prototipo_lint_status_envelope",
 }) | CHAVES_DEV
 #: `spec_missao_gate0` tem de cair: o split do D0 só grava esse backup se ele não existir
 #: (`agents/checkers.py`, SecaoSplitAgent) — senão a spec velha seria preservada como "original".
@@ -65,13 +69,20 @@ CHAVES_SPEC = frozenset({
     "spec_missao", "spec_missao_gate0", "spec_rodada",
     "bncc_report", "bncc_status", "bncc_status_envelope",
     "one_pager_resumido",
+    # gates da spec criados em 22–23/09/2026. `juiz_perguntas_rodada` é o que doía: sem apagar,
+    # a correção começava com as rodadas do juiz já esgotadas e não havia rodada de correção.
+    "evidencia_report", "evidencia_status", "evidencia_status_envelope",
+    "perguntas_report", "perguntas_status", "perguntas_status_envelope",
+    "juiz_perguntas_report", "juiz_perguntas_status", "juiz_perguntas_status_envelope",
+    "juiz_perguntas_rodada",
 }) | CHAVES_DESIGN
 CHAVES_TRANSVERSAL = frozenset({
     "diagnostico_execucao", "diagnostico_status", "diagnostico_status_envelope", "aprendizado_registro",
 })
 #: Contadores da execução anterior. `reexecucoes` é o orçamento de retrabalho da banca: sem zerar,
 #: uma sessão que já gastou o teto chega à correção sem direito a conserto.
-CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", KEY_AGENTES_DEGRADADOS})
+#: `tickets_sem_rota` acumula: sem zerar, o dossiê da correção listaria pendências da execução velha.
+CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_rota", KEY_AGENTES_DEGRADADOS})
 
 CHAVES_POR_ETAPA: Dict[str, frozenset] = {
     "spec": CHAVES_SPEC,
