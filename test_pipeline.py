@@ -2652,6 +2652,18 @@ def test_conteudo_imersao_e_escola_publica():
     # F1 — não havia NENHUMA linha de acessibilidade contável na esteira: era texto sem verificação
     assert "4,5:1" in qa and "Ordem de foco" in qa, "contraste e ordem de foco não são contáveis"
     assert "64×64" in qa, "o alvo de toque já existia e não pode ter saído"
+    # A-01 (auditoria de 23/09/2026): as linhas contáveis viviam dentro da D8b, que só roda
+    # com CAA `concluido` — 4 das 14 missões medidas saíram sem nenhuma verificação. Elas têm de
+    # estar numa dimensão que roda sempre, e a D8b não pode voltar a ser a única dona delas.
+    import re as _re
+    d4a = _re.search(r"\*\*D4a — Acessibilidade.*?(?=\n\*\*D5 —)", qa, _re.S)
+    assert d4a, "a dimensão de acessibilidade de toda missão (D4a) sumiu"
+    for linha in ("4,5:1", "64×64", "Ordem de foco", "nada-so-por-cor"):
+        assert linha in d4a.group(0), f"{linha} saiu da D4a"
+    assert "Roda sempre" in d4a.group(0)
+    d8b = _re.search(r"\*\*D8b — Camada CAA.*?(?=\n\n)", qa, _re.S).group(0)
+    assert "4,5:1" not in d8b, "o contraste voltou a depender da camada CAA"
+    assert "D4a" in qa.split("## Veredito por dimensão")[1], "a D4a não aparece no template de saída"
 
     # F4 — o micro-gate testa spoiler no núcleo e nada testava depois: copy, tela e protótipo
     # podiam entregar de graça o que a missão existe para a criança descobrir

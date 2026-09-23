@@ -113,7 +113,7 @@ rebaixa nada. Decida assim, e só assim:
 
 | Veredito | Condição |
 |---|---|
-| 🟢 **APROVADO** | Nenhum ❌ em dimensão obrigatória (D1–D8c). Ressalvas de ofício (O1–O5) podem existir se estiverem nomeadas. |
+| 🟢 **APROVADO** | Nenhum ❌ em dimensão obrigatória (D1–D8c, incluída a D4a de acessibilidade). Ressalvas de ofício (O1–O5) podem existir se estiverem nomeadas. |
 | 🟡 **APROVADO COM RESSALVAS** | Nenhum ❌ obrigatório, mas há ⚠️ que o agente a jusante consegue contornar, ou pendência humana herdada da spec. A esteira segue; a ressalva fica visível. |
 | 🔴 **RETRABALHO** | Qualquer ❌ em dimensão obrigatória, **ou** a inversão de hierarquia da tela `pico` (O1). Emita o ticket com dono e o que fazer. |
 | ⛔ **DEVOLVIDO AO PRODUTO** | O defeito está na spec, não na construção: o design fez o que a spec mandava e a spec está errada. Nunca use isto para defeito de tela. |
@@ -151,6 +151,14 @@ Colete toda lacuna aberta declarada nos relatórios de **fechamento de lacunas, 
 
 **D4 — Adequação etária nas telas reais.** Teto de palavras por string; redundância ícone+áudio em anos iniciais; recontagem de decisões do mesmo tipo somando todos os frames vs cap; scaffolding no primeiro uso; duração dos atos com a leitura construída; densidade visual vs tetos de elementos.
 
+**D4a — Acessibilidade, em toda missão.** Roda sempre, com ou sem camada CAA: nenhuma destas linhas depende de a criança usar comunicação alternativa. Quatro contagens sobre o frame construído, cada uma com o trecho citado:
+1. **Contraste de texto ≥ 4,5:1** (≥ 3:1 em texto grande e em ícone que carrega significado) — conte os pares cor de texto × fundo usados nos frames e liste os que ficam abaixo.
+2. **Alvo de toque ≥ 64×64** (≥ 88×88 na projeção) e vão ≥ 16 px entre alvos vizinhos — conte os acionáveis abaixo do mínimo.
+3. **Ordem de foco segue a ordem de leitura**, e toda decisão é alcançável por teclado — percorra a tela `pico` e cada tela com decisão.
+4. **Nada comunicado só por cor** (`nada-so-por-cor`, `defaults-missao.md`) — estado, erro, seleção e feedback têm um segundo sinal (forma, texto, ícone).
+
+Qualquer uma abaixo do mínimo é ❌ com dono `telas`. Até 23/09/2026 estas linhas viviam dentro da D8b, que só roda quando a camada CAA é `concluido`: 4 das 14 missões medidas declararam `nao_aplicavel` e saíram sem **nenhuma** verificação de acessibilidade — justamente as do 6º ano em diante, onde o desenho fica mais denso.
+
 **D5 — Fluxo.** 6 etapas na ordem com checkpoints modulares e salvamento de estado; permanência no ambiente etapa a etapa (especialmente Resultado e Explicar); caminhos diferentes chegam a telas diferentes; Aha com affordance nativa; reflexão com cenário novo; sem dead end; estados de erro e espera existem; 3 cenários de dispositivo construídos.
 
 **D6 — Controle do professor.** As cinco telas do preparo (`E0-PROF-01…05`: escolher a missão, recorte da aula com disciplina/tema/assuntos, geração em andamento, curadoria do pacote, ativar) construídas **no Stitch e no protótipo** — verifique na folha `stitch_links` e no trilho do protótipo, não só na jornada; tela do professor ausente do Stitch é ⛔ com dono `telas`. O fluxo do professor existe como segundo grafo no documento de fluxo e aparece no board do Miro (folha `miro_links`); ausência é ticket com dono `fluxo`. Botão de ativação do banco curado padrão, e o **caminho curto** `E0-PROF-01 → 02 → 05` ("usar banco padrão", pulando geração e curadoria) presente como aresta própria no segundo grafo do fluxo — ausência é ticket com dono `fluxo`; em missão de 1º–5º, o banco padrão é a primeira ação visível de `E0-PROF-02` (4.3, teste de posição), senão ticket com dono `telas`; gatilho em tela e comportamento da plataforma durante a mediação e pausas em sala; controle de avanço e congelamento de tela; dashboard com os dados da raia de evidência (nada além, nada a menos); roteiro ≥ 3 perguntas; nenhuma comparação nominal; nenhuma métrica como avaliação formal.
@@ -176,7 +184,7 @@ Colete toda lacuna aberta declarada nos relatórios de **fechamento de lacunas, 
 - **Registros de voz:** o sheet marca `unooria` em **todas** as strings do jogo, inclusive as do personagem-guia? String de mini-jogo marcada como `clone` é ❌ com dono `copy-ptbr-revisao` — não existe plataforma simulada para falar.
 - **Cap:** a contagem de decisões recontada com as fases continua dentro do teto do bloco 6?
 
-**D8b — Camada CAA.** Só quando o `camada_caa` vier `concluido`. Cada decisão do mapa tem modo de resposta alternativo construído no frame? Um conceito, um símbolo, na missão inteira? Alvo de toque ≥ 64×64 (≥ 88×88 na projeção) e vão ≥ 16 px? **Contraste de texto ≥ 4,5:1 (≥ 3:1 em texto grande e em ícone que carrega significado)? Ordem de foco segue a ordem de leitura, e toda decisão é alcançável sem depender de cor** — as três são contáveis sobre o frame, e não havia nenhuma linha de acessibilidade contável na esteira: eram texto sem verificação. Botão de áudio é componente e não caixa cinza? Cada símbolo acionável tem chave de áudio que existe no sheet da passada 2? **Prancha CAA dentro do clone é ❌ por DES-13.** Nenhum marcador no dashboard distingue "respondeu por CAA" (8.4) — se houver, é ❌. Se `camada_caa` vier `nao_aplicavel`, verifique só se a condição de não-aplicação declarada bate com a faixa da spec; se bater, D8b fecha ✅ com nota.
+**D8b — Camada CAA.** Só quando o `camada_caa` vier `concluido`. Cada decisão do mapa tem modo de resposta alternativo construído no frame? Um conceito, um símbolo, na missão inteira? O modo alternativo cumpre os mínimos da D4a **também na rota não-leitora** — um símbolo acionável de 48 px é ❌ aqui mesmo que a rota leitora passe. Botão de áudio é componente e não caixa cinza? Cada símbolo acionável tem chave de áudio que existe no sheet da passada 2? **Prancha CAA dentro do clone é ❌ por DES-13.** Nenhum marcador no dashboard distingue "respondeu por CAA" (8.4) — se houver, é ❌. Se `camada_caa` vier `nao_aplicavel`, verifique só se a condição de não-aplicação declarada bate com a faixa da spec; se bater, D8b fecha ✅ com nota.
 
 **Gate de ofício (O1–O5).** Aplique a régua abaixo contra a direção por tela da jornada, em telas `pico`/`alta`. Achado O1–O5 sai com `severidade: "oficio"`, **exceto a inversão de hierarquia**: tela `pico` com mais elementos do que qualquer vizinha na ordem do arco sai com `severidade: "bloqueio"`, `codigo: "O1"`, `agente_responsavel: "jornada"`. A contagem é a da coluna "Teto de elementos (contado)" da Seção 4 da jornada, conferida sobre o frame construído, não sobre a intenção; empate é `oficio`. É a única regra de ofício que bloqueia hoje, porque é comparativa e não depende de teto calibrado:
 
@@ -222,7 +230,7 @@ Na **última rodada permitida**, não adianta endereçar ticket esperando corre�
 **Inspeção:** Stitch conferido | documental
 
 ## Pré-check de lacunas
-## Veredito por dimensão: D1 · D1b · D2 · D3 · D4 · D5 · D6 · D6b · D7 · D8 · D8b · D8c · Ofício O1–O5
+## Veredito por dimensão: D1 · D1b · D2 · D3 · D4 · D4a · D5 · D6 · D6b · D7 · D8 · D8b · D8c · Ofício O1–O5
 ## Matriz D1 (tela a tela)
 ## D1b — contagem do diff de strings (ou `não verificado — n nós: —`, sem percentual)
 ## Tickets (gabarito ID · dimensão · severidade · agente · ONDE · O QUÊ · POR QUÊ · COMO)
