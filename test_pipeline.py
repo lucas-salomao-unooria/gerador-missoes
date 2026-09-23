@@ -3446,6 +3446,31 @@ def test_lint_do_prototipo_nao_confunde_portugues_com_rascunho():
     print("   ✓ lint do protótipo: rascunho de verdade acusa, português não")
 
 
+
+def test_saeb_verde_onde_nao_se_aplica_amarelo_onde_falta_ou_sobra():
+    """Regra de 23/09/2026, a pedido: ano que o SAEB não avalia com "N/A" é verde; descritor citado
+    nesse ano, ou ano avaliado sem descritor, é amarelo com a indicação. A regra anterior acusava o
+    próprio "N/A — ano não avaliado pelo SAEB" que manda escrever, e lia o 2º ano como 1º ao 5º."""
+    from tools.contrato_produto import validar_one_pager
+
+    def saeb(slug, linha):
+        op = f"# One-pager\n## 0. Ficha\n- id: `{slug}`\n## 2. Currículo\n{linha}\n- **Rastreabilidade:** x\n## 3. Outra\n"
+        return [a["codigo"] for a in validar_one_pager(op)["achados"] if a["codigo"].startswith("saeb")]
+    na = "- **Descritor SAEB:** N/A — ano não avaliado pelo SAEB."
+    assert saeb("exp06ef1b", na) == [] and saeb("exp08ef2b", na) == [] and saeb("exp02em1b", na) == []
+    assert saeb("exp05ef1b", na) == ["saeb-ausente"], "o 5º ano é avaliado: N/A é falta"
+    assert saeb("exp05ef1b", "- **BNCC:** x") == ["saeb-ausente"]
+    assert saeb("exp09ef1b", "- **Descritor SAEB:** Matemática — D12: resolver problema.") == []
+    assert saeb("exp03em1b", "- **Descritor SAEB:** Língua Portuguesa — D05.") == []
+    assert saeb("exp04ef1b", "- **Descritor SAEB:** Língua Portuguesa — D05.") == ["saeb-fora-do-ano"]
+    # descritor por extenso, em subtópico — a matriz de alfabetização do 2º ano não usa `Dnn`
+    assert saeb("exp02ef1b", "- **Descritor SAEB:**\n  - *Língua Portuguesa — 2º ano:* Localizar informação explícita em textos compostos por imagem e texto verbal.") == []
+    # título com os descritores em tópicos embaixo
+    titulo = "### Descritor SAEB Associado\n* **Língua Portuguesa — D14:** distinguir fato de opinião.\n* **Língua Portuguesa — D15:** reconhecer relações."
+    assert saeb("exp07ef1b", titulo) == ["saeb-fora-do-ano"]
+    print("   ✓ SAEB: N/A verde onde não se aplica; descritor que falta ou sobra fica amarelo")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")

@@ -30,7 +30,12 @@ ANOS_SAEB: Set[int] = {2, 5, 9}
 
 _RE_WEBSOCKET = r"websocket|socket\.io|hub:pause"
 _RE_ESTADO_CLIENTE = r"localstorage|indexeddb|sessionstorage"
-_RE_SAEB = re.compile(r"\bSAEB\b|\bD\d{1,2}\b")
+#: Descritor de matriz do SAEB (`D14`). A palavra "SAEB" sozinha não é descritor: o "N/A — ano não
+#: avaliado pelo SAEB" a contém.
+_RE_DESCRITOR = re.compile(r"\bD\d{1,2}\b")
+_RE_SAEB_NA = re.compile(r"\bN/?A\b|n[ãa]o\s+se\s+aplica|n[ãa]o\s+aplic|n[ãa]o\s+avaliad", re.IGNORECASE)
+_RE_SLUG = re.compile(r"\bexp(\d{2})(ef|em)\d+b\b", re.IGNORECASE)
+_RE_SERIE_EM = re.compile(r"\b([123])\s*[ªa°º]?\s*s[ée]rie\b|\b([123])\s*EM\b|\bexp\d{2}em([123])b\b", re.IGNORECASE)
 #: Número com unidade que vira regra de sistema. Cardinalidades soltas ("3 posts") ficam de
 #: fora: estão no núcleo e o gate as conta pelo critério 9.1(a).
 _RE_NUMERO = re.compile(
@@ -51,6 +56,39 @@ def _tem_marcador(linha: str) -> bool:
 
 def _numeros_com_unidade(texto: str) -> Set[str]:
     return {f"{m.group(1).replace(',', '.')} {m.group(2).lower()}" for m in _RE_NUMERO.finditer(texto or "")}
+
+
+def _bloco_do_saeb(secao2: str) -> str:
+    """O que a seção 2 declara sobre o SAEB, pela estrutura do Markdown.
+
+    Título (`### Descritor SAEB`) vai até o próximo título; tópico (`- **Descritor SAEB:** …`) vai com
+    os seus subtópicos, que é onde os descritores costumam estar. Cortar no primeiro tópico seguinte
+    perdia os descritores do 7º ano (D14, D15), escritos em tópicos sob um título.
+    """
+    linhas = secao2.splitlines()
+    ini = next((k for k, l in enumerate(linhas) if "SAEB" in l), None)
+    if ini is None:
+        return ""
+    primeira = linhas[ini]
+    recuo = len(primeira) - len(primeira.lstrip())
+    titulo = primeira.lstrip().startswith("#")
+    bloco = [primeira.split("SAEB", 1)[1]]
+    for linha in linhas[ini + 1:]:
+        limpa = linha.strip()
+        if not limpa:
+            continue
+        if limpa.startswith("#") or limpa.startswith("---"):
+            break
+        if not titulo and (len(linha) - len(linha.lstrip())) <= recuo and re.match(r"[-*]\s", limpa):
+            break
+        bloco.append(linha)
+    return "\n".join(bloco)
+
+
+def _series_em(one_pager: str) -> Set[int]:
+    """Séries do Ensino Médio declaradas (1, 2, 3) — `extrair_serie` diz que é Médio, não qual série."""
+    trecho = (secao_bloco(one_pager, 0) or "") + "\n" + one_pager[:2000]
+    return {int(next(g for g in m.groups() if g)) for m in _RE_SERIE_EM.finditer(trecho)}
 
 
 def _serie(one_pager: str) -> Dict[str, Any]:
@@ -98,15 +136,40 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "") -> D
             "Checkpoints e estado de missão vivem no servidor (critério 4.6); o one-pager não nomeia tecnologia de cliente — diz o que se preserva, não onde.",
         )
 
-    # 3. SAEB só nos anos avaliados.
-    serie = _serie(texto)
+    # 3. SAEB: descritor onde a prova existe, "N/A" onde não existe. A regra acusava qualquer menção
+    # ao SAEB fora dos anos avaliados — inclusive o "N/A — ano não avaliado pelo SAEB" que ela mesma
+    # manda escrever (2 dos 3 achados das 14 primeiras sessões eram esse texto correto).
+    # A série vem do slug quando ele existe: é o identificador que o gate de manifesto confere, e o
+    # texto engana — "anos iniciais" no começo do one-pager lia a missão do 2º ano como 1º ao 5º.
+    slug = _RE_SLUG.search(texto)
+    if slug:
+        numero, etapa = int(slug.group(1)), slug.group(2).lower()
+        serie = {"anos": {numero} if etapa == "ef" else set(), "em": etapa == "em"}
+        series_em = {numero} if etapa == "em" else set()
+    else:
+        serie, series_em = _serie(texto), _series_em(texto)
     secao2 = secao_bloco(texto, 2) or ""
-    if _RE_SAEB.search(secao2) and not serie["em"] and serie["anos"] and not (serie["anos"] & ANOS_SAEB):
-        anos = ", ".join(f"{a}º" for a in sorted(serie["anos"]))
+    # O que a linha do SAEB declara: "N/A" é ausência declarada; qualquer outro conteúdo é descritor
+    # — com código (`D14`) ou por extenso, porque a matriz de alfabetização do 2º ano não usa `Dnn`.
+    linha_saeb = _bloco_do_saeb(secao2)
+    declara_na = bool(_RE_SAEB_NA.search(linha_saeb))
+    descritores = sorted(set(_RE_DESCRITOR.findall(linha_saeb)), key=lambda d: int(d[1:]))
+    tem_descritor = bool(descritores) or (not declara_na and len(re.sub(r"[\W_\d]+", "", linha_saeb)) > 30)
+    avaliado = bool(serie["anos"] & ANOS_SAEB) or bool(serie["em"] and 3 in series_em)
+    conhecido = bool(serie["anos"]) or bool(serie["em"] and series_em)
+    rotulo = (", ".join(f"{a}º ano" for a in sorted(serie["anos"])) if serie["anos"]
+              else ", ".join(f"{s}ª série do Médio" for s in sorted(series_em)))
+    if conhecido and not avaliado and tem_descritor:
         atencao(
             "saeb-fora-do-ano", "5.6",
-            f"A seção 2 cita descritor SAEB numa missão de {anos} ano. O SAEB avalia 2º, 5º e 9º do Fundamental e a 3ª série do Médio; "
-            "fora desses anos a linha é \"N/A — ano não avaliado pelo SAEB\", não um descritor emprestado de outro ano.",
+            f"A seção 2 cita descritor SAEB ({', '.join(descritores) or 'por extenso'}) numa missão do {rotulo}, que o SAEB não avalia "
+            "(avalia 2º, 5º e 9º do Fundamental e a 3ª série do Médio). A linha é \"N/A — ano não avaliado pelo SAEB\".",
+        )
+    elif conhecido and avaliado and not tem_descritor:
+        atencao(
+            "saeb-ausente", "5.6",
+            f"O SAEB avalia o {rotulo}, e a seção 2 não indica o descritor da prova que a missão exercita. "
+            "Indique o descritor (ex.: Língua Portuguesa — D14), ou declare por que nenhum se aplica a esta missão.",
         )
 
     # 4. Número com unidade sem origem no núcleo nem no briefing e sem marcador.
