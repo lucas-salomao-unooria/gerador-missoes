@@ -57,11 +57,11 @@ Falha → ❌ citando a pergunta, a ação e o campo, e diga qual campo faltaria
 
 ## J4 — É desta missão, não uma transversal repintada
 
-As transversais (T1–T8) toda missão já herda: conclusão, tempo, retorno, falha, custo. Uma PQ que só reescreve uma delas ocupa uma das cinco vagas sem acrescentar nada.
+As transversais (T1–T21, a lista do PO) toda missão já herda: entrada, abandono por etapa, tempo, espera, falha, preparo do professor, retorno ao resultado, custo. Uma PQ que só reescreve uma delas ocupa uma das cinco vagas sem acrescentar nada.
 
 **Como testar:** existe uma transversal que, respondida, já responde esta? Se sim → ❌, e diga qual (Tn).
 
-Exceção legítima: a PQ **especializa** a transversal num ponto próprio da mecânica desta missão («em qual das três abas o abandono se concentra?» não é T1).
+Exceção legítima: a PQ **especializa** a transversal num ponto próprio da mecânica desta missão («em qual das três abas o abandono se concentra?» não é T8).
 
 ## Regra de decisão
 

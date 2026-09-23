@@ -2714,16 +2714,23 @@ def test_kpi_aponta_para_algo_que_o_mede():
     O `telemetria-check` deu verde em cinco dessas sessões: confere o formato do evento, não
     se o KPI fecha com ele.
     """
-    from tools.kpis import validar_kpis, extrair_perguntas_do_briefing
+    from tools.kpis import validar_kpis, extrair_perguntas_do_briefing, catalogo, sinais_exigidos
 
+    # os sinais universais das transversais de dono `missao`, copiados do catálogo como o redator faria
+    universais = "".join(
+        f"| {s} | {catalogo()['sinais'][s].get('verbo', '—')} | "
+        f"{catalogo()['sinais'][s]['objeto'].replace('<expId>', 'exp06ef1b')} | catálogo "
+        f"| `{{\"x\": 1}}` | — | painel de produto (PostHog) |\n"
+        for s in sorted(sinais_exigidos(False)))
     bom = ("## 2. Objetivos\n"
            "| KPI | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |\n"
            "|---|---|---|---|---|---|---|---|---|---|\n"
            "| KPI-01 | quantas turmas chegam ao fim? | <50% encurta | missao · serie | E3-ALU-02 | EVT-005 "
            "| count(EVT-005) | sem baseline — primeira medição | 70% | 2 meses |\n"
            "## 13. Eventos\n"
-           "| EVT | Quando dispara | resultado | contexto | Onde é lido |\n|---|---|---|---|---|\n"
-           "| EVT-005 | Toque em Salvar, na tela E3-ALU-02 | `{\"ok\": true}` | `{\"ms\": 1}` | `exp06ef1b_sessoes` |\n")
+           "| EVT | Verbo | Objeto | Quando dispara | resultado | contexto | Onde é lido |\n|---|---|---|---|---|---|---|\n"
+           "| EVT-005 | interacted | mural:salvar | Toque em Salvar, na tela E3-ALU-02 | `{\"ok\": true}` | `{\"ms\": 1}` | `exp06ef1b_sessoes` |\n"
+           + universais)
     assert validar_kpis(bom)["status"] == "aprovado", validar_kpis(bom)["achados"]
 
     def cods(txt):
@@ -2742,6 +2749,27 @@ def test_kpi_aponta_para_algo_que_o_mede():
     assert "kpi-evento-inexistente" in cods(bom.replace("| EVT-005 | count", "| EVT-099 | count"))
     assert "leitura-sem-leitor" in cods(bom.replace("`exp06ef1b_sessoes` |", "`/telemetry/batch` |"))
     assert "kpi-aponta-tabela-ou-rota" in cods(bom.replace("| EVT-005 | count", "| `exp06ef1b_sessoes` | count"))
+
+    # a mensagem traz a saída, não só o erro (a rodada 2 de 23/09 deixou os dois que não traziam)
+    msg = [a["resumo"] for a in validar_kpis(bom.replace("na tela E3-ALU-02", "na tela E3-ALU-01"))["achados"]
+           if a["codigo"] == "kpi-tela-divergente"][0]
+    assert "Nenhum evento da tabela dispara nessa tela" in msg, msg
+    msg = [a["resumo"] for a in validar_kpis(bom.replace("count(EVT-005)", "count(contexto.detalhes)"))["achados"]
+           if a["codigo"] == "payload-nao-computa"][0]
+    assert "`ms`" in msg and "Coluna de tabela do módulo não é campo do evento" in msg, msg
+
+    # o catálogo: sinal universal ausente, reaproveitado para outro evento, e KPI herdado com evento próprio
+    assert "sinal-universal-ausente" in cods(bom.replace("| EVT-U04 |", "| EVT-904 |"))
+    assert "sinal-universal-divergente" in cods(bom.replace("etapa:entrar", "sessao:iniciar"))
+    herdado = ("\n| KPI | PQ | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |\n"
+               "|---|---|---|---|---|---|---|---|---|---|---|\n"
+               "| KPI-02 | T7 | De cada X turmas liberadas, quantas chegam ao fim da missão? | <50% encurta | missao "
+               "| — | {evt} | turmas com EVT-U03 / turmas com EVT-U01 | sem baseline — primeira medição | 70% | 2 meses |\n\n")
+    com = lambda evt, t="T7": bom.replace("## 13. Eventos", herdado.format(evt=evt).replace("T7", t) + "## 13. Eventos")
+    assert validar_kpis(com("EVT-U01, EVT-U03"))["status"] == "aprovado", validar_kpis(com("EVT-U01, EVT-U03"))["achados"]
+    assert "kpi-herdada-evento" in cods(com("EVT-U01, EVT-005")), "o caso de 23/09: a lupa medindo T1"
+    assert "kpi-herdada-plataforma" in cods(com("EVT-U01", t="T1"))
+    assert "kpi-herdada-inexistente" in cods(com("EVT-U01", t="T30"))
 
     # o PO escreve em português; a esteira normaliza
     tabela = extrair_perguntas_do_briefing(
@@ -2843,7 +2871,7 @@ def test_agentes_novos_rodam_de_ponta_a_ponta():
 _SPEC_9F = """
 - `declared_lessons: 1`
 - `core_action: scored decisao:mural`
-- `perguntas_herdadas: T1, T2, T4`
+- `perguntas_herdadas: T7, T8, T9, T10, T11, T12, T14, T15, T16, T17, T19, T20`
 
 | PQ | Pergunta | Decisão que dispara | Corte | Etapa | Ação (verbo:objeto) | Origem |
 |---|---|---|---|---|---|---|
@@ -2860,6 +2888,10 @@ _SPEC_9F = """
 | interacted | aba:fontes | ao abrir a aba | {"aberta": true} | — | analítico | exp09ef1b_sessoes |
 | attempted | decisao:mural | a cada troca | {"trocas": 2} | — | analítico | exp09ef1b_sessoes |
 | opened | painel:professor | ao abrir o painel | {"aberto": true} | — | analítico | exp09ef1b_gates_turma |
+| attempted | missao:iniciar | primeira tela do estudante | {"retomada": false} | {"etapa": "E1"} | analítico | painel de produto (PostHog) |
+| progressed | etapa:entrar | ao entrar em cada etapa | {"etapa": "E2"} | {"pedagogical_role": "core_action"} | analítico | painel de produto (PostHog) |
+| interacted | aviso:inatividade | ao exibir o aviso | {"segundos_sem_acao": 90} | {"etapa": "E2"} | analítico | painel de produto (PostHog) |
+| attempted | erro:exibir | ao exibir erro diegético | {"codigo": "sem-sinal"} | {"etapa": "E2"} | analítico | painel de produto (PostHog) |
 """
 
 
@@ -2902,7 +2934,16 @@ def test_perguntas_de_produto_9f():
     sem_core = validar_9f(_SPEC_9F.replace("`core_action: scored decisao:mural`", "`core_action: scored decisao:fantasma`"))
     assert any(a["codigo"] == "core-action-sem-evento" for a in sem_core["achados"])
 
-    print("   ✓ 9f: cinco perguntas, decisão com limiar, ação que existe no bloco 9 e mede")
+    # As transversais do PO: as de dono `missao` são herdadas inteiras, as de `plataforma` não se
+    # declaram, e o evento universal do estudante nasce no bloco 9 com o verbo e o objeto do catálogo.
+    def cods(txt):
+        return [a["codigo"] for a in validar_9f(txt)["achados"]]
+    assert "herdada-plataforma" in cods(_SPEC_9F.replace("T7, T8,", "T1, T7, T8,"))
+    assert "herdada-faltando" in cods(_SPEC_9F.replace("T7, T8,", "T8,"))
+    assert "herdada-inexistente" in cods(_SPEC_9F.replace("T7, T8,", "T30, T7, T8,"))
+    assert "sinal-universal-ausente" in cods(_SPEC_9F.replace("| progressed | etapa:entrar |", "| progressed | etapa:outra |"))
+
+    print("   ✓ 9f: cinco perguntas, decisão com limiar, ação que existe no bloco 9 e mede; herdadas e sinais do catálogo")
 
 
 def test_kpis_cruza_o_prd_com_a_spec():

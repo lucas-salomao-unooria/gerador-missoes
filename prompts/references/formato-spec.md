@@ -168,7 +168,7 @@ sobre ela como produto — separado do que o professor lê sobre a turma. Três 
 ```
 - `declared_lessons: 1`        (quantas aulas a missão ocupa; 1, 2 ou fracionada→2)
 - `core_action: scored decisao:mural`   (o verbo:objeto que É a decisão central; um só)
-- `perguntas_herdadas: T1, T2, T3, T4, T7`
+- `perguntas_herdadas: T7, T8, T9, T10, T11, T12, T14, T15, T16, T17, T19, T20`   (as de dono `missao`; + T21 se a IA responde ao estudante)
 
 | PQ | Pergunta | Decisão que dispara | Corte | Etapa | Ação (verbo:objeto) | Origem |
 |---|---|---|---|---|---|---|
@@ -179,6 +179,11 @@ sobre ela como produto — separado do que o professor lê sobre a turma. Três 
 **por desenho**, e as melhores são lidas como as piores. `core_action` é o que separa "o aluno
 passou pela decisão" de "o aluno abriu a missão". `Origem` é `PO` quando veio do briefing, e
 `[PROPOSTA — validar com PO]` quando o agente propôs: proposta não bloqueia, mas fica visível.
+
+`perguntas_herdadas` não é escolha: são as transversais de dono `missao` do catálogo abaixo, e
+cada uma cobra seus sinais. A tabela de eventos do bloco 9 traz as linhas dos eventos universais
+do estudante (`EVT-U*`) **com o verbo e o objeto do catálogo, sem adaptar**, e o DDL traz as
+colunas dos sinais do professor (`EVT-P*`) nas tabelas do módulo. Um gate confere os dois.
 
 <!-- include: references/perguntas-de-produto.md -->
 

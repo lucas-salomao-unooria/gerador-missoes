@@ -48,7 +48,7 @@ guardrail metrics (o que não pode piorar) · hipóteses de validação.
 ```
 | KPI | PQ | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |
 |---|---|---|---|---|---|---|---|---|---|---|
-| KPI-01 | T2 | quantas turmas chegam ao fim? | <50% → encurtar ou dividir | missao · serie | — | `EVT-U02`, `EVT-U09` | turmas com `EVT-U09` / turmas com `EVT-U02` | sem baseline — primeira medição | ≥ 70% | 2 meses |
+| KPI-01 | T7 | De cada X turmas liberadas, quantas chegam ao fim da missão? | Menos da metade → encurtar ou dividir | missao · serie | — | `EVT-U01`, `EVT-U03` | turmas com `EVT-U03` / turmas com `EVT-U01` | sem baseline — primeira medição | ≥ 70% | 2 meses |
 | KPI-02 | PQ-01 | ... | ... | turma | `E3-ALU-02` | `EVT-005` | count(`EVT-005` com `contexto.tempo_ms` ≥ 120000) | 45% (playtest 12/08, n=23) | ≥ 80% | piloto |
 ```
 
@@ -60,7 +60,13 @@ alimentado por evento de outra, e o número saía parecendo certo; `Baseline` tr
 medida (20 dos 49 tinham `0%`); `Como calcula` cita os campos de `resultado`/`contexto` que o
 evento de fato carrega.
 
-KPI transversal (herdado de `T1`–`T8`) usa `Tela: —` e eventos `EVT-U*`.
+KPI transversal (herdado de uma `T` de dono `missao` do catálogo de `perguntas-de-produto.md`)
+usa `Tela: —`, **a pergunta da transversal com as palavras dela**, e **só os sinais que o catálogo
+lista para ela** — nunca um evento próprio da mecânica, mesmo que pareça próximo. As de dono
+`plataforma` (T1–T6, T13, T18) não viram KPI da missão: a missão não tem o dado. As
+transversais não precisam de KPI próprio; o que a missão deve a elas é que **a tabela de eventos
+da seção 13 traga todos os sinais universais** (`EVT-U*` e `EVT-P*`) com o id, o verbo e o objeto
+do catálogo. Os ids `EVT-U*`/`EVT-P*` são reservados: evento da mecânica é `EVT-001`, `EVT-002`…
 
 
 # 3. Não-objetivos e fora de escopo

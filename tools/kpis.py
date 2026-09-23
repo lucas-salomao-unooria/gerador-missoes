@@ -16,19 +16,23 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 AGENTE = "kpis-check"
 
 _RE_KPI = re.compile(r"\bKPI-?\d{1,3}\b", re.IGNORECASE)
-_RE_EVT = re.compile(r"\bEVT-U?\d{1,3}\b", re.IGNORECASE)
+_RE_EVT = re.compile(r"\bEVT-[UP]?\d{1,3}\b", re.IGNORECASE)
+_RE_T = re.compile(r"\bT(\d{1,2})\b")
+_CANON = Path(__file__).resolve().parent.parent / "prompts" / "references" / "perguntas-de-produto.md"
 _RE_TELA = re.compile(r"\bE[0-6]-(?:ALU|PROF|SIS)-\d{2}\b")
 _RE_ETAPA = re.compile(r"\bE[0-6]\b")
 _RE_BASELINE_ZERO = re.compile(r"^\s*\**\s*\$?\s*0\s*\\?%", re.I)
 _RE_SEM_BASELINE = re.compile(r"sem baseline", re.I)
 _RE_ORIGEM = re.compile(r"\(([^)]{4,})\)")
 _RE_TABELA_OU_ROTA = re.compile(r"\bENT-\d|\bexp_?\d{2}_?e[fm]\d?b?_|GET\s+/|POST\s+/|\bRota\b", re.I)
-_CORTES = {"rede", "escola", "missao", "serie", "turma", "professor"}
+_CORTES = {"rede", "escola", "missao", "serie", "turma", "professor", "etapa", "aluno", "disciplina"}
 #: Os dois leitores possíveis de um evento — o mesmo nos dois gates (`kpis-check` e `prd-check`).
 LEITOR_VALIDO = r"exp_?\d{2}_?e[fm]\d?b?_\w+|posthog|painel\s+de\s+produto"
 MENSAGEM_LEITOR = ("Pub/Sub, `/telemetry/batch` e `telemetria_eventos` são transporte, não leitor. Se o evento "
@@ -82,6 +86,58 @@ def _col(linha: Dict[str, str], *nomes: str) -> str:
     return ""
 
 
+# ─── O catálogo das transversais e dos sinais universais ────────────────────────────────
+#
+# Na geração de 23/09 o PRD reescreveu T1 ("professores que abriram → liberaram") como "turmas
+# que iniciam", e o alimentou com o evento da lupa — o primeiro da tabela. O prompt mandava usar
+# "eventos `EVT-U*`", mas nenhuma referência dizia quais: o redator inventava três a cada
+# execução, e para as perguntas do lado do professor não havia nenhum. A fonte única é a cerca
+# JSON de `perguntas-de-produto.md`, como a BNCC é o JSON de `tools/bncc.py`.
+
+@lru_cache(maxsize=1)
+def catalogo() -> Dict[str, Any]:
+    texto = _CANON.read_text(encoding="utf-8")
+    m = re.search(r"```json\s*(\{.*?\})\s*```", texto, re.S)
+    dados = json.loads(m.group(1))
+    perguntas: Dict[str, str] = {}
+    for tabela in _tabelas(texto, {"id", "dono", "sinais"}):
+        for linha in tabela:
+            t = _RE_T.search(_col(linha, "id"))
+            if t:
+                perguntas[f"T{t.group(1)}"] = _col(linha, "pergunta").strip()
+    dados["perguntas"] = perguntas
+    return dados
+
+
+def _ids_t(celula: str) -> List[str]:
+    return [f"T{n}" for n in _RE_T.findall(celula or "")]
+
+
+def ia_responde_estudante(spec: str = "", prd: str = "") -> bool:
+    """A condição de `T21`: a spec herda T21, ou o PRD já emite o sinal de IA ao estudante."""
+    herdadas = re.search(r"perguntas_herdadas[`*_]*\s*:\s*([^\n]+)", spec or "", re.I)
+    if herdadas and "T21" in _ids_t(herdadas.group(1)):
+        return True
+    return bool(re.search(r"\bEVT-U06\b|\bEVT-P06\b", prd or ""))
+
+
+def sinais_exigidos(ia: bool = False) -> Dict[str, List[str]]:
+    """Sinal → transversais que ele responde, para toda T de dono `missao` (T21 só com IA)."""
+    exigidos: Dict[str, List[str]] = {}
+    for t, info in catalogo()["transversais"].items():
+        if info["dono"] != "missao" or (info.get("so_se") and not ia):
+            continue
+        for s in info["sinais"]:
+            if catalogo()["sinais"][s].get("so_se") and not ia:
+                continue
+            exigidos.setdefault(s, []).append(t)
+    return exigidos
+
+
+def _palavras(texto: str) -> set:
+    return {p for p in re.findall(r"[a-z]{4,}", _norm(texto))}
+
+
 def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
     texto = prd or ""
     achados: List[Dict[str, str]] = []
@@ -106,6 +162,10 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
     # telas de cada evento, para o casamento KPI ↔ evento ↔ tela
     tela_do_evento: Dict[str, set] = {}
     payload_do_evento: Dict[str, str] = {}
+    verbo_objeto: Dict[str, tuple] = {}
+    for linha in tab_evt:
+        for i in _RE_EVT.findall(" ".join(linha.values())):
+            verbo_objeto.setdefault(i.upper(), (_norm(_col(linha, "verbo")), _norm(_col(linha, "objeto"))))
     for linha in tab_evt:
         ids = _RE_EVT.findall(" ".join(linha.values()))
         if not ids:
@@ -144,6 +204,34 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
                 falha("kpi-sem-evento", f"{nome} sem `EVT-` que o alimente: ninguém sabe de onde o número sai.")
             continue
 
+        # KPI que herda uma transversal usa a pergunta dela e só os sinais que o catálogo lista
+        for t in _ids_t(_col(linha, "pq")):
+            info = catalogo()["transversais"].get(t)
+            if not info:
+                falha("kpi-herdada-inexistente",
+                      f"{nome} herda `{t}`, que não existe: as transversais são T1–T21 de "
+                      f"`references/perguntas-de-produto.md`.")
+                continue
+            if info["dono"] == "plataforma":
+                falha("kpi-herdada-plataforma",
+                      f"{nome} herda `{t}`, que só a plataforma responde (hub ou api): a missão não tem "
+                      f"o dado. Tire o KPI e cite `{t}` como pendência de plataforma.", severidade="atencao")
+                continue
+            fora = [e for e in eventos if e not in info["sinais"]]
+            if fora:
+                falha("kpi-herdada-evento",
+                      f"{nome} herda `{t}` e é alimentado por {', '.join(f'`{e}`' for e in fora)}, que não "
+                      f"responde a ela. `{t}` se responde com {', '.join(f'`{s}`' for s in info['sinais'])} "
+                      f"do catálogo — o mesmo em toda missão, para que as missões se comparem.")
+            canonica = catalogo()["perguntas"].get(t, "")
+            escrita = _col(linha, "pergunta")
+            if canonica and escrita:
+                a, b = _palavras(canonica), _palavras(escrita)
+                if a and len(a & b) / len(a) < 0.4:
+                    falha("kpi-herdada-reescrita",
+                          f"{nome} herda `{t}` mas pergunta outra coisa: «{escrita.strip()[:70]}». A "
+                          f"transversal não se reinventa: «{canonica[:90]}».", severidade="atencao")
+
         for e in eventos:
             if tab_evt and e not in tela_do_evento:
                 falha("kpi-evento-inexistente", f"{nome} cita `{e}`, que não existe na tabela de eventos.")
@@ -155,18 +243,28 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
             if telas_kpi and telas_evt:
                 casa = any(tk == te or tk.startswith(te) or te.startswith(tk) for tk in telas_kpi for te in telas_evt)
                 if not casa:
+                    # a mensagem traz a saída: sem ela o redator consertou 25 de 27 achados na
+                    # rodada 2 de 23/09 e deixou estes, que só diziam o que estava errado
+                    na_tela = sorted(ev for ev, ts in tela_do_evento.items()
+                                     if any(tk == te or tk.startswith(te) or te.startswith(tk)
+                                            for tk in telas_kpi for te in ts))
+                    saida = (f"Na tela do KPI disparam {', '.join(f'`{x}`' for x in na_tela)}."
+                             if na_tela else "Nenhum evento da tabela dispara nessa tela: acrescente o "
+                             "evento que a mede, ou corrija a coluna Tela.")
                     falha("kpi-tela-divergente",
                           f"{nome} mede {sorted(telas_kpi)} e é alimentado por `{e}`, que dispara em "
-                          f"{sorted(telas_evt)}. O número vai sair e não vai medir o que o KPI diz.")
+                          f"{sorted(telas_evt)}. O número vai sair e não vai medir o que o KPI diz. {saida}")
             calculo = _col(linha, "como calcula", "calculo")
             campos = re.findall(r"(?:resultado|contexto)\.(\w+)", calculo)
             if campos:
                 disponiveis = set(re.findall(r'"(\w+)"\s*:', payload_do_evento.get(e, "")))
                 faltando = [c for c in campos if c not in disponiveis]
                 if faltando:
+                    carrega = ", ".join(f"`{c}`" for c in sorted(disponiveis)) or "nenhum campo"
                     falha("payload-nao-computa",
-                          f"{nome} calcula com `{', '.join(faltando)}`, que `{e}` não carrega "
-                          f"(payload: {payload_do_evento.get(e, '—')[:60]}).")
+                          f"{nome} calcula com `{', '.join(faltando)}`, que `{e}` não carrega. `{e}` carrega "
+                          f"{carrega}: reescreva o cálculo com eles, ou acrescente o campo ao evento. "
+                          f"Coluna de tabela do módulo não é campo do evento.")
 
         baseline = _col(linha, "baseline", "linha de base")
         if _RE_BASELINE_ZERO.match(baseline) and not _RE_SEM_BASELINE.search(baseline):
@@ -187,6 +285,27 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
             ids = _RE_EVT.findall(" ".join(linha.values()))
             falha("leitura-sem-leitor",
                   f"`{ids[0] if ids else 'evento'}` declara leitura em `{onde.strip()[:40]}`. {MENSAGEM_LEITOR}")
+
+    # Os sinais universais das transversais de dono `missao` estão na tabela, com o id, o verbo e
+    # o objeto do catálogo. É o que a missão deve às perguntas do PO — mesmo sem KPI próprio para
+    # elas, que se leem comparando missões no painel de produto.
+    if tab_evt:
+        for s, ts in sorted(sinais_exigidos(ia_responde_estudante(spec, texto)).items()):
+            canon = catalogo()["sinais"][s]
+            if s not in verbo_objeto:
+                forma = f"`{canon['verbo']} {canon['objeto']}`" if canon.get("verbo") else f"objeto `{canon['objeto']}`"
+                falha("sinal-universal-ausente",
+                      f"`{s}` ({forma}) não está na tabela de eventos: é o sinal que responde a "
+                      f"{', '.join(ts)}. Copie a linha do catálogo de `references/perguntas-de-produto.md`.")
+                continue
+            verbo, objeto = verbo_objeto[s]
+            errado = (canon.get("verbo") and verbo and canon["verbo"] not in verbo) or \
+                     ("<" not in canon["objeto"] and objeto and canon["objeto"] not in objeto)
+            if errado:
+                falha("sinal-universal-divergente",
+                      f"`{s}` está como `{verbo} {objeto}`; no catálogo é "
+                      f"`{canon.get('verbo', '')} {canon['objeto']}`. O id universal é o mesmo em toda "
+                      f"missão — reaproveitá-lo para outro evento quebra a comparação entre missões.")
 
     # A spec deixou de ser parâmetro morto. As perguntas decididas no 9f precisam CHEGAR ao PRD:
     # sem este cruzamento o redator podia largar três das cinco pelo caminho, e o gate aprovava as
@@ -243,7 +362,7 @@ def extrair_perguntas_do_briefing(briefing: str) -> str:
     if aulas:
         linhas.append(f"- `declared_lessons: {aulas.group(1)}`")
     if herdar:
-        ids = ", ".join(sorted(set(re.findall(r"\bT[1-8]\b", herdar.group(1)))))
+        ids = ", ".join(sorted(set(_ids_t(herdar.group(1))), key=lambda t: int(t[1:])))
         linhas.append(f"- `perguntas_herdadas: {ids}`")
     perguntas = []
     for item in re.findall(r"^\s*[-*]\s*(.+)$", bloco, re.M):
@@ -348,10 +467,41 @@ def validar_9f(spec: str) -> Dict[str, Any]:
             falha("core-action-sem-evento",
                   f"`core_action: {par[0]} {par[1]}` não existe na tabela de eventos do bloco 9. "
                   f"A decisão central da missão não é emitida por nada.")
+    missao_ts = [t for t, i in catalogo()["transversais"].items() if i["dono"] == "missao" and not i.get("so_se")]
     if "perguntas_herdadas" not in fichas:
         falha("perguntas-herdadas-ausente",
-              "Ficha `perguntas_herdadas` ausente: declare quais transversais (T1–T8) esta missão herda.",
-              severidade="atencao")
+              f"Ficha `perguntas_herdadas` ausente: toda missão herda as transversais de dono `missao` "
+              f"({', '.join(missao_ts)}; T21 só se a IA responde ao estudante).", severidade="atencao")
+    else:
+        declaradas = _ids_t(fichas["perguntas_herdadas"])
+        for t in declaradas:
+            info = catalogo()["transversais"].get(t)
+            if not info:
+                falha("herdada-inexistente", f"`perguntas_herdadas` cita `{t}`, que não existe (T1–T21).")
+            elif info["dono"] == "plataforma":
+                falha("herdada-plataforma",
+                      f"`{t}` é de dono `plataforma`: só o hub ou a api respondem, e a missão não tem o dado. "
+                      f"Tire da ficha.", severidade="atencao")
+        faltam = [t for t in missao_ts if t not in declaradas]
+        if faltam:
+            falha("herdada-faltando",
+                  f"`perguntas_herdadas` deixa de fora {', '.join(faltam)}, de dono `missao`: toda missão as "
+                  f"herda, e emite os sinais delas.", severidade="atencao")
+
+    # Os eventos universais do estudante nascem no bloco 9: é dele que o handoff e o PRD copiam.
+    # (`EVT-U03` é o `completed` que a própria SDK emite no `concluir()`; os `EVT-P*` são colunas
+    # do módulo e são conferidos no PRD.)
+    if eventos:
+        ia = ia_responde_estudante(texto)
+        for s, ts in sorted(sinais_exigidos(ia).items()):
+            canon = catalogo()["sinais"][s]
+            if not s.startswith("EVT-U") or "<" in canon["objeto"]:
+                continue
+            if (canon["verbo"], canon["objeto"]) not in eventos:
+                falha("sinal-universal-ausente",
+                      f"A tabela de eventos do bloco 9 não tem `{canon['verbo']} {canon['objeto']}` "
+                      f"(`{s}`), o sinal universal que responde a {', '.join(ts)}. Copie a linha do "
+                      f"catálogo de `references/perguntas-de-produto.md`.")
 
     linhas = [l for t in _tabelas(texto, {"pq", "pergunta"}) for l in t if _RE_PQ.search(str(l))]
     if not linhas:
