@@ -955,6 +955,11 @@ class VizinhasCatalogoAgent(BaseAgent):
                 fonte = "briefing"
             proximas = cat.vizinhas(ficha, indice, n=self.limite)
             total = len(indice.get("missoes", []))
+            # A base do V5, conferida AQUI e não no registro do fim da esteira: o aviso existia
+            # e só aparecia no relatório do catálogo, que roda depois do dossiê — nem o micro-gate
+            # que julga a semelhança nem quem lê o diagnóstico ficavam sabendo.
+            saude = cat.saude_do_indice(indice)
+            aviso = cat.aviso_de_indice_cego(saude)
 
             if not proximas:
                 texto = (f"_Nenhuma missão próxima no índice ({total} registrada(s) ao todo, filtro pelo {fonte}: "
@@ -970,16 +975,36 @@ class VizinhasCatalogoAgent(BaseAgent):
                     "Linha com campo `—` ou `[preencher…]` **não sustenta reprovação**: registre como lacuna de catálogo e siga.",
                 ])
             msg = f"🗂️ Catálogo: {len(proximas)} missão(ões) próxima(s) de {total} no índice (por {fonte})."
+            if aviso:
+                texto = aviso + "\n\n" + texto
+                msg += "\n" + aviso.lstrip("> ")
+            achados = []
+            if saude.get("fora_do_indice"):
+                achados.append({"severidade": "atencao", "codigo": "indice-defasado", "agente_responsavel": "produto",
+                                 "resumo": f"{len(saude['fora_do_indice'])} missão(ões) gerada(s) fora do índice: "
+                                           + ", ".join(saude["fora_do_indice"][:8])})
+            if saude["total"] and saude["fracao_cega"] >= 0.5:
+                achados.append({"severidade": "atencao", "codigo": "indice-cego", "agente_responsavel": "produto",
+                                 "resumo": f"{saude['cegas']} de {saude['total']} fichas sem campo de comparação: o V5 não as julga."})
+            status = "amarelo" if (aviso or achados) else "aprovado"
+            envelope = {"agente": "catalogo-indice", "status": status, "achados": achados,
+                        "total": saude["total"], "uteis": saude["uteis"]}
         except Exception as exc:  # memória é conveniência: nunca derruba a esteira
             texto = f"_Índice de missões indisponível nesta execução ({exc}). Sem comparação com missões anteriores._"
             msg = f"⚠️ Catálogo: não consegui ler o índice ({exc})."
+            status = "amarelo"
+            envelope = {"agente": "catalogo-indice", "status": status, "achados": [{
+                "severidade": "atencao", "codigo": "indice-ilegivel", "agente_responsavel": "produto",
+                "resumo": f"índice de missões ilegível: {exc}"}]}
 
         yield Event(
             invocation_id=ctx.invocation_id,
             author=self.name,
             branch=ctx.branch,
             content=types.Content(role="model", parts=[types.Part(text=msg)]),
-            actions=EventActions(state_delta={"missoes_vizinhas": texto}),
+            actions=EventActions(state_delta={"missoes_vizinhas": texto,
+                                              "catalogo_indice_status": status,
+                                              "catalogo_indice_status_envelope": envelope}),
         )
 
 

@@ -32,6 +32,7 @@ from tools.doc_parser import DocumentBatch
 logger = logging.getLogger("pipeline_runner")
 
 STATUS_KEYS = [
+    "catalogo_indice_status",
     "micro_gate_status",
     "micro_gate_rodada",
     "gate_estrutural_status",

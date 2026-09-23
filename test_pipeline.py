@@ -2570,12 +2570,22 @@ def test_gaps_estruturais_da_auditoria():
     # G1 — o gate de semelhança se autodesliga quando o índice está incompleto, e ninguém sabe
     cego = {"missoes": [{"slug": "a", "tipo_decisao": "—", "porta_abstracao": "—"},
                         {"slug": "b", "tipo_decisao": "[preencher do manifesto]", "porta_abstracao": "x"}]}
-    saude = saude_do_indice(cego)
+    # `base` vazio: sem ele a saúde também conta as sessões do `output/` real da máquina, e o
+    # teste passava ou falhava conforme o que o desenvolvedor tinha gerado.
+    import tempfile
+    from pathlib import Path
+    vazio = Path(tempfile.mkdtemp())
+    saude = saude_do_indice(cego, base=vazio)
     assert saude["cegas"] == 2 and saude["fracao_cega"] == 1.0
     assert "praticamente desligada" in (aviso_de_indice_cego(saude) or "")
     cheio = {"missoes": [{"slug": "a", "tipo_decisao": "escolher fonte", "porta_abstracao": "explicar",
                           "descoberta": "o feed esconde o que eu não sigo", "ambiente": "instanooria"}]}
-    assert aviso_de_indice_cego(saude_do_indice(cheio)) is None
+    assert aviso_de_indice_cego(saude_do_indice(cheio, base=vazio)) is None
+    # os dois defeitos juntos: um aviso não pode esconder o outro
+    (vazio / "20260922-181029-exp06ef1b").mkdir()
+    (vazio / "20260922-181029-exp06ef1b" / "estado.json").write_text("{}")
+    ambos = aviso_de_indice_cego(saude_do_indice(cego, base=vazio)) or ""
+    assert "praticamente desligada" in ambos and "exp06ef1b" in ambos, ambos
 
     # G2 — o brief de escopo sai do one-pager antes do revisor o apagar
     split = get_brief_escopo_split()
@@ -2960,6 +2970,102 @@ def test_brief_ausente_nao_sai_verde():
     ])))[1]
     assert com["brief_escopo_status"] == "aprovado" and com.get("brief_escopo")
     print("   ✓ brief de escopo ausente sai 🟡 com achado, presente sai verde")
+
+
+
+def test_indice_defasado_chega_ao_micro_gate_e_ao_dossie():
+    """O caso de produção em 23/09/2026: 14 sessões no bucket e 1 missão no índice. Nenhuma linha
+    furada, fração cega 0%, e portanto nenhum aviso — o V5 comparava a missão nova contra UMA. E o
+    aviso que existia só saía no relatório do catálogo, que roda depois do dossiê."""
+    import os
+    import tempfile
+    from pathlib import Path
+
+    from agents.checkers import VizinhasCatalogoAgent
+    from tools import catalogo as cat
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        cat.registrar(_ficha(), base=base)  # só a exp06ef1b está no índice, e completa
+        for pasta in ("20260922-181029-exp06ef1b", "20260922-004159-exp05ef1b", "20260921-124345-exp01ef1b"):
+            (base / pasta).mkdir()
+            (base / pasta / "estado.json").write_text("{}")
+        (base / "20260922-102140-exp02ef1b").mkdir()   # sem estado.json: execução que não terminou
+        (base / "amostra-identidade-visual").mkdir()   # pasta que não é sessão
+
+        saude = cat.saude_do_indice(base=base)
+        assert saude["fracao_cega"] == 0.0, "o caso é justamente o de nenhuma linha furada"
+        assert saude["fora_do_indice"] == ["exp01ef1b", "exp05ef1b"], saude["fora_do_indice"]
+
+        antes = os.environ.get("OUTPUT_DIR")
+        os.environ["OUTPUT_DIR"] = tmp
+        try:
+            _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+                FakeAgent(name="B", key="briefing", text="Missão para o 6º ano do fundamental."),
+                VizinhasCatalogoAgent(name="A00bVizinhasCatalogo"),
+            ])))
+            assert st["catalogo_indice_status"] == "amarelo"
+            assert st["missoes_vizinhas"].startswith("> ⚠️"), "o aviso precisa vir ANTES da tabela que o V5 julga"
+            assert "exp05ef1b" in st["missoes_vizinhas"] and "exp01ef1b" in st["missoes_vizinhas"]
+            assert [a["codigo"] for a in st["catalogo_indice_status_envelope"]["achados"]] == ["indice-defasado"]
+
+            for slug, sessao in (("exp05ef1b", "s5"), ("exp01ef1b", "s1b")):
+                cat.registrar(_ficha(slug=slug, sessao=sessao, ano=slug[3:5].lstrip("0") + "EF",
+                                     descoberta=f"descoberta própria da {slug}"), base=base)
+            _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+                FakeAgent(name="B", key="briefing", text="Missão para o 6º ano do fundamental."),
+                VizinhasCatalogoAgent(name="A00bVizinhasCatalogo"),
+            ])))
+            assert st["catalogo_indice_status"] == "aprovado", st["catalogo_indice_status_envelope"]
+        finally:
+            if antes is None:
+                os.environ.pop("OUTPUT_DIR", None)
+            else:
+                os.environ["OUTPUT_DIR"] = antes
+
+    from tools.diagnostico import GATES
+    assert "catalogo_indice_status" in {g["status"] for g in GATES}
+    print("   ✓ índice defasado: o micro-gate lê o aviso antes da tabela e o dossiê mostra 🟡")
+
+
+
+def test_ficha_do_catalogo_le_pelo_nome_da_coluna():
+    """13 das 14 fichas reconstruídas em 23/09/2026 saíam com `tipo_decisao` vazio: o parser lia a
+    linha do aprendizado POR POSIÇÃO, com o slug primeiro, e o 51 escreve `|Ano|Bim|Nome|…|` sem
+    slug. A linha era descartada sempre, e o registro automático repetia o defeito em toda missão
+    nova. O ambiente saía vazio nas 5 com `secao_ds: nova:…`."""
+    from tools import catalogo as cat
+
+    # a linha como o 51 de fato a escreveu na exp06ef1b (8 colunas, sem slug)
+    real = """### Linha proposta para `references/catalogo-missoes.md`
+
+| Ano | Bim | Nome | Ambiente | Eixo temático | Descoberta central (aha) | Tipo de decisão | Status |
+|---|---|---|---|---|---|---|---|
+| 6º EF | 1º | O algoritmo que me formou | InstaNooria (Instagram) | Algoritmos / bolhas | Eu só segui 1 conta e isso decidiu o resto. | Seguir 1 perfil e fixar 1 post de síntese | Aprovada |
+"""
+    f = cat._linha_do_aprendizado(real)
+    assert f["tipo_decisao"] == "Seguir 1 perfil e fixar 1 post de síntese", f
+    assert f["descoberta"].startswith("Eu só segui") and f["ano"] == "6º EF"
+
+    # o formato que o prompt pede: outra ordem, com slug e campo por preencher
+    pedido = """|Slug|Ano|Bim|Nome|Ambiente|Eixo temático|Descoberta central (aha)|Tipo de decisão|Porta de abstração|Habilidade primária|Status|
+|---|---|---|---|---|---|---|---|---|---|---|
+|exp04ef1b|4º EF|1º|N|unitube|credibilidade|views não é confiança|escolher 3 de 10 vídeos|explicar|[preencher do manifesto]|em criação|
+"""
+    g = cat._linha_do_aprendizado(pedido)
+    assert g["slug"] == "exp04ef1b" and g["tipo_decisao"] == "escolher 3 de 10 vídeos"
+    assert "habilidade_primaria" not in g, "campo por preencher volta vazio para a extração do núcleo tentar"
+
+    # ambiente pelo `secao_ds`: canônico, e ambiente novo com o nome
+    assert cat._ambiente_da_spec("- `secao_ds: instanooria`") == "instanooria"
+    assert cat._ambiente_da_spec("- **secao_ds**: `nova:galeria-infantil`") == "nova:galeria-infantil"
+    assert cat._ambiente_da_spec("- `secao_ds: inventado`") == ""
+
+    ficha = cat.ficha_da_execucao({"aprendizado_registro": real,
+                                   "spec_missao": "## 0. Ficha\n- `secao_ds: nova:galeria-infantil`\n"})
+    assert ficha["tipo_decisao"] and ficha["ambiente"] == "nova:galeria-infantil"
+    assert not cat.tem_lacuna(ficha), "ficha completa não pode sair cega para o V5"
+    print("   ✓ ficha do catálogo lida pelo nome da coluna; ambiente novo não sai vazio")
 
 
 if __name__ == "__main__":

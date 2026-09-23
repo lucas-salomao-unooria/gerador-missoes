@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional
 #: DEPOIS deste diagnóstico (a missão só entra no catálogo com o status que o dossiê derivou), e
 #: `diagnostico_status` é o próprio dossiê. Um cruzamento ingênuo status×dossiê acusa os dois.
 GATES: List[Dict[str, Optional[str]]] = [
+    {"status": "catalogo_indice_status", "rotulo": "Base de comparação do V5 (índice de missões)", "etapa": "produto", "rodada": None},
     {"status": "micro_gate_status", "rotulo": "Micro-gate do núcleo", "etapa": "produto", "rodada": "micro_gate_rodada"},
     {"status": "brief_escopo_status", "rotulo": "Brief de escopo separado do one-pager", "etapa": "produto", "rodada": None},
     {"status": "gate_estrutural_status", "rotulo": "Gate estrutural", "etapa": "produto", "rodada": "gate_estrutural_rodada"},

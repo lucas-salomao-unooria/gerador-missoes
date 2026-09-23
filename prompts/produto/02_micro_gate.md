@@ -84,6 +84,7 @@ Contra **cada linha** da tabela de missões acima, aplique o **teste de 2 frases
 - A coluna **Semelhança** é lexical e serve para ordenar, não para decidir: duas missões podem dizer a mesma coisa com outras palavras e aparecer como `baixa`. Julgue pelo conteúdo das colunas Descoberta central e Tipo de decisão.
 - **Válvula, e ela é obrigatória:** linha com campo `—` ou `[preencher…]` **não sustenta reprovação** — não dá para julgar contra dado furado. Nesse caso V5 passa, e você registra no relatório a linha incompleta como lacuna de catálogo (dono: produto).
 - Tabela vazia, ou aviso de índice indisponível: V5 passa, com uma linha dizendo que não houve comparação.
+- Aviso de **índice defasado ou cego** no topo da tabela (missões geradas fora do índice, ou maioria das fichas incompleta): V5 julga contra o que houver, e você registra no relatório quantas missões ficaram fora da comparação, como lacuna de catálogo (dono: produto). Não é defeito desta missão — é o gate dizendo em voz alta que viu menos do que devia.
 
 ## Regra de parada
 
