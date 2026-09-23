@@ -184,7 +184,7 @@ def _linha_do_aprendizado(aprendizado: str) -> Dict[str, str]:
         if not re.search(r"exp\d{2}(ef|em)\d b?|exp-\d{2}", celulas[0], re.IGNORECASE):
             continue
         campos = ["slug", "ano", "bimestre", "nome", "ambiente", "eixo", "descoberta", "tipo_decisao",
-                  "porta_abstracao", "habilidade_primaria", "status", "observada_em_campo"]
+                  "porta_abstracao", "habilidade_primaria", "status"]
         return {campo: celulas[i] for i, campo in enumerate(campos) if i < len(celulas)}
     return {}
 

@@ -6,7 +6,7 @@ sources: [literatura-cognitiva.md]
 
 # Régua por idade — resumo operacional
 
-> **Gerado automaticamente** de `literatura-cognitiva.md` por `scripts/gerar_resumo_literatura.py`. Não edite à mão: edite a fonte e regenere. SHA-256 da fonte: `ceafbf01e71544b5cf1618eaa01500df9d434486362b0daf2b8c2dd0395dd666`.
+> **Gerado automaticamente** de `literatura-cognitiva.md` por `scripts/gerar_resumo_literatura.py`. Não edite à mão: edite a fonte e regenere. SHA-256 da fonte: `aff8c56181b709f99c482c9e1c6695970bba49a538f77173b450e206511880c3`.
 
 Esta é a **fonte única dos números** que a esteira usa para julgar se uma missão cabe na idade, em uma página. Todo número é **[DADO DIRETO]** (medido), **[EXTRAPOLAÇÃO]** (derivado de princípio) ou **[CONVENÇÃO]** (escolha da equipe); extrapolação justifica ⚠️ com mais frequência que ❌. A fundamentação e as citações estão na fonte — aqui só o que se aplica ao construir tela, copy e jornada.
 
@@ -61,7 +61,7 @@ Esta é a **fonte única dos números** que a esteira usa para julgar se uma mis
 | Leitura, 9º ano | **62% abaixo do adequado** | aqui a defasagem se confirma |
 | Leitura, Ensino Médio | **65% abaixo do adequado** | 50% abaixo do Nível 2 do PISA aos 15 anos |
 | Professor | sem formação recente em tecnologia | 46% não tiveram; só ~1/3 decide sobre uso de recurso digital; **43%** com formação continuada na rede municipal, que concentra os anos iniciais (TIC Educação 2024) |
-| Preparo docente | cinco telas obrigatórias (`E0-PROF-01…05`) | **sem tempo medido** até observação de campo; a contagem de telas e toques exigida pelo 4.3 é [CONVENÇÃO] |
+| Preparo docente | cinco telas obrigatórias (`E0-PROF-01…05`) | **sem tempo medido**; a contagem de telas e toques exigida pelo 4.3 é [CONVENÇÃO] — acordo interno, não medida |
 | Duração da aula | 50 min é **parâmetro de rede** | a LDB fixa carga anual (800h no EF, 1.000h no EM), não duração de aula |
 
 ## Que plataforma a criança usa, por idade (fonte §10)

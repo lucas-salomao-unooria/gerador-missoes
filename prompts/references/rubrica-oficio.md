@@ -27,7 +27,7 @@ Elementos por tela, por faixa e por tier. Conta como elemento: bloco de texto, a
 
 ⚠️ **v0.1 — números a calibrar.** São ponto de partida derivado dos caps de carga decisória do 3.5, não medição. A primeira missão que os aplicar gera a primeira correção; **registre o desvio em vez de burlar o número.**
 
-**Regra que não depende de calibragem:** a tela `pico` tem menos elementos que suas vizinhas na ordem do arco. Essa é comparativa e vale mesmo se todos os números acima estiverem errados. Se o pico é a tela mais cheia da missão, a hierarquia está invertida e o wireframe construiu a inversão fielmente. **Por isso, desde a v0.2, é a única linha desta rubrica que sai com `severidade: "bloqueio"`** (código `O1`, dono `jornada`): a contagem é a da coluna "Teto de elementos (contado)" da Seção 4 da jornada, sobre o frame construído; empate com uma vizinha é `oficio`; maior que qualquer vizinha na ordem do arco é bloqueio. As demais linhas de O1–O5 continuam `oficio` até a calibragem por observação de campo.
+**Regra que não depende de calibragem:** a tela `pico` tem menos elementos que suas vizinhas na ordem do arco. Essa é comparativa e vale mesmo se todos os números acima estiverem errados. Se o pico é a tela mais cheia da missão, a hierarquia está invertida e o wireframe construiu a inversão fielmente. **Por isso, desde a v0.2, é a única linha desta rubrica que sai com `severidade: "bloqueio"`** (código `O1`, dono `jornada`): a contagem é a da coluna "Teto de elementos (contado)" da Seção 4 da jornada, sobre o frame construído; empate com uma vizinha é `oficio`; maior que qualquer vizinha na ordem do arco é bloqueio. As demais linhas de O1–O5 continuam `oficio`: são convenções de ofício, não medidas, e assim permanecem.
 
 ---
 
