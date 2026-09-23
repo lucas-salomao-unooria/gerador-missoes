@@ -78,7 +78,7 @@ Conexão cai · sessão expira · mídia não carrega · professor não libera �
 **9b. A mesma missão em três aulas** — tabela obrigatória, derivada do teste das três disciplinas da seção 3: `| Disciplina | Recorte do professor | O que a IA gera (posts, mensagens, perfis…) | O que não muda |`, com Português, Ciências/Biologia e História (ou Geografia). Copie os exemplos do núcleo; se o núcleo trouxe `[LIMITE DE TRANSVERSALIDADE — …]`, a linha correspondente repete o marcador em vez de inventar um exemplo que a mecânica não sustenta.
 
 ## 10. Modularidade, tempos sugeridos e controle do professor
-Tabela das etapas com tempos sugeridos; checkpoints de pausa e salvamento; controle docente; cenários: aula única (50 min), 2 aulas (2x 50 min), sessões fracionadas (20–40 min).
+Tabela das etapas com **dois tempos separados**: `Em tela (aluno)` — o estudante está na missão — e `Fora da tela` — mediação oral, debate conduzido pelo professor, fechamento, distribuição de aparelho. Uma linha de total para cada coluna, e a frase `Tempo de aula: N min · Em tela: M min`. **Nunca escreva "N minutos em tela" para a duração da aula**: o teto do critério 6.2 é sobre o tempo em tela, e somar a aula inteira nele reprova a missão por um número que ela não tem. Preparo docente fica fora das duas colunas. Depois: checkpoints de pausa e salvamento; controle docente; cenários: aula única (50 min), 2 aulas (2x 50 min), sessões fracionadas (20–40 min).
 
 ## 11. Podcast de recapitulação
 Roteiro completo, 2 apresentadores, 5 blocos (abertura ~30s, recapitulação ~1–1,5 min, revelação ~1–1,5 min, provocação ~30s–1 min, encerramento ~15s), 3–5 min.

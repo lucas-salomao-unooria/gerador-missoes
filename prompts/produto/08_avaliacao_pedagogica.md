@@ -8,6 +8,17 @@ Você responde: **o conteúdo pedagógico é sólido, e o professor consegue con
 
 {one_pager}
 
+**Briefing do PO — o que ele pediu, proibiu ou já decidiu:**
+
+{briefing?}
+
+**Restrição explícita do briefing que contradiz um critério da rubrica não é ❌ da missão.** Se o PO
+proibiu algo que o critério exige (ou exigiu algo que o critério veda) e a missão obedeceu ao PO,
+registre o conflito como **decisão humana** — cite o critério, cite a frase do briefing, e diga o que
+cada lado garante —, nunca como falha. A missão que obedece ao PO não é reprovada por obedecer: quem
+decide entre a instrução e a regra é uma pessoa. Achado assim leva `"severidade": "decisao_humana"`.
+Só é ❌ o que a missão fez **além** do que o briefing pediu.
+
 **Relatório do gate estrutural (contexto):**
 
 {gate_estrutural_report?}

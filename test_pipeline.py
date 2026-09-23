@@ -3498,6 +3498,27 @@ def test_leitor_de_evento_e_o_mesmo_nos_dois_gates_e_nos_documentos():
     print("   ✓ leitor de evento: tabela do módulo ou painel de produto, igual nos dois gates e nos três documentos")
 
 
+
+def test_juizes_de_produto_leem_o_briefing_e_contam_so_o_tempo_em_tela():
+    """Na geração de teste de 23/09/2026 a missão foi reprovada duas vezes por obedecer ao PO — o
+    briefing proibia áudio, a rubrica exige áudio no 1º–2º ano, e nenhum dos três juízes de produto
+    recebia o briefing — e o one-pager escreveu "45 minutos em tela" para a aula inteira, com 15 min
+    de mediação oral dentro, e o teto de tempo-aluno leu isso ao pé da letra."""
+    from agents.produto import (get_avaliacao_pedagogica_agent, get_experiencia_aluno_agent,
+                                get_gate_final_produto_agent)
+    from prompts import REFERENCES_DIR, load_prompt
+    for agente in (get_avaliacao_pedagogica_agent(), get_experiencia_aluno_agent(), get_gate_final_produto_agent()):
+        instr = str(agente.instruction)
+        assert "{briefing?}" in instr, f"{agente.name} não recebe o briefing"
+        assert "não é reprovada por obedecer" in instr, f"{agente.name} sem a regra do conflito briefing × rubrica"
+    assert "nunca 🔴" in str(get_gate_final_produto_agent().instruction)
+    apoio = load_prompt("produto/04_secoes_apoio.md", gate_max_rodadas=3)
+    assert "`Em tela (aluno)`" in apoio and "`Fora da tela`" in apoio
+    exp = (REFERENCES_DIR / "criterios-experiencia.md").read_text(encoding="utf-8")
+    assert "Tempo-aluno é o tempo em tela" in exp
+    print("   ✓ juízes de produto leem o briefing; o teto de tempo conta só o tempo em tela")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")

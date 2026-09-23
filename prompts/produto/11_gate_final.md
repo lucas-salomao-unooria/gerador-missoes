@@ -11,6 +11,17 @@ Você responde uma única pergunta: **a versão final da missão pode ser entreg
 
 {one_pager}
 
+**Briefing do PO — o que ele pediu, proibiu ou já decidiu:**
+
+{briefing?}
+
+**Restrição explícita do briefing que contradiz um critério da rubrica não é ❌ da missão.** Se o PO
+proibiu algo que o critério exige (ou exigiu algo que o critério veda) e a missão obedeceu ao PO,
+registre o conflito como **decisão humana** — cite o critério, cite a frase do briefing, e diga o que
+cada lado garante —, nunca como falha. A missão que obedece ao PO não é reprovada por obedecer: quem
+decide entre a instrução e a regra é uma pessoa. No gate final isso vai para **Decisões de produto pendentes (🔵)** e o veredito é 🟡, nunca 🔴: um avaliador que reprovou a missão por obedecer ao briefing não produz pendência de release.
+Só é ❌ o que a missão fez **além** do que o briefing pediu.
+
 **Veredito do gate estrutural (última rodada) — status registrado: `{gate_estrutural_status?}` após `{gate_estrutural_rodada?}` rodada(s):**
 
 {gate_estrutural_report?}
