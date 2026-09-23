@@ -101,6 +101,7 @@ def get_validador_agents(**kw) -> list[LlmAgent]:
             instruction=load_prompt(prompt),
             output_key=key,
             before_agent_callback=marcar_heranca,
+            deterministico=True,  # as cinco dimensões emitem veredito
             **kw,
         )
         for name, key, prompt, desc in _VALIDADORES
@@ -110,6 +111,7 @@ def get_validador_agents(**kw) -> list[LlmAgent]:
 def get_consolidacao_banca_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A44ConsolidacaoBanca",
+        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Consolida as 5 dimensões da banca em um relatório único com veredito determinístico 🟢/🟡/🔴.",
         instruction=load_prompt("dev/44_consolidacao_banca.md"),
         output_key="validacao_dev_report",

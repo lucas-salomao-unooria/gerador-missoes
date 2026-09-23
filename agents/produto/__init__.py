@@ -71,6 +71,7 @@ def get_nucleo_narrativo_agent(**kw) -> LlmAgent:
 def get_micro_gate_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A02MicroGate",
+        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Micro-gate do núcleo: spoiler (4 padrões), gap de informação real, escolha significativa e job-to-be-done no Desafiar.",
         instruction=load_prompt("produto/02_micro_gate.md"),
         output_key="micro_gate_report",
@@ -95,6 +96,7 @@ def get_gate_estrutural_agent(max_rodadas: Optional[int] = None, **kw) -> LlmAge
     rodadas = max_rodadas or get_settings().gate_estrutural_max_rodadas
     return create_llm_agent(
         name="A05GateEstrutural",
+        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Gate estrutural: completude, ambiente, verbos nativos, logística, evidências e fechamento de spec.",
         instruction=load_prompt("produto/05_gate_estrutural.md", gate_max_rodadas=rodadas),
         output_key="gate_estrutural_report",
@@ -115,6 +117,7 @@ def get_revisor_one_pager_agent(**kw) -> LlmAgent:
 def get_avaliacao_pedagogica_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A08AvaliacaoPedagogica",
+        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Avaliação pedagógica: descoberta central, papel do professor, BNCC e guardrails éticos.",
         instruction=load_prompt("produto/08_avaliacao_pedagogica.md"),
         output_key="avaliacao_pedagogica_report",
@@ -126,6 +129,7 @@ def get_avaliacao_pedagogica_agent(**kw) -> LlmAgent:
 def get_adequacao_pedagogica_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A10AdequacaoPedagogica",
+        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Parecer de adequação pedagógica em seis eixos: alinhamento curricular, demanda cognitiva, carga acidental, viabilidade na escola pública, evidência de aprendizagem e equidade.",
         instruction=load_prompt("produto/10_adequacao_pedagogica.md"),
         output_key="adequacao_report",
@@ -137,6 +141,7 @@ def get_adequacao_pedagogica_agent(**kw) -> LlmAgent:
 def get_experiencia_aluno_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A09ExperienciaEstudante",
+        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Experiência do aluno por faixa etária: carga decisória, linguagem, duração e complexidade.",
         instruction=load_prompt("produto/09_experiencia_estudante.md"),
         output_key="experiencia_aluno_report",
@@ -148,6 +153,7 @@ def get_experiencia_aluno_agent(**kw) -> LlmAgent:
 def get_gate_final_produto_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A11GateFinalProduto",
+        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Gate final de produto: coerência entre missão e vereditos; libera ou bloqueia para design/dev.",
         instruction=load_prompt("produto/11_gate_final.md"),
         output_key="gate_final_report",

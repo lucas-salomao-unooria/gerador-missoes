@@ -73,6 +73,23 @@ class AppSettings(BaseSettings):
         default_factory=lambda: _env_bool("INCLUDE_THOUGHTS", "true"),
         description="Expor o fluxo de pensamento dos agentes",
     )
+    temperatura_juiz: float = Field(
+        default_factory=lambda: float(os.getenv("TEMPERATURA_JUIZ", "0.1")),
+        description="Amostragem dos agentes que emitem veredito. Baixa, não zero: com thinking "
+                    "ligado a temperatura afeta sobretudo a verbalização, e 0 não compra "
+                    "determinismo — quem compra é o seed.",
+    )
+    seed_juiz: int = Field(
+        default_factory=lambda: int(os.getenv("SEED_JUIZ", "20260923")),
+        description="Seed fixo dos juízes: dois gates sobre o mesmo artefato devem dar o mesmo "
+                    "veredito, senão não há como medir se uma mudança de critério funcionou.",
+    )
+    tentativas_modelo: int = Field(
+        default_factory=lambda: int(os.getenv("TENTATIVAS_MODELO", "4")),
+        description="Tentativas por chamada ao modelo, com backoff exponencial e jitter. A esteira "
+                    "faz 33 a 55 chamadas e a banca dispara 5 em paralelo: sem isto, um 429 no "
+                    "meio derruba uma execução de 20 minutos.",
+    )
 
     # ------------------------------------------------------------- Pipeline
     pipeline_stages_raw: str = Field(

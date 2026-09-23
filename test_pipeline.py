@@ -2350,6 +2350,43 @@ def test_cortes_da_auditoria_de_23_09():
     print("   ✓ cortes de 23/09: WebSocket descartado não é achado, liberação é default, plano de implementação confere no PRD")
 
 
+def test_veredito_reproduzivel_e_retry_em_toda_chamada():
+    """Quem julga tem seed; quem inventa, não. E ninguém chama o modelo sem rede.
+
+    Dois gates sobre o mesmo artefato precisam dar o mesmo veredito — senão a matriz
+    antes × depois de uma sessão vira ruído e não há como saber se uma mudança de critério
+    funcionou. Já os agentes que INVENTAM ficam na amostragem livre: achatá-los aproxima as
+    missões umas das outras e colide com o gate de semelhança do catálogo (V5).
+
+    O retry vale para todos: a esteira faz de 33 a 55 chamadas e a banca dispara cinco
+    validadores em paralelo; um 429 no meio derrubava vinte minutos sem nada reaproveitável.
+    """
+    from agents.produto import (get_micro_gate_agent, get_gate_estrutural_agent,
+                                get_gate_final_produto_agent, get_avaliacao_pedagogica_agent,
+                                get_adequacao_pedagogica_agent, get_experiencia_aluno_agent,
+                                get_nucleo_narrativo_agent, get_secoes_apoio_agent)
+    from agents.design import get_qa_entregaveis_agent
+    from agents.dev import get_validador_agents, get_consolidacao_banca_agent
+
+    juizes = ([get_micro_gate_agent(), get_gate_estrutural_agent(), get_avaliacao_pedagogica_agent(),
+               get_experiencia_aluno_agent(), get_adequacao_pedagogica_agent(),
+               get_gate_final_produto_agent(), get_qa_entregaveis_agent(),
+               get_consolidacao_banca_agent()] + get_validador_agents())
+    for ag in juizes:
+        c = ag.generate_content_config
+        assert c.temperature is not None, f"{ag.name} emite veredito sem temperatura fixa"
+        assert c.seed is not None, f"{ag.name} emite veredito sem seed"
+
+    for ag in (get_nucleo_narrativo_agent(), get_secoes_apoio_agent()):
+        assert ag.generate_content_config.temperature is None, f"{ag.name} inventa: amostragem não se achata"
+
+    for ag in juizes + [get_nucleo_narrativo_agent()]:
+        ro = ag.generate_content_config.http_options.retry_options
+        assert ro.attempts >= 2 and 429 in ro.http_status_codes, f"{ag.name} chama o modelo sem retry"
+
+    print(f"   ✓ {len(juizes)} juízes com seed fixo, agentes criativos livres, retry com backoff em todos")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")

@@ -245,6 +245,7 @@ def get_qa_entregaveis_agent(max_rodadas: Optional[int] = None, **kw) -> LlmAgen
     rodadas = max_rodadas or get_settings().qa_design_max_rodadas
     return create_llm_agent(
         name="A30QaEntregaveis",
+        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Gate final de design: fidelidade à spec, diff de strings, currículo, faixa etária, fluxo, professor, briefing, ambiente simulado e CAA.",
         instruction=load_prompt(
             "design/30_qa_entregaveis.md",

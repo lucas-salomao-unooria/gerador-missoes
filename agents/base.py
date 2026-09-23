@@ -21,6 +21,7 @@ def create_llm_agent(
     thinking_budget: Optional[int] = None,
     include_thoughts: Optional[bool] = None,
     include_contents: str = "none",
+    deterministico: bool = False,
     before_agent_callback: Any = None,
     after_agent_callback: Any = None,
     before_tool_callback: Any = None,
@@ -38,6 +39,12 @@ def create_llm_agent(
         thinking_budget / include_thoughts: controle de raciocínio.
         include_contents: 'none' (padrão — o agente trabalha só com a instrução interpolada
             e o turno corrente) ou 'default' (recebe o histórico completo da conversa).
+        deterministico: para quem emite VEREDITO. Fixa temperatura baixa e seed, de modo que
+            dois gates sobre o mesmo artefato deem a mesma resposta — sem isso não há como
+            medir se uma mudança de critério funcionou, e a matriz antes × depois de uma
+            sessão vira ruído. Agentes que INVENTAM (núcleo, copy, telas) ficam de fora:
+            achatar a amostragem deles aproxima as missões umas das outras, o que colide
+            com o gate de semelhança do catálogo.
         before_agent_callback / after_agent_callback: callbacks do ADK.
         before_tool_callback / after_tool_callback: idem para ferramentas. Quando há
             `tools` e nada é passado, entram os limitadores de contexto de
@@ -76,10 +83,34 @@ def create_llm_agent(
         thinking_params["thinking_budget"] = t_budget
     if inc_thoughts is not None:
         thinking_params["include_thoughts"] = inc_thoughts
+
+    # O config é montado SEMPRE. Antes ele só existia quando havia `thinking_params`, e
+    # qualquer outro parâmetro de geração passado por fora era descartado em silêncio —
+    # incluindo temperatura e seed, que é o que torna o veredito de um gate reproduzível.
+    config_params: dict[str, Any] = {}
     if thinking_params:
-        kwargs["generate_content_config"] = types.GenerateContentConfig(
-            thinking_config=types.ThinkingConfig(**thinking_params)
+        config_params["thinking_config"] = types.ThinkingConfig(**thinking_params)
+
+    # Retry com backoff exponencial e jitter, para todo agente. A esteira faz de 33 a 55
+    # chamadas por execução e a banca dispara cinco validadores em paralelo: sem isto, um
+    # 429 no meio derruba vinte minutos de trabalho e o estado parcial não é reaproveitável.
+    if settings.tentativas_modelo > 1:
+        config_params["http_options"] = types.HttpOptions(
+            retry_options=types.HttpRetryOptions(
+                attempts=settings.tentativas_modelo,
+                initial_delay=1.0,
+                max_delay=60.0,
+                exp_base=2.0,
+                jitter=1.0,
+                http_status_codes=[408, 429, 500, 502, 503, 504],
+            )
         )
+
+    if deterministico:
+        config_params["temperature"] = settings.temperatura_juiz
+        config_params["seed"] = settings.seed_juiz
+
+    kwargs["generate_content_config"] = types.GenerateContentConfig(**config_params)
 
     if output_key:
         kwargs["output_key"] = output_key
