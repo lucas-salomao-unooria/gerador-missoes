@@ -61,7 +61,9 @@ CONSULTIVOS = [
 _ICONE = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴", "devolvido": "🔴"}
 
 #: Artefatos dos dois agentes transversais, que rodam depois deste diagnóstico.
-_ESCRITOS_DEPOIS = ("diagnostico_execucao", "aprendizado_registro")
+#: A ficha do catálogo é gravada pelo A52, que roda depois do dossiê: as gerações de 23/09 a
+#: listavam como "ausente" com o arquivo presente na pasta.
+_ESCRITOS_DEPOIS = ("diagnostico_execucao", "aprendizado_registro", "ficha_catalogo")
 
 #: Severidades que impedem a missão de ser construída como está.
 _BLOQUEIA = ("bloqueio",)

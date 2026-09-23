@@ -915,7 +915,8 @@ def test_gate_amarelo_limpa_degradacao_da_rodada_anterior():
         sub_agents=[
             FakeAgent(name="Prd1", key="prd_final", text="rascunho [NEEDS CLARIFICATION: qual cardinalidade?, dono: produto]"),
             check("Check1"),
-            FakeAgent(name="Prd2", key="prd_final", text="rascunho [ABERTO — coordenação pedagógica: confirmar semana]"),
+            FakeAgent(name="Prd2", key="prd_final", text="rascunho [ABERTO — coordenação pedagógica: confirmar semana]",
+                      before_agent_callback=marcar_heranca),
             check("Check2"),
         ],
     )
@@ -924,7 +925,10 @@ def test_gate_amarelo_limpa_degradacao_da_rodada_anterior():
     assert state.get(KEY_PIPELINE_BLOQUEADO) is False, "a reprovação da rodada 1 não pode sobreviver ao 🟡 da rodada 2"
     assert not state.get(KEY_DEGRADACOES), state.get(KEY_DEGRADACOES)
     assert not state.get(KEY_HERANCA)
-    print("   ✓ gate 🔴 → 🟡 limpa a degradação e destrava a execução")
+    # o redator da rodada 2 rodou sob a reprovação da 1 e foi anotado; com o gate aprovado, a
+    # anotação sai — a geração de 23/09 terminou sem impedimento e com o PRD listado como provisório
+    assert state.get("agentes_degradados") == [], state.get("agentes_degradados")
+    print("   ✓ gate 🔴 → 🟡 limpa a degradação, destrava a execução e tira o 'provisório' de quem rodou nela")
 
 
 def test_diagnostico_respeita_veredito_do_gate():

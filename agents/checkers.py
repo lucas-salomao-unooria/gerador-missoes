@@ -100,6 +100,10 @@ def limpar_degradacao(state, delta: Dict[str, Any], gate: str) -> None:
     if not restantes:
         delta[KEY_PIPELINE_BLOQUEADO] = False
         delta[KEY_PIPELINE_MOTIVO] = ""
+        # Sem reprovação viva, ninguém construiu sobre base reprovada: na geração de 23/09 o PRD
+        # reprovou no kpis-check da rodada 1, aprovou na 2, e o dossiê seguia listando o redator
+        # e os dois gates como "saiu provisório" numa execução sem nenhum impedimento.
+        delta[KEY_AGENTES_DEGRADADOS] = []
 
 
 def registrar_degradacao(state, delta: Dict[str, Any], gate: str, motivo: str) -> None:
