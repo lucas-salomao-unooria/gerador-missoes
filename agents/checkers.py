@@ -542,7 +542,7 @@ class PrototipoLintAgent(BaseAgent):
 
         resultado = lint.validar(html, declaradas)
         delta = {
-            self.report_key: lint.relatorio(resultado, extrair_slug(state) or ""),
+            self.report_key: lint.relatorio(resultado, extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""),
             self.status_key: resultado["status"],
             f"{self.status_key}_envelope": {"agente": lint.AGENTE, "status": resultado["status"],
                                             "achados": resultado["achados"]},
@@ -584,7 +584,7 @@ class ConsolidacaoBancaAgent(BaseAgent):
         from tools import banca as bnc
 
         state = ctx.session.state
-        missao = extrair_slug(state) or ""
+        missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
         envelopes = {chave: extrair_envelope(str(state.get(chave, "") or "")) for chave in self.fontes}
         resultado = bnc.consolidar(envelopes)
         texto = bnc.relatorio(resultado, missao)
@@ -650,6 +650,20 @@ class RastroCheckAgent(BaseAgent):
         elif self.modo == "telemetria":
             resultado = validar_telemetria(str(state.get(self.fonte_key, "") or ""))
             relatorio = relatorio_telemetria(resultado, missao)
+        elif self.modo == "evidencia":
+            # Coerência pedagógica do bloco 9/11 da spec: grau `scored` com dois sinais, toda
+            # habilidade com momento em tela e medida ligada, gabarito declarado no servidor.
+            from tools import evidencia as ev
+
+            resultado = ev.validar(str(state.get(self.spec_key, "") or ""))
+            relatorio = ev.relatorio(resultado, missao)
+        elif self.modo == "kpis":
+            # Coerência KPI ↔ evento ↔ tela no PRD.
+            from tools import kpis as kp
+
+            resultado = kp.validar_kpis(str(state.get("prd_final", "") or ""),
+                                        str(state.get(self.spec_key, "") or ""))
+            relatorio = kp.relatorio(resultado, missao)
         elif self.modo == "prd":
             # Dois exames no mesmo passo: os marcadores que o redator deixou (lacunas) e as
             # contradições que ele não viu (consistência). Um PRD pode não ter lacuna nenhuma e
@@ -682,17 +696,6 @@ class RastroCheckAgent(BaseAgent):
         if status == "aprovado":
             msg = f"✅ {self.rotulo}: conforme."
             limpar_degradacao(state, delta, self.rotulo)
-        elif self.modo == "kpis":
-            from tools import kpis as kp
-
-            resultado = kp.validar_kpis(str(state.get("prd_final", "") or ""),
-                                        str(state.get("spec_missao", "") or ""))
-            texto = kp.relatorio(resultado, missao)
-        elif self.modo == "evidencia":
-            from tools import evidencia as ev
-
-            resultado = ev.validar(str(state.get("spec_missao", "") or ""))
-            texto = ev.relatorio(resultado, missao)
         elif self.modo == "one_pager":
             # Aqui o veredito é do gate estrutural; este nó só entrega a lista para ele aplicar.
             todos = bloqueios + avisos

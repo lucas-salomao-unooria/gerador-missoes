@@ -2738,6 +2738,54 @@ def test_custo_e_tendencia_da_esteira():
     print("   ✓ custo por agente no dossiê, execução reproduzível e tendência de achados medida")
 
 
+def test_agentes_novos_rodam_de_ponta_a_ponta():
+    """Os agentes determinísticos novos, exercitados pelo ADK — não só pelas funções que chamam.
+
+    Dois bugs só apareceram numa execução real, porque os testes cobriam `tools/` mas nunca
+    instanciavam os agentes: um ramo de `RastroCheckAgent` inserido no bloco que monta a
+    mensagem em vez do que calcula o resultado (`UnboundLocalError: msg`), e `extrair_slug`
+    recebendo o dicionário de estado quando espera o TEXTO do one-pager (`TypeError`). Os dois
+    custaram 20 minutos de execução cada.
+    """
+    from agents.checkers import ConsolidacaoBancaAgent, PrototipoLintAgent, RastroCheckAgent
+
+    spec = ("# Spec — `id: exp06ef1b`\n## 9. Evidências\n"
+            "| Medida | Grau | Sinais | Canal | Tabela.coluna | Habilidade |\n|---|---|---|---|---|---|\n"
+            "| `posts` | `scored` | `a:b` + `c:d` | operacional | `exp06ef1b_sessoes.p` | `EF06CO09` |\n"
+            "- `gabarito_servidor: sim`\n## 11. Currículo\n"
+            "| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Marcador |\n"
+            "|---|---|---|---|---|---|\n| `EF06CO09` | `E3-ALU-02` | fixa | rola | `posts` | ternário |\n")
+
+    root = SequentialAgent(name="R", sub_agents=[
+        FakeAgent(name="Spec", key="spec_missao", text=spec),
+        FakeAgent(name="Jornada", key="jornada_telas", text="| E1-ALU-01 | abertura |\n"),
+        FakeAgent(name="Proto", key="prototipo_arquivo", text="<html><body>E1-ALU-01</body></html>"),
+        FakeAgent(name="Prd", key="prd_final", text="# PRD\n`exp06ef1b_sessoes`\n"),
+        FakeAgent(name="V1", key="validacao_produto_narrativa",
+                  text='```json\n{"status": "aprovado", "achados": []}\n```'),
+        RastroCheckAgent(name="A15bEvidenciaCheck", modo="evidencia", rotulo="Matriz de evidência",
+                         report_key="evidencia_report", status_key="evidencia_status", estrito=False),
+        RastroCheckAgent(name="A48bKpisCheck", modo="kpis", rotulo="KPI",
+                         report_key="kpis_report", status_key="kpis_status", estrito=False),
+        PrototipoLintAgent(name="A29cPrototipoLint"),
+        ConsolidacaoBancaAgent(name="A44", fontes=["validacao_produto_narrativa"]),
+    ])
+    _, st = asyncio.run(_run(root))
+
+    # cada agente gravou status E relatório — é o que faltava quando os bugs passaram
+    for chave, relatorio in (("evidencia_status", "evidencia_report"), ("kpis_status", "kpis_report"),
+                             ("prototipo_lint_status", "prototipo_lint_report")):
+        assert st.get(chave), f"{chave} não foi gravado"
+        assert st.get(relatorio), f"{relatorio} não foi gravado"
+    assert st["evidencia_status"] == "aprovado", st.get("evidencia_report", "")[:200]
+    # o protótipo não tem a tela E3-ALU-02 que a jornada declara
+    assert st["prototipo_lint_status"] == "aprovado", "jornada só declara E1-ALU-01 neste teste"
+    assert st.get("validacao_dev_report"), "a banca consolidada não gerou relatório"
+    assert (st.get("dev_status_envelope") or {}).get("status") == "aprovado"
+
+    print("   ✓ agentes novos rodam pelo ADK: evidência, KPI, lint do protótipo e banca consolidada")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")

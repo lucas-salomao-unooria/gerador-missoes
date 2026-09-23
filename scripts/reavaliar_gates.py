@@ -28,7 +28,7 @@ from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from tools import bncc, contrato_produto, rastro  # noqa: E402
+from tools import bncc, contrato_produto, evidencia, kpis, rastro  # noqa: E402
 from tools.diagnostico import GATES, coletar  # noqa: E402
 
 #: Espelha `fontes_lacunas` de `agents/dev/__init__.py` — se a lista mudar lá, muda aqui.
@@ -111,6 +111,10 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
         "status": pior,
         "achados": lac_prd.get("achados", []) + cons_prd.get("achados", []),
     }
+
+    # gates acrescentados pela auditoria de 23/09: coerência pedagógica e KPI ↔ evento ↔ tela
+    novos["evidencia_status"] = evidencia.validar(spec)
+    novos["kpis_status"] = kpis.validar_kpis(prd, spec)
 
     novos["contrato_produto_status"] = contrato_produto.validar_one_pager(
         one_pager, state.get("nucleo_narrativo", "") or "", state.get("briefing", "") or ""
