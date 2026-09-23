@@ -24,6 +24,10 @@ Ordem (SequentialAgent):
   p5  A13SpecMissao          → spec_missao   (saída final de Produto)
   p5c A14BnccCheck                → bncc_status   (determinístico: bloco 11 × BNCC Computação oficial;
                                  não conforme bloqueia design e dev)
+  p5d A15cPerguntasCheck     → perguntas_status (determinístico: as 5 perguntas do 9f, com decisão
+                                 com limiar e ação que existe na tabela de eventos)
+  p5e A15dJuizPerguntas      → juiz_perguntas_report (o que só se julga lendo: a pergunta muda
+                                 uma decisão nossa e é sobre o produto, não sobre a criança)
   p6  A16bOnePagerResumido   → one_pager_resumido (o formato curto do time de produto para
                                  avaliação pedagógica, derivado do canônico e da spec conferida)
 """
@@ -220,6 +224,18 @@ def get_vizinhas_catalogo_agent(nome: str) -> VizinhasCatalogoAgent:
     )
 
 
+def get_juiz_perguntas_agent(**kw) -> LlmAgent:
+    return create_llm_agent(
+        name="A15dJuizPerguntas",
+        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
+        description="Juiz das cinco perguntas de produto do 9f: cada uma muda uma decisão nossa, é sobre o produto e não sobre a criança, e a ação nomeada a responde.",
+        instruction=load_prompt("produto/15_juiz_perguntas.md"),
+        output_key="juiz_perguntas_report",
+        before_agent_callback=marcar_heranca,
+        **kw,
+    )
+
+
 def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
     """Spec da missão ↔ BNCC e ficha do manifesto. Usado pela etapa inteira e pela correção a partir da spec."""
     return LoopAgent(
@@ -254,11 +270,32 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
                 estrito=settings.esteira_estrita,
                 before_agent_callback=marcar_heranca,
             ),
+            RastroCheckAgent(
+                name="A15cPerguntasCheck",
+                description="Sub-bloco 9f: cinco perguntas de produto, cada uma com decisão que tem limiar, corte válido e uma ação declarada na tabela de eventos que a responde com número.",
+                modo="perguntas",
+                rotulo="Perguntas de produto (9f)",
+                report_key="perguntas_report",
+                status_key="perguntas_status",
+                estrito=settings.esteira_estrita,
+                before_agent_callback=marcar_heranca,
+            ),
+            get_juiz_perguntas_agent(**kw),
+            EnvelopeGateAgent(
+                name="A15eJuizPerguntasCheck",
+                report_key="juiz_perguntas_report",
+                status_key="juiz_perguntas_status",
+                rotulo="Juiz das perguntas de produto",
+                round_key="juiz_perguntas_rodada",
+                max_rounds=rodadas_spec,
+                block_pipeline_on_fail=settings.esteira_estrita,
+            ),
             SaidaDeLoopAgent(
                 name="A16SpecCheck",
-                description="Currículo, manifesto e matriz de evidência conformes encerram o loop; reprovados devolvem a spec ao autor com os relatórios.",
+                description="Currículo, manifesto, matriz de evidência e perguntas de produto conformes encerram o loop; reprovados devolvem a spec ao autor com os relatórios.",
                 rotulo="Spec da missão",
-                status_keys=["bncc_status", "manifesto_status", "evidencia_status"],
+                status_keys=["bncc_status", "manifesto_status", "evidencia_status",
+                             "perguntas_status", "juiz_perguntas_status"],
                 rodada_key="spec_rodada",
                 max_rounds=rodadas_spec,
             ),
@@ -465,7 +502,9 @@ def build_produto_stage(
 
 
 #: Agentes do estágio parcial "spec" (correção a partir da spec), na ordem em que rodam.
-SPEC_AGENT_IDS = ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A16SpecCheck", "A16bOnePagerResumido"]
+SPEC_AGENT_IDS = ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
+                  "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
+                  "A16SpecCheck", "A16bOnePagerResumido"]
 
 PRODUTO_METADATA = [
     {"id": "A00bVizinhasCatalogo", "name": "00b · Missões já geradas (determinístico)", "icon": "🗂️", "output_key": "missoes_vizinhas", "prompt_file": None, "description": "Lê o índice de missões e entrega ao núcleo as mais próximas do ano do briefing, para a missão nova não repetir uma anterior."},
@@ -488,6 +527,10 @@ PRODUTO_METADATA = [
     {"id": "A13SpecMissao", "name": "13 · Spec da missão", "icon": "📜", "output_key": "spec_missao", "prompt_file": "produto/13_spec_missao.md", "description": "Os 12 blocos da spec — contrato contra o qual design e dev constroem."},
     {"id": "A14BnccCheck", "name": "14 · Conformidade BNCC Computação (determinístico)", "icon": "📚", "output_key": "bncc_report", "prompt_file": None, "description": "Bloco 11 × lista oficial do MEC: código existe, é do ano da missão e inclui letramento digital. Não conforme bloqueia design e dev."},
     {"id": "A15ManifestoCheckProduto", "name": "15 · Ficha do manifesto (determinístico)", "icon": "🪪", "output_key": "manifesto_report", "prompt_file": None, "description": "Bloco 0 da spec × listas fechadas da plataforma, conferido ainda em Produto: campo errado volta para quem escreveu a spec, em vez de custar o design inteiro."},
+    {"id": "A15bEvidenciaCheck", "name": "15b · Matriz de evidência pedagógica (determinístico)", "icon": "🔬", "output_key": "evidencia_report", "prompt_file": None, "description": "Bloco 9 × bloco 11: grau `scored` com dois sinais nomeados, toda habilidade com momento em tela e medida ligada, gabarito declarado no servidor."},
+    {"id": "A15cPerguntasCheck", "name": "15c · Perguntas de produto, sub-bloco 9f (determinístico)", "icon": "❓", "output_key": "perguntas_report", "prompt_file": None, "description": "As cinco perguntas de produto: quantidade fechada, decisão com limiar, corte do vocabulário, e a ação que responde cada uma declarada na tabela de eventos do bloco 9 com payload que mede."},
+    {"id": "A15dJuizPerguntas", "name": "15d · Juiz das perguntas de produto", "icon": "⚖️", "output_key": "juiz_perguntas_report", "prompt_file": "produto/15_juiz_perguntas.md", "description": "O que não se confere por regex: a pergunta muda uma decisão nossa, é sobre o produto e não sobre a criança, a ação nomeada a responde, e ela não é uma transversal repintada."},
+    {"id": "A15eJuizPerguntasCheck", "name": "15e · Veredito do juiz das perguntas (determinístico)", "icon": "🔀", "output_key": "juiz_perguntas_status", "prompt_file": None, "description": "Lê o envelope do juiz: ❌ em pergunta declarada pelo PO bloqueia; ❌ só em proposta segue como ressalva para o PO decidir."},
     {"id": "A16SpecCheck", "name": "16 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
     {"id": "A16bOnePagerResumido", "name": "16b · One-pager resumido", "icon": "🗂️", "output_key": "one_pager_resumido", "prompt_file": "produto/16b_one_pager_resumido.md", "description": "O one-pager no formato do time de produto para avaliação pedagógica: ficha, ideia, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário e takeaway. Sai em .md, .docx e .html."},
 ]

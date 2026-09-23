@@ -42,6 +42,8 @@ STATUS_KEYS = [
     "ambiente_status",
     "design_status",
     "manifesto_status", "evidencia_status", "evidencia_report",
+    "perguntas_status", "perguntas_report",
+    "juiz_perguntas_status", "juiz_perguntas_rodada",
     "telemetria_status",
     "rastro_lacunas_status",
     "dev_status",

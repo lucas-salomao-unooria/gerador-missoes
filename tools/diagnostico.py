@@ -32,6 +32,8 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "design_status", "rotulo": "QA de entregáveis", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "manifesto_status", "rotulo": "Ficha do manifesto", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "evidencia_status", "rotulo": "Matriz de evidência pedagógica", "etapa": "produto", "rodada": "spec_rodada"},
+    {"status": "perguntas_status", "rotulo": "Perguntas de produto (9f)", "etapa": "produto", "rodada": "spec_rodada"},
+    {"status": "juiz_perguntas_status", "rotulo": "Juiz das perguntas de produto", "etapa": "produto", "rodada": "juiz_perguntas_rodada"},
     {"status": "telemetria_status", "rotulo": "Contrato de telemetria", "etapa": "dev", "rodada": "handoff_rodada"},
     {"status": "rastro_lacunas_status", "rotulo": "Rastro de lacunas", "etapa": "dev", "rodada": None},
     {"status": "dev_status", "rotulo": "Banca de dev", "etapa": "dev", "rodada": "banca_rodada"},

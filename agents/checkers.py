@@ -620,7 +620,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria | prd | one_pager
+    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -657,6 +657,13 @@ class RastroCheckAgent(BaseAgent):
 
             resultado = ev.validar(str(state.get(self.spec_key, "") or ""))
             relatorio = ev.relatorio(resultado, missao)
+        elif self.modo == "perguntas":
+            # As cinco perguntas de produto do sub-bloco 9f, onde a pergunta NASCE. Conferir aqui
+            # custa uma reescrita da spec; deixar passar custa o PRD inteiro duas etapas adiante.
+            from tools import kpis as kp
+
+            resultado = kp.validar_9f(str(state.get(self.spec_key, "") or ""))
+            relatorio = kp.relatorio_9f(resultado, missao)
         elif self.modo == "kpis":
             # Coerência KPI ↔ evento ↔ tela no PRD.
             from tools import kpis as kp

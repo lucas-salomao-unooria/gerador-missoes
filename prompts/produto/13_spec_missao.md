@@ -69,6 +69,14 @@ Cinco é o número fechado — nem quatro por economia, nem oito por zelo.
 
 {evidencia_report?}
 
+**Perguntas de produto (gate determinístico sobre o sub-bloco 9f):**
+
+{perguntas_report?}
+
+**Juiz das perguntas de produto (o que a regra não vê):**
+
+{juiz_perguntas_report?}
+
 Se os dois blocos estiverem vazios e não houver pedido de correção no fim desta instrução, esta é a primeira passada: escreva a spec normalmente. Com pedido de correção, você está reescrevendo uma spec já aprovada: aplique o pedido, preserve o resto e registre o que mudou.
 
 Se algum deles apontar achado, **reemita a spec inteira** corrigindo exatamente o que foi apontado. Os dois gates são mecânicos e a correção costuma ser literal:
@@ -89,7 +97,8 @@ Não aproveite a rodada para melhorar outra coisa: mudança não pedida invalida
 5. **Bloco 8 completo**: formalize o contrato de customização e preparação docente — o **recorte da aula** (disciplina, tema, assuntos, contexto, foco; a missão é transversal e quem prepara é o professor de qualquer disciplina), regras e schema Zod de geração por IA (Vertex AI Gemini) no molde da exp-08, as rotas instanciando o padrão de Atividade da plataforma (criar → gerar → progresso → aprovar → ativar; nunca rota nova por missão), fluxo de curadoria docente com preview e edição de qualquer texto antes da aula, banco curado default (fallback imediato sem IA), a **tabela "A mesma missão em três aulas"** copiada da seção 9b do one-pager, e gatilhos de controle/pausas da turma.
 6. Copie as contas dos tetos do relatório de experiência (bloco 6) e as habilidades confirmadas/pendentes do relatório pedagógico (bloco 11), marcando 🔵 o que não foi confirmado.
 7. **Bloco 12 — decisões fechadas neste gate**: decisão · quem decidiu · data · alternativas descartadas. Mais a lista `[ABERTO — dono]` consolidada.
-8. Nunca invente código BNCC, componente de DS, rota ou tabela. **O bloco 11 passa por um gate determinístico logo depois de você:** código fora da lista oficial acima, código de outro ano que não a série do bloco 0, ou bloco sem nenhuma habilidade de **letramento digital** trava a esteira. Escreva cada código exatamente como está na lista (ou no material do Entre Redes anexado, quando prioritário), com o eixo, o texto literal da habilidade e o momento em tela; marque qual é a de letramento digital. Se a seção 2 do one-pager traz `[DECISÃO PENDENTE — responsável de produto: …]` no lugar do foco de letramento digital, copie-a no bloco 11 como `[ABERTO — dono: produto: <mesmo texto>]` — o gate determinístico reconhece o marcador e bloqueia pela decisão pendente, que é a mensagem certa para o time; não preencha com um código aproximado.
+8. **Sub-bloco 9f — cinco perguntas de produto, sempre cinco.** Cada uma com: a pergunta (interrogativa), a **decisão que ela dispara com o limiar** (`<20% → reforçar a mediação`; sem o número ninguém sabe quando agir), o corte (`rede · escola · missao · serie · turma · professor`), a etapa, a **ação `verbo objeto:slug` que a responde — e essa ação tem de estar na tabela de eventos do bloco 9, com `resultado` ou `contexto` que carregue o número** (evento que só diz «aconteceu» não responde «quantos»), e a origem. Mais as três fichas: `declared_lessons`, `core_action` (também presente na tabela de eventos) e `perguntas_herdadas`. Um gate determinístico confere tudo isso logo depois de você, e um juiz confere se a pergunta muda alguma decisão nossa — pergunta sobre o que a criança aprendeu não é pergunta de produto, é medida do bloco 9.
+9. Nunca invente código BNCC, componente de DS, rota ou tabela. **O bloco 11 passa por um gate determinístico logo depois de você:** código fora da lista oficial acima, código de outro ano que não a série do bloco 0, ou bloco sem nenhuma habilidade de **letramento digital** trava a esteira. Escreva cada código exatamente como está na lista (ou no material do Entre Redes anexado, quando prioritário), com o eixo, o texto literal da habilidade e o momento em tela; marque qual é a de letramento digital. Se a seção 2 do one-pager traz `[DECISÃO PENDENTE — responsável de produto: …]` no lugar do foco de letramento digital, copie-a no bloco 11 como `[ABERTO — dono: produto: <mesmo texto>]` — o gate determinístico reconhece o marcador e bloqueia pela decisão pendente, que é a mensagem certa para o time; não preencha com um código aproximado.
 
 ## Saída
 

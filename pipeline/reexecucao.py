@@ -103,6 +103,8 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Conformidade BNCC Computação": "spec",
     "Ficha do manifesto (produto)": "spec",
     "Matriz de evidência pedagógica": "spec",
+    "Perguntas de produto (9f)": "spec",
+    "Juiz das perguntas de produto": "spec",
     "Spec da missão": "spec",
     "Fechamento de lacunas (D0)": "design",
     "Ambiente simulado (D9)": "design",

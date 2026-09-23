@@ -66,7 +66,9 @@ KNOWN_STATE_KEYS = {
     "miro_links", "miro_board",
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
-    "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "execucao", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
+    "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po",
+    "perguntas_report", "perguntas_status", "juiz_perguntas_report", "juiz_perguntas_status",
+    "juiz_perguntas_rodada", "execucao", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
     "validacao_dev_report", "dev_status", "prd_final", "one_pager_pedagogico", "one_pager_resumido", "aprendizado_registro",
@@ -955,7 +957,12 @@ def test_estagio_produto_parcial_spec():
     # `A15bEvidenciaCheck` entra desde 23/09/2026: grau `scored` com dois sinais, habilidade do
     # bloco 11 com momento e medida, gabarito no servidor. Eram três exigências que a spec
     # declarava em prosa e nenhuma verificação tocava — PED-04 é bloqueante e ninguém o conferia.
-    assert [a.name for a in produto.sub_agents[0].sub_agents] == ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck", "A16SpecCheck"]
+    # `A15cPerguntasCheck` e o juiz `A15dJuizPerguntas` entram em 23/09/2026: as cinco perguntas
+    # de produto do sub-bloco 9f nasciam na spec sem nenhum gate, e o `validar_kpis` do PRD recebia
+    # a spec como parâmetro morto — a pergunta podia morrer entre produto e dev sem deixar rastro.
+    assert [a.name for a in produto.sub_agents[0].sub_agents] == [
+        "A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
+        "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck", "A16SpecCheck"]
     assert produto.sub_agents[0].max_iterations == max(1, get_settings().spec_max_rodadas)
     nomes = [a.name for _, a in iter_agent_tree(orch)]
     assert "A01NucleoNarrativo" not in nomes and "A05GateEstrutural" not in nomes
@@ -978,7 +985,10 @@ def test_estagio_produto_parcial_spec():
     assert [s["key"] for s in stages_para_ui(["spec", "design", "dev"])] == ["spec", "design", "dev", "transversal"]
     assert [s["key"] for s in stages_para_ui(["dev"])] == ["dev", "transversal"]
     assert [s["key"] for s in stages_para_ui(["produto", "design", "dev"])] == ["produto", "design", "dev", "transversal"]
-    assert [m["id"] for m in STAGE_SPEC["agents"]] == ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A16SpecCheck", "A16bOnePagerResumido"]
+    assert [m["id"] for m in STAGE_SPEC["agents"]] == [
+        "A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
+        "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
+        "A16SpecCheck", "A16bOnePagerResumido"]
     print("   ✓ estágio parcial spec: SpecLoop + resumido, sem núcleo; stages_para_ui resolve spec")
 
 
@@ -2767,6 +2777,8 @@ def test_agentes_novos_rodam_de_ponta_a_ponta():
                          report_key="evidencia_report", status_key="evidencia_status", estrito=False),
         RastroCheckAgent(name="A48bKpisCheck", modo="kpis", rotulo="KPI",
                          report_key="kpis_report", status_key="kpis_status", estrito=False),
+        RastroCheckAgent(name="A15cPerguntasCheck", modo="perguntas", rotulo="Perguntas de produto (9f)",
+                         report_key="perguntas_report", status_key="perguntas_status", estrito=False),
         PrototipoLintAgent(name="A29cPrototipoLint"),
         ConsolidacaoBancaAgent(name="A44", fontes=["validacao_produto_narrativa"]),
     ])
@@ -2774,6 +2786,7 @@ def test_agentes_novos_rodam_de_ponta_a_ponta():
 
     # cada agente gravou status E relatório — é o que faltava quando os bugs passaram
     for chave, relatorio in (("evidencia_status", "evidencia_report"), ("kpis_status", "kpis_report"),
+                             ("perguntas_status", "perguntas_report"),
                              ("prototipo_lint_status", "prototipo_lint_report")):
         assert st.get(chave), f"{chave} não foi gravado"
         assert st.get(relatorio), f"{relatorio} não foi gravado"
@@ -2783,7 +2796,105 @@ def test_agentes_novos_rodam_de_ponta_a_ponta():
     assert st.get("validacao_dev_report"), "a banca consolidada não gerou relatório"
     assert (st.get("dev_status_envelope") or {}).get("status") == "aprovado"
 
-    print("   ✓ agentes novos rodam pelo ADK: evidência, KPI, lint do protótipo e banca consolidada")
+    # a spec deste teste não traz o 9f: o gate precisa dizer isso em vez de estourar
+    assert st["perguntas_status"] == "bloqueado"
+    assert "9f" in st["perguntas_report"]
+
+    print("   ✓ agentes novos rodam pelo ADK: evidência, KPI, perguntas do 9f, lint e banca")
+
+
+_SPEC_9F = """
+- `declared_lessons: 1`
+- `core_action: scored decisao:mural`
+- `perguntas_herdadas: T1, T2, T4`
+
+| PQ | Pergunta | Decisão que dispara | Corte | Etapa | Ação (verbo:objeto) | Origem |
+|---|---|---|---|---|---|---|
+| PQ-01 | quantas duplas trocam de escolha depois do Aha? | <20% → reforçar a mediação na etapa 3 | turma | E4 | `progressed aha:revelacao` | PO |
+| PQ-02 | quantas turmas chegam ao mural? | <50% → encurtar a etapa 3 | turma | E5 | `scored decisao:mural` | PO |
+| PQ-03 | quantos abrem a aba de fontes? | <30% → dar pista na copy | missao | E2 | `interacted aba:fontes` | [PROPOSTA — validar com PO] |
+| PQ-04 | quantos refazem a escolha antes de salvar? | >40% → a decisão está confusa | turma | E4 | `attempted decisao:mural` | [PROPOSTA — validar com PO] |
+| PQ-05 | quantos professores abrem o painel antes da aula? | <50% → mudar o convite | escola | E0 | `opened painel:professor` | [PROPOSTA — validar com PO] |
+
+| Verbo | Objeto | Quando dispara | Resultado | Contexto | Caminho | Onde é lido |
+|---|---|---|---|---|---|---|
+| progressed | aha:revelacao | ao virar a carta | {"trocou": true} | {"etapa": 4} | analítico | exp09ef1b_sessoes |
+| scored | decisao:mural | ao salvar no mural | {"acertos": 3} | {"tempo_ms": 120000} | operacional | exp09ef1b_sessoes |
+| interacted | aba:fontes | ao abrir a aba | {"aberta": true} | — | analítico | exp09ef1b_sessoes |
+| attempted | decisao:mural | a cada troca | {"trocas": 2} | — | analítico | exp09ef1b_sessoes |
+| opened | painel:professor | ao abrir o painel | {"aberto": true} | — | analítico | exp09ef1b_gates_turma |
+"""
+
+
+def test_perguntas_de_produto_9f():
+    """As cinco perguntas do 9f: quantidade fechada, decisão com limiar, e uma ação que a spec
+    de fato emite e que carrega número. Até 23/09/2026 nada disso era conferido — a pergunta
+    nascia na spec sem gate e chegava ao PRD já convertida em KPI."""
+    from tools.kpis import PQ_POR_MISSAO, validar_9f
+
+    assert PQ_POR_MISSAO == 5
+    ok = validar_9f(_SPEC_9F)
+    assert ok["status"] == "aprovado", [a["codigo"] for a in ok["achados"]]
+    assert ok["perguntas"] == 5
+
+    # Uma a menos é lacuna: o número é fechado justamente para o PO não receber página em branco.
+    quatro = validar_9f(_SPEC_9F.replace(
+        "| PQ-05 | quantos professores abrem o painel antes da aula? | <50% → mudar o convite | escola | E0 | `opened painel:professor` | [PROPOSTA — validar com PO] |\n", ""))
+    assert quatro["status"] == "bloqueado"
+    assert [a["codigo"] for a in quatro["achados"]] == ["pq-faltando"]
+
+    # Ação que a tabela de eventos não declara: a pergunta não tem como ser respondida.
+    orfa = validar_9f(_SPEC_9F.replace("`interacted aba:fontes`", "`interacted aba:inexistente`"))
+    assert orfa["status"] == "bloqueado"
+    assert any(a["codigo"] == "pq-acao-sem-evento" for a in orfa["achados"])
+
+    # Evento que existe mas não carrega nada: diz que aconteceu, não quanto.
+    mudo = validar_9f(_SPEC_9F.replace('| interacted | aba:fontes | ao abrir a aba | {"aberta": true} | — |',
+                                       "| interacted | aba:fontes | ao abrir a aba | — | — |"))
+    assert any(a["codigo"] == "pq-evento-nao-mede" for a in mudo["achados"])
+
+    # Decisão sem limiar não é decisão: ninguém sabe quando agir.
+    vaga = validar_9f(_SPEC_9F.replace("<30% → dar pista na copy", "melhorar a experiência"))
+    assert any(a["codigo"] == "pq-decisao-sem-limiar" for a in vaga["achados"])
+
+    # Encher linguiça para chegar a cinco: a mesma pergunta duas vezes.
+    repetida = validar_9f(_SPEC_9F.replace("quantos abrem a aba de fontes?", "quantas turmas chegam ao mural?"))
+    assert any(a["codigo"] == "pq-duplicada" for a in repetida["achados"])
+
+    # `core_action` que a tabela de eventos não emite: a decisão central não é medida por nada.
+    sem_core = validar_9f(_SPEC_9F.replace("`core_action: scored decisao:mural`", "`core_action: scored decisao:fantasma`"))
+    assert any(a["codigo"] == "core-action-sem-evento" for a in sem_core["achados"])
+
+    print("   ✓ 9f: cinco perguntas, decisão com limiar, ação que existe no bloco 9 e mede")
+
+
+def test_kpis_cruza_o_prd_com_a_spec():
+    """`validar_kpis` recebia a spec e nunca a lia: o PRD era conferido contra si mesmo, e uma
+    pergunta decidida em produto podia sumir no caminho sem que nenhum gate notasse."""
+    from tools.kpis import validar_kpis
+
+    prd = """
+| KPI | PQ | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |
+|---|---|---|---|---|---|---|---|---|---|---|
+| KPI-01 | PQ-01 | trocam de escolha? | <20% → reforçar | turma | E4-ALU-02 | `EVT-001` | razão | sem baseline — primeira medição | 20% | 11/2026 |
+| KPI-02 | PQ-09 | inventada aqui | <10% → nada | turma | E4-ALU-02 | `EVT-001` | razão | sem baseline — primeira medição | 10% | 11/2026 |
+
+| ID | Verbo | Objeto | Quando dispara | Resultado | Contexto | Onde é lido |
+|---|---|---|---|---|---|---|
+| EVT-001 | progressed | aha:revelacao | E4-ALU-02 | {"trocou": true} | — | exp09ef1b_sessoes |
+"""
+    r = validar_kpis(prd, _SPEC_9F)
+    codigos = [a["codigo"] for a in r["achados"]]
+    assert r["status"] == "bloqueado"
+    # quatro perguntas da spec ficaram sem KPI, e uma PQ do PRD não existe na spec
+    assert codigos.count("pq-sem-kpi") == 4
+    assert "kpi-pq-inexistente" in codigos
+    assert any("PQ-09" in a["resumo"] for a in r["achados"])
+
+    # Sem spec o gate não inventa achado: é o caso do modo correção que só refaz o PRD.
+    assert not [a for a in validar_kpis(prd, "")["achados"] if a["codigo"].startswith("pq-")]
+
+    print("   ✓ KPI ↔ spec: pergunta que morreu entre produto e dev, e KPI que inventou pergunta")
 
 
 if __name__ == "__main__":
