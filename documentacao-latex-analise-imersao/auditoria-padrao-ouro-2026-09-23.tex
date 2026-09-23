@@ -45,7 +45,7 @@
 \fancyhf{}
 \fancyhead[L]{\small\color{SteelBlue}Auditoria do padrão ouro --- Gerador de Missões Unooria}
 \fancyhead[R]{\small\color{SteelBlue}\thepage}
-\fancyfoot[C]{\footnotesize\color{gray}23 de setembro de 2026 --- versão 3 (fim da tarde) --- confronto com os relatórios de 20 e 22/09}
+\fancyfoot[C]{\footnotesize\color{gray}23 de setembro de 2026 --- versão 4 (noite) --- confronto com os relatórios de 20 e 22/09}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0.2pt}
 
@@ -87,9 +87,9 @@
 \begin{center}
     {\Huge\bfseries\color{NavyBlue} Auditoria do Padrão Ouro}\\[0.4cm]
     {\LARGE\bfseries\color{SteelBlue} O que os 28 gaps viraram, e o que ainda separa a esteira de uma geração confiável}\\[0.5cm]
-    \textbf{Gerador de Missões Unooria --- terceira leitura em quatro dias, revisada duas vezes}\\[0.3cm]
-    {\small \textbf{Data:} 23 de setembro de 2026 \quad|\quad \textbf{Versão:} 3 (fim da tarde) \quad|\quad \textbf{Referência:} Rubrica v1.19 \quad|\quad \textbf{HEAD:} \texttt{0b186a1}}\\[0.2cm]
-    {\footnotesize \textbf{Corpus:} 105 agentes na árvore $\cdot$ 49 de LLM $\cdot$ 69 prompts $\cdot$ 34 referências $\cdot$ 74 testes $\cdot$ 22 gates no dossiê $\cdot$ 14 sessões do bucket}
+    \textbf{Gerador de Missões Unooria --- terceira leitura em quatro dias, revisada três vezes}\\[0.3cm]
+    {\small \textbf{Data:} 23 de setembro de 2026 \quad|\quad \textbf{Versão:} 4 (noite) \quad|\quad \textbf{Referência:} Rubrica v1.19 \quad|\quad \textbf{HEAD:} \texttt{5427dbf}}\\[0.2cm]
+    {\footnotesize \textbf{Corpus:} 105 agentes na árvore $\cdot$ 49 de LLM $\cdot$ 69 prompts $\cdot$ 34 referências $\cdot$ 75 testes $\cdot$ 22 gates no dossiê $\cdot$ 14 sessões do bucket}
 \end{center}
 
 \vspace{0.4cm}
@@ -98,23 +98,23 @@
 
 \section{Veredito}
 
-\begin{vereditobox}{A resposta curta, na versão 3}
-\textbf{Ainda não é padrão ouro, e o que falta no código agora cabe em dez minutos.} A versão 2 terminou com um defeito de código aberto: o ticket de design cujo dono o despacho não conhecia (A-15). Corrigi-lo revelou que o problema era maior e mais grave --- \textbf{desde 22/09 o retrabalho da banca não consertava nada} (A-15b), por um defeito introduzido na própria consolidação determinística da banca. Os dois estão fechados, com teste.
+\begin{vereditobox}{A resposta curta, na versão 4}
+\textbf{No código, sim --- dentro do que este relatório define como padrão ouro.} Não há defeito conhecido aberto que deixe um veredito mentir, um ticket sumir, um gate passar sem resposta ou um agente reescrever sem ler o que lhe pediram. Os dois últimos casos dessa família (A-16 e A-17, achados na v3) foram fechados, e as duas perguntas que os acharam viraram teste.
 
-Uma verificação nova, feita pela primeira vez sobre a árvore inteira --- \emph{todo agente que pode ser reexecutado lê o que o gate pediu?} --- achou mais dois casos da mesma família:
+O sinal mais forte não é a correção, é o que veio depois dela: \textbf{a pergunta nova desta versão --- todo insumo que um prompt lê já existe quando o agente roda? --- voltou sem defeito}. Depois de três versões em que cada pergunta nova feita à árvore inteira achou algo a consertar, é a primeira que não achou.
+
+\textbf{Como sistema, ainda não}, pelas mesmas três coisas, nenhuma delas código:
 \begin{enumerate}[nosep,leftmargin=*]
-  \item \textbf{A-16 --- o brief de assets é reexecutado pela banca às cegas}: não lê o ticket nem o relatório. Real, raro (2 tickets nas 14 sessões). Cinco minutos.
-  \item \textbf{A-17 --- latente}: no loop das avaliações, o revisor do one-pager não recebe a avaliação pedagógica. Só se manifesta com \texttt{AVALIACOES\_MAX\_RODADAS} $>$ 1, que não é o caso em produção. Cinco minutos.
+  \item \textbf{nenhuma missão atravessou a esteira com o formato de hoje} --- e há um risco que só essa execução mede: os dois agentes que escrevem as entregas finais recebem 668 e 784~KB de contexto (R-01);
+  \item \textbf{as cópias da plataforma seguem em 16/09}, por decisão;
+  \item \textbf{o índice de missões de produção segue com 1 entrada}, à espera de autorização.
 \end{enumerate}
-
-Fora do código, nada mudou desde a versão 2: \textbf{as cópias da plataforma seguem em 16/09} (por decisão), \textbf{o índice de missões de produção segue com 1 entrada} (espera autorização) e \textbf{nenhuma missão atravessou a esteira com o formato de hoje}.
-
-Em uma frase: \textbf{falta fechar dois agentes que reescrevem sem ler o pedido, e depois provar que funciona.}
+Ficam, no código, uma funcionalidade ausente que não impede gerar (A-04, correção parcial sem a etapa de produto) e uma nota de versão cosmética (A-08).
 \end{vereditobox}
 
-\section{O que mudou desde a versão da manhã (v1) e desde a v2}
+\section{O que mudou desde a versão da manhã}
 
-A versão 1 deste relatório foi publicada às 12h06 (\texttt{bea95c5}), a versão 2 à tarde (\texttt{97a07bd}). Depois da v1, seis commits:
+A versão 1 deste relatório foi publicada às 12h06 (\texttt{bea95c5}), a versão 2 à tarde (\texttt{97a07bd}), a versão 3 no fim da tarde (\texttt{5d7ecda}). Depois da v1, sete commits:
 
 \begin{center}
 \small
@@ -129,6 +129,7 @@ A versão 1 deste relatório foi publicada às 12h06 (\texttt{bea95c5}), a vers�
 \texttt{80e1bbb} & \texttt{sincronizar\_plataforma.py} lê argumentos antes de gravar: \texttt{-{}-help} executava a sincronização inteira (A-14). \\
 \midrule
 \texttt{0b186a1} & \textbf{Depois da v2.} Despacho traduz o nome do dono pela fonte única; ticket sem rota vira pendência humana no dossiê; a consolidação da banca volta a entregar dono e id ao despacho; \texttt{brief-oficio} ganha rota e lê o ticket (A-15, A-15b). \\
+\texttt{5427dbf} & \textbf{Depois da v3.} O brief de assets lê o ticket da banca (A-16); o revisor do one-pager recebe a avaliação pedagógica e a experiência do estudante (A-17). As duas perguntas que os acharam viram teste. \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -139,9 +140,9 @@ A versão 1 disse que as 20 depreciações restantes do ADK ``vêm do SDK e do P
 
 \section{Método}
 
-Três leituras anteriores foram cruzadas: o relatório de imersão de 20/09 (102 achados), a reavaliação de 22/09 e o relatório dos 28 gaps sistêmicos de 22/09. Contra elas, o repositório no \texttt{HEAD 0b186a1}: os 105 agentes da árvore real, os 69 prompts com \texttt{include} resolvido, as 34 referências, os validadores de \texttt{tools/} e os 74 testes. Cada gap foi verificado \textbf{no código, por linha}, não pelo commit que diz tê-lo corrigido.
+Três leituras anteriores foram cruzadas: o relatório de imersão de 20/09 (102 achados), a reavaliação de 22/09 e o relatório dos 28 gaps sistêmicos de 22/09. Contra elas, o repositório no \texttt{HEAD 5427dbf}: os 105 agentes da árvore real, os 69 prompts com \texttt{include} resolvido, as 34 referências, os validadores de \texttt{tools/} e os 75 testes. Cada gap foi verificado \textbf{no código, por linha}, não pelo commit que diz tê-lo corrigido.
 
-Na tarde, três cruzamentos foram automatizados, e os três viraram teste: (i) todo \texttt{status\_key} gravado por um agente aparece no dossiê; (ii) nenhum prompt instrui a usar ferramenta que o agente não recebe; (iii) todo dono citado num prompt de gate tem rota no despacho --- revelou o A-15. Na v3, mais três perguntas sobre a árvore inteira: (iv) todo agente que um despacho reexecuta lê o ticket? (v) dentro de cada loop, o autor recebe o relatório de cada gate que o reprova? (vi) documento escrito por mais de um agente, em que o segundo apague o primeiro? As duas primeiras acharam o A-16 e o A-17; a terceira está limpa. As 14 sessões do bucket foram recomputadas duas vezes, em cópia local: \textbf{o bucket foi lido e nunca escrito}.
+Na tarde, três cruzamentos foram automatizados, e os três viraram teste: (i) todo \texttt{status\_key} gravado por um agente aparece no dossiê; (ii) nenhum prompt instrui a usar ferramenta que o agente não recebe; (iii) todo dono citado num prompt de gate tem rota no despacho --- revelou o A-15. Na v3, mais três perguntas sobre a árvore inteira: (iv) todo agente que um despacho reexecuta lê o ticket? (v) dentro de cada loop, o autor recebe o relatório de cada gate que o reprova? (vi) documento escrito por mais de um agente, em que o segundo apague o primeiro? As duas primeiras acharam o A-16 e o A-17; a terceira está limpa. Na v4, mais uma pergunta e uma medição: (vii) todo insumo que um prompt lê já foi escrito quando o agente roda --- percorrendo a árvore na ordem de execução, separando o que chega de propósito só na rodada de correção; (viii) quanto contexto cada agente recebe, com os insumos reais da última execução completa. A (vii) voltou limpa. As 14 sessões do bucket foram recomputadas duas vezes, em cópia local: \textbf{o bucket foi lido e nunca escrito}.
 
 \begin{ressalvabox}{O que este relatório não afirma}
 Não afirma que as missões geradas são boas. A esteira verifica que a missão \emph{declara} o que precisa declarar, de forma conferível; ela não sabe se a criança aprende. Com o protocolo de observação em sala removido por decisão, essa fronteira é permanente: \textbf{padrão ouro aqui significa que tudo que é verificável sobre o artefato está verificado, e o que não é está marcado como tal}.
@@ -161,7 +162,7 @@ Não afirma que as missões geradas são boas. A esteira verifica que a missão 
 \midrule
 GAP-01 & Fail-open nos gates de design e dev & \ok & \texttt{treat\_indefinido\_as\_blocked} só sobrevive no comentário que explica por que saiu \\
 GAP-02 & Status vazio aceito na adequação & \ok & \texttt{SaidaDeLoopAgent}: chave ausente conta como reprovada \\
-GAP-03 & Teste principal quebrado em runtime & \ok & descoberta automática; 74 testes verdes \\
+GAP-03 & Teste principal quebrado em runtime & \ok & descoberta automática; 75 testes verdes \\
 GAP-04 & Sem persistência nem contagem de tokens & \ok & custo e tokens por agente no dossiê \\
 GAP-05 & Sem retry nem backoff & \ok & \texttt{HttpRetryOptions} em todos os agentes \\
 GAP-06 & 118 avisos de depreciação do ADK & \decisao & 20 hoje, 15 do nosso código; dependência sem teto. Adiado por decisão \\
@@ -251,18 +252,48 @@ O GAP-16 passou de fechado (v1) a parcial (v2) e de volta a fechado (v3): a veri
 \textbf{A-15b --- O retrabalho da banca não consertava nada desde 22/09} (achado ao corrigir o A-15, e o mais grave do dia). A consolidação determinística da banca, escrita em 22/09, montava o envelope que o despacho lê só com código, severidade, dimensão, classe e resumo --- \textbf{descartava o \texttt{agente\_responsavel} e o \texttt{id}}. Todo ticket da banca chegava sem dono e era jogado fora: a banca reprovava, o despacho respondia ``nenhum ticket com dono executável'', e a rodada seguinte julgava o mesmo documento. Agora o dono atravessa a consolidação, e o envelope da banca tem o campo obrigatório, com a lista fechada de onze donos. \texttt{0b186a1}.
 \end{sucessobox}
 
-\subsection{Aberto no código}
+\subsection{No código}
 
-\begin{alertabox}{A-16 --- O brief de assets é reexecutado pela banca às cegas (novo na v3)}
-O despacho da banca pode reexecutar seis agentes. Cinco deles leem o que a banca pediu: quatro de design leem o ticket (\texttt{\{tickets\_retrabalho?\}}), e o handoff de dev tem uma rodada de correção explícita com o relatório consolidado da banca. \textbf{O brief de assets não lê nem um nem outro.} Quando a banca aponta um defeito de asset, ele é reexecutado, reescreve o documento sem saber o que corrigir, e a rodada seguinte julga algo parecido com o anterior.
+\begin{sucessobox}{Nenhum defeito aberto no código}
+Os dois que a v3 deixou abertos foram fechados em \texttt{5427dbf}:
 
-Real e raro: nas 14 sessões a banca endereçou \texttt{brief-assets} duas vezes. \emph{Correção:} o bloco ``Rodada de correção'' com \texttt{\{tickets\_retrabalho?\}}, no molde dos outros cinco. Cinco minutos.
-\end{alertabox}
+\medskip
+\textbf{A-16 --- O brief de assets era reexecutado pela banca às cegas.} Dos seis agentes que a banca reexecuta, era o único que não lia nem o ticket nem o relatório. Ganhou a rodada de correção com \texttt{\{tickets\_retrabalho?\}}, no molde dos outros cinco.
 
-\begin{ressalvabox}{A-17 --- Latente: o revisor do one-pager não recebe a avaliação pedagógica (novo na v3)}
-No loop das avaliações, a saída repete o loop quando a avaliação pedagógica reprova (\texttt{avaliacao\_status} está entre as chaves que ela olha). Quem reescreve na rodada seguinte é o revisor do one-pager --- e o prompt dele recebe o gate estrutural, o contrato de produto e a adequação, \textbf{não a avaliação pedagógica nem a experiência do estudante}. O loop repetiria por um motivo que o autor não leu.
+\medskip
+\textbf{A-17 --- O revisor do one-pager não recebia a avaliação pedagógica.} O loop das avaliações repete quando ela reprova, e quem reescreve não a lia. Recebe agora a avaliação pedagógica e a experiência do estudante, e aplica os ``\vermelho{} obrigatórios --- correção pronta'' de cada uma como aplica o complemento do gate.
 
-Latente porque o loop roda uma vez só por padrão (\texttt{AVALIACOES\_MAX\_RODADAS=1}, sem sobrescrita na revisão ativa) e o revisor só entra da segunda em diante. Mas é o tipo de defeito que aparece no dia em que alguém aumenta as rodadas para melhorar a qualidade. \emph{Correção:} os dois relatórios no prompt do revisor. Cinco minutos.
+\medskip
+As regras que acharam os dois viraram teste, e foi conferido que elas \textbf{pegam} os dois defeitos quando rodadas contra os prompts do commit anterior --- um teste que nunca falha não prova nada.
+\end{sucessobox}
+
+\begin{ressalvabox}{A-18 --- Observação: duas rodadas de correção que o fluxo atual não alcança}
+A pergunta (vii) achou dois trechos de prompt que leem um insumo que, no fluxo normal, nunca chega. A experiência do estudante lê o relatório do gate final ``quando já houve uma passada'' --- mas o gate final roda depois das avaliações e nada volta delas. A adequação pedagógica lê o ambiente simulado ``quando já decidido'' --- mas ele nasce na etapa de design.
+
+Não é defeito: os dois são opcionais, a condição está escrita, e o conteúdo chega por outro caminho (o one-pager traz o ambiente; o gate final reprovado vira pendência humana). \textbf{Os dois trechos ficariam vivos com a reexecução parcial de produto} (A-04), e é por isso que não foram removidos.
+\end{ressalvabox}
+
+\begin{ressalvabox}{R-01 --- Risco medido: o contexto dos dois agentes que escrevem as entregas}
+Com os insumos reais da última execução completa (exp06ef1b, 22/09), o contexto de cada agente de LLM:
+
+\begin{center}
+\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+\textbf{Agente} & \textbf{Total} & \textbf{Prompt} & \textbf{Insumos} \\
+\midrule
+Redator do PRD & 784 KB & 393 KB & 391 KB \\
+Handoff de dev & 668 KB & 303 KB & 365 KB \\
+Banca --- técnica e arquitetura & 597 KB & 336 KB & 260 KB \\
+Banca --- dados e LGPD & 553 KB & 293 KB & 260 KB \\
+Banca --- pedagogia e BNCC & 407 KB & 147 KB & 260 KB \\
+\midrule
+Mediana dos 33 agentes & 189 KB & & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Cabe no modelo --- são cerca de 200 mil tokens, bem abaixo do limite. O risco é outro: \textbf{regra no meio de um prompt muito longo sendo ignorada}. Há um caso documentado: o commit \texttt{fd68d9b} existiu porque o redator do PRD não seguia a regra do KPI no lugar onde ela estava escrita, e ela teve de ir para onde ele ``de fato olha''. Não é verificável sem rodar. \emph{O que fazer:} na primeira execução, conferir se o PRD segue as regras 8 e as de consistência interna; se não seguir, o corte é nas referências da plataforma (393~KB fixos), não nos insumos da missão.
 \end{ressalvabox}
 
 \subsection{Abertos por decisão, ou fora do código}\label{sec:decisoes}
@@ -319,14 +350,14 @@ evidência e KPI: --- $\rightarrow$ bloqueado & 14 & gates que não existiam em 
 
 Três das cinco correções da tarde são a mesma lição, e vale registrá-la: \textbf{ler por posição é o erro que mais se repete nesta esteira}. A \S{}2 dos PRDs saiu em oito cabeçalhos diferentes; a linha de catálogo do agente 51 sai numa ordem que o prompt não pede. O que o modelo escreve deriva; o nome da coluna, não. \texttt{tools/kpis.py} e agora \texttt{tools/catalogo.py} leem pelo nome normalizado.
 
-A outra lição: \textbf{cruzamento que acha defeito vira teste}. Status gravado $\times$ dossiê, instrução $\times$ ferramenta, argumento $\times$ escrita, dono $\times$ rota. Os dois cruzamentos da v3 que acharam o A-16 e o A-17 --- agente reexecutado $\times$ ticket lido, autor $\times$ relatório do gate --- ainda não são teste: viram junto com a correção.
+A outra lição: \textbf{cruzamento que acha defeito vira teste}. Status gravado $\times$ dossiê, instrução $\times$ ferramenta, argumento $\times$ escrita, dono $\times$ rota, agente reexecutado $\times$ ticket lido, autor $\times$ relatório do gate. Todos são teste.
 
 \section{Os marcos do plano, medidos}
 
 \small
 \begin{longtable}{@{}p{0.8cm} p{5.5cm} p{1.9cm} p{2.1cm} p{2.7cm} p{1.4cm}@{}}
 \toprule
-\textbf{M} & \textbf{Marco} & \textbf{22/09} & \textbf{23/09 manhã} & \textbf{23/09 v3} & \textbf{Estado} \\
+\textbf{M} & \textbf{Marco} & \textbf{22/09} & \textbf{23/09 manhã} & \textbf{23/09 v4} & \textbf{Estado} \\
 \midrule
 \endhead
 \bottomrule
@@ -343,9 +374,10 @@ M10 & bloqueantes invisíveis ao consolidador & 1 & 0 & 0 & \ok \\
 M11 & fichas do catálogo que não sustentam o V5 & 10 de 10 & 10 de 15 & 7 de 28 local; produção: 1 entrada & \parcial \\
 M12 & critérios de acessibilidade contáveis e sempre aplicados & 0 & 4, só com CAA & 4, sempre & \ok \\
 M13 & custo por missão & --- & no dossiê & no dossiê & \ok \\
-M14 & suíte de testes & quebrada & 64 & 74 & \ok \\
+M14 & suíte de testes & quebrada & 64 & 75 & \ok \\
 M15 & segredo fora da imagem & aberto & fechado & fechado & \ok \\
 M16 & tickets que somem sem rastro & não medido & não medido & 0 & \ok \\
+M17 & agentes que reescrevem sem ler o pedido do gate & não medido & não medido & 0 & \ok \\
 \end{longtable}
 \normalsize
 {\footnotesize $^*$ Fora do dossiê por construção, e registrados como tal no código: o status do registro no catálogo (roda depois do diagnóstico) e o do próprio diagnóstico.}
@@ -353,27 +385,26 @@ M16 & tickets que somem sem rastro & não medido & não medido & 0 & \ok \\
 \section{O que fazer antes da próxima geração}
 
 \begin{enumerate}[leftmargin=*]
-  \item \textbf{Fechar o A-16 e o A-17} --- dois blocos de prompt, dez minutos no total. São os únicos defeitos de código abertos, e os dois são o mesmo: agente que reescreve sem ler o que o gate pediu.
   \item \textbf{Decidir o índice de produção} (A-02) --- subir as 14 fichas ao bucket, ou gerar localmente, onde o índice já está certo.
   \item \textbf{Decidir as cópias da plataforma} (A-05) --- se a próxima missão for do 5\textsuperscript{o} ano, a porta 5184 e as rotas da exp-05 importam.
-  \item \textbf{Rodar uma missão de ponta a ponta} (A-09) e ler com olho humano o 9f, a tabela de KPIs, a D4a e o aviso do V5.
+  \item \textbf{Rodar uma missão de ponta a ponta} (A-09) e ler com olho humano o 9f, a tabela de KPIs, a D4a e o aviso do V5 --- e conferir o R-01: se o PRD e o handoff seguem as regras que estão no meio dos prompts deles.
 \end{enumerate}
 
 \section{Conclusão}
 
 \begin{vereditobox}{Atingimos o padrão ouro?}
-\textbf{No código, a dez minutos disso.} Tudo que é verificável sobre o artefato tem gate, aparece no dossiê e não aprova sem resposta; e, desde a v3, nenhum ticket some sem deixar rastro. Restam dois agentes que reescrevem sem ler o pedido do gate --- um real e raro (A-16), um latente (A-17) --- e a correção de cada um é um bloco de prompt.
+\textbf{No código, sim.} Tudo que é verificável sobre o artefato tem gate, aparece no dossiê e não aprova sem resposta; nenhum ticket some sem deixar rastro; todo agente que reescreve lê o que o gate pediu; e todo insumo chega antes de quem o lê, ou chega de propósito só na rodada de correção. As três primeiras afirmações são teste --- e os dois testes da v3 foram vistos falhar contra os defeitos que existem para pegar; a quarta foi verificada nesta versão e ainda não é teste.
 
-\textbf{Como sistema, ainda não}, pelas mesmas três coisas da v2, nenhuma delas código: o gabarito da plataforma de 16/09, o índice de produção com uma entrada, e a ausência de uma execução real com o formato de hoje.
+\textbf{Como sistema, ainda não}, por três coisas que não são código: nenhuma execução real com o formato de hoje, o gabarito da plataforma de 16/09, e o índice de produção com uma entrada. A primeira é a que decide --- e é também a única que mede o R-01.
 
-Uma observação sobre o próprio processo, porque ela vale para a próxima auditoria: \textbf{cada vez que um cruzamento sistemático foi feito sobre a árvore inteira, ele achou defeito} --- e os mais graves (o índice 14 de 14 cego, o retrabalho da banca inerte) estavam atrás de correções que pareciam completas. O que os pegou não foi ler o código de novo, foi perguntar a mesma coisa a todos os agentes de uma vez. Por isso cada um vira teste --- os dois da v3 entram junto com a correção do A-16 e do A-17.
+Sobre o processo: nas três primeiras versões, cada pergunta feita a todos os agentes de uma vez achou defeito, e os mais graves estavam atrás de correções que pareciam completas. A da v4 foi a primeira a voltar limpa. Isso não prova que não há mais nada; prova que \textbf{o que sobrou não se acha mais olhando o código --- se acha rodando}.
 \end{vereditobox}
 
 \section*{Anexo --- como reproduzir}
 
 \small
 \begin{verbatim}
-python3 test_pipeline.py                      # 74 testes estruturais
+python3 test_pipeline.py                      # 75 testes estruturais
 python3 scripts/conferir_referencias.py       # fonte única x prompts
 python3 scripts/catalogo.py listar            # estado do índice de missões
 python3 scripts/reavaliar_gates.py --todas \
