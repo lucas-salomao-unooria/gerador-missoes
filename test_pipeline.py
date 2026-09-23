@@ -82,7 +82,7 @@ KNOWN_STATE_KEYS = {
     "pedido_correcao", "triagem_correcao", "mapa_da_missao",
 }
 # Variáveis estáticas substituídas pelo loader antes do ADK
-CONFIG_VARS = {"gdrive_folder_url": "g", "stitch_mcp_mode": "off", "stitch_project_url_base": "u", "gate_max_rodadas": 3, "qa_max_rodadas": 1}
+CONFIG_VARS = {"stitch_mcp_mode": "off", "stitch_project_url_base": "u", "gate_max_rodadas": 3, "qa_max_rodadas": 1}
 
 # Chaves obrigatórias (sem `?`) permitidas por área: existem sempre antes do agente rodar
 REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
@@ -328,7 +328,7 @@ def test_secao_split_d0_e_d9():
     d0_out = (
         "# Fechamento de lacunas — teste\n**Veredito: 🟢 SEGUE PARA D1**\n\n## Passo 1 — Varredura\n...\n"
         "## Passo 5 — Spec consolidada (texto original do Gate 0, blocos 0–12 intocados, + bloco 13)\n" + spec_consolidada +
-        "\n## Passo 5b — Relatório de preenchimento — `relatorio-preenchimento.md` · Google Docs: GDOCS indisponível\n"
+        "\n## Passo 5b — Relatório de preenchimento — `relatorio-preenchimento.md`\n"
         "### [D0-1] Tela de espera\n**O que faltava:** o que a criança vê enquanto a professora fala.\n**O que entrou:** a tela congela.\n\n"
         "## Passo 6 — Devolutiva ao produto\n- nada\n\n## Testes 1–6 — resultado\nok\n\n"
         '```json\n{"agente": "fecha-lacunas", "missao": "exp-99-teste", "status": "segue_com_pendencias", "decisoes": [], "respec": []}\n```'
@@ -3066,6 +3066,39 @@ def test_ficha_do_catalogo_le_pelo_nome_da_coluna():
     assert ficha["tipo_decisao"] and ficha["ambiente"] == "nova:galeria-infantil"
     assert not cat.tem_lacuna(ficha), "ficha completa não pode sair cega para o V5"
     print("   ✓ ficha do catálogo lida pelo nome da coluna; ambiente novo não sai vazio")
+
+
+
+def test_nenhum_prompt_manda_usar_ferramenta_que_o_agente_nao_tem():
+    """O D0 foi instruído, de 16 a 23/09/2026, a criar um Google Docs com `create_file` — e nunca
+    recebeu ferramenta nenhuma, em modo nenhum. As 14 sessões escreveram "GDOCS: indisponível" em
+    9 redações. Instrução para ferramenta ausente não falha: é desobedecida em silêncio.
+
+    O Stitch é o caso legítimo e diferente: ferramenta CONDICIONAL, anexada por
+    `stitch_tools_or_empty` quando `STITCH_MCP_MODE` está ligado (em produção, `remote`), e com
+    o que fazer quando não está escrito nos dois prompts. Aqui ele vem desligado (linha 21), então
+    o que se confere é que só os agentes que recebem o Stitch falam das ferramentas dele.
+    """
+    import re as _re
+    from google.adk.agents.llm_agent import LlmAgent
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+
+    llms = [a for _, a in iter_agent_tree(create_mission_orchestrator(stages=["produto", "design", "dev"]))
+            if isinstance(a, LlmAgent)]
+    drive = _re.compile(r"google drive|google docs|gdocs|create_file|gdrive", _re.I)
+    stitch = _re.compile(r"\b(?:upload_design_md|list_screens|get_screen|create_project|generate_screen)\w*", _re.I)
+    com_stitch = ("A26Telas", "A30QaEntregaveis")  # os que chamam `stitch_tools_or_empty`
+
+    falhas = {a.name: sorted(set(drive.findall(str(a.instruction)))) for a in llms}
+    falhas = {k: v for k, v in falhas.items() if v}
+    assert not falhas, f"instrução para ferramenta do Drive, que nenhum agente recebe: {falhas}"
+    fora = {a.name: sorted(set(stitch.findall(str(a.instruction)))) for a in llms
+            if not a.name.startswith(com_stitch)}
+    fora = {k: v for k, v in fora.items() if v}
+    assert not fora, f"ferramenta do Stitch citada em agente que não recebe o Stitch: {fora}"
+    from config import get_settings
+    assert not hasattr(get_settings(), "gdrive_folder_url")
+    print(f"   ✓ {len(llms)} agentes de LLM: nenhum instruído a usar o Drive; Stitch só onde é anexado")
 
 
 if __name__ == "__main__":

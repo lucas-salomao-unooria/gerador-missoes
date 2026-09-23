@@ -72,19 +72,11 @@ def _stitch_vars() -> dict:
     }
 
 
-def _gdrive_vars() -> dict:
-    s = get_settings()
-    return {
-        "gdrive_folder_url": s.gdrive_folder_url
-        or "(não configurada — as ferramentas do Google Drive não estão disponíveis nesta esteira; registre `GDOCS: indisponível` e entregue só o Markdown)",
-    }
-
-
 def get_fecha_lacunas_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A17FechaLacunas",
         description="Fechamento de lacunas da spec antes do design: varredura célula a célula, decisões [D0-n] com base declarada, pedidos de re-spec [RS-n] e spec consolidada com bloco 13.",
-        instruction=load_prompt("design/17_fechamento_lacunas.md", **_gdrive_vars()),
+        instruction=load_prompt("design/17_fechamento_lacunas.md"),
         output_key="fechamento_lacunas",
         before_agent_callback=marcar_heranca,
         **kw,

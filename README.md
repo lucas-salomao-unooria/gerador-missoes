@@ -709,7 +709,6 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `MIRO_OAUTH_TOKENS_FILE` | `.miro_mcp_tokens.json` | Onde ficam o client registrado e os tokens. Fora do versionamento. |
 | `MIRO_TEAM_ID` | — | Time onde os boards nascem. Vazio = o time escolhido ao conectar. |
 | `MIRO_MAX_ITENS` | `80` | Teto de itens por board, para não bater no rate limit do Miro. |
-| `GDRIVE_FOLDER_URL` | — | Pasta do Google Drive onde o D0 gravaria o relatório de lacunas como Google Docs. Sem toolset do Drive na esteira, o agente registra `GDOCS: indisponível` e entrega só o Markdown. |
 
 ---
 

@@ -224,11 +224,6 @@ class AppSettings(BaseSettings):
     miro_client_id: str = Field(default_factory=lambda: os.getenv("MIRO_CLIENT_ID", ""))
     miro_client_secret: str = Field(default_factory=lambda: os.getenv("MIRO_CLIENT_SECRET", ""))
 
-    # Google Drive (relatório de lacunas do D0 em Google Docs — sem toolset ainda; o prompt tem fallback)
-    gdrive_folder_url: str = Field(
-        default_factory=lambda: os.getenv("GDRIVE_FOLDER_URL", ""),
-        description="URL da pasta do Google Drive onde o D0 gravaria o relatório de lacunas como Google Docs",
-    )
 
     # ----------------------------------------------------------- Derivados
     @property

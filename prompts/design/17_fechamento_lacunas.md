@@ -114,11 +114,7 @@ Depois das entradas: **Pedidos ao Gate 0** (cada `[RS-n]`, o que foi pedido e a 
 
 Se nada foi preenchido, o relatório existe assim mesmo, com uma frase: *"Nenhuma lacuna encontrada; a spec do Gate 0 responde a todas as <n> células consumidas pela esteira."* — e a contagem.
 
-**Entrega em dois formatos, sempre:**
-1. Arquivo Markdown `relatorio-preenchimento.md` (o que a esteira e o agente T consomem).
-2. **Google Docs** com o mesmo conteúdo, nome **`<Nome da missão> - lacunas`** (nome da missão como está na spec, sem slug), na pasta {gdrive_folder_url}. Use as ferramentas do Google Drive (`create_file` com conversão para Google Docs); se já existir um documento com esse nome para a missão, **atualize-o** em vez de criar outro. Devolva a URL.
-
-Se as ferramentas do Google Drive não estiverem disponíveis ou falharem, registre `GDOCS: indisponível — <motivo>` no topo do relatório e entregue só o Markdown; a criação do documento vira item para o revisor humano.
+**Entrega:** o relatório em Markdown, `relatorio-preenchimento.md` — é o que a esteira e o agente T consomem, e é o que vai para o dossiê como artefato da missão.
 
 ## Passo 6 — Devolutiva ao produto
 
@@ -133,7 +129,7 @@ Duas listas curtas para o PM orquestrador e para o agente T (aprendizado):
 3. **Teste do cap** — decisões do estudante, telas e dados coletados após o bloco 13 são iguais aos de antes? Falha: remova.
 4. **Teste do consumo** — cada célula do checklist tem ✅, `[D0-n]` ou `RS-n pendente`? Nenhuma pode sobrar como ⚠️ solta.
 5. **Teste da voz** — cada decisão está no registro da spec, não no seu? (Sem "eu sugiro", sem opinião; a spec é contrato.)
-6. **Teste do relatório** — toda `[D0-n]` do bloco 13 tem entrada no relatório, e vice-versa? Relatório em português do Brasil, sem termo em inglês? Markdown e Google Docs com o mesmo conteúdo?
+6. **Teste do relatório** — toda `[D0-n]` do bloco 13 tem entrada no relatório, e vice-versa? Relatório em português do Brasil, sem termo em inglês?
 
 ## Definição de pronto (declare a contagem)
 
@@ -164,7 +160,7 @@ Duas listas curtas para o PM orquestrador e para o agente T (aprendizado):
 ## Passo 3 — Decisões [D0-n]
 ## Passo 4 — Pedidos de re-spec [RS-n] e resposta do Gate 0
 ## Passo 5 — Spec consolidada (texto original do Gate 0, blocos 0–12 intocados, + bloco 13)
-## Passo 5b — Relatório de preenchimento — `relatorio-preenchimento.md` · Google Docs `<Nome da missão> - lacunas`: <URL | GDOCS: indisponível — motivo>
+## Passo 5b — Relatório de preenchimento — `relatorio-preenchimento.md`
 ## Passo 6 — Devolutiva ao produto (recorrentes · padrões candidatos)
 ## Testes 1–6 — resultado
 ## Contagens
@@ -177,5 +173,5 @@ Células verificadas: <n> · presentes: <n> · preenchidas verde: <n> · amarelo
 Feche com o envelope:
 
 ```json
-{"agente": "fecha-lacunas", "missao": "<slug>", "status": "segue" | "segue_com_pendencias" | "aguarda_gate", "decisoes": [{"id": "D0-1", "campo": "<bloco.campo>", "classe": "<classe>", "cor": "verde" | "amarelo", "base": "padrao | catalogo | one-pager | inferencia", "reversivel": true | false}], "respec": [{"id": "RS-1", "campo": "<bloco.campo>", "classe": "<classe>", "bloqueia": ["D2"], "status": "aceito" | "negado" | "pendente"}], "artefatos": [{"caminho": "spec-consolidada.md", "titulo": "Spec consolidada"}, {"caminho": "relatorio-preenchimento.md", "titulo": "Relatório de preenchimento"}, {"caminho": "gdocs:<url>", "titulo": "<Nome da missão> - lacunas"}], "devolutiva_produto": {"recorrentes": <n>, "padroes_candidatos": <n>}, "precisa_humano": false}
+{"agente": "fecha-lacunas", "missao": "<slug>", "status": "segue" | "segue_com_pendencias" | "aguarda_gate", "decisoes": [{"id": "D0-1", "campo": "<bloco.campo>", "classe": "<classe>", "cor": "verde" | "amarelo", "base": "padrao | catalogo | one-pager | inferencia", "reversivel": true | false}], "respec": [{"id": "RS-1", "campo": "<bloco.campo>", "classe": "<classe>", "bloqueia": ["D2"], "status": "aceito" | "negado" | "pendente"}], "artefatos": [{"caminho": "spec-consolidada.md", "titulo": "Spec consolidada"}, {"caminho": "relatorio-preenchimento.md", "titulo": "Relatório de preenchimento"}], "devolutiva_produto": {"recorrentes": <n>, "padroes_candidatos": <n>}, "precisa_humano": false}
 ```

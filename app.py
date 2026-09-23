@@ -1134,7 +1134,7 @@ def render_prompt_manager():
     with tab_final:
         s = get_settings()
         try:
-            final = load_prompt(rel, gdrive_folder_url=s.gdrive_folder_url or "(não configurada)", stitch_mcp_mode=s.stitch_mcp_mode, stitch_project_url_base=s.stitch_project_url_base, gate_max_rodadas=s.gate_estrutural_max_rodadas, qa_max_rodadas=s.qa_design_max_rodadas)
+            final = load_prompt(rel, stitch_mcp_mode=s.stitch_mcp_mode, stitch_project_url_base=s.stitch_project_url_base, gate_max_rodadas=s.gate_estrutural_max_rodadas, qa_max_rodadas=s.qa_design_max_rodadas)
             st.caption(f"{len(final):,} caracteres após includes")
             st.code(final, language="markdown")
         except Exception as exc:
