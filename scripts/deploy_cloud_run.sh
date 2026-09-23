@@ -48,13 +48,10 @@ gcloud run deploy "$SERVICE_NAME" \
   --source . \
   --region "$REGION" \
   --project "$PROJECT_ID" \
-# ACESSO FECHADO (auditoria de 23/09/2026): a app não tem autenticação própria.
-# Depois do deploy, acesse por:
-#   gcloud run services proxy "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID"
-# e abra http://localhost:8080. Para liberar outra pessoa:
-#   gcloud run services add-iam-policy-binding "$SERVICE_NAME" --region "$REGION" \
-#     --member=user:<email> --role=roles/run.invoker
-  --no-allow-unauthenticated \
+# Acesso público, por decisão do dono do projeto (23/09/2026). Para fechar:
+#   --no-allow-unauthenticated
+# e acessar por `gcloud run services proxy "$SERVICE_NAME" --region "$REGION"`.
+  --allow-unauthenticated \
   --port 8080 \
   --memory 4Gi \
   --cpu 2 \
