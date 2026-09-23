@@ -18,6 +18,7 @@ O que o script faz:
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -135,7 +136,15 @@ def indice_openapi(commit: str, data: str) -> dict:
     return {"origem": OPENAPI, "destino": "openapi-indice.md", "sha256": hashlib.sha256(conteudo.encode()).hexdigest()[:16], "bytes": len(conteudo), "caminhos": len(doc["paths"])}
 
 
-def main() -> int:
+def main(argv: "list[str] | None" = None) -> int:
+    # Antes de qualquer escrita: o script não lia argumento nenhum, e `--help` executava a
+    # sincronização inteira — começando por apagar todos os `.md` do destino. Visto em
+    # 23/09/2026. Argumento desconhecido agora é erro, nunca "ignora e grava".
+    argparse.ArgumentParser(
+        prog="sincronizar_plataforma.py",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    ).parse_args(argv)
     if not PLATAFORMA.exists():
         print(f"plataforma não encontrada em {PLATAFORMA} (defina PLATAFORMA_UNOORIA_DIR)", file=sys.stderr)
         return 1

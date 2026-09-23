@@ -3101,6 +3101,36 @@ def test_nenhum_prompt_manda_usar_ferramenta_que_o_agente_nao_tem():
     print(f"   ✓ {len(llms)} agentes de LLM: nenhum instruído a usar o Drive; Stitch só onde é anexado")
 
 
+
+def test_sincronizar_plataforma_nao_grava_com_help_nem_com_argumento_errado():
+    """O script não lia argumento nenhum: `--help` executou a sincronização inteira em 23/09/2026,
+    começando por apagar os `.md` do destino. A plataforma aponta para um caminho que não existe:
+    se o parser não rodasse primeiro, o script sairia com 1 ("plataforma não encontrada") — nunca
+    grava, mesmo que a correção regrida."""
+    import hashlib
+    import subprocess
+
+    raiz = Path(__file__).resolve().parent
+    destino = raiz / "prompts" / "references" / "plataforma"
+
+    def digital() -> str:
+        h = hashlib.sha256()
+        for f in sorted(destino.rglob("*")):
+            if f.is_file():
+                h.update(f.name.encode() + f.read_bytes())
+        return h.hexdigest()
+
+    antes = digital()
+    env = {**os.environ, "PLATAFORMA_UNOORIA_DIR": str(raiz / "nao-existe")}
+    script = str(raiz / "scripts" / "sincronizar_plataforma.py")
+    ajuda = subprocess.run([sys.executable, script, "--help"], capture_output=True, text=True, env=env)
+    assert ajuda.returncode == 0 and "usage:" in ajuda.stdout, (ajuda.returncode, ajuda.stderr[-200:])
+    errado = subprocess.run([sys.executable, script, "--seco"], capture_output=True, text=True, env=env)
+    assert errado.returncode == 2 and "unrecognized arguments" in errado.stderr
+    assert digital() == antes, "o script gravou nas cópias da plataforma"
+    print("   ✓ sincronizar_plataforma: --help mostra o uso e argumento errado falha, sem gravar nada")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")
