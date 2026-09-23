@@ -242,5 +242,5 @@ Na **última rodada permitida**, não adianta endereçar ticket esperando corre�
 Feche com o envelope:
 
 ```json
-{"agente": "qa-entregaveis", "missao": "<slug>", "rodada": <n>, "status": "aprovado" | "bloqueado" | "devolvido", "inspecao": "stitch" | "documental", "veredito": "verde" | "amarelo" | "vermelho" | "devolvido", "achados": [{"id": "T1", "severidade": "bloqueio" | "atencao" | "oficio" | "decisao_humana", "codigo": "D<n> | O<n>", "classe": "<classe>", "agente_responsavel": "jornada | fluxo | copy-ptbr-revisao | telas | caa | ambiente-simulado | fecha-lacunas | gate-estrutural | null", "resumo": "<uma linha>"}], "devolucao": {"para": "gate-estrutural", "classe": "<classe>"} | null, "precisa_humano": true | false}
+{"agente": "qa-entregaveis", "missao": "<slug>", "rodada": <n>, "status": "aprovado" | "bloqueado" | "devolvido", "inspecao": "stitch" | "documental", "veredito": "verde" | "amarelo" | "vermelho" | "devolvido", "achados": [{"id": "T1", "severidade": "bloqueio" | "atencao" | "oficio" | "decisao_humana", "codigo": "D<n> | O<n>", "classe": "<classe>", "agente_responsavel": "brief-oficio | jornada | fluxo | copy-ptbr-revisao | telas | caa | ambiente-simulado | fecha-lacunas | gate-estrutural | null", "resumo": "<uma linha>"}], "devolucao": {"para": "gate-estrutural", "classe": "<classe>"} | null, "precisa_humano": true | false}
 ```

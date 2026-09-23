@@ -176,6 +176,22 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
             "bloqueios": 0,
         })
 
+    # Ticket que um gate emitiu e nenhum agente pôde executar: o 🔴 do gate já aparece acima,
+    # mas sem isto ninguém ficava sabendo que o conserto nunca foi tentado, nem por quê.
+    for ticket in state.get("tickets_sem_rota") or []:
+        if not isinstance(ticket, dict):
+            continue
+        achados.append({
+            "gate": f"{ticket.get('gate') or 'Retrabalho'} — sem quem execute",
+            "etapa": "humano",
+            "id": ticket.get("id") or "—",
+            "codigo": "ticket-sem-rota",
+            "classe": "roteamento",
+            "severidade": "decisao_humana",
+            "dono": ticket.get("dono") or "—",
+            "resumo": f"{ticket.get('motivo', '')}: {ticket.get('resumo', '')}".strip(": "),
+        })
+
     degradacoes = list(state.get("degradacoes") or [])
     agentes_degradados = list(state.get("agentes_degradados") or [])
 

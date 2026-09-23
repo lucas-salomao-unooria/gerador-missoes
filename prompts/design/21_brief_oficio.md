@@ -95,6 +95,14 @@ Os três registros — personagem-guia, plataforma simulada, Unooria — o que c
 **Cada não-negociável recebe uma de duas marcas, obrigatoriamente.** `[MECANISMO: bloco 2, regra <n>]` quando a spec já garante o comportamento por ordenação, bloqueio ou restrição de geração — cite a regra. `[RS-n → gate-estrutural]` quando depende de comportamento que a spec **não** garante: emita o pedido no formato do envelope da triagem de correção (`00_triagem_correcao.md`), com `etapa: "spec"` e o `resumo_pedido` no imperativo, e marque `status: pendente` — nesta esteira não há resposta do Gate 0 dentro da execução. **Não-negociável sem marca não é vinculante** para jornada, copy e wireframes, e o QA (D7) o devolve com dono `brief-oficio`. Origem: candidato C3 (dois não-negociáveis sem mecanismo passaram no Gate 0 e foram pegos pelo fluxo).
 (Não repita requisito de conformidade — scaffolding, áudio, verbo nativo já são 🔒 por outro caminho.)
 
+## Rodada de correção — só quando houver tickets
+
+{tickets_retrabalho?}
+
+**Se o bloco acima estiver vazio, ignore esta seção**: é a sua primeira passada.
+
+**Se houver tickets**, o QA de entregáveis auditou o briefing contra o que foi construído e devolveu apontamentos endereçados a você — quase sempre um não-negociável sem a marca `[MECANISMO: …]` ou `[RS-n → gate-estrutural]`. Reemita **o briefing inteiro**, corrigindo exatamente o apontado. Não mude a aposta, a forma do arco, o pico nem os beats que o ticket não cita: a jornada, a copy e as telas já foram construídas sobre eles, e mudar o que ninguém pediu invalida o que já passou.
+
 ## Alternativas descartadas (as 3 formas e o trade-off)
 
 ## Lacunas encontradas

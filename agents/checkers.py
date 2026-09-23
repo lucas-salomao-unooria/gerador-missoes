@@ -754,6 +754,10 @@ class RastroCheckAgent(BaseAgent):
         )
 
 
+#: Tickets que um gate emitiu e nenhum agente pôde executar. O dossiê os lista como pendência humana.
+KEY_TICKETS_SEM_ROTA = "tickets_sem_rota"
+
+
 class DespachoTicketsAgent(BaseAgent):
     """Re-executa **apenas** os agentes endereçados pelos tickets de um gate.
 
@@ -788,6 +792,15 @@ class DespachoTicketsAgent(BaseAgent):
     severidades: List[str] = Field(default_factory=lambda: ["bloqueio"])
     tickets_key: str = "tickets_retrabalho"
 
+    def _sem_rota(self, achado: Dict[str, Any], dono: str, motivo: str) -> Dict[str, str]:
+        return {
+            "gate": self.rotulo,
+            "id": str(achado.get("id") or achado.get("codigo") or "—"),
+            "dono": dono,
+            "motivo": motivo,
+            "resumo": str(achado.get("resumo") or "")[:300],
+        }
+
     def _formatar(self, achados: List[Dict[str, Any]]) -> str:
         linhas = ["## Tickets do QA endereçados a você nesta rodada", ""]
         for a in achados:
@@ -812,21 +825,31 @@ class DespachoTicketsAgent(BaseAgent):
         if status == STATUS_APROVADO:
             return
 
+        from tools.rastro import normalizar_dono
+
         por_slug: Dict[str, List[Dict[str, Any]]] = {}
         pendentes_externos: List[str] = []
+        # Ticket que ninguém pode executar. Antes eram três descartes silenciosos — sem dono,
+        # dono com nome que o mapa não conhece, e agente de retrabalho ausente —, e o 🔴 do
+        # gate voltava na rodada seguinte sem que alguém soubesse que o conserto não saiu.
+        sem_rota: List[Dict[str, str]] = []
         for achado in envelope.get("achados") or []:
             if not isinstance(achado, dict):
                 continue
             if str(achado.get("severidade", "")).strip().lower() not in self.severidades:
                 continue
-            slug = str(achado.get("agente_responsavel") or "").strip().lower()
+            escrito = str(achado.get("agente_responsavel") or "").strip()
+            slug = normalizar_dono(escrito)
             if not slug or slug in ("null", "none"):
+                sem_rota.append(self._sem_rota(achado, escrito, "o gate não disse quem conserta"))
                 continue
             if slug in self.externos:
                 pendentes_externos.append(f"`{achado.get('id', '?')}` → `{slug}`")
                 continue
             if slug in self.mapa:
                 por_slug.setdefault(slug, []).append(achado)
+            else:
+                sem_rota.append(self._sem_rota(achado, escrito, "nenhum agente desta etapa atende por esse dono"))
 
         slugs_na_ordem = [s for s in self.ordem if s in por_slug]
         slugs_na_ordem += [s for s in por_slug if s not in slugs_na_ordem]
@@ -834,22 +857,46 @@ class DespachoTicketsAgent(BaseAgent):
         # cada slug vira a cadeia de agentes que o conserto exige, sem repetir nome
         nomes_na_ordem: List[str] = []
         por_agente: Dict[str, List[Dict[str, Any]]] = {}
+        existentes = {s.name for s in self.sub_agents}
         for slug in slugs_na_ordem:
             alvo = self.mapa[slug]
-            for nome in ([alvo] if isinstance(alvo, str) else list(alvo)):
+            cadeia = [alvo] if isinstance(alvo, str) else list(alvo)
+            ausentes = [n for n in cadeia if n not in existentes]
+            if ausentes:
+                for achado in por_slug[slug]:
+                    sem_rota.append(self._sem_rota(
+                        achado, slug, f"o agente de retrabalho {', '.join(ausentes)} não existe nesta etapa"))
+                continue
+            for nome in cadeia:
                 if nome not in nomes_na_ordem:
                     nomes_na_ordem.append(nome)
                 por_agente.setdefault(nome, []).extend(por_slug[slug])
+
+        delta_sem_rota: Dict[str, Any] = {}
+        if sem_rota:
+            registrados = list(state.get(KEY_TICKETS_SEM_ROTA) or [])
+            vistos = {(r.get("gate"), r.get("id"), r.get("dono")) for r in registrados}
+            for r in sem_rota:
+                if (r["gate"], r["id"], r["dono"]) not in vistos:
+                    registrados.append(r)
+                    vistos.add((r["gate"], r["id"], r["dono"]))
+            state[KEY_TICKETS_SEM_ROTA] = registrados
+            delta_sem_rota = {KEY_TICKETS_SEM_ROTA: registrados}
+        aviso_sem_rota = (" Sem quem execute (vai ao dossiê como pendência humana): "
+                          + ", ".join(f"`{r['id']}` → `{r['dono'] or '—'}` ({r['motivo']})" for r in sem_rota)
+                          + ".") if sem_rota else ""
 
         if not nomes_na_ordem:
             msg = f"⏭️ {self.rotulo}: nenhum ticket com dono executável nesta etapa."
             if pendentes_externos:
                 msg += " Devolução a outra etapa: " + ", ".join(pendentes_externos) + "."
+            msg += aviso_sem_rota
             yield Event(
                 invocation_id=ctx.invocation_id,
                 author=self.name,
                 branch=ctx.branch,
                 content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                actions=EventActions(state_delta=delta_sem_rota),
             )
             return
 
@@ -877,11 +924,13 @@ class DespachoTicketsAgent(BaseAgent):
         aviso = f"🔁 {self.rotulo}: reexecutando {len(nomes_na_ordem)} agente(s) com ticket — {resumo}."
         if pendentes_externos:
             aviso += " Fora desta etapa (não reexecutado): " + ", ".join(pendentes_externos) + "."
+        aviso += aviso_sem_rota
         yield Event(
             invocation_id=ctx.invocation_id,
             author=self.name,
             branch=ctx.branch,
             content=types.Content(role="model", parts=[types.Part(text=aviso)]),
+            actions=EventActions(state_delta=delta_sem_rota),
         )
 
         for nome in nomes_na_ordem:

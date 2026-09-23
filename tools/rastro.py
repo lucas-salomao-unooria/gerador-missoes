@@ -108,6 +108,18 @@ ETAPAS = tuple(_TAXONOMIA["ordem_precedencia"])
 #: ato humano. Bloquear por elas trava a esteira em algo que nenhum agente resolve.
 ETAPAS_NAO_BLOQUEANTES = tuple(e for e, d in _TAXONOMIA["etapas"].items() if not d["bloqueia"])
 
+#: Nome que um gate escreve → nome que o despacho de retrabalho conhece. Os juízes não
+#: escrevem os slugs exatos (`wireframes`, `spec`, `copy`), e o despacho só casava o nome
+#: literal: 33 tickets das 14 primeiras sessões iriam para lugar nenhum. A tabela vivia na
+#: fonte única desde 23/09/2026 e nenhum código a lia.
+SLUGS_ROTEAVEIS: Dict[str, str] = dict(_TAXONOMIA.get("slugs_roteaveis") or {})
+
+
+def normalizar_dono(valor: Any) -> str:
+    """`Wireframes`, `` `spec` ``, `copy` → o slug que o despacho roteia. Desconhecido passa como veio."""
+    bruto = str(valor or "").strip().strip("`*_ ").lower()
+    return SLUGS_ROTEAVEIS.get(bruto, bruto)
+
 # ------------------------------------------------------------------ marcadores de lacuna
 _MARCADORES = [
     ("lacuna", re.compile(r"\[LACUNA\s*[—–-]\s*dono:\s*([^\]]+?)\s*\]", re.IGNORECASE)),

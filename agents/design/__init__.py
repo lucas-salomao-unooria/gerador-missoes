@@ -258,6 +258,7 @@ def get_qa_entregaveis_agent(max_rodadas: Optional[int] = None, **kw) -> LlmAgen
 ORDEM_RETRABALHO = [
     "fecha-lacunas",
     "ambiente-simulado",
+    "brief-oficio",  # a jornada deriva os tiers do mapa de beats: o brief conserta primeiro
     "jornada",
     "fluxo",
     "copy-ptbr-revisao",
@@ -271,6 +272,9 @@ ORDEM_RETRABALHO = [
 MAPA_RETRABALHO = {
     "fecha-lacunas": ["A17FechaLacunasRetrabalho", "A18FechaLacunasSplitRetrabalho"],
     "ambiente-simulado": ["A19AmbienteSimuladoRetrabalho", "A20AmbienteSimuladoSplitRetrabalho"],
+    # A D7 do QA manda "não-negociável sem marca é ticket com dono `brief-oficio`", e até
+    # 23/09/2026 esse dono não tinha rota: o ticket era descartado em silêncio.
+    "brief-oficio": ["A21BriefOficioRetrabalho"],
     "jornada": ["A22JornadaRetrabalho"],
     "fluxo": ["A23FluxoRetrabalho"],
     "copy-ptbr-revisao": ["A27CopyRevisaoRetrabalho"],
@@ -299,6 +303,7 @@ def _agentes_de_retrabalho(**kw) -> list:
     pares = [
         (get_fecha_lacunas_agent, "A17FechaLacunasRetrabalho"),
         (get_ambiente_simulado_agent, "A19AmbienteSimuladoRetrabalho"),
+        (get_brief_oficio_agent, "A21BriefOficioRetrabalho"),
         (get_jornada_agent, "A22JornadaRetrabalho"),
         (get_fluxo_agent, "A23FluxoRetrabalho"),
         (get_copy_revisao_agent, "A27CopyRevisaoRetrabalho"),

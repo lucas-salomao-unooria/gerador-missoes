@@ -3131,6 +3131,93 @@ def test_sincronizar_plataforma_nao_grava_com_help_nem_com_argumento_errado():
     print("   ✓ sincronizar_plataforma: --help mostra o uso e argumento errado falha, sem gravar nada")
 
 
+
+def test_despacho_traduz_o_dono_e_nunca_descarta_ticket_em_silencio():
+    """A-15 (auditoria de 23/09/2026). O despacho casava só o nome literal do dono: a banca escreveu
+    `wireframes` 16 vezes, `spec` 15 e `copy` 2 nas 14 sessões, e tudo iria para lugar nenhum. Havia
+    três descartes silenciosos — sem dono, dono desconhecido, agente de retrabalho ausente."""
+    import json as _json
+    from agents.checkers import DespachoTicketsAgent
+
+    achados = [
+        {"id": "T1", "severidade": "bloqueio", "agente_responsavel": "Wireframes", "resumo": "tela sem estado vazio"},
+        {"id": "T2", "severidade": "bloqueio", "agente_responsavel": "spec", "resumo": "a spec não decide a cardinalidade"},
+        {"id": "T3", "severidade": "bloqueio", "agente_responsavel": "inventado", "resumo": "dono que não existe"},
+        {"id": "T4", "severidade": "bloqueio", "agente_responsavel": "", "resumo": "ninguém foi apontado"},
+        {"id": "T5", "severidade": "bloqueio", "agente_responsavel": "jornada", "resumo": "o mapa aponta para agente ausente"},
+        {"id": "T6", "severidade": "atencao", "agente_responsavel": "inventado", "resumo": "ressalva não é roteada"},
+    ]
+    relatorio = "QA\n```json\n" + _json.dumps({"status": "bloqueado", "achados": achados}) + "\n```"
+    despacho = DespachoTicketsAgent(
+        name="Despacho", report_key="qa", rotulo="Retrabalho de teste",
+        mapa={"telas": "TelasR", "jornada": ["JornadaInexistente"]},
+        externos=["spec-missao"],
+        sub_agents=[FakeAgent(name="TelasR", key="telas_refeitas", text="telas corrigidas")],
+    )
+    eventos, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+        FakeAgent(name="QA", key="qa", text=relatorio), despacho])))
+
+    assert st.get("telas_refeitas") == "telas corrigidas", "`Wireframes` tinha de chegar ao agente de telas"
+    sem_rota = {r["id"]: r for r in st.get("tickets_sem_rota") or []}
+    assert set(sem_rota) == {"T3", "T4", "T5"}, sorted(sem_rota)
+    assert "nenhum agente" in sem_rota["T3"]["motivo"]
+    assert "não disse quem conserta" in sem_rota["T4"]["motivo"]
+    assert "JornadaInexistente" in sem_rota["T5"]["motivo"]
+    texto = " ".join(p.text for e in eventos if e.content for p in (e.content.parts or []) if getattr(p, "text", None))
+    assert "`T2` → `spec-missao`" in texto, "o nome traduzido tinha de chegar à lista de externos"
+    assert "Sem quem execute" in texto and "`T3`" in texto
+
+    from tools.diagnostico import coletar
+    d = coletar({"tickets_sem_rota": st["tickets_sem_rota"]})
+    humanos = [a for a in d["humanos"] if a["codigo"] == "ticket-sem-rota"]
+    assert len(humanos) == 3 and d["veredito"] == "amarelo" and d["precisa_humano"]
+    print("   ✓ despacho: nome traduzido pela fonte única, e ticket sem rota vira pendência humana no dossiê")
+
+
+def test_banca_consolidada_entrega_o_dono_ao_despacho():
+    """De 22 a 23/09/2026 a consolidação determinística da banca descartava `agente_responsavel` e
+    `id` do envelope que o despacho lê: todo ticket da banca chegava sem dono e era jogado fora."""
+    from agents.callbacks import extrair_envelope
+    from tools import banca
+
+    dim = {"status": "bloqueado", "contagem": {"nok_bloqueantes": 1},
+           "achados": [{"id": "DES-01", "codigo": "DES-01", "severidade": "bloqueio",
+                        "agente_responsavel": "telas", "resumo": "a tela quebra a imersão"}]}
+    resultado = banca.consolidar({"validacao_design_imersao": dim})
+    env = extrair_envelope(banca.relatorio(resultado, "exp06ef1b")) or {}
+    achado = next(a for a in env["achados"] if a.get("codigo") == "DES-01")
+    assert achado.get("agente_responsavel") == "telas" and achado.get("id") == "DES-01", achado
+    print("   ✓ banca consolidada: id e dono chegam ao despacho")
+
+
+def test_todo_dono_que_um_gate_pode_escrever_tem_destino():
+    """O cruzamento que revelou o A-15, como teste: cada nome da lista fechada que o envelope do QA
+    de design e o da banca oferecem, traduzido pela fonte única, cai numa rota ou num externo — e
+    toda rota aponta para um agente que existe."""
+    import re as _re
+    from agents.checkers import DespachoTicketsAgent
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+    from prompts import load_prompt
+    from tools.rastro import normalizar_dono
+
+    despachos = {a.name: a for _, a in iter_agent_tree(create_mission_orchestrator(stages=["produto", "design", "dev"]))
+                 if isinstance(a, DespachoTicketsAgent)}
+    kw = dict(stitch_mcp_mode="off", stitch_project_url_base="u", gate_max_rodadas=3, qa_max_rodadas=2)
+    fontes = {"A32DespachoDesign": "design/30_qa_entregaveis.md", "A46DespachoBanca": "dev/40_validacao_design_imersao.md"}
+    for nome, prompt in fontes.items():
+        d = despachos[nome]
+        bloco = _re.search(r'"agente_responsavel":\s*((?:"[^"]+"\s*\|?\s*)+)', load_prompt(prompt, **kw)).group(1)
+        oferecidos = {x.strip() for x in _re.findall(r'"([^"]+)"', bloco) for x in x.split("|")} - {"null", ""}
+        destinos = set(d.mapa) | set(d.externos or [])
+        sem = sorted(o for o in oferecidos if normalizar_dono(o) not in destinos)
+        assert not sem, f"{nome}: o envelope oferece donos sem destino: {sem}"
+        existentes = {s.name for s in d.sub_agents}
+        for slug, alvo in d.mapa.items():
+            for agente in ([alvo] if isinstance(alvo, str) else alvo):
+                assert agente in existentes, f"{nome}: `{slug}` aponta para {agente}, que não existe"
+    print("   ✓ todo dono que o QA e a banca podem escrever tem rota ou vira externo; toda rota existe")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")

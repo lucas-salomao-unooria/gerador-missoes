@@ -140,7 +140,10 @@ def _envelope_json(resultado: Dict[str, Any], missao: str) -> str:
         "veredito": {"aprovado": "verde", "amarelo": "amarelo", "bloqueado": "vermelho"}[resultado["status"]],
         "por_dimensao": {k: v["status"] for k, v in resultado["por_dimensao"].items()},
         "achados": [
-            {k: a.get(k) for k in ("codigo", "severidade", "dimensao", "classe", "resumo") if a.get(k)}
+            # `id` e `agente_responsavel` precisam chegar ao despacho: sem eles, de 22 a
+            # 23/09/2026 todo ticket da banca foi descartado — o retrabalho não consertava nada.
+            {k: a.get(k) for k in ("id", "codigo", "severidade", "agente_responsavel", "dimensao", "classe", "resumo")
+             if a.get(k)}
             for a in resultado["achados"]
         ],
         "precisa_humano": any(a.get("classe") == "pendencia-plataforma" for a in resultado["achados"]),
