@@ -51,7 +51,7 @@ dos 49 KPIs tinham baseline `0%`.
 
 ## O que a missão declara
 
-Cada missão herda as transversais e acrescenta **2 a 4 perguntas próprias**, que dependem da
+Cada missão herda as transversais e acrescenta **exatamente 5 perguntas próprias**, que dependem da
 mecânica dela. A regra é a mesma: pergunta, decisão, corte — e um evento que a responda.
 
 Quem decide quais perguntas importam é o **PO**. Quando o briefing não as traz, o agente

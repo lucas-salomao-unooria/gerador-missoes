@@ -9,7 +9,11 @@ entram na spec; o parecer produzia achados que nenhum documento a jusante lia.
 
 {adequacao_report?}
 
-**Perguntas de produto declaradas pelo PO** (vazio = proponha 2, marcadas `[PROPOSTA — validar com PO]`):
+**Perguntas de produto declaradas pelo PO** — a spec fecha com **5 perguntas próprias**, sempre.
+O que o PO declarou abaixo entra com `Origem: PO`; complete até 5 a partir da decisão central da
+missão, marcando as suas com `[PROPOSTA — validar com PO]`. Proposta não bloqueia: ela existe para
+o PO cortar ou corrigir, e é mais barato ele riscar uma linha do que descobrir depois que faltou uma.
+Cinco é o número fechado — nem quatro por economia, nem oito por zelo.
 
 {perguntas_po?}
 
