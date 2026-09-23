@@ -155,10 +155,12 @@ quatro campos a missão não passa pela banca de dados.
 `resultado` e `contexto` são objetos JSON com número, booleano ou vocabulário
 fechado. **Não existe campo `dados`** — a api descarta chave desconhecida em
 silêncio. A spec traz a tabela de eventos com estas colunas: verbo · objeto ·
-quando dispara · `resultado` · `contexto` · caminho · **onde é lido** (tabela
-`expNNefNb_*` e rota/tela do professor). Ninguém lê `telemetria_eventos` para
-relatório de missão: toda medida que a professora vê nasce de tabela própria
-do módulo, gravada pela rota operacional.
+quando dispara · `resultado` · `contexto` · caminho · **onde é lido**. São dois
+leitores, e só dois: o que a professora vê nasce de tabela própria do módulo
+(`expNNefNb_*` + rota/tela do professor), gravada pela rota operacional; o que só
+alimenta uma pergunta de produto do 9f é lido no `painel de produto (PostHog)`.
+Pub/Sub, `/telemetry/batch` e `telemetria_eventos` são transporte — escrever um
+deles como leitor é dizer que ninguém lê.
 
 **Perguntas de produto desta missão (sub-bloco 9f).** A missão declara o que se quer SABER
 sobre ela como produto — separado do que o professor lê sobre a turma. Três fichas e uma tabela:

@@ -10,7 +10,7 @@ Três coisas diferentes eram tratadas como uma só, e é o que produzia KPI que 
 |---|---|---|---|
 | **Log e observabilidade** | o sistema está de pé, rápido e sem erro? | engenharia | Google Cloud |
 | **Telemetria de uso** | o que as pessoas fizeram, em que ordem, onde pararam? | ninguém "olha": é matéria-prima | `expNNefNb_*` e Pub/Sub |
-| **Produto** | a missão está funcionando como produto? | PO e engenharia | painel |
+| **Produto** | a missão está funcionando como produto? | PO e engenharia | `painel de produto (PostHog)`, espelhado do `track` no hub |
 | **Relatório pedagógico** | o que esta turma entendeu? | só o professor | tela de resultados |
 
 **A missão declara as duas últimas, e elas não se misturam.** Um número que serve às duas ao

@@ -3474,6 +3474,30 @@ def test_saeb_verde_onde_nao_se_aplica_amarelo_onde_falta_ou_sobra():
     print("   ✓ SAEB: N/A verde onde não se aplica; descritor que falta ou sobra fica amarelo")
 
 
+
+def test_leitor_de_evento_e_o_mesmo_nos_dois_gates_e_nos_documentos():
+    """Na geração de teste de 23/09/2026 seis impedimentos vinham de o PRD escrever "Pub/Sub" como
+    leitor de eventos que só alimentam KPI de produto. O gate estava certo — Pub/Sub é transporte —,
+    mas nenhum documento dizia ao redator quem é o leitor desse evento, e os dois gates discordavam
+    entre si: o de KPI aceitava PostHog, o do PRD não."""
+    from prompts import REFERENCES_DIR
+    from tools.kpis import LEITOR_VALIDO, validar_kpis
+    from tools.rastro import validar_prd
+    import re as _re
+
+    linha_evt = "| {id} | interacted | foto:miniatura | E2-ALU-01 | {{\"foto_id\": \"x\"}} | — | analítico | {leitor} |"
+    cab = "| ID | Verbo | Objeto | Quando dispara | Resultado | Contexto | Caminho | Onde é lido |\n|---|---|---|---|---|---|---|---|\n"
+    for leitor, esperado in (("Pub/Sub", True), ("telemetria_eventos", True),
+                             ("painel de produto (PostHog)", False), ("exp02ef1b_sessoes", False)):
+        prd = cab + linha_evt.format(id="EVT-001", leitor=leitor) + "\n"
+        k = any(a["codigo"] == "leitura-sem-leitor" for a in validar_kpis(prd)["achados"])
+        p = any(a["codigo"] == "evento-sem-leitor" for a in validar_prd(prd)["achados"])
+        assert k == p == esperado, (leitor, k, p)
+    for nome in ("prd-padrao-ouro.md", "formato-spec.md", "perguntas-de-produto.md"):
+        assert "painel de produto (PostHog)" in (REFERENCES_DIR / nome).read_text(encoding="utf-8"), nome
+    print("   ✓ leitor de evento: tabela do módulo ou painel de produto, igual nos dois gates e nos três documentos")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")

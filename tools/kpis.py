@@ -29,6 +29,11 @@ _RE_SEM_BASELINE = re.compile(r"sem baseline", re.I)
 _RE_ORIGEM = re.compile(r"\(([^)]{4,})\)")
 _RE_TABELA_OU_ROTA = re.compile(r"\bENT-\d|\bexp_?\d{2}_?e[fm]\d?b?_|GET\s+/|POST\s+/|\bRota\b", re.I)
 _CORTES = {"rede", "escola", "missao", "serie", "turma", "professor"}
+#: Os dois leitores possíveis de um evento — o mesmo nos dois gates (`kpis-check` e `prd-check`).
+LEITOR_VALIDO = r"exp_?\d{2}_?e[fm]\d?b?_\w+|posthog|painel\s+de\s+produto"
+MENSAGEM_LEITOR = ("Pub/Sub, `/telemetry/batch` e `telemetria_eventos` são transporte, não leitor. Se o evento "
+                   "alimenta a tela da professora, o leitor é a tabela `expNNefNb_*` do módulo; se só alimenta "
+                   "uma pergunta de produto do 9f, é o `painel de produto (PostHog)`.")
 
 
 def _norm(t: str) -> str:
@@ -178,11 +183,10 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
     for linha in tab_evt:
         onde = _col(linha, "onde e lido", "tabela leitora", "leitor")
         if onde and re.search(r"/telemetry/(batch|beacon)|telemetria_eventos|pub/?sub", onde, re.I) \
-                and not re.search(r"exp_?\d{2}_?e[fm]\d?b?_|posthog", onde, re.I):
+                and not re.search(LEITOR_VALIDO, onde, re.I):
             ids = _RE_EVT.findall(" ".join(linha.values()))
             falha("leitura-sem-leitor",
-                  f"`{ids[0] if ids else 'evento'}` declara leitura em `{onde.strip()[:40]}` — é a fila de "
-                  f"entrada, não um leitor. Ninguém lê `telemetria_eventos` para relatório de missão.")
+                  f"`{ids[0] if ids else 'evento'}` declara leitura em `{onde.strip()[:40]}`. {MENSAGEM_LEITOR}")
 
     # A spec deixou de ser parâmetro morto. As perguntas decididas no 9f precisam CHEGAR ao PRD:
     # sem este cruzamento o redator podia largar três das cinco pelo caminho, e o gate aprovava as

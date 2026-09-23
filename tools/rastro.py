@@ -900,14 +900,14 @@ def validar_prd(prd: str) -> Dict[str, Any]:
     # 3. evento sem tabela de leitura nomeada
     for linha in texto.splitlines():
         if re.search(r"\bEVT-\d+", linha) and "|" in linha:
-            if re.search(r"pub/?sub|telemetria_eventos", linha, re.I) and not re.search(r"exp\d{2}e[fm]\db_", linha, re.I):
+            from tools.kpis import LEITOR_VALIDO, MENSAGEM_LEITOR
+            if re.search(r"pub/?sub|telemetria_eventos", linha, re.I) and not re.search(LEITOR_VALIDO, linha, re.I):
                 evt = re.search(r"\bEVT-\d+", linha)
                 # O identificador do evento pode estar em qualquer coluna da linha, e a tabela é larga:
                 # citar só o começo da linha escondia a evidência de quem vai corrigir.
                 falha("evento-sem-leitor",
-                      f"`{evt.group(0) if evt else 'evento'}` aponta Pub/Sub ou `telemetria_eventos` como origem da "
-                      f"leitura, em vez da tabela `expNNefNb_*` do módulo. Toda medida que a professora vê nasce de "
-                      f"tabela própria do módulo. Linha: `{linha.strip()[:200]}`")
+                      f"`{evt.group(0) if evt else 'evento'}` aponta Pub/Sub ou `telemetria_eventos` como leitor. "
+                      f"{MENSAGEM_LEITOR} Linha: `{linha.strip()[:200]}`")
 
     # 4. tarefa não atômica
     for m in re.finditer(r"\b(T-\d{3})\b[^\n]*?(todos os RFs?|todas as RFs?|todos os requisitos)", texto, re.I):
