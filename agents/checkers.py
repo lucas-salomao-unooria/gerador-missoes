@@ -765,6 +765,66 @@ class RastroCheckAgent(BaseAgent):
         )
 
 
+class JuizDeAchadosAgent(BaseAgent):
+    """O regex acha, o LLM decide, o código confere a citação (`tools/juiz_achados.py`).
+
+    Roda logo depois de um gate determinístico. Se ele emitiu achado do tipo "afirma ou cita para
+    vedar?", separa as linhas que o dispararam, pergunta ao juiz (o sub-agente) e retira o achado
+    só quando o juiz julga todas como citação para descartar E cada citação existe no documento.
+    Sem candidato, o juiz não roda — não custa chamada. Nunca cria achado.
+    """
+
+    status_key: str
+    report_key: str
+    fonte_key: str
+    gate_rotulo: str = ""
+    rotulo: str = "Juiz de achados"
+    entrada_key: str = "juiz_achados_entrada"
+    saida_key: str = ""  # vazio: o `output_key` do juiz
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import juiz_achados as ja
+
+        state = ctx.session.state
+        relatorio = str(state.get(self.report_key, "") or "")
+        envelope = dict(state.get(f"{self.status_key}_envelope") or extrair_envelope(relatorio) or {})
+        achados = [a for a in (envelope.get("achados") or []) if isinstance(a, dict)]
+        documento = str(state.get(self.fonte_key, "") or "")
+        cands = ja.candidatos(achados, documento)
+        if not cands or not self.sub_agents:
+            return
+
+        entrada = json.dumps(cands, ensure_ascii=False, indent=1)
+        state[self.entrada_key] = entrada
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    actions=EventActions(state_delta={self.entrada_key: entrada}))
+        juiz = self.sub_agents[0]
+        async for evento in juiz.run_async(ctx):
+            yield evento
+        saida = str(ctx.session.state.get(self.saida_key or getattr(juiz, "output_key", "") or "", "") or "")
+
+        ficam, retirados = ja.aplicar(achados, cands, saida, documento)
+        delta: Dict[str, Any] = {self.entrada_key: ""}
+        if retirados:
+            status = ja.status_de(ficam)
+            envelope.update(status=status, achados=ficam)
+            delta.update({
+                self.status_key: status,
+                f"{self.status_key}_envelope": envelope,
+                self.report_key: ja.reescrever_relatorio(relatorio, envelope, retirados),
+            })
+            if status != "bloqueado" and self.gate_rotulo:
+                limpar_degradacao(state, delta, self.gate_rotulo)
+            msg = (f"⚖️ {self.rotulo}: {len(retirados)} achado(s) retirado(s) — o texto cita para vedar "
+                   f"({', '.join(r['codigo'] for r in retirados)}). Status: {status}.")
+        else:
+            msg = f"⚖️ {self.rotulo}: {len(cands)} candidato(s) julgado(s); nenhum retirado."
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta=delta))
+
+
 #: Tickets que um gate emitiu e nenhum agente pôde executar. O dossiê os lista como pendência humana.
 KEY_TICKETS_SEM_ROTA = "tickets_sem_rota"
 

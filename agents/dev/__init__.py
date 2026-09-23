@@ -45,6 +45,7 @@ from google.adk.agents.loop_agent import LoopAgent
 from google.adk.agents.parallel_agent import ParallelAgent
 from google.adk.agents.sequential_agent import SequentialAgent
 
+from agents.juiz import get_juiz_de_achados
 from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca
 from agents.checkers import (
@@ -261,6 +262,9 @@ def build_dev_stage(
                         estrito=estrito,
                         before_agent_callback=marcar_heranca,
                     ),
+                    get_juiz_de_achados("A36bJuizTelemetria", status_key="telemetria_status",
+                                        report_key="telemetria_report", fonte_key="handoff_dev",
+                                        gate_rotulo="Contrato de telemetria e arquitetura", **kw),
                     SaidaDeLoopAgent(
                         name="A37HandoffCheck",
                         description="Contrato conforme encerra o loop; reprovado devolve o handoff ao V1 com o relatório do gate.",

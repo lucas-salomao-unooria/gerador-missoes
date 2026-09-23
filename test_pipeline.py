@@ -66,7 +66,8 @@ KNOWN_STATE_KEYS = {
     "miro_links", "miro_board",
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
-    "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado",
+    "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
+    "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
     "perguntas_report", "perguntas_status", "juiz_perguntas_report", "juiz_perguntas_status",
     "juiz_perguntas_rodada", "execucao", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
@@ -176,7 +177,9 @@ def test_arvore_de_agentes():
     # `A04bBriefEscopoSplit` entra desde 23/09/2026: o A04 entrega one-pager E brief de escopo
     # na mesma `output_key`, e o A07 devolve só o one-pager revisado — o brief evaporava a
     # cada execução, sem erro e sem artefato.
-    assert [a.name for a in loop.sub_agents] == ["A04bBriefEscopoSplit", "A04bContratoProdutoCheck", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager"]
+    # o juiz de achados roda entre o lint e o gate: o gate estrutural lê o relatório já revisto
+    assert [a.name for a in loop.sub_agents] == ["A04bBriefEscopoSplit", "A04bContratoProdutoCheck", "A04cJuizContratoProduto",
+                                                 "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager"]
     banca = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "BancaValidacaoDev")
     assert len(banca.sub_agents) == 5
 
@@ -962,6 +965,9 @@ def test_estagio_produto_parcial_spec():
     # a spec como parâmetro morto — a pergunta podia morrer entre produto e dev sem deixar rastro.
     assert [a.name for a in produto.sub_agents[0].sub_agents] == [
         "A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
+        # juiz de achados (23/09/2026): o regex marca "gabarito no cliente", o juiz decide se o texto
+        # afirma ou cita para vedar, e o achado só sai com citação literal conferida
+        "A15bbJuizEvidencia",
         "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck", "A16SpecCheck"]
     assert produto.sub_agents[0].max_iterations == max(1, get_settings().spec_max_rodadas)
     nomes = [a.name for _, a in iter_agent_tree(orch)]
@@ -3642,6 +3648,58 @@ def test_componentes_do_ds_conferidos_contra_o_inventario():
     assert r.returncode == 0 and "usage:" in r.stdout
     assert hashlib.sha256(alvo.read_bytes()).hexdigest() == antes
     print("   ✓ componentes do DS: inventário nos prompts, coluna conferida, nome parecido sugerido")
+
+
+
+def test_juiz_de_achados_so_retira_com_citacao_conferida():
+    """Frente B (23/09/2026): 5 de 5 menções a WebSocket acusadas em 22–23/09 eram falsas —
+    "Nenhum protocolo WebSocket é utilizado", "sem necessidade de WebSocket", o envelope do próprio
+    agente. O regex continua achando; o juiz decide; o código confere a citação. Falha fechada."""
+    import json as _json
+    from agents.checkers import JuizDeAchadosAgent
+    from tools.rastro import frases_afirmativas, validar_telemetria
+
+    handoff = ("## Canal\nA sala sincroniza por polling HTTP curto em `exp05ef1b_gates_turma` (ADR-93).\n"
+               "Nenhum protocolo WebSocket ou canal socket.io é utilizado na plataforma.\n"
+               "| EVT-001 | interacted | post:feed | ao curtir | {\"x\": 1} | — | analítico | exp05ef1b_sessoes |\n"
+               '```json\n{"codigo": "websocket-mencao"}\n```\n')
+    assert frases_afirmativas(handoff, r"websocket") == ["Nenhum protocolo WebSocket ou canal socket.io é utilizado na plataforma."], \
+        "o envelope JSON não é prosa"
+    gate = validar_telemetria(handoff)
+    assert "websocket-mencao" in {a["codigo"] for a in gate["achados"]}
+
+    linha = "Nenhum protocolo WebSocket ou canal socket.io é utilizado na plataforma."
+    def rodar(resposta, doc=handoff):
+        env = {"status": gate["status"], "achados": gate["achados"]}
+        juiz = FakeAgent(name="JuizFalso", key="juiz_saida_teste", text=resposta, marker_key="juiz_rodou")
+        agente = JuizDeAchadosAgent(name="Juiz", status_key="telemetria_status", report_key="telemetria_report",
+                                    fonte_key="handoff_dev", saida_key="juiz_saida_teste", sub_agents=[juiz])
+        _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+            FakeAgent(name="Doc", key="handoff_dev", text=doc,
+                      extra_delta={"telemetria_status_envelope": env, "telemetria_status": gate["status"],
+                                   "telemetria_report": "relatório\n```json\n" + _json.dumps(env) + "\n```"}),
+            agente])))
+        return st
+    def resposta(veredito, citacoes):
+        return "leitura\n```json\n" + _json.dumps({"agente": "juiz-de-achados", "decisoes": [
+            {"id": "C1", "veredito": veredito, "citacoes": citacoes}]}, ensure_ascii=False) + "\n```"
+
+    st = rodar(resposta("cita_para_descartar", [linha]))
+    assert "websocket-mencao" not in {a["codigo"] for a in st["telemetria_status_envelope"]["achados"]}
+    assert "Revisto pelo juiz" in st["telemetria_report"] and linha[:30] in st["telemetria_report"]
+    assert "websocket-mencao" not in st["telemetria_report"].split("## Revisto")[0], "o envelope do relatório também é reescrito"
+
+    st = rodar(resposta("cita_para_descartar", ["Nenhum WebSocket foi usado em lugar algum desta missão."]))
+    assert "websocket-mencao" in {a["codigo"] for a in st["telemetria_status_envelope"]["achados"]}, "citação inventada não vale"
+    st = rodar("não sei")
+    assert "websocket-mencao" in {a["codigo"] for a in st["telemetria_status_envelope"]["achados"]}, "resposta inválida: fica"
+    st = rodar(resposta("afirma_uso", [linha]))
+    assert "websocket-mencao" in {a["codigo"] for a in st["telemetria_status_envelope"]["achados"]}
+
+    sem_candidato = handoff.replace(linha, "O canal é o polling acima.")
+    st = rodar(resposta("cita_para_descartar", [linha]), doc=sem_candidato)
+    assert not st.get("juiz_rodou"), "sem candidato o juiz não roda — não custa chamada"
+    print("   ✓ juiz de achados: retira só com citação conferida; inválido, inventado ou 'afirma' mantém; sem candidato não roda")
 
 
 if __name__ == "__main__":

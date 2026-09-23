@@ -55,6 +55,7 @@ CHAVES_DEV = frozenset({
     # gate de KPI do PRD (23/09/2026): sem apagar, uma correção que caísse antes dele deixava
     # no dossiê o veredito da execução anterior como se fosse desta
     "kpis_report", "kpis_status", "kpis_status_envelope",
+    "juiz_telemetria_saida",
 })
 #: `miro_board` fica de fora de propósito: o espelho atualiza o mesmo board em vez de abrir outro.
 CHAVES_DESIGN = frozenset({
@@ -77,7 +78,7 @@ CHAVES_SPEC = frozenset({
     "evidencia_report", "evidencia_status", "evidencia_status_envelope",
     "perguntas_report", "perguntas_status", "perguntas_status_envelope",
     "juiz_perguntas_report", "juiz_perguntas_status", "juiz_perguntas_status_envelope",
-    "juiz_perguntas_rodada",
+    "juiz_perguntas_rodada", "juiz_evidencia_saida",
 }) | CHAVES_DESIGN
 #: Tudo que a etapa de produto grava. Ficam de fora, de propósito, o que ela LÊ da geração original:
 #: `briefing`, `perguntas_po` e `material_anexado` — refazer produto é refazê-lo sobre o mesmo pedido
@@ -92,6 +93,7 @@ CHAVES_PRODUTO = frozenset({
     "experiencia_aluno_report", "experiencia_status", "experiencia_status_envelope",
     "adequacao_report", "adequacao_status", "adequacao_status_envelope", "avaliacoes_rodada",
     "gate_final_report", "gate_final_status", "gate_final_status_envelope",
+    "juiz_contrato_produto_saida",
 }) | CHAVES_SPEC
 CHAVES_TRANSVERSAL = frozenset({
     "diagnostico_execucao", "diagnostico_status", "diagnostico_status_envelope", "aprendizado_registro",
@@ -99,7 +101,8 @@ CHAVES_TRANSVERSAL = frozenset({
 #: Contadores da execução anterior. `reexecucoes` é o orçamento de retrabalho da banca: sem zerar,
 #: uma sessão que já gastou o teto chega à correção sem direito a conserto.
 #: `tickets_sem_rota` acumula: sem zerar, o dossiê da correção listaria pendências da execução velha.
-CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_rota", KEY_AGENTES_DEGRADADOS})
+CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_rota", "juiz_achados_entrada",
+                             KEY_AGENTES_DEGRADADOS})
 
 CHAVES_POR_ETAPA: Dict[str, frozenset] = {
     "produto": CHAVES_PRODUTO,

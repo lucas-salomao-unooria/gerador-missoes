@@ -43,6 +43,7 @@ from google.adk.agents.parallel_agent import ParallelAgent
 from google.adk.agents.sequential_agent import SequentialAgent
 
 from agents.base import create_llm_agent
+from agents.juiz import get_juiz_de_achados
 from agents.callbacks import marcar_heranca, preservar_one_pager
 from agents.checkers import (
     SecaoSplitAgent,
@@ -273,6 +274,8 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
                 estrito=settings.esteira_estrita,
                 before_agent_callback=marcar_heranca,
             ),
+            get_juiz_de_achados("A15bbJuizEvidencia", status_key="evidencia_status", report_key="evidencia_report",
+                                fonte_key="spec_missao", gate_rotulo="Matriz de evidência pedagógica", **kw),
             RastroCheckAgent(
                 name="A15cPerguntasCheck",
                 description="Sub-bloco 9f: cinco perguntas de produto, cada uma com decisão que tem limiar, corte válido e uma ação declarada na tabela de eventos que a responde com número.",
@@ -382,6 +385,9 @@ def build_produto_stage(
                 status_key="contrato_produto_status",
                 estrito=False,
             ),
+            get_juiz_de_achados("A04cJuizContratoProduto", status_key="contrato_produto_status",
+                                report_key="contrato_produto_report", fonte_key="one_pager",
+                                gate_rotulo="Contrato de plataforma e origem dos parâmetros", **kw),
             get_gate_estrutural_agent(max_rodadas=rodadas, **kw),
             EnvelopeGateAgent(
                 name="A06GateEstruturalCheck",

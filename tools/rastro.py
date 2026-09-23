@@ -738,12 +738,29 @@ def _linha_de(texto: str, pos: int) -> str:
     return texto[inicio : fim if fim != -1 else len(texto)]
 
 
+#: Bloco JSON (o envelope que o próprio agente escreve) não é prosa: um handoff de 22/09/2026 foi
+#: acusado de "propor WebSocket" pelo `"codigo": "websocket-mencao"` do próprio envelope.
+_RE_BLOCO_JSON = re.compile(r"```json.*?```", re.DOTALL | re.IGNORECASE)
+
+
+def _sem_json(texto: str) -> str:
+    return _RE_BLOCO_JSON.sub(" ", texto or "")
+
+
+def frases_afirmativas(texto: str, padrao: str) -> List[str]:
+    """As linhas em que o termo aparece sem negação por perto — os candidatos que o juiz de achados
+    julga. O regex é a rede larga (recall); decidir se a linha propõe ou cita para vedar é do juiz."""
+    limpo, vistas = _sem_json(texto), []
+    for m in re.finditer(padrao, limpo, re.IGNORECASE):
+        linha = _linha_de(limpo, m.start()).strip()
+        if linha and not _NEGACAO.search(linha) and linha not in vistas:
+            vistas.append(linha)
+    return vistas
+
+
 def _usado_afirmativamente(texto: str, padrao: str) -> bool:
     """O termo aparece propondo algo, e não numa frase que o proíbe."""
-    for m in re.finditer(padrao, texto, re.IGNORECASE):
-        if not _NEGACAO.search(_linha_de(texto, m.start())):
-            return True
-    return False
+    return bool(frases_afirmativas(texto, padrao))
 
 
 def validar_telemetria(handoff: str) -> Dict[str, Any]:
