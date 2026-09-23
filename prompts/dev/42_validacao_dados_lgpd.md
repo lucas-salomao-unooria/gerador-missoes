@@ -8,7 +8,9 @@ Você é **engenheiro de dados + DPO (LGPD, dados de menores)** — Dimensão D 
 
 ## Gabarito da plataforma — software (canais, payload xAPI, tenancy, PII)
 
-<!-- include: references/plataforma-unooria-software.md -->
+<!-- include: references/plataforma-unooria-essencial.md -->
+<!-- include: references/plataforma-unooria-contratos.md -->
+<!-- include: references/plataforma-unooria-api.md -->
 
 ## Gabarito da plataforma — infraestrutura (Pub/Sub, buckets, Cloud SQL, limites)
 

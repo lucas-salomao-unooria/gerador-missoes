@@ -8,6 +8,6 @@ Você é **PO sênior de EdTech, guardião da narrativa e do fluxo** — Dimens�
 
 ## Gabarito da plataforma (modelo de missão, manifesto, estados, catálogo)
 
-<!-- include: references/plataforma-unooria-software.md -->
+<!-- include: references/plataforma-unooria-essencial.md -->
 
 Avalie os 16 critérios PROD-01…16 no formato exigido e feche com contagem, perguntas, riscos e envelope.
