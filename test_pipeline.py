@@ -603,7 +603,12 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
         {"chave": "handoff_dev", "rotulo": "handoff", "etapa_padrao": "dev"},
     ]
     r = varrer_lacunas(fontes, st)
-    assert r["status"] == "bloqueado" and r["por_etapa"] == {"input": 0, "produto": 2, "design": 1, "dev": 1, "plataforma": 1, "externo": 0, "humano": 0}, r["por_etapa"]
+    # Desde 23/09/2026 os dois marcadores de dono fixo mudaram de etapa, e a contagem reflete
+    # isso: `RS-n pendente` é pedido ao Gate 0/PO (humano, não produto) e
+    # `[verificar no repositório]` é instrução para quem codifica (plataforma, não dev). Os
+    # dois eram bloqueantes e os prompts mandavam escrevê-los — ver `references/donos-e-etapas.md`.
+    assert r["por_etapa"] == {"input": 0, "produto": 1, "design": 1, "dev": 0, "plataforma": 2, "externo": 0, "humano": 1}, r["por_etapa"]
+    assert r["status"] == "bloqueado", "gate-estrutural e wireframes continuam impedindo"
     so_plat = varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], st)
     assert so_plat["status"] == "amarelo" and so_plat["por_etapa"]["plataforma"] == 1
     assert varrer_lacunas(fontes, {"spec_missao": "limpo", "handoff_dev": "limpo"})["status"] == "aprovado"
@@ -639,14 +644,25 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
     r_azul_design = varrer_lacunas(fontes, {"spec_missao": "🔵 falta o wireframe da tela de perfil", "handoff_dev": "limpo"})
     assert r_azul_design["status"] == "bloqueado" and r_azul_design["por_etapa"]["design"] == 1
 
-    # `RS-n pendente` e `[verificar no repositório:]` seguem fixos e bloqueantes, por decisão
-    # de produto — o primeiro é lacuna que o D0 carimbou, o segundo é conferência no código.
+    # `RS-n pendente` e `[verificar no repositório:]` têm dono fixo, e desde 23/09/2026 o dono
+    # mudou: os dois eram bloqueantes (produto e dev) enquanto os PRÓPRIOS PROMPTS mandavam
+    # escrevê-los — 17_fechamento_lacunas.md manda carimbar o RS-n, e 34/47 mandam marcar o
+    # que só quem tem o monorepo confere. A esteira reprovava o agente por obedecer. Agora:
+    # RS-n é pedido ao Gate 0/PO (humano) e o marcador de repositório é de plataforma.
     r_fixos = varrer_lacunas(fontes, {
         "spec_missao": "RS-3 pendente conforme a coordenação da rede parceira",
         "handoff_dev": "[verificar no repositório: nome da tabela] com a coordenação externa",
     })
-    assert r_fixos["status"] == "bloqueado", r_fixos["achados"]
-    assert r_fixos["por_etapa"]["produto"] == 1 and r_fixos["por_etapa"]["dev"] == 1
+    assert r_fixos["status"] == "amarelo", r_fixos["achados"]
+    assert r_fixos["por_etapa"]["humano"] == 1 and r_fixos["por_etapa"]["plataforma"] == 1
+    assert r_fixos["por_etapa"]["produto"] == 0 and r_fixos["por_etapa"]["dev"] == 0
+
+    # Mas um documento CRAVEJADO de "verificar no repositório" não conhece o próprio gabarito:
+    # aí a ausência deixa de ser pendência de plataforma e vira defeito de construção.
+    muitos = " ".join(f"[verificar no repositório: campo {i}]" for i in range(9))
+    r_muitos = varrer_lacunas(fontes, {"spec_missao": "limpo", "handoff_dev": muitos})
+    assert r_muitos["status"] == "bloqueado", r_muitos["achados"]
+    assert any(a.get("codigo") == "gabarito-desconhecido" for a in r_muitos["achados"]), r_muitos["achados"]
     assert r_ext["achados"][0]["severidade"] == "atencao"
 
     fontes_com_d9 = fontes + [{"chave": "ambiente_simulado", "rotulo": "ambiente simulado (D9)", "etapa_padrao": "design"}]
@@ -2028,14 +2044,19 @@ def test_ato_humano_nao_bloqueia_a_esteira():
     estado = {
         "prd_final": (
             "[NEEDS CLARIFICATION: Homologação nominal dos autores do gabarito] "
-            "e [verificar no repositório: nome da tabela]"
+            "e [verificar no repositório: nome da tabela] "
+            "e [ABERTO — dono: handoff-dev: contrato da rota de progresso]"
         )
     }
     r = varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], estado)
     severidades = {a["etapa"]: a["severidade"] for a in r["achados"]}
     assert severidades["humano"] == "decisao_humana", "ato humano é decisão, não impedimento"
+    # `[verificar no repositório]` é pendência de PLATAFORMA desde 23/09/2026: os agentes não
+    # têm o monorepo por desenho (só as cópias sincronizadas) e os prompts 34 e 47 mandam
+    # escrever o marcador. Tratá-lo como lacuna de dev era punir o agente por obedecer.
+    assert severidades["plataforma"] == "atencao", "marcador de repositório é pendência de plataforma"
     assert severidades["dev"] == "bloqueio", "lacuna real de dev continua bloqueando"
-    print("   ✓ ato humano vira decisão humana; lacuna de construção continua bloqueio")
+    print("   ✓ ato humano vira decisão; marcador de repositório é plataforma; lacuna de dev bloqueia")
 
 
 def test_prd_inconsistente_consigo_mesmo_e_barrado():
@@ -2385,6 +2406,52 @@ def test_veredito_reproduzivel_e_retry_em_toda_chamada():
         assert ro.attempts >= 2 and 429 in ro.http_status_codes, f"{ag.name} chama o modelo sem retry"
 
     print(f"   ✓ {len(juizes)} juízes com seed fixo, agentes criativos livres, retry com backoff em todos")
+
+
+def test_donos_e_etapas_e_fonte_unica():
+    """A regra que o agente lê e a que o classificador aplica saem do mesmo arquivo.
+
+    Enquanto a lista de tokens vivia só em `tools/rastro.py`, o prompt mandava escrever um
+    marcador que o gate reprovava, e a lista acumulou cinco correções datadas — uma por
+    sessão quebrada. `references/donos-e-etapas.md` tem a prosa (que os prompts incluem) e a
+    cerca JSON (que o código lê): mudar a regra passa a mexer nas duas metades de uma vez.
+    """
+    import json, re
+    from prompts import REFERENCES_DIR
+    from tools.rastro import (ETAPAS, ETAPAS_NAO_BLOQUEANTES, _TOKENS_ETAPA, _DONOS_ROTEAVEIS,
+                              _DONO_DO_MARCADOR, _etapa_por_tokens, classificar_dono, varrer_lacunas)
+
+    texto = (REFERENCES_DIR / "donos-e-etapas.md").read_text(encoding="utf-8")
+    contrato = json.loads(re.search(r"```json\s*(\{.*?\})\s*```", texto, re.DOTALL).group(1))
+
+    assert tuple(contrato["ordem_precedencia"]) == ETAPAS
+    assert set(contrato["etapas"]) == set(_TOKENS_ETAPA)
+    assert set(ETAPAS_NAO_BLOQUEANTES) == {e for e, d in contrato["etapas"].items() if not d["bloqueia"]}
+    # a prosa da tabela e o JSON não podem divergir sobre quem bloqueia
+    for etapa, dados in contrato["etapas"].items():
+        marca = "**sim**" if dados["bloqueia"] else "não (🟡)"
+        assert f"| `{etapa}` | {marca} |" in texto, f"a tabela em prosa discorda do JSON sobre {etapa}"
+
+    # Todo slug CANÔNICO que o despacho aciona precisa cair numa etapa — senão o ticket some
+    # em `checkers.py`. Os apelidos (`lacunas` para `fecha-lacunas`) ficam de fora de
+    # propósito: como token soltos casariam prosa comum ("gate-rastro-lacunas") e roubariam
+    # marcadores de outras etapas.
+    for slug in set(_DONOS_ROTEAVEIS.values()):
+        assert _etapa_por_tokens(slug) is not None, f"slug roteável `{slug}` não pertence a etapa nenhuma"
+
+    # os donos que a auditoria de 23/09 corrigiu, um a um
+    for texto_dono, esperado in (("PO", "humano"), ("Product Owner", "humano"), ("PM", "humano"),
+                                 ("Responsável de Dados", "externo"), ("parceiro Entre Redes", "externo"),
+                                 ("design system", "plataforma"), ("telas", "design"), ("assets", "dev")):
+        assert classificar_dono(texto_dono, "produto") == esperado, texto_dono
+    # e o que NÃO pode ter mudado: marcador com dono de agente continua bloqueando
+    assert classificar_dono("decisão pendente [ABERTO — gate-estrutural]", "produto") == "produto"
+
+    assert _DONO_DO_MARCADOR["rs_pendente"] == "humano"
+    assert _DONO_DO_MARCADOR["verificar_repositorio"] == "plataforma"
+
+    print(f"   ✓ donos e etapas: {len(ETAPAS)} etapas e {len(set(_DONOS_ROTEAVEIS.values()))} slugs, "
+          f"prosa e código lidos do mesmo arquivo")
 
 
 if __name__ == "__main__":

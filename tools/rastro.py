@@ -82,11 +82,31 @@ EXPERIENCIAS_EXISTENTES = frozenset({
     "exp-70-vila-do-lume", "exp-90-plano-de-aula", "exp-91-bem-estar", "exp-92-plano-de-ensino",
 })
 PUBLICOS = ("estudante", "professor")
-ETAPAS = ("input", "produto", "design", "dev", "plataforma", "externo", "humano")
+
+
+def _carregar_taxonomia() -> Dict[str, Any]:
+    """Lê `references/donos-e-etapas.md` — a mesma fonte que os prompts leem em prosa.
+
+    Enquanto a lista de tokens vivia só aqui, o prompt mandava escrever um marcador que este
+    classificador reprovava, e a lista acumulou cinco correções datadas (uma por sessão
+    quebrada). Com a cerca JSON no mesmo arquivo da prosa, quem muda a regra muda as duas
+    metades de uma vez. Mesmo padrão de `tools/bncc.py`, que lê o anexo da BNCC.
+    """
+    from prompts import REFERENCES_DIR
+
+    texto = (REFERENCES_DIR / "donos-e-etapas.md").read_text(encoding="utf-8")
+    cerca = re.search(r"```json\s*(\{.*?\})\s*```", texto, re.DOTALL)
+    if not cerca:  # pragma: no cover - o arquivo é versionado com a cerca
+        raise ValueError("donos-e-etapas.md sem a cerca ```json com o contrato de etapas")
+    return json.loads(cerca.group(1))
+
+
+_TAXONOMIA = _carregar_taxonomia()
+ETAPAS = tuple(_TAXONOMIA["ordem_precedencia"])
 # Etapas cuja pendência é resolvida por gente, fora da esteira: registram 🟡 e o PRD sai.
 #: Etapas cujo achado não impede a construção: ou é pré-requisito de plataforma, ou é
 #: ato humano. Bloquear por elas trava a esteira em algo que nenhum agente resolve.
-ETAPAS_NAO_BLOQUEANTES = ("plataforma", "externo", "humano")
+ETAPAS_NAO_BLOQUEANTES = tuple(e for e, d in _TAXONOMIA["etapas"].items() if not d["bloqueia"])
 
 # ------------------------------------------------------------------ marcadores de lacuna
 _MARCADORES = [
@@ -95,7 +115,11 @@ _MARCADORES = [
     ("needs_clarification", re.compile(r"\[NEEDS CLARIFICATION:?\s*([^\]]*?)\]", re.IGNORECASE)),
     ("verificar_repositorio", re.compile(r"\[verificar no reposit[oó]rio:?\s*([^\]]*?)\]", re.IGNORECASE)),
     ("rs_pendente", re.compile(r"\b(RS-\d+)\s+pendente\b", re.IGNORECASE)),
-    ("a_validar", re.compile(r"🔵[^\n]{0,120}")),
+    # O 🔵 precedido de contagem é PLACAR, não pendência: "Nenhuma pendência técnica aberta
+    # (`0 ❌ / 0 🔵`)" reprovou a sessão exp06ef1b inteira em 22/09/2026 — o gate leu como
+    # pendência de produto a frase que afirma justamente a ausência delas, e 13 artefatos a
+    # jusante saíram `[PROVISÓRIO]`. Um 🔵 de verdade abre a pendência, não a conta.
+    ("a_validar", re.compile(r"(?<![0-9])(?<![0-9] )🔵[^\n]{0,120}")),
 ]
 
 # Os prompts citam o formato do marcador para ensinar o agente a usá-lo — e a citação
@@ -119,38 +143,16 @@ def _e_citacao_do_formato(dono_raw: str) -> bool:
     return bruto in _PLACEHOLDERS
 
 
+#: Tokens por etapa, na ordem de precedência — ambos vêm de `references/donos-e-etapas.md`.
+#: A prosa do mesmo arquivo é o que os prompts leem, então a regra que o agente segue e a que
+#: o classificador aplica não podem mais divergir. O histórico das correções (coordenação em
+#: 2026-09-20, especialista e pedagógico em 2026-09-21, dados e PO em 2026-09-23) está lá.
 _TOKENS_ETAPA: Dict[str, tuple] = {
-    # Ato que só uma pessoa pratica — homologar, nomear autoria, licenciar, indexar no material
-    # editorial. Nenhum agente produz isso, então tratá-lo como lacuna de construção fazia o gate
-    # reprovar a missão por algo que nenhuma rodada de correção poderia resolver. Vai à frente das
-    # demais porque o texto costuma citar também a etapa ("homologação pelo produto").
-    "humano": ("homologa", "homologar", "editorial", "autoria", "autor e revisor", "nomear autor",
-               "licen[çc]a", "direitos de uso", "validar com o time", "aprova[çc][ãa]o human"),
-    # Dono que não é etapa da esteira: coordenação da escola, rede parceira, consultor.
-    # Cai aqui antes de "produto" porque "pedagóg" também é token de produto.
-    # Calendário e semana letiva entram aqui por decisão de 2026-09-20: em que semana do ano a
-    # aula acontece é combinado com a rede na implantação, não é insumo de construção. O critério
-    # 5.5 de `references/criterios-pedagogicos.md` já diz que isso "não bloqueia"; o classificador
-    # é que discordava e barrava a missão por algo que nenhum agente resolve.
-    # Os tokens exigem fim de palavra (`s?` opcional): "coordena" não casava "coordenador" nem
-    # "coordenação", e "pedagog" não casava "pedagógico" por causa do acento — o marcador
-    # `[ABERTO — coordenador pedagógico: …]` caía no default da spec (produto) e barrava o PRD
-    # por algo que o critério 5.5 manda registrar sem bloquear (sessão 8f76, 2026-09-21).
-    "externo": ("coordena(ção|cao|dor|dora|dores|doras)", "rede parceira", "escola parceira", "designer instrucional",
-                # `especialista` entrou em 2026-09-21 (exp08ef2b): `[ABERTO — especialista curricular:
-                # confirmar alocação na matriz do Entre Redes]` caía no padrão da spec (produto) e
-                # barrava o PRD, enquanto a linha irmã do MESMO assunto, marcada 🔵, ia para externo.
-                # Especialista, consultor e assessor são sempre gente de fora da esteira.
-                "especialista", "assessor", "assessoria", "parecerista",
-                "consultor", "time pedag[oó]g[a-z]*", "externo", "externa", "cliente", "secretaria",
-                "jur[ií]dico", "dpo", "rede escolar", "rede de ensino", "semana letiva", "est[uú]dio",
-                "calend[áa]rio letivo", "calend[áa]rio", "implanta[çc][ãa]o"),
-    "plataforma": ("plataforma", "adr", "design-system", "storybook", "infra", "ponte", "@edu/ui", "componente do ds", "componente de ds"),
-    "dev": ("handoff-dev", "handoff", "brief-assets", "banca", "tech", "arquitetura", "dev"),
-    "design": ("jornada", "fluxo", "copy", "wireframe", "caa", "ambiente-simulado", "ambiente", "brief-oficio", "briefing de ofício", "qa-entregaveis", "mermaid", "stitch", "design"),
-    "produto": ("gate-estrutural", "gate estrutural", "gate 0", "gate0", "spec", "produto", "one-pager", "pm", "gate-final", "gate final", "pedag[oó]g[a-z]*", "experiencia-aluno", "fecha-lacunas", "responsável de dados", "dados"),
-    "input": ("input", "briefing", "insumo", "solicitante"),
+    etapa: tuple(dados["tokens"]) for etapa, dados in _TAXONOMIA["etapas"].items()
 }
+
+#: Marcadores cujo dono é fixo porque o prompt que os cria já sabe quem fecha.
+_DONO_DO_MARCADOR: Dict[str, str] = dict(_TAXONOMIA["marcadores"])
 
 
 def _etapa_por_tokens(texto: str) -> Optional[str]:
@@ -241,10 +243,13 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                 if tipo in ("lacuna", "aberto", "needs_clarification") and _e_citacao_do_formato(dono_raw):
                     continue
                 linha, contexto = _linha_e_contexto(texto, m.start(), m.end())
-                if tipo == "rs_pendente":
-                    etapa = "produto"
-                elif tipo == "verificar_repositorio":
-                    etapa = "dev"
+                if tipo in ("rs_pendente", "verificar_repositorio"):
+                    # Dono fixo, do contrato: `RS-n pendente` é pedido ao Gate 0/PO que só
+                    # pessoa fecha, e `[verificar no repositório]` é instrução para quem
+                    # codifica — os agentes não têm o monorepo por desenho. Os dois eram
+                    # roteados para `produto` e `dev`, bloqueantes, e os prompts mandavam
+                    # escrevê-los: a esteira punia o agente por obedecer.
+                    etapa = _DONO_DO_MARCADOR[tipo]
                 elif tipo == "a_validar":
                     # Todo prompt que ensina o 🔵 o descreve como pendência externa a validar
                     # (criterios-pedagogicos.md:41 · 47_prd_writer.md:151 · 11_gate_final.md:30).
@@ -271,6 +276,25 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                 }
                 vistos[chave] = achado
                 achados.append(achado)
+    # Marcador de repositório é pendência de plataforma — mas um documento cravejado deles não
+    # consultou o gabarito que a esteira já tem nas cópias sincronizadas, e isso é defeito de
+    # construção. O teto separa "não tenho como conferir este nome" de "não li a referência".
+    TETO_VERIFICAR_REPO = 8
+    por_documento: Dict[str, int] = {}
+    for a in achados:
+        if a.get("tipo") == "verificar_repositorio":
+            por_documento[a.get("documento", "?")] = por_documento.get(a.get("documento", "?"), 0) + 1
+    for documento, n in sorted(por_documento.items()):
+        if n >= TETO_VERIFICAR_REPO:
+            achados.append({
+                "tipo": "gabarito_desconhecido", "codigo": "gabarito-desconhecido",
+                "trecho": f"{n}× [verificar no repositório]",
+                "contexto": f"O documento «{documento}» adia {n} definições para o repositório. "
+                            f"As cópias em `references/plataforma/` trazem o contrato: acima de "
+                            f"{TETO_VERIFICAR_REPO} marcadores o documento não consultou o gabarito.",
+                "documento": documento, "dono": "handoff-dev", "etapa": "dev", "severidade": "bloqueio",
+            })
+
     por_etapa = {e: sum(1 for a in achados if a["etapa"] == e) for e in ETAPAS}
     if any(a["severidade"] == "bloqueio" for a in achados):
         status = "bloqueado"
