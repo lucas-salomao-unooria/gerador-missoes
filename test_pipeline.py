@@ -2909,6 +2909,59 @@ def test_kpis_cruza_o_prd_com_a_spec():
     print("   ✓ KPI ↔ spec: pergunta que morreu entre produto e dev, e KPI que inventou pergunta")
 
 
+def test_todo_gate_gravado_aparece_no_dossie():
+    """O cruzamento da auditoria de 23/09/2026, como teste: todo `status_key` que um agente da
+    árvore grava está no dossiê. Eram três fora, e um deles reprovava protótipo sem que quem lia
+    o diagnóstico soubesse. Gate novo que nascer invisível falha aqui."""
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+    from tools.diagnostico import CONSULTIVOS, GATES
+
+    # gravados DEPOIS do diagnóstico, ou o próprio diagnóstico: não cabem nele por construção
+    fora_por_construcao = {"catalogo_status", "diagnostico_status"}
+    consultivos = {c["chave"].replace("_report", "_status") for c in CONSULTIVOS}
+    gravados = {getattr(a, "status_key", "") for _, a in iter_agent_tree(
+        create_mission_orchestrator(stages=["produto", "design", "dev"]))} - {"", None}
+    no_dossie = {g["status"] for g in GATES}
+    invisiveis = gravados - no_dossie - consultivos - fora_por_construcao
+    assert not invisiveis, f"gates que gravam status e não aparecem no dossiê: {sorted(invisiveis)}"
+    print("   ✓ todo gate gravado aparece no dossiê (catálogo e diagnóstico fora por construção)")
+
+
+def test_lint_do_prototipo_roda_de_novo_no_retrabalho():
+    """O retrabalho reconstruía o protótipo e o QA da rodada 2 lia o lint da rodada 1 — sobre o
+    HTML velho — com a instrução de tratá-lo como fato."""
+    from agents.design import POSFIXO_RETRABALHO, _agentes_de_retrabalho
+
+    assert "A29cPrototipoLintRetrabalho" in POSFIXO_RETRABALHO
+    # depois de separar o HTML do relatório, senão lint o documento antigo de novo
+    assert POSFIXO_RETRABALHO.index("A29ArtefatosDesignRetrabalho") < POSFIXO_RETRABALHO.index("A29cPrototipoLintRetrabalho")
+    nomes = {a.name for a in _agentes_de_retrabalho()}
+    assert set(POSFIXO_RETRABALHO) <= nomes, f"posfixo sem agente: {set(POSFIXO_RETRABALHO) - nomes}"
+    print("   ✓ o lint do protótipo roda de novo depois de todo retrabalho de design")
+
+
+def test_brief_ausente_nao_sai_verde():
+    """Sem o brief, o split escrevia ⚠️ no log e gravava o status do ENVELOPE do one-pager:
+    `aprovado`. O GAP-09 voltava com cara de sucesso."""
+    from agents.produto import get_brief_escopo_split
+
+    envelope = '```json\n{"agente": "secoes-apoio", "status": "aprovado"}\n```'
+    sem = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+        FakeAgent(name="A04", key="one_pager", text="# One-pager\n\nSó o canônico.\n\n" + envelope),
+        get_brief_escopo_split(),
+    ])))[1]
+    assert sem["brief_escopo_status"] == "amarelo", sem["brief_escopo_status"]
+    assert any(a["codigo"] == "secao-ausente" for a in sem["brief_escopo_status_envelope"]["achados"])
+
+    brief = "**MISSÃO DIGITAL UNOORIA · BRIEFING DE ESCOPO**\n\n" + ("Escopo da missão. " * 20)
+    com = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+        FakeAgent(name="A04", key="one_pager", text="# One-pager\n\n" + brief + "\n\n" + envelope),
+        get_brief_escopo_split(),
+    ])))[1]
+    assert com["brief_escopo_status"] == "aprovado" and com.get("brief_escopo")
+    print("   ✓ brief de escopo ausente sai 🟡 com achado, presente sai verde")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")

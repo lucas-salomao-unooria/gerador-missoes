@@ -93,7 +93,10 @@ def get_brief_escopo_split() -> SecaoSplitAgent:
         source_key="one_pager",
         status_key="brief_escopo_status",
         extracoes=[
-            {"chave": "brief_escopo", "inicio": BRIEF_ESCOPO_INICIO, "minimo_chars": 200},
+            {"chave": "brief_escopo", "inicio": BRIEF_ESCOPO_INICIO, "minimo_chars": 200,
+             # sem brief a missão ainda se constrói, mas quem não audita critério por critério
+             # fica sem o documento dele: ressalva visível, não bloqueio
+             "ausencia_vira_ressalva": True},
         ],
     )
 

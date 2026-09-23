@@ -48,6 +48,7 @@ ARTIFACT_FILES = [
     ("diagramas_html", "design/09-diagramas.html"),
     ("stitch_links", "design/10-stitch-telas.md"),
     ("miro_links", "design/11-miro-boards.md"),
+    ("prototipo_lint_report", "design/06b-lint-prototipo.md"),
     ("qa_entregaveis_report", "design/07-qa-entregaveis.md"),
     ("evidencia_report", "produto/05c-matriz-evidencia.md"),
     ("perguntas_report", "produto/05d-perguntas-de-produto.md"),

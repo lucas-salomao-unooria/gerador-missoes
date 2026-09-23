@@ -257,6 +257,7 @@ class SecaoSplitAgent(BaseAgent):
                 }],
             }
         else:
+            faltou: List[tuple] = []
             for ex in self.extracoes:
                 chave = ex["chave"]
                 secao = extrair_secao(texto, ex["inicio"], ex.get("fim"))
@@ -277,6 +278,8 @@ class SecaoSplitAgent(BaseAgent):
                         )
                 if motivo:
                     linhas.append(f"⚠️ `{chave}` mantido como estava — {motivo}.")
+                    if ex.get("ausencia_vira_ressalva"):
+                        faltou.append((chave, motivo))
                     continue
                 backup = ex.get("backup")
                 if backup and state.get(chave) and not state.get(backup):
@@ -297,6 +300,18 @@ class SecaoSplitAgent(BaseAgent):
                     "agente_responsavel": self.name,
                     "resumo": f"{self.rotulo} respondeu sem envelope legível — o conteúdo foi extraído, o veredito não.",
                 })
+            # Seção que o documento TINHA de trazer e não trouxe: o status vinha do envelope da
+            # fonte (o one-pager, "aprovado"), e a ausência ficava só no log — no dossiê, verde.
+            # Era o GAP-09 (brief de escopo evaporado) com cara de sucesso.
+            if faltou:
+                if delta[self.status_key] != STATUS_BLOQUEADO:
+                    delta[self.status_key] = "amarelo"
+                for chave, motivo in faltou:
+                    env.setdefault("achados", []).append({
+                        "severidade": "atencao", "codigo": "secao-ausente",
+                        "agente_responsavel": self.name,
+                        "resumo": f"`{chave}` não veio em `{self.source_key}`: {motivo}.",
+                    })
             delta[f"{self.status_key}_envelope"] = env
             bruto = (envelope or {}).get("status") or status
             icone = "🔴" if status == STATUS_BLOQUEADO else "🟢"

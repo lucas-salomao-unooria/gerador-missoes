@@ -19,8 +19,12 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 #: Ordem de execução. `rodada` só existe nos gates que vivem dentro de um LoopAgent.
+#: Fora desta lista de propósito: `catalogo_status` é gravado pelo registro no índice, que roda
+#: DEPOIS deste diagnóstico (a missão só entra no catálogo com o status que o dossiê derivou), e
+#: `diagnostico_status` é o próprio dossiê. Um cruzamento ingênuo status×dossiê acusa os dois.
 GATES: List[Dict[str, Optional[str]]] = [
     {"status": "micro_gate_status", "rotulo": "Micro-gate do núcleo", "etapa": "produto", "rodada": "micro_gate_rodada"},
+    {"status": "brief_escopo_status", "rotulo": "Brief de escopo separado do one-pager", "etapa": "produto", "rodada": None},
     {"status": "gate_estrutural_status", "rotulo": "Gate estrutural", "etapa": "produto", "rodada": "gate_estrutural_rodada"},
     {"status": "avaliacao_status", "rotulo": "Avaliação pedagógica", "etapa": "produto", "rodada": "avaliacoes_rodada"},
     {"status": "experiencia_status", "rotulo": "Experiência do estudante", "etapa": "produto", "rodada": "avaliacoes_rodada"},
@@ -29,6 +33,7 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "bncc_status", "rotulo": "Conformidade BNCC", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "lacunas_status", "rotulo": "Fechamento de lacunas (D0)", "etapa": "design", "rodada": None},
     {"status": "ambiente_status", "rotulo": "Ambiente simulado (D9)", "etapa": "design", "rodada": None},
+    {"status": "prototipo_lint_status", "rotulo": "Lint do protótipo (arquivo)", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "design_status", "rotulo": "QA de entregáveis", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "manifesto_status", "rotulo": "Ficha do manifesto", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "evidencia_status", "rotulo": "Matriz de evidência pedagógica", "etapa": "produto", "rodada": "spec_rodada"},

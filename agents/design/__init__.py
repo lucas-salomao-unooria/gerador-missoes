@@ -288,7 +288,11 @@ MAPA_RETRABALHO = {
 
 #: Roda depois de qualquer retrabalho. O protótipo deriva de jornada, copy, CAA e telas —
 #: deixá-lo de fora faria o QA auditar, na rodada seguinte, um protótipo da rodada anterior.
-POSFIXO_RETRABALHO = ["A28PrototipoRetrabalho", "A29ArtefatosDesignRetrabalho", "A29bEspelhoMiroRetrabalho"]
+#: O lint vem DEPOIS de separar o HTML e ANTES do QA voltar a julgar. Sem ele no posfixo, o
+#: protótipo era reconstruído e o QA da rodada 2 lia o lint da rodada 1 — sobre o HTML velho —
+#: com a instrução de tratá-lo como fato. Visto na auditoria de 23/09/2026.
+POSFIXO_RETRABALHO = ["A28PrototipoRetrabalho", "A29ArtefatosDesignRetrabalho",
+                      "A29cPrototipoLintRetrabalho", "A29bEspelhoMiroRetrabalho"]
 
 #: Tickets endereçados a estes donos não são desta etapa: o QA está devolvendo ao produto.
 RETRABALHO_EXTERNO = ["gate-estrutural"]
@@ -330,6 +334,7 @@ def _agentes_de_retrabalho(**kw) -> list:
             name="A29ArtefatosDesignRetrabalho",
             description="Reextrai o HTML do protótipo, os links do Stitch e a folha de diagramas depois de uma rodada de retrabalho.",
         ),
+        PrototipoLintAgent(name="A29cPrototipoLintRetrabalho"),
         EspelhoMiroAgent(
             name="A29bEspelhoMiroRetrabalho",
             description="Reenvia ao mesmo board do Miro os diagramas corrigidos na rodada de retrabalho.",
