@@ -2984,7 +2984,17 @@ def test_brief_ausente_nao_sai_verde():
         get_brief_escopo_split(),
     ])))[1]
     assert com["brief_escopo_status"] == "aprovado" and com.get("brief_escopo")
-    print("   ✓ brief de escopo ausente sai 🟡 com achado, presente sai verde")
+
+    # como as duas rodadas de 23/09 escreveram: título em heading, e o one-pager sem envelope
+    # (é documento, não veredito) — antes, brief nunca separado e `envelope-ilegivel` sempre
+    heading = "# MISSÃO DIGITAL UNOORIA · BRIEFING DE ESCOPO (LEITURA RÁPIDA)\n\n" + ("Escopo da missão. " * 20)
+    h = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+        FakeAgent(name="A04", key="one_pager", text="# One-pager\n\nSó o canônico.\n\n" + heading),
+        get_brief_escopo_split(),
+    ])))[1]
+    assert h["brief_escopo_status"] == "aprovado" and h["brief_escopo"].startswith("Escopo"), h.get("brief_escopo_status")
+    assert not h["brief_escopo_status_envelope"].get("achados"), h["brief_escopo_status_envelope"]
+    print("   ✓ brief de escopo ausente sai 🟡 com achado, presente sai verde — em negrito ou heading")
 
 
 
