@@ -55,7 +55,7 @@ Se disponível, nesta ordem exata:
 
 **Economia de contexto, que é regra e não conselho:** não peça o HTML nem a imagem de tela nenhuma. Você precisa do **link**, não do arquivo. Pedir o código ou a captura de todas as telas estoura o contexto da etapa e derruba a execução inteira.
 
-**Priorize** quando o inventário for grande: pico, aha, uma tela por etapa, depois os estados degenerados. Declare o que ficou fora. **Exceção que não se prioriza para fora: as telas do professor no preparo (`E0-PROF-01…05`) e a de dashboard são obrigatórias** — a visão do professor é entregável, e sem elas o QA (D6) e o rastro de lacunas reprovam a etapa. Se a cota apertar, corte estados degenerados do estudante antes de cortar uma tela do professor; entre as do professor, as últimas a cair são `E0-PROF-02` (recorte) e `E0-PROF-04` (curadoria).
+**Priorize** quando o inventário for grande: pico, aha, uma tela por etapa, depois os estados degenerados. Declare o que ficou fora. **Exceção que não se prioriza para fora: as telas do professor no preparo (`E0-PROF-01…05`), a de dashboard e o estado degradado 2–4 por aparelho da tela `pico` e de toda tela com decisão são obrigatórios** — dois a quatro estudantes por aparelho é o primeiro cenário da escola pública, não uma variação de luxo, e cortá-lo por cota é desenhar para a escola que temos menos — a visão do professor é entregável, e sem elas o QA (D6) e o rastro de lacunas reprovam a etapa. Se a cota apertar, corte estados degenerados do estudante antes de cortar uma tela do professor; entre as do professor, as últimas a cair são `E0-PROF-02` (recorte) e `E0-PROF-04` (curadoria).
 
 No relatório, entregue **esta tabela**, que é o que vai ao PRD:
 

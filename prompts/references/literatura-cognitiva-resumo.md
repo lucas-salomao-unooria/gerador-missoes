@@ -6,7 +6,7 @@ sources: [literatura-cognitiva.md]
 
 # Régua por idade — resumo operacional
 
-> **Gerado automaticamente** de `literatura-cognitiva.md` por `scripts/gerar_resumo_literatura.py`. Não edite à mão: edite a fonte e regenere. SHA-256 da fonte: `aff8c56181b709f99c482c9e1c6695970bba49a538f77173b450e206511880c3`.
+> **Gerado automaticamente** de `literatura-cognitiva.md` por `scripts/gerar_resumo_literatura.py`. Não edite à mão: edite a fonte e regenere. SHA-256 da fonte: `c280e97a1fcbd4decdeb3064d0e3127ece296f371db65e076f0406c06674a63c`.
 
 Esta é a **fonte única dos números** que a esteira usa para julgar se uma missão cabe na idade, em uma página. Todo número é **[DADO DIRETO]** (medido), **[EXTRAPOLAÇÃO]** (derivado de princípio) ou **[CONVENÇÃO]** (escolha da equipe); extrapolação justifica ⚠️ com mais frequência que ❌. A fundamentação e as citações estão na fonte — aqui só o que se aplica ao construir tela, copy e jornada.
 

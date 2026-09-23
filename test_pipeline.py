@@ -2634,6 +2634,29 @@ def test_pedagogia_falsificavel():
     print("   ✓ pedagogia: 4 gates novos, grau/matriz/gabarito conferidos, achado recorrente identificado")
 
 
+def test_conteudo_imersao_e_escola_publica():
+    """Acessibilidade contável, spoiler a jusante e o cenário que não se corta."""
+    from prompts.loader import load_prompt
+
+    qa = load_prompt("design/30_qa_entregaveis.md")
+    # F1 — não havia NENHUMA linha de acessibilidade contável na esteira: era texto sem verificação
+    assert "4,5:1" in qa and "Ordem de foco" in qa, "contraste e ordem de foco não são contáveis"
+    assert "64×64" in qa, "o alvo de toque já existia e não pode ter saído"
+
+    # F4 — o micro-gate testa spoiler no núcleo e nada testava depois: copy, tela e protótipo
+    # podiam entregar de graça o que a missão existe para a criança descobrir
+    assert "D3b" in qa and "Spoiler a jusante" in qa
+
+    # F5 — dois a quatro por aparelho é o primeiro cenário da escola pública, não variação de luxo
+    telas = load_prompt("design/26_telas.md")
+    assert "estado degradado 2–4 por aparelho" in telas
+    i_excecao = telas.index("Exceção que não se prioriza para fora")
+    i_degradado = telas.index("estado degradado 2–4 por aparelho")
+    assert i_degradado > i_excecao, "o 2–4 precisa estar DENTRO da exceção que não se corta"
+
+    print("   ✓ conteúdo: contraste e foco contáveis, spoiler testado a jusante, cenário 2–4 blindado")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")

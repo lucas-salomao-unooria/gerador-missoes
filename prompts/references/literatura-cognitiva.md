@@ -199,7 +199,7 @@ Saeb, não o nominal. A cláusula não muda a complexidade da decisão (6.3), s�
 com dois a três elementos **novos e interagentes** (Sweller, van Merriënboer & Paas, *Educational
 Psychology Review*, v. 31, n. 2, p. 261–292, 2019. DOI 10.1007/s10648-019-09465-5). Elemento já
 automatizado — o ícone de coração, o botão de play — **não conta**. Derivando: ~1–2 gestos novos por
-ato nos anos iniciais, 2–3 nos anos 3º–5º, 3–4 nos finais e no Médio. **[EXTRAPOLAÇÃO]** — ninguém
+ato no 1º–2º ano, 2–3 no 3º–5º, 3–4 nos finais e no Médio. **[EXTRAPOLAÇÃO]** — ninguém
 mediu "elementos de interface".
 
 ---

@@ -95,6 +95,15 @@ inventário estão nele e que não sobrou marcador de rascunho. Achado dele é f
 não reabra, não reconfira, e **não aprove D8 contra ele**. O que cabe a você é o que a máquina
 não vê: se a tela está boa.
 
+### D3b — Spoiler a jusante (a descoberta continua sendo do estudante?)
+
+O micro-gate testa spoiler **no núcleo**, e depois disso nada testava: a copy, a tela e o
+protótipo podem entregar de graça o que a missão existe para a criança descobrir. Aplique aqui
+o mesmo teste do V1, sobre o que vai à TELA: um estudante que só lê os textos das telas até o
+Decidir já sabe a resposta? Título de tela, microcopy de botão, dica, texto de estado vazio e
+nome de seção contam. Se sim, é ❌ com dono `copy-ptbr-revisao` ou `telas` — e não é ressalva:
+uma missão cuja descoberta foi entregue antes da decisão não é a missão que a spec descreve.
+
 ## Como decidir o veredito
 
 Você é o único gate desta esteira que listava quatro vereditos sem dizer quando usar cada um —
@@ -167,7 +176,7 @@ Colete toda lacuna aberta declarada nos relatórios de **fechamento de lacunas, 
 - **Registros de voz:** o sheet marca `unooria` em **todas** as strings do jogo, inclusive as do personagem-guia? String de mini-jogo marcada como `clone` é ❌ com dono `copy-ptbr-revisao` — não existe plataforma simulada para falar.
 - **Cap:** a contagem de decisões recontada com as fases continua dentro do teto do bloco 6?
 
-**D8b — Camada CAA.** Só quando o `camada_caa` vier `concluido`. Cada decisão do mapa tem modo de resposta alternativo construído no frame? Um conceito, um símbolo, na missão inteira? Alvo de toque ≥ 64×64 (≥ 88×88 na projeção) e vão ≥ 16 px? Botão de áudio é componente e não caixa cinza? Cada símbolo acionável tem chave de áudio que existe no sheet da passada 2? **Prancha CAA dentro do clone é ❌ por DES-13.** Nenhum marcador no dashboard distingue "respondeu por CAA" (8.4) — se houver, é ❌. Se `camada_caa` vier `nao_aplicavel`, verifique só se a condição de não-aplicação declarada bate com a faixa da spec; se bater, D8b fecha ✅ com nota.
+**D8b — Camada CAA.** Só quando o `camada_caa` vier `concluido`. Cada decisão do mapa tem modo de resposta alternativo construído no frame? Um conceito, um símbolo, na missão inteira? Alvo de toque ≥ 64×64 (≥ 88×88 na projeção) e vão ≥ 16 px? **Contraste de texto ≥ 4,5:1 (≥ 3:1 em texto grande e em ícone que carrega significado)? Ordem de foco segue a ordem de leitura, e toda decisão é alcançável sem depender de cor** — as três são contáveis sobre o frame, e não havia nenhuma linha de acessibilidade contável na esteira: eram texto sem verificação. Botão de áudio é componente e não caixa cinza? Cada símbolo acionável tem chave de áudio que existe no sheet da passada 2? **Prancha CAA dentro do clone é ❌ por DES-13.** Nenhum marcador no dashboard distingue "respondeu por CAA" (8.4) — se houver, é ❌. Se `camada_caa` vier `nao_aplicavel`, verifique só se a condição de não-aplicação declarada bate com a faixa da spec; se bater, D8b fecha ✅ com nota.
 
 **Gate de ofício (O1–O5).** Aplique a régua abaixo contra a direção por tela da jornada, em telas `pico`/`alta`. Achado O1–O5 sai com `severidade: "oficio"`, **exceto a inversão de hierarquia**: tela `pico` com mais elementos do que qualquer vizinha na ordem do arco sai com `severidade: "bloqueio"`, `codigo: "O1"`, `agente_responsavel: "jornada"`. A contagem é a da coluna "Teto de elementos (contado)" da Seção 4 da jornada, conferida sobre o frame construído, não sobre a intenção; empate é `oficio`. É a única regra de ofício que bloqueia hoje, porque é comparativa e não depende de teto calibrado:
 
