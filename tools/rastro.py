@@ -735,12 +735,30 @@ def validar_telemetria(handoff: str) -> Dict[str, Any]:
         bloqueio("resultado-contexto", "A tabela de eventos não tem coluna `resultado` nem `contexto` — são os dois únicos campos de payload que a api aceita.")
     if _usado_afirmativamente(texto, r"\|\s*`?dados`?\s*\|") or _usado_afirmativamente(texto, r"[`\"']?\bdados\b[`\"']?\s*:"):
         bloqueio("campo-dados", "Evento com campo `dados`: a api não tem esse campo e descarta a chave em silêncio. Use `resultado` e `contexto`.")
-    if not re.search(r"\bexp\d{2}e[fm]\db_[a-z][a-z0-9_]*", texto):
+    # A tabela é reconhecida nas DUAS grafias, e a errada vira achado próprio. Escrever
+    # `exp_04ef1b_gates_turma` com underscore é defeito real — o id já carrega ano e bimestre,
+    # e quebrá-lo desalinha migration, Prisma e `@@map`. Mas é defeito de NOME, não de
+    # arquitetura: quando os detectores exigiam a grafia certa para reconhecer a tabela, o
+    # handoff da exp04ef1b saía com "nenhuma tabela nomeada" e "WebSocket como canal de sala"
+    # — duas acusações falsas — enquanto o erro que existia de fato não era nomeado por
+    # ninguém. Um defeito, um achado, com o nome que ele tem.
+    tabelas_certas = re.findall(r"\bexp\d{2}e[fm]\db_[a-z][a-z0-9_]*", texto)
+    tabelas_tortas = re.findall(r"\bexp_\d{2}_?e[fm]\d?b?_[a-z][a-z0-9_]*", texto)
+    if not tabelas_certas and not tabelas_tortas:
         bloqueio("tabela-leitura", "Nenhuma tabela `expNNefNb_*` nomeada. Toda medida que a professora vê nasce de tabela própria do módulo — sem tabela de leitura, a medida não existe (`telemetria_eventos` não tem leitor).")
+    elif tabelas_tortas:
+        exemplo = sorted(set(tabelas_tortas))[0]
+        bloqueio("prefixo-tabela", f"Tabela com underscore no identificador (`{exemplo}`): o prefixo é o id inteiro, sem separador interno (`expNNefNb_…`). O id já carrega ano e bimestre, e quebrá-lo desalinha migration, Prisma e `@@map`.")
     # O que importa é o canal DECLARADO, não a palavra. Handoff correto cita WebSocket
     # justamente para descartá-lo ("Cloud Run não sustenta WebSocket, ADR-93/94") ou
     # para colocá-lo como futuro fora de escopo — e era bloqueado por isso.
-    canal_correto = bool(re.search(r"polling", texto, re.IGNORECASE) and re.search(r"exp\d{2}e[fm]\db_gates_turma", texto))
+    # "o canal certo está declarado?" exige polling E a tabela de gates nomeada — só a palavra
+    # `polling` viraria escudo para quem propõe WebSocket ao lado. A tabela conta nas duas
+    # grafias: quem a nomeou declarou o canal, e o erro de grafia já tem achado próprio acima.
+    canal_correto = bool(
+        re.search(r"polling", texto, re.IGNORECASE)
+        and re.search(r"\bexp_?\d{2}_?e[fm]\d?b?_gates_turma", texto)
+    )
     if _usado_afirmativamente(texto, r"websocket|socket\.io|hub:pause"):
         if canal_correto:
             atencao("websocket-mencao", "WebSocket ou `hub:pause` proposto como segunda via de sincronização, apesar de o canal de sala declarado ser o correto (polling em `expNNefNb_gates_turma`). Duas vias de sincronia é uma a mais.")

@@ -2454,6 +2454,44 @@ def test_donos_e_etapas_e_fonte_unica():
           f"prosa e código lidos do mesmo arquivo")
 
 
+def test_erro_de_grafia_nao_vira_erro_de_arquitetura():
+    """Regressão da exp04ef1b (22/09/2026): um underscore produzia duas acusações falsas.
+
+    O handoff escreveu `exp_04ef1b_gates_turma` — a tabela CERTA com grafia errada — e
+    declarou o canal corretamente ("nunca WebSocket, conforme ADR-93/94"). Como os dois
+    detectores exigiam a grafia sem underscore para RECONHECER a tabela, o gate emitiu
+    `tabela-leitura` ("nenhuma tabela nomeada") e `websocket` ("WebSocket como canal de
+    sala"), ambos falsos — enquanto o defeito que existia de fato, o prefixo quebrado, não
+    era nomeado por ninguém.
+
+    Um defeito, um achado, com o nome que ele tem.
+    """
+    from tools.rastro import validar_telemetria
+
+    base = ("| Evento | Verbo xAPI | Objeto | resultado | contexto |\n"
+            "| E1 | interacted | `chat:amara` | `{}` | `{}` |\n"
+            "Nunca WebSocket (ADR-93/94): a sala sincroniza por polling HTTP de 3s.\n")
+
+    torto = base + "Relógio em `exp_04ef1b_gates_turma`; sessão em `exp_04ef1b_sessoes`.\n"
+    cods = {a["codigo"]: a["severidade"] for a in validar_telemetria(torto)["achados"]}
+    assert cods.get("prefixo-tabela") == "bloqueio", cods
+    assert "tabela-leitura" not in cods, "a tabela foi nomeada, só com grafia errada"
+    assert "websocket" not in cods, "o canal está declarado: grafia errada não é arquitetura errada"
+
+    certo = base + "Relógio em `exp04ef1b_gates_turma`; sessão em `exp04ef1b_sessoes`.\n"
+    assert validar_telemetria(certo)["status"] == "aprovado", validar_telemetria(certo)["achados"]
+
+    # e o controle: sem tabela nenhuma, o bloqueio de leitura continua
+    assert "tabela-leitura" in {a["codigo"] for a in validar_telemetria(base)["achados"]}
+
+    # `polling` sozinho não serve de escudo para quem propõe WebSocket de verdade
+    escudo = ("| Evento | Verbo | Objeto | resultado | contexto |\n| E1 | interacted | `a:b` | `{}` | `{}` |\n"
+              "Usamos polling. A sala sincroniza por WebSocket dedicado.\n")
+    assert "websocket" in {a["codigo"] for a in validar_telemetria(escudo)["achados"]}
+
+    print("   ✓ prefixo com underscore é achado próprio; canal declarado com grafia errada não vira WebSocket")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")
