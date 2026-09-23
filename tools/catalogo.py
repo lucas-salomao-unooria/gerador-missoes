@@ -392,6 +392,42 @@ def registrar(ficha: Dict[str, Any], indice: Optional[Dict[str, Any]] = None, ba
             "total": len(missoes), "vizinhas": proximas}
 
 
+def saude_do_indice(indice: Optional[Dict[str, Any]] = None, base: Optional[Path] = None) -> Dict[str, Any]:
+    """Quantas linhas do índice sustentam uma reprovação em V5 — e quantas não.
+
+    A verificação de semelhança só reprova contra uma linha COMPLETA: `01_nucleo_narrativo.md`
+    instrui que "linha com campo `—` ou `[preencher…]` não serve de comparação". Com o índice
+    majoritariamente incompleto, o V5 **se autodesliga** — e em silêncio, que é o problema: o
+    dossiê continua mostrando o gate verde. Em 23/09/2026, 10 das 14 fichas (71%) estavam
+    assim, e nenhuma execução avisou.
+    """
+    idx = indice if indice is not None else carregar(base)
+    missoes = idx.get("missoes", [])
+    cegas = [m for m in missoes if tem_lacuna(m)]
+    total = len(missoes)
+    return {
+        "total": total,
+        "cegas": len(cegas),
+        "uteis": total - len(cegas),
+        "fracao_cega": (len(cegas) / total) if total else 0.0,
+        "slugs_cegos": [m.get("slug") or "—" for m in cegas],
+    }
+
+
+def aviso_de_indice_cego(saude: Dict[str, Any]) -> Optional[str]:
+    """Frase para o dossiê quando o gate de semelhança perdeu a base de comparação."""
+    if saude["total"] == 0:
+        return ("> ⚠️ O índice está vazio: a verificação de semelhança (V5) não tem contra o que "
+                "comparar e **não reprovará nada** nesta execução.")
+    if saude["fracao_cega"] >= 0.5:
+        return (f"> ⚠️ **A verificação de semelhança está praticamente desligada**: "
+                f"{saude['cegas']} das {saude['total']} fichas do índice ({saude['fracao_cega']:.0%}) "
+                f"não têm campo de comparação preenchido, e o V5 não reprova contra linha incompleta. "
+                f"Rode `python scripts/catalogo.py reconstruir` e preencha `tipo_decisao` e "
+                f"`porta_abstracao` das fichas antigas — sem isso o gate segue verde sem julgar nada.")
+    return None
+
+
 def relatorio_markdown(resultado: Dict[str, Any], missao: str = "") -> str:
     """Relatório legível + envelope JSON, no padrão dos demais gates determinísticos."""
     f = resultado.get("ficha", {})
@@ -406,6 +442,10 @@ def relatorio_markdown(resultado: Dict[str, Any], missao: str = "") -> str:
     linhas.append("")
     if f and tem_lacuna(f):
         linhas.append("> ⚠️ Campo de comparação vazio nesta ficha: o critério 2.5 e a verificação V5 não conseguem julgar contra ela nas próximas execuções. Preencher no núcleo narrativo ou na seção 1 do catálogo proposto pelo agente 51.")
+        linhas.append("")
+    aviso = aviso_de_indice_cego(saude_do_indice())
+    if aviso:
+        linhas.append(aviso)
         linhas.append("")
     linhas.append("## Missões mais próximas no índice")
     linhas.append("")

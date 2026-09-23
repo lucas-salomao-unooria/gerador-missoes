@@ -65,7 +65,8 @@ KNOWN_STATE_KEYS = {
     "prototipo_html", "prototipo_arquivo", "prototipo_relatorio", "stitch_links", "diagramas_html",
     "miro_links", "miro_board",
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
-    "rastro_lacunas_status", "rastro_lacunas_report", "prd_status", "prd_check_report",
+    "rastro_lacunas_status", "rastro_lacunas_report",
+    "prototipo_lint_report", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
     "validacao_dev_report", "dev_status", "prd_final", "one_pager_pedagogico", "one_pager_resumido", "aprendizado_registro",
@@ -170,7 +171,10 @@ def test_arvore_de_agentes():
     loop = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "GateEstruturalLoop")
     assert isinstance(loop, LoopAgent) and loop.max_iterations == settings.gate_estrutural_max_rodadas
     # O lint vem antes do gate, dentro do loop: cada rodada relê a versão corrente do one-pager.
-    assert [a.name for a in loop.sub_agents] == ["A04bContratoProdutoCheck", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager"]
+    # `A04bBriefEscopoSplit` entra desde 23/09/2026: o A04 entrega one-pager E brief de escopo
+    # na mesma `output_key`, e o A07 devolve só o one-pager revisado — o brief evaporava a
+    # cada execução, sem erro e sem artefato.
+    assert [a.name for a in loop.sub_agents] == ["A04bBriefEscopoSplit", "A04bContratoProdutoCheck", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager"]
     banca = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "BancaValidacaoDev")
     assert len(banca.sub_agents) == 5
 
@@ -2542,6 +2546,41 @@ def test_banca_consolidada_em_codigo_enxerga_todos_os_bloqueantes():
     assert r_misto["status"] == "amarelo", r_misto  # PED-09 não é bloqueante
 
     print(f"   ✓ banca consolidada em código: {len(travam)} bloqueantes lidos dos critérios, DES-14 incluído")
+
+
+def test_gaps_estruturais_da_auditoria():
+    """Quatro coisas que a esteira perdia em silêncio (auditoria de 23/09/2026)."""
+    from tools.catalogo import saude_do_indice, aviso_de_indice_cego
+    from tools.prototipo import validar as lint_prototipo
+    from agents.produto import get_brief_escopo_split
+
+    # G1 — o gate de semelhança se autodesliga quando o índice está incompleto, e ninguém sabe
+    cego = {"missoes": [{"slug": "a", "tipo_decisao": "—", "porta_abstracao": "—"},
+                        {"slug": "b", "tipo_decisao": "[preencher do manifesto]", "porta_abstracao": "x"}]}
+    saude = saude_do_indice(cego)
+    assert saude["cegas"] == 2 and saude["fracao_cega"] == 1.0
+    assert "praticamente desligada" in (aviso_de_indice_cego(saude) or "")
+    cheio = {"missoes": [{"slug": "a", "tipo_decisao": "escolher fonte", "porta_abstracao": "explicar",
+                          "descoberta": "o feed esconde o que eu não sigo", "ambiente": "instanooria"}]}
+    assert aviso_de_indice_cego(saude_do_indice(cheio)) is None
+
+    # G2 — o brief de escopo sai do one-pager antes do revisor o apagar
+    split = get_brief_escopo_split()
+    assert split.source_key == "one_pager" and split.extracoes[0]["chave"] == "brief_escopo"
+
+    # G3 — o protótipo deixa de se auto-aprovar: o lint toca o arquivo
+    assert lint_prototipo("")["status"] == "bloqueado"
+    assert lint_prototipo("<html><body>E1-ALU-01 TODO</body></html>")["status"] == "bloqueado"
+    faltando = lint_prototipo("<html><body>E1-ALU-01</body></html>", ["E1-ALU-01", "E3-ALU-02"])
+    assert {a["codigo"] for a in faltando["achados"]} == {"telas-ausentes"}
+    assert lint_prototipo("<html><body>E1-ALU-01 E3-ALU-02</body></html>",
+                          ["E1-ALU-01", "E3-ALU-02"])["status"] == "aprovado"
+
+    # G4 — o gate estrutural passa a receber a rodada que o prompt afirma receber
+    from prompts.loader import load_prompt
+    assert "{gate_estrutural_rodada?}" in load_prompt("produto/05_gate_estrutural.md")
+
+    print("   ✓ gaps estruturais: índice cego avisa, brief sobrevive ao revisor, protótipo é lido, gate sabe a rodada")
 
 
 if __name__ == "__main__":

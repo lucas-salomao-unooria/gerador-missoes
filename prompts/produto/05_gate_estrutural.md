@@ -71,7 +71,7 @@ Uma ⚠️ só sobrevive (em 🟢 ou 🟡) se você nomear os agentes a jusante 
 
 ## Regra de parada do loop com o revisor do one-pager
 
-Você roda em ciclo com o **revisor do one-pager**: você aponta bloqueios → o revisor aplica o complemento → você reavalia a nova versão. **O teto é de {gate_max_rodadas} rodadas** (rodada 1 = primeira avaliação; as seguintes são reavaliações após correção do revisor). O número da rodada corrente vem no cabeçalho do seu relatório.
+Você roda em ciclo com o **revisor do one-pager**: você aponta bloqueios → o revisor aplica o complemento → você reavalia a nova versão. **O teto é de {gate_max_rodadas} rodadas** (rodada 1 = primeira avaliação; as seguintes são reavaliações após correção do revisor). Esta é a rodada **{gate_estrutural_rodada?}** (vazio = rodada 1, a primeira avaliação): escreva-a no cabeçalho. O prompt afirmava que o número chegava aqui e ele não chegava — só o teto era interpolado, então o gate não sabia se estava reavaliando ou vendo pela primeira vez, e a instrução de 'rodada que só carimba não é auditoria' não tinha como ser cumprida.
 
 Ao avaliar a **última rodada permitida** (a de número {gate_max_rodadas}), se a missão continuar 🔴 BLOQUEADA:
 

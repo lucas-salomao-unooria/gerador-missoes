@@ -86,6 +86,15 @@ A esteira não constrói mais em ferramenta de design: a jornada e o fluxo saem 
 
 Com o Stitch disponível, confirme que o projeto existe e que as telas da tabela do D5 estão lá (`list_screens`, `get_screen`). Sem ele, registre `STITCH: indisponível — <motivo>` e siga: a auditoria continua válida, porque o contrato está nos documentos.
 
+## Lint do protótipo (determinístico, já rodado)
+
+{prototipo_lint_report?}
+
+Este lint tocou o **arquivo**, não o relatório: conferiu que o HTML abre, que as telas do
+inventário estão nele e que não sobrou marcador de rascunho. Achado dele é fato, não opinião —
+não reabra, não reconfira, e **não aprove D8 contra ele**. O que cabe a você é o que a máquina
+não vê: se a tela está boa.
+
 ## Como decidir o veredito
 
 Você é o único gate desta esteira que listava quatro vereditos sem dizer quando usar cada um —

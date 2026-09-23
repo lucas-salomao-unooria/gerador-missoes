@@ -21,6 +21,7 @@ ARTIFACT_FILES = [
     ("nucleo_narrativo", "produto/00a-nucleo-narrativo.md"),
     ("micro_gate_report", "produto/00b-micro-gate.md"),
     ("one_pager", "produto/00-one-pager.md"),
+    ("brief_escopo", "produto/00f-brief-escopo.md"),
     ("contrato_produto_report", "produto/00e-contrato-produto.md"),
     ("gate_estrutural_report", "produto/01-gate-estrutural.md"),
     ("avaliacao_pedagogica_report", "produto/02-avaliacao-pedagogica.md"),

@@ -512,6 +512,55 @@ class BnccCheckAgent(BaseAgent):
         )
 
 
+class PrototipoLintAgent(BaseAgent):
+    """Determinístico: confere o HTML do protótipo contra o inventário de telas da jornada.
+
+    O QA de design julgava o protótipo lendo o RELATÓRIO do agente que o construiu — nenhuma
+    conferência tocava o arquivo. Um protótipo com metade das telas, com `TODO` na tela de pico
+    ou que nem abre passava, desde que o relatório dissesse que estava pronto.
+
+    As perguntas aqui são de fato (o arquivo abre? as telas declaradas estão nele? sobrou
+    marcador de rascunho?) e por isso cabem em código; julgar se a tela está BOA continua com
+    o QA. Informativo: alimenta o QA, não trava a esteira sozinho.
+    """
+
+    arquivo_key: str = "prototipo_arquivo"
+    inventario_key: str = "jornada_telas"
+    report_key: str = "prototipo_lint_report"
+    status_key: str = "prototipo_lint_status"
+    rotulo: str = "Lint do protótipo"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        import re as _re
+        from tools import prototipo as lint
+
+        state = ctx.session.state
+        html = str(state.get(self.arquivo_key, "") or "")
+        inventario = str(state.get(self.inventario_key, "") or "")
+        declaradas = sorted(set(_re.findall(r"\bE\d-(?:ALU|PROF|SIS)-\d{2}\b", inventario)))
+
+        resultado = lint.validar(html, declaradas)
+        delta = {
+            self.report_key: lint.relatorio(resultado, extrair_slug(state) or ""),
+            self.status_key: resultado["status"],
+            f"{self.status_key}_envelope": {"agente": lint.AGENTE, "status": resultado["status"],
+                                            "achados": resultado["achados"]},
+        }
+        marca = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
+        msg = (f"{marca} {self.rotulo}: {len(resultado['telas'])} tela(s) no arquivo"
+               + (f" contra {len(declaradas)} declaradas" if declaradas else "")
+               + (f" · {len(resultado['achados'])} achado(s)" if resultado["achados"] else ""))
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta=delta),
+        )
+
+
 class ConsolidacaoBancaAgent(BaseAgent):
     """Determinístico: o veredito da banca é a pior das cinco dimensões, contada em código.
 

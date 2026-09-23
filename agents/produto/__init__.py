@@ -41,6 +41,7 @@ from google.adk.agents.sequential_agent import SequentialAgent
 from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca, preservar_one_pager
 from agents.checkers import (
+    SecaoSplitAgent,
     BnccCheckAgent,
     EnvelopeGateAgent,
     RastroCheckAgent,
@@ -65,6 +66,31 @@ def get_nucleo_narrativo_agent(**kw) -> LlmAgent:
         output_key="nucleo_narrativo",
         include_contents="default",  # único agente que vê a mensagem original e os anexos
         **kw,
+    )
+
+
+#: O brief de escopo começa por esta linha, fixada em `04_secoes_apoio.md`.
+BRIEF_ESCOPO_INICIO = r"^\*\*MISS[ÃA]O DIGITAL UNOORIA\s*·\s*BRIEFING DE ESCOPO"
+
+
+def get_brief_escopo_split() -> SecaoSplitAgent:
+    """Separa o brief de escopo do one-pager antes que o revisor o apague.
+
+    O A04 entrega DOIS documentos — one-pager canônico e brief de escopo — na mesma
+    `output_key` (`one_pager`). O A07, logo a seguir, é instruído a devolver "apenas o
+    one-pager revisado" na mesma chave: o brief evaporava a cada execução, sem erro e sem
+    artefato, e ninguém percebia porque ele nunca foi gravado em disco. É o documento que
+    existe justamente para quem não vai auditar critério por critério.
+    """
+    return SecaoSplitAgent(
+        name="A04bBriefEscopoSplit",
+        description="Separa o brief de escopo do one-pager canônico para `brief_escopo`, antes do revisor.",
+        rotulo="Brief de escopo",
+        source_key="one_pager",
+        status_key="brief_escopo_status",
+        extracoes=[
+            {"chave": "brief_escopo", "inicio": BRIEF_ESCOPO_INICIO, "minimo_chars": 200},
+        ],
     )
 
 
@@ -290,6 +316,10 @@ def build_produto_stage(
         description="Gate estrutural ↔ revisor do one-pager até aprovar ou esgotar as rodadas.",
         max_iterations=rodadas,
         sub_agents=[
+            # O brief de escopo sai do `one_pager` ANTES do gate e do revisor: o A04 entrega os
+            # dois documentos na mesma chave e o A07 devolve só o one-pager revisado, então o
+            # brief evaporava a cada execução — sem erro, sem artefato, sem ninguém notar.
+            get_brief_escopo_split(),
             # Antes do gate, a cada rodada: WebSocket como canal de sala, estado em
             # `localStorage`, SAEB fora do ano e número sem origem nasciam aqui e só eram pegos
             # duas etapas depois (A36) ou nunca. O lint não bloqueia sozinho — o gate aplica.

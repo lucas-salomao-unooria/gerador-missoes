@@ -43,6 +43,7 @@ from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca
 from agents.checkers import (
     ArtefatosDesignAgent,
+    PrototipoLintAgent,
     DespachoTicketsAgent,
     EnvelopeGateAgent,
     EspelhoMiroAgent,
@@ -408,6 +409,10 @@ def build_design_stage(
                 description="Separa o HTML do protótipo do relatório que o acompanha, colhe os links das telas no Stitch e monta a folha de diagramas da jornada e do fluxo.",
                 before_agent_callback=marcar_heranca,
             ),
+            # O QA lia o RELATÓRIO de quem construiu o protótipo, nunca o arquivo: metade das
+            # telas, um `TODO` na tela de pico ou um HTML que nem abre passavam se o relatório
+            # dissesse que estava pronto. Este lint toca o arquivo e alimenta o QA.
+            PrototipoLintAgent(name="A29cPrototipoLint"),
             EspelhoMiroAgent(
                 name="A29bEspelhoMiro",
                 description="Espelha no Miro os diagramas Mermaid da jornada e do fluxo e devolve o link do board.",
