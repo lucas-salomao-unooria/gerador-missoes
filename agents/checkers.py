@@ -488,7 +488,8 @@ class BnccCheckAgent(BaseAgent):
         state = ctx.session.state
         spec = str(state.get(self.spec_key, "") or "")
         missao = extrair_slug(spec) or ""
-        resultado = validar_spec(spec)
+        # o material anexado entra porque a spec pode citar o texto da habilidade como está nele
+        resultado = validar_spec(spec, str(state.get("material_anexado") or ""))
         relatorio = relatorio_markdown(resultado, missao)
         status = STATUS_APROVADO if resultado["status"] == "aprovado" else STATUS_BLOQUEADO
 

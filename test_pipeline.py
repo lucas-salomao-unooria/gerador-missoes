@@ -3519,6 +3519,45 @@ def test_juizes_de_produto_leem_o_briefing_e_contam_so_o_tempo_em_tela():
     print("   ✓ juízes de produto leem o briefing; o teto de tempo conta só o tempo em tela")
 
 
+
+def test_bncc_confere_eixo_texto_e_o_que_e_declarado():
+    """A alucinação da exp06ef1b (22/09/2026): `EF06CO07` apresentado como Cultura Digital e
+    letramento digital, com texto inventado e atribuído a um material do Entre Redes que não tinha
+    sido anexado. Oficialmente é Mundo Digital, sobre transmissão de dados. O gate aprovou: o código
+    existia, era do ano, e um `EF06CO09` citado entre parênteses contou como letramento."""
+    from tools.bncc import validar_spec
+    of7 = "Entender o processo de transmissão de dados, como a informação é quebrada em pedaços, transmitida em pacotes através de múltiplos equipamentos, e reconstruída no destino."
+    of9 = "Apresentar conduta e linguagem apropriadas ao se comunicar em ambiente digital, considerando a ética e o respeito."
+    inventado = "Discutir o impacto das tecnologias digitais na sociedade, na cultura e nas relações humanas."
+    def spec(item, extra=""):
+        return f"# Spec\n## 0. Ficha\n- séries: [\"6EF\"]\n## 11. Currículo\n{item}\n{extra}\n## 12. Decisões\n"
+    def cods(r): return {a["codigo"] for a in r["achados"]}
+
+    alucinado = spec(f"* **`EF06CO07` — Cultura Digital**\n  * **Habilidade:** *{inventado}*\n  * **Momento em tela:** Etapa 4.",
+                     "(o letramento digital equivalente corresponde a `EF06CO09`).")
+    r = validar_spec(alucinado)
+    assert r["status"] == "bloqueado" and {"eixo-divergente", "texto-divergente", "letramento"} <= cods(r), cods(r)
+
+    certo = spec(f"* **`EF06CO09` — Cultura Digital**\n  * **Texto oficial:** {of9}\n  * **Momento em tela:** Etapa 4.")
+    assert validar_spec(certo)["status"] == "aprovado", cods(validar_spec(certo))
+
+    # texto do material do Entre Redes: vale quando o material anexado o traz
+    do_material = spec(f"* **`EF06CO09` — Cultura Digital**\n  * **Habilidade (Entre Redes):** *{inventado}*\n  * **Momento em tela:** Etapa 4.")
+    assert "texto-divergente" in cods(validar_spec(do_material))
+    assert "texto-divergente" not in cods(validar_spec(do_material, material="Unidade 1. " + inventado + " Fim."))
+
+    # rótulo do momento que menciona a palavra habilidade não é o texto dela
+    momento = spec(f"* **`EF06CO09` — Cultura Digital**\n  * *Texto oficial:* {of9}\n  * *Momento em tela que exercita a habilidade:* O estudante fixa um post e explica por que confia nele.")
+    assert validar_spec(momento)["status"] == "aprovado", cods(validar_spec(momento))
+
+    # tabela: só a coluna da habilidade é conferida
+    tabela = spec("| Eixo | Código | Habilidade (texto oficial) | Momento em tela |\n|---|---|---|---|\n"
+                  f"| Mundo Digital | `EF06CO07` | *{inventado}* | Etapa 4: o estudante compara dois feeds lado a lado. |\n"
+                  f"| Cultura Digital | `EF06CO09` | {of9} | Etapa 5: o estudante escolhe o que publicar. |")
+    assert "texto-divergente" in cods(validar_spec(tabela))
+    print("   ✓ BNCC: eixo e texto conferidos contra o oficial (ou o material), e letramento só do que é declarado")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")
