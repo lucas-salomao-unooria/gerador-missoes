@@ -85,10 +85,13 @@ class AppSettings(BaseSettings):
                     "veredito, senão não há como medir se uma mudança de critério funcionou.",
     )
     kpis_check_estrito: bool = Field(
-        default_factory=lambda: _env_bool("KPIS_CHECK_ESTRITO", "false"),
-        description="Coerência KPI ↔ evento ↔ tela trava a esteira. Começa desligado: os 14 PRDs "
-                    "medidos reprovam todos, e ligar de saída faria o gate parecer quebrado em vez "
-                    "de mostrar o que ele encontrou. Ligar quando o formato novo estiver rodando.",
+        default_factory=lambda: _env_bool("KPIS_CHECK_ESTRITO", "true"),
+        description="Coerência KPI ↔ evento ↔ tela trava a esteira. Nasceu desligado porque os 14 "
+                    "PRDs medidos reprovavam todos — eram anteriores ao formato. Ligado em "
+                    "23/09/2026, junto com o gate do sub-bloco 9f: a partir daí as perguntas são "
+                    "decididas na spec e o PRD só as transporta, então reprovar aqui significa que "
+                    "alguma se perdeu no caminho — que é exatamente o que o gate existe para dizer. "
+                    "Desligar só para depurar uma execução, nunca como regime.",
     )
     tentativas_modelo: int = Field(
         default_factory=lambda: int(os.getenv("TENTATIVAS_MODELO", "4")),

@@ -117,6 +117,15 @@ cita. Lacuna de insumo com dono de outra etapa continua sendo marcador, não inv
 
 {prd_check_report?}
 
+**Coerência KPI ↔ pergunta ↔ evento ↔ tela (gate determinístico, também bloqueante):**
+
+Aqui a correção é sempre literal e nunca é decisão sua. `pq-sem-kpi` significa que uma pergunta
+que produto decidiu com o PO não chegou à tabela da seção 2 — copie-a do sub-bloco 9f da spec com
+o mesmo id `PQ-nn`. `kpi-pq-inexistente` significa o contrário: você citou um `PQ-` que a spec não
+declara — ou é erro de digitação, ou a pergunta foi inventada aqui, e nesse caso ela sai.
+
+{kpis_report?}
+
 ## Consistência interna — um gate determinístico confere isto depois de você
 
 Estas regras não são estilo: um documento que se contradiz faz quem codifica escolher um caminho ao
