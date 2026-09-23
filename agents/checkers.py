@@ -234,6 +234,9 @@ class SecaoSplitAgent(BaseAgent):
     status_key: str
     rotulo: str = "Split"
     extracoes: List[Dict[str, Any]] = Field(default_factory=list)
+    #: a fonte é um documento, não um veredito (o one-pager do A04): não há envelope a ler, e
+    #: procurá-lo gerava um `envelope-ilegivel` em toda execução
+    fonte_sem_veredito: bool = False
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -287,12 +290,13 @@ class SecaoSplitAgent(BaseAgent):
                 delta[chave] = secao
                 linhas.append(f"✅ `{chave}` gravado a partir de `{self.source_key}` ({len(secao)} caracteres).")
 
-            envelope = extrair_envelope(texto)
-            status = inferir_status(texto, envelope)
+            envelope = None if self.fonte_sem_veredito else extrair_envelope(texto)
+            status = STATUS_APROVADO if self.fonte_sem_veredito else inferir_status(texto, envelope)
             ilegivel = status not in (STATUS_APROVADO, STATUS_BLOQUEADO)
             if ilegivel:
                 status = STATUS_APROVADO  # o split é informativo: o conteúdo veio, o veredito não
-            delta[self.status_key] = STATUS_APROVADO if ilegivel else status_registrado(texto, envelope)
+            delta[self.status_key] = (STATUS_APROVADO if ilegivel or self.fonte_sem_veredito
+                                      else status_registrado(texto, envelope))
             env = dict(envelope or {})
             if ilegivel:
                 env.setdefault("achados", []).append({

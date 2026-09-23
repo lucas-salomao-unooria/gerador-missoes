@@ -75,7 +75,9 @@ def get_nucleo_narrativo_agent(**kw) -> LlmAgent:
 
 
 #: O brief de escopo começa por esta linha, fixada em `04_secoes_apoio.md`.
-BRIEF_ESCOPO_INICIO = r"^\*\*MISS[ÃA]O DIGITAL UNOORIA\s*·\s*BRIEFING DE ESCOPO"
+#: Em negrito, como o prompt mostra, ou como heading — as duas rodadas de 23/09 escreveram
+#: `# MISSÃO DIGITAL…`, e o brief nunca era separado. A linha inteira é consumida.
+BRIEF_ESCOPO_INICIO = r"^(?:#{1,6}\s*|\*\*)\s*MISS[ÃA]O DIGITAL UNOORIA\s*·\s*BRIEFING DE ESCOPO[^\n]*"
 
 
 def get_brief_escopo_split() -> SecaoSplitAgent:
@@ -93,6 +95,7 @@ def get_brief_escopo_split() -> SecaoSplitAgent:
         rotulo="Brief de escopo",
         source_key="one_pager",
         status_key="brief_escopo_status",
+        fonte_sem_veredito=True,
         extracoes=[
             {"chave": "brief_escopo", "inicio": BRIEF_ESCOPO_INICIO, "minimo_chars": 200,
              # sem brief a missão ainda se constrói, mas quem não audita critério por critério
