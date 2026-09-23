@@ -13,3 +13,17 @@ temp*
 .agent_engine_config.json
 scripts/deploy_agent_engine.sh
 scripts/client_agent_engine.py
+
+# Segredos — o Dockerfile faz `COPY . .` (linha 35), então tudo que não estiver
+# aqui entra na imagem e vaza para quem puder baixá-la. `.env.example` fica de
+# fora da exclusão de propósito: é o molde público, sem valor nenhum dentro.
+.env
+.env.*
+!.env.example
+*.env.yaml
+.miro_mcp_tokens.json
+*_tokens.json
+credenciais*.csv
+*.pem
+*.key
+service-account*.json

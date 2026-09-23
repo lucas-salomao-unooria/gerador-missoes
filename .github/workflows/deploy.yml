@@ -80,7 +80,16 @@ jobs:
             --image="$IMAGE" \
             --region=us-east1 \
             --project=entre-redes-dev \
-            --allow-unauthenticated \
+          # ACESSO FECHADO (auditoria de 23/09/2026): a app não tem autenticação
+          # própria — o único OAuth é o do Miro, que é integração, não login. Aberta,
+          # qualquer pessoa com a URL gera missão, gasta a quota do Vertex e lê os
+          # artefatos de todas as sessões, inclusive os que citam escola e rede.
+          # Para usar depois do deploy:  gcloud run services proxy gerador-missoes \
+          #   --region=us-east1 --project=entre-redes-dev   → abre em localhost:8080
+          # Dar acesso a alguém:  gcloud run services add-iam-policy-binding \
+          #   gerador-missoes --region=us-east1 --member=user:<email> \
+          #   --role=roles/run.invoker
+          --no-allow-unauthenticated \
             --port=8080 \
             --memory=4Gi \
             --cpu=2 \
