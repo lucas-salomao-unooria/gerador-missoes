@@ -45,7 +45,10 @@ D0 não decide ambiente (é vermelho para ele). Você é quem decide — mas só
 
 A seção do ambiente sai como **especificação em Markdown**: inventário de chrome, componentes e tokens. É isso que o D5 consome para montar as telas, e é o documento que alguém usa depois para construir a seção no design system de verdade.
 
-**Não invente nome de componente.** Você não tem acesso ao design system para conferir o que existe: escreva o nome que a convenção da seção pede e marque `[verificar no design system]` ao lado de cada componente que você não pode confirmar. Nome inventado que passa como certo custa mais caro que lacuna declarada.
+**Componente do design system só com nome do inventário abaixo.** Na ficha do ambiente, a origem `DS existente` aceita apenas nomes que existem na seção da missão (ou na marca `unooria`); o que você precisar e não estiver lá vai para `Componentes locais (candidatos)`, como composição ou componente novo. Um lint confere a coluna contra este inventário e bloqueia nome que o DS não tem — em 22/09/2026, 32% dos componentes "do DS" das telas não existiam.
+
+<!-- include: references/ds-componentes.md -->
+
 
 ## O limite da sua autoridade
 

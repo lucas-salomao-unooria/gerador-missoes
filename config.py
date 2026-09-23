@@ -87,6 +87,9 @@ class AppSettings(BaseSettings):
     # OpenAPI da plataforma servido pela api, para o gate de rotas ler sempre atualizado
     # (`tools/rotas_plataforma.py`). Vazio: usa a cópia gerada do roteador por
     # `scripts/sincronizar_plataforma.py --openapi`. Em 23/09/2026 o `/docs` da api de dev não era público.
+    # Inventário de componentes do DS publicado (JSON no formato de ds-componentes.json). Vazio: a cópia
+    # gerada do storybook-unooria por scripts/sincronizar_design_system.py.
+    ds_componentes_url: str = Field(default_factory=lambda: os.getenv("DS_COMPONENTES_URL", ""))
     plataforma_openapi_url: str = Field(default_factory=lambda: os.getenv("PLATAFORMA_OPENAPI_URL", ""))
     plataforma_openapi_usuario: str = Field(default_factory=lambda: os.getenv("PLATAFORMA_OPENAPI_USUARIO", ""))
     plataforma_openapi_senha: str = Field(default_factory=lambda: os.getenv("PLATAFORMA_OPENAPI_SENHA", ""))

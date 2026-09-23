@@ -91,7 +91,8 @@ Com o Stitch disponível, confirme que o projeto existe e que as telas da tabela
 {prototipo_lint_report?}
 
 Este lint tocou o **arquivo**, não o relatório: conferiu que o HTML abre, que as telas do
-inventário estão nele e que não sobrou marcador de rascunho. Achado dele é fato, não opinião —
+inventário estão nele, que não sobrou marcador de rascunho, e que todo nome da coluna
+`Componentes do DS` existe no inventário do storybook. Achado dele é fato, não opinião —
 não reabra, não reconfira, e **não aprove D8 contra ele**. O que cabe a você é o que a máquina
 não vê: se a tela está boa.
 

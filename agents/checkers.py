@@ -542,6 +542,7 @@ class PrototipoLintAgent(BaseAgent):
 
     arquivo_key: str = "prototipo_arquivo"
     inventario_key: str = "jornada_telas"
+    telas_key: str = "wireframes_cobertura"
     report_key: str = "prototipo_lint_report"
     status_key: str = "prototipo_lint_status"
     rotulo: str = "Lint do protótipo"
@@ -557,6 +558,15 @@ class PrototipoLintAgent(BaseAgent):
         declaradas = sorted(set(_re.findall(r"\bE\d-(?:ALU|PROF|SIS)-\d{2}\b", inventario)))
 
         resultado = lint.validar(html, declaradas)
+        # A coluna `Componentes do DS` das telas, contra o inventário do storybook: fato conferível,
+        # que o QA recebia como afirmação (32% eram nomes que o DS não tem).
+        from tools.componentes_ds import validar as validar_componentes
+        resultado["achados"] += validar_componentes(str(state.get(self.telas_key, "") or ""),
+                                                    str(state.get("spec_missao", "") or ""))
+        if any(a["severidade"] == "bloqueio" for a in resultado["achados"]):
+            resultado["status"] = "bloqueado"
+        elif resultado["achados"] and resultado["status"] == "aprovado":
+            resultado["status"] = "amarelo"
         delta = {
             self.report_key: lint.relatorio(resultado, extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""),
             self.status_key: resultado["status"],

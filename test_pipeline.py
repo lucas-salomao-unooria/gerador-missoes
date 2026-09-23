@@ -3603,6 +3603,47 @@ def test_rotas_citadas_em_modulo_da_plataforma_existem_nela():
     print("   ✓ rotas: inexistente e verbo errado acusados; proposta, módulo próprio e slug no parâmetro passam")
 
 
+
+def test_componentes_do_ds_conferidos_contra_o_inventario():
+    """32% dos componentes que as telas das 14 sessões chamavam "do DS" não existiam na seção — o
+    prompt de telas dizia ao agente "você não tem como conferir o catálogo"."""
+    import hashlib
+    import subprocess
+    import tools.componentes_ds as cds
+    from prompts import load_prompt
+
+    cds._cache.clear()
+    marcas, mapa, _ = cds.carregar()
+    assert "PostCard" in marcas["instanooria"] and "LikeButton" not in marcas["instanooria"]
+    assert mapa.get("unitube") == "unootube"
+
+    def tela(secao, ds, locais=""):
+        spec = f"- `secao_ds: {secao}`"
+        w = "| ID tela | Componentes do DS | Componentes locais (candidatos) |\n|---|---|---|\n" + f"| E1-ALU-01 | {ds} | {locais} |\n"
+        return [(a["codigo"], a["severidade"]) for a in cds.validar(w, spec)]
+    assert tela("instanooria", "`PostCard`, `StoriesTray`, `Button`, `DataViz`") == []
+    assert tela("instanooria", "`LikeButton`") == [("componente-inexistente", "bloqueio")]
+    assert tela("instanooria", "`PostCard`", "`LikeButton`, `FeedContainer`") == [], "coluna de locais não é conferida"
+    assert tela("chatgpt", "`MessageBubble`") == [("componente-inexistente", "bloqueio")], "componente de outro clone"
+    assert "ChatBubble" in cds.validar("| Componentes do DS |\n|---|\n| `MessageBubble` |\n", "- `secao_ds: chatgpt`")[0]["resumo"]
+    assert tela("nova:galeria-infantil", "`GradeAlbum2x2`") == [("componente-inexistente", "atencao")]
+    assert tela("unitube", "`VideoCard`") == [], "unitube é a marca unootube"
+
+    for prompt in ("design/26_telas.md", "design/19_ambiente_simulado.md"):
+        texto = load_prompt(prompt, stitch_mcp_mode="off", stitch_project_url_base="u")
+        assert "Você não tem como conferir" not in texto and "`PostCard`" in texto, prompt
+
+    raiz = Path(__file__).resolve().parent
+    alvo = raiz / "prompts" / "references" / "ds-componentes.json"
+    antes = hashlib.sha256(alvo.read_bytes()).hexdigest()
+    env = {**os.environ, "STORYBOOK_UNOORIA_DIR": str(raiz / "nao-existe")}
+    r = subprocess.run([sys.executable, str(raiz / "scripts" / "sincronizar_design_system.py"), "--help"],
+                       capture_output=True, text=True, env=env)
+    assert r.returncode == 0 and "usage:" in r.stdout
+    assert hashlib.sha256(alvo.read_bytes()).hexdigest() == antes
+    print("   ✓ componentes do DS: inventário nos prompts, coluna conferida, nome parecido sugerido")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")

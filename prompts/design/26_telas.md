@@ -80,7 +80,10 @@ Dois artefatos, nesta ordem de importância:
 
 **Os nomes dos tokens são fechados.** Use exatamente os nove slots da coleção `wireframe-cinza`: `superficie/base` · `superficie/elevada` · `superficie/midia` · `borda/padrao` · `borda/foco` · `texto/primario` · `texto/secundario` · `acao/primaria` · `acao/secundaria`. **`wf-action-primary`, `wf-border-focus` e qualquer `wf-*` não existem** — foram inventados numa execução anterior, quebram a subida para alta fidelidade e são ❌ no QA. Precisa de um slot fora dos nove? É lacuna a registrar, não nome novo.
 
-**Não invente nome de componente do design system.** Você não tem como conferir o catálogo: escreva o nome que a convenção pede e marque `[verificar no design system]` ao lado do que não puder confirmar.
+**Componente do design system só com nome do inventário abaixo.** A coluna `Componentes do DS` aceita apenas nomes que existem na seção da missão (ou na marca `unooria`); o que você precisar e não estiver lá vai para `Componentes locais (candidatos)`, como composição ou componente novo. Um lint confere a coluna contra este inventário e bloqueia nome que o DS não tem — em 22/09/2026, 32% dos componentes "do DS" das telas não existiam.
+
+<!-- include: references/ds-componentes.md -->
+
 
 ## Você monta, não constrói
 
