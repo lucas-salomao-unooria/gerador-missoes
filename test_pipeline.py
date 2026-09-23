@@ -592,6 +592,12 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
     assert {a["codigo"] for a in validar_telemetria(propoe)["achados"]} == {"campo-dados"}
     coluna = layout_livre.replace("| Campos | Canal |", "| dados | Canal |")
     assert {a["codigo"] for a in validar_telemetria(coluna)["achados"]} == {"campo-dados"}
+    # o handoff é quem descreve a implementação: gabarito no bundle bloqueia aqui também,
+    # e dizer que ele NÃO vai ao bundle não é achado
+    no_bundle = layout_livre + "\nO gabarito das alternativas vai no bundle do cliente.\n"
+    assert {a["codigo"] for a in validar_telemetria(no_bundle)["achados"]} == {"gabarito-no-cliente"}
+    nega = layout_livre + "\nO gabarito nunca vai no bundle do cliente: a correção é no servidor.\n"
+    assert validar_telemetria(nega)["status"] == "aprovado", validar_telemetria(nega)["achados"]
 
     assert classificar_dono("jornada", "dev") == "design"
     assert classificar_dono("gate-estrutural", "dev") == "produto"
