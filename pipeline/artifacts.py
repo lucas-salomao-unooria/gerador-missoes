@@ -18,6 +18,7 @@ logger = logging.getLogger("artifacts")
 
 # Ordem e nome de arquivo por chave de estado
 ARTIFACT_FILES = [
+    ("material_anexado", "produto/00-material-anexado.md"),
     ("nucleo_narrativo", "produto/00a-nucleo-narrativo.md"),
     ("micro_gate_report", "produto/00b-micro-gate.md"),
     ("one_pager", "produto/00-one-pager.md"),

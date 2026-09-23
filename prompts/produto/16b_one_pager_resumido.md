@@ -38,9 +38,13 @@ Sua pergunta: **quem ler só este documento entende o mecanismo inteiro, sabe on
 
 {gate_final_report?}
 
-**Briefing original e material do bimestre, quando anexado (fonte do "componente curricular"):**
+**Briefing original:**
 
 {briefing?}
+
+**Material do bimestre anexado ao briefing — o texto integral de cada documento (fonte do "componente curricular"; vazio quando nada foi anexado):**
+
+{material_anexado?}
 
 **Catálogo de missões (para a caixa de diferenciação):**
 
@@ -119,7 +123,7 @@ Exemplos vindos de uma missão já aprovada pelo time. **Copie o jeito de escrev
 1. **Copie, não reescreva.** Números, cardinalidades, nomes de personagem, textos de DM e Stories, tempos e códigos vêm do one-pager e da spec, palavra por palavra quando possível. Se o canônico e a spec divergirem, a spec vence e você registra `[DIVERGÊNCIA: one-pager diz X, spec diz Y]` no lugar afetado. Copiar o dado não é copiar a frase: o dado é intocável, a frase obedece às regras de linguagem.
 2. **Nunca invente código BNCC, descritor SAEB ou artigo de lei.** Os códigos de Computação são **só os do bloco 11 da spec** (já validados). Código de disciplina tradicional (Língua Portuguesa, Matemática, Ciências…) que não conste do relatório de conformidade sai sempre com o sufixo "(plausível, a confirmar em fonte oficial da BNCC)". Habilidade sem confirmação **não recebe contrato de evidência**: vai para "Habilidades pendentes". O texto oficial da habilidade é citado como está — ele é a única exceção às regras de linguagem.
 3. **"1. A ideia" é prosa.** Três parágrafos, sem bullets, contando o mecanismo inteiro do Desafiar ao Resultado com os números exatos. Quem lê só esses três parágrafos tem de conseguir explicar a missão para outra pessoa.
-4. **Componente curricular vem da fonte, não da memória.** A lista do que o bimestre ensina sai do material anexado ao briefing. Sem material anexado, escreva a linha `[A PREENCHER — material do bimestre não anexado; fonte: livro/plano do ano]` no lugar da lista e siga com o restante da seção. Não invente conteúdo de livro.
+4. **Componente curricular vem da fonte, não da memória.** A lista do que o bimestre ensina sai do bloco de material anexado. Só com o bloco vazio, ou sem nenhum documento do bimestre nele, escreva a linha `[A PREENCHER — material do bimestre não anexado; fonte: livro/plano do ano]` no lugar da lista e siga com o restante da seção. Não invente conteúdo de livro.
 5. **Diferenciação frente ao catálogo.** Procure no catálogo missão com o mesmo ambiente ou o mesmo eixo temático. Se houver, a caixa diz o que muda no mecanismo (tipo de decisão, quantos itens o estudante escolhe, o que é revelado) e o que é convenção de plataforma partilhada (personagem-guia, Refletir com cenário novo). Se não houver, a caixa traz uma linha só: "N/A — catálogo sem missão no mesmo ambiente ou eixo."
 6. **Contrato de evidência ternário por habilidade confirmada.** Para cada código do bloco 11: a ação observável (o que, concretamente, o estudante faz ou escreve que serve de evidência), a tabela de marcadores com três linhas (Atingiu / Em processo / Não atingiu) e a frase-template que o professor lê para cada status. Cada critério traz, entre parênteses, um exemplo do que conta e do que não conta. As três frases-template são frases prontas para o professor falar ou escrever no relatório — escreva-as como fala, não como critério. Os marcadores são lidos sobre o registro do Refletir ou sobre uma ação registrada pela plataforma — diga qual. Feche com "Quem calcula o quê": regra simples (palavras-chave) ou modelo de linguagem com saída estruturada, e a nota de que é decisão de implementação que não muda o contrato. Nada aqui vira nota escolar nem rótulo do estudante.
 7. **Ressalvas não somem.** Ressalva ou decisão pendente dos pareceres e dos gates que toque o que este documento afirma entra no lugar afetado, entre colchetes, com quem decide.

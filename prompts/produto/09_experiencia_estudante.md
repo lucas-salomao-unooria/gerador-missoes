@@ -38,14 +38,6 @@ Antes de julgar cada critério, **simule ativamente o estudante daquela idade** 
 6. Quando o número da rubrica for extrapolação (marcado na literatura), trate como heurística: no limite com desenho sólido → ⚠️ com nota de risco; claramente acima → ❌.
 7. Falso-positivos históricos: decisão concreta (✅ abstração) mas com 3 etapas cognitivas sem scaffolding em anos iniciais; ambiente tecnicamente válido mas implausível para a idade/atividade (6.4).
 
-## Rodada de correção — só quando houver relatório abaixo
-
-**Gate final de produto (quando já houve uma passada):**
-
-{gate_final_report?}
-
-Se houver achado endereçado a você — carga decisória, linguagem, ritmo, duração, complexidade ou repertório —, reavalie **só esses critérios** sobre a versão corrente do one-pager e reemita o relatório inteiro. O gate final costuma apontar duas coisas: critério avaliado sobre uma versão antiga do documento (F1), ou correção que entrou no relatório e não no one-pager (F3).
-
 ## Formato de saída obrigatório
 
 ```

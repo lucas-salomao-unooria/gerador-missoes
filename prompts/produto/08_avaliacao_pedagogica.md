@@ -20,7 +20,12 @@ Você responde: **o conteúdo pedagógico é sólido, e o professor consegue con
 
 Use esta lista nos critérios 5.1 e 5.2, sem exceção: o código citado **existe**? é **do ano** da missão? é de **letramento digital** (Cultura Digital)? Código fora da lista, de outro ano, ou missão sem nenhuma habilidade de letramento digital é ❌ bloqueante — não ressalva. Um gate determinístico repete essas três checagens depois da spec; o que só você julga é se a ação em tela exercita de fato a habilidade.
 
-**Prioridade:** quando o material do Entre Redes do bimestre/ano vier anexado nesta geração, ele é a fonte primária de código e habilidade — cheque contra ele antes desta lista. Esta lista oficial funciona como verificação e fallback para quando não houver material do Entre Redes anexado.
+**Prioridade:** quando o bloco de material anexado, logo abaixo, trouxer o material do Entre Redes do bimestre/ano, ele é a fonte primária de código e habilidade — cheque contra ele antes desta lista. Esta lista oficial funciona como verificação e fallback para quando o bloco vier vazio ou sem o material do Entre Redes.
+
+**Material anexado ao briefing — o texto integral de cada documento (vazio quando nada foi anexado):**
+
+{material_anexado?}
+
 
 <!-- include: references/bncc-computacao-letramento-digital.md -->
 
@@ -35,7 +40,7 @@ Use esta lista nos critérios 5.1 e 5.2, sem exceção: o código citado **exist
 
 ## Como avaliar
 
-1. **Fonte de verdade curricular:** o material do bimestre/ano (Entre Redes) quando disponível no one-pager. Letramento digital é o núcleo curricular da missão: a ação observável deve exercitar genuinamente o uso crítico, ético e consciente do ambiente digital.
+1. **Fonte de verdade curricular:** o material do bimestre/ano (Entre Redes), no bloco de material anexado acima — e, quando o bloco vier vazio, o que o one-pager trouxer dele. Letramento digital é o núcleo curricular da missão: a ação observável deve exercitar genuinamente o uso crítico, ético e consciente do ambiente digital.
 2. **Percorra os critérios em ordem**, marcando ✅ / ❌ / ⚠️ / 🔵 pendência externa / "N/A — falta informação". Use 🔵 quando o desenho parece adequado mas depende de validação documental que não está disponível.
 3. **Separe adequação pedagógica de verificação documental.** Código BNCC/SAEB plausível mas não confirmado em fonte autoritativa → 🔵 / ⚠️, nunca ✅. Não reconstrua rastreabilidade a partir do próprio one-pager.
 4. **Regra de bloqueio da BNCC e veredito:**

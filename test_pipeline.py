@@ -66,7 +66,7 @@ KNOWN_STATE_KEYS = {
     "miro_links", "miro_board",
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
-    "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po",
+    "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado",
     "perguntas_report", "perguntas_status", "juiz_perguntas_report", "juiz_perguntas_status",
     "juiz_perguntas_rodada", "execucao", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
@@ -1017,7 +1017,7 @@ def test_agente_de_triagem_configurado():
     assert agente.output_key == "triagem_correcao"
     instr = str(agente.instruction)
     assert "{mapa_da_missao?}" in instr and "{briefing?}" in instr
-    assert '"etapa": "spec | design | dev | nenhuma"' in instr
+    assert '"etapa": "produto | spec | design | dev | nenhuma"' in instr
     assert all(m["id"] != "A00TriagemCorrecao" for m in TRANSVERSAL_METADATA)
     for var in list_state_variables(instr):
         assert var in KNOWN_STATE_KEYS, var
@@ -3288,9 +3288,10 @@ def test_correcao_parcial_apaga_tudo_que_a_etapa_vai_regravar():
     from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
     from pipeline.reexecucao import CHAVES_EXECUCAO, CHAVES_POR_ETAPA, ETAPA_PARA_STAGES
 
-    anteriores = {"spec": frozenset(), "design": CHAVES_POR_ETAPA["spec"] - CHAVES_POR_ETAPA["design"],
+    anteriores = {"produto": frozenset(), "spec": frozenset(),
+                  "design": CHAVES_POR_ETAPA["spec"] - CHAVES_POR_ETAPA["design"],
                   "dev": CHAVES_POR_ETAPA["spec"] - CHAVES_POR_ETAPA["dev"]}
-    for etapa in ("spec", "design", "dev"):
+    for etapa in ("produto", "spec", "design", "dev"):
         escritas = set()
         for _, a in iter_agent_tree(create_mission_orchestrator(stages=ETAPA_PARA_STAGES[etapa])):
             if a.name in ("A50Diagnostico", "A51Aprendizado", "A52RegistroCatalogo"):
@@ -3325,6 +3326,106 @@ def test_criterios_da_rubrica_declaram_a_mesma_versao():
     assert None not in versoes.values(), f"critério sem versão no título: {versoes}"
     assert len(set(versoes.values())) == 1, f"versões divergentes: {versoes}"
     print(f"   ✓ os quatro critérios da rubrica de produto declaram v{next(iter(versoes.values()))}")
+
+
+
+def test_material_anexado_chega_a_quem_o_usa_como_fonte():
+    """A-19 (23/09/2026). O conteúdo dos anexos existia só na mensagem, que só o núcleo narrativo
+    lê. A spec, a avaliação pedagógica e o one-pager resumido são instruídos a usar o material do
+    Entre Redes como fonte primária e nunca o viam: 5 das 7 sessões que o anexaram entregaram um
+    resumido dizendo "material do bimestre não anexado"."""
+    import re as _re
+    from google.adk.agents.llm_agent import LlmAgent
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+    from pipeline.runner import material_dos_anexos
+    from tools.doc_parser import DocumentBatch, ProcessedDocument
+
+    grande = "habilidade EF06CO09 " * 30000  # ~600 KB: nada é cortado, por decisão
+    lote = DocumentBatch(documents=[
+        ProcessedDocument(name="entre_redes_6ano.docx", file_type="docx", size_bytes=1, markdown_text=grande),
+        ProcessedDocument(name="plano.pdf", file_type="pdf", size_bytes=1, is_native_pdf=True,
+                          pdf_bytes=b"%PDF", markdown_text="texto extraído do PDF"),
+        ProcessedDocument(name="digitalizado.pdf", file_type="pdf", size_bytes=1, is_native_pdf=True, pdf_bytes=b"%PDF"),
+    ])
+    material = material_dos_anexos(lote)
+    assert grande.strip() in material, "o material foi cortado — não pode haver limite"
+    assert "texto extraído do PDF" in material, "o PDF vai ao modelo como arquivo; ao estado, como texto"
+    assert "digitalizado.pdf" in material and "sem texto extraível" in material
+    assert material_dos_anexos(None) == ""
+
+    # quem cita o material anexado como fonte tem de recebê-lo — salvo quem lê a mensagem inteira
+    cita = _re.compile(r"material[^.\n]{0,60}anexad|anexad[^.\n]{0,60}material", _re.I)
+    sem = [a.name for _, a in iter_agent_tree(create_mission_orchestrator(stages=["produto", "design", "dev"]))
+           if isinstance(a, LlmAgent) and getattr(a, "include_contents", "none") != "default"
+           and cita.search(str(a.instruction)) and "{material_anexado" not in str(a.instruction)]
+    assert not sem, f"citam o material anexado como fonte e não o recebem: {sem}"
+    print("   ✓ material anexado: guardado inteiro, e chega à spec, à avaliação e ao resumido")
+
+
+def test_correcao_de_produto_refaz_desde_o_nucleo_com_o_material_da_origem():
+    """A-04 (23/09/2026). A triagem mandava para `spec` os pedidos de mecânica, etapas e narrativa,
+    e a correção a partir da spec não refaz o one-pager nem passa pelos gates de produto."""
+    import json as _json
+    import tempfile
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+    from pipeline.reexecucao import (CHAVES_PRODUTO, ETAPA_PARA_STAGES, PedidoCorrecao, Triagem,
+                                     executar_correcao_stream, material_para_refazer_produto, preparar_estado)
+    from pipeline.runner import CABECALHO_MATERIAL_GUARDADO, mensagem_do_usuario
+
+    # 1. refaz produto, design e dev — e os gates de produto estão na árvore
+    assert ETAPA_PARA_STAGES["produto"] == ["produto", "design", "dev"]
+    nomes = [a.name for _, a in iter_agent_tree(create_mission_orchestrator(stages=ETAPA_PARA_STAGES["produto"]))]
+    for gate in ("A01NucleoNarrativo", "A05GateEstrutural", "A08AvaliacaoPedagogica", "A11GateFinalProduto"):
+        assert gate in nomes, gate
+    assert len(nomes) == len(set(nomes))
+
+    # 2. apaga o que produto grava, preserva o que ele lê da geração original
+    estado = {"briefing": "missão do 6º ano", "perguntas_po": "PQ", "material_anexado": "material",
+              "nucleo_narrativo": "velho", "one_pager": "velho", "gate_final_report": "velho", "spec_missao": "velha",
+              "gate_estrutural_rodada": 2, "degradacoes": [{"gate": "Gate estrutural"}]}
+    limpo, removidas = preparar_estado(estado, "produto", "pedido")
+    for k in ("nucleo_narrativo", "one_pager", "gate_final_report", "spec_missao", "gate_estrutural_rodada"):
+        assert k not in limpo and k in removidas, k
+    assert limpo["briefing"] and limpo["perguntas_po"] and limpo["material_anexado"] == "material"
+    assert not limpo.get("degradacoes"), "todos os gates vão ser refeitos: nenhuma reprovação é herdada"
+    assert {"brief_escopo", "missoes_vizinhas", "catalogo_indice_status"} <= CHAVES_PRODUTO
+
+    # 3. o núcleo recebe o material guardado na mensagem — só quando refaz produto
+    msg = mensagem_do_usuario("briefing", None, {"material_anexado": "### 📄 entre redes"}, ["produto", "design", "dev"])
+    texto = msg.parts[0].text
+    assert CABECALHO_MATERIAL_GUARDADO in texto and "entre redes" in texto
+    assert "entre redes" not in mensagem_do_usuario("briefing", None, {"material_anexado": "### 📄 entre redes"}, ["spec"]).parts[0].text
+
+    # 4. sessão antiga, sem material guardado
+    sem_material = {"briefing": "b"}
+    com_anexo = {"attached_files": ["entre_redes_6ano.docx"]}
+    assert material_para_refazer_produto({"material_anexado": "salvo"}, com_anexo, None) == ("salvo", None)
+    reanexado = PedidoCorrecao(texto="mude a etapa 3", anexos=[("entre_redes_6ano.docx", "conteúdo")])
+    material, recusa = material_para_refazer_produto(sem_material, com_anexo, reanexado)
+    assert recusa is None and "conteúdo" in material
+    material, recusa = material_para_refazer_produto(sem_material, com_anexo, PedidoCorrecao(texto="mude a etapa 3"))
+    assert material is None and "entre_redes_6ano.docx" in recusa and "Anexe de novo" in recusa
+    assert material_para_refazer_produto(sem_material, {"attached_files": []}, None) == ("", None)
+
+    # 5. a recusa não toca a sessão: nem backup, nem estado
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp)
+        (run_dir / "estado.json").write_text(_json.dumps({"briefing": "b", "one_pager": "intacto"}))
+        (run_dir / "conversa.json").write_text(_json.dumps({"session_id": "s", "user_id": "u",
+                                                            "attached_files": ["entre_redes_6ano.docx"]}))
+
+        async def _coletar():
+            return [e async for e in executar_correcao_stream(run_dir, "produto", PedidoCorrecao(texto="mude"))]
+        eventos = asyncio.run(_coletar())
+        assert [e["type"] for e in eventos] == ["correcao_error"], [e["type"] for e in eventos]
+        assert not (run_dir / ".correcoes").exists(), "a recusa criou backup"
+        assert _json.loads((run_dir / "estado.json").read_text())["one_pager"] == "intacto"
+
+    # 6. a triagem sabe escolher produto
+    tri = Triagem.de_texto('ok\n```json\n{"agente": "triagem-correcao", "etapa": "produto", "motivo": "muda a mecânica", '
+                           '"resumo_pedido": "x", "resumo_anexos": "", "confianca": "alta"}\n```')
+    assert tri.etapa == "produto" and tri.reexecuta
+    print("   ✓ correção de produto: refaz desde o núcleo, com o material da origem, e recusa sem ele")
 
 
 if __name__ == "__main__":

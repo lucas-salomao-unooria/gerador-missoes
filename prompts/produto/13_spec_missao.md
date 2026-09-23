@@ -53,7 +53,12 @@ Cinco é o número fechado — nem quatro por economia, nem oito por zelo.
 
 ## BNCC Computação — lista oficial (o bloco 11 só aceita o que está aqui)
 
-**Prioridade:** quando o material do Entre Redes do bimestre/ano vier anexado nesta geração, ele é a fonte primária de código e habilidade — cheque contra ele antes desta lista. Esta lista oficial funciona como verificação e fallback para quando não houver material do Entre Redes anexado.
+**Prioridade:** quando o bloco de material anexado, logo abaixo, trouxer o material do Entre Redes do bimestre/ano, ele é a fonte primária de código e habilidade — cheque contra ele antes desta lista. Esta lista oficial funciona como verificação e fallback para quando o bloco vier vazio ou sem o material do Entre Redes.
+
+**Material anexado ao briefing — o texto integral de cada documento (vazio quando nada foi anexado):**
+
+{material_anexado?}
+
 
 <!-- include: references/bncc-computacao-letramento-digital.md -->
 

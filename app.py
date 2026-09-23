@@ -624,8 +624,9 @@ def _run_async(coro):
         loop.close()
 
 
-ETAPAS_DE_CORRECAO = ["spec", "design", "dev"]
-LEGENDAS_ETAPA = {"spec": "Spec + design + dev (~20 min)", "design": "Design + dev (~15 min)", "dev": "Só dev (~7 min)"}
+ETAPAS_DE_CORRECAO = ["produto", "spec", "design", "dev"]
+LEGENDAS_ETAPA = {"produto": "Missão inteira, desde o núcleo (~30 min)", "spec": "Spec + design + dev (~20 min)",
+                  "design": "Design + dev (~15 min)", "dev": "Só dev (~7 min)"}
 
 
 def _iniciar_correcao(user_prompt: str, doc_batch: Optional[DocumentBatch]) -> None:

@@ -36,8 +36,11 @@ from pipeline.artifacts import ARTIFACT_FILES
 KEY_PEDIDO_CORRECAO = "pedido_correcao"
 
 #: Etapas de onde uma correção pode recomeçar, na ordem da esteira. `transversal` refaz só
-#: diagnóstico e aprendizado.
-ETAPAS = ("spec", "design", "dev", "transversal")
+#: diagnóstico e aprendizado. `produto` entrou em 23/09/2026: sem ela, a triagem mandava para `spec`
+#: pedidos de mecânica, etapas e narrativa — e a correção a partir da spec não refaz o one-pager nem
+#: passa pelos gates de produto. A spec mudava, o one-pager do PO ficava como estava, e a mecânica
+#: nova não era avaliada por ninguém.
+ETAPAS = ("produto", "spec", "design", "dev", "transversal")
 
 CHAVES_DEV = frozenset({
     "manifesto_report", "manifesto_status", "manifesto_status_envelope",
@@ -76,6 +79,20 @@ CHAVES_SPEC = frozenset({
     "juiz_perguntas_report", "juiz_perguntas_status", "juiz_perguntas_status_envelope",
     "juiz_perguntas_rodada",
 }) | CHAVES_DESIGN
+#: Tudo que a etapa de produto grava. Ficam de fora, de propósito, o que ela LÊ da geração original:
+#: `briefing`, `perguntas_po` e `material_anexado` — refazer produto é refazê-lo sobre o mesmo pedido
+#: e o mesmo material, mais o pedido de correção.
+CHAVES_PRODUTO = frozenset({
+    "nucleo_narrativo", "micro_gate_report", "micro_gate_status", "micro_gate_status_envelope", "micro_gate_rodada",
+    "missoes_vizinhas", "catalogo_indice_status", "catalogo_indice_status_envelope",
+    "one_pager", "brief_escopo", "brief_escopo_status", "brief_escopo_status_envelope",
+    "contrato_produto_report", "contrato_produto_status", "contrato_produto_status_envelope",
+    "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_status_envelope", "gate_estrutural_rodada",
+    "avaliacao_pedagogica_report", "avaliacao_status", "avaliacao_status_envelope",
+    "experiencia_aluno_report", "experiencia_status", "experiencia_status_envelope",
+    "adequacao_report", "adequacao_status", "adequacao_status_envelope", "avaliacoes_rodada",
+    "gate_final_report", "gate_final_status", "gate_final_status_envelope",
+}) | CHAVES_SPEC
 CHAVES_TRANSVERSAL = frozenset({
     "diagnostico_execucao", "diagnostico_status", "diagnostico_status_envelope", "aprendizado_registro",
 })
@@ -85,6 +102,7 @@ CHAVES_TRANSVERSAL = frozenset({
 CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_rota", KEY_AGENTES_DEGRADADOS})
 
 CHAVES_POR_ETAPA: Dict[str, frozenset] = {
+    "produto": CHAVES_PRODUTO,
     "spec": CHAVES_SPEC,
     "design": CHAVES_DESIGN,
     "dev": CHAVES_DEV,
@@ -94,6 +112,7 @@ CHAVES_POR_ETAPA: Dict[str, frozenset] = {
 #: `transversal` passa uma etapa que o orquestrador não monta: sobram só diagnóstico e
 #: aprendizado. Lista vazia não serve — o orquestrador a trocaria pelas etapas padrão.
 ETAPA_PARA_STAGES: Dict[str, List[str]] = {
+    "produto": ["produto", "design", "dev"],
     "spec": ["spec", "design", "dev"],
     "design": ["design", "dev"],
     "dev": ["dev"],
@@ -132,6 +151,7 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Consistência do PRD": "dev",
 }
 _ETAPAS_REFEITAS: Dict[str, frozenset] = {
+    "produto": frozenset({"produto", "spec", "design", "dev"}),
     "spec": frozenset({"spec", "design", "dev"}),
     "design": frozenset({"design", "dev"}),
     "dev": frozenset({"dev"}),
@@ -168,9 +188,18 @@ class PedidoCorrecao:
                 pedido.anexos_sem_texto.append(doc.name)
         return pedido
 
+    def como_material(self) -> str:
+        """Os anexos do pedido no formato de `material_anexado` — para refazer produto numa sessão
+        antiga, que não guardou o material da geração original."""
+        blocos = [f"### 📄 Documento de apoio: {nome}\n\n{conteudo.strip()}" for nome, conteudo in self.anexos]
+        blocos += [f"### 📄 {nome} — anexado, mas sem texto extraível; considere só o que o pedido diz sobre ele."
+                   for nome in self.anexos_sem_texto]
+        return "\n\n".join(blocos)
+
     def como_markdown(self, etapa: str) -> str:
         """Valor de `state["pedido_correcao"]`: pedido, anexos e como agir."""
-        seguintes = {"spec": " (e design e dev, que derivam dela)", "design": " (e dev, que deriva dele)"}.get(etapa, "")
+        seguintes = {"produto": " (e a spec, o design e o dev, que derivam dele)",
+                     "spec": " (e design e dev, que derivam dela)", "design": " (e dev, que deriva dele)"}.get(etapa, "")
         linhas = [
             f"Esta execução refaz a etapa `{etapa}`{seguintes} de uma missão já gerada, a pedido de uma pessoa. "
             "Os documentos das etapas anteriores foram preservados e são seus insumos; os da sua etapa foram "
@@ -221,6 +250,32 @@ class RegistroCorrecao:
 
 
 # ------------------------------------------------------------------ estado
+def material_para_refazer_produto(
+    estado: Dict[str, Any], conversa: Dict[str, Any], pedido: Optional[PedidoCorrecao]
+) -> Tuple[Optional[str], Optional[str]]:
+    """`(material, recusa)` para refazer produto. Exatamente um dos dois vem preenchido.
+
+    O núcleo narrativo é construído a partir dos anexos, e até 23/09/2026 a sessão guardava só os
+    nomes deles. Refazer produto numa sessão dessas sem o material seria gerar outra missão, sem o
+    material do Entre Redes que definiu esta — pior que não corrigir. Então: o material guardado
+    vence; sem ele, vale o que o pedido anexou; sem nenhum dos dois, e se a geração original teve
+    anexos, a correção é recusada com o que fazer.
+    """
+    salvo = str(estado.get("material_anexado") or "").strip()
+    if salvo:
+        return salvo, None
+    if pedido and (pedido.anexos or pedido.anexos_sem_texto):
+        return pedido.como_material(), None
+    originais = [str(n) for n in (conversa.get("attached_files") or [])]
+    if not originais:
+        return "", None
+    return None, (
+        "esta missão foi gerada antes de a esteira guardar o conteúdo dos anexos, e refazer a etapa de "
+        "produto sem eles geraria outra missão. Anexe de novo ao pedido o material original ("
+        + ", ".join(f"`{n}`" for n in originais[:6]) + ("…" if len(originais) > 6 else "") + ") e reenvie."
+    )
+
+
 def _etapa_do_gate(rotulo: str) -> Optional[str]:
     return ROTULOS_GATE_POR_ETAPA.get(str(rotulo or "").strip())
 
@@ -423,6 +478,13 @@ async def executar_correcao_stream(
 
     run_dir = Path(run_dir)
     estado, conversa, briefing = carregar_sessao(run_dir)
+    if etapa == "produto":
+        material, recusa = material_para_refazer_produto(estado, conversa, pedido)
+        if recusa:
+            # nada foi tocado ainda: sem backup, sem estado limpo, sem registro de correção
+            yield {"type": "correcao_error", "error": recusa, "registro": None, "restaurados": [], "timestamp": time.time()}
+            return
+        estado = {**estado, "material_anexado": material}
     tem_pedido = bool(pedido and (pedido.texto.strip() or pedido.anexos or pedido.anexos_sem_texto))
     pedido_md = pedido.como_markdown(etapa) if tem_pedido else None
     limpo, removidas = preparar_estado(estado, etapa, pedido_md)
@@ -505,7 +567,7 @@ def executar_correcao_sync(run_dir: Path, etapa: str, pedido: Optional[PedidoCor
 
 
 # ------------------------------------------------------------------ triagem
-ETAPAS_DE_TRIAGEM = ("spec", "design", "dev", "nenhuma")
+ETAPAS_DE_TRIAGEM = ("produto", "spec", "design", "dev", "nenhuma")
 
 
 @dataclass

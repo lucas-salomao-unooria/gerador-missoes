@@ -159,6 +159,47 @@ def build_user_message(prompt: str, doc_batch: Optional[DocumentBatch]) -> types
 _build_user_message = build_user_message  # nome antigo, mantido para quem já importava
 
 
+#: Cabeçalho do material guardado quando ele volta à mensagem numa correção de produto.
+CABECALHO_MATERIAL_GUARDADO = "## 📎 Documentos de apoio anexados (texto) — guardados da geração original"
+
+
+def mensagem_do_usuario(prompt: str, doc_batch: Optional[DocumentBatch],
+                        initial_state: Optional[Dict[str, Any]], stages: Optional[List[str]]) -> types.Content:
+    """A mensagem que o núcleo narrativo lê — o único agente que a lê.
+
+    Numa correção que refaz produto não há anexo novo: sem remontar o material guardado da
+    geração original, o núcleo seria refeito sem o material do Entre Redes que o gerou.
+    """
+    material_salvo = str((initial_state or {}).get("material_anexado") or "")
+    if not doc_batch and material_salvo and "produto" in (stages or []):
+        return build_user_message(f"{prompt}\n\n---\n{CABECALHO_MATERIAL_GUARDADO}\n\n{material_salvo}", None)
+    return build_user_message(prompt, doc_batch)
+
+
+def material_dos_anexos(doc_batch: Optional[DocumentBatch]) -> str:
+    """O texto integral de cada anexo, para o estado — sem limite de tamanho, de propósito.
+
+    Até 23/09/2026 o conteúdo dos anexos existia só na mensagem, e só o núcleo narrativo a lê.
+    A spec, a avaliação pedagógica e o one-pager resumido são instruídos a usar o material do
+    Entre Redes como fonte primária de código BNCC e componente curricular e nunca o viam: 5 das
+    7 sessões que anexaram o material entregaram um resumido dizendo "material não anexado". E
+    a sessão guardava só os nomes, então uma correção que refizesse produto perdia o material.
+    O PDF vai ao modelo como arquivo; aqui entra o texto extraído dele, que é o que um agente
+    sem a mensagem consegue ler.
+    """
+    if not doc_batch or not doc_batch.documents:
+        return ""
+    blocos: List[str] = []
+    for doc in doc_batch.documents:
+        texto = (doc.markdown_text or "").strip()
+        if texto:
+            blocos.append(f"### 📄 Documento de apoio ({doc.file_type.upper()}): {doc.name}\n\n{texto}")
+        else:
+            blocos.append(f"### 📄 {doc.name} — anexado, mas sem texto extraível (PDF digitalizado?). "
+                          "O conteúdo não pôde ser guardado; considere só o que o briefing diz sobre ele.")
+    return "\n\n".join(blocos)
+
+
 def catalogo_para_prompt() -> str:
     """O índice de missões geradas, em tabela, para os prompts que comparam com o catálogo."""
     try:
@@ -240,6 +281,10 @@ async def run_orchestrator_pipeline_stream(
             state={
                 **(initial_state or {}),
                 "briefing": briefing_inicial(initial_state, prompt),
+                # O texto integral dos anexos: o salvo vence, porque numa correção não há anexo
+                # novo — o material da geração original é o que vale.
+                "material_anexado": str((initial_state or {}).get("material_anexado") or "")
+                                    or material_dos_anexos(doc_batch),
                 # O PO declara as perguntas de produto no briefing, em português; a esteira as
                 # normaliza para a tabela do sub-bloco 9f. Sem o bloco, fica vazio e o agente
                 # propõe, marcando `[PROPOSTA — validar com PO]` — proposta não bloqueia.
@@ -259,7 +304,7 @@ async def run_orchestrator_pipeline_stream(
             session_service=session_service,
             artifact_service=artifact_service,
         )
-        user_message = _build_user_message(prompt, doc_batch)
+        user_message = mensagem_do_usuario(prompt, doc_batch, initial_state, stages)
 
         step_outputs: Dict[str, str] = {}
         step_thoughts: Dict[str, str] = {}

@@ -14,10 +14,6 @@ Seu viés padrão é o do professor cético: uma atividade é inadequada até qu
 
 {one_pager}
 
-**Ambiente simulado, quando já decidido:**
-
-{ambiente_simulado?}
-
 **Relatório do gate estrutural, para contexto do que já foi apontado:**
 
 {gate_estrutural_report?}
