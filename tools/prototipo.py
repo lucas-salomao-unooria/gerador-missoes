@@ -16,7 +16,13 @@ from typing import Any, Dict, List, Optional
 AGENTE = "prototipo-lint"
 
 _RE_ID_TELA = re.compile(r"\bE\d-(?:ALU|PROF|SIS)-\d{2}\b")
-_RE_RASCUNHO = re.compile(r"\b(TODO|FIXME|XXX|lorem ipsum|placeholder|\[preencher|a definir)\b", re.IGNORECASE)
+#: Marcador de rascunho de quem escreve código — em MAIÚSCULAS, como se escreve. Em 23/09/2026 a
+#: regra ignorava caixa e bloqueou um protótipo por "você aprendeu que **todo** enquadramento conta
+#: uma história": em português, `todo` e `a definir` são palavras, e `placeholder` é o nome da
+#: convenção do DS para a caixa de mídia do wireframe. Colchete de marcador conta em qualquer caixa.
+_RE_RASCUNHO = re.compile(r"\b(?:TODO|FIXME|XXX)\b|(?i:lorem ipsum|\[\s*preencher|\[\s*a definir|\[\[[^\]]*\]\])")
+#: Comentários não vão à tela da criança: CSS, HTML e JS de linha.
+_RE_COMENTARIO = re.compile(r"/\*.*?\*/|<!--.*?-->|(?<![:\w])//[^\n]*", re.S)
 _RE_TAG_ABERTA = re.compile(r"<(html|body)\b", re.IGNORECASE)
 
 
@@ -55,7 +61,7 @@ def validar(html: str, telas_declaradas: Optional[List[str]] = None) -> Dict[str
               "Nenhum identificador `E<etapa>-<ator>-<n>` no protótipo: sem isso não há como "
               "casar tela construída com tela declarada, e o QA vira leitura de relatório.")
 
-    rascunhos = sorted(set(m.group(0).lower() for m in _RE_RASCUNHO.finditer(texto)))
+    rascunhos = sorted(set(m.group(0) for m in _RE_RASCUNHO.finditer(_RE_COMENTARIO.sub(" ", texto))))
     if rascunhos:
         falha("marcador-de-rascunho",
               f"Marcador de rascunho no protótipo ({', '.join(rascunhos[:4])}): o que vai ao QA "

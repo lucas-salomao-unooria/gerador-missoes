@@ -3428,6 +3428,24 @@ def test_correcao_de_produto_refaz_desde_o_nucleo_com_o_material_da_origem():
     print("   ✓ correção de produto: refaz desde o núcleo, com o material da origem, e recusa sem ele")
 
 
+
+def test_lint_do_prototipo_nao_confunde_portugues_com_rascunho():
+    """Em 23/09/2026 o lint bloqueou um protótipo por "você aprendeu que **todo** enquadramento conta
+    uma história": ignorava caixa, e `todo`, `a definir` e `placeholder` são palavras comuns — a
+    última é o nome da convenção do DS para a caixa de mídia do wireframe."""
+    from tools.prototipo import validar
+    base = '<html><body><section id="E1-ALU-01">'
+    def acusa(corpo):
+        return any(a["codigo"] == "marcador-de-rascunho" for a in validar(base + corpo + "</section></body></html>", ["E1-ALU-01"])["achados"])
+    assert not acusa("Você aprendeu que todo enquadramento conta uma história.")
+    assert not acusa("<style>/* Linhas X de placeholder do DS */</style>oi")
+    assert not acusa("O tema da aula é a definir pelo professor.")
+    assert not acusa('<input placeholder="Digite sua legenda">')
+    assert acusa("TODO: texto final") and acusa("Olá [[nome_da_turma]]") and acusa("Legenda: [a definir]")
+    assert acusa("Lorem ipsum dolor")
+    print("   ✓ lint do protótipo: rascunho de verdade acusa, português não")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")
