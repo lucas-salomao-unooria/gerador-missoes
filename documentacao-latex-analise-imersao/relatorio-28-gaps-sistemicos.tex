@@ -1,0 +1,497 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- PACOTES FUNDAMENTAIS ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\geometry{a4paper, top=2.5cm, bottom=2.5cm, left=2.2cm, right=2.2cm}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+% --- PALETA DE CORES UNOORIA ---
+\definecolor{NavyBlue}{RGB}{16, 44, 87}
+\definecolor{SteelBlue}{RGB}{53, 89, 142}
+\definecolor{LightBlue}{RGB}{235, 243, 250}
+\definecolor{DarkGreen}{RGB}{20, 108, 67}
+\definecolor{LightGreen}{RGB}{232, 245, 233}
+\definecolor{DarkRed}{RGB}{176, 42, 55}
+\definecolor{LightRed}{RGB}{253, 237, 237}
+\definecolor{DarkYellow}{RGB}{153, 115, 0}
+\definecolor{LightYellow}{RGB}{254, 249, 231}
+\definecolor{Charcoal}{RGB}{40, 40, 40}
+\definecolor{GrayBg}{RGB}{248, 249, 250}
+\definecolor{BorderGray}{RGB}{218, 224, 233}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=NavyBlue,
+    citecolor=SteelBlue,
+    urlcolor=SteelBlue,
+    pdftitle={Relatorio Tecnico: Os 28 Gaps Sistemicos Raiz do Gerador de Missoes},
+    pdfauthor={Auditoria de Engenharia e Produto - Unooria},
+    pdfsubject={Desconstrucao fria dos 102 pontos e consolidacao dos 28 gaps reais de esteira},
+    pdfkeywords={gerador de missoes, auditoria, padrao ouro, gaps sistemicos, BNCC, rubrica v1.19}
+}
+
+% --- CABEÇALHOS E RODAPÉ ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{SteelBlue}Relatório Técnico: Os 28 Gaps Sistêmicos Raiz --- Gerador de Missões Unooria}
+\fancyhead[R]{\small\color{SteelBlue}\thepage}
+\fancyfoot[C]{\footnotesize\color{gray}Auditoria Fria e Independente de Engenharia --- 22 de Setembro de 2026}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.2pt}
+
+% --- TÍTULOS ---
+\titleformat{\section}{\Large\bfseries\color{NavyBlue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{SteelBlue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{Charcoal}}{\thesubsubsection}{1em}{}
+
+% --- CAIXAS SEMÂNTICAS ---
+\newtcolorbox{gapbox}[2][]{
+  breakable, enhanced, colback=white, colframe=NavyBlue,
+  boxrule=1pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #2}, fonttitle=\color{white}, #1
+}
+
+\newtcolorbox{destaquebox}[1]{
+  breakable, enhanced, colback=LightBlue, colframe=SteelBlue,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+
+\newtcolorbox{alertainfra}[1]{
+  breakable, enhanced, colback=LightRed, colframe=DarkRed,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+
+\newtcolorbox{sucessobox}[1]{
+  breakable, enhanced, colback=LightGreen, colframe=DarkGreen,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+
+\begin{document}
+
+% --- CAPA / CABEÇALHO EXECUTIVO ---
+\begin{center}
+    {\Huge\bfseries\color{NavyBlue} Relatório Técnico de Engenharia}\\[0.4cm]
+    {\LARGE\bfseries\color{SteelBlue} A Desconstrução Fria dos 102 Pontos e a Consolidação dos 28 Gaps Sistêmicos Raiz}\\[0.5cm]
+    \textbf{Gerador de Missões Unooria: Diagnóstico, Evidências Empíricas e Plano de Ação}\\[0.3cm]
+    {\small \textbf{Data da Auditoria:} 22 de Setembro de 2026 \quad|\quad \textbf{Referência Normativa:} Rubrica Unooria v1.19}\\[0.2cm]
+    {\footnotesize \textbf{Corpus Auditado:} 159 testes unitários passing $\cdot$ ADK v0.4.x $\cdot$ 51 Prompts $\cdot$ 23 Módulos Python}
+\end{center}
+
+\vspace{0.4cm}
+\hrule height 1pt
+\vspace{0.5cm}
+
+% ==========================================
+% SEÇÃO 1: METODOLOGIA E RACIONAL DA RECONTAGEM
+% ==========================================
+\section{Metodologia e Racional da Recontagem Fria}
+
+O objetivo desta auditoria foi responder tecnicamente e sem viés de confirmação à seguinte pergunta: \textbf{o Gerador de Missões Unooria possui realmente 102 falhas abertas hoje?}
+
+A análise fria da base de código, suítes de teste e templates de prompt comprovou que o número de 102 achados (catalogados na auditoria preliminar matinal sob os identificadores P01--P30, D01--D37 e V01--V35) refletia uma abordagem descritiva e fragmentada de sintomas. Sob rigor de engenharia de software, apurou-se:
+
+\begin{destaquebox}{A Equação de Engenharia da Auditoria de Hoje}
+\begin{center}
+\Large
+$102 \text{ (nominais)} - 4 \text{ (sanados)} - 75 \text{ (sintomas agrupados)} + 5 \text{ (novos gaps)} = \mathbf{28 \text{ Gaps Sistêmicos Raiz}}$
+\end{center}
+\end{destaquebox}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{4 Pontos Sanados:} As intervenções realizadas hoje corrigiram deficiências históricas, como a unificação de versão da Rubrica (v1.19), o formato canônico de 12 colunas no Agente 51 e a persistência dinâmica de catálogo.
+    \item \textbf{75 Sintomas Fragmentados:} Cerca de 70\% dos itens eram sintomas repetidos de apenas 6 decisões arquiteturais em aberto (ex.: o beco sem saída do Agente 10 era descrito 5 vezes com nomes diferentes).
+    \item \textbf{5 Novos Gaps Descobertos:} Falhas críticas geradas ou evidenciadas pelas mudanças recentes, como a quebra em runtime de \texttt{test\_pipeline.py} e 10 missões com dados vazios no catálogo quebrando o teste de repetição V5.
+    \item \textbf{28 Gaps Sistêmicos Reais:} Frentes concretas e não redundantes de intervenção. Resolver esses 28 pontos erradica 100\% dos 102 problemas reportados na manhã.
+\end{itemize}
+
+% ==========================================
+% SEÇÃO 2: PONTOS SANADOS E NOVOS GAPS
+% ==========================================
+\section{Pontos Efetivamente Sanados vs. Novos Gaps Identificados}
+
+\subsection{Os 4 Pontos Efetivamente Sanados Hoje}
+
+\begin{longtable}{@{}p{1.8cm} p{6.5cm} p{7.5cm}@{}}
+\toprule
+\textbf{ID Original} & \textbf{Afirmação do Relatório Matinal} & \textbf{Constatação Fria no Código Atual} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\textbf{P-21} & Versão de rubrica diverge em todo par prompt/critério (v1.17, v1.16, v1.13, etc.). & \textbf{100\% Sanado.} Varredura integral no repositório comprovou que todos os prompts (\texttt{05}, \texttt{08}, \texttt{09}, \texttt{11}, \texttt{13}) e critérios normativos foram rigorosamente unificados para a \textbf{Rubrica v1.19}. \\
+\midrule
+\textbf{P-26} & Linha de catálogo proposta pelo Agente 51 não encaixa no catálogo oficial (7 colunas vs. 8). & \textbf{100\% Sanado.} O prompt \texttt{prompts/transversal/51\_aprendizado.md:76} foi corrigido para as exatas 12 colunas canônicas e padrão de slug \texttt{expNNefNb}. \\
+\midrule
+\textbf{P-25} (parcial) & Catálogo sem persistência em código; aprendizado sem aplicador real. & \textbf{Atenuado.} Foram criados os módulos determinísticos \texttt{tools/catalogo.py} e o CLI \texttt{scripts/catalogo.py}, registrando execuções diretamente em \texttt{output/\_catalogo.json}. \\
+\midrule
+\textbf{D-20} (parcial) & Anos iniciais com conflito de definição entre 1º--2º e 1º--5º EF. & \textbf{Atenuado.} Alinhamento dos defaults e de \texttt{literatura-cognitiva.md} definindo áudio compulsório no 1º--2º e andaime estruturado no 3º--5º. \\
+\end{longtable}
+
+\subsection{Os 5 Novos Gaps Críticos Descobertos na Auditoria Atual}
+
+\begin{alertainfra}{Novos Problemas Identificados em Runtime}
+\begin{enumerate}[leftmargin=1.2em]
+    \item \textbf{Quebra em Runtime do Script de Testes (\texttt{test\_pipeline.py:1748}):} Executar diretamente \texttt{.venv/bin/python test\_pipeline.py} causa parada fatal imediata: \texttt{NameError: name 'test\_gate\_loop\_bloqueia\_e\_pula\_jusante' is not defined}. A lista do bloco \texttt{\_\_main\_\_} referenciava uma função deletada/renomeada.
+    \item \textbf{Cegueira do Micro-Gate Anti-Repetição (V5):} O arquivo canônico de inicialização \texttt{output/\_catalogo.json} contém 10 missões com o campo \texttt{descoberta\_central} preenchido como \texttt{[preencher do manifesto]}. O comando \texttt{scripts/catalogo.py listar} acusa oficialmente: \textit{``10 missão(ões) com campo de comparação vazio --- não sustentam reprovação em V5''}.
+    \item \textbf{118 Deprecation Warnings do Google ADK:} A suíte de execução emite 118 avisos alertando que \texttt{SequentialAgent} e \texttt{LoopAgent} estão descontinuados na versão instalada do framework (\textit{``SequentialAgent is deprecated, please use Chains instead''}).
+    \item \textbf{Esvaziamento do Brief de Escopo no Loop de Revisão de One-Pager:} O Agente 04 gera o One-pager Canônico e o Brief de Escopo juntos na chave \texttt{one\_pager}. Na primeira iteração de correção, o Agente 07 (\texttt{prompts/produto/07\_revisor\_one\_pager.md:38}) instrui a devolver exclusivamente o documento iniciado por \texttt{\# One-pager}, destruindo o Brief de Escopo do estado.
+    \item \textbf{Assimetria de Severidade no QA de Design (\texttt{30\_qa\_entregaveis.md}):} No Critério D7, quebras na hierarquia visual do pico emocional constituem bloqueio imperativo da jornada, mas o gabarito do envelope de saída instrui a registrar severidade \texttt{oficio}. Como o orquestrador não bloqueia por ofício, a falha passa silenciosamente.
+\end{enumerate}
+\end{alertainfra}
+
+% ==========================================
+% SEÇÃO 3: QUADRO SINTÉTICO DOS 28 GAPS
+% ==========================================
+\newpage
+\section{Quadro Geral dos 28 Gaps Sistêmicos Raiz}
+
+\small
+\begin{longtable}{@{}p{1.2cm} p{5.5cm} p{2.2cm} p{1.3cm} p{5.2cm}@{}}
+\toprule
+\textbf{Gap} & \textbf{Título do Gap Sistêmico} & \textbf{Achados Absorvidos} & \textbf{Grav.} & \textbf{Módulo / Arquivo Afetado} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\multicolumn{5}{l}{\textbf{\color{NavyBlue}Frente I: Execução, Fail-Safe e Robustez Técnica (01 a 07)}} \\
+\midrule
+\textbf{GAP-01} & Fail-Open nos Gates de Design e Dev & D-27, V-01 & Alta & \texttt{agents/dev:308}, \texttt{agents/design:365} \\
+\textbf{GAP-02} & Aceitação de Status Vazio em Adequação & P-01, P-30 & Alta & \texttt{agents/produto:358} \\
+\textbf{GAP-03} & Quebra em Runtime do Teste Principal & Novo Gap 1, V-27 & Alta & \texttt{test\_pipeline.py:1748} \\
+\textbf{GAP-04} & Ausência de Persistência e Tokens & V-22, V-23, V-30 & Alta & \texttt{pipeline/runner.py:238--306} \\
+\textbf{GAP-05} & Ausência de Retry/Backoff em Chamadas & V-25 & Alta & \texttt{pipeline/runner.py:238, 393} \\
+\textbf{GAP-06} & Obsolescência Técnica (118 Warnings ADK) & Novo Gap 3 & Média & \texttt{agents/produto/design/dev} \\
+\textbf{GAP-07} & Falhas de Governança em Deploy & V-32, V-33 & Alta & \texttt{deploy.yml}, \texttt{.dockerignore} \\
+\midrule
+\multicolumn{5}{l}{\textbf{\color{NavyBlue}Frente II: Arquitetura de Produto e Pipeline Pedagógico (08 a 15)}} \\
+\midrule
+\textbf{GAP-08} & O Beco sem Saída Pedagógico (Agente 10) & P-02, P-03, P-15 & Alta & \texttt{prompts/produto/10, 11, 13} \\
+\textbf{GAP-09} & Esvaziamento do Brief no Loop de Revisão & Novo Gap 4, P-13 & Alta & \texttt{prompts/produto/04, 07} \\
+\textbf{GAP-10} & Inexistência de Guardrail de Spoiler & P-09 & Alta & \texttt{criterios-gate-estrutural/final} \\
+\textbf{GAP-11} & Invenção Tardia de Evidência/Acessibilidade & P-10, P-14 & Média & \texttt{prompts/produto/16b}, \texttt{formato-spec} \\
+\textbf{GAP-12} & Incompatibilidade de Eixo BNCC no EM & P-11 & Média & \texttt{prompts/produto/01:75--76} \\
+\textbf{GAP-13} & Falta de Reexecução Parcial em Produto & P-12 & Média & \texttt{pipeline/reexecucao.py:40} \\
+\textbf{GAP-14} & Conflito de Réguas Temporais de Sala & P-17, P-18 & Média & \texttt{criterios-experiencia/estrutural} \\
+\textbf{GAP-15} & Cegueira do Gate em Relação à Rodada & P-08 & Média & \texttt{prompts/produto/05}, \texttt{agents/produto} \\
+\midrule
+\multicolumn{5}{l}{\textbf{\color{NavyBlue}Frente III: Design, Imersão e Experiência do Estudante (16 a 23)}} \\
+\midrule
+\textbf{GAP-16} & Sistema Fantasma de Retrabalho por Tickets & D-07, D-08, D-11, D-12, V-05, V-07 & Alta & \texttt{agents/design:270}, \texttt{agents/dev:149} \\
+\textbf{GAP-17} & Inversão de Dependência em Retrabalho & D-09, D-10 & Alta & \texttt{agents/design:260--268} \\
+\textbf{GAP-18} & Validação Cega do Protótipo HTML & D-01, D-29 & Alta & \texttt{prompts/design/30}, \texttt{artefatos\_html} \\
+\textbf{GAP-19} & Ambiguidade de Notação Mermaid em Fluxo & D-14 & Média & \texttt{prompts/design/23:27, 93} \\
+\textbf{GAP-20} & Conflito de Severidade no Pico Emocional & Novo Gap 5, D-16 & Alta & \texttt{prompts/design/30:123} \\
+\textbf{GAP-21} & Ausência de Critérios de Acessibilidade & D-19, D-21, D-37 & Média & \texttt{prompts/design/25, 26} \\
+\textbf{GAP-22} & Descarte Sistemático de 2--4 por Aparelho & D-18 & Alta & \texttt{prompts/design/26:58, 28:126} \\
+\textbf{GAP-23} & Falsa Dependência de Ferramentas Inativas & D-25, D-30, D-31, D-32 & Média & \texttt{prompts/design/30}, \texttt{config.py} \\
+\midrule
+\multicolumn{5}{l}{\textbf{\color{NavyBlue}Frente IV: Governança, Contratos Técnicos e Validações (24 a 28)}} \\
+\midrule
+\textbf{GAP-24} & Base Incompleta do Catálogo Travando V5 & Novo Gap 2, P-26 & Alta & \texttt{output/\_catalogo.json}, \texttt{catalogo.py} \\
+\textbf{GAP-25} & Desalinhamento do Enum de Status e IDs & P-04, P-05, P-06, P-07 & Média & \texttt{contrato-saida.md}, prompts \\
+\textbf{GAP-26} & Validação Cega a Pendências em Spec/PRD & P-29, V-11, V-17 & Alta & \texttt{agents/produto:215}, \texttt{rastro.py} \\
+\textbf{GAP-27} & Drift Estático de Cópias da Plataforma & V-18, V-19, V-20, V-21, V-34 & Média & \texttt{criterios-dev.md}, \texttt{rastro.py} \\
+\textbf{GAP-28} & Consolidação da Banca Dev por LLM & V-02, V-03, V-10 & Alta & \texttt{agents/dev:110}, \texttt{checkers.py} \\
+\end{longtable}
+\normalsize
+
+% ==========================================
+% SEÇÃO 4: DETALHAMENTO DOS 28 GAPS
+% ==========================================
+\newpage
+\section{Detalhamento e Evidências dos 28 Gaps Sistêmicos}
+
+% ---------------- FRENTE 1 ----------------
+\subsection{Frente I: Execução, Fail-Safe e Robustez Técnica}
+
+\begin{gapbox}{GAP-01: Comportamento Fail-Open nos Gates de Design e Dev}
+\textbf{Achados Absorvidos:} D-27, V-01 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{agents/dev/\_\_init\_\_.py:308}, \texttt{agents/design/\_\_init\_\_.py:365}.\\
+\textbf{Diagnóstico Técnico:} Os gates avaliadores utilizam o parâmetro \texttt{treat\_indefinido\_as\_blocked=False}. Se o modelo Gemini sofrer truncamento por limite de tokens, crash do JSON ou falha na extração de tags, o status resultante é interpretado como nulo ou indefinido, e a esteira \textbf{aprova silenciosamente a entrega} sem nenhuma dimensão validada. Um PRD reprovado por 5 avaliadores ou um protótipo com código quebrado é promovido para a etapa seguinte.\\
+\textbf{Ação de Correção:} Alterar mandatoriamente o parâmetro para \texttt{treat\_indefinido\_as\_blocked=True} e introduzir um validador sintático estrito do envelope JSON antes de qualquer decisão de prosseguimento.
+\end{gapbox}
+
+\begin{gapbox}{GAP-02: Aceitação Incondicional de Status Vazio em Adequação Pedagógica}
+\textbf{Achados Absorvidos:} P-01, P-30 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{agents/produto/\_\_init\_\_.py:358}, \texttt{prompts/produto/10\_adequacao\_pedagogica.md}.\\
+\textbf{Diagnóstico Técnico:} O checker de loop \texttt{A10bAdequacaoCheck} define explicitamente \texttt{aceitos=["aprovado", "aprovado\_com\_ressalvas", "amarelo", ""]}. A string vazia \texttt{""} está cadastrada como condição de sucesso. Como nenhum agente no pipeline instancia a variável de estado \texttt{adequacao\_status}, ela permanece vazia, sendo aprovada automaticamente mesmo quando o Parecer do Agente 10 emite vetos absolutos de impraticabilidade na escola pública.\\
+\textbf{Ação de Correção:} Excluir \texttt{""} da lista de aceitos e obrigar o Agente 10 a emitir \texttt{adequacao\_status} estruturado no envelope.
+\end{gapbox}
+
+\begin{gapbox}{GAP-03: Quebra Fatal em Runtime na Execução Direta de \texttt{test\_pipeline.py}}
+\textbf{Achados Absorvidos:} Novo Gap 1, V-27 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{test\_pipeline.py:1748}.\\
+\textbf{Diagnóstico Técnico:} A linha 1748 registra \texttt{test\_gate\_loop\_bloqueia\_e\_pula\_jusante} no array \texttt{tests}. Esta função foi renomeada ou removida da suíte. A execução via \texttt{pytest} não manifesta o erro porque descobre funções por regex e ignora o bloco \texttt{\_\_main\_\_}. Todavia, qualquer desenvolvedor, automação ou script que execute \texttt{python test\_pipeline.py} sofre parada imediata por \texttt{NameError}.\\
+\textbf{Ação de Correção:} Remover a referência à função inexistente e incluir teste automatizado para validar a execução íntegra do bloco \texttt{\_\_main\_\_}.
+\end{gapbox}
+
+\begin{gapbox}{GAP-04: Ausência de Persistência Histórica, Sementes e Contabilidade de Tokens}
+\textbf{Achados Absorvidos:} V-22, V-23, V-30 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{pipeline/runner.py:238--306}, \texttt{agents/base.py:79}.\\
+\textbf{Diagnóstico Técnico:} O runner descarta o payload \texttt{usage\_metadata} retornado pelo SDK da Google. A esteira opera completamente cega quanto ao consumo de tokens de entrada/saída, custos e tempo de latência por agente. Além disso, nenhuma seed, temperatura ou hash de prompt é persistido no \texttt{estado.json}, e o arquivo acumulador \texttt{output/\_historico.jsonl} não existe. Duas execuções da mesma missão são impossíveis de comparar empiricamente.\\
+\textbf{Ação de Correção:} Implementar acumulador de telemetria de tokens no runner e persistir o log \texttt{\_historico.jsonl} ao final de cada execução.
+\end{gapbox}
+
+\begin{gapbox}{GAP-05: Falta de Resiliência de Rede e Política de Retry com Backoff Exponencial}
+\textbf{Achados Absorvidos:} V-25 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{pipeline/runner.py:238, 393}.\\
+\textbf{Diagnóstico Técnico:} O acionamento da API do Gemini e dos servidores MCP ocorre sem envoltório de retry nem timeout parametrizado. Qualquer oscilação transitória de conexão TLS, timeout de socket ou pico de concorrência com erro HTTP 429 derruba uma esteira de 40 agentes no meio do processamento, sem ponto de restauração.\\
+\textbf{Ação de Correção:} Encapsular as chamadas em decorator com até 3 retries e backoff exponencial com jitter aleatório.
+\end{gapbox}
+
+\begin{gapbox}{GAP-06: Obsolescência Técnica Estrutural (118 Warnings do Google ADK)}
+\textbf{Achados Absorvidos:} Novo Gap 3 $\cdot$ \textbf{Severidade:} Média\\
+\textbf{Arquivos:} \texttt{agents/produto/\_\_init\_\_.py}, \texttt{agents/design/\_\_init\_\_.py}, \texttt{agents/dev/\_\_init\_\_.py}.\\
+\textbf{Diagnóstico Técnico:} A inicialização e execução do pipeline geram 118 advertências de depreciação oficiais da biblioteca do ADK: \textit{``UserWarning: SequentialAgent is deprecated, please use Chains instead''} e \textit{``LoopAgent is deprecated''}. Toda a orquestração do sistema apoia-se em classes marcadas para descontinuação.\\
+\textbf{Ação de Correção:} Mapear o plano de refatoração para substituir a instanciação de \texttt{SequentialAgent} pelas novas abstrações de composição em cadeia recomendadas pelo SDK.
+\end{gapbox}
+
+\begin{gapbox}{GAP-07: Vulnerabilidades de Governança no Build Docker e Deploy no Cloud Run}
+\textbf{Achados Absorvidos:} V-32, V-33 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{.github/workflows/deploy.yml:83}, \texttt{.dockerignore}, \texttt{Dockerfile}.\\
+\textbf{Diagnóstico Técnico:} O pipeline de CI/CD implanta a aplicação no Cloud Run com a flag \texttt{--allow-unauthenticated}, deixando artefatos pedagógicos em elaboração, briefings confidenciais e rotas de edição de prompts acessíveis publicamente. Adicionalmente, o \texttt{.dockerignore} não lista \texttt{.env}, \texttt{.env.yaml} e chaves de tokens, que são agregados na imagem por \texttt{COPY . .}.\\
+\textbf{Ação de Correção:} Configurar autenticação restrita via Google Cloud IAP/IAM e sanear o arquivo \texttt{.dockerignore}.
+\end{gapbox}
+
+% ---------------- FRENTE 2 ----------------
+\newpage
+\subsection{Frente II: Arquitetura de Produto e Pipeline Pedagógico}
+
+\begin{gapbox}{GAP-08: O Beco sem Saída Pedagógico (Agente 10 Desconectado do Fluxo)}
+\textbf{Achados Absorvidos:} P-02, P-03, P-15 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{prompts/produto/10\_adequacao\_pedagogica.md}, \texttt{11\_gate\_final.md:5--21}, \texttt{13\_spec\_missao.md:7--27}.\\
+\textbf{Diagnóstico Técnico:} O Agente 10 é acionado para emitir um parecer pedagógico exaustivo em 6 eixos de viabilidade real para a escola pública brasileira. Todavia, o prompt do Gate Final (Agente 11) orienta explicitamente a avaliar \textit{``apenas três relatórios''} (ignora o 10), e o prompt da Spec (Agente 13) não recebe o relatório nos seus blocos de contexto. O parecer opera como adereço isolado sem canal de interferência nos entregáveis.\\
+\textbf{Ação de Correção:} Interpolar \texttt{\{adequacao\_report?\}} nos prompts dos Agentes 11 e 13, integrando os vetos do parecer pedagógico aos critérios mandatórios de reprovação.
+\end{gapbox}
+
+\begin{gapbox}{GAP-09: Esvaziamento do Brief de Escopo no Loop de Revisão de One-Pager}
+\textbf{Achados Absorvidos:} Novo Gap 4, P-13 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{prompts/produto/04\_secoes\_apoio.md:108}, \texttt{07\_revisor\_one\_pager.md:38}.\\
+\textbf{Diagnóstico Técnico:} O Agente 04 concatena dois documentos distintos na chave de estado \texttt{one\_pager}: o One-pager Canônico (18 seções) e o Brief de Escopo da missão. Quando o Gate Estrutural devolve a missão para correção, o Agente 07 (Revisor) recebe a diretriz estrita de entregar \textit{``apenas o one-pager completo iniciando por \# One-pager''}. Nessa operação, o Brief de Escopo é deletado da memória, e as etapas de Design e Dev passam a operar sem o brief.\\
+\textbf{Ação de Correção:} Isolar o Brief de Escopo em chave própria de estado (\texttt{brief\_escopo}) e atribuir sua revisão a um agente ou diretriz explícita.
+\end{gapbox}
+
+\begin{gapbox}{GAP-10: Inexistência de Verificação de Spoiler Narrativo a Jusante do Micro-Gate}
+\textbf{Achados Absorvidos:} P-09 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{prompts/references/criterios-gate-estrutural.md}, \texttt{criterios-pedagogicos.md}, \texttt{criterios-gate-final.md}.\\
+\textbf{Diagnóstico Técnico:} O teste de não-revelação do segredo narrativo (momento \textit{aha} da missão) é executado apenas no micro-gate inicial (Agente 02). Durante a geração das 18 seções de apoio (04), na revisão do one-pager (07) ou na spec (13), novos textos são gerados (briefing da professora, roteiro do podcast). Nenhuma das bancas subsequentes verifica se esses novos artefatos expõem spoilers do desafio aos estudantes.\\
+\textbf{Ação de Correção:} Adicionar o critério objetivo de barreira contra spoiler narrativo no Gate Estrutural e no Gate Final de Produto.
+\end{gapbox}
+
+\begin{gapbox}{GAP-11: Invenção Tardia do Contrato de Evidência e Acessibilidade}
+\textbf{Achados Absorvidos:} P-10, P-14 $\cdot$ \textbf{Severidade:} Média\\
+\textbf{Arquivos:} \texttt{prompts/references/formato-spec.md:78}, \texttt{prompts/produto/16b\_one\_pager\_resumido.md:119--125}.\\
+\textbf{Diagnóstico Técnico:} O Bloco 7 da spec exige detalhamento de canais sensoriais e gestos assistidos, mas o one-pager gerado no Bloco 4 não contém seção de acessibilidade para sustentá-lo. Similarmente, o contrato de evidência de aprendizagem baseado na escala ternária (\textit{Atingiu / Em processo / Não atingiu}) é inserido pelo Agente 16b no último passo do estágio, sem validação pedagógica anterior.\\
+\textbf{Ação de Correção:} Estruturar o contrato de acessibilidade e a matriz de evidência desde a geração do One-pager Canônico (04) e formalizá-los na Spec (13).
+\end{gapbox}
+
+\begin{gapbox}{GAP-12: Incompatibilidade da Regra de Eixo BNCC para o Ensino Médio}
+\textbf{Achados Absorvidos:} P-11 $\cdot$ \textbf{Severidade:} Média\\
+\textbf{Arquivos:} \texttt{prompts/produto/01\_nucleo\_narrativo.md:75--76}, \texttt{prompts/produto/04\_secoes\_apoio.md:32}.\\
+\textbf{Diagnóstico Técnico:} A Regra 12 de Produto exige que toda missão selecione uma habilidade primária obrigatoriamente vinculada ao eixo ``Cultura Digital'' sob risco de reprovação. Contudo, nas normas da BNCC Computação (Resolução CNE/CEB 1/2022), as habilidades de Ensino Médio (prefixo \texttt{EM13CO}) não possuem subdivisão em eixos. Missões de Ensino Médio são compelidas a forjar um eixo ou sofrem veto indevido.\\
+\textbf{Ação de Correção:} Criar exceção condicional no prompt: quando a habilidade iniciar por \texttt{EM13CO}, a verificação de eixo é desativada.
+\end{gapbox}
+
+\begin{gapbox}{GAP-13: Impossibilidade de Reexecução Parcial a partir do Estágio Produto}
+\textbf{Achados Absorvidos:} P-12 $\cdot$ \textbf{Severidade:} Média\\
+\textbf{Arquivos:} \texttt{pipeline/reexecucao.py:40}, \texttt{prompts/transversal/00\_triagem\_correcao.md}.\\
+\textbf{Diagnóstico Técnico:} O módulo de reexecução define a tupla de estágios como \texttt{ETAPAS = ("spec", "design", "dev", "transversal")}. O estágio de produto não consta na tupla. Caso a triagem de correção identifique uma falha no núcleo narrativo ou nas decisões do one-pager, o pipeline obriga a reiniciar a partir de \texttt{"spec"}, gerando uma spec que passa a divergir silenciosamente do one-pager histórico.\\
+\textbf{Ação de Correção:} Incorporar o estágio \texttt{"produto"} à tupla de etapas reexecutáveis no módulo \texttt{reexecucao.py}.
+\end{gapbox}
+
+\begin{gapbox}{GAP-14: Conflito de Réguas Temporais de Execução em Sala de Aula}
+\textbf{Achados Absorvidos:} P-17, P-18 $\cdot$ \textbf{Severidade:} Média\\
+\textbf{Arquivos:} \texttt{prompts/references/criterios-gate-estrutural.md:48}, \texttt{criterios-experiencia.md:52}, \texttt{10\_adequacao\_pedagogica.md:117}.\\
+\textbf{Diagnóstico Técnico:} O Critério 6.2 impõe teto de 25 minutos em tela para os estudantes; o Critério 4.5 cobra compatibilidade com aula de 50 minutos; o Parecer Pedagógico veta missões que excedam 50\% do tempo declarado; e o próprio Critério 4.5 cita fases de um rascunho obsoleto (\textit{``ambientação, exploração, revelação''}) conflitantes com o framework canônico de 6 etapas Unooria.\\
+\textbf{Ação de Correção:} Criar a tabela normativa única \texttt{references/tempos-aula.md} e atualizar a terminologia de etapas no Critério 4.5.
+\end{gapbox}
+
+\begin{gapbox}{GAP-15: Cegueira do Gate Estrutural em Relação à Rodada Corrente}
+\textbf{Achados Absorvidos:} P-08 $\cdot$ \textbf{Severidade:} Média\\
+\textbf{Arquivos:} \texttt{prompts/produto/05\_gate\_estrutural.md:74--80}, \texttt{agents/produto/\_\_init\_\_.py:92--102}.\\
+\textbf{Diagnóstico Técnico:} O prompt do Gate Estrutural prescreve regras de comportamento divergentes para a rodada final (deve interromper complementos e lavrar encaminhamento para decisão humana). No entanto, o orquestrador Python injeta no agente apenas o limite \texttt{gate\_max\_rodadas}, omitindo o contador dinâmico da rodada atual. O LLM nunca toma conhecimento da iteração corrente.\\
+\textbf{Ação de Correção:} Injetar o número da rodada corrente na inicialização e atualização do contexto do Agente 05.
+\end{gapbox}
+
+% ---------------- FRENTE 3 ----------------
+\newpage
+\subsection{Frente III: Design, Imersão e Experiência do Estudante}
+
+\begin{gapbox}{GAP-16: Sistema Fantasma de Retrabalho por Tickets em Design e Dev}
+\textbf{Achados Absorvidos:} D-07, D-08, D-11, D-12, V-05, V-07 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{agents/design/\_\_init\_\_.py:270--295}, \texttt{agents/dev/\_\_init\_\_.py:149, 170}, \texttt{prompts/references/contrato-saida.md:77}.\\
+\textbf{Diagnóstico Técnico:} Os prompts de QA orientam a geração de tickets para responsáveis como \texttt{prototipo-navegavel}, \texttt{wireframes}, \texttt{copy}, \texttt{spec} e \texttt{brief-oficio}. No orquestrador em Python, esses donos não existem no dicionário \texttt{\_DONOS\_ROTEAVEIS}; tickets de severidade \texttt{atencao}, \texttt{oficio} e \texttt{decisao\_humana} são descartados silenciosamente pelo código sem qualquer ação corretiva.\\
+\textbf{Ação de Correção:} Sincronizar todos os identificadores de agentes entre os prompts de QA e os roteadores Python de cada estágio.
+\end{gapbox}
+
+\begin{gapbox}{GAP-17: Inversão da Ordem Topológica de Dependência no Retrabalho de Design}
+\textbf{Achados Absorvidos:} D-09, D-10 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{agents/design/\_\_init\_\_.py:260--268}, \texttt{prompts/design/26\_telas.md}, \texttt{27\_copy\_revisao.md}.\\
+\textbf{Diagnóstico Técnico:} Na cadeia de retrabalho de Design, o agente \texttt{copy-revisao} é disparado antes de \texttt{caa} e \texttt{telas}. Como a revisão textual necessita avaliar os textos dispostos nos frames de tela e nos símbolos assistivos, ela é forçada a ler os dados defasados da passada anterior. Simultaneamente, o gerador de telas implementa strings da passada antiga.\\
+\textbf{Ação de Correção:} Reordenar a lista de execução de retrabalho para a sequência estrita: \texttt{telas} $\to$ \texttt{caa} $\to$ \texttt{copy-revisao}.
+\end{gapbox}
+
+\begin{gapbox}{GAP-18: Validação Cega do Protótipo HTML e Dependência de Autodeclaração}
+\textbf{Achados Absorvidos:} D-01, D-29 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{prompts/design/30\_qa\_entregaveis.md:37, 81}, \texttt{tools/artefatos\_html.py:36}.\\
+\textbf{Diagnóstico Técnico:} O Agente 30 (QA de Design) valida o protótipo navegável lendo o sumário textual descritivo gerado pelo Agente 28, sem auditar o arquivo HTML real. Asserções de conformidade (\textit{``abre sem erro'', ``sem placeholders''} e responsividade) decorrem de autodeclaração do próprio gerador. Se houver falha de extração, o código HTML bruto inteiro é lançado no contexto do LLM, consumindo dezenas de milhares de tokens.\\
+\textbf{Ação de Correção:} Desenvolver o validador determinístico \texttt{tools/validar\_prototipo.py} para inspecionar marcação, tags semânticas e scripts antes de passar o resumo ao QA.
+\end{gapbox}
+
+\begin{gapbox}{GAP-19: Ambiguidade de Notação Mermaid em Grafos de Fluxo}
+\textbf{Achados Absorvidos:} D-14 $\cdot$ \textbf{Severidade:} Média\\
+\textbf{Arquivos:} \texttt{prompts/design/23\_fluxo.md:27, 93, 99}.\\
+\textbf{Diagnóstico Técnico:} O corpo do prompt instrui expressamente: \textit{``Prefira flowchart LR quando o percurso importar mais; stateDiagram-v2 só quando os estados importarem mais que as telas --- o espelho renderiza flowchart como diagrama nativo e cai num desenho mais pobre nas outras notações''}. Não obstante, nas linhas 93 e 99, a saída obrigatória do template impõe:
+\begin{center}
+\texttt{```mermaid} \\
+\texttt{stateDiagram-v2} \\
+\texttt{```}
+\end{center}
+Isso compele o modelo a violar a recomendação de percurso e degrada a renderização no espelho do Miro.\\
+\textbf{Ação de Correção:} Atualizar o bloco de saída em \texttt{23\_fluxo.md} para fixar \texttt{flowchart LR} como formato padrão prioritário.
+\end{gapbox}
+
+\begin{gapbox}{GAP-20: Conflito de Severidade no QA de Design (Pico Emocional da Missão)}
+\textbf{Achados Absorvidos:} Novo Gap 5, D-16 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{prompts/design/30\_qa\_entregaveis.md:123}, \texttt{prompts/references/contrato-saida.md}.\\
+\textbf{Diagnóstico Técnico:} O critério D7 determina categoricamente que a inversão de hierarquia visual na tela de pico emocional bloqueia a jornada do estudante. Contudo, o gabarito de envelope do próprio prompt orienta registrar essa ocorrência com severidade \texttt{oficio}. Dado que a esteira não bloqueia por tickets de ofício, artefatos com o clímax emocional visualmente quebrado são promovidos para produção.\\
+\textbf{Ação de Correção:} Corrigir a severidade associada à quebra de pico emocional em \texttt{30\_qa\_entregaveis.md} para \texttt{bloqueio}.
+\end{gapbox}
+
+\begin{gapbox}{GAP-21: Ausência de Critérios Falsificáveis de Acessibilidade Técnica}
+\textbf{Achados Absorvidos:} D-19, D-21, D-37 $\cdot$ \textbf{Severidade:} Média\\
+\textbf{Arquivos:} \texttt{prompts/design/25\_caa.md:83}, \texttt{prompts/design/26\_telas.md:130}.\\
+\textbf{Diagnóstico Técnico:} O pipeline não inclui testes automatizados nem parâmetros numéricos objetivos para checagem de contraste de cor (WCAG AA), suporte a sintetizador de voz (ARIA) ou área mínima de alvo de toque (44x44px em tela touch). Além disso, o Agente 25 adota os pictogramas ARASAAC (sob licença restritiva CC BY-NC-SA) como biblioteca default, expondo o produto a passivos jurídicos de licenciamento.\\
+\textbf{Ação de Correção:} Incluir parâmetros mensuráveis no checklist do QA de Design e migrar o default de CAA para símbolos proprietários Unooria ou de domínio público.
+\end{gapbox}
+
+\begin{gapbox}{GAP-22: Descarte Sistemático do Cenário 2--4 Estudantes por Aparelho}
+\textbf{Achados Absorvidos:} D-18 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{prompts/design/26\_telas.md:58}, \texttt{28\_prototipo.md:126}, \texttt{30\_qa\_entregaveis.md:115}.\\
+\textbf{Diagnóstico Técnico:} O prompt de telas instrui que, sob restrição de escopo ou tempo, os estados do cenário compartilhado (2 a 4 estudantes por aparelho) devem ser os primeiros a serem eliminados. Essa orientação vai na contramão da realidade da escola pública brasileira (onde dispositivos individuais são minoria) e gera reprovações mandatórias no Agente 30, que exige a presença de todos os cenários de uso.\\
+\textbf{Ação de Correção:} Blindar o estado degradado de uso compartilhado, proibindo o seu descarte na especificação das decisões críticas da missão.
+\end{gapbox}
+
+\begin{gapbox}{GAP-23: Falsa Dependência de Ferramentas Externas Inativas (Stitch e Miro)}
+\textbf{Achados Absorvidos:} D-25, D-30, D-31, D-32 $\cdot$ \textbf{Severidade:} Média\\
+\textbf{Arquivos:} \texttt{prompts/design/30\_qa\_entregaveis.md:117}, \texttt{config.py:31}.\\
+\textbf{Diagnóstico Técnico:} O QA de Design imputa reprovações à entrega quando constata ausência de IDs de telas do Stitch ou links ativos de board do Miro, mesmo quando as respectivas variáveis no ambiente estão configuradas como \texttt{stitch\_mcp\_mode="off"} e \texttt{miro\_ativo=False}. O pipeline cobra entregáveis de integrações intencionalmente desativadas.\\
+\textbf{Ação de Correção:} Condicionar as regras de verificação no QA de Design à disponibilidade ativa das ferramentas externas na configuração.
+\end{gapbox}
+
+% ---------------- FRENTE 4 ----------------
+\newpage
+\subsection{Frente IV: Governança, Contratos Técnicos e Validações}
+
+\begin{gapbox}{GAP-24: Base Incompleta do Catálogo Travando o Micro-Gate Anti-Repetição (V5)}
+\textbf{Achados Absorvidos:} Novo Gap 2, P-26 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{output/\_catalogo.json}, \texttt{tools/catalogo.py:110--145}, \texttt{scripts/catalogo.py}.\\
+\textbf{Diagnóstico Técnico:} O micro-gate inicial de Produto aplica o teste de novidade V5 (confronta duas frases da proposta contra missões do mesmo ano e ambiente). No arquivo \texttt{output/\_catalogo.json}, 10 missões legadas estão cadastradas com \texttt{descoberta\_central} como \texttt{[preencher do manifesto]}. A rotina determinística \texttt{scripts/catalogo.py listar} acusa oficialmente a inoperância do gate anti-repetição para quase metade do currículo.\\
+\textbf{Ação de Correção:} Executar script de migração para preencher os dados reais das 10 missões históricas a partir dos one-pagers aprovados.
+\end{gapbox}
+
+\begin{gapbox}{GAP-25: Desalinhamento Normativo do Enum de Status e Formato de IDs}
+\textbf{Achados Absorvidos:} P-04, P-05, P-06, P-07 $\cdot$ \textbf{Severidade:} Média\\
+\textbf{Arquivos:} \texttt{prompts/references/contrato-saida.md:23}, \texttt{formato-relatorios.md:11}, \texttt{08\_avaliacao\_pedagogica.md:89}.\\
+\textbf{Diagnóstico Técnico:} O contrato normativo central estabelece \texttt{"status": ["aprovado", "bloqueado", "concluido", "devolvido"]}. Todavia, prompts instruem a emitir \texttt{"aprovado\_com\_ressalvas"}. Além disso, enquanto \texttt{formato-relatorios.md} dita que \texttt{L<n>} é bloqueio e \texttt{A<n>} é atenção, o Agente 08 gera o achado \texttt{A1} com severidade \texttt{bloqueio}. Esse conflito de tipos confunde os parsers de diagnóstico.\\
+\textbf{Ação de Correção:} Definir um schema Pydantic unificado (\texttt{StatusEnvelopeSchema}) e validar todos os retornos de agentes contra essa especificação.
+\end{gapbox}
+
+\begin{gapbox}{GAP-26: Validação Cega a Pendências Textuais em Specs e Frontmatter do PRD}
+\textbf{Achados Absorvidos:} P-29, V-11, V-17 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{agents/produto/\_\_init\_\_.py:215--222}, \texttt{tools/rastro.py:767--860}.\\
+\textbf{Diagnóstico Técnico:} O agente de checagem \texttt{A16SpecCheck} valida apenas a presença física dos arquivos e as flags de BNCC/manifesto, sem varrer o texto em busca de tags residuais \texttt{[ABERTO --- dono]}. Da mesma forma, o validador de dev aprova PRDs que declaram \texttt{needs\_clarification: 2} no frontmatter YAML sem apontar as respectivas marcações no corpo do documento.\\
+\textbf{Ação de Correção:} Adicionar filtros determinísticos via regex para reprovar artefatos contendo tags de lacuna não resolvidas.
+\end{gapbox}
+
+\begin{gapbox}{GAP-27: Drift Temporal e Acoplamento Estático com a Plataforma Unooria}
+\textbf{Achados Absorvidos:} V-18, V-19, V-20, V-21, V-34 $\cdot$ \textbf{Severidade:} Média\\
+\textbf{Arquivos:} \texttt{prompts/references/criterios-dev.md:9}, \texttt{prompts/references/plataforma/versao-lida.json}, \texttt{tools/rastro.py:27--83}.\\
+\textbf{Diagnóstico Técnico:} As cópias locais de rotas, esquemas de telemetria e tabelas do sistema estão congeladas no commit \texttt{ba0de35} de 16/09/2026. O módulo \texttt{rastro.py} emprega listas estáticas \textit{hardcoded} de rotas da plataforma. Se o time de core da Unooria alterar um endpoint de telemetria em produção, o gerador continuará emitindo PRDs contra contratos obsoletos sem aviso de drift.\\
+\textbf{Ação de Correção:} Criar checagem automática no pipeline que alerta quando as cópias da plataforma ultrapassarem 15 dias de desatualização.
+\end{gapbox}
+
+\begin{gapbox}{GAP-28: Pseudo-Validação Determinística na Banca de Dev (Agente 44 como LLM)}
+\textbf{Achados Absorvidos:} V-02, V-03, V-10 $\cdot$ \textbf{Severidade:} Alta\\
+\textbf{Arquivos:} \texttt{agents/dev/\_\_init\_\_.py:110, 291--298}, \texttt{agents/checkers.py:531--549}.\\
+\textbf{Diagnóstico Técnico:} O Agente 44 é apresentado conceitualmente como consolidador determinístico da banca de 5 dimensões de Dev. Porém, sua implementação é um \texttt{LlmAgent}. Se o LLM alucinar a contagem dos votos dos 5 avaliadores ou ignorar uma reprovação da arquitetura, o veredito falso é aceito. Adicionalmente, o checker concatena os relatórios e preserva apenas o envelope do último documento.\\
+\textbf{Ação de Correção:} Substituir o Agente 44 por uma classe determinística em Python (\texttt{BancaDevConsolidatorAgent}) que apura os votos e combina os envelopes via regra matemática.
+\end{gapbox}
+
+% ==========================================
+% SEÇÃO 5: PLANO DE AÇÃO E ROADMAP
+% ==========================================
+\newpage
+\section{Roadmap de Implementação: O Caminho para o Padrão Ouro}
+
+Para sanear integralmente os 28 gaps sistêmicos com eficiência e sem introduzir novas regressões na esteira, recomenda-se a execução estruturada em \textbf{4 Ciclos de Intervenção}:
+
+\begin{destaquebox}{Visão dos 4 Ciclos Sequenciais de Trabalho}
+\begin{center}
+\textbf{Ciclo 1: Blindagem de Execução} $\longrightarrow$ \textbf{Ciclo 2: Circuito Pedagógico} $\longrightarrow$ \textbf{Ciclo 3: Contratos \& Retrabalho} $\longrightarrow$ \textbf{Ciclo 4: Governança \& Dev}
+\end{center}
+\end{destaquebox}
+
+\subsection{Detalhamento dos Ciclos de Trabalho}
+
+\begin{longtable}{@{}p{3.2cm} p{3.2cm} p{3.2cm} p{6.4cm}@{}}
+\toprule
+\textbf{Ciclo} & \textbf{Foco Principal} & \textbf{Gaps Cobertos} & \textbf{Impacto e Entregáveis Concretos} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\textbf{Ciclo 1: Blindagem de Execução} & Fail-safe no código, runtime de testes e controle de iteração. & \textbf{GAP-01, GAP-02, GAP-03, GAP-15} & \begin{minipage}[t]{6.4cm}\raggedright
+- \texttt{treat\_indefinido\_as\_blocked=True};\\
+- Remoção do vazio \texttt{""} em \texttt{A10bAdequacaoCheck};\\
+- Correção da linha 1748 em \texttt{test\_pipeline.py};\\
+- Injeção da rodada dinâmica no Gate Estrutural.
+\end{minipage} \\
+\midrule
+\textbf{Ciclo 2: Integridade Pedagógica} & Fechamento do loop pedagógico e higienização da base V5. & \textbf{GAP-08, GAP-09, GAP-10, GAP-11, GAP-24} & \begin{minipage}[t]{6.4cm}\raggedright
+- Conexão do Agente 10 ao Gate 11 e Spec 13;\\
+- Isolamento da chave \texttt{brief\_escopo};\\
+- Guardrail de spoiler a jusante;\\
+- Povoamento das 10 missões em \texttt{\_catalogo.json}.
+\end{minipage} \\
+\midrule
+\textbf{Ciclo 3: Contratos \& Retrabalho} & Sincronização de tickets, ordem de design e envelopes. & \textbf{GAP-16, GAP-17, GAP-19, GAP-20, GAP-25} & \begin{minipage}[t]{6.4cm}\raggedright
+- Sincronização de donos no orquestrador Python;\\
+- Nova ordem: \texttt{telas} $\to$ \texttt{caa} $\to$ \texttt{copy-revisao};\\
+- Template Mermaid com \texttt{flowchart LR};\\
+- Schema Pydantic único de envelopes.
+\end{minipage} \\
+\midrule
+\textbf{Ciclo 4: Governança \& Telemetria} & Consolidação determinística, tokens e segurança. & \textbf{GAP-04, GAP-05, GAP-06, GAP-26, GAP-28} & \begin{minipage}[t]{6.4cm}\raggedright
+- Acumulador de tokens e log \texttt{\_historico.jsonl};\\
+- Retries e backoff exponencial em chamadas de API;\\
+- Consolidador matemático na Banca de Dev (substituindo LLM no Agente 44).
+\end{minipage} \\
+\end{longtable}
+
+\section{Conclusão Técnica}
+
+A tese inicial de que existiam ``102 problemas independentes'' no repositório foi desmistificada por esta auditoria: tratava-se de uma contagem inflada por sintomas redundantes e catalogação fragmentada.
+
+Ao reorganizar o diagnóstico em torno dos **28 Gaps Sistêmicos Raiz**, o Gerador de Missões Unooria passa a dispor de um diagnóstico preciso, com causas fundamentais identificadas no código e soluções delimitadas. A execução dos 4 ciclos aqui desenhados não apenas encerra as 102 queixas históricas, mas blinda o gerador para operar com confiabilidade irrestrita, auditabilidade total e garantia autêntica de **Padrão Ouro**.
+
+\end{document}

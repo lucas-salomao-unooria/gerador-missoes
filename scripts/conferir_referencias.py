@@ -22,6 +22,10 @@ ALVOS = sorted(
     list((RAIZ / "prompts" / "references").glob("*.md"))
     + list((RAIZ / "prompts" / "produto").glob("*.md"))
     + list((RAIZ / "prompts" / "design").glob("*.md"))
+    # dev e transversal estavam fora do único guarda contra número revogado — e é lá que
+    # moram os seis maiores prompts da esteira, inclusive os cinco juízes da banca.
+    + list((RAIZ / "prompts" / "dev").glob("*.md"))
+    + list((RAIZ / "prompts" / "transversal").glob("*.md"))
 )
 #: Arquivos que podem citar valores antigos como registro histórico.
 ISENTOS = {"literatura-cognitiva.md", "literatura-cognitiva-resumo.md"}

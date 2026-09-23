@@ -170,7 +170,7 @@ Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica — a redund
 **Camada CAA:** aplicada | não aplicável | ausente — <n> telas com restrição CAA construída
 
 ## Cobertura — inventário × frame × estados
-| ID tela | Frame (nodeId) | Estados construídos | Strings usadas (chaves) | Placeholders `[[…]]` | Componentes do DS | Componentes locais (candidatos) | CAA construída (símbolo · alvo px · áudio) | Anotações |
+| ID tela | Frame (screenId) | Estados construídos | Strings usadas (chaves) | Placeholders `[[…]]` | Componentes do DS | Componentes locais (candidatos) | CAA construída (símbolo · alvo px · áudio) | Anotações |
 
 ## Especificação por tela (obrigatória — uma seção por tela do inventário)
 Para cada tela: zonas (topo/centro/rodapé ou moldura do aparelho), elementos contados vs teto, hierarquia (o que salta / o que recua), verbo, o que muda, estados.

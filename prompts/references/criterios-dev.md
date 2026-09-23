@@ -7,7 +7,7 @@ sources: [chat]
 # Critérios do gate de dev
 
 **Versão lida:** 02/09/2026 (critérios). **Gabarito da plataforma reconferido em 16/09/2026** contra `plataforma-unooria@ba0de35` — as cópias canônicas estão em `references/plataforma/` (`versao-lida.json`). 73 critérios, 5 dimensões, **22 bloqueantes** (contagem real dos cinco arquivos: 16 + 14 + 15 + 15 + 13; DES-14 nasceu do lado de cá em 21/09/2026 e ganhou severidade em 22/09).
-Consolidação: 🟢 exige zero ❌ nos 72 — qualquer ❌ não bloqueante rebaixa
+Consolidação: 🟢 exige zero ❌ nos 73 — qualquer ❌ não bloqueante rebaixa
 para 🟡.
 
 ⚠️ **Os critérios deles citam ADRs, tabelas e rotas reais do repositório.**

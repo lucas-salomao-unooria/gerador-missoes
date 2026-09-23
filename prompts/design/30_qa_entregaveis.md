@@ -86,6 +86,27 @@ A esteira não constrói mais em ferramenta de design: a jornada e o fluxo saem 
 
 Com o Stitch disponível, confirme que o projeto existe e que as telas da tabela do D5 estão lá (`list_screens`, `get_screen`). Sem ele, registre `STITCH: indisponível — <motivo>` e siga: a auditoria continua válida, porque o contrato está nos documentos.
 
+## Como decidir o veredito
+
+Você é o único gate desta esteira que listava quatro vereditos sem dizer quando usar cada um —
+e o rótulo do 🟡 era "não inspecionado", que confunde o **modo de inspeção** com a **qualidade
+do entregável**. Inspeção documental é o caminho normal quando o Stitch está desligado: ela não
+rebaixa nada. Decida assim, e só assim:
+
+| Veredito | Condição |
+|---|---|
+| 🟢 **APROVADO** | Nenhum ❌ em dimensão obrigatória (D1–D8c). Ressalvas de ofício (O1–O5) podem existir se estiverem nomeadas. |
+| 🟡 **APROVADO COM RESSALVAS** | Nenhum ❌ obrigatório, mas há ⚠️ que o agente a jusante consegue contornar, ou pendência humana herdada da spec. A esteira segue; a ressalva fica visível. |
+| 🔴 **RETRABALHO** | Qualquer ❌ em dimensão obrigatória, **ou** a inversão de hierarquia da tela `pico` (O1). Emita o ticket com dono e o que fazer. |
+| ⛔ **DEVOLVIDO AO PRODUTO** | O defeito está na spec, não na construção: o design fez o que a spec mandava e a spec está errada. Nunca use isto para defeito de tela. |
+
+**O modo de inspeção não é veredito.** Declare-o na linha `Inspeção:` e siga. Se o Stitch está
+desligado (`stitch_links` declara `off`), confira na jornada e no protótipo: tela ausente do
+Stitch **não é** ❌ nesse caso.
+
+**Evidência obrigatória.** Nunca marque ✅ sem citar onde no documento a evidência está (seção e
+trecho). ✅ sem citação vale ⚠️. Um ❌ sem o trecho que o sustenta não é ticket, é opinião.
+
 ## Pré-check de lacunas — antes de qualquer dimensão
 
 Colete toda lacuna aberta declarada nos relatórios de **fechamento de lacunas, ambiente, jornada, fluxo, copy, CAA e wireframes**. Lacuna com dono `gate-estrutural` → ⛔ devolve ao produto, não consome rodada. Lacuna com dono de design (`fecha-lacunas`, `ambiente-simulado`, `jornada`, `fluxo`, `copy-ptbr`, `caa`, `telas`, `copy-ptbr-revisao`) → 🔁 ticket ao dono. Você **não fecha lacuna**.
@@ -179,7 +200,7 @@ Na **última rodada permitida**, não adianta endereçar ticket esperando corre�
 ```
 # QA de Entregáveis — <missão> — rodada <n> de {qa_max_rodadas}
 
-**Veredito: 🟢 APROVADO PARA REVISÃO HUMANA | 🟡 APROVADO COM RESSALVA — não inspecionado | 🔴 RETRABALHO (<n> tickets ❌) | ⛔ DEVOLVIDO AO PRODUTO**
+**Veredito: <um só: 🟢 APROVADO PARA REVISÃO HUMANA · 🟡 APROVADO COM RESSALVAS · 🔴 RETRABALHO (<n> tickets ❌) · ⛔ DEVOLVIDO AO PRODUTO>**
 **Inspeção:** Stitch conferido | documental
 
 ## Pré-check de lacunas

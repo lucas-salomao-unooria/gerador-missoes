@@ -295,6 +295,17 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                 "documento": documento, "dono": "handoff-dev", "etapa": "dev", "severidade": "bloqueio",
             })
 
+    # Nenhum documento com conteúdo não é "sem lacunas" — é ausência de documento. O relatório
+    # saía 🟢 SEM LACUNAS com `documentos` vazio, que é o veredito mais perigoso que existe:
+    # afirma que se leu tudo e nada havia.
+    lidos = [d for d in documentos_lidos if d.get("chars", 0) > 0] if documentos_lidos and isinstance(documentos_lidos[0], dict) else documentos_lidos
+    if not lidos:
+        achados.append({
+            "tipo": "fonte_vazia", "codigo": "fontes-vazias", "trecho": "—",
+            "contexto": "Nenhum dos documentos varridos tinha conteúdo: não há como afirmar que não há lacunas.",
+            "documento": "—", "dono": "dev", "etapa": "dev", "severidade": "bloqueio",
+        })
+
     por_etapa = {e: sum(1 for a in achados if a["etapa"] == e) for e in ETAPAS}
     if any(a["severidade"] == "bloqueio" for a in achados):
         status = "bloqueado"
@@ -833,6 +844,12 @@ def validar_prd(prd: str) -> Dict[str, Any]:
     """
     texto = prd or ""
     achados: List[Dict[str, str]] = []
+    if not texto.strip():
+        return {"status": "bloqueado", "achados": [{
+            "severidade": "bloqueio", "codigo": "prd-vazio", "etapa": "dev",
+            "resumo": "O PRD chegou vazio. Sem documento não há consistência a conferir — e o "
+                      "gate saía 🟡 por não encontrar defeito no que não existe.",
+        }]}
 
     def falha(codigo: str, resumo: str, severidade: str = "bloqueio", etapa: str = "dev") -> None:
         achados.append({"severidade": severidade, "codigo": codigo, "etapa": etapa, "resumo": resumo})

@@ -48,6 +48,7 @@ from google.adk.agents.sequential_agent import SequentialAgent
 from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca
 from agents.checkers import (
+    ConsolidacaoBancaAgent,
     DespachoTicketsAgent,
     EnvelopeGateAgent,
     RastroCheckAgent,
@@ -108,15 +109,13 @@ def get_validador_agents(**kw) -> list[LlmAgent]:
     ]
 
 
-def get_consolidacao_banca_agent(**kw) -> LlmAgent:
-    return create_llm_agent(
+def get_consolidacao_banca_agent(**kw) -> ConsolidacaoBancaAgent:
+    """Determinístico desde 23/09/2026 — ver `tools/banca.py` para o porquê."""
+    return ConsolidacaoBancaAgent(
         name="A44ConsolidacaoBanca",
-        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
-        description="Consolida as 5 dimensões da banca em um relatório único com veredito determinístico 🟢/🟡/🔴.",
-        instruction=load_prompt("dev/44_consolidacao_banca.md"),
-        output_key="validacao_dev_report",
-        before_agent_callback=marcar_heranca,
-        **kw,
+        description="Consolida as 5 dimensões da banca: veredito = o pior delas, com a lista de "
+                    "bloqueantes lida dos próprios arquivos de critério.",
+        fontes=[key for _, key, _, _ in _VALIDADORES],
     )
 
 
@@ -307,7 +306,6 @@ def build_dev_stage(
                         max_rounds=rodadas_banca,
                         escalate_on_approve=True,
                         block_pipeline_on_fail=estrito,
-                        treat_indefinido_as_blocked=False,
                         before_agent_callback=marcar_heranca,
                     ),
                     DespachoTicketsAgent(
@@ -369,7 +367,7 @@ DEV_METADATA = [
     {"id": "A41BancaPedagogiaBncc", "name": "41 · Banca: Pedagogia & BNCC", "icon": "🅲", "output_key": "validacao_pedagogia_bncc", "prompt_file": "dev/41_validacao_pedagogia_bncc.md", "description": "PED-01…15."},
     {"id": "A42BancaDadosLgpd", "name": "42 · Banca: Dados, Telemetria & LGPD", "icon": "🅳", "output_key": "validacao_dados_lgpd", "prompt_file": "dev/42_validacao_dados_lgpd.md", "description": "DAD-01…15."},
     {"id": "A43BancaTecnicaArquitetura", "name": "43 · Banca: Técnica & Arquitetura", "icon": "🅴", "output_key": "validacao_tecnica_arquitetura", "prompt_file": "dev/43_validacao_tecnica_arquitetura.md", "description": "TEC-01…13."},
-    {"id": "A44ConsolidacaoBanca", "name": "44 · Consolidação da banca", "icon": "⚖️", "output_key": "validacao_dev_report", "prompt_file": "dev/44_consolidacao_banca.md", "description": "Veredito determinístico 🟢/🟡/🔴 e bloqueios."},
+    {"id": "A44ConsolidacaoBanca", "name": "44 · Consolidação da banca", "icon": "⚖️", "output_key": "validacao_dev_report", "prompt_file": None, "description": "Determinístico: veredito = a pior das 5 dimensões; bloqueantes lidos de `references/criterios-dev/`."},
     {"id": "A45ValidacaoDevCheck", "name": "45 · Veredito de dev (determinístico)", "icon": "🔀", "output_key": "dev_status", "prompt_file": None, "description": "Lê o envelope da banca."},
     {"id": "A46DespachoBanca", "name": "46 · Retrabalho da banca (determinístico)", "icon": "🔁", "output_key": "reexecucoes", "prompt_file": None, "description": "Reexecuta o dono de cada achado da banca — inclusive quando o dono está na etapa de design. Achado de produto vira pendência nomeada."},
     {"id": "A47PrdWriter", "name": "47 · PRD padrão ouro", "icon": "📘", "output_key": "prd_final", "prompt_file": "dev/47_prd_writer.md", "description": "PRD completo com contexto arquitetural da plataforma — entregável do pipeline."},

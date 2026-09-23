@@ -71,7 +71,7 @@ As 13 seções, com a origem indicada: 1 ← spec bloco 0 · 2 ← bloco 1 · 3 
 ```
 ### [ID da tela] — <título>
 **Como** estudante | professor **Quero** <ação com o verbo nativo> **Para** <o que resolve>
-**Frame:** <nodeId> · **Strings:** <chaves> · **Etapa:** <0–6> · **Sustenta:** <critérios>
+**Frame:** <screenId> · **Strings:** <chaves> · **Etapa:** <0–6> · **Sustenta:** <critérios>
 **Critérios de aceite**
 - [ ] <verificável, um por linha>
 - [ ] 🔒 <requisito de conformidade — de onde vem>

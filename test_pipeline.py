@@ -340,7 +340,11 @@ def test_secao_split_d0_e_d9():
     assert "## 13. Decisões D0" in state["spec_missao"] and "Passo 5b" not in state["spec_missao"]
     assert state["spec_missao_gate0"] == spec_original
     assert state["relatorio_lacunas"].startswith("### [D0-1]") and "Passo 6" not in state["relatorio_lacunas"]
-    assert state["lacunas_status"] == "aprovado"
+    # `segue_com_pendencias` é o que o nome diz: segue, COM pendências. Desde 23/09/2026 o
+    # dossiê grava o veredito como o agente o deu, em vez de achatar tudo em "aprovado" — em
+    # 14 execuções nenhum gate de LLM aparecia amarelo, embora os relatórios estivessem cheios
+    # de amarelo. O ROTEAMENTO continua binário: a esteira segue.
+    assert state["lacunas_status"] == "amarelo"
     assert not state.get(KEY_PIPELINE_BLOQUEADO)
 
     # D9 dormente: reemite a spec (blocos 1–13 + bloco 14); o split troca spec_missao e não bloqueia
@@ -400,7 +404,10 @@ def test_secao_split_d0_e_d9():
     )
     _, state3 = asyncio.run(_run(root3))
     assert state3["spec_missao"] == spec_consolidada
-    assert state3["ambiente_status"] == "bloqueado"
+    # `aguarda_gate` é o D9 devolvendo a decisão ao Gate 0 / PO: pendência humana, não
+    # impedimento. Lido como bloqueio, travava a esteira num impasse que nenhum agente
+    # resolve — não existe loop que devolva a decisão ao Gate 0 (23/09/2026).
+    assert state3["ambiente_status"] == "amarelo"
     assert state3.get("brief_oficio") == "brief" and not state3.get(KEY_PIPELINE_BLOQUEADO)
     print("   ✓ split D0/D9: spec consolidada, cópia da original, relatório separado, status informativo")
 
@@ -2388,11 +2395,15 @@ def test_veredito_reproduzivel_e_retry_em_toda_chamada():
                                 get_nucleo_narrativo_agent, get_secoes_apoio_agent)
     from agents.design import get_qa_entregaveis_agent
     from agents.dev import get_validador_agents, get_consolidacao_banca_agent
+    from agents.checkers import ConsolidacaoBancaAgent
+
+    # o consolidador da banca deixou de ser LlmAgent em 23/09/2026: o veredito é contado em
+    # código a partir dos cinco envelopes, com os bloqueantes lidos dos arquivos de critério
+    assert isinstance(get_consolidacao_banca_agent(), ConsolidacaoBancaAgent)
 
     juizes = ([get_micro_gate_agent(), get_gate_estrutural_agent(), get_avaliacao_pedagogica_agent(),
                get_experiencia_aluno_agent(), get_adequacao_pedagogica_agent(),
-               get_gate_final_produto_agent(), get_qa_entregaveis_agent(),
-               get_consolidacao_banca_agent()] + get_validador_agents())
+               get_gate_final_produto_agent(), get_qa_entregaveis_agent()] + get_validador_agents())
     for ag in juizes:
         c = ag.generate_content_config
         assert c.temperature is not None, f"{ag.name} emite veredito sem temperatura fixa"
@@ -2490,6 +2501,47 @@ def test_erro_de_grafia_nao_vira_erro_de_arquitetura():
     assert "websocket" in {a["codigo"] for a in validar_telemetria(escudo)["achados"]}
 
     print("   ✓ prefixo com underscore é achado próprio; canal declarado com grafia errada não vira WebSocket")
+
+
+def test_banca_consolidada_em_codigo_enxerga_todos_os_bloqueantes():
+    """O consolidador da banca prometia veredito determinístico e era um LlmAgent.
+
+    Em 14 execuções leu 122 achados e aprovou 14 vezes. E a lista de bloqueantes que o prompt
+    dele carregava omitia `DES-14` — visão do professor completa, declarada bloqueante nos
+    critérios desde 22/09/2026. A visão do professor podia faltar inteira e a banca liberava.
+
+    A lista passa a ser lida dos próprios arquivos de `references/criterios-dev/`: uma fonte,
+    sem cópia para divergir.
+    """
+    from tools.banca import todos_bloqueantes, consolidar, FORA_DA_ESTEIRA
+
+    travam = todos_bloqueantes()
+    assert len(travam) == 22, sorted(travam)
+    assert "DES-14" in travam, "o bloqueante que o prompt do consolidador não enxergava"
+
+    # ❌ em bloqueante reprova
+    r = consolidar({"validacao_design_imersao": {"achados": [
+        {"codigo": "DES-14", "severidade": "bloqueio", "resumo": "sem visão do professor"}]}})
+    assert r["status"] == "bloqueado", r
+
+    # dimensão que não respondeu é bloqueio, nunca aprovação
+    assert consolidar({"validacao_dados_lgpd": None})["status"] == "bloqueado"
+
+    # o que pede ato no monorepo vira pendência declarada e não rebaixa o veredito
+    r_plat = consolidar({"validacao_tecnica_arquitetura": {"achados": [
+        {"codigo": "TEC-09", "severidade": "bloqueio", "resumo": "sem roteiro de walkthrough"}]}})
+    assert r_plat["status"] == "aprovado", r_plat
+    assert r_plat["achados"][0]["classe"] == "pendencia-plataforma"
+    assert "TEC-09" in FORA_DA_ESTEIRA
+
+    # o veredito global é o PIOR das dimensões
+    r_misto = consolidar({
+        "validacao_produto_narrativa": {"achados": []},
+        "validacao_pedagogia_bncc": {"achados": [{"codigo": "PED-09", "severidade": "bloqueio", "resumo": "x"}]},
+    })
+    assert r_misto["status"] == "amarelo", r_misto  # PED-09 não é bloqueante
+
+    print(f"   ✓ banca consolidada em código: {len(travam)} bloqueantes lidos dos critérios, DES-14 incluído")
 
 
 if __name__ == "__main__":

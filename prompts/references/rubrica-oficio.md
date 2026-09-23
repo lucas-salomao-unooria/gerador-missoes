@@ -6,7 +6,7 @@ sources: [chat]
 
 # Rubrica de ofício v0.1
 
-Conformidade é do agente 6. Aqui se mede **execução**: uma entrega pode cumprir todo obrigatório da v1.13 e ainda ser medíocre. Hoje nada no pipeline reprova por isso.
+Conformidade é do agente 6. Aqui se mede **execução**: uma entrega pode cumprir todo obrigatório da rubrica e ainda ser medíocre. Hoje nada no pipeline reprova por isso.
 
 Cada item devolve ou não devolve. **Item que precisa de debate pra responder está mal redigido** — reescreva ou tire. É a única defesa contra esta rubrica virar gosto em três missões.
 

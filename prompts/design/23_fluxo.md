@@ -24,7 +24,7 @@ Jornada e fluxo não são o mesmo artefato. **A jornada é experiência no tempo
 
 ## Como você entrega
 
-O grafo é **Mermaid**, sempre, num bloco ` ```mermaid `. Você não constrói board: depois da etapa, um passo determinístico espelha este bloco num board do Miro, e o texto continua sendo a fonte. Prefira `flowchart LR` quando o percurso importar mais; `stateDiagram-v2` só quando os estados importarem mais que as telas — o espelho renderiza `flowchart` como diagrama nativo e cai num desenho mais pobre nas outras notações. Junto vai a lista de arestas em tabela, que é o que o dev implementa.
+O grafo é **Mermaid**, sempre, num bloco ` ```mermaid `. Você não constrói board: depois da etapa, um passo determinístico espelha este bloco num board do Miro, e o texto continua sendo a fonte. Use `stateDiagram-v2` — é o que os dois templates obrigatórios deste prompt fixam, e o que o espelho do Miro renderiza que as telas — o espelho renderiza `flowchart` como diagrama nativo e cai num desenho mais pobre nas outras notações. Junto vai a lista de arestas em tabela, que é o que o dev implementa.
 
 Para o diagrama ficar legível:
 

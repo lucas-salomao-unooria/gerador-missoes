@@ -63,6 +63,13 @@ def _serie(one_pager: str) -> Dict[str, Any]:
 
 def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "") -> Dict[str, Any]:
     """Aplica as regras ao one-pager. Devolve `status`, `achados` e a série lida."""
+    if not (one_pager or "").strip():
+        return {"status": "bloqueado", "achados": [{
+            "severidade": "bloqueio", "codigo": "one-pager-vazio", "etapa": "produto",
+            "criterio": "—",
+            "resumo": "O one-pager chegou vazio: `secao_bloco` não encontra seção nenhuma e o "
+                      "lint devolvia `aprovado` por não achar defeito no que não existe.",
+        }]}
     texto = one_pager or ""
     achados: List[Dict[str, str]] = []
 

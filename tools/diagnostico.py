@@ -39,6 +39,11 @@ GATES: List[Dict[str, Optional[str]]] = [
 #: continua sendo o gate estrutural e a avaliação pedagógica.
 CONSULTIVOS = [
     {"chave": "adequacao_report", "rotulo": "Adequação pedagógica", "etapa": "produto"},
+    # O lint de contrato de plataforma roda em modo não estrito por desenho (devolve ao autor
+    # do one-pager em vez de travar), mas não aparecia em lugar nenhum do dossiê: os achados
+    # dele — WebSocket na seção 8, número sem origem, SAEB fora do ano — eram invisíveis para
+    # quem lia o relatório da execução.
+    {"chave": "contrato_produto_report", "rotulo": "Contrato de plataforma e origem dos números", "etapa": "produto"},
 ]
 
 _ICONE = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴", "devolvido": "🔴"}

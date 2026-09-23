@@ -363,9 +363,6 @@ def build_qa_design_loop(**kw) -> LoopAgent:
                 max_rounds=rodadas,
                 escalate_on_approve=True,
                 block_pipeline_on_fail=get_settings().esteira_estrita,
-                treat_indefinido_as_blocked=False,
-                # Com o pipeline já bloqueado ele leria a mensagem de pulo do QA
-                # e sobrescreveria o motivo do bloqueio original.
                 before_agent_callback=marcar_heranca,
             ),
             DespachoTicketsAgent(

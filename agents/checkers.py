@@ -60,6 +60,7 @@ from .callbacks import (
     STATUS_BLOQUEADO,
     extrair_envelope,
     extrair_slug,
+    status_registrado,
     inferir_status,
     texto_de_heranca,
 )
@@ -128,7 +129,6 @@ class EnvelopeGateAgent(BaseAgent):
     max_rounds: int = 1
     escalate_on_approve: bool = False
     block_pipeline_on_fail: bool = True
-    treat_indefinido_as_blocked: bool = True
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -136,11 +136,22 @@ class EnvelopeGateAgent(BaseAgent):
         relatorio = str(state.get(self.report_key, "") or "")
         envelope = extrair_envelope(relatorio)
         status = inferir_status(relatorio, envelope)
-        if status not in (STATUS_APROVADO, STATUS_BLOQUEADO):
-            status = STATUS_BLOQUEADO if self.treat_indefinido_as_blocked else STATUS_APROVADO
+        # Relatório vazio, truncado ou sem veredito legível é BLOQUEIO, sempre. O QA de design
+        # e a banca de dev optavam pelo contrário (`treat_indefinido_as_blocked=False`) e, com
+        # isso, uma resposta que não chegou valia aprovação: é o pior erro possível num gate,
+        # porque não deixa rastro no dossiê. O motivo é registrado à parte para separar
+        # "reprovou" de "não respondeu" — são defeitos diferentes, com donos diferentes.
+        truncado = status not in (STATUS_APROVADO, STATUS_BLOQUEADO)
+        if truncado:
+            status = STATUS_BLOQUEADO
 
         rodada = int(state.get(self.round_key, 0) or 0) + 1 if self.round_key else 1
-        delta = {self.status_key: status, f"{self.status_key}_envelope": envelope or {}}
+        # O ROTEAMENTO usa `status` (binário: a esteira segue ou não). O DOSSIÊ usa o veredito
+        # como ele foi dado: gravar "aprovado" onde o juiz escreveu 🟡 apagava a ressalva, e em
+        # 14 execuções nenhum gate de LLM apareceu amarelo embora os relatórios estivessem
+        # cheios de amarelo. O que o time lia era um verde que o juiz não deu.
+        registrado = STATUS_BLOQUEADO if truncado else status_registrado(relatorio, envelope)
+        delta = {self.status_key: registrado, f"{self.status_key}_envelope": envelope or {}}
         if self.round_key:
             delta[self.round_key] = rodada
 
@@ -164,7 +175,9 @@ class EnvelopeGateAgent(BaseAgent):
                     + ". A esteira segue até o fim: o que derivar daqui sai marcado "
                     "`[PROVISÓRIO]` e o diagnóstico final registra o que travou e de quem é."
                 )
-                registrar_degradacao(state, delta, self.rotulo, f"{self.rotulo} reprovado")
+                motivo = (f"{self.rotulo}: relatório vazio ou sem veredito legível"
+                          if truncado else f"{self.rotulo} reprovado")
+                registrar_degradacao(state, delta, self.rotulo, motivo)
             else:
                 msg = (
                     f"⚠️ {self.rotulo}: reprovado"
@@ -230,7 +243,19 @@ class SecaoSplitAgent(BaseAgent):
         linhas: List[str] = []
 
         if not texto.strip():
-            linhas.append(f"⏭️ {self.rotulo}: `{self.source_key}` vazio — nada a extrair.")
+            # O status era simplesmente NÃO GRAVADO, e `tools/diagnostico.py` pula gate ausente
+            # do estado: o D0 e o D9 truncados **sumiam do dossiê**, sem linha, sem achado e sem
+            # veredito. Uma resposta que não chegou é bloqueio, e precisa aparecer.
+            linhas.append(f"⛔ {self.rotulo}: `{self.source_key}` vazio — o agente não respondeu.")
+            delta[self.status_key] = STATUS_BLOQUEADO
+            delta[f"{self.status_key}_envelope"] = {
+                "status": "bloqueado",
+                "achados": [{
+                    "severidade": "bloqueio", "codigo": "fonte-vazia",
+                    "agente_responsavel": self.name,
+                    "resumo": f"`{self.source_key}` chegou vazio: o agente não produziu resposta.",
+                }],
+            }
         else:
             for ex in self.extracoes:
                 chave = ex["chave"]
@@ -261,10 +286,18 @@ class SecaoSplitAgent(BaseAgent):
 
             envelope = extrair_envelope(texto)
             status = inferir_status(texto, envelope)
-            if status not in (STATUS_APROVADO, STATUS_BLOQUEADO):
-                status = STATUS_APROVADO
-            delta[self.status_key] = status
-            delta[f"{self.status_key}_envelope"] = envelope or {}
+            ilegivel = status not in (STATUS_APROVADO, STATUS_BLOQUEADO)
+            if ilegivel:
+                status = STATUS_APROVADO  # o split é informativo: o conteúdo veio, o veredito não
+            delta[self.status_key] = STATUS_APROVADO if ilegivel else status_registrado(texto, envelope)
+            env = dict(envelope or {})
+            if ilegivel:
+                env.setdefault("achados", []).append({
+                    "severidade": "atencao", "codigo": "envelope-ilegivel",
+                    "agente_responsavel": self.name,
+                    "resumo": f"{self.rotulo} respondeu sem envelope legível — o conteúdo foi extraído, o veredito não.",
+                })
+            delta[f"{self.status_key}_envelope"] = env
             bruto = (envelope or {}).get("status") or status
             icone = "🔴" if status == STATUS_BLOQUEADO else "🟢"
             linhas.append(f"{icone} {self.rotulo}: status `{bruto}` (informativo — o pipeline segue).")
@@ -469,6 +502,54 @@ class BnccCheckAgent(BaseAgent):
                 )
             else:
                 msg = f"⚠️ {self.rotulo}: {len(bloqueios)} achado(s) — modo não estrito, segue como ressalva.\n{itens}"
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta=delta),
+        )
+
+
+class ConsolidacaoBancaAgent(BaseAgent):
+    """Determinístico: o veredito da banca é a pior das cinco dimensões, contada em código.
+
+    Era um `LlmAgent` cuja própria descrição prometia "veredito determinístico 🟢/🟡/🔴". Em 14
+    execuções leu 122 achados e aprovou 14 vezes — e a lista de bloqueantes que ele carregava
+    no prompt omitia `DES-14` (visão do professor completa), que os critérios declaram
+    bloqueante desde 22/09/2026. A visão do professor podia faltar inteira e a banca liberava.
+
+    A lista agora é lida dos próprios arquivos de `references/criterios-dev/`: não há segunda
+    cópia para divergir. Dimensão sem envelope legível **bloqueia** — uma das cinco não ter
+    respondido é exatamente o caso em que aprovar é mais caro.
+    """
+
+    fontes: List[str] = Field(default_factory=list)
+    report_key: str = "validacao_dev_report"
+    status_key: str = "dev_status"
+    rotulo: str = "Banca de dev"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import banca as bnc
+
+        state = ctx.session.state
+        missao = extrair_slug(state) or ""
+        envelopes = {chave: extrair_envelope(str(state.get(chave, "") or "")) for chave in self.fontes}
+        resultado = bnc.consolidar(envelopes)
+        texto = bnc.relatorio(resultado, missao)
+
+        delta = {
+            self.report_key: texto,
+            f"{self.status_key}_envelope": {"agente": bnc.AGENTE, "status": resultado["status"],
+                                            "achados": resultado["achados"]},
+        }
+        marca = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
+        dims = " · ".join(f"{k.replace('validacao_', '')}: {marca_d}"
+                          for k, marca_d in ((k, {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[v["status"]])
+                                             for k, v in resultado["por_dimensao"].items()))
+        msg = f"{marca} {self.rotulo}: {resultado['status']} — {dims}"
 
         yield Event(
             invocation_id=ctx.invocation_id,
@@ -858,8 +939,19 @@ class RegistroCatalogoAgent(BaseAgent):
             if resultado["achados"]:
                 msg += "\n" + "\n".join(f"- ⚠️ {a['resumo'][:120]}" for a in resultado["achados"])
         except Exception as exc:  # o registro é memória, não gate: nunca derruba a execução
-            delta = {self.status_key: "aprovado"}
-            msg = f"⚠️ Catálogo: não consegui montar a ficha desta missão ({exc}). A execução segue."
+            # Mas falhar não é aprovar. Gravar `aprovado` numa exceção faz o dossiê dizer que a
+            # missão entrou no índice quando ela não entrou — e o gate de semelhança da próxima
+            # execução compara contra um catálogo que não a tem. 🟡 diz a verdade e não trava.
+            delta = {
+                self.status_key: "amarelo",
+                f"{self.status_key}_envelope": {"agente": cat.AGENTE, "status": "amarelo", "achados": [{
+                    "severidade": "atencao", "codigo": "catalogo-indisponivel",
+                    "agente_responsavel": "catalogo",
+                    "resumo": f"A missão não foi registrada no índice ({exc}): a próxima execução "
+                              f"não a terá como vizinha na verificação de semelhança.",
+                }]},
+            }
+            msg = f"⚠️ Catálogo: não consegui montar a ficha desta missão ({exc}). A execução segue, e o dossiê registra a falta."
 
         yield Event(
             invocation_id=ctx.invocation_id,
@@ -930,9 +1022,13 @@ class SaidaDeLoopAgent(BaseAgent):
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         state = ctx.session.state
         rodada = int(state.get(self.rodada_key, 0) or 0) + 1
+        # Chave ausente conta como REPROVADA. O `k in state` fazia o loop encerrar com
+        # aprovação quando o gate a montante não tinha escrito nada — e era o caso do
+        # `adequacao_status`, que nenhum agente gravava: o `A10bAdequacaoCheck` aprovava
+        # sempre, sobre uma chave que nunca existiu.
         reprovados = [
             k for k in self.status_keys
-            if str(state.get(k, "")).strip().lower() not in self.aceitos and k in state
+            if str(state.get(k, "")).strip().lower() not in self.aceitos
         ]
         esgotou = rodada >= self.max_rounds
         delta: Dict[str, Any] = {self.rodada_key: rodada}
