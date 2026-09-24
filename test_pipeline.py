@@ -3008,6 +3008,35 @@ def test_ia_ao_estudante_e_decidida_pela_spec():
     print("   ✓ IA ao estudante: a spec decide, e o PRD que a contradiz é apontado")
 
 
+def test_sinais_do_professor_em_tabela_propria_e_prosa_nao_emite():
+    """24/09/2026, segunda rodada da mesma missão: o PRD copiou a tabela de `EVT-P*` do catálogo à
+    risca (coluna «Quando grava») e o gate, que só lia a de «Quando dispara», deu 13 achados de sinal
+    inexistente. E o changelog que dizia "expurgo de `EVT-U06`" contava como emissão do evento."""
+    from tools.kpis import validar_kpis
+
+    prd = """
+| KPI | PQ | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |
+|---|---|---|---|---|---|---|---|---|---|---|
+| KPI-01 | T15 | De X professores que acessaram a missão, quantos iniciaram a customização? | <50% → rever | missao | — | `EVT-P01` | razão | sem baseline — primeira medição | 50% | 11/2026 |
+
+| ID | Verbo | Objeto | Quando dispara | Resultado | Contexto | Onde é lido |
+|---|---|---|---|---|---|---|
+| EVT-001 | progressed | aha:revelacao | E4-ALU-02 | {"ok": true} | — | exp09ef1b_sessoes |
+
+| Sinal | Objeto | Quando grava | Onde fica | Responde |
+|---|---|---|---|---|
+| `EVT-P01` | `preparo:iniciar` | Primeira chamada de preparo da turma | `exp09ef1b_conteudo_turma.preparo_iniciado_em` | T14, T15 |
+
+- O que mudou nesta versão: expurgo definitivo de `EVT-U06`, a IA não responde ao estudante.
+"""
+    achados = validar_kpis(prd, "- `perguntas_herdadas`: T15\n")["achados"]
+    codigos = {a["codigo"] for a in achados}
+    assert "kpi-evento-inexistente" not in codigos, achados
+    assert not any(a["codigo"] == "sinal-universal-ausente" and "EVT-P01" in a["resumo"] for a in achados)
+    assert "sinal-ia-sem-ia-ao-estudante" not in codigos
+    print("   ✓ EVT-P* na tabela do catálogo contam, e citar um evento na prosa não o emite")
+
+
 def test_nome_do_marcador_entre_crases_nao_e_pendencia():
     """24/09/2026: "Todos os marcadores `[NEEDS CLARIFICATION]` foram saneados" deixava o PRD 🟡 por
     uma pendência humana que a própria frase dizia não existir."""

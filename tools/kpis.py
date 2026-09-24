@@ -150,7 +150,10 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
         return {"status": "bloqueado", "achados": achados, "kpis": 0, "eventos": 0}
 
     tab_kpi = [l for t in _tabelas(texto, {"kpi"}) for l in t if _RE_KPI.search(str(l))]
-    tab_evt = [l for t in _tabelas(texto, {"quando dispara"}) for l in t]
+    # Os `EVT-P*` são colunas do módulo, não eventos de telemetria, e o catálogo os ensina numa tabela
+    # própria (`| Sinal | Objeto | Quando grava | Onde fica | Responde |`). O gate só lia a de «Quando
+    # dispara»: o PRD que copiou o catálogo à risca levou 13 achados de sinal «inexistente» (24/09/2026).
+    tab_evt = [l for t in _tabelas(texto, {"quando dispara"}) + _tabelas(texto, {"quando grava"}) for l in t]
     if not tab_kpi:
         falha("tabela-kpi-ausente",
               "Sem tabela de KPIs legível na seção de objetivos. Cabeçalho: "
@@ -294,10 +297,15 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
         # isso por si: em 24/09/2026 o redator pôs `EVT-U06` no KPI de espera (T12) de uma missão cuja IA
         # só atua no preparo docente, o gate leu "o PRD emite sinal de IA" e passou a exigir o `EVT-P06`
         # de custo — mandou acrescentar um evento de algo que não existe, quando o certo era tirar o outro.
-        ia_prd = ia_responde_estudante("", texto)
+        # «Emite» é estar na tabela de eventos ou na coluna de evento de um KPI — não ser citado na
+        # prosa: o PRD refeito dizia "expurgo definitivo de `EVT-U06`" no changelog e o gate lia a
+        # própria remoção como emissão (24/09/2026).
+        emitido_em = " ".join(" ".join(l.values()) for l in tab_evt) + " " + \
+                     " ".join(_col(l, "evento", "evt", "alimenta") for l in tab_kpi)
+        emitidos = [s for s in ("EVT-U06", "EVT-P06") if re.search(rf"\b{s}\b", emitido_em)]
+        ia_prd = bool(emitidos)
         ia = ia_responde_estudante(spec, "") if (spec or "").strip() else ia_prd
         if ia_prd and not ia:
-            emitidos = [s for s in ("EVT-U06", "EVT-P06") if re.search(rf"\b{s}\b", texto)]
             falha("sinal-ia-sem-ia-ao-estudante",
                   f"O PRD emite {', '.join(f'`{s}`' for s in emitidos)}, sinal de IA que responde ao estudante, "
                   f"mas a spec não herda `T21`: nesta missão a IA não fala com o aluno. Tire "
