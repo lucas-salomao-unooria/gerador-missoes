@@ -128,6 +128,14 @@ GATE_LABELS = {
 }
 
 
+# Os gates novos entravam na esteira e ficavam sem rótulo aqui: o semáforo mostrava `kpis_status` cru
+# (24/09/2026). O diagnóstico já tem o rótulo de cada gate; o dicionário acima só troca o nome.
+from tools.diagnostico import GATES as _GATES_DO_DIAGNOSTICO  # noqa: E402
+
+for _g in _GATES_DO_DIAGNOSTICO:
+    GATE_LABELS.setdefault(_g["status"], _g["rotulo"])
+
+
 def _status_icon(value: Any) -> str:
     val = str(value).strip().lower()
     if val in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
@@ -514,6 +522,28 @@ def _painel_execucao(run_dir_str: str) -> None:
     st.caption("A execução continua no servidor mesmo se você fechar esta aba. A missão volta para a fila de quem dá o próximo parecer.")
 
 
+def _render_motivos_do_semaforo(estado: Dict[str, Any], semaforo: Dict[str, str]) -> None:
+    """O porquê de cada 🔴 e 🟡, direto no cartão: quem dá o parecer decide sem abrir relatório.
+
+    Antes do parecer humano, isso vinha no dossiê final. Agora o dossiê só roda depois do de acordo do
+    Dev, e o cartão mostrava o 🔴 sem dizer o que bloqueou (24/09/2026).
+    """
+    for chave, icone in semaforo.items():
+        if icone not in ("🔴", "🟡"):
+            continue
+        envelope = estado.get(f"{chave}_envelope")
+        achados = [a for a in (envelope.get("achados") if isinstance(envelope, dict) else None) or []
+                   if isinstance(a, dict) and a.get("resumo")]
+        rotulo = GATE_LABELS.get(chave, chave)
+        with st.expander(f"{icone} {rotulo} — {len(achados)} achado(s)", expanded=icone == "🔴"):
+            if not achados:
+                st.caption("O gate não detalhou os achados no envelope: veja o relatório dele nos passos da esteira.")
+            for a in achados:
+                marca = {"bloqueio": "❌", "decisao_humana": "🧑"}.get(str(a.get("severidade")), "⚠️")
+                codigo = f"`{a['codigo']}` · " if a.get("codigo") else ""
+                st.markdown(f"{marca} {codigo}{a['resumo']}")
+
+
 def _decidir(run_dir: Path, fluxo: Dict[str, Any], acao: str, comentario: str,
              estado: Dict[str, Any], opts: Dict[str, Any]) -> None:
     sessao = sessao_atual()
@@ -542,6 +572,7 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
     semaforo = passagem.semaforo_da_etapa(estado, etapa)
     if semaforo and situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA):
         st.markdown("**Semáforo da etapa:** " + " · ".join(f"{icone} {GATE_LABELS.get(k, k)}" for k, icone in semaforo.items()))
+        _render_motivos_do_semaforo(estado, semaforo)
     if situacao == passagem.DEVOLVIDA:
         dev = passagem.ultima_devolutiva(fluxo, etapa)
         if dev:

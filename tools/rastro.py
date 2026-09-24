@@ -254,6 +254,11 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                 dono_raw = m.group(1).strip() if m.groups() and m.group(1) else ""
                 if tipo in ("lacuna", "aberto", "needs_clarification") and _e_citacao_do_formato(dono_raw):
                     continue
+                # O nome do marcador entre crases, sem conteúdo, é citação e não pendência: "Todos os
+                # marcadores `[NEEDS CLARIFICATION]` foram saneados" virava pendência humana e deixava
+                # o PRD 🟡 (24/09/2026). Pendência de verdade vem sem crase, ou com a pergunta dentro.
+                if not dono_raw and texto[m.start() - 1:m.start()] == "`" and texto[m.end():m.end() + 1] == "`":
+                    continue
                 linha, contexto = _linha_e_contexto(texto, m.start(), m.end())
                 if tipo in ("rs_pendente", "verificar_repositorio"):
                     # Dono fixo, do contrato: `RS-n pendente` é pedido ao Gate 0/PO que só
