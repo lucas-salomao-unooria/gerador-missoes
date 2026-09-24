@@ -3,16 +3,27 @@
 Cada etapa leva de 7 a 30 minutos. Rodando dentro do rerun do Streamlit, fechar a aba (ou
 recarregar, que agora também pede o cookie de login) interrompia a execução — e, com três pessoas
 revezando, ninguém deve ficar olhando a tela esperando. Aqui a etapa roda numa `threading.Thread`
-com loop asyncio próprio, e o progresso vai para `run_dir/execucao.json`, que a tela lê a cada 5 s:
+com loop asyncio próprio.
+
+**Onde fica o estado da execução — e por que em dois lugares.** O progresso (agente atual, gates,
+batimento) muda a cada evento e é lido pela tela a cada 5 s: ele vive no **disco local** da
+instância (`<tmp>/gerador-execucoes/<sessão>.json`). No bucket, `run_dir/execucao.json` só é gravado
+três vezes — no início, quando o backup nasce e no fim. Em 24/09/2026 o progresso inteiro ia para o
+bucket (montado por gcsfuse), com `.tmp` + rename a cada evento e a cada 30 s: foi o dia em que o
+gcsfuse do Cloud Run passou a entrar em pânico (`convertInMessage: Corrupt OpLookup`) no meio da
+etapa, derrubando a instância cinco vezes — nenhuma nos sete dias anteriores. E cada falha momentânea
+do volume (`Stale file handle`, `Transport endpoint is not connected`) matava a thread do batimento.
 
     {"situacao": "executando", "tipo": "iniciar", "etapa": "design", "agente_atual": "D2Jornada",
      "gates": {"design_status": "aprovado"}, "iniciado_em": 1790000000.0,
      "batimento": 1790000030.0, "backup": ".correcoes/20260923-140211-passagem-design", "erro": ""}
 
-Uma execução por sessão: `em_execucao` é a trava. O batimento é gravado a cada 30 s por uma thread
-à parte, porque uma chamada longa ao modelo pode ficar minutos sem emitir evento. Batimento com
-mais de 2 min e nenhuma thread viva neste processo = a execução morreu (reinício do container,
-deploy no meio): `conferir_execucao_morta` restaura o backup e devolve a missão ao dono.
+**Uma execução por sessão, e como se sabe que ela morreu.** O serviço roda com uma instância só
+(`--max-instances 1`), então "está rodando" é "há uma thread viva *neste processo*". Se o bucket diz
+`executando` e nenhuma thread daqui roda a etapa, a instância que a rodava morreu (reinício, deploy,
+pânico do volume): `conferir_execucao_morta` restaura o backup e devolve a missão ao dono. Logo depois
+de o processo subir há uma folga, porque numa troca de revisão a instância anterior pode estar
+terminando.
 
 No Cloud Run isto exige `--no-cpu-throttling` (CPU fora de requisição) e `--min-instances 1` (o
 container não pode ser desligado no meio de uma etapa) — ver `.github/workflows/deploy.yml` e o
@@ -24,10 +35,12 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
+import tempfile
 import threading
 import time
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, Optional
+from typing import Any, AsyncGenerator, Callable, Dict, Optional
 
 from pipeline import passagem
 
@@ -36,7 +49,11 @@ logger = logging.getLogger(__name__)
 ARQUIVO = "execucao.json"
 BATIMENTO_S = 30
 MORTA_APOS_S = 120
+#: Numa troca de revisão, a instância anterior ainda pode estar fechando a etapa dela.
+FOLGA_AO_SUBIR_S = 45
+TENTATIVAS = 3
 
+_INICIO_PROCESSO = time.time()
 _threads: Dict[str, threading.Thread] = {}
 _lock = threading.Lock()
 
@@ -46,24 +63,63 @@ class ExecucaoEmAndamento(RuntimeError):
 
 
 # ------------------------------------------------------------------ estado em disco
-def _caminho(run_dir: Path) -> Path:
+def _dir_local() -> Path:
+    return Path(os.getenv("EXECUCAO_LOCAL_DIR") or tempfile.gettempdir()) / "gerador-execucoes"
+
+
+def _caminho_local(run_dir: Path) -> Path:
+    return _dir_local() / f"{Path(run_dir).name}.json"
+
+
+def _caminho_bucket(run_dir: Path) -> Path:
     return Path(run_dir) / ARQUIVO
 
 
-def ler_execucao(run_dir: Path) -> Optional[Dict[str, Any]]:
+def _tentar(descricao: str, fn: Callable[[], Any]) -> Any:
+    """Repete uma operação de disco que o volume do bucket pode recusar por um instante.
+
+    Nunca levanta: uma gravação de estado que falha não pode derrubar a etapa que ela descreve.
+    """
+    for tentativa in range(1, TENTATIVAS + 1):
+        try:
+            return fn()
+        except OSError as exc:
+            if tentativa == TENTATIVAS:
+                logger.warning("%s falhou após %d tentativas: %s", descricao, TENTATIVAS, exc)
+                return None
+            time.sleep(0.5 * tentativa)
+    return None
+
+
+def _ler(caminho: Path) -> Optional[Dict[str, Any]]:
     try:
-        dados = json.loads(_caminho(run_dir).read_text(encoding="utf-8"))
+        dados = json.loads(caminho.read_text(encoding="utf-8"))
         return dados if isinstance(dados, dict) else None
     except (OSError, ValueError):
         return None
 
 
+def _gravar_local(run_dir: Path, dados: Dict[str, Any]) -> None:
+    def gravar() -> None:
+        caminho = _caminho_local(run_dir)
+        caminho.parent.mkdir(parents=True, exist_ok=True)
+        temporario = caminho.with_suffix(".tmp")
+        temporario.write_text(json.dumps(dados, ensure_ascii=False, default=str), encoding="utf-8")
+        temporario.replace(caminho)  # rename é atômico no disco local; no gcsfuse, não
+
+    _tentar("gravar o progresso local", gravar)
+
+
 def _gravar(run_dir: Path, dados: Dict[str, Any]) -> None:
-    caminho = _caminho(run_dir)
-    caminho.parent.mkdir(parents=True, exist_ok=True)
-    temporario = caminho.with_suffix(".tmp")
-    temporario.write_text(json.dumps(dados, ensure_ascii=False, default=str), encoding="utf-8")
-    temporario.replace(caminho)
+    """Grava no bucket: escrita direta, sem `.tmp` + rename, que no gcsfuse vira cópia e remoção."""
+    _tentar(f"gravar {ARQUIVO} de {Path(run_dir).name}",
+            lambda: _caminho_bucket(run_dir).write_text(json.dumps(dados, ensure_ascii=False, default=str),
+                                                        encoding="utf-8"))
+
+
+def ler_execucao(run_dir: Path) -> Optional[Dict[str, Any]]:
+    """O progresso local, se esta instância rodou a etapa; senão, o que o bucket guardou."""
+    return _ler(_caminho_local(run_dir)) or _ler(_caminho_bucket(run_dir))
 
 
 def _thread_viva(run_dir: Path) -> bool:
@@ -73,30 +129,33 @@ def _thread_viva(run_dir: Path) -> bool:
 
 
 def em_execucao(run_dir: Path, agora: Optional[float] = None) -> bool:
+    """Há uma etapa rodando nesta instância. Não lê o bucket: com uma instância só, basta o processo."""
     if _thread_viva(run_dir):
         return True
-    dados = ler_execucao(run_dir)
+    local = _ler(_caminho_local(run_dir))
     agora = time.time() if agora is None else agora
-    return bool(dados and dados.get("situacao") == "executando"
-                and agora - float(dados.get("batimento") or 0) < MORTA_APOS_S)
+    return bool(local and local.get("situacao") == "executando"
+                and agora - float(local.get("batimento") or 0) < MORTA_APOS_S)
 
 
 def conferir_execucao_morta(run_dir: Path, agora: Optional[float] = None) -> bool:
-    """Se a execução registrada morreu sem avisar, restaura o backup e marca o fluxo como falho."""
-    dados = ler_execucao(run_dir)
+    """Se o bucket diz que a etapa roda e nenhuma thread daqui a roda, restaura o backup e a devolve."""
     agora = time.time() if agora is None else agora
-    if not dados or dados.get("situacao") != "executando" or _thread_viva(run_dir):
+    if em_execucao(run_dir, agora) or agora - _INICIO_PROCESSO < FOLGA_AO_SUBIR_S:
         return False
-    if agora - float(dados.get("batimento") or 0) < MORTA_APOS_S:
+    dados = _ler(_caminho_bucket(run_dir))
+    if not dados or dados.get("situacao") != "executando":
         return False
+    local = _ler(_caminho_local(run_dir))
+    if local and local.get("situacao") == "executando":
+        dados = {**dados, **local}  # a thread morreu neste processo: o local sabe mais
     if dados.get("backup"):
         from pipeline.reexecucao import restaurar_backup
 
-        try:
-            restaurar_backup(Path(run_dir), Path(run_dir) / dados["backup"])
-        except OSError as exc:  # pragma: no cover - disco
-            logger.warning("Backup de %s não restaurado: %s", run_dir, exc)
-    _fechar(Path(run_dir), dados, ok=False, erro="a execução foi interrompida (reinício do servidor?)")
+        _tentar(f"restaurar o backup de {Path(run_dir).name}",
+                lambda: restaurar_backup(Path(run_dir), Path(run_dir) / dados["backup"]))
+    _fechar(Path(run_dir), dados, ok=False,
+            erro="a instância que rodava a etapa parou no meio (reinício, deploy ou falha do volume)")
     return True
 
 
@@ -104,13 +163,12 @@ def _fechar(run_dir: Path, dados: Dict[str, Any], ok: bool, erro: str = "") -> N
     """Grava o fim da execução e devolve a missão ao dono da etapa."""
     dados = {**dados, "situacao": "concluida" if ok else "falhou", "erro": erro, "terminou_em": time.time(),
              "batimento": time.time()}
+    _gravar_local(run_dir, dados)
     _gravar(run_dir, dados)
     fluxo = passagem.ler_fluxo(run_dir)
     if fluxo:
-        try:
-            passagem.registrar_fluxo(run_dir, passagem.concluir_execucao(fluxo, ok), None)
-        except OSError as exc:  # pragma: no cover - disco
-            logger.warning("Fluxo de %s não atualizado: %s", run_dir, exc)
+        _tentar(f"atualizar o fluxo de {run_dir.name}",
+                lambda: passagem.registrar_fluxo(run_dir, passagem.concluir_execucao(fluxo, ok), None))
     notificar({"tipo": "execucao_terminou", "run_dir": str(run_dir), "ok": ok, "etapa": dados.get("etapa"),
                "erro": erro})
 
@@ -160,6 +218,8 @@ async def _consumir(run_dir: Path, stream: AsyncGenerator[Dict[str, Any], None],
                 mudou = True
             elif tipo in ("etapa_started", "correcao_started") and evento.get("backup"):
                 dados["backup"] = evento["backup"]
+                # o backup vai ao bucket: é o que permite desfazer a etapa se esta instância morrer
+                _gravar(run_dir, dados)
                 mudou = True
             elif tipo in _FIM_OK or (nova and tipo == "pipeline_completed"):
                 resultado = evento.get("result")
@@ -169,7 +229,7 @@ async def _consumir(run_dir: Path, stream: AsyncGenerator[Dict[str, Any], None],
                 ok, erro = False, str(evento.get("error") or "erro no runner")
             if mudou:
                 dados["batimento"] = time.time()
-                _gravar(run_dir, dados)
+                _gravar_local(run_dir, dados)
     except Exception as exc:  # a thread não pode morrer calada: o fluxo ficaria "gerando" para sempre
         logger.exception("Execução em segundo plano falhou em %s", run_dir)
         ok, erro = False, str(exc)
@@ -179,24 +239,22 @@ async def _consumir(run_dir: Path, stream: AsyncGenerator[Dict[str, Any], None],
 def _disparar(run_dir: Path, dados: Dict[str, Any], fabrica_stream, nova: bool = False) -> None:
     run_dir = Path(run_dir)
     chave = str(run_dir.resolve())
-    with _lock:
-        vivo = _threads.get(chave)
-        if vivo and vivo.is_alive():
-            raise ExecucaoEmAndamento("Esta missão já tem uma etapa rodando.")
     if em_execucao(run_dir):
         raise ExecucaoEmAndamento("Esta missão já tem uma etapa rodando.")
     agora = time.time()
     dados = {"situacao": "executando", "agente_atual": "", "gates": {}, "iniciado_em": agora,
              "batimento": agora, "backup": "", "erro": "", **dados}
+    _gravar_local(run_dir, dados)
     _gravar(run_dir, dados)
     parar = threading.Event()
 
     def batimento() -> None:
+        # só no disco local: é o que a tela lê a cada 5 s, e o bucket não precisa saber disso
         while not parar.wait(BATIMENTO_S):
-            atual = ler_execucao(run_dir) or dados
+            atual = _ler(_caminho_local(run_dir)) or dados
             if atual.get("situacao") != "executando":
                 return
-            _gravar(run_dir, {**atual, "batimento": time.time()})
+            _gravar_local(run_dir, {**atual, "batimento": time.time()})
 
     def alvo() -> None:
         pulso = threading.Thread(target=batimento, name=f"batimento-{run_dir.name}", daemon=True)
@@ -211,6 +269,8 @@ def _disparar(run_dir: Path, dados: Dict[str, Any], fabrica_stream, nova: bool =
 
     t = threading.Thread(target=alvo, name=f"etapa-{run_dir.name}", daemon=True)
     with _lock:
+        if (vivo := _threads.get(chave)) and vivo.is_alive():
+            raise ExecucaoEmAndamento("Esta missão já tem uma etapa rodando.")
         _threads[chave] = t
     t.start()
 

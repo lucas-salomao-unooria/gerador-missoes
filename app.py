@@ -652,7 +652,9 @@ def render_passagem(run_dir: Path, opts: Dict[str, Any]) -> bool:
     fluxo = passagem.ler_fluxo(run_dir)
     if not fluxo:
         return False
-    if execucao_fundo.conferir_execucao_morta(run_dir):
+    # só quando o fluxo diz que a etapa roda: a checagem lê o bucket, e cada rerun de missão parada
+    # pagaria uma leitura no gcsfuse à toa
+    if fluxo.get("situacao") in passagem.EM_EXECUCAO and execucao_fundo.conferir_execucao_morta(run_dir):
         fluxo = passagem.ler_fluxo(run_dir) or fluxo
     with st.container(border=True):
         st.markdown(f"#### 🧭 Passagem — {passagem.quem_age(fluxo)}")
