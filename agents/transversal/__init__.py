@@ -70,6 +70,24 @@ def get_triagem_correcao_agent(thinking_budget: Optional[int] = 1024) -> LlmAgen
     )
 
 
+def get_conversa_etapa_agent(thinking_budget: Optional[int] = 2048) -> LlmAgent:
+    """Responde perguntas sobre uma etapa da missão, sem alterar nada (`pipeline/conversa_etapas.py`).
+
+    Roda FORA da esteira, como a triagem, e também não entra em `TRANSVERSAL_METADATA`. Vê a
+    pergunta como mensagem (`include_contents="default"`); os documentos da etapa e a conversa
+    anterior chegam pelo estado, já recortados.
+    """
+    return create_llm_agent(
+        name="A00bConversaEtapa",
+        description="Conversa sobre uma etapa da missão: responde com os documentos dela, sem mudar nada, e rascunha o comentário do parecer.",
+        instruction=load_prompt("transversal/00b_conversa_etapa.md"),
+        output_key="resposta_conversa",
+        include_contents="default",
+        thinking_budget=thinking_budget,
+        include_thoughts=False,
+    )
+
+
 TRANSVERSAL_METADATA = [
     {"id": "A50Diagnostico", "name": "50 · Diagnóstico da execução (determinístico)", "icon": "🩺", "output_key": "diagnostico_execucao", "prompt_file": None, "description": "Como cada portão se saiu, o que trava e de quem é cada conserto, o que saiu provisório e que documento faltou. Sem LLM — roda mesmo quando tudo o mais falhou."},
     {"id": "A51Aprendizado", "name": "51 · Aprendizado", "icon": "🧠", "output_key": "aprendizado_registro", "prompt_file": "transversal/51_aprendizado.md", "description": "A leitura em prosa do diagnóstico, mais catálogo, padrões aprendidos, lacunas com dono/classe e candidatos a critério."},

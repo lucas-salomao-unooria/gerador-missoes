@@ -99,7 +99,7 @@ def caracteres_uteis(texto: str) -> int:
     return len(re.sub(r"[\W_]", "", texto or ""))
 
 
-def _chaves_da_etapa(etapa: str) -> frozenset:
+def chaves_da_etapa(etapa: str) -> frozenset:
     """O que a etapa produz, sem o que as seguintes produzem. Reaproveita os conjuntos da correção."""
     from pipeline.reexecucao import CHAVES_DESIGN, CHAVES_DEV, CHAVES_PRODUTO
 
@@ -109,7 +109,7 @@ def _chaves_da_etapa(etapa: str) -> frozenset:
 
 def assinatura_da_etapa(estado: Dict[str, Any], etapa: str) -> str:
     """Hash do que a etapa gerou. Um parecer vale para esta versão, não para uma refeita depois."""
-    chaves = sorted(k for k in _chaves_da_etapa(etapa) if k in estado)
+    chaves = sorted(k for k in chaves_da_etapa(etapa) if k in estado)
     carga = json.dumps({k: estado[k] for k in chaves}, sort_keys=True, ensure_ascii=False, default=str)
     return hashlib.sha256(carga.encode("utf-8")).hexdigest()[:16]
 
@@ -127,7 +127,7 @@ def _icone(valor: Any) -> str:
 
 def semaforo_da_etapa(estado: Dict[str, Any], etapa: str) -> Dict[str, str]:
     """`{chave_de_status: ícone}` dos gates que a etapa produz, na ordem alfabética."""
-    return {k: _icone(estado[k]) for k in sorted(_chaves_da_etapa(etapa))
+    return {k: _icone(estado[k]) for k in sorted(chaves_da_etapa(etapa))
             if k.endswith("_status") and k in estado}
 
 
