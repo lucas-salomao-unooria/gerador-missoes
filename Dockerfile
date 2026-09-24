@@ -1,7 +1,11 @@
 # Dockerfile otimizado para o Gerador de Missões Unooria (Streamlit + Google ADK + Cloud Run)
 FROM python:3.11-slim
 
-ENV PYTHONUNBUFFERED=1 \
+# Hora de Brasília em tudo que o app mostra ou grava (expiração do login, data dos pareceres, criação
+# da missão, nome da pasta): o Cloud Run roda em UTC, e o horário saía 3 h adiantado. O `tzdata`
+# abaixo é garantia: a imagem base de hoje já traz a base de fusos, mas sem ela o TZ cai em UTC calado.
+ENV TZ=America/Sao_Paulo \
+    PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive \
     PORT=8080 \
     STREAMLIT_SERVER_PORT=8080 \
@@ -18,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     ca-certificates \
+    tzdata \
     gnupg \
     && mkdir -p /etc/apt/keyrings \
     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
