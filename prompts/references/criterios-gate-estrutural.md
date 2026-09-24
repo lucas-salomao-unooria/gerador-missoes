@@ -1,4 +1,4 @@
-# Critérios do Gate Estrutural — Rubrica v1.19 — fechamento de spec incorporado
+# Critérios do Gate Estrutural — Rubrica v1.20 — fechamento de spec incorporado
 
 <!-- v1.19 — 22/09/2026 — o que mudou (auditoria de imersão + proposta de emendas):
   2.1 lista fechada de 5 com seção do DS; teste de plataforma real consulta literatura-cognitiva §10; teste de posse admite conta do grupo em 2–4 por aparelho ·

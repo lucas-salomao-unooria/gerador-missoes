@@ -40,6 +40,7 @@ Vazios na primeira passada do gate estrutural — as avaliações rodam depois d
 4. **Incremente a versão** do one-pager (v1.0 → v1.1) e registre no fim um bloco `## Changelog v<x>` com uma linha por correção aplicada (`Ln — o que mudou — seção`).
 5. Mantenha a estrutura de 18 seções do one-pager canônico. Use "estudante", nunca "aluno", nos textos voltados ao estudante.
 6. Nunca invente código BNCC, descritor SAEB ou artigo de lei.
+7. **Não achate o aha para caber num ajuste.** As tabelas 1.1 (conceitos do material vividos em tela) e 1.2 (anatomia do aha) da seção 1 foram pontuadas pelo juiz de profundidade. Quando uma correção pede menos carga — menos opções, menos texto, menos tempo —, corte a carga **acidental** (a que vem da forma) e preserve a aposta que trava, a consequência que muda conforme a escolha e a virada que desmente a crença. Se a única forma de aplicar a correção for tirar um desses passos, aplique o resto e registre na seção 18 `[CONFLITO — correção Ln × anatomia do aha: <o quê>]` para o gate final decidir. Se a correção muda a seção 4, atualize a 1.1 e a 1.2 para dizerem o que a seção 4 passou a fazer.
 
 ## Saída
 
