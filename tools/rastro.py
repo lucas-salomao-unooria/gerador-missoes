@@ -763,6 +763,10 @@ def frases_afirmativas(texto: str, padrao: str) -> List[str]:
     return vistas
 
 
+#: `dados` como chave de objeto — o campo que o `track()` da api não tem.
+RE_CAMPO_DADOS = r"[{,]\s*[`\"']?\bdados\b[`\"']?\s*:"
+
+
 def _usado_afirmativamente(texto: str, padrao: str) -> bool:
     """O termo aparece propondo algo, e não numa frase que o proíbe."""
     return bool(frases_afirmativas(texto, padrao))
@@ -783,7 +787,11 @@ def validar_telemetria(handoff: str) -> Dict[str, Any]:
         bloqueio("tabela-eventos", "Nenhuma tabela de eventos com as colunas `verbo` e `objeto`. O contrato real é `track(verbo, objeto, resultado, contexto)`.")
     elif not any(("resultado" in b.lower() or "contexto" in b.lower()) for b in tabela_eventos):
         bloqueio("resultado-contexto", "A tabela de eventos não tem coluna `resultado` nem `contexto` — são os dois únicos campos de payload que a api aceita.")
-    if _usado_afirmativamente(texto, r"\|\s*`?dados`?\s*\|") or _usado_afirmativamente(texto, r"[`\"']?\bdados\b[`\"']?\s*:"):
+    # `dados` como CHAVE de objeto (`{ dados:` / `, dados:`) fora de `concluir()`: a SDK aceita
+    # `concluir({ score, dados })` por contrato (packages/sdk/src/types.ts), e "…de dados:" é prosa.
+    # O padrão antigo pegava qualquer "dados:" do documento e bloqueou um handoff certo (24/09/2026).
+    if _usado_afirmativamente(texto, r"\|\s*`?dados`?\s*\|") or any(
+            "concluir(" not in frase for frase in frases_afirmativas(texto, RE_CAMPO_DADOS)):
         bloqueio("campo-dados", "Evento com campo `dados`: a api não tem esse campo e descarta a chave em silêncio. Use `resultado` e `contexto`.")
     # A tabela é reconhecida nas DUAS grafias, e a errada vira achado próprio. Escrever
     # `exp_04ef1b_gates_turma` com underscore é defeito real — o id já carrega ano e bimestre,

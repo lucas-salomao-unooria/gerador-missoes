@@ -3116,6 +3116,22 @@ def test_sinal_do_professor_em_lista_e_rota_proibida():
     print("   ✓ EVT-P* em lista contam, e rota citada para ser proibida não é rota em uso")
 
 
+def test_campo_dados_so_no_evento_e_nao_no_concluir_da_sdk():
+    """24/09/2026: o handoff chamava `handle.concluir({ score: 100, dados: {...} })` — assinatura
+    certa da SDK (`packages/sdk/src/types.ts`) — e o gate de telemetria bloqueou como se fosse um
+    evento com `dados`. Pegava até a prosa "linguagem de dados:"."""
+    from tools.rastro import validar_telemetria
+
+    def pega(texto):
+        return "campo-dados" in [a["codigo"] for a in validar_telemetria(texto)["achados"]]
+
+    assert pega("O front chama `track('interacted', 'tabela:abrir', { dados: { etapa: 'E1' } })`.")
+    assert pega("| ID | Verbo | Objeto | dados |\n|---|---|---|---|\n| EVT-001 | x | y | z |\n")
+    assert not pega("Invoca `handle.concluir({ score: 100, dados: { conclusao: true } })` da SDK.")
+    assert not pega("- **Correção da linguagem pedagógica de dados:** trocada a expressão.")
+    print("   ✓ campo `dados` só bloqueia no evento, não no concluir() da SDK nem na prosa")
+
+
 def test_nome_do_marcador_entre_crases_nao_e_pendencia():
     """24/09/2026: "Todos os marcadores `[NEEDS CLARIFICATION]` foram saneados" deixava o PRD 🟡 por
     uma pendência humana que a própria frase dizia não existir."""

@@ -26,7 +26,7 @@ PADROES: Dict[str, Tuple[str, str]] = {
                          "a linha propõe WebSocket, socket.io ou `hub:pause` como via de sincronização, ou só o cita para descartar, proibir ou dizer que não existe?"),
     "estado-cliente": (r"localstorage|indexeddb|sessionstorage",
                        "a linha guarda progresso ou estado da missão no navegador (localStorage, IndexedDB, sessionStorage), ou só o cita para proibir?"),
-    "campo-dados": (r"\|\s*`?dados`?\s*\||[`\"']?\bdados\b[`\"']?\s*:",
+    "campo-dados": (r"\|\s*`?dados`?\s*\||[{,]\s*[`\"']?\bdados\b[`\"']?\s*:",
                     "a linha usa um campo `dados` no evento de telemetria, ou só diz que esse campo não existe / não deve ser usado?"),
     "admin-contrato": (r"admin-contrato|@Roles\([^)]*[\"']gestor[\"']",
                        "a linha propõe o papel admin-contrato ou @Roles('gestor') na missão, ou só o cita para vedar?"),
