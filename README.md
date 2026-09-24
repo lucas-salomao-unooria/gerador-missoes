@@ -708,6 +708,7 @@ O app exige login: quatro contas fixas, uma por papel — `produto`, `design`, `
 
 - Senhas: `python scripts/gerar_credenciais.py --env` (local) ou `--publicar` (Secret Manager). Elas aparecem uma única vez; no ambiente ficam só os hashes scrypt (`AUTH_CREDENCIAIS`) e a chave do JWT (`AUTH_SEGREDO_JWT`). Gerar de novo troca todas as senhas e derruba todas as sessões.
 - Sem `AUTH_CREDENCIAIS` ou `AUTH_SEGREDO_JWT`, o app **não sobe**: não existe modo aberto por esquecimento.
+- Quem age em cada etapa: **Produto** — `produto` e `design`; **Design** — `design`; **Dev** — `dev`; o `admin` em todas. Missão nova é criada por `produto`, `design` ou `admin`. Quando o design age em produto, o registro diz "design (como Produto)".
 - As contas são papéis, não pessoas: o registro diz "Design", não qual designer. O `admin` age por qualquer papel e fica registrado como "admin (como Produto)". Qualquer papel exclui missões, menos durante uma etapa em execução.
 - O login é da aplicação, não da rede: o Cloud Run segue `--allow-unauthenticated`, e as URLs `/media/...` dos downloads continuam acessíveis a quem tiver o link exato (id aleatório e temporário).
 

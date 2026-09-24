@@ -34,6 +34,12 @@ from typing import Any, Dict, List, Optional, Tuple
 ORDEM: Tuple[str, ...] = ("produto", "design", "dev")
 ROTULO_ETAPA = {"produto": "Produto", "design": "Design", "dev": "Dev"}
 
+#: Quem responde por cada etapa, além do `admin`. O design também gera e dá parecer em produto
+#: (decisão de 24/09/2026): ele costuma abrir a missão e seguir até o fim do design. O dev só age no dev.
+PAPEIS_DA_ETAPA: Dict[str, Tuple[str, ...]] = {"produto": ("produto", "design"), "design": ("design",), "dev": ("dev",)}
+#: Quem cria missão nova — é a etapa de produto que ela começa.
+PAPEIS_QUE_CRIAM: Tuple[str, ...] = PAPEIS_DA_ETAPA["produto"] + ("admin",)
+
 GERANDO = "gerando"
 AGUARDANDO = "aguardando_parecer"
 REFAZENDO = "refazendo"
@@ -137,6 +143,19 @@ def fluxo_de(conversa: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return fluxo if isinstance(fluxo, dict) and fluxo.get("etapa") in ORDEM else None
 
 
+def pode_agir(papel: str, etapa: str) -> bool:
+    return papel == "admin" or papel in PAPEIS_DA_ETAPA.get(etapa, ())
+
+
+def pode_criar_missao(papel: str) -> bool:
+    return papel in PAPEIS_QUE_CRIAM
+
+
+def rotulo_donos(etapa: str) -> str:
+    """"Produto ou Design", "Dev" — para dizer a quem a missão está esperando."""
+    return " ou ".join(ROTULO_ETAPA.get(p, p) for p in PAPEIS_DA_ETAPA.get(etapa, (etapa,)))
+
+
 def dono_da_vez(fluxo: Dict[str, Any]) -> Optional[str]:
     """O papel de quem a missão está esperando, ou `None` se ninguém (executando ou entregue)."""
     if fluxo.get("situacao") in (AGUARDANDO, LIBERADA, DEVOLVIDA, FALHOU):
@@ -147,7 +166,7 @@ def dono_da_vez(fluxo: Dict[str, Any]) -> Optional[str]:
 def acoes_possiveis(fluxo: Dict[str, Any], papel: str, estado: Dict[str, Any]) -> List[str]:
     """O que `papel` pode fazer agora. O `admin` pode tudo o que o dono pode, mais a exceção."""
     etapa, situacao = fluxo["etapa"], fluxo["situacao"]
-    if papel not in (etapa, "admin"):
+    if not pode_agir(papel, etapa):
         return []
     vermelho = "🔴" in semaforo_da_etapa(estado, etapa).values()
     acoes: List[str] = []

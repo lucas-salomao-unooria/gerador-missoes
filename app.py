@@ -416,7 +416,7 @@ def render_aguardando_voce(sessoes: List[Dict[str, Any]], sessao: Optional[Sessa
     if not sessao:
         return
     minhas = [s for s in sessoes if s.get("fluxo_situacao") in SITUACOES_PENDENTES
-              and (sessao.papel == "admin" or s.get("fluxo_etapa") == sessao.papel)]
+              and passagem.pode_agir(sessao.papel, s.get("fluxo_etapa") or "")]
     if not minhas:
         return
     if not st.session_state.get("aviso_fila_mostrado"):
@@ -620,7 +620,7 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
                       else ", ou peça ao admin uma liberação com exceção."))
     if not acoes:
         dono = passagem.dono_da_vez(fluxo)
-        st.caption(f"🔒 Aguardando **{passagem.ROTULO_ETAPA.get(dono or '', dono)}**. Você está como {sessao.rotulo}.")
+        st.caption(f"🔒 Aguardando **{passagem.rotulo_donos(dono or '')}**. Você está como {sessao.rotulo}.")
         return
 
     comentario = ""
@@ -1730,16 +1730,21 @@ def main():
                         doc_batch = batch
                         st.success(f"✅ {batch.files_count} arquivo(s) — {batch.total_mb:.2f} MB")
 
+        sessao = sessao_atual()
+        # missão nova começa pela etapa de produto: só quem responde por ela a cria
+        sem_permissao_de_criar = not modo_correcao and not (sessao and passagem.pode_criar_missao(sessao.papel))
         placeholder = (
             "Esta missão segue por pareceres: use o cartão de passagem acima (Refazer leva o seu comentário aos agentes)."
             if com_fluxo else
+            f"Missão nova é criada por {passagem.rotulo_donos('produto')} (ou admin). Abra uma missão no histórico."
+            if sem_permissao_de_criar else
             "Peça uma correção nesta missão (ex.: subir o teto de bio para 150; trocar a copy da tela 3; fixar o polling em 4 s)…"
             if modo_correcao else
             "Descreva a missão (ano, ambiente, descoberta central, decisão do estudante) ou envie o one-pager…"
         )
         # Com parecer humano, a correção livre pelo chat ficaria fora do fluxo (sem dono, sem
         # parecer, rodando as etapas seguintes sem ninguém ter liberado): o Refazer do cartão a substitui.
-        user_prompt = st.chat_input(placeholder, disabled=bool(com_fluxo))
+        user_prompt = st.chat_input(placeholder, disabled=bool(com_fluxo) or sem_permissao_de_criar)
         if user_prompt and modo_correcao:
             settings = get_settings()
             if not settings.is_gemini_configured():

@@ -40,9 +40,22 @@ class TestRegras(unittest.TestCase):
         f = _aguardando("produto")
         self.assertIn(DE_ACORDO, acoes_possiveis(f, "produto", ESTADO_VERDE))
         self.assertIn(DE_ACORDO, acoes_possiveis(f, "admin", ESTADO_VERDE))
-        self.assertEqual(acoes_possiveis(f, "design", ESTADO_VERDE), [])
+        # o design também responde por produto (24/09/2026); o dev não
+        self.assertEqual(acoes_possiveis(f, "dev", ESTADO_VERDE), [])
         with self.assertRaises(DecisaoInvalida):
-            aplicar(f, DE_ACORDO, DESIGN, COMENTARIO, ESTADO_VERDE)
+            aplicar(f, DE_ACORDO, DEV, COMENTARIO, ESTADO_VERDE, CONFERENCIA)
+
+    def test_design_tambem_responde_por_produto_e_dev_so_por_dev(self):
+        f = _aguardando("produto")
+        self.assertIn(DE_ACORDO, acoes_possiveis(f, "design", ESTADO_VERDE))
+        self.assertEqual(acoes_possiveis(f, "dev", ESTADO_VERDE), [])
+        novo, _ = aplicar(f, DE_ACORDO, DESIGN, COMENTARIO, ESTADO_VERDE, CONFERENCIA)
+        self.assertEqual(novo["pareceres"][-1]["como"], "design (como Produto)")
+        self.assertEqual(acoes_possiveis(_aguardando("dev"), "design", ESTADO_VERDE), [])
+        self.assertEqual(acoes_possiveis(_aguardando("design"), "produto", ESTADO_VERDE), [])
+        self.assertEqual([p for p in ("produto", "design", "dev", "admin") if passagem.pode_criar_missao(p)],
+                         ["produto", "design", "admin"])
+        self.assertEqual(passagem.rotulo_donos("produto"), "Produto ou Design")
 
     def test_comentario_curto_recusado(self):
         with self.assertRaises(DecisaoInvalida):

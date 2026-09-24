@@ -137,10 +137,14 @@ class Sessao:
         return self.papel == "admin" or self.papel == papel
 
     def assinatura_de(self, papel: str) -> str:
-        """Como a decisão fica registrada: "design", ou "admin (como Design)"."""
-        if self.papel == papel or self.papel != "admin":
+        """Como a decisão fica registrada: "design", "design (como Produto)", "admin (como Design)".
+
+        Quem age numa etapa que não é a do próprio papel aparece com o papel dele e o da etapa — o
+        registro precisa dizer que foi o design, e não o PO, quem deu o de acordo em produto.
+        """
+        if self.papel == papel:
             return self.papel
-        return f"admin (como {ROTULO_PAPEL.get(papel, papel)})"
+        return f"{self.papel} (como {ROTULO_PAPEL.get(papel, papel)})"
 
 
 #: hash de uma senha qualquer, para o login de usuário inexistente custar o mesmo scrypt
