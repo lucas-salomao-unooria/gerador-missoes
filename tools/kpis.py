@@ -121,14 +121,51 @@ def ia_responde_estudante(spec: str = "", prd: str = "") -> bool:
     return bool(re.search(r"\bEVT-U06\b|\bEVT-P06\b", prd or ""))
 
 
-def sinais_exigidos(ia: bool = False) -> Dict[str, List[str]]:
-    """Sinal → transversais que ele responde, para toda T de dono `missao` (T21 só com IA)."""
+#: As transversais do grupo "customização de tema (IA)" na revisão do PO de 24/09/2026. Antes dela,
+#: T15, T16 e T20 eram cobradas de toda missão, e a missão sem customização levava bloqueio por não
+#: gravar `geracoes` de um `gerar-conteudo` que ela não tem.
+_CUSTOMIZACAO_TS = ("T15", "T16", "T20")
+_RE_CUSTOMIZACAO = re.compile(r"gerar-conteudo|customiza", re.I)
+#: nome antigo da condição da IA conversacional, aceito para não quebrar catálogo anterior
+_ALIAS_CONDICAO = {"ia_responde_estudante": "ia_conversacional"}
+
+
+def _herdadas(spec: str) -> Optional[List[str]]:
+    m = re.search(r"perguntas_herdadas[`*_]*\s*:\s*([^\n]+)", spec or "", re.I)
+    return _ids_t(m.group(1)) if m else None
+
+
+def condicoes_da_missao(spec: str = "", prd: str = "") -> set:
+    """Os grupos de missão a que ela pertence, além do universal.
+
+    A ficha `perguntas_herdadas` é quem diz: T21 → IA conversacional; T15, T16 ou T20 → customização
+    de tema. Sem a ficha, a customização se reconhece pelo preparo (`gerar-conteudo`, customização).
+    """
+    ativas = set()
+    if ia_responde_estudante(spec, prd):
+        ativas.add("ia_conversacional")
+    herdadas = _herdadas(spec)
+    if herdadas is not None:
+        if any(t in herdadas for t in _CUSTOMIZACAO_TS):
+            ativas.add("customizacao_tema")
+    elif _RE_CUSTOMIZACAO.search(spec or "") or re.search(r"\bEVT-P0[23]\b", prd or ""):
+        ativas.add("customizacao_tema")
+    return ativas
+
+
+def sinais_exigidos(ia: bool = False, customizacao: bool = True) -> Dict[str, List[str]]:
+    """Sinal → transversais que ele responde, para toda T de dono `missao` do grupo da missão."""
+    ativas = {c for c, ligada in (("ia_conversacional", ia), ("customizacao_tema", customizacao)) if ligada}
+
+    def vale(condicao: Optional[str]) -> bool:
+        return not condicao or _ALIAS_CONDICAO.get(condicao, condicao) in ativas
+
     exigidos: Dict[str, List[str]] = {}
     for t, info in catalogo()["transversais"].items():
-        if info["dono"] != "missao" or (info.get("so_se") and not ia):
+        if info["dono"] != "missao" or not vale(info.get("so_se")):
             continue
         for s in info["sinais"]:
-            if catalogo()["sinais"][s].get("so_se") and not ia:
+            if not vale(catalogo()["sinais"][s].get("so_se")):
                 continue
             exigidos.setdefault(s, []).append(t)
     return exigidos
@@ -318,7 +355,10 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
                   f"{'o evento' if len(emitidos) == 1 else 'os eventos'} da tabela e dos KPIs (em `T12`, a "
                   f"espera vem só de não entender o que fazer) — ou, se a IA responde mesmo ao estudante, "
                   f"a spec precisa herdar `T21`.")
-        for s, ts in sorted(sinais_exigidos(ia).items()):
+        # o grupo "customização de tema" vem da spec (T15/T16/T20 herdadas); sem spec, do próprio PRD
+        custom = ("customizacao_tema" in condicoes_da_missao(spec)) if (spec or "").strip() \
+            else bool(re.search(r"\bEVT-P0[123]\b", emitido_em))
+        for s, ts in sorted(sinais_exigidos(ia, custom).items()):
             canon = catalogo()["sinais"][s]
             if s not in verbo_objeto:
                 forma = f"`{canon['verbo']} {canon['objeto']}`" if canon.get("verbo") else f"objeto `{canon['objeto']}`"
@@ -495,11 +535,17 @@ def validar_9f(spec: str) -> Dict[str, Any]:
             falha("core-action-sem-evento",
                   f"`core_action: {par[0]} {par[1]}` não existe na tabela de eventos do bloco 9. "
                   f"A decisão central da missão não é emitida por nada.")
-    missao_ts = [t for t, i in catalogo()["transversais"].items() if i["dono"] == "missao" and not i.get("so_se")]
+    # As universais sempre; as de customização de tema quando a spec tem o preparo com IA (o grupo se
+    # reconhece pelo texto, porque a ficha é justamente o que se está conferindo); T21 nunca é cobrada
+    # — só a spec sabe se a IA fala com o aluno, e declarar é o que a põe no grupo.
+    customiza = bool(_RE_CUSTOMIZACAO.search(re.sub(r"perguntas_herdadas[^\n]*", "", texto)))
+    missao_ts = [t for t, i in catalogo()["transversais"].items() if i["dono"] == "missao"
+                 and (not i.get("so_se") or (customiza and i.get("so_se") == "customizacao_tema"))]
     if "perguntas_herdadas" not in fichas:
         falha("perguntas-herdadas-ausente",
-              f"Ficha `perguntas_herdadas` ausente: toda missão herda as transversais de dono `missao` "
-              f"({', '.join(missao_ts)}; T21 só se a IA responde ao estudante).", severidade="atencao")
+              f"Ficha `perguntas_herdadas` ausente: a missão herda as transversais de dono `missao` do "
+              f"seu grupo ({', '.join(missao_ts)}; T15, T16 e T20 só com customização de tema por IA; "
+              f"T21 só com IA conversacional em tempo real).", severidade="atencao")
     else:
         declaradas = _ids_t(fichas["perguntas_herdadas"])
         for t in declaradas:
@@ -513,15 +559,15 @@ def validar_9f(spec: str) -> Dict[str, Any]:
         faltam = [t for t in missao_ts if t not in declaradas]
         if faltam:
             falha("herdada-faltando",
-                  f"`perguntas_herdadas` deixa de fora {', '.join(faltam)}, de dono `missao`: toda missão as "
-                  f"herda, e emite os sinais delas.", severidade="atencao")
+                  f"`perguntas_herdadas` deixa de fora {', '.join(faltam)}, de dono `missao` e do grupo desta "
+                  f"missão: ela as herda, e emite os sinais delas.", severidade="atencao")
 
     # Os eventos universais do estudante nascem no bloco 9: é dele que o handoff e o PRD copiam.
     # (`EVT-U03` é o `completed` que a própria SDK emite no `concluir()`; os `EVT-P*` são colunas
     # do módulo e são conferidos no PRD.)
     if eventos:
-        ia = ia_responde_estudante(texto)
-        for s, ts in sorted(sinais_exigidos(ia).items()):
+        ativas = condicoes_da_missao(texto)
+        for s, ts in sorted(sinais_exigidos("ia_conversacional" in ativas, "customizacao_tema" in ativas).items()):
             canon = catalogo()["sinais"][s]
             if not s.startswith("EVT-U") or "<" in canon["objeto"]:
                 continue

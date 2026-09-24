@@ -16,45 +16,57 @@ Três coisas diferentes eram tratadas como uma só, e é o que produzia KPI que 
 **A missão declara as duas últimas, e elas não se misturam.** Um número que serve às duas ao
 mesmo tempo é coincidência, não desenho.
 
-## As perguntas transversais — a lista do PO (23/09/2026)
+## As perguntas transversais — a lista do PO (revisada em 24/09/2026)
 
-São as 21 perguntas de observabilidade de produto definidas pelo PO. Valem igual para qualquer
-missão, e por isso **não se reinventam**: um KPI que herda `T7` usa a pergunta de `T7`, com
-estas palavras, e os sinais que o catálogo abaixo diz que a respondem — nunca um evento próprio
-da mecânica escolhido por proximidade.
+São as 21 perguntas de observabilidade de produto definidas pelo PO, com a pergunta, a decisão,
+o grupo de missão, o pilar e o corte **nas palavras dele**. Valem igual para qualquer missão do
+grupo, e por isso **não se reinventam**: um KPI que herda `T7` usa a pergunta e a decisão de
+`T7`, e os sinais que o catálogo abaixo diz que a respondem — nunca um evento próprio da mecânica
+escolhido por proximidade.
 
 Cada pergunta tem **um dono de dado**, e é isso que decide quem a declara:
 
 - **`missao`** — a missão responde, emitindo os eventos universais no bundle (`EVT-U*`) ou
-  gravando os sinais do professor nas tabelas do próprio módulo (`EVT-P*`). **Toda missão herda
-  todas as de dono `missao`**; `T21` só se a IA responde ao estudante em tempo real.
+  gravando os sinais do professor nas tabelas do próprio módulo (`EVT-P*`).
 - **`plataforma`** — só o hub ou a api respondem (login, cadastro, abertura de missão no
   catálogo). A missão **não** as declara: listá-las no 9f é prometer um número que ela não tem
   como produzir. Ficam na lista de pendências de plataforma.
 
-| ID | Pergunta (do PO) | Decisão que dispara | Corte | Dono | Sinais |
-|---|---|---|---|---|---|
-| `T1` | De X professores vinculados à rede, quantos entraram na plataforma? | `[PROPOSTA — validar com PO]` <50% → problema de ativação: conversa com a rede antes de nova escola | rede · escola | plataforma | — |
-| `T2` | De X alunos de uma turma, quantos entraram na plataforma? | `[PROPOSTA — validar com PO]` <70% → acesso do estudante trava: rever credencial e primeiro acesso | turma · escola · rede | plataforma | — |
-| `T3` | De X gestores (escola e rede) vinculados, quantos entraram no dashboard nos últimos X meses? | `[PROPOSTA — validar com PO]` <30% → o dashboard não serve ao gestor: entrevistar antes de evoluir | escola · rede | plataforma | — |
-| `T4` | De X gestores vinculados, quantos cadastraram usuários (professor ou aluno), manualmente ou por importação? | `[PROPOSTA — validar com PO]` cadastro concentrado no suporte → simplificar a importação | escola · rede | plataforma | — |
-| `T5` | Quais missões o professor mais abre? | `[PROPOSTA — validar com PO]` missão pouco aberta → rever a vitrine do catálogo, não a missão | missao · serie | plataforma | — |
-| `T6` | De cada X professores que abriram uma missão no painel, quantos liberaram para a turma? | Conversão baixa → a tela de preparo gera insegurança: simplificar ou reforçar o guia | missao · serie | plataforma | — |
-| `T7` | De cada X turmas liberadas, quantas chegam ao fim da missão? | Menos da metade → longa demais ou travando: entra na fila antes de qualquer feature nova | missao · serie | missao | `EVT-U01`, `EVT-U03` |
-| `T8` | Comparando todas as missões, em que etapa da jornada (abertura, ação central, reflexão, resultado) os alunos mais abandonam? | `[PROPOSTA — validar com PO]` abandono concentrado numa etapa → redesenhar aquela etapa antes das outras | etapa · missao · serie | missao | `EVT-U02` |
-| `T9` | Que proporção dos alunos de uma turma inicia a missão depois que o professor libera? | `[PROPOSTA — validar com PO]` <70% → a entrada trava: rever o pareamento e o aviso de liberação | turma · missao · serie | missao | `EVT-U01` |
-| `T10` | Na etapa em que o aluno travou (T8), ele travou por erro técnico ou ficou inativo? | Aula perdida por falha silenciosa é prioridade acima de feature; inatividade → rever a instrução da etapa | missao · serie · etapa | missao | `EVT-U04`, `EVT-U05` |
-| `T11` | Quanto tempo o aluno leva entre receber o desafio e avançar para as próximas etapas, da segunda até a final? | Passa do teto de tempo em tela → encurtar a etapa mais longa ou dividir a missão | missao · serie | missao | `EVT-U02` |
-| `T12` | Dentro do tempo total, quanto é interação ativa e quanto é espera (resposta da IA, ou não entender o que fazer)? | `[PROPOSTA — validar com PO]` espera >30% do tempo → atacar a maior fonte de espera | missao · etapa | missao | `EVT-U02`, `EVT-U04`; `EVT-U06` **só se a IA responde ao estudante** (spec herda `T21`) — sem isso, a espera medida é só a de não entender o que fazer |
-| `T13` | Dos alunos que iniciam ou completam uma missão, quantos iniciam ou completam as demais liberadas no mesmo ano? | `[PROPOSTA — validar com PO]` retorno baixo → a trilha não se sustenta: rever a sequência | aluno · turma · escola · rede | plataforma | — |
-| `T14` | O professor que inicia a configuração da missão consegue terminar, ou trava no meio? | `[PROPOSTA — validar com PO]` <80% termina → simplificar o preparo | missao · serie | missao | `EVT-P01`, `EVT-P03` |
-| `T15` | De X professores que acessaram a missão, quantos iniciaram a customização? | `[PROPOSTA — validar com PO]` <50% → a customização não é percebida: rever a entrada do preparo | missao · serie | missao | `EVT-P01` |
-| `T16` | Quantas vezes, em média, o professor rejeita a proposta de tema da IA antes de aprovar? | `[PROPOSTA — validar com PO]` >2 rejeições → o prompt de geração erra o recorte: rever antes de escalar | missao · disciplina | missao | `EVT-P02`, `EVT-P03` |
-| `T17` | O professor volta para ver o resultado da turma depois da aula? | Não volta → o relatório não entrega valor: avisar por e-mail, depois redesenhar | escola | missao | `EVT-P04` |
-| `T18` | De professores que liberaram uma missão, quantos configuram uma segunda (ou mais) no mesmo ano? | Retorno baixo → produto "de uma vez": entender o que faltou antes de vender mais | professor · escola · rede | plataforma | — |
-| `T19` | Quantas aulas leva para o professor aplicar a missão do começo ao fim? | Passa do número de aulas declarado → encurtar ou dividir | missao · serie | missao | `EVT-P05` |
-| `T20` | Quanto custa de IA por missão customizada pelo professor? | Acima do teto → otimizar antes de escalar para mais redes | missao · rede | missao | `EVT-P02` |
-| `T21` | Quanto custa por interação nas missões em que a IA responde ao aluno em tempo real? | Acima do teto → otimizar o turno antes de escalar | missao · rede | missao (só se a IA responde ao estudante) | `EVT-U06`, `EVT-P06` |
+E um **grupo de missão**, que decide quais missões herdam a pergunta:
+
+- **universal** — toda missão.
+- **customização de tema (IA)** — só a missão em que o professor customiza o tema com a IA
+  (`gerar-conteudo` + homologação no preparo): `T15`, `T16`, `T20`. Na `T14`, que é universal, é
+  este grupo que traz a etapa de aprovação da IA para dentro da configuração.
+- **IA conversacional em tempo real** — só a missão em que a IA responde ao aluno (tipo UnoGPT):
+  `T21`, e a parte "espera por resposta da IA" da `T12`.
+
+Os **pilares** agrupam as perguntas no painel: adoção do professor, adoção do aluno, adoção do
+gestor, funil, custo e qualidade de IA.
+
+| ID | Pergunta (do PO) | Grupo de missão | Pilar | Decisão que dispara (do PO) | Corte | Dono | Sinais |
+|---|---|---|---|---|---|---|---|
+| `T1` | De X professores vinculados à rede, quantos entraram na plataforma? | universal | adoção do professor | Entrada baixa mesmo com acesso liberado aciona conversa com o gestor da rede antes de investir em melhoria de conteúdo. | rede · escola | plataforma | — |
+| `T2` | De X alunos de uma turma, quantos entraram na plataforma? | universal | adoção do aluno | Separa problema de acesso (login, dispositivo, senha) de problema de engajamento com a missão. | turma · escola · rede | plataforma | — |
+| `T3` | De X gestores (escola e rede) vinculados, quantos entraram no dashboard nos últimos X meses? | universal | adoção do gestor | Se o gestor não entra, o relatório não está gerando valor pra ele. É risco de renovação, não só de produto. | escola · rede | plataforma | — |
+| `T4` | De X gestores (escola e rede) vinculados, quantos realizaram o cadastro de usuários (professor e/ou aluno), seja manual ou via importação? | universal | adoção do gestor (onboarding) | Se o cadastro trava aqui, nada a jusante (professor, aluno, missão) sequer começa a existir na plataforma. É o primeiro ponto de funil do produto inteiro: cadastro baixo é prioridade de correção antes de qualquer outra métrica fazer sentido. | escola · rede | plataforma | — |
+| `T5` | Quais missões o professor mais abre? | universal | funil | Missão nunca aberta tem problema de descoberta ou de nome na plataforma. Investigar antes de criar missão nova. | missao · serie | plataforma | — |
+| `T6` | De cada X professores que abriram uma missão no painel do professor, quantos liberaram pra turma? | universal | adoção do professor · funil | Conversão baixa aponta pra atrito ou insegurança na tela de preparação. Simplificar antes de mexer em conteúdo. | missao · serie | plataforma | — |
+| `T7` | De cada X turmas liberadas, quantas chegam ao fim da missão? | universal | adoção do aluno · funil | Se a conclusão ficar abaixo de 50%, entra na fila de investigação antes de qualquer feature nova. | missao · serie | missao | `EVT-U01`, `EVT-U03` |
+| `T8` | Comparando entre todas as missões, em que etapa da jornada (abertura, ação central, reflexão, resultado) os alunos mais abandonam? | universal | funil | Etapa com abandono desproporcional em várias missões ao mesmo tempo é sinal estrutural. Prioridade de redesenho transversal, não conserto pontual. | etapa · missao · serie | missao | `EVT-U02` |
+| `T9` | Que proporção dos alunos de uma turma inicia a missão depois que o professor libera? | universal | adoção do aluno | Participação consistentemente baixa aponta pra problema de acesso (laboratório, dispositivo), não de desinteresse. Investigar antes de mudar a missão. | turma · missao · serie | missao | `EVT-U01` |
+| `T10` | Na etapa em que o aluno travou (T8), ele travou por erro técnico ou simplesmente ficou inativo? | universal | funil | Abandono que coincide com erro técnico registrado é prioridade de bug, não de redesign. Sem erro, entra na fila de investigação de UX. | missao · serie · etapa | missao | `EVT-U04`, `EVT-U05` |
+| `T11` | Quanto tempo o aluno leva entre receber o desafio da missão e avançar pras próximas etapas, da segunda etapa até a etapa final? | universal | funil | Tempo muito curto sugere que pulou sem entender a proposta; tempo muito longo sugere confusão. Os dois pedem revisão de clareza do texto. É aproximação, não medida direta de compreensão. | missao · serie | missao | `EVT-U02` |
+| `T12` | Dentro do tempo total da missão, quanto é interação ativa do aluno e quanto é espera (por resposta da IA ou por não entender o que deve ser feito)? | universal na métrica; a leitura de causa muda por grupo — "espera por resposta da IA" só em IA conversacional em tempo real | funil · custo | Espera concentrada logo após uma ação do aluno é latência: resolve com loading melhor ou troca de modelo. Espera distribuída sem padrão é desengajamento ou instrução confusa: resolve redesenhando a tela. Fora da IA conversacional, espera alta tende a ser confusão sobre o que fazer, não latência de IA. | missao · etapa | missao | `EVT-U02`, `EVT-U04`; `EVT-U06` **só em IA conversacional** (spec herda `T21`) |
+| `T13` | Dos alunos que iniciam e/ou completam uma missão, quantos iniciam e/ou completam as demais liberadas no mesmo ano? | universal | adoção do aluno (retenção) | Queda forte da primeira pras próximas indica engajamento por novidade, não interesse sustentado. A sequência de missões ao longo do ano precisa reforçar valor, não só entregar bem na estreia. | aluno · turma · escola · rede | plataforma | — |
+| `T14` | O professor que inicia a configuração da missão consegue terminar, ou trava no meio? | universal; a complexidade varia — sem customização de tema a configuração é turma e data, com customização entra a aprovação da IA | adoção do professor | Se muitos iniciam e não terminam, a configuração está complexa demais. Encurtar ou pré-preencher. | missao · serie | missao | `EVT-P01`, `EVT-P03` **com customização de tema**; sem ela, o fim da configuração é a liberação da turma (`liberacoes.liberada_em`, plataforma) |
+| `T15` | De X professores que acessaram a missão, quantos iniciaram a customização? | customização de tema (IA) | adoção do professor | Separa quem nem chega a considerar customizar (problema de descoberta da funcionalidade ou de valor percebido) de quem começa e desiste (fricção na tela, coberto pela T14). Pouca gente iniciando aponta pra problema antes da tela. | missao · serie | missao | `EVT-P01` |
+| `T16` | Quantas vezes, em média, o professor rejeita a proposta de tema da IA antes de aprovar? | customização de tema (IA) | adoção do professor · qualidade de IA | Rejeição alta é sinal de que a qualidade da primeira geração da IA não está boa o suficiente. Prioridade de ajuste no motor de geração, não na tela. | missao · disciplina | missao | `EVT-P02`, `EVT-P03` |
+| `T17` | O professor volta pra ver o resultado da turma depois da aula? | universal | adoção do professor | Se não volta, o relatório não está entregando valor. Primeiro teste é notificação por e-mail. Se mesmo assim não voltar, repensar o relatório do zero. | escola | missao | `EVT-P04` |
+| `T18` | De professores que liberaram uma missão, quantos configuram uma segunda (ou mais) dentro do mesmo ano? | universal | adoção do professor (retenção) | Recorrência baixa mesmo com liberação alta indica que a primeira experiência não convenceu. Pode ser conteúdo, esforço de configuração ou falta de missão relevante pra série dele. | professor · escola · rede | plataforma | — |
+| `T19` | Quantas aulas leva para o professor aplicar a missão do começo ao fim? | universal | adoção do professor · funil | Se o número de aulas necessárias passar do que o professor consegue encaixar no planejamento dele, a missão perde espaço na grade antes mesmo de começar. Acima do esperado entra na fila pra encurtar ou dividir em partes menores. | missao · serie | missao | `EVT-P05` |
+| `T20` | Quanto custa de IA por missão customizada pelo professor? | customização de tema (IA) | custo | Se o custo por missão customizada passar do teto definido, otimizar o motor de geração antes de escalar customização pra mais redes. | missao · rede | missao | `EVT-P02` |
+| `T21` | Quanto custa por interação nas missões onde a IA responde ao aluno em tempo real (tipo UnoGPT)? | IA conversacional em tempo real | custo | Se o custo por mensagem nas missões de conversa livre passar do teto definido, otimizar antes de escalar pra mais redes. | missao · rede | missao | `EVT-U06`, `EVT-P06` |
 
 ## O catálogo de sinais universais
 
@@ -79,7 +91,8 @@ obtém pela matrícula.
 
 **Sinais do professor (`EVT-P*`)** — as telas do professor vivem no hub, que não tem `track`.
 Esses sinais são **gravados pela rota do próprio módulo da missão**, em colunas das tabelas dela;
-o "evento" é a escrita da coluna, e o leitor é a própria tabela.
+o "evento" é a escrita da coluna, e o leitor é a própria tabela. `EVT-P01`–`EVT-P03` só existem
+na missão com customização de tema por IA; `EVT-P06`, só na IA conversacional.
 
 | Sinal | Objeto | Quando grava | Onde fica | Responde |
 |---|---|---|---|---|
@@ -97,27 +110,27 @@ para os `EVT-U*`, a tabela do módulo para os `EVT-P*`.
 ```json
 {
   "transversais": {
-    "T1": {"dono": "plataforma", "sinais": []},
-    "T2": {"dono": "plataforma", "sinais": []},
-    "T3": {"dono": "plataforma", "sinais": []},
-    "T4": {"dono": "plataforma", "sinais": []},
-    "T5": {"dono": "plataforma", "sinais": []},
-    "T6": {"dono": "plataforma", "sinais": []},
-    "T7": {"dono": "missao", "sinais": ["EVT-U01", "EVT-U03"]},
-    "T8": {"dono": "missao", "sinais": ["EVT-U02"]},
-    "T9": {"dono": "missao", "sinais": ["EVT-U01"]},
-    "T10": {"dono": "missao", "sinais": ["EVT-U04", "EVT-U05"]},
-    "T11": {"dono": "missao", "sinais": ["EVT-U02"]},
-    "T12": {"dono": "missao", "sinais": ["EVT-U02", "EVT-U04", "EVT-U06"]},
-    "T13": {"dono": "plataforma", "sinais": []},
-    "T14": {"dono": "missao", "sinais": ["EVT-P01", "EVT-P03"]},
-    "T15": {"dono": "missao", "sinais": ["EVT-P01"]},
-    "T16": {"dono": "missao", "sinais": ["EVT-P02", "EVT-P03"]},
-    "T17": {"dono": "missao", "sinais": ["EVT-P04"]},
-    "T18": {"dono": "plataforma", "sinais": []},
-    "T19": {"dono": "missao", "sinais": ["EVT-P05"]},
-    "T20": {"dono": "missao", "sinais": ["EVT-P02"]},
-    "T21": {"dono": "missao", "sinais": ["EVT-U06", "EVT-P06"], "so_se": "ia_responde_estudante"}
+    "T1": {"dono": "plataforma", "grupo": "universal", "pilar": ["adocao_professor"], "sinais": []},
+    "T2": {"dono": "plataforma", "grupo": "universal", "pilar": ["adocao_aluno"], "sinais": []},
+    "T3": {"dono": "plataforma", "grupo": "universal", "pilar": ["adocao_gestor"], "sinais": []},
+    "T4": {"dono": "plataforma", "grupo": "universal", "pilar": ["adocao_gestor"], "sinais": []},
+    "T5": {"dono": "plataforma", "grupo": "universal", "pilar": ["funil"], "sinais": []},
+    "T6": {"dono": "plataforma", "grupo": "universal", "pilar": ["adocao_professor", "funil"], "sinais": []},
+    "T7": {"dono": "missao", "grupo": "universal", "pilar": ["adocao_aluno", "funil"], "sinais": ["EVT-U01", "EVT-U03"]},
+    "T8": {"dono": "missao", "grupo": "universal", "pilar": ["funil"], "sinais": ["EVT-U02"]},
+    "T9": {"dono": "missao", "grupo": "universal", "pilar": ["adocao_aluno"], "sinais": ["EVT-U01"]},
+    "T10": {"dono": "missao", "grupo": "universal", "pilar": ["funil"], "sinais": ["EVT-U04", "EVT-U05"]},
+    "T11": {"dono": "missao", "grupo": "universal", "pilar": ["funil"], "sinais": ["EVT-U02"]},
+    "T12": {"dono": "missao", "grupo": "universal", "pilar": ["funil", "custo"], "sinais": ["EVT-U02", "EVT-U04", "EVT-U06"]},
+    "T13": {"dono": "plataforma", "grupo": "universal", "pilar": ["adocao_aluno"], "sinais": []},
+    "T14": {"dono": "missao", "grupo": "universal", "pilar": ["adocao_professor"], "sinais": ["EVT-P01", "EVT-P03"]},
+    "T15": {"dono": "missao", "grupo": "customizacao_tema", "pilar": ["adocao_professor"], "sinais": ["EVT-P01"], "so_se": "customizacao_tema"},
+    "T16": {"dono": "missao", "grupo": "customizacao_tema", "pilar": ["adocao_professor", "qualidade_ia"], "sinais": ["EVT-P02", "EVT-P03"], "so_se": "customizacao_tema"},
+    "T17": {"dono": "missao", "grupo": "universal", "pilar": ["adocao_professor"], "sinais": ["EVT-P04"]},
+    "T18": {"dono": "plataforma", "grupo": "universal", "pilar": ["adocao_professor"], "sinais": []},
+    "T19": {"dono": "missao", "grupo": "universal", "pilar": ["adocao_professor", "funil"], "sinais": ["EVT-P05"]},
+    "T20": {"dono": "missao", "grupo": "customizacao_tema", "pilar": ["custo"], "sinais": ["EVT-P02"], "so_se": "customizacao_tema"},
+    "T21": {"dono": "missao", "grupo": "ia_conversacional", "pilar": ["custo"], "sinais": ["EVT-U06", "EVT-P06"], "so_se": "ia_conversacional"}
   },
   "sinais": {
     "EVT-U01": {"verbo": "attempted", "objeto": "missao:iniciar"},
@@ -125,13 +138,13 @@ para os `EVT-U*`, a tabela do módulo para os `EVT-P*`.
     "EVT-U03": {"verbo": "completed", "objeto": "<expId>"},
     "EVT-U04": {"verbo": "interacted", "objeto": "aviso:inatividade"},
     "EVT-U05": {"verbo": "attempted", "objeto": "erro:exibir"},
-    "EVT-U06": {"verbo": "attempted", "objeto": "ia:responder", "so_se": "ia_responde_estudante"},
-    "EVT-P01": {"objeto": "preparo:iniciar"},
-    "EVT-P02": {"objeto": "conteudo:gerar"},
-    "EVT-P03": {"objeto": "conteudo:homologar"},
+    "EVT-U06": {"verbo": "attempted", "objeto": "ia:responder", "so_se": "ia_conversacional"},
+    "EVT-P01": {"objeto": "preparo:iniciar", "so_se": "customizacao_tema"},
+    "EVT-P02": {"objeto": "conteudo:gerar", "so_se": "customizacao_tema"},
+    "EVT-P03": {"objeto": "conteudo:homologar", "so_se": "customizacao_tema"},
     "EVT-P04": {"objeto": "painel:ver"},
     "EVT-P05": {"objeto": "gate:liberar"},
-    "EVT-P06": {"objeto": "ia:consumir", "so_se": "ia_responde_estudante"}
+    "EVT-P06": {"objeto": "ia:consumir", "so_se": "ia_conversacional"}
   }
 }
 ```
@@ -157,9 +170,14 @@ dos 49 KPIs tinham baseline `0%`.
 
 ## O que a missão declara
 
-Cada missão herda as transversais de dono `missao` — e, por isso, **emite todos os sinais delas**
-— e acrescenta **exatamente 5 perguntas próprias**, que dependem da mecânica. A regra é a mesma:
-pergunta, decisão, corte — e um evento que a responda.
+Cada missão herda as transversais de dono `missao` **do seu grupo** — e, por isso, **emite todos
+os sinais delas** — e acrescenta **exatamente 5 perguntas próprias**, que dependem da mecânica. A
+regra é a mesma: pergunta, decisão, corte — e um evento que a responda.
+
+Na ficha `perguntas_herdadas`: toda missão herda `T7`–`T12`, `T14`, `T17`, `T19`; a missão com
+customização de tema por IA herda também `T15`, `T16`, `T20` (e emite `EVT-P01`–`EVT-P03`); a
+missão com IA conversacional em tempo real herda também `T21` (e emite `EVT-U06` e `EVT-P06`). É
+a lista de herdadas que diz a que grupo a missão pertence — o gate cobra os sinais a partir dela.
 
 As transversais não precisam de uma linha de KPI cada uma no PRD: elas são lidas no painel de
 produto **comparando missões**, e o que a missão deve a elas é o sinal instrumentado. Se o PRD
