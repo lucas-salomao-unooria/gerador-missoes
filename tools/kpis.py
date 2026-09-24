@@ -169,6 +169,12 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
     for linha in tab_evt:
         for i in _RE_EVT.findall(" ".join(linha.values())):
             verbo_objeto.setdefault(i.upper(), (_norm(_col(linha, "verbo")), _norm(_col(linha, "objeto"))))
+    # Os `EVT-P*` também valem declarados em lista, com o id e o objeto do catálogo — o redator alternou
+    # entre tabela de eventos, tabela do catálogo e lista em três rodadas da mesma missão (24/09/2026), e
+    # os três trazem o que importa. O formato é estrito de propósito: citação solta na prosa não conta.
+    for m in re.finditer(r"^\s*[-*]\s*`?(EVT-P\d{2})`?\s*\(\s*`?([a-z_]+:[a-z_]+)`?\s*\)", texto, re.M | re.I):
+        verbo_objeto.setdefault(m.group(1).upper(), ("", _norm(m.group(2))))
+        tela_do_evento.setdefault(m.group(1).upper(), set())
     for linha in tab_evt:
         ids = _RE_EVT.findall(" ".join(linha.values()))
         if not ids:

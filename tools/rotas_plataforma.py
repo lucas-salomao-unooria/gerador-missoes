@@ -28,6 +28,12 @@ ARQUIVO = REFERENCES_DIR / "plataforma" / "openapi-rotas.json"
 _RE_ROTA = re.compile(r"\b(GET|POST|PUT|PATCH|DELETE)\s+`?(/[A-Za-z0-9_\-/{}:«».]+)", re.IGNORECASE)
 #: Marcação de que a rota ainda não existe e é pedida à plataforma — aí ela não é afirmação falsa.
 _RE_PROPOSTA = re.compile(r"\[\s*nova|nova rota|rota nova|a criar|proposta|pend[êe]ncia de plataforma|verificar no reposit", re.IGNORECASE)
+#: Linha que cita a rota para PROIBI-LA: "**NÃO** utilizar rotas inexistentes como `PUT /salas`",
+#: "Eliminada qualquer menção incorreta a `GET /turmas/:id/painel`". O redator escreve isso quando o
+#: pedido de correção aponta a rota errada, e o gate a lia como rota em uso (24/09/2026).
+_RE_PROIBICAO = re.compile(
+    r"\bn[ãa]o\s+(?:utiliz|us[ae]|cham|consum|cri[ae])|\bnunca\b|\binexistente|\beliminad|\bincorret|"
+    r"\bproibid|\bvedad|\bveda-se|\bexpurg", re.IGNORECASE)
 _RE_PARAM = re.compile(r"«[^»]+»|:\w+|\{[^}]+\}")
 _cache: Dict[str, Any] = {}
 
@@ -88,6 +94,9 @@ def validar_rotas(texto: str) -> List[Dict[str, str]]:
     achados: List[Dict[str, str]] = []
     vistos = set()
     for linha in (texto or "").splitlines():
+        # antes do `vistos`: a mesma rota usada de verdade noutra linha continua sendo conferida
+        if _RE_PROIBICAO.search(linha):
+            continue
         for m in _RE_ROTA.finditer(linha):
             metodo, citado = m.group(1).upper(), _normalizar(m.group(2))
             if not citado or citado[0] not in modulos or citado[0] in proprios or (metodo, tuple(citado)) in vistos:
