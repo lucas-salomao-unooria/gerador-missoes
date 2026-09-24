@@ -682,6 +682,26 @@ Cada mensagem numa conversa **nova** é uma missão do zero. Para corrigir uma m
 
 A lógica vive em `pipeline/reexecucao.py` e é a mesma do script `scripts/rerodar_etapa.py` (abaixo). Missão do zero continua pelo botão **➕ Nova Missão**.
 
+### 🔐 Login
+
+O app exige login: quatro contas fixas, uma por papel — `produto`, `design`, `dev` e `admin` —, sem provedor de identidade. A sessão vale **4 h a partir do login** (expiração absoluta) e sobrevive ao recarregar a página: o JWT fica num cookie `SameSite=Strict`, gravado por um componente CCv2 (`tools/cookie_sessao.py`), porque o Streamlit só lê cookies. **Sair** revoga o token (`output/.auth/revogados.json`). Cinco senhas erradas seguidas travam a conta por 5 min.
+
+- Senhas: `python scripts/gerar_credenciais.py --env` (local) ou `--publicar` (Secret Manager). Elas aparecem uma única vez; no ambiente ficam só os hashes scrypt (`AUTH_CREDENCIAIS`) e a chave do JWT (`AUTH_SEGREDO_JWT`). Gerar de novo troca todas as senhas e derruba todas as sessões.
+- Sem `AUTH_CREDENCIAIS` ou `AUTH_SEGREDO_JWT`, o app **não sobe**: não existe modo aberto por esquecimento.
+- As contas são papéis, não pessoas: o registro diz "Design", não qual designer. O `admin` age por qualquer papel e fica registrado como "admin (como Produto)"; só ele exclui missões.
+- O login é da aplicação, não da rede: o Cloud Run segue `--allow-unauthenticated`, e as URLs `/media/...` dos downloads continuam acessíveis a quem tiver o link exato (id aleatório e temporário).
+
+### 🧭 Parecer humano entre etapas
+
+Com `PARECER_HUMANO=true` (padrão; o admin desliga na barra lateral para testes), a esteira **para ao fim de cada etapa** e espera quem responde por ela. A lógica é `pipeline/passagem.py`; o registro fica em `conversa.json → fluxo`.
+
+1. **Semáforo (máquina):** os gates da etapa, 🟢🟡🔴, como sempre.
+2. **Parecer do dono da etapa:** ✅ *De acordo* libera para a próxima, e o comentário obrigatório (contribuições, mínimo de 20 letras ou números) segue para os agentes das etapas seguintes no bloco "Notas de passagem" do rodapé. ↩️ *Refazer* transforma o comentário em pedido de correção e refaz **só esta etapa**, na mesma sessão, de volta ao parecer do mesmo dono. Com gate 🔴, *De acordo* não aparece; só o admin libera **com exceção**, que fica marcada no dossiê.
+3. **Recebimento pelo dono da próxima etapa:** ▶️ *Iniciar* dispara a etapa dele; ⤴️ *Devolver* (com comentário) reabre o parecer do dono anterior, **sem refazer nada sozinho**: ele decide entre refazer, com a devolutiva no pedido, e reafirmar o *de acordo*.
+4. O *De acordo* do Dev fecha a missão: diagnóstico, aprendizado e catálogo rodam só aí, e o dossiê ganha a seção **Passagens**.
+
+As etapas rodam **em segundo plano** (`pipeline/execucao_fundo.py`): dá para fechar a aba. O progresso fica em `execucao.json`, e a missão volta para a fila **📥 Aguardando você** de quem dá o próximo parecer. Um batimento de 30 s detecta execução morta (reinício ou deploy no meio): o backup é restaurado e a etapa pode rodar de novo. **Não faça deploy com missão gerando.** Com o fluxo ativo, a correção livre pelo chat e o desfazer ficam desligados, porque o *Refazer* do cartão faz o mesmo passando pelo dono.
+
 ## ⚙️ Configuração e Variáveis de Ambiente
 
 Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///Users/lucassalomao/Documents/Unooria/gerador-missoes/.env.example):
@@ -709,6 +729,10 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `MIRO_OAUTH_TOKENS_FILE` | `.miro_mcp_tokens.json` | Onde ficam o client registrado e os tokens. Fora do versionamento. |
 | `MIRO_TEAM_ID` | — | Time onde os boards nascem. Vazio = o time escolhido ao conectar. |
 | `MIRO_MAX_ITENS` | `80` | Teto de itens por board, para não bater no rate limit do Miro. |
+| `AUTH_CREDENCIAIS` | *Obrigatório* | JSON com o hash scrypt de cada conta (`scripts/gerar_credenciais.py`). |
+| `AUTH_SEGREDO_JWT` | *Obrigatório* | Chave HS256 da sessão, com 32 caracteres ou mais. Girar derruba todas as sessões. |
+| `AUTH_HORAS_SESSAO` | `4` | Validade absoluta da sessão, contada do login. |
+| `PARECER_HUMANO` | `true` | A esteira para ao fim de cada etapa e espera o parecer do dono. |
 
 ---
 

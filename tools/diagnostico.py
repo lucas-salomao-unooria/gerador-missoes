@@ -332,11 +332,44 @@ def relatorio_markdown(d: Dict[str, Any], missao: str = "", artefatos: Optional[
     else:
         linhas.append("1. Nada travando. As ressalvas acima são opcionais e estão registradas para a próxima versão.")
 
+    passagens = bloco_de_passagens(state or {})
+    if passagens:
+        linhas += ["", passagens]
+
     bloco = bloco_de_execucao(state or {})
     if bloco:
         linhas += ["", bloco]
 
     return "\n".join(linhas) + "\n"
+
+
+def bloco_de_passagens(state: Dict[str, Any]) -> str:
+    """Quem deu parecer em cada etapa, com que texto, e quantas voltas cada uma levou.
+
+    Vem de `pareceres_humanos`, que a rodada final da esteira com parecer humano copia do `fluxo`
+    do `conversa.json` (`pipeline/reexecucao.py`, `iniciar_etapa_stream`). Sem parecer humano, vazio.
+    """
+    pareceres = [p for p in (state.get("pareceres_humanos") or []) if isinstance(p, dict)]
+    if not pareceres:
+        return ""
+    nomes = {"de_acordo": "de acordo", "refazer": "pediu para refazer", "devolver": "devolveu",
+             "excecao": "**liberou com exceção** (havia gate 🔴)"}
+    linhas = ["## Passagens", "",
+              "Cada etapa só seguiu depois do parecer de quem responde por ela. Pareceres de uma versão que",
+              "depois foi refeita aparecem riscados.", ""]
+    for etapa in ("produto", "design", "dev"):
+        da_etapa = [p for p in pareceres if p.get("etapa") == etapa]
+        if not da_etapa:
+            continue
+        voltas = sum(1 for p in da_etapa if p.get("acao") in ("refazer", "devolver"))
+        linhas.append(f"### {etapa.capitalize()} — {voltas} volta(s)")
+        linhas.append("")
+        for p in da_etapa:
+            texto = " ".join(str(p.get("comentario") or "").split())
+            linha = f"- {p.get('quando', '?')} · {p.get('como', '?')} {nomes.get(p.get('acao'), p.get('acao'))}: {texto}"
+            linhas.append(linha if p.get("valido", True) else f"- ~~{linha[2:]}~~")
+        linhas.append("")
+    return "\n".join(linhas).rstrip()
 
 
 def bloco_de_execucao(state: Dict[str, Any]) -> str:

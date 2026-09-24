@@ -244,6 +244,7 @@ async def run_orchestrator_pipeline_stream(
     initial_state: Optional[Dict[str, Any]] = None,
     run_dir: Optional[Path] = None,
     registrar_conversa: bool = True,
+    com_transversal: bool = True,
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Executa o pipeline e emite eventos: pipeline_started, agent_started, agent_chunk,
     agent_thought_chunk, gate_status, pipeline_completed | pipeline_error."""
@@ -269,6 +270,7 @@ async def run_orchestrator_pipeline_stream(
             include_thoughts=include_thoughts,
             modo_estrito=modo_estrito,
             stages=stages,
+            com_transversal=com_transversal,
         )
         session_service = InMemorySessionService()
         session = await session_service.create_session(
@@ -438,6 +440,11 @@ async def run_orchestrator_pipeline_stream(
                 )
                 if output_dir:
                     artifacts_manifest = generate_artifact_manifest(output_dir)
+                if output_dir and com_transversal:
+                    # Catálogo e histórico são da missão inteira: com parecer humano a esteira roda
+                    # uma etapa por vez, e só a rodada final (a transversal) registra — senão cada
+                    # etapa viraria uma linha no histórico, e uma ficha velha no estado seria
+                    # registrada de novo a cada passagem.
                     # Memória entre execuções: só aqui existe o nome da pasta, que é a chave da
                     # entrada no índice. Falhar aqui não pode custar a execução inteira.
                     try:

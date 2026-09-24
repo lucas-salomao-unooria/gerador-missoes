@@ -72,6 +72,9 @@ def create_llm_agent(
             instruction.strip()
             + "\n\n---\n## Herança desta execução\n\n{heranca_degradada?}\n"
             + "\n---\n## Pedido de correção desta execução\n\n{pedido_correcao?}\n"
+            # Pareceres de quem responde por cada etapa já liberada (`pipeline/passagem.py`).
+            # Vazio sem parecer humano ou na primeira etapa.
+            + "\n---\n## Notas de passagem desta missão\n\n{notas_de_passagem?}\n"
             + f"\n---\nData de hoje: {time.strftime('%Y-%m-%d')}. Use esta data em cabeçalhos, changelogs e frontmatter."
         ),
         "description": description.strip(),

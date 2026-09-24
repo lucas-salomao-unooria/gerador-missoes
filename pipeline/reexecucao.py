@@ -34,6 +34,8 @@ from pipeline.artifacts import ARTIFACT_FILES
 
 #: Chave de estado lida por todos os agentes (rodapé injetado em `agents/base.py`).
 KEY_PEDIDO_CORRECAO = "pedido_correcao"
+#: Pareceres humanos das etapas já liberadas (`pipeline/passagem.py`), no mesmo rodapé.
+KEY_NOTAS_DE_PASSAGEM = "notas_de_passagem"
 
 #: Etapas de onde uma correção pode recomeçar, na ordem da esteira. `transversal` refaz só
 #: diagnóstico e aprendizado. `produto` entrou em 23/09/2026: sem ela, a triagem mandava para `spec`
@@ -97,6 +99,9 @@ CHAVES_PRODUTO = frozenset({
 }) | CHAVES_SPEC
 CHAVES_TRANSVERSAL = frozenset({
     "diagnostico_execucao", "diagnostico_status", "diagnostico_status_envelope", "aprendizado_registro",
+    # a ficha do A52: sem cair, a ficha da execução anterior ficava no estado de uma correção que
+    # não chega à transversal, e o runner a registraria de novo no catálogo
+    "ficha_catalogo", "ficha_catalogo_dados",
 })
 #: Contadores da execução anterior. `reexecucoes` é o orçamento de retrabalho da banca: sem zerar,
 #: uma sessão que já gastou o teto chega à correção sem direito a conserto.
@@ -469,9 +474,13 @@ async def executar_correcao_stream(
     triagem: Any = None,
     *,
     so_esta_etapa: bool = False,
+    notas_de_passagem: Optional[str] = None,
     **opcoes_runner: Any,
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Reexecuta `etapa` (e as seguintes) sobre a sessão em `run_dir`, gravando na mesma pasta.
+
+    `notas_de_passagem`, quando vem, substitui a do estado salvo: é o *refazer* do parecer humano,
+    e uma refação invalida os pareceres da própria etapa — o texto velho não pode seguir aos agentes.
 
     Emite `correcao_started`, repassa os eventos do runner e fecha com `correcao_completed`
     (`result` + `registro`) ou `correcao_error` (backup restaurado). `opcoes_runner` vai para
@@ -491,6 +500,8 @@ async def executar_correcao_stream(
     tem_pedido = bool(pedido and (pedido.texto.strip() or pedido.anexos or pedido.anexos_sem_texto))
     pedido_md = pedido.como_markdown(etapa) if tem_pedido else None
     limpo, removidas = preparar_estado(estado, etapa, pedido_md)
+    if notas_de_passagem is not None:
+        limpo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
     backup = fazer_backup(run_dir, etapa, removidas)
     stages = _stages_de(etapa, so_esta_etapa)
     inicio = time.time()
@@ -551,6 +562,90 @@ async def executar_correcao_stream(
     mensagens.append({"role": "assistant", "content": mensagem_de_correcao(registro), "pipeline_result": result})
     mesclar_conversa(run_dir, conversa, result, registro, mensagens)
     yield {"type": "correcao_completed", "result": result, "registro": asdict(registro), "timestamp": time.time()}
+
+
+async def iniciar_etapa_stream(
+    run_dir: Path,
+    etapa: str,
+    notas_de_passagem: str = "",
+    **opcoes_runner: Any,
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """Roda a próxima etapa de uma missão com parecer humano, sobre o estado salvo, na mesma pasta.
+
+    É o esqueleto de `executar_correcao_stream` sem pedido de correção: não é conserto, é a esteira
+    andando. `preparar_estado` ainda apaga o que a etapa (e as seguintes) já tinham produzido — há
+    produto numa etapa *devolvida* e depois liberada de novo — e recalcula a herança. `etapa=
+    "transversal"` fecha a missão (diagnóstico → aprendizado → catálogo).
+
+    Emite os eventos do runner e fecha com `etapa_completed` (`result`) ou `etapa_error` (backup
+    restaurado). Não entra em `historico_correcoes`: a linha do tempo das passagens é o `fluxo`.
+    """
+    from pipeline.runner import run_orchestrator_pipeline_stream
+
+    run_dir = Path(run_dir)
+    estado, conversa, briefing = carregar_sessao(run_dir)
+    if etapa == "transversal":
+        limpo = {k: v for k, v in estado.items() if k not in CHAVES_TRANSVERSAL | {KEY_PEDIDO_CORRECAO}}
+        removidas = sorted(k for k in estado if k not in limpo)
+        stages, com_transversal = ETAPA_PARA_STAGES["transversal"], True
+        # o dossiê (A50) ganha a seção "Passagens" a partir daqui: o fluxo vive no conversa.json,
+        # fora do estado que os agentes enxergam
+        fluxo = (conversa.get("fluxo") or {}) if isinstance(conversa.get("fluxo"), dict) else {}
+        limpo["pareceres_humanos"] = list(fluxo.get("pareceres") or [])
+    else:
+        limpo, removidas = preparar_estado(estado, etapa)
+        stages, com_transversal = [etapa], False
+    limpo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
+    backup = fazer_backup(run_dir, f"passagem-{etapa}", removidas)
+    inicio = time.time()
+    yield {"type": "etapa_started", "etapa": etapa, "stages": stages, "timestamp": inicio,
+           "backup": backup.relative_to(run_dir).as_posix()}
+
+    result: Any = None
+    erro: Optional[Dict[str, Any]] = None
+    async for evento in run_orchestrator_pipeline_stream(
+        prompt=briefing,
+        user_id=conversa.get("user_id"),
+        session_id=conversa.get("session_id"),
+        stages=stages,
+        initial_state=limpo,
+        run_dir=run_dir,
+        registrar_conversa=False,
+        com_transversal=com_transversal,
+        **opcoes_runner,
+    ):
+        tipo = evento.get("type")
+        if tipo == "pipeline_completed":
+            result = evento.get("result")
+        elif tipo == "pipeline_error":
+            erro = evento
+        yield evento
+
+    if result is None or getattr(result, "status", "") == "error":
+        restaurados = restaurar_backup(run_dir, backup)
+        detalhe = (erro or {}).get("error") or getattr(result, "error_message", None) or "o runner terminou sem resultado"
+        yield {"type": "etapa_error", "etapa": etapa, "error": detalhe, "restaurados": restaurados,
+               "timestamp": time.time()}
+        return
+
+    from pipeline.session_store import save_session_record
+
+    nome = {"transversal": "o dossiê final"}.get(etapa, f"a etapa **{etapa}**")
+    mensagens = list(conversa.get("messages") or []) + [
+        {"role": "assistant", "content": f"▶️ {time.strftime('%d/%m/%Y %H:%M')} — terminou {nome} "
+                                         f"({round(time.time() - inicio)} s). Status: {getattr(result, 'status', '')}."}]
+    save_session_record(
+        run_dir=run_dir,
+        session_id=str(conversa.get("session_id") or result.session_id),
+        user_id=str(conversa.get("user_id") or result.user_id),
+        prompt=str(conversa.get("prompt") or briefing),
+        result=result,
+        messages=mensagens,
+        attached_files=list(conversa.get("attached_files") or []),
+        created_at=conversa.get("created_at"),
+        historico_correcoes=historico_de(conversa) or None,
+    )
+    yield {"type": "etapa_completed", "etapa": etapa, "result": result, "timestamp": time.time()}
 
 
 def executar_correcao_sync(run_dir: Path, etapa: str, pedido: Optional[PedidoCorrecao] = None,

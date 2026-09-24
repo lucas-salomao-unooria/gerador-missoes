@@ -11,6 +11,7 @@ import json
 import os
 import re
 import time
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -19,6 +20,7 @@ import streamlit.components.v1 as components
 from PIL import Image
 
 from config import get_settings
+from pipeline import execucao_fundo, passagem
 from pipeline.artifacts import generate_artifact_manifest
 from pipeline.orchestrator import STAGES, get_pipeline_agents_metadata, get_pipeline_stages, stages_para_ui
 from pipeline.reexecucao import (
@@ -46,6 +48,15 @@ from pipeline.session_store import (
     resolve_session_dir,
 )
 from prompts import get_prompt_raw, list_prompt_files, load_prompt, save_prompt
+from tools.auth import (
+    ConfiguracaoDeLoginAusente,
+    Revogacoes,
+    Sessao,
+    autenticar,
+    configuracao_de_login,
+    emitir_token,
+    validar_token,
+)
 from tools.doc_parser import EXTENSOES_ACEITAS, DocumentBatch, validate_and_process_batch
 from tools.markdown_blocos import sanear_para_streamlit
 
@@ -155,7 +166,10 @@ def init_session_state():
 
 
 @st.cache_data(show_spinner=False)
-def _listar_sessoes_cached(_assinatura: str) -> List[Dict[str, Any]]:
+def _listar_sessoes_cached(assinatura: str) -> List[Dict[str, Any]]:
+    # sem `_` no nome: o `st.cache_data` deixa de fora da chave todo parâmetro que começa com `_`,
+    # e a assinatura nunca invalidava o cache — missão gravada por outro processo (o script de
+    # reexecução, a etapa em segundo plano) não aparecia até alguém chamar `.clear()`
     return list_saved_sessions()
 
 
@@ -190,7 +204,7 @@ def listar_sessoes() -> List[Dict[str, Any]]:
 
 
 @st.cache_data(show_spinner=False)
-def _manifesto_cached(_assinatura: str, output_path: str) -> List[Dict[str, Any]]:
+def _manifesto_cached(assinatura: str, output_path: str) -> List[Dict[str, Any]]:
     return generate_artifact_manifest(Path(output_path))
 
 
@@ -238,6 +252,93 @@ def tratar_retorno_oauth_miro() -> None:
         st.session_state["miro_aviso"] = ("error", f"❌ Não deu para conectar ao Miro: {exc}")
 
     st.query_params.clear()
+
+
+# ------------------------------------------------------------------ login
+def _revogacoes() -> Revogacoes:
+    return Revogacoes(get_settings().output_path / ".auth" / "revogados.json")
+
+
+def sessao_atual() -> Optional[Sessao]:
+    """Quem está logado nesta sessão do Streamlit. `exigir_login` garante que existe em `main`."""
+    return st.session_state.get("auth_sessao")
+
+
+def exigir_login() -> Sessao:
+    """Devolve a sessão válida ou desenha só o formulário de login e para o script.
+
+    O token vive em `st.session_state` durante a aba e num cookie (`tools/cookie_sessao.py`) para
+    sobreviver ao recarregar. A expiração é absoluta, 4 h depois do login, conferida a cada rerun.
+    As revogações ("Sair") são lidas só quando o token chega pelo cookie, isto é, uma vez por aba:
+    dentro da aba, sair já apaga o token do estado, e reler o arquivo do bucket a cada rerun
+    custaria uma RPC do GCS-FUSE por clique.
+    """
+    from tools.cookie_sessao import apagar_cookie, gravar_cookie, ler_cookie
+
+    settings = get_settings()
+    try:
+        cfg = configuracao_de_login(settings.auth_credenciais, settings.auth_segredo_jwt, settings.auth_horas_sessao)
+    except ConfiguracaoDeLoginAusente as exc:
+        st.error(f"🔒 O login não está configurado: {exc}. Gere as credenciais com "
+                 "`python scripts/gerar_credenciais.py --env` (local) ou publique os segredos no Secret Manager.")
+        st.stop()
+
+    agora = time.time()
+    token = st.session_state.get("auth_token")
+    veio_do_cookie = False
+    if not token and not st.session_state.get("auth_saiu"):
+        token = ler_cookie()
+        veio_do_cookie = bool(token)
+    sessao = validar_token(cfg, token, agora, _revogacoes() if veio_do_cookie else None) if token else None
+
+    if sessao:
+        st.session_state.auth_token = token
+        st.session_state.auth_sessao = sessao
+        gravar_cookie(token, int(sessao.expira_em - agora))
+        return sessao
+
+    aviso = None
+    if token and not veio_do_cookie:
+        aviso = f"⏱️ Sua sessão expirou ({settings.auth_horas_sessao:g} h). Entre de novo."
+    for chave in ("auth_token", "auth_sessao"):
+        st.session_state.pop(chave, None)
+    if token or st.session_state.get("auth_saiu"):
+        apagar_cookie()
+
+    _, meio, _ = st.columns([1, 1.2, 1])
+    with meio:
+        st.markdown("<h1 class='main-header'>Gerador de Missões</h1>", unsafe_allow_html=True)
+        if aviso:
+            st.info(aviso)
+        with st.form("login", border=True):
+            usuario = st.text_input("Usuário", placeholder="produto, design, dev ou admin")
+            senha = st.text_input("Senha", type="password")
+            entrar = st.form_submit_button("Entrar", type="primary", use_container_width=True)
+        if entrar:
+            nova, motivo = autenticar(cfg, usuario, senha)
+            if nova:
+                st.session_state.auth_token = emitir_token(cfg, nova)
+                st.session_state.auth_sessao = nova
+                st.session_state.auth_saiu = False
+                st.rerun()
+            st.error(motivo)
+        st.caption(f"A sessão vale {settings.auth_horas_sessao:g} h a partir do login.")
+    st.stop()
+
+
+def sair() -> None:
+    sessao = sessao_atual()
+    if sessao:
+        try:
+            _revogacoes().revogar(sessao)
+        except OSError:
+            pass  # sem o arquivo, o token ainda expira sozinho; o cookie é apagado de qualquer forma
+    # a missão aberta e a fila também saem: a próxima pessoa no mesmo navegador não herda a tela
+    for chave in ("auth_token", "auth_sessao", "current_session_id", "messages", "correcao_pendente",
+                  "aviso_fila_mostrado"):
+        st.session_state.pop(chave, None)
+    st.session_state.auth_saiu = True
+    st.rerun()
 
 
 def render_integracoes(settings) -> None:
@@ -290,6 +391,246 @@ def render_integracoes(settings) -> None:
             st.caption("Você escolhe o time no Miro e volta para cá automaticamente.")
 
 
+# ------------------------------------------------------------------ parecer humano
+SITUACOES_PENDENTES = (passagem.AGUARDANDO, passagem.LIBERADA, passagem.DEVOLVIDA, passagem.FALHOU)
+
+
+def _abrir_sessao(dir_name: str) -> None:
+    loaded = load_saved_session(dir_name)
+    if loaded:
+        st.session_state.current_session_id = dir_name
+        st.session_state.messages = loaded[0]
+        st.session_state.correcao_pendente = None
+
+
+def render_aguardando_voce(sessoes: List[Dict[str, Any]], sessao: Optional[Sessao]) -> None:
+    """Fila das missões paradas no papel de quem está logado. É o aviso: não há Slack nem e-mail."""
+    if not sessao:
+        return
+    minhas = [s for s in sessoes if s.get("fluxo_situacao") in SITUACOES_PENDENTES
+              and (sessao.papel == "admin" or s.get("fluxo_etapa") == sessao.papel)]
+    if not minhas:
+        return
+    if not st.session_state.get("aviso_fila_mostrado"):
+        st.toast(f"📥 {len(minhas)} missão(ões) aguardando {sessao.rotulo}.")
+        st.session_state.aviso_fila_mostrado = True
+    st.markdown(f"#### 📥 Aguardando você ({len(minhas)})")
+    for s in minhas:
+        o_que = passagem.quem_age({"etapa": s["fluxo_etapa"], "situacao": s["fluxo_situacao"]})
+        titulo = s["title"] if len(s["title"]) <= 26 else s["title"][:24] + "…"
+        if st.button(f"{titulo} · {o_que}", key=f"fila_{s['dir_name']}", use_container_width=True,
+                     help=f"Parado desde {s.get('fluxo_atualizado_em') or '?'}"):
+            _abrir_sessao(s["dir_name"])
+            st.rerun()
+    st.markdown("---")
+
+
+def _opcoes_runner(opts: Dict[str, Any]) -> Dict[str, Any]:
+    return {"thinking_budget": opts["thinking_budget"], "include_thoughts": opts["include_thoughts"],
+            "modo_estrito": opts["modo_estrito"]}
+
+
+@st.cache_data(show_spinner=False, max_entries=8)
+def _estado_cached(caminho: str, mtime: float) -> Dict[str, Any]:
+    return json.loads(Path(caminho).read_text(encoding="utf-8"))
+
+
+def estado_da_sessao(run_dir: Path) -> Dict[str, Any]:
+    """`estado.json` cacheado pelo mtime: ~1 MB, e o cartão de passagem o consulta a cada rerun."""
+    caminho = run_dir / "estado.json"
+    try:
+        return _estado_cached(str(caminho), caminho.stat().st_mtime)
+    except (OSError, ValueError):
+        return {}
+
+
+ROTULO_ACAO = {
+    passagem.DE_ACORDO: "✅ De acordo — liberar para {prox}",
+    passagem.REFAZER: "↩️ Refazer {etapa}",
+    passagem.INICIAR: "▶️ Iniciar {etapa}",
+    passagem.DEVOLVER: "⤴️ Devolver a {ant}",
+    passagem.EXCECAO: "⚠️ Liberar com exceção",
+}
+
+
+def _rotulo_acao(acao: str, etapa: str, fluxo: Dict[str, Any]) -> str:
+    if acao == passagem.DE_ACORDO and not passagem.proxima_etapa(etapa):
+        return "✅ De acordo — entregar a missão"
+    if acao == passagem.INICIAR and fluxo.get("situacao") == passagem.FALHOU:
+        return f"🔁 Rodar {passagem.ROTULO_ETAPA[etapa]} de novo"
+    ant = passagem.etapa_anterior(etapa)
+    prox = passagem.proxima_etapa(etapa)
+    return ROTULO_ACAO[acao].format(etapa=passagem.ROTULO_ETAPA[etapa],
+                                    prox=passagem.ROTULO_ETAPA.get(prox or "", ""),
+                                    ant=passagem.ROTULO_ETAPA.get(ant or "", ""))
+
+
+def _citar(texto: str) -> str:
+    return "\n".join(f"> {l}" if l.strip() else ">" for l in (texto or "").splitlines())
+
+
+def _render_trilha(fluxo: Dict[str, Any]) -> None:
+    pareceres = fluxo.get("pareceres") or []
+    liberadas = {p["etapa"] for p in pareceres if p.get("acao") in (passagem.DE_ACORDO, passagem.EXCECAO) and p.get("valido", True)}
+    marcas = []
+    for etapa in passagem.ORDEM:
+        if etapa in liberadas:
+            icone = "✅"
+        elif etapa == fluxo["etapa"] and fluxo.get("situacao") != passagem.ENTREGUE:
+            icone = "🔄"
+        else:
+            icone = "⬜"
+        marcas.append(f"{icone} {passagem.ROTULO_ETAPA[etapa]}")
+    st.markdown(" → ".join(marcas))
+    if pareceres:
+        with st.expander(f"🗒️ Pareceres ({len(pareceres)})", expanded=False):
+            nomes = {passagem.DE_ACORDO: "de acordo", passagem.REFAZER: "refazer", passagem.DEVOLVER: "devolveu",
+                     passagem.EXCECAO: "liberou com exceção"}
+            for p in reversed(pareceres):
+                invalido = "" if p.get("valido", True) else " · ~~substituído por uma versão refeita~~"
+                st.markdown(f"**{passagem.ROTULO_ETAPA.get(p['etapa'], p['etapa'])}** · {nomes.get(p['acao'], p['acao'])} · "
+                            f"{p['como']} · {p['quando']} (rodada {p.get('rodada', 1)}){invalido}\n\n{_citar(p['comentario'])}")
+
+
+@st.fragment(run_every=5)
+def _painel_execucao(run_dir_str: str) -> None:
+    """Progresso da etapa em segundo plano. Quando ela termina, recarrega a missão inteira."""
+    run_dir = Path(run_dir_str)
+    execucao_fundo.conferir_execucao_morta(run_dir)
+    dados = execucao_fundo.ler_execucao(run_dir) or {}
+    if dados.get("situacao") != "executando" and not execucao_fundo.em_execucao(run_dir):
+        invalidar_cache_sessoes()
+        _abrir_sessao(run_dir.name)
+        st.rerun(scope="app")
+    tipo = {"nova": "Gerando", "iniciar": "Gerando", "refazer": "Refazendo", "encerrar": "Fechando o dossiê de"}.get(
+        dados.get("tipo", ""), "Rodando")
+    etapa = passagem.ROTULO_ETAPA.get(dados.get("etapa", ""), dados.get("etapa", ""))
+    decorrido = int(time.time() - float(dados.get("iniciado_em") or time.time()))
+    agente = dados.get("agente_atual") or "iniciando"
+    st.info(f"⏳ {tipo} **{etapa}** — {decorrido // 60} min {decorrido % 60:02d} s · agente atual: `{agente}`")
+    gates = dados.get("gates") or {}
+    if gates:
+        st.caption(" · ".join(f"{_status_icon(v)} {GATE_LABELS.get(k, k)}" for k, v in gates.items() if k in GATE_LABELS))
+    st.caption("A execução continua no servidor mesmo se você fechar esta aba. A missão volta para a fila de quem dá o próximo parecer.")
+
+
+def _decidir(run_dir: Path, fluxo: Dict[str, Any], acao: str, comentario: str,
+             estado: Dict[str, Any], opts: Dict[str, Any]) -> None:
+    sessao = sessao_atual()
+    try:
+        novo, efeito = passagem.aplicar(fluxo, acao, sessao, comentario, estado)
+        gravado = passagem.registrar_fluxo(run_dir, novo, fluxo.get("versao", 0))
+        if efeito:
+            execucao_fundo.executar_efeito(run_dir, efeito, passagem.notas_de_passagem(gravado), **_opcoes_runner(opts))
+    except (passagem.DecisaoInvalida, passagem.ConflitoDeVersao, execucao_fundo.ExecucaoEmAndamento) as exc:
+        st.error(str(exc))
+        return
+    execucao_fundo.notificar({"tipo": "parecer", "run_dir": str(run_dir), "acao": acao, "etapa": fluxo["etapa"],
+                              "autor": sessao.assinatura_de(fluxo["etapa"])})
+    invalidar_cache_sessoes()
+    st.rerun()
+
+
+def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) -> None:
+    sessao = sessao_atual()
+    etapa, situacao = fluxo["etapa"], fluxo.get("situacao")
+    estado = estado_da_sessao(run_dir)
+    if situacao == passagem.ENTREGUE:
+        st.success("📦 Missão entregue: as três etapas têm parecer de acordo e o dossiê final foi gerado.")
+        return
+
+    semaforo = passagem.semaforo_da_etapa(estado, etapa)
+    if semaforo and situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA):
+        st.markdown("**Semáforo da etapa:** " + " · ".join(f"{icone} {GATE_LABELS.get(k, k)}" for k, icone in semaforo.items()))
+    if situacao == passagem.DEVOLVIDA:
+        dev = passagem.ultima_devolutiva(fluxo, etapa)
+        if dev:
+            st.warning(f"⤴️ **Devolvida por {dev['como']}** em {dev['quando']}:\n\n{_citar(dev['comentario'])}")
+    if situacao == passagem.LIBERADA:
+        anterior = passagem.etapa_anterior(etapa)
+        ultimo = next((p for p in reversed(fluxo.get("pareceres") or [])
+                       if p.get("etapa") == anterior and p.get("acao") in (passagem.DE_ACORDO, passagem.EXCECAO)), None)
+        if ultimo:
+            st.success(f"Parecer de **{passagem.ROTULO_ETAPA[anterior]}** ({ultimo['como']}, {ultimo['quando']}):\n\n{_citar(ultimo['comentario'])}")
+    if situacao == passagem.FALHOU:
+        erro = (execucao_fundo.ler_execucao(run_dir) or {}).get("erro") or "sem detalhe"
+        st.error(f"❌ A última execução de {passagem.ROTULO_ETAPA[etapa]} falhou: {erro}")
+        if not (run_dir / "estado.json").exists():
+            st.caption("A geração não chegou a gravar o estado da missão. Crie a missão de novo pelo ➕ Nova Missão.")
+            return
+
+    acoes = passagem.acoes_possiveis(fluxo, sessao.papel, estado)
+    if "🔴" in semaforo.values() and situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA):
+        st.warning("🔴 Há gate reprovado nesta etapa: ela não pode ser liberada. Refaça com um comentário do que mudar"
+                   + (", ou libere com exceção (fica registrado no dossiê)." if passagem.EXCECAO in acoes
+                      else ", ou peça ao admin uma liberação com exceção."))
+    if not acoes:
+        dono = passagem.dono_da_vez(fluxo)
+        st.caption(f"🔒 Aguardando **{passagem.ROTULO_ETAPA.get(dono or '', dono)}**. Você está como {sessao.rotulo}.")
+        return
+
+    comentario = ""
+    if any(a != passagem.INICIAR for a in acoes):
+        comentario = st.text_area(
+            "Comentário (obrigatório para parecer, refazer ou devolver)",
+            key=f"parecer_{run_dir.name}_{fluxo.get('versao', 0)}", height=140,
+            placeholder="De acordo: o que você conferiu, ajustou ou decidiu — segue para os agentes das próximas etapas.\n"
+                        "Refazer ou devolver: o que precisa mudar, e por quê.")
+        st.caption(f"Mínimo de {passagem.MIN_CARACTERES_COMENTARIO} letras ou números. Iniciar não pede comentário.")
+    colunas = st.columns(len(acoes))
+    for coluna, acao in zip(colunas, acoes):
+        primario = acao in (passagem.DE_ACORDO, passagem.INICIAR)
+        if coluna.button(_rotulo_acao(acao, etapa, fluxo), key=f"acao_{acao}_{run_dir.name}_{fluxo.get('versao', 0)}",
+                         type="primary" if primario else "secondary", use_container_width=True):
+            _decidir(run_dir, fluxo, acao, comentario, estado, opts)
+
+
+def render_passagem(run_dir: Path, opts: Dict[str, Any]) -> bool:
+    """Cartão do parecer humano da missão aberta. `True` se a missão segue por pareceres."""
+    fluxo = passagem.ler_fluxo(run_dir)
+    if not fluxo:
+        return False
+    if execucao_fundo.conferir_execucao_morta(run_dir):
+        fluxo = passagem.ler_fluxo(run_dir) or fluxo
+    with st.container(border=True):
+        st.markdown(f"#### 🧭 Passagem — {passagem.quem_age(fluxo)}")
+        _render_trilha(fluxo)
+        if fluxo.get("situacao") in passagem.EM_EXECUCAO or execucao_fundo.em_execucao(run_dir):
+            _painel_execucao(str(run_dir))
+        else:
+            _painel_decisao(run_dir, fluxo, opts)
+    return True
+
+
+def _iniciar_missao_com_parecer(user_prompt: str, doc_batch: Optional[DocumentBatch], opts: Dict[str, Any]) -> None:
+    """Missão nova com parecer humano: cria a pasta já, e produto roda em segundo plano.
+
+    A pasta nasce antes da execução (sem o slug no nome, que só existe no fim) para a missão aparecer
+    no histórico como "Produto gerando" e o progresso ter onde ser gravado.
+    """
+    sessao = sessao_atual()
+    session_id = f"session_{uuid.uuid4().hex[:8]}"
+    run_dir = get_settings().output_path / f"{time.strftime('%Y%m%d-%H%M%S')}-{session_id}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    display = user_prompt
+    if doc_batch and doc_batch.documents:
+        display += "\n\n📎 **Anexos:** " + ", ".join(f"`{d.name}`" for d in doc_batch.documents)
+    primeira_linha = next((l.strip() for l in user_prompt.splitlines() if l.strip()), "Missão")
+    conversa = {
+        "session_id": session_id, "user_id": sessao.usuario, "title": primeira_linha[:60],
+        "created_at": time.strftime("%d/%m/%Y %H:%M:%S"), "prompt": user_prompt,
+        "attached_files": [d.name for d in doc_batch.documents] if doc_batch else [],
+        "status": "executando", "messages": [{"role": "user", "content": display}], "gates": {},
+        "pipeline_bloqueado": False, "has_prd": False, "files_count": 0, "fluxo": passagem.novo_fluxo(),
+    }
+    (run_dir / "conversa.json").write_text(json.dumps(conversa, indent=2, ensure_ascii=False), encoding="utf-8")
+    execucao_fundo.iniciar_nova(run_dir, user_prompt, sessao.usuario, session_id, doc_batch, **_opcoes_runner(opts))
+    st.session_state.current_session_id = run_dir.name
+    st.session_state.messages = conversa["messages"]
+    invalidar_cache_sessoes()
+    st.rerun()
+
+
 def render_sidebar() -> Dict[str, Any]:
     settings = get_settings()
     with st.sidebar:
@@ -298,14 +639,32 @@ def render_sidebar() -> Dict[str, Any]:
         elif os.path.exists("images/logo.png"):
             st.image("images/logo.png", use_container_width=True)
 
+        sessao = sessao_atual()
+        if sessao:
+            col_quem, col_sair = st.columns([3, 1])
+            col_quem.markdown(f"👤 Conectado como **{sessao.rotulo}**  \n"
+                              f"<span style='opacity:.65;font-size:.8rem'>expira às "
+                              f"{time.strftime('%H:%M', time.localtime(sessao.expira_em))}</span>",
+                              unsafe_allow_html=True)
+            if col_sair.button("Sair", key="auth_sair", use_container_width=True):
+                sair()
+
         if st.button("➕ Nova Missão", type="primary", use_container_width=True):
             st.session_state.current_session_id = None
             st.session_state.messages = []
             init_session_state()
             st.rerun()
 
+        parecer_humano = settings.parecer_humano
+        if sessao and sessao.papel == "admin":
+            parecer_humano = st.toggle(
+                "Parecer humano entre etapas", value=settings.parecer_humano, key="parecer_humano",
+                help="Ligado: cada etapa para e espera o parecer do dono (de acordo, refazer, devolver). "
+                     "Desligado: a esteira roda direto, como antes — para testes.")
+
         st.markdown("---")
         saved_sessions = listar_sessoes()
+        render_aguardando_voce(saved_sessions, sessao)
         total_sessions = len(saved_sessions)
         header_title = f"#### 🗂️ Histórico de Missões ({total_sessions})" if total_sessions > 0 else "#### 🗂️ Histórico de Missões"
         st.markdown(header_title)
@@ -354,7 +713,10 @@ def render_sidebar() -> Dict[str, Any]:
                                     st.session_state.messages = msgs
                                     st.rerun()
                         with col_del:
-                            if st.button("🗑️", key=f"del_{s['dir_name']}", help=f"Excluir {s['title']}"):
+                            # excluir apaga a pasta no bucket, com pareceres e histórico: só o admin
+                            if st.button("🗑️", key=f"del_{s['dir_name']}", help=f"Excluir {s['title']}",
+                                         disabled=not (sessao and sessao.papel == "admin")
+                                         or s.get("fluxo_situacao") in passagem.EM_EXECUCAO):
                                 delete_saved_session(s["dir_name"])
                                 invalidar_cache_sessoes()
                                 if st.session_state.get("current_session_id") == s["dir_name"]:
@@ -415,7 +777,8 @@ def render_sidebar() -> Dict[str, Any]:
             st.session_state.messages = []
             st.rerun()
 
-    return {"stages": stages, "modo_estrito": modo_estrito, "thinking_budget": thinking_presets[selected_label], "include_thoughts": include_thoughts}
+    return {"stages": stages, "modo_estrito": modo_estrito, "thinking_budget": thinking_presets[selected_label],
+            "include_thoughts": include_thoughts, "parecer_humano": parecer_humano}
 
 
 def update_pipeline_step_status(
@@ -591,8 +954,10 @@ async def _acompanhar_esteira(stream, stages: List[Dict[str, Any]], progress, st
 
 async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_container, doc_batch: Optional[DocumentBatch]):
     """Missão nova, do zero."""
+    sessao = sessao_atual()
     stream = run_orchestrator_pipeline_stream(
         prompt=prompt,
+        user_id=sessao.usuario if sessao else None,
         thinking_budget=opts["thinking_budget"],
         include_thoughts=opts["include_thoughts"],
         modo_estrito=opts["modo_estrito"],
@@ -841,7 +1206,11 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
                     linha += f" · desfeita em {h['desfeita_em']}"
                 st.markdown(linha)
             pasta = Path(getattr(result, "output_dir", "") or "")
-            if correcao_desfazivel({"historico_correcoes": historico}) and pasta.is_dir():
+            com_fluxo = pasta.is_dir() and passagem.ler_fluxo(pasta) is not None
+            if com_fluxo:
+                # restaurar o conversa.json de antes voltaria os pareceres no tempo, sem ninguém decidir
+                st.caption("Com parecer humano, o desfazer fica desligado: o caminho é **Refazer** no cartão de passagem.")
+            elif correcao_desfazivel({"historico_correcoes": historico}) and pasta.is_dir():
                 st.caption("Desfazer restaura os documentos, o estado e a conversa de antes da última correção. A cópia fica guardada.")
                 if st.button("↩️ Desfazer a última correção", key=f"desfazer_{prefix}"):
                     registro = desfazer_correcao(pasta)
@@ -1246,7 +1615,10 @@ Em aberto: não sei se o banco deve ter 8 ou 12 vídeos.""",
 
 
 def main():
+    # O retorno do OAuth do Miro vem antes do login: é uma aba nova e, sem isso, o `?code=` se
+    # perderia na tela de login. Ele não mostra dados — valida o `state` e guarda o token.
     tratar_retorno_oauth_miro()
+    exigir_login()
     init_session_state()
     opts = render_sidebar()
 
@@ -1273,7 +1645,9 @@ def main():
         # Com uma sessão aberta, o campo de mensagem pede correções NELA: a esteira recomeça só
         # da etapa afetada, sobre o estado salvo. Missão do zero é pelo botão "➕ Nova Missão".
         modo_correcao = bool(st.session_state.get("current_session_id"))
-        if modo_correcao and st.session_state.get("correcao_pendente"):
+        com_fluxo = modo_correcao and render_passagem(
+            get_settings().output_path / str(st.session_state.current_session_id), opts)
+        if modo_correcao and not com_fluxo and st.session_state.get("correcao_pendente"):
             _render_card_correcao(st.session_state.correcao_pendente, opts)
 
         doc_batch: Optional[DocumentBatch] = None
@@ -1282,27 +1656,35 @@ def main():
             if modo_correcao else
             "📎 Anexar one-pager / documentos de apoio (PDF, Word, Markdown ou texto — até 60 arquivos / 25 MB)"
         )
-        with st.expander(rotulo_anexos, expanded=False):
-            uploaded = st.file_uploader("Arquivos para os agentes:" if modo_correcao else "Arquivos para o agente P0 (one-pager):", type=list(EXTENSOES_ACEITAS), accept_multiple_files=True, key="docs")
-            if uploaded:
-                batch, err = validate_and_process_batch(uploaded)
-                if err:
-                    st.error(err)
-                elif batch:
-                    doc_batch = batch
-                    st.success(f"✅ {batch.files_count} arquivo(s) — {batch.total_mb:.2f} MB")
+        # com fluxo, o material de uma refação vai no comentário do Refazer; anexo aqui não teria destino
+        if not com_fluxo:
+            with st.expander(rotulo_anexos, expanded=False):
+                uploaded = st.file_uploader("Arquivos para os agentes:" if modo_correcao else "Arquivos para o agente P0 (one-pager):", type=list(EXTENSOES_ACEITAS), accept_multiple_files=True, key="docs")
+                if uploaded:
+                    batch, err = validate_and_process_batch(uploaded)
+                    if err:
+                        st.error(err)
+                    elif batch:
+                        doc_batch = batch
+                        st.success(f"✅ {batch.files_count} arquivo(s) — {batch.total_mb:.2f} MB")
 
         placeholder = (
+            "Esta missão segue por pareceres: use o cartão de passagem acima (Refazer leva o seu comentário aos agentes)."
+            if com_fluxo else
             "Peça uma correção nesta missão (ex.: subir o teto de bio para 150; trocar a copy da tela 3; fixar o polling em 4 s)…"
             if modo_correcao else
             "Descreva a missão (ano, ambiente, descoberta central, decisão do estudante) ou envie o one-pager…"
         )
-        user_prompt = st.chat_input(placeholder)
+        # Com parecer humano, a correção livre pelo chat ficaria fora do fluxo (sem dono, sem
+        # parecer, rodando as etapas seguintes sem ninguém ter liberado): o Refazer do cartão a substitui.
+        user_prompt = st.chat_input(placeholder, disabled=bool(com_fluxo))
         if user_prompt and modo_correcao:
             settings = get_settings()
             if not settings.is_gemini_configured():
                 st.warning("⚠️ `GOOGLE_API_KEY` não configurada no `.env`.")
             _iniciar_correcao(user_prompt, doc_batch)
+        elif user_prompt and opts.get("parecer_humano"):
+            _iniciar_missao_com_parecer(user_prompt, doc_batch, opts)
         elif user_prompt:
             settings = get_settings()
             if not settings.is_gemini_configured():

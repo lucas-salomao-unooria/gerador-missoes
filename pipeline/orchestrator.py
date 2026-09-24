@@ -100,8 +100,15 @@ def create_mission_orchestrator(
     include_thoughts: Optional[bool] = None,
     modo_estrito: Optional[bool] = None,
     stages: Optional[List[str]] = None,
+    com_transversal: bool = True,
 ) -> SequentialAgent:
-    """Cria o orquestrador raiz com as etapas Produto → Design → Dev → Aprendizado."""
+    """Cria o orquestrador raiz com as etapas Produto → Design → Dev → Aprendizado.
+
+    `com_transversal=False` monta só as etapas pedidas, sem diagnóstico, aprendizado e registro
+    no catálogo: é como a esteira roda com parecer humano (`pipeline/passagem.py`), uma etapa por
+    vez. Os três ficam para o parecer final do Dev — rodar a cada etapa registraria no catálogo
+    uma missão pela metade, e o gate de repetição (V5) passaria a acusá-la contra si mesma.
+    """
     settings = get_settings()
     t_budget = thinking_budget if thinking_budget is not None else settings.thinking_budget
     inc_thoughts = include_thoughts if include_thoughts is not None else settings.include_thoughts
@@ -120,11 +127,12 @@ def create_mission_orchestrator(
     # O diagnóstico vem antes do aprendizado: é ele quem monta o dossiê que o aprendizado
     # lê para escrever a leitura em prosa. Ambos rodam sempre — a esteira não aborta mais,
     # e mesmo que abortasse, estes dois são o que explica o que houve.
-    sub_agents.append(get_diagnostico_agent())
-    sub_agents.append(get_aprendizado_agent(t_budget, inc_thoughts))
-    # Por último, de propósito: a ficha de catálogo copia do aprendizado os campos de julgamento
-    # (descoberta, eixo, tipo de decisão) que só ele redige.
-    sub_agents.append(get_registro_catalogo_agent())
+    if com_transversal:
+        sub_agents.append(get_diagnostico_agent())
+        sub_agents.append(get_aprendizado_agent(t_budget, inc_thoughts))
+        # Por último, de propósito: a ficha de catálogo copia do aprendizado os campos de julgamento
+        # (descoberta, eixo, tipo de decisão) que só ele redige.
+        sub_agents.append(get_registro_catalogo_agent())
 
     return SequentialAgent(
         name=name,

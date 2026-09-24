@@ -81,6 +81,8 @@ KNOWN_STATE_KEYS = {
     "degradacoes", "heranca_degradada", "agentes_degradados",
     # modo correção (pipeline/reexecucao.py): pedido lido por todo agente, triagem e seu insumo
     "pedido_correcao", "triagem_correcao", "mapa_da_missao",
+    # parecer humano entre etapas (`pipeline/passagem.py`): notas no rodapé, pareceres no dossiê
+    "notas_de_passagem", "pareceres_humanos",
 }
 # Variáveis estáticas substituídas pelo loader antes do ADK
 CONFIG_VARS = {"stitch_mcp_mode": "off", "stitch_project_url_base": "u", "gate_max_rodadas": 3, "qa_max_rodadas": 1}
