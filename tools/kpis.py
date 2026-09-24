@@ -290,7 +290,21 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
     # o objeto do catálogo. É o que a missão deve às perguntas do PO — mesmo sem KPI próprio para
     # elas, que se leem comparando missões no painel de produto.
     if tab_evt:
-        for s, ts in sorted(sinais_exigidos(ia_responde_estudante(spec, texto)).items()):
+        # Com spec, é ela quem diz se a IA responde ao estudante (T21 herdada). O PRD não pode decidir
+        # isso por si: em 24/09/2026 o redator pôs `EVT-U06` no KPI de espera (T12) de uma missão cuja IA
+        # só atua no preparo docente, o gate leu "o PRD emite sinal de IA" e passou a exigir o `EVT-P06`
+        # de custo — mandou acrescentar um evento de algo que não existe, quando o certo era tirar o outro.
+        ia_prd = ia_responde_estudante("", texto)
+        ia = ia_responde_estudante(spec, "") if (spec or "").strip() else ia_prd
+        if ia_prd and not ia:
+            emitidos = [s for s in ("EVT-U06", "EVT-P06") if re.search(rf"\b{s}\b", texto)]
+            falha("sinal-ia-sem-ia-ao-estudante",
+                  f"O PRD emite {', '.join(f'`{s}`' for s in emitidos)}, sinal de IA que responde ao estudante, "
+                  f"mas a spec não herda `T21`: nesta missão a IA não fala com o aluno. Tire "
+                  f"{'o evento' if len(emitidos) == 1 else 'os eventos'} da tabela e dos KPIs (em `T12`, a "
+                  f"espera vem só de não entender o que fazer) — ou, se a IA responde mesmo ao estudante, "
+                  f"a spec precisa herdar `T21`.")
+        for s, ts in sorted(sinais_exigidos(ia).items()):
             canon = catalogo()["sinais"][s]
             if s not in verbo_objeto:
                 forma = f"`{canon['verbo']} {canon['objeto']}`" if canon.get("verbo") else f"objeto `{canon['objeto']}`"
