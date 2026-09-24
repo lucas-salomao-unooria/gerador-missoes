@@ -44,6 +44,12 @@ não aplica regra por ano; sem `produto` o CI recusa o manifesto (ADR-87); sem
 
 ## 1. Descoberta central
 <frase única> — e o beat exato em que ela é vivida.
+Logo abaixo, a **anatomia do aha** copiada da tabela 1.2 do one-pager (crença de
+entrada · aposta comprometida · consequência sentida · virada · nomeação ·
+transferência) e o **conceito limiar** do material com a etapa em que é vivido
+(tabela 1.1). É o que design protege na tela do pico e dev mede no bloco 9: a
+aposta que trava vira estado latch, e a consequência que muda por escolha vira regra
+de sistema no bloco 2.
 
 ## 2. Mecanismo por etapa
 Por etapa (1–6): o que o sistema **apresenta**, **ordena**, **bloqueia** e

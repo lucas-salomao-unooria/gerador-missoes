@@ -19,8 +19,12 @@ logger = logging.getLogger("artifacts")
 # Ordem e nome de arquivo por chave de estado
 ARTIFACT_FILES = [
     ("material_anexado", "produto/00-material-anexado.md"),
+    ("mapa_conceitual", "produto/00g-mapa-conceitual.md"),
+    ("ideacao_mecanismos", "produto/00h-ideacao-mecanismos.md"),
     ("nucleo_narrativo", "produto/00a-nucleo-narrativo.md"),
+    ("cobertura_report", "produto/00i-cobertura-conceitual.md"),
     ("micro_gate_report", "produto/00b-micro-gate.md"),
+    ("profundidade_report", "produto/00j-juiz-profundidade.md"),
     ("one_pager", "produto/00-one-pager.md"),
     ("brief_escopo", "produto/00f-brief-escopo.md"),
     ("contrato_produto_report", "produto/00e-contrato-produto.md"),

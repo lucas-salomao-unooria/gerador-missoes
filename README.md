@@ -136,7 +136,8 @@ flowchart TD
     subgraph PIPELINE["🌌 MissionPipelineOrchestrator (Google ADK SequentialAgent)"]
         
         subgraph STAGE_PROD["🧭 Etapa de Produto (ProdutoStage)"]
-            LOOP_P0{"Loop Núcleo Narrativo ↔ Micro-gate\n(≤ 2 rodadas)"}:::gateStyle
+            P00C["P00c/P00d: Mapa conceitual do material\n+ Ideação de 3 mecanismos"]:::stageStyle
+            LOOP_P0{"Loop Núcleo Narrativo ↔ Micro-gate\n+ Juiz de profundidade (≤ 2 rodadas)"}:::gateStyle
             P0B["P0b: A04SecoesApoio\n(One-pager canônico + Brief)"]:::stageStyle
             LOOP_P1{"Loop Gate Estrutural\n(≤ 3 rodadas)"}:::gateStyle
             PAR_AVAL["Paralelo: Avaliação Pedagógica (P2)\n∥ Experiência do Estudante (P3)"]:::stageStyle
@@ -187,9 +188,10 @@ flowchart TD
         UI_STREAMLIT["Streamlit Web App (app.py)\n(Streaming de Thoughts & Eventos)"]:::outputStyle
     end
 
-    IN_TXT --> LOOP_P0
-    IN_PDF --> LOOP_P0
-    IN_DOCX --> LOOP_P0
+    IN_TXT --> P00C
+    IN_PDF --> P00C
+    IN_DOCX --> P00C
+    P00C --> LOOP_P0
     GEMINI_API -.-> PIPELINE
     STITCH_MCP -.-> D5 & D7
     MIRO_MCP -.-> ESPELHO
@@ -226,14 +228,22 @@ graph TD
     subgraph ORCH["MissionPipelineOrchestrator (SequentialAgent)"]
         
         subgraph PROD["ProdutoStage (SequentialAgent)"]
+            P00c["P00c: A00cMapaConceitual\noutput_key: mapa_conceitual"]
+            P00d["P00d: A00dIdeacaoMecanismos\noutput_key: ideacao_mecanismos"]
+
             subgraph LOOP_P0["NucleoNarrativoLoop (LoopAgent ≤ 2 iterações)"]
                 P0a["P0a: A01NucleoNarrativo\noutput_key: nucleo_narrativo"]
+                P0cc["P0cc: A01cCoberturaConceitual (determinístico)\ncobertura_resultado"]
                 P0mg["P0mg: A02MicroGate\noutput_key: micro_gate_report"]
+                P0jp["P0jp: A02bJuizProfundidade\noutput_key: profundidade_report"]
+                P0pc["P0pc: A03bProfundidadeCheck (determinístico)\nstatus_key: profundidade_status"]
                 P0mgc["P0mgc: A03MicroGateCheck (EnvelopeGateAgent)\nstatus_key: micro_gate_status"]
+                P0nc["P0nc: A03cNucleoCheck (SaidaDeLoopAgent)"]
 
-                P0a --> P0mg --> P0mgc
-                P0mgc -->|Não passa| P0a
+                P0a --> P0cc --> P0mg --> P0jp --> P0pc --> P0mgc --> P0nc
+                P0nc -->|Micro-gate ou profundidade reprovado| P0a
             end
+            P00c --> P00d --> P0a
 
             P0B["P0b: A04SecoesApoio\noutput_key: one_pager"]
             
@@ -359,9 +369,15 @@ A área de Produto garante que nenhuma missão siga para concepção visual ou c
 
 | Agente | ID | Tipo / Container | Insumos (`session.state`) | Saída (`output_key`) | Responsabilidade Central |
 |---|---|---|---|---|---|
-| **Núcleo narrativo** | `P0a` | `LlmAgent` (Loop) | `user_message` (Prompt + PDFs/DOCX), `{micro_gate_report?}` | `nucleo_narrativo` | Escreve só as seções 0, 1, 3 e 4 — descoberta central, narrativa e as 6 etapas — para isolar o raciocínio criativo da formatação. É o **único** agente com `include_contents="default"` para receber os anexos originais. Reescreve o trecho apontado quando o micro-gate reprova. |
+| **Mapa conceitual do material** | `P00c` | `LlmAgent` (seed fixo) | `{material_anexado?}`, `{briefing?}` | `mapa_conceitual` | Lê o material do bimestre **antes** de inventar a missão: um conceito limiar (o que a virada precisa mudar no estudante), de dois a quatro conceitos núcleo e os de apoio, cada um com o trecho do material entre aspas; as crenças de entrada que o bimestre derruba; o vocabulário do Explicar; o teto de ambição. Nos anos iniciais escolhe a unidade pelo bimestre (o documento traz as quatro). Não copia código BNCC do material. |
+| **Ideação de mecanismos** | `P00d` | `LlmAgent` | `{mapa_conceitual?}`, `{briefing?}`, `{material_anexado?}`, `{missoes_vizinhas?}` | `ideacao_mecanismos` | Três mecanismos que diferem na decisão **e** na virada, cada um com a anatomia do aha em seis passos, pontuados na rubrica de profundidade (`criterios-profundidade.md`). O núcleo desenvolve o escolhido. Mecanismo que veio no briefing é o candidato A e é preservado; B e C viram `[PROPOSTA — decisão do PO]`. |
+| **Núcleo narrativo** | `P0a` | `LlmAgent` (Loop) | `user_message` (Prompt + PDFs/DOCX), `{mapa_conceitual?}`, `{ideacao_mecanismos?}`, `{micro_gate_report?}`, `{profundidade_report?}`, `{cobertura_report?}` | `nucleo_narrativo` | Escreve só as seções 0, 1, 3 e 4 — descoberta central, narrativa e as 6 etapas — para isolar o raciocínio criativo da formatação, e na seção 1 as tabelas **1.1** (conceitos do material vividos em tela) e **1.2** (anatomia do aha). É o **único** agente com `include_contents="default"` para receber os anexos originais. Reescreve o trecho apontado quando o micro-gate ou o juiz de profundidade reprovam. |
+| **Cobertura conceitual** | `P0cc` | Determinístico (`CoberturaConceitualAgent`) | `nucleo_narrativo`, `mapa_conceitual`, `material_anexado` | `cobertura_report`, `cobertura_resultado` | `tools/profundidade.py`: o limiar do mapa vive no Decidir ou no Resultado/Aha; todo conceito núcleo tem etapa ou motivo para ficar de fora; a anatomia tem os seis passos; a citação do mapa existe no material (defeito do mapa é ⚠️, não bloqueio). |
 | **Micro-gate do núcleo** | `P0mg` | `LlmAgent` (Loop) | `{nucleo_narrativo}` | `micro_gate_report` | Quatro verificações binárias: spoiler (4 padrões), gap de informação real, escolha significativa (4 testes) e job-to-be-done no Desafiar. Emite o envelope JSON com `passa`/`nao_passa`. |
-| **Veredito do micro-gate** | `P0mgc` | Determinístico | `{micro_gate_report}` | `micro_gate_status` | Aprovado encerra o loop e libera o P0b; reprovado devolve o núcleo ao P0a. Teto de 2 rodadas; esgotado, segue com o achado registrado — quem bloqueia a missão é o gate estrutural. |
+| **Juiz de profundidade** | `P0jp` | `LlmAgent` (Loop, seed fixo) | `{nucleo_narrativo}`, `{mapa_conceitual?}`, `{material_anexado?}`, `{cobertura_report?}` | `profundidade_report` | Nota de 1 a 4 em seis dimensões — conceito do material vivido, aposta comprometida, ápice do aha, explicar depois de viver, transferência no Refletir, demanda à altura do ano —, cada uma com o trecho literal que a sustenta e a instrução de reescrita que a levaria a 4 **sem somar carga**. Aplica o teste da crença e o dos dois estudantes. |
+| **Veredito de profundidade** | `P0pc` | Determinístico (`ProfundidadeCheckAgent`) | `profundidade_report`, `cobertura_resultado` | `profundidade_status` | Reconta o veredito nas notas, não no que o juiz escreveu: 🔴 com P1, P2 ou P3 abaixo de 3 ou qualquer dimensão em 1; 🟡 com P4–P6 em 2. Funde a cobertura. Não trava a esteira: o freio é o parecer humano, que recusa o *de acordo* de produto com este gate em 🔴. |
+| **Veredito do micro-gate** | `P0mgc` | Determinístico | `{micro_gate_report}` | `micro_gate_status` | Registra se o núcleo passou em spoiler, gap, escolha e job. Teto de 2 rodadas; esgotado, segue com o achado registrado — quem bloqueia a missão é o gate estrutural. |
+| **Saída do loop do núcleo** | `P0nc` | Determinístico (`SaidaDeLoopAgent`) | `micro_gate_status`, `profundidade_status` | `nucleo_rodada` | Encerra o loop só com micro-gate **e** profundidade aprovados; qualquer um reprovado devolve o núcleo ao P0a com os relatórios. |
 | **Seções de apoio e brief** | `P0b` | `LlmAgent` | `{nucleo_narrativo}`, `{briefing?}` | `one_pager` | Completa o one-pager canônico (seções 2 e 5–18) sobre o núcleo aprovado, sem alterar as seções validadas, e entrega junto o brief de escopo para leitura rápida. Recebe o contrato de plataforma (`capacidades-plataforma.md`) e a regra de origem dos parâmetros: número que não vem do núcleo nem do briefing sai como `[PARÂMETRO — a definir por produto]`. |
 | **Contrato de plataforma e origem dos parâmetros** | `P0c` | Determinístico (`RastroCheckAgent`, modo `one_pager`) | `one_pager`, `nucleo_narrativo`, `briefing` | `contrato_produto_report`, `contrato_produto_status` | Roda dentro do loop do gate, antes do P1, a cada rodada (`tools/contrato_produto.py`): ⛔ WebSocket/socket.io como canal de sala (a plataforma sincroniza por polling HTTP, ADR-93/94); ⚠️ progresso em `localStorage`/`IndexedDB` (estado é do servidor, 4.6); ⚠️ descritor SAEB fora de 2º/5º/9º EF e 3ª EM; ⚠️ número com unidade sem origem no núcleo/briefing e sem marcador; ⚠️ código de Computação fora de Cultura Digital sem etapa. Não bloqueia sozinho: o gate aplica cada achado no critério indicado e o revisor corrige. |
 | **Gate estrutural** | `P1` | `LlmAgent` (Loop) | `{one_pager}` | `gate_estrutural_report` | Avalia **23 critérios** obrigatórios agrupados em: Estrutura, Ambiente simulado, Logística e tempo, Evidências e Fechamento de spec. Emite o envelope JSON. |
@@ -563,8 +579,12 @@ output/20260904-143000-exp-04-fake-news/
 ├── estado.json                        # 🔍 Estado completo serializado (session.state)
 ├── manifesto-artefatos.json           # 📋 Metadados de todos os arquivos gerados
 ├── produto/
-│   ├── 00a-nucleo-narrativo.md        # Seções 0, 1, 3 e 4 (núcleo criativo)
+│   ├── 00g-mapa-conceitual.md         # Conceito limiar, núcleos e crenças do material do bimestre
+│   ├── 00h-ideacao-mecanismos.md      # Três mecanismos pontuados e o escolhido
+│   ├── 00a-nucleo-narrativo.md        # Seções 0, 1 (com 1.1 e 1.2), 3 e 4 (núcleo criativo)
+│   ├── 00i-cobertura-conceitual.md    # Núcleo × mapa: limiar no aha, núcleos com destino, anatomia completa
 │   ├── 00b-micro-gate.md              # Spoiler, gap, escolha e job-to-be-done
+│   ├── 00j-juiz-profundidade.md       # Notas P1–P6, teste da crença e instruções de reescrita
 │   ├── 00-one-pager.md                # One-pager canônico + brief de escopo
 │   ├── 00-one-pager.docx              # o mesmo, com a identidade visual, para editar
 │   ├── 00-one-pager.html              # o mesmo, para apresentar e imprimir em PDF
@@ -717,6 +737,7 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `PRODUTO_MODO_ESTRITO` | `true` | Se `true`, bloqueio em gate de produto encerra o pipeline impedindo design e dev. |
 | `ESTEIRA_ESTRITA` | `true` | QA de design 🔴, banca de dev 🔴 e gates de rastro (manifesto, telemetria, lacunas) impedem o PRD. Lacuna de plataforma não impede: o PRD sai 🟡. |
 | `BNCC_CHECK_ESTRITO` | `true` | Gate determinístico depois da spec: habilidade inexistente, de outro ano ou sem letramento digital trava a esteira. |
+| `PROFUNDIDADE_ESTRITA` | `true` | Profundidade pedagógica reprovada na última rodada do núcleo fica 🔴 e o *de acordo* de produto é recusado. `false` rebaixa a 🟡 com a ressalva, sem mudar notas nem rodadas — para usar enquanto os cortes da rubrica são calibrados contra as revisões do time pedagógico. |
 | `GATE_ESTRUTURAL_MAX_RODADAS` | `3` | Número máximo de ciclos entre o Gate Estrutural e o Revisor do One-pager. |
 | `OUTPUT_DIR` | `output` | Diretório local para gravação persistente dos artefatos. |
 | `STITCH_MCP_MODE` | `auto` | Modo do Stitch MCP: `auto`, `remote`, `proxy` ou `off`. Em `auto`, liga `remote` se houver chave. |

@@ -53,6 +53,18 @@ EXCECAO = "excecao"
 #: Letras e dígitos, sem espaços nem pontuação: "ok, de acordo!!!" não passa.
 MIN_CARACTERES_COMENTARIO = 20
 
+#: O *de acordo* de produto pede duas respostas que só quem leu a missão consegue dar. Em
+#: 24/09/2026 o time pedagógico devolvia missões rasas que o PO liberava confiando no semáforo —
+#: e o semáforo não media profundidade. O comentário livre aceitava "conferi, está ok"; estas
+#: perguntas não se respondem sem abrir o núcleo. A resposta segue para os agentes de design
+#: junto com o comentário. Não é conferida contra a missão: o objetivo é que a leitura aconteça.
+CONFERENCIA_DE_ACORDO: Dict[str, Tuple[Tuple[str, str], ...]] = {
+    "produto": (
+        ("crenca", "Que crença do estudante cai no aha, e em que momento da tela ela cai?"),
+        ("fora", "Que conceito do material do bimestre a missão deixa de fora, e por que isso está certo?"),
+    ),
+}
+
 
 class DecisaoInvalida(ValueError):
     """A ação não cabe nesta situação, para este papel, ou veio sem comentário suficiente."""
@@ -169,11 +181,18 @@ class Efeito:
     pedido: str = ""
 
 
+def perguntas_de_conferencia(etapa: str, acao: str) -> Tuple[Tuple[str, str], ...]:
+    """As perguntas que a liberação desta etapa exige — vazio para as demais ações e etapas."""
+    return CONFERENCIA_DE_ACORDO.get(etapa, ()) if acao in (DE_ACORDO, EXCECAO) else ()
+
+
 def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
-            estado: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[Efeito]]:
+            estado: Dict[str, Any], conferencia: Optional[Dict[str, str]] = None,
+            ) -> Tuple[Dict[str, Any], Optional[Efeito]]:
     """Aplica a decisão e devolve `(fluxo_novo, efeito)`. Pura: não toca disco.
 
-    `sessao` é um `tools.auth.Sessao` (usa `.papel` e `.assinatura_de`). Levanta
+    `sessao` é um `tools.auth.Sessao` (usa `.papel` e `.assinatura_de`). `conferencia` traz as
+    respostas às `CONFERENCIA_DE_ACORDO` da etapa, quando a ação a libera. Levanta
     `DecisaoInvalida` com a razão para a tela mostrar.
     """
     etapa = fluxo["etapa"]
@@ -185,6 +204,18 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
     if acao != INICIAR and caracteres_uteis(comentario) < MIN_CARACTERES_COMENTARIO:
         raise DecisaoInvalida(f"O comentário é obrigatório e precisa de ao menos {MIN_CARACTERES_COMENTARIO} "
                               "letras ou números: registre o que você viu e o que decidiu.")
+    respostas: Dict[str, str] = {}
+    for chave, pergunta in perguntas_de_conferencia(etapa, acao):
+        resposta = str((conferencia or {}).get(chave) or "").strip()
+        if caracteres_uteis(resposta) < MIN_CARACTERES_COMENTARIO:
+            raise DecisaoInvalida(f"Para liberar {ROTULO_ETAPA.get(etapa, etapa)}, responda «{pergunta}» com ao menos "
+                                  f"{MIN_CARACTERES_COMENTARIO} letras ou números. A resposta está no núcleo "
+                                  "narrativo (1.1 e 1.2) — é a leitura que o de acordo registra.")
+        respostas[chave] = resposta
+    if respostas:
+        # No texto também: é o comentário que chega aos agentes de design, à trilha e ao dossiê.
+        comentario += "\n\n" + "\n".join(f"- **{pergunta}** {respostas[chave]}"
+                                         for chave, pergunta in perguntas_de_conferencia(etapa, acao))
 
     novo = json.loads(json.dumps(fluxo))  # cópia funda: o chamador pode comparar antes/depois
     pareceres: List[Dict[str, Any]] = novo.setdefault("pareceres", [])
@@ -196,6 +227,8 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
         "assinatura": assinatura_da_etapa(estado, alvo), "valido": True,
         "gates": semaforo_da_etapa(estado, alvo), "excecao": acao == EXCECAO,
     }
+    if respostas:
+        registro["conferencia"] = respostas
     efeito: Optional[Efeito] = None
 
     if acao in (DE_ACORDO, EXCECAO):

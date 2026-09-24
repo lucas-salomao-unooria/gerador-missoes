@@ -87,6 +87,10 @@ CHAVES_SPEC = frozenset({
 #: e o mesmo material, mais o pedido de correção.
 CHAVES_PRODUTO = frozenset({
     "nucleo_narrativo", "micro_gate_report", "micro_gate_status", "micro_gate_status_envelope", "micro_gate_rodada",
+    # o mapa e a ideação são refeitos: o pedido de correção pode dizer qual é o conceito central
+    "mapa_conceitual", "ideacao_mecanismos", "cobertura_report", "cobertura_resultado",
+    "profundidade_report", "profundidade_status", "profundidade_status_envelope", "profundidade_rodada",
+    "nucleo_rodada",
     "missoes_vizinhas", "catalogo_indice_status", "catalogo_indice_status_envelope",
     "one_pager", "brief_escopo", "brief_escopo_status", "brief_escopo_status_envelope",
     "contrato_produto_report", "contrato_produto_status", "contrato_produto_status_envelope",

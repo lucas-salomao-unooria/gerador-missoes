@@ -46,6 +46,10 @@ Sua pergunta: **quem ler só este documento entende o mecanismo inteiro, sabe on
 
 {material_anexado?}
 
+**Mapa conceitual do material (o que o bimestre ensina, com o conceito limiar e as citações conferidas em código):**
+
+{mapa_conceitual?}
+
 **Catálogo de missões (para a caixa de diferenciação):**
 
 <!-- include: references/catalogo-missoes.md -->
@@ -181,7 +185,7 @@ Ao longo do bimestre, o estudante aprende:
 
 **Em uma frase:** <o que o bimestre ensina, em uma frase só>.
 
-<Um parágrafo: como a missão repete o bimestre etapa por etapa — no Desafiar/Navegar o estudante faz X, que é o conceito A do bimestre; no Resultado faz Y, que é o conceito B; no Refletir faz Z, que é o conceito C.>
+<Um parágrafo: como a missão repete o bimestre etapa por etapa — no Desafiar/Navegar o estudante faz X, que é o conceito A do bimestre; no Resultado faz Y, que é o conceito B; no Refletir faz Z, que é o conceito C. **Copie a correspondência da tabela 1.1 do one-pager canônico** ("Conceitos do material vividos em tela"), com os nomes de conceito do mapa conceitual: não escreva conexão que a 1.1 não tem. Termine dizendo, numa frase, o conceito do bimestre que a missão deixa para outra semana e por quê — está na 1.1 como `fora`. Quem lê este parágrafo é o time pedagógico, e a reclamação deles era justamente conexão com o bimestre escrita depois, sem a missão fazer.>
 
 <Um parágrafo com os códigos: o **foco primário** (código de letramento digital do bloco 11 + texto oficial + o que o estudante faz que exercita isso), depois as secundárias de Computação (código + texto oficial + etapa em que aparece), e por fim as conexões com disciplinas tradicionais, cada uma com o sufixo "(plausível, a confirmar em fonte oficial da BNCC)".>
 

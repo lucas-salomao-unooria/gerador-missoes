@@ -18,6 +18,8 @@ from pipeline.passagem import (
 from tools.auth import Sessao
 
 COMENTARIO = "Conferi a mecânica e o teto de bio; ajustei a descoberta central."
+CONFERENCIA = {"crenca": "B1: o feed mostra o que é popular — cai na comparação com os colegas no Resultado.",
+               "fora": "C3, bolha: a semana 5 do bimestre faz o mapa da bolha; aqui não cabe em 50 min."}
 
 
 def _sessao(papel: str) -> Sessao:
@@ -47,7 +49,7 @@ class TestRegras(unittest.TestCase):
             aplicar(_aguardando(), DE_ACORDO, PO, "ok, de acordo!!!", ESTADO_VERDE)
 
     def test_de_acordo_libera_a_proxima_e_registra(self):
-        novo, efeito = aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE)
+        novo, efeito = aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE, CONFERENCIA)
         self.assertIsNone(efeito)
         self.assertEqual((novo["etapa"], novo["situacao"]), ("design", LIBERADA))
         p = novo["pareceres"][-1]
@@ -60,7 +62,7 @@ class TestRegras(unittest.TestCase):
         self.assertNotIn(DE_ACORDO, acoes_possiveis(f, "produto", estado))
         self.assertNotIn(EXCECAO, acoes_possiveis(f, "produto", estado))
         self.assertIn(EXCECAO, acoes_possiveis(f, "admin", estado))
-        novo, _ = aplicar(f, EXCECAO, ADMIN, COMENTARIO, estado)
+        novo, _ = aplicar(f, EXCECAO, ADMIN, COMENTARIO, estado, CONFERENCIA)
         self.assertTrue(novo["pareceres"][-1]["excecao"])
         self.assertEqual(novo["pareceres"][-1]["como"], "admin (como Produto)")
         self.assertEqual(novo["situacao"], LIBERADA)
@@ -80,7 +82,7 @@ class TestRegras(unittest.TestCase):
         self.assertEqual((depois["etapa"], depois["situacao"]), ("produto", AGUARDANDO))
 
     def test_devolver_nao_refaz_e_reabre_o_parecer_anterior(self):
-        f, _ = aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE)
+        f, _ = aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE, CONFERENCIA)
         devolvido, efeito = aplicar(f, DEVOLVER, DESIGN, "A mecânica não fecha com a tela de revelação.", ESTADO_VERDE)
         self.assertIsNone(efeito)
         self.assertEqual((devolvido["etapa"], devolvido["situacao"]), ("produto", DEVOLVIDA))
@@ -90,7 +92,8 @@ class TestRegras(unittest.TestCase):
         _, efeito = aplicar(devolvido, REFAZER, PO, "Troquei a revelação para a etapa 3.", ESTADO_VERDE)
         self.assertIn("A mecânica não fecha", efeito.pedido)
         # ou reafirma, e a missão volta a estar liberada para design
-        reafirmado, _ = aplicar(devolvido, DE_ACORDO, PO, "Mantenho: a revelação está na etapa 3.", ESTADO_VERDE)
+        reafirmado, _ = aplicar(devolvido, DE_ACORDO, PO, "Mantenho: a revelação está na etapa 3.", ESTADO_VERDE,
+                               CONFERENCIA)
         self.assertEqual((reafirmado["etapa"], reafirmado["situacao"]), ("design", LIBERADA))
 
     def test_design_pode_devolver_depois_de_gerar(self):
@@ -129,6 +132,28 @@ class TestRegras(unittest.TestCase):
         # e não depende do que as etapas seguintes produziram
         c = passagem.assinatura_da_etapa({**ESTADO_VERDE, "prd_final": "outro"}, "produto")
         self.assertEqual(a, c)
+
+    def test_de_acordo_de_produto_exige_a_conferencia_de_leitura(self):
+        """24/09/2026: o PO liberava missões rasas confiando no semáforo. O de acordo de produto
+        pede duas respostas que só quem leu o núcleo dá — e elas seguem para design no comentário."""
+        with self.assertRaises(DecisaoInvalida):
+            aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE)
+        with self.assertRaises(DecisaoInvalida):
+            aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE, {**CONFERENCIA, "fora": "nenhum, ok"})
+        novo, _ = aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE, CONFERENCIA)
+        p = novo["pareceres"][-1]
+        self.assertEqual(p["conferencia"], CONFERENCIA)
+        self.assertIn(CONFERENCIA["crenca"], p["comentario"])
+        self.assertIn(CONFERENCIA["crenca"], notas_de_passagem(novo))
+        # refazer não pede conferência, e as outras etapas não a têm
+        aplicar(_aguardando(), REFAZER, PO, COMENTARIO, ESTADO_VERDE)
+        novo, _ = aplicar(_aguardando("design"), DE_ACORDO, DESIGN, COMENTARIO, ESTADO_VERDE)
+        self.assertNotIn("conferencia", novo["pareceres"][-1])
+
+    def test_profundidade_vermelha_recusa_o_de_acordo_de_produto(self):
+        estado = {**ESTADO_VERDE, "profundidade_status": "bloqueado"}
+        self.assertNotIn(DE_ACORDO, acoes_possiveis(_aguardando(), "produto", estado))
+        self.assertIn(REFAZER, acoes_possiveis(_aguardando(), "produto", estado))
 
 
 class TestNotas(unittest.TestCase):

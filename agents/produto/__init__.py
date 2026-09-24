@@ -1,10 +1,18 @@
 """Área de PRODUTO — do briefing ao spec fechado da missão.
 
 Ordem (SequentialAgent):
+  p00c A00cMapaConceitual    → mapa_conceitual (conceito limiar, núcleo e apoio do material, com o
+                                 trecho citado; as crenças de entrada que o bimestre derruba)
+  p00d A00dIdeacaoMecanismos → ideacao_mecanismos (três mecanismos distintos, pontuados na
+                                 rubrica de profundidade; o núcleo desenvolve o escolhido)
   ┌─ LoopAgent (≤ 2 rodadas) ─────────────────────────────────────────┐
   │ p0a A01NucleoNarrativo   → nucleo_narrativo                     │
+  │ p0cc A01cCoberturaConceitual → cobertura_resultado (determinístico) │
   │ p0mg A02MicroGate        → micro_gate_report                    │
-  │ p0mgc A03MicroGateCheck       → micro_gate_status (escalate)         │
+  │ p0jp A02bJuizProfundidade → profundidade_report (notas P1–P6)   │
+  │ p0pc A03bProfundidadeCheck → profundidade_status (contado nas notas) │
+  │ p0mgc A03MicroGateCheck       → micro_gate_status                    │
+  │ p0nc A03cNucleoCheck     → sai quando micro-gate E profundidade passam │
   └───────────────────────────────────────────────────────────────────┘
   p0b A04SecoesApoio         → one_pager  (núcleo + seções 2, 5–18 + brief)
   ┌─ LoopAgent (≤ N rodadas) ─────────────────────────────────────────┐
@@ -48,7 +56,9 @@ from agents.callbacks import marcar_heranca, preservar_one_pager
 from agents.checkers import (
     SecaoSplitAgent,
     BnccCheckAgent,
+    CoberturaConceitualAgent,
     EnvelopeGateAgent,
+    ProfundidadeCheckAgent,
     RastroCheckAgent,
     SaidaDeLoopAgent,
     VizinhasCatalogoAgent,
@@ -61,6 +71,51 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module="google.ad
 # O prompt do micro-gate fixa o teto em 2 rodadas: na segunda reprovação o problema é de
 # mecanismo, não de redação, e o relatório sai com `precisa_humano`.
 MICRO_GATE_MAX_RODADAS = 2
+
+
+def get_mapa_conceitual_agent(**kw) -> LlmAgent:
+    """Lê o material do bimestre ANTES de alguém inventar a missão.
+
+    Até 24/09/2026 o material chegava ao núcleo narrativo e nenhuma regra pedia que a missão
+    trabalhasse os conceitos dele: o núcleo pegava o tema gerador e ignorava o resto. O mapa
+    separa o conceito limiar (o que a virada precisa mudar no estudante) dos conceitos de apoio,
+    e cita o trecho do material de onde cada um saiu — a citação é conferida em código.
+    """
+    return create_llm_agent(
+        name="A00cMapaConceitual",
+        deterministico=True,  # extrai do material: mesma entrada, mesmo mapa
+        description="Mapa conceitual do material do bimestre: conceito limiar, conceitos núcleo e de apoio com o trecho citado, crenças de entrada a derrubar e o vocabulário que o Explicar deve usar.",
+        instruction=load_prompt("produto/00c_mapa_conceitual.md"),
+        output_key="mapa_conceitual",
+        **kw,
+    )
+
+
+def get_ideacao_mecanismos_agent(**kw) -> LlmAgent:
+    """Três mecanismos candidatos antes do núcleo: a primeira ideia de um modelo é a mais provável.
+
+    Uma geração única devolve o esqueleto modal — escolher, comparar com colegas, revelar o
+    escondido —, e o próprio one-pager v5 do 6º ano admitiu ter repetido o de "A Seleção". Aqui
+    nascem três desenhos que diferem na decisão e na virada, pontuados na rubrica de profundidade.
+    """
+    return create_llm_agent(
+        name="A00dIdeacaoMecanismos",
+        description="Ideação: três mecanismos distintos para o conceito limiar do material, cada um com a anatomia do aha, pontuados na rubrica de profundidade; indica qual o núcleo deve desenvolver.",
+        instruction=load_prompt("produto/00d_ideacao_mecanismos.md"),
+        output_key="ideacao_mecanismos",
+        **kw,
+    )
+
+
+def get_juiz_profundidade_agent(**kw) -> LlmAgent:
+    return create_llm_agent(
+        name="A02bJuizProfundidade",
+        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
+        description="Juiz de profundidade pedagógica: nota de 1 a 4 em seis dimensões (conceito do material vivido, aposta comprometida, ápice do aha, explicar depois de viver, transferência, demanda à altura do ano), com trecho citado e instrução de reescrita.",
+        instruction=load_prompt("produto/02b_juiz_profundidade.md"),
+        output_key="profundidade_report",
+        **kw,
+    )
 
 
 def get_nucleo_narrativo_agent(**kw) -> LlmAgent:
@@ -342,7 +397,7 @@ def build_produto_stage(
 
     nucleo_loop = LoopAgent(
         name="NucleoNarrativoLoop",
-        description="Núcleo narrativo ↔ micro-gate de spoiler/gap até passar ou esgotar as rodadas.",
+        description="Núcleo narrativo ↔ micro-gate de spoiler/gap e juiz de profundidade até os dois passarem ou esgotar as rodadas.",
         max_iterations=MICRO_GATE_MAX_RODADAS,
         sub_agents=[
             get_nucleo_narrativo_agent(**kw),
@@ -350,7 +405,19 @@ def build_produto_stage(
             # descoberta). É esta lista que a verificação V5 do micro-gate julga, e é ela que o
             # autor relê na segunda rodada quando V5 reprova.
             get_vizinhas_catalogo_agent("A01bVizinhasCatalogo"),
+            CoberturaConceitualAgent(
+                name="A01cCoberturaConceitual",
+                description="Núcleo × mapa conceitual: o limiar vive no Decidir ou no aha, todo conceito núcleo tem destino, a anatomia do aha tem os seis passos e a citação do mapa existe no material. Determinístico.",
+            ),
             get_micro_gate_agent(**kw),
+            get_juiz_profundidade_agent(**kw),
+            # Antes do veredito do micro-gate, de propósito: esgotada a última rodada, o
+            # `A03MicroGateCheck` encerra o loop, e a profundidade da rodada ficaria sem status.
+            ProfundidadeCheckAgent(
+                name="A03bProfundidadeCheck",
+                max_rounds=MICRO_GATE_MAX_RODADAS,
+                description="Conta o veredito de profundidade nas notas do juiz e funde a cobertura conceitual: 🔴 com P1, P2 ou P3 abaixo de 3 ou qualquer dimensão em 1.",
+            ),
             EnvelopeGateAgent(
                 name="A03MicroGateCheck",
                 description="Lê o envelope do micro-gate: aprovado segue para as seções de apoio, reprovado devolve o núcleo ao P0a.",
@@ -359,10 +426,20 @@ def build_produto_stage(
                 status_key="micro_gate_status",
                 round_key="micro_gate_rodada",
                 max_rounds=MICRO_GATE_MAX_RODADAS,
-                escalate_on_approve=True,
+                # Quem encerra o loop é o `A03cNucleoCheck`: spoiler resolvido com missão rasa
+                # não é núcleo pronto.
+                escalate_on_approve=False,
                 # Quem bloqueia a missão é o gate estrutural (P1). O micro-gate esgotado
                 # segue adiante com o achado registrado — o problema é de mecanismo e o P1 o audita.
                 block_pipeline_on_fail=False,
+            ),
+            SaidaDeLoopAgent(
+                name="A03cNucleoCheck",
+                description="Micro-gate e profundidade aprovados encerram o loop; qualquer um reprovado devolve o núcleo ao P0a com os dois relatórios.",
+                rotulo="Núcleo narrativo",
+                status_keys=["micro_gate_status", "profundidade_status"],
+                rodada_key="nucleo_rodada",
+                max_rounds=MICRO_GATE_MAX_RODADAS,
             ),
         ],
     )
@@ -492,6 +569,10 @@ def build_produto_stage(
             # Antes de inventar: o que já existe no ano, lido do índice pelo briefing. Sem isto, a
             # primeira geração nasce cega e a repetição só apareceria na segunda rodada do loop.
             get_vizinhas_catalogo_agent("A00bVizinhasCatalogo"),
+            # Antes de inventar, também: o que o material do bimestre ensina, e três desenhos
+            # candidatos para o conceito central dele. O núcleo desenvolve um, não improvisa.
+            get_mapa_conceitual_agent(**kw),
+            get_ideacao_mecanismos_agent(**kw),
             nucleo_loop,
             get_secoes_apoio_agent(**kw),
             gate_loop,
@@ -520,10 +601,16 @@ SPEC_AGENT_IDS = ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "
 
 PRODUTO_METADATA = [
     {"id": "A00bVizinhasCatalogo", "name": "00b · Missões já geradas (determinístico)", "icon": "🗂️", "output_key": "missoes_vizinhas", "prompt_file": None, "description": "Lê o índice de missões e entrega ao núcleo as mais próximas do ano do briefing, para a missão nova não repetir uma anterior."},
-    {"id": "A01NucleoNarrativo", "name": "01 · Núcleo narrativo", "icon": "🎬", "output_key": "nucleo_narrativo", "prompt_file": "produto/01_nucleo_narrativo.md", "description": "Seções 0, 1, 3 e 4 a partir do briefing e dos anexos: descoberta, narrativa e as 6 etapas."},
+    {"id": "A00cMapaConceitual", "name": "00c · Mapa conceitual do material", "icon": "🧭", "output_key": "mapa_conceitual", "prompt_file": "produto/00c_mapa_conceitual.md", "description": "Lê o material do bimestre antes de inventar: um conceito limiar, os conceitos núcleo e de apoio com o trecho citado, as crenças de entrada que o bimestre derruba e o vocabulário do Explicar."},
+    {"id": "A00dIdeacaoMecanismos", "name": "00d · Ideação de mecanismos", "icon": "💡", "output_key": "ideacao_mecanismos", "prompt_file": "produto/00d_ideacao_mecanismos.md", "description": "Três mecanismos distintos para o conceito limiar, cada um com a anatomia do aha, pontuados na rubrica de profundidade. O núcleo desenvolve o escolhido."},
+    {"id": "A01NucleoNarrativo", "name": "01 · Núcleo narrativo", "icon": "🎬", "output_key": "nucleo_narrativo", "prompt_file": "produto/01_nucleo_narrativo.md", "description": "Seções 0, 1, 3 e 4 a partir do briefing, dos anexos, do mapa conceitual e do mecanismo escolhido: descoberta, conceitos vividos em tela, anatomia do aha, narrativa e as 6 etapas."},
     {"id": "A01bVizinhasCatalogo", "name": "01b · Missões já geradas, pelo núcleo (determinístico)", "icon": "🗂️", "output_key": "missoes_vizinhas", "prompt_file": None, "description": "Refiltra o índice pelo ambiente, eixo e descoberta do núcleo recém-escrito. É esta lista que a verificação V5 do micro-gate julga."},
+    {"id": "A01cCoberturaConceitual", "name": "01c · Cobertura conceitual (determinístico)", "icon": "🧩", "output_key": "cobertura_report", "prompt_file": None, "description": "Núcleo × mapa: o limiar vive no Decidir ou no aha, todo conceito núcleo tem destino, a anatomia do aha tem os seis passos e o trecho citado pelo mapa existe no material."},
     {"id": "A02MicroGate", "name": "02 · Micro-gate do núcleo", "icon": "🕵️", "output_key": "micro_gate_report", "prompt_file": "produto/02_micro_gate.md", "description": "Spoiler, gap de informação, escolha significativa e job-to-be-done — binário, até 2 rodadas."},
-    {"id": "A03MicroGateCheck", "name": "03 · Veredito do micro-gate (determinístico)", "icon": "🔀", "output_key": "micro_gate_status", "prompt_file": None, "description": "Lê o envelope do micro-gate e decide se o núcleo volta ao P0a ou segue."},
+    {"id": "A02bJuizProfundidade", "name": "02b · Juiz de profundidade", "icon": "🎯", "output_key": "profundidade_report", "prompt_file": "produto/02b_juiz_profundidade.md", "description": "Nota de 1 a 4 em seis dimensões — conceito do material vivido, aposta comprometida, ápice do aha, explicar depois de viver, transferência e demanda à altura do ano —, com trecho citado e instrução de reescrita."},
+    {"id": "A03bProfundidadeCheck", "name": "03b · Veredito de profundidade (determinístico)", "icon": "🔀", "output_key": "profundidade_status", "prompt_file": None, "description": "Conta o veredito nas notas do juiz, não no que ele escreveu: P1, P2 ou P3 abaixo de 3 é 🔴. Funde a cobertura conceitual."},
+    {"id": "A03MicroGateCheck", "name": "03 · Veredito do micro-gate (determinístico)", "icon": "🔀", "output_key": "micro_gate_status", "prompt_file": None, "description": "Lê o envelope do micro-gate e registra se o núcleo passou em spoiler, gap, escolha e job."},
+    {"id": "A03cNucleoCheck", "name": "03c · Saída do loop do núcleo (determinístico)", "icon": "🔀", "output_key": "nucleo_rodada", "prompt_file": None, "description": "Micro-gate e profundidade aprovados encerram o loop; qualquer um reprovado devolve o núcleo ao P0a com os dois relatórios."},
     {"id": "A04SecoesApoio", "name": "04 · Seções de apoio e brief", "icon": "📝", "output_key": "one_pager", "prompt_file": "produto/04_secoes_apoio.md", "description": "Completa o one-pager canônico (seções 2 e 5–18) e o brief de escopo sobre o núcleo aprovado."},
     {"id": "A04bContratoProdutoCheck", "name": "04b · Contrato de plataforma e origem dos parâmetros (determinístico)", "icon": "📡", "output_key": "contrato_produto_report", "prompt_file": None, "description": "Lint do one-pager a cada rodada do gate: canal de sala por polling (nunca WebSocket), estado no servidor (sem localStorage/IndexedDB), SAEB só nos anos avaliados, número com origem ou marcador. O gate aplica; o revisor corrige."},
     {"id": "A05GateEstrutural", "name": "05 · Gate estrutural", "icon": "🚧", "output_key": "gate_estrutural_report", "prompt_file": "produto/05_gate_estrutural.md", "description": "critérios: estrutura, ambiente, logística, evidências, viabilidade e infraestrutura."},

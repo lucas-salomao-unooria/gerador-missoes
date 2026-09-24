@@ -544,11 +544,32 @@ def _render_motivos_do_semaforo(estado: Dict[str, Any], semaforo: Dict[str, str]
                 st.markdown(f"{marca} {codigo}{a['resumo']}")
 
 
+def _render_profundidade(estado: Dict[str, Any]) -> None:
+    """As notas do juiz de profundidade e o aha em uma frase, antes do parecer de produto.
+
+    O semáforo verde nunca mediu profundidade, e o PO liberava confiando nele (24/09/2026). Aqui ele
+    vê, sem abrir relatório, onde a missão é rasa — e o que o juiz entendeu como o aha.
+    """
+    from tools.profundidade import DIMENSOES, NOME_DIMENSAO
+
+    envelope = estado.get("profundidade_status_envelope")
+    if not isinstance(envelope, dict) or not envelope.get("notas"):
+        return
+    notas = envelope["notas"]
+    icone = _status_icon(estado.get("profundidade_status"))
+    st.markdown(f"**🎯 Profundidade pedagógica** {icone} — "
+                + " · ".join(f"{NOME_DIMENSAO[d]} **{notas.get(d) or '—'}/4**" for d in DIMENSOES))
+    if envelope.get("aha_em_uma_frase"):
+        st.caption(f"Aha, como o juiz o leu: {envelope['aha_em_uma_frase']}")
+    if envelope.get("ponto_mais_fraco"):
+        st.caption(f"Ponto mais fraco, segundo o juiz: {envelope['ponto_mais_fraco']}")
+
+
 def _decidir(run_dir: Path, fluxo: Dict[str, Any], acao: str, comentario: str,
-             estado: Dict[str, Any], opts: Dict[str, Any]) -> None:
+             estado: Dict[str, Any], opts: Dict[str, Any], conferencia: Optional[Dict[str, str]] = None) -> None:
     sessao = sessao_atual()
     try:
-        novo, efeito = passagem.aplicar(fluxo, acao, sessao, comentario, estado)
+        novo, efeito = passagem.aplicar(fluxo, acao, sessao, comentario, estado, conferencia)
         gravado = passagem.registrar_fluxo(run_dir, novo, fluxo.get("versao", 0))
         if efeito:
             execucao_fundo.executar_efeito(run_dir, efeito, passagem.notas_de_passagem(gravado), **_opcoes_runner(opts))
@@ -572,6 +593,8 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
     semaforo = passagem.semaforo_da_etapa(estado, etapa)
     if semaforo and situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA):
         st.markdown("**Semáforo da etapa:** " + " · ".join(f"{icone} {GATE_LABELS.get(k, k)}" for k, icone in semaforo.items()))
+        if etapa == "produto":
+            _render_profundidade(estado)
         _render_motivos_do_semaforo(estado, semaforo)
     if situacao == passagem.DEVOLVIDA:
         dev = passagem.ultima_devolutiva(fluxo, etapa)
@@ -608,12 +631,20 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
             placeholder="De acordo: o que você conferiu, ajustou ou decidiu — segue para os agentes das próximas etapas.\n"
                         "Refazer ou devolver: o que precisa mudar, e por quê.")
         st.caption(f"Mínimo de {passagem.MIN_CARACTERES_COMENTARIO} letras ou números. Iniciar não pede comentário.")
+    # As perguntas de conferência só existem para quem libera a etapa: refazer e devolver não as pedem.
+    perguntas = next((passagem.perguntas_de_conferencia(etapa, a) for a in acoes
+                      if passagem.perguntas_de_conferencia(etapa, a)), ())
+    conferencia: Dict[str, str] = {}
+    if perguntas:
+        st.markdown("**Para liberar, responda com o que você leu no núcleo (1.1 e 1.2):**")
+        for chave, pergunta in perguntas:
+            conferencia[chave] = st.text_input(pergunta, key=f"conferencia_{chave}_{run_dir.name}_{fluxo.get('versao', 0)}")
     colunas = st.columns(len(acoes))
     for coluna, acao in zip(colunas, acoes):
         primario = acao in (passagem.DE_ACORDO, passagem.INICIAR)
         if coluna.button(_rotulo_acao(acao, etapa, fluxo), key=f"acao_{acao}_{run_dir.name}_{fluxo.get('versao', 0)}",
                          type="primary" if primario else "secondary", use_container_width=True):
-            _decidir(run_dir, fluxo, acao, comentario, estado, opts)
+            _decidir(run_dir, fluxo, acao, comentario, estado, opts, conferencia)
 
 
 def render_passagem(run_dir: Path, opts: Dict[str, Any]) -> bool:

@@ -130,6 +130,13 @@ class AppSettings(BaseSettings):
         default_factory=lambda: _env_bool("PRODUTO_MODO_ESTRITO", "true"),
         description="Se verdadeiro, missão reprovada nos gates de produto marca a herança como degradada para design e dev",
     )
+    # Os cortes da rubrica de profundidade (P1–P3 em 3) são convenção até serem calibrados contra as
+    # revisões do time pedagógico. Desligar não mexe nas notas nem nas rodadas: o núcleo continua
+    # sendo devolvido ao autor, e só o veredito final deixa de ser 🔴 — o de acordo volta a ser possível.
+    profundidade_estrita: bool = Field(
+        default_factory=lambda: _env_bool("PROFUNDIDADE_ESTRITA", "true"),
+        description="Se true, profundidade pedagógica reprovada na última rodada do núcleo fica 🔴 e recusa o de acordo de produto; se false, fica 🟡 com a ressalva registrada",
+    )
     gate_estrutural_max_rodadas: int = Field(
         default_factory=lambda: int(os.getenv("GATE_ESTRUTURAL_MAX_RODADAS", "3")),
         description="Rodadas máximas do loop gate estrutural ↔ revisor do one-pager",
