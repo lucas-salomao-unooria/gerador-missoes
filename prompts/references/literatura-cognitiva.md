@@ -269,6 +269,7 @@ DOI 10.1080/10627197.2011.634286).
 | Piso de desafio (§11) | não existia — só teto | **piso por faixa, redigido como discriminação** | desafio, não imersão, prediz aprendizagem (Hamari 2016); o 6.5 só valia do 6º ano em diante |
 | Cláusula de defasagem de leitura (§5) | retirada uniforme do andaime a partir do 3º | **áudio sob demanda e teto do 6º–9º para 9º ano e Médio** | Saeb 2025: a defasagem cresce com a série |
 | Preparo docente (§6) | não constava | **cinco telas, tempo não medido** | transversalidade de 21/09 criou o fluxo; a régua do professor não tem número |
+| Profundidade e aha (§12) | só teto; o aha era "dá para resumir numa frase" | **anatomia do aha em seis passos e rubrica P1–P6** | o time pedagógico devolveu missões rasas (24/09); nenhuma fonte sobre previsão, mudança conceitual ou aha estava aqui |
 
 ---
 
@@ -344,3 +345,97 @@ Transfere-se o princípio (a decisão precisa discriminar), não um número. Por
 grava (`abriu_busca`, `buscou`, tempo revendo antes de concluir) devem mostrar **variância** entre
 estudantes numa missão que passa no 6.6. Todo mundo investiga zero, ou todo mundo investiga tudo, é
 sinal de que a decisão não discriminou.
+
+---
+
+## 12. Profundidade: o conceito, a previsão, o aha e a transferência
+
+As seções anteriores dizem o que **cabe** na idade. Esta diz o que faz uma missão **mudar** o que o
+estudante pensa — a base de `criterios-profundidade.md` (anatomia do aha e dimensões P1–P6). Entrou em
+24/09/2026, quando o time pedagógico devolveu as missões por serem rasas. **Delimitação honesta, que vale
+para a seção inteira:** quase toda a evidência abaixo é de laboratório, de ciências e matemática, e com
+adolescentes ou adultos; nenhum estudo testou previsão ou aha em simulação de letramento digital, e não
+há literatura brasileira sobre isso. Transfere-se o **princípio**, não um número. Os cortes da rubrica
+(P1–P3 em 3 ou mais) são **[CONVENÇÃO]** até serem calibrados contra as revisões do time pedagógico.
+
+**(a) Conceito limiar e crença de entrada.** Um conceito limiar é transformador, integrador, delimitado e
+problemático — contraria o senso comum (MEYER, J. H. F.; LAND, R. *Higher Education*, v. 49, n. 3,
+p. 373–388, 2005. DOI 10.1007/s10734-004-6779-5). A identificação é contestada e não há evidência causal
+de que desenhar em torno dele melhore o aprendizado (BARRADELL, S. *Higher Education*, v. 65, n. 2,
+p. 265–276, 2013. DOI 10.1007/s10734-012-9542-3): vale como **heurística** para ler o material. Mudar uma
+concepção exige que o estudante fique insatisfeito com a atual e que a nova seja inteligível, plausível e
+fecunda (POSNER, G. J. et al. *Science Education*, v. 66, n. 2, p. 211–227, 1982.
+DOI 10.1002/sce.3730660207). Concepções robustas são erros de **categoria** — tratar um processo emergente
+como se alguém decidisse (CHI, M. T. H. *Journal of the Learning Sciences*, v. 14, n. 2, p. 161–199, 2005.
+DOI 10.1207/s15327809jls1402_1). Para feed e recomendação, a crença típica é "o app escolhe para mim"; o
+mecanismo real são muitos sinais de muitos usuários mais um objetivo de engajamento. **[EXTRAPOLAÇÃO]**
+
+**(b) O conflito só funciona se o estudante o reconhece.** Com pouco conhecimento prévio, a contradição
+passa despercebida; dados claramente anômalos ajudam mais que dados misturados (LIMÓN, M. *Learning and
+Instruction*, v. 11, n. 4–5, p. 357–380, 2001. DOI 10.1016/S0959-4752(00)00037-2). Diante de um dado
+anômalo, mudar de ideia é uma entre sete respostas; as outras o descartam — ignorar, rejeitar, reinterpretar
+("foi sorte") (CHINN, C. A.; BREWER, W. F. *Review of Educational Research*, v. 63, n. 1, p. 1–49, 1993.
+DOI 10.3102/00346543063001001). Daí o passo que prevê os descartes e os desmonta. **[DADO DIRETO]** para o
+fenômeno; a aplicação à missão é **[EXTRAPOLAÇÃO]**.
+
+**(c) Prever antes cria a surpresa que ensina.** Gerar uma previsão antes de ver o resultado melhorou o
+aprendizado, e a surpresa só apareceu quando havia previsão (BROD, G.; HASSELHORN, M.; BUNGE, S. A.
+*Learning and Instruction*, v. 55, p. 22–31, 2018. DOI 10.1016/j.learninstruc.2018.01.013). Com 94
+crianças de **6 a 9 anos**, prever antes aumentou a revisão de concepções equivocadas, d = 0,56
+(THEOBALD, M.; BROD, G. *Child Development*, v. 92, n. 5, p. 2128–2141, 2021. DOI 10.1111/cdev.13582).
+**[DADO DIRETO]** Mas entre 9 e 12 anos só as crianças com melhor controle inibitório aprenderam com a
+previsão errada (BROD, G. et al. *Developmental Science*, v. 23, n. 3, e12916, 2020.
+DOI 10.1111/desc.12916), e errar por conta própria ensina mais do que ver o erro de outro (METCALFE, J.;
+XU, J. *Psychonomic Bulletin & Review*, v. 25, n. 1, p. 402–408, 2018. DOI 10.3758/s13423-017-1287-7).
+Consequência: a aposta é **do estudante**, não de um personagem, e nos anos iniciais a discrepância
+"você escolheu X, aconteceu Y" aparece explícita na tela e na fala do professor. **[EXTRAPOLAÇÃO]**
+
+**(d) Explicar depois de viver — com uma exceção nos anos iniciais.** Resolver primeiro e receber a
+instrução depois supera o inverso, g = 0,36, em 53 estudos (SINHA, T.; KAPUR, M. *Review of Educational
+Research*, v. 91, n. 5, p. 761–798, 2021. DOI 10.3102/00346543211019105) — **mas do 2º ao 5º ano o efeito
+favorece instruir primeiro**. **[DADO DIRETO]** Só funciona quando a instrução compara casos contrastantes
+ou é construída sobre as soluções dos próprios estudantes (LOIBL, K.; ROLL, I.; RUMMEL, N. *Educational
+Psychology Review*, v. 29, n. 4, p. 693–715, 2017. DOI 10.1007/s10648-016-9379-x); é o "momento de contar"
+(SCHWARTZ, D. L.; BRANSFORD, J. D. *Cognition and Instruction*, v. 16, n. 4, p. 475–522, 1998.
+DOI 10.1207/s1532690xci1604_4). Comparar casos rende d = 0,50, mais quando o princípio vem depois da
+comparação (ALFIERI, L.; NOKES-MALACH, T. J.; SCHUNN, C. D. *Educational Psychologist*, v. 48, n. 2,
+p. 87–113, 2013. DOI 10.1080/00461520.2013.775712). Nos anos iniciais, portanto, o Explicar pode vir em
+parte antes (andaime breve antes do Decidir), sem entregar a virada. **[EXTRAPOLAÇÃO]**
+
+**(e) O aha melhora a memória — e engana.** Insight é a reinterpretação súbita de uma situação (KOUNIOS,
+J.; BEEMAN, M. *Annual Review of Psychology*, v. 65, p. 71–93, 2014. DOI 10.1146/annurev-psych-010213-115154).
+Soluções com aha foram mais lembradas após 14 dias, 64% contra 52% (DANEK, A. H. et al. *Psychological
+Research*, v. 77, n. 5, p. 659–669, 2013. DOI 10.1007/s00426-012-0454-8). **[DADO DIRETO]**, laboratório,
+adultos. Mas um aha induzido faz até fato falso parecer verdadeiro (LAUKKONEN, R. E. et al. *Cognition*,
+v. 196, 104122, 2020. DOI 10.1016/j.cognition.2019.104122): numa missão de mídia, "entendi!" não é
+evidência, e o Explicar pede que o estudante aponte na tela o que sustenta a explicação.
+
+**(f) Transferência não é espontânea.** O caminho "alto" exige abstração deliberada e pontes mediadas
+("onde mais isso acontece?") (SALOMON, G.; PERKINS, D. N. *Educational Psychologist*, v. 24, n. 2,
+p. 113–142, 1989. DOI 10.1207/s15326985ep2402_1). A distância da transferência tem dimensões de contexto —
+domínio, físico, temporal, funcional, social, modalidade (BARNETT, S. M.; CECI, S. J. *Psychological
+Bulletin*, v. 128, n. 4, p. 612–637, 2002. DOI 10.1037/0033-2909.128.4.612). Em feeds realistas, a
+inoculação quase não transferiu (WANG, S. Y. N. et al. *PNAS Nexus*, v. 4, n. 6, pgaf172, 2025.
+DOI 10.1093/pnasnexus/pgaf172). Consequência: o Refletir muda ao menos uma dimensão de contexto, não nomeia
+o conceito no enunciado, e o professor faz a pergunta-ponte. **[EXTRAPOLAÇÃO]**
+
+**(g) Letramento midiático por jogo: funciona, pouco, e decai.** Assumir o papel de quem produz a
+desinformação é o ingrediente do Bad News (ROOZENBEEK, J.; VAN DER LINDEN, S. *Palgrave Communications*,
+v. 5, 65, 2019. DOI 10.1057/s41599-019-0279-9). Meta-análise de 49 estudos: d = 0,60, maior com várias
+sessões (HUANG, G.; JIA, W.; YU, W. *Communication Research*, 2024, online first.
+DOI 10.1177/00936502241288103). O efeito decai em semanas sem reforço (MAERTENS, R. et al. *Journal of
+Experimental Psychology: Applied*, v. 27, n. 1, p. 1–16, 2021. DOI 10.1037/xap0000315), e há disputa se
+melhora a **discriminação** ou só o ceticismo geral (MODIRROUSTA-GALIAN, A.; HIGHAM, P. A. *Journal of
+Experimental Psychology: General*, v. 152, n. 9, p. 2411–2437, 2023. DOI 10.1037/xge0001395). Na escola,
+os resultados são mistos (NYGREN, T.; EFIMOVA, E. *PLoS ONE*, v. 20, n. 7, e0326928, 2025.
+DOI 10.1371/journal.pone.0326928). Consequência: a missão pede discriminação — há item confiável a manter —
+e declara onde o conceito reaparece. Jovens começam a entender o algoritmo quando algo **viola a
+expectativa** na própria experiência, e esse entendimento não vira vocabulário sozinho (SWART, J. *Social
+Media + Society*, v. 7, n. 2, 2021. DOI 10.1177/20563051211008828); o conhecimento sobre algoritmos se
+distribui de forma desigual por nível socioeconômico — relevante para a escola pública (COTTER, K.;
+REISDORF, B. C. *International Journal of Communication*, v. 14, p. 745–765, 2020).
+
+**(h) O conteúdo dentro da mecânica.** Com o conteúdo embutido na mecânica central do jogo, crianças de
+7 a 11 anos aprenderam mais (HABGOOD, M. P. J.; AINSWORTH, S. E. *Journal of the Learning Sciences*, v. 20,
+n. 2, p. 169–206, 2011. DOI 10.1080/10508406.2010.508029). **[DADO DIRETO]** Teste que a rubrica usa: se
+trocar o conceito do bimestre não exigiria mudar a mecânica, o conceito está fora dela.

@@ -55,6 +55,8 @@ from prompts import list_prompt_files, list_state_variables, load_prompt  # noqa
 # Chaves que existem no session.state em algum ponto do pipeline
 KNOWN_STATE_KEYS = {
     "briefing", "nucleo_narrativo", "micro_gate_report", "micro_gate_status", "micro_gate_rodada",
+    "mapa_conceitual", "ideacao_mecanismos", "cobertura_report", "profundidade_report", "profundidade_status",
+    "profundidade_rodada", "nucleo_rodada",
     "one_pager", "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_rodada",
     "contrato_produto_report", "contrato_produto_status",
     "avaliacao_pedagogica_report", "experiencia_aluno_report", "adequacao_report", "gate_final_report", "gate_final_status",
@@ -91,6 +93,8 @@ CONFIG_VARS = {"stitch_mcp_mode": "off", "stitch_project_url_base": "u", "gate_m
 REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
 
 EXPECTED_AGENTS = {
+    "A00cMapaConceitual", "A00dIdeacaoMecanismos", "A01cCoberturaConceitual", "A02bJuizProfundidade",
+    "A03bProfundidadeCheck", "A03cNucleoCheck",
     "NucleoNarrativoLoop", "A01NucleoNarrativo", "A02MicroGate", "A03MicroGateCheck", "A04SecoesApoio",
     "GateEstruturalLoop", "A04bContratoProdutoCheck", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager",
     "AvaliacoesParalelas", "A08AvaliacaoPedagogica", "A09ExperienciaEstudante",
@@ -171,7 +175,14 @@ def test_arvore_de_agentes():
     # loop e paralelos
     micro = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "NucleoNarrativoLoop")
     assert isinstance(micro, LoopAgent) and micro.max_iterations == MICRO_GATE_MAX_RODADAS
-    assert [a.name for a in micro.sub_agents] == ["A01NucleoNarrativo", "A01bVizinhasCatalogo", "A02MicroGate", "A03MicroGateCheck"]
+    # A profundidade conta ANTES do veredito do micro-gate: na última rodada o `A03MicroGateCheck`
+    # encerra o loop ao reprovar, e a rodada ficaria sem status de profundidade.
+    assert [a.name for a in micro.sub_agents] == ["A01NucleoNarrativo", "A01bVizinhasCatalogo", "A01cCoberturaConceitual",
+                                                  "A02MicroGate", "A02bJuizProfundidade", "A03bProfundidadeCheck",
+                                                  "A03MicroGateCheck", "A03cNucleoCheck"]
+    produto = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "ProdutoStage")
+    assert [a.name for a in produto.sub_agents][:4] == ["A00bVizinhasCatalogo", "A00cMapaConceitual",
+                                                        "A00dIdeacaoMecanismos", "NucleoNarrativoLoop"]
 
     loop = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "GateEstruturalLoop")
     assert isinstance(loop, LoopAgent) and loop.max_iterations == settings.gate_estrutural_max_rodadas
@@ -3845,6 +3856,193 @@ def test_juiz_de_achados_so_retira_com_citacao_conferida():
     st = rodar(resposta("cita_para_descartar", [linha]), doc=sem_candidato)
     assert not st.get("juiz_rodou"), "sem candidato o juiz não roda — não custa chamada"
     print("   ✓ juiz de achados: retira só com citação conferida; inválido, inventado ou 'afirma' mantém; sem candidato não roda")
+
+
+# --------------------------------------------------------------------------- profundidade pedagógica
+_MATERIAL_6ANO = (
+    "Modelagem simplificada do funcionamento de um algoritmo de recomendação: dados de entrada, padrões "
+    "identificados, previsão e reforço. *Modelar o funcionamento do algoritmo: SE o usuário clica em X, ENTÃO "
+    "recebe mais de X.* Os estudantes mapeiam os conteúdos que consomem e identificam: que perfil o algoritmo "
+    "construiu sobre eles? | **Semana 5** | **Mapeando a bolha** |")
+_MAPA_6ANO = """# Mapa conceitual do material — 6º ano · 1º bimestre
+
+| ID | Conceito | Papel | Trecho do material | O que o estudante faz para viver o conceito |
+|---|---|---|---|---|
+| C1 | O algoritmo aprende com o que eu faço e me devolve mais do mesmo | limiar | "SE o usuário clica em X, ENTÃO recebe mais de X" (Semana 2) | seguir uma conta e ver o feed mudar |
+| C2 | O app monta um perfil de mim que mostra umas coisas e esconde outras | núcleo | "que perfil o algoritmo construiu sobre eles" (Semana 4) | comparar o perfil com o de um colega |
+| C3 | A bolha é o conjunto do que eu nunca vejo | apoio | "Mapeando a bolha" (Semana 5) | montar o mapa da turma |
+
+| ID | Crença de entrada | Origem | Conceito que a derruba |
+|---|---|---|---|
+| B1 | "O feed mostra o que está bombando para todo mundo" | [INFERÊNCIA] | C1 |
+
+```json
+{"agente": "mapa-conceitual", "status": "aprovado", "fonte": "material", "limiar": "C1"}
+```"""
+_ANATOMIA_6ANO = [
+    ("Crença de entrada", "B1 — o feed mostra o que está bombando para todo mundo"),
+    ("Aposta comprometida", "segue exatamente 1 das 3 contas e a escolha trava antes do Explorar"),
+    ("Consequência sentida", "cada bloco do feed dele vem reponderado pelo ângulo da conta que ELE seguiu"),
+    ("Virada", "os destaques de 4 colegas lado a lado, e depois os 3 posts que nunca apareceram para ele"),
+    ("Nomeação", "Léo nomeia perfil algorítmico citando a conta que o próprio estudante seguiu"),
+    ("Transferência", "pesquisa de trabalho só no TikTok: o risco é ___ porque ___, com marcador de mecanismo"),
+]
+
+
+def _nucleo_6ano(linha_c1="| C1 — aprende e devolve | Decidir · Resultado/Aha | segue 1 conta e vê o feed reponderar a cada bloco | pergunta por que o seu feed mudou |",
+                 linha_c2="| C2 — perfil | fora | cabe na semana 4 do bimestre, que faz o mapeamento do próprio perfil | — |",
+                 anatomia=None) -> str:
+    passos = _ANATOMIA_6ANO if anatomia is None else anatomia
+    return "\n".join([
+        "# Núcleo narrativo — O algoritmo que me formou v1", "", "## 1. Descoberta central", "Eu só segui 1 conta.", "",
+        "### 1.1 Conceitos do material vividos em tela",
+        "| Conceito | Etapa | O que o estudante faz em tela | Como o professor aprofunda |",
+        "|---|---|---|---|", linha_c1, linha_c2, "",
+        "### 1.2 Anatomia do aha", "| Passo | Nesta missão |", "|---|---|",
+        *[f"| {p} | {t} |" for p, t in passos], "", "## 4. As 6 etapas", "…",
+    ])
+
+
+def test_cobertura_conceitual_confere_o_nucleo_contra_o_mapa():
+    """24/09/2026: o time pedagógico devolvia missões que não trabalhavam o conceito do material.
+    O limiar do mapa precisa estar no Decidir ou no aha; conceito núcleo tem destino; a anatomia tem os
+    seis passos. Defeito do mapa é ressalva: ele roda fora do loop, e o núcleo não o conserta."""
+    from tools.profundidade import validar_cobertura
+
+    ok = validar_cobertura(_nucleo_6ano(), _MAPA_6ANO, _MATERIAL_6ANO)
+    assert ok["status"] == "aprovado", ok["achados"]
+    assert ok["cobertos"] == ["C1"]
+
+    def codigos(r):
+        return {a["codigo"]: a["severidade"] for a in r["achados"]}
+
+    so_no_navegar = validar_cobertura(_nucleo_6ano(linha_c1="| C1 | Navegar | segue 1 conta e vê o feed reponderar a cada bloco | — |"),
+                                      _MAPA_6ANO, _MATERIAL_6ANO)
+    assert codigos(so_no_navegar) == {"limiar-fora-do-aha": "bloqueio"}
+    limiar_fora = validar_cobertura(_nucleo_6ano(linha_c1="| C1 | fora | o bimestre cobre isso na semana 2, com cartas | — |"),
+                                    _MAPA_6ANO, _MATERIAL_6ANO)
+    assert codigos(limiar_fora) == {"limiar-fora": "bloqueio"}
+    sem_c2 = validar_cobertura(_nucleo_6ano(linha_c2=""), _MAPA_6ANO, _MATERIAL_6ANO)
+    assert codigos(sem_c2) == {"conceito-sem-destino": "bloqueio"}
+    fora_sem_motivo = validar_cobertura(_nucleo_6ano(linha_c2="| C2 | fora | não cabe | — |"), _MAPA_6ANO, _MATERIAL_6ANO)
+    assert codigos(fora_sem_motivo) == {"fora-sem-justificativa": "bloqueio"}
+    sem_virada = validar_cobertura(_nucleo_6ano(anatomia=[p for p in _ANATOMIA_6ANO if p[0] != "Virada"]),
+                                   _MAPA_6ANO, _MATERIAL_6ANO)
+    assert codigos(sem_virada) == {"anatomia-incompleta": "bloqueio"}
+    marcador = validar_cobertura(_nucleo_6ano(anatomia=[(p, "<a preencher pelo autor do núcleo>") if p == "Virada" else (p, t)
+                                                       for p, t in _ANATOMIA_6ANO]), _MAPA_6ANO, _MATERIAL_6ANO)
+    assert codigos(marcador) == {"anatomia-incompleta": "bloqueio"}
+    sem_tabelas = validar_cobertura("# Núcleo\n\n## 1. Descoberta central\nfrase", _MAPA_6ANO, _MATERIAL_6ANO)
+    assert {"cobertura-ausente", "conceito-sem-destino", "anatomia-ausente"} <= set(codigos(sem_tabelas))
+
+    # o mapa que cita o que o material não tem é ressalva, e não gasta a rodada do núcleo
+    inventado = _MAPA_6ANO.replace('"Mapeando a bolha"', '"a bolha filtra o mundo inteiro de cada um"')
+    r = validar_cobertura(_nucleo_6ano(), inventado, _MATERIAL_6ANO)
+    assert (r["status"], codigos(r)) == ("amarelo", {"trecho-inexistente": "atencao"})
+    # sem material, não há o que conferir na citação; sem mapa, a cobertura não é medida — e diz isso
+    assert validar_cobertura(_nucleo_6ano(), _MAPA_6ANO, "")["status"] == "aprovado"
+    assert codigos(validar_cobertura(_nucleo_6ano(), "", _MATERIAL_6ANO)) == {"mapa-ausente": "atencao"}
+    print("   ✓ cobertura conceitual: limiar no Decidir/aha, núcleo com destino, anatomia completa; mapa ruim é ressalva")
+
+
+def test_veredito_de_profundidade_e_contado_nas_notas():
+    """O juiz escreve o status, mas quem decide são as notas que ele deu: 'aprovado' com o ápice em 2 é
+    bloqueio. Nota ausente é bloqueio. A cobertura em código bloqueada bloqueia por cima."""
+    import json as _json
+    from tools.profundidade import consolidar, veredito_por_notas
+
+    def juiz(status, **notas):
+        base = {"P1": 3, "P2": 3, "P3": 3, "P4": 3, "P5": 3, "P6": 3, **notas}
+        return f"# Juiz\n```json\n{_json.dumps({'status': status, 'notas': base, 'aha_em_uma_frase': 'eu achava que'})}\n```"
+
+    assert consolidar(juiz("aprovado"))["status"] == "aprovado"
+    incoerente = consolidar(juiz("aprovado", P3=2))
+    assert incoerente["status"] == "bloqueado"
+    assert {"veredito-incoerente", "p3-abaixo-do-corte"} <= {a["codigo"] for a in incoerente["achados"]}
+    assert consolidar(juiz("aprovado", P5=2))["status"] == "amarelo"
+    assert consolidar(juiz("aprovado", P6=1))["status"] == "bloqueado"
+    # o juiz pode ser mais severo que as notas, nunca menos
+    assert consolidar(juiz("bloqueado"))["status"] == "bloqueado"
+    assert veredito_por_notas({"P1": 3})[0] == "bloqueado"
+    assert veredito_por_notas({d: "4" for d in ("P1", "P2", "P3", "P4", "P5", "P6")})[0] == "aprovado"
+    assert consolidar("")["status"] == "bloqueado"
+    assert consolidar(juiz("aprovado"), {"status": "bloqueado", "achados": [
+        {"severidade": "bloqueio", "codigo": "limiar-fora-do-aha", "resumo": "x"}]})["status"] == "bloqueado"
+    assert consolidar(juiz("aprovado"))["aha_em_uma_frase"] == "eu achava que"
+    print("   ✓ profundidade: status recontado nas notas, juiz só pode endurecer, cobertura bloqueada bloqueia")
+
+
+def test_loop_do_nucleo_so_sai_com_micro_gate_e_profundidade():
+    """Spoiler resolvido com missão rasa não é núcleo pronto: o loop só encerra com os dois aprovados. E a
+    profundidade reprovada não trava a esteira — o freio é o parecer humano, que não aceita *de acordo* com 🔴."""
+    import json as _json
+    from agents.callbacks import KEY_PIPELINE_BLOQUEADO
+    from agents.checkers import CoberturaConceitualAgent, ProfundidadeCheckAgent, SaidaDeLoopAgent
+    from pipeline import passagem
+
+    micro_ok = '# Micro\n```json\n{"agente": "micro-gate", "status": "passa", "falhas": []}\n```'
+
+    def juiz(p3):
+        notas = {"P1": 3, "P2": 3, "P3": p3, "P4": 3, "P5": 3, "P6": 3}
+        return f"# Juiz\n```json\n{_json.dumps({'status': 'aprovado', 'notas': notas})}\n```"
+
+    def rodar(texto_juiz):
+        loop = LoopAgent(name="NucleoNarrativoLoop", max_iterations=2, sub_agents=[
+            FakeAgent(name="A01NucleoNarrativo", key="nucleo_narrativo", text=_nucleo_6ano(), marker_key="vezes_nucleo"),
+            CoberturaConceitualAgent(name="A01cCoberturaConceitual"),
+            FakeAgent(name="A02MicroGate", key="micro_gate_report", text=micro_ok),
+            FakeAgent(name="A02bJuizProfundidade", key="profundidade_report", text=texto_juiz),
+            ProfundidadeCheckAgent(name="A03bProfundidadeCheck"),
+            EnvelopeGateAgent(name="A03MicroGateCheck", rotulo="Micro-gate do núcleo", report_key="micro_gate_report",
+                              status_key="micro_gate_status", round_key="micro_gate_rodada", max_rounds=2,
+                              escalate_on_approve=False, block_pipeline_on_fail=False),
+            SaidaDeLoopAgent(name="A03cNucleoCheck", status_keys=["micro_gate_status", "profundidade_status"],
+                             rodada_key="nucleo_rodada", max_rounds=2),
+        ])
+        insumos = FakeAgent(name="Insumos", key="mapa_conceitual", text=_MAPA_6ANO,
+                            extra_delta={"material_anexado": _MATERIAL_6ANO})
+        return asyncio.run(_run(SequentialAgent(name="R", sub_agents=[insumos, loop])))[1]
+
+    st = rodar(juiz(3))
+    assert (st["vezes_nucleo"], st["profundidade_status"], st["micro_gate_status"]) == (1, "aprovado", "aprovado")
+    assert st["cobertura_resultado"]["cobertos"] == ["C1"]
+
+    st = rodar(juiz(2))
+    assert st["vezes_nucleo"] == 2, "profundidade reprovada devolve o núcleo mesmo com o micro-gate aprovado"
+    assert (st["profundidade_status"], st["profundidade_rodada"]) == ("bloqueado", 2)
+    assert st["profundidade_status_envelope"]["notas"]["P3"] == 2
+    assert not st.get(KEY_PIPELINE_BLOQUEADO), "a profundidade não trava a esteira: quem trava é o parecer"
+    fluxo = {**passagem.novo_fluxo(), "situacao": passagem.AGUARDANDO}
+    assert passagem.DE_ACORDO not in passagem.acoes_possiveis(fluxo, "produto", st)
+
+    # PROFUNDIDADE_ESTRITA=false: o núcleo ainda volta ao autor; só o veredito final vira 🟡
+    import os as _os
+    from unittest import mock as _mock
+    with _mock.patch.dict(_os.environ, {"PROFUNDIDADE_ESTRITA": "false"}):
+        st = rodar(juiz(2))
+    assert (st["vezes_nucleo"], st["profundidade_status"]) == (2, "amarelo")
+    assert "profundidade-nao-estrita" in {a["codigo"] for a in st["profundidade_status_envelope"]["achados"]}
+    assert passagem.DE_ACORDO in passagem.acoes_possiveis(fluxo, "produto", st)
+    print("   ✓ loop do núcleo: sai só com micro-gate e profundidade; profundidade 🔴 recusa o de acordo, sem travar a esteira")
+
+
+def test_profundidade_entra_no_dossie_na_correcao_e_nos_artefatos():
+    from pipeline.artifacts import ARTIFACT_FILES
+    from pipeline.reexecucao import CHAVES_PRODUTO
+    from tools.diagnostico import GATES
+    from agents.produto import get_ideacao_mecanismos_agent, get_juiz_profundidade_agent, get_mapa_conceitual_agent
+
+    assert any(g["status"] == "profundidade_status" and g["rodada"] == "profundidade_rodada" for g in GATES)
+    novas = {"mapa_conceitual", "ideacao_mecanismos", "cobertura_report", "cobertura_resultado", "profundidade_report",
+             "profundidade_status", "profundidade_status_envelope", "profundidade_rodada", "nucleo_rodada"}
+    assert novas <= CHAVES_PRODUTO, novas - CHAVES_PRODUTO
+    salvos = {k for k, _ in ARTIFACT_FILES}
+    assert {"mapa_conceitual", "ideacao_mecanismos", "cobertura_report", "profundidade_report"} <= salvos
+    # o juiz e o mapa emitem o mesmo resultado para a mesma entrada; a ideação inventa
+    assert get_juiz_profundidade_agent().generate_content_config.seed is not None
+    assert get_mapa_conceitual_agent().generate_content_config.seed is not None
+    assert get_ideacao_mecanismos_agent().generate_content_config.temperature is None
+    print("   ✓ profundidade no dossiê, apagada numa correção de produto, salva em artefato; juiz com seed, ideação livre")
 
 
 if __name__ == "__main__":

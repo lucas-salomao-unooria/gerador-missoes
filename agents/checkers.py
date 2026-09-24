@@ -1238,6 +1238,92 @@ class DiagnosticoAgent(BaseAgent):
         )
 
 
+class CoberturaConceitualAgent(BaseAgent):
+    """Confere o núcleo contra o mapa conceitual do material, a cada rodada do loop do núcleo.
+
+    Roda antes do micro-gate e do juiz de profundidade, e não emite status próprio: o resultado
+    vai para `cobertura_resultado`, que o `ProfundidadeCheckAgent` funde ao veredito do juiz. Um
+    semáforo à parte repetiria o mesmo 🔴 duas vezes no cartão do parecer.
+    """
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import profundidade as prof
+
+        state = ctx.session.state
+        nucleo = str(state.get("nucleo_narrativo", "") or "")
+        resultado = prof.validar_cobertura(nucleo, str(state.get("mapa_conceitual", "") or ""),
+                                           str(state.get("material_anexado", "") or ""))
+        relatorio = prof.relatorio_cobertura(resultado, extrair_slug(nucleo) or "")
+        bloqueios = [a for a in resultado["achados"] if a["severidade"] == "bloqueio"]
+        icone = {"aprovado": "✅", "amarelo": "🟡", "bloqueado": "⛔"}[resultado["status"]]
+        msg = (f"{icone} Cobertura conceitual: {len(resultado['cobertos'])} conceito(s) do material vivido(s) em tela, "
+               f"{len(bloqueios)} bloqueio(s), {len(resultado['achados']) - len(bloqueios)} ressalva(s).")
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta={
+                "cobertura_report": relatorio,
+                "cobertura_resultado": {"status": resultado["status"], "achados": resultado["achados"],
+                                        "cobertos": resultado["cobertos"]},
+            }),
+        )
+
+
+class ProfundidadeCheckAgent(BaseAgent):
+    """Veredito de profundidade contado em código: notas do juiz + cobertura determinística.
+
+    O juiz de profundidade dá nota de 1 a 4 em seis dimensões; o status sai das notas
+    (`tools/profundidade.py::veredito_por_notas`), não do que o juiz escreveu no campo `status` —
+    um juiz que escreve "aprovado" com o ápice em 2 não aprova. Cobertura bloqueada bloqueia.
+
+    Não registra degradação: como no micro-gate, a esteira segue e o problema fica à vista. O
+    freio é o parecer humano — com este gate em 🔴, o *de acordo* de produto é recusado.
+    """
+
+    report_key: str = "profundidade_report"
+    status_key: str = "profundidade_status"
+    round_key: str = "profundidade_rodada"
+    rotulo: str = "Profundidade pedagógica"
+    max_rounds: int = 2
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from config import get_settings
+        from tools import profundidade as prof
+
+        state = ctx.session.state
+        resultado = prof.consolidar(str(state.get(self.report_key, "") or ""),
+                                    dict(state.get("cobertura_resultado") or {}))
+        rodada = int(state.get(self.round_key, 0) or 0) + 1
+        # Só na última rodada: antes dela, o 🔴 é o que devolve o núcleo ao autor.
+        if resultado["status"] == "bloqueado" and rodada >= self.max_rounds and not get_settings().profundidade_estrita:
+            resultado["status"] = "amarelo"
+            resultado["achados"].append({
+                "severidade": "atencao", "codigo": "profundidade-nao-estrita", "etapa": "produto",
+                "agente_responsavel": "produto",
+                "resumo": "A profundidade reprovou nas notas, e PROFUNDIDADE_ESTRITA=false rebaixou o 🔴 a 🟡: "
+                          "os cortes ainda estão em calibração. Leia as notas antes do de acordo.",
+            })
+        envelope = {"agente": prof.AGENTE_JUIZ, "status": resultado["status"], "rodada": rodada,
+                    "notas": resultado["notas"], "aha_em_uma_frase": resultado["aha_em_uma_frase"],
+                    "ponto_mais_fraco": resultado["ponto_mais_fraco"], "achados": resultado["achados"]}
+        notas = prof.linha_de_notas(resultado["notas"]) if resultado["notas"] else "sem notas"
+        icone = {"aprovado": "✅", "amarelo": "🟡", "bloqueado": "⛔"}[resultado["status"]]
+        msg = f"{icone} {self.rotulo}: `{resultado['status']}` na rodada {rodada} — {notas}."
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta={self.status_key: resultado["status"],
+                                              f"{self.status_key}_envelope": envelope,
+                                              self.round_key: rodada}),
+        )
+
+
 class SaidaDeLoopAgent(BaseAgent):
     """Encerra um `LoopAgent` quando todos os gates da rodada passaram — ou quando o teto caiu.
 

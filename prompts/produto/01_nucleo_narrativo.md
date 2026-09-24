@@ -59,6 +59,31 @@ Esta é a regra mais importante do núcleo. As demais regras existem para apoiar
 
 ---
 
+## REGRA UM — Profundidade: o conceito do material e o ápice do aha
+
+A Regra Zero protege o gap. Esta garante que, do outro lado do gap, haja algo que valha a pena descobrir. Em 24/09/2026 o time pedagógico devolveu as missões por serem rasas: não trabalhavam os conceitos do material do bimestre, e o aha não tinha ápice — era uma informação nova revelada (um zoom-out, um painel com percentuais), igual para qualquer escolha do estudante. Um juiz de profundidade pontua o seu núcleo, na mesma rodada do micro-gate, com a rubrica abaixo, e um verificador em código confere as tabelas 1.1 e 1.2.
+
+**Mapa conceitual do material (o que o bimestre ensina — leia antes de desenhar):**
+
+{mapa_conceitual?}
+
+**Ideação — três mecanismos candidatos, pontuados, e o escolhido:**
+
+{ideacao_mecanismos?}
+
+**O que isso muda no seu trabalho:**
+
+- **Desenvolva o candidato escolhido na ideação.** Ele já foi comparado com dois outros; preserve o que a ideação diz que o núcleo "não pode perder". Você pode ajustar detalhes para caber nas regras abaixo; trocar de candidato só se o escolhido esbarra numa regra deste documento — e então registre na 18-parcial qual regra, e qual candidato você desenvolveu no lugar. Quando o mecanismo veio do briefing, a Regra 1 vale inteira.
+- **O conceito limiar do mapa é o que o estudante decide.** A aposta do Decidir é sobre ele, e a virada o desmonta. Conceito do material que aparece só no Explicar, como texto, é leitura, não vivência (2.2).
+- **A anatomia do aha tem seis passos, e todos estão na seção 4**: crença de entrada → aposta comprometida → consequência sentida → virada → nomeação → transferência. A comparação com colegas da Regra 10 é o passo 4; sem a aposta (2) e a consequência da escolha dele (3), ela é contraste, não aha.
+- **A virada é mostrada pelo ambiente**: o que ele deixou de ver, o que os colegas receberam, a reação de quem viu o que ele publicou. Nunca por painel da Unooria dentro do clone. Os dados da turma ficam na tela do professor.
+- **Profundidade não é carga.** Nada disto autoriza mais telas, mais opções ou mais minutos: os tetos da faixa continuam valendo. Aprofundar é trocar a revelação igual para todos por uma consequência que depende da escolha — não somar etapas.
+- **Escreva as tabelas 1.1 e 1.2** exatamente com os cabeçalhos do formato de saída. Um verificador em código as lê: sem elas, o núcleo bloqueia mesmo que a missão seja boa.
+
+<!-- include: references/criterios-profundidade.md -->
+
+---
+
 ## Regras
 
 1. **Fidelidade acima de criatividade.** Se o material do time já é um one-pager, preserve integralmente conteúdo, decisões, números, nomes e códigos — só reorganize no formato canônico e complete lacunas evidentes marcando-as.
@@ -86,11 +111,21 @@ Na primeira geração os dois blocos abaixo chegam vazios: ignore esta seção e
 
 {micro_gate_report?}
 
+**Veredito do juiz de profundidade na rodada anterior:**
+
+{profundidade_report?}
+
+**Cobertura conceitual na rodada anterior (verificação em código das tabelas 1.1 e 1.2):**
+
+{cobertura_report?}
+
 **Núcleo que você entregou na rodada anterior:**
 
 {nucleo_narrativo?}
 
-Havendo relatório com ❌, reescreva **apenas** o que a verificação apontou e devolva o núcleo completo, com o restante preservado palavra por palavra. Não aproveite a rodada para melhorar o que passou: mudança não pedida invalida a verificação já feita e gasta a segunda rodada, que é a última.
+Havendo relatório com ❌ ou 🔴, reescreva **apenas** o que as verificações apontaram e devolva o núcleo completo, com o restante preservado palavra por palavra. Não aproveite a rodada para melhorar o que passou: mudança não pedida invalida a verificação já feita e gasta a segunda rodada, que é a última.
+
+**Quando é o juiz de profundidade que reprova**, a correção costuma ser de mecanismo, não de redação: a aposta que não trava, a consequência que é igual para todos, a virada que não desmente a crença. Siga as "Instruções de reescrita" dele na ordem em que vêm (P3 antes de P2 antes de P1), mexendo no Decidir e no Resultado/Aha — e no que depende deles — e **não** no que o micro-gate aprovou: a nova virada continua sem spoiler no Desafiar e no Navegar. Instrução marcada `[PROPOSTA — decisão do PO]` não se aplica: copie-a para a 18-parcial, como decisão aberta. E atualize as tabelas 1.1 e 1.2 para dizerem o que a seção 4 passou a fazer.
 
 ## Formato de saída (Markdown) — APENAS 4 seções + decisões
 
@@ -103,6 +138,24 @@ Slug = o **id da plataforma**, no formato `expNNefNb`: ano em dois dígitos + `e
 ## 1. Descoberta central
 Uma frase, como o estudante diria o que descobriu. Eixo temático. Eixo de Pensamento Computacional. **Tipo de decisão:** o que o estudante faz ativamente, em até 12 palavras (ex.: "escolher 3 de 10 vídeos avaliando credibilidade"; "seguir uma conta e comparar o feed depois") — é o campo que o catálogo compara para detectar missão repetida. **Porta de abstração:** `descrever` · `explicar` · `criticar com apoio` · `criticar` (a escala de `literatura-cognitiva.md` §4), conforme o que a decisão exige do estudante. **Foco primário BNCC (Regra 12):** qual habilidade de letramento digital e COMO esta missão a exerce de forma distinta.
 
+### 1.1 Conceitos do material vividos em tela
+Uma linha por conceito `limiar` e `núcleo` do mapa conceitual (os de `apoio`, se a missão os tocar). Na coluna Etapa, as etapas em que o estudante FAZ algo com o conceito — ou `fora`, e então a terceira coluna diz por que não cabe nesta missão e que parte do bimestre o cobre. O limiar nunca fica `fora` e sempre inclui Decidir ou Resultado/Aha.
+
+| Conceito | Etapa | O que o estudante faz em tela | Como o professor aprofunda |
+|---|---|---|---|
+| C1 — <conceito do mapa> | Decidir · Resultado/Aha | <ação observável, com o verbo nativo> | <a pergunta ou o movimento do professor que leva do "o quê" ao "por quê"> |
+| C2 — … | fora | <por que não cabe e onde o bimestre o cobre> | — |
+
+### 1.2 Anatomia do aha
+| Passo | Nesta missão |
+|---|---|
+| Crença de entrada | B<n> — <a crença do mapa, como o estudante diria> |
+| Aposta comprometida | <o que o estudante escolhe ou prevê sobre o limiar, e o que trava> |
+| Consequência sentida | <o que muda na tela DELE por causa da escolha dele, e como difere para quem escolheu outra coisa> |
+| Virada | <a evidência que desmente a crença: o contraste com colegas e, se houver, a segunda camada — o que nunca apareceu para ele> |
+| Nomeação | <o termo do material que o Explicar usa, e com que dado do próprio estudante> |
+| Transferência | <o cenário novo do Refletir e o que a resposta precisa conter para mostrar o mecanismo> |
+
 ## 3. Narrativa e personagem-guia
 Abertura (Desafiar) com job-to-be-done concreto (Regra 9). Decisão deliberada sobre personagem-guia (Regra 6). **Superfície de parametrização docente (Regra 11):** o que o professor de qualquer disciplina customiza nesta missão pelo recorte da aula (disciplina, tema, assuntos, contexto), onde isso aparece no conteúdo do Navegar, o que é camada fixa — e a **tabela do teste das três disciplinas** `| Disciplina | Recorte do professor (exemplo) | O que a IA gera | O que não muda |` com Português, Ciências/Biologia e História.
 
@@ -110,7 +163,7 @@ Abertura (Desafiar) com job-to-be-done concreto (Regra 9). Decisão deliberada s
 Para cada etapa: o que o estudante **vê**, o **verbo nativo** que executa, o que **muda na tela**, quem conduz (Estudante / Professor / Unooria), e a **regra do sistema** (o que a plataforma apresenta, ordena, bloqueia ou garante). Cardinalidades e mínimos/máximos. Quem publica/envia cada conteúdo visível. Onde o conteúdo usa `[tema: parâmetro do professor]`. **Etapa Resultado/Aha:** desenhada com mediação do professor e comparação entre colegas reais (Regra 10). **Etapa Refletir:** provocação que exige aplicação a cenário novo (Regra 13).
 
 ## 18-parcial. Decisões de direção e propostas P0a
-**Decisões de direção desta versão** — toda escolha estrutural deliberada (obrigatórias: uso do personagem-guia da seção 3, superfície de parametrização da Regra 11, foco BNCC primário da Regra 12), no formato: decisão tomada · alternativa descartada · o que essa escolha testa ou arrisca.
+**Decisões de direção desta versão** — toda escolha estrutural deliberada (obrigatórias: uso do personagem-guia da seção 3, superfície de parametrização da Regra 11, foco BNCC primário da Regra 12, e **o mecanismo**: qual candidato da ideação você desenvolveu, se veio do briefing, e o que foi ajustado dele), no formato: decisão tomada · alternativa descartada · o que essa escolha testa ou arrisca.
 **Decisões abertas e propostas P0a** — tudo o que ficou em aberto ou foi decidido por você por falta de informação, com a alternativa.
 ```
 
