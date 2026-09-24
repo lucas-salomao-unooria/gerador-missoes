@@ -14,7 +14,7 @@ novo de plataforma e deve ser sinalizada como tal no relatório.
 
 ## PED-01 [BLOQUEANTE para Letramento Digital] — Habilidades BNCC com código explícito
 A spec lista as habilidades alvo com código oficial (ex.: `EFxxCOxx`), poucas e priorizadas (uma missão que "cobre" dez habilidades não mede nenhuma).
-**Regra de bloqueio da BNCC:** As **únicas regras da BNCC que bloqueiam de fato são as de letramento digital** (BNCC Computação — Cultura Digital / uso crítico, seguro e consciente de tecnologias). Falha ou ausência nessas habilidades = ❌ bloqueante. Habilidades de disciplinas tradicionais ou competências gerais citadas sem código verificado **não bloqueiam** a missão: passam com ressalvas no relatório, registradas como itens de alerta (⚠️).
+**Regra de bloqueio da BNCC:** As **únicas regras da BNCC que bloqueiam de fato são as de letramento digital** (BNCC Computação — Cultura Digital / uso crítico, seguro e consciente de tecnologias). Falha ou ausência nessas habilidades = ❌ bloqueante. Habilidades de disciplinas tradicionais ou competências gerais **não são conferidas por esta banca e não geram achado** — não há motor de BNCC no servidor e o código não muda a implementação. O que permanece: código declarado **sem** ação observável que o sustente é ajuste de remoção.
 
 ## PED-02 [BLOQUEANTE] — Matriz habilidade → evidência → interação → dado
 Para CADA habilidade: qual comportamento observável evidencia a habilidade,

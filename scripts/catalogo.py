@@ -29,7 +29,7 @@ from tools import catalogo as cat  # noqa: E402
 MARKDOWN_LEGADO = REFERENCES_DIR / "catalogo-missoes.md"
 #: Colunas do catálogo em markdown, na ordem da tabela.
 COLUNAS_LEGADO = ["slug", "ano", "bimestre", "nome", "ambiente", "eixo", "descoberta",
-                  "tipo_decisao", "porta_abstracao", "habilidade_primaria", "status", "observada_em_campo"]
+                  "tipo_decisao", "porta_abstracao", "habilidade_primaria", "status"]
 
 
 def _sessoes() -> list[Path]:
@@ -55,8 +55,6 @@ def reconstruir(seco: bool) -> int:
         velha = anterior.get(pasta.name, {})
         if str(velha.get("status", "")) in cat.STATUS_HUMANOS:
             ficha["status"] = velha["status"]
-        if velha.get("observada_em_campo"):
-            ficha["observada_em_campo"] = velha["observada_em_campo"]
         r = cat.registrar(ficha, indice, gravar_arquivo=False)
         lidas += 1
         marca = "·" if r["status"] == "aprovado" else "⚠️"

@@ -32,21 +32,24 @@ from tools.doc_parser import DocumentBatch
 logger = logging.getLogger("pipeline_runner")
 
 STATUS_KEYS = [
+    "catalogo_indice_status",
     "micro_gate_status",
     "micro_gate_rodada",
     "gate_estrutural_status",
     "gate_estrutural_rodada",
-    "gate_final_status",
+    "avaliacao_status", "experiencia_status", "adequacao_status", "gate_final_status",
     "bncc_status",
     "lacunas_status",
     "ambiente_status",
-    "design_status",
-    "manifesto_status",
+    "design_status", "prototipo_lint_status", "brief_escopo_status",
+    "manifesto_status", "evidencia_status", "evidencia_report",
+    "perguntas_status", "perguntas_report",
+    "juiz_perguntas_status", "juiz_perguntas_rodada",
     "telemetria_status",
     "rastro_lacunas_status",
     "dev_status",
-    "prd_status",
-    "diagnostico_status",
+    "prd_status", "kpis_status", "kpis_report",
+    "diagnostico_status", "tickets_sem_rota",
     KEY_PIPELINE_BLOQUEADO,
     KEY_PIPELINE_MOTIVO,
 ]
@@ -112,6 +115,16 @@ class PipelineExecutionResult:
         return "⚪"
 
 
+def _perguntas_do_po(briefing: str) -> str:
+    """Bloco `## Perguntas de produto` do briefing. Falha aqui nunca derruba a execução."""
+    try:
+        from tools.kpis import extrair_perguntas_do_briefing
+
+        return extrair_perguntas_do_briefing(briefing)
+    except Exception:  # pragma: no cover - conveniência
+        return ""
+
+
 def build_user_message(prompt: str, doc_batch: Optional[DocumentBatch]) -> types.Content:
     """Mensagem do usuário: texto (+ documentos de texto inline) e PDFs como Parts binárias.
 
@@ -144,6 +157,47 @@ def build_user_message(prompt: str, doc_batch: Optional[DocumentBatch]) -> types
 
 
 _build_user_message = build_user_message  # nome antigo, mantido para quem já importava
+
+
+#: Cabeçalho do material guardado quando ele volta à mensagem numa correção de produto.
+CABECALHO_MATERIAL_GUARDADO = "## 📎 Documentos de apoio anexados (texto) — guardados da geração original"
+
+
+def mensagem_do_usuario(prompt: str, doc_batch: Optional[DocumentBatch],
+                        initial_state: Optional[Dict[str, Any]], stages: Optional[List[str]]) -> types.Content:
+    """A mensagem que o núcleo narrativo lê — o único agente que a lê.
+
+    Numa correção que refaz produto não há anexo novo: sem remontar o material guardado da
+    geração original, o núcleo seria refeito sem o material do Entre Redes que o gerou.
+    """
+    material_salvo = str((initial_state or {}).get("material_anexado") or "")
+    if not doc_batch and material_salvo and "produto" in (stages or []):
+        return build_user_message(f"{prompt}\n\n---\n{CABECALHO_MATERIAL_GUARDADO}\n\n{material_salvo}", None)
+    return build_user_message(prompt, doc_batch)
+
+
+def material_dos_anexos(doc_batch: Optional[DocumentBatch]) -> str:
+    """O texto integral de cada anexo, para o estado — sem limite de tamanho, de propósito.
+
+    Até 23/09/2026 o conteúdo dos anexos existia só na mensagem, e só o núcleo narrativo a lê.
+    A spec, a avaliação pedagógica e o one-pager resumido são instruídos a usar o material do
+    Entre Redes como fonte primária de código BNCC e componente curricular e nunca o viam: 5 das
+    7 sessões que anexaram o material entregaram um resumido dizendo "material não anexado". E
+    a sessão guardava só os nomes, então uma correção que refizesse produto perdia o material.
+    O PDF vai ao modelo como arquivo; aqui entra o texto extraído dele, que é o que um agente
+    sem a mensagem consegue ler.
+    """
+    if not doc_batch or not doc_batch.documents:
+        return ""
+    blocos: List[str] = []
+    for doc in doc_batch.documents:
+        texto = (doc.markdown_text or "").strip()
+        if texto:
+            blocos.append(f"### 📄 Documento de apoio ({doc.file_type.upper()}): {doc.name}\n\n{texto}")
+        else:
+            blocos.append(f"### 📄 {doc.name} — anexado, mas sem texto extraível (PDF digitalizado?). "
+                          "O conteúdo não pôde ser guardado; considere só o que o briefing diz sobre ele.")
+    return "\n\n".join(blocos)
 
 
 def catalogo_para_prompt() -> str:
@@ -190,6 +244,7 @@ async def run_orchestrator_pipeline_stream(
     initial_state: Optional[Dict[str, Any]] = None,
     run_dir: Optional[Path] = None,
     registrar_conversa: bool = True,
+    com_transversal: bool = True,
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Executa o pipeline e emite eventos: pipeline_started, agent_started, agent_chunk,
     agent_thought_chunk, gate_status, pipeline_completed | pipeline_error."""
@@ -215,6 +270,7 @@ async def run_orchestrator_pipeline_stream(
             include_thoughts=include_thoughts,
             modo_estrito=modo_estrito,
             stages=stages,
+            com_transversal=com_transversal,
         )
         session_service = InMemorySessionService()
         session = await session_service.create_session(
@@ -227,6 +283,14 @@ async def run_orchestrator_pipeline_stream(
             state={
                 **(initial_state or {}),
                 "briefing": briefing_inicial(initial_state, prompt),
+                # O texto integral dos anexos: o salvo vence, porque numa correção não há anexo
+                # novo — o material da geração original é o que vale.
+                "material_anexado": str((initial_state or {}).get("material_anexado") or "")
+                                    or material_dos_anexos(doc_batch),
+                # O PO declara as perguntas de produto no briefing, em português; a esteira as
+                # normaliza para a tabela do sub-bloco 9f. Sem o bloco, fica vazio e o agente
+                # propõe, marcando `[PROPOSTA — validar com PO]` — proposta não bloqueia.
+                "perguntas_po": _perguntas_do_po(briefing_inicial(initial_state, prompt)),
                 # A memória do gerador chega aos prompts pelo estado, não por include: o índice vive
                 # no bucket (`output/`), que persiste, enquanto `prompts/` vem da imagem do container.
                 "catalogo_missoes": catalogo_para_prompt(),
@@ -242,7 +306,7 @@ async def run_orchestrator_pipeline_stream(
             session_service=session_service,
             artifact_service=artifact_service,
         )
-        user_message = _build_user_message(prompt, doc_batch)
+        user_message = mensagem_do_usuario(prompt, doc_batch, initial_state, stages)
 
         step_outputs: Dict[str, str] = {}
         step_thoughts: Dict[str, str] = {}
@@ -250,9 +314,21 @@ async def run_orchestrator_pipeline_stream(
         final_text = ""
         current_agent: Optional[str] = None
         known_status: Dict[str, Any] = {}
+        # Custo por agente. O `usage_metadata` de cada evento era descartado, então ninguém
+        # sabia quanto custa gerar uma missão nem qual agente pesa — e sem isso não há como
+        # decidir onde cortar contexto, nem justificar o gasto.
+        tokens_por_agente: Dict[str, Dict[str, int]] = {}
 
         async for event in runner.run_async(user_id=user_id, session_id=session.id, new_message=user_message):
             author = getattr(event, "author", None) or "Orchestrator"
+
+            uso = getattr(event, "usage_metadata", None)
+            if uso is not None:
+                reg = tokens_por_agente.setdefault(author, {"entrada": 0, "saida": 0, "pensamento": 0, "chamadas": 0})
+                reg["entrada"] += int(getattr(uso, "prompt_token_count", 0) or 0)
+                reg["saida"] += int(getattr(uso, "candidates_token_count", 0) or 0)
+                reg["pensamento"] += int(getattr(uso, "thoughts_token_count", 0) or 0)
+                reg["chamadas"] += 1
 
             if author != current_agent and author != "user":
                 current_agent = author
@@ -327,6 +403,28 @@ async def run_orchestrator_pipeline_stream(
         final_state = dict(final_session.state) if final_session else {}
         duration = time.time() - start_time
 
+        # Bloco de execução: o que torna uma execução reproduzível e comparável com a seguinte.
+        # Sem ele não havia como responder "quanto custa gerar uma missão", "qual agente pesa"
+        # nem "estamos melhorando?" — os mesmos ~20 achados reapareciam sessão após sessão e
+        # nada media a tendência.
+        totais = {
+            "entrada": sum(v["entrada"] for v in tokens_por_agente.values()),
+            "saida": sum(v["saida"] for v in tokens_por_agente.values()),
+            "pensamento": sum(v["pensamento"] for v in tokens_por_agente.values()),
+            "chamadas": sum(v["chamadas"] for v in tokens_por_agente.values()),
+        }
+        settings_exec = get_settings()
+        final_state["execucao"] = {
+            "modelo": settings_exec.gemini_model,
+            "modelo_prd": settings_exec.gemini_model_prd,
+            "seed_juiz": settings_exec.seed_juiz,
+            "temperatura_juiz": settings_exec.temperatura_juiz,
+            "duracao_s": round(duration, 1),
+            "tokens": totais,
+            "tokens_por_agente": dict(sorted(tokens_por_agente.items(),
+                                             key=lambda kv: -(kv[1]["entrada"] + kv[1]["saida"]))),
+        }
+
         output_dir: Optional[Path] = None
         artifacts_manifest: List[Dict[str, Any]] = []
         if save_artifacts:
@@ -342,6 +440,11 @@ async def run_orchestrator_pipeline_stream(
                 )
                 if output_dir:
                     artifacts_manifest = generate_artifact_manifest(output_dir)
+                if output_dir and com_transversal:
+                    # Catálogo e histórico são da missão inteira: com parecer humano a esteira roda
+                    # uma etapa por vez, e só a rodada final (a transversal) registra — senão cada
+                    # etapa viraria uma linha no histórico, e uma ficha velha no estado seria
+                    # registrada de novo a cada passagem.
                     # Memória entre execuções: só aqui existe o nome da pasta, que é a chave da
                     # entrada no índice. Falhar aqui não pode custar a execução inteira.
                     try:
@@ -352,6 +455,15 @@ async def run_orchestrator_pipeline_stream(
                             registrar_no_catalogo({**ficha, "sessao": output_dir.name})
                     except Exception as exc:  # pragma: no cover - disco
                         logger.warning("Falha ao registrar a missão no catálogo: %s", exc)
+                    # Série temporal: os mesmos ~20 identificadores de achado reapareciam
+                    # sessão após sessão e nada media a tendência. Uma linha por execução,
+                    # append-only, ao lado do índice. Falhar aqui também não custa a execução.
+                    try:
+                        from tools.historico import registrar as registrar_no_historico
+
+                        registrar_no_historico(final_state, sessao=output_dir.name)
+                    except Exception as exc:  # pragma: no cover - disco
+                        logger.warning("Falha ao registrar no histórico: %s", exc)
             except Exception as exc:  # pragma: no cover - disco
                 logger.warning("Falha ao gravar artefatos: %s", exc)
 

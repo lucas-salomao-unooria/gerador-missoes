@@ -55,7 +55,7 @@ Se disponível, nesta ordem exata:
 
 **Economia de contexto, que é regra e não conselho:** não peça o HTML nem a imagem de tela nenhuma. Você precisa do **link**, não do arquivo. Pedir o código ou a captura de todas as telas estoura o contexto da etapa e derruba a execução inteira.
 
-**Priorize** quando o inventário for grande: pico, aha, uma tela por etapa, depois os estados degenerados. Declare o que ficou fora. **Exceção que não se prioriza para fora: as telas do professor no preparo (`E0-PROF-01…05`) e a de dashboard são obrigatórias** — a visão do professor é entregável, e sem elas o QA (D6) e o rastro de lacunas reprovam a etapa. Se a cota apertar, corte estados degenerados do estudante antes de cortar uma tela do professor; entre as do professor, as últimas a cair são `E0-PROF-02` (recorte) e `E0-PROF-04` (curadoria).
+**Priorize** quando o inventário for grande: pico, aha, uma tela por etapa, depois os estados degenerados. Declare o que ficou fora. **Exceção que não se prioriza para fora: as telas do professor no preparo (`E0-PROF-01…05`), a de dashboard e o estado degradado 2–4 por aparelho da tela `pico` e de toda tela com decisão são obrigatórios** — dois a quatro estudantes por aparelho é o primeiro cenário da escola pública, não uma variação de luxo, e cortá-lo por cota é desenhar para a escola que temos menos — a visão do professor é entregável, e sem elas o QA (D6) e o rastro de lacunas reprovam a etapa. Se a cota apertar, corte estados degenerados do estudante antes de cortar uma tela do professor; entre as do professor, as últimas a cair são `E0-PROF-02` (recorte) e `E0-PROF-04` (curadoria).
 
 No relatório, entregue **esta tabela**, que é o que vai ao PRD:
 
@@ -80,7 +80,10 @@ Dois artefatos, nesta ordem de importância:
 
 **Os nomes dos tokens são fechados.** Use exatamente os nove slots da coleção `wireframe-cinza`: `superficie/base` · `superficie/elevada` · `superficie/midia` · `borda/padrao` · `borda/foco` · `texto/primario` · `texto/secundario` · `acao/primaria` · `acao/secundaria`. **`wf-action-primary`, `wf-border-focus` e qualquer `wf-*` não existem** — foram inventados numa execução anterior, quebram a subida para alta fidelidade e são ❌ no QA. Precisa de um slot fora dos nove? É lacuna a registrar, não nome novo.
 
-**Não invente nome de componente do design system.** Você não tem como conferir o catálogo: escreva o nome que a convenção pede e marque `[verificar no design system]` ao lado do que não puder confirmar.
+**Componente do design system só com nome do inventário abaixo.** A coluna `Componentes do DS` aceita apenas nomes que existem na seção da missão (ou na marca `unooria`); o que você precisar e não estiver lá vai para `Componentes locais (candidatos)`, como composição ou componente novo. Um lint confere a coluna contra este inventário e bloqueia nome que o DS não tem — em 22/09/2026, 32% dos componentes "do DS" das telas não existiam.
+
+<!-- include: references/ds-componentes.md -->
+
 
 ## Você monta, não constrói
 
@@ -170,7 +173,7 @@ Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica — a redund
 **Camada CAA:** aplicada | não aplicável | ausente — <n> telas com restrição CAA construída
 
 ## Cobertura — inventário × frame × estados
-| ID tela | Frame (nodeId) | Estados construídos | Strings usadas (chaves) | Placeholders `[[…]]` | Componentes do DS | Componentes locais (candidatos) | CAA construída (símbolo · alvo px · áudio) | Anotações |
+| ID tela | Frame (screenId) | Estados construídos | Strings usadas (chaves) | Placeholders `[[…]]` | Componentes do DS | Componentes locais (candidatos) | CAA construída (símbolo · alvo px · áudio) | Anotações |
 
 ## Especificação por tela (obrigatória — uma seção por tela do inventário)
 Para cada tela: zonas (topo/centro/rodapé ou moldura do aparelho), elementos contados vs teto, hierarquia (o que salta / o que recua), verbo, o que muda, estados.

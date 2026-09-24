@@ -82,11 +82,43 @@ EXPERIENCIAS_EXISTENTES = frozenset({
     "exp-70-vila-do-lume", "exp-90-plano-de-aula", "exp-91-bem-estar", "exp-92-plano-de-ensino",
 })
 PUBLICOS = ("estudante", "professor")
-ETAPAS = ("input", "produto", "design", "dev", "plataforma", "externo", "humano")
+
+
+def _carregar_taxonomia() -> Dict[str, Any]:
+    """Lê `references/donos-e-etapas.md` — a mesma fonte que os prompts leem em prosa.
+
+    Enquanto a lista de tokens vivia só aqui, o prompt mandava escrever um marcador que este
+    classificador reprovava, e a lista acumulou cinco correções datadas (uma por sessão
+    quebrada). Com a cerca JSON no mesmo arquivo da prosa, quem muda a regra muda as duas
+    metades de uma vez. Mesmo padrão de `tools/bncc.py`, que lê o anexo da BNCC.
+    """
+    from prompts import REFERENCES_DIR
+
+    texto = (REFERENCES_DIR / "donos-e-etapas.md").read_text(encoding="utf-8")
+    cerca = re.search(r"```json\s*(\{.*?\})\s*```", texto, re.DOTALL)
+    if not cerca:  # pragma: no cover - o arquivo é versionado com a cerca
+        raise ValueError("donos-e-etapas.md sem a cerca ```json com o contrato de etapas")
+    return json.loads(cerca.group(1))
+
+
+_TAXONOMIA = _carregar_taxonomia()
+ETAPAS = tuple(_TAXONOMIA["ordem_precedencia"])
 # Etapas cuja pendência é resolvida por gente, fora da esteira: registram 🟡 e o PRD sai.
 #: Etapas cujo achado não impede a construção: ou é pré-requisito de plataforma, ou é
 #: ato humano. Bloquear por elas trava a esteira em algo que nenhum agente resolve.
-ETAPAS_NAO_BLOQUEANTES = ("plataforma", "externo", "humano")
+ETAPAS_NAO_BLOQUEANTES = tuple(e for e, d in _TAXONOMIA["etapas"].items() if not d["bloqueia"])
+
+#: Nome que um gate escreve → nome que o despacho de retrabalho conhece. Os juízes não
+#: escrevem os slugs exatos (`wireframes`, `spec`, `copy`), e o despacho só casava o nome
+#: literal: 33 tickets das 14 primeiras sessões iriam para lugar nenhum. A tabela vivia na
+#: fonte única desde 23/09/2026 e nenhum código a lia.
+SLUGS_ROTEAVEIS: Dict[str, str] = dict(_TAXONOMIA.get("slugs_roteaveis") or {})
+
+
+def normalizar_dono(valor: Any) -> str:
+    """`Wireframes`, `` `spec` ``, `copy` → o slug que o despacho roteia. Desconhecido passa como veio."""
+    bruto = str(valor or "").strip().strip("`*_ ").lower()
+    return SLUGS_ROTEAVEIS.get(bruto, bruto)
 
 # ------------------------------------------------------------------ marcadores de lacuna
 _MARCADORES = [
@@ -95,7 +127,11 @@ _MARCADORES = [
     ("needs_clarification", re.compile(r"\[NEEDS CLARIFICATION:?\s*([^\]]*?)\]", re.IGNORECASE)),
     ("verificar_repositorio", re.compile(r"\[verificar no reposit[oó]rio:?\s*([^\]]*?)\]", re.IGNORECASE)),
     ("rs_pendente", re.compile(r"\b(RS-\d+)\s+pendente\b", re.IGNORECASE)),
-    ("a_validar", re.compile(r"🔵[^\n]{0,120}")),
+    # O 🔵 precedido de contagem é PLACAR, não pendência: "Nenhuma pendência técnica aberta
+    # (`0 ❌ / 0 🔵`)" reprovou a sessão exp06ef1b inteira em 22/09/2026 — o gate leu como
+    # pendência de produto a frase que afirma justamente a ausência delas, e 13 artefatos a
+    # jusante saíram `[PROVISÓRIO]`. Um 🔵 de verdade abre a pendência, não a conta.
+    ("a_validar", re.compile(r"(?<![0-9])(?<![0-9] )🔵[^\n]{0,120}")),
 ]
 
 # Os prompts citam o formato do marcador para ensinar o agente a usá-lo — e a citação
@@ -119,38 +155,16 @@ def _e_citacao_do_formato(dono_raw: str) -> bool:
     return bruto in _PLACEHOLDERS
 
 
+#: Tokens por etapa, na ordem de precedência — ambos vêm de `references/donos-e-etapas.md`.
+#: A prosa do mesmo arquivo é o que os prompts leem, então a regra que o agente segue e a que
+#: o classificador aplica não podem mais divergir. O histórico das correções (coordenação em
+#: 2026-09-20, especialista e pedagógico em 2026-09-21, dados e PO em 2026-09-23) está lá.
 _TOKENS_ETAPA: Dict[str, tuple] = {
-    # Ato que só uma pessoa pratica — homologar, nomear autoria, licenciar, indexar no material
-    # editorial. Nenhum agente produz isso, então tratá-lo como lacuna de construção fazia o gate
-    # reprovar a missão por algo que nenhuma rodada de correção poderia resolver. Vai à frente das
-    # demais porque o texto costuma citar também a etapa ("homologação pelo produto").
-    "humano": ("homologa", "homologar", "editorial", "autoria", "autor e revisor", "nomear autor",
-               "licen[çc]a", "direitos de uso", "validar com o time", "aprova[çc][ãa]o human"),
-    # Dono que não é etapa da esteira: coordenação da escola, rede parceira, consultor.
-    # Cai aqui antes de "produto" porque "pedagóg" também é token de produto.
-    # Calendário e semana letiva entram aqui por decisão de 2026-09-20: em que semana do ano a
-    # aula acontece é combinado com a rede na implantação, não é insumo de construção. O critério
-    # 5.5 de `references/criterios-pedagogicos.md` já diz que isso "não bloqueia"; o classificador
-    # é que discordava e barrava a missão por algo que nenhum agente resolve.
-    # Os tokens exigem fim de palavra (`s?` opcional): "coordena" não casava "coordenador" nem
-    # "coordenação", e "pedagog" não casava "pedagógico" por causa do acento — o marcador
-    # `[ABERTO — coordenador pedagógico: …]` caía no default da spec (produto) e barrava o PRD
-    # por algo que o critério 5.5 manda registrar sem bloquear (sessão 8f76, 2026-09-21).
-    "externo": ("coordena(ção|cao|dor|dora|dores|doras)", "rede parceira", "escola parceira", "designer instrucional",
-                # `especialista` entrou em 2026-09-21 (exp08ef2b): `[ABERTO — especialista curricular:
-                # confirmar alocação na matriz do Entre Redes]` caía no padrão da spec (produto) e
-                # barrava o PRD, enquanto a linha irmã do MESMO assunto, marcada 🔵, ia para externo.
-                # Especialista, consultor e assessor são sempre gente de fora da esteira.
-                "especialista", "assessor", "assessoria", "parecerista",
-                "consultor", "time pedag[oó]g[a-z]*", "externo", "externa", "cliente", "secretaria",
-                "jur[ií]dico", "dpo", "rede escolar", "rede de ensino", "semana letiva", "est[uú]dio",
-                "calend[áa]rio letivo", "calend[áa]rio", "implanta[çc][ãa]o"),
-    "plataforma": ("plataforma", "adr", "design-system", "storybook", "infra", "ponte", "@edu/ui", "componente do ds", "componente de ds"),
-    "dev": ("handoff-dev", "handoff", "brief-assets", "banca", "tech", "arquitetura", "dev"),
-    "design": ("jornada", "fluxo", "copy", "wireframe", "caa", "ambiente-simulado", "ambiente", "brief-oficio", "briefing de ofício", "qa-entregaveis", "mermaid", "stitch", "design"),
-    "produto": ("gate-estrutural", "gate estrutural", "gate 0", "gate0", "spec", "produto", "one-pager", "pm", "gate-final", "gate final", "pedag[oó]g[a-z]*", "experiencia-aluno", "fecha-lacunas", "responsável de dados", "dados"),
-    "input": ("input", "briefing", "insumo", "solicitante"),
+    etapa: tuple(dados["tokens"]) for etapa, dados in _TAXONOMIA["etapas"].items()
 }
+
+#: Marcadores cujo dono é fixo porque o prompt que os cria já sabe quem fecha.
+_DONO_DO_MARCADOR: Dict[str, str] = dict(_TAXONOMIA["marcadores"])
 
 
 def _etapa_por_tokens(texto: str) -> Optional[str]:
@@ -241,10 +255,13 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                 if tipo in ("lacuna", "aberto", "needs_clarification") and _e_citacao_do_formato(dono_raw):
                     continue
                 linha, contexto = _linha_e_contexto(texto, m.start(), m.end())
-                if tipo == "rs_pendente":
-                    etapa = "produto"
-                elif tipo == "verificar_repositorio":
-                    etapa = "dev"
+                if tipo in ("rs_pendente", "verificar_repositorio"):
+                    # Dono fixo, do contrato: `RS-n pendente` é pedido ao Gate 0/PO que só
+                    # pessoa fecha, e `[verificar no repositório]` é instrução para quem
+                    # codifica — os agentes não têm o monorepo por desenho. Os dois eram
+                    # roteados para `produto` e `dev`, bloqueantes, e os prompts mandavam
+                    # escrevê-los: a esteira punia o agente por obedecer.
+                    etapa = _DONO_DO_MARCADOR[tipo]
                 elif tipo == "a_validar":
                     # Todo prompt que ensina o 🔵 o descreve como pendência externa a validar
                     # (criterios-pedagogicos.md:41 · 47_prd_writer.md:151 · 11_gate_final.md:30).
@@ -271,6 +288,36 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                 }
                 vistos[chave] = achado
                 achados.append(achado)
+    # Marcador de repositório é pendência de plataforma — mas um documento cravejado deles não
+    # consultou o gabarito que a esteira já tem nas cópias sincronizadas, e isso é defeito de
+    # construção. O teto separa "não tenho como conferir este nome" de "não li a referência".
+    TETO_VERIFICAR_REPO = 8
+    por_documento: Dict[str, int] = {}
+    for a in achados:
+        if a.get("tipo") == "verificar_repositorio":
+            por_documento[a.get("documento", "?")] = por_documento.get(a.get("documento", "?"), 0) + 1
+    for documento, n in sorted(por_documento.items()):
+        if n >= TETO_VERIFICAR_REPO:
+            achados.append({
+                "tipo": "gabarito_desconhecido", "codigo": "gabarito-desconhecido",
+                "trecho": f"{n}× [verificar no repositório]",
+                "contexto": f"O documento «{documento}» adia {n} definições para o repositório. "
+                            f"As cópias em `references/plataforma/` trazem o contrato: acima de "
+                            f"{TETO_VERIFICAR_REPO} marcadores o documento não consultou o gabarito.",
+                "documento": documento, "dono": "handoff-dev", "etapa": "dev", "severidade": "bloqueio",
+            })
+
+    # Nenhum documento com conteúdo não é "sem lacunas" — é ausência de documento. O relatório
+    # saía 🟢 SEM LACUNAS com `documentos` vazio, que é o veredito mais perigoso que existe:
+    # afirma que se leu tudo e nada havia.
+    lidos = [d for d in documentos_lidos if d.get("chars", 0) > 0] if documentos_lidos and isinstance(documentos_lidos[0], dict) else documentos_lidos
+    if not lidos:
+        achados.append({
+            "tipo": "fonte_vazia", "codigo": "fontes-vazias", "trecho": "—",
+            "contexto": "Nenhum dos documentos varridos tinha conteúdo: não há como afirmar que não há lacunas.",
+            "documento": "—", "dono": "dev", "etapa": "dev", "severidade": "bloqueio",
+        })
+
     por_etapa = {e: sum(1 for a in achados if a["etapa"] == e) for e in ETAPAS}
     if any(a["severidade"] == "bloqueio" for a in achados):
         status = "bloqueado"
@@ -545,9 +592,12 @@ def validar_manifesto(spec: str) -> Dict[str, Any]:
     elif re.match(r"^(nova|minijogo)\s*:", v, re.IGNORECASE):
         achados.append({"severidade": "atencao", "campo": "secao_ds", "etapa": "plataforma", "resumo": f"Seção de DS nova (`{v}`): componentes, responsável e prazo são pendência de plataforma."})
 
-    v = _campo(texto, "liberacao"); campos["liberacao"] = v
-    if not v or "por-turma" not in v.lower():
-        falta("liberacao", f"`liberacao: por-turma` ausente (lido: {v!r}). Sem liberação por turma a missão não abre (ADR-69).")
+    # `por-turma` é o único valor que a plataforma aceita (ADR-69), então ausência é
+    # default, não defeito: cobrar uma linha que só pode ter um valor é cerimônia.
+    # O que ainda importa é denunciar quem declara OUTRA coisa — aí há divergência real.
+    v = _campo(texto, "liberacao"); campos["liberacao"] = v or "por-turma"
+    if v and "por-turma" not in v.lower():
+        falta("liberacao", f"`liberacao` declarada como {v!r}: a plataforma só abre missão liberada por turma (ADR-69).")
 
     # Capturar voz ou imagem de criança é contrato de dados, não só permissão de
     # iframe: o bloco 9 tem de dizer onde a mídia fica, por quanto tempo e quem lê.
@@ -654,12 +704,30 @@ def _tabelas_de_evento(texto: str) -> List[str]:
 # "nunca WebSocket", "papel `admin-contrato` não existe mais"). Procurar só o termo
 # transformava a regra citada em violação e barrava o PRD por cumpri-la.
 _NEGACAO = re.compile(
-    r"proibid|vedado|nunca|jamais|evit[ae]|descartad|obsolet|legad|zero\s+|"
-    r"n[ãa]o\s+(existe|existem|use|usar|usamos|h[áa]|aceita|pode|deve|ser[áa]|suporta)|"
+    # Radical curto e conjugação completa: `proibid` não casava "proibição", e a lista
+    # de verbos do "não" tinha `use|usar` mas não `usa`, `suporta` mas não `sustenta`.
+    # As 8 menções a WebSocket das 14 primeiras execuções eram TODAS negações escritas
+    # assim — "Cloud Run não sustenta", "Não usa WebSocket", "proibição de WebSockets",
+    # "eliminando qualquer dependência". Nenhuma era proposta (corte A4, 23/09/2026).
+    r"proibi|vedad|nunca|jamais|evit[ae]|descartad|obsolet|legad|zero\s+|elimina|abol|"
+    # "Ausência total de pistas de gabarito no bundle" e "atributos retidos no servidor" são
+    # a spec CUMPRINDO a regra — e o detector de gabarito as lia como violação (23/09/2026).
+    # `retid` sozinho é ambíguo — "retidos NO SERVIDOR" nega o cliente, "retidos EM
+    # localStorage" o afirma. Só a forma com complemento entra.
+    r"aus[êe]nci|retid[oa]s?\s+no servidor|isolad[oa]s?\s+no servidor|fora do (bundle|cliente)|"
+    r"n[ãa]o\s+(existe|existem|usa|use|usar|usamos|utiliza|h[áa]|aceita|pode|deve|ser[áa]|"
+    r"suporta|sustenta|emprega|requer|depende|precisa|mant[ée]m|abre)|"
     r"em vez de|ao inv[ée]s|fora de escopo|removid|deprecia|"
     # "sem custos de WebSocket", "(sem WebSockets)", "sem suporte a WebSockets": três jeitos de
     # descartar o canal que o handoff da sessão 8f76 usou e que viravam aviso (2026-09-21).
-    r"sem\s+(campo|coluna|chave|payload|uso|custos?|suporte|depend[êe]ncia|conex[õo]es?|websockets?|sockets?)|nada de|dispensa",
+    r"sem\s+(campo|coluna|chave|payload|uso|custos?|suporte|depend[êe]ncia|conex[õo]es?|websockets?|sockets?)|nada de|dispensa|"
+    # Menção CONDICIONAL ou de roadmap não é proposta: "WebSocket só se a infra mudar",
+    # "fica para a fase 2", "se um dia a plataforma suportar". Era a forma de 5 dos 8
+    # achados de WebSocket das 14 primeiras execuções, todos em handoffs cujo canal
+    # declarado já era o polling correto — o achado pedia a um humano o julgamento que
+    # o regex não fazia, e nunca apontou defeito. Proposta afirmativa continua pega.
+    r"s[óo]\s+se|somente se|apenas se|caso\s+(a|o|venha|haja)|se\s+(a|o)\s+(infra|plataforma|arquitetura)|"
+    r"futur|fase\s*2|pr[óo]xima\s+vers[ãa]o|fora do mvp|n[ãa]o nesta|um dia|hipot[ée]tic|se um dia",
     re.IGNORECASE,
 )
 
@@ -670,12 +738,29 @@ def _linha_de(texto: str, pos: int) -> str:
     return texto[inicio : fim if fim != -1 else len(texto)]
 
 
+#: Bloco JSON (o envelope que o próprio agente escreve) não é prosa: um handoff de 22/09/2026 foi
+#: acusado de "propor WebSocket" pelo `"codigo": "websocket-mencao"` do próprio envelope.
+_RE_BLOCO_JSON = re.compile(r"```json.*?```", re.DOTALL | re.IGNORECASE)
+
+
+def _sem_json(texto: str) -> str:
+    return _RE_BLOCO_JSON.sub(" ", texto or "")
+
+
+def frases_afirmativas(texto: str, padrao: str) -> List[str]:
+    """As linhas em que o termo aparece sem negação por perto — os candidatos que o juiz de achados
+    julga. O regex é a rede larga (recall); decidir se a linha propõe ou cita para vedar é do juiz."""
+    limpo, vistas = _sem_json(texto), []
+    for m in re.finditer(padrao, limpo, re.IGNORECASE):
+        linha = _linha_de(limpo, m.start()).strip()
+        if linha and not _NEGACAO.search(linha) and linha not in vistas:
+            vistas.append(linha)
+    return vistas
+
+
 def _usado_afirmativamente(texto: str, padrao: str) -> bool:
     """O termo aparece propondo algo, e não numa frase que o proíbe."""
-    for m in re.finditer(padrao, texto, re.IGNORECASE):
-        if not _NEGACAO.search(_linha_de(texto, m.start())):
-            return True
-    return False
+    return bool(frases_afirmativas(texto, padrao))
 
 
 def validar_telemetria(handoff: str) -> Dict[str, Any]:
@@ -695,15 +780,33 @@ def validar_telemetria(handoff: str) -> Dict[str, Any]:
         bloqueio("resultado-contexto", "A tabela de eventos não tem coluna `resultado` nem `contexto` — são os dois únicos campos de payload que a api aceita.")
     if _usado_afirmativamente(texto, r"\|\s*`?dados`?\s*\|") or _usado_afirmativamente(texto, r"[`\"']?\bdados\b[`\"']?\s*:"):
         bloqueio("campo-dados", "Evento com campo `dados`: a api não tem esse campo e descarta a chave em silêncio. Use `resultado` e `contexto`.")
-    if not re.search(r"\bexp\d{2}e[fm]\db_[a-z][a-z0-9_]*", texto):
+    # A tabela é reconhecida nas DUAS grafias, e a errada vira achado próprio. Escrever
+    # `exp_04ef1b_gates_turma` com underscore é defeito real — o id já carrega ano e bimestre,
+    # e quebrá-lo desalinha migration, Prisma e `@@map`. Mas é defeito de NOME, não de
+    # arquitetura: quando os detectores exigiam a grafia certa para reconhecer a tabela, o
+    # handoff da exp04ef1b saía com "nenhuma tabela nomeada" e "WebSocket como canal de sala"
+    # — duas acusações falsas — enquanto o erro que existia de fato não era nomeado por
+    # ninguém. Um defeito, um achado, com o nome que ele tem.
+    tabelas_certas = re.findall(r"\bexp\d{2}e[fm]\db_[a-z][a-z0-9_]*", texto)
+    tabelas_tortas = re.findall(r"\bexp_\d{2}_?e[fm]\d?b?_[a-z][a-z0-9_]*", texto)
+    if not tabelas_certas and not tabelas_tortas:
         bloqueio("tabela-leitura", "Nenhuma tabela `expNNefNb_*` nomeada. Toda medida que a professora vê nasce de tabela própria do módulo — sem tabela de leitura, a medida não existe (`telemetria_eventos` não tem leitor).")
+    elif tabelas_tortas:
+        exemplo = sorted(set(tabelas_tortas))[0]
+        bloqueio("prefixo-tabela", f"Tabela com underscore no identificador (`{exemplo}`): o prefixo é o id inteiro, sem separador interno (`expNNefNb_…`). O id já carrega ano e bimestre, e quebrá-lo desalinha migration, Prisma e `@@map`.")
     # O que importa é o canal DECLARADO, não a palavra. Handoff correto cita WebSocket
     # justamente para descartá-lo ("Cloud Run não sustenta WebSocket, ADR-93/94") ou
     # para colocá-lo como futuro fora de escopo — e era bloqueado por isso.
-    canal_correto = bool(re.search(r"polling", texto, re.IGNORECASE) and re.search(r"exp\d{2}e[fm]\db_gates_turma", texto))
+    # "o canal certo está declarado?" exige polling E a tabela de gates nomeada — só a palavra
+    # `polling` viraria escudo para quem propõe WebSocket ao lado. A tabela conta nas duas
+    # grafias: quem a nomeou declarou o canal, e o erro de grafia já tem achado próprio acima.
+    canal_correto = bool(
+        re.search(r"polling", texto, re.IGNORECASE)
+        and re.search(r"\bexp_?\d{2}_?e[fm]\d?b?_gates_turma", texto)
+    )
     if _usado_afirmativamente(texto, r"websocket|socket\.io|hub:pause"):
         if canal_correto:
-            atencao("websocket-mencao", "WebSocket ou `hub:pause` aparece no texto. O canal de sala declarado é o correto (polling em `expNNefNb_gates_turma`), então é só conferir se a menção é mesmo comparativa e não uma segunda via de sincronização.")
+            atencao("websocket-mencao", "WebSocket ou `hub:pause` proposto como segunda via de sincronização, apesar de o canal de sala declarado ser o correto (polling em `expNNefNb_gates_turma`). Duas vias de sincronia é uma a mais.")
         else:
             bloqueio("websocket", "WebSocket ou `hub:pause` como canal de sala, sem polling em `expNNefNb_gates_turma` declarado: a plataforma sincroniza por polling HTTP curto (ADR-93/94).")
     if _usado_afirmativamente(texto, r"admin-contrato|@Roles\([^)]*[\"']gestor[\"']"):
@@ -714,6 +817,14 @@ def validar_telemetria(handoff: str) -> Dict[str, Any]:
         atencao("quota-env", "Quota de IA por env não existe mais: é linha em `ia_quotas` por perfil (ADR-105).")
     if _usado_afirmativamente(texto, r"\benum\b[^\n]{0,60}\b(estado|status)\b"):
         atencao("enum-estado", "Estado como enum: na plataforma é string com CHECK na migration, nunca enum Prisma.")
+    # A spec declara `gabarito_servidor: sim` e o evidencia-check confere; mas quem descreve a
+    # implementação é o handoff, e nada o lia: "o gabarito vai no bundle" passava aqui.
+    if _usado_afirmativamente(texto, r"gabarito[^\n]{0,90}\b(no cliente|bundle|front-?end|navegador|localstorage)"):
+        bloqueio("gabarito-no-cliente", "O handoff coloca o gabarito no cliente/bundle: gabarito no bundle é gabarito entregue ao estudante. Ele vive no servidor (PED-04).")
+
+    # rota citada num módulo que a plataforma já tem precisa existir nela (tools/rotas_plataforma.py)
+    from tools.rotas_plataforma import validar_rotas
+    achados.extend(validar_rotas(texto))
 
     status = "bloqueado" if any(a["severidade"] == "bloqueio" for a in achados) else ("amarelo" if achados else "aprovado")
     return {"status": status, "achados": achados, "tabelas_eventos": len(tabela_eventos)}
@@ -775,6 +886,12 @@ def validar_prd(prd: str) -> Dict[str, Any]:
     """
     texto = prd or ""
     achados: List[Dict[str, str]] = []
+    if not texto.strip():
+        return {"status": "bloqueado", "achados": [{
+            "severidade": "bloqueio", "codigo": "prd-vazio", "etapa": "dev",
+            "resumo": "O PRD chegou vazio. Sem documento não há consistência a conferir — e o "
+                      "gate saía 🟡 por não encontrar defeito no que não existe.",
+        }]}
 
     def falha(codigo: str, resumo: str, severidade: str = "bloqueio", etapa: str = "dev") -> None:
         achados.append({"severidade": severidade, "codigo": codigo, "etapa": etapa, "resumo": resumo})
@@ -808,14 +925,14 @@ def validar_prd(prd: str) -> Dict[str, Any]:
     # 3. evento sem tabela de leitura nomeada
     for linha in texto.splitlines():
         if re.search(r"\bEVT-\d+", linha) and "|" in linha:
-            if re.search(r"pub/?sub|telemetria_eventos", linha, re.I) and not re.search(r"exp\d{2}e[fm]\db_", linha, re.I):
+            from tools.kpis import LEITOR_VALIDO, MENSAGEM_LEITOR
+            if re.search(r"pub/?sub|telemetria_eventos", linha, re.I) and not re.search(LEITOR_VALIDO, linha, re.I):
                 evt = re.search(r"\bEVT-\d+", linha)
                 # O identificador do evento pode estar em qualquer coluna da linha, e a tabela é larga:
                 # citar só o começo da linha escondia a evidência de quem vai corrigir.
                 falha("evento-sem-leitor",
-                      f"`{evt.group(0) if evt else 'evento'}` aponta Pub/Sub ou `telemetria_eventos` como origem da "
-                      f"leitura, em vez da tabela `expNNefNb_*` do módulo. Toda medida que a professora vê nasce de "
-                      f"tabela própria do módulo. Linha: `{linha.strip()[:200]}`")
+                      f"`{evt.group(0) if evt else 'evento'}` aponta Pub/Sub ou `telemetria_eventos` como leitor. "
+                      f"{MENSAGEM_LEITOR} Linha: `{linha.strip()[:200]}`")
 
     # 4. tarefa não atômica
     for m in re.finditer(r"\b(T-\d{3})\b[^\n]*?(todos os RFs?|todas as RFs?|todos os requisitos)", texto, re.I):
@@ -854,6 +971,31 @@ def validar_prd(prd: str) -> Dict[str, Any]:
     if len(caminhos) > 1:
         falha("caminho-divergente",
               f"O PRD declara mais de um diretório para a mesma experiência: {sorted(caminhos)}.")
+
+    # 7. o plano de implementação nomeia o que só ele pode nomear. Estes quatro itens eram
+    # cobrados pela banca de dev sobre o HANDOFF (TEC-07/08/09/10) — e a banca roda ANTES do
+    # PRD, que é justamente quem os escreve: 24 dos 283 achados das 14 primeiras execuções
+    # apontavam ausência de algo que o PRD da mesma sessão já continha. Aqui a pergunta é
+    # verificável e cai no documento certo. Atenção, nunca bloqueio: a missão não está errada,
+    # o plano é que está incompleto, e quem codifica precisa saber disso sem travar a esteira.
+    plano = [
+        ("plano-sem-porta", r"experiencias-dev\.ts|strictPort|CORS_ORIGINS",
+         "porta de dev da missão (`apps/hub/lib/experiencias-dev.ts`, `strictPort`, `CORS_ORIGINS`)"),
+        ("plano-sem-versao", r"EXP_VERSION|versao\.test\.ts",
+         "amarração da versão nos três lugares (`experiencia.json`, `package.json`, `EXP_VERSION`)"),
+        ("plano-sem-e2e", r"scripts/e2e|rodar\.mjs|walkthrough|playwright",
+         "roteiro do smoke walkthrough (`node scripts/e2e/rodar.mjs`)"),
+        ("plano-sem-invariantes", r"invariantes\.ts|lista única de invariantes|invariantes de produto",
+         "lista única de invariantes de produto (padrão `unoogpt/invariantes.ts`)"),
+    ]
+    for codigo, padrao, o_que in plano:
+        if not re.search(padrao, texto, re.IGNORECASE):
+            falha(codigo, f"O plano de implementação não nomeia {o_que} — quem codifica vai decidir sozinho.",
+                  severidade="atencao")
+
+    # rota citada num módulo que a plataforma já tem precisa existir nela (tools/rotas_plataforma.py)
+    from tools.rotas_plataforma import validar_rotas
+    achados.extend(validar_rotas(texto))
 
     bloqueios = [a for a in achados if a["severidade"] == "bloqueio"]
     status = "bloqueado" if bloqueios else ("amarelo" if achados else "aprovado")

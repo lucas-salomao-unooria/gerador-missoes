@@ -18,9 +18,11 @@ logger = logging.getLogger("artifacts")
 
 # Ordem e nome de arquivo por chave de estado
 ARTIFACT_FILES = [
+    ("material_anexado", "produto/00-material-anexado.md"),
     ("nucleo_narrativo", "produto/00a-nucleo-narrativo.md"),
     ("micro_gate_report", "produto/00b-micro-gate.md"),
     ("one_pager", "produto/00-one-pager.md"),
+    ("brief_escopo", "produto/00f-brief-escopo.md"),
     ("contrato_produto_report", "produto/00e-contrato-produto.md"),
     ("gate_estrutural_report", "produto/01-gate-estrutural.md"),
     ("avaliacao_pedagogica_report", "produto/02-avaliacao-pedagogica.md"),
@@ -47,7 +49,11 @@ ARTIFACT_FILES = [
     ("diagramas_html", "design/09-diagramas.html"),
     ("stitch_links", "design/10-stitch-telas.md"),
     ("miro_links", "design/11-miro-boards.md"),
+    ("prototipo_lint_report", "design/06b-lint-prototipo.md"),
     ("qa_entregaveis_report", "design/07-qa-entregaveis.md"),
+    ("evidencia_report", "produto/05c-matriz-evidencia.md"),
+    ("perguntas_report", "produto/05d-perguntas-de-produto.md"),
+    ("juiz_perguntas_report", "produto/05e-juiz-perguntas-de-produto.md"),
     ("manifesto_report", "dev/00-ficha-manifesto.md"),
     ("handoff_dev", "dev/01-handoff-dev.md"),
     ("brief_assets", "dev/01b-brief-assets.md"),
@@ -61,6 +67,7 @@ ARTIFACT_FILES = [
     ("validacao_dev_report", "dev/03-banca-consolidada.md"),
     ("prd_final", "PRD.md"),
     ("one_pager_pedagogico", "one-pager-pedagogico.md"),
+    ("kpis_report", "dev/04b-kpis-check.md"),
     ("prd_check_report", "dev/04-pendencias-do-prd.md"),
     ("diagnostico_execucao", "diagnostico-execucao.md"),
     ("aprendizado_registro", "aprendizado.md"),

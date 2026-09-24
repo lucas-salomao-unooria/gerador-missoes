@@ -60,6 +60,7 @@ from .callbacks import (
     STATUS_BLOQUEADO,
     extrair_envelope,
     extrair_slug,
+    status_registrado,
     inferir_status,
     texto_de_heranca,
 )
@@ -99,6 +100,10 @@ def limpar_degradacao(state, delta: Dict[str, Any], gate: str) -> None:
     if not restantes:
         delta[KEY_PIPELINE_BLOQUEADO] = False
         delta[KEY_PIPELINE_MOTIVO] = ""
+        # Sem reprovação viva, ninguém construiu sobre base reprovada: na geração de 23/09 o PRD
+        # reprovou no kpis-check da rodada 1, aprovou na 2, e o dossiê seguia listando o redator
+        # e os dois gates como "saiu provisório" numa execução sem nenhum impedimento.
+        delta[KEY_AGENTES_DEGRADADOS] = []
 
 
 def registrar_degradacao(state, delta: Dict[str, Any], gate: str, motivo: str) -> None:
@@ -128,7 +133,6 @@ class EnvelopeGateAgent(BaseAgent):
     max_rounds: int = 1
     escalate_on_approve: bool = False
     block_pipeline_on_fail: bool = True
-    treat_indefinido_as_blocked: bool = True
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -136,11 +140,22 @@ class EnvelopeGateAgent(BaseAgent):
         relatorio = str(state.get(self.report_key, "") or "")
         envelope = extrair_envelope(relatorio)
         status = inferir_status(relatorio, envelope)
-        if status not in (STATUS_APROVADO, STATUS_BLOQUEADO):
-            status = STATUS_BLOQUEADO if self.treat_indefinido_as_blocked else STATUS_APROVADO
+        # Relatório vazio, truncado ou sem veredito legível é BLOQUEIO, sempre. O QA de design
+        # e a banca de dev optavam pelo contrário (`treat_indefinido_as_blocked=False`) e, com
+        # isso, uma resposta que não chegou valia aprovação: é o pior erro possível num gate,
+        # porque não deixa rastro no dossiê. O motivo é registrado à parte para separar
+        # "reprovou" de "não respondeu" — são defeitos diferentes, com donos diferentes.
+        truncado = status not in (STATUS_APROVADO, STATUS_BLOQUEADO)
+        if truncado:
+            status = STATUS_BLOQUEADO
 
         rodada = int(state.get(self.round_key, 0) or 0) + 1 if self.round_key else 1
-        delta = {self.status_key: status, f"{self.status_key}_envelope": envelope or {}}
+        # O ROTEAMENTO usa `status` (binário: a esteira segue ou não). O DOSSIÊ usa o veredito
+        # como ele foi dado: gravar "aprovado" onde o juiz escreveu 🟡 apagava a ressalva, e em
+        # 14 execuções nenhum gate de LLM apareceu amarelo embora os relatórios estivessem
+        # cheios de amarelo. O que o time lia era um verde que o juiz não deu.
+        registrado = STATUS_BLOQUEADO if truncado else status_registrado(relatorio, envelope)
+        delta = {self.status_key: registrado, f"{self.status_key}_envelope": envelope or {}}
         if self.round_key:
             delta[self.round_key] = rodada
 
@@ -164,7 +179,9 @@ class EnvelopeGateAgent(BaseAgent):
                     + ". A esteira segue até o fim: o que derivar daqui sai marcado "
                     "`[PROVISÓRIO]` e o diagnóstico final registra o que travou e de quem é."
                 )
-                registrar_degradacao(state, delta, self.rotulo, f"{self.rotulo} reprovado")
+                motivo = (f"{self.rotulo}: relatório vazio ou sem veredito legível"
+                          if truncado else f"{self.rotulo} reprovado")
+                registrar_degradacao(state, delta, self.rotulo, motivo)
             else:
                 msg = (
                     f"⚠️ {self.rotulo}: reprovado"
@@ -221,6 +238,9 @@ class SecaoSplitAgent(BaseAgent):
     status_key: str
     rotulo: str = "Split"
     extracoes: List[Dict[str, Any]] = Field(default_factory=list)
+    #: a fonte é um documento, não um veredito (o one-pager do A04): não há envelope a ler, e
+    #: procurá-lo gerava um `envelope-ilegivel` em toda execução
+    fonte_sem_veredito: bool = False
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -230,8 +250,21 @@ class SecaoSplitAgent(BaseAgent):
         linhas: List[str] = []
 
         if not texto.strip():
-            linhas.append(f"⏭️ {self.rotulo}: `{self.source_key}` vazio — nada a extrair.")
+            # O status era simplesmente NÃO GRAVADO, e `tools/diagnostico.py` pula gate ausente
+            # do estado: o D0 e o D9 truncados **sumiam do dossiê**, sem linha, sem achado e sem
+            # veredito. Uma resposta que não chegou é bloqueio, e precisa aparecer.
+            linhas.append(f"⛔ {self.rotulo}: `{self.source_key}` vazio — o agente não respondeu.")
+            delta[self.status_key] = STATUS_BLOQUEADO
+            delta[f"{self.status_key}_envelope"] = {
+                "status": "bloqueado",
+                "achados": [{
+                    "severidade": "bloqueio", "codigo": "fonte-vazia",
+                    "agente_responsavel": self.name,
+                    "resumo": f"`{self.source_key}` chegou vazio: o agente não produziu resposta.",
+                }],
+            }
         else:
+            faltou: List[tuple] = []
             for ex in self.extracoes:
                 chave = ex["chave"]
                 secao = extrair_secao(texto, ex["inicio"], ex.get("fim"))
@@ -252,6 +285,8 @@ class SecaoSplitAgent(BaseAgent):
                         )
                 if motivo:
                     linhas.append(f"⚠️ `{chave}` mantido como estava — {motivo}.")
+                    if ex.get("ausencia_vira_ressalva"):
+                        faltou.append((chave, motivo))
                     continue
                 backup = ex.get("backup")
                 if backup and state.get(chave) and not state.get(backup):
@@ -259,12 +294,33 @@ class SecaoSplitAgent(BaseAgent):
                 delta[chave] = secao
                 linhas.append(f"✅ `{chave}` gravado a partir de `{self.source_key}` ({len(secao)} caracteres).")
 
-            envelope = extrair_envelope(texto)
-            status = inferir_status(texto, envelope)
-            if status not in (STATUS_APROVADO, STATUS_BLOQUEADO):
-                status = STATUS_APROVADO
-            delta[self.status_key] = status
-            delta[f"{self.status_key}_envelope"] = envelope or {}
+            envelope = None if self.fonte_sem_veredito else extrair_envelope(texto)
+            status = STATUS_APROVADO if self.fonte_sem_veredito else inferir_status(texto, envelope)
+            ilegivel = status not in (STATUS_APROVADO, STATUS_BLOQUEADO)
+            if ilegivel:
+                status = STATUS_APROVADO  # o split é informativo: o conteúdo veio, o veredito não
+            delta[self.status_key] = (STATUS_APROVADO if ilegivel or self.fonte_sem_veredito
+                                      else status_registrado(texto, envelope))
+            env = dict(envelope or {})
+            if ilegivel:
+                env.setdefault("achados", []).append({
+                    "severidade": "atencao", "codigo": "envelope-ilegivel",
+                    "agente_responsavel": self.name,
+                    "resumo": f"{self.rotulo} respondeu sem envelope legível — o conteúdo foi extraído, o veredito não.",
+                })
+            # Seção que o documento TINHA de trazer e não trouxe: o status vinha do envelope da
+            # fonte (o one-pager, "aprovado"), e a ausência ficava só no log — no dossiê, verde.
+            # Era o GAP-09 (brief de escopo evaporado) com cara de sucesso.
+            if faltou:
+                if delta[self.status_key] != STATUS_BLOQUEADO:
+                    delta[self.status_key] = "amarelo"
+                for chave, motivo in faltou:
+                    env.setdefault("achados", []).append({
+                        "severidade": "atencao", "codigo": "secao-ausente",
+                        "agente_responsavel": self.name,
+                        "resumo": f"`{chave}` não veio em `{self.source_key}`: {motivo}.",
+                    })
+            delta[f"{self.status_key}_envelope"] = env
             bruto = (envelope or {}).get("status") or status
             icone = "🔴" if status == STATUS_BLOQUEADO else "🟢"
             linhas.append(f"{icone} {self.rotulo}: status `{bruto}` (informativo — o pipeline segue).")
@@ -440,7 +496,8 @@ class BnccCheckAgent(BaseAgent):
         state = ctx.session.state
         spec = str(state.get(self.spec_key, "") or "")
         missao = extrair_slug(spec) or ""
-        resultado = validar_spec(spec)
+        # o material anexado entra porque a spec pode citar o texto da habilidade como está nele
+        resultado = validar_spec(spec, str(state.get("material_anexado") or ""))
         relatorio = relatorio_markdown(resultado, missao)
         status = STATUS_APROVADO if resultado["status"] == "aprovado" else STATUS_BLOQUEADO
 
@@ -479,6 +536,113 @@ class BnccCheckAgent(BaseAgent):
         )
 
 
+class PrototipoLintAgent(BaseAgent):
+    """Determinístico: confere o HTML do protótipo contra o inventário de telas da jornada.
+
+    O QA de design julgava o protótipo lendo o RELATÓRIO do agente que o construiu — nenhuma
+    conferência tocava o arquivo. Um protótipo com metade das telas, com `TODO` na tela de pico
+    ou que nem abre passava, desde que o relatório dissesse que estava pronto.
+
+    As perguntas aqui são de fato (o arquivo abre? as telas declaradas estão nele? sobrou
+    marcador de rascunho?) e por isso cabem em código; julgar se a tela está BOA continua com
+    o QA. Informativo: alimenta o QA, não trava a esteira sozinho.
+    """
+
+    arquivo_key: str = "prototipo_arquivo"
+    inventario_key: str = "jornada_telas"
+    telas_key: str = "wireframes_cobertura"
+    report_key: str = "prototipo_lint_report"
+    status_key: str = "prototipo_lint_status"
+    rotulo: str = "Lint do protótipo"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        import re as _re
+        from tools import prototipo as lint
+
+        state = ctx.session.state
+        html = str(state.get(self.arquivo_key, "") or "")
+        inventario = str(state.get(self.inventario_key, "") or "")
+        declaradas = sorted(set(_re.findall(r"\bE\d-(?:ALU|PROF|SIS)-\d{2}\b", inventario)))
+
+        resultado = lint.validar(html, declaradas)
+        # A coluna `Componentes do DS` das telas, contra o inventário do storybook: fato conferível,
+        # que o QA recebia como afirmação (32% eram nomes que o DS não tem).
+        from tools.componentes_ds import validar as validar_componentes
+        resultado["achados"] += validar_componentes(str(state.get(self.telas_key, "") or ""),
+                                                    str(state.get("spec_missao", "") or ""))
+        if any(a["severidade"] == "bloqueio" for a in resultado["achados"]):
+            resultado["status"] = "bloqueado"
+        elif resultado["achados"] and resultado["status"] == "aprovado":
+            resultado["status"] = "amarelo"
+        delta = {
+            self.report_key: lint.relatorio(resultado, extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""),
+            self.status_key: resultado["status"],
+            f"{self.status_key}_envelope": {"agente": lint.AGENTE, "status": resultado["status"],
+                                            "achados": resultado["achados"]},
+        }
+        marca = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
+        msg = (f"{marca} {self.rotulo}: {len(resultado['telas'])} tela(s) no arquivo"
+               + (f" contra {len(declaradas)} declaradas" if declaradas else "")
+               + (f" · {len(resultado['achados'])} achado(s)" if resultado["achados"] else ""))
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta=delta),
+        )
+
+
+class ConsolidacaoBancaAgent(BaseAgent):
+    """Determinístico: o veredito da banca é a pior das cinco dimensões, contada em código.
+
+    Era um `LlmAgent` cuja própria descrição prometia "veredito determinístico 🟢/🟡/🔴". Em 14
+    execuções leu 122 achados e aprovou 14 vezes — e a lista de bloqueantes que ele carregava
+    no prompt omitia `DES-14` (visão do professor completa), que os critérios declaram
+    bloqueante desde 22/09/2026. A visão do professor podia faltar inteira e a banca liberava.
+
+    A lista agora é lida dos próprios arquivos de `references/criterios-dev/`: não há segunda
+    cópia para divergir. Dimensão sem envelope legível **bloqueia** — uma das cinco não ter
+    respondido é exatamente o caso em que aprovar é mais caro.
+    """
+
+    fontes: List[str] = Field(default_factory=list)
+    report_key: str = "validacao_dev_report"
+    status_key: str = "dev_status"
+    rotulo: str = "Banca de dev"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import banca as bnc
+
+        state = ctx.session.state
+        missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
+        envelopes = {chave: extrair_envelope(str(state.get(chave, "") or "")) for chave in self.fontes}
+        resultado = bnc.consolidar(envelopes)
+        texto = bnc.relatorio(resultado, missao)
+
+        delta = {
+            self.report_key: texto,
+            f"{self.status_key}_envelope": {"agente": bnc.AGENTE, "status": resultado["status"],
+                                            "achados": resultado["achados"]},
+        }
+        marca = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
+        dims = " · ".join(f"{k.replace('validacao_', '')}: {marca_d}"
+                          for k, marca_d in ((k, {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[v["status"]])
+                                             for k, v in resultado["por_dimensao"].items()))
+        msg = f"{marca} {self.rotulo}: {resultado['status']} — {dims}"
+
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta=delta),
+        )
+
+
 class RastroCheckAgent(BaseAgent):
     """Gate determinístico de rastro: `modo` decide a verificação de `tools/rastro.py`.
 
@@ -490,7 +654,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria | prd | one_pager
+    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -520,6 +684,27 @@ class RastroCheckAgent(BaseAgent):
         elif self.modo == "telemetria":
             resultado = validar_telemetria(str(state.get(self.fonte_key, "") or ""))
             relatorio = relatorio_telemetria(resultado, missao)
+        elif self.modo == "evidencia":
+            # Coerência pedagógica do bloco 9/11 da spec: grau `scored` com dois sinais, toda
+            # habilidade com momento em tela e medida ligada, gabarito declarado no servidor.
+            from tools import evidencia as ev
+
+            resultado = ev.validar(str(state.get(self.spec_key, "") or ""))
+            relatorio = ev.relatorio(resultado, missao)
+        elif self.modo == "perguntas":
+            # As cinco perguntas de produto do sub-bloco 9f, onde a pergunta NASCE. Conferir aqui
+            # custa uma reescrita da spec; deixar passar custa o PRD inteiro duas etapas adiante.
+            from tools import kpis as kp
+
+            resultado = kp.validar_9f(str(state.get(self.spec_key, "") or ""))
+            relatorio = kp.relatorio_9f(resultado, missao)
+        elif self.modo == "kpis":
+            # Coerência KPI ↔ evento ↔ tela no PRD.
+            from tools import kpis as kp
+
+            resultado = kp.validar_kpis(str(state.get("prd_final", "") or ""),
+                                        str(state.get(self.spec_key, "") or ""))
+            relatorio = kp.relatorio(resultado, missao)
         elif self.modo == "prd":
             # Dois exames no mesmo passo: os marcadores que o redator deixou (lacunas) e as
             # contradições que ele não viu (consistência). Um PRD pode não ter lacuna nenhuma e
@@ -588,6 +773,70 @@ class RastroCheckAgent(BaseAgent):
         )
 
 
+class JuizDeAchadosAgent(BaseAgent):
+    """O regex acha, o LLM decide, o código confere a citação (`tools/juiz_achados.py`).
+
+    Roda logo depois de um gate determinístico. Se ele emitiu achado do tipo "afirma ou cita para
+    vedar?", separa as linhas que o dispararam, pergunta ao juiz (o sub-agente) e retira o achado
+    só quando o juiz julga todas como citação para descartar E cada citação existe no documento.
+    Sem candidato, o juiz não roda — não custa chamada. Nunca cria achado.
+    """
+
+    status_key: str
+    report_key: str
+    fonte_key: str
+    gate_rotulo: str = ""
+    rotulo: str = "Juiz de achados"
+    entrada_key: str = "juiz_achados_entrada"
+    saida_key: str = ""  # vazio: o `output_key` do juiz
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import juiz_achados as ja
+
+        state = ctx.session.state
+        relatorio = str(state.get(self.report_key, "") or "")
+        envelope = dict(state.get(f"{self.status_key}_envelope") or extrair_envelope(relatorio) or {})
+        achados = [a for a in (envelope.get("achados") or []) if isinstance(a, dict)]
+        documento = str(state.get(self.fonte_key, "") or "")
+        cands = ja.candidatos(achados, documento)
+        if not cands or not self.sub_agents:
+            return
+
+        entrada = json.dumps(cands, ensure_ascii=False, indent=1)
+        state[self.entrada_key] = entrada
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    actions=EventActions(state_delta={self.entrada_key: entrada}))
+        juiz = self.sub_agents[0]
+        async for evento in juiz.run_async(ctx):
+            yield evento
+        saida = str(ctx.session.state.get(self.saida_key or getattr(juiz, "output_key", "") or "", "") or "")
+
+        ficam, retirados = ja.aplicar(achados, cands, saida, documento)
+        delta: Dict[str, Any] = {self.entrada_key: ""}
+        if retirados:
+            status = ja.status_de(ficam)
+            envelope.update(status=status, achados=ficam)
+            delta.update({
+                self.status_key: status,
+                f"{self.status_key}_envelope": envelope,
+                self.report_key: ja.reescrever_relatorio(relatorio, envelope, retirados),
+            })
+            if status != "bloqueado" and self.gate_rotulo:
+                limpar_degradacao(state, delta, self.gate_rotulo)
+            msg = (f"⚖️ {self.rotulo}: {len(retirados)} achado(s) retirado(s) — o texto cita para vedar "
+                   f"({', '.join(r['codigo'] for r in retirados)}). Status: {status}.")
+        else:
+            msg = f"⚖️ {self.rotulo}: {len(cands)} candidato(s) julgado(s); nenhum retirado."
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta=delta))
+
+
+#: Tickets que um gate emitiu e nenhum agente pôde executar. O dossiê os lista como pendência humana.
+KEY_TICKETS_SEM_ROTA = "tickets_sem_rota"
+
+
 class DespachoTicketsAgent(BaseAgent):
     """Re-executa **apenas** os agentes endereçados pelos tickets de um gate.
 
@@ -622,6 +871,15 @@ class DespachoTicketsAgent(BaseAgent):
     severidades: List[str] = Field(default_factory=lambda: ["bloqueio"])
     tickets_key: str = "tickets_retrabalho"
 
+    def _sem_rota(self, achado: Dict[str, Any], dono: str, motivo: str) -> Dict[str, str]:
+        return {
+            "gate": self.rotulo,
+            "id": str(achado.get("id") or achado.get("codigo") or "—"),
+            "dono": dono,
+            "motivo": motivo,
+            "resumo": str(achado.get("resumo") or "")[:300],
+        }
+
     def _formatar(self, achados: List[Dict[str, Any]]) -> str:
         linhas = ["## Tickets do QA endereçados a você nesta rodada", ""]
         for a in achados:
@@ -646,21 +904,31 @@ class DespachoTicketsAgent(BaseAgent):
         if status == STATUS_APROVADO:
             return
 
+        from tools.rastro import normalizar_dono
+
         por_slug: Dict[str, List[Dict[str, Any]]] = {}
         pendentes_externos: List[str] = []
+        # Ticket que ninguém pode executar. Antes eram três descartes silenciosos — sem dono,
+        # dono com nome que o mapa não conhece, e agente de retrabalho ausente —, e o 🔴 do
+        # gate voltava na rodada seguinte sem que alguém soubesse que o conserto não saiu.
+        sem_rota: List[Dict[str, str]] = []
         for achado in envelope.get("achados") or []:
             if not isinstance(achado, dict):
                 continue
             if str(achado.get("severidade", "")).strip().lower() not in self.severidades:
                 continue
-            slug = str(achado.get("agente_responsavel") or "").strip().lower()
+            escrito = str(achado.get("agente_responsavel") or "").strip()
+            slug = normalizar_dono(escrito)
             if not slug or slug in ("null", "none"):
+                sem_rota.append(self._sem_rota(achado, escrito, "o gate não disse quem conserta"))
                 continue
             if slug in self.externos:
                 pendentes_externos.append(f"`{achado.get('id', '?')}` → `{slug}`")
                 continue
             if slug in self.mapa:
                 por_slug.setdefault(slug, []).append(achado)
+            else:
+                sem_rota.append(self._sem_rota(achado, escrito, "nenhum agente desta etapa atende por esse dono"))
 
         slugs_na_ordem = [s for s in self.ordem if s in por_slug]
         slugs_na_ordem += [s for s in por_slug if s not in slugs_na_ordem]
@@ -668,22 +936,46 @@ class DespachoTicketsAgent(BaseAgent):
         # cada slug vira a cadeia de agentes que o conserto exige, sem repetir nome
         nomes_na_ordem: List[str] = []
         por_agente: Dict[str, List[Dict[str, Any]]] = {}
+        existentes = {s.name for s in self.sub_agents}
         for slug in slugs_na_ordem:
             alvo = self.mapa[slug]
-            for nome in ([alvo] if isinstance(alvo, str) else list(alvo)):
+            cadeia = [alvo] if isinstance(alvo, str) else list(alvo)
+            ausentes = [n for n in cadeia if n not in existentes]
+            if ausentes:
+                for achado in por_slug[slug]:
+                    sem_rota.append(self._sem_rota(
+                        achado, slug, f"o agente de retrabalho {', '.join(ausentes)} não existe nesta etapa"))
+                continue
+            for nome in cadeia:
                 if nome not in nomes_na_ordem:
                     nomes_na_ordem.append(nome)
                 por_agente.setdefault(nome, []).extend(por_slug[slug])
+
+        delta_sem_rota: Dict[str, Any] = {}
+        if sem_rota:
+            registrados = list(state.get(KEY_TICKETS_SEM_ROTA) or [])
+            vistos = {(r.get("gate"), r.get("id"), r.get("dono")) for r in registrados}
+            for r in sem_rota:
+                if (r["gate"], r["id"], r["dono"]) not in vistos:
+                    registrados.append(r)
+                    vistos.add((r["gate"], r["id"], r["dono"]))
+            state[KEY_TICKETS_SEM_ROTA] = registrados
+            delta_sem_rota = {KEY_TICKETS_SEM_ROTA: registrados}
+        aviso_sem_rota = (" Sem quem execute (vai ao dossiê como pendência humana): "
+                          + ", ".join(f"`{r['id']}` → `{r['dono'] or '—'}` ({r['motivo']})" for r in sem_rota)
+                          + ".") if sem_rota else ""
 
         if not nomes_na_ordem:
             msg = f"⏭️ {self.rotulo}: nenhum ticket com dono executável nesta etapa."
             if pendentes_externos:
                 msg += " Devolução a outra etapa: " + ", ".join(pendentes_externos) + "."
+            msg += aviso_sem_rota
             yield Event(
                 invocation_id=ctx.invocation_id,
                 author=self.name,
                 branch=ctx.branch,
                 content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                actions=EventActions(state_delta=delta_sem_rota),
             )
             return
 
@@ -711,11 +1003,13 @@ class DespachoTicketsAgent(BaseAgent):
         aviso = f"🔁 {self.rotulo}: reexecutando {len(nomes_na_ordem)} agente(s) com ticket — {resumo}."
         if pendentes_externos:
             aviso += " Fora desta etapa (não reexecutado): " + ", ".join(pendentes_externos) + "."
+        aviso += aviso_sem_rota
         yield Event(
             invocation_id=ctx.invocation_id,
             author=self.name,
             branch=ctx.branch,
             content=types.Content(role="model", parts=[types.Part(text=aviso)]),
+            actions=EventActions(state_delta=delta_sem_rota),
         )
 
         for nome in nomes_na_ordem:
@@ -789,6 +1083,11 @@ class VizinhasCatalogoAgent(BaseAgent):
                 fonte = "briefing"
             proximas = cat.vizinhas(ficha, indice, n=self.limite)
             total = len(indice.get("missoes", []))
+            # A base do V5, conferida AQUI e não no registro do fim da esteira: o aviso existia
+            # e só aparecia no relatório do catálogo, que roda depois do dossiê — nem o micro-gate
+            # que julga a semelhança nem quem lê o diagnóstico ficavam sabendo.
+            saude = cat.saude_do_indice(indice)
+            aviso = cat.aviso_de_indice_cego(saude)
 
             if not proximas:
                 texto = (f"_Nenhuma missão próxima no índice ({total} registrada(s) ao todo, filtro pelo {fonte}: "
@@ -804,16 +1103,36 @@ class VizinhasCatalogoAgent(BaseAgent):
                     "Linha com campo `—` ou `[preencher…]` **não sustenta reprovação**: registre como lacuna de catálogo e siga.",
                 ])
             msg = f"🗂️ Catálogo: {len(proximas)} missão(ões) próxima(s) de {total} no índice (por {fonte})."
+            if aviso:
+                texto = aviso + "\n\n" + texto
+                msg += "\n" + aviso.lstrip("> ")
+            achados = []
+            if saude.get("fora_do_indice"):
+                achados.append({"severidade": "atencao", "codigo": "indice-defasado", "agente_responsavel": "produto",
+                                 "resumo": f"{len(saude['fora_do_indice'])} missão(ões) gerada(s) fora do índice: "
+                                           + ", ".join(saude["fora_do_indice"][:8])})
+            if saude["total"] and saude["fracao_cega"] >= 0.5:
+                achados.append({"severidade": "atencao", "codigo": "indice-cego", "agente_responsavel": "produto",
+                                 "resumo": f"{saude['cegas']} de {saude['total']} fichas sem campo de comparação: o V5 não as julga."})
+            status = "amarelo" if (aviso or achados) else "aprovado"
+            envelope = {"agente": "catalogo-indice", "status": status, "achados": achados,
+                        "total": saude["total"], "uteis": saude["uteis"]}
         except Exception as exc:  # memória é conveniência: nunca derruba a esteira
             texto = f"_Índice de missões indisponível nesta execução ({exc}). Sem comparação com missões anteriores._"
             msg = f"⚠️ Catálogo: não consegui ler o índice ({exc})."
+            status = "amarelo"
+            envelope = {"agente": "catalogo-indice", "status": status, "achados": [{
+                "severidade": "atencao", "codigo": "indice-ilegivel", "agente_responsavel": "produto",
+                "resumo": f"índice de missões ilegível: {exc}"}]}
 
         yield Event(
             invocation_id=ctx.invocation_id,
             author=self.name,
             branch=ctx.branch,
             content=types.Content(role="model", parts=[types.Part(text=msg)]),
-            actions=EventActions(state_delta={"missoes_vizinhas": texto}),
+            actions=EventActions(state_delta={"missoes_vizinhas": texto,
+                                              "catalogo_indice_status": status,
+                                              "catalogo_indice_status_envelope": envelope}),
         )
 
 
@@ -858,8 +1177,19 @@ class RegistroCatalogoAgent(BaseAgent):
             if resultado["achados"]:
                 msg += "\n" + "\n".join(f"- ⚠️ {a['resumo'][:120]}" for a in resultado["achados"])
         except Exception as exc:  # o registro é memória, não gate: nunca derruba a execução
-            delta = {self.status_key: "aprovado"}
-            msg = f"⚠️ Catálogo: não consegui montar a ficha desta missão ({exc}). A execução segue."
+            # Mas falhar não é aprovar. Gravar `aprovado` numa exceção faz o dossiê dizer que a
+            # missão entrou no índice quando ela não entrou — e o gate de semelhança da próxima
+            # execução compara contra um catálogo que não a tem. 🟡 diz a verdade e não trava.
+            delta = {
+                self.status_key: "amarelo",
+                f"{self.status_key}_envelope": {"agente": cat.AGENTE, "status": "amarelo", "achados": [{
+                    "severidade": "atencao", "codigo": "catalogo-indisponivel",
+                    "agente_responsavel": "catalogo",
+                    "resumo": f"A missão não foi registrada no índice ({exc}): a próxima execução "
+                              f"não a terá como vizinha na verificação de semelhança.",
+                }]},
+            }
+            msg = f"⚠️ Catálogo: não consegui montar a ficha desta missão ({exc}). A execução segue, e o dossiê registra a falta."
 
         yield Event(
             invocation_id=ctx.invocation_id,
@@ -890,7 +1220,7 @@ class DiagnosticoAgent(BaseAgent):
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or ""))
         dossie = coletar(state)
         artefatos = artefatos_esperados(state, ARTIFACT_FILES)
-        texto = relatorio_markdown(dossie, missao, artefatos)
+        texto = relatorio_markdown(dossie, missao, artefatos, state=state)
         env = envelope(dossie, missao)
 
         yield Event(
@@ -930,9 +1260,13 @@ class SaidaDeLoopAgent(BaseAgent):
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         state = ctx.session.state
         rodada = int(state.get(self.rodada_key, 0) or 0) + 1
+        # Chave ausente conta como REPROVADA. O `k in state` fazia o loop encerrar com
+        # aprovação quando o gate a montante não tinha escrito nada — e era o caso do
+        # `adequacao_status`, que nenhum agente gravava: o `A10bAdequacaoCheck` aprovava
+        # sempre, sobre uma chave que nunca existiu.
         reprovados = [
             k for k in self.status_keys
-            if str(state.get(k, "")).strip().lower() not in self.aceitos and k in state
+            if str(state.get(k, "")).strip().lower() not in self.aceitos
         ]
         esgotou = rodada >= self.max_rounds
         delta: Dict[str, Any] = {self.rodada_key: rodada}

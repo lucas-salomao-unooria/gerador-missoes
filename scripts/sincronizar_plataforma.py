@@ -18,6 +18,7 @@ O que o script faz:
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -120,8 +121,18 @@ def recortar_schema(commit: str, data: str) -> dict:
     return {"origem": SCHEMA_PRISMA, "destino": "exemplo-schema-exp.md", "sha256": hashlib.sha256(conteudo.encode()).hexdigest()[:16], "bytes": len(conteudo), "modelos": len(escolhidos)}
 
 
-def indice_openapi(commit: str, data: str) -> dict:
-    doc = json.loads((PLATAFORMA / OPENAPI).read_text(encoding="utf-8"))
+def rotas_do_openapi(doc: dict) -> list:
+    """`[{metodo, caminho, tag}]` — a lista que o gate de rotas lê (`tools/rotas_plataforma.py`)."""
+    rotas = []
+    for caminho in sorted(doc["paths"]):
+        for metodo, op in doc["paths"][caminho].items():
+            if metodo.lower() in ("get", "post", "put", "patch", "delete"):
+                rotas.append({"metodo": metodo.upper(), "caminho": caminho, "tag": ", ".join(op.get("tags") or [])})
+    return rotas
+
+
+def indice_openapi(commit: str, data: str, doc: "dict | None" = None, origem: str = OPENAPI) -> list:
+    doc = doc if doc is not None else json.loads((PLATAFORMA / OPENAPI).read_text(encoding="utf-8"))
     linhas = [f"# `{OPENAPI}` — índice de rotas (método · caminho · resumo · tags)", "", f"{len(doc['paths'])} caminhos. O contrato completo (Zod → OpenAPI) está no repositório; aqui só o mapa.", "", "| Método | Caminho | Resumo | Tags |", "|---|---|---|---|"]
     for caminho in sorted(doc["paths"]):
         for metodo, op in doc["paths"][caminho].items():
@@ -130,12 +141,50 @@ def indice_openapi(commit: str, data: str) -> dict:
             resumo = (op.get("summary") or "").replace("|", "\\|").strip()
             tags = ", ".join(op.get("tags") or [])
             linhas.append(f"| {metodo.upper()} | `{caminho}` | {resumo} | {tags} |")
-    conteudo = cabecalho(OPENAPI, commit, data) + neutralizar_chaves("\n".join(linhas) + "\n")
+    conteudo = cabecalho(origem, commit, data) + neutralizar_chaves("\n".join(linhas) + "\n")
     (DESTINO / "openapi-indice.md").write_text(conteudo, encoding="utf-8")
-    return {"origem": OPENAPI, "destino": "openapi-indice.md", "sha256": hashlib.sha256(conteudo.encode()).hexdigest()[:16], "bytes": len(conteudo), "caminhos": len(doc["paths"])}
+    rotas = json.dumps({"commit": commit, "data_commit": data, "origem": origem, "rotas": rotas_do_openapi(doc)},
+                       ensure_ascii=False, indent=1)
+    (DESTINO / "openapi-rotas.json").write_text(rotas, encoding="utf-8")
+    return [
+        {"origem": origem, "destino": "openapi-indice.md", "commit": commit, "sha256": hashlib.sha256(conteudo.encode()).hexdigest()[:16], "bytes": len(conteudo), "caminhos": len(doc["paths"])},
+        {"origem": origem, "destino": "openapi-rotas.json", "commit": commit, "sha256": hashlib.sha256(rotas.encode()).hexdigest()[:16], "bytes": len(rotas), "caminhos": len(doc["paths"])},
+    ]
 
 
-def main() -> int:
+def so_openapi(arquivo: Path) -> int:
+    """Atualiza só o índice do OpenAPI e a lista de rotas, a partir de um `openapi.json` já gerado
+    (`apps/api/scripts/gerar-openapi.ts <destino>`). As outras cópias ficam como estão, e o registro
+    de versão ganha o commit do OpenAPI por arquivo — a pasta pode ter cópias de dois commits."""
+    doc = json.loads(Path(arquivo).read_text(encoding="utf-8"))
+    commit = git("rev-parse", "--short", "HEAD") if PLATAFORMA.exists() else "?"
+    data = git("log", "-1", "--format=%cs") if PLATAFORMA.exists() else "?"
+    novos = indice_openapi(commit, data, doc, origem=f"apps/api/scripts/gerar-openapi.ts (roteador em {commit})")
+    registro_p = DESTINO / "versao-lida.json"
+    registro = json.loads(registro_p.read_text(encoding="utf-8")) if registro_p.exists() else {"arquivos": []}
+    destinos = {a["destino"] for a in novos}
+    registro["arquivos"] = [a for a in registro.get("arquivos", []) if a.get("destino") not in destinos] + novos
+    registro["openapi_atualizado_em"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    registro_p.write_text(json.dumps(registro, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"ok → openapi-indice.md e openapi-rotas.json: {len(doc['paths'])} caminhos, plataforma-unooria@{commit}")
+    return 0
+
+
+def main(argv: "list[str] | None" = None) -> int:
+    # Antes de qualquer escrita: o script não lia argumento nenhum, e `--help` executava a
+    # sincronização inteira — começando por apagar todos os `.md` do destino. Visto em
+    # 23/09/2026. Argumento desconhecido agora é erro, nunca "ignora e grava".
+    parser = argparse.ArgumentParser(
+        prog="sincronizar_plataforma.py",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("--openapi", metavar="ARQUIVO", type=Path,
+                        help="atualiza SÓ o índice do OpenAPI e a lista de rotas a partir deste openapi.json; "
+                             "as outras cópias ficam como estão")
+    args = parser.parse_args(argv)
+    if args.openapi:
+        return so_openapi(args.openapi)
     if not PLATAFORMA.exists():
         print(f"plataforma não encontrada em {PLATAFORMA} (defina PLATAFORMA_UNOORIA_DIR)", file=sys.stderr)
         return 1
@@ -154,7 +203,7 @@ def main() -> int:
     for regra in sorted(PLATAFORMA.glob(REGRAS_GLOB)):
         arquivos.append(copiar(str(regra.relative_to(PLATAFORMA)), f"regras-{regra.stem}.md", None, commit, data))
     arquivos.append(recortar_schema(commit, data))
-    arquivos.append(indice_openapi(commit, data))
+    arquivos += indice_openapi(commit, data)
     manifesto = {
         "plataforma_dir": str(PLATAFORMA),
         "commit": commit,

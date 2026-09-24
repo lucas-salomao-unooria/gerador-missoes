@@ -65,7 +65,11 @@ KNOWN_STATE_KEYS = {
     "prototipo_html", "prototipo_arquivo", "prototipo_relatorio", "stitch_links", "diagramas_html",
     "miro_links", "miro_board",
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
-    "rastro_lacunas_status", "rastro_lacunas_report", "prd_status", "prd_check_report",
+    "rastro_lacunas_status", "rastro_lacunas_report",
+    "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
+    "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
+    "perguntas_report", "perguntas_status", "juiz_perguntas_report", "juiz_perguntas_status",
+    "juiz_perguntas_rodada", "execucao", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
     "validacao_dev_report", "dev_status", "prd_final", "one_pager_pedagogico", "one_pager_resumido", "aprendizado_registro",
@@ -77,9 +81,11 @@ KNOWN_STATE_KEYS = {
     "degradacoes", "heranca_degradada", "agentes_degradados",
     # modo correção (pipeline/reexecucao.py): pedido lido por todo agente, triagem e seu insumo
     "pedido_correcao", "triagem_correcao", "mapa_da_missao",
+    # parecer humano entre etapas (`pipeline/passagem.py`): notas no rodapé, pareceres no dossiê
+    "notas_de_passagem", "pareceres_humanos",
 }
 # Variáveis estáticas substituídas pelo loader antes do ADK
-CONFIG_VARS = {"gdrive_folder_url": "g", "stitch_mcp_mode": "off", "stitch_project_url_base": "u", "gate_max_rodadas": 3, "qa_max_rodadas": 1}
+CONFIG_VARS = {"stitch_mcp_mode": "off", "stitch_project_url_base": "u", "gate_max_rodadas": 3, "qa_max_rodadas": 1}
 
 # Chaves obrigatórias (sem `?`) permitidas por área: existem sempre antes do agente rodar
 REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
@@ -170,7 +176,12 @@ def test_arvore_de_agentes():
     loop = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "GateEstruturalLoop")
     assert isinstance(loop, LoopAgent) and loop.max_iterations == settings.gate_estrutural_max_rodadas
     # O lint vem antes do gate, dentro do loop: cada rodada relê a versão corrente do one-pager.
-    assert [a.name for a in loop.sub_agents] == ["A04bContratoProdutoCheck", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager"]
+    # `A04bBriefEscopoSplit` entra desde 23/09/2026: o A04 entrega one-pager E brief de escopo
+    # na mesma `output_key`, e o A07 devolve só o one-pager revisado — o brief evaporava a
+    # cada execução, sem erro e sem artefato.
+    # o juiz de achados roda entre o lint e o gate: o gate estrutural lê o relatório já revisto
+    assert [a.name for a in loop.sub_agents] == ["A04bBriefEscopoSplit", "A04bContratoProdutoCheck", "A04cJuizContratoProduto",
+                                                 "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager"]
     banca = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "BancaValidacaoDev")
     assert len(banca.sub_agents) == 5
 
@@ -322,7 +333,7 @@ def test_secao_split_d0_e_d9():
     d0_out = (
         "# Fechamento de lacunas — teste\n**Veredito: 🟢 SEGUE PARA D1**\n\n## Passo 1 — Varredura\n...\n"
         "## Passo 5 — Spec consolidada (texto original do Gate 0, blocos 0–12 intocados, + bloco 13)\n" + spec_consolidada +
-        "\n## Passo 5b — Relatório de preenchimento — `relatorio-preenchimento.md` · Google Docs: GDOCS indisponível\n"
+        "\n## Passo 5b — Relatório de preenchimento — `relatorio-preenchimento.md`\n"
         "### [D0-1] Tela de espera\n**O que faltava:** o que a criança vê enquanto a professora fala.\n**O que entrou:** a tela congela.\n\n"
         "## Passo 6 — Devolutiva ao produto\n- nada\n\n## Testes 1–6 — resultado\nok\n\n"
         '```json\n{"agente": "fecha-lacunas", "missao": "exp-99-teste", "status": "segue_com_pendencias", "decisoes": [], "respec": []}\n```'
@@ -340,7 +351,11 @@ def test_secao_split_d0_e_d9():
     assert "## 13. Decisões D0" in state["spec_missao"] and "Passo 5b" not in state["spec_missao"]
     assert state["spec_missao_gate0"] == spec_original
     assert state["relatorio_lacunas"].startswith("### [D0-1]") and "Passo 6" not in state["relatorio_lacunas"]
-    assert state["lacunas_status"] == "aprovado"
+    # `segue_com_pendencias` é o que o nome diz: segue, COM pendências. Desde 23/09/2026 o
+    # dossiê grava o veredito como o agente o deu, em vez de achatar tudo em "aprovado" — em
+    # 14 execuções nenhum gate de LLM aparecia amarelo, embora os relatórios estivessem cheios
+    # de amarelo. O ROTEAMENTO continua binário: a esteira segue.
+    assert state["lacunas_status"] == "amarelo"
     assert not state.get(KEY_PIPELINE_BLOQUEADO)
 
     # D9 dormente: reemite a spec (blocos 1–13 + bloco 14); o split troca spec_missao e não bloqueia
@@ -400,7 +415,10 @@ def test_secao_split_d0_e_d9():
     )
     _, state3 = asyncio.run(_run(root3))
     assert state3["spec_missao"] == spec_consolidada
-    assert state3["ambiente_status"] == "bloqueado"
+    # `aguarda_gate` é o D9 devolvendo a decisão ao Gate 0 / PO: pendência humana, não
+    # impedimento. Lido como bloqueio, travava a esteira num impasse que nenhum agente
+    # resolve — não existe loop que devolva a decisão ao Gate 0 (23/09/2026).
+    assert state3["ambiente_status"] == "amarelo"
     assert state3.get("brief_oficio") == "brief" and not state3.get(KEY_PIPELINE_BLOQUEADO)
     print("   ✓ split D0/D9: spec consolidada, cópia da original, relatório separado, status informativo")
 
@@ -546,12 +564,15 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
 """
     assert validar_telemetria(layout_livre)["status"] == "aprovado", validar_telemetria(layout_livre)["achados"]
 
-    # falso positivo 2: citar WebSocket para DESCARTÁ-LO é o comportamento correto.
-    # Com o canal certo declarado, vira atenção; sem ele, continua bloqueio.
+    # falso positivo 2: citar WebSocket para DESCARTÁ-LO é o comportamento correto, e
+    # menção CONDICIONAL ("só se a infra mudar", "fase 2") é descarte, não proposta.
+    # Era a forma de 5 dos 8 achados de WebSocket das 14 primeiras execuções — todos em
+    # handoffs cujo canal declarado já era o polling certo (corte A4, 23/09/2026).
     nega = layout_livre + "\n| Sincronização | Polling de 3s | WebSocket dedicado só se a infra mudar | Cloud Run não sustenta WebSocket (ADR-93/94) |\n"
     r_nega = validar_telemetria(nega)
-    assert r_nega["status"] == "amarelo", r_nega["achados"]
-    assert {a["codigo"] for a in r_nega["achados"]} == {"websocket-mencao"}
+    assert r_nega["status"] == "aprovado", r_nega["achados"]
+    roadmap = layout_livre + "\nWebSocket fica para a fase 2.\n"
+    assert validar_telemetria(roadmap)["status"] == "aprovado", validar_telemetria(roadmap)["achados"]
     sem_canal = layout_livre.replace("Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.", "Sala sincroniza por WebSocket dedicado.")
     assert validar_telemetria(sem_canal)["status"] == "bloqueado"
 
@@ -573,6 +594,12 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
     assert {a["codigo"] for a in validar_telemetria(propoe)["achados"]} == {"campo-dados"}
     coluna = layout_livre.replace("| Campos | Canal |", "| dados | Canal |")
     assert {a["codigo"] for a in validar_telemetria(coluna)["achados"]} == {"campo-dados"}
+    # o handoff é quem descreve a implementação: gabarito no bundle bloqueia aqui também,
+    # e dizer que ele NÃO vai ao bundle não é achado
+    no_bundle = layout_livre + "\nO gabarito das alternativas vai no bundle do cliente.\n"
+    assert {a["codigo"] for a in validar_telemetria(no_bundle)["achados"]} == {"gabarito-no-cliente"}
+    nega = layout_livre + "\nO gabarito nunca vai no bundle do cliente: a correção é no servidor.\n"
+    assert validar_telemetria(nega)["status"] == "aprovado", validar_telemetria(nega)["achados"]
 
     assert classificar_dono("jornada", "dev") == "design"
     assert classificar_dono("gate-estrutural", "dev") == "produto"
@@ -600,7 +627,12 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
         {"chave": "handoff_dev", "rotulo": "handoff", "etapa_padrao": "dev"},
     ]
     r = varrer_lacunas(fontes, st)
-    assert r["status"] == "bloqueado" and r["por_etapa"] == {"input": 0, "produto": 2, "design": 1, "dev": 1, "plataforma": 1, "externo": 0, "humano": 0}, r["por_etapa"]
+    # Desde 23/09/2026 os dois marcadores de dono fixo mudaram de etapa, e a contagem reflete
+    # isso: `RS-n pendente` é pedido ao Gate 0/PO (humano, não produto) e
+    # `[verificar no repositório]` é instrução para quem codifica (plataforma, não dev). Os
+    # dois eram bloqueantes e os prompts mandavam escrevê-los — ver `references/donos-e-etapas.md`.
+    assert r["por_etapa"] == {"input": 0, "produto": 1, "design": 1, "dev": 0, "plataforma": 2, "externo": 0, "humano": 1}, r["por_etapa"]
+    assert r["status"] == "bloqueado", "gate-estrutural e wireframes continuam impedindo"
     so_plat = varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], st)
     assert so_plat["status"] == "amarelo" and so_plat["por_etapa"]["plataforma"] == 1
     assert varrer_lacunas(fontes, {"spec_missao": "limpo", "handoff_dev": "limpo"})["status"] == "aprovado"
@@ -636,14 +668,25 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
     r_azul_design = varrer_lacunas(fontes, {"spec_missao": "🔵 falta o wireframe da tela de perfil", "handoff_dev": "limpo"})
     assert r_azul_design["status"] == "bloqueado" and r_azul_design["por_etapa"]["design"] == 1
 
-    # `RS-n pendente` e `[verificar no repositório:]` seguem fixos e bloqueantes, por decisão
-    # de produto — o primeiro é lacuna que o D0 carimbou, o segundo é conferência no código.
+    # `RS-n pendente` e `[verificar no repositório:]` têm dono fixo, e desde 23/09/2026 o dono
+    # mudou: os dois eram bloqueantes (produto e dev) enquanto os PRÓPRIOS PROMPTS mandavam
+    # escrevê-los — 17_fechamento_lacunas.md manda carimbar o RS-n, e 34/47 mandam marcar o
+    # que só quem tem o monorepo confere. A esteira reprovava o agente por obedecer. Agora:
+    # RS-n é pedido ao Gate 0/PO (humano) e o marcador de repositório é de plataforma.
     r_fixos = varrer_lacunas(fontes, {
         "spec_missao": "RS-3 pendente conforme a coordenação da rede parceira",
         "handoff_dev": "[verificar no repositório: nome da tabela] com a coordenação externa",
     })
-    assert r_fixos["status"] == "bloqueado", r_fixos["achados"]
-    assert r_fixos["por_etapa"]["produto"] == 1 and r_fixos["por_etapa"]["dev"] == 1
+    assert r_fixos["status"] == "amarelo", r_fixos["achados"]
+    assert r_fixos["por_etapa"]["humano"] == 1 and r_fixos["por_etapa"]["plataforma"] == 1
+    assert r_fixos["por_etapa"]["produto"] == 0 and r_fixos["por_etapa"]["dev"] == 0
+
+    # Mas um documento CRAVEJADO de "verificar no repositório" não conhece o próprio gabarito:
+    # aí a ausência deixa de ser pendência de plataforma e vira defeito de construção.
+    muitos = " ".join(f"[verificar no repositório: campo {i}]" for i in range(9))
+    r_muitos = varrer_lacunas(fontes, {"spec_missao": "limpo", "handoff_dev": muitos})
+    assert r_muitos["status"] == "bloqueado", r_muitos["achados"]
+    assert any(a.get("codigo") == "gabarito-desconhecido" for a in r_muitos["achados"]), r_muitos["achados"]
     assert r_ext["achados"][0]["severidade"] == "atencao"
 
     fontes_com_d9 = fontes + [{"chave": "ambiente_simulado", "rotulo": "ambiente simulado (D9)", "etapa_padrao": "design"}]
@@ -699,7 +742,9 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
     root3 = SequentialAgent(
         name="Root3",
         sub_agents=[
-            FakeAgent(name="Spec", key="spec_missao", text=_SPEC_MANIFESTO_OK.replace("- `liberacao: por-turma`\n", "")),
+            # `liberacao` ausente é default (corte A8); o que reprova é declarar outro
+            # valor — aqui a ficha perde o `id`, que não tem default nenhum.
+            FakeAgent(name="Spec", key="spec_missao", text=_SPEC_MANIFESTO_OK.replace("- `id: exp05ef2b`\n", "")),
             RastroCheckAgent(name="A33ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
             FakeAgent(name="Jusante", key="handoff_dev", text="h", before_agent_callback=marcar_heranca),
         ],
@@ -872,7 +917,8 @@ def test_gate_amarelo_limpa_degradacao_da_rodada_anterior():
         sub_agents=[
             FakeAgent(name="Prd1", key="prd_final", text="rascunho [NEEDS CLARIFICATION: qual cardinalidade?, dono: produto]"),
             check("Check1"),
-            FakeAgent(name="Prd2", key="prd_final", text="rascunho [ABERTO — coordenação pedagógica: confirmar semana]"),
+            FakeAgent(name="Prd2", key="prd_final", text="rascunho [ABERTO — coordenação pedagógica: confirmar semana]",
+                      before_agent_callback=marcar_heranca),
             check("Check2"),
         ],
     )
@@ -881,7 +927,10 @@ def test_gate_amarelo_limpa_degradacao_da_rodada_anterior():
     assert state.get(KEY_PIPELINE_BLOQUEADO) is False, "a reprovação da rodada 1 não pode sobreviver ao 🟡 da rodada 2"
     assert not state.get(KEY_DEGRADACOES), state.get(KEY_DEGRADACOES)
     assert not state.get(KEY_HERANCA)
-    print("   ✓ gate 🔴 → 🟡 limpa a degradação e destrava a execução")
+    # o redator da rodada 2 rodou sob a reprovação da 1 e foi anotado; com o gate aprovado, a
+    # anotação sai — a geração de 23/09 terminou sem impedimento e com o PRD listado como provisório
+    assert state.get("agentes_degradados") == [], state.get("agentes_degradados")
+    print("   ✓ gate 🔴 → 🟡 limpa a degradação, destrava a execução e tira o 'provisório' de quem rodou nela")
 
 
 def test_diagnostico_respeita_veredito_do_gate():
@@ -920,7 +969,18 @@ def test_estagio_produto_parcial_spec():
     assert [a.name for a in orch.sub_agents] == ["ProdutoStage", "A50Diagnostico", "A51Aprendizado", "A52RegistroCatalogo"]
     produto = orch.sub_agents[0]
     assert [a.name for a in produto.sub_agents] == ["SpecLoop", "A16bOnePagerResumido"]
-    assert [a.name for a in produto.sub_agents[0].sub_agents] == ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A16SpecCheck"]
+    # `A15bEvidenciaCheck` entra desde 23/09/2026: grau `scored` com dois sinais, habilidade do
+    # bloco 11 com momento e medida, gabarito no servidor. Eram três exigências que a spec
+    # declarava em prosa e nenhuma verificação tocava — PED-04 é bloqueante e ninguém o conferia.
+    # `A15cPerguntasCheck` e o juiz `A15dJuizPerguntas` entram em 23/09/2026: as cinco perguntas
+    # de produto do sub-bloco 9f nasciam na spec sem nenhum gate, e o `validar_kpis` do PRD recebia
+    # a spec como parâmetro morto — a pergunta podia morrer entre produto e dev sem deixar rastro.
+    assert [a.name for a in produto.sub_agents[0].sub_agents] == [
+        "A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
+        # juiz de achados (23/09/2026): o regex marca "gabarito no cliente", o juiz decide se o texto
+        # afirma ou cita para vedar, e o achado só sai com citação literal conferida
+        "A15bbJuizEvidencia",
+        "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck", "A16SpecCheck"]
     assert produto.sub_agents[0].max_iterations == max(1, get_settings().spec_max_rodadas)
     nomes = [a.name for _, a in iter_agent_tree(orch)]
     assert "A01NucleoNarrativo" not in nomes and "A05GateEstrutural" not in nomes
@@ -943,7 +1003,10 @@ def test_estagio_produto_parcial_spec():
     assert [s["key"] for s in stages_para_ui(["spec", "design", "dev"])] == ["spec", "design", "dev", "transversal"]
     assert [s["key"] for s in stages_para_ui(["dev"])] == ["dev", "transversal"]
     assert [s["key"] for s in stages_para_ui(["produto", "design", "dev"])] == ["produto", "design", "dev", "transversal"]
-    assert [m["id"] for m in STAGE_SPEC["agents"]] == ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A16SpecCheck", "A16bOnePagerResumido"]
+    assert [m["id"] for m in STAGE_SPEC["agents"]] == [
+        "A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
+        "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
+        "A16SpecCheck", "A16bOnePagerResumido"]
     print("   ✓ estágio parcial spec: SpecLoop + resumido, sem núcleo; stages_para_ui resolve spec")
 
 
@@ -972,7 +1035,7 @@ def test_agente_de_triagem_configurado():
     assert agente.output_key == "triagem_correcao"
     instr = str(agente.instruction)
     assert "{mapa_da_missao?}" in instr and "{briefing?}" in instr
-    assert '"etapa": "spec | design | dev | nenhuma"' in instr
+    assert '"etapa": "produto | spec | design | dev | nenhuma"' in instr
     assert all(m["id"] != "A00TriagemCorrecao" for m in TRANSVERSAL_METADATA)
     for var in list_state_variables(instr):
         assert var in KNOWN_STATE_KEYS, var
@@ -1647,8 +1710,11 @@ def test_lint_do_one_pager_pega_os_erros_conhecidos():
 
     # Menção proibitiva não é uso: o one-pager que cita WebSocket para descartá-lo passa limpo.
     limpo = validar_one_pager(
-        "## 0. Identificação\n* Ano/série: [\"5EF\"]\n\n## 2. Currículo\n* EF05CO09 — Cultura Digital.\n\n"
-        "## 16. Requisitos técnicos e escopo\n* Sala sincronizada por polling HTTP em exp05ef1b_gates_turma; nunca WebSocket (ADR-93).\n"
+        # 6º ano, com o N/A do SAEB: desde 23/09/2026 o 5º ano sem descritor é amarelo, e este teste
+        # não é sobre SAEB — é sobre a menção proibitiva ao WebSocket não contar como uso.
+        "## 0. Identificação\n* Ano/série: [\"6EF\"]\n\n## 2. Currículo\n* EF06CO09 — Cultura Digital.\n"
+        "* **Descritor SAEB:** N/A — ano não avaliado pelo SAEB.\n\n"
+        "## 16. Requisitos técnicos e escopo\n* Sala sincronizada por polling HTTP em exp06ef1b_gates_turma; nunca WebSocket (ADR-93).\n"
     )
     assert limpo["status"] == "aprovado" and limpo["achados"] == []
     print("   ✓ lint do one-pager: WebSocket, estado de cliente, SAEB fora do ano e números sem origem viram achado antes do gate")
@@ -1733,60 +1799,6 @@ def test_referencias_plataforma_sincronizadas():
         if head and head != manifesto["commit"]:
             print(f"   ⚠️ plataforma-unooria está em {head}, cópias lidas de {manifesto['commit']} — considere rodar scripts/sincronizar_plataforma.py")
     print(f"   ✓ {len(manifesto['arquivos'])} cópias da plataforma presentes (commit {manifesto['commit']}, {manifesto['data_commit']})")
-
-
-if __name__ == "__main__":
-    print("=" * 64)
-    print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")
-    print("=" * 64)
-    s = get_settings()
-    print(f"   modelo: {s.gemini_model} · Stitch MCP: {s.stitch_mcp_mode} · etapas: {s.pipeline_stages} · estrito: {s.produto_modo_estrito}")
-    tests = [
-        test_prompts_carregam_e_interpolacao_segura,
-        test_arvore_de_agentes,
-        test_envelope_e_status,
-        test_gate_loop_bloqueia_e_pula_jusante,
-        test_gate_loop_aprova_e_segue,
-        test_modo_nao_estrito_nao_bloqueia,
-        test_secao_split_d0_e_d9,
-        test_bncc_validador_e_gate,
-        test_rastro_manifesto_telemetria_lacunas,
-        test_regressao_sessao_8f76_falsos_positivos,
-        test_rotulos_de_gate_cobertos_pelo_mapa_de_heranca,
-        test_estagio_produto_parcial_spec,
-        test_bloco_de_correcao_em_todos_os_agentes,
-        test_agente_de_triagem_configurado,
-        test_prd_cita_experiencia_existente_sem_virar_caminho_divergente,
-        test_capacidade_de_plataforma_nao_bloqueia,
-        test_mensagem_de_pulo_nao_vira_prd,
-        test_contencao_de_resposta_de_ferramenta,
-        test_markdown_saneado_para_streamlit,
-        test_artefatos_html_e_links,
-        test_desembrulhar_cerca_do_documento,
-        test_one_pager_pedagogico_em_docx,
-        test_one_pagers_com_identidade_visual,
-        test_one_pager_resumido_no_formato_do_time_de_produto,
-        test_lint_do_one_pager_pega_os_erros_conhecidos,
-        test_bncc_reconhece_decisao_de_produto_pendente,
-        test_visao_do_professor_nos_diagramas_e_na_folha_do_stitch,
-        test_schema_de_ferramenta_saneado,
-        test_referencias_plataforma_sincronizadas,
-    ]
-    failed = 0
-    for t in tests:
-        try:
-            t()
-        except AssertionError as exc:
-            failed += 1
-            print(f"   ✗ {t.__name__}: {exc}")
-        except Exception as exc:  # noqa: BLE001
-            failed += 1
-            print(f"   ✗ {t.__name__}: {type(exc).__name__}: {exc}")
-    print("=" * 64)
-    if failed:
-        print(f"❌ {failed} teste(s) falharam")
-        sys.exit(1)
-    print("✅ TODOS OS TESTES ESTRUTURAIS PASSARAM")
 
 
 # --------------------------------------------------------------------------- esteira que não aborta
@@ -2077,14 +2089,19 @@ def test_ato_humano_nao_bloqueia_a_esteira():
     estado = {
         "prd_final": (
             "[NEEDS CLARIFICATION: Homologação nominal dos autores do gabarito] "
-            "e [verificar no repositório: nome da tabela]"
+            "e [verificar no repositório: nome da tabela] "
+            "e [ABERTO — dono: handoff-dev: contrato da rota de progresso]"
         )
     }
     r = varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], estado)
     severidades = {a["etapa"]: a["severidade"] for a in r["achados"]}
     assert severidades["humano"] == "decisao_humana", "ato humano é decisão, não impedimento"
+    # `[verificar no repositório]` é pendência de PLATAFORMA desde 23/09/2026: os agentes não
+    # têm o monorepo por desenho (só as cópias sincronizadas) e os prompts 34 e 47 mandam
+    # escrever o marcador. Tratá-lo como lacuna de dev era punir o agente por obedecer.
+    assert severidades["plataforma"] == "atencao", "marcador de repositório é pendência de plataforma"
     assert severidades["dev"] == "bloqueio", "lacuna real de dev continua bloqueando"
-    print("   ✓ ato humano vira decisão humana; lacuna de construção continua bloqueio")
+    print("   ✓ ato humano vira decisão; marcador de repositório é plataforma; lacuna de dev bloqueia")
 
 
 def test_prd_inconsistente_consigo_mesmo_e_barrado():
@@ -2103,6 +2120,12 @@ def test_prd_inconsistente_consigo_mesmo_e_barrado():
         "Tabela `exp02ef1b_sessoes`.\n"
         "| EVT-001 | interacted | onde é lido: `exp02ef1b_sessoes` + painel |\n"
         "Diretório `apps/experiencias/exp02ef1b/`.\n"
+        # Desde o corte A2 (23/09/2026) o plano de implementação também é conferido aqui:
+        # eram os TEC-07/08/09/10 que a banca cobrava do handoff, uma etapa antes de o PRD
+        # existir. PRD "limpo" passou a incluí-los.
+        "Porta em `apps/hub/lib/experiencias-dev.ts` (`strictPort`, `CORS_ORIGINS`).\n"
+        "Versão em `experiencia.json`, `package.json` e `EXP_VERSION` (`versao.test.ts`).\n"
+        "Walkthrough: `node scripts/e2e/rodar.mjs estudante`. Invariantes em `invariantes.ts`.\n"
     )
     assert validar_prd(limpo)["status"] == "aprovado", validar_prd(limpo)["achados"]
 
@@ -2344,3 +2367,1427 @@ def test_catalogo_ficha_le_slug_ano_ambiente_e_descoberta_do_estado():
     assert f["descoberta"].startswith("Eu segui uma conta"), f["descoberta"]
     assert f["status"] == "bloqueada", "missão bloqueada entra no índice — senão a mesma ideia volta"
     print("   ✓ catálogo: ficha lê slug, ano, bimestre, ambiente, habilidade e descoberta da spec")
+
+
+def test_cortes_da_auditoria_de_23_09():
+    """Os cortes A2/A4/A8/A9 da auditoria de 23/09/2026, cada um com o caso real que o motivou.
+
+    Os três primeiros derrubam achado que nenhuma rodada de correção podia fechar; o quarto
+    põe no PRD uma pergunta que a banca fazia ao handoff — e que o PRD é quem responde.
+    """
+    from tools.rastro import validar_telemetria, validar_manifesto, validar_prd
+
+    base = (
+        "| Evento | Verbo xAPI | Objeto | resultado | contexto |\n"
+        "| E1 | interacted | `chat:amara` | `{\"ok\": true}` | `{\"n\": 1}` |\n"
+        "Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s. Grava em `exp08ef2b_sessoes`.\n"
+    )
+    # A4 — as cinco formas reais de descartar WebSocket nas 14 primeiras execuções
+    for forma in (
+        "Cloud Run é stateless e não sustenta conexões persistentes WebSocket com autoscaling.",
+        "/// Não usa WebSocket (ADR-93/94). Linha única por turma.",
+        "Comunicação síncrona operada unicamente por polling HTTP (proibição de WebSockets).",
+        "Relógio coletivo operado por polling. Não utiliza WebSocket.",
+        "Ratificado o uso exclusivo de polling, eliminando qualquer dependência de WebSockets.",
+    ):
+        r = validar_telemetria(base + forma + "\n")
+        assert r["status"] == "aprovado", (forma, r["achados"])
+    # …e propor de verdade continua sendo apontado
+    propoe = validar_telemetria(base + "A sala usa WebSocket dedicado para o relógio coletivo.\n")
+    assert {a["codigo"] for a in propoe["achados"]} == {"websocket-mencao"}, propoe["achados"]
+
+    # A8 — `liberacao` ausente é default; declarar outro valor é que reprova
+    sem_liberacao = _SPEC_MANIFESTO_OK.replace("- `liberacao: por-turma`\n", "")
+    assert validar_manifesto(sem_liberacao)["status"] == "aprovado", validar_manifesto(sem_liberacao)["achados"]
+    outra = _SPEC_MANIFESTO_OK.replace("- `liberacao: por-turma`", "- `liberacao: aberta`")
+    assert "liberacao" in {a.get("campo") for a in validar_manifesto(outra)["achados"]}
+
+    # A2 — o plano de implementação é conferido no PRD, com severidade de atenção
+    prd_sem_plano = "# PRD\n`exp06ef1b_sessoes` guarda a sessão.\n| RF-001 | P0 | T-001 |\n"
+    cods = {a["codigo"]: a["severidade"] for a in validar_prd(prd_sem_plano)["achados"]}
+    for esperado in ("plano-sem-porta", "plano-sem-versao", "plano-sem-e2e", "plano-sem-invariantes"):
+        assert cods.get(esperado) == "atencao", (esperado, cods)
+    prd_com_plano = prd_sem_plano + (
+        "Porta em `apps/hub/lib/experiencias-dev.ts` com `strictPort`. `EXP_VERSION` e `versao.test.ts`.\n"
+        "`node scripts/e2e/rodar.mjs estudante`. Invariantes em `invariantes.ts`.\n"
+    )
+    assert not [a for a in validar_prd(prd_com_plano)["achados"] if a["codigo"].startswith("plano-sem-")]
+
+    print("   ✓ cortes de 23/09: WebSocket descartado não é achado, liberação é default, plano de implementação confere no PRD")
+
+
+def test_veredito_reproduzivel_e_retry_em_toda_chamada():
+    """Quem julga tem seed; quem inventa, não. E ninguém chama o modelo sem rede.
+
+    Dois gates sobre o mesmo artefato precisam dar o mesmo veredito — senão a matriz
+    antes × depois de uma sessão vira ruído e não há como saber se uma mudança de critério
+    funcionou. Já os agentes que INVENTAM ficam na amostragem livre: achatá-los aproxima as
+    missões umas das outras e colide com o gate de semelhança do catálogo (V5).
+
+    O retry vale para todos: a esteira faz de 33 a 55 chamadas e a banca dispara cinco
+    validadores em paralelo; um 429 no meio derrubava vinte minutos sem nada reaproveitável.
+    """
+    from agents.produto import (get_micro_gate_agent, get_gate_estrutural_agent,
+                                get_gate_final_produto_agent, get_avaliacao_pedagogica_agent,
+                                get_adequacao_pedagogica_agent, get_experiencia_aluno_agent,
+                                get_nucleo_narrativo_agent, get_secoes_apoio_agent)
+    from agents.design import get_qa_entregaveis_agent
+    from agents.dev import get_validador_agents, get_consolidacao_banca_agent
+    from agents.checkers import ConsolidacaoBancaAgent
+
+    # o consolidador da banca deixou de ser LlmAgent em 23/09/2026: o veredito é contado em
+    # código a partir dos cinco envelopes, com os bloqueantes lidos dos arquivos de critério
+    assert isinstance(get_consolidacao_banca_agent(), ConsolidacaoBancaAgent)
+
+    juizes = ([get_micro_gate_agent(), get_gate_estrutural_agent(), get_avaliacao_pedagogica_agent(),
+               get_experiencia_aluno_agent(), get_adequacao_pedagogica_agent(),
+               get_gate_final_produto_agent(), get_qa_entregaveis_agent()] + get_validador_agents())
+    for ag in juizes:
+        c = ag.generate_content_config
+        assert c.temperature is not None, f"{ag.name} emite veredito sem temperatura fixa"
+        assert c.seed is not None, f"{ag.name} emite veredito sem seed"
+
+    for ag in (get_nucleo_narrativo_agent(), get_secoes_apoio_agent()):
+        assert ag.generate_content_config.temperature is None, f"{ag.name} inventa: amostragem não se achata"
+
+    for ag in juizes + [get_nucleo_narrativo_agent()]:
+        ro = ag.generate_content_config.http_options.retry_options
+        assert ro.attempts >= 2 and 429 in ro.http_status_codes, f"{ag.name} chama o modelo sem retry"
+
+    print(f"   ✓ {len(juizes)} juízes com seed fixo, agentes criativos livres, retry com backoff em todos")
+
+
+def test_donos_e_etapas_e_fonte_unica():
+    """A regra que o agente lê e a que o classificador aplica saem do mesmo arquivo.
+
+    Enquanto a lista de tokens vivia só em `tools/rastro.py`, o prompt mandava escrever um
+    marcador que o gate reprovava, e a lista acumulou cinco correções datadas — uma por
+    sessão quebrada. `references/donos-e-etapas.md` tem a prosa (que os prompts incluem) e a
+    cerca JSON (que o código lê): mudar a regra passa a mexer nas duas metades de uma vez.
+    """
+    import json, re
+    from prompts import REFERENCES_DIR
+    from tools.rastro import (ETAPAS, ETAPAS_NAO_BLOQUEANTES, _TOKENS_ETAPA, _DONOS_ROTEAVEIS,
+                              _DONO_DO_MARCADOR, _etapa_por_tokens, classificar_dono, varrer_lacunas)
+
+    texto = (REFERENCES_DIR / "donos-e-etapas.md").read_text(encoding="utf-8")
+    contrato = json.loads(re.search(r"```json\s*(\{.*?\})\s*```", texto, re.DOTALL).group(1))
+
+    assert tuple(contrato["ordem_precedencia"]) == ETAPAS
+    assert set(contrato["etapas"]) == set(_TOKENS_ETAPA)
+    assert set(ETAPAS_NAO_BLOQUEANTES) == {e for e, d in contrato["etapas"].items() if not d["bloqueia"]}
+    # a prosa da tabela e o JSON não podem divergir sobre quem bloqueia
+    for etapa, dados in contrato["etapas"].items():
+        marca = "**sim**" if dados["bloqueia"] else "não (🟡)"
+        assert f"| `{etapa}` | {marca} |" in texto, f"a tabela em prosa discorda do JSON sobre {etapa}"
+
+    # Todo slug CANÔNICO que o despacho aciona precisa cair numa etapa — senão o ticket some
+    # em `checkers.py`. Os apelidos (`lacunas` para `fecha-lacunas`) ficam de fora de
+    # propósito: como token soltos casariam prosa comum ("gate-rastro-lacunas") e roubariam
+    # marcadores de outras etapas.
+    for slug in set(_DONOS_ROTEAVEIS.values()):
+        assert _etapa_por_tokens(slug) is not None, f"slug roteável `{slug}` não pertence a etapa nenhuma"
+
+    # os donos que a auditoria de 23/09 corrigiu, um a um
+    for texto_dono, esperado in (("PO", "humano"), ("Product Owner", "humano"), ("PM", "humano"),
+                                 ("Responsável de Dados", "externo"), ("parceiro Entre Redes", "externo"),
+                                 ("design system", "plataforma"), ("telas", "design"), ("assets", "dev")):
+        assert classificar_dono(texto_dono, "produto") == esperado, texto_dono
+    # e o que NÃO pode ter mudado: marcador com dono de agente continua bloqueando
+    assert classificar_dono("decisão pendente [ABERTO — gate-estrutural]", "produto") == "produto"
+
+    assert _DONO_DO_MARCADOR["rs_pendente"] == "humano"
+    assert _DONO_DO_MARCADOR["verificar_repositorio"] == "plataforma"
+
+    print(f"   ✓ donos e etapas: {len(ETAPAS)} etapas e {len(set(_DONOS_ROTEAVEIS.values()))} slugs, "
+          f"prosa e código lidos do mesmo arquivo")
+
+
+def test_erro_de_grafia_nao_vira_erro_de_arquitetura():
+    """Regressão da exp04ef1b (22/09/2026): um underscore produzia duas acusações falsas.
+
+    O handoff escreveu `exp_04ef1b_gates_turma` — a tabela CERTA com grafia errada — e
+    declarou o canal corretamente ("nunca WebSocket, conforme ADR-93/94"). Como os dois
+    detectores exigiam a grafia sem underscore para RECONHECER a tabela, o gate emitiu
+    `tabela-leitura` ("nenhuma tabela nomeada") e `websocket` ("WebSocket como canal de
+    sala"), ambos falsos — enquanto o defeito que existia de fato, o prefixo quebrado, não
+    era nomeado por ninguém.
+
+    Um defeito, um achado, com o nome que ele tem.
+    """
+    from tools.rastro import validar_telemetria
+
+    base = ("| Evento | Verbo xAPI | Objeto | resultado | contexto |\n"
+            "| E1 | interacted | `chat:amara` | `{}` | `{}` |\n"
+            "Nunca WebSocket (ADR-93/94): a sala sincroniza por polling HTTP de 3s.\n")
+
+    torto = base + "Relógio em `exp_04ef1b_gates_turma`; sessão em `exp_04ef1b_sessoes`.\n"
+    cods = {a["codigo"]: a["severidade"] for a in validar_telemetria(torto)["achados"]}
+    assert cods.get("prefixo-tabela") == "bloqueio", cods
+    assert "tabela-leitura" not in cods, "a tabela foi nomeada, só com grafia errada"
+    assert "websocket" not in cods, "o canal está declarado: grafia errada não é arquitetura errada"
+
+    certo = base + "Relógio em `exp04ef1b_gates_turma`; sessão em `exp04ef1b_sessoes`.\n"
+    assert validar_telemetria(certo)["status"] == "aprovado", validar_telemetria(certo)["achados"]
+
+    # e o controle: sem tabela nenhuma, o bloqueio de leitura continua
+    assert "tabela-leitura" in {a["codigo"] for a in validar_telemetria(base)["achados"]}
+
+    # `polling` sozinho não serve de escudo para quem propõe WebSocket de verdade
+    escudo = ("| Evento | Verbo | Objeto | resultado | contexto |\n| E1 | interacted | `a:b` | `{}` | `{}` |\n"
+              "Usamos polling. A sala sincroniza por WebSocket dedicado.\n")
+    assert "websocket" in {a["codigo"] for a in validar_telemetria(escudo)["achados"]}
+
+    print("   ✓ prefixo com underscore é achado próprio; canal declarado com grafia errada não vira WebSocket")
+
+
+def test_banca_consolidada_em_codigo_enxerga_todos_os_bloqueantes():
+    """O consolidador da banca prometia veredito determinístico e era um LlmAgent.
+
+    Em 14 execuções leu 122 achados e aprovou 14 vezes. E a lista de bloqueantes que o prompt
+    dele carregava omitia `DES-14` — visão do professor completa, declarada bloqueante nos
+    critérios desde 22/09/2026. A visão do professor podia faltar inteira e a banca liberava.
+
+    A lista passa a ser lida dos próprios arquivos de `references/criterios-dev/`: uma fonte,
+    sem cópia para divergir.
+    """
+    from tools.banca import todos_bloqueantes, consolidar, FORA_DA_ESTEIRA
+
+    travam = todos_bloqueantes()
+    assert len(travam) == 22, sorted(travam)
+    assert "DES-14" in travam, "o bloqueante que o prompt do consolidador não enxergava"
+
+    # ❌ em bloqueante reprova
+    r = consolidar({"validacao_design_imersao": {"achados": [
+        {"codigo": "DES-14", "severidade": "bloqueio", "resumo": "sem visão do professor"}]}})
+    assert r["status"] == "bloqueado", r
+
+    # dimensão que não respondeu é bloqueio, nunca aprovação
+    assert consolidar({"validacao_dados_lgpd": None})["status"] == "bloqueado"
+
+    # o que pede ato no monorepo vira pendência declarada e não rebaixa o veredito
+    r_plat = consolidar({"validacao_tecnica_arquitetura": {"achados": [
+        {"codigo": "TEC-09", "severidade": "bloqueio", "resumo": "sem roteiro de walkthrough"}]}})
+    assert r_plat["status"] == "aprovado", r_plat
+    assert r_plat["achados"][0]["classe"] == "pendencia-plataforma"
+    assert "TEC-09" in FORA_DA_ESTEIRA
+
+    # o veredito global é o PIOR das dimensões
+    r_misto = consolidar({
+        "validacao_produto_narrativa": {"achados": []},
+        "validacao_pedagogia_bncc": {"achados": [{"codigo": "PED-09", "severidade": "bloqueio", "resumo": "x"}]},
+    })
+    assert r_misto["status"] == "amarelo", r_misto  # PED-09 não é bloqueante
+
+    print(f"   ✓ banca consolidada em código: {len(travam)} bloqueantes lidos dos critérios, DES-14 incluído")
+
+
+def test_gaps_estruturais_da_auditoria():
+    """Quatro coisas que a esteira perdia em silêncio (auditoria de 23/09/2026)."""
+    from tools.catalogo import saude_do_indice, aviso_de_indice_cego
+    from tools.prototipo import validar as lint_prototipo
+    from agents.produto import get_brief_escopo_split
+
+    # G1 — o gate de semelhança se autodesliga quando o índice está incompleto, e ninguém sabe
+    cego = {"missoes": [{"slug": "a", "tipo_decisao": "—", "porta_abstracao": "—"},
+                        {"slug": "b", "tipo_decisao": "[preencher do manifesto]", "porta_abstracao": "x"}]}
+    # `base` vazio: sem ele a saúde também conta as sessões do `output/` real da máquina, e o
+    # teste passava ou falhava conforme o que o desenvolvedor tinha gerado.
+    import tempfile
+    from pathlib import Path
+    vazio = Path(tempfile.mkdtemp())
+    saude = saude_do_indice(cego, base=vazio)
+    assert saude["cegas"] == 2 and saude["fracao_cega"] == 1.0
+    assert "praticamente desligada" in (aviso_de_indice_cego(saude) or "")
+    cheio = {"missoes": [{"slug": "a", "tipo_decisao": "escolher fonte", "porta_abstracao": "explicar",
+                          "descoberta": "o feed esconde o que eu não sigo", "ambiente": "instanooria"}]}
+    assert aviso_de_indice_cego(saude_do_indice(cheio, base=vazio)) is None
+    # os dois defeitos juntos: um aviso não pode esconder o outro
+    (vazio / "20260922-181029-exp06ef1b").mkdir()
+    (vazio / "20260922-181029-exp06ef1b" / "estado.json").write_text("{}")
+    ambos = aviso_de_indice_cego(saude_do_indice(cego, base=vazio)) or ""
+    assert "praticamente desligada" in ambos and "exp06ef1b" in ambos, ambos
+
+    # G2 — o brief de escopo sai do one-pager antes do revisor o apagar
+    split = get_brief_escopo_split()
+    assert split.source_key == "one_pager" and split.extracoes[0]["chave"] == "brief_escopo"
+
+    # G3 — o protótipo deixa de se auto-aprovar: o lint toca o arquivo
+    assert lint_prototipo("")["status"] == "bloqueado"
+    assert lint_prototipo("<html><body>E1-ALU-01 TODO</body></html>")["status"] == "bloqueado"
+    faltando = lint_prototipo("<html><body>E1-ALU-01</body></html>", ["E1-ALU-01", "E3-ALU-02"])
+    assert {a["codigo"] for a in faltando["achados"]} == {"telas-ausentes"}
+    assert lint_prototipo("<html><body>E1-ALU-01 E3-ALU-02</body></html>",
+                          ["E1-ALU-01", "E3-ALU-02"])["status"] == "aprovado"
+
+    # G4 — o gate estrutural passa a receber a rodada que o prompt afirma receber
+    from prompts.loader import load_prompt
+    assert "{gate_estrutural_rodada?}" in load_prompt("produto/05_gate_estrutural.md")
+
+    print("   ✓ gaps estruturais: índice cego avisa, brief sobrevive ao revisor, protótipo é lido, gate sabe a rodada")
+
+
+def test_pedagogia_falsificavel():
+    """Os critérios pedagógicos deixam de valer só como prosa (auditoria de 23/09/2026)."""
+    from tools.evidencia import validar
+    from tools.catalogo import recorrencias
+    from tools.diagnostico import GATES
+
+    # os três pareceres pedagógicos passam a ter gate no dossiê
+    chaves = {g["status"] for g in GATES}
+    for k in ("avaliacao_status", "experiencia_status", "adequacao_status", "evidencia_status"):
+        assert k in chaves, f"{k} sem gate: o veredito existia e ninguém o lia"
+
+    base = ("## 9. Evidências\n"
+            "| Medida | Grau | Sinais | Canal | Tabela.coluna | Habilidade |\n|---|---|---|---|---|---|\n"
+            "| `posts_no_mural` | `scored` | `salvar:post` + `submeter:mural` | operacional | `exp06ef1b_sessoes.posts` | `EF06CO09` |\n"
+            "- `gabarito_servidor: sim`\n"
+            "## 11. Currículo\n"
+            "| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Marcador |\n|---|---|---|---|---|---|\n"
+            "| `EF06CO09` | `E3-ALU-01` (Decidir) | fixa 1 post | rolar o feed | `posts_no_mural` | ternário |\n")
+    assert validar(base)["status"] == "aprovado", validar(base)["achados"]
+
+    # (a) `scored` exige os dois sinais que a própria definição do bloco 9 pede
+    um_sinal = base.replace("`salvar:post` + `submeter:mural`", "`salvar:post`")
+    assert "scored-1-sinal" in {a["codigo"] for a in validar(um_sinal)["achados"]}
+
+    # (b) habilidade declarada sem dado que a meça é currículo no papel
+    sem_medida = base.replace("| `posts_no_mural` | ternário |", "| — | ternário |")
+    assert "habilidade-sem-medida" in {a["codigo"] for a in validar(sem_medida)["achados"]}
+
+    # (c) PED-04 é bloqueante e nada o conferia
+    assert "gabarito-nao-declarado" in {a["codigo"] for a in validar(base.replace("- `gabarito_servidor: sim`", ""))["achados"]}
+    assert "gabarito-no-cliente" in {a["codigo"] for a in validar(base + "\nO gabarito fica no bundle do cliente.\n")["achados"]}
+    # ...mas a spec que CUMPRE a regra falando do bundle não é acusada
+    cumpre = base + "\n**Garante:** ausência total de pistas de gabarito no bundle do cliente.\n"
+    assert "gabarito-no-cliente" not in {a["codigo"] for a in validar(cumpre)["achados"]}
+
+    # o achado que volta em duas missões diferentes vira candidato a regra
+    idx = {"missoes": [
+        {"slug": "a", "achados_pedagogicos": [{"padrao": "termo-sem-ancoragem", "resumo": "x"}]},
+        {"slug": "b", "achados_pedagogicos": [{"padrao": "termo-sem-ancoragem", "resumo": "y"}]},
+        {"slug": "a", "achados_pedagogicos": [{"padrao": "termo-sem-ancoragem", "resumo": "z"}]},
+        {"slug": "a", "achados_pedagogicos": [{"padrao": "so-desta", "resumo": "w"}]},
+        {"slug": "a", "achados_pedagogicos": [{"padrao": "so-desta", "resumo": "w"}]},
+        {"slug": "a", "achados_pedagogicos": [{"padrao": "so-desta", "resumo": "w"}]}]}
+    rec = recorrencias(idx)
+    assert [r["padrao"] for r in rec] == ["termo-sem-ancoragem"], rec
+    print("   ✓ pedagogia: 4 gates novos, grau/matriz/gabarito conferidos, achado recorrente identificado")
+
+
+def test_conteudo_imersao_e_escola_publica():
+    """Acessibilidade contável, spoiler a jusante e o cenário que não se corta."""
+    from prompts.loader import load_prompt
+
+    qa = load_prompt("design/30_qa_entregaveis.md")
+    # F1 — não havia NENHUMA linha de acessibilidade contável na esteira: era texto sem verificação
+    assert "4,5:1" in qa and "Ordem de foco" in qa, "contraste e ordem de foco não são contáveis"
+    assert "64×64" in qa, "o alvo de toque já existia e não pode ter saído"
+    # A-01 (auditoria de 23/09/2026): as linhas contáveis viviam dentro da D8b, que só roda
+    # com CAA `concluido` — 4 das 14 missões medidas saíram sem nenhuma verificação. Elas têm de
+    # estar numa dimensão que roda sempre, e a D8b não pode voltar a ser a única dona delas.
+    import re as _re
+    d4a = _re.search(r"\*\*D4a — Acessibilidade.*?(?=\n\*\*D5 —)", qa, _re.S)
+    assert d4a, "a dimensão de acessibilidade de toda missão (D4a) sumiu"
+    for linha in ("4,5:1", "64×64", "Ordem de foco", "nada-so-por-cor"):
+        assert linha in d4a.group(0), f"{linha} saiu da D4a"
+    assert "Roda sempre" in d4a.group(0)
+    d8b = _re.search(r"\*\*D8b — Camada CAA.*?(?=\n\n)", qa, _re.S).group(0)
+    assert "4,5:1" not in d8b, "o contraste voltou a depender da camada CAA"
+    assert "D4a" in qa.split("## Veredito por dimensão")[1], "a D4a não aparece no template de saída"
+
+    # F4 — o micro-gate testa spoiler no núcleo e nada testava depois: copy, tela e protótipo
+    # podiam entregar de graça o que a missão existe para a criança descobrir
+    assert "D3b" in qa and "Spoiler a jusante" in qa
+
+    # F5 — dois a quatro por aparelho é o primeiro cenário da escola pública, não variação de luxo
+    telas = load_prompt("design/26_telas.md")
+    assert "estado degradado 2–4 por aparelho" in telas
+    i_excecao = telas.index("Exceção que não se prioriza para fora")
+    i_degradado = telas.index("estado degradado 2–4 por aparelho")
+    assert i_degradado > i_excecao, "o 2–4 precisa estar DENTRO da exceção que não se corta"
+
+    print("   ✓ conteúdo: contraste e foco contáveis, spoiler testado a jusante, cenário 2–4 blindado")
+
+
+def test_kpi_aponta_para_algo_que_o_mede():
+    """O KPI deixa de ser número solto (auditoria de 23/09/2026).
+
+    Nos 14 PRDs medidos: 34 KPIs sem pergunta e sem decisão — métrica de vaidade por
+    definição; 20 com baseline `0%`, que não é medida mas espaço em branco vestido de número;
+    KPI de uma tela alimentado por evento de OUTRA, com o número saindo parecendo certo; e
+    evento declarando leitura em `/telemetry/batch`, que é a fila de entrada, não um leitor.
+    O `telemetria-check` deu verde em cinco dessas sessões: confere o formato do evento, não
+    se o KPI fecha com ele.
+    """
+    from tools.kpis import validar_kpis, extrair_perguntas_do_briefing, catalogo, sinais_exigidos
+
+    # os sinais universais das transversais de dono `missao`, copiados do catálogo como o redator faria
+    universais = "".join(
+        f"| {s} | {catalogo()['sinais'][s].get('verbo', '—')} | "
+        f"{catalogo()['sinais'][s]['objeto'].replace('<expId>', 'exp06ef1b')} | catálogo "
+        f"| `{{\"x\": 1}}` | — | painel de produto (PostHog) |\n"
+        for s in sorted(sinais_exigidos(False)))
+    bom = ("## 2. Objetivos\n"
+           "| KPI | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |\n"
+           "|---|---|---|---|---|---|---|---|---|---|\n"
+           "| KPI-01 | quantas turmas chegam ao fim? | <50% encurta | missao · serie | E3-ALU-02 | EVT-005 "
+           "| count(EVT-005) | sem baseline — primeira medição | 70% | 2 meses |\n"
+           "## 13. Eventos\n"
+           "| EVT | Verbo | Objeto | Quando dispara | resultado | contexto | Onde é lido |\n|---|---|---|---|---|---|---|\n"
+           "| EVT-005 | interacted | mural:salvar | Toque em Salvar, na tela E3-ALU-02 | `{\"ok\": true}` | `{\"ms\": 1}` | `exp06ef1b_sessoes` |\n"
+           + universais)
+    assert validar_kpis(bom)["status"] == "aprovado", validar_kpis(bom)["achados"]
+
+    def cods(txt):
+        return {a["codigo"] for a in validar_kpis(txt)["achados"]}
+
+    # o caso real: "Retenção na Mesa de Limpeza" alimentado por evento de "Salvar no Mural"
+    assert "kpi-tela-divergente" in cods(bom.replace("na tela E3-ALU-02", "na tela E3-ALU-01"))
+    # …mas o KPI que declara só a ETAPA casa com qualquer tela dela
+    assert "kpi-tela-divergente" not in cods(bom.replace("| E3-ALU-02 | EVT-005 |", "| E3 | EVT-005 |"))
+
+    assert "baseline-zero" in cods(bom.replace("sem baseline — primeira medição", "0%"))
+    assert "baseline-ausente" in cods(bom.replace("sem baseline — primeira medição", "—"))
+    assert "kpi-sem-pergunta" in cods(bom.replace("| quantas turmas chegam ao fim? |", "|  |"))
+    assert "kpi-sem-decisao" in cods(bom.replace("| <50% encurta |", "|  |"))
+    assert "payload-nao-computa" in cods(bom.replace("count(EVT-005)", "count(resultado.falso_neutro)"))
+    assert "kpi-evento-inexistente" in cods(bom.replace("| EVT-005 | count", "| EVT-099 | count"))
+    assert "leitura-sem-leitor" in cods(bom.replace("`exp06ef1b_sessoes` |", "`/telemetry/batch` |"))
+    assert "kpi-aponta-tabela-ou-rota" in cods(bom.replace("| EVT-005 | count", "| `exp06ef1b_sessoes` | count"))
+
+    # a mensagem traz a saída, não só o erro (a rodada 2 de 23/09 deixou os dois que não traziam)
+    msg = [a["resumo"] for a in validar_kpis(bom.replace("na tela E3-ALU-02", "na tela E3-ALU-01"))["achados"]
+           if a["codigo"] == "kpi-tela-divergente"][0]
+    assert "Nenhum evento da tabela dispara nessa tela" in msg, msg
+    msg = [a["resumo"] for a in validar_kpis(bom.replace("count(EVT-005)", "count(contexto.detalhes)"))["achados"]
+           if a["codigo"] == "payload-nao-computa"][0]
+    assert "`ms`" in msg and "Coluna de tabela do módulo não é campo do evento" in msg, msg
+
+    # o catálogo: sinal universal ausente, reaproveitado para outro evento, e KPI herdado com evento próprio
+    assert "sinal-universal-ausente" in cods(bom.replace("| EVT-U04 |", "| EVT-904 |"))
+    assert "sinal-universal-divergente" in cods(bom.replace("etapa:entrar", "sessao:iniciar"))
+    herdado = ("\n| KPI | PQ | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |\n"
+               "|---|---|---|---|---|---|---|---|---|---|---|\n"
+               "| KPI-02 | T7 | De cada X turmas liberadas, quantas chegam ao fim da missão? | <50% encurta | missao "
+               "| — | {evt} | turmas com EVT-U03 / turmas com EVT-U01 | sem baseline — primeira medição | 70% | 2 meses |\n\n")
+    com = lambda evt, t="T7": bom.replace("## 13. Eventos", herdado.format(evt=evt).replace("T7", t) + "## 13. Eventos")
+    assert validar_kpis(com("EVT-U01, EVT-U03"))["status"] == "aprovado", validar_kpis(com("EVT-U01, EVT-U03"))["achados"]
+    assert "kpi-herdada-evento" in cods(com("EVT-U01, EVT-005")), "o caso de 23/09: a lupa medindo T1"
+    assert "kpi-herdada-plataforma" in cods(com("EVT-U01", t="T1"))
+    assert "kpi-herdada-inexistente" in cods(com("EVT-U01", t="T30"))
+
+    # o PO escreve em português; a esteira normaliza
+    tabela = extrair_perguntas_do_briefing(
+        "## Perguntas de produto\nAulas: 1\nHerdar: T1, T2\n"
+        "- quantas duplas trocam de escolha? → decisão: se <20%, reforçar a mediação → corte: turma\n")
+    assert "declared_lessons: 1" in tabela and "PQ-01" in tabela and "| PO |" in tabela
+    assert extrair_perguntas_do_briefing("briefing sem o bloco") == ""
+
+    print("   ✓ KPI: pergunta, decisão, corte, evento na tela certa e baseline honesto — tudo conferido")
+
+
+def test_custo_e_tendencia_da_esteira():
+    """Quanto custa gerar uma missão, e estamos melhorando? Duas perguntas sem resposta até agora."""
+    import tempfile, pathlib as _p
+    from tools import historico
+    from tools.diagnostico import bloco_de_execucao
+
+    # O `usage_metadata` de cada evento era descartado: ninguém sabia o custo nem qual agente pesa
+    st = {"execucao": {"modelo": "gemini-3.8-flash", "seed_juiz": 20260923, "temperatura_juiz": 0.1,
+                       "duracao_s": 742.3, "tokens": {"entrada": 1_840_000, "saida": 210_000, "chamadas": 41},
+                       "tokens_por_agente": {"A47PrdWriter": {"entrada": 390_000, "saida": 48_000, "chamadas": 2}}}}
+    bloco = bloco_de_execucao(st)
+    assert "2.050.000" in bloco, "o total de tokens precisa aparecer no dossiê"
+    assert "seed `20260923`" in bloco, "sem seed e modelo, duas execuções não são comparáveis"
+    assert "A47PrdWriter" in bloco and "390.000" in bloco
+    assert bloco_de_execucao({}) == "", "execução sem o bloco não quebra o dossiê"
+
+    # série temporal: a queda de achados entre a primeira e a segunda metade da janela
+    base = _p.Path(tempfile.mkdtemp())
+    for i in range(6):
+        historico.registrar({"execucao": {"modelo": "m", "duracao_s": 700,
+                                          "tokens": {"entrada": 100_000, "saida": 10_000, "chamadas": 40}},
+                             "rastro_lacunas_status": "aprovado",
+                             "rastro_lacunas_status_envelope": {"achados": [{"x": 1}] * (5 - i)}},
+                            sessao=f"s{i}", base=base)
+    assert len(historico.carregar(base)) == 6
+    t = historico.tendencia(base)
+    assert t["suficiente"] and t["achados"]["depois"] < t["achados"]["antes"], t
+    assert historico.tendencia(_p.Path(tempfile.mkdtemp()))["suficiente"] is False
+
+    print("   ✓ custo por agente no dossiê, execução reproduzível e tendência de achados medida")
+
+
+def test_agentes_novos_rodam_de_ponta_a_ponta():
+    """Os agentes determinísticos novos, exercitados pelo ADK — não só pelas funções que chamam.
+
+    Dois bugs só apareceram numa execução real, porque os testes cobriam `tools/` mas nunca
+    instanciavam os agentes: um ramo de `RastroCheckAgent` inserido no bloco que monta a
+    mensagem em vez do que calcula o resultado (`UnboundLocalError: msg`), e `extrair_slug`
+    recebendo o dicionário de estado quando espera o TEXTO do one-pager (`TypeError`). Os dois
+    custaram 20 minutos de execução cada.
+    """
+    from agents.checkers import ConsolidacaoBancaAgent, PrototipoLintAgent, RastroCheckAgent
+
+    spec = ("# Spec — `id: exp06ef1b`\n## 9. Evidências\n"
+            "| Medida | Grau | Sinais | Canal | Tabela.coluna | Habilidade |\n|---|---|---|---|---|---|\n"
+            "| `posts` | `scored` | `a:b` + `c:d` | operacional | `exp06ef1b_sessoes.p` | `EF06CO09` |\n"
+            "- `gabarito_servidor: sim`\n## 11. Currículo\n"
+            "| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Marcador |\n"
+            "|---|---|---|---|---|---|\n| `EF06CO09` | `E3-ALU-02` | fixa | rola | `posts` | ternário |\n")
+
+    root = SequentialAgent(name="R", sub_agents=[
+        FakeAgent(name="Spec", key="spec_missao", text=spec),
+        FakeAgent(name="Jornada", key="jornada_telas", text="| E1-ALU-01 | abertura |\n"),
+        FakeAgent(name="Proto", key="prototipo_arquivo", text="<html><body>E1-ALU-01</body></html>"),
+        FakeAgent(name="Prd", key="prd_final", text="# PRD\n`exp06ef1b_sessoes`\n"),
+        FakeAgent(name="V1", key="validacao_produto_narrativa",
+                  text='```json\n{"status": "aprovado", "achados": []}\n```'),
+        RastroCheckAgent(name="A15bEvidenciaCheck", modo="evidencia", rotulo="Matriz de evidência",
+                         report_key="evidencia_report", status_key="evidencia_status", estrito=False),
+        RastroCheckAgent(name="A48bKpisCheck", modo="kpis", rotulo="KPI",
+                         report_key="kpis_report", status_key="kpis_status", estrito=False),
+        RastroCheckAgent(name="A15cPerguntasCheck", modo="perguntas", rotulo="Perguntas de produto (9f)",
+                         report_key="perguntas_report", status_key="perguntas_status", estrito=False),
+        PrototipoLintAgent(name="A29cPrototipoLint"),
+        ConsolidacaoBancaAgent(name="A44", fontes=["validacao_produto_narrativa"]),
+    ])
+    _, st = asyncio.run(_run(root))
+
+    # cada agente gravou status E relatório — é o que faltava quando os bugs passaram
+    for chave, relatorio in (("evidencia_status", "evidencia_report"), ("kpis_status", "kpis_report"),
+                             ("perguntas_status", "perguntas_report"),
+                             ("prototipo_lint_status", "prototipo_lint_report")):
+        assert st.get(chave), f"{chave} não foi gravado"
+        assert st.get(relatorio), f"{relatorio} não foi gravado"
+    assert st["evidencia_status"] == "aprovado", st.get("evidencia_report", "")[:200]
+    # o protótipo não tem a tela E3-ALU-02 que a jornada declara
+    assert st["prototipo_lint_status"] == "aprovado", "jornada só declara E1-ALU-01 neste teste"
+    assert st.get("validacao_dev_report"), "a banca consolidada não gerou relatório"
+    assert (st.get("dev_status_envelope") or {}).get("status") == "aprovado"
+
+    # a spec deste teste não traz o 9f: o gate precisa dizer isso em vez de estourar
+    assert st["perguntas_status"] == "bloqueado"
+    assert "9f" in st["perguntas_report"]
+
+    print("   ✓ agentes novos rodam pelo ADK: evidência, KPI, perguntas do 9f, lint e banca")
+
+
+_SPEC_9F = """
+- `declared_lessons: 1`
+- `core_action: scored decisao:mural`
+- `perguntas_herdadas: T7, T8, T9, T10, T11, T12, T14, T15, T16, T17, T19, T20`
+
+| PQ | Pergunta | Decisão que dispara | Corte | Etapa | Ação (verbo:objeto) | Origem |
+|---|---|---|---|---|---|---|
+| PQ-01 | quantas duplas trocam de escolha depois do Aha? | <20% → reforçar a mediação na etapa 3 | turma | E4 | `progressed aha:revelacao` | PO |
+| PQ-02 | quantas turmas chegam ao mural? | <50% → encurtar a etapa 3 | turma | E5 | `scored decisao:mural` | PO |
+| PQ-03 | quantos abrem a aba de fontes? | <30% → dar pista na copy | missao | E2 | `interacted aba:fontes` | [PROPOSTA — validar com PO] |
+| PQ-04 | quantos refazem a escolha antes de salvar? | >40% → a decisão está confusa | turma | E4 | `attempted decisao:mural` | [PROPOSTA — validar com PO] |
+| PQ-05 | quantos professores abrem o painel antes da aula? | <50% → mudar o convite | escola | E0 | `opened painel:professor` | [PROPOSTA — validar com PO] |
+
+| Verbo | Objeto | Quando dispara | Resultado | Contexto | Caminho | Onde é lido |
+|---|---|---|---|---|---|---|
+| progressed | aha:revelacao | ao virar a carta | {"trocou": true} | {"etapa": 4} | analítico | exp09ef1b_sessoes |
+| scored | decisao:mural | ao salvar no mural | {"acertos": 3} | {"tempo_ms": 120000} | operacional | exp09ef1b_sessoes |
+| interacted | aba:fontes | ao abrir a aba | {"aberta": true} | — | analítico | exp09ef1b_sessoes |
+| attempted | decisao:mural | a cada troca | {"trocas": 2} | — | analítico | exp09ef1b_sessoes |
+| opened | painel:professor | ao abrir o painel | {"aberto": true} | — | analítico | exp09ef1b_gates_turma |
+| attempted | missao:iniciar | primeira tela do estudante | {"retomada": false} | {"etapa": "E1"} | analítico | painel de produto (PostHog) |
+| progressed | etapa:entrar | ao entrar em cada etapa | {"etapa": "E2"} | {"pedagogical_role": "core_action"} | analítico | painel de produto (PostHog) |
+| interacted | aviso:inatividade | ao exibir o aviso | {"segundos_sem_acao": 90} | {"etapa": "E2"} | analítico | painel de produto (PostHog) |
+| attempted | erro:exibir | ao exibir erro diegético | {"codigo": "sem-sinal"} | {"etapa": "E2"} | analítico | painel de produto (PostHog) |
+"""
+
+
+def test_perguntas_de_produto_9f():
+    """As cinco perguntas do 9f: quantidade fechada, decisão com limiar, e uma ação que a spec
+    de fato emite e que carrega número. Até 23/09/2026 nada disso era conferido — a pergunta
+    nascia na spec sem gate e chegava ao PRD já convertida em KPI."""
+    from tools.kpis import PQ_POR_MISSAO, validar_9f
+
+    assert PQ_POR_MISSAO == 5
+    ok = validar_9f(_SPEC_9F)
+    assert ok["status"] == "aprovado", [a["codigo"] for a in ok["achados"]]
+    assert ok["perguntas"] == 5
+
+    # Uma a menos é lacuna: o número é fechado justamente para o PO não receber página em branco.
+    quatro = validar_9f(_SPEC_9F.replace(
+        "| PQ-05 | quantos professores abrem o painel antes da aula? | <50% → mudar o convite | escola | E0 | `opened painel:professor` | [PROPOSTA — validar com PO] |\n", ""))
+    assert quatro["status"] == "bloqueado"
+    assert [a["codigo"] for a in quatro["achados"]] == ["pq-faltando"]
+
+    # Ação que a tabela de eventos não declara: a pergunta não tem como ser respondida.
+    orfa = validar_9f(_SPEC_9F.replace("`interacted aba:fontes`", "`interacted aba:inexistente`"))
+    assert orfa["status"] == "bloqueado"
+    assert any(a["codigo"] == "pq-acao-sem-evento" for a in orfa["achados"])
+
+    # Evento que existe mas não carrega nada: diz que aconteceu, não quanto.
+    mudo = validar_9f(_SPEC_9F.replace('| interacted | aba:fontes | ao abrir a aba | {"aberta": true} | — |',
+                                       "| interacted | aba:fontes | ao abrir a aba | — | — |"))
+    assert any(a["codigo"] == "pq-evento-nao-mede" for a in mudo["achados"])
+
+    # Decisão sem limiar não é decisão: ninguém sabe quando agir.
+    vaga = validar_9f(_SPEC_9F.replace("<30% → dar pista na copy", "melhorar a experiência"))
+    assert any(a["codigo"] == "pq-decisao-sem-limiar" for a in vaga["achados"])
+
+    # Encher linguiça para chegar a cinco: a mesma pergunta duas vezes.
+    repetida = validar_9f(_SPEC_9F.replace("quantos abrem a aba de fontes?", "quantas turmas chegam ao mural?"))
+    assert any(a["codigo"] == "pq-duplicada" for a in repetida["achados"])
+
+    # `core_action` que a tabela de eventos não emite: a decisão central não é medida por nada.
+    sem_core = validar_9f(_SPEC_9F.replace("`core_action: scored decisao:mural`", "`core_action: scored decisao:fantasma`"))
+    assert any(a["codigo"] == "core-action-sem-evento" for a in sem_core["achados"])
+
+    # As transversais do PO: as de dono `missao` são herdadas inteiras, as de `plataforma` não se
+    # declaram, e o evento universal do estudante nasce no bloco 9 com o verbo e o objeto do catálogo.
+    def cods(txt):
+        return [a["codigo"] for a in validar_9f(txt)["achados"]]
+    assert "herdada-plataforma" in cods(_SPEC_9F.replace("T7, T8,", "T1, T7, T8,"))
+    assert "herdada-faltando" in cods(_SPEC_9F.replace("T7, T8,", "T8,"))
+    assert "herdada-inexistente" in cods(_SPEC_9F.replace("T7, T8,", "T30, T7, T8,"))
+    assert "sinal-universal-ausente" in cods(_SPEC_9F.replace("| progressed | etapa:entrar |", "| progressed | etapa:outra |"))
+
+    print("   ✓ 9f: cinco perguntas, decisão com limiar, ação que existe no bloco 9 e mede; herdadas e sinais do catálogo")
+
+
+def test_kpis_cruza_o_prd_com_a_spec():
+    """`validar_kpis` recebia a spec e nunca a lia: o PRD era conferido contra si mesmo, e uma
+    pergunta decidida em produto podia sumir no caminho sem que nenhum gate notasse."""
+    from tools.kpis import validar_kpis
+
+    prd = """
+| KPI | PQ | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |
+|---|---|---|---|---|---|---|---|---|---|---|
+| KPI-01 | PQ-01 | trocam de escolha? | <20% → reforçar | turma | E4-ALU-02 | `EVT-001` | razão | sem baseline — primeira medição | 20% | 11/2026 |
+| KPI-02 | PQ-09 | inventada aqui | <10% → nada | turma | E4-ALU-02 | `EVT-001` | razão | sem baseline — primeira medição | 10% | 11/2026 |
+
+| ID | Verbo | Objeto | Quando dispara | Resultado | Contexto | Onde é lido |
+|---|---|---|---|---|---|---|
+| EVT-001 | progressed | aha:revelacao | E4-ALU-02 | {"trocou": true} | — | exp09ef1b_sessoes |
+"""
+    r = validar_kpis(prd, _SPEC_9F)
+    codigos = [a["codigo"] for a in r["achados"]]
+    assert r["status"] == "bloqueado"
+    # quatro perguntas da spec ficaram sem KPI, e uma PQ do PRD não existe na spec
+    assert codigos.count("pq-sem-kpi") == 4
+    assert "kpi-pq-inexistente" in codigos
+    assert any("PQ-09" in a["resumo"] for a in r["achados"])
+
+    # Sem spec o gate não inventa achado: é o caso do modo correção que só refaz o PRD.
+    assert not [a for a in validar_kpis(prd, "")["achados"] if a["codigo"].startswith("pq-")]
+
+    print("   ✓ KPI ↔ spec: pergunta que morreu entre produto e dev, e KPI que inventou pergunta")
+
+
+def test_todo_gate_gravado_aparece_no_dossie():
+    """O cruzamento da auditoria de 23/09/2026, como teste: todo `status_key` que um agente da
+    árvore grava está no dossiê. Eram três fora, e um deles reprovava protótipo sem que quem lia
+    o diagnóstico soubesse. Gate novo que nascer invisível falha aqui."""
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+    from tools.diagnostico import CONSULTIVOS, GATES
+
+    # gravados DEPOIS do diagnóstico, ou o próprio diagnóstico: não cabem nele por construção
+    fora_por_construcao = {"catalogo_status", "diagnostico_status"}
+    consultivos = {c["chave"].replace("_report", "_status") for c in CONSULTIVOS}
+    gravados = {getattr(a, "status_key", "") for _, a in iter_agent_tree(
+        create_mission_orchestrator(stages=["produto", "design", "dev"]))} - {"", None}
+    no_dossie = {g["status"] for g in GATES}
+    invisiveis = gravados - no_dossie - consultivos - fora_por_construcao
+    assert not invisiveis, f"gates que gravam status e não aparecem no dossiê: {sorted(invisiveis)}"
+    print("   ✓ todo gate gravado aparece no dossiê (catálogo e diagnóstico fora por construção)")
+
+
+def test_lint_do_prototipo_roda_de_novo_no_retrabalho():
+    """O retrabalho reconstruía o protótipo e o QA da rodada 2 lia o lint da rodada 1 — sobre o
+    HTML velho — com a instrução de tratá-lo como fato."""
+    from agents.design import POSFIXO_RETRABALHO, _agentes_de_retrabalho
+
+    assert "A29cPrototipoLintRetrabalho" in POSFIXO_RETRABALHO
+    # depois de separar o HTML do relatório, senão lint o documento antigo de novo
+    assert POSFIXO_RETRABALHO.index("A29ArtefatosDesignRetrabalho") < POSFIXO_RETRABALHO.index("A29cPrototipoLintRetrabalho")
+    nomes = {a.name for a in _agentes_de_retrabalho()}
+    assert set(POSFIXO_RETRABALHO) <= nomes, f"posfixo sem agente: {set(POSFIXO_RETRABALHO) - nomes}"
+    print("   ✓ o lint do protótipo roda de novo depois de todo retrabalho de design")
+
+
+def test_brief_ausente_nao_sai_verde():
+    """Sem o brief, o split escrevia ⚠️ no log e gravava o status do ENVELOPE do one-pager:
+    `aprovado`. O GAP-09 voltava com cara de sucesso."""
+    from agents.produto import get_brief_escopo_split
+
+    envelope = '```json\n{"agente": "secoes-apoio", "status": "aprovado"}\n```'
+    sem = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+        FakeAgent(name="A04", key="one_pager", text="# One-pager\n\nSó o canônico.\n\n" + envelope),
+        get_brief_escopo_split(),
+    ])))[1]
+    assert sem["brief_escopo_status"] == "amarelo", sem["brief_escopo_status"]
+    assert any(a["codigo"] == "secao-ausente" for a in sem["brief_escopo_status_envelope"]["achados"])
+
+    brief = "**MISSÃO DIGITAL UNOORIA · BRIEFING DE ESCOPO**\n\n" + ("Escopo da missão. " * 20)
+    com = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+        FakeAgent(name="A04", key="one_pager", text="# One-pager\n\n" + brief + "\n\n" + envelope),
+        get_brief_escopo_split(),
+    ])))[1]
+    assert com["brief_escopo_status"] == "aprovado" and com.get("brief_escopo")
+
+    # como as duas rodadas de 23/09 escreveram: título em heading, e o one-pager sem envelope
+    # (é documento, não veredito) — antes, brief nunca separado e `envelope-ilegivel` sempre
+    heading = "# MISSÃO DIGITAL UNOORIA · BRIEFING DE ESCOPO (LEITURA RÁPIDA)\n\n" + ("Escopo da missão. " * 20)
+    h = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+        FakeAgent(name="A04", key="one_pager", text="# One-pager\n\nSó o canônico.\n\n" + heading),
+        get_brief_escopo_split(),
+    ])))[1]
+    assert h["brief_escopo_status"] == "aprovado" and h["brief_escopo"].startswith("Escopo"), h.get("brief_escopo_status")
+    assert not h["brief_escopo_status_envelope"].get("achados"), h["brief_escopo_status_envelope"]
+    print("   ✓ brief de escopo ausente sai 🟡 com achado, presente sai verde — em negrito ou heading")
+
+
+
+def test_indice_defasado_chega_ao_micro_gate_e_ao_dossie():
+    """O caso de produção em 23/09/2026: 14 sessões no bucket e 1 missão no índice. Nenhuma linha
+    furada, fração cega 0%, e portanto nenhum aviso — o V5 comparava a missão nova contra UMA. E o
+    aviso que existia só saía no relatório do catálogo, que roda depois do dossiê."""
+    import os
+    import tempfile
+    from pathlib import Path
+
+    from agents.checkers import VizinhasCatalogoAgent
+    from tools import catalogo as cat
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        cat.registrar(_ficha(), base=base)  # só a exp06ef1b está no índice, e completa
+        for pasta in ("20260922-181029-exp06ef1b", "20260922-004159-exp05ef1b", "20260921-124345-exp01ef1b"):
+            (base / pasta).mkdir()
+            (base / pasta / "estado.json").write_text("{}")
+        (base / "20260922-102140-exp02ef1b").mkdir()   # sem estado.json: execução que não terminou
+        (base / "amostra-identidade-visual").mkdir()   # pasta que não é sessão
+
+        saude = cat.saude_do_indice(base=base)
+        assert saude["fracao_cega"] == 0.0, "o caso é justamente o de nenhuma linha furada"
+        assert saude["fora_do_indice"] == ["exp01ef1b", "exp05ef1b"], saude["fora_do_indice"]
+
+        antes = os.environ.get("OUTPUT_DIR")
+        os.environ["OUTPUT_DIR"] = tmp
+        try:
+            _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+                FakeAgent(name="B", key="briefing", text="Missão para o 6º ano do fundamental."),
+                VizinhasCatalogoAgent(name="A00bVizinhasCatalogo"),
+            ])))
+            assert st["catalogo_indice_status"] == "amarelo"
+            assert st["missoes_vizinhas"].startswith("> ⚠️"), "o aviso precisa vir ANTES da tabela que o V5 julga"
+            assert "exp05ef1b" in st["missoes_vizinhas"] and "exp01ef1b" in st["missoes_vizinhas"]
+            assert [a["codigo"] for a in st["catalogo_indice_status_envelope"]["achados"]] == ["indice-defasado"]
+
+            for slug, sessao in (("exp05ef1b", "s5"), ("exp01ef1b", "s1b")):
+                cat.registrar(_ficha(slug=slug, sessao=sessao, ano=slug[3:5].lstrip("0") + "EF",
+                                     descoberta=f"descoberta própria da {slug}"), base=base)
+            _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+                FakeAgent(name="B", key="briefing", text="Missão para o 6º ano do fundamental."),
+                VizinhasCatalogoAgent(name="A00bVizinhasCatalogo"),
+            ])))
+            assert st["catalogo_indice_status"] == "aprovado", st["catalogo_indice_status_envelope"]
+        finally:
+            if antes is None:
+                os.environ.pop("OUTPUT_DIR", None)
+            else:
+                os.environ["OUTPUT_DIR"] = antes
+
+    from tools.diagnostico import GATES
+    assert "catalogo_indice_status" in {g["status"] for g in GATES}
+    print("   ✓ índice defasado: o micro-gate lê o aviso antes da tabela e o dossiê mostra 🟡")
+
+
+
+def test_ficha_do_catalogo_le_pelo_nome_da_coluna():
+    """13 das 14 fichas reconstruídas em 23/09/2026 saíam com `tipo_decisao` vazio: o parser lia a
+    linha do aprendizado POR POSIÇÃO, com o slug primeiro, e o 51 escreve `|Ano|Bim|Nome|…|` sem
+    slug. A linha era descartada sempre, e o registro automático repetia o defeito em toda missão
+    nova. O ambiente saía vazio nas 5 com `secao_ds: nova:…`."""
+    from tools import catalogo as cat
+
+    # a linha como o 51 de fato a escreveu na exp06ef1b (8 colunas, sem slug)
+    real = """### Linha proposta para `references/catalogo-missoes.md`
+
+| Ano | Bim | Nome | Ambiente | Eixo temático | Descoberta central (aha) | Tipo de decisão | Status |
+|---|---|---|---|---|---|---|---|
+| 6º EF | 1º | O algoritmo que me formou | InstaNooria (Instagram) | Algoritmos / bolhas | Eu só segui 1 conta e isso decidiu o resto. | Seguir 1 perfil e fixar 1 post de síntese | Aprovada |
+"""
+    f = cat._linha_do_aprendizado(real)
+    assert f["tipo_decisao"] == "Seguir 1 perfil e fixar 1 post de síntese", f
+    assert f["descoberta"].startswith("Eu só segui") and f["ano"] == "6º EF"
+
+    # o formato que o prompt pede: outra ordem, com slug e campo por preencher
+    pedido = """|Slug|Ano|Bim|Nome|Ambiente|Eixo temático|Descoberta central (aha)|Tipo de decisão|Porta de abstração|Habilidade primária|Status|
+|---|---|---|---|---|---|---|---|---|---|---|
+|exp04ef1b|4º EF|1º|N|unitube|credibilidade|views não é confiança|escolher 3 de 10 vídeos|explicar|[preencher do manifesto]|em criação|
+"""
+    g = cat._linha_do_aprendizado(pedido)
+    assert g["slug"] == "exp04ef1b" and g["tipo_decisao"] == "escolher 3 de 10 vídeos"
+    assert "habilidade_primaria" not in g, "campo por preencher volta vazio para a extração do núcleo tentar"
+
+    # ambiente pelo `secao_ds`: canônico, e ambiente novo com o nome
+    assert cat._ambiente_da_spec("- `secao_ds: instanooria`") == "instanooria"
+    assert cat._ambiente_da_spec("- **secao_ds**: `nova:galeria-infantil`") == "nova:galeria-infantil"
+    assert cat._ambiente_da_spec("- `secao_ds: inventado`") == ""
+
+    ficha = cat.ficha_da_execucao({"aprendizado_registro": real,
+                                   "spec_missao": "## 0. Ficha\n- `secao_ds: nova:galeria-infantil`\n"})
+    assert ficha["tipo_decisao"] and ficha["ambiente"] == "nova:galeria-infantil"
+    assert not cat.tem_lacuna(ficha), "ficha completa não pode sair cega para o V5"
+    print("   ✓ ficha do catálogo lida pelo nome da coluna; ambiente novo não sai vazio")
+
+
+
+def test_nenhum_prompt_manda_usar_ferramenta_que_o_agente_nao_tem():
+    """O D0 foi instruído, de 16 a 23/09/2026, a criar um Google Docs com `create_file` — e nunca
+    recebeu ferramenta nenhuma, em modo nenhum. As 14 sessões escreveram "GDOCS: indisponível" em
+    9 redações. Instrução para ferramenta ausente não falha: é desobedecida em silêncio.
+
+    O Stitch é o caso legítimo e diferente: ferramenta CONDICIONAL, anexada por
+    `stitch_tools_or_empty` quando `STITCH_MCP_MODE` está ligado (em produção, `remote`), e com
+    o que fazer quando não está escrito nos dois prompts. Aqui ele vem desligado (linha 21), então
+    o que se confere é que só os agentes que recebem o Stitch falam das ferramentas dele.
+    """
+    import re as _re
+    from google.adk.agents.llm_agent import LlmAgent
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+
+    llms = [a for _, a in iter_agent_tree(create_mission_orchestrator(stages=["produto", "design", "dev"]))
+            if isinstance(a, LlmAgent)]
+    drive = _re.compile(r"google drive|google docs|gdocs|create_file|gdrive", _re.I)
+    stitch = _re.compile(r"\b(?:upload_design_md|list_screens|get_screen|create_project|generate_screen)\w*", _re.I)
+    com_stitch = ("A26Telas", "A30QaEntregaveis")  # os que chamam `stitch_tools_or_empty`
+
+    falhas = {a.name: sorted(set(drive.findall(str(a.instruction)))) for a in llms}
+    falhas = {k: v for k, v in falhas.items() if v}
+    assert not falhas, f"instrução para ferramenta do Drive, que nenhum agente recebe: {falhas}"
+    fora = {a.name: sorted(set(stitch.findall(str(a.instruction)))) for a in llms
+            if not a.name.startswith(com_stitch)}
+    fora = {k: v for k, v in fora.items() if v}
+    assert not fora, f"ferramenta do Stitch citada em agente que não recebe o Stitch: {fora}"
+    from config import get_settings
+    assert not hasattr(get_settings(), "gdrive_folder_url")
+    print(f"   ✓ {len(llms)} agentes de LLM: nenhum instruído a usar o Drive; Stitch só onde é anexado")
+
+
+
+def test_sincronizar_plataforma_nao_grava_com_help_nem_com_argumento_errado():
+    """O script não lia argumento nenhum: `--help` executou a sincronização inteira em 23/09/2026,
+    começando por apagar os `.md` do destino. A plataforma aponta para um caminho que não existe:
+    se o parser não rodasse primeiro, o script sairia com 1 ("plataforma não encontrada") — nunca
+    grava, mesmo que a correção regrida."""
+    import hashlib
+    import subprocess
+
+    raiz = Path(__file__).resolve().parent
+    destino = raiz / "prompts" / "references" / "plataforma"
+
+    def digital() -> str:
+        h = hashlib.sha256()
+        for f in sorted(destino.rglob("*")):
+            if f.is_file():
+                h.update(f.name.encode() + f.read_bytes())
+        return h.hexdigest()
+
+    antes = digital()
+    env = {**os.environ, "PLATAFORMA_UNOORIA_DIR": str(raiz / "nao-existe")}
+    script = str(raiz / "scripts" / "sincronizar_plataforma.py")
+    ajuda = subprocess.run([sys.executable, script, "--help"], capture_output=True, text=True, env=env)
+    assert ajuda.returncode == 0 and "usage:" in ajuda.stdout, (ajuda.returncode, ajuda.stderr[-200:])
+    errado = subprocess.run([sys.executable, script, "--seco"], capture_output=True, text=True, env=env)
+    assert errado.returncode == 2 and "unrecognized arguments" in errado.stderr
+    assert digital() == antes, "o script gravou nas cópias da plataforma"
+    print("   ✓ sincronizar_plataforma: --help mostra o uso e argumento errado falha, sem gravar nada")
+
+
+
+def test_despacho_traduz_o_dono_e_nunca_descarta_ticket_em_silencio():
+    """A-15 (auditoria de 23/09/2026). O despacho casava só o nome literal do dono: a banca escreveu
+    `wireframes` 16 vezes, `spec` 15 e `copy` 2 nas 14 sessões, e tudo iria para lugar nenhum. Havia
+    três descartes silenciosos — sem dono, dono desconhecido, agente de retrabalho ausente."""
+    import json as _json
+    from agents.checkers import DespachoTicketsAgent
+
+    achados = [
+        {"id": "T1", "severidade": "bloqueio", "agente_responsavel": "Wireframes", "resumo": "tela sem estado vazio"},
+        {"id": "T2", "severidade": "bloqueio", "agente_responsavel": "spec", "resumo": "a spec não decide a cardinalidade"},
+        {"id": "T3", "severidade": "bloqueio", "agente_responsavel": "inventado", "resumo": "dono que não existe"},
+        {"id": "T4", "severidade": "bloqueio", "agente_responsavel": "", "resumo": "ninguém foi apontado"},
+        {"id": "T5", "severidade": "bloqueio", "agente_responsavel": "jornada", "resumo": "o mapa aponta para agente ausente"},
+        {"id": "T6", "severidade": "atencao", "agente_responsavel": "inventado", "resumo": "ressalva não é roteada"},
+    ]
+    relatorio = "QA\n```json\n" + _json.dumps({"status": "bloqueado", "achados": achados}) + "\n```"
+    despacho = DespachoTicketsAgent(
+        name="Despacho", report_key="qa", rotulo="Retrabalho de teste",
+        mapa={"telas": "TelasR", "jornada": ["JornadaInexistente"]},
+        externos=["spec-missao"],
+        sub_agents=[FakeAgent(name="TelasR", key="telas_refeitas", text="telas corrigidas")],
+    )
+    eventos, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+        FakeAgent(name="QA", key="qa", text=relatorio), despacho])))
+
+    assert st.get("telas_refeitas") == "telas corrigidas", "`Wireframes` tinha de chegar ao agente de telas"
+    sem_rota = {r["id"]: r for r in st.get("tickets_sem_rota") or []}
+    assert set(sem_rota) == {"T3", "T4", "T5"}, sorted(sem_rota)
+    assert "nenhum agente" in sem_rota["T3"]["motivo"]
+    assert "não disse quem conserta" in sem_rota["T4"]["motivo"]
+    assert "JornadaInexistente" in sem_rota["T5"]["motivo"]
+    texto = " ".join(p.text for e in eventos if e.content for p in (e.content.parts or []) if getattr(p, "text", None))
+    assert "`T2` → `spec-missao`" in texto, "o nome traduzido tinha de chegar à lista de externos"
+    assert "Sem quem execute" in texto and "`T3`" in texto
+
+    from tools.diagnostico import coletar
+    d = coletar({"tickets_sem_rota": st["tickets_sem_rota"]})
+    humanos = [a for a in d["humanos"] if a["codigo"] == "ticket-sem-rota"]
+    assert len(humanos) == 3 and d["veredito"] == "amarelo" and d["precisa_humano"]
+    print("   ✓ despacho: nome traduzido pela fonte única, e ticket sem rota vira pendência humana no dossiê")
+
+
+def test_banca_consolidada_entrega_o_dono_ao_despacho():
+    """De 22 a 23/09/2026 a consolidação determinística da banca descartava `agente_responsavel` e
+    `id` do envelope que o despacho lê: todo ticket da banca chegava sem dono e era jogado fora."""
+    from agents.callbacks import extrair_envelope
+    from tools import banca
+
+    dim = {"status": "bloqueado", "contagem": {"nok_bloqueantes": 1},
+           "achados": [{"id": "DES-01", "codigo": "DES-01", "severidade": "bloqueio",
+                        "agente_responsavel": "telas", "resumo": "a tela quebra a imersão"}]}
+    resultado = banca.consolidar({"validacao_design_imersao": dim})
+    env = extrair_envelope(banca.relatorio(resultado, "exp06ef1b")) or {}
+    achado = next(a for a in env["achados"] if a.get("codigo") == "DES-01")
+    assert achado.get("agente_responsavel") == "telas" and achado.get("id") == "DES-01", achado
+    print("   ✓ banca consolidada: id e dono chegam ao despacho")
+
+
+def test_todo_dono_que_um_gate_pode_escrever_tem_destino():
+    """O cruzamento que revelou o A-15, como teste: cada nome da lista fechada que o envelope do QA
+    de design e o da banca oferecem, traduzido pela fonte única, cai numa rota ou num externo — e
+    toda rota aponta para um agente que existe."""
+    import re as _re
+    from agents.checkers import DespachoTicketsAgent
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+    from prompts import load_prompt
+    from tools.rastro import normalizar_dono
+
+    despachos = {a.name: a for _, a in iter_agent_tree(create_mission_orchestrator(stages=["produto", "design", "dev"]))
+                 if isinstance(a, DespachoTicketsAgent)}
+    kw = dict(stitch_mcp_mode="off", stitch_project_url_base="u", gate_max_rodadas=3, qa_max_rodadas=2)
+    fontes = {"A32DespachoDesign": "design/30_qa_entregaveis.md", "A46DespachoBanca": "dev/40_validacao_design_imersao.md"}
+    for nome, prompt in fontes.items():
+        d = despachos[nome]
+        bloco = _re.search(r'"agente_responsavel":\s*((?:"[^"]+"\s*\|?\s*)+)', load_prompt(prompt, **kw)).group(1)
+        oferecidos = {x.strip() for x in _re.findall(r'"([^"]+)"', bloco) for x in x.split("|")} - {"null", ""}
+        destinos = set(d.mapa) | set(d.externos or [])
+        sem = sorted(o for o in oferecidos if normalizar_dono(o) not in destinos)
+        assert not sem, f"{nome}: o envelope oferece donos sem destino: {sem}"
+        existentes = {s.name for s in d.sub_agents}
+        for slug, alvo in d.mapa.items():
+            for agente in ([alvo] if isinstance(alvo, str) else alvo):
+                assert agente in existentes, f"{nome}: `{slug}` aponta para {agente}, que não existe"
+    print("   ✓ todo dono que o QA e a banca podem escrever tem rota ou vira externo; toda rota existe")
+
+
+
+# ── Quem reescreve lê o que o gate pediu (auditoria v3, 23/09/2026) ──────────────────────────
+# Duas perguntas feitas a todos os agentes de uma vez acharam dois agentes que reescreviam às
+# cegas: o brief de assets, reexecutado pela banca sem ler ticket nem relatório (A-16), e o
+# revisor do one-pager, que o loop das avaliações repetia por um relatório que ele não recebia
+# (A-17). Toda vez que um cruzamento assim foi feito sobre a árvore inteira, achou defeito.
+from google.adk.agents.llm_agent import LlmAgent
+from google.adk.agents.loop_agent import LoopAgent
+from agents.checkers import (BnccCheckAgent, DespachoTicketsAgent, EnvelopeGateAgent,
+                             RastroCheckAgent, SaidaDeLoopAgent)
+from pipeline.orchestrator import iter_agent_tree
+
+def _dentro(a):
+    for s in getattr(a, "sub_agents", []) or []:
+        yield s
+        yield from _dentro(s)
+
+def _reexecutados_sem_pedido(raiz):
+    """Agente que um despacho reexecuta e que não lê nem o ticket nem o relatório do gate."""
+    falhas = []
+    for _, d in iter_agent_tree(raiz):
+        if isinstance(d, DespachoTicketsAgent):
+            for s in d.sub_agents:
+                txt = str(getattr(s, "instruction", ""))
+                if isinstance(s, LlmAgent) and "{" + d.tickets_key not in txt and "{" + d.report_key not in txt:
+                    falhas.append(f"{d.name} → {s.name}")
+    return falhas
+
+def _gates_que_ninguem_le(raiz):
+    """Gate que faz o loop repetir, e cujo relatório nenhum autor do loop recebe."""
+    falhas = []
+    for _, loop in iter_agent_tree(raiz):
+        if not isinstance(loop, LoopAgent):
+            continue
+        dentro = list(_dentro(loop))
+        if any(isinstance(a, DespachoTicketsAgent) for a in dentro):
+            continue  # quem corrige é o despacho — coberto pela outra regra
+        gates = [g for g in dentro if isinstance(g, (EnvelopeGateAgent, RastroCheckAgent, BnccCheckAgent))]
+        repetem = {k for s in dentro if isinstance(s, SaidaDeLoopAgent) for k in s.status_keys}
+        repetem |= {g.status_key for g in gates if isinstance(g, EnvelopeGateAgent) and g.round_key}
+        relatorios = {getattr(g, "report_key", "") for g in gates}
+        autores = [a for a in dentro if isinstance(a, LlmAgent) and a.output_key not in relatorios]
+        for g in gates:
+            if g.status_key in repetem and getattr(g, "report_key", ""):
+                if not any("{" + g.report_key in str(a.instruction) for a in autores):
+                    falhas.append(f"{loop.name}: {g.name} reprova e nenhum de {[a.name for a in autores]} lê {{{g.report_key}}}")
+    return falhas
+
+
+def test_todo_agente_reexecutado_le_o_que_o_gate_pediu():
+    from pipeline.orchestrator import create_mission_orchestrator
+    orch = create_mission_orchestrator(stages=["produto", "design", "dev"])
+    falhas = _reexecutados_sem_pedido(orch)
+    assert not falhas, f"reexecutado sem ler o ticket nem o relatório do gate: {falhas}"
+    falhas = _gates_que_ninguem_le(orch)
+    assert not falhas, f"gate que repete o loop sem que nenhum autor leia o relatório: {falhas}"
+    print("   ✓ quem é reexecutado lê o ticket; todo gate que repete um loop tem um autor que o lê")
+
+
+
+def test_correcao_parcial_apaga_tudo_que_a_etapa_vai_regravar():
+    """Toda chave que um agente da etapa grava é apagada quando a correção recomeça dali.
+
+    Em 23/09/2026 seis gates novos tinham ficado fora das listas: o contador do juiz das perguntas
+    sobrevivia (a correção começava com as rodadas esgotadas) e o veredito da execução anterior
+    podia aparecer no dossiê da nova. Gate novo que nascer sem entrar na lista falha aqui.
+    """
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+    from pipeline.reexecucao import CHAVES_EXECUCAO, CHAVES_POR_ETAPA, ETAPA_PARA_STAGES
+
+    anteriores = {"produto": frozenset(), "spec": frozenset(),
+                  "design": CHAVES_POR_ETAPA["spec"] - CHAVES_POR_ETAPA["design"],
+                  "dev": CHAVES_POR_ETAPA["spec"] - CHAVES_POR_ETAPA["dev"]}
+    for etapa in ("produto", "spec", "design", "dev"):
+        escritas = set()
+        for _, a in iter_agent_tree(create_mission_orchestrator(stages=ETAPA_PARA_STAGES[etapa])):
+            if a.name in ("A50Diagnostico", "A51Aprendizado", "A52RegistroCatalogo"):
+                continue  # transversal: refeitos em toda execução
+            for attr in ("output_key", "report_key", "status_key", "round_key", "rodada_key"):
+                if getattr(a, attr, None):
+                    escritas.add(getattr(a, attr))
+            if getattr(a, "status_key", None):
+                escritas.add(a.status_key + "_envelope")
+        # o retrabalho da banca reescreve documentos de design: numa correção de dev eles são o
+        # insumo, e apagá-los apagaria o design
+        fora = escritas - CHAVES_POR_ETAPA[etapa] - CHAVES_EXECUCAO - anteriores[etapa]
+        assert not fora, f"correção a partir de `{etapa}` não apaga o que a etapa regrava: {sorted(fora)}"
+        rodadas = {k for k in escritas if "rodada" in k} - anteriores[etapa]
+        assert rodadas <= CHAVES_POR_ETAPA[etapa], f"contador de rodada sobrevive à correção: {sorted(rodadas)}"
+    assert "tickets_sem_rota" in CHAVES_EXECUCAO
+    print("   ✓ correção parcial apaga tudo que a etapa regrava, contadores de rodada inclusive")
+
+
+
+def test_criterios_da_rubrica_declaram_a_mesma_versao():
+    """Os quatro arquivos de critério da rubrica de produto dizem, no título, qual versão vale.
+    `criterios-experiencia.md` tinha as notas v1.18 e v1.19 e nenhum título dizendo qual das duas
+    estava em vigor — o único dos quatro que o versionamento de 22/09/2026 deixou de fora."""
+    import re as _re
+    from prompts import REFERENCES_DIR
+    versoes = {}
+    for nome in ("criterios-gate-estrutural.md", "criterios-pedagogicos.md",
+                 "criterios-experiencia.md", "criterios-gate-final.md"):
+        m = _re.search(r"Rubrica v(\d+\.\d+)", (REFERENCES_DIR / nome).read_text(encoding="utf-8").splitlines()[0])
+        versoes[nome] = m.group(1) if m else None
+    assert None not in versoes.values(), f"critério sem versão no título: {versoes}"
+    assert len(set(versoes.values())) == 1, f"versões divergentes: {versoes}"
+    print(f"   ✓ os quatro critérios da rubrica de produto declaram v{next(iter(versoes.values()))}")
+
+
+
+def test_material_anexado_chega_a_quem_o_usa_como_fonte():
+    """A-19 (23/09/2026). O conteúdo dos anexos existia só na mensagem, que só o núcleo narrativo
+    lê. A spec, a avaliação pedagógica e o one-pager resumido são instruídos a usar o material do
+    Entre Redes como fonte primária e nunca o viam: 5 das 7 sessões que o anexaram entregaram um
+    resumido dizendo "material do bimestre não anexado"."""
+    import re as _re
+    from google.adk.agents.llm_agent import LlmAgent
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+    from pipeline.runner import material_dos_anexos
+    from tools.doc_parser import DocumentBatch, ProcessedDocument
+
+    grande = "habilidade EF06CO09 " * 30000  # ~600 KB: nada é cortado, por decisão
+    lote = DocumentBatch(documents=[
+        ProcessedDocument(name="entre_redes_6ano.docx", file_type="docx", size_bytes=1, markdown_text=grande),
+        ProcessedDocument(name="plano.pdf", file_type="pdf", size_bytes=1, is_native_pdf=True,
+                          pdf_bytes=b"%PDF", markdown_text="texto extraído do PDF"),
+        ProcessedDocument(name="digitalizado.pdf", file_type="pdf", size_bytes=1, is_native_pdf=True, pdf_bytes=b"%PDF"),
+    ])
+    material = material_dos_anexos(lote)
+    assert grande.strip() in material, "o material foi cortado — não pode haver limite"
+    assert "texto extraído do PDF" in material, "o PDF vai ao modelo como arquivo; ao estado, como texto"
+    assert "digitalizado.pdf" in material and "sem texto extraível" in material
+    assert material_dos_anexos(None) == ""
+
+    # quem cita o material anexado como fonte tem de recebê-lo — salvo quem lê a mensagem inteira
+    cita = _re.compile(r"material[^.\n]{0,60}anexad|anexad[^.\n]{0,60}material", _re.I)
+    sem = [a.name for _, a in iter_agent_tree(create_mission_orchestrator(stages=["produto", "design", "dev"]))
+           if isinstance(a, LlmAgent) and getattr(a, "include_contents", "none") != "default"
+           and cita.search(str(a.instruction)) and "{material_anexado" not in str(a.instruction)]
+    assert not sem, f"citam o material anexado como fonte e não o recebem: {sem}"
+    print("   ✓ material anexado: guardado inteiro, e chega à spec, à avaliação e ao resumido")
+
+
+def test_correcao_de_produto_refaz_desde_o_nucleo_com_o_material_da_origem():
+    """A-04 (23/09/2026). A triagem mandava para `spec` os pedidos de mecânica, etapas e narrativa,
+    e a correção a partir da spec não refaz o one-pager nem passa pelos gates de produto."""
+    import json as _json
+    import tempfile
+    from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+    from pipeline.reexecucao import (CHAVES_PRODUTO, ETAPA_PARA_STAGES, PedidoCorrecao, Triagem,
+                                     executar_correcao_stream, material_para_refazer_produto, preparar_estado)
+    from pipeline.runner import CABECALHO_MATERIAL_GUARDADO, mensagem_do_usuario
+
+    # 1. refaz produto, design e dev — e os gates de produto estão na árvore
+    assert ETAPA_PARA_STAGES["produto"] == ["produto", "design", "dev"]
+    nomes = [a.name for _, a in iter_agent_tree(create_mission_orchestrator(stages=ETAPA_PARA_STAGES["produto"]))]
+    for gate in ("A01NucleoNarrativo", "A05GateEstrutural", "A08AvaliacaoPedagogica", "A11GateFinalProduto"):
+        assert gate in nomes, gate
+    assert len(nomes) == len(set(nomes))
+
+    # 2. apaga o que produto grava, preserva o que ele lê da geração original
+    estado = {"briefing": "missão do 6º ano", "perguntas_po": "PQ", "material_anexado": "material",
+              "nucleo_narrativo": "velho", "one_pager": "velho", "gate_final_report": "velho", "spec_missao": "velha",
+              "gate_estrutural_rodada": 2, "degradacoes": [{"gate": "Gate estrutural"}]}
+    limpo, removidas = preparar_estado(estado, "produto", "pedido")
+    for k in ("nucleo_narrativo", "one_pager", "gate_final_report", "spec_missao", "gate_estrutural_rodada"):
+        assert k not in limpo and k in removidas, k
+    assert limpo["briefing"] and limpo["perguntas_po"] and limpo["material_anexado"] == "material"
+    assert not limpo.get("degradacoes"), "todos os gates vão ser refeitos: nenhuma reprovação é herdada"
+    assert {"brief_escopo", "missoes_vizinhas", "catalogo_indice_status"} <= CHAVES_PRODUTO
+
+    # 3. o núcleo recebe o material guardado na mensagem — só quando refaz produto
+    msg = mensagem_do_usuario("briefing", None, {"material_anexado": "### 📄 entre redes"}, ["produto", "design", "dev"])
+    texto = msg.parts[0].text
+    assert CABECALHO_MATERIAL_GUARDADO in texto and "entre redes" in texto
+    assert "entre redes" not in mensagem_do_usuario("briefing", None, {"material_anexado": "### 📄 entre redes"}, ["spec"]).parts[0].text
+
+    # 4. sessão antiga, sem material guardado
+    sem_material = {"briefing": "b"}
+    com_anexo = {"attached_files": ["entre_redes_6ano.docx"]}
+    assert material_para_refazer_produto({"material_anexado": "salvo"}, com_anexo, None) == ("salvo", None)
+    reanexado = PedidoCorrecao(texto="mude a etapa 3", anexos=[("entre_redes_6ano.docx", "conteúdo")])
+    material, recusa = material_para_refazer_produto(sem_material, com_anexo, reanexado)
+    assert recusa is None and "conteúdo" in material
+    material, recusa = material_para_refazer_produto(sem_material, com_anexo, PedidoCorrecao(texto="mude a etapa 3"))
+    assert material is None and "entre_redes_6ano.docx" in recusa and "Anexe de novo" in recusa
+    assert material_para_refazer_produto(sem_material, {"attached_files": []}, None) == ("", None)
+
+    # 5. a recusa não toca a sessão: nem backup, nem estado
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp)
+        (run_dir / "estado.json").write_text(_json.dumps({"briefing": "b", "one_pager": "intacto"}))
+        (run_dir / "conversa.json").write_text(_json.dumps({"session_id": "s", "user_id": "u",
+                                                            "attached_files": ["entre_redes_6ano.docx"]}))
+
+        async def _coletar():
+            return [e async for e in executar_correcao_stream(run_dir, "produto", PedidoCorrecao(texto="mude"))]
+        eventos = asyncio.run(_coletar())
+        assert [e["type"] for e in eventos] == ["correcao_error"], [e["type"] for e in eventos]
+        assert not (run_dir / ".correcoes").exists(), "a recusa criou backup"
+        assert _json.loads((run_dir / "estado.json").read_text())["one_pager"] == "intacto"
+
+    # 6. a triagem sabe escolher produto
+    tri = Triagem.de_texto('ok\n```json\n{"agente": "triagem-correcao", "etapa": "produto", "motivo": "muda a mecânica", '
+                           '"resumo_pedido": "x", "resumo_anexos": "", "confianca": "alta"}\n```')
+    assert tri.etapa == "produto" and tri.reexecuta
+    print("   ✓ correção de produto: refaz desde o núcleo, com o material da origem, e recusa sem ele")
+
+
+
+def test_lint_do_prototipo_nao_confunde_portugues_com_rascunho():
+    """Em 23/09/2026 o lint bloqueou um protótipo por "você aprendeu que **todo** enquadramento conta
+    uma história": ignorava caixa, e `todo`, `a definir` e `placeholder` são palavras comuns — a
+    última é o nome da convenção do DS para a caixa de mídia do wireframe."""
+    from tools.prototipo import validar
+    base = '<html><body><section id="E1-ALU-01">'
+    def acusa(corpo):
+        return any(a["codigo"] == "marcador-de-rascunho" for a in validar(base + corpo + "</section></body></html>", ["E1-ALU-01"])["achados"])
+    assert not acusa("Você aprendeu que todo enquadramento conta uma história.")
+    assert not acusa("<style>/* Linhas X de placeholder do DS */</style>oi")
+    assert not acusa("O tema da aula é a definir pelo professor.")
+    assert not acusa('<input placeholder="Digite sua legenda">')
+    assert acusa("TODO: texto final") and acusa("Olá [[nome_da_turma]]") and acusa("Legenda: [a definir]")
+    assert acusa("Lorem ipsum dolor")
+    print("   ✓ lint do protótipo: rascunho de verdade acusa, português não")
+
+
+
+def test_saeb_verde_onde_nao_se_aplica_amarelo_onde_falta_ou_sobra():
+    """Regra de 23/09/2026, a pedido: ano que o SAEB não avalia com "N/A" é verde; descritor citado
+    nesse ano, ou ano avaliado sem descritor, é amarelo com a indicação. A regra anterior acusava o
+    próprio "N/A — ano não avaliado pelo SAEB" que manda escrever, e lia o 2º ano como 1º ao 5º."""
+    from tools.contrato_produto import validar_one_pager
+
+    def saeb(slug, linha):
+        op = f"# One-pager\n## 0. Ficha\n- id: `{slug}`\n## 2. Currículo\n{linha}\n- **Rastreabilidade:** x\n## 3. Outra\n"
+        return [a["codigo"] for a in validar_one_pager(op)["achados"] if a["codigo"].startswith("saeb")]
+    na = "- **Descritor SAEB:** N/A — ano não avaliado pelo SAEB."
+    assert saeb("exp06ef1b", na) == [] and saeb("exp08ef2b", na) == [] and saeb("exp02em1b", na) == []
+    assert saeb("exp05ef1b", na) == ["saeb-ausente"], "o 5º ano é avaliado: N/A é falta"
+    assert saeb("exp05ef1b", "- **BNCC:** x") == ["saeb-ausente"]
+    assert saeb("exp09ef1b", "- **Descritor SAEB:** Matemática — D12: resolver problema.") == []
+    assert saeb("exp03em1b", "- **Descritor SAEB:** Língua Portuguesa — D05.") == []
+    assert saeb("exp04ef1b", "- **Descritor SAEB:** Língua Portuguesa — D05.") == ["saeb-fora-do-ano"]
+    # descritor por extenso, em subtópico — a matriz de alfabetização do 2º ano não usa `Dnn`
+    assert saeb("exp02ef1b", "- **Descritor SAEB:**\n  - *Língua Portuguesa — 2º ano:* Localizar informação explícita em textos compostos por imagem e texto verbal.") == []
+    # título com os descritores em tópicos embaixo
+    titulo = "### Descritor SAEB Associado\n* **Língua Portuguesa — D14:** distinguir fato de opinião.\n* **Língua Portuguesa — D15:** reconhecer relações."
+    assert saeb("exp07ef1b", titulo) == ["saeb-fora-do-ano"]
+    print("   ✓ SAEB: N/A verde onde não se aplica; descritor que falta ou sobra fica amarelo")
+
+
+
+def test_leitor_de_evento_e_o_mesmo_nos_dois_gates_e_nos_documentos():
+    """Na geração de teste de 23/09/2026 seis impedimentos vinham de o PRD escrever "Pub/Sub" como
+    leitor de eventos que só alimentam KPI de produto. O gate estava certo — Pub/Sub é transporte —,
+    mas nenhum documento dizia ao redator quem é o leitor desse evento, e os dois gates discordavam
+    entre si: o de KPI aceitava PostHog, o do PRD não."""
+    from prompts import REFERENCES_DIR
+    from tools.kpis import LEITOR_VALIDO, validar_kpis
+    from tools.rastro import validar_prd
+    import re as _re
+
+    linha_evt = "| {id} | interacted | foto:miniatura | E2-ALU-01 | {{\"foto_id\": \"x\"}} | — | analítico | {leitor} |"
+    cab = "| ID | Verbo | Objeto | Quando dispara | Resultado | Contexto | Caminho | Onde é lido |\n|---|---|---|---|---|---|---|---|\n"
+    for leitor, esperado in (("Pub/Sub", True), ("telemetria_eventos", True),
+                             ("painel de produto (PostHog)", False), ("exp02ef1b_sessoes", False)):
+        prd = cab + linha_evt.format(id="EVT-001", leitor=leitor) + "\n"
+        k = any(a["codigo"] == "leitura-sem-leitor" for a in validar_kpis(prd)["achados"])
+        p = any(a["codigo"] == "evento-sem-leitor" for a in validar_prd(prd)["achados"])
+        assert k == p == esperado, (leitor, k, p)
+    for nome in ("prd-padrao-ouro.md", "formato-spec.md", "perguntas-de-produto.md"):
+        assert "painel de produto (PostHog)" in (REFERENCES_DIR / nome).read_text(encoding="utf-8"), nome
+    print("   ✓ leitor de evento: tabela do módulo ou painel de produto, igual nos dois gates e nos três documentos")
+
+
+
+def test_juizes_de_produto_leem_o_briefing_e_contam_so_o_tempo_em_tela():
+    """Na geração de teste de 23/09/2026 a missão foi reprovada duas vezes por obedecer ao PO — o
+    briefing proibia áudio, a rubrica exige áudio no 1º–2º ano, e nenhum dos três juízes de produto
+    recebia o briefing — e o one-pager escreveu "45 minutos em tela" para a aula inteira, com 15 min
+    de mediação oral dentro, e o teto de tempo-aluno leu isso ao pé da letra."""
+    from agents.produto import (get_avaliacao_pedagogica_agent, get_experiencia_aluno_agent,
+                                get_gate_final_produto_agent)
+    from prompts import REFERENCES_DIR, load_prompt
+    for agente in (get_avaliacao_pedagogica_agent(), get_experiencia_aluno_agent(), get_gate_final_produto_agent()):
+        instr = str(agente.instruction)
+        assert "{briefing?}" in instr, f"{agente.name} não recebe o briefing"
+        assert "não é reprovada por obedecer" in instr, f"{agente.name} sem a regra do conflito briefing × rubrica"
+    assert "nunca 🔴" in str(get_gate_final_produto_agent().instruction)
+    apoio = load_prompt("produto/04_secoes_apoio.md", gate_max_rodadas=3)
+    assert "`Em tela (aluno)`" in apoio and "`Fora da tela`" in apoio
+    exp = (REFERENCES_DIR / "criterios-experiencia.md").read_text(encoding="utf-8")
+    assert "Tempo-aluno é o tempo em tela" in exp
+    print("   ✓ juízes de produto leem o briefing; o teto de tempo conta só o tempo em tela")
+
+
+
+def test_bncc_confere_eixo_texto_e_o_que_e_declarado():
+    """A alucinação da exp06ef1b (22/09/2026): `EF06CO07` apresentado como Cultura Digital e
+    letramento digital, com texto inventado e atribuído a um material do Entre Redes que não tinha
+    sido anexado. Oficialmente é Mundo Digital, sobre transmissão de dados. O gate aprovou: o código
+    existia, era do ano, e um `EF06CO09` citado entre parênteses contou como letramento."""
+    from tools.bncc import validar_spec
+    of7 = "Entender o processo de transmissão de dados, como a informação é quebrada em pedaços, transmitida em pacotes através de múltiplos equipamentos, e reconstruída no destino."
+    of9 = "Apresentar conduta e linguagem apropriadas ao se comunicar em ambiente digital, considerando a ética e o respeito."
+    inventado = "Discutir o impacto das tecnologias digitais na sociedade, na cultura e nas relações humanas."
+    def spec(item, extra=""):
+        return f"# Spec\n## 0. Ficha\n- séries: [\"6EF\"]\n## 11. Currículo\n{item}\n{extra}\n## 12. Decisões\n"
+    def cods(r): return {a["codigo"] for a in r["achados"]}
+
+    alucinado = spec(f"* **`EF06CO07` — Cultura Digital**\n  * **Habilidade:** *{inventado}*\n  * **Momento em tela:** Etapa 4.",
+                     "(o letramento digital equivalente corresponde a `EF06CO09`).")
+    r = validar_spec(alucinado)
+    assert r["status"] == "bloqueado" and {"eixo-divergente", "texto-divergente", "letramento"} <= cods(r), cods(r)
+
+    certo = spec(f"* **`EF06CO09` — Cultura Digital**\n  * **Texto oficial:** {of9}\n  * **Momento em tela:** Etapa 4.")
+    assert validar_spec(certo)["status"] == "aprovado", cods(validar_spec(certo))
+
+    # texto do material do Entre Redes: vale quando o material anexado o traz
+    do_material = spec(f"* **`EF06CO09` — Cultura Digital**\n  * **Habilidade (Entre Redes):** *{inventado}*\n  * **Momento em tela:** Etapa 4.")
+    assert "texto-divergente" in cods(validar_spec(do_material))
+    assert "texto-divergente" not in cods(validar_spec(do_material, material="Unidade 1. " + inventado + " Fim."))
+
+    # rótulo do momento que menciona a palavra habilidade não é o texto dela
+    momento = spec(f"* **`EF06CO09` — Cultura Digital**\n  * *Texto oficial:* {of9}\n  * *Momento em tela que exercita a habilidade:* O estudante fixa um post e explica por que confia nele.")
+    assert validar_spec(momento)["status"] == "aprovado", cods(validar_spec(momento))
+
+    # tabela: só a coluna da habilidade é conferida
+    tabela = spec("| Eixo | Código | Habilidade (texto oficial) | Momento em tela |\n|---|---|---|---|\n"
+                  f"| Mundo Digital | `EF06CO07` | *{inventado}* | Etapa 4: o estudante compara dois feeds lado a lado. |\n"
+                  f"| Cultura Digital | `EF06CO09` | {of9} | Etapa 5: o estudante escolhe o que publicar. |")
+    assert "texto-divergente" in cods(validar_spec(tabela))
+    print("   ✓ BNCC: eixo e texto conferidos contra o oficial (ou o material), e letramento só do que é declarado")
+
+
+
+def test_rotas_citadas_em_modulo_da_plataforma_existem_nela():
+    """Nas 14 sessões, 22 afirmações de rota inexistente ou com verbo errado em módulos que a
+    plataforma já tem — `DELETE /turmas/:id` apagaria uma turma inteira a partir de uma missão. A
+    maioria vinha de um prompt que mandava "instanciar o padrão de Atividade que a plataforma já
+    tem (`POST /atividades` → … → aprovar)": `/atividades` é o motor da exp-01, e cada missão
+    construída tem o preparo no próprio módulo."""
+    import os
+    import tools.rotas_plataforma as rp
+    from tools.rastro import validar_prd
+
+    def cods(txt):
+        return [a["codigo"] for a in rp.validar_rotas(txt)]
+    rp._cache.clear()
+    assert cods("O professor chama `PUT /atividades/:id/revisar`.") == ["rota-inexistente"]
+    assert cods("Ao fim, `DELETE /turmas/:id`.") == ["rota-verbo-errado"]
+    assert cods("Libera com `PUT /salas/turma/:turmaId/missoes/exp09ef1b`.") == [], "slug no lugar do parâmetro casa"
+    assert cods("Módulo `apps/api/src/detetives-bento/`: `POST /detetives-bento/turmas/:id/gate`.") == [], "módulo novo é proposta"
+    assert cods("Módulo `apps/api/src/quem-mandou-isso/`: `POST /quem-mandou-isso/mural`.") == [], "o módulo que o documento declara é dele"
+    assert cods("`POST /atividades/:id/aprovar` — rota nova, pendência de plataforma.") == [], "proposta marcada não é afirmação"
+    assert cods("`GET /experiencias/exp07ef1b/sessao`") == ["rota-fora-do-modulo"]
+    assert "rota-inexistente" in [a["codigo"] for a in validar_prd("| RF-001 | P0 | `PUT /atividades/:id/revisar` | T-001 |")["achados"]]
+
+    # a URL vence quando responde; sem ela, ou se falhar, a cópia sincronizada serve
+    antes = os.environ.get("PLATAFORMA_OPENAPI_URL")
+    os.environ["PLATAFORMA_OPENAPI_URL"] = "http://127.0.0.1:9/docs-json"
+    try:
+        rp._cache.clear()
+        rotas, origem = rp.carregar()
+        assert rotas and "cópia sincronizada" in origem, origem
+    finally:
+        if antes is None:
+            os.environ.pop("PLATAFORMA_OPENAPI_URL", None)
+        else:
+            os.environ["PLATAFORMA_OPENAPI_URL"] = antes
+        rp._cache.clear()
+
+    from prompts import REFERENCES_DIR, load_prompt
+    for texto in ((REFERENCES_DIR / "formato-spec.md").read_text(encoding="utf-8"),
+                  load_prompt("produto/13_spec_missao.md"), load_prompt("dev/47_prd_writer.md")):
+        assert "instancie o padrão de Atividade" not in texto and "padrão de Atividade da plataforma" not in texto
+        assert "não se reusa" in texto
+    print("   ✓ rotas: inexistente e verbo errado acusados; proposta, módulo próprio e slug no parâmetro passam")
+
+
+
+def test_componentes_do_ds_conferidos_contra_o_inventario():
+    """32% dos componentes que as telas das 14 sessões chamavam "do DS" não existiam na seção — o
+    prompt de telas dizia ao agente "você não tem como conferir o catálogo"."""
+    import hashlib
+    import subprocess
+    import tools.componentes_ds as cds
+    from prompts import load_prompt
+
+    cds._cache.clear()
+    marcas, mapa, _ = cds.carregar()
+    assert "PostCard" in marcas["instanooria"] and "LikeButton" not in marcas["instanooria"]
+    assert mapa.get("unitube") == "unootube"
+
+    def tela(secao, ds, locais=""):
+        spec = f"- `secao_ds: {secao}`"
+        w = "| ID tela | Componentes do DS | Componentes locais (candidatos) |\n|---|---|---|\n" + f"| E1-ALU-01 | {ds} | {locais} |\n"
+        return [(a["codigo"], a["severidade"]) for a in cds.validar(w, spec)]
+    assert tela("instanooria", "`PostCard`, `StoriesTray`, `Button`, `DataViz`") == []
+    assert tela("instanooria", "`LikeButton`") == [("componente-inexistente", "bloqueio")]
+    assert tela("instanooria", "`PostCard`", "`LikeButton`, `FeedContainer`") == [], "coluna de locais não é conferida"
+    assert tela("chatgpt", "`MessageBubble`") == [("componente-inexistente", "bloqueio")], "componente de outro clone"
+    assert "ChatBubble" in cds.validar("| Componentes do DS |\n|---|\n| `MessageBubble` |\n", "- `secao_ds: chatgpt`")[0]["resumo"]
+    assert tela("nova:galeria-infantil", "`GradeAlbum2x2`") == [("componente-inexistente", "atencao")]
+    assert tela("unitube", "`VideoCard`") == [], "unitube é a marca unootube"
+
+    for prompt in ("design/26_telas.md", "design/19_ambiente_simulado.md"):
+        texto = load_prompt(prompt, stitch_mcp_mode="off", stitch_project_url_base="u")
+        assert "Você não tem como conferir" not in texto and "`PostCard`" in texto, prompt
+
+    raiz = Path(__file__).resolve().parent
+    alvo = raiz / "prompts" / "references" / "ds-componentes.json"
+    antes = hashlib.sha256(alvo.read_bytes()).hexdigest()
+    env = {**os.environ, "STORYBOOK_UNOORIA_DIR": str(raiz / "nao-existe")}
+    r = subprocess.run([sys.executable, str(raiz / "scripts" / "sincronizar_design_system.py"), "--help"],
+                       capture_output=True, text=True, env=env)
+    assert r.returncode == 0 and "usage:" in r.stdout
+    assert hashlib.sha256(alvo.read_bytes()).hexdigest() == antes
+    print("   ✓ componentes do DS: inventário nos prompts, coluna conferida, nome parecido sugerido")
+
+
+
+def test_juiz_de_achados_so_retira_com_citacao_conferida():
+    """Frente B (23/09/2026): 5 de 5 menções a WebSocket acusadas em 22–23/09 eram falsas —
+    "Nenhum protocolo WebSocket é utilizado", "sem necessidade de WebSocket", o envelope do próprio
+    agente. O regex continua achando; o juiz decide; o código confere a citação. Falha fechada."""
+    import json as _json
+    from agents.checkers import JuizDeAchadosAgent
+    from tools.rastro import frases_afirmativas, validar_telemetria
+
+    handoff = ("## Canal\nA sala sincroniza por polling HTTP curto em `exp05ef1b_gates_turma` (ADR-93).\n"
+               "Nenhum protocolo WebSocket ou canal socket.io é utilizado na plataforma.\n"
+               "| EVT-001 | interacted | post:feed | ao curtir | {\"x\": 1} | — | analítico | exp05ef1b_sessoes |\n"
+               '```json\n{"codigo": "websocket-mencao"}\n```\n')
+    assert frases_afirmativas(handoff, r"websocket") == ["Nenhum protocolo WebSocket ou canal socket.io é utilizado na plataforma."], \
+        "o envelope JSON não é prosa"
+    gate = validar_telemetria(handoff)
+    assert "websocket-mencao" in {a["codigo"] for a in gate["achados"]}
+
+    linha = "Nenhum protocolo WebSocket ou canal socket.io é utilizado na plataforma."
+    def rodar(resposta, doc=handoff):
+        env = {"status": gate["status"], "achados": gate["achados"]}
+        juiz = FakeAgent(name="JuizFalso", key="juiz_saida_teste", text=resposta, marker_key="juiz_rodou")
+        agente = JuizDeAchadosAgent(name="Juiz", status_key="telemetria_status", report_key="telemetria_report",
+                                    fonte_key="handoff_dev", saida_key="juiz_saida_teste", sub_agents=[juiz])
+        _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+            FakeAgent(name="Doc", key="handoff_dev", text=doc,
+                      extra_delta={"telemetria_status_envelope": env, "telemetria_status": gate["status"],
+                                   "telemetria_report": "relatório\n```json\n" + _json.dumps(env) + "\n```"}),
+            agente])))
+        return st
+    def resposta(veredito, citacoes):
+        return "leitura\n```json\n" + _json.dumps({"agente": "juiz-de-achados", "decisoes": [
+            {"id": "C1", "veredito": veredito, "citacoes": citacoes}]}, ensure_ascii=False) + "\n```"
+
+    st = rodar(resposta("cita_para_descartar", [linha]))
+    assert "websocket-mencao" not in {a["codigo"] for a in st["telemetria_status_envelope"]["achados"]}
+    assert "Revisto pelo juiz" in st["telemetria_report"] and linha[:30] in st["telemetria_report"]
+    assert "websocket-mencao" not in st["telemetria_report"].split("## Revisto")[0], "o envelope do relatório também é reescrito"
+
+    st = rodar(resposta("cita_para_descartar", ["Nenhum WebSocket foi usado em lugar algum desta missão."]))
+    assert "websocket-mencao" in {a["codigo"] for a in st["telemetria_status_envelope"]["achados"]}, "citação inventada não vale"
+    st = rodar("não sei")
+    assert "websocket-mencao" in {a["codigo"] for a in st["telemetria_status_envelope"]["achados"]}, "resposta inválida: fica"
+    st = rodar(resposta("afirma_uso", [linha]))
+    assert "websocket-mencao" in {a["codigo"] for a in st["telemetria_status_envelope"]["achados"]}
+
+    sem_candidato = handoff.replace(linha, "O canal é o polling acima.")
+    st = rodar(resposta("cita_para_descartar", [linha]), doc=sem_candidato)
+    assert not st.get("juiz_rodou"), "sem candidato o juiz não roda — não custa chamada"
+    print("   ✓ juiz de achados: retira só com citação conferida; inválido, inventado ou 'afirma' mantém; sem candidato não roda")
+
+
+if __name__ == "__main__":
+    print("=" * 64)
+    print("🚀 Teste estrutural — Gerador de Missões Unooria (Produto → Design → Dev)")
+    print("=" * 64)
+    s = get_settings()
+    print(f"   modelo: {s.gemini_model} · Stitch MCP: {s.stitch_mcp_mode} · etapas: {s.pipeline_stages} · estrito: {s.produto_modo_estrito}")
+    # Descoberta automática: a lista literal ficou defasada (um nome inexistente
+    # derrubava a suíte inteira com NameError, e 25 dos 51 testes nunca rodavam).
+    # `globals()` é a fonte da verdade — teste novo entra sozinho.
+    tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
+    print(f"   {len(tests)} testes descobertos")
+    failed = 0
+    for t in tests:
+        try:
+            t()
+        except AssertionError as exc:
+            failed += 1
+            print(f"   ✗ {t.__name__}: {exc}")
+        except Exception as exc:  # noqa: BLE001
+            failed += 1
+            print(f"   ✗ {t.__name__}: {type(exc).__name__}: {exc}")
+    print("=" * 64)
+    if failed:
+        print(f"❌ {failed} teste(s) falharam")
+        sys.exit(1)
+    print("✅ TODOS OS TESTES ESTRUTURAIS PASSARAM")

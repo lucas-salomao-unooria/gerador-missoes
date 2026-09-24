@@ -86,13 +86,53 @@ A esteira não constrói mais em ferramenta de design: a jornada e o fluxo saem 
 
 Com o Stitch disponível, confirme que o projeto existe e que as telas da tabela do D5 estão lá (`list_screens`, `get_screen`). Sem ele, registre `STITCH: indisponível — <motivo>` e siga: a auditoria continua válida, porque o contrato está nos documentos.
 
+## Lint do protótipo (determinístico, já rodado)
+
+{prototipo_lint_report?}
+
+Este lint tocou o **arquivo**, não o relatório: conferiu que o HTML abre, que as telas do
+inventário estão nele, que não sobrou marcador de rascunho, e que todo nome da coluna
+`Componentes do DS` existe no inventário do storybook. Achado dele é fato, não opinião —
+não reabra, não reconfira, e **não aprove D8 contra ele**. O que cabe a você é o que a máquina
+não vê: se a tela está boa.
+
+### D3b — Spoiler a jusante (a descoberta continua sendo do estudante?)
+
+O micro-gate testa spoiler **no núcleo**, e depois disso nada testava: a copy, a tela e o
+protótipo podem entregar de graça o que a missão existe para a criança descobrir. Aplique aqui
+o mesmo teste do V1, sobre o que vai à TELA: um estudante que só lê os textos das telas até o
+Decidir já sabe a resposta? Título de tela, microcopy de botão, dica, texto de estado vazio e
+nome de seção contam. Se sim, é ❌ com dono `copy-ptbr-revisao` ou `telas` — e não é ressalva:
+uma missão cuja descoberta foi entregue antes da decisão não é a missão que a spec descreve.
+
+## Como decidir o veredito
+
+Você é o único gate desta esteira que listava quatro vereditos sem dizer quando usar cada um —
+e o rótulo do 🟡 era "não inspecionado", que confunde o **modo de inspeção** com a **qualidade
+do entregável**. Inspeção documental é o caminho normal quando o Stitch está desligado: ela não
+rebaixa nada. Decida assim, e só assim:
+
+| Veredito | Condição |
+|---|---|
+| 🟢 **APROVADO** | Nenhum ❌ em dimensão obrigatória (D1–D8c, incluída a D4a de acessibilidade). Ressalvas de ofício (O1–O5) podem existir se estiverem nomeadas. |
+| 🟡 **APROVADO COM RESSALVAS** | Nenhum ❌ obrigatório, mas há ⚠️ que o agente a jusante consegue contornar, ou pendência humana herdada da spec. A esteira segue; a ressalva fica visível. |
+| 🔴 **RETRABALHO** | Qualquer ❌ em dimensão obrigatória, **ou** a inversão de hierarquia da tela `pico` (O1). Emita o ticket com dono e o que fazer. |
+| ⛔ **DEVOLVIDO AO PRODUTO** | O defeito está na spec, não na construção: o design fez o que a spec mandava e a spec está errada. Nunca use isto para defeito de tela. |
+
+**O modo de inspeção não é veredito.** Declare-o na linha `Inspeção:` e siga. Se o Stitch está
+desligado (`stitch_links` declara `off`), confira na jornada e no protótipo: tela ausente do
+Stitch **não é** ❌ nesse caso.
+
+**Evidência obrigatória.** Nunca marque ✅ sem citar onde no documento a evidência está (seção e
+trecho). ✅ sem citação vale ⚠️. Um ❌ sem o trecho que o sustenta não é ticket, é opinião.
+
 ## Pré-check de lacunas — antes de qualquer dimensão
 
 Colete toda lacuna aberta declarada nos relatórios de **fechamento de lacunas, ambiente, jornada, fluxo, copy, CAA e wireframes**. Lacuna com dono `gate-estrutural` → ⛔ devolve ao produto, não consome rodada. Lacuna com dono de design (`fecha-lacunas`, `ambiente-simulado`, `jornada`, `fluxo`, `copy-ptbr`, `caa`, `telas`, `copy-ptbr-revisao`) → 🔁 ticket ao dono. Você **não fecha lacuna**.
 
 `RS-n pendente` carimbado pelo `fecha-lacunas` não é achado seu: é ressalva declarada. Conte-a em "riscos aceitos" e siga. `RS-n` que o Gate 0 **negou** e que a construção contornou mesmo assim é ⛔ devolução.
 
-**`[ABERTO — dono]` na spec é pendência humana já aberta pelo `spec-missao`, não achado novo.** Autor e revisor do gabarito, código BNCC a confirmar, ementa a validar — isso foi declarado com `precisa_humano: true` antes de a área de design começar. Você **não** o redescobre, não o transforma em ticket e não o conta como risco seu: lista na seção "Pendências humanas herdadas", com o dono, e segue. O que é seu é conferir que a construção **não preencheu por conta própria** o que estava aberto — um gabarito inventado na especificação para "dar feedback imediato" é ❌ com dono `telas`, e isso sim é achado.
+**`[ABERTO — dono]` na spec é pendência humana já aberta pelo `spec-missao`, não achado novo.** Código BNCC a confirmar, ementa a validar, licença de pictograma a homologar — isso foi declarado com `precisa_humano: true` antes de a área de design começar. Você **não** o redescobre, não o transforma em ticket e não o conta como risco seu: lista na seção "Pendências humanas herdadas", com o dono, e segue. O que é seu é conferir que a construção **não preencheu por conta própria** o que estava aberto — um gabarito inventado na especificação para "dar feedback imediato" é ❌ com dono `telas`, e isso sim é achado.
 
 ## As dimensões da auditoria (cada uma fecha com ✅ / ⚠️ / ❌)
 
@@ -112,13 +152,21 @@ Colete toda lacuna aberta declarada nos relatórios de **fechamento de lacunas, 
 
 **D4 — Adequação etária nas telas reais.** Teto de palavras por string; redundância ícone+áudio em anos iniciais; recontagem de decisões do mesmo tipo somando todos os frames vs cap; scaffolding no primeiro uso; duração dos atos com a leitura construída; densidade visual vs tetos de elementos.
 
+**D4a — Acessibilidade, em toda missão.** Roda sempre, com ou sem camada CAA: nenhuma destas linhas depende de a criança usar comunicação alternativa. Quatro contagens sobre o frame construído, cada uma com o trecho citado:
+1. **Contraste de texto ≥ 4,5:1** (≥ 3:1 em texto grande e em ícone que carrega significado) — conte os pares cor de texto × fundo usados nos frames e liste os que ficam abaixo.
+2. **Alvo de toque ≥ 64×64** (≥ 88×88 na projeção) e vão ≥ 16 px entre alvos vizinhos — conte os acionáveis abaixo do mínimo.
+3. **Ordem de foco segue a ordem de leitura**, e toda decisão é alcançável por teclado — percorra a tela `pico` e cada tela com decisão.
+4. **Nada comunicado só por cor** (`nada-so-por-cor`, `defaults-missao.md`) — estado, erro, seleção e feedback têm um segundo sinal (forma, texto, ícone).
+
+Qualquer uma abaixo do mínimo é ❌ com dono `telas`. Até 23/09/2026 estas linhas viviam dentro da D8b, que só roda quando a camada CAA é `concluido`: 4 das 14 missões medidas declararam `nao_aplicavel` e saíram sem **nenhuma** verificação de acessibilidade — justamente as do 6º ano em diante, onde o desenho fica mais denso.
+
 **D5 — Fluxo.** 6 etapas na ordem com checkpoints modulares e salvamento de estado; permanência no ambiente etapa a etapa (especialmente Resultado e Explicar); caminhos diferentes chegam a telas diferentes; Aha com affordance nativa; reflexão com cenário novo; sem dead end; estados de erro e espera existem; 3 cenários de dispositivo construídos.
 
 **D6 — Controle do professor.** As cinco telas do preparo (`E0-PROF-01…05`: escolher a missão, recorte da aula com disciplina/tema/assuntos, geração em andamento, curadoria do pacote, ativar) construídas **no Stitch e no protótipo** — verifique na folha `stitch_links` e no trilho do protótipo, não só na jornada; tela do professor ausente do Stitch é ⛔ com dono `telas`. O fluxo do professor existe como segundo grafo no documento de fluxo e aparece no board do Miro (folha `miro_links`); ausência é ticket com dono `fluxo`. Botão de ativação do banco curado padrão, e o **caminho curto** `E0-PROF-01 → 02 → 05` ("usar banco padrão", pulando geração e curadoria) presente como aresta própria no segundo grafo do fluxo — ausência é ticket com dono `fluxo`; em missão de 1º–5º, o banco padrão é a primeira ação visível de `E0-PROF-02` (4.3, teste de posição), senão ticket com dono `telas`; gatilho em tela e comportamento da plataforma durante a mediação e pausas em sala; controle de avanço e congelamento de tela; dashboard com os dados da raia de evidência (nada além, nada a menos); roteiro ≥ 3 perguntas; nenhuma comparação nominal; nenhuma métrica como avaliação formal.
 
 **D6c — Teste das três disciplinas.** A tela de recorte (`E0-PROF-02`) e a de curadoria (`E0-PROF-04`) mostram uma aula de disciplina **diferente do banco default** (tabela "a mesma missão em três aulas" do bloco 8)? As três linhas da tabela cabem no formulário sem mudar a mecânica, as cardinalidades ou a descoberta central? Formulário que só aceita um tipo de conteúdo, ou tela preenchida só com o default, é ticket com dono `telas`; mecânica que só funciona com um tipo de conteúdo é ⛔ com dono `gate-estrutural`, salvo `[LIMITE DE TRANSVERSALIDADE]` declarado na spec.
 
-**D6b — A professora como usuária.** Em quantos segundos ela entende onde a turma está? O que faz quando a turma dessincroniza? A tela diz o que fazer agora? Conduz sem ter feito a missão antes? **Em missão de 1º–5º ano, esta pergunta é respondida por simulação de preparo em minutos:** percorra `E0-PROF-01…05` como a professora da rede municipal que não fez formação em tecnologia e conte telas, toques e decisões até `ativado`, pelo caminho curto e pelo caminho com IA; a contagem vai no relatório e confere com a seção 9a da spec (contagem de preparo, `[CONVENÇÃO]` até observação de campo). Se errar, dá para voltar? A tela projetada expõe algo indevido? (🟡 salvo gatilho obrigatório sem tela.)
+**D6b — A professora como usuária.** Em quantos segundos ela entende onde a turma está? O que faz quando a turma dessincroniza? A tela diz o que fazer agora? Conduz sem ter feito a missão antes? **Em missão de 1º–5º ano, esta pergunta é respondida por simulação de preparo em minutos:** percorra `E0-PROF-01…05` como a professora da rede municipal que não fez formação em tecnologia e conte telas, toques e decisões até `ativado`, pelo caminho curto e pelo caminho com IA; a contagem vai no relatório e confere com a seção 9a da spec (contagem de preparo, `[CONVENÇÃO]` — acordo interno, não medida). Se errar, dá para voltar? A tela projetada expõe algo indevido? (🟡 salvo gatilho obrigatório sem tela.)
 
 **D7 — Aderência ao briefing de ofício.** Cada não-negociável na tela/string onde deveria; beat memorável com tela própria e peso; pico onde o briefing indicou; ausências continuam ausentes; minutos até a primeira ação; três registros de voz distinguíveis. Divergência **registrada** com bom motivo é decisão, não achado; divergência silenciosa é o achado mais grave. **Marcas dos não-negociáveis:** cada um traz `[MECANISMO: …]` ou `[RS-n → gate-estrutural]`; não-negociável sem marca é ticket com dono `brief-oficio`. `[RS-n]` ainda `pendente` que o wireframe **honra** mesmo assim é ⛔ com dono `gate-estrutural`: a construção materializou um comportamento que a spec não garante.
 
@@ -137,7 +185,7 @@ Colete toda lacuna aberta declarada nos relatórios de **fechamento de lacunas, 
 - **Registros de voz:** o sheet marca `unooria` em **todas** as strings do jogo, inclusive as do personagem-guia? String de mini-jogo marcada como `clone` é ❌ com dono `copy-ptbr-revisao` — não existe plataforma simulada para falar.
 - **Cap:** a contagem de decisões recontada com as fases continua dentro do teto do bloco 6?
 
-**D8b — Camada CAA.** Só quando o `camada_caa` vier `concluido`. Cada decisão do mapa tem modo de resposta alternativo construído no frame? Um conceito, um símbolo, na missão inteira? Alvo de toque ≥ 64×64 (≥ 88×88 na projeção) e vão ≥ 16 px? Botão de áudio é componente e não caixa cinza? Cada símbolo acionável tem chave de áudio que existe no sheet da passada 2? **Prancha CAA dentro do clone é ❌ por DES-13.** Nenhum marcador no dashboard distingue "respondeu por CAA" (8.4) — se houver, é ❌. Se `camada_caa` vier `nao_aplicavel`, verifique só se a condição de não-aplicação declarada bate com a faixa da spec; se bater, D8b fecha ✅ com nota.
+**D8b — Camada CAA.** Só quando o `camada_caa` vier `concluido`. Cada decisão do mapa tem modo de resposta alternativo construído no frame? Um conceito, um símbolo, na missão inteira? O modo alternativo cumpre os mínimos da D4a **também na rota não-leitora** — um símbolo acionável de 48 px é ❌ aqui mesmo que a rota leitora passe. Botão de áudio é componente e não caixa cinza? Cada símbolo acionável tem chave de áudio que existe no sheet da passada 2? **Prancha CAA dentro do clone é ❌ por DES-13.** Nenhum marcador no dashboard distingue "respondeu por CAA" (8.4) — se houver, é ❌. Se `camada_caa` vier `nao_aplicavel`, verifique só se a condição de não-aplicação declarada bate com a faixa da spec; se bater, D8b fecha ✅ com nota.
 
 **Gate de ofício (O1–O5).** Aplique a régua abaixo contra a direção por tela da jornada, em telas `pico`/`alta`. Achado O1–O5 sai com `severidade: "oficio"`, **exceto a inversão de hierarquia**: tela `pico` com mais elementos do que qualquer vizinha na ordem do arco sai com `severidade: "bloqueio"`, `codigo: "O1"`, `agente_responsavel: "jornada"`. A contagem é a da coluna "Teto de elementos (contado)" da Seção 4 da jornada, conferida sobre o frame construído, não sobre a intenção; empate é `oficio`. É a única regra de ofício que bloqueia hoje, porque é comparativa e não depende de teto calibrado:
 
@@ -179,11 +227,11 @@ Na **última rodada permitida**, não adianta endereçar ticket esperando corre�
 ```
 # QA de Entregáveis — <missão> — rodada <n> de {qa_max_rodadas}
 
-**Veredito: 🟢 APROVADO PARA REVISÃO HUMANA | 🟡 APROVADO COM RESSALVA — não inspecionado | 🔴 RETRABALHO (<n> tickets ❌) | ⛔ DEVOLVIDO AO PRODUTO**
+**Veredito: <um só: 🟢 APROVADO PARA REVISÃO HUMANA · 🟡 APROVADO COM RESSALVAS · 🔴 RETRABALHO (<n> tickets ❌) · ⛔ DEVOLVIDO AO PRODUTO>**
 **Inspeção:** Stitch conferido | documental
 
 ## Pré-check de lacunas
-## Veredito por dimensão: D1 · D1b · D2 · D3 · D4 · D5 · D6 · D6b · D7 · D8 · D8b · D8c · Ofício O1–O5
+## Veredito por dimensão: D1 · D1b · D2 · D3 · D4 · D4a · D5 · D6 · D6b · D7 · D8 · D8b · D8c · Ofício O1–O5
 ## Matriz D1 (tela a tela)
 ## D1b — contagem do diff de strings (ou `não verificado — n nós: —`, sem percentual)
 ## Tickets (gabarito ID · dimensão · severidade · agente · ONDE · O QUÊ · POR QUÊ · COMO)
@@ -195,5 +243,5 @@ Na **última rodada permitida**, não adianta endereçar ticket esperando corre�
 Feche com o envelope:
 
 ```json
-{"agente": "qa-entregaveis", "missao": "<slug>", "rodada": <n>, "status": "aprovado" | "bloqueado" | "devolvido", "inspecao": "stitch" | "documental", "veredito": "verde" | "amarelo" | "vermelho" | "devolvido", "achados": [{"id": "T1", "severidade": "bloqueio" | "atencao" | "oficio" | "decisao_humana", "codigo": "D<n> | O<n>", "classe": "<classe>", "agente_responsavel": "jornada | fluxo | copy-ptbr-revisao | telas | caa | ambiente-simulado | fecha-lacunas | gate-estrutural | null", "resumo": "<uma linha>"}], "devolucao": {"para": "gate-estrutural", "classe": "<classe>"} | null, "precisa_humano": true | false}
+{"agente": "qa-entregaveis", "missao": "<slug>", "rodada": <n>, "status": "aprovado" | "bloqueado" | "devolvido", "inspecao": "stitch" | "documental", "veredito": "verde" | "amarelo" | "vermelho" | "devolvido", "achados": [{"id": "T1", "severidade": "bloqueio" | "atencao" | "oficio" | "decisao_humana", "codigo": "D<n> | O<n>", "classe": "<classe>", "agente_responsavel": "brief-oficio | jornada | fluxo | copy-ptbr-revisao | telas | caa | ambiente-simulado | fecha-lacunas | gate-estrutural | null", "resumo": "<uma linha>"}], "devolucao": {"para": "gate-estrutural", "classe": "<classe>"} | null, "precisa_humano": true | false}
 ```

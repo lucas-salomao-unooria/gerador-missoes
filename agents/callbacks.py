@@ -67,8 +67,13 @@ def inferir_status(texto: str, envelope: Optional[Dict[str, Any]] = None) -> str
         status = str(envelope.get("status") or envelope.get("veredito") or "").strip().lower()
         if status in ("aprovado", "concluido", "concluído", "liberada", "apto", "passa", "verde", "🟢"):
             return STATUS_APROVADO
-        if status in ("bloqueado", "bloqueada", "devolvido", "nao_apto", "não apto", "nao_passa", "não passa", "vermelho", "🔴", "aguarda_gate"):
+        if status in ("bloqueado", "bloqueada", "devolvido", "nao_apto", "não apto", "nao_passa", "não passa", "vermelho", "🔴"):
             return STATUS_BLOQUEADO
+        # `aguarda_gate` é o D0 dizendo que a decisão cabe ao Gate 0 ou ao PO. Não existe loop
+        # que devolva isso a um agente, então tratá-lo como bloqueio travava a esteira num
+        # impasse insolúvel. É pendência humana: segue, e o dossiê registra como 🟡.
+        if status == "aguarda_gate":
+            return STATUS_APROVADO
         if status in ("aprovado_com_ressalvas", "apto_com_ressalvas", "ressalvas", "amarelo", "🟡"):
             return STATUS_APROVADO
         # D0 (fecha-lacunas): segue | segue_com_pendencias · D9 (ambiente-simulado): dormente | existente | novo
@@ -80,6 +85,35 @@ def inferir_status(texto: str, envelope: Optional[Dict[str, Any]] = None) -> str
     if any(tok in cabecalho for tok in _APROVADO_TOKENS):
         return STATUS_APROVADO
     return STATUS_INDEFINIDO
+
+
+def status_registrado(texto: str, envelope: Optional[Dict[str, Any]] = None) -> str:
+    """O veredito COMO ELE FOI DADO — aprovado | amarelo | bloqueado | indefinido.
+
+    `inferir_status` é binário de propósito: ela decide se a esteira segue, e para isso
+    "aprovado com ressalvas" é seguir. Mas gravar esse mesmo valor no dossiê apagava a
+    ressalva: em 14 execuções, nenhum gate de LLM apareceu como 🟡, embora os relatórios
+    estivessem cheios de 🟡. O que o time lia era um verde que o juiz não deu.
+
+    Os dois convivem: o roteamento usa `inferir_status`, o dossiê usa esta.
+    """
+    if envelope:
+        bruto = str(envelope.get("status") or envelope.get("veredito") or "").strip().lower()
+        if bruto in ("aprovado_com_ressalvas", "apto_com_ressalvas", "ressalvas", "amarelo", "🟡",
+                     "segue_com_pendencias", "parcial", "aprovado-com-pendencias-de-plataforma",
+                     # o D0/D9 devolvendo a decisão ao Gate 0 ou ao PO: não é aprovação nem
+                     # impedimento, é pendência humana — e era lida como bloqueio insolúvel,
+                     # porque não existe loop que devolva a decisão a um agente.
+                     "aguarda_gate"):
+            return "amarelo"
+    binario = inferir_status(texto, envelope)
+    if binario == STATUS_APROVADO and envelope:
+        achados = envelope.get("achados") or []
+        if any(str(a.get("severidade", "")).lower() in ("atencao", "atenção", "oficio", "ofício",
+                                                        "decisao_humana", "decisão humana")
+               for a in achados if isinstance(a, dict)):
+            return "amarelo"
+    return binario
 
 
 def marcar_heranca(callback_context: CallbackContext) -> Optional[types.Content]:

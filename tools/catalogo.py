@@ -169,24 +169,74 @@ def _habilidade_primaria(spec: str, nucleo: str) -> str:
     return ""
 
 
+#: Cabeçalho normalizado → campo da ficha. A ordem das colunas NÃO importa, e é esse o ponto.
+_COLUNAS_CATALOGO = (
+    ("tipo de decis", "tipo_decisao"), ("descoberta", "descoberta"), ("habilidade", "habilidade_primaria"),
+    ("porta", "porta_abstracao"), ("ambiente", "ambiente"), ("eixo", "eixo"), ("slug", "slug"),
+    ("bim", "bimestre"), ("nome", "nome"), ("status", "status"), ("ano", "ano"),
+)
+
+
+def _norm_cab(celula: str) -> str:
+    sem = "".join(c for c in unicodedata.normalize("NFD", celula.lower()) if unicodedata.category(c) != "Mn")
+    return sem.strip(" `*_")
+
+
 def _linha_do_aprendizado(aprendizado: str) -> Dict[str, str]:
     """Campos de julgamento da linha que o agente 51 propõe no formato do catálogo.
 
-    O 51 já monta essa linha hoje e ela era descartada. Aqui ela vira dado — e, quando ele não
-    a emite, a ficha cai na extração do núcleo.
+    Lida pelo NOME da coluna. A versão anterior lia por posição, com o slug na primeira: o prompt
+    pede `|Slug|Ano|…|` e o modelo escreve `|Ano|Bim|Nome|…|` — o formato antigo de
+    `catalogo-missoes.md`. A linha era descartada em todas as execuções, a ficha caía no núcleo,
+    e o núcleo não tem rótulo de tipo de decisão: 13 das 14 fichas reconstruídas em 23/09/2026
+    saíam com `tipo_decisao` vazio, o V5 as ignorava, e o registro automático repetia o defeito
+    a cada missão nova. Campo `[preencher…]` volta vazio, para a extração do núcleo tentar.
     """
-    for linha in (aprendizado or "").splitlines():
-        if not _RE_LINHA_TABELA.match(linha.strip()):
+    cabecalho: Optional[List[str]] = None
+    for bruta in (aprendizado or "").splitlines():
+        linha = bruta.strip()
+        # Pela forma, e não por `_RE_LINHA_TABELA`: aquele regex exclui a linha separadora de
+        # propósito, e tratar "não casou" como "a tabela acabou" zerava o cabeçalho justo antes
+        # da linha de dados.
+        if not (linha.startswith("|") and linha.endswith("|") and len(linha) > 2):
+            cabecalho = None
             continue
-        celulas = [_limpar(c) for c in linha.strip().strip("|").split("|")]
-        if len(celulas) < 8 or celulas[0].lower() in ("slug", "missão", "missao"):
+        if set(linha) <= set("|-: "):
             continue
-        if not re.search(r"exp\d{2}(ef|em)\d b?|exp-\d{2}", celulas[0], re.IGNORECASE):
+        celulas = [_limpar(c) for c in linha.strip("|").split("|")]
+        normal = [_norm_cab(c) for c in celulas]
+        if any("descoberta" in c for c in normal) and any("tipo de decis" in c for c in normal):
+            cabecalho = normal
             continue
-        campos = ["slug", "ano", "bimestre", "nome", "ambiente", "eixo", "descoberta", "tipo_decisao",
-                  "porta_abstracao", "habilidade_primaria", "status", "observada_em_campo"]
-        return {campo: celulas[i] for i, campo in enumerate(campos) if i < len(celulas)}
+        if cabecalho is None:
+            continue
+        ficha: Dict[str, str] = {}
+        for i, nome_col in enumerate(cabecalho):
+            if i >= len(celulas):
+                break
+            campo = next((c for chave, c in _COLUNAS_CATALOGO if chave in nome_col), None)
+            valor = celulas[i].strip()
+            if campo and campo not in ficha and valor and "preencher" not in valor.lower():
+                ficha[campo] = valor
+        if ficha.get("descoberta") or ficha.get("tipo_decisao"):
+            return ficha
     return {}
+
+
+_RE_SECAO_DS = re.compile(r"secao_ds[`*_]*\s*:\s*[`*_]*\s*([a-z0-9:_\-]+)", re.IGNORECASE)
+
+
+def _ambiente_da_spec(bloco0: str) -> str:
+    """O ambiente pelo campo `secao_ds` do bloco 0 — vocabulário fechado, conferido por gate.
+
+    Ambiente novo é `nova:<nome>` e fica assim: vazio, ele fazia a ficha sair cega em todas as
+    missões com seção de DS nova (5 das 14 em 23/09/2026), embora a spec dissesse qual era.
+    """
+    m = _RE_SECAO_DS.search(bloco0 or "")
+    if not m:
+        return ""
+    valor = m.group(1).lower().strip("`")
+    return valor if (valor in AMBIENTES or valor.startswith("nova:")) else ""
 
 
 def _nome(textos: str) -> str:
@@ -237,7 +287,10 @@ def ficha_da_execucao(state: Dict[str, Any], sessao: str = "") -> Dict[str, Any]
         "nome": proposta.get("nome") or _nome(nucleo or spec or one_pager),
         "ano": proposta.get("ano") or ano,
         "bimestre": bimestre,
-        "ambiente": (proposta.get("ambiente") or _ambiente(bloco0) or _ambiente(juntos[:6000])).lower(),
+        # A spec primeiro: `secao_ds` é vocabulário fechado. A linha do aprendizado traz o nome de
+        # vitrine ("InstaNooria (Instagram)") e só serve canonizada.
+        "ambiente": (_ambiente_da_spec(bloco0) or _ambiente(proposta.get("ambiente", ""))
+                     or _ambiente(bloco0) or _ambiente(juntos[:6000])).lower(),
         "eixo": proposta.get("eixo") or _campo_rotulado(bloco1, "Eixo temático", "Eixo"),
         "descoberta": proposta.get("descoberta") or _campo_rotulado(bloco1, "Descoberta central") or _primeira_frase(bloco1),
         "tipo_decisao": proposta.get("tipo_decisao") or _campo_rotulado(bloco1, "Tipo de decisão"),
@@ -247,6 +300,15 @@ def ficha_da_execucao(state: Dict[str, Any], sessao: str = "") -> Dict[str, Any]
         "gates": gates,
         "gerada_em": time.strftime("%Y-%m-%d"),
         "origem": "esteira",
+        # Achados dos pareceres pedagógicos, com o slug de padrão, para `recorrencias()`
+        # perceber o que volta. Sem isto cada execução redescobria o mesmo defeito com um id
+        # novo: 40 achados de conteúdo em 14 execuções, nenhum fechado.
+        "achados_pedagogicos": [
+            {"padrao": a["padrao"], "resumo": str(a.get("resumo") or "")[:200]}
+            for chave in ("adequacao_status_envelope", "avaliacao_status_envelope", "experiencia_status_envelope")
+            for a in ((state.get(chave) or {}).get("achados") or [])
+            if isinstance(a, dict) and a.get("padrao")
+        ],
     }
 
 
@@ -392,6 +454,111 @@ def registrar(ficha: Dict[str, Any], indice: Optional[Dict[str, Any]] = None, ba
             "total": len(missoes), "vizinhas": proximas}
 
 
+def recorrencias(indice: Optional[Dict[str, Any]] = None, minimo: int = 3, janela: int = 20,
+                 base: Optional[Path] = None) -> List[Dict[str, Any]]:
+    """Padrões de achado pedagógico que voltaram — a base para virar regra do prompt.
+
+    Recorrente = aparece em `minimo` sessões DE PELO MENOS DUAS MISSÕES distintas, dentro das
+    últimas `janela`. Duas missões é o que separa "defeito daquela missão" de "defeito que a
+    esteira produz": reexecutar a mesma missão não conta como recorrência.
+
+    Existe porque em 14 execuções os pareceres emitiram 40 achados de conteúdo e nenhum foi
+    fechado — cada execução redescobria o mesmo problema com um id novo.
+    """
+    idx = indice if indice is not None else carregar(base)
+    fichas = (idx.get("missoes") or [])[-janela:]
+    por_padrao: Dict[str, Dict[str, Any]] = {}
+    for f in fichas:
+        slug = f.get("slug") or "—"
+        for achado in f.get("achados_pedagogicos") or []:
+            padrao = str(achado.get("padrao") or "outro")
+            reg = por_padrao.setdefault(padrao, {"padrao": padrao, "sessoes": 0, "slugs": set(), "exemplo": ""})
+            reg["sessoes"] += 1
+            reg["slugs"].add(slug)
+            if not reg["exemplo"]:
+                reg["exemplo"] = str(achado.get("resumo") or "")[:160]
+    fora = []
+    for reg in por_padrao.values():
+        if reg["sessoes"] >= minimo and len(reg["slugs"]) >= 2:
+            fora.append({**reg, "slugs": sorted(reg["slugs"]), "missoes": len(reg["slugs"])})
+    return sorted(fora, key=lambda r: -r["sessoes"])
+
+
+_RE_PASTA_SESSAO = re.compile(r"^\d{8}-\d{6}-(exp\d{2}(?:ef|em)\d+b)$", re.IGNORECASE)
+
+
+def slugs_das_sessoes(base: Optional[Path] = None) -> Set[str]:
+    """Slugs das missões que têm sessão gravada ao lado do índice — pelo NOME da pasta.
+
+    Só lista diretórios e confere que `estado.json` existe: em produção `output/` é o bucket
+    montado, e abrir cada estado (1–2 MB) a cada execução custaria mais que o próprio gate.
+    """
+    raiz = caminho_indice(base).parent
+    if not raiz.is_dir():
+        return set()
+    achados: Set[str] = set()
+    for pasta in raiz.iterdir():
+        m = _RE_PASTA_SESSAO.match(pasta.name)
+        if m and pasta.is_dir() and (pasta / "estado.json").exists():
+            achados.add(m.group(1).lower())
+    return achados
+
+
+def saude_do_indice(indice: Optional[Dict[str, Any]] = None, base: Optional[Path] = None) -> Dict[str, Any]:
+    """Quantas linhas do índice sustentam uma reprovação em V5 — e quantas não.
+
+    A verificação de semelhança só reprova contra uma linha COMPLETA: `01_nucleo_narrativo.md`
+    instrui que "linha com campo `—` ou `[preencher…]` não serve de comparação". Com o índice
+    majoritariamente incompleto, o V5 **se autodesliga** — e em silêncio, que é o problema: o
+    dossiê continua mostrando o gate verde. Em 23/09/2026, 10 das 14 fichas (71%) estavam
+    assim, e nenhuma execução avisou.
+    """
+    idx = indice if indice is not None else carregar(base)
+    missoes = idx.get("missoes", [])
+    cegas = [m for m in missoes if tem_lacuna(m)]
+    total = len(missoes)
+    # A outra metade da cegueira, que a contagem de linhas não vê: missão GERADA que nunca
+    # entrou no índice. Em 23/09/2026 o bucket tinha 14 sessões e 1 missão indexada — zero
+    # linhas furadas, fração cega 0%, nenhum aviso, e o V5 comparando contra uma só.
+    no_indice = {str(m.get("slug") or "").lower() for m in missoes}
+    fora = sorted(slugs_das_sessoes(base) - no_indice)
+    return {
+        "total": total,
+        "cegas": len(cegas),
+        "uteis": total - len(cegas),
+        "fracao_cega": (len(cegas) / total) if total else 0.0,
+        "slugs_cegos": [m.get("slug") or "—" for m in cegas],
+        "fora_do_indice": fora,
+    }
+
+
+def aviso_de_indice_cego(saude: Dict[str, Any]) -> Optional[str]:
+    """Frase para o dossiê quando o gate de semelhança perdeu a base de comparação.
+
+    Os dois defeitos convivem — fichas furadas E missões geradas fora do índice — e o aviso diz
+    os dois: um não pode esconder o outro.
+    """
+    partes: List[str] = []
+    fora = saude.get("fora_do_indice") or []
+    if fora:
+        partes.append(
+            f"> ⚠️ **O índice não conhece {len(fora)} missão(ões) já gerada(s)** "
+            f"({', '.join(f'`{s}`' for s in fora[:8])}{'…' if len(fora) > 8 else ''}): elas têm "
+            f"sessão gravada e não estão no catálogo, então a verificação de semelhança (V5) não as "
+            f"compara. Rode `python scripts/catalogo.py reconstruir` onde as sessões estão.")
+    if saude["total"] == 0 and not fora:
+        partes.append("> ⚠️ O índice está vazio: a verificação de semelhança (V5) não tem contra o que "
+                      "comparar e **não reprovará nada** nesta execução.")
+    elif saude["total"] and saude["fracao_cega"] >= 0.5:
+        partes.append(
+            f"> ⚠️ **A verificação de semelhança está praticamente desligada**: "
+            f"{saude['cegas']} das {saude['total']} fichas do índice ({saude['fracao_cega']:.0%}) "
+            f"não têm campo de comparação preenchido, e o V5 não reprova contra linha incompleta. "
+            f"Rode `python scripts/catalogo.py reconstruir` e preencha `tipo_decisao` e "
+            f"`porta_abstracao` das fichas antigas — sem isso o gate segue verde sem julgar nada.")
+    return "\n>\n".join(partes) or None
+
+
 def relatorio_markdown(resultado: Dict[str, Any], missao: str = "") -> str:
     """Relatório legível + envelope JSON, no padrão dos demais gates determinísticos."""
     f = resultado.get("ficha", {})
@@ -406,6 +573,10 @@ def relatorio_markdown(resultado: Dict[str, Any], missao: str = "") -> str:
     linhas.append("")
     if f and tem_lacuna(f):
         linhas.append("> ⚠️ Campo de comparação vazio nesta ficha: o critério 2.5 e a verificação V5 não conseguem julgar contra ela nas próximas execuções. Preencher no núcleo narrativo ou na seção 1 do catálogo proposto pelo agente 51.")
+        linhas.append("")
+    aviso = aviso_de_indice_cego(saude_do_indice())
+    if aviso:
+        linhas.append(aviso)
         linhas.append("")
     linhas.append("## Missões mais próximas no índice")
     linhas.append("")

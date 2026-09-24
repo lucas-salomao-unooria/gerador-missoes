@@ -66,6 +66,13 @@ vira serviço no Cloud Run. Porta de dev nova registrada em
 WebSocket próprio ou estado no cliente entre sessões — se a spec exige,
 levantar como decisão de arquitetura (ADR) antes de codar.
 
+> **Não emita achado aqui.** Isto é entregável do **plano de implementação do PRD**, que é
+> escrito *depois* desta banca (`agents/dev/__init__.py`: banca → consolidação → PRD). Cobrar
+> do handoff o que o PRD ainda vai escrever produziu 24 dos 283 achados das 14 primeiras
+> execuções, todos já atendidos no PRD da mesma sessão. A conferência acontece sobre o
+> `prd_final`, no `prd-check`. O que cabe a você aqui: julgar se o **insumo permite** escrever
+> isso — se a spec esconde a informação, o achado é sobre a spec, não sobre o arquivo ausente.
+
 ## TEC-08 — Versão única em três lugares
 `versao` do manifesto = `version` do `package.json` = constante de versão do
 bundle (`EXP_VERSION`) — o CI lê do manifesto e a divergência já causou bug;
@@ -73,6 +80,13 @@ o skew da constante do bundle torna a análise de telemetria cega à versão
 real (defeito presente hoje nas quatro missões). A spec só precisa declarar a
 versão inicial; o critério existe para o plano de implementação incluir a
 fonte única.
+
+> **Não emita achado aqui.** Isto é entregável do **plano de implementação do PRD**, que é
+> escrito *depois* desta banca (`agents/dev/__init__.py`: banca → consolidação → PRD). Cobrar
+> do handoff o que o PRD ainda vai escrever produziu 24 dos 283 achados das 14 primeiras
+> execuções, todos já atendidos no PRD da mesma sessão. A conferência acontece sobre o
+> `prd_final`, no `prd-check`. O que cabe a você aqui: julgar se o **insumo permite** escrever
+> isso — se a spec esconde a informação, o achado é sobre a spec, não sobre o arquivo ausente.
 
 ## TEC-09 — Smoke walkthrough desenhado com asserções honestas
 O insumo permite roteirizar o walkthrough: quais passos, e asserções que
@@ -83,17 +97,39 @@ passaria com o relógio quebrado), espera que corre contra o erro
 ao teste anterior). Asserção que passa com a feature quebrada é pior que
 nenhuma.
 
+> **Não emita achado aqui.** Isto é entregável do **plano de implementação do PRD**, que é
+> escrito *depois* desta banca (`agents/dev/__init__.py`: banca → consolidação → PRD). Cobrar
+> do handoff o que o PRD ainda vai escrever produziu 24 dos 283 achados das 14 primeiras
+> execuções, todos já atendidos no PRD da mesma sessão. A conferência acontece sobre o
+> `prd_final`, no `prd-check`. O que cabe a você aqui: julgar se o **insumo permite** escrever
+> isso — se a spec esconde a informação, o achado é sobre a spec, não sobre o arquivo ausente.
+
 ## TEC-10 — Testes de contrato mínimos
 Regras puras testadas; guard de tenancy; sanitizador com teste de `grep` dos
 campos sensíveis no `dist/`; invariantes de produto em LISTA ÚNICA importada
 por código, sanitizador, prompt e teste (padrão `unoogpt/invariantes.ts`).
 A spec fornece os invariantes (termos proibidos na tela, campos sensíveis).
 
+> **Não emita achado aqui.** Isto é entregável do **plano de implementação do PRD**, que é
+> escrito *depois* desta banca (`agents/dev/__init__.py`: banca → consolidação → PRD). Cobrar
+> do handoff o que o PRD ainda vai escrever produziu 24 dos 283 achados das 14 primeiras
+> execuções, todos já atendidos no PRD da mesma sessão. A conferência acontece sobre o
+> `prd_final`, no `prd-check`. O que cabe a você aqui: julgar se o **insumo permite** escrever
+> isso — se a spec esconde a informação, o achado é sobre a spec, não sobre o arquivo ausente.
+
 ## TEC-11 — Dependências de DS resolvidas antes
 Componentes novos no `storybook-unooria` publicados e a versão do
 `@unooria/design-system` atualizada (`pnpm up -r --latest` deliberado — caret
 `^0.1.x` não sobe minor) ANTES da codificação da missão. A spec lista essas
 dependências com status.
+
+**Não emita achado aqui.** A ficha do manifesto já é conferida por gate
+determinístico: `secao_ds: nova:<nome>` produz, sozinha, a pendência de
+plataforma com componentes, responsável e prazo (`tools/rastro.py`, achado
+`secao_ds`). Repetir na banca dava duas severidades para o mesmo fato — 6 dos
+283 achados das 14 primeiras execuções. Este critério existe para o **plano de
+implementação** do PRD saber a ordem (publicar o DS antes de codificar), não
+para reabrir a pendência que o gate já abriu.
 
 ## TEC-12 — Esforço e risco dimensionados
 O que é padrão já pavimentado (módulo api, bridge, manifesto, walkthrough) vs

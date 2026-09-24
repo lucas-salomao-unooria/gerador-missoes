@@ -45,9 +45,11 @@ from google.adk.agents.loop_agent import LoopAgent
 from google.adk.agents.parallel_agent import ParallelAgent
 from google.adk.agents.sequential_agent import SequentialAgent
 
+from agents.juiz import get_juiz_de_achados
 from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca
 from agents.checkers import (
+    ConsolidacaoBancaAgent,
     DespachoTicketsAgent,
     EnvelopeGateAgent,
     RastroCheckAgent,
@@ -101,20 +103,20 @@ def get_validador_agents(**kw) -> list[LlmAgent]:
             instruction=load_prompt(prompt),
             output_key=key,
             before_agent_callback=marcar_heranca,
+            deterministico=True,  # as cinco dimensões emitem veredito
             **kw,
         )
         for name, key, prompt, desc in _VALIDADORES
     ]
 
 
-def get_consolidacao_banca_agent(**kw) -> LlmAgent:
-    return create_llm_agent(
+def get_consolidacao_banca_agent(**kw) -> ConsolidacaoBancaAgent:
+    """Determinístico desde 23/09/2026 — ver `tools/banca.py` para o porquê."""
+    return ConsolidacaoBancaAgent(
         name="A44ConsolidacaoBanca",
-        description="Consolida as 5 dimensões da banca em um relatório único com veredito determinístico 🟢/🟡/🔴.",
-        instruction=load_prompt("dev/44_consolidacao_banca.md"),
-        output_key="validacao_dev_report",
-        before_agent_callback=marcar_heranca,
-        **kw,
+        description="Consolida as 5 dimensões da banca: veredito = o pior delas, com a lista de "
+                    "bloqueantes lida dos próprios arquivos de critério.",
+        fontes=[key for _, key, _, _ in _VALIDADORES],
     )
 
 
@@ -260,6 +262,9 @@ def build_dev_stage(
                         estrito=estrito,
                         before_agent_callback=marcar_heranca,
                     ),
+                    get_juiz_de_achados("A36bJuizTelemetria", status_key="telemetria_status",
+                                        report_key="telemetria_report", fonte_key="handoff_dev",
+                                        gate_rotulo="Contrato de telemetria e arquitetura", **kw),
                     SaidaDeLoopAgent(
                         name="A37HandoffCheck",
                         description="Contrato conforme encerra o loop; reprovado devolve o handoff ao V1 com o relatório do gate.",
@@ -305,7 +310,6 @@ def build_dev_stage(
                         max_rounds=rodadas_banca,
                         escalate_on_approve=True,
                         block_pipeline_on_fail=estrito,
-                        treat_indefinido_as_blocked=False,
                         before_agent_callback=marcar_heranca,
                     ),
                     DespachoTicketsAgent(
@@ -340,11 +344,22 @@ def build_dev_stage(
                         estrito=estrito,
                         before_agent_callback=marcar_heranca,
                     ),
+                    RastroCheckAgent(
+                        name="A48bKpisCheck",
+                        description="Coerência KPI ↔ evento ↔ tela: todo KPI com pergunta, decisão, corte, evento que dispara na tela que o KPI nomeia, e baseline honesto.",
+                        modo="kpis",
+                        rotulo="Coerência KPI ↔ evento ↔ tela",
+                        report_key="kpis_report",
+                        status_key="kpis_status",
+                        agente="kpis-check",
+                        estrito=get_settings().kpis_check_estrito,
+                        before_agent_callback=marcar_heranca,
+                    ),
                     SaidaDeLoopAgent(
                         name="A48PrdRodada",
                         description="PRD consistente encerra o loop; reprovado devolve ao redator com o relatório do gate.",
                         rotulo="Consistência do PRD",
-                        status_keys=["prd_status"],
+                        status_keys=["prd_status", "kpis_status"],
                         rodada_key="prd_rodada",
                         max_rounds=rodadas_prd,
                     ),
@@ -367,7 +382,7 @@ DEV_METADATA = [
     {"id": "A41BancaPedagogiaBncc", "name": "41 · Banca: Pedagogia & BNCC", "icon": "🅲", "output_key": "validacao_pedagogia_bncc", "prompt_file": "dev/41_validacao_pedagogia_bncc.md", "description": "PED-01…15."},
     {"id": "A42BancaDadosLgpd", "name": "42 · Banca: Dados, Telemetria & LGPD", "icon": "🅳", "output_key": "validacao_dados_lgpd", "prompt_file": "dev/42_validacao_dados_lgpd.md", "description": "DAD-01…15."},
     {"id": "A43BancaTecnicaArquitetura", "name": "43 · Banca: Técnica & Arquitetura", "icon": "🅴", "output_key": "validacao_tecnica_arquitetura", "prompt_file": "dev/43_validacao_tecnica_arquitetura.md", "description": "TEC-01…13."},
-    {"id": "A44ConsolidacaoBanca", "name": "44 · Consolidação da banca", "icon": "⚖️", "output_key": "validacao_dev_report", "prompt_file": "dev/44_consolidacao_banca.md", "description": "Veredito determinístico 🟢/🟡/🔴 e bloqueios."},
+    {"id": "A44ConsolidacaoBanca", "name": "44 · Consolidação da banca", "icon": "⚖️", "output_key": "validacao_dev_report", "prompt_file": None, "description": "Determinístico: veredito = a pior das 5 dimensões; bloqueantes lidos de `references/criterios-dev/`."},
     {"id": "A45ValidacaoDevCheck", "name": "45 · Veredito de dev (determinístico)", "icon": "🔀", "output_key": "dev_status", "prompt_file": None, "description": "Lê o envelope da banca."},
     {"id": "A46DespachoBanca", "name": "46 · Retrabalho da banca (determinístico)", "icon": "🔁", "output_key": "reexecucoes", "prompt_file": None, "description": "Reexecuta o dono de cada achado da banca — inclusive quando o dono está na etapa de design. Achado de produto vira pendência nomeada."},
     {"id": "A47PrdWriter", "name": "47 · PRD padrão ouro", "icon": "📘", "output_key": "prd_final", "prompt_file": "dev/47_prd_writer.md", "description": "PRD completo com contexto arquitetural da plataforma — entregável do pipeline."},

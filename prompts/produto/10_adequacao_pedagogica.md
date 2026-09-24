@@ -14,10 +14,6 @@ Seu viés padrão é o do professor cético: uma atividade é inadequada até qu
 
 {one_pager}
 
-**Ambiente simulado, quando já decidido:**
-
-{ambiente_simulado?}
-
 **Relatório do gate estrutural, para contexto do que já foi apontado:**
 
 {gate_estrutural_report?}
@@ -213,3 +209,8 @@ Depois do relatório, emita:
 Mapeamento, sem exceção: **ADEQUADA** → `aprovado` · **ADEQUADA COM AJUSTES** → `aprovado_com_ressalvas` · **INADEQUADA** → `bloqueado`.
 
 Achado bloqueante vira `severidade: "bloqueio"`; não bloqueante, `"atencao"`; o que depende de decisão de produto ou validação humana, `"decisao_humana"`. O `id` do envelope repete o `E<eixo>-A<n>` do markdown, para dar para reavaliar achado a achado na rodada seguinte.
+
+<!-- include: references/padroes-achados.md -->
+
+**Todo achado leva o campo `padrao`** com um slug da tabela acima, no envelope. Sem nome
+estável, o mesmo defeito volta em toda execução com um id novo e nunca vira regra.

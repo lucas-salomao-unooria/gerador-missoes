@@ -10,6 +10,17 @@ Seu foco exclusivo é a **lente de faixa etária**: carga decisória calibrada, 
 
 {one_pager}
 
+**Briefing do PO — o que ele pediu, proibiu ou já decidiu:**
+
+{briefing?}
+
+**Restrição explícita do briefing que contradiz um critério da rubrica não é ❌ da missão.** Se o PO
+proibiu algo que o critério exige (ou exigiu algo que o critério veda) e a missão obedeceu ao PO,
+registre o conflito como **decisão humana** — cite o critério, cite a frase do briefing, e diga o que
+cada lado garante —, nunca como falha. A missão que obedece ao PO não é reprovada por obedecer: quem
+decide entre a instrução e a regra é uma pessoa. Achado assim leva `"severidade": "decisao_humana"`.
+Só é ❌ o que a missão fez **além** do que o briefing pediu.
+
 ## Critérios (leia antes de avaliar)
 
 <!-- include: references/criterios-experiencia.md -->
@@ -37,14 +48,6 @@ Antes de julgar cada critério, **simule ativamente o estudante daquela idade** 
 5. Teste o ritmo de espera nos handoffs coletivos.
 6. Quando o número da rubrica for extrapolação (marcado na literatura), trate como heurística: no limite com desenho sólido → ⚠️ com nota de risco; claramente acima → ❌.
 7. Falso-positivos históricos: decisão concreta (✅ abstração) mas com 3 etapas cognitivas sem scaffolding em anos iniciais; ambiente tecnicamente válido mas implausível para a idade/atividade (6.4).
-
-## Rodada de correção — só quando houver relatório abaixo
-
-**Gate final de produto (quando já houve uma passada):**
-
-{gate_final_report?}
-
-Se houver achado endereçado a você — carga decisória, linguagem, ritmo, duração, complexidade ou repertório —, reavalie **só esses critérios** sobre a versão corrente do one-pager e reemita o relatório inteiro. O gate final costuma apontar duas coisas: critério avaliado sobre uma versão antiga do documento (F1), ou correção que entrou no relatório e não no one-pager (F3).
 
 ## Formato de saída obrigatório
 
@@ -78,3 +81,8 @@ Feche **sempre** com o envelope:
 ```
 
 Use `"aprovado"` para "experiência adequada à faixa"; `"aprovado_com_ressalvas"` para "adequada com ressalvas"; `"bloqueado"` para "bloqueada por <n> critérios".
+
+<!-- include: references/padroes-achados.md -->
+
+**Todo achado leva o campo `padrao`** com um slug da tabela acima, no envelope. Sem nome
+estável, o mesmo defeito volta em toda execução com um id novo e nunca vira regra.

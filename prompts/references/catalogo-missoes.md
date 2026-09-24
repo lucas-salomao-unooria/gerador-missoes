@@ -23,7 +23,6 @@
 - **Porta de abstração** — o que a decisão pede do estudante, na escala de `literatura-cognitiva.md` §4: `descrever` · `explicar` · `criticar com apoio` · `criticar`
 - **Habilidade primária** — o código BNCC de letramento digital do foco primário (Regra 12 do P0a)
 - **Status** — em criação / validada / aprovada / em produção / descartada
-- **Observada em campo** — `não` · `piloto` · `sim (AAAA-MM)`, preenchido pelo protocolo de `observacao-campo.md`
 
 \---
 
@@ -32,7 +31,7 @@
 As linhas abaixo vieram do catálogo escrito à mão e já foram importadas para o índice
 (`scripts/catalogo.py importar-markdown`). Não acrescente linhas aqui: a esteira registra sozinha.
 
-|Slug|Ano|Bim|Nome|Ambiente|Eixo temático|Descoberta central (aha)|Tipo de decisão|Porta de abstração|Habilidade primária|Status|Observada em campo|
+|Slug|Ano|Bim|Nome|Ambiente|Eixo temático|Descoberta central (aha)|Tipo de decisão|Porta de abstração|Habilidade primária|Status|
 |-|-|-|-|-|-|-|-|-|-|-|-|
 |exp04ef1b|4º EF|1º|Mais curtido ou mais confiável?|`unitube`|Desinformação / credibilidade|Popularidade não é o mesmo que confiabilidade — um vídeo ter mais views não significa que a informação é melhor.|Escolher 3 de 10 vídeos pra playlist do canal, avaliando credibilidade vs. popularidade|descrever|[preencher do manifesto]|validada|não|
 |[preencher do manifesto]|8º EF|—|O conteúdo que não chegou|`instanooria`|Algoritmos / curadoria de feed|O que você não vê no feed foi decidido por alguém — o algoritmo mostra o que gera engajamento, não o que é importante.|Navegar feed curado e descobrir o que ficou de fora|explicar|[preencher do manifesto]|aprovada|não|
@@ -62,4 +61,3 @@ Ao avaliar uma missão nova:
 - Missão passou pela rubrica com todos os obrigatórios ✅ → adicionar ao catálogo.
 - Missão mudou de conceito (trocou ambiente, aha, ou tipo de decisão) → atualizar a linha existente.
 - Missão foi descartada → marcar status como "descartada".
-- Missão observada em campo → preencher a última coluna com `piloto` ou `sim (AAAA-MM)`.

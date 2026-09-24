@@ -19,7 +19,9 @@ gera atenção, não bloqueio.
 from __future__ import annotations
 
 import json
+import difflib
 import re
+import unicodedata
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -115,8 +117,95 @@ def _compativel(hab: Dict[str, Any], anos: Set[int], em: bool) -> bool:
 
 
 # ------------------------------------------------------------------ validação
-def validar_spec(spec: str) -> Dict[str, Any]:
-    """Aplica as três regras à spec. Devolve status, achados e o detalhe por código."""
+_EIXOS = {"CD": ("cultura digital",), "MD": ("mundo digital",), "PC": ("pensamento computacional",)}
+#: O texto que a spec apresenta COMO a habilidade: o que vem depois do rótulo "Habilidade:" ou
+#: "Texto oficial:" — e não qualquer itálico da linha, que costuma ser o momento em tela.
+#: Ancorado no COMEÇO do rótulo: "Momento em tela que exercita a habilidade:" não é o texto dela.
+_RE_ROTULO_TEXTO = re.compile(r"^\s*(?:[-*]\s+)?[*_]*\s*(?:habilidade|texto\s+(?:oficial|literal))[^:\n]{0,60}:\**\s*(.+)$", re.IGNORECASE)
+
+
+def _textos_citados(trecho: str, codigo: str) -> List[str]:
+    citados: List[str] = []
+    linhas = trecho.splitlines()
+    for linha in linhas[:8]:
+        m = _RE_ROTULO_TEXTO.search(linha)
+        if m:
+            citados.append(m.group(1))
+    if linhas:  # na linha do código, só o texto entre aspas ou itálico logo depois do travessão
+        m = re.search(re.escape(codigo) + r"[`*]*\s*[—–-]\s*[*\"“]([^*\"”\n]{25,})[*\"”]", linhas[0])
+        if m:
+            citados.append(m.group(1))
+    limpos = [re.sub(r"[*`_\"“”]", "", x).strip() for x in citados]
+    return [x for x in limpos if len(x) >= 25]
+
+
+def _textos_em_tabela(bloco11: str) -> Dict[str, List[str]]:
+    """Código → texto apresentado como habilidade numa tabela do bloco 11, pela coluna cujo cabeçalho
+    diz "habilidade" ou "texto" — nunca pela do momento em tela, que também é texto longo."""
+    achados: Dict[str, List[str]] = {}
+    coluna: Optional[int] = None
+    for linha in bloco11.splitlines():
+        l = linha.strip()
+        if not (l.startswith("|") and l.endswith("|")):
+            coluna = None
+            continue
+        celulas = [c.strip() for c in l.strip("|").split("|")]
+        if set("".join(celulas)) <= set("-: "):
+            continue
+        normal = ["".join(ch for ch in unicodedata.normalize("NFD", c.lower()) if unicodedata.category(ch) != "Mn") for c in celulas]
+        alvo = next((k for k, c in enumerate(normal) if re.search(r"habilidade|texto", c) and "momento" not in c), None)
+        if alvo is not None and not CODIGO_RE.search(l):
+            coluna = alvo
+            continue
+        if coluna is not None and coluna < len(celulas):
+            for cod in CODIGO_RE.findall(l):
+                texto = re.sub(r"[*`_\"“”]", "", celulas[coluna]).strip()
+                if len(texto) >= 25 and cod not in texto:
+                    achados.setdefault(cod, []).append(texto)
+    return achados
+
+
+
+
+def _palavras(texto: str) -> List[str]:
+    sem = "".join(c for c in unicodedata.normalize("NFD", (texto or "").lower()) if unicodedata.category(c) != "Mn")
+    return re.sub(r"[^a-z0-9 ]+", " ", sem).split()
+
+
+def _semelhanca(a: str, b: str) -> float:
+    return difflib.SequenceMatcher(None, _palavras(a), _palavras(b)).ratio()
+
+
+def _itens_por_codigo(bloco11: str, codigos: List[str]) -> Dict[str, str]:
+    """O trecho de cada código: da primeira ocorrência dele até a próxima ocorrência de OUTRO código."""
+    posicoes = sorted((m.start(), m.group(0)) for m in CODIGO_RE.finditer(bloco11))
+    itens: Dict[str, str] = {}
+    for k, (pos, cod) in enumerate(posicoes):
+        if cod in itens:
+            continue
+        fim = next((p for p, c in posicoes[k + 1:] if c != cod), len(bloco11))
+        itens[cod] = bloco11[pos: min(fim, pos + 1200)]
+    return itens
+
+
+def _declarados(bloco11: str, itens: Dict[str, str]) -> Set[str]:
+    """Códigos DECLARADOS como habilidade da missão: com momento em tela no próprio trecho, ou numa
+    linha da matriz de evidência. Menção de passagem — entre parênteses, "equivalente a" — não é
+    declaração: em 22/09/2026 um `EF06CO09` citado assim fez o gate contar letramento digital numa
+    spec cuja habilidade principal era outra."""
+    na_matriz = set()
+    for linha in bloco11.splitlines():
+        if linha.strip().startswith("|") and re.search(r"E[\w-]*-(?:ALU|PROF|SIS)-\d{2}|\bE[0-6]\b|etapa", linha, re.I):
+            na_matriz |= set(CODIGO_RE.findall(linha.split("|")[1] if linha.count("|") > 2 else linha))
+    return {c for c, trecho in itens.items() if re.search(r"momento", trecho, re.I)} | na_matriz
+
+
+def validar_spec(spec: str, material: str = "") -> Dict[str, Any]:
+    """Aplica as regras à spec. Devolve status, achados e o detalhe por código.
+
+    `material` é o texto integral dos anexos do briefing: quando a spec atribui o texto de uma
+    habilidade ao material do Entre Redes, é contra ele que se confere.
+    """
     spec = spec or ""
     data = carregar()
     habs = habilidades()
@@ -151,6 +240,9 @@ def validar_spec(spec: str) -> Dict[str, Any]:
 
     detalhes: List[Dict[str, Any]] = []
     tem_letramento = False
+    itens = _itens_por_codigo(fonte_codigos, codigos)
+    declarados = _declarados(fonte_codigos, itens) or set(codigos)  # spec sem momento em nenhum código: formato antigo
+    em_tabela = _textos_em_tabela(fonte_codigos)
     for c in codigos:
         hab = habs.get(c)
         if not hab:
@@ -164,7 +256,28 @@ def validar_spec(spec: str) -> Dict[str, Any]:
             alvo = "Ensino Médio" if hab["etapa"] == "EM" else "/".join(f"{a}º" for a in hab["anos"]) + " ano"
             declarado = ("EM" if em else "") + ("/".join(f"{a}º" for a in sorted(anos)) if anos else "")
             achados.append({"severidade": "bloqueio", "codigo": c, "resumo": f"`{c}` é do {alvo}; a missão é de {declarado}. Habilidade de outro ano."})
-        if letr and ano_ok:
+        # 4. o que a spec DIZ sobre o código confere com o oficial — eixo e texto. Em 22/09/2026 uma
+        # spec citou `EF06CO07` como "Cultura Digital", com um texto inventado e atribuído ao material
+        # do Entre Redes que não tinha sido anexado; o oficial é Mundo Digital, sobre transmissão de
+        # dados. O código existia e era do ano: o gate aprovou.
+        trecho = itens.get(c, "")
+        primeira = trecho.split("\n", 1)[0].lower()
+        primeira = "".join(ch for ch in unicodedata.normalize("NFD", primeira) if unicodedata.category(ch) != "Mn")
+        declarado_eixo = next((e for e, nomes in _EIXOS.items() if any(n in primeira for n in nomes)), None)
+        if declarado_eixo and declarado_eixo != hab["eixo"]:
+            nomes = {"CD": "Cultura Digital", "MD": "Mundo Digital", "PC": "Pensamento Computacional"}
+            achados.append({"severidade": "bloqueio", "codigo": "eixo-divergente",
+                            "resumo": f"`{c}` aparece como {nomes[declarado_eixo]}; na BNCC ele é {nomes.get(hab['eixo'], hab['eixo'])}. "
+                                      f"O eixo muda o que a missão pode declarar como letramento digital."})
+        citados = _textos_citados(trecho, c) + em_tabela.get(c, [])
+        if citados and max(_semelhanca(x, hab["habilidade"]) for x in citados) < 0.6:
+            texto = max(citados, key=len)
+            no_material = bool(material) and _semelhanca_em(texto, material) >= 0.85
+            if not no_material:
+                achados.append({"severidade": "bloqueio", "codigo": "texto-divergente",
+                                "resumo": f"`{c}` aparece com o texto «{texto[:120]}», que não é o da BNCC («{hab['habilidade'][:120]}») "
+                                          f"nem está no material anexado. Escreva o texto oficial, ou cite o trecho do material de onde ele vem."})
+        if letr and ano_ok and c in declarados:
             tem_letramento = True
             if hab["etapa"] == "EM":
                 achados.append({"severidade": "atencao", "codigo": c, "resumo": f"`{c}` conta como letramento digital pela leitura **proposta** do EM (sem eixo oficial) — validar com pedagogia."})
@@ -187,6 +300,22 @@ def validar_spec(spec: str) -> Dict[str, Any]:
         "tem_letramento": tem_letramento,
         "bloco11_encontrado": bloco11 is not None,
     }
+
+
+def _semelhanca_em(trecho: str, material: str) -> float:
+    """O quanto `trecho` aparece em `material`: a melhor janela de mesmo tamanho, palavra a palavra."""
+    alvo, fonte = _palavras(trecho), _palavras(material)
+    n = len(alvo)
+    if not n or not fonte:
+        return 0.0
+    melhor = 0.0
+    for i in range(0, max(1, len(fonte) - n + 1)):
+        r = difflib.SequenceMatcher(None, alvo, fonte[i:i + n]).ratio()
+        if r > melhor:
+            melhor = r
+            if melhor >= 0.95:
+                break
+    return melhor
 
 
 def relatorio_markdown(resultado: Dict[str, Any], missao: str = "") -> str:

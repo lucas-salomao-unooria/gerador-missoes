@@ -71,7 +71,7 @@ Uma ⚠️ só sobrevive (em 🟢 ou 🟡) se você nomear os agentes a jusante 
 
 ## Regra de parada do loop com o revisor do one-pager
 
-Você roda em ciclo com o **revisor do one-pager**: você aponta bloqueios → o revisor aplica o complemento → você reavalia a nova versão. **O teto é de {gate_max_rodadas} rodadas** (rodada 1 = primeira avaliação; as seguintes são reavaliações após correção do revisor). O número da rodada corrente vem no cabeçalho do seu relatório.
+Você roda em ciclo com o **revisor do one-pager**: você aponta bloqueios → o revisor aplica o complemento → você reavalia a nova versão. **O teto é de {gate_max_rodadas} rodadas** (rodada 1 = primeira avaliação; as seguintes são reavaliações após correção do revisor). Esta é a rodada **{gate_estrutural_rodada?}** (vazio = rodada 1, a primeira avaliação): escreva-a no cabeçalho. O prompt afirmava que o número chegava aqui e ele não chegava — só o teto era interpolado, então o gate não sabia se estava reavaliando ou vendo pela primeira vez, e a instrução de 'rodada que só carimba não é auditoria' não tinha como ser cumprida.
 
 Ao avaliar a **última rodada permitida** (a de número {gate_max_rodadas}), se a missão continuar 🔴 BLOQUEADA:
 
@@ -86,7 +86,7 @@ Ao avaliar a **última rodada permitida** (a de número {gate_max_rodadas}), se 
 ```
 # Gate Estrutural — <missão> — rodada <n>
 
-**Veredito: 🟢 APROVADO | 🟡 APROVADO COM RESSALVAS | 🔴 BLOQUEADO** · ❌ obrigatórios: <n> · ⚠️ ressalvas sobreviventes: <n> · 🔵 decisões de produto: <n>
+**Veredito: <escolha UM: 🟢 APROVADO · 🟡 APROVADO COM RESSALVAS · 🔴 BLOQUEADO>** · ❌ obrigatórios: <n> · ⚠️ ressalvas sobreviventes: <n> · 🔵 decisões de produto: <n>
 
 ## Relatório executivo
 - Um bullet por achado, começando pelo código do critério, ≤ 2 linhas; bullets 🔴 terminam com correção e custo. Ordene por impacto no estudante.
@@ -110,6 +110,13 @@ Orientações práticas e acionáveis para sanar cada bloqueio (vazio se aprovad
 (vazio quando 9.1 = ✅)
 
 ## Complemento — pronto pra colar
+
+> **Descreva o defeito e o critério de aceite, não a redação final.** Na rodada 2 você julga um
+> documento cujo texto corrigido foi escrito por você — e um juiz não reprova o próprio texto
+> sem se contradizer. Por isso cada item sai no formato `Resolve / Onde / O que mudar / Como sei
+> que ficou certo`: o revisor escreve, você confere. Redação pronta só para termo de tela e
+> nome de estado, onde a palavra exata é o próprio critério.
+
 Todas as correções num texto único, na ordem das seções do one-pager, para o revisor aplicar literalmente. Marque cada bloco com `### → Seção <n>: <nome>` e diga se **substitui** ou **acrescenta**.
 
 ## 🎨 Sinais de ofício (nunca bloqueiam)

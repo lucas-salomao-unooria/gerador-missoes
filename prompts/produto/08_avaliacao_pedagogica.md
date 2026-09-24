@@ -8,6 +8,17 @@ Você responde: **o conteúdo pedagógico é sólido, e o professor consegue con
 
 {one_pager}
 
+**Briefing do PO — o que ele pediu, proibiu ou já decidiu:**
+
+{briefing?}
+
+**Restrição explícita do briefing que contradiz um critério da rubrica não é ❌ da missão.** Se o PO
+proibiu algo que o critério exige (ou exigiu algo que o critério veda) e a missão obedeceu ao PO,
+registre o conflito como **decisão humana** — cite o critério, cite a frase do briefing, e diga o que
+cada lado garante —, nunca como falha. A missão que obedece ao PO não é reprovada por obedecer: quem
+decide entre a instrução e a regra é uma pessoa. Achado assim leva `"severidade": "decisao_humana"`.
+Só é ❌ o que a missão fez **além** do que o briefing pediu.
+
 **Relatório do gate estrutural (contexto):**
 
 {gate_estrutural_report?}
@@ -20,7 +31,12 @@ Você responde: **o conteúdo pedagógico é sólido, e o professor consegue con
 
 Use esta lista nos critérios 5.1 e 5.2, sem exceção: o código citado **existe**? é **do ano** da missão? é de **letramento digital** (Cultura Digital)? Código fora da lista, de outro ano, ou missão sem nenhuma habilidade de letramento digital é ❌ bloqueante — não ressalva. Um gate determinístico repete essas três checagens depois da spec; o que só você julga é se a ação em tela exercita de fato a habilidade.
 
-**Prioridade:** quando o material do Entre Redes do bimestre/ano vier anexado nesta geração, ele é a fonte primária de código e habilidade — cheque contra ele antes desta lista. Esta lista oficial funciona como verificação e fallback para quando não houver material do Entre Redes anexado.
+**Prioridade:** quando o bloco de material anexado, logo abaixo, trouxer o material do Entre Redes do bimestre/ano, ele é a fonte primária de código e habilidade — cheque contra ele antes desta lista. Esta lista oficial funciona como verificação e fallback para quando o bloco vier vazio ou sem o material do Entre Redes.
+
+**Material anexado ao briefing — o texto integral de cada documento (vazio quando nada foi anexado):**
+
+{material_anexado?}
+
 
 <!-- include: references/bncc-computacao-letramento-digital.md -->
 
@@ -35,7 +51,7 @@ Use esta lista nos critérios 5.1 e 5.2, sem exceção: o código citado **exist
 
 ## Como avaliar
 
-1. **Fonte de verdade curricular:** o material do bimestre/ano (Entre Redes) quando disponível no one-pager. Letramento digital é o núcleo curricular da missão: a ação observável deve exercitar genuinamente o uso crítico, ético e consciente do ambiente digital.
+1. **Fonte de verdade curricular:** o material do bimestre/ano (Entre Redes), no bloco de material anexado acima — e, quando o bloco vier vazio, o que o one-pager trouxer dele. Letramento digital é o núcleo curricular da missão: a ação observável deve exercitar genuinamente o uso crítico, ético e consciente do ambiente digital.
 2. **Percorra os critérios em ordem**, marcando ✅ / ❌ / ⚠️ / 🔵 pendência externa / "N/A — falta informação". Use 🔵 quando o desenho parece adequado mas depende de validação documental que não está disponível.
 3. **Separe adequação pedagógica de verificação documental.** Código BNCC/SAEB plausível mas não confirmado em fonte autoritativa → 🔵 / ⚠️, nunca ✅. Não reconstrua rastreabilidade a partir do próprio one-pager.
 4. **Regra de bloqueio da BNCC e veredito:**
@@ -88,3 +104,8 @@ Feche **sempre** com o envelope:
 ```json
 {"agente": "avaliacao-pedagogica", "missao": "<slug>", "status": "aprovado" | "aprovado_com_ressalvas" | "bloqueado", "ressalvas": <n>, "pendencias_externas": <n>, "achados": [{"id": "A1", "severidade": "bloqueio" | "atencao" | "decisao_humana", "codigo": "<critério>", "resumo": "<uma linha>"}], "precisa_humano": true | false}
 ```
+
+<!-- include: references/padroes-achados.md -->
+
+**Todo achado leva o campo `padrao`** com um slug da tabela acima, no envelope. Sem nome
+estável, o mesmo defeito volta em toda execução com um id novo e nunca vira regra.

@@ -24,6 +24,14 @@ Os achados dele já estão refletidos no relatório do gate; se algum não estiv
 
 Os ajustes dele vêm no formato `Resolve / Onde / Mudar / Aceite` — outro formato do mesmo contrato. Aplique os **Ajustes exigidos** como aplica o complemento do gate: "Onde" diz a seção, "Mudar" diz o que precisa passar a ser verdade, e "Aceite" é o teste que você usa para conferir se conseguiu. Os **Ajustes recomendados** (prefixo R) são opcionais — aplique só se não ampliarem escopo. O parecer não escreve o texto pronto por princípio; aqui é você quem escreve, respeitando a mesma regra 2: decisão de produto continua com marcador, não é você quem decide.
 
+**Avaliação pedagógica e experiência do estudante (quando o loop das avaliações devolveu o one-pager a você):**
+
+{avaliacao_pedagogica_report?}
+
+{experiencia_aluno_report?}
+
+Vazios na primeira passada do gate estrutural — as avaliações rodam depois dele. Preenchidos, é porque o loop das avaliações repetiu: a avaliação pedagógica reprovou, ou o parecer exigiu ajuste, e **é o relatório dela que diz o que mudar**. Aplique a seção **"❌ obrigatórios — correção pronta"** de cada um como aplica o complemento do gate. O resto — ⚠️ de alerta, 🔵 pendência externa, hipótese de validação em sala — não é pedido de correção e fica como está. A experiência do estudante não reprova sozinha (os tetos dela são `[EXTRAPOLAÇÃO]`), mas quando um ❌ dela estiver na mesma seção que você está corrigindo, resolva junto.
+
 ## Regras
 
 1. **Aplique o complemento, não reinterprete.** Onde o gate diz "substitui", substitua a seção; onde diz "acrescenta", acrescente no lugar indicado. Preserve tom, ambiente, mecanismo e tudo que o gate marcou como "Não mexer".

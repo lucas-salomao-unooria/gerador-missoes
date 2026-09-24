@@ -1,0 +1,497 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\geometry{a4paper, top=2.5cm, bottom=2.5cm, left=2.2cm, right=2.2cm}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+\definecolor{NavyBlue}{RGB}{16, 44, 87}
+\definecolor{SteelBlue}{RGB}{53, 89, 142}
+\definecolor{LightBlue}{RGB}{235, 243, 250}
+\definecolor{DarkGreen}{RGB}{20, 108, 67}
+\definecolor{LightGreen}{RGB}{232, 245, 233}
+\definecolor{DarkRed}{RGB}{176, 42, 55}
+\definecolor{LightRed}{RGB}{253, 237, 237}
+\definecolor{DarkYellow}{RGB}{153, 115, 0}
+\definecolor{LightYellow}{RGB}{254, 249, 231}
+\definecolor{Charcoal}{RGB}{40, 40, 40}
+\definecolor{GrayBg}{RGB}{248, 249, 250}
+\definecolor{BorderGray}{RGB}{218, 224, 233}
+
+\hypersetup{
+    colorlinks=true, linkcolor=NavyBlue, citecolor=SteelBlue, urlcolor=SteelBlue,
+    pdftitle={Auditoria do padrao ouro - Gerador de Missoes Unooria - 23/09/2026},
+    pdfauthor={Engenharia e Produto - Unooria},
+    pdfsubject={Confronto com os 28 gaps sistemicos e os 102 achados, e o que falta para gerar},
+    pdfkeywords={gerador de missoes, padrao ouro, gates, telemetria, BNCC, rubrica v1.19}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{SteelBlue}Auditoria do padrão ouro --- Gerador de Missões Unooria}
+\fancyhead[R]{\small\color{SteelBlue}\thepage}
+\fancyfoot[C]{\footnotesize\color{gray}23 de setembro de 2026 --- versão 6 (noite) --- confronto com os relatórios de 20 e 22/09}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.2pt}
+
+\titleformat{\section}{\Large\bfseries\color{NavyBlue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{SteelBlue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{Charcoal}}{\thesubsubsection}{1em}{}
+
+\newtcolorbox{vereditobox}[1]{
+  breakable, enhanced, colback=LightBlue, colframe=NavyBlue,
+  boxrule=1pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{sucessobox}[1]{
+  breakable, enhanced, colback=LightGreen, colframe=DarkGreen,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{alertabox}[1]{
+  breakable, enhanced, colback=LightRed, colframe=DarkRed,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+\newtcolorbox{ressalvabox}[1]{
+  breakable, enhanced, colback=LightYellow, colframe=DarkYellow,
+  boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title={\bfseries #1}, fonttitle=\color{white}
+}
+
+\newcommand{\ok}{\textcolor{DarkGreen}{\textbf{fechado}}}
+\newcommand{\parcial}{\textcolor{DarkYellow}{\textbf{parcial}}}
+\newcommand{\aberto}{\textcolor{DarkRed}{\textbf{aberto}}}
+\newcommand{\decisao}{\textcolor{SteelBlue}{\textbf{decisão}}}
+
+\newcommand{\amarelo}{\textcolor{DarkYellow}{\textbf{amarelo}}}
+\newcommand{\vermelho}{\textcolor{DarkRed}{\textbf{vermelho}}}
+\newcommand{\aviso}{\textcolor{DarkYellow}{\textbf{aviso}}}
+\begin{document}
+
+\begin{center}
+    {\Huge\bfseries\color{NavyBlue} Auditoria do Padrão Ouro}\\[0.4cm]
+    {\LARGE\bfseries\color{SteelBlue} O que os 28 gaps viraram, e o que ainda separa a esteira de uma geração confiável}\\[0.5cm]
+    \textbf{Gerador de Missões Unooria --- terceira leitura em quatro dias, revisada cinco vezes}\\[0.3cm]
+    {\small \textbf{Data:} 23 de setembro de 2026 \quad|\quad \textbf{Versão:} 6 (noite) \quad|\quad \textbf{Referência:} Rubrica v1.19 \quad|\quad \textbf{HEAD:} \texttt{8ed2b61}}\\[0.2cm]
+    {\footnotesize \textbf{Corpus:} 105 agentes na árvore $\cdot$ 49 de LLM $\cdot$ 69 prompts $\cdot$ 34 referências $\cdot$ 85 testes $\cdot$ 27 gates no dossiê $\cdot$ 14 sessões do bucket}
+\end{center}
+
+\vspace{0.4cm}
+\hrule height 1pt
+\vspace{0.5cm}
+
+\section{Veredito}
+
+\begin{vereditobox}{A resposta curta, na versão 6}
+\textbf{A v5 disse ``no código, sim''. A auditoria de qualidade desta noite mostrou que a pergunta estava incompleta.} As cinco versões anteriores perguntavam se cada gate \emph{existe, roda e aparece}; a v6 perguntou se ele \emph{aprova o que é falso} ou \emph{reprova o que é certo}. Achou as duas coisas.
+
+\textbf{Três classes de alucinação passavam por gates verdes}, todas medidas nas 14 sessões do bucket: um código BNCC apresentado com eixo e texto inventados (a exp06ef1b atribuiu a EF06CO07 um texto de letramento que a BNCC não tem); 22 rotas inexistentes ou com verbo errado em módulos da plataforma, a maioria ensinada pelos próprios prompts; e 66 de 206 componentes ``do DS'' que o DS não tem. \textbf{Quatro regras reprovavam o que estava certo}: o lint lia ``todo'' como rascunho, o SAEB acusava o ``N/A'' que ele mesmo manda escrever, o gate de telemetria cobrava um leitor que nenhum documento nomeava, e o detector de WebSocket acusava a frase que proíbe WebSocket. As sete estão corrigidas, com teste; a última, por um juiz de LLM que só retira um achado citando o trecho, conferido com o modelo real em 9 casos --- 7 das sessões, 2 plantados --- com 9 acertos.
+
+A primeira execução com o formato de hoje também rodou (exp02ef1b, 39 min): dos 11 impedimentos, \textbf{9 eram defeito da esteira}, e estão corrigidos. Os outros 2 são o teto de tempo, que continua bloqueando por desenho --- mas a conta estava errada: somava os 45 minutos da aula como tempo de tela.
+
+\textbf{Como sistema, ainda não}, pelo que não é código:
+\begin{enumerate}[nosep,leftmargin=*]
+  \item \textbf{nenhuma execução rodou depois das correções desta noite} --- a próxima é a que confirma que os 9 impedimentos falsos não voltam;
+  \item \textbf{a precisão dos juízes de LLM não tem medida contínua}: o juiz de achados foi conferido em 9 casos, os juízes de produto e da banca em nenhum;
+  \item \textbf{o índice de missões de produção segue com 1 entrada}, e as cópias da plataforma além do OpenAPI seguem em 16/09, por decisão.
+\end{enumerate}
+\end{vereditobox}
+
+\section{O que mudou desde a versão da manhã}
+
+A versão 1 deste relatório foi publicada às 12h06 (\texttt{bea95c5}), a versão 2 à tarde (\texttt{97a07bd}), a versão 3 no fim da tarde (\texttt{5d7ecda}), a versão 4 à noite (\texttt{9677b02}), a versão 5 depois (\texttt{8238b8c}). Depois da v1, vinte commits:
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{1.7cm}p{13.6cm}@{}}
+\toprule
+\textbf{Commit} & \textbf{O que corrigiu} \\
+\midrule
+\texttt{a3c3a30} & Acessibilidade conferida em toda missão (D4a), não só nas que têm camada CAA (A-01). \\
+\texttt{00b0a9a} & Lint do protótipo e brief de escopo no dossiê; o lint volta a rodar depois do retrabalho (A-03, A-10); brief ausente sai \amarelo{}, não verde (A-13). \\
+\texttt{744a96f} & Extrator do catálogo lê a coluna pelo nome; ambiente novo não sai vazio; aviso de índice cego chega ao micro-gate e ao dossiê, e vê o caso de produção (A-02, A-11, A-12). \\
+\texttt{a2542c0} & Todo o rastro do Google Drive removido; trava contra instrução de ferramenta que o agente não tem (A-07). \\
+\texttt{80e1bbb} & \texttt{sincronizar\_plataforma.py} lê argumentos antes de gravar: \texttt{-{}-help} executava a sincronização inteira (A-14). \\
+\midrule
+\texttt{0b186a1} & \textbf{Depois da v2.} Despacho traduz o nome do dono pela fonte única; ticket sem rota vira pendência humana no dossiê; a consolidação da banca volta a entregar dono e id ao despacho; \texttt{brief-oficio} ganha rota e lê o ticket (A-15, A-15b). \\
+\texttt{5427dbf} & \textbf{Depois da v3.} O brief de assets lê o ticket da banca (A-16); o revisor do one-pager recebe a avaliação pedagógica e a experiência do estudante (A-17). As duas perguntas que os acharam viram teste. \\
+\texttt{3d7639c} & \textbf{Depois da v4.} A correção parcial apaga tudo que a etapa regrava --- seis gates novos tinham ficado fora, e o contador do juiz das perguntas sobrevivia (A-20); o critério de experiência declara a versão da rubrica no título (A-08). \\
+\texttt{d53cf06} & O material anexado é guardado inteiro e chega à spec, à avaliação pedagógica e ao resumido (A-19); a correção ganha a etapa de produto, e a triagem a escolhe pelo lugar onde a decisão mora (A-04); os dois trechos inalcançáveis do A-18 saem. \\
+\midrule
+\texttt{3124c86} & \textbf{Depois da v5: a auditoria de qualidade.} O lint do protótipo deixa de ler português como rascunho (A-21). \\
+\texttt{50b18b3} \texttt{e22fe52} & SAEB: verde onde não se aplica, \amarelo{} onde o descritor falta ou sobra; a série vem do slug (A-22). \\
+\texttt{21e168b} & O leitor de evento de produto é o painel (PostHog), e o gate de KPI e o do PRD aceitam os mesmos leitores (A-23). \\
+\texttt{b464cad} & Os três juízes de produto leem o briefing; o teto de tempo conta o tempo em tela (A-24, A-25). \\
+\texttt{7122dbe} & O gate BNCC confere eixo e texto da habilidade, não só o código (A-26). \\
+\texttt{559f918} & Rota citada num módulo da plataforma tem de existir nela; OpenAPI regenerado do roteador (A-27). \\
+\texttt{4761366} & O inventário do DS chega às telas, e o lint confere os nomes (A-28). \\
+\texttt{c68d680} & Juiz de LLM para as menções que o regex não sabe ler: afirma ou cita para descartar (A-29). \\
+\texttt{c87f6c0} \texttt{8ed2b61} & Gabarito no bundle, dito no handoff, também bloqueia --- achado pelo teste de mutação (A-32). \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{alertabox}{Uma correção ao que a versão da manhã afirmou}
+A versão 1 disse que as 20 depreciações restantes do ADK ``vêm do SDK e do Python 3.14, não do nosso código''. \textbf{Estava errado.} Quinze das vinte vêm do nosso código: cada \texttt{SequentialAgent}, \texttt{LoopAgent} e \texttt{ParallelAgent} que a esteira monta --- que o ADK depreciou em favor do motor de grafo \texttt{Workflow}. E o risco não está na depreciação, está na dependência sem teto (\texttt{google-adk>=2.8.0}): os testes rodam na 2.8.0, e a revisão ativa do Cloud Run, de 22/09, muito provavelmente roda a 2.9.2. O item foi \textbf{adiado por decisão} (seção~\ref{sec:decisoes}).
+\end{alertabox}
+
+\begin{alertabox}{Uma correção ao que as versões 1 a 5 afirmaram: o M3}
+A tabela de marcos dizia \texttt{websocket-mencao} falso: \textbf{0}, desde a manhã. \textbf{Estava errado.} A regra de 22/09 deixou de acusar a frase que o gabarito manda escrever (``nunca WebSocket''), e o harness contou zero porque recomputava só os documentos em que essa frase aparecia. Lida a frase de cada handoff, três documentos reais seguiam acusados por descartar o WebSocket com outras palavras: ``NÃO é suportada'' (exp04), ``sem necessidade'' (exp05) e ``Nenhum protocolo'' (a execução de teste de hoje). Nenhuma lista de negações fecha isso --- a próxima redação escapa dela. A correção é o A-29: a regra acha o candidato, e um juiz de LLM decide se a frase afirma o uso ou cita para descartar.
+\end{alertabox}
+
+\section{Método}
+
+Três leituras anteriores foram cruzadas: o relatório de imersão de 20/09 (102 achados), a reavaliação de 22/09 e o relatório dos 28 gaps sistêmicos de 22/09. Contra elas, o repositório no \texttt{HEAD d53cf06}: os 105 agentes da árvore real, os 69 prompts com \texttt{include} resolvido, as 34 referências, os validadores de \texttt{tools/} e os 79 testes (na v6, \texttt{8ed2b61} e 85 testes). Cada gap foi verificado \textbf{no código, por linha}, não pelo commit que diz tê-lo corrigido.
+
+Na tarde, três cruzamentos foram automatizados, e os três viraram teste: (i) todo \texttt{status\_key} gravado por um agente aparece no dossiê; (ii) nenhum prompt instrui a usar ferramenta que o agente não recebe; (iii) todo dono citado num prompt de gate tem rota no despacho --- revelou o A-15. Na v3, mais três perguntas sobre a árvore inteira: (iv) todo agente que um despacho reexecuta lê o ticket? (v) dentro de cada loop, o autor recebe o relatório de cada gate que o reprova? (vi) documento escrito por mais de um agente, em que o segundo apague o primeiro? As duas primeiras acharam o A-16 e o A-17; a terceira está limpa. Na v4, mais uma pergunta e uma medição: (vii) todo insumo que um prompt lê já foi escrito quando o agente roda --- percorrendo a árvore na ordem de execução, separando o que chega de propósito só na rodada de correção; (viii) quanto contexto cada agente recebe, com os insumos reais da última execução completa. A (vii) voltou limpa. Na v5, ao fechar o GAP-13: (ix) toda chave que um agente da etapa grava é apagada quando a correção recomeça dali? --- achou o A-20; (x) todo agente que cita o material anexado como fonte o recebe? --- achou o A-19. Os dois viraram teste, e os dois foram vistos acusar o defeito no commit anterior. Na v6 a pergunta mudou de lado: (xi) o gate aprova algo que a fonte desmente? --- cada afirmação conferível das 14 specs, PRDs e telas (código BNCC com eixo e texto, rota, componente) foi comparada à fonte oficial; (xii) o gate reprova algo certo? --- cada impedimento da execução de teste foi lido à mão; (xiii) um teste de mutação: 14 defeitos plantados nos documentos de uma sessão aprovada, e quantos a esteira pega --- 10 de 14 antes das correções, 13 de 14 depois. A primeira versão do harness usava de base a exp06 (justamente a spec alucinada, já bloqueada no BNCC) e comparava conjuntos de código, o que escondia defeito repetido; foi refeita sobre a exp04, contando ocorrências. As 14 sessões do bucket foram recomputadas duas vezes, em cópia local: \textbf{o bucket foi lido e nunca escrito}.
+
+\begin{ressalvabox}{O que este relatório não afirma}
+Não afirma que as missões geradas são boas. A esteira verifica que a missão \emph{declara} o que precisa declarar, de forma conferível; ela não sabe se a criança aprende. Com o protocolo de observação em sala removido por decisão, essa fronteira é permanente: \textbf{padrão ouro aqui significa que tudo que é verificável sobre o artefato está verificado, e o que não é está marcado como tal}.
+\end{ressalvabox}
+
+\section{Confronto: os 28 gaps, um a um}
+
+\small
+\begin{longtable}{@{}p{1.5cm} p{6.0cm} p{1.6cm} p{6.0cm}@{}}
+\toprule
+\textbf{Gap} & \textbf{Título} & \textbf{Estado} & \textbf{Evidência verificada hoje} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\multicolumn{4}{l}{\textbf{\color{NavyBlue}Frente I --- Execução, fail-safe e robustez}} \\
+\midrule
+GAP-01 & Fail-open nos gates de design e dev & \ok & \texttt{treat\_indefinido\_as\_blocked} só sobrevive no comentário que explica por que saiu \\
+GAP-02 & Status vazio aceito na adequação & \ok & \texttt{SaidaDeLoopAgent}: chave ausente conta como reprovada \\
+GAP-03 & Teste principal quebrado em runtime & \ok & descoberta automática; 79 testes verdes \\
+GAP-04 & Sem persistência nem contagem de tokens & \ok & custo e tokens por agente no dossiê \\
+GAP-05 & Sem retry nem backoff & \ok & \texttt{HttpRetryOptions} em todos os agentes \\
+GAP-06 & 118 avisos de depreciação do ADK & \decisao & 20 hoje, 15 do nosso código; dependência sem teto. Adiado por decisão \\
+GAP-07 & Governança de deploy & \decisao & segredos fora da imagem; app de geração pública por decisão de produto \\
+\midrule
+\multicolumn{4}{l}{\textbf{\color{NavyBlue}Frente II --- Produto e pipeline pedagógico}} \\
+\midrule
+GAP-08 & Beco sem saída pedagógico & \ok & \texttt{adequacao\_report} chega ao gate final, à spec e ao PRD \\
+GAP-09 & Brief de escopo esvaziado no loop & \ok & separado antes do revisor; \textbf{e desde a tarde, ausente sai \amarelo{}} \\
+GAP-10 & Sem guardrail de spoiler a jusante & \ok & dimensão D3b sobre o que vai à tela \\
+GAP-11 & Evidência inventada tarde pelo 16b & \ok & matriz nasce na spec e é conferida \\
+GAP-12 & Eixo BNCC incompatível no EM & \ok & referência explícita \\
+GAP-13 & Sem reexecução parcial de produto & \ok & etapa \texttt{produto} na correção, com o material da origem; a triagem a escolhe (A-04) \\
+GAP-14 & Réguas temporais conflitantes & \ok & T1/T2/T3 unificadas \\
+GAP-15 & Gate cego à própria rodada & \ok & rodada interpolada \\
+\midrule
+\multicolumn{4}{l}{\textbf{\color{NavyBlue}Frente III --- Design, imersão e experiência}} \\
+\midrule
+GAP-16 & Retrabalho por tickets fantasma & \ok & dono traduzido pela fonte única; ticket sem rota vira pendência humana; banca volta a entregar o dono (A-15, A-15b) \\
+GAP-17 & Inversão de dependência no retrabalho & \ok & ordem conferida sem alterar \\
+GAP-18 & Protótipo auto-aprovado & \ok & lint no dossiê, com arquivo, e \textbf{relintado depois de todo retrabalho} \\
+GAP-19 & Notação Mermaid ambígua & \ok & \texttt{stateDiagram-v2} fixado \\
+GAP-20 & Severidade do pico emocional & \ok & \texttt{c10e98b} \\
+GAP-21 & Sem critérios de acessibilidade & \ok & D4a roda sempre: contraste, alvo, foco, nada-só-por-cor \\
+GAP-22 & 2--4 por aparelho descartado & \ok & exceção que não se corta \\
+GAP-23 & Falsa dependência de ferramenta inativa & \ok & Stitch condicional tratado; Drive removido \\
+\midrule
+\multicolumn{4}{l}{\textbf{\color{NavyBlue}Frente IV --- Governança e contratos}} \\
+\midrule
+GAP-24 & Catálogo incompleto trava o V5 & \parcial & código corrigido: 14 fichas cegas $\rightarrow$ 0 na reconstrução. \textbf{Índice de produção ainda com 1 entrada} \\
+GAP-25 & Enum de status desalinhado & \ok & 15 valores com teste \\
+GAP-26 & Validação cega a pendências & \ok & validador vazio bloqueia em todos os nós \\
+GAP-27 & Drift das cópias da plataforma & \decisao & sincronizadas por acidente e \textbf{descartadas por decisão}; seguem em \texttt{29afc8f} \\
+GAP-28 & Banca consolidada por LLM & \ok & consolidação determinística, 22 bloqueantes, DES-14 incluído \\
+\end{longtable}
+\normalsize
+
+\begin{center}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Estado} & \textbf{v1} & \textbf{v2} & \textbf{v3--v4} & \textbf{v5} \\
+\midrule
+Fechado com evidência de código & 21 & 22 & 23 & \textbf{24} \\
+Parcial & 4 & 2 & 1 & 1 \\
+Aberto & 2 & 1 & 1 & \textbf{0} \\
+Decisão de negócio ou adiamento consciente & 1 & 3 & 3 & 3 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+O GAP-16 passou de fechado (v1) a parcial (v2) e de volta a fechado (v3): a verificação da tarde olhou mais fundo, achou o ralo, e fechá-lo expôs um defeito maior no mesmo lugar. O GAP-13 fechou na v5, e fechá-lo foi o que expôs o A-19. O único parcial que resta é o GAP-24, pelo índice de produção --- que é dado, não código.
+
+\section{Os achados, com o estado de cada um}
+
+\subsection{Corrigidos hoje}
+
+\begin{sucessobox}{Da lista da manhã}
+\textbf{A-01 --- Acessibilidade atrás da porta da CAA.} As quatro contagens (contraste $\geq$ 4,5:1, alvo $\geq$ 64$\times$64, ordem de foco, nada-só-por-cor) viviam na D8b, que só roda com CAA \texttt{concluido}; 4 das 14 missões saíram sem nenhuma verificação. Agora vivem na D4a, que roda sempre; a D8b cobra os mesmos mínimos também na rota não-leitora. \texttt{a3c3a30}.
+
+\medskip
+\textbf{A-03 --- Gates fora do dossiê.} O lint do protótipo e o brief de escopo entraram; o relatório do lint vira arquivo. Um teste cruza todo status gravado com o dossiê, para gate novo não nascer invisível. \texttt{00b0a9a}.
+
+\medskip
+\textbf{A-07 --- Instrução para o Google Drive.} Removida inteira --- prompt, envelope, configuração, \texttt{.env.example}, README, pré-visualização no app. Trava nova impede instrução de Drive em qualquer prompt. \texttt{a2542c0}.
+\end{sucessobox}
+
+\begin{sucessobox}{Achados novos da tarde, já corrigidos (v2 e v3)}
+\textbf{A-10 --- O lint do protótipo ficava velho.} No retrabalho de design o protótipo era reconstruído e o lint não rodava de novo: o QA da rodada 2 lia o lint da rodada 1, sobre o HTML antigo, com a instrução de tratá-lo como fato. O lint entrou no pós-fixo do retrabalho. \texttt{00b0a9a}.
+
+\medskip
+\textbf{A-11 --- O extrator do catálogo lia por posição.} A causa real do GAP-24, mais funda que dado velho. O extrator esperava o slug na primeira coluna da linha que o agente 51 propõe; o modelo escreve a linha começando por \texttt{Ano}, sem slug. A linha era descartada em toda execução e \texttt{tipo\_decisao} saía vazio --- \textbf{mesmo reconstruído das sessões, o índice saía 14 de 14 cego}, e o registro automático repetia isso a cada missão nova. Agora a coluna é lida pelo nome, e o ambiente vem do campo \texttt{secao\_ds} da spec. Reconstrução em cópia: \textbf{14 cegas $\rightarrow$ 0}. \texttt{744a96f}.
+
+\medskip
+\textbf{A-12 --- O aviso de índice cego não chegava a ninguém, e era cego ao caso de produção.} Ele só aparecia no relatório do catálogo, que roda depois do dossiê, e só contava linhas furadas --- o bucket tinha 14 sessões e 1 missão indexada, zero linhas furadas, nenhum aviso. Agora compara sessões gravadas com o índice, vai antes da tabela que o micro-gate julga, e o dossiê mostra a base do V5 como gate. \texttt{744a96f}.
+
+\medskip
+\textbf{A-13 --- Brief ausente saía verde.} Quando o brief de escopo não vinha, o separador escrevia \aviso{} no log e gravava o status do envelope do one-pager: \texttt{aprovado}. Pôr isso no dossiê seria exibir um verde que mente; agora sai \amarelo{} com achado \texttt{secao-ausente}. \texttt{00b0a9a}.
+
+\medskip
+\textbf{A-14 --- \texttt{-{}-help} executava a sincronização.} O script não tinha parser: qualquer argumento era ignorado e ele começava apagando todos os \texttt{.md} do destino. Foi assim que as 47 cópias foram reescritas por acidente nesta auditoria. Agora \texttt{-{}-help} mostra o uso e argumento desconhecido falha, sem gravar. \texttt{80e1bbb}.
+
+\medskip
+\textbf{A-15 --- Ticket de design com dono sem rota era descartado em silêncio} (achado na v2). O despacho casava só o nome literal do dono, e três casos sumiam sem aviso: ticket sem dono, dono que nenhum agente atende, mapa apontando para agente ausente. A tabela que traduz os nomes que os gates de fato escrevem --- a banca escreveu \texttt{wireframes} 16 vezes, \texttt{spec} 15, \texttt{copy} 2 --- existia na fonte única e nenhum código a lia; agora é lida. O que continua sem rota vai à mensagem e ao dossiê como pendência humana, com id, dono e motivo. \texttt{brief-oficio}, que a D7 do QA exige e que não estava nem na lista do próprio envelope do QA, ganhou rota antes da jornada e o prompt passou a ler o ticket. \texttt{0b186a1}.
+
+\medskip
+\textbf{A-15b --- O retrabalho da banca não consertava nada desde 22/09} (achado ao corrigir o A-15, e o mais grave do dia). A consolidação determinística da banca, escrita em 22/09, montava o envelope que o despacho lê só com código, severidade, dimensão, classe e resumo --- \textbf{descartava o \texttt{agente\_responsavel} e o \texttt{id}}. Todo ticket da banca chegava sem dono e era jogado fora: a banca reprovava, o despacho respondia ``nenhum ticket com dono executável'', e a rodada seguinte julgava o mesmo documento. Agora o dono atravessa a consolidação, e o envelope da banca tem o campo obrigatório, com a lista fechada de onze donos. \texttt{0b186a1}.
+\end{sucessobox}
+
+\subsection{No código: nenhum defeito aberto}
+
+\begin{sucessobox}{Fechados na v4}
+Os dois que a v3 deixou abertos foram fechados em \texttt{5427dbf}:
+
+\medskip
+\textbf{A-16 --- O brief de assets era reexecutado pela banca às cegas.} Dos seis agentes que a banca reexecuta, era o único que não lia nem o ticket nem o relatório. Ganhou a rodada de correção com \texttt{\{tickets\_retrabalho?\}}, no molde dos outros cinco.
+
+\medskip
+\textbf{A-17 --- O revisor do one-pager não recebia a avaliação pedagógica.} O loop das avaliações repete quando ela reprova, e quem reescreve não a lia. Recebe agora a avaliação pedagógica e a experiência do estudante, e aplica os ``\vermelho{} obrigatórios --- correção pronta'' de cada uma como aplica o complemento do gate.
+
+\medskip
+As regras que acharam os dois viraram teste, e foi conferido que elas \textbf{pegam} os dois defeitos quando rodadas contra os prompts do commit anterior --- um teste que nunca falha não prova nada.
+\end{sucessobox}
+
+\begin{sucessobox}{Corrigidos na v5}
+\textbf{A-19 --- O material anexado nunca chegava a quem o usa como fonte} (novo na v5, e o mais visível ao PO). O conteúdo dos anexos existia só na mensagem, que só o núcleo narrativo lê; a sessão guardava os nomes dos arquivos. A spec, a avaliação pedagógica e o one-pager resumido são instruídos a usar o material do Entre Redes como fonte primária de código BNCC e de componente curricular, e nenhum dos três o via. Medido nas 14 sessões: \textbf{das 7 que anexaram o material do Entre Redes, 5 entregaram um resumido dizendo ``material do bimestre não anexado''}. Agora o texto integral de cada anexo --- PDF inclusive, pelo texto extraído --- é guardado com a sessão, sem limite de tamanho, sai como artefato (\texttt{produto/00-material-anexado.md}) e chega aos três. \texttt{d53cf06}.
+
+\medskip
+\textbf{A-04 --- Uma correção de mecânica pulava todos os gates de produto} (era o GAP-13, e era pior que conveniência). A triagem mandava para \texttt{spec} os pedidos de mecânica, etapas e narrativa, e a correção a partir da spec não refaz o one-pager nem passa pelo gate estrutural, pela avaliação pedagógica ou pelo gate final. A spec mudava, o one-pager do PO ficava como estava, e a regra nova não era avaliada por ninguém. A correção ganha a etapa \texttt{produto}, que refaz a missão desde o núcleo, com o material da geração original remontado na mensagem, e a triagem passa a decidir pelo lugar onde a decisão mora. Sessão antiga sem material guardado usa o que o pedido anexar; sem nenhum dos dois, a correção é \textbf{recusada antes de tocar a sessão}, com a lista dos arquivos a anexar de novo. \texttt{d53cf06}.
+
+\medskip
+\textbf{A-20 --- A correção parcial não apagava o que os gates novos gravam} (achado ao preparar o A-04, e introduzido nesta própria auditoria). Seis gates criados em 22--23/09 tinham ficado fora das listas do que a correção apaga antes de refazer uma etapa. O que doía era o contador de rodadas do juiz das perguntas: uma correção a partir da spec começava com as rodadas já esgotadas, e não havia rodada de correção. O teste novo percorre cada etapa e exige que toda chave gravada esteja na lista. \texttt{3d7639c}.
+
+\medskip
+\textbf{A-08 --- A versão da rubrica no critério de experiência} (descrição corrigida). A v4 descrevia a nota ``v1.18'' como defeito; ela é histórico legítimo e ficou. O defeito era outro: os outros três critérios de produto declaram \emph{Rubrica v1.19} no título, e este não --- quem o lia via duas notas de versão e nenhuma dizendo qual vale. Um teste exige que os quatro declarem a mesma. \texttt{3d7639c}.
+\end{sucessobox}
+
+\begin{ressalvabox}{A-18 --- Duas rodadas de correção que o fluxo não alcançava: removidas na v5}
+A pergunta (vii) da v4 achou dois trechos de prompt que liam um insumo que nunca chega: a experiência do estudante lendo o relatório do gate final ``quando já houve uma passada'', e a adequação pedagógica lendo o ambiente simulado ``quando já decidido''. A v4 afirmou que os dois ficariam vivos com a correção de produto. \textbf{Não ficam}: a correção de produto apaga justamente esses relatórios antes de refazer, porque refazer produto é refazê-lo sobre o mesmo pedido e o mesmo material, não sobre o veredito anterior. Mantê-los seria o caso do Google Drive outra vez --- instrução que nunca se exerce. Saíram em \texttt{d53cf06}.
+\end{ressalvabox}
+
+\begin{ressalvabox}{R-01 --- Risco medido: o contexto dos dois agentes que escrevem as entregas}
+Com os insumos reais da última execução completa (exp06ef1b, 22/09), o contexto de cada agente de LLM:
+
+\begin{center}
+\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+\textbf{Agente} & \textbf{Total} & \textbf{Prompt} & \textbf{Insumos} \\
+\midrule
+Redator do PRD & 784 KB & 393 KB & 391 KB \\
+Handoff de dev & 668 KB & 303 KB & 365 KB \\
+Banca --- técnica e arquitetura & 597 KB & 336 KB & 260 KB \\
+Banca --- dados e LGPD & 553 KB & 293 KB & 260 KB \\
+Banca --- pedagogia e BNCC & 407 KB & 147 KB & 260 KB \\
+\midrule
+Mediana dos 33 agentes & 189 KB & & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Cabe no modelo --- são cerca de 200 mil tokens, bem abaixo do limite. O risco é outro: \textbf{regra no meio de um prompt muito longo sendo ignorada}. Há um caso documentado: o commit \texttt{fd68d9b} existiu porque o redator do PRD não seguia a regra do KPI no lugar onde ela estava escrita, e ela teve de ir para onde ele ``de fato olha''. Não é verificável sem rodar. \emph{O que fazer:} na primeira execução, conferir se o PRD segue as regras 8 e as de consistência interna; se não seguir, o corte é nas referências da plataforma (393~KB fixos), não nos insumos da missão.
+
+\textbf{Na v5 o risco cresceu, por decisão.} O material anexado vai inteiro, sem limite, a três agentes --- spec, avaliação pedagógica e resumido. Quanto isso soma não dá para medir antes: as 14 sessões guardaram só os nomes dos anexos, e cinco delas anexaram de 42 a 45 documentos de uma geração anterior. A primeira execução com material mede.
+\end{ressalvabox}
+
+\subsection{Corrigidos na v6: o que o gate aprovava falso, e o que reprovava certo}
+
+\begin{alertabox}{Alucinações que passavam por gate verde}
+\textbf{A-26 --- A habilidade BNCC com eixo e texto inventados} (a mais grave). A spec da exp06ef1b apresentou EF06CO07 como Cultura Digital e letramento digital, foco primário da missão, com um texto atribuído a uma ``Matriz Curricular Entre Redes'' que não tinha sido anexada. Na BNCC ele é Mundo Digital, sobre transmissão de dados. O gate aprovou: o código existia e era do ano, e um EF06CO09 citado entre parênteses contou como a habilidade de letramento. Agora o gate confere, contra a fonte, o eixo declarado na linha do código, o texto apresentado como a habilidade (contra o texto oficial ou o material anexado, quando vem dele), e só conta como letramento o código declarado com momento em tela. Nas 15 specs reais, só a exp06ef1b muda; das 32 citações de texto, 31 são iguais ao oficial. \texttt{7122dbe}.
+
+\medskip
+\textbf{A-27 --- Rotas que a plataforma não tem.} 22 afirmações de rota inexistente ou com verbo errado em módulos que já existem --- \texttt{DELETE /turmas/:id} apagaria uma turma inteira a partir de uma missão. A maioria vinha dos prompts: três deles mandavam ``instanciar o padrão de Atividade (\texttt{POST /atividades}\ldots), nunca rota de preparo nova''. A plataforma faz o contrário: \texttt{/atividades} é o motor da exp-01, e cada missão tem o preparo no próprio módulo. Os prompts passam a descrever o que existe, e \texttt{tools/rotas\_plataforma.py} confere no PRD e no handoff toda rota citada num módulo da plataforma --- inexistente e verbo errado bloqueiam. A fonte é a URL do OpenAPI quando a api o expuser (hoje o \texttt{/docs} de dev fica numa porta interna com senha); até lá, a lista gerada do roteador de verdade no commit \texttt{71b4dbb}, com 268 operações. \texttt{559f918}.
+
+\medskip
+\textbf{A-28 --- Componentes ``do DS'' que o DS não tem.} 66 de 206 (32\%): \texttt{LikeButton} numa missão InstaNooria, \texttt{MessageBubble} --- do WhatsApp --- numa de ChatGPT. O prompt de telas dizia ao agente ``você não tem como conferir o catálogo''. Agora tem: \texttt{scripts/sincronizar\_design\_system.py} lê a API pública de cada marca do \texttt{storybook-unooria} (273 componentes em 6 marcas), os prompts de telas e ambiente recebem o inventário, e o lint do protótipo bloqueia nome inexistente em seção existente, com o mais parecido sugerido (\texttt{MessageBubble} $\rightarrow$ \texttt{ChatBubble}). \texttt{4761366}.
+\end{alertabox}
+
+\begin{sucessobox}{Falsos bloqueios, e o que a execução de teste mostrou}
+\textbf{A-21 --- O lint lia português como rascunho.} Na execução de teste, bloqueou o protótipo por ``você aprendeu que \emph{todo} enquadramento conta uma história''. TODO, FIXME e XXX contam só em maiúsculas; marcador entre colchetes conta em qualquer caixa; comentário de código não é lido. \texttt{3124c86}.
+
+\medskip
+\textbf{A-22 --- SAEB.} Dois dos três achados das 14 sessões eram o ``N/A --- ano não avaliado'' que a regra manda escrever. Agora, como pedido: ano não avaliado com N/A é verde; descritor citado nesse ano, ou ano avaliado (2\textsuperscript{o}, 5\textsuperscript{o}, 9\textsuperscript{o} do Fundamental, 3\textsuperscript{a} série do Médio) sem descritor, é \amarelo{} com a indicação. A série vem do slug, não do texto --- ``anos iniciais'' no começo de um one-pager fazia o 2\textsuperscript{o} ano virar 1\textsuperscript{o} ao 5\textsuperscript{o}. \texttt{50b18b3}.
+
+\medskip
+\textbf{A-23 --- Pub/Sub, seis dos onze impedimentos.} O gate estava certo --- Pub/Sub é transporte ---, mas nenhum documento dizia quem lê um evento que só alimenta KPI de produto, e o gate do PRD não aceitava PostHog. O redator não tinha resposta certa e não ``corrigiu'' em duas rodadas. São dois leitores: a tabela do módulo, para o que a professora vê; o painel de produto (PostHog), para o que só responde a uma pergunta de produto. Os dois gates aceitam os mesmos. \texttt{21e168b}.
+
+\medskip
+\textbf{A-24 --- A missão reprovada por obedecer ao PO.} O briefing proibia áudio, o critério 6.1 exige áudio no 1\textsuperscript{o}--2\textsuperscript{o} ano, e nenhum dos três juízes de produto recebia o briefing. Recebem agora, com a regra: restrição explícita do PO que contradiz a rubrica é decisão humana citando os dois lados --- no gate final, \amarelo{}, nunca \vermelho{}. \texttt{b464cad}.
+
+\medskip
+\textbf{A-25 --- O teto de tempo somava a aula inteira.} O teto continua bloqueando, por desenho: a experiência nunca dura a aula toda. Mas o one-pager escreveu ``sessão de 45 minutos em tela'' para a aula, com mediação oral e fechamento dentro, e o juiz somou tudo. A seção 10 passa a ter duas colunas --- em tela e fora da tela ---, e o critério 6.2 define tempo-aluno como o tempo em tela. \texttt{b464cad}.
+
+\medskip
+\textbf{A-29 --- WebSocket, estado no cliente e as famílias ``propõe ou cita para proibir''.} Nove padrões que o regex acha e não sabe ler passam por um juiz de LLM em três gates (contrato do one-pager, evidência, telemetria). A assimetria é proposital: o juiz \textbf{só retira} um achado, e só com citação literal que existe no documento, uma por linha marcada; resposta inválida, citação inventada ou ``afirma uso'' mantêm o achado. Conferido com o modelo real em seis casos das sessões: os três descartes (exp04, exp05, execução de teste) saíram; os três usos reais (WebSocket com fallback e \texttt{localStorage} na exp07, IndexedDB offline na exp01) ficaram. \texttt{c68d680}.
+
+\medskip
+\textbf{A-32 --- Gabarito no bundle, dito no handoff, passava.} Achado pelo teste de mutação: o evidencia-check confere a ficha \texttt{gabarito\_servidor} da spec, mas quem descreve a implementação é o handoff, e nada o lia. A regra passou a valer também no handoff, com o mesmo juiz. Nos 15 handoffs reais ela acusa um só --- ``Cegueira total de gabarito no bundle do cliente'', da exp05, que nega ---, e o juiz real o retirou; a mutação, ele manteve. \texttt{c87f6c0}.
+
+\medskip
+\textbf{O que o teste de mutação ainda não pega.} Das 14 mutações, 12 são acusadas pela regra e 1 pela regra com o juiz (WebSocket afirmado num handoff que já o citava para descartar: o juiz retira o descarte e mantém a afirmação --- conferido com o modelo real). A que escapa é uma habilidade com eixo e texto inventados \emph{fora} da seção 11 da spec, que é onde o gate lê as habilidades; na seção 11, no formato real, eixo e texto trocados são acusados.
+\end{sucessobox}
+
+\subsection{Abertos por decisão, ou fora do código}\label{sec:decisoes}
+
+\begin{ressalvabox}{O que fica, e por quê}
+\textbf{A-02 --- Índice de produção com 1 entrada.} O índice certo --- 14 fichas das sessões do bucket, todas úteis ao V5 --- está pronto em cópia local. Escrevê-lo no bucket depende de autorização. Até lá, uma geração no Cloud Run compara a missão nova contra uma só, mas o dossiê agora diz isso em \amarelo{}. Localmente o índice foi mesclado: \textbf{28 fichas, 21 úteis} (eram 4). As 7 restantes são missões reais do catálogo oficial (Rastro do Boato, Manifesto IA, O Eco no Grupo\ldots) cujas fichas nunca tiveram descoberta ou tipo de decisão escritos --- preenchimento humano.
+
+\medskip
+\textbf{A-05 --- Cópias da plataforma em \texttt{29afc8f} (16/09), plataforma em \texttt{71b4dbb} (18/09).} A diferença é a exp-05 ``Quem Mandou Isso?'': 18 rotas, a porta 5184, o módulo novo. Com as cópias velhas, uma missão nova do 5\textsuperscript{o} ano pode pedir a mesma porta ou propor rota que já existe. Sincronizadas por acidente, descartadas por decisão. \textbf{Na v6, só o OpenAPI foi atualizado}, com aprovação: o índice e a lista de rotas vêm agora de \texttt{71b4dbb} (244 caminhos, 268 operações), e a exp-05 está neles; as demais cópias seguem em 16/09. \texttt{sincronizar\_plataforma.py -{}-openapi} atualiza só isso.
+
+\medskip
+\textbf{A-06 --- ADK sem teto de versão.} Ver o quadro de correção na seção 2. Migrar para \texttt{Workflow} é reescrita de dias (21 construções, loops por aresta, 63 asserções de forma de árvore), com ganho funcional zero hoje. Adiado por decisão.
+
+\medskip
+\textbf{A-30 --- A precisão dos juízes de LLM não é medida.} Os gates determinísticos têm teste de mutação; os juízes, não. O juiz de achados foi conferido em nove casos, uma vez. Os juízes de produto e da banca --- que decidem 6.1, 6.2, os vetos pedagógicos, os 22 bloqueantes --- não têm conjunto de casos conhecidos contra o qual rodar. Sem isso, uma troca de modelo ou de prompt pode afrouxar um juiz sem que nada acuse.
+
+\medskip
+\textbf{A-31 --- As duas fontes ``direto da URL'' ainda não existem do lado da plataforma.} O gerador já lê \texttt{PLATAFORMA\_OPENAPI\_URL} e \texttt{DS\_COMPONENTES\_URL} primeiro, como pedido; hoje as duas caem na cópia local, porque o \texttt{/docs} da api de dev fica numa porta interna com senha e o storybook de dev serve só a página padrão do Cloud Run. Publicar os dois é trabalho do repositório da plataforma.
+\end{ressalvabox}
+
+\subsection{O que só uma execução responde}
+
+\begin{alertabox}{A-09 --- O formato novo rodou uma vez, antes das correções da v6}
+A execução de teste (exp02ef1b, 23/09, 39 min, 70 chamadas, 7,4 M tokens de entrada, sem escrever no bucket) foi a primeira a atravessar a esteira com o 9f, o juiz das perguntas, os KPIs em modo estrito, a D4a e o material inteiro. Confirmou o que foi desenhado: o material do Entre Redes chegou à spec (A-19); o 9f saiu com 5 perguntas, cada uma com evento que mede; o cruzamento KPI $\times$ pergunta rodou; nenhum ticket sumiu. E o R-01 não se materializou: o PRD seguiu as regras do meio do prompt.
+
+O veredito foi \vermelho{}, com 11 impedimentos --- e ler cada um à mão foi o que abriu a auditoria de qualidade: \textbf{9 eram defeito da esteira} (seis do leitor Pub/Sub, dois do briefing que os juízes não liam, um do lint), hoje corrigidos; 2 eram o teto de tempo, com a conta errada. \textbf{Nenhuma execução rodou depois das correções.}
+\end{alertabox}
+
+\section{A medição sobre as 14 sessões}
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{7.2cm}cp{6.4cm}@{}}
+\toprule
+\textbf{Mudança de veredito (gravado em 22/09 $\rightarrow$ recomputado)} & \textbf{Sessões} & \textbf{Leitura} \\
+\midrule
+telemetria: amarelo $\rightarrow$ aprovado & 5 & erro de grafia deixou de virar erro de arquitetura \\
+rastro de lacunas: bloqueado $\rightarrow$ amarelo ou aprovado & 5 & dono corrigido; placar deixou de ser pendência \\
+PRD: bloqueado $\rightarrow$ amarelo & 1 & marcador de dono externo é compatível com \amarelo{} \\
+\midrule
+telemetria e PRD: passaram a acusar achado real & 2 & o que antes passava \\
+\midrule
+evidência e KPI: --- $\rightarrow$ bloqueado & 14 & gates que não existiam em 22/09 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Seis bloqueios falsos deixaram de existir; dois achados verdadeiros passaram a aparecer.} Os achados determinísticos somam 272, manhã e tarde. Os mais frequentes são formato novo (\texttt{gabarito-nao-declarado}, 14 de 14) e decisão humana (\texttt{lacuna:aberto:humano}, 14 de 14); os que medem qualidade de produto são reais e estão logo abaixo: \texttt{baseline-zero} em 9 sessões, \texttt{leitura-sem-leitor}, \texttt{tarefa-nao-atomica} e \texttt{numero-sem-origem} em 7 cada.
+
+\section{Onde a esteira está pronta}
+
+\subsection{A fronteira que sustenta tudo}
+
+\emph{O que se confere contra lista, formato ou outro trecho do documento é determinístico; julgar o que o autor quis dizer fica com o LLM} (\texttt{tools/bncc.py:11-13}). Das 53 verificações determinísticas medidas, \textbf{37 são fato e acertam 37/37}; as 16 de julgamento produziam 100\% dos bloqueios falsos, e as 12 piores foram para juiz estruturado --- o determinístico acha os candidatos, o juiz rebaixa ou troca o dono, nunca cria bloqueio sem citação.
+
+\subsection{O que a tarde acrescentou como princípio}
+
+Três das cinco correções da tarde são a mesma lição, e vale registrá-la: \textbf{ler por posição é o erro que mais se repete nesta esteira}. A \S{}2 dos PRDs saiu em oito cabeçalhos diferentes; a linha de catálogo do agente 51 sai numa ordem que o prompt não pede. O que o modelo escreve deriva; o nome da coluna, não. \texttt{tools/kpis.py} e agora \texttt{tools/catalogo.py} leem pelo nome normalizado.
+
+A outra lição: \textbf{cruzamento que acha defeito vira teste}. Status gravado $\times$ dossiê, instrução $\times$ ferramenta, argumento $\times$ escrita, dono $\times$ rota, agente reexecutado $\times$ ticket lido, autor $\times$ relatório do gate, chave gravada $\times$ chave apagada na correção, citação do material $\times$ material recebido. Todos são teste.
+
+\section{Os marcos do plano, medidos}
+
+\small
+\begin{longtable}{@{}p{0.8cm} p{5.5cm} p{1.9cm} p{2.1cm} p{2.7cm} p{1.4cm}@{}}
+\toprule
+\textbf{M} & \textbf{Marco} & \textbf{22/09} & \textbf{23/09 manhã} & \textbf{23/09 v6} & \textbf{Estado} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+M2 & bloqueios por dono classificado errado & 6 & 0 & 0 & \ok \\
+M3 & \texttt{websocket-mencao} falso & 8 de 14 & 3, não 0 (ver seção 2) & 0 em 6 casos reais, pelo juiz & \ok \\
+M4 & achados de campo órfão & 68 & 0 & 0 & \ok \\
+M5 & banca cobrando o que o PRD entrega & 24 & 0 & 0 & \ok \\
+M6 & gates que aprovam com a chave vazia & 8 & 0 & 0 & \ok \\
+M7 & gates invisíveis no dossiê & 4 & 3 & 0\,$^*$ & \ok \\
+M8 & juízes sem regra de decisão & 3 & 0 & 0 & \ok \\
+M9 & juízes sem exigência de citação & 3 & 0 & 0 & \ok \\
+M10 & bloqueantes invisíveis ao consolidador & 1 & 0 & 0 & \ok \\
+M11 & fichas do catálogo que não sustentam o V5 & 10 de 10 & 10 de 15 & 7 de 28 local; produção: 1 entrada & \parcial \\
+M12 & critérios de acessibilidade contáveis e sempre aplicados & 0 & 4, só com CAA & 4, sempre & \ok \\
+M13 & custo por missão & --- & no dossiê & no dossiê & \ok \\
+M14 & suíte de testes & quebrada & 64 & 85 & \ok \\
+M15 & segredo fora da imagem & aberto & fechado & fechado & \ok \\
+M16 & tickets que somem sem rastro & não medido & não medido & 0 & \ok \\
+M17 & agentes que reescrevem sem ler o pedido do gate & não medido & não medido & 0 & \ok \\
+M18 & agentes que citam o material anexado como fonte sem recebê-lo & não medido & não medido & 0 (eram 3) & \ok \\
+M19 & gates de produto que uma correção de mecânica pula & não medido & não medido & 0 (eram todos) & \ok \\
+M20 & código BNCC com eixo ou texto diferente do oficial, aprovado & não medido & não medido & 0 (era 1 spec, 3 afirmações) & \ok \\
+M21 & rota inexistente ou com verbo errado num módulo da plataforma, aprovada & não medido & não medido & 0 (eram 22) & \ok \\
+M22 & componente ``do DS'' que o DS não tem, aprovado & não medido & não medido & 0 (eram 66 de 206) & \ok \\
+M23 & impedimentos falsos na execução de teste & --- & --- & 9 de 11 com causa corrigida; não reexecutado & \parcial \\
+M24 & defeitos plantados que a esteira pega (mutação) & não medido & não medido & 13 de 14 (eram 10) & \ok \\
+M25 & juízes de LLM com precisão medida & não medido & não medido & 1 de 7, em 9 casos & \aberto \\
+\end{longtable}
+\normalsize
+{\footnotesize $^*$ Fora do dossiê por construção, e registrados como tal no código: o status do registro no catálogo (roda depois do diagnóstico) e o do próprio diagnóstico.}
+
+\section{O que fazer antes da próxima geração}
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Rodar de novo a mesma missão} (exp02ef1b, sem escrever no bucket) e conferir que os 9 impedimentos falsos não voltam, que o 6.2 é julgado pela coluna ``em tela'', e que o juiz de achados não retira nenhum achado verdadeiro. É o que fecha o M23.
+  \item \textbf{Montar os casos conhecidos dos juízes} (A-30): para cada juiz de LLM, uns poucos documentos das sessões com o veredito certo escrito à mão, e um script que os roda. É o que torna medível o que hoje é confiança.
+  \item \textbf{Decidir o índice de produção} (A-02) e \textbf{pedir à plataforma as duas URLs} (A-31): o OpenAPI acessível à esteira e o inventário do DS publicado --- a partir daí o gerador lê sempre o atual, sem cópia.
+\end{enumerate}
+
+\section{Conclusão}
+
+\begin{vereditobox}{Atingimos o padrão ouro?}
+\textbf{Mais perto do que na v5, e por um motivo diferente do que a v5 dava.} A v5 disse que tudo que é verificável tinha gate. A v6 mostrou que ter gate não bastava: três gates aprovavam o que a fonte desmente e quatro reprovavam o que estava certo --- e a maior parte da alucinação que passava vinha da própria esteira, de prompts que ensinavam rota errada ou diziam ao agente que ele não tinha como conferir o DS. Hoje o código BNCC, a rota e o componente são conferidos contra a fonte; os falsos bloqueios da execução de teste têm causa corrigida; e onde o regex não sabe ler, um juiz decide, sem poder inventar.
+
+\textbf{Como sistema, ainda não}: nenhuma execução rodou depois das correções, e a precisão dos juízes de LLM é confiança, não medida.
+
+Sobre o processo: as cinco versões anteriores perguntaram se cada gate existe, roda e aparece. A pergunta que achou mais defeito foi outra --- \textbf{o gate diz a verdade?} ---, e ela só pôde ser feita porque houve uma execução real para ler à mão e uma fonte oficial para comparar. A lição da v5 continua valendo, com um complemento: a pergunta certa ainda acha defeito, e \textbf{a mais produtiva é a que confronta o veredito com a fonte}.
+\end{vereditobox}
+
+\section*{Anexo --- como reproduzir}
+
+\small
+\begin{verbatim}
+python3 test_pipeline.py                      # 85 testes estruturais
+python3 scripts/conferir_referencias.py       # fonte única x prompts
+python3 scripts/catalogo.py listar            # estado do índice de missões
+python3 scripts/reavaliar_gates.py --todas \
+    gs://entre-redes-dev-adk-artifacts        # recomputa os gates (só lê)
+python3 scripts/sincronizar_plataforma.py --help   # agora só mostra o uso
+python3 scripts/sincronizar_plataforma.py --openapi openapi.json
+                                              # só o OpenAPI e a lista de rotas
+python3 scripts/sincronizar_design_system.py  # inventário do DS (273 comp.)
+\end{verbatim}
+\normalsize
+
+\end{document}

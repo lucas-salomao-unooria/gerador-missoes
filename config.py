@@ -73,6 +73,41 @@ class AppSettings(BaseSettings):
         default_factory=lambda: _env_bool("INCLUDE_THOUGHTS", "true"),
         description="Expor o fluxo de pensamento dos agentes",
     )
+    temperatura_juiz: float = Field(
+        default_factory=lambda: float(os.getenv("TEMPERATURA_JUIZ", "0.1")),
+        description="Amostragem dos agentes que emitem veredito. Baixa, não zero: com thinking "
+                    "ligado a temperatura afeta sobretudo a verbalização, e 0 não compra "
+                    "determinismo — quem compra é o seed.",
+    )
+    seed_juiz: int = Field(
+        default_factory=lambda: int(os.getenv("SEED_JUIZ", "20260923")),
+        description="Seed fixo dos juízes: dois gates sobre o mesmo artefato devem dar o mesmo "
+                    "veredito, senão não há como medir se uma mudança de critério funcionou.",
+    )
+    # OpenAPI da plataforma servido pela api, para o gate de rotas ler sempre atualizado
+    # (`tools/rotas_plataforma.py`). Vazio: usa a cópia gerada do roteador por
+    # `scripts/sincronizar_plataforma.py --openapi`. Em 23/09/2026 o `/docs` da api de dev não era público.
+    # Inventário de componentes do DS publicado (JSON no formato de ds-componentes.json). Vazio: a cópia
+    # gerada do storybook-unooria por scripts/sincronizar_design_system.py.
+    ds_componentes_url: str = Field(default_factory=lambda: os.getenv("DS_COMPONENTES_URL", ""))
+    plataforma_openapi_url: str = Field(default_factory=lambda: os.getenv("PLATAFORMA_OPENAPI_URL", ""))
+    plataforma_openapi_usuario: str = Field(default_factory=lambda: os.getenv("PLATAFORMA_OPENAPI_USUARIO", ""))
+    plataforma_openapi_senha: str = Field(default_factory=lambda: os.getenv("PLATAFORMA_OPENAPI_SENHA", ""))
+    kpis_check_estrito: bool = Field(
+        default_factory=lambda: _env_bool("KPIS_CHECK_ESTRITO", "true"),
+        description="Coerência KPI ↔ evento ↔ tela trava a esteira. Nasceu desligado porque os 14 "
+                    "PRDs medidos reprovavam todos — eram anteriores ao formato. Ligado em "
+                    "23/09/2026, junto com o gate do sub-bloco 9f: a partir daí as perguntas são "
+                    "decididas na spec e o PRD só as transporta, então reprovar aqui significa que "
+                    "alguma se perdeu no caminho — que é exatamente o que o gate existe para dizer. "
+                    "Desligar só para depurar uma execução, nunca como regime.",
+    )
+    tentativas_modelo: int = Field(
+        default_factory=lambda: int(os.getenv("TENTATIVAS_MODELO", "4")),
+        description="Tentativas por chamada ao modelo, com backoff exponencial e jitter. A esteira "
+                    "faz 33 a 55 chamadas e a banca dispara 5 em paralelo: sem isto, um 429 no "
+                    "meio derruba uma execução de 20 minutos.",
+    )
 
     # ------------------------------------------------------------- Pipeline
     pipeline_stages_raw: str = Field(
@@ -198,11 +233,29 @@ class AppSettings(BaseSettings):
     miro_client_id: str = Field(default_factory=lambda: os.getenv("MIRO_CLIENT_ID", ""))
     miro_client_secret: str = Field(default_factory=lambda: os.getenv("MIRO_CLIENT_SECRET", ""))
 
-    # Google Drive (relatório de lacunas do D0 em Google Docs — sem toolset ainda; o prompt tem fallback)
-    gdrive_folder_url: str = Field(
-        default_factory=lambda: os.getenv("GDRIVE_FOLDER_URL", ""),
-        description="URL da pasta do Google Drive onde o D0 gravaria o relatório de lacunas como Google Docs",
+    # ------------------------------------------------------------------ Login
+    # Quatro contas fixas (produto, design, dev, admin), sem provedor de identidade. Os dois
+    # valores saem de `scripts/gerar_credenciais.py` e vivem no Secret Manager; sem qualquer um
+    # deles o app recusa subir (`tools/auth.py`, `configuracao_de_login`) — não existe modo aberto
+    # por esquecimento, senão um deploy sem o segredo publicaria o app sem login.
+    auth_credenciais: str = Field(
+        default_factory=lambda: os.getenv("AUTH_CREDENCIAIS", ""),
+        description="JSON {usuario: {hash, papel}} com os hashes scrypt das senhas",
     )
+    auth_segredo_jwt: str = Field(
+        default_factory=lambda: os.getenv("AUTH_SEGREDO_JWT", ""),
+        description="Chave HS256 que assina o token de sessão. Girar derruba todas as sessões",
+    )
+    auth_horas_sessao: float = Field(
+        default_factory=lambda: float(os.getenv("AUTH_HORAS_SESSAO", "4")),
+        description="Validade absoluta da sessão, contada do login",
+    )
+    parecer_humano: bool = Field(
+        default_factory=lambda: _env_bool("PARECER_HUMANO", "true"),
+        description="Se true, a esteira para ao fim de cada etapa e espera o parecer do dono "
+                    "(pipeline/passagem.py). Padrão da sessão; o admin muda na barra lateral",
+    )
+
 
     # ----------------------------------------------------------- Derivados
     @property

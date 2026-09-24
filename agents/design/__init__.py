@@ -43,6 +43,7 @@ from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca
 from agents.checkers import (
     ArtefatosDesignAgent,
+    PrototipoLintAgent,
     DespachoTicketsAgent,
     EnvelopeGateAgent,
     EspelhoMiroAgent,
@@ -71,19 +72,11 @@ def _stitch_vars() -> dict:
     }
 
 
-def _gdrive_vars() -> dict:
-    s = get_settings()
-    return {
-        "gdrive_folder_url": s.gdrive_folder_url
-        or "(não configurada — as ferramentas do Google Drive não estão disponíveis nesta esteira; registre `GDOCS: indisponível` e entregue só o Markdown)",
-    }
-
-
 def get_fecha_lacunas_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A17FechaLacunas",
         description="Fechamento de lacunas da spec antes do design: varredura célula a célula, decisões [D0-n] com base declarada, pedidos de re-spec [RS-n] e spec consolidada com bloco 13.",
-        instruction=load_prompt("design/17_fechamento_lacunas.md", **_gdrive_vars()),
+        instruction=load_prompt("design/17_fechamento_lacunas.md"),
         output_key="fechamento_lacunas",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -245,6 +238,7 @@ def get_qa_entregaveis_agent(max_rodadas: Optional[int] = None, **kw) -> LlmAgen
     rodadas = max_rodadas or get_settings().qa_design_max_rodadas
     return create_llm_agent(
         name="A30QaEntregaveis",
+        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Gate final de design: fidelidade à spec, diff de strings, currículo, faixa etária, fluxo, professor, briefing, ambiente simulado e CAA.",
         instruction=load_prompt(
             "design/30_qa_entregaveis.md",
@@ -264,6 +258,7 @@ def get_qa_entregaveis_agent(max_rodadas: Optional[int] = None, **kw) -> LlmAgen
 ORDEM_RETRABALHO = [
     "fecha-lacunas",
     "ambiente-simulado",
+    "brief-oficio",  # a jornada deriva os tiers do mapa de beats: o brief conserta primeiro
     "jornada",
     "fluxo",
     "copy-ptbr-revisao",
@@ -277,6 +272,9 @@ ORDEM_RETRABALHO = [
 MAPA_RETRABALHO = {
     "fecha-lacunas": ["A17FechaLacunasRetrabalho", "A18FechaLacunasSplitRetrabalho"],
     "ambiente-simulado": ["A19AmbienteSimuladoRetrabalho", "A20AmbienteSimuladoSplitRetrabalho"],
+    # A D7 do QA manda "não-negociável sem marca é ticket com dono `brief-oficio`", e até
+    # 23/09/2026 esse dono não tinha rota: o ticket era descartado em silêncio.
+    "brief-oficio": ["A21BriefOficioRetrabalho"],
     "jornada": ["A22JornadaRetrabalho"],
     "fluxo": ["A23FluxoRetrabalho"],
     "copy-ptbr-revisao": ["A27CopyRevisaoRetrabalho"],
@@ -286,7 +284,11 @@ MAPA_RETRABALHO = {
 
 #: Roda depois de qualquer retrabalho. O protótipo deriva de jornada, copy, CAA e telas —
 #: deixá-lo de fora faria o QA auditar, na rodada seguinte, um protótipo da rodada anterior.
-POSFIXO_RETRABALHO = ["A28PrototipoRetrabalho", "A29ArtefatosDesignRetrabalho", "A29bEspelhoMiroRetrabalho"]
+#: O lint vem DEPOIS de separar o HTML e ANTES do QA voltar a julgar. Sem ele no posfixo, o
+#: protótipo era reconstruído e o QA da rodada 2 lia o lint da rodada 1 — sobre o HTML velho —
+#: com a instrução de tratá-lo como fato. Visto na auditoria de 23/09/2026.
+POSFIXO_RETRABALHO = ["A28PrototipoRetrabalho", "A29ArtefatosDesignRetrabalho",
+                      "A29cPrototipoLintRetrabalho", "A29bEspelhoMiroRetrabalho"]
 
 #: Tickets endereçados a estes donos não são desta etapa: o QA está devolvendo ao produto.
 RETRABALHO_EXTERNO = ["gate-estrutural"]
@@ -301,6 +303,7 @@ def _agentes_de_retrabalho(**kw) -> list:
     pares = [
         (get_fecha_lacunas_agent, "A17FechaLacunasRetrabalho"),
         (get_ambiente_simulado_agent, "A19AmbienteSimuladoRetrabalho"),
+        (get_brief_oficio_agent, "A21BriefOficioRetrabalho"),
         (get_jornada_agent, "A22JornadaRetrabalho"),
         (get_fluxo_agent, "A23FluxoRetrabalho"),
         (get_copy_revisao_agent, "A27CopyRevisaoRetrabalho"),
@@ -328,6 +331,7 @@ def _agentes_de_retrabalho(**kw) -> list:
             name="A29ArtefatosDesignRetrabalho",
             description="Reextrai o HTML do protótipo, os links do Stitch e a folha de diagramas depois de uma rodada de retrabalho.",
         ),
+        PrototipoLintAgent(name="A29cPrototipoLintRetrabalho"),
         EspelhoMiroAgent(
             name="A29bEspelhoMiroRetrabalho",
             description="Reenvia ao mesmo board do Miro os diagramas corrigidos na rodada de retrabalho.",
@@ -362,9 +366,6 @@ def build_qa_design_loop(**kw) -> LoopAgent:
                 max_rounds=rodadas,
                 escalate_on_approve=True,
                 block_pipeline_on_fail=get_settings().esteira_estrita,
-                treat_indefinido_as_blocked=False,
-                # Com o pipeline já bloqueado ele leria a mensagem de pulo do QA
-                # e sobrescreveria o motivo do bloqueio original.
                 before_agent_callback=marcar_heranca,
             ),
             DespachoTicketsAgent(
@@ -410,6 +411,10 @@ def build_design_stage(
                 description="Separa o HTML do protótipo do relatório que o acompanha, colhe os links das telas no Stitch e monta a folha de diagramas da jornada e do fluxo.",
                 before_agent_callback=marcar_heranca,
             ),
+            # O QA lia o RELATÓRIO de quem construiu o protótipo, nunca o arquivo: metade das
+            # telas, um `TODO` na tela de pico ou um HTML que nem abre passavam se o relatório
+            # dissesse que estava pronto. Este lint toca o arquivo e alimenta o QA.
+            PrototipoLintAgent(name="A29cPrototipoLint"),
             EspelhoMiroAgent(
                 name="A29bEspelhoMiro",
                 description="Espelha no Miro os diagramas Mermaid da jornada e do fluxo e devolve o link do board.",

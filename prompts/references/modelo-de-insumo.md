@@ -28,7 +28,7 @@ dúvida — dúvida declarada é melhor que lacuna silenciosa.
 |---|---|---|---|
 
 - **O que é medida e o que é cosmético** (item a item):
-- **Gabarito**: fonte da verdade, autor, revisor:
+- **Gabarito**: fonte da verdade, e a declaração de que vive **exclusivamente no servidor**:
 - **Nota/score**: existe? qual, em que escala? Se não existe, por quê:
 - **Graus de medida**: o que conta como scored / indicative / zero / none:
 

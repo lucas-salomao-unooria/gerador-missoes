@@ -70,7 +70,7 @@ Cada padrão diz de onde saiu. Padrão sem fonte não entra — vira candidato e
 
 | Nome | Padrão | Fonte |
 |---|---|---|
-| `audio-autoplay-1-2` | Em 1º–2º ano, todo texto voltado ao estudante é **narrado em áudio** (toca sozinho); texto na tela é reforço. Rótulos curtos com ícone não exigem narração. | critério 6.1 (v1.15) |
+| `audio-autoplay-1-2` | Em 1º–2º ano, todo texto voltado ao estudante é **narrado em áudio** (toca sozinho); texto na tela é reforço. Rótulos curtos com ícone não exigem narração. | critério 6.1 (v1.19) |
 | `texto-icone-audio-anos-iniciais` | Toda instrução acionável em anos iniciais entra como `texto + ícone + áudio`. | pronto.md (copy-ptbr) |
 | `alvo-64-88-vao-16` | Alvo de toque ≥ 64×64 px no aparelho, ≥ 88×88 na projeção, vão ≥ 16 px. | d4b · pronto.md (caa) |
 | `gesto-com-demonstracao` | Gesto que não seja toque simples (arrastar, segurar, deslizar) exige demonstração animada no primeiro uso. | formato-spec bloco 7 · critério 6.3 (scaffolding) |

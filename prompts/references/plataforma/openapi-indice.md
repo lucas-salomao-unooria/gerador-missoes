@@ -1,8 +1,8 @@
-<!-- CÓPIA SINCRONIZADA de plataforma-unooria@29afc8f (2026-09-16) · origem: docs/openapi.json · não edite: rode scripts/sincronizar_plataforma.py · placeholders entre chaves aparecem como «nome» por limitação de interpolação do ADK; no código real use chaves -->
+<!-- CÓPIA SINCRONIZADA de plataforma-unooria@71b4dbb (2026-09-18) · origem: apps/api/scripts/gerar-openapi.ts (roteador em 71b4dbb) · não edite: rode scripts/sincronizar_plataforma.py · placeholders entre chaves aparecem como «nome» por limitação de interpolação do ADK; no código real use chaves -->
 
 # `docs/openapi.json` — índice de rotas (método · caminho · resumo · tags)
 
-226 caminhos. O contrato completo (Zod → OpenAPI) está no repositório; aqui só o mapa.
+244 caminhos. O contrato completo (Zod → OpenAPI) está no repositório; aqui só o mapa.
 
 | Método | Caminho | Resumo | Tags |
 |---|---|---|---|
@@ -156,6 +156,24 @@
 | GET | `/prospeccao/cadastros` | Os cadastros de interesse recebidos pelo site público. | prospeccao |
 | GET | `/prospeccao/cadastros/exportacao` | Os mesmos cadastros, em CSV. | prospeccao |
 | POST | `/prospeccao/publico/cadastros` | Registra um cadastro de interesse feito no site público. | prospeccao |
+| POST | `/quem-mandou-isso/avancar` | Sai do Mural revelado e abre a pergunta do dilema do tio. | quem-mandou-isso |
+| POST | `/quem-mandou-isso/confirmar` | "Confirmar envio" — fecha o Mural da Turma (latch). | quem-mandou-isso |
+| POST | `/quem-mandou-isso/encaminhar` | Manda uma mensagem para o Mural da Turma. | quem-mandou-isso |
+| DELETE | `/quem-mandou-isso/encaminhar/«mensagemId»` | O "Apagar para todos" do Mural — tira a mensagem antes da confirmação. | quem-mandou-isso |
+| POST | `/quem-mandou-isso/entrar` | Toca "Entrar no grupo" e abre a Turma 5ºB. | quem-mandou-isso |
+| GET | `/quem-mandou-isso/gate` | Em que etapa a turma está (polling de ~5s). | quem-mandou-isso |
+| POST | `/quem-mandou-isso/leitura-integral` | Marca que o estudante rolou até a 8ª mensagem do grupo. | quem-mandou-isso |
+| POST | `/quem-mandou-isso/midia` | Registra que a transcrição do áudio ou o card do link foi aberto. | quem-mandou-isso |
+| GET | `/quem-mandou-isso/professor/material` | As 8 mensagens do banco curado com o gabarito, a paridade e o podcast. | quem-mandou-isso |
+| POST | `/quem-mandou-isso/reflexao` | A resposta ao dilema do áudio do tio — encerra a missão (latch). | quem-mandou-isso |
+| GET | `/quem-mandou-isso/sessao` | O estado da missão e as 8 mensagens do grupo, sem o gabarito. | quem-mandou-isso |
+| GET | `/quem-mandou-isso/turmas` | Turmas para o seletor do painel. | quem-mandou-isso |
+| DELETE | `/quem-mandou-isso/turmas/«turmaId»` | Zerar a turma — a segunda aplicação. | quem-mandou-isso |
+| GET | `/quem-mandou-isso/turmas/«turmaId»/conteudo` | O lote da turma, COM o gabarito. | quem-mandou-isso |
+| POST | `/quem-mandou-isso/turmas/«turmaId»/gate` | Os dois botões mestres: "Iniciar revelação coletiva" e "Liberar reflexão final". | quem-mandou-isso |
+| POST | `/quem-mandou-isso/turmas/«turmaId»/gerar-conteudo` | Gera um RASCUNHO das 8 mensagens do grupo com IA (pré-aula). | quem-mandou-isso |
+| POST | `/quem-mandou-isso/turmas/«turmaId»/homologar` | O clique em "Aprovar e liberar para a turma" — o portão do RF-001. | quem-mandou-isso |
+| GET | `/quem-mandou-isso/turmas/«turmaId»/painel` | O painel ao vivo: a barra de prontidão e o telão da sala. | quem-mandou-isso |
 | POST | `/rastro-boato/auditoria` | Registra a abertura da janela "Dados da mensagem". | rastro-boato |
 | POST | `/rastro-boato/decisao` | A intervenção no grupo — irrevogável (latch). | rastro-boato |
 | POST | `/rastro-boato/entrar` | Sai da tela de contexto e abre a lista de conversas. | rastro-boato |

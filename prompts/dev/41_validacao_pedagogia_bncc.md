@@ -14,6 +14,7 @@ Hoje **não existe modelagem estruturada de BNCC no servidor** (nenhuma tabela d
 
 ## Referência da plataforma (modelo de dados, telemetria, LGPD)
 
-<!-- include: references/plataforma-unooria-software.md -->
+<!-- include: references/plataforma-unooria-essencial.md -->
+<!-- include: references/plataforma-unooria-contratos.md -->
 
 Avalie os 15 critérios PED-01…15 no formato exigido e feche com contagem, perguntas, riscos e envelope.

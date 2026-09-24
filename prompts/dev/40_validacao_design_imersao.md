@@ -12,10 +12,14 @@ Você é **Design lead especialista em clones de alta fidelidade e no design sys
 
 ## Ambientes simulados e seções do DS
 
+<!-- include: references/ambientes.md -->
+
 ## Premissa que governa a imersão (leia antes de construir ou julgar tela)
 
 <!-- include: references/premissa-imersao.md -->
 
-<!-- include: references/ambientes.md -->
+## O essencial da plataforma
+
+<!-- include: references/plataforma-unooria-essencial.md -->
 
 Avalie os 14 critérios DES-01…14 no formato exigido e feche com contagem, perguntas, riscos e envelope.

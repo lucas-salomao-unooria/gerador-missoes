@@ -199,7 +199,7 @@ Saeb, não o nominal. A cláusula não muda a complexidade da decisão (6.3), s�
 com dois a três elementos **novos e interagentes** (Sweller, van Merriënboer & Paas, *Educational
 Psychology Review*, v. 31, n. 2, p. 261–292, 2019. DOI 10.1007/s10648-019-09465-5). Elemento já
 automatizado — o ícone de coração, o botão de play — **não conta**. Derivando: ~1–2 gestos novos por
-ato nos anos iniciais, 2–3 nos anos 3º–5º, 3–4 nos finais e no Médio. **[EXTRAPOLAÇÃO]** — ninguém
+ato no 1º–2º ano, 2–3 no 3º–5º, 3–4 nos finais e no Médio. **[EXTRAPOLAÇÃO]** — ninguém
 mediu "elementos de interface".
 
 ---
@@ -219,7 +219,7 @@ Indicadores Sociais 2025*), TALIS 2024, TIC Educação 2024 (CETIC.br/NIC.br), S
 | Leitura, 9º ano | **62% abaixo do adequado** | aqui a defasagem se confirma |
 | Leitura, Ensino Médio | **65% abaixo do adequado** | 50% abaixo do Nível 2 do PISA aos 15 anos |
 | Professor | sem formação recente em tecnologia | 46% não tiveram; só ~1/3 decide sobre uso de recurso digital; **43%** com formação continuada na rede municipal, que concentra os anos iniciais (TIC Educação 2024) |
-| Preparo docente | cinco telas obrigatórias (`E0-PROF-01…05`) | **sem tempo medido** até observação de campo; a contagem de telas e toques exigida pelo 4.3 é [CONVENÇÃO] |
+| Preparo docente | cinco telas obrigatórias (`E0-PROF-01…05`) | **sem tempo medido**; a contagem de telas e toques exigida pelo 4.3 é [CONVENÇÃO] — acordo interno, não medida |
 | Duração da aula | 50 min é **parâmetro de rede** | a LDB fixa carga anual (800h no EF, 1.000h no EM), não duração de aula |
 
 ---
@@ -275,10 +275,11 @@ DOI 10.1080/10627197.2011.634286).
 ## 9. Como isso deveria evoluir
 
 Nenhum número desta página é medição feita com missões da Unooria. Os melhores são extrapolação
-rigorosa a partir de medidas próximas; os piores são convenção declarada. A única forma de
-transformá-los em dado é **observação de campo**: rodar a missão com turmas reais, registrar onde a
-atenção cai, onde a decisão trava e quanto tempo de fato leva. Até lá, tratar teto como sinal de
-alerta, não como veredito automático — e manter a marcação honesta de cada número.
+rigorosa a partir de medidas próximas; os piores são convenção declarada — e é assim que devem ser
+lidos e citados. Por isso todo número sai daqui com a marca da sua origem (`[DADO DIRETO]`,
+`[EXTRAPOLAÇÃO]`, `[CONVENÇÃO]`): **teto é sinal de alerta, nunca veredito automático**, e convenção
+repetida sem a marca vira fato falso na geração seguinte. Onde a telemetria da plataforma já grava o
+comportamento (§11), é ela — não esta página — que decide.
 
 ---
 
@@ -339,7 +340,7 @@ ensino médio e superior, em ciências; nenhum mediu crianças de 6 a 10 anos ne
 Transfere-se o princípio (a decisão precisa discriminar), não um número. Por isso o 6.6 é redigido como
 **discriminação** (teste do estudante apressado × estudante que investiga), e não como "dificuldade".
 
-**Como isto vira dado (ver §9 e `observacao-campo.md`):** os eventos de investigação que a plataforma já
+**Como isto vira dado (ver §9):** os eventos de investigação que a plataforma já
 grava (`abriu_busca`, `buscou`, tempo revendo antes de concluir) devem mostrar **variância** entre
 estudantes numa missão que passa no 6.6. Todo mundo investiga zero, ou todo mundo investiga tudo, é
 sinal de que a decisão não discriminou.

@@ -34,10 +34,15 @@ from pipeline.artifacts import ARTIFACT_FILES
 
 #: Chave de estado lida por todos os agentes (rodapé injetado em `agents/base.py`).
 KEY_PEDIDO_CORRECAO = "pedido_correcao"
+#: Pareceres humanos das etapas já liberadas (`pipeline/passagem.py`), no mesmo rodapé.
+KEY_NOTAS_DE_PASSAGEM = "notas_de_passagem"
 
 #: Etapas de onde uma correção pode recomeçar, na ordem da esteira. `transversal` refaz só
-#: diagnóstico e aprendizado.
-ETAPAS = ("spec", "design", "dev", "transversal")
+#: diagnóstico e aprendizado. `produto` entrou em 23/09/2026: sem ela, a triagem mandava para `spec`
+#: pedidos de mecânica, etapas e narrativa — e a correção a partir da spec não refaz o one-pager nem
+#: passa pelos gates de produto. A spec mudava, o one-pager do PO ficava como estava, e a mecânica
+#: nova não era avaliada por ninguém.
+ETAPAS = ("produto", "spec", "design", "dev", "transversal")
 
 CHAVES_DEV = frozenset({
     "manifesto_report", "manifesto_status", "manifesto_status_envelope",
@@ -49,6 +54,10 @@ CHAVES_DEV = frozenset({
     "dev_status", "dev_status_envelope", "banca_rodada",
     "prd_final", "prd_check_report", "prd_status", "prd_status_envelope", "prd_rodada",
     "one_pager_pedagogico",
+    # gate de KPI do PRD (23/09/2026): sem apagar, uma correção que caísse antes dele deixava
+    # no dossiê o veredito da execução anterior como se fosse desta
+    "kpis_report", "kpis_status", "kpis_status_envelope",
+    "juiz_telemetria_saida",
 })
 #: `miro_board` fica de fora de propósito: o espelho atualiza o mesmo board em vez de abrir outro.
 CHAVES_DESIGN = frozenset({
@@ -58,6 +67,7 @@ CHAVES_DESIGN = frozenset({
     "wireframes_cobertura", "copy_strings_revisada", "prototipo_html", "prototipo_arquivo",
     "prototipo_relatorio", "diagramas_html", "stitch_links", "miro_links",
     "qa_entregaveis_report", "design_status", "design_status_envelope", "qa_design_rodada",
+    "prototipo_lint_report", "prototipo_lint_status", "prototipo_lint_status_envelope",
 }) | CHAVES_DEV
 #: `spec_missao_gate0` tem de cair: o split do D0 só grava esse backup se ele não existir
 #: (`agents/checkers.py`, SecaoSplitAgent) — senão a spec velha seria preservada como "original".
@@ -65,15 +75,42 @@ CHAVES_SPEC = frozenset({
     "spec_missao", "spec_missao_gate0", "spec_rodada",
     "bncc_report", "bncc_status", "bncc_status_envelope",
     "one_pager_resumido",
+    # gates da spec criados em 22–23/09/2026. `juiz_perguntas_rodada` é o que doía: sem apagar,
+    # a correção começava com as rodadas do juiz já esgotadas e não havia rodada de correção.
+    "evidencia_report", "evidencia_status", "evidencia_status_envelope",
+    "perguntas_report", "perguntas_status", "perguntas_status_envelope",
+    "juiz_perguntas_report", "juiz_perguntas_status", "juiz_perguntas_status_envelope",
+    "juiz_perguntas_rodada", "juiz_evidencia_saida",
 }) | CHAVES_DESIGN
+#: Tudo que a etapa de produto grava. Ficam de fora, de propósito, o que ela LÊ da geração original:
+#: `briefing`, `perguntas_po` e `material_anexado` — refazer produto é refazê-lo sobre o mesmo pedido
+#: e o mesmo material, mais o pedido de correção.
+CHAVES_PRODUTO = frozenset({
+    "nucleo_narrativo", "micro_gate_report", "micro_gate_status", "micro_gate_status_envelope", "micro_gate_rodada",
+    "missoes_vizinhas", "catalogo_indice_status", "catalogo_indice_status_envelope",
+    "one_pager", "brief_escopo", "brief_escopo_status", "brief_escopo_status_envelope",
+    "contrato_produto_report", "contrato_produto_status", "contrato_produto_status_envelope",
+    "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_status_envelope", "gate_estrutural_rodada",
+    "avaliacao_pedagogica_report", "avaliacao_status", "avaliacao_status_envelope",
+    "experiencia_aluno_report", "experiencia_status", "experiencia_status_envelope",
+    "adequacao_report", "adequacao_status", "adequacao_status_envelope", "avaliacoes_rodada",
+    "gate_final_report", "gate_final_status", "gate_final_status_envelope",
+    "juiz_contrato_produto_saida",
+}) | CHAVES_SPEC
 CHAVES_TRANSVERSAL = frozenset({
     "diagnostico_execucao", "diagnostico_status", "diagnostico_status_envelope", "aprendizado_registro",
+    # a ficha do A52: sem cair, a ficha da execução anterior ficava no estado de uma correção que
+    # não chega à transversal, e o runner a registraria de novo no catálogo
+    "ficha_catalogo", "ficha_catalogo_dados",
 })
 #: Contadores da execução anterior. `reexecucoes` é o orçamento de retrabalho da banca: sem zerar,
 #: uma sessão que já gastou o teto chega à correção sem direito a conserto.
-CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", KEY_AGENTES_DEGRADADOS})
+#: `tickets_sem_rota` acumula: sem zerar, o dossiê da correção listaria pendências da execução velha.
+CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_rota", "juiz_achados_entrada",
+                             KEY_AGENTES_DEGRADADOS})
 
 CHAVES_POR_ETAPA: Dict[str, frozenset] = {
+    "produto": CHAVES_PRODUTO,
     "spec": CHAVES_SPEC,
     "design": CHAVES_DESIGN,
     "dev": CHAVES_DEV,
@@ -83,6 +120,7 @@ CHAVES_POR_ETAPA: Dict[str, frozenset] = {
 #: `transversal` passa uma etapa que o orquestrador não monta: sobram só diagnóstico e
 #: aprendizado. Lista vazia não serve — o orquestrador a trocaria pelas etapas padrão.
 ETAPA_PARA_STAGES: Dict[str, List[str]] = {
+    "produto": ["produto", "design", "dev"],
     "spec": ["spec", "design", "dev"],
     "design": ["design", "dev"],
     "dev": ["dev"],
@@ -97,9 +135,14 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Contrato de plataforma e origem dos parâmetros": "produto",
     "Gate estrutural": "produto",
     "Adequação pedagógica": "produto",
+    "Avaliação pedagógica": "produto",
+    "Experiência do estudante": "produto",
     "Gate final de produto": "produto",
     "Conformidade BNCC Computação": "spec",
     "Ficha do manifesto (produto)": "spec",
+    "Matriz de evidência pedagógica": "spec",
+    "Perguntas de produto (9f)": "spec",
+    "Juiz das perguntas de produto": "spec",
     "Spec da missão": "spec",
     "Fechamento de lacunas (D0)": "design",
     "Ambiente simulado (D9)": "design",
@@ -112,9 +155,11 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Banca de dev": "dev",
     "Retrabalho da banca": "dev",
     "Pendências e consistência do PRD": "dev",
+    "Coerência KPI ↔ evento ↔ tela": "dev",
     "Consistência do PRD": "dev",
 }
 _ETAPAS_REFEITAS: Dict[str, frozenset] = {
+    "produto": frozenset({"produto", "spec", "design", "dev"}),
     "spec": frozenset({"spec", "design", "dev"}),
     "design": frozenset({"design", "dev"}),
     "dev": frozenset({"dev"}),
@@ -151,9 +196,18 @@ class PedidoCorrecao:
                 pedido.anexos_sem_texto.append(doc.name)
         return pedido
 
+    def como_material(self) -> str:
+        """Os anexos do pedido no formato de `material_anexado` — para refazer produto numa sessão
+        antiga, que não guardou o material da geração original."""
+        blocos = [f"### 📄 Documento de apoio: {nome}\n\n{conteudo.strip()}" for nome, conteudo in self.anexos]
+        blocos += [f"### 📄 {nome} — anexado, mas sem texto extraível; considere só o que o pedido diz sobre ele."
+                   for nome in self.anexos_sem_texto]
+        return "\n\n".join(blocos)
+
     def como_markdown(self, etapa: str) -> str:
         """Valor de `state["pedido_correcao"]`: pedido, anexos e como agir."""
-        seguintes = {"spec": " (e design e dev, que derivam dela)", "design": " (e dev, que deriva dele)"}.get(etapa, "")
+        seguintes = {"produto": " (e a spec, o design e o dev, que derivam dele)",
+                     "spec": " (e design e dev, que derivam dela)", "design": " (e dev, que deriva dele)"}.get(etapa, "")
         linhas = [
             f"Esta execução refaz a etapa `{etapa}`{seguintes} de uma missão já gerada, a pedido de uma pessoa. "
             "Os documentos das etapas anteriores foram preservados e são seus insumos; os da sua etapa foram "
@@ -204,6 +258,32 @@ class RegistroCorrecao:
 
 
 # ------------------------------------------------------------------ estado
+def material_para_refazer_produto(
+    estado: Dict[str, Any], conversa: Dict[str, Any], pedido: Optional[PedidoCorrecao]
+) -> Tuple[Optional[str], Optional[str]]:
+    """`(material, recusa)` para refazer produto. Exatamente um dos dois vem preenchido.
+
+    O núcleo narrativo é construído a partir dos anexos, e até 23/09/2026 a sessão guardava só os
+    nomes deles. Refazer produto numa sessão dessas sem o material seria gerar outra missão, sem o
+    material do Entre Redes que definiu esta — pior que não corrigir. Então: o material guardado
+    vence; sem ele, vale o que o pedido anexou; sem nenhum dos dois, e se a geração original teve
+    anexos, a correção é recusada com o que fazer.
+    """
+    salvo = str(estado.get("material_anexado") or "").strip()
+    if salvo:
+        return salvo, None
+    if pedido and (pedido.anexos or pedido.anexos_sem_texto):
+        return pedido.como_material(), None
+    originais = [str(n) for n in (conversa.get("attached_files") or [])]
+    if not originais:
+        return "", None
+    return None, (
+        "esta missão foi gerada antes de a esteira guardar o conteúdo dos anexos, e refazer a etapa de "
+        "produto sem eles geraria outra missão. Anexe de novo ao pedido o material original ("
+        + ", ".join(f"`{n}`" for n in originais[:6]) + ("…" if len(originais) > 6 else "") + ") e reenvie."
+    )
+
+
 def _etapa_do_gate(rotulo: str) -> Optional[str]:
     return ROTULOS_GATE_POR_ETAPA.get(str(rotulo or "").strip())
 
@@ -394,9 +474,13 @@ async def executar_correcao_stream(
     triagem: Any = None,
     *,
     so_esta_etapa: bool = False,
+    notas_de_passagem: Optional[str] = None,
     **opcoes_runner: Any,
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Reexecuta `etapa` (e as seguintes) sobre a sessão em `run_dir`, gravando na mesma pasta.
+
+    `notas_de_passagem`, quando vem, substitui a do estado salvo: é o *refazer* do parecer humano,
+    e uma refação invalida os pareceres da própria etapa — o texto velho não pode seguir aos agentes.
 
     Emite `correcao_started`, repassa os eventos do runner e fecha com `correcao_completed`
     (`result` + `registro`) ou `correcao_error` (backup restaurado). `opcoes_runner` vai para
@@ -406,9 +490,18 @@ async def executar_correcao_stream(
 
     run_dir = Path(run_dir)
     estado, conversa, briefing = carregar_sessao(run_dir)
+    if etapa == "produto":
+        material, recusa = material_para_refazer_produto(estado, conversa, pedido)
+        if recusa:
+            # nada foi tocado ainda: sem backup, sem estado limpo, sem registro de correção
+            yield {"type": "correcao_error", "error": recusa, "registro": None, "restaurados": [], "timestamp": time.time()}
+            return
+        estado = {**estado, "material_anexado": material}
     tem_pedido = bool(pedido and (pedido.texto.strip() or pedido.anexos or pedido.anexos_sem_texto))
     pedido_md = pedido.como_markdown(etapa) if tem_pedido else None
     limpo, removidas = preparar_estado(estado, etapa, pedido_md)
+    if notas_de_passagem is not None:
+        limpo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
     backup = fazer_backup(run_dir, etapa, removidas)
     stages = _stages_de(etapa, so_esta_etapa)
     inicio = time.time()
@@ -471,6 +564,90 @@ async def executar_correcao_stream(
     yield {"type": "correcao_completed", "result": result, "registro": asdict(registro), "timestamp": time.time()}
 
 
+async def iniciar_etapa_stream(
+    run_dir: Path,
+    etapa: str,
+    notas_de_passagem: str = "",
+    **opcoes_runner: Any,
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """Roda a próxima etapa de uma missão com parecer humano, sobre o estado salvo, na mesma pasta.
+
+    É o esqueleto de `executar_correcao_stream` sem pedido de correção: não é conserto, é a esteira
+    andando. `preparar_estado` ainda apaga o que a etapa (e as seguintes) já tinham produzido — há
+    produto numa etapa *devolvida* e depois liberada de novo — e recalcula a herança. `etapa=
+    "transversal"` fecha a missão (diagnóstico → aprendizado → catálogo).
+
+    Emite os eventos do runner e fecha com `etapa_completed` (`result`) ou `etapa_error` (backup
+    restaurado). Não entra em `historico_correcoes`: a linha do tempo das passagens é o `fluxo`.
+    """
+    from pipeline.runner import run_orchestrator_pipeline_stream
+
+    run_dir = Path(run_dir)
+    estado, conversa, briefing = carregar_sessao(run_dir)
+    if etapa == "transversal":
+        limpo = {k: v for k, v in estado.items() if k not in CHAVES_TRANSVERSAL | {KEY_PEDIDO_CORRECAO}}
+        removidas = sorted(k for k in estado if k not in limpo)
+        stages, com_transversal = ETAPA_PARA_STAGES["transversal"], True
+        # o dossiê (A50) ganha a seção "Passagens" a partir daqui: o fluxo vive no conversa.json,
+        # fora do estado que os agentes enxergam
+        fluxo = (conversa.get("fluxo") or {}) if isinstance(conversa.get("fluxo"), dict) else {}
+        limpo["pareceres_humanos"] = list(fluxo.get("pareceres") or [])
+    else:
+        limpo, removidas = preparar_estado(estado, etapa)
+        stages, com_transversal = [etapa], False
+    limpo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
+    backup = fazer_backup(run_dir, f"passagem-{etapa}", removidas)
+    inicio = time.time()
+    yield {"type": "etapa_started", "etapa": etapa, "stages": stages, "timestamp": inicio,
+           "backup": backup.relative_to(run_dir).as_posix()}
+
+    result: Any = None
+    erro: Optional[Dict[str, Any]] = None
+    async for evento in run_orchestrator_pipeline_stream(
+        prompt=briefing,
+        user_id=conversa.get("user_id"),
+        session_id=conversa.get("session_id"),
+        stages=stages,
+        initial_state=limpo,
+        run_dir=run_dir,
+        registrar_conversa=False,
+        com_transversal=com_transversal,
+        **opcoes_runner,
+    ):
+        tipo = evento.get("type")
+        if tipo == "pipeline_completed":
+            result = evento.get("result")
+        elif tipo == "pipeline_error":
+            erro = evento
+        yield evento
+
+    if result is None or getattr(result, "status", "") == "error":
+        restaurados = restaurar_backup(run_dir, backup)
+        detalhe = (erro or {}).get("error") or getattr(result, "error_message", None) or "o runner terminou sem resultado"
+        yield {"type": "etapa_error", "etapa": etapa, "error": detalhe, "restaurados": restaurados,
+               "timestamp": time.time()}
+        return
+
+    from pipeline.session_store import save_session_record
+
+    nome = {"transversal": "o dossiê final"}.get(etapa, f"a etapa **{etapa}**")
+    mensagens = list(conversa.get("messages") or []) + [
+        {"role": "assistant", "content": f"▶️ {time.strftime('%d/%m/%Y %H:%M')} — terminou {nome} "
+                                         f"({round(time.time() - inicio)} s). Status: {getattr(result, 'status', '')}."}]
+    save_session_record(
+        run_dir=run_dir,
+        session_id=str(conversa.get("session_id") or result.session_id),
+        user_id=str(conversa.get("user_id") or result.user_id),
+        prompt=str(conversa.get("prompt") or briefing),
+        result=result,
+        messages=mensagens,
+        attached_files=list(conversa.get("attached_files") or []),
+        created_at=conversa.get("created_at"),
+        historico_correcoes=historico_de(conversa) or None,
+    )
+    yield {"type": "etapa_completed", "etapa": etapa, "result": result, "timestamp": time.time()}
+
+
 def executar_correcao_sync(run_dir: Path, etapa: str, pedido: Optional[PedidoCorrecao] = None,
                            triagem: Any = None, **kwargs: Any) -> Tuple[Any, Dict[str, Any]]:
     """`(result | None, registro)` — para a linha de comando."""
@@ -488,7 +665,7 @@ def executar_correcao_sync(run_dir: Path, etapa: str, pedido: Optional[PedidoCor
 
 
 # ------------------------------------------------------------------ triagem
-ETAPAS_DE_TRIAGEM = ("spec", "design", "dev", "nenhuma")
+ETAPAS_DE_TRIAGEM = ("produto", "spec", "design", "dev", "nenhuma")
 
 
 @dataclass

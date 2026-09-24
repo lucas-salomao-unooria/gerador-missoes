@@ -19,32 +19,51 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 #: Ordem de execução. `rodada` só existe nos gates que vivem dentro de um LoopAgent.
+#: Fora desta lista de propósito: `catalogo_status` é gravado pelo registro no índice, que roda
+#: DEPOIS deste diagnóstico (a missão só entra no catálogo com o status que o dossiê derivou), e
+#: `diagnostico_status` é o próprio dossiê. Um cruzamento ingênuo status×dossiê acusa os dois.
 GATES: List[Dict[str, Optional[str]]] = [
+    {"status": "catalogo_indice_status", "rotulo": "Base de comparação do V5 (índice de missões)", "etapa": "produto", "rodada": None},
     {"status": "micro_gate_status", "rotulo": "Micro-gate do núcleo", "etapa": "produto", "rodada": "micro_gate_rodada"},
+    {"status": "brief_escopo_status", "rotulo": "Brief de escopo separado do one-pager", "etapa": "produto", "rodada": None},
     {"status": "gate_estrutural_status", "rotulo": "Gate estrutural", "etapa": "produto", "rodada": "gate_estrutural_rodada"},
+    {"status": "avaliacao_status", "rotulo": "Avaliação pedagógica", "etapa": "produto", "rodada": "avaliacoes_rodada"},
+    {"status": "experiencia_status", "rotulo": "Experiência do estudante", "etapa": "produto", "rodada": "avaliacoes_rodada"},
+    {"status": "adequacao_status", "rotulo": "Adequação pedagógica", "etapa": "produto", "rodada": "avaliacoes_rodada"},
     {"status": "gate_final_status", "rotulo": "Gate final de produto", "etapa": "produto", "rodada": None},
     {"status": "bncc_status", "rotulo": "Conformidade BNCC", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "lacunas_status", "rotulo": "Fechamento de lacunas (D0)", "etapa": "design", "rodada": None},
     {"status": "ambiente_status", "rotulo": "Ambiente simulado (D9)", "etapa": "design", "rodada": None},
+    {"status": "prototipo_lint_status", "rotulo": "Lint do protótipo (arquivo)", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "design_status", "rotulo": "QA de entregáveis", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "manifesto_status", "rotulo": "Ficha do manifesto", "etapa": "produto", "rodada": "spec_rodada"},
+    {"status": "evidencia_status", "rotulo": "Matriz de evidência pedagógica", "etapa": "produto", "rodada": "spec_rodada"},
+    {"status": "perguntas_status", "rotulo": "Perguntas de produto (9f)", "etapa": "produto", "rodada": "spec_rodada"},
+    {"status": "juiz_perguntas_status", "rotulo": "Juiz das perguntas de produto", "etapa": "produto", "rodada": "juiz_perguntas_rodada"},
     {"status": "telemetria_status", "rotulo": "Contrato de telemetria", "etapa": "dev", "rodada": "handoff_rodada"},
     {"status": "rastro_lacunas_status", "rotulo": "Rastro de lacunas", "etapa": "dev", "rodada": None},
     {"status": "dev_status", "rotulo": "Banca de dev", "etapa": "dev", "rodada": "banca_rodada"},
     {"status": "prd_status", "rotulo": "Pendências do PRD", "etapa": "dev", "rodada": None},
+    {"status": "kpis_status", "rotulo": "Coerência KPI ↔ evento ↔ tela", "etapa": "dev", "rodada": "prd_rodada"},
 ]
 
 #: Relatórios que não têm portão próprio: o parecer entra no dossiê como ressalva, nunca como
 #: impedimento. É o caso da adequação pedagógica — avalia, aponta ajustes, e quem decide bloquear
 #: continua sendo o gate estrutural e a avaliação pedagógica.
 CONSULTIVOS = [
-    {"chave": "adequacao_report", "rotulo": "Adequação pedagógica", "etapa": "produto"},
+    # O lint de contrato de plataforma roda em modo não estrito por desenho (devolve ao autor
+    # do one-pager em vez de travar), mas não aparecia em lugar nenhum do dossiê: os achados
+    # dele — WebSocket na seção 8, número sem origem, SAEB fora do ano — eram invisíveis para
+    # quem lia o relatório da execução.
+    {"chave": "contrato_produto_report", "rotulo": "Contrato de plataforma e origem dos números", "etapa": "produto"},
 ]
 
 _ICONE = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴", "devolvido": "🔴"}
 
 #: Artefatos dos dois agentes transversais, que rodam depois deste diagnóstico.
-_ESCRITOS_DEPOIS = ("diagnostico_execucao", "aprendizado_registro")
+#: A ficha do catálogo é gravada pelo A52, que roda depois do dossiê: as gerações de 23/09 a
+#: listavam como "ausente" com o arquivo presente na pasta.
+_ESCRITOS_DEPOIS = ("diagnostico_execucao", "aprendizado_registro", "ficha_catalogo")
 
 #: Severidades que impedem a missão de ser construída como está.
 _BLOQUEIA = ("bloqueio",)
@@ -159,6 +178,22 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
             "bloqueios": 0,
         })
 
+    # Ticket que um gate emitiu e nenhum agente pôde executar: o 🔴 do gate já aparece acima,
+    # mas sem isto ninguém ficava sabendo que o conserto nunca foi tentado, nem por quê.
+    for ticket in state.get("tickets_sem_rota") or []:
+        if not isinstance(ticket, dict):
+            continue
+        achados.append({
+            "gate": f"{ticket.get('gate') or 'Retrabalho'} — sem quem execute",
+            "etapa": "humano",
+            "id": ticket.get("id") or "—",
+            "codigo": "ticket-sem-rota",
+            "classe": "roteamento",
+            "severidade": "decisao_humana",
+            "dono": ticket.get("dono") or "—",
+            "resumo": f"{ticket.get('motivo', '')}: {ticket.get('resumo', '')}".strip(": "),
+        })
+
     degradacoes = list(state.get("degradacoes") or [])
     agentes_degradados = list(state.get("agentes_degradados") or [])
 
@@ -212,7 +247,8 @@ def artefatos_esperados(state: Dict[str, Any], mapa: Any) -> Dict[str, List[str]
     return {"entregues": sorted(entregues), "ausentes": sorted(ausentes)}
 
 
-def relatorio_markdown(d: Dict[str, Any], missao: str = "", artefatos: Optional[Dict[str, List[str]]] = None) -> str:
+def relatorio_markdown(d: Dict[str, Any], missao: str = "", artefatos: Optional[Dict[str, List[str]]] = None,
+                       state: Optional[Dict[str, Any]] = None) -> str:
     """Dossiê legível. Sem chave de estado, sem nome de classe, sem log cru."""
     icone = _ICONE.get(d["veredito"], "⚪")
     linhas = [
@@ -296,7 +332,78 @@ def relatorio_markdown(d: Dict[str, Any], missao: str = "", artefatos: Optional[
     else:
         linhas.append("1. Nada travando. As ressalvas acima são opcionais e estão registradas para a próxima versão.")
 
+    passagens = bloco_de_passagens(state or {})
+    if passagens:
+        linhas += ["", passagens]
+
+    bloco = bloco_de_execucao(state or {})
+    if bloco:
+        linhas += ["", bloco]
+
     return "\n".join(linhas) + "\n"
+
+
+def bloco_de_passagens(state: Dict[str, Any]) -> str:
+    """Quem deu parecer em cada etapa, com que texto, e quantas voltas cada uma levou.
+
+    Vem de `pareceres_humanos`, que a rodada final da esteira com parecer humano copia do `fluxo`
+    do `conversa.json` (`pipeline/reexecucao.py`, `iniciar_etapa_stream`). Sem parecer humano, vazio.
+    """
+    pareceres = [p for p in (state.get("pareceres_humanos") or []) if isinstance(p, dict)]
+    if not pareceres:
+        return ""
+    nomes = {"de_acordo": "de acordo", "refazer": "pediu para refazer", "devolver": "devolveu",
+             "excecao": "**liberou com exceção** (havia gate 🔴)"}
+    linhas = ["## Passagens", "",
+              "Cada etapa só seguiu depois do parecer de quem responde por ela. Pareceres de uma versão que",
+              "depois foi refeita aparecem riscados.", ""]
+    for etapa in ("produto", "design", "dev"):
+        da_etapa = [p for p in pareceres if p.get("etapa") == etapa]
+        if not da_etapa:
+            continue
+        voltas = sum(1 for p in da_etapa if p.get("acao") in ("refazer", "devolver"))
+        linhas.append(f"### {etapa.capitalize()} — {voltas} volta(s)")
+        linhas.append("")
+        for p in da_etapa:
+            texto = " ".join(str(p.get("comentario") or "").split())
+            linha = f"- {p.get('quando', '?')} · {p.get('como', '?')} {nomes.get(p.get('acao'), p.get('acao'))}: {texto}"
+            linhas.append(linha if p.get("valido", True) else f"- ~~{linha[2:]}~~")
+        linhas.append("")
+    return "\n".join(linhas).rstrip()
+
+
+def bloco_de_execucao(state: Dict[str, Any]) -> str:
+    """Custo, modelo e reprodutibilidade — o que permite comparar duas execuções.
+
+    O `usage_metadata` de cada evento era descartado: ninguém sabia quanto custa gerar uma
+    missão, qual agente pesa, nem se a esteira está melhorando. E sem registrar modelo e seed,
+    duas execuções da mesma missão não eram comparáveis.
+    """
+    exec_ = state.get("execucao") or {}
+    if not exec_:
+        return ""
+    t = exec_.get("tokens") or {}
+    total = t.get("entrada", 0) + t.get("saida", 0)
+
+    def _n(valor: int) -> str:
+        """Milhar com ponto, como se escreve em português."""
+        return f"{valor:,}".replace(",", ".")
+    linhas = ["## Execução", "",
+              f"- **Modelo:** `{exec_.get('modelo', '—')}`"
+              + (f" · PRD: `{exec_['modelo_prd']}`" if exec_.get("modelo_prd") and exec_["modelo_prd"] != exec_.get("modelo") else ""),
+              f"- **Reprodutibilidade:** seed `{exec_.get('seed_juiz', '—')}` · temperatura dos juízes `{exec_.get('temperatura_juiz', '—')}`",
+              f"- **Duração:** {exec_.get('duracao_s', 0)} s · **{t.get('chamadas', 0)} chamadas** ao modelo",
+              f"- **Tokens:** {_n(total)} ({_n(t.get('entrada', 0))} de entrada, {_n(t.get('saida', 0))} de saída"
+              + (f", {_n(t.get('pensamento', 0))} de raciocínio" if t.get("pensamento") else "") + ")",
+              ""]
+    por_agente = exec_.get("tokens_por_agente") or {}
+    if por_agente:
+        linhas += ["Os cinco agentes mais caros desta execução:", "",
+                   "| Agente | Entrada | Saída | Chamadas |", "|---|---:|---:|---:|"]
+        for nome, v in list(por_agente.items())[:5]:
+            linhas.append(f"| {nome} | {_n(v['entrada'])} | {_n(v['saida'])} | {v['chamadas']} |")
+        linhas.append("")
+    return "\n".join(linhas)
 
 
 def envelope(d: Dict[str, Any], missao: str = "") -> Dict[str, Any]:

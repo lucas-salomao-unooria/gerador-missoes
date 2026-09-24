@@ -22,86 +22,8 @@
 
 Exemplares a imitar: `apps/api/src/manifesto-ia/` + `apps/experiencias/exp-08-manifesto-ia/` (preparação docente + gate de turma), `apps/api/src/rastro-boato/` (texto livre de menor). `apps/api/src/unootube/` é de agosto e ficou para trás.
 
-## Doutrina (cópias)
+<!-- include: references/plataforma-unooria-api.md -->
 
-<!-- include: references/plataforma/agents-raiz.md -->
+<!-- include: references/plataforma-unooria-monorepo.md -->
 
-<!-- include: references/plataforma/glossario-dominio.md -->
-
-<!-- include: references/plataforma/arquitetura.md -->
-
-<!-- include: references/plataforma/agents-api.md -->
-
-<!-- include: references/plataforma/agents-experiencias.md -->
-
-<!-- include: references/plataforma/agents-hub.md -->
-
-<!-- include: references/plataforma/agents-sdk.md -->
-
-<!-- include: references/plataforma/agents-api-salas.md -->
-
-<!-- include: references/plataforma/agents-api-telemetry.md -->
-
-<!-- include: references/plataforma/agents-api-ai.md -->
-
-<!-- include: references/plataforma/agents-api-experiencias.md -->
-
-<!-- include: references/plataforma/agents-api-recursos.md -->
-
-<!-- include: references/plataforma/agents-e2e.md -->
-
-## Regras transversais (cópias de `docs/regras/`)
-
-<!-- include: references/plataforma/regras-manifesto-de-experiencias.md -->
-
-<!-- include: references/plataforma/regras-bridge-postmessage.md -->
-
-<!-- include: references/plataforma/regras-convencoes-de-codigo.md -->
-
-<!-- include: references/plataforma/regras-definition-of-done.md -->
-
-<!-- include: references/plataforma/regras-idioma-da-interface.md -->
-
-<!-- include: references/plataforma/regras-o-que-nao-fazer.md -->
-
-<!-- include: references/plataforma/regras-comandos.md -->
-
-## Contratos (código canônico, dentro de cerca)
-
-<!-- include: references/plataforma/contrato-manifesto.md -->
-
-<!-- include: references/plataforma/contrato-telemetria.md -->
-
-<!-- include: references/plataforma/contrato-progresso.md -->
-
-<!-- include: references/plataforma/guarda-liberacao.md -->
-
-<!-- include: references/plataforma/perfis-claims.md -->
-
-<!-- include: references/plataforma/produtos-catalogo.md -->
-
-<!-- include: references/plataforma/series.md -->
-
-<!-- include: references/plataforma/sdk-types.md -->
-
-<!-- include: references/plataforma/experiencias-dev-portas.md -->
-
-## Exemplar de missão nova (exp-08 Manifesto IA · migration da exp-04 · modelos exp-04/06/07/08)
-
-<!-- include: references/plataforma/exemplo-manifesto-exp-08.md -->
-
-<!-- include: references/plataforma/exemplo-contrato-rotas-exp-08.md -->
-
-<!-- include: references/plataforma/exemplo-invariantes-exp-08.md -->
-
-<!-- include: references/plataforma/exemplo-telemetria-exp-08.md -->
-
-<!-- include: references/plataforma/exemplo-schema-exp.md -->
-
-<!-- include: references/plataforma/exemplo-migration-exp-04.md -->
-
-## Rotas existentes e decisões
-
-<!-- include: references/plataforma/openapi-indice.md -->
-
-<!-- include: references/plataforma/decisoes-adr.md -->
+<!-- include: references/plataforma-unooria-contratos.md -->

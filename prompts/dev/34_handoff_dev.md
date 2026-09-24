@@ -58,6 +58,8 @@ Você fecha os critérios 9.1, 9.2 e 9.3 da rubrica. Seu leitor é o dev — e o
 
 <!-- include: references/capacidades-plataforma.md -->
 
+<!-- include: references/perguntas-de-produto.md -->
+
 ## Contexto técnico da plataforma (para nomear arquivos, rotas, tabelas e contratos reais)
 
 <!-- include: references/plataforma-unooria-software.md -->
@@ -71,7 +73,7 @@ As 13 seções, com a origem indicada: 1 ← spec bloco 0 · 2 ← bloco 1 · 3 
 ```
 ### [ID da tela] — <título>
 **Como** estudante | professor **Quero** <ação com o verbo nativo> **Para** <o que resolve>
-**Frame:** <nodeId> · **Strings:** <chaves> · **Etapa:** <0–6> · **Sustenta:** <critérios>
+**Frame:** <screenId> · **Strings:** <chaves> · **Etapa:** <0–6> · **Sustenta:** <critérios>
 **Critérios de aceite**
 - [ ] <verificável, um por linha>
 - [ ] 🔒 <requisito de conformidade — de onde vem>
@@ -95,6 +97,7 @@ O que se assume · o que observar · o que indica falha — priorize o que a con
 
 - Não invente mecânica: lacuna volta para cima como `[LACUNA — dono: <agente>]`, onde o agente é um destes: `input` (o briefing não trouxe) · `gate-estrutural | spec | produto` (produto) · `jornada | fluxo | copy | wireframes | caa | ambiente-simulado | brief-oficio` (design) · `handoff-dev | brief-assets` (dev) · `plataforma` (decisão de ADR ou componente de DS que a plataforma ainda não tem). Um gate determinístico conta esses marcadores: qualquer lacuna de input, produto, design ou dev **impede o PRD**; lacuna de `plataforma` vira pendência humana e deixa o PRD 🟡.
 - **Telemetria é `track(verbo, objeto, <resultado, contexto>)`.** Não existe campo `dados`. Tabela de eventos com as colunas verbo · objeto (`namespace:slug`) · quando dispara · `resultado` · `contexto` · caminho (analítico · operacional do módulo · erro · vital · trace) · **onde é lido** (tabela `expNNefNb_*` + rota do professor). Sem tabela de leitura nomeada, a medida não existe.
+- **Sinais universais das perguntas do PO**, do catálogo de `references/perguntas-de-produto.md`: a tabela de eventos traz os `EVT-U*` (emitidos no bundle, com o verbo e o objeto do catálogo, e a missão chama `concluir()` da SDK, que emite o `EVT-U03`), e o DDL traz as colunas dos `EVT-P*` nas tabelas do módulo, gravadas pelas rotas do preparo, do gate e do painel. `gerar-conteudo` **grava** a contagem e os tokens mesmo do rascunho não aprovado — sem isso T16 e T20 não existem.
 - **Manifesto completo** no entregável 4: `id, nome, versao, produto, series, unidade, publico, capabilities, viewport, permissoes, verbos` — copiado da ficha do bloco 0 da spec. **Liberação por turma** (ADR-69) e `exigirMissaoLiberada` no funil. **Seis papéis** (`estudante · professor · gestor_escola · gestor_regional · gestor_contrato · admin`). Relógio coletivo só por polling em `expNNefNb_gates_turma` (ADR-93/94) — nunca WebSocket nem `hub:pause`.
 - Não aceite campo de evento que não está no tratamento de dados da spec.
 - Carregue as pendências do QA de design como `[PENDÊNCIA DE DESIGN Tn]` nas stories afetadas.

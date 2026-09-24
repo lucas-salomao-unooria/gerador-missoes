@@ -277,11 +277,21 @@
    "modelos": 16
   },
   {
-   "origem": "docs/openapi.json",
+   "origem": "apps/api/scripts/gerar-openapi.ts (roteador em 71b4dbb)",
    "destino": "openapi-indice.md",
-   "sha256": "4a33bba093e117ab",
-   "bytes": 25243,
-   "caminhos": 226
+   "commit": "71b4dbb",
+   "sha256": "c45365c66ee4d3ee",
+   "bytes": 27493,
+   "caminhos": 244
+  },
+  {
+   "origem": "apps/api/scripts/gerar-openapi.ts (roteador em 71b4dbb)",
+   "destino": "openapi-rotas.json",
+   "commit": "71b4dbb",
+   "sha256": "a7425440310abbe4",
+   "bytes": 25416,
+   "caminhos": 244
   }
- ]
+ ],
+ "openapi_atualizado_em": "2026-09-23T18:16:43+00:00"
 }

@@ -375,6 +375,10 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
         if files_count is None:
             files_count = len(list(entry.glob("**/*.md")))
 
+        # Parecer humano (`pipeline/passagem.py`): a fila "Aguardando você" sai daqui, sem abrir
+        # mais nenhum arquivo. Sessões anteriores ao parecer não têm `fluxo` e ficam de fora da fila.
+        fluxo = conversa_data.get("fluxo") if isinstance(conversa_data.get("fluxo"), dict) else {}
+
         sessions.append(
             {
                 "dir_name": entry.name,
@@ -390,6 +394,9 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
                 "prompt": prompt,
                 "files_count": files_count,
                 "mtime": entry.stat().st_mtime,
+                "fluxo_etapa": fluxo.get("etapa"),
+                "fluxo_situacao": fluxo.get("situacao"),
+                "fluxo_atualizado_em": fluxo.get("atualizado_em"),
             }
         )
 
@@ -578,8 +585,13 @@ def save_session_record(
     attached_files: Optional[List[str]] = None,
     created_at: Optional[str] = None,
     historico_correcoes: Optional[List[Dict[str, Any]]] = None,
+    fluxo: Optional[Dict[str, Any]] = None,
 ) -> Path:
     """Grava `conversa.json`.
+
+    O `fluxo` do parecer humano (`pipeline/passagem.py`) é preservado do arquivo em disco quando
+    não vem explícito: este arquivo é regravado do zero pelo runner e pela correção, e perder o
+    fluxo apagaria os pareceres de quem já deu *de acordo*.
 
     `created_at` e `historico_correcoes` existem para a correção de uma sessão
     (`pipeline/reexecucao.py`): a data de criação é a original, e o histórico acumula.
@@ -640,6 +652,14 @@ def save_session_record(
         data["historico_correcoes"] = historico_correcoes
 
     conversa_path = run_dir / "conversa.json"
+    if fluxo is None and conversa_path.exists():
+        try:
+            fluxo = json.loads(conversa_path.read_text(encoding="utf-8")).get("fluxo")
+        except (OSError, ValueError):
+            fluxo = None
+    if isinstance(fluxo, dict):
+        data["fluxo"] = fluxo
+
     conversa_path.write_text(json.dumps(data, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
     return conversa_path
 

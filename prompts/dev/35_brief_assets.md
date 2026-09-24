@@ -30,6 +30,14 @@ Seu leitor é curadoria e produção de conteúdo, não dev. Você não descreve
 
 {one_pager?}
 
+## Rodada de correção — só quando houver tickets
+
+{tickets_retrabalho?}
+
+**Se o bloco acima estiver vazio, ignore esta seção**: é a sua primeira passada.
+
+**Se houver tickets**, a banca de validação auditou o seu brief e devolveu apontamentos endereçados a você. Reemita **o brief inteiro** — os cinco entregáveis — corrigindo exatamente o apontado. Não mude asset, spec ou ordem de produção que o ticket não cita: o handoff e o PRD já foram escritos sobre eles.
+
 ## Entregável 1 — Inventário de assets
 
 Classifique cada asset em um dos três blocos arquiteturais:
