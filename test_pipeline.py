@@ -2981,6 +2981,59 @@ def test_kpis_cruza_o_prd_com_a_spec():
     print("   ✓ KPI ↔ spec: pergunta que morreu entre produto e dev, e KPI que inventou pergunta")
 
 
+def test_ia_ao_estudante_e_decidida_pela_spec():
+    """24/09/2026: o PRD pôs `EVT-U06` (IA responde) no KPI de espera de uma missão cuja IA só atua no
+    preparo docente; o gate leu "o PRD emite sinal de IA" e exigiu o `EVT-P06` de custo. Mandava
+    acrescentar um evento de algo que não existe. A spec decide; o PRD que contradiz é o achado."""
+    from tools.kpis import validar_kpis
+
+    prd = """
+| ID | Verbo | Objeto | Quando dispara | Resultado | Contexto | Onde é lido |
+|---|---|---|---|---|---|---|
+| EVT-U06 | attempted | ia:responder | resposta da IA | {"latencia_ms": 1800} | — | painel de produto |
+"""
+    sem_t21 = "- `perguntas_herdadas`: T7, T12, T20\n"
+    com_t21 = "- `perguntas_herdadas`: T7, T12, T20, T21\n"
+
+    sem = validar_kpis(prd, sem_t21)["achados"]
+    assert any(a["codigo"] == "sinal-ia-sem-ia-ao-estudante" and "Tire o evento" in a["resumo"] for a in sem)
+    assert not any("EVT-P06" in a["resumo"] and a["codigo"] == "sinal-universal-ausente" for a in sem)
+
+    com = validar_kpis(prd, com_t21)["achados"]
+    assert not any(a["codigo"] == "sinal-ia-sem-ia-ao-estudante" for a in com)
+    assert any(a["codigo"] == "sinal-universal-ausente" and "EVT-P06" in a["resumo"] for a in com)
+
+    # sem spec (correção que só refaz o PRD), o próprio PRD continua sendo a pista
+    assert any("EVT-P06" in a["resumo"] for a in validar_kpis(prd, "")["achados"])
+    print("   ✓ IA ao estudante: a spec decide, e o PRD que a contradiz é apontado")
+
+
+def test_nome_do_marcador_entre_crases_nao_e_pendencia():
+    """24/09/2026: "Todos os marcadores `[NEEDS CLARIFICATION]` foram saneados" deixava o PRD 🟡 por
+    uma pendência humana que a própria frase dizia não existir."""
+    from tools.rastro import varrer_lacunas
+
+    def achados(texto):
+        return varrer_lacunas([{"chave": "x", "rotulo": "X", "etapa_padrao": "dev"}], {"x": texto})["achados"]
+
+    assert not achados("- Nenhuma questão aberta. Todos os marcadores `[NEEDS CLARIFICATION]` foram saneados.\n")
+    assert achados("A rota do painel não foi confirmada. [NEEDS CLARIFICATION]\n")
+    assert achados("Rota: `[NEEDS CLARIFICATION: qual endpoint lê a turma, dono: dev]`\n")
+    print("   ✓ o nome do marcador citado entre crases não vira pendência")
+
+
+def test_todo_relatorio_de_gate_tem_onde_aparecer_na_tela():
+    """24/09/2026: o gate de KPIs bloqueava o Dev e a tela não tinha passo para mostrar o relatório —
+    ele não estava nos metadados. O lint do protótipo estava igual. Relatório novo sem passo falha aqui."""
+    from pipeline.orchestrator import create_mission_orchestrator, get_pipeline_agents_metadata, iter_agent_tree
+
+    mostrados = {m["output_key"] for m in get_pipeline_agents_metadata(active_only=False)}
+    invisiveis = sorted({f"{a.name} → {a.report_key}" for _, a in iter_agent_tree(create_mission_orchestrator())
+                         if getattr(a, "report_key", None) and a.report_key not in mostrados})
+    assert not invisiveis, invisiveis
+    print("   ✓ todo relatório de gate tem um passo na tela")
+
+
 def test_todo_gate_gravado_aparece_no_dossie():
     """O cruzamento da auditoria de 23/09/2026, como teste: todo `status_key` que um agente da
     árvore grava está no dossiê. Eram três fora, e um deles reprovava protótipo sem que quem lia
