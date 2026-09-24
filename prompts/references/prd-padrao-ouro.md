@@ -64,9 +64,10 @@ KPI transversal (herdado de uma `T` de dono `missao` do catálogo de `perguntas-
 usa `Tela: —`, **a pergunta da transversal com as palavras dela**, e **só os sinais que o catálogo
 lista para ela** — nunca um evento próprio da mecânica, mesmo que pareça próximo. As de dono
 `plataforma` (T1–T6, T13, T18) não viram KPI da missão: a missão não tem o dado. As
-transversais não precisam de KPI próprio; o que a missão deve a elas é que **a tabela de eventos
-da seção 13 traga todos os sinais universais** (`EVT-U*` e `EVT-P*`) com o id, o verbo e o objeto
-do catálogo. Os ids `EVT-U*`/`EVT-P*` são reservados: evento da mecânica é `EVT-001`, `EVT-002`…
+transversais não precisam de KPI próprio; o que a missão deve a elas é que a seção 13 traga
+**todos os sinais universais** com o id e o objeto do catálogo: os `EVT-U*` na **tabela de eventos**
+(com o verbo), e os `EVT-P*` — que são colunas do módulo, não telemetria — numa tabela própria
+**«Sinais do professor»**, no formato do catálogo: `| Sinal | Objeto | Quando grava | Onde fica | Responde |`. Os ids `EVT-U*`/`EVT-P*` são reservados: evento da mecânica é `EVT-001`, `EVT-002`…
 
 
 # 3. Não-objetivos e fora de escopo

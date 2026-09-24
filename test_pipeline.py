@@ -3037,6 +3037,36 @@ def test_sinais_do_professor_em_tabela_propria_e_prosa_nao_emite():
     print("   ✓ EVT-P* na tabela do catálogo contam, e citar um evento na prosa não o emite")
 
 
+def test_sinal_do_professor_em_lista_e_rota_proibida():
+    """24/09/2026, terceira rodada: os `EVT-P*` vieram em lista (id e objeto do catálogo) e o gate só
+    lia tabelas; e a linha em que o redator PROIBIA as rotas erradas ("**NÃO** utilizar `PUT /salas`")
+    virava `rota-inexistente`. A rota errada usada de verdade continua bloqueando."""
+    from tools.kpis import validar_kpis
+    from tools.rotas_plataforma import validar_rotas
+
+    prd = """
+| KPI | PQ | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |
+|---|---|---|---|---|---|---|---|---|---|---|
+| KPI-01 | T15 | De X professores que acessaram a missão, quantos iniciaram a customização? | <50% → rever | missao | — | `EVT-P01` | razão | sem baseline — primeira medição | 50% | 11/2026 |
+
+| ID | Verbo | Objeto | Quando dispara | Resultado | Contexto | Onde é lido |
+|---|---|---|---|---|---|---|
+| EVT-001 | progressed | aha:revelacao | E4-ALU-02 | {"ok": true} | — | exp09ef1b_sessoes |
+
+- `EVT-P01` (`preparo:iniciar`): gravado em `exp09ef1b_conteudo_turma.preparo_iniciado_em`. (Alimenta `T14`, `T15`).
+"""
+    achados = validar_kpis(prd, "- `perguntas_herdadas`: T15\n")["achados"]
+    assert not [a for a in achados if "EVT-P01" in a["resumo"]], achados
+    # citação solta na prosa não declara o sinal
+    solta = prd.replace("- `EVT-P01` (`preparo:iniciar`)", "O `EVT-P01` foi revisto")
+    assert any(a["codigo"] == "kpi-evento-inexistente" for a in validar_kpis(solta, "")["achados"])
+
+    proibida = "- **NÃO** utilizar rotas inexistentes como `PUT /salas` ou `GET /turmas/:id/painel`.\n"
+    assert not validar_rotas(proibida)
+    assert validar_rotas("O professor chama `POST /salas/turma/:turmaId/missoes/exp04ef3b`.\n")
+    print("   ✓ EVT-P* em lista contam, e rota citada para ser proibida não é rota em uso")
+
+
 def test_nome_do_marcador_entre_crases_nao_e_pendencia():
     """24/09/2026: "Todos os marcadores `[NEEDS CLARIFICATION]` foram saneados" deixava o PRD 🟡 por
     uma pendência humana que a própria frase dizia não existir."""
