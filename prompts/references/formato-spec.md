@@ -168,7 +168,7 @@ sobre ela como produto — separado do que o professor lê sobre a turma. Três 
 ```
 - `declared_lessons: 1`        (quantas aulas a missão ocupa; 1, 2 ou fracionada→2)
 - `core_action: scored decisao:mural`   (o verbo:objeto que É a decisão central; um só)
-- `perguntas_herdadas: T7, T8, T9, T10, T11, T12, T14, T15, T16, T17, T19, T20`   (as de dono `missao`; + T21 se a IA responde ao estudante)
+- `perguntas_herdadas: T7, T8, T9, T10, T11, T12, T14, T15, T16, T17, T19, T20`   (universais T7–T12, T14, T17, T19; + T15, T16, T20 com customização de tema por IA; + T21 com IA conversacional)
 
 | PQ | Pergunta | Decisão que dispara | Corte | Etapa | Ação (verbo:objeto) | Origem |
 |---|---|---|---|---|---|---|

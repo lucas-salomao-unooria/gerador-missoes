@@ -2901,6 +2901,44 @@ _SPEC_9F = """
 """
 
 
+def test_transversais_do_po_por_grupo_de_missao():
+    """A revisão do PO de 24/09/2026 deu a cada pergunta grupo, pilar e decisão. O grupo muda quem
+    herda: T15, T16 e T20 só na missão com customização de tema por IA, T21 só na IA conversacional.
+    Antes, toda missão era cobrada de `geracoes` de um `gerar-conteudo` que podia nem ter."""
+    from tools.kpis import catalogo, sinais_exigidos, condicoes_da_missao, validar_9f
+
+    c = catalogo()
+    assert len(c["transversais"]) == 21 and len(c["perguntas"]) == 21
+    for t, info in c["transversais"].items():
+        assert info.get("grupo") in ("universal", "customizacao_tema", "ia_conversacional"), t
+        assert info.get("pilar"), f"{t} sem pilar"
+    assert {t for t, i in c["transversais"].items() if i["grupo"] == "customizacao_tema"} == {"T15", "T16", "T20"}
+    assert {t for t, i in c["transversais"].items() if i["grupo"] == "ia_conversacional"} == {"T21"}
+    # as decisões são as do PO: nenhuma proposta do agente sobra na tabela das transversais
+    canon = (Path(__file__).parent / "prompts/references/perguntas-de-produto.md").read_text(encoding="utf-8")
+    tabela = canon.split("## O catálogo de sinais universais")[0].split("| `T1` |", 1)[1]
+    assert "PROPOSTA" not in tabela, "sobrou decisão proposta pelo agente na tabela do PO"
+
+    universal = set(sinais_exigidos(False, False))
+    assert not universal & {"EVT-P01", "EVT-P02", "EVT-P03", "EVT-P06", "EVT-U06"}, universal
+    assert {"EVT-P01", "EVT-P02", "EVT-P03"} <= set(sinais_exigidos(False, True))
+
+    # o grupo sai da ficha de herdadas; sem ela, do preparo com gerar-conteudo
+    assert condicoes_da_missao("- `perguntas_herdadas: T7, T8, T16`") == {"customizacao_tema"}
+    assert condicoes_da_missao("- `perguntas_herdadas: T7, T8`\nO professor chama gerar-conteudo.") == set()
+    assert condicoes_da_missao("preparo: POST /x/turmas/:id/gerar-conteudo") == {"customizacao_tema"}
+    assert condicoes_da_missao("- `perguntas_herdadas: T7, T21`") == {"ia_conversacional"}
+
+    # missão sem customização: herdar só as universais não é falta
+    sem_custom = _SPEC_9F.replace("T14, T15, T16, T17, T19, T20", "T14, T17, T19")
+    assert sem_custom != _SPEC_9F
+    assert "herdada-faltando" not in [a["codigo"] for a in validar_9f(sem_custom)["achados"]]
+    # com o preparo por IA na spec, deixar T15/T16/T20 de fora é falta
+    com_preparo = sem_custom + "\nPreparo: `POST /exp09ef1b/turmas/:turmaId/gerar-conteudo`.\n"
+    assert "herdada-faltando" in [a["codigo"] for a in validar_9f(com_preparo)["achados"]]
+    print("   ✓ transversais do PO: grupo, pilar e decisão; sinais cobrados só do grupo da missão")
+
+
 def test_perguntas_de_produto_9f():
     """As cinco perguntas do 9f: quantidade fechada, decisão com limiar, e uma ação que a spec
     de fato emite e que carrega número. Até 23/09/2026 nada disso era conferido — a pergunta
