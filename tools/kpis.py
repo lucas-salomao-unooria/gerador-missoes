@@ -186,7 +186,11 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
         falha("prd-vazio", "PRD vazio: não há KPI a conferir.")
         return {"status": "bloqueado", "achados": achados, "kpis": 0, "eventos": 0}
 
-    tab_kpi = [l for t in _tabelas(texto, {"kpi"}) for l in t if _RE_KPI.search(str(l))]
+    # A tabela de eventos com uma coluna «KPI» de volta (qual KPI o evento alimenta) é rastro, não
+    # declaração de KPI. Lida como tabela de KPIs, cada evento virava um KPI sem pergunta, decisão
+    # nem baseline: 27 bloqueios num PRD cujos 11 KPIs estavam completos (24/09/2026).
+    tab_kpi = [l for t in _tabelas(texto, {"kpi"}) if not {"quando dispara", "quando grava"} & set(t[0])
+               for l in t if _RE_KPI.search(str(l))]
     # Os `EVT-P*` são colunas do módulo, não eventos de telemetria, e o catálogo os ensina numa tabela
     # própria (`| Sinal | Objeto | Quando grava | Onde fica | Responde |`). O gate só lia a de «Quando
     # dispara»: o PRD que copiou o catálogo à risca levou 13 achados de sinal «inexistente» (24/09/2026).

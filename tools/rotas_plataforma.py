@@ -30,10 +30,12 @@ _RE_ROTA = re.compile(r"\b(GET|POST|PUT|PATCH|DELETE)\s+`?(/[A-Za-z0-9_\-/{}:«�
 _RE_PROPOSTA = re.compile(r"\[\s*nova|nova rota|rota nova|a criar|proposta|pend[êe]ncia de plataforma|verificar no reposit", re.IGNORECASE)
 #: Linha que cita a rota para PROIBI-LA: "**NÃO** utilizar rotas inexistentes como `PUT /salas`",
 #: "Eliminada qualquer menção incorreta a `GET /turmas/:id/painel`". O redator escreve isso quando o
-#: pedido de correção aponta a rota errada, e o gate a lia como rota em uso (24/09/2026).
+#: pedido de correção aponta a rota errada, e o gate a lia como rota em uso (24/09/2026). Na rodada
+#: seguinte vieram mais duas formas: "❌ NÃO inventar rota `DELETE /turmas/:turmaId`" e, no changelog,
+#: "Substituição da menção indevida a `DELETE /turmas/:id`".
 _RE_PROIBICAO = re.compile(
-    r"\bn[ãa]o\s+(?:utiliz|us[ae]|cham|consum|cri[ae])|\bnunca\b|\binexistente|\beliminad|\bincorret|"
-    r"\bproibid|\bvedad|\bveda-se|\bexpurg", re.IGNORECASE)
+    r"\bn[ãa]o\s+(?:utiliz|us[ae]|cham|consum|cri[ae]|invent)|\bnunca\b|\binexistente|\beliminad|\bincorret|"
+    r"\bindevid|\bproibid|\bvedad|\bveda-se|\bexpurg", re.IGNORECASE)
 _RE_PARAM = re.compile(r"«[^»]+»|:\w+|\{[^}]+\}")
 _cache: Dict[str, Any] = {}
 
