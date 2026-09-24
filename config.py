@@ -233,6 +233,29 @@ class AppSettings(BaseSettings):
     miro_client_id: str = Field(default_factory=lambda: os.getenv("MIRO_CLIENT_ID", ""))
     miro_client_secret: str = Field(default_factory=lambda: os.getenv("MIRO_CLIENT_SECRET", ""))
 
+    # ------------------------------------------------------------------ Login
+    # Quatro contas fixas (produto, design, dev, admin), sem provedor de identidade. Os dois
+    # valores saem de `scripts/gerar_credenciais.py` e vivem no Secret Manager; sem qualquer um
+    # deles o app recusa subir (`tools/auth.py`, `configuracao_de_login`) — não existe modo aberto
+    # por esquecimento, senão um deploy sem o segredo publicaria o app sem login.
+    auth_credenciais: str = Field(
+        default_factory=lambda: os.getenv("AUTH_CREDENCIAIS", ""),
+        description="JSON {usuario: {hash, papel}} com os hashes scrypt das senhas",
+    )
+    auth_segredo_jwt: str = Field(
+        default_factory=lambda: os.getenv("AUTH_SEGREDO_JWT", ""),
+        description="Chave HS256 que assina o token de sessão. Girar derruba todas as sessões",
+    )
+    auth_horas_sessao: float = Field(
+        default_factory=lambda: float(os.getenv("AUTH_HORAS_SESSAO", "4")),
+        description="Validade absoluta da sessão, contada do login",
+    )
+    parecer_humano: bool = Field(
+        default_factory=lambda: _env_bool("PARECER_HUMANO", "true"),
+        description="Se true, a esteira para ao fim de cada etapa e espera o parecer do dono "
+                    "(pipeline/passagem.py). Padrão da sessão; o admin muda na barra lateral",
+    )
+
 
     # ----------------------------------------------------------- Derivados
     @property
