@@ -713,10 +713,10 @@ def render_sidebar() -> Dict[str, Any]:
                                     st.session_state.messages = msgs
                                     st.rerun()
                         with col_del:
-                            # excluir apaga a pasta no bucket, com pareceres e histórico: só o admin
+                            # qualquer papel exclui (decisão de 24/09/2026); só não com etapa rodando,
+                            # senão a thread em segundo plano seguiria gravando numa pasta apagada
                             if st.button("🗑️", key=f"del_{s['dir_name']}", help=f"Excluir {s['title']}",
-                                         disabled=not (sessao and sessao.papel == "admin")
-                                         or s.get("fluxo_situacao") in passagem.EM_EXECUCAO):
+                                         disabled=s.get("fluxo_situacao") in passagem.EM_EXECUCAO):
                                 delete_saved_session(s["dir_name"])
                                 invalidar_cache_sessoes()
                                 if st.session_state.get("current_session_id") == s["dir_name"]:
