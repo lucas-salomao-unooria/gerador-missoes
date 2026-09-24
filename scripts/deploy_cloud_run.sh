@@ -16,6 +16,10 @@ ARTIFACT_BUCKET="entre-redes-dev-adk-artifacts"
 # recurso é declarado no Terraform (`gerador_missoes.tf`) e o valor é injetado por
 # `gcloud secrets versions add`. Aqui só se referencia a versão mais recente.
 STITCH_SECRET="plataforma-unooria-dev-stitch-api-key"
+# Login da aplicação (`tools/auth.py`): hashes das 4 contas e chave que assina o JWT.
+# Mesmo padrão do Stitch — recurso no Terraform, valor por `scripts/gerar_credenciais.py`.
+AUTH_CREDENCIAIS_SECRET="plataforma-unooria-dev-gerador-credenciais"
+AUTH_JWT_SECRET="plataforma-unooria-dev-gerador-jwt"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -44,24 +48,29 @@ echo "=================================================================="
 # --max-instances 1 é obrigatório: o Streamlit guarda os arquivos de download na
 # memória do processo, e um GET em /media que caia em outra instância responde 404
 # mesmo com os artefatos íntegros no bucket.
+# --min-instances 1 e --no-cpu-throttling: as etapas rodam em segundo plano
+# (`pipeline/execucao_fundo.py`) e precisam de CPU fora de requisição. Espelham o Terraform.
+# Acesso público, por decisão do dono do projeto (23/09/2026); quem barra é o login do app.
+# Para fechar a rede: `--no-allow-unauthenticated` e
+# `gcloud run services proxy "$SERVICE_NAME" --region "$REGION"`.
+# Comentários ficam ACIMA do comando: um `#` no meio da continuação com `\` o encerra ali.
 gcloud run deploy "$SERVICE_NAME" \
   --source . \
   --region "$REGION" \
   --project "$PROJECT_ID" \
-# Acesso público, por decisão do dono do projeto (23/09/2026). Para fechar:
-#   --no-allow-unauthenticated
-# e acessar por `gcloud run services proxy "$SERVICE_NAME" --region "$REGION"`.
   --allow-unauthenticated \
   --port 8080 \
   --memory 4Gi \
   --cpu 2 \
   --timeout 3600 \
   --session-affinity \
+  --min-instances 1 \
   --max-instances 1 \
+  --no-cpu-throttling \
   --add-volume "name=artifacts-vol,type=cloud-storage,bucket=$ARTIFACT_BUCKET" \
   --add-volume-mount "volume=artifacts-vol,mount-path=/app/output" \
   --env-vars-file .env.yaml \
-  --update-secrets "STITCH_API_KEY=$STITCH_SECRET:latest" \
+  --update-secrets "STITCH_API_KEY=$STITCH_SECRET:latest,AUTH_CREDENCIAIS=$AUTH_CREDENCIAIS_SECRET:latest,AUTH_SEGREDO_JWT=$AUTH_JWT_SECRET:latest" \
   --quiet
 
 echo "=================================================================="

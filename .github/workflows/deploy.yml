@@ -76,23 +76,31 @@ jobs:
           # --max-instances=1 é obrigatório: o Streamlit guarda os arquivos de download
           # na memória do processo, e um GET em /media que caia em outra instância
           # responde 404 mesmo com os artefatos íntegros no bucket.
+          # --min-instances=1 e --no-cpu-throttling: as etapas rodam numa thread em segundo
+          # plano (`pipeline/execucao_fundo.py`), que precisa de CPU fora de requisição e de
+          # um container que não seja desligado no meio. Espelham o Terraform
+          # (`gerador_missoes_min_instances` e `gerador_missoes_cpu_sempre_alocada`); sem
+          # eles aqui, cada deploy devolveria o default e divergiria do state.
+          # Acesso público, por decisão do dono do projeto (23/09/2026): quem barra é o login
+          # da própria aplicação (`tools/auth.py`), com as credenciais e a chave JWT no Secret
+          # Manager. Sem os dois segredos, o app recusa subir.
+          # Os comentários ficam ACIMA do comando: uma linha `#` no meio de uma continuação
+          # com `\` encerra o comando ali, e o resto vira comandos soltos que falham.
           gcloud run deploy gerador-missoes \
             --image="$IMAGE" \
             --region=us-east1 \
             --project=entre-redes-dev \
-          # Acesso público, por decisão do dono do projeto (23/09/2026). A app não tem
-          # autenticação própria — o OAuth do Miro é integração, não login. Para fechar:
-          # trocar por `--no-allow-unauthenticated` e acessar com
-          # `gcloud run services proxy gerador-missoes --region=us-east1`.
-          --allow-unauthenticated \
+            --allow-unauthenticated \
             --port=8080 \
             --memory=4Gi \
             --cpu=2 \
             --timeout=3600 \
             --session-affinity \
+            --min-instances=1 \
             --max-instances=1 \
+            --no-cpu-throttling \
             --add-volume=name=artifacts-vol,type=cloud-storage,bucket=entre-redes-dev-adk-artifacts \
             --add-volume-mount=volume=artifacts-vol,mount-path=/app/output \
             --update-env-vars=STITCH_MCP_MODE=remote \
-            --update-secrets=STITCH_API_KEY=plataforma-unooria-dev-stitch-api-key:latest \
+            --update-secrets=STITCH_API_KEY=plataforma-unooria-dev-stitch-api-key:latest,AUTH_CREDENCIAIS=plataforma-unooria-dev-gerador-credenciais:latest,AUTH_SEGREDO_JWT=plataforma-unooria-dev-gerador-jwt:latest \
             --quiet
