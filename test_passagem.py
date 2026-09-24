@@ -1,8 +1,10 @@
 """Testes do parecer humano entre etapas: regras, fluxo em disco, execução em segundo plano."""
 
+import asyncio
 import json
 import os
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -229,8 +231,15 @@ class TestExecucaoFundo(unittest.TestCase):
         self.run_dir.mkdir()
         fluxo = {**novo_fluxo(), "etapa": "design", "situacao": GERANDO, "versao": 4}
         (self.run_dir / "conversa.json").write_text(json.dumps({"fluxo": fluxo}))
+        # progresso local isolado por teste, e processo "antigo" (fora da folga de quem acabou de subir)
+        self.patches = [mock.patch.dict(os.environ, {"EXECUCAO_LOCAL_DIR": str(Path(self.tmp.name) / "local")}),
+                        mock.patch.object(execucao_fundo, "_INICIO_PROCESSO", time.time() - 3600)]
+        for p in self.patches:
+            p.start()
 
     def tearDown(self):
+        for p in self.patches:
+            p.stop()
         self.tmp.cleanup()
 
     def _rodar(self, eventos):
@@ -242,14 +251,39 @@ class TestExecucaoFundo(unittest.TestCase):
             execucao_fundo.executar_efeito(self.run_dir, passagem.Efeito("iniciar", "design"), "")
             execucao_fundo.aguardar(self.run_dir, 5)
 
+    def _bucket(self):
+        return json.loads((self.run_dir / execucao_fundo.ARQUIVO).read_text())
+
     def test_sucesso_devolve_ao_parecer_do_dono(self):
         self._rodar([{"type": "etapa_started", "backup": ".correcoes/x"},
                      {"type": "agent_started", "agent_name": "D2Jornada"},
                      {"type": "etapa_completed", "result": SimpleNamespace(status="success")}])
         dados = execucao_fundo.ler_execucao(self.run_dir)
         self.assertEqual((dados["situacao"], dados["agente_atual"], dados["backup"]), ("concluida", "D2Jornada", ".correcoes/x"))
+        self.assertEqual(self._bucket()["situacao"], "concluida")
         fluxo = passagem.ler_fluxo(self.run_dir)
         self.assertEqual((fluxo["situacao"], fluxo["versao"]), (AGUARDANDO, 5))
+
+    def test_progresso_fica_local_e_o_bucket_so_recebe_inicio_backup_e_fim(self):
+        """24/09/2026: gravar cada evento e o batimento no bucket (gcsfuse) coincidiu com o pânico do
+        volume que derrubou a instância cinco vezes no meio do Dev. O bucket agora recebe três gravações."""
+        eventos = [{"type": "etapa_started", "backup": ".correcoes/x"}]
+        eventos += [{"type": "agent_started", "agent_name": f"A{i}"} for i in range(20)]
+        eventos += [{"type": "gate_status", "status": {"dev_status": "aprovado"}},
+                    {"type": "etapa_completed", "result": SimpleNamespace(status="success")}]
+        with mock.patch.object(execucao_fundo, "_gravar", wraps=execucao_fundo._gravar) as no_bucket:
+            self._rodar(eventos)
+        self.assertEqual(no_bucket.call_count, 3)
+        self.assertEqual(execucao_fundo.ler_execucao(self.run_dir)["agente_atual"], "A19")
+
+    def test_falha_do_volume_nao_derruba_a_etapa(self):
+        """`Stale file handle` e `Transport endpoint is not connected` no bucket matavam a thread."""
+        sem_volume = Path(self.tmp.name) / "volume-caiu" / "execucao.json"  # pasta que não existe
+        with mock.patch.object(execucao_fundo, "_caminho_bucket", lambda _r: sem_volume), \
+                mock.patch.object(execucao_fundo, "TENTATIVAS", 1):
+            self._rodar([{"type": "agent_started", "agent_name": "D2Jornada"},
+                         {"type": "etapa_completed", "result": SimpleNamespace(status="success")}])
+        self.assertEqual(passagem.ler_fluxo(self.run_dir)["situacao"], AGUARDANDO)
 
     def test_erro_marca_falhou(self):
         self._rodar([{"type": "etapa_error", "error": "cota do modelo"}])
@@ -267,21 +301,41 @@ class TestExecucaoFundo(unittest.TestCase):
         self.assertEqual(passagem.ler_fluxo(self.run_dir)["situacao"], FALHOU)
 
     def test_uma_execucao_por_sessao(self):
-        execucao_fundo._gravar(self.run_dir, {"situacao": "executando", "batimento": time.time()})
-        with self.assertRaises(execucao_fundo.ExecucaoEmAndamento):
-            execucao_fundo.executar_efeito(self.run_dir, passagem.Efeito("iniciar", "design"), "")
+        solta = threading.Event()
 
-    def test_batimento_velho_vira_falha_e_restaura_o_backup(self):
+        async def espera(*_a, **_k):
+            while not solta.is_set():
+                await asyncio.sleep(0.01)
+            yield {"type": "etapa_completed", "result": SimpleNamespace(status="success")}
+
+        with mock.patch.object(execucao_fundo, "_stream_do_efeito", lambda *a, **k: espera()):
+            execucao_fundo.executar_efeito(self.run_dir, passagem.Efeito("iniciar", "design"), "")
+            try:
+                with self.assertRaises(execucao_fundo.ExecucaoEmAndamento):
+                    execucao_fundo.executar_efeito(self.run_dir, passagem.Efeito("iniciar", "design"), "")
+                self.assertTrue(execucao_fundo.em_execucao(self.run_dir))
+                self.assertFalse(execucao_fundo.conferir_execucao_morta(self.run_dir))
+            finally:
+                solta.set()
+                execucao_fundo.aguardar(self.run_dir, 5)
+
+    def test_instancia_que_morreu_restaura_o_backup_e_devolve_ao_dono(self):
+        """Depois de um reinício não há thread nem progresso local; o bucket ainda diz `executando`."""
         backup = self.run_dir / ".correcoes" / "b"
         backup.mkdir(parents=True)
         (backup / "estado.json").write_text('{"antes": true}')
         (self.run_dir / "estado.json").write_text('{"pela_metade": true}')
-        execucao_fundo._gravar(self.run_dir, {"situacao": "executando", "batimento": time.time() - 600,
-                                              "backup": ".correcoes/b"})
+        execucao_fundo._gravar(self.run_dir, {"situacao": "executando", "tipo": "iniciar", "etapa": "design",
+                                              "batimento": time.time(), "backup": ".correcoes/b"})
         self.assertFalse(execucao_fundo.em_execucao(self.run_dir))
+        self.assertEqual(execucao_fundo.ler_execucao(self.run_dir)["situacao"], "executando")  # do bucket
+        # logo depois de subir, a instância anterior pode estar fechando a etapa: espera a folga
+        with mock.patch.object(execucao_fundo, "_INICIO_PROCESSO", time.time()):
+            self.assertFalse(execucao_fundo.conferir_execucao_morta(self.run_dir))
         self.assertTrue(execucao_fundo.conferir_execucao_morta(self.run_dir))
         self.assertEqual(json.loads((self.run_dir / "estado.json").read_text()), {"antes": True})
         self.assertEqual(passagem.ler_fluxo(self.run_dir)["situacao"], FALHOU)
+        self.assertEqual(self._bucket()["situacao"], "falhou")
 
 
 class TestOrquestradorEDossie(unittest.TestCase):
