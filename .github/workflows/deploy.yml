@@ -33,7 +33,7 @@ jobs:
 
       - name: 🔍 Rodar Testes de Pipeline e Sessões
         run: |
-          pytest test_pipeline.py test_session_artifacts.py -v
+          pytest test_pipeline.py test_session_artifacts.py test_auth.py test_passagem.py -v
 
   deploy:
     name: 🚀 Build & Deploy no Cloud Run (DEV)

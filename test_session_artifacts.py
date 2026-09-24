@@ -822,8 +822,13 @@ class TestReexecucao(unittest.TestCase):
         self.assertIn("jornada_telas", dev)
         self.assertNotIn("handoff_dev", dev)
 
+        # `produto` virou etapa de correção em 23/09/2026 (refaz o one-pager e passa pelos gates de
+        # produto): aceita, e apaga também a spec, que deriva dele. Inválida é etapa que não existe.
+        produto, removidas_produto = preparar_estado(self._estado(), "produto")
+        self.assertNotIn("spec_missao", produto)
+        self.assertIn("spec_missao", removidas_produto)
         with self.assertRaises(ValueError):
-            preparar_estado(self._estado(), "produto")
+            preparar_estado(self._estado(), "marketing")
 
     def test_heranca_preserva_so_gates_nao_refeitos(self):
         from pipeline.reexecucao import preparar_estado, recalcular_heranca
@@ -1131,7 +1136,10 @@ class TestTriagem(unittest.TestCase):
         so_etapa = Triagem.de_texto('```json\n{"etapa":"dev"}\n```')
         self.assertEqual(so_etapa.etapa, "dev", "a triagem não é gate: não precisa de `status` no envelope")
 
-        for ruim in ("sem envelope", '```json\n{"agente":"triagem-correcao","etapa":"produto"}\n```', '```json\n{"agente":"x","motivo":"sem etapa"}\n```'):
+        refaz_produto = Triagem.de_texto('```json\n{"agente":"triagem-correcao","etapa":"produto"}\n```')
+        self.assertEqual(refaz_produto.etapa, "produto", "produto é etapa de correção desde 23/09/2026")
+
+        for ruim in ("sem envelope", '```json\n{"agente":"triagem-correcao","etapa":"marketing"}\n```', '```json\n{"agente":"x","motivo":"sem etapa"}\n```'):
             t = Triagem.de_texto(ruim)
             self.assertEqual(t.etapa, "indefinida", ruim)
             self.assertFalse(t.confiavel)
