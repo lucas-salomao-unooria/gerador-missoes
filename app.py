@@ -122,6 +122,8 @@ GATE_LABELS = {
     "design_status": "QA de design",
     "manifesto_status": "Ficha do manifesto",
     "telemetria_status": "Telemetria e arquitetura",
+    "rastro_spec_status": "Rastro de lacunas da spec",
+    "rastro_design_status": "Rastro de lacunas do design",
     "rastro_lacunas_status": "Rastro de lacunas",
     "dev_status": "Banca de dev",
     "prd_status": "Pendências do PRD",

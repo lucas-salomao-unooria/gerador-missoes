@@ -145,30 +145,6 @@ _PLACEHOLDERS = frozenset({
 })
 
 
-# O D0 (fechamento de lacunas) consolida, por contrato, a lista do que estava aberto e diz onde
-# fechou cada item: "`[ABERTO — dono: produto: …]` (§6) — Resolvido em [D0-09]." O varredor lia a
-# linha que **registra o fechamento** como a pendência que ela fechou — e uma única linha dessas
-# barrou o PRD da sessão exp04ef1b em 25/09/2026, com todos os outros vinte gates verdes ou
-# amarelos. É o mesmo modo de falha da citação do formato: a esteira punia o agente por obedecer.
-#
-# A guarda é estreita de propósito: exige a **referência da decisão** que fechou a pendência
-# (`[D0-n]`, `[D9-n]`, `[RS-n]`). Dizer "resolvido" sem dizer onde continua contando como
-# pendência aberta, porque aí não há o que auditar.
-_RE_RESOLVIDO_EM = re.compile(
-    r"\b(?:resolvid|fechad|sanad|atendid)[ao]s?\b[^\n]{0,60}?\[(?:D0|D9|RS)-\d+\]",
-    re.IGNORECASE,
-)
-
-
-def _declara_a_propria_resolucao(linha: str, fim_do_marcador: int) -> bool:
-    """O texto **depois** do marcador diz onde a pendência foi fechada?
-
-    Só o sufixo conta: "Resolvido em [D0-09] o item `[ABERTO — …]`" é uma frase sobre outra
-    pendência, e aliviá-la pela vizinhança reabriria o buraco que esta guarda fecha.
-    """
-    return bool(_RE_RESOLVIDO_EM.search(linha[fim_do_marcador:]))
-
-
 def _e_citacao_do_formato(dono_raw: str) -> bool:
     bruto = dono_raw.strip().strip("`*_ ").lower()
     # `<dono>`, `<agente>`: o agente citou o formato do marcador em vez de abrir uma pendência —
@@ -262,11 +238,97 @@ def _linha_e_contexto(texto: str, inicio: int, fim: int) -> tuple:
     return linha, prosa
 
 
-def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[str, Any]:
-    """`fontes` = [{"chave": <state key>, "rotulo": <nome legível>, "etapa_padrao": <etapa>}]."""
+# ------------------------------------------------------------------ etapa corrente
+#: Onde o rastro de lacunas lê, em cada etapa: o que ela escreve mais tudo o que veio antes.
+#: `etapa_padrao` é a etapa DONA do documento — é por ela que `_severidade_na_etapa` separa o
+#: que esta etapa escreveu do que herdou. Fonte única: produto, design, dev e o
+#: `scripts/reavaliar_gates.py` leem daqui.
+FONTES_SPEC: List[Dict[str, str]] = [
+    {"chave": "spec_missao", "rotulo": "spec da missão", "etapa_padrao": "produto"},
+]
+FONTES_DESIGN: List[Dict[str, str]] = FONTES_SPEC + [
+    {"chave": "jornada_telas", "rotulo": "jornada", "etapa_padrao": "design"},
+    {"chave": "fluxo_arestas", "rotulo": "fluxo", "etapa_padrao": "design"},
+    {"chave": "copy_strings_revisada", "rotulo": "copy revisada", "etapa_padrao": "design"},
+    {"chave": "wireframes_cobertura", "rotulo": "telas", "etapa_padrao": "design"},
+    # A folha do Stitch registra `[LACUNA — dono: telas]` quando a visão do professor
+    # (E0-PROF-*) não foi construída — sem esta fonte a lacuna existiria e ninguém a leria.
+    {"chave": "stitch_links", "rotulo": "telas no Stitch", "etapa_padrao": "design"},
+    {"chave": "camada_caa", "rotulo": "camada CAA", "etapa_padrao": "design"},
+    {"chave": "ambiente_simulado", "rotulo": "ambiente simulado", "etapa_padrao": "design"},
+]
+FONTES_DEV: List[Dict[str, str]] = FONTES_DESIGN + [
+    {"chave": "handoff_dev", "rotulo": "handoff de dev", "etapa_padrao": "dev"},
+    {"chave": "brief_assets", "rotulo": "brief de assets", "etapa_padrao": "dev"},
+]
+
+#: Posição de cada etapa bloqueante na esteira. `input` fica com produto: a falta de insumo se
+#: fecha refazendo produto com o material, e é no parecer de produto que isso se decide.
+_POSICAO_NA_ESTEIRA = {"input": 0, "produto": 0, "design": 1, "dev": 2}
+
+#: `— Resolvido em [D0-09]`: a marca que o fechamento de lacunas (D0) põe na linha do `[ABERTO]`
+#: que ele fechou. O número é comparado sem zero à esquerda, porque o bloco 13 escreve `[D0-9]`.
+_RE_RESOLVIDO_D0 = re.compile(r"resolvid[oa]s?\s+(?:em|no|na|pel[oa])\s*\[?\s*D0-0*(\d+)\s*\]?", re.IGNORECASE)
+_RE_DECISAO_D0 = re.compile(r"\[\s*D0-0*(\d+)\s*\]")
+
+
+def _decisoes_d0(textos: List[str]) -> set:
+    """Números das decisões `[D0-n]` que existem: citadas numa linha que não é a marca de resolvido.
+
+    A marca sozinha não fecha nada. Em 25/09/2026 (exp04ef1b) a linha `[ABERTO — dono: produto:
+    Ratificação formal do teto de texto…] — Resolvido em [D0-09]` barrou o PRD, com o `[D0-9]`
+    decidido no bloco 13 — mas uma marca que aponta para um D0 inexistente é pendência aberta.
+    """
+    numeros: set = set()
+    for texto in textos:
+        for linha in texto.splitlines():
+            if not _RE_RESOLVIDO_D0.search(linha):
+                numeros.update(int(n) for n in _RE_DECISAO_D0.findall(linha))
+    return numeros
+
+
+def _severidade_na_etapa(severidade: str, dono: str, documento: str, etapa_corrente: Optional[str]) -> tuple:
+    """`(severidade, motivo)` da lacuna vista pela etapa que está rodando.
+
+    Cada etapa bloqueia pelo que é dela. Antes o rastro só rodava em dev, e uma pendência de
+    produto na spec aprovada barrava o PRD numa etapa que não pode reescrever a spec (exp04ef1b,
+    25/09/2026). Agora:
+
+    - dono de uma etapa **seguinte** → `adiante`: registrada, e a etapa dela a cobra;
+    - dono e documento de uma etapa **anterior** → `heranca`: já passou pelo rastro da etapa
+      dona e pelo parecer dela, e quem está aqui não tem a caneta;
+    - dono anterior num documento **desta** etapa continua bloqueando: foi esta etapa que o
+      escreveu, e é ela que o reescreve.
+
+    Sem `etapa_corrente` (reavaliação avulsa, chamada antiga), nada muda.
+    """
+    agora = _POSICAO_NA_ESTEIRA.get(etapa_corrente or "")
+    pos_dono = _POSICAO_NA_ESTEIRA.get(dono)
+    if severidade != "bloqueio" or agora is None or pos_dono is None:
+        return severidade, ""
+    if pos_dono > agora:
+        return "atencao", "adiante"
+    pos_doc = _POSICAO_NA_ESTEIRA.get(documento, agora)
+    if pos_dono < agora and pos_doc < agora:
+        return "atencao", "heranca"
+    return severidade, ""
+
+
+def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
+                   etapa_corrente: Optional[str] = None) -> Dict[str, Any]:
+    """`fontes` = [{"chave": <state key>, "rotulo": <nome legível>, "etapa_padrao": <etapa>}].
+
+    `etapa_corrente` (`produto` · `design` · `dev`) é a etapa que roda o rastro: ela só bloqueia
+    pelo que é dela (`_severidade_na_etapa`). O `etapa_padrao` de cada fonte diz de que etapa é
+    o documento.
+    """
     achados: List[Dict[str, Any]] = []
     documentos_lidos: List[str] = []
     vistos: Dict[tuple, Dict[str, Any]] = {}
+    resolvidos: List[Dict[str, Any]] = []
+    textos = [t for f in fontes if isinstance(t := state.get(f["chave"]), str) and t]
+    decisoes_d0 = _decisoes_d0(textos)
+    etapa_do_documento = {f["rotulo"]: f.get("etapa_padrao", "dev") for f in fontes}
     for fonte in fontes:
         texto = state.get(fonte["chave"])
         if not texto or not isinstance(texto, str):
@@ -284,10 +346,11 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                 if not dono_raw and texto[m.start() - 1:m.start()] == "`" and texto[m.end():m.end() + 1] == "`":
                     continue
                 linha, contexto = _linha_e_contexto(texto, m.start(), m.end())
-                if tipo in ("lacuna", "aberto", "needs_clarification", "a_validar"):
-                    ini_linha = texto.rfind("\n", 0, m.start()) + 1
-                    if _declara_a_propria_resolucao(linha, m.end() - ini_linha):
-                        continue
+                fechado = _RE_RESOLVIDO_D0.search(linha)
+                if tipo in ("lacuna", "aberto", "needs_clarification") and fechado and int(fechado.group(1)) in decisoes_d0:
+                    if not any(r["trecho"] == trecho[:160] for r in resolvidos):
+                        resolvidos.append({"trecho": trecho[:160], "documento": fonte["rotulo"], "d0": f"D0-{fechado.group(1)}"})
+                    continue
                 if tipo in ("rs_pendente", "verificar_repositorio"):
                     # Dono fixo, do contrato: `RS-n pendente` é pedido ao Gate 0/PO que só
                     # pessoa fecha, e `[verificar no repositório]` é instrução para quem
@@ -309,6 +372,9 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                     # documento de origem, e os demais ficam registrados ao lado.
                     vistos[chave].setdefault("tambem_em", []).append(fonte["rotulo"])
                     continue
+                severidade, motivo = _severidade_na_etapa(
+                    "decisao_humana" if etapa == "humano" else "atencao" if etapa in ETAPAS_NAO_BLOQUEANTES else "bloqueio",
+                    etapa, fonte.get("etapa_padrao", "dev"), etapa_corrente)
                 achado = {
                     "tipo": tipo,
                     "trecho": trecho[:160],
@@ -316,9 +382,10 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                     "documento": fonte["rotulo"],
                     "dono": dono_raw[:80] or "—",
                     "etapa": etapa,
-                    "severidade": ("decisao_humana" if etapa == "humano"
-                                   else "atencao" if etapa in ETAPAS_NAO_BLOQUEANTES else "bloqueio"),
+                    "severidade": severidade,
                 }
+                if motivo:
+                    achado["motivo"] = motivo
                 vistos[chave] = achado
                 achados.append(achado)
     # Marcador de repositório é pendência de plataforma — mas um documento cravejado deles não
@@ -331,13 +398,17 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
             por_documento[a.get("documento", "?")] = por_documento.get(a.get("documento", "?"), 0) + 1
     for documento, n in sorted(por_documento.items()):
         if n >= TETO_VERIFICAR_REPO:
+            # O defeito é de quem escreveu o documento. Sem etapa corrente, vale o de sempre: dev.
+            dono_doc = etapa_do_documento.get(documento, "dev") if etapa_corrente else "dev"
+            severidade, motivo = _severidade_na_etapa("bloqueio", dono_doc, dono_doc, etapa_corrente)
             achados.append({
                 "tipo": "gabarito_desconhecido", "codigo": "gabarito-desconhecido",
                 "trecho": f"{n}× [verificar no repositório]",
                 "contexto": f"O documento «{documento}» adia {n} definições para o repositório. "
                             f"As cópias em `references/plataforma/` trazem o contrato: acima de "
                             f"{TETO_VERIFICAR_REPO} marcadores o documento não consultou o gabarito.",
-                "documento": documento, "dono": "handoff-dev", "etapa": "dev", "severidade": "bloqueio",
+                "documento": documento, "dono": "handoff-dev", "etapa": dono_doc, "severidade": severidade,
+                **({"motivo": motivo} if motivo else {}),
             })
 
     # Nenhum documento com conteúdo não é "sem lacunas" — é ausência de documento. O relatório
@@ -348,7 +419,7 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
         achados.append({
             "tipo": "fonte_vazia", "codigo": "fontes-vazias", "trecho": "—",
             "contexto": "Nenhum dos documentos varridos tinha conteúdo: não há como afirmar que não há lacunas.",
-            "documento": "—", "dono": "dev", "etapa": "dev", "severidade": "bloqueio",
+            "documento": "—", "dono": etapa_corrente or "dev", "etapa": etapa_corrente or "dev", "severidade": "bloqueio",
         })
 
     por_etapa = {e: sum(1 for a in achados if a["etapa"] == e) for e in ETAPAS}
@@ -358,7 +429,8 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
         status = "amarelo"
     else:
         status = "aprovado"
-    return {"status": status, "achados": achados, "por_etapa": por_etapa, "documentos": documentos_lidos}
+    return {"status": status, "achados": achados, "por_etapa": por_etapa, "documentos": documentos_lidos,
+            "resolvidos": resolvidos, "etapa_corrente": etapa_corrente}
 
 
 #: Slugs de agente que um despacho sabe acionar. O texto do marcador é livre
@@ -392,37 +464,58 @@ def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", 
     icone = {"aprovado": "🟢 SEM LACUNAS", "amarelo": "🟡 SÓ PENDÊNCIAS HUMANAS", "bloqueado": "🔴 BLOQUEADO"}[r["status"]]
     linhas = [f"# {rotulo} — {missao or 'missão'}", "", f"**Veredito: {icone}**", ""]
     pe = r["por_etapa"]
+    etapa_corrente = r.get("etapa_corrente")
+    # O que esta etapa não entrega enquanto houver bloqueio: a spec em produto, o design, o PRD.
+    alvo = {"produto": "A spec **não fecha**", "design": "O design **não fecha**"}.get(etapa_corrente or "", "O PRD **não sai**")
     linhas.append(
         f"**O que faltou:** input `{pe['input']}` · **produto `{pe['produto']}`** · **design `{pe['design']}`** · dev `{pe['dev']}` · "
         f"plataforma `{pe['plataforma']}` · externo `{pe['externo']}` · humano `{pe['humano']}` "
-        f"_(plataforma, externo e humano são pendências de gente: ficam registradas e não impedem o PRD)_"
+        f"_(plataforma, externo e humano são pendências de gente: ficam registradas e não impedem a etapa)_"
     )
     linhas.append(f"**Documentos lidos:** {', '.join(r['documentos']) or '— nenhum'}")
     linhas.append("")
+    motivos = {a.get("motivo") for a in r["achados"]}
     if r["status"] == "bloqueado":
-        faltou = [e for e in ("input", "produto", "design", "dev") if pe[e]]
+        faltou = [e for e in ("input", "produto", "design", "dev")
+                  if any(a["etapa"] == e and a["severidade"] == "bloqueio" for a in r["achados"])]
         linhas.append(
-            "O PRD **não sai** enquanto houver lacuna de " + " e ".join(f"**{e}**" for e in faltou)
+            f"{alvo} enquanto houver lacuna de " + " e ".join(f"**{e}**" for e in faltou)
             + ". Cada linha abaixo diz o documento onde a lacuna está e quem tem de fechá-la. Lacuna de plataforma ou de dono externo fica registrada como pendência humana e não impede."
         )
     elif r["status"] == "amarelo":
-        linhas.append("Só restam pendências humanas: da **plataforma** (ADR nova, componente de DS, ponte), resolvidas na codificação, e/ou **externas** (coordenação pedagógica, rede parceira, consultoria), resolvidas fora da esteira. O PRD sai `aprovado-com-pendencias` (🟡), nunca `aprovado`.")
+        linhas.append("Nada aqui é desta etapa fechar. Restam pendências de gente — da **plataforma** (ADR nova, componente de DS, ponte), resolvidas na codificação; **externas** (coordenação pedagógica, rede parceira, consultoria) ou **humanas** (homologar, ratificar), resolvidas fora da esteira — e as de outras etapas, marcadas na tabela. A etapa segue 🟡, nunca 🟢.")
     else:
         linhas.append("Nenhum marcador de lacuna nos documentos lidos.")
+    if "heranca" in motivos:
+        linhas.append("")
+        linhas.append("_«de etapa anterior»: a lacuna é de uma etapa que já passou pelo próprio rastro e pelo parecer, num documento dela. Esta etapa não a reescreve; fica registrada para quem a aprovou._")
+    if "adiante" in motivos:
+        linhas.append("")
+        linhas.append("_«fica para a etapa dela»: a lacuna é de uma etapa seguinte, que a cobra no rastro dela._")
     linhas.append("")
     linhas.append("## Lacunas")
     linhas.append("")
+    rotulo_motivo = {"heranca": " _(de etapa anterior)_", "adiante": " _(fica para a etapa dela)_"}
     if r["achados"]:
-        linhas.append("| Etapa que falhou | Documento | Tipo | Dono declarado | Linha do documento |")
+        linhas.append("| Etapa | Documento | Tipo | Dono declarado | Linha do documento |")
         linhas.append("|---|---|---|---|---|")
         for a in sorted(r["achados"], key=lambda x: (ETAPAS.index(x["etapa"]), x["documento"])):
-            sev = "⚠️" if a["severidade"] == "atencao" else "⛔"
+            # ⛔ só no que bloqueia: a decisão humana saía ⛔ e parecia impedimento (exp04ef1b).
+            sev = "⛔" if a["severidade"] == "bloqueio" else "⚠️"
             # A linha inteira, e não só o marcador: é ela que justifica a etapa escolhida, e
             # `[ABERTO — dono: produto]` sozinho não diz a quem cobrar.
             trecho = (a.get("contexto") or a["trecho"]).replace("|", "\\|").replace("\n", " ")
-            linhas.append(f"| {sev} **{a['etapa']}** | {a['documento']} | `{a['tipo']}` | {a['dono']} | {trecho} |")
+            linhas.append(f"| {sev} **{a['etapa']}**{rotulo_motivo.get(a.get('motivo', ''), '')} | {a['documento']} | "
+                          f"`{a['tipo']}` | {a['dono']} | {trecho} |")
     else:
         linhas.append("_Nenhuma._")
+    if r.get("resolvidos"):
+        linhas.append("")
+        linhas.append("## Fechadas no fechamento de lacunas (não contam)")
+        linhas.append("")
+        for x in r["resolvidos"]:
+            fechado = x["trecho"].replace("|", "\\|")
+            linhas.append(f"- `{x['d0']}` fecha {fechado} ({x['documento']})")
     linhas.append("")
     envelope = {
         "agente": agente,

@@ -82,13 +82,18 @@ Cinco é o número fechado — nem quatro por economia, nem oito por zelo.
 
 {juiz_perguntas_report?}
 
+**Lacunas da spec (gate determinístico sobre os marcadores `[ABERTO]`, `[LACUNA]` e `[NEEDS CLARIFICATION]`):**
+
+{rastro_spec_report?}
+
 Se os dois blocos estiverem vazios e não houver pedido de correção no fim desta instrução, esta é a primeira passada: escreva a spec normalmente. Com pedido de correção, você está reescrevendo uma spec já aprovada: aplique o pedido, preserve o resto e registre o que mudou.
 
 Se algum deles apontar achado, **reemita a spec inteira** corrigindo exatamente o que foi apontado. Os dois gates são mecânicos e a correção costuma ser literal:
 
-- **Código BNCC** que não existe, é de outro ano, ou falta letramento digital → troque pelo código certo da lista oficial acima, com o texto literal da habilidade. Não invente; se nenhum código servir, marque `[ABERTO — dono: produto]` e diga por quê.
+- **Código BNCC** que não existe, é de outro ano, ou falta letramento digital → troque pelo código certo da lista oficial acima, com o texto literal da habilidade. Não invente; se nenhum código servir, marque `[ABERTO — dono: produto: responsável de produto: <por que nenhum código serve>]` — o marcador da regra 9, que o gate de BNCC lê como decisão pendente.
 - **Campo do manifesto** fora do vocabulário fechado → o relatório traz a lista válida na própria mensagem do achado. Copie de lá.
-- Achado com dono `plataforma` **não é seu**: é pendência de quem constrói a plataforma. Deixe declarado e siga — ele não impede a spec.
+- **Lacuna de produto ou de insumo** (`⛔ produto`, `⛔ input` no rastro de lacunas) → é sua, e a spec não sai com ela: feche com o que o one-pager, o núcleo e os pareceres já decidiram. Se a decisão é do PO — homologar, ratificar um número, escolher entre alternativas —, reescreva como `[ABERTO — dono: PO: <a decisão, com as alternativas>]`: ela aparece 🟡 no parecer de produto, para o PO decidir antes do *de acordo*, e não trava a spec. Até 25/09/2026 esse marcador só era lido em dev, que não reescreve a spec, e barrava o PRD.
+- Achado com dono `plataforma`, `design` ou `dev` **não é seu**: é pendência de quem constrói a plataforma ou da etapa dela. Deixe declarado e siga — ele não impede a spec.
 
 Não aproveite a rodada para melhorar outra coisa: mudança não pedida invalida o que os gates já aprovaram.
 

@@ -68,6 +68,7 @@ CHAVES_DESIGN = frozenset({
     "prototipo_relatorio", "diagramas_html", "stitch_links", "miro_links",
     "qa_entregaveis_report", "design_status", "design_status_envelope", "qa_design_rodada",
     "prototipo_lint_report", "prototipo_lint_status", "prototipo_lint_status_envelope",
+    "rastro_design_report", "rastro_design_status", "rastro_design_status_envelope",
 }) | CHAVES_DEV
 #: `spec_missao_gate0` tem de cair: o split do D0 só grava esse backup se ele não existir
 #: (`agents/checkers.py`, SecaoSplitAgent) — senão a spec velha seria preservada como "original".
@@ -81,6 +82,7 @@ CHAVES_SPEC = frozenset({
     "perguntas_report", "perguntas_status", "perguntas_status_envelope",
     "juiz_perguntas_report", "juiz_perguntas_status", "juiz_perguntas_status_envelope",
     "juiz_perguntas_rodada", "juiz_evidencia_saida",
+    "rastro_spec_report", "rastro_spec_status", "rastro_spec_status_envelope",
 }) | CHAVES_DESIGN
 #: Tudo que a etapa de produto grava. Ficam de fora, de propósito, o que ela LÊ da geração original:
 #: `briefing`, `perguntas_po` e `material_anexado` — refazer produto é refazê-lo sobre o mesmo pedido
@@ -147,11 +149,13 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Matriz de evidência pedagógica": "spec",
     "Perguntas de produto (9f)": "spec",
     "Juiz das perguntas de produto": "spec",
+    "Rastro de lacunas da spec": "spec",
     "Spec da missão": "spec",
     "Fechamento de lacunas (D0)": "design",
     "Ambiente simulado (D9)": "design",
     "QA de entregáveis (design)": "design",
     "Retrabalho de design": "design",
+    "Rastro de lacunas do design": "design",
     "Ficha do manifesto": "dev",
     "Contrato de telemetria e arquitetura": "dev",
     "Handoff de dev": "dev",

@@ -22,6 +22,8 @@ HTML é o que a revisão humana de fato abre.
                                  · diagramas_html — determinístico, o HTML nunca entra em prompt
   d7  A30QaEntregaveis      → qa_entregaveis_report (gate de design)
   d7c A31QaEntregaveisCheck      → design_status (🔴 impede dev e PRD quando ESTEIRA_ESTRITA)
+  d7d A33RastroDesign            → rastro_design_status (determinístico: lacuna de design na spec e
+                                 nos documentos de design, cobrada onde o designer ainda refaz)
 
 D0 e D9 emitem dois documentos numa única resposta (a spec consolidada e o próprio
 relatório). Um `LlmAgent` grava uma só chave, então cada um é seguido por um
@@ -47,10 +49,12 @@ from agents.checkers import (
     DespachoTicketsAgent,
     EnvelopeGateAgent,
     EspelhoMiroAgent,
+    RastroCheckAgent,
     SecaoSplitAgent,
 )
 from config import get_settings
 from prompts import load_prompt
+from tools.rastro import FONTES_DESIGN
 from tools.stitch_mcp import STITCH_TOOLS_QA, STITCH_TOOLS_WIREFRAMES, stitch_tools_or_empty
 
 # Headings que D0 e D9 usam na "Saída obrigatória" dos seus prompts. Os regex são tolerantes
@@ -421,6 +425,21 @@ def build_design_stage(
                 before_agent_callback=marcar_heranca,
             ),
             build_qa_design_loop(**kw),
+            # A lacuna de design só era cobrada em dev, que não reescreve documento de design.
+            # Cobrada aqui, ela aparece no parecer de design, onde o designer ainda pode refazer.
+            RastroCheckAgent(
+                name="A33RastroDesign",
+                description="Marcadores de lacuna na spec consolidada e nos documentos de design: o de design bloqueia; o que o D0 fechou (`Resolvido em [D0-n]`) não conta; o de produto já aprovado e o de dev ficam 🟡.",
+                modo="lacunas",
+                rotulo="Rastro de lacunas do design",
+                report_key="rastro_design_report",
+                status_key="rastro_design_status",
+                fontes=FONTES_DESIGN,
+                etapa="design",
+                agente="rastro-lacunas-design",
+                estrito=get_settings().esteira_estrita,
+                before_agent_callback=marcar_heranca,
+            ),
         ],
     )
 
@@ -443,5 +462,6 @@ DESIGN_METADATA = [
     {"id": "A29bEspelhoMiro", "name": "29b · Espelho no Miro (determinístico)", "icon": "🪞", "output_key": "miro_links", "prompt_file": None, "description": "Publica no Miro, como board navegável, os mesmos diagramas Mermaid da jornada e do fluxo. O Mermaid continua sendo a fonte; Miro indisponível não interrompe a esteira."},
     {"id": "A30QaEntregaveis", "name": "30 · QA de entregáveis", "icon": "🧪", "output_key": "qa_entregaveis_report", "prompt_file": "design/30_qa_entregaveis.md", "description": "Fidelidade à spec, diff de strings, currículo, faixa, fluxo, professor, briefing, ambiente (D8) e CAA (D8b)."},
     {"id": "A31QaEntregaveisCheck", "name": "31 · Veredito de design (determinístico)", "icon": "🔀", "output_key": "design_status", "prompt_file": None, "description": "Lê o envelope do QA de entregáveis."},
+    {"id": "A33RastroDesign", "name": "33 · Rastro de lacunas do design (determinístico)", "icon": "🧭", "output_key": "rastro_design_report", "prompt_file": None, "description": "Marcadores de lacuna na spec consolidada e nos documentos de design: o de design bloqueia a etapa; o que o fechamento de lacunas fechou (`Resolvido em [D0-n]`) não conta; o de produto já aprovado e o de dev ficam 🟡."},
     {"id": "A32DespachoDesign", "name": "32 · Retrabalho de design (determinístico)", "icon": "🔁", "output_key": "tickets_retrabalho", "prompt_file": None, "description": "Reexecuta só os agentes com ticket do QA, na ordem de precedência do prompt, e refaz o protótipo depois."},
 ]

@@ -68,6 +68,7 @@ KNOWN_STATE_KEYS = {
     "miro_links", "miro_board",
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
+    "rastro_spec_status", "rastro_spec_report", "rastro_design_status", "rastro_design_report",
     "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
     "perguntas_report", "perguntas_status", "juiz_perguntas_report", "juiz_perguntas_status",
@@ -725,24 +726,31 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
     # o D0 consolida, por contrato, a lista do que FECHOU — e o varredor lia a linha que
     # registra o fechamento como a pendência que ela fechou. Uma linha dessas bloqueou o PRD
     # da sessão exp04ef1b em 25/09/2026, com os outros vinte gates verdes ou amarelos.
+    # A marca só vale para o `[D0-n]` que o bloco 13 de fato decidiu.
     resolvidas = {
         "spec_missao": (
+            "## Bloco 13 — decisões do fechamento de lacunas\n"
+            "- [D0-09] Teto de texto: 30 palavras por resumo.\n\n"
             "### Lista consolidada de itens `[ABERTO — dono]`\n"
             "- `[ABERTO — dono: produto: Ratificação do teto de texto por resumo]` (§6) — Resolvido em [D0-09].\n"
-            "- `[ABERTO — dono: design: Escolha do componente de enquete]` (§8d) — Fechada em [D9-02].\n"
         ),
         "handoff_dev": "limpo",
     }
     r_resolv = varrer_lacunas(fontes, resolvidas)
     assert r_resolv["status"] == "aprovado", r_resolv["achados"]
+    assert [x["d0"] for x in r_resolv["resolvidos"]] == ["D0-9"], r_resolv["resolvidos"]   # o número sai sem o zero à esquerda
 
-    # a guarda é estreita: sem a referência da decisão não há o que auditar, e continua bloqueando
+    # citar um D0 que o bloco 13 não decidiu não fecha nada: a pendência continua aberta.
+    # (ratificar é ato do PO, então ela pesa como decisão humana — o que importa aqui é que
+    # ela NÃO foi dada por fechada.)
+    inventado = dict(resolvidas, spec_missao=resolvidas["spec_missao"].replace("[D0-09].", "[D0-77]."))
+    r_inv = varrer_lacunas(fontes, inventado)
+    assert not r_inv["resolvidos"] and len(r_inv["achados"]) == 1, r_inv
+
+    # e sem a referência da decisão também não fecha
     sem_ref = {"spec_missao": "- `[ABERTO — dono: produto: Ratificação do teto]` (§6) — Resolvido.", "handoff_dev": "limpo"}
-    assert varrer_lacunas(fontes, sem_ref)["status"] == "bloqueado"
-
-    # e a referência antes do marcador é frase sobre OUTRA pendência: não alivia esta
-    invertida = {"spec_missao": "Resolvido em [D0-09]; segue aberto `[ABERTO — dono: produto: teto do resumo]`.", "handoff_dev": "limpo"}
-    assert varrer_lacunas(fontes, invertida)["status"] == "bloqueado"
+    r_sem = varrer_lacunas(fontes, sem_ref)
+    assert not r_sem["resolvidos"] and len(r_sem["achados"]) == 1, r_sem
 
     # e um marcador de verdade, com dono preenchido, continua bloqueando
     real = {"spec_missao": "decisão pendente [ABERTO — gate-estrutural]", "handoff_dev": "limpo"}
@@ -1015,7 +1023,10 @@ def test_estagio_produto_parcial_spec():
         # juiz de achados (23/09/2026): o regex marca "gabarito no cliente", o juiz decide se o texto
         # afirma ou cita para vedar, e o achado só sai com citação literal conferida
         "A15bbJuizEvidencia",
-        "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck", "A16SpecCheck"]
+        "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
+        # rastro de lacunas da spec (25/09/2026): a pendência de produto só era cobrada em dev,
+        # que não reescreve a spec — e barrava o PRD da exp04ef1b sem ninguém poder fechá-la
+        "A15fRastroSpec", "A16SpecCheck"]
     assert produto.sub_agents[0].max_iterations == max(1, get_settings().spec_max_rodadas)
     nomes = [a.name for _, a in iter_agent_tree(orch)]
     assert "A01NucleoNarrativo" not in nomes and "A05GateEstrutural" not in nomes
@@ -4201,6 +4212,92 @@ def test_profundidade_entra_no_dossie_na_correcao_e_nos_artefatos():
     assert get_mapa_conceitual_agent().generate_content_config.seed is not None
     assert get_ideacao_mecanismos_agent().generate_content_config.temperature is None
     print("   ✓ profundidade no dossiê, apagada numa correção de produto, salva em artefato; juiz com seed, ideação livre")
+
+
+def test_rastro_cobra_cada_etapa_pelo_que_e_dela():
+    """25/09/2026, exp04ef1b: `[ABERTO — dono: produto: Ratificação formal do teto de texto…] —
+    Resolvido em [D0-09]` barrou o PRD. O rastro só rodava em dev, que não reescreve a spec; o D0 já
+    tinha fechado a pendência; e «ratificação» não contava como decisão humana, ao contrário das três
+    «Homologação…» da mesma lista. Nenhuma das três coisas dependia de quem estava no parecer de dev."""
+    from agents.design import build_design_stage
+    from agents.dev import build_dev_stage
+    from agents.produto import _build_spec_loop
+    from config import get_settings
+    from pipeline.passagem import chaves_da_etapa
+    from tools.rastro import FONTES_DESIGN, FONTES_DEV, FONTES_SPEC, relatorio_lacunas, varrer_lacunas
+
+    # a lista do bloco 12 e o bloco 13 da missão real, encurtados
+    spec = ("## 12. Decisões fechadas neste gate\n"
+            "- `[ABERTO — dono: produto: Ratificação formal do teto de texto entre 25 e 35 palavras por resumo]` (§6) — Resolvido em [D0-09].\n"
+            "- `[ABERTO — dono: produto: Homologação dos limiares de H1 e H2]` (§9f) — Resolvido em [D0-11].\n"
+            "## 13. Decisões D0\n"
+            "- **[D0-9] Bloco 6:** Ratificado o teto de 25 a 35 palavras por resumo.\n"
+            "- **[D0-11] Bloco 9f:** limiares homologados.\n")
+    # o ambiente simulado carrega a spec copiada: a mesma linha, num documento de design
+    estado = {"spec_missao": spec, "ambiente_simulado": spec + "\n## 14. Ambiente simulado\n", "handoff_dev": "ok"}
+    r = varrer_lacunas(FONTES_DEV, estado, etapa_corrente="dev")
+    assert r["status"] == "aprovado", r["achados"]
+    assert {x["d0"] for x in r["resolvidos"]} == {"D0-9", "D0-11"}
+    # a marca só fecha o que o bloco 13 decidiu: D0 inexistente é pendência aberta
+    sem_d0 = spec.replace("- **[D0-9] Bloco 6:** Ratificado o teto de 25 a 35 palavras por resumo.\n", "")
+    aberto = varrer_lacunas(FONTES_SPEC, {"spec_missao": sem_d0}, etapa_corrente="produto")
+    assert [a["etapa"] for a in aberto["achados"]] == ["humano"], aberto["achados"]
+    # ratificar é o mesmo ato de homologar: decisão do PO, 🟡 no parecer de produto
+    ratifica = "- `[ABERTO — dono: produto: Ratificação formal do teto de texto]`\n"
+    r = varrer_lacunas(FONTES_SPEC, {"spec_missao": ratifica}, etapa_corrente="produto")
+    assert r["status"] == "amarelo" and r["achados"][0]["severidade"] == "decisao_humana", r["achados"]
+    assert "⛔" not in relatorio_lacunas(r, "Rastro de lacunas da spec"), "decisão humana não é impedimento"
+
+    # cada etapa bloqueia pelo que é dela
+    lacuna_produto = "- `[ABERTO — dono: produto: definir o teto de palavras]`\n"
+    lacuna_design = "- `[LACUNA — dono: jornada: tela de erro sem texto]`\n"
+    r = varrer_lacunas(FONTES_SPEC, {"spec_missao": lacuna_produto + lacuna_design}, etapa_corrente="produto")
+    por_etapa = {a["etapa"]: (a["severidade"], a.get("motivo")) for a in r["achados"]}
+    assert r["status"] == "bloqueado" and por_etapa["produto"] == ("bloqueio", None)
+    assert por_etapa["design"] == ("atencao", "adiante"), "lacuna de design na spec é cobrada no design"
+    assert "A spec **não fecha**" in relatorio_lacunas(r, "Rastro de lacunas da spec")
+    # no design, a de produto na spec aprovada é herança; a de design, dele
+    r = varrer_lacunas(FONTES_DESIGN, {"spec_missao": lacuna_produto + lacuna_design}, etapa_corrente="design")
+    por_etapa = {a["etapa"]: (a["severidade"], a.get("motivo")) for a in r["achados"]}
+    assert por_etapa == {"produto": ("atencao", "heranca"), "design": ("bloqueio", None)}, por_etapa
+    # mas a pendência de produto que um documento de design ESCREVEU é do design reescrever
+    r = varrer_lacunas(FONTES_DESIGN, {"spec_missao": "ok", "jornada_telas": lacuna_produto}, etapa_corrente="design")
+    assert r["status"] == "bloqueado", r["achados"]
+    # em dev, o que é de design num documento de design é herança; o do handoff, de dev
+    r = varrer_lacunas(FONTES_DEV, {"spec_missao": "ok", "jornada_telas": lacuna_design,
+                                    "handoff_dev": "- `[LACUNA — dono: handoff: rota do painel]`\n"}, etapa_corrente="dev")
+    por_etapa = {a["etapa"]: (a["severidade"], a.get("motivo")) for a in r["achados"]}
+    assert por_etapa == {"design": ("atencao", "heranca"), "dev": ("bloqueio", None)}, por_etapa
+    # sem etapa corrente (reavaliação avulsa), nada muda
+    assert varrer_lacunas(FONTES_DEV, {"spec_missao": lacuna_produto})["status"] == "bloqueado"
+
+    # e os três pontos estão ligados na esteira
+    spec_loop = _build_spec_loop({}, get_settings(), 2)
+    rastro_spec = next(a for a in spec_loop.sub_agents if a.name == "A15fRastroSpec")
+    saida = next(a for a in spec_loop.sub_agents if a.name == "A16SpecCheck")
+    assert rastro_spec.etapa == "produto" and "rastro_spec_status" in saida.status_keys
+    rastro_design = build_design_stage().sub_agents[-1]
+    assert rastro_design.name == "A33RastroDesign" and rastro_design.etapa == "design"
+    a38 = next(a for a in build_dev_stage().sub_agents if a.name == "A38LacunaCheck")
+    assert a38.etapa == "dev" and a38.fontes == FONTES_DEV
+    assert "rastro_spec_status" in chaves_da_etapa("produto") and "rastro_design_status" in chaves_da_etapa("design")
+    print("   ✓ rastro por etapa: D0 fecha, ratificação é do PO, cada etapa cobra o que é dela")
+
+
+def test_kpis_leem_intervalo_de_etapas():
+    """25/09/2026, exp04ef1b: «Ao entrar em cada etapa E1..E6» era lido como E1 e E6, e o `EVT-U02`
+    deixava sem evento os KPIs de E2 e E4 — dois 🔴 de um evento que dispara em todas as etapas."""
+    from tools.kpis import _etapas, validar_kpis
+
+    assert _etapas("Ao entrar em cada etapa E1..E6") == {f"E{n}" for n in range(1, 7)}
+    assert _etapas("de E2 a E4") == {"E2", "E3", "E4"} and _etapas("E2 e E4") == {"E2", "E4"}
+    assert _etapas("E3-ALU-02") == set(), "tela não é etapa"
+    prd = ("| KPI | Pergunta | Decisão que dispara | Corte | Tela | Evento |\n|---|---|---|---|---|---|\n"
+           "| KPI-05 | quanto tempo leva? | > 10 min → encurtar | missao | `E2-ALU-01` | `EVT-U02` |\n\n"
+           "| Evento | Verbo | Objeto | Quando dispara | `resultado` | `contexto` |\n|---|---|---|---|---|---|\n"
+           "| `EVT-U02` | `progressed` | `etapa:entrar` | Ao entrar em cada etapa E1..E6 | `{\"etapa\": \"E2\"}` | — |\n")
+    assert "kpi-tela-divergente" not in {a["codigo"] for a in validar_kpis(prd, "")["achados"]}
+    print("   ✓ KPI: intervalo de etapas expandido")
 
 
 if __name__ == "__main__":

@@ -57,6 +57,7 @@ from agents.checkers import (
 )
 from config import get_settings
 from prompts import load_prompt
+from tools.rastro import FONTES_DEV
 
 
 def get_handoff_dev_agent(**kw) -> LlmAgent:
@@ -207,20 +208,6 @@ def build_dev_stage(
     rodadas_handoff = max(1, get_settings().handoff_max_rodadas)
     rodadas_banca = max(1, get_settings().banca_max_rodadas)
     rodadas_prd = max(1, get_settings().prd_max_rodadas)
-    fontes_lacunas = [
-        {"chave": "spec_missao", "rotulo": "spec da missão", "etapa_padrao": "produto"},
-        {"chave": "jornada_telas", "rotulo": "jornada", "etapa_padrao": "design"},
-        {"chave": "fluxo_arestas", "rotulo": "fluxo", "etapa_padrao": "design"},
-        {"chave": "copy_strings_revisada", "rotulo": "copy revisada", "etapa_padrao": "design"},
-        {"chave": "wireframes_cobertura", "rotulo": "telas", "etapa_padrao": "design"},
-        # A folha do Stitch registra `[LACUNA — dono: telas]` quando a visão do professor
-        # (E0-PROF-*) não foi construída — sem esta fonte a lacuna existiria e ninguém a leria.
-        {"chave": "stitch_links", "rotulo": "telas no Stitch", "etapa_padrao": "design"},
-        {"chave": "camada_caa", "rotulo": "camada CAA", "etapa_padrao": "design"},
-        {"chave": "ambiente_simulado", "rotulo": "ambiente simulado", "etapa_padrao": "design"},
-        {"chave": "handoff_dev", "rotulo": "handoff de dev", "etapa_padrao": "dev"},
-        {"chave": "brief_assets", "rotulo": "brief de assets", "etapa_padrao": "dev"},
-    ]
     return SequentialAgent(
         name="DevStage",
         description="Área de Dev: ficha do manifesto → handoff + brief de assets → telemetria e rastro de lacunas → banca de validação (5 dimensões em paralelo) → consolidação → PRD → pendências do PRD → one-pager pedagógico para validação humana.",
@@ -282,7 +269,8 @@ def build_dev_stage(
                 rotulo="Rastro de lacunas antes do PRD",
                 report_key="rastro_lacunas_report",
                 status_key="rastro_lacunas_status",
-                fontes=fontes_lacunas,
+                fontes=FONTES_DEV,
+                etapa="dev",
                 agente="rastro-lacunas",
                 estrito=estrito,
                 before_agent_callback=marcar_heranca,
