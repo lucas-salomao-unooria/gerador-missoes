@@ -148,22 +148,31 @@ class TestRegras(unittest.TestCase):
         c = passagem.assinatura_da_etapa({**ESTADO_VERDE, "prd_final": "outro"}, "produto")
         self.assertEqual(a, c)
 
-    def test_de_acordo_de_produto_exige_a_conferencia_de_leitura(self):
-        """24/09/2026: o PO liberava missões rasas confiando no semáforo. O de acordo de produto
-        pede duas respostas que só quem leu o núcleo dá — e elas seguem para design no comentário."""
-        with self.assertRaises(DecisaoInvalida):
-            aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE)
-        with self.assertRaises(DecisaoInvalida):
-            aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE, {**CONFERENCIA, "fora": "nenhum, ok"})
-        novo, _ = aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE, CONFERENCIA)
-        p = novo["pareceres"][-1]
-        self.assertEqual(p["conferencia"], CONFERENCIA)
-        self.assertIn(CONFERENCIA["crenca"], p["comentario"])
-        self.assertIn(CONFERENCIA["crenca"], notas_de_passagem(novo))
-        # refazer não pede conferência, e as outras etapas não a têm
-        aplicar(_aguardando(), REFAZER, PO, COMENTARIO, ESTADO_VERDE)
-        novo, _ = aplicar(_aguardando("design"), DE_ACORDO, DESIGN, COMENTARIO, ESTADO_VERDE)
+    def test_de_acordo_de_produto_libera_sem_conferencia_de_leitura(self):
+        """25/09/2026: a conferência de leitura foi desligada — o time a sentiu como mais um bloqueio."""
+        novo, _ = aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE)
         self.assertNotIn("conferencia", novo["pareceres"][-1])
+
+    def test_conferencia_de_leitura_quando_religada(self):
+        """24/09/2026: o PO liberava missões rasas confiando no semáforo. O de acordo de produto
+        pedia duas respostas que só quem leu o núcleo dá — e elas seguiam para design no comentário.
+        Desligada em 25/09/2026; o mecanismo continua testado para quando for religada."""
+        perguntas = {"produto": (("crenca", "Que crença do estudante cai no aha?"),
+                                 ("fora", "Que conceito do material fica de fora?"))}
+        with mock.patch.dict(passagem.CONFERENCIA_DE_ACORDO, perguntas):
+            with self.assertRaises(DecisaoInvalida):
+                aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE)
+            with self.assertRaises(DecisaoInvalida):
+                aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE, {**CONFERENCIA, "fora": "nenhum, ok"})
+            novo, _ = aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, ESTADO_VERDE, CONFERENCIA)
+            p = novo["pareceres"][-1]
+            self.assertEqual(p["conferencia"], CONFERENCIA)
+            self.assertIn(CONFERENCIA["crenca"], p["comentario"])
+            self.assertIn(CONFERENCIA["crenca"], notas_de_passagem(novo))
+            # refazer não pede conferência, e as outras etapas não a têm
+            aplicar(_aguardando(), REFAZER, PO, COMENTARIO, ESTADO_VERDE)
+            novo, _ = aplicar(_aguardando("design"), DE_ACORDO, DESIGN, COMENTARIO, ESTADO_VERDE)
+            self.assertNotIn("conferencia", novo["pareceres"][-1])
 
     def test_profundidade_vermelha_recusa_o_de_acordo_de_produto(self):
         estado = {**ESTADO_VERDE, "profundidade_status": "bloqueado"}

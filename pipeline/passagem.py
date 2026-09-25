@@ -64,11 +64,15 @@ MIN_CARACTERES_COMENTARIO = 20
 #: e o semáforo não media profundidade. O comentário livre aceitava "conferi, está ok"; estas
 #: perguntas não se respondem sem abrir o núcleo. A resposta segue para os agentes de design
 #: junto com o comentário. Não é conferida contra a missão: o objetivo é que a leitura aconteça.
+#:
+#: **Desligada em 25/09/2026:** o time sentiu as duas perguntas como mais um bloqueio para liberar
+#: produto. O mecanismo fica: `perguntas_de_conferencia`, `aplicar` e o cartão do app leem este
+#: dicionário, e vazio não pede nada. Para religar, descomente a entrada de produto.
 CONFERENCIA_DE_ACORDO: Dict[str, Tuple[Tuple[str, str], ...]] = {
-    "produto": (
-        ("crenca", "Que crença do estudante cai no aha, e em que momento da tela ela cai?"),
-        ("fora", "Que conceito do material do bimestre a missão deixa de fora, e por que isso está certo?"),
-    ),
+    # "produto": (
+    #     ("crenca", "Que crença do estudante cai no aha, e em que momento da tela ela cai?"),
+    #     ("fora", "Que conceito do material do bimestre a missão deixa de fora, e por que isso está certo?"),
+    # ),
 }
 
 
