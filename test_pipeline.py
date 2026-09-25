@@ -722,6 +722,28 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
     }
     assert varrer_lacunas(fontes, citacao)["status"] == "aprovado", varrer_lacunas(fontes, citacao)["achados"]
 
+    # o D0 consolida, por contrato, a lista do que FECHOU — e o varredor lia a linha que
+    # registra o fechamento como a pendência que ela fechou. Uma linha dessas bloqueou o PRD
+    # da sessão exp04ef1b em 25/09/2026, com os outros vinte gates verdes ou amarelos.
+    resolvidas = {
+        "spec_missao": (
+            "### Lista consolidada de itens `[ABERTO — dono]`\n"
+            "- `[ABERTO — dono: produto: Ratificação do teto de texto por resumo]` (§6) — Resolvido em [D0-09].\n"
+            "- `[ABERTO — dono: design: Escolha do componente de enquete]` (§8d) — Fechada em [D9-02].\n"
+        ),
+        "handoff_dev": "limpo",
+    }
+    r_resolv = varrer_lacunas(fontes, resolvidas)
+    assert r_resolv["status"] == "aprovado", r_resolv["achados"]
+
+    # a guarda é estreita: sem a referência da decisão não há o que auditar, e continua bloqueando
+    sem_ref = {"spec_missao": "- `[ABERTO — dono: produto: Ratificação do teto]` (§6) — Resolvido.", "handoff_dev": "limpo"}
+    assert varrer_lacunas(fontes, sem_ref)["status"] == "bloqueado"
+
+    # e a referência antes do marcador é frase sobre OUTRA pendência: não alivia esta
+    invertida = {"spec_missao": "Resolvido em [D0-09]; segue aberto `[ABERTO — dono: produto: teto do resumo]`.", "handoff_dev": "limpo"}
+    assert varrer_lacunas(fontes, invertida)["status"] == "bloqueado"
+
     # e um marcador de verdade, com dono preenchido, continua bloqueando
     real = {"spec_missao": "decisão pendente [ABERTO — gate-estrutural]", "handoff_dev": "limpo"}
     r_real = varrer_lacunas(fontes, real)
