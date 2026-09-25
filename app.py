@@ -13,14 +13,14 @@ import re
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
 import streamlit.components.v1 as components
 from PIL import Image
 
 from config import get_settings
-from pipeline import execucao_fundo, passagem
+from pipeline import conversa_etapas, execucao_fundo, passagem
 from pipeline.artifacts import generate_artifact_manifest
 from pipeline.orchestrator import STAGES, get_pipeline_agents_metadata, get_pipeline_stages, stages_para_ui
 from pipeline.reexecucao import (
@@ -49,6 +49,7 @@ from pipeline.session_store import (
 )
 from prompts import get_prompt_raw, list_prompt_files, load_prompt, save_prompt
 from tools.auth import (
+    ROTULO_PAPEL,
     ConfiguracaoDeLoginAusente,
     Revogacoes,
     Sessao,
@@ -165,8 +166,9 @@ def init_session_state():
                     "**PRD padrão ouro** com o contexto arquitetural da plataforma, pronto para um agente de codificação.\n\n"
                     "💡 *Anexe o one-pager em PDF/DOCX ou descreva: ano/série, ambiente simulado "
                     "(Instagram, YouTube, ChatGPT, TikTok ou WhatsApp), descoberta central e a decisão do estudante.*\n\n"
-                    "🔧 *Com uma missão aberta no histórico, o campo de mensagem pede **correções nela**: a esteira "
-                    "recomeça só da etapa afetada, sobre o que já foi gerado.*"
+                    "💬 *Com uma missão aberta no histórico, o campo de mensagem **pergunta à etapa** que você "
+                    "escolher (produto, design ou dev), sem mudar nada. Para mudar a missão, use Refazer no cartão "
+                    "de passagem. Numa missão sem parecer humano, ele pede a correção direto.*"
                 ),
                 "pipeline_result": None,
             }
@@ -625,9 +627,16 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
 
     comentario = ""
     if any(a != passagem.INICIAR for a in acoes):
+        chave_comentario = f"parecer_{run_dir.name}_{fluxo.get('versao', 0)}"
+        # o rascunho vem da conversa com as etapas, desenhada depois deste cartão: só dá para
+        # preencher o campo antes de ele existir, no rerun seguinte ao botão
+        rascunho = st.session_state.pop(f"rascunho_parecer_{run_dir.name}", None)
+        if rascunho:
+            st.session_state[chave_comentario] = rascunho
+            st.info("📝 O comentário abaixo é um rascunho tirado da conversa com as etapas. Revise antes de decidir.")
         comentario = st.text_area(
             "Comentário (obrigatório para parecer, refazer ou devolver)",
-            key=f"parecer_{run_dir.name}_{fluxo.get('versao', 0)}", height=140,
+            key=chave_comentario, height=140,
             placeholder="De acordo: o que você conferiu, ajustou ou decidiu — segue para os agentes das próximas etapas.\n"
                         "Refazer ou devolver: o que precisa mudar, e por quê.")
         st.caption(f"Mínimo de {passagem.MIN_CARACTERES_COMENTARIO} letras ou números. Iniciar não pede comentário.")
@@ -692,6 +701,93 @@ def _iniciar_missao_com_parecer(user_prompt: str, doc_batch: Optional[DocumentBa
     st.session_state.current_session_id = run_dir.name
     st.session_state.messages = conversa["messages"]
     invalidar_cache_sessoes()
+    st.rerun()
+
+
+EXEMPLOS_DE_PERGUNTA = {
+    "produto": "Por que o gate final ficou 🟡? · De onde saiu o teto de caracteres da etapa 3?",
+    "design": "Quais telas a jornada tem, e em que ordem? · A copy da tela de resultado segue a spec?",
+    "dev": "Que eventos de telemetria o PRD define? · O que a banca reprovou, e por quê?",
+}
+
+
+def render_conversa_etapas(run_dir: Path, fluxo: Dict[str, Any]) -> Tuple[str, Any]:
+    """Perguntas sobre produto, design ou dev desta missão, sem mudar nada (`pipeline/conversa_etapas.py`).
+
+    Devolve a etapa escolhida, para onde vai a pergunta do campo de mensagem, e o espaço onde a
+    pergunta em andamento aparece enquanto o modelo responde.
+    """
+    mensagens = conversa_etapas.ler(run_dir)
+    with st.container(border=True):
+        st.markdown("#### 💬 Conversa com as etapas")
+        st.caption("Pergunte sobre produto, design ou dev desta missão no campo de mensagem. A conversa fica no "
+                   "histórico da missão, à vista de todos, e não altera nenhum documento: para mudar a missão, "
+                   "use Refazer no cartão de passagem.")
+        contagem = {e: len([m for m in conversa_etapas.da_etapa(mensagens, e) if m.get("role") == "user"])
+                    for e in passagem.ORDEM}
+        etapa = st.segmented_control(
+            "Conversar com", list(passagem.ORDEM), default=fluxo["etapa"], key=f"conversa_etapa_{run_dir.name}",
+            format_func=lambda e: passagem.ROTULO_ETAPA[e] + (f" · {contagem[e]}" if contagem[e] else ""),
+        ) or fluxo["etapa"]
+        da_etapa = conversa_etapas.da_etapa(mensagens, etapa)
+        if not da_etapa:
+            st.caption(f"Ninguém perguntou sobre {passagem.ROTULO_ETAPA[etapa]} ainda. Exemplos: {EXEMPLOS_DE_PERGUNTA[etapa]}")
+        else:
+            estado = estado_da_sessao(run_dir)
+            assinatura = passagem.assinatura_da_etapa(estado, etapa)
+            with st.container(height=520) if len(da_etapa) > 6 else st.container():
+                for m in da_etapa:
+                    with st.chat_message(m.get("role", "user")):
+                        if m.get("role") == "user":
+                            st.caption(f"**{ROTULO_PAPEL.get(m.get('como'), m.get('como'))}** · {m.get('quando')}")
+                        elif conversa_etapas.de_outra_versao(m, assinatura):
+                            st.caption("↺ Resposta sobre uma versão anterior desta etapa: ela foi refeita depois.")
+                        st.markdown(sanear_para_streamlit(str(m.get("texto") or "")))
+            _botao_rascunho(run_dir, fluxo, etapa, estado, da_etapa)
+        em_andamento = st.container()
+    return etapa, em_andamento
+
+
+def _botao_rascunho(run_dir: Path, fluxo: Dict[str, Any], etapa: str, estado: Dict[str, Any],
+                    da_etapa: List[Dict[str, Any]]) -> None:
+    """Leva a conversa ao comentário do parecer, para quem tem o parecer em mãos."""
+    sessao = sessao_atual()
+    if fluxo.get("situacao") in passagem.EM_EXECUCAO:
+        return
+    if not any(a != passagem.INICIAR for a in passagem.acoes_possiveis(fluxo, sessao.papel, estado)):
+        return
+    if not st.button("📝 Rascunhar o comentário do parecer com esta conversa", key=f"rascunho_{run_dir.name}_{etapa}"):
+        return
+    with st.spinner("Escrevendo o rascunho…"):
+        try:
+            texto = _run_async(conversa_etapas.rascunhar_comentario(etapa, estado, fluxo, da_etapa))
+        except Exception as exc:
+            st.error(f"Não consegui escrever o rascunho agora: {exc}")
+            return
+    st.session_state[f"rascunho_parecer_{run_dir.name}"] = texto
+    st.rerun()
+
+
+def _perguntar_a_etapa(run_dir: Path, etapa: str, texto: str, em_andamento: Any) -> None:
+    """Responde e grava pergunta e resposta juntas: se o modelo falhar, nada entra no histórico."""
+    sessao = sessao_atual()
+    fluxo = passagem.ler_fluxo(run_dir)
+    estado = estado_da_sessao(run_dir)
+    anteriores = conversa_etapas.da_etapa(conversa_etapas.ler(run_dir), etapa)
+    pergunta = conversa_etapas.pergunta(etapa, texto, sessao.usuario, sessao.papel)
+    with em_andamento:
+        with st.chat_message("user"):
+            st.caption(f"**{sessao.rotulo}** · agora")
+            st.markdown(texto)
+        with st.chat_message("assistant"):
+            with st.spinner(f"Lendo os documentos de {passagem.ROTULO_ETAPA[etapa]}…"):
+                try:
+                    saida = _run_async(conversa_etapas.responder(
+                        texto, etapa, estado, fluxo, anteriores, execucao_fundo.ler_execucao(run_dir)))
+                except Exception as exc:
+                    st.error(f"Não consegui responder agora: {exc}. A pergunta não foi gravada; tente de novo.")
+                    return
+    conversa_etapas.registrar(run_dir, pergunta, conversa_etapas.resposta(etapa, saida, pergunta, estado))
     st.rerun()
 
 
@@ -1707,10 +1803,14 @@ def main():
         render_guia_de_uso()
 
         # Com uma sessão aberta, o campo de mensagem pede correções NELA: a esteira recomeça só
-        # da etapa afetada, sobre o estado salvo. Missão do zero é pelo botão "➕ Nova Missão".
+        # da etapa afetada, sobre o estado salvo. Com parecer humano, ele pergunta à etapa escolhida
+        # na conversa, sem mudar nada. Missão do zero é pelo botão "➕ Nova Missão".
         modo_correcao = bool(st.session_state.get("current_session_id"))
-        com_fluxo = modo_correcao and render_passagem(
-            get_settings().output_path / str(st.session_state.current_session_id), opts)
+        run_dir_aberto = get_settings().output_path / str(st.session_state.current_session_id) if modo_correcao else None
+        com_fluxo = modo_correcao and render_passagem(run_dir_aberto, opts)
+        etapa_da_conversa, em_andamento = (
+            render_conversa_etapas(run_dir_aberto, passagem.ler_fluxo(run_dir_aberto) or passagem.novo_fluxo())
+            if com_fluxo else (None, None))
         if modo_correcao and not com_fluxo and st.session_state.get("correcao_pendente"):
             _render_card_correcao(st.session_state.correcao_pendente, opts)
 
@@ -1736,7 +1836,8 @@ def main():
         # missão nova começa pela etapa de produto: só quem responde por ela a cria
         sem_permissao_de_criar = not modo_correcao and not (sessao and passagem.pode_criar_missao(sessao.papel))
         placeholder = (
-            "Esta missão segue por pareceres: use o cartão de passagem acima (Refazer leva o seu comentário aos agentes)."
+            f"Pergunte sobre {passagem.ROTULO_ETAPA[etapa_da_conversa]} desta missão: a resposta fica no histórico "
+            "e não muda nada. Para mudar, use Refazer no cartão de passagem."
             if com_fluxo else
             f"Missão nova é criada por {passagem.rotulo_donos('produto')} (ou admin). Abra uma missão no histórico."
             if sem_permissao_de_criar else
@@ -1745,9 +1846,13 @@ def main():
             "Descreva a missão (ano, ambiente, descoberta central, decisão do estudante) ou envie o one-pager…"
         )
         # Com parecer humano, a correção livre pelo chat ficaria fora do fluxo (sem dono, sem
-        # parecer, rodando as etapas seguintes sem ninguém ter liberado): o Refazer do cartão a substitui.
-        user_prompt = st.chat_input(placeholder, disabled=bool(com_fluxo) or sem_permissao_de_criar)
-        if user_prompt and modo_correcao:
+        # parecer, rodando as etapas seguintes sem ninguém ter liberado): o campo vira pergunta à
+        # etapa escolhida na conversa, que não altera nada, e mudar continua sendo o Refazer do cartão.
+        user_prompt = st.chat_input(placeholder, disabled=sem_permissao_de_criar,
+                                    max_chars=conversa_etapas.TETO_PERGUNTA if com_fluxo else None)
+        if user_prompt and com_fluxo:
+            _perguntar_a_etapa(run_dir_aberto, etapa_da_conversa, user_prompt, em_andamento)
+        elif user_prompt and modo_correcao:
             settings = get_settings()
             if not settings.is_gemini_configured():
                 st.warning("⚠️ `GOOGLE_API_KEY` não configurada no `.env`.")
