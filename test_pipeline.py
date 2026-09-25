@@ -3132,6 +3132,39 @@ def test_campo_dados_so_no_evento_e_nao_no_concluir_da_sdk():
     print("   ✓ campo `dados` só bloqueia no evento, não no concluir() da SDK nem na prosa")
 
 
+def test_coluna_kpi_na_tabela_de_eventos_e_rota_proibida_no_changelog():
+    """24/09/2026, refazer de Dev da exp04ef3b já com o fix do `dados`: o PRD pôs na tabela de eventos
+    uma coluna «KPI» de volta, e o gate leu cada evento como um KPI sem pergunta, decisão nem baseline
+    (27 bloqueios, com os 11 KPIs completos). E a rota errada citada para ser vedada — "❌ NÃO inventar
+    rota" e "menção indevida" no changelog — virava `rota-verbo-errado`."""
+    from tools.kpis import validar_kpis
+    from tools.rotas_plataforma import validar_rotas
+
+    kpi = ("| KPI | PQ | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |\n"
+           "|---|---|---|---|---|---|---|---|---|---|---|\n"
+           "| KPI-08 | PQ-02 | Quantos estudantes abrem a tabela de apuração antes de selecionar o rascunho do post? "
+           "| `<40%` indica affordance da gaveta retrátil invisível | turma | `E1-ALU-01` | `EVT-001` "
+           "| count(`EVT-001`) / total(`EVT-U01`) | sem baseline — primeira medição | ≥ 60% | Piloto |\n\n")
+    eventos = ("| Evento | Verbo | Objeto | Quando dispara | `resultado` | `contexto` | Caminho | Onde é lido | Retenção | KPI |\n"
+               "|---|---|---|---|---|---|---|---|---|---|\n"
+               "| `EVT-001` | `interacted` | `dm:abrir_tabela` | Estudante toca na aba de apuração na E1 "
+               "| `{\"tempo_ate_abrir_s\": 4}` | `{\"etapa\": \"E1\"}` | operacional "
+               "| `exp04ef3b_sessoes.abriu_tabela` / `GET /painel` | 1 ano letivo | KPI-08 |\n")
+    achados = validar_kpis(kpi + eventos)["achados"]
+    falsos = {"kpi-sem-pergunta", "kpi-sem-decisao", "baseline-ausente"}
+    assert not [a for a in achados if a["codigo"] in falsos], achados
+    # o KPI de verdade sem pergunta continua pego
+    sem_pergunta = kpi.replace("| Quantos estudantes abrem a tabela de apuração antes de selecionar o rascunho do post? ", "|  ")
+    assert "kpi-sem-pergunta" in {a["codigo"] for a in validar_kpis(sem_pergunta + eventos)["achados"]}
+
+    assert not validar_rotas("- ❌ NÃO inventar rota `DELETE /turmas/:turmaId`. A limpeza para segunda aplicação "
+                             "é no módulo da própria missão: `DELETE /exp04ef3b/turmas/:turmaId`.\n")
+    assert not validar_rotas("| `0.1.0` | 2026-09-24 | PRD Writer | Substituição da menção indevida a "
+                             "`DELETE /turmas/:id` pela rota canônica do módulo `DELETE /exp04ef3b/turmas/:turmaId`. |\n")
+    assert validar_rotas("Ao fim, `DELETE /turmas/:id`.\n"), "a rota errada usada de verdade continua bloqueando"
+    print("   ✓ coluna KPI na tabela de eventos não vira KPI, e rota vedada no changelog não é rota em uso")
+
+
 def test_nome_do_marcador_entre_crases_nao_e_pendencia():
     """24/09/2026: "Todos os marcadores `[NEEDS CLARIFICATION]` foram saneados" deixava o PRD 🟡 por
     uma pendência humana que a própria frase dizia não existir."""
