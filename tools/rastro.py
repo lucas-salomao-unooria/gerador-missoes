@@ -145,6 +145,30 @@ _PLACEHOLDERS = frozenset({
 })
 
 
+# O D0 (fechamento de lacunas) consolida, por contrato, a lista do que estava aberto e diz onde
+# fechou cada item: "`[ABERTO — dono: produto: …]` (§6) — Resolvido em [D0-09]." O varredor lia a
+# linha que **registra o fechamento** como a pendência que ela fechou — e uma única linha dessas
+# barrou o PRD da sessão exp04ef1b em 25/09/2026, com todos os outros vinte gates verdes ou
+# amarelos. É o mesmo modo de falha da citação do formato: a esteira punia o agente por obedecer.
+#
+# A guarda é estreita de propósito: exige a **referência da decisão** que fechou a pendência
+# (`[D0-n]`, `[D9-n]`, `[RS-n]`). Dizer "resolvido" sem dizer onde continua contando como
+# pendência aberta, porque aí não há o que auditar.
+_RE_RESOLVIDO_EM = re.compile(
+    r"\b(?:resolvid|fechad|sanad|atendid)[ao]s?\b[^\n]{0,60}?\[(?:D0|D9|RS)-\d+\]",
+    re.IGNORECASE,
+)
+
+
+def _declara_a_propria_resolucao(linha: str, fim_do_marcador: int) -> bool:
+    """O texto **depois** do marcador diz onde a pendência foi fechada?
+
+    Só o sufixo conta: "Resolvido em [D0-09] o item `[ABERTO — …]`" é uma frase sobre outra
+    pendência, e aliviá-la pela vizinhança reabriria o buraco que esta guarda fecha.
+    """
+    return bool(_RE_RESOLVIDO_EM.search(linha[fim_do_marcador:]))
+
+
 def _e_citacao_do_formato(dono_raw: str) -> bool:
     bruto = dono_raw.strip().strip("`*_ ").lower()
     # `<dono>`, `<agente>`: o agente citou o formato do marcador em vez de abrir uma pendência —
@@ -260,6 +284,10 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> Dict[
                 if not dono_raw and texto[m.start() - 1:m.start()] == "`" and texto[m.end():m.end() + 1] == "`":
                     continue
                 linha, contexto = _linha_e_contexto(texto, m.start(), m.end())
+                if tipo in ("lacuna", "aberto", "needs_clarification", "a_validar"):
+                    ini_linha = texto.rfind("\n", 0, m.start()) + 1
+                    if _declara_a_propria_resolucao(linha, m.end() - ini_linha):
+                        continue
                 if tipo in ("rs_pendente", "verificar_repositorio"):
                     # Dono fixo, do contrato: `RS-n pendente` é pedido ao Gate 0/PO que só
                     # pessoa fecha, e `[verificar no repositório]` é instrução para quem
