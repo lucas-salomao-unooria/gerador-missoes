@@ -28,6 +28,22 @@ _RE_T = re.compile(r"\bT(\d{1,2})\b")
 _CANON = Path(__file__).resolve().parent.parent / "prompts" / "references" / "perguntas-de-produto.md"
 _RE_TELA = re.compile(r"\bE[0-6]-(?:ALU|PROF|SIS)-\d{2}\b")
 _RE_ETAPA = re.compile(r"\bE[0-6]\b")
+#: `E1..E6`, `E1…E6`, `E1–E6`, `E1 a E6`, `E1 até E6`. O hífen só vale seguido de `E`: `E3-ALU-02` é tela.
+_RE_INTERVALO_ETAPA = re.compile(r"\bE([0-6])\s*(?:\.\.\.?|…|–|—|-(?=\s*E)|\ba\b|\bat[ée]\b)\s*E([0-6])\b", re.I)
+
+
+def _etapas(texto: str) -> set:
+    """Etapas citadas, com o intervalo expandido.
+
+    «Ao entrar em cada etapa E1..E6» era lido como E1 e E6, e o `EVT-U02` — que dispara em
+    todas — deixava sem evento os KPIs de E2 e E4 (exp04ef1b, 25/09/2026: dois falsos 🔴).
+    """
+    t = texto or ""
+    etapas = set(_RE_ETAPA.findall(_RE_TELA.sub(" ", t)))
+    for m in _RE_INTERVALO_ETAPA.finditer(t):
+        a, b = sorted((int(m.group(1)), int(m.group(2))))
+        etapas.update(f"E{n}" for n in range(a, b + 1))
+    return etapas
 _RE_BASELINE_ZERO = re.compile(r"^\s*\**\s*\$?\s*0\s*\\?%", re.I)
 _RE_SEM_BASELINE = re.compile(r"sem baseline", re.I)
 _RE_ORIGEM = re.compile(r"\(([^)]{4,})\)")
@@ -225,7 +241,7 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
         # aprovava justamente o caso que existe para pegar.
         telas = set(_RE_TELA.findall(" ".join(linha.values())))
         if not telas:
-            telas = set(_RE_ETAPA.findall(_col(linha, "quando dispara")))
+            telas = _etapas(_col(linha, "quando dispara"))
         for i in ids:
             tela_do_evento.setdefault(i.upper(), set()).update(telas)
             payload_do_evento[i.upper()] = _col(linha, "resultado") + " " + _col(linha, "contexto")
@@ -288,7 +304,7 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
                 continue
             telas_kpi = set(_RE_TELA.findall(" ".join(linha.values())))
             if not telas_kpi:
-                telas_kpi = set(_RE_ETAPA.findall(_col(linha, "tela")))
+                telas_kpi = _etapas(_col(linha, "tela"))
             telas_evt = tela_do_evento.get(e, set())
             if telas_kpi and telas_evt:
                 casa = any(tk == te or tk.startswith(te) or te.startswith(tk) for tk in telas_kpi for te in telas_evt)

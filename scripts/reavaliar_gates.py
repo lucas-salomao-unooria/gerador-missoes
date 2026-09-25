@@ -31,19 +31,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from tools import bncc, contrato_produto, evidencia, kpis, rastro  # noqa: E402
 from tools.diagnostico import GATES, coletar  # noqa: E402
 
-#: Espelha `fontes_lacunas` de `agents/dev/__init__.py` — se a lista mudar lá, muda aqui.
-FONTES_LACUNAS: List[Dict[str, str]] = [
-    {"chave": "spec_missao", "rotulo": "spec da missão", "etapa_padrao": "produto"},
-    {"chave": "jornada_telas", "rotulo": "jornada", "etapa_padrao": "design"},
-    {"chave": "fluxo_arestas", "rotulo": "fluxo", "etapa_padrao": "design"},
-    {"chave": "copy_strings_revisada", "rotulo": "copy revisada", "etapa_padrao": "design"},
-    {"chave": "wireframes_cobertura", "rotulo": "telas", "etapa_padrao": "design"},
-    {"chave": "stitch_links", "rotulo": "telas no Stitch", "etapa_padrao": "design"},
-    {"chave": "camada_caa", "rotulo": "camada CAA", "etapa_padrao": "design"},
-    {"chave": "ambiente_simulado", "rotulo": "ambiente simulado", "etapa_padrao": "design"},
-    {"chave": "handoff_dev", "rotulo": "handoff de dev", "etapa_padrao": "dev"},
-    {"chave": "brief_assets", "rotulo": "brief de assets", "etapa_padrao": "dev"},
-]
+#: As mesmas fontes que o A38 lê — a lista vive em `tools/rastro.py`, sem espelho aqui.
+FONTES_LACUNAS: List[Dict[str, str]] = rastro.FONTES_DEV
 
 ICONE = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴", "devolvido": "🔴", "—": "·"}
 
@@ -99,7 +88,13 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
     novos["manifesto_status"] = rastro.validar_manifesto(spec)
     novos["telemetria_status"] = rastro.validar_telemetria(handoff)
     novos["bncc_status"] = bncc.validar_spec(spec)
-    novos["rastro_lacunas_status"] = rastro.varrer_lacunas(FONTES_LACUNAS, state)
+    novos["rastro_lacunas_status"] = rastro.varrer_lacunas(FONTES_LACUNAS, state, etapa_corrente="dev")
+    # O rastro de produto roda sobre a spec do Gate 0, que é a que existia no loop da spec: a
+    # `spec_missao` de uma sessão que passou por design já traz o bloco 13 do fechamento de lacunas.
+    spec_gate0 = state.get("spec_missao_gate0") or spec
+    novos["rastro_spec_status"] = rastro.varrer_lacunas(rastro.FONTES_SPEC, {**state, "spec_missao": spec_gate0},
+                                                         etapa_corrente="produto")
+    novos["rastro_design_status"] = rastro.varrer_lacunas(rastro.FONTES_DESIGN, state, etapa_corrente="design")
 
     # `Pendências do PRD` é a pior das duas leituras: marcadores abertos + consistência.
     lac_prd = rastro.varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], state)

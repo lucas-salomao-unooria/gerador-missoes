@@ -36,6 +36,8 @@ Ordem (SequentialAgent):
                                  com limiar e ação que existe na tabela de eventos)
   p5e A15dJuizPerguntas      → juiz_perguntas_report (o que só se julga lendo: a pergunta muda
                                  uma decisão nossa e é sobre o produto, não sobre a criança)
+  p5f A15fRastroSpec         → rastro_spec_status (determinístico: marcador de lacuna na spec;
+                                 o de produto volta para a spec, o do PO fica 🟡 no parecer)
   p6  A16bOnePagerResumido   → one_pager_resumido (o formato curto do time de produto para
                                  avaliação pedagógica, derivado do canônico e da spec conferida)
 """
@@ -65,6 +67,7 @@ from agents.checkers import (
 )
 from config import get_settings
 from prompts import load_prompt
+from tools.rastro import FONTES_SPEC
 
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="google.adk.agents")
 
@@ -354,12 +357,28 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
                 max_rounds=rodadas_spec,
                 block_pipeline_on_fail=settings.esteira_estrita,
             ),
+            # O rastro de lacunas só rodava em dev, e uma pendência de produto que a spec deixou
+            # barrava o PRD numa etapa que não reescreve a spec (exp04ef1b, 25/09/2026). Aqui ela
+            # volta para quem a escreveu, e a decisão do PO aparece no semáforo do parecer.
+            RastroCheckAgent(
+                name="A15fRastroSpec",
+                description="Marcadores de lacuna na spec: pendência de produto ou de insumo volta para quem escreveu a spec; decisão do PO fica 🟡 no parecer; a de design e a de dev ficam para a etapa delas.",
+                modo="lacunas",
+                rotulo="Rastro de lacunas da spec",
+                report_key="rastro_spec_report",
+                status_key="rastro_spec_status",
+                fontes=FONTES_SPEC,
+                etapa="produto",
+                agente="rastro-lacunas-spec",
+                estrito=settings.esteira_estrita,
+                before_agent_callback=marcar_heranca,
+            ),
             SaidaDeLoopAgent(
                 name="A16SpecCheck",
-                description="Currículo, manifesto, matriz de evidência e perguntas de produto conformes encerram o loop; reprovados devolvem a spec ao autor com os relatórios.",
+                description="Currículo, manifesto, matriz de evidência, perguntas de produto e lacunas conformes encerram o loop; reprovados devolvem a spec ao autor com os relatórios.",
                 rotulo="Spec da missão",
                 status_keys=["bncc_status", "manifesto_status", "evidencia_status",
-                             "perguntas_status", "juiz_perguntas_status"],
+                             "perguntas_status", "juiz_perguntas_status", "rastro_spec_status"],
                 rodada_key="spec_rodada",
                 max_rounds=rodadas_spec,
             ),
@@ -630,6 +649,7 @@ PRODUTO_METADATA = [
     {"id": "A15cPerguntasCheck", "name": "15c · Perguntas de produto, sub-bloco 9f (determinístico)", "icon": "❓", "output_key": "perguntas_report", "prompt_file": None, "description": "As cinco perguntas de produto: quantidade fechada, decisão com limiar, corte do vocabulário, e a ação que responde cada uma declarada na tabela de eventos do bloco 9 com payload que mede."},
     {"id": "A15dJuizPerguntas", "name": "15d · Juiz das perguntas de produto", "icon": "⚖️", "output_key": "juiz_perguntas_report", "prompt_file": "produto/15_juiz_perguntas.md", "description": "O que não se confere por regex: a pergunta muda uma decisão nossa, é sobre o produto e não sobre a criança, a ação nomeada a responde, e ela não é uma transversal repintada."},
     {"id": "A15eJuizPerguntasCheck", "name": "15e · Veredito do juiz das perguntas (determinístico)", "icon": "🔀", "output_key": "juiz_perguntas_status", "prompt_file": None, "description": "Lê o envelope do juiz: ❌ em pergunta declarada pelo PO bloqueia; ❌ só em proposta segue como ressalva para o PO decidir."},
+    {"id": "A15fRastroSpec", "name": "15f · Rastro de lacunas da spec (determinístico)", "icon": "🧭", "output_key": "rastro_spec_report", "prompt_file": None, "description": "Marcadores de lacuna na spec, por dono: o de produto ou de insumo volta para quem escreveu a spec; a decisão do PO fica 🟡 no semáforo do parecer; o de design e o de dev ficam para a etapa delas."},
     {"id": "A16SpecCheck", "name": "16 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
     {"id": "A16bOnePagerResumido", "name": "16b · One-pager resumido", "icon": "🗂️", "output_key": "one_pager_resumido", "prompt_file": "produto/16b_one_pager_resumido.md", "description": "O one-pager no formato do time de produto para avaliação pedagógica: ficha, ideia, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário e takeaway. Sai em .md, .docx e .html."},
 ]

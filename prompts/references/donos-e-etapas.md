@@ -19,12 +19,36 @@ correções datadas, uma por sessão quebrada.
 | `dev` | **sim** | os agentes de dev (handoff, brief de assets, PRD) |
 | `plataforma` | não (🟡) | o monorepo `plataforma-unooria`: ADR, componente de DS, ponte `@edu/ui` |
 | `externo` | não (🟡) | gente de fora: coordenação, rede, especialista, jurídico, encarregado de dados |
-| `humano` | não (🟡) | um ato que só pessoa pratica: homologar, licenciar, nomear autoria, **decidir produto** |
+| `humano` | não (🟡) | um ato que só pessoa pratica: homologar, ratificar, licenciar, nomear autoria, **decidir produto** |
 
 **A pergunta que decide** não é "de que assunto isto trata?", é **"quem precisa agir para
 fechar?"**. Um marcador sobre telemetria cujo dono é o encarregado de dados é `externo`, não
 `dev` — nenhum agente da esteira resolve. Um marcador que diz "produto precisa decidir o teto" é
 `humano`, não `produto`: `produto` são os *agentes* de produto, e nenhum deles decide por você.
+Ratificar é o mesmo ato que homologar — o PO confirma um valor —, e até 25/09/2026 só o segundo
+era reconhecido: `[ABERTO — dono: produto: Ratificação formal do teto de texto…]` barrou o PRD da
+exp04ef1b enquanto três `Homologação…` na mesma lista passavam como decisão humana.
+
+## Cada etapa cobra o que é dela
+
+O rastro de lacunas roda em três pontos, e cada um só **bloqueia** pelas lacunas cujo dono é a
+etapa que está rodando — onde ainda há quem as feche:
+
+- **Produto**, no loop da spec: lacuna de `input` ou de `produto` na spec volta para quem a
+  escreveu; decisão do PO (`humano`) aparece no semáforo do parecer de produto.
+- **Design**, no fim da etapa: lacuna de `design` na spec e nos documentos de design.
+- **Dev**, antes do PRD: lacuna de `dev` no handoff e no brief de assets.
+
+Lacuna de uma etapa **seguinte** fica registrada (🟡, «fica para a etapa dela»). Lacuna de uma
+etapa **anterior**, num documento dela, também (🟡, «de etapa anterior»): ela já passou pelo
+rastro e pelo parecer da dona, e a etapa de agora não reescreve aquele documento. Uma lacuna de
+etapa anterior escrita num documento **desta** etapa continua bloqueando: foi esta etapa que a
+escreveu.
+
+**Lacuna fechada pelo fechamento de lacunas (D0).** Quando uma decisão `[D0-n]` do bloco 13 fecha
+um `[ABERTO — …]` da spec, a linha dele ganha ` — Resolvido em [D0-n]`, e o rastro deixa de
+contá-la — desde que o `[D0-n]` exista no bloco 13. Marca que aponta para um D0 inexistente
+continua aberta.
 
 ## Como escrever o marcador
 
@@ -53,6 +77,8 @@ Três marcadores têm dono fixo, porque o prompt que os cria já sabe quem fecha
       "tokens": [
         "homologa",
         "homologar",
+        "ratifica",
+        "ratificar",
         "editorial",
         "autoria",
         "autor e revisor",

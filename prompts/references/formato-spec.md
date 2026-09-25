@@ -266,4 +266,4 @@ A spec só muda por reabertura do Gate 0. Agente de construção não edita spec
 - **Bloco 13 — Decisões D0** (`fecha-lacunas`): decisões `[D0-n]` que preenchem ausências deriváveis da missão, com base declarada, e os pedidos de re-spec `[RS-n]` pendentes. Preenche ausência, nunca altera presença.
 - **Bloco 14 — Ambiente simulado** (`ambiente-simulado`): a ficha do ambiente — nome, seção do DS, verbos do bloco 4 com rótulo literal, dispositivo nativo, estados e o que a plataforma real não tem. Emitido mesmo quando a spec já nomeia o ambiente (dormente).
 
-Bloco 0–12 diferente do texto do Gate 0 continua sendo violação; bloco 13 ou 14 ausente numa spec que passou pela esteira de design é sinal de que D0 ou D9 não rodaram.
+Bloco 0–12 diferente do texto do Gate 0 continua sendo violação; bloco 13 ou 14 ausente numa spec que passou pela esteira de design é sinal de que D0 ou D9 não rodaram. A exceção é uma só: o D0 acrescenta ` — Resolvido em [D0-n]` ao fim da linha do `[ABERTO — …]` que uma decisão dele fechou, e o rastro de lacunas deixa de cobrar essa linha.

@@ -663,6 +663,9 @@ class RastroCheckAgent(BaseAgent):
     fonte_key: str = "handoff_dev"
     fontes: List[Dict[str, str]] = Field(default_factory=list)
     agente: str = "rastro-lacunas"
+    #: Modo `lacunas`: a etapa que roda o rastro (`produto` · `design` · `dev`). Ela só bloqueia
+    #: pelo que é dela; o de outra etapa sai 🟡 (`tools/rastro._severidade_na_etapa`).
+    etapa: Optional[str] = None
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -723,7 +726,7 @@ class RastroCheckAgent(BaseAgent):
                 "achados": list(r_lacunas["achados"]) + list(r_consistencia["achados"]),
             }
         else:
-            resultado = varrer_lacunas(self.fontes, dict(state))
+            resultado = varrer_lacunas(self.fontes, dict(state), etapa_corrente=self.etapa)
             relatorio = relatorio_lacunas(resultado, self.rotulo, missao, agente=self.agente)
 
         status = resultado["status"]  # aprovado | amarelo | bloqueado
@@ -749,7 +752,7 @@ class RastroCheckAgent(BaseAgent):
             # também — senão a execução sai `pipeline_bloqueado` com zero impedimento e o
             # diagnóstico lista o PRD como provisório (visto em 2026-09-21, exp06ef1b).
             limpar_degradacao(state, delta, self.rotulo)
-            msg = f"🟡 {self.rotulo}: {len(avisos)} pendência(s) de plataforma — o pipeline segue e o PRD sai 🟡, não verde.\n" + "\n".join(f"- ⚠️ {a.get('resumo') or a.get('trecho', '')}" for a in avisos)
+            msg = f"🟡 {self.rotulo}: {len(avisos)} pendência(s) que não são desta etapa fechar — a esteira segue 🟡, não verde.\n" + "\n".join(f"- ⚠️ {a.get('resumo') or a.get('trecho', '')}" for a in avisos)
         else:
             itens = "\n".join(f"- ⛔ [{a.get('etapa', 'dev')}] {a.get('resumo') or a.get('trecho', '')}" for a in bloqueios)
             if self.estrito:

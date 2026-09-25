@@ -46,6 +46,7 @@ STATUS_KEYS = [
     "perguntas_status", "perguntas_report",
     "juiz_perguntas_status", "juiz_perguntas_rodada",
     "telemetria_status",
+    "rastro_spec_status", "rastro_design_status",
     "rastro_lacunas_status",
     "dev_status",
     "prd_status", "kpis_status", "kpis_report",
