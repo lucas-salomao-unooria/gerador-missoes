@@ -2656,8 +2656,10 @@ def test_pedagogia_falsificavel():
             "| `posts_no_mural` | `scored` | `salvar:post` + `submeter:mural` | operacional | `exp06ef1b_sessoes.posts` | `EF06CO09` |\n"
             "- `gabarito_servidor: sim`\n"
             "## 11. Currículo\n"
-            "| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Marcador |\n|---|---|---|---|---|---|\n"
-            "| `EF06CO09` | `E3-ALU-01` (Decidir) | fixa 1 post | rolar o feed | `posts_no_mural` | ternário |\n")
+            "| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Canal de evidência | Regra ternária |\n"
+            "|---|---|---|---|---|---|---|\n"
+            "| `EF06CO09` | `E3-ALU-01` (Decidir) | fixa 1 post | rolar o feed | `posts_no_mural` | A + B | "
+            "Atingiu: fixa post com fonte aberta · Em processo: fixa sem abrir a fonte · Não atingiu: não salva |\n")
     assert validar(base)["status"] == "aprovado", validar(base)["achados"]
 
     # (a) `scored` exige os dois sinais que a própria definição do bloco 9 pede
@@ -2665,8 +2667,22 @@ def test_pedagogia_falsificavel():
     assert "scored-1-sinal" in {a["codigo"] for a in validar(um_sinal)["achados"]}
 
     # (b) habilidade declarada sem dado que a meça é currículo no papel
-    sem_medida = base.replace("| `posts_no_mural` | ternário |", "| — | ternário |")
+    sem_medida = base.replace("| `posts_no_mural` | A + B |", "| — | A + B |")
     assert "habilidade-sem-medida" in {a["codigo"] for a in validar(sem_medida)["achados"]}
+
+    # (b') v1.21 — a matriz diz de onde sai o nível e a regra que o separa, por extenso
+    marcador_antigo = base.replace("| Canal de evidência | Regra ternária |", "| Marcador |").replace(
+        "| A + B | Atingiu: fixa post com fonte aberta · Em processo: fixa sem abrir a fonte · Não atingiu: não salva |",
+        "| ternário |")
+    codigos = {a["codigo"] for a in validar(marcador_antigo)["achados"]}
+    assert {"habilidade-sem-canal", "regra-ternaria-ausente"} <= codigos, codigos
+    so_escala = base.replace("Atingiu: fixa post com fonte aberta · Em processo: fixa sem abrir a fonte · Não atingiu: não salva",
+                             "ternário 🟢🟡🔴")
+    assert "regra-ternaria-ausente" in {a["codigo"] for a in validar(so_escala)["achados"]}
+    # o Canal B vale no 1º–2º ano: três alternativas visíveis ao mesmo tempo cabem no teto da
+    # faixa (3.5, opção visível +1) — conferir a tela é dos pareceres, não deste gate
+    segundo_ano = "## 0. Identificação\nSéries: `[\"2EF\"]`\n" + base
+    assert validar(segundo_ano)["status"] == "aprovado", validar(segundo_ano)["achados"]
 
     # (c) PED-04 é bloqueante e nada o conferia
     assert "gabarito-nao-declarado" in {a["codigo"] for a in validar(base.replace("- `gabarito_servidor: sim`", ""))["achados"]}
@@ -2847,8 +2863,9 @@ def test_agentes_novos_rodam_de_ponta_a_ponta():
             "| Medida | Grau | Sinais | Canal | Tabela.coluna | Habilidade |\n|---|---|---|---|---|---|\n"
             "| `posts` | `scored` | `a:b` + `c:d` | operacional | `exp06ef1b_sessoes.p` | `EF06CO09` |\n"
             "- `gabarito_servidor: sim`\n## 11. Currículo\n"
-            "| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Marcador |\n"
-            "|---|---|---|---|---|---|\n| `EF06CO09` | `E3-ALU-02` | fixa | rola | `posts` | ternário |\n")
+            "| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Canal de evidência | Regra ternária |\n"
+            "|---|---|---|---|---|---|---|\n| `EF06CO09` | `E3-ALU-02` | fixa | rola | `posts` | A | "
+            "Atingiu: fixa com fonte · Em processo: fixa sem fonte · Não atingiu: não fixa |\n")
 
     root = SequentialAgent(name="R", sub_agents=[
         FakeAgent(name="Spec", key="spec_missao", text=spec),

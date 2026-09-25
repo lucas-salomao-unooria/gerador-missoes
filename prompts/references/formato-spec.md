@@ -145,6 +145,17 @@ são registro editorial, fechado fora da esteira.
 **Servidor calcula, nunca aceita.** O que o cliente envia (medidas brutas)
 e o que o servidor deriva.
 
+**Pergunta de evidência (Canal B), quando a matriz do bloco 11 a declara.** A pergunta, as três
+alternativas com o nível de cada uma (a spec não fixa a ordem: o servidor sorteia a cada
+exibição), o componente que a renderiza — do DS da seção, ou local com responsável, nunca
+chamado "do DS" sem estar lá — e o retorno ao estudante, que é só a confirmação de envio. A
+resposta vai pela **rota operacional do módulo**, com o identificador opaco da alternativa; o
+servidor calcula o nível pelo mapeamento fixo e grava na tabela do módulo, lida pela tela do
+professor. O nível **nunca** trafega no `track`: quem chama `track` é o cliente, e o cliente que
+conhece o nível conhece o gabarito. Uma resposta é um sinal só — a medida é `indicative`, e vira
+`scored` apenas somada a um sinal de Canal A da mesma habilidade. O bloco 2 ganha o estado da
+pergunta entre o Refletir e a conclusão, e a falha de plataforma nesse estado é `none`.
+
 **Mídia capturada do estudante.** Se a missão grava voz, foto, vídeo ou tela
 (`microphone`, `camera`, `display-capture` no bloco 0), este bloco declara, sem
 exceção: **onde a mídia é gravada** (tabela `expNNefNb_*` com `escola_id` e RLS,
@@ -224,14 +235,23 @@ Habilidades e códigos **confirmados**, com o momento em tela de cada um.
 **Matriz de evidência — obrigatória, uma linha por código de Computação:**
 
 ```
-| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Marcador |
-|---|---|---|---|---|---|
-| `EF06CO09` | `E3-ALU-01` (Decidir) | seleciona até 4 posts e fixa 1 | rolar o feed sem salvar | `posts_no_mural` | ternário |
+| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Canal de evidência | Regra ternária |
+|---|---|---|---|---|---|---|
+| `EF06CO09` | `E3-ALU-01` (Decidir) | seleciona até 4 posts e fixa 1 | rolar o feed sem salvar | `posts_no_mural` | A | Atingiu: fixa um post cuja fonte abriu · Em processo: salva posts, mas fixa um sem abrir a fonte · Não atingiu: não salva nenhum |
 ```
 
 A coluna «Medida do bloco 9» precisa nomear uma medida que existe lá — habilidade declarada que
 nada mede é currículo no papel, e some do relatório do professor. Nas primeiras execuções, 40
 códigos de Computação foram declarados e ~38 não tinham nenhum dado ligado.
+
+«Canal de evidência» é `A` (ação do estudante, classificada pelo servidor), `B` (pergunta de
+múltipla escolha depois do Refletir) ou `A + B`, copiado da seção 12a do one-pager; não confundir
+com o canal do dado (operacional × analítico) do bloco 9. «Regra ternária» diz o que separa
+**Atingiu**, **Em processo** e **Não atingiu** — por extenso, porque os círculos coloridos são
+veredito de gate. Com Canal B, a regra é o mapeamento das três alternativas, e a pergunta com as
+alternativas vai no bloco 9. O Canal B **soma** evidência: a linha continua com momento em tela e
+ação observável. No 1º e no 2º ano, as três alternativas ficam na tela ao mesmo tempo (opção
+visível sobe o teto da faixa de duas para três, critério 3.5) e são narradas (6.1).
 
 ## 12. Decisões fechadas neste gate
 Decisão · quem decidiu · data · alternativas descartadas.
