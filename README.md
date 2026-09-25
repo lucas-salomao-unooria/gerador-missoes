@@ -1,7 +1,7 @@
 # 🌌 Gerador de Missões Unooria — Produto → Design → Dev
 
 
-> 📘 **Manual do Gerador de Missões:** [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 55 páginas com identidade visual Unooria. É a documentação para **usar e entender** a esteira; este README é a referência técnica do repositório. Prévia das páginas logo abaixo, em [Manual](#-manual).
+> 📘 **Manual do Gerador de Missões:** [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 68 páginas com identidade visual Unooria. É a documentação para **usar e entender** a esteira; este README é a referência técnica do repositório. Prévia das páginas logo abaixo, em [Manual](#-manual).
 >
 > O manual unifica e substitui os dois documentos anteriores — o [guia de funcionamento](documentacao-latex/guia-do-gerador-de-missoes.pdf) (operação) e o [manual completo e explicativo](manual-gerador-missoes/manual_gerador_missoes.pdf) (fundamentação), mantidos no repositório como histórico.
 
@@ -41,7 +41,7 @@ Compila com `tectonic -X compile manual-gerador-missoes.tex`.
 
 | | |
 |---|---|
-| 📄 **PDF** | [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 55 páginas |
+| 📄 **PDF** | [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 68 páginas, 2.ª edição (25/09/2026) |
 | 📝 **Fonte** | [`manual-unooria/manual-gerador-missoes.tex`](manual-unooria/manual-gerador-missoes.tex) |
 | 🎨 **Identidade** | Paleta e tipografia do *brandbook*, documentadas em [`manual-unooria/README.md`](manual-unooria/README.md) |
 
@@ -50,9 +50,9 @@ Sete partes, que não precisam ser lidas na ordem:
 | Parte | Título | Responde a |
 |:-:|---|---|
 | I | O que a esteira faz | Que documentos saem, para quem, e o que significa a esteira não abortar. |
-| II | Como usar | O que colocar no briefing, como rodar, como ler o diagnóstico quando algo trava. |
-| III | Como é construída | Por que 54 agentes e não um prompt grande; portões, ciclos e o controle anti-alucinação. |
-| IV | Por que funciona | A jornada de seis etapas, a carga cognitiva e a régua por idade — com os números e as fontes. |
+| II | Como usar | O que colocar no briefing, o **parecer humano entre etapas**, a conversa com as etapas, o modo correção e como ler o diagnóstico. |
+| III | Como é construída | Por que 72 passos e não um prompt grande; portões, ciclos e o controle anti-alucinação. |
+| IV | Por que funciona | A jornada de seis etapas, a **profundidade pedagógica** (a anatomia do *ahá*), a carga cognitiva e a régua por idade — com os números e as fontes. |
 | V | O que protege | BNCC e o primado do letramento digital, LGPD art. 14, ética de acolhimento. |
 | VI | Os agentes, um a um | O catálogo completo, com o que cada um faz e em que se apoia. |
 | VII | O que a operação ensinou | As correções que só apareceram ao rodar a esteira inteira sobre material real. |
@@ -60,28 +60,32 @@ Sete partes, que não precisam ser lidas na ordem:
 > Toda descrição de agente, portão, variável de ambiente e artefato no manual foi conferida contra o
 > código deste repositório — `agents/`, `config.py`, `prompts/` — e não contra a documentação anterior.
 > Ao mudar a esteira, o catálogo da Parte VI é o primeiro trecho a revisar.
+>
+> **2.ª edição (25/09/2026):** cobre o parecer humano entre etapas, o login por papel, a camada de
+> profundidade pedagógica, a memória entre execuções, as perguntas de produto e o recorte da aula por
+> disciplina. A 1.ª edição descrevia 55 passos e uma esteira que rodava sozinha do briefing ao PRD.
 
 ### Prévia
 
 <table>
 <tr>
 <td width="33%"><img width="100%" src="manual-unooria/previews/capa.png" alt="Capa do manual"></td>
-<td width="33%"><img width="100%" src="manual-unooria/previews/o-que-a-esteira-faz.png" alt="O que a esteira faz: entrada, esteira e os seis artefatos de saída"></td>
-<td width="33%"><img width="100%" src="manual-unooria/previews/seis-etapas.png" alt="O framework de seis etapas da missão"></td>
+<td width="33%"><img width="100%" src="manual-unooria/previews/o-que-a-esteira-faz.png" alt="O que a esteira faz: entrada, esteira e os sete artefatos de saída"></td>
+<td width="33%"><img width="100%" src="manual-unooria/previews/parecer-humano.png" alt="O parecer humano entre etapas: semáforo, parecer do dono, recebimento e devolução"></td>
 </tr>
 <tr>
 <td align="center"><sub><b>Capa</b></sub></td>
 <td align="center"><sub><b>Parte I</b> — o que entra e o que sai</sub></td>
-<td align="center"><sub><b>Parte I</b> — as seis etapas da jornada</sub></td>
+<td align="center"><sub><b>Parte II</b> — o parecer humano entre etapas</sub></td>
 </tr>
 <tr>
-<td><img width="100%" src="manual-unooria/previews/mapa-dos-agentes.png" alt="Mapa dos 54 agentes numerados na ordem de execução"></td>
-<td><img width="100%" src="manual-unooria/previews/regua-por-idade.png" alt="A régua por idade: tetos de opções e de duração por faixa"></td>
+<td><img width="100%" src="manual-unooria/previews/mapa-dos-agentes.png" alt="Mapa dos 72 passos numerados na ordem de execução"></td>
+<td><img width="100%" src="manual-unooria/previews/anatomia-do-aha.png" alt="Os seis passos da anatomia do ahá, com o teste e a falha vista em execução"></td>
 <td><img width="100%" src="manual-unooria/previews/catalogo-de-agentes.png" alt="Catálogo de agentes com a natureza da fundamentação de cada regra"></td>
 </tr>
 <tr>
-<td align="center"><sub><b>Parte III</b> — o mapa dos 54 agentes</sub></td>
-<td align="center"><sub><b>Parte IV</b> — a régua por idade, com as fontes</sub></td>
+<td align="center"><sub><b>Parte III</b> — o mapa dos 72 passos</sub></td>
+<td align="center"><sub><b>Parte IV</b> — a anatomia do <i>ahá</i></sub></td>
 <td align="center"><sub><b>Parte VI</b> — o catálogo, agente a agente</sub></td>
 </tr>
 </table>
@@ -96,7 +100,7 @@ Criar uma missão educacional interativa de alta imersão para a plataforma Unoo
 3. **Engenharia de Software & Arquitetura:** modelo de dados em três camadas (Missão, Etapa, Desafio), contratos de API Zod/OpenAPI, protocolo de comunicação iframe via `postMessage`, telemetria operacional/analítica e conformidade estrita com o Art. 14 da LGPD (dados de menores).
 4. **Viabilidade Técnica do Monorepo:** caminhos reais de código em Next.js 16, NestJS, Prisma/PostgreSQL, TypeScript e Docker.
 
-O **Gerador de Missões** automatiza essa cadeia por meio de uma equipe de **54 agentes numerados na ordem de execução**, com **sete ciclos de correção automática**, bifurcações paralelas de validação e *gates* determinísticos sem inferência de LLM. A esteira **não aborta** quando um portão reprova: segue até o fim, marca como `[PROVISÓRIO]` o que derivou da parte reprovada e fecha com um diagnóstico do que travou e de quem é cada conserto.
+O **Gerador de Missões** automatiza essa cadeia por meio de **72 passos numerados na ordem de execução** — 37 agentes com LLM e 35 verificações determinísticas —, com **oito ciclos de correção automática**, bifurcações paralelas de validação, *gates* determinísticos sem inferência de LLM e **parecer humano entre as etapas**. A esteira **não aborta** quando um portão reprova: segue até o fim, marca como `[PROVISÓRIO]` o que derivou da parte reprovada e fecha com um diagnóstico do que travou e de quem é cada conserto.
 
 ```
 Briefing / Ideia (+ PDF / DOCX)
