@@ -86,6 +86,15 @@ Roteiro completo, 2 apresentadores, 5 blocos (abertura ~30s, recapitulação ~1�
 ## 12. Evidências e dados
 O que é capturado, quando, finalidade, retenção, acesso; o que NÃO é coletado; graus de medida; canal; texto livre de menor; segredo de servidor; gabarito. A Atividade guarda `disciplina` e o recorte da aula como metadados do professor (rótulo do relatório pós-aula); nunca são dado do estudante.
 
+**12a. Contrato de evidência por habilidade.** Copie da seção 4 do núcleo o contrato do foco primário (Regra 17 do P0a) e estenda-o a **toda habilidade de Computação da seção 2**, uma linha cada. Os níveis vão por extenso — Atingiu · Em processo · Não atingiu —, nunca com os círculos de veredito dos gates.
+- **Canal A:** o evento que o sistema registra (verbo + objeto), o campo do `resultado` ou do `contexto` que distingue os três níveis, e a regra ternária explícita ("servidor calcula, nunca aceita").
+- **Canal B:** a pergunta, as 3 alternativas com o nível de cada uma (sem ordem fixa: o servidor sorteia a cada exibição), o componente que a renderiza sem quebrar a imersão — do DS da seção quando existir; senão, componente local declarado como pré-requisito na seção 16, nunca apresentado como "do DS" — e a confirmação de que o estudante vê apenas "resposta enviada" ou o equivalente diegético: sem nota, sem resultado, sem sinal de acerto.
+- **Gabarito no servidor:** o mapeamento alternativa → nível vive só no servidor. O cliente envia a alternativa escolhida (identificador opaco) pela rota do módulo e nunca recebe qual alternativa corresponde a qual nível.
+- **Grau de medida:** uma resposta de Canal B é um sinal só — `indicative`, nunca `scored` sozinha (quem chuta acerta uma vez em três). Vira `scored` somada a um sinal de Canal A da mesma habilidade.
+- O Canal B vem **depois do Refletir**, como última interação, entra na conta de telas e minutos da seção 15 e, no 1º e no 2º ano, mostra as três alternativas ao mesmo tempo (critério 3.5: opção visível sobe o teto de duas para três), narradas e com imagem ou ícone (6.1). Não substitui o exercício em tela nem o registro do Refletir.
+- **Quem lê:** o nível de cada estudante chega ao professor pela tabela do módulo e pela tela dele (seção 9), como leitura da evidência daquela habilidade — nunca rótulo do estudante (8.4) nem nota (7.2), e nunca pela telemetria analítica.
+Se o núcleo não trouxe o contrato do foco primário, sinalize `[INCONSISTÊNCIA DETECTADA — o P0a precisa declarar o canal de evidência do foco primário (Regra 17)]`.
+
 ## 13. Cenários de dispositivo
 1:1 · 2–4 por dispositivo · projeção única — o que muda e se a descoberta chega.
 

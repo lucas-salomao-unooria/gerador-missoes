@@ -94,6 +94,26 @@ Com base em desenho centrado em evidência: para cada objetivo declarado, respon
 
 Objetivo sem artefato observável é objetivo não avaliável. Aponte cada um.
 
+Para cada habilidade de Computação, confira também o canal de evidência declarado na seção 12a do one-pager (A — ação do estudante; B — pergunta de múltipla escolha depois do Refletir; ou A + B).
+
+**Canal A:**
+1. A ação observável exercita de fato a habilidade, ou é proxy fraco (curtir ≠ avaliar credibilidade)?
+2. A regra ternária (Atingiu · Em processo · Não atingiu) distingue os três níveis pela ação — ou o Em processo é um balde onde cai tudo que não é extremo?
+3. O estudante chega a Atingiu por tentativa, sorte ou repetição mecânica, sem demonstrar a habilidade?
+
+**Canal B:**
+1. A pergunta testa a habilidade declarada — não compreensão de texto, memória da missão ou opinião pessoal?
+2. As 3 alternativas discriminam os três níveis? A de Em processo é parcialmente correta e plausível — não é "errada de outro jeito" nem idêntica à de Atingiu com uma palavra a menos?
+3. A de Não atingiu é equívoco genuíno que alguém sem domínio cometeria — não um absurdo que ninguém marca?
+4. Um estudante que não fez a missão acerta a de Atingiu só pela formulação? Se sim, a pergunta não discrimina.
+5. Com três alternativas, quem chuta acerta uma vez em três: a resposta sozinha é indício, não medida. Se o one-pager a trata como medida suficiente da habilidade, aponte.
+
+**Para os dois canais:**
+- Habilidade sem canal declarado é habilidade não avaliável. Aponte.
+- Habilidade com canal mas sem regra ternária (Canal A) ou sem alternativas mapeadas (Canal B) é evidência incompleta. Aponte.
+- Canal B no lugar do exercício em tela não é evidência: é questionário. Aponte.
+- No 1º e no 2º ano, o Canal B só é adequado com as três alternativas visíveis ao mesmo tempo, narradas e com imagem ou ícone — alternativa que exige ler sozinho, ou que some da tela enquanto ele escolhe, não é. Aponte.
+
 ### Eixo 6 — Equidade e acessibilidade
 
 - Referências culturais, de consumo ou de experiência que parte da turma não compartilha.

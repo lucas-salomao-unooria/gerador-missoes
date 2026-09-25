@@ -13,6 +13,11 @@ O que motivou cada uma, medido nas 14 primeiras execuções:
   habilidade era declarada e nada a media.
 - O gabarito "vive no servidor" aparecia em prosa em 6 das 14 specs, e é critério BLOQUEANTE
   (PED-04) que nenhuma verificação mecânica tocava.
+- A matriz terminava numa coluna «Marcador» que dizia só «ternário»: a escala sem a regra que
+  separa Atingiu, Em processo e Não atingiu, deixada para quem implementa. Desde a rubrica v1.21
+  (revisão do PO, 24/09/2026) cada linha diz o canal da evidência — ação (A), pergunta (B) ou os
+  dois — e a regra por extenso. Se as três alternativas ficam visíveis ao mesmo tempo no 1º–2º
+  ano (critério 3.5) é pergunta de tela, e fica com os pareceres, não com este gate.
 
 Como em `tools/rastro.py` aprendemos que prosa engana, aqui só se lê TABELA com cabeçalho
 reconhecido e identificador entre crases. Texto corrido é ignorado, sem fallback.
@@ -35,6 +40,10 @@ _RE_MOMENTO = re.compile(r"\bE[0-6]-(?:ALU|PROF|SIS)-\d{2}\b|\b(desafiar|navegar
 _RE_GABARITO = re.compile(r"^\s*[-*]\s*[`*_]*gabarito_servidor[`*_]*\s*:\s*[`*_]*\s*(sim|n[ãa]o)\b", re.I | re.M)
 _RE_GABARITO_CLIENTE = re.compile(r"gabarito[^\n]{0,90}\b(no cliente|bundle|front-?end|navegador|localstorage)", re.I)
 _RE_LINHA_TABELA = re.compile(r"^\s*\|(.+)\|\s*$", re.M)
+#: A, B ou os dois — tolera «Canal A», «A (ação)», «A + B». Letra maiúscula: «a ação» não é canal.
+_RE_CANAL = re.compile(r"^[\W_]*(?:(?i:canal)\s+)?(A\s*\+\s*B|B\s*\+\s*A|A|B)(?!\w)")
+#: Os três níveis, sobre o texto normalizado (sem acento, minúsculo). «Não atingiu» contém «atingiu».
+_NIVEIS = (re.compile(r"(?<!nao )\batingiu\b"), re.compile(r"\bem processo\b"), re.compile(r"\bnao atingiu\b"))
 
 
 def _norm(texto: str) -> str:
@@ -134,7 +143,8 @@ def validar(spec: str) -> Dict[str, Any]:
         if linha is None:
             falha("habilidade-sem-matriz",
                   f"`{c}` está no bloco 11 e não tem linha na matriz de evidência. Cabeçalho: "
-                  f"`| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Marcador |`.")
+                  f"`| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | "
+                  f"Canal de evidência | Regra ternária |`.")
             continue
         if not _RE_MOMENTO.search(linha.get("momento em tela", "")):
             falha("habilidade-sem-momento",
@@ -144,6 +154,16 @@ def validar(spec: str) -> Dict[str, Any]:
             falha("habilidade-sem-medida",
                   f"`{c}`: nenhuma medida do bloco 9 ligada. Habilidade declarada que nada mede é "
                   f"currículo no papel — some no relatório do professor.")
+        canal = _RE_CANAL.match(linha.get("canal de evidencia", "").strip())
+        if not canal:
+            falha("habilidade-sem-canal",
+                  f"`{c}`: a coluna «Canal de evidência» não diz `A` (ação), `B` (pergunta) nem `A + B`. "
+                  f"Sem canal, quem implementa não sabe de onde sai o nível — e inventa a classificação.")
+        regra = _norm(linha.get("regra ternaria", ""))
+        if not all(n.search(regra) for n in _NIVEIS):
+            falha("regra-ternaria-ausente",
+                  f"`{c}`: a coluna «Regra ternária» não diz o que separa Atingiu, Em processo e Não atingiu, "
+                  f"por extenso. Sem a regra, a matriz declara a escala e deixa a classificação para quem implementa.")
 
     # (c) gabarito no servidor — PED-04 é bloqueante e nada o conferia
     ficha = _RE_GABARITO.search(texto)
@@ -176,7 +196,7 @@ def relatorio(resultado: Dict[str, Any], missao: str = "") -> str:
             marca = "❌" if a["severidade"] == "bloqueio" else "⚠️"
             linhas.append(f"- {marca} **{a['codigo']}** — {a['resumo']}")
     else:
-        linhas.append("Nenhum achado: todo grau `scored` tem dois sinais, toda habilidade tem momento e medida, e o gabarito está declarado no servidor.")
+        linhas.append("Nenhum achado: todo grau `scored` tem dois sinais, toda habilidade tem momento, medida, canal e regra ternária, e o gabarito está declarado no servidor.")
     linhas += ["", "```json", json.dumps(
         {"agente": AGENTE, "missao": missao, "status": resultado["status"], "achados": resultado["achados"]},
         ensure_ascii=False, indent=2), "```"]

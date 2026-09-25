@@ -1,4 +1,4 @@
-# Critérios de Experiência do Estudante — Rubrica v1.20 — Categorias 3 e 6
+# Critérios de Experiência do Estudante — Rubrica v1.21 — Categorias 3 e 6
 
 Ver `literatura-cognitiva.md` para a fundamentação de cada cap numérico e a classificação dado-direto vs. extrapolação.
 

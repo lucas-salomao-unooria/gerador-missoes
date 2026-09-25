@@ -1,4 +1,4 @@
-# Critérios de profundidade pedagógica — Rubrica v1.20 — o conceito do material e a anatomia do aha
+# Critérios de profundidade pedagógica — Rubrica v1.21 — o conceito do material e a anatomia do aha
 
 **Para que existe.** Em 24/09/2026 o time pedagógico devolveu as missões geradas por serem rasas: não trabalhavam os conceitos do material do bimestre, e o aha não tinha ápice. A esteira tinha 73 critérios de estrutura, plataforma, currículo e carga, e um só sobre o aha — o 2.4, "dá para resumir numa frase?", em que qualquer missão rasa passa. Esta rubrica é a régua que faltava. Ela é lida por quem **desenha** (ideação, núcleo narrativo) e por quem **julga** (juiz de profundidade), para que os dois usem as mesmas palavras.
 
