@@ -222,6 +222,7 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
     # telas de cada evento, para o casamento KPI ↔ evento ↔ tela
     tela_do_evento: Dict[str, set] = {}
     payload_do_evento: Dict[str, str] = {}
+    onde_do_sinal: Dict[str, str] = {}
     verbo_objeto: Dict[str, tuple] = {}
     for linha in tab_evt:
         for i in _RE_EVT.findall(" ".join(linha.values())):
@@ -242,9 +243,22 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
         telas = set(_RE_TELA.findall(" ".join(linha.values())))
         if not telas:
             telas = _etapas(_col(linha, "quando dispara"))
+        # O payload vem só de tabela com coluna `resultado`/`contexto`, e SOMA entre tabelas. Antes a
+        # última tabela ganhava: a «Sinais do professor» (`| Sinal | Objeto | Quando grava | Onde fica |`)
+        # zerava o payload dos mesmos ids, e o gate dizia «carrega nenhum campo» (29/09/2026).
+        tem_payload = any("resultado" in k or "contexto" in k for k in linha)
         for i in ids:
-            tela_do_evento.setdefault(i.upper(), set()).update(telas)
-            payload_do_evento[i.upper()] = _col(linha, "resultado") + " " + _col(linha, "contexto")
+            iu = i.upper()
+            tela_do_evento.setdefault(iu, set()).update(telas)
+            if iu.startswith("EVT-P"):
+                # `EVT-P*` não passa por `track`: é a escrita de uma coluna do módulo, sem payload —
+                # o que o redator escrever em `resultado` para ele é ficção. Guarda-se onde ele grava.
+                onde = _col(linha, "onde fica") or _col(linha, "onde e lido")
+                if onde and ("onde fica" in " ".join(linha) or iu not in onde_do_sinal):
+                    onde_do_sinal[iu] = onde.strip()
+            elif tem_payload:
+                payload_do_evento[iu] = (payload_do_evento.get(iu, "") + " " + _col(linha, "resultado")
+                                         + " " + _col(linha, "contexto"))
 
     for linha in tab_kpi:
         kpi = (_RE_KPI.search(" ".join(linha.values())) or [None])
@@ -320,17 +334,39 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
                     falha("kpi-tela-divergente",
                           f"{nome} mede {sorted(telas_kpi)} e é alimentado por `{e}`, que dispara em "
                           f"{sorted(telas_evt)}. O número vai sair e não vai medir o que o KPI diz. {saida}")
-            calculo = _col(linha, "como calcula", "calculo")
-            campos = re.findall(r"(?:resultado|contexto)\.(\w+)", calculo)
-            if campos:
-                disponiveis = set(re.findall(r'"(\w+)"\s*:', payload_do_evento.get(e, "")))
-                faltando = [c for c in campos if c not in disponiveis]
-                if faltando:
-                    carrega = ", ".join(f"`{c}`" for c in sorted(disponiveis)) or "nenhum campo"
-                    falha("payload-nao-computa",
-                          f"{nome} calcula com `{', '.join(faltando)}`, que `{e}` não carrega. `{e}` carrega "
-                          f"{carrega}: reescreva o cálculo com eles, ou acrescente o campo ao evento. "
-                          f"Coluna de tabela do módulo não é campo do evento.")
+
+        # O campo do cálculo tem de estar em ALGUM evento que o cálculo usa — não em todos os da célula.
+        # Cobrar cada campo de cada evento acusava `count(EVT-U05 com resultado.codigo) vs count(EVT-U04
+        # com resultado.segundos_sem_acao)` duas vezes, e um evento listado na célula mas fora da conta
+        # (KPI-06 da exp01ef1b, 29/09/2026) pagava por um campo que ninguém pediu a ele.
+        calculo = _col(linha, "como calcula", "calculo")
+        campos = list(dict.fromkeys(re.findall(r"(?:resultado|contexto)\.(\w+)", calculo)))
+        usados = list(dict.fromkeys(x.upper() for x in _RE_EVT.findall(calculo))) or eventos
+        usados = [x for x in usados if not tab_evt or x in tela_do_evento]
+        if campos and usados:
+            sinais_p = [x for x in usados if x.startswith("EVT-P")]
+            carregam = {x: set(re.findall(r'"(\w+)"\s*:', payload_do_evento.get(x, "")))
+                        for x in usados if x not in sinais_p}
+            disponiveis = set().union(*carregam.values())
+            faltando = [c for c in campos if c not in disponiveis]
+            if faltando:
+                partes = []
+                if carregam:
+                    partes.append("; ".join(
+                        f"`{x}` carrega {', '.join(f'`{c}`' for c in sorted(cs)) or 'nenhum campo'}"
+                        for x, cs in carregam.items())
+                        + ": reescreva o cálculo com eles, ou acrescente o campo ao evento que o mede.")
+                if sinais_p:
+                    onde = "; ".join(f"`{x}` → {onde_do_sinal[x]}" for x in sinais_p if x in onde_do_sinal)
+                    partes.append(
+                        f"{', '.join(f'`{x}`' for x in sinais_p)} "
+                        f"{'é sinal' if len(sinais_p) == 1 else 'são sinais'} do professor: o hub não tem `track`, "
+                        f"o sinal é a escrita de uma coluna do módulo e não tem `resultado` nem `contexto`. "
+                        f"Calcule com a coluna onde ele grava" + (f" ({onde})" if onde else "")
+                        + ", e não invente campo de payload para ele.")
+                falha("payload-nao-computa",
+                      f"{nome} calcula com `{', '.join(faltando)}`, que nenhum evento do cálculo carrega. "
+                      + " ".join(partes) + " Coluna de tabela do módulo não é campo do evento.")
 
         baseline = _col(linha, "baseline", "linha de base")
         if _RE_BASELINE_ZERO.match(baseline) and not _RE_SEM_BASELINE.search(baseline):

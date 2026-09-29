@@ -2849,6 +2849,43 @@ def test_kpi_aponta_para_algo_que_o_mede():
     print("   ✓ KPI: pergunta, decisão, corte, evento na tela certa e baseline honesto — tudo conferido")
 
 
+def test_kpi_payload_por_calculo_e_evt_p_sem_payload():
+    """PRD da exp01ef1b (Detetive da Foto, 29/09/2026): 5 bloqueios `payload-nao-computa`, 3 falsos.
+
+    O gate cobrava cada campo do cálculo de cada evento da célula (KPI-04 com U04 e U05, cada campo
+    no seu), e a tabela «Sinais do professor» zerava o payload dos `EVT-P`. Os 2 que ficaram são
+    reais: `resultado.tokens` num `EVT-P02` — o sinal do professor é coluna, não tem payload.
+    """
+    from tools.kpis import validar_kpis
+
+    cab = "| KPI | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |\n|---|---|---|---|---|---|---|---|---|---|\n"
+    kpi = "| {id} | pergunta? | decide | missao | — | {evt} | {calc} | sem baseline — primeira medição | 1 | piloto |\n"
+    eventos = (
+        "\n| EVT | Verbo | Objeto | Quando dispara | `resultado` | `contexto` | Onde é lido |\n|---|---|---|---|---|---|---|\n"
+        "| `EVT-U02` | progressed | etapa:entrar | Ao entrar em E2 | `{\"etapa\": \"E2\"}` | `{\"pedagogical_role\": \"core_action\"}` | painel de produto (PostHog) |\n"
+        "| `EVT-U04` | interacted | aviso:inatividade | Aviso na E3 | `{\"segundos_sem_acao\": 20}` | `{\"etapa\": \"E3\"}` | painel de produto (PostHog) |\n"
+        "| `EVT-U05` | attempted | erro:exibir | Erro na E4 | `{\"codigo\": \"sem-sinal\"}` | `{\"etapa\": \"E4\"}` | painel de produto (PostHog) |\n"
+        "| `EVT-P02` | interacted | conteudo:gerar | POST gerar-conteudo | `{\"tokens\": 3500}` | — | `exp01ef1b_conteudo_turma.geracoes` |\n"
+        "\n| Sinal | Objeto | Quando grava | Onde fica | Responde |\n|---|---|---|---|---|\n"
+        "| `EVT-P02` | `conteudo:gerar` | A cada POST | `exp01ef1b_conteudo_turma.tokens_usados` (soma) | T20 |\n")
+
+    def achados(evt, calc):
+        prd = cab + kpi.format(id="KPI-01", evt=evt, calc=calc) + eventos
+        return [a for a in validar_kpis(prd)["achados"] if a["codigo"] == "payload-nao-computa"]
+
+    # cada campo no evento que o carrega: não é defeito
+    assert not achados("`EVT-U04`, `EVT-U05`", "count(`EVT-U05` com `resultado.codigo`) vs count(`EVT-U04` com `resultado.segundos_sem_acao`)")
+    # evento na célula que o cálculo não usa não paga pelo campo
+    assert not achados("`EVT-U02`, `EVT-U04`", "sum(`EVT-U04` com `resultado.segundos_sem_acao`)")
+    # campo que nenhum evento do cálculo carrega continua pego
+    assert achados("`EVT-U04`", "count(`EVT-U04` com `resultado.codigo`)")
+    # `EVT-P` não tem payload, mesmo que o redator o escreva na tabela — e a mensagem diz onde ele grava
+    msg = achados("`EVT-P02`", "sum(`resultado.tokens` em `EVT-P02`)")
+    assert msg and "sinal do professor" in msg[0]["resumo"] and "tokens_usados" in msg[0]["resumo"], msg
+    # o cálculo com a coluna passa
+    assert not achados("`EVT-P02`", "sum(`exp01ef1b_conteudo_turma.tokens_usados` de `EVT-P02`)")
+
+
 def test_custo_e_tendencia_da_esteira():
     """Quanto custa gerar uma missão, e estamos melhorando? Duas perguntas sem resposta até agora."""
     import tempfile, pathlib as _p
