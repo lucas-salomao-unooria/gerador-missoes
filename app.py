@@ -45,6 +45,7 @@ from pipeline.session_store import (
     formatar_status_label,
     list_saved_sessions,
     load_saved_session,
+    identificador_da_missao,
     nome_do_zip_de_artefatos,
     resolve_session_dir,
 )
@@ -1532,7 +1533,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
             download_button_lazy(
                 "📥 Baixar estado completo (.json)",
                 lambda: json.dumps(result.state, indent=2, ensure_ascii=False, default=str),
-                file_name=f"estado_{sid[:12]}.json",
+                file_name=f"estado_{identificador_da_missao(result.state, sid)}.json",
                 mime="application/json",
                 key=f"estado_{prefix}",
             )
@@ -1561,7 +1562,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
         download_button_lazy(
             "📥 PRD (Markdown)",
             lambda: getattr(result, "prd_gerado", None) or result.final_output,
-            file_name=f"PRD_{sid[:8]}.md",
+            file_name=f"PRD_{identificador_da_missao(result.state, sid)}.md",
             mime="text/markdown",
             key=f"prd_{prefix}",
         )
@@ -1569,7 +1570,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
         download_button_lazy(
             "📥 Spec da missão",
             lambda: result.state.get("spec_missao") or "(spec não gerada)",
-            file_name=f"spec_{sid[:8]}.md",
+            file_name=f"spec_{identificador_da_missao(result.state, sid)}.md",
             mime="text/markdown",
             key=f"spec_{prefix}",
         )
@@ -1589,7 +1590,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
         download_button_lazy(
             "📥 Estado completo (JSON)",
             _exportar_estado,
-            file_name=f"missao_{sid[:8]}.json",
+            file_name=f"missao_{identificador_da_missao(result.state, sid)}.json",
             mime="application/json",
             key=f"state_{prefix}",
         )

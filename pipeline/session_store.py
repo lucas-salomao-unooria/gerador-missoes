@@ -770,8 +770,8 @@ def _zip_timestamp(path: Path) -> Tuple[int, int, int, int, int, int]:
     return (mtime.tm_year, mtime.tm_mon, mtime.tm_mday, mtime.tm_hour, mtime.tm_min, mtime.tm_sec)
 
 
-def nome_do_zip_de_artefatos(state: Dict[str, Any], session_id: str) -> str:
-    """`artefatos_<slug>.zip` — `artefatos_exp09ef1b.zip`, ano e bimestre da missão.
+def identificador_da_missao(state: Dict[str, Any], session_id: str) -> str:
+    """O que vai no nome dos downloads: o slug (`exp09ef1b`, ano e bimestre da missão).
 
     O slug sai da spec, do one-pager ou do PRD, nessa ordem. Missão que ainda não tem nenhum
     deles (produto gerando) cai no id da sessão, como era antes de 06/10/2026.
@@ -779,8 +779,13 @@ def nome_do_zip_de_artefatos(state: Dict[str, Any], session_id: str) -> str:
     for chave in ("spec_missao", "one_pager", "prd_final"):
         slug = extrair_slug(_safe_str((state or {}).get(chave)))
         if slug:
-            return f"artefatos_{slug}.zip"
-    return f"artefatos_{(session_id or 'session')[:12]}.zip"
+            return slug
+    return (session_id or "session")[:12]
+
+
+def nome_do_zip_de_artefatos(state: Dict[str, Any], session_id: str) -> str:
+    """`artefatos_<slug>.zip` — `artefatos_exp09ef1b.zip`."""
+    return f"artefatos_{identificador_da_missao(state, session_id)}.zip"
 
 
 def create_session_zip(run_dir_path: str | Path) -> bytes:
