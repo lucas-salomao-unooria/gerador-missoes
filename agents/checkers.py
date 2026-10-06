@@ -836,6 +836,75 @@ class JuizDeAchadosAgent(BaseAgent):
                     actions=EventActions(state_delta=delta))
 
 
+class FidelidadeCheckAgent(BaseAgent):
+    """O que o PO pediu e o briefing fixou está nos documentos? (`tools/fidelidade.py`)
+
+    O código monta o checklist — TRAVAS, AJUSTES e perguntas de VALIDAÇÃO de todos os pedidos de
+    refazer, frases entre aspas, e o direcionamento, os passos e os elementos fixos do briefing —, o
+    juiz (sub-agente) responde item a item com citação, e o código confere frase literal e citação.
+    Sem nada a conferir, o juiz não roda. Pedido do PO sem prova é 🔴: no fim de produto, isso
+    recusa o *de acordo*; no laço do núcleo, devolve o núcleo ao autor com o relatório.
+    """
+
+    status_key: str
+    report_key: str
+    rotulo: str = "Fidelidade ao pedido do PO e ao briefing"
+    onde: str = ""
+    documentos: List[str] = Field(default_factory=lambda: ["nucleo_narrativo", "one_pager", "spec_missao"])
+    entrada_key: str = "fidelidade_entrada"
+    documentos_key: str = "fidelidade_documentos"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import fidelidade as fid
+
+        state = ctx.session.state
+        pedidos = [(str(p.get("origem") or "pedido"), str(p.get("texto") or ""))
+                   for p in (state.get("pedidos_do_po") or []) if isinstance(p, dict)]
+        corrente = str(state.get("pedido_correcao", "") or "")
+        if corrente.strip() and not any(_norm_simples(t)[:200] in _norm_simples(corrente) for _, t in pedidos):
+            pedidos.append(("pedido de correção desta execução", corrente))
+        itens = fid.montar_checklist(pedidos, str(state.get("briefing", "") or ""))
+        docs = {k: str(state.get(k, "") or "") for k in self.documentos if str(state.get(k, "") or "").strip()}
+        missao = extrair_slug(docs.get("spec_missao", "") or docs.get("nucleo_narrativo", "")) or ""
+
+        saida = ""
+        julgaveis = fid.para_o_juiz(itens)
+        if julgaveis and docs and self.sub_agents:
+            entrada = json.dumps(julgaveis, ensure_ascii=False, indent=1)
+            corpo = "\n\n".join(f"### Documento `{k}`\n\n{v}" for k, v in docs.items())
+            state[self.entrada_key] = entrada
+            state[self.documentos_key] = corpo
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                        actions=EventActions(state_delta={self.entrada_key: entrada, self.documentos_key: corpo}))
+            juiz = self.sub_agents[0]
+            async for evento in juiz.run_async(ctx):
+                yield evento
+            saida = str(ctx.session.state.get(getattr(juiz, "output_key", "") or "", "") or "")
+
+        resultado = fid.aplicar(itens, saida, docs)
+        relatorio = fid.relatorio(resultado, itens, missao, self.onde)
+        envelope = extrair_envelope(relatorio) or {}
+        bloqueios = sum(1 for a in resultado["achados"] if a["severidade"] == "bloqueio")
+        icone = {"aprovado": "✅", "amarelo": "🟡", "bloqueado": "⛔"}[resultado["status"]]
+        msg = (f"{icone} {self.rotulo}{f' ({self.onde})' if self.onde else ''}: {len(itens)} item(ns), "
+               f"{len(resultado['conferidos'])} com prova, {bloqueios} bloqueio(s), "
+               f"{len(resultado['achados']) - bloqueios} outro(s) achado(s).")
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta={
+                        self.report_key: relatorio,
+                        self.status_key: resultado["status"],
+                        f"{self.status_key}_envelope": envelope,
+                        self.entrada_key: "",
+                        self.documentos_key: "",
+                    }))
+
+
+def _norm_simples(texto: str) -> str:
+    return re.sub(r"\s+", " ", (texto or "").lower()).strip()
+
+
 #: Tickets que um gate emitiu e nenhum agente pôde executar. O dossiê os lista como pendência humana.
 KEY_TICKETS_SEM_ROTA = "tickets_sem_rota"
 
