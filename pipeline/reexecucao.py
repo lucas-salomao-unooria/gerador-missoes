@@ -2,9 +2,10 @@
 
 Cada mensagem no chat do gerador é uma missão nova: sessão ADK vazia, pasta nova, tudo do zero.
 Este módulo é o que permite **corrigir** uma missão existente: carrega o `estado.json` da pasta,
-descarta o que a etapa pedida (e as seguintes) produziram, injeta o pedido de correção numa chave
-de estado que todo agente enxerga (`pedido_correcao`, ver `agents/base.py`) e deixa o runner
-rodar só essas etapas na mesma pasta. Usado por `scripts/rerodar_etapa.py` (CLI) e pelo app.
+descarta o que a etapa pedida (e as seguintes) produziram — guardando cada documento autoral como
+base em `anterior_<chave>`, para o autor editar em vez de reescrever —, injeta o pedido de correção
+numa chave de estado que todo agente enxerga (`pedido_correcao`, ver `agents/base.py`) e deixa o
+runner rodar só essas etapas na mesma pasta. Usado por `scripts/rerodar_etapa.py` (CLI) e pelo app.
 
 Só a parte determinística vive aqui: o que apagar, como preservar a herança dos gates que não
 foram refeitos, backup e merge do `conversa.json`. Nada de LLM.
@@ -115,6 +116,19 @@ CHAVES_TRANSVERSAL = frozenset({
 CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_rota", "juiz_achados_entrada",
                              KEY_AGENTES_DEGRADADOS})
 
+#: Documentos escritos por um AUTOR (não por gate). Quando uma reexecução os apaga, a versão que
+#: existia vai para `anterior_<chave>` e o autor a recebe no prompt (`agents/base.py`) como base.
+#: Até 06/10/2026 o pedido dizia "o que não foi pedido continua como estava", mas o autor não via
+#: como estava: apagado o documento, ele escrevia do zero, e a ideação sorteava outro mecanismo.
+#: Acrescentar uma pergunta de evidência à spec devolvia outra missão inteira.
+CHAVES_AUTORAIS = frozenset({
+    "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao", "one_pager_resumido",
+    "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
+    "camada_caa", "wireframes_cobertura", "copy_strings_revisada", "prototipo_html",
+    "handoff_dev", "brief_assets", "prd_final", "one_pager_pedagogico",
+})
+PREFIXO_ANTERIOR = "anterior_"
+
 CHAVES_POR_ETAPA: Dict[str, frozenset] = {
     "produto": CHAVES_PRODUTO,
     "spec": CHAVES_SPEC,
@@ -218,8 +232,9 @@ class PedidoCorrecao:
                      "spec": " (e design e dev, que derivam dela)", "design": " (e dev, que deriva dele)"}.get(etapa, "")
         linhas = [
             f"Esta execução refaz a etapa `{etapa}`{seguintes} de uma missão já gerada, a pedido de uma pessoa. "
-            "Os documentos das etapas anteriores foram preservados e são seus insumos; os da sua etapa foram "
-            "descartados e você os escreve de novo.",
+            "Os documentos das etapas anteriores foram preservados e são seus insumos. Se você é autor de um "
+            "documento desta etapa, a versão que existia vem na seção \"Sua versão anterior deste documento\": "
+            "é dela que você parte, não de uma folha em branco.",
             "",
             "### Pedido, na íntegra",
             "",
@@ -236,9 +251,11 @@ class PedidoCorrecao:
             "",
             "### Como agir",
             "",
-            "1. Aplique o pedido **no que é seu** — no documento que você produz. Se o pedido não toca o seu "
-            "documento, refaça-o normalmente a partir dos insumos, que podem ter mudado.",
-            "2. Não invente o resto nem amplie o escopo: o que não foi pedido continua como estava.",
+            "1. Aplique o pedido **no que é seu** — no documento que você produz, editando a versão anterior. Se o "
+            "pedido não toca o seu documento, mantenha a versão anterior e ajuste só o que os insumos, se mudaram, "
+            "obrigam a ajustar.",
+            "2. Não invente o resto nem amplie o escopo: o que não foi pedido continua como estava — mesma mecânica, "
+            "mesma narrativa, mesmos nomes, etapas, telas e números.",
             "3. Registre no seu documento, numa seção curta **\"O que mudou nesta versão\"** (ou no changelog, se o "
             "formato já tiver um), o que você alterou por causa do pedido — ou \"nada: o pedido não toca este documento\".",
         ]
@@ -313,11 +330,56 @@ def recalcular_heranca(estado: Dict[str, Any], etapa: str) -> Dict[str, Any]:
     return novo
 
 
+def bloco_versao_anterior(chave: str, documento: str) -> str:
+    """Valor de `anterior_<chave>`: a versão que existia, com o que o autor faz com ela."""
+    return "\n".join([
+        "## Sua versão anterior deste documento",
+        "",
+        "Esta etapa está sendo refeita sobre uma missão que já existia. Abaixo está o documento que ocupava o seu "
+        "lugar na execução anterior — a versão que as pessoas já leram e revisaram.",
+        "",
+        "1. **Parta dela.** Mantenha mecânica, narrativa, nomes, personagens, etapas, telas, textos e números como "
+        "estão — palavra por palavra quando nada obriga a mudar.",
+        "2. **Mude só o que tem motivo:** o que o pedido de correção pede; o que os seus insumos (documentos das "
+        "etapas anteriores, notas de passagem) mudaram e obrigam a acompanhar; o que um gate desta execução "
+        "reprovou. O tamanho da mudança é o do motivo: se o pedido manda refazer uma parte inteira, refaça essa "
+        "parte — e só ela.",
+        "3. Se o documento já foi reescrito nesta execução (você é revisor, ou está numa rodada seguinte de um "
+        "loop), trabalhe sobre a versão atual e use esta só para conferir que nada fora do motivo mudou.",
+        "4. Não reescreva por estilo nem melhore o que ninguém pediu: cada mudança sem motivo é uma missão "
+        "diferente da que foi aprovada, e alguém vai ter de revisá-la de novo.",
+        "",
+        f'<versao_anterior chave="{chave}">',
+        documento.strip(),
+        "</versao_anterior>",
+    ])
+
+
+def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], remover: frozenset) -> None:
+    """Grava em `limpo` a base de cada documento autoral que a reexecução vai reescrever.
+
+    Documento que não vai ser reescrito perde a base velha. Documento já apagado por uma
+    reexecução anterior (produto refeito apaga design e dev, que só rodam no próximo *iniciar*)
+    conserva a base que aquela reexecução guardou — senão o design chegaria sem nada.
+    """
+    for chave in CHAVES_AUTORAIS:
+        anterior = PREFIXO_ANTERIOR + chave
+        if chave not in remover:
+            limpo.pop(anterior, None)
+            continue
+        # a spec que o autor escreveu é a do Gate 0; `spec_missao` pode já trazer a consolidação do D0
+        atual = estado.get("spec_missao_gate0") if chave == "spec_missao" else None
+        atual = str(atual or estado.get(chave) or "").strip()
+        if atual:
+            limpo[anterior] = bloco_versao_anterior(chave, atual)
+
+
 def preparar_estado(
     estado: Dict[str, Any], etapa: str, pedido_md: Optional[str] = None
 ) -> Tuple[Dict[str, Any], List[str]]:
     """Estado pronto para reexecutar `etapa`: sem o que ela produz, com herança recalculada e o pedido.
 
+    O que ela produz sai, mas cada documento autoral fica como base em `anterior_<chave>`.
     Pura, sem I/O. Devolve `(estado_limpo, chaves_removidas)`.
     """
     if etapa not in CHAVES_POR_ETAPA:
@@ -325,6 +387,7 @@ def preparar_estado(
     remover = CHAVES_POR_ETAPA[etapa] | CHAVES_TRANSVERSAL | CHAVES_EXECUCAO | {KEY_PEDIDO_CORRECAO}
     removidas = sorted(k for k in estado if k in remover)
     limpo = {k: v for k, v in estado.items() if k not in remover and not str(k).startswith("temp:")}
+    _guardar_versoes_anteriores(estado, limpo, remover)
     if etapa == "design" and limpo.get("spec_missao_gate0"):
         # o D0 consolida a spec por cima de `spec_missao`; para refazer o design, volta à do Gate 0
         limpo["spec_missao"] = limpo["spec_missao_gate0"]
