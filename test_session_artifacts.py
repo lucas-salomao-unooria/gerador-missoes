@@ -658,6 +658,15 @@ class TestSessionZip(unittest.TestCase):
         # produto ainda gerando: sem documento com slug, fica o id da sessão
         self.assertEqual(nome_do_zip_de_artefatos({}, "session_4e6cf385abcdef"), "artefatos_session_4e6c.zip")
 
+    def test_downloads_avulsos_usam_o_mesmo_identificador(self):
+        from pipeline.session_store import identificador_da_missao
+
+        self.assertEqual(identificador_da_missao({"spec_missao": "slug: exp09ef1b"}, "session_4e6cf385"), "exp09ef1b")
+        self.assertEqual(identificador_da_missao({"spec_missao": "", "prd_final": "exp02ef3b"}, "s"), "exp02ef3b")
+        self.assertEqual(identificador_da_missao({}, ""), "session")
+        app = (Path(__file__).parent / "app.py").read_text(encoding="utf-8")
+        self.assertNotIn("sid[:", app, "download nomeado pelo id da sessão em vez do slug")
+
     def test_zip_contains_visible_files_only(self):
         names = self._names(create_session_zip(self.run_dir))
         self.assertEqual(names, ["PRD.md", "produto/00-one-pager.md"])
