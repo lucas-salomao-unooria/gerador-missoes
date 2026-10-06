@@ -79,6 +79,7 @@ CHAVES_DESIGN = frozenset({
     "qa_entregaveis_report", "design_status", "design_status_envelope", "qa_design_rodada",
     "prototipo_lint_report", "prototipo_lint_status", "prototipo_lint_status_envelope",
     "rastro_design_report", "rastro_design_status", "rastro_design_status_envelope",
+    "consistencia_report", "consistencia_status", "consistencia_status_envelope",
 }) | CHAVES_DEV
 #: `spec_missao_gate0` tem de cair: o split do D0 só grava esse backup se ele não existir
 #: (`agents/checkers.py`, SecaoSplitAgent) — senão a spec velha seria preservada como "original".
@@ -185,6 +186,7 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "QA de entregáveis (design)": "design",
     "Retrabalho de design": "design",
     "Rastro de lacunas do design": "design",
+    "Coerência entre documentos": "design",
     "Ficha do manifesto": "dev",
     "Contrato de telemetria e arquitetura": "dev",
     "Handoff de dev": "dev",

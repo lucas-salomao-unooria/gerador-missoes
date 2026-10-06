@@ -96,6 +96,16 @@ inventário estão nele, que não sobrou marcador de rascunho, e que todo nome d
 não reabra, não reconfira, e **não aprove D8 contra ele**. O que cabe a você é o que a máquina
 não vê: se a tela está boa.
 
+## Coerência entre documentos (determinística, já rodada)
+
+{consistencia_report?}
+
+Este relatório leu jornada, fluxo, copy revisada e o texto do protótipo contra o `## Glossário
+canônico` da spec: nome de entidade, papel e idade de personagem, número com unidade, rótulo de
+botão e nome de arquivo. Variante proibida é ⛔ — enderece o ticket ao dono que o relatório nomeia
+(`jornada`, `fluxo`, `copy-ptbr-revisao`; o protótipo se refaz sozinho depois de qualquer retrabalho).
+Não proponha um terceiro nome: o glossário é a fonte, e se ele estiver errado o conserto é na spec.
+
 ### D3b — Spoiler a jusante (a descoberta continua sendo do estudante?)
 
 O micro-gate testa spoiler **no núcleo**, e depois disso nada testava: a copy, a tela e o

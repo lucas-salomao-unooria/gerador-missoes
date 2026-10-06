@@ -654,7 +654,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager
+    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager | consistencia
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -708,13 +708,22 @@ class RastroCheckAgent(BaseAgent):
             resultado = kp.validar_kpis(str(state.get("prd_final", "") or ""),
                                         str(state.get(self.spec_key, "") or ""))
             relatorio = kp.relatorio(resultado, missao)
+        elif self.modo == "consistencia":
+            # Jornada, fluxo, copy revisada e protótipo contra o glossário canônico da spec. O mesmo
+            # órgão com quatro nomes e o beneficiário de 14 anos virando coordenador (exp09ef1b) eram
+            # defeitos de documento lido sozinho: cada um estava bem escrito, nenhum batia com o outro.
+            from tools import consistencia as cons
+
+            resultado = cons.validar_estado(dict(state))
+            relatorio = cons.relatorio(resultado, missao)
         elif self.modo == "prd":
             # Dois exames no mesmo passo: os marcadores que o redator deixou (lacunas) e as
             # contradições que ele não viu (consistência). Um PRD pode não ter lacuna nenhuma e
             # ainda declarar dois prefixos de tabela ou deixar um requisito P0 sem teste — e é o
             # segundo caso que faz quem codifica escolher um caminho ao acaso.
             r_lacunas = varrer_lacunas(self.fontes, dict(state))
-            r_consistencia = validar_prd(str(state.get("prd_final", "") or ""))
+            r_consistencia = validar_prd(str(state.get("prd_final", "") or ""),
+                                         spec=str(state.get(self.spec_key, "") or ""))
             relatorio = (
                 relatorio_lacunas(r_lacunas, self.rotulo, missao, agente=self.agente)
                 + "\n\n---\n\n"

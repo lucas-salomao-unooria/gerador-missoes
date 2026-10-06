@@ -70,7 +70,7 @@ KNOWN_STATE_KEYS = {
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
     "rastro_spec_status", "rastro_spec_report", "rastro_design_status", "rastro_design_report",
-    "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
+    "prototipo_lint_report", "consistencia_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
     "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida",
     "perguntas_report", "perguntas_status", "juiz_perguntas_report", "juiz_perguntas_status",
@@ -116,7 +116,7 @@ EXPECTED_AGENTS = {
     "A12GateFinalProdutoCheck", "A13SpecMissao", "A14BnccCheck", "A16bOnePagerResumido", "DesignStage", "A17FechaLacunas", "A18FechaLacunasSplit",
     "A19AmbienteSimulado", "A20AmbienteSimuladoSplit", "A21BriefOficio", "A22Jornada",
     "A23Fluxo", "A24CopyPtBr", "A25Caa", "A26Telas", "A27CopyRevisao", "A30QaEntregaveis",
-    "A28Prototipo", "A29ArtefatosDesign", "A29bEspelhoMiro", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets",
+    "A28Prototipo", "A29ArtefatosDesign", "A29bEspelhoMiro", "A29dConsistencia", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets",
     "A36TelemetriaCheck", "A38LacunaCheck", "A48PrdCheck",
     "BancaValidacaoDev", "A39BancaProdutoNarrativa", "A40BancaDesignImersao",
     "A41BancaPedagogiaBncc", "A42BancaDadosLgpd", "A43BancaTecnicaArquitetura",
@@ -4565,3 +4565,140 @@ def test_conta_da_virada_refeita_em_codigo():
     assert mec.validar("### 1.3 Conta da virada\n**Não se aplica:** a missão não tem recomendação de máquina nem ranking.\n")["status"] == "aprovado"
     assert mec._numero("R$ 12.000") == 12000 and mec._numero("12,5") == 12.5
     print("   ✓ conta da virada: o custo por vaga da exp09ef1b não fecha; com comprovação declarada, fecha")
+
+
+#: O glossário que a spec da exp09ef1b deveria ter trazido: valores tirados do briefing do PO.
+_GLOSSARIO_EXP09 = """
+## Glossário canônico
+
+### Entidades
+| Nome canônico | Variantes proibidas |
+|---|---|
+| Comissão Municipal de Recursos Comunitários | "Conselho Municipal de Apoio Social"; "Conselho Municipal de Recursos"; "Comissão de Recursos Comunitários" |
+| Mesa Aberta | — |
+| Ponto de Apoio | — |
+| Conexão para Continuar | — |
+
+### Personagens
+| Nome | Idade | Papel na história |
+|---|---|---|
+| João | 14 | beneficiário do Mesa Aberta: nem sempre tem refeição no contraturno |
+| Ana | 14 | beneficiária do Ponto de Apoio |
+| Luana | 14 | beneficiária do Conexão para Continuar |
+
+### Números
+| O quê | Valor | Unidade |
+|---|---|---|
+| Vagas novas do Mesa Aberta | 24 | vagas |
+| Dias de atendimento do Mesa Aberta | 2 | dias por semana |
+| Vagas novas do Ponto de Apoio | 18 | vagas |
+| Vagas novas do Conexão para Continuar | 20 | vagas |
+
+### Rótulos de botão por ação
+| Ação | Rótulo |
+|---|---|
+| Usar o banco padrão no preparo | Usar banco padrão |
+| Gerar o cenário com IA | Gerar Cenário com IA |
+| Liberar a missão para a turma | Liberar Missão Agora |
+| Liberar a auditoria dos cadernos (Gate E4) | Liberar Auditoria dos Cadernos (Gate E4) |
+
+### Arquivos
+| Artefato | Nome do arquivo |
+|---|---|
+| Protótipo navegável | design/08-prototipo.html |
+"""
+
+
+def test_coerencia_entre_documentos_contra_o_glossario():
+    """exp09ef1b: o órgão com quatro nomes, João/Ana/Luana (14 anos) como "Coordenação" na copy, o Mesa
+    Aberta de 2 dias por semana com "180 dias" de registros, rótulos de botão em dobro e o QA citando um
+    arquivo que não existe. Textos reais da execução; o glossário é o que a spec deveria ter trazido."""
+    import re
+
+    from tools import consistencia as cons
+
+    spec = _fixture_exp09("spec.md") + _GLOSSARIO_EXP09
+    docs = {"copy revisada": _fixture_exp09("copy_revisada.md"), "one-pager": _fixture_exp09("one_pager.md"),
+            "jornada": _fixture_exp09("jornada.md"), "QA": _fixture_exp09("qa_entregaveis.md")}
+    r = cons.validar(spec, docs)
+    assert r["status"] == "bloqueado"
+    por = lambda cod: [a for a in r["achados"] if a["codigo"] == cod]
+    variantes = {re.search(r"«([^»]+)»", a["resumo"]).group(1) for a in por("variante-proibida")}
+    assert variantes == {"Conselho Municipal de Recursos", "Conselho Municipal de Apoio Social",
+                         "Comissão de Recursos Comunitários"}, variantes
+    assert not [a for a in por("variante-proibida") if "«Comissão Municipal de Recursos Comunitários»" in a["resumo"].split(" é variante")[0]]
+    assert {a["documento"] for a in por("papel-divergente")} == {"copy revisada", "one-pager"}
+    assert any("Coordenação: João" in a["resumo"] for a in por("papel-divergente"))
+    assert any("180 dias" in a["resumo"] for a in por("numero-divergente"))
+    assert not any("18 vagas" in a["resumo"] for a in por("numero-divergente")), "as 18 vagas são do Ponto de Apoio"
+    rotulos = " ".join(a["resumo"] for a in por("rotulo-divergente"))
+    for visto in ("Usar Banco Padrão Oficial", "Gerar com IA", "Liberar para a Turma", "Liberar Gate E4"):
+        assert f"«{visto}»" in rotulos, visto
+    assert any("08-prototipo-navegavel.html" in a["resumo"] for a in por("arquivo-divergente"))
+
+    # glossário com um quinto nome canônico: os quatro nomes que circularam são acusados, e a variante
+    # que é pedaço do canônico ("Conselho Municipal de Recursos") só conta quando aparece solta
+    quinto = _GLOSSARIO_EXP09.replace(
+        '| Comissão Municipal de Recursos Comunitários | "Conselho Municipal de Apoio Social"; "Conselho Municipal de Recursos"; "Comissão de Recursos Comunitários" |',
+        '| Conselho Municipal de Recursos Comunitários | "Conselho Municipal de Apoio Social"; "Conselho Municipal de Recursos"; '
+        '"Comissão Municipal de Recursos Comunitários"; "Comissão de Recursos Comunitários" |')
+    r4 = cons.validar(_fixture_exp09("spec.md") + quinto, docs)
+    assert len({re.search(r"«([^»]+)»", a["resumo"]).group(1) for a in r4["achados"] if a["codigo"] == "variante-proibida"}) == 4
+    limpo = cons.validar(_fixture_exp09("spec.md") + quinto, {"copy": "O Conselho Municipal de Recursos Comunitários abriu o edital."})
+    assert limpo["status"] == "aprovado", limpo["achados"]
+
+    # sem glossário: atenção, nunca silêncio
+    assert [a["codigo"] for a in cons.validar(_fixture_exp09("spec.md"), docs)["achados"]] == ["glossario-ausente"]
+    print("   ✓ coerência: 4 nomes do órgão, coordenadores de 14 anos, 180 dias, rótulos em dobro e arquivo inexistente")
+
+
+def test_prd_coluna_inexistente_e_tipo_divergente():
+    """exp09ef1b: a tabela de eventos da spec gravava em `exp09ef1b_sessoes.projeto_homologado`, que o DDL
+    não declara, e o PRD trocou `escola_id UUID` (spec) por `escola_id TEXT`. Textos reais da execução."""
+    from tools import consistencia as cons
+    from tools.rastro import validar_prd
+
+    spec = _fixture_exp09("spec.md")
+    da_spec = cons.conferir_colunas(spec, rotulo="spec")
+    assert [a["codigo"] for a in da_spec] == ["coluna-inexistente"] and "projeto_homologado" in da_spec[0]["resumo"]
+
+    prd = _fixture_exp09("prd_modelo_de_dados.md")
+    assert not cons.conferir_colunas(prd), "sozinho, o modelo de dados do PRD é coerente"
+    contra = cons.conferir_colunas(prd, referencia=spec)
+    assert [(a["codigo"], a["severidade"]) for a in contra] == [("tipo-divergente-da-spec", "bloqueio")]
+    assert "escola_id" in contra[0]["resumo"] and "UUID" in contra[0]["resumo"] and "TEXT" in contra[0]["resumo"]
+
+    # o mesmo documento com os dois tipos: bloqueio sem precisar da spec
+    misturado = prd + "\n```sql\nCREATE TABLE exp09ef1b_extra (\n    id UUID PRIMARY KEY,\n    escola_id UUID NOT NULL\n);\n```\n"
+    assert any(a["codigo"] == "tipo-divergente" and "escola_id" in a["resumo"] for a in cons.conferir_colunas(misturado))
+
+    r = validar_prd(prd + "\nA tarefa T-004 grava em `exp09ef1b_sessoes.projeto_homologado`.\n", spec=spec)
+    codigos = {a["codigo"] for a in r["achados"]}
+    assert {"tipo-divergente-da-spec", "coluna-inexistente"} <= codigos and r["status"] == "bloqueado"
+    print("   ✓ PRD: escola_id TEXT × UUID bloqueia; coluna que o DDL não declara fica 🟡")
+
+
+def test_gate_de_coerencia_no_design():
+    from agents.design import POSFIXO_RETRABALHO, build_design_stage
+
+    nomes = [a.name for a in build_design_stage().sub_agents]
+    assert nomes.index("A29cPrototipoLint") < nomes.index("A29dConsistencia") < nomes.index("QaDesignLoop")
+    assert POSFIXO_RETRABALHO.index("A29cPrototipoLintRetrabalho") < POSFIXO_RETRABALHO.index("A29dConsistenciaRetrabalho")
+    from agents.design import get_consistencia_check
+
+    estado = {"spec_missao": _fixture_exp09("spec.md") + _GLOSSARIO_EXP09,
+              "copy_strings_revisada": _fixture_exp09("copy_revisada.md"),
+              "prototipo_arquivo": "<html><body><div data-screen-id='E1-ALU-01'>Conselho Municipal de Recursos"
+                                   "<button>Liberar para a Turma</button></div></body></html>"}
+
+    class Semente(BaseAgent):
+        @override
+        async def _run_async_impl(self, ctx):
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
+
+    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), get_consistencia_check()])))
+    assert st["consistencia_status"] == "bloqueado"
+    env = st["consistencia_status_envelope"]
+    assert {a["agente_responsavel"] for a in env["achados"] if a["codigo"] == "variante-proibida"} == {"copy-ptbr-revisao", "prototipo"}
+    assert any(a["codigo"] == "coluna-inexistente" and a["severidade"] == "atencao" for a in env["achados"])
+    print("   ✓ gate de coerência roda no design, depois do lint e antes do QA, e de novo no retrabalho")

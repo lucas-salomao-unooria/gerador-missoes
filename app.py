@@ -124,6 +124,7 @@ GATE_LABELS = {
     "bncc_status": "Conformidade BNCC Computação",
     "lacunas_status": "Fechamento de lacunas",
     "ambiente_status": "Ambiente simulado",
+    "consistencia_status": "Coerência entre documentos",
     "design_status": "QA de design",
     "manifesto_status": "Ficha do manifesto",
     "telemetria_status": "Telemetria e arquitetura",

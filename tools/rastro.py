@@ -1048,8 +1048,8 @@ def _rfs_da_linha(linha: str) -> set[str]:
     return rfs
 
 
-def validar_prd(prd: str) -> Dict[str, Any]:
-    """Confere se o PRD é coerente consigo mesmo antes de ir para quem codifica.
+def validar_prd(prd: str, spec: str = "") -> Dict[str, Any]:
+    """Confere se o PRD é coerente consigo mesmo (e, com `spec`, com ela) antes de ir para quem codifica.
 
     O gabarito já exige tudo isto em prosa — o que faltava era alguém conferir. Um PRD que
     declara dois prefixos de tabela, ou que deixa um requisito P0 sem teste, faz o agente de
@@ -1165,6 +1165,15 @@ def validar_prd(prd: str) -> Dict[str, Any]:
         if not re.search(padrao, texto, re.IGNORECASE):
             falha(codigo, f"O plano de implementação não nomeia {o_que} — quem codifica vai decidir sozinho.",
                   severidade="atencao")
+
+    # 8. o modelo de dados contra ele mesmo e contra a spec (`tools/consistencia.py`). Na exp09ef1b o
+    # bloco 9 da spec declarava `escola_id UUID` e o PRD `escola_id TEXT`; a tabela de eventos citava
+    # `exp09ef1b_sessoes.projeto_homologado`, que nenhum DDL declara. Quem codifica escolheria ao acaso.
+    from tools.consistencia import conferir_colunas, validar as validar_glossario
+    achados.extend(conferir_colunas(texto, referencia=spec))
+    # 9. os nomes do PRD contra o glossário canônico da spec — o PRD é o último a escrever o nome do órgão
+    if spec:
+        achados.extend(validar_glossario(spec, {"PRD": texto}, exigir_glossario=False, etapa="dev")["achados"])
 
     # rota citada num módulo que a plataforma já tem precisa existir nela (tools/rotas_plataforma.py)
     from tools.rotas_plataforma import validar_rotas
