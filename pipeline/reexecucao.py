@@ -37,6 +37,15 @@ from pipeline.artifacts import ARTIFACT_FILES
 KEY_PEDIDO_CORRECAO = "pedido_correcao"
 #: Pareceres humanos das etapas já liberadas (`pipeline/passagem.py`), no mesmo rodapé.
 KEY_NOTAS_DE_PASSAGEM = "notas_de_passagem"
+#: Todos os pedidos de refazer do PO, de todas as etapas (`pipeline/passagem.py::pedidos_do_po`). É o
+#: que o verificador de fidelidade confere; o `pedido_correcao` só traz o da execução corrente.
+KEY_PEDIDOS_DO_PO = "pedidos_do_po"
+
+
+def _pedidos_do_po(conversa: Dict[str, Any]) -> List[Dict[str, str]]:
+    from pipeline.passagem import fluxo_de, pedidos_do_po
+
+    return pedidos_do_po(fluxo_de(conversa or {}))
 
 #: Etapas de onde uma correção pode recomeçar, na ordem da esteira. `transversal` refaz só
 #: diagnóstico e aprendizado. `produto` entrou em 23/09/2026: sem ela, a triagem mandava para `spec`
@@ -81,6 +90,8 @@ CHAVES_SPEC = frozenset({
     # a correção começava com as rodadas do juiz já esgotadas e não havia rodada de correção.
     "evidencia_report", "evidencia_status", "evidencia_status_envelope",
     "perguntas_report", "perguntas_status", "perguntas_status_envelope",
+    # a fidelidade final roda também na correção a partir da spec
+    "fidelidade_report", "fidelidade_status", "fidelidade_status_envelope", "juiz_fidelidade_saida",
     "juiz_perguntas_report", "juiz_perguntas_status", "juiz_perguntas_status_envelope",
     "juiz_perguntas_rodada", "juiz_evidencia_saida",
     "rastro_spec_report", "rastro_spec_status", "rastro_spec_status_envelope",
@@ -93,6 +104,8 @@ CHAVES_PRODUTO = frozenset({
     # o mapa e a ideação são refeitos: o pedido de correção pode dizer qual é o conceito central
     "mapa_conceitual", "ideacao_mecanismos", "cobertura_report", "cobertura_resultado",
     "profundidade_report", "profundidade_status", "profundidade_status_envelope", "profundidade_rodada",
+    "fidelidade_nucleo_report", "fidelidade_nucleo_status", "fidelidade_nucleo_status_envelope",
+    "juiz_fidelidade_nucleo_saida",
     "nucleo_rodada",
     "missoes_vizinhas", "catalogo_indice_status", "catalogo_indice_status_envelope",
     "one_pager", "brief_escopo", "brief_escopo_status", "brief_escopo_status_envelope",
@@ -114,6 +127,7 @@ CHAVES_TRANSVERSAL = frozenset({
 #: uma sessão que já gastou o teto chega à correção sem direito a conserto.
 #: `tickets_sem_rota` acumula: sem zerar, o dossiê da correção listaria pendências da execução velha.
 CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_rota", "juiz_achados_entrada",
+                             "fidelidade_entrada", "fidelidade_documentos",
                              KEY_AGENTES_DEGRADADOS})
 
 #: Documentos escritos por um AUTOR (não por gate). Quando uma reexecução os apaga, a versão que
@@ -573,6 +587,7 @@ async def executar_correcao_stream(
     limpo, removidas = preparar_estado(estado, etapa, pedido_md)
     if notas_de_passagem is not None:
         limpo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
+    limpo[KEY_PEDIDOS_DO_PO] = _pedidos_do_po(conversa)
     backup = fazer_backup(run_dir, etapa, removidas)
     stages = _stages_de(etapa, so_esta_etapa)
     inicio = time.time()
@@ -667,6 +682,7 @@ async def iniciar_etapa_stream(
         limpo, removidas = preparar_estado(estado, etapa)
         stages, com_transversal = [etapa], False
     limpo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
+    limpo[KEY_PEDIDOS_DO_PO] = _pedidos_do_po(conversa)
     backup = fazer_backup(run_dir, f"passagem-{etapa}", removidas)
     inicio = time.time()
     yield {"type": "etapa_started", "etapa": etapa, "stages": stages, "timestamp": inicio,

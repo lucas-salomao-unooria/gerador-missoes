@@ -76,6 +76,24 @@ CONFERENCIA_DE_ACORDO: Dict[str, Tuple[Tuple[str, str], ...]] = {
 }
 
 
+#: Na última etapa o *de acordo* só encerra a missão: comentário longo ali é quase sempre ajuste.
+#: O de 06/10/2026 na missão do 9º ano trazia as perguntas de Canal B reescritas (2.375 caracteres)
+#: e nenhum agente o leu. Nas outras etapas o comentário segue para a próxima, então só recusa o que
+#: tem cara de conteúdo para a etapa que está sendo liberada.
+MAX_DE_ACORDO_ULTIMA_ETAPA = 400
+_RE_CONTEUDO = re.compile(r"\bPergunta\s+\d|\bAlternativas?\b|\bCen[áa]rio:|\bAJUSTE\s+\d|\bTRAVAS?\b", re.IGNORECASE)
+
+
+def parece_ajuste(comentario: str, ultima_etapa: bool) -> str:
+    """O motivo, se o comentário de um *de acordo* parece trazer mudança de conteúdo; senão, vazio."""
+    m = _RE_CONTEUDO.search(comentario or "")
+    if m:
+        return f"traz «{m.group(0).strip()}»"
+    if ultima_etapa and caracteres_uteis(comentario) > MAX_DE_ACORDO_ULTIMA_ETAPA:
+        return f"tem mais de {MAX_DE_ACORDO_ULTIMA_ETAPA} letras na última etapa, que não tem etapa seguinte para lê-lo"
+    return ""
+
+
 class DecisaoInvalida(ValueError):
     """A ação não cabe nesta situação, para este papel, ou veio sem comentário suficiente."""
 
@@ -232,6 +250,13 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
     if acao != INICIAR and caracteres_uteis(comentario) < MIN_CARACTERES_COMENTARIO:
         raise DecisaoInvalida(f"O comentário é obrigatório e precisa de ao menos {MIN_CARACTERES_COMENTARIO} "
                               "letras ou números: registre o que você viu e o que decidiu.")
+    if acao == DE_ACORDO:
+        motivo = parece_ajuste(comentario, ultima_etapa=proxima_etapa(etapa) is None)
+        if motivo:
+            raise DecisaoInvalida(
+                f"Este comentário parece trazer mudança de conteúdo ({motivo}). Pelo *de acordo* ela não entra em "
+                "documento nenhum: ele só registra que a etapa está pronta como está. Para a mudança valer, use "
+                "**Refazer** com este mesmo texto — a etapa é refeita aplicando-o e volta ao seu parecer.")
     respostas: Dict[str, str] = {}
     for chave, pergunta in perguntas_de_conferencia(etapa, acao):
         resposta = str((conferencia or {}).get(chave) or "").strip()
@@ -312,21 +337,48 @@ def ultima_devolutiva(fluxo: Dict[str, Any], etapa: str) -> Optional[Dict[str, A
     return None
 
 
+def pedidos_do_po(fluxo: Optional[Dict[str, Any]]) -> List[Dict[str, str]]:
+    """Todos os pedidos de *refazer*, de todas as etapas, do mais antigo ao mais novo.
+
+    Até 06/10/2026 só o último pedido chegava aos agentes: o refazer seguinte apagava o anterior
+    (`pedido_correcao` é uma chave só), e design e dev não recebiam nenhum. Na missão do 9º ano o
+    primeiro pedido trazia a definição dos caminhos A/B e a frase da descoberta inteira; o segundo o
+    apagou, e a missão saiu com A/B trocados. Um pedido não deixa de valer porque veio outro.
+    """
+    if not fluxo:
+        return []
+    return [{"origem": f"refazer {ROTULO_ETAPA.get(p.get('etapa'), p.get('etapa'))} · {p.get('como', '')} · {p.get('quando', '')}",
+             "etapa": str(p.get("etapa") or ""), "texto": str(p.get("comentario") or "")}
+            for p in fluxo.get("pareceres") or [] if p.get("acao") == REFAZER and str(p.get("comentario") or "").strip()]
+
+
 def notas_de_passagem(fluxo: Optional[Dict[str, Any]]) -> str:
-    """Markdown dos pareceres *de acordo* válidos, para o estado (`{notas_de_passagem?}`)."""
+    """Markdown dos pedidos de refazer e dos pareceres *de acordo* válidos (`{notas_de_passagem?}`)."""
     if not fluxo:
         return ""
     validos = [p for p in fluxo.get("pareceres") or []
                if p.get("acao") in (DE_ACORDO, EXCECAO) and p.get("valido", True)]
-    if not validos:
+    pedidos = pedidos_do_po(fluxo)
+    if not validos and not pedidos:
         return ""
-    linhas = ["Pareceres humanos das etapas já liberadas. São decisão de quem responde pela etapa: aplique-os. "
-              "Se um deles contrariar um gate ou a plataforma, registre o conflito no seu documento em vez de "
-              "escolher em silêncio.", ""]
-    for p in validos:
-        marca = " — **liberada com exceção** (havia gate 🔴)" if p.get("excecao") else ""
-        linhas.append(f"### {ROTULO_ETAPA.get(p['etapa'], p['etapa'])} · {p['como']} · {p['quando']}{marca}")
-        linhas += [""] + [f"> {l}" if l.strip() else ">" for l in p["comentario"].splitlines()] + [""]
+    linhas: List[str] = []
+    if pedidos:
+        linhas += ["## Pedidos de refazer do PO, em vigor", "",
+                   "Todos continuam valendo, do mais antigo ao mais novo — um pedido não apaga o anterior. Onde dois "
+                   "se contradizem, vale o mais novo. Aplique as TRAVAS e os AJUSTES no que é seu, e responda às "
+                   "perguntas de VALIDAÇÃO que o PO escreveu: a fidelidade a eles é conferida depois.", ""]
+        for i, p in enumerate(pedidos, 1):
+            linhas.append(f"### Pedido {i} · {p['origem']}")
+            linhas += [""] + [f"> {l}" if l.strip() else ">" for l in p["texto"].splitlines()] + [""]
+    if validos:
+        linhas += ["## Pareceres de quem liberou as etapas", "",
+                   "Pareceres humanos das etapas já liberadas. São decisão de quem responde pela etapa: aplique-os. "
+                   "Se um deles contrariar um gate ou a plataforma, registre o conflito no seu documento em vez de "
+                   "escolher em silêncio.", ""]
+        for p in validos:
+            marca = " — **liberada com exceção** (havia gate 🔴)" if p.get("excecao") else ""
+            linhas.append(f"### {ROTULO_ETAPA.get(p['etapa'], p['etapa'])} · {p['como']} · {p['quando']}{marca}")
+            linhas += [""] + [f"> {l}" if l.strip() else ">" for l in p["comentario"].splitlines()] + [""]
     return "\n".join(linhas).rstrip() + "\n"
 
 
