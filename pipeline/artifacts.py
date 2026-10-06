@@ -56,6 +56,7 @@ ARTIFACT_FILES = [
     ("prototipo_lint_report", "design/06b-lint-prototipo.md"),
     ("consistencia_report", "design/06c-coerencia-documentos.md"),
     ("qa_entregaveis_report", "design/07-qa-entregaveis.md"),
+    ("qa_afirmacoes_report", "design/07b-qa-afirmacoes.md"),
     ("rastro_design_report", "design/12-rastro-lacunas-design.md"),
     ("evidencia_report", "produto/05c-matriz-evidencia.md"),
     ("perguntas_report", "produto/05d-perguntas-de-produto.md"),

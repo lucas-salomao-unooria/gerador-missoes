@@ -70,7 +70,7 @@ KNOWN_STATE_KEYS = {
     "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
     "rastro_spec_status", "rastro_spec_report", "rastro_design_status", "rastro_design_report",
-    "prototipo_lint_report", "consistencia_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
+    "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
     "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida",
     "perguntas_report", "perguntas_status", "juiz_perguntas_report", "juiz_perguntas_status",
@@ -116,7 +116,7 @@ EXPECTED_AGENTS = {
     "A12GateFinalProdutoCheck", "A13SpecMissao", "A14BnccCheck", "A16bOnePagerResumido", "DesignStage", "A17FechaLacunas", "A18FechaLacunasSplit",
     "A19AmbienteSimulado", "A20AmbienteSimuladoSplit", "A21BriefOficio", "A22Jornada",
     "A23Fluxo", "A24CopyPtBr", "A25Caa", "A26Telas", "A27CopyRevisao", "A30QaEntregaveis",
-    "A28Prototipo", "A29ArtefatosDesign", "A29bEspelhoMiro", "A29dConsistencia", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets",
+    "A28Prototipo", "A29ArtefatosDesign", "A29bEspelhoMiro", "A29dConsistencia", "A30bQaAfirmacoes", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets",
     "A36TelemetriaCheck", "A38LacunaCheck", "A48PrdCheck",
     "BancaValidacaoDev", "A39BancaProdutoNarrativa", "A40BancaDesignImersao",
     "A41BancaPedagogiaBncc", "A42BancaDadosLgpd", "A43BancaTecnicaArquitetura",
@@ -4702,3 +4702,54 @@ def test_gate_de_coerencia_no_design():
     assert {a["agente_responsavel"] for a in env["achados"] if a["codigo"] == "variante-proibida"} == {"copy-ptbr-revisao", "prototipo"}
     assert any(a["codigo"] == "coluna-inexistente" and a["severidade"] == "atencao" for a in env["achados"])
     print("   ✓ gate de coerência roda no design, depois do lint e antes do QA, e de novo no retrabalho")
+
+
+def test_afirmacoes_do_qa_conferidas_em_codigo():
+    """exp09ef1b: o QA aprovou escrevendo "todas as 16 telas ativas e vinculadas" ao lado do link de um Stitch
+    com 6, e apontou `design/08-prototipo-navegavel.html`, que a esteira não grava. Textos reais."""
+    from tools import afirmacoes as af
+
+    qa, folha, jornada = _fixture_exp09("qa_entregaveis.md"), _fixture_exp09("stitch_telas.md"), _fixture_exp09("jornada.md")
+    assert len(af.telas_do_inventario(jornada)) == 16 and len(af.telas_do_stitch(folha)) == 6
+
+    cob = af.cobertura_stitch(folha, jornada)
+    assert cob["status"] == "bloqueado" and cob["achados"][0]["agente_responsavel"] == "telas"
+    assert "E3-ALU-01" in cob["faltando"] and "E0-PROF-01" not in cob["faltando"]
+
+    r = af.conferir_qa(qa, folha, jornada)
+    assert r["status"] == "bloqueado"
+    assert {a["codigo"] for a in r["achados"]} == {"afirmacao-stitch", "arquivo-inexistente"}, r["achados"]
+    assert any("16 telas no Stitch; o projeto tem 6" in a["resumo"] for a in r["achados"])
+    assert any("08-prototipo-navegavel.html" in a["resumo"] for a in r["achados"])
+    # "Todas as 16 telas … protótipo" e "16 de 16 telas no lint" batem com o inventário: não são acusadas
+    assert not [a for a in r["achados"] if a["codigo"] == "afirmacao-inventario"]
+    # com o protótipo à mão, a afirmação "16/16 no lint" passa a ser conferida contra o arquivo
+    html = "<html><body>" + "".join(f"<section data-screen-id='{t}'></section>" for t in af.telas_do_inventario(jornada)[:12]) + "</body></html>"
+    assert any(a["codigo"] == "afirmacao-prototipo" for a in af.conferir_qa(qa, folha, jornada, html)["achados"])
+    # QA honesto: nada a acusar
+    assert af.conferir_qa("Stitch com 6 telas: 6 de 16 telas desenhadas no Stitch. Protótipo em design/08-prototipo.html.",
+                          folha, jornada)["status"] == "aprovado"
+
+    # no loop: o envelope aprovado do QA é reescrito como bloqueado, com o ticket do Stitch para `telas`
+    from agents.checkers import QaAfirmacoesAgent
+
+    estado = {"qa_entregaveis_report": qa, "stitch_links": folha, "jornada_telas": jornada,
+              "stitch_status": cob["status"], "stitch_status_envelope": {"status": cob["status"], "achados": cob["achados"]}}
+
+    class Semente(BaseAgent):
+        @override
+        async def _run_async_impl(self, ctx):
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
+
+    assert extrair_envelope(qa)["status"] == "aprovado"
+    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), QaAfirmacoesAgent(name="A30b")])))
+    env = extrair_envelope(st["qa_entregaveis_report"])
+    assert env["status"] == "bloqueado" and inferir_status(st["qa_entregaveis_report"], env) == "bloqueado"
+    assert {a["codigo"] for a in env["achados"]} >= {"afirmacao-stitch", "arquivo-inexistente", "stitch-incompleto"}
+    assert any(a.get("agente_responsavel") == "telas" for a in env["achados"])
+    assert st["qa_afirmacoes_status"] == "bloqueado"
+
+    from agents.design import build_qa_design_loop
+
+    assert [a.name for a in build_qa_design_loop().sub_agents][:3] == ["A30QaEntregaveis", "A30bQaAfirmacoes", "A31QaEntregaveisCheck"]
+    print("   ✓ afirmações do QA: 16 telas num Stitch com 6 e um arquivo que não existe reprovam a rodada")

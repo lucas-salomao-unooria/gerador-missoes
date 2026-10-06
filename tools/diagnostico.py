@@ -40,6 +40,8 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "ambiente_status", "rotulo": "Ambiente simulado (D9)", "etapa": "design", "rodada": None},
     {"status": "prototipo_lint_status", "rotulo": "Lint do protótipo (arquivo)", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "consistencia_status", "rotulo": "Coerência entre documentos", "etapa": "design", "rodada": None},
+    {"status": "stitch_status", "rotulo": "Telas no Stitch × inventário", "etapa": "design", "rodada": "qa_design_rodada"},
+    {"status": "qa_afirmacoes_status", "rotulo": "Afirmações do QA conferidas", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "design_status", "rotulo": "QA de entregáveis", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "rastro_design_status", "rotulo": "Rastro de lacunas do design", "etapa": "design", "rodada": None},
     {"status": "manifesto_status", "rotulo": "Ficha do manifesto", "etapa": "produto", "rodada": "spec_rodada"},

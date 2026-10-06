@@ -80,6 +80,8 @@ CHAVES_DESIGN = frozenset({
     "prototipo_lint_report", "prototipo_lint_status", "prototipo_lint_status_envelope",
     "rastro_design_report", "rastro_design_status", "rastro_design_status_envelope",
     "consistencia_report", "consistencia_status", "consistencia_status_envelope",
+    "stitch_status", "stitch_status_envelope",
+    "qa_afirmacoes_report", "qa_afirmacoes_status", "qa_afirmacoes_status_envelope",
 }) | CHAVES_DEV
 #: `spec_missao_gate0` tem de cair: o split do D0 só grava esse backup se ele não existir
 #: (`agents/checkers.py`, SecaoSplitAgent) — senão a spec velha seria preservada como "original".

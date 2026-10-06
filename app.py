@@ -125,6 +125,8 @@ GATE_LABELS = {
     "lacunas_status": "Fechamento de lacunas",
     "ambiente_status": "Ambiente simulado",
     "consistencia_status": "Coerência entre documentos",
+    "stitch_status": "Telas no Stitch × inventário",
+    "qa_afirmacoes_status": "Afirmações do QA conferidas",
     "design_status": "QA de design",
     "manifesto_status": "Ficha do manifesto",
     "telemetria_status": "Telemetria e arquitetura",
