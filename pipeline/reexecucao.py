@@ -57,6 +57,7 @@ ETAPAS = ("produto", "spec", "design", "dev", "transversal")
 CHAVES_DEV = frozenset({
     "manifesto_report", "manifesto_status", "manifesto_status_envelope",
     "handoff_dev", "brief_assets", "handoff_rodada",
+    "banco_conteudo", "conteudo_report", "conteudo_status", "conteudo_status_envelope",
     "telemetria_report", "telemetria_status", "telemetria_status_envelope",
     "rastro_lacunas_report", "rastro_lacunas_status", "rastro_lacunas_status_envelope",
     "validacao_produto_narrativa", "validacao_design_imersao", "validacao_pedagogia_bncc",
@@ -143,7 +144,7 @@ CHAVES_AUTORAIS = frozenset({
     "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao", "one_pager_resumido",
     "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
     "camada_caa", "wireframes_cobertura", "copy_strings_revisada", "prototipo_html",
-    "handoff_dev", "brief_assets", "prd_final", "one_pager_pedagogico",
+    "handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico",
 })
 PREFIXO_ANTERIOR = "anterior_"
 
@@ -191,6 +192,7 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Coerência entre documentos": "design",
     "Ficha do manifesto": "dev",
     "Contrato de telemetria e arquitetura": "dev",
+    "Banco de conteúdo": "dev",
     "Handoff de dev": "dev",
     "Rastro de lacunas antes do PRD": "dev",
     "Banca de dev": "dev",

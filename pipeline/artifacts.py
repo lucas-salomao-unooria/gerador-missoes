@@ -65,6 +65,8 @@ ARTIFACT_FILES = [
     ("manifesto_report", "dev/00-ficha-manifesto.md"),
     ("handoff_dev", "dev/01-handoff-dev.md"),
     ("brief_assets", "dev/01b-brief-assets.md"),
+    ("banco_conteudo", "dev/01e-banco-conteudo.md"),
+    ("conteudo_report", "dev/01f-banco-conteudo-check.md"),
     ("telemetria_report", "dev/01c-telemetria-check.md"),
     ("rastro_lacunas_report", "dev/01d-rastro-lacunas.md"),
     ("validacao_produto_narrativa", "dev/02a-banca-produto-narrativa.md"),

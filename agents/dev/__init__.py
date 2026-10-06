@@ -10,6 +10,10 @@ Ordem (SequentialAgent):
   └────────────────────────────────────────────────────────────────┘
   v1c A36TelemetriaCheck       → telemetria_status (contrato real de evento, tabela de leitura,
                                sem WebSocket, papéis e quota atuais)
+  v1e A35bBancoConteudo        → banco_conteudo  (o texto integral de cada item de conteúdo do brief
+                               e as falas da IA simulada por estado — `dev/01e-banco-conteudo.md`)
+  v1f A35cConteudoCheck        → conteudo_status (determinístico: todo ID de texto do brief tem bloco;
+                               Status do brief só `a produzir | rascunho | escrito`; falas por estado)
   v1d A38LacunaCheck           → rastro_lacunas_status (marcadores de lacuna em spec, design,
                                handoff e assets, por dono: input · produto · design · dev ·
                                plataforma — só plataforma não bloqueia, e deixa o PRD 🟡)
@@ -77,6 +81,20 @@ def get_brief_assets_agent(**kw) -> LlmAgent:
         description="Brief de produção de conteúdo: inventário de assets, spec por tipo, critérios de reprovação e ordem de produção.",
         instruction=load_prompt("dev/35_brief_assets.md"),
         output_key="brief_assets",
+        before_agent_callback=marcar_heranca,
+        **kw,
+    )
+
+
+def get_banco_conteudo_agent(**kw) -> LlmAgent:
+    """O texto que o brief de assets só descreve. Na exp09ef1b o banco padrão inteiro (12 PDFs, atas,
+    cadernos, a tabela da Linha 302) e quase toda a fala da IA simulada ficaram por escrever, com o
+    brief dizendo "Homologado" — e o PRD mandou codificar sobre conteúdo nenhum."""
+    return create_llm_agent(
+        name="A35bBancoConteudo",
+        description="Banco de conteúdo: o texto integral de cada documento, tabela, transcrição e roteiro do brief de assets, e a árvore de falas da IA simulada por estado da spec (boas-vindas, fora do tema, aviso de limite).",
+        instruction=load_prompt("dev/35b_banco_conteudo.md"),
+        output_key="banco_conteudo",
         before_agent_callback=marcar_heranca,
         **kw,
     )
@@ -210,7 +228,7 @@ def build_dev_stage(
     rodadas_prd = max(1, get_settings().prd_max_rodadas)
     return SequentialAgent(
         name="DevStage",
-        description="Área de Dev: ficha do manifesto → handoff + brief de assets → telemetria e rastro de lacunas → banca de validação (5 dimensões em paralelo) → consolidação → PRD → pendências do PRD → one-pager pedagógico para validação humana.",
+        description="Área de Dev: ficha do manifesto → handoff + brief de assets → banco de conteúdo → telemetria e rastro de lacunas → banca de validação (5 dimensões em paralelo) → consolidação → PRD → pendências do PRD → one-pager pedagógico para validação humana.",
         before_agent_callback=marcar_heranca,
         sub_agents=[
             RastroCheckAgent(
@@ -261,6 +279,19 @@ def build_dev_stage(
                         max_rounds=rodadas_handoff,
                     ),
                 ],
+            ),
+            # O brief descreve; o banco escreve. Depois do loop do handoff, porque lê o brief final.
+            get_banco_conteudo_agent(**kw),
+            RastroCheckAgent(
+                name="A35cConteudoCheck",
+                description="Todo ID de texto, documento, tabela e roteiro do brief tem bloco escrito no banco; o Status do brief é `a produzir | rascunho | escrito` (homologar é ato humano); cada estado de fala da IA na spec tem fala.",
+                modo="conteudo",
+                rotulo="Banco de conteúdo",
+                report_key="conteudo_report",
+                status_key="conteudo_status",
+                agente="conteudo-check",
+                estrito=estrito,
+                before_agent_callback=marcar_heranca,
             ),
             RastroCheckAgent(
                 name="A38LacunaCheck",
@@ -362,6 +393,8 @@ DEV_METADATA = [
     {"id": "A33ManifestoCheck", "name": "33 · Ficha do manifesto (determinístico)", "icon": "🪪", "output_key": "manifesto_report", "prompt_file": None, "description": "Bloco 0 da spec × listas fechadas da plataforma: produto, séries, unidade, público, viewport, permissões, capabilities, seção do DS, liberação por turma. Não conforme impede o PRD."},
     {"id": "A34HandoffDev", "name": "34 · Handoff para dev", "icon": "🤝", "output_key": "handoff_dev", "prompt_file": "dev/34_handoff_dev.md", "description": "Modelo de insumo preenchido, stories com 🔒, eventos, escopo V1/V2, hipóteses (paralelo com V1b)."},
     {"id": "A35BriefAssets", "name": "35 · Brief de assets", "icon": "🎬", "output_key": "brief_assets", "prompt_file": "dev/35_brief_assets.md", "description": "Inventário de assets, spec por tipo, critérios de reprovação, ordem de produção."},
+    {"id": "A35bBancoConteudo", "name": "35b · Banco de conteúdo", "icon": "📚", "output_key": "banco_conteudo", "prompt_file": "dev/35b_banco_conteudo.md", "description": "O texto integral de cada item de conteúdo do brief (documentos fictícios, atas, tabelas cujas linhas não entregam a resposta, transcrições, roteiros) e a árvore de falas da IA simulada por estado. Status `escrito` — homologar é da curadoria. Salvo em `dev/01e-banco-conteudo.md`."},
+    {"id": "A35cConteudoCheck", "name": "35c · Banco de conteúdo conferido (determinístico)", "icon": "🗂️", "output_key": "conteudo_report", "prompt_file": None, "description": "ID de texto/documento/tabela/roteiro do brief sem bloco no banco bloqueia; Status do brief fora de `a produzir | rascunho | escrito` (\"Homologado\", \"Pronto para corte\") bloqueia; estado de fala da IA sem fala fica 🟡."},
     {"id": "A36TelemetriaCheck", "name": "36 · Contrato de telemetria e arquitetura (determinístico)", "icon": "📡", "output_key": "telemetria_report", "prompt_file": None, "description": "Evento = verbo · objeto · resultado · contexto (sem `dados`), medida com tabela de leitura, sem WebSocket, seis papéis, quota em `ia_quotas`."},
     {"id": "A37HandoffCheck", "name": "37 · Veredito do handoff (determinístico)", "icon": "🔀", "output_key": "handoff_rodada", "prompt_file": None, "description": "Contrato de telemetria conforme encerra o loop; reprovado devolve o handoff ao V1 com o relatório."},
     {"id": "A38LacunaCheck", "name": "38 · Rastro de lacunas (determinístico)", "icon": "🧭", "output_key": "rastro_lacunas_report", "prompt_file": None, "description": "Marcadores de lacuna em spec, design, handoff e assets, por dono: o que faltou de input, produto, design ou dev impede o PRD; plataforma vira pendência humana (🟡)."},

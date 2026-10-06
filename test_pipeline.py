@@ -67,7 +67,7 @@ KNOWN_STATE_KEYS = {
     "wireframes_cobertura", "copy_strings_revisada", "qa_entregaveis_report", "design_status",
     "prototipo_html", "prototipo_arquivo", "prototipo_relatorio", "stitch_links", "diagramas_html",
     "miro_links", "miro_board",
-    "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
+    "handoff_dev", "brief_assets", "banco_conteudo", "conteudo_report", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
     "rastro_spec_status", "rastro_spec_report", "rastro_design_status", "rastro_design_report",
     "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
@@ -95,7 +95,7 @@ KNOWN_STATE_KEYS = {
         "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao", "one_pager_resumido",
         "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
         "camada_caa", "wireframes_cobertura", "copy_strings_revisada", "prototipo_html",
-        "handoff_dev", "brief_assets", "prd_final", "one_pager_pedagogico")),
+        "handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico")),
 }
 # Variáveis estáticas substituídas pelo loader antes do ADK
 CONFIG_VARS = {"stitch_mcp_mode": "off", "stitch_project_url_base": "u", "gate_max_rodadas": 3, "qa_max_rodadas": 1}
@@ -116,7 +116,7 @@ EXPECTED_AGENTS = {
     "A12GateFinalProdutoCheck", "A13SpecMissao", "A14BnccCheck", "A16bOnePagerResumido", "DesignStage", "A17FechaLacunas", "A18FechaLacunasSplit",
     "A19AmbienteSimulado", "A20AmbienteSimuladoSplit", "A21BriefOficio", "A22Jornada",
     "A23Fluxo", "A24CopyPtBr", "A25Caa", "A26Telas", "A27CopyRevisao", "A30QaEntregaveis",
-    "A28Prototipo", "A29ArtefatosDesign", "A29bEspelhoMiro", "A29dConsistencia", "A30bQaAfirmacoes", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets",
+    "A28Prototipo", "A29ArtefatosDesign", "A29bEspelhoMiro", "A29dConsistencia", "A30bQaAfirmacoes", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets", "A35bBancoConteudo", "A35cConteudoCheck",
     "A36TelemetriaCheck", "A38LacunaCheck", "A48PrdCheck",
     "BancaValidacaoDev", "A39BancaProdutoNarrativa", "A40BancaDesignImersao",
     "A41BancaPedagogiaBncc", "A42BancaDadosLgpd", "A43BancaTecnicaArquitetura",
@@ -4753,3 +4753,82 @@ def test_afirmacoes_do_qa_conferidas_em_codigo():
 
     assert [a.name for a in build_qa_design_loop().sub_agents][:3] == ["A30QaEntregaveis", "A30bQaAfirmacoes", "A31QaEntregaveisCheck"]
     print("   ✓ afirmações do QA: 16 telas num Stitch com 6 e um arquivo que não existe reprovam a rodada")
+
+
+def test_banco_de_conteudo_escrito_e_status_humano_no_brief():
+    """exp09ef1b: o brief marcava "Homologado", "Pronto para corte" e "Roteiro aprovado" para conteúdo que ninguém
+    escreveu (12 PDFs, atas, cadernos, a tabela da Linha 302), e a IA simulada tinha quatro falas. Brief real."""
+    from tools import conteudo as ct
+    from tools.rastro import validar_prd
+
+    brief, spec = _fixture_exp09("brief_assets.md"), _fixture_exp09("spec.md")
+    r = ct.validar(brief, "", spec)
+    assert r["status"] == "bloqueado"
+    humanos = " ".join(a["resumo"] for a in r["achados"] if a["codigo"] == "status-humano")
+    for visto in ("Homologado", "Pronto para corte", "Roteiro aprovado"):
+        assert f"«{visto}»" in humanos, visto
+    assert any(a["codigo"] == "status-fora-do-vocabulario" and "Especificado" in a["resumo"] for a in r["achados"])
+    # os itens de texto do brief real: documentos, textos e o roteiro do podcast; pictograma e prompt ficam fora
+    assert set(r["ids"]) == {"doc-exp09ef1b-01", "doc-exp09ef1b-02", "doc-exp09ef1b-03", "txt-exp09ef1b-01",
+                             "txt-exp09ef1b-02", "txt-exp09ef1b-03", "aud-exp09ef1b-01"}
+    assert any(a["codigo"] == "banco-vazio" for a in r["achados"])
+    assert ct.estados_de_fala(spec) == ["E1_INICIAL", "E2_INVESTIGANDO_CHAT", "E2_CADERNOS_DESBLOQUEADOS", "E4_AUDITORIA_REVELADA"]
+
+    # banco parcial: os IDs sem bloco, o bloco raso e as falas que faltam são acusados
+    corpo = "Registro de campo. " * 12
+    banco = ("# Banco de conteúdo — exp09ef1b\n\n## Itens do brief\n\n"
+             f"### txt-exp09ef1b-02 · Tabelas do transporte\n**Status:** escrito\n\n{corpo}\n\n"
+             f"### doc-exp09ef1b-01 · Cadernos de campo\n**Status:** escrito\n\n{corpo}\n\n"
+             "### doc-exp09ef1b-02 · Ficha\n**Status:** escrito\n\nCurta.\n\n"
+             "## Falas da IA simulada\n\n### `E1_INICIAL` · boas-vindas\nBem-vindo à comissão.\n\n"
+             "### Pergunta fora do tema\nVoltemos aos projetos.\n")
+    p = ct.validar(brief.replace("Homologado", "escrito").replace("Pronto para corte", "escrito")
+                   .replace("Roteiro aprovado", "a produzir").replace("Especificado", "rascunho"), banco, spec)
+    codigos = [a["codigo"] for a in p["achados"]]
+    assert "status-humano" not in codigos and "status-fora-do-vocabulario" not in codigos
+    ausente = next(a for a in p["achados"] if a["codigo"] == "conteudo-ausente")
+    assert "txt-exp09ef1b-01" in ausente["resumo"] and "aud-exp09ef1b-01" in ausente["resumo"]
+    assert "txt-exp09ef1b-02" not in ausente["resumo"]
+    assert any(a["codigo"] == "conteudo-raso" and "doc-exp09ef1b-02" in a["resumo"] for a in p["achados"])
+    falas = " ".join(a["resumo"] for a in p["achados"] if a["codigo"] == "fala-ausente")
+    assert "E4_AUDITORIA_REVELADA" in falas and "aviso de limite" in falas and "E1_INICIAL" not in falas
+    assert ct.validar(brief, banco.replace("**Status:** escrito", "**Status:** homologado"), spec)["status"] == "bloqueado"
+
+    # PRD: tarefa que consome conteúdo sem bloco bloqueia, salvo marcada; sem banco, não se acusa
+    prd = ("| T-007 | Montar `base_dados_conselho.json` a partir de `txt-exp09ef1b-01` | RF-004 |\n"
+           "| T-008 | Tabela do transporte (`txt-exp09ef1b-02`) | RF-005 |\n")
+    assert [a["resumo"][:7] for a in ct.tarefas_sem_conteudo(prd, banco)] == ["`T-007`"]
+    assert not ct.tarefas_sem_conteudo(prd.replace("| RF-004 |", "| RF-004 [BLOQUEADA — dono: conteúdo] |"), banco)
+    assert not ct.tarefas_sem_conteudo(prd, "")
+    assert "tarefa-sem-conteudo" in {a["codigo"] for a in validar_prd(prd, banco=banco)["achados"]}
+
+    # os prompts: o brief tem vocabulário fechado, e o PRD lê o banco
+    assert "`a produzir | rascunho | escrito`" in load_prompt("dev/35_brief_assets.md")
+    assert "{banco_conteudo?}" in load_prompt("dev/47_prd_writer.md")
+    print("   ✓ banco de conteúdo: Homologado/Pronto para corte do brief real e os IDs sem texto bloqueiam")
+
+
+def test_banco_de_conteudo_no_estagio_de_dev():
+    from agents.dev import build_dev_stage
+    from pipeline.artifacts import ARTIFACT_FILES
+
+    nomes = [a.name for a in build_dev_stage().sub_agents]
+    assert nomes.index("HandoffLoop") < nomes.index("A35bBancoConteudo") < nomes.index("A35cConteudoCheck") < nomes.index("A38LacunaCheck")
+    assert ("banco_conteudo", "dev/01e-banco-conteudo.md") in ARTIFACT_FILES
+
+    estado = {"spec_missao": _fixture_exp09("spec.md") + _GLOSSARIO_EXP09, "brief_assets": _fixture_exp09("brief_assets.md"),
+              "banco_conteudo": "## Itens do brief\n\n### txt-exp09ef1b-01 · Base\n**Status:** escrito\n\n"
+                                "O Conselho Municipal de Recursos recebeu três projetos. Coordenação: João. " * 3}
+
+    class Semente(BaseAgent):
+        @override
+        async def _run_async_impl(self, ctx):
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
+
+    original = next(a for a in build_dev_stage().sub_agents if a.name == "A35cConteudoCheck")
+    check = original.model_copy(update={"parent_agent": None})
+    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), check])))
+    assert st["conteudo_status"] == "bloqueado"
+    codigos = {a["codigo"] for a in st["conteudo_status_envelope"]["achados"]}
+    assert {"status-humano", "conteudo-ausente", "variante-proibida", "papel-divergente"} <= codigos, codigos
+    print("   ✓ banco de conteúdo entre o handoff e o rastro de lacunas, conferido também contra o glossário")

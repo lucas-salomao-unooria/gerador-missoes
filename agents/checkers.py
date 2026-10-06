@@ -714,7 +714,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager | consistencia
+    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager | consistencia | conteudo
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -776,6 +776,23 @@ class RastroCheckAgent(BaseAgent):
 
             resultado = cons.validar_estado(dict(state))
             relatorio = cons.relatorio(resultado, missao)
+        elif self.modo == "conteudo":
+            # O banco escrito contra o brief que o declara, e o Status do brief contra o vocabulário: na
+            # exp09ef1b o brief dizia "Homologado" para um banco que ninguém escreveu.
+            from tools import conteudo as ct
+            from tools.consistencia import validar as validar_glossario
+
+            spec = str(state.get(self.spec_key, "") or "")
+            banco = str(state.get("banco_conteudo", "") or "")
+            resultado = ct.validar(str(state.get("brief_assets", "") or ""), banco, spec)
+            # o banco escreve nomes, idades e números: o mesmo glossário que confere a copy o confere
+            resultado["achados"] += validar_glossario(spec, {"banco de conteúdo": banco}, exigir_glossario=False,
+                                                      etapa="dev")["achados"]
+            if any(a["severidade"] == "bloqueio" for a in resultado["achados"]):
+                resultado["status"] = "bloqueado"
+            elif resultado["achados"] and resultado["status"] == "aprovado":
+                resultado["status"] = "amarelo"
+            relatorio = ct.relatorio(resultado, missao)
         elif self.modo == "prd":
             # Dois exames no mesmo passo: os marcadores que o redator deixou (lacunas) e as
             # contradições que ele não viu (consistência). Um PRD pode não ter lacuna nenhuma e
@@ -783,7 +800,8 @@ class RastroCheckAgent(BaseAgent):
             # segundo caso que faz quem codifica escolher um caminho ao acaso.
             r_lacunas = varrer_lacunas(self.fontes, dict(state))
             r_consistencia = validar_prd(str(state.get("prd_final", "") or ""),
-                                         spec=str(state.get(self.spec_key, "") or ""))
+                                         spec=str(state.get(self.spec_key, "") or ""),
+                                         banco=str(state.get("banco_conteudo", "") or ""))
             relatorio = (
                 relatorio_lacunas(r_lacunas, self.rotulo, missao, agente=self.agente)
                 + "\n\n---\n\n"
