@@ -88,6 +88,12 @@ KNOWN_STATE_KEYS = {
     "notas_de_passagem", "pareceres_humanos",
     # conversa com as etapas (`pipeline/conversa_etapas.py`): fora da esteira, só o agente de conversa lê
     "etapa_da_conversa", "contexto_da_etapa", "conversa_anterior", "resposta_conversa",
+    # versão anterior de cada documento autoral, quando a etapa é refeita (pipeline/reexecucao.py)
+    *("anterior_" + c for c in (
+        "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao", "one_pager_resumido",
+        "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
+        "camada_caa", "wireframes_cobertura", "copy_strings_revisada", "prototipo_html",
+        "handoff_dev", "brief_assets", "prd_final", "one_pager_pedagogico")),
 }
 # Variáveis estáticas substituídas pelo loader antes do ADK
 CONFIG_VARS = {"stitch_mcp_mode": "off", "stitch_project_url_base": "u", "gate_max_rodadas": 3, "qa_max_rodadas": 1}

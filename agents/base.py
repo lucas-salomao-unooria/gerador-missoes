@@ -52,6 +52,9 @@ def create_llm_agent(
             do teto do modelo, e o histórico de chamada não é descartado por
             `include_contents="none"`.
     """
+    # import tardio: `pipeline.reexecucao` importa `agents.callbacks`, que importa este módulo
+    from pipeline.reexecucao import CHAVES_AUTORAIS, PREFIXO_ANTERIOR
+
     settings = get_settings()
     selected_model = model or settings.gemini_model
 
@@ -72,6 +75,9 @@ def create_llm_agent(
             instruction.strip()
             + "\n\n---\n## Herança desta execução\n\n{heranca_degradada?}\n"
             + "\n---\n## Pedido de correção desta execução\n\n{pedido_correcao?}\n"
+            # A versão que este autor escreveu antes, quando a etapa é refeita
+            # (`pipeline/reexecucao.py`, CHAVES_AUTORAIS). Vazio na primeira execução; gate não tem.
+            + (f"\n{{{PREFIXO_ANTERIOR}{output_key}?}}\n" if output_key in CHAVES_AUTORAIS else "")
             # Pareceres de quem responde por cada etapa já liberada (`pipeline/passagem.py`).
             # Vazio sem parecer humano ou na primeira etapa.
             + "\n---\n## Notas de passagem desta missão\n\n{notas_de_passagem?}\n"

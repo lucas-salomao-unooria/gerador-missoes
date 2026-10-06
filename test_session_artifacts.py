@@ -830,6 +830,41 @@ class TestReexecucao(unittest.TestCase):
         with self.assertRaises(ValueError):
             preparar_estado(self._estado(), "marketing")
 
+    def test_reexecucao_guarda_a_versao_anterior_de_cada_autor(self):
+        """Refazer produto para acrescentar uma pergunta de evidência devolvia outra missão: o autor
+        recebia "o que não foi pedido continua como estava" sem ver como estava (06/10/2026)."""
+        from pipeline.reexecucao import PREFIXO_ANTERIOR, preparar_estado
+
+        produto, _ = preparar_estado(self._estado(), "produto", "PEDIDO")
+        self.assertNotIn("nucleo_narrativo", produto)
+        base = produto[PREFIXO_ANTERIOR + "nucleo_narrativo"]
+        self.assertIn('<versao_anterior chave="nucleo_narrativo">\nn\n</versao_anterior>', base)
+        self.assertIn("Parta dela", base)
+        self.assertIn("spec gate0", produto[PREFIXO_ANTERIOR + "spec_missao"], "a spec do autor é a do Gate 0, não a do D0")
+        # produto refeito apaga design e dev, que só rodam no próximo *iniciar*: a base deles fica guardada
+        self.assertIn("j", produto[PREFIXO_ANTERIOR + "jornada_telas"])
+        self.assertNotIn(PREFIXO_ANTERIOR + "gate_final_report", produto, "gate não recebe veredito velho")
+
+        design, _ = preparar_estado(produto, "design")
+        self.assertIn(PREFIXO_ANTERIOR + "jornada_telas", design, "a base sobrevive até a etapa dela rodar")
+        self.assertNotIn(PREFIXO_ANTERIOR + "nucleo_narrativo", design, "produto não vai ser reescrito")
+
+        dev, _ = preparar_estado(self._estado(), "dev")
+        self.assertIn("h", dev[PREFIXO_ANTERIOR + "handoff_dev"])
+        self.assertNotIn(PREFIXO_ANTERIOR + "jornada_telas", dev)
+        self.assertNotIn(PREFIXO_ANTERIOR + "nucleo_narrativo", dev)
+
+    def test_todo_documento_autoral_chega_ao_prompt_do_autor(self):
+        from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
+        from pipeline.reexecucao import CHAVES_AUTORAIS, PREFIXO_ANTERIOR
+
+        lidas = set()
+        for _, agente in iter_agent_tree(create_mission_orchestrator(stages=["produto", "design", "dev"])):
+            instrucao = getattr(agente, "instruction", "")
+            if isinstance(instrucao, str):
+                lidas |= {c for c in CHAVES_AUTORAIS if "{" + PREFIXO_ANTERIOR + c + "?}" in instrucao}
+        self.assertEqual(sorted(CHAVES_AUTORAIS - lidas), [], "base guardada que nenhum autor lê")
+
     def test_heranca_preserva_so_gates_nao_refeitos(self):
         from pipeline.reexecucao import preparar_estado, recalcular_heranca
 
