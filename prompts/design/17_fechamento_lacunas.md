@@ -92,7 +92,7 @@ Rode com o Gate 0 em **no máximo duas rodadas**. O que ele negar volta ao produ
 
 ## Passo 5 — Spec consolidada
 
-Emita a **spec completa**: o texto original do Gate 0 intocado, mais um **bloco 13 — Decisões D0** com todas as decisões `[D0-n]` e os `[RS-n]` pendentes. Cada decisão referencia o bloco/campo que preenche. Downstream, `spec_missao` **é esta spec consolidada** — D1 a D8 não precisam saber que você existiu, só que a célula tem resposta e a marca `[D0-n]` diz de onde veio.
+Emita a **spec completa**: o texto original do Gate 0 intocado (inclusive o `## Glossário canônico`, que o verificador de coerência lê depois de você), mais um **bloco 13 — Decisões D0** com todas as decisões `[D0-n]` e os `[RS-n]` pendentes. Cada decisão referencia o bloco/campo que preenche. Downstream, `spec_missao` **é esta spec consolidada** — D1 a D8 não precisam saber que você existiu, só que a célula tem resposta e a marca `[D0-n]` diz de onde veio.
 
 **Uma única alteração no texto do Gate 0 é permitida:** quando uma `[D0-n]` fecha um marcador `[ABERTO — …]` da spec, acrescente ao fim da linha dele — e só dela — ` — Resolvido em [D0-n]`. O rastro de lacunas lê essa marca e deixa de cobrar o que você fechou, desde que o `[D0-n]` exista no bloco 13; sem ela, a pendência que você resolveu volta a barrar o design e o PRD. Não apague nem reescreva o marcador: quem lê precisa ver o que estava aberto e onde foi fechado.
 

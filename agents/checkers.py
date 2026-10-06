@@ -353,6 +353,10 @@ class ArtefatosDesignAgent(BaseAgent):
     links_key: str = "stitch_links"
     diagramas_key: str = "diagramas_html"
     fonte_wireframes: str = "wireframes_cobertura"
+    #: Telas no Stitch × inventário da jornada. Na exp09ef1b o Stitch tinha 6 das 16 telas e o QA escreveu
+    #: "todas as 16 telas ativas"; aqui só se avisava a falta de `E0-PROF`. Menos telas que o inventário
+    #: bloqueia, com dono `telas` — o `A30bQaAfirmacoes` leva o ticket ao retrabalho.
+    status_key: str = "stitch_status"
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -394,6 +398,14 @@ class ArtefatosDesignAgent(BaseAgent):
                     dados = coletar_links(pid, ids_de_reserva=extrair_screen_ids(relatorio))
                     delta[self.links_key] = montar_folha_de_links(dados, titulo)
                     linhas.append(f"🔗 Stitch: {len(dados['telas'])} tela(s) no projeto `{pid}` — link no relatório e no PRD.")
+                    from tools.afirmacoes import cobertura_stitch
+
+                    cob = cobertura_stitch(delta[self.links_key], str(state.get("jornada_telas", "") or ""))
+                    delta[self.status_key] = cob["status"]
+                    delta[f"{self.status_key}_envelope"] = {"agente": "stitch-cobertura", "status": cob["status"],
+                                                            "achados": cob["achados"], "precisa_humano": False}
+                    for a in cob["achados"]:
+                        linhas.append(f"⛔ {a['resumo']}")
                     if dados["telas"] and not any("E0-PROF" in (t.get("titulo") or "").upper() for t in dados["telas"]):
                         # A folha já carrega o marcador `[LACUNA — dono: telas]`; aqui só se avisa.
                         linhas.append("⚠️ Nenhuma tela do preparo do professor (`E0-PROF-*`) no Stitch — lacuna registrada na folha com dono `telas`.")
@@ -409,6 +421,54 @@ class ArtefatosDesignAgent(BaseAgent):
             content=types.Content(role="model", parts=[types.Part(text="\n".join(linhas) or "Nada a coletar.")]),
             actions=EventActions(state_delta=delta),
         )
+
+
+class QaAfirmacoesAgent(BaseAgent):
+    """Confere em código as contagens de telas e os nomes de arquivo que o QA de design escreveu.
+
+    Na exp09ef1b o QA aprovou o design escrevendo "todas as 16 telas ativas e vinculadas" ao lado do
+    link do Stitch — o projeto tinha 6 — e apontou o protótipo em `design/08-prototipo-navegavel.html`,
+    arquivo que a esteira não grava. Roda entre o QA e o veredito: afirmação que não bate, ou Stitch
+    com menos telas que o inventário (`stitch_status`), reescreve o envelope do QA como bloqueado e
+    acrescenta os tickets — o do Stitch com dono `telas`, para o retrabalho desenhar o que falta.
+    O próprio veredito vai para `qa_afirmacoes_status`, no dossiê.
+    """
+
+    report_key: str = "qa_afirmacoes_report"
+    status_key: str = "qa_afirmacoes_status"
+    qa_key: str = "qa_entregaveis_report"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import afirmacoes as af
+
+        state = ctx.session.state
+        qa = str(state.get(self.qa_key, "") or "")
+        resultado = af.conferir_qa(qa, str(state.get("stitch_links", "") or ""), str(state.get("jornada_telas", "") or ""),
+                                   str(state.get("prototipo_arquivo", "") or ""))
+        missao = extrair_slug(str(state.get("spec_missao") or "")) or ""
+        relatorio = af.relatorio(resultado, missao)
+        delta: Dict[str, Any] = {self.report_key: relatorio, self.status_key: resultado["status"],
+                                 f"{self.status_key}_envelope": extrair_envelope(relatorio) or {}}
+        stitch = state.get("stitch_status_envelope") or {}
+        tickets = list(resultado["achados"]) + [a for a in (stitch.get("achados") or [])
+                                                if str(state.get("stitch_status", "")) == "bloqueado"]
+        envelope = extrair_envelope(qa)
+        if tickets and envelope is not None:
+            novo = dict(envelope)
+            novo["status"], novo["veredito"] = "bloqueado", "vermelho"
+            novo["achados"] = list(envelope.get("achados") or []) + [
+                {"id": f"QA-A{i}", **a} for i, a in enumerate(tickets, 1)]
+            delta[self.qa_key] = (qa.rstrip() + "\n\n## Afirmações conferidas em código (A30b)\n\n"
+                                  + "\n".join(f"- ⛔ `{a['codigo']}` — {a['resumo']}" for a in tickets)
+                                  + "\n\nO veredito acima foi reescrito: aprovar com uma contagem que não bate é aprovar "
+                                    "o que ninguém viu.\n\n```json\n" + json.dumps(novo, ensure_ascii=False) + "\n```\n")
+        msg = ("✅ Afirmações do QA: contagens e arquivos batem." if not tickets else
+               f"⛔ Afirmações do QA: {len(tickets)} divergência(s) — o veredito do QA foi reescrito como bloqueado.\n"
+               + "\n".join(f"- {a['resumo'][:200]}" for a in tickets))
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta=delta))
 
 
 class EspelhoMiroAgent(BaseAgent):
@@ -654,7 +714,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager
+    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager | consistencia | conteudo
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -708,13 +768,40 @@ class RastroCheckAgent(BaseAgent):
             resultado = kp.validar_kpis(str(state.get("prd_final", "") or ""),
                                         str(state.get(self.spec_key, "") or ""))
             relatorio = kp.relatorio(resultado, missao)
+        elif self.modo == "consistencia":
+            # Jornada, fluxo, copy revisada e protótipo contra o glossário canônico da spec. O mesmo
+            # órgão com quatro nomes e o beneficiário de 14 anos virando coordenador (exp09ef1b) eram
+            # defeitos de documento lido sozinho: cada um estava bem escrito, nenhum batia com o outro.
+            from tools import consistencia as cons
+
+            resultado = cons.validar_estado(dict(state))
+            relatorio = cons.relatorio(resultado, missao)
+        elif self.modo == "conteudo":
+            # O banco escrito contra o brief que o declara, e o Status do brief contra o vocabulário: na
+            # exp09ef1b o brief dizia "Homologado" para um banco que ninguém escreveu.
+            from tools import conteudo as ct
+            from tools.consistencia import validar as validar_glossario
+
+            spec = str(state.get(self.spec_key, "") or "")
+            banco = str(state.get("banco_conteudo", "") or "")
+            resultado = ct.validar(str(state.get("brief_assets", "") or ""), banco, spec)
+            # o banco escreve nomes, idades e números: o mesmo glossário que confere a copy o confere
+            resultado["achados"] += validar_glossario(spec, {"banco de conteúdo": banco}, exigir_glossario=False,
+                                                      etapa="dev")["achados"]
+            if any(a["severidade"] == "bloqueio" for a in resultado["achados"]):
+                resultado["status"] = "bloqueado"
+            elif resultado["achados"] and resultado["status"] == "aprovado":
+                resultado["status"] = "amarelo"
+            relatorio = ct.relatorio(resultado, missao)
         elif self.modo == "prd":
             # Dois exames no mesmo passo: os marcadores que o redator deixou (lacunas) e as
             # contradições que ele não viu (consistência). Um PRD pode não ter lacuna nenhuma e
             # ainda declarar dois prefixos de tabela ou deixar um requisito P0 sem teste — e é o
             # segundo caso que faz quem codifica escolher um caminho ao acaso.
             r_lacunas = varrer_lacunas(self.fontes, dict(state))
-            r_consistencia = validar_prd(str(state.get("prd_final", "") or ""))
+            r_consistencia = validar_prd(str(state.get("prd_final", "") or ""),
+                                         spec=str(state.get(self.spec_key, "") or ""),
+                                         banco=str(state.get("banco_conteudo", "") or ""))
             relatorio = (
                 relatorio_lacunas(r_lacunas, self.rotulo, missao, agente=self.agente)
                 + "\n\n---\n\n"
@@ -1308,6 +1395,36 @@ class DiagnosticoAgent(BaseAgent):
                 }
             ),
         )
+
+
+class MecanicaCheckAgent(BaseAgent):
+    """Refaz a conta da virada a partir da tabela 1.3 do núcleo (`tools/mecanica.py`). Determinístico.
+
+    Roda no laço do núcleo, junto do micro-gate e da profundidade: conta que não fecha devolve o núcleo
+    ao autor com o ranking calculado. Não registra degradação — o freio é o parecer humano.
+    """
+
+    report_key: str = "mecanica_report"
+    status_key: str = "mecanica_status"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import mecanica as mec
+
+        nucleo = str(ctx.session.state.get("nucleo_narrativo", "") or "")
+        resultado = mec.validar(nucleo)
+        relatorio = mec.relatorio(resultado, extrair_slug(nucleo) or "")
+        icone = {"aprovado": "✅", "amarelo": "🟡", "bloqueado": "⛔"}[resultado["status"]]
+        calc = resultado.get("calculo") or {}
+        resumo = (f" Antes: {calc['antes'][0][0]}; depois: {calc['depois'][0][0]}." if calc.get("antes") and calc.get("depois") else "")
+        msg = f"{icone} Conta da virada: {len(resultado['achados'])} achado(s).{resumo}"
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta={
+                        self.report_key: relatorio,
+                        self.status_key: resultado["status"],
+                        f"{self.status_key}_envelope": extrair_envelope(relatorio) or {},
+                    }))
 
 
 class CoberturaConceitualAgent(BaseAgent):

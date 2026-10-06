@@ -205,7 +205,7 @@ Envie a decisão como `[RS-AMB]` no formato de re-spec do D0. Escolha de ambient
 
 ## Passo 4 — Spec consolidada + insumos para a esteira
 
-**Você parte da spec consolidada que o D0 entregou, não do texto original do Gate 0.** Reemita-a inteira com os blocos 1–13 **intocados, incluindo o bloco 13 (Decisões D0)**, e acrescente **bloco 14 — Ambiente simulado (D9)**: nome, seção do DS, verbos nativos com rótulo literal, dispositivo nativo, estados, e o que o ambiente não tem. Regenerar a spec a partir do original apaga o trabalho do D0 — se o bloco 13 não estiver na sua saída, você perdeu as decisões dele.
+**Você parte da spec consolidada que o D0 entregou, não do texto original do Gate 0.** Reemita-a inteira com os blocos 1–13 **intocados, incluindo o bloco 13 (Decisões D0) e o `## Glossário canônico`**, e acrescente **bloco 14 — Ambiente simulado (D9)**: nome, seção do DS, verbos nativos com rótulo literal, dispositivo nativo, estados, e o que o ambiente não tem. Regenerar a spec a partir do original apaga o trabalho do D0 — se o bloco 13 não estiver na sua saída, você perdeu as decisões dele.
 
 O **bloco 14 completo também vai para `ambiente_simulado`**, como documento próprio: é ele que D1, D2, D4, D5, V1 e o QA recebem. A spec é o contrato; `ambiente_simulado` é o documento de trabalho. Os dois dizem a mesma coisa, e é você quem garante isso.
 

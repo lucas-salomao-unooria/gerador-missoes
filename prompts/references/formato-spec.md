@@ -255,11 +255,43 @@ visível sobe o teto da faixa de duas para três, critério 3.5) e são narradas
 
 ## 12. Decisões fechadas neste gate
 Decisão · quem decidiu · data · alternativas descartadas.
+
+## Glossário canônico
+> Todo documento a jusante (jornada, fluxo, copy, protótipo, brief de assets, banco de conteúdo,
+> PRD) usa só os nomes desta seção. Um verificador determinístico confere cada um contra ela:
+> variante proibida em tela é bloqueio.
+
+### Entidades
+| Nome canônico | Variantes proibidas |
+|---|---|
+| <órgão, projeto, empresa, plataforma — o nome que aparece em tela> | "<outro nome que já circulou>"; "<sigla ou abreviação que não vale>" |
+
+### Personagens
+| Nome | Idade | Papel na história |
+|---|---|---|
+| <nome> | <anos> | <o que a pessoa é na história, com o verbo: "beneficiário do X", "coordena o Y"> |
+
+### Números
+| O quê | Valor | Unidade |
+|---|---|---|
+| <grandeza com a entidade no nome: "vagas novas do X"> | <número> | <vagas · dias por semana · R$ · …> |
+
+### Rótulos de botão por ação
+| Ação | Rótulo |
+|---|---|
+| <o que o botão faz, em verbo> | <o texto exato do botão> |
+
+### Arquivos
+| Artefato | Nome do arquivo |
+|---|---|
+| Protótipo navegável | design/08-prototipo.html |
 ```
 
 ## Regra de alteração
 
 A spec só muda por reabertura do Gate 0. Agente de construção não edita spec — se ela estiver errada ou incompleta, devolve, e isso é registrado como falha do gate.
+
+O `## Glossário canônico` faz parte do texto do Gate 0, como os blocos 0–12: quem acrescenta bloco depois dele o copia intocado.
 
 **Blocos acrescentados pela esteira de design (não alteram os blocos 0–12).** Depois do Gate 0, dois agentes anexam blocos à spec sem tocar no texto original:
 

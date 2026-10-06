@@ -137,6 +137,10 @@ Na primeira geração os dois blocos abaixo chegam vazios: ignore esta seção e
 
 {fidelidade_nucleo_report?}
 
+**Conta da virada na rodada anterior** (o código refez o ranking da tabela 1.3). Se a conta não fecha, o problema é de mecanismo: mude o critério, o peso ou o dado que falta na seção 4 — não só os números da tabela — e registre a mudança na 18-parcial.
+
+{mecanica_report?}
+
 **Núcleo que você entregou na rodada anterior:**
 
 {nucleo_narrativo?}
@@ -173,6 +177,18 @@ Uma linha por conceito `limiar` e `núcleo` do mapa conceitual (os de `apoio`, s
 | Virada | <a evidência que desmente a crença: o contraste com colegas e, se houver, a segunda camada — o que nunca apareceu para ele> |
 | Nomeação | <o termo do material que o Explicar usa, e com que dado do próprio estudante> |
 | Transferência | <o cenário novo do Refletir e o que a resposta precisa conter para mostrar o mecanismo> |
+
+### 1.3 Conta da virada
+Quando a virada é uma recomendação, um ranking ou uma pontuação que muda (a IA recomenda A, e com o dado que faltava recomenda B), escreva a conta. Um verificador em código **refaz o ranking** a partir desta tabela: normaliza cada critério entre as opções, aplica os pesos e confere que o vencedor antes e o vencedor depois são os que você declarou — e que são diferentes. Use os números do briefing (vagas, valores, datas). Critérios e pesos são os mesmos antes e depois: só muda o dado que faltava. Na missão do 9º ano o critério "menor custo por vaga" fazia o projeto que deveria perder vencer antes da virada, e ninguém fez a conta.
+
+| Opção | Critério | Melhor quando | Peso | Antes | Depois |
+|---|---|---|---|---|---|
+| <opção 1> | <critério que a IA da missão usa, com unidade> | maior · menor | <número> | <valor só com o que a IA vê> | <valor com o dado que faltava> |
+| … | … | … | … | … | … |
+
+**Vencedor antes:** <opção> · **Vencedor depois:** <opção>
+
+Se a missão não tem ranking nem recomendação que se inverte, escreva só `**Não se aplica:** <por quê, em uma frase>`.
 
 ## 3. Narrativa e personagem-guia
 Abertura (Desafiar) com job-to-be-done concreto (Regra 9). Decisão deliberada sobre personagem-guia (Regra 6). **Superfície de parametrização docente (Regra 11):** o que o professor de qualquer disciplina customiza nesta missão pelo recorte da aula (disciplina, tema, assuntos, contexto), onde isso aparece no conteúdo do Navegar, o que é camada fixa — e a **tabela do teste das três disciplinas** `| Disciplina | Recorte do professor (exemplo) | O que a IA gera | O que não muda |` com Português, Ciências/Biologia e História.

@@ -20,7 +20,11 @@ HTML é o que a revisão humana de fato abre.
   d8  A28Prototipo          → prototipo_html  (protótipo navegável)
   d8c A29ArtefatosDesign         → prototipo_arquivo (.html) · prototipo_relatorio · stitch_links
                                  · diagramas_html — determinístico, o HTML nunca entra em prompt
+  d8e A29dConsistencia           → consistencia_status (determinístico: jornada, fluxo, copy e
+                                 protótipo contra o glossário canônico da spec)
   d7  A30QaEntregaveis      → qa_entregaveis_report (gate de design)
+  d7b A30bQaAfirmacoes          → qa_afirmacoes_status (determinístico: contagens de telas e nomes de
+                                 arquivo do QA contra o real; divergência reescreve o QA como bloqueado)
   d7c A31QaEntregaveisCheck      → design_status (🔴 impede dev e PRD quando ESTEIRA_ESTRITA)
   d7d A33RastroDesign            → rastro_design_status (determinístico: lacuna de design na spec e
                                  nos documentos de design, cobrada onde o designer ainda refaz)
@@ -47,6 +51,7 @@ from agents.checkers import (
     ArtefatosDesignAgent,
     PrototipoLintAgent,
     DespachoTicketsAgent,
+    QaAfirmacoesAgent,
     EnvelopeGateAgent,
     EspelhoMiroAgent,
     RastroCheckAgent,
@@ -292,7 +297,7 @@ MAPA_RETRABALHO = {
 #: protótipo era reconstruído e o QA da rodada 2 lia o lint da rodada 1 — sobre o HTML velho —
 #: com a instrução de tratá-lo como fato. Visto na auditoria de 23/09/2026.
 POSFIXO_RETRABALHO = ["A28PrototipoRetrabalho", "A29ArtefatosDesignRetrabalho",
-                      "A29cPrototipoLintRetrabalho", "A29bEspelhoMiroRetrabalho"]
+                      "A29cPrototipoLintRetrabalho", "A29dConsistenciaRetrabalho", "A29bEspelhoMiroRetrabalho"]
 
 #: Tickets endereçados a estes donos não são desta etapa: o QA está devolvendo ao produto.
 RETRABALHO_EXTERNO = ["gate-estrutural"]
@@ -336,12 +341,35 @@ def _agentes_de_retrabalho(**kw) -> list:
             description="Reextrai o HTML do protótipo, os links do Stitch e a folha de diagramas depois de uma rodada de retrabalho.",
         ),
         PrototipoLintAgent(name="A29cPrototipoLintRetrabalho"),
+        get_consistencia_check("A29dConsistenciaRetrabalho"),
         EspelhoMiroAgent(
             name="A29bEspelhoMiroRetrabalho",
             description="Reenvia ao mesmo board do Miro os diagramas corrigidos na rodada de retrabalho.",
         ),
     ]
     return agentes
+
+
+def get_consistencia_check(nome: str = "A29dConsistencia") -> RastroCheckAgent:
+    """Jornada, fluxo, copy revisada e protótipo contra o `## Glossário canônico` da spec.
+
+    Na exp09ef1b o órgão teve quatro nomes, os beneficiários de 14 anos viraram coordenadores na copy
+    e seis ações tinham dois rótulos de botão. Nenhum documento estava errado sozinho; ninguém lia os
+    quatro juntos. Variante proibida em tela bloqueia; o resto é atenção para o QA ler como fato.
+    """
+    return RastroCheckAgent(
+        name=nome,
+        description="Coerência entre documentos: nomes de entidade, papel e idade de personagem, números com unidade, "
+                    "rótulos de botão e nomes de arquivo da jornada, do fluxo, da copy e do protótipo contra o glossário "
+                    "canônico da spec. Variante proibida bloqueia.",
+        modo="consistencia",
+        rotulo="Coerência entre documentos",
+        report_key="consistencia_report",
+        status_key="consistencia_status",
+        agente="consistencia-check",
+        estrito=get_settings().esteira_estrita,
+        before_agent_callback=marcar_heranca,
+    )
 
 
 def build_qa_design_loop(**kw) -> LoopAgent:
@@ -360,6 +388,13 @@ def build_qa_design_loop(**kw) -> LoopAgent:
         before_agent_callback=marcar_heranca,
         sub_agents=[
             get_qa_entregaveis_agent(max_rodadas=rodadas, **kw),
+            # Entre o QA e o veredito: contagem de telas e nome de arquivo que o QA escreveu são
+            # conferidos em código; divergência reescreve o envelope como bloqueado (exp09ef1b).
+            QaAfirmacoesAgent(
+                name="A30bQaAfirmacoes",
+                description="Confere as contagens de telas e os nomes de arquivo que o QA afirma contra o inventário da jornada, o projeto no Stitch, o protótipo e os arquivos que a esteira grava; divergência, ou Stitch com menos telas que o inventário, reprova a rodada do QA com ticket.",
+                before_agent_callback=marcar_heranca,
+            ),
             EnvelopeGateAgent(
                 name="A31QaEntregaveisCheck",
                 description="Lê o veredito do QA de entregáveis: aprovado encerra o loop; 🔴 na última rodada impede o dev e o PRD (modo estrito).",
@@ -419,6 +454,9 @@ def build_design_stage(
             # telas, um `TODO` na tela de pico ou um HTML que nem abre passavam se o relatório
             # dissesse que estava pronto. Este lint toca o arquivo e alimenta o QA.
             PrototipoLintAgent(name="A29cPrototipoLint"),
+            # Os nomes, papéis, números e rótulos contra o glossário da spec. Antes do QA, que lê o
+            # relatório como fato e endereça o conserto ao dono de cada documento.
+            get_consistencia_check("A29dConsistencia"),
             EspelhoMiroAgent(
                 name="A29bEspelhoMiro",
                 description="Espelha no Miro os diagramas Mermaid da jornada e do fluxo e devolve o link do board.",
@@ -457,10 +495,12 @@ DESIGN_METADATA = [
     {"id": "A26Telas", "name": "26 · Wireframes lo-fi (Stitch)", "icon": "📐", "output_key": "wireframes_cobertura", "prompt_file": "design/26_telas.md", "description": "Telas em escala de cinza sobre a seção do DS do ambiente."},
     {"id": "A27CopyRevisao", "name": "27 · Copy PT-BR (passada 2)", "icon": "🔍", "output_key": "copy_strings_revisada", "prompt_file": "design/27_copy_revisao.md", "description": "Revisão em contexto de tela."},
     {"id": "A28Prototipo", "name": "28 · Protótipo navegável (HTML)", "icon": "🖥️", "output_key": "prototipo_html", "prompt_file": "design/28_prototipo.md", "description": "Arquivo HTML único e sem dependências com as telas navegáveis, o painel da etapa vindo do one-pager e as cadências do pico. Salvo como `design/08-prototipo.html`."},
-    {"id": "A29ArtefatosDesign", "name": "29 · Artefatos e links (determinístico)", "icon": "🔗", "output_key": "stitch_links", "prompt_file": None, "description": "Separa o HTML do protótipo do relatório, colhe os links das telas no Stitch e monta a folha de diagramas."},
+    {"id": "A29ArtefatosDesign", "name": "29 · Artefatos e links (determinístico)", "icon": "🔗", "output_key": "stitch_links", "prompt_file": None, "description": "Separa o HTML do protótipo do relatório, colhe os links das telas no Stitch e monta a folha de diagramas. Stitch com menos telas que o inventário da jornada bloqueia (`stitch_status`, dono `telas`)."},
     {"id": "A29cPrototipoLint", "name": "29a · Lint do protótipo (determinístico)", "icon": "🧹", "output_key": "prototipo_lint_report", "prompt_file": None, "description": "Confere o arquivo do protótipo HTML: o que o QA de entregáveis não vê por ler só o texto. Reprovado devolve ao protótipo no retrabalho de design."},
+    {"id": "A29dConsistencia", "name": "29d · Coerência entre documentos (determinístico)", "icon": "📖", "output_key": "consistencia_report", "prompt_file": None, "description": "Jornada, fluxo, copy revisada e protótipo contra o glossário canônico da spec: variante proibida de entidade bloqueia; papel ou idade de personagem, número com unidade, rótulo de botão e nome de arquivo divergentes ficam 🟡. Pegou os quatro nomes do órgão da exp09ef1b."},
     {"id": "A29bEspelhoMiro", "name": "29b · Espelho no Miro (determinístico)", "icon": "🪞", "output_key": "miro_links", "prompt_file": None, "description": "Publica no Miro, como board navegável, os mesmos diagramas Mermaid da jornada e do fluxo. O Mermaid continua sendo a fonte; Miro indisponível não interrompe a esteira."},
     {"id": "A30QaEntregaveis", "name": "30 · QA de entregáveis", "icon": "🧪", "output_key": "qa_entregaveis_report", "prompt_file": "design/30_qa_entregaveis.md", "description": "Fidelidade à spec, diff de strings, currículo, faixa, fluxo, professor, briefing, ambiente (D8) e CAA (D8b)."},
+    {"id": "A30bQaAfirmacoes", "name": "30b · Afirmações do QA (determinístico)", "icon": "🔎", "output_key": "qa_afirmacoes_report", "prompt_file": None, "description": "Contagens de telas (\"todas as N telas\", \"N de M\") e nomes de arquivo que o QA escreveu, contra o inventário da jornada, o Stitch, o protótipo e `pipeline/artifacts.py`. Divergência reescreve o veredito do QA como bloqueado; Stitch com menos telas que o inventário vira ticket para `telas`. Pegou as \"16 telas\" de um Stitch com 6 na exp09ef1b."},
     {"id": "A31QaEntregaveisCheck", "name": "31 · Veredito de design (determinístico)", "icon": "🔀", "output_key": "design_status", "prompt_file": None, "description": "Lê o envelope do QA de entregáveis."},
     {"id": "A33RastroDesign", "name": "33 · Rastro de lacunas do design (determinístico)", "icon": "🧭", "output_key": "rastro_design_report", "prompt_file": None, "description": "Marcadores de lacuna na spec consolidada e nos documentos de design: o de design bloqueia a etapa; o que o fechamento de lacunas fechou (`Resolvido em [D0-n]`) não conta; o de produto já aprovado e o de dev ficam 🟡."},
     {"id": "A32DespachoDesign", "name": "32 · Retrabalho de design (determinístico)", "icon": "🔁", "output_key": "tickets_retrabalho", "prompt_file": None, "description": "Reexecuta só os agentes com ticket do QA, na ordem de precedência do prompt, e refaz o protótipo depois."},

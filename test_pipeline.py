@@ -57,7 +57,7 @@ KNOWN_STATE_KEYS = {
     "briefing", "nucleo_narrativo", "micro_gate_report", "micro_gate_status", "micro_gate_rodada",
     "mapa_conceitual", "ideacao_mecanismos", "cobertura_report", "profundidade_report", "profundidade_status",
     "profundidade_rodada", "nucleo_rodada",
-    "fidelidade_nucleo_report", "fidelidade_report", "fidelidade_entrada", "fidelidade_documentos",
+    "fidelidade_nucleo_report", "fidelidade_report", "fidelidade_entrada", "fidelidade_documentos", "mecanica_report",
     "one_pager", "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_rodada",
     "contrato_produto_report", "contrato_produto_status",
     "avaliacao_pedagogica_report", "experiencia_aluno_report", "adequacao_report", "gate_final_report", "gate_final_status",
@@ -67,10 +67,10 @@ KNOWN_STATE_KEYS = {
     "wireframes_cobertura", "copy_strings_revisada", "qa_entregaveis_report", "design_status",
     "prototipo_html", "prototipo_arquivo", "prototipo_relatorio", "stitch_links", "diagramas_html",
     "miro_links", "miro_board",
-    "handoff_dev", "brief_assets", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
+    "handoff_dev", "brief_assets", "banco_conteudo", "conteudo_report", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
     "rastro_spec_status", "rastro_spec_report", "rastro_design_status", "rastro_design_report",
-    "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
+    "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
     "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida",
     "perguntas_report", "perguntas_status", "juiz_perguntas_report", "juiz_perguntas_status",
@@ -95,7 +95,7 @@ KNOWN_STATE_KEYS = {
         "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao", "one_pager_resumido",
         "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
         "camada_caa", "wireframes_cobertura", "copy_strings_revisada", "prototipo_html",
-        "handoff_dev", "brief_assets", "prd_final", "one_pager_pedagogico")),
+        "handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico")),
 }
 # Variáveis estáticas substituídas pelo loader antes do ADK
 CONFIG_VARS = {"stitch_mcp_mode": "off", "stitch_project_url_base": "u", "gate_max_rodadas": 3, "qa_max_rodadas": 1}
@@ -105,7 +105,7 @@ REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
 
 EXPECTED_AGENTS = {
     "A00cMapaConceitual", "A00dIdeacaoMecanismos", "A01cCoberturaConceitual", "A02bJuizProfundidade",
-    "A03bProfundidadeCheck", "A03cNucleoCheck", "A03aFidelidadeNucleo", "A16cFidelidadeProduto",
+    "A03bProfundidadeCheck", "A03cNucleoCheck", "A03aFidelidadeNucleo", "A16cFidelidadeProduto", "A03aaContaDaVirada",
     "NucleoNarrativoLoop", "A01NucleoNarrativo", "A02MicroGate", "A03MicroGateCheck", "A04SecoesApoio",
     "GateEstruturalLoop", "A04bContratoProdutoCheck", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager",
     "AvaliacoesParalelas", "A08AvaliacaoPedagogica", "A09ExperienciaEstudante",
@@ -116,7 +116,7 @@ EXPECTED_AGENTS = {
     "A12GateFinalProdutoCheck", "A13SpecMissao", "A14BnccCheck", "A16bOnePagerResumido", "DesignStage", "A17FechaLacunas", "A18FechaLacunasSplit",
     "A19AmbienteSimulado", "A20AmbienteSimuladoSplit", "A21BriefOficio", "A22Jornada",
     "A23Fluxo", "A24CopyPtBr", "A25Caa", "A26Telas", "A27CopyRevisao", "A30QaEntregaveis",
-    "A28Prototipo", "A29ArtefatosDesign", "A29bEspelhoMiro", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets",
+    "A28Prototipo", "A29ArtefatosDesign", "A29bEspelhoMiro", "A29dConsistencia", "A30bQaAfirmacoes", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets", "A35bBancoConteudo", "A35cConteudoCheck",
     "A36TelemetriaCheck", "A38LacunaCheck", "A48PrdCheck",
     "BancaValidacaoDev", "A39BancaProdutoNarrativa", "A40BancaDesignImersao",
     "A41BancaPedagogiaBncc", "A42BancaDadosLgpd", "A43BancaTecnicaArquitetura",
@@ -189,7 +189,7 @@ def test_arvore_de_agentes():
     # A profundidade conta ANTES do veredito do micro-gate: na última rodada o `A03MicroGateCheck`
     # encerra o loop ao reprovar, e a rodada ficaria sem status de profundidade.
     assert [a.name for a in micro.sub_agents] == ["A01NucleoNarrativo", "A01bVizinhasCatalogo", "A01cCoberturaConceitual",
-                                                  "A02MicroGate", "A02bJuizProfundidade", "A03aFidelidadeNucleo",
+                                                  "A02MicroGate", "A02bJuizProfundidade", "A03aaContaDaVirada", "A03aFidelidadeNucleo",
                                                   "A03bProfundidadeCheck", "A03MicroGateCheck", "A03cNucleoCheck"]
     produto = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "ProdutoStage")
     assert [a.name for a in produto.sub_agents][:4] == ["A00bVizinhasCatalogo", "A00cMapaConceitual",
@@ -4541,3 +4541,294 @@ def test_semaforo_honesto_quando_um_gate_pede_uma_pessoa():
     env = catalogo.relatorio_markdown({"status": "amarelo", "achados": col, "ficha": ficha, "total": 9, "vizinhas": []}, "exp09ef1b")
     assert '"precisa_humano": true' in env
     print("   ✓ semáforo: gate que pede pessoa vira decisão listada; colisão de slug é decisão de produto")
+
+
+def test_conta_da_virada_refeita_em_codigo():
+    """exp09ef1b: com só "menor custo por vaga", o projeto que deveria perder (Mesa Aberta, R$ 500) já
+    vencia antes da virada. Com um critério de comprovação declarado, a mesma virada fecha."""
+    from tools import mecanica as mec
+
+    cab = "### 1.3 Conta da virada\n| Opção | Critério | Melhor quando | Peso | Antes | Depois |\n|---|---|---|---|---|---|\n"
+    custo = ("| Mesa Aberta | custo por vaga (R$) | menor | 1 | 500 | 500 |\n"
+             "| Ponto de Apoio | custo por vaga (R$) | menor | 1 | 667 | 667 |\n"
+             "| Conexão para Continuar | custo por vaga (R$) | menor | 1 | 600 | 600 |\n")
+    venc = "\n**Vencedor antes:** Conexão para Continuar · **Vencedor depois:** Mesa Aberta\n"
+    so_custo = mec.validar(cab + custo + venc)
+    assert {a["codigo"] for a in so_custo["achados"]} == {"conta-nao-fecha", "sem-virada"}
+    comprovacao = ("| Mesa Aberta | registros comprovados | maior | 1 | 0 | 180 |\n"
+                   "| Ponto de Apoio | registros comprovados | maior | 1 | 4 | 4 |\n"
+                   "| Conexão para Continuar | registros comprovados | maior | 1 | 12 | 12 |\n")
+    fecha = mec.validar(cab + custo + comprovacao + venc)
+    assert fecha["status"] == "aprovado", fecha["achados"]
+    assert fecha["calculo"]["antes"][0][0] == "Conexão para Continuar" and fecha["calculo"]["depois"][0][0] == "Mesa Aberta"
+    assert mec.validar("## 1. Descoberta\n")["achados"][0]["codigo"] == "conta-ausente"
+    assert mec.validar("### 1.3 Conta da virada\n**Não se aplica:** a missão não tem recomendação de máquina nem ranking.\n")["status"] == "aprovado"
+    assert mec._numero("R$ 12.000") == 12000 and mec._numero("12,5") == 12.5
+    print("   ✓ conta da virada: o custo por vaga da exp09ef1b não fecha; com comprovação declarada, fecha")
+
+
+#: O glossário que a spec da exp09ef1b deveria ter trazido: valores tirados do briefing do PO.
+_GLOSSARIO_EXP09 = """
+## Glossário canônico
+
+### Entidades
+| Nome canônico | Variantes proibidas |
+|---|---|
+| Comissão Municipal de Recursos Comunitários | "Conselho Municipal de Apoio Social"; "Conselho Municipal de Recursos"; "Comissão de Recursos Comunitários" |
+| Mesa Aberta | — |
+| Ponto de Apoio | — |
+| Conexão para Continuar | — |
+
+### Personagens
+| Nome | Idade | Papel na história |
+|---|---|---|
+| João | 14 | beneficiário do Mesa Aberta: nem sempre tem refeição no contraturno |
+| Ana | 14 | beneficiária do Ponto de Apoio |
+| Luana | 14 | beneficiária do Conexão para Continuar |
+
+### Números
+| O quê | Valor | Unidade |
+|---|---|---|
+| Vagas novas do Mesa Aberta | 24 | vagas |
+| Dias de atendimento do Mesa Aberta | 2 | dias por semana |
+| Vagas novas do Ponto de Apoio | 18 | vagas |
+| Vagas novas do Conexão para Continuar | 20 | vagas |
+
+### Rótulos de botão por ação
+| Ação | Rótulo |
+|---|---|
+| Usar o banco padrão no preparo | Usar banco padrão |
+| Gerar o cenário com IA | Gerar Cenário com IA |
+| Liberar a missão para a turma | Liberar Missão Agora |
+| Liberar a auditoria dos cadernos (Gate E4) | Liberar Auditoria dos Cadernos (Gate E4) |
+
+### Arquivos
+| Artefato | Nome do arquivo |
+|---|---|
+| Protótipo navegável | design/08-prototipo.html |
+"""
+
+
+def test_coerencia_entre_documentos_contra_o_glossario():
+    """exp09ef1b: o órgão com quatro nomes, João/Ana/Luana (14 anos) como "Coordenação" na copy, o Mesa
+    Aberta de 2 dias por semana com "180 dias" de registros, rótulos de botão em dobro e o QA citando um
+    arquivo que não existe. Textos reais da execução; o glossário é o que a spec deveria ter trazido."""
+    import re
+
+    from tools import consistencia as cons
+
+    spec = _fixture_exp09("spec.md") + _GLOSSARIO_EXP09
+    docs = {"copy revisada": _fixture_exp09("copy_revisada.md"), "one-pager": _fixture_exp09("one_pager.md"),
+            "jornada": _fixture_exp09("jornada.md"), "QA": _fixture_exp09("qa_entregaveis.md")}
+    r = cons.validar(spec, docs)
+    assert r["status"] == "bloqueado"
+    por = lambda cod: [a for a in r["achados"] if a["codigo"] == cod]
+    variantes = {re.search(r"«([^»]+)»", a["resumo"]).group(1) for a in por("variante-proibida")}
+    assert variantes == {"Conselho Municipal de Recursos", "Conselho Municipal de Apoio Social",
+                         "Comissão de Recursos Comunitários"}, variantes
+    assert not [a for a in por("variante-proibida") if "«Comissão Municipal de Recursos Comunitários»" in a["resumo"].split(" é variante")[0]]
+    assert {a["documento"] for a in por("papel-divergente")} == {"copy revisada", "one-pager"}
+    assert any("Coordenação: João" in a["resumo"] for a in por("papel-divergente"))
+    assert any("180 dias" in a["resumo"] for a in por("numero-divergente"))
+    assert not any("18 vagas" in a["resumo"] for a in por("numero-divergente")), "as 18 vagas são do Ponto de Apoio"
+    rotulos = " ".join(a["resumo"] for a in por("rotulo-divergente"))
+    for visto in ("Usar Banco Padrão Oficial", "Gerar com IA", "Liberar para a Turma", "Liberar Gate E4"):
+        assert f"«{visto}»" in rotulos, visto
+    assert any("08-prototipo-navegavel.html" in a["resumo"] for a in por("arquivo-divergente"))
+
+    # glossário com um quinto nome canônico: os quatro nomes que circularam são acusados, e a variante
+    # que é pedaço do canônico ("Conselho Municipal de Recursos") só conta quando aparece solta
+    quinto = _GLOSSARIO_EXP09.replace(
+        '| Comissão Municipal de Recursos Comunitários | "Conselho Municipal de Apoio Social"; "Conselho Municipal de Recursos"; "Comissão de Recursos Comunitários" |',
+        '| Conselho Municipal de Recursos Comunitários | "Conselho Municipal de Apoio Social"; "Conselho Municipal de Recursos"; '
+        '"Comissão Municipal de Recursos Comunitários"; "Comissão de Recursos Comunitários" |')
+    r4 = cons.validar(_fixture_exp09("spec.md") + quinto, docs)
+    assert len({re.search(r"«([^»]+)»", a["resumo"]).group(1) for a in r4["achados"] if a["codigo"] == "variante-proibida"}) == 4
+    limpo = cons.validar(_fixture_exp09("spec.md") + quinto, {"copy": "O Conselho Municipal de Recursos Comunitários abriu o edital."})
+    assert limpo["status"] == "aprovado", limpo["achados"]
+
+    # sem glossário: atenção, nunca silêncio
+    assert [a["codigo"] for a in cons.validar(_fixture_exp09("spec.md"), docs)["achados"]] == ["glossario-ausente"]
+    print("   ✓ coerência: 4 nomes do órgão, coordenadores de 14 anos, 180 dias, rótulos em dobro e arquivo inexistente")
+
+
+def test_prd_coluna_inexistente_e_tipo_divergente():
+    """exp09ef1b: a tabela de eventos da spec gravava em `exp09ef1b_sessoes.projeto_homologado`, que o DDL
+    não declara, e o PRD trocou `escola_id UUID` (spec) por `escola_id TEXT`. Textos reais da execução."""
+    from tools import consistencia as cons
+    from tools.rastro import validar_prd
+
+    spec = _fixture_exp09("spec.md")
+    da_spec = cons.conferir_colunas(spec, rotulo="spec")
+    assert [a["codigo"] for a in da_spec] == ["coluna-inexistente"] and "projeto_homologado" in da_spec[0]["resumo"]
+
+    prd = _fixture_exp09("prd_modelo_de_dados.md")
+    assert not cons.conferir_colunas(prd), "sozinho, o modelo de dados do PRD é coerente"
+    contra = cons.conferir_colunas(prd, referencia=spec)
+    assert [(a["codigo"], a["severidade"]) for a in contra] == [("tipo-divergente-da-spec", "bloqueio")]
+    assert "escola_id" in contra[0]["resumo"] and "UUID" in contra[0]["resumo"] and "TEXT" in contra[0]["resumo"]
+
+    # o mesmo documento com os dois tipos: bloqueio sem precisar da spec
+    misturado = prd + "\n```sql\nCREATE TABLE exp09ef1b_extra (\n    id UUID PRIMARY KEY,\n    escola_id UUID NOT NULL\n);\n```\n"
+    assert any(a["codigo"] == "tipo-divergente" and "escola_id" in a["resumo"] for a in cons.conferir_colunas(misturado))
+
+    r = validar_prd(prd + "\nA tarefa T-004 grava em `exp09ef1b_sessoes.projeto_homologado`.\n", spec=spec)
+    codigos = {a["codigo"] for a in r["achados"]}
+    assert {"tipo-divergente-da-spec", "coluna-inexistente"} <= codigos and r["status"] == "bloqueado"
+    print("   ✓ PRD: escola_id TEXT × UUID bloqueia; coluna que o DDL não declara fica 🟡")
+
+
+def test_gate_de_coerencia_no_design():
+    from agents.design import POSFIXO_RETRABALHO, build_design_stage
+
+    nomes = [a.name for a in build_design_stage().sub_agents]
+    assert nomes.index("A29cPrototipoLint") < nomes.index("A29dConsistencia") < nomes.index("QaDesignLoop")
+    assert POSFIXO_RETRABALHO.index("A29cPrototipoLintRetrabalho") < POSFIXO_RETRABALHO.index("A29dConsistenciaRetrabalho")
+    from agents.design import get_consistencia_check
+
+    estado = {"spec_missao": _fixture_exp09("spec.md") + _GLOSSARIO_EXP09,
+              "copy_strings_revisada": _fixture_exp09("copy_revisada.md"),
+              "prototipo_arquivo": "<html><body><div data-screen-id='E1-ALU-01'>Conselho Municipal de Recursos"
+                                   "<button>Liberar para a Turma</button></div></body></html>"}
+
+    class Semente(BaseAgent):
+        @override
+        async def _run_async_impl(self, ctx):
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
+
+    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), get_consistencia_check()])))
+    assert st["consistencia_status"] == "bloqueado"
+    env = st["consistencia_status_envelope"]
+    assert {a["agente_responsavel"] for a in env["achados"] if a["codigo"] == "variante-proibida"} == {"copy-ptbr-revisao", "prototipo"}
+    assert any(a["codigo"] == "coluna-inexistente" and a["severidade"] == "atencao" for a in env["achados"])
+    print("   ✓ gate de coerência roda no design, depois do lint e antes do QA, e de novo no retrabalho")
+
+
+def test_afirmacoes_do_qa_conferidas_em_codigo():
+    """exp09ef1b: o QA aprovou escrevendo "todas as 16 telas ativas e vinculadas" ao lado do link de um Stitch
+    com 6, e apontou `design/08-prototipo-navegavel.html`, que a esteira não grava. Textos reais."""
+    from tools import afirmacoes as af
+
+    qa, folha, jornada = _fixture_exp09("qa_entregaveis.md"), _fixture_exp09("stitch_telas.md"), _fixture_exp09("jornada.md")
+    assert len(af.telas_do_inventario(jornada)) == 16 and len(af.telas_do_stitch(folha)) == 6
+
+    cob = af.cobertura_stitch(folha, jornada)
+    assert cob["status"] == "bloqueado" and cob["achados"][0]["agente_responsavel"] == "telas"
+    assert "E3-ALU-01" in cob["faltando"] and "E0-PROF-01" not in cob["faltando"]
+
+    r = af.conferir_qa(qa, folha, jornada)
+    assert r["status"] == "bloqueado"
+    assert {a["codigo"] for a in r["achados"]} == {"afirmacao-stitch", "arquivo-inexistente"}, r["achados"]
+    assert any("16 telas no Stitch; o projeto tem 6" in a["resumo"] for a in r["achados"])
+    assert any("08-prototipo-navegavel.html" in a["resumo"] for a in r["achados"])
+    # "Todas as 16 telas … protótipo" e "16 de 16 telas no lint" batem com o inventário: não são acusadas
+    assert not [a for a in r["achados"] if a["codigo"] == "afirmacao-inventario"]
+    # com o protótipo à mão, a afirmação "16/16 no lint" passa a ser conferida contra o arquivo
+    html = "<html><body>" + "".join(f"<section data-screen-id='{t}'></section>" for t in af.telas_do_inventario(jornada)[:12]) + "</body></html>"
+    assert any(a["codigo"] == "afirmacao-prototipo" for a in af.conferir_qa(qa, folha, jornada, html)["achados"])
+    # QA honesto: nada a acusar
+    assert af.conferir_qa("Stitch com 6 telas: 6 de 16 telas desenhadas no Stitch. Protótipo em design/08-prototipo.html.",
+                          folha, jornada)["status"] == "aprovado"
+
+    # no loop: o envelope aprovado do QA é reescrito como bloqueado, com o ticket do Stitch para `telas`
+    from agents.checkers import QaAfirmacoesAgent
+
+    estado = {"qa_entregaveis_report": qa, "stitch_links": folha, "jornada_telas": jornada,
+              "stitch_status": cob["status"], "stitch_status_envelope": {"status": cob["status"], "achados": cob["achados"]}}
+
+    class Semente(BaseAgent):
+        @override
+        async def _run_async_impl(self, ctx):
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
+
+    assert extrair_envelope(qa)["status"] == "aprovado"
+    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), QaAfirmacoesAgent(name="A30b")])))
+    env = extrair_envelope(st["qa_entregaveis_report"])
+    assert env["status"] == "bloqueado" and inferir_status(st["qa_entregaveis_report"], env) == "bloqueado"
+    assert {a["codigo"] for a in env["achados"]} >= {"afirmacao-stitch", "arquivo-inexistente", "stitch-incompleto"}
+    assert any(a.get("agente_responsavel") == "telas" for a in env["achados"])
+    assert st["qa_afirmacoes_status"] == "bloqueado"
+
+    from agents.design import build_qa_design_loop
+
+    assert [a.name for a in build_qa_design_loop().sub_agents][:3] == ["A30QaEntregaveis", "A30bQaAfirmacoes", "A31QaEntregaveisCheck"]
+    print("   ✓ afirmações do QA: 16 telas num Stitch com 6 e um arquivo que não existe reprovam a rodada")
+
+
+def test_banco_de_conteudo_escrito_e_status_humano_no_brief():
+    """exp09ef1b: o brief marcava "Homologado", "Pronto para corte" e "Roteiro aprovado" para conteúdo que ninguém
+    escreveu (12 PDFs, atas, cadernos, a tabela da Linha 302), e a IA simulada tinha quatro falas. Brief real."""
+    from tools import conteudo as ct
+    from tools.rastro import validar_prd
+
+    brief, spec = _fixture_exp09("brief_assets.md"), _fixture_exp09("spec.md")
+    r = ct.validar(brief, "", spec)
+    assert r["status"] == "bloqueado"
+    humanos = " ".join(a["resumo"] for a in r["achados"] if a["codigo"] == "status-humano")
+    for visto in ("Homologado", "Pronto para corte", "Roteiro aprovado"):
+        assert f"«{visto}»" in humanos, visto
+    assert any(a["codigo"] == "status-fora-do-vocabulario" and "Especificado" in a["resumo"] for a in r["achados"])
+    # os itens de texto do brief real: documentos, textos e o roteiro do podcast; pictograma e prompt ficam fora
+    assert set(r["ids"]) == {"doc-exp09ef1b-01", "doc-exp09ef1b-02", "doc-exp09ef1b-03", "txt-exp09ef1b-01",
+                             "txt-exp09ef1b-02", "txt-exp09ef1b-03", "aud-exp09ef1b-01"}
+    assert any(a["codigo"] == "banco-vazio" for a in r["achados"])
+    assert ct.estados_de_fala(spec) == ["E1_INICIAL", "E2_INVESTIGANDO_CHAT", "E2_CADERNOS_DESBLOQUEADOS", "E4_AUDITORIA_REVELADA"]
+
+    # banco parcial: os IDs sem bloco, o bloco raso e as falas que faltam são acusados
+    corpo = "Registro de campo. " * 12
+    banco = ("# Banco de conteúdo — exp09ef1b\n\n## Itens do brief\n\n"
+             f"### txt-exp09ef1b-02 · Tabelas do transporte\n**Status:** escrito\n\n{corpo}\n\n"
+             f"### doc-exp09ef1b-01 · Cadernos de campo\n**Status:** escrito\n\n{corpo}\n\n"
+             "### doc-exp09ef1b-02 · Ficha\n**Status:** escrito\n\nCurta.\n\n"
+             "## Falas da IA simulada\n\n### `E1_INICIAL` · boas-vindas\nBem-vindo à comissão.\n\n"
+             "### Pergunta fora do tema\nVoltemos aos projetos.\n")
+    p = ct.validar(brief.replace("Homologado", "escrito").replace("Pronto para corte", "escrito")
+                   .replace("Roteiro aprovado", "a produzir").replace("Especificado", "rascunho"), banco, spec)
+    codigos = [a["codigo"] for a in p["achados"]]
+    assert "status-humano" not in codigos and "status-fora-do-vocabulario" not in codigos
+    ausente = next(a for a in p["achados"] if a["codigo"] == "conteudo-ausente")
+    assert "txt-exp09ef1b-01" in ausente["resumo"] and "aud-exp09ef1b-01" in ausente["resumo"]
+    assert "txt-exp09ef1b-02" not in ausente["resumo"]
+    assert any(a["codigo"] == "conteudo-raso" and "doc-exp09ef1b-02" in a["resumo"] for a in p["achados"])
+    falas = " ".join(a["resumo"] for a in p["achados"] if a["codigo"] == "fala-ausente")
+    assert "E4_AUDITORIA_REVELADA" in falas and "aviso de limite" in falas and "E1_INICIAL" not in falas
+    assert ct.validar(brief, banco.replace("**Status:** escrito", "**Status:** homologado"), spec)["status"] == "bloqueado"
+
+    # PRD: tarefa que consome conteúdo sem bloco bloqueia, salvo marcada; sem banco, não se acusa
+    prd = ("| T-007 | Montar `base_dados_conselho.json` a partir de `txt-exp09ef1b-01` | RF-004 |\n"
+           "| T-008 | Tabela do transporte (`txt-exp09ef1b-02`) | RF-005 |\n")
+    assert [a["resumo"][:7] for a in ct.tarefas_sem_conteudo(prd, banco)] == ["`T-007`"]
+    assert not ct.tarefas_sem_conteudo(prd.replace("| RF-004 |", "| RF-004 [BLOQUEADA — dono: conteúdo] |"), banco)
+    assert not ct.tarefas_sem_conteudo(prd, "")
+    assert "tarefa-sem-conteudo" in {a["codigo"] for a in validar_prd(prd, banco=banco)["achados"]}
+
+    # os prompts: o brief tem vocabulário fechado, e o PRD lê o banco
+    assert "`a produzir | rascunho | escrito`" in load_prompt("dev/35_brief_assets.md")
+    assert "{banco_conteudo?}" in load_prompt("dev/47_prd_writer.md")
+    print("   ✓ banco de conteúdo: Homologado/Pronto para corte do brief real e os IDs sem texto bloqueiam")
+
+
+def test_banco_de_conteudo_no_estagio_de_dev():
+    from agents.dev import build_dev_stage
+    from pipeline.artifacts import ARTIFACT_FILES
+
+    nomes = [a.name for a in build_dev_stage().sub_agents]
+    assert nomes.index("HandoffLoop") < nomes.index("A35bBancoConteudo") < nomes.index("A35cConteudoCheck") < nomes.index("A38LacunaCheck")
+    assert ("banco_conteudo", "dev/01e-banco-conteudo.md") in ARTIFACT_FILES
+
+    estado = {"spec_missao": _fixture_exp09("spec.md") + _GLOSSARIO_EXP09, "brief_assets": _fixture_exp09("brief_assets.md"),
+              "banco_conteudo": "## Itens do brief\n\n### txt-exp09ef1b-01 · Base\n**Status:** escrito\n\n"
+                                "O Conselho Municipal de Recursos recebeu três projetos. Coordenação: João. " * 3}
+
+    class Semente(BaseAgent):
+        @override
+        async def _run_async_impl(self, ctx):
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
+
+    original = next(a for a in build_dev_stage().sub_agents if a.name == "A35cConteudoCheck")
+    check = original.model_copy(update={"parent_agent": None})
+    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), check])))
+    assert st["conteudo_status"] == "bloqueado"
+    codigos = {a["codigo"] for a in st["conteudo_status_envelope"]["achados"]}
+    assert {"status-humano", "conteudo-ausente", "variante-proibida", "papel-divergente"} <= codigos, codigos
+    print("   ✓ banco de conteúdo entre o handoff e o rastro de lacunas, conferido também contra o glossário")

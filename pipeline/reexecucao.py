@@ -57,6 +57,7 @@ ETAPAS = ("produto", "spec", "design", "dev", "transversal")
 CHAVES_DEV = frozenset({
     "manifesto_report", "manifesto_status", "manifesto_status_envelope",
     "handoff_dev", "brief_assets", "handoff_rodada",
+    "banco_conteudo", "conteudo_report", "conteudo_status", "conteudo_status_envelope",
     "telemetria_report", "telemetria_status", "telemetria_status_envelope",
     "rastro_lacunas_report", "rastro_lacunas_status", "rastro_lacunas_status_envelope",
     "validacao_produto_narrativa", "validacao_design_imersao", "validacao_pedagogia_bncc",
@@ -79,6 +80,9 @@ CHAVES_DESIGN = frozenset({
     "qa_entregaveis_report", "design_status", "design_status_envelope", "qa_design_rodada",
     "prototipo_lint_report", "prototipo_lint_status", "prototipo_lint_status_envelope",
     "rastro_design_report", "rastro_design_status", "rastro_design_status_envelope",
+    "consistencia_report", "consistencia_status", "consistencia_status_envelope",
+    "stitch_status", "stitch_status_envelope",
+    "qa_afirmacoes_report", "qa_afirmacoes_status", "qa_afirmacoes_status_envelope",
 }) | CHAVES_DEV
 #: `spec_missao_gate0` tem de cair: o split do D0 só grava esse backup se ele não existir
 #: (`agents/checkers.py`, SecaoSplitAgent) — senão a spec velha seria preservada como "original".
@@ -105,6 +109,7 @@ CHAVES_PRODUTO = frozenset({
     "mapa_conceitual", "ideacao_mecanismos", "cobertura_report", "cobertura_resultado",
     "profundidade_report", "profundidade_status", "profundidade_status_envelope", "profundidade_rodada",
     "fidelidade_nucleo_report", "fidelidade_nucleo_status", "fidelidade_nucleo_status_envelope",
+    "mecanica_report", "mecanica_status", "mecanica_status_envelope",
     "juiz_fidelidade_nucleo_saida",
     "nucleo_rodada",
     "missoes_vizinhas", "catalogo_indice_status", "catalogo_indice_status_envelope",
@@ -139,7 +144,7 @@ CHAVES_AUTORAIS = frozenset({
     "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao", "one_pager_resumido",
     "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
     "camada_caa", "wireframes_cobertura", "copy_strings_revisada", "prototipo_html",
-    "handoff_dev", "brief_assets", "prd_final", "one_pager_pedagogico",
+    "handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico",
 })
 PREFIXO_ANTERIOR = "anterior_"
 
@@ -184,8 +189,10 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "QA de entregáveis (design)": "design",
     "Retrabalho de design": "design",
     "Rastro de lacunas do design": "design",
+    "Coerência entre documentos": "design",
     "Ficha do manifesto": "dev",
     "Contrato de telemetria e arquitetura": "dev",
+    "Banco de conteúdo": "dev",
     "Handoff de dev": "dev",
     "Rastro de lacunas antes do PRD": "dev",
     "Banca de dev": "dev",

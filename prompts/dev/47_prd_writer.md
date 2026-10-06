@@ -98,6 +98,16 @@ Você escreve o **PRD padrão ouro da missão**: o documento que um **agente de 
 
 {brief_assets?}
 
+**Banco de conteúdo — o texto integral de cada item e as falas da IA simulada (`dev/01e-banco-conteudo.md`):**
+
+{banco_conteudo?}
+
+A fonte do conteúdo é o **banco**, não a coluna Status do brief: "escrito" no brief diz que alguém
+escreveu, e o que está escrito está aqui. Não copie o banco para o PRD — referencie o ID e o arquivo.
+Tarefa que consome um ID de texto, documento ou tabela **sem bloco no banco** leva
+`[BLOQUEADA — dono: conteúdo]` na própria linha: um gate determinístico confere, e quem codifica não
+inventa fala de IA nem documento fictício.
+
 **Banca de dev consolidada:**
 
 {validacao_dev_report?}
@@ -150,7 +160,7 @@ acaso, e a partir daí o resto do PRD deixa de valer contra o que foi escrito.
    requisitos que entrega, no máximo meia dúzia. Se a tarefa precisa de mais, ela é duas.
 7. **Inventário de conteúdo autoral.** Toda mídia e todo texto que a missão exibe entra numa tabela
    com nome do arquivo, caminho no bucket, peso aproximado e quem produz. Sem isso, quem codifica
-   inventa caminho de asset — e o brief de assets, que já existe nesta execução, é a sua fonte.
+   inventa caminho de asset — o brief de assets dá o arquivo e o peso, o banco de conteúdo dá o texto.
 
 ## Regras de redação
 
