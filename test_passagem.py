@@ -132,6 +132,33 @@ class TestRegras(unittest.TestCase):
         self.assertEqual(efeito.tipo, "encerrar")
         self.assertEqual(concluir_execucao(novo, ok=True)["situacao"], ENTREGUE)
 
+    def test_dev_devolve_a_design_depois_de_entregar(self):
+        """Reabrir uma missão entregue era editar o conversa.json no bucket à mão (05/10/2026)."""
+        f = _aguardando("dev", pareceres=[
+            {"etapa": "produto", "acao": DE_ACORDO, "valido": True, "comentario": "a", "como": "produto", "quando": "1"},
+            {"etapa": "design", "acao": DE_ACORDO, "valido": True, "comentario": "b", "como": "design", "quando": "2"},
+        ])
+        encerrando, _ = aplicar(f, DE_ACORDO, DEV, COMENTARIO, ESTADO_VERDE)
+        entregue = concluir_execucao(encerrando, ok=True)
+        self.assertEqual(acoes_possiveis(entregue, "dev", ESTADO_VERDE), [DEVOLVER])
+        self.assertEqual(acoes_possiveis(entregue, "admin", ESTADO_VERDE), [DEVOLVER])
+        self.assertEqual(acoes_possiveis(entregue, "design", ESTADO_VERDE), [], "quem reabre a entrega é o Dev")
+        self.assertEqual(acoes_possiveis(entregue, "produto", ESTADO_VERDE), [])
+
+        devolvido, efeito = aplicar(entregue, DEVOLVER, DEV, "A tela de revelação não cabe no componente do DS.", ESTADO_VERDE)
+        self.assertIsNone(efeito, "devolver não refaz: o Design decide")
+        self.assertEqual((devolvido["etapa"], devolvido["situacao"]), ("design", DEVOLVIDA))
+        self.assertEqual([p["valido"] for p in devolvido["pareceres"]], [True, False, False, True])
+        self.assertEqual((devolvido["pareceres"][-1]["etapa"], devolvido["pareceres"][-1]["como"]), ("design", "dev"))
+        self.assertIsNone(passagem.dono_da_vez(entregue))
+        self.assertEqual(passagem.dono_da_vez(devolvido), "design")
+
+        # de Design para Produto, o caminho de sempre: refaz, volta ao parecer e aí pode devolver
+        self.assertNotIn(DEVOLVER, acoes_possiveis(devolvido, "design", ESTADO_VERDE))
+        refazendo, efeito = aplicar(devolvido, REFAZER, DESIGN, "Troquei a revelação pelo cartão do DS.", ESTADO_VERDE)
+        self.assertIn("não cabe no componente do DS", efeito.pedido)
+        self.assertIn(DEVOLVER, acoes_possiveis(concluir_execucao(refazendo, ok=True), "design", ESTADO_VERDE))
+
     def test_falha_de_execucao_permite_rodar_de_novo(self):
         f = {**novo_fluxo(), "etapa": "design", "situacao": GERANDO}
         falhou = concluir_execucao(f, ok=False)
