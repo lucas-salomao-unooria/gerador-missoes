@@ -14,10 +14,10 @@ from PIL import Image
 PAGINAS = {
     1:  "capa",
     9:  "o-que-a-esteira-faz",
-    18: "parecer-humano",
-    25: "mapa-dos-agentes",
-    33: "anatomia-do-aha",
-    46: "catalogo-de-agentes",
+    19: "parecer-humano",
+    28: "mapa-dos-agentes",
+    39: "anatomia-do-aha",
+    52: "catalogo-de-agentes",
 }
 
 dest = pathlib.Path("previews")

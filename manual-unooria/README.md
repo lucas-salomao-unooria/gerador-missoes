@@ -4,10 +4,17 @@ Manual único da esteira, com a identidade visual da Unooria aplicada. Unifica e
 os dois documentos anteriores (`documentacao-latex/guia-do-gerador-de-missoes.tex`, voltado à
 operação, e `manual-gerador-missoes/manual_gerador_missoes.tex`, voltado à fundamentação).
 
+**3.ª edição — 06/10/2026.** A 2.ª (25/09) descrevia 72 passos; esta descreve 81. Entraram: a base
+da plataforma lida do bucket (no lugar da cópia no git, parada em 16/09), os pedidos do PO que se
+acumulam e são conferidos item a item (fidelidade), a conta da virada refeita em código, a coerência
+entre documentos pelo glossário canônico, as afirmações do QA conferidas, o banco de conteúdo escrito
+e conferido, e o rastro de lacunas por etapa. A Parte VII ganhou o caso da exp09ef1b, a missão que
+saiu verde e estava errada.
+
 **2.ª edição — 25/09/2026.** A 1.ª (19/09) descrevia 55 passos e uma esteira que rodava sozinha
-do briefing ao PRD. Entraram desde então: o parecer humano entre etapas com login por papel, a
-camada de profundidade pedagógica, a memória entre execuções, as perguntas de produto e o recorte
-da aula por disciplina. São 114 commits de diferença.
+do briefing ao PRD. Entraram: o parecer humano entre etapas com login por papel, a camada de
+profundidade pedagógica, a memória entre execuções, as perguntas de produto e o recorte da aula por
+disciplina.
 
 ## Compilar
 
@@ -15,7 +22,7 @@ da aula por disciplina. São 114 commits de diferença.
 tectonic -X compile manual-gerador-missoes.tex
 ```
 
-Gera `manual-gerador-missoes.pdf` (68 páginas, 2.ª edição). Não depende de BibTeX — a bibliografia é
+Gera `manual-gerador-missoes.pdf` (80 páginas, 3.ª edição). Não depende de BibTeX — a bibliografia é
 `thebibliography` embutida. A primeira compilação baixa as fontes e os pacotes do bundle.
 
 ## Identidade visual
@@ -54,9 +61,22 @@ ao logotipo.
 ## Manutenção
 
 As descrições de agentes, portões, variáveis de ambiente e artefatos foram conferidas contra o
-código (`agents/*/__init__.py`, `config.py`, `prompts/`), não contra os manuais anteriores.
+código (`agents/*/__init__.py`, `config.py`, `prompts/`, `tools/`), não contra os manuais anteriores.
 Ao mudar a esteira, o catálogo da Parte VI é o primeiro trecho a revisar — ele espelha o
 dicionário de agentes de `agents/<etapa>/__init__.py`.
+
+As contagens do manual vêm do código. Os **passos numerados** (81 na 3.ª edição) são a lista que a
+tela de progresso mostra; os com `prompt_file` contam como agentes de modelo (38), o resto como
+verificações em código (43):
+
+```bash
+python -c "from pipeline.orchestrator import STAGES; print(sum(len(s['agents']) for s in STAGES))"
+```
+
+A **árvore** (114 agentes na 3.ª edição: os 81 passos, 21 cópias de retrabalho e 12 auxiliares) sai
+de `pipeline.orchestrator.create_mission_orchestrator(stages=["produto","design","dev"])` percorrida
+com `iter_agent_tree`, contando só as folhas. Montar a árvore exige a base da plataforma: rode com
+`BASE_PLATAFORMA_DIR=fixtures/base-plataforma` e chame `prompts.base_plataforma.fixar(ler_atual())` antes.
 
 Três armadilhas conhecidas da composição, que já custaram tempo:
 
@@ -70,7 +90,7 @@ Três armadilhas conhecidas da composição, que já custaram tempo:
 ## Prévias no README principal
 
 O README da raiz embute seis páginas como PNG, porque o GitHub não renderiza PDF inline.
-São elas: capa, o que a esteira faz, o parecer humano, o mapa dos 72 passos, a anatomia do *ahá*
+São elas: capa, o que a esteira faz, o parecer humano, o mapa dos 81 passos, a anatomia do *ahá*
 e o catálogo de agentes.
 Elas envelhecem junto com o manual — depois de mexer no `.tex`, rode:
 
