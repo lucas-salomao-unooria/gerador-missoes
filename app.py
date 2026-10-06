@@ -117,6 +117,7 @@ st.markdown(
 GATE_LABELS = {
     "micro_gate_status": "Micro-gate do núcleo",
     "fidelidade_nucleo_status": "Fidelidade ao pedido do PO (núcleo)",
+    "mecanica_status": "Conta da virada",
     "fidelidade_status": "Fidelidade ao pedido do PO e ao briefing",
     "gate_estrutural_status": "Gate estrutural",
     "gate_final_status": "Gate final de produto",

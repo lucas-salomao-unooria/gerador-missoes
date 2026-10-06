@@ -1310,6 +1310,36 @@ class DiagnosticoAgent(BaseAgent):
         )
 
 
+class MecanicaCheckAgent(BaseAgent):
+    """Refaz a conta da virada a partir da tabela 1.3 do núcleo (`tools/mecanica.py`). Determinístico.
+
+    Roda no laço do núcleo, junto do micro-gate e da profundidade: conta que não fecha devolve o núcleo
+    ao autor com o ranking calculado. Não registra degradação — o freio é o parecer humano.
+    """
+
+    report_key: str = "mecanica_report"
+    status_key: str = "mecanica_status"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import mecanica as mec
+
+        nucleo = str(ctx.session.state.get("nucleo_narrativo", "") or "")
+        resultado = mec.validar(nucleo)
+        relatorio = mec.relatorio(resultado, extrair_slug(nucleo) or "")
+        icone = {"aprovado": "✅", "amarelo": "🟡", "bloqueado": "⛔"}[resultado["status"]]
+        calc = resultado.get("calculo") or {}
+        resumo = (f" Antes: {calc['antes'][0][0]}; depois: {calc['depois'][0][0]}." if calc.get("antes") and calc.get("depois") else "")
+        msg = f"{icone} Conta da virada: {len(resultado['achados'])} achado(s).{resumo}"
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta={
+                        self.report_key: relatorio,
+                        self.status_key: resultado["status"],
+                        f"{self.status_key}_envelope": extrair_envelope(relatorio) or {},
+                    }))
+
+
 class CoberturaConceitualAgent(BaseAgent):
     """Confere o núcleo contra o mapa conceitual do material, a cada rodada do loop do núcleo.
 

@@ -105,6 +105,7 @@ CHAVES_PRODUTO = frozenset({
     "mapa_conceitual", "ideacao_mecanismos", "cobertura_report", "cobertura_resultado",
     "profundidade_report", "profundidade_status", "profundidade_status_envelope", "profundidade_rodada",
     "fidelidade_nucleo_report", "fidelidade_nucleo_status", "fidelidade_nucleo_status_envelope",
+    "mecanica_report", "mecanica_status", "mecanica_status_envelope",
     "juiz_fidelidade_nucleo_saida",
     "nucleo_rodada",
     "missoes_vizinhas", "catalogo_indice_status", "catalogo_indice_status_envelope",

@@ -57,7 +57,7 @@ KNOWN_STATE_KEYS = {
     "briefing", "nucleo_narrativo", "micro_gate_report", "micro_gate_status", "micro_gate_rodada",
     "mapa_conceitual", "ideacao_mecanismos", "cobertura_report", "profundidade_report", "profundidade_status",
     "profundidade_rodada", "nucleo_rodada",
-    "fidelidade_nucleo_report", "fidelidade_report", "fidelidade_entrada", "fidelidade_documentos",
+    "fidelidade_nucleo_report", "fidelidade_report", "fidelidade_entrada", "fidelidade_documentos", "mecanica_report",
     "one_pager", "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_rodada",
     "contrato_produto_report", "contrato_produto_status",
     "avaliacao_pedagogica_report", "experiencia_aluno_report", "adequacao_report", "gate_final_report", "gate_final_status",
@@ -105,7 +105,7 @@ REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
 
 EXPECTED_AGENTS = {
     "A00cMapaConceitual", "A00dIdeacaoMecanismos", "A01cCoberturaConceitual", "A02bJuizProfundidade",
-    "A03bProfundidadeCheck", "A03cNucleoCheck", "A03aFidelidadeNucleo", "A16cFidelidadeProduto",
+    "A03bProfundidadeCheck", "A03cNucleoCheck", "A03aFidelidadeNucleo", "A16cFidelidadeProduto", "A03aaContaDaVirada",
     "NucleoNarrativoLoop", "A01NucleoNarrativo", "A02MicroGate", "A03MicroGateCheck", "A04SecoesApoio",
     "GateEstruturalLoop", "A04bContratoProdutoCheck", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager",
     "AvaliacoesParalelas", "A08AvaliacaoPedagogica", "A09ExperienciaEstudante",
@@ -189,7 +189,7 @@ def test_arvore_de_agentes():
     # A profundidade conta ANTES do veredito do micro-gate: na última rodada o `A03MicroGateCheck`
     # encerra o loop ao reprovar, e a rodada ficaria sem status de profundidade.
     assert [a.name for a in micro.sub_agents] == ["A01NucleoNarrativo", "A01bVizinhasCatalogo", "A01cCoberturaConceitual",
-                                                  "A02MicroGate", "A02bJuizProfundidade", "A03aFidelidadeNucleo",
+                                                  "A02MicroGate", "A02bJuizProfundidade", "A03aaContaDaVirada", "A03aFidelidadeNucleo",
                                                   "A03bProfundidadeCheck", "A03MicroGateCheck", "A03cNucleoCheck"]
     produto = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "ProdutoStage")
     assert [a.name for a in produto.sub_agents][:4] == ["A00bVizinhasCatalogo", "A00cMapaConceitual",
@@ -4541,3 +4541,27 @@ def test_semaforo_honesto_quando_um_gate_pede_uma_pessoa():
     env = catalogo.relatorio_markdown({"status": "amarelo", "achados": col, "ficha": ficha, "total": 9, "vizinhas": []}, "exp09ef1b")
     assert '"precisa_humano": true' in env
     print("   ✓ semáforo: gate que pede pessoa vira decisão listada; colisão de slug é decisão de produto")
+
+
+def test_conta_da_virada_refeita_em_codigo():
+    """exp09ef1b: com só "menor custo por vaga", o projeto que deveria perder (Mesa Aberta, R$ 500) já
+    vencia antes da virada. Com um critério de comprovação declarado, a mesma virada fecha."""
+    from tools import mecanica as mec
+
+    cab = "### 1.3 Conta da virada\n| Opção | Critério | Melhor quando | Peso | Antes | Depois |\n|---|---|---|---|---|---|\n"
+    custo = ("| Mesa Aberta | custo por vaga (R$) | menor | 1 | 500 | 500 |\n"
+             "| Ponto de Apoio | custo por vaga (R$) | menor | 1 | 667 | 667 |\n"
+             "| Conexão para Continuar | custo por vaga (R$) | menor | 1 | 600 | 600 |\n")
+    venc = "\n**Vencedor antes:** Conexão para Continuar · **Vencedor depois:** Mesa Aberta\n"
+    so_custo = mec.validar(cab + custo + venc)
+    assert {a["codigo"] for a in so_custo["achados"]} == {"conta-nao-fecha", "sem-virada"}
+    comprovacao = ("| Mesa Aberta | registros comprovados | maior | 1 | 0 | 180 |\n"
+                   "| Ponto de Apoio | registros comprovados | maior | 1 | 4 | 4 |\n"
+                   "| Conexão para Continuar | registros comprovados | maior | 1 | 12 | 12 |\n")
+    fecha = mec.validar(cab + custo + comprovacao + venc)
+    assert fecha["status"] == "aprovado", fecha["achados"]
+    assert fecha["calculo"]["antes"][0][0] == "Conexão para Continuar" and fecha["calculo"]["depois"][0][0] == "Mesa Aberta"
+    assert mec.validar("## 1. Descoberta\n")["achados"][0]["codigo"] == "conta-ausente"
+    assert mec.validar("### 1.3 Conta da virada\n**Não se aplica:** a missão não tem recomendação de máquina nem ranking.\n")["status"] == "aprovado"
+    assert mec._numero("R$ 12.000") == 12000 and mec._numero("12,5") == 12.5
+    print("   ✓ conta da virada: o custo por vaga da exp09ef1b não fecha; com comprovação declarada, fecha")
