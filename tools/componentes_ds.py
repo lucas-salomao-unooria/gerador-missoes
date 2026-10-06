@@ -5,22 +5,20 @@ de 206) — `LikeButton`, `FeedContainer`, `StoryComposer` numa missão InstaNoo
 WhatsApp) numa de ChatGPT. O prompt de telas dizia ao agente "você não tem como conferir o catálogo".
 Agora ele recebe o inventário, e este módulo confere a coluna `Componentes do DS` contra ele.
 
-**Fonte, na ordem:** `DS_COMPONENTES_URL` (JSON no formato de `ds-componentes.json`, quando o
-inventário for publicado) e, sem ela, `references/ds-componentes.json`, gerado do `storybook-unooria`
-por `scripts/sincronizar_design_system.py`. Componente local vai na coluna própria e não é conferido.
+**Fonte:** o `ds-componentes.json` da base fixada na execução (`prompts/base_plataforma.py`), que o CI
+do storybook publica a cada versão. Até 06/10/2026 era uma cópia no git com as marcas fixas no código, e
+`unooriaai`, `unoovista` e `unoochat` nunca entraram. Componente local vai na coluna própria e não é
+conferido.
 """
 from __future__ import annotations
 
 import difflib
-import json
 import re
 import unicodedata
-import urllib.request
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from prompts import REFERENCES_DIR
+from prompts import base_plataforma
 
-ARQUIVO = REFERENCES_DIR / "ds-componentes.json"
 _RE_NOME = re.compile(r"\b([A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+)(?:\.[A-Z][A-Za-z]+)?\b")
 _RE_SECAO = re.compile(r"secao_ds[`*_]*\s*:\s*[`*_]*\s*([a-z0-9:_\-]+)", re.IGNORECASE)
 #: Não são componente: esquema Zod, tipo, contexto, token.
@@ -31,26 +29,15 @@ _cache: Dict[str, Any] = {}
 
 
 def carregar() -> Tuple[Dict[str, Set[str]], Dict[str, str], str]:
-    """`(marca → nomes, seção → marca, origem)`."""
-    if "marcas" in _cache:
+    """`(marca → nomes, seção → marca, origem)`, da base fixada na execução."""
+    base = base_plataforma.ativa()
+    if _cache.get("assinatura") == base.assinatura:
         return _cache["marcas"], _cache["mapa"], _cache["origem"]
-    from config import get_settings
-    dados: Optional[Dict[str, Any]] = None
-    origem = ""
-    url = get_settings().ds_componentes_url
-    if url:
-        try:
-            with urllib.request.urlopen(url, timeout=8) as resp:
-                dados = json.loads(resp.read().decode("utf-8"))
-            origem = url
-        except Exception:
-            dados = None
-    if dados is None and ARQUIVO.exists():
-        dados = json.loads(ARQUIVO.read_text(encoding="utf-8"))
-        origem = f"storybook-unooria@{dados.get('commit', '?')} ({dados.get('versao', '?')})"
-    marcas = {m: set(v) for m, v in ((dados or {}).get("marcas") or {}).items()}
-    mapa = dict((dados or {}).get("secao_para_marca") or {})
-    _cache.update(marcas=marcas, mapa=mapa, origem=origem)
+    dados = base_plataforma.ds_componentes(base)
+    origem = f"storybook-unooria@{dados.get('commit', '?')} ({dados.get('versao', '?')})"
+    marcas = {m: set(v) for m, v in (dados.get("marcas") or {}).items()}
+    mapa = dict(dados.get("secao_para_marca") or {})
+    _cache.update(assinatura=base.assinatura, marcas=marcas, mapa=mapa, origem=origem)
     return marcas, mapa, origem
 
 

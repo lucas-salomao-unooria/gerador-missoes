@@ -1,0 +1,1722 @@
+{
+ "commit": "89e0f9ae",
+ "data_commit": "2026-10-06",
+ "origem": "docs/openapi.json",
+ "rotas": [
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/concluir",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/decisao",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/a-selecao/gate",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/a-selecao/mural",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/passo",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/a-selecao/professor/material",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/reflexao",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/a-selecao/sessao",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/a-selecao/turmas",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/a-selecao/turmas/{turmaId}/coberturas",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/a-selecao/turmas/{turmaId}/coberturas/{coberturaId}",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/turmas/{turmaId}/coberturas/{coberturaId}/aprovar-imagens",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/turmas/{turmaId}/coberturas/{coberturaId}/em-andamento",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/turmas/{turmaId}/coberturas/{coberturaId}/imagens/{postId}/regerar",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/turmas/{turmaId}/gate",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/turmas/{turmaId}/gerar-conteudo",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/turmas/{turmaId}/gerar-midia",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/turmas/{turmaId}/gerar-podcast",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/turmas/{turmaId}/homologar",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/a-selecao/turmas/{turmaId}/painel",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/a-selecao/turmas/{turmaId}/podcast",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/a-selecao/turmas/{turmaId}/zerar",
+   "tag": "a-selecao"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/agente-professor/conversas",
+   "tag": "agente-professor"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/agente-professor/conversas",
+   "tag": "agente-professor"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/agente-professor/conversas/{id}",
+   "tag": "agente-professor"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/agente-professor/conversas/{id}",
+   "tag": "agente-professor"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/agente-professor/conversas/{id}/mensagens",
+   "tag": "agente-professor"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/ai/gerar",
+   "tag": "ai"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/ajuda/llm/chat/completions",
+   "tag": "ajuda"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/ajuda/llm/models",
+   "tag": "ajuda"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/ajuda/sessoes",
+   "tag": "ajuda"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/ajuda/sessoes/{id}/encerrar",
+   "tag": "ajuda"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/analise/atividades/{id}",
+   "tag": "analise"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/analise/csv",
+   "tag": "analise"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/analise/resumo",
+   "tag": "analise"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/atividades",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/atividades",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/atividades/{id}",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/atividades/{id}",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/atividades/{id}/analise",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/atividades/{id}/analise/csv",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "PATCH",
+   "caminho": "/atividades/{id}/antagonismo",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/atividades/{id}/ativar",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/atividades/{id}/destilar",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/atividades/{id}/distribuicao",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/atividades/{id}/estudantes/{runId}",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/atividades/{id}/etapa",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/atividades/{id}/etapa",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/atividades/{id}/geracao/progresso",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/atividades/{id}/gerar",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "PATCH",
+   "caminho": "/atividades/{id}/ia",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/atividades/{id}/limpar",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/atividades/{id}/monitor",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/atividades/{id}/perfis",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/atividades/{id}/perfis",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/atividades/{id}/perfis/da-vila",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/atividades/{id}/posts",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/atividades/{id}/redistribuir",
+   "tag": "atividades"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/auth/login",
+   "tag": "auth"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/auth/trocar-senha",
+   "tag": "auth"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/bemestar/checkins/{id}/respostas",
+   "tag": "bemestar"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/bemestar/dados",
+   "tag": "bemestar"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/bemestar/historico",
+   "tag": "bemestar"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/bemestar/hoje",
+   "tag": "bemestar"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/bemestar/resumo",
+   "tag": "bemestar"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/equipes/minha",
+   "tag": "equipes"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/equipes/turma/{turmaId}/missao/{expId}/atividade/{atividadeId}",
+   "tag": "equipes"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/equipes/turma/{turmaId}/missao/{expId}/atividade/{atividadeId}",
+   "tag": "equipes"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/equipes/turma/{turmaId}/missao/{expId}/atividade/{atividadeId}",
+   "tag": "equipes"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/equipes/turma/{turmaId}/missao/{expId}/atividade/{atividadeId}/sugestao",
+   "tag": "equipes"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/equipes/turma/{turmaId}/missao/{expId}/atividade/{atividadeId}/ultima",
+   "tag": "equipes"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/escolas",
+   "tag": "escolas"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/escolas",
+   "tag": "escolas"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/escolas/lotacoes-em-lote",
+   "tag": "escolas"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/escolas/minhas",
+   "tag": "escolas"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/escolas/minhas/relatorio",
+   "tag": "escolas"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/escolas/minhas/resumo",
+   "tag": "escolas"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/escolas/profissionais",
+   "tag": "escolas"
+  },
+  {
+   "metodo": "PATCH",
+   "caminho": "/escolas/{id}",
+   "tag": "escolas"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/escolas/{id}",
+   "tag": "escolas"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/escolas/{id}/lotacoes",
+   "tag": "escolas"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/escolas/{id}/pessoas",
+   "tag": "escolas"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/estudantes/{id}/historico",
+   "tag": "estudantes"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/estudantes/{id}/perfil-portatil",
+   "tag": "estudantes"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/estudantes/{id}/perfis-recebidos",
+   "tag": "estudantes"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/estudantes/{id}/transferir",
+   "tag": "estudantes"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/evidencias/escola/consolidado",
+   "tag": "evidencias"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/evidencias/estudante/{estudanteId}",
+   "tag": "evidencias"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/evidencias/rede/consolidado",
+   "tag": "evidencias"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/evidencias/turma/{turmaId}/consolidado",
+   "tag": "evidencias"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/evidencias/turma/{turmaId}/missao/{expId}/atividade/{atividadeId}",
+   "tag": "evidencias"
+  },
+  {
+   "metodo": "PATCH",
+   "caminho": "/evidencias/turma/{turmaId}/missao/{expId}/atividade/{atividadeId}/rodadas/{rodada}/ajustes",
+   "tag": "evidencias"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/evidencias/turma/{turmaId}/missao/{expId}/atividade/{atividadeId}/rodadas/{rodada}/confirmar",
+   "tag": "evidencias"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/evidencias/{expId}/perguntas/{perguntaId}",
+   "tag": "evidencias"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/evidencias/{expId}/perguntas/{perguntaId}/resposta",
+   "tag": "evidencias"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/experiencias",
+   "tag": "experiencias"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/experiencias/{expId}",
+   "tag": "experiencias"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/experiencias/{expId}",
+   "tag": "experiencias"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/foto-conta/feed",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/foto-conta/galeria",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/foto-conta/latch",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/foto-conta/marca",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/foto-conta/publicar",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/foto-conta/reflexao",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/foto-conta/roda",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/foto-conta/sessao",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/foto-conta/turmas",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/foto-conta/turmas/{turmaId}",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/foto-conta/turmas/{turmaId}/aprovar-pacote",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/foto-conta/turmas/{turmaId}/configurar",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/foto-conta/turmas/{turmaId}/destravar-latch",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/foto-conta/turmas/{turmaId}/gerar-conteudo",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/foto-conta/turmas/{turmaId}/projecao",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/foto-conta/turmas/{turmaId}/reset",
+   "tag": "foto-conta"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/healthz",
+   "tag": "healthz"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/chave",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/jornal-escola/comparativo",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/concluir",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/diagramar",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/jornal-escola/gate",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/motivo",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/passo",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/pista",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/jornal-escola/professor/material",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/publicar",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/republicar",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/jornal-escola/resultado",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/jornal-escola/revisao",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/jornal-escola/sessao",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/jornal-escola/turmas",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/turmas/{turmaId}/gate",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/turmas/{turmaId}/gerar-conteudo",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/turmas/{turmaId}/gerar-midia",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/turmas/{turmaId}/homologar",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/jornal-escola/turmas/{turmaId}/pacotes",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/jornal-escola/turmas/{turmaId}/pacotes/{pacoteId}",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/turmas/{turmaId}/pacotes/{pacoteId}/aprovar-imagens",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/turmas/{turmaId}/pacotes/{pacoteId}/em-andamento",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/turmas/{turmaId}/pacotes/{pacoteId}/imagens/{noticiaId}/regerar",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/jornal-escola/turmas/{turmaId}/painel",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/turmas/{turmaId}/regenerar-noticia",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/jornal-escola/turmas/{turmaId}/zerar",
+   "tag": "jornal-escola"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/cadeia",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/cartoes",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/concluir",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/feed/eventos",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/juri-estadual/galeria",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/galeria/acoes",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/juri-estadual/gate",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/pacotes",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/passo",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/juri-estadual/professor/material",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/revisao",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/juri-estadual/sessao",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/juri-estadual/turmas",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/turmas/{turmaId}/gate",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/turmas/{turmaId}/gerar-conteudo",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/turmas/{turmaId}/gerar-midia",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/turmas/{turmaId}/homologar",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/juri-estadual/turmas/{turmaId}/pacotes",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/juri-estadual/turmas/{turmaId}/pacotes/{pacoteId}",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/turmas/{turmaId}/pacotes/{pacoteId}/em-andamento",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/juri-estadual/turmas/{turmaId}/painel",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/turmas/{turmaId}/regenerar-projeto",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/turmas/{turmaId}/zerar",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/juri-estadual/voto",
+   "tag": "juri-estadual"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/lotacoes/{id}",
+   "tag": "lotacoes"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/manifesto-ia/abrir-conversa",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/manifesto-ia/clausula",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/manifesto-ia/concluir",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/manifesto-ia/disparar",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/manifesto-ia/gate",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/manifesto-ia/percurso",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/manifesto-ia/sessao",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/manifesto-ia/turmas",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/manifesto-ia/turmas/{turmaId}",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/manifesto-ia/turmas/{turmaId}/conteudo",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/manifesto-ia/turmas/{turmaId}/gate",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/manifesto-ia/turmas/{turmaId}/gerar-conteudo",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/manifesto-ia/turmas/{turmaId}/homologar",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/manifesto-ia/turmas/{turmaId}/painel",
+   "tag": "manifesto-ia"
+  },
+  {
+   "metodo": "PATCH",
+   "caminho": "/matriculas/{id}",
+   "tag": "matriculas"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/matriculas/{id}",
+   "tag": "matriculas"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/observabilidade/erros-cliente",
+   "tag": "observabilidade"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/observabilidade/publico/erros-cliente",
+   "tag": "observabilidade"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/observabilidade/publico/vitals",
+   "tag": "observabilidade"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/observabilidade/v1/traces",
+   "tag": "observabilidade"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/observabilidade/vitals",
+   "tag": "observabilidade"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/perfis-recebidos",
+   "tag": "perfis-recebidos"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/perfis-recebidos/{id}",
+   "tag": "perfis-recebidos"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/perfis-recebidos/{id}",
+   "tag": "perfis-recebidos"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/perfis/importar",
+   "tag": "perfis"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/periodos-letivos",
+   "tag": "periodos-letivos"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/periodos-letivos",
+   "tag": "periodos-letivos"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/planejamento/configuracoes",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/planejamento/configuracoes",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/planejamento/configuracoes/{id}",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/planejamento/configuracoes/{id}/calendario",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/planejamento/configuracoes/{id}/plano-anual",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/planejamento/curriculo/componentes",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/planejamento/curriculo/habilidades",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/planejamento/periodos/{id}",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/planejamento/periodos/{id}/aulas",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/planejamento/planos-anuais",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/planejamento/planos-anuais/{id}",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/planejamento/planos-anuais/{id}",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/planejamento/planos-anuais/{id}/conteudo",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/planejamento/planos-anuais/{id}/distribuicao",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/planejamento/planos-anuais/{id}/gerar",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/planejamento/planos-anuais/{id}/periodos",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/planejamento/planos-anuais/{id}/periodos/{ordem}/gerar",
+   "tag": "planejamento"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/planos",
+   "tag": "planos"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/planos",
+   "tag": "planos"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/planos/referencias",
+   "tag": "planos"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/planos/referencias",
+   "tag": "planos"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/planos/referencias/disponiveis",
+   "tag": "planos"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/planos/referencias/{id}",
+   "tag": "planos"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/planos/{id}",
+   "tag": "planos"
+  },
+  {
+   "metodo": "PATCH",
+   "caminho": "/planos/{id}",
+   "tag": "planos"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/planos/{id}",
+   "tag": "planos"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/planos/{id}/conteudo",
+   "tag": "planos"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/planos/{id}/restaurar",
+   "tag": "planos"
+  },
+  {
+   "metodo": "PATCH",
+   "caminho": "/posts/{id}",
+   "tag": "posts"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/posts/{id}",
+   "tag": "posts"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/posts/{id}/comentarios",
+   "tag": "posts"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/posts/{id}/regenerar",
+   "tag": "posts"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/progresso/{expId}",
+   "tag": "progresso"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/progresso/{expId}",
+   "tag": "progresso"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/progresso/{expId}/concluir",
+   "tag": "progresso"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/prospeccao/cadastros",
+   "tag": "prospeccao"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/prospeccao/cadastros/exportacao",
+   "tag": "prospeccao"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/prospeccao/cadastros/{id}",
+   "tag": "prospeccao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/prospeccao/publico/cadastros",
+   "tag": "prospeccao"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/quem-mandou-isso/concluir",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/quem-mandou-isso/enquete",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/quem-mandou-isso/entrar",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/quem-mandou-isso/gate",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/quem-mandou-isso/mural",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/quem-mandou-isso/professor/material",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/quem-mandou-isso/selecao",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/quem-mandou-isso/sessao",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/quem-mandou-isso/turmas/{turmaId}/aprovar",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/quem-mandou-isso/turmas/{turmaId}/gate",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/quem-mandou-isso/turmas/{turmaId}/gerar",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/quem-mandou-isso/turmas/{turmaId}/nova-rodada",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/quem-mandou-isso/turmas/{turmaId}/pacote",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/quem-mandou-isso/turmas/{turmaId}/pacotes",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/quem-mandou-isso/turmas/{turmaId}/pacotes/{pacoteId}",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/quem-mandou-isso/turmas/{turmaId}/pacotes/{pacoteId}/em-andamento",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/quem-mandou-isso/turmas/{turmaId}/painel",
+   "tag": "quem-mandou-isso"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/rastro-boato/auditoria",
+   "tag": "rastro-boato"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/rastro-boato/decisao",
+   "tag": "rastro-boato"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/rastro-boato/entrar",
+   "tag": "rastro-boato"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/rastro-boato/gate",
+   "tag": "rastro-boato"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/rastro-boato/modelagem",
+   "tag": "rastro-boato"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/rastro-boato/professor/material",
+   "tag": "rastro-boato"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/rastro-boato/reflexao",
+   "tag": "rastro-boato"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/rastro-boato/sessao",
+   "tag": "rastro-boato"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/rastro-boato/turmas",
+   "tag": "rastro-boato"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/rastro-boato/turmas/{turmaId}",
+   "tag": "rastro-boato"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/rastro-boato/turmas/{turmaId}/gate",
+   "tag": "rastro-boato"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/rastro-boato/turmas/{turmaId}/painel",
+   "tag": "rastro-boato"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/readyz",
+   "tag": "readyz"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/recursos/arquivadas",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/recursos/auditoria",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/recursos/efetivos",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/recursos/experiencias/{expId}/ativar",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/recursos/experiencias/{expId}/versao",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/recursos/experiencias/{expId}/versoes",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/recursos/limites-da-ajuda",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/recursos/limites-da-ajuda/{chave}",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/recursos/painel",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/recursos/quotas-de-ia",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/recursos/quotas-de-ia/{perfil}",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/recursos/{recursoId}",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/recursos/{recursoId}",
+   "tag": "recursos"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/rostering/contas-de-assento",
+   "tag": "rostering"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/rostering/importar",
+   "tag": "rostering"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/rostering/modelos/exemplo.csv",
+   "tag": "rostering"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/rostering/modelos/oneroster/{arquivo}",
+   "tag": "rostering"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/rostering/modelos/oneroster/{arquivo}/exemplo",
+   "tag": "rostering"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/rostering/modelos/usuarios.csv",
+   "tag": "rostering"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/rostering/oneroster/{arquivo}",
+   "tag": "rostering"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/runs",
+   "tag": "runs"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/runs/boot",
+   "tag": "runs"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/runs/{id}/busca",
+   "tag": "runs"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/runs/{id}/conclusao",
+   "tag": "runs"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/runs/{id}/dossie",
+   "tag": "runs"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/runs/{id}/entrar",
+   "tag": "runs"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/runs/{id}/eventos",
+   "tag": "runs"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/runs/{id}/fase",
+   "tag": "runs"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/runs/{id}/feed",
+   "tag": "runs"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/runs/{id}/finish",
+   "tag": "runs"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/runs/{id}/perdidos",
+   "tag": "runs"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/runs/{id}/reacoes",
+   "tag": "runs"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/runs/{id}/reflexao",
+   "tag": "runs"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/runs/{id}/reflexao",
+   "tag": "runs"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/runs/{id}/reset",
+   "tag": "runs"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/runs/{id}/salvos",
+   "tag": "runs"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/runs/{id}/student-post",
+   "tag": "runs"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/salas/minhas",
+   "tag": "salas"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/salas/turma/{turmaId}",
+   "tag": "salas"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/salas/turma/{turmaId}/missoes/{expId}",
+   "tag": "salas"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/telemetry/batch",
+   "tag": "telemetry"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/telemetry/beacon",
+   "tag": "telemetry"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/telemetry/ingest",
+   "tag": "telemetry"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/turmas",
+   "tag": "turmas"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/turmas",
+   "tag": "turmas"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/turmas/minhas",
+   "tag": "turmas"
+  },
+  {
+   "metodo": "PATCH",
+   "caminho": "/turmas/{id}",
+   "tag": "turmas"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/turmas/{id}",
+   "tag": "turmas"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/turmas/{id}/matriculas",
+   "tag": "turmas"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/unoogpt/agregado/escola",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/unoogpt/alocacao",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "PUT",
+   "caminho": "/unoogpt/conjuntos",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/unoogpt/contrafactual",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/unoogpt/passo",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/unoogpt/pergunta",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/unoogpt/professor/estudantes/{estudanteId}",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/unoogpt/professor/fontes",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/unoogpt/professor/turmas",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/unoogpt/professor/turmas/{turmaId}",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/unoogpt/professor/turmas/{turmaId}",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/unoogpt/professor/turmas/{turmaId}/relogio",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/unoogpt/reiniciar",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/unoogpt/relogio",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/unoogpt/resultado",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/unoogpt/sessao",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/unoogpt/simular",
+   "tag": "unoogpt"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/usuarios",
+   "tag": "usuarios"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/usuarios",
+   "tag": "usuarios"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/usuarios/importar-csv",
+   "tag": "usuarios"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/usuarios/sem-escola",
+   "tag": "usuarios"
+  },
+  {
+   "metodo": "PATCH",
+   "caminho": "/usuarios/{id}",
+   "tag": "usuarios"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/usuarios/{id}/reset-senha",
+   "tag": "usuarios"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/vila/agregado/turmas",
+   "tag": "vila"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/vila/agregado/turmas/{turmaId}",
+   "tag": "vila"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/vila/professor/cartoes",
+   "tag": "vila"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/vila/professor/estudantes/{estudanteId}",
+   "tag": "vila"
+  },
+  {
+   "metodo": "GET",
+   "caminho": "/vila/professor/turmas/{turmaId}",
+   "tag": "vila"
+  },
+  {
+   "metodo": "DELETE",
+   "caminho": "/vila/professor/turmas/{turmaId}/dados",
+   "tag": "vila"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/vila/sessoes",
+   "tag": "vila"
+  },
+  {
+   "metodo": "POST",
+   "caminho": "/vila/sessoes/{id}/concluir",
+   "tag": "vila"
+  }
+ ]
+}

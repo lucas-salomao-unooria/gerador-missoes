@@ -9,8 +9,8 @@ a partir de uma missão), uma tinha o verbo errado, e nove rotas de missão esta
 1. `PLATAFORMA_OPENAPI_URL` — o documento servido pela api (`/docs-json`, com `SWAGGER_USUARIO` e
    `SWAGGER_SENHA` quando o `/docs` é protegido). É o ideal: sempre atualizado. Em 23/09/2026 a api
    de dev não expunha o documento publicamente, então o padrão é vazio.
-2. `references/plataforma/openapi-rotas.json` — gerado do roteador de verdade
-   (`apps/api/scripts/gerar-openapi.ts`) por `scripts/sincronizar_plataforma.py --openapi`.
+2. `openapi-rotas.json` da base da plataforma fixada na execução (`prompts/base_plataforma.py`),
+   publicada pelo CI da plataforma a cada push em `dev-local` a partir do `docs/openapi.json`.
 
 Rota em módulo que a plataforma ainda não tem é proposta da missão, e não é conferida aqui.
 """
@@ -22,9 +22,8 @@ import re
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
-from prompts import REFERENCES_DIR
+from prompts import base_plataforma
 
-ARQUIVO = REFERENCES_DIR / "plataforma" / "openapi-rotas.json"
 _RE_ROTA = re.compile(r"\b(GET|POST|PUT|PATCH|DELETE)\s+`?(/[A-Za-z0-9_\-/{}:«».]+)", re.IGNORECASE)
 #: Marcação de que a rota ainda não existe e é pedida à plataforma — aí ela não é afirmação falsa.
 _RE_PROPOSTA = re.compile(r"\[\s*nova|nova rota|rota nova|a criar|proposta|pend[êe]ncia de plataforma|verificar no reposit", re.IGNORECASE)
@@ -50,8 +49,9 @@ def _do_openapi(doc: Dict[str, Any]) -> List[Tuple[str, List[str]]]:
 
 
 def carregar() -> Tuple[List[Tuple[str, List[str]]], str]:
-    """`(rotas, origem)`. A URL vence; sem ela, ou se ela falhar, a lista sincronizada."""
-    if "rotas" in _cache:
+    """`(rotas, origem)`. A URL vence; sem ela, ou se ela falhar, a lista da base fixada na execução."""
+    base = base_plataforma.ativa()
+    if _cache.get("assinatura") == base.assinatura:
         return _cache["rotas"], _cache["origem"]
     from config import get_settings
     s = get_settings()
@@ -66,13 +66,13 @@ def carregar() -> Tuple[List[Tuple[str, List[str]]], str]:
             with urllib.request.urlopen(req, timeout=8) as resp:
                 rotas = _do_openapi(json.loads(resp.read().decode("utf-8")))
             origem = s.plataforma_openapi_url
-        except Exception:  # sem rede ou sem permissão: a cópia sincronizada serve
+        except Exception:  # sem rede ou sem permissão: a base serve
             rotas = []
-    if not rotas and ARQUIVO.exists():
-        dados = json.loads(ARQUIVO.read_text(encoding="utf-8"))
+    if not rotas:
+        dados = base_plataforma.rotas(base)
         rotas = [(r["metodo"], _normalizar(r["caminho"])) for r in dados.get("rotas", [])]
-        origem = f"cópia sincronizada ({dados.get('commit', '?')}, {dados.get('data_commit', '?')})"
-    _cache.update(rotas=rotas, origem=origem)
+        origem = f"base da plataforma ({dados.get('commit', base.commit)}, {dados.get('data_commit', base.data_commit)})"
+    _cache.update(assinatura=base.assinatura, rotas=rotas, origem=origem)
     return rotas, origem
 
 

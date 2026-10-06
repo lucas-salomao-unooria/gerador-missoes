@@ -250,6 +250,16 @@ def artefatos_esperados(state: Dict[str, Any], mapa: Any) -> Dict[str, List[str]
     return {"entregues": sorted(entregues), "ausentes": sorted(ausentes)}
 
 
+def _linha_da_base(state: Dict[str, Any]) -> str:
+    """Qual retrato da plataforma e do DS a execução leu. A missão do 9º ano (06/10/2026) foi escrita
+    contra uma cópia de 16/09 e nada no dossiê dizia isso."""
+    commit = state.get("base_plataforma_commit")
+    if not commit:
+        return "**Base da plataforma:** não registrada nesta execução."
+    return (f"**Base da plataforma:** `plataforma-unooria@{commit}` ({state.get('base_plataforma_branch', '?')}, "
+            f"{state.get('base_plataforma_data', '?')}) · design system {state.get('ds_versao', '?')}")
+
+
 def relatorio_markdown(d: Dict[str, Any], missao: str = "", artefatos: Optional[Dict[str, List[str]]] = None,
                        state: Optional[Dict[str, Any]] = None) -> str:
     """Dossiê legível. Sem chave de estado, sem nome de classe, sem log cru."""
@@ -264,6 +274,8 @@ def relatorio_markdown(d: Dict[str, Any], missao: str = "", artefatos: Optional[
         "",
         "A esteira roda até o fim mesmo com gate reprovado: todos os documentos abaixo existem, e o que",
         "derivou de uma etapa reprovada está marcado `[PROVISÓRIO]` no próprio documento.",
+        "",
+        _linha_da_base(state or {}),
         "",
         "## Como cada portão se saiu",
         "",

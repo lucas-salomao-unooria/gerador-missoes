@@ -1,5 +1,6 @@
 """Pacote de prompts dos agentes (Markdown) e utilitários de carga."""
 
+from . import base_plataforma
 from .loader import (
     PROMPTS_DIR,
     REFERENCES_DIR,
@@ -20,4 +21,5 @@ __all__ = [
     "load_prompt",
     "resolve_includes",
     "save_prompt",
+    "base_plataforma",
 ]
