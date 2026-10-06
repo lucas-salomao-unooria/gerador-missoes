@@ -181,6 +181,11 @@ def acoes_possiveis(fluxo: Dict[str, Any], papel: str, estado: Dict[str, Any]) -
             acoes.append(EXCECAO)
     if situacao == AGUARDANDO and etapa_anterior(etapa):
         acoes.append(DEVOLVER)  # quem gerou pode ver que o problema vem de antes
+    if situacao == ENTREGUE and etapa_anterior(etapa):
+        # Dev aprovou e entregou, e depois viu que o design precisa mudar. Antes não havia ação:
+        # reabrir era editar o conversa.json no bucket à mão. Volta só um passo, como a devolução
+        # comum; de Design para Produto segue o caminho de sempre.
+        acoes.append(DEVOLVER)
     if situacao == LIBERADA:
         acoes += [INICIAR, DEVOLVER]
     if situacao == FALHOU:

@@ -592,7 +592,10 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
     estado = estado_da_sessao(run_dir)
     if situacao == passagem.ENTREGUE:
         st.success("📦 Missão entregue: as três etapas têm parecer de acordo e o dossiê final foi gerado.")
-        return
+        if not passagem.acoes_possiveis(fluxo, sessao.papel, estado):
+            return
+        st.caption("Viu depois da entrega que o design precisa mudar? Devolva ao Design com o que mudar e por quê: "
+                   "os de acordo de Design e Dev deixam de valer e a missão volta para a fila do Design.")
 
     semaforo = passagem.semaforo_da_etapa(estado, etapa)
     if semaforo and situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA):
