@@ -45,6 +45,7 @@ from pipeline.session_store import (
     formatar_status_label,
     list_saved_sessions,
     load_saved_session,
+    nome_do_zip_de_artefatos,
     resolve_session_dir,
 )
 from prompts import get_prompt_raw, list_prompt_files, load_prompt, save_prompt
@@ -1490,7 +1491,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
                     download_button_lazy(
                         "📦 Baixar Todos os Artefatos (.ZIP)",
                         lambda p=output_path: create_session_zip(p),
-                        file_name=f"artefatos_{sid[:12]}.zip",
+                        file_name=nome_do_zip_de_artefatos(result.state, sid),
                         mime="application/zip",
                         key=f"zip_{prefix}",
                         help="O pacote é montado no momento do clique, a partir dos arquivos da missão.",
