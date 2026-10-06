@@ -428,6 +428,26 @@ def tem_lacuna(missao: Dict[str, Any]) -> bool:
 
 
 # --------------------------------------------------------------------- registro
+def colisao_de_slug(ficha: Dict[str, Any], missoes: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, str]]:
+    """O achado de slug colidido, se houver. É decisão de produto, então é `decisao_humana`.
+
+    Até 06/10/2026 nascia `atencao` com `precisa_humano: false` fixo no envelope, e o registro no
+    catálogo roda depois do diagnóstico: a colisão da missão do 9º ano nunca chegou ao dossiê. O
+    diagnóstico agora chama esta função antes de fechar.
+    """
+    if missoes is None:
+        missoes = carregar().get("missoes", [])
+    for m in missoes:
+        # Mesma descoberta = mesma missão registrada de novo (reexecução), não colisão. O agente
+        # que roda dentro da esteira ainda não sabe o nome da pasta, então a sessão não basta.
+        mesma_missao = bool(ficha.get("descoberta")) and m.get("descoberta") == ficha.get("descoberta")
+        if m.get("slug") and m.get("slug") == ficha.get("slug") and m.get("sessao") != ficha.get("sessao") \
+                and not mesma_missao and str(m.get("status", "")).lower() != "descartada":
+            return [{"severidade": "decisao_humana", "codigo": "slug-colidido",
+                     "resumo": f"O slug `{ficha['slug']}` já é da sessão `{m.get('sessao')}` — o id da plataforma deriva de ano e bimestre, então duas missões do mesmo bimestre colidem. Decisão de produto."}]
+    return []
+
+
 def registrar(ficha: Dict[str, Any], indice: Optional[Dict[str, Any]] = None, base: Optional[Path] = None, gravar_arquivo: bool = True) -> Dict[str, Any]:
     """Insere ou atualiza a missão no índice, pela sessão. Devolve status e achados."""
     indice = indice if indice is not None else carregar(base)
@@ -445,15 +465,7 @@ def registrar(ficha: Dict[str, Any], indice: Optional[Dict[str, Any]] = None, ba
             achados.append({"severidade": "atencao", "codigo": "missao-parecida",
                             "resumo": f"Parecida com `{m.get('slug') or m.get('sessao')}` ({m['semelhanca']:.2f}): {m.get('descoberta', '')[:90]}"})
 
-    for m in missoes:
-        # Mesma descoberta = mesma missão registrada de novo (reexecução), não colisão. O agente
-        # que roda dentro da esteira ainda não sabe o nome da pasta, então a sessão não basta.
-        mesma_missao = bool(ficha.get("descoberta")) and m.get("descoberta") == ficha.get("descoberta")
-        if m.get("slug") and m.get("slug") == ficha.get("slug") and m.get("sessao") != ficha.get("sessao") \
-                and not mesma_missao and str(m.get("status", "")).lower() != "descartada":
-            achados.append({"severidade": "atencao", "codigo": "slug-colidido",
-                            "resumo": f"O slug `{ficha['slug']}` já é da sessão `{m.get('sessao')}` — o id da plataforma deriva de ano e bimestre, então duas missões do mesmo bimestre colidem. Decisão de produto."})
-            break
+    achados += colisao_de_slug(ficha, missoes)
 
     anterior = next((m for m in missoes if m.get("sessao") and m.get("sessao") == ficha.get("sessao")), None)
     if anterior:
@@ -602,7 +614,8 @@ def relatorio_markdown(resultado: Dict[str, Any], missao: str = "") -> str:
     linhas.append("")
     if resultado.get("achados"):
         for a in resultado["achados"]:
-            linhas.append(f"- ⚠️ **{a['codigo']}** — {a['resumo']}")
+            marca = "🔵" if a.get("severidade") == "decisao_humana" else "⚠️"
+            linhas.append(f"- {marca} **{a['codigo']}** — {a['resumo']}")
     else:
         linhas.append("- Nenhum. A missão entrou no índice sem colisão de slug nem semelhança alta.")
     linhas.append("")
@@ -614,7 +627,7 @@ def relatorio_markdown(resultado: Dict[str, Any], missao: str = "") -> str:
         "registrada": bool(f.get("slug") or f.get("nome")),
         "total_no_indice": resultado.get("total", 0),
         "achados": resultado.get("achados", []),
-        "precisa_humano": False,
+        "precisa_humano": any(a.get("severidade") == "decisao_humana" for a in resultado.get("achados", [])),
     }
     linhas.append("```json")
     linhas.append(json.dumps(envelope, ensure_ascii=False))

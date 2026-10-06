@@ -26,6 +26,7 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "catalogo_indice_status", "rotulo": "Base de comparação do V5 (índice de missões)", "etapa": "produto", "rodada": None},
     {"status": "micro_gate_status", "rotulo": "Micro-gate do núcleo", "etapa": "produto", "rodada": "micro_gate_rodada"},
     {"status": "profundidade_status", "rotulo": "Profundidade pedagógica", "etapa": "produto", "rodada": "profundidade_rodada"},
+    {"status": "fidelidade_nucleo_status", "rotulo": "Fidelidade ao pedido do PO (núcleo)", "etapa": "produto", "rodada": "nucleo_rodada"},
     {"status": "brief_escopo_status", "rotulo": "Brief de escopo separado do one-pager", "etapa": "produto", "rodada": None},
     {"status": "gate_estrutural_status", "rotulo": "Gate estrutural", "etapa": "produto", "rodada": "gate_estrutural_rodada"},
     {"status": "avaliacao_status", "rotulo": "Avaliação pedagógica", "etapa": "produto", "rodada": "avaliacoes_rodada"},
@@ -33,6 +34,7 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "adequacao_status", "rotulo": "Adequação pedagógica", "etapa": "produto", "rodada": "avaliacoes_rodada"},
     {"status": "gate_final_status", "rotulo": "Gate final de produto", "etapa": "produto", "rodada": None},
     {"status": "bncc_status", "rotulo": "Conformidade BNCC", "etapa": "produto", "rodada": "spec_rodada"},
+    {"status": "fidelidade_status", "rotulo": "Fidelidade ao pedido do PO e ao briefing", "etapa": "produto", "rodada": None},
     {"status": "lacunas_status", "rotulo": "Fechamento de lacunas (D0)", "etapa": "design", "rodada": None},
     {"status": "ambiente_status", "rotulo": "Ambiente simulado (D9)", "etapa": "design", "rodada": None},
     {"status": "prototipo_lint_status", "rotulo": "Lint do protótipo (arquivo)", "etapa": "design", "rodada": "qa_design_rodada"},
@@ -105,7 +107,8 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
         status = str(state.get(chave) or "")
         envelope = state.get(f"{chave}_envelope") or {}
         rodada = state.get(gate["rodada"]) if gate["rodada"] else None
-        if isinstance(envelope, dict) and envelope.get("precisa_humano"):
+        pede_pessoa = isinstance(envelope, dict) and bool(envelope.get("precisa_humano"))
+        if pede_pessoa:
             precisa_humano = True
 
         deste_gate = []
@@ -132,6 +135,20 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
                 }
                 deste_gate.append(normalizado)
                 achados.append(normalizado)
+
+        # O gate pediu uma pessoa e nenhum achado dele diz qual decisão: as ressalvas dele SÃO a
+        # decisão. Sem isto, a banca da missão do 9º ano gravou `precisa_humano: true` e o texto do
+        # mesmo dossiê disse "Nada travando. As ressalvas são opcionais" (06/10/2026).
+        if pede_pessoa and not any(a["severidade"] in _HUMANO for a in deste_gate):
+            for a in deste_gate:
+                if a["severidade"] not in _BLOQUEIA:
+                    a["severidade"] = "decisao_humana"
+            if not deste_gate:
+                item = {"gate": gate["rotulo"], "etapa": gate["etapa"], "id": "—", "codigo": "precisa-humano",
+                        "classe": "", "severidade": "decisao_humana", "dono": gate["etapa"],
+                        "resumo": "O gate pediu uma decisão de pessoa e não disse qual: leia o relatório dele."}
+                deste_gate.append(item)
+                achados.append(item)
 
         gates.append({
             "rotulo": gate["rotulo"],
@@ -196,6 +213,17 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
             "dono": ticket.get("dono") or "—",
             "resumo": f"{ticket.get('motivo', '')}: {ticket.get('resumo', '')}".strip(": "),
         })
+
+    # Colisão de slug: o registro no catálogo roda DEPOIS deste dossiê, então a checagem é feita aqui.
+    try:
+        from tools.catalogo import colisao_de_slug, ficha_da_execucao
+
+        for a in colisao_de_slug(ficha_da_execucao(state)):
+            achados.append({"gate": "Registro no catálogo de missões", "etapa": "produto", "id": a["codigo"],
+                            "codigo": a["codigo"], "classe": "catalogo", "severidade": a["severidade"],
+                            "dono": "produto", "resumo": a["resumo"]})
+    except Exception:  # pragma: no cover - índice ilegível não derruba o dossiê
+        pass
 
     degradacoes = list(state.get("degradacoes") or [])
     agentes_degradados = list(state.get("agentes_degradados") or [])
@@ -342,7 +370,7 @@ def relatorio_markdown(d: Dict[str, Any], missao: str = "", artefatos: Optional[
         dono, itens = next(iter(_por_dono(d["bloqueios"]).items()))
         linhas.append(f"1. **{dono}** concentra {len(itens)} dos {len(d['bloqueios'])} impedimentos — resolver ali destrava mais coisa de uma vez.")
         linhas.append(f"2. Comece por `{itens[0]['id']}`: {itens[0]['resumo']}")
-    elif d["humanos"]:
+    elif d["humanos"] or d.get("precisa_humano"):
         linhas.append("1. Não há impedimento técnico: o que falta são decisões listadas acima.")
     else:
         linhas.append("1. Nada travando. As ressalvas acima são opcionais e estão registradas para a próxima versão.")
