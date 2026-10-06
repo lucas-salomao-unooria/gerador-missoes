@@ -25,6 +25,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List
 
+from . import base_plataforma
+
 PROMPTS_DIR = Path(__file__).resolve().parent
 REFERENCES_DIR = PROMPTS_DIR / "references"
 
@@ -55,7 +57,12 @@ def get_prompt_raw(filename: str) -> str:
 
     Memoizado por (caminho, mtime): o editor de prompts e a construção dos ~40 agentes
     reliam o mesmo arquivo — e cada include dele, recursivamente — a cada chamada.
+
+    `references/plataforma/*` e `references/ds-componentes.md` não moram em `prompts/`: vêm da base
+    publicada no bucket (`prompts/base_plataforma.py`), já com as chaves neutralizadas.
     """
+    if base_plataforma.eh_da_base(filename):
+        return base_plataforma.ler_include(filename)
     path = _resolve(filename)
     return _ler_arquivo(path, path.stat().st_mtime)
 
@@ -70,6 +77,8 @@ def save_prompt(filename: str, content: str) -> bool:
     """Salva o conteúdo atualizado no arquivo de prompt correspondente."""
     if not filename.endswith(".md"):
         filename = f"{filename}.md"
+    if base_plataforma.eh_da_base(filename):
+        raise ValueError(f"{filename} vem da base publicada pela plataforma: mude na origem, não aqui")
     path = (PROMPTS_DIR / filename).resolve()
     if PROMPTS_DIR not in path.parents:
         raise ValueError(f"Caminho de prompt fora da pasta prompts/: {filename}")
@@ -81,15 +90,24 @@ def save_prompt(filename: str, content: str) -> bool:
     return True
 
 
-def resolve_includes(content: str, _depth: int = 0) -> str:
-    """Substitui diretivas `<!-- include: caminho -->` pelo conteúdo do arquivo referenciado."""
+def resolve_includes(content: str, _depth: int = 0, _ja_da_base: "set[str] | None" = None) -> str:
+    """Substitui diretivas `<!-- include: caminho -->` pelo conteúdo do arquivo referenciado.
+
+    Um arquivo da base da plataforma entra uma vez só por prompt: o contrato chega pelo `essencial`
+    e pelas regras do DS, e o prompt que inclui os dois o recebia em dobro.
+    """
     if _depth > 5:
         raise RecursionError("Profundidade máxima de includes excedida (ciclo?)")
+    ja_da_base = set() if _ja_da_base is None else _ja_da_base
 
     def _repl(match: re.Match[str]) -> str:
         rel = match.group(1)
+        if base_plataforma.eh_da_base(rel):
+            if rel in ja_da_base:
+                return f"\n<!-- {rel}: já incluído acima -->\n"
+            ja_da_base.add(rel)
         included = get_prompt_raw(rel)
-        included = resolve_includes(included, _depth + 1)
+        included = resolve_includes(included, _depth + 1, ja_da_base)
         return f"\n<!-- início de {rel} -->\n{included.strip()}\n<!-- fim de {rel} -->\n"
 
     return _INCLUDE_RE.sub(_repl, content)
@@ -128,13 +146,22 @@ def _assinatura_prompts() -> str:
     return marca
 
 
+def _assinatura_base() -> str:
+    """Commit da plataforma + versão do DS da base ativa. Sem isto, a expansão memoizada de um prompt
+    continuaria servindo a base anterior depois que o CI publicasse outra."""
+    try:
+        return base_plataforma.ativa().assinatura
+    except base_plataforma.BaseIndisponivel:
+        return "sem-base"
+
+
 def load_prompt(filename: str, **kwargs: Any) -> str:
     """Carrega um prompt: resolve includes e substitui variáveis estáticas de configuração.
 
     As variáveis dinâmicas de estado do ADK (`{one_pager}`, `{spec_missao?}`…) são
     preservadas para interpolação em tempo de execução.
     """
-    content = _expandir_includes(filename, _assinatura_prompts())
+    content = _expandir_includes(filename, f"{_assinatura_prompts()}|{_assinatura_base()}")
     for key, val in kwargs.items():
         content = content.replace(f"{{{key}}}", str(val))
     return content.strip()

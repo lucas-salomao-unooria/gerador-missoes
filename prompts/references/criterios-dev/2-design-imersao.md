@@ -6,8 +6,10 @@ Referências do gabarito: `packages/AGENTS.md` (mecânica do DS),
 citada pela spec contra as pontes existentes em `packages/ui`.
 
 ## DES-01 [BLOQUEANTE] — Seção do design system definida e existente
-A spec nomeia a seção do clone: `instanooria`, `unitube`, `chatgpt`,
-`whatsappmobile` ou `tiktooria` (as duas últimas existem sem consumidor), ou
+A spec nomeia a seção do clone — para missão nova, `unooriaai`, `unoovista` ou
+`unoochat` (tradução do ambiente em `ambientes.md`; a lista do que existe está no
+contrato da plataforma); `tiktooria` existe sem ponte; as legadas (`instanooria`,
+`unitube`, `chatgpt`, `whatsappmobile`) só com decisão registrada do PO —, ou
 declara que precisa de seção NOVA. Componente/seção que não existe nasce no
 repo `storybook-unooria` e chega por versão publicada ANTES da codificação da
 missão — a spec então lista os componentes faltantes como pré-requisito, com

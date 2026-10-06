@@ -1,30 +1,30 @@
 ---
 name: ambientes
-description: Registro dos ambientes simulados — seção do design system, versão publicada, e a fronteira entre o que é fixo na biblioteca e o que cada missão possui. Lido por telas e jornada.
+description: Registro dos ambientes simulados — de "ChatGPT/Instagram/WhatsApp" do briefing para a seção atual do design system, e a fronteira entre o que é fixo na biblioteca e o que cada missão possui. Lido por telas e jornada.
 sources: [chat]
 ---
 
 # Ambientes simulados
 
-Cinco ambientes, dezenas de missões. **A biblioteca não é nossa** — cada ambiente é uma **seção do design system**, publicada no `storybook-unooria`. Missão **monta**; a seção **fornece**.
+**A biblioteca não é nossa** — cada ambiente é uma **seção do design system**, publicada no `storybook-unooria`. Missão **monta**; a seção **fornece**. Não existe biblioteca a construir, existe seção a consumir **na última versão publicada** (versão única, ADR-139: não crave número).
 
-Isto substitui a ideia de "biblioteca de ambiente por missão": não existe biblioteca a construir, existe seção a consumir na versão publicada.
+## Ambiente do briefing ≠ seção do DS
 
-## As seções
+O briefing fala a língua do aluno: "ChatGPT", "Instagram", "WhatsApp". A spec e o PRD falam a língua do código: a **seção**. Desde as ADR-133 a 138 (out/2026), **missão nova não reproduz a identidade visual de aplicativo de terceiros**: ela usa a cópia estrutural do app **com a identidade da Unooria**. A tradução é esta, e vale para todo briefing:
 
-| Ambiente | Seção do DS | Versão publicada | Componentes | Missões que usam |
+| O briefing diz | Seção para missão NOVA | Ponte | App que o aluno vê | Seção legada (só missão antiga) |
 |---|---|---|---|---|
-| Instagram | `instanooria` | `[storybook]` | `[storybook]` | exp-01 Instanooria |
-| YouTube | `unitube` (ponte `@edu/ui/ds-unootube`, CSS `--uni-*`) | `[storybook]` | `[storybook]` | exp-02 UnooTube |
-| ChatGPT | `chatgpt` | `[storybook]` | `[storybook]` | exp-03 unooGPT |
-| WhatsApp | `whatsappmobile` (ponte `@edu/ui/ds-whatsapp`, **só tema escuro** — ADR-68) | `[storybook]` | `[storybook]` | exp-06 Rastro do Boato · exp-07 O Eco no Grupo |
-| TikTok | `tiktooria` | `[storybook]` | `[storybook]` | — *(existe no DS, **sem ponte em `@edu/ui`**; criar a ponte é pré-requisito declarado)* |
+| ChatGPT, assistente de IA, chat com IA | `unooriaai` (tokens `--uai-*`, `data-uai-theme`) | `@edu/ui/ds-unooriaai` | **UnooriaAI** | `chatgpt` (exp08ef4b) |
+| Instagram, feed, rede social de fotos | `unoovista` (tokens `--unv-*`, `data-unv-theme`) | `@edu/ui/ds-unoovista` | **Unoovista** | `instanooria` (exp01ef1b) |
+| WhatsApp, mensageiro, grupo de conversa | `unoochat` (tema CLARO) | `@edu/ui/ds-unoochat` | **Unoochat** | `whatsappmobile` (exp06ef2b, só tema escuro, ADR-68) |
+| YouTube, vídeo | — (o `unootube` está arquivado, ADR-116) | — | — | `unootube` (arquivado) |
+| TikTok, vídeo curto | `tiktooria` (existe no DS, **sem ponte** em `@edu/ui`) | criar a ponte é pré-requisito | — | — |
+| Jornal, blog, galeria | `unoojornal`, `unooblog`, `unoogaleria` (existem no DS, **sem ponte**) | criar a ponte é pré-requisito | — | — |
+| A escola, a plataforma, o professor | `unooria` | `@edu/ui/ds` | Unooria | — |
 
-`[storybook]` = preencher a partir de `https://storybook.unooria.com/`. Nome da seção é fato do repositório e está confirmado por DES-01 do gate de dev; versão e inventário de componentes só o storybook dá.
+**O nome do app que o aluno vê é o da coluna "App que o aluno vê"**, nunca o da marca imitada: a missão do 9º ano (out/2026) saiu da esteira pedindo `chatgpt`, `@edu/ui/ds-chatgpt` e `data-gpt-theme` porque esta tabela não existia. A lista do que existe de fato (seções, pontes, componentes) está no **contrato da plataforma** e no inventário do DS, incluídos ao lado; esta tabela só diz **qual escolher**. Briefing que pedir explicitamente a seção legada é decisão do PO: registre `[ABERTO — PO]`, não escolha sozinho.
 
-**`tiktooria` é o nome canônico.** TikNooria, UnooTok e NooriaTok em missões anteriores são desvios a corrigir — inclusive em roteiro de podcast já escrito, que é o mais caro.
-
-**Roblox saiu.** Não tem seção de DS e não está em uso. Missão em Roblox reprova em DES-01. Se voltar, volta como seção nova, com componentes a criar no `storybook-unooria`, responsável e prazo declarados **antes** da codificação — nunca como componente criado dentro da experiência.
+**Uma peça de outro app dentro de uma tela da Unooria fala na voz de onde veio** (ADR-117): um post que chegou por rede social aparece como `PostCard` do `unoovista` dentro da redação `unooria`, uma mensagem encaminhada como `MessageBubble` do `unoochat`. A regra é por **peça**, nunca por tela: o cromo em volta continua da Unooria. O inverso — peça da plataforma dentro do clone — continua proibido.
 
 ## Seção que não existe
 
@@ -47,10 +47,10 @@ Caso que não couber nos dois lados é zona de negociação, não improviso: a m
 
 | Seção | Não tem (o que a plataforma real tem e a simulação deliberadamente não) |
 |---|---|
-| `instanooria` | [PROPOSTA] Mensagens diretas · Stories e Reels, salvo quando a mecânica os pede · anúncios e publicações patrocinadas · loja e compras · notificações fora da missão · busca aberta na internet · perfis fora do banco curado · contadores de seguidores ao vivo (todo número visível é gabarito ou cosmético declarado, PED-03) |
-| `unitube` | [PROPOSTA] Anúncios · transmissão ao vivo e chat · monetização · autoplay infinito fora do banco · comentários de terceiros reais · download · histórico entre sessões fora do estado salvo |
-| `chatgpt` | [PROPOSTA] Memória entre conversas · upload de arquivo ou imagem · navegação na web · plugins e GPTs · modo de voz · histórico lateral fora da missão · resposta em tempo real sem curadoria (8.2) |
-| `whatsappmobile` | [PROPOSTA] Chamadas de voz e vídeo · status · localização · pagamentos · contatos fora do grupo da missão · encaminhar para fora da simulação · tema claro (ADR-68) |
+| `unoovista` (e o legado `instanooria`) | [PROPOSTA] Mensagens diretas · Stories e Reels, salvo quando a mecânica os pede · anúncios e publicações patrocinadas · loja e compras · notificações fora da missão · busca aberta na internet · perfis fora do banco curado · contadores de seguidores ao vivo (todo número visível é gabarito ou cosmético declarado, PED-03) |
+| `unootube` (arquivado) | [PROPOSTA] Anúncios · transmissão ao vivo e chat · monetização · autoplay infinito fora do banco · comentários de terceiros reais · download · histórico entre sessões fora do estado salvo |
+| `unooriaai` (e o legado `chatgpt`) | [PROPOSTA] Memória entre conversas · upload de arquivo ou imagem · navegação na web · plugins e GPTs · modo de voz · histórico lateral fora da missão · resposta em tempo real sem curadoria (8.2) |
+| `unoochat` (e o legado `whatsappmobile`) | [PROPOSTA] Chamadas de voz e vídeo · status · localização · pagamentos · contatos fora do grupo da missão · encaminhar para fora da simulação. Tema: `unoochat` é CLARO (ADR-134); `whatsappmobile`, só escuro (ADR-68) |
 | `tiktooria` | [PROPOSTA] Transmissão ao vivo · loja · mensagens diretas · efeitos e filtros de criação · monetização · download · "Para você" infinito fora do banco |
 
 Cada linha nasce marcada `[PROPOSTA]` até conferência contra o storybook e contra o bloco 5 das specs já aprovadas — uma lista imperfeita é conferível; uma lista vazia não é. Quem conferir tira a marca e registra a data.

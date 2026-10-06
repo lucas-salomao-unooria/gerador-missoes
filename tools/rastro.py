@@ -13,8 +13,8 @@ Três verificações mecânicas, todas sem LLM:
   (`verbo · objeto · resultado · contexto`, sem campo `dados`), a tabela de leitura das medidas
   e as proibições de arquitetura (WebSocket, rota do motor da exp-01, papéis antigos).
 
-As listas fechadas espelham `references/plataforma/` (contrato-manifesto, produtos-catalogo,
-series, perfis-claims); reconferir quando `versao-lida.json` mudar.
+As listas fechadas espelham a base da plataforma (`prompts/base_plataforma.py`: contrato-manifesto,
+produtos-catalogo, series, perfis-claims); reconferir quando a plataforma mudar esses contratos.
 """
 
 from __future__ import annotations
@@ -70,7 +70,36 @@ CAPACIDADES_DE_EXTENSAO = {
 
 # Capturar mídia do estudante não é só permissão de iframe: é contrato de dados.
 CAPTURA_DE_MIDIA = ("microphone", "camera", "display-capture")
-SECOES_DS = ("instanooria", "unitube", "chatgpt", "whatsappmobile", "tiktooria")
+#: Seções que existiam quando a lista era fixa. Hoje valem como LEGADAS: missão nova não reproduz a
+#: identidade de app de terceiro (ADR-133 a 138) e usa `unooriaai`, `unoovista` ou `unoochat`. A lista
+#: fixa aceitava só estas — e reprovava `unooriaai`, empurrando a missão do 9º ano (out/2026) para `chatgpt`.
+SECOES_LEGADAS = ("instanooria", "unitube", "unootube", "chatgpt", "whatsappmobile")
+#: Para qual seção cada legada foi (`ambientes.md`).
+SUCESSORA_DA_LEGADA = {"chatgpt": "unooriaai", "instanooria": "unoovista", "whatsappmobile": "unoochat"}
+
+
+def secoes_ds() -> Dict[str, Optional[str]]:
+    """`seção → ponte` (ou `None` sem ponte), do contrato da base da plataforma. Sem base, as legadas."""
+    from prompts import base_plataforma
+
+    try:
+        secoes = (base_plataforma.contrato().get("design_system") or {}).get("secoes") or []
+        mapa = {str(s.get("secao") or "").lower(): s.get("ponte") for s in secoes if s.get("secao")}
+    except base_plataforma.BaseIndisponivel:
+        mapa = {s: s for s in SECOES_LEGADAS}
+    mapa.setdefault("unitube", mapa.get("unootube"))  # nome antigo do UnooTube na esteira
+    return mapa
+
+
+def experiencias_existentes() -> frozenset:
+    """Pastas de experiência que já existem: as do contrato da base, mais os nomes antigos (ADR-110)."""
+    from prompts import base_plataforma
+
+    try:
+        atuais = {str(e.get("id") or "") for e in base_plataforma.contrato().get("experiencias") or []}
+    except base_plataforma.BaseIndisponivel:
+        atuais = set()
+    return EXPERIENCIAS_EXISTENTES | frozenset(a for a in atuais if a)
 
 #: Experiências que já existem na plataforma (espelha `references/plataforma/`). O PRD as cita
 #: como exemplar a imitar (`apps/experiencias/exp-08-manifesto-ia/`) ou para não repetir porta —
@@ -711,10 +740,17 @@ def validar_manifesto(spec: str) -> Dict[str, Any]:
                 })
 
     v = _campo(texto, "secao_ds"); campos["secao_ds"] = v
-    if not v or not (v.lower() in SECOES_DS or re.match(r"^(nova|minijogo)\s*:\s*\S+", v, re.IGNORECASE)):
-        falta("secao_ds", f"`secao_ds` ausente ou fora de {list(SECOES_DS)} / `nova:<nome>` / `minijogo:<nome>` (lido: {v!r}). Dono: design (D9 ambiente-simulado) quando a spec cala; produto quando a spec errou.", etapa="design")
-    elif v.lower() == "tiktooria":
-        achados.append({"severidade": "atencao", "campo": "secao_ds", "etapa": "plataforma", "resumo": "`tiktooria` existe no DS mas não tem ponte em `@edu/ui`; criar a ponte é pré-requisito de plataforma."})
+    secoes = secoes_ds()
+    if not v or not (v.lower() in secoes or re.match(r"^(nova|minijogo)\s*:\s*\S+", v, re.IGNORECASE)):
+        falta("secao_ds", f"`secao_ds` ausente ou fora de {sorted(secoes)} / `nova:<nome>` / `minijogo:<nome>` (lido: {v!r}). Dono: design (D9 ambiente-simulado) quando a spec cala; produto quando a spec errou.", etapa="design")
+    elif v.lower() in SECOES_LEGADAS:
+        sucessora = SUCESSORA_DA_LEGADA.get(v.lower())
+        achados.append({"severidade": "bloqueio", "campo": "secao_ds", "etapa": "produto", "resumo": (
+            f"`{v}` é seção legada: missão nova não reproduz a identidade de app de terceiro (ADR-133 a 138)"
+            + (f" e usa `{sucessora}`" if sucessora else "") + " — veja `ambientes.md`. Se o PO quer mesmo a legada, "
+            "é decisão dele, registrada na spec antes de seguir.")})
+    elif v.lower() in secoes and not secoes[v.lower()]:
+        achados.append({"severidade": "atencao", "campo": "secao_ds", "etapa": "plataforma", "resumo": f"`{v}` existe no DS mas não tem ponte em `@edu/ui`; criar a ponte é pré-requisito de plataforma."})
     elif re.match(r"^(nova|minijogo)\s*:", v, re.IGNORECASE):
         achados.append({"severidade": "atencao", "campo": "secao_ds", "etapa": "plataforma", "resumo": f"Seção de DS nova (`{v}`): componentes, responsável e prazo são pendência de plataforma."})
 
@@ -959,6 +995,9 @@ def validar_telemetria(handoff: str) -> Dict[str, Any]:
     # rota citada num módulo que a plataforma já tem precisa existir nela (tools/rotas_plataforma.py)
     from tools.rotas_plataforma import validar_rotas
     achados.extend(validar_rotas(texto))
+    # o que o documento afirma da plataforma confere com o contrato da base (tools/conferir_prd_plataforma.py)
+    from tools.conferir_prd_plataforma import validar_contrato
+    achados.extend(validar_contrato(texto))
 
     status = "bloqueado" if any(a["severidade"] == "bloqueio" for a in achados) else ("amarelo" if achados else "aprovado")
     return {"status": status, "achados": achados, "tabelas_eventos": len(tabela_eventos)}
@@ -1101,7 +1140,7 @@ def validar_prd(prd: str) -> Dict[str, Any]:
     # nomes de pasta (o velho `exp-NN-<slug>` ao lado do `expNNefNb`); experiência que já existe na
     # plataforma é referência, não declaração.
     caminhos = {m.rstrip("/") for m in re.findall(r"apps/experiencias/([a-z0-9][a-z0-9-]*)/?", texto)}
-    caminhos -= EXPERIENCIAS_EXISTENTES
+    caminhos -= experiencias_existentes()
     if len(caminhos) > 1:
         falha("caminho-divergente",
               f"O PRD declara mais de um diretório para a mesma experiência: {sorted(caminhos)}.")
@@ -1130,6 +1169,9 @@ def validar_prd(prd: str) -> Dict[str, Any]:
     # rota citada num módulo que a plataforma já tem precisa existir nela (tools/rotas_plataforma.py)
     from tools.rotas_plataforma import validar_rotas
     achados.extend(validar_rotas(texto))
+    # o que o documento afirma da plataforma confere com o contrato da base (tools/conferir_prd_plataforma.py)
+    from tools.conferir_prd_plataforma import validar_contrato
+    achados.extend(validar_contrato(texto))
 
     bloqueios = [a for a in achados if a["severidade"] == "bloqueio"]
     status = "bloqueado" if bloqueios else ("amarelo" if achados else "aprovado")

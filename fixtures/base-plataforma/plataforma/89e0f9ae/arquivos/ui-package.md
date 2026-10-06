@@ -1,0 +1,42 @@
+<!-- CÓPIA de plataforma-unooria@89e0f9ae (2026-10-06) · origem: packages/ui/package.json · não edite -->
+
+# `packages/ui/package.json`
+
+```json
+{
+  "name": "@edu/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    "./ds": "./src/ds.ts",
+    "./ds-insta": "./src/ds-insta.ts",
+    "./ds-unoovista": "./src/ds-unoovista.ts",
+    "./ds-unootube": "./src/ds-unootube.ts",
+    "./ds-chatgpt": "./src/ds-chatgpt.ts",
+    "./ds-whatsapp": "./src/ds-whatsapp.ts",
+    "./ds-unoochat": "./src/ds-unoochat.ts",
+    "./ds-unooriaai": "./src/ds-unooriaai.ts",
+    "./styles/plataforma.css": "./styles/plataforma.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "build": "echo 'sem build (fonte TS direto)'"
+  },
+  "dependencies": {
+    "@unooria/design-system": "^0.2.18"
+  },
+  "peerDependencies": {
+    "react": ">=19"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "react": "^19.2.0",
+    "typescript": "^5.7.0"
+  }
+}
+```

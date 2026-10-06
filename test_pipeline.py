@@ -537,7 +537,7 @@ Nome: Teste. Ficha do manifesto:
 - `viewport: 375x812`
 - `permissoes: [forms]`
 - `capabilities: [telemetria, progresso]`
-- `secao_ds: unitube`
+- `secao_ds: unoovista`
 - `liberacao: por-turma`
 
 ## 1. Descoberta central
@@ -563,8 +563,14 @@ def test_rastro_manifesto_telemetria_lacunas():
     ruim = validar_manifesto(_SPEC_MANIFESTO_OK.replace("- `produto: entre-redes`\n", "").replace("`unidade: 2`", "`unidade: 7`").replace("`permissoes: [forms]`", "`permissoes: [camera]`"))
     campos = {a["campo"] for a in ruim["achados"] if a["severidade"] == "bloqueio"}
     assert ruim["status"] == "bloqueado" and {"produto", "unidade", "permissoes"} <= campos, campos
-    tiktok = validar_manifesto(_SPEC_MANIFESTO_OK.replace("secao_ds: unitube", "secao_ds: tiktooria"))
+    tiktok = validar_manifesto(_SPEC_MANIFESTO_OK.replace("secao_ds: unoovista", "secao_ds: tiktooria"))
     assert tiktok["status"] == "amarelo" and tiktok["achados"][0]["etapa"] == "plataforma"
+    # 06/10/2026: a lista fixa aceitava só as seções legadas e reprovava `unooriaai` — a missão do 9º ano
+    # saiu em `chatgpt`. Agora as seções vêm do contrato, e a legada em missão nova bloqueia com a sucessora.
+    uai = validar_manifesto(_SPEC_MANIFESTO_OK.replace("secao_ds: unoovista", "secao_ds: unooriaai"))
+    assert uai["status"] == "aprovado", uai["achados"]
+    gpt = validar_manifesto(_SPEC_MANIFESTO_OK.replace("secao_ds: unoovista", "secao_ds: chatgpt"))
+    assert gpt["status"] == "bloqueado" and "unooriaai" in gpt["achados"][0]["resumo"], gpt["achados"]
 
     t_ok = validar_telemetria(_HANDOFF_OK)
     assert t_ok["status"] == "aprovado", t_ok["achados"]
@@ -827,7 +833,7 @@ def test_capacidade_de_plataforma_nao_bloqueia():
             "- `id: exp02ef1b`\n- `produto: entre-redes`\n- `series: [\"2EF\"]`\n"
             "- `unidade: 1`\n- `publico: estudante`\n- `viewport: 375x812`\n"
             f"- `permissoes: {permissoes}`\n"
-            "- `capabilities: [telemetria, progresso]`\n- `secao_ds: instanooria`\n"
+            "- `capabilities: [telemetria, progresso]`\n- `secao_ds: unoovista`\n"
             "- `liberacao: por-turma`\n\n"
             f"## 9. Evidências e dados\n{bloco9}\n\n## 10. Cenários\nx\n"
         )
@@ -1835,22 +1841,76 @@ def test_schema_de_ferramenta_saneado():
 
 
 # --------------------------------------------------------------------------- 8. cópias da plataforma
-def test_referencias_plataforma_sincronizadas():
-    import json
-    import subprocess
-    from prompts import REFERENCES_DIR
+def test_base_da_plataforma_lida_do_bucket_e_fixada_por_execucao():
+    """06/10/2026: a cópia no git parou em 16/09 e a missão do 9º ano saiu pedindo `chatgpt`, ADR-108 e
+    DS 0.2.2. A base agora vem do bucket (`prompts/base_plataforma.py`); aqui, da fotografia em
+    `fixtures/base-plataforma`. Toda cópia que um prompt inclui tem de existir nela, o contrato tem de
+    trazer as listas fechadas, e a falta da base é erro com mensagem — nunca cópia velha em silêncio."""
+    import re as _re
+    import tempfile
+    import threading
+    from prompts import PROMPTS_DIR, base_plataforma as bp, get_prompt_raw, load_prompt, save_prompt
 
-    pasta = REFERENCES_DIR / "plataforma"
-    manifesto = json.loads((pasta / "versao-lida.json").read_text(encoding="utf-8"))
-    faltando = [a["destino"] for a in manifesto["arquivos"] if not (pasta / a["destino"]).exists()]
-    assert not faltando, f"cópias ausentes: {faltando} — rode scripts/sincronizar_plataforma.py"
-    assert len(manifesto["arquivos"]) >= 40
-    plataforma = Path(manifesto["plataforma_dir"])
-    if (plataforma / ".git").exists():
-        head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=plataforma, capture_output=True, text=True).stdout.strip()
-        if head and head != manifesto["commit"]:
-            print(f"   ⚠️ plataforma-unooria está em {head}, cópias lidas de {manifesto['commit']} — considere rodar scripts/sincronizar_plataforma.py")
-    print(f"   ✓ {len(manifesto['arquivos'])} cópias da plataforma presentes (commit {manifesto['commit']}, {manifesto['data_commit']})")
+    bp.esquecer_cache()
+    base = bp.ler_atual()
+    assert base.commit != "?" and base.ds_versao != "?", base
+    c = bp.contrato(base)
+    secoes = {s["secao"] for s in c["design_system"]["secoes"]}
+    assert {"unooria", "unooriaai", "unoovista", "unoochat"} <= secoes, secoes
+    assert c["adr"]["proxima"] == c["adr"]["ultima"] + 1
+    assert str(c["portas"]["proxima_livre"]) not in {str(v) for v in c["portas"]["ocupadas"].values()}
+    assert {"forms", "downloads"} <= set(c["manifesto"]["permissoes_iframe"])
+
+    # toda cópia citada por um prompt existe na base publicada
+    citados = set()
+    for md in PROMPTS_DIR.rglob("*.md"):
+        citados |= set(_re.findall(r"include:\s*references/plataforma/([\w.-]+\.md)", md.read_text(encoding="utf-8")))
+    citados.discard("contrato-plataforma.md")
+    faltando = sorted(n for n in citados if not (base.pasta_plataforma / "arquivos" / n).exists())
+    assert not faltando, f"prompts incluem cópias que a plataforma não publica: {faltando}"
+
+    # o contrato e o inventário chegam renderizados, com as chaves neutralizadas
+    essencial = load_prompt("references/plataforma-unooria-essencial.md")
+    assert "Contrato da plataforma" in essencial and "unooriaai" in essencial
+    assert f"ADR-{c['adr']['proxima']}" in essencial
+    assert "unooriaai" in get_prompt_raw("references/ds-componentes.md")
+    from prompts import list_state_variables
+    for copia in ("exemplo-juri-contrato-rotas.md", "openapi-indice.md", "agents-raiz.md"):
+        sobra = list_state_variables(get_prompt_raw(f"references/plataforma/{copia}"))
+        assert not sobra, f"{copia}: o ADK interpolaria {sobra}"
+
+    # cada arquivo da base entra uma vez só por prompt
+    prd = load_prompt("dev/47_prd_writer.md")
+    assert prd.count("<!-- início de references/plataforma/contrato-plataforma.md -->") == 1
+
+    # a base não se edita pela esteira
+    try:
+        save_prompt("references/plataforma/agents-raiz.md", "x")
+        raise AssertionError("save_prompt gravou numa cópia da base")
+    except ValueError:
+        pass
+
+    # sem base: erro que diz onde procurou
+    with tempfile.TemporaryDirectory() as vazio:
+        try:
+            bp.ler_atual(Path(vazio))
+            raise AssertionError("base ausente não pode ser silenciosa")
+        except bp.BaseIndisponivel as exc:
+            assert "atual.json" in str(exc) and "gcloud storage rsync" in str(exc)
+
+    # a base fixada vale só para a thread da execução
+    falsa = bp.Base(raiz=base.raiz, commit="outro", branch="b", data_commit="d", gerado_em="g",
+                    pasta_plataforma=base.pasta_plataforma, ds_versao=base.ds_versao, ds_commit="x",
+                    pasta_ds=base.pasta_ds)
+    vista = {}
+    bp.fixar(falsa)
+    try:
+        t2 = threading.Thread(target=lambda: vista.update(outra=bp.ativa().commit))
+        t2.start(); t2.join()
+        assert bp.ativa().commit == "outro" and vista["outra"] == base.commit
+    finally:
+        bp.fixar(None)
+    print(f"   ✓ base da plataforma: {base.resumo()} · {len(citados)} cópias citadas, todas presentes")
 
 
 # --------------------------------------------------------------------------- esteira que não aborta
@@ -2107,7 +2167,7 @@ def test_id_da_experiencia_carrega_ano_e_bimestre():
             f"- `id: {idm}`\n- `produto: entre-redes`\n- `series: [\"{series}\"]`\n"
             f"- `unidade: {unidade}`\n- `publico: estudante`\n- `viewport: 375x812`\n"
             "- `permissoes: [forms]`\n- `capabilities: [telemetria]`\n"
-            "- `secao_ds: unitube`\n- `liberacao: por-turma`\n"
+            "- `secao_ds: unoovista`\n- `liberacao: por-turma`\n"
         )
 
     ok = validar_manifesto(ficha("exp05ef3b", "5EF", 3))
@@ -3479,36 +3539,6 @@ def test_nenhum_prompt_manda_usar_ferramenta_que_o_agente_nao_tem():
 
 
 
-def test_sincronizar_plataforma_nao_grava_com_help_nem_com_argumento_errado():
-    """O script não lia argumento nenhum: `--help` executou a sincronização inteira em 23/09/2026,
-    começando por apagar os `.md` do destino. A plataforma aponta para um caminho que não existe:
-    se o parser não rodasse primeiro, o script sairia com 1 ("plataforma não encontrada") — nunca
-    grava, mesmo que a correção regrida."""
-    import hashlib
-    import subprocess
-
-    raiz = Path(__file__).resolve().parent
-    destino = raiz / "prompts" / "references" / "plataforma"
-
-    def digital() -> str:
-        h = hashlib.sha256()
-        for f in sorted(destino.rglob("*")):
-            if f.is_file():
-                h.update(f.name.encode() + f.read_bytes())
-        return h.hexdigest()
-
-    antes = digital()
-    env = {**os.environ, "PLATAFORMA_UNOORIA_DIR": str(raiz / "nao-existe")}
-    script = str(raiz / "scripts" / "sincronizar_plataforma.py")
-    ajuda = subprocess.run([sys.executable, script, "--help"], capture_output=True, text=True, env=env)
-    assert ajuda.returncode == 0 and "usage:" in ajuda.stdout, (ajuda.returncode, ajuda.stderr[-200:])
-    errado = subprocess.run([sys.executable, script, "--seco"], capture_output=True, text=True, env=env)
-    assert errado.returncode == 2 and "unrecognized arguments" in errado.stderr
-    assert digital() == antes, "o script gravou nas cópias da plataforma"
-    print("   ✓ sincronizar_plataforma: --help mostra o uso e argumento errado falha, sem gravar nada")
-
-
-
 def test_despacho_traduz_o_dono_e_nunca_descarta_ticket_em_silencio():
     """A-15 (auditoria de 23/09/2026). O despacho casava só o nome literal do dono: a banca escreveu
     `wireframes` 16 vezes, `spec` 15 e `copy` 2 nas 14 sessões, e tudo iria para lugar nenhum. Havia
@@ -3955,13 +3985,13 @@ def test_rotas_citadas_em_modulo_da_plataforma_existem_nela():
     assert cods("`GET /experiencias/exp07ef1b/sessao`") == ["rota-fora-do-modulo"]
     assert "rota-inexistente" in [a["codigo"] for a in validar_prd("| RF-001 | P0 | `PUT /atividades/:id/revisar` | T-001 |")["achados"]]
 
-    # a URL vence quando responde; sem ela, ou se falhar, a cópia sincronizada serve
+    # a URL vence quando responde; sem ela, ou se falhar, a base da plataforma serve
     antes = os.environ.get("PLATAFORMA_OPENAPI_URL")
     os.environ["PLATAFORMA_OPENAPI_URL"] = "http://127.0.0.1:9/docs-json"
     try:
         rp._cache.clear()
         rotas, origem = rp.carregar()
-        assert rotas and "cópia sincronizada" in origem, origem
+        assert rotas and "base da plataforma" in origem, origem
     finally:
         if antes is None:
             os.environ.pop("PLATAFORMA_OPENAPI_URL", None)
@@ -3978,11 +4008,36 @@ def test_rotas_citadas_em_modulo_da_plataforma_existem_nela():
 
 
 
+def test_prd_conferido_contra_o_contrato_da_plataforma():
+    """Aceite com o PRD da missão do 9º ano (06/10/2026), que saiu da esteira "sem lacunas": cada
+    trecho abaixo é literal dele, e cada um era uma afirmação falsa sobre a plataforma."""
+    from tools.conferir_prd_plataforma import validar_contrato
+    from tools.rastro import validar_prd
+
+    def cods(texto):
+        return sorted(a["codigo"] for a in validar_contrato(texto))
+
+    assert cods("- **ADR-108 (Proposta):** Adoção de componentes de enquete estruturada") == ["adr-numero-errado"]
+    assert cods("- Seção `@unooria/design-system` v0.2.2 ativa.") == ["ds-versao-cravada"]
+    assert cods("- **Pontes consumidas:** `@edu/ui/ds` e `@edu/ui/ds-chatgpt` (para a experiência do estudante).") == ["ponte-legada"]
+    assert cods("- **`exp09ef1b_respostas_poll`**: Respostas das enquetes estruturadas.") == ["evidencia-tabela-propria"]
+    assert cods("**O SISTEMA DEVE** marcar as sessões ativas como `arquivada`, reiniciar o gate para `E1`") == ["zerar-arquiva"]
+    assert cods("selecionar minha turma e liberar a missão imediatamente ou agendar data e horário") == ["agendamento-inexistente"]
+    assert cods("Porta de dev: 5185.") == ["porta-ocupada"]
+    assert cods('```json\n{"id": "exp09ef1b", "series": ["9EF"], "capabilities": ["telemetria"], "secao_ds": "chatgpt"}\n```') \
+        == ["manifesto-chave-inexistente"]
+
+    # o que está certo, proibido ou pedido à plataforma não é acusado
+    assert cods("Decisão nova: ADR-150 (proposta). Porta 5186. Ponte `@edu/ui/ds-unooriaai`.") == []
+    assert cods("NÃO usar `@edu/ui/ds-chatgpt` nem agendar a missão.") == []
+    assert cods("Agendamento da liberação — [PENDÊNCIA PLATAFORMA], dono: dev.") == []
+    assert "adr-numero-errado" in [a["codigo"] for a in validar_prd("ADR-108 (Proposta): enquete no chat.")["achados"]]
+    print("   ✓ contrato da plataforma: ADR, DS, ponte legada, tabela de enquete, zerar, agenda, porta, manifesto")
+
+
 def test_componentes_do_ds_conferidos_contra_o_inventario():
     """32% dos componentes que as telas das 14 sessões chamavam "do DS" não existiam na seção — o
     prompt de telas dizia ao agente "você não tem como conferir o catálogo"."""
-    import hashlib
-    import subprocess
     import tools.componentes_ds as cds
     from prompts import load_prompt
 
@@ -4007,14 +4062,10 @@ def test_componentes_do_ds_conferidos_contra_o_inventario():
         texto = load_prompt(prompt, stitch_mcp_mode="off", stitch_project_url_base="u")
         assert "Você não tem como conferir" not in texto and "`PostCard`" in texto, prompt
 
-    raiz = Path(__file__).resolve().parent
-    alvo = raiz / "prompts" / "references" / "ds-componentes.json"
-    antes = hashlib.sha256(alvo.read_bytes()).hexdigest()
-    env = {**os.environ, "STORYBOOK_UNOORIA_DIR": str(raiz / "nao-existe")}
-    r = subprocess.run([sys.executable, str(raiz / "scripts" / "sincronizar_design_system.py"), "--help"],
-                       capture_output=True, text=True, env=env)
-    assert r.returncode == 0 and "usage:" in r.stdout
-    assert hashlib.sha256(alvo.read_bytes()).hexdigest() == antes
+    # as seções que a lista fixa antiga nunca viu (06/10/2026): missão nova no UnooriaAI é conferida
+    assert {"unooriaai", "unoovista", "unoochat"} <= set(marcas), sorted(marcas)
+    assert tela("unooriaai", "`Composer`, `ChatBubble`") == []
+    assert tela("unooriaai", "`ChatPollEmbed`") == [("componente-inexistente", "bloqueio")]
     print("   ✓ componentes do DS: inventário nos prompts, coluna conferida, nome parecido sugerido")
 
 

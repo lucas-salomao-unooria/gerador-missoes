@@ -1,0 +1,36 @@
+<!-- CÓPIA de plataforma-unooria@89e0f9ae (2026-10-06) · origem: apps/experiencias/exp06ef1b/public/experiencia.json · não edite -->
+
+# `apps/experiencias/exp06ef1b/public/experiencia.json`
+
+```json
+{
+  "id": "exp06ef1b",
+  "nome": "O Júri Estadual de Projetos",
+  "versao": "0.1.2",
+  "produto": "entre-redes",
+  "series": [
+    "6EF"
+  ],
+  "unidade": 1,
+  "publico": "estudante",
+  "capabilities": [
+    "telemetria",
+    "progresso",
+    "ia",
+    "avaliacao"
+  ],
+  "viewport": {
+    "largura": 375,
+    "altura": 812
+  },
+  "permissoes": [
+    "forms"
+  ],
+  "verbos": {
+    "attempted": "votou na cédula lacrada da mostra estadual",
+    "interacted": "curtiu e avaliou os estandes do feed da mostra",
+    "progressed": "auditou a Galeria Oculta e revisou o voto",
+    "completed": "remontou a curtida, montou a cadeia do feed e respondeu à consulta aos jurados"
+  }
+}
+```

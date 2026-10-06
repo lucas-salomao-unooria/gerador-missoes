@@ -134,7 +134,7 @@ Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica — a redund
 
 ## Telas de professor — obrigatórias (4.3 e 4.4)
 
-**Preparo (Seção 1c da jornada — a missão é customizada pelo professor de qualquer disciplina):** `E0-PROF-01` catálogo/escolher a missão · `E0-PROF-02` recorte da aula (disciplina em `Selection`, tema, assuntos em lista, contexto; botão "usar banco padrão") — **construída nos dois estados**: banco padrão em primeiro nível e recorte abaixo (missão de 1º–5º ano) e recorte em primeiro nível com o banco padrão a um toque (6º ano em diante), conforme o critério 4.3 (teste de posição) · `E0-PROF-03` geração em andamento (progresso, e o estado sem saldo de IA) · `E0-PROF-04` curadoria do pacote (prévia dos itens gerados, editar qualquer texto, regenerar item, aprovar) · `E0-PROF-05` ativar/agendar. Estados a gerar: padrão · gerando · sem saldo · pacote pronto. **A tela de recorte e a de curadoria saem preenchidas com uma das três aulas da tabela "a mesma missão em três aulas" do bloco 8 — uma disciplina diferente do banco default**, para que quem lê veja o que o professor de Biologia ou de História faria.
+**Preparo (Seção 1c da jornada — a missão é customizada pelo professor de qualquer disciplina):** `E0-PROF-01` catálogo/escolher a missão · `E0-PROF-02` recorte da aula (disciplina em `Selection`, tema, assuntos em lista, contexto; botão "usar banco padrão") — **construída nos dois estados**: banco padrão em primeiro nível e recorte abaixo (missão de 1º–5º ano) e recorte em primeiro nível com o banco padrão a um toque (6º ano em diante), conforme o critério 4.3 (teste de posição) · `E0-PROF-03` geração em andamento (progresso, e o estado sem saldo de IA) · `E0-PROF-04` curadoria do pacote (prévia dos itens gerados, editar qualquer texto, regenerar item, aprovar) · `E0-PROF-05` pôr a atividade no ar (libera a missão na sala na hora; a plataforma não tem agendamento). Estados a gerar: padrão · gerando · sem saldo · pacote pronto. **A tela de recorte e a de curadoria saem preenchidas com uma das três aulas da tabela "a mesma missão em três aulas" do bloco 8 — uma disciplina diferente do banco default**, para que quem lê veja o que o professor de Biologia ou de História faria.
 
 **Condução (4.4):** dashboard em tempo real (quem está em que etapa, **o que pede ação**) · controles de handoff · evidências agregadas da turma · evidência individual (com o grau da medida ao lado). Dados vêm da raia "Evidência capturada". Nenhuma comparação nominal de mérito (8.5); nenhuma coluna ordenável com medida de criança (PED-07).
 
@@ -169,7 +169,7 @@ Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica — a redund
 ```
 # Wireframes — <missão>
 
-**Seção do DS usada:** <instanooria|unitube|chatgpt|whatsappmobile|tiktooria|novo: nome> · componentes importados: <lista>
+**Seção do DS usada:** <unooriaai|unoovista|unoochat|tiktooria|novo: nome> (tradução do ambiente em `ambientes.md`) · componentes importados: <lista>
 **Camada CAA:** aplicada | não aplicável | ausente — <n> telas com restrição CAA construída
 
 ## Cobertura — inventário × frame × estados

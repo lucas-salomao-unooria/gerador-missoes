@@ -6,7 +6,7 @@ sources: [chat]
 
 # Critérios do gate de dev
 
-**Versão lida:** 02/09/2026 (critérios). **Gabarito da plataforma reconferido em 16/09/2026** contra `plataforma-unooria@ba0de35` — as cópias canônicas estão em `references/plataforma/` (`versao-lida.json`). 73 critérios, 5 dimensões, **22 bloqueantes** (contagem real dos cinco arquivos: 16 + 14 + 15 + 15 + 13; DES-14 nasceu do lado de cá em 21/09/2026 e ganhou severidade em 22/09).
+**Versão lida:** 02/09/2026 (critérios). **Gabarito da plataforma reconferido em 16/09/2026** contra `plataforma-unooria@ba0de35` — as cópias canônicas vêm da base da plataforma publicada no bucket (o commit lido aparece no diagnóstico de cada execução). 73 critérios, 5 dimensões, **22 bloqueantes** (contagem real dos cinco arquivos: 16 + 14 + 15 + 15 + 13; DES-14 nasceu do lado de cá em 21/09/2026 e ganhou severidade em 22/09).
 Consolidação: 🟢 exige zero ❌ nos 73 — qualquer ❌ não bloqueante rebaixa
 para 🟡.
 
@@ -62,8 +62,10 @@ debate faça parte do insumo. O teste de permanência do nosso 2.1 vale para
 **interface** dentro da simulação, não para material de mediação — que o
 nosso 4.2 exige. Origem da emenda: o gate deles.
 
-**DES-01** dá o nome canônico das seções: `instanooria`, `unitube`,
-`chatgpt`, `whatsappmobile`, `tiktooria`. Roblox não tem seção.
+**DES-01** dá o nome canônico das seções: as do contrato da plataforma (base publicada).
+Para missão nova, `unooriaai`, `unoovista` ou `unoochat` — a tradução do ambiente está em
+`ambientes.md`; as legadas (`instanooria`, `unitube`, `chatgpt`, `whatsappmobile`) só por decisão
+registrada do PO (ADR-133 a 138). Roblox não tem seção.
 
 ## O que continua fora do nosso alcance
 

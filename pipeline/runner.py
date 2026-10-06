@@ -27,6 +27,7 @@ from pipeline.artifacts import (
     save_run_artifacts,
 )
 from pipeline.orchestrator import FINAL_OUTPUT_KEY, create_mission_orchestrator
+from prompts import base_plataforma
 from tools.doc_parser import DocumentBatch
 
 logger = logging.getLogger("pipeline_runner")
@@ -265,6 +266,12 @@ async def run_orchestrator_pipeline_stream(
     }
 
     try:
+        # A base da plataforma é fixada ANTES de montar os agentes: os prompts são expandidos agora, e
+        # os verificadores que leem arquivo durante a execução consultam a mesma base. Sem base, para
+        # aqui com a mensagem de onde procurou (`prompts/base_plataforma.py`).
+        base = base_plataforma.ler_atual()
+        base_plataforma.fixar(base)
+        logger.info(base.resumo())
         orchestrator = create_mission_orchestrator(
             name=orchestrator_name,
             thinking_budget=thinking_budget,
@@ -295,6 +302,8 @@ async def run_orchestrator_pipeline_stream(
                 # A memória do gerador chega aos prompts pelo estado, não por include: o índice vive
                 # no bucket (`output/`), que persiste, enquanto `prompts/` vem da imagem do container.
                 "catalogo_missoes": catalogo_para_prompt(),
+                # Qual retrato da plataforma e do DS esta execução leu — vai para o diagnóstico.
+                **base.para_estado(),
             },
         )
         adk_artifacts_dir = settings.output_path / ".adk_artifacts"
@@ -542,6 +551,8 @@ async def run_orchestrator_pipeline_stream(
             error_message=str(exc),
         )
         yield {"type": "pipeline_error", "error": str(exc), "result": error_result, "duration": duration, "timestamp": time.time()}
+    finally:
+        base_plataforma.fixar(None)
 
 
 def run_orchestrator_pipeline_sync(

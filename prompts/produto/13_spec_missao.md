@@ -23,6 +23,10 @@ Cinco é o número fechado — nem quatro por economia, nem oito por zelo.
 
 {one_pager}
 
+**Briefing original do PO** — a fonte dos elementos fixos (personagens e papéis, números, o que o aluno faz em cada passo, o que a descoberta não pode ser). Até 06/10/2026 este agente não o recebia, e a spec da missão do 9º ano trocou "o aluno confirma ou muda sua escolha" por um voto único irreversível, e "Davi: causas não apuradas" por "bairro sem registros", sem ninguém notar. Se o one-pager contradiz o briefing num elemento fixo, **não escolha um lado**: registre `[ABERTO — PO]` no bloco 12 citando os dois trechos, e marque o campo afetado.
+
+{briefing?}
+
 **Gate estrutural (status `{gate_estrutural_status?}`):**
 
 {gate_estrutural_report?}

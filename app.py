@@ -1678,12 +1678,19 @@ def render_prompt_manager():
 
     st.markdown("---")
     st.markdown("#### 📚 Referências compartilhadas (`prompts/references/`)")
-    from prompts import REFERENCES_DIR
+    from prompts import REFERENCES_DIR, base_plataforma
 
     # Os arquivos próprios vêm primeiro; as cópias da plataforma, agrupadas no fim. Ordenar tudo
     # junto pelo caminho enterrava as referências editáveis no meio de 45 cópias sincronizadas.
     todas = sorted(p.relative_to(REFERENCES_DIR).as_posix() for p in REFERENCES_DIR.rglob("*.md"))
     refs = [r for r in todas if "/" not in r] + [r for r in todas if "/" in r]
+    try:
+        base = base_plataforma.ativa()
+        st.caption(base.resumo())
+        refs += ["ds-componentes.md", "plataforma/contrato-plataforma.md"]
+        refs += [f"plataforma/{n}" for n in base_plataforma.listar_copias(base)]
+    except base_plataforma.BaseIndisponivel as exc:
+        st.warning(f"Base da plataforma indisponível: {exc}")
 
     def _rotulo_ref(r: str) -> str:
         pasta, _, nome = r.rpartition("/")
@@ -1691,12 +1698,11 @@ def render_prompt_manager():
 
     ref = st.selectbox("Referência", refs, format_func=_rotulo_ref)
     ref_raw = get_prompt_raw(f"references/{ref}")
-    sincronizada = ref.startswith("plataforma/")
+    sincronizada = base_plataforma.eh_da_base(f"references/{ref}")
     if sincronizada:
         st.warning(
-            "🔒 Cópia sincronizada do repositório `plataforma-unooria`. Editar aqui **não** muda a "
-            "plataforma e a alteração é desfeita no próximo `python scripts/sincronizar_plataforma.py`. "
-            "Para mudar de verdade, altere na origem e rode o script."
+            "🔒 Vem da base publicada pela plataforma e pelo storybook (bucket). Não se edita aqui: "
+            "mude na origem; o CI publica de novo a cada push em `dev-local` ou versão do DS."
         )
     ref_edit = st.text_area("Conteúdo da referência", value=ref_raw, height=380, key=f"ref_{ref}", disabled=sincronizada)
     if st.button("💾 Salvar referência", key=f"save_ref_{ref}", disabled=sincronizada):

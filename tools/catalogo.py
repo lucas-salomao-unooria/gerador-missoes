@@ -236,7 +236,23 @@ def _ambiente_da_spec(bloco0: str) -> str:
     if not m:
         return ""
     valor = m.group(1).lower().strip("`")
-    return valor if (valor in AMBIENTES or valor.startswith("nova:")) else ""
+    return valor if (valor in _secoes_validas() or valor.startswith("nova:")) else ""
+
+
+def _secoes_validas() -> set:
+    """As seções do DS que existem hoje (contrato da base) mais os ambientes legados.
+
+    A lista fixa `AMBIENTES` não conhecia `unooriaai`, `unoovista` nem `unoochat`: a ficha de uma
+    missão nova numa dessas seções saía com o ambiente em branco.
+    """
+    from prompts import base_plataforma
+
+    try:
+        secoes = {str(s.get("secao") or "").lower() for s in
+                  (base_plataforma.contrato().get("design_system") or {}).get("secoes") or []}
+    except base_plataforma.BaseIndisponivel:
+        secoes = set()
+    return set(AMBIENTES) | {s for s in secoes if s}
 
 
 def _nome(textos: str) -> str:

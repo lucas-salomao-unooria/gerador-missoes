@@ -109,7 +109,7 @@ Chave: `eN.tipo.nome` (ex.: `e3.instrucao.salvar`) — estável; o dev usa a cha
 Seção: `clone` (personagem-guia e plataforma simulada) ou `unooria` (só na tela de contexto e na reflexão). **Em mini-jogo, `unooria` em tudo** — não há clone.
 Redundância: `texto` · `texto+ícone` · `texto+ícone+áudio`.
 
-## Strings do professor (preparação/curadoria com IA, dashboard, gatilhos, roteiro de perguntas, erro) — inclui, obrigatoriamente: rótulos e textos de ajuda do recorte da aula (disciplina, tema, assuntos, contexto), o botão do banco padrão, as mensagens de geração em andamento, de falha e de saldo de IA esgotado, os textos da curadoria (editar, regenerar, aprovar) e da ativação/agendamento; e, como amostra de conteúdo dinâmico, o recorte preenchido de cada uma das três aulas da tabela do bloco 8
+## Strings do professor (preparação/curadoria com IA, dashboard, gatilhos, roteiro de perguntas, erro) — inclui, obrigatoriamente: rótulos e textos de ajuda do recorte da aula (disciplina, tema, assuntos, contexto), o botão do banco padrão, as mensagens de geração em andamento, de falha e de saldo de IA esgotado, os textos da curadoria (editar, regenerar, aprovar) e de pôr a atividade no ar (sem agendamento: a plataforma libera na hora); e, como amostra de conteúdo dinâmico, o recorte preenchido de cada uma das três aulas da tabela do bloco 8
 ## Prompts e Schemas para Conteúdo Dinâmico gerado por IA (posts, comentários, personas) + Amostras do Banco Curado Default
 ## Roteiro do podcast (5 blocos, falas alternadas, "estudante", 3–5 min) — se não vier pronto do one-pager, escreva
 ## Testes de voz — resultado (boca · exclamativo · quem fala)
