@@ -16,7 +16,7 @@
 - **Ano/série** — ex: 4º EF, 8º EF, 2º EM
 - **Bimestre** — 1º, 2º, 3º ou 4º
 - **Nome da missão** — título de trabalho
-- **Ambiente simulado** — um dos cinco de `ambientes.md`: `instanooria`, `unitube`, `chatgpt`, `whatsappmobile`, `tiktooria` (ou `mini-jogo`, só 1º–5º)
+- **Ambiente simulado** — a seção de `ambientes.md`: `unooriaai`, `unoovista`, `unoochat`, `tiktooria` (ou `mini-jogo`, só 1º–5º); missões antigas aparecem com a legada (`instanooria`, `unitube`, `chatgpt`, `whatsappmobile`)
 - **Eixo temático** — categoria do tema (narrativas/poder, algoritmos/viés, privacidade/dados, desinformação, etc.)
 - **Descoberta central (aha)** — frase-chave que captura o que o estudante descobre
 - **Tipo de decisão** — o que o estudante faz ativamente (comparar coberturas, montar dataset, curar fontes, selecionar candidatos, etc.)

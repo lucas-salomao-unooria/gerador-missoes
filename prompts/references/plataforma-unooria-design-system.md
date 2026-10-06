@@ -1,19 +1,19 @@
 # Unooria Design System — referência para design e código
 
-> **Atenção à versão.** O inventário de tokens e componentes abaixo foi lido do repo `storybook-unooria` na tag **0.1.18**; a plataforma consome **`@unooria/design-system@^0.2.2`** (compilado contra React 19) desde 11/09/2026. Onde houver divergência, vale o Storybook publicado (`https://storybook.unooria.com/`) e as regras da plataforma copiadas ao final deste arquivo (`regras-design-system.md`, `agents-ui.md`). Reconferir o inventário na próxima sincronização do storybook.
+> **O que é fato e o que é contexto.** Seções, pontes, versão em uso e componentes **vêm da base publicada** (`ds-componentes.md` nos prompts de telas e de ambiente; abaixo, o contrato da plataforma e as regras copiadas de `docs/regras/design-system.md` e `packages/ui/AGENTS.md`). Onde este texto divergir delas, **elas vencem**. Os tokens da marca `unooria` (seção 2) foram lidos à mão na tag 0.1.18 e servem de contexto para wireframe, não de lista fechada.
 >
-> **Pontes existentes em `@edu/ui`:** `ds` (unooria), `ds-insta` (instanooria), `ds-unootube` (unitube, CSS `--uni-*`), `ds-chatgpt`, `ds-whatsapp` (whatsappmobile, **só tema escuro**, ADR-68; usada por exp-06 e exp-07). **`tiktooria` não tem ponte** — criar a ponte é pré-requisito de qualquer missão TikTok. Componente de UI local continua proibido; compensação local marcada nunca vira componente (ADR-68/72).
+> **Versão: sempre a última publicada** (versão única para hub, ponte e todas as experiências, ADR-139). Não crave número no documento. **Qual seção usar** a partir do ambiente do briefing está em `ambientes.md`: missão nova não usa `chatgpt`, `instanooria` nem `whatsappmobile` (ADR-133 a 138). Componente de UI local continua proibido; compensação local marcada nunca vira componente (ADR-68/72).
 
 ## 1. Pacote
 
 | Item | Valor |
 |---|---|
 | Nome npm | `@unooria/design-system` |
-| Versão | `0.1.18` (inventário lido) · **`^0.2.2` em uso na plataforma** |
+| Versão | **a última publicada** (a dependência atual está no contrato da plataforma) |
 | Peer deps | `react >=18`, `react-dom >=18` |
 | Publicação | GitHub Actions por tag `v*`; Storybook em Cloud Run |
 
-**Multimarca**: seis design systems irmãos, cada um com subpath export próprio: `./unooria` (a plataforma), `./instanooria`, `./chatgpt`, `./whatsappmobile`, `./tiktooria`, `./unootube`. Cada marca tem CSS próprio (`@unooria/design-system/unooria.css`) e folha de fontes opt-in (`@unooria/design-system/fonts/unooria.css`).
+**Multimarca**: um design system por seção, cada um com subpath export próprio (a lista atual, com contagem de componentes, está em `ds-componentes.md`). Cada marca tem CSS próprio (`@unooria/design-system/unooria.css`) e folha de fontes opt-in (`@unooria/design-system/fonts/unooria.css`).
 
 Consumo exige ponte `components/ds.ts` com `'use client'` reexportando o que se usa; **nunca importar o barril raiz numa tela**.
 
@@ -68,13 +68,11 @@ Papéis semânticos (convenção, não há camada `--unooria-color-surface-*`):
 | notebook | 1280 | 1440 | 12 | 24 | 48 |
 | desktop | 1920 | 1920 | 12 | 24 | 48 |
 
-### 2.7 Tema — prop `theme="light"|"dark"` nos componentes + seletor `[data-theme="dark"]`. Clones usam atributo na raiz (`data-uni-theme`, `data-gpt-theme`).
+### 2.7 Tema — prop `theme="light"|"dark"` nos componentes + seletor `[data-theme="dark"]`. Clones usam atributo na raiz, com o prefixo da seção (`data-uai-theme` na `unooriaai`, `data-unv-theme` na `unoovista`).
 
-## 3. Componentes — marca `unooria` (39)
+## 3. Componentes
 
-`Button` (primary·secondary·outline·ghost·danger; sm/md/lg) · `Card` (default·elevated·outlined·interactive; compound `Card.Header/Media/Content/Footer/Progress`) · `Badge` · `TextField`/`PasswordInput`/`SearchInput`/`TextArea` · `Modal` (dialog·alertdialog; sm 400/md 617/lg 800/full; focus trap) · `ProgressBar` (brand·primary·success·warning·danger; xs–lg) · `Avatar`/`AvatarGroup` · `Stepper` · `Tag` · `Tabs` · `AlertBox` · `FeedbackAlert`/`Snackbar` · `EmptyState` · `Checkbox`/`RadioButton`/`Toggle`/`Selection` · `Table` · `DataViz` (`BarChart`, `LineChart`, `AreaChart`, `PieChart`, `DonutChart`, `RadarChart`, `MetricCard`, `StackedProgressBar`, `CircularProgressBar`, `RankingCard`) · `SideBar`, `BottomBar`, `Breadcrumb`, `Pagination`, `Outline`, `SectionHeader` · `Calendar`, `DatePicker`, `TimePicker`, `Cropper`, `RichTextEditor`, `UploadFileModal`, `Collapse`, `Tooltip` · `Logo`, `Icon`.
-
-**Clones (ambientes simulados)**: `instanooria` 21 comp. (`PostCard`, `StoriesTray`, `StoryViewer`, `ProfileHeader`, `PhoneFrame`…), `chatgpt` 25 (`ChatBubble`, `Composer`, `WebSidebar`…), `whatsappmobile` 29 (`MessageBubble`, `ChatListItem`…), `tiktooria` 35 (`ActionRail`, `VideoMeta`, `RecordButton`…), `unootube` ~44 (`VideoCard`, `ShortsPlayer`, `Playlist`, `DesktopFrame`…).
+A lista de cada seção, na versão em uso, está em `ds-componentes.md`, gerado da base a cada execução e incluído nos prompts de telas e de ambiente. Só nome que está lá é "do DS".
 
 ## 4. Padrões transversais
 
@@ -130,7 +128,9 @@ CSS: `@unooria/design-system/unooria.css` + `@unooria/design-system/fonts/unoori
 
 **Riscos a declarar em PRD**: (1) sem tokens de radius; (2) sem camada semântica de cor; (3) sem Code Connect; (4) `prefers-reduced-motion` ausente; (5) a11y não bloqueia CI; (6) README do DS desatualizado — `AGENTS.md` é a fonte.
 
-## Regras da plataforma sobre o DS (cópias sincronizadas)
+## Regras da plataforma sobre o DS (da base publicada)
+
+<!-- include: references/plataforma/contrato-plataforma.md -->
 
 <!-- include: references/plataforma/regras-design-system.md -->
 

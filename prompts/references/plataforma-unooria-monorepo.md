@@ -21,3 +21,5 @@
 
 <!-- include: references/plataforma/regras-comandos.md -->
 
+<!-- include: references/plataforma/regras-agente-professor.md -->
+

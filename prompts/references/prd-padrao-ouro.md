@@ -30,7 +30,7 @@ produto: entre-redes | plano-de-aula | plano-de-ensino | bem-estar
 serie: ["4EF"]            # formato da plataforma; [] = transversal
 unidade: 1 | 2 | 3 | 4 | nenhuma
 ambiente_simulado: <o ambiente da spec (bloco 14): clone da lista fechada, ambiente novo ou mini-jogo>
-secao_ds: <instanooria|unitube|chatgpt|tiktooria|whatsappmobile|nova:<nome>|minijogo:<nome>>
+secao_ds: <unooriaai|unoovista|unoochat|tiktooria|nova:<nome>|minijogo:<nome>>  # ambientes.md; legada só por decisão do PO
 links: {stitch: <url do projeto>, miro: <url do board — omita se indisponível>, prototipo: design/08-prototipo.html, diagramas: design/09-diagramas.html, spec: spec/<slug>-spec.md, one_pager: ...}
 data: AAAA-MM-DD
 ---

@@ -14,8 +14,8 @@ dúvida — dúvida declarada é melhor que lacuna silenciosa.
 - **Público**: `estudante` / `professor`
 - **Liberação**: por turma (ADR-69) — como a professora libera e o que o estudante vê bloqueado
 - **Software clonado** (ou "mundo próprio"):
-- **Seção do design system**: existente (`instanooria`/`unitube`/`chatgpt`/
-  `whatsappmobile`/`tiktooria`) ou nova (listar componentes a criar no
+- **Seção do design system**: existente (`unooriaai`/`unoovista`/`unoochat`/`tiktooria`;
+  a tradução do app do briefing está em `ambientes.md`) ou nova (listar componentes a criar no
   storybook-unooria, com responsável e prazo)
 
 ## 2. Premissa e objetivos

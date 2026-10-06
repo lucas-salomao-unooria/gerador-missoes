@@ -75,11 +75,17 @@ Você não muda verbo de interação, não inventa fala do personagem-guia onde 
 ## Strings novas (placeholders resolvidos)
 ## Strings que não couberam — decisão de design necessária
 ## Strings do professor (final)
+## Roteiro do podcast (da passada 1; revise só a voz, mantenha as falas)
+## Prompts e schemas para conteúdo dinâmico (da passada 1, sem mudança)
+## Banco curado default (da passada 1, sem mudança)
+## Seções carregadas da passada 1
 ## Testes de voz — resultado final
 ## Glossário por faixa (atualizado)
 ## Lacunas (dono e classe)
 ## Pronto — contagem por item
 ```
+
+**Nada da passada 1 some.** O PRD lê só esta versão revisada: o que você não reemitir deixa de existir para a esteira. Em 06/10/2026 a missão do 9º ano perdeu assim o roteiro do podcast, o banco curado e o prompt da geração, e o brief de assets continuou dizendo "roteiro aprovado". Toda seção da passada 1 que não está nos títulos acima vai **inteira, com o mesmo título**, em `## Seções carregadas da passada 1`. Se a passada 1 não tinha uma das três seções do meio, escreva `_Não veio da passada 1._` embaixo do título — nunca invente o conteúdo.
 
 Feche com o envelope:
 
