@@ -47,8 +47,14 @@ _SECOES_BRIEFING = ("direcionamento pedagógico", "passo a passo", "elementos fi
 def _norm(texto: str) -> str:
     sem = "".join(c for c in unicodedata.normalize("NFD", (texto or "").lower()) if unicodedata.category(c) != "Mn")
     sem = re.sub(r"[—–-]", " ", sem)
-    sem = re.sub(r"[`*_\"“”'|«»]+", " ", sem)
-    return re.sub(r"\s+", " ", sem).strip(" .")
+    # marcação some sem deixar espaço: `latch: locked` entre crases virava "( latch: locked )" e não
+    # casava com a citação "(latch: locked)" que o juiz copiou (06/10/2026, primeira execução real)
+    sem = re.sub(r"[`*_]+", "", sem)
+    sem = re.sub(r"[\"“”'|«»]+", " ", sem)
+    sem = re.sub(r"\s+", " ", sem)
+    sem = re.sub(r"\s+([,.;:!?)\]])", r"\1", sem)
+    sem = re.sub(r"([(\[])\s+", r"\1", sem)
+    return sem.strip(" .")
 
 
 def _palavras(texto: str) -> int:
@@ -186,6 +192,30 @@ def _decisoes(saida_juiz: str) -> Dict[str, Dict[str, Any]]:
     return {}
 
 
+#: Fração da citação que precisa aparecer contínua no documento. O juiz copia com pequenas diferenças
+#: (vírgula, aspas, uma palavra a mais); paráfrase e texto do próprio pedido não chegam perto disto.
+FRACAO_CITACAO = 0.85
+
+
+def _trecho_confere(trecho: str, documentos_norm: str) -> bool:
+    alvo = _norm(trecho)
+    if alvo in documentos_norm:
+        return True
+    import difflib
+    m = difflib.SequenceMatcher(None, documentos_norm, alvo, autojunk=False).find_longest_match(
+        0, len(documentos_norm), 0, len(alvo))
+    return m.size >= FRACAO_CITACAO * len(alvo)
+
+
+def _citacao_confere(citacao: str, documentos_norm: str) -> bool:
+    """A citação existe no documento. Com reticências no meio ("Mesa Aberta: … Ponto de Apoio: …"),
+    cada parte precisa existir — o juiz corta assim mesmo quando o prompt diz para não cortar."""
+    partes = [p for p in re.split(r"\.\.\.|…", citacao or "") if len(_norm(p)) >= MIN_CITACAO]
+    if not partes:
+        return False
+    return all(_trecho_confere(p, documentos_norm) for p in partes)
+
+
 def _literal_presente(frase: str, documentos_norm: str) -> bool:
     alvo = _norm(re.sub(r"(\.\.\.|…)\s*$", "", frase))
     return bool(alvo) and alvo in documentos_norm
@@ -216,7 +246,7 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         veredito = str((d or {}).get("veredito") or "").strip().lower()
         citacao = str((d or {}).get("citacao") or "")
         explicacao = str((d or {}).get("explicacao") or "").strip()
-        if veredito == "atendido" and len(_norm(citacao)) >= MIN_CITACAO and _norm(citacao) in doc:
+        if veredito == "atendido" and _citacao_confere(citacao, doc) and not _norm(citacao) in _norm(it["texto"]):
             conferidos.append({"id": it["id"], "texto": trecho, "prova": citacao[:240]})
         elif veredito == "conflito_com_regra":
             achado(it, "decisao_humana", "conflito-pedido-regra",
@@ -224,6 +254,9 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         elif veredito == "violado":
             achado(it, "bloqueio", "pedido-violado" if do_po else "briefing-violado",
                    f"O documento contraria {'o pedido do PO' if do_po else 'o briefing'}: «{trecho}». {explicacao}")
+        elif veredito == "atendido" and len(_norm(citacao)) >= MIN_CITACAO and _norm(citacao) in _norm(it["texto"]):
+            achado(it, "bloqueio" if do_po else "atencao", "citou-o-pedido",
+                   f"O juiz diz que atende, mas citou o próprio pedido em vez do documento: «{trecho}».")
         elif veredito == "atendido":
             achado(it, "bloqueio" if do_po else "atencao", "sem-prova",
                    f"O juiz diz que atende, mas a citação não está no documento: «{trecho}».")

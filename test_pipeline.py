@@ -4507,6 +4507,13 @@ def test_fidelidade_confere_o_pedido_do_po_com_citacao():
     assert literal["id"] in {c["id"] for c in r["conferidos"]}, "frase da trava (com reticências) presente pelo começo"
     assert fid.aplicar([dict(literal, texto="Eu achei que estava avaliando, e quase deixei de fora quem mais precisava de ajuda")],
                        "", docs)["achados"][0]["codigo"] == "frase-do-po-alterada"
+    # citações reais da primeira execução com IA, que a marcação do documento escondia
+    for citacao in ("Ao clicar, a interface trava permanentemente (latch: locked), impedindo qualquer retorno",
+                    "dois estudantes, Lia e Davi, por excesso de faltas injustificadas"):
+        assert fid._norm(citacao) in fid._norm(docs["nucleo_narrativo"] + docs["spec_missao"]), citacao
+    doc_norm = fid._norm(docs["nucleo_narrativo"] + docs["spec_missao"])
+    assert fid._citacao_confere("Ao clicar, a interface trava permanentemente (latch: locked)... impedindo qualquer retorno", doc_norm)
+    assert not fid._citacao_confere("Ao clicar, a interface trava permanentemente... o aluno pode votar de novo quando quiser", doc_norm)
     rel = fid.relatorio(r, itens, "exp09ef1b", "núcleo")
     assert "🔴" in rel and "🔵" in rel and '"status": "bloqueado"' in rel
     print(f"   ✓ fidelidade: {len(itens)} itens da exp09ef1b; A/B trocado bloqueia, revoto vira decisão do PO")
