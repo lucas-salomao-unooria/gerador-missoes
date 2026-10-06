@@ -648,6 +648,16 @@ class TestSessionZip(unittest.TestCase):
     def _names(self, blob: bytes):
         return sorted(zipfile.ZipFile(io.BytesIO(blob)).namelist())
 
+    def test_nome_do_zip_e_o_slug_da_missao(self):
+        from pipeline.session_store import nome_do_zip_de_artefatos
+
+        spec = "---\nslug_experiencia: exp09ef1b\n---\n# O Visor Misterioso"
+        self.assertEqual(nome_do_zip_de_artefatos({"spec_missao": spec}, "session_4e6cf385"), "artefatos_exp09ef1b.zip")
+        self.assertEqual(nome_do_zip_de_artefatos({"one_pager": "Missão EXP01EF1B"}, "s"), "artefatos_exp01ef1b.zip")
+        self.assertEqual(nome_do_zip_de_artefatos({"prd_final": "id: exp06ef2b"}, "s"), "artefatos_exp06ef2b.zip")
+        # produto ainda gerando: sem documento com slug, fica o id da sessão
+        self.assertEqual(nome_do_zip_de_artefatos({}, "session_4e6cf385abcdef"), "artefatos_session_4e6c.zip")
+
     def test_zip_contains_visible_files_only(self):
         names = self._names(create_session_zip(self.run_dir))
         self.assertEqual(names, ["PRD.md", "produto/00-one-pager.md"])
