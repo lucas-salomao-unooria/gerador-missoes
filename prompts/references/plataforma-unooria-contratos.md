@@ -10,8 +10,6 @@
 
 <!-- include: references/plataforma/contrato-progresso.md -->
 
-<!-- include: references/plataforma/contrato-atividades.md -->
-
 <!-- include: references/plataforma/guarda-liberacao.md -->
 
 <!-- include: references/plataforma/perfis-claims.md -->
@@ -23,8 +21,6 @@
 <!-- include: references/plataforma/sdk-types.md -->
 
 <!-- include: references/plataforma/experiencias-dev-portas.md -->
-
-<!-- include: references/plataforma/equipes-regras.md -->
 
 <!-- include: references/plataforma/evidencia-fichas-tipos.md -->
 
@@ -44,14 +40,12 @@
 
 <!-- include: references/plataforma/exemplo-migration-exp06ef1b.md -->
 
-## Outros moldes: zerar = rodada (A Seleção) e chat com IA real ao estudante (UnooriaAI)
+## Outro molde: chat com IA real ao estudante (UnooriaAI)
 
-<!-- include: references/plataforma/exemplo-a-selecao-contrato-rotas.md -->
+> Enxugado em 06/10/2026: o código de `equipes/regras.ts`, o contrato de rotas d'A Seleção, o de atividades e o log inteiro de ADRs somavam ~70 KB em cada prompt de dev. O que eles ensinam está nas 15 regras, no contrato (listas de equipes/atividades e as últimas 40 ADRs) e no exemplar do Júri, que também zera por rodada.
 
 <!-- include: references/plataforma/exemplo-unoogpt-agents.md -->
 
 ## Rotas existentes e decisões
 
 <!-- include: references/plataforma/openapi-indice.md -->
-
-<!-- include: references/plataforma/adr-log.md -->

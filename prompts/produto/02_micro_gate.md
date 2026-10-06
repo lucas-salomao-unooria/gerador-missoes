@@ -61,7 +61,7 @@ Gap fraco ≠ sem gap. Se o gap existe mas é previsível demais, marque ⚠️ 
 1. O estudante percebe que está escolhendo? (não é ação de navegação disfarçada)
 2. A escolha muda algo perceptível? (branch, reação ou conteúdo diferente)
 3. A missão referencia essa escolha depois? (na revelação, reflexão ou debate)
-4. O estudante não pode desfazer e escolher de novo depois de ver o efeito?
+4. O estudante não pode desfazer e escolher de novo depois de ver o efeito? (A primeira escolha fica registrada. Uma **segunda** decisão depois da virada — "confirma ou muda", também travada — não reprova este teste: é o que o briefing do 9º ano pedia e a esteira cortou.)
 
 Qualquer falha → ❌ com o número do teste que falhou.
 

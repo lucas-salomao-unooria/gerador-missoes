@@ -490,7 +490,7 @@ def _dono_roteavel(achado: Dict[str, Any]) -> str:
 
 def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", agente: str = "rastro-lacunas") -> str:
     r = resultado
-    icone = {"aprovado": "🟢 SEM LACUNAS", "amarelo": "🟡 SÓ PENDÊNCIAS HUMANAS", "bloqueado": "🔴 BLOQUEADO"}[r["status"]]
+    icone = {"aprovado": "🟢 NENHUM MARCADOR DE LACUNA", "amarelo": "🟡 SÓ PENDÊNCIAS HUMANAS", "bloqueado": "🔴 BLOQUEADO"}[r["status"]]
     linhas = [f"# {rotulo} — {missao or 'missão'}", "", f"**Veredito: {icone}**", ""]
     pe = r["por_etapa"]
     etapa_corrente = r.get("etapa_corrente")
@@ -514,7 +514,7 @@ def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", 
     elif r["status"] == "amarelo":
         linhas.append("Nada aqui é desta etapa fechar. Restam pendências de gente — da **plataforma** (ADR nova, componente de DS, ponte), resolvidas na codificação; **externas** (coordenação pedagógica, rede parceira, consultoria) ou **humanas** (homologar, ratificar), resolvidas fora da esteira — e as de outras etapas, marcadas na tabela. A etapa segue 🟡, nunca 🟢.")
     else:
-        linhas.append("Nenhum marcador de lacuna nos documentos lidos.")
+        linhas.append("Nenhum marcador de lacuna nos documentos lidos. Isto NÃO quer dizer que nada falta: este rastro só acha o que um agente marcou como pendente. A fidelidade ao pedido do PO e a coerência entre documentos são conferidas em outros gates.")
     if "heranca" in motivos:
         linhas.append("")
         linhas.append("_«de etapa anterior»: a lacuna é de uma etapa que já passou pelo próprio rastro e pelo parecer, num documento dela. Esta etapa não a reescreve; fica registrada para quem a aprovou._")

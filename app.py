@@ -116,6 +116,8 @@ st.markdown(
 
 GATE_LABELS = {
     "micro_gate_status": "Micro-gate do núcleo",
+    "fidelidade_nucleo_status": "Fidelidade ao pedido do PO (núcleo)",
+    "fidelidade_status": "Fidelidade ao pedido do PO e ao briefing",
     "gate_estrutural_status": "Gate estrutural",
     "gate_final_status": "Gate final de produto",
     "bncc_status": "Conformidade BNCC Computação",
@@ -541,7 +543,11 @@ def _render_motivos_do_semaforo(estado: Dict[str, Any], semaforo: Dict[str, str]
         achados = [a for a in (envelope.get("achados") if isinstance(envelope, dict) else None) or []
                    if isinstance(a, dict) and a.get("resumo")]
         rotulo = GATE_LABELS.get(chave, chave)
-        with st.expander(f"{icone} {rotulo} — {len(achados)} achado(s)", expanded=icone == "🔴"):
+        # 🟡 que pede pessoa abre como o 🔴: decisão humana escondida num expander fechado era o
+        # "Nada travando" da tela (06/10/2026).
+        pede_pessoa = (isinstance(envelope, dict) and bool(envelope.get("precisa_humano"))) or any(
+            str(a.get("severidade")) == "decisao_humana" for a in achados)
+        with st.expander(f"{icone} {rotulo} — {len(achados)} achado(s)", expanded=icone == "🔴" or pede_pessoa):
             if not achados:
                 st.caption("O gate não detalhou os achados no envelope: veja o relatório dele nos passos da esteira.")
             for a in achados:
@@ -644,7 +650,10 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
         comentario = st.text_area(
             "Comentário (obrigatório para parecer, refazer ou devolver)",
             key=chave_comentario, height=140,
-            placeholder="De acordo: o que você conferiu, ajustou ou decidiu — segue para os agentes das próximas etapas.\n"
+            placeholder=("De acordo: o que você conferiu e decidiu — segue para os agentes das próximas etapas.\n"
+                         if passagem.proxima_etapa(etapa) else
+                         "De acordo: o que você conferiu. É a última etapa: o comentário não chega a agente nenhum.\n")
+                        + "Mudança de conteúdo (perguntas, textos, regras): use Refazer, que aplica o pedido.\n"
                         "Refazer ou devolver: o que precisa mudar, e por quê.")
         st.caption(f"Mínimo de {passagem.MIN_CARACTERES_COMENTARIO} letras ou números. Iniciar não pede comentário.")
     # As perguntas de conferência só existem para quem libera a etapa: refazer e devolver não as pedem.

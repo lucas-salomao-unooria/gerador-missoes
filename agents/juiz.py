@@ -5,7 +5,7 @@ Um agente do ADK tem um único pai na árvore, então cada gate que recebe juiz 
 from __future__ import annotations
 
 from agents.base import create_llm_agent
-from agents.checkers import JuizDeAchadosAgent
+from agents.checkers import FidelidadeCheckAgent, JuizDeAchadosAgent
 from prompts import load_prompt
 
 
@@ -25,5 +25,26 @@ def get_juiz_de_achados(nome: str, *, status_key: str, report_key: str, fonte_ke
         description=f"Juiz de achados sobre `{gate_rotulo}`: retira o achado de uso vedado quando o texto só cita para vedar — com citação literal conferida.",
         status_key=status_key, report_key=report_key, fonte_key=fonte_key, gate_rotulo=gate_rotulo,
         rotulo=f"Juiz de achados ({gate_rotulo})",
+        sub_agents=[juiz],
+    )
+
+
+def get_fidelidade_check(nome: str, *, status_key: str, report_key: str, documentos: list,
+                         onde: str, **kw) -> FidelidadeCheckAgent:
+    """O par (verificador de fidelidade + juiz), uma instância por ponto da esteira."""
+    base = status_key.removesuffix("_status")
+    juiz = create_llm_agent(
+        name=f"{nome}Juiz",
+        deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
+        description="Confere item a item, com citação literal, se os documentos fazem o que o PO pediu e o briefing fixou.",
+        instruction=load_prompt("transversal/61_juiz_de_fidelidade.md"),
+        output_key=f"juiz_{base}_saida",
+        **kw,
+    )
+    return FidelidadeCheckAgent(
+        name=nome,
+        description=(f"Fidelidade ao pedido do PO e ao briefing ({onde}): TRAVAS, AJUSTES, VALIDAÇÃO e elementos "
+                     "fixos conferidos com citação; pedido sem prova é 🔴."),
+        status_key=status_key, report_key=report_key, documentos=list(documentos), onde=onde,
         sub_agents=[juiz],
     )

@@ -33,7 +33,5 @@
 
 <!-- include: references/plataforma/agents-api-evidencias.md -->
 
-<!-- include: references/plataforma/agents-api-equipes.md -->
-
 <!-- include: references/plataforma/agents-e2e.md -->
 

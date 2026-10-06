@@ -57,6 +57,7 @@ KNOWN_STATE_KEYS = {
     "briefing", "nucleo_narrativo", "micro_gate_report", "micro_gate_status", "micro_gate_rodada",
     "mapa_conceitual", "ideacao_mecanismos", "cobertura_report", "profundidade_report", "profundidade_status",
     "profundidade_rodada", "nucleo_rodada",
+    "fidelidade_nucleo_report", "fidelidade_report", "fidelidade_entrada", "fidelidade_documentos",
     "one_pager", "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_rodada",
     "contrato_produto_report", "contrato_produto_status",
     "avaliacao_pedagogica_report", "experiencia_aluno_report", "adequacao_report", "gate_final_report", "gate_final_status",
@@ -71,6 +72,7 @@ KNOWN_STATE_KEYS = {
     "rastro_spec_status", "rastro_spec_report", "rastro_design_status", "rastro_design_report",
     "prototipo_lint_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
+    "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida",
     "perguntas_report", "perguntas_status", "juiz_perguntas_report", "juiz_perguntas_status",
     "juiz_perguntas_rodada", "execucao", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
@@ -103,7 +105,7 @@ REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
 
 EXPECTED_AGENTS = {
     "A00cMapaConceitual", "A00dIdeacaoMecanismos", "A01cCoberturaConceitual", "A02bJuizProfundidade",
-    "A03bProfundidadeCheck", "A03cNucleoCheck",
+    "A03bProfundidadeCheck", "A03cNucleoCheck", "A03aFidelidadeNucleo", "A16cFidelidadeProduto",
     "NucleoNarrativoLoop", "A01NucleoNarrativo", "A02MicroGate", "A03MicroGateCheck", "A04SecoesApoio",
     "GateEstruturalLoop", "A04bContratoProdutoCheck", "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager",
     "AvaliacoesParalelas", "A08AvaliacaoPedagogica", "A09ExperienciaEstudante",
@@ -187,8 +189,8 @@ def test_arvore_de_agentes():
     # A profundidade conta ANTES do veredito do micro-gate: na última rodada o `A03MicroGateCheck`
     # encerra o loop ao reprovar, e a rodada ficaria sem status de profundidade.
     assert [a.name for a in micro.sub_agents] == ["A01NucleoNarrativo", "A01bVizinhasCatalogo", "A01cCoberturaConceitual",
-                                                  "A02MicroGate", "A02bJuizProfundidade", "A03bProfundidadeCheck",
-                                                  "A03MicroGateCheck", "A03cNucleoCheck"]
+                                                  "A02MicroGate", "A02bJuizProfundidade", "A03aFidelidadeNucleo",
+                                                  "A03bProfundidadeCheck", "A03MicroGateCheck", "A03cNucleoCheck"]
     produto = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "ProdutoStage")
     assert [a.name for a in produto.sub_agents][:4] == ["A00bVizinhasCatalogo", "A00cMapaConceitual",
                                                         "A00dIdeacaoMecanismos", "NucleoNarrativoLoop"]
@@ -1023,7 +1025,7 @@ def test_estagio_produto_parcial_spec():
     orch = create_mission_orchestrator(stages=["spec"])
     assert [a.name for a in orch.sub_agents] == ["ProdutoStage", "A50Diagnostico", "A51Aprendizado", "A52RegistroCatalogo"]
     produto = orch.sub_agents[0]
-    assert [a.name for a in produto.sub_agents] == ["SpecLoop", "A16bOnePagerResumido"]
+    assert [a.name for a in produto.sub_agents] == ["SpecLoop", "A16cFidelidadeProduto", "A16bOnePagerResumido"]
     # `A15bEvidenciaCheck` entra desde 23/09/2026: grau `scored` com dois sinais, habilidade do
     # bloco 11 com momento e medida, gabarito no servidor. Eram três exigências que a spec
     # declarava em prosa e nenhuma verificação tocava — PED-04 é bloqueante e ninguém o conferia.
@@ -1064,7 +1066,7 @@ def test_estagio_produto_parcial_spec():
     assert [m["id"] for m in STAGE_SPEC["agents"]] == [
         "A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
         "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
-        "A16SpecCheck", "A16bOnePagerResumido"]
+        "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido"]
     print("   ✓ estágio parcial spec: SpecLoop + resumido, sem núcleo; stages_para_ui resolve spec")
 
 
@@ -4420,3 +4422,122 @@ if __name__ == "__main__":
         print(f"❌ {failed} teste(s) falharam")
         sys.exit(1)
     print("✅ TODOS OS TESTES ESTRUTURAIS PASSARAM")
+
+
+# --------------------------------------------------------------------------- fidelidade ao PO (06/10/2026)
+def _fixture_exp09(nome):
+    return (Path(__file__).resolve().parent / "fixtures" / "exp09ef1b" / nome).read_text(encoding="utf-8")
+
+
+def test_pedidos_do_po_acumulam_e_chegam_a_todas_as_etapas():
+    """Na missão do 9º ano o segundo *refazer* apagou o primeiro, que definia os caminhos A/B e a frase
+    da descoberta inteira. Agora todos os pedidos seguem, do mais antigo ao mais novo, nas notas que
+    todo agente de toda etapa lê, e numa lista estruturada para o verificador de fidelidade."""
+    import json as _json
+    from pipeline import passagem
+
+    fluxo = _json.loads(_fixture_exp09("fluxo.json"))
+    pedidos = passagem.pedidos_do_po(fluxo)
+    assert len(pedidos) == 2 and all(p["etapa"] == "produto" for p in pedidos)
+    assert "Caminho A (maioria): não perguntou" in pedidos[0]["texto"]
+    notas = passagem.notas_de_passagem(fluxo)
+    assert notas.index("### Pedido 1") < notas.index("### Pedido 2") < notas.index("## Pareceres de quem liberou")
+    assert "Caminho A (maioria): não perguntou" in notas, "o primeiro pedido não pode sumir"
+    print("   ✓ pedidos do PO: os dois refazer da exp09ef1b chegam juntos, em ordem")
+
+
+def test_de_acordo_com_conteudo_e_recusado():
+    """06/10/2026: o *de acordo* do Dev trazia as perguntas de Canal B reescritas, e na última etapa ele
+    só encerra a missão — o texto não chegou a documento nenhum."""
+    import json as _json
+    from types import SimpleNamespace
+    from pipeline import passagem
+
+    fluxo = _json.loads(_fixture_exp09("fluxo.json"))
+    do_dev = next(p["comentario"] for p in fluxo["pareceres"] if p["etapa"] == "dev")
+    assert passagem.parece_ajuste(do_dev, ultima_etapa=True)
+    assert passagem.parece_ajuste("Conferi o PRD e os critérios de aceite; segue para a codificação sem mudanças.", ultima_etapa=True) == ""
+    assert passagem.parece_ajuste("Pergunta 2: trocar o cenário por creches.", ultima_etapa=False)
+    sessao = SimpleNamespace(papel="dev", assinatura_de=lambda etapa: "dev")
+    aguardando = {"etapa": "dev", "situacao": passagem.AGUARDANDO, "versao": 1, "pareceres": []}
+    try:
+        passagem.aplicar(aguardando, passagem.DE_ACORDO, sessao, do_dev, {})
+        raise AssertionError("o de acordo com perguntas novas não pode encerrar a missão")
+    except passagem.DecisaoInvalida as exc:
+        assert "Refazer" in str(exc)
+    _, efeito = passagem.aplicar(aguardando, passagem.REFAZER, sessao, do_dev, {})
+    assert efeito.tipo == "refazer" and "Pergunta" in efeito.pedido
+    print("   ✓ de acordo com conteúdo: recusado, com o caminho do Refazer")
+
+
+def test_fidelidade_confere_o_pedido_do_po_com_citacao():
+    """Aceite com a exp09ef1b: o checklist sai dos dois pedidos e do briefing; a frase entre aspas das
+    TRAVAS é conferida em código; o juiz só vale com citação que exista no documento."""
+    import json as _json
+    from pipeline import passagem
+    from tools import fidelidade as fid
+
+    fluxo = _json.loads(_fixture_exp09("fluxo.json"))
+    pedidos = [(p["origem"], p["texto"]) for p in passagem.pedidos_do_po(fluxo)]
+    itens = fid.montar_checklist(pedidos, _fixture_exp09("briefing.md"))
+    por_tipo = {t: [i for i in itens if i["tipo"] == t] for t in ("ajuste", "validacao", "literal", "trava", "briefing")}
+    assert len(por_tipo["ajuste"]) == 3 and any("Caminho A (maioria)" in i["texto"] for i in por_tipo["ajuste"])
+    assert any("tem dois modos" in i["texto"] for i in por_tipo["validacao"]), "o checklist que o próprio PO escreveu"
+    assert any("confirma ou muda sua escolha" in i["texto"] for i in por_tipo["briefing"])
+    assert any("Mesa Aberta: 24 novas vagas" in i["texto"] for i in por_tipo["briefing"]), "elementos fixos sob subtítulo"
+    assert len(itens) <= fid.MAX_ITENS and len({i["id"] for i in itens}) == len(itens)
+
+    docs = {"nucleo_narrativo": _fixture_exp09("nucleo.md"), "spec_missao": _fixture_exp09("spec.md")}
+    ab = next(i for i in por_tipo["ajuste"] if "Caminho A (maioria)" in i["texto"])
+    revoto = next(i for i in por_tipo["briefing"] if "confirma ou muda" in i["texto"])
+    trava = por_tipo["trava"][0]
+    juiz = "```json\n" + _json.dumps({"decisoes": [
+        {"id": ab["id"], "veredito": "violado", "citacao": "Caminho A (Investigação Ativa de Lacunas)",
+         "explicacao": "o núcleo chama de A quem perguntou"},
+        {"id": revoto["id"], "veredito": "conflito_com_regra", "explicacao": "Regra 7 do núcleo: decisão irreversível"},
+        {"id": trava["id"], "veredito": "atendido", "citacao": "isto não está escrito em documento nenhum da missão"},
+    ]}, ensure_ascii=False) + "\n```"
+    r = fid.aplicar(itens, juiz, docs)
+    cod = {a["id"]: (a["codigo"], a["severidade"]) for a in r["achados"]}
+    assert cod[ab["id"]] == ("pedido-violado", "bloqueio")
+    assert cod[revoto["id"]] == ("conflito-pedido-regra", "decisao_humana")
+    assert cod[trava["id"]] == ("sem-prova", "bloqueio"), "citação que não está no documento não prova nada"
+    assert r["status"] == "bloqueado"
+    literal = next(i for i in itens if i["tipo"] == "literal")
+    assert literal["id"] in {c["id"] for c in r["conferidos"]}, "frase da trava (com reticências) presente pelo começo"
+    assert fid.aplicar([dict(literal, texto="Eu achei que estava avaliando, e quase deixei de fora quem mais precisava de ajuda")],
+                       "", docs)["achados"][0]["codigo"] == "frase-do-po-alterada"
+    # citações reais da primeira execução com IA, que a marcação do documento escondia
+    for citacao in ("Ao clicar, a interface trava permanentemente (latch: locked), impedindo qualquer retorno",
+                    "dois estudantes, Lia e Davi, por excesso de faltas injustificadas"):
+        assert fid._norm(citacao) in fid._norm(docs["nucleo_narrativo"] + docs["spec_missao"]), citacao
+    doc_norm = fid._norm(docs["nucleo_narrativo"] + docs["spec_missao"])
+    assert fid._citacao_confere("Ao clicar, a interface trava permanentemente (latch: locked)... impedindo qualquer retorno", doc_norm)
+    assert not fid._citacao_confere("Ao clicar, a interface trava permanentemente... o aluno pode votar de novo quando quiser", doc_norm)
+    rel = fid.relatorio(r, itens, "exp09ef1b", "núcleo")
+    assert "🔴" in rel and "🔵" in rel and '"status": "bloqueado"' in rel
+    print(f"   ✓ fidelidade: {len(itens)} itens da exp09ef1b; A/B trocado bloqueia, revoto vira decisão do PO")
+
+
+def test_semaforo_honesto_quando_um_gate_pede_uma_pessoa():
+    """06/10/2026, exp09ef1b: a banca gravou `precisa_humano: true` com três ressalvas, e o texto do mesmo
+    dossiê disse "Nada travando. As ressalvas acima são opcionais". E a colisão de slug, "decisão de
+    produto" no próprio texto, nascia `atencao` e rodava depois do dossiê."""
+    from tools import catalogo
+    from tools.diagnostico import coletar, relatorio_markdown
+
+    state = {"dev_status": "amarelo", "dev_status_envelope": {"status": "amarelo", "precisa_humano": True, "achados": [
+        {"id": "DES-06", "severidade": "atencao", "resumo": "data-gpt-theme no bootstrap"},
+        {"id": "DAD-10", "severidade": "atencao", "resumo": "expurgo sem scheduler"}]}}
+    d = coletar(state)
+    assert len(d["humanos"]) == 2 and d["precisa_humano"]
+    texto = relatorio_markdown(d, "exp09ef1b", state=state)
+    assert "Nada travando" not in texto and "o que falta são decisões" in texto
+
+    ficha = {"slug": "exp09ef1b", "sessao": "nova", "descoberta": "outra"}
+    col = catalogo.colisao_de_slug(ficha, [{"slug": "exp09ef1b", "sessao": "20260924-014635-exp09ef1b", "descoberta": "x"}])
+    assert col and col[0]["severidade"] == "decisao_humana"
+    assert catalogo.colisao_de_slug(ficha, [{"slug": "exp09ef1b", "sessao": "nova"}]) == []
+    env = catalogo.relatorio_markdown({"status": "amarelo", "achados": col, "ficha": ficha, "total": 9, "vizinhas": []}, "exp09ef1b")
+    assert '"precisa_humano": true' in env
+    print("   ✓ semáforo: gate que pede pessoa vira decisão listada; colisão de slug é decisão de produto")

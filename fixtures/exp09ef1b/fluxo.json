@@ -1,0 +1,133 @@
+{
+ "etapa": "produto",
+ "situacao": "aguardando_parecer",
+ "versao": 1,
+ "pareceres": [
+  {
+   "etapa": "produto",
+   "acao": "refazer",
+   "autor": "produto",
+   "como": "produto",
+   "comentario": "Reprocesse a missão exp09ef1b (O Dossiê Invisível), 9º ano, 1º bimestre, ambiente chatgpt.\n\nEstou anexando o one-pager aprovado e a apostila. O one-pager já passou no gate estrutural (🟢) e na avaliação pedagógica (🟢). A missão está pronta — o que falta são 3 ajustes de alinhamento pedagógico solicitados pela consultora de conteúdo. Fora esses 3 ajustes, o one-pager deve sair idêntico.\n\nTRAVAS — o que NÃO muda em hipótese nenhuma:\n\nAmbiente: chatgpt. Não trocar para Instagram, WhatsApp nem qualquer outro.\nOs 3 projetos: Mesa Aberta (João, 24 vagas), Ponto de Apoio (Ana, 18 vagas), Conexão para Continuar (Luana, 20 vagas). Nomes, descrições e personagens ficam iguais.\nValor: R$ 12.000 indivisível para 1 projeto.\nMecanismo de 6 etapas: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. Não fundir, eliminar nem reordenar.\nVoto vinculante na Etapa 3 com latch, justificativa de 60 caracteres e trava irreversível.\nCaso de transferência no Refletir: Lia e Davi, 4 faltas, linha 302, cruzamento tabular. Idêntico.\nAmara aparece no Desafiar e no Explicar, e em nenhum outro momento.\nHabilidades BNCC: EF09CO07 (primária) e EF09CO08 (secundária). Canais A e B de evidência iguais.\nParametrização docente, teste das 3 disciplinas, podcast, dashboard, caminhos degenerados, estados de falha: tudo igual, exceto onde os ajustes abaixo exigirem uma adição pontual.\n\nAJUSTE 1 — Porta investigativa antecipada (o mais importante dos três)\n\nA consultora disse textualmente: \"Se pedir essas informações antes, poderá acessá-las antes de decidir.\" Hoje a missão só revela os cadernos de campo DEPOIS do voto travado. A descoberta precisa ser consequência da postura do aluno, não um evento agendado pelo sistema.\n\nO que quero: na Etapa 2 (Navegar), se o estudante perguntar sobre registros físicos, dados fora do sistema, cadernos de campo ou documentos não digitais, o assistente informa que existem cadernos de campo não indexados na pasta da Assistência Social e oferece incorporá-los. Se o estudante aceitar, os diários entram na análise ANTES do voto. Isso cria dois caminhos:\n\nCaminho A (maioria): não perguntou → vota com ranking incompleto → virada surpresa na Etapa 4 com os cadernos → fluxo atual preservado inteiro.\nCaminho B (investigativo): perguntou → recebeu os cadernos antes → votou com dados completos → na Etapa 4 vê uma simulação contrafactual (\"sem esses cadernos, o ranking teria sido...\") → o aha é: \"se eu não tivesse perguntado, a máquina teria excluído o projeto sem ninguém saber.\"\n\nO contrato de estados precisa de uma bifurcação a partir de E2 para o caminho B. O dashboard do professor precisa marcar quantos alunos seguiram cada caminho. As perguntas de mediação oral do professor ganham uma a mais: \"Quem perguntou sobre registros fora do sistema antes de votar? O que teria acontecido com a Ana se ninguém tivesse feito essa pergunta?\"\n\nAJUSTE 2 — Reposicionar o aha no sujeito aluno\n\nA consultora formulou o aha assim: \"Eu estava avaliando o resultado do projeto ou apenas aquilo que estava documentado sobre ele?\" O sujeito é \"eu\" (o aluno). A missão atual diz: \"a inteligência artificial estava apenas medindo qual deles tinha mais relatórios digitais\" — o sujeito é a IA.\n\nO que quero: trocar a frase de descoberta central para algo como: \"Eu achei que estava avaliando qual projeto fazia o melhor trabalho, mas na verdade estava julgando apenas pela quantidade de documentos digitais que cada um tinha no sistema — e quase deixei de fora quem mais precisava de ajuda.\"\n\nO sujeito é sempre \"eu\" (o aluno assumindo a responsabilidade), nunca \"a IA\" (externalizando a culpa). Aplicar em todas as ocorrências da frase de descoberta ao longo do one-pager e da spec.\n\nAJUSTE 3 — Pílulas de prompt como fallback discreto\n\nA consultora disse: \"O aluno conversa com a IA e escolhe o que quer investigar. Suas perguntas ajudam a definir os critérios da análise.\" As 3 pílulas pré-formuladas na Etapa 2 direcionam a investigação.\n\nO que quero: o campo de texto aberto é o elemento principal. As 3 pílulas de sugestão ficam em tamanho menor, tom discreto, como apoio para quem não sabe por onde começar. Elas desaparecem da tela assim que o estudante digita a primeira mensagem própria. Ajustar no one-pager e na spec.\n\nVALIDAÇÃO — depois de gerar, confira:\n\nO ambiente continua chatgpt?\nOs 3 projetos, personagens e R$ 12.000 estão idênticos?\nA Etapa 2 permite descobrir os cadernos SE o aluno perguntar?\nA Etapa 4 tem dois modos (virada surpresa vs. contrafactual)?\nA frase de descoberta central tem \"eu\" como sujeito?\nAs pílulas são opcionais e somem após o primeiro prompt?\nO caso Lia/Davi no Refletir está intacto?\nNenhuma seção foi removida, reordenada ou fundida?",
+   "quando": "30/09/2026 10:30:50",
+   "rodada": 1,
+   "assinatura": "d1cd579a96324680",
+   "valido": true,
+   "gates": {
+    "adequacao_status": "🟡",
+    "avaliacao_status": "🟢",
+    "bncc_status": "🟢",
+    "brief_escopo_status": "🟢",
+    "catalogo_indice_status": "🟡",
+    "contrato_produto_status": "🟢",
+    "evidencia_status": "🟢",
+    "experiencia_status": "🔴",
+    "gate_estrutural_status": "🟢",
+    "gate_final_status": "🔴",
+    "juiz_perguntas_status": "🟢",
+    "micro_gate_status": "🟢",
+    "perguntas_status": "🟢",
+    "profundidade_status": "🟢",
+    "rastro_spec_status": "🟢"
+   },
+   "excecao": false
+  },
+  {
+   "etapa": "produto",
+   "acao": "refazer",
+   "autor": "produto",
+   "como": "produto",
+   "comentario": "Reprocesse a missão exp09ef1b (O Dossiê Invisível), 9º ano, 1º bimestre, ambiente chatgpt.\n\nHá 1 ÚNICO ajuste a fazer: o formato de captura do Canal A de evidência. Fora esse ajuste, o one-pager, a spec e todos os artefatos devem sair IDÊNTICOS.\n\nTRAVAS — NÃO ALTERAR EM HIPÓTESE NENHUMA:\n\nAmbiente: chatgpt. Não trocar.\nOs 3 projetos: Mesa Aberta (João, 24 vagas), Ponto de Apoio (Ana, 18 vagas), Conexão para Continuar (Luana, 20 vagas). Idênticos.\nValor: R$ 12.000 indivisível.\nMecanismo de 6 etapas: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. Não fundir, eliminar nem reordenar.\nBifurcação Caminho A / Caminho B na Etapa 2 (porta investigativa antecipada dos cadernos de campo). Preservar integralmente a lógica, os estados E2_CADERNOS_OFERECIDOS e E2_CADERNOS_DESBLOQUEADOS, a flag caminho_tomado, e a simulação contrafactual na Etapa 4 para Caminho B.\nFrase de descoberta central com sujeito \"eu\" (o aluno): \"Eu achei que estava avaliando qual projeto fazia o melhor trabalho, mas na verdade estava julgando apenas pela quantidade de documentos digitais...\" Não alterar.\nPílulas de prompt opcionais e efêmeras que desaparecem após o primeiro input. Não alterar.\nVoto vinculante na Etapa 3 com latch e trava irreversível. Não alterar.\nCaso Lia/Davi no Refletir: 4 faltas cada, Linha 302, cruzamento tabular. Idêntico.\nAmara apenas no Desafiar e no Explicar. Não alterar.\nHabilidades BNCC: EF09CO07 (primária) e EF09CO08 (secundária). Não alterar.\nCanal B das duas habilidades: enquete ChatPollEmbed com 3 alternativas mapeadas para Atingiu / Em processo / Não atingiu. Já está correto. NÃO ALTERAR.\nParametrização docente, teste das 3 disciplinas, podcast, dashboard (incluindo gráfico Caminho A vs. B), caminhos degenerados, estados de falha, contrato de estados (exceto o ajuste abaixo), tempos sugeridos: tudo idêntico.\n\nAJUSTE ÚNICO — Canal A de evidência: trocar texto livre por ação discreta + múltipla escolha\n\nRegra inviolável: NENHUM canal de evidência pedagógica pode exigir que o professor leia texto livre para avaliar. Todo Canal A deve capturar evidência por meio de ação discreta do aluno (seleção, marcação, cruzamento) seguida de pergunta de múltipla escolha com exatamente 3 alternativas mapeadas 1:1 para Atingiu / Em processo / Não atingiu. O componente de renderização é o mesmo ChatPollEmbed já usado no Canal B.\n\nO que mudar, habilidade por habilidade:\n\nCanal A da EF09CO07 (Etapa 6 — Refletir):\nHOJE: O aluno redige um parecer de texto livre cruzando faltas de Lia/Davi com cancelamentos da Linha 302. O professor precisa ler cada parecer.\nDEVE SER: O aluno realiza o cruzamento tabular nas tabelas interativas (essa ação permanece — é a experiência pedagógica). Depois, responde uma pergunta de múltipla escolha com 3 alternativas. Os critérios da régua ternária já existem e estão bons — basta transformá-los em alternativas selecionáveis:\n[Atingiu]: alternativa que demonstra correlação exata das datas de Lia com os cancelamentos E exige investigação de Davi antes de qualquer decisão.\n[Em processo]: alternativa que identifica a inocência de Lia mas recomenda punir Davi por ausência de registro.\n[Não atingiu]: alternativa genérica que não estabelece correlação nem distingue os dois casos.\nRenderização: ChatPollEmbed integrado ao chat, mesma mecânica do Canal B.\nO campo de parecer de texto livre deve ser removido como instrumento de avaliação. Se quiser manter um espaço de reflexão escrita, ele é opcional e NÃO entra no scoring.\nCanal A da EF09CO08 (Etapa 3 — Decidir):\nHOJE: O aluno escreve justificativa de texto livre (60+ caracteres) no voto vinculante. O professor precisa ler cada justificativa.\nDEVE SER: O aluno seleciona o projeto (ação discreta — permanece). Depois, responde uma pergunta de múltipla escolha com 3 alternativas. Os critérios da régua ternária já existem — transformá-los em alternativas:\n[Atingiu]: alternativa que problematiza a disparidade estrutural de infraestrutura digital entre projetos e demonstra compreensão de como a distribuição desigual de recursos afeta o poder de decisão.\n[Em processo]: alternativa que menciona a vantagem tecnológica sem relacionar à desigualdade de acesso.\n[Não atingiu]: alternativa que trata projetos sem tecnologia como inferiores.\nRenderização: ChatPollEmbed integrado ao chat.\nA justificativa de 60 caracteres pode ser mantida como registro qualitativo para o professor, mas NÃO é o instrumento de scoring. O scoring vem exclusivamente da múltipla escolha.\n\nAjustar todas as referências na spec e no one-pager: o evento scored de cada habilidade passa a ser a resposta da múltipla escolha do Canal A, não a submissão de texto. O campo justificativa_texto e parecer_transporte_texto, se mantidos, passam a ser campos opcionais não avaliados.\n\nVALIDAÇÃO — depois de gerar, confira:\n\nO Canal A da EF09CO07 é múltipla escolha com 3 alternativas (não texto livre)?\nO Canal A da EF09CO08 é múltipla escolha com 3 alternativas (não texto livre)?\nOs Canal B das duas habilidades continuam idênticos?\nO ambiente continua chatgpt?\nO Caminho A / Caminho B da porta investigativa está intacto?\nA frase de descoberta central tem \"eu\" como sujeito?\nAs pílulas são opcionais e efêmeras?\nO caso Lia/Davi está intacto?\nOs 3 projetos, personagens e R$ 12.000 estão idênticos?\nNenhuma seção foi removida, reordenada ou fundida?",
+   "quando": "30/09/2026 15:03:00",
+   "rodada": 2,
+   "assinatura": "1690921f0932b9f2",
+   "valido": true,
+   "gates": {
+    "adequacao_status": "🟢",
+    "avaliacao_status": "🟢",
+    "bncc_status": "🟢",
+    "brief_escopo_status": "🟢",
+    "catalogo_indice_status": "🟡",
+    "contrato_produto_status": "🟢",
+    "evidencia_status": "🟢",
+    "experiencia_status": "🟡",
+    "gate_estrutural_status": "🟢",
+    "gate_final_status": "🟡",
+    "juiz_perguntas_status": "🟢",
+    "micro_gate_status": "🟢",
+    "perguntas_status": "🟢",
+    "profundidade_status": "🟢",
+    "rastro_spec_status": "🟢"
+   },
+   "excecao": false
+  },
+  {
+   "etapa": "produto",
+   "acao": "de_acordo",
+   "autor": "produto",
+   "como": "produto",
+   "comentario": "De acordo com a parte pedagógica. Avaliar a etapa de design para ver se precisamos alterar algo estrutural da missão",
+   "quando": "30/09/2026 15:25:37",
+   "rodada": 3,
+   "assinatura": "99285cd44c63135d",
+   "valido": true,
+   "gates": {
+    "adequacao_status": "🟢",
+    "avaliacao_status": "🟢",
+    "bncc_status": "🟢",
+    "brief_escopo_status": "🟢",
+    "catalogo_indice_status": "🟡",
+    "contrato_produto_status": "🟢",
+    "evidencia_status": "🟢",
+    "experiencia_status": "🟡",
+    "gate_estrutural_status": "🟢",
+    "gate_final_status": "🟡",
+    "juiz_perguntas_status": "🟡",
+    "micro_gate_status": "🟢",
+    "perguntas_status": "🟢",
+    "profundidade_status": "🟢",
+    "rastro_spec_status": "🟢"
+   },
+   "excecao": false
+  },
+  {
+   "etapa": "design",
+   "acao": "de_acordo",
+   "autor": "design",
+   "como": "design",
+   "comentario": "Assets de acordo com o esperado",
+   "quando": "01/10/2026 07:32:43",
+   "rodada": 1,
+   "assinatura": "c82a777597eec357",
+   "valido": true,
+   "gates": {
+    "ambiente_status": "🟢",
+    "design_status": "🟢",
+    "lacunas_status": "🟢",
+    "prototipo_lint_status": "🟢",
+    "rastro_design_status": "🟢"
+   },
+   "excecao": false
+  },
+  {
+   "etapa": "dev",
+   "acao": "de_acordo",
+   "autor": "dev",
+   "como": "dev",
+   "comentario": "as perguntas de evidencia pedagogica foram atualizadas, mas avaliam as mesmas habilidades\n\nCanal B — Perguntas de evidência pedagógica\nMissão 9EF1B · O Dossiê Invisível · 9º ano\nPergunta 1\nHabilidade: EF09CO07 — Avaliar implicações de tecnologias digitais e propor alternativas\nCenário:\nUm sistema automatizado de triagem de bolsas escolares desclassificou uma família porque seu cadastro não apresentava comprovantes de renda digitais recentes, apenas uma declaração de trabalho informal feita à mão.\nConsiderando o impacto da IA na sociedade, como você avalia esse critério?\nAlternativas (ordenação aleatória pelo servidor):\nAtingiu\tO critério gera viés algorítmico, pois confunde a falta de comprovantes digitalizados com renda inexistente, excluindo quem mais depende do benefício por limitações burocráticas de acesso à tecnologia.\nEm processo\tO critério é neutro e apenas segue o regulamento, mas o sistema deveria dar uma nota intermediária para declarações escritas à mão.\nNão atingiu\tO sistema está correto, porque documentos digitais são infalsificáveis e garantem que a máquina tome uma decisão matemática totalmente justa sem interferência humana.\nPergunta 2\nHabilidade: EF09CO08 — Discutir distribuição desigual de recursos de computação e questões de equidade, acesso e poder\nCenário:\nEm outro município, uma IA de priorização de vagas em creches públicas usa como critério principal a quantidade de documentos digitais no cadastro da família. Duas famílias precisam igualmente da vaga. Uma enviou quatro documentos digitalizados em PDF pelo portal. A outra entregou os mesmos documentos, mas em papel no balcão da secretaria, porque não conseguiu digitalizar em casa. O sistema classificou a segunda família com nota zero em documentação.\nConsiderando o que você viveu nesta missão, qual das afirmações faz mais sentido?\nAlternativas (ordenação aleatória pelo servidor):\nAtingiu\tAs duas famílias apresentaram a mesma documentação. O que mudou foi só o formato; o sistema deveria aceitar outras formas de entrega antes de atribuir nota zero.\nEm processo\tO sistema está sendo justo porque precisa de um critério padronizado, mas poderia dar um prazo extra para quem não enviou pelo portal.\nNão atingiu\tA família que enviou tudo pelo portal merece prioridade porque seguiu o procedimento correto e demonstrou mais organização.\n\nsem pendencia de dev até o momento.",
+   "quando": "06/10/2026 10:35:07",
+   "rodada": 1,
+   "assinatura": "25e136b67ce66f50",
+   "valido": true,
+   "gates": {
+    "dev_status": "🟡",
+    "kpis_status": "🟡",
+    "manifesto_status": "🟢",
+    "prd_status": "🟡",
+    "rastro_lacunas_status": "🟢",
+    "telemetria_status": "🟢"
+   },
+   "excecao": false
+  }
+ ]
+}

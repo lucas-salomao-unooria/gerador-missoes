@@ -47,6 +47,7 @@ Só é ❌ o que a missão fez **além** do que o briefing pediu.
 1. Confirme que os quatro relatórios avaliam **a mesma versão** do one-pager (compare a versão declarada no título e o changelog). Se um relatório avaliou versão anterior às correções → F1 = ❌ e indique qual reexecutar.
 2. Varra todos os obrigatórios dos três relatórios e localize qualquer ❌, 🔵 ou N/A por falta de informação. **Na dimensão curricular da BNCC, apenas falhas em letramento digital bloqueiam o release;** pendências ou códigos em aberto de disciplinas tradicionais ou socioemocionais entram como riscos aceitos / itens de alerta (⚠️) e não impedem a liberação para design/dev.
 3. Confira se cada correção exigida **entrou de fato** no one-pager — não aceite "corrigido" só no relatório.
+   **Não declare que o pedido do PO foi atendido.** Em 30/09/2026 este gate escreveu "a versão final atende integralmente ao pedido de correção" sobre uma missão com os caminhos A/B trocados e a frase do PO cortada. A fidelidade ao pedido do PO e ao briefing é conferida item a item, com citação, pelo verificador de fidelidade (A03a no núcleo, A16c no fim de produto). Aqui, julgue a missão pelos critérios deste gate.
 4. Procure contradições entre missão e relatórios.
 5. Reaplique o núcleo do 9.1 (teste de implementação cega) como regressão: cardinalidade/bloqueio, geração de outputs, estados incompletos, quem termina cedo, conta publicadora, permissões/handoffs, fallbacks.
 6. Verifique se a descoberta central continua intacta (frase, ação principal e virada formam a mesma cadeia causal).

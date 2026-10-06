@@ -45,7 +45,7 @@ Ordem (SequentialAgent):
 from __future__ import annotations
 
 import warnings
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from google.adk.agents.llm_agent import LlmAgent
 from google.adk.agents.loop_agent import LoopAgent
@@ -53,7 +53,7 @@ from google.adk.agents.parallel_agent import ParallelAgent
 from google.adk.agents.sequential_agent import SequentialAgent
 
 from agents.base import create_llm_agent
-from agents.juiz import get_juiz_de_achados
+from agents.juiz import get_fidelidade_check, get_juiz_de_achados
 from agents.callbacks import marcar_heranca, preservar_one_pager
 from agents.checkers import (
     SecaoSplitAgent,
@@ -411,7 +411,8 @@ def build_produto_stage(
         return SequentialAgent(
             name="ProdutoStage",
             description="Área de Produto — correção a partir da spec: spec ↔ currículo e manifesto → one-pager resumido (núcleo, one-pager e gates preservados da execução anterior).",
-            sub_agents=[_build_spec_loop(kw, settings, rodadas_spec), get_one_pager_resumido_agent(**kw)],
+            sub_agents=[_build_spec_loop(kw, settings, rodadas_spec), _fidelidade_de_produto(kw),
+                        get_one_pager_resumido_agent(**kw)],
         )
 
     nucleo_loop = LoopAgent(
@@ -432,6 +433,11 @@ def build_produto_stage(
             get_juiz_profundidade_agent(**kw),
             # Antes do veredito do micro-gate, de propósito: esgotada a última rodada, o
             # `A03MicroGateCheck` encerra o loop, e a profundidade da rodada ficaria sem status.
+            # O núcleo é onde a missão do 9º ano trocou A e B e cortou a frase do PO (30/09/2026):
+            # conferido aqui, a cada rodada, o autor recebe o relatório e reescreve antes de seguir.
+            get_fidelidade_check("A03aFidelidadeNucleo", status_key="fidelidade_nucleo_status",
+                                 report_key="fidelidade_nucleo_report", documentos=["nucleo_narrativo"],
+                                 onde="núcleo", **kw),
             ProfundidadeCheckAgent(
                 name="A03bProfundidadeCheck",
                 max_rounds=MICRO_GATE_MAX_RODADAS,
@@ -456,7 +462,7 @@ def build_produto_stage(
                 name="A03cNucleoCheck",
                 description="Micro-gate e profundidade aprovados encerram o loop; qualquer um reprovado devolve o núcleo ao P0a com os dois relatórios.",
                 rotulo="Núcleo narrativo",
-                status_keys=["micro_gate_status", "profundidade_status"],
+                status_keys=["micro_gate_status", "profundidade_status", "fidelidade_nucleo_status"],
                 rodada_key="nucleo_rodada",
                 max_rounds=MICRO_GATE_MAX_RODADAS,
             ),
@@ -606,6 +612,7 @@ def build_produto_stage(
                 block_pipeline_on_fail=estrito,
             ),
             spec_loop,
+            _fidelidade_de_produto(kw),
             # Depois da spec, de propósito: o bloco 11 já passou pelo A14, então o resumido
             # copia códigos conferidos em vez dos que a seção 2 do canônico ainda podia trocar.
             get_one_pager_resumido_agent(**kw),
@@ -613,10 +620,18 @@ def build_produto_stage(
     )
 
 
+def _fidelidade_de_produto(kw: Dict[str, Any]):
+    """A conferência final: núcleo, one-pager e spec contra todos os pedidos do PO e o briefing.
+    Com 🔴 aqui, o *de acordo* de produto é recusado (`pipeline/passagem.py`)."""
+    return get_fidelidade_check("A16cFidelidadeProduto", status_key="fidelidade_status", report_key="fidelidade_report",
+                                documentos=["nucleo_narrativo", "one_pager", "spec_missao"],
+                                onde="fim de produto", **kw)
+
+
 #: Agentes do estágio parcial "spec" (correção a partir da spec), na ordem em que rodam.
 SPEC_AGENT_IDS = ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
                   "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
-                  "A16SpecCheck", "A16bOnePagerResumido"]
+                  "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido"]
 
 PRODUTO_METADATA = [
     {"id": "A00bVizinhasCatalogo", "name": "00b · Missões já geradas (determinístico)", "icon": "🗂️", "output_key": "missoes_vizinhas", "prompt_file": None, "description": "Lê o índice de missões e entrega ao núcleo as mais próximas do ano do briefing, para a missão nova não repetir uma anterior."},
@@ -651,6 +666,8 @@ PRODUTO_METADATA = [
     {"id": "A15eJuizPerguntasCheck", "name": "15e · Veredito do juiz das perguntas (determinístico)", "icon": "🔀", "output_key": "juiz_perguntas_status", "prompt_file": None, "description": "Lê o envelope do juiz: ❌ em pergunta declarada pelo PO bloqueia; ❌ só em proposta segue como ressalva para o PO decidir."},
     {"id": "A15fRastroSpec", "name": "15f · Rastro de lacunas da spec (determinístico)", "icon": "🧭", "output_key": "rastro_spec_report", "prompt_file": None, "description": "Marcadores de lacuna na spec, por dono: o de produto ou de insumo volta para quem escreveu a spec; a decisão do PO fica 🟡 no semáforo do parecer; o de design e o de dev ficam para a etapa delas."},
     {"id": "A16SpecCheck", "name": "16 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
+    {"id": "A03aFidelidadeNucleo", "name": "03a · Fidelidade ao pedido do PO (núcleo)", "icon": "📌", "output_key": "fidelidade_nucleo_report", "prompt_file": None, "description": "O núcleo contra todos os pedidos de refazer do PO (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) e o briefing: o juiz cita, o código confere. Com 🔴, o núcleo volta ao autor com o relatório."},
+    {"id": "A16cFidelidadeProduto", "name": "16c · Fidelidade ao pedido do PO e ao briefing", "icon": "📌", "output_key": "fidelidade_report", "prompt_file": None, "description": "Núcleo, one-pager e spec contra todos os pedidos do PO e o briefing. Pedido sem prova é 🔴 e recusa o de acordo de produto; conflito com regra da esteira vira decisão do PO."},
     {"id": "A16bOnePagerResumido", "name": "16b · One-pager resumido", "icon": "🗂️", "output_key": "one_pager_resumido", "prompt_file": "produto/16b_one_pager_resumido.md", "description": "O one-pager no formato do time de produto para avaliação pedagógica: ficha, ideia, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário e takeaway. Sai em .md, .docx e .html."},
 ]
 
