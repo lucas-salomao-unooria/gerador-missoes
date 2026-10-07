@@ -29,6 +29,12 @@ SECOES_NUMERICAS = (7, 8, 9, 10, 15, 16)
 ANOS_SAEB: Set[int] = {2, 5, 9}
 
 _RE_WEBSOCKET = r"websocket|socket\.io|hub:pause"
+#: A plataforma não agenda (ADR-146): pôr a atividade no ar libera a missão na hora. O one-pager da
+#: exp01ef1b dizia "ou agenda a data/horário da aula" no §9a; o design desenhou o seletor, e só o PRD
+#: negou — o anexo literal do one-pager levou a contradição até o agente de codificação (07/10/2026).
+_RE_AGENDAMENTO = r"\bagend(?:ar|ad[oa]s?|amentos?|a\s+(?:a\s+|o\s+)?(?:data|hor))"
+#: Exemplo entre parênteses não é parâmetro: "(ex.: 😟 85% vs. 😄 15%)" ilustra o gráfico.
+_RE_EXEMPLO = re.compile(r"\(\s*\**\s*(?:ex\.?|por exemplo|e\.g\.)[^)]*\)", re.IGNORECASE)
 _RE_ESTADO_CLIENTE = r"localstorage|indexeddb|sessionstorage"
 #: Descritor de matriz do SAEB (`D14`). A palavra "SAEB" sozinha não é descritor: o "N/A — ano não
 #: avaliado pelo SAEB" a contém.
@@ -39,11 +45,22 @@ _RE_SERIE_EM = re.compile(r"\b([123])\s*[ªa°º]?\s*s[ée]rie\b|\b([123])\s*EM\
 #: Número com unidade que vira regra de sistema. Cardinalidades soltas ("3 posts") ficam de
 #: fora: estão no núcleo e o gate as conta pelo critério 9.1(a).
 _RE_NUMERO = re.compile(
-    r"(\d+(?:[.,]\d+)?)\s*(segundos?|seg\b|s\b|milissegundos?|ms\b|caracteres|KB|MB|GB|px|%)",
+    # `palavras`: o "teto de 18 palavras" da exp03ef1b (07/10/2026) nasceu no §15, sem fonte — a
+    # literatura-cognitiva não fixa número por ano — e o gate final reprovou a missão por ele
+    r"(\d+(?:[.,]\d+)?)\s*(segundos?|seg\b|s\b|milissegundos?|ms\b|caracteres|palavras|KB|MB|GB|px|%)",
     re.IGNORECASE,
 )
-_MARCADORES = ("[PROPOSTA", "[PARÂMETRO", "[PARAMETRO", "[DECISÃO PENDENTE", "[DECISAO PENDENTE", "🔵")
-_RE_ETAPA = re.compile(r"desafiar|navegar|decidir|resultado|aha|explicar|refletir|etapa", re.IGNORECASE)
+#: `[CONVENÇÃO]`, `[EXTRAPOLAÇÃO]` e `[INFERÊNCIA]` são os rótulos de origem da literatura-cognitiva: o
+#: número diz de onde veio, e é isso que a regra pede.
+_MARCADORES = ("[PROPOSTA", "[PARÂMETRO", "[PARAMETRO", "[DECISÃO PENDENTE", "[DECISAO PENDENTE", "🔵",
+               "[CONVENÇÃO", "[CONVENCAO", "[EXTRAPOLAÇÃO", "[EXTRAPOLACAO", "[INFERÊNCIA", "[INFERENCIA")
+_RE_ETAPA = re.compile(r"desafiar|navegar|decidir|resultado|aha|explicar|refletir|etapa|\bE[1-6]\b", re.IGNORECASE)
+#: "Foco primário BNCC (Regra 12): `EF03CO08`" — a linha onde o one-pager crava a habilidade principal.
+_RE_FOCO_PRIMARIO = re.compile(r"foco\s+prim[áa]rio[^\n]{0,240}", re.IGNORECASE)
+#: Linha do briefing que marca a habilidade principal: "EF03CO03 (âncora)".
+_RE_ANCORA = re.compile(r"[âa]ncora|foco\s+prim[áa]rio|principal", re.IGNORECASE)
+#: "Seção do DS: `unoochat`" / "Seção do DS = `unoogaleria`" no cabeçalho do one-pager.
+_RE_SECAO_DO_CABECALHO = re.compile(r"Se[çc][ãa]o do DS\**\s*[:=]\s*\**`?([a-z][\w:-]*)", re.IGNORECASE)
 
 
 def _linhas(texto: str) -> List[str]:
@@ -55,7 +72,10 @@ def _tem_marcador(linha: str) -> bool:
 
 
 def _numeros_com_unidade(texto: str) -> Set[str]:
-    return {f"{m.group(1).replace(',', '.')} {m.group(2).lower()}" for m in _RE_NUMERO.finditer(texto or "")}
+    texto = _RE_EXEMPLO.sub("", texto or "")
+    # zero não é parâmetro: "0 palavras de leitura autônoma" é a regra do não alfabetizado
+    return {f"{m.group(1).replace(',', '.')} {m.group(2).lower()}" for m in _RE_NUMERO.finditer(texto)
+            if float(m.group(1).replace(",", ".")) != 0}
 
 
 def _bloco_do_saeb(secao2: str) -> str:
@@ -99,7 +119,8 @@ def _serie(one_pager: str) -> Dict[str, Any]:
     return serie
 
 
-def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "") -> Dict[str, Any]:
+def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
+                      registro_do_po: bool = False) -> Dict[str, Any]:
     """Aplica as regras ao one-pager. Devolve `status`, `achados` e a série lida."""
     if not (one_pager or "").strip():
         return {"status": "bloqueado", "achados": [{
@@ -125,6 +146,17 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "") -> D
                 "websocket", "9.1(h)",
                 f"Seção {n} propõe WebSocket, socket.io ou `hub:pause` como canal de sala. A plataforma sincroniza a turma por "
                 "polling HTTP curto em `expNNefNb_gates_turma` (ADR-93/94); Cloud Run não sustenta WebSocket. Reescrever como polling, sem inventar o intervalo.",
+            )
+
+    # 1b. Agendamento — a plataforma não tem (ADR-146). Seção 9 entra: é onde o preparo do professor mora.
+    for n in sorted(set(SECOES_TECNICAS) | {9}):
+        secao = secao_bloco(texto, n)
+        if secao and _usado_afirmativamente(secao, _RE_AGENDAMENTO):
+            bloqueio(
+                "agendamento", "9.1(h)",
+                f"Seção {n} propõe agendar a missão. A plataforma não tem agendamento: o professor põe a atividade no ar "
+                "e ela abre na sala na hora (ADR-146). Reescreva como \"pôr no ar\"; se a missão precisa mesmo de "
+                "agendamento, marque `[PENDÊNCIA PLATAFORMA — agendamento]`.",
             )
 
     # 2. Estado de missão é do servidor — nenhuma seção de apoio nomeia armazenamento de cliente.
@@ -196,18 +228,64 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "") -> D
     # 5. Código de Computação fora de Cultura Digital sem momento em tela — sinal para o parecer.
     habs = habilidades()
     linhas2 = _linhas(secao2)
+    # a etapa de cada habilidade costuma estar no contrato de evidência (§12a), não na seção 2
+    secao12 = secao_bloco(texto, 12) or ""
+    com_etapa_no_12a = {c for l in _linhas(secao12) if _RE_ETAPA.search(l) for c in extrair_codigos(l)}
     for i, linha in enumerate(linhas2):
         for c in extrair_codigos(linha):
             hab = habs.get(c)
             if not hab or hab["eixo"] == "CD":
                 continue
             janela = " ".join(linhas2[i : i + 3])
-            if not _RE_ETAPA.search(janela):
+            if not _RE_ETAPA.search(janela) and c not in com_etapa_no_12a:
                 atencao(
                     "codigo-fora-do-eixo", "5.2",
                     f"`{c}` ({hab['eixo']}: “{hab['habilidade'][:80]}…”) está na seção 2 sem a etapa em que o estudante exercita o texto oficial. "
                     "Código que o livro cita mas a ação em tela não exercita sai do documento.",
                 )
+
+    # 6. Seção do DS fixada pelo briefing. As três gerações da exp03ef1b (07/10/2026) receberam
+    # `secao_ds: unoogaleria` com "É PROIBIDO usar qualquer outro design system" e saíram em
+    # `unoochat`, `unoovista` e `whatsappmobile` — uma delas aprovada.
+    cabecalho = _RE_SECAO_DO_CABECALHO.search(texto[:4000])
+    if cabecalho and briefing:
+        from tools.rastro import achado_secao_travada
+
+        trava = achado_secao_travada(cabecalho.group(1), briefing, "o one-pager")
+        if trava:
+            (bloqueio if trava["severidade"] == "bloqueio" else atencao)("secao-travada-pelo-briefing", "2.1 · 6.4", trava["resumo"])
+
+    # 7. Habilidade que o briefing lista não some sem registro, e a âncora dele não troca em silêncio.
+    # As três gerações da exp03ef1b cortaram EF03CO01 e EF03CO02 sem uma linha, e a Regra 12 pôs
+    # EF03CO08 no lugar da âncora EF03CO03 — decisão do PO tomada pelo agente.
+    if briefing:
+        no_briefing = list(dict.fromkeys(extrair_codigos(briefing)))
+        sumiram = [c for c in no_briefing if c not in texto]
+        if sumiram:
+            bloqueio(
+                "habilidade-do-briefing-sumiu", "5.2",
+                f"O briefing lista {', '.join(f'`{c}`' for c in sumiram)} e o one-pager não menciona "
+                f"{'nenhum deles' if len(sumiram) > 1 else 'o código'}. Cortar habilidade do briefing é decisão do PO: "
+                "mantenha-a com o momento em tela, ou registre na seção 18 `[PROPOSTA — validar com PO: tirar <código> · por quê]`.",
+            )
+        ancoras = {c for linha in briefing.splitlines() if _RE_ANCORA.search(linha) for c in extrair_codigos(linha)}
+        # só o primeiro código depois de "foco primário": a mesma linha costuma seguir com "Esteio: …"
+        foco = {extrair_codigos(m.group(0))[0] for m in _RE_FOCO_PRIMARIO.finditer(texto) if extrair_codigos(m.group(0))}
+        if ancoras and foco and not (ancoras & foco):
+            atencao(
+                "ancora-do-briefing-trocada", "5.2",
+                f"O briefing marca {', '.join(f'`{c}`' for c in sorted(ancoras))} como âncora e o one-pager crava "
+                f"{', '.join(f'`{c}`' for c in sorted(foco))} como foco primário. Se a Regra 12 pede a troca, ela é "
+                "proposta ao PO, não decisão: registre `[PROPOSTA — validar com PO: foco primário <código> no lugar da âncora "
+                "do briefing · por quê]` na seção 18 — a etapa sai 🟡.",
+            )
+
+    # 8. Decisão atribuída ao PO sem registro dele (só a atribuição: proposta do agente é do gate final).
+    from tools import decisoes
+
+    for a in decisoes.achados(texto, "O one-pager", registro_do_po):
+        if a["codigo"] == "decisao-atribuida-ao-po":
+            (bloqueio if a["severidade"] == "bloqueio" else atencao)(a["codigo"], "9.1", a["resumo"])
 
     if any(a["severidade"] == "bloqueio" for a in achados):
         status = "bloqueado"

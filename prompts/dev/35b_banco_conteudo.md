@@ -8,6 +8,10 @@ O brief de assets **descreve** o que a missão exibe. Você **escreve**. Na miss
 
 {spec_missao?}
 
+**Conteúdo aprovado pelo PO — cópia literal do one-pager** (currículo, papel do professor, tempos e cenários de aula, podcast com o roteiro, contrato de evidência com o Canal B, hipóteses). Até 07/10/2026 você não recebia o one-pager: o que a spec não trazia não existia para você, e na exp01ef1b se perderam as travas do professor, o podcast e a redação do debate. O roteiro do podcast que vai para a gravação é o daqui (§11), com as mesmas vozes e falas: copie-o inteiro, não escreva outro. Um gate confere.
+
+{conteudo_aprovado?}
+
 **Núcleo narrativo (a virada, os números, o que o estudante tem de poder descobrir):**
 
 {nucleo_narrativo?}
@@ -24,6 +28,20 @@ O brief de assets **descreve** o que a missão exibe. Você **escreve**. Na miss
 
 {brief_assets?}
 
+**Camada CAA (quando aplicável) — a prancha que você escreve segue o layout, os símbolos e as cores dela, não os do brief:**
+
+{camada_caa?}
+
+**Rodada de correção — o verificador do banco reprovou a sua versão anterior (vazio na primeira rodada).** Corrija cada achado e reemita o banco **inteiro**, partindo da versão abaixo — o que estava certo continua palavra por palavra:
+
+{conteudo_report?}
+
+{banco_conteudo?}
+
+**Tickets da banca de dev endereçados a você (vazio quando a banca não te acionou).** Corrija exatamente estes pontos e reemita o banco inteiro:
+
+{tickets_retrabalho?}
+
 ## O que você escreve
 
 **1. O texto integral de cada item de conteúdo do inventário** — todo ID `txt-`, `doc-`, `tab-`, `ata-`, `dos-`, `rot-` do brief, e o **roteiro** de cada `aud-` e `vid-`. Não `pic-` (é desenho) nem `ia-` (prompt de sistema é engenharia, vai no PRD).
@@ -33,7 +51,7 @@ O brief de assets **descreve** o que a missão exibe. Você **escreve**. Na miss
 - **Fac-símile:** a transcrição completa (é o que o leitor de tela e o fallback de mídia mostram).
 - **Áudio e vídeo:** o roteiro com falas, tempos e quem fala, dentro da duração do brief.
 
-**2. A árvore de falas da IA simulada**, uma por estado do contrato do bloco 2 em que ela fala, com o nome do estado no título. Cada fala escrita por inteiro, na voz da ficha do ambiente (bloco 14), dentro do teto de palavras do brief. Para cada estado com ramificação (caminho A / caminho B, pergunta certa / pergunta vaga), uma fala por ramo. E sempre, mesmo que a spec não as nomeie:
+**2. A árvore de falas da IA simulada — só se a missão tem uma IA que fala com o estudante** (a spec a declara no contrato de estados do bloco 2 ou na ficha do ambiente, bloco 14). Sem ela, esta seção não existe: a exp01ef1b escreveu 20 falas para uma "IA simulada" que a missão não tinha, e uma delas inventou um limite de tempo que a spec não tem. Com ela: uma fala por estado do contrato do bloco 2 em que a IA fala, com o nome do estado no título. Cada fala escrita por inteiro, na voz da ficha do ambiente (bloco 14), dentro do teto de palavras do brief. Para cada estado com ramificação (caminho A / caminho B, pergunta certa / pergunta vaga), uma fala por ramo. E, quando há IA, sempre, mesmo que a spec não as nomeie:
 
 - **boas-vindas** — a primeira mensagem;
 - **pergunta fora do tema** — o que a IA responde quando o estudante pergunta outra coisa (sem sair da ficção, sem dar a resposta, devolvendo à investigação);
@@ -47,6 +65,10 @@ O brief de assets **descreve** o que a missão exibe. Você **escreve**. Na miss
 4. **Sem pessoa real, escola real, marca, endereço ou telefone existente.** Conteúdo fictício e verossímil para a série da spec.
 5. **Não entregue a descoberta.** O documento que o estudante ainda não pode ver não aparece citado em outro; a fala da IA antes da virada não antecipa a virada.
 6. Item que você não consegue escrever (falta um número que só o PO decide, a spec cala sobre o caso) fica com o bloco e o marcador `[LACUNA — dono: <produto | design | PO>: <o que falta>]` no lugar do trecho — nunca com texto inventado sobre o que a spec não fixou.
+
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
 
 ## Saída
 

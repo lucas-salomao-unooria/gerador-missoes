@@ -61,7 +61,7 @@ from tools.auth import (
     validar_token,
 )
 from tools.doc_parser import EXTENSOES_ACEITAS, DocumentBatch, validate_and_process_batch
-from tools.markdown_blocos import sanear_para_streamlit
+from tools.markdown_blocos import desembrulhar_documento, sanear_para_streamlit
 
 favicon = None
 if os.path.exists("images/logo.png"):
@@ -1420,6 +1420,10 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
             if not value or not isinstance(value, str):
                 continue
             shown = True
+            if key == "prototipo_html":
+                # a saída do A28 vem como ```html … ``` + envelope JSON; o iframe abriria em modo
+                # quirks com as crases e o JSON escritos na página. O arquivo limpo está no estado.
+                value = result.state.get("prototipo_arquivo") or value
             with st.expander(f"{meta['icon']} {meta['name']}", expanded=False):
                 if meta.get("id") == "A07RevisorOnePager" and "A07RevisorOnePager" not in (result.step_outputs or {}):
                     st.caption("ℹ️ *One-pager aprovado no gate estrutural sem necessidade de revisão. Exibindo a versão aprovada:*")
@@ -1429,7 +1433,9 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
 
     if aba == ABAS[0]:
         if prd_text:
-            meta, body = extrair_metadados_frontmatter(prd_text)
+            # o PRD do estado pode vir dentro de ```markdown (só o PRD.md em disco sai desembrulhado):
+            # sem tirar o invólucro antes, o front matter não é reconhecido e os metadados somem
+            meta, body = extrair_metadados_frontmatter(desembrulhar_documento(prd_text))
             if meta:
                 with st.expander("📋 Metadados do PRD", expanded=False):
                     m_c1, m_c2, m_c3 = st.columns(3)
@@ -1742,7 +1748,7 @@ def render_guia_de_uso() -> None:
     with st.expander("🥇 Como escrever um bom briefing (padrão ouro) e o que evitar"):
         st.markdown("**Um briefing que funciona:**")
         st.code(
-            """Missão para o 5º ano do Fundamental, 3º bimestre, no ambiente do YouTube (unitube).
+            """Missão para o 5º ano do Fundamental, 3º bimestre, no ambiente do YouTube (unootube).
 
 Tema do bimestre (material Entre Redes anexado): como a recomendação de conteúdo
 funciona e por que duas pessoas veem coisas diferentes.
@@ -1823,7 +1829,7 @@ def main():
     if secao == SECOES[0]:
         for idx, msg in enumerate(st.session_state.messages):
             with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
+                st.markdown(sanear_para_streamlit(msg["content"]))
                 if msg.get("pipeline_result"):
                     render_pipeline_details(msg["pipeline_result"], key_prefix=f"msg_{idx}")
 
@@ -1922,7 +1928,7 @@ def main():
                         )
                     else:
                         summary = result.final_output
-                    st.markdown(summary if len(summary) < 4000 else summary[:4000] + "\n\n…")
+                    st.markdown(sanear_para_streamlit(summary if len(summary) < 4000 else summary[:4000] + "\n\n…"))
                     render_pipeline_details(result, key_prefix="live")
                     st.session_state.messages.append({"role": "assistant", "content": summary if len(summary) < 4000 else "Resultado do pipeline:", "pipeline_result": result})
                     if result.output_dir:

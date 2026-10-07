@@ -14,6 +14,10 @@ CAA não é acessibilidade genérica nem "ícone bonito ao lado do texto": é ga
 
 {spec_missao?}
 
+**Conteúdo aprovado pelo PO — cópia literal do one-pager** (currículo, estados de falha — inclusive de mídia —, papel do professor, tempos e cenários de aula, podcast com o roteiro, contrato de evidência com o Canal B, cenários de dispositivo — projeção e 2 a 4 por aparelho —, hipóteses). Até 07/10/2026 você não recebia o one-pager: o que a spec não trazia não existia para você, e na exp01ef1b se perderam as travas do professor, o podcast e a redação do debate. O professor lê em voz alta a pergunta e as alternativas do Canal B e as perguntas do debate exatamente como estão aqui: a camada CAA não parafraseia. Se o one-pager diz que a tela da criança não tem texto, rótulo escrito não entra na tela (descrição para leitor de tela pode).
+
+{conteudo_aprovado?}
+
 **Briefing de ofício (sinais 🎨, direção de voz, beats onde o estudante está sozinho):**
 
 {brief_oficio?}
@@ -58,7 +62,7 @@ Se para a rota não-leitora funcionar a mecânica precisa mudar → `[DEVOLUÇÃ
 Percorra a raia "Estudante — faz" e o sheet. Classifique cada ação e cada string acionável:
 
 - **Decisão** (o estudante escolhe algo que a mecânica mede) → precisa de **modo de resposta alternativo**.
-- **Instrução acionável** → precisa de **pictograma + áudio** (a copy já exige `texto+ícone+áudio`; você define **qual** ícone e **qual** fala).
+- **Instrução acionável** → precisa de **pictograma + áudio** — salvo quando a spec declara ausência de áudio (bloco 5 ou 14): aí pictograma + texto, e a narração fica no `[ABERTO — dono: PO]` que a copy registrou (a copy já exige `texto+ícone+áudio`; você define **qual** ícone e **qual** fala).
 - **Reflexão / estado interno** → precisa de **prancha de posicionamento**.
 - **Leitura passiva** (narrativa, feed) → **áudio** pela voz do personagem-guia; sem símbolo.
 
@@ -107,6 +111,10 @@ Se nenhuma das quatro cobre uma decisão dentro do clone, é lacuna com dono `ga
 1. Reemita **a camada CAA por inteiro** — não mande só o trecho corrigido. Quem consome o seu documento espera o documento completo, e entregar um pedaço apaga o resto.
 2. Corrija **exatamente** o que os tickets apontam. Não redesenhe o que não foi apontado, não amplie escopo, não aproveite a rodada para melhorar outra coisa: mudança não pedida quebra o que outros agentes já construíram em cima da sua versão anterior.
 3. Ticket que você **não conseguir** fechar (falta informação, é decisão de outra pessoa, ou discorda do achado) fica declarado no relatório, com o motivo em uma linha. Silêncio conta como não corrigido.
+
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
 
 ## Saída obrigatória
 

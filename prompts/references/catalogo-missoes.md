@@ -16,7 +16,7 @@
 - **Ano/série** — ex: 4º EF, 8º EF, 2º EM
 - **Bimestre** — 1º, 2º, 3º ou 4º
 - **Nome da missão** — título de trabalho
-- **Ambiente simulado** — a seção de `ambientes.md`: `unooriaai`, `unoovista`, `unoochat`, `tiktooria` (ou `mini-jogo`, só 1º–5º); missões antigas aparecem com a legada (`instanooria`, `unitube`, `chatgpt`, `whatsappmobile`)
+- **Ambiente simulado** — a seção de `ambientes.md`: `unooriaai`, `unoovista`, `unoochat`, `tiktooria`, `unoogaleria`, `unoojornal`, `unooblog` (ou `mini-jogo`, só 1º–5º); missões antigas aparecem com a legada (`instanooria`, `unootube`, `chatgpt`, `whatsappmobile`)
 - **Eixo temático** — categoria do tema (narrativas/poder, algoritmos/viés, privacidade/dados, desinformação, etc.)
 - **Descoberta central (aha)** — frase-chave que captura o que o estudante descobre
 - **Tipo de decisão** — o que o estudante faz ativamente (comparar coberturas, montar dataset, curar fontes, selecionar candidatos, etc.)
@@ -33,7 +33,7 @@ As linhas abaixo vieram do catálogo escrito à mão e já foram importadas para
 
 |Slug|Ano|Bim|Nome|Ambiente|Eixo temático|Descoberta central (aha)|Tipo de decisão|Porta de abstração|Habilidade primária|Status|
 |-|-|-|-|-|-|-|-|-|-|-|-|
-|exp04ef1b|4º EF|1º|Mais curtido ou mais confiável?|`unitube`|Desinformação / credibilidade|Popularidade não é o mesmo que confiabilidade — um vídeo ter mais views não significa que a informação é melhor.|Escolher 3 de 10 vídeos pra playlist do canal, avaliando credibilidade vs. popularidade|descrever|[preencher do manifesto]|validada|não|
+|exp04ef1b|4º EF|1º|Mais curtido ou mais confiável?|`unootube`|Desinformação / credibilidade|Popularidade não é o mesmo que confiabilidade — um vídeo ter mais views não significa que a informação é melhor.|Escolher 3 de 10 vídeos pra playlist do canal, avaliando credibilidade vs. popularidade|descrever|[preencher do manifesto]|validada|não|
 |[preencher do manifesto]|8º EF|—|O conteúdo que não chegou|`instanooria`|Algoritmos / curadoria de feed|O que você não vê no feed foi decidido por alguém — o algoritmo mostra o que gera engajamento, não o que é importante.|Navegar feed curado e descobrir o que ficou de fora|explicar|[preencher do manifesto]|aprovada|não|
 |[preencher do manifesto]|4º EF|—|O Vulcão dos Dois Lados|`whatsappmobile` + editor de vídeo (escape a revisar: editor não é seção do DS)|Narrativas / perspectiva|A mesma história contada de dois lados diferentes não é mentira de nenhum dos dois — é ponto de vista.|Receber duas versões do mesmo evento por WhatsApp e produzir um vídeo com sua versão|descrever|[preencher do manifesto]|aprovada|não|
 |exp01ef1b|1º EF|1º|O Que a Foto Conta (exp-04 na plataforma)|[preencher do manifesto]|[preencher do manifesto]|[preencher do manifesto]|[preencher do manifesto]|descrever|[preencher do manifesto]|em produção|não|

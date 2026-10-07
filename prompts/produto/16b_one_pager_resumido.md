@@ -272,6 +272,10 @@ A mesma missão em três aulas (copiada da seção 9b do canônico):
 7. **Teste do tamanho** — até 2.800 palavras?
 8. **Teste da ressalva** — toda ressalva dos pareceres e dos gates que toque o que está escrito aqui aparece entre colchetes no lugar afetado?
 
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
+
 ## Saída
 
 Entregue **apenas o documento em Markdown**, começando por `# MISSÃO DIGITAL UNOORIA`. Sem preâmbulo, sem comentário seu, sem bloco de código em volta.

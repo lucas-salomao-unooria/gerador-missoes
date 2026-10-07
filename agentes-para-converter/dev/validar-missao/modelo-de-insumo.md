@@ -11,7 +11,7 @@ dúvida — dúvida declarada é melhor que lacuna silenciosa.
 - **Série(s)**: `["4EF"]` / `["2EM"]` / `[]` (transversal)
 - **Unidade da trilha**:
 - **Software clonado** (ou "mundo próprio"):
-- **Seção do design system**: existente (`instanooria`/`unitube`/`chatgpt`/
+- **Seção do design system**: existente (`instanooria`/`unootube`/`chatgpt`/
   `whatsappmobile`/`tiktooria`) ou nova (listar componentes a criar no
   storybook-unooria, com responsável e prazo)
 

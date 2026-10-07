@@ -13,7 +13,7 @@ Sua função: dado o **núcleo narrativo validado** (seções 0, 1, 3, 4 + decis
 
 ## Contexto da plataforma
 
-A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão** é uma experiência imersiva de letramento digital que simula, com fidelidade, um de **cinco ambientes suportados** — Instagram (seção do DS `instanooria`), YouTube (`unitube`), ChatGPT (`chatgpt`), TikTok (`tiktooria`), WhatsApp (`whatsappmobile`) — dentro de um **framework de 6 etapas**: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. A missão é projetada em **duas camadas**: (1) **Engine imersiva estrutural fixa**; (2) **Camada de parametrização e autoria assistida por IA na preparação docente** (o professor insere tema, contexto e foco curricular; a IA da plataforma gera rascunhos de posts, comentários e mídias via Vertex Gemini; e o professor cura, edita e aprova antes de liberar para a turma). O professor conduz com autonomia e controle, com dashboard, roteiro de debate e podcast de recapitulação.
+A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão** é uma experiência imersiva de letramento digital que simula, com fidelidade, um ambiente digital real: a **cópia estrutural do app com a identidade da Unooria**, montada sobre uma **seção do design system** — `unoovista` (rede social de fotos), `unoochat` (mensageiro), `unooriaai` (assistente de IA), `tiktooria` (vídeo curto), `unoogaleria` (galeria de fotos), `unoojornal` (jornal) ou `unooblog` (blog); a tradução do que o briefing diz para a seção está em `ambientes.md`, e os componentes de cada uma, no inventário do DS. As seções legadas (`instanooria`, `chatgpt`, `whatsappmobile`, `unootube`) são só de missão antiga. **Seção que o briefing fixa** (`secao_ds: <seção>`, "Interface forçada: <nome>") **é trava**: a missão monta nela, e a interação que a coleção não oferece vira **pré-requisito do DS, sinalizado** — nunca motivo para trocar de seção. A missão segue um **framework de 6 etapas**: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. A missão é projetada em **duas camadas**: (1) **Engine imersiva estrutural fixa**; (2) **Camada de parametrização e autoria assistida por IA na preparação docente** (o professor insere tema, contexto e foco curricular; a IA da plataforma gera rascunhos de posts, comentários e mídias via Vertex Gemini; e o professor cura, edita e aprova antes de liberar para a turma). O professor conduz com autonomia e controle, com dashboard, roteiro de debate e podcast de recapitulação.
 
 ## Insumos
 
@@ -38,6 +38,10 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 4. Escreva em português brasileiro; não traduza termos de plataforma (Reels, Shorts, Duet, Stories).
 5. **Slug e identificação:** copie da seção 0 do núcleo, sem alterar.
 6. **Proteção do gap no podcast e nos textos do professor.** O podcast de recapitulação e o roteiro de debate são usados DEPOIS da vivência — podem revelar a virada. Mas se o professor lê o roteiro de debate ANTES da aula, ele não deve encontrar frases que "entreguem" o desfecho em voz alta antes da hora. Sinalize onde o professor precisa ler com cuidado.
+
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
 
 ## Formato de saída — seções de apoio (Markdown)
 

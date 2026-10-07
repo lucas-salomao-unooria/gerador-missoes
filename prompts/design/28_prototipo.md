@@ -69,7 +69,7 @@ Sua pergunta: **um adulto que não acompanhou a esteira consegue percorrer a mis
 
 ### As telas
 
-Uma tela por **estado declarado** na cobertura, não uma por tela. Se a tela tem quatro estados, são quatro quadros. Use o mesmo ID da cobertura, com sufixo de letra nos estados extras.
+Um quadro por **estado declarado** no inventário da jornada, não um por tela. Se a tela tem quatro estados, são quatro quadros. **Todo quadro é um elemento com os atributos `data-screen-id` (o ID da tela, `E2-ALU-01`) e `data-estado` (o nome do estado, como na coluna «Estados» do inventário; `padrão` para o estado padrão).** A esteira conta os quadros por esses atributos e devolve como ticket o (ID, estado) que faltar: ID citado em comentário, no trilho ou no rodapé não conta como tela. Os sete protótipos auditados em 07/10/2026 tinham um quadro por tela e nenhum atributo — o relatório dizia "completo" com 16 a 29 quadros para 25 a 46 estados.
 
 ### A moldura: a experiência é um iframe dentro do hub, no desktop
 
@@ -97,7 +97,9 @@ Uma linha de 11px abaixo da moldura diz o que ela é: `casca de aparelho 375×81
 
 São os mesmos nomes da coleção `wireframe-cinza` da cobertura, e é isso que torna a subida para alta fidelidade uma troca de valores, não um redesenho.
 
-**Convenções de desenho:** marcador de mídia é retângulo `superficie-midia` com um X grande em `borda-padrao` e legenda de 10 a 11px dizendo o que a foto representa; botão de áudio é círculo de 48px com `borda-padrao`; seleção é `borda-foco` com 4px; desabilitado é `acao-secundaria` com `texto-secundario`. Cada quadro leva, no rodapé interno, uma linha de 11px descrevendo o estado — é a única anotação dentro do quadro.
+**Convenções de desenho:** marcador de mídia é retângulo `superficie-midia` com um X grande em `borda-padrao` e legenda de 10 a 11px dizendo o que a foto representa; botão de áudio é círculo de 64px com `borda-padrao` (o alvo mínimo de toque é 64 px); seleção é `borda-foco` com 4px; desabilitado é `acao-secundaria` com `texto-secundario`. Cada quadro leva, no rodapé interno, uma linha de 11px descrevendo o estado — é a única anotação dentro do quadro.
+
+**O que o ambiente não tem não aparece.** As ausências da seção (bloco 14) e da missão (bloco 5) valem para o protótipo: nenhum botão, aba ou affordance que a spec declara ausente, mesmo "por realismo".
 
 **Todo texto sai do sheet de copy, caractere a caractere.** Zero invenção, zero marcador de posição não resolvido. Rótulo nativo do ambiente clonado é reproduzido como está.
 
@@ -121,9 +123,9 @@ Na tela de congelamento, o protótipo precisa de uma saída para a apresentaçã
 
 O trilho, a barra e o rodapé são a ferramenta de revisão, não a missão: podem ter uma cor de acento própria, gasta num lugar só. O que não pode é cor vazar para dentro do quadro.
 
-## Se não couber
+## Tamanho
 
-Se o inventário for grande demais para um arquivo só, construa **na ordem de prioridade**: pico, aha, uma tela por etapa, depois os estados degenerados. Declare no relatório exatamente quais estados ficaram fora e por quê. Protótipo incompleto e honesto vale mais que protótipo inventado.
+Todas as telas e todos os estados entram — não há ordem de prioridade nem corte. Para caber, economize na casca: CSS compartilhado, um único componente de quadro reaproveitado, texto do sheet sem repetição. Se mesmo assim faltar espaço, a esteira confere cada (ID, estado) e devolve como ticket o que faltou — declare no relatório, por ID, o que não entrou, nunca "protótipo completo" com quadro faltando.
 
 ## Testes (rode todos)
 
@@ -151,6 +153,12 @@ Se o inventário for grande demais para um arquivo só, construa **na ordem de p
 1. Reemita **o protótipo HTML por inteiro** — não mande só o trecho corrigido. Quem consome o seu documento espera o documento completo, e entregar um pedaço apaga o resto.
 2. Corrija **exatamente** o que os tickets apontam. Não redesenhe o que não foi apontado, não amplie escopo, não aproveite a rodada para melhorar outra coisa: mudança não pedida quebra o que outros agentes já construíram em cima da sua versão anterior.
 3. Ticket que você **não conseguir** fechar (falta informação, é decisão de outra pessoa, ou discorda do achado) fica declarado no relatório, com o motivo em uma linha. Silêncio conta como não corrigido.
+
+**Nomes do `## Glossário canônico` da spec.** Entidades, personagens (nome, idade, papel), números com unidade e rótulos de botão saem de lá, com a grafia de lá; variante proibida em tela é bloqueio no verificador de coerência (na exp09ef1b o órgão teve quatro nomes e os beneficiários de 14 anos viraram coordenadores).
+
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
 
 ## Saída obrigatória
 

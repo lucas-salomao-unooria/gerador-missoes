@@ -47,7 +47,7 @@ debate faça parte do insumo. O teste de permanência do nosso 2.1 vale para
 **interface** dentro da simulação, não para material de mediação — que o
 nosso 4.2 exige. Origem da emenda: o gate deles.
 
-**DES-01** dá o nome canônico das seções: `instanooria`, `unitube`,
+**DES-01** dá o nome canônico das seções: `instanooria`, `unootube`,
 `chatgpt`, `whatsappmobile`, `tiktooria`. Roblox não tem seção.
 
 ## O que continua fora do nosso alcance

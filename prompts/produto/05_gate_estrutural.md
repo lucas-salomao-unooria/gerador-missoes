@@ -12,6 +12,12 @@ Não avalia qualidade pedagógica (P2) nem adequação à faixa etária (P3). Av
 
 {one_pager}
 
+**Briefing do PO — o que ele pediu, proibiu ou já decidiu:**
+
+{briefing?}
+
+Restrição explícita do briefing (seção do DS fixada, "É PROIBIDO", "OBRIGATÓRIO", "SINALIZAR — não migrar") vale acima da sua preferência: a correção que você escreve nunca a desfaz. Se ela colide com um critério, é 🔵 ao responsável de produto com a frase do briefing citada — não ❌ com proposta de troca. A exp03ef1b (07/10/2026) fixou `secao_ds: unoogaleria` com "É PROIBIDO usar qualquer outro design system", e o gate, que não lia o briefing, mandou migrar para `unoochat` e `unoovista`.
+
 **Relatório do gate na rodada anterior (vazio na primeira rodada):**
 
 {gate_estrutural_report?}
@@ -20,7 +26,7 @@ Não avalia qualidade pedagógica (P2) nem adequação à faixa etária (P3). Av
 
 {contrato_produto_report?}
 
-Ele já leu o documento por você em quatro pontos mecânicos. **Não reavalie: aplique.** Cada ⛔ é ❌ direto no critério que ele indica (9.1 item h — WebSocket como canal de sala), com o complemento reescrevendo como polling HTTP em `expNNefNb_gates_turma` sem inventar intervalo. Cada ⚠️ entra no complemento pronto pra colar: estado de cliente sai do texto (4.6); SAEB fora do ano vira "N/A — ano não avaliado pelo SAEB"; número sem origem vira `[PARÂMETRO — a definir por produto: <o quê>]` ou é removido (9.1 item i); código de Computação sem etapa é sinal para o parecer pedagógico, você só registra.
+Ele já leu o documento por você em quatro pontos mecânicos. **Não reavalie: aplique.** Cada ⛔ é ❌ direto no critério que ele indica (9.1 item h — WebSocket como canal de sala), com o complemento reescrevendo como polling HTTP em `expNNefNb_gates_turma` sem inventar intervalo. Cada ⚠️ entra no complemento pronto pra colar: estado de cliente sai do texto (4.6); SAEB fora do ano vira "N/A — ano não avaliado pelo SAEB"; número sem origem vira `[PARÂMETRO — a definir por produto: <o quê>]` ou é removido (9.1 item i); código de Computação sem etapa é sinal para o parecer pedagógico, você só registra. ⛔ `secao-travada-pelo-briefing` é ❌ no 2.1, com complemento que devolve a missão à seção do briefing e lista como pré-requisito do DS a interação que a coleção não oferece — nunca o contrário. ⛔ `habilidade-do-briefing-sumiu` é ❌ no 5.2: o complemento devolve a habilidade com o momento em tela, ou — se o material mostra que ela não descreve a ação — a registra na seção 18 como `[PROPOSTA — validar com PO: tirar <código> · por quê]`. ⚠️ `ancora-do-briefing-trocada` entra no complemento como essa mesma proposta, nunca como troca silenciosa. ⛔ `decisao-atribuida-ao-po` é ❌ no 9.1: o complemento reescreve cada frase como `[PROPOSTA — validar com PO: …]`.
 
 ## Critérios (leia antes de avaliar)
 
@@ -32,6 +38,10 @@ Uma missão pode pedir capacidade que a plataforma ainda não concede (gravar vo
 
 <!-- include: references/capacidades-plataforma.md -->
 
+## O que cada seção do DS oferece (para o 2.1 e para o que vira pré-requisito)
+
+<!-- include: references/ds-componentes.md -->
+
 ## Referências de apoio
 
 <!-- include: references/padroes-aprendidos.md -->
@@ -41,7 +51,7 @@ Uma missão pode pedir capacidade que a plataforma ainda não concede (gravar vo
 ## Como avaliar
 
 1. **Identifique o ano/série** — muda o que é aplicável em 2.1 e nos tetos.
-2. **Confira PRIMEIRO o critério 2.1** (ambiente na lista fechada: Instagram, YouTube, ChatGPT, TikTok, WhatsApp — Roblox não tem seção de DS e reprova em DES-01 do gate de dev). Fora da lista → ❌ direto + proposta de migração de ambiente reescrevendo Navegar, verbos e textos que nomeiam a plataforma.
+2. **Confira PRIMEIRO o critério 2.1** (ambiente numa seção do DS para missão nova — `unoovista`, `unooriaai`, `unoochat`, `tiktooria`, `unoogaleria`, `unoojornal`, `unooblog`, pela tabela de `ambientes.md`; Roblox não tem seção de DS e reprova em DES-01 do gate de dev). **Antes, leia o briefing:** se ele fixa a seção, ela é trava — a missão fica nela, e o que a coleção não oferece vai ao complemento como pré-requisito do DS, nunca como migração. Fora da lista e sem trava do briefing → ❌ direto + proposta de migração de ambiente reescrevendo Navegar, verbos e textos que nomeiam a plataforma.
 3. **Percorra os demais critérios em ordem**, marcando ✅ / ❌ / ⚠️ (justificar em 1 frase) / "N/A — falta informação". **Nunca marque ✅ sem citar onde no documento a evidência está.** ⚠️ é "a mecânica existe mas o documento não a descreve"; nunca use ⚠️ para amaciar um ❌.
 4. **Passo 4.3 — Mecanismo ou intenção?** Para cada etapa: o documento diz *como* acontece (regra do sistema: ordena, bloqueia, apresenta, garante) ou só *o que se espera*? Quando a intenção depende de sequência, a sequência é mecanismo e precisa estar escrita. Intenção sem mecanismo na etapa que carrega a descoberta central → ❌; em etapa secundária → ⚠️.
 5. **Passo 4.4 — Caminhos degenerados.** Rode a missão com o estudante que faz o mínimo: não escolheu nada · escolheu tudo · não usou a ferramenta · exploração mínima · terminou antes. Etapa que só funciona para o estudante ideal não funciona → ❌.
@@ -61,7 +71,7 @@ Uma missão pode pedir capacidade que a plataforma ainda não concede (gravar vo
 
 ## Remediação — para cada ❌ obrigatório
 
-Formato: **ONDE** (etapa/seção, documento citado) · **POR QUÊ** (teste que falhou) · **IMPACTO** (o que quebra para o estudante) · **COMO** (2–3 alternativas: affordance nativa usada, custo baixo/médio/alto, critério que resolve, risco que abre) · **Recomendação**. Toda alternativa fica nos 5 ambientes, usa verbo nativo, respeita tetos da faixa e preserva a descoberta central. Se nenhuma alternativa resolve, diga: a missão precisa mudar de mecanismo.
+Formato: **ONDE** (etapa/seção, documento citado) · **POR QUÊ** (teste que falhou) · **IMPACTO** (o que quebra para o estudante) · **COMO** (2–3 alternativas: affordance nativa usada, custo baixo/médio/alto, critério que resolve, risco que abre) · **Recomendação**. Toda alternativa fica numa seção do DS para missão nova (`ambientes.md`) — na que o briefing fixou, quando fixou —, usa verbo nativo, respeita tetos da faixa e preserva a descoberta central. Se nenhuma alternativa resolve, diga: a missão precisa mudar de mecanismo.
 
 **Não pare no diagnóstico.** Falta roteiro do podcast → escreva o roteiro. Falta modularidade e tempos sugeridos → escreva a tabela de etapas e cenários de aula. Falta estado de falha → escreva a copy na voz da ficção. A correção mantém tom, ambiente e mecanismo. **Exceção:** decisão de produto (🔵) você não escreve — você lista as alternativas e marca `[DECISÃO PENDENTE — responsável de produto]`.
 

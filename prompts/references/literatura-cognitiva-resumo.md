@@ -6,7 +6,7 @@ sources: [literatura-cognitiva.md]
 
 # Régua por idade — resumo operacional
 
-> **Gerado automaticamente** de `literatura-cognitiva.md` por `scripts/gerar_resumo_literatura.py`. Não edite à mão: edite a fonte e regenere. SHA-256 da fonte: `cd5b94b3422f53f2a2594979fbe3be91941ad32d3ab06b614080a009cccfb1e8`.
+> **Gerado automaticamente** de `literatura-cognitiva.md` por `scripts/gerar_resumo_literatura.py`. Não edite à mão: edite a fonte e regenere. SHA-256 da fonte: `afe07c3a8b4052ea8c1f128fc2f14ea39b21395e73ca8f8f62945f90b0ed7dd5`.
 
 Esta é a **fonte única dos números** que a esteira usa para julgar se uma missão cabe na idade, em uma página. Todo número é **[DADO DIRETO]** (medido), **[EXTRAPOLAÇÃO]** (derivado de princípio) ou **[CONVENÇÃO]** (escolha da equipe); extrapolação justifica ⚠️ com mais frequência que ❌. A fundamentação e as citações estão na fonte — aqui só o que se aplica ao construir tela, copy e jornada.
 
@@ -71,7 +71,7 @@ Esta é a **fonte única dos números** que a esteira usa para julgar se uma mis
 | Tem perfil em alguma rede social | 60% | 70% | 93% | 99% |
 | Plataforma mais usada várias vezes ao dia | YouTube | transição | Instagram | Instagram |
 
-- **(a) 3º–5º ano:** o ambiente de consumo mais plausível é YouTube (`unitube`); WhatsApp é plausível como *grupo da família ou da turma*, não como conta pessoal.
+- **(a) 3º–5º ano:** o ambiente de consumo mais plausível é YouTube (`unootube`, hoje arquivado — ADR-116); WhatsApp é plausível como *grupo da família ou da turma*, não como conta pessoal.
 - **(b) 6º–7º ano:** zona de transição — qualquer um dos cinco é defensável, e a spec justifica na seção 18.
 - **(c) 8º ano em diante:** Instagram, TikTok e WhatsApp são os de maior uso.
 - **(d) 1º–2º ano:** sem dado. Presumir uso mediado por adulto e sem perfil próprio, o que faz da "primeira conta" um evento diegético legítimo (ver Regra 15 do P0a). **[EXTRAPOLAÇÃO]**

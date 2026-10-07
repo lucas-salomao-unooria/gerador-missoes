@@ -44,6 +44,24 @@ Você é um dos cinco avaliadores paralelos da banca que decide se os insumos de
 
 {brief_oficio?}
 
+**Camada CAA (DES-11 a julga contra ela, não contra os wireframes):**
+
+{camada_caa?}
+
+**Telas no Stitch e relatório do protótipo (DES-14 julga o que existe, não o que o handoff promete):**
+
+{stitch_links?}
+
+{prototipo_relatorio?}
+
+**Conteúdo aprovado pelo PO — cópia literal do one-pager (o debate e o Canal B de PROD-12, o podcast, os tempos):**
+
+{conteudo_aprovado?}
+
+**Banco de conteúdo escrito (PROD-16 o confere contra o brief):**
+
+{banco_conteudo?}
+
 ### Formato por critério (obrigatório, para CADA critério do seu arquivo)
 
 ```
@@ -59,9 +77,9 @@ Encerre com: contagem (✅/⚠️/❌/➖ e ❌ em bloqueantes), até 3 pergunta
 Feche com o envelope:
 
 ```json
-{"agente": "<dimensao>", "missao": "<slug>", "status": "aprovado" | "bloqueado", "contagem": {"ok": <n>, "ressalvas": <n>, "nok": <n>, "na": <n>, "nok_bloqueantes": <n>}, "achados": [{"id": "<ID do critério>", "severidade": "bloqueio" | "atencao", "agente_responsavel": "jornada" | "fluxo" | "copy-ptbr-revisao" | "telas" | "handoff-dev" | "brief-assets" | "spec-missao" | "gate-estrutural" | "produto" | "avaliacao-pedagogica" | "experiencia-aluno", "resumo": "<uma linha>"}], "precisa_humano": false}
+{"agente": "<dimensao>", "missao": "<slug>", "status": "aprovado" | "bloqueado", "contagem": {"ok": <n>, "ressalvas": <n>, "nok": <n>, "na": <n>, "nok_bloqueantes": <n>}, "achados": [{"id": "<ID do critério>", "severidade": "bloqueio" | "atencao", "agente_responsavel": "jornada" | "fluxo" | "copy-ptbr-revisao" | "telas" | "handoff-dev" | "brief-assets" | "banco-conteudo" | "spec-missao" | "gate-estrutural" | "produto" | "avaliacao-pedagogica" | "experiencia-aluno", "resumo": "<uma linha>"}], "precisa_humano": false}
 ```
 
 `"bloqueado"` somente quando houver ❌ em critério bloqueante.
 
-**`agente_responsavel` é obrigatório em todo achado, e só aceita os onze nomes acima** — é por ele que o conserto chega a alguém. Os seis primeiros são reexecutados aqui mesmo com o seu ticket (quatro de design, dois de dev); os cinco últimos são de produto e viram pendência nomeada, porque reabrir a spec invalida tudo que foi construído sobre ela. Escolha pelo documento que precisa mudar: tela ou componente é `telas` (não `wireframes`), o que a spec decidiu é `spec-missao` (não `spec`), string é `copy-ptbr-revisao` (não `copy`). Nome fora da lista não é roteado: vira pendência humana no dossiê, e o conserto não acontece.
+**`agente_responsavel` é obrigatório em todo achado, e só aceita os doze nomes acima** — é por ele que o conserto chega a alguém. Os sete primeiros são reexecutados aqui mesmo com o seu ticket (quatro de design, três de dev); os cinco últimos são de produto e viram pendência nomeada, porque reabrir a spec invalida tudo que foi construído sobre ela. Escolha pelo documento que precisa mudar: tela ou componente é `telas` (não `wireframes`), o que a spec decidiu é `spec-missao` (não `spec`), string é `copy-ptbr-revisao` (não `copy`). Nome fora da lista não é roteado: vira pendência humana no dossiê, e o conserto não acontece.

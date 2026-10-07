@@ -114,3 +114,7 @@ Entregue apenas o briefing em Markdown. Feche com o envelope:
 ```json
 {"agente": "brief-oficio", "missao": "<slug>", "status": "concluido" | "devolvido", "achados": [{"id": "O1", "severidade": "oficio" | "bloqueio", "classe": "<classe>", "agente_responsavel": "gate-estrutural | fecha-lacunas | ambiente-simulado | null", "resumo": "<uma linha>"}], "precisa_humano": false}
 ```
+
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->

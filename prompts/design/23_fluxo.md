@@ -14,6 +14,10 @@ Jornada e fluxo não são o mesmo artefato. **A jornada é experiência no tempo
 
 {spec_missao?}
 
+**Conteúdo aprovado pelo PO — cópia literal do one-pager** (currículo, estados de falha — inclusive de mídia —, papel do professor, tempos e cenários de aula, podcast com o roteiro, contrato de evidência com o Canal B, cenários de dispositivo — projeção e 2 a 4 por aparelho —, hipóteses). Até 07/10/2026 você não recebia o one-pager: o que a spec não trazia não existia para você, e na exp01ef1b se perderam as travas do professor, o podcast e a redação do debate. As travas e liberações do professor, os checkpoints e os cenários de aula daqui viram estados e arestas do fluxo. O que está aqui e não está na spec é lacuna da spec: registre-a, não a omita.
+
+{conteudo_aprovado?}
+
 **Jornada e inventário de telas (você não inventa tela; trabalha com as que existem e reporta as que faltam):**
 
 {jornada_telas?}
@@ -48,7 +52,7 @@ Para o diagrama ficar legível:
 
 ## O segundo grafo — fluxo do professor (obrigatório)
 
-A visão do professor é entregável: quem prepara a missão é o professor de qualquer disciplina, e o board no Miro espelha este grafo ao lado do do estudante. Em **bloco Mermaid próprio**, sob o título fixo `## Fluxo do professor (Mermaid — obrigatório)`: nós `E0-PROF-01…05` (escolher a missão · recorte da aula · geração em andamento · curadoria do pacote · pôr no ar) com os estados encostados `vazio`, `gerando`, `sem saldo de IA`, `falha da geração (503)`, `pacote pronto`, `editado`, `ativado`; a decisão `banco default × gerar com IA`, com o **caminho curto** `E0-PROF-02 -->|usar banco padrão| E0-PROF-05` como aresta própria (o critério 4.3 exige que a missão rode inteira por ele); a volta `curadoria → editar → aprovar`; o gate `ativar atividade`, cuja saída liga ao grafo do estudante pela aresta `atividade ativada → E1-ALU-01`; e os gates de condução (liberar etapa, pausar, zerar turma) com as duas saídas. Os cinco testes abaixo valem para este grafo também. Rótulos de aresta vêm do bloco 8 da spec (`POST /atividades`, `gerar`, `progresso`, `aprovar`, `ativar`) — nada inventado.
+A visão do professor é entregável: quem prepara a missão é o professor de qualquer disciplina, e o board no Miro espelha este grafo ao lado do do estudante. Em **bloco Mermaid próprio**, sob o título fixo `## Fluxo do professor (Mermaid — obrigatório)`: nós `E0-PROF-01…05` (escolher a missão · recorte da aula · geração em andamento · curadoria do pacote · pôr no ar) com os estados encostados `vazio`, `gerando`, `sem saldo de IA`, `falha da geração (503)`, `pacote pronto`, `editado`, `ativado`; a decisão `banco default × gerar com IA`, com o **caminho curto** `E0-PROF-02 -->|usar banco padrão| E0-PROF-05` como aresta própria (o critério 4.3 exige que a missão rode inteira por ele); a volta `curadoria → editar → aprovar`; o gate `ativar atividade`, cuja saída liga ao grafo do estudante pela aresta `atividade ativada → E1-ALU-01`; e os gates de condução (liberar etapa, pausar, zerar turma) com as duas saídas. Os cinco testes abaixo valem para este grafo também. Rótulos de aresta vêm do bloco 8 da spec (`POST /<modulo>/turmas/«turmaId»/gerar-conteudo`, `GET …/conteudo`, `POST …/homologar`, `POST …/gate`) — nada inventado. O módulo `/atividades` é o motor do Instanooria e não se reusa (`formato-spec`, bloco 8).
 
 ## Os cinco testes (rode todos, sempre)
 
@@ -81,6 +85,12 @@ Inclua os **estados de falha** do bloco 2 da spec (conexão, sessão expirada, m
 1. Reemita **o grafo de fluxo e a tabela de arestas por inteiro** — não mande só o trecho corrigido. Quem consome o seu documento espera o documento completo, e entregar um pedaço apaga o resto.
 2. Corrija **exatamente** o que os tickets apontam. Não redesenhe o que não foi apontado, não amplie escopo, não aproveite a rodada para melhorar outra coisa: mudança não pedida quebra o que outros agentes já construíram em cima da sua versão anterior.
 3. Ticket que você **não conseguir** fechar (falta informação, é decisão de outra pessoa, ou discorda do achado) fica declarado no relatório, com o motivo em uma linha. Silêncio conta como não corrigido.
+
+**Nomes do `## Glossário canônico` da spec.** Entidades, personagens (nome, idade, papel), números com unidade e rótulos de botão saem de lá, com a grafia de lá; variante proibida em tela é bloqueio no verificador de coerência (na exp09ef1b o órgão teve quatro nomes e os beneficiários de 14 anos viraram coordenadores).
+
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
 
 ## Saída obrigatória
 

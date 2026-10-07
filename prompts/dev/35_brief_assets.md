@@ -12,8 +12,6 @@ Seu leitor é curadoria e produção de conteúdo, não dev. Você não descreve
 
 {copy_strings_revisada?}
 
-{copy_strings?}
-
 **Jornada — inventário de telas (onde cada asset aparece):**
 
 {jornada_telas?}
@@ -70,6 +68,10 @@ Categoria adivinhável pela forma · revelação que não permite reconhecer o o
 ## Entregável 4 — Ordem de produção
 
 1. O asset mais difícil de acertar primeiro (o item ambíguo por design). 2. Pares conteúdo + revelação sempre juntos. 3. Narração só depois do sheet de copy congelado. 4. Pictogramas em paralelo. Marque V1 e o que espera.
+
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
 
 ## Saída
 

@@ -82,6 +82,7 @@ ARTIFACT_FILES = [
     ("prd_check_report", "dev/04-pendencias-do-prd.md"),
     ("conteudo_aprovado_prd_report", "dev/04c-conteudo-aprovado-prd.md"),
     ("conteudo_aprovado_pedagogico_report", "dev/05-conteudo-aprovado-pedagogico.md"),
+    ("rastreabilidade_report", "matriz-de-rastreabilidade.md"),
     ("diagnostico_execucao", "diagnostico-execucao.md"),
     ("aprendizado_registro", "aprendizado.md"),
     ("ficha_catalogo", "catalogo-ficha.md"),
@@ -260,6 +261,11 @@ def exportar_one_pagers(state: Dict[str, Any], run_dir: Path, slug: str) -> List
 
     Falha aqui não derruba a execução: o documento em Markdown já está no disco, e o que
     se perde é a formatação, não o conteúdo.
+
+    O pedagógico sai com imagens: a tela do Stitch debaixo de cada passo («Telas deste passo») e
+    o desenho da jornada e do fluxo no fim do passo a passo (`tools.ilustracoes`). As imagens
+    baixadas ficam em `.cache-imagens/`, na pasta da sessão — fora do manifesto —, e imagem que
+    não vem vira legenda com o link: nunca derruba a exportação.
     """
     gerados: List[Path] = []
     for chave, base, etiqueta, subtitulo in ONE_PAGERS_COM_MARCA:
@@ -267,12 +273,22 @@ def exportar_one_pagers(state: Dict[str, Any], run_dir: Path, slug: str) -> List
         if not documento or not isinstance(documento, str) or e_mensagem_de_pulo(documento):
             continue
 
+        ilustracoes = None
+        if chave == "one_pager_pedagogico":
+            try:
+                from tools.ilustracoes import PASTA_CACHE, montar_ilustracoes
+
+                ilustracoes = montar_ilustracoes(state, documento, run_dir / PASTA_CACHE)
+            except Exception as exc:
+                logger.warning("O pedagógico sai sem as imagens das telas: %s", exc)
+
         destino_docx = run_dir / f"{base}.docx"
         try:
             from tools.docx_export import markdown_para_docx
 
             if markdown_para_docx(
-                documento, destino_docx, titulo_fallback=slug, etiqueta=etiqueta, subtitulo=subtitulo
+                documento, destino_docx, titulo_fallback=slug, etiqueta=etiqueta, subtitulo=subtitulo,
+                ilustracoes=ilustracoes,
             ):
                 gerados.append(destino_docx)
         except Exception as exc:
@@ -283,7 +299,7 @@ def exportar_one_pagers(state: Dict[str, Any], run_dir: Path, slug: str) -> List
             from tools.onepager_html import markdown_para_html
 
             pagina = markdown_para_html(
-                documento, titulo_fallback=slug, etiqueta=etiqueta, subtitulo=subtitulo
+                documento, titulo_fallback=slug, etiqueta=etiqueta, subtitulo=subtitulo, ilustracoes=ilustracoes
             )
             destino_html.parent.mkdir(parents=True, exist_ok=True)
             destino_html.write_text(pagina, encoding="utf-8")

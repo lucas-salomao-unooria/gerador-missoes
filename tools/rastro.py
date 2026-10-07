@@ -78,8 +78,27 @@ SECOES_LEGADAS = ("instanooria", "unitube", "unootube", "chatgpt", "whatsappmobi
 SUCESSORA_DA_LEGADA = {"chatgpt": "unooriaai", "instanooria": "unoovista", "whatsappmobile": "unoochat"}
 
 
+#: Radicais que, no nome de uma seção `nova:<nome>`, apontam a coleção do DS que já cobre aquele app.
+#: A exp01ef1b declarou `nova:galeriadefotos` e inventou oito componentes que a `unoogaleria` já tinha
+#: (`AlbumCard`, `MediaGrid`, `MediaViewer` com zoom, `PhotoEditor` com recorte) — 07/10/2026.
+RADICAIS_DA_COLECAO = {
+    "unoogaleria": ("galeria", "foto", "album", "álbum"),
+    "unoojornal": ("jornal", "noticia", "notícia", "manchete"),
+    "unooblog": ("blog",),
+    "unoovista": ("insta", "feed", "rede social"),
+    "unoochat": ("whats", "mensageiro", "chat"),
+    "unooriaai": ("gpt", "assistente"),
+    "tiktooria": ("tiktok", "video curto", "vídeo curto"),
+}
+
+
 def secoes_ds() -> Dict[str, Optional[str]]:
-    """`seção → ponte` (ou `None` sem ponte), do contrato da base da plataforma. Sem base, as legadas."""
+    """`seção → ponte` (ou `None` sem ponte), do contrato da base da plataforma. Sem base, as legadas.
+
+    Mais as coleções do inventário publicado do DS que a plataforma ainda não liga (`unoogaleria`,
+    `unoojornal`, `unooblog`): `ambientes.md` manda usá-las, e a lista só do contrato as reprovava como
+    "fora da lista" — empurrando a missão para `nova:<nome>` e componentes locais.
+    """
     from prompts import base_plataforma
 
     try:
@@ -87,8 +106,65 @@ def secoes_ds() -> Dict[str, Optional[str]]:
         mapa = {str(s.get("secao") or "").lower(): s.get("ponte") for s in secoes if s.get("secao")}
     except base_plataforma.BaseIndisponivel:
         mapa = {s: s for s in SECOES_LEGADAS}
+    try:
+        for marca in (base_plataforma.ds_componentes().get("marcas") or {}):
+            mapa.setdefault(str(marca).lower(), None)
+    except base_plataforma.BaseIndisponivel:
+        pass
     mapa.setdefault("unitube", mapa.get("unootube"))  # nome antigo do UnooTube na esteira
     return mapa
+
+
+def colecao_que_ja_cobre(nome: str, secoes: Dict[str, Optional[str]]) -> Optional[str]:
+    """A coleção do DS cujo radical aparece no nome da seção nova (`galeriadefotos` → `unoogaleria`)."""
+    nome = (nome or "").lower()
+    for colecao, radicais in RADICAIS_DA_COLECAO.items():
+        if colecao in secoes and any(r in nome for r in radicais):
+            return colecao
+    return None
+
+
+_RE_SECAO_NO_BRIEFING = re.compile(r"^[\s>*-]*`?secao_ds`?\s*[:=]\s*`?([a-z][\w:-]*)", re.IGNORECASE | re.MULTILINE)
+_RE_INTERFACE_FORCADA = re.compile(
+    r"^[\s>*-]*interface\s+(?:for[çc]ada|obrigat[óo]ria|fixa)\s*[:=—–-]\s*(.+)$", re.IGNORECASE | re.MULTILINE)
+
+
+def secao_travada(briefing: str, secoes: Optional[Dict[str, Optional[str]]] = None) -> Optional[Dict[str, Any]]:
+    """A seção do DS que o briefing fixou: `{secao, explicita, trecho}`, ou `None`.
+
+    `secao_ds: unoogaleria` é explícita. "Interface forçada: Galeria de Fotos" é lida pelo radical
+    (`colecao_que_ja_cobre`) e por isso não é explícita: quem confere avisa, não bloqueia. As três
+    gerações da exp03ef1b (07/10/2026) trocaram a `unoogaleria` do briefing por `unoochat`,
+    `unoovista` e `whatsappmobile`, e nenhum código lia a seção que o briefing pedia.
+    """
+    m = _RE_SECAO_NO_BRIEFING.search(briefing or "")
+    if m:
+        return {"secao": m.group(1).lower(), "explicita": True, "trecho": m.group(0).strip(" >*-")}
+    m = _RE_INTERFACE_FORCADA.search(briefing or "")
+    if m:
+        secao = colecao_que_ja_cobre(m.group(1), secoes if secoes is not None else secoes_ds())
+        if secao:
+            return {"secao": secao, "explicita": False, "trecho": m.group(0).strip(" >*-")}
+    return None
+
+
+def achado_secao_travada(declarada: str, briefing: str, onde: str,
+                         secoes: Optional[Dict[str, Optional[str]]] = None) -> Optional[Dict[str, str]]:
+    """Achado quando a seção declarada (`onde`: "a spec", "o one-pager") não é a que o briefing fixou."""
+    trava = secao_travada(briefing, secoes)
+    if not trava or (declarada or "").strip().strip("`").lower() == trava["secao"]:
+        return None
+    return {
+        "severidade": "bloqueio" if trava["explicita"] else "atencao",
+        "secao": trava["secao"],
+        "resumo": (
+            f"O briefing fixou a seção (“{trava['trecho']}”) e {onde} declara `{declarada or '—'}`. Seção fixada pelo "
+            f"briefing é trava: a missão monta na `{trava['secao']}`, e a interação que a coleção não oferece é "
+            "pré-requisito do DS, sinalizado — não troca de seção. Se a trava inviabiliza a mecânica, quem decide é o PO."
+            + ("" if trava["explicita"] else
+               " (Seção lida pelo nome da interface; se o PO quis outra, o briefing diz `secao_ds: <seção>`.)")
+        ),
+    }
 
 
 def experiencias_existentes() -> frozenset:
@@ -610,7 +686,7 @@ def decompor_id(identificador: str) -> Optional[Dict[str, Any]]:
     return {"serie": f"{ano}{etapa}", "unidade": bimestre}
 
 
-def validar_manifesto(spec: str) -> Dict[str, Any]:
+def validar_manifesto(spec: str, briefing: str = "") -> Dict[str, Any]:
     from tools.bncc import secao_bloco  # bloco 0 da spec, mesmo parser
 
     texto = secao_bloco(spec or "", 0) or (spec or "")[:4000]
@@ -752,8 +828,19 @@ def validar_manifesto(spec: str) -> Dict[str, Any]:
             "é decisão dele, registrada na spec antes de seguir.")})
     elif v.lower() in secoes and not secoes[v.lower()]:
         achados.append({"severidade": "atencao", "campo": "secao_ds", "etapa": "plataforma", "resumo": f"`{v}` existe no DS mas não tem ponte em `@edu/ui`; criar a ponte é pré-requisito de plataforma."})
+    elif re.match(r"^nova\s*:", v, re.IGNORECASE) and colecao_que_ja_cobre(v.split(":", 1)[1], secoes):
+        colecao = colecao_que_ja_cobre(v.split(":", 1)[1], secoes)
+        ponte = secoes.get(colecao)
+        achados.append({"severidade": "bloqueio", "campo": "secao_ds", "etapa": "produto", "resumo": (
+            f"`{v}` cria uma seção que o DS já tem: a coleção `{colecao}`. Use `secao_ds: {colecao}` e os componentes "
+            f"dela — seção nova vira componente local, que a plataforma não aceita."
+            + ("" if ponte else f" A coleção ainda não tem ponte em `@edu/ui`: criar `@edu/ui/ds-{colecao}` é "
+               f"pré-requisito de plataforma (PRD 🟡). O que faltar na coleção é pendência do DS, não componente local."))})
     elif re.match(r"^(nova|minijogo)\s*:", v, re.IGNORECASE):
         achados.append({"severidade": "atencao", "campo": "secao_ds", "etapa": "plataforma", "resumo": f"Seção de DS nova (`{v}`): componentes, responsável e prazo são pendência de plataforma."})
+    trava = achado_secao_travada(v or "", briefing, "a spec", secoes)
+    if trava:
+        achados.append({"severidade": trava["severidade"], "campo": "secao_ds", "etapa": "produto", "resumo": trava["resumo"]})
 
     # `por-turma` é o único valor que a plataforma aceita (ADR-69), então ausência é
     # default, não defeito: cobrar uma linha que só pode ter um valor é cerimônia.
@@ -872,7 +959,7 @@ _NEGACAO = re.compile(
     # As 8 menções a WebSocket das 14 primeiras execuções eram TODAS negações escritas
     # assim — "Cloud Run não sustenta", "Não usa WebSocket", "proibição de WebSockets",
     # "eliminando qualquer dependência". Nenhuma era proposta (corte A4, 23/09/2026).
-    r"proibi|vedad|nunca|jamais|evit[ae]|descartad|obsolet|legad|zero\s+|elimina|abol|"
+    r"pro[ií]b|vedad|nunca|jamais|evit[ae]|descartad|obsolet|legad|zero\s+|elimina|abol|"
     # "Ausência total de pistas de gabarito no bundle" e "atributos retidos no servidor" são
     # a spec CUMPRINDO a regra — e o detector de gabarito as lia como violação (23/09/2026).
     # `retid` sozinho é ambíguo — "retidos NO SERVIDOR" nega o cliente, "retidos EM
@@ -1004,7 +1091,7 @@ def validar_telemetria(handoff: str) -> Dict[str, Any]:
     return {"status": status, "achados": achados, "tabelas_eventos": len(tabela_eventos)}
 
 
-def relatorio_telemetria(resultado: Dict[str, Any], missao: str = "") -> str:
+def relatorio_telemetria(resultado: Dict[str, Any], missao: str = "", rodada: int = 1) -> str:
     r = resultado
     icone = {"aprovado": "🟢 CONFORME", "amarelo": "🟡 CONFORME COM AVISOS", "bloqueado": "🔴 BLOQUEADO"}[r["status"]]
     linhas = [f"# Contrato de telemetria e arquitetura — {missao or 'missão'}", "", f"**Veredito: {icone}** · handoff de dev × contrato real da plataforma (`references/plataforma/contrato-telemetria.md`, ADR-80/93/94/105).", "", f"Tabelas de eventos com `verbo` e `objeto` encontradas: {r['tabelas_eventos']}", "", "## Achados", ""]
@@ -1015,7 +1102,7 @@ def relatorio_telemetria(resultado: Dict[str, Any], missao: str = "") -> str:
         linhas.append("- Nenhum. Eventos no contrato real, medidas com tabela de leitura, sem WebSocket, papéis e quota atuais.")
     linhas.append("")
     envelope = {
-        "agente": "telemetria-check", "missao": missao or "", "rodada": 1,
+        "agente": "telemetria-check", "missao": missao or "", "rodada": rodada,
         "status": "aprovado" if r["status"] == "aprovado" else ("apto_com_ressalvas" if r["status"] == "amarelo" else "bloqueado"),
         "veredito": {"aprovado": "verde", "amarelo": "amarelo", "bloqueado": "vermelho"}[r["status"]],
         "achados": [{"severidade": a["severidade"], "classe": "telemetria", "codigo": a["codigo"], "agente_responsavel": "handoff-dev", "resumo": a["resumo"]} for a in r["achados"]],
@@ -1057,8 +1144,13 @@ def validar_prd(prd: str, spec: str = "", banco: str = "") -> Dict[str, Any]:
     codificação escolher um caminho ao acaso; e a partir daí o resto do documento deixa de
     valer contra o que ele escreveu. São defeitos de consistência, não de conteúdo, e por
     isso dá para pegá-los em código.
+
+    O anexo do one-pager aprovado fica de fora: é cópia literal do PO, não texto do redator — e o
+    "ativar ou agendar" do §9 da exp01ef1b fazia o PRD ser acusado de agendamento (07/10/2026).
     """
-    texto = prd or ""
+    from tools.conteudo_aprovado import remover_anexo
+
+    texto = remover_anexo(prd or "")
     achados: List[Dict[str, str]] = []
     if not texto.strip():
         return {"status": "bloqueado", "achados": [{

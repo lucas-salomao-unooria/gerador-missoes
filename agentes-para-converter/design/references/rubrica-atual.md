@@ -165,7 +165,7 @@ TikTok, WhatsApp. Roblox removido — não tem seção publicada no design
 system e não está em uso.
 
 **Teste de seção do DS (expansão do 2.1, obrigatório):** o ambiente
-corresponde a uma seção publicada — `instanooria`, `unitube`, `chatgpt`,
+corresponde a uma seção publicada — `instanooria`, `unootube`, `chatgpt`,
 `whatsappmobile`, `tiktooria` (ver `references/ambientes.md`). Ambiente
 fora dessas cinco só passa se a missão declarar a seção como
 **pré-requisito**, com componentes a criar no `storybook-unooria`,

@@ -9,6 +9,10 @@ página, títulos em azul profundo com régua lavanda, tabelas com cabeçalho na
 alternadas, citações com barra lavanda — o pedagógico abre com uma —, e links clicáveis,
 que são o item que deixa a professora abrir o protótipo antes de aprovar.
 
+No pedagógico, a linha «Telas deste passo: `E2-ALU-01` · …» vira a imagem de cada tela do
+Stitch, com legenda, logo abaixo do passo, e o fim do passo a passo ganha o desenho da jornada
+e do fluxo — ou a frase que aponta onde ele está (`tools.ilustracoes`).
+
 A leitura do Markdown fica em `tools.markdown_blocos`; aqui só a aparência. Sem os
 arquivos de marca no repositório, o cabeçalho escreve "Unooria" em texto e o documento
 sai igual no resto.
@@ -16,11 +20,21 @@ sai igual no resto.
 
 from __future__ import annotations
 
+import io
 from pathlib import Path
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from tools import marca
 from tools.markdown_blocos import Bloco, Trecho, analisar, formatar, titulo_do_documento
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tools.ilustracoes import Figura, Ilustracoes
+
+#: Tela: coluna de 13 cm, no máximo 12,5 cm de altura (tela de celular em pé fica estreita).
+LARGURA_TELA_CM, ALTURA_TELA_CM = 13.0, 12.5
+#: Diagrama: a largura útil inteira, quase a página de altura.
+LARGURA_DIAGRAMA_CM, ALTURA_DIAGRAMA_CM = 16.2, 21.0
+TITULO_DIAGRAMAS = "O mapa da missão: jornada e fluxo"
 
 
 def _elemento(tag: str, **atributos):
@@ -68,7 +82,7 @@ def _campo_de_pagina(paragrafo) -> None:
     run._r.append(_elemento("w:fldChar", fldCharType="end"))
 
 
-def _hyperlink(paragrafo, texto: str, url: str) -> None:
+def _hyperlink(paragrafo, texto: str, url: str, tamanho: float = 10.5) -> None:
     """Link clicável de verdade: o python-docx não traz isso pronto."""
     from docx.opc.constants import RELATIONSHIP_TYPE as RT
     from docx.oxml.ns import qn
@@ -80,7 +94,7 @@ def _hyperlink(paragrafo, texto: str, url: str) -> None:
     run = paragrafo.add_run(texto)
     run.font.color.rgb = RGBColor(*marca.rgb(marca.NAVY))
     run.font.underline = True
-    run.font.size = Pt(10.5)
+    run.font.size = Pt(tamanho)
     link.append(run._r)
     paragrafo._p.append(link)
 
@@ -305,14 +319,98 @@ def _codigo(doc, bloco: Bloco) -> None:
     run.font.color.rgb = RGBColor(*marca.rgb(marca.TEXTO))
 
 
+def _contorno(forma) -> None:
+    """Fio fino em volta da imagem: tela de fundo branco some na página branca sem ele."""
+    from docx.oxml import OxmlElement
+
+    linha = OxmlElement("a:ln")
+    linha.set("w", "6350")
+    preenchimento = OxmlElement("a:solidFill")
+    cor = OxmlElement("a:srgbClr")
+    cor.set("val", marca.LINHA)
+    preenchimento.append(cor)
+    linha.append(preenchimento)
+    forma._inline.graphic.graphicData.pic.spPr.append(linha)
+
+
+def _legenda(doc, texto: str, *, link: Optional[str] = None, rotulo_link: str = "abrir imagem") -> None:
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt, RGBColor
+
+    paragrafo = doc.add_paragraph()
+    paragrafo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    paragrafo.paragraph_format.space_after = Pt(10)
+    run = paragrafo.add_run(texto)
+    run.italic = True
+    run.font.size = Pt(9)
+    run.font.color.rgb = RGBColor(*marca.rgb(marca.TEXTO))
+    if link:
+        separador = paragrafo.add_run("  ·  ")
+        separador.font.size = Pt(9)
+        _hyperlink(paragrafo, rotulo_link, link, tamanho=9)
+
+
+def _figura(doc, figura: "Figura", largura_cm: float, altura_max_cm: float) -> bool:
+    """A imagem centralizada, com contorno e legenda. Sem imagem, só a legenda com o aviso e o link."""
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Cm, Pt
+
+    if not figura.imagem:
+        aviso = f": {figura.aviso}" if figura.aviso else ""
+        _legenda(doc, f"{figura.rotulo}{aviso}", link=figura.link)
+        return False
+    largura = largura_cm
+    if figura.largura and figura.altura and largura_cm * figura.altura / figura.largura > altura_max_cm:
+        largura = altura_max_cm * figura.largura / figura.altura
+    paragrafo = doc.add_paragraph()
+    paragrafo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    paragrafo.paragraph_format.space_before = Pt(6)
+    paragrafo.paragraph_format.space_after = Pt(3)
+    paragrafo.paragraph_format.keep_with_next = True  # a legenda não fica sozinha na página seguinte
+    forma = paragrafo.add_run().add_picture(io.BytesIO(figura.imagem), width=Cm(largura))
+    forma._inline.docPr.set("descr", figura.rotulo)  # texto alternativo, para leitor de tela
+    _contorno(forma)
+    _legenda(doc, figura.rotulo)
+    return True
+
+
+def _telas(doc, bloco: Bloco, ilustracoes: "Ilustracoes") -> None:
+    """A linha «Telas deste passo» vira a imagem de cada tela; o que o Stitch não desenhou, uma linha."""
+    from docx.shared import Pt, RGBColor
+
+    figuras, sem_desenho = ilustracoes.do_passo(bloco.ids)
+    for figura in figuras:
+        _figura(doc, figura, LARGURA_TELA_CM, ALTURA_TELA_CM)
+    if sem_desenho:
+        paragrafo = doc.add_paragraph()
+        run = paragrafo.add_run(f"Ainda sem desenho no Stitch: {ilustracoes.nomes(sem_desenho)}.")
+        run.italic = True
+        run.font.size = Pt(9)
+        run.font.color.rgb = RGBColor(*marca.rgb(marca.TEXTO))
+
+
+def _diagramas(doc, ilustracoes: "Ilustracoes", nivel: int) -> None:
+    _titulo(doc, Bloco("titulo", formatar(TITULO_DIAGRAMAS), nivel=nivel))
+    for figura in ilustracoes.diagramas:
+        if figura.imagem:
+            _figura(doc, figura, LARGURA_DIAGRAMA_CM, ALTURA_DIAGRAMA_CM)
+    if ilustracoes.aviso_diagramas:
+        _escrever(doc.add_paragraph(), formatar(ilustracoes.aviso_diagramas))
+
+
 def markdown_para_docx(
     markdown: str,
     destino: Path,
     titulo_fallback: str = "Documento",
     etiqueta: str = "One-pager",
     subtitulo: Optional[str] = None,
+    ilustracoes: Optional["Ilustracoes"] = None,
 ) -> Optional[Path]:
-    """Escreve o `.docx` e devolve o caminho. ``None`` se a biblioteca não estiver instalada."""
+    """Escreve o `.docx` e devolve o caminho. ``None`` se a biblioteca não estiver instalada.
+
+    `ilustracoes` (`tools.ilustracoes.montar_ilustracoes`) só vem para o pedagógico: põe a imagem
+    das telas debaixo de cada passo e o desenho da jornada e do fluxo no fim do passo a passo.
+    """
     try:
         from docx import Document
         from docx.shared import Pt
@@ -324,13 +422,26 @@ def markdown_para_docx(
     if blocos and blocos[0].tipo == "titulo" and blocos[0].nivel == 1:
         blocos = blocos[1:]  # o título já é a capa; repeti-lo no corpo é ruído
 
+    posicao, nivel_diagramas = None, 2
+    if ilustracoes is not None and ilustracoes.tem_diagramas:
+        from tools.ilustracoes import indice_do_anexo, nivel_da_secao_dos_diagramas, posicao_dos_diagramas
+
+        posicao = posicao_dos_diagramas(blocos)
+        nivel_diagramas = nivel_da_secao_dos_diagramas(blocos, posicao)
+        if posicao is None:
+            posicao = indice_do_anexo(blocos)
+
     doc = Document()
     _preparar_documento(doc)
     _cabecalho_e_rodape(doc, etiqueta)
     _capa(doc, titulo, etiqueta, subtitulo)
 
-    for bloco in blocos:
-        if bloco.tipo == "titulo":
+    for n, bloco in enumerate(blocos):
+        if n == posicao:
+            _diagramas(doc, ilustracoes, nivel_diagramas)
+        if bloco.tipo == "telas" and ilustracoes is not None and ilustracoes.tem_stitch:
+            _telas(doc, bloco, ilustracoes)
+        elif bloco.tipo == "titulo":
             _titulo(doc, bloco)
         elif bloco.tipo == "tabela":
             _tabela(doc, bloco)
@@ -353,6 +464,8 @@ def markdown_para_docx(
             _bordas(regua, baixo=marca.LINHA, espessura=4)
         elif bloco.trechos:
             _escrever(doc.add_paragraph(), bloco.trechos)
+    if posicao is not None and posicao >= len(blocos):
+        _diagramas(doc, ilustracoes, nivel_diagramas)
 
     destino.parent.mkdir(parents=True, exist_ok=True)
     doc.save(str(destino))

@@ -15,7 +15,7 @@ Isto substitui a ideia de "biblioteca de ambiente por missão": não existe bibl
 | Ambiente | Seção do DS | Versão publicada | Componentes | Missões que usam |
 |---|---|---|---|---|
 | Instagram | `instanooria` | `[storybook]` | `[storybook]` | exp-01 Instanooria |
-| YouTube | `unitube` | `[storybook]` | `[storybook]` | exp-02 UnooTube |
+| YouTube | `unootube` | `[storybook]` | `[storybook]` | exp-02 UnooTube |
 | ChatGPT | `chatgpt` | `[storybook]` | `[storybook]` | exp-03 unooGPT |
 | WhatsApp | `whatsappmobile` | `[storybook]` | `[storybook]` | — *(existe sem consumidor)* |
 | TikTok | `tiktooria` | `[storybook]` | `[storybook]` | — *(existe sem consumidor)* |
@@ -48,7 +48,7 @@ Caso que não couber nos dois lados é zona de negociação, não improviso: a m
 | Seção | Não tem |
 |---|---|
 | `instanooria` | |
-| `unitube` | |
+| `unootube` | |
 | `chatgpt` | |
 | `whatsappmobile` | |
 | `tiktooria` | |

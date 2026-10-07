@@ -70,7 +70,7 @@ KNOWN_STATE_KEYS = {
     "handoff_dev", "brief_assets", "banco_conteudo", "conteudo_report", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
     "rastro_spec_status", "rastro_spec_report", "rastro_design_status", "rastro_design_report",
-    "conteudo_aprovado_spec_report", "conteudo_aprovado_spec_status", "conteudo_aprovado_prd_report",
+    "conteudo_aprovado", "conteudo_aprovado_spec_report", "conteudo_aprovado_spec_status", "conteudo_aprovado_prd_report",
     "conteudo_aprovado_prd_status", "conteudo_aprovado_pedagogico_report", "conteudo_aprovado_pedagogico_status",
     "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
@@ -1251,6 +1251,118 @@ def test_markdown_saneado_para_streamlit():
     )
     limpo = limpar(doc)
     assert '"a": 1' in limpo and "Segue o texto" in limpo and "agente" not in limpo
+
+
+def _fora_de_codigo(md: str) -> list:
+    """Linhas que o Streamlit renderiza como markdown: cercas pareadas como no CommonMark.
+
+    Qualquer cerca abre; só a cerca nua, da mesma marca e com tamanho >= fecha. É a regra que o
+    react-markdown do Streamlit segue e que o saneamento antigo (alternar a cada ```) não seguia.
+    """
+    import re
+
+    fora, aberta = [], None
+    for linha in md.split("\n"):
+        m = re.match(r"^\s*(`{3,}|~{3,})(.*)$", linha)
+        if m and aberta is None:
+            aberta = m.group(1)
+            continue
+        if m and aberta and m.group(1)[0] == aberta[0] and len(m.group(1)) >= len(aberta) and not m.group(2).strip():
+            aberta = None
+            continue
+        if aberta is None:
+            fora.append(linha)
+    return fora
+
+
+def test_markdown_saneado_cercas_aninhadas_e_tabelas():
+    """Artefato cru na tela: `#`, `|` e `**` à mostra dentro de bloco de código.
+
+    Regressão de 2026-10-07 (auditoria sobre as sessões do bucket): o agente embrulha a spec e
+    o PRD em ```markdown e abre ```typescript/```sql dentro. O renderizador fecha o invólucro
+    no primeiro ``` nu e dali em diante código e texto trocam de lugar — no PRD da exp06ef1b,
+    front matter e seções 0–4 em código, e a seção 5 também. O `.md` em disco sai
+    desembrulhado (`desembrulhar_cerca`), mas a tela lê o estado, que nunca foi.
+    """
+    from tools.markdown_blocos import desembrulhar_documento, sanear_para_streamlit as sanear
+
+    # spec da exp07ef1b: frase de abertura, invólucro, bloco interno com linguagem, ``` órfão no fim
+    spec = (
+        "Abaixo segue o contrato consolidado.\n\n```markdown\n# Spec — A Seleção v1.0\n\n"
+        "```typescript\nexport const lote = z.object({})\n```\n\n## 9. Regras de geração\n"
+        "| Perfil | Posts |\n|---|---|\n| @folhaoficial_ | 4 |\n```\n\n---"
+    )
+    fora = _fora_de_codigo(sanear(spec))
+    assert "# Spec — A Seleção v1.0" in fora, "o título da spec ficou dentro do bloco de código"
+    assert "## 9. Regras de geração" in fora and "| @folhaoficial_ | 4 |" in fora
+    assert "export const lote = z.object({})" not in fora, "o typescript tem de continuar código"
+    assert "```markdown" not in sanear(spec)
+
+    # PRD da exp06ef1b: invólucro na 1ª linha e bloco NU dentro (cenários de dispositivo)
+    prd = (
+        "```markdown\n---\nprd_id: PRD-exp06ef1b\ntitulo: O Júri Estadual de Projetos\n---\n\n"
+        "### Cenários de dispositivo\n\n```\nCENÁRIO A (1:1 — Ideal)\n```\n\n---\n\n"
+        "# 5. Experiência — narrativa e mecânica\n\n| Etapa | Ação |\n|---|---|\n| E1 | ler |\n```"
+    )
+    fora = _fora_de_codigo(sanear(prd))
+    assert "# 5. Experiência — narrativa e mecânica" in fora and "| E1 | ler |" in fora
+    assert "CENÁRIO A (1:1 — Ideal)" not in fora
+    # aba PRD: o metadado só aparece se o invólucro sair antes de ler o front matter
+    from pipeline.session_store import extrair_metadados_frontmatter
+    meta, corpo = extrair_metadados_frontmatter(desembrulhar_documento(prd))
+    assert meta.get("prd_id") == "PRD-exp06ef1b" and corpo.startswith("### Cenários")
+
+    # D0 (fechamento de lacunas): a spec citada no meio do relatório, com ```sql dentro
+    d0 = (
+        "Relatório do D0.\n\n```markdown\n# Spec — Quem Mandou Isso?\n\n```sql\nselect 1;\n```\n\n"
+        "## 9. Bloco de dados\ntexto\n```\n\nFim do relatório.\n"
+    )
+    fora = _fora_de_codigo(sanear(d0))
+    assert "## 9. Bloco de dados" in fora and "Fim do relatório." in fora and "select 1;" not in fora
+
+    # o que NÃO pode mudar: trecho citado sem título, bem fechado, no meio do gate estrutural
+    gate = (
+        "Trecho proposto:\n\n```markdown\n### 2.4 Avaliação externa\n* **Descritor SAEB:** N/A\n```\n\n"
+        "Justificativa do gate.\nSegunda linha.\nTerceira linha.\nQuarta linha.\nQuinta linha.\n"
+    )
+    assert sanear(gate) == gate
+    assert desembrulhar_documento("# normal\ntexto") == "# normal\ntexto"
+    assert sanear("```sql\nSELECT 1;\n```") == "```sql\nSELECT 1;\n```"
+
+    # cerca órfã: depois dela só markdown (ou nada) → sai; depois dela código → fecha no fim
+    assert "```" not in sanear("# T\n\ntexto\n```\n\n---")
+    assert "```" not in sanear("```\n## Seção que ficou presa\n| a | b |\n")
+    assert sanear("texto\n```py\nx=1\n").endswith("```\n")
+
+    # `$` dentro de bloco aninhado é código: sem `\`, que o leitor via escrito no PL/pgSQL
+    aninhado = "```markdown\n# Doc\n\n```sql\nDO $$ x $$;\n```\n\nCusta R$ 5.\n```"
+    assert "DO $$ x $$;" in sanear(aninhado) and r"Custa R\$ 5." in sanear(aninhado)
+    assert "DO $$" in sanear("~~~sql\nDO $$\n~~~\nR$ 1") and r"R\$ 1" in sanear("~~~sql\nDO $$\n~~~\nR$ 1")
+    assert sanear(r"já escapado R\$ 3") == r"já escapado R\$ 3"
+
+    # front matter na aba Dev (PRD da exp01ef1b): sem isso, <hr> + um <h2> com todas as chaves
+    fm = sanear("---\nprd_id: PRD-exp01ef1b\nlinks:\n  stitch: https://x\n---\n\n# 0. Resumo executivo")
+    assert fm.startswith("```yaml\nprd_id: PRD-exp01ef1b") and "# 0. Resumo executivo" in _fora_de_codigo(fm)
+
+    # `---` colado no parágrafo (one-pager pedagógico): divisória, não <h2> do parágrafo inteiro
+    ped = "**O momento do \"ahá\":**  \nNo mesmo segundo, o telão projeta o gráfico.\n---\n## Próxima"
+    assert "gráfico.\n\n---" in sanear(ped)
+
+    # tabela: separador com uma coluna a mais (aprendizado da exp07ef1b) — saía tudo como texto
+    t1 = sanear("| ID | Origem | Classe |\n|---|---|---|---|\n| D0-1 | fecha-lacunas | documental |")
+    assert t1.split("\n")[1] == "|---|---|---|"
+    # tabela sem cabeçalho (experiência do aluno da exp06ef1b)
+    t2 = sanear("Resumo:\n\n| Obrigatórios | ✅ 4 | ⚠️ 1 | ❌ 0 |\n| Desejáveis | ✅ 2 | ⚠️ 0 | ❌ 0 |")
+    assert "| | | | |\n|---|---|---|---|\n| Obrigatórios" in t2
+    # `|` dentro de crase numa célula (aresta A18 do fluxo da 4e6cf385): a última coluna sumia
+    t3 = sanear("| ID | Guarda | Nota |\n|---|---|---|\n| A18 | `etapa == 'E1' | 'E4'` | espera |")
+    assert r"`etapa == 'E1' \| 'E4'`" in t3
+    # `<br>` na célula (handoff da exp07ef1b) aparecia escrito; no mermaid ele é do diagrama
+    t4 = sanear("| Regra | Itens |\n|---|---|\n| R1 | - Cardinalidade.<br>- Modal irreversível |")
+    assert "| R1 | - Cardinalidade. · Modal irreversível |" in t4
+    mer = "```mermaid\nflowchart LR\n  A[\"E1<br/>Lista\"]\n```"
+    assert sanear(mer) == mer
+    print("   ✓ invólucro ```markdown aninhado, cerca órfã, front matter, `---`, tabelas e <br> saneados")
 
 
 def test_artefatos_html_e_links():
@@ -2838,9 +2950,11 @@ def test_conteudo_imersao_e_escola_publica():
     # F5 — dois a quatro por aparelho é o primeiro cenário da escola pública, não variação de luxo
     telas = load_prompt("design/26_telas.md")
     assert "estado degradado 2–4 por aparelho" in telas
-    i_excecao = telas.index("Exceção que não se prioriza para fora")
+    # desde 07/10/2026 nenhuma tela se corta (o Stitch saía com 27% a 68% do inventário): o 2–4 está
+    # entre as telas obrigatórias como todas as outras
+    i_regra = telas.index("todas, sem priorizar nem resumir")
     i_degradado = telas.index("estado degradado 2–4 por aparelho")
-    assert i_degradado > i_excecao, "o 2–4 precisa estar DENTRO da exceção que não se corta"
+    assert i_degradado > i_regra, "o 2–4 precisa estar sob a regra de que nenhuma tela se corta"
 
     print("   ✓ conteúdo: contraste e foco contáveis, spoiler testado a jusante, cenário 2–4 blindado")
 
@@ -2867,7 +2981,7 @@ def test_kpi_aponta_para_algo_que_o_mede():
            "| KPI | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |\n"
            "|---|---|---|---|---|---|---|---|---|---|\n"
            "| KPI-01 | quantas turmas chegam ao fim? | <50% encurta | missao · serie | E3-ALU-02 | EVT-005 "
-           "| count(EVT-005) | sem baseline — primeira medição | 70% | 2 meses |\n"
+           "| count(EVT-005) | sem baseline — primeira medição | sem meta — primeira medição | 2 meses |\n"
            "## 13. Eventos\n"
            "| EVT | Verbo | Objeto | Quando dispara | resultado | contexto | Onde é lido |\n|---|---|---|---|---|---|---|\n"
            "| EVT-005 | interacted | mural:salvar | Toque em Salvar, na tela E3-ALU-02 | `{\"ok\": true}` | `{\"ms\": 1}` | `exp06ef1b_sessoes` |\n"
@@ -2905,7 +3019,7 @@ def test_kpi_aponta_para_algo_que_o_mede():
     herdado = ("\n| KPI | PQ | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |\n"
                "|---|---|---|---|---|---|---|---|---|---|---|\n"
                "| KPI-02 | T7 | De cada X turmas liberadas, quantas chegam ao fim da missão? | <50% encurta | missao "
-               "| — | {evt} | turmas com EVT-U03 / turmas com EVT-U01 | sem baseline — primeira medição | 70% | 2 meses |\n\n")
+               "| — | {evt} | turmas com EVT-U03 / turmas com EVT-U01 | sem baseline — primeira medição | sem meta — primeira medição | 2 meses |\n\n")
     com = lambda evt, t="T7": bom.replace("## 13. Eventos", herdado.format(evt=evt).replace("T7", t) + "## 13. Eventos")
     assert validar_kpis(com("EVT-U01, EVT-U03"))["status"] == "aprovado", validar_kpis(com("EVT-U01, EVT-U03"))["achados"]
     assert "kpi-herdada-evento" in cods(com("EVT-U01, EVT-005")), "o caso de 23/09: a lupa medindo T1"
@@ -4377,7 +4491,7 @@ def test_rastro_cobra_cada_etapa_pelo_que_e_dela():
     rastro_spec = next(a for a in spec_loop.sub_agents if a.name == "A15fRastroSpec")
     saida = next(a for a in spec_loop.sub_agents if a.name == "A16SpecCheck")
     assert rastro_spec.etapa == "produto" and "rastro_spec_status" in saida.status_keys
-    rastro_design = build_design_stage().sub_agents[-1]
+    rastro_design = next(a for a in build_design_stage().sub_agents if a.name == "A33RastroDesign")
     assert rastro_design.name == "A33RastroDesign" and rastro_design.etapa == "design"
     a38 = next(a for a in build_dev_stage().sub_agents if a.name == "A38LacunaCheck")
     assert a38.etapa == "dev" and a38.fontes == FONTES_DEV
@@ -4818,7 +4932,10 @@ def test_banco_de_conteudo_no_estagio_de_dev():
     from pipeline.artifacts import ARTIFACT_FILES
 
     nomes = [a.name for a in build_dev_stage().sub_agents]
-    assert nomes.index("HandoffLoop") < nomes.index("A35bBancoConteudo") < nomes.index("A35cConteudoCheck") < nomes.index("A38LacunaCheck")
+    # desde 07/10/2026 o banco e o verificador estão num loop: o bloqueio volta ao banco com o relatório
+    assert nomes.index("HandoffLoop") < nomes.index("BancoLoop") < nomes.index("A38LacunaCheck")
+    loop = next(a for a in build_dev_stage().sub_agents if a.name == "BancoLoop")
+    assert [a.name for a in loop.sub_agents] == ["A35bBancoConteudo", "A35cConteudoCheck", "A35dBancoRodada"]
     assert ("banco_conteudo", "dev/01e-banco-conteudo.md") in ARTIFACT_FILES
 
     estado = {"spec_missao": _fixture_exp09("spec.md") + _GLOSSARIO_EXP09, "brief_assets": _fixture_exp09("brief_assets.md"),
@@ -4830,7 +4947,7 @@ def test_banco_de_conteudo_no_estagio_de_dev():
         async def _run_async_impl(self, ctx):
             yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
 
-    original = next(a for a in build_dev_stage().sub_agents if a.name == "A35cConteudoCheck")
+    original = next(a for a in loop.sub_agents if a.name == "A35cConteudoCheck")
     check = original.model_copy(update={"parent_agent": None})
     _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), check])))
     assert st["conteudo_status"] == "bloqueado"

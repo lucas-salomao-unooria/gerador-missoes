@@ -122,22 +122,87 @@ def itens_do_pedido(texto: str, origem: str) -> List[Dict[str, str]]:
     return itens
 
 
+#: Briefing com títulos em MAIÚSCULAS e sem dois-pontos ("OPERAÇÃO COGNITIVA", "MECÂNICA — IMAGEM
+#: PRÉ-DECOMPOSTA", "CONSTRAINT DE INTERFACE — OBRIGATÓRIO"). O parser só via títulos com dois-pontos:
+#: o briefing da exp03ef1b (07/10/2026) deu zero itens, e a fidelidade aprovou a geração que trocou a
+#: seção do DS que o briefing proibia trocar. Radicais sem acento, comparados com `_norm`.
+_TITULOS_EM_MAIUSCULAS = (
+    ("restricao", ("constraint", "restricao", "obrigatorio", "proibido", "trava")),
+    ("habilidades", ("habilidades",)),
+    ("direcionamento pedagógico", ("operacao cognitiva", "contrato de evidencia", "direcionamento")),
+    ("elementos fixos", ("mecanica", "narrativa", "elementos fixos")),
+    ("passo a passo", ("passo a passo", "jornada")),
+)
+#: Seções cujas linhas são curtas demais para virar item uma a uma ("EF03CO01 — Lógica computacional",
+#: "secao_ds: unoogaleria") e valem como bloco: o tipo do item que o bloco inteiro vira.
+_BLOCO_INTEIRO = {"restricao": "trava", "habilidades": "briefing"}
+#: Linha solta que fixa a interface ("Interface forçada: Galeria de Fotos", "secao_ds: unoogaleria").
+_RE_LINHA_DE_INTERFACE = re.compile(r"^(?:interface|`?secao_ds`?|se[çc][ãa]o do ds)\b[^:\n]{0,40}[:=]\s*\S", re.IGNORECASE)
+_RE_SUBTITULO = re.compile(r"\s[—–-]\s")
+
+
+def _titulo_em_maiusculas(linha: str) -> Optional[str]:
+    """A seção de um título em maiúsculas (decide o que vem antes do travessão); "" se não reconhecida."""
+    cabeca = _RE_SUBTITULO.split(linha, maxsplit=1)[0]
+    letras = [c for c in cabeca if c.isalpha()]
+    # uma palavra de verdade, não só código: "EF03CO03" sozinho na linha não é título
+    palavra = any(len(w) >= 4 and w.isalpha() for w in re.findall(r"\w+", cabeca))
+    if not palavra or not all(c.isupper() for c in letras) or _palavras(linha) > 12:
+        return None
+    baixa = _norm(linha)
+    return next((secao for secao, radicais in _TITULOS_EM_MAIUSCULAS if any(r in baixa for r in radicais)), "")
+
+
 def itens_do_briefing(briefing: str) -> List[Dict[str, str]]:
-    """Direcionamento, passos da experiência e elementos fixos — um item por parágrafo."""
+    """Direcionamento, passos da experiência e elementos fixos — um item por parágrafo.
+
+    Restrição explícita (bloco de título CONSTRAINT/RESTRIÇÃO/OBRIGATÓRIO, ou a linha que fixa a
+    interface) vira um item só, do tipo `trava`: linhas curtas como `secao_ds: unoogaleria` não
+    chegam a `MIN_PALAVRAS_ITEM` e sumiam, e é justamente a regra que não pode sumir. No briefing de
+    títulos em maiúsculas, o item leva o título ("CONTRATO DE EVIDÊNCIA PEDAGÓGICA — Gesto registrável
+    que demonstre: 3. Recombinou as partes…"): sem ele, "3. Recombinou…" não diz de onde veio.
+    """
     itens: List[Dict[str, str]] = []
     secao: Optional[str] = None
+    titulo = ""  # só o do título em maiúsculas, com o subtítulo de dois-pontos que vier abaixo dele
+    bloco: List[str] = []
+
+    def fechar_bloco() -> None:
+        if bloco:
+            itens.append({"origem": "briefing", "tipo": _BLOCO_INTEIRO[secao], "texto": f"{titulo}: {' '.join(bloco)}"[:900]})
+            bloco.clear()
+
     for linha in (briefing or "").splitlines():
         limpa = linha.strip()
         if not limpa:
             continue
+        maiusculas = _titulo_em_maiusculas(limpa)
+        if maiusculas is not None:
+            fechar_bloco()
+            secao, titulo = maiusculas or None, limpa
+            continue
         if limpa.endswith(":") and _palavras(limpa) <= 12:
+            if titulo and secao and secao not in _BLOCO_INTEIRO:
+                # "Gesto registrável que demonstre:" abaixo de CONTRATO DE EVIDÊNCIA é subtítulo dele
+                titulo = f"{titulo.split(' — ')[0]} — {limpa.rstrip(':')}"
+                continue
+            fechar_bloco()
             baixa = limpa.lower()
             nova = next((s for s in _SECOES_BRIEFING if s in baixa), None)
             # "Os três projetos:" é subtítulo dos elementos fixos, não fim deles
-            secao = nova or (secao if secao == "elementos fixos" else None)
+            secao, titulo = nova or (secao if secao == "elementos fixos" else None), ""
             continue
-        if secao and _palavras(limpa) >= MIN_PALAVRAS_ITEM:
-            itens.append({"origem": "briefing", "tipo": "briefing", "texto": limpa[:900]})
+        if secao in _BLOCO_INTEIRO:
+            bloco.append(limpa)
+        elif _RE_LINHA_DE_INTERFACE.match(limpa):
+            itens.append({"origem": "briefing", "tipo": "trava", "texto": limpa[:900]})
+        elif secao and _palavras(limpa) >= MIN_PALAVRAS_ITEM:
+            texto = f"{titulo}: {limpa}" if titulo else limpa
+            itens.append({"origem": "briefing", "tipo": "briefing", "texto": texto[:900]})
+    fechar_bloco()
+    # A frase que o briefing pôs entre aspas é texto do PO ("Pergunta-motor: “Se a mesma coisa
+    # aconteceu…”"): as três gerações da exp03ef1b a perderam. Confere-se letra a letra, como as TRAVAS.
+    itens += _literais(briefing or "", "briefing")
     return itens
 
 
@@ -238,9 +303,13 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         if it["tipo"] == "literal":
             if _literal_presente(it["texto"], doc):
                 conferidos.append({"id": it["id"], "texto": trecho, "prova": "frase literal presente"})
-            else:
+            elif do_po:
                 achado(it, "bloqueio", "frase-do-po-alterada",
                        f"O PO escreveu a frase entre aspas e ela não está, letra por letra, em nenhum documento: «{trecho}».")
+            else:
+                achado(it, "atencao", "frase-do-briefing-ausente",
+                       f"O briefing traz a frase entre aspas e ela não está, letra por letra, em nenhum documento: «{trecho}». "
+                       "Se a missão a reescreveu de propósito, registre `[PROPOSTA — validar com PO: …]`.")
             continue
         d = decisoes.get(it["id"])
         veredito = str((d or {}).get("veredito") or "").strip().lower()

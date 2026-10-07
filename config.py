@@ -159,8 +159,8 @@ class AppSettings(BaseSettings):
         description="Teto de agentes reexecutados por retrabalho na execução inteira, somando todos os loops. Estourado, a esteira para de tentar, marca pendência humana e segue até o fim",
     )
     avaliacoes_max_rodadas: int = Field(
-        default_factory=lambda: int(os.getenv("AVALIACOES_MAX_RODADAS", "1")),
-        description="Rodadas do loop avaliações ↔ revisor do one-pager movido pelo parecer de adequação. 1 = sem correção automática (padrão, porque uma rodada extra reexecuta os três avaliadores)",
+        default_factory=lambda: int(os.getenv("AVALIACOES_MAX_RODADAS", "2")),
+        description="Rodadas do loop avaliações ↔ revisor do one-pager movido pelo parecer de adequação. 2 (padrão) = o revisor aplica o ajuste exigido e as avaliações refazem; 1 = sem correção automática",
     )
     qa_design_max_rodadas: int = Field(
         default_factory=lambda: int(os.getenv("QA_DESIGN_MAX_RODADAS", "2")),
@@ -203,6 +203,16 @@ class AppSettings(BaseSettings):
         default_factory=lambda: os.getenv("STITCH_PROJECT_URL_BASE", "https://stitch.withgoogle.com/projects"),
         description="Base da URL pública de um projeto, usada nos relatórios e no PRD",
     )
+    # A geração das telas saiu do modelo em 07/10/2026 (`tools/stitch_geracao.py`): cada (tela, estado) é uma
+    # chamada que leva minutos, e 25 a 46 delas em série passariam de uma hora.
+    stitch_paralelo: int = Field(
+        default_factory=lambda: int(os.getenv("STITCH_PARALELO", "4")),
+        description="Telas geradas ao mesmo tempo no Stitch. Mais rápido com mais; o limite é a cota do Stitch",
+    )
+    stitch_prazo_geracao_s: int = Field(
+        default_factory=lambda: int(os.getenv("STITCH_PRAZO_GERACAO_S", "300")),
+        description="Segundos de espera por tela gerada antes de conciliar pelo projeto (a ferramenta pede para não repetir em timeout)",
+    )
 
     # -------------------------------------------------------------------- Miro
     # Espelha no Miro a jornada (D2) e o fluxo de telas (D3). O Mermaid continua sendo a
@@ -236,6 +246,22 @@ class AppSettings(BaseSettings):
     # o caminho alternativo caso a escrita via MCP não sirva.
     miro_client_id: str = Field(default_factory=lambda: os.getenv("MIRO_CLIENT_ID", ""))
     miro_client_secret: str = Field(default_factory=lambda: os.getenv("MIRO_CLIENT_SECRET", ""))
+
+    # ------------------------------------------ Imagem da jornada e do fluxo no pedagógico
+    # O `.docx` não roda mermaid.js e a imagem do Cloud Run não tem navegador: a figura dos
+    # diagramas vem de um renderizador de fora. **Desligado por padrão** porque `url` envia o
+    # texto do fluxo da missão a um serviço de terceiros, e `miro` lê o board com o token da
+    # esteira — quem liga é o dono da decisão. Desligado, o documento aponta `design/09-diagramas.html`.
+    # `_raw` pelo mesmo motivo do Stitch: o pydantic-settings entregaria o valor sem normalizar.
+    diagrama_imagem_fonte_raw: str = Field(
+        default_factory=lambda: os.getenv("DIAGRAMA_IMAGEM_FONTE", "off"),
+        description="off (padrão) | url (MERMAID_RENDER_URL, estilo mermaid.ink ou Kroki) | miro (lê o board da sessão)",
+    )
+    mermaid_render_url: str = Field(
+        default_factory=lambda: os.getenv("MERMAID_RENDER_URL", ""),
+        description="Com DIAGRAMA_IMAGEM_FONTE=url: https://mermaid.ink/img (GET), https://kroki.io/mermaid/png "
+                    "(POST) ou um modelo com {codigo} (GET, Mermaid em base64url). Vazio = nada sai daqui",
+    )
 
     # ------------------------------------------------------------------ Login
     # Quatro contas fixas (produto, design, dev, admin), sem provedor de identidade. Os dois
@@ -308,6 +334,14 @@ class AppSettings(BaseSettings):
             return "🟢 Remoto (mcp.miro.com)"
         return f"🔴 Modo desconhecido ({self.miro_mode})"
 
+
+    @property
+    def diagrama_imagem_fonte(self) -> str:
+        """`off`, `url` ou `miro`; qualquer outra coisa — e `url` sem endereço — é `off`."""
+        fonte = (self.diagrama_imagem_fonte_raw or "off").strip().lower()
+        if fonte == "url" and not self.mermaid_render_url.strip():
+            return "off"
+        return fonte if fonte in ("off", "url", "miro") else "off"
 
     @property
     def output_path(self) -> Path:

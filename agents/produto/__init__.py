@@ -534,8 +534,9 @@ def build_produto_stage(
     # O revisor do one-pager vive no loop do gate estrutural, que fecha ANTES das avaliações —
     # então o parecer de adequação chegaria a ele com o one-pager já congelado. Este segundo
     # ciclo resolve: avalia, e se o parecer pede ajuste, o revisor aplica e as avaliações
-    # refazem sobre a versão nova. Desligado por padrão (teto 1), porque ligar custa
-    # reexecutar os três avaliadores; suba `AVALIACOES_MAX_RODADAS` para ativar.
+    # refazem sobre a versão nova. Ligado por padrão (teto 2) desde 07/10/2026: com teto 1 o ajuste
+    # exigido nunca era aplicado e o gate final reprovava a missão por ele (exp03ef1b). Custa
+    # reexecutar os três avaliadores só quando o parecer exige ajuste.
     revisor_pos_parecer = get_revisor_one_pager_agent(**kw)
     revisor_pos_parecer.name = "A07RevisorOnePagerParecer"
     revisor_pos_parecer.description = (
@@ -604,6 +605,8 @@ def build_produto_stage(
                 max_rounds=rodadas_avaliacoes,
                 # `""` saiu da lista: era o que fazia a chave nunca escrita valer aprovação.
                 aceitos=["aprovado", "aprovado_com_ressalvas", "amarelo"],
+                # com ressalvas, mas com ajuste exigido, o revisor aplica antes do gate final
+                envelope_exige={"adequacao_status": "ajustes_exigidos"},
             ),
             revisor_pos_parecer,
         ],
@@ -676,7 +679,7 @@ PRODUTO_METADATA = [
     {"id": "A09ExperienciaEstudante", "name": "09 · Experiência do estudante", "icon": "🧒", "output_key": "experiencia_aluno_report", "prompt_file": "produto/09_experiencia_estudante.md", "description": "Carga cognitiva, faixa etária e agência (paralelo com P2)."},
     {"id": "A10AdequacaoPedagogica", "name": "10 · Adequação pedagógica", "icon": "⚖️", "output_key": "adequacao_report", "prompt_file": "produto/10_adequacao_pedagogica.md", "description": "Seis eixos com parecer e ajustes acionáveis: currículo, demanda cognitiva, carga acidental, viabilidade na escola pública, evidência de aprendizagem e equidade. Parecer entra como ressalva, não bloqueia."},
     {"id": "A10bAdequacaoCheck", "name": "10b · Veredito do parecer (determinístico)", "icon": "🔀", "output_key": "avaliacoes_rodada", "prompt_file": None, "description": "Parecer sem ajuste exigido encerra o ciclo das avaliações; com ajuste, devolve ao revisor do one-pager."},
-    {"id": "A07RevisorOnePagerParecer", "name": "10c · Revisor movido pelo parecer", "icon": "🩹", "output_key": "one_pager", "prompt_file": "produto/07_revisor_one_pager.md", "description": "Aplica ao one-pager os ajustes exigidos pelo parecer de adequação. Só roda com AVALIACOES_MAX_RODADAS > 1."},
+    {"id": "A07RevisorOnePagerParecer", "name": "10c · Revisor movido pelo parecer", "icon": "🩹", "output_key": "one_pager", "prompt_file": "produto/07_revisor_one_pager.md", "description": "Aplica ao one-pager os ajustes exigidos pelo parecer de adequação (padrão: 2 rodadas; AVALIACOES_MAX_RODADAS=1 desliga)."},
     {"id": "A11GateFinalProduto", "name": "11 · Gate final de produto", "icon": "🏁", "output_key": "gate_final_report", "prompt_file": "produto/11_gate_final.md", "description": "Coerência entre missão e vereditos; libera ou bloqueia para design/dev."},
     {"id": "A12GateFinalProdutoCheck", "name": "12 · Veredito final (determinístico)", "icon": "🔀", "output_key": "gate_final_status", "prompt_file": None, "description": "Lê o envelope do gate final."},
     {"id": "A13SpecMissao", "name": "13 · Spec da missão", "icon": "📜", "output_key": "spec_missao", "prompt_file": "produto/13_spec_missao.md", "description": "Os 12 blocos da spec — contrato contra o qual design e dev constroem."},

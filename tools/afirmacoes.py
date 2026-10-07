@@ -32,7 +32,11 @@ _RE_ARTEFATO = re.compile(r"(?<![\w/.-])((?:design|dev|produto)/[\w.-]+\.(?:md|h
 
 
 def telas_do_inventario(jornada: str) -> List[str]:
-    return sorted(set(_RE_ID_TELA.findall(jornada or "")))
+    """As telas da tabela «Seção 3» da jornada (`tools/telas.py`); sem a tabela, os IDs citados."""
+    from tools import telas
+
+    inv = [t["id"] for t in telas.inventario(jornada)["telas"]]
+    return sorted(set(inv)) if inv else sorted(set(_RE_ID_TELA.findall(jornada or "")))
 
 
 def telas_do_stitch(folha: str) -> Optional[List[str]]:
@@ -60,14 +64,19 @@ def cobertura_stitch(folha: str, jornada: str) -> Dict[str, Any]:
     achados: List[Dict[str, str]] = []
     if telas is None or not inventario:
         return {"status": "aprovado", "achados": achados, "stitch": telas, "inventario": inventario, "faltando": []}
-    no_stitch = {i for t in telas for i in _RE_ID_TELA.findall(t)}
+    from tools.telas import ids as ids_de_tela
+
+    # Por CONJUNTO de IDs, não por contagem: cinco telas no Stitch, três delas estados da mesma tela,
+    # aprovavam um inventário de cinco com três IDs faltando (auditoria de 07/10/2026). E a lista vai
+    # inteira no ticket — cortada em 10, o retrabalho desenhava só as dez e o resto nunca chegava.
+    no_stitch = {i for t in telas for i in ids_de_tela(t)}
     faltando = [t for t in inventario if t not in no_stitch]
-    if len(telas) < len(inventario):
+    if faltando:
         achados.append({
             "severidade": "bloqueio", "codigo": "stitch-incompleto", "etapa": "design", "agente_responsavel": "telas",
-            "resumo": f"O Stitch tem {len(telas)} tela(s) e o inventário da jornada declara {len(inventario)}. "
-                      f"Faltam: {', '.join(faltando[:10])}{'…' if len(faltando) > 10 else ''}. Tela que não está no "
-                      f"Stitch não foi desenhada — o protótipo e o PRD a descrevem de memória.",
+            "resumo": f"O Stitch tem {len(no_stitch & set(inventario))} de {len(inventario)} tela(s) do inventário da jornada. "
+                      f"Faltam: {', '.join(faltando)}. Tela que não está no Stitch não foi desenhada — o protótipo e o "
+                      f"PRD a descrevem de memória. Gere cada uma no mesmo projeto, sem priorizar.",
         })
     status = "bloqueado" if achados else "aprovado"
     return {"status": status, "achados": achados, "stitch": telas, "inventario": inventario, "faltando": faltando}

@@ -39,7 +39,10 @@ STATUS_AUTOMATICOS = ("em criação", "bloqueada")
 STATUS_HUMANOS = ("validada", "aprovada", "em produção", "descartada")
 
 #: Seções do design system que nomeiam o ambiente simulado (`references/ambientes.md`).
-AMBIENTES = ("instanooria", "unitube", "chatgpt", "whatsappmobile", "tiktooria", "mini-jogo")
+AMBIENTES = ("instanooria", "unootube", "chatgpt", "whatsappmobile", "tiktooria", "mini-jogo")
+#: Nome antigo → nome do DS. Fichas e specs antigas dizem `unitube`; comparar sem normalizar
+#: separava duas missões do mesmo ambiente.
+APELIDOS_DE_AMBIENTE = {"unitube": "unootube"}
 #: Escala de abstração de `literatura-cognitiva.md` §4, usada pelo critério 2.8.
 PORTAS = ("descrever", "explicar", "criticar com apoio", "criticar")
 
@@ -145,10 +148,16 @@ def _ano_bimestre(slug: str, textos: str) -> Tuple[str, Optional[int]]:
 
 def _ambiente(textos: str) -> str:
     baixo = (textos or "").lower()
-    for amb in AMBIENTES:
+    for amb in (*AMBIENTES, *APELIDOS_DE_AMBIENTE):
         if amb in baixo:
-            return amb
+            return _canonico(amb)
     return ""
+
+
+def _canonico(ambiente: str) -> str:
+    """O nome do DS para o ambiente: `unitube` (nome antigo na esteira) é `unootube`."""
+    valor = (ambiente or "").strip().lower()
+    return APELIDOS_DE_AMBIENTE.get(valor, valor)
 
 
 def _habilidade_primaria(spec: str, nucleo: str) -> str:
@@ -236,7 +245,7 @@ def _ambiente_da_spec(bloco0: str) -> str:
     if not m:
         return ""
     valor = m.group(1).lower().strip("`")
-    return valor if (valor in _secoes_validas() or valor.startswith("nova:")) else ""
+    return _canonico(valor) if (valor in _secoes_validas() or valor.startswith("nova:")) else ""
 
 
 def _secoes_validas() -> set:
@@ -252,7 +261,7 @@ def _secoes_validas() -> set:
                   (base_plataforma.contrato().get("design_system") or {}).get("secoes") or []}
     except base_plataforma.BaseIndisponivel:
         secoes = set()
-    return set(AMBIENTES) | {s for s in secoes if s}
+    return set(AMBIENTES) | set(APELIDOS_DE_AMBIENTE) | {s for s in secoes if s}
 
 
 def _nome(textos: str) -> str:
@@ -354,7 +363,7 @@ def semelhanca(a: Dict[str, Any], b: Dict[str, Any]) -> float:
     as vizinhas que este score trouxe. Por isso o limiar abaixo serve a um aviso, nunca a um veto.
     """
     score = 0.35 * _jaccard(_tokens(a.get("descoberta", "")), _tokens(b.get("descoberta", "")))
-    if a.get("ambiente") and a.get("ambiente") == b.get("ambiente"):
+    if a.get("ambiente") and _canonico(a.get("ambiente")) == _canonico(b.get("ambiente")):
         score += 0.25
     if a.get("eixo") and _jaccard(_tokens(a.get("eixo", "")), _tokens(b.get("eixo", ""))) >= 0.5:
         score += 0.20
@@ -383,7 +392,7 @@ def vizinhas(ficha: Dict[str, Any], indice: Optional[Dict[str, Any]] = None, n: 
             continue
         ano_m = _ano_num(m.get("ano", ""))
         perto = ano_alvo is not None and ano_m is not None and abs(ano_alvo - ano_m) <= 1
-        mesmo_ambiente = bool(ficha.get("ambiente")) and ficha.get("ambiente") == m.get("ambiente")
+        mesmo_ambiente = bool(ficha.get("ambiente")) and _canonico(ficha.get("ambiente")) == _canonico(m.get("ambiente"))
         mesmo_eixo = bool(ficha.get("eixo")) and _jaccard(_tokens(ficha.get("eixo", "")), _tokens(m.get("eixo", ""))) >= 0.5
         if not (perto or mesmo_ambiente or mesmo_eixo):
             continue

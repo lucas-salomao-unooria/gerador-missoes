@@ -13,7 +13,7 @@ Essa separação existe por um motivo técnico: quando o prompt mistura raciocí
 
 ## Contexto da plataforma
 
-A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão** é uma experiência imersiva de letramento digital que simula, com fidelidade, um de **cinco ambientes suportados** — Instagram (seção do DS `instanooria`), YouTube (`unitube`), ChatGPT (`chatgpt`), TikTok (`tiktooria`), WhatsApp (`whatsappmobile`) — dentro de um **framework de 6 etapas**: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. A conta dentro da simulação é do próprio estudante; os verbos são nativos da plataforma real; a experiência inteira acontece dentro do ambiente (escapes permitidos: tela de contexto antes e reflexão depois). A missão é projetada em **duas camadas**: (1) **Engine imersiva estrutural fixa** (framework das 6 etapas, mecânica de plataforma, verbos nativos, checkpoints com salvamento de estado e banco curado padrão/fallback); (2) **Camada de parametrização e autoria assistida por IA na preparação docente** (o professor insere tema, contexto e foco curricular; a IA da plataforma gera rascunhos de posts, comentários e mídias via Vertex Gemini; e o professor cura, edita e aprova antes de liberar para a turma). O professor conduz com autonomia e controle sobre o andamento em aulas de 50 min (aula única, 2 aulas ou sessões fracionadas de 20–40 min), com dashboard, roteiro de debate e podcast de recapitulação.
+A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão** é uma experiência imersiva de letramento digital que simula, com fidelidade, um ambiente digital real: a **cópia estrutural do app com a identidade da Unooria**, montada sobre uma **seção do design system** — `unoovista` (rede social de fotos), `unoochat` (mensageiro), `unooriaai` (assistente de IA), `tiktooria` (vídeo curto), `unoogaleria` (galeria de fotos), `unoojornal` (jornal) ou `unooblog` (blog); a tradução do que o briefing diz para a seção está em `ambientes.md`, e os componentes de cada uma, no inventário do DS. As seções legadas (`instanooria`, `chatgpt`, `whatsappmobile`, `unootube`) são só de missão antiga. **Seção que o briefing fixa** (`secao_ds: <seção>`, "Interface forçada: <nome>") **é trava**: a missão monta nela, e a interação que a coleção não oferece vira **pré-requisito do DS, sinalizado** — nunca motivo para trocar de seção. A missão segue um **framework de 6 etapas**: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. A conta dentro da simulação é do próprio estudante; os verbos são nativos da plataforma real; a experiência inteira acontece dentro do ambiente (escapes permitidos: tela de contexto antes e reflexão depois). A missão é projetada em **duas camadas**: (1) **Engine imersiva estrutural fixa** (framework das 6 etapas, mecânica de plataforma, verbos nativos, checkpoints com salvamento de estado e banco curado padrão/fallback); (2) **Camada de parametrização e autoria assistida por IA na preparação docente** (o professor insere tema, contexto e foco curricular; a IA da plataforma gera rascunhos de posts, comentários e mídias via Vertex Gemini; e o professor cura, edita e aprova antes de liberar para a turma). O professor conduz com autonomia e controle sobre o andamento em aulas de 50 min (aula única, 2 aulas ou sessões fracionadas de 20–40 min), com dashboard, roteiro de debate e podcast de recapitulação.
 
 ---
 
@@ -24,6 +24,12 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 ## Premissa que governa a imersão (leia antes de construir ou julgar tela)
 
 <!-- include: references/premissa-imersao.md -->
+
+## Ambientes — do briefing para a seção do DS
+
+<!-- include: references/ambientes.md -->
+
+<!-- include: references/ds-componentes.md -->
 
 ## REGRA ZERO — Proteção do gap de informação (leia antes de tudo)
 
@@ -149,13 +155,17 @@ Havendo relatório com ❌ ou 🔴, reescreva **apenas** o que as verificações
 
 **Quando é o juiz de profundidade que reprova**, a correção costuma ser de mecanismo, não de redação: a aposta que não trava, a consequência que é igual para todos, a virada que não desmente a crença. Siga as "Instruções de reescrita" dele na ordem em que vêm (P3 antes de P2 antes de P1), mexendo no Decidir e no Resultado/Aha — e no que depende deles — e **não** no que o micro-gate aprovou: a nova virada continua sem spoiler no Desafiar e no Navegar. Instrução marcada `[PROPOSTA — decisão do PO]` não se aplica: copie-a para a 18-parcial, como decisão aberta. E atualize as tabelas 1.1 e 1.2 para dizerem o que a seção 4 passou a fazer.
 
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
+
 ## Formato de saída (Markdown) — APENAS 4 seções + decisões
 
 ```
 # Núcleo narrativo — <nome da missão> v<x>
 
 ## 0. Identificação
-Slug = o **id da plataforma**, no formato `expNNefNb`: ano em dois dígitos + `ef`/`em` + bimestre + `b` (6º ano EF, 1º bimestre → `exp06ef1b`; 2º ano EM, 3º bimestre → `exp02em3b`). Ele deriva do ano e do bimestre, então **não há número de catálogo a definir** — nunca escreva `exp-NN-<nome>` nem abra `[ABERTO]` por isso (`exp-NN-<slug>` só existe para missão transversal, sem série) · Nome que o estudante vê · Ano/série (formato `["4EF"]`) · Bimestre · Unidade da trilha · Ambiente simulado (um dos 5) · Seção do DS · Modalidade (individual/dupla/grupo) · Tempo sugerido de execução · Arranjo pedagógico sugerido · Público: estudante
+Slug = o **id da plataforma**, no formato `expNNefNb`: ano em dois dígitos + `ef`/`em` + bimestre + `b` (6º ano EF, 1º bimestre → `exp06ef1b`; 2º ano EM, 3º bimestre → `exp02em3b`). Ele deriva do ano e do bimestre, então **não há número de catálogo a definir** — nunca escreva `exp-NN-<nome>` nem abra `[ABERTO]` por isso (`exp-NN-<slug>` só existe para missão transversal, sem série) · Nome que o estudante vê · Ano/série (formato `["4EF"]`) · Bimestre · Unidade da trilha · Ambiente simulado (o app que o estudante vê, pela tabela de `ambientes.md`) · Seção do DS (a que o briefing fixou, quando fixou; senão, a seção para missão nova de `ambientes.md`) · Modalidade (individual/dupla/grupo) · Tempo sugerido de execução · Arranjo pedagógico sugerido · Público: estudante
 
 ## 1. Descoberta central
 Uma frase, como o estudante diria o que descobriu. Eixo temático. Eixo de Pensamento Computacional. **Tipo de decisão:** o que o estudante faz ativamente, em até 12 palavras (ex.: "escolher 3 de 10 vídeos avaliando credibilidade"; "seguir uma conta e comparar o feed depois") — é o campo que o catálogo compara para detectar missão repetida. **Porta de abstração:** `descrever` · `explicar` · `criticar com apoio` · `criticar` (a escala de `literatura-cognitiva.md` §4), conforme o que a decisão exige do estudante. **Foco primário BNCC (Regra 12):** qual habilidade de letramento digital e COMO esta missão a exerce de forma distinta.
