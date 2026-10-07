@@ -8,14 +8,16 @@ a 148) e o DS 0.2.2 (era o 0.2.18). O inventário do DS tinha as marcas fixas no
 
 Agora quem conhece a plataforma a publica:
 
-- o CI da plataforma, a cada push em `dev-local`, grava `base-plataforma/plataforma/<commit>/` e só
-  depois troca `base-plataforma/plataforma/atual.json` (`scripts/base-do-gerador/extrair.mjs`);
-- o CI do storybook, a cada versão publicada, grava `base-plataforma/design-system/<versao>/` e
-  `base-plataforma/design-system/atual.json` (`scripts/inventario-para-o-gerador.mjs`).
+- o CI da plataforma, a cada push em `dev-local`, grava `plataforma/<commit>/` e só depois troca
+  `plataforma/atual.json` (`scripts/base-do-gerador/extrair.mjs`);
+- o CI do storybook, a cada versão publicada, grava `design-system/<versao>/` e
+  `design-system/atual.json` (`scripts/inventario-para-o-gerador.mjs`).
 
-O bucket é o mesmo que o Cloud Run do gerador monta em `/app/output`, então a base aparece como pasta
-em `<OUTPUT_DIR>/base-plataforma` (ou em `BASE_PLATAFORMA_DIR`). Localmente, ela é baixada do bucket ou
-gerada pelos dois scripts com `--saida` — o README diz como.
+Os dois escrevem em `gs://entre-redes-dev-base-plataforma`, um bucket só da base, que o Cloud Run do
+gerador monta **só para leitura** em `/app/base-plataforma` (`BASE_PLATAFORMA_DIR`). Até 07/10/2026 ela
+morava em `base-plataforma/` do bucket das sessões: a barra lateral a listava como missão e o botão de
+excluir a apagou duas vezes. Sem `BASE_PLATAFORMA_DIR`, a base é `<OUTPUT_DIR>/base-plataforma` — o
+caminho local, baixado do bucket ou gerado pelos dois scripts com `--saida` (o README diz como).
 
 **Uma execução lê uma base só.** `run_orchestrator_pipeline_stream` chama `fixar(ler_atual())` antes de
 montar os agentes; os prompts são expandidos nessa hora e os verificadores que leem arquivo durante a
@@ -98,7 +100,7 @@ def _ler_json(caminho: Path) -> Dict[str, Any]:
         raise BaseIndisponivel(
             f"não encontrei {caminho}. A base da plataforma é publicada no bucket pelo CI da plataforma "
             f"(push em dev-local) e do storybook (versão publicada). Localmente: "
-            f"`gcloud storage rsync -r gs://entre-redes-dev-adk-artifacts/base-plataforma output/base-plataforma`, "
+            f"`gcloud storage rsync -r gs://entre-redes-dev-base-plataforma output/base-plataforma`, "
             f"ou aponte BASE_PLATAFORMA_DIR para uma base gerada com `--saida` (veja o README)."
         ) from None
     except json.JSONDecodeError as exc:

@@ -84,6 +84,9 @@ jobs:
           # Acesso público, por decisão do dono do projeto (23/09/2026): quem barra é o login
           # da própria aplicação (`tools/auth.py`), com as credenciais e a chave JWT no Secret
           # Manager. Sem os dois segredos, o app recusa subir.
+          # A base da plataforma vem de um bucket SÓ DELA, montado `readonly` em /app/base-plataforma
+          # (Fundação, `gerador_missoes.tf`). Até 07/10/2026 ela morava em `base-plataforma/` do bucket
+          # das sessões, a barra lateral a listava como missão, e o botão de excluir a apagou duas vezes.
           # Os comentários ficam ACIMA do comando: uma linha `#` no meio de uma continuação
           # com `\` encerra o comando ali, e o resto vira comandos soltos que falham.
           gcloud run deploy gerador-missoes \
@@ -101,6 +104,8 @@ jobs:
             --no-cpu-throttling \
             --add-volume=name=artifacts-vol,type=cloud-storage,bucket=entre-redes-dev-adk-artifacts \
             --add-volume-mount=volume=artifacts-vol,mount-path=/app/output \
-            --update-env-vars=STITCH_MCP_MODE=remote \
+            --add-volume=name=base-plataforma-vol,type=cloud-storage,bucket=entre-redes-dev-base-plataforma,readonly=true \
+            --add-volume-mount=volume=base-plataforma-vol,mount-path=/app/base-plataforma \
+            --update-env-vars=STITCH_MCP_MODE=remote,BASE_PLATAFORMA_DIR=/app/base-plataforma \
             --update-secrets=STITCH_API_KEY=plataforma-unooria-dev-stitch-api-key:latest,AUTH_CREDENCIAIS=plataforma-unooria-dev-gerador-credenciais:latest,AUTH_SEGREDO_JWT=plataforma-unooria-dev-gerador-jwt:latest \
             --quiet

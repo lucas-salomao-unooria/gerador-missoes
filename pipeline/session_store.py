@@ -18,10 +18,10 @@ from pipeline.artifacts import extrair_slug
 
 logger = logging.getLogger("session_store")
 
-#: Pastas da pasta de saída (o bucket, em produção) que não são missão. `base-plataforma/` é escrita
-#: pelo CI da plataforma e do storybook desde 06/10/2026 e a esteira não roda sem ela. Listada como
-#: sessão, ela ganhou o 🗑️ da barra lateral e foi apagada duas vezes no mesmo dia (18:20 e 02:19 UTC),
-#: e a execução seguinte falharia com "base indisponível".
+#: Pastas da pasta de saída que não são missão. `base-plataforma/` morou no bucket das sessões de 06 a
+#: 07/10/2026: listada como sessão, ganhou o 🗑️ da barra lateral e foi apagada duas vezes. Em produção ela
+#: mora agora num bucket próprio, montado só leitura (`BASE_PLATAFORMA_DIR`); localmente o caminho
+#: padrão continua sendo `<OUTPUT_DIR>/base-plataforma`, e a guarda vale para os dois.
 PASTAS_QUE_NAO_SAO_SESSAO = frozenset({"base-plataforma"})
 
 
