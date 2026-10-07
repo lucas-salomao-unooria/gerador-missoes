@@ -153,8 +153,13 @@ class TestRegras(unittest.TestCase):
         self.assertIsNone(passagem.dono_da_vez(entregue))
         self.assertEqual(passagem.dono_da_vez(devolvido), "design")
 
-        # de Design para Produto, o caminho de sempre: refaz, volta ao parecer e aí pode devolver
-        self.assertNotIn(DEVOLVER, acoes_possiveis(devolvido, "design", ESTADO_VERDE))
+        # Design recebeu a devolução e vê que a causa é do Produto: pode repassar sem refazer antes
+        self.assertIn(DEVOLVER, acoes_possiveis(devolvido, "design", ESTADO_VERDE))
+        self.assertNotIn(DEVOLVER, acoes_possiveis(_aguardando("produto"), "produto", ESTADO_VERDE))
+        repassado, efeito = aplicar(devolvido, DEVOLVER, DESIGN, "A causa é a mecânica do one-pager, não a tela.", ESTADO_VERDE)
+        self.assertIsNone(efeito)
+        self.assertEqual((repassado["etapa"], repassado["situacao"]), ("produto", DEVOLVIDA))
+        # o caminho de sempre continua valendo: refaz, volta ao parecer e aí pode devolver
         refazendo, efeito = aplicar(devolvido, REFAZER, DESIGN, "Troquei a revelação pelo cartão do DS.", ESTADO_VERDE)
         self.assertIn("não cabe no componente do DS", efeito.pedido)
         self.assertIn(DEVOLVER, acoes_possiveis(concluir_execucao(refazendo, ok=True), "design", ESTADO_VERDE))

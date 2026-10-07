@@ -197,8 +197,10 @@ def acoes_possiveis(fluxo: Dict[str, Any], papel: str, estado: Dict[str, Any]) -
         acoes.append(REFAZER)
         if vermelho and papel == "admin":
             acoes.append(EXCECAO)
-    if situacao == AGUARDANDO and etapa_anterior(etapa):
-        acoes.append(DEVOLVER)  # quem gerou pode ver que o problema vem de antes
+    if situacao in (AGUARDANDO, DEVOLVIDA) and etapa_anterior(etapa):
+        # Quem gerou pode ver que o problema vem de antes. Também depois de receber uma devolução: o Dev
+        # devolve ao Design, e o Design precisa poder repassar a Produto sem refazer o que não é dele.
+        acoes.append(DEVOLVER)
     if situacao == ENTREGUE and etapa_anterior(etapa):
         # Dev aprovou e entregou, e depois viu que o design precisa mudar. Antes não havia ação:
         # reabrir era editar o conversa.json no bucket à mão. Volta só um passo, como a devolução
