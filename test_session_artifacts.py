@@ -617,6 +617,47 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
 
 
 
+class TestBasePlataformaNaoESessao(unittest.TestCase):
+    """A base da plataforma mora no mesmo bucket das sessões e não pode ser listada nem apagada como
+    uma: em 06/10/2026 o 🗑️ da barra lateral a apagou duas vezes."""
+
+    def setUp(self):
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.original_output = os.environ.get("OUTPUT_DIR")
+        os.environ["OUTPUT_DIR"] = str(self.temp_dir)
+        self.base = self.temp_dir / "base-plataforma" / "plataforma"
+        self.base.mkdir(parents=True)
+        (self.base / "atual.json").write_text("{}", encoding="utf-8")
+        self.sessao = self.temp_dir / "20261001-000000-session_x"
+        self.sessao.mkdir()
+        (self.sessao / "conversa.json").write_text(
+            json.dumps({"session_id": "x", "title": "Missão", "status": "success"}), encoding="utf-8")
+
+    def tearDown(self):
+        if self.original_output is not None:
+            os.environ["OUTPUT_DIR"] = self.original_output
+        else:
+            os.environ.pop("OUTPUT_DIR", None)
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_base_fora_da_lista(self):
+        from pipeline.session_store import list_saved_sessions
+
+        self.assertEqual([s["dir_name"] for s in list_saved_sessions()], ["20261001-000000-session_x"])
+
+    def test_exclusao_recusa_a_base_o_vazio_e_o_que_nao_e_filho(self):
+        from pipeline.session_store import delete_saved_session
+
+        for nome in ("base-plataforma", "plataforma", "", "  ", ".", "..", "base-plataforma/plataforma"):
+            self.assertFalse(delete_saved_session(nome), nome)
+        self.assertTrue((self.base / "atual.json").exists())
+        self.assertTrue(self.sessao.exists())
+
+        self.assertTrue(delete_saved_session("session_x"))  # pedaço do nome continua valendo para sessão
+        self.assertFalse(self.sessao.exists())
+        self.assertTrue((self.base / "atual.json").exists())
+
+
 class TestSessionZip(unittest.TestCase):
     """Regressões do pacote .ZIP de artefatos.
 

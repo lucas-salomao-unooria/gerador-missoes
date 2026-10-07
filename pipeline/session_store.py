@@ -18,6 +18,12 @@ from pipeline.artifacts import extrair_slug
 
 logger = logging.getLogger("session_store")
 
+#: Pastas da pasta de saída (o bucket, em produção) que não são missão. `base-plataforma/` é escrita
+#: pelo CI da plataforma e do storybook desde 06/10/2026 e a esteira não roda sem ela. Listada como
+#: sessão, ela ganhou o 🗑️ da barra lateral e foi apagada duas vezes no mesmo dia (18:20 e 02:19 UTC),
+#: e a execução seguinte falharia com "base indisponível".
+PASTAS_QUE_NAO_SAO_SESSAO = frozenset({"base-plataforma"})
+
 
 def _safe_str(val: Any) -> str:
     return str(val) if val is not None else ""
@@ -244,7 +250,7 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
     sessions: List[Dict[str, Any]] = []
 
     for entry in base_dir.iterdir():
-        if not entry.is_dir() or entry.name.startswith("."):
+        if not entry.is_dir() or entry.name.startswith(".") or entry.name in PASTAS_QUE_NAO_SAO_SESSAO:
             continue
 
         estado_file = entry / "estado.json"
@@ -665,16 +671,30 @@ def save_session_record(
 
 
 def delete_saved_session(dir_name_or_id: str) -> bool:
-    """Remove o diretório de uma sessão salva."""
+    """Remove o diretório de uma sessão salva — e só de uma sessão.
+
+    Recusa nome vazio (`base_dir / ""` é o bucket inteiro), pasta reservada e qualquer alvo que não
+    seja filho direto da pasta de saída. A busca por pedaço do nome também pula as reservadas.
+    """
     settings = get_settings()
     base_dir = settings.output_path
 
-    target_dir = base_dir / dir_name_or_id
+    nome = (dir_name_or_id or "").strip()
+    if not nome or nome in (".", "..") or "/" in nome or nome in PASTAS_QUE_NAO_SAO_SESSAO:
+        logger.warning("Exclusão recusada: %r não é uma sessão.", dir_name_or_id)
+        return False
+
+    target_dir = base_dir / nome
     if not target_dir.exists():
         for d in base_dir.iterdir():
-            if d.is_dir() and dir_name_or_id in d.name:
+            if (d.is_dir() and not d.name.startswith(".") and d.name not in PASTAS_QUE_NAO_SAO_SESSAO
+                    and nome in d.name):
                 target_dir = d
                 break
+
+    if target_dir.parent != base_dir or target_dir.name in PASTAS_QUE_NAO_SAO_SESSAO:
+        logger.warning("Exclusão recusada: %s não é uma sessão.", target_dir)
+        return False
 
     if target_dir.exists() and target_dir.is_dir():
         try:
