@@ -62,6 +62,7 @@ ARTIFACT_FILES = [
     ("perguntas_report", "produto/05d-perguntas-de-produto.md"),
     ("juiz_perguntas_report", "produto/05e-juiz-perguntas-de-produto.md"),
     ("rastro_spec_report", "produto/05f-rastro-lacunas-spec.md"),
+    ("conteudo_aprovado_spec_report", "produto/05g-conteudo-aprovado.md"),
     ("manifesto_report", "dev/00-ficha-manifesto.md"),
     ("handoff_dev", "dev/01-handoff-dev.md"),
     ("brief_assets", "dev/01b-brief-assets.md"),
@@ -79,6 +80,8 @@ ARTIFACT_FILES = [
     ("one_pager_pedagogico", "one-pager-pedagogico.md"),
     ("kpis_report", "dev/04b-kpis-check.md"),
     ("prd_check_report", "dev/04-pendencias-do-prd.md"),
+    ("conteudo_aprovado_prd_report", "dev/04c-conteudo-aprovado-prd.md"),
+    ("conteudo_aprovado_pedagogico_report", "dev/05-conteudo-aprovado-pedagogico.md"),
     ("diagnostico_execucao", "diagnostico-execucao.md"),
     ("aprendizado_registro", "aprendizado.md"),
     ("ficha_catalogo", "catalogo-ficha.md"),
@@ -234,6 +237,17 @@ ONE_PAGERS_COM_MARCA = [
         "Para leitura e aprovação do time pedagógico",
     ),
 ]
+
+
+def caminhos_de_artefato() -> List[str]:
+    """Todo caminho que uma sessão pode ter: o mapa acima e as exportações `.docx`/`.html` dos one-pagers.
+
+    É contra esta lista que o PRD e o pedagógico conferem os caminhos que citam — os das 11 missões do
+    bucket apontavam `spec/<slug>-spec.md` e `design/08-prototipo-navegavel.html`, que nunca existiram.
+    """
+    caminhos = [arquivo for _, arquivo in ARTIFACT_FILES]
+    caminhos += [f"{base}{ext}" for _, base, _, _ in ONE_PAGERS_COM_MARCA for ext in (".docx", ".html")]
+    return sorted(set(caminhos))
 
 
 def exportar_one_pagers(state: Dict[str, Any], run_dir: Path, slug: str) -> List[Path]:

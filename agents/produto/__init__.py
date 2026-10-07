@@ -38,6 +38,8 @@ Ordem (SequentialAgent):
                                  uma decisão nossa e é sobre o produto, não sobre a criança)
   p5f A15fRastroSpec         → rastro_spec_status (determinístico: marcador de lacuna na spec;
                                  o de produto volta para a spec, o do PO fica 🟡 no parecer)
+  p5g A15gConteudoAprovadoSpec → conteudo_aprovado_spec_status (determinístico: habilidades,
+                                 tempo em tela e podcast iguais aos do one-pager aprovado)
   p6  A16bOnePagerResumido   → one_pager_resumido (o formato curto do time de produto para
                                  avaliação pedagógica, derivado do canônico e da spec conferida)
 """
@@ -374,12 +376,27 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
                 estrito=settings.esteira_estrita,
                 before_agent_callback=marcar_heranca,
             ),
+            # A spec traduz o one-pager aprovado. Até 06/10/2026 ela aplicava as ressalvas dos pareceres
+            # que o PO não tinha incorporado — a exp06ef1b perdeu a EF06CO07 e foi de 29 para 24 min em
+            # tela —, e tudo a jusante seguia a spec sem nenhum gate ver.
+            RastroCheckAgent(
+                name="A15gConteudoAprovadoSpec",
+                description="Spec × one-pager aprovado: as habilidades do contrato de evidência (§12a), o tempo total em tela (§10) e o podcast (§11). Divergência volta ao autor da spec.",
+                modo="aprovado_spec",
+                rotulo="Spec × one-pager aprovado",
+                report_key="conteudo_aprovado_spec_report",
+                status_key="conteudo_aprovado_spec_status",
+                agente="conteudo-aprovado",
+                estrito=settings.esteira_estrita,
+                before_agent_callback=marcar_heranca,
+            ),
             SaidaDeLoopAgent(
                 name="A16SpecCheck",
-                description="Currículo, manifesto, matriz de evidência, perguntas de produto e lacunas conformes encerram o loop; reprovados devolvem a spec ao autor com os relatórios.",
+                description="Currículo, manifesto, matriz de evidência, perguntas de produto, lacunas e fidelidade ao one-pager aprovado conformes encerram o loop; reprovados devolvem a spec ao autor com os relatórios.",
                 rotulo="Spec da missão",
                 status_keys=["bncc_status", "manifesto_status", "evidencia_status",
-                             "perguntas_status", "juiz_perguntas_status", "rastro_spec_status"],
+                             "perguntas_status", "juiz_perguntas_status", "rastro_spec_status",
+                             "conteudo_aprovado_spec_status"],
                 rodada_key="spec_rodada",
                 max_rounds=rodadas_spec,
             ),
@@ -636,7 +653,7 @@ def _fidelidade_de_produto(kw: Dict[str, Any]):
 #: Agentes do estágio parcial "spec" (correção a partir da spec), na ordem em que rodam.
 SPEC_AGENT_IDS = ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
                   "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
-                  "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido"]
+                  "A15gConteudoAprovadoSpec", "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido"]
 
 PRODUTO_METADATA = [
     {"id": "A00bVizinhasCatalogo", "name": "00b · Missões já geradas (determinístico)", "icon": "🗂️", "output_key": "missoes_vizinhas", "prompt_file": None, "description": "Lê o índice de missões e entrega ao núcleo as mais próximas do ano do briefing, para a missão nova não repetir uma anterior."},
@@ -670,6 +687,7 @@ PRODUTO_METADATA = [
     {"id": "A15dJuizPerguntas", "name": "15d · Juiz das perguntas de produto", "icon": "⚖️", "output_key": "juiz_perguntas_report", "prompt_file": "produto/15_juiz_perguntas.md", "description": "O que não se confere por regex: a pergunta muda uma decisão nossa, é sobre o produto e não sobre a criança, a ação nomeada a responde, e ela não é uma transversal repintada."},
     {"id": "A15eJuizPerguntasCheck", "name": "15e · Veredito do juiz das perguntas (determinístico)", "icon": "🔀", "output_key": "juiz_perguntas_status", "prompt_file": None, "description": "Lê o envelope do juiz: ❌ em pergunta declarada pelo PO bloqueia; ❌ só em proposta segue como ressalva para o PO decidir."},
     {"id": "A15fRastroSpec", "name": "15f · Rastro de lacunas da spec (determinístico)", "icon": "🧭", "output_key": "rastro_spec_report", "prompt_file": None, "description": "Marcadores de lacuna na spec, por dono: o de produto ou de insumo volta para quem escreveu a spec; a decisão do PO fica 🟡 no semáforo do parecer; o de design e o de dev ficam para a etapa delas."},
+    {"id": "A15gConteudoAprovadoSpec", "name": "15g · Spec × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_spec_report", "prompt_file": None, "description": "A spec traduz o one-pager que o PO aprovou: mesmas habilidades do contrato de evidência (§12a), mesmo tempo total em tela (§10) e o podcast (§11) declarado. Ressalva de parecer que o PO não incorporou não muda a spec."},
     {"id": "A16SpecCheck", "name": "16 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
     {"id": "A03aaContaDaVirada", "name": "03aa · Conta da virada (determinístico)", "icon": "🧮", "output_key": "mecanica_report", "prompt_file": None, "description": "Refaz o ranking da tabela 1.3 do núcleo: normaliza cada critério, aplica os pesos e confere que o vencedor antes e o depois são os declarados — e diferentes. Pega a virada que não fecha (o custo por vaga da exp09ef1b)."},
     {"id": "A03aFidelidadeNucleo", "name": "03a · Fidelidade ao pedido do PO (núcleo)", "icon": "📌", "output_key": "fidelidade_nucleo_report", "prompt_file": None, "description": "O núcleo contra todos os pedidos de refazer do PO (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) e o briefing: o juiz cita, o código confere. Com 🔴, o núcleo volta ao autor com o relatório."},

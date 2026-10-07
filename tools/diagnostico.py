@@ -49,12 +49,15 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "perguntas_status", "rotulo": "Perguntas de produto (9f)", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "juiz_perguntas_status", "rotulo": "Juiz das perguntas de produto", "etapa": "produto", "rodada": "juiz_perguntas_rodada"},
     {"status": "rastro_spec_status", "rotulo": "Rastro de lacunas da spec", "etapa": "produto", "rodada": "spec_rodada"},
+    {"status": "conteudo_aprovado_spec_status", "rotulo": "Spec × one-pager aprovado", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "conteudo_status", "rotulo": "Banco de conteúdo", "etapa": "dev", "rodada": None},
     {"status": "telemetria_status", "rotulo": "Contrato de telemetria", "etapa": "dev", "rodada": "handoff_rodada"},
     {"status": "rastro_lacunas_status", "rotulo": "Rastro de lacunas", "etapa": "dev", "rodada": None},
     {"status": "dev_status", "rotulo": "Banca de dev", "etapa": "dev", "rodada": "banca_rodada"},
     {"status": "prd_status", "rotulo": "Pendências do PRD", "etapa": "dev", "rodada": None},
     {"status": "kpis_status", "rotulo": "Coerência KPI ↔ evento ↔ tela", "etapa": "dev", "rodada": "prd_rodada"},
+    {"status": "conteudo_aprovado_prd_status", "rotulo": "PRD × one-pager aprovado", "etapa": "dev", "rodada": "prd_rodada"},
+    {"status": "conteudo_aprovado_pedagogico_status", "rotulo": "Pedagógico × one-pager aprovado", "etapa": "dev", "rodada": "pedagogico_rodada"},
 ]
 
 #: Relatórios que não têm portão próprio: o parecer entra no dossiê como ressalva, nunca como

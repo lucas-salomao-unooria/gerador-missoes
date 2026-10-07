@@ -82,13 +82,17 @@ Reaparecimento é violação, não melhoria.
 ## 6. Tetos aplicados
 Decisões do mesmo tipo (com a conta) · duração por ato · etapas
 cognitivas por decisão · onde há scaffolding e onde a dica desaparece.
+**Tempos e formatos de aula, copiados do §10 do one-pager:** a tabela por etapa (em tela · fora
+da tela), o total em tela com o mesmo número (`Em tela: <n> min`), os checkpoints e os cenários de
+aula (aula única, duas aulas, sessões fracionadas). Parecer que pede menos tempo vai para as
+ressalvas do bloco 12; o número não muda aqui.
 
 ## 7. Acessibilidade
 Canais por instrução (áudio / pictograma / texto), teto de palavras,
 gestos que exigem demonstração animada.
 
 ## 8. Professora, preparação e parametrização com IA
-**A missão é transversal: quem a prepara é o professor de qualquer disciplina.** Contrato de customização = **recorte da aula**: `disciplina` (lista fechada dos componentes curriculares da BNCC + `projeto-interdisciplinar`), `tema` (≤ 60 caracteres), `assuntos` (3 a 6 itens, ≤ 600 caracteres no total — os objetos de conhecimento da aula), `contexto` opcional (turma, escola, região, ≤ 120), `foco` opcional (≤ 120). Campos curtos porque alimentam um prompt: o teto é a primeira barreira contra injeção (mesmo desenho de `ParametrosDoPreparoSchema` da exp-08, em `references/plataforma/exemplo-contrato-rotas-exp-08.md`). O professor **não** declara habilidades BNCC da própria disciplina. · Regras e schemas Zod de geração de conteúdo por IA (Vertex AI Gemini, só via `apps/api/src/ai`), no molde dos schemas da exp-08, incluindo a homologação em que o professor edita **qualquer** texto do pacote antes de aprovar · **Rotas do preparo docente: no módulo da própria missão, no molde da exp-08 — `POST /<modulo>/turmas/«turmaId»/gerar-conteudo` → `GET …/conteudo` → `POST …/homologar` (o professor edita e aprova) → `POST …/gate` (libera a turma), com o painel em `GET …/turmas/«turmaId»/painel`; é o que `manifesto-ia` (exp-08), `quem-mandou-isso` (exp-05) e `foto-conta` (exp-04) fazem. O módulo `/atividades` é o motor da exp-01 (antagonismo, perfis da vila) e **não se reusa**: citar `/atividades/«id»/aprovar`, `/pacote` ou `/curadoria` é citar rota que não existe** · fluxo de curadoria docente (preview, edição de postagens e aprovação **antes da aula**, ADR-66/67) · banco curado default (fallback imediato sem IA) · **tabela "A mesma missão em três aulas"** copiada do one-pager (Português, Ciências/Biologia, História: recorte · o que a IA gera · o que não muda), ou o marcador `[LIMITE DE TRANSVERSALIDADE — dono: produto]` onde couber · **perfil de quota de IA consumido** (`ia_quotas` por perfil, ADR-105) e o que o estudante e a professora veem sem saldo (429, na voz da ficção) · gatilhos de handoff · comportamento da plataforma em cada mediação e pausas (relógio coletivo = tabela `expNNefNb_gates_turma` por polling, ADR-93/94 — nunca WebSocket) · dados do painel docente · roteiro de perguntas.
+**A missão é transversal: quem a prepara é o professor de qualquer disciplina.** Contrato de customização = **recorte da aula**: `disciplina` (lista fechada dos componentes curriculares da BNCC + `projeto-interdisciplinar`), `tema` (≤ 60 caracteres), `assuntos` (3 a 6 itens, ≤ 600 caracteres no total — os objetos de conhecimento da aula), `contexto` opcional (turma, escola, região, ≤ 120), `foco` opcional (≤ 120). Campos curtos porque alimentam um prompt: o teto é a primeira barreira contra injeção (mesmo desenho de `ParametrosDoPreparoSchema` da exp-08, em `references/plataforma/exemplo-contrato-rotas-exp-08.md`). O professor **não** declara habilidades BNCC da própria disciplina. · Regras e schemas Zod de geração de conteúdo por IA (Vertex AI Gemini, só via `apps/api/src/ai`), no molde dos schemas da exp-08, incluindo a homologação em que o professor edita **qualquer** texto do pacote antes de aprovar · **Rotas do preparo docente: no módulo da própria missão, no molde da exp-08 — `POST /<modulo>/turmas/«turmaId»/gerar-conteudo` → `GET …/conteudo` → `POST …/homologar` (o professor edita e aprova) → `POST …/gate` (libera a turma), com o painel em `GET …/turmas/«turmaId»/painel`; é o que `manifesto-ia` (exp-08), `quem-mandou-isso` (exp-05) e `foto-conta` (exp-04) fazem. O módulo `/atividades` é o motor da exp-01 (antagonismo, perfis da vila) e **não se reusa**: citar `/atividades/«id»/aprovar`, `/pacote` ou `/curadoria` é citar rota que não existe** · fluxo de curadoria docente (preview, edição de postagens e aprovação **antes da aula**, ADR-66/67) · banco curado default (fallback imediato sem IA) · **tabela "A mesma missão em três aulas"** copiada do one-pager (Português, Ciências/Biologia, História: recorte · o que a IA gera · o que não muda), ou o marcador `[LIMITE DE TRANSVERSALIDADE — dono: produto]` onde couber · **perfil de quota de IA consumido** (`ia_quotas` por perfil, ADR-105) e o que o estudante e a professora veem sem saldo (429, na voz da ficção) · gatilhos de handoff · comportamento da plataforma em cada mediação e pausas (relógio coletivo = tabela `expNNefNb_gates_turma` por polling, ADR-93/94 — nunca WebSocket) · dados do painel docente · roteiro de perguntas, no momento em que o one-pager o coloca · **podcast de recapitulação** do §11 do one-pager: título, vozes, duração, quando toca, quem toca e o aviso ao professor (o roteiro fica no one-pager e ninguém a jusante o reescreve; nas 11 missões do bucket até 06/10/2026 nenhuma spec o trazia, e design e brief de assets reescreveram o áudio).
 
 ## 9. Evidências e dados
 Campo por campo: o que é coletado, quando, finalidade, retenção, acesso.
@@ -230,7 +234,9 @@ log e de telemetria.
 Os três, com o que muda e a garantia de que a descoberta chega.
 
 ## 11. Currículo
-Habilidades e códigos **confirmados**, com o momento em tela de cada um.
+Habilidades e códigos **confirmados**, com o momento em tela de cada um — **os mesmos do contrato
+de evidência (§12a) do one-pager aprovado**, nem um a mais, nem um a menos. Mais as competências
+socioemocionais e os descritores SAEB do §2, copiados.
 
 **Matriz de evidência — obrigatória, uma linha por código de Computação:**
 
@@ -254,7 +260,18 @@ ação observável. No 1º e no 2º ano, as três alternativas ficam na tela ao 
 visível sobe o teto da faixa de duas para três, critério 3.5) e são narradas (6.1).
 
 ## 12. Decisões fechadas neste gate
-Decisão · quem decidiu · data · alternativas descartadas.
+Decisão · quem decidiu · data · alternativas descartadas. Quem decide é o PO (no one-pager ou num
+pedido de correção); parecer recomenda.
+
+**Ressalvas dos pareceres não incorporadas** — o que um parecer ou gate recomendou e o one-pager
+aprovado manteve diferente. Registro para o PO, sem marcador: não trava nada, e a spec segue o
+one-pager.
+
+```
+| Parecer | Item | O que recomendou | O que o one-pager manteve |
+|---|---|---|---|
+| Adequação pedagógica | A2 | tirar `EF06CO07` do contrato | quatro habilidades, com `EF06CO07` |
+```
 
 ## Glossário canônico
 > Todo documento a jusante (jornada, fluxo, copy, protótipo, brief de assets, banco de conteúdo,

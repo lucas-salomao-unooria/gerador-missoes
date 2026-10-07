@@ -70,6 +70,8 @@ KNOWN_STATE_KEYS = {
     "handoff_dev", "brief_assets", "banco_conteudo", "conteudo_report", "manifesto_status", "manifesto_report", "telemetria_status", "telemetria_report",
     "rastro_lacunas_status", "rastro_lacunas_report",
     "rastro_spec_status", "rastro_spec_report", "rastro_design_status", "rastro_design_report",
+    "conteudo_aprovado_spec_report", "conteudo_aprovado_spec_status", "conteudo_aprovado_prd_report",
+    "conteudo_aprovado_prd_status", "conteudo_aprovado_pedagogico_report", "conteudo_aprovado_pedagogico_status",
     "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
     "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida",
@@ -1040,7 +1042,10 @@ def test_estagio_produto_parcial_spec():
         "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
         # rastro de lacunas da spec (25/09/2026): a pendência de produto só era cobrada em dev,
         # que não reescreve a spec — e barrava o PRD da exp04ef1b sem ninguém poder fechá-la
-        "A15fRastroSpec", "A16SpecCheck"]
+        "A15fRastroSpec",
+        # spec × one-pager aprovado (06/10/2026): a spec aplicava ressalvas que o PO tinha recusado —
+        # a exp06ef1b perdeu uma habilidade e cinco minutos de tela — e ninguém via
+        "A15gConteudoAprovadoSpec", "A16SpecCheck"]
     assert produto.sub_agents[0].max_iterations == max(1, get_settings().spec_max_rodadas)
     nomes = [a.name for _, a in iter_agent_tree(orch)]
     assert "A01NucleoNarrativo" not in nomes and "A05GateEstrutural" not in nomes
@@ -1066,7 +1071,7 @@ def test_estagio_produto_parcial_spec():
     assert [m["id"] for m in STAGE_SPEC["agents"]] == [
         "A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
         "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
-        "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido"]
+        "A15gConteudoAprovadoSpec", "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido"]
     print("   ✓ estágio parcial spec: SpecLoop + resumido, sem núcleo; stages_para_ui resolve spec")
 
 
