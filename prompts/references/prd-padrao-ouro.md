@@ -31,7 +31,7 @@ serie: ["4EF"]            # formato da plataforma; [] = transversal
 unidade: 1 | 2 | 3 | 4 | nenhuma
 ambiente_simulado: <o ambiente da spec (bloco 14): clone da lista fechada, ambiente novo ou mini-jogo>
 secao_ds: <unooriaai|unoovista|unoochat|tiktooria|nova:<nome>|minijogo:<nome>>  # ambientes.md; legada só por decisão do PO
-links: {stitch: <url do projeto>, miro: <url do board — omita se indisponível>, prototipo: design/08-prototipo.html, diagramas: design/09-diagramas.html, spec: spec/<slug>-spec.md, one_pager: ...}
+links: {stitch: <url do projeto>, miro: <url do board — omita se indisponível>, prototipo: design/08-prototipo.html, diagramas: design/09-diagramas.html, spec: produto/05-spec-missao.md, one_pager: produto/00-one-pager.md, pedagogico: one-pager-pedagogico.md}  # só caminhos que a sessão tem: não existe pasta spec/
 data: AAAA-MM-DD
 ---
 
@@ -43,7 +43,12 @@ Trilha/ano/unidade · problema de aprendizagem · evidências · alinhamento com
 
 # 2. Objetivos e métricas
 North star pedagógica · **tabela de KPIs no formato abaixo, lida por gate determinístico** ·
-guardrail metrics (o que não pode piorar) · hipóteses de validação.
+guardrail metrics (o que não pode piorar) · hipóteses de validação **do §17 do one-pager, com as
+palavras e os números delas** (meta que não está no one-pager nem no 9f não se inventa).
+**KPI de evidência por habilidade** — quantos estudantes chegam a Atingiu em cada habilidade do
+bloco 11 (uma linha pode cobrir várias), calculado sobre a coluna de nível que o servidor grava; o
+nível nunca vai no `track`. É o número que a missão existe para mover, e um gate confere que cada
+habilidade aparece numa linha da tabela.
 
 ```
 | KPI | PQ | Pergunta | Decisão | Corte | Tela | Evento(s) | Como calcula | Baseline | Alvo | Prazo |
@@ -77,7 +82,7 @@ Lista explícita com motivo. Inclui V2 (o que fica para depois) e o que a rubric
 Estudante (ano, faixa etária, perfil cognitivo — caps de decisão e leitura), Professor (preparo, condução, leitura), Gestor (só agregado). Cenários de dispositivo (1:1, 2–4 por aparelho, projeção única).
 
 # 5. Experiência — narrativa e mecânica (as 6 etapas)
-Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. Por etapa: o que o sistema apresenta, ordena, bloqueia e garante; verbo nativo; ator. Descoberta central e o beat exato. Checkpoints modulares entre etapas com persistência de estado, tempos sugeridos de execução, controle docente de ritmo, podcast de recapitulação e flexibilidade para formatos de aula (50 min, 2 aulas ou sessões fracionadas). Ausências declaradas do ambiente. Briefing de ofício (aposta, pico, beat memorável, não-negociáveis).
+Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. Por etapa: o que o sistema apresenta, ordena, bloqueia e garante; verbo nativo; ator. Descoberta central e o beat exato. **Tempos e formatos de aula do §10 do one-pager:** a tabela por etapa (em tela · fora da tela), o total em tela com o mesmo número, os checkpoints com persistência de estado, o controle docente de ritmo e os cenários (aula única, 2 aulas, sessões fracionadas). O podcast de recapitulação no momento que o §11 diz. Ausências declaradas do ambiente. Briefing de ofício (aposta, pico, beat memorável, não-negociáveis).
 
 # 6. Fluxo e máquina de estados
 Estados com nome próprio (viram enum), tabela de transições (estado inicial · gatilho · regra · estado seguinte · responsável · reversível?), caminhos degenerados com rota, gates de professora, estados de falha na voz da ficção, reentrada (F5, outro dia), latch, conclusão, segunda aplicação. Diagrama Mermaid `stateDiagram-v2` (o mesmo que o D3 emitiu).
@@ -86,7 +91,7 @@ Estados com nome próprio (viram enum), tabela de transições (estado inicial �
 Uma por tela do inventário: Como/Quero/Para · especificação da tela (D5) · chaves de string · etapa · critérios sustentados · estados · dependências. Itens 🔒 = requisito de conformidade (rubrica/BNCC/acessibilidade), não negociável.
 
 # 8. Requisitos funcionais
-Tabela `RF-xxx` · título · descrição (necessidade, não mecanismo) · prioridade P0/P1/P2 · rastreio (objetivo, story, critério da rubrica) · **critérios de aceite EARS/Gherkin** · casos de borda. Mínimo obrigatório: estudante, professor (tela de preparação docente `E0-PROF-01` com parametrização de tema/palavras-chave, geração de conteúdo via IA com curadoria e aprovação humana, ativação do banco curado padrão `banco_default`, dashboard, gatilhos, roteiro), plataforma (persistência de conteúdo por turma, reentrada, falhas).
+Tabela `RF-xxx` · título · descrição (necessidade, não mecanismo) · prioridade P0/P1/P2 · rastreio (objetivo, story, critério da rubrica) · **critérios de aceite EARS/Gherkin** · casos de borda. Mínimo obrigatório: estudante, professor (tela de preparação docente `E0-PROF-01` com parametrização de tema/palavras-chave, geração de conteúdo via IA com curadoria e aprovação humana, ativação do banco curado padrão `banco_default`, dashboard, gatilhos, roteiro de perguntas no momento que o one-pager diz), **podcast de recapitulação quando o §11 o traz** (quem toca, em que tela e quando — com o asset no inventário e a tarefa), plataforma (persistência de conteúdo por turma, reentrada, falhas).
 
 # 9. Requisitos não funcionais
 Checklist com meta numérica e método de medição por categoria: performance (p95, peso do bundle, mídia >2MB em bucket) · disponibilidade/recuperabilidade (F5, sessão expirada, offline) · segurança (gabarito server-side, nada no bundle, identidade do token) · **privacidade e LGPD para menores** (art. 14; `estudante_id` opaco; PII zero; texto livre em tabela própria; graus de medida scored/indicative/zero/none; retenção declarada ou lacuna assumida) · acessibilidade (WCAG 2.2 AA; áudio + pictograma em anos iniciais; contraste; teclado; `prefers-reduced-motion`) · usabilidade por faixa (tetos de palavras, decisões, duração de ato) · observabilidade (eventos, logs com `codigo`, OTel) · compatibilidade (Chromebook/desktop; viewport) · i18n (pt-BR único) · custo (IA: teto de tokens por turma/preparação; Cloud Run).
@@ -104,7 +109,7 @@ Rotas por papel na forma consagrada pelas missões recentes (exp-06/07/08): `GET
 Tabela `EVT-xxx` · `verbo` (sugerido `attempted|interacted|progressed|completed|scored`; não imposto pela api) · `objeto` (`namespace:slug`, estável) · quando dispara · `resultado` · `contexto` (objetos JSON; só número, booleano ou vocabulário fechado; nunca texto de menor, nome, e-mail) · caminho (analítico `track` · operacional rota do módulo · erro · vital · trace) · **onde é lido** (o que a professora vê: tabela `expNNefNb_*` + rota/tela do professor; o que só alimenta KPI de produto: `painel de produto (PostHog)`. Pub/Sub, `/telemetry/batch` e `telemetria_eventos` são transporte, nunca leitor; "aparece no dashboard" sem tabela nem painel nomeados é fantasia) · retenção · KPI que alimenta. **Não existe campo `dados`.** Volume por sessão (cabe em 50 eventos/10 s?) e o que é agregado no cliente. `experiencia.json#verbos` com o significado nesta missão + lista de objetos. Métricas proibidas (dwell no analítico, ranking). Versão do instrumento. Clarity recebe só `verbo:objeto`. Molde: `references/plataforma/exemplo-telemetria-exp-08.md`.
 
 # 14. Pedagogia e conformidade
-Matriz habilidade BNCC (código, confirmado ou 🔵 a validar) → evidência observável → interação → dado gravado. Competência socioemocional nomeada. Rastreabilidade curricular. Gabarito (só no servidor). Graus de medida. Guardrails de IA (8.1/8.2: geração restrita à preparação docente com curadoria humana obrigatória antes do consumo pelo estudante; IA nunca avalia formalmente o estudante; fallback para banco curado padrão) e éticos (8.3–8.6). Papel do erro. O que cada adulto vê.
+Matriz habilidade BNCC — **exatamente as do bloco 11 da spec** (código, confirmado ou 🔵 a validar) → evidência observável → interação → dado gravado → **régua inteira: Atingiu, Em processo e Não atingiu, por extenso** → canal (A, B, A + B) → no Canal B, remissão à pergunta e às alternativas no anexo (§12a). Competências socioemocionais do §2 do one-pager. Rastreabilidade curricular. Gabarito (só no servidor). Graus de medida. Guardrails de IA (8.1/8.2: geração restrita à preparação docente com curadoria humana obrigatória antes do consumo pelo estudante; IA nunca avalia formalmente o estudante; fallback para banco curado padrão) e éticos (8.3–8.6). Papel do erro. O que cada adulto vê.
 
 # 15. Dependências, integrações e **pré-requisitos de plataforma**
 **Pré-requisitos de plataforma** — tabela própria e obrigatória quando a missão pede capacidade que a plataforma ainda não tem: capacidade · por que a mecânica precisa dela · arquivos a tocar (contrato da api, migration do CHECK, `ExpFrame`, teste, repasse nas rotas do hub) · componente de design system a criar · ADR necessária · o que acontece sem ela (degradação). Cada linha vira também item da seção 19, e o frontmatter sai `aprovado-com-pendencias-de-plataforma`. A tabela das capacidades, com o caminho de cada uma, está em `references/capacidades-plataforma.md`. Depois disso: seção do DS e componentes faltantes (com responsável e prazo) · versão do `@unooria/design-system` · SDK · módulos da api reutilizados · IA (Vertex AI Gemini no backend NestJS via `apps/api/src/ai`, quota, banco default curado para contingência) · outras missões (contrato e fallback) · conteúdo autoral (inventário, quem produz).
@@ -128,6 +133,8 @@ Estratégia (unit de regras puras, contrato, tenancy, sanitizador com grep no `d
 Fases `dev-local → dev → hml → main` (ADR-101; PR `--base dev-local`; tag semver só em `main`), `status` no catálogo (`em-breve` → `disponivel`), disponibilidade no painel `/unooria` (a DoD exige provar que a experiência **desliga**, ADR-87/88), liberação por turma pela professora (ADR-69), critérios de avanço e rollback (`node apps/hub/scripts/publicar-manifesto.mjs <exp> --versao x.y.z`), comunicação a professores, playtest piloto.
 
 # 22. Apêndices e changelog
+**O anexo do conteúdo aprovado é da esteira.** Depois do PRD, ela cola `# Anexo — conteúdo aprovado pelo PO` com as seções §2, §9, §10, §11, §12 e §17 do one-pager, literais; o corpo remete a ele e não o reescreve.
+
 **Links, não cópias.** Os relatórios dos gates, a spec, o briefing de ofício, as arestas do fluxo, o
 sheet de strings, o brief de assets e o insumo de dev já são arquivos próprios da sessão: aponte
 para eles pelo caminho (`produto/01-gate-estrutural.md`, `design/03-fluxo-arestas.md`…). Copiá-los
@@ -140,7 +147,7 @@ Aqui fica só o histórico de versões deste PRD.
 - Português brasileiro; termos técnicos e identificadores no original.
 - Uma ideia por frase. Tabelas para tudo que é lista paralela (RF, RNF, EVT, ENT, T, RISCO).
 - Nunca inventar código BNCC, rota, tabela, componente ou ADR: se a fonte upstream não confirma, marcar `🔵 a validar` ou `[NEEDS CLARIFICATION]`.
-- Nunca transcrever copy quando existe chave de string; referenciar a chave.
+- Nunca transcrever copy quando existe chave de string; referenciar a chave. O conteúdo pedagógico aprovado (perguntas e alternativas do Canal B, roteiro do podcast, roteiro do debate) não é copy de tela: está no anexo, e o corpo remete a ele.
 - Todo RF P0 deve ter pelo menos um critério EARS **e** aparecer em pelo menos uma tarefa e um teste.
 - O PRD referencia caminhos reais do monorepo (`apps/experiencias/expNNefNb/…`, `apps/api/src/<slug>/…`) e os exemplares canônicos a imitar (`apps/api/src/unootube/`, `apps/experiencias/_template/`).
 - Tamanho: resumo executivo ≤ 1 página; corpo completo sem limite artificial, mas sem repetir o que outra seção já disse — referenciar por número de seção.

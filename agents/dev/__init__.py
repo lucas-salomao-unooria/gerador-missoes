@@ -31,13 +31,23 @@ Ordem (SequentialAgent):
   │                            de codificação                       │
   │ v4c A48PrdCheck          → prd_status (marcadores que o redator │
   │                            deixou no PRD + consistência interna)│
+  │ v4a A48cConteudoAprovadoPrd → conteudo_aprovado_prd_status      │
+  │                            (habilidades, KPI por habilidade,    │
+  │                            tempo, podcast e caminhos × one-pager)│
   │ v4r A48PrdRodada         → prd_rodada (reprovado devolve ao     │
   │                            redator com o relatório do gate)     │
   └────────────────────────────────────────────────────────────────┘
-  v5  A49OnePagerPedagogico → one_pager_pedagogico ← entregável para GENTE: o documento
-                               que o time pedagógico lê para aprovar a missão antes de
-                               alguém codificar. Sem jargão, com os links do protótipo,
-                               exportado também em `.docx`.
+  v4d A48dAnexoPrd             → prd_final + anexo literal do one-pager aprovado (§2, 9, 10,
+                               11, 12, 17): o que nenhum gabarito tinha onde pôr
+  ┌── OnePagerPedagogicoLoop (até PRD_MAX_RODADAS) ─────────────────┐
+  │ v5  A49OnePagerPedagogico → one_pager_pedagogico ← entregável   │
+  │       para GENTE: o documento que o time pedagógico lê para      │
+  │       aprovar a missão antes de alguém codificar. Sem jargão,    │
+  │       com os links do protótipo, exportado também em `.docx`.    │
+  │ v5b A49bConteudoAprovadoPedagogico → habilidades, tempo,        │
+  │       podcast e caminhos × one-pager aprovado                   │
+  └────────────────────────────────────────────────────────────────┘
+  v5c A49cAnexoPedagogico      → one_pager_pedagogico + anexo literal (§10, 11, 12)
 """
 
 from __future__ import annotations
@@ -53,6 +63,7 @@ from agents.juiz import get_juiz_de_achados
 from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca
 from agents.checkers import (
+    AnexoAprovadoAgent,
     ConsolidacaoBancaAgent,
     DespachoTicketsAgent,
     EnvelopeGateAgent,
@@ -61,6 +72,7 @@ from agents.checkers import (
 )
 from config import get_settings
 from prompts import load_prompt
+from tools.conteudo_aprovado import SECOES_PEDAGOGICO, SECOES_PRD
 from tools.rastro import FONTES_DEV
 
 
@@ -374,17 +386,73 @@ def build_dev_stage(
                         estrito=get_settings().kpis_check_estrito,
                         before_agent_callback=marcar_heranca,
                     ),
+                    RastroCheckAgent(
+                        name="A48cConteudoAprovadoPrd",
+                        description="PRD × one-pager aprovado e spec: as habilidades do bloco 11 na matriz da seção 14, um KPI por habilidade, o tempo em tela do §10, o podcast do §11 com requisito, e só caminhos de artefato que a sessão tem.",
+                        modo="aprovado_prd",
+                        rotulo="PRD × one-pager aprovado",
+                        report_key="conteudo_aprovado_prd_report",
+                        status_key="conteudo_aprovado_prd_status",
+                        agente="conteudo-aprovado",
+                        estrito=estrito,
+                        before_agent_callback=marcar_heranca,
+                    ),
                     SaidaDeLoopAgent(
                         name="A48PrdRodada",
                         description="PRD consistente encerra o loop; reprovado devolve ao redator com o relatório do gate.",
                         rotulo="Consistência do PRD",
-                        status_keys=["prd_status", "kpis_status"],
+                        status_keys=["prd_status", "kpis_status", "conteudo_aprovado_prd_status"],
                         rodada_key="prd_rodada",
                         max_rounds=rodadas_prd,
                     ),
                 ],
             ),
-            get_one_pager_pedagogico_agent(**kw),
+            # Depois do loop, para os gates lerem só o que o redator escreveu. O PRD das 11 missões do
+            # bucket não tinha onde pôr o podcast, os tempos e o contrato de evidência, e os resumia.
+            AnexoAprovadoAgent(
+                name="A48dAnexoPrd",
+                description="Cola no fim do PRD as seções do one-pager aprovado — currículo, professor, tempos e cenários, podcast, contrato de evidência, hipóteses —, literais.",
+                chave="prd_final",
+                secoes=list(SECOES_PRD),
+                rotulo="Anexo do PRD",
+                before_agent_callback=marcar_heranca,
+            ),
+            LoopAgent(
+                name="OnePagerPedagogicoLoop",
+                description="One-pager pedagógico ↔ conferência contra o one-pager aprovado, até bater ou esgotar as rodadas.",
+                max_iterations=rodadas_prd,
+                before_agent_callback=marcar_heranca,
+                sub_agents=[
+                    get_one_pager_pedagogico_agent(**kw),
+                    RastroCheckAgent(
+                        name="A49bConteudoAprovadoPedagogico",
+                        description="One-pager pedagógico × one-pager aprovado e spec: as habilidades do bloco 11, o tempo em tela do §10, o podcast do §11 e só caminhos de artefato que a sessão tem.",
+                        modo="aprovado_pedagogico",
+                        rotulo="Pedagógico × one-pager aprovado",
+                        report_key="conteudo_aprovado_pedagogico_report",
+                        status_key="conteudo_aprovado_pedagogico_status",
+                        agente="conteudo-aprovado",
+                        estrito=estrito,
+                        before_agent_callback=marcar_heranca,
+                    ),
+                    SaidaDeLoopAgent(
+                        name="A49PedagogicoRodada",
+                        description="Pedagógico fiel encerra o loop; divergente volta ao redator com o relatório.",
+                        rotulo="One-pager pedagógico",
+                        status_keys=["conteudo_aprovado_pedagogico_status"],
+                        rodada_key="pedagogico_rodada",
+                        max_rounds=rodadas_prd,
+                    ),
+                ],
+            ),
+            AnexoAprovadoAgent(
+                name="A49cAnexoPedagogico",
+                description="Cola no fim do pedagógico os tempos e cenários de aula, o podcast com o roteiro e o contrato de evidência do one-pager aprovado, literais — o texto que o time pedagógico aprova.",
+                chave="one_pager_pedagogico",
+                secoes=list(SECOES_PEDAGOGICO),
+                rotulo="Anexo do pedagógico",
+                before_agent_callback=marcar_heranca,
+            ),
         ],
     )
 
@@ -410,6 +478,11 @@ DEV_METADATA = [
     {"id": "A48PrdCheck", "name": "48 · Pendências do PRD (determinístico)", "icon": "🧭", "output_key": "prd_check_report", "prompt_file": None, "description": "Marcadores que o redator deixou no PRD, mais a consistência interna do documento (prefixo de tabela único, requisito P0 com teste e tarefa, evento com tabela leitora, caminho único). lacuna de produto/design/dev marca o PRD como não pronto, plataforma deixa 🟡."},
     # sem esta linha o gate rodava, podia bloquear, e a tela não tinha onde mostrar o relatório (24/09/2026)
     {"id": "A48bKpisCheck", "name": "48a · Coerência KPI ↔ evento ↔ tela (determinístico)", "icon": "📈", "output_key": "kpis_report", "prompt_file": None, "description": "Todo KPI com pergunta, decisão, corte e evento que dispara na tela que ele nomeia; os sinais universais das transversais de dono missão na tabela de eventos, com a IA ao estudante decidida pela spec."},
+    {"id": "A48cConteudoAprovadoPrd", "name": "48c · PRD × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_prd_report", "prompt_file": None, "description": "As habilidades do bloco 11 na matriz da seção 14, um KPI por habilidade, o tempo em tela do one-pager, o podcast com requisito funcional e só caminhos de artefato que existem na sessão. Divergência volta ao redator."},
     {"id": "A48PrdRodada", "name": "48b · Veredito do PRD (determinístico)", "icon": "🔁", "output_key": "prd_rodada", "prompt_file": None, "description": "PRD consistente encerra o loop; reprovado devolve ao redator com o relatório do gate, até o teto de rodadas."},
+    {"id": "A48dAnexoPrd", "name": "48d · Anexo do conteúdo aprovado no PRD (determinístico)", "icon": "📎", "output_key": "prd_final", "prompt_file": None, "description": "Cola no fim do PRD, literais, as seções do one-pager aprovado que o gabarito não tinha onde pôr: currículo, papel do professor, tempos e cenários de aula, podcast com roteiro, contrato de evidência e hipóteses."},
     {"id": "A49OnePagerPedagogico", "name": "49 · One-pager pedagógico (validação humana)", "icon": "🧑‍🏫", "output_key": "one_pager_pedagogico", "prompt_file": "dev/49_one_pager_pedagogico.md", "description": "A missão inteira em linguagem de sala de aula, com o papel do professor, os links do protótipo e as perguntas de aprovação. Salvo em Markdown e `.docx`."},
+    {"id": "A49bConteudoAprovadoPedagogico", "name": "49b · Pedagógico × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_pedagogico_report", "prompt_file": None, "description": "As habilidades do bloco 11, o tempo em tela, o podcast e os caminhos de artefato do pedagógico contra o one-pager aprovado. Divergência volta ao redator."},
+    {"id": "A49PedagogicoRodada", "name": "49r · Veredito do pedagógico (determinístico)", "icon": "🔁", "output_key": "pedagogico_rodada", "prompt_file": None, "description": "Pedagógico fiel encerra o loop; divergente volta ao redator com o relatório, até o teto de rodadas."},
+    {"id": "A49cAnexoPedagogico", "name": "49c · Anexo do conteúdo aprovado no pedagógico (determinístico)", "icon": "📎", "output_key": "one_pager_pedagogico", "prompt_file": None, "description": "Cola no fim do pedagógico, literais, os tempos e cenários de aula, o podcast com o roteiro e o contrato de evidência do one-pager aprovado — o texto que o time pedagógico aprova."},
 ]

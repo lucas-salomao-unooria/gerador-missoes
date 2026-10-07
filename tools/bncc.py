@@ -60,12 +60,18 @@ def extrair_codigos(texto: str) -> List[str]:
 
 
 def secao_bloco(texto: str, numero: int) -> Optional[str]:
-    """Texto do bloco `## <numero>.` da spec até o próximo heading numerado (ou o fim)."""
+    """Texto do bloco `## <numero>.` da spec até o próximo bloco numerado (ou o fim).
+
+    Subseção `### 11.1` é do bloco 11, não o fim dele. Até 06/10/2026 o corte parava nela: a spec
+    que abria o currículo com `### 11.1 Habilidades e momentos` tinha o bloco 11 vazio, e o gate
+    acusava "nenhum código de habilidade" — o falso positivo que o PO contestou na exp06ef1b em
+    28/09 — e todo gate que lia um bloco perdia o texto das subseções numeradas.
+    """
     m = re.search((_BLOCO_RE % numero) + r".*$", texto or "", re.MULTILINE)
     if not m:
         return None
     resto = texto[m.end():]
-    m2 = re.search(r"^#{1,4}\s*\d{1,2}\s*[.—-]", resto, re.MULTILINE)
+    m2 = re.search(r"^#{1,4}\s*\d{1,2}\s*(?:\.(?!\d)|[—-])", resto, re.MULTILINE)
     return resto[: m2.start()] if m2 else resto
 
 

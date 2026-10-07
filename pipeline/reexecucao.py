@@ -68,6 +68,10 @@ CHAVES_DEV = frozenset({
     # gate de KPI do PRD (23/09/2026): sem apagar, uma correção que caísse antes dele deixava
     # no dossiê o veredito da execução anterior como se fosse desta
     "kpis_report", "kpis_status", "kpis_status_envelope",
+    # PRD e pedagógico × one-pager aprovado (06/10/2026)
+    "conteudo_aprovado_prd_report", "conteudo_aprovado_prd_status", "conteudo_aprovado_prd_status_envelope",
+    "conteudo_aprovado_pedagogico_report", "conteudo_aprovado_pedagogico_status",
+    "conteudo_aprovado_pedagogico_status_envelope", "pedagogico_rodada",
     "juiz_telemetria_saida",
 })
 #: `miro_board` fica de fora de propósito: o espelho atualiza o mesmo board em vez de abrir outro.
@@ -99,6 +103,7 @@ CHAVES_SPEC = frozenset({
     "juiz_perguntas_report", "juiz_perguntas_status", "juiz_perguntas_status_envelope",
     "juiz_perguntas_rodada", "juiz_evidencia_saida",
     "rastro_spec_report", "rastro_spec_status", "rastro_spec_status_envelope",
+    "conteudo_aprovado_spec_report", "conteudo_aprovado_spec_status", "conteudo_aprovado_spec_status_envelope",
 }) | CHAVES_DESIGN
 #: Tudo que a etapa de produto grava. Ficam de fora, de propósito, o que ela LÊ da geração original:
 #: `briefing`, `perguntas_po` e `material_anexado` — refazer produto é refazê-lo sobre o mesmo pedido
@@ -183,6 +188,7 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Perguntas de produto (9f)": "spec",
     "Juiz das perguntas de produto": "spec",
     "Rastro de lacunas da spec": "spec",
+    "Spec × one-pager aprovado": "spec",
     "Spec da missão": "spec",
     "Fechamento de lacunas (D0)": "design",
     "Ambiente simulado (D9)": "design",
@@ -199,6 +205,8 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Retrabalho da banca": "dev",
     "Pendências e consistência do PRD": "dev",
     "Coerência KPI ↔ evento ↔ tela": "dev",
+    "PRD × one-pager aprovado": "dev",
+    "Pedagógico × one-pager aprovado": "dev",
     "Consistência do PRD": "dev",
 }
 _ETAPAS_REFEITAS: Dict[str, frozenset] = {
@@ -391,6 +399,11 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
         # a spec que o autor escreveu é a do Gate 0; `spec_missao` pode já trazer a consolidação do D0
         atual = estado.get("spec_missao_gate0") if chave == "spec_missao" else None
         atual = str(atual or estado.get(chave) or "").strip()
+        if chave in ("prd_final", "one_pager_pedagogico"):
+            # o anexo é da esteira, não do autor: na base dele, viraria texto a reescrever e duplicaria
+            from tools.conteudo_aprovado import remover_anexo
+
+            atual = remover_anexo(atual).strip()
         if atual:
             limpo[anterior] = bloco_versao_anterior(chave, atual)
 

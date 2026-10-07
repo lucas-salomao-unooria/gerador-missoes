@@ -37,6 +37,27 @@ Use **a criança** nos anos iniciais (1º ao 5º do Fundamental) e **o estudante
 
 Se você precisar de uma palavra técnica porque não existe outra, explique-a na hora, entre vírgulas, na mesma frase.
 
+## De onde vem cada coisa
+
+O time pedagógico aprova o que o PO aprovou: **as habilidades, o contrato de evidência, os tempos,
+os cenários de aula, o podcast e o roteiro do debate saem do one-pager de produto**, com os mesmos
+números e o mesmo texto; a spec detalha a mecânica. Nas 11 missões do bucket até 06/10/2026, este
+documento nunca falou do podcast, nunca mostrou como a missão sabe que a criança aprendeu, punha o
+debate em "Depois" quando o one-pager o põe na virada, e repetia os minutos que a spec tinha mudado
+por conta própria. Não reabra decisão que a spec fechou no bloco 12: ela entra em "Por que este
+caminho", não em "O que ainda está em aberto".
+
+**Depois de você, a esteira cola no fim deste documento um anexo com os tempos (§10), o podcast com
+o roteiro (§11) e o contrato de evidência (§12a) do one-pager, literais** — é o texto que a criança
+vai ouvir e responder, e o time pedagógico aprova palavra por palavra. Não o escreva; remeta a ele.
+
+## Rodada de correção — só quando houver relatório abaixo
+
+Um gate determinístico confere as habilidades do bloco 11 da spec, o total em tela do one-pager, o
+podcast e os caminhos de arquivo que você cita. A correção é copiar de onde o relatório manda.
+
+{conteudo_aprovado_pedagogico_report?}
+
 ## Insumos
 
 **Spec da missão (o contrato fechado):**
@@ -166,9 +187,12 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 <A preparação: o que ela escolhe, o que o sistema prepara, quanto tempo leva.>
 ### Durante
 <Onde ela entra, o que aciona a entrada dela, o que aparece na tela dela,
- e o que acontece com as crianças enquanto ela conduz.>
+ e o que acontece com as crianças enquanto ela conduz. As perguntas da conversa entram AQUI,
+ escritas literalmente, no momento em que o one-pager as coloca (quase sempre na virada, antes do
+ Explicar) — não no fim da aula.>
 ### Depois
-<A conversa final, com as perguntas escritas, literalmente, para ela ler.>
+<O que acontece depois da missão: o podcast, se o one-pager o põe depois, o que ela vê no painel
+ da turma e quando.>
 
 ## As telas
 <No máximo quatro telas — as que mudam a decisão de quem aprova. Uma linha cada, dizendo o que se vê
@@ -180,9 +204,27 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
  Diga em uma frase como abrir e o que esperar ao abrir.>
 
 ## O que a missão ensina
-<As habilidades do currículo, cada uma escrita por extenso em linguagem de sala,
- com o código entre parênteses no fim, e o momento exato da missão em que a criança
- exercita aquilo. Se alguma ainda não foi confirmada, diga.>
+<As habilidades do currículo — exatamente as do bloco 11 da spec, nem uma a mais —, cada uma escrita
+ por extenso em linguagem de sala, com o código entre parênteses no fim, e o momento exato da missão
+ em que a criança exercita aquilo. Se alguma ainda não foi confirmada, diga. Feche com as
+ competências socioemocionais do one-pager, em uma linha.>
+
+## Como a gente sabe que a criança aprendeu
+<Uma entrada por habilidade, com o código entre parênteses. O que a criança faz na tela que conta, e
+ o que separa os três níveis — "chegou lá", "está a caminho", "ainda não" —, uma linha cada, em
+ linguagem de sala. Quando a missão faz uma pergunta no fim (Canal B), escreva a pergunta e as três
+ respostas exatamente como a criança vai ver, dizendo qual é qual. Diga que a missão não dá nota nem
+ mostra o nível para a criança. O texto completo está no anexo.>
+
+## Quanto tempo leva e como dividir em aulas
+<A tabela das seis etapas com os minutos em tela e fora da tela, com os números do one-pager, e o
+ total. Depois, os formatos possíveis — uma aula, duas aulas, sessões curtas — com onde cada aula
+ começa e termina e onde a missão guarda o progresso.>
+
+## O podcast do fechamento
+<Se o one-pager tem podcast: o título, quem fala, quanto dura, em que momento tocar e quem toca, e o
+ aviso do one-pager ("nunca antes da aula", por exemplo). O roteiro completo está no anexo, para o
+ time aprovar o texto. Se não tem, uma linha dizendo isso.>
 
 ## O que a missão NÃO faz, de propósito
 <As ausências deliberadas, e o porquê de cada uma em meia linha.
@@ -238,7 +280,10 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
  Varra os dois vereditos de gate e os dois pareceres: toda ressalva que sobreviveu
  e toda decisão de produto ainda pendente entra aqui, com o nome de quem decide —
  **inclusive quando o veredito final foi verde**. Um gate que passou com ressalva
- não é um gate sem ressalva, e quem aprova a missão precisa ver a diferença.>
+ não é um gate sem ressalva, e quem aprova a missão precisa ver a diferença.
+ Ressalva que o PO já recusou (a tabela «Ressalvas dos pareceres não incorporadas» do bloco 12
+ da spec) e decisão fechada no bloco 12 não são pendência: são decisão, e vão para "Por que este
+ caminho, e não outro".>
 
 > "<O princípio por trás da descoberta, generalizado para além desta missão —
 >  o que fica depois que o app simulado é esquecido. Não repita a citação de abertura:
@@ -250,12 +295,14 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 1. **Teste da palavra** — existe alguma palavra da coluna esquerda da tabela de linguagem? Falha: troque.
 2. **Teste do identificador** — sobrou algum código de tela, nome de arquivo, nome de campo ou trecho de código? Falha: descreva em palavras.
 3. **Teste da professora** — cada seção responde uma pergunta que uma professora faria, na ordem em que ela faria?
-4. **Teste da conversa final** — as perguntas do fechamento estão escritas literalmente, prontas para ler em voz alta?
+4. **Teste da conversa** — as perguntas da conversa estão escritas literalmente, prontas para ler em voz alta, no momento em que o one-pager as coloca?
 5. **Teste do link — bloqueante.** Os links do protótipo e das telas estão lá, com uma frase dizendo o que a pessoa encontra ao abrir? **Escrever "o protótipo pode ser aberto no navegador" sem o caminho do arquivo não passa neste teste.** O protótipo é o único item que deixa a professora simular a aula antes de aprovar; sem ele, ela aprova no escuro. Link ausente ou vazio → `"status": "bloqueado"` no envelope, e a falta entra em "O que ainda está em aberto" com dono nomeado.
 6. **Teste da honestidade** — alguma seção promete algo que a spec não garante? Falha: corrija para o que está escrito.
-7. **Teste do tamanho** — dá para ler em dez minutos? Se passou muito disso, corte explicação, não conteúdo.
-8. **Teste da ressalva** — toda ressalva e toda decisão pendente dos dois gates de produto e dos dois pareceres aparece em "O que ainda está em aberto"? Veredito verde não dispensa a varredura. Falha: liste o que faltou.
-9. **Teste da alternativa** — "Por que este caminho, e não outro" responde às perguntas que o time pedagógico faria, e não às que já estão respondidas no corpo do documento?
+7. **Teste do tamanho** — dá para ler em dez minutos, sem contar o anexo? Se passou muito disso, corte explicação, não conteúdo.
+8. **Teste do one-pager aprovado** — as habilidades, os minutos em tela, o podcast e o momento do debate são os do one-pager? Falha: copie de lá. Um gate confere os três primeiros.
+9. **Teste da contagem** — o número de perguntas, pendências e ressalvas no bloco do topo é a contagem das listas do corpo? Falha: conte de novo.
+10. **Teste da ressalva** — toda ressalva e toda decisão pendente dos dois gates de produto e dos dois pareceres aparece em "O que ainda está em aberto"? Veredito verde não dispensa a varredura. Falha: liste o que faltou.
+11. **Teste da alternativa** — "Por que este caminho, e não outro" responde às perguntas que o time pedagógico faria, e não às que já estão respondidas no corpo do documento?
 
 ## Saída
 

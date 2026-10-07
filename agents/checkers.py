@@ -714,7 +714,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager | consistencia | conteudo
+    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -812,6 +812,26 @@ class RastroCheckAgent(BaseAgent):
                 "status": min((r_lacunas["status"], r_consistencia["status"]), key=ordem.index),
                 "achados": list(r_lacunas["achados"]) + list(r_consistencia["achados"]),
             }
+        elif self.modo in ("aprovado_spec", "aprovado_prd", "aprovado_pedagogico"):
+            # O documento contra o one-pager que o PO aprovou: habilidades, tempo em tela, podcast e, no
+            # PRD e no pedagógico, os caminhos de artefato. A exp06ef1b perdeu uma habilidade e cinco
+            # minutos de tela na spec, e o PRD seguiu a spec sem nenhum gate acusar (06/10/2026).
+            from pipeline.artifacts import caminhos_de_artefato
+            from tools import conteudo_aprovado as ca
+
+            one_pager = str(state.get("one_pager", "") or "")
+            spec = str(state.get(self.spec_key, "") or "")
+            if self.modo == "aprovado_spec":
+                resultado, documento = ca.validar_spec(spec, one_pager), "spec"
+            elif self.modo == "aprovado_prd":
+                resultado = ca.validar_prd(str(state.get("prd_final", "") or ""), spec, one_pager,
+                                           caminhos_de_artefato())
+                documento = "PRD"
+            else:
+                resultado = ca.validar_pedagogico(str(state.get("one_pager_pedagogico", "") or ""), spec,
+                                                  one_pager, caminhos_de_artefato())
+                documento = "one-pager pedagógico"
+            relatorio = ca.relatorio(resultado, documento, missao)
         else:
             resultado = varrer_lacunas(self.fontes, dict(state), etapa_corrente=self.etapa)
             relatorio = relatorio_lacunas(resultado, self.rotulo, missao, agente=self.agente)
@@ -854,6 +874,43 @@ class RastroCheckAgent(BaseAgent):
             else:
                 msg = f"⚠️ {self.rotulo}: {len(bloqueios)} lacuna(s) — modo não estrito, segue como ressalva.\n{itens}"
 
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta=delta),
+        )
+
+
+class AnexoAprovadoAgent(BaseAgent):
+    """Cola no fim de `chave` as seções do one-pager aprovado, literais (`tools/conteudo_aprovado.py`).
+
+    Roda depois do loop do documento, para os gates do loop lerem só o que o redator escreveu. Troca
+    o anexo de uma execução anterior em vez de somar outro. Documento vazio ou mensagem de pulo do
+    ADK não recebe anexo: o PRD de um pipeline bloqueado continua sendo só o aviso.
+    """
+
+    chave: str
+    secoes: List[int] = Field(default_factory=list)
+    rotulo: str = "Anexo do conteúdo aprovado"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from pipeline.artifacts import e_mensagem_de_pulo
+        from tools import conteudo_aprovado as ca
+
+        state = ctx.session.state
+        documento = state.get(self.chave)
+        one_pager = str(state.get("one_pager", "") or "")
+        delta: Dict[str, Any] = {}
+        if not documento or e_mensagem_de_pulo(documento):
+            msg = f"⏭️ {self.rotulo}: sem documento para anexar."
+        else:
+            novo = ca.com_anexo(str(documento), one_pager, self.secoes)
+            delta[self.chave] = novo
+            msg = (f"📎 {self.rotulo}: seções {', '.join(f'§{n}' for n in self.secoes)} do one-pager aprovado, literais."
+                   if ca.TITULO_ANEXO in novo else f"⚠️ {self.rotulo}: o one-pager não tem nenhuma das seções.")
         yield Event(
             invocation_id=ctx.invocation_id,
             author=self.name,
