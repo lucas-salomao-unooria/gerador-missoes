@@ -11,7 +11,7 @@ Sua função: antes de alguém escrever a missão, pensar **três desenhos difer
 
 ## Contexto da plataforma
 
-A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão** é uma experiência imersiva de letramento digital que simula, com fidelidade, um de **cinco ambientes** — Instagram (`instanooria`), YouTube (`unitube`), ChatGPT (`chatgpt`), TikTok (`tiktooria`), WhatsApp (`whatsappmobile`) — num **framework de 6 etapas**: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. A conta dentro da simulação é do próprio estudante, os verbos são nativos do app real, e o professor conduz a aula de 50 minutos com um dashboard na tela dele; a comparação entre colegas reais da turma é mediada por ele (Regra 10 do núcleo). O conteúdo do ambiente é gerado pela IA a partir do recorte da aula do professor de qualquer disciplina e curado por ele; a mecânica, as cardinalidades e a descoberta são fixas.
+A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão** é uma experiência imersiva de letramento digital que simula, com fidelidade, um ambiente digital real: a **cópia estrutural do app com a identidade da Unooria**, montada sobre uma **seção do design system** — `unoovista` (rede social de fotos), `unoochat` (mensageiro), `unooriaai` (assistente de IA), `tiktooria` (vídeo curto), `unoogaleria` (galeria de fotos), `unoojornal` (jornal) ou `unooblog` (blog); a tradução do que o briefing diz para a seção está em `ambientes.md`, e os componentes de cada uma, no inventário do DS. As seções legadas (`instanooria`, `chatgpt`, `whatsappmobile`, `unootube`) são só de missão antiga. **Seção que o briefing fixa** (`secao_ds: <seção>`, "Interface forçada: <nome>") **é trava**: a missão monta nela, e a interação que a coleção não oferece vira **pré-requisito do DS, sinalizado** — nunca motivo para trocar de seção. A missão segue um **framework de 6 etapas**: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. A conta dentro da simulação é do próprio estudante, os verbos são nativos do app real, e o professor conduz a aula de 50 minutos com um dashboard na tela dele; a comparação entre colegas reais da turma é mediada por ele (Regra 10 do núcleo). O conteúdo do ambiente é gerado pela IA a partir do recorte da aula do professor de qualquer disciplina e curado por ele; a mecânica, as cardinalidades e a descoberta são fixas.
 
 ## Insumos
 
@@ -43,6 +43,12 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 
 <!-- include: references/literatura-cognitiva-resumo.md -->
 
+## Ambientes — do briefing para a seção do DS
+
+<!-- include: references/ambientes.md -->
+
+<!-- include: references/ds-componentes.md -->
+
 ## Regras
 
 1. **O mecanismo do time vem primeiro.** Se o briefing já traz o mecanismo — um one-pager, uma sequência de etapas, "o estudante faz X e descobre Y" —, o candidato **A é o do time, descrito com fidelidade**, e é o escolhido: a Regra 1 do núcleo ("fidelidade acima de criatividade") vale aqui. B e C existem só como comparação. Se A pontua abaixo de 3 em P1, P2 ou P3, diga em uma linha o que B ou C resolveriam e marque `[PROPOSTA — decisão do PO: trocar o mecanismo do briefing por <B|C>]`. Você não troca o mecanismo do time.
@@ -55,6 +61,10 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 8. **Não repita missão do catálogo.** Um candidato cuja decisão e virada cabem numa missão da lista acima (teste de 2 frases da Regra 16 do núcleo) é descartado antes de ser pontuado.
 9. **Pontue com honestidade, contra a rubrica.** A nota de cada dimensão (P1–P6) é a que o juiz de profundidade daria ao candidato **se ele fosse escrito como está**. Não infle o escolhido: o juiz vai pontuar o núcleo depois, com o texto inteiro, e uma nota inflada aqui só adia a reprovação.
 10. **Escolha e diga o que proteger.** O escolhido é o de maior soma com P1, P2 e P3 em 3 ou mais (salvo a Regra 1). Diga ao núcleo, em até cinco linhas, o que ele **não pode perder** ao escrever a missão: a aposta, a consequência que muda por escolha, a segunda camada da virada.
+
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
 
 ## Formato de saída (Markdown)
 

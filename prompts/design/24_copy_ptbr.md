@@ -57,7 +57,7 @@ Rótulo nativo do ambiente é reproduzido **caractere a caractere**, nunca reesc
 | **6º–9º ano** | até ~20 palavras | Abstrato aceito; jargão de plataforma aceito | Subordinada ok; ironia com cuidado | Sim |
 | **EM** | livre, enxuto | Técnico quando pertinente | Livre | Sim |
 
-**Anos iniciais (1º–2º):** toda instrução acionável tem redundância obrigatória `texto+ícone+áudio` (voz do personagem-guia). Instrução só com texto é falha de acessibilidade.
+**Anos iniciais (1º–2º):** toda instrução acionável tem redundância obrigatória `texto+ícone+áudio` (voz do personagem-guia). Instrução só com texto é falha de acessibilidade. **Exceção:** se a spec declara ausência de áudio (bloco 5 ou ficha do ambiente, bloco 14), não marque áudio — use `texto+ícone` e registre em «Strings que precisam de decisão» `[ABERTO — dono: PO: narração exigida pelo 6.1 × ausência de áudio declarada na spec]`. A exp01ef1b marcou 39 strings com áudio numa spec de "zero áudio", e o PRD vetou o áudio.
 
 ## Voz — três registros que não se misturam na mesma tela
 
@@ -96,6 +96,12 @@ Registro adulto, operacional, sem infantilização e sem jargão de produto: rot
 
 <!-- include: references/pronto.md -->
 
+**Nomes do `## Glossário canônico` da spec.** Entidades, personagens (nome, idade, papel), números com unidade e rótulos de botão saem de lá, com a grafia de lá; variante proibida em tela é bloqueio no verificador de coerência (na exp09ef1b o órgão teve quatro nomes e os beneficiários de 14 anos viraram coordenadores).
+
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
+
 ## Saída obrigatória — sheet de strings
 
 ```
@@ -111,7 +117,7 @@ Redundância: `texto` · `texto+ícone` · `texto+ícone+áudio`.
 
 ## Strings do professor (preparação/curadoria com IA, dashboard, gatilhos, roteiro de perguntas, erro) — inclui, obrigatoriamente: rótulos e textos de ajuda do recorte da aula (disciplina, tema, assuntos, contexto), o botão do banco padrão, as mensagens de geração em andamento, de falha e de saldo de IA esgotado, os textos da curadoria (editar, regenerar, aprovar) e de pôr a atividade no ar (sem agendamento: a plataforma libera na hora); e, como amostra de conteúdo dinâmico, o recorte preenchido de cada uma das três aulas da tabela do bloco 8
 ## Prompts e Schemas para Conteúdo Dinâmico gerado por IA (posts, comentários, personas) + Amostras do Banco Curado Default
-## Roteiro do podcast (5 blocos, falas alternadas, "estudante", 3–5 min) — se não vier pronto do one-pager, escreva
+## Roteiro do podcast — as falas do §11 do one-pager, literais (vozes, ordem e texto); só escreva um roteiro se o one-pager não tiver nenhum (5 blocos, falas alternadas, "estudante", 3–5 min). A esteira confere as falas contra o one-pager: na exp01ef1b a copy reescreveu as 9 e o banco gravou outro roteiro
 ## Testes de voz — resultado (boca · exclamativo · quem fala)
 ## Strings que não couberam / precisam de decisão de design
 ## Glossário por faixa (termos novos e trocados)

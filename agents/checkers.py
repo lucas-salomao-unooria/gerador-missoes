@@ -113,13 +113,16 @@ def registrar_degradacao(state, delta: Dict[str, Any], gate: str, motivo: str) -
     tenha todos os insumos. `KEY_PIPELINE_BLOQUEADO` continua existindo, mas só como
     veredito da execução — não como ordem de parada.
     """
-    anteriores = list(state.get(KEY_DEGRADACOES) or [])
+    # Um gate tem UMA reprovação vigente: a rodada nova substitui a anterior. Acumulando, a exp01ef1b
+    # (07/10/2026) saiu com "telemetria reprovado (4 lacunas)" de motivo, quando a rodada final tinha 2.
+    anteriores = [d for d in state.get(KEY_DEGRADACOES) or [] if d.get("gate") != gate]
     anteriores.append({"gate": gate, "motivo": motivo})
     delta[KEY_DEGRADACOES] = anteriores
     delta[KEY_HERANCA] = texto_de_heranca(anteriores)
     delta[KEY_PIPELINE_BLOQUEADO] = True
-    # O motivo original é o primeiro; a lista completa fica em KEY_DEGRADACOES.
-    if not state.get(KEY_PIPELINE_MOTIVO):
+    # O motivo é o do primeiro gate que reprovou, na rodada mais recente dele; a lista fica em KEY_DEGRADACOES.
+    atual = str(state.get(KEY_PIPELINE_MOTIVO) or "")
+    if not atual or atual.startswith(gate):
         delta[KEY_PIPELINE_MOTIVO] = motivo
 
 
@@ -230,6 +233,9 @@ class SecaoSplitAgent(BaseAgent):
                       encolhe. Sem isso, o D9 já substituiu uma spec de 35 KB por um fragmento
                       de 5 KB, e o dev perdeu a ficha do manifesto e todos os blocos.
       backup        → chave onde o valor anterior de `chave` é preservado antes de sobrescrever (opcional)
+      preservar     → dono do conserto (slug de retrabalho) quando uma linha do documento ATUAL some
+                      do novo (`tools/preservacao.linhas_perdidas`). O D0 da exp06ef1b apagou a
+                      pergunta 3 do debate e passou: o tamanho não encolheu o bastante (07/10/2026).
 
     Seção ausente, curta ou sem o conteúdo exigido → a chave é mantida como está e o evento avisa.
     """
@@ -265,6 +271,7 @@ class SecaoSplitAgent(BaseAgent):
             }
         else:
             faltou: List[tuple] = []
+            perdidas: List[Dict[str, Any]] = []
             for ex in self.extracoes:
                 chave = ex["chave"]
                 secao = extrair_secao(texto, ex["inicio"], ex.get("fim"))
@@ -291,6 +298,19 @@ class SecaoSplitAgent(BaseAgent):
                 backup = ex.get("backup")
                 if backup and state.get(chave) and not state.get(backup):
                     delta[backup] = state.get(chave)
+                if ex.get("preservar") and str(state.get(chave) or "").strip():
+                    from tools.preservacao import linhas_perdidas
+
+                    sumiram = linhas_perdidas(str(state.get(chave)), secao)
+                    if sumiram:
+                        perdidas.append({
+                            "severidade": "bloqueio", "codigo": "linhas-perdidas", "etapa": "design",
+                            "agente_responsavel": ex["preservar"],
+                            "resumo": (f"`{chave}` reescrito sem {len(sumiram)} linha(s) do documento anterior — o que "
+                                       "o autor de antes escreveu não pode sumir na consolidação. Devolva cada uma, "
+                                       "no mesmo lugar:\n" + "\n".join(f"    - «{l[:200]}»" for l in sumiram[:15])),
+                        })
+                        linhas.append(f"⛔ `{chave}`: {len(sumiram)} linha(s) do documento anterior sumiram na reescrita.")
                 delta[chave] = secao
                 linhas.append(f"✅ `{chave}` gravado a partir de `{self.source_key}` ({len(secao)} caracteres).")
 
@@ -320,6 +340,23 @@ class SecaoSplitAgent(BaseAgent):
                         "agente_responsavel": self.name,
                         "resumo": f"`{chave}` não veio em `{self.source_key}`: {motivo}.",
                     })
+            # lacuna de mecânica ou currículo é decisão humana: o D0 não a fecha em verde
+            if self.source_key == "fechamento_lacunas":
+                from tools.decisoes import lacunas_fechadas_pelo_agente
+
+                fechadas = lacunas_fechadas_pelo_agente(texto)  # a tabela do Passo 2 está na resposta inteira
+                if fechadas:
+                    perdidas.append({
+                        "severidade": "bloqueio", "codigo": "decisao-de-produto-pelo-agente", "etapa": "design",
+                        "agente_responsavel": "fecha-lacunas",
+                        "resumo": ("Lacuna de mecânica ou currículo fechada pelo D0 — as duas classes são sempre vermelhas "
+                                   "(decisão do PO). Reabra cada uma como `[ABERTO — dono: PO: …]` com as alternativas, "
+                                   "sem marcar Resolvido:\n" + "\n".join(f"    - {l}" for l in fechadas[:10])),
+                    })
+            if perdidas:
+                delta[self.status_key] = STATUS_BLOQUEADO
+                env["status"] = "bloqueado"
+                env.setdefault("achados", []).extend(perdidas)
             delta[f"{self.status_key}_envelope"] = env
             bruto = (envelope or {}).get("status") or status
             icone = "🔴" if status == STATUS_BLOQUEADO else "🟢"
@@ -392,10 +429,18 @@ class ArtefatosDesignAgent(BaseAgent):
 
             if get_settings().is_stitch_enabled:
                 relatorio = str(state.get(self.fonte_wireframes, "") or "")
-                pid = extrair_project_id(relatorio)
+                pid = str(state.get("stitch_project_id") or "") or extrair_project_id(relatorio)
                 if pid:
+                    from tools.stitch_geracao import rotulos
+
                     # Os ids do relatório só são usados se o `list_screens` vier vazio.
-                    dados = coletar_links(pid, ids_de_reserva=extrair_screen_ids(relatorio))
+                    dados = coletar_links(pid, limite=1000, ids_de_reserva=extrair_screen_ids(relatorio))
+                    # a tela gerada pela esteira leva o nome do inventário (`E2-ALU-01 — padrão`), não o título
+                    # que o Stitch inventou: é por ele que a cobertura e o pedagógico acham cada tela
+                    nomes = rotulos(state.get("stitch_geracao") or {})
+                    for tela in dados["telas"]:
+                        if tela.get("id") in nomes:
+                            tela["titulo"] = nomes[tela["id"]]
                     delta[self.links_key] = montar_folha_de_links(dados, titulo)
                     linhas.append(f"🔗 Stitch: {len(dados['telas'])} tela(s) no projeto `{pid}` — link no relatório e no PRD.")
                     from tools.afirmacoes import cobertura_stitch
@@ -410,7 +455,17 @@ class ArtefatosDesignAgent(BaseAgent):
                         # A folha já carrega o marcador `[LACUNA — dono: telas]`; aqui só se avisa.
                         linhas.append("⚠️ Nenhuma tela do preparo do professor (`E0-PROF-*`) no Stitch — lacuna registrada na folha com dono `telas`.")
                 else:
-                    linhas.append("⚠️ Stitch ligado, mas o relatório de wireframes não trouxe o identificador do projeto.")
+                    # Sem projeto não há o que conferir — e era assim que o Stitch vazio passava. Com o
+                    # Stitch ligado, relatório sem projectId é bloqueio com dono `telas`.
+                    resumo = ("O Stitch está ligado e o relatório de wireframes não traz o identificador do projeto "
+                              "(`projects/<id>`): nenhuma tela pode ser conferida. Crie ou reaproveite o projeto e "
+                              "gere todas as telas do inventário nele.")
+                    achado = {"severidade": "bloqueio", "codigo": "stitch-sem-projeto", "etapa": "design",
+                              "agente_responsavel": "telas", "resumo": resumo}
+                    delta[self.status_key] = "bloqueado"
+                    delta[f"{self.status_key}_envelope"] = {"agente": "stitch-cobertura", "status": "bloqueado",
+                                                            "achados": [achado], "precisa_humano": False}
+                    linhas.append(f"⛔ {resumo}")
         except Exception as exc:  # a coleta é conveniência: nunca derruba a esteira
             linhas.append(f"⚠️ Não consegui colher os links do Stitch: {exc}")
 
@@ -450,9 +505,21 @@ class QaAfirmacoesAgent(BaseAgent):
         relatorio = af.relatorio(resultado, missao)
         delta: Dict[str, Any] = {self.report_key: relatorio, self.status_key: resultado["status"],
                                  f"{self.status_key}_envelope": extrair_envelope(relatorio) or {}}
-        stitch = state.get("stitch_status_envelope") or {}
-        tickets = list(resultado["achados"]) + [a for a in (stitch.get("achados") or [])
-                                                if str(state.get("stitch_status", "")) == "bloqueado"]
+        tickets = list(resultado["achados"])
+        # Stitch e cobertura de telas por ID: o bloqueio deles vira ticket com o dono do conserto
+        # e os de lint, consistência e preservação da spec: dependiam de o QA ler o relatório e escrever o
+        # ticket, e o protótipo nem tinha rota (auditoria de 07/10/2026)
+        for chave in ("stitch_status", "cobertura_telas_status", "prototipo_lint_status", "consistencia_status",
+                      "lacunas_status", "ambiente_status"):
+            if str(state.get(chave, "")) == "bloqueado":
+                envelope_gate = state.get(f"{chave}_envelope") or {}
+                for a in envelope_gate.get("achados") or []:
+                    if a.get("severidade") != "bloqueio":
+                        continue
+                    if chave in ("lacunas_status", "ambiente_status") and a.get("codigo") not in (
+                            "linhas-perdidas", "decisao-de-produto-pelo-agente"):
+                        continue  # o resto do envelope do D0/D9 é do autor, não do código
+                    tickets.append(a)
         envelope = extrair_envelope(qa)
         if tickets and envelope is not None:
             novo = dict(envelope)
@@ -596,6 +663,178 @@ class BnccCheckAgent(BaseAgent):
         )
 
 
+class StitchGeracaoAgent(BaseAgent):
+    """Determinístico: gera no Stitch toda (tela, estado) que o agente de telas especificou (`tools/stitch_geracao.py`).
+
+    O agente de telas gerava no Stitch dentro da própria resposta: priorizava, batia no teto de resposta de
+    ferramenta e escrevia screenId que o projeto não tinha (auditoria de 07/10/2026). Agora ele só escreve a
+    tabela «Geração no Stitch»; o código gera todas as linhas — e as do inventário que a tabela esqueceu —,
+    em paralelo, e registra o screenId que o Stitch devolveu. A seção «Telas geradas no Stitch (esteira)»
+    vai para o fim da cobertura dos wireframes, que o resto da esteira lê.
+    """
+
+    relatorio_key: str = "wireframes_cobertura"
+    projeto_key: str = "stitch_project_id"
+    design_system_key: str = "stitch_design_system"
+    registro_key: str = "stitch_geracao"
+    titulo_secao: str = "## Telas geradas no Stitch (esteira)"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        import asyncio
+
+        from config import get_settings
+        from tools import stitch_geracao as sg
+        from tools.stitch_cliente import chamar, extrair_project_id
+
+        state = ctx.session.state
+        s = get_settings()
+        relatorio = str(state.get(self.relatorio_key) or "")
+        if not s.is_stitch_enabled or not relatorio.strip():
+            motivo = "Stitch desligado" if not s.is_stitch_enabled else "sem cobertura dos wireframes"
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                        content=types.Content(role="model", parts=[types.Part(text=f"⏭️ Geração no Stitch: {motivo}.")]))
+            return
+
+        corpo = relatorio.split(self.titulo_secao)[0].rstrip()  # a seção da rodada anterior sai antes de escrever a nova
+        spec = str(state.get("spec_missao") or "")
+        desktop = bool(re.search(r"viewport\W{0,6}:\W{0,3}desktop", spec, re.I))
+        itens = sg.completar(sg.itens_do_relatorio(corpo), str(state.get("jornada_telas") or ""), desktop_padrao=desktop)
+        projeto = str(state.get(self.projeto_key) or "") or extrair_project_id(str(state.get("stitch_links") or "")) or None
+        titulo = f"{extrair_slug(spec) or 'missão'} — wireframes lo-fi"
+
+        def chamar_com_prazo(ferramenta: str, argumentos: Dict[str, Any]) -> Dict[str, Any]:
+            prazo = s.stitch_prazo_geracao_s if ferramenta == "generate_screen_from_text" else 120
+            return chamar(ferramenta, argumentos, timeout=prazo)
+
+        try:
+            saida = await asyncio.to_thread(
+                sg.gerar, itens, dict(state.get(self.registro_key) or {}), projeto=projeto,
+                design_system=str(state.get(self.design_system_key) or "") or None, titulo_projeto=titulo,
+                chamar=chamar_com_prazo, paralelo=s.stitch_paralelo)
+        except Exception as exc:  # projeto que não se cria não derruba a etapa: a cobertura conta o que faltou
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                        content=types.Content(role="model", parts=[types.Part(text=f"⚠️ Geração no Stitch falhou: {exc}")]))
+            return
+
+        from tools.stitch_mcp import url_do_projeto
+
+        delta = {
+            self.projeto_key: saida["projeto"],
+            self.design_system_key: saida["design_system"] or "",
+            self.registro_key: saida["registro"],
+            self.relatorio_key: corpo + "\n\n" + sg.relatorio(saida, url_do_projeto(saida["projeto"])),
+        }
+        faltaram = [r for r in saida["resultado"] if not r["screen_id"]]
+        msg = (f"🖼️ Stitch: {len(saida['resultado']) - len(faltaram)} de {len(saida['resultado'])} (tela, estado) no projeto "
+               f"`{saida['projeto']}`" + (f" — faltaram {', '.join(sg.titulo(r) for r in faltaram)}" if faltaram else "") + ".")
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta=delta))
+
+
+class RastreabilidadeAgent(BaseAgent):
+    """Determinístico: a matriz requisito do produto × artefato (`tools/rastreabilidade.py`).
+
+    Cada gate conferia um par de documentos; ninguém respondia, num lugar que o PO lê, se o que o produto
+    especificou chegou inteiro ao fim. Roda no fim do design (o que já existe; o resto fica `—`) e no fim
+    do dev, e vai ao dossiê e aos artefatos da sessão. Não reprova sozinho: cada perda já tem o gate do seu
+    documento, com dono e loop — a matriz é o que mostra que nenhuma passou.
+    """
+
+    report_key: str = "rastreabilidade_report"
+    status_key: str = "rastreabilidade_status"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import rastreabilidade as rb
+
+        state = ctx.session.state
+        resultado = rb.matriz(dict(state))
+        missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
+        delta = {
+            self.report_key: rb.relatorio(resultado, missao),
+            self.status_key: resultado["status"],
+            f"{self.status_key}_envelope": {"agente": rb.AGENTE, "status": resultado["status"],
+                                            "achados": resultado["achados"], "precisa_humano": False},
+        }
+        marca = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
+        msg = (f"{marca} Rastreabilidade: {len(resultado['requisitos'])} requisito(s) do produto conferidos em cada artefato"
+               + "".join(f"\n- {'⛔' if a['severidade'] == 'bloqueio' else '⚠️'} {a['resumo'][:200]}"
+                         for a in resultado["achados"][:12]))
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta=delta))
+
+
+class CopyPreservadaAgent(BaseAgent):
+    """Determinístico: o que a passada 1 da copy escreveu e a revisão não reemitiu volta, sem mudança.
+
+    O prompt da revisão manda reemitir prompts, schemas, banco curado e o roteiro do podcast "da passada 1,
+    sem mudança" — e nas 8 sessões do bucket com design a revisão os descartou. O PRD, o brief e o banco
+    leem só a revisada. Copiar sem mudança é trabalho do código: aqui as seções faltantes são reanexadas
+    (`tools/preservacao.reanexar_secoes`) e o evento diz quais.
+    """
+
+    antes_key: str = "copy_strings"
+    depois_key: str = "copy_strings_revisada"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools.preservacao import reanexar_secoes
+
+        state = ctx.session.state
+        antes, depois = str(state.get(self.antes_key) or ""), str(state.get(self.depois_key) or "")
+        if not antes.strip() or not depois.strip():
+            return
+        r = reanexar_secoes(antes, depois)
+        if not r["reanexadas"]:
+            msg, delta = "✅ Copy revisada: nenhuma seção da passada 1 ficou para trás.", {}
+        else:
+            msg = f"📌 Copy revisada: reanexadas da passada 1, sem mudança — {', '.join(r['reanexadas'])}."
+            delta = {self.depois_key: r["texto"]}
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta=delta))
+
+
+class CoberturaTelasAgent(BaseAgent):
+    """Determinístico: toda tela do inventário da jornada em todo artefato que a desenha, por ID.
+
+    A auditoria de 07/10/2026 achou o Stitch com 27% a 68% das telas — o prompt mandava priorizar — e
+    o protótipo com um quadro por tela em vez de um por estado, enquanto os gates aprovavam: comparavam
+    contagem, não IDs. Aqui a lista vem da tabela «Seção 3» da jornada (`tools/telas.py`) e cada
+    derivado (fluxo, copy revisada, cobertura, protótipo) é conferido por conjunto; cada falta sai com o
+    dono do conserto, e o `A30bQaAfirmacoes` a leva ao retrabalho.
+    """
+
+    report_key: str = "cobertura_telas_report"
+    status_key: str = "cobertura_telas_status"
+    rotulo: str = "Cobertura de telas"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import telas
+
+        state = ctx.session.state
+        resultado = telas.cobertura(dict(state))
+        missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
+        delta = {
+            self.report_key: telas.relatorio(resultado, missao),
+            self.status_key: resultado["status"],
+            f"{self.status_key}_envelope": {"agente": telas.AGENTE, "status": resultado["status"],
+                                            "achados": resultado["achados"], "precisa_humano": False},
+        }
+        n = len(resultado["inventario"]["telas"])
+        marca = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
+        msg = f"{marca} {self.rotulo}: {n} tela(s) no inventário." + "".join(
+            f"\n- {'⛔' if a['severidade'] == 'bloqueio' else '⚠️'} [{a['agente_responsavel']}] {a['resumo'][:220]}"
+            for a in resultado["achados"])
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta=delta))
+
+
 class PrototipoLintAgent(BaseAgent):
     """Determinístico: confere o HTML do protótipo contra o inventário de telas da jornada.
 
@@ -631,6 +870,8 @@ class PrototipoLintAgent(BaseAgent):
         from tools.componentes_ds import validar as validar_componentes
         resultado["achados"] += validar_componentes(str(state.get(self.telas_key, "") or ""),
                                                     str(state.get("spec_missao", "") or ""))
+        for a in resultado["achados"]:  # sem dono o ticket ia para "sem rota"
+            a.setdefault("agente_responsavel", "telas" if a.get("codigo") == "componente-inexistente" else "prototipo")
         if any(a["severidade"] == "bloqueio" for a in resultado["achados"]):
             resultado["status"] = "bloqueado"
         elif resultado["achados"] and resultado["status"] == "aprovado":
@@ -732,6 +973,8 @@ class RastroCheckAgent(BaseAgent):
         state = ctx.session.state
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
         if self.modo == "one_pager":
+            from tools import decisoes
+
             # Roda antes do gate estrutural, a cada rodada: contrato de plataforma (canal de
             # sala, estado no servidor), SAEB no ano certo e origem dos números. Não bloqueia
             # sozinho — o gate converte cada achado em ❌ pelo critério e o revisor aplica.
@@ -739,14 +982,17 @@ class RastroCheckAgent(BaseAgent):
                 str(state.get("one_pager", "") or ""),
                 nucleo=str(state.get("nucleo_narrativo", "") or ""),
                 briefing=str(state.get("briefing", "") or ""),
+                registro_do_po=decisoes.ha_registro_do_po(dict(state)),
             )
             relatorio = relatorio_contrato_produto(resultado, missao)
         elif self.modo == "manifesto":
-            resultado = validar_manifesto(str(state.get(self.spec_key, "") or ""))
+            # o briefing entra para conferir a seção do DS que ele fixou (exp03ef1b, 07/10/2026)
+            resultado = validar_manifesto(str(state.get(self.spec_key, "") or ""),
+                                          briefing=str(state.get("briefing", "") or ""))
             relatorio = relatorio_manifesto(resultado, missao)
         elif self.modo == "telemetria":
             resultado = validar_telemetria(str(state.get(self.fonte_key, "") or ""))
-            relatorio = relatorio_telemetria(resultado, missao)
+            relatorio = relatorio_telemetria(resultado, missao, rodada=int(state.get("handoff_rodada", 0) or 0) + 1)
         elif self.modo == "evidencia":
             # Coerência pedagógica do bloco 9/11 da spec: grau `scored` com dois sinais, toda
             # habilidade com momento em tela e medida ligada, gabarito declarado no servidor.
@@ -766,7 +1012,8 @@ class RastroCheckAgent(BaseAgent):
             from tools import kpis as kp
 
             resultado = kp.validar_kpis(str(state.get("prd_final", "") or ""),
-                                        str(state.get(self.spec_key, "") or ""))
+                                        str(state.get(self.spec_key, "") or ""),
+                                        one_pager=str(state.get("one_pager", "") or ""))
             relatorio = kp.relatorio(resultado, missao)
         elif self.modo == "consistencia":
             # Jornada, fluxo, copy revisada e protótipo contra o glossário canônico da spec. O mesmo
@@ -774,7 +1021,19 @@ class RastroCheckAgent(BaseAgent):
             # defeitos de documento lido sozinho: cada um estava bem escrito, nenhum batia com o outro.
             from tools import consistencia as cons
 
+            from tools import conteudo_aprovado as ca
+
             resultado = cons.validar_estado(dict(state))
+            # e o texto que o PO aprovou palavra por palavra — Canal B e debate — chegou literal à copy
+            # (a exp01ef1b chegou a dev com a pergunta 1 do debate reescrita, 07/10/2026)
+            resultado["achados"] += ca.validar_copy(str(state.get("copy_strings_revisada", "") or ""),
+                                                    str(state.get("one_pager", "") or ""))
+            # e o Canal B na prancha CAA e nas telas do protótipo (só a copy era conferida)
+            resultado["achados"] += ca.validar_literais_design(str(state.get("camada_caa", "") or ""),
+                                                               str(state.get("prototipo_arquivo", "") or ""),
+                                                               str(state.get("one_pager", "") or ""))
+            if any(a["severidade"] == "bloqueio" for a in resultado["achados"]):
+                resultado["status"] = "bloqueado"
             relatorio = cons.relatorio(resultado, missao)
         elif self.modo == "conteudo":
             # O banco escrito contra o brief que o declara, e o Status do brief contra o vocabulário: na
@@ -788,6 +1047,10 @@ class RastroCheckAgent(BaseAgent):
             # o banco escreve nomes, idades e números: o mesmo glossário que confere a copy o confere
             resultado["achados"] += validar_glossario(spec, {"banco de conteúdo": banco}, exigir_glossario=False,
                                                       etapa="dev")["achados"]
+            # o roteiro do podcast que vai para gravação é o do PO (o banco da exp01ef1b escreveu outro)
+            from tools import conteudo_aprovado as ca
+
+            resultado["achados"] += ca.validar_banco(banco, str(state.get("one_pager", "") or ""))
             if any(a["severidade"] == "bloqueio" for a in resultado["achados"]):
                 resultado["status"] = "bloqueado"
             elif resultado["achados"] and resultado["status"] == "aprovado":
@@ -802,16 +1065,26 @@ class RastroCheckAgent(BaseAgent):
             r_consistencia = validar_prd(str(state.get("prd_final", "") or ""),
                                          spec=str(state.get(self.spec_key, "") or ""),
                                          banco=str(state.get("banco_conteudo", "") or ""))
-            relatorio = (
-                relatorio_lacunas(r_lacunas, self.rotulo, missao, agente=self.agente)
-                + "\n\n---\n\n"
-                + relatorio_prd(r_consistencia, missao)
-            )
+            # O PRD contra o design da mesma sessão (exp01ef1b, 07/10/2026: 0 de 90 chaves de copy, 1 de 28
+            # assets, 0 de 17 estados, status de gate escrito pelo redator): tela, chave, asset, estado,
+            # status de gate, critério dos P0, schema citado e proposta da spec (`tools/cobertura_design.py`).
+            from tools import cobertura_design as cdz
+
+            r_design = cdz.validar(str(state.get("prd_final", "") or ""),
+                                   {**dict(state), "spec_missao": state.get(self.spec_key, "")})
             ordem = ("bloqueado", "amarelo", "aprovado")
             resultado = {
-                "status": min((r_lacunas["status"], r_consistencia["status"]), key=ordem.index),
-                "achados": list(r_lacunas["achados"]) + list(r_consistencia["achados"]),
+                "status": min((r_lacunas["status"], r_design["status"], r_consistencia["status"]), key=ordem.index),
+                "achados": list(r_lacunas["achados"]) + list(r_design["achados"]) + list(r_consistencia["achados"]),
             }
+            relatorio = (
+                relatorio_lacunas(r_lacunas, self.rotulo, missao, agente=self.agente)
+                + "\n\n---\n\n" + cdz.relatorio(r_design, missao)
+                + "\n\n---\n\n" + relatorio_prd(r_consistencia, missao)
+                # o envelope é o ÚLTIMO bloco json: o combinado, para o dossiê ver os três exames
+                + "\n\n```json\n" + json.dumps({"agente": "prd-check", "missao": missao, "status": resultado["status"],
+                                                 "achados": resultado["achados"]}, ensure_ascii=False) + "\n```\n"
+            )
         elif self.modo in ("aprovado_spec", "aprovado_prd", "aprovado_pedagogico"):
             # O documento contra o one-pager que o PO aprovou: habilidades, tempo em tela, podcast e, no
             # PRD e no pedagógico, os caminhos de artefato. A exp06ef1b perdeu uma habilidade e cinco
@@ -831,6 +1104,14 @@ class RastroCheckAgent(BaseAgent):
                 resultado = ca.validar_pedagogico(str(state.get("one_pager_pedagogico", "") or ""), spec,
                                                   one_pager, caminhos_de_artefato())
                 documento = "one-pager pedagógico"
+            # quem decidiu: decisão atribuída ao PO sem registro dele bloqueia; proposta do agente
+            # deixa a etapa 🟡 (exp03ef1b, 07/10/2026: "aprovado pelo PO" sem parecer nenhum)
+            from tools import decisoes as dec
+
+            chave = {"aprovado_spec": self.spec_key, "aprovado_prd": "prd_final"}.get(self.modo, "one_pager_pedagogico")
+            resultado = dec.com_achados(resultado, dec.achados(
+                str(state.get(chave, "") or ""), f"A {documento}" if documento == "spec" else f"O {documento}",
+                dec.ha_registro_do_po(dict(state)), etapa="produto" if self.modo == "aprovado_spec" else "dev"))
             relatorio = ca.relatorio(resultado, documento, missao)
         else:
             resultado = varrer_lacunas(self.fontes, dict(state), etapa_corrente=self.etapa)
@@ -917,6 +1198,36 @@ class AnexoAprovadoAgent(BaseAgent):
             branch=ctx.branch,
             content=types.Content(role="model", parts=[types.Part(text=msg)]),
             actions=EventActions(state_delta=delta),
+        )
+
+
+class ConteudoAprovadoAgent(BaseAgent):
+    """Grava em `conteudo_aprovado` as seções literais do one-pager aprovado (`tools/conteudo_aprovado.py`).
+
+    Seis agentes de design e de dev — fluxo, CAA, telas, revisão da copy, QA e banco de conteúdo — não
+    recebiam o one-pager: o que a spec não trazia não existia para eles. Na exp01ef1b (07/10/2026) as
+    travas do professor, o podcast e a redação do debate se perderam nesse caminho. Roda no começo do
+    design e do dev, para valer também quando só uma das etapas é refeita.
+    """
+
+    chave: str = "conteudo_aprovado"
+    secoes: List[int] = Field(default_factory=list)
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import conteudo_aprovado as ca
+
+        texto = ca.secoes_literais(str(ctx.session.state.get("one_pager", "") or ""), self.secoes)
+        if texto:
+            texto = ca.NOTA_CONTEUDO_APROVADO + "\n\n" + texto
+        msg = (f"📎 Conteúdo aprovado: §{', §'.join(str(n) for n in self.secoes)} do one-pager, literais, para os agentes "
+               f"que não leem o one-pager." if texto else "⏭️ Conteúdo aprovado: one-pager sem as seções.")
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta={self.chave: texto}),
         )
 
 
@@ -1084,6 +1395,11 @@ class DespachoTicketsAgent(BaseAgent):
     ordem: List[str] = Field(default_factory=list)
     externos: List[str] = Field(default_factory=list)
     posfixo: List[str] = Field(default_factory=list)
+    #: `dono → agentes` que rodam depois do conserto SÓ quando aquele dono foi acionado. A banca de dev
+    #: manda refazer jornada, telas ou copy, e nada refazia o protótipo, as conferências e o handoff que
+    #: derivam deles (auditoria de 07/10/2026); um posfixo incondicional refaria o protótipo até por uma
+    #: correção de handoff.
+    posfixo_por_dono: Dict[str, List[str]] = Field(default_factory=dict)
     severidades: List[str] = Field(default_factory=lambda: ["bloqueio"])
     tickets_key: str = "tickets_retrabalho"
 
@@ -1103,6 +1419,12 @@ class DespachoTicketsAgent(BaseAgent):
             classe = a.get("classe") or ""
             resumo = a.get("resumo") or ""
             linhas.append(f"- **{a.get('id', '?')}** · `{cod}`{f' · {classe}' if classe else ''} — {resumo}")
+            # o ONDE e o COMO do QA chegavam só na seção `## Tickets` do relatório, que nenhum autor
+            # lê: o ticket ia em uma linha e o autor adivinhava o conserto (auditoria de 07/10/2026)
+            for campo, rotulo in (("onde", "Onde"), ("por_que", "Por quê"), ("como", "Como"), ("trecho", "Trecho")):
+                valor = str(a.get(campo) or "").strip()
+                if valor:
+                    linhas.append(f"  - {rotulo}: {valor}")
         linhas.append("")
         linhas.append(
             "Corrija **exatamente** estes pontos e reemita o seu documento completo. "
@@ -1195,12 +1517,22 @@ class DespachoTicketsAgent(BaseAgent):
             )
             return
 
-        for nome in self.posfixo:
+        por_slug_nomes = set(nomes_na_ordem)  # quem recebeu ticket conta sempre no orçamento
+        derivados = [n for s in slugs_na_ordem for n in self.posfixo_por_dono.get(s, [])]
+        for nome in derivados + list(self.posfixo):
             if nome not in nomes_na_ordem:
                 nomes_na_ordem.append(nome)
                 por_agente.setdefault(nome, [])
 
-        if not orcamento_disponivel(state, len(nomes_na_ordem)):
+        # O orçamento é de chamadas de modelo: os determinísticos do posfixo (artefatos, lint, cobertura,
+        # Miro) não custam nada e contavam como reexecução — com quatro donos, o orçamento estourava
+        # antes de qualquer conserto (auditoria de 07/10/2026).
+        from google.adk.agents.llm_agent import LlmAgent
+
+        llm = sum(1 for n in nomes_na_ordem
+                  if n not in self.posfixo or n in por_slug_nomes
+                  or isinstance(next((s for s in self.sub_agents if s.name == n), None), LlmAgent))
+        if not orcamento_disponivel(state, llm):
             gastos = int(state.get(KEY_REEXECUCOES, 0) or 0)
             yield Event(
                 invocation_id=ctx.invocation_id,
@@ -1240,17 +1572,32 @@ class DespachoTicketsAgent(BaseAgent):
                      "Refaça o seu a partir da versão nova, sem alterar nada além do que a mudança exigir."
             )
             state[self.tickets_key] = tickets
+            # A versão que o autor escreveu nesta execução vai como base: sem ela, "corrija exatamente
+            # estes pontos" virava reescrever do zero — o retrabalho das telas da exp09ef1b abriu outro
+            # projeto no Stitch e perdeu E0-PROF-02/04 (auditoria de 07/10/2026).
+            from pipeline.reexecucao import CHAVES_AUTORAIS, PREFIXO_ANTERIOR, bloco_versao_anterior
+
+            chave = getattr(sub, "output_key", None) or ""
+            anterior = f"{PREFIXO_ANTERIOR}{chave}" if chave in CHAVES_AUTORAIS else ""
+            delta_ticket: Dict[str, Any] = {self.tickets_key: tickets}
+            if anterior and str(state.get(chave) or "").strip():
+                delta_ticket[anterior] = bloco_versao_anterior(chave, str(state.get(chave)))
+                state[anterior] = delta_ticket[anterior]
             yield Event(
                 invocation_id=ctx.invocation_id,
                 author=self.name,
                 branch=ctx.branch,
-                actions=EventActions(state_delta={self.tickets_key: tickets}),
+                actions=EventActions(state_delta=delta_ticket),
             )
             async for evento in sub.run_async(ctx):
                 yield evento
+            if anterior and anterior in delta_ticket:
+                state[anterior] = ""
+                yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                            actions=EventActions(state_delta={anterior: ""}))
 
         state[self.tickets_key] = ""
-        gastos = int(state.get(KEY_REEXECUCOES, 0) or 0) + len(nomes_na_ordem)
+        gastos = int(state.get(KEY_REEXECUCOES, 0) or 0) + llm
         state[KEY_REEXECUCOES] = gastos
         yield Event(
             invocation_id=ctx.invocation_id,
@@ -1587,6 +1934,10 @@ class SaidaDeLoopAgent(BaseAgent):
     rotulo: str = "Loop"
     #: Status que contam como "pode seguir". `amarelo` é pendência de plataforma: repetir não resolve.
     aceitos: List[str] = Field(default_factory=lambda: ["aprovado", "amarelo"])
+    #: `status_key → campo do envelope` que, maior que zero, reprova mesmo com status aceito. O parecer
+    #: "ADEQUADA COM AJUSTES" é `aprovado_com_ressalvas` com `ajustes_exigidos: 3`, e o loop encerrava
+    #: sem o revisor aplicar nenhum — o gate final da exp03ef1b reprovou depois pelo ajuste que ficou.
+    envelope_exige: Dict[str, str] = Field(default_factory=dict)
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -1600,6 +1951,14 @@ class SaidaDeLoopAgent(BaseAgent):
             k for k in self.status_keys
             if str(state.get(k, "")).strip().lower() not in self.aceitos
         ]
+        for k, campo in self.envelope_exige.items():
+            envelope = state.get(f"{k}_envelope") or {}
+            try:
+                exigidos = int(envelope.get(campo) or 0) if isinstance(envelope, dict) else 0
+            except (TypeError, ValueError):
+                exigidos = 0
+            if exigidos > 0 and k not in reprovados:
+                reprovados.append(k)
         esgotou = rodada >= self.max_rounds
         delta: Dict[str, Any] = {self.rodada_key: rodada}
 

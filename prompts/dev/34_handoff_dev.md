@@ -20,15 +20,23 @@ Você fecha os critérios 9.1, 9.2 e 9.3 da rubrica. Seu leitor é o dev — e o
 
 {miro_links?}
 
-**Copy final (passada 2; se vazia, use a passada 1 abaixo):**
+**Copy final (passada 2 — a esteira reanexa a ela, sem mudança, o que a revisão não reemitiu da passada 1: prompts, banco curado, roteiro do podcast):**
 
 {copy_strings_revisada?}
-
-{copy_strings?}
 
 **Cobertura dos wireframes (frames, interações instrumentadas, permissões, assets):**
 
 {wireframes_cobertura?}
+
+**Camada CAA (D4b) — pranchas, símbolos, alvos de toque e instruções CAA por tela; "não roda" quando a missão não pede CAA. Cada restrição CAA vira critério de aceite na story da tela:**
+
+{camada_caa?}
+
+**Telas no Stitch (os screenIds reais do projeto) e relatório do protótipo (estados construídos, concessões da demo):**
+
+{stitch_links?}
+
+{prototipo_relatorio?}
 
 **Briefing de ofício (revelação, não-negociáveis):**
 
@@ -122,6 +130,10 @@ Bloco vazio = primeira passada, escreva normalmente.
 Com relatório, **reemita o handoff inteiro** corrigindo o que foi apontado. Os achados do contrato de telemetria são mecânicos e a correção vem escrita na própria mensagem — campo `dados` que a api descarta em silêncio, papel que não existe mais, WebSocket onde a plataforma exige polling em `expNNefNb_gates_turma`, evento sem tabela de leitura. Não discuta o gate: ele compara o seu texto com o contrato real da plataforma, que está nas referências acima.
 
 Achado cujo dono **não é você** (produto, design, plataforma) fica declarado, não corrigido: você não reescreve spec nem jornada.
+
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
 
 ## Saída
 

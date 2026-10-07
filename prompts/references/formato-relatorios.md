@@ -104,7 +104,7 @@ Classe nova exige registro em `candidatos-a-criterio.md`.
 **Recomendação:** qual, e por quê.
 ```
 
-Toda alternativa proposta respeita: os 5 ambientes suportados · verbo nativo real da plataforma · nenhuma interface Unooria dentro da simulação (escapes: contexto antes, reflexão depois) · os tetos da faixa · nenhum julgamento do aluno como pessoa.
+Toda alternativa proposta respeita: uma seção do DS para missão nova (`ambientes.md`), e a que o briefing fixou quando fixou · verbo nativo real da plataforma · nenhuma interface Unooria dentro da simulação (escapes: contexto antes, reflexão depois) · os tetos da faixa · nenhum julgamento do aluno como pessoa.
 
 Se nenhuma alternativa dentro da lista fechada resolver, diga isso: a missão precisa mudar de mecanismo, não forçar encaixe.
 

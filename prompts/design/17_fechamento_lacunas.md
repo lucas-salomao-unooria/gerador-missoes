@@ -149,6 +149,10 @@ Duas listas curtas para o PM orquestrador e para o agente T (aprendizado):
 2. Corrija **exatamente** o que os tickets apontam. Não redesenhe o que não foi apontado, não amplie escopo, não aproveite a rodada para melhorar outra coisa: mudança não pedida quebra o que outros agentes já construíram em cima da sua versão anterior.
 3. Ticket que você **não conseguir** fechar (falta informação, é decisão de outra pessoa, ou discorda do achado) fica declarado no relatório, com o motivo em uma linha. Silêncio conta como não corrigido.
 
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
+
 ## Saída obrigatória
 
 ```

@@ -22,6 +22,8 @@ HTML é o que a revisão humana de fato abre.
                                  · diagramas_html — determinístico, o HTML nunca entra em prompt
   d8e A29dConsistencia           → consistencia_status (determinístico: jornada, fluxo, copy e
                                  protótipo contra o glossário canônico da spec)
+  d8f A29eCoberturaTelas         → cobertura_telas_status (determinístico: toda tela do inventário
+                                 da jornada no fluxo, na copy, na cobertura e no protótipo, por ID)
   d7  A30QaEntregaveis      → qa_entregaveis_report (gate de design)
   d7b A30bQaAfirmacoes          → qa_afirmacoes_status (determinístico: contagens de telas e nomes de
                                  arquivo do QA contra o real; divergência reescreve o QA como bloqueado)
@@ -49,6 +51,11 @@ from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca
 from agents.checkers import (
     ArtefatosDesignAgent,
+    CoberturaTelasAgent,
+    CopyPreservadaAgent,
+    RastreabilidadeAgent,
+    StitchGeracaoAgent,
+    ConteudoAprovadoAgent,
     PrototipoLintAgent,
     DespachoTicketsAgent,
     QaAfirmacoesAgent,
@@ -59,8 +66,9 @@ from agents.checkers import (
 )
 from config import get_settings
 from prompts import load_prompt
+from tools.conteudo_aprovado import SECOES_DESIGN
 from tools.rastro import FONTES_DESIGN
-from tools.stitch_mcp import STITCH_TOOLS_QA, STITCH_TOOLS_WIREFRAMES, stitch_tools_or_empty
+from tools.stitch_mcp import STITCH_TOOLS_QA, stitch_tools_or_empty
 
 # Headings que D0 e D9 usam na "Saída obrigatória" dos seus prompts. Os regex são tolerantes
 # ao travessão/hífen e ao texto depois do número, mas dependem do número do passo.
@@ -108,6 +116,8 @@ def get_fecha_lacunas_split() -> SecaoSplitAgent:
                 "minimo_chars": SPEC_MINIMO_CHARS,
                 "minimo_fracao": 0.8,
                 "backup": "spec_missao_gate0",
+                # o que o Gate 0 escreveu não some na consolidação (exp06ef1b perdeu a pergunta 3 do debate)
+                "preservar": "fecha-lacunas",
             },
             {
                 "chave": "relatorio_lacunas",
@@ -145,6 +155,7 @@ def get_ambiente_simulado_split() -> SecaoSplitAgent:
                 "exigir": r"14",
                 "minimo_chars": SPEC_MINIMO_CHARS,
                 "minimo_fracao": 0.8,
+                "preservar": "ambiente-simulado",
             },
         ],
     )
@@ -211,9 +222,8 @@ def get_wireframes_agent(**kw) -> LlmAgent:
         description="Wireframes lo-fi em escala de cinza no Stitch, montados sobre a seção do DS do ambiente simulado.",
         instruction=load_prompt("design/26_telas.md", **_stitch_vars()),
         output_key="wireframes_cobertura",
-        # O Stitch é quem gera as telas. Sem chave, o toolset vem vazio e o prompt
-        # manda o agente registrar "STITCH: indisponível" e seguir só com o Markdown.
-        tools=stitch_tools_or_empty(STITCH_TOOLS_WIREFRAMES),
+        # Sem ferramentas do Stitch desde 07/10/2026: o agente especifica (a tabela «Geração no Stitch») e o
+        # `StitchGeracaoAgent` gera todas as telas fora do modelo — sem priorizar, sem teto, sem id inventado.
         before_agent_callback=marcar_heranca,
         **kw,
     )
@@ -263,16 +273,19 @@ def get_qa_entregaveis_agent(max_rodadas: Optional[int] = None, **kw) -> LlmAgen
 
 #: Ordem em que dois donos de ticket se resolvem. Está escrita no prompt do D7
 #: ("ambiente antes de jornada · jornada antes de fluxo · fluxo antes de wireframe ·
-#: copy antes de wireframe · CAA antes de wireframe") — aqui ela vira execução.
+#: CAA antes de wireframe · wireframe antes da revisão da copy") — aqui ela vira execução.
+#: A revisão da copy (passada 2) lê as telas: rodando antes delas, a correção de uma tela não
+#: chegava ao texto revisado (auditoria de 07/10/2026).
 ORDEM_RETRABALHO = [
     "fecha-lacunas",
     "ambiente-simulado",
     "brief-oficio",  # a jornada deriva os tiers do mapa de beats: o brief conserta primeiro
     "jornada",
     "fluxo",
-    "copy-ptbr-revisao",
     "caa",
     "telas",
+    "copy-ptbr-revisao",
+    "prototipo",
 ]
 
 #: Slug do envelope → cadeia de agentes que o conserto exige, em ordem.
@@ -286,9 +299,11 @@ MAPA_RETRABALHO = {
     "brief-oficio": ["A21BriefOficioRetrabalho"],
     "jornada": ["A22JornadaRetrabalho"],
     "fluxo": ["A23FluxoRetrabalho"],
-    "copy-ptbr-revisao": ["A27CopyRevisaoRetrabalho"],
+    "copy-ptbr-revisao": ["A27CopyRevisaoRetrabalho", "A27bCopyPreservadaRetrabalho"],
     "caa": ["A25CaaRetrabalho"],
-    "telas": ["A26TelasRetrabalho"],
+    "telas": ["A26TelasRetrabalho", "A26bStitchGeracaoRetrabalho"],
+    # o protótipo tinha dono no QA e nenhuma rota: o ticket ia para "sem rota" (auditoria 07/10/2026)
+    "prototipo": ["A28PrototipoRetrabalho"],
 }
 
 #: Roda depois de qualquer retrabalho. O protótipo deriva de jornada, copy, CAA e telas —
@@ -297,7 +312,8 @@ MAPA_RETRABALHO = {
 #: protótipo era reconstruído e o QA da rodada 2 lia o lint da rodada 1 — sobre o HTML velho —
 #: com a instrução de tratá-lo como fato. Visto na auditoria de 23/09/2026.
 POSFIXO_RETRABALHO = ["A28PrototipoRetrabalho", "A29ArtefatosDesignRetrabalho",
-                      "A29cPrototipoLintRetrabalho", "A29dConsistenciaRetrabalho", "A29bEspelhoMiroRetrabalho"]
+                      "A29cPrototipoLintRetrabalho", "A29dConsistenciaRetrabalho",
+                      "A29eCoberturaTelasRetrabalho", "A29bEspelhoMiroRetrabalho"]
 
 #: Tickets endereçados a estes donos não são desta etapa: o QA está devolvendo ao produto.
 RETRABALHO_EXTERNO = ["gate-estrutural"]
@@ -336,12 +352,17 @@ def _agentes_de_retrabalho(**kw) -> list:
     agentes += [
         split_lacunas,
         split_ambiente,
+        StitchGeracaoAgent(name="A26bStitchGeracaoRetrabalho",
+                           description="Gera no mesmo projeto do Stitch só o que o retrabalho das telas mudou ou ainda falta."),
+        CopyPreservadaAgent(name="A27bCopyPreservadaRetrabalho"),
         ArtefatosDesignAgent(
             name="A29ArtefatosDesignRetrabalho",
             description="Reextrai o HTML do protótipo, os links do Stitch e a folha de diagramas depois de uma rodada de retrabalho.",
         ),
         PrototipoLintAgent(name="A29cPrototipoLintRetrabalho"),
         get_consistencia_check("A29dConsistenciaRetrabalho"),
+        CoberturaTelasAgent(name="A29eCoberturaTelasRetrabalho",
+                            description="Reconfere, por ID, toda tela do inventário em todo derivado depois do retrabalho."),
         EspelhoMiroAgent(
             name="A29bEspelhoMiroRetrabalho",
             description="Reenvia ao mesmo board do Miro os diagramas corrigidos na rodada de retrabalho.",
@@ -433,6 +454,12 @@ def build_design_stage(
         description="Área de Design: fechamento de lacunas → ambiente simulado → briefing de ofício → jornada e fluxo → copy → camada CAA → wireframes (Stitch) → protótipo navegável → QA de entregáveis.",
         before_agent_callback=marcar_heranca,
         sub_agents=[
+            ConteudoAprovadoAgent(
+                name="A16dConteudoAprovadoDesign",
+                description="Grava as seções do one-pager aprovado, literais, para os agentes de design que não leem o one-pager (fluxo, CAA, telas, revisão da copy, QA).",
+                secoes=list(SECOES_DESIGN),
+                before_agent_callback=marcar_heranca,
+            ),
             get_fecha_lacunas_agent(**kw),
             get_fecha_lacunas_split(),
             get_ambiente_simulado_agent(**kw),
@@ -443,7 +470,16 @@ def build_design_stage(
             get_copy_ptbr_agent(**kw),
             get_caa_agent(**kw),
             get_wireframes_agent(**kw),
+            # Toda (tela, estado) no Stitch, gerada pelo código com o screenId que o Stitch devolve.
+            StitchGeracaoAgent(
+                name="A26bStitchGeracao",
+                description="Gera no Stitch, fora do modelo, cada linha da tabela «Geração no Stitch» e cada (tela, estado) do inventário que ela esqueceu; registra o screenId real.",
+                before_agent_callback=marcar_heranca,
+            ),
             get_copy_revisao_agent(**kw),
+            # A revisão descartava prompts, banco curado e podcast em 8 de 8 sessões, com o prompt mandando
+            # manter: copiar sem mudança é trabalho do código (auditoria de 07/10/2026).
+            CopyPreservadaAgent(name="A27bCopyPreservada", before_agent_callback=marcar_heranca),
             get_prototipo_agent(**kw),
             ArtefatosDesignAgent(
                 name="A29ArtefatosDesign",
@@ -457,6 +493,13 @@ def build_design_stage(
             # Os nomes, papéis, números e rótulos contra o glossário da spec. Antes do QA, que lê o
             # relatório como fato e endereça o conserto ao dono de cada documento.
             get_consistencia_check("A29dConsistencia"),
+            # Toda tela do inventário em todo derivado, por ID: o Stitch tinha 27% a 68% das telas e o
+            # protótipo um quadro por tela, e os gates aprovavam por contagem (auditoria 07/10/2026).
+            CoberturaTelasAgent(
+                name="A29eCoberturaTelas",
+                description="Confere, por ID, toda tela do inventário da jornada no fluxo, na copy revisada, na cobertura dos wireframes e nos quadros do protótipo; falta vira ticket com o dono.",
+                before_agent_callback=marcar_heranca,
+            ),
             EspelhoMiroAgent(
                 name="A29bEspelhoMiro",
                 description="Espelha no Miro os diagramas Mermaid da jornada e do fluxo e devolve o link do board.",
@@ -478,11 +521,18 @@ def build_design_stage(
                 estrito=get_settings().esteira_estrita,
                 before_agent_callback=marcar_heranca,
             ),
+            # O que o produto especificou, requisito por requisito, em cada artefato de design (auditoria 07/10/2026).
+            RastreabilidadeAgent(
+                name="A33bRastreabilidadeDesign",
+                description="Matriz de rastreabilidade: cada requisito do one-pager e da spec (habilidades, textos literais, tempo, telas, estados, seção do DS) procurado em cada artefato de design.",
+                before_agent_callback=marcar_heranca,
+            ),
         ],
     )
 
 
 DESIGN_METADATA = [
+    {"id": "A16dConteudoAprovadoDesign", "name": "16d · Conteúdo aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado", "prompt_file": None, "description": "As seções do one-pager aprovado — currículo, professor, tempos e cenários, podcast, contrato de evidência, hipóteses —, literais, para os agentes de design que não leem o one-pager."},
     {"id": "A17FechaLacunas", "name": "17 · Fechamento de lacunas", "icon": "🧩", "output_key": "fechamento_lacunas", "prompt_file": "design/17_fechamento_lacunas.md", "description": "Varredura da spec célula a célula, decisões [D0-n] com base declarada, pedidos de re-spec [RS-n], spec consolidada (bloco 13) e relatório de preenchimento."},
     {"id": "A18FechaLacunasSplit", "name": "18 · Relatório de lacunas + spec consolidada (determinístico)", "icon": "✂️", "output_key": "relatorio_lacunas", "prompt_file": None, "description": "Copia a spec consolidada para `spec_missao` (original preservada em `spec_missao_gate0`), separa o relatório e registra `lacunas_status`."},
     {"id": "A19AmbienteSimulado", "name": "19 · Ambiente simulado", "icon": "🏝️", "output_key": "ambiente_simulado", "prompt_file": "design/19_ambiente_simulado.md", "description": "Condicional: decide o ambiente (app clonado existente, app novo ou mini-jogo) quando a spec cala; dormente emite só a ficha do bloco 14 que D1, D2, D4, D5 e o QA consomem."},
@@ -493,15 +543,19 @@ DESIGN_METADATA = [
     {"id": "A24CopyPtBr", "name": "24 · Copy PT-BR (passada 1)", "icon": "✍️", "output_key": "copy_strings", "prompt_file": "design/24_copy_ptbr.md", "description": "Sheet de strings por tela, calibrado à faixa etária."},
     {"id": "A25Caa", "name": "25 · Camada CAA", "icon": "🔣", "output_key": "camada_caa", "prompt_file": "design/25_caa.md", "description": "Símbolos, modos de resposta alternativos e pranchas; só roda quando a faixa ou a spec pedem."},
     {"id": "A26Telas", "name": "26 · Wireframes lo-fi (Stitch)", "icon": "📐", "output_key": "wireframes_cobertura", "prompt_file": "design/26_telas.md", "description": "Telas em escala de cinza sobre a seção do DS do ambiente."},
+    {"id": "A26bStitchGeracao", "name": "26b · Telas no Stitch (determinístico)", "icon": "🖼️", "output_key": "stitch_geracao", "prompt_file": None, "description": "Gera no Stitch, fora do modelo, toda (tela, estado) da tabela do agente de telas e do inventário da jornada, em paralelo; o screenId é o que o Stitch devolve."},
     {"id": "A27CopyRevisao", "name": "27 · Copy PT-BR (passada 2)", "icon": "🔍", "output_key": "copy_strings_revisada", "prompt_file": "design/27_copy_revisao.md", "description": "Revisão em contexto de tela."},
+    {"id": "A27bCopyPreservada", "name": "27b · Copy preservada (determinístico)", "icon": "📌", "output_key": "copy_strings_revisada", "prompt_file": None, "description": "Reanexa à copy revisada, sem mudança, as seções da passada 1 que a revisão não trouxe (prompts e schemas, banco curado, roteiro do podcast)."},
     {"id": "A28Prototipo", "name": "28 · Protótipo navegável (HTML)", "icon": "🖥️", "output_key": "prototipo_html", "prompt_file": "design/28_prototipo.md", "description": "Arquivo HTML único e sem dependências com as telas navegáveis, o painel da etapa vindo do one-pager e as cadências do pico. Salvo como `design/08-prototipo.html`."},
     {"id": "A29ArtefatosDesign", "name": "29 · Artefatos e links (determinístico)", "icon": "🔗", "output_key": "stitch_links", "prompt_file": None, "description": "Separa o HTML do protótipo do relatório, colhe os links das telas no Stitch e monta a folha de diagramas. Stitch com menos telas que o inventário da jornada bloqueia (`stitch_status`, dono `telas`)."},
     {"id": "A29cPrototipoLint", "name": "29a · Lint do protótipo (determinístico)", "icon": "🧹", "output_key": "prototipo_lint_report", "prompt_file": None, "description": "Confere o arquivo do protótipo HTML: o que o QA de entregáveis não vê por ler só o texto. Reprovado devolve ao protótipo no retrabalho de design."},
     {"id": "A29dConsistencia", "name": "29d · Coerência entre documentos (determinístico)", "icon": "📖", "output_key": "consistencia_report", "prompt_file": None, "description": "Jornada, fluxo, copy revisada e protótipo contra o glossário canônico da spec: variante proibida de entidade bloqueia; papel ou idade de personagem, número com unidade, rótulo de botão e nome de arquivo divergentes ficam 🟡. Pegou os quatro nomes do órgão da exp09ef1b."},
     {"id": "A29bEspelhoMiro", "name": "29b · Espelho no Miro (determinístico)", "icon": "🪞", "output_key": "miro_links", "prompt_file": None, "description": "Publica no Miro, como board navegável, os mesmos diagramas Mermaid da jornada e do fluxo. O Mermaid continua sendo a fonte; Miro indisponível não interrompe a esteira."},
+    {"id": "A29eCoberturaTelas", "name": "29e · Cobertura de telas (determinístico)", "icon": "🧮", "output_key": "cobertura_telas_report", "prompt_file": None, "description": "Toda tela do inventário da jornada no fluxo, na copy revisada, na cobertura dos wireframes e nos quadros do protótipo, conferida por ID; falta vira ticket com o dono (`cobertura_telas_status`)."},
     {"id": "A30QaEntregaveis", "name": "30 · QA de entregáveis", "icon": "🧪", "output_key": "qa_entregaveis_report", "prompt_file": "design/30_qa_entregaveis.md", "description": "Fidelidade à spec, diff de strings, currículo, faixa, fluxo, professor, briefing, ambiente (D8) e CAA (D8b)."},
     {"id": "A30bQaAfirmacoes", "name": "30b · Afirmações do QA (determinístico)", "icon": "🔎", "output_key": "qa_afirmacoes_report", "prompt_file": None, "description": "Contagens de telas (\"todas as N telas\", \"N de M\") e nomes de arquivo que o QA escreveu, contra o inventário da jornada, o Stitch, o protótipo e `pipeline/artifacts.py`. Divergência reescreve o veredito do QA como bloqueado; Stitch com menos telas que o inventário vira ticket para `telas`. Pegou as \"16 telas\" de um Stitch com 6 na exp09ef1b."},
     {"id": "A31QaEntregaveisCheck", "name": "31 · Veredito de design (determinístico)", "icon": "🔀", "output_key": "design_status", "prompt_file": None, "description": "Lê o envelope do QA de entregáveis."},
     {"id": "A33RastroDesign", "name": "33 · Rastro de lacunas do design (determinístico)", "icon": "🧭", "output_key": "rastro_design_report", "prompt_file": None, "description": "Marcadores de lacuna na spec consolidada e nos documentos de design: o de design bloqueia a etapa; o que o fechamento de lacunas fechou (`Resolvido em [D0-n]`) não conta; o de produto já aprovado e o de dev ficam 🟡."},
+    {"id": "A33bRastreabilidadeDesign", "name": "33b · Matriz de rastreabilidade (determinístico)", "icon": "🧷", "output_key": "rastreabilidade_report", "prompt_file": None, "description": "Cada requisito do produto (habilidades, textos literais, tempo, telas, estados, seção do DS) procurado em cada artefato de design; o que se perdeu sai com o dono."},
     {"id": "A32DespachoDesign", "name": "32 · Retrabalho de design (determinístico)", "icon": "🔁", "output_key": "tickets_retrabalho", "prompt_file": None, "description": "Reexecuta só os agentes com ticket do QA, na ordem de precedência do prompt, e refaz o protótipo depois."},
 ]

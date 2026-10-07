@@ -303,7 +303,7 @@ Perfil declarado, 9 a 17 anos: WhatsApp 69% · Instagram 63% · TikTok 45% · Yo
 
 **Regras de aplicação (2.1 e 6.4):**
 
-- **(a) 3º–5º ano:** o ambiente de consumo mais plausível é YouTube (`unitube`); WhatsApp é plausível
+- **(a) 3º–5º ano:** o ambiente de consumo mais plausível é YouTube (`unootube`, hoje arquivado — ADR-116); WhatsApp é plausível
   como *grupo da família ou da turma*, não como conta pessoal.
 - **(b) 6º–7º ano:** zona de transição — qualquer um dos cinco é defensável, e a spec justifica na seção 18.
 - **(c) 8º ano em diante:** Instagram, TikTok e WhatsApp são os de maior uso.

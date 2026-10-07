@@ -191,8 +191,21 @@ def _palavras(texto: str) -> set:
     return {p for p in re.findall(r"[a-z]{4,}", _norm(texto))}
 
 
-def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
+def _numeros(texto: str) -> set:
+    return {n.replace(",", ".").rstrip("0").rstrip(".") or "0" for n in re.findall(r"\d+(?:[.,]\d+)?", texto or "")}
+
+
+def _numeros_de_meta(spec: str, one_pager: str) -> set:
+    """Os números que podem ser meta: os do §17 do one-pager e os do bloco 9 da spec (onde mora o 9f)."""
+    from tools import bncc
+    from tools.conteudo_aprovado import secao
+
+    return _numeros(secao(one_pager or "", 17) or "") | _numeros(bncc.secao_bloco(spec or "", 9) or "")
+
+
+def validar_kpis(prd: str, spec: str = "", one_pager: str = "") -> Dict[str, Any]:
     texto = prd or ""
+    origem_das_metas = _numeros_de_meta(spec, one_pager)
     achados: List[Dict[str, str]] = []
 
     def falha(codigo: str, resumo: str, severidade: str = "bloqueio") -> None:
@@ -224,6 +237,15 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
     payload_do_evento: Dict[str, str] = {}
     onde_do_sinal: Dict[str, str] = {}
     verbo_objeto: Dict[str, tuple] = {}
+    # O caminho de cada evento (coluna «Caminho» da tabela de eventos). Evento OPERACIONAL não passa por `track`: é
+    # a rota do módulo gravando uma coluna, e o que ele «carrega» em `resultado`/`contexto` na tabela é o corpo da
+    # rota, não telemetria — não há evento em lugar nenhum para o KPI contar (exp01ef1b, 07/10/2026).
+    caminho_do_evento: Dict[str, str] = {}
+    for linha in tab_evt:
+        caminho = _norm(_col(linha, "caminho"))
+        for i in _RE_EVT.findall(" ".join(linha.values())):
+            if caminho:
+                caminho_do_evento.setdefault(i.upper(), caminho)
     for linha in tab_evt:
         for i in _RE_EVT.findall(" ".join(linha.values())):
             verbo_objeto.setdefault(i.upper(), (_norm(_col(linha, "verbo")), _norm(_col(linha, "objeto"))))
@@ -331,6 +353,10 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
                     saida = (f"Na tela do KPI disparam {', '.join(f'`{x}`' for x in na_tela)}."
                              if na_tela else "Nenhum evento da tabela dispara nessa tela: acrescente o "
                              "evento que a mede, ou corrija a coluna Tela.")
+                    # o KPI-20 da exp01ef1b mede uma sequência E2→E4; a dica antiga só mandava trocar o
+                    # evento, e trocá-lo derrubaria a medida (07/10/2026)
+                    saida += (f" Se o KPI mede uma sequência de etapas, a correção é ampliar a coluna Tela para "
+                              f"{sorted(telas_kpi | telas_evt)}, não trocar o evento.")
                     falha("kpi-tela-divergente",
                           f"{nome} mede {sorted(telas_kpi)} e é alimentado por `{e}`, que dispara em "
                           f"{sorted(telas_evt)}. O número vai sair e não vai medir o que o KPI diz. {saida}")
@@ -343,6 +369,18 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
         campos = list(dict.fromkeys(re.findall(r"(?:resultado|contexto)\.(\w+)", calculo)))
         usados = list(dict.fromkeys(x.upper() for x in _RE_EVT.findall(calculo))) or eventos
         usados = [x for x in usados if not tab_evt or x in tela_do_evento]
+        # KPI que conta `resultado.*`/`contexto.*` de evento operacional: medido nas sete sessões, a exp01ef1b
+        # (KPI-13/15/17: `resultado.voto`, `.metodo`, `.alt_id` de `EVT-002/006/008`, operacionais), a exp06ef1b
+        # (KPI-16/17) e a exp04ef1b (KPI-02/03/05/06). O voto está em `exp01ef1b_sessoes.voto_emocional`, e é essa
+        # coluna que o cálculo lê. ⚠️: o número sai, mas de uma telemetria que ninguém emite.
+        operacionais = [x for x in usados if caminho_do_evento.get(x, "").startswith("operac")]
+        if campos and operacionais:
+            falha("kpi-operacional-com-resultado",
+                  f"{nome} calcula com `{', '.join(campos)}` de {', '.join(f'`{x}`' for x in operacionais)}, de caminho "
+                  f"operacional: evento operacional não passa por `track` — é a rota do módulo gravando uma coluna, e "
+                  f"não existe `resultado` nem `contexto` para contar. Calcule com a coluna que a rota grava (a da "
+                  f"seção 11, como em `count(<id>_sessoes.<coluna> = '<valor>')`), ou, se o número é de produto e "
+                  f"não da professora, emita o evento também pelo caminho analítico.", severidade="atencao")
         if campos and usados:
             sinais_p = [x for x in usados if x.startswith("EVT-P")]
             carregam = {x: set(re.findall(r'"(\w+)"\s*:', payload_do_evento.get(x, "")))
@@ -378,6 +416,18 @@ def validar_kpis(prd: str, spec: str = "") -> Dict[str, Any]:
         elif re.search(r"\d", baseline) and not _RE_ORIGEM.search(baseline) and not _RE_SEM_BASELINE.search(baseline):
             falha("baseline-sem-origem",
                   f"{nome} tem baseline `{baseline.strip()[:30]}` sem dizer de onde veio.", severidade="atencao")
+
+        # Meta é decisão do PO: só vale o número que o §17 do one-pager ou o 9f da spec fixam. Os 23 alvos do
+        # PRD da exp01ef1b (≥75%, ≥85%, ≤1,4…) não estavam em lugar nenhum — o exemplo do gabarito trazia
+        # `≥ 70%` e o redator o imitou (auditoria de 07/10/2026).
+        alvo = _col(linha, "alvo", "meta")
+        if alvo and "[PROPOSTA" not in alvo.upper() and not re.search(r"sem meta", alvo, re.I):
+            inventados = sorted(_numeros(alvo) - origem_das_metas)
+            if inventados:
+                falha("kpi-alvo-inventado",
+                      f"{nome} tem alvo `{alvo.strip()[:40]}` e o número não está no §17 do one-pager nem no 9f da spec. "
+                      "Meta é decisão do PO: escreva `sem meta — primeira medição`, ou marque "
+                      "`[PROPOSTA — validar com PO: <meta> · por quê]`.")
 
     # a leitura precisa ter leitor: a fila analítica não é lugar onde alguém lê
     for linha in tab_evt:

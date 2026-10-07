@@ -20,7 +20,7 @@ proibiu algo que o critério exige (ou exigiu algo que o critério veda) e a mis
 registre o conflito como **decisão humana** — cite o critério, cite a frase do briefing, e diga o que
 cada lado garante —, nunca como falha. A missão que obedece ao PO não é reprovada por obedecer: quem
 decide entre a instrução e a regra é uma pessoa. No gate final isso vai para **Decisões de produto pendentes (🔵)** e o veredito é 🟡, nunca 🔴: um avaliador que reprovou a missão por obedecer ao briefing não produz pendência de release.
-Só é ❌ o que a missão fez **além** do que o briefing pediu.
+Só é ❌ o que a missão fez **além** do que o briefing pediu — e o que ela fez **contra** ele: trocar a seção do DS que o briefing fixou, cortar habilidade que ele marcou como obrigatória ou entregar ao sistema o gesto que o contrato de evidência dá à criança é ❌, nunca 🔵 de "homologar". O PO não ratifica fato consumado.
 
 **Veredito do gate estrutural (última rodada) — status registrado: `{gate_estrutural_status?}` após `{gate_estrutural_rodada?}` rodada(s):**
 
@@ -51,8 +51,15 @@ Só é ❌ o que a missão fez **além** do que o briefing pediu.
 4. Procure contradições entre missão e relatórios.
 5. Reaplique o núcleo do 9.1 (teste de implementação cega) como regressão: cardinalidade/bloqueio, geração de outputs, estados incompletos, quem termina cedo, conta publicadora, permissões/handoffs, fallbacks.
 6. Verifique se a descoberta central continua intacta (frase, ação principal e virada formam a mesma cadeia causal).
+6.1. **Régua alcançável e sem buraco.** Para cada habilidade da régua (Atingiu / Em processo / Não atingiu), escreva a sequência de gestos na interface que produz cada nível. Nível que a interface torna impossível (ex.: "repete a mesma categoria" quando a tela não deixa repetir), duas faixas que se sobrepõem, ou combinação possível de respostas que não cai em nível nenhum → ❌ no 9.1 (implementação cega: quem codifica inventaria a classificação). Cite a regra e a tela.
+6.2. **Teto numérico só reprova com fonte.** Um teto (palavras por texto, segundos, itens) sustenta ❌ só se vier do núcleo, do briefing ou de `literatura-cognitiva.md` — cite a linha. Teto que o próprio one-pager declarou sem origem é ⚠️ e vira `[PROPOSTA — validar com PO: <teto>]`; e, se você aplicar um teto, aplique a **todos** os textos da missão, não a um só.
+6.3. **Quem decidiu.** Toda `[PROPOSTA — validar com PO …]` do one-pager entra em "Decisões de produto pendentes (🔵)" — com ela, o veredito é no máximo 🟡. Decisão atribuída ao PO ("aprovado pelo PO", "Quem decidiu: PO") sem o parecer do PO que a sustente é ❌ de coerência: o PO não ratifica fato consumado (`references/decisoes-do-agente.md`).
 6.5. Classifique o veredito: 🔴 se qualquer F-critério for bloqueio; senão 🟡 se existir qualquer item em "Riscos aceitos" ou em "Decisões de produto pendentes"; senão 🟢.
 7. Emita o veredito. Você **não cria soluções de produto**: se detectar decisão aberta, aponte a lacuna e o agente responsável (estrutura/estados/ownership → gate estrutural; BNCC/professor/guardrails → avaliação pedagógica; carga/linguagem/ritmo → experiência do estudante).
+
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
 
 ## Formato de saída obrigatório
 

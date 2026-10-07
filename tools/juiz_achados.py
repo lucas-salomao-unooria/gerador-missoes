@@ -103,6 +103,16 @@ def status_de(achados: List[Dict[str, Any]]) -> str:
 def reescrever_relatorio(relatorio: str, envelope: Dict[str, Any], retirados: List[Dict[str, str]]) -> str:
     """O relatório com o envelope JSON atualizado e a seção do que o juiz retirou, com a citação."""
     novo_env = "```json\n" + json.dumps(envelope, ensure_ascii=False, indent=2) + "\n```"
+    # O bullet do achado retirado e o veredito do cabeçalho saem também: na exp01ef1b (07/10/2026) o JSON
+    # dizia «retirado» e o texto continuava listando o `websocket-mencao` sob «🔴 BLOQUEADO».
+    for codigo in {r["codigo"] for r in retirados}:
+        if not any(a.get("codigo") == codigo for a in envelope.get("achados") or []):
+            relatorio = re.sub(rf"^- [^\n]*\*\*{re.escape(codigo)}\*\*[^\n]*\n?", "", relatorio or "", flags=re.M)
+    icone = {"aprovado": "🟢 CONFORME", "amarelo": "🟡 COM AVISOS", "bloqueado": "🔴 BLOQUEADO"}.get(
+        str(envelope.get("status") or ""), "")
+    if icone:
+        relatorio = re.sub(r"\*\*Veredito: [^*]*\*\*", f"**Veredito: {icone} (revisto pelo juiz de achados)**",
+                           relatorio or "", count=1)
     blocos = list(re.finditer(r"```json.*?```", relatorio or "", re.DOTALL))
     corpo = (relatorio[:blocos[-1].start()] + novo_env + relatorio[blocos[-1].end():]) if blocos else (relatorio or "") + "\n\n" + novo_env
     linhas = ["", "## Revisto pelo juiz de achados", "",

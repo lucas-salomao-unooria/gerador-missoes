@@ -85,7 +85,7 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
 
     novos: Dict[str, Dict[str, Any]] = {}
 
-    novos["manifesto_status"] = rastro.validar_manifesto(spec)
+    novos["manifesto_status"] = rastro.validar_manifesto(spec, briefing=state.get("briefing", "") or "")
     novos["telemetria_status"] = rastro.validar_telemetria(handoff)
     novos["bncc_status"] = bncc.validar_spec(spec)
     novos["rastro_lacunas_status"] = rastro.varrer_lacunas(FONTES_LACUNAS, state, etapa_corrente="dev")

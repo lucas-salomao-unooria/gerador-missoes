@@ -245,7 +245,7 @@ def render_ds_componentes(dados: Dict[str, Any]) -> str:
     ]
     mapa = dados.get("secao_para_marca") or {}
     if mapa:
-        linhas += ["Nome da seção na esteira → pasta no DS: "
+        linhas += ["Nome antigo da seção (missão antiga) → pasta no DS: "
                    + " · ".join(f"`{s}` → `{m}`" for s, m in sorted(mapa.items())), ""]
     for marca, nomes in sorted(marcas.items()):
         linhas.append(f"**`{marca}`** ({len(nomes)}): " + " · ".join(f"`{n}`" for n in nomes))

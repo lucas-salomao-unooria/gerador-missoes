@@ -8,15 +8,26 @@ O arquivo é autossuficiente: o logotipo e o grafismo vão embutidos em base64 e
 inline, então ele continua inteiro depois de baixado, anexado num e-mail ou aberto sem
 rede. As fontes vêm do Google Fonts quando há rede; sem ela, cai no fallback do sistema
 e só o desenho da letra muda.
+
+No pedagógico, as telas do Stitch entram debaixo de cada passo e o desenho da jornada e do
+fluxo no fim do passo a passo, como no `.docx` (`tools.ilustracoes`). As imagens também vão
+embutidas: o endereço público do Stitch vence em poucos dias, e o arquivo tem de continuar
+inteiro depois disso.
 """
 
 from __future__ import annotations
 
+import base64
 import html
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from tools import marca
 from tools.markdown_blocos import Bloco, Trecho, analisar, formatar, titulo_do_documento
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tools.ilustracoes import Figura, Ilustracoes
+
+TITULO_DIAGRAMAS = "O mapa da missão: jornada e fluxo"
 
 
 def _trechos_html(trechos: List[Trecho]) -> str:
@@ -36,7 +47,40 @@ def _trechos_html(trechos: List[Trecho]) -> str:
     return "".join(saida)
 
 
-def _corpo(blocos: List[Bloco]) -> str:
+def _figura(figura: "Figura", classe: str) -> str:
+    """`<figure>` com a imagem embutida e a legenda; sem imagem, a legenda com o aviso e o link."""
+    rotulo = html.escape(figura.rotulo)
+    if figura.imagem:
+        src = f"data:{figura.mime};base64," + base64.b64encode(figura.imagem).decode("ascii")
+    elif figura.svg:
+        # Por <img>, e não inline: SVG que veio de fora não executa script dentro de um <img>.
+        src = "data:image/svg+xml;base64," + base64.b64encode(figura.svg.encode("utf-8")).decode("ascii")
+    else:
+        aviso = f": {html.escape(figura.aviso)}" if figura.aviso else ""
+        link = f' · <a href="{html.escape(figura.link, quote=True)}">abrir imagem</a>' if figura.link else ""
+        return f'<p class="figura-ausente">{rotulo}{aviso}{link}</p>'
+    return (f'<figure class="{classe}"><img src="{src}" alt="{rotulo}" />'
+            f"<figcaption>{rotulo}</figcaption></figure>")
+
+
+def _telas(bloco: Bloco, ilustracoes: "Ilustracoes") -> str:
+    figuras, sem_desenho = ilustracoes.do_passo(bloco.ids)
+    partes = [_figura(f, "tela") for f in figuras]
+    if sem_desenho:
+        partes.append(f'<p class="figura-ausente">Ainda sem desenho no Stitch: '
+                      f"{html.escape(ilustracoes.nomes(sem_desenho))}.</p>")
+    return "\n".join(partes)
+
+
+def _diagramas(ilustracoes: "Ilustracoes", nivel: int) -> str:
+    partes = [f"<h{nivel}>{html.escape(TITULO_DIAGRAMAS)}</h{nivel}>"]
+    partes += [_figura(f, "diagrama") for f in ilustracoes.diagramas if f.imagem or f.svg]
+    if ilustracoes.aviso_diagramas:
+        partes.append(f"<p>{_trechos_html(formatar(ilustracoes.aviso_diagramas))}</p>")
+    return "\n".join(partes)
+
+
+def _corpo(blocos: List[Bloco], ilustracoes: Optional["Ilustracoes"] = None) -> str:
     """Blocos → HTML, agrupando itens consecutivos numa lista só."""
     partes: List[str] = []
     lista_aberta: Optional[str] = None
@@ -47,7 +91,23 @@ def _corpo(blocos: List[Bloco]) -> str:
             partes.append(f"</{lista_aberta}>")
             lista_aberta = None
 
-    for bloco in blocos:
+    posicao, nivel_diagramas = None, 2
+    if ilustracoes is not None and ilustracoes.tem_diagramas:
+        from tools.ilustracoes import indice_do_anexo, nivel_da_secao_dos_diagramas, posicao_dos_diagramas
+
+        posicao = posicao_dos_diagramas(blocos)
+        nivel_diagramas = nivel_da_secao_dos_diagramas(blocos, posicao)
+        if posicao is None:
+            posicao = indice_do_anexo(blocos)
+
+    for n, bloco in enumerate(blocos):
+        if n == posicao:
+            fechar_lista()
+            partes.append(_diagramas(ilustracoes, nivel_diagramas))
+        if bloco.tipo == "telas" and ilustracoes is not None and ilustracoes.tem_stitch:
+            fechar_lista()
+            partes.append(_telas(bloco, ilustracoes))
+            continue
         if bloco.tipo == "item":
             etiqueta = "ol" if bloco.ordenada else "ul"
             if lista_aberta != etiqueta:
@@ -85,6 +145,8 @@ def _corpo(blocos: List[Bloco]) -> str:
             partes.append(f"<p>{_trechos_html(bloco.trechos)}</p>")
 
     fechar_lista()
+    if posicao is not None and posicao >= len(blocos):
+        partes.append(_diagramas(ilustracoes, nivel_diagramas))
     return "\n".join(partes)
 
 
@@ -163,6 +225,13 @@ _PAGINA = """<!doctype html>
   }}
   blockquote p {{ margin: 0; }}
   hr {{ border: 0; border-top: 1px solid var(--linha); margin: 26px 0; }}
+  figure {{ margin: 14px 0 22px; text-align: center; }}
+  figure img {{
+    max-width: 100%; height: auto; border: 1px solid var(--linha); border-radius: 6px; background: #fff;
+  }}
+  figure.tela img {{ max-height: 560px; }}
+  figcaption {{ margin-top: 6px; font-size: 13px; font-style: italic; color: var(--texto); }}
+  .figura-ausente {{ font-size: 13px; font-style: italic; text-align: center; }}
   .tabela {{ overflow-x: auto; margin: 0 0 18px; }}
   table {{ border-collapse: collapse; width: 100%; font-size: 14.5px; }}
   th {{
@@ -186,7 +255,7 @@ _PAGINA = """<!doctype html>
     .conteudo {{ padding: 26px 30px 0; }}
     .rodape {{ padding: 16px 30px 0; }}
     h1, h2, h3, h4 {{ break-after: avoid; }}
-    table, blockquote, pre, li {{ break-inside: avoid; }}
+    table, blockquote, pre, li, figure {{ break-inside: avoid; }}
   }}
   @media (max-width: 640px) {{
     .capa {{ padding: 32px 20px; }}
@@ -223,6 +292,7 @@ def markdown_para_html(
     titulo_fallback: str = "Missão",
     etiqueta: str = "One-pager",
     subtitulo: Optional[str] = None,
+    ilustracoes: Optional["Ilustracoes"] = None,
 ) -> str:
     """Devolve a página completa, pronta para gravar em disco."""
     blocos = analisar(markdown or "")
@@ -243,7 +313,7 @@ def markdown_para_html(
             else '<span class="marca-texto">UNOORIA</span>'
         ),
         grafismo=f'<img class="grafismo" alt="" src="{grafismo_uri}" />' if grafismo_uri else "",
-        corpo=_corpo(blocos),
+        corpo=_corpo(blocos, ilustracoes),
         fontes=marca.GOOGLE_FONTS,
         navy=marca.NAVY,
         lavanda=marca.LAVANDA,

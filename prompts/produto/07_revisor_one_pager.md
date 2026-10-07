@@ -8,6 +8,10 @@ O gate estrutural bloqueou a missão e escreveu, no bloco **"Complemento — pro
 
 {one_pager}
 
+**Briefing do PO — o que ele pediu, proibiu ou já decidiu:**
+
+{briefing?}
+
 **Relatório do gate estrutural (rodada corrente):**
 
 {gate_estrutural_report}
@@ -16,7 +20,7 @@ O gate estrutural bloqueou a missão e escreveu, no bloco **"Complemento — pro
 
 {contrato_produto_report?}
 
-Os achados dele já estão refletidos no relatório do gate; se algum não estiver, aplique do mesmo jeito: ⛔ WebSocket vira polling HTTP em `expNNefNb_gates_turma` sem inventar intervalo; ⚠️ estado de cliente sai do texto (o que se preserva fica, onde se guarda não); ⚠️ SAEB fora do ano vira "N/A — ano não avaliado pelo SAEB"; ⚠️ número sem origem vira `[PARÂMETRO — a definir por produto: <o quê>]` ou some, nunca fica como fato.
+Os achados dele já estão refletidos no relatório do gate; se algum não estiver, aplique do mesmo jeito: ⛔ WebSocket vira polling HTTP em `expNNefNb_gates_turma` sem inventar intervalo; ⚠️ estado de cliente sai do texto (o que se preserva fica, onde se guarda não); ⚠️ SAEB fora do ano vira "N/A — ano não avaliado pelo SAEB"; ⚠️ número sem origem vira `[PARÂMETRO — a definir por produto: <o quê>]` ou some, nunca fica como fato. ⛔ seção travada pelo briefing: a missão volta à seção que o briefing fixou. ⛔ habilidade do briefing que sumiu: volta, ou entra na seção 18 como `[PROPOSTA — validar com PO: tirar <código> · por quê]`. ⛔ decisão atribuída ao PO sem parecer dele: a frase vira `[PROPOSTA — validar com PO: …]`.
 
 **Parecer de adequação pedagógica (quando houver):**
 
@@ -41,6 +45,11 @@ Vazios na primeira passada do gate estrutural — as avaliações rodam depois d
 5. Mantenha a estrutura de 18 seções do one-pager canônico. Use "estudante", nunca "aluno", nos textos voltados ao estudante.
 6. Nunca invente código BNCC, descritor SAEB ou artigo de lei.
 7. **Não achate o aha para caber num ajuste.** As tabelas 1.1 (conceitos do material vividos em tela) e 1.2 (anatomia do aha) da seção 1 foram pontuadas pelo juiz de profundidade. Quando uma correção pede menos carga — menos opções, menos texto, menos tempo —, corte a carga **acidental** (a que vem da forma) e preserve a aposta que trava, a consequência que muda conforme a escolha e a virada que desmente a crença. Se a única forma de aplicar a correção for tirar um desses passos, aplique o resto e registre na seção 18 `[CONFLITO — correção Ln × anatomia do aha: <o quê>]` para o gate final decidir. Se a correção muda a seção 4, atualize a 1.1 e a 1.2 para dizerem o que a seção 4 passou a fazer.
+8. **Restrição do briefing não se desfaz.** Correção que troca a seção do DS que o briefing fixou, corta habilidade que ele marcou como obrigatória ou contraria um "É PROIBIDO" não se aplica: registre na seção 18 `[CONFLITO — correção Ln × briefing: <frase do briefing>]` para o gate final levar ao PO. Escolher uma das opções de um 🔵 também não é seu (regra 2) — a exp03ef1b migrou de seção porque o revisor aplicou a "Opção A".
+
+## Quem decide
+
+<!-- include: references/decisoes-do-agente.md -->
 
 ## Saída
 

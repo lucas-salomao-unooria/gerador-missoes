@@ -41,6 +41,7 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "prototipo_lint_status", "rotulo": "Lint do protótipo (arquivo)", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "consistencia_status", "rotulo": "Coerência entre documentos", "etapa": "design", "rodada": None},
     {"status": "stitch_status", "rotulo": "Telas no Stitch × inventário", "etapa": "design", "rodada": "qa_design_rodada"},
+    {"status": "cobertura_telas_status", "rotulo": "Cobertura de telas por ID", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "qa_afirmacoes_status", "rotulo": "Afirmações do QA conferidas", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "design_status", "rotulo": "QA de entregáveis", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "rastro_design_status", "rotulo": "Rastro de lacunas do design", "etapa": "design", "rodada": None},
@@ -50,7 +51,7 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "juiz_perguntas_status", "rotulo": "Juiz das perguntas de produto", "etapa": "produto", "rodada": "juiz_perguntas_rodada"},
     {"status": "rastro_spec_status", "rotulo": "Rastro de lacunas da spec", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "conteudo_aprovado_spec_status", "rotulo": "Spec × one-pager aprovado", "etapa": "produto", "rodada": "spec_rodada"},
-    {"status": "conteudo_status", "rotulo": "Banco de conteúdo", "etapa": "dev", "rodada": None},
+    {"status": "conteudo_status", "rotulo": "Banco de conteúdo", "etapa": "dev", "rodada": "banco_rodada"},
     {"status": "telemetria_status", "rotulo": "Contrato de telemetria", "etapa": "dev", "rodada": "handoff_rodada"},
     {"status": "rastro_lacunas_status", "rotulo": "Rastro de lacunas", "etapa": "dev", "rodada": None},
     {"status": "dev_status", "rotulo": "Banca de dev", "etapa": "dev", "rodada": "banca_rodada"},
@@ -58,6 +59,7 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "kpis_status", "rotulo": "Coerência KPI ↔ evento ↔ tela", "etapa": "dev", "rodada": "prd_rodada"},
     {"status": "conteudo_aprovado_prd_status", "rotulo": "PRD × one-pager aprovado", "etapa": "dev", "rodada": "prd_rodada"},
     {"status": "conteudo_aprovado_pedagogico_status", "rotulo": "Pedagógico × one-pager aprovado", "etapa": "dev", "rodada": "pedagogico_rodada"},
+    {"status": "rastreabilidade_status", "rotulo": "Matriz de rastreabilidade (produto → design → dev)", "etapa": "dev", "rodada": None},
 ]
 
 #: Relatórios que não têm portão próprio: o parecer entra no dossiê como ressalva, nunca como

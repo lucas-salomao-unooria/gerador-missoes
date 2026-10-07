@@ -63,8 +63,9 @@ debate faça parte do insumo. O teste de permanência do nosso 2.1 vale para
 nosso 4.2 exige. Origem da emenda: o gate deles.
 
 **DES-01** dá o nome canônico das seções: as do contrato da plataforma (base publicada).
-Para missão nova, `unooriaai`, `unoovista` ou `unoochat` — a tradução do ambiente está em
-`ambientes.md`; as legadas (`instanooria`, `unitube`, `chatgpt`, `whatsappmobile`) só por decisão
+Para missão nova, `unooriaai`, `unoovista` ou `unoochat` — e `tiktooria`, `unoogaleria`, `unoojornal`,
+`unooblog`, que existem sem ponte; a tradução do ambiente está em `ambientes.md`, e a seção que o
+briefing fixou é trava; as legadas (`instanooria`, `unootube`, `chatgpt`, `whatsappmobile`) só por decisão
 registrada do PO (ADR-133 a 138). Roblox não tem seção.
 
 ## O que continua fora do nosso alcance

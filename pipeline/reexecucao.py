@@ -57,7 +57,7 @@ ETAPAS = ("produto", "spec", "design", "dev", "transversal")
 CHAVES_DEV = frozenset({
     "manifesto_report", "manifesto_status", "manifesto_status_envelope",
     "handoff_dev", "brief_assets", "handoff_rodada",
-    "banco_conteudo", "conteudo_report", "conteudo_status", "conteudo_status_envelope",
+    "banco_conteudo", "conteudo_report", "conteudo_status", "conteudo_status_envelope", "banco_rodada",
     "telemetria_report", "telemetria_status", "telemetria_status_envelope",
     "rastro_lacunas_report", "rastro_lacunas_status", "rastro_lacunas_status_envelope",
     "validacao_produto_narrativa", "validacao_design_imersao", "validacao_pedagogia_bncc",
@@ -76,6 +76,7 @@ CHAVES_DEV = frozenset({
 })
 #: `miro_board` fica de fora de propósito: o espelho atualiza o mesmo board em vez de abrir outro.
 CHAVES_DESIGN = frozenset({
+    "conteudo_aprovado",
     "fechamento_lacunas", "relatorio_lacunas", "lacunas_status", "lacunas_status_envelope",
     "ambiente_simulado", "ambiente_status", "ambiente_status_envelope",
     "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
@@ -85,6 +86,8 @@ CHAVES_DESIGN = frozenset({
     "prototipo_lint_report", "prototipo_lint_status", "prototipo_lint_status_envelope",
     "rastro_design_report", "rastro_design_status", "rastro_design_status_envelope",
     "consistencia_report", "consistencia_status", "consistencia_status_envelope",
+    "cobertura_telas_report", "cobertura_telas_status", "cobertura_telas_status_envelope",
+    "rastreabilidade_report", "rastreabilidade_status", "rastreabilidade_status_envelope",
     "stitch_status", "stitch_status_envelope",
     "qa_afirmacoes_report", "qa_afirmacoes_status", "qa_afirmacoes_status_envelope",
 }) | CHAVES_DEV
