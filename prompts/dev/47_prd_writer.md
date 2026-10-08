@@ -89,6 +89,28 @@ codifica precisa para implementar, e um gate determinístico confere os quatro p
 
 <!-- include: references/capacidades-plataforma.md -->
 
+## O que o código confere antes de o PRD sair — e no formato em que procura
+
+Quem vai codificar não pode decidir sozinho rota, corpo, erro, tabela, regra de nível nem prompt. Um gate
+determinístico (`prd-codavel`) lê o PRD como ele e devolve a você o que faltar:
+
+1. **Seção 12 — rotas do molde, cada uma numa linha `| API-xxx |`:** `/sessao`, `/gate`, `/turmas`, `…/painel`,
+   `POST …/zerar` (rodada nova; `DELETE` reprova), `…/pacotes`, `…/em-andamento`, `/professor/material`.
+2. **Corpo e resposta em `z.object(…)` dentro de bloco de código**, cada campo com tipo e limite. `Record<string,
+   unknown>`, `any` e `unknown` reprovam: declare os campos.
+3. **Tabela de erros** com as colunas `Código` e `Status`.
+4. **IA no preparo:** a tabela `| Chamada | Rota | Entrada | Saída | Prompt | Modelo | Quota | Fallback | Moderação |`,
+   **o texto de cada prompt num bloco de código** (vai para `prompts.ts`) e o schema de saída definido em Zod
+   (`const XSchema = z.object(…)`) — o `validar` do `generateJson` e a homologação usam o mesmo.
+5. **Seção 11 — DDL em bloco `sql`** (`CREATE TABLE …`), com o bloco manual (`FORCE ROW LEVEL SECURITY`, `GRANT … TO
+   app_runtime`). Coluna `score_*`, `nivel_*` ou `nota_*` em tabela da missão reprova: o nível mora em `evidencias_marcas`.
+6. **Seção 14 — a ficha** `| Habilidade | Marcador | Tipo | Pergunta | Regra | Nível | Grava na transação de |
+   Critério |`, uma linha para cada habilidade do bloco 11; `Tipo` é `acao` ou `multipla_escolha`; a `Regra` de `acao`
+   cita pelo nome uma coluna que a seção 11 declara (o que não vira predicado é `[PROPOSTA — validar com PO: …]`).
+7. **Missão em que o estudante escreve para um interlocutor simulado:** a seção 8 ou a 12 remete à **árvore de
+   intenções** do banco de conteúdo (`dev/01e-banco-conteudo.md`), diz que ela vive em `conteudo.ts` no servidor e
+   que a detecção roda no servidor. Não repita os gatilhos: cite a tabela.
+
 ## Insumos do pipeline
 
 Os status dos gates não entram aqui desde 07/10/2026: o status do PRD é calculado pela esteira, e o

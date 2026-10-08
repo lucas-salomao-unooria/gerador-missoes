@@ -96,10 +96,10 @@ na missão com customização de tema por IA; `EVT-P06`, só na IA conversaciona
 
 | Sinal | Objeto | Quando grava | Onde fica | Responde |
 |---|---|---|---|---|
-| `EVT-P01` | `preparo:iniciar` | Na primeira chamada de qualquer rota do preparo da turma | `<modulo>_conteudo_turma.preparo_iniciado_em` | T14, T15 |
-| `EVT-P02` | `conteudo:gerar` | A cada `POST …/gerar-conteudo`, **inclusive rascunho não aprovado** | `<modulo>_conteudo_turma.geracoes` (+1) e `tokens_usados` (soma) | T16, T20 |
-| `EVT-P03` | `conteudo:homologar` | Ao homologar o conteúdo | `<modulo>_conteudo_turma.aprovado_em` e `aprovado_por` | T14, T16 |
-| `EVT-P04` | `painel:ver` | A cada `GET …/painel` do professor | `<modulo>_conteudo_turma.painel_visto_em` (primeira vez) e `painel_vistas` (+1) | T17 |
+| `EVT-P01` | `preparo:iniciar` | Na primeira chamada de qualquer rota do preparo da turma | `<modulo>_pacotes.preparo_iniciado_em` | T14, T15 |
+| `EVT-P02` | `conteudo:gerar` | A cada `POST …/gerar-conteudo`, **inclusive rascunho não aprovado** | `<modulo>_pacotes.ia_geracoes` (+1) e `ia_tokens` (soma) | T16, T20 |
+| `EVT-P03` | `conteudo:homologar` | Ao homologar o conteúdo | `<modulo>_pacotes.aprovado_em` e `aprovado_por` | T14, T16 |
+| `EVT-P04` | `painel:ver` | A cada `GET …/painel` do professor | `<modulo>_pacotes.painel_visto_em` (primeira vez) e `painel_vistas` (+1) | T17 |
 | `EVT-P05` | `gate:liberar` | A cada etapa que o professor libera no gate — linha nova, nunca sobrescrita | `<modulo>_gates_historico (turma_id, etapa, liberada_em)` | T19 |
 | `EVT-P06` | `ia:consumir` | A cada chamada de IA feita para o estudante | `<modulo>_sessoes.tokens_gastos` (soma) e `chamadas_ia` (+1) | T21 |
 

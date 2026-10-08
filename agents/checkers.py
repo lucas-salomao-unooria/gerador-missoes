@@ -1136,6 +1136,10 @@ class RastroCheckAgent(BaseAgent):
             from tools import conteudo_aprovado as ca
 
             resultado["achados"] += ca.validar_banco(banco, str(state.get("one_pager", "") or ""))
+            # missão de chat: a árvore de intenções que o interlocutor simulado responde (auditoria de 08/10/2026)
+            from tools.prd_codavel import validar_intencoes
+
+            resultado["achados"] += [{**a, "etapa": "dev"} for a in validar_intencoes(banco, spec)]
             if any(a["severidade"] == "bloqueio" for a in resultado["achados"]):
                 resultado["status"] = "bloqueado"
             elif resultado["achados"] and resultado["status"] == "aprovado":
@@ -1158,14 +1162,23 @@ class RastroCheckAgent(BaseAgent):
 
             r_design = cdz.validar(str(state.get("prd_final", "") or ""),
                                    {**dict(state), "spec_missao": state.get(self.spec_key, "")})
+            # O PRD dá para codar: rotas do molde com Zod e erros, IA com prompt e schema, DDL, ficha de evidência com
+            # regra sobre colunas e a árvore do chat (`tools/prd_codavel.py`, auditoria de 08/10/2026)
+            from tools import prd_codavel as pc
+
+            r_codavel = pc.validar(str(state.get("prd_final", "") or ""), str(state.get(self.spec_key, "") or ""),
+                                   str(state.get("banco_conteudo", "") or ""))
             ordem = ("bloqueado", "amarelo", "aprovado")
             resultado = {
-                "status": min((r_lacunas["status"], r_design["status"], r_consistencia["status"]), key=ordem.index),
-                "achados": list(r_lacunas["achados"]) + list(r_design["achados"]) + list(r_consistencia["achados"]),
+                "status": min((r_lacunas["status"], r_design["status"], r_consistencia["status"], r_codavel["status"]),
+                              key=ordem.index),
+                "achados": (list(r_lacunas["achados"]) + list(r_design["achados"]) + list(r_consistencia["achados"])
+                            + list(r_codavel["achados"])),
             }
             relatorio = (
                 relatorio_lacunas(r_lacunas, self.rotulo, missao, agente=self.agente)
                 + "\n\n---\n\n" + cdz.relatorio(r_design, missao)
+                + "\n\n---\n\n" + pc.relatorio(r_codavel, missao)
                 + "\n\n---\n\n" + relatorio_prd(r_consistencia, missao)
                 # o envelope é o ÚLTIMO bloco json: o combinado, para o dossiê ver os três exames
                 + "\n\n```json\n" + json.dumps({"agente": "prd-check", "missao": missao, "status": resultado["status"],
