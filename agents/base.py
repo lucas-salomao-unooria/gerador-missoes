@@ -81,6 +81,9 @@ def create_llm_agent(
             # E o que mudou no one-pager aprovado desde aquela versão (`tools.conteudo_aprovado.mudancas_no_aprovado`):
             # sem isso, depois de um refazer de produto, o autor mantinha «palavra por palavra» o número velho.
             + (f"\n{{{PREFIXO_ANTERIOR}{output_key}?}}\n\n{{{KEY_MUDANCAS}?}}\n" if output_key in CHAVES_AUTORAIS else "")
+            # A versão que este autor escreveu na rodada anterior do loop, quando o gate reprovou
+            # (`agents.checkers.SaidaDeLoopAgent.autor_keys`). Vazio na primeira rodada e fora dos loops.
+            + (f"\n{{rodada_anterior_{output_key}?}}\n" if output_key in CHAVES_AUTORAIS else "")
             # Pareceres de quem responde por cada etapa já liberada (`pipeline/passagem.py`).
             # Vazio sem parecer humano ou na primeira etapa.
             + "\n---\n## Notas de passagem desta missão\n\n{notas_de_passagem?}\n"

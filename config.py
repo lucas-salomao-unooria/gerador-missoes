@@ -119,6 +119,12 @@ class AppSettings(BaseSettings):
         default_factory=lambda: _env_bool("ESTEIRA_ESTRITA", "true"),
         description="Se true, QA de design 🔴, banca de dev 🔴 e os gates de rastro (manifesto, telemetria, lacunas) marcam a herança como degradada e o PRD sai 🔴; lacuna de plataforma só deixa o PRD 🟡",
     )
+    banca_entrada_estrita: bool = Field(
+        default_factory=lambda: _env_bool("BANCA_ENTRADA_ESTRITA", "true"),
+        description="Se true, a banca de entrada do dev 🔴 (segunda verificação de produto e design) impede todo agente "
+                    "de dev de rodar: construir sobre o que vai mudar é desperdício. Se false, o dev roda e o 🔴 fica no "
+                    "semáforo.",
+    )
     bncc_check_estrito: bool = Field(
         default_factory=lambda: _env_bool("BNCC_CHECK_ESTRITO", "true"),
         description="Se true, spec com habilidade BNCC inexistente, de outro ano ou sem letramento digital marca a herança como degradada em design e dev",

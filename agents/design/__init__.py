@@ -49,6 +49,7 @@ from google.adk.agents.sequential_agent import SequentialAgent
 
 from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca
+from agents.banca import get_banca
 from agents.juiz import get_fidelidade_check
 from agents.checkers import (
     ArtefatosDesignAgent,
@@ -429,6 +430,11 @@ def build_qa_design_loop(**kw) -> LoopAgent:
         max_iterations=rodadas,
         before_agent_callback=marcar_heranca,
         sub_agents=[
+            # A banca no fim de design (o que de produto se realiza em tela, e design e imersão), antes do parecer:
+            # o bloqueio dela vira ticket pelo A30b, e o dono refaz nesta etapa. Até 08/10/2026 ela só rodava no
+            # dev, que reescrevia o design depois do parecer (decisão do usuário).
+            *get_banca("design", "AB", "A29f", rotulo="Banca de design", titulo="Banca de validação — fim de design",
+                       report_key="banca_design_report", status_key="banca_design_status", **kw),
             get_qa_entregaveis_agent(max_rodadas=rodadas, **kw),
             # Entre o QA e o veredito: contagem de telas e nome de arquivo que o QA escreveu são
             # conferidos em código; divergência reescreve o envelope como bloqueado (exp09ef1b).
@@ -554,7 +560,8 @@ def build_design_stage(
             # conferência. Sem pedido de refazer de design, o juiz não roda.
             get_fidelidade_check("A33cFidelidadeDesign", status_key="fidelidade_design_status",
                                  report_key="fidelidade_design_report", documentos=FIDELIDADE_DOCUMENTOS_DESIGN,
-                                 onde="fim do design", etapas_pedido=["design"], com_briefing=False, etapa="design", **kw),
+                                 onde="fim do design", etapas_pedido=["design"], com_briefing=False, etapa="design",
+                                 incluir_corrente=False, **kw),
         ],
     )
 
@@ -586,6 +593,9 @@ DESIGN_METADATA = [
     {"id": "A29dConsistencia", "name": "29d · Coerência entre documentos (determinístico)", "icon": "📖", "output_key": "consistencia_report", "prompt_file": None, "description": "Jornada, fluxo, copy revisada e protótipo contra o glossário canônico da spec: variante proibida de entidade bloqueia; papel ou idade de personagem, número com unidade, rótulo de botão e nome de arquivo divergentes ficam 🟡. Pegou os quatro nomes do órgão da exp09ef1b."},
     {"id": "A29bEspelhoMiro", "name": "29b · Espelho no Miro (determinístico)", "icon": "🪞", "output_key": "miro_links", "prompt_file": None, "description": "Publica no Miro, como board navegável, os mesmos diagramas Mermaid da jornada e do fluxo. O Mermaid continua sendo a fonte; Miro indisponível não interrompe a esteira."},
     {"id": "A29eCoberturaTelas", "name": "29e · Cobertura de telas (determinístico)", "icon": "🧮", "output_key": "cobertura_telas_report", "prompt_file": None, "description": "Toda tela do inventário da jornada no fluxo, na copy revisada, na cobertura dos wireframes e nos quadros do protótipo, conferida por ID; falta vira ticket com o dono (`cobertura_telas_status`)."},
+    {"id": "A29fBancaProdutoNarrativa", "name": "29f · Banca no fim de design: produto realizado em tela", "icon": "🅰️", "output_key": "banca_design_narrativa", "prompt_file": None, "description": "Os critérios PROD que se realizam em tela — fluxo × contrato de estados, momento de conclusão, condução do debate, modos de erro —, antes do parecer de design."},
+    {"id": "A29fBancaDesignImersao", "name": "29f · Banca no fim de design: design e imersão", "icon": "🅱️", "output_key": "banca_design_imersao", "prompt_file": None, "description": "Os critérios DES da banca sobre os documentos de design, antes do parecer de design."},
+    {"id": "A29fBancaConsolidacao", "name": "29f · Banca de design (determinístico)", "icon": "⚖️", "output_key": "banca_design_report", "prompt_file": None, "description": "Veredito da banca no fim de design. O bloqueio vira ticket pelo A30b e o dono refaz nesta etapa; esgotadas as rodadas, recusa o de acordo."},
     {"id": "A30QaEntregaveis", "name": "30 · QA de entregáveis", "icon": "🧪", "output_key": "qa_entregaveis_report", "prompt_file": "design/30_qa_entregaveis.md", "description": "Fidelidade à spec, diff de strings, currículo, faixa, fluxo, professor, briefing, ambiente (D8) e CAA (D8b)."},
     {"id": "A30bQaAfirmacoes", "name": "30b · Afirmações do QA (determinístico)", "icon": "🔎", "output_key": "qa_afirmacoes_report", "prompt_file": None, "description": "Contagens de telas (\"todas as N telas\", \"N de M\") e nomes de arquivo que o QA escreveu, contra o inventário da jornada, o Stitch, o protótipo e `pipeline/artifacts.py`. Divergência reescreve o veredito do QA como bloqueado; Stitch com menos telas que o inventário vira ticket para `telas`. Pegou as \"16 telas\" de um Stitch com 6 na exp09ef1b."},
     {"id": "A31QaEntregaveisCheck", "name": "31 · Veredito de design (determinístico)", "icon": "🔀", "output_key": "design_status", "prompt_file": None, "description": "Lê o envelope do QA de entregáveis."},

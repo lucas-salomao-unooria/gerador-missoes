@@ -60,8 +60,11 @@ def _norm(texto: str) -> str:
     return re.sub(r"\s+", " ", sem).strip(" `*_")
 
 
-def titulo(item: Dict[str, str]) -> str:
-    return f"{item['id']} — {item['estado']}"
+def titulo(item: Dict[str, str], versao: int = 1) -> str:
+    """O título da tela no Stitch. A partir da segunda versão leva `· vN`: o Stitch não renomeia nem apaga tela, e a
+    refeita convive no projeto com a anterior — é o título que diz qual é a atual (decisão do usuário, 08/10/2026)."""
+    base = f"{item['id']} — {item['estado']}"
+    return base if versao <= 1 else f"{base} · v{versao}"
 
 
 def _hash(item: Dict[str, str]) -> str:
@@ -191,18 +194,23 @@ def gerar(itens: List[Dict[str, str]], registro: Dict[str, Dict[str, str]], *, p
     existentes = _telas_no_projeto(chamar, projeto)
     registro = {k: dict(v) for k, v in (registro or {}).items()}
     pendentes = []
+    #: a versão que cada item pendente vai ter: a tela que muda (hash novo sobre um screenId conhecido) sobe uma
+    versao: Dict[int, int] = {}
     for item in itens:
         chave, h = f"{item['id']}|{item['estado']}", _hash(item)
         anterior = registro.get(chave) or {}
         if anterior.get("screen_id") and anterior.get("hash") == h:
             continue
         if not anterior and titulo(item) in existentes:  # gerado numa execução anterior, sem registro
-            registro[chave] = {"screen_id": existentes[titulo(item)], "hash": h}
+            registro[chave] = {"screen_id": existentes[titulo(item)], "hash": h, "versao": 1}
             continue
+        atual = int(anterior.get("versao") or 1)
+        versao[id(item)] = atual + 1 if anterior.get("screen_id") else atual
         pendentes.append(item)
 
     def um(item: Dict[str, str]) -> Dict[str, Any]:
-        argumentos = {"projectId": projeto, "prompt": f"{titulo(item)}. {item['prompt']}", "deviceType": item["dispositivo"]}
+        argumentos = {"projectId": projeto, "prompt": f"{titulo(item, versao.get(id(item), 1))}. {item['prompt']}",
+                      "deviceType": item["dispositivo"]}
         if design_system:
             argumentos["designSystem"] = design_system
         try:
@@ -221,7 +229,7 @@ def gerar(itens: List[Dict[str, str]], registro: Dict[str, Dict[str, str]], *, p
         esperar(30)
         existentes = _telas_no_projeto(chamar, projeto)
         for f in sem_id:
-            f["screen_id"] = existentes.get(titulo(f["item"]), "")
+            f["screen_id"] = existentes.get(titulo(f["item"], versao.get(id(f["item"]), 1)), "")
         sem_id = [f for f in sem_id if not f["screen_id"]]
         if not sem_id:
             break
@@ -232,7 +240,8 @@ def gerar(itens: List[Dict[str, str]], registro: Dict[str, Dict[str, str]], *, p
             f["screen_id"], f["erro"] = r["screen_id"], r["erro"] or f["erro"]
     for f in feitos:
         if f["screen_id"]:
-            registro[f"{f['item']['id']}|{f['item']['estado']}"] = {"screen_id": f["screen_id"], "hash": _hash(f["item"])}
+            registro[f"{f['item']['id']}|{f['item']['estado']}"] = {"screen_id": f["screen_id"], "hash": _hash(f["item"]),
+                                                                     "versao": versao.get(id(f["item"]), 1)}
 
     falhas = {id(f["item"]): f for f in feitos if not f["screen_id"]}
     resultado = []
@@ -262,4 +271,5 @@ def relatorio(saida: Dict[str, Any], url_projeto: str = "") -> str:
 
 def rotulos(registro: Dict[str, Dict[str, str]]) -> Dict[str, str]:
     """`screenId → "ID — estado"`: a folha de links nomeia a tela pelo inventário, não pelo título do Stitch."""
-    return {v["screen_id"]: k.replace("|", " — ") for k, v in (registro or {}).items() if v.get("screen_id")}
+    return {v["screen_id"]: k.replace("|", " — ") + (f" · v{v['versao']}" if int(v.get("versao") or 1) > 1 else "")
+            for k, v in (registro or {}).items() if v.get("screen_id")}

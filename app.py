@@ -49,7 +49,7 @@ from pipeline.session_store import (
     nome_do_zip_de_artefatos,
     resolve_session_dir,
 )
-from prompts import get_prompt_raw, list_prompt_files, load_prompt, save_prompt
+from prompts import get_prompt_raw, list_prompt_files, load_prompt
 from tools.auth import (
     ROTULO_PAPEL,
     ConfiguracaoDeLoginAusente,
@@ -832,6 +832,10 @@ def render_sidebar() -> Dict[str, Any]:
                               unsafe_allow_html=True)
             if col_sair.button("Sair", key="auth_sair", use_container_width=True):
                 sair()
+            if MANUAL_PDF.exists():
+                st.download_button("📘 Manual do gerador (PDF)", data=_bytes_do_manual(str(MANUAL_PDF), MANUAL_PDF.stat().st_mtime),
+                                   file_name=MANUAL_PDF.name, mime="application/pdf", use_container_width=True,
+                                   key="baixar_manual_pdf")
 
         if st.button("➕ Nova Missão", type="primary", use_container_width=True):
             st.session_state.current_session_id = None
@@ -1621,8 +1625,56 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
         st.caption(f"Artefatos gravados em `{result.output_dir}`")
 
 
+def zip_dos_prompts() -> bytes:
+    """Todos os prompts num .zip: `fonte/` como estão em `prompts/` (com as diretivas de include) e `final/` com os
+    includes resolvidos, como o agente os recebe. Referência que vem da base da plataforma e não pôde ser lida fica de
+    fora do `final/`, com a razão em `final/_LEIA-ME.txt`."""
+    import io
+    import zipfile
+
+    from prompts import PROMPTS_DIR
+
+    s = get_settings()
+    falhas: List[str] = []
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for caminho in sorted(PROMPTS_DIR.rglob("*.md")):
+            rel = caminho.relative_to(PROMPTS_DIR).as_posix()
+            zf.writestr(f"fonte/{rel}", caminho.read_text(encoding="utf-8"))
+        for area, arquivos in list_prompt_files().items():
+            for nome in arquivos:
+                rel = f"{area}/{nome}"
+                try:
+                    zf.writestr(f"final/{rel}", load_prompt(
+                        rel, stitch_mcp_mode=s.stitch_mcp_mode, stitch_project_url_base=s.stitch_project_url_base,
+                        gate_max_rodadas=s.gate_estrutural_max_rodadas, qa_max_rodadas=s.qa_design_max_rodadas))
+                except Exception as exc:  # base da plataforma fora do ar: a fonte continua no zip
+                    falhas.append(f"{rel}: {exc}")
+        if falhas:
+            zf.writestr("final/_LEIA-ME.txt", "Prompts sem a versão final (includes não resolvidos):\n" + "\n".join(falhas))
+    return buffer.getvalue()
+
+
+#: O manual na 3ª edição (outubro de 2026), que vai na imagem com o resto do repositório.
+MANUAL_PDF = Path(__file__).resolve().parent / "manual-unooria" / "manual-gerador-missoes.pdf"
+
+
+@st.cache_data(show_spinner=False)
+def _bytes_do_manual(caminho: str, mtime: float) -> bytes:
+    """Lido uma vez por versão do arquivo: o botão é desenhado a cada rerun da barra lateral."""
+    return Path(caminho).read_bytes()
+
+
 def render_prompt_manager():
     st.markdown("### 📝 Prompts dos agentes")
+    st.info("🔒 Somente leitura: os prompts vão dentro da imagem publicada, e mudar um prompt é mudar o código — por "
+            "pull request no repositório.")
+    if st.button("📦 Preparar .zip com todos os prompts", key="preparar_zip_prompts"):
+        with st.spinner("Juntando os prompts e resolvendo os includes…"):
+            st.session_state["zip_prompts"] = zip_dos_prompts()
+    if st.session_state.get("zip_prompts"):
+        st.download_button("⬇️ Baixar prompts.zip", data=st.session_state["zip_prompts"], file_name="prompts-gerador-missoes.zip",
+                           mime="application/zip", key="baixar_zip_prompts")
     st.markdown("Cada agente lê um arquivo Markdown em `prompts/<área>/`. Diretivas `<!-- include: references/… -->` inserem conhecimento compartilhado em tempo de carga; `{chave}` / `{chave?}` são interpoladas pelo ADK a partir do estado da sessão.")
     areas = list_prompt_files()
 
@@ -1682,15 +1734,9 @@ def render_prompt_manager():
         st.markdown("\n".join(linhas) or "_Nenhum agente nesta área._")
 
     raw = get_prompt_raw(rel)
-    tab_edit, tab_final = st.tabs(["✏️ Editar (fonte)", "👁️ Prompt final (includes resolvidos)"])
+    tab_edit, tab_final = st.tabs(["📄 Fonte", "👁️ Prompt final (includes resolvidos)"])
     with tab_edit:
-        edited = st.text_area("Conteúdo", value=raw, height=520, key=f"ta_{rel}")
-        c_save, c_reload, _ = st.columns([1.5, 1.5, 4])
-        if c_save.button("💾 Salvar", type="primary", key=f"save_{rel}", use_container_width=True):
-            save_prompt(rel, edited)
-            st.success(f"✅ `{rel}` salvo. As próximas execuções usarão esta versão.")
-        if c_reload.button("🔄 Recarregar", key=f"reload_{rel}", use_container_width=True):
-            st.rerun()
+        st.code(raw, language="markdown")
     with tab_final:
         s = get_settings()
         try:
@@ -1728,10 +1774,7 @@ def render_prompt_manager():
             "🔒 Vem da base publicada pela plataforma e pelo storybook (bucket). Não se edita aqui: "
             "mude na origem; o CI publica de novo a cada push em `dev-local` ou versão do DS."
         )
-    ref_edit = st.text_area("Conteúdo da referência", value=ref_raw, height=380, key=f"ref_{ref}", disabled=sincronizada)
-    if st.button("💾 Salvar referência", key=f"save_ref_{ref}", disabled=sincronizada):
-        save_prompt(f"references/{ref}", ref_edit)
-        st.success(f"✅ `references/{ref}` salva.")
+    st.code(ref_raw, language="markdown")
 
 
 def render_guia_de_uso() -> None:
@@ -1825,8 +1868,9 @@ def main():
     # Mesmo motivo das seções de `render_pipeline_details`: com `st.tabs`, o editor de
     # prompts era montado a cada rerun mesmo fechado — e ele resolve includes, chegando a
     # ~380 KB de payload por interação.
-    # SECOES = ["💬 Pipeline", "📝 Prompts e referências"]
-    SECOES = ["💬 Pipeline"]
+    # Os prompts voltam à tela só para leitura (08/10/2026): eles vão dentro da imagem, e uma edição aqui valeria só
+    # até o próximo deploy. O .zip baixa todos de uma vez.
+    SECOES = ["💬 Pipeline", "📝 Prompts e referências"]
     secao = st.segmented_control("Seção", SECOES, default=SECOES[0], key="secao_principal", label_visibility="collapsed") or SECOES[0]
 
     if secao == SECOES[0]:
