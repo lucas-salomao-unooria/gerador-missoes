@@ -33,7 +33,8 @@ def get_juiz_de_achados(nome: str, *, status_key: str, report_key: str, fonte_ke
 
 def get_fidelidade_check(nome: str, *, status_key: str, report_key: str, documentos: list,
                          onde: str, etapas_pedido: Optional[list] = None, com_briefing: bool = True,
-                         etapa: str = "produto", incluir_corrente: bool = True, **kw) -> FidelidadeCheckAgent:
+                         etapa: str = "produto", incluir_corrente: bool = True, parcial: bool = False,
+                         **kw) -> FidelidadeCheckAgent:
     """O par (verificador de fidelidade + juiz), uma instância por ponto da esteira.
 
     `etapas_pedido` restringe o checklist aos pedidos de refazer daquelas etapas (no fim do design, os do
@@ -48,6 +49,7 @@ def get_fidelidade_check(nome: str, *, status_key: str, report_key: str, documen
         **kw,
     )
     return FidelidadeCheckAgent(
+        parcial=parcial,
         name=nome,
         description=(f"Fidelidade ao pedido do PO e ao briefing ({onde}): TRAVAS, AJUSTES, VALIDAÇÃO e elementos "
                      "fixos conferidos com citação; pedido sem prova é 🔴."),

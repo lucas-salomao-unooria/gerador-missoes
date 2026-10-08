@@ -1477,6 +1477,8 @@ class FidelidadeCheckAgent(BaseAgent):
     rotulo: str = "Fidelidade ao pedido do PO e ao briefing"
     onde: str = ""
     documentos: List[str] = Field(default_factory=lambda: ["nucleo_narrativo", "one_pager", "spec_missao"])
+    #: Os documentos são só parte do que o pedido cobre (o núcleo): sem prova é 🟡, só violação bloqueia.
+    parcial: bool = False
     entrada_key: str = "fidelidade_entrada"
     documentos_key: str = "fidelidade_documentos"
     #: Só os pedidos de refazer destas etapas (`pedidos_do_po[].etapa`; `""` = registro antigo, sem etapa); vazio =
@@ -1531,7 +1533,7 @@ class FidelidadeCheckAgent(BaseAgent):
                 yield evento
             saida = str(ctx.session.state.get(getattr(juiz, "output_key", "") or "", "") or "")
 
-        resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa)
+        resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa, parcial=self.parcial)
         relatorio = fid.relatorio(resultado, itens, missao, self.onde)
         envelope = extrair_envelope(relatorio) or {}
         bloqueios = sum(1 for a in resultado["achados"] if a["severidade"] == "bloqueio")

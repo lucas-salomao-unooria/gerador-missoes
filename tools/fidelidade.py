@@ -37,7 +37,9 @@ MIN_PALAVRAS_ITEM = 6
 MIN_PALAVRAS_LITERAL = 8
 MIN_CITACAO = 15
 
-_RE_TRAVAS = re.compile(r"\bTRAVAS?\b[^:\n]{0,80}:(.*?)(?=\bAJUSTE\s+\d|\bVALIDA[ÇC][ÃA]O\b|$)", re.S)
+#: O bloco TRAVAS vai até o próximo bloco — ou até uma lista que começa depois de linha em branco (formato misto).
+_RE_TRAVAS = re.compile(r"\bTRAVAS?\b[^:\n]{0,80}:(.*?)(?=\bAJUSTE\s+\d|\bVALIDA[ÇC][ÃA]O\b|"
+                        r"\n\s*\n\s*(?:\d{1,2}[.)]|[-*•])\s|$)", re.S)
 _RE_AJUSTE = re.compile(r"\b(AJUSTE\s+\d+)\s*[—–-]\s*(.*?)(?=\bAJUSTE\s+\d|\bVALIDA[ÇC][ÃA]O\b|$)", re.S)
 _RE_VALIDACAO = re.compile(r"\bVALIDA[ÇC][ÃA]O\b[^:\n]{0,80}:(.*)$", re.S)
 _RE_FRASE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9\"“])")
@@ -100,11 +102,14 @@ def _literais(bloco: str, origem: str) -> List[Dict[str, str]]:
 def itens_do_pedido(texto: str, origem: str) -> List[Dict[str, str]]:
     """Checklist de um pedido do PO (refazer, parecer com ajuste)."""
     itens: List[Dict[str, str]] = []
+    trechos_em_bloco: List[tuple] = []
     m = _RE_TRAVAS.search(texto or "")
     if m:
+        trechos_em_bloco.append(m.span())
         itens += _literais(m.group(1), origem)
         itens += [{"origem": origem, "tipo": "trava", "texto": f} for f in _frases(m.group(1))]
     for aj in _RE_AJUSTE.finditer(texto or ""):
+        trechos_em_bloco.append(aj.span())
         corpo = re.sub(r"\s+", " ", aj.group(2)).strip()
         quero = re.search(r"O que quero:(.*)", corpo, re.I)
         foco = (quero.group(1) if quero else corpo).strip()
@@ -112,10 +117,18 @@ def itens_do_pedido(texto: str, origem: str) -> List[Dict[str, str]]:
         itens.append({"origem": origem, "tipo": "ajuste", "texto": f"{aj.group(1)} — {titulo}…: {foco}"[:1200]})
     v = _RE_VALIDACAO.search(texto or "")
     if v:
+        trechos_em_bloco.append(v.span())
         for q in v.group(1).split("?"):
             q = re.sub(r"\s+", " ", q).strip(" .")
             if _palavras(q) >= 4:
                 itens.append({"origem": origem, "tipo": "validacao", "texto": q + "?"})
+    if itens:
+        # Formato misto (um bloco TRAVAS/AJUSTE/VALIDAÇÃO e, fora dele, uma lista ou parágrafos): o que fica fora dos
+        # blocos também é pedido. Até 08/10/2026 só os blocos viravam item, e a lista solta não era conferida.
+        fora = list(texto or "")
+        for a, b in trechos_em_bloco:
+            fora[a:b] = [" "] * (b - a)
+        itens += unidades_do_pedido("".join(fora), origem)
     if not itens:
         # Pedido sem a estrutura AJUSTE/TRAVAS: unidades atômicas recortadas em código. Até 08/10/2026 virava UM item
         # com o texto inteiro — o parecer de 8 pontos da exp06ef1b não tinha um trecho do documento que provasse tudo, o
@@ -396,7 +409,7 @@ def _literal_presente(frase: str, documentos_norm: str) -> bool:
 
 
 def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, str],
-            etapa: str = "produto") -> Dict[str, Any]:
+            etapa: str = "produto", parcial: bool = False) -> Dict[str, Any]:
     """`{status, achados, conferidos}` a partir dos itens, da saída do juiz e dos documentos.
 
     `etapa` é a de quem responde pelos documentos: o pedido de refazer do design é conferido nos documentos de
@@ -412,6 +425,11 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
     conferidos: List[Dict[str, str]] = []
 
     def achado(item: Dict[str, str], severidade: str, codigo: str, resumo: str) -> None:
+        # `parcial`: o documento é só um pedaço do que o pedido cobre (o núcleo, seções 0/1/3/4). Falta de prova ali é
+        # esperada para o item de outra seção — só a contradição explícita bloqueia; a prova completa é cobrada no fim
+        # de produto. A exp06ef1b (08/10/2026) saía 🔴 no núcleo por «painel docente na Seção 9», com o fim 🟢 25/25.
+        if parcial and severidade == "bloqueio" and codigo not in ("pedido-violado", "frase-do-po-alterada"):
+            severidade = "atencao"
         achados.append({"id": item["id"], "severidade": severidade, "codigo": codigo, "etapa": etapa,
                         "origem": item["origem"], "resumo": resumo})
 
