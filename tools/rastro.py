@@ -688,7 +688,7 @@ def decompor_id(identificador: str) -> Optional[Dict[str, Any]]:
 
 def _legada_fixada_pelo_po(secao: str, briefing: str, one_pager_po: str) -> bool:
     """A seção legada está na linha «Seção do DS» do one-pager do PO, ou o briefing a fixa (`secao_ds: <seção>`)."""
-    cab = re.search(r"Se[çc][ãa]o do DS\**\s*[:=]\s*\**`?([a-z][\w:-]*)", (one_pager_po or "")[:6000], re.IGNORECASE)
+    cab = re.search(r"Se[çc][ãa]o do DS\**\s*[:=]\s*\**\s*`?([a-z][\w:-]*)", (one_pager_po or "")[:6000], re.IGNORECASE)
     if cab and cab.group(1).lower() == secao:
         return True
     return bool(re.search(rf"secao_ds\W{{0,4}}{re.escape(secao)}\b", briefing or "", re.IGNORECASE))
