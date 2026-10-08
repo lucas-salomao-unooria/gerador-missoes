@@ -353,8 +353,9 @@ _RE_NEGACAO = re.compile(r"\b(?:nao|nunca|jamais|nenhum|nenhuma|sem)\b")
 
 
 def _negacoes(texto: str) -> int:
-    """Negações do trecho, sem o rótulo de nível «Não atingiu» — que antecede a alternativa no Canal B e não a nega."""
-    return len(_RE_NEGACAO.findall(re.sub(r"\bnao\s+atingiu\b", " ", texto)))
+    """Negações do trecho, sem os rótulos de nível — «Não atingiu:», «Ainda não:» (o pedagógico, em linguagem de sala) —,
+    que antecedem a alternativa no Canal B e não a negam. Rótulo é a negação seguida de dois-pontos ou de «atingiu»."""
+    return len(_RE_NEGACAO.findall(re.sub(r"\bnao\s+atingiu\b|\b(?:nao|nunca|sem)\s*:", " ", texto)))
 
 
 def _ocorrencias(texto: str, alvo: str) -> List[int]:
@@ -384,7 +385,8 @@ def _literal_confere(trecho: str, documento_norm: str) -> bool:
         # inteiro, mas negado pela palavra imediatamente anterior ("Não apenas para a família…"): o texto está lá e
         # diz o contrário. Só a palavra anterior — a frase de antes pode ter um "sem" que não é com ele.
         anteriores = [(documento_norm[max(0, i - 30):i].split() or [""])[-1] for i in _ocorrencias(documento_norm, alvo)]
-        return any(not _RE_NEGACAO.fullmatch(p.strip(".,;:!?()[]")) for p in anteriores)
+        # «Ainda não:» antes da alternativa é rótulo de nível, não negação (o dois-pontos o separa do texto)
+        return any(p.endswith(":") or not _RE_NEGACAO.fullmatch(p.strip(".,;!?()[]")) for p in anteriores)
     m = difflib.SequenceMatcher(None, documento_norm, alvo, autojunk=False).find_longest_match(
         0, len(documento_norm), 0, len(alvo))
     if m.size < 0.85 * len(alvo):

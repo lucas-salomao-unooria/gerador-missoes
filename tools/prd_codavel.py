@@ -143,8 +143,12 @@ def _ia(prd: str, achados: List[Dict[str, str]]) -> None:
                 "O PRD gera conteúdo com IA, e a seção 12 não tem a tabela «Chamada · Rota · Entrada · Saída · Prompt · "
                 "Modelo · Quota · Fallback · Moderação» (gabarito §12.2).")
         return
+    # o prompt em bloco de texto, ou já como a constante do `prompts.ts` (`export const PROMPT_X = \`…\``) — o PRD da
+    # exp09ef1b gerado em 08/10/2026 escreveu assim, e é a forma que vai para o arquivo
     prompts = [m.group(2) for m in _RE_BLOCO.finditer(s12)
                if m.group(1).lower() in ("", "text", "txt", "md", "markdown", "prompt") and len(m.group(2).split()) >= 40]
+    prompts += [t for t in re.findall(r"const\s+\w*PROMPT\w*\s*(?::\s*string\s*)?=\s*`([^`]*)`", _codigo(s12), re.I)
+                if len(t.split()) >= 40]
     linhas = len(tabela) - 1
     if len(prompts) < linhas:
         _achado(achados, "bloqueio", "ia-sem-prompt",

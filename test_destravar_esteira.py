@@ -389,3 +389,18 @@ def test_gates_de_llm_pedem_citacao_e_sabem_o_que_avaliam():
     for nome in ("A03MicroGateCheck", "A06GateEstruturalCheck", "A08bAvaliacaoCheck", "A10aAdequacaoCheck",
                  "A12GateFinalProdutoCheck", "A15eJuizPerguntasCheck", "A31QaEntregaveisCheck"):
         assert gates[nome].documentos, nome
+
+
+def test_falsos_positivos_achados_no_prd_gerado_ao_vivo():
+    """Dev da exp09ef1b reexecutado localmente com o código novo (08/10/2026): o PRD saiu passando em tudo menos em dois
+    achados que eram do gate — o prompt escrito como a constante do `prompts.ts` e o rótulo «Ainda não:» do pedagógico."""
+    from test_prd_codavel import PRD, PROMPT, SPEC
+    from tools import conteudo_aprovado as ca
+    from tools import prd_codavel as pc
+
+    em_ts = PRD.replace(f"```text\n{PROMPT}\n```", f"```typescript\n// prompts.ts\nexport const PROMPT_PREPARO = `\n{PROMPT}\n`;\n```")
+    assert "ia-sem-prompt" not in {a["codigo"] for a in pc.validar(em_ts, SPEC)["achados"]}
+    alt = "Descartar o uso de computadores e decidir exclusivamente pela intuição pessoal."
+    assert ca.literais_ausentes(f"Ainda não: {alt} Para a compreensão…", [alt]) == []
+    assert ca.literais_ausentes(f"Não atingiu: {alt}", [alt]) == []
+    assert ca.literais_ausentes(f"Não {alt.lower()}", [alt]) == [alt]
