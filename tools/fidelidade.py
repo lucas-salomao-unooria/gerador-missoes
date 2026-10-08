@@ -409,7 +409,7 @@ def _literal_presente(frase: str, documentos_norm: str) -> bool:
 
 
 def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, str],
-            etapa: str = "produto") -> Dict[str, Any]:
+            etapa: str = "produto", parcial: bool = False) -> Dict[str, Any]:
     """`{status, achados, conferidos}` a partir dos itens, da saída do juiz e dos documentos.
 
     `etapa` é a de quem responde pelos documentos: o pedido de refazer do design é conferido nos documentos de
@@ -425,6 +425,11 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
     conferidos: List[Dict[str, str]] = []
 
     def achado(item: Dict[str, str], severidade: str, codigo: str, resumo: str) -> None:
+        # `parcial`: o documento é só um pedaço do que o pedido cobre (o núcleo, seções 0/1/3/4). Falta de prova ali é
+        # esperada para o item de outra seção — só a contradição explícita bloqueia; a prova completa é cobrada no fim
+        # de produto. A exp06ef1b (08/10/2026) saía 🔴 no núcleo por «painel docente na Seção 9», com o fim 🟢 25/25.
+        if parcial and severidade == "bloqueio" and codigo not in ("pedido-violado", "frase-do-po-alterada"):
+            severidade = "atencao"
         achados.append({"id": item["id"], "severidade": severidade, "codigo": codigo, "etapa": etapa,
                         "origem": item["origem"], "resumo": resumo})
 
