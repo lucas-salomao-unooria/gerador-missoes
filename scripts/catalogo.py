@@ -7,6 +7,7 @@ Uso:
   python scripts/catalogo.py listar
   python scripts/catalogo.py reconstruir [--seco]
   python scripts/catalogo.py importar-markdown [--seco]
+  python scripts/catalogo.py importar-plataforma [--repo ../plataforma-unooria] [--ref origin/dev-local] [--seco]
   python scripts/catalogo.py promover --sessao 20260922-132758-exp06ef1b --status aprovada
 """
 
@@ -61,15 +62,49 @@ def reconstruir(seco: bool) -> int:
         print(f"  {marca} {pasta.name} → {ficha.get('slug') or '(sem slug)'} · {ficha.get('ano') or '?'} · {ficha.get('ambiente') or '?'} · {ficha['status']}")
         for a in r["achados"]:
             print(f"      ⚠️ {a['codigo']}: {a['resumo'][:120]}")
-    # As entradas legadas (sem sessão em disco) sobrevivem à reconstrução.
+    # As entradas legadas e as da grade publicada da plataforma (sem sessão em disco) sobrevivem à reconstrução.
     for sessao, m in anterior.items():
-        if m.get("origem") == "markdown-legado" and not any(x.get("sessao") == sessao for x in indice["missoes"]):
+        if (m.get("origem") in ("markdown-legado", cat.ORIGEM_PLATAFORMA)
+                and not any(x.get("sessao") == sessao for x in indice["missoes"])):
             indice["missoes"].append(m)
     if seco:
         print(f"\n[seco] {lidas} sessão(ões) lida(s); {len(indice['missoes'])} missão(ões) no índice. Nada gravado.")
         return 0
     caminho = cat.gravar(indice)
     print(f"\n✅ {lidas} sessão(ões) lida(s) · {len(indice['missoes'])} missão(ões) → {caminho}")
+    return 0
+
+
+def importar_plataforma(repo: Path, ref: str, seco: bool) -> int:
+    """As missões publicadas na grade da plataforma (`MISSOES_PUBLICADAS`) entram no índice como «em produção».
+
+    Lê o catálogo do hub e o código de cada experiência pela referência git (`origin/dev-local`), sem tocar a pasta
+    de trabalho do repositório. As fichas da plataforma de uma importação anterior são trocadas pelas novas.
+    """
+    import subprocess
+
+    def git(*args: str) -> str:
+        r = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True)
+        return r.stdout if r.returncode == 0 else ""
+
+    catalogo_ts = git("show", f"{ref}:apps/hub/lib/entre-redes/catalogo.ts")
+    if not catalogo_ts:
+        print(f"❌ não li `apps/hub/lib/entre-redes/catalogo.ts` em {repo} @ {ref}")
+        return 1
+    fichas = cat.fichas_da_plataforma(catalogo_ts)
+    for f in fichas:
+        if not f["ambiente"]:
+            f["ambiente"] = cat.ambiente_da_fonte(git("grep", "-h", "-o", "-E",
+                                                      r"(@unooria/design-system|@edu/ui)/[a-z]+|ds-[a-z]+",
+                                                      ref, "--", f"apps/experiencias/{f['slug']}/src"))
+        print(f"  · {f['slug']} · {f['ano']} · {f['ambiente'] or '?'} · {f['nome'][:50]}")
+    indice = cat.carregar()
+    indice["missoes"] = [m for m in indice.get("missoes", []) if m.get("origem") != cat.ORIGEM_PLATAFORMA] + fichas
+    if seco:
+        print(f"\n[seco] {len(fichas)} missão(ões) publicada(s); o índice ficaria com {len(indice['missoes'])}. Nada gravado.")
+        return 0
+    caminho = cat.gravar(indice)
+    print(f"\n✅ {len(fichas)} missão(ões) publicada(s) · {len(indice['missoes'])} no índice → {caminho}")
     return 0
 
 
@@ -143,6 +178,10 @@ def main(argv: list[str]) -> int:
     for nome in ("reconstruir", "importar-markdown"):
         s = sub.add_parser(nome)
         s.add_argument("--seco", action="store_true", help="mostra o que faria, sem gravar")
+    ip = sub.add_parser("importar-plataforma", help="missões publicadas na grade do hub, como «em produção»")
+    ip.add_argument("--repo", default=str(RAIZ.parent / "plataforma-unooria"), help="pasta do repositório da plataforma")
+    ip.add_argument("--ref", default="origin/dev-local", help="referência git de onde ler (padrão: origin/dev-local)")
+    ip.add_argument("--seco", action="store_true", help="mostra o que faria, sem gravar")
     sub.add_parser("listar")
     sp = sub.add_parser("promover")
     sp.add_argument("--sessao", required=True, help="nome da pasta da sessão ou slug")
@@ -152,6 +191,8 @@ def main(argv: list[str]) -> int:
         return reconstruir(a.seco)
     if a.cmd == "importar-markdown":
         return importar_markdown(a.seco)
+    if a.cmd == "importar-plataforma":
+        return importar_plataforma(Path(a.repo), a.ref, a.seco)
     if a.cmd == "promover":
         return promover(a.sessao, a.status)
     return listar()

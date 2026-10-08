@@ -349,6 +349,87 @@ def _jaccard(a: Set[str], b: Set[str]) -> float:
     return len(a & b) / len(a | b)
 
 
+# --------------------------------------------------------------------- missões publicadas na plataforma
+#: Origem das fichas que vêm da grade publicada (`apps/hub/lib/entre-redes/catalogo.ts`), não de uma sessão.
+ORIGEM_PLATAFORMA = "plataforma"
+_RE_CONSTANTE = re.compile(r"^export const (MISSAO_\w+): Missao = \{(.*?)^\};", re.S | re.M)
+
+
+def _campo_ts(bloco: str, nome: str) -> str:
+    """O valor de `nome: "…"` (string simples ou concatenada em várias linhas) no primeiro nível em que aparece."""
+    m = re.search(rf"\b{nome}:\s*((?:\"(?:[^\"\\]|\\.)*\"\s*\+?\s*)+)", bloco)
+    if not m:
+        return ""
+    return "".join(re.findall(r"\"((?:[^\"\\]|\\.)*)\"", m.group(1))).replace('\\"', '"').strip()
+
+
+def _ano_da_plataforma(ano_slug: str) -> str:
+    m = re.match(r"(\d+)-(ano|serie)", ano_slug or "")
+    if not m:
+        return ""
+    return f"{m.group(1)}º EF" if m.group(2) == "ano" else f"{m.group(1)}ª EM"
+
+
+def fichas_da_plataforma(catalogo_ts: str) -> List[Dict[str, Any]]:
+    """Uma ficha por missão publicada (`MISSOES_PUBLICADAS` do catálogo do hub), com status «em produção».
+
+    O índice só conhecia o que o gerador produziu: as missões que estão na grade da plataforma e nasceram fora dele
+    (o Unoovista do 8º ano, a UnooGPT, o Rastro do Boato, o Manifesto IA) não entravam na verificação de semelhança
+    (V5), e uma missão nova podia repetir uma que a escola já usa. Ambiente, eixo e descoberta saem do que a grade
+    mostra — o app que o estudante vê, a competência e o resumo —; o resto fica vazio, nunca inventado.
+    """
+    texto = catalogo_ts or ""
+    publicadas_bloco = re.search(r"const MISSOES_PUBLICADAS[^=]*=\s*\{(.*?)^\};", texto, re.S | re.M)
+    publicadas = set(re.findall(r"\b(MISSAO_\w+)\b", publicadas_bloco.group(1))) if publicadas_bloco else set()
+    fichas: List[Dict[str, Any]] = []
+    for m in _RE_CONSTANTE.finditer(texto):
+        nome, bloco = m.group(1), m.group(2)
+        if nome not in publicadas:
+            continue
+        exp_id = _campo_ts(bloco, "expId")
+        estudante = re.search(r"\bestudante:\s*\{(.*?)\}", bloco, re.S)
+        ficha_bloco = re.search(r"\bficha:\s*\{(.*)", bloco, re.S)
+        unidade = re.search(r"\bunidade:\s*(\d+)", bloco)
+        fichas.append({
+            "sessao": f"{ORIGEM_PLATAFORMA}:{exp_id}",
+            "slug": exp_id,
+            "nome": _campo_ts(bloco, "titulo"),
+            "ano": _ano_da_plataforma(_campo_ts(bloco, "anoSlug")),
+            "bimestre": f"{unidade.group(1)}º bimestre" if unidade else "",
+            # o título que o estudante vê só vale quando é o nome de uma seção do DS; senão, vem do código da
+            # experiência (`ambiente_da_fonte`, preenchido por quem importa)
+            "ambiente": _MARCAS_DO_DS.get(_campo_ts(estudante.group(1), "titulo").lower(), "") if estudante else "",
+            "eixo": _campo_ts(ficha_bloco.group(1), "competencia") if ficha_bloco else "",
+            "descoberta": _campo_ts(bloco, "resumo"),
+            "tipo_decisao": "",
+            "porta_abstracao": "",
+            "habilidade_primaria": "",
+            "status": "em produção",
+            "origem": ORIGEM_PLATAFORMA,
+            "gerada_em": time.strftime("%Y-%m-%d"),
+        })
+    return fichas
+
+
+#: Marcas do DS que um import ou uma classe da experiência pode nomear, e a seção que cada uma é.
+_MARCAS_DO_DS = {"unoovista": "unoovista", "unoochat": "unoochat", "unooriaai": "unooriaai", "tiktooria": "tiktooria",
+                 "unoogaleria": "unoogaleria", "unoojornal": "unoojornal", "unooblog": "unooblog", "unooria": "unooria",
+                 "instanooria": "instanooria", "insta": "instanooria", "chatgpt": "chatgpt",
+                 "whatsappmobile": "whatsappmobile", "unootube": "unootube", "unitube": "unitube"}
+
+
+def ambiente_da_fonte(fonte: str) -> str:
+    """A seção do DS que o código da experiência usa: a marca mais importada (`@unooria/design-system/<marca>`,
+    `@edu/ui/<marca>`) ou nomeada em classe (`ds-<marca>`). O manifesto da experiência não traz a seção, e o título
+    que o estudante vê às vezes é o nome da missão, não o app. Sem marca reconhecida, vazio."""
+    contagem: Dict[str, int] = {}
+    for m in re.finditer(r"(?:@unooria/design-system/|@edu/ui/|\bds-)([a-z]+)\b", fonte or ""):
+        secao = _MARCAS_DO_DS.get(m.group(1))
+        if secao:
+            contagem[secao] = contagem.get(secao, 0) + 1
+    return max(contagem, key=lambda s: (contagem[s], s != "unooria")) if contagem else ""
+
+
 def _ano_num(ano: str) -> Optional[int]:
     m = re.match(r"(\d)\s*EF", (ano or "").upper())
     return int(m.group(1)) if m else None
@@ -383,6 +464,11 @@ def vizinhas(ficha: Dict[str, Any], indice: Optional[Dict[str, Any]] = None, n: 
     candidatas: List[Dict[str, Any]] = []
     for m in indice.get("missoes", []):
         if m.get("sessao") and m.get("sessao") == ficha.get("sessao"):
+            continue
+        # Outra versão da MESMA missão não é repetição: o id da plataforma é ano + bimestre, então mesmo slug é a
+        # mesma vaga — a versão nova substitui a anterior (ou a publicada). Sem isto, regerar a exp06ef1b a
+        # comparava com a exp06ef1b publicada e com cada tentativa anterior (08/10/2026).
+        if ficha.get("slug") and str(m.get("slug") or "").lower() == str(ficha["slug"]).lower():
             continue
         # A própria missão, quando já está no índice (reexecução da mesma sessão): a esteira rodando
         # de novo não pode ver a si mesma como repetição.
