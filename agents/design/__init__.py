@@ -554,7 +554,8 @@ def build_design_stage(
             # conferência. Sem pedido de refazer de design, o juiz não roda.
             get_fidelidade_check("A33cFidelidadeDesign", status_key="fidelidade_design_status",
                                  report_key="fidelidade_design_report", documentos=FIDELIDADE_DOCUMENTOS_DESIGN,
-                                 onde="fim do design", etapas_pedido=["design"], com_briefing=False, etapa="design", **kw),
+                                 onde="fim do design", etapas_pedido=["design"], com_briefing=False, etapa="design",
+                                 incluir_corrente=False, **kw),
         ],
     )
 

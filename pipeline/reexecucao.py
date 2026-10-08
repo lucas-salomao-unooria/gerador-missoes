@@ -159,7 +159,9 @@ CHAVES_TRANSVERSAL = frozenset({
 #: lista: têm de sobreviver ao refazer de produto para dizer o que mudou nele.
 CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_rota", "juiz_achados_entrada",
                              "fidelidade_entrada", "fidelidade_documentos", "mudancas_no_aprovado",
-                             KEY_AGENTES_DEGRADADOS})
+                             "etapa_da_correcao", KEY_AGENTES_DEGRADADOS})
+#: Em que etapa começou a correção desta execução (vazio sem pedido de correção).
+KEY_ETAPA_DA_CORRECAO = "etapa_da_correcao"
 
 #: Documentos escritos por um AUTOR (não por gate). Quando uma reexecução os apaga, a versão que
 #: existia vai para `anterior_<chave>` e o autor a recebe no prompt (`agents/base.py`) como base.
@@ -457,6 +459,8 @@ def preparar_estado(
         limpo = recalcular_heranca(limpo, etapa)
     if pedido_md:
         limpo[KEY_PEDIDO_CORRECAO] = pedido_md
+        # a fidelidade de design e de dev confere o pedido corrente só quando a correção começou nelas
+        limpo[KEY_ETAPA_DA_CORRECAO] = etapa
     return limpo, removidas
 
 

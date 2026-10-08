@@ -52,7 +52,76 @@ def test_textos_de_tela_do_4_e_o_que_fica_de_fora():
     ]
     assert ca.literais(ONE_PAGER_S4)["texto_tela"] == ca.textos_de_tela(ONE_PAGER_S4)
     # a missão real do 9º ano: botões, títulos, mensagens da IA e o caso de transferência
-    assert len(ca.textos_de_tela((FIXTURES / "one_pager.md").read_text(encoding="utf-8"))) == 16
+    assert len(ca.textos_de_tela((FIXTURES / "one_pager.md").read_text(encoding="utf-8"))) == 17
+
+
+def test_aspas_curtas_nao_emparelham_com_a_seguinte_e_sub_item_oral_fica_fora():
+    """Auditoria do PR #32: «"Ontem" (que ficou guardada) e a lista de "Hoje"» virava texto de tela, e a fala do
+    professor num sub-item da «Mediação do professor:» escapava do filtro de linha oral."""
+    op = ("# OP\n\n## 4. Etapas\n\n### Etapa 1: Desafiar\n"
+          '- **O que o estudante vê:** a lista de "Ontem" (que ficou guardada) e a lista de "Hoje".\n'
+          "- **Mediação do professor:**\n"
+          '  * "Quem aqui escolheu a capa com o susto?"\n'
+          '- Balão de Nina: "Uau! Não teve bagunça nenhuma aqui hoje!"\n')
+    assert ca.textos_de_tela(op) == ["Uau! Não teve bagunça nenhuma aqui hoje!"]
+
+
+def test_correcoes_da_auditoria_do_pr_32():
+    # o mesmo número em outro assunto não bloqueia: fica 🟡 para o PO conferir
+    op = ONE_PAGER + "\n## 8. Estados de falha\n- Inatividade: dica após `[PARÂMETRO — a definir por produto: tempo de inatividade de 45 segundos]`.\n"
+    audio = _spec() + "\n- O áudio de encerramento dura 45 segundos.\n"
+    achado = next(a for a in ca.validar_spec(audio, op)["achados"] if a["codigo"] == "parametro-decidido")
+    assert achado["severidade"] == "atencao"
+    inatividade = _spec() + "\n- Inatividade: após 45 segundos sem interação, a dica aparece.\n"
+    achado = next(a for a in ca.validar_spec(inatividade, op)["achados"] if a["codigo"] == "parametro-decidido")
+    assert achado["severidade"] == "bloqueio"
+
+    # o Canal B parafraseado no resumido é 🟡: não recusa o de acordo de produto
+    r = ca.validar_resumido("## 2. Componente\n`EF01CO01`\nA criança escolhe por que as fotos combinam.",
+                            "## 11. Currículo\n`EF01CO01`\n", ONE_PAGER_LITERAIS)
+    assert r["status"] == "amarelo" and _codigos(r) == ["canal-b-reescrito"]
+
+    # código do one-pager fora da lista oficial: manda o gate BNCC, a referência volta à spec
+    invalido = ONE_PAGER.replace("`EF06CO07` | A + B", "`EF06CO99` | A + B")
+    assert ca.habilidades_de_referencia(_spec(), invalido)[1] == "o bloco 11 da spec"
+    # sem §12a, o rótulo diz §2
+    so_curriculo = "# One-pager\n\n## 2. Currículo\n- Foco: `EF06CO10`.\n"
+    assert ca.habilidades_de_referencia(_spec(), so_curriculo) == (["EF06CO10"], "o currículo do one-pager aprovado (§2)")
+
+    # piora nova do D0 aparece mesmo com outra divergência do mesmo tipo já na spec do Gate 0
+    op2 = op + "- Handoff: quando `[PARÂMETRO — a definir por produto: patamar de 80% da turma]` concluir.\n"
+    gate0 = inatividade
+    consolidada = gate0 + "\n- Handoff: o painel avisa quando 80% da turma concluir.\n"
+    novos = ca.validar_spec_consolidada(consolidada, gate0, op2)["achados"]
+    assert [a["codigo"] for a in novos] == ["parametro-decidido"] and "80%" in novos[0]["resumo"]
+
+
+def test_pedido_corrente_so_conta_na_etapa_em_que_a_correcao_comecou():
+    from agents.checkers import FidelidadeCheckAgent
+    from pipeline.reexecucao import preparar_estado
+
+    estado = {"pedidos_do_po": [], "briefing": "", "copy_strings_revisada": "a copy",
+              "pedido_correcao": "AJUSTE 1 — o botão da tela E3-ALU-02 diz Enviar a minha resposta agora"}
+
+    def origens(etapa_da_correcao):
+        f = FidelidadeCheckAgent(name="F", status_key="f_status", report_key="f_report",
+                                 documentos=["copy_strings_revisada"], etapas_pedido=["design"], com_briefing=False,
+                                 incluir_corrente=False, etapa="design")
+        final = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[f]),
+                                   {**estado, "etapa_da_correcao": etapa_da_correcao}))
+        return {a["origem"] for a in final["f_status_envelope"]["achados"]}
+
+    assert origens("design") == {"pedido de correção desta execução"}, "a correção pela triagem é conferida no design"
+    assert origens("produto") == set(), "a correção de produto não é cobrada do design"
+    limpo, _ = preparar_estado({"one_pager": "x"}, "design", "corrija o botão")
+    assert limpo["etapa_da_correcao"] == "design"
+    assert "etapa_da_correcao" not in preparar_estado({**limpo}, "dev")[0]
+
+    from agents.design import build_design_stage
+    from agents.dev import build_dev_stage
+
+    assert build_design_stage().sub_agents[-1].incluir_corrente is False
+    assert build_dev_stage().sub_agents[-1].incluir_corrente is False
 
 
 def test_copy_sem_o_texto_de_tela_fica_amarela_e_a_proposta_conta():

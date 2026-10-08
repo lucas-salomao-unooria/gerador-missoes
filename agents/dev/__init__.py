@@ -544,7 +544,7 @@ def build_dev_stage(
             # Sem pedido de refazer de dev, o juiz não roda.
             get_fidelidade_check("A51FidelidadeDev", status_key="fidelidade_dev_status", report_key="fidelidade_dev_report",
                                  documentos=FIDELIDADE_DOCUMENTOS_DEV, onde="fim do dev", etapas_pedido=["dev"],
-                                 com_briefing=False, etapa="dev", **kw),
+                                 com_briefing=False, etapa="dev", incluir_corrente=False, **kw),
         ],
     )
 

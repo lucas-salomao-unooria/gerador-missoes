@@ -1362,7 +1362,11 @@ class FidelidadeCheckAgent(BaseAgent):
             registrados = [p for p in registrados if str(p.get("etapa") or "") in self.etapas_pedido]
         pedidos = [(str(p.get("origem") or "pedido"), str(p.get("texto") or "")) for p in registrados]
         corrente = str(state.get("pedido_correcao", "") or "")
-        if (self.incluir_corrente and corrente.strip()
+        # Em design e dev o pedido corrente entra só quando a correção começou nesta etapa (`etapa_da_correcao`, gravada
+        # por `pipeline.reexecucao.preparar_estado`): a correção pela triagem não vira parecer e não está em
+        # `pedidos_do_po`; a de produto atravessa design e dev na mesma execução e não é deles (auditoria do PR #32).
+        corrente_e_daqui = self.incluir_corrente or str(state.get("etapa_da_correcao") or "") in self.etapas_pedido
+        if (corrente_e_daqui and corrente.strip()
                 and not any(_norm_simples(t)[:200] in _norm_simples(corrente) for _, t in pedidos)):
             pedidos.append(("pedido de correção desta execução", corrente))
         itens = fid.montar_checklist(pedidos, str(state.get("briefing", "") or "") if self.com_briefing else "")

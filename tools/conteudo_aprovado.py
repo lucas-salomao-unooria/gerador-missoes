@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from tools import bncc
 
@@ -35,10 +35,12 @@ AGENTE = "conteudo-aprovado"
 
 #: Seções do one-pager (`prompts/produto/04_secoes_apoio.md`); a numeração é a mesma nas 11 missões.
 TITULOS = {
+    0: "Identificação",
     1: "Descoberta central e anatomia do aha",
     2: "Currículo",
     3: "Narrativa e personagem-guia",
     4: "As 6 etapas — mecanismo e o que a tela mostra",
+    5: "Verificação de ambiente",
     6: "Verbos e affordances",
     7: "Caminhos degenerados",
     8: "Estados de falha",
@@ -49,7 +51,9 @@ TITULOS = {
     13: "Cenários de dispositivo",
     14: "Guardrails e IA",
     15: "Tetos aplicados à faixa",
+    16: "Requisitos técnicos e escopo",
     17: "Hipóteses de validação",
+    18: "Decisões de direção, trade-offs e propostas",
 }
 SECOES_PRD: Tuple[int, ...] = (2, 9, 10, 11, 12, 17)
 #: §9 entrou em 07/10/2026: o roteiro do debate mora nele, e o pedagógico da exp01ef1b copiou a pergunta 1
@@ -64,7 +68,9 @@ SECOES_PEDAGOGICO: Tuple[int, ...] = (9, 10, 11, 12)
 #: E §6, §7, §14 e §15 (verbos, caminhos degenerados, guardrails, tetos da faixa): 6 a 9 mil caracteres por missão,
 #: que fluxo, revisão da copy e banca só viam pela spec — §7 chegava à spec com 26 de 41 textos, §14 com 2 de 11.
 SECOES_NUCLEO: Tuple[int, ...] = (1, 3, 4)
-SECOES_DESIGN: Tuple[int, ...] = (1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17)
+#: E §0, §5, §16 e §18 (identificação, verificação de ambiente, escopo V1/V2, decisões e propostas), que a
+#: auditoria do PR #32 achou faltando: com elas, design e dev recebem o one-pager inteiro, seção por seção.
+SECOES_DESIGN: Tuple[int, ...] = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18)
 #: O dev recebe o mesmo que o design. Até 07/10/2026 o `A33aConteudoAprovadoDev` regravava a chave com as
 #: seções do PRD, e a banca — e os agentes de design que ela reaciona — perdiam §8, §13 e o núcleo; o banco de
 #: conteúdo lia o núcleo de antes da revisão do one-pager (`nucleo_narrativo`).
@@ -249,7 +255,10 @@ _ROTULOS_DE_METADADO = frozenset({"duração", "duracao", "formato", "participan
 #: de evidência que fecha a seção — esse é o §12a resumido, e o Canal B já é conferido por ele.
 _RE_TITULO_ETAPA = re.compile(r"^#{2,6}\s*(?:Etapa\s*)?\d\s*[a-z]?\s*[:.—–-]", re.I)
 _RE_TITULO_EVIDENCIA = re.compile(r"^#{2,6}\s*(?:Bloco\s+de\s+)?Evid[êe]ncia", re.I)
-_RE_ENTRE_ASPAS = re.compile(r"[\"“]([^\"”\n]{12,}?)[\"”]")
+#: Qualquer par de aspas, do tamanho que for: o tamanho mínimo é filtrado depois. Com `{12,}` no padrão, um rótulo
+#: curto («"Ontem"») não fechava par, e a aspa que o fechava abria outro — «(que ficou guardada) e a lista de» virava
+#: texto de tela (auditoria do PR #32, sessão 0b99718a).
+_RE_ENTRE_ASPAS = re.compile(r"[\"“]([^\"”\n]*)[\"”]")
 #: Linha que é fala do professor em sala, não texto de tela: «Quem conduz», «o professor pergunta: "…"»,
 #: a pergunta-ponte, a mediação. Também a crença que a missão desmonta («O descarte previsto ("…")»).
 _RE_LINHA_ORAL = re.compile(
@@ -274,21 +283,31 @@ def textos_de_tela(one_pager: str) -> List[str]:
     """
     saida: List[str] = []
     dentro = False
+    #: recuo da linha oral que abre uma lista: os itens mais recuados abaixo dela são falas dela
+    #: («- **Mediação do professor:**» seguido de «  * "Quem aqui escolheu a capa?"»)
+    recuo_oral: Optional[int] = None
     for linha in (secao(one_pager or "", 4) or "").splitlines():
         s = linha.strip()
         if _RE_TITULO_EVIDENCIA.match(s):
             dentro = False
             continue
         if _RE_TITULO_ETAPA.match(s):
-            dentro = True
+            dentro, recuo_oral = True, None
             continue
-        if not dentro or _RE_LINHA_ORAL.search(linha):
+        if not dentro or not s:
+            continue
+        recuo = len(linha) - len(linha.lstrip())
+        if recuo_oral is not None and recuo > recuo_oral:
+            continue
+        recuo_oral = None
+        if _RE_LINHA_ORAL.search(linha):
+            recuo_oral = recuo
             continue
         for m in _RE_ENTRE_ASPAS.finditer(linha):
             if _RE_ANTES_DE_EXEMPLO.search(linha[:m.start()]):
                 continue
             t = m.group(1).strip().strip("*").strip()
-            if not t or t[0] in ",;:.)]" or "`" in t or _RE_FALA_A_TURMA.search(t):
+            if len(t) < 12 or t[0] in ",;:.)]" or "`" in t or _RE_FALA_A_TURMA.search(t):
                 continue
             if len(t.split()) >= 3 and t not in saida:
                 saida.append(t)
@@ -464,6 +483,28 @@ def parametros_decididos(documento: str, one_pager: str) -> List[Tuple[str, str]
     return saida
 
 
+#: Palavras que não dizem de que assunto é o número: as do próprio marcador e as unidades.
+_PALAVRAS_SEM_ASSUNTO = frozenset({"definir", "produto", "parametro", "decisao", "pendente", "segundo", "segundos",
+                                   "minuto", "minutos", "palavra", "palavras", "milissegundos", "toques", "mensagens",
+                                   "tentativas", "rodadas", "caracteres", "itens", "entre", "maximo", "minimo",
+                                   "padrao", "cerca", "apenas", "quando", "depois", "antes"})
+
+
+def _palavras_de_assunto(texto: str) -> Set[str]:
+    import unicodedata
+
+    sem_acento = "".join(c for c in unicodedata.normalize("NFD", (texto or "").lower()) if unicodedata.category(c) != "Mn")
+    return {p for p in re.findall(r"[a-z]{5,}", sem_acento) if p not in _PALAVRAS_SEM_ASSUNTO}
+
+
+def parametro_no_mesmo_assunto(marcador: str, linha_da_spec: str, one_pager: str) -> bool:
+    """A linha da spec fala do mesmo assunto que o parâmetro? Alguma palavra de conteúdo em comum com o marcador ou
+    com a linha do one-pager onde ele está. O número igual num assunto diferente («inatividade de 45 segundos» no
+    one-pager, «o áudio dura 45 segundos» na spec) não é o parâmetro decidido (auditoria do PR #32)."""
+    linha_op = next((l for l in (one_pager or "").splitlines() if marcador in l), marcador)
+    return bool(_palavras_de_assunto(linha_op) & _palavras_de_assunto(linha_da_spec))
+
+
 _RE_ARTEFATO = re.compile(r"(?<![\w/.-])((?:produto|design|dev|spec)/[\w./-]+?\.(?:md|html|docx|json|pdf))\b")
 
 
@@ -555,14 +596,20 @@ def validar_spec(spec: str, one_pager: str) -> Dict[str, Any]:
             "one-pager. Sem isso, design e dev reescrevem ou esquecem o áudio (aconteceu nas 11 missões).",
             "produto"))
     decididos = parametros_decididos(spec, one_pager)
-    if decididos:
-        exemplos = "; ".join(f"{marcador[:110]} → «{linha[:120]}»" for marcador, linha in decididos[:4])
+    # no mesmo assunto bloqueia; número igual em outro assunto (a duração de um áudio) só fica 🟡 para o PO ver
+    for severidade, grupo in (("bloqueio", [d for d in decididos if parametro_no_mesmo_assunto(d[0], d[1], one_pager)]),
+                              ("atencao", [d for d in decididos if not parametro_no_mesmo_assunto(d[0], d[1], one_pager)])):
+        if not grupo:
+            continue
+        exemplos = "; ".join(f"{marcador[:110]} → «{linha[:120]}»" for marcador, linha in grupo[:4])
         achados.append(_achado(
             "parametro-decidido",
-            f"{len(decididos)} número(s) que o one-pager aprovado deixou a definir por produto aparece(m) na spec como "
+            f"{len(grupo)} número(s) que o one-pager aprovado deixou a definir por produto aparece(m) na spec como "
             f"decidido(s), sem marcador: {exemplos}. A spec não decide no lugar do PO: mantenha o número com o "
             "marcador na mesma linha (`[PARÂMETRO — a definir por produto: …]`, ou `[ABERTO — dono: PO: …]`), ou diga "
-            "quem o decidiu e quando.", "produto"))
+            "quem o decidiu e quando."
+            + ("" if severidade == "bloqueio" else " A linha não fala do mesmo assunto do parâmetro: confira se é ele."),
+            "produto", severidade))
     return {"status": _status(achados), "achados": achados, "codigos": aprovados,
             "tempo": tempo_aprovado(one_pager), "podcast": tem_podcast(one_pager)}
 
@@ -702,8 +749,14 @@ def habilidades_de_referencia(spec: str, one_pager: str) -> Tuple[List[str], str
     """
     bloco11 = bncc.secao_bloco(spec or "", 11) or ""
     aprovados = codigos_aprovados(one_pager)
-    if aprovados and not _decisao_pendente(secao(one_pager or "", 2) or "", bloco11):
-        return aprovados, "o contrato de evidência do one-pager aprovado (§12a)"
+    # código que a lista oficial não tem é do gate BNCC decidir, não do PRD reinserir (auditoria do PR #32)
+    oficiais = bncc.habilidades()
+    if aprovados and all(c in oficiais for c in aprovados) and not _decisao_pendente(secao(one_pager or "", 2) or "", bloco11):
+        s12 = secao(one_pager or "", 12) or ""
+        m = _RE_12A.search(s12)
+        do_12a = bool(m and bncc.extrair_codigos(s12[m.start():]))
+        return aprovados, ("o contrato de evidência do one-pager aprovado (§12a)" if do_12a
+                           else "o currículo do one-pager aprovado (§2)")
     return bncc.extrair_codigos(bloco11), "o bloco 11 da spec"
 
 
@@ -828,10 +881,13 @@ def validar_resumido(resumido: str, spec: str, one_pager: str) -> Dict[str, Any]
                                                  "produto", correcao_falta, correcao_sobra)
                     if a["codigo"] == "habilidade-acrescentada"]
     achados += _tempo(corpo, one_pager, "o one-pager resumido", "produto")
-    achados += _literais(corpo, one_pager, ("canal_b",), "no one-pager resumido", "produto",
-                         "O time pedagógico aprova a pergunta e as alternativas que a criança vai ler: no contrato de "
-                         "evidência, a tabela de marcadores do Canal B traz o texto do §12a do canônico, palavra por "
-                         "palavra, e só depois a explicação de cada nível.")
+    # 🟡, não ⛔: nas 15 sessões do bucket o resumido não trazia o Canal B literal em 7 — geradas antes de o prompt
+    # pedir — e travar o de acordo de produto por isso recusaria quase metade das missões (auditoria do PR #32).
+    achados += [{**a, "severidade": "atencao"} for a in _literais(
+        corpo, one_pager, ("canal_b",), "no one-pager resumido", "produto",
+        "O time pedagógico aprova a pergunta e as alternativas que a criança vai ler: no contrato de evidência, a "
+        "tabela de marcadores do Canal B traz o texto do §12a do canônico, palavra por palavra, e só depois a "
+        "explicação de cada nível.")]
     for a in achados:
         a["agente_responsavel"] = "one-pager-resumido"
     return {"status": _status(achados), "achados": achados, "codigos": da_spec,
