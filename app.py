@@ -658,8 +658,11 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
             placeholder=("De acordo: o que você conferiu e decidiu — segue para os agentes das próximas etapas.\n"
                          if passagem.proxima_etapa(etapa) else
                          "De acordo: o que você conferiu. É a última etapa: o comentário não chega a agente nenhum.\n")
-                        + "Mudança de conteúdo (perguntas, textos, regras): use Refazer, que aplica o pedido.\n"
-                        "Refazer ou devolver: o que precisa mudar, e por quê.")
+                        + ("Mudança de conteúdo (perguntas, textos, regras): use Refazer, que aplica o pedido.\n"
+                           if etapa == "produto" else
+                           "Mudança no que o one-pager aprovou (perguntas, textos, regras, habilidades, tempos): "
+                           "devolva até Produto — o one-pager só muda lá. Refazer aqui muda o que é desta etapa.\n")
+                        + "Refazer ou devolver: o que precisa mudar, e por quê.")
         st.caption(f"Mínimo de {passagem.MIN_CARACTERES_COMENTARIO} letras ou números. Iniciar não pede comentário.")
     # As perguntas de conferência só existem para quem libera a etapa: refazer e devolver não as pedem.
     perguntas = next((passagem.perguntas_de_conferencia(etapa, a) for a in acoes

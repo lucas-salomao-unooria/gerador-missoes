@@ -36,7 +36,7 @@ ensina, mede e diz; restrição da plataforma não se decide nele: se o anexo pe
 divergência vai para a seção 19 com dono `produto`. O corpo carrega o que quem
 codifica precisa para implementar, e um gate determinístico confere os quatro primeiros itens:
 
-- **Seção 14:** a matriz com **exatamente** as habilidades do bloco 11 da spec, cada uma com a régua
+- **Seção 14:** a matriz com **exatamente** as habilidades do contrato de evidência do one-pager aprovado (§12a, no anexo) — as mesmas do bloco 11 da spec; se as duas divergirem, siga o one-pager e registre a divergência na seção 19 com dono `produto` —, cada uma com a régua
   inteira — Atingiu, Em processo e Não atingiu, por extenso, que é a regra que o servidor calcula —,
   o canal (A, B ou A + B), o grau de medida (`indicative` / `scored`) e, no Canal B, a remissão à
   pergunta e às alternativas no anexo. Mais as competências socioemocionais do §2. E a **ficha de
@@ -199,8 +199,8 @@ declara — ou é erro de digitação, ou a pergunta foi inventada aqui, e nesse
 **PRD × one-pager aprovado (gate determinístico, também bloqueante):**
 
 A correção é sempre copiar de onde o relatório manda: `habilidade-perdida` e
-`habilidade-acrescentada` → a matriz da seção 14 fica com as habilidades do bloco 11 da spec, nem uma
-a mais; `habilidade-sem-kpi` → o KPI de evidência da seção 2; `tempo-alterado` → o total do §10 do
+`habilidade-acrescentada` → a matriz da seção 14 fica com as habilidades do one-pager aprovado (§12a),
+nem uma a mais — divergência da spec vai para a seção 19 com dono `produto`; `habilidade-sem-kpi` → o KPI de evidência da seção 2; `tempo-alterado` → o total do §10 do
 one-pager em todo lugar que fala de tempo em tela, inclusive guardrail e RNF; `podcast-sem-requisito`
 → o RF do podcast; `artefato-inexistente` → o caminho real da lista acima.
 

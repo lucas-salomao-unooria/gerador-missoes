@@ -33,6 +33,8 @@ A missão possui dois tipos de texto:
 
 {one_pager?}
 
+O texto que o §4 do one-pager põe na tela entre aspas — a pergunta da aposta e as alternativas, as falas do personagem-guia, as mensagens do sistema, o caso de transferência — é a redação que o PO aprovou: entra no sheet palavra por palavra. Se o teto de palavras da faixa (abaixo) obrigar a mudar, mude e registre em «Strings que precisam de decisão» `[PROPOSTA — validar com PO: «texto aprovado» → «texto novo» · por quê]`, com o texto aprovado entre aspas. Fala do professor em sala e exemplo do que o estudante diria («ex.: "…"») não são texto de tela. Nas sessões até 07/10/2026, a passada 1 perdia mais da metade desses textos, e nenhuma etapa seguinte os recuperava.
+
 **Ambiente simulado (D9) — rótulos nativos literais e o padrão de conteúdo (o schema que os prompts de conteúdo dinâmico preenchem):**
 
 {ambiente_simulado?}

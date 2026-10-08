@@ -49,6 +49,7 @@ from google.adk.agents.sequential_agent import SequentialAgent
 
 from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca
+from agents.juiz import get_fidelidade_check
 from agents.checkers import (
     ArtefatosDesignAgent,
     CoberturaTelasAgent,
@@ -137,6 +138,24 @@ def get_ambiente_simulado_agent(**kw) -> LlmAgent:
         output_key="ambiente_simulado",
         before_agent_callback=marcar_heranca,
         **kw,
+    )
+
+
+def get_spec_consolidada_check(nome: str) -> RastroCheckAgent:
+    """A spec que o D0 e o D9 reescreveram, conferida de novo contra o one-pager aprovado (o que eles pioraram).
+
+    O conserto vai ao dono do D0 pelo QA (A30b). Até 07/10/2026 essa conferência só rodava em produto, e o
+    `bncc_status` e o `conteudo_aprovado_spec_status` ficavam verdes sobre uma spec que o design tinha trocado."""
+    return RastroCheckAgent(
+        name=nome,
+        description="Spec consolidada pelo D0 e pelo D9 × one-pager aprovado: habilidades, tempo em tela, podcast, Canal B, debate e parâmetros a definir — só o que piorou desde a spec do Gate 0.",
+        modo="aprovado_spec_design",
+        rotulo="Spec consolidada × one-pager aprovado",
+        report_key="conteudo_aprovado_spec_design_report",
+        status_key="conteudo_aprovado_spec_design_status",
+        agente="conteudo-aprovado",
+        estrito=get_settings().esteira_estrita,
+        before_agent_callback=marcar_heranca,
     )
 
 
@@ -292,8 +311,9 @@ ORDEM_RETRABALHO = [
 #: D0 e D9 emitem dois documentos numa resposta só: sem o split logo atrás, a correção
 #: fica presa no relatório e nunca chega à `spec_missao` que o resto da esteira lê.
 MAPA_RETRABALHO = {
-    "fecha-lacunas": ["A17FechaLacunasRetrabalho", "A18FechaLacunasSplitRetrabalho"],
-    "ambiente-simulado": ["A19AmbienteSimuladoRetrabalho", "A20AmbienteSimuladoSplitRetrabalho"],
+    "fecha-lacunas": ["A17FechaLacunasRetrabalho", "A18FechaLacunasSplitRetrabalho", "A20bSpecConsolidadaRetrabalho"],
+    "ambiente-simulado": ["A19AmbienteSimuladoRetrabalho", "A20AmbienteSimuladoSplitRetrabalho",
+                          "A20bSpecConsolidadaRetrabalho"],
     # A D7 do QA manda "não-negociável sem marca é ticket com dono `brief-oficio`", e até
     # 23/09/2026 esse dono não tinha rota: o ticket era descartado em silêncio.
     "brief-oficio": ["A21BriefOficioRetrabalho"],
@@ -352,6 +372,7 @@ def _agentes_de_retrabalho(**kw) -> list:
     agentes += [
         split_lacunas,
         split_ambiente,
+        get_spec_consolidada_check("A20bSpecConsolidadaRetrabalho"),
         StitchGeracaoAgent(name="A26bStitchGeracaoRetrabalho",
                            description="Gera no mesmo projeto do Stitch só o que o retrabalho das telas mudou ou ainda falta."),
         CopyPreservadaAgent(name="A27bCopyPreservadaRetrabalho"),
@@ -456,14 +477,16 @@ def build_design_stage(
         sub_agents=[
             ConteudoAprovadoAgent(
                 name="A16dConteudoAprovadoDesign",
-                description="Grava as seções do one-pager aprovado, literais, para os agentes de design que não leem o one-pager (fluxo, CAA, telas, revisão da copy, QA).",
+                description="Grava as seções do one-pager aprovado, literais — o núcleo (§1, §3, §4) inclusive —, para os agentes de design que não leem o one-pager (fluxo, CAA, telas, revisão da copy, QA).",
                 secoes=list(SECOES_DESIGN),
+                chave_base="conteudo_aprovado_base_design",
                 before_agent_callback=marcar_heranca,
             ),
             get_fecha_lacunas_agent(**kw),
             get_fecha_lacunas_split(),
             get_ambiente_simulado_agent(**kw),
             get_ambiente_simulado_split(),
+            get_spec_consolidada_check("A20bSpecConsolidada"),
             get_brief_oficio_agent(**kw),
             get_jornada_agent(**kw),
             get_fluxo_agent(**kw),
@@ -527,16 +550,27 @@ def build_design_stage(
                 description="Matriz de rastreabilidade: cada requisito do one-pager e da spec (habilidades, textos literais, tempo, telas, estados, seção do DS) procurado em cada artefato de design.",
                 before_agent_callback=marcar_heranca,
             ),
+            # O refazer de design, conferido nos documentos de design: até 07/10/2026 só o de produto tinha
+            # conferência. Sem pedido de refazer de design, o juiz não roda.
+            get_fidelidade_check("A33cFidelidadeDesign", status_key="fidelidade_design_status",
+                                 report_key="fidelidade_design_report", documentos=FIDELIDADE_DOCUMENTOS_DESIGN,
+                                 onde="fim do design", etapas_pedido=["design"], com_briefing=False, etapa="design", **kw),
         ],
     )
 
 
+#: Onde o pedido de refazer de design tem de aparecer: o que o design escreve, e a spec que o D0 e o D9 consolidam.
+FIDELIDADE_DOCUMENTOS_DESIGN = ["spec_missao", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings_revisada",
+                                "camada_caa", "wireframes_cobertura"]
+
+
 DESIGN_METADATA = [
-    {"id": "A16dConteudoAprovadoDesign", "name": "16d · Conteúdo aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado", "prompt_file": None, "description": "As seções do one-pager aprovado — currículo, professor, tempos e cenários, podcast, contrato de evidência, hipóteses —, literais, para os agentes de design que não leem o one-pager."},
+    {"id": "A16dConteudoAprovadoDesign", "name": "16d · Conteúdo aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado", "prompt_file": None, "description": "As seções do one-pager aprovado — o núcleo (descoberta, narrativa e as 6 etapas com o texto de tela), currículo, falhas, professor, tempos e cenários, podcast, contrato de evidência, dispositivos, hipóteses —, literais, para os agentes de design que não leem o one-pager."},
     {"id": "A17FechaLacunas", "name": "17 · Fechamento de lacunas", "icon": "🧩", "output_key": "fechamento_lacunas", "prompt_file": "design/17_fechamento_lacunas.md", "description": "Varredura da spec célula a célula, decisões [D0-n] com base declarada, pedidos de re-spec [RS-n], spec consolidada (bloco 13) e relatório de preenchimento."},
     {"id": "A18FechaLacunasSplit", "name": "18 · Relatório de lacunas + spec consolidada (determinístico)", "icon": "✂️", "output_key": "relatorio_lacunas", "prompt_file": None, "description": "Copia a spec consolidada para `spec_missao` (original preservada em `spec_missao_gate0`), separa o relatório e registra `lacunas_status`."},
     {"id": "A19AmbienteSimulado", "name": "19 · Ambiente simulado", "icon": "🏝️", "output_key": "ambiente_simulado", "prompt_file": "design/19_ambiente_simulado.md", "description": "Condicional: decide o ambiente (app clonado existente, app novo ou mini-jogo) quando a spec cala; dormente emite só a ficha do bloco 14 que D1, D2, D4, D5 e o QA consomem."},
     {"id": "A20AmbienteSimuladoSplit", "name": "20 · Spec com bloco 14 (determinístico)", "icon": "✂️", "output_key": "ambiente_status", "prompt_file": None, "description": "Copia a spec com o bloco 14 para `spec_missao` e registra `ambiente_status`."},
+    {"id": "A20bSpecConsolidada", "name": "20b · Spec consolidada × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_spec_design_report", "prompt_file": None, "description": "A spec que o D0 e o D9 reescreveram, contra o one-pager aprovado: habilidades, tempo em tela, podcast, Canal B, debate e parâmetros a definir. Só o que piorou desde a spec do Gate 0; o conserto vai ao D0 pelo QA."},
     {"id": "A21BriefOficio", "name": "21 · Briefing de ofício", "icon": "🎯", "output_key": "brief_oficio", "prompt_file": "design/21_brief_oficio.md", "description": "Aposta, forma do arco, pico, beat memorável, mapa de beats, não-negociáveis."},
     {"id": "A22Jornada", "name": "22 · Jornada (Mermaid)", "icon": "🗺️", "output_key": "jornada_telas", "prompt_file": "design/22_jornada.md", "description": "Raias × 6 etapas, cenários de dispositivo, inventário de telas e direção por tela."},
     {"id": "A23Fluxo", "name": "23 · Fluxo de telas (Mermaid)", "icon": "🕸️", "output_key": "fluxo_arestas", "prompt_file": "design/23_fluxo.md", "description": "Grafo de telas com condições, gates e os 5 testes de fluxo."},
@@ -557,5 +591,6 @@ DESIGN_METADATA = [
     {"id": "A31QaEntregaveisCheck", "name": "31 · Veredito de design (determinístico)", "icon": "🔀", "output_key": "design_status", "prompt_file": None, "description": "Lê o envelope do QA de entregáveis."},
     {"id": "A33RastroDesign", "name": "33 · Rastro de lacunas do design (determinístico)", "icon": "🧭", "output_key": "rastro_design_report", "prompt_file": None, "description": "Marcadores de lacuna na spec consolidada e nos documentos de design: o de design bloqueia a etapa; o que o fechamento de lacunas fechou (`Resolvido em [D0-n]`) não conta; o de produto já aprovado e o de dev ficam 🟡."},
     {"id": "A33bRastreabilidadeDesign", "name": "33b · Matriz de rastreabilidade (determinístico)", "icon": "🧷", "output_key": "rastreabilidade_report", "prompt_file": None, "description": "Cada requisito do produto (habilidades, textos literais, tempo, telas, estados, seção do DS) procurado em cada artefato de design; o que se perdeu sai com o dono."},
+    {"id": "A33cFidelidadeDesign", "name": "33c · Fidelidade ao refazer de design", "icon": "📌", "output_key": "fidelidade_design_report", "prompt_file": None, "description": "Cada pedido de refazer feito ao design (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) conferido na spec consolidada, no brief, na jornada, no fluxo, na copy, na CAA e nas telas: o juiz cita, o código confere. Sem pedido de design, não roda. 🔴 recusa o de acordo."},
     {"id": "A32DespachoDesign", "name": "32 · Retrabalho de design (determinístico)", "icon": "🔁", "output_key": "tickets_retrabalho", "prompt_file": None, "description": "Reexecuta só os agentes com ticket do QA, na ordem de precedência do prompt, e refaz o protótipo depois."},
 ]

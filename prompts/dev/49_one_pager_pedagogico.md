@@ -53,7 +53,7 @@ vai ouvir e responder, e o time pedagógico aprova palavra por palavra. Não o e
 
 ## Rodada de correção — só quando houver relatório abaixo
 
-Um gate determinístico confere as habilidades do bloco 11 da spec, o total em tela do one-pager, o
+Um gate determinístico confere as habilidades do one-pager aprovado (§12a — as do bloco 11 da spec), o total em tela do one-pager, o
 podcast e os caminhos de arquivo que você cita. A correção é copiar de onde o relatório manda.
 
 {conteudo_aprovado_pedagogico_report?}
@@ -251,7 +251,7 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
  Diga em uma frase como abrir e o que esperar ao abrir.>
 
 ## O que a missão ensina
-<As habilidades do currículo — exatamente as do bloco 11 da spec, nem uma a mais —, cada uma escrita
+<As habilidades do currículo — exatamente as do contrato de evidência do one-pager aprovado (§12a, no anexo), que são as do bloco 11 da spec; se divergirem, as do one-pager —, nem uma a mais, cada uma escrita
  por extenso em linguagem de sala, com o código entre parênteses no fim, e o momento exato da missão
  em que a criança exercita aquilo. Se alguma ainda não foi confirmada, diga. Feche com as
  competências socioemocionais do one-pager, em uma linha.>

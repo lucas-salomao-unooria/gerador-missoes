@@ -46,6 +46,8 @@ CATEGORIAS: Dict[str, Tuple[str, Tuple[str, ...], str]] = {
     "canal_b": ("Canal B literal (one-pager §12a)", ("spec", "copy", "prototipo", "prd", "pedagogico"), "bloqueio"),
     "roteiro": ("Pergunta do debate literal (one-pager §9)", ("spec", "copy", "prd", "pedagogico"), "bloqueio"),
     "podcast": ("Fala do podcast literal (one-pager §11)", ("copy", "banco", "prd"), "bloqueio"),
+    # 🟡 enquanto o extrator do §4 não é calibrado contra as revisões do time (`conteudo_aprovado.textos_de_tela`)
+    "texto_tela": ("Texto de tela do §4 (one-pager)", ("copy", "prototipo"), "atencao"),
     "tempo": ("Tempo em tela (one-pager §10)", ("spec", "prd", "pedagogico"), "bloqueio"),
     "secao_ds": ("Seção do DS fixada pelo briefing", ("spec", "handoff", "prd"), "bloqueio"),
     "tela": ("Tela do inventário (jornada)", ("fluxo", "copy", "telas", "prototipo", "stitch", "handoff", "prd"), "bloqueio"),
@@ -53,9 +55,6 @@ CATEGORIAS: Dict[str, Tuple[str, Tuple[str, ...], str]] = {
     "evento": ("Evento de telemetria (spec 9.4)", ("handoff", "prd"), "atencao"),
     "proposta": ("Decisão do agente a revisar ([PROPOSTA])", ("prd",), "atencao"),
 }
-
-_RE_ESTADO = re.compile(r"\b[EF]\d_[A-Z0-9_]{3,}\b")
-
 
 def _secao_md(texto: str, rx: str) -> str:
     """Do título que casa `rx` até o próximo título de nível igual ou maior."""
@@ -68,12 +67,16 @@ def _secao_md(texto: str, rx: str) -> str:
 
 
 def estados_da_spec(spec: str) -> List[str]:
-    """Os estados nomeados no «Contrato de estados» da spec (`E2_PRONTO_APOSTA`)."""
-    vistos: List[str] = []
-    for e in _RE_ESTADO.findall(_secao_md(spec, r"contrato de estados")):
-        if e not in vistos:
-            vistos.append(e)
-    return vistos
+    """Os estados do «Contrato de estados» da spec, pelo leitor do gate do PRD (`tools/cobertura_design.py`).
+
+    Até 07/10/2026 a matriz tinha leitor próprio, que só via nome com prefixo `E1_`/`F2_`: em 6 das 15 specs do
+    bucket (`INICIAL_DESAFIO`, `e1_desafio_aberto`) ela mostrava zero estados, e nas outras contava menos que o
+    gate — o lugar que o PO lê dizia uma coisa e o gate do PRD conferia outra. A cerca ```markdown em volta da
+    spec sai antes, como no gate.
+    """
+    from tools import cobertura_design as cd
+
+    return cd.estados_da_spec(cd._desembrulhar(spec or ""))
 
 
 def eventos_da_spec(spec: str) -> List[str]:
@@ -131,7 +134,7 @@ def requisitos(state: Dict[str, Any]) -> List[Dict[str, str]]:
     for c in ca.codigos_aprovados(one_pager):
         req("habilidade", c)
     lit = ca.literais(one_pager)
-    for qual in ("canal_b", "roteiro", "podcast"):
+    for qual in ("canal_b", "roteiro", "podcast", "texto_tela"):
         for t in lit.get(qual) or []:
             req(qual, t)
     tempo = ca.tempo_aprovado(one_pager)
@@ -155,8 +158,16 @@ def _presente(categoria: str, alvo: str, coluna: str, texto: str) -> bool:
     from tools import conteudo_aprovado as ca
     from tools import telas
 
-    if categoria in ("canal_b", "roteiro", "podcast"):
-        fonte = ca._texto_visivel(texto) if coluna == "prototipo" else texto
+    if categoria in ("canal_b", "roteiro", "podcast", "texto_tela"):
+        if coluna == "prototipo":
+            fonte = ca._texto_visivel(texto)
+        elif coluna == "pedagogico":
+            # o gate do pedagógico (A49b) cobra o Canal B e o debate no corpo; o anexo que a esteira cola no fim
+            # traz o §12 e o §9 inteiros, e contá-lo deixava a coluna sempre ✅. No PRD o anexo conta: o corpo
+            # remete a ele por desenho.
+            fonte = ca.remover_anexo(texto)
+        else:
+            fonte = texto
         return not ca.literais_ausentes(fonte, [alvo])
     corpo = ca.remover_anexo(texto) if coluna in ("prd", "pedagogico") else texto
     if categoria == "tempo":
@@ -177,7 +188,9 @@ def _presente(categoria: str, alvo: str, coluna: str, texto: str) -> bool:
         if alvo in secao_revisar:
             return True
         return any(alvo in l and "PROPOSTA" in l.upper() for l in corpo.splitlines())
-    return alvo in corpo  # habilidade, estado
+    if categoria == "estado":
+        return alvo.lower() in corpo.lower()  # sem caixa, como o gate do PRD: `e3_voto_lacrado` no CHECK vale
+    return alvo in corpo  # habilidade
 
 
 def matriz(state: Dict[str, Any]) -> Dict[str, Any]:

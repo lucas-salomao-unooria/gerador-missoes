@@ -48,6 +48,8 @@ STATUS_KEYS = [
     "juiz_perguntas_status", "juiz_perguntas_rodada",
     "telemetria_status",
     "rastro_spec_status", "rastro_design_status", "conteudo_aprovado_spec_status",
+    "conteudo_aprovado_resumido_status", "fidelidade_design_status", "fidelidade_dev_status",
+    "rastreabilidade_dev_status", "conteudo_aprovado_spec_design_status",
     "rastro_lacunas_status",
     "dev_status",
     "prd_status", "kpis_status", "kpis_report",

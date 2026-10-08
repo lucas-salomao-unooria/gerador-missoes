@@ -75,6 +75,14 @@ KNOWN_STATE_KEYS = {
     "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
     "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida",
+    # 07/10/2026 (noite): resumido × canônico, fidelidade ao refazer de design e de dev, matriz final do dev,
+    # spec consolidada × one-pager, o que mudou no one-pager desde a versão anterior e os retratos que o medem
+    "conteudo_aprovado_resumido_report", "conteudo_aprovado_resumido_status", "resumido_rodada",
+    "fidelidade_design_report", "fidelidade_design_status", "juiz_fidelidade_design_saida",
+    "fidelidade_dev_report", "fidelidade_dev_status", "juiz_fidelidade_dev_saida",
+    "rastreabilidade_dev_report", "rastreabilidade_dev_status",
+    "conteudo_aprovado_spec_design_report", "conteudo_aprovado_spec_design_status",
+    "mudancas_no_aprovado", "conteudo_aprovado_base_design", "conteudo_aprovado_base_dev",
     "perguntas_report", "perguntas_status", "juiz_perguntas_report", "juiz_perguntas_status",
     "juiz_perguntas_rodada", "execucao", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
@@ -1027,7 +1035,10 @@ def test_estagio_produto_parcial_spec():
     orch = create_mission_orchestrator(stages=["spec"])
     assert [a.name for a in orch.sub_agents] == ["ProdutoStage", "A50Diagnostico", "A51Aprendizado", "A52RegistroCatalogo"]
     produto = orch.sub_agents[0]
-    assert [a.name for a in produto.sub_agents] == ["SpecLoop", "A16cFidelidadeProduto", "A16bOnePagerResumido"]
+    # o resumido em loop com a conferência contra o canônico (07/10/2026)
+    assert [a.name for a in produto.sub_agents] == ["SpecLoop", "A16cFidelidadeProduto", "OnePagerResumidoLoop"]
+    assert [a.name for a in produto.sub_agents[2].sub_agents] == [
+        "A16bOnePagerResumido", "A16eConteudoAprovadoResumido", "A16fResumidoRodada"]
     # `A15bEvidenciaCheck` entra desde 23/09/2026: grau `scored` com dois sinais, habilidade do
     # bloco 11 com momento e medida, gabarito no servidor. Eram três exigências que a spec
     # declarava em prosa e nenhuma verificação tocava — PED-04 é bloqueante e ninguém o conferia.
@@ -1071,7 +1082,8 @@ def test_estagio_produto_parcial_spec():
     assert [m["id"] for m in STAGE_SPEC["agents"]] == [
         "A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
         "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
-        "A15gConteudoAprovadoSpec", "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido"]
+        "A15gConteudoAprovadoSpec", "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido",
+        "A16eConteudoAprovadoResumido", "A16fResumidoRodada"]
     print("   ✓ estágio parcial spec: SpecLoop + resumido, sem núcleo; stages_para_ui resolve spec")
 
 

@@ -35,13 +35,20 @@ AGENTE = "conteudo-aprovado"
 
 #: Seções do one-pager (`prompts/produto/04_secoes_apoio.md`); a numeração é a mesma nas 11 missões.
 TITULOS = {
+    1: "Descoberta central e anatomia do aha",
     2: "Currículo",
+    3: "Narrativa e personagem-guia",
+    4: "As 6 etapas — mecanismo e o que a tela mostra",
+    6: "Verbos e affordances",
+    7: "Caminhos degenerados",
     8: "Estados de falha",
     9: "Papel do professor e parametrização com IA",
     10: "Modularidade, tempos sugeridos e controle do professor",
     11: "Podcast de recapitulação",
     12: "Evidências e dados, com o contrato de evidência por habilidade",
     13: "Cenários de dispositivo",
+    14: "Guardrails e IA",
+    15: "Tetos aplicados à faixa",
     17: "Hipóteses de validação",
 }
 SECOES_PRD: Tuple[int, ...] = (2, 9, 10, 11, 12, 17)
@@ -50,14 +57,28 @@ SECOES_PRD: Tuple[int, ...] = (2, 9, 10, 11, 12, 17)
 SECOES_PEDAGOGICO: Tuple[int, ...] = (9, 10, 11, 12)
 #: O design recebe também §8 (falhas — a de mídia não chegava a tela nenhuma) e §13 (cenários de
 #: dispositivo — projeção e 2 a 4 por aparelho), que fluxo, CAA, telas e QA não liam (auditoria de 07/10/2026).
-SECOES_DESIGN: Tuple[int, ...] = (2, 8, 9, 10, 11, 12, 13, 17)
+#: E o núcleo aprovado — §1, §3 e §4 — desde a reanálise da noite de 07/10/2026: o §4 traz o texto que a tela
+#: mostra (a pergunta da aposta e as alternativas, as falas da personagem, o caso de transferência), e a spec
+#: levava 81 de 153 desses textos nas dez sessões de outubro. Fluxo, CAA, telas e a revisão da copy só o viam
+#: pela spec; nas sessões que chegaram ao fim, de 18% a 45% chegavam ao protótipo.
+#: E §6, §7, §14 e §15 (verbos, caminhos degenerados, guardrails, tetos da faixa): 6 a 9 mil caracteres por missão,
+#: que fluxo, revisão da copy e banca só viam pela spec — §7 chegava à spec com 26 de 41 textos, §14 com 2 de 11.
+SECOES_NUCLEO: Tuple[int, ...] = (1, 3, 4)
+SECOES_DESIGN: Tuple[int, ...] = (1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17)
+#: O dev recebe o mesmo que o design. Até 07/10/2026 o `A33aConteudoAprovadoDev` regravava a chave com as
+#: seções do PRD, e a banca — e os agentes de design que ela reaciona — perdiam §8, §13 e o núcleo; o banco de
+#: conteúdo lia o núcleo de antes da revisão do one-pager (`nucleo_narrativo`).
+SECOES_DEV: Tuple[int, ...] = SECOES_DESIGN
 #: Abre o `conteudo_aprovado` que os agentes leem: sem ela, a seção que pede o que a plataforma não tem
 #: ("ativar ou agendar" no §9 da exp01ef1b) valia tanto quanto a spec que a corrigiu.
 NOTA_CONTEUDO_APROVADO = (
     "> Copiado pela esteira, sem reescrita, do one-pager que o PO aprovou. Para o que a missão ensina e mede, os "
-    "textos literais (Canal B, debate, podcast), os tempos e o papel do professor, se a spec divergir, vale este "
-    "texto. Restrição da plataforma não se decide aqui: se ele pedir o que a plataforma não tem (agendamento, por "
-    "exemplo), vale a spec, e a divergência é pendência de produto."
+    "textos literais (Canal B, debate, podcast e o que o §4 põe na tela entre aspas — a pergunta da aposta, as "
+    "alternativas, as falas da personagem), os tempos e o papel do professor, se a spec divergir, vale este "
+    "texto. Onde a spec detalha o mecanismo (estados, regras, IDs de tela), vale a spec; onde ela contradiz o §4 "
+    "num número ou num texto de tela, siga este texto e registre a divergência. Restrição da plataforma não se "
+    "decide aqui: se ele pedir o que a plataforma não tem (agendamento, por exemplo), vale a spec, e a divergência "
+    "é pendência de produto."
 )
 
 #: O título do anexo é também o marcador: comentário HTML apareceria cru no `.docx` do pedagógico.
@@ -142,6 +163,47 @@ def secoes_literais(one_pager: str, secoes: Sequence[int]) -> str:
     return "\n".join(partes)
 
 
+#: O que mudou nas seções aprovadas desde a última vez que a etapa rodou (`agents/base.py` o põe junto da versão
+#: anterior de cada autor). Vazio na primeira execução e quando o one-pager não mudou.
+KEY_MUDANCAS = "mudancas_no_aprovado"
+LIMITE_MUDANCAS = 120
+
+
+def mudancas_no_aprovado(anterior: str, atual: str, limite: int = LIMITE_MUDANCAS) -> str:
+    """As linhas das seções aprovadas que mudaram entre o retrato da última execução da etapa e o one-pager atual.
+
+    Depois de um refazer de produto, design e dev recomeçam da versão anterior dos próprios documentos
+    (`anterior_<chave>`), com a instrução de mantê-la «palavra por palavra quando nada obriga a mudar» — e nada
+    dizia o que tinha mudado no one-pager. O número que foi de 24 para 20 vagas seguia 24 na jornada, na copy e no
+    PRD (auditoria da noite de 07/10/2026).
+    """
+    import difflib
+
+    if not (anterior or "").strip() or anterior == atual:
+        return ""
+    linhas: List[str] = []
+    for l in difflib.unified_diff(anterior.splitlines(), (atual or "").splitlines(), lineterm="", n=0):
+        if l.startswith(("---", "+++", "@@")):
+            continue
+        conteudo = l[1:].strip()
+        if not conteudo or set(conteudo) <= set("-|:> "):
+            continue  # divisória, separador de tabela, citação vazia
+        linhas.append(("antes: " if l[0] == "-" else "agora: ") + conteudo[:300])
+    if not linhas:
+        return ""
+    corpo = [f"- {x}" for x in linhas[:limite]]
+    if len(linhas) > limite:
+        corpo.append(f"- … e mais {len(linhas) - limite} linha(s). Com tanta mudança, trate a sua versão anterior como "
+                     "rascunho: confira cada número, nome, habilidade e texto de tela contra o conteúdo aprovado.")
+    return "\n".join([
+        "## O one-pager aprovado mudou desde a sua versão anterior", "",
+        "A versão anterior dos seus documentos (o bloco «Sua versão anterior», quando você o recebeu) foi escrita sobre "
+        "um one-pager que mudou depois — o PO refez produto. Abaixo, as linhas que mudaram nas seções aprovadas. O que "
+        "você reaproveitar da versão anterior tem de bater com o «agora»: número, nome, habilidade ou texto de tela que "
+        "o contradiga, reescreva. O que não aparece aqui não mudou.", "",
+    ] + corpo)
+
+
 def anexo(one_pager: str, secoes: Sequence[int]) -> str:
     """As seções aprovadas, literais, sob um título único. Vazio se o one-pager não tem nenhuma."""
     partes = secoes_literais(one_pager, secoes)
@@ -183,13 +245,64 @@ _ROTULOS_DE_METADADO = frozenset({"duração", "duracao", "formato", "participan
                                   "publico-alvo"})
 
 
+#: O título de cada etapa do §4 (`### Etapa 3: Decidir`, `### 3. Decidir`, `#### Etapa 5b: Revisar`) e o bloco
+#: de evidência que fecha a seção — esse é o §12a resumido, e o Canal B já é conferido por ele.
+_RE_TITULO_ETAPA = re.compile(r"^#{2,6}\s*(?:Etapa\s*)?\d\s*[a-z]?\s*[:.—–-]", re.I)
+_RE_TITULO_EVIDENCIA = re.compile(r"^#{2,6}\s*(?:Bloco\s+de\s+)?Evid[êe]ncia", re.I)
+_RE_ENTRE_ASPAS = re.compile(r"[\"“]([^\"”\n]{12,}?)[\"”]")
+#: Linha que é fala do professor em sala, não texto de tela: «Quem conduz», «o professor pergunta: "…"»,
+#: a pergunta-ponte, a mediação. Também a crença que a missão desmonta («O descarte previsto ("…")»).
+_RE_LINHA_ORAL = re.compile(
+    r"quem conduz|professor\w*\b[^\"“\n]{0,60}?\b(?:pergunta|diz|orienta|refor[çc]a|conduz|lan[çc]a|fecha|chama|"
+    r"paralisa|projeta|encerra|provoca|comenta|retoma|media)|pergunta[- ]ponte|pergunta mediada|debate mediado|"
+    r"media[çc][ãa]o|\boral(?:mente)?\b|roda de conversa|descarte previsto", re.I)
+#: Aspas depois disto, na mesma linha, são exemplo do que o estudante faria ou diria, não texto aprovado.
+_RE_ANTES_DE_EXEMPLO = re.compile(r"\bex\.?\s*:|\bexemplo|algo como|\brespond(?:em|e)\b|estudantes? (?:diz|dizem|fala|falam|escreve)",
+                                  re.I)
+#: Fala dirigida à turma, sem rótulo na linha: «Turma, olhem…», «Quem marcou monstro, levante a mão!».
+_RE_FALA_A_TURMA = re.compile(r"^(?:turma|pessoal|gente|crian[çc]as|detetives)\b|levant\w*\s+a\s+m[ãa]o|\b(?:olhem|vejam|observem)\b",
+                              re.I)
+
+
+def textos_de_tela(one_pager: str) -> List[str]:
+    """O que o §4 aprovado põe na tela entre aspas: a pergunta da aposta e as alternativas, botões, títulos,
+    mensagens do sistema e falas da personagem, o caso de transferência.
+
+    Fica de fora o que não é texto de tela: fala do professor em sala, exemplo do que o estudante diria («ex.:
+    "…"»), aspas quebradas por crase, rótulo de até duas palavras, e o bloco de evidência que fecha o §4 (o Canal B
+    tem conferência própria). Calibrado nas 15 sessões do bucket de 25/09 a 07/10/2026: de 7 a 28 textos por missão.
+    """
+    saida: List[str] = []
+    dentro = False
+    for linha in (secao(one_pager or "", 4) or "").splitlines():
+        s = linha.strip()
+        if _RE_TITULO_EVIDENCIA.match(s):
+            dentro = False
+            continue
+        if _RE_TITULO_ETAPA.match(s):
+            dentro = True
+            continue
+        if not dentro or _RE_LINHA_ORAL.search(linha):
+            continue
+        for m in _RE_ENTRE_ASPAS.finditer(linha):
+            if _RE_ANTES_DE_EXEMPLO.search(linha[:m.start()]):
+                continue
+            t = m.group(1).strip().strip("*").strip()
+            if not t or t[0] in ",;:.)]" or "`" in t or _RE_FALA_A_TURMA.search(t):
+                continue
+            if len(t.split()) >= 3 and t not in saida:
+                saida.append(t)
+    return saida
+
+
 def literais(one_pager: str) -> Dict[str, List[str]]:
     """O texto que o PO aprovou palavra por palavra e que a criança ou o professor ouvem.
 
     - `canal_b`: perguntas e alternativas entre aspas do §12a;
     - `roteiro`: as perguntas do debate (bloco «Roteiro…»/«Perguntas…» do §9);
     - `podcast`: as falas do §11 (`**Nome:** fala`): o nome que se repete, ou o nome próprio de uma palavra
-      que não é rótulo de metadado (`**Duração:**`, `**Apresentadores:**`).
+      que não é rótulo de metadado (`**Duração:**`, `**Apresentadores:**`);
+    - `texto_tela`: o que o §4 põe na tela entre aspas (`textos_de_tela`).
 
     Na exp01ef1b (07/10/2026) a spec reescreveu a primeira pergunta do debate, a camada CAA parafraseou
     as alternativas, a copy reescreveu o podcast e o banco de conteúdo escreveu outro roteiro.
@@ -213,7 +326,8 @@ def literais(one_pager: str) -> Dict[str, List[str]]:
         return vezes[nome] >= 2 or (" " not in nome and nome[:1].isupper() and nome.lower() not in _ROTULOS_DE_METADADO)
 
     podcast = [fala.strip().strip('"“”*').strip() for nome, fala in falas if e_voz(nome)]
-    return {"canal_b": canal_b, "roteiro": list(dict.fromkeys(roteiro)), "podcast": podcast}
+    return {"canal_b": canal_b, "roteiro": list(dict.fromkeys(roteiro)), "podcast": podcast,
+            "texto_tela": textos_de_tela(texto)}
 
 
 def literais_ausentes(documento: str, trechos: Sequence[str]) -> List[str]:
@@ -294,6 +408,60 @@ _RE_PODCAST = re.compile(r"podcast", re.I)
 def tem_podcast(one_pager: str) -> bool:
     s11 = (secao(one_pager or "", 11) or "").strip()
     return len(s11) >= 200 and not _RE_SEM_PODCAST.search(s11[:400])
+
+
+#: O número que o one-pager deixou para o PO decidir: `[PARÂMETRO — a definir por produto: 45 segundos]`.
+_RE_PARAMETRO_PENDENTE = re.compile(r"\[(?:PAR[ÂA]METRO|DECIS[ÃA]O PENDENTE)[^\]\n]{0,300}\]", re.I)
+_RE_VALOR_COM_UNIDADE = re.compile(
+    r"(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(?:a\s*\d+(?:[.,]\d+)?\s*)?"
+    r"(%|s\b|seg\w*|min\w*|palavras?|ms\b|milissegundos?|toques?|mensage\w+|tentativas?|rodadas?|caracteres?|itens?)",
+    re.I)
+#: Família da unidade → como ela aparece escrita (`45 s`, `45 segundos`; `3 min`, `3 minutos`).
+_UNIDADE_ESCRITA = {"seg": r"(?:s\b|seg\w*)", "min": r"min\w*", "%": r"%", "pal": r"palavras?", "mil": r"(?:ms\b|milissegundos?)",
+                    "toq": r"toques?", "men": r"mensage\w+", "ten": r"tentativas?", "rod": r"rodadas?",
+                    "car": r"caracteres?", "ite": r"itens?"}
+#: Linha que ainda trata o número como pendente, ou que diz quem o decidiu (o D0 ratificou, o PO homologou).
+_RE_AINDA_PENDENTE = re.compile(r"PAR[ÂA]METRO|PROPOSTA|ABERTO|DECIS[ÃA]O PENDENTE|a definir|validar com (?:o )?PO|"
+                                r"NEEDS CLARIFICATION", re.I)
+_RE_DECISAO_REGISTRADA = re.compile(r"ratificad|homologad|\[D0-\d|parecer d[oe]|decidido (?:pelo|em|no)|PO —", re.I)
+
+
+def _familia_da_unidade(unidade: str) -> str:
+    u = unidade.lower()
+    if u == "s" or u.startswith("seg"):
+        return "seg"
+    if u == "ms" or u.startswith("mil"):
+        return "mil"
+    return "%" if u == "%" else u[:3]
+
+
+def parametros_decididos(documento: str, one_pager: str) -> List[Tuple[str, str]]:
+    """`(marcador do one-pager, linha do documento)` de cada número que o one-pager deixou a definir por produto e
+    que o documento afirma como decidido — sem marcador e sem dizer quem decidiu.
+
+    Nas dez sessões de outubro, 4 de 16 parâmetros viraram fato na spec («Após 45 segundos sem interação…»,
+    «quando ≥ 80% da turma concluir…», «no máximo 25 palavras por string»): a spec decidia no lugar do PO, e
+    design e PRD herdavam o número como decidido. O parâmetro que some do documento não entra aqui.
+
+    Varre todas as linhas, inclusive as de bloco de código: o comentário de um schema também afirma o número, e a
+    spec da exp04ef1b (25/09) abria uma cerca ```markdown na linha 2 que invertia a paridade das outras.
+    """
+    linhas = (documento or "").splitlines()
+    saida: List[Tuple[str, str]] = []
+    for m in _RE_PARAMETRO_PENDENTE.finditer(one_pager or ""):
+        valor = _RE_VALOR_COM_UNIDADE.search(m.group(0))
+        if not valor:
+            continue
+        familia = _familia_da_unidade(valor.group(2))
+        unidade = _UNIDADE_ESCRITA.get(familia, re.escape(familia))
+        alvo = re.compile(rf"(?<![\d.,]){re.escape(valor.group(1))}\s*(?:a\s*\d+(?:[.,]\d+)?\s*)?{unidade}", re.I)
+        com_o_numero = [l for l in linhas if alvo.search(l)]
+        if not com_o_numero or any(_RE_AINDA_PENDENTE.search(l) or _RE_DECISAO_REGISTRADA.search(l)
+                                   for l in com_o_numero):
+            continue
+        if m.group(0) not in [s for s, _ in saida]:
+            saida.append((m.group(0), com_o_numero[0].strip()))
+    return saida
 
 
 _RE_ARTEFATO = re.compile(r"(?<![\w/.-])((?:produto|design|dev|spec)/[\w./-]+?\.(?:md|html|docx|json|pdf))\b")
@@ -386,8 +554,36 @@ def validar_spec(spec: str, one_pager: str) -> Dict[str, Any]:
             "bloco 8: título, vozes, duração, quando toca e quem toca, copiados do §11 — o roteiro fica no "
             "one-pager. Sem isso, design e dev reescrevem ou esquecem o áudio (aconteceu nas 11 missões).",
             "produto"))
+    decididos = parametros_decididos(spec, one_pager)
+    if decididos:
+        exemplos = "; ".join(f"{marcador[:110]} → «{linha[:120]}»" for marcador, linha in decididos[:4])
+        achados.append(_achado(
+            "parametro-decidido",
+            f"{len(decididos)} número(s) que o one-pager aprovado deixou a definir por produto aparece(m) na spec como "
+            f"decidido(s), sem marcador: {exemplos}. A spec não decide no lugar do PO: mantenha o número com o "
+            "marcador na mesma linha (`[PARÂMETRO — a definir por produto: …]`, ou `[ABERTO — dono: PO: …]`), ou diga "
+            "quem o decidiu e quando.", "produto"))
     return {"status": _status(achados), "achados": achados, "codigos": aprovados,
             "tempo": tempo_aprovado(one_pager), "podcast": tem_podcast(one_pager)}
+
+
+def validar_spec_consolidada(spec: str, spec_gate0: str, one_pager: str) -> Dict[str, Any]:
+    """A spec que o D0 e o D9 reescreveram no design, contra o one-pager aprovado: só o que eles pioraram.
+
+    Até 07/10/2026 a conferência da spec contra o one-pager só rodava em produto. O D0 e o D9 reescrevem a spec
+    inteira, e o split só detecta linha removida (trocar o código numa linha longa do bloco 11, ou acrescentar
+    «Tempo total em tela: 25 minutos», passava). O que já divergia na spec do Gate 0 foi decidido em produto — com
+    exceção do admin, se foi o caso — e não volta aqui; o que é novo vai ao dono do D0.
+    """
+    antes = {a["resumo"] for a in validar_spec(spec_gate0, one_pager)["achados"]} if (spec_gate0 or "").strip() else set()
+    resultado = validar_spec(spec, one_pager)
+    achados = []
+    for a in resultado["achados"]:
+        if a["resumo"] in antes:
+            continue
+        achados.append({**a, "etapa": "design", "agente_responsavel": "fecha-lacunas",
+                        "resumo": "Depois do fechamento de lacunas (D0) e do ambiente (D9): " + a["resumo"]})
+    return {**resultado, "status": _status(achados), "achados": achados}
 
 
 _ROTULO_LITERAL = {"canal_b": "do Canal B (pergunta ou alternativa)", "roteiro": "do debate",
@@ -426,9 +622,27 @@ def validar_copy(copy_revisada: str, one_pager: str) -> List[Dict[str, str]]:
             f"{len(faltam)} de {len(falas)} falas do podcast aprovado no one-pager (§11) não estão na copy revisada — "
             f"ex.: «{faltam[0][:120]}». Dono: `copy-ptbr-revisao`. O roteiro é o do PO: copie as falas do conteúdo "
             "aprovado, com as mesmas vozes; revise só a marcação de voz.", "design"))
+    # e o que o §4 põe na tela: a aposta e as alternativas, as falas da personagem, o caso de transferência. Nas
+    # sessões que chegaram ao fim, a copy trazia de 25% a 85% desses textos. 🟡 e não ⛔ enquanto o extrator não é
+    # calibrado contra as revisões do time: o PO vê a lista e decide.
+    tela = literais(one_pager)["texto_tela"]
+    faltam = literais_ausentes(copy_revisada, tela) if tela else []
+    if tela and len(faltam) > LIMIAR_TEXTO_DE_TELA * len(tela):
+        exemplos = "; ".join(f"«{t[:100]}»" for t in faltam[:4])
+        achados.append(_achado(
+            "texto-de-tela-reescrito",
+            f"{len(faltam)} de {len(tela)} textos que o §4 do one-pager aprovado põe na tela entre aspas não estão na "
+            f"copy revisada, nem com 85% da redação: {exemplos}. Dono: `copy-ptbr-revisao`. Copie do conteúdo aprovado "
+            "(§4); se o teto de palavras da faixa obrigar a mudar, registre em «Strings que precisam de decisão» "
+            "`[PROPOSTA — validar com PO: «texto aprovado» → «texto novo» · por quê]`.", "design", severidade="atencao"))
     for a in achados:
         a["agente_responsavel"] = "copy-ptbr-revisao"
     return achados
+
+
+#: Fração dos textos de tela do §4 que pode faltar na copy antes de virar achado: a mesma folga do podcast, para o
+#: ruído do extrator (uma aspa de exemplo que escapou) não acusar a copy fiel.
+LIMIAR_TEXTO_DE_TELA = 0.2
 
 
 def _texto_visivel(html: str) -> str:
@@ -476,6 +690,23 @@ def validar_banco(banco: str, one_pager: str) -> List[Dict[str, str]]:
         f"do conteúdo aprovado. Na exp01ef1b o banco escreveu outro, de antes da aula.", "dev")]
 
 
+def habilidades_de_referencia(spec: str, one_pager: str) -> Tuple[List[str], str]:
+    """`(códigos, de onde vêm)` contra os quais o PRD, o pedagógico e o resumido conferem as habilidades.
+
+    O one-pager aprovado (§12a; sem ele, o §2), como manda a precedência do redator do PRD — «onde as duas
+    divergem numa habilidade, siga o one-pager». Até 07/10/2026 a referência era o bloco 11 da spec: com a spec
+    sem a EF09CO08 (o loop da spec esgotado, a exceção do admin, o D0 mexendo no bloco 11), o PRD fiel ao
+    one-pager recebia «tire-a da matriz». O bloco 11 vale quando o one-pager não tem código, ou quando o currículo
+    é decisão pendente no one-pager ou na spec — o código do one-pager que a lista oficial não aceita vira
+    `[ABERTO — dono: produto: …]` no bloco 11, e o PRD não pode ser cobrado por ele.
+    """
+    bloco11 = bncc.secao_bloco(spec or "", 11) or ""
+    aprovados = codigos_aprovados(one_pager)
+    if aprovados and not _decisao_pendente(secao(one_pager or "", 2) or "", bloco11):
+        return aprovados, "o contrato de evidência do one-pager aprovado (§12a)"
+    return bncc.extrair_codigos(bloco11), "o bloco 11 da spec"
+
+
 def _linhas_de_kpi(prd: str) -> List[str]:
     return [l for l in _linhas_fora_de_codigo(prd) if l.lstrip().startswith("|") and re.search(r"\bKPI-?\d", l)]
 
@@ -484,7 +715,7 @@ def validar_prd(prd: str, spec: str, one_pager: str, artefatos: Optional[Iterabl
     """O corpo do PRD (sem o anexo) contra a spec e o one-pager aprovado."""
     achados: List[Dict[str, str]] = []
     corpo = remover_anexo(prd or "")
-    da_spec = bncc.extrair_codigos(bncc.secao_bloco(spec or "", 11) or "")
+    da_spec, origem = habilidades_de_referencia(spec, one_pager)
     s14 = secao(corpo, 14)
     if da_spec:
         if s14 is None:
@@ -492,10 +723,13 @@ def validar_prd(prd: str, spec: str, one_pager: str, artefatos: Optional[Iterabl
                                    "onde fica a matriz das habilidades.", "dev"))
         else:
             achados += _comparar_codigos(
-                da_spec, bncc.extrair_codigos(s14), "a matriz da seção 14 do PRD", "o bloco 11 da spec", "dev",
-                "Toda habilidade da spec tem linha na matriz, com a régua inteira — Atingiu, Em processo e "
-                "Não atingiu — e a pergunta do Canal B remetendo ao anexo (§12a). O PRD não reabre currículo.",
-                "O PRD não acrescenta habilidade: tire-a da matriz.")
+                da_spec, bncc.extrair_codigos(s14), "a matriz da seção 14 do PRD", origem, "dev",
+                "Toda habilidade aprovada tem linha na matriz, com a régua inteira — Atingiu, Em processo e "
+                "Não atingiu — e a pergunta do Canal B remetendo ao anexo (§12a). O PRD não reabre currículo: se a "
+                "spec a tirou, a divergência é defeito a montante — mantenha a linha e registre-a na seção 19 com "
+                "dono `produto`.",
+                "O PRD não acrescenta habilidade que o one-pager aprovado não tem: tire-a da matriz. Se foi a spec "
+                "que a acrescentou, registre a divergência na seção 19 com dono `produto`.")
         linhas_kpi = _linhas_de_kpi(corpo)
         sem_kpi = [c for c in da_spec if not any(c in l for l in linhas_kpi)]
         if sem_kpi:
@@ -539,10 +773,10 @@ def validar_pedagogico(pedagogico: str, spec: str, one_pager: str,
     """O corpo do one-pager pedagógico (sem o anexo) contra a spec e o one-pager aprovado."""
     achados: List[Dict[str, str]] = []
     corpo = remover_anexo(pedagogico or "")
-    da_spec = bncc.extrair_codigos(bncc.secao_bloco(spec or "", 11) or "")
+    da_spec, origem = habilidades_de_referencia(spec, one_pager)
     if da_spec:
         achados += _comparar_codigos(
-            da_spec, bncc.extrair_codigos(corpo), "o one-pager pedagógico", "o bloco 11 da spec", "dev",
+            da_spec, bncc.extrair_codigos(corpo), "o one-pager pedagógico", origem, "dev",
             "Cada habilidade entra em «O que a missão ensina» e em «Como a gente sabe que a criança aprendeu», "
             "com o código entre parênteses.",
             "O pedagógico não acrescenta habilidade: tire-a.")
@@ -558,6 +792,48 @@ def validar_pedagogico(pedagogico: str, spec: str, one_pager: str,
                          "O professor lê em sala exatamente o texto aprovado: copie do conteúdo aprovado, sem parafrasear.")
     if artefatos is not None:
         achados += _artefatos(corpo, artefatos, "o one-pager pedagógico")
+    return {"status": _status(achados), "achados": achados, "codigos": da_spec,
+            "tempo": tempo_aprovado(one_pager), "podcast": tem_podcast(one_pager)}
+
+
+#: Linha do resumido que cita a habilidade sem afirmá-la: a proposta de tirá-la, «a confirmar», a divergência.
+_RE_HABILIDADE_SO_CITADA = re.compile(r"PROPOSTA|a confirmar|DIVERG[ÊE]NCIA|ABERTO|DECIS[ÃA]O PENDENTE|plaus[íi]vel", re.I)
+
+
+def validar_resumido(resumido: str, spec: str, one_pager: str) -> Dict[str, Any]:
+    """O one-pager resumido contra o canônico aprovado e a spec.
+
+    O resumido é o que o time de produto lê para aprovar a missão pedagogicamente (A16b); o canônico é o que
+    segue para design e dev. Até 07/10/2026 nada os comparava, e o prompt mandava a spec vencer quando os dois
+    divergiam. Confere as habilidades do bloco 11 (já conferidas contra o §12a), o tempo em tela do §10 e o Canal
+    B com o texto aprovado — o contrato de evidência do resumido usa as alternativas como tabela de marcadores, e
+    nas sessões de outubro só uma em cada três o trazia. Habilidade citada numa proposta de tirá-la ou «a
+    confirmar» não conta como acrescentada.
+    """
+    achados: List[Dict[str, str]] = []
+    corpo = resumido or ""
+    da_spec, origem = habilidades_de_referencia(spec, one_pager)
+    if da_spec and not _decisao_pendente(bncc.secao_bloco(spec or "", 11) or ""):
+        citadas = bncc.extrair_codigos(corpo)
+        afirmadas = bncc.extrair_codigos("\n".join(l for l in _linhas_fora_de_codigo(corpo)
+                                                   if not _RE_HABILIDADE_SO_CITADA.search(l)))
+        correcao_falta = ("Cada habilidade aprovada entra no componente curricular e no contrato de evidência, com "
+                          "o código entre crases.")
+        correcao_sobra = ("O resumido não acrescenta habilidade: tire-a, ou cite-a como `[PROPOSTA — validar com PO: …]` "
+                          "ou «a confirmar».")
+        achados += [a for a in _comparar_codigos(da_spec, citadas, "o one-pager resumido", origem,
+                                                 "produto", correcao_falta, correcao_sobra)
+                    if a["codigo"] == "habilidade-perdida"]
+        achados += [a for a in _comparar_codigos(da_spec, afirmadas, "o one-pager resumido", origem,
+                                                 "produto", correcao_falta, correcao_sobra)
+                    if a["codigo"] == "habilidade-acrescentada"]
+    achados += _tempo(corpo, one_pager, "o one-pager resumido", "produto")
+    achados += _literais(corpo, one_pager, ("canal_b",), "no one-pager resumido", "produto",
+                         "O time pedagógico aprova a pergunta e as alternativas que a criança vai ler: no contrato de "
+                         "evidência, a tabela de marcadores do Canal B traz o texto do §12a do canônico, palavra por "
+                         "palavra, e só depois a explicação de cada nível.")
+    for a in achados:
+        a["agente_responsavel"] = "one-pager-resumido"
     return {"status": _status(achados), "achados": achados, "codigos": da_spec,
             "tempo": tempo_aprovado(one_pager), "podcast": tem_podcast(one_pager)}
 
