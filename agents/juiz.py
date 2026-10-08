@@ -4,6 +4,8 @@ Um agente do ADK tem um único pai na árvore, então cada gate que recebe juiz 
 """
 from __future__ import annotations
 
+from typing import Optional
+
 from agents.base import create_llm_agent
 from agents.checkers import FidelidadeCheckAgent, JuizDeAchadosAgent
 from prompts import load_prompt
@@ -30,8 +32,12 @@ def get_juiz_de_achados(nome: str, *, status_key: str, report_key: str, fonte_ke
 
 
 def get_fidelidade_check(nome: str, *, status_key: str, report_key: str, documentos: list,
-                         onde: str, **kw) -> FidelidadeCheckAgent:
-    """O par (verificador de fidelidade + juiz), uma instância por ponto da esteira."""
+                         onde: str, etapas_pedido: Optional[list] = None, com_briefing: bool = True,
+                         etapa: str = "produto", incluir_corrente: bool = True, **kw) -> FidelidadeCheckAgent:
+    """O par (verificador de fidelidade + juiz), uma instância por ponto da esteira.
+
+    `etapas_pedido` restringe o checklist aos pedidos de refazer daquelas etapas (no fim do design, os do
+    design); sem ele, entram todos. `incluir_corrente` soma o pedido desta execução; `com_briefing`, o briefing."""
     base = status_key.removesuffix("_status")
     juiz = create_llm_agent(
         name=f"{nome}Juiz",
@@ -46,5 +52,7 @@ def get_fidelidade_check(nome: str, *, status_key: str, report_key: str, documen
         description=(f"Fidelidade ao pedido do PO e ao briefing ({onde}): TRAVAS, AJUSTES, VALIDAÇÃO e elementos "
                      "fixos conferidos com citação; pedido sem prova é 🔴."),
         status_key=status_key, report_key=report_key, documentos=list(documentos), onde=onde,
+        etapas_pedido=list(etapas_pedido or []), com_briefing=com_briefing, etapa=etapa,
+        incluir_corrente=incluir_corrente,
         sub_agents=[juiz],
     )

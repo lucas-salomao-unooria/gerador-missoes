@@ -81,6 +81,22 @@ CONFERENCIA_DE_ACORDO: Dict[str, Tuple[Tuple[str, str], ...]] = {
 #: e nenhum agente o leu. Nas outras etapas o comentário segue para a próxima, então só recusa o que
 #: tem cara de conteúdo para a etapa que está sendo liberada.
 MAX_DE_ACORDO_ULTIMA_ETAPA = 400
+
+#: Onde uma mudança de conteúdo vale, por etapa. Em design e dev, o *refazer* não muda o one-pager, e os gates
+#: conferem design e dev contra ele: o Canal B reescrito num refazer de dev voltava ao texto antigo pelo gate do
+#: pedagógico, e o anexo do PRD seguia com o §12a de antes (auditoria de 07/10/2026). O que o one-pager decide
+#: muda em produto; o resto, na etapa.
+COMO_MUDAR_CONTEUDO: Dict[str, str] = {
+    "produto": ("Para a mudança valer, use **Refazer** com este mesmo texto — a etapa é refeita aplicando-o e volta "
+                "ao seu parecer."),
+    "design": ("Se ela muda o que o one-pager aprovou (texto que a criança ou o professor lê, regra, número, "
+               "habilidade, tempo), use **Devolver** até Produto: o one-pager só muda lá, e design e dev são "
+               "conferidos contra ele. Se é só do design (tela, fluxo, copy que o one-pager não fixa), use **Refazer** "
+               "com este mesmo texto."),
+    "dev": ("Se ela muda o que o one-pager aprovou (texto que a criança ou o professor lê, regra, número, "
+            "habilidade, tempo), use **Devolver** — o Design repassa a Produto, onde o one-pager muda; design e dev "
+            "são conferidos contra ele. Se é só do dev (handoff, PRD, banco), use **Refazer** com este mesmo texto."),
+}
 _RE_CONTEUDO = re.compile(r"\bPergunta\s+\d|\bAlternativas?\b|\bCen[áa]rio:|\bAJUSTE\s+\d|\bTRAVAS?\b", re.IGNORECASE)
 
 
@@ -257,8 +273,7 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
         if motivo:
             raise DecisaoInvalida(
                 f"Este comentário parece trazer mudança de conteúdo ({motivo}). Pelo *de acordo* ela não entra em "
-                "documento nenhum: ele só registra que a etapa está pronta como está. Para a mudança valer, use "
-                "**Refazer** com este mesmo texto — a etapa é refeita aplicando-o e volta ao seu parecer.")
+                "documento nenhum: ele só registra que a etapa está pronta como está. " + COMO_MUDAR_CONTEUDO[etapa])
     respostas: Dict[str, str] = {}
     for chave, pergunta in perguntas_de_conferencia(etapa, acao):
         resposta = str((conferencia or {}).get(chave) or "").strip()
@@ -295,10 +310,10 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
             efeito = Efeito("encerrar", etapa)
     elif acao == REFAZER:
         _invalidar_a_partir_de(pareceres, etapa)
-        devolutiva = ultima_devolutiva(novo, etapa)
-        pedido = comentario if not devolutiva else (
-            f"{comentario}\n\nDevolutiva que motivou o retrabalho ({devolutiva['como']}, {devolutiva['quando']}):\n"
-            f"{devolutiva['comentario']}")
+        pedido = comentario
+        for devolutiva in devolutivas_em_cadeia(novo, etapa):
+            pedido += (f"\n\nDevolutiva que motivou o retrabalho ({devolutiva['como']}, {devolutiva['quando']}):\n"
+                       f"{devolutiva['comentario']}")
         novo["situacao"] = REFAZENDO
         efeito = Efeito("refazer", etapa, pedido)
     elif acao == INICIAR:
@@ -339,6 +354,17 @@ def ultima_devolutiva(fluxo: Dict[str, Any], etapa: str) -> Optional[Dict[str, A
     return None
 
 
+def devolutivas_em_cadeia(fluxo: Dict[str, Any], etapa: str) -> List[Dict[str, Any]]:
+    """A devolução pendente para `etapa` e as que ainda estão pendentes nas etapas seguintes, da que achou o
+    problema à mais recente.
+
+    O Dev devolve ao Design («29 × 24 min, falta EF06CO07»), o Design repassa a Produto («a causa é a mecânica do
+    one-pager») — e, até 07/10/2026, o refazer de Produto levava só o repasse: o detalhe de quem achou o problema
+    ficava na trilha, que agente nenhum lê. Devolução que já teve *refazer* ou *de acordo* depois não conta.
+    """
+    return [d for e in reversed(ORDEM[ORDEM.index(etapa):]) if (d := ultima_devolutiva(fluxo, e))]
+
+
 def pedidos_do_po(fluxo: Optional[Dict[str, Any]]) -> List[Dict[str, str]]:
     """Todos os pedidos de *refazer*, de todas as etapas, do mais antigo ao mais novo.
 
@@ -368,7 +394,11 @@ def notas_de_passagem(fluxo: Optional[Dict[str, Any]]) -> str:
         linhas += ["## Pedidos de refazer do PO, em vigor", "",
                    "Todos continuam valendo, do mais antigo ao mais novo — um pedido não apaga o anterior. Onde dois "
                    "se contradizem, vale o mais novo. Aplique as TRAVAS e os AJUSTES no que é seu, e responda às "
-                   "perguntas de VALIDAÇÃO que o PO escreveu: a fidelidade a eles é conferida depois.", ""]
+                   "perguntas de VALIDAÇÃO que o PO escreveu: a fidelidade a eles é conferida depois. Pedido feito a "
+                   "design ou a dev não muda o one-pager aprovado, e design e dev são conferidos contra ele: se o "
+                   "pedido muda o que o one-pager decide — habilidade, tempo, texto que a criança ou o professor lê, "
+                   "número, regra de mecânica —, aplique o que é da sua etapa e registre o resto como "
+                   "`[CONFLITO — pedido do PO × one-pager aprovado: …]`. Essa mudança se faz em produto.", ""]
         for i, p in enumerate(pedidos, 1):
             linhas.append(f"### Pedido {i} · {p['origem']}")
             linhas += [""] + [f"> {l}" if l.strip() else ">" for l in p["texto"].splitlines()] + [""]
@@ -376,7 +406,10 @@ def notas_de_passagem(fluxo: Optional[Dict[str, Any]]) -> str:
         linhas += ["## Pareceres de quem liberou as etapas", "",
                    "Pareceres humanos das etapas já liberadas. São decisão de quem responde pela etapa: aplique-os. "
                    "Se um deles contrariar um gate ou a plataforma, registre o conflito no seu documento em vez de "
-                   "escolher em silêncio.", ""]
+                   "escolher em silêncio. Parecer não muda o one-pager aprovado: se um comentário contradiz o que o "
+                   "one-pager decide — habilidade, tempo, texto que a criança ou o professor lê, número, regra de "
+                   "mecânica —, não aplique; registre `[CONFLITO — parecer × one-pager aprovado: …]` para o PO "
+                   "decidir em produto.", ""]
         for p in validos:
             marca = " — **liberada com exceção** (havia gate 🔴)" if p.get("excecao") else ""
             linhas.append(f"### {ROTULO_ETAPA.get(p['etapa'], p['etapa'])} · {p['como']} · {p['quando']}{marca}")

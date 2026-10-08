@@ -1,0 +1,314 @@
+"""Reanálise de 07/10/2026 (noite): o que do one-pager aprovado chega a cada agente, e as conferências novas.
+
+Cada teste reproduz, em miniatura, uma lacuna achada nas 15 sessões do bucket ou na leitura do código: o §4 sem
+proteção, o conteúdo aprovado do dev sem §8/§13/núcleo, o resumido sem conferência, o parâmetro do PO decidido pela
+spec, o PRD ancorado na spec, a spec do D0 sem reconferência, a matriz cega a estados, a base velha depois de refazer
+produto, a fidelidade só em produto, a devolutiva perdida no repasse e o orçamento da banca.
+"""
+
+import asyncio
+import json
+
+from google.adk.agents.base_agent import BaseAgent
+from google.adk.agents.sequential_agent import SequentialAgent
+from google.adk.events.event import Event
+from google.adk.events.event_actions import EventActions
+
+from test_conteudo_aprovado import (
+    ARTEFATOS, FIXTURES, ONE_PAGER, ONE_PAGER_LITERAIS, _codigos, _prd, _rodar, _spec,
+)
+from tools import conteudo_aprovado as ca
+
+S4 = """## 4. As 6 etapas — mecanismo, não intenção
+
+### Etapa 1: Desafiar
+- **O que o estudante vê:** Nina pergunta: *"Antes de abrir as fotos, o que você acha que aconteceu no pátio?"*
+- [A] "Um monstro assustador atacou e quebrou tudo na escola." (Crença do boato)
+- [B] "Alguém inventou uma mentira de propósito para assustar todo mundo."
+- **Quem conduz:** o professor pergunta: "Quem aqui já viu um boato assim na escola?"
+- **Regra do sistema:** define `caminho = "B"` e segue.
+- Se o estudante perguntar algo (ex.: "Por que a foto está borrada no canto?"), a IA responde.
+
+### Etapa 4: Resultado / Aha
+- Balão de Nina: "Uau! Não teve bagunça nenhuma quando a gente separou as pistas!"
+- **Mediação:** "Turma, olhem para a fita que se formou na tela de vocês."
+- Botão "OK".
+
+### Evidência do foco primário (Regra 17)
+| `EF03CO08` | B | **Pergunta:** "Qual frase é verdadeira sobre o que aconteceu no pátio?" |
+"""
+ONE_PAGER_S4 = "# One-pager — O Mistério do Pátio v1\n\n" + S4 + "\n## 5. Verificação de ambiente\nNada.\n"
+
+
+# --------------------------------------------------------------------------- §4: o texto que a tela mostra
+def test_textos_de_tela_do_4_e_o_que_fica_de_fora():
+    """A pergunta da aposta, as alternativas e a fala da personagem entram; fala do professor em sala, exemplo do
+    que o estudante diria, aspas de código e o bloco de evidência (o Canal B tem conferência própria) ficam fora."""
+    assert ca.textos_de_tela(ONE_PAGER_S4) == [
+        "Antes de abrir as fotos, o que você acha que aconteceu no pátio?",
+        "Um monstro assustador atacou e quebrou tudo na escola.",
+        "Alguém inventou uma mentira de propósito para assustar todo mundo.",
+        "Uau! Não teve bagunça nenhuma quando a gente separou as pistas!",
+    ]
+    assert ca.literais(ONE_PAGER_S4)["texto_tela"] == ca.textos_de_tela(ONE_PAGER_S4)
+    # a missão real do 9º ano: botões, títulos, mensagens da IA e o caso de transferência
+    assert len(ca.textos_de_tela((FIXTURES / "one_pager.md").read_text(encoding="utf-8"))) == 16
+
+
+def test_copy_sem_o_texto_de_tela_fica_amarela_e_a_proposta_conta():
+    tela = ca.textos_de_tela(ONE_PAGER_S4)
+    assert ca.validar_copy("\n".join(tela), ONE_PAGER_S4) == []
+    so_um = ca.validar_copy(tela[0], ONE_PAGER_S4)
+    assert [(a["codigo"], a["severidade"], a["agente_responsavel"]) for a in so_um] == [
+        ("texto-de-tela-reescrito", "atencao", "copy-ptbr-revisao")]
+    # a proposta que cita o texto aprovado entre aspas conta: o PO vê as duas redações e decide
+    proposta = "\n".join(tela[1:]) + f"\n[PROPOSTA — validar com PO: «{tela[0]}» → «O que houve no pátio?» · teto de palavras]"
+    assert ca.validar_copy(proposta, ONE_PAGER_S4) == []
+
+
+def test_design_e_dev_recebem_o_nucleo_e_o_banco_nao_le_o_nucleo_antigo():
+    from agents.design import build_design_stage
+    from agents.dev import build_dev_stage
+    from prompts import load_prompt
+
+    assert {1, 3, 4, 8, 13} <= set(ca.SECOES_DESIGN)
+    design, dev = build_design_stage().sub_agents[0], build_dev_stage().sub_agents[0]
+    assert design.secoes == list(ca.SECOES_DESIGN) and dev.name == "A33aConteudoAprovadoDev"
+    # o dev regravava a chave só com as seções do PRD: banca e retrabalhos de design perdiam §8, §13 e o núcleo
+    assert dev.secoes == list(ca.SECOES_DESIGN)
+    banco = load_prompt("dev/35b_banco_conteudo.md")
+    assert "{nucleo_narrativo" not in banco and "{conteudo_aprovado?}" in banco
+    for prompt in ("design/24_copy_ptbr.md", "design/27_copy_revisao.md"):
+        assert "§4" in load_prompt(prompt) and "PROPOSTA — validar com PO: «texto aprovado»" in load_prompt(prompt), prompt
+
+
+# --------------------------------------------------------------------------- a spec não decide no lugar do PO
+def test_spec_que_decide_parametro_do_po_volta_ao_autor():
+    op = ONE_PAGER + "\n## 8. Estados de falha\n- Inatividade: dica após `[PARÂMETRO — a definir por produto: tempo de inatividade de 45 segundos]`.\n"
+    decidida = _spec() + "\n- Inatividade: após 45 segundos sem interação, a dica aparece.\n"
+    assert "parametro-decidido" in _codigos(ca.validar_spec(decidida, op))
+    marcada = _spec() + "\n- Inatividade: após 45 segundos `[PARÂMETRO — a definir por produto: inatividade]`.\n"
+    registrada = _spec() + "\n- Inatividade: 45 s, ratificado no [D0-3].\n"
+    for spec in (marcada, registrada, _spec()):
+        assert "parametro-decidido" not in _codigos(ca.validar_spec(spec, op))
+    assert ca.parametros_decididos("- Inatividade: 45 s sem toque, a dica pisca.", op)
+
+
+# --------------------------------------------------------------------------- o resumido que o time aprova
+def test_resumido_conferido_contra_o_canonico():
+    spec = "## 11. Currículo\n`EF01CO01`\n"
+    lit = ca.literais(ONE_PAGER_LITERAIS)["canal_b"]
+    fiel = "## 2. Componente curricular\n`EF01CO01`\n\n## 6. Contrato de evidência\n" + "\n".join(f'"{t}"' for t in lit)
+    assert ca.validar_resumido(fiel, spec, ONE_PAGER_LITERAIS)["status"] == "aprovado"
+    parafraseado = "## 2. Componente curricular\n`EF01CO01`\n\n## 6. Contrato\nA criança escolhe por que as fotos combinam."
+    assert _codigos(ca.validar_resumido(parafraseado, spec, ONE_PAGER_LITERAIS)) == ["canal-b-reescrito"]
+    # citar numa proposta de incluir não é acrescentar; afirmar é
+    proposta = fiel + "\n`EF01CO03` [PROPOSTA — validar com PO: incluir a EF01CO03]"
+    assert ca.validar_resumido(proposta, spec, ONE_PAGER_LITERAIS)["status"] == "aprovado"
+    afirmada = fiel + "\nTambém exercita `EF01CO03`."
+    r = ca.validar_resumido(afirmada, spec, ONE_PAGER_LITERAIS)
+    assert _codigos(r) == ["habilidade-acrescentada"] and r["achados"][0]["agente_responsavel"] == "one-pager-resumido"
+    # o tempo em tela do canônico (29 min), não o de um parecer
+    outro_tempo = "`EF06CO10` `EF06CO01` `EF06CO03` `EF06CO07` — 24 minutos em tela."
+    assert _codigos(ca.validar_resumido(outro_tempo, _spec(), ONE_PAGER)) == ["tempo-alterado"]
+
+
+def test_resumido_em_loop_e_o_prompt_manda_o_canonico_vencer():
+    from agents.produto import build_produto_stage
+    from prompts import load_prompt
+
+    loop = build_produto_stage().sub_agents[-1]
+    assert loop.name == "OnePagerResumidoLoop"
+    assert [a.name for a in loop.sub_agents] == ["A16bOnePagerResumido", "A16eConteudoAprovadoResumido", "A16fResumidoRodada"]
+    prompt = load_prompt("produto/16b_one_pager_resumido.md")
+    assert "a spec vence e você registra" not in prompt and "**vale o canônico**" in prompt
+    assert "{conteudo_aprovado_resumido_report?}" in prompt
+
+
+# --------------------------------------------------------------------------- PRD ancorado no one-pager
+def test_prd_e_pedagogico_conferidos_contra_o_one_pager_mesmo_com_a_spec_divergente():
+    """Com a spec sem a EF06CO07 (loop esgotado, exceção do admin), o PRD fiel ao one-pager recebia «tire-a»."""
+    spec_sem = _spec(codigos=("EF06CO10", "EF06CO01", "EF06CO03"))
+    fiel = ca.com_anexo(_prd(), ONE_PAGER, ca.SECOES_PRD)
+    assert "habilidade-acrescentada" not in _codigos(ca.validar_prd(fiel, spec_sem, ONE_PAGER, ARTEFATOS))
+    sem = ca.com_anexo(_prd(codigos_14=("EF06CO10", "EF06CO01", "EF06CO03")), ONE_PAGER, ca.SECOES_PRD)
+    r = ca.validar_prd(sem, spec_sem, ONE_PAGER, ARTEFATOS)
+    perdida = next(a for a in r["achados"] if a["codigo"] == "habilidade-perdida")
+    assert "`EF06CO07`" in perdida["resumo"] and "one-pager aprovado" in perdida["resumo"]
+    # sem código no one-pager, a referência volta a ser o bloco 11
+    assert ca.habilidades_de_referencia(_spec(), "# One-pager\n## 2. Currículo\nA definir.\n")[1] == "o bloco 11 da spec"
+    # e também quando a spec deixou o currículo pendente: o código do one-pager que a lista oficial recusou não é cobrado
+    pendente = _spec().replace("## 11. Currículo", "## 11. Currículo\n[ABERTO — dono: produto: EF06CO07 fora da lista do ano]")
+    assert ca.habilidades_de_referencia(pendente, ONE_PAGER)[1] == "o bloco 11 da spec"
+
+
+def test_spec_consolidada_so_acusa_o_que_o_d0_piorou():
+    gate0 = _spec(codigos=("EF06CO10", "EF06CO01", "EF06CO03"))  # já divergia em produto: decidido lá
+    assert ca.validar_spec_consolidada(gate0, gate0, ONE_PAGER)["status"] == "aprovado"
+    consolidada = gate0.replace("**29 minutos**", "**25 minutos**")  # o D0 trocou o tempo
+    r = ca.validar_spec_consolidada(consolidada, gate0, ONE_PAGER)
+    assert [a["codigo"] for a in r["achados"]] == ["tempo-alterado"]
+    assert r["achados"][0]["agente_responsavel"] == "fecha-lacunas" and r["achados"][0]["etapa"] == "design"
+
+    from agents.design import MAPA_RETRABALHO, build_design_stage
+
+    nomes = [a.name for a in build_design_stage().sub_agents]
+    assert nomes.index("A20AmbienteSimuladoSplit") + 1 == nomes.index("A20bSpecConsolidada")
+    assert MAPA_RETRABALHO["fecha-lacunas"][-1] == "A20bSpecConsolidadaRetrabalho"
+
+
+# --------------------------------------------------------------------------- refazer produto: o que mudou
+class _Marca(BaseAgent):
+    async def _run_async_impl(self, ctx):
+        feitos = list(ctx.session.state.get("feitos") or []) + [self.name]
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta={"feitos": feitos}))
+
+
+def test_o_que_mudou_no_one_pager_chega_aos_autores_com_a_versao_anterior():
+    from agents.base import create_llm_agent
+    from agents.checkers import ConteudoAprovadoAgent
+    from pipeline.reexecucao import preparar_estado
+
+    def rodar(estado):
+        return asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[
+            ConteudoAprovadoAgent(name="C", secoes=[10], chave_base="base_teste")]), estado))
+
+    primeira = rodar({"one_pager": ONE_PAGER})
+    assert primeira["mudancas_no_aprovado"] == "" and "Em tela: 29 min" in primeira["base_teste"]
+    refeito = ONE_PAGER.replace("Em tela: 29 min", "Em tela: 25 min")
+    segunda = rodar({**primeira, "one_pager": refeito})
+    assert "antes: **Tempo de aula: 50 min · Em tela: 29 min**" in segunda["mudancas_no_aprovado"]
+    assert "agora: **Tempo de aula: 50 min · Em tela: 25 min**" in segunda["mudancas_no_aprovado"]
+    assert rodar(segunda)["mudancas_no_aprovado"] == "", "sem mudança nova, nada a dizer"
+
+    autor = create_llm_agent(name="X", instruction="Escreva.", description="d", output_key="jornada_telas")
+    assert "{anterior_jornada_telas?}" in autor.instruction and "{mudancas_no_aprovado?}" in autor.instruction
+    gate = create_llm_agent(name="Y", instruction="Julgue.", description="d", output_key="qa_entregaveis_report")
+    assert "{mudancas_no_aprovado?}" not in gate.instruction
+    # o retrato sobrevive ao refazer de produto; a lista de mudanças, não
+    limpo, _ = preparar_estado({"one_pager": "x", "conteudo_aprovado_base_design": "b", "mudancas_no_aprovado": "m"},
+                               "produto")
+    assert "mudancas_no_aprovado" not in limpo and limpo["conteudo_aprovado_base_design"] == "b"
+
+
+# --------------------------------------------------------------------------- pedidos do PO, por etapa
+def test_cada_etapa_confere_o_refazer_que_foi_pedido_a_ela():
+    from agents.checkers import FidelidadeCheckAgent
+
+    pedidos = [
+        {"origem": "refazer Produto", "etapa": "produto",
+         "texto": "AJUSTE 1 — a descoberta central passa a falar de bolha de filtro no feed"},
+        {"origem": "refazer Design", "etapa": "design",
+         "texto": "AJUSTE 1 — o botão da tela E3-ALU-02 diz Enviar a minha resposta agora"},
+    ]
+    estado = {"pedidos_do_po": pedidos, "pedido_correcao": "AJUSTE 9 — um pedido da execução corrente que é de produto",
+              "briefing": "", "copy_strings_revisada": "a copy", "one_pager": "o one-pager"}
+
+    def origens(**campos):
+        f = FidelidadeCheckAgent(name="F", status_key="f_status", report_key="f_report", **campos)
+        final = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[f]), dict(estado)))
+        return final["f_status_envelope"]["achados"]
+
+    design = origens(documentos=["copy_strings_revisada"], etapas_pedido=["design"], com_briefing=False,
+                     incluir_corrente=False, etapa="design")
+    assert {a["origem"] for a in design} == {"refazer Design"} and {a["etapa"] for a in design} == {"design"}
+    produto = origens(documentos=["one_pager"], etapas_pedido=["produto", ""])
+    assert {a["origem"] for a in produto} == {"refazer Produto", "pedido de correção desta execução"}
+
+    from agents.design import build_design_stage
+    from agents.dev import build_dev_stage
+
+    assert build_design_stage().sub_agents[-1].name == "A33cFidelidadeDesign"
+    assert build_dev_stage().sub_agents[-1].name == "A51FidelidadeDev"
+
+
+def test_devolutiva_que_achou_o_problema_chega_ao_refazer_e_o_conteudo_muda_em_produto():
+    from pipeline import passagem
+    from test_passagem import COMENTARIO, DESIGN, ESTADO_VERDE, PO
+
+    pareceres = [
+        {"etapa": "design", "acao": "devolver", "como": "dev", "quando": "07/10/2026 10:00:00",
+         "comentario": "29 × 24 min em tela, e falta a EF06CO07 no PRD"},
+        {"etapa": "produto", "acao": "devolver", "como": "design", "quando": "07/10/2026 11:00:00",
+         "comentario": "A causa é a mecânica do one-pager, não o design"},
+    ]
+    fluxo = {**passagem.novo_fluxo(), "etapa": "produto", "situacao": passagem.DEVOLVIDA, "pareceres": pareceres}
+    _, efeito = passagem.aplicar(fluxo, passagem.REFAZER, PO, "Refaça a mecânica e mantenha a EF06CO07 no contrato.",
+                                 ESTADO_VERDE)
+    assert "29 × 24 min em tela" in efeito.pedido and "A causa é a mecânica" in efeito.pedido
+
+    # em design, mudança de conteúdo aprovado vai a produto, não ao refazer
+    aguardando = {**passagem.novo_fluxo(), "etapa": "design", "situacao": passagem.AGUARDANDO}
+    try:
+        passagem.aplicar(aguardando, passagem.DE_ACORDO, DESIGN,
+                         COMENTARIO + " Pergunta 1 passa a ser outra, bem diferente.", ESTADO_VERDE)
+        assert False, "de acordo com mudança de conteúdo deveria ser recusado"
+    except passagem.DecisaoInvalida as e:
+        assert "Devolver" in str(e)
+
+    notas = passagem.notas_de_passagem({"pareceres": [
+        {"etapa": "produto", "acao": passagem.DE_ACORDO, "como": "produto", "quando": "1", "comentario": COMENTARIO},
+        {"etapa": "design", "acao": passagem.REFAZER, "como": "design", "quando": "2", "comentario": COMENTARIO}]})
+    assert "CONFLITO — parecer × one-pager aprovado" in notas and "CONFLITO — pedido do PO × one-pager aprovado" in notas
+
+
+# --------------------------------------------------------------------------- banca de dev
+def test_orcamento_conta_so_chamada_de_modelo_e_o_conserto_pulado_vai_ao_dossie():
+    from agents.checkers import KEY_REEXECUCOES, KEY_TICKETS_SEM_ROTA, DespachoTicketsAgent
+    from config import get_settings
+
+    envelope = {"status": "bloqueado", "achados": [{"id": "B1", "severidade": "bloqueio", "codigo": "DES-02",
+                                                     "agente_responsavel": "jornada", "resumo": "jornada sem a tela"}]}
+    teto = get_settings().orcamento_reexecucoes
+
+    def rodar(gastos):
+        derivados = [f"P{i}" for i in range(6)]
+        despacho = DespachoTicketsAgent(
+            name="D", rotulo="Banca", report_key="banca", mapa={"jornada": ["J"]}, ordem=["jornada"],
+            posfixo_por_dono={"jornada": derivados}, sub_agents=[_Marca(name="J")] + [_Marca(name=n) for n in derivados])
+        return asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[despacho]),
+                                  {"banca": "```json\n" + json.dumps(envelope) + "\n```", KEY_REEXECUCOES: gastos}))
+
+    # resta 1 no orçamento: o ticket da jornada custa 1; os seis determinísticos que derivam dela não custam
+    assert rodar(teto - 1)["feitos"] == ["J", "P0", "P1", "P2", "P3", "P4", "P5"]
+    pulado = rodar(teto)
+    assert not pulado.get("feitos")
+    assert [(r["id"], r["dono"]) for r in pulado[KEY_TICKETS_SEM_ROTA]] == [("B1", "jornada")]
+
+
+def test_banca_conserta_na_ordem_do_design_e_reconfere_o_que_reescreve():
+    from agents.dev import MAPA_BANCA, ORDEM_BANCA, POSFIXO_BANCA, build_dev_stage
+
+    assert ORDEM_BANCA.index("telas") < ORDEM_BANCA.index("copy-ptbr-revisao")
+    assert MAPA_BANCA["copy-ptbr-revisao"] == ["A27CopyRevisaoRetrabalhoBanca", "A27bCopyPreservadaRetrabalhoBanca"]
+    assert POSFIXO_BANCA["banco-conteudo"] == ["A35cConteudoCheckRetrabalhoBanca"]
+    assert "A36TelemetriaCheckRetrabalhoBanca" in POSFIXO_BANCA["handoff-dev"] + POSFIXO_BANCA["jornada"]
+    banca = next(a for a in build_dev_stage().sub_agents if a.name == "BancaLoop")
+    despacho = next(a for a in banca.sub_agents if a.name == "A46DespachoBanca")
+    conferencias = {s.name: s for s in despacho.sub_agents}
+    assert conferencias["A35cConteudoCheckRetrabalhoBanca"].status_key == "conteudo_status"
+    assert conferencias["A36TelemetriaCheckRetrabalhoBanca"].status_key == "telemetria_status"
+
+
+def test_matriz_final_no_semaforo_de_dev_e_a_do_design_no_de_design():
+    from agents.dev import build_dev_stage
+    from pipeline import passagem
+    from pipeline.artifacts import ARTIFACT_FILES
+
+    a50 = next(a for a in build_dev_stage().sub_agents if a.name == "A50Rastreabilidade")
+    assert (a50.report_key, a50.status_key) == ("rastreabilidade_dev_report", "rastreabilidade_dev_status")
+    assert "rastreabilidade_dev_status" in passagem.chaves_da_etapa("dev")
+    assert "rastreabilidade_status" in passagem.chaves_da_etapa("design")
+    estado = {"rastreabilidade_status": "aprovado", "rastreabilidade_dev_status": "bloqueado"}
+    assert passagem.semaforo_da_etapa(estado, "dev").get("rastreabilidade_dev_status") == "🔴"
+    # o arquivo é o mesmo: a final, quando existe, substitui a do design
+    assert [k for k, f in ARTIFACT_FILES if f == "matriz-de-rastreabilidade.md"] == [
+        "rastreabilidade_report", "rastreabilidade_dev_report"]
+
+
+def test_triagem_manda_a_produto_o_que_o_one_pager_fixa():
+    texto = (FIXTURES.parent.parent / "prompts" / "transversal" / "00_triagem_correcao.md").read_text(encoding="utf-8")
+    linha_spec = next(l for l in texto.splitlines() if l.startswith("| `spec`"))
+    linha_produto = next(l for l in texto.splitlines() if l.startswith("| `produto`"))
+    assert "códigos BNCC do bloco 11" not in linha_spec
+    assert "§12a" in linha_produto and "Canal B" in linha_produto and "PARÂMETRO" in linha_produto

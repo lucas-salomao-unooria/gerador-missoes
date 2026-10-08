@@ -73,6 +73,10 @@ CHAVES_DEV = frozenset({
     "conteudo_aprovado_pedagogico_report", "conteudo_aprovado_pedagogico_status",
     "conteudo_aprovado_pedagogico_status_envelope", "pedagogico_rodada",
     "juiz_telemetria_saida",
+    # o refazer de dev conferido nos documentos de dev (07/10/2026)
+    "fidelidade_dev_report", "fidelidade_dev_status", "fidelidade_dev_status_envelope", "juiz_fidelidade_dev_saida",
+    # a matriz final, com chave própria para entrar no semáforo de dev (07/10/2026)
+    "rastreabilidade_dev_report", "rastreabilidade_dev_status", "rastreabilidade_dev_status_envelope",
 })
 #: `miro_board` fica de fora de propósito: o espelho atualiza o mesmo board em vez de abrir outro.
 CHAVES_DESIGN = frozenset({
@@ -90,6 +94,12 @@ CHAVES_DESIGN = frozenset({
     "rastreabilidade_report", "rastreabilidade_status", "rastreabilidade_status_envelope",
     "stitch_status", "stitch_status_envelope",
     "qa_afirmacoes_report", "qa_afirmacoes_status", "qa_afirmacoes_status_envelope",
+    # o refazer de design conferido nos documentos de design (07/10/2026)
+    "fidelidade_design_report", "fidelidade_design_status", "fidelidade_design_status_envelope",
+    "juiz_fidelidade_design_saida",
+    # a spec consolidada pelo D0/D9 × one-pager aprovado (07/10/2026)
+    "conteudo_aprovado_spec_design_report", "conteudo_aprovado_spec_design_status",
+    "conteudo_aprovado_spec_design_status_envelope",
 }) | CHAVES_DEV
 #: `spec_missao_gate0` tem de cair: o split do D0 só grava esse backup se ele não existir
 #: (`agents/checkers.py`, SecaoSplitAgent) — senão a spec velha seria preservada como "original".
@@ -107,6 +117,9 @@ CHAVES_SPEC = frozenset({
     "juiz_perguntas_rodada", "juiz_evidencia_saida",
     "rastro_spec_report", "rastro_spec_status", "rastro_spec_status_envelope",
     "conteudo_aprovado_spec_report", "conteudo_aprovado_spec_status", "conteudo_aprovado_spec_status_envelope",
+    # o resumido × canônico aprovado (07/10/2026): sem apagar, a correção começava com as rodadas esgotadas
+    "conteudo_aprovado_resumido_report", "conteudo_aprovado_resumido_status",
+    "conteudo_aprovado_resumido_status_envelope", "resumido_rodada",
 }) | CHAVES_DESIGN
 #: Tudo que a etapa de produto grava. Ficam de fora, de propósito, o que ela LÊ da geração original:
 #: `briefing`, `perguntas_po` e `material_anexado` — refazer produto é refazê-lo sobre o mesmo pedido
@@ -121,7 +134,9 @@ CHAVES_PRODUTO = frozenset({
     "juiz_fidelidade_nucleo_saida",
     "nucleo_rodada",
     "missoes_vizinhas", "catalogo_indice_status", "catalogo_indice_status_envelope",
-    "one_pager", "brief_escopo", "brief_escopo_status", "brief_escopo_status_envelope",
+    # `one_pager_gate0` só é gravado se não existe (`agents.callbacks.preservar_one_pager`): sem cair aqui, o
+    # «one-pager original» de um refazer de produto continuava sendo o da missão anterior
+    "one_pager", "one_pager_gate0", "brief_escopo", "brief_escopo_status", "brief_escopo_status_envelope",
     "contrato_produto_report", "contrato_produto_status", "contrato_produto_status_envelope",
     "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_status_envelope", "gate_estrutural_rodada",
     "avaliacao_pedagogica_report", "avaliacao_status", "avaliacao_status_envelope",
@@ -139,8 +154,11 @@ CHAVES_TRANSVERSAL = frozenset({
 #: Contadores da execução anterior. `reexecucoes` é o orçamento de retrabalho da banca: sem zerar,
 #: uma sessão que já gastou o teto chega à correção sem direito a conserto.
 #: `tickets_sem_rota` acumula: sem zerar, o dossiê da correção listaria pendências da execução velha.
+#: `mudancas_no_aprovado` é recalculada no começo de design e de dev; em produto ela não vale. Os retratos que
+#: a originam (`conteudo_aprovado_base_design`, `conteudo_aprovado_base_dev`) ficam de propósito fora de toda
+#: lista: têm de sobreviver ao refazer de produto para dizer o que mudou nele.
 CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_rota", "juiz_achados_entrada",
-                             "fidelidade_entrada", "fidelidade_documentos",
+                             "fidelidade_entrada", "fidelidade_documentos", "mudancas_no_aprovado",
                              KEY_AGENTES_DEGRADADOS})
 
 #: Documentos escritos por um AUTOR (não por gate). Quando uma reexecução os apaga, a versão que
@@ -193,6 +211,10 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Rastro de lacunas da spec": "spec",
     "Spec × one-pager aprovado": "spec",
     "Spec da missão": "spec",
+    # o resumido roda no fim da correção a partir da spec: refazer spec o refaz
+    "Resumido × one-pager aprovado": "spec",
+    "One-pager resumido": "spec",
+    "Spec consolidada × one-pager aprovado": "design",
     "Fechamento de lacunas (D0)": "design",
     "Ambiente simulado (D9)": "design",
     "QA de entregáveis (design)": "design",

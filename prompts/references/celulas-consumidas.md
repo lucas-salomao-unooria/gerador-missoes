@@ -163,13 +163,20 @@ O `A16dConteudoAprovadoDesign` copia estas seções, sem reescrita, para `conteu
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
+| §1 Descoberta central e anatomia do aha (1.1 conceitos vividos em tela, 1.2 anatomia do aha, 1.3 conta da virada) — espelho: bloco 1 | D3 (a virada vira o estado do pico), D5 (a tela do aha mostra a consequência que a 1.2 descreve), D7 (D2: a virada chega à tela) | A virada e os números do núcleo só chegavam pela spec; o banco de conteúdo lia o núcleo de antes da revisão do one-pager |
 | §2 Currículo — espelho: bloco 11 | D7 (D2 curricular; confere o design contra o aprovado) | O código que o PO aprovou some (exp06ef1b perdeu a EF06CO07 seguindo um parecer que o PO recusou) |
+| §3 Narrativa e personagem-guia — espelho: bloco 1 e glossário canônico | D4b (a voz da personagem na prancha), D6 (falas da personagem palavra por palavra), D7 | O nome e a voz da personagem mudavam de um documento para outro |
+| §4 As 6 etapas — mecanismo e o que a tela mostra — espelho: bloco 2 | D3 (o que acontece em cada etapa e em que ordem; o detalhe de estado segue a spec), D4b (a pergunta da aposta e as alternativas na prancha), D5 (o texto entre aspas é o que a tela exibe), D6 (texto de tela palavra por palavra), D7 (confere contra o conteúdo aprovado) | A spec levava 81 de 153 textos de tela do §4 nas dez sessões de outubro, e o protótipo de 18% a 45% (07/10/2026) |
+| §6 Verbos e affordances — espelho: bloco 4 | D3 (cada gesto vira aresta), D4b (modo de resposta alternativo ao gesto), D5 (a affordance aparece na tela), D7 | O gesto que o one-pager aprovou trocava de forma entre fluxo e telas |
+| §7 Caminhos degenerados — espelho: bloco 3 | D3 (cada caminho degenerado vira aresta de tratamento), D5 (o estado de tela do tratamento), D6 (a copy do tratamento), D7 | A spec levava 26 de 41 textos do §7 (dez sessões de outubro); fluxo e telas os viam só por ela |
 | §8 Estados de falha — espelho: 2.modos de erro e 2.falha de mídia | D3 (nós de falha), D4b (falha de áudio → prancha), D5 (frame de falha), D6 (string por estado de falha), D7 (D5) | A falha de mídia não chegava a tela nenhuma (07/10/2026) |
 | §9 Papel do professor e parametrização com IA (9a preparo, 9b três aulas, roteiro do debate) — espelho: bloco 8 | D3 (travas e liberações viram estados e arestas), D4b (perguntas do debate lidas como estão), D5 (telas do professor: preparo, travas, painel), D6 (perguntas do debate palavra por palavra), D7 (D6b: contagem de preparo do 9a) | Na exp01ef1b se perderam as travas do professor e a redação do debate |
 | §10 Modularidade, tempos sugeridos e controle do professor — espelho: 6.tempos e formatos de aula | D3 (checkpoints e cenários de aula), D7 (D4 e D5: duração e checkpoints) | O tempo em tela muda sem o PO (exp06ef1b: 29 → 24 min; exp04ef1b: 29 → 25) |
 | §11 Podcast de recapitulação — espelho: 8.podcast | D4 (falas literais, pelo one-pager), D6 (falas palavra por palavra), D7 | A copy reescreve as falas (exp01ef1b: as 9) e o banco grava outro roteiro |
 | §12 Evidências e dados, com o contrato de evidência por habilidade (12a, Canal B) — espelho: bloco 9 e matriz do bloco 11 | D4b (Canal B sem paráfrase), D6 (Canal B palavra por palavra), D7 | O Canal B se perde no caminho (exp06ef1b: nenhuma das quatro perguntas chegou ao PRD) |
 | §13 Cenários de dispositivo — espelho: bloco 10 | D2 (pelo one-pager, como contexto), D4b (dispositivo compartilhado e projeção), D5 (degradado e projeção), D7 (D5: três cenários) | Fluxo, CAA, telas e QA não liam projeção nem 2 a 4 por aparelho (07/10/2026) |
+| §14 Guardrails e IA — espelho: bloco 5 (ausências declaradas) e bloco 8 (IA) | D6 (sem rótulo pejorativo, sem ranking, o que a IA não diz), D7 | A spec levava 2 de 11 textos do §14 (dez sessões de outubro) |
+| §15 Tetos aplicados à faixa — espelho: bloco 6 | D5 (densidade por tela), D6 (teto de palavras por string), D7 | A revisão da copy não via o teto da faixa que o PO aprovou |
 | §17 Hipóteses de validação — sem espelho na spec | D7 (cada hipótese com a tela ou o evento que a observa) | — |
 
 ## Bloco 13 — Decisões D0

@@ -510,7 +510,7 @@ class QaAfirmacoesAgent(BaseAgent):
         # e os de lint, consistência e preservação da spec: dependiam de o QA ler o relatório e escrever o
         # ticket, e o protótipo nem tinha rota (auditoria de 07/10/2026)
         for chave in ("stitch_status", "cobertura_telas_status", "prototipo_lint_status", "consistencia_status",
-                      "lacunas_status", "ambiente_status"):
+                      "lacunas_status", "ambiente_status", "conteudo_aprovado_spec_design_status"):
             if str(state.get(chave, "")) == "bloqueado":
                 envelope_gate = state.get(f"{chave}_envelope") or {}
                 for a in envelope_gate.get("achados") or []:
@@ -955,7 +955,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico
+    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico | aprovado_resumido | aprovado_spec_design
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -1034,6 +1034,9 @@ class RastroCheckAgent(BaseAgent):
                                                                str(state.get("one_pager", "") or ""))
             if any(a["severidade"] == "bloqueio" for a in resultado["achados"]):
                 resultado["status"] = "bloqueado"
+            elif resultado["achados"] and resultado["status"] == "aprovado":
+                # o texto de tela do §4 reescrito é 🟡: sem isto o achado ia ao relatório com a etapa ✅
+                resultado["status"] = "amarelo"
             relatorio = cons.relatorio(resultado, missao)
         elif self.modo == "conteudo":
             # O banco escrito contra o brief que o declara, e o Status do brief contra o vocabulário: na
@@ -1085,7 +1088,7 @@ class RastroCheckAgent(BaseAgent):
                 + "\n\n```json\n" + json.dumps({"agente": "prd-check", "missao": missao, "status": resultado["status"],
                                                  "achados": resultado["achados"]}, ensure_ascii=False) + "\n```\n"
             )
-        elif self.modo in ("aprovado_spec", "aprovado_prd", "aprovado_pedagogico"):
+        elif self.modo in ("aprovado_spec", "aprovado_prd", "aprovado_pedagogico", "aprovado_resumido"):
             # O documento contra o one-pager que o PO aprovou: habilidades, tempo em tela, podcast e, no
             # PRD e no pedagógico, os caminhos de artefato. A exp06ef1b perdeu uma habilidade e cinco
             # minutos de tela na spec, e o PRD seguiu a spec sem nenhum gate acusar (06/10/2026).
@@ -1100,6 +1103,10 @@ class RastroCheckAgent(BaseAgent):
                 resultado = ca.validar_prd(str(state.get("prd_final", "") or ""), spec, one_pager,
                                            caminhos_de_artefato())
                 documento = "PRD"
+            elif self.modo == "aprovado_resumido":
+                # o resumido é o que o time de produto lê para aprovar; nada o comparava ao canônico (07/10/2026)
+                resultado = ca.validar_resumido(str(state.get("one_pager_resumido", "") or ""), spec, one_pager)
+                documento = "one-pager resumido"
             else:
                 resultado = ca.validar_pedagogico(str(state.get("one_pager_pedagogico", "") or ""), spec,
                                                   one_pager, caminhos_de_artefato())
@@ -1108,11 +1115,21 @@ class RastroCheckAgent(BaseAgent):
             # deixa a etapa 🟡 (exp03ef1b, 07/10/2026: "aprovado pelo PO" sem parecer nenhum)
             from tools import decisoes as dec
 
-            chave = {"aprovado_spec": self.spec_key, "aprovado_prd": "prd_final"}.get(self.modo, "one_pager_pedagogico")
+            chave = {"aprovado_spec": self.spec_key, "aprovado_prd": "prd_final",
+                     "aprovado_resumido": "one_pager_resumido"}.get(self.modo, "one_pager_pedagogico")
             resultado = dec.com_achados(resultado, dec.achados(
                 str(state.get(chave, "") or ""), f"A {documento}" if documento == "spec" else f"O {documento}",
-                dec.ha_registro_do_po(dict(state)), etapa="produto" if self.modo == "aprovado_spec" else "dev"))
+                dec.ha_registro_do_po(dict(state)),
+                etapa="produto" if self.modo in ("aprovado_spec", "aprovado_resumido") else "dev"))
             relatorio = ca.relatorio(resultado, documento, missao)
+        elif self.modo == "aprovado_spec_design":
+            # a spec que o D0 e o D9 reescreveram: só o que eles pioraram, com o dono do D0 (07/10/2026)
+            from tools import conteudo_aprovado as ca
+
+            resultado = ca.validar_spec_consolidada(str(state.get(self.spec_key, "") or ""),
+                                                    str(state.get("spec_missao_gate0", "") or ""),
+                                                    str(state.get("one_pager", "") or ""))
+            relatorio = ca.relatorio(resultado, "spec consolidada", missao)
         else:
             resultado = varrer_lacunas(self.fontes, dict(state), etapa_corrente=self.etapa)
             relatorio = relatorio_lacunas(resultado, self.rotulo, missao, agente=self.agente)
@@ -1212,22 +1229,35 @@ class ConteudoAprovadoAgent(BaseAgent):
 
     chave: str = "conteudo_aprovado"
     secoes: List[int] = Field(default_factory=list)
+    #: Onde guardar o retrato das seções aprovadas que esta etapa leu. Na execução seguinte da etapa, o que mudou
+    #: entre o retrato e o one-pager atual vai para `mudancas_no_aprovado`, que os autores recebem junto da versão
+    #: anterior (`agents/base.py`). A chave fica fora das listas de limpeza: tem de sobreviver ao refazer de produto.
+    chave_base: str = ""
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         from tools import conteudo_aprovado as ca
 
-        texto = ca.secoes_literais(str(ctx.session.state.get("one_pager", "") or ""), self.secoes)
-        if texto:
-            texto = ca.NOTA_CONTEUDO_APROVADO + "\n\n" + texto
+        state = ctx.session.state
+        literal = ca.secoes_literais(str(state.get("one_pager", "") or ""), self.secoes)
+        texto = ca.NOTA_CONTEUDO_APROVADO + "\n\n" + literal if literal else ""
+        delta: Dict[str, Any] = {self.chave: texto}
         msg = (f"📎 Conteúdo aprovado: §{', §'.join(str(n) for n in self.secoes)} do one-pager, literais, para os agentes "
                f"que não leem o one-pager." if texto else "⏭️ Conteúdo aprovado: one-pager sem as seções.")
+        if self.chave_base:
+            mudancas = ca.mudancas_no_aprovado(str(state.get(self.chave_base, "") or ""), literal)
+            delta[ca.KEY_MUDANCAS] = mudancas
+            if literal:
+                delta[self.chave_base] = literal
+            if mudancas:
+                msg += (f" O one-pager mudou desde a última execução desta etapa: {mudancas.count(chr(10) + '- ')} "
+                        "linha(s) vão aos autores junto da versão anterior deles.")
         yield Event(
             invocation_id=ctx.invocation_id,
             author=self.name,
             branch=ctx.branch,
             content=types.Content(role="model", parts=[types.Part(text=msg)]),
-            actions=EventActions(state_delta={self.chave: texto}),
+            actions=EventActions(state_delta=delta),
         )
 
 
@@ -1308,18 +1338,34 @@ class FidelidadeCheckAgent(BaseAgent):
     documentos: List[str] = Field(default_factory=lambda: ["nucleo_narrativo", "one_pager", "spec_missao"])
     entrada_key: str = "fidelidade_entrada"
     documentos_key: str = "fidelidade_documentos"
+    #: Só os pedidos de refazer destas etapas (`pedidos_do_po[].etapa`; `""` = registro antigo, sem etapa); vazio =
+    #: todos. Até 07/10/2026 o checklist de produto juntava os refazer de todas as etapas — o «AJUSTE 1 — botão da
+    #: E3-ALU-02» pedido ao design reprovava o núcleo num refazer de produto seguinte —, e um refazer de design ou
+    #: de dev não era conferido em lugar nenhum. Agora cada etapa confere o que foi pedido a ela.
+    etapas_pedido: List[str] = Field(default_factory=list)
+    #: O `pedido_correcao` corrente entra no checklist. Fora em design e dev: a correção de produto atravessa as
+    #: etapas seguintes na mesma execução, e julgar documento de design por pedido de produto bloquearia o que não
+    #: é dele.
+    incluir_corrente: bool = True
+    #: O briefing entra no checklist só em produto: é lá que ele vira missão.
+    com_briefing: bool = True
+    #: A etapa que os achados levam.
+    etapa: str = "produto"
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         from tools import fidelidade as fid
 
         state = ctx.session.state
-        pedidos = [(str(p.get("origem") or "pedido"), str(p.get("texto") or ""))
-                   for p in (state.get("pedidos_do_po") or []) if isinstance(p, dict)]
+        registrados = [p for p in (state.get("pedidos_do_po") or []) if isinstance(p, dict)]
+        if self.etapas_pedido:
+            registrados = [p for p in registrados if str(p.get("etapa") or "") in self.etapas_pedido]
+        pedidos = [(str(p.get("origem") or "pedido"), str(p.get("texto") or "")) for p in registrados]
         corrente = str(state.get("pedido_correcao", "") or "")
-        if corrente.strip() and not any(_norm_simples(t)[:200] in _norm_simples(corrente) for _, t in pedidos):
+        if (self.incluir_corrente and corrente.strip()
+                and not any(_norm_simples(t)[:200] in _norm_simples(corrente) for _, t in pedidos)):
             pedidos.append(("pedido de correção desta execução", corrente))
-        itens = fid.montar_checklist(pedidos, str(state.get("briefing", "") or ""))
+        itens = fid.montar_checklist(pedidos, str(state.get("briefing", "") or "") if self.com_briefing else "")
         docs = {k: str(state.get(k, "") or "") for k in self.documentos if str(state.get(k, "") or "").strip()}
         missao = extrair_slug(docs.get("spec_missao", "") or docs.get("nucleo_narrativo", "")) or ""
 
@@ -1337,7 +1383,7 @@ class FidelidadeCheckAgent(BaseAgent):
                 yield evento
             saida = str(ctx.session.state.get(getattr(juiz, "output_key", "") or "", "") or "")
 
-        resultado = fid.aplicar(itens, saida, docs)
+        resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa)
         relatorio = fid.relatorio(resultado, itens, missao, self.onde)
         envelope = extrair_envelope(relatorio) or {}
         bloqueios = sum(1 for a in resultado["achados"] if a["severidade"] == "bloqueio")
@@ -1529,11 +1575,25 @@ class DespachoTicketsAgent(BaseAgent):
         # antes de qualquer conserto (auditoria de 07/10/2026).
         from google.adk.agents.llm_agent import LlmAgent
 
+        # Conta quem recebeu ticket e quem é LLM. Até 07/10/2026 a conta só isentava o `posfixo`, e os
+        # determinísticos do `posfixo_por_dono` da banca contavam: um ticket de jornada custava 7 de um orçamento
+        # de 8, com 3 chamadas de modelo de fato, e dois donos de design já pulavam a rodada inteira.
         llm = sum(1 for n in nomes_na_ordem
-                  if n not in self.posfixo or n in por_slug_nomes
+                  if n in por_slug_nomes
                   or isinstance(next((s for s in self.sub_agents if s.name == n), None), LlmAgent))
         if not orcamento_disponivel(state, llm):
             gastos = int(state.get(KEY_REEXECUCOES, 0) or 0)
+            # Cada conserto pulado vai ao dossiê como pendência humana, com o dono. A mensagem prometia isso e nada
+            # o gravava: o redator do PRD seguia sem saber que a banca tinha pedido o conserto.
+            registrados = list(state.get(KEY_TICKETS_SEM_ROTA) or [])
+            vistos = {(r.get("gate"), r.get("id"), r.get("dono")) for r in registrados}
+            for slug in slugs_na_ordem:
+                for achado in por_slug.get(slug) or []:
+                    r = self._sem_rota(achado, slug, "orçamento de retrabalho esgotado nesta execução")
+                    if (r["gate"], r["id"], r["dono"]) not in vistos:
+                        registrados.append(r)
+                        vistos.add((r["gate"], r["id"], r["dono"]))
+            state[KEY_TICKETS_SEM_ROTA] = registrados
             yield Event(
                 invocation_id=ctx.invocation_id,
                 author=self.name,
@@ -1543,7 +1603,7 @@ class DespachoTicketsAgent(BaseAgent):
                     f"nesta execução). Os {len(nomes_na_ordem)} conserto(s) desta rodada ficam para uma pessoa; "
                     "a esteira segue e o diagnóstico final lista cada um com o dono."
                 ))]),
-                actions=EventActions(state_delta={KEY_PIPELINE_BLOQUEADO: True}),
+                actions=EventActions(state_delta={KEY_PIPELINE_BLOQUEADO: True, KEY_TICKETS_SEM_ROTA: registrados}),
             )
             return
 

@@ -320,7 +320,9 @@ def test_etapas_montadas_com_os_gates_e_os_anexos():
 
     dev = build_dev_stage()
     nomes = [a.name for a in dev.sub_agents]
-    assert nomes[-5:] == ["PrdLoop", "A48dAnexoPrd", "OnePagerPedagogicoLoop", "A49cAnexoPedagogico", "A50Rastreabilidade"]
+    # A51 (07/10/2026): o refazer de dev conferido nos documentos de dev
+    assert nomes[-6:] == ["PrdLoop", "A48dAnexoPrd", "OnePagerPedagogicoLoop", "A49cAnexoPedagogico", "A50Rastreabilidade",
+                          "A51FidelidadeDev"]
     prd_loop = next(a for a in dev.sub_agents if a.name == "PrdLoop")
     saida = next(a for a in prd_loop.sub_agents if a.name == "A48PrdRodada")
     assert "conteudo_aprovado_prd_status" in saida.status_keys
@@ -945,14 +947,16 @@ def _cadeia_completa():
 
     telas_ids = do_tipo("tela")
     literais = do_tipo("canal_b", "roteiro", "podcast")
+    textos_de_tela = do_tipo("texto_tela")
     comum = "\n".join(do_tipo("habilidade") + [f"{t} min em tela" for t in do_tipo("tempo")] + ["unoochat"])
     estado.update({
         "spec_missao": estado["spec_missao"] + "\n" + "\n".join(literais) + "\n" + comum,
         "fluxo_arestas": "\n".join(i.replace("-", "_") for i in telas_ids) + "\n" + "\n".join(do_tipo("estado")),
-        "copy_strings_revisada": "\n".join(telas_ids + literais),
+        "copy_strings_revisada": "\n".join(telas_ids + literais + textos_de_tela),
         "wireframes_cobertura": "\n".join(telas_ids),
         "prototipo_arquivo": "<html><body>" + "".join(f'<section data-screen-id="{i}" data-estado="padrão"></section>'
-                                                      for i in telas_ids) + "<script>const t=`" + " ".join(do_tipo("canal_b")) + "`;</script></body></html>",
+                                                      for i in telas_ids) + "<script>const t=`"
+                             + " ".join(do_tipo("canal_b") + textos_de_tela) + "`;</script></body></html>",
         "stitch_links": "| Tela | Link |\n|---|---|\n" + "".join(f"| {i} | x |\n" for i in telas_ids),
         "handoff_dev": "\n".join(telas_ids + [e.split(" · ")[1] for e in do_tipo("evento")]) + "\n" + comum,
         "banco_conteudo": "\n".join(do_tipo("podcast")),
@@ -1006,6 +1010,8 @@ def test_mutacao_a_matriz_pega_cada_perda_plantada():
         "perdido-secao_ds-prd": tirar("prd_final", "unoochat"),
         # um evento da 9.4 que o handoff não instrumenta
         "perdido-evento-handoff": tirar("handoff_dev", texto["evento"][0].split(" · ")[1]),
+        # a copy reescreveu o texto que o §4 põe na tela (a passada 1 perdia mais da metade; reanálise de 07/10/2026)
+        "perdido-texto_tela-copy": tirar("copy_strings_revisada", texto["texto_tela"][0]),
     }
     pegas = {nome: nome in {a["codigo"] for a in rb.matriz(estado)["achados"]} for nome, estado in mutacoes.items()}
     perdidas = [n for n, ok in pegas.items() if not ok]
@@ -1015,6 +1021,21 @@ def test_mutacao_a_matriz_pega_cada_perda_plantada():
     falso = {**base, "prd_final": base["prd_final"].replace(texto["canal_b"][0], "")
              + "\n---\n\n# " + ca.TITULO_ANEXO + "\n\n" + texto["canal_b"][0]}
     assert "perdido-canal_b-prd" not in {a["codigo"] for a in rb.matriz(falso)["achados"]}, "literal no anexo conta"
+
+    # no pedagógico o anexo não salva o corpo: o gate dele (A49b) cobra o Canal B no corpo, e o anexo que a esteira
+    # cola traz o §12 inteiro — contado, a coluna saía sempre ✅
+    so_no_anexo = ca.com_anexo(base["one_pager_pedagogico"].replace(texto["canal_b"][1], ""), base["one_pager"],
+                               ca.SECOES_PEDAGOGICO)
+    assert "perdido-canal_b-pedagogico" in {a["codigo"] for a in rb.matriz({**base, "one_pager_pedagogico": so_no_anexo})["achados"]}
+
+    # estado sem o prefixo `E1_` (6 das 15 specs do bucket): a matriz o vê, como o gate do PRD
+    spec_minusculas = ("## 2. Mecanismo\n\n### Contrato de estados\n\n"
+                       "| Estado inicial | Gatilho | Regra | Estado seguinte |\n|---|---|---|---|\n"
+                       "| `INICIAL_DESAFIO` | `iniciar` | abre | `APOSTA_PENDENTE` |\n"
+                       "| `APOSTA_PENDENTE` | `apostar` | trava | `APOSTA_TRAVADA` |\n")
+    assert rb.estados_da_spec(spec_minusculas) == ["INICIAL_DESAFIO", "APOSTA_PENDENTE", "APOSTA_TRAVADA"]
+    assert rb.estados_da_spec("```markdown\n" + spec_minusculas + "```\n") == ["INICIAL_DESAFIO", "APOSTA_PENDENTE",
+                                                                                "APOSTA_TRAVADA"]
 
 
 def test_conserto_de_design_pedido_pela_banca_refaz_o_que_deriva_dele():

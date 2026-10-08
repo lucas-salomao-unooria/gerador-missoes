@@ -38,6 +38,7 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "fidelidade_status", "rotulo": "Fidelidade ao pedido do PO e ao briefing", "etapa": "produto", "rodada": None},
     {"status": "lacunas_status", "rotulo": "Fechamento de lacunas (D0)", "etapa": "design", "rodada": None},
     {"status": "ambiente_status", "rotulo": "Ambiente simulado (D9)", "etapa": "design", "rodada": None},
+    {"status": "conteudo_aprovado_spec_design_status", "rotulo": "Spec consolidada × one-pager aprovado", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "prototipo_lint_status", "rotulo": "Lint do protótipo (arquivo)", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "consistencia_status", "rotulo": "Coerência entre documentos", "etapa": "design", "rodada": None},
     {"status": "stitch_status", "rotulo": "Telas no Stitch × inventário", "etapa": "design", "rodada": "qa_design_rodada"},
@@ -51,6 +52,9 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "juiz_perguntas_status", "rotulo": "Juiz das perguntas de produto", "etapa": "produto", "rodada": "juiz_perguntas_rodada"},
     {"status": "rastro_spec_status", "rotulo": "Rastro de lacunas da spec", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "conteudo_aprovado_spec_status", "rotulo": "Spec × one-pager aprovado", "etapa": "produto", "rodada": "spec_rodada"},
+    {"status": "conteudo_aprovado_resumido_status", "rotulo": "Resumido × one-pager aprovado", "etapa": "produto", "rodada": "resumido_rodada"},
+    {"status": "fidelidade_design_status", "rotulo": "Fidelidade ao refazer de design", "etapa": "design", "rodada": None},
+    {"status": "fidelidade_dev_status", "rotulo": "Fidelidade ao refazer de dev", "etapa": "dev", "rodada": None},
     {"status": "conteudo_status", "rotulo": "Banco de conteúdo", "etapa": "dev", "rodada": "banco_rodada"},
     {"status": "telemetria_status", "rotulo": "Contrato de telemetria", "etapa": "dev", "rodada": "handoff_rodada"},
     {"status": "rastro_lacunas_status", "rotulo": "Rastro de lacunas", "etapa": "dev", "rodada": None},
@@ -59,7 +63,8 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "kpis_status", "rotulo": "Coerência KPI ↔ evento ↔ tela", "etapa": "dev", "rodada": "prd_rodada"},
     {"status": "conteudo_aprovado_prd_status", "rotulo": "PRD × one-pager aprovado", "etapa": "dev", "rodada": "prd_rodada"},
     {"status": "conteudo_aprovado_pedagogico_status", "rotulo": "Pedagógico × one-pager aprovado", "etapa": "dev", "rodada": "pedagogico_rodada"},
-    {"status": "rastreabilidade_status", "rotulo": "Matriz de rastreabilidade (produto → design → dev)", "etapa": "dev", "rodada": None},
+    {"status": "rastreabilidade_status", "rotulo": "Matriz de rastreabilidade (produto → design)", "etapa": "design", "rodada": None},
+    {"status": "rastreabilidade_dev_status", "rotulo": "Matriz de rastreabilidade (produto → design → dev)", "etapa": "dev", "rodada": None},
 ]
 
 #: Relatórios que não têm portão próprio: o parecer entra no dossiê como ressalva, nunca como
@@ -276,16 +281,19 @@ def artefatos_esperados(state: Dict[str, Any], mapa: Any) -> Dict[str, List[str]
     Documento ausente é sintoma: ou o agente não rodou, ou devolveu vazio. Nos dois casos
     é a primeira coisa que o operador precisa saber.
     """
-    entregues, ausentes = [], []
     pares = mapa.items() if hasattr(mapa, "items") else mapa
+    # Por arquivo: a matriz de rastreabilidade nasce de duas chaves (a do design e a final do dev), e o arquivo
+    # está entregue se qualquer uma delas tem conteúdo.
+    por_arquivo: Dict[str, bool] = {}
     for chave, arquivo in pares:
         # Os dois transversais são escritos depois desta contagem — listá-los como ausentes
         # faria o dossiê acusar a própria falta.
         if chave in _ESCRITOS_DEPOIS:
             continue
         valor = state.get(chave)
-        (entregues if (isinstance(valor, str) and valor.strip()) else ausentes).append(arquivo)
-    return {"entregues": sorted(entregues), "ausentes": sorted(ausentes)}
+        por_arquivo[arquivo] = por_arquivo.get(arquivo, False) or bool(isinstance(valor, str) and valor.strip())
+    return {"entregues": sorted(a for a, ok in por_arquivo.items() if ok),
+            "ausentes": sorted(a for a, ok in por_arquivo.items() if not ok)}
 
 
 def _linha_da_base(state: Dict[str, Any]) -> str:

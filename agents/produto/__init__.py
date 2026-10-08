@@ -40,8 +40,11 @@ Ordem (SequentialAgent):
                                  o de produto volta para a spec, o do PO fica 🟡 no parecer)
   p5g A15gConteudoAprovadoSpec → conteudo_aprovado_spec_status (determinístico: habilidades,
                                  tempo em tela e podcast iguais aos do one-pager aprovado)
-  p6  A16bOnePagerResumido   → one_pager_resumido (o formato curto do time de produto para
-                                 avaliação pedagógica, derivado do canônico e da spec conferida)
+  ┌── OnePagerResumidoLoop (até SPEC_MAX_RODADAS) ─────────────────────────┐
+  │ p6  A16bOnePagerResumido   → one_pager_resumido (o formato curto do time de produto para │
+  │                              avaliação pedagógica, derivado do canônico e da spec conferida) │
+  │ p6b A16eConteudoAprovadoResumido → habilidades, tempo e Canal B × canônico aprovado │
+  └────────────────────────────────────────────────────────────────────────┘
 """
 
 from __future__ import annotations
@@ -282,6 +285,44 @@ def get_one_pager_resumido_agent(**kw) -> LlmAgent:
     )
 
 
+def _resumido_loop(kw: dict, settings) -> LoopAgent:
+    """O resumido ↔ conferência contra o canônico aprovado.
+
+    O resumido é o que o time de produto lê para aprovar a missão; o canônico é o que segue para design e dev.
+    Até 07/10/2026 nada os comparava: em 7 das 15 sessões do bucket o resumido não trazia o Canal B com o texto
+    aprovado, e numa delas declarava outro tempo em tela.
+    """
+    rodadas = max(1, settings.spec_max_rodadas)
+    return LoopAgent(
+        name="OnePagerResumidoLoop",
+        description="One-pager resumido ↔ conferência contra o one-pager canônico aprovado, até bater ou esgotar as rodadas.",
+        max_iterations=rodadas,
+        before_agent_callback=marcar_heranca,
+        sub_agents=[
+            get_one_pager_resumido_agent(**kw),
+            RastroCheckAgent(
+                name="A16eConteudoAprovadoResumido",
+                description="One-pager resumido × canônico aprovado e spec: as habilidades do bloco 11, o tempo em tela do §10 e o Canal B com o texto do §12a. Divergência volta ao autor do resumido.",
+                modo="aprovado_resumido",
+                rotulo="Resumido × one-pager aprovado",
+                report_key="conteudo_aprovado_resumido_report",
+                status_key="conteudo_aprovado_resumido_status",
+                agente="conteudo-aprovado",
+                estrito=settings.esteira_estrita,
+                before_agent_callback=marcar_heranca,
+            ),
+            SaidaDeLoopAgent(
+                name="A16fResumidoRodada",
+                description="Resumido fiel ao canônico encerra o loop; divergente volta ao autor com o relatório.",
+                rotulo="One-pager resumido",
+                status_keys=["conteudo_aprovado_resumido_status"],
+                rodada_key="resumido_rodada",
+                max_rounds=rodadas,
+            ),
+        ],
+    )
+
+
 def get_vizinhas_catalogo_agent(nome: str) -> VizinhasCatalogoAgent:
     """Missões já geradas mais próximas desta. Roda em duas posições: antes do núcleo (filtrando
     pelo briefing) e depois dele, dentro do loop (filtrando pelo que a missão é) — só a segunda
@@ -430,7 +471,7 @@ def build_produto_stage(
             name="ProdutoStage",
             description="Área de Produto — correção a partir da spec: spec ↔ currículo e manifesto → one-pager resumido (núcleo, one-pager e gates preservados da execução anterior).",
             sub_agents=[_build_spec_loop(kw, settings, rodadas_spec), _fidelidade_de_produto(kw),
-                        get_one_pager_resumido_agent(**kw)],
+                        _resumido_loop(kw, settings)],
         )
 
     nucleo_loop = LoopAgent(
@@ -459,7 +500,7 @@ def build_produto_stage(
             ),
             get_fidelidade_check("A03aFidelidadeNucleo", status_key="fidelidade_nucleo_status",
                                  report_key="fidelidade_nucleo_report", documentos=["nucleo_narrativo"],
-                                 onde="núcleo", **kw),
+                                 onde="núcleo", etapas_pedido=list(ETAPAS_DO_PEDIDO_DE_PRODUTO), **kw),
             ProfundidadeCheckAgent(
                 name="A03bProfundidadeCheck",
                 max_rounds=MICRO_GATE_MAX_RODADAS,
@@ -640,7 +681,7 @@ def build_produto_stage(
             _fidelidade_de_produto(kw),
             # Depois da spec, de propósito: o bloco 11 já passou pelo A14, então o resumido
             # copia códigos conferidos em vez dos que a seção 2 do canônico ainda podia trocar.
-            get_one_pager_resumido_agent(**kw),
+            _resumido_loop(kw, settings),
         ],
     )
 
@@ -650,13 +691,19 @@ def _fidelidade_de_produto(kw: Dict[str, Any]):
     Com 🔴 aqui, o *de acordo* de produto é recusado (`pipeline/passagem.py`)."""
     return get_fidelidade_check("A16cFidelidadeProduto", status_key="fidelidade_status", report_key="fidelidade_report",
                                 documentos=["nucleo_narrativo", "one_pager", "spec_missao"],
-                                onde="fim de produto", **kw)
+                                onde="fim de produto", etapas_pedido=list(ETAPAS_DO_PEDIDO_DE_PRODUTO), **kw)
+
+
+#: Os pedidos de refazer que produto confere: os de produto e os registros antigos, sem etapa. O pedido feito a
+#: design ou a dev é conferido no fim daquela etapa (A33c, A51): aqui ele reprovava o núcleo por um botão de tela.
+ETAPAS_DO_PEDIDO_DE_PRODUTO = ("produto", "")
 
 
 #: Agentes do estágio parcial "spec" (correção a partir da spec), na ordem em que rodam.
 SPEC_AGENT_IDS = ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
                   "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
-                  "A15gConteudoAprovadoSpec", "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido"]
+                  "A15gConteudoAprovadoSpec", "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido",
+                  "A16eConteudoAprovadoResumido", "A16fResumidoRodada"]
 
 PRODUTO_METADATA = [
     {"id": "A00bVizinhasCatalogo", "name": "00b · Missões já geradas (determinístico)", "icon": "🗂️", "output_key": "missoes_vizinhas", "prompt_file": None, "description": "Lê o índice de missões e entrega ao núcleo as mais próximas do ano do briefing, para a missão nova não repetir uma anterior."},
@@ -696,6 +743,8 @@ PRODUTO_METADATA = [
     {"id": "A03aFidelidadeNucleo", "name": "03a · Fidelidade ao pedido do PO (núcleo)", "icon": "📌", "output_key": "fidelidade_nucleo_report", "prompt_file": None, "description": "O núcleo contra todos os pedidos de refazer do PO (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) e o briefing: o juiz cita, o código confere. Com 🔴, o núcleo volta ao autor com o relatório."},
     {"id": "A16cFidelidadeProduto", "name": "16c · Fidelidade ao pedido do PO e ao briefing", "icon": "📌", "output_key": "fidelidade_report", "prompt_file": None, "description": "Núcleo, one-pager e spec contra todos os pedidos do PO e o briefing. Pedido sem prova é 🔴 e recusa o de acordo de produto; conflito com regra da esteira vira decisão do PO."},
     {"id": "A16bOnePagerResumido", "name": "16b · One-pager resumido", "icon": "🗂️", "output_key": "one_pager_resumido", "prompt_file": "produto/16b_one_pager_resumido.md", "description": "O one-pager no formato do time de produto para avaliação pedagógica: ficha, ideia, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário e takeaway. Sai em .md, .docx e .html."},
+    {"id": "A16eConteudoAprovadoResumido", "name": "16e · Resumido × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_resumido_report", "prompt_file": None, "description": "As habilidades do bloco 11, o tempo em tela do §10 e o Canal B com o texto do §12a no resumido que o time lê para aprovar. Divergência volta ao autor do resumido."},
+    {"id": "A16fResumidoRodada", "name": "16f · Veredito do resumido (determinístico)", "icon": "🔁", "output_key": "resumido_rodada", "prompt_file": None, "description": "Resumido fiel encerra o loop; divergente volta ao autor com o relatório, até o teto de rodadas."},
 ]
 
 PRODUTO_METADATA_SPEC = [m for m in PRODUTO_METADATA if m["id"] in SPEC_AGENT_IDS]

@@ -59,7 +59,7 @@ from google.adk.agents.loop_agent import LoopAgent
 from google.adk.agents.parallel_agent import ParallelAgent
 from google.adk.agents.sequential_agent import SequentialAgent
 
-from agents.juiz import get_juiz_de_achados
+from agents.juiz import get_fidelidade_check, get_juiz_de_achados
 from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca
 from agents.checkers import (
@@ -74,7 +74,7 @@ from agents.checkers import (
 )
 from config import get_settings
 from prompts import load_prompt
-from tools.conteudo_aprovado import SECOES_PEDAGOGICO, SECOES_PRD
+from tools.conteudo_aprovado import SECOES_DEV, SECOES_PEDAGOGICO, SECOES_PRD
 from tools.rastro import FONTES_DEV
 
 
@@ -186,7 +186,9 @@ MAPA_BANCA = {
     "brief-assets": ["A35BriefAssetsRetrabalhoBanca"],
     "jornada": ["A22JornadaRetrabalhoBanca"],
     "fluxo": ["A23FluxoRetrabalhoBanca"],
-    "copy-ptbr-revisao": ["A27CopyRevisaoRetrabalhoBanca"],
+    # a revisão descarta o que a passada 1 escreveu (prompts, banco curado, podcast): o código reanexa logo depois,
+    # antes de brief e banco consertados na mesma rodada lerem a copy (auditoria da noite de 07/10/2026)
+    "copy-ptbr-revisao": ["A27CopyRevisaoRetrabalhoBanca", "A27bCopyPreservadaRetrabalhoBanca"],
     "telas": ["A26TelasRetrabalhoBanca", "A26bStitchGeracaoRetrabalhoBanca"],
     # PROD-16 confere o banco contra o brief, e o dono não tinha rota: o ticket virava pendência humana
     "banco-conteudo": ["A35bBancoConteudoRetrabalhoBanca"],
@@ -196,15 +198,21 @@ MAPA_BANCA = {
 #: (copy preservada, artefatos, consistência, telas por ID) e o handoff, que a banca vai reler.
 _DERIVADOS_DO_DESIGN = ["A27bCopyPreservadaRetrabalhoBanca", "A28PrototipoRetrabalhoBanca",
                         "A29ArtefatosDesignRetrabalhoBanca", "A29dConsistenciaRetrabalhoBanca",
-                        "A29eCoberturaTelasRetrabalhoBanca", "A34HandoffDevRetrabalhoBanca"]
+                        "A29eCoberturaTelasRetrabalhoBanca", "A34HandoffDevRetrabalhoBanca",
+                        "A36TelemetriaCheckRetrabalhoBanca"]
 POSFIXO_BANCA = {dono: _DERIVADOS_DO_DESIGN for dono in ("jornada", "fluxo", "copy-ptbr-revisao", "telas")}
+# O banco e o handoff reescritos pela banca passavam sem a conferência que tiveram na primeira passada: o podcast
+# do §11 (só o A35c o confere) e o contrato de telemetria (A36). O veredito velho seguia no semáforo de dev.
+POSFIXO_BANCA["banco-conteudo"] = ["A35cConteudoCheckRetrabalhoBanca"]
+POSFIXO_BANCA["handoff-dev"] = ["A36TelemetriaCheckRetrabalhoBanca"]
 
-#: Ordem entre donos: design antes de dev, porque o handoff deriva do design.
+#: Ordem entre donos: design antes de dev, porque o handoff deriva do design. Telas antes da copy, como no
+#: retrabalho do design (`ORDEM_RETRABALHO`): a revisão da copy lê as telas.
 ORDEM_BANCA = [
     "jornada",
     "fluxo",
-    "copy-ptbr-revisao",
     "telas",
+    "copy-ptbr-revisao",
     "handoff-dev",
     "brief-assets",
     "banco-conteudo",  # o banco lê o brief: conserta depois dele
@@ -245,6 +253,7 @@ def _agentes_de_retrabalho_banca(**kw) -> list:
     from agents.checkers import ArtefatosDesignAgent, CoberturaTelasAgent, CopyPreservadaAgent, StitchGeracaoAgent
     from agents.design import get_consistencia_check
 
+    estrito = get_settings().esteira_estrita
     agentes += [
         CopyPreservadaAgent(name="A27bCopyPreservadaRetrabalhoBanca"),
         StitchGeracaoAgent(name="A26bStitchGeracaoRetrabalhoBanca"),
@@ -252,6 +261,19 @@ def _agentes_de_retrabalho_banca(**kw) -> list:
                              description="Reextrai o HTML do protótipo e os links do Stitch depois de um conserto pedido pela banca."),
         get_consistencia_check("A29dConsistenciaRetrabalhoBanca"),
         CoberturaTelasAgent(name="A29eCoberturaTelasRetrabalhoBanca"),
+        # as conferências de dev que a primeira passada teve, de novo sobre o que a banca reescreveu
+        RastroCheckAgent(
+            name="A35cConteudoCheckRetrabalhoBanca",
+            description="O banco reescrito pela banca, conferido de novo: IDs do brief com bloco, Status do brief, falas por estado e o roteiro do podcast do one-pager.",
+            modo="conteudo", rotulo="Banco de conteúdo", report_key="conteudo_report", status_key="conteudo_status",
+            agente="conteudo-check", estrito=estrito,
+        ),
+        RastroCheckAgent(
+            name="A36TelemetriaCheckRetrabalhoBanca",
+            description="O handoff reescrito pela banca, conferido de novo contra o contrato real de evento e as proibições de arquitetura.",
+            modo="telemetria", rotulo="Contrato de telemetria e arquitetura", report_key="telemetria_report",
+            status_key="telemetria_status", estrito=estrito,
+        ),
     ]
     return agentes
 
@@ -270,10 +292,13 @@ def build_dev_stage(
         description="Área de Dev: ficha do manifesto → handoff + brief de assets → banco de conteúdo → telemetria e rastro de lacunas → banca de validação (5 dimensões em paralelo) → consolidação → PRD → pendências do PRD → one-pager pedagógico para validação humana.",
         before_agent_callback=marcar_heranca,
         sub_agents=[
+            # As mesmas seções do design: até 07/10/2026 esta chave era regravada só com as do PRD, e a banca —
+            # e os agentes de design que ela reaciona — perdiam §8, §13 e o núcleo aprovado (§1, §3, §4).
             ConteudoAprovadoAgent(
                 name="A33aConteudoAprovadoDev",
-                description="Grava as seções do one-pager aprovado, literais, para o banco de conteúdo, que não lê o one-pager.",
-                secoes=list(SECOES_PRD),
+                description="Grava as seções do one-pager aprovado, literais — as mesmas do design —, para o banco de conteúdo, a banca e os agentes de design que ela reaciona, que não leem o one-pager.",
+                secoes=list(SECOES_DEV),
+                chave_base="conteudo_aprovado_base_dev",
                 before_agent_callback=marcar_heranca,
             ),
             RastroCheckAgent(
@@ -506,17 +531,30 @@ def build_dev_stage(
                 before_agent_callback=marcar_heranca,
             ),
             # A pergunta do PO, respondida num lugar só: o que o produto especificou chegou ao PRD?
+            # Chaves próprias: a do design (A33b) é do semáforo de design, e a matriz final regravava a mesma chave —
+            # o 🔴 do PRD e do pedagógico não entrava no semáforo de dev, e o de design mudava depois do de acordo.
             RastreabilidadeAgent(
                 name="A50Rastreabilidade",
                 description="Matriz de rastreabilidade final: cada requisito do produto em cada artefato de design e de dev, até o PRD e o pedagógico.",
+                report_key="rastreabilidade_dev_report",
+                status_key="rastreabilidade_dev_status",
                 before_agent_callback=marcar_heranca,
             ),
+            # O refazer de dev, conferido nos documentos de dev: até 07/10/2026 só o de produto tinha conferência.
+            # Sem pedido de refazer de dev, o juiz não roda.
+            get_fidelidade_check("A51FidelidadeDev", status_key="fidelidade_dev_status", report_key="fidelidade_dev_report",
+                                 documentos=FIDELIDADE_DOCUMENTOS_DEV, onde="fim do dev", etapas_pedido=["dev"],
+                                 com_briefing=False, etapa="dev", **kw),
         ],
     )
 
 
+#: Onde o pedido de refazer de dev tem de aparecer: o que o dev escreve.
+FIDELIDADE_DOCUMENTOS_DEV = ["handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico"]
+
+
 DEV_METADATA = [
-    {"id": "A33aConteudoAprovadoDev", "name": "33a · Conteúdo aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado", "prompt_file": None, "description": "As seções do one-pager aprovado, literais, para o banco de conteúdo — que não lê o one-pager e escrevia outro roteiro de podcast."},
+    {"id": "A33aConteudoAprovadoDev", "name": "33a · Conteúdo aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado", "prompt_file": None, "description": "As seções do one-pager aprovado, literais — as mesmas do design: núcleo (§1, §3, §4), currículo, falhas, professor, tempos, podcast, evidência, dispositivos e hipóteses —, para o banco de conteúdo, a banca e os agentes de design que ela reaciona."},
     {"id": "A33ManifestoCheck", "name": "33 · Ficha do manifesto (determinístico)", "icon": "🪪", "output_key": "manifesto_report", "prompt_file": None, "description": "Bloco 0 da spec × listas fechadas da plataforma: produto, séries, unidade, público, viewport, permissões, capabilities, seção do DS, liberação por turma. Não conforme impede o PRD."},
     {"id": "A34HandoffDev", "name": "34 · Handoff para dev", "icon": "🤝", "output_key": "handoff_dev", "prompt_file": "dev/34_handoff_dev.md", "description": "Modelo de insumo preenchido, stories com 🔒, eventos, escopo V1/V2, hipóteses (paralelo com V1b)."},
     {"id": "A35BriefAssets", "name": "35 · Brief de assets", "icon": "🎬", "output_key": "brief_assets", "prompt_file": "dev/35_brief_assets.md", "description": "Inventário de assets, spec por tipo, critérios de reprovação, ordem de produção."},
@@ -543,6 +581,7 @@ DEV_METADATA = [
     {"id": "A49OnePagerPedagogico", "name": "49 · One-pager pedagógico (validação humana)", "icon": "🧑‍🏫", "output_key": "one_pager_pedagogico", "prompt_file": "dev/49_one_pager_pedagogico.md", "description": "A missão inteira em linguagem de sala de aula, com o papel do professor, os links do protótipo e as perguntas de aprovação. Salvo em Markdown e `.docx`."},
     {"id": "A49bConteudoAprovadoPedagogico", "name": "49b · Pedagógico × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_pedagogico_report", "prompt_file": None, "description": "As habilidades do bloco 11, o tempo em tela, o podcast e os caminhos de artefato do pedagógico contra o one-pager aprovado. Divergência volta ao redator."},
     {"id": "A49PedagogicoRodada", "name": "49r · Veredito do pedagógico (determinístico)", "icon": "🔁", "output_key": "pedagogico_rodada", "prompt_file": None, "description": "Pedagógico fiel encerra o loop; divergente volta ao redator com o relatório, até o teto de rodadas."},
-    {"id": "A50Rastreabilidade", "name": "50 · Matriz de rastreabilidade (determinístico)", "icon": "🧷", "output_key": "rastreabilidade_report", "prompt_file": None, "description": "Cada requisito do produto procurado em cada artefato de design e de dev, até o PRD e o pedagógico; o que se perdeu sai com o dono."},
+    {"id": "A50Rastreabilidade", "name": "50 · Matriz de rastreabilidade (determinístico)", "icon": "🧷", "output_key": "rastreabilidade_dev_report", "prompt_file": None, "description": "Cada requisito do produto procurado em cada artefato de design e de dev, até o PRD e o pedagógico; o que se perdeu sai com o dono."},
+    {"id": "A51FidelidadeDev", "name": "51 · Fidelidade ao refazer de dev", "icon": "📌", "output_key": "fidelidade_dev_report", "prompt_file": None, "description": "Cada pedido de refazer feito ao dev (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) conferido no handoff, no brief, no banco, no PRD e no pedagógico: o juiz cita, o código confere. Sem pedido de dev, não roda. 🔴 recusa o de acordo."},
     {"id": "A49cAnexoPedagogico", "name": "49c · Anexo do conteúdo aprovado no pedagógico (determinístico)", "icon": "📎", "output_key": "one_pager_pedagogico", "prompt_file": None, "description": "Cola no fim do pedagógico, literais, os tempos e cenários de aula, o podcast com o roteiro e o contrato de evidência do one-pager aprovado — o texto que o time pedagógico aprova."},
 ]

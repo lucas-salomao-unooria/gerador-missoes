@@ -286,15 +286,19 @@ def _literal_presente(frase: str, documentos_norm: str) -> bool:
     return bool(alvo) and alvo in documentos_norm
 
 
-def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, str]) -> Dict[str, Any]:
-    """`{status, achados, conferidos}` a partir dos itens, da saída do juiz e dos documentos."""
+def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, str],
+            etapa: str = "produto") -> Dict[str, Any]:
+    """`{status, achados, conferidos}` a partir dos itens, da saída do juiz e dos documentos.
+
+    `etapa` é a de quem responde pelos documentos: o pedido de refazer do design é conferido nos documentos de
+    design, e o achado é dele."""
     doc = _norm("\n".join(documentos.values()))
     decisoes = _decisoes(saida_juiz)
     achados: List[Dict[str, str]] = []
     conferidos: List[Dict[str, str]] = []
 
     def achado(item: Dict[str, str], severidade: str, codigo: str, resumo: str) -> None:
-        achados.append({"id": item["id"], "severidade": severidade, "codigo": codigo, "etapa": "produto",
+        achados.append({"id": item["id"], "severidade": severidade, "codigo": codigo, "etapa": etapa,
                         "origem": item["origem"], "resumo": resumo})
 
     for it in itens:

@@ -54,6 +54,7 @@ def create_llm_agent(
     """
     # import tardio: `pipeline.reexecucao` importa `agents.callbacks`, que importa este módulo
     from pipeline.reexecucao import CHAVES_AUTORAIS, PREFIXO_ANTERIOR
+    from tools.conteudo_aprovado import KEY_MUDANCAS
 
     settings = get_settings()
     selected_model = model or settings.gemini_model
@@ -77,7 +78,9 @@ def create_llm_agent(
             + "\n---\n## Pedido de correção desta execução\n\n{pedido_correcao?}\n"
             # A versão que este autor escreveu antes, quando a etapa é refeita
             # (`pipeline/reexecucao.py`, CHAVES_AUTORAIS). Vazio na primeira execução; gate não tem.
-            + (f"\n{{{PREFIXO_ANTERIOR}{output_key}?}}\n" if output_key in CHAVES_AUTORAIS else "")
+            # E o que mudou no one-pager aprovado desde aquela versão (`tools.conteudo_aprovado.mudancas_no_aprovado`):
+            # sem isso, depois de um refazer de produto, o autor mantinha «palavra por palavra» o número velho.
+            + (f"\n{{{PREFIXO_ANTERIOR}{output_key}?}}\n\n{{{KEY_MUDANCAS}?}}\n" if output_key in CHAVES_AUTORAIS else "")
             # Pareceres de quem responde por cada etapa já liberada (`pipeline/passagem.py`).
             # Vazio sem parecer humano ou na primeira etapa.
             + "\n---\n## Notas de passagem desta missão\n\n{notas_de_passagem?}\n"
