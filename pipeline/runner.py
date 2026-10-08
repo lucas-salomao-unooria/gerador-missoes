@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -204,6 +205,19 @@ def material_dos_anexos(doc_batch: Optional[DocumentBatch]) -> str:
             blocos.append(f"### 📄 {doc.name} — anexado, mas sem texto extraível (PDF digitalizado?). "
                           "O conteúdo não pôde ser guardado; considere só o que o briefing diz sobre ele.")
     return "\n\n".join(blocos)
+
+
+_RE_VARIAVEL_AUSENTE = re.compile(r"Context variable not found: `(\w+)` in agent '(\w+)'")
+
+
+def mensagem_de_erro(exc: BaseException) -> str:
+    """O erro como o PO consegue ler. O ADK diz "Context variable not found: `one_pager` in agent 'A05…'" quando o
+    agente que escreve um documento termina sem texto e o seguinte precisa dele (exp03ef1b, 08/10/2026, duas vezes)."""
+    m = _RE_VARIAVEL_AUSENTE.search(str(exc))
+    if m:
+        return (f"o documento `{m.group(1)}` não existe quando o agente {m.group(2)} precisou dele — quem o escreve "
+                "terminou sem texto (resposta vazia do modelo). Nada foi alterado; tente de novo.")
+    return str(exc)
 
 
 def one_pager_do_po(initial_state: Optional[Dict[str, Any]], doc_batch: Optional[DocumentBatch]) -> str:
@@ -561,12 +575,13 @@ async def run_orchestrator_pipeline_stream(
             session_id=session_id,
             user_id=user_id,
             prompt=prompt,
-            final_output=f"❌ Erro na execução do pipeline: {exc}",
+            final_output=f"❌ Erro na execução do pipeline: {mensagem_de_erro(exc)}",
             duration_seconds=duration,
             status="error",
-            error_message=str(exc),
+            error_message=mensagem_de_erro(exc),
         )
-        yield {"type": "pipeline_error", "error": str(exc), "result": error_result, "duration": duration, "timestamp": time.time()}
+        yield {"type": "pipeline_error", "error": mensagem_de_erro(exc), "result": error_result, "duration": duration,
+               "timestamp": time.time()}
     finally:
         base_plataforma.fixar(None)
 

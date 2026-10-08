@@ -62,6 +62,7 @@ from agents.banca import get_banca
 from agents.juiz import get_fidelidade_check, get_juiz_de_achados
 from agents.callbacks import dispensar_ideacao_com_one_pager_do_po, marcar_heranca, preservar_one_pager
 from agents.checkers import (
+    DocumentoObrigatorioAgent,
     SecaoSplitAgent,
     BnccCheckAgent,
     CoberturaConceitualAgent,
@@ -747,6 +748,8 @@ def build_produto_stage(
             get_ideacao_mecanismos_agent(**kw),
             nucleo_loop,
             secoes_apoio_loop,
+            DocumentoObrigatorioAgent(name="A04fOnePagerExiste", chave="one_pager", autor="A04SecoesApoio",
+                                      description="Sem one-pager depois de duas tentativas do A04, a etapa para com mensagem legível."),
             gate_loop,
             avaliacoes_loop,
             one_pager_po_loop,
@@ -803,6 +806,7 @@ PRODUTO_METADATA = [
     {"id": "A04SecoesApoio", "name": "04 · Seções de apoio e brief", "icon": "📝", "output_key": "one_pager", "prompt_file": "produto/04_secoes_apoio.md", "description": "Completa o one-pager canônico (seções 2 e 5–18) e o brief de escopo sobre o núcleo aprovado."},
     {"id": "A04dOnePagerPoCheck", "name": "04d · One-pager do PO preservado (determinístico)", "icon": "📌", "output_key": "one_pager_po_report", "prompt_file": None, "description": "Quando o PO anexou o one-pager: cada trecho dele (linha e célula de tabela) está no one-pager das seções de apoio, ou saiu porque o pedido mandou. Trecho perdido volta ao A04 com a lista. Sem anexo, não se aplica."},
     {"id": "A04eSecoesApoioRodada", "name": "04e · Saída das seções de apoio (determinístico)", "icon": "🔀", "output_key": "secoes_apoio_rodada", "prompt_file": None, "description": "One-pager do PO preservado encerra o loop das seções de apoio; trecho perdido devolve ao A04."},
+    {"id": "A04fOnePagerExiste", "name": "04f · One-pager existe (determinístico)", "icon": "🧱", "output_key": None, "prompt_file": None, "description": "Se o A04 terminou sem texto nas duas tentativas, a etapa para aqui com uma mensagem que diz quem ficou mudo — antes, o gate estrutural quebrava com «Context variable not found»."},
     {"id": "A04bContratoProdutoCheck", "name": "04b · Contrato de plataforma e origem dos parâmetros (determinístico)", "icon": "📡", "output_key": "contrato_produto_report", "prompt_file": None, "description": "Lint do one-pager a cada rodada do gate: canal de sala por polling (nunca WebSocket), estado no servidor (sem localStorage/IndexedDB), SAEB só nos anos avaliados, número com origem ou marcador. O gate aplica; o revisor corrige."},
     {"id": "A05GateEstrutural", "name": "05 · Gate estrutural", "icon": "🚧", "output_key": "gate_estrutural_report", "prompt_file": "produto/05_gate_estrutural.md", "description": "critérios: estrutura, ambiente, logística, evidências, viabilidade e infraestrutura."},
     {"id": "A06GateEstruturalCheck", "name": "06 · Veredito do gate (determinístico)", "icon": "🔀", "output_key": "gate_estrutural_status", "prompt_file": None, "description": "Lê o envelope JSON e decide repetir, seguir ou bloquear."},

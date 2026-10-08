@@ -171,12 +171,14 @@ def _pedido_confere(celula: str, fonte: str) -> Optional[str]:
 def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "") -> Dict[str, Any]:
     """Cada trecho do one-pager do PO está no gerado, ou saiu por ordem do pedido conferida em código."""
     vazio = {"total": 0, "perdidas": [], "removidas": 0, "declaradas": 0, "codigos_removidos": []}
+    # Sem one-pager não há o que conferir — e o autor ficou mudo. Com ou sem anexo do PO, isso reprova, para o loop
+    # chamá-lo de novo: na exp03ef1b (08/10/2026) o A04 terminou sem texto duas vezes e o gate estrutural quebrou.
+    if not (gerado or "").strip():
+        return {**vazio, "status": "bloqueado", "aplica": bool((po or "").strip()),
+                "achados": [{"severidade": "bloqueio", "codigo": "one-pager-vazio", "etapa": "produto",
+                             "resumo": "O one-pager gerado está vazio: o autor terminou sem texto. Escreva o one-pager inteiro."}]}
     if not (po or "").strip():
         return {**vazio, "status": "aprovado", "aplica": False, "achados": []}
-    if not (gerado or "").strip():
-        return {**vazio, "status": "bloqueado", "aplica": True,
-                "achados": [{"severidade": "bloqueio", "codigo": "one-pager-vazio", "etapa": "produto",
-                             "resumo": "O one-pager gerado está vazio: não há como conferir o one-pager do PO nele."}]}
 
     novo = _norm(_sem_secoes_que_nao_contam(gerado))
     tri_novo = _trigramas(novo)
@@ -233,12 +235,14 @@ def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "") -> Dic
 
 def relatorio(resultado: Dict[str, Any], missao: str = "") -> str:
     titulo = f"# One-pager do PO × one-pager gerado — {missao or 'missão'}"
-    if not resultado.get("aplica"):
+    if not resultado.get("aplica") and resultado["status"] == "aprovado":
         return "\n".join([titulo, "", "**Veredito: 🟢 NÃO SE APLICA**", "",
                           "Nenhum anexo traz um one-pager no formato canônico: a missão nasce do briefing.", "",
                           "```json", json.dumps({"agente": AGENTE, "missao": missao, "status": "aprovado",
                                                  "achados": []}, ensure_ascii=False), "```"])
-    icone = "🟢 PRESERVA O ONE-PAGER DO PO" if resultado["status"] == "aprovado" else "🔴 REESCREVEU O ONE-PAGER DO PO"
+    icone = ("🟢 PRESERVA O ONE-PAGER DO PO" if resultado["status"] == "aprovado"
+             else "🔴 ONE-PAGER VAZIO" if any(a["codigo"] == "one-pager-vazio" for a in resultado["achados"])
+             else "🔴 REESCREVEU O ONE-PAGER DO PO")
     total, perdidas = resultado["total"], len(resultado["perdidas"])
     preservados = total - perdidas - resultado["removidas"] - resultado["declaradas"]
     removidos = ", ".join(resultado["codigos_removidos"]) or "nenhuma habilidade"

@@ -157,3 +157,81 @@ def test_pedido_do_po_que_retira_habilidade_vence_o_briefing_original():
     sem_co01 = one_pager.replace("`EF06CO01` e ", "").replace("- EF06CO01 — tipos de dados\n", "")
     r = validar_one_pager(sem_co01, briefing=briefing, pedidos=pedido)
     assert any(a["codigo"] == "habilidade-do-briefing-sumiu" and "EF06CO01" in a["resumo"] for a in r["achados"])
+
+
+# --------------------------------------------------------------------------- autor mudo (exp03ef1b, 08/10/2026)
+def test_one_pager_vazio_reprova_a_conferencia_mesmo_sem_anexo_do_po():
+    """O A04 terminou sem texto duas vezes; sem anexo do PO a conferência dizia «não se aplica» e o loop saía."""
+    from tools import one_pager_po as op
+
+    r = op.conferir("", "")
+    assert r["status"] == "bloqueado" and r["achados"][0]["codigo"] == "one-pager-vazio"
+    assert "ONE-PAGER VAZIO" in op.relatorio(r) and '"status": "bloqueado"' in op.relatorio(r)
+    assert op.conferir("", "# One-pager")["status"] == "aprovado"
+
+
+def test_documento_obrigatorio_para_a_etapa_com_mensagem_legivel():
+    import pytest
+
+    from agents.checkers import DocumentoAusente, DocumentoObrigatorioAgent
+
+    guarda = DocumentoObrigatorioAgent(name="G", chave="one_pager", autor="A04SecoesApoio")
+    with pytest.raises(DocumentoAusente, match="A04SecoesApoio terminou sem texto"):
+        asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[guarda]), {"one_pager": ""}))
+    guarda = DocumentoObrigatorioAgent(name="G", chave="one_pager", autor="A04SecoesApoio")
+    assert asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[guarda]), {"one_pager": "# OP"}))["one_pager"] == "# OP"
+
+    from agents.produto import build_produto_stage
+
+    nomes = [a.name for a in build_produto_stage().sub_agents]
+    assert nomes.index("SecoesApoioLoop") < nomes.index("A04fOnePagerExiste") < nomes.index("GateEstruturalLoop")
+
+
+def test_erro_de_variavel_ausente_vira_mensagem_que_o_po_le():
+    from pipeline.runner import mensagem_de_erro
+
+    msg = mensagem_de_erro(KeyError("Context variable not found: `one_pager` in agent 'A05GateEstrutural'."))
+    assert "`one_pager`" in msg and "A05GateEstrutural" in msg and "terminou sem texto" in msg
+    assert mensagem_de_erro(RuntimeError("outra coisa")) == "outra coisa"
+
+
+def test_fidelidade_le_so_o_texto_do_pedido_e_nao_o_cabecalho_da_esteira():
+    """exp06ef1b: o item F1 citava «Esta execução refaz a etapa produto…» como pedido do PO, e o mesmo pedido entrava
+    duas vezes no checklist (o embrulho não casava com o texto registrado no parecer)."""
+    from agents.checkers import _pedidos_de_produto
+    from pipeline.reexecucao import PedidoCorrecao, texto_do_pedido
+
+    texto = "Descarte curricular de EF06CO07 — RATIFICADO.\n\nRemover a habilidade EF06CO07 de todos os documentos."
+    md = PedidoCorrecao(texto=texto).como_markdown("produto")
+    assert texto_do_pedido(md) == texto and "Esta execução refaz" not in texto_do_pedido(md)
+    assert texto_do_pedido("pedido solto") == "pedido solto"
+    assert "Esta execução refaz" not in _pedidos_de_produto({"pedido_correcao": md})
+
+
+def test_resposta_cortada_pelo_modelo_vai_a_proxima_tentativa_do_mesmo_agente():
+    """exp03ef1b (08/10/2026): o A04 terminou com FinishReason.RECITATION e nenhum texto, duas vezes, com a mesma
+    instrução. Reproduzido localmente sobre o estado salvo. Agora o motivo vai ao estado e à instrução seguinte."""
+    from google.adk.models.llm_response import LlmResponse
+    from google.genai import types
+
+    from agents.base import create_llm_agent
+    from agents.callbacks import registrar_corte_do_modelo
+
+    class _Ctx:
+        agent_name = "A04SecoesApoio"
+
+        def __init__(self):
+            self.state = {}
+
+    ctx = _Ctx()
+    cortada = LlmResponse(content=types.Content(role="model", parts=[]), finish_reason=types.FinishReason.RECITATION)
+    registrar_corte_do_modelo(ctx, cortada)
+    assert "filtro de recitação" in ctx.state["bloqueio_modelo_A04SecoesApoio"]
+    ok = LlmResponse(content=types.Content(role="model", parts=[types.Part(text="# One-pager")]),
+                     finish_reason=types.FinishReason.STOP)
+    registrar_corte_do_modelo(ctx, ok)
+    assert ctx.state["bloqueio_modelo_A04SecoesApoio"] == ""
+
+    agente = create_llm_agent(name="A04SecoesApoio", instruction="x", description="d", output_key="one_pager")
+    assert "{bloqueio_modelo_A04SecoesApoio?}" in agente.instruction
+    assert agente.after_model_callback is registrar_corte_do_modelo

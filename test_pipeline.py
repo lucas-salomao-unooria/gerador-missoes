@@ -1136,7 +1136,8 @@ def test_agente_de_triagem_configurado():
     assert '"etapa": "produto | spec | design | dev | nenhuma"' in instr
     assert all(m["id"] != "A00TriagemCorrecao" for m in TRANSVERSAL_METADATA)
     for var in list_state_variables(instr):
-        assert var in KNOWN_STATE_KEYS, var
+        # o aviso de resposta cortada pelo modelo é por agente (`agents.callbacks.registrar_corte_do_modelo`)
+        assert var in KNOWN_STATE_KEYS or var.startswith("bloqueio_modelo_"), var
     print("   ✓ triagem: include_contents=default, output triagem_correcao, fora dos metadados")
 
 

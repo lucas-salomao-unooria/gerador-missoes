@@ -334,3 +334,44 @@ def desembrulhar_documento(chave: str):
 
     _callback.__name__ = f"desembrulhar_{chave}"
     return _callback
+
+
+#: Prefixo da chave em que fica o aviso de resposta cortada pelo modelo, por agente (`bloqueio_modelo_<nome>`).
+PREFIXO_BLOQUEIO_MODELO = "bloqueio_modelo_"
+_AVISOS_DE_CORTE = {
+    "RECITATION": (
+        "o filtro de recitação do modelo cortou a resposta inteira — ela reproduzia literalmente um texto publicado. "
+        "Nesta tentativa, **não transcreva por extenso** texto de fonte publicada (texto oficial da BNCC, apostila, lei, "
+        "notícia, letra de música): cite o código ou a fonte e resuma em uma linha com suas palavras. O conteúdo da "
+        "missão (narrativa, telas, falas, decisões) segue como as regras mandam."),
+    "MAX_TOKENS": (
+        "a resposta passou do limite de tamanho e foi cortada antes de terminar. Nesta tentativa, seja mais enxuto no "
+        "raciocínio e não repita trechos já escritos; o documento precisa sair inteiro."),
+}
+
+
+def registrar_corte_do_modelo(callback_context: CallbackContext, llm_response: Any) -> None:
+    """after_model_callback de todo agente: resposta sem texto cortada pelo modelo fica registrada para a tentativa seguinte.
+
+    Na exp03ef1b (08/10/2026) o A04 terminou com `FinishReason.RECITATION` e nenhum texto, duas vezes: o filtro de
+    recitação do Gemini corta a saída que reproduz texto publicado — e o one-pager transcreve o texto oficial da
+    BNCC. A esteira não registrava o motivo, o loop chamava o agente de novo com a mesma instrução e o resultado era
+    o mesmo. Aqui o motivo vai ao estado e a próxima instrução do mesmo agente o recebe (`agents.base`).
+    """
+    conteudo = getattr(llm_response, "content", None)
+    partes = list(getattr(conteudo, "parts", None) or [])
+    texto = "".join(p.text or "" for p in partes if getattr(p, "text", None) and not getattr(p, "thought", False))
+    chave = f"{PREFIXO_BLOQUEIO_MODELO}{callback_context.agent_name}"
+    if getattr(llm_response, "partial", False):
+        return None
+    motivo = str(getattr(llm_response, "finish_reason", "") or getattr(llm_response, "error_code", "") or "")
+    motivo = motivo.split(".")[-1].upper()
+    if texto.strip() or getattr(llm_response, "turn_complete", None) is False:
+        if callback_context.state.get(chave):
+            callback_context.state[chave] = ""
+        return None
+    if motivo and motivo not in ("STOP", "FINISH_REASON_UNSPECIFIED"):
+        aviso = _AVISOS_DE_CORTE.get(motivo, f"o modelo devolveu a resposta vazia (motivo `{motivo}`). Escreva o documento inteiro.")
+        callback_context.state[chave] = f"## Sua tentativa anterior foi cortada pelo modelo\n\nNa tentativa anterior, {aviso}"
+        logging.getLogger(__name__).warning("Resposta de %s cortada pelo modelo: %s", callback_context.agent_name, motivo)
+    return None

@@ -87,6 +87,9 @@ def create_llm_agent(
             # Pareceres de quem responde por cada etapa já liberada (`pipeline/passagem.py`).
             # Vazio sem parecer humano ou na primeira etapa.
             + "\n---\n## Notas de passagem desta missão\n\n{notas_de_passagem?}\n"
+            # O motivo de a tentativa anterior deste agente ter saído vazia — filtro de recitação, limite de tamanho
+            # (`agents.callbacks.registrar_corte_do_modelo`). Vazio quase sempre.
+            + f"\n{{bloqueio_modelo_{name}?}}\n"
             + f"\n---\nData de hoje: {time.strftime('%Y-%m-%d')}. Use esta data em cabeçalhos, changelogs e frontmatter."
         ),
         "description": description.strip(),
@@ -143,6 +146,9 @@ def create_llm_agent(
             kwargs["before_tool_callback"] = before_tool_callback
         if after_tool_callback is not None:
             kwargs["after_tool_callback"] = after_tool_callback
+    from agents.callbacks import registrar_corte_do_modelo
+
+    kwargs["after_model_callback"] = registrar_corte_do_modelo
     if before_agent_callback is not None:
         kwargs["before_agent_callback"] = before_agent_callback
     if after_agent_callback is not None:

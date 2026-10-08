@@ -173,7 +173,8 @@ class TestAgente(unittest.TestCase):
         self.assertIn(conversa.PEDIDO_RASCUNHO, instr)
         # o que o prompt lê é exatamente o que `estado_da_conversa` entrega (fora o rodapé comum a todo agente)
         entregue = set(conversa.estado_da_conversa("dev", ESTADO, _fluxo("dev"), []))
-        lidas = set(list_state_variables(instr)) - {"heranca_degradada", "pedido_correcao", "notas_de_passagem"}
+        lidas = {v for v in list_state_variables(instr) if not v.startswith("bloqueio_modelo_")} - {
+            "heranca_degradada", "pedido_correcao", "notas_de_passagem"}
         self.assertEqual(lidas, entregue)
 
     def test_responder_passa_contexto_e_pergunta_e_devolve_a_saida(self):

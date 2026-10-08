@@ -989,7 +989,39 @@ def _pedidos_de_produto(state: Any) -> str:
     """Os pedidos do PO que produto atende — os de refazer registrados e o da execução corrente — num texto só."""
     registrados = [str(p.get("texto") or "") for p in (state.get("pedidos_do_po") or [])
                    if isinstance(p, dict) and str(p.get("etapa") or "") in ("produto", "")]
-    return "\n\n".join(registrados + [str(state.get("pedido_correcao", "") or "")]).strip()
+    from pipeline.reexecucao import texto_do_pedido
+
+    return "\n\n".join(registrados + [texto_do_pedido(str(state.get("pedido_correcao", "") or ""))]).strip()
+
+
+class DocumentoAusente(RuntimeError):
+    """O autor de um documento obrigatório terminou sem texto, mesmo depois de chamado de novo."""
+
+
+class DocumentoObrigatorioAgent(BaseAgent):
+    """Para a etapa, com mensagem que se lê, quando um documento de que o resto depende não existe.
+
+    Na exp03ef1b (08/10/2026) o A04 terminou sem texto duas vezes; a esteira seguiu e o gate estrutural quebrou ao
+    montar o prompt com "Context variable not found: `one_pager`" — e o PO viu só isso. Aqui a parada é no lugar
+    certo e diz quem ficou mudo. Fica depois do loop que já chamou o autor de novo.
+    """
+
+    chave: str
+    autor: str
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        if not str(ctx.session.state.get(self.chave, "") or "").strip():
+            from agents.callbacks import PREFIXO_BLOQUEIO_MODELO
+
+            corte = str(ctx.session.state.get(f"{PREFIXO_BLOQUEIO_MODELO}{self.autor}") or "")
+            motivo = (" O modelo cortou a resposta" + (" pelo filtro de recitação (texto publicado transcrito por extenso)"
+                                                      if "recitação" in corte else "") + ".") if corte else ""
+            raise DocumentoAusente(
+                f"o agente {self.autor} terminou sem texto nas duas tentativas, e sem `{self.chave}` a etapa não "
+                f"continua.{motivo} Nada foi alterado; tente de novo — se repetir, veja o relatório de execução")
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=f"✅ `{self.chave}` presente.")]))
 
 
 class RastroCheckAgent(BaseAgent):
@@ -1434,7 +1466,10 @@ class FidelidadeCheckAgent(BaseAgent):
         if self.etapas_pedido:
             registrados = [p for p in registrados if str(p.get("etapa") or "") in self.etapas_pedido]
         pedidos = [(str(p.get("origem") or "pedido"), str(p.get("texto") or "")) for p in registrados]
-        corrente = str(state.get("pedido_correcao", "") or "")
+        from pipeline.reexecucao import texto_do_pedido
+
+        # só o que o PO escreveu: o cabeçalho da esteira entrava no checklist como se fosse o pedido dele
+        corrente = texto_do_pedido(str(state.get("pedido_correcao", "") or ""))
         # Em design e dev o pedido corrente entra só quando a correção começou nesta etapa (`etapa_da_correcao`, gravada
         # por `pipeline.reexecucao.preparar_estado`): a correção pela triagem não vira parecer e não está em
         # `pedidos_do_po`; a de produto atravessa design e dev na mesma execução e não é deles (auditoria do PR #32).

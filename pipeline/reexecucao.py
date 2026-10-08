@@ -459,6 +459,20 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
             limpo[anterior] = bloco_versao_anterior(chave, atual)
 
 
+def texto_do_pedido(pedido_md: str) -> str:
+    """Só o que a pessoa escreveu, de dentro de `pedido_correcao` (`PedidoCorrecao.como_markdown`).
+
+    O valor do estado leva um cabeçalho da esteira ("Esta execução refaz a etapa…"), os anexos e "Como agir". A
+    fidelidade citava esse cabeçalho como se fosse o pedido do PO (exp06ef1b, 08/10/2026). Texto fora desse formato
+    volta como está.
+    """
+    texto = pedido_md or ""
+    m = re.search(r"^### Pedido, na íntegra\s*\n(.*?)(?=^### |\Z)", texto, re.S | re.M)
+    if not m:
+        return texto.strip()
+    return "\n".join(re.sub(r"^>\s?", "", l) for l in m.group(1).strip().splitlines()).strip()
+
+
 def preparar_estado(
     estado: Dict[str, Any], etapa: str, pedido_md: Optional[str] = None
 ) -> Tuple[Dict[str, Any], List[str]]:
