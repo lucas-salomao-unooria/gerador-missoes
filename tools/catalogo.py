@@ -245,7 +245,12 @@ def _ambiente_da_spec(bloco0: str) -> str:
     if not m:
         return ""
     valor = m.group(1).lower().strip("`")
-    return _canonico(valor) if (valor in _secoes_validas() or valor.startswith("nova:")) else ""
+    # Também as coleções do DS que a esteira já conhece e a base ainda não publica (`unoogaleria`, `unoojornal`,
+    # `unooblog`): as tentativas da exp03ef1b em `unoogaleria` saíam com o ambiente em branco (08/10/2026).
+    from tools.rastro import RADICAIS_DA_COLECAO
+
+    conhecida = valor in _secoes_validas() or valor in RADICAIS_DA_COLECAO or valor.startswith("nova:")
+    return _canonico(valor) if conhecida else ""
 
 
 def _secoes_validas() -> set:
@@ -401,7 +406,9 @@ def fichas_da_plataforma(catalogo_ts: str) -> List[Dict[str, Any]]:
             "ambiente": _MARCAS_DO_DS.get(_campo_ts(estudante.group(1), "titulo").lower(), "") if estudante else "",
             "eixo": _campo_ts(ficha_bloco.group(1), "competencia") if ficha_bloco else "",
             "descoberta": _campo_ts(bloco, "resumo"),
-            "tipo_decisao": "",
+            # o que o estudante faz, como a grade o chama para a missão — é a frase que o teste de 2 frases do V5 compara;
+            # vazio, a ficha "não sustenta reprovação" e a missão publicada não protegia nada (08/10/2026)
+            "tipo_decisao": _campo_ts(estudante.group(1), "chamada") if estudante else "",
             "porta_abstracao": "",
             "habilidade_primaria": "",
             "status": "em produção",
