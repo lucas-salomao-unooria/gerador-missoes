@@ -80,3 +80,15 @@ def test_v5_nao_compara_a_missao_com_versoes_dela_mesma():
     nova_versao = {"sessao": "s1", "slug": "exp06ef1b", "ano": "6º EF", "ambiente": "unoovista",
                    "eixo": "Letramento digital", "descoberta": "o feed esconde o resto da mostra"}
     assert [m["slug"] for m in cat.vizinhas(nova_versao, indice)] == ["exp06ef2b"]
+
+
+def test_ficha_da_plataforma_tem_o_que_o_v5_compara():
+    """Sem tipo de decisão a ficha «não sustenta reprovação» no V5: a chamada do estudante diz o que ele faz."""
+    juri = next(f for f in cat.fichas_da_plataforma(CATALOGO_TS) if f["slug"] == "exp06ef1b")
+    assert juri["tipo_decisao"] == "Entre na mostra."
+    assert not cat.tem_lacuna({**juri, "ambiente": "unoovista"})
+
+
+def test_ambiente_da_spec_aceita_colecao_conhecida_que_a_base_ainda_nao_publica():
+    assert cat._ambiente_da_spec("- `secao_ds: unoogaleria`") == "unoogaleria"
+    assert cat._ambiente_da_spec("- `secao_ds: inventada`") == ""
