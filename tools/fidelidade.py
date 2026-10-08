@@ -116,10 +116,98 @@ def itens_do_pedido(texto: str, origem: str) -> List[Dict[str, str]]:
             q = re.sub(r"\s+", " ", q).strip(" .")
             if _palavras(q) >= 4:
                 itens.append({"origem": origem, "tipo": "validacao", "texto": q + "?"})
-    if not itens and _palavras(texto) >= MIN_PALAVRAS_ITEM:
-        # pedido sem estrutura: vale inteiro, como um item só
-        itens.append({"origem": origem, "tipo": "pedido", "texto": re.sub(r"\s+", " ", texto).strip()[:1200]})
+    if not itens:
+        # Pedido sem a estrutura AJUSTE/TRAVAS: unidades atômicas recortadas em código. Até 08/10/2026 virava UM item
+        # com o texto inteiro — o parecer de 8 pontos da exp06ef1b não tinha um trecho do documento que provasse tudo, o
+        # juiz citou o próprio pedido e a fidelidade saiu 🔴 com os 8 aplicados.
+        itens += unidades_do_pedido(texto, origem)
     return itens
+
+
+#: Verbo de ação ou obrigação: unidade com um deles é exigência e não pode ser dispensada como "contexto" pelo juiz.
+_RE_ACAO = re.compile(
+    # formas de ordem e de dever, não particípio: «a versão aprovada pelo PO» descreve, «aprovar o pacote» manda
+    r"\b(?:remov(?:er|a|am|e)|retir(?:ar|e|em)|tir(?:ar|e|em)|exclu(?:ir|a|am)|descart(?:ar|e|em)|"
+    r"adicion(?:ar|e|em)|acrescent(?:ar|e|em)|inclu(?:ir|a|am)|insir(?:a|am)|inserir|explicit(?:ar|e|em)|"
+    r"troc(?:ar|a|ue|uem)|substitu(?:ir|a|am)|crav(?:ar|e|em)|mant(?:er|enha|enham|ém|êm)|preserv(?:ar|e|em)|"
+    r"permanec(?:er|e|em|am)|n[ãa]o\s+(?:alter|mud|prescrev|mant|troc|mex)\w*|alter(?:ar|e|em)|mud(?:ar|e|em)|"
+    r"corrig(?:ir|a|am)|ajust(?:ar|e|em)|escrev(?:er|a|am)|registr(?:ar|e|em)|defin(?:ir|a|am)|fix(?:ar|e|em)|"
+    r"homolog(?:ar|ue|uem)|ratific(?:ar|que)|aprov(?:ar|e|em)|dev(?:e|em)|precis(?:a|am)|garant(?:ir|a|am)|"
+    r"exib(?:ir|a|am)|mostr(?:ar|e|em)|declar(?:ar|e|em)|resolv(?:er|a|am))\b", re.IGNORECASE)
+#: Frase que só remete aos itens do pedido ("Resolver cada ponto abaixo"): não há no documento o que a prove.
+_RE_REMETE_A_LISTA = re.compile(r"\b(?:cada\s+(?:ponto|item)|(?:pontos|itens)\s+(?:abaixo|a\s+seguir|seguintes)|"
+                                r"abaixo\s*[:.]?\s*$)", re.IGNORECASE)
+_RE_ITEM_DE_LISTA = re.compile(r"^\s*(?:(\d{1,2})[.)]|[-*•])\s+")
+
+
+def _frases_sem_cortar_aspas(texto: str) -> List[str]:
+    """Frases do texto, sem quebrar dentro de aspas: «Substituir por: “A. B.”» é uma frase só."""
+    frases, atual, dentro = [], [], False
+    for i, c in enumerate(texto):
+        atual.append(c)
+        fecha_frase_citada = False
+        if c in "“«":
+            dentro = True
+        elif c in "”»":
+            dentro = False
+            fecha_frase_citada = i > 0 and texto[i - 1] in ".!?"
+        elif c == '"':
+            dentro = not dentro
+            fecha_frase_citada = not dentro and i > 0 and texto[i - 1] in ".!?"
+        # fim de frase fora de aspas, ou aspas que fecham uma frase citada («…configuração.” Remover as tags…»)
+        if (not dentro and (c in ".!?;" or fecha_frase_citada)
+                and (i + 1 == len(texto) or texto[i + 1].isspace())):
+            frases.append("".join(atual).strip())
+            atual = []
+    if "".join(atual).strip():
+        frases.append("".join(atual).strip())
+    return [f for f in frases if f]
+
+
+def unidades_do_pedido(texto: str, origem: str) -> List[Dict[str, str]]:
+    """O pedido recortado em unidades atômicas e literais: cada item de lista e cada frase vira um item.
+
+    Recorte em código, não pelo modelo: nada é agrupado (duas exigências nunca viram um item) e nada é inventado (o
+    texto do item está no pedido, letra por letra). Fragmento curto («Ponto final.») cola na unidade anterior. O item
+    de lista leva o rótulo dele («item 2») para o juiz saber de onde a frase veio; a frase que proíbe mudar vira trava.
+    """
+    # Parágrafos primeiro: linha que continua a anterior (texto com quebra manual) é a mesma frase — cortada por linha,
+    # «(Canal B,\nroteiro do debate…)» virava dois itens sem sentido. Item de lista e linha em branco abrem parágrafo.
+    paragrafos: List[tuple] = []
+    rotulo, em_branco, atual = "", False, []
+    for bruta in (texto or "").splitlines() + [""]:
+        linha = bruta.strip()
+        m = _RE_ITEM_DE_LISTA.match(linha) if linha else None
+        if not linha or m:
+            if atual:
+                paragrafos.append((rotulo, " ".join(atual)))
+                atual = []
+            if not linha:
+                em_branco = True
+                continue
+            rotulo = f"item {m.group(1)}" if m.group(1) else rotulo
+            linha = linha[m.end():]
+        elif em_branco and not atual:
+            rotulo = ""  # parágrafo novo fora da lista: o rótulo do último item não vale para ele
+        em_branco = False
+        atual.append(linha)
+    unidades: List[Dict[str, str]] = []
+    for rotulo, paragrafo in paragrafos:
+        for frase in _frases_sem_cortar_aspas(paragrafo):
+            # trava curta ("Não alterar mais nada.") é item próprio — colada noutro, passava junto com ele
+            if _RE_TRAVA_PROSA.search(frase):
+                unidades.append({"origem": origem, "tipo": "trava",
+                                 "texto": (f"({rotulo}) {frase}" if rotulo else frase)[:900]})
+                continue
+            if unidades and _palavras(frase) < MIN_PALAVRAS_ITEM:
+                unidades[-1]["texto"] = f"{unidades[-1]['texto']} {frase}"[:900]
+                continue
+            if _palavras(frase) < MIN_PALAVRAS_ITEM:
+                continue
+            tipo = "trava" if _RE_TRAVA_PROSA.search(frase) else "pedido"
+            unidades.append({"origem": origem, "tipo": tipo,
+                             "texto": (f"({rotulo}) {frase}" if rotulo else frase)[:900]})
+    return unidades
 
 
 #: Briefing com títulos em MAIÚSCULAS e sem dois-pontos ("OPERAÇÃO COGNITIVA", "MECÂNICA — IMAGEM
@@ -214,30 +302,23 @@ _RE_TRAVA_PROSA = re.compile(r"n[ãa]o\s+(?:alter|mud|troc|mex|reescrev|refa[zç
 
 
 def _itens_da_prosa(briefing: str) -> List[Dict[str, str]]:
-    """Briefing sem título nenhum: um item por parágrafo, e a frase que proíbe mudar vira trava.
+    """Briefing sem título nenhum: uma frase por item, como o pedido (`unidades_do_pedido`) — nada agrupado.
 
     O parser só via seção com título (em maiúsculas ou com dois-pontos). O reprocessamento da exp06ef1b
     (08/10/2026) veio em prosa — "A narrativa, o mecanismo das 6 etapas e a estrutura da missão estão
     aprovados — não alterar nenhum deles" — e o checklist saiu com um item só, o texto oficial de uma
-    habilidade entre aspas: o juiz nem rodou e a fidelidade aprovou a missão reescrita.
+    habilidade entre aspas: o juiz nem rodou e a fidelidade aprovou a missão reescrita. Depois, o parágrafo
+    inteiro virava um item, e três exigências do PO dividiam uma prova só.
     """
-    itens: List[Dict[str, str]] = []
-    for paragrafo in re.split(r"\n\s*\n|\n(?=\S)", briefing or ""):
-        paragrafo = re.sub(r"\s+", " ", paragrafo).strip()
-        if _palavras(paragrafo) < MIN_PALAVRAS_ITEM:
-            continue
-        travas = [f for f in _frases(paragrafo) if _RE_TRAVA_PROSA.search(f)]
-        itens += [{"origem": "briefing", "tipo": "trava", "texto": f[:900]} for f in travas]
-        resto = " ".join(f for f in _frases(paragrafo) if f not in travas)
-        if _palavras(resto) >= MIN_PALAVRAS_ITEM:
-            itens.append({"origem": "briefing", "tipo": "briefing", "texto": resto[:900]})
-    return itens
+    return [{**u, "tipo": "briefing" if u["tipo"] == "pedido" else u["tipo"]}
+            for u in unidades_do_pedido(briefing, "briefing")]
 
 
 #: Ordem de prioridade e teto por tipo. Os pedidos repetem as travas com outras palavras (os dois
 #: refazer da exp09ef1b trouxeram 42), e elas empurravam o briefing para fora do checklist.
 PRIORIDADE: Tuple[Tuple[str, int], ...] = (
-    ("ajuste", 12), ("pedido", 6), ("literal", 8), ("validacao", 12), ("trava", 18), ("briefing", 16))
+    # «pedido» era 6: um parecer de 8 pontos perdia dois sem aviso (exp06ef1b, 08/10/2026)
+    ("ajuste", 12), ("pedido", 30), ("literal", 8), ("validacao", 12), ("trava", 18), ("briefing", 16))
 
 
 def montar_checklist(pedidos: List[Tuple[str, str]], briefing: str) -> List[Dict[str, str]]:
@@ -321,6 +402,11 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
     `etapa` é a de quem responde pelos documentos: o pedido de refazer do design é conferido nos documentos de
     design, e o achado é dele."""
     doc = _norm("\n".join(documentos.values()))
+    # o corpo, sem changelog nem tabela de alterações: o texto que o PO ditou só prova quando está ali — no registro
+    # do que mudou, o autor só repete o pedido (auditoria de insumos de 08/10/2026)
+    from tools.one_pager_po import _sem_secoes_que_nao_contam
+
+    corpo = _norm("\n".join(_sem_secoes_que_nao_contam(d) for d in documentos.values()))
     decisoes = _decisoes(saida_juiz)
     achados: List[Dict[str, str]] = []
     conferidos: List[Dict[str, str]] = []
@@ -347,8 +433,28 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         veredito = str((d or {}).get("veredito") or "").strip().lower()
         citacao = str((d or {}).get("citacao") or "")
         explicacao = str((d or {}).get("explicacao") or "").strip()
+        # o pedido ditou o texto ("Adicionar: “…”"): a prova é esse texto no corpo do documento, idêntico ao ditado
+        ditado = (veredito == "atendido" and len(_norm(citacao)) >= MIN_CITACAO and _citacao_confere(citacao, corpo)
+                  and any(_norm(citacao) in _norm(q) or _norm(q) in _norm(citacao) for q in _entre_aspas(it["texto"])))
+        # frase sem exigência (título, contexto) que o documento repete: nada a provar além de estar lá
+        sem_exigencia = (veredito == "atendido" and not _RE_ACAO.search(it["texto"]) and _citacao_confere(citacao, doc))
+        # item com vários elementos ("29 min, tetos 60/25/35, toast de 60 s"): uma citação por elemento, todas no
+        # documento e nenhuma copiada do pedido — o juiz não prova o conjunto repetindo a frase do PO
+        varias = [str(c) for c in ((d or {}).get("citacoes") or []) if str(c).strip()]
+        todas_provam = (veredito == "atendido" and len(varias) >= 2
+                        and all(_citacao_confere(c, doc) and not _norm(c) in _norm(it["texto"]) for c in varias))
         if veredito == "atendido" and _citacao_confere(citacao, doc) and not _norm(citacao) in _norm(it["texto"]):
             conferidos.append({"id": it["id"], "texto": trecho, "prova": citacao[:240]})
+        elif todas_provam:
+            conferidos.append({"id": it["id"], "texto": trecho, "prova": " · ".join(c[:120] for c in varias)[:400]})
+        elif ditado or sem_exigencia:
+            conferidos.append({"id": it["id"], "texto": trecho, "prova": citacao[:240]})
+        elif veredito == "contexto" and (not _RE_ACAO.search(it["texto"]) or _RE_REMETE_A_LISTA.search(it["texto"])):
+            # título ou contexto do pedido, sem verbo de ação: não há o que provar
+            conferidos.append({"id": it["id"], "texto": trecho, "prova": "(contexto do pedido, sem exigência)"})
+        elif veredito == "contexto":
+            achado(it, "bloqueio" if do_po else "atencao", "exigencia-dispensada",
+                   f"O juiz tratou como contexto uma frase com verbo de ação — é exigência e precisa de prova: «{trecho}».")
         elif veredito == "conflito_com_regra":
             achado(it, "decisao_humana", "conflito-pedido-regra",
                    f"O pedido conflita com uma regra da esteira — decisão do PO, não do agente: «{trecho}». {explicacao}")

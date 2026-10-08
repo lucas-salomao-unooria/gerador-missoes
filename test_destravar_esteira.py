@@ -417,3 +417,49 @@ def test_secao_legada_escolhida_pelo_po_nao_bloqueia():
     assert sev(validar_manifesto(spec, one_pager_po="# One-pager\n- **Seção do DS:** `instanooria`\n")) == ["atencao"]
     assert sev(validar_manifesto(spec, briefing="secao_ds: instanooria")) == ["atencao"]
     assert sev(validar_manifesto(spec, one_pager_po="- **Seção do DS:** `unoovista`")) == ["bloqueio"]
+
+
+# --------------------------------------------------------------------------- fidelidade em unidades atômicas
+PARECER_NUMERADO = """Fechamento de todas as pendências abertas — exp06ef1b
+
+Resolver cada ponto abaixo no corpo dos documentos. Não alterar narrativa, mecanismo das 6 etapas nem estrutura de telas.
+
+1. Cenário de dispositivos (Seção 13): Não prescrever protocolo de revezamento de papéis. Substituir qualquer menção a rodízio por: “O arranjo é definido pela escola. A mecânica funciona igual.” Remover as tags [PROPOSTA] relacionadas a revezamento em todos os documentos.
+2. Habilidade complementar EF67LP08: Remover a habilidade EF67LP08 de todos os documentos de produto. A conferência em fonte oficial não foi realizada e a missão não depende dela.
+3. Perguntas de Produto: Trocar o marcador [PROPOSTA — validar com PO] de cada uma por [HOMOLOGADO pelo PO].
+
+Não alterar mais nada. Todos os itens anteriormente homologados (tempo em tela de 29 min) permanecem como estão.
+"""
+
+
+def test_parecer_numerado_vira_unidades_atomicas_e_literais():
+    """O parecer de 8 pontos da exp06ef1b (08/10/2026) virava um item só e a fidelidade saía 🔴 com tudo aplicado."""
+    from tools import fidelidade as fid
+
+    itens = fid.itens_do_pedido(PARECER_NUMERADO, "pedido")
+    textos = [i["texto"] for i in itens]
+    # nada inventado: cada unidade (sem o rótulo) está no pedido, letra por letra
+    for t in textos:
+        assert t.split(") ", 1)[-1] in PARECER_NUMERADO.replace("\n", " "), t
+    # nada agrupado: as três exigências do item 1 são três itens, e a frase depois das aspas não gruda nelas
+    do_item_1 = [t for t in textos if t.startswith("(item 1)")]
+    assert len(do_item_1) == 3 and any(t.endswith("Remover as tags [PROPOSTA] relacionadas a revezamento em todos os documentos.")
+                                       for t in do_item_1)
+    # trava curta é item próprio, e o parágrafo depois da lista não herda o rótulo do último item
+    assert {"tipo": "trava", "texto": "Não alterar mais nada."}.items() <= next(i for i in itens if "mais nada" in i["texto"]).items()
+    assert not any(t.startswith("(item 3) Todos os itens") for t in textos)
+    # o teto de itens de pedido não corta um parecer longo
+    assert len(fid.montar_checklist([("pedido", PARECER_NUMERADO)], "")) == len(itens)
+
+
+def test_juiz_so_dispensa_como_contexto_o_que_nao_e_exigencia():
+    import json
+
+    from tools import fidelidade as fid
+
+    itens = [{"id": "F1", "origem": "pedido", "tipo": "pedido", "texto": "Fechamento de todas as pendências abertas — exp06ef1b"},
+             {"id": "F2", "origem": "pedido", "tipo": "pedido", "texto": "Resolver cada ponto abaixo no corpo dos documentos."},
+             {"id": "F3", "origem": "pedido", "tipo": "pedido", "texto": "Remover a habilidade EF67LP08 de todos os documentos."}]
+    saida = "```json\n" + json.dumps({"decisoes": [{"id": i, "veredito": "contexto"} for i in ("F1", "F2", "F3")]}) + "\n```"
+    r = fid.aplicar(itens, saida, {"one_pager": "# One-pager\nNada aqui."})
+    assert [a["codigo"] for a in r["achados"]] == ["exigencia-dispensada"] and "EF67LP08" in r["achados"][0]["resumo"]
