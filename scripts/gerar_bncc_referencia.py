@@ -80,6 +80,16 @@ def gerar() -> str:
         "Essas três regras são conferidas por um gate **determinístico** (`A14BnccCheck`, depois da spec) que trava a esteira quando falham, e são lidas pelos agentes LLM (avaliação pedagógica 5.1/5.2, spec bloco 11, QA de entregáveis D2) para julgar o que a máquina não julga: se a ação em tela exercita de fato a habilidade."
     )
     out.append("")
+    # exp03ef1b (08/10/2026): o A04 terminou duas vezes com FinishReason.RECITATION e nenhum texto — o one-pager
+    # transcrevia o texto oficial de EF03CO03 três vezes, e o filtro de recitação do modelo corta a resposta inteira.
+    out.append(
+        "**Como citar no documento que você escreve:** o texto oficial de cada habilidade entra **uma vez só**, entre "
+        "aspas, no lugar do currículo (seção 2 do one-pager, bloco 11 da spec). Em todas as outras menções — foco "
+        "primário, contrato de evidência, decisões, changelog — escreva só o código e um rótulo curto com as suas "
+        "palavras (`EF03CO03` — decomposição). Transcrever o texto oficial várias vezes faz o modelo cortar a resposta "
+        "inteira pelo filtro de recitação: o documento sai vazio e a etapa para."
+    )
+    out.append("")
     out.append("---")
     out.append("")
     out.append("## Ensino Fundamental")

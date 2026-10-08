@@ -71,6 +71,8 @@ codifica precisa para implementar, e um gate determinístico confere os quatro p
 
 <!-- include: references/prd-padrao-ouro.md -->
 
+**Habilidade BNCC: o texto oficial uma vez só.** Cite o texto oficial de cada habilidade no máximo uma vez, entre aspas, onde o documento apresenta o currículo; nas demais menções, só o código e um rótulo curto com as suas palavras. Transcrever o texto oficial várias vezes faz o modelo cortar a resposta inteira pelo filtro de recitação — o documento sai vazio (exp03ef1b, 08/10/2026).
+
 ## Perguntas de produto e o catálogo de sinais universais — a seção 2 e a tabela de eventos seguem este catálogo
 
 <!-- include: references/perguntas-de-produto.md -->
