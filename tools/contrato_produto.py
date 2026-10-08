@@ -120,7 +120,7 @@ def _serie(one_pager: str) -> Dict[str, Any]:
 
 
 def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
-                      registro_do_po: bool = False, one_pager_po: str = "") -> Dict[str, Any]:
+                      registro_do_po: bool = False, one_pager_po: str = "", pedidos: str = "") -> Dict[str, Any]:
     """Aplica as regras ao one-pager. Devolve `status`, `achados` e a série lida.
 
     `one_pager_po` é o one-pager que o PO anexou (`tools/one_pager_po.py`): o número que ele fixou tem
@@ -267,8 +267,15 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
     # As três gerações da exp03ef1b cortaram EF03CO01 e EF03CO02 sem uma linha, e a Regra 12 pôs
     # EF03CO08 no lugar da âncora EF03CO03 — decisão do PO tomada pelo agente.
     if briefing:
+        # O pedido do PO posterior ao briefing vence: na exp06ef1b (08/10/2026) o briefing de 28/09 listava EF06CO07
+        # como obrigatória, o PO pediu três vezes para tirá-la e ratificou a retirada — e esta regra, lendo só o
+        # briefing, bloqueava o one-pager sem ela e mandava pôr de volta a proposta de tirá-la. A tag voltava a cada
+        # refazer. Habilidade que um pedido manda retirar não "sumiu": saiu por ordem dele.
+        from tools.one_pager_po import codigos_retirados
+
+        retiradas = codigos_retirados(pedidos)
         no_briefing = list(dict.fromkeys(extrair_codigos(briefing)))
-        sumiram = [c for c in no_briefing if c not in texto]
+        sumiram = [c for c in no_briefing if c not in texto and c not in retiradas]
         if sumiram:
             bloqueio(
                 "habilidade-do-briefing-sumiu", "5.2",
@@ -276,7 +283,10 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
                 f"{'nenhum deles' if len(sumiram) > 1 else 'o código'}. Cortar habilidade do briefing é decisão do PO: "
                 "mantenha-a com o momento em tela, ou registre na seção 18 `[PROPOSTA — validar com PO: tirar <código> · por quê]`.",
             )
-        ancoras = {c for linha in briefing.splitlines() if _RE_ANCORA.search(linha) for c in extrair_codigos(linha)}
+        # a âncora mais recente vale: a do pedido do PO, se ele fixou uma; senão a do briefing
+        ancoras = ({c for linha in (pedidos or "").splitlines() if _RE_ANCORA.search(linha) for c in extrair_codigos(linha)}
+                   or {c for linha in briefing.splitlines() if _RE_ANCORA.search(linha) for c in extrair_codigos(linha)})
+        ancoras -= retiradas
         # só o primeiro código depois de "foco primário": a mesma linha costuma seguir com "Esteio: …"
         foco = {extrair_codigos(m.group(0))[0] for m in _RE_FOCO_PRIMARIO.finditer(texto) if extrair_codigos(m.group(0))}
         if ancoras and foco and not (ancoras & foco):

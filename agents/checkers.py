@@ -1032,6 +1032,7 @@ class RastroCheckAgent(BaseAgent):
                 briefing=str(state.get("briefing", "") or ""),
                 registro_do_po=decisoes.ha_registro_do_po(dict(state)),
                 one_pager_po=str(state.get("one_pager_po", "") or ""),
+                pedidos=_pedidos_de_produto(state),
             )
             relatorio = relatorio_contrato_produto(resultado, missao)
         elif self.modo == "manifesto":

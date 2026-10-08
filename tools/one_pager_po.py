@@ -42,7 +42,7 @@ _RE_TITULO = re.compile(r"^#{1,4}\s+(.+?)\s*$")
 _RE_SEPARADOR = re.compile(r"^\s*\|?[\s:|-]+\|?\s*$")
 _RE_VERSAO = re.compile(r"\bv\d+(?:\.\d+)+\b")
 _RE_CODIGO = re.compile(r"\bE[FM]\d{2}[A-Z]{2}\d{2,3}\b")
-_RE_REMOVER = re.compile(r"remov|desvincul|exclu|retir|tirar|tire\b|sem a habilidade", re.IGNORECASE)
+_RE_REMOVER = re.compile(r"remov|desvincul|exclu|retir|tirar|tire\b|descart|sem a habilidade", re.IGNORECASE)
 #: Seções do gerado que não contam como presença: o changelog e a própria tabela de alterações citam o
 #: texto do PO, e colar o trecho ali não pode valer como preservá-lo.
 _RE_SECAO_NAO_CONTA = re.compile(r"o que mudou|changelog|altera[çc][õo]es sobre o one-pager", re.IGNORECASE)
@@ -120,11 +120,15 @@ def _sem_secoes_que_nao_contam(doc: str) -> str:
     return "\n".join(linha for _, linha in _linhas_por_secao(doc))
 
 
+def codigos_retirados(texto: str) -> Set[str]:
+    """Habilidades que o texto manda tirar: o código aparece numa frase com verbo de remoção."""
+    frases = re.split(r"(?<=[.!?\n])\s+", texto or "")
+    return {c for f in frases if _RE_REMOVER.search(f) for c in _RE_CODIGO.findall(f)}
+
+
 def codigos_removidos(po: str, briefing: str = "", pedidos: str = "") -> Set[str]:
-    """Habilidades que o pedido manda tirar: o código aparece numa frase do pedido com verbo de remoção."""
-    frases = re.split(r"(?<=[.!?\n])\s+", f"{briefing}\n{pedidos}")
-    pedidos_de_remocao = {c for f in frases if _RE_REMOVER.search(f) for c in _RE_CODIGO.findall(f)}
-    return pedidos_de_remocao & set(_RE_CODIGO.findall(po or ""))
+    """Habilidades do one-pager do PO que o pedido manda tirar."""
+    return codigos_retirados(f"{briefing}\n{pedidos}") & set(_RE_CODIGO.findall(po or ""))
 
 
 def alteracoes_declaradas(gerado: str) -> List[Dict[str, str]]:

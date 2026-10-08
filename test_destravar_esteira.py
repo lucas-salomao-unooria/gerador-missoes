@@ -135,3 +135,25 @@ def test_banca_de_produto_recebe_o_one_pager_antes_de_julgar():
     assert produto[0].name == "A15hConteudoAprovado" and produto[1].name == "A15hEscopoBanca"
     design = get_banca("design", "AB", "A29f", rotulo="Banca de design", titulo="t", report_key="r", status_key="s")
     assert design[0].name == "A29fEscopoBanca", "no design o conteúdo aprovado já existe, com o retrato da etapa"
+
+
+def test_pedido_do_po_que_retira_habilidade_vence_o_briefing_original():
+    """exp06ef1b (08/10/2026): o briefing de 28/09 listava EF06CO07 como obrigatória; o PO pediu três vezes para tirá-la
+    e ratificou («Descarte curricular de EF06CO07 — RATIFICADO … Remover a habilidade EF06CO07 de todos os documentos,
+    incluindo a própria tag [PROPOSTA — validar com PO: tirar EF06CO07]»). O lint, lendo só o briefing, bloqueava o
+    one-pager sem ela e mandava recolocar a tag — e ela voltava a cada refazer."""
+    from tools.contrato_produto import validar_one_pager
+
+    briefing = ("Gere uma missão para o 6 ano. As habilidades que devem ser trabalhadas, obrigatoriamente, são essas:\n"
+                "EF06CO01\nEF06CO03\nEF06CO07\n")
+    one_pager = ("# One-pager — exp06ef1b\n\n## 1. Descoberta central\nFoco primário: `EF06CO10`, com `EF06CO01` e "
+                 "`EF06CO03`.\n\n## 2. Currículo\n- EF06CO01 — tipos de dados\n- EF06CO03 — regra condicional\n")
+    pedido = ("Descarte curricular de EF06CO07 — RATIFICADO. Remover a habilidade EF06CO07 de todos os documentos de "
+              "produto — incluindo a própria tag [PROPOSTA — validar com PO: tirar EF06CO07...] da Seção 18.")
+    codigos = lambda r: {a["codigo"] for a in r["achados"]}  # noqa: E731
+    assert "habilidade-do-briefing-sumiu" in codigos(validar_one_pager(one_pager, briefing=briefing))
+    assert "habilidade-do-briefing-sumiu" not in codigos(validar_one_pager(one_pager, briefing=briefing, pedidos=pedido))
+    # habilidade que nenhum pedido retirou continua cobrada
+    sem_co01 = one_pager.replace("`EF06CO01` e ", "").replace("- EF06CO01 — tipos de dados\n", "")
+    r = validar_one_pager(sem_co01, briefing=briefing, pedidos=pedido)
+    assert any(a["codigo"] == "habilidade-do-briefing-sumiu" and "EF06CO01" in a["resumo"] for a in r["achados"])
