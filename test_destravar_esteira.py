@@ -463,3 +463,16 @@ def test_juiz_so_dispensa_como_contexto_o_que_nao_e_exigencia():
     saida = "```json\n" + json.dumps({"decisoes": [{"id": i, "veredito": "contexto"} for i in ("F1", "F2", "F3")]}) + "\n```"
     r = fid.aplicar(itens, saida, {"one_pager": "# One-pager\nNada aqui."})
     assert [a["codigo"] for a in r["achados"]] == ["exigencia-dispensada"] and "EF67LP08" in r["achados"][0]["resumo"]
+
+
+def test_formato_misto_bloco_e_lista_solta_sao_conferidos_inteiros():
+    """Com um bloco TRAVAS e uma lista numerada fora dele, só o bloco virava item — e o TRAVAS engolia a lista."""
+    from tools import fidelidade as fid
+
+    texto = ("TRAVAS: a frase da descoberta fica como está, sem nenhuma mudança.\n\n"
+             "1. Remover a habilidade EF67LP08 de todos os documentos.\n"
+             "2. Adicionar a nota pedagógica ao guia do professor.\n")
+    itens = [(i["tipo"], i["texto"]) for i in fid.itens_do_pedido(texto, "pedido")]
+    assert ("trava", "a frase da descoberta fica como está, sem nenhuma mudança.") in itens
+    assert ("pedido", "(item 1) Remover a habilidade EF67LP08 de todos os documentos.") in itens
+    assert ("pedido", "(item 2) Adicionar a nota pedagógica ao guia do professor.") in itens
