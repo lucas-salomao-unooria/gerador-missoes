@@ -395,9 +395,11 @@ def test_prd_que_cobre_o_design_passa_e_o_relatorio_tem_envelope():
 
 def test_prd_vazio_bloqueia_e_insumo_ausente_pula_a_conferencia():
     assert cd.validar("", STATE)["achados"][0]["codigo"] == "prd-vazio"
-    # sessão sem design (produto parou antes): só o que é do próprio PRD é conferido
+    # sessão sem design (produto parou antes): só o que é do próprio PRD é conferido — e o semáforo diz que o resto
+    # não foi conferido (🟡), em vez de aprovar calado (auditoria de 08/10/2026)
     r = cd.validar(PRD_BOM, {})
-    assert r["status"] == "aprovado" and r["contagens"]["telas_inventario"] == 0
+    assert r["status"] == "amarelo" and r["contagens"]["telas_inventario"] == 0
+    assert {a["codigo"] for a in r["achados"]} == {"insumo-ausente"} and len(r["achados"]) == 4
 
 
 # --------------------------------------------------------------------------- 1. telas

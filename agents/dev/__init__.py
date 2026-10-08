@@ -500,11 +500,17 @@ def build_dev_stage(
                             estrito=estrito,
                             before_agent_callback=marcar_heranca,
                         ),
+                        # O documento que o time pedagógico aprova também não pode afirmar o contrário do aprovado — e era
+                        # o único sem juiz de contradições (auditoria do padrão ouro, 08/10/2026).
+                        get_juiz_de_contradicoes("A49eCoerenciaPedagogico", documento_key="one_pager_pedagogico",
+                                                 referencia_key="conteudo_aprovado", report_key="coerencia_pedagogico_report",
+                                                 status_key="coerencia_pedagogico_status", dono="one-pager-pedagogico",
+                                                 rotulo="Coerência do pedagógico com o one-pager aprovado", **kw),
                         SaidaDeLoopAgent(
                             name="A49PedagogicoRodada",
                             description="Pedagógico fiel encerra o loop; divergente volta ao redator com o relatório.",
                             rotulo="One-pager pedagógico",
-                            status_keys=["conteudo_aprovado_pedagogico_status"],
+                            status_keys=["conteudo_aprovado_pedagogico_status", "coerencia_pedagogico_status"],
                             rodada_key="pedagogico_rodada",
                             max_rounds=rodadas_prd,
                             autor_keys=["one_pager_pedagogico"],
@@ -578,6 +584,7 @@ DEV_METADATA = [
     {"id": "A48bKpisCheck", "name": "48a · Coerência KPI ↔ evento ↔ tela (determinístico)", "icon": "📈", "output_key": "kpis_report", "prompt_file": None, "description": "Todo KPI com pergunta, decisão, corte e evento que dispara na tela que ele nomeia; os sinais universais das transversais de dono missão na tabela de eventos, com a IA ao estudante decidida pela spec."},
     {"id": "A48cConteudoAprovadoPrd", "name": "48c · PRD × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_prd_report", "prompt_file": None, "description": "As habilidades do bloco 11 na matriz da seção 14, um KPI por habilidade, o tempo em tela do one-pager, o podcast com requisito funcional e só caminhos de artefato que existem na sessão. Divergência volta ao redator."},
     {"id": "A48eCoerenciaPrd", "name": "48e · Coerência do PRD com o one-pager aprovado", "icon": "⚖️", "output_key": "coerencia_prd_report", "prompt_file": None, "description": "Um juiz aponta onde o corpo do PRD afirma o contrário do conteúdo aprovado — mecânica, número, regra, texto —, citando os dois lados; o código confere as citações. Contradição comprovada volta ao redator."},
+    {"id": "A49eCoerenciaPedagogico", "name": "49e · Coerência do pedagógico com o one-pager aprovado", "icon": "⚖️", "output_key": "coerencia_pedagogico_report", "prompt_file": None, "description": "O mesmo juiz do PRD, sobre o documento que o time pedagógico aprova: contradição com o conteúdo aprovado, com as duas citações conferidas, volta ao redator."},
     {"id": "A48PrdRodada", "name": "48b · Veredito do PRD (determinístico)", "icon": "🔁", "output_key": "prd_rodada", "prompt_file": None, "description": "PRD consistente encerra o loop; reprovado devolve ao redator com o relatório do gate, até o teto de rodadas."},
     {"id": "A48dAnexoPrd", "name": "48d · Anexo do conteúdo aprovado no PRD (determinístico)", "icon": "📎", "output_key": "prd_final", "prompt_file": None, "description": "Cola no fim do PRD, literais, as seções do one-pager aprovado que o gabarito não tinha onde pôr: currículo, papel do professor, tempos e cenários de aula, podcast com roteiro, contrato de evidência e hipóteses."},
     {"id": "A49OnePagerPedagogico", "name": "49 · One-pager pedagógico (validação humana)", "icon": "🧑‍🏫", "output_key": "one_pager_pedagogico", "prompt_file": "dev/49_one_pager_pedagogico.md", "description": "A missão inteira em linguagem de sala de aula, com o papel do professor, os links do protótipo e as perguntas de aprovação. Salvo em Markdown e `.docx`."},

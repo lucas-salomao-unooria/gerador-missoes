@@ -180,7 +180,9 @@ def _presente(categoria: str, alvo: str, coluna: str, texto: str) -> bool:
             return alvo in quadros if quadros else alvo in telas.ids(corpo)
         return alvo in telas.ids(corpo)
     if categoria == "evento":
-        return alvo.split(" · ", 1)[-1] in corpo
+        # fronteira de token: `quiz:responder_v2` não é `quiz:responder` (auditoria de 08/10/2026 — substring passava)
+        objeto = alvo.split(" · ", 1)[-1]
+        return bool(re.search(rf"(?<![\w:]){re.escape(objeto)}(?![\w:])", corpo))
     if categoria == "proposta":
         # a proposta continua marcada no PRD (o marcador na mesma linha do identificador) ou está na seção de
         # decisões a revisar; o PRD da exp01ef1b trouxe os KPI de PQ-02..05 sem o marcador da spec
@@ -189,7 +191,8 @@ def _presente(categoria: str, alvo: str, coluna: str, texto: str) -> bool:
             return True
         return any(alvo in l and "PROPOSTA" in l.upper() for l in corpo.splitlines())
     if categoria == "estado":
-        return alvo.lower() in corpo.lower()  # sem caixa, como o gate do PRD: `e3_voto_lacrado` no CHECK vale
+        # sem caixa, como o gate do PRD (`e3_voto_lacrado` no CHECK vale), e com fronteira: `E3_VOTO` não é `E3_VOTO_LACRADO`
+        return bool(re.search(rf"(?<!\w){re.escape(alvo.lower())}(?!\w)", corpo.lower()))
     return alvo in corpo  # habilidade
 
 

@@ -235,3 +235,90 @@ def test_resposta_cortada_pelo_modelo_vai_a_proxima_tentativa_do_mesmo_agente():
     agente = create_llm_agent(name="A04SecoesApoio", instruction="x", description="d", output_key="one_pager")
     assert "{bloqueio_modelo_A04SecoesApoio?}" in agente.instruction
     assert agente.after_model_callback is registrar_corte_do_modelo
+
+
+# --------------------------------------------------------------------------- mutação além da remoção
+def test_mutacao_pega_troca_negacao_e_renomeacao_nao_so_remocao():
+    """As 13 perdas do teste de mutação eram todas remoção. A auditoria de 08/10/2026 plantou as que passavam: palavra
+    trocada no fim de um texto aprovado, "não" inserido, evento renomeado com sufixo, estado renomeado, fala do podcast
+    com uma palavra trocada. Agora a matriz pega cada uma."""
+    from test_conteudo_aprovado import _cadeia_completa
+    from tools import rastreabilidade as rb
+
+    base, reqs = _cadeia_completa()
+    assert rb.matriz(base)["status"] == "aprovado", rb.matriz(base)["achados"]
+    texto = {c: [r["texto"] for r in reqs if r["categoria"] == c] for c in rb.CATEGORIAS}
+
+    def trocar(chave, de, para):
+        assert de in base[chave], (chave, de[:60])
+        return {**base, chave: base[chave].replace(de, para)}
+
+    alt = texto["canal_b"][1]
+    ultima = alt.rstrip(" .?!").split()[-1]
+    fala = texto["podcast"][0]
+    meio = fala.split()[len(fala.split()) // 2]
+    pergunta = texto["roteiro"][-1]
+    objeto = texto["evento"][0].split(" · ")[1]
+    estado = texto["estado"][0]
+    mutacoes = {
+        "perdido-canal_b-copy": trocar("copy_strings_revisada", alt, alt.replace(ultima, "diferente", 1)),
+        "perdido-roteiro-copy": trocar("copy_strings_revisada", pergunta,
+                                       pergunta.replace(" ", " não ", 1)),
+        "perdido-evento-handoff": trocar("handoff_dev", objeto, objeto + "_v2"),
+        "perdido-estado-prd": {**base, "prd_final": base["prd_final"].replace(estado, estado + "_novo")},
+        "perdido-podcast-copy": trocar("copy_strings_revisada", fala, fala.replace(meio, "qualquer", 1)),
+    }
+    perdidas = [n for n, e in mutacoes.items() if n not in {a["codigo"] for a in rb.matriz(e)["achados"]}]
+    assert not perdidas, f"a matriz deixou passar: {perdidas}"
+
+
+def test_literal_tolera_formatacao_mas_nao_troca_de_sentido():
+    from tools import conteudo_aprovado as ca
+
+    aprovado = "Apenas para a família e amigos próximos que você conhece de verdade."
+    assert ca.literais_ausentes("**Apenas** para a família e amigos próximos que você conhece de verdade!", [aprovado]) == []
+    assert ca.literais_ausentes("Apenas para a família e amigos próximos que você conhece de mentira.", [aprovado]) == [aprovado]
+    assert ca.literais_ausentes("Não apenas para a família e amigos próximos que você conhece de verdade.", [aprovado]) == [aprovado]
+
+
+# --------------------------------------------------------------------------- gates que aprovavam vazio
+def test_gates_que_aprovavam_vazio_agora_reprovam():
+    from tools import conteudo_aprovado as ca
+    from tools import telas
+
+    assert telas.cobertura({"jornada_telas": ""})["status"] == "bloqueado"
+    jornada = _fixture_exp09("jornada.md")
+    r = telas.cobertura({"jornada_telas": jornada, "fluxo_arestas": "", "copy_strings_revisada": "x",
+                         "wireframes_cobertura": "x"})
+    assert any(a["codigo"] == "derivado-vazio" and a["agente_responsavel"] == "fluxo" for a in r["achados"])
+    one_pager = _fixture_exp09("one_pager.md")
+    if any(ca.literais(one_pager).get(q) for q in ("canal_b", "roteiro", "podcast")):
+        assert [a["codigo"] for a in ca.validar_copy("", one_pager)] == ["copy-vazia"]
+    if ca.literais(one_pager)["podcast"]:
+        assert [a["codigo"] for a in ca.validar_banco("", one_pager)] == ["banco-vazio"]
+
+
+# --------------------------------------------------------------------------- handoff → PRD e PRD → pedagógico
+def test_handoff_no_prd_tabela_e_evento_nao_somem_sem_registro():
+    from tools.prd_codavel import handoff_no_prd
+
+    handoff = ("CREATE TABLE exp06ef1b_sessoes (id UUID);\nCREATE TABLE exp06ef1b_reflexoes (id UUID);\n"
+               "| Verbo | Objeto |\n|---|---|\n| interacted | `voto:cravar` |\n| completed | `missao:concluir` |\n"
+               "POST /exp06ef1b/turmas/:turmaId/zerar\n")
+    prd = "exp06ef1b_sessoes · `voto:cravar` · POST /exp06ef1b/turmas/:turmaId/zerar"
+    codigos = {a["codigo"] for a in handoff_no_prd(prd, handoff)}
+    assert codigos == {"tabela-do-handoff-perdida", "evento-do-handoff-perdido"}
+    registrado = prd + "\n\n# 19. Decisões\n`exp06ef1b_reflexoes` e `missao:concluir` saem: divergência com o handoff, dono produto.\n"
+    assert handoff_no_prd(registrado, handoff) == []
+    rota = handoff_no_prd(prd.replace("POST /exp06ef1b/turmas/:turmaId/zerar", "DELETE /exp06ef1b/turmas/:turmaId")
+                          + "\n# 19. Decisões\nexp06ef1b_reflexoes missao:concluir\n", handoff)
+    assert [a["codigo"] for a in rota] == ["rota-do-handoff-mudou"] and rota[0]["severidade"] == "atencao"
+
+
+def test_pedagogico_tem_juiz_de_contradicoes():
+    from agents.dev import agentes_em_ordem, build_dev_stage
+
+    loop = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "OnePagerPedagogicoLoop")
+    nomes = [a.name for a in loop.sub_agents]
+    assert nomes.index("A49eCoerenciaPedagogico") < nomes.index("A49PedagogicoRodada")
+    assert "coerencia_pedagogico_status" in loop.sub_agents[-1].status_keys

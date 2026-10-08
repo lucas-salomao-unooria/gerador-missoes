@@ -1167,7 +1167,7 @@ class RastroCheckAgent(BaseAgent):
             from tools import prd_codavel as pc
 
             r_codavel = pc.validar(str(state.get("prd_final", "") or ""), str(state.get(self.spec_key, "") or ""),
-                                   str(state.get("banco_conteudo", "") or ""))
+                                   str(state.get("banco_conteudo", "") or ""), handoff=str(state.get("handoff_dev", "") or ""))
             ordem = ("bloqueado", "amarelo", "aprovado")
             resultado = {
                 "status": min((r_lacunas["status"], r_design["status"], r_consistencia["status"], r_codavel["status"]),

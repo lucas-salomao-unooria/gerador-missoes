@@ -67,6 +67,7 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "kpis_status", "rotulo": "Coerência KPI ↔ evento ↔ tela", "etapa": "dev", "rodada": "prd_rodada"},
     {"status": "conteudo_aprovado_prd_status", "rotulo": "PRD × one-pager aprovado", "etapa": "dev", "rodada": "prd_rodada"},
     {"status": "coerencia_prd_status", "rotulo": "Coerência do PRD com o one-pager aprovado", "etapa": "dev", "rodada": "prd_rodada"},
+    {"status": "coerencia_pedagogico_status", "rotulo": "Coerência do pedagógico com o one-pager aprovado", "etapa": "dev", "rodada": "pedagogico_rodada"},
     {"status": "conteudo_aprovado_pedagogico_status", "rotulo": "Pedagógico × one-pager aprovado", "etapa": "dev", "rodada": "pedagogico_rodada"},
     {"status": "rastreabilidade_status", "rotulo": "Matriz de rastreabilidade (produto → design)", "etapa": "design", "rodada": None},
     {"status": "rastreabilidade_dev_status", "rotulo": "Matriz de rastreabilidade (produto → design → dev)", "etapa": "dev", "rodada": None},

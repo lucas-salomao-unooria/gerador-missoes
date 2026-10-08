@@ -267,8 +267,61 @@ def validar_intencoes(banco: str, spec: str, prd: str = "") -> List[Dict[str, st
     return achados
 
 
+# --------------------------------------------------------------------------- handoff → PRD
+_RE_TABELA_DA_MISSAO = re.compile(r"\b(exp\d{2}e[fm]\d[ab]_[a-z0-9_]+)\b")
+_RE_ROTA = re.compile(r"\b(GET|POST|PUT|PATCH|DELETE)\s+`?(/[\w/:{}.-]+)")
+
+
+def handoff_no_prd(prd: str, handoff: str) -> List[Dict[str, str]]:
+    """O que o handoff entregou ao PRD não some no caminho: tabela da missão, evento, rota.
+
+    Nada comparava os dois (auditoria do padrão ouro, 08/10/2026): o PRD da exp09ef1b reduziu a DDL do handoff a
+    prosa e trocou `GET /sessoes/:id` por `GET /sessao` sem dizer. Tabela e evento que somem reprovam — a menos que a
+    seção 19 do PRD os nomeie (divergência registrada). Rota diferente é ressalva: o PRD reorganiza para o molde.
+    """
+    achados: List[Dict[str, str]] = []
+    if not (handoff or "").strip() or not (prd or "").strip():
+        return achados
+    s19 = _secao(prd, 19)
+    corpo = prd
+
+    def registrado(nome: str) -> bool:
+        return nome in s19
+
+    # tabela é o que o handoff declara como tabela — índice, policy e constraint têm o mesmo prefixo e não contam
+    declaradas = set(re.findall(r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`\"]?(exp\w+)", handoff, re.I))
+    declaradas |= set(re.findall(r"@@map\(\"(exp\w+)\"\)", handoff))
+    declaradas |= set(re.findall(r"tabela\s+\**`(exp\w+)`", handoff, re.I))
+    if not declaradas:
+        declaradas = {t for t in _RE_TABELA_DA_MISSAO.findall(handoff)
+                      if not re.search(r"_(?:idx|pkey|fkey|key|check|por_escola|uk|unique)$", t)}
+    tabelas = sorted({t for t in declaradas if t not in corpo and not registrado(t)})
+    if tabelas:
+        _achado(achados, "bloqueio", "tabela-do-handoff-perdida",
+                f"O handoff declara {', '.join(f'`{t}`' for t in tabelas)} e o PRD não as tem nem as registra como "
+                "divergência na seção 19: quem codifica não sabe se a tabela existe.")
+    objetos: Set[str] = set()
+    for t in _tabelas(handoff):
+        col = _coluna(t, "objeto")
+        if col is None:
+            continue
+        for linha in t[1:]:
+            objetos |= set(re.findall(r"\b[a-z_]+:[a-z0-9_:-]+\b", linha[col] if col < len(linha) else ""))
+    eventos = sorted(o for o in objetos if o not in corpo and not registrado(o))
+    if eventos:
+        _achado(achados, "bloqueio", "evento-do-handoff-perdido",
+                f"Evento(s) do handoff que o PRD não traz nem registra na seção 19: {', '.join(f'`{o}`' for o in eventos[:12])}"
+                f"{' …' if len(eventos) > 12 else ''}. O objeto é o que a conferência de telemetria procura literal.")
+    rotas = sorted({f"{m} {p}" for m, p in _RE_ROTA.findall(handoff) if p.rstrip("/") not in corpo})
+    if rotas:
+        _achado(achados, "atencao", "rota-do-handoff-mudou",
+                f"Rota(s) do handoff que o PRD não repete: {', '.join(f'`{r}`' for r in rotas[:10])}. Se o PRD as trocou pelo "
+                "molde, a seção 19 diz qual substitui qual.")
+    return achados
+
+
 # --------------------------------------------------------------------------- entrada
-def validar(prd: str, spec: str = "", banco: str = "") -> Dict[str, Any]:
+def validar(prd: str, spec: str = "", banco: str = "", handoff: str = "") -> Dict[str, Any]:
     from tools.conteudo_aprovado import remover_anexo
 
     corpo = remover_anexo(prd or "")
@@ -281,6 +334,7 @@ def validar(prd: str, spec: str = "", banco: str = "") -> Dict[str, Any]:
         _modelo(corpo, achados)
         _ficha(corpo, spec, achados)
         achados += [a for a in validar_intencoes(banco, spec, corpo) if a["codigo"] == "prd-sem-intencoes"]
+        achados += handoff_no_prd(corpo, handoff)
     status = "bloqueado" if any(a["severidade"] == "bloqueio" for a in achados) else ("amarelo" if achados else "aprovado")
     return {"status": status, "achados": achados}
 

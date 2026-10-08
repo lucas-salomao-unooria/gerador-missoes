@@ -79,6 +79,8 @@ CHAVES_DEV = frozenset({
     "rastreabilidade_dev_report", "rastreabilidade_dev_status", "rastreabilidade_dev_status_envelope",
     # o corpo do PRD × conteúdo aprovado, pelo juiz de contradições (08/10/2026)
     "coerencia_prd_report", "coerencia_prd_status", "coerencia_prd_status_envelope", "juiz_coerencia_prd_saida",
+    "coerencia_pedagogico_report", "coerencia_pedagogico_status", "coerencia_pedagogico_status_envelope",
+    "juiz_coerencia_pedagogico_saida",
     # a banca de entrada do dev, segunda verificação de produto e design (08/10/2026)
     "banca_entrada_narrativa", "banca_entrada_imersao", "banca_entrada_pedagogia",
     "banca_entrada_report", "banca_entrada_status", "banca_entrada_status_envelope",
@@ -241,6 +243,7 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Banca de design": "design",
     "Banca de entrada do dev": "dev",
     "Coerência do PRD com o one-pager aprovado": "dev",
+    "Coerência do pedagógico com o one-pager aprovado": "dev",
     "Fechamento de lacunas (D0)": "design",
     "Ambiente simulado (D9)": "design",
     "QA de entregáveis (design)": "design",

@@ -83,6 +83,7 @@ KNOWN_STATE_KEYS = {
                                        "copy_strings", "camada_caa", "wireframes_cobertura", "copy_strings_revisada",
                                        "prototipo_html")),
     "contradicoes_documento", "contradicoes_referencia", "coerencia_prd_report", "coerencia_prd_status",
+    "coerencia_pedagogico_report", "coerencia_pedagogico_status", "juiz_coerencia_pedagogico_saida",
     "juiz_coerencia_prd_saida",
     "escopo_banca", "banca_produto_report", "banca_produto_status", "banca_produto_narrativa", "banca_produto_pedagogia",
     "banca_design_report", "banca_design_status", "banca_design_narrativa", "banca_design_imersao",

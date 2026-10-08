@@ -140,8 +140,12 @@ def cobertura(state: Dict[str, Any]) -> Dict[str, Any]:
         achados.append({"severidade": severidade, "codigo": codigo, "etapa": "design",
                         "agente_responsavel": dono, "resumo": resumo})
 
+    # Jornada vazia não é "nada a conferir": é o autor que não respondeu, e todo derivado fica sem chão
+    # (auditoria do padrão ouro, 08/10/2026 — este gate aprovava a jornada vazia).
     if not jornada.strip():
-        return {"status": "aprovado", "achados": [], "inventario": inv, "matriz": {}}
+        achado("bloqueio", "jornada-vazia", "jornada",
+               "A jornada chegou vazia: sem o inventário de telas, nenhum derivado pode ser conferido.")
+        return {"status": "bloqueado", "achados": achados, "inventario": inv, "matriz": {}}
     if not esperadas:
         achado("bloqueio", "inventario-ausente", "jornada",
                "A jornada não tem a tabela «Seção 3 — Inventário de telas» com a coluna `ID`: sem ela nenhum derivado "
@@ -162,6 +166,9 @@ def cobertura(state: Dict[str, Any]) -> Dict[str, Any]:
     for chave, rotulo, dono in DERIVADOS:
         texto = str(state.get(chave, "") or "")
         if not texto.strip():
+            # derivado obrigatório que não chegou: antes era pulado e o gate aprovava sem ele
+            achado("bloqueio", "derivado-vazio", dono,
+                   f"{rotulo.capitalize()} chegou vazio: as {len(esperadas)} telas do inventário não têm onde ser conferidas.")
             continue
         presentes = set(ids(texto))
         faltando = [i for i in esperadas if i not in presentes]

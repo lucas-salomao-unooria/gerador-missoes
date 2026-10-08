@@ -60,6 +60,10 @@ podcast e os caminhos de arquivo que você cita. A correção é copiar de onde 
 
 {conteudo_aprovado_pedagogico_report?}
 
+**Coerência com o one-pager aprovado (um juiz cita o seu texto e o conteúdo aprovado em cada contradição; o código conferiu as duas citações — bloqueante):**
+
+{coerencia_pedagogico_report?}
+
 ## Insumos
 
 **Spec da missão (o contrato fechado):**
