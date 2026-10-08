@@ -404,3 +404,16 @@ def test_falsos_positivos_achados_no_prd_gerado_ao_vivo():
     assert ca.literais_ausentes(f"Ainda não: {alt} Para a compreensão…", [alt]) == []
     assert ca.literais_ausentes(f"Não atingiu: {alt}", [alt]) == []
     assert ca.literais_ausentes(f"Não {alt.lower()}", [alt]) == [alt]
+
+
+def test_secao_legada_escolhida_pelo_po_nao_bloqueia():
+    """Seção legada é bloqueio — salvo quando o PO a fixou no one-pager que anexou ou no briefing: a decisão é dele."""
+    from tools.rastro import validar_manifesto
+
+    spec = ("## 0. Ficha\n- id: exp06ef1b\n- secao_ds: instanooria\n- produto: entre-redes\n")
+    def sev(r):
+        return [a["severidade"] for a in r["achados"] if a.get("campo") == "secao_ds"]
+    assert sev(validar_manifesto(spec)) == ["bloqueio"]
+    assert sev(validar_manifesto(spec, one_pager_po="# One-pager\n- **Seção do DS:** `instanooria`\n")) == ["atencao"]
+    assert sev(validar_manifesto(spec, briefing="secao_ds: instanooria")) == ["atencao"]
+    assert sev(validar_manifesto(spec, one_pager_po="- **Seção do DS:** `unoovista`")) == ["bloqueio"]

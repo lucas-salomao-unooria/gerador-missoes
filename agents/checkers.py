@@ -1092,7 +1092,8 @@ class RastroCheckAgent(BaseAgent):
         elif self.modo == "manifesto":
             # o briefing entra para conferir a seção do DS que ele fixou (exp03ef1b, 07/10/2026)
             resultado = validar_manifesto(str(state.get(self.spec_key, "") or ""),
-                                          briefing=str(state.get("briefing", "") or ""))
+                                          briefing=str(state.get("briefing", "") or ""),
+                                          one_pager_po=str(state.get("one_pager_po", "") or ""))
             relatorio = relatorio_manifesto(resultado, missao)
         elif self.modo == "telemetria":
             resultado = validar_telemetria(str(state.get(self.fonte_key, "") or ""))

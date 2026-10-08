@@ -686,7 +686,15 @@ def decompor_id(identificador: str) -> Optional[Dict[str, Any]]:
     return {"serie": f"{ano}{etapa}", "unidade": bimestre}
 
 
-def validar_manifesto(spec: str, briefing: str = "") -> Dict[str, Any]:
+def _legada_fixada_pelo_po(secao: str, briefing: str, one_pager_po: str) -> bool:
+    """A seção legada está na linha «Seção do DS» do one-pager do PO, ou o briefing a fixa (`secao_ds: <seção>`)."""
+    cab = re.search(r"Se[çc][ãa]o do DS\**\s*[:=]\s*\**`?([a-z][\w:-]*)", (one_pager_po or "")[:6000], re.IGNORECASE)
+    if cab and cab.group(1).lower() == secao:
+        return True
+    return bool(re.search(rf"secao_ds\W{{0,4}}{re.escape(secao)}\b", briefing or "", re.IGNORECASE))
+
+
+def validar_manifesto(spec: str, briefing: str = "", one_pager_po: str = "") -> Dict[str, Any]:
     from tools.bncc import secao_bloco  # bloco 0 da spec, mesmo parser
 
     texto = secao_bloco(spec or "", 0) or (spec or "")[:4000]
@@ -820,6 +828,14 @@ def validar_manifesto(spec: str, briefing: str = "") -> Dict[str, Any]:
     secoes = secoes_ds()
     if not v or not (v.lower() in secoes or re.match(r"^(nova|minijogo)\s*:\s*\S+", v, re.IGNORECASE)):
         falta("secao_ds", f"`secao_ds` ausente ou fora de {sorted(secoes)} / `nova:<nome>` / `minijogo:<nome>` (lido: {v!r}). Dono: design (D9 ambiente-simulado) quando a spec cala; produto quando a spec errou.", etapa="design")
+    elif v.lower() in SECOES_LEGADAS and _legada_fixada_pelo_po(v.lower(), briefing, one_pager_po):
+        # O PO escolheu a legada — no one-pager que anexou ou no briefing. A decisão é dele (a mensagem sempre disse
+        # isso, e o código bloqueava assim mesmo): a exp06ef1b, missão já publicada em `instanooria`, era empurrada
+        # para `unoovista` contra o one-pager aprovado (08/10/2026). Fica visível, não trava.
+        sucessora = SUCESSORA_DA_LEGADA.get(v.lower())
+        achados.append({"severidade": "atencao", "campo": "secao_ds", "etapa": "produto", "resumo": (
+            f"`{v}` é seção legada, mantida por decisão do PO (está no one-pager que ele anexou ou no briefing)"
+            + (f"; a sucessora é `{sucessora}`" if sucessora else "") + ".")})
     elif v.lower() in SECOES_LEGADAS:
         sucessora = SUCESSORA_DA_LEGADA.get(v.lower())
         achados.append({"severidade": "bloqueio", "campo": "secao_ds", "etapa": "produto", "resumo": (
