@@ -206,6 +206,12 @@ one-pager em todo lugar que fala de tempo em tela, inclusive guardrail e RNF; `p
 
 {conteudo_aprovado_prd_report?}
 
+**Coerência com o one-pager aprovado (um juiz cita o seu corpo e o conteúdo aprovado em cada contradição; o código conferiu as duas citações — bloqueante):**
+
+{coerencia_prd_report?}
+
+Cada contradição comprovada é sua: o corpo passa a dizer o que o conteúdo aprovado diz — a mecânica, o número, a regra, o texto. Se a plataforma não permite o que o aprovado pede, o corpo segue a plataforma e a divergência vai para a seção 19 com dono `produto`; o juiz não acusa o que está registrado assim.
+
 ## Consistência interna — um gate determinístico confere isto depois de você
 
 Estas regras não são estilo: um documento que se contradiz faz quem codifica escolher um caminho ao

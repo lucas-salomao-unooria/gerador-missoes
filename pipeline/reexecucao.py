@@ -77,6 +77,11 @@ CHAVES_DEV = frozenset({
     "fidelidade_dev_report", "fidelidade_dev_status", "fidelidade_dev_status_envelope", "juiz_fidelidade_dev_saida",
     # a matriz final, com chave própria para entrar no semáforo de dev (07/10/2026)
     "rastreabilidade_dev_report", "rastreabilidade_dev_status", "rastreabilidade_dev_status_envelope",
+    # o corpo do PRD × conteúdo aprovado, pelo juiz de contradições (08/10/2026)
+    "coerencia_prd_report", "coerencia_prd_status", "coerencia_prd_status_envelope", "juiz_coerencia_prd_saida",
+    # a banca de entrada do dev, segunda verificação de produto e design (08/10/2026)
+    "banca_entrada_narrativa", "banca_entrada_imersao", "banca_entrada_pedagogia",
+    "banca_entrada_report", "banca_entrada_status", "banca_entrada_status_envelope",
 })
 #: `miro_board` fica de fora de propósito: o espelho atualiza o mesmo board em vez de abrir outro.
 CHAVES_DESIGN = frozenset({
@@ -100,6 +105,9 @@ CHAVES_DESIGN = frozenset({
     # a spec consolidada pelo D0/D9 × one-pager aprovado (07/10/2026)
     "conteudo_aprovado_spec_design_report", "conteudo_aprovado_spec_design_status",
     "conteudo_aprovado_spec_design_status_envelope",
+    # a banca no fim de design (08/10/2026)
+    "banca_design_narrativa", "banca_design_imersao",
+    "banca_design_report", "banca_design_status", "banca_design_status_envelope",
 }) | CHAVES_DEV
 #: `spec_missao_gate0` tem de cair: o split do D0 só grava esse backup se ele não existir
 #: (`agents/checkers.py`, SecaoSplitAgent) — senão a spec velha seria preservada como "original".
@@ -120,6 +128,9 @@ CHAVES_SPEC = frozenset({
     # o resumido × canônico aprovado (07/10/2026): sem apagar, a correção começava com as rodadas esgotadas
     "conteudo_aprovado_resumido_report", "conteudo_aprovado_resumido_status",
     "conteudo_aprovado_resumido_status_envelope", "resumido_rodada",
+    # a banca no fim de produto (08/10/2026)
+    "banca_produto_narrativa", "banca_produto_pedagogia",
+    "banca_produto_report", "banca_produto_status", "banca_produto_status_envelope",
 }) | CHAVES_DESIGN
 #: Tudo que a etapa de produto grava. Ficam de fora, de propósito, o que ela LÊ da geração original:
 #: `briefing`, `perguntas_po` e `material_anexado` — refazer produto é refazê-lo sobre o mesmo pedido
@@ -159,7 +170,11 @@ CHAVES_TRANSVERSAL = frozenset({
 #: lista: têm de sobreviver ao refazer de produto para dizer o que mudou nele.
 CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_rota", "juiz_achados_entrada",
                              "fidelidade_entrada", "fidelidade_documentos", "mudancas_no_aprovado",
-                             "etapa_da_correcao", KEY_AGENTES_DEGRADADOS})
+                             "etapa_da_correcao", "escopo_banca", KEY_AGENTES_DEGRADADOS,
+                             "contradicoes_documento", "contradicoes_referencia",
+                             # a versão da rodada anterior de cada loop: some ao sair do loop, e aqui se a execução caiu
+                             *(f"rodada_anterior_{c}" for c in ("spec_missao", "one_pager_resumido", "handoff_dev",
+                                                                "brief_assets", "prd_final", "one_pager_pedagogico"))})
 #: Em que etapa começou a correção desta execução (vazio sem pedido de correção).
 KEY_ETAPA_DA_CORRECAO = "etapa_da_correcao"
 
@@ -217,6 +232,10 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Resumido × one-pager aprovado": "spec",
     "One-pager resumido": "spec",
     "Spec consolidada × one-pager aprovado": "design",
+    "Banca de produto": "spec",
+    "Banca de design": "design",
+    "Banca de entrada do dev": "dev",
+    "Coerência do PRD com o one-pager aprovado": "dev",
     "Fechamento de lacunas (D0)": "design",
     "Ambiente simulado (D9)": "design",
     "QA de entregáveis (design)": "design",

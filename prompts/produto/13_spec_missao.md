@@ -116,6 +116,12 @@ Cinco é o número fechado — nem quatro por economia, nem oito por zelo.
 
 {conteudo_aprovado_spec_report?}
 
+**Banca de validação no fim de produto (os critérios de produto e de pedagogia da banca que, até 08/10/2026, só rodava no dev — vazio na primeira rodada):**
+
+{banca_produto_report?}
+
+Cada ❌ da banca é seu: corrija na spec o que ela aponta. Se a falha está numa decisão do one-pager que a spec só traduz, não a resolva por conta própria: marque `[ABERTO — dono: PO: <o que a banca apontou>]` no lugar, para o PO decidir antes do parecer. A mesma banca roda de novo na entrada do dev, e o que ela reprovar lá depois de aprovado aqui aparece como «passou na etapa, reprova aqui».
+
 Se os dois blocos estiverem vazios e não houver pedido de correção no fim desta instrução, esta é a primeira passada: escreva a spec normalmente. Com pedido de correção, você está reescrevendo uma spec já aprovada: aplique o pedido, preserve o resto e registre o que mudou.
 
 Se algum deles apontar achado, **reemita a spec inteira** corrigindo exatamente o que foi apontado. Os dois gates são mecânicos e a correção costuma ser literal:

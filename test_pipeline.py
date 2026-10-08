@@ -75,6 +75,19 @@ KNOWN_STATE_KEYS = {
     "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
     "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida",
+    # a banca nas quatro posições (08/10/2026)
+    *("rodada_anterior_" + c for c in ("spec_missao", "one_pager_resumido", "handoff_dev", "brief_assets",
+                                       "prd_final", "one_pager_pedagogico", "banco_conteudo", "mapa_conceitual",
+                                       "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "fechamento_lacunas",
+                                       "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas",
+                                       "copy_strings", "camada_caa", "wireframes_cobertura", "copy_strings_revisada",
+                                       "prototipo_html")),
+    "contradicoes_documento", "contradicoes_referencia", "coerencia_prd_report", "coerencia_prd_status",
+    "juiz_coerencia_prd_saida",
+    "escopo_banca", "banca_produto_report", "banca_produto_status", "banca_produto_narrativa", "banca_produto_pedagogia",
+    "banca_design_report", "banca_design_status", "banca_design_narrativa", "banca_design_imersao",
+    "banca_entrada_report", "banca_entrada_status", "banca_entrada_narrativa", "banca_entrada_imersao",
+    "banca_entrada_pedagogia",
     # 07/10/2026 (noite): resumido × canônico, fidelidade ao refazer de design e de dev, matriz final do dev,
     # spec consolidada × one-pager, o que mudou no one-pager desde a versão anterior e os retratos que o medem
     "conteudo_aprovado_resumido_report", "conteudo_aprovado_resumido_status", "resumido_rodada",
@@ -128,8 +141,12 @@ EXPECTED_AGENTS = {
     "A23Fluxo", "A24CopyPtBr", "A25Caa", "A26Telas", "A27CopyRevisao", "A30QaEntregaveis",
     "A28Prototipo", "A29ArtefatosDesign", "A29bEspelhoMiro", "A29dConsistencia", "A30bQaAfirmacoes", "A31QaEntregaveisCheck", "DevStage", "A33ManifestoCheck", "HandoffParalelo", "A34HandoffDev", "A35BriefAssets", "A35bBancoConteudo", "A35cConteudoCheck",
     "A36TelemetriaCheck", "A38LacunaCheck", "A48PrdCheck",
-    "BancaValidacaoDev", "A39BancaProdutoNarrativa", "A40BancaDesignImersao",
-    "A41BancaPedagogiaBncc", "A42BancaDadosLgpd", "A43BancaTecnicaArquitetura",
+    "BancaValidacaoDev", "A42BancaDadosLgpd", "A43BancaTecnicaArquitetura",
+    # a banca nas quatro posições (08/10/2026): fim de produto, fim de design e entrada do dev
+    "A15hBancaProdutoNarrativa", "A15hBancaPedagogiaBncc", "A15hBancaConsolidacao",
+    "A29fBancaProdutoNarrativa", "A29fBancaDesignImersao", "A29fBancaConsolidacao",
+    "A33bBancaProdutoNarrativa", "A33bBancaDesignImersao", "A33bBancaPedagogiaBncc", "A33bBancaConsolidacao",
+    "DevConstrucao",
     "A44ConsolidacaoBanca", "A45ValidacaoDevCheck", "A47PrdWriter", "A49OnePagerPedagogico",
     "A51Aprendizado",
     "A50Diagnostico", "ProdutoStage",
@@ -215,7 +232,8 @@ def test_arvore_de_agentes():
     assert [a.name for a in loop.sub_agents] == ["A04bBriefEscopoSplit", "A04bContratoProdutoCheck", "A04cJuizContratoProduto",
                                                  "A05GateEstrutural", "A06GateEstruturalCheck", "A07RevisorOnePager"]
     banca = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "BancaValidacaoDev")
-    assert len(banca.sub_agents) == 5
+    # dentro do dev só dados e técnica; produto, design e pedagogia rodam no fim das etapas e na entrada (08/10/2026)
+    assert [j.name for j in banca.sub_agents] == ["A42BancaDadosLgpd", "A43BancaTecnicaArquitetura"]
 
     # metadados coerentes com a árvore
     meta_ids = {m["id"] for m in get_pipeline_agents_metadata()}
@@ -1056,7 +1074,9 @@ def test_estagio_produto_parcial_spec():
         "A15fRastroSpec",
         # spec × one-pager aprovado (06/10/2026): a spec aplicava ressalvas que o PO tinha recusado —
         # a exp06ef1b perdeu uma habilidade e cinco minutos de tela — e ninguém via
-        "A15gConteudoAprovadoSpec", "A16SpecCheck"]
+        "A15gConteudoAprovadoSpec",
+        # a banca no fim de produto (08/10/2026): o achado volta ao autor da spec antes do parecer
+        "A15hEscopoBanca", "A15hBanca", "A15hBancaConsolidacao", "A16SpecCheck"]
     assert produto.sub_agents[0].max_iterations == max(1, get_settings().spec_max_rodadas)
     nomes = [a.name for _, a in iter_agent_tree(orch)]
     assert "A01NucleoNarrativo" not in nomes and "A05GateEstrutural" not in nomes
@@ -1082,7 +1102,8 @@ def test_estagio_produto_parcial_spec():
     assert [m["id"] for m in STAGE_SPEC["agents"]] == [
         "A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
         "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
-        "A15gConteudoAprovadoSpec", "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido",
+        "A15gConteudoAprovadoSpec", "A15hBancaProdutoNarrativa", "A15hBancaPedagogiaBncc", "A15hBancaConsolidacao",
+        "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido",
         "A16eConteudoAprovadoResumido", "A16fResumidoRodada"]
     print("   ✓ estágio parcial spec: SpecLoop + resumido, sem núcleo; stages_para_ui resolve spec")
 
@@ -2431,7 +2452,7 @@ def test_prd_tem_ciclo_de_correcao():
     O do PRD não tinha: detectava defeito de contrato no entregável final e seguia para o
     one-pager com o defeito intacto, deixando para o humano o que tem correção certa.
     """
-    from agents.dev import DEV_METADATA, build_dev_stage
+    from agents.dev import agentes_em_ordem, DEV_METADATA, build_dev_stage
 
     nomes = {m["id"] for m in DEV_METADATA}
     assert {"A47PrdWriter", "A48PrdCheck", "A48PrdRodada"} <= nomes, sorted(nomes)
@@ -4447,7 +4468,7 @@ def test_rastro_cobra_cada_etapa_pelo_que_e_dela():
     tinha fechado a pendência; e «ratificação» não contava como decisão humana, ao contrário das três
     «Homologação…» da mesma lista. Nenhuma das três coisas dependia de quem estava no parecer de dev."""
     from agents.design import build_design_stage
-    from agents.dev import build_dev_stage
+    from agents.dev import agentes_em_ordem, build_dev_stage
     from agents.produto import _build_spec_loop
     from config import get_settings
     from pipeline.passagem import chaves_da_etapa
@@ -4505,7 +4526,7 @@ def test_rastro_cobra_cada_etapa_pelo_que_e_dela():
     assert rastro_spec.etapa == "produto" and "rastro_spec_status" in saida.status_keys
     rastro_design = next(a for a in build_design_stage().sub_agents if a.name == "A33RastroDesign")
     assert rastro_design.name == "A33RastroDesign" and rastro_design.etapa == "design"
-    a38 = next(a for a in build_dev_stage().sub_agents if a.name == "A38LacunaCheck")
+    a38 = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "A38LacunaCheck")
     assert a38.etapa == "dev" and a38.fontes == FONTES_DEV
     assert "rastro_spec_status" in chaves_da_etapa("produto") and "rastro_design_status" in chaves_da_etapa("design")
     print("   ✓ rastro por etapa: D0 fecha, ratificação é do PO, cada etapa cobra o que é dela")
@@ -4882,7 +4903,11 @@ def test_afirmacoes_do_qa_conferidas_em_codigo():
 
     from agents.design import build_qa_design_loop
 
-    assert [a.name for a in build_qa_design_loop().sub_agents][:3] == ["A30QaEntregaveis", "A30bQaAfirmacoes", "A31QaEntregaveisCheck"]
+    # a banca de design vem antes do QA (08/10/2026); o QA, as afirmações e o veredito seguem em sequência
+    nomes_qa = [a.name for a in build_qa_design_loop().sub_agents]
+    i = nomes_qa.index("A30QaEntregaveis")
+    assert nomes_qa[:3] == ["A29fEscopoBanca", "A29fBanca", "A29fBancaConsolidacao"]
+    assert nomes_qa[i:i + 3] == ["A30QaEntregaveis", "A30bQaAfirmacoes", "A31QaEntregaveisCheck"]
     print("   ✓ afirmações do QA: 16 telas num Stitch com 6 e um arquivo que não existe reprovam a rodada")
 
 
@@ -4940,13 +4965,13 @@ def test_banco_de_conteudo_escrito_e_status_humano_no_brief():
 
 
 def test_banco_de_conteudo_no_estagio_de_dev():
-    from agents.dev import build_dev_stage
+    from agents.dev import agentes_em_ordem, build_dev_stage
     from pipeline.artifacts import ARTIFACT_FILES
 
-    nomes = [a.name for a in build_dev_stage().sub_agents]
+    nomes = [a.name for a in agentes_em_ordem(build_dev_stage())]
     # desde 07/10/2026 o banco e o verificador estão num loop: o bloqueio volta ao banco com o relatório
     assert nomes.index("HandoffLoop") < nomes.index("BancoLoop") < nomes.index("A38LacunaCheck")
-    loop = next(a for a in build_dev_stage().sub_agents if a.name == "BancoLoop")
+    loop = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "BancoLoop")
     assert [a.name for a in loop.sub_agents] == ["A35bBancoConteudo", "A35cConteudoCheck", "A35dBancoRodada"]
     assert ("banco_conteudo", "dev/01e-banco-conteudo.md") in ARTIFACT_FILES
 

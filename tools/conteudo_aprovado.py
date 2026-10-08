@@ -760,6 +760,80 @@ def habilidades_de_referencia(spec: str, one_pager: str) -> Tuple[List[str], str
     return bncc.extrair_codigos(bloco11), "o bloco 11 da spec"
 
 
+#: Semelhança mínima para o texto entre aspas no documento ser uma redação do aprovado, e não outro texto.
+SEMELHANCA_PARAFRASE = 0.6
+
+
+def literais_parafraseados(documento: str, one_pager: str) -> List[Tuple[str, str]]:
+    """`(aprovado, como o documento escreveu)`: texto entre aspas no documento parecido com um texto aprovado (Canal B,
+    debate, texto de tela do §4) sem ser ele.
+
+    O corpo do PRD pode remeter ao anexo sem citar; o que ele não pode é citar outra redação — o dev codifica o corpo
+    e o anexo diz outra coisa (decisão do usuário, 08/10/2026: o corpo do PRD conferido contra o anexo).
+    """
+    import difflib
+
+    from tools.fidelidade import _norm
+
+    lit = literais(one_pager)
+    alvos = [t for qual in ("canal_b", "roteiro", "texto_tela") for t in lit.get(qual) or []]
+    citados = list(dict.fromkeys(m.group(1).strip() for m in _RE_ENTRE_ASPAS.finditer(documento or "")
+                                 if len(m.group(1).strip()) >= 12))
+    if not alvos or not citados:
+        return []
+    saida: List[Tuple[str, str]] = []
+    for alvo in alvos:
+        if not literais_ausentes(documento, [alvo]):
+            continue  # está literal
+        a = _norm(alvo)
+        melhor = max(citados, key=lambda c: difflib.SequenceMatcher(None, a, _norm(c), autojunk=False).ratio())
+        # rótulo curto parece com outro rótulo curto por acaso («Galeria Oculta da Mostra» × «Acessar Feed da
+        # Mostra», PRD da exp06ef1b): abaixo de 30 caracteres, só conta o quase idêntico
+        corte = SEMELHANCA_PARAFRASE if len(a) >= 30 else 0.8
+        if difflib.SequenceMatcher(None, a, _norm(melhor), autojunk=False).ratio() >= corte:
+            saida.append((alvo, melhor))
+    return saida
+
+
+_ETAPAS = ("Desafiar", "Navegar", "Decidir", "Resultado", "Explicar", "Refletir")
+
+
+def tempos_por_etapa(one_pager: str) -> Dict[str, int]:
+    """Etapa → minutos em tela, da tabela do §10 (a primeira coluna com minutos depois do nome da etapa)."""
+    saida: Dict[str, int] = {}
+    for linha in (secao(one_pager or "", 10) or "").splitlines():
+        if not linha.strip().startswith("|"):
+            continue
+        celulas = [c.strip() for c in linha.strip().strip("|").split("|")]
+        etapa = next((e for e in _ETAPAS if e.lower() in celulas[0].lower()), None) if celulas else None
+        if not etapa or etapa in saida:
+            continue
+        for celula in celulas[1:]:
+            m = re.search(r"(\d{1,2})\s*min", celula)
+            if m:
+                saida[etapa] = int(m.group(1))
+                break
+    return saida
+
+
+def tempos_de_etapa_divergentes(documento: str, one_pager: str) -> List[Tuple[str, int, str]]:
+    """`(etapa, aprovado, linha)`: linha de tabela do documento que nomeia uma só etapa e dá a ela minutos que não são os
+    do §10. Só tabela: em prosa, o número junto da etapa costuma ser outra coisa (o tempo fora da tela, um teto)."""
+    aprovados = tempos_por_etapa(one_pager)
+    saida: List[Tuple[str, int, str]] = []
+    for linha in _linhas_fora_de_codigo(documento):
+        if not linha.strip().startswith("|"):
+            continue
+        nomeadas = [e for e in aprovados if re.search(rf"\b{e}\b", linha, re.I)]
+        if len(nomeadas) != 1:
+            continue
+        etapa = nomeadas[0]
+        numeros = [int(n) for n in re.findall(r"(\d{1,2})\s*min", linha)]
+        if numeros and aprovados[etapa] not in numeros and etapa not in [s[0] for s in saida]:
+            saida.append((etapa, aprovados[etapa], linha.strip()))
+    return saida
+
+
 def _linhas_de_kpi(prd: str) -> List[str]:
     return [l for l in _linhas_fora_de_codigo(prd) if l.lstrip().startswith("|") and re.search(r"\bKPI-?\d", l)]
 
@@ -805,6 +879,22 @@ def validar_prd(prd: str, spec: str, one_pager: str, artefatos: Optional[Iterabl
                 "quando), a linha do asset no inventário de conteúdo e a tarefa que o liga.", "dev"))
     if artefatos is not None:
         achados += _artefatos(corpo, artefatos, "o PRD")
+    # o corpo que cita o texto aprovado com outra redação: o dev codifica o do corpo, e o anexo diz outra coisa
+    parafraseados = literais_parafraseados(corpo, one_pager)
+    if parafraseados:
+        exemplos = "; ".join(f"aprovado «{a[:90]}» → no corpo «{c[:90]}»" for a, c in parafraseados[:4])
+        achados.append(_achado(
+            "literal-parafraseado",
+            f"{len(parafraseados)} texto(s) que o PO aprovou palavra por palavra aparece(m) no corpo do PRD com outra "
+            f"redação: {exemplos}. O corpo copia o texto aprovado, ou remete ao anexo sem citá-lo — nunca uma terceira "
+            "versão.", "dev"))
+    divergentes = tempos_de_etapa_divergentes(corpo, one_pager)
+    if divergentes:
+        exemplos = "; ".join(f"{etapa}: aprovado {aprovado} min → «{linha[:110]}»" for etapa, aprovado, linha in divergentes[:4])
+        achados.append(_achado(
+            "tempo-de-etapa-divergente",
+            f"O tempo em tela por etapa do corpo não bate com a tabela do §10 aprovada: {exemplos}. Confira — o anexo "
+            "traz a tabela; se a divergência é proposital, registre-a na seção 19.", "dev", severidade="atencao"))
     return {"status": _status(achados), "achados": achados, "codigos": da_spec,
             "tempo": tempo_aprovado(one_pager), "podcast": tem_podcast(one_pager)}
 

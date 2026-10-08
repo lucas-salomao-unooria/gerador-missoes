@@ -101,8 +101,11 @@ def test_retrabalho_gera_no_mesmo_projeto_so_o_que_mudou():
     segunda = _gerar(stitch, mudou, registro=primeira["registro"], projeto=primeira["projeto"])
     ferramentas = [f for f, _ in stitch.chamadas]
     assert "create_project" not in ferramentas
-    assert [a["prompt"].split(". ")[0] for f, a in stitch.chamadas if f == "generate_screen_from_text"] == ["E0-PROF-01 — padrão"]
+    # a tela refeita nasce como v2 no mesmo projeto: o Stitch não renomeia nem apaga a v1 (decisão de 08/10/2026)
+    assert [a["prompt"].split(". ")[0] for f, a in stitch.chamadas if f == "generate_screen_from_text"] == ["E0-PROF-01 — padrão · v2"]
+    assert segunda["registro"]["E0-PROF-01|padrão"]["versao"] == 2
     assert segunda["registro"]["E1-ALU-01|padrão"] == primeira["registro"]["E1-ALU-01|padrão"]
+    assert sg.rotulos(segunda["registro"])[segunda["registro"]["E0-PROF-01|padrão"]["screen_id"]] == "E0-PROF-01 — padrão · v2"
 
 
 def test_agente_anexa_a_secao_e_reaproveita_o_projeto(monkeypatch):

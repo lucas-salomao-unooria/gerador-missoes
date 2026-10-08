@@ -118,10 +118,10 @@ def test_pedido_corrente_so_conta_na_etapa_em_que_a_correcao_comecou():
     assert "etapa_da_correcao" not in preparar_estado({**limpo}, "dev")[0]
 
     from agents.design import build_design_stage
-    from agents.dev import build_dev_stage
+    from agents.dev import agentes_em_ordem, build_dev_stage
 
     assert build_design_stage().sub_agents[-1].incluir_corrente is False
-    assert build_dev_stage().sub_agents[-1].incluir_corrente is False
+    assert agentes_em_ordem(build_dev_stage())[-1].incluir_corrente is False
 
 
 def test_copy_sem_o_texto_de_tela_fica_amarela_e_a_proposta_conta():
@@ -137,11 +137,11 @@ def test_copy_sem_o_texto_de_tela_fica_amarela_e_a_proposta_conta():
 
 def test_design_e_dev_recebem_o_nucleo_e_o_banco_nao_le_o_nucleo_antigo():
     from agents.design import build_design_stage
-    from agents.dev import build_dev_stage
+    from agents.dev import agentes_em_ordem, build_dev_stage
     from prompts import load_prompt
 
     assert {1, 3, 4, 8, 13} <= set(ca.SECOES_DESIGN)
-    design, dev = build_design_stage().sub_agents[0], build_dev_stage().sub_agents[0]
+    design, dev = build_design_stage().sub_agents[0], agentes_em_ordem(build_dev_stage())[0]
     assert design.secoes == list(ca.SECOES_DESIGN) and dev.name == "A33aConteudoAprovadoDev"
     # o dev regravava a chave só com as seções do PRD: banca e retrabalhos de design perdiam §8, §13 e o núcleo
     assert dev.secoes == list(ca.SECOES_DESIGN)
@@ -285,10 +285,10 @@ def test_cada_etapa_confere_o_refazer_que_foi_pedido_a_ela():
     assert {a["origem"] for a in produto} == {"refazer Produto", "pedido de correção desta execução"}
 
     from agents.design import build_design_stage
-    from agents.dev import build_dev_stage
+    from agents.dev import agentes_em_ordem, build_dev_stage
 
     assert build_design_stage().sub_agents[-1].name == "A33cFidelidadeDesign"
-    assert build_dev_stage().sub_agents[-1].name == "A51FidelidadeDev"
+    assert agentes_em_ordem(build_dev_stage())[-1].name == "A51FidelidadeDev"
 
 
 def test_devolutiva_que_achou_o_problema_chega_ao_refazer_e_o_conteudo_muda_em_produto():
@@ -345,26 +345,71 @@ def test_orcamento_conta_so_chamada_de_modelo_e_o_conserto_pulado_vai_ao_dossie(
     assert [(r["id"], r["dono"]) for r in pulado[KEY_TICKETS_SEM_ROTA]] == [("B1", "jornada")]
 
 
-def test_banca_conserta_na_ordem_do_design_e_reconfere_o_que_reescreve():
-    from agents.dev import MAPA_BANCA, ORDEM_BANCA, POSFIXO_BANCA, build_dev_stage
+def test_banca_nas_quatro_posicoes_e_o_dev_so_conserta_dev():
+    """Decisão de 08/10/2026: a banca roda no fim de produto e no fim de design (antes do parecer, com retrabalho da
+    própria etapa), de novo na entrada do dev (segunda verificação, sem reescrever) e, dentro do dev, só com dados e
+    técnica — consertando só documento de dev."""
+    from agents.design import build_qa_design_loop
+    from agents.dev import BANCA_EXTERNO, MAPA_BANCA, ORDEM_BANCA, POSFIXO_BANCA, agentes_em_ordem, build_dev_stage
+    from agents.produto import _build_spec_loop
+    from config import get_settings
+    from tools import banca as bnc
 
-    assert ORDEM_BANCA.index("telas") < ORDEM_BANCA.index("copy-ptbr-revisao")
-    assert MAPA_BANCA["copy-ptbr-revisao"] == ["A27CopyRevisaoRetrabalhoBanca", "A27bCopyPreservadaRetrabalhoBanca"]
-    assert POSFIXO_BANCA["banco-conteudo"] == ["A35cConteudoCheckRetrabalhoBanca"]
-    assert "A36TelemetriaCheckRetrabalhoBanca" in POSFIXO_BANCA["handoff-dev"] + POSFIXO_BANCA["jornada"]
-    banca = next(a for a in build_dev_stage().sub_agents if a.name == "BancaLoop")
-    despacho = next(a for a in banca.sub_agents if a.name == "A46DespachoBanca")
-    conferencias = {s.name: s for s in despacho.sub_agents}
-    assert conferencias["A35cConteudoCheckRetrabalhoBanca"].status_key == "conteudo_status"
-    assert conferencias["A36TelemetriaCheckRetrabalhoBanca"].status_key == "telemetria_status"
+    # dentro do dev: só documento de dev, e o que ele reescreve é reconferido
+    assert set(MAPA_BANCA) == {"handoff-dev", "brief-assets", "banco-conteudo"} and ORDEM_BANCA[-1] == "banco-conteudo"
+    assert {"jornada", "fluxo", "telas", "copy-ptbr-revisao", "spec-missao"} <= set(BANCA_EXTERNO)
+    assert POSFIXO_BANCA == {"banco-conteudo": ["A35cConteudoCheckRetrabalhoBanca"],
+                             "handoff-dev": ["A36TelemetriaCheckRetrabalhoBanca"]}
+    banca_dev = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "BancaLoop")
+    juizes = next(a for a in banca_dev.sub_agents if a.name == "BancaValidacaoDev").sub_agents
+    assert [j.output_key for j in juizes] == ["validacao_dados_lgpd", "validacao_tecnica_arquitetura"]
+    assert banca_dev.sub_agents[0].posicao == "dev"
+
+    # fim de produto: dentro do loop da spec, e o loop só termina com a banca liberada
+    loop_spec = _build_spec_loop({}, get_settings(), 2)
+    nomes = [a.name for a in loop_spec.sub_agents]
+    assert nomes.index("A15hBancaConsolidacao") < nomes.index("A16SpecCheck")
+    assert "banca_produto_status" in loop_spec.sub_agents[-1].status_keys
+
+    # fim de design: antes do QA, e o bloqueio vira ticket pelo A30b
+    qa = [a.name for a in build_qa_design_loop().sub_agents]
+    assert qa.index("A29fBancaConsolidacao") < qa.index("A30QaEntregaveis")
+
+    # entrada do dev: antes de qualquer agente de dev, comparando com as etapas
+    dev = build_dev_stage()
+    topo = [a.name for a in dev.sub_agents]
+    assert topo == ["A33aConteudoAprovadoDev", "A33bEscopoBanca", "A33bBanca", "A33bBancaConsolidacao", "DevConstrucao"]
+    entrada = dev.sub_agents[3]
+    assert entrada.status_key == "banca_entrada_status" and entrada.gravar_status
+    assert set(entrada.comparar_com) == {"produto", "design"}
+    assert set(bnc.ESCOPOS) == {"produto", "design", "entrada", "dev"}
+
+
+def test_banca_de_entrada_bloqueada_nao_deixa_o_dev_rodar_e_aponta_a_divergencia():
+    from agents.banca import pular_se_banca_de_entrada_bloqueou
+    from tools import banca as bnc
+
+    def rodar(status):
+        dev = SequentialAgent(name="DevConstrucao", before_agent_callback=pular_se_banca_de_entrada_bloqueou,
+                              sub_agents=[_Marca(name="Handoff")])
+        return asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[dev]), {"banca_entrada_status": status}))
+
+    assert rodar("bloqueado").get("feitos") is None, "com a entrada 🔴 o dev não roda"
+    assert rodar("aprovado")["feitos"] == ["Handoff"]
+
+    entrada = {"achados": [{"id": "PROD-07", "severidade": "bloqueio"}, {"id": "DES-14", "severidade": "bloqueio"}]}
+    design = {"achados": [{"id": "DES-14", "severidade": "bloqueio"}]}  # o design já sabia: liberado por exceção
+    assert bnc.divergencias_com_etapas(entrada, {"produto": {"achados": []}, "design": design}) == [
+        "`PROD-07` passou no fim de produto e de design e reprova aqui."]
+    assert bnc.divergencias_com_etapas(entrada, {"produto": None, "design": None}) == []
 
 
 def test_matriz_final_no_semaforo_de_dev_e_a_do_design_no_de_design():
-    from agents.dev import build_dev_stage
+    from agents.dev import agentes_em_ordem, build_dev_stage
     from pipeline import passagem
     from pipeline.artifacts import ARTIFACT_FILES
 
-    a50 = next(a for a in build_dev_stage().sub_agents if a.name == "A50Rastreabilidade")
+    a50 = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "A50Rastreabilidade")
     assert (a50.report_key, a50.status_key) == ("rastreabilidade_dev_report", "rastreabilidade_dev_status")
     assert "rastreabilidade_dev_status" in passagem.chaves_da_etapa("dev")
     assert "rastreabilidade_status" in passagem.chaves_da_etapa("design")
@@ -381,3 +426,105 @@ def test_triagem_manda_a_produto_o_que_o_one_pager_fixa():
     linha_produto = next(l for l in texto.splitlines() if l.startswith("| `produto`"))
     assert "códigos BNCC do bloco 11" not in linha_spec
     assert "§12a" in linha_produto and "Canal B" in linha_produto and "PARÂMETRO" in linha_produto
+
+
+# --------------------------------------------------------------------------- PRD × conteúdo aprovado (08/10/2026)
+class _JuizFalso(BaseAgent):
+    output_key: str = "juiz_saida"
+    resposta: str = ""
+
+    async def _run_async_impl(self, ctx):
+        yield Event(invocation_id=ctx.invocation_id, author=self.name,
+                    actions=EventActions(state_delta={self.output_key: self.resposta}))
+
+
+def test_corpo_do_prd_que_cita_o_aprovado_com_outra_redacao_ou_outro_tempo():
+    aprovado = "Antes de abrir as fotos, o que você acha que aconteceu no pátio?"
+    assert ca.literais_parafraseados(f'O estudante lê "{aprovado}"', ONE_PAGER_S4) == []
+    reescrito = 'O estudante lê "Antes de abrir as fotos, o que você imagina que houve no pátio?"'
+    assert ca.literais_parafraseados(reescrito, ONE_PAGER_S4) == [
+        (aprovado, "Antes de abrir as fotos, o que você imagina que houve no pátio?")]
+    # rótulo curto parecido com outro rótulo curto não é paráfrase
+    assert not ca.literais_parafraseados('"Galeria Oculta da Mostra"', '# OP\n## 4. E\n### Etapa 1: Desafiar\n- Botão "Acessar Feed da Mostra"\n')
+
+    assert ca.tempos_por_etapa(ONE_PAGER) == {"Desafiar": 2}
+    assert ca.tempos_de_etapa_divergentes("| Desafiar | 4 min |", ONE_PAGER)[0][:2] == ("Desafiar", 2)
+    assert ca.tempos_de_etapa_divergentes("| Desafiar | 2 min |", ONE_PAGER) == []
+    prd = ca.com_anexo(_prd() + "\n| Desafiar | 4 min |\n", ONE_PAGER, ca.SECOES_PRD)
+    achado = next(a for a in ca.validar_prd(prd, _spec(), ONE_PAGER, ARTEFATOS)["achados"]
+                  if a["codigo"] == "tempo-de-etapa-divergente")
+    assert achado["severidade"] == "atencao"
+
+
+def test_juiz_de_contradicoes_so_vale_com_as_duas_citacoes_conferidas():
+    from agents.checkers import JuizDeContradicoesAgent
+
+    referencia = "O estudante não pode voltar à etapa anterior depois de travar a aposta."
+    prd = "# PRD\n\nRF-004: o estudante pode voltar e trocar a aposta a qualquer momento antes do resultado.\n"
+    resposta = "```json\n" + json.dumps({"contradicoes": [
+        {"tipo": "mecanica", "citacao_documento": "o estudante pode voltar e trocar a aposta a qualquer momento",
+         "citacao_referencia": "não pode voltar à etapa anterior depois de travar a aposta",
+         "explicacao": "um diz que a aposta trava, o outro que pode trocar"},
+        {"tipo": "numero", "citacao_documento": "são cinco rodadas de votação na turma",
+         "citacao_referencia": "não pode voltar à etapa anterior depois de travar a aposta", "explicacao": "inventada"},
+    ]}, ensure_ascii=False) + "\n```"
+
+    def rodar(estado):
+        agente = JuizDeContradicoesAgent(name="C", documento_key="prd_final", referencia_key="conteudo_aprovado",
+                                         report_key="c_report", status_key="c_status", dono="prd-writer",
+                                         sub_agents=[_JuizFalso(name="J", resposta=resposta)])
+        return asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[agente]), estado))
+
+    final = rodar({"prd_final": prd, "conteudo_aprovado": referencia})
+    assert final["c_status"] == "bloqueado"
+    achados = final["c_status_envelope"]["achados"]
+    assert [a["codigo"] for a in achados] == ["contradicao-mecanica"] and achados[0]["agente_responsavel"] == "prd-writer"
+    assert "Apontadas sem prova" in final["c_report"], "a contradição inventada é descartada"
+    assert final["contradicoes_documento"] == "" and final["contradicoes_referencia"] == ""
+    # o anexo colado pela esteira não é o corpo: a contradição que só ele teria não conta
+    assert rodar({"prd_final": "", "conteudo_aprovado": referencia})["c_status"] == "aprovado"
+
+    from agents.dev import agentes_em_ordem, build_dev_stage
+
+    prd_loop = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "PrdLoop")
+    nomes = [a.name for a in prd_loop.sub_agents]
+    assert nomes.index("A48eCoerenciaPrd") < nomes.index("A48PrdRodada")
+    assert "coerencia_prd_status" in prd_loop.sub_agents[-1].status_keys
+
+
+def test_loop_que_repete_entrega_ao_autor_a_versao_da_rodada():
+    from agents.base import create_llm_agent
+    from agents.checkers import SaidaDeLoopAgent
+
+    def rodar(status):
+        saida = SaidaDeLoopAgent(name="S", status_keys=["g_status"], rodada_key="r", max_rounds=3,
+                                 autor_keys=["prd_final"])
+        return asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[saida]),
+                                  {"g_status": status, "prd_final": "# PRD v1\nRF-001 …"}))
+
+    repete = rodar("bloqueado")
+    assert "<versao_da_rodada chave=\"prd_final\">" in repete["rodada_anterior_prd_final"]
+    assert "# PRD v1" in repete["rodada_anterior_prd_final"]
+    assert rodar("aprovado")["rodada_anterior_prd_final"] == "", "ao sair do loop a versão da rodada some"
+    autor = create_llm_agent(name="X", instruction="Escreva.", description="d", output_key="prd_final")
+    assert "{rodada_anterior_prd_final?}" in autor.instruction
+
+
+def test_folha_do_stitch_entrega_so_a_versao_atual(monkeypatch):
+    from agents.checkers import ArtefatosDesignAgent
+    from config import get_settings
+    import tools.stitch_cliente as cliente
+
+    telas = [{"id": "a" * 32, "titulo": "E1-ALU-01 — padrão"}, {"id": "b" * 32, "titulo": "E1-ALU-01 — padrão"},
+             {"id": "c" * 32, "titulo": "E1-ALU-02 — padrão"}]
+    monkeypatch.setattr(cliente, "coletar_links", lambda pid, limite=60, ids_de_reserva=(): {
+        "project_id": pid, "url_projeto": f"https://stitch/{pid}", "telas": [dict(t) for t in telas]})
+    monkeypatch.setattr(type(get_settings()), "is_stitch_enabled", property(lambda self: True))
+    registro = {"E1-ALU-01|padrão": {"screen_id": "b" * 32, "hash": "h", "versao": 2},
+                "E1-ALU-02|padrão": {"screen_id": "c" * 32, "hash": "h", "versao": 1}}
+    estado = {"stitch_project_id": "123", "stitch_geracao": registro, "jornada_telas": "E1-ALU-01 E1-ALU-02",
+              "prototipo_html": "<html></html>", "wireframes_cobertura": "x"}
+    final = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[ArtefatosDesignAgent(name="A")]), estado))
+    folha = final["stitch_links"]
+    assert "E1-ALU-01 — padrão · v2" in folha and "E1-ALU-02 — padrão" in folha
+    assert "2 tela(s)." in folha and "1 tela(s) do projeto são versões anteriores" in folha
