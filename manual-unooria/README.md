@@ -36,7 +36,7 @@ disciplina.
 tectonic -X compile manual-gerador-missoes.tex
 ```
 
-Gera `manual-gerador-missoes.pdf` (92 páginas, 4.ª edição). Não depende de BibTeX — a bibliografia é
+Gera `manual-gerador-missoes.pdf` (93 páginas, 4.ª edição). Não depende de BibTeX — a bibliografia é
 `thebibliography` embutida. A primeira compilação baixa as fontes e os pacotes do bundle.
 
 ## Identidade visual

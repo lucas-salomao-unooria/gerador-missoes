@@ -720,7 +720,7 @@ PDFs entram \textbf{em binário}, aproveitando a capacidade multimodal nativa do
 \end{itemize}
 
 \begin{caixaPratica}{Como pedir}
-Na mensagem, diga o mínimo: \emph{``use o one-pager anexado; não alterar nada''}, mais as correções que você quer, se houver, no formato de pedido da Seção~\ref{sec:conferido}. Não repita na mensagem o que o \emph{one-pager} já diz --- habilidades, tempos, seção do DS: a mensagem vira briefing, e o que ela listar a fidelidade passa a cobrar dela também. Na missão do 6.\textsuperscript{o} ano, uma conversa nova com o \emph{one-pager} corrigido e esse pedido curto preservou os 304 trechos do PO (Parte~VII).
+Na mensagem, diga o mínimo: \emph{``use o one-pager anexado; não alterar nada''}, mais as correções que você quer, se houver, em lista ou em parágrafos (Seção~\ref{sec:conferido}, que traz também o modelo para refazer só as conferências). Não repita na mensagem o que o \emph{one-pager} já diz --- habilidades, tempos, seção do DS: a mensagem vira briefing, e o que ela listar a fidelidade passa a cobrar dela também. Na missão do 6.\textsuperscript{o} ano, uma conversa nova com o \emph{one-pager} corrigido e esse pedido curto preservou os 304 trechos do PO (Parte~VII).
 \end{caixaPratica}
 
 \subsection{O checklist antes de apertar o botão}
@@ -820,7 +820,10 @@ Pedir não basta: a esteira \textbf{confere se o pedido foi atendido}. Um verifi
 Pedido do PO sem prova é \statusVermelho, e com ele o \emph{de acordo} daquela etapa não aparece. Elemento do briefing sem prova é \statusAmbar. O verificador lê o briefing também quando ele vem em prosa ou com títulos em maiúsculas --- e uma ordem de ``não alterar'' vira trava --- e lê \textbf{só o texto do pedido}: até 8 de outubro ele lia junto o cabeçalho que a esteira põe no pedido, citava ``Esta execução refaz a etapa\ldots'' como se fosse item, e contava o mesmo pedido duas vezes.
 
 \begin{caixaPratica}{Como escrever um pedido que a esteira consegue conferir}
-O verificador reconhece três blocos no texto do \emph{Refazer}, além de frases entre aspas. Escrever nesse formato é o que transforma um desejo numa conferência:
+\textbf{Qualquer formato serve}: lista numerada, parágrafos, tópicos, linhas quebradas à mão. O código recorta o pedido em \textbf{unidades atômicas e literais} --- cada frase e cada item de lista vira um item, com o rótulo dele (``(item 3)''); linhas do mesmo parágrafo são juntadas, o trecho entre aspas não é cortado no meio, e uma trava curta como ``Não alterar mais nada.'' vira item próprio. O recorte é do código, não do modelo: nenhuma exigência é agrupada a outra, nenhuma é inventada.
+
+\medskip
+Os três blocos abaixo continuam aceitos e úteis, mas \textbf{não são obrigatórios}. Com um bloco no texto, o que ficar fora deles não vira item: escreva tudo dentro dos blocos, ou não use nenhum.
 
 \begin{description}[leftmargin=2.6cm,style=sameline,font=\sffamily\bfseries\color{unNavy}]
   \item[TRAVAS:] O que \textbf{não pode mudar}. A frase entre aspas dentro das travas é conferida \textbf{letra por letra}, sem juiz: \emph{TRAVAS: a frase da descoberta é ``…que cada um tinha no sistema --- e quase deixei de fora quem mais precisava de ajuda''. Não trocar.}
@@ -829,6 +832,18 @@ O verificador reconhece três blocos no texto do \emph{Refazer}, além de frases
 \end{description}
 
 \textbf{Uma ideia por frase, com o nome das coisas.} ``Melhore o ápice'' não é conferível; ``no ápice, o estudante vê o projeto que ele recusou atendendo 24 famílias'' é. ``Algo como'' dá liberdade de redação, não de sentido: a reescrita tem de manter sujeito, consequência e a parte final.
+
+\medskip
+\textbf{Item com vários elementos é provado elemento por elemento.} ``29 min, tetos 60/25/35, \emph{toast} de 60\,s permanecem'' só é atendido com uma citação do documento para cada um --- a linha da tabela de tempos, a dos tetos, a frase do \emph{toast}. \textbf{O texto que você dita entre aspas} (\emph{Adicionar: ``\ldots''}) prova quando aparece no corpo do documento; repetido no \emph{changelog} ou na tabela de alterações, não prova, porque ali o autor só copia o pedido. E a frase de título ou de contexto (``Fechamento das pendências --- exp06ef1b'') o juiz pode dispensar, desde que ela não tenha verbo de ação; dispensar uma exigência (remover, manter, não alterar\ldots) vira bloqueio.
+\end{caixaPratica}
+
+\textbf{Não cole de novo um parecer já aplicado.} Os pedidos de \emph{Refazer} ficam registrados e são conferidos outra vez a cada execução (Seção~\ref{sec:pedidos}); colá-los de novo não acrescenta conferência. E itens como ``Adicionar\ldots'' e ``Trocar\ldots'' não são idempotentes: lidos de novo por um autor, podem duplicar o que já está lá.
+
+\begin{caixaPratica}{Dois modelos de pedido}
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Conversa nova com o \emph{one-pager} pronto} (Seção~\ref{sec:onepagerpo}): \emph{``Use o one-pager anexado; não alterar nada.''} --- mais as correções, se houver. Não liste habilidades, tempos nem seção do DS.
+  \item \textbf{Conferência final, para refazer sem mudar nada}: \emph{``Conferência final --- \textless slug\textgreater. As correções do parecer anterior já estão aplicadas. Não alterar nada nos documentos: o one-pager, a spec e o resumido devem permanecer exatamente como estão. Esta execução serve só para refazer as conferências.''} Se quiser colar o parecer junto, ponha antes dele: \emph{``Os itens abaixo JÁ ESTÃO APLICADOS nos documentos: confira cada um e não adicione, não duplique e não reescreva nada.''}
+\end{itemize}
 \end{caixaPratica}
 
 \subsection{O azul é decisão do PO}
@@ -2560,6 +2575,8 @@ O que entrou é a Seção~\ref{sec:onepagerpo}: o \emph{one-pager} anexado vira 
 
 Depois da correção, a missão foi refeita como o PO quer usá-la: conversa nova, o \emph{one-pager} corrigido anexado, e a mensagem só ``use o \emph{one-pager} anexado; não alterar nada''. A conferência contou \textbf{304 trechos preservados de 304}.
 
+Faltava a fidelidade. O parecer do PO em oito pontos, numa lista numerada e todo aplicado, ainda saía \statusVermelho: sem os blocos TRAVAS e AJUSTE, o pedido inteiro virava um item só, nenhum trecho do documento provava os oito, e o juiz citou o próprio pedido. Com o recorte em unidades atômicas (Seção~\ref{sec:conferido}), o juiz real, sobre o mesmo estado salvo, comprovou \textbf{22 itens de 22} \statusVerde.
+
 \begin{destaque}
 \textbf{Conferir a esteira contra ela mesma não é conferência.} Todo gate respondia certo: a \emph{spec} batia com o \emph{one-pager}, o resumido batia com a \emph{spec}. Só que o \emph{one-pager} já não era o do PO. A referência de uma conferência tem de ser o que a pessoa aprovou, não o que a máquina escreveu a partir disso.
 \end{destaque}
@@ -2777,7 +2794,7 @@ O \cod{PRD.md} segue um gabarito único (\cod{prompts/references/prd-padrao-ouro
   \item[\emph{One-pager}] O documento canônico de 18 seções (Produto) e, no fim da esteira, o documento de validação humana (agente 49).
   \item[\emph{One-pager} do PO] O \emph{one-pager} que o PO anexa a uma conversa nova. Vira a base da missão: a esteira completa e confere trecho a trecho, e não o redesenha.
   \item[Passagem] O momento entre duas etapas: semáforo dos gates, parecer do dono, recebimento pelo dono seguinte. Registrada no histórico da missão.
-  \item[Pedido do PO] O comentário de um \emph{Refazer}. Todos se acumulam e valem para todas as etapas; TRAVAS, AJUSTE e VALIDAÇÃO são os blocos que o verificador de fidelidade sabe conferir.
+  \item[Pedido do PO] O comentário de um \emph{Refazer}. Todos se acumulam e valem para todas as etapas. O verificador de fidelidade o recorta em código, frase a frase e item a item, em qualquer formato; os blocos TRAVAS, AJUSTE e VALIDAÇÃO são aceitos, não obrigatórios.
   \item[Pergunta de produto] Pergunta que, respondida, muda uma decisão nossa. Tem três partes --- a pergunta, a decisão que dispara e o corte. Sem decisão, é curiosidade.
   \item[Orquestrador] O código que decide a ordem, os ciclos e as repetições. Não é um agente e não usa modelo de linguagem.
   \item[PRD] \emph{Product requirements document}: o entregável de 23 seções, mais o \emph{frontmatter} e o conteúdo aprovado anexo, que alimenta quem codifica.
