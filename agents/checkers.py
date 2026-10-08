@@ -1184,7 +1184,10 @@ class RastroCheckAgent(BaseAgent):
             # mandou (exp06ef1b, 08/10/2026: 253 de 304 trechos reescritos num pedido de três correções).
             from tools import one_pager_po as op
 
-            resultado = op.conferir(str(state.get("one_pager_po", "") or ""), str(state.get("one_pager", "") or ""),
+            # o brief de escopo sai do `one_pager` antes do gate estrutural (A04bBriefEscopoSplit): o do PO é conferido
+            # contra os dois juntos, senão as linhas do brief dele contariam como perdidas
+            gerado = "\n\n".join(str(state.get(k, "") or "") for k in ("one_pager", "brief_escopo"))
+            resultado = op.conferir(str(state.get("one_pager_po", "") or ""), gerado,
                                     briefing=str(state.get("briefing", "") or ""), pedidos=_pedidos_de_produto(state))
             relatorio = op.relatorio(resultado, missao)
         elif self.modo == "aprovado_spec_design":
