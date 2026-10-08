@@ -120,8 +120,14 @@ def _serie(one_pager: str) -> Dict[str, Any]:
 
 
 def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
-                      registro_do_po: bool = False) -> Dict[str, Any]:
-    """Aplica as regras ao one-pager. Devolve `status`, `achados` e a série lida."""
+                      registro_do_po: bool = False, one_pager_po: str = "") -> Dict[str, Any]:
+    """Aplica as regras ao one-pager. Devolve `status`, `achados` e a série lida.
+
+    `one_pager_po` é o one-pager que o PO anexou (`tools/one_pager_po.py`): o número que ele fixou tem
+    origem — a decisão é dele —, e a linha dele que a plataforma não comporta fica, com a proposta ao lado.
+    Até 08/10/2026 o lint chamava de "número sem origem" os tetos de palavras que o PO tinha decidido, e o
+    revisor os trocava por `[PARÂMETRO — a definir por produto]` (exp06ef1b).
+    """
     if not (one_pager or "").strip():
         return {"status": "bloqueado", "achados": [{
             "severidade": "bloqueio", "codigo": "one-pager-vazio", "etapa": "produto",
@@ -151,6 +157,8 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
     # 1b. Agendamento — a plataforma não tem (ADR-146). Seção 9 entra: é onde o preparo do professor mora.
     for n in sorted(set(SECOES_TECNICAS) | {9}):
         secao = secao_bloco(texto, n)
+        # a linha que carrega a proposta ao PO já é a resposta: o texto dele fica, a decisão é dele
+        secao = "\n".join(l for l in (secao or "").splitlines() if not _tem_marcador(l) and "[PENDÊNCIA" not in l)
         if secao and _usado_afirmativamente(secao, _RE_AGENDAMENTO):
             bloqueio(
                 "agendamento", "9.1(h)",
@@ -205,7 +213,7 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
         )
 
     # 4. Número com unidade sem origem no núcleo nem no briefing e sem marcador.
-    origem = _numeros_com_unidade((nucleo or "") + "\n" + (briefing or ""))
+    origem = _numeros_com_unidade((nucleo or "") + "\n" + (briefing or "") + "\n" + (one_pager_po or ""))
     sem_origem: List[str] = []
     for n in SECOES_NUMERICAS:
         secao = secao_bloco(texto, n)

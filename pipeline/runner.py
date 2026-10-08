@@ -48,7 +48,7 @@ STATUS_KEYS = [
     "juiz_perguntas_status", "juiz_perguntas_rodada",
     "telemetria_status",
     "rastro_spec_status", "rastro_design_status", "conteudo_aprovado_spec_status",
-    "conteudo_aprovado_resumido_status", "fidelidade_design_status", "fidelidade_dev_status",
+    "conteudo_aprovado_resumido_status", "fidelidade_design_status", "fidelidade_dev_status", "one_pager_po_status",
     "rastreabilidade_dev_status", "conteudo_aprovado_spec_design_status",
     "banca_produto_status", "banca_design_status", "banca_entrada_status", "coerencia_prd_status",
     "rastro_lacunas_status",
@@ -206,6 +206,15 @@ def material_dos_anexos(doc_batch: Optional[DocumentBatch]) -> str:
     return "\n\n".join(blocos)
 
 
+def one_pager_do_po(initial_state: Optional[Dict[str, Any]], doc_batch: Optional[DocumentBatch]) -> str:
+    """O one-pager que o PO anexou: o salvo vence (numa correção não há anexo novo); senão, o dos anexos."""
+    from tools.one_pager_po import extrair
+
+    salvo = str((initial_state or {}).get("one_pager_po") or "")
+    material = str((initial_state or {}).get("material_anexado") or "") or material_dos_anexos(doc_batch)
+    return salvo or extrair(material)
+
+
 def catalogo_para_prompt() -> str:
     """O índice de missões geradas, em tabela, para os prompts que comparam com o catálogo."""
     try:
@@ -299,6 +308,9 @@ async def run_orchestrator_pipeline_stream(
                 # novo — o material da geração original é o que vale.
                 "material_anexado": str((initial_state or {}).get("material_anexado") or "")
                                     or material_dos_anexos(doc_batch),
+                # O one-pager canônico entre os anexos: a missão que o PO já desenhou. A esteira o completa e
+                # confere trecho a trecho (`tools/one_pager_po.py`), em vez de redesenhar do zero (08/10/2026).
+                "one_pager_po": one_pager_do_po(initial_state, doc_batch),
                 # O PO declara as perguntas de produto no briefing, em português; a esteira as
                 # normaliza para a tabela do sub-bloco 9f. Sem o bloco, fica vazio e o agente
                 # propõe, marcando `[PROPOSTA — validar com PO]` — proposta não bloqueia.

@@ -148,6 +148,9 @@ CHAVES_PRODUTO = frozenset({
     # `one_pager_gate0` só é gravado se não existe (`agents.callbacks.preservar_one_pager`): sem cair aqui, o
     # «one-pager original» de um refazer de produto continuava sendo o da missão anterior
     "one_pager", "one_pager_gate0", "brief_escopo", "brief_escopo_status", "brief_escopo_status_envelope",
+    # a conferência do one-pager do PO (08/10/2026). O `one_pager_po` em si fica: é insumo, como o material
+    "one_pager_po_report", "one_pager_po_status", "one_pager_po_status_envelope", "one_pager_po_rodada",
+    "secoes_apoio_rodada",
     "contrato_produto_report", "contrato_produto_status", "contrato_produto_status_envelope",
     "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_status_envelope", "gate_estrutural_rodada",
     "avaliacao_pedagogica_report", "avaliacao_status", "avaliacao_status_envelope",
@@ -220,6 +223,8 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Avaliação pedagógica": "produto",
     "Experiência do estudante": "produto",
     "Gate final de produto": "produto",
+    # o one-pager do PO reescrito só se conserta refazendo o one-pager, não a spec
+    "One-pager do PO preservado": "produto",
     "Conformidade BNCC Computação": "spec",
     "Ficha do manifesto (produto)": "spec",
     "Matriz de evidência pedagógica": "spec",

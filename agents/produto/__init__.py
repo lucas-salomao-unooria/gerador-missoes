@@ -60,7 +60,7 @@ from google.adk.agents.sequential_agent import SequentialAgent
 from agents.base import create_llm_agent
 from agents.banca import get_banca
 from agents.juiz import get_fidelidade_check, get_juiz_de_achados
-from agents.callbacks import marcar_heranca, preservar_one_pager
+from agents.callbacks import dispensar_ideacao_com_one_pager_do_po, marcar_heranca, preservar_one_pager
 from agents.checkers import (
     SecaoSplitAgent,
     BnccCheckAgent,
@@ -113,6 +113,8 @@ def get_ideacao_mecanismos_agent(**kw) -> LlmAgent:
         description="Ideação: três mecanismos distintos para o conceito limiar do material, cada um com a anatomia do aha, pontuados na rubrica de profundidade; indica qual o núcleo deve desenvolver.",
         instruction=load_prompt("produto/00d_ideacao_mecanismos.md"),
         output_key="ideacao_mecanismos",
+        # com o one-pager do PO anexado, o mecanismo é o dele: três candidatos novos puxavam o núcleo para longe
+        before_agent_callback=dispensar_ideacao_com_one_pager_do_po,
         **kw,
     )
 
@@ -214,6 +216,34 @@ def get_revisor_one_pager_agent(**kw) -> LlmAgent:
         output_key="one_pager",
         **kw,
     )
+
+
+def get_restaurador_one_pager_po_agent(**kw) -> LlmAgent:
+    return create_llm_agent(
+        name="A10fRestaurarOnePagerPo",
+        description="Devolve ao one-pager os trechos do one-pager do PO que a esteira reescreveu sem pedido; o que um gate ou parecer pedia vira proposta ao PO.",
+        instruction=load_prompt("produto/10f_restaurar_one_pager_po.md"),
+        output_key="one_pager",
+        **kw,
+    )
+
+
+def get_one_pager_po_check(nome: str, estrito: bool) -> RastroCheckAgent:
+    """One-pager do PO × one-pager gerado, trecho a trecho (`tools/one_pager_po.py`). Sem anexo, aprova sem custo."""
+    return RastroCheckAgent(
+        name=nome,
+        description="Cada trecho do one-pager que o PO anexou está no one-pager gerado, ou saiu porque o pedido mandou (código removido ou alteração com o pedido citado).",
+        modo="one_pager_po",
+        rotulo="One-pager do PO preservado",
+        report_key="one_pager_po_report",
+        status_key="one_pager_po_status",
+        agente="one-pager-do-po",
+        estrito=estrito,
+    )
+
+
+#: Rodadas da conferência do one-pager do PO: a das seções de apoio e a final (uma restauração em cada uma).
+ONE_PAGER_PO_RODADAS = 2
 
 
 def get_avaliacao_pedagogica_agent(**kw) -> LlmAgent:
@@ -661,6 +691,49 @@ def build_produto_stage(
         ],
     )
 
+    # O one-pager que o PO anexou é a missão: o A04 parte dele e a conferência devolve ao A04 o que ele reescreveu.
+    # Sem anexo, a conferência aprova e o loop sai na primeira rodada, sem custo.
+    secoes_apoio_loop = LoopAgent(
+        name="SecoesApoioLoop",
+        description="Seções de apoio ↔ conferência do one-pager do PO, quando ele anexou um.",
+        max_iterations=ONE_PAGER_PO_RODADAS,
+        sub_agents=[
+            get_secoes_apoio_agent(**kw),
+            # dentro do loop não bloqueia: quem registra o 🔴 é a conferência final, depois de revisores e pareceres
+            get_one_pager_po_check("A04dOnePagerPoCheck", estrito=False),
+            SaidaDeLoopAgent(
+                name="A04eSecoesApoioRodada",
+                description="One-pager do PO preservado encerra o loop; trecho perdido volta ao A04 com a lista.",
+                rotulo="Seções de apoio × one-pager do PO",
+                status_keys=["one_pager_po_status"],
+                rodada_key="secoes_apoio_rodada",
+                max_rounds=ONE_PAGER_PO_RODADAS,
+                autor_keys=["one_pager"],
+            ),
+        ],
+    )
+
+    # Depois de gate estrutural, pareceres e revisores — os que reescreviam o one-pager do PO na exp06ef1b
+    # (08/10/2026). Trecho perdido vai ao restaurador; o que um parecer pedia vira proposta ao PO.
+    one_pager_po_loop = LoopAgent(
+        name="OnePagerPoLoop",
+        description="Conferência final do one-pager do PO ↔ restaurador, antes do gate final.",
+        max_iterations=ONE_PAGER_PO_RODADAS,
+        sub_agents=[
+            get_one_pager_po_check("A10dOnePagerPoCheck", estrito=settings.esteira_estrita),
+            SaidaDeLoopAgent(
+                name="A10eOnePagerPoRodada",
+                description="One-pager do PO preservado segue para o gate final; trecho perdido vai ao restaurador.",
+                rotulo="One-pager do PO",
+                status_keys=["one_pager_po_status"],
+                rodada_key="one_pager_po_rodada",
+                max_rounds=ONE_PAGER_PO_RODADAS,
+                autor_keys=["one_pager"],
+            ),
+            get_restaurador_one_pager_po_agent(**kw),
+        ],
+    )
+
     return SequentialAgent(
         name="ProdutoStage",
         description="Área de Produto: núcleo narrativo ↔ micro-gate → seções de apoio → gate estrutural → avaliações → gate final → spec da missão ↔ currículo e manifesto → one-pager resumido.",
@@ -673,9 +746,10 @@ def build_produto_stage(
             get_mapa_conceitual_agent(**kw),
             get_ideacao_mecanismos_agent(**kw),
             nucleo_loop,
-            get_secoes_apoio_agent(**kw),
+            secoes_apoio_loop,
             gate_loop,
             avaliacoes_loop,
+            one_pager_po_loop,
             get_gate_final_produto_agent(**kw),
             EnvelopeGateAgent(
                 name="A12GateFinalProdutoCheck",
@@ -727,6 +801,8 @@ PRODUTO_METADATA = [
     {"id": "A03MicroGateCheck", "name": "03 · Veredito do micro-gate (determinístico)", "icon": "🔀", "output_key": "micro_gate_status", "prompt_file": None, "description": "Lê o envelope do micro-gate e registra se o núcleo passou em spoiler, gap, escolha e job."},
     {"id": "A03cNucleoCheck", "name": "03c · Saída do loop do núcleo (determinístico)", "icon": "🔀", "output_key": "nucleo_rodada", "prompt_file": None, "description": "Micro-gate e profundidade aprovados encerram o loop; qualquer um reprovado devolve o núcleo ao P0a com os dois relatórios."},
     {"id": "A04SecoesApoio", "name": "04 · Seções de apoio e brief", "icon": "📝", "output_key": "one_pager", "prompt_file": "produto/04_secoes_apoio.md", "description": "Completa o one-pager canônico (seções 2 e 5–18) e o brief de escopo sobre o núcleo aprovado."},
+    {"id": "A04dOnePagerPoCheck", "name": "04d · One-pager do PO preservado (determinístico)", "icon": "📌", "output_key": "one_pager_po_report", "prompt_file": None, "description": "Quando o PO anexou o one-pager: cada trecho dele (linha e célula de tabela) está no one-pager das seções de apoio, ou saiu porque o pedido mandou. Trecho perdido volta ao A04 com a lista. Sem anexo, não se aplica."},
+    {"id": "A04eSecoesApoioRodada", "name": "04e · Saída das seções de apoio (determinístico)", "icon": "🔀", "output_key": "secoes_apoio_rodada", "prompt_file": None, "description": "One-pager do PO preservado encerra o loop das seções de apoio; trecho perdido devolve ao A04."},
     {"id": "A04bContratoProdutoCheck", "name": "04b · Contrato de plataforma e origem dos parâmetros (determinístico)", "icon": "📡", "output_key": "contrato_produto_report", "prompt_file": None, "description": "Lint do one-pager a cada rodada do gate: canal de sala por polling (nunca WebSocket), estado no servidor (sem localStorage/IndexedDB), SAEB só nos anos avaliados, número com origem ou marcador. O gate aplica; o revisor corrige."},
     {"id": "A05GateEstrutural", "name": "05 · Gate estrutural", "icon": "🚧", "output_key": "gate_estrutural_report", "prompt_file": "produto/05_gate_estrutural.md", "description": "critérios: estrutura, ambiente, logística, evidências, viabilidade e infraestrutura."},
     {"id": "A06GateEstruturalCheck", "name": "06 · Veredito do gate (determinístico)", "icon": "🔀", "output_key": "gate_estrutural_status", "prompt_file": None, "description": "Lê o envelope JSON e decide repetir, seguir ou bloquear."},
@@ -736,6 +812,9 @@ PRODUTO_METADATA = [
     {"id": "A10AdequacaoPedagogica", "name": "10 · Adequação pedagógica", "icon": "⚖️", "output_key": "adequacao_report", "prompt_file": "produto/10_adequacao_pedagogica.md", "description": "Seis eixos com parecer e ajustes acionáveis: currículo, demanda cognitiva, carga acidental, viabilidade na escola pública, evidência de aprendizagem e equidade. Parecer entra como ressalva, não bloqueia."},
     {"id": "A10bAdequacaoCheck", "name": "10b · Veredito do parecer (determinístico)", "icon": "🔀", "output_key": "avaliacoes_rodada", "prompt_file": None, "description": "Parecer sem ajuste exigido encerra o ciclo das avaliações; com ajuste, devolve ao revisor do one-pager."},
     {"id": "A07RevisorOnePagerParecer", "name": "10c · Revisor movido pelo parecer", "icon": "🩹", "output_key": "one_pager", "prompt_file": "produto/07_revisor_one_pager.md", "description": "Aplica ao one-pager os ajustes exigidos pelo parecer de adequação (padrão: 2 rodadas; AVALIACOES_MAX_RODADAS=1 desliga)."},
+    {"id": "A10dOnePagerPoCheck", "name": "10d · One-pager do PO preservado, depois dos pareceres (determinístico)", "icon": "📌", "output_key": "one_pager_po_report", "prompt_file": None, "description": "A conferência final, depois do gate estrutural, dos pareceres e dos revisores: trecho do one-pager do PO perdido sem pedido deixa produto 🔴 e vai ao restaurador."},
+    {"id": "A10eOnePagerPoRodada", "name": "10e · Saída da conferência do one-pager do PO (determinístico)", "icon": "🔀", "output_key": "one_pager_po_rodada", "prompt_file": None, "description": "Preservado segue para o gate final; perdido vai ao restaurador uma vez."},
+    {"id": "A10fRestaurarOnePagerPo", "name": "10f · Restaurador do one-pager do PO", "icon": "🧷", "output_key": "one_pager", "prompt_file": "produto/10f_restaurar_one_pager_po.md", "description": "Devolve ao one-pager, literalmente, os trechos do PO que a esteira reescreveu; o que um gate ou parecer pedia vira [PROPOSTA — validar com PO]."},
     {"id": "A11GateFinalProduto", "name": "11 · Gate final de produto", "icon": "🏁", "output_key": "gate_final_report", "prompt_file": "produto/11_gate_final.md", "description": "Coerência entre missão e vereditos; libera ou bloqueia para design/dev."},
     {"id": "A12GateFinalProdutoCheck", "name": "12 · Veredito final (determinístico)", "icon": "🔀", "output_key": "gate_final_status", "prompt_file": None, "description": "Lê o envelope do gate final."},
     {"id": "A13SpecMissao", "name": "13 · Spec da missão", "icon": "📜", "output_key": "spec_missao", "prompt_file": "produto/13_spec_missao.md", "description": "Os 12 blocos da spec — contrato contra o qual design e dev constroem."},

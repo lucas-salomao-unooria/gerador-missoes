@@ -281,3 +281,24 @@ def barrar_ferramenta_sem_orcamento(tool: Any, args: Dict[str, Any], tool_contex
             "no arquivo e por quê."
         ),
     }
+
+
+#: O que a ideação grava quando o PO já trouxe o one-pager: o núcleo lê isto no lugar dos três candidatos.
+IDEACAO_DISPENSADA = (
+    "# Ideação de mecanismos — dispensada\n\n"
+    "O PO anexou o one-pager da missão (`one_pager_po`): o mecanismo é o dele, já desenhado e aprovado. "
+    "Não há candidato a comparar nem a escolher. O núcleo narrativo parte do one-pager do PO e só muda o que "
+    "o pedido dele manda mudar."
+)
+
+
+def dispensar_ideacao_com_one_pager_do_po(callback_context: CallbackContext) -> Optional[types.Content]:
+    """before_agent_callback da ideação: com o one-pager do PO no estado, não se inventam três mecanismos.
+
+    Na exp06ef1b (08/10/2026) o PO anexou o one-pager aprovado e pediu três correções; a ideação desenhou três
+    mecanismos novos e o núcleo, instruído a "desenvolver o candidato escolhido", partiu deles. O `Content`
+    devolvido vai para o `output_key` e o agente não roda.
+    """
+    if not str(callback_context.state.get("one_pager_po") or "").strip():
+        return None
+    return types.Content(role="model", parts=[types.Part(text=IDEACAO_DISPENSADA)])

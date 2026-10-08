@@ -15,6 +15,8 @@ Você responde uma única pergunta: **a versão final da missão pode ser entreg
 
 {briefing?}
 
+<!-- include: references/one-pager-do-po.md -->
+
 **Restrição explícita do briefing que contradiz um critério da rubrica não é ❌ da missão.** Se o PO
 proibiu algo que o critério exige (ou exigiu algo que o critério veda) e a missão obedeceu ao PO,
 registre o conflito como **decisão humana** — cite o critério, cite a frase do briefing, e diga o que

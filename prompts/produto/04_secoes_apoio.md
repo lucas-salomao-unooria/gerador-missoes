@@ -25,6 +25,12 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 
 {briefing?}
 
+**Conferência do one-pager do PO na rodada anterior (só existe se o PO anexou o one-pager e algum trecho dele se perdeu — restaure cada um, literalmente):**
+
+{one_pager_po_report?}
+
+<!-- include: references/one-pager-do-po.md -->
+
 ## Regras
 
 1. **Derive, não invente.** Cada seção de apoio deve ser derivável do núcleo narrativo. Se uma seção exige informação que o núcleo não fornece e o briefing também não, marque `[PROPOSTA P0b — a validar pelo time]`.

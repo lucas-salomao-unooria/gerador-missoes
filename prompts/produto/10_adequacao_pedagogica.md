@@ -14,6 +14,12 @@ Seu viés padrão é o do professor cético: uma atividade é inadequada até qu
 
 {one_pager}
 
+**Briefing do PO (o pedido e as restrições dele — restrição do briefing não é falha a corrigir):**
+
+{briefing?}
+
+<!-- include: references/one-pager-do-po.md -->
+
 **Relatório do gate estrutural, para contexto do que já foi apontado:**
 
 {gate_estrutural_report?}
@@ -162,6 +168,8 @@ Todo achado recebe um identificador estável `E<eixo>-A<n>` (ex.: `E2-A3`). Os a
 - Onde: <etapa, tela ou trecho específico do one-pager>
 - Mudar: <o que precisa passar a ser verdade, em uma frase>
 - Aceite: <teste verificável — como saber, olhando, que foi resolvido>
+
+Com one-pager do PO anexado (seção «One-pager do PO»), **ajuste exigido não altera o que o PO escreveu** — mecanismo, tempos, textos, Canal B, podcast. Se o seu eixo encontra problema nisso, o achado continua valendo, mas o ajuste vai em «Ajustes recomendados», como recomendação ao PO. Exigido é só o que o pedido do PO manda ou o que falta para o formato canônico.
 
 ## Ajustes recomendados
 <Mesmo formato, prefixo R. Não bloqueiam.>

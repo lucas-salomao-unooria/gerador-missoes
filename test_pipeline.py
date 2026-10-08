@@ -72,7 +72,7 @@ KNOWN_STATE_KEYS = {
     "rastro_spec_status", "rastro_spec_report", "rastro_design_status", "rastro_design_report",
     "conteudo_aprovado", "conteudo_aprovado_spec_report", "conteudo_aprovado_spec_status", "conteudo_aprovado_prd_report",
     "conteudo_aprovado_prd_status", "conteudo_aprovado_pedagogico_report", "conteudo_aprovado_pedagogico_status",
-    "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
+    "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "one_pager_po", "one_pager_po_report", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
     "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida",
     # a banca nas quatro posições (08/10/2026)

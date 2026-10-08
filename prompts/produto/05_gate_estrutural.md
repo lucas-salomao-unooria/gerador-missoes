@@ -16,6 +16,8 @@ Não avalia qualidade pedagógica (P2) nem adequação à faixa etária (P3). Av
 
 {briefing?}
 
+<!-- include: references/one-pager-do-po.md -->
+
 Restrição explícita do briefing (seção do DS fixada, "É PROIBIDO", "OBRIGATÓRIO", "SINALIZAR — não migrar") vale acima da sua preferência: a correção que você escreve nunca a desfaz. Se ela colide com um critério, é 🔵 ao responsável de produto com a frase do briefing citada — não ❌ com proposta de troca. A exp03ef1b (07/10/2026) fixou `secao_ds: unoogaleria` com "É PROIBIDO usar qualquer outro design system", e o gate, que não lia o briefing, mandou migrar para `unoochat` e `unoovista`.
 
 **Relatório do gate na rodada anterior (vazio na primeira rodada):**

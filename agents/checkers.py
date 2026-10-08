@@ -985,6 +985,13 @@ class ConsolidacaoBancaAgent(BaseAgent):
         )
 
 
+def _pedidos_de_produto(state: Any) -> str:
+    """Os pedidos do PO que produto atende — os de refazer registrados e o da execução corrente — num texto só."""
+    registrados = [str(p.get("texto") or "") for p in (state.get("pedidos_do_po") or [])
+                   if isinstance(p, dict) and str(p.get("etapa") or "") in ("produto", "")]
+    return "\n\n".join(registrados + [str(state.get("pedido_correcao", "") or "")]).strip()
+
+
 class RastroCheckAgent(BaseAgent):
     """Gate determinístico de rastro: `modo` decide a verificação de `tools/rastro.py`.
 
@@ -1024,6 +1031,7 @@ class RastroCheckAgent(BaseAgent):
                 nucleo=str(state.get("nucleo_narrativo", "") or ""),
                 briefing=str(state.get("briefing", "") or ""),
                 registro_do_po=decisoes.ha_registro_do_po(dict(state)),
+                one_pager_po=str(state.get("one_pager_po", "") or ""),
             )
             relatorio = relatorio_contrato_produto(resultado, missao)
         elif self.modo == "manifesto":
@@ -1163,6 +1171,14 @@ class RastroCheckAgent(BaseAgent):
                 dec.ha_registro_do_po(dict(state)),
                 etapa="produto" if self.modo in ("aprovado_spec", "aprovado_resumido") else "dev"))
             relatorio = ca.relatorio(resultado, documento, missao)
+        elif self.modo == "one_pager_po":
+            # O one-pager que o PO anexou é a missão: cada trecho dele está no gerado, ou saiu porque o pedido
+            # mandou (exp06ef1b, 08/10/2026: 253 de 304 trechos reescritos num pedido de três correções).
+            from tools import one_pager_po as op
+
+            resultado = op.conferir(str(state.get("one_pager_po", "") or ""), str(state.get("one_pager", "") or ""),
+                                    briefing=str(state.get("briefing", "") or ""), pedidos=_pedidos_de_produto(state))
+            relatorio = op.relatorio(resultado, missao)
         elif self.modo == "aprovado_spec_design":
             # a spec que o D0 e o D9 reescreveram: só o que eles pioraram, com o dono do D0 (07/10/2026)
             from tools import conteudo_aprovado as ca
