@@ -43,7 +43,9 @@ STATUS_BLOQUEADO = "bloqueado"
 STATUS_INDEFINIDO = "indefinido"
 
 _APROVADO_TOKENS = ("🟢", "APROVADO", "LIBERADA PARA DESIGN/DEV", "APTO PARA CODIFICAR", "APROVADO PARA REVISÃO HUMANA")
-_BLOQUEADO_TOKENS = ("🔴", "BLOQUEADO", "BLOQUEADA PARA DESIGN/DEV", "NÃO APTO", "IMPASSE")
+#: "NÃO APROVADO" contém "APROVADO": sem o token próprio, o relatório sem envelope que reprovava era lido como
+#: aprovado (auditoria de 08/10/2026).
+_BLOQUEADO_TOKENS = ("🔴", "BLOQUEADO", "BLOQUEADA PARA DESIGN/DEV", "NÃO APTO", "IMPASSE", "NÃO APROVAD", "NAO APROVAD")
 
 
 def extrair_envelope(texto: str) -> Optional[Dict[str, Any]]:
@@ -61,14 +63,21 @@ def extrair_envelope(texto: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+_ENVELOPE_BLOQUEADO = ("bloqueado", "bloqueada", "devolvido", "nao_apto", "não apto", "nao_passa", "não passa",
+                       "vermelho", "🔴", "reprovado", "reprovada", "nao_aprovado", "não aprovado")
+
+
 def inferir_status(texto: str, envelope: Optional[Dict[str, Any]] = None) -> str:
     """Normaliza o veredito de um relatório em aprovado | bloqueado | indefinido."""
     if envelope:
-        status = str(envelope.get("status") or envelope.get("veredito") or "").strip().lower()
+        # `status` e `veredito` juntos: o envelope {"status": "aprovado", "veredito": "vermelho"} era lido só pelo
+        # primeiro campo preenchido e passava. Qualquer um dos dois reprovando, reprova.
+        valores = [str(envelope.get(k) or "").strip().lower() for k in ("status", "veredito")]
+        if any(v in _ENVELOPE_BLOQUEADO for v in valores):
+            return STATUS_BLOQUEADO
+        status = next((v for v in valores if v), "")
         if status in ("aprovado", "concluido", "concluído", "liberada", "apto", "passa", "verde", "🟢"):
             return STATUS_APROVADO
-        if status in ("bloqueado", "bloqueada", "devolvido", "nao_apto", "não apto", "nao_passa", "não passa", "vermelho", "🔴"):
-            return STATUS_BLOQUEADO
         # `aguarda_gate` é o D0 dizendo que a decisão cabe ao Gate 0 ou ao PO. Não existe loop
         # que devolva isso a um agente, então tratá-lo como bloqueio travava a esteira num
         # impasse insolúvel. É pendência humana: segue, e o dossiê registra como 🟡.
@@ -98,6 +107,8 @@ def status_registrado(texto: str, envelope: Optional[Dict[str, Any]] = None) -> 
     Os dois convivem: o roteamento usa `inferir_status`, o dossiê usa esta.
     """
     if envelope:
+        if any(str(envelope.get(k) or "").strip().lower() in _ENVELOPE_BLOQUEADO for k in ("status", "veredito")):
+            return STATUS_BLOQUEADO
         bruto = str(envelope.get("status") or envelope.get("veredito") or "").strip().lower()
         if bruto in ("aprovado_com_ressalvas", "apto_com_ressalvas", "ressalvas", "amarelo", "🟡",
                      "segue_com_pendencias", "parcial", "aprovado-com-pendencias-de-plataforma",
@@ -302,3 +313,24 @@ def dispensar_ideacao_com_one_pager_do_po(callback_context: CallbackContext) -> 
     if not str(callback_context.state.get("one_pager_po") or "").strip():
         return None
     return types.Content(role="model", parts=[types.Part(text=IDEACAO_DISPENSADA)])
+
+
+def desembrulhar_documento(chave: str):
+    """after_agent_callback: tira a cerca ```markdown que envolve o documento inteiro, logo que ele é gravado.
+
+    Na exp09ef1b o redator embrulhou o PRD: a conferência PRD × aprovado (A48c) não achava a §14 dentro da cerca e
+    acusava habilidade sem KPI que estava lá, deixava passar o tempo de etapa divergente, e o anexo literal entrava
+    depois da cerca — aí a gravação não reconhecia mais o invólucro e o `PRD.md` abria como bloco de código.
+    """
+    def _callback(callback_context: CallbackContext) -> None:
+        from pipeline.artifacts import desembrulhar_cerca
+
+        texto = callback_context.state.get(chave)
+        if isinstance(texto, str) and texto:
+            limpo = desembrulhar_cerca(texto)
+            if limpo != texto:
+                callback_context.state[chave] = limpo
+        return None
+
+    _callback.__name__ = f"desembrulhar_{chave}"
+    return _callback

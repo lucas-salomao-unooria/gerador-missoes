@@ -38,8 +38,9 @@ _ORDEM = {"bloqueado": 0, "amarelo": 1, "aprovado": 2}
 KEY_ESCOPO = "escopo_banca"
 ESCOPOS: Dict[str, str] = {
     "produto": (
-        "Você avalia no **fim da etapa de produto**, antes do parecer do PO. O insumo que existe é a **spec** (o "
-        "one-pager aprovado chega por ela). Jornada, fluxo, copy, telas, handoff, brief e banco **ainda não existem**: "
+        "Você avalia no **fim da etapa de produto**, antes do parecer do PO. O insumo que existe é a **spec**, e o "
+        "**conteúdo aprovado** traz as seções literais do one-pager: o achado que mais importa aqui é a spec dizendo "
+        "outra coisa que o one-pager. Jornada, fluxo, copy, telas, handoff, brief e banco **ainda não existem**: "
         "vêm vazios, e isso **não é falha** — não acuse ausência deles. Avalie os critérios que a spec decide; o que só "
         "se julga em tela ou no handoff é ➖ N/A (avaliado no design ou no dev). Todo achado volta ao autor da spec, que "
         "corrige na próxima rodada: `agente_responsavel` é `spec-missao` — ou `produto`, quando a falha está numa "

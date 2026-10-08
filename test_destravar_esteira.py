@@ -1,0 +1,137 @@
+"""Correções da auditoria do padrão ouro de 08/10/2026, medidas na primeira execução real do código novo.
+
+A exp01ef1b terminou o design 🔴 com «Coerência entre documentos reprovado (21 lacunas)»: 20 eram falsos positivos ou
+conflito do glossário com o one-pager aprovado, e o orçamento de retrabalho, mal contado, não deixou nenhum autor
+consertar a única real. Outros defeitos foram confirmados em código na mesma auditoria. Cada teste aqui fixa um deles.
+"""
+import asyncio
+
+from google.adk.agents.sequential_agent import SequentialAgent
+
+from test_conteudo_aprovado import _rodar
+from test_pipeline import _fixture_exp09
+
+GLOSSARIO = """# Spec — exp01ef1b
+
+## Glossário canônico
+
+### Entidades
+| Nome canônico | Variantes proibidas |
+|---|---|
+| Unoovista | "Instagram da Tia"; "Insta"; "App Escola" |
+| Atividade | "Visualizadores"; "Quem viu"; "Olhinho" |
+| Seu story | "Story público"; "Para todos" |
+| Unooria | "App Escola"; "Sistema Unooria" |
+"""
+ONE_PAGER = "# One-pager — O MUNDO DAS IMAGENS: Quem viu o bolo da Iara\n\nTata: apertou no olhinho da atividade.\n"
+
+
+def _codigos(r):
+    return [a["codigo"] for a in r["achados"] if a["severidade"] == "bloqueio"]
+
+
+# --------------------------------------------------------------------------- glossário
+def test_tabela_do_glossario_republicada_nao_e_uso_da_variante():
+    from tools.consistencia import validar
+
+    copy = ("| Unoovista | Nome da rede social. | \"Instagram da Tia\", \"Insta\", \"App Escola\" | \"Vamos postar no Unoovista?\" |\n"
+            "| Seu story | Botão de publicação aberta. | \"Story público\", \"Para todos\" | \"Seu story\" |\n")
+    assert _codigos(validar(GLOSSARIO, {"copy revisada": copy})) == []
+    # a mesma variante fora da tabela é uso, e continua bloqueando
+    assert _codigos(validar(GLOSSARIO, {"copy revisada": "Abra o Instagram da Tia e poste a foto."})) == ["variante-proibida"]
+
+
+def test_variante_curta_so_conta_como_rotulo():
+    from tools.consistencia import validar
+
+    frase = "A liberação ativa a missão para todos os dispositivos pareados da sala."
+    assert _codigos(validar(GLOSSARIO, {"jornada": frase})) == []
+    assert _codigos(validar(GLOSSARIO, {"jornada": 'Toque em "Para todos" para publicar.'})) == ["variante-proibida"]
+    assert _codigos(validar(GLOSSARIO, {"jornada": "| E4-ALU-02 | **Para todos** |"})) == ["variante-proibida"]
+
+
+def test_variante_que_o_po_aprovou_nao_e_proibida_e_volta_ao_autor_da_spec():
+    from tools.consistencia import glossario_contra_o_aprovado, validar
+
+    prototipo = 'Protótipo — O MUNDO DAS IMAGENS. Toque em "Quem viu" e depois no **Olhinho**.'
+    assert _codigos(validar(GLOSSARIO, {"protótipo": prototipo})) == ["variante-proibida"] * 2
+    assert _codigos(validar(GLOSSARIO, {"protótipo": prototipo}, aprovado=ONE_PAGER)) == []
+    conflitos = glossario_contra_o_aprovado(GLOSSARIO, ONE_PAGER)
+    assert {a["codigo"] for a in conflitos} == {"glossario-proibe-o-aprovado"}
+    assert {a["agente_responsavel"] for a in conflitos} == {"spec-missao"}
+    assert sorted(a["resumo"].split("«")[1].split("»")[0] for a in conflitos) == ["Olhinho", "Quem viu"]
+
+
+# --------------------------------------------------------------------------- Stitch
+def test_tela_com_id_fora_do_padrao_bloqueia_a_cobertura_do_stitch():
+    from tools import afirmacoes as af
+
+    folha, jornada = _fixture_exp09("stitch_telas.md"), _fixture_exp09("jornada.md")
+    linha = next(l for l in jornada.splitlines() if l.startswith("| `E3-ALU-01` | E3"))
+    com_sessao_b = jornada.replace(linha, linha + "\n" + linha.replace("`E3-ALU-01` | E3", "`E5B-ALU-01` | E5"), 1)
+    cob = af.cobertura_stitch(folha, com_sessao_b)
+    sem_id = [a for a in cob["achados"] if a["codigo"] == "stitch-tela-sem-id"]
+    assert sem_id and sem_id[0]["agente_responsavel"] == "jornada" and "E5B-ALU-01" in sem_id[0]["resumo"]
+    assert "E5-ALU-04" in sem_id[0]["resumo"], "a convenção sugerida tem de ser um ID que o normalizador aceita"
+    from tools.telas import normalizar
+
+    assert normalizar("E5-ALU-04") == "E5-ALU-04" and normalizar("E5B-ALU-01") is None
+
+
+# --------------------------------------------------------------------------- leitura de veredito
+def test_nao_aprovado_e_envelope_contraditorio_reprovam():
+    from agents.callbacks import inferir_status, status_registrado
+
+    assert inferir_status("# Gate\n\n**Veredito: NÃO APROVADO**") == "bloqueado"
+    assert inferir_status("x", {"status": "aprovado", "veredito": "vermelho"}) == "bloqueado"
+    assert status_registrado("x", {"status": "aprovado", "veredito": "vermelho"}) == "bloqueado"
+    assert inferir_status("**Veredito: 🟢 APROVADO**") == "aprovado"
+    assert inferir_status("x", {"status": "aguarda_gate"}) == "aprovado"
+
+
+# --------------------------------------------------------------------------- quem decidiu
+def test_po_no_one_pager_e_atribuicao_ao_po():
+    from tools.decisoes import atribuicoes_ao_po, ha_registro_do_po
+
+    linha = "| Mecânica de construção de programa em blocos na E5 | **PO no one-pager v1.8.0** | 2026-10-08 |"
+    assert atribuicoes_ao_po(linha)
+    assert not atribuicoes_ao_po("| Desvinculação de EF06CO07 | Briefing do PO (reprocessamento) | 2026-10-08 |")
+    assert not ha_registro_do_po({}) and ha_registro_do_po({"one_pager_po": "# One-pager do PO"})
+
+
+# --------------------------------------------------------------------------- PRD embrulhado
+def test_prd_embrulhado_e_desembrulhado_ao_ser_gravado_e_antes_do_anexo():
+    from agents.callbacks import desembrulhar_documento
+
+    class _Ctx:
+        def __init__(self, state):
+            self.state = state
+
+    ctx = _Ctx({"prd_final": "```markdown\n# PRD\n\n## 14. KPIs\nKPI-01\n```"})
+    desembrulhar_documento("prd_final")(ctx)
+    assert ctx.state["prd_final"] == "# PRD\n\n## 14. KPIs\nKPI-01"
+
+    from agents.checkers import AnexoAprovadoAgent
+
+    estado = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[
+        AnexoAprovadoAgent(name="A", chave="prd_final", secoes=[10])]),
+        {"prd_final": "```markdown\n# PRD\n\ncorpo\n```", "one_pager": "# OP\n\n## 10. Tempos\n29 min em tela\n"}))
+    assert not estado["prd_final"].lstrip().startswith("```")
+    assert estado["prd_final"].startswith("# PRD")
+
+
+def test_writers_do_dev_desembrulham_a_saida():
+    from agents.dev import get_one_pager_pedagogico_agent, get_prd_writer_agent
+
+    for agente in (get_prd_writer_agent(), get_one_pager_pedagogico_agent()):
+        assert agente.after_agent_callback is not None, agente.name
+
+
+# --------------------------------------------------------------------------- banca de produto
+def test_banca_de_produto_recebe_o_one_pager_antes_de_julgar():
+    from agents.banca import get_banca
+
+    produto = get_banca("produto", "AC", "A15h", rotulo="Banca de produto", titulo="t", report_key="r", status_key="s")
+    assert produto[0].name == "A15hConteudoAprovado" and produto[1].name == "A15hEscopoBanca"
+    design = get_banca("design", "AB", "A29f", rotulo="Banca de design", titulo="t", report_key="r", status_key="s")
+    assert design[0].name == "A29fEscopoBanca", "no design o conteúdo aprovado já existe, com o retrato da etapa"

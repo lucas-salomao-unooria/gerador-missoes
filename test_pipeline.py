@@ -1076,7 +1076,7 @@ def test_estagio_produto_parcial_spec():
         # a exp06ef1b perdeu uma habilidade e cinco minutos de tela — e ninguém via
         "A15gConteudoAprovadoSpec",
         # a banca no fim de produto (08/10/2026): o achado volta ao autor da spec antes do parecer
-        "A15hEscopoBanca", "A15hBanca", "A15hBancaConsolidacao", "A16SpecCheck"]
+        "A15hConteudoAprovado", "A15hEscopoBanca", "A15hBanca", "A15hBancaConsolidacao", "A16SpecCheck"]
     assert produto.sub_agents[0].max_iterations == max(1, get_settings().spec_max_rodadas)
     nomes = [a.name for _, a in iter_agent_tree(orch)]
     assert "A01NucleoNarrativo" not in nomes and "A05GateEstrutural" not in nomes

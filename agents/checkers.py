@@ -1098,7 +1098,7 @@ class RastroCheckAgent(BaseAgent):
             resultado = ct.validar(str(state.get("brief_assets", "") or ""), banco, spec)
             # o banco escreve nomes, idades e números: o mesmo glossário que confere a copy o confere
             resultado["achados"] += validar_glossario(spec, {"banco de conteúdo": banco}, exigir_glossario=False,
-                                                      etapa="dev")["achados"]
+                                                      etapa="dev", aprovado=str(state.get("one_pager", "") or ""))["achados"]
             # o roteiro do podcast que vai para gravação é o do PO (o banco da exp01ef1b escreveu outro)
             from tools import conteudo_aprovado as ca
 
@@ -1116,7 +1116,8 @@ class RastroCheckAgent(BaseAgent):
             r_lacunas = varrer_lacunas(self.fontes, dict(state))
             r_consistencia = validar_prd(str(state.get("prd_final", "") or ""),
                                          spec=str(state.get(self.spec_key, "") or ""),
-                                         banco=str(state.get("banco_conteudo", "") or ""))
+                                         banco=str(state.get("banco_conteudo", "") or ""),
+                                         aprovado=str(state.get("one_pager", "") or ""))
             # O PRD contra o design da mesma sessão (exp01ef1b, 07/10/2026: 0 de 90 chaves de copy, 1 de 28
             # assets, 0 de 17 estados, status de gate escrito pelo redator): tela, chave, asset, estado,
             # status de gate, critério dos P0, schema citado e proposta da spec (`tools/cobertura_design.py`).
@@ -1148,6 +1149,13 @@ class RastroCheckAgent(BaseAgent):
             spec = str(state.get(self.spec_key, "") or "")
             if self.modo == "aprovado_spec":
                 resultado, documento = ca.validar_spec(spec, one_pager), "spec"
+                # o glossário que a spec escreve não pode proibir o que o PO escreveu (exp01ef1b, 08/10/2026: proibiu
+                # o título e uma fala do podcast aprovados, e o design bloqueou por obedecer ou por desobedecer)
+                from tools.consistencia import glossario_contra_o_aprovado
+
+                conflitos = glossario_contra_o_aprovado(spec, one_pager)
+                if conflitos:
+                    resultado = {**resultado, "status": "bloqueado", "achados": resultado["achados"] + conflitos}
             elif self.modo == "aprovado_prd":
                 resultado = ca.validar_prd(str(state.get("prd_final", "") or ""), spec, one_pager,
                                            caminhos_de_artefato())
@@ -1262,7 +1270,11 @@ class AnexoAprovadoAgent(BaseAgent):
         if not documento or e_mensagem_de_pulo(documento):
             msg = f"⏭️ {self.rotulo}: sem documento para anexar."
         else:
-            novo = ca.com_anexo(str(documento), one_pager, self.secoes)
+            from pipeline.artifacts import desembrulhar_cerca
+
+            # a cerca ```markdown em volta do documento sai antes: anexo colado depois dela impedia a gravação de
+            # reconhecer o invólucro, e o arquivo abria como bloco de código
+            novo = ca.com_anexo(desembrulhar_cerca(str(documento)), one_pager, self.secoes)
             delta[self.chave] = novo
             msg = (f"📎 {self.rotulo}: seções {', '.join(f'§{n}' for n in self.secoes)} do one-pager aprovado, literais."
                    if ca.TITULO_ANEXO in novo else f"⚠️ {self.rotulo}: o one-pager não tem nenhuma das seções.")
@@ -1533,10 +1545,16 @@ class JuizDeContradicoesAgent(BaseAgent):
                 })
             else:
                 sem_prova.append(f"«{no_doc[:120]}» × «{na_ref[:120]}»")
-        status = "bloqueado" if achados else "aprovado"
+        # Sem resposta legível do juiz — ou sem documento, ou sem conteúdo aprovado para comparar —, nada foi conferido:
+        # 🟡, nunca 🟢. Até 08/10/2026 o juiz que falhava aprovava o PRD (auditoria do padrão ouro).
+        conferido = bool(documento.strip() and referencia.strip()) and isinstance(envelope_juiz.get("contradicoes"), list)
+        status = "bloqueado" if achados else ("aprovado" if conferido else "amarelo")
+        veredito = ("🔴 CONTRADIZ O APROVADO" if achados else "🟢 SEM CONTRADIÇÃO COMPROVADA" if conferido
+                    else "🟡 NÃO CONFERIDO — o juiz não devolveu a lista de contradições, ou faltou documento ou "
+                         "conteúdo aprovado para comparar")
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
         linhas = [f"# {self.rotulo} — {missao or 'missão'}", "",
-                  f"**Veredito: {'🔴 CONTRADIZ O APROVADO' if achados else '🟢 SEM CONTRADIÇÃO COMPROVADA'}**", "",
+                  f"**Veredito: {veredito}**", "",
                   "O juiz aponta onde o corpo afirma o contrário do conteúdo aprovado, citando os dois lados; o código "
                   "confere as duas citações. Contradição sem prova é descartada.", ""]
         if achados:
@@ -1547,8 +1565,8 @@ class JuizDeContradicoesAgent(BaseAgent):
         linhas += ["```json", json.dumps(envelope, ensure_ascii=False), "```"]
         yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
                     content=types.Content(role="model", parts=[types.Part(text=(
-                        f"{'⛔' if achados else '✅'} {self.rotulo}: {len(achados)} contradição(ões) comprovada(s), "
-                        f"{len(sem_prova)} sem prova."))]),
+                        f"{'⛔' if achados else '✅' if conferido else '🟡'} {self.rotulo}: {len(achados)} contradição(ões) "
+                        f"comprovada(s), {len(sem_prova)} sem prova{'' if conferido else ' — não conferido'}."))]),
                     actions=EventActions(state_delta={
                         self.report_key: "\n".join(linhas), self.status_key: status,
                         f"{self.status_key}_envelope": envelope,
@@ -1673,6 +1691,7 @@ class DespachoTicketsAgent(BaseAgent):
 
         # cada slug vira a cadeia de agentes que o conserto exige, sem repetir nome
         nomes_na_ordem: List[str] = []
+        autores: set = set()
         por_agente: Dict[str, List[Dict[str, Any]]] = {}
         existentes = {s.name for s in self.sub_agents}
         for slug in slugs_na_ordem:
@@ -1684,6 +1703,7 @@ class DespachoTicketsAgent(BaseAgent):
                     sem_rota.append(self._sem_rota(
                         achado, slug, f"o agente de retrabalho {', '.join(ausentes)} não existe nesta etapa"))
                 continue
+            autores.add(cadeia[0])  # o autor do conserto; o resto da cadeia confere ou deriva
             for nome in cadeia:
                 if nome not in nomes_na_ordem:
                     nomes_na_ordem.append(nome)
@@ -1717,7 +1737,6 @@ class DespachoTicketsAgent(BaseAgent):
             )
             return
 
-        por_slug_nomes = set(nomes_na_ordem)  # quem recebeu ticket conta sempre no orçamento
         derivados = [n for s in slugs_na_ordem for n in self.posfixo_por_dono.get(s, [])]
         for nome in derivados + list(self.posfixo):
             if nome not in nomes_na_ordem:
@@ -1729,12 +1748,17 @@ class DespachoTicketsAgent(BaseAgent):
         # antes de qualquer conserto (auditoria de 07/10/2026).
         from google.adk.agents.llm_agent import LlmAgent
 
-        # Conta quem recebeu ticket e quem é LLM. Até 07/10/2026 a conta só isentava o `posfixo`, e os
-        # determinísticos do `posfixo_por_dono` da banca contavam: um ticket de jornada custava 7 de um orçamento
-        # de 8, com 3 chamadas de modelo de fato, e dois donos de design já pulavam a rodada inteira.
+        # Conta o autor de cada conserto e quem chama modelo. Até 07/10/2026 a conta só isentava o `posfixo`, e os determinísticos do
+        # `posfixo_por_dono` da banca contavam. A correção de 07/10 ainda contava a cadeia inteira de cada dono
+        # ("quem recebeu ticket conta sempre"): o dono `ambiente-simulado` é D9 + split + spec consolidada, e o
+        # `telas` é telas + Stitch. Na exp01ef1b (08/10/2026, primeira execução real) a conta deu 11 contra o
+        # orçamento de 8, com 7 chamadas de modelo de fato — e nenhum conserto rodou nas duas rodadas.
+        def _chama_modelo(agente) -> bool:
+            return agente is not None and (isinstance(agente, LlmAgent)
+                                           or any(_chama_modelo(f) for f in (getattr(agente, "sub_agents", None) or [])))
+
         llm = sum(1 for n in nomes_na_ordem
-                  if n in por_slug_nomes
-                  or isinstance(next((s for s in self.sub_agents if s.name == n), None), LlmAgent))
+                  if n in autores or _chama_modelo(next((s for s in self.sub_agents if s.name == n), None)))
         if not orcamento_disponivel(state, llm):
             gastos = int(state.get(KEY_REEXECUCOES, 0) or 0)
             # Cada conserto pulado vai ao dossiê como pendência humana, com o dono. A mensagem prometia isso e nada

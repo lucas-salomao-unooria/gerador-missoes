@@ -21,7 +21,7 @@ from google.genai import types
 
 from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca
-from agents.checkers import ConsolidacaoBancaAgent, EscopoBancaAgent
+from agents.checkers import ConsolidacaoBancaAgent, ConteudoAprovadoAgent, EscopoBancaAgent
 from prompts import load_prompt
 
 #: Letra da dimensão → (sufixo do nome, prompt, sufixo da chave de saída).
@@ -51,7 +51,15 @@ def get_banca(posicao: str, dimensoes: str, prefixo: str, *, rotulo: str, titulo
         )
         for d, chave in zip(dimensoes, chaves_de_saida(posicao, dimensoes))
     ]
-    return [
+    # No fim de produto o `conteudo_aprovado` ainda não existe (é gravado no começo do design e do dev): a banca
+    # julgava a spec sem o one-pager e não via a spec divergindo dele — o defeito do "segundo autor" que ela existe
+    # para pegar (auditoria de 08/10/2026). O design o regrava ao começar, com o retrato dele.
+    from tools.conteudo_aprovado import SECOES_DESIGN
+
+    antes = [ConteudoAprovadoAgent(name=f"{prefixo}ConteudoAprovado", secoes=list(SECOES_DESIGN),
+                                   description="Grava as seções literais do one-pager para a banca do fim de produto.")
+             ] if posicao == "produto" else []
+    return antes + [
         EscopoBancaAgent(name=f"{prefixo}EscopoBanca", posicao=posicao,
                          description=f"Grava o escopo da banca na posição «{posicao}»."),
         ParallelAgent(name=f"{prefixo}Banca", description=f"Banca ({posicao}): dimensões {', '.join(dimensoes)} em paralelo.",

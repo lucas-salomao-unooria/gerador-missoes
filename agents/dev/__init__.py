@@ -62,7 +62,7 @@ from google.adk.agents.sequential_agent import SequentialAgent
 from agents.banca import get_banca, pular_se_banca_de_entrada_bloqueou
 from agents.juiz import get_fidelidade_check, get_juiz_de_achados, get_juiz_de_contradicoes
 from agents.base import create_llm_agent
-from agents.callbacks import marcar_heranca
+from agents.callbacks import desembrulhar_documento, marcar_heranca
 from agents.checkers import (
     AnexoAprovadoAgent,
     ConsolidacaoBancaAgent,
@@ -169,6 +169,7 @@ def get_prd_writer_agent(**kw) -> LlmAgent:
         output_key="prd_final",
         model=settings.gemini_model_prd,
         before_agent_callback=marcar_heranca,
+        after_agent_callback=desembrulhar_documento("prd_final"),
         **kw,
     )
 
@@ -180,6 +181,7 @@ def get_one_pager_pedagogico_agent(**kw) -> LlmAgent:
         instruction=load_prompt("dev/49_one_pager_pedagogico.md"),
         output_key="one_pager_pedagogico",
         before_agent_callback=marcar_heranca,
+        after_agent_callback=desembrulhar_documento("one_pager_pedagogico"),
         **kw,
     )
 

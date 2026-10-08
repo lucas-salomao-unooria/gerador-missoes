@@ -184,16 +184,44 @@ def _achado(severidade: str, codigo: str, resumo: str, documento: str, etapa: st
             "agente_responsavel": DONOS.get(documento, ""), "resumo": resumo}
 
 
+#: Antes ou depois de uma variante curta, o sinal de que ela está como rótulo ("Para todos", `Quem viu`, **Insta**,
+#: célula de tabela) e não como locução da frase ("ativa a missão para todos os dispositivos").
+_SINAL_DE_ROTULO = set("\"“”«»'`*|[]")
+
+
+def _como_rotulo(texto: str, a: int, b: int) -> bool:
+    antes = texto[:a].rstrip()[-1:]
+    depois = texto[b:].lstrip()[:1]
+    return antes in _SINAL_DE_ROTULO or depois in _SINAL_DE_ROTULO
+
+
+def _linha_do_glossario(texto: str, pos: int, canonicos: List[str]) -> bool:
+    """A ocorrência está numa linha de tabela que também traz um nome canônico do glossário: é a lista de variantes
+    (a mesma variante pode ser listada na linha de outra entidade — «App Escola» na do Unoovista e na do Unooria)."""
+    ini = texto.rfind("\n", 0, pos) + 1
+    fim = texto.find("\n", pos)
+    linha = texto[ini: fim if fim >= 0 else len(texto)]
+    return linha.lstrip().startswith("|") and any(re.search(_padrao_nome(c), _dobrar(linha)) for c in canonicos if c)
+
+
 def _entidades(g: Dict[str, Any], rotulo: str, texto: str) -> List[Dict[str, str]]:
     """Variante proibida usada. As ocorrências disputam o texto da mais longa para a mais curta: o canônico
     "Conselho Municipal de Recursos Comunitários" protege o trecho, mas a variante "Conselho Municipal de
-    Recursos" solta (sem "Comunitários") é acusada."""
+    Recursos" solta (sem "Comunitários") é acusada.
+
+    Não contam (exp01ef1b, 08/10/2026 — 13 dos 21 bloqueios eram isto): a linha de tabela que traz o canônico junto,
+    que é o glossário republicado listando as variantes; e a variante de até duas palavras fora de posição de rótulo,
+    que é locução da frase ("ativa a missão para todos os dispositivos" não é o botão «Para todos»)."""
     d = _dobrar(texto)
     achados = []
+    canonicos = [e["nome"] for e in g["entidades"]]
     for ent in g["entidades"]:
         cands: List[Tuple[int, int, str, bool]] = []
         for nome, proibida in [(ent["nome"], False)] + [(v, True) for v in ent["variantes"]]:
-            cands += [(m.start(), m.end(), nome, proibida) for m in re.finditer(_padrao_nome(nome), d)]
+            curta = len(nome.split()) <= 2
+            cands += [(m.start(), m.end(), nome, proibida) for m in re.finditer(_padrao_nome(nome), d)
+                      if not proibida or not (_linha_do_glossario(texto, m.start(), canonicos)
+                                              or (curta and not _como_rotulo(texto, m.start(), m.end())))]
         ocupado: List[Tuple[int, int]] = []
         usos: Dict[str, List[int]] = {}
         for a, b, nome, proibida in sorted(cands, key=lambda c: -(c[1] - c[0])):
@@ -507,9 +535,40 @@ def conferir_colunas(texto: str, referencia: str = "", rotulo: str = "PRD", rotu
 
 
 # ------------------------------------------------------------------ entrada
-def validar(spec: str, documentos: Dict[str, str], exigir_glossario: bool = True, etapa: str = "design") -> Dict[str, Any]:
-    """Confere cada documento (`{rótulo: texto}`) contra o glossário canônico da spec."""
+def variantes_aprovadas(g: Dict[str, Any], aprovado: str) -> List[Tuple[str, str]]:
+    """(variante, canônico) das variantes proibidas que o one-pager aprovado usa.
+
+    O glossário nasce na spec, escrito por um agente que transforma em proibição o que o PO escreveu: na exp01ef1b
+    proibiu «Quem viu» (está no título aprovado), «Olhinho» (está numa fala aprovada do podcast) e «Visualizadores»
+    (10× no one-pager). O design obedecia ao glossário e perdia o texto aprovado — ou não obedecia e bloqueava.
+    """
+    d = _dobrar(aprovado or "")
+    return [(v, ent["nome"]) for ent in (g or {}).get("entidades", []) for v in ent["variantes"]
+            if d and re.search(_padrao_nome(v), d)]
+
+
+def glossario_contra_o_aprovado(spec: str, aprovado: str) -> List[Dict[str, str]]:
+    """O gate de produto: variante proibida pelo glossário que o one-pager aprovado usa volta ao autor da spec."""
     g = extrair_glossario(spec)
+    return [{"severidade": "bloqueio", "codigo": "glossario-proibe-o-aprovado", "etapa": "produto",
+             "agente_responsavel": "spec-missao",
+             "resumo": (f"O glossário canônico proíbe «{v}» (canônico «{c}»), e o one-pager aprovado usa «{v}». Termo "
+                        "que o PO escreveu não é variante proibida: tire-o da coluna de variantes, ou trate-o como "
+                        "outra entidade se for outra coisa (as pessoas que viram não são o botão que as mostra).")}
+            for v, c in variantes_aprovadas(g, aprovado)] if g else []
+
+
+def validar(spec: str, documentos: Dict[str, str], exigir_glossario: bool = True, etapa: str = "design",
+            aprovado: str = "") -> Dict[str, Any]:
+    """Confere cada documento (`{rótulo: texto}`) contra o glossário canônico da spec.
+
+    `aprovado` é o one-pager que o PO aprovou: variante que ele usa não é proibida em documento nenhum — o conflito
+    é do glossário, e o gate de produto o devolve ao autor da spec (`glossario_contra_o_aprovado`)."""
+    g = extrair_glossario(spec)
+    if g and aprovado:
+        usadas = {_norm(v) for v, _ in variantes_aprovadas(g, aprovado)}
+        g = {**g, "entidades": [{**e, "variantes": [v for v in e["variantes"] if _norm(v) not in usadas]}
+                                for e in g["entidades"]]}
     achados: List[Dict[str, str]] = []
     if g is None:
         if exigir_glossario:
@@ -545,7 +604,8 @@ def validar_estado(state: Dict[str, Any]) -> Dict[str, Any]:
         "copy revisada": str(state.get("copy_strings_revisada", "") or ""),
         "protótipo": texto_de_html(str(state.get("prototipo_arquivo", "") or "")),
     }
-    resultado = validar(spec, documentos)
+    aprovado = "\n".join(str(state.get(k, "") or "") for k in ("one_pager", "one_pager_po"))
+    resultado = validar(spec, documentos, aprovado=aprovado)
     for a in conferir_colunas(spec, rotulo="spec", etapa="produto"):
         a["severidade"] = "atencao"
         a["resumo"] += " (Da spec: o design não a reescreve; o PRD é conferido de novo contra ela.)"

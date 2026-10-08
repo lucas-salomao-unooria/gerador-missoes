@@ -62,8 +62,23 @@ def cobertura_stitch(folha: str, jornada: str) -> Dict[str, Any]:
     telas = telas_do_stitch(folha)
     inventario = telas_do_inventario(jornada)
     achados: List[Dict[str, str]] = []
+    # Tela com ID fora do padrão não entra no inventário nem na geração (`stitch_geracao.itens_do_relatorio`
+    # descarta a linha): na exp01ef1b (08/10/2026) a Sessão B e as telas de erro — seis telas — ficaram com zero
+    # telas no Stitch e o status saiu 🟢. Ela é tela do inventário que não foi desenhada.
+    from tools.telas import inventario as inventario_completo
+
+    fora = inventario_completo(jornada or "")["fora_do_padrao"]
+    if telas is not None and fora:
+        achados.append({
+            "severidade": "bloqueio", "codigo": "stitch-tela-sem-id", "etapa": "design", "agente_responsavel": "jornada",
+            "resumo": f"{len(fora)} tela(s) do inventário com ID fora do padrão `E<etapa>-<ator>-<nn>` não foram ao Stitch: "
+                      f"{', '.join(fora)}. Renumere na jornada — sub-etapa continua a numeração da etapa (Sessão B da Etapa 5 → "
+                      f"`E5-ALU-04`, `E5-ALU-05`…); tela de erro vai para a etapa em que acontece (`E3-SIS-01`) — e as "
+                      f"telas são geradas na rodada seguinte.",
+        })
     if telas is None or not inventario:
-        return {"status": "aprovado", "achados": achados, "stitch": telas, "inventario": inventario, "faltando": []}
+        status = "bloqueado" if achados else "aprovado"
+        return {"status": status, "achados": achados, "stitch": telas, "inventario": inventario, "faltando": []}
     from tools.telas import ids as ids_de_tela
 
     # Por CONJUNTO de IDs, não por contagem: cinco telas no Stitch, três delas estados da mesma tela,

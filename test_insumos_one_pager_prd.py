@@ -481,8 +481,14 @@ def test_juiz_de_contradicoes_so_vale_com_as_duas_citacoes_conferidas():
     assert [a["codigo"] for a in achados] == ["contradicao-mecanica"] and achados[0]["agente_responsavel"] == "prd-writer"
     assert "Apontadas sem prova" in final["c_report"], "a contradição inventada é descartada"
     assert final["contradicoes_documento"] == "" and final["contradicoes_referencia"] == ""
-    # o anexo colado pela esteira não é o corpo: a contradição que só ele teria não conta
-    assert rodar({"prd_final": "", "conteudo_aprovado": referencia})["c_status"] == "aprovado"
+    # o anexo colado pela esteira não é o corpo: a contradição que só ele teria não conta — e sem corpo nada foi
+    # conferido, então é 🟡, não 🟢 (auditoria de 08/10/2026: o juiz que não conferia aprovava)
+    assert rodar({"prd_final": "", "conteudo_aprovado": referencia})["c_status"] == "amarelo"
+    mudo = JuizDeContradicoesAgent(name="C", documento_key="prd_final", referencia_key="conteudo_aprovado",
+                                   report_key="c_report", status_key="c_status", dono="prd-writer",
+                                   sub_agents=[_JuizFalso(name="J", resposta="Não consegui avaliar.")])
+    final = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[mudo]), {"prd_final": prd, "conteudo_aprovado": referencia}))
+    assert final["c_status"] == "amarelo" and "NÃO CONFERIDO" in final["c_report"]
 
     from agents.dev import agentes_em_ordem, build_dev_stage
 
@@ -528,3 +534,23 @@ def test_folha_do_stitch_entrega_so_a_versao_atual(monkeypatch):
     folha = final["stitch_links"]
     assert "E1-ALU-01 — padrão · v2" in folha and "E1-ALU-02 — padrão" in folha
     assert "2 tela(s)." in folha and "1 tela(s) do projeto são versões anteriores" in folha
+
+
+def test_orcamento_conta_o_autor_e_nao_a_cadeia_inteira_de_cada_dono():
+    """exp01ef1b (08/10/2026): sete donos de design, cada um com determinísticos na cadeia (D9 + split + spec
+    consolidada; telas + Stitch). A conta deu 11 contra o orçamento de 8 com 7 chamadas de modelo, e nenhum conserto
+    rodou nas duas rodadas do QA."""
+    from agents.checkers import KEY_REEXECUCOES, DespachoTicketsAgent
+
+    donos = [f"d{i}" for i in range(7)]
+    envelope = {"status": "bloqueado", "achados": [
+        {"id": f"T{i}", "severidade": "bloqueio", "codigo": "X", "agente_responsavel": d, "resumo": "conserto"}
+        for i, d in enumerate(donos)]}
+    mapa = {d: [f"A{i}", f"A{i}det"] if i < 4 else [f"A{i}"] for i, d in enumerate(donos)}
+    nomes = [n for cadeia in mapa.values() for n in cadeia]
+    despacho = DespachoTicketsAgent(name="D", rotulo="QA", report_key="qa", mapa=mapa, ordem=donos,
+                                    sub_agents=[_Marca(name=n) for n in nomes])
+    final = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[despacho]),
+                               {"qa": "```json\n" + json.dumps(envelope) + "\n```", KEY_REEXECUCOES: 0}))
+    assert final["feitos"] == [n for d in donos for n in mapa[d]]
+    assert final[KEY_REEXECUCOES] == 7
