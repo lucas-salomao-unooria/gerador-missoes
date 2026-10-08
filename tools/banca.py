@@ -29,6 +29,94 @@ FORA_DA_ESTEIRA = frozenset({"TEC-07", "TEC-08", "TEC-09", "TEC-10", "TEC-11", "
 
 _ORDEM = {"bloqueado": 0, "amarelo": 1, "aprovado": 2}
 
+#: Onde a banca roda e o que ela pode fazer ali (decisão do usuário, 08/10/2026). Os mesmos critérios e o mesmo
+#: modelo nas quatro posições; muda o escopo, que um agente determinístico grava em `escopo_banca` logo antes:
+#: - fim de produto e fim de design: antes do parecer, e o achado volta ao autor da própria etapa;
+#: - entrada do dev: segunda verificação de produto e design já aprovados, com a visão cruzada que nenhuma etapa
+#:   tem sozinha. Não reescreve nada: bloqueio para o dev antes de qualquer agente de dev rodar;
+#: - dev: dados/LGPD e técnica, depois do handoff, consertando só documento de dev.
+KEY_ESCOPO = "escopo_banca"
+ESCOPOS: Dict[str, str] = {
+    "produto": (
+        "Você avalia no **fim da etapa de produto**, antes do parecer do PO. O insumo que existe é a **spec** (o "
+        "one-pager aprovado chega por ela). Jornada, fluxo, copy, telas, handoff, brief e banco **ainda não existem**: "
+        "vêm vazios, e isso **não é falha** — não acuse ausência deles. Avalie os critérios que a spec decide; o que só "
+        "se julga em tela ou no handoff é ➖ N/A (avaliado no design ou no dev). Todo achado volta ao autor da spec, que "
+        "corrige na próxima rodada: `agente_responsavel` é `spec-missao` — ou `produto`, quando a falha está numa "
+        "decisão do one-pager que a spec só traduziu."
+    ),
+    "design": (
+        "Você avalia no **fim da etapa de design**, antes do parecer de design. Existem a spec consolidada e os "
+        "documentos de design (jornada, fluxo, copy revisada, CAA, telas, protótipo). Handoff, brief de assets e "
+        "banco **ainda não existem**: vêm vazios, e isso **não é falha**. Se você é a dimensão de produto, avalie só "
+        "o que se realiza em tela — PROD-04 (o fluxo realiza o contrato de estados), PROD-07 (o momento de conclusão "
+        "tem tela), PROD-12 (a condução do debate está nas telas e na copy do professor), PROD-13 (cada modo de erro "
+        "tem tela, na ficção) — e marque os demais ➖ N/A (avaliados no fim de produto). DES-10: o inventário de "
+        "assets é o da jornada e das telas. Todo achado vira ticket para o dono refazer antes do parecer: além dos "
+        "nomes da lista, `agente_responsavel` aceita aqui `caa`, `prototipo`, `brief-oficio`, `fecha-lacunas` e "
+        "`ambiente-simulado`."
+    ),
+    "entrada": (
+        "Você avalia na **entrada do dev**, antes de qualquer agente de dev: é a **segunda verificação** de produto e "
+        "design, já aprovados nas etapas deles. Handoff, brief e banco **ainda não existem** (vêm vazios; não é "
+        "falha). Avalie todos os seus critérios sobre a spec e o design aprovados e, além deles, **confira produto e "
+        "design juntos** — o que nenhuma etapa vê sozinha: cada estado do contrato da spec tem tela e aresta no fluxo; "
+        "o momento de conclusão e a revelação que a spec decide aparecem numa tela; o papel do professor do conteúdo "
+        "aprovado tem as telas dele (`E0-PROF-…`) e as strings dele; os textos literais do conteúdo aprovado (Canal B, "
+        "debate, aposta) estão na copy como foram aprovados; o que a spec declara ausente não aparece no design. "
+        "**Você não manda reescrever nada**: todo bloqueio para o dev e vai, com o dono, para a etapa que o conserta. "
+        "Quando reprovar algo que a etapa aprovou, diga no resumo: «passou na etapa, reprova aqui»."
+    ),
+    "dev": (
+        "Você avalia **dentro do dev**, depois do handoff, do brief de assets e do banco de conteúdo. Produto e design "
+        "já passaram pela segunda verificação na entrada do dev. Achado seu sobre documento de dev (`handoff-dev`, "
+        "`brief-assets`, `banco-conteudo`) é refeito aqui com o seu ticket; achado sobre spec ou design vira pendência "
+        "nomeada para a etapa dona — o dev não reescreve produto nem design."
+    ),
+}
+
+#: Saída de cada dimensão em cada posição → rótulo no relatório.
+DIMENSOES: Dict[str, str] = {
+    "validacao_produto_narrativa": "A — Produto e narrativa",
+    "validacao_design_imersao": "B — Design e imersão",
+    "validacao_pedagogia_bncc": "C — Pedagogia e BNCC",
+    "validacao_dados_lgpd": "D — Dados, telemetria e LGPD",
+    "validacao_tecnica_arquitetura": "E — Técnica e arquitetura",
+    "banca_produto_narrativa": "A — Produto e narrativa (fim de produto)",
+    "banca_produto_pedagogia": "C — Pedagogia e BNCC (fim de produto)",
+    "banca_design_narrativa": "A — Produto realizado em tela (fim de design)",
+    "banca_design_imersao": "B — Design e imersão (fim de design)",
+    "banca_entrada_narrativa": "A — Produto e narrativa (entrada do dev)",
+    "banca_entrada_imersao": "B — Design e imersão (entrada do dev)",
+    "banca_entrada_pedagogia": "C — Pedagogia e BNCC (entrada do dev)",
+}
+
+
+def _ids_bloqueio(achados: List[Dict[str, Any]]) -> List[str]:
+    saida: List[str] = []
+    for a in achados or []:
+        if str(a.get("severidade", "")).lower() not in ("bloqueio", "nok", "❌"):
+            continue
+        m = re.search(r"[A-Z]{3,4}-\d{2}", str(a.get("codigo") or a.get("id") or "").upper())
+        if m and m.group(0) not in saida:
+            saida.append(m.group(0))
+    return saida
+
+
+def divergencias_com_etapas(resultado: Dict[str, Any], etapas: Dict[str, Optional[Dict[str, Any]]]) -> List[str]:
+    """Critérios que bloqueiam na entrada do dev e que nenhuma etapa bloqueou.
+
+    É o sinal que a segunda verificação existe para dar: a correção pedida na etapa não pegou, ou o juiz da etapa
+    foi enganado. `etapas` = nome da etapa → envelope da banca dela (ausente quando a etapa não rodou a banca).
+    O critério que a etapa também bloqueou não é divergência: a etapa foi liberada por exceção, e já se sabia.
+    """
+    rodaram = {nome: env for nome, env in etapas.items() if env}
+    if not rodaram:
+        return []
+    bloqueados_nas_etapas = {i for env in rodaram.values() for i in _ids_bloqueio(env.get("achados") or [])}
+    return [f"`{c}` passou no fim de {' e de '.join(rodaram)} e reprova aqui."
+            for c in _ids_bloqueio(resultado.get("achados") or []) if c not in bloqueados_nas_etapas]
+
 
 def bloqueantes() -> Dict[str, List[str]]:
     """IDs bloqueantes por arquivo de dimensão, lidos da fonte."""
@@ -99,22 +187,20 @@ def consolidar(envelopes: Dict[str, Optional[Dict[str, Any]]]) -> Dict[str, Any]
     }
 
 
-def relatorio(resultado: Dict[str, Any], missao: str = "") -> str:
+def relatorio(resultado: Dict[str, Any], missao: str = "", titulo: str = "Validação de insumos",
+              divergencias: Optional[List[str]] = None) -> str:
     icone = {"aprovado": "🟢 APTO PARA CODIFICAR", "amarelo": "🟡 APTO COM RESSALVAS",
              "bloqueado": "🔴 NÃO APTO PARA CODIFICAR"}[resultado["status"]]
-    linhas = [f"# Validação de insumos — {missao or 'missão'}", "",
+    linhas = [f"# {titulo} — {missao or 'missão'}", "",
               f"**Veredito: {icone}**", "",
               "| Dimensão | Veredito | Achados |", "|---|---|---|"]
-    rotulos = {
-        "validacao_produto_narrativa": "A — Produto e narrativa",
-        "validacao_design_imersao": "B — Design e imersão",
-        "validacao_pedagogia_bncc": "C — Pedagogia e BNCC",
-        "validacao_dados_lgpd": "D — Dados, telemetria e LGPD",
-        "validacao_tecnica_arquitetura": "E — Técnica e arquitetura",
-    }
     marca = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}
     for chave, dados in resultado["por_dimensao"].items():
-        linhas.append(f"| {rotulos.get(chave, chave)} | {marca[dados['status']]} | {len(dados['achados'])} |")
+        linhas.append(f"| {DIMENSOES.get(chave, chave)} | {marca[dados['status']]} | {len(dados['achados'])} |")
+    if divergencias:
+        linhas += ["", "## Passou na etapa, reprova aqui", "",
+                   "A segunda verificação discorda da banca da etapa. É o sinal de que a correção pedida lá não pegou, "
+                   "ou de que o juiz da etapa foi enganado:", ""] + [f"- {d}" for d in divergencias]
 
     impedem = [a for a in resultado["achados"] if str(a.get("severidade", "")).lower() in ("bloqueio", "nok", "❌")]
     plataforma = [a for a in resultado["achados"] if a.get("classe") == "pendencia-plataforma"]

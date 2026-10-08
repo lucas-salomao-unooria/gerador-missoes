@@ -50,6 +50,7 @@ STATUS_KEYS = [
     "rastro_spec_status", "rastro_design_status", "conteudo_aprovado_spec_status",
     "conteudo_aprovado_resumido_status", "fidelidade_design_status", "fidelidade_dev_status",
     "rastreabilidade_dev_status", "conteudo_aprovado_spec_design_status",
+    "banca_produto_status", "banca_design_status", "banca_entrada_status", "coerencia_prd_status",
     "rastro_lacunas_status",
     "dev_status",
     "prd_status", "kpis_status", "kpis_report",

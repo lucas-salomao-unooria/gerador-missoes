@@ -58,6 +58,7 @@ from google.adk.agents.parallel_agent import ParallelAgent
 from google.adk.agents.sequential_agent import SequentialAgent
 
 from agents.base import create_llm_agent
+from agents.banca import get_banca
 from agents.juiz import get_fidelidade_check, get_juiz_de_achados
 from agents.callbacks import marcar_heranca, preservar_one_pager
 from agents.checkers import (
@@ -318,6 +319,7 @@ def _resumido_loop(kw: dict, settings) -> LoopAgent:
                 status_keys=["conteudo_aprovado_resumido_status"],
                 rodada_key="resumido_rodada",
                 max_rounds=rodadas,
+                autor_keys=["one_pager_resumido"],
             ),
         ],
     )
@@ -431,15 +433,21 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
                 estrito=settings.esteira_estrita,
                 before_agent_callback=marcar_heranca,
             ),
+            # A banca no fim de produto (dimensões de produto e pedagogia), antes do parecer do PO: o achado volta ao
+            # autor da spec na próxima rodada. A mesma banca roda de novo na entrada do dev (decisão de 08/10/2026).
+            *get_banca("produto", "AC", "A15h", rotulo="Banca de produto",
+                       titulo="Banca de validação — fim de produto",
+                       report_key="banca_produto_report", status_key="banca_produto_status", **kw),
             SaidaDeLoopAgent(
                 name="A16SpecCheck",
                 description="Currículo, manifesto, matriz de evidência, perguntas de produto, lacunas e fidelidade ao one-pager aprovado conformes encerram o loop; reprovados devolvem a spec ao autor com os relatórios.",
                 rotulo="Spec da missão",
                 status_keys=["bncc_status", "manifesto_status", "evidencia_status",
                              "perguntas_status", "juiz_perguntas_status", "rastro_spec_status",
-                             "conteudo_aprovado_spec_status"],
+                             "conteudo_aprovado_spec_status", "banca_produto_status"],
                 rodada_key="spec_rodada",
                 max_rounds=rodadas_spec,
+                autor_keys=["spec_missao"],
             ),
         ],
     )
@@ -702,7 +710,8 @@ ETAPAS_DO_PEDIDO_DE_PRODUTO = ("produto", "")
 #: Agentes do estágio parcial "spec" (correção a partir da spec), na ordem em que rodam.
 SPEC_AGENT_IDS = ["A13SpecMissao", "A14BnccCheck", "A15ManifestoCheckProduto", "A15bEvidenciaCheck",
                   "A15cPerguntasCheck", "A15dJuizPerguntas", "A15eJuizPerguntasCheck",
-                  "A15gConteudoAprovadoSpec", "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido",
+                  "A15gConteudoAprovadoSpec", "A15hBancaProdutoNarrativa", "A15hBancaPedagogiaBncc",
+                  "A15hBancaConsolidacao", "A16SpecCheck", "A16cFidelidadeProduto", "A16bOnePagerResumido",
                   "A16eConteudoAprovadoResumido", "A16fResumidoRodada"]
 
 PRODUTO_METADATA = [
@@ -738,6 +747,9 @@ PRODUTO_METADATA = [
     {"id": "A15eJuizPerguntasCheck", "name": "15e · Veredito do juiz das perguntas (determinístico)", "icon": "🔀", "output_key": "juiz_perguntas_status", "prompt_file": None, "description": "Lê o envelope do juiz: ❌ em pergunta declarada pelo PO bloqueia; ❌ só em proposta segue como ressalva para o PO decidir."},
     {"id": "A15fRastroSpec", "name": "15f · Rastro de lacunas da spec (determinístico)", "icon": "🧭", "output_key": "rastro_spec_report", "prompt_file": None, "description": "Marcadores de lacuna na spec, por dono: o de produto ou de insumo volta para quem escreveu a spec; a decisão do PO fica 🟡 no semáforo do parecer; o de design e o de dev ficam para a etapa delas."},
     {"id": "A15gConteudoAprovadoSpec", "name": "15g · Spec × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_spec_report", "prompt_file": None, "description": "A spec traduz o one-pager que o PO aprovou: mesmas habilidades do contrato de evidência (§12a), mesmo tempo total em tela (§10) e o podcast (§11) declarado. Ressalva de parecer que o PO não incorporou não muda a spec."},
+    {"id": "A15hBancaProdutoNarrativa", "name": "15h · Banca no fim de produto: produto e narrativa", "icon": "🅰️", "output_key": "banca_produto_narrativa", "prompt_file": None, "description": "Os critérios PROD da banca que a spec decide, antes do parecer do PO. O achado volta ao autor da spec na próxima rodada."},
+    {"id": "A15hBancaPedagogiaBncc", "name": "15h · Banca no fim de produto: pedagogia e BNCC", "icon": "🅲", "output_key": "banca_produto_pedagogia", "prompt_file": None, "description": "Os critérios PED da banca sobre a spec, antes do parecer do PO."},
+    {"id": "A15hBancaConsolidacao", "name": "15h · Banca de produto (determinístico)", "icon": "⚖️", "output_key": "banca_produto_report", "prompt_file": None, "description": "Veredito da banca no fim de produto: o pior das dimensões, com os bloqueantes lidos dos arquivos de critério. 🔴 devolve a spec ao autor e, esgotadas as rodadas, recusa o de acordo."},
     {"id": "A16SpecCheck", "name": "16 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
     {"id": "A03aaContaDaVirada", "name": "03aa · Conta da virada (determinístico)", "icon": "🧮", "output_key": "mecanica_report", "prompt_file": None, "description": "Refaz o ranking da tabela 1.3 do núcleo: normaliza cada critério, aplica os pesos e confere que o vencedor antes e o depois são os declarados — e diferentes. Pega a virada que não fecha (o custo por vaga da exp09ef1b)."},
     {"id": "A03aFidelidadeNucleo", "name": "03a · Fidelidade ao pedido do PO (núcleo)", "icon": "📌", "output_key": "fidelidade_nucleo_report", "prompt_file": None, "description": "O núcleo contra todos os pedidos de refazer do PO (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) e o briefing: o juiz cita, o código confere. Com 🔴, o núcleo volta ao autor com o relatório."},

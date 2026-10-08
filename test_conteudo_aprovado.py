@@ -315,18 +315,18 @@ def test_refazer_entrega_ao_redator_a_versao_sem_anexo():
 
 
 def test_etapas_montadas_com_os_gates_e_os_anexos():
-    from agents.dev import build_dev_stage
+    from agents.dev import agentes_em_ordem, build_dev_stage
     from agents.produto import build_produto_stage
 
     dev = build_dev_stage()
-    nomes = [a.name for a in dev.sub_agents]
+    nomes = [a.name for a in agentes_em_ordem(dev)]
     # A51 (07/10/2026): o refazer de dev conferido nos documentos de dev
     assert nomes[-6:] == ["PrdLoop", "A48dAnexoPrd", "OnePagerPedagogicoLoop", "A49cAnexoPedagogico", "A50Rastreabilidade",
                           "A51FidelidadeDev"]
-    prd_loop = next(a for a in dev.sub_agents if a.name == "PrdLoop")
+    prd_loop = next(a for a in agentes_em_ordem(dev) if a.name == "PrdLoop")
     saida = next(a for a in prd_loop.sub_agents if a.name == "A48PrdRodada")
     assert "conteudo_aprovado_prd_status" in saida.status_keys
-    ped_loop = next(a for a in dev.sub_agents if a.name == "OnePagerPedagogicoLoop")
+    ped_loop = next(a for a in agentes_em_ordem(dev) if a.name == "OnePagerPedagogicoLoop")
     assert [a.name for a in ped_loop.sub_agents] == [
         "A49OnePagerPedagogico", "A49bConteudoAprovadoPedagogico", "A49PedagogicoRodada"]
 
@@ -1047,7 +1047,7 @@ def test_conserto_de_design_pedido_pela_banca_refaz_o_que_deriva_dele():
     from google.adk.events.event_actions import EventActions
 
     from agents.checkers import DespachoTicketsAgent
-    from agents.dev import POSFIXO_BANCA, build_dev_stage
+    from agents.dev import agentes_em_ordem, POSFIXO_BANCA, build_dev_stage
 
     class Marca(BaseAgent):
         async def _run_async_impl(self, ctx):
@@ -1067,8 +1067,12 @@ def test_conserto_de_design_pedido_pela_banca_refaz_o_que_deriva_dele():
 
     assert rodar("jornada") == ["J", "P", "H"]
     assert rodar("handoff-dev") == ["H"], "conserto de handoff não refaz o protótipo"
-    assert "A28PrototipoRetrabalhoBanca" in POSFIXO_BANCA["telas"]
-    banca = next(a for a in build_dev_stage().sub_agents if a.name == "BancaLoop")
+    # desde 08/10/2026 a banca de dev não reescreve design: dono de design é pendência para a etapa dona
+    from agents.dev import BANCA_EXTERNO, MAPA_BANCA
+
+    assert not {"jornada", "fluxo", "telas", "copy-ptbr-revisao"} & set(MAPA_BANCA)
+    assert {"jornada", "fluxo", "telas", "copy-ptbr-revisao"} <= set(BANCA_EXTERNO)
+    banca = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "BancaLoop")
     despacho = next(a for a in banca.sub_agents if a.name == "A46DespachoBanca")
     existentes = {s.name for s in despacho.sub_agents}
     assert all(n in existentes for nomes in POSFIXO_BANCA.values() for n in nomes)

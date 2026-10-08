@@ -441,7 +441,19 @@ class ArtefatosDesignAgent(BaseAgent):
                     for tela in dados["telas"]:
                         if tela.get("id") in nomes:
                             tela["titulo"] = nomes[tela["id"]]
+                    # Com registro, a entrega é só a versão atual de cada tela: o Stitch não apaga a anterior, e a
+                    # folha (que vai ao PRD) listava as duas misturadas. As antigas ficam contadas, sem ID de tela,
+                    # para não contarem como cobertura (decisão do usuário, 08/10/2026).
+                    anteriores = 0
+                    if nomes:
+                        anteriores = sum(1 for t in dados["telas"] if t.get("id") not in nomes)
+                        dados = {**dados, "telas": [t for t in dados["telas"] if t.get("id") in nomes]}
                     delta[self.links_key] = montar_folha_de_links(dados, titulo)
+                    if anteriores:
+                        delta[self.links_key] += (
+                            f"\n## Versões anteriores no projeto\n\n{anteriores} tela(s) do projeto são versões anteriores "
+                            "de telas refeitas, ou telas que saíram do inventário. Continuam no Stitch — o título da "
+                            "atual leva `· vN` — e não entram nesta entrega.\n")
                     linhas.append(f"🔗 Stitch: {len(dados['telas'])} tela(s) no projeto `{pid}` — link no relatório e no PRD.")
                     from tools.afirmacoes import cobertura_stitch
 
@@ -510,7 +522,8 @@ class QaAfirmacoesAgent(BaseAgent):
         # e os de lint, consistência e preservação da spec: dependiam de o QA ler o relatório e escrever o
         # ticket, e o protótipo nem tinha rota (auditoria de 07/10/2026)
         for chave in ("stitch_status", "cobertura_telas_status", "prototipo_lint_status", "consistencia_status",
-                      "lacunas_status", "ambiente_status", "conteudo_aprovado_spec_design_status"):
+                      "lacunas_status", "ambiente_status", "conteudo_aprovado_spec_design_status",
+                      "banca_design_status"):
             if str(state.get(chave, "")) == "bloqueado":
                 envelope_gate = state.get(f"{chave}_envelope") or {}
                 for a in envelope_gate.get("achados") or []:
@@ -896,6 +909,23 @@ class PrototipoLintAgent(BaseAgent):
         )
 
 
+class EscopoBancaAgent(BaseAgent):
+    """Grava em `escopo_banca` onde a banca está rodando e o que ela pode fazer ali (`tools/banca.ESCOPOS`).
+
+    Os prompts das dimensões são os mesmos nas quatro posições — fim de produto, fim de design, entrada do dev e dev —
+    e leem `{escopo_banca?}`. Roda logo antes das dimensões, porque a chave é a mesma para todas as posições."""
+
+    posicao: str
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import banca as bnc
+
+        texto = bnc.ESCOPOS[self.posicao]
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    actions=EventActions(state_delta={bnc.KEY_ESCOPO: texto}))
+
+
 class ConsolidacaoBancaAgent(BaseAgent):
     """Determinístico: o veredito da banca é a pior das cinco dimensões, contada em código.
 
@@ -913,6 +943,13 @@ class ConsolidacaoBancaAgent(BaseAgent):
     report_key: str = "validacao_dev_report"
     status_key: str = "dev_status"
     rotulo: str = "Banca de dev"
+    #: Grava o status aqui mesmo. A banca de dev tem um gate de envelope depois (A45) que o grava; as bancas de fim
+    #: de produto, fim de design e entrada do dev não têm.
+    gravar_status: bool = False
+    titulo: str = "Validação de insumos"
+    #: Nome da etapa → chave do envelope da banca dela. Na entrada do dev, o critério que reprova aqui e passou na
+    #: etapa vai a uma seção própria do relatório (decisão do usuário, 08/10/2026).
+    comparar_com: Dict[str, str] = Field(default_factory=dict)
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -922,13 +959,17 @@ class ConsolidacaoBancaAgent(BaseAgent):
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
         envelopes = {chave: extrair_envelope(str(state.get(chave, "") or "")) for chave in self.fontes}
         resultado = bnc.consolidar(envelopes)
-        texto = bnc.relatorio(resultado, missao)
+        divergencias = bnc.divergencias_com_etapas(
+            resultado, {nome: state.get(chave) for nome, chave in self.comparar_com.items()}) if self.comparar_com else []
+        texto = bnc.relatorio(resultado, missao, self.titulo, divergencias)
 
         delta = {
             self.report_key: texto,
             f"{self.status_key}_envelope": {"agente": bnc.AGENTE, "status": resultado["status"],
-                                            "achados": resultado["achados"]},
+                                            "achados": resultado["achados"], "divergencias": divergencias},
         }
+        if self.gravar_status:
+            delta[self.status_key] = resultado["status"]
         marca = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
         dims = " · ".join(f"{k.replace('validacao_', '')}: {marca_d}"
                           for k, marca_d in ((k, {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[v["status"]])
@@ -1403,6 +1444,99 @@ class FidelidadeCheckAgent(BaseAgent):
                         f"{self.status_key}_envelope": envelope,
                         self.entrada_key: "",
                         self.documentos_key: "",
+                    }))
+
+
+def _bloco_com(texto: str, campo: str) -> Dict[str, Any]:
+    """O último objeto JSON do texto que tem `campo` — em bloco ```json ou solto. O `extrair_envelope` só aceita
+    envelope de gate (com `status`), e a resposta de um juiz não tem."""
+    candidatos = re.findall(r"```(?:json)?\s*(.*?)```", texto or "", re.S) + [(texto or "").strip()]
+    for bruto in reversed(candidatos):
+        try:
+            dados = json.loads(bruto)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if isinstance(dados, dict) and campo in dados:
+            return dados
+    return {}
+
+
+class JuizDeContradicoesAgent(BaseAgent):
+    """O documento contradiz o conteúdo aprovado? O juiz cita os dois lados; o código confere as duas citações.
+
+    A conferência do PRD em código pega o que tem estrutura — habilidade, tempo, texto literal reescrito. A mecânica
+    («o estudante pode voltar», «o professor libera depois da votação») não tem: o corpo do PRD podia contradizer o
+    anexo que a esteira cola no fim, que se declara prevalente, e ninguém via (decisão do usuário, 08/10/2026: «prefiro
+    pecar pelo excesso»). Contradição com as duas citações conferidas é bloqueio para o autor; sem prova, é descartada
+    e aparece no relatório como não comprovada.
+    """
+
+    documento_key: str
+    referencia_key: str
+    report_key: str
+    status_key: str
+    dono: str
+    rotulo: str = "Coerência com o conteúdo aprovado"
+    entrada_documento_key: str = "contradicoes_documento"
+    entrada_referencia_key: str = "contradicoes_referencia"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools.conteudo_aprovado import remover_anexo
+        from tools.fidelidade import _citacao_confere, _norm
+
+        state = ctx.session.state
+        documento = remover_anexo(str(state.get(self.documento_key, "") or ""))
+        referencia = str(state.get(self.referencia_key, "") or "")
+        saida = ""
+        if documento.strip() and referencia.strip() and self.sub_agents:
+            state[self.entrada_documento_key], state[self.entrada_referencia_key] = documento, referencia
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                        actions=EventActions(state_delta={self.entrada_documento_key: documento,
+                                                          self.entrada_referencia_key: referencia}))
+            juiz = self.sub_agents[0]
+            async for evento in juiz.run_async(ctx):
+                yield evento
+            saida = str(ctx.session.state.get(getattr(juiz, "output_key", "") or "", "") or "")
+
+        envelope_juiz = _bloco_com(saida, "contradicoes")
+        doc_norm, ref_norm = _norm(documento), _norm(referencia)
+        achados: List[Dict[str, str]] = []
+        sem_prova: List[str] = []
+        for c in envelope_juiz.get("contradicoes") or []:
+            if not isinstance(c, dict):
+                continue
+            no_doc, na_ref = str(c.get("citacao_documento") or ""), str(c.get("citacao_referencia") or "")
+            if _citacao_confere(no_doc, doc_norm) and _citacao_confere(na_ref, ref_norm):
+                achados.append({
+                    "severidade": "bloqueio", "codigo": f"contradicao-{c.get('tipo') or 'mecanica'}", "etapa": "dev",
+                    "agente_responsavel": self.dono,
+                    "resumo": (f"O documento diz «{no_doc[:160]}» e o conteúdo aprovado diz «{na_ref[:160]}». "
+                               f"{str(c.get('explicacao') or '').strip()} Siga o aprovado; se a plataforma não permite, "
+                               "registre a divergência na seção 19 com dono `produto`."),
+                })
+            else:
+                sem_prova.append(f"«{no_doc[:120]}» × «{na_ref[:120]}»")
+        status = "bloqueado" if achados else "aprovado"
+        missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
+        linhas = [f"# {self.rotulo} — {missao or 'missão'}", "",
+                  f"**Veredito: {'🔴 CONTRADIZ O APROVADO' if achados else '🟢 SEM CONTRADIÇÃO COMPROVADA'}**", "",
+                  "O juiz aponta onde o corpo afirma o contrário do conteúdo aprovado, citando os dois lados; o código "
+                  "confere as duas citações. Contradição sem prova é descartada.", ""]
+        if achados:
+            linhas += ["## Contradições comprovadas", ""] + [f"- ⛔ `{a['codigo']}` — {a['resumo']}" for a in achados] + [""]
+        if sem_prova:
+            linhas += ["## Apontadas sem prova (descartadas)", ""] + [f"- {s}" for s in sem_prova] + [""]
+        envelope = {"agente": "juiz-de-contradicoes", "missao": missao, "status": status, "achados": achados}
+        linhas += ["```json", json.dumps(envelope, ensure_ascii=False), "```"]
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=(
+                        f"{'⛔' if achados else '✅'} {self.rotulo}: {len(achados)} contradição(ões) comprovada(s), "
+                        f"{len(sem_prova)} sem prova."))]),
+                    actions=EventActions(state_delta={
+                        self.report_key: "\n".join(linhas), self.status_key: status,
+                        f"{self.status_key}_envelope": envelope,
+                        self.entrada_documento_key: "", self.entrada_referencia_key: "",
                     }))
 
 
@@ -1981,6 +2115,24 @@ class ProfundidadeCheckAgent(BaseAgent):
         )
 
 
+PREFIXO_RODADA_ANTERIOR = "rodada_anterior_"
+
+
+def bloco_versao_da_rodada(chave: str, documento: str) -> str:
+    """Valor de `rodada_anterior_<chave>`: a versão que o autor escreveu na rodada que o gate reprovou."""
+    return "\n".join([
+        "## Sua versão da rodada anterior deste loop",
+        "",
+        "O gate reprovou a versão abaixo, que você escreveu na rodada anterior. **Parta dela**: corrija exatamente o que "
+        "os relatórios desta instrução apontam e mantenha o resto palavra por palavra — o que já passou não pode mudar "
+        "sem motivo, porque nenhum gate o confere de novo. Reemita o documento inteiro.",
+        "",
+        f'<versao_da_rodada chave="{chave}">',
+        documento,
+        "</versao_da_rodada>",
+    ])
+
+
 class SaidaDeLoopAgent(BaseAgent):
     """Encerra um `LoopAgent` quando todos os gates da rodada passaram — ou quando o teto caiu.
 
@@ -2002,6 +2154,9 @@ class SaidaDeLoopAgent(BaseAgent):
     #: "ADEQUADA COM AJUSTES" é `aprovado_com_ressalvas` com `ajustes_exigidos: 3`, e o loop encerrava
     #: sem o revisor aplicar nenhum — o gate final da exp03ef1b reprovou depois pelo ajuste que ficou.
     envelope_exige: Dict[str, str] = Field(default_factory=dict)
+    #: Os documentos que o autor do loop escreve: quando o loop repete, a versão desta rodada vai a ele em
+    #: `rodada_anterior_<chave>` (`agents/base.py`).
+    autor_keys: List[str] = Field(default_factory=list)
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -2043,6 +2198,14 @@ class SaidaDeLoopAgent(BaseAgent):
                 "O autor do documento recebe o relatório e reescreve."
             )
             escalate = False
+
+        # A versão desta rodada vai ao autor na seguinte, para ele corrigir em vez de reescrever do zero: só o que o
+        # gate confere ficava protegido entre rodadas, e o resto podia mudar sem ninguém ver (auditoria de 07/10/2026).
+        # Ao sair do loop, a chave some.
+        for chave in self.autor_keys:
+            documento = str(state.get(chave, "") or "").strip()
+            delta[f"{PREFIXO_RODADA_ANTERIOR}{chave}"] = (
+                bloco_versao_da_rodada(chave, documento) if documento and not escalate else "")
 
         yield Event(
             invocation_id=ctx.invocation_id,
