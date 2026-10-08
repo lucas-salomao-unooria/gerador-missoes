@@ -149,3 +149,5 @@ Feche **sempre** com o envelope de roteamento, exatamente neste formato:
 ```json
 {"agente": "gate-estrutural", "missao": "<slug>", "rodada": <n>, "status": "aprovado" | "aprovado_com_ressalvas" | "bloqueado", "bloqueios_obrigatorios": <n>, "ressalvas": <n>, "decisoes_produto": <n>, "achados": [{"id": "L1", "severidade": "bloqueio" | "atencao" | "decisao_humana" | "oficio", "codigo": "<critério>", "classe": "<classe da lacuna>", "resumo": "<uma linha>"}], "precisa_humano": true | false}
 ```
+
+<!-- include: references/citacao-nos-achados.md -->

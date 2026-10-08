@@ -102,3 +102,5 @@ Feche **sempre** com o envelope:
 ```
 
 `"aprovado"` = 🟢 LIBERADA; `"aprovado_com_ressalvas"` = 🟡 LIBERADA COM RESSALVAS (riscos_aceitos > 0 e/ou decisões de produto pendentes, sem nenhuma pendência de bloqueio); `"bloqueado"` = 🔴 BLOQUEADA.
+
+<!-- include: references/citacao-nos-achados.md -->

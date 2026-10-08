@@ -242,3 +242,5 @@ Achado bloqueante vira `severidade: "bloqueio"`; não bloqueante, `"atencao"`; o
 
 **Todo achado leva o campo `padrao`** com um slug da tabela acima, no envelope. Sem nome
 estável, o mesmo defeito volta em toda execução com um id novo e nunca vira regra.
+
+<!-- include: references/citacao-nos-achados.md -->

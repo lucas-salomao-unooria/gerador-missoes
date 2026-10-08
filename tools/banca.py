@@ -159,11 +159,28 @@ def _status_da_dimensao(envelope: Optional[Dict[str, Any]], travam: frozenset) -
     return "aprovado", achados
 
 
-def consolidar(envelopes: Dict[str, Optional[Dict[str, Any]]]) -> Dict[str, Any]:
-    """Veredito global = o pior das cinco dimensões. Dimensão ausente bloqueia."""
+#: O que a banca avalia, nas quatro posições: a citação de cada NOK é conferida nestes documentos.
+DOCUMENTOS_DA_BANCA = ("spec_missao", "conteudo_aprovado", "jornada_telas", "fluxo_arestas", "copy_strings_revisada",
+                       "wireframes_cobertura", "brief_oficio", "camada_caa", "stitch_links", "prototipo_relatorio",
+                       "handoff_dev", "brief_assets", "banco_conteudo")
+
+
+def consolidar(envelopes: Dict[str, Optional[Dict[str, Any]]], documentos: str = "") -> Dict[str, Any]:
+    """Veredito global = o pior das cinco dimensões. Dimensão ausente bloqueia.
+
+    Com `documentos`, a citação de cada NOK é conferida (`tools/citacoes.py`): a que não existe rebaixa o achado, e a
+    contagem que o juiz declarou deixa de valer para aquela dimensão — o veredito sai dos achados que sobraram.
+    """
     travam = todos_bloqueantes()
     por_dimensao: Dict[str, Dict[str, Any]] = {}
     todos: List[Dict[str, Any]] = []
+
+    if documentos:
+        from tools import citacoes
+
+        for chave, envelope in list(envelopes.items()):
+            if envelope and isinstance(envelope.get("achados"), list) and citacoes.conferir(envelope["achados"], documentos):
+                envelopes[chave] = {**envelope, "contagem": {}}
 
     for chave, envelope in envelopes.items():
         status, achados = _status_da_dimensao(envelope, travam)

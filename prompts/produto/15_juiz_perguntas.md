@@ -97,3 +97,5 @@ Feche **sempre** com o envelope:
 ```json
 {"agente": "juiz-perguntas", "missao": "<slug>", "rodada": <n>, "status": "aprovado" | "aprovado_com_ressalvas" | "bloqueado", "achados": [{"id": "PQ-01", "severidade": "bloqueio" | "atencao", "codigo": "J1" | "J2" | "J3" | "J4", "agente_responsavel": "produto", "resumo": "<uma linha>"}], "precisa_humano": false | true}
 ```
+
+<!-- include: references/citacao-nos-achados.md -->

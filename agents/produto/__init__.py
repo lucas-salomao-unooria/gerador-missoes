@@ -427,6 +427,7 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
             get_juiz_perguntas_agent(**kw),
             EnvelopeGateAgent(
                 name="A15eJuizPerguntasCheck",
+                documentos=["spec_missao", "perguntas_po"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 report_key="juiz_perguntas_report",
                 status_key="juiz_perguntas_status",
                 rotulo="Juiz das perguntas de produto",
@@ -547,6 +548,7 @@ def build_produto_stage(
             ),
             EnvelopeGateAgent(
                 name="A03MicroGateCheck",
+                documentos=["nucleo_narrativo"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o envelope do micro-gate: aprovado segue para as seções de apoio, reprovado devolve o núcleo ao P0a.",
                 rotulo="Micro-gate do núcleo",
                 report_key="micro_gate_report",
@@ -598,6 +600,7 @@ def build_produto_stage(
             get_gate_estrutural_agent(max_rodadas=rodadas, **kw),
             EnvelopeGateAgent(
                 name="A06GateEstruturalCheck",
+                documentos=["one_pager", "brief_escopo", "briefing"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o envelope do gate estrutural e decide repetir, seguir ou bloquear.",
                 rotulo="Gate estrutural",
                 report_key="gate_estrutural_report",
@@ -654,6 +657,7 @@ def build_produto_stage(
             # de adequação emitiu 40 achados de conteúdo real e nenhum foi fechado.
             EnvelopeGateAgent(
                 name="A08bAvaliacaoCheck",
+                documentos=["one_pager", "brief_escopo", "material_anexado"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o veredito da avaliação pedagógica (critérios 4.x, 5.1/5.2, 8.x).",
                 rotulo="Avaliação pedagógica",
                 report_key="avaliacao_pedagogica_report",
@@ -662,6 +666,7 @@ def build_produto_stage(
             ),
             EnvelopeGateAgent(
                 name="A09bExperienciaCheck",
+                documentos=["one_pager", "brief_escopo"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o veredito da experiência do estudante (3.x, 6.x). Sinaliza, não trava: os tetos desta dimensão são [EXTRAPOLAÇÃO], não medida.",
                 rotulo="Experiência do estudante",
                 report_key="experiencia_aluno_report",
@@ -670,6 +675,7 @@ def build_produto_stage(
             ),
             EnvelopeGateAgent(
                 name="A10aAdequacaoCheck",
+                documentos=["one_pager", "brief_escopo", "material_anexado"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o veredito do parecer de adequação pedagógica.",
                 rotulo="Adequação pedagógica",
                 report_key="adequacao_report",
@@ -756,6 +762,7 @@ def build_produto_stage(
             get_gate_final_produto_agent(**kw),
             EnvelopeGateAgent(
                 name="A12GateFinalProdutoCheck",
+                documentos=["one_pager", "brief_escopo", "gate_estrutural_report", "avaliacao_pedagogica_report", "experiencia_aluno_report", "adequacao_report"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o veredito do gate final de produto (🟢 liberada / 🔴 bloqueada).",
                 rotulo="Gate final de produto",
                 report_key="gate_final_report",

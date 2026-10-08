@@ -272,3 +272,5 @@ Feche com o envelope:
 ```json
 {"agente": "qa-entregaveis", "missao": "<slug>", "rodada": <n>, "status": "aprovado" | "bloqueado" | "devolvido", "inspecao": "stitch" | "documental", "veredito": "verde" | "amarelo" | "vermelho" | "devolvido", "achados": [{"id": "T1", "severidade": "bloqueio" | "atencao" | "oficio" | "decisao_humana", "codigo": "D<n> | O<n>", "classe": "<classe>", "agente_responsavel": "brief-oficio | jornada | fluxo | copy-ptbr-revisao | telas | caa | prototipo | ambiente-simulado | fecha-lacunas | gate-estrutural | null", "resumo": "<uma linha>", "onde": "<documento · seção · tela/linha>", "por_que": "<o teste que falhou>", "como": "<o conserto, pronto para aplicar>"}], "devolucao": {"para": "gate-estrutural", "classe": "<classe>"} | null, "precisa_humano": true | false}
 ```
+
+<!-- include: references/citacao-nos-achados.md -->

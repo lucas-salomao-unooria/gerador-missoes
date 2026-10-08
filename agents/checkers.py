@@ -136,6 +136,9 @@ class EnvelopeGateAgent(BaseAgent):
     max_rounds: int = 1
     escalate_on_approve: bool = False
     block_pipeline_on_fail: bool = True
+    #: Os documentos que o gate avalia (chaves do estado). Com eles, a citação de cada achado bloqueante é conferida
+    #: (`tools/citacoes.py`): a que não existe rebaixa o achado, e se todos os bloqueios caem, o veredito vira 🟡.
+    documentos: List[str] = Field(default_factory=list)
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -143,6 +146,21 @@ class EnvelopeGateAgent(BaseAgent):
         relatorio = str(state.get(self.report_key, "") or "")
         envelope = extrair_envelope(relatorio)
         status = inferir_status(relatorio, envelope)
+        nota_citacao = ""
+        if self.documentos and envelope and isinstance(envelope.get("achados"), list) and status == STATUS_BLOQUEADO:
+            from tools import citacoes
+
+            bloqueios = [a for a in envelope["achados"] if isinstance(a, dict) and citacoes.bloqueante(a)]
+            rebaixados = citacoes.conferir(envelope["achados"], citacoes.texto_dos_documentos(state, self.documentos))
+            if rebaixados:
+                nota_citacao = (f"\n\n---\n> ⚖️ **Citação conferida em código:** {len(rebaixados)} de {len(bloqueios)} "
+                                "bloqueio(s) citavam trecho que não existe no documento avaliado e foram rebaixados a "
+                                "atenção (`citacao_nao_confere`).")
+                if len(rebaixados) == len(bloqueios):
+                    # nenhum bloqueio comprovado sobrou: o 🔴 era do juiz, não do documento
+                    envelope = {**envelope, "status": "amarelo", "veredito_original": envelope.get("status")}
+                    status = STATUS_APROVADO
+                relatorio += nota_citacao + "\n\n```json\n" + json.dumps(envelope, ensure_ascii=False) + "\n```\n"
         # Relatório vazio, truncado ou sem veredito legível é BLOQUEIO, sempre. O QA de design
         # e a banca de dev optavam pelo contrário (`treat_indefinido_as_blocked=False`) e, com
         # isso, uma resposta que não chegou valia aprovação: é o pior erro possível num gate,
@@ -159,6 +177,8 @@ class EnvelopeGateAgent(BaseAgent):
         # cheios de amarelo. O que o time lia era um verde que o juiz não deu.
         registrado = STATUS_BLOQUEADO if truncado else status_registrado(relatorio, envelope)
         delta = {self.status_key: registrado, f"{self.status_key}_envelope": envelope or {}}
+        if nota_citacao:
+            delta[self.report_key] = relatorio
         if self.round_key:
             delta[self.round_key] = rodada
 
@@ -958,7 +978,9 @@ class ConsolidacaoBancaAgent(BaseAgent):
         state = ctx.session.state
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
         envelopes = {chave: extrair_envelope(str(state.get(chave, "") or "")) for chave in self.fontes}
-        resultado = bnc.consolidar(envelopes)
+        from tools.citacoes import texto_dos_documentos
+
+        resultado = bnc.consolidar(envelopes, texto_dos_documentos(state, bnc.DOCUMENTOS_DA_BANCA))
         divergencias = bnc.divergencias_com_etapas(
             resultado, {nome: state.get(chave) for nome, chave in self.comparar_com.items()}) if self.comparar_com else []
         texto = bnc.relatorio(resultado, missao, self.titulo, divergencias)

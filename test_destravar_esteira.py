@@ -322,3 +322,70 @@ def test_pedagogico_tem_juiz_de_contradicoes():
     nomes = [a.name for a in loop.sub_agents]
     assert nomes.index("A49eCoerenciaPedagogico") < nomes.index("A49PedagogicoRodada")
     assert "coerencia_pedagogico_status" in loop.sub_agents[-1].status_keys
+
+
+# --------------------------------------------------------------------------- citação conferida nos gates de LLM
+def _relatorio(achados, status="bloqueado"):
+    import json
+
+    return "# Gate\n\n**Veredito: 🔴**\n\n```json\n" + json.dumps({"status": status, "achados": achados}, ensure_ascii=False) + "\n```"
+
+
+def test_gate_de_llm_so_bloqueia_com_citacao_que_existe():
+    from agents.checkers import EnvelopeGateAgent
+
+    one_pager = "## 4. Etapas\nO estudante escolhe o projeto campeão e o voto fica travado depois de confirmar."
+
+    def rodar(achados):
+        gate = EnvelopeGateAgent(name="G", rotulo="Gate", report_key="r", status_key="s", block_pipeline_on_fail=False,
+                                 documentos=["one_pager"])
+        return asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[gate]), {"r": _relatorio(achados), "one_pager": one_pager}))
+
+    inventada = [{"severidade": "bloqueio", "codigo": "X", "resumo": "voto destravável",
+                  "citacao": "o estudante pode trocar o voto a qualquer momento antes do resultado"}]
+    final = rodar(inventada)
+    assert final["s"] == "amarelo" and final["s_envelope"]["achados"][0]["citacao_nao_confere"]
+    assert "Citação conferida em código" in final["r"]
+
+    verdadeira = [{"severidade": "bloqueio", "codigo": "X", "resumo": "sem retorno",
+                   "citacao": "o voto fica travado depois de confirmar"}]
+    assert rodar(verdadeira)["s"] == "bloqueado"
+    sem_citacao = [{"severidade": "bloqueio", "codigo": "X", "resumo": "falta a tela de erro"}]
+    assert rodar(sem_citacao)["s"] == "bloqueado", "ausência de citação não rebaixa (cautela)"
+    misto = inventada + verdadeira
+    assert rodar(misto)["s"] == "bloqueado", "sobrou um bloqueio comprovado"
+
+
+def test_banca_rebaixa_nok_com_citacao_inventada():
+    from tools import banca as bnc
+
+    bloqueante = sorted(bnc.todos_bloqueantes())[0]
+    env = {"status": "bloqueado", "contagem": {"nok_bloqueantes": 1},
+           "achados": [{"codigo": bloqueante, "severidade": "nok", "resumo": "x",
+                        "citacao": "uma frase que não está em lugar nenhum do documento avaliado"}]}
+    import copy
+
+    assert bnc.consolidar({"d": copy.deepcopy(env)})["status"] == "bloqueado"
+    assert bnc.consolidar({"d": copy.deepcopy(env)}, "## Spec\nO estudante vota uma vez.")["status"] == "amarelo"
+
+
+def test_gates_de_llm_pedem_citacao_e_sabem_o_que_avaliam():
+    from agents.design import build_design_stage
+    from agents.produto import build_produto_stage
+    from pipeline.orchestrator import iter_agent_tree  # noqa: F401  (só garante que o módulo carrega)
+    from prompts import load_prompt
+
+    for p in ("produto/02_micro_gate.md", "produto/05_gate_estrutural.md", "produto/11_gate_final.md",
+              "design/30_qa_entregaveis.md", "dev/39_validacao_produto_narrativa.md"):
+        assert "o código confere" in load_prompt(p).lower(), p
+
+    def todos(a):
+        yield a
+        for s in getattr(a, "sub_agents", []) or []:
+            yield from todos(s)
+
+    gates = {a.name: a for raiz in (build_produto_stage(), build_design_stage()) for a in todos(raiz)
+             if type(a).__name__ == "EnvelopeGateAgent"}
+    for nome in ("A03MicroGateCheck", "A06GateEstruturalCheck", "A08bAvaliacaoCheck", "A10aAdequacaoCheck",
+                 "A12GateFinalProdutoCheck", "A15eJuizPerguntasCheck", "A31QaEntregaveisCheck"):
+        assert gates[nome].documentos, nome

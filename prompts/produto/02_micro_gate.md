@@ -126,3 +126,5 @@ Feche com o envelope:
 ```json
 {"agente": "micro-gate", "missao": "<slug>", "rodada": <n>, "status": "passa" | "nao_passa", "falhas": ["V1" | "V2" | "V3" | "V4" | "V5"], "precisa_humano": false | true}
 ```
+
+<!-- include: references/citacao-nos-achados.md -->
