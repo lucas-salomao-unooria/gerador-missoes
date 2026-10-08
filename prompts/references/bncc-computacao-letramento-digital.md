@@ -1,6 +1,6 @@
 ---
 name: bncc-computacao-letramento-digital
-description: Todas as habilidades da BNCC Computação por ano (Resolução CNE/CEB 1/2022), com eixo e a marca de letramento digital. Fonte única: references/bncc-computacao.json (gerado por scripts/gerar_bncc_referencia.py). Lido pela avaliação pedagógica (5.1/5.2), pela spec (bloco 11) e pelo QA de entregáveis (D2); o gate determinístico BnccCheck usa o JSON.
+description: Todas as habilidades da BNCC Computação por ano (Resolução CNE/CEB 1/2022), com eixo e a marca de letramento digital. Fonte única: references/bncc-computacao.json (gerado por scripts/gerar_bncc_referencia.py). Lido pela avaliação pedagógica (5.1/5.2), pela spec (bloco 11) e pelo QA de entregáveis (D2); o gate determinístico A14BnccCheck usa o JSON.
 sources: [https://www.gov.br/mec/pt-br/escolas-conectadas/arquivos/BNCCComputaoCompletodiagramado.pdf]
 ---
 
@@ -14,7 +14,9 @@ sources: [https://www.gov.br/mec/pt-br/escolas-conectadas/arquivos/BNCCComputaoC
 2. **Ano bate com ano.** `EF0n` vale só para o n-º ano; `EF15` vale para qualquer ano do 1º ao 5º; `EF69` para qualquer ano do 6º ao 9º; `EM13` só para o Ensino Médio. Habilidade de outro ano na missão é ⛔.
 3. **Letramento digital é obrigatório no Fundamental.** Toda missão de 1º a 9º ano exercita pelo menos uma habilidade do eixo Cultura Digital (marcada **letramento digital** abaixo). Pensamento Computacional e Mundo Digital podem entrar como secundárias, nunca como o núcleo que justifica a missão. No Ensino Médio o anexo não tem eixo: a missão precisa citar pelo menos uma habilidade `EM13` (não todas), e a marca de letramento digital é leitura proposta que orienta a avaliação pedagógica sem bloquear.
 
-Essas três regras são conferidas por um gate **determinístico** (`BnccCheck`, depois da spec) que trava a esteira quando falham, e são lidas pelos agentes LLM (avaliação pedagógica 5.1/5.2, spec bloco 11, QA de entregáveis D2) para julgar o que a máquina não julga: se a ação em tela exercita de fato a habilidade.
+Essas três regras são conferidas por um gate **determinístico** (`A14BnccCheck`, depois da spec) que trava a esteira quando falham, e são lidas pelos agentes LLM (avaliação pedagógica 5.1/5.2, spec bloco 11, QA de entregáveis D2) para julgar o que a máquina não julga: se a ação em tela exercita de fato a habilidade.
+
+**Como citar no documento que você escreve:** o texto oficial de cada habilidade entra **uma vez só**, entre aspas, no lugar do currículo (seção 2 do one-pager, bloco 11 da spec). Em todas as outras menções — foco primário, contrato de evidência, decisões, changelog — escreva só o código e um rótulo curto com as suas palavras (`EF03CO03` — decomposição). Transcrever o texto oficial várias vezes faz o modelo cortar a resposta inteira pelo filtro de recitação: o documento sai vazio e a etapa para.
 
 ---
 

@@ -217,7 +217,7 @@ caminho de cada dado.
 
 **Versão do instrumento e segunda aplicação.** `versao_instrumento` inicial
 na linha da sessão, o que acontece com linhas antigas quando sobe, e se
-"zerar turma" apaga ou incrementa `tentativa`.
+"zerar turma" abre rodada nova: a linha da rodada anterior fica, imutável, e é ela que o painel de habilidades lê — nada se apaga nem se arquiva (o que se conta por ação é `<acao>_tentativas`).
 
 **O prefixo da tabela é o id inteiro, sem separador interno.** A missão `exp05ef3b` usa `exp05ef3b_sessoes`, nunca `exp_05ef3b_` nem `exp_05_`. O identificador já carrega ano e bimestre; quebrá-lo com underscore recria o formato antigo e desalinha migration, Prisma e o `@@map`.
 

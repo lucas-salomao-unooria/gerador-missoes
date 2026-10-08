@@ -43,7 +43,9 @@ STATUS_BLOQUEADO = "bloqueado"
 STATUS_INDEFINIDO = "indefinido"
 
 _APROVADO_TOKENS = ("🟢", "APROVADO", "LIBERADA PARA DESIGN/DEV", "APTO PARA CODIFICAR", "APROVADO PARA REVISÃO HUMANA")
-_BLOQUEADO_TOKENS = ("🔴", "BLOQUEADO", "BLOQUEADA PARA DESIGN/DEV", "NÃO APTO", "IMPASSE")
+#: "NÃO APROVADO" contém "APROVADO": sem o token próprio, o relatório sem envelope que reprovava era lido como
+#: aprovado (auditoria de 08/10/2026).
+_BLOQUEADO_TOKENS = ("🔴", "BLOQUEADO", "BLOQUEADA PARA DESIGN/DEV", "NÃO APTO", "IMPASSE", "NÃO APROVAD", "NAO APROVAD")
 
 
 def extrair_envelope(texto: str) -> Optional[Dict[str, Any]]:
@@ -61,14 +63,21 @@ def extrair_envelope(texto: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+_ENVELOPE_BLOQUEADO = ("bloqueado", "bloqueada", "devolvido", "nao_apto", "não apto", "nao_passa", "não passa",
+                       "vermelho", "🔴", "reprovado", "reprovada", "nao_aprovado", "não aprovado")
+
+
 def inferir_status(texto: str, envelope: Optional[Dict[str, Any]] = None) -> str:
     """Normaliza o veredito de um relatório em aprovado | bloqueado | indefinido."""
     if envelope:
-        status = str(envelope.get("status") or envelope.get("veredito") or "").strip().lower()
+        # `status` e `veredito` juntos: o envelope {"status": "aprovado", "veredito": "vermelho"} era lido só pelo
+        # primeiro campo preenchido e passava. Qualquer um dos dois reprovando, reprova.
+        valores = [str(envelope.get(k) or "").strip().lower() for k in ("status", "veredito")]
+        if any(v in _ENVELOPE_BLOQUEADO for v in valores):
+            return STATUS_BLOQUEADO
+        status = next((v for v in valores if v), "")
         if status in ("aprovado", "concluido", "concluído", "liberada", "apto", "passa", "verde", "🟢"):
             return STATUS_APROVADO
-        if status in ("bloqueado", "bloqueada", "devolvido", "nao_apto", "não apto", "nao_passa", "não passa", "vermelho", "🔴"):
-            return STATUS_BLOQUEADO
         # `aguarda_gate` é o D0 dizendo que a decisão cabe ao Gate 0 ou ao PO. Não existe loop
         # que devolva isso a um agente, então tratá-lo como bloqueio travava a esteira num
         # impasse insolúvel. É pendência humana: segue, e o dossiê registra como 🟡.
@@ -98,6 +107,8 @@ def status_registrado(texto: str, envelope: Optional[Dict[str, Any]] = None) -> 
     Os dois convivem: o roteamento usa `inferir_status`, o dossiê usa esta.
     """
     if envelope:
+        if any(str(envelope.get(k) or "").strip().lower() in _ENVELOPE_BLOQUEADO for k in ("status", "veredito")):
+            return STATUS_BLOQUEADO
         bruto = str(envelope.get("status") or envelope.get("veredito") or "").strip().lower()
         if bruto in ("aprovado_com_ressalvas", "apto_com_ressalvas", "ressalvas", "amarelo", "🟡",
                      "segue_com_pendencias", "parcial", "aprovado-com-pendencias-de-plataforma",
@@ -281,3 +292,86 @@ def barrar_ferramenta_sem_orcamento(tool: Any, args: Dict[str, Any], tool_contex
             "no arquivo e por quê."
         ),
     }
+
+
+#: O que a ideação grava quando o PO já trouxe o one-pager: o núcleo lê isto no lugar dos três candidatos.
+IDEACAO_DISPENSADA = (
+    "# Ideação de mecanismos — dispensada\n\n"
+    "O PO anexou o one-pager da missão (`one_pager_po`): o mecanismo é o dele, já desenhado e aprovado. "
+    "Não há candidato a comparar nem a escolher. O núcleo narrativo parte do one-pager do PO e só muda o que "
+    "o pedido dele manda mudar."
+)
+
+
+def dispensar_ideacao_com_one_pager_do_po(callback_context: CallbackContext) -> Optional[types.Content]:
+    """before_agent_callback da ideação: com o one-pager do PO no estado, não se inventam três mecanismos.
+
+    Na exp06ef1b (08/10/2026) o PO anexou o one-pager aprovado e pediu três correções; a ideação desenhou três
+    mecanismos novos e o núcleo, instruído a "desenvolver o candidato escolhido", partiu deles. O `Content`
+    devolvido vai para o `output_key` e o agente não roda.
+    """
+    if not str(callback_context.state.get("one_pager_po") or "").strip():
+        return None
+    return types.Content(role="model", parts=[types.Part(text=IDEACAO_DISPENSADA)])
+
+
+def desembrulhar_documento(chave: str):
+    """after_agent_callback: tira a cerca ```markdown que envolve o documento inteiro, logo que ele é gravado.
+
+    Na exp09ef1b o redator embrulhou o PRD: a conferência PRD × aprovado (A48c) não achava a §14 dentro da cerca e
+    acusava habilidade sem KPI que estava lá, deixava passar o tempo de etapa divergente, e o anexo literal entrava
+    depois da cerca — aí a gravação não reconhecia mais o invólucro e o `PRD.md` abria como bloco de código.
+    """
+    def _callback(callback_context: CallbackContext) -> None:
+        from pipeline.artifacts import desembrulhar_cerca
+
+        texto = callback_context.state.get(chave)
+        if isinstance(texto, str) and texto:
+            limpo = desembrulhar_cerca(texto)
+            if limpo != texto:
+                callback_context.state[chave] = limpo
+        return None
+
+    _callback.__name__ = f"desembrulhar_{chave}"
+    return _callback
+
+
+#: Prefixo da chave em que fica o aviso de resposta cortada pelo modelo, por agente (`bloqueio_modelo_<nome>`).
+PREFIXO_BLOQUEIO_MODELO = "bloqueio_modelo_"
+_AVISOS_DE_CORTE = {
+    "RECITATION": (
+        "o filtro de recitação do modelo cortou a resposta inteira — ela reproduzia literalmente um texto publicado. "
+        "Nesta tentativa, **não transcreva por extenso** texto de fonte publicada (texto oficial da BNCC, apostila, lei, "
+        "notícia, letra de música): cite o código ou a fonte e resuma em uma linha com suas palavras. O conteúdo da "
+        "missão (narrativa, telas, falas, decisões) segue como as regras mandam."),
+    "MAX_TOKENS": (
+        "a resposta passou do limite de tamanho e foi cortada antes de terminar. Nesta tentativa, seja mais enxuto no "
+        "raciocínio e não repita trechos já escritos; o documento precisa sair inteiro."),
+}
+
+
+def registrar_corte_do_modelo(callback_context: CallbackContext, llm_response: Any) -> None:
+    """after_model_callback de todo agente: resposta sem texto cortada pelo modelo fica registrada para a tentativa seguinte.
+
+    Na exp03ef1b (08/10/2026) o A04 terminou com `FinishReason.RECITATION` e nenhum texto, duas vezes: o filtro de
+    recitação do Gemini corta a saída que reproduz texto publicado — e o one-pager transcreve o texto oficial da
+    BNCC. A esteira não registrava o motivo, o loop chamava o agente de novo com a mesma instrução e o resultado era
+    o mesmo. Aqui o motivo vai ao estado e a próxima instrução do mesmo agente o recebe (`agents.base`).
+    """
+    conteudo = getattr(llm_response, "content", None)
+    partes = list(getattr(conteudo, "parts", None) or [])
+    texto = "".join(p.text or "" for p in partes if getattr(p, "text", None) and not getattr(p, "thought", False))
+    chave = f"{PREFIXO_BLOQUEIO_MODELO}{callback_context.agent_name}"
+    if getattr(llm_response, "partial", False):
+        return None
+    motivo = str(getattr(llm_response, "finish_reason", "") or getattr(llm_response, "error_code", "") or "")
+    motivo = motivo.split(".")[-1].upper()
+    if texto.strip() or getattr(llm_response, "turn_complete", None) is False:
+        if callback_context.state.get(chave):
+            callback_context.state[chave] = ""
+        return None
+    if motivo and motivo not in ("STOP", "FINISH_REASON_UNSPECIFIED"):
+        aviso = _AVISOS_DE_CORTE.get(motivo, f"o modelo devolveu a resposta vazia (motivo `{motivo}`). Escreva o documento inteiro.")
+        callback_context.state[chave] = f"## Sua tentativa anterior foi cortada pelo modelo\n\nNa tentativa anterior, {aviso}"
+        logging.getLogger(__name__).warning("Resposta de %s cortada pelo modelo: %s", callback_context.agent_name, motivo)
+    return None

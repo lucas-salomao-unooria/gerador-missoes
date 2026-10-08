@@ -328,7 +328,7 @@ def test_etapas_montadas_com_os_gates_e_os_anexos():
     assert "conteudo_aprovado_prd_status" in saida.status_keys
     ped_loop = next(a for a in agentes_em_ordem(dev) if a.name == "OnePagerPedagogicoLoop")
     assert [a.name for a in ped_loop.sub_agents] == [
-        "A49OnePagerPedagogico", "A49bConteudoAprovadoPedagogico", "A49PedagogicoRodada"]
+        "A49OnePagerPedagogico", "A49bConteudoAprovadoPedagogico", "A49eCoerenciaPedagogico", "A49PedagogicoRodada"]
 
     spec_loop = build_produto_stage(a_partir_de="spec").sub_agents[0]
     saida = next(a for a in spec_loop.sub_agents if a.name == "A16SpecCheck")

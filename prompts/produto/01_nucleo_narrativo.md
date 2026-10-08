@@ -79,7 +79,7 @@ A Regra Zero protege o gap. Esta garante que, do outro lado do gap, haja algo qu
 
 **O que isso muda no seu trabalho:**
 
-- **Desenvolva o candidato escolhido na ideação.** Ele já foi comparado com dois outros; preserve o que a ideação diz que o núcleo "não pode perder". Você pode ajustar detalhes para caber nas regras abaixo; trocar de candidato só se o escolhido esbarra numa regra deste documento — e então registre na 18-parcial qual regra, e qual candidato você desenvolveu no lugar. Quando o mecanismo veio do briefing, a Regra 1 vale inteira.
+- **Desenvolva o candidato escolhido na ideação.** Ele já foi comparado com dois outros; preserve o que a ideação diz que o núcleo "não pode perder". Você pode ajustar detalhes para caber nas regras abaixo; trocar de candidato só se o escolhido esbarra numa regra deste documento — e então registre na 18-parcial qual regra, e qual candidato você desenvolveu no lugar. Quando o mecanismo veio do briefing, a Regra 1 vale inteira. **Quando o PO anexou o one-pager** (seção «One-pager do PO» acima), não há candidato: a ideação foi dispensada, e as seções 0, 1, 3 e 4 saem do one-pager dele, mudando só o que o pedido manda.
 - **O conceito limiar do mapa é o que o estudante decide.** A aposta do Decidir é sobre ele, e a virada o desmonta. Conceito do material que aparece só no Explicar, como texto, é leitura, não vivência (2.2).
 - **A anatomia do aha tem seis passos, e todos estão na seção 4**: crença de entrada → aposta comprometida → consequência sentida → virada → nomeação → transferência. A comparação com colegas da Regra 10 é o passo 4; sem a aposta (2) e a consequência da escolha dele (3), ela é contraste, não aha.
 - **A virada é mostrada pelo ambiente**: o que ele deixou de ver, o que os colegas receberam, a reação de quem viu o que ele publicou. Nunca por painel da Unooria dentro do clone. Os dados da turma ficam na tela do professor.
@@ -89,6 +89,9 @@ A Regra Zero protege o gap. Esta garante que, do outro lado do gap, haja algo qu
 <!-- include: references/criterios-profundidade.md -->
 
 ---
+
+
+<!-- include: references/one-pager-do-po.md -->
 
 ## Regras
 

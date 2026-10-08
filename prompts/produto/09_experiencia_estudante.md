@@ -14,6 +14,8 @@ Seu foco exclusivo é a **lente de faixa etária**: carga decisória calibrada, 
 
 {briefing?}
 
+<!-- include: references/one-pager-do-po.md -->
+
 **Restrição explícita do briefing que contradiz um critério da rubrica não é ❌ da missão.** Se o PO
 proibiu algo que o critério exige (ou exigiu algo que o critério veda) e a missão obedeceu ao PO,
 registre o conflito como **decisão humana** — cite o critério, cite a frase do briefing, e diga o que
@@ -86,3 +88,5 @@ Use `"aprovado"` para "experiência adequada à faixa"; `"aprovado_com_ressalvas
 
 **Todo achado leva o campo `padrao`** com um slug da tabela acima, no envelope. Sem nome
 estável, o mesmo defeito volta em toda execução com um id novo e nunca vira regra.
+
+<!-- include: references/citacao-nos-achados.md -->

@@ -1136,7 +1136,7 @@ def _rfs_da_linha(linha: str) -> set[str]:
     return rfs
 
 
-def validar_prd(prd: str, spec: str = "", banco: str = "") -> Dict[str, Any]:
+def validar_prd(prd: str, spec: str = "", banco: str = "", aprovado: str = "") -> Dict[str, Any]:
     """Confere se o PRD é coerente consigo mesmo (e, com `spec`, com ela) antes de ir para quem codifica.
 
     O gabarito já exige tudo isto em prosa — o que faltava era alguém conferir. Um PRD que
@@ -1266,7 +1266,8 @@ def validar_prd(prd: str, spec: str = "", banco: str = "") -> Dict[str, Any]:
     achados.extend(conferir_colunas(texto, referencia=spec))
     # 9. os nomes do PRD contra o glossário canônico da spec — o PRD é o último a escrever o nome do órgão
     if spec:
-        achados.extend(validar_glossario(spec, {"PRD": texto}, exigir_glossario=False, etapa="dev")["achados"])
+        achados.extend(validar_glossario(spec, {"PRD": texto}, exigir_glossario=False, etapa="dev",
+                                         aprovado=aprovado)["achados"])
     # 10. tarefa que consome conteúdo que ninguém escreveu (`tools/conteudo.py`). Sem banco, não se acusa.
     from tools.conteudo import tarefas_sem_conteudo
     achados.extend(tarefas_sem_conteudo(texto, banco))

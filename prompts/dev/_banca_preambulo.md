@@ -89,3 +89,5 @@ Feche com o envelope:
 `"bloqueado"` somente quando houver ❌ em critério bloqueante.
 
 **`agente_responsavel` é obrigatório em todo achado, e só aceita os doze nomes acima** — é por ele que o conserto chega a alguém. O que acontece com ele depende da posição (veja «Onde você está avaliando»): no fim de produto e no fim de design o achado volta ao autor da própria etapa, antes do parecer; na entrada do dev nada é reescrito — o bloqueio para o dev e vai ao dono; dentro do dev só `handoff-dev`, `brief-assets` e `banco-conteudo` são refeitos, e o achado de spec ou de design vira pendência nomeada para a etapa dona (desde 08/10/2026 o dev não reescreve design). Escolha pelo documento que precisa mudar: tela ou componente é `telas` (não `wireframes`), o que a spec decidiu é `spec-missao` (não `spec`), string é `copy-ptbr-revisao` (não `copy`). Nome fora da lista não é roteado: vira pendência humana no dossiê, e o conserto não acontece.
+
+<!-- include: references/citacao-nos-achados.md -->

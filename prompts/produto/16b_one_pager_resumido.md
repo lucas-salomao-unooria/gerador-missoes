@@ -139,6 +139,8 @@ Exemplos vindos de uma missão já aprovada pelo time. **Copie o jeito de escrev
 9. **Tamanho:** até 2.800 palavras. Se passar, corte explicação, nunca item.
 10. Se houver herança degradada (a instrução avisa), marque `[PROVISÓRIO — depende de <gate>]` no que derivar da parte reprovada.
 
+**Habilidade BNCC: o texto oficial uma vez só.** Cite o texto oficial de cada habilidade no máximo uma vez, entre aspas, onde o documento apresenta o currículo; nas demais menções, só o código e um rótulo curto com as suas palavras. Transcrever o texto oficial várias vezes faz o modelo cortar a resposta inteira pelo filtro de recitação — o documento sai vazio (exp03ef1b, 08/10/2026).
+
 ## Regras de formatação (o documento vira .docx e .html sem intervenção humana)
 
 - Toda tabela tem linha de cabeçalho **e** linha separadora `|---|`. A primeira linha sempre vira cabeçalho no arquivo exportado.

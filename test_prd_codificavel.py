@@ -146,9 +146,10 @@ def test_o_prd_novo_no_padrao_ouro_passa_em_tudo():
     assert cp.slug_do_prd(PRD_NOVA) == "exp09ef1b"
     assert cp.validar_prd(PRD_NOVA) == []
     r = cd.validar(PRD_NOVA, {})
-    assert r["status"] == "aprovado", r["achados"]
+    # sem design na sessão, o que dependia dele sai «não conferido» (🟡); defeito do PRD, nenhum
+    assert r["status"] == "amarelo" and {a["codigo"] for a in r["achados"]} == {"insumo-ausente"}, r["achados"]
     rel = cd.relatorio(r, "exp09ef1b")
-    assert "modelo de dados, manifesto, ADR" in rel and extrair_envelope(rel)["status"] == "aprovado"
+    assert "modelo de dados, manifesto, ADR" in rel and extrair_envelope(rel)["status"] == "amarelo"
 
 
 # --------------------------------------------------------------------------- 1. modelo de dados

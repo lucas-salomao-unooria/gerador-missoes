@@ -349,12 +349,64 @@ def literais(one_pager: str) -> Dict[str, List[str]]:
             "texto_tela": textos_de_tela(texto)}
 
 
+_RE_NEGACAO = re.compile(r"\b(?:nao|nunca|jamais|nenhum|nenhuma|sem)\b")
+
+
+def _negacoes(texto: str) -> int:
+    """Negações do trecho, sem os rótulos de nível — «Não atingiu:», «Ainda não:» (o pedagógico, em linguagem de sala) —,
+    que antecedem a alternativa no Canal B e não a negam. Rótulo é a negação seguida de dois-pontos ou de «atingiu»."""
+    return len(_RE_NEGACAO.findall(re.sub(r"\bnao\s+atingiu\b|\b(?:nao|nunca|sem)\s*:", " ", texto)))
+
+
+def _ocorrencias(texto: str, alvo: str) -> List[int]:
+    saida, i = [], texto.find(alvo)
+    while i >= 0:
+        saida.append(i)
+        i = texto.find(alvo, i + 1)
+    return saida
+
+
+def _literal_confere(trecho: str, documento_norm: str) -> bool:
+    """O texto aprovado está no documento: 85% contínuos, e o começo, o fim e as negações dele intactos.
+
+    Os 85% são a conferência de citação da fidelidade, tolerante de propósito (o juiz copia com uma vírgula a mais).
+    Para texto aprovado palavra por palavra ela deixava passar a troca das últimas palavras e o "não" inserido perto
+    do começo — mutações que a matriz não pegava (auditoria do padrão ouro, 08/10/2026). Aqui, na região que casou,
+    as três primeiras e as três últimas palavras do trecho têm de estar, e o número de negações tem de ser o mesmo.
+    """
+    import difflib
+
+    from tools.fidelidade import _norm
+
+    alvo = _norm(trecho)
+    if not alvo:
+        return True
+    if alvo in documento_norm:
+        # inteiro, mas negado pela palavra imediatamente anterior ("Não apenas para a família…"): o texto está lá e
+        # diz o contrário. Só a palavra anterior — a frase de antes pode ter um "sem" que não é com ele.
+        anteriores = [(documento_norm[max(0, i - 30):i].split() or [""])[-1] for i in _ocorrencias(documento_norm, alvo)]
+        # «Ainda não:» antes da alternativa é rótulo de nível, não negação (o dois-pontos o separa do texto)
+        return any(p.endswith(":") or not _RE_NEGACAO.fullmatch(p.strip(".,;!?()[]")) for p in anteriores)
+    m = difflib.SequenceMatcher(None, documento_norm, alvo, autojunk=False).find_longest_match(
+        0, len(documento_norm), 0, len(alvo))
+    if m.size < 0.85 * len(alvo):
+        return False
+    inicio = max(0, m.a - m.b)
+    regiao = documento_norm[inicio: inicio + len(alvo) + max(12, len(alvo) // 10)]
+    palavras = alvo.split()
+    cabeca, cauda = " ".join(palavras[:3]), " ".join(palavras[-3:])
+    if cabeca not in regiao or cauda not in regiao:
+        return False
+    fim_da_cauda = regiao.find(cauda) + len(cauda)
+    return _negacoes(regiao[:fim_da_cauda]) == _negacoes(alvo)
+
+
 def literais_ausentes(documento: str, trechos: Sequence[str]) -> List[str]:
-    """Os trechos que não estão no documento — 85% contínuos, como a conferência de citação da fidelidade."""
-    from tools.fidelidade import _norm, _trecho_confere
+    """Os trechos aprovados que não estão no documento (`_literal_confere`)."""
+    from tools.fidelidade import _norm
 
     alvo = _norm(documento or "")
-    return [t for t in trechos if not _trecho_confere(t, alvo)]
+    return [t for t in trechos if not _literal_confere(t, alvo)]
 
 
 def _decisao_pendente(*textos: str) -> bool:
@@ -655,6 +707,11 @@ def _literais(documento: str, one_pager: str, quais: Sequence[str], onde: str, e
 def validar_copy(copy_revisada: str, one_pager: str) -> List[Dict[str, str]]:
     """A copy revisada traz a pergunta e as alternativas do Canal B e as perguntas do debate como o PO aprovou."""
     if not (copy_revisada or "").strip():
+        # vazia com texto aprovado a conferir é o autor mudo, não "nada a cobrar" (auditoria de 08/10/2026)
+        lits = literais(one_pager)
+        if any(lits.get(q) for q in ("canal_b", "roteiro", "podcast")):
+            return [_achado("copy-vazia", "A copy revisada chegou vazia, e o one-pager tem textos aprovados que ela "
+                            "precisa trazer (Canal B, debate, podcast). Dono: `copy-ptbr-revisao`.", "design")]
         return []
     achados = _literais(copy_revisada, one_pager, ("canal_b", "roteiro"), "na copy revisada", "design",
                         "Dono: `copy-ptbr-revisao`. A criança ouve e o professor lê exatamente o texto aprovado: copie "
@@ -725,8 +782,11 @@ def validar_literais_design(camada_caa: str, prototipo_html: str, one_pager: str
 def validar_banco(banco: str, one_pager: str) -> List[Dict[str, str]]:
     """O banco de conteúdo grava o roteiro do podcast que o PO aprovou — não escreve outro."""
     falas = literais(one_pager)["podcast"]
-    if not falas or not (banco or "").strip():
+    if not falas:
         return []
+    if not (banco or "").strip():
+        return [_achado("banco-vazio", f"O banco de conteúdo chegou vazio, e o podcast aprovado tem {len(falas)} falas "
+                        "que ele grava para a síntese. Dono: `banco-conteudo`.", "dev")]
     faltam = literais_ausentes(banco, falas)
     if len(faltam) <= 0.2 * len(falas):
         return []

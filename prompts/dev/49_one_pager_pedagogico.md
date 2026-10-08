@@ -29,6 +29,8 @@ Escreva como quem explica a missão para uma colega no intervalo. Frase curta. V
 | prompt, IA generativa, modelo | o conteúdo que o sistema prepara para a sua turma |
 | iframe, hub, bundle, deploy | a plataforma |
 
+**Habilidade BNCC: o texto oficial uma vez só.** Cite o texto oficial de cada habilidade no máximo uma vez, entre aspas, onde o documento apresenta o currículo; nas demais menções, só o código e um rótulo curto com as suas palavras. Transcrever o texto oficial várias vezes faz o modelo cortar a resposta inteira pelo filtro de recitação — o documento sai vazio (exp03ef1b, 08/10/2026).
+
 ## Como chamar quem faz a missão
 
 Use **a criança** nos anos iniciais (1º ao 5º do Fundamental) e **o estudante** nos anos finais e no Ensino Médio. Nunca "o aluno", nunca "o usuário". A faixa está no bloco 0 da spec; se ela cobrir as duas pontas, use "o estudante". Escolha uma vez e mantenha no documento inteiro.
@@ -57,6 +59,10 @@ Um gate determinístico confere as habilidades do one-pager aprovado (§12a — 
 podcast e os caminhos de arquivo que você cita. A correção é copiar de onde o relatório manda.
 
 {conteudo_aprovado_pedagogico_report?}
+
+**Coerência com o one-pager aprovado (um juiz cita o seu texto e o conteúdo aprovado em cada contradição; o código conferiu as duas citações — bloqueante):**
+
+{coerencia_pedagogico_report?}
 
 ## Insumos
 

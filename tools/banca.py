@@ -38,8 +38,9 @@ _ORDEM = {"bloqueado": 0, "amarelo": 1, "aprovado": 2}
 KEY_ESCOPO = "escopo_banca"
 ESCOPOS: Dict[str, str] = {
     "produto": (
-        "Você avalia no **fim da etapa de produto**, antes do parecer do PO. O insumo que existe é a **spec** (o "
-        "one-pager aprovado chega por ela). Jornada, fluxo, copy, telas, handoff, brief e banco **ainda não existem**: "
+        "Você avalia no **fim da etapa de produto**, antes do parecer do PO. O insumo que existe é a **spec**, e o "
+        "**conteúdo aprovado** traz as seções literais do one-pager: o achado que mais importa aqui é a spec dizendo "
+        "outra coisa que o one-pager. Jornada, fluxo, copy, telas, handoff, brief e banco **ainda não existem**: "
         "vêm vazios, e isso **não é falha** — não acuse ausência deles. Avalie os critérios que a spec decide; o que só "
         "se julga em tela ou no handoff é ➖ N/A (avaliado no design ou no dev). Todo achado volta ao autor da spec, que "
         "corrige na próxima rodada: `agente_responsavel` é `spec-missao` — ou `produto`, quando a falha está numa "
@@ -158,11 +159,28 @@ def _status_da_dimensao(envelope: Optional[Dict[str, Any]], travam: frozenset) -
     return "aprovado", achados
 
 
-def consolidar(envelopes: Dict[str, Optional[Dict[str, Any]]]) -> Dict[str, Any]:
-    """Veredito global = o pior das cinco dimensões. Dimensão ausente bloqueia."""
+#: O que a banca avalia, nas quatro posições: a citação de cada NOK é conferida nestes documentos.
+DOCUMENTOS_DA_BANCA = ("spec_missao", "conteudo_aprovado", "jornada_telas", "fluxo_arestas", "copy_strings_revisada",
+                       "wireframes_cobertura", "brief_oficio", "camada_caa", "stitch_links", "prototipo_relatorio",
+                       "handoff_dev", "brief_assets", "banco_conteudo")
+
+
+def consolidar(envelopes: Dict[str, Optional[Dict[str, Any]]], documentos: str = "") -> Dict[str, Any]:
+    """Veredito global = o pior das cinco dimensões. Dimensão ausente bloqueia.
+
+    Com `documentos`, a citação de cada NOK é conferida (`tools/citacoes.py`): a que não existe rebaixa o achado, e a
+    contagem que o juiz declarou deixa de valer para aquela dimensão — o veredito sai dos achados que sobraram.
+    """
     travam = todos_bloqueantes()
     por_dimensao: Dict[str, Dict[str, Any]] = {}
     todos: List[Dict[str, Any]] = []
+
+    if documentos:
+        from tools import citacoes
+
+        for chave, envelope in list(envelopes.items()):
+            if envelope and isinstance(envelope.get("achados"), list) and citacoes.conferir(envelope["achados"], documentos):
+                envelopes[chave] = {**envelope, "contagem": {}}
 
     for chave, envelope in envelopes.items():
         status, achados = _status_da_dimensao(envelope, travam)

@@ -1127,6 +1127,13 @@ def validar(prd: str, state: Dict[str, Any]) -> Dict[str, Any]:
     spec = insumo("spec_missao")
     achados: List[Dict[str, str]] = []
     contagens: Dict[str, Any] = {}
+    # Insumo de design vazio pula a conferência que depende dele — mas não em silêncio: o PRD que «passou» contra uma
+    # jornada que não existe não foi conferido (auditoria do padrão ouro, 08/10/2026). 🟡, para o semáforo mostrar.
+    for chave, rotulo in (("jornada_telas", "jornada (telas)"), ("copy_strings_revisada", "copy revisada"),
+                          ("brief_assets", "brief de assets"), ("spec_missao", "spec")):
+        if not insumo(chave).strip():
+            achados.append({"severidade": "atencao", "codigo": "insumo-ausente", "etapa": "dev", "agente_responsavel": DONO,
+                            "resumo": f"Sem {rotulo} na sessão: o PRD não foi conferido contra ela — não é aprovação."})
     for novos, conta in (
         conferir_telas(corpo, insumo("jornada_telas")),
         conferir_chaves(corpo, insumo("copy_strings_revisada")),

@@ -445,6 +445,7 @@ def build_qa_design_loop(**kw) -> LoopAgent:
             ),
             EnvelopeGateAgent(
                 name="A31QaEntregaveisCheck",
+                documentos=["spec_missao", "jornada_telas", "fluxo_arestas", "copy_strings_revisada", "camada_caa", "wireframes_cobertura", "prototipo_arquivo", "prototipo_relatorio", "stitch_links", "ambiente_simulado", "brief_oficio"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o veredito do QA de entregáveis: aprovado encerra o loop; 🔴 na última rodada impede o dev e o PRD (modo estrito).",
                 rotulo="QA de entregáveis (design)",
                 report_key="qa_entregaveis_report",

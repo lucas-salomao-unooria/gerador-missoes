@@ -27,7 +27,10 @@ RE_ATRIBUIDA_AO_PO = re.compile(
     rf"|\b(?:o|a)\s+{_PO}\s+(?:j[áa]\s+)?(?:aprovou|homologou|ratificou|decidiu|validou|confirmou|escolheu|definiu|fechou|autorizou)\b"
     rf"|quem\s+decidiu\W{{0,6}}(?:o\s+)?{_PO}\b"
     rf"|\bdecis(?:[ãa]o|[õo]es)\s+(?:fechadas?|tomadas?)\W{{0,6}}(?:pel[oa]\s+)?{_PO}\b"
-    rf"|\b{_PO}\s*\(via\b",
+    rf"|\b{_PO}\s*\(via\b"
+    # "PO no one-pager v1.8.0" na coluna «quem decidiu» da spec da exp06ef1b (08/10/2026): o ambiente e a mecânica
+    # que a esteira trocou saíram atribuídos ao PO, e a regra não reconhecia a forma
+    rf"|\b{_PO}\s+(?:no|na|em|pelo|pela|via)\s+(?:one[- ]?pager|parecer|documento|vers[ãa]o)\b",
     re.IGNORECASE,
 )
 #: A frase pede a decisão em vez de afirmá-la: "a validar pelo PO", "pendente de homologação pelo PO".
@@ -66,9 +69,11 @@ def propostas(texto: str) -> List[str]:
 
 
 def ha_registro_do_po(state: Dict[str, Any]) -> bool:
-    """A sessão tem alguma palavra do PO: pedido de refazer, parecer de acordo com nota, pedido de correção."""
+    """A sessão tem alguma palavra do PO: pedido de refazer, parecer de acordo com nota, pedido de correção, ou o
+    one-pager que ele anexou. Com ela, a atribuição vira ⚠️ a conferir — o que a esteira mudou no one-pager do PO quem
+    barra é a conferência trecho a trecho (`tools/one_pager_po.py`)."""
     return bool(state.get("pedidos_do_po") or str(state.get("notas_de_passagem") or "").strip()
-                or str(state.get("pedido_correcao") or "").strip())
+                or str(state.get("pedido_correcao") or "").strip() or str(state.get("one_pager_po") or "").strip())
 
 
 def achados(texto: str, documento: str, registro_do_po: bool, etapa: str = "produto") -> List[Dict[str, str]]:

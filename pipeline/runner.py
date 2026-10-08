@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -48,9 +49,9 @@ STATUS_KEYS = [
     "juiz_perguntas_status", "juiz_perguntas_rodada",
     "telemetria_status",
     "rastro_spec_status", "rastro_design_status", "conteudo_aprovado_spec_status",
-    "conteudo_aprovado_resumido_status", "fidelidade_design_status", "fidelidade_dev_status",
+    "conteudo_aprovado_resumido_status", "fidelidade_design_status", "fidelidade_dev_status", "one_pager_po_status",
     "rastreabilidade_dev_status", "conteudo_aprovado_spec_design_status",
-    "banca_produto_status", "banca_design_status", "banca_entrada_status", "coerencia_prd_status",
+    "banca_produto_status", "banca_design_status", "banca_entrada_status", "coerencia_prd_status", "coerencia_pedagogico_status",
     "rastro_lacunas_status",
     "dev_status",
     "prd_status", "kpis_status", "kpis_report",
@@ -206,6 +207,28 @@ def material_dos_anexos(doc_batch: Optional[DocumentBatch]) -> str:
     return "\n\n".join(blocos)
 
 
+_RE_VARIAVEL_AUSENTE = re.compile(r"Context variable not found: `(\w+)` in agent '(\w+)'")
+
+
+def mensagem_de_erro(exc: BaseException) -> str:
+    """O erro como o PO consegue ler. O ADK diz "Context variable not found: `one_pager` in agent 'A05…'" quando o
+    agente que escreve um documento termina sem texto e o seguinte precisa dele (exp03ef1b, 08/10/2026, duas vezes)."""
+    m = _RE_VARIAVEL_AUSENTE.search(str(exc))
+    if m:
+        return (f"o documento `{m.group(1)}` não existe quando o agente {m.group(2)} precisou dele — quem o escreve "
+                "terminou sem texto (resposta vazia do modelo). Nada foi alterado; tente de novo.")
+    return str(exc)
+
+
+def one_pager_do_po(initial_state: Optional[Dict[str, Any]], doc_batch: Optional[DocumentBatch]) -> str:
+    """O one-pager que o PO anexou: o salvo vence (numa correção não há anexo novo); senão, o dos anexos."""
+    from tools.one_pager_po import extrair
+
+    salvo = str((initial_state or {}).get("one_pager_po") or "")
+    material = str((initial_state or {}).get("material_anexado") or "") or material_dos_anexos(doc_batch)
+    return salvo or extrair(material)
+
+
 def catalogo_para_prompt() -> str:
     """O índice de missões geradas, em tabela, para os prompts que comparam com o catálogo."""
     try:
@@ -299,6 +322,9 @@ async def run_orchestrator_pipeline_stream(
                 # novo — o material da geração original é o que vale.
                 "material_anexado": str((initial_state or {}).get("material_anexado") or "")
                                     or material_dos_anexos(doc_batch),
+                # O one-pager canônico entre os anexos: a missão que o PO já desenhou. A esteira o completa e
+                # confere trecho a trecho (`tools/one_pager_po.py`), em vez de redesenhar do zero (08/10/2026).
+                "one_pager_po": one_pager_do_po(initial_state, doc_batch),
                 # O PO declara as perguntas de produto no briefing, em português; a esteira as
                 # normaliza para a tabela do sub-bloco 9f. Sem o bloco, fica vazio e o agente
                 # propõe, marcando `[PROPOSTA — validar com PO]` — proposta não bloqueia.
@@ -549,12 +575,13 @@ async def run_orchestrator_pipeline_stream(
             session_id=session_id,
             user_id=user_id,
             prompt=prompt,
-            final_output=f"❌ Erro na execução do pipeline: {exc}",
+            final_output=f"❌ Erro na execução do pipeline: {mensagem_de_erro(exc)}",
             duration_seconds=duration,
             status="error",
-            error_message=str(exc),
+            error_message=mensagem_de_erro(exc),
         )
-        yield {"type": "pipeline_error", "error": str(exc), "result": error_result, "duration": duration, "timestamp": time.time()}
+        yield {"type": "pipeline_error", "error": mensagem_de_erro(exc), "result": error_result, "duration": duration,
+               "timestamp": time.time()}
     finally:
         base_plataforma.fixar(None)
 

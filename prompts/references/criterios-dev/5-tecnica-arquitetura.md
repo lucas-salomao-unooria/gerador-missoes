@@ -2,8 +2,11 @@
 
 Referências do gabarito: `AGENTS.md` raiz, `apps/experiencias/AGENTS.md`,
 `apps/api/AGENTS.md`, `apps/experiencias/_template/`,
-`apps/api/src/manifesto-ia/` e `apps/api/src/rastro-boato/` (exemplares
-atuais do padrão de módulo; `unootube` é de agosto e ficou para trás),
+`apps/api/src/juri-estadual/` + `apps/experiencias/exp06ef1b/` (o molde
+atual: pacote, gate, rodada, ficha de evidência, equipe, podcast),
+`apps/api/src/a-selecao/` (zerar = rodada nova; texto livre de menor) e
+`apps/api/src/unoogpt/` (IA que responde ao estudante); `manifesto-ia`,
+`rastro-boato` e `unootube` são de antes do molde e ficaram para trás,
 `apps/api/src/ai/` (provider + quota). O avaliador confere no repositório o
 que a spec pressupõe existir.
 
@@ -21,8 +24,10 @@ implementação, nunca ❌.
 
 ## TEC-02 [BLOQUEANTE] — Módulo da api desenhado
 Se há gabarito, estado de missão ou visão de professor (quase sempre há):
-módulo próprio `apps/api/src/<slug-curto>/` com `catalogo.ts` (dados),
-`regras.ts` (funções PURAS, sem Prisma/HTTP — testáveis), service com
+módulo próprio `apps/api/src/<slug-curto>/` no molde do Júri — `vocabulario.ts`,
+`conteudo.ts` (dados), `invariantes.ts`, `erros.ts`, `contrato-de-rotas.ts`,
+`prompts.ts` —,
+`regras/` (funções PURAS — passos, evidência, painel —, sem Prisma/HTTP, testáveis), service com
 `comTenancy`, e controllers SEPARADOS por papel (nunca `@Roles` misto com
 exceção por método; seis papéis via grupos de `auth/claims.ts`), com
 `exigirMissaoLiberada` no funil de estudante (ADR-69) e relógio coletivo por

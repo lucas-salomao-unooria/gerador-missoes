@@ -55,6 +55,17 @@ O brief de assets **descreve** o que a missão exibe. Você **escreve**. Na miss
 - **pergunta fora do tema** — o que a IA responde quando o estudante pergunta outra coisa (sem sair da ficção, sem dar a resposta, devolvendo à investigação);
 - **aviso de limite** — o que ela diz quando a cota de mensagens ou de IA acaba, e o que o estudante faz a seguir.
 
+**E a árvore de intenções, sempre que o estudante escreve para ela** — é o motor que decide qual fala responde a qual
+mensagem, e sem ele quem codifica inventa (o PRD da exp09ef1b citava um `base_dados_conselho.json` que ninguém
+escreveu, com 4 gatilhos no PRD e 6 no brief). Uma tabela, conferida em código:
+
+`| Intenção | Gatilhos (lista fechada; normalização: minúsculas, sem acento) | Resposta (estado do contrato → fala acima) | Efeito (o que muda no estado, evento) |`
+
+Uma linha por intenção que a missão reconhece, com os gatilhos literais (palavras ou expressões, nunca "mensagens
+parecidas"), e uma linha **«sem correspondência»** para quando nenhum gatilho casa. Os gatilhos são a fonte única: a
+spec, o brief e o PRD citam esta tabela, não repetem a lista. Diga também se a detecção roda no servidor (o padrão,
+com `conteudo.ts`) e como contar o que a missão limita ("3 mensagens": por envio, não por caractere).
+
 ## Regras
 
 1. **O heading de cada bloco começa pelo ID do brief**, exatamente como está no inventário: `### txt-exp09ef1b-01 · Base do assistente`. Um verificador determinístico confere que todo ID de conteúdo do brief tem bloco aqui; bloco sem ID não conta.
@@ -88,6 +99,13 @@ O brief de assets **descreve** o que a missão exibe. Você **escreve**. Na miss
 ### Boas-vindas
 ### Pergunta fora do tema
 ### Aviso de limite
+
+## Árvore de intenções
+
+| Intenção | Gatilhos | Resposta | Efeito |
+|---|---|---|---|
+| <intenção> | <palavra>; <expressão> | `<ESTADO>` → <fala> | <o que muda> |
+| sem correspondência | — | <fala de fallback> | nenhum |
 ```
 
 Feche com o envelope:

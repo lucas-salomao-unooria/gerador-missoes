@@ -71,7 +71,7 @@ dúvida — dúvida declarada é melhor que lacuna silenciosa.
 - **Vocabulário de telemetria** (`verbo` / `objeto` em `namespace:slug` / `resultado` / `contexto` / significado — **não existe campo `dados`**) e **onde cada medida é lida** (tabela `expNNefNb_*` + rota do professor):
 - **Caminho de cada dado**: operacional (rota do próprio módulo → `expNNefNb_sessoes`) × analítico (`track` → Pub/Sub) × erro × vital × trace:
 - **Relógio coletivo** (largada, pausa, virada): existe? → `expNNefNb_gates_turma` por polling curto (ADR-93/94), etapas e quem transiciona:
-- **Entidades a persistir** (tabelas `expNNefNb_*` com PK, `turma_id` denormalizado, `versao_instrumento`, `tentativa`; `expNNefNb_conteudo_turma` quando há preparação docente; exceções de RLS justificadas):
+- **Entidades a persistir** (tabelas `expNNefNb_*` com PK, `turma_id` denormalizado, `versao_instrumento`, `rodada` (zerar abre rodada nova; nada se apaga); `expNNefNb_pacotes` — o pacote homologado pelo professor — quando há preparação docente; exceções de RLS justificadas):
 - **Lista do que NUNCA vai ao bundle** (gabarito, parâmetros, calibragem,
   prompts de geração) — será verificada por grep no dist/:
 - **Payload bruto + versão do instrumento** (reprocessamento):

@@ -200,9 +200,37 @@ def itens_do_briefing(briefing: str) -> List[Dict[str, str]]:
             texto = f"{titulo}: {limpa}" if titulo else limpa
             itens.append({"origem": "briefing", "tipo": "briefing", "texto": texto[:900]})
     fechar_bloco()
+    if not itens:
+        itens += _itens_da_prosa(briefing)
     # A frase que o briefing pôs entre aspas é texto do PO ("Pergunta-motor: “Se a mesma coisa
     # aconteceu…”"): as três gerações da exp03ef1b a perderam. Confere-se letra a letra, como as TRAVAS.
     itens += _literais(briefing or "", "briefing")
+    return itens
+
+
+#: Frase de briefing que proíbe mudar algo: vira trava, como o bloco CONSTRAINT dos briefings com título.
+_RE_TRAVA_PROSA = re.compile(r"n[ãa]o\s+(?:alter|mud|troc|mex|reescrev|refa[zç])|sem\s+alterar|manter\b|mantenha|"
+                             r"preserv|proibid|n[ãa]o\s+pode", re.IGNORECASE)
+
+
+def _itens_da_prosa(briefing: str) -> List[Dict[str, str]]:
+    """Briefing sem título nenhum: um item por parágrafo, e a frase que proíbe mudar vira trava.
+
+    O parser só via seção com título (em maiúsculas ou com dois-pontos). O reprocessamento da exp06ef1b
+    (08/10/2026) veio em prosa — "A narrativa, o mecanismo das 6 etapas e a estrutura da missão estão
+    aprovados — não alterar nenhum deles" — e o checklist saiu com um item só, o texto oficial de uma
+    habilidade entre aspas: o juiz nem rodou e a fidelidade aprovou a missão reescrita.
+    """
+    itens: List[Dict[str, str]] = []
+    for paragrafo in re.split(r"\n\s*\n|\n(?=\S)", briefing or ""):
+        paragrafo = re.sub(r"\s+", " ", paragrafo).strip()
+        if _palavras(paragrafo) < MIN_PALAVRAS_ITEM:
+            continue
+        travas = [f for f in _frases(paragrafo) if _RE_TRAVA_PROSA.search(f)]
+        itens += [{"origem": "briefing", "tipo": "trava", "texto": f[:900]} for f in travas]
+        resto = " ".join(f for f in _frases(paragrafo) if f not in travas)
+        if _palavras(resto) >= MIN_PALAVRAS_ITEM:
+            itens.append({"origem": "briefing", "tipo": "briefing", "texto": resto[:900]})
     return itens
 
 

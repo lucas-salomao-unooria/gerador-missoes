@@ -72,7 +72,7 @@ KNOWN_STATE_KEYS = {
     "rastro_spec_status", "rastro_spec_report", "rastro_design_status", "rastro_design_report",
     "conteudo_aprovado", "conteudo_aprovado_spec_report", "conteudo_aprovado_spec_status", "conteudo_aprovado_prd_report",
     "conteudo_aprovado_prd_status", "conteudo_aprovado_pedagogico_report", "conteudo_aprovado_pedagogico_status",
-    "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "juiz_achados_entrada",
+    "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "one_pager_po", "one_pager_po_report", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
     "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida",
     # a banca nas quatro posições (08/10/2026)
@@ -83,6 +83,7 @@ KNOWN_STATE_KEYS = {
                                        "copy_strings", "camada_caa", "wireframes_cobertura", "copy_strings_revisada",
                                        "prototipo_html")),
     "contradicoes_documento", "contradicoes_referencia", "coerencia_prd_report", "coerencia_prd_status",
+    "coerencia_pedagogico_report", "coerencia_pedagogico_status", "juiz_coerencia_pedagogico_saida",
     "juiz_coerencia_prd_saida",
     "escopo_banca", "banca_produto_report", "banca_produto_status", "banca_produto_narrativa", "banca_produto_pedagogia",
     "banca_design_report", "banca_design_status", "banca_design_narrativa", "banca_design_imersao",
@@ -1076,7 +1077,7 @@ def test_estagio_produto_parcial_spec():
         # a exp06ef1b perdeu uma habilidade e cinco minutos de tela — e ninguém via
         "A15gConteudoAprovadoSpec",
         # a banca no fim de produto (08/10/2026): o achado volta ao autor da spec antes do parecer
-        "A15hEscopoBanca", "A15hBanca", "A15hBancaConsolidacao", "A16SpecCheck"]
+        "A15hConteudoAprovado", "A15hEscopoBanca", "A15hBanca", "A15hBancaConsolidacao", "A16SpecCheck"]
     assert produto.sub_agents[0].max_iterations == max(1, get_settings().spec_max_rodadas)
     nomes = [a.name for _, a in iter_agent_tree(orch)]
     assert "A01NucleoNarrativo" not in nomes and "A05GateEstrutural" not in nomes
@@ -1136,7 +1137,8 @@ def test_agente_de_triagem_configurado():
     assert '"etapa": "produto | spec | design | dev | nenhuma"' in instr
     assert all(m["id"] != "A00TriagemCorrecao" for m in TRANSVERSAL_METADATA)
     for var in list_state_variables(instr):
-        assert var in KNOWN_STATE_KEYS, var
+        # o aviso de resposta cortada pelo modelo é por agente (`agents.callbacks.registrar_corte_do_modelo`)
+        assert var in KNOWN_STATE_KEYS or var.startswith("bloqueio_modelo_"), var
     print("   ✓ triagem: include_contents=default, output triagem_correcao, fora dos metadados")
 
 

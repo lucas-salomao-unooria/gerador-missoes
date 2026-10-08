@@ -79,6 +79,8 @@ CHAVES_DEV = frozenset({
     "rastreabilidade_dev_report", "rastreabilidade_dev_status", "rastreabilidade_dev_status_envelope",
     # o corpo do PRD × conteúdo aprovado, pelo juiz de contradições (08/10/2026)
     "coerencia_prd_report", "coerencia_prd_status", "coerencia_prd_status_envelope", "juiz_coerencia_prd_saida",
+    "coerencia_pedagogico_report", "coerencia_pedagogico_status", "coerencia_pedagogico_status_envelope",
+    "juiz_coerencia_pedagogico_saida",
     # a banca de entrada do dev, segunda verificação de produto e design (08/10/2026)
     "banca_entrada_narrativa", "banca_entrada_imersao", "banca_entrada_pedagogia",
     "banca_entrada_report", "banca_entrada_status", "banca_entrada_status_envelope",
@@ -148,6 +150,9 @@ CHAVES_PRODUTO = frozenset({
     # `one_pager_gate0` só é gravado se não existe (`agents.callbacks.preservar_one_pager`): sem cair aqui, o
     # «one-pager original» de um refazer de produto continuava sendo o da missão anterior
     "one_pager", "one_pager_gate0", "brief_escopo", "brief_escopo_status", "brief_escopo_status_envelope",
+    # a conferência do one-pager do PO (08/10/2026). O `one_pager_po` em si fica: é insumo, como o material
+    "one_pager_po_report", "one_pager_po_status", "one_pager_po_status_envelope", "one_pager_po_rodada",
+    "secoes_apoio_rodada",
     "contrato_produto_report", "contrato_produto_status", "contrato_produto_status_envelope",
     "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_status_envelope", "gate_estrutural_rodada",
     "avaliacao_pedagogica_report", "avaliacao_status", "avaliacao_status_envelope",
@@ -220,6 +225,8 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Avaliação pedagógica": "produto",
     "Experiência do estudante": "produto",
     "Gate final de produto": "produto",
+    # o one-pager do PO reescrito só se conserta refazendo o one-pager, não a spec
+    "One-pager do PO preservado": "produto",
     "Conformidade BNCC Computação": "spec",
     "Ficha do manifesto (produto)": "spec",
     "Matriz de evidência pedagógica": "spec",
@@ -236,6 +243,7 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Banca de design": "design",
     "Banca de entrada do dev": "dev",
     "Coerência do PRD com o one-pager aprovado": "dev",
+    "Coerência do pedagógico com o one-pager aprovado": "dev",
     "Fechamento de lacunas (D0)": "design",
     "Ambiente simulado (D9)": "design",
     "QA de entregáveis (design)": "design",
@@ -452,6 +460,20 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
             atual = remover_anexo(atual).strip()
         if atual:
             limpo[anterior] = bloco_versao_anterior(chave, atual)
+
+
+def texto_do_pedido(pedido_md: str) -> str:
+    """Só o que a pessoa escreveu, de dentro de `pedido_correcao` (`PedidoCorrecao.como_markdown`).
+
+    O valor do estado leva um cabeçalho da esteira ("Esta execução refaz a etapa…"), os anexos e "Como agir". A
+    fidelidade citava esse cabeçalho como se fosse o pedido do PO (exp06ef1b, 08/10/2026). Texto fora desse formato
+    volta como está.
+    """
+    texto = pedido_md or ""
+    m = re.search(r"^### Pedido, na íntegra\s*\n(.*?)(?=^### |\Z)", texto, re.S | re.M)
+    if not m:
+        return texto.strip()
+    return "\n".join(re.sub(r"^>\s?", "", l) for l in m.group(1).strip().splitlines()).strip()
 
 
 def preparar_estado(
