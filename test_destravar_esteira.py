@@ -542,3 +542,44 @@ def test_prototipo_mostra_distratores_de_toda_escolha():
     from prompts import load_prompt
 
     assert "distratores" in load_prompt("design/28_prototipo.md")
+
+
+def test_listagem_do_stitch_segue_paginas_e_busca_por_id_o_que_faltou(monkeypatch):
+    """exp06ef1b (09/10/2026): o `list_screens` voltou parcial e o Stitch saiu 🔴 com telas que existiam."""
+    from tools import stitch_cliente as sc
+
+    def tela(i, titulo):
+        return {"name": f"projects/p/screens/{i}", "title": titulo}
+
+    chamadas = []
+
+    def falso(ferramenta, args, timeout=180):
+        chamadas.append((ferramenta, args))
+        if ferramenta == "list_screens":
+            if not args.get("pageToken"):
+                return {"screens": [tela("a" * 32, "A"), tela("d" * 32, "DESIGN.md")], "nextPageToken": "t2"}
+            return {"screens": [tela("b" * 32, "B")]}
+        if ferramenta == "get_screen":
+            i = args["name"].rsplit("/", 1)[-1]
+            return tela(i, "C") if i == "c" * 32 else {}
+        raise AssertionError(ferramenta)
+
+    monkeypatch.setattr(sc, "chamar", falso)
+    telas = sc.listar_telas("p", ["a" * 32, "C" * 32, "e" * 32])
+    assert [t["id"] for t in telas] == ["a" * 32, "b" * 32, "c" * 32]
+    # só o que a listagem não trouxe vai ao get_screen
+    assert [a["name"].rsplit("/", 1)[-1] for f, a in chamadas if f == "get_screen"] == ["c" * 32, "e" * 32]
+
+
+def test_afirmacao_do_qa_conta_telas_e_nao_estados_nem_grupo_nomeado():
+    """exp06ef1b (09/10/2026): «22 de 22 telas (38 estados)» contra 30 linhas, e «as 5 telas do preparo» contra o projeto."""
+    from tools import afirmacoes as af
+
+    ids = ["E0-PROF-01", "E0-PROF-02", "E1-ALU-01"]
+    jornada = "## Seção 3\n\n| ID | Tela | Estados |\n|---|---|---|\n" + "\n".join(f"| {i} | t | padrão |" for i in ids)
+    folha = "| Tela | Dispositivo |\n|---|---|\n" + "\n".join(
+        f"| {i} — {e} | DESKTOP |" for i in ids for e in ("normal", "erro"))
+    qa = ("- A contagem no Stitch fecha com **3 de 3 telas** do inventário (6 estados).\n"
+          "| D6 | ✅ | Todas as 2 telas do preparo `E0-PROF-01` a `02` construídas no Stitch. |\n")
+    r = af.conferir_qa(qa, folha, jornada, "")
+    assert not [a for a in r["achados"] if a["codigo"].startswith("afirmacao-stitch")], r["achados"]

@@ -478,8 +478,11 @@ class ArtefatosDesignAgent(BaseAgent):
                 if pid:
                     from tools.stitch_geracao import rotulos
 
-                    # Os ids do relatório só são usados se o `list_screens` vier vazio.
-                    dados = coletar_links(pid, limite=1000, ids_de_reserva=extrair_screen_ids(relatorio))
+                    # e as telas que a geração registrou: a listagem do Stitch já voltou parcial (exp06ef1b, 09/10/2026)
+                    registro = state.get("stitch_geracao") or {}
+                    esperados = extrair_screen_ids(relatorio) + [str(v.get("screen_id") or "") for v in registro.values()
+                                                                 if isinstance(v, dict)]
+                    dados = coletar_links(pid, limite=1000, ids_de_reserva=esperados)
                     # a tela gerada pela esteira leva o nome do inventário (`E2-ALU-01 — padrão`), não o título
                     # que o Stitch inventou: é por ele que a cobertura e o pedagógico acham cada tela
                     nomes = rotulos(state.get("stitch_geracao") or {})
