@@ -77,6 +77,9 @@ por item**, todos com o mesmo `data-screen-id` e o mesmo `data-estado`; a esteir
 do Canal B leva **todas** as alternativas, sem o rótulo de nível ([Atingiu], [Em processo], [Não atingiu]): o gabarito
 fica no servidor, e a criança não pode vê-lo. Na exp06ef1b (09/10/2026) a tela `E6-ALU-02` tinha um estado de pergunta
 para três perguntas: o protótipo desenhou só a B1, com uma alternativa e o rótulo à mostra, e B2 e B3 sumiram.
+Vale para **toda escolha da missão**, não só o Canal B: cartões, alternativas e **distratores** de qualquer etapa
+aparecem todos, sem `[Correto]`, `[Distrator …]` ou outra marca do gabarito. Na mesma execução, o Refletir mostrou só os
+dois cartões corretos e escondeu os três distratores: o protótipo entregava a resposta.
 
 ### A moldura: a experiência é um iframe dentro do hub, no desktop
 

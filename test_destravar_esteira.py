@@ -523,3 +523,22 @@ def test_prototipo_pede_cada_pergunta_do_canal_b_em_quadro_e_sem_gabarito():
     p = load_prompt("design/28_prototipo.md")
     assert "um quadro\npor item" in p or "um quadro por item" in p.replace("\n", " ")
     assert "sem o rótulo de nível" in p
+
+
+def test_estados_da_spec_nao_contam_o_gatilho_em_snake_case():
+    """exp06ef1b (09/10/2026): `estado · gatilho · regra · estado seguinte` — o gatilho `confirmar_voto` virava estado."""
+    from tools import cobertura_design as cd
+
+    spec = ("## 2. Mecânica\n\n### Contrato de estados — obrigatório\n\n```\n"
+            "E3_DECIDINDO · confirmar_voto · selecionou projeto · E3_LATCH_ESPERA · estudante · não\n"
+            "QUALQUER_ESTADO · midia_falhou · erro 404 · PLACEHOLDER_DIEGETICO · sistema · não\n"
+            "e1_desafio_aberto · toque · slot_count == 3 · e2_mesa_livre · estudante · não\n```\n")
+    estados = cd.estados_da_spec(spec)
+    assert "confirmar_voto" not in estados and "midia_falhou" not in estados and "toque" not in estados
+    assert {"E3_DECIDINDO", "E3_LATCH_ESPERA", "PLACEHOLDER_DIEGETICO", "e1_desafio_aberto", "e2_mesa_livre"} <= set(estados)
+
+
+def test_prototipo_mostra_distratores_de_toda_escolha():
+    from prompts import load_prompt
+
+    assert "distratores" in load_prompt("design/28_prototipo.md")

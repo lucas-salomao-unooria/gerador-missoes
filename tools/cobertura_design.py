@@ -591,7 +591,14 @@ def _estados_dos_campos(linha: str) -> List[str]:
     Variável de regra (`slot_count == 3`) e gatilho (`tap:album`) não são um identificador sozinho no campo.
     """
     saida = list(_RE_ESTADO.findall(linha))
-    for campo in _RE_SEPARA_CAMPO.split(re.sub(r"^\s*(?:[-*+]|\d+[.)])\s+", "", linha)):
+    sem_marcador = re.sub(r"^\s*(?:[-*+]|\d+[.)])\s+", "", linha)
+    campos = _RE_SEPARA_CAMPO.split(sem_marcador)
+    # Na linha `estado inicial · gatilho · regra · estado seguinte · …` do formato da spec, o estado em caixa baixa só
+    # está no 1º e no 4º campo: o gatilho `confirmar_voto` também é snake_case e entrava como estado — a exp06ef1b
+    # (09/10/2026) contou 29 «estados», 15 deles gatilhos, e o fluxo saía 🟡 com 17 «perdidos».
+    if sem_marcador.count("·") >= 3 and len(campos) >= 4:
+        campos = [campos[0], campos[3]]
+    for campo in campos:
         c = _RE_ROTULO_CAMPO.sub("", campo.strip().strip(" `*[]")).strip(" `*[]_.")
         if _RE_ESTADO_CAMPO.match(c):
             saida.append(c)
