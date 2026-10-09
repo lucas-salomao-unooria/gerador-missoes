@@ -261,6 +261,31 @@ def documento_sem_moldura(secao: str) -> str:
     return limpo.strip() if limpo != miolo else secao
 
 
+def _sem_bloco(documento: str, titulo: str) -> str:
+    """O documento sem o bloco cujo título casa `titulo` (regex de linha) — dele até o próximo `## ` ou o fim."""
+    m = re.search(titulo, documento or "", re.MULTILINE)
+    if not m:
+        return documento
+    fim = re.search(r"^## ", documento[m.end():], re.MULTILINE)
+    return (documento[:m.start()].rstrip() + ("\n\n" + documento[m.end() + fim.start():].lstrip() if fim else "")).rstrip() + "\n"
+
+
+def montar_sobre_aceita(aceita: str, nova: str, titulo: str) -> str:
+    """A versão aceita com o bloco `titulo` tirado da nova; o resto da nova é descartado.
+
+    O D9 acrescenta o bloco 14 e recopiava, por modelo, os 60 KB dos blocos 0–13 do D0. Na exp06ef1b (09/10/2026)
+    o D0 traduziu «refresh token» para «chave de renovação» e o D9, partindo da própria versão anterior, manteve o
+    inglês: a preservação acusou, com razão, e o design terminou 🔴 duas vezes. Cópia literal é trabalho de código.
+    Sem o bloco na nova, devolve a nova como veio — a preservação confere a cópia como antes.
+    """
+    m = re.search(titulo, nova or "", re.MULTILINE)
+    if not m:
+        return nova
+    fim = re.search(r"^## ", nova[m.end():], re.MULTILINE)
+    bloco = nova[m.start():m.end() + fim.start()] if fim else nova[m.start():]
+    return _sem_bloco(aceita, titulo).rstrip() + "\n\n" + bloco.strip() + "\n"
+
+
 #: `base_preservada_<chave>`: a versão aceita de um documento cuja reescrita perdeu linhas (`SecaoSplitAgent`).
 PREFIXO_BASE_PRESERVADA = "base_preservada_"
 
@@ -283,6 +308,9 @@ class SecaoSplitAgent(BaseAgent):
       preservar     → dono do conserto (slug de retrabalho) quando uma linha do documento ATUAL some
                       do novo (`tools/preservacao.linhas_perdidas`). O D0 da exp06ef1b apagou a
                       pergunta 3 do debate e passou: o tamanho não encolheu o bastante (07/10/2026).
+      bloco_proprio → regex do título do único bloco que este autor escreve (`^## 14`): o documento gravado é a
+                      versão aceita com esse bloco trocado pelo da nova — o resto da nova é descartado, e a
+                      preservação confere só o que não é dele (`montar_sobre_aceita`).
 
     Seção ausente, curta ou sem o conteúdo exigido → a chave é mantida como está e o evento avisa.
     """
@@ -324,6 +352,10 @@ class SecaoSplitAgent(BaseAgent):
                 secao = extrair_secao(texto, ex["inicio"], ex.get("fim"))
                 if secao is not None:
                     secao = documento_sem_moldura(secao)
+                proprio = ex.get("bloco_proprio")
+                aceita = str(state.get(f"{PREFIXO_BASE_PRESERVADA}{chave}") or "") or str(state.get(chave) or "")
+                if secao is not None and proprio and aceita.strip():
+                    secao = montar_sobre_aceita(documento_sem_moldura(aceita), secao, proprio)
                 motivo: Optional[str] = None
                 if secao is None:
                     motivo = "seção não encontrada no relatório"
@@ -356,7 +388,11 @@ class SecaoSplitAgent(BaseAgent):
                     # rodada 2 o acusou de apagar a troca que a rodada 1 tinha feito.
                     chave_base = f"{PREFIXO_BASE_PRESERVADA}{chave}"
                     base = str(state.get(chave_base) or "") or str(state.get(chave))
-                    sumiram = linhas_perdidas(documento_sem_moldura(base), secao)
+                    comparada = documento_sem_moldura(base)
+                    if proprio:
+                        # o bloco do próprio autor ele pode reescrever; o resto é o que veio antes dele
+                        comparada = _sem_bloco(comparada, proprio)
+                    sumiram = linhas_perdidas(comparada, secao)
                     delta[chave_base] = base if sumiram else ""
                     if sumiram:
                         perdidas.append({
