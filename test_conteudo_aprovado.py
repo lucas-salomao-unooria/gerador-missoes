@@ -1076,3 +1076,25 @@ def test_conserto_de_design_pedido_pela_banca_refaz_o_que_deriva_dele():
     despacho = next(a for a in banca.sub_agents if a.name == "A46DespachoBanca")
     existentes = {s.name for s in despacho.sub_agents}
     assert all(n in existentes for nomes in POSFIXO_BANCA.values() for n in nomes)
+
+
+def test_preservacao_compara_com_a_ultima_versao_aceita_e_nao_com_a_reprovada():
+    """exp06ef1b (09/10/2026): o D9 trocou as palavras do [D0-3] (bloqueio certo); a rodada 2 devolveu o texto do D0 e
+    foi acusada de apagar a troca — a reescrita reprovada tinha virado a base da comparação."""
+    from agents.checkers import SecaoSplitAgent
+
+    d0 = "## 13\n| `[D0-3]` | Ciclo de vida do suporte visual: etiquetas da busca iniciam expandidas como botões |\n"
+    trocada = "## 13\n| `[D0-3]` | Ciclo de vida do scaffolding: tags iniciam abertas e depois recolhem sozinhas |\n"
+    corpo = "x " * 40
+
+    def split():
+        return SecaoSplitAgent(name="S", source_key="fonte", status_key="st", extracoes=[{
+            "chave": "spec_missao", "inicio": r"^## Passo 4", "fim": None, "preservar": "ambiente-simulado"}])
+
+    r1 = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[split()]),
+                            {"fonte": f"## Passo 4\n{trocada}\n{corpo}", "spec_missao": d0}))
+    assert r1["st"] == "bloqueado" and "suporte visual" in r1["base_preservada_spec_missao"]
+    r2 = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[split()]),
+                            {**r1, "fonte": f"## Passo 4\n{d0}\n{corpo}"}))
+    assert not [a for a in (r2.get("st_envelope") or {}).get("achados", []) if a["codigo"] == "linhas-perdidas"]
+    assert r2["base_preservada_spec_missao"] == ""
