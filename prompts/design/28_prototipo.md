@@ -71,6 +71,13 @@ Sua pergunta: **um adulto que não acompanhou a esteira consegue percorrer a mis
 
 Um quadro por **estado declarado** no inventário da jornada, não um por tela. Se a tela tem quatro estados, são quatro quadros. **Todo quadro é um elemento com os atributos `data-screen-id` (o ID da tela, `E2-ALU-01`) e `data-estado` (o nome do estado, como na coluna «Estados» do inventário; `padrão` para o estado padrão).** A esteira conta os quadros por esses atributos e devolve como ticket o (ID, estado) que faltar: ID citado em comentário, no trilho ou no rodapé não conta como tela. Os sete protótipos auditados em 07/10/2026 tinham um quadro por tela e nenhum atributo — o relatório dizia "completo" com 16 a 29 quadros para 25 a 46 estados.
 
+**Todo texto do sheet de copy da tela aparece em algum quadro dela, com a redação do sheet.** Um estado que passa por
+vários itens em sequência — as perguntas do Canal B em stories (B1, B2, B3), os passos de um roteiro — vira **um quadro
+por item**, todos com o mesmo `data-screen-id` e o mesmo `data-estado`; a esteira aceita o par repetido. Cada pergunta
+do Canal B leva **todas** as alternativas, sem o rótulo de nível ([Atingiu], [Em processo], [Não atingiu]): o gabarito
+fica no servidor, e a criança não pode vê-lo. Na exp06ef1b (09/10/2026) a tela `E6-ALU-02` tinha um estado de pergunta
+para três perguntas: o protótipo desenhou só a B1, com uma alternativa e o rótulo à mostra, e B2 e B3 sumiram.
+
 ### A moldura: a experiência é um iframe dentro do hub, no desktop
 
 Isto decide o layout do palco e é onde protótipo de missão costuma mentir. A missão **não** roda numa tela de celular: ela roda **dentro do hub, que é desktop**, e o hub decide como embedá-la pelo `viewport` do manifesto.

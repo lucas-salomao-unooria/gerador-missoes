@@ -238,6 +238,29 @@ def extrair_secao(texto: str, inicio: str, fim: Optional[str] = None) -> Optiona
     return texto[start:end].strip()
 
 
+_RE_CERCA_ANTES_DO_TITULO = re.compile(r"^```[\w-]*[ \t]*\n(?=\s*# )", re.MULTILINE)
+_RE_RABO_DE_SEPARADOR = re.compile(r"(?:\n[ \t]*(?:-{3,}|\*{3,})?[ \t]*)+\Z")
+
+
+def documento_sem_moldura(secao: str) -> str:
+    """O documento sem a frase de abertura do agente e sem a cerca ```markdown que o envolve.
+
+    O D0 escrevia «Abaixo segue a especificação técnica consolidada…» e a spec dentro de uma cerca; o split gravava as
+    duas coisas em `spec_missao`. O D9 escrevia outra frase de abertura, a preservação acusava a do D0 como linha perdida,
+    o retrabalho devolvia a frase e o ciclo recomeçava — a exp06ef1b (09/10/2026) terminou o design 🔴 por isso. Só age
+    quando a cerca abre antes do título `# ` e nada antes dela é título: a frase é do agente, não do documento.
+    """
+    t = (secao or "").strip()
+    m = _RE_CERCA_ANTES_DO_TITULO.search(t)
+    if not m or m.start() > 1500 or re.search(r"^#{1,6}\s", t[:m.start()], re.MULTILINE):
+        return secao
+    from pipeline.artifacts import desembrulhar_cerca
+
+    miolo = _RE_RABO_DE_SEPARADOR.sub("", t[m.start():]).strip()
+    limpo = desembrulhar_cerca(miolo)
+    return limpo.strip() if limpo != miolo else secao
+
+
 class SecaoSplitAgent(BaseAgent):
     """Copia seções de um relatório para chaves próprias do estado e registra um status informativo.
 
@@ -295,6 +318,8 @@ class SecaoSplitAgent(BaseAgent):
             for ex in self.extracoes:
                 chave = ex["chave"]
                 secao = extrair_secao(texto, ex["inicio"], ex.get("fim"))
+                if secao is not None:
+                    secao = documento_sem_moldura(secao)
                 motivo: Optional[str] = None
                 if secao is None:
                     motivo = "seção não encontrada no relatório"
@@ -321,7 +346,7 @@ class SecaoSplitAgent(BaseAgent):
                 if ex.get("preservar") and str(state.get(chave) or "").strip():
                     from tools.preservacao import linhas_perdidas
 
-                    sumiram = linhas_perdidas(str(state.get(chave)), secao)
+                    sumiram = linhas_perdidas(documento_sem_moldura(str(state.get(chave))), secao)
                     if sumiram:
                         perdidas.append({
                             "severidade": "bloqueio", "codigo": "linhas-perdidas", "etapa": "design",
