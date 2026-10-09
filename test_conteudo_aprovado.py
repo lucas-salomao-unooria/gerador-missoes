@@ -1098,3 +1098,26 @@ def test_preservacao_compara_com_a_ultima_versao_aceita_e_nao_com_a_reprovada():
                             {**r1, "fonte": f"## Passo 4\n{d0}\n{corpo}"}))
     assert not [a for a in (r2.get("st_envelope") or {}).get("achados", []) if a["codigo"] == "linhas-perdidas"]
     assert r2["base_preservada_spec_missao"] == ""
+
+
+def test_d9_so_acrescenta_o_bloco_14_e_o_resto_vem_da_spec_aceita():
+    """exp06ef1b (09/10/2026): o D0 traduziu «refresh token»; o D9 recopiou a spec da própria versão anterior, em inglês."""
+    from agents.checkers import SecaoSplitAgent
+
+    aceita = "# Spec\n\n## 13. Decisões D0\n| `[D0-1]` | tentando chave de renovação sem perda de memória local |\n"
+    copia_velha = "# Spec\n\n## 13. Decisões D0\n| `[D0-1]` | tentando refresh token sem perda de cache |\n"
+    bloco = "## 14. Ambiente simulado (D9)\n- **Seção do DS:** `unoovista`\n" + "x " * 40 + "\n"
+    def split():
+        return SecaoSplitAgent(name="S", source_key="fonte", status_key="st", extracoes=[{
+            "chave": "spec_missao", "inicio": r"^## Passo 4", "fim": None, "preservar": "ambiente-simulado",
+            "bloco_proprio": r"^##\s*14\b.*$"}])
+
+    r = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[split()]),
+                           {"fonte": f"## Passo 4\n{copia_velha}\n{bloco}", "spec_missao": aceita}))
+    assert not [a for a in (r.get("st_envelope") or {}).get("achados", []) if a["codigo"] == "linhas-perdidas"]
+    assert "chave de renovação" in r["spec_missao"] and "refresh token" not in r["spec_missao"]
+    assert "## 14. Ambiente simulado" in r["spec_missao"]
+    # 2ª rodada: o bloco 14 é trocado, não duplicado
+    novo = bloco.replace("unoovista", "unoovista` (revisto)")
+    r2 = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[split()]), {**r, "fonte": f"## Passo 4\n{novo}"}))
+    assert r2["spec_missao"].count("## 14.") == 1 and "(revisto)" in r2["spec_missao"]

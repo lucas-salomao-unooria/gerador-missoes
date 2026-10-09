@@ -451,7 +451,10 @@ def test_secao_split_d0_e_d9():
         ],
     )
     _, state_frag = asyncio.run(_run(root_frag))
-    assert state_frag["spec_missao"] == spec_grande, "a spec foi trocada por um fragmento"
+    # desde 09/10/2026 os blocos 0–13 vêm da spec aceita pelo código (`montar_sobre_aceita`): o D9 que devolve só o
+    # bloco 14 não apaga nada — a spec fica inteira, com o bloco novo no fim
+    assert state_frag["spec_missao"].startswith(spec_grande.rstrip()), "a spec foi trocada por um fragmento"
+    assert state_frag["spec_missao"].count("## 14. Ambiente simulado") == 1
 
     # D9 sem a seção de spec (saída fora do formato) e com aguarda_gate: mantém a spec, marca 🔴, pipeline segue
     d9_ruim = '# Ambiente simulado\n**Veredito: 🔴 AGUARDA GATE 0**\n\n```json\n{"agente": "ambiente-simulado", "status": "aguarda_gate"}\n```'

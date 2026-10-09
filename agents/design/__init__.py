@@ -176,6 +176,8 @@ def get_ambiente_simulado_split() -> SecaoSplitAgent:
                 "minimo_chars": SPEC_MINIMO_CHARS,
                 "minimo_fracao": 0.8,
                 "preservar": "ambiente-simulado",
+                # blocos 0–13 copiados da spec aceita pelo código; do D9 só entra o bloco 14
+                "bloco_proprio": r"^##\s*14\b.*$",
             },
         ],
     )
