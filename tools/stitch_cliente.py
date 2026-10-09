@@ -95,20 +95,37 @@ def _tela(t: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+#: Teto de páginas do `list_screens`: o laço não pode girar para sempre se o token se repetir.
+_MAX_PAGINAS = 20
+
+
 def listar_telas(project_id: str, ids_de_reserva: Any = ()) -> List[Dict[str, Any]]:
     """Telas do projeto, sem o DESIGN.md, com o link de download do HTML.
 
-    O caminho normal é `list_screens`. Quando ele devolve vazio — o que o Stitch faz
-    hoje mesmo para projeto com telas —, cai para `get_screen` um a um, com os
-    identificadores que o agente reportou. Ver `extrair_screen_ids`.
+    O caminho normal é `list_screens`, seguindo `nextPageToken` quando vem. Depois, cada identificador de
+    `ids_de_reserva` que a listagem não trouxe é buscado com `get_screen`, um a um. O Stitch já devolveu `{}`
+    para projeto com telas (17/09/2026) e, na exp06ef1b (09/10/2026), uma lista **parcial**: 37 telas num
+    projeto de mais de 49, sem `E0-PROF-02` e `E4-PROF-01`, que não tinham mudado e estavam na folha da
+    execução anterior — o Stitch saiu 🔴 com 19 de 22 telas que existiam. Ver `extrair_screen_ids`.
     """
-    dados = chamar("list_screens", {"projectId": project_id})
-    telas = [_tela(t) for t in (dados.get("screens") or []) if not (t.get("title") or "").upper().startswith("DESIGN.MD")]
-    if telas or not ids_de_reserva:
+    brutas: List[Dict[str, Any]] = []
+    token = ""
+    for _ in range(_MAX_PAGINAS):
+        dados = chamar("list_screens", {"projectId": project_id, **({"pageToken": token} if token else {})})
+        brutas += list(dados.get("screens") or [])
+        novo = str(dados.get("nextPageToken") or "")
+        if not novo or novo == token:
+            break
+        token = novo
+    telas = [_tela(t) for t in brutas if not (t.get("title") or "").upper().startswith("DESIGN.MD")]
+    vistos = {t["id"] for t in telas}
+    faltando = [i for i in dict.fromkeys(str(i).lower() for i in (ids_de_reserva or ())) if i and i not in vistos]
+    if not faltando:
         return telas
 
-    logger.warning("list_screens devolveu vazio para %s; buscando %d tela(s) por id", project_id, len(list(ids_de_reserva)))
-    for i in ids_de_reserva:
+    logger.warning("list_screens não trouxe %d de %d tela(s) esperada(s) em %s; buscando por id",
+                   len(faltando), len(vistos) + len(faltando), project_id)
+    for i in faltando:
         try:
             t = chamar("get_screen", {"name": f"projects/{project_id}/screens/{i}"})
         except Exception as exc:  # uma tela inexistente não invalida as demais

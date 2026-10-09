@@ -115,7 +115,9 @@ def conferir_qa(qa: str, folha_stitch: str = "", jornada: str = "", prototipo_ht
         arquivos = [nome for _, nome in ARTIFACT_FILES]
     validos = _arquivos_validos(arquivos)
     inventario = telas_do_inventario(jornada)
-    stitch = telas_do_stitch(folha_stitch)
+    # a folha tem uma linha por estado; a afirmação do QA conta telas: «22 de 22 telas … 38 estados» (exp06ef1b)
+    linhas_stitch = telas_do_stitch(folha_stitch)
+    stitch = sorted({i for t in linhas_stitch for i in _RE_ID_TELA.findall(t)}) if linhas_stitch is not None else None
     no_prototipo = sorted(set(_RE_ID_TELA.findall(prototipo_html or ""))) if prototipo_html else None
     achados: List[Dict[str, Any]] = []
     vistos: Set[tuple] = set()
@@ -136,8 +138,12 @@ def conferir_qa(qa: str, folha_stitch: str = "", jornada: str = "", prototipo_ht
             continue
         fala_do_stitch = bool(re.search(r"stitch", linha, re.I))
         fala_do_prototipo = bool(re.search(r"prot[óo]tipo|\blint\b", linha, re.I))
+        # «todas as 5 telas do preparo `E0-PROF-01` a `05`» fala de um grupo nomeado, não do projeto inteiro
+        cita_grupo = bool(_RE_ID_TELA.search(linha))
         for total, achadas in afirmadas:
             contadas = achadas if achadas is not None else total
+            if cita_grupo and inventario and contadas < len(inventario):
+                continue
             if fala_do_stitch and stitch is not None and contadas != len(stitch):
                 falha("afirmacao-stitch", f"O QA afirma {contadas} telas no Stitch; o projeto tem {len(stitch)}.", linha)
             if fala_do_prototipo and no_prototipo is not None and contadas != len(no_prototipo):
