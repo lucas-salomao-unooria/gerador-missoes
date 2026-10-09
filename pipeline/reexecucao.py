@@ -89,7 +89,7 @@ CHAVES_DEV = frozenset({
 CHAVES_DESIGN = frozenset({
     "conteudo_aprovado",
     "fechamento_lacunas", "relatorio_lacunas", "lacunas_status", "lacunas_status_envelope",
-    "ambiente_simulado", "ambiente_status", "ambiente_status_envelope",
+    "ambiente_simulado", "ambiente_status", "ambiente_status_envelope", "base_preservada_spec_missao",
     "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
     "wireframes_cobertura", "copy_strings_revisada", "prototipo_html", "prototipo_arquivo",
     "prototipo_relatorio", "diagramas_html", "stitch_links", "miro_links",

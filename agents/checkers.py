@@ -261,6 +261,10 @@ def documento_sem_moldura(secao: str) -> str:
     return limpo.strip() if limpo != miolo else secao
 
 
+#: `base_preservada_<chave>`: a versão aceita de um documento cuja reescrita perdeu linhas (`SecaoSplitAgent`).
+PREFIXO_BASE_PRESERVADA = "base_preservada_"
+
+
 class SecaoSplitAgent(BaseAgent):
     """Copia seções de um relatório para chaves próprias do estado e registra um status informativo.
 
@@ -346,7 +350,14 @@ class SecaoSplitAgent(BaseAgent):
                 if ex.get("preservar") and str(state.get(chave) or "").strip():
                     from tools.preservacao import linhas_perdidas
 
-                    sumiram = linhas_perdidas(documento_sem_moldura(str(state.get(chave))), secao)
+                    # A comparação é contra a última versão ACEITA. A reescrita reprovada também é gravada (a
+                    # jusante precisa do bloco novo), e virava a base da rodada seguinte: na exp06ef1b (09/10/2026)
+                    # o D9 trocou as palavras do [D0-3], foi reprovado, devolveu o texto literal do D0 — e a
+                    # rodada 2 o acusou de apagar a troca que a rodada 1 tinha feito.
+                    chave_base = f"{PREFIXO_BASE_PRESERVADA}{chave}"
+                    base = str(state.get(chave_base) or "") or str(state.get(chave))
+                    sumiram = linhas_perdidas(documento_sem_moldura(base), secao)
+                    delta[chave_base] = base if sumiram else ""
                     if sumiram:
                         perdidas.append({
                             "severidade": "bloqueio", "codigo": "linhas-perdidas", "etapa": "design",
