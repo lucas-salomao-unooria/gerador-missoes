@@ -497,3 +497,29 @@ def test_fidelidade_do_nucleo_e_parcial_so_violacao_bloqueia():
     nucleo = next(a for a in todos(build_produto_stage()) if a.name == "A03aFidelidadeNucleo")
     fim = next(a for a in todos(build_produto_stage()) if a.name == "A16cFidelidadeProduto")
     assert nucleo.parcial and not fim.parcial
+
+
+def test_split_tira_a_moldura_do_agente_e_a_preservacao_nao_faz_ping_pong():
+    """exp06ef1b (09/10/2026): a frase de abertura do D0 entrava na spec e o D9 era cobrado por não repeti-la."""
+    from agents.checkers import documento_sem_moldura
+    from tools.preservacao import linhas_perdidas
+
+    corpo = "# Spec — Missão\n\n## 0. Identificação\nO estudante atua como jurado da mostra estadual.\n\n```json\n{\"a\": 1}\n```\n"
+    d0 = ("Abaixo segue a especificação técnica consolidada, preservando integralmente os Blocos 0 a 12:\n\n"
+          f"```markdown\n{corpo}```\n\n---")
+    d9 = f"Segue a spec consolidada com a adição do Bloco 14, sem mudar os blocos anteriores:\n\n```markdown\n{corpo}```"
+    assert documento_sem_moldura(d0).startswith("# Spec") and documento_sem_moldura(d0).endswith("```")
+    assert "Abaixo segue" not in documento_sem_moldura(d0)
+    assert linhas_perdidas(documento_sem_moldura(d0), documento_sem_moldura(d9)) == []
+    # sem moldura, ou com título antes da cerca, o texto fica como está
+    assert documento_sem_moldura(corpo) == corpo
+    com_titulo = "## Passo 4\n\n```markdown\n# Spec\n```"
+    assert documento_sem_moldura(com_titulo) == com_titulo
+
+
+def test_prototipo_pede_cada_pergunta_do_canal_b_em_quadro_e_sem_gabarito():
+    from prompts import load_prompt
+
+    p = load_prompt("design/28_prototipo.md")
+    assert "um quadro\npor item" in p or "um quadro por item" in p.replace("\n", " ")
+    assert "sem o rótulo de nível" in p
