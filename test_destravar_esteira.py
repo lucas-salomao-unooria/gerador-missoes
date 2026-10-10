@@ -583,3 +583,21 @@ def test_afirmacao_do_qa_conta_telas_e_nao_estados_nem_grupo_nomeado():
           "| D6 | ✅ | Todas as 2 telas do preparo `E0-PROF-01` a `02` construídas no Stitch. |\n")
     r = af.conferir_qa(qa, folha, jornada, "")
     assert not [a for a in r["achados"] if a["codigo"].startswith("afirmacao-stitch")], r["achados"]
+
+
+def test_ordem_de_nao_mexer_sem_citacao_e_atencao_e_violacao_bloqueia():
+    """exp06ef1b (10/10/2026): «Não alterar spec, telas, fluxo, copy nem protótipo» não tem trecho que prove ausência de mudança."""
+    from tools import fidelidade as fid
+
+    assert fid.so_preservacao("Não alterar spec, telas, fluxo, copy nem protótipo;")
+    assert fid.so_preservacao("O one-pager, a spec e o resumido devem permanecer exatamente como estão.")
+    assert fid.so_preservacao("as telas do Stitch já existem e não devem ser geradas de novo.")
+    assert not fid.so_preservacao("Manter a narrativa e trocar o título da Etapa 2.")
+    assert not fid.so_preservacao("Remover a habilidade EF67LP08 de todos os documentos.")
+
+    itens = [{"id": "F1", "origem": "pedido", "tipo": "pedido", "texto": "Não alterar spec, telas, fluxo, copy nem protótipo;"}]
+    citou = '```json\n{"decisoes":[{"id":"F1","veredito":"atendido","citacao":"Não alterar spec, telas, fluxo, copy nem protótipo;"}]}\n```'
+    r = fid.aplicar(itens, citou, {"d": "documento sem a frase"}, etapa="design")
+    assert r["status"] == "amarelo" and r["achados"][0]["codigo"] == "preservacao-sem-citacao"
+    violou = '```json\n{"decisoes":[{"id":"F1","veredito":"violado","citacao":"x"}]}\n```'
+    assert fid.aplicar(itens, violou, {"d": "documento"}, etapa="design")["status"] == "bloqueado"

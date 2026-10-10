@@ -148,6 +148,23 @@ _RE_ACAO = re.compile(
     r"homolog(?:ar|ue|uem)|ratific(?:ar|que)|aprov(?:ar|e|em)|dev(?:e|em)|precis(?:a|am)|garant(?:ir|a|am)|"
     r"exib(?:ir|a|am)|mostr(?:ar|e|em)|declar(?:ar|e|em)|resolv(?:er|a|am))\b", re.IGNORECASE)
 #: Frase que só remete aos itens do pedido ("Resolver cada ponto abaixo"): não há no documento o que a prove.
+#: Ordem de NÃO fazer: «não alterar spec, telas, fluxo», «manter o roteiro», «não gerar de novo».
+_RE_PRESERVACAO = re.compile(
+    r"\bdev\w*\s+(?:ser\s+)?(?:mantid|preservad|permanec)\w*|"
+    r"\bn[ãa]o\s+(?:dev\w*\s+)?(?:ser\s+)?(?:alter|mud|mex|ger|regener|refaz|reescrev|troc|toc)\w*(?:\s+de\s+novo)?|"
+    r"\bmant(?:er|enha|enham|ém|êm)\b|\bpreserv(?:ar|e|em)\b|\bpermanec(?:er|e|em|am)\b", re.IGNORECASE)
+
+
+def so_preservacao(texto: str) -> bool:
+    """O item só manda não mexer: tirada a ordem de preservar, não sobra verbo de ação.
+
+    Ausência de mudança não tem trecho que a prove — na exp06ef1b (10/10/2026) o juiz citou o próprio «Não alterar
+    spec, telas, fluxo, copy nem protótipo» e o design saiu 🔴 com 14 de 15 itens provados. O que não pode mudar é
+    conferido em código pelos gates de preservação (linhas perdidas, rastreabilidade, registro do Stitch).
+    """
+    return bool(_RE_PRESERVACAO.search(texto or "")) and not _RE_ACAO.search(_RE_PRESERVACAO.sub(" ", texto or ""))
+
+
 _RE_REMETE_A_LISTA = re.compile(r"\b(?:cada\s+(?:ponto|item)|(?:pontos|itens)\s+(?:abaixo|a\s+seguir|seguintes)|"
                                 r"abaixo\s*[:.]?\s*$)", re.IGNORECASE)
 _RE_ITEM_DE_LISTA = re.compile(r"^\s*(?:(\d{1,2})[.)]|[-*•])\s+")
@@ -479,6 +496,10 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         elif veredito == "violado":
             achado(it, "bloqueio", "pedido-violado" if do_po else "briefing-violado",
                    f"O documento contraria {'o pedido do PO' if do_po else 'o briefing'}: «{trecho}». {explicacao}")
+        elif veredito != "violado" and so_preservacao(it["texto"]):
+            achado(it, "atencao", "preservacao-sem-citacao",
+                   f"Ordem de não mexer, sem trecho que a prove: «{trecho}». A conferência é dos gates de preservação "
+                   "(linhas perdidas, rastreabilidade, Stitch) — confira o que eles dizem.")
         elif veredito == "atendido" and len(_norm(citacao)) >= MIN_CITACAO and _norm(citacao) in _norm(it["texto"]):
             achado(it, "bloqueio" if do_po else "atencao", "citou-o-pedido",
                    f"O juiz diz que atende, mas citou o próprio pedido em vez do documento: «{trecho}».")
