@@ -519,19 +519,37 @@ def conferir_colunas(texto: str, referencia: str = "", rotulo: str = "PRD", rotu
 
     if referencia:
         ref = _declaracoes(referencia)
+
+        def divergente(nome: str, resumo: str) -> None:
+            # O PRD que segue a migration publicada e registra a troca não está errado: a spec é que inventou o tipo.
+            # Na exp06ef1b (10/10/2026) o PRD copiou a migration da Júri (`turma_id UUID`, `assuntos TEXT`), anotou
+            # «Seguiu a plataforma» em cada linha — e saiu 🔴 três vezes por concordar com a plataforma.
+            if _divergencia_registrada(texto, nome):
+                achados.append({"severidade": "atencao", "codigo": "tipo-divergente-registrado", "etapa": "produto",
+                                "documento": rotulo_ref, "agente_responsavel": "spec",
+                                "resumo": f"{resumo} O {rotulo} seguiu a plataforma e registrou a troca; a {rotulo_ref} "
+                                          "é que precisa acompanhar."})
+            else:
+                falha("bloqueio", "tipo-divergente-da-spec", resumo)
+
         for coluna in sorted(c for c in todas if c.endswith("_id")):
             nossas, delas = _por_coluna(decl, coluna), _por_coluna(ref, coluna)
             if nossas and delas and not set(nossas) & set(delas):
-                falha("bloqueio", "tipo-divergente-da-spec",
-                      f"`{coluna}` é {_tipos(nossas)} no {rotulo} e {_tipos(delas)} na {rotulo_ref}. "
-                      f"Um dos dois está errado, e quem codifica escolhe ao acaso.")
+                divergente(coluna, f"`{coluna}` é {_tipos(nossas)} no {rotulo} e {_tipos(delas)} na {rotulo_ref}. "
+                                   f"Um dos dois está errado, e quem codifica escolhe ao acaso.")
         for tabela, colunas in sorted(decl.items()):
             for coluna, fams in sorted(colunas.items()):
                 delas = ref.get(tabela, {}).get(coluna)
                 if delas and not coluna.endswith("_id") and not set(fams) & set(delas):
-                    falha("bloqueio", "tipo-divergente-da-spec",
-                          f"`{tabela}.{coluna}` é {_tipos(fams)} no {rotulo} e {_tipos(delas)} na {rotulo_ref}.")
+                    divergente(coluna, f"`{tabela}.{coluna}` é {_tipos(fams)} no {rotulo} e {_tipos(delas)} na {rotulo_ref}.")
     return achados
+
+
+def _divergencia_registrada(texto: str, coluna: str) -> bool:
+    """Uma linha do documento cita a coluna e diz que seguiu a plataforma (tabela de divergências da seção 19)."""
+    alvo = re.compile(rf"(?<![\w]){re.escape(coluna)}(?![\w])", re.I)
+    return any(alvo.search(l) and re.search(r"segu\w*\s+(?:a\s+)?plataforma|molde\s+d[ao]\s+j[úu]ri", l, re.I)
+               for l in (texto or "").splitlines())
 
 
 # ------------------------------------------------------------------ entrada

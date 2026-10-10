@@ -601,3 +601,31 @@ def test_ordem_de_nao_mexer_sem_citacao_e_atencao_e_violacao_bloqueia():
     assert r["status"] == "amarelo" and r["achados"][0]["codigo"] == "preservacao-sem-citacao"
     violou = '```json\n{"decisoes":[{"id":"F1","veredito":"violado","citacao":"x"}]}\n```'
     assert fid.aplicar(itens, violou, {"d": "documento"}, etapa="design")["status"] == "bloqueado"
+
+
+def test_prd_que_segue_a_plataforma_e_registra_nao_bloqueia_por_tipo_da_spec():
+    """exp06ef1b (10/10/2026): o PRD copiou a migration da Júri (`turma_id UUID`) e anotou «Seguiu a plataforma»."""
+    from tools.consistencia import conferir_colunas
+
+    spec = 'CREATE TABLE "exp06ef1b_sessoes" (\n  turma_id VARCHAR(64) NOT NULL,\n  assuntos JSONB NOT NULL\n);'
+    prd = 'CREATE TABLE "exp06ef1b_sessoes" (\n  "turma_id" UUID NOT NULL,\n  "assuntos" TEXT NOT NULL\n);'
+    sem_registro = conferir_colunas(prd, spec)
+    assert {a["codigo"] for a in sem_registro if a["severidade"] == "bloqueio"} == {"tipo-divergente-da-spec"}
+    registrado = prd + ("\n| `turma_id` em texto na spec | `turma_id UUID` | Seguiu a plataforma (`UUID`) | `produto` |"
+                        "\n| `exp06ef1b_sessoes.assuntos` JSONB na spec | `assuntos TEXT` no molde do Júri | Seguiu a plataforma | `produto` |")
+    achados = conferir_colunas(registrado, spec)
+    assert not [a for a in achados if a["severidade"] == "bloqueio"]
+    assert {a["codigo"] for a in achados} == {"tipo-divergente-registrado"}
+    assert all(a["agente_responsavel"] == "spec" for a in achados)
+
+
+def test_regra_da_ficha_le_coluna_jsonb_de_uma_palavra():
+    """`auditoria: abertos >= 2` lê a coluna `auditoria` (JSONB); o check só via nomes com sublinhado."""
+    from tools import prd_codavel as pc
+
+    prd = ("## 11. Dados\n```sql\nCREATE TABLE \"exp06ef1b_sessoes\" (\n  \"auditoria\" JSONB NOT NULL\n);\n```\n\n"
+           "## 14. Evidência\n| Habilidade | Marcador | Tipo | Pergunta | Regra |\n|---|---|---|---|---|\n"
+           "| EF06CO10 | m1 | acao | — | `auditoria: abertos >= 2 AND buscas >= 1 → atingiu` |\n")
+    achados = []
+    pc._ficha(prd, "", achados)
+    assert not [a for a in achados if a["codigo"] == "regra-sem-coluna"], achados

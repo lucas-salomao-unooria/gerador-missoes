@@ -699,8 +699,10 @@ def conferir_manifesto(texto: str, slug: str, c: Dict[str, Any]) -> List[Dict[st
         for dados in validos[:1]:
             nova = _semver(dados.get("versao"))
             if atual and nova and nova <= atual:
+                proxima = f"{atual[0]}.{atual[1] + 1}.0"
                 faltas.append(f"o manifesto diz `versao` `{dados.get('versao')}`, que não sobe da publicada "
-                              f"`{existente.get('versao')}`")
+                              f"`{existente.get('versao')}` — use `{proxima}` no manifesto, no frontmatter e no "
+                              "`package.json` (versão em três lugares)")
         if faltas:
             achados.append(_achado(
                 "existente-sem-decisao",
