@@ -219,7 +219,8 @@ def _ficha(prd: str, spec: str, achados: List[Dict[str, str]]) -> None:
                     f"Ficha: tipo «{cel(i_tipo)}» na linha de {cel(i_hab)[:40]}. Só `acao` ou `multipla_escolha`.")
         regra = cel(i_regra)
         if tipo == "acao" and "[PROPOSTA" not in regra:
-            citadas = {c.lower() for c in re.findall(r"\b([a-z][a-z0-9]*_[a-z0-9_]+)\b", regra)}
+            # `cadeia_tentativas = 1` ou a coluna JSONB com a chave: `auditoria: abertos >= 2` (exp06ef1b, 10/10/2026)
+            citadas = {c.lower() for c in re.findall(r"\b([a-z][a-z0-9_]*)\b", regra)}
             if not citadas & colunas:
                 _achado(achados, "bloqueio", "regra-sem-coluna",
                         f"Ficha de {cel(i_hab)[:40]}: a regra «{regra[:120]}» não lê nenhuma coluna declarada na seção 11. "
