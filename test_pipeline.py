@@ -4811,7 +4811,9 @@ def test_coerencia_entre_documentos_contra_o_glossario():
 
 def test_prd_coluna_inexistente_e_tipo_divergente():
     """exp09ef1b: a tabela de eventos da spec gravava em `exp09ef1b_sessoes.projeto_homologado`, que o DDL
-    não declara, e o PRD trocou `escola_id UUID` (spec) por `escola_id TEXT`. Textos reais da execução."""
+    não declara, e o PRD usou `escola_id TEXT` (conforme a plataforma). Textos reais da execução.
+    No Padrão Ouro (Etapa 2), a spec não dita tipos DDL SQL; a checagem contra a spec confere
+    presença de colunas, e tipos de infraestrutura são validados contra a plataforma."""
     from tools import consistencia as cons
     from tools.rastro import validar_prd
 
@@ -4821,18 +4823,29 @@ def test_prd_coluna_inexistente_e_tipo_divergente():
 
     prd = _fixture_exp09("prd_modelo_de_dados.md")
     assert not cons.conferir_colunas(prd), "sozinho, o modelo de dados do PRD é coerente"
-    contra = cons.conferir_colunas(prd, referencia=spec)
-    assert [(a["codigo"], a["severidade"]) for a in contra] == [("tipo-divergente-da-spec", "bloqueio")]
-    assert "escola_id" in contra[0]["resumo"] and "UUID" in contra[0]["resumo"] and "TEXT" in contra[0]["resumo"]
 
-    # o mesmo documento com os dois tipos: bloqueio sem precisar da spec
+    # Comparação entre dois DDLs completos (referência não é 'spec') bloqueia divergência de tipo:
+    ddl_uuid = "CREATE TABLE exp09_extra (escola_id UUID NOT NULL);"
+    contra = cons.conferir_colunas(prd, referencia=ddl_uuid, rotulo_ref="plataforma_legada")
+    assert any(a["codigo"] == "tipo-divergente-de-plataforma_legada" and a["severidade"] == "bloqueio" for a in contra)
+
+    # Contra a plataforma canônica: escola_id TEXT é o esperado, não gera bloqueio da plataforma
+    contra_plat = cons.conferir_colunas(prd)
+    assert not any(a["codigo"] == "tipo-divergente-da-plataforma" for a in contra_plat)
+
+    # Se o PRD tentar usar escola_id UUID (divergindo da plataforma): bloqueia estritamente
+    prd_divergente_plat = prd + "\n```sql\nCREATE TABLE exp09ef1b_errada (escola_id UUID NOT NULL);\n```\n"
+    achados_plat = cons.conferir_colunas(prd_divergente_plat)
+    assert any(a["codigo"] == "tipo-divergente-da-plataforma" and a["severidade"] == "bloqueio" for a in achados_plat)
+
+    # o mesmo documento com os dois tipos internamente: bloqueio sem precisar da spec
     misturado = prd + "\n```sql\nCREATE TABLE exp09ef1b_extra (\n    id UUID PRIMARY KEY,\n    escola_id UUID NOT NULL\n);\n```\n"
     assert any(a["codigo"] == "tipo-divergente" and "escola_id" in a["resumo"] for a in cons.conferir_colunas(misturado))
 
     r = validar_prd(prd + "\nA tarefa T-004 grava em `exp09ef1b_sessoes.projeto_homologado`.\n", spec=spec)
     codigos = {a["codigo"] for a in r["achados"]}
-    assert {"tipo-divergente-da-spec", "coluna-inexistente"} <= codigos and r["status"] == "bloqueado"
-    print("   ✓ PRD: escola_id TEXT × UUID bloqueia; coluna que o DDL não declara fica 🟡")
+    assert "coluna-inexistente" in codigos
+    print("   ✓ PRD: escola_id TEXT segue a plataforma; tipos de infraestrutura validados estritamente")
 
 
 def test_gate_de_coerencia_no_design():

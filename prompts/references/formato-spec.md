@@ -203,8 +203,8 @@ passou pela decisão" de "o aluno abriu a missão". `Origem` é `PO` quando veio
 
 `perguntas_herdadas` não é escolha: são as transversais de dono `missao` do catálogo abaixo, e
 cada uma cobra seus sinais. A tabela de eventos do bloco 9 traz as linhas dos eventos universais
-do estudante (`EVT-U*`) **com o verbo e o objeto do catálogo, sem adaptar**, e o DDL traz as
-colunas dos sinais do professor (`EVT-P*`) nas tabelas do módulo. Um gate confere os dois.
+do estudante (`EVT-U*`) **com o verbo e o objeto do catálogo, sem adaptar**, e o modelo conceitual traz as
+colunas dos sinais do professor (`EVT-P*`) nas tabelas do módulo (a especificação de DDL SQL com tipos e constraints cabe exclusivamente ao PRD na etapa de Dev). Um gate confere os dois.
 
 <!-- include: references/perguntas-de-produto.md -->
 
@@ -221,11 +221,7 @@ na linha da sessão, o que acontece com linhas antigas quando sobe, e se
 
 **O prefixo da tabela é o id inteiro, sem separador interno.** A missão `exp05ef3b` usa `exp05ef3b_sessoes`, nunca `exp_05ef3b_` nem `exp_05_`. O identificador já carrega ano e bimestre; quebrá-lo com underscore recria o formato antigo e desalinha migration, Prisma e o `@@map`.
 
-**Tabelas e RLS.** Toda tabela `expNNefNb_*` com `escola_id NOT NULL`, `ENABLE`
-+ `FORCE ROW LEVEL SECURITY` e policy por `app.escola_id`; exceção de RLS só
-justificada por escrito. Estado é **string com CHECK na migration**, nunca
-enum Prisma. Texto livre de menor em tabela própria com `chars_count`, fora de
-log e de telemetria.
+**Tabelas e modelo conceitual.** O Bloco 9 define as tabelas e colunas conceituais necessárias para a pedagogia e telemetria (ex.: `expNNefNb_*`), separando o que é operacional e o que é analítico. Toda tabela conceitual deve prever isolamento por `escola_id`. Detalhamento de DDL SQL (`CREATE TABLE`, tipos SQL, chaves estrangeiras, constraints e RLS) é responsabilidade exclusiva da Seção 11 do PRD. Texto livre de menor em entidade própria com `chars_count`, fora de log e de telemetria.
 
 **Fuso.** Toda data vem de `config.fuso` do handshake / `FUSO_DA_PLATAFORMA`
 (ADR-98/99); proibido formatar data na mão.

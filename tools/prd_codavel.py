@@ -219,13 +219,41 @@ def _ficha(prd: str, spec: str, achados: List[Dict[str, str]]) -> None:
                     f"Ficha: tipo «{cel(i_tipo)}» na linha de {cel(i_hab)[:40]}. Só `acao` ou `multipla_escolha`.")
         regra = cel(i_regra)
         if tipo == "acao" and "[PROPOSTA" not in regra:
-            # `cadeia_tentativas = 1` ou a coluna JSONB com a chave: `auditoria: abertos >= 2` (exp06ef1b, 10/10/2026)
-            citadas = {c.lower() for c in re.findall(r"\b([a-z][a-z0-9_]*)\b", regra)}
-            if not citadas & colunas:
-                _achado(achados, "bloqueio", "regra-sem-coluna",
-                        f"Ficha de {cel(i_hab)[:40]}: a regra «{regra[:120]}» não lê nenhuma coluna declarada na seção 11. "
-                        "A regra é um predicado sobre o que o servidor gravou (`cadeia_tentativas = 1 → atingiu`); o que "
-                        "não vira predicado é `[PROPOSTA — validar com PO: …]`, e a coluna que falta entra na seção 11.")
+            # Item 4 da Etapa 2 (Plano Padrão Ouro): cada ramo da regra de ação (antes do →) precisa ler coluna
+            # e expressar predicado formal (OP valor), e não apenas citar palavra solta
+            operadores = r"(?:=|>=|<=|>|<|!=|<>|\bBETWEEN\b|\bIN\b|\bLIKE\b|\bILIKE\b|\bIS\b)"
+            ramos = [r.strip() for r in regra.strip("`").split(";")]
+            erro_encontrado = False
+            for ramo in ramos:
+                if not ramo or erro_encontrado:
+                    continue
+                partes = re.split(r"→|->", ramo, maxsplit=1)
+                condicao = partes[0].strip()
+                if re.search(r"\b(?:sem\s+a[cç][aã]o|fallback|default|demais|outro[s]?|null)\b", condicao, re.I):
+                    continue
+                citadas = {c.lower() for c in re.findall(r"\b([a-z][a-z0-9_]*)\b", condicao)}
+                intersecao = citadas & colunas
+                if not intersecao:
+                    _achado(achados, "bloqueio", "regra-sem-coluna",
+                            f"Ficha de {cel(i_hab)[:40]}: a condição «{condicao[:80]}» não lê nenhuma coluna declarada na seção 11. "
+                            "A regra é um predicado sobre o que o servidor gravou (`cadeia_tentativas = 1 → atingiu`); o que "
+                            "não vira predicado é `[PROPOSTA — validar com PO: …]`, e a coluna que falta entra na seção 11.")
+                    erro_encontrado = True
+                    break
+                tem_predicado = False
+                for c in intersecao:
+                    padrao = rf"\b{re.escape(c)}\b(?:\s*[:.]\s*\w+|\s*->>\s*['\"\w]+)?\s*{operadores}"
+                    padrao_json = rf"\b{re.escape(c)}\s*:\s*\w+\s*{operadores}"
+                    if re.search(padrao, condicao, re.IGNORECASE) or re.search(padrao_json, condicao, re.IGNORECASE):
+                        tem_predicado = True
+                        break
+                if not tem_predicado:
+                    _achado(achados, "bloqueio", "regra-sem-predicado",
+                            f"Ficha de {cel(i_hab)[:40]}: a condição «{condicao[:80]}» cita coluna mas não expressa um predicado "
+                            "formal (`coluna OP valor`, `coluna: chave OP valor`, `coluna->>'chave' OP valor`). "
+                            "Palavras soltas sem operador de comparação não definem como o servidor afere a evidência.")
+                    erro_encontrado = True
+                    break
     faltam = sorted(set(codigos_do_bloco11(spec)) - cobertas)
     if faltam:
         _achado(achados, "bloqueio", "ficha-sem-habilidade",

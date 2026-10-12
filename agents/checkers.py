@@ -267,23 +267,78 @@ def _sem_bloco(documento: str, titulo: str) -> str:
     if not m:
         return documento
     fim = re.search(r"^## ", documento[m.end():], re.MULTILINE)
-    return (documento[:m.start()].rstrip() + ("\n\n" + documento[m.end() + fim.start():].lstrip() if fim else "")).rstrip() + "\n"
+    antes = documento[:m.start()].rstrip()
+    depois = documento[m.end() + fim.start():].lstrip() if fim else ""
+    if antes and depois:
+        return antes + "\n\n" + depois + "\n"
+    elif antes:
+        return antes + "\n"
+    elif depois:
+        return depois + "\n"
+    return "\n"
 
 
-def montar_sobre_aceita(aceita: str, nova: str, titulo: str) -> str:
+def _blocos_numerados(documento: str) -> Dict[str, str]:
+    """`{"0": corpo, "1": corpo, …}` dos blocos `## N` do documento — do título até o próximo `## ` ou o fim."""
+    blocos: Dict[str, str] = {}
+    marcas = list(re.finditer(r"^##\s*(\d{1,2})\b.*$", documento or "", re.MULTILINE))
+    for m in marcas:
+        fim = re.search(r"^## ", documento[m.end():], re.MULTILINE)
+        blocos[m.group(1)] = documento[m.start():m.end() + fim.start()] if fim else documento[m.start():]
+    return blocos
+
+
+def bloco0_pode_mudar(envelope: Optional[Dict[str, Any]]) -> bool:
+    """O D9 só muda o bloco 0 quando o ambiente é `novo`/`existente` e o Gate 0 aceitou a `[RS-AMB]`."""
+    env = envelope or {}
+    respec = env.get("respec") if isinstance(env.get("respec"), dict) else {}
+    return (str(env.get("status") or "").lower() in ("novo", "existente")
+            and str(respec.get("id") or "").upper() == "RS-AMB"
+            and str(respec.get("status") or "").lower() == "aceito")
+
+
+def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool = False,
+                        avisos: Optional[List[Dict[str, Any]]] = None) -> str:
     """A versão aceita com o bloco `titulo` tirado da nova; o resto da nova é descartado.
 
     O D9 acrescenta o bloco 14 e recopiava, por modelo, os 60 KB dos blocos 0–13 do D0. Na exp06ef1b (09/10/2026)
     o D0 traduziu «refresh token» para «chave de renovação» e o D9, partindo da própria versão anterior, manteve o
     inglês: a preservação acusou, com razão, e o design terminou 🔴 duas vezes. Cópia literal é trabalho de código.
     Sem o bloco na nova, devolve a nova como veio — a preservação confere a cópia como antes.
+
+    Única exceção: o bloco 0 da nova entra quando `bloco0_aceito` (`bloco0_pode_mudar`: ambiente novo ou existente
+    com a `[RS-AMB]` aceita). Qualquer outra diferença nos blocos copiados é descartada e vai para `avisos` como 🟡
+    «D9 alterou fora do bloco 14», com o que mudou — antes era descartada em silêncio (plano padrão ouro, 2.5).
     """
     m = re.search(titulo, nova or "", re.MULTILINE)
     if not m:
         return nova
     fim = re.search(r"^## ", nova[m.end():], re.MULTILINE)
     bloco = nova[m.start():m.end() + fim.start()] if fim else nova[m.start():]
-    return _sem_bloco(aceita, titulo).rstrip() + "\n\n" + bloco.strip() + "\n"
+    proprio = (re.search(r"(\d{1,2})", titulo) or [None, None])[1]
+
+    base = aceita
+    dos_aceitos, dos_novos = _blocos_numerados(aceita), _blocos_numerados(nova)
+    for numero, corpo_aceito in dos_aceitos.items():
+        corpo_novo = dos_novos.get(numero)
+        if numero == proprio or corpo_novo is None or corpo_novo.strip() == corpo_aceito.strip():
+            continue
+        if numero == "0" and bloco0_aceito:
+            base = base.replace(corpo_aceito.rstrip(), corpo_novo.rstrip(), 1)
+            continue
+        if avisos is not None:
+            import difflib
+
+            diff = [l for l in difflib.unified_diff(corpo_aceito.strip().splitlines(), corpo_novo.strip().splitlines(),
+                                                    lineterm="", n=0) if l[:1] in "+-" and l[:3] not in ("+++", "---")]
+            avisos.append({
+                "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": "design",
+                "agente_responsavel": "ambiente-simulado",
+                "resumo": (f"D9 alterou fora do bloco {proprio or titulo}: o bloco {numero} veio diferente do aceito e a "
+                           "mudança foi descartada" + (" (o bloco 0 só muda por `[RS-AMB]` aceita)" if numero == "0" else "")
+                           + ":\n" + "\n".join(f"    {l[:200]}" for l in diff[:15])),
+            })
+    return _sem_bloco(base, titulo).rstrip() + "\n\n" + bloco.strip() + "\n"
 
 
 #: `base_preservada_<chave>`: a versão aceita de um documento cuja reescrita perdeu linhas (`SecaoSplitAgent`).
@@ -347,6 +402,7 @@ class SecaoSplitAgent(BaseAgent):
         else:
             faltou: List[tuple] = []
             perdidas: List[Dict[str, Any]] = []
+            fora_do_bloco: List[Dict[str, Any]] = []
             for ex in self.extracoes:
                 chave = ex["chave"]
                 secao = extrair_secao(texto, ex["inicio"], ex.get("fim"))
@@ -355,7 +411,9 @@ class SecaoSplitAgent(BaseAgent):
                 proprio = ex.get("bloco_proprio")
                 aceita = str(state.get(f"{PREFIXO_BASE_PRESERVADA}{chave}") or "") or str(state.get(chave) or "")
                 if secao is not None and proprio and aceita.strip():
-                    secao = montar_sobre_aceita(documento_sem_moldura(aceita), secao, proprio)
+                    env_fonte = None if self.fonte_sem_veredito else extrair_envelope(texto)
+                    secao = montar_sobre_aceita(documento_sem_moldura(aceita), secao, proprio,
+                                                bloco0_aceito=bloco0_pode_mudar(env_fonte), avisos=fora_do_bloco)
                 motivo: Optional[str] = None
                 if secao is None:
                     motivo = "seção não encontrada no relatório"
@@ -445,6 +503,11 @@ class SecaoSplitAgent(BaseAgent):
                                    "(decisão do PO). Reabra cada uma como `[ABERTO — dono: PO: …]` com as alternativas, "
                                    "sem marcar Resolvido:\n" + "\n".join(f"    - {l}" for l in fechadas[:10])),
                     })
+            if fora_do_bloco:
+                if delta[self.status_key] != STATUS_BLOQUEADO:
+                    delta[self.status_key] = "amarelo"
+                env.setdefault("achados", []).extend(fora_do_bloco)
+                linhas.append(f"🟡 {len(fora_do_bloco)} bloco(s) alterado(s) fora do bloco próprio — descartado(s), ver achados.")
             if perdidas:
                 delta[self.status_key] = STATUS_BLOQUEADO
                 env["status"] = "bloqueado"

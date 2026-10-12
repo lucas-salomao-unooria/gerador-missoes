@@ -604,19 +604,22 @@ def test_ordem_de_nao_mexer_sem_citacao_e_atencao_e_violacao_bloqueia():
 
 
 def test_prd_que_segue_a_plataforma_e_registra_nao_bloqueia_por_tipo_da_spec():
-    """exp06ef1b (10/10/2026): o PRD copiou a migration da Júri (`turma_id UUID`) e anotou «Seguiu a plataforma»."""
+    """Plano Padrão Ouro (item 1 e 2 da Etapa 2):
+    - A spec não dita DDL SQL: tipos da spec não bloqueiam o PRD.
+    - Coluna de plataforma (`turma_id UUID`) é validada diretamente contra a plataforma (sem válvula de escape textual).
+    - Coluna da spec não declarada no PRD gera atenção `coluna-da-spec-ausente`.
+    """
     from tools.consistencia import conferir_colunas
 
     spec = 'CREATE TABLE "exp06ef1b_sessoes" (\n  turma_id VARCHAR(64) NOT NULL,\n  assuntos JSONB NOT NULL\n);'
     prd = 'CREATE TABLE "exp06ef1b_sessoes" (\n  "turma_id" UUID NOT NULL,\n  "assuntos" TEXT NOT NULL\n);'
-    sem_registro = conferir_colunas(prd, spec)
-    assert {a["codigo"] for a in sem_registro if a["severidade"] == "bloqueio"} == {"tipo-divergente-da-spec"}
-    registrado = prd + ("\n| `turma_id` em texto na spec | `turma_id UUID` | Seguiu a plataforma (`UUID`) | `produto` |"
-                        "\n| `exp06ef1b_sessoes.assuntos` JSONB na spec | `assuntos TEXT` no molde do Júri | Seguiu a plataforma | `produto` |")
-    achados = conferir_colunas(registrado, spec)
+    achados = conferir_colunas(prd, spec)
+    # turma_id UUID segue a plataforma (UUID), assuntos TEXT não é da plataforma e a spec não impõe tipo DDL
     assert not [a for a in achados if a["severidade"] == "bloqueio"]
-    assert {a["codigo"] for a in achados} == {"tipo-divergente-registrado"}
-    assert all(a["agente_responsavel"] == "spec" for a in achados)
+    # Se a spec tiver coluna que o PRD não tem, acusa atenção coluna-da-spec-ausente
+    spec_com_extra = 'CREATE TABLE "exp06ef1b_sessoes" (\n  turma_id VARCHAR(64) NOT NULL,\n  assuntos JSONB NOT NULL,\n  coluna_faltando INT NOT NULL\n);'
+    achados_extra = conferir_colunas(prd, spec_com_extra)
+    assert any(a["codigo"] == "coluna-da-spec-ausente" for a in achados_extra)
 
 
 def test_regra_da_ficha_le_coluna_jsonb_de_uma_palavra():

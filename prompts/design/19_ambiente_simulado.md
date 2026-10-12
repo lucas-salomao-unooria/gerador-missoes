@@ -205,7 +205,7 @@ Envie a decisão como `[RS-AMB]` no formato de re-spec do D0. Escolha de ambient
 
 ## Passo 4 — Spec consolidada + insumos para a esteira
 
-**Você parte da spec consolidada que o D0 entregou, não do texto original do Gate 0.** Reemita-a inteira com os blocos 1–13 **intocados, incluindo o bloco 13 (Decisões D0) e o `## Glossário canônico`**, e acrescente **bloco 14 — Ambiente simulado (D9)**: nome, seção do DS, verbos nativos com rótulo literal, dispositivo nativo, estados, e o que o ambiente não tem. Regenerar a spec a partir do original apaga o trabalho do D0 — se o bloco 13 não estiver na sua saída, você perdeu as decisões dele.
+**Você parte da spec consolidada que o D0 entregou, não do texto original do Gate 0.** Reemita-a inteira com os blocos 0–13 **intocados, incluindo o bloco 13 (Decisões D0) e o `## Glossário canônico`**, e acrescente **bloco 14 — Ambiente simulado (D9)**: nome, seção do DS, verbos nativos com rótulo literal, dispositivo nativo, estados, e o que o ambiente não tem. Regenerar a spec a partir do original apaga o trabalho do D0 — se o bloco 13 não estiver na sua saída, você perdeu as decisões dele. **O bloco 0 só muda por `[RS-AMB]` aceita** (ambiente novo ou existente): o código grava a spec aceita com o seu bloco 14 e descarta qualquer outra mudança nos blocos 0–13, registrando 🟡 «D9 alterou fora do bloco 14».
 
 O **bloco 14 completo também vai para `ambiente_simulado`**, como documento próprio: é ele que D1, D2, D4, D5, V1 e o QA recebem. A spec é o contrato; `ambiente_simulado` é o documento de trabalho. Os dois dizem a mesma coisa, e é você quem garante isso.
 
@@ -275,7 +275,7 @@ Ambiente novo também gera **dois artefatos para a plataforma**, fora da missão
 ## Passada 2 — Definição do app clonado novo (se houve) + seção do DS
 ## Passada 2b — Ficha do mini-jogo (se houve) + seção `minijogo-<nome>` sobre a identidade Unooria
 ## Passo 3 — [RS-AMB] e resposta do Gate 0 — pule se dormente
-## Passo 4 — Spec consolidada (blocos 1–13 do D0 intocados + bloco 14) · propostas para `ambientes.md` e DS
+## Passo 4 — Spec consolidada (blocos 0–13 do D0 intocados + bloco 14) · propostas para `ambientes.md` e DS
 ## Bloco 14 — Ficha do ambiente (sempre, inclusive dormente — é o que D1, D2, D4, D5, V1 e o QA consomem)
 App clonado: nome · seção do DS · dispositivo nativo · chrome · **tabela verbo do bloco 4 → rótulo literal na tela → componente do DS** · padrão de conteúdo e schema mínimo · estados que a seção já traz · **o que a plataforma real NÃO tem** (linha proposta para a tabela de ausências de `ambientes.md`).
 Mini-jogo: a ficha completa da Passada 2b, mais **o pedido à jornada** — intervalo de fases que a mecânica do bloco 2 comporta, e a exigência de uma habilidade do bloco 11 por fase.

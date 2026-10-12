@@ -385,6 +385,26 @@ def para_o_juiz(itens: List[Dict[str, str]]) -> List[Dict[str, str]]:
             for i in itens if i["tipo"] != "literal"]
 
 
+#: Objetos de uma ordem de não mexer que têm gate de preservação próprio em código (linhas perdidas, conteúdo
+#: aprovado, rastreabilidade, registro do Stitch, consistência do Canal B e dos estados). Sem citação, a ordem sobre
+#: um destes fica 🟡 — o gate dele confere; sobre qualquer outra coisa (mecânica, regra, narrativa), 🔴.
+_RE_OBJETO_COM_GATE = re.compile(
+    r"\b(?:spec|texto literal|textos literais|copy|telas?|wireframes?|stitch|podcast|canal b|estados?|fsm)\b")
+
+#: Documento inteiro nomeado numa ordem de não mexer → chaves do estado que o guardam. A ordem sobre o documento
+#: inteiro se prova em código contra `anterior_<chave>` (`pipeline/reexecucao.py`), sem juiz.
+_DOCUMENTO_INTEIRO = (
+    (re.compile(r"\bspec\b"), ("spec_missao",)),
+    (re.compile(r"\bone[- ]pager\b(?! (?:pedag|resum))"), ("one_pager",)),
+    (re.compile(r"\bprd\b"), ("prd_final",)),
+    (re.compile(r"\bprototipo\b"), ("prototipo_html",)),
+    (re.compile(r"\bcopy\b"), ("copy_strings_revisada", "copy_strings")),
+    (re.compile(r"\btelas\b|\bjornada\b"), ("jornada_telas",)),
+    (re.compile(r"\bfluxo\b"), ("fluxo_arestas",)),
+    (re.compile(r"\bwireframes?\b"), ("wireframes_cobertura",)),
+)
+
+
 def _decisoes(saida_juiz: str) -> Dict[str, Dict[str, Any]]:
     for bruto in reversed(re.findall(r"```json\s*(.*?)```", saida_juiz or "", re.S)):
         try:
@@ -394,6 +414,32 @@ def _decisoes(saida_juiz: str) -> Dict[str, Dict[str, Any]]:
         if isinstance(dados, dict) and isinstance(dados.get("decisoes"), list):
             return {str(d.get("id")): d for d in dados["decisoes"] if isinstance(d, dict)}
     return {}
+
+
+def _sem_anexo(texto: str) -> str:
+    from tools.conteudo_aprovado import remover_anexo
+
+    return remover_anexo(texto or "")
+
+
+def _documentos_nomeados(texto: str, documentos: Dict[str, str], anteriores: Dict[str, str]) -> List[str]:
+    """As chaves dos documentos inteiros que a ordem nomeia e que existem agora e na versão anterior."""
+    alvo = _norm(texto)
+    chaves: List[str] = []
+    for padrao, candidatas in _DOCUMENTO_INTEIRO:
+        if padrao.search(alvo):
+            chave = next((c for c in candidatas if c in documentos and (anteriores.get(c) or "").strip()), None)
+            if chave:
+                chaves.append(chave)
+    return chaves
+
+
+def _diferenca(anterior: str, atual: str) -> Tuple[List[str], List[str]]:
+    """`(saíram, entraram)`: linhas não vazias da versão anterior ausentes da atual, e o contrário."""
+    antes = [l.strip() for l in _sem_anexo(anterior).splitlines() if l.strip()]
+    agora = [l.strip() for l in _sem_anexo(atual).splitlines() if l.strip()]
+    ja, ag = set(agora), set(antes)
+    return [l for l in antes if l not in ja], [l for l in agora if l not in ag]
 
 
 #: Fração da citação que precisa aparecer contínua no documento. O juiz copia com pequenas diferenças
@@ -426,11 +472,15 @@ def _literal_presente(frase: str, documentos_norm: str) -> bool:
 
 
 def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, str],
-            etapa: str = "produto", parcial: bool = False) -> Dict[str, Any]:
+            etapa: str = "produto", parcial: bool = False,
+            anteriores: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     """`{status, achados, conferidos}` a partir dos itens, da saída do juiz e dos documentos.
 
     `etapa` é a de quem responde pelos documentos: o pedido de refazer do design é conferido nos documentos de
-    design, e o achado é dele."""
+    design, e o achado é dele. `anteriores` (`{chave: texto}`, a versão de antes do refazer) prova as ordens de não
+    mexer: documento inteiro por comparação em código; parte dele pela citação do juiz, idêntica nas duas versões."""
+    anteriores = {k: v for k, v in (anteriores or {}).items() if (v or "").strip()}
+    doc_anterior = _norm("\n".join(anteriores.values()))
     doc = _norm("\n".join(documentos.values()))
     # o corpo, sem changelog nem tabela de alterações: o texto que o PO ditou só prova quando está ali — no registro
     # do que mudou, o autor só repete o pedido (auditoria de insumos de 08/10/2026)
@@ -478,6 +528,56 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         varias = [str(c) for c in ((d or {}).get("citacoes") or []) if str(c).strip()]
         todas_provam = (veredito == "atendido" and len(varias) >= 2
                         and all(_citacao_confere(c, doc) and not _norm(c) in _norm(it["texto"]) for c in varias))
+        if so_preservacao(it["texto"]) and veredito != "conflito_com_regra":
+            # Ordem de não mexer: a prova é a versão anterior, nunca a palavra do juiz (plano padrão ouro, 2.3)
+            nomeados = _documentos_nomeados(it["texto"], documentos, anteriores)
+            if nomeados:
+                saidas = {c: _diferenca(anteriores[c], documentos[c]) for c in nomeados}
+                if all(not sa and not en for sa, en in saidas.values()):
+                    conferidos.append({"id": it["id"], "texto": trecho,
+                                       "prova": f"idêntico à versão anterior: {', '.join(nomeados)}"})
+                    continue
+                perdidas = [(c, l) for c, (sa, _) in saidas.items() for l in sa]
+                novas = sum(len(en) for _, en in saidas.values())
+                if perdidas:
+                    achado(it, "bloqueio", "pedido-violado" if do_po else "briefing-violado",
+                           f"Ordem de não mexer: «{trecho}». {len(perdidas)} linha(s) da versão anterior saíram ou "
+                           f"mudaram:\n" + "\n".join(f"    - `{c}`: «{l[:160]}»" for c, l in perdidas[:10]))
+                else:
+                    achado(it, "atencao", "preservacao-com-acrescimo",
+                           f"Ordem de não mexer: «{trecho}». Nada da versão anterior saiu, mas {novas} linha(s) "
+                           f"entraram em {', '.join(nomeados)} — confira se o pedido as autoriza.")
+                continue
+            citadas = [c for c in ([citacao] + varias) if len(_norm(c)) >= MIN_CITACAO]
+            if citadas and doc_anterior:
+                no_antes = [c for c in citadas if _citacao_confere(c, doc_anterior)]
+                if no_antes and all(_citacao_confere(c, doc) for c in no_antes):
+                    conferidos.append({"id": it["id"], "texto": trecho,
+                                       "prova": "idêntico nas duas versões: " + " · ".join(c[:120] for c in no_antes)[:400]})
+                    continue
+                sumiu = [c for c in no_antes if not _citacao_confere(c, doc)]
+                if sumiu:
+                    achado(it, "bloqueio", "pedido-violado" if do_po else "briefing-violado",
+                           f"Ordem de não mexer: «{trecho}». O trecho estava na versão anterior e não está na atual: "
+                           f"«{sumiu[0][:200]}».")
+                    continue
+            elif citadas and veredito == "atendido" and all(_citacao_confere(c, doc) for c in citadas) \
+                    and not any(_norm(c) in _norm(it["texto"]) for c in citadas):
+                # primeira execução, sem versão anterior: o trecho no documento é a prova possível
+                conferidos.append({"id": it["id"], "texto": trecho, "prova": citacao[:240] or varias[0][:240]})
+                continue
+            if veredito == "violado":
+                achado(it, "bloqueio", "pedido-violado" if do_po else "briefing-violado",
+                       f"O documento contraria {'o pedido do PO' if do_po else 'o briefing'}: «{trecho}». {explicacao}")
+            elif _RE_OBJETO_COM_GATE.search(_norm(it["texto"])):
+                achado(it, "atencao", "preservacao-sem-citacao",
+                       f"Ordem de não mexer, sem trecho que a prove: «{trecho}». A conferência é dos gates de preservação "
+                       "(linhas perdidas, rastreabilidade, Stitch) — confira o que eles dizem.")
+            else:
+                achado(it, "bloqueio", "preservacao-sem-prova",
+                       f"Ordem de não mexer sobre o que nenhum gate preserva, sem trecho idêntico nas duas versões: "
+                       f"«{trecho}». {explicacao}")
+            continue
         if veredito == "atendido" and _citacao_confere(citacao, doc) and not _norm(citacao) in _norm(it["texto"]):
             conferidos.append({"id": it["id"], "texto": trecho, "prova": citacao[:240]})
         elif todas_provam:
@@ -496,10 +596,6 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         elif veredito == "violado":
             achado(it, "bloqueio", "pedido-violado" if do_po else "briefing-violado",
                    f"O documento contraria {'o pedido do PO' if do_po else 'o briefing'}: «{trecho}». {explicacao}")
-        elif veredito != "violado" and so_preservacao(it["texto"]):
-            achado(it, "atencao", "preservacao-sem-citacao",
-                   f"Ordem de não mexer, sem trecho que a prove: «{trecho}». A conferência é dos gates de preservação "
-                   "(linhas perdidas, rastreabilidade, Stitch) — confira o que eles dizem.")
         elif veredito == "atendido" and len(_norm(citacao)) >= MIN_CITACAO and _norm(citacao) in _norm(it["texto"]):
             achado(it, "bloqueio" if do_po else "atencao", "citou-o-pedido",
                    f"O juiz diz que atende, mas citou o próprio pedido em vez do documento: «{trecho}».")
@@ -540,3 +636,14 @@ def relatorio(resultado: Dict[str, Any], itens: List[Dict[str, str]], missao: st
            "precisa_humano": any(a["severidade"] == "decisao_humana" for a in resultado["achados"])}
     linhas += ["```json", json.dumps(env, ensure_ascii=False, indent=1), "```", ""]
     return "\n".join(linhas)
+
+
+def avaliar(parecer: str, saida_juiz: str, doc_atual: str = "", doc_anterior: str = "") -> List[Dict[str, Any]]:
+    """Os achados do parecer do PO contra a saída do juiz, o documento atual e (opcional) a versão anterior."""
+    itens = montar_checklist([("parecer", parecer)], "")
+    if not itens:
+        itens = [{"id": "F1", "origem": "parecer", "tipo": "ajuste", "texto": parecer.strip()}]
+    docs = {"atual": doc_atual} if doc_atual else {}
+    res = aplicar(itens, saida_juiz, docs, anteriores={"atual": doc_anterior} if doc_anterior else None)
+    return res["achados"]
+

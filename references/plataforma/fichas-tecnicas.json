@@ -1,0 +1,94 @@
+{
+  "fichas": {
+    "exp01ef1b": {
+      "slug": "exp01ef1b",
+      "pasta": "apps/experiencias/exp01ef1b",
+      "versao": "1.0.6",
+      "porta": 5183,
+      "modulo_api": "apps/api/src/foto-conta",
+      "rotas": [],
+      "ficha_evidencia_arquivo": "",
+      "tabelas": []
+    },
+    "exp02em1b": {
+      "slug": "exp02em1b",
+      "pasta": "apps/experiencias/exp02em1b",
+      "versao": "1.4.1",
+      "porta": 5178,
+      "modulo_api": "",
+      "rotas": [],
+      "ficha_evidencia_arquivo": "apps/api/src/evidencias/fichas/exp02em1b.ts",
+      "tabelas": []
+    },
+    "exp04ef1b": {
+      "slug": "exp04ef1b",
+      "pasta": "apps/experiencias/exp04ef1b",
+      "versao": "2.2.0",
+      "porta": 5174,
+      "modulo_api": "apps/api/src/unootube",
+      "rotas": [],
+      "ficha_evidencia_arquivo": "apps/api/src/evidencias/fichas/exp04ef1b.ts",
+      "tabelas": []
+    },
+    "exp05ef1b": {
+      "slug": "exp05ef1b",
+      "pasta": "apps/experiencias/exp05ef1b",
+      "versao": "0.4.0",
+      "porta": 5184,
+      "modulo_api": "",
+      "rotas": [],
+      "ficha_evidencia_arquivo": "apps/api/src/evidencias/fichas/exp05ef1b.ts",
+      "tabelas": []
+    },
+    "exp06ef1b": {
+      "slug": "exp06ef1b",
+      "pasta": "apps/experiencias/exp06ef1b",
+      "versao": "0.4.0",
+      "porta": 5185,
+      "modulo_api": "apps/api/src/juri-estadual",
+      "rotas": [],
+      "ficha_evidencia_arquivo": "apps/api/src/evidencias/fichas/exp06ef1b.ts",
+      "tabelas": []
+    },
+    "exp06ef2b": {
+      "slug": "exp06ef2b",
+      "pasta": "apps/experiencias/exp06ef2b",
+      "versao": "0.1.6",
+      "porta": 5181,
+      "modulo_api": "",
+      "rotas": [],
+      "ficha_evidencia_arquivo": "",
+      "tabelas": []
+    },
+    "exp07ef1b": {
+      "slug": "exp07ef1b",
+      "pasta": "apps/experiencias/exp07ef1b",
+      "versao": "1.2.0",
+      "porta": 5179,
+      "modulo_api": "apps/api/src/a-selecao",
+      "rotas": [],
+      "ficha_evidencia_arquivo": "apps/api/src/evidencias/fichas/exp07ef1b.ts",
+      "tabelas": []
+    },
+    "exp08ef1b": {
+      "slug": "exp08ef1b",
+      "pasta": "apps/experiencias/exp08ef1b",
+      "versao": "1.3.0",
+      "porta": 5173,
+      "modulo_api": "apps/api/src/dossie",
+      "rotas": [],
+      "ficha_evidencia_arquivo": "apps/api/src/evidencias/fichas/exp08ef1b.ts",
+      "tabelas": []
+    },
+    "exp08ef4b": {
+      "slug": "exp08ef4b",
+      "pasta": "apps/experiencias/exp08ef4b",
+      "versao": "0.1.6",
+      "porta": 5182,
+      "modulo_api": "",
+      "rotas": [],
+      "ficha_evidencia_arquivo": "",
+      "tabelas": []
+    }
+  }
+}

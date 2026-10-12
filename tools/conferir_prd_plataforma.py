@@ -571,6 +571,11 @@ SERIES = tuple(f"{n}EF" for n in range(1, 10)) + tuple(f"{n}EM" for n in range(1
 _TESTE_PUT = "`apps/api/tests/manifestos-passam-no-put.spec.ts › o corpo do PUT passa no UpsertSchema da rota`"
 _TESTE_CODIGO = "`apps/api/tests/codigo-da-experiencia.spec.ts`"
 _RE_ABERTO_PO = re.compile(r"\[\s*ABERTO\s*[—–-]+\s*dono\s*:\s*PO\b", re.I)
+_RE_DECISAO_PO_REGISTRADA = re.compile(
+    r"(?:\[\s*ABERTO\s*[—–-]+\s*dono\s*:\s*PO\b|"
+    r"(?:decis[ãa]o|parecer|pedido)\s+(?:do\s+)?PO\b[^\n]{0,200}(?:substitu|manter|c[óo]digo|vers[ãa]o|\b\d{2}/\d{2}(?:/\d{4})?\b|\b\d{4}-\d{2}-\d{2}\b))",
+    re.IGNORECASE
+)
 
 
 def blocos_de_manifesto(texto: str) -> List[Tuple[str, Optional[Dict[str, Any]], str]]:
@@ -693,8 +698,8 @@ def conferir_manifesto(texto: str, slug: str, c: Dict[str, Any]) -> List[Dict[st
     existente = next((e for e in c.get("experiencias") or [] if str(e.get("id") or "").lower() == slug), None)
     if existente:
         faltas = []
-        if not _RE_ABERTO_PO.search(texto):
-            faltas.append("a seção 19 não registra `[ABERTO — dono: PO: substituir a existente ou outro código]`")
+        if not _RE_DECISAO_PO_REGISTRADA.search(texto):
+            faltas.append("a seção 19 não registra `[ABERTO — dono: PO: substituir a existente ou outro código]` nem a decisão registrada do PO")
         atual = _semver(existente.get("versao"))
         for dados in validos[:1]:
             nova = _semver(dados.get("versao"))

@@ -20,6 +20,19 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
+# Prevenção de deadlock no Python 3.14/macOS: desacopla o ContextVar do OpenTelemetry
+# em chamadas de gerador assíncrono interno do ADK que colidem com context.detach().
+try:
+    from google.adk.agents import base_agent
+
+    async def _safe_with_caller_context(agen, caller_ctx):
+        async for item in agen:
+            yield item
+
+    base_agent._with_caller_context = _safe_with_caller_context
+except Exception:
+    pass
+
 from agents.callbacks import KEY_PIPELINE_BLOQUEADO, KEY_PIPELINE_MOTIVO
 from config import get_settings
 from pipeline.artifacts import (
