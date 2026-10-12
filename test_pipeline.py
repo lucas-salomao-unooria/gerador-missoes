@@ -5116,3 +5116,18 @@ def test_restaurar_backup_nao_apaga_o_custo_e_soma_o_que_a_falha_gastou(tmp_path
     restaurar_backup(tmp_path, backup, {"tokens": {"chamadas": 0}}, ["dev"])
     assert len(_json.loads((tmp_path / "estado.json").read_text())["custo_missao"]["execucoes"]) == 3
     assert texto_ao_vivo(falha, {"brl": 10}).startswith("💰 R$ 2,50 nesta execução · R$ 12,50 na missão")
+
+
+def test_animacao_pinta_o_veredito_e_marca_o_que_nao_precisou_rodar():
+    from pipeline.esteira_visual import cores_dos_passos, html_da_esteira, passos_da_esteira, situacao_dos_passos
+
+    # o juiz 020 não emitiu evento e a execução já está no 022: ficou para trás sem rodar
+    s = situacao_dos_passos(passos_da_esteira(), "produto", "A022GateEstruturalCheck", ["A019ContratoProdutoCheck"])
+    assert s[(20, "")] == "pulado" and s[(19, "")] == "feito" and s[(23, "")] == "pendente"
+    cores = cores_dos_passos({"gate_estrutural_status": "bloqueado", "bncc_status": "amarelo",
+                              "micro_gate_status": "aprovado"})
+    assert cores[(22, "")][0] == "vermelho" and cores[(36, "")][0] == "amarelo" and (12, "") not in cores
+    h = html_da_esteira("produto", "A040PerguntasCheck", ["A022GateEstruturalCheck", "A036BnccCheck"],
+                        gates={"gate_estrutural_status": "bloqueado", "bncc_status": "amarelo"}, escuro=True)
+    assert 'class="p vermelho"' in h and 'class="p amarelo"' in h and "não precisou rodar" in h
+    assert "class='esteira escuro'" in h

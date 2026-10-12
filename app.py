@@ -105,7 +105,8 @@ st.markdown(
 st.markdown(
     """
     <style>
-    [data-testid="stSidebar"] {
+    /* só aberta: com a largura mínima fixa, a barra recolhida deixava uma faixa com pedaços dela à esquerda */
+    [data-testid="stSidebar"][aria-expanded="true"] {
         min-width: 400px;
         max-width: 600px;
     }
@@ -513,6 +514,14 @@ def _render_trilha(fluxo: Dict[str, Any]) -> None:
                             f"{p['como']} · {p['quando']} (rodada {p.get('rodada', 1)}){invalido}\n\n{_citar(p['comentario'])}")
 
 
+def _tema_escuro() -> bool:
+    """O tema ativo do app (inclusive o que vem do sistema), para o que é desenhado com `st.html`."""
+    try:
+        return st.context.theme.type == "dark"
+    except Exception:
+        return False
+
+
 @st.fragment(run_every=5)
 def _painel_execucao(run_dir_str: str) -> None:
     """Progresso da etapa em segundo plano. Quando ela termina, recarrega a missão inteira."""
@@ -532,10 +541,10 @@ def _painel_execucao(run_dir_str: str) -> None:
     from tools.custo import texto_ao_vivo
 
     custo_vivo = dados.get("custo") or {}
-    components.html(html_da_esteira(dados.get("etapa", ""), dados.get("agente_atual") or "", dados.get("vistos") or [],
-                                    titulo=f"⏳ {tipo} {etapa} ·", decorrido_s=decorrido,
-                                    custo=texto_ao_vivo(custo_vivo.get("execucao"), custo_vivo.get("missao_antes"))),
-                    height=350, scrolling=True)
+    st.html(html_da_esteira(dados.get("etapa", ""), dados.get("agente_atual") or "", dados.get("vistos") or [],
+                            titulo=f"⏳ {tipo} {etapa} ·", decorrido_s=decorrido,
+                            custo=texto_ao_vivo(custo_vivo.get("execucao"), custo_vivo.get("missao_antes")),
+                            escuro=_tema_escuro(), gates=dados.get("gates") or {}))
     gates = dados.get("gates") or {}
     if gates:
         st.caption(" · ".join(f"{_status_icon(v)} {GATE_LABELS.get(k, k)}" for k, v in gates.items() if k in GATE_LABELS))
@@ -1069,9 +1078,9 @@ async def _acompanhar_esteira(stream, stages: List[Dict[str, Any]], progress, st
         with steps_container.container():
             rodou = [k for k, v in status.items() if v in ("done", "running")]
             etapa_atual = etapa_do_agente(active_agent or "")
-            components.html(html_da_esteira(etapa_atual, active_agent or "", rodou, titulo="🔄",
-                                            custo=texto_ao_vivo(custo_vivo.get("custo"), custo_vivo.get("missao_antes"))),
-                            height=350, scrolling=True)
+            st.html(html_da_esteira(etapa_atual, active_agent or "", rodou, titulo="🔄",
+                                    custo=texto_ao_vivo(custo_vivo.get("custo"), custo_vivo.get("missao_antes")),
+                                    escuro=_tema_escuro(), gates=gates))
             cols = st.columns(len(stages))
             for col, stage in zip(cols, stages):
                 with col:
