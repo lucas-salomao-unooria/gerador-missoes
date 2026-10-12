@@ -711,6 +711,8 @@ def render_passagem(run_dir: Path, opts: Dict[str, Any]) -> bool:
         if fluxo.get("situacao") in passagem.EM_EXECUCAO or execucao_fundo.em_execucao(run_dir):
             _painel_execucao(str(run_dir))
         else:
+            # entre as etapas o custo fica à vista: o detalhe da execução, onde ele também aparece, fica fora do cartão
+            render_custo_da_missao(estado_da_sessao(run_dir), f"passagem_{run_dir.name}")
             _painel_decisao(run_dir, fluxo, opts)
     return True
 
@@ -1646,12 +1648,17 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
     pasta = Path(result.output_dir) if result.output_dir else None
 
     def _one_pager(chave: str, base: str):
-        """O `.docx` com a marca quando a exportação existe; senão o Markdown do estado."""
+        """O `.docx` com a marca quando a exportação existe; senão o Markdown do estado; `None` se não foi gerado."""
+        from pipeline.artifacts import e_mensagem_de_pulo
+
         docx = pasta / f"{base}.docx" if pasta else None
         if docx and docx.exists():
             return (lambda d=docx: d.read_bytes()), f"{Path(base).name}_{missao}.docx", \
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        return (lambda: str(result.state.get(chave) or "(não gerado)")), f"{Path(base).name}_{missao}.md", "text/markdown"
+        texto = str(result.state.get(chave) or "")
+        if not texto.strip() or e_mensagem_de_pulo(texto):
+            return None
+        return (lambda t=texto: t), f"{Path(base).name}_{missao}.md", "text/markdown"
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -1667,13 +1674,19 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
         else:
             st.button("📦 Download total", disabled=True, use_container_width=True, key=f"zip_total_{prefix}",
                       help="A pasta da missão ainda não foi gravada.")
-    for col, (rotulo, chave, base) in zip((c2, c3, c4), (
-            ("📄 One-pager de produto", "one_pager", "produto/00-one-pager"),
-            ("📄 One-pager resumido", "one_pager_resumido", "produto/00d-one-pager-resumido"),
-            ("📄 One-pager pedagógico", "one_pager_pedagogico", "one-pager-pedagogico"))):
+    # quem gera cada um: sem ele, o botão fica desabilitado em vez de baixar um arquivo vazio
+    for col, (rotulo, chave, base, quem) in zip((c2, c3, c4), (
+            ("📄 One-pager de produto", "one_pager", "produto/00-one-pager", "a etapa de Produto"),
+            ("📄 One-pager resumido", "one_pager_resumido", "produto/00d-one-pager-resumido", "o fim de Produto"),
+            ("📄 One-pager pedagógico", "one_pager_pedagogico", "one-pager-pedagogico", "o fim de Dev"))):
         with col:
-            dados, nome, mime = _one_pager(chave, base)
-            download_button_lazy(rotulo, dados, file_name=nome, mime=mime, key=f"{chave}_{prefix}")
+            pronto = _one_pager(chave, base)
+            if pronto:
+                dados, nome, mime = pronto
+                download_button_lazy(rotulo, dados, file_name=nome, mime=mime, key=f"{chave}_{prefix}")
+            else:
+                st.button(rotulo, disabled=True, use_container_width=True, key=f"{chave}_{prefix}",
+                          help=f"Ainda não gerado: sai em {quem}.")
     if result.output_dir:
         st.caption(f"Artefatos gravados em `{result.output_dir}`")
 
