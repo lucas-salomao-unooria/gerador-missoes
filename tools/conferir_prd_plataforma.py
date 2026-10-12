@@ -571,6 +571,11 @@ SERIES = tuple(f"{n}EF" for n in range(1, 10)) + tuple(f"{n}EM" for n in range(1
 _TESTE_PUT = "`apps/api/tests/manifestos-passam-no-put.spec.ts › o corpo do PUT passa no UpsertSchema da rota`"
 _TESTE_CODIGO = "`apps/api/tests/codigo-da-experiencia.spec.ts`"
 _RE_ABERTO_PO = re.compile(r"\[\s*ABERTO\s*[—–-]+\s*dono\s*:\s*PO\b", re.I)
+_RE_DECISAO_PO_REGISTRADA = re.compile(
+    r"(?:\[\s*ABERTO\s*[—–-]+\s*dono\s*:\s*PO\b|"
+    r"(?:decis[ãa]o|parecer|pedido)\s+(?:do\s+)?PO\b[^\n]{0,200}(?:substitu|manter|c[óo]digo|vers[ãa]o|\b\d{2}/\d{2}(?:/\d{4})?\b|\b\d{4}-\d{2}-\d{2}\b))",
+    re.IGNORECASE
+)
 
 
 def blocos_de_manifesto(texto: str) -> List[Tuple[str, Optional[Dict[str, Any]], str]]:
@@ -604,7 +609,33 @@ def _semver(v: Any) -> Optional[Tuple[int, int, int]]:
     return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
 
 
-def conferir_manifesto(texto: str, slug: str, c: Dict[str, Any]) -> List[Dict[str, str]]:
+def datas_do_po(state: Dict[str, Any]) -> Set[str]:
+    """`DD/MM/AAAA` de cada parecer humano e pedido do PO da sessão: a fonte que prova uma decisão registrada."""
+    datas: Set[str] = set()
+    for p in list(state.get("pareceres_humanos") or []) + list(state.get("pedidos_do_po") or []):
+        if isinstance(p, dict):
+            datas.update(re.findall(r"\b\d{2}/\d{2}/\d{4}\b", f"{p.get('quando') or ''} {p.get('origem') or ''}"))
+    return datas
+
+
+def _decisao_do_po_provada(texto: str, datas_po: Optional[Set[str]]) -> bool:
+    """O marcador `[ABERTO — dono: PO …]`, ou uma decisão do PO cuja data é a de um parecer ou pedido da sessão.
+
+    Sem `datas_po` (chamador sem estado) a decisão escrita não prova nada: só o marcador vale (princípio 1 do
+    plano padrão ouro — nenhuma isenção pela palavra do próprio modelo)."""
+    if _RE_ABERTO_PO.search(texto):
+        return True
+    if not datas_po:
+        return False
+    for m in _RE_DECISAO_PO_REGISTRADA.finditer(texto):
+        linha = texto[texto.rfind("\n", 0, m.start()) + 1:texto.find("\n", m.end()) if "\n" in texto[m.end():] else len(texto)]
+        if any(d in linha for d in datas_po):
+            return True
+    return False
+
+
+def conferir_manifesto(texto: str, slug: str, c: Dict[str, Any],
+                       datas_po: Optional[Set[str]] = None) -> List[Dict[str, str]]:
     """O `experiencia.json` completo no PRD, que passe nos testes da plataforma, com o id derivado.
 
     Medido nas sete sessões: só a exp02em1b trazia o manifesto num bloco json, sem o `viewport` — e é o
@@ -693,8 +724,9 @@ def conferir_manifesto(texto: str, slug: str, c: Dict[str, Any]) -> List[Dict[st
     existente = next((e for e in c.get("experiencias") or [] if str(e.get("id") or "").lower() == slug), None)
     if existente:
         faltas = []
-        if not _RE_ABERTO_PO.search(texto):
-            faltas.append("a seção 19 não registra `[ABERTO — dono: PO: substituir a existente ou outro código]`")
+        if not _decisao_do_po_provada(texto, datas_po):
+            faltas.append("a seção 19 não registra `[ABERTO — dono: PO: substituir a existente ou outro código]` nem "
+                          "a decisão do PO com a data de um parecer ou pedido desta sessão")
         atual = _semver(existente.get("versao"))
         for dados in validos[:1]:
             nova = _semver(dados.get("versao"))
@@ -961,7 +993,7 @@ def conferir_registros(texto: str, slug: str, c: Dict[str, Any]) -> List[Dict[st
 
 
 # --------------------------------------------------------------------------- tudo
-def validar_prd(texto: str, slug: str = "") -> List[Dict[str, str]]:
+def validar_prd(texto: str, slug: str = "", datas_po: Optional[Set[str]] = None) -> List[Dict[str, str]]:
     """O que só o PRD traz para a plataforma, conferido contra o contrato da base e os moldes.
 
     Sem base, nada: a conferência é contra o contrato, e sem ele não há o que conferir (como `validar_contrato`).
@@ -973,5 +1005,5 @@ def validar_prd(texto: str, slug: str = "") -> List[Dict[str, str]]:
     except base_plataforma.BaseIndisponivel:
         return achados
     slug = (slug or slug_do_prd(texto or "")).lower()
-    return (achados + conferir_manifesto(texto or "", slug, c) + conferir_adr(texto or "", c)
+    return (achados + conferir_manifesto(texto or "", slug, c, datas_po) + conferir_adr(texto or "", c)
             + conferir_modelo_de_ia(texto or "", c) + conferir_registros(texto or "", slug, c))

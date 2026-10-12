@@ -153,7 +153,8 @@ def conferir_execucao_morta(run_dir: Path, agora: Optional[float] = None) -> boo
         from pipeline.reexecucao import restaurar_backup
 
         _tentar(f"restaurar o backup de {Path(run_dir).name}",
-                lambda: restaurar_backup(Path(run_dir), Path(run_dir) / dados["backup"]))
+                lambda: restaurar_backup(Path(run_dir), Path(run_dir) / dados["backup"],
+                                         (dados.get("custo") or {}).get("execucao"), [dados.get("etapa", "")]))
     _fechar(Path(run_dir), dados, ok=False,
             erro="a instância que rodava a etapa parou no meio (reinício, deploy ou falha do volume)")
     return True
@@ -212,9 +213,16 @@ async def _consumir(run_dir: Path, stream: AsyncGenerator[Dict[str, Any], None],
             mudou = False
             if tipo == "agent_started":
                 dados["agente_atual"] = evento.get("agent_name", "")
+                # o que já rodou nesta execução, para a animação da esteira (`pipeline/esteira_visual.py`)
+                if dados["agente_atual"] and dados["agente_atual"] not in dados.setdefault("vistos", []):
+                    dados["vistos"].append(dados["agente_atual"])
                 mudou = True
             elif tipo == "gate_status":
                 dados["gates"] = evento.get("status") or {}
+                mudou = True
+            elif tipo == "custo_parcial":
+                # o custo ao vivo (`tools/custo.py`): só no disco local, como o resto do progresso
+                dados["custo"] = {"execucao": evento.get("custo") or {}, "missao_antes": evento.get("missao_antes") or {}}
                 mudou = True
             elif tipo in ("etapa_started", "correcao_started") and evento.get("backup"):
                 dados["backup"] = evento["backup"]
@@ -242,7 +250,7 @@ def _disparar(run_dir: Path, dados: Dict[str, Any], fabrica_stream, nova: bool =
     if em_execucao(run_dir):
         raise ExecucaoEmAndamento("Esta missão já tem uma etapa rodando.")
     agora = time.time()
-    dados = {"situacao": "executando", "agente_atual": "", "gates": {}, "iniciado_em": agora,
+    dados = {"situacao": "executando", "agente_atual": "", "vistos": [], "gates": {}, "iniciado_em": agora,
              "batimento": agora, "backup": "", "erro": "", **dados}
     _gravar_local(run_dir, dados)
     _gravar(run_dir, dados)

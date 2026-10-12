@@ -1,7 +1,7 @@
 """Contrato de plataforma e origem dos parâmetros, conferidos no one-pager ainda em Produto.
 
 Quatro erros do one-pager canônico nasciam aqui e só eram pegos duas etapas depois, ou nunca:
-WebSocket como canal de sala (o A36 reprova no Dev, com o design já feito); progresso do
+WebSocket como canal de sala (o A091 reprova no Dev, com o design já feito); progresso do
 estudante atribuído a `localStorage`/`IndexedDB` (o estado de missão é do servidor, critério
 4.6); descritor SAEB num ano que a prova não avalia; e números apresentados como fato sem
 origem no núcleo nem no briefing ("4 segundos por bloco", "20 caracteres", "150 KB").
@@ -144,7 +144,7 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
     def atencao(codigo: str, criterio: str, resumo: str) -> None:
         achados.append({"severidade": "atencao", "codigo": codigo, "criterio": criterio, "resumo": resumo})
 
-    # 1. Canal de sala — a mesma regra do A36, aplicada onde o erro nasce.
+    # 1. Canal de sala — a mesma regra do A091, aplicada onde o erro nasce.
     for n in SECOES_TECNICAS:
         secao = secao_bloco(texto, n)
         if secao and _usado_afirmativamente(secao, _RE_WEBSOCKET):

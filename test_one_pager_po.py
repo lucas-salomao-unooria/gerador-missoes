@@ -247,13 +247,13 @@ def test_runner_guarda_o_one_pager_do_po_e_o_salvo_vence():
 def test_quem_escreve_e_quem_avalia_recebem_o_one_pager_do_po():
     from prompts import load_prompt
 
-    for arquivo in ("01_nucleo_narrativo", "04_secoes_apoio", "05_gate_estrutural", "07_revisor_one_pager",
-                    "08_avaliacao_pedagogica", "09_experiencia_estudante", "10_adequacao_pedagogica", "11_gate_final",
-                    "10f_restaurar_one_pager_po"):
+    for arquivo in ("004_nucleo_narrativo", "014_secoes_apoio", "021_gate_estrutural", "revisor_one_pager",
+                    "024a_avaliacao_pedagogica", "024b_experiencia_estudante", "024c_adequacao_pedagogica", "033_gate_final",
+                    "032_restaurar_one_pager_po"):
         texto = load_prompt(f"produto/{arquivo}.md")
         assert "{one_pager_po?}" in texto, arquivo
     # o parecer que exigiu trocar o mecanismo da exp06ef1b não via o briefing
-    assert "{briefing?}" in load_prompt("produto/10_adequacao_pedagogica.md")
+    assert "{briefing?}" in load_prompt("produto/024c_adequacao_pedagogica.md")
 
 
 def test_fidelidade_le_o_briefing_em_prosa_e_a_ordem_de_nao_mexer_vira_trava():

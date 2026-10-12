@@ -6,7 +6,7 @@
     ├── ProdutoStage   (SequentialAgent)  one-pager → gate estrutural (loop) → avaliações (paralelo) → gate final → spec
     ├── DesignStage    (SequentialAgent)  briefing → jornada 🎨 → fluxo 🎨 → copy → wireframes 🎨 → copy 2 → QA
     ├── DevStage       (SequentialAgent)  handoff ∥ assets → banca (5 ∥) → consolidação → PRD
-    └── A51Aprendizado (transversal)
+    └── A118Aprendizado (transversal)
 
 Controle de fluxo determinístico: os `EnvelopeGateAgent` leem o envelope JSON dos
 relatórios e gravam o status no `session.state`; os agentes a jusante carregam o
@@ -47,7 +47,7 @@ STAGES: List[Dict[str, Any]] = [
 
 #: Etapa parcial do modo correção (`pipeline/reexecucao.py`): só spec ↔ gates → one-pager resumido.
 #: Fica fora de `STAGES` de propósito — não é uma etapa que a configuração liga, e listá-la
-#: duplicaria os agentes A13–A16b nos metadados da UI.
+#: duplicaria os agentes A035–A051 nos metadados da UI.
 STAGE_SPEC: Dict[str, Any] = {"key": "spec", "name": "Produto (spec)", "icon": "🧭", "container": "ProdutoStage", "agents": PRODUTO_METADATA_SPEC}
 
 FINAL_OUTPUT_KEY = "prd_final"
@@ -143,6 +143,37 @@ def create_mission_orchestrator(
         ),
         sub_agents=sub_agents,
     )
+
+
+#: Prompts que nenhum agente dos metadados declara: os juízes genéricos (um por tipo de verificador) e os dois
+#: agentes fora da esteira. `passos_dos_prompts_compartilhados` diz quem os usa, a partir da árvore real.
+ROTULO_PROMPT_COMPARTILHADO = {
+    "transversal/juiz_de_fidelidade.md": "Juiz de fidelidade (compartilhado)",
+    "transversal/juiz_de_achados.md": "Juiz de achados (compartilhado)",
+    "transversal/juiz_de_contradicoes.md": "Juiz de contradições (compartilhado)",
+    "transversal/triagem_correcao.md": "000 · Triagem do pedido de correção (fora da esteira)",
+    "transversal/conversa_etapa.md": "000 · Conversa sobre a missão (fora da esteira)",
+}
+
+
+def passos_dos_prompts_compartilhados() -> Dict[str, List[str]]:
+    """`{prompt: [agentes]}` dos juízes genéricos, pela classe do verificador que os contém, e dos dois de fora."""
+    from agents.checkers import FidelidadeCheckAgent, JuizDeAchadosAgent, JuizDeContradicoesAgent
+    from agents.design import build_design_stage
+    from agents.dev import build_dev_stage
+    from agents.produto import build_produto_stage
+
+    por_classe = {FidelidadeCheckAgent: "transversal/juiz_de_fidelidade.md",
+                  JuizDeAchadosAgent: "transversal/juiz_de_achados.md",
+                  JuizDeContradicoesAgent: "transversal/juiz_de_contradicoes.md"}
+    usos: Dict[str, List[str]] = {"transversal/triagem_correcao.md": ["A000TriagemCorrecao"],
+                                  "transversal/conversa_etapa.md": ["A000ConversaEtapa"]}
+    for raiz in (build_produto_stage(), build_design_stage(), build_dev_stage()):
+        for _, agente in iter_agent_tree(raiz):
+            prompt = next((p for c, p in por_classe.items() if isinstance(agente, c)), None)
+            if prompt and agente.name not in usos.setdefault(prompt, []):
+                usos[prompt].append(agente.name)
+    return usos
 
 
 def iter_agent_tree(agent, depth: int = 0):

@@ -10,7 +10,7 @@ de botão diferentes entre jornada, fluxo e copy ("Usar banco padrão" × "Usar 
 Cada documento, lido sozinho, estava bem escrito; nenhum agente lia os cinco juntos, e nenhum tinha
 uma lista do que é canônico.
 
-Agora a spec traz o bloco `## Glossário canônico` (`prompts/produto/13_spec_missao.md`) e este módulo
+Agora a spec traz o bloco `## Glossário canônico` (`prompts/produto/035_spec_missao.md`) e este módulo
 confere os documentos a jusante contra ele:
 
 - variante proibida de uma entidade = **bloqueio** (é o mesmo órgão com outro nome na tela);
@@ -54,7 +54,7 @@ _RE_PAPEL_DE_GESTAO = re.compile(r"\bcoordena\w*|\brespons[áa]ve(?:l|is)\b", re
 _RE_ROTULO_CONTEXTO = re.compile(r"bot[ãa]o|\bcta\b|clica|clique|\btoca\b|\btoque\b|r[óo]tulo|\bbutton\b|\blabel\b", re.I)
 #: A chave de string de um botão na tabela de copy: `e0.rotulo.botao_configurar`, `e2.cta.enviar`.
 _RE_CHAVE_DE_BOTAO = re.compile(r"\b\w+\.\w+\.\w*(?:bot[aã]o|cta)\w*|\b\w+\.(?:bot[aã]o|cta)\.\w+", re.I)
-_RE_ENTRE_ASPAS = re.compile(r"[“\"«`]([^”\"»`\n]{2,60})[”\"»`]")
+_RE_ENTRE_ASPAS = re.compile(r"[“\"«`']([^”\"»`'\n]{2,60})[”\"»`']")
 _RE_ARQUIVO = re.compile(r"(?<![\w/.-])((?:[\w-]+/)*[\w.-]+\.(?:html|md|docx|pdf|json|csv))\b")
 _PALAVRAS_VAZIAS = frozenset("a o as os de da do das dos e em para com por um uma no na nos nas ao aos à às".split())
 _NUMEROS_POR_EXTENSO = {
@@ -343,18 +343,21 @@ def _numeros(g: Dict[str, Any], rotulo: str, texto: str) -> List[Dict[str, str]]
 def _candidatos_a_rotulo(texto: str) -> List[Tuple[str, int]]:
     """Textos citados como rótulo: entre aspas/crases numa linha que fala de botão, ou na célula de uma
     linha da tabela de copy cuja chave é de botão (`e0.rotulo.botao_configurar`)."""
-    cands: List[Tuple[str, int]] = []
+    cands: List[Tuple[str, int, bool]] = []
     pos = 0
     for linha in texto.splitlines(keepends=True):
         if _RE_ROTULO_CONTEXTO.search(linha):
-            cands += [(m.group(1), pos + m.start()) for m in _RE_ENTRE_ASPAS.finditer(linha)]
+            eh_tab = linha.lstrip().startswith("|")
+            cands += [(m.group(1), pos + m.start(), eh_tab) for m in _RE_ENTRE_ASPAS.finditer(linha)]
         if linha.lstrip().startswith("|") and _RE_CHAVE_DE_BOTAO.search(linha):
-            cands += [(c, pos) for c in (x.strip() for x in linha.strip().strip("|").split("|"))]
+            cands += [(c, pos, True) for c in (x.strip() for x in linha.strip().strip("|").split("|"))]
         pos += len(linha)
     saida = []
-    for bruto, p in cands:
+    for bruto, p, eh_tabela in cands:
         c = _limpa(bruto)
         if not c or not re.search(r"[A-Za-zÀ-ú]", c) or re.search(r"[_/]|\w\.\w|^E\d-|^[A-Z0-9_]+$", c):
+            continue
+        if (eh_tabela or bruto.startswith("'")) and len(c.split()) == 1 and c.islower():
             continue
         if not 1 <= len(c.split()) <= 8:
             continue
@@ -444,17 +447,30 @@ def _declaracoes(texto: str) -> Dict[str, Dict[str, Dict[str, Set[str]]]]:
             if c:
                 anota(m.group(1), c.group(1), c.group(2))
     for bloco in re.findall(r"erDiagram(.*?)(?:```|\Z)", texto or "", re.S):
-        for ent, corpo in re.findall(r"([\w-]+)\s*\{([^}]*)\}", bloco):
+        for ent, corpo in re.findall(r"(?m)^\s*([A-Za-z_]\w*)\s*\{([^}]*)\}", bloco):
             for linha in corpo.splitlines():
                 c = re.match(r"\s*(" + _RE_TIPO + r")\w*\s+(\w+)", linha, re.I)
                 if c:
                     anota(ent, c.group(2), c.group(1))
+    tabela_atual = "*"
     for linha in (texto or "").splitlines():
         t = re.match(r"\s*[-*]\s*\*\*`?(\w+_\w+)`?\*\*", linha)
-        if not t:
-            continue
-        for c in re.finditer(r"`(\w+)\s+(" + _RE_TIPO + r")\b[^`]*`", linha, re.I):
-            anota(t.group(1), c.group(1), c.group(2))
+        if t:
+            tabela_atual = t.group(1).lower()
+            for c in re.finditer(r"`(\w+)\s+(" + _RE_TIPO + r")\b[^`]*`", linha, re.I):
+                anota(t.group(1), c.group(1), c.group(2))
+        elif linha.strip().startswith("|"):
+            partes = [p.strip() for p in linha.strip().strip("|").split("|")]
+            if len(partes) >= 2:
+                col = re.sub(r"[`*]", "", partes[0]).strip().lower()
+                if col in ("coluna", "campo", "nome", "name") or re.match(r"^:?-+:?$", col):
+                    continue
+                tipo_match = re.search(r"\b(" + _RE_TIPO + r")\b", partes[1], re.I)
+                if tipo_match and re.match(r"^[a-z0-9_]+$", col):
+                    anota(tabela_atual, col, tipo_match.group(1))
+        elif re.match(r"^#{1,4}\s+", linha):
+            t_cab = re.search(r"\b([a-z0-9]+_[a-z0-9_]+)\b", linha, re.I)
+            tabela_atual = t_cab.group(1).lower() if t_cab else "*"
     return decl
 
 
@@ -470,15 +486,51 @@ def _tipos(fams: Dict[str, Set[str]]) -> str:
     return " × ".join(sorted("/".join(sorted(t)) for t in fams.values()))
 
 
+#: Chaves do núcleo → coluna da plataforma que dá o tipo. Sem `fichas-tecnicas.json`, vale o tipo escrito aqui.
+TIPO_DA_PLATAFORMA = {"escola_id": "TEXT", "turma_id": "UUID", "estudante_id": "UUID"}
+_ORIGEM_DO_NUCLEO = {"escola_id": ("turmas", "escola_id"), "turma_id": ("turmas", "id"), "estudante_id": ("users", "id")}
+
+
+def _esperados_da_plataforma(texto: str, decl: Dict[str, Dict[str, Dict[str, Set[str]]]]) -> List[Tuple[str, str, str, str]]:
+    """`(tabela, coluna, TIPO esperado, de onde vem)` para cada coluna do documento que a plataforma tipa.
+
+    Três fontes, todas do esquema real (`tools/esquema_plataforma`, plano padrão ouro 2.2): a tabela já publicada
+    (vale a migration dela), a chave estrangeira (vale o tipo da coluna-alvo) e as chaves do núcleo."""
+    from tools.esquema_plataforma import ler_migrations, tabelas as tabelas_da_plataforma
+
+    plat = tabelas_da_plataforma()
+    esperados: List[Tuple[str, str, str, str]] = []
+    for tabela, colunas in decl.items():
+        publicada = plat.get(tabela) or {}
+        for coluna in colunas:
+            if coluna in publicada:
+                esperados.append((tabela, coluna, publicada[coluna], f"migration publicada de `{tabela}`"))
+    _, fks = ler_migrations(texto or "")
+    for tabela, refs in fks.items():
+        for coluna, (alvo, col_alvo) in refs.items():
+            tipo = (plat.get(alvo) or {}).get(col_alvo)
+            if tipo and coluna in decl.get(tabela, {}):
+                esperados.append((tabela, coluna, tipo, f"chave estrangeira para `{alvo}.{col_alvo}`"))
+    for coluna, (alvo, col_alvo) in _ORIGEM_DO_NUCLEO.items():
+        tipo = (plat.get(alvo) or {}).get(col_alvo) or TIPO_DA_PLATAFORMA[coluna]
+        for tabela, colunas in decl.items():
+            if coluna in colunas:
+                esperados.append((tabela, coluna, tipo, f"chave do núcleo (`{alvo}.{col_alvo}`)"))
+    return esperados
+
+
 def conferir_colunas(texto: str, referencia: str = "", rotulo: str = "PRD", rotulo_ref: str = "spec",
                      etapa: str = "dev") -> List[Dict[str, str]]:
-    """O documento contra o próprio modelo de dados, e (com `referencia`) contra o da spec.
+    """O documento contra o próprio modelo de dados, contra a plataforma e (com `referencia`) contra o da spec.
 
     - coluna citada (`tabela.coluna` com tabela declarada, ou "coluna \\`x\\`") que nenhum DDL ou
       erDiagram do documento declara = atenção;
     - a mesma coluna com dois tipos no documento = bloqueio — por tabela, e para chaves `*_id` entre
       tabelas (é a mesma chave: `escola_id` não pode ser UUID numa e TEXT na outra);
-    - a coluna com tipo diferente do que a spec declara = bloqueio.
+    - coluna com tipo diferente da plataforma real (`tools/esquema_plataforma`: tabela já publicada, chave
+      estrangeira para tabela da plataforma, chaves do núcleo) = bloqueio, sem válvula de texto do modelo;
+    - quando `referencia` for a spec (`rotulo_ref == "spec"`), compara apenas os nomes das colunas,
+      já que tipos SQL cabem exclusivamente ao PRD; quando for outra referência, compara tipos.
     """
     decl = _declaracoes(texto)
     achados: List[Dict[str, str]] = []
@@ -517,39 +569,45 @@ def conferir_colunas(texto: str, referencia: str = "", rotulo: str = "PRD", rotu
                   f"{rotulo}: `{coluna}` aparece com dois tipos ({_tipos(fams)}). A chave é a mesma em todas as tabelas: "
                   f"a migration, o Prisma e a política de RLS (`current_setting(...)::uuid`) precisam de um tipo só.")
 
+    # Contra a plataforma real: tabela publicada, chave estrangeira e núcleo. Sem válvula de texto do modelo — a
+    # frase «Seguiu a plataforma» não alivia nada (plano padrão ouro, 2.2). A spec não dita DDL e fica de fora.
+    if rotulo != "spec":
+        vistos: Set[Tuple[str, str]] = set()
+        for tabela, coluna, tipo, origem in _esperados_da_plataforma(texto, decl):
+            fams = decl.get(tabela, {}).get(coluna) or {}
+            # `TIMESTAMPTZ(6)`, `VARCHAR(16)`: a precisão não muda a família
+            if (tabela, coluna) in vistos or not fams or set(fams) <= {_familia(re.sub(r"\s*\(.*$", "", tipo))}:
+                continue
+            vistos.add((tabela, coluna))
+            falha("bloqueio", "tipo-divergente-da-plataforma",
+                  f"{rotulo}: `{tabela}.{coluna}` é {_tipos(fams)}, mas a plataforma usa {tipo} ({origem}). "
+                  "O tipo segue a plataforma.")
+
     if referencia:
         ref = _declaracoes(referencia)
 
-        def divergente(nome: str, resumo: str) -> None:
-            # O PRD que segue a migration publicada e registra a troca não está errado: a spec é que inventou o tipo.
-            # Na exp06ef1b (10/10/2026) o PRD copiou a migration da Júri (`turma_id UUID`, `assuntos TEXT`), anotou
-            # «Seguiu a plataforma» em cada linha — e saiu 🔴 três vezes por concordar com a plataforma.
-            if _divergencia_registrada(texto, nome):
-                achados.append({"severidade": "atencao", "codigo": "tipo-divergente-registrado", "etapa": "produto",
-                                "documento": rotulo_ref, "agente_responsavel": "spec",
-                                "resumo": f"{resumo} O {rotulo} seguiu a plataforma e registrou a troca; a {rotulo_ref} "
-                                          "é que precisa acompanhar."})
-            else:
-                falha("bloqueio", "tipo-divergente-da-spec", resumo)
+        if rotulo_ref == "spec":
+            # Item 1 da Etapa 2: A spec não dita DDL SQL; conferência compara existência de nomes de colunas
+            todas_ref = {c for cols in ref.values() for c in cols}
+            for col_ref in sorted(todas_ref):
+                if col_ref not in todas:
+                    falha("atencao", "coluna-da-spec-ausente",
+                          f"{rotulo}: a coluna `{col_ref}` prevista na {rotulo_ref} não foi declarada no modelo de dados.")
+        else:
+            def divergente(resumo: str) -> None:
+                falha("bloqueio", f"tipo-divergente-de-{rotulo_ref}", resumo)
 
-        for coluna in sorted(c for c in todas if c.endswith("_id")):
-            nossas, delas = _por_coluna(decl, coluna), _por_coluna(ref, coluna)
-            if nossas and delas and not set(nossas) & set(delas):
-                divergente(coluna, f"`{coluna}` é {_tipos(nossas)} no {rotulo} e {_tipos(delas)} na {rotulo_ref}. "
-                                   f"Um dos dois está errado, e quem codifica escolhe ao acaso.")
-        for tabela, colunas in sorted(decl.items()):
-            for coluna, fams in sorted(colunas.items()):
-                delas = ref.get(tabela, {}).get(coluna)
-                if delas and not coluna.endswith("_id") and not set(fams) & set(delas):
-                    divergente(coluna, f"`{tabela}.{coluna}` é {_tipos(fams)} no {rotulo} e {_tipos(delas)} na {rotulo_ref}.")
+            for coluna in sorted(c for c in todas if c.endswith("_id")):
+                nossas, delas = _por_coluna(decl, coluna), _por_coluna(ref, coluna)
+                if nossas and delas and not set(nossas) & set(delas):
+                    divergente(f"`{coluna}` é {_tipos(nossas)} no {rotulo} e {_tipos(delas)} na {rotulo_ref}. "
+                               f"Um dos dois está errado, e quem codifica escolhe ao acaso.")
+            for tabela, colunas in sorted(decl.items()):
+                for coluna, fams in sorted(colunas.items()):
+                    delas = ref.get(tabela, {}).get(coluna)
+                    if delas and not coluna.endswith("_id") and not set(fams) & set(delas):
+                        divergente(f"`{tabela}.{coluna}` é {_tipos(fams)} no {rotulo} e {_tipos(delas)} na {rotulo_ref}.")
     return achados
-
-
-def _divergencia_registrada(texto: str, coluna: str) -> bool:
-    """Uma linha do documento cita a coluna e diz que seguiu a plataforma (tabela de divergências da seção 19)."""
-    alvo = re.compile(rf"(?<![\w]){re.escape(coluna)}(?![\w])", re.I)
-    return any(alvo.search(l) and re.search(r"segu\w*\s+(?:a\s+)?plataforma|molde\s+d[ao]\s+j[úu]ri", l, re.I)
-               for l in (texto or "").splitlines())
 
 
 # ------------------------------------------------------------------ entrada

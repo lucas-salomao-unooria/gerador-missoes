@@ -33,7 +33,7 @@ from tools import bncc
 
 AGENTE = "conteudo-aprovado"
 
-#: Seções do one-pager (`prompts/produto/04_secoes_apoio.md`); a numeração é a mesma nas 11 missões.
+#: Seções do one-pager (`prompts/produto/014_secoes_apoio.md`); a numeração é a mesma nas 11 missões.
 TITULOS = {
     0: "Identificação",
     1: "Descoberta central e anatomia do aha",
@@ -71,7 +71,7 @@ SECOES_NUCLEO: Tuple[int, ...] = (1, 3, 4)
 #: E §0, §5, §16 e §18 (identificação, verificação de ambiente, escopo V1/V2, decisões e propostas), que a
 #: auditoria do PR #32 achou faltando: com elas, design e dev recebem o one-pager inteiro, seção por seção.
 SECOES_DESIGN: Tuple[int, ...] = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18)
-#: O dev recebe o mesmo que o design. Até 07/10/2026 o `A33aConteudoAprovadoDev` regravava a chave com as
+#: O dev recebe o mesmo que o design. Até 07/10/2026 o `A085ConteudoAprovadoDev` regravava a chave com as
 #: seções do PRD, e a banca — e os agentes de design que ela reaciona — perdiam §8, §13 e o núcleo; o banco de
 #: conteúdo lia o núcleo de antes da revisão do one-pager (`nucleo_narrativo`).
 SECOES_DEV: Tuple[int, ...] = SECOES_DESIGN
@@ -494,7 +494,11 @@ _UNIDADE_ESCRITA = {"seg": r"(?:s\b|seg\w*)", "min": r"min\w*", "%": r"%", "pal"
 #: Linha que ainda trata o número como pendente, ou que diz quem o decidiu (o D0 ratificou, o PO homologou).
 _RE_AINDA_PENDENTE = re.compile(r"PAR[ÂA]METRO|PROPOSTA|ABERTO|DECIS[ÃA]O PENDENTE|a definir|validar com (?:o )?PO|"
                                 r"NEEDS CLARIFICATION", re.I)
-_RE_DECISAO_REGISTRADA = re.compile(r"ratificad|homologad|\[D0-\d|parecer d[oe]|decidido (?:pelo|em|no)|PO —", re.I)
+#: Só a decisão do PO com data isenta (princípio 1 do plano padrão ouro). A ratificação pelo D0 (`[D0-n]`,
+#: «ratificado») é de um agente: não isenta, e o número decidido assim fica 🟡 para o PO ver (`_RE_RATIFICADO_PELO_D0`).
+_RE_DECISAO_REGISTRADA = re.compile(r"(?:homologad|parecer d[oe]|decidido (?:pelo|em|no)|PO —|pedido d[oe] PO)"
+                                    r"[^\n]*\b\d{2}/\d{2}/\d{4}\b", re.I)
+_RE_RATIFICADO_PELO_D0 = re.compile(r"ratificad|\[D0-\d", re.I)
 
 
 def _familia_da_unidade(unidade: str) -> str:
@@ -649,8 +653,12 @@ def validar_spec(spec: str, one_pager: str) -> Dict[str, Any]:
             "produto"))
     decididos = parametros_decididos(spec, one_pager)
     # no mesmo assunto bloqueia; número igual em outro assunto (a duração de um áudio) só fica 🟡 para o PO ver
-    for severidade, grupo in (("bloqueio", [d for d in decididos if parametro_no_mesmo_assunto(d[0], d[1], one_pager)]),
-                              ("atencao", [d for d in decididos if not parametro_no_mesmo_assunto(d[0], d[1], one_pager)])):
+    # ratificado pelo D0 é decisão de agente com registro: não bloqueia, mas não some (o PO decide)
+    def bloqueia(d: Tuple[str, str]) -> bool:
+        return parametro_no_mesmo_assunto(d[0], d[1], one_pager) and not _RE_RATIFICADO_PELO_D0.search(d[1])
+
+    for severidade, grupo in (("bloqueio", [d for d in decididos if bloqueia(d)]),
+                              ("atencao", [d for d in decididos if not bloqueia(d)])):
         if not grupo:
             continue
         exemplos = "; ".join(f"{marcador[:110]} → «{linha[:120]}»" for marcador, linha in grupo[:4])
@@ -1006,7 +1014,7 @@ _RE_HABILIDADE_SO_CITADA = re.compile(r"PROPOSTA|a confirmar|DIVERG[ÊE]NCIA|ABE
 def validar_resumido(resumido: str, spec: str, one_pager: str) -> Dict[str, Any]:
     """O one-pager resumido contra o canônico aprovado e a spec.
 
-    O resumido é o que o time de produto lê para aprovar a missão pedagogicamente (A16b); o canônico é o que
+    O resumido é o que o time de produto lê para aprovar a missão pedagogicamente (A051); o canônico é o que
     segue para design e dev. Até 07/10/2026 nada os comparava, e o prompt mandava a spec vencer quando os dois
     divergiam. Confere as habilidades do bloco 11 (já conferidas contra o §12a), o tempo em tela do §10 e o Canal
     B com o texto aprovado — o contrato de evidência do resumido usa as alternativas como tabela de marcadores, e

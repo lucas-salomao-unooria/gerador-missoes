@@ -1159,7 +1159,8 @@ def validar(prd: str, state: Dict[str, Any]) -> Dict[str, Any]:
     # do hub e da api que os testes da plataforma cobram (`tools/conferir_prd_plataforma.validar_prd`)
     from tools import conferir_prd_plataforma as plataforma
 
-    achados += [{**a, "agente_responsavel": DONO} for a in plataforma.validar_prd(corpo, plataforma.slug_do_prd(corpo))]
+    achados += [{**a, "agente_responsavel": DONO} for a in plataforma.validar_prd(corpo, plataforma.slug_do_prd(corpo),
+                                                                                   plataforma.datas_do_po(state))]
     return {"status": _status(achados), "achados": achados, "contagens": contagens}
 
 

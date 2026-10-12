@@ -140,7 +140,7 @@ def e_mensagem_de_pulo(valor: Any) -> bool:
     """O ADK grava no `output_key` o texto do callback que pulou o agente.
 
     Sem este filtro, um pipeline bloqueado produz um `PRD.md` de 88 bytes dizendo
-    "A47PrdWriter não executado" — e a interface, que só testa se a chave existe,
+    "A103PrdWriter não executado" — e a interface, que só testa se a chave existe,
     anuncia "PRD gerado".
     """
     if not isinstance(valor, str):

@@ -131,10 +131,10 @@ def test_writers_do_dev_desembrulham_a_saida():
 def test_banca_de_produto_recebe_o_one_pager_antes_de_julgar():
     from agents.banca import get_banca
 
-    produto = get_banca("produto", "AC", "A15h", rotulo="Banca de produto", titulo="t", report_key="r", status_key="s")
-    assert produto[0].name == "A15hConteudoAprovado" and produto[1].name == "A15hEscopoBanca"
-    design = get_banca("design", "AB", "A29f", rotulo="Banca de design", titulo="t", report_key="r", status_key="s")
-    assert design[0].name == "A29fEscopoBanca", "no design o conteúdo aprovado já existe, com o retrato da etapa"
+    produto = get_banca("produto", "AC", 45, rotulo="Banca de produto", titulo="t", report_key="r", status_key="s")
+    assert produto[0].name == "A045ConteudoAprovado" and produto[1].name == "A046EscopoBanca"
+    design = get_banca("design", "AB", 75, rotulo="Banca de design", titulo="t", report_key="r", status_key="s")
+    assert design[0].name == "A075EscopoBanca", "no design o conteúdo aprovado já existe, com o retrato da etapa"
 
 
 def test_pedido_do_po_que_retira_habilidade_vence_o_briefing_original():
@@ -161,7 +161,7 @@ def test_pedido_do_po_que_retira_habilidade_vence_o_briefing_original():
 
 # --------------------------------------------------------------------------- autor mudo (exp03ef1b, 08/10/2026)
 def test_one_pager_vazio_reprova_a_conferencia_mesmo_sem_anexo_do_po():
-    """O A04 terminou sem texto duas vezes; sem anexo do PO a conferência dizia «não se aplica» e o loop saía."""
+    """O A014 terminou sem texto duas vezes; sem anexo do PO a conferência dizia «não se aplica» e o loop saía."""
     from tools import one_pager_po as op
 
     r = op.conferir("", "")
@@ -175,23 +175,23 @@ def test_documento_obrigatorio_para_a_etapa_com_mensagem_legivel():
 
     from agents.checkers import DocumentoAusente, DocumentoObrigatorioAgent
 
-    guarda = DocumentoObrigatorioAgent(name="G", chave="one_pager", autor="A04SecoesApoio")
-    with pytest.raises(DocumentoAusente, match="A04SecoesApoio terminou sem texto"):
+    guarda = DocumentoObrigatorioAgent(name="G", chave="one_pager", autor="A014SecoesApoio")
+    with pytest.raises(DocumentoAusente, match="A014SecoesApoio terminou sem texto"):
         asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[guarda]), {"one_pager": ""}))
-    guarda = DocumentoObrigatorioAgent(name="G", chave="one_pager", autor="A04SecoesApoio")
+    guarda = DocumentoObrigatorioAgent(name="G", chave="one_pager", autor="A014SecoesApoio")
     assert asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[guarda]), {"one_pager": "# OP"}))["one_pager"] == "# OP"
 
     from agents.produto import build_produto_stage
 
     nomes = [a.name for a in build_produto_stage().sub_agents]
-    assert nomes.index("SecoesApoioLoop") < nomes.index("A04fOnePagerExiste") < nomes.index("GateEstruturalLoop")
+    assert nomes.index("SecoesApoioLoop") < nomes.index("A017OnePagerExiste") < nomes.index("GateEstruturalLoop")
 
 
 def test_erro_de_variavel_ausente_vira_mensagem_que_o_po_le():
     from pipeline.runner import mensagem_de_erro
 
-    msg = mensagem_de_erro(KeyError("Context variable not found: `one_pager` in agent 'A05GateEstrutural'."))
-    assert "`one_pager`" in msg and "A05GateEstrutural" in msg and "terminou sem texto" in msg
+    msg = mensagem_de_erro(KeyError("Context variable not found: `one_pager` in agent 'A021GateEstrutural'."))
+    assert "`one_pager`" in msg and "A021GateEstrutural" in msg and "terminou sem texto" in msg
     assert mensagem_de_erro(RuntimeError("outra coisa")) == "outra coisa"
 
 
@@ -209,7 +209,7 @@ def test_fidelidade_le_so_o_texto_do_pedido_e_nao_o_cabecalho_da_esteira():
 
 
 def test_resposta_cortada_pelo_modelo_vai_a_proxima_tentativa_do_mesmo_agente():
-    """exp03ef1b (08/10/2026): o A04 terminou com FinishReason.RECITATION e nenhum texto, duas vezes, com a mesma
+    """exp03ef1b (08/10/2026): o A014 terminou com FinishReason.RECITATION e nenhum texto, duas vezes, com a mesma
     instrução. Reproduzido localmente sobre o estado salvo. Agora o motivo vai ao estado e à instrução seguinte."""
     from google.adk.models.llm_response import LlmResponse
     from google.genai import types
@@ -218,7 +218,7 @@ def test_resposta_cortada_pelo_modelo_vai_a_proxima_tentativa_do_mesmo_agente():
     from agents.callbacks import registrar_corte_do_modelo
 
     class _Ctx:
-        agent_name = "A04SecoesApoio"
+        agent_name = "A014SecoesApoio"
 
         def __init__(self):
             self.state = {}
@@ -226,14 +226,14 @@ def test_resposta_cortada_pelo_modelo_vai_a_proxima_tentativa_do_mesmo_agente():
     ctx = _Ctx()
     cortada = LlmResponse(content=types.Content(role="model", parts=[]), finish_reason=types.FinishReason.RECITATION)
     registrar_corte_do_modelo(ctx, cortada)
-    assert "filtro de recitação" in ctx.state["bloqueio_modelo_A04SecoesApoio"]
+    assert "filtro de recitação" in ctx.state["bloqueio_modelo_A014SecoesApoio"]
     ok = LlmResponse(content=types.Content(role="model", parts=[types.Part(text="# One-pager")]),
                      finish_reason=types.FinishReason.STOP)
     registrar_corte_do_modelo(ctx, ok)
-    assert ctx.state["bloqueio_modelo_A04SecoesApoio"] == ""
+    assert ctx.state["bloqueio_modelo_A014SecoesApoio"] == ""
 
-    agente = create_llm_agent(name="A04SecoesApoio", instruction="x", description="d", output_key="one_pager")
-    assert "{bloqueio_modelo_A04SecoesApoio?}" in agente.instruction
+    agente = create_llm_agent(name="A014SecoesApoio", instruction="x", description="d", output_key="one_pager")
+    assert "{bloqueio_modelo_A014SecoesApoio?}" in agente.instruction
     assert agente.after_model_callback is registrar_corte_do_modelo
 
 
@@ -309,10 +309,13 @@ def test_handoff_no_prd_tabela_e_evento_nao_somem_sem_registro():
     codigos = {a["codigo"] for a in handoff_no_prd(prd, handoff)}
     assert codigos == {"tabela-do-handoff-perdida", "evento-do-handoff-perdido"}
     registrado = prd + "\n\n# 19. Decisões\n`exp06ef1b_reflexoes` e `missao:concluir` saem: divergência com o handoff, dono produto.\n"
-    assert handoff_no_prd(registrado, handoff) == []
+    # registrar na seção 19 é texto do modelo: tira do bloqueio, mas fica 🟡 para o PO (plano padrão ouro, 2.8)
+    assert [(a["codigo"], a["severidade"]) for a in handoff_no_prd(registrado, handoff)] == [
+        ("divergencia-do-handoff-registrada", "atencao")]
     rota = handoff_no_prd(prd.replace("POST /exp06ef1b/turmas/:turmaId/zerar", "DELETE /exp06ef1b/turmas/:turmaId")
                           + "\n# 19. Decisões\nexp06ef1b_reflexoes missao:concluir\n", handoff)
-    assert [a["codigo"] for a in rota] == ["rota-do-handoff-mudou"] and rota[0]["severidade"] == "atencao"
+    assert sorted(a["codigo"] for a in rota) == ["divergencia-do-handoff-registrada", "rota-do-handoff-mudou"]
+    assert all(a["severidade"] == "atencao" for a in rota)
 
 
 def test_pedagogico_tem_juiz_de_contradicoes():
@@ -320,7 +323,7 @@ def test_pedagogico_tem_juiz_de_contradicoes():
 
     loop = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "OnePagerPedagogicoLoop")
     nomes = [a.name for a in loop.sub_agents]
-    assert nomes.index("A49eCoerenciaPedagogico") < nomes.index("A49PedagogicoRodada")
+    assert nomes.index("A112CoerenciaPedagogico") < nomes.index("A113PedagogicoRodada")
     assert "coerencia_pedagogico_status" in loop.sub_agents[-1].status_keys
 
 
@@ -375,8 +378,8 @@ def test_gates_de_llm_pedem_citacao_e_sabem_o_que_avaliam():
     from pipeline.orchestrator import iter_agent_tree  # noqa: F401  (só garante que o módulo carrega)
     from prompts import load_prompt
 
-    for p in ("produto/02_micro_gate.md", "produto/05_gate_estrutural.md", "produto/11_gate_final.md",
-              "design/30_qa_entregaveis.md", "dev/39_validacao_produto_narrativa.md"):
+    for p in ("produto/007_micro_gate.md", "produto/021_gate_estrutural.md", "produto/033_gate_final.md",
+              "design/078_qa_entregaveis.md", "dev/validacao_produto_narrativa.md"):
         assert "o código confere" in load_prompt(p).lower(), p
 
     def todos(a):
@@ -386,8 +389,8 @@ def test_gates_de_llm_pedem_citacao_e_sabem_o_que_avaliam():
 
     gates = {a.name: a for raiz in (build_produto_stage(), build_design_stage()) for a in todos(raiz)
              if type(a).__name__ == "EnvelopeGateAgent"}
-    for nome in ("A03MicroGateCheck", "A06GateEstruturalCheck", "A08bAvaliacaoCheck", "A10aAdequacaoCheck",
-                 "A12GateFinalProdutoCheck", "A15eJuizPerguntasCheck", "A31QaEntregaveisCheck"):
+    for nome in ("A012MicroGateCheck", "A022GateEstruturalCheck", "A025AvaliacaoCheck", "A027AdequacaoCheck",
+                 "A034GateFinalProdutoCheck", "A042JuizPerguntasCheck", "A080QaEntregaveisCheck"):
         assert gates[nome].documentos, nome
 
 
@@ -494,8 +497,8 @@ def test_fidelidade_do_nucleo_e_parcial_so_violacao_bloqueia():
         yield a
         for s in getattr(a, "sub_agents", []) or []:
             yield from todos(s)
-    nucleo = next(a for a in todos(build_produto_stage()) if a.name == "A03aFidelidadeNucleo")
-    fim = next(a for a in todos(build_produto_stage()) if a.name == "A16cFidelidadeProduto")
+    nucleo = next(a for a in todos(build_produto_stage()) if a.name == "A010FidelidadeNucleo")
+    fim = next(a for a in todos(build_produto_stage()) if a.name == "A050FidelidadeProduto")
     assert nucleo.parcial and not fim.parcial
 
 
@@ -520,7 +523,7 @@ def test_split_tira_a_moldura_do_agente_e_a_preservacao_nao_faz_ping_pong():
 def test_prototipo_pede_cada_pergunta_do_canal_b_em_quadro_e_sem_gabarito():
     from prompts import load_prompt
 
-    p = load_prompt("design/28_prototipo.md")
+    p = load_prompt("design/069_prototipo.md")
     assert "um quadro\npor item" in p or "um quadro por item" in p.replace("\n", " ")
     assert "sem o rótulo de nível" in p
 
@@ -541,7 +544,7 @@ def test_estados_da_spec_nao_contam_o_gatilho_em_snake_case():
 def test_prototipo_mostra_distratores_de_toda_escolha():
     from prompts import load_prompt
 
-    assert "distratores" in load_prompt("design/28_prototipo.md")
+    assert "distratores" in load_prompt("design/069_prototipo.md")
 
 
 def test_listagem_do_stitch_segue_paginas_e_busca_por_id_o_que_faltou(monkeypatch):
@@ -604,19 +607,22 @@ def test_ordem_de_nao_mexer_sem_citacao_e_atencao_e_violacao_bloqueia():
 
 
 def test_prd_que_segue_a_plataforma_e_registra_nao_bloqueia_por_tipo_da_spec():
-    """exp06ef1b (10/10/2026): o PRD copiou a migration da Júri (`turma_id UUID`) e anotou «Seguiu a plataforma»."""
+    """Plano Padrão Ouro (item 1 e 2 da Etapa 2):
+    - A spec não dita DDL SQL: tipos da spec não bloqueiam o PRD.
+    - Coluna de plataforma (`turma_id UUID`) é validada diretamente contra a plataforma (sem válvula de escape textual).
+    - Coluna da spec não declarada no PRD gera atenção `coluna-da-spec-ausente`.
+    """
     from tools.consistencia import conferir_colunas
 
     spec = 'CREATE TABLE "exp06ef1b_sessoes" (\n  turma_id VARCHAR(64) NOT NULL,\n  assuntos JSONB NOT NULL\n);'
     prd = 'CREATE TABLE "exp06ef1b_sessoes" (\n  "turma_id" UUID NOT NULL,\n  "assuntos" TEXT NOT NULL\n);'
-    sem_registro = conferir_colunas(prd, spec)
-    assert {a["codigo"] for a in sem_registro if a["severidade"] == "bloqueio"} == {"tipo-divergente-da-spec"}
-    registrado = prd + ("\n| `turma_id` em texto na spec | `turma_id UUID` | Seguiu a plataforma (`UUID`) | `produto` |"
-                        "\n| `exp06ef1b_sessoes.assuntos` JSONB na spec | `assuntos TEXT` no molde do Júri | Seguiu a plataforma | `produto` |")
-    achados = conferir_colunas(registrado, spec)
+    achados = conferir_colunas(prd, spec)
+    # turma_id UUID segue a plataforma (UUID), assuntos TEXT não é da plataforma e a spec não impõe tipo DDL
     assert not [a for a in achados if a["severidade"] == "bloqueio"]
-    assert {a["codigo"] for a in achados} == {"tipo-divergente-registrado"}
-    assert all(a["agente_responsavel"] == "spec" for a in achados)
+    # Se a spec tiver coluna que o PRD não tem, acusa atenção coluna-da-spec-ausente
+    spec_com_extra = 'CREATE TABLE "exp06ef1b_sessoes" (\n  turma_id VARCHAR(64) NOT NULL,\n  assuntos JSONB NOT NULL,\n  coluna_faltando INT NOT NULL\n);'
+    achados_extra = conferir_colunas(prd, spec_com_extra)
+    assert any(a["codigo"] == "coluna-da-spec-ausente" for a in achados_extra)
 
 
 def test_regra_da_ficha_le_coluna_jsonb_de_uma_palavra():

@@ -7,7 +7,7 @@ tela, e nenhuma linha deles estava escrita. A IA simulada tinha quatro falas no 
 coluna Status do brief dizia "Homologado", "Pronto para corte" e "Roteiro aprovado" para arquivos
 que não existiam — o PRD leu o status como fato e mandou codificar sobre conteúdo nenhum.
 
-Agora o `A35bBancoConteudo` escreve o texto integral de cada item, e este módulo confere:
+Agora o `A094BancoConteudo` escreve o texto integral de cada item, e este módulo confere:
 
 1. a coluna Status do brief só aceita `a produzir | rascunho | escrito` — homologar, aprovar e dar
    "pronto" é ato humano, e agente que o escreve está afirmando o que ninguém fez (**bloqueio**);
@@ -73,13 +73,27 @@ def _tabela_de_inventario(brief: str) -> List[Dict[str, str]]:
 
 
 def blocos_do_banco(banco: str) -> Dict[str, str]:
-    """`{id: corpo}` dos blocos do banco: o heading começa pelo ID do brief (`### txt-exp09ef1b-01 · …`)."""
+    """`{id: corpo}` dos blocos do banco: o heading começa pelo ID do brief (`### txt-exp09ef1b-01 · …`).
+    O corpo de cada bloco se estende até o próximo título de nível igual ou menor, ou até o próximo bloco."""
     blocos: Dict[str, str] = {}
-    partes = re.split(r"^(#{2,4}\s+.*)$", banco or "", flags=re.M)
-    for i in range(1, len(partes) - 1, 2):
-        m = re.match(r"#{2,4}\s+[`*]*([a-z]{2,4}-[a-z0-9]+(?:-[a-z0-9]+)*-\d{1,3})\b", partes[i], re.I)
-        if m:
-            blocos[m.group(1).lower()] = partes[i + 1]
+    matches = list(re.finditer(r"^(#{2,4})\s+[`*]*([a-z]{2,4}-[a-z0-9]+(?:-[a-z0-9]+)*-\d{1,3})\b.*$", banco or "", flags=re.M | re.I))
+    if not matches:
+        return blocos
+
+    for idx, m in enumerate(matches):
+        nivel = len(m.group(1))
+        bloco_id = m.group(2).lower()
+        inicio_corpo = m.end()
+        fim_corpo = len(banco)
+        if idx + 1 < len(matches):
+            fim_corpo = matches[idx + 1].start()
+
+        padrao_fim = re.compile(rf"^(#{{1,{nivel}}})\s+.*$", flags=re.M)
+        m_fim = padrao_fim.search(banco[inicio_corpo:fim_corpo])
+        if m_fim:
+            fim_corpo = inicio_corpo + m_fim.start()
+
+        blocos[bloco_id] = banco[inicio_corpo:fim_corpo]
     return blocos
 
 

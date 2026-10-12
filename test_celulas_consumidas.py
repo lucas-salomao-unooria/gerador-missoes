@@ -26,21 +26,21 @@ PROMPTS = RAIZ / "prompts"
 TABELA = PROMPTS / "references" / "celulas-consumidas.md"
 FORMATO = PROMPTS / "references" / "formato-spec.md"
 #: O gabarito do one-pager: os `§N` que a tabela cita são as seções `## N.` dele.
-ONE_PAGER = PROMPTS / "produto" / "04_secoes_apoio.md"
+ONE_PAGER = PROMPTS / "produto" / "014_secoes_apoio.md"
 
 #: Código de agente usado na tabela → nome do agente em `agents/design/__init__.py`.
 AGENTES = {
-    "D0": "A17FechaLacunas",
-    "D9": "A19AmbienteSimulado",
-    "D1": "A21BriefOficio",
-    "D2": "A22Jornada",
-    "D3": "A23Fluxo",
-    "D4": "A24CopyPtBr",
-    "D4b": "A25Caa",
-    "D5": "A26Telas",
-    "D6": "A27CopyRevisao",
-    "D8": "A28Prototipo",
-    "D7": "A30QaEntregaveis",
+    "D0": "A055FechaLacunas",
+    "D9": "A057AmbienteSimulado",
+    "D1": "A060BriefOficio",
+    "D2": "A061Jornada",
+    "D3": "A062Fluxo",
+    "D4": "A063CopyPtBr",
+    "D4b": "A064Caa",
+    "D5": "A065Telas",
+    "D6": "A067CopyRevisao",
+    "D8": "A069Prototipo",
+    "D7": "A078QaEntregaveis",
 }
 
 #: Prompts fora do cruzamento «bloco citado → linha que aponta o agente». O D0 percorre a tabela inteira:

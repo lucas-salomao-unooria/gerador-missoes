@@ -267,23 +267,105 @@ def _sem_bloco(documento: str, titulo: str) -> str:
     if not m:
         return documento
     fim = re.search(r"^## ", documento[m.end():], re.MULTILINE)
-    return (documento[:m.start()].rstrip() + ("\n\n" + documento[m.end() + fim.start():].lstrip() if fim else "")).rstrip() + "\n"
+    antes = documento[:m.start()].rstrip()
+    depois = documento[m.end() + fim.start():].lstrip() if fim else ""
+    if antes and depois:
+        return antes + "\n\n" + depois + "\n"
+    elif antes:
+        return antes + "\n"
+    elif depois:
+        return depois + "\n"
+    return "\n"
 
 
-def montar_sobre_aceita(aceita: str, nova: str, titulo: str) -> str:
+def _blocos_numerados(documento: str) -> Dict[str, str]:
+    """`{"0": corpo, "1": corpo, …}` dos blocos `## N` do documento — do título até o próximo `## ` ou o fim."""
+    blocos: Dict[str, str] = {}
+    marcas = list(re.finditer(r"^##\s*(\d{1,2})\b.*$", documento or "", re.MULTILINE))
+    for m in marcas:
+        fim = re.search(r"^## ", documento[m.end():], re.MULTILINE)
+        blocos[m.group(1)] = documento[m.start():m.end() + fim.start()] if fim else documento[m.start():]
+    return blocos
+
+
+def bloco0_pode_mudar(envelope: Optional[Dict[str, Any]]) -> bool:
+    """O D9 só muda o bloco 0 quando o ambiente é `novo`/`existente` e o Gate 0 aceitou a `[RS-AMB]`."""
+    env = envelope or {}
+    respec = env.get("respec") if isinstance(env.get("respec"), dict) else {}
+    return (str(env.get("status") or "").lower() in ("novo", "existente")
+            and str(respec.get("id") or "").upper() == "RS-AMB"
+            and str(respec.get("status") or "").lower() == "aceito")
+
+
+def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool = False,
+                        avisos: Optional[List[Dict[str, Any]]] = None) -> str:
     """A versão aceita com o bloco `titulo` tirado da nova; o resto da nova é descartado.
 
     O D9 acrescenta o bloco 14 e recopiava, por modelo, os 60 KB dos blocos 0–13 do D0. Na exp06ef1b (09/10/2026)
     o D0 traduziu «refresh token» para «chave de renovação» e o D9, partindo da própria versão anterior, manteve o
     inglês: a preservação acusou, com razão, e o design terminou 🔴 duas vezes. Cópia literal é trabalho de código.
     Sem o bloco na nova, devolve a nova como veio — a preservação confere a cópia como antes.
+
+    Única exceção: o bloco 0 da nova entra quando `bloco0_aceito` (`bloco0_pode_mudar`: ambiente novo ou existente
+    com a `[RS-AMB]` aceita). Qualquer outra diferença nos blocos copiados é descartada e vai para `avisos` como 🟡
+    «D9 alterou fora do bloco 14», com o que mudou — antes era descartada em silêncio (plano padrão ouro, 2.5).
     """
     m = re.search(titulo, nova or "", re.MULTILINE)
     if not m:
         return nova
     fim = re.search(r"^## ", nova[m.end():], re.MULTILINE)
     bloco = nova[m.start():m.end() + fim.start()] if fim else nova[m.start():]
-    return _sem_bloco(aceita, titulo).rstrip() + "\n\n" + bloco.strip() + "\n"
+    proprio = (re.search(r"(\d{1,2})", titulo) or [None, None])[1]
+
+    base = aceita
+    dos_aceitos, dos_novos = _blocos_numerados(aceita), _blocos_numerados(nova)
+    for numero, corpo_aceito in dos_aceitos.items():
+        corpo_novo = dos_novos.get(numero)
+        if numero == proprio or corpo_novo is None or corpo_novo.strip() == corpo_aceito.strip():
+            continue
+        if numero == "0" and bloco0_aceito:
+            base = base.replace(corpo_aceito.rstrip(), corpo_novo.rstrip(), 1)
+            continue
+        if avisos is not None:
+            import difflib
+
+            diff = [l for l in difflib.unified_diff(corpo_aceito.strip().splitlines(), corpo_novo.strip().splitlines(),
+                                                    lineterm="", n=0) if l[:1] in "+-" and l[:3] not in ("+++", "---")]
+            avisos.append({
+                "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": "design",
+                "agente_responsavel": "ambiente-simulado",
+                "resumo": (f"D9 alterou fora do bloco {proprio or titulo}: o bloco {numero} veio diferente do aceito e a "
+                           "mudança foi descartada" + (" (o bloco 0 só muda por `[RS-AMB]` aceita)" if numero == "0" else "")
+                           + ":\n" + "\n".join(f"    {l[:200]}" for l in diff[:15])),
+            })
+    return _sem_bloco(base, titulo).rstrip() + "\n\n" + bloco.strip() + "\n"
+
+
+def _instabilidade(state: Dict[str, Any], ex: Dict[str, Any], secao: str) -> Optional[Dict[str, Any]]:
+    """Achado `autor-instavel` quando a seção perdeu linhas da versão da execução anterior (`estavel_contra`)."""
+    from pipeline.reexecucao import KEY_ETAPA_DA_CORRECAO, PREFIXO_VERSAO_ANTERIOR
+    from tools.preservacao import linhas_perdidas
+
+    fonte = str(ex["estavel_contra"])
+    anterior = str(state.get(f"{PREFIXO_VERSAO_ANTERIOR}{fonte}") or "")
+    antes = extrair_secao(anterior, ex["inicio"], ex.get("fim")) if anterior.strip() else None
+    if not antes:
+        return None
+    sumiram = linhas_perdidas(documento_sem_moldura(antes), secao)
+    if not sumiram:
+        return None
+    # spec do Gate 0 refeita (produto/spec reexecutados), retrabalho por achado de gate nesta execução ou pedido de
+    # correção de design: a mudança pode ter motivo
+    com_motivo = bool(str(state.get("tickets_retrabalho") or "").strip()) or bool(str(state.get(f"{PREFIXO_VERSAO_ANTERIOR}spec_missao") or "").strip()) or (
+        str(state.get(KEY_ETAPA_DA_CORRECAO) or "") == "design" and str(state.get("pedido_correcao") or "").strip())
+    return {
+        "severidade": "atencao" if com_motivo else "bloqueio", "codigo": "autor-instavel", "etapa": "design",
+        "agente_responsavel": ex.get("preservar") or fonte,
+        "resumo": (f"`{ex['chave']}` perdeu {len(sumiram)} linha(s) da versão da execução anterior"
+                   + (" — confira se o motivo do refazer as cobre" if com_motivo else
+                      ", sem pedido de correção e sem mudança a montante. Devolva cada uma como estava")
+                   + ":\n" + "\n".join(f"    - «{l[:200]}»" for l in sumiram[:15])),
+    }
 
 
 #: `base_preservada_<chave>`: a versão aceita de um documento cuja reescrita perdeu linhas (`SecaoSplitAgent`).
@@ -308,6 +390,10 @@ class SecaoSplitAgent(BaseAgent):
       preservar     → dono do conserto (slug de retrabalho) quando uma linha do documento ATUAL some
                       do novo (`tools/preservacao.linhas_perdidas`). O D0 da exp06ef1b apagou a
                       pergunta 3 do debate e passou: o tamanho não encolheu o bastante (07/10/2026).
+      estavel_contra → chave autoral cuja versão de antes do refazer (`versao_anterior_<chave>`) traz a mesma
+                      seção: o que ela tinha e a nova não tem é instabilidade do autor. Na exp06ef1b o D0 traduziu
+                      o próprio texto num refazer sem pedido. Sem nada mudado a montante (spec do Gate 0) e sem
+                      pedido de correção de design, é bloqueio; com motivo, 🟡 com as linhas (plano padrão ouro, 2.7).
       bloco_proprio → regex do título do único bloco que este autor escreve (`^## 14`): o documento gravado é a
                       versão aceita com esse bloco trocado pelo da nova — o resto da nova é descartado, e a
                       preservação confere só o que não é dele (`montar_sobre_aceita`).
@@ -319,7 +405,7 @@ class SecaoSplitAgent(BaseAgent):
     status_key: str
     rotulo: str = "Split"
     extracoes: List[Dict[str, Any]] = Field(default_factory=list)
-    #: a fonte é um documento, não um veredito (o one-pager do A04): não há envelope a ler, e
+    #: a fonte é um documento, não um veredito (o one-pager do A014): não há envelope a ler, e
     #: procurá-lo gerava um `envelope-ilegivel` em toda execução
     fonte_sem_veredito: bool = False
 
@@ -347,6 +433,8 @@ class SecaoSplitAgent(BaseAgent):
         else:
             faltou: List[tuple] = []
             perdidas: List[Dict[str, Any]] = []
+            fora_do_bloco: List[Dict[str, Any]] = []
+            instaveis: List[Dict[str, Any]] = []
             for ex in self.extracoes:
                 chave = ex["chave"]
                 secao = extrair_secao(texto, ex["inicio"], ex.get("fim"))
@@ -355,7 +443,9 @@ class SecaoSplitAgent(BaseAgent):
                 proprio = ex.get("bloco_proprio")
                 aceita = str(state.get(f"{PREFIXO_BASE_PRESERVADA}{chave}") or "") or str(state.get(chave) or "")
                 if secao is not None and proprio and aceita.strip():
-                    secao = montar_sobre_aceita(documento_sem_moldura(aceita), secao, proprio)
+                    env_fonte = None if self.fonte_sem_veredito else extrair_envelope(texto)
+                    secao = montar_sobre_aceita(documento_sem_moldura(aceita), secao, proprio,
+                                                bloco0_aceito=bloco0_pode_mudar(env_fonte), avisos=fora_do_bloco)
                 motivo: Optional[str] = None
                 if secao is None:
                     motivo = "seção não encontrada no relatório"
@@ -403,6 +493,12 @@ class SecaoSplitAgent(BaseAgent):
                                        "no mesmo lugar:\n" + "\n".join(f"    - «{l[:200]}»" for l in sumiram[:15])),
                         })
                         linhas.append(f"⛔ `{chave}`: {len(sumiram)} linha(s) do documento anterior sumiram na reescrita.")
+                if ex.get("estavel_contra"):
+                    achado = _instabilidade(state, ex, secao)
+                    if achado:
+                        (perdidas if achado["severidade"] == "bloqueio" else instaveis).append(achado)
+                        linhas.append(f"{'⛔' if achado['severidade'] == 'bloqueio' else '🟡'} `{chave}`: mudou contra "
+                                      "a versão da execução anterior.")
                 delta[chave] = secao
                 linhas.append(f"✅ `{chave}` gravado a partir de `{self.source_key}` ({len(secao)} caracteres).")
 
@@ -445,6 +541,15 @@ class SecaoSplitAgent(BaseAgent):
                                    "(decisão do PO). Reabra cada uma como `[ABERTO — dono: PO: …]` com as alternativas, "
                                    "sem marcar Resolvido:\n" + "\n".join(f"    - {l}" for l in fechadas[:10])),
                     })
+            if fora_do_bloco:
+                if delta[self.status_key] != STATUS_BLOQUEADO:
+                    delta[self.status_key] = "amarelo"
+                env.setdefault("achados", []).extend(fora_do_bloco)
+                linhas.append(f"🟡 {len(fora_do_bloco)} bloco(s) alterado(s) fora do bloco próprio — descartado(s), ver achados.")
+            if instaveis:
+                if delta[self.status_key] != STATUS_BLOQUEADO:
+                    delta[self.status_key] = "amarelo"
+                env.setdefault("achados", []).extend(instaveis)
             if perdidas:
                 delta[self.status_key] = STATUS_BLOQUEADO
                 env["status"] = "bloqueado"
@@ -484,7 +589,7 @@ class ArtefatosDesignAgent(BaseAgent):
     fonte_wireframes: str = "wireframes_cobertura"
     #: Telas no Stitch × inventário da jornada. Na exp09ef1b o Stitch tinha 6 das 16 telas e o QA escreveu
     #: "todas as 16 telas ativas"; aqui só se avisava a falta de `E0-PROF`. Menos telas que o inventário
-    #: bloqueia, com dono `telas` — o `A30bQaAfirmacoes` leva o ticket ao retrabalho.
+    #: bloqueia, com dono `telas` — o `A079QaAfirmacoes` leva o ticket ao retrabalho.
     status_key: str = "stitch_status"
 
     @override
@@ -634,7 +739,7 @@ class QaAfirmacoesAgent(BaseAgent):
             novo["status"], novo["veredito"] = "bloqueado", "vermelho"
             novo["achados"] = list(envelope.get("achados") or []) + [
                 {"id": f"QA-A{i}", **a} for i, a in enumerate(tickets, 1)]
-            delta[self.qa_key] = (qa.rstrip() + "\n\n## Afirmações conferidas em código (A30b)\n\n"
+            delta[self.qa_key] = (qa.rstrip() + "\n\n## Afirmações conferidas em código (A079)\n\n"
                                   + "\n".join(f"- ⛔ `{a['codigo']}` — {a['resumo']}" for a in tickets)
                                   + "\n\nO veredito acima foi reescrito: aprovar com uma contagem que não bate é aprovar "
                                     "o que ninguém viu.\n\n```json\n" + json.dumps(novo, ensure_ascii=False) + "\n```\n")
@@ -913,7 +1018,7 @@ class CoberturaTelasAgent(BaseAgent):
     o protótipo com um quadro por tela em vez de um por estado, enquanto os gates aprovavam: comparavam
     contagem, não IDs. Aqui a lista vem da tabela «Seção 3» da jornada (`tools/telas.py`) e cada
     derivado (fluxo, copy revisada, cobertura, protótipo) é conferido por conjunto; cada falta sai com o
-    dono do conserto, e o `A30bQaAfirmacoes` a leva ao retrabalho.
+    dono do conserto, e o `A079QaAfirmacoes` a leva ao retrabalho.
     """
 
     report_key: str = "cobertura_telas_report"
@@ -1038,7 +1143,7 @@ class ConsolidacaoBancaAgent(BaseAgent):
     report_key: str = "validacao_dev_report"
     status_key: str = "dev_status"
     rotulo: str = "Banca de dev"
-    #: Grava o status aqui mesmo. A banca de dev tem um gate de envelope depois (A45) que o grava; as bancas de fim
+    #: Grava o status aqui mesmo. A banca de dev tem um gate de envelope depois (A101) que o grava; as bancas de fim
     #: de produto, fim de design e entrada do dev não têm.
     gravar_status: bool = False
     titulo: str = "Validação de insumos"
@@ -1098,7 +1203,7 @@ class DocumentoAusente(RuntimeError):
 class DocumentoObrigatorioAgent(BaseAgent):
     """Para a etapa, com mensagem que se lê, quando um documento de que o resto depende não existe.
 
-    Na exp03ef1b (08/10/2026) o A04 terminou sem texto duas vezes; a esteira seguiu e o gate estrutural quebrou ao
+    Na exp03ef1b (08/10/2026) o A014 terminou sem texto duas vezes; a esteira seguiu e o gate estrutural quebrou ao
     montar o prompt com "Context variable not found: `one_pager`" — e o PO viu só isso. Aqui a parada é no lugar
     certo e diz quem ficou mudo. Fica depois do loop que já chamou o autor de novo.
     """
@@ -1328,7 +1433,7 @@ class RastroCheckAgent(BaseAgent):
             # mandou (exp06ef1b, 08/10/2026: 253 de 304 trechos reescritos num pedido de três correções).
             from tools import one_pager_po as op
 
-            # o brief de escopo sai do `one_pager` antes do gate estrutural (A04bBriefEscopoSplit): o do PO é conferido
+            # o brief de escopo sai do `one_pager` antes do gate estrutural (A018BriefEscopoSplit): o do PO é conferido
             # contra os dois juntos, senão as linhas do brief dele contariam como perdidas
             gerado = "\n\n".join(str(state.get(k, "") or "") for k in ("one_pager", "brief_escopo"))
             resultado = op.conferir(str(state.get("one_pager_po", "") or ""), gerado,
@@ -1608,7 +1713,10 @@ class FidelidadeCheckAgent(BaseAgent):
                 yield evento
             saida = str(ctx.session.state.get(getattr(juiz, "output_key", "") or "", "") or "")
 
-        resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa, parcial=self.parcial)
+        from pipeline.reexecucao import PREFIXO_VERSAO_ANTERIOR
+
+        anteriores = {k: str(state.get(f"{PREFIXO_VERSAO_ANTERIOR}{k}") or "") for k in docs}
+        resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa, parcial=self.parcial, anteriores=anteriores)
         relatorio = fid.relatorio(resultado, itens, missao, self.onde)
         envelope = extrair_envelope(relatorio) or {}
         bloqueios = sum(1 for a in resultado["achados"] if a["severidade"] == "bloqueio")
@@ -1970,6 +2078,8 @@ class DespachoTicketsAgent(BaseAgent):
             chave = getattr(sub, "output_key", None) or ""
             anterior = f"{PREFIXO_ANTERIOR}{chave}" if chave in CHAVES_AUTORAIS else ""
             delta_ticket: Dict[str, Any] = {self.tickets_key: tickets}
+            # a base do refazer (`preparar_estado`) volta depois do autor: zerá-la apagava a versão anterior
+            base_do_refazer = str(state.get(anterior) or "") if anterior else ""
             if anterior and str(state.get(chave) or "").strip():
                 delta_ticket[anterior] = bloco_versao_anterior(chave, str(state.get(chave)))
                 state[anterior] = delta_ticket[anterior]
@@ -1982,9 +2092,9 @@ class DespachoTicketsAgent(BaseAgent):
             async for evento in sub.run_async(ctx):
                 yield evento
             if anterior and anterior in delta_ticket:
-                state[anterior] = ""
+                state[anterior] = base_do_refazer
                 yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
-                            actions=EventActions(state_delta={anterior: ""}))
+                            actions=EventActions(state_delta={anterior: base_do_refazer}))
 
         state[self.tickets_key] = ""
         gastos = int(state.get(KEY_REEXECUCOES, 0) or 0) + llm
@@ -2356,7 +2466,7 @@ class SaidaDeLoopAgent(BaseAgent):
         rodada = int(state.get(self.rodada_key, 0) or 0) + 1
         # Chave ausente conta como REPROVADA. O `k in state` fazia o loop encerrar com
         # aprovação quando o gate a montante não tinha escrito nada — e era o caso do
-        # `adequacao_status`, que nenhum agente gravava: o `A10bAdequacaoCheck` aprovava
+        # `adequacao_status`, que nenhum agente gravava: o `A028AdequacaoCheck` aprovava
         # sempre, sobre uma chave que nunca existiu.
         reprovados = [
             k for k in self.status_keys

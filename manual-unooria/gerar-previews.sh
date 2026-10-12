@@ -13,11 +13,11 @@ from PIL import Image
 # página do PDF -> nome do arquivo de prévia
 PAGINAS = {
     1:  "capa",
-    8:  "o-que-a-esteira-faz",
-    18: "parecer-humano",
-    30: "mapa-dos-agentes",
-    47: "anatomia-do-aha",
-    60: "catalogo-de-agentes",
+    9:  "o-que-a-esteira-faz",
+    19: "parecer-humano",
+    33: "mapa-dos-agentes",
+    50: "anatomia-do-aha",
+    63: "catalogo-de-agentes",
 }
 
 dest = pathlib.Path("previews")

@@ -20,6 +20,19 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
+# Prevenção de deadlock no Python 3.14/macOS: desacopla o ContextVar do OpenTelemetry
+# em chamadas de gerador assíncrono interno do ADK que colidem com context.detach().
+try:
+    from google.adk.agents import base_agent
+
+    async def _safe_with_caller_context(agen, caller_ctx):
+        async for item in agen:
+            yield item
+
+    base_agent._with_caller_context = _safe_with_caller_context
+except Exception:
+    pass
+
 from agents.callbacks import KEY_PIPELINE_BLOQUEADO, KEY_PIPELINE_MOTIVO
 from config import get_settings
 from pipeline.artifacts import (
@@ -211,7 +224,7 @@ _RE_VARIAVEL_AUSENTE = re.compile(r"Context variable not found: `(\w+)` in agent
 
 
 def mensagem_de_erro(exc: BaseException) -> str:
-    """O erro como o PO consegue ler. O ADK diz "Context variable not found: `one_pager` in agent 'A05…'" quando o
+    """O erro como o PO consegue ler. O ADK diz "Context variable not found: `one_pager` in agent 'A021…'" quando o
     agente que escreve um documento termina sem texto e o seguinte precisa dele (exp03ef1b, 08/10/2026, duas vezes)."""
     m = _RE_VARIAVEL_AUSENTE.search(str(exc))
     if m:
@@ -363,12 +376,23 @@ async def run_orchestrator_pipeline_stream(
             author = getattr(event, "author", None) or "Orchestrator"
 
             uso = getattr(event, "usage_metadata", None)
-            if uso is not None:
-                reg = tokens_por_agente.setdefault(author, {"entrada": 0, "saida": 0, "pensamento": 0, "chamadas": 0})
+            # pedaço parcial de streaming repete o uso acumulado da chamada: conta só o evento final
+            if uso is not None and not getattr(event, "partial", False):
+                reg = tokens_por_agente.setdefault(author, {"entrada": 0, "saida": 0, "pensamento": 0, "cache": 0,
+                                                            "chamadas": 0})
+                reg["cache"] += int(getattr(uso, "cached_content_token_count", 0) or 0)
                 reg["entrada"] += int(getattr(uso, "prompt_token_count", 0) or 0)
                 reg["saida"] += int(getattr(uso, "candidates_token_count", 0) or 0)
                 reg["pensamento"] += int(getattr(uso, "thoughts_token_count", 0) or 0)
                 reg["chamadas"] += 1
+                # o custo ao vivo: a tela mostra, e a reexecução que falhar o devolve ao estado restaurado
+                from tools.custo import KEY_CUSTO as _KEY_CUSTO, custo_da_execucao as _custo_da_execucao
+
+                _cfg = get_settings()
+                yield {"type": "custo_parcial", "timestamp": time.time(),
+                       "custo": _custo_da_execucao(tokens_por_agente, _cfg.gemini_model,
+                                                   {"A103PrdWriter": _cfg.gemini_model_prd}),
+                       "missao_antes": ((initial_state or {}).get(_KEY_CUSTO) or {}).get("total") or {}}
 
             if author != current_agent and author != "user":
                 current_agent = author
@@ -452,6 +476,7 @@ async def run_orchestrator_pipeline_stream(
             "saida": sum(v["saida"] for v in tokens_por_agente.values()),
             "pensamento": sum(v["pensamento"] for v in tokens_por_agente.values()),
             "chamadas": sum(v["chamadas"] for v in tokens_por_agente.values()),
+            "cache": sum(v.get("cache", 0) for v in tokens_por_agente.values()),
         }
         settings_exec = get_settings()
         final_state["execucao"] = {
@@ -464,6 +489,16 @@ async def run_orchestrator_pipeline_stream(
             "tokens_por_agente": dict(sorted(tokens_por_agente.items(),
                                              key=lambda kv: -(kv[1]["entrada"] + kv[1]["saida"]))),
         }
+
+        # Custo em US$ e R$, somado às execuções anteriores desta missão (`tools/custo.py`): um refazer acrescenta
+        # uma linha, e o total é o da missão inteira.
+        from tools.custo import KEY_CUSTO, acumular, custo_da_execucao
+
+        modelo_por_agente = {"A103PrdWriter": settings_exec.gemini_model_prd}
+        esta = custo_da_execucao(tokens_por_agente, settings_exec.gemini_model, modelo_por_agente)
+        final_state["execucao"]["custo"] = esta
+        final_state[KEY_CUSTO] = acumular((initial_state or {}).get(KEY_CUSTO) or final_state.get(KEY_CUSTO),
+                                          esta, list(stages or settings_exec.pipeline_stages))
 
         output_dir: Optional[Path] = None
         artifacts_manifest: List[Dict[str, Any]] = []
