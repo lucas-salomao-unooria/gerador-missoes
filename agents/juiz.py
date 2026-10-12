@@ -18,7 +18,7 @@ def get_juiz_de_achados(nome: str, *, status_key: str, report_key: str, fonte_ke
         name=f"{nome}Llm",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description=f"Lê as linhas que o gate `{gate_rotulo}` marcou e decide, com citação, se o texto afirma o uso do que a plataforma veda ou só cita para vedar.",
-        instruction=load_prompt("transversal/60_juiz_de_achados.md"),
+        instruction=load_prompt("transversal/juiz_de_achados.md"),
         output_key=f"juiz_{base}_saida",
         **kw,
     )
@@ -44,7 +44,7 @@ def get_fidelidade_check(nome: str, *, status_key: str, report_key: str, documen
         name=f"{nome}Juiz",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Confere item a item, com citação literal, se os documentos fazem o que o PO pediu e o briefing fixou.",
-        instruction=load_prompt("transversal/61_juiz_de_fidelidade.md"),
+        instruction=load_prompt("transversal/juiz_de_fidelidade.md"),
         output_key=f"juiz_{base}_saida",
         **kw,
     )
@@ -68,7 +68,7 @@ def get_juiz_de_contradicoes(nome: str, *, documento_key: str, referencia_key: s
         name=f"{nome}Juiz",
         deterministico=True,  # emite veredito: mesmo documento, mesma resposta
         description="Aponta, citando os dois lados, onde o documento afirma o contrário do conteúdo aprovado.",
-        instruction=load_prompt("transversal/62_juiz_de_contradicoes.md"),
+        instruction=load_prompt("transversal/juiz_de_contradicoes.md"),
         output_key=f"juiz_{base}_saida",
         **kw,
     )

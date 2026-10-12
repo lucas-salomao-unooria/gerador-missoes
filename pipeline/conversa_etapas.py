@@ -33,6 +33,11 @@ logger = logging.getLogger(__name__)
 
 ARQUIVO = ".conversa-etapas.json"
 
+#: A conversa única (12/10/2026): uma pergunta sobre a missão inteira, com os documentos das três etapas no
+#: contexto. As perguntas antigas, gravadas com a etapa delas, continuam no histórico.
+MISSAO = "missao"
+ROTULO_MISSAO = "toda a missão"
+
 #: Teto do contexto por pergunta, em caracteres (~90 mil tokens). O estado de uma missão com PRD
 #: passa de 1,1 milhão de caracteres; só o design tem 590 mil.
 ORCAMENTO_CONTEXTO = 350_000
@@ -53,8 +58,13 @@ PRIORIDADE: Dict[str, Tuple[str, ...]] = {
                "brief_oficio", "ambiente_simulado", "fechamento_lacunas", "qa_entregaveis_report"),
     "dev": ("prd_final", "handoff_dev", "brief_assets", "validacao_dev_report", "one_pager_pedagogico"),
 }
+# na conversa única, o principal de cada etapa antes de qualquer relatório
+PRIORIDADE[MISSAO] = ("one_pager", "spec_missao", "jornada_telas", "fluxo_arestas", "copy_strings_revisada",
+                      "prd_final", "one_pager_resumido", "handoff_dev", "brief_assets", "one_pager_pedagogico",
+                      "gate_final_report", "qa_entregaveis_report", "validacao_dev_report", "nucleo_narrativo",
+                      "wireframes_cobertura", "camada_caa", "brief_oficio", "ambiente_simulado", "fechamento_lacunas")
 #: O que a etapa recebe da anterior e costuma entrar na pergunta ("o design seguiu a spec?").
-A_MONTANTE: Dict[str, Tuple[str, ...]] = {"produto": (), "design": ("spec_missao",), "dev": ("spec_missao",)}
+A_MONTANTE: Dict[str, Tuple[str, ...]] = {"produto": (), "design": ("spec_missao",), "dev": ("spec_missao",), MISSAO: ()}
 #: HTML do protótipo e dos diagramas: ~240 mil caracteres de marcação que não respondem nada que a
 #: jornada, o fluxo e a copy não respondam.
 FORA_DO_CONTEXTO = frozenset({"prototipo_html", "prototipo_arquivo", "diagramas_html"})
@@ -111,6 +121,19 @@ def registrar(run_dir: Path, *novas: Dict[str, Any]) -> None:
                            encoding="utf-8")
 
 
+def rotulo(etapa: str) -> str:
+    return ROTULO_MISSAO if etapa == MISSAO else passagem.ROTULO_ETAPA[etapa]
+
+
+def _etapas(etapa: str) -> Tuple[str, ...]:
+    return passagem.ORDEM if etapa == MISSAO else (etapa,)
+
+
+def assinatura(estado: Dict[str, Any], etapa: str) -> str:
+    """A da etapa; na conversa única, a das três juntas (qualquer etapa refeita muda a versão)."""
+    return "-".join(passagem.assinatura_da_etapa(estado, e) for e in _etapas(etapa))
+
+
 def pergunta(etapa: str, texto: str, usuario: str, papel: str) -> Dict[str, Any]:
     return {"id": uuid.uuid4().hex[:12], "etapa": etapa, "role": "user", "autor": usuario, "como": papel,
             "quando": _agora(), "texto": texto}
@@ -119,7 +142,7 @@ def pergunta(etapa: str, texto: str, usuario: str, papel: str) -> Dict[str, Any]
 def resposta(etapa: str, texto: str, a_pergunta: Dict[str, Any], estado: Dict[str, Any]) -> Dict[str, Any]:
     """A resposta guarda a assinatura da etapa: se ela for refeita, a resposta passa a ser de outra versão."""
     return {"id": uuid.uuid4().hex[:12], "etapa": etapa, "role": "assistant", "responde_a": a_pergunta["id"],
-            "quando": _agora(), "assinatura": passagem.assinatura_da_etapa(estado, etapa), "texto": texto}
+            "quando": _agora(), "assinatura": assinatura(estado, etapa), "texto": texto}
 
 
 def da_etapa(mensagens: Sequence[Dict[str, Any]], etapa: str) -> List[Dict[str, Any]]:
@@ -157,7 +180,7 @@ def _tem_conteudo(estado: Dict[str, Any], chave: str) -> bool:
 
 def documentos_da_etapa(estado: Dict[str, Any], etapa: str) -> List[str]:
     """As chaves que a conversa lê para a etapa, na ordem de leitura."""
-    proprias = passagem.chaves_da_etapa(etapa)
+    proprias = frozenset().union(*(passagem.chaves_da_etapa(e) for e in _etapas(etapa)))
 
     def serve(chave: str) -> bool:
         if chave in FORA_DO_CONTEXTO or chave.endswith(SUFIXOS_FORA) or not _tem_conteudo(estado, chave):
@@ -179,6 +202,15 @@ def _situacao(fluxo: Optional[Dict[str, Any]], etapa: str, execucao: Optional[Di
     if not fluxo:
         return "missão sem parecer humano entre etapas"
     atual, situacao = fluxo["etapa"], fluxo.get("situacao")
+    if etapa == MISSAO:
+        if situacao == passagem.ENTREGUE:
+            return "missão entregue: as três etapas foram liberadas"
+        texto = f"a missão está em {passagem.ROTULO_ETAPA[atual]}: {passagem.quem_age(fluxo)}"
+        if situacao in passagem.EM_EXECUCAO:
+            agente = (execucao or {}).get("agente_atual")
+            texto += (f" (agente atual: {agente})" if agente else "") + (
+                ". Etapas seguintes ainda não têm documento; os abaixo são os gravados quando a pergunta foi feita.")
+        return texto
     i, j = passagem.ORDEM.index(etapa), passagem.ORDEM.index(atual)
     if situacao == passagem.ENTREGUE or i < j:
         return "etapa já liberada: a missão passou dela"
@@ -211,8 +243,8 @@ def montar_contexto(estado: Dict[str, Any], fluxo: Optional[Dict[str, Any]], eta
     from pipeline.reexecucao import montar_mapa_da_missao
 
     partes = [f"### Missão\n\n{montar_mapa_da_missao(estado)}",
-              f"### Situação da etapa {passagem.ROTULO_ETAPA[etapa]}\n\n{_situacao(fluxo, etapa, execucao)}"]
-    semaforo = passagem.semaforo_da_etapa(estado, etapa)
+              f"### Situação de {rotulo(etapa)}\n\n{_situacao(fluxo, etapa, execucao)}"]
+    semaforo = {k: v for e in _etapas(etapa) for k, v in passagem.semaforo_da_etapa(estado, e).items()}
     if semaforo:
         partes.append("### Semáforo dos gates desta etapa\n\n"
                       + "\n".join(f"- {icone} `{k}` = {estado[k]}" for k, icone in semaforo.items()))
@@ -263,9 +295,10 @@ def estado_da_conversa(etapa: str, estado: Dict[str, Any], fluxo: Optional[Dict[
                        anteriores: Sequence[Dict[str, Any]], execucao: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
     """O estado da sessão do ADK que o prompt interpola."""
     return {
-        "etapa_da_conversa": passagem.ROTULO_ETAPA[etapa],
+        "etapa_da_conversa": rotulo(etapa),
+        "etapa_do_parecer": passagem.ROTULO_ETAPA.get((fluxo or {}).get("etapa"), rotulo(etapa)),
         "contexto_da_etapa": montar_contexto(estado, fluxo, etapa, execucao),
-        "conversa_anterior": historico_para_modelo(anteriores) or "(é a primeira pergunta sobre esta etapa)",
+        "conversa_anterior": historico_para_modelo(anteriores) or "(é a primeira pergunta desta conversa)",
     }
 
 

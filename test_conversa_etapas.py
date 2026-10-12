@@ -111,13 +111,29 @@ class TestContexto(unittest.TestCase):
 
     def test_documento_pulado_nao_entra(self):
         self.assertIn("brief_oficio", conversa.documentos_da_etapa(ESTADO, "design"))
-        estado = {**ESTADO, "brief_oficio": "⏭️ A21BriefOficio não executado: etapa bloqueada"}
+        estado = {**ESTADO, "brief_oficio": "⏭️ A060BriefOficio não executado: etapa bloqueada"}
         self.assertNotIn("brief_oficio", conversa.documentos_da_etapa(estado, "design"))
 
     def test_produto_nao_le_documento_de_design(self):
         docs = conversa.documentos_da_etapa(ESTADO, "produto")
         self.assertEqual(docs[:2], ["one_pager", "spec_missao"])
         self.assertNotIn("jornada_telas", docs)
+
+    def test_conversa_unica_le_as_tres_etapas(self):
+        docs = conversa.documentos_da_etapa(ESTADO, conversa.MISSAO)
+        self.assertEqual(docs[:3], ["one_pager", "spec_missao", "jornada_telas"])
+        for dentro in ("prd_final", "handoff_dev", "qa_entregaveis_report"):
+            self.assertIn(dentro, docs)
+        self.assertNotIn("prototipo_html", docs)
+        ctx = conversa.montar_contexto(ESTADO, _fluxo(), conversa.MISSAO)
+        self.assertIn("### Situação de toda a missão", ctx)
+        self.assertIn("design_status", ctx)
+
+    def test_conversa_unica_muda_de_versao_quando_qualquer_etapa_e_refeita(self):
+        r = conversa.resposta(conversa.MISSAO, "ok", conversa.pergunta(conversa.MISSAO, "?", "u", "admin"), ESTADO)
+        self.assertFalse(conversa.de_outra_versao(r, conversa.assinatura(ESTADO, conversa.MISSAO)))
+        refeito = {**ESTADO, "prd_final": "# PRD v2"}
+        self.assertTrue(conversa.de_outra_versao(r, conversa.assinatura(refeito, conversa.MISSAO)))
 
     def test_orcamento_corta_e_lista_o_que_ficou_de_fora(self):
         estado = {"jornada_telas": "j" * 30_000, "fluxo_arestas": "f" * 30_000, "copy_strings_revisada": "c" * 10}
@@ -144,8 +160,8 @@ class TestContexto(unittest.TestCase):
         ctx = conversa.montar_contexto({"one_pager": "x"}, _fluxo("produto"), "dev")
         self.assertIn("ainda não começou", ctx)
         self.assertIn("Nenhum documento desta etapa foi gravado ainda.", ctx)
-        ctx = conversa.montar_contexto(ESTADO, _fluxo("design", GERANDO), "design", {"agente_atual": "A24CopyPtBr"})
-        self.assertIn("Design gerando agora (agente atual: A24CopyPtBr)", ctx)
+        ctx = conversa.montar_contexto(ESTADO, _fluxo("design", GERANDO), "design", {"agente_atual": "A063CopyPtBr"})
+        self.assertIn("Design gerando agora (agente atual: A063CopyPtBr)", ctx)
 
     def test_historico_so_as_ultimas_trocas_e_cortadas(self):
         mensagens = []
@@ -168,7 +184,7 @@ class TestAgente(unittest.TestCase):
         agente = get_conversa_etapa_agent()
         self.assertEqual(agente.include_contents, "default")
         self.assertEqual(agente.output_key, "resposta_conversa")
-        self.assertTrue(all(m["id"] != "A00bConversaEtapa" for m in TRANSVERSAL_METADATA))
+        self.assertTrue(all(m["id"] != "A000ConversaEtapa" for m in TRANSVERSAL_METADATA))
         instr = str(agente.instruction)
         self.assertIn(conversa.PEDIDO_RASCUNHO, instr)
         # o que o prompt lê é exatamente o que `estado_da_conversa` entrega (fora o rodapé comum a todo agente)

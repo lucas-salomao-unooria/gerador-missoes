@@ -151,7 +151,7 @@ def marcar_heranca(callback_context: CallbackContext) -> Optional[types.Content]
 def preservar_one_pager(callback_context: CallbackContext) -> None:
     """Guarda a primeira versão do one-pager antes de o revisor começar a sobrescrevê-la.
 
-    `A07RevisorOnePager` grava na mesma chave que o autor (`one_pager`), de propósito —
+    `A023RevisorOnePager` grava na mesma chave que o autor (`one_pager`), de propósito —
     é assim que os 17 prompts a jusante leem sempre a versão corrente. O efeito colateral
     é que a versão original desaparecia: a spec tinha `spec_missao_gate0`, o one-pager não
     tinha equivalente. Sem ele, não há como mostrar o que mudou entre rodadas.
@@ -318,7 +318,7 @@ def dispensar_ideacao_com_one_pager_do_po(callback_context: CallbackContext) -> 
 def desembrulhar_documento(chave: str):
     """after_agent_callback: tira a cerca ```markdown que envolve o documento inteiro, logo que ele é gravado.
 
-    Na exp09ef1b o redator embrulhou o PRD: a conferência PRD × aprovado (A48c) não achava a §14 dentro da cerca e
+    Na exp09ef1b o redator embrulhou o PRD: a conferência PRD × aprovado (A106) não achava a §14 dentro da cerca e
     acusava habilidade sem KPI que estava lá, deixava passar o tempo de etapa divergente, e o anexo literal entrava
     depois da cerca — aí a gravação não reconhecia mais o invólucro e o `PRD.md` abria como bloco de código.
     """
@@ -353,7 +353,7 @@ _AVISOS_DE_CORTE = {
 def registrar_corte_do_modelo(callback_context: CallbackContext, llm_response: Any) -> None:
     """after_model_callback de todo agente: resposta sem texto cortada pelo modelo fica registrada para a tentativa seguinte.
 
-    Na exp03ef1b (08/10/2026) o A04 terminou com `FinishReason.RECITATION` e nenhum texto, duas vezes: o filtro de
+    Na exp03ef1b (08/10/2026) o A014 terminou com `FinishReason.RECITATION` e nenhum texto, duas vezes: o filtro de
     recitação do Gemini corta a saída que reproduz texto publicado — e o one-pager transcreve o texto oficial da
     BNCC. A esteira não registrava o motivo, o loop chamava o agente de novo com a mesma instrução e o resultado era
     o mesmo. Aqui o motivo vai ao estado e a próxima instrução do mesmo agente o recebe (`agents.base`).

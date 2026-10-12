@@ -527,8 +527,10 @@ def _painel_execucao(run_dir_str: str) -> None:
         dados.get("tipo", ""), "Rodando")
     etapa = passagem.ROTULO_ETAPA.get(dados.get("etapa", ""), dados.get("etapa", ""))
     decorrido = int(time.time() - float(dados.get("iniciado_em") or time.time()))
-    agente = dados.get("agente_atual") or "iniciando"
-    st.info(f"⏳ {tipo} **{etapa}** — {decorrido // 60} min {decorrido % 60:02d} s · agente atual: `{agente}`")
+    from pipeline.esteira_visual import html_da_esteira
+
+    components.html(html_da_esteira(dados.get("etapa", ""), dados.get("agente_atual") or "", dados.get("vistos") or [],
+                                    titulo=f"⏳ {tipo} {etapa} ·", decorrido_s=decorrido), height=330, scrolling=True)
     gates = dados.get("gates") or {}
     if gates:
         st.caption(" · ".join(f"{_status_icon(v)} {GATE_LABELS.get(k, k)}" for k, v in gates.items() if k in GATE_LABELS))
@@ -728,48 +730,41 @@ def _iniciar_missao_com_parecer(user_prompt: str, doc_batch: Optional[DocumentBa
     st.rerun()
 
 
-EXEMPLOS_DE_PERGUNTA = {
-    "produto": "Por que o gate final ficou 🟡? · De onde saiu o teto de caracteres da etapa 3?",
-    "design": "Quais telas a jornada tem, e em que ordem? · A copy da tela de resultado segue a spec?",
-    "dev": "Que eventos de telemetria o PRD define? · O que a banca reprovou, e por quê?",
-}
+EXEMPLOS_DE_PERGUNTA = ("Por que o gate final ficou 🟡? · O design seguiu a spec na tela de resultado? · "
+                        "Que eventos de telemetria o PRD define? · O que a banca reprovou, e por quê?")
 
 
 def render_conversa_etapas(run_dir: Path, fluxo: Dict[str, Any]) -> Tuple[str, Any]:
-    """Perguntas sobre produto, design ou dev desta missão, sem mudar nada (`pipeline/conversa_etapas.py`).
+    """Um chat só, sobre a missão inteira, sem mudar nada (`pipeline/conversa_etapas.py`).
 
-    Devolve a etapa escolhida, para onde vai a pergunta do campo de mensagem, e o espaço onde a
-    pergunta em andamento aparece enquanto o modelo responde.
+    Até 12/10/2026 eram três abas, uma por etapa, e a pergunta que cruzava etapas ("o PRD trouxe os eventos do
+    handoff?") não tinha onde ser feita. As perguntas antigas, gravadas com a etapa delas, continuam no histórico.
+    Devolve a chave da conversa e o espaço onde a pergunta em andamento aparece enquanto o modelo responde.
     """
     mensagens = conversa_etapas.ler(run_dir)
     with st.container(border=True):
-        st.markdown("#### 💬 Conversa com as etapas")
-        st.caption("Pergunte sobre produto, design ou dev desta missão no campo de mensagem. A conversa fica no "
-                   "histórico da missão, à vista de todos, e não altera nenhum documento: para mudar a missão, "
-                   "use Refazer no cartão de passagem.")
-        contagem = {e: len([m for m in conversa_etapas.da_etapa(mensagens, e) if m.get("role") == "user"])
-                    for e in passagem.ORDEM}
-        etapa = st.segmented_control(
-            "Conversar com", list(passagem.ORDEM), default=fluxo["etapa"], key=f"conversa_etapa_{run_dir.name}",
-            format_func=lambda e: passagem.ROTULO_ETAPA[e] + (f" · {contagem[e]}" if contagem[e] else ""),
-        ) or fluxo["etapa"]
-        da_etapa = conversa_etapas.da_etapa(mensagens, etapa)
-        if not da_etapa:
-            st.caption(f"Ninguém perguntou sobre {passagem.ROTULO_ETAPA[etapa]} ainda. Exemplos: {EXEMPLOS_DE_PERGUNTA[etapa]}")
+        st.markdown("#### 💬 Conversa sobre a missão")
+        st.caption("Pergunte sobre produto, design, dev ou a passagem entre eles no campo de mensagem. A conversa "
+                   "fica no histórico da missão, à vista de todos, e não altera nenhum documento: para mudar a "
+                   "missão, use Refazer no cartão de passagem.")
+        if not mensagens:
+            st.caption(f"Ninguém perguntou nada ainda. Exemplos: {EXEMPLOS_DE_PERGUNTA}")
         else:
             estado = estado_da_sessao(run_dir)
-            assinatura = passagem.assinatura_da_etapa(estado, etapa)
-            with st.container(height=520) if len(da_etapa) > 6 else st.container():
-                for m in da_etapa:
+            assinaturas = {e: conversa_etapas.assinatura(estado, e) for e in (*passagem.ORDEM, conversa_etapas.MISSAO)}
+            with st.container(height=520) if len(mensagens) > 6 else st.container():
+                for m in mensagens:
+                    etapa_m = m.get("etapa") or conversa_etapas.MISSAO
                     with st.chat_message(m.get("role", "user")):
                         if m.get("role") == "user":
-                            st.caption(f"**{ROTULO_PAPEL.get(m.get('como'), m.get('como'))}** · {m.get('quando')}")
-                        elif conversa_etapas.de_outra_versao(m, assinatura):
-                            st.caption("↺ Resposta sobre uma versão anterior desta etapa: ela foi refeita depois.")
+                            sobre = "" if etapa_m == conversa_etapas.MISSAO else f" · sobre {conversa_etapas.rotulo(etapa_m)}"
+                            st.caption(f"**{ROTULO_PAPEL.get(m.get('como'), m.get('como'))}** · {m.get('quando')}{sobre}")
+                        elif conversa_etapas.de_outra_versao(m, assinaturas.get(etapa_m, "")):
+                            st.caption("↺ Resposta sobre uma versão anterior da missão: uma etapa foi refeita depois.")
                         st.markdown(sanear_para_streamlit(str(m.get("texto") or "")))
-            _botao_rascunho(run_dir, fluxo, etapa, estado, da_etapa)
+            _botao_rascunho(run_dir, fluxo, conversa_etapas.MISSAO, estado, mensagens)
         em_andamento = st.container()
-    return etapa, em_andamento
+    return conversa_etapas.MISSAO, em_andamento
 
 
 def _botao_rascunho(run_dir: Path, fluxo: Dict[str, Any], etapa: str, estado: Dict[str, Any],
@@ -797,14 +792,14 @@ def _perguntar_a_etapa(run_dir: Path, etapa: str, texto: str, em_andamento: Any)
     sessao = sessao_atual()
     fluxo = passagem.ler_fluxo(run_dir)
     estado = estado_da_sessao(run_dir)
-    anteriores = conversa_etapas.da_etapa(conversa_etapas.ler(run_dir), etapa)
+    anteriores = conversa_etapas.ler(run_dir)
     pergunta = conversa_etapas.pergunta(etapa, texto, sessao.usuario, sessao.papel)
     with em_andamento:
         with st.chat_message("user"):
             st.caption(f"**{sessao.rotulo}** · agora")
             st.markdown(texto)
         with st.chat_message("assistant"):
-            with st.spinner(f"Lendo os documentos de {passagem.ROTULO_ETAPA[etapa]}…"):
+            with st.spinner(f"Lendo os documentos de {conversa_etapas.rotulo(etapa)}…"):
                 try:
                     saida = _run_async(conversa_etapas.responder(
                         texto, etapa, estado, fluxo, anteriores, execucao_fundo.ler_execucao(run_dir)))
@@ -991,20 +986,20 @@ def update_pipeline_step_status(
 
         # Se avançou para agentes posteriores ao gate estrutural e o revisor ainda está pendente:
         if name not in (
-            "A01NucleoNarrativo",
-            "A02MicroGate",
-            "A03MicroGateCheck",
-            "A04SecoesApoio",
-            "A05GateEstrutural",
-            "A06GateEstruturalCheck",
-            "A07RevisorOnePager",
+            "A004NucleoNarrativo",
+            "A007MicroGate",
+            "A012MicroGateCheck",
+            "A014SecoesApoio",
+            "A021GateEstrutural",
+            "A022GateEstruturalCheck",
+            "A023RevisorOnePager",
         ):
             ge_st = str(gates.get("gate_estrutural_status", "")).strip().lower()
             if ge_st in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
-                if status.get("A07RevisorOnePager") == "pending":
-                    status["A07RevisorOnePager"] = "done"
-            if status.get("A06GateEstruturalCheck") == "running":
-                status["A06GateEstruturalCheck"] = "done"
+                if status.get("A023RevisorOnePager") == "pending":
+                    status["A023RevisorOnePager"] = "done"
+            if status.get("A022GateEstruturalCheck") == "running":
+                status["A022GateEstruturalCheck"] = "done"
 
     elif et == "agent_chunk":
         name = event.get("agent_name", "")
@@ -1016,16 +1011,16 @@ def update_pipeline_step_status(
         gates.update(new_status)
         ge_st = str(new_status.get("gate_estrutural_status") or gates.get("gate_estrutural_status") or "").strip().lower()
         if ge_st in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
-            if status.get("A07RevisorOnePager") == "pending":
-                status["A07RevisorOnePager"] = "done"
-            if status.get("A06GateEstruturalCheck") == "running":
-                status["A06GateEstruturalCheck"] = "done"
-        if new_status.get("gate_final_status") and status.get("A12GateFinalProdutoCheck") == "running":
-            status["A12GateFinalProdutoCheck"] = "done"
-        if new_status.get("design_status") and status.get("A31QaEntregaveisCheck") == "running":
-            status["A31QaEntregaveisCheck"] = "done"
-        if new_status.get("dev_status") and status.get("A45ValidacaoDevCheck") == "running":
-            status["A45ValidacaoDevCheck"] = "done"
+            if status.get("A023RevisorOnePager") == "pending":
+                status["A023RevisorOnePager"] = "done"
+            if status.get("A022GateEstruturalCheck") == "running":
+                status["A022GateEstruturalCheck"] = "done"
+        if new_status.get("gate_final_status") and status.get("A034GateFinalProdutoCheck") == "running":
+            status["A034GateFinalProdutoCheck"] = "done"
+        if new_status.get("design_status") and status.get("A080QaEntregaveisCheck") == "running":
+            status["A080QaEntregaveisCheck"] = "done"
+        if new_status.get("dev_status") and status.get("A101ValidacaoDevCheck") == "running":
+            status["A101ValidacaoDevCheck"] = "done"
 
     elif et == "pipeline_completed":
         result = event.get("result")
@@ -1039,8 +1034,8 @@ def update_pipeline_step_status(
         # Se o gate estrutural foi aprovado (ou o pipeline avançou), o revisor fica concluído (verde):
         # O revisor do one-pager só roda quando o gate reprova: aprovado de primeira, ele
         # não tem o que corrigir — e isso é sucesso, não passo pulado.
-        if status.get("A07RevisorOnePager") == "pending":
-            status["A07RevisorOnePager"] = "done"
+        if status.get("A023RevisorOnePager") == "pending":
+            status["A023RevisorOnePager"] = "done"
 
         # Nenhum agente deve permanecer indefinidamente com ícone de ampulheta (pending) após
         # conclusão. A esteira não pula mais ninguém por causa de gate reprovado: quem ficou
@@ -1063,7 +1058,13 @@ async def _acompanhar_esteira(stream, stages: List[Dict[str, Any]], progress, st
     tool_log: List[str] = []
 
     def render():
+        from pipeline.esteira_visual import etapa_do_agente, html_da_esteira
+
         with steps_container.container():
+            rodou = [k for k, v in status.items() if v in ("done", "running")]
+            etapa_atual = etapa_do_agente(active_agent or "")
+            components.html(html_da_esteira(etapa_atual, active_agent or "", rodou, titulo="🔄"),
+                            height=330, scrolling=True)
             cols = st.columns(len(stages))
             for col, stage in zip(cols, stages):
                 with col:
@@ -1080,10 +1081,10 @@ async def _acompanhar_esteira(stream, stages: List[Dict[str, Any]], progress, st
             if gates:
                 st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS.get(k, k)}" for k, v in gates.items() if k in GATE_LABELS))
 
+    active_agent: Optional[str] = None
     render()
     result: Optional[PipelineExecutionResult] = None
     registro: Optional[Dict[str, Any]] = None
-    active_agent: Optional[str] = None
 
     async for event in stream:
         et = event.get("type")
@@ -1428,11 +1429,11 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
                 continue
             shown = True
             if key == "prototipo_html":
-                # a saída do A28 vem como ```html … ``` + envelope JSON; o iframe abriria em modo
+                # a saída do A069 vem como ```html … ``` + envelope JSON; o iframe abriria em modo
                 # quirks com as crases e o JSON escritos na página. O arquivo limpo está no estado.
                 value = result.state.get("prototipo_arquivo") or value
             with st.expander(f"{meta['icon']} {meta['name']}", expanded=False):
-                if meta.get("id") == "A07RevisorOnePager" and "A07RevisorOnePager" not in (result.step_outputs or {}):
+                if meta.get("id") == "A023RevisorOnePager" and "A023RevisorOnePager" not in (result.step_outputs or {}):
                     st.caption("ℹ️ *One-pager aprovado no gate estrutural sem necessidade de revisão. Exibindo a versão aprovada:*")
                 render_saida_agente(value, output_key=key, prefix=f"{prefix}_{key}")
         if not shown:
@@ -1584,43 +1585,38 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
             st.caption("Estado vazio.")
 
     st.markdown("---")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        download_button_lazy(
-            "📥 PRD (Markdown)",
-            lambda: getattr(result, "prd_gerado", None) or result.final_output,
-            file_name=f"PRD_{identificador_da_missao(result.state, sid)}.md",
-            mime="text/markdown",
-            key=f"prd_{prefix}",
-        )
-    with c2:
-        download_button_lazy(
-            "📥 Spec da missão",
-            lambda: result.state.get("spec_missao") or "(spec não gerada)",
-            file_name=f"spec_{identificador_da_missao(result.state, sid)}.md",
-            mime="text/markdown",
-            key=f"spec_{prefix}",
-        )
-    with c3:
-        def _exportar_estado() -> str:
-            export = {
-                "session_id": result.session_id,
-                "prompt": result.prompt,
-                "attached_files": result.attached_files,
-                "duration_seconds": result.duration_seconds,
-                "gates": gates,
-                "output_dir": result.output_dir,
-                "state": result.state,
-            }
-            return json.dumps(export, indent=2, ensure_ascii=False, default=str)
+    missao = identificador_da_missao(result.state, sid)
+    pasta = Path(result.output_dir) if result.output_dir else None
 
-        download_button_lazy(
-            "📥 Estado completo (JSON)",
-            _exportar_estado,
-            file_name=f"missao_{identificador_da_missao(result.state, sid)}.json",
-            mime="application/json",
-            key=f"state_{prefix}",
-        )
+    def _one_pager(chave: str, base: str):
+        """O `.docx` com a marca quando a exportação existe; senão o Markdown do estado."""
+        docx = pasta / f"{base}.docx" if pasta else None
+        if docx and docx.exists():
+            return (lambda d=docx: d.read_bytes()), f"{Path(base).name}_{missao}.docx", \
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        return (lambda: str(result.state.get(chave) or "(não gerado)")), f"{Path(base).name}_{missao}.md", "text/markdown"
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        if pasta and pasta.exists():
+            download_button_lazy(
+                "📦 Download total",
+                lambda p=pasta: create_session_zip(p),
+                file_name=nome_do_zip_de_artefatos(result.state, sid),
+                mime="application/zip",
+                key=f"zip_total_{prefix}",
+                help="Todos os artefatos da missão num .zip.",
+            )
+        else:
+            st.button("📦 Download total", disabled=True, use_container_width=True, key=f"zip_total_{prefix}",
+                      help="A pasta da missão ainda não foi gravada.")
+    for col, (rotulo, chave, base) in zip((c2, c3, c4), (
+            ("📄 One-pager de produto", "one_pager", "produto/00-one-pager"),
+            ("📄 One-pager resumido", "one_pager_resumido", "produto/00d-one-pager-resumido"),
+            ("📄 One-pager pedagógico", "one_pager_pedagogico", "one-pager-pedagogico"))):
+        with col:
+            dados, nome, mime = _one_pager(chave, base)
+            download_button_lazy(rotulo, dados, file_name=nome, mime=mime, key=f"{chave}_{prefix}")
     if result.output_dir:
         st.caption(f"Artefatos gravados em `{result.output_dir}`")
 
@@ -1916,8 +1912,8 @@ def main():
         # missão nova começa pela etapa de produto: só quem responde por ela a cria
         sem_permissao_de_criar = not modo_correcao and not (sessao and passagem.pode_criar_missao(sessao.papel))
         placeholder = (
-            f"Pergunte sobre {passagem.ROTULO_ETAPA[etapa_da_conversa]} desta missão: a resposta fica no histórico "
-            "e não muda nada. Para mudar, use Refazer no cartão de passagem."
+            "Pergunte qualquer coisa sobre esta missão: a resposta fica no histórico e não muda nada. "
+            "Para mudar, use Refazer no cartão de passagem."
             if com_fluxo else
             f"Missão nova é criada por {passagem.rotulo_donos('produto')} (ou admin). Abra uma missão no histórico."
             if sem_permissao_de_criar else

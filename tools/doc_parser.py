@@ -73,7 +73,7 @@ def process_document(file_name: str, file_bytes: bytes) -> ProcessedDocument:
             size_bytes=size_bytes,
             is_native_pdf=True,
             pdf_bytes=file_bytes,
-            # O A01 lê o PDF nativo; quem só lê texto (correção de missão) usa isto.
+            # O A004 lê o PDF nativo; quem só lê texto (correção de missão) usa isto.
             markdown_text=_texto_do_pdf(file_name, file_bytes),
         )
 

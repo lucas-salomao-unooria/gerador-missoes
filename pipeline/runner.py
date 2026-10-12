@@ -224,7 +224,7 @@ _RE_VARIAVEL_AUSENTE = re.compile(r"Context variable not found: `(\w+)` in agent
 
 
 def mensagem_de_erro(exc: BaseException) -> str:
-    """O erro como o PO consegue ler. O ADK diz "Context variable not found: `one_pager` in agent 'A05…'" quando o
+    """O erro como o PO consegue ler. O ADK diz "Context variable not found: `one_pager` in agent 'A021…'" quando o
     agente que escreve um documento termina sem texto e o seguinte precisa dele (exp03ef1b, 08/10/2026, duas vezes)."""
     m = _RE_VARIAVEL_AUSENTE.search(str(exc))
     if m:

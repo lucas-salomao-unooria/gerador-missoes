@@ -564,7 +564,7 @@ def extrair_perguntas_do_briefing(briefing: str) -> str:
 # Todas as regras são cross-ref dentro do MESMO documento: a ação que a pergunta usa existe na
 # tabela de eventos do bloco 9? esse evento carrega algum campo? o corte está no vocabulário?
 # Se a pergunta é boa — se responder a ela muda mesmo uma decisão nossa — é julgamento, e fica
-# com o juiz LLM logo atrás (`prompts/produto/15_juiz_perguntas.md`).
+# com o juiz LLM logo atrás (`prompts/produto/041_juiz_perguntas.md`).
 
 PQ_POR_MISSAO = 5
 

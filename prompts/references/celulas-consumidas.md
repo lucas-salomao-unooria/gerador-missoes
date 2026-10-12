@@ -145,21 +145,21 @@ Uma linha por célula que algum agente **lê como contrato**. A varredura do D0 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
 | 12.decisão · quem decidiu · data · alternativas descartadas | D0 (não repetir como lacuna o que foi decidido), D7 (pendências herdadas) | D0 reabre o que o Gate 0 fechou |
-| 12.decisão em aberto — `[ABERTO — dono]` no bloco 12 e no campo afetado | D0 (é a lista inicial de lacunas; fecha com ` — Resolvido em [D0-n]`), D7 (pendências humanas herdadas), rastro de lacunas (`A33RastroDesign` cobra a linha até a marca do D0) | Lacuna sem dono; a pendência que o D0 fechou volta a barrar o design e o PRD |
+| 12.decisão em aberto — `[ABERTO — dono]` no bloco 12 e no campo afetado | D0 (é a lista inicial de lacunas; fecha com ` — Resolvido em [D0-n]`), D7 (pendências humanas herdadas), rastro de lacunas (`A082RastroDesign` cobra a linha até a marca do D0) | Lacuna sem dono; a pendência que o D0 fechou volta a barrar o design e o PRD |
 
 ## Glossário canônico
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
-| Glossário.Entidades — nome canônico e variantes proibidas | coerência entre documentos (`A29dConsistencia`, sobre jornada, fluxo, copy revisada e protótipo), D7 (lê esse relatório e endereça o ticket ao dono), D0 e D9 (copiam o glossário intocado) | O órgão com quatro nomes da exp09ef1b passa, porque ninguém lê os documentos juntos |
-| Glossário.Personagens — nome, idade, papel na história | `A29dConsistencia`, D7, D0 e D9, como acima · construção: D2, D3, D4, D6, D8 | O beneficiário de 14 anos vira coordenador na copy (exp09ef1b) |
-| Glossário.Números — o quê, valor, unidade | `A29dConsistencia`, D7, D0 e D9, como acima · construção: D2, D3, D4, D6, D8 | O mesmo número com duas unidades em dois documentos |
-| Glossário.Rótulos de botão por ação | `A29dConsistencia`, D7, D0 e D9, como acima · construção: D2, D3, D4, D6, D8 | A mesma ação com dois rótulos de botão (exp09ef1b: seis) |
-| Glossário.Arquivos — artefato e nome do arquivo | `A29dConsistencia` e a conferência das afirmações do QA (`A30bQaAfirmacoes`), D7, D0 e D9 | QA e protótipo citam arquivo que a esteira não grava |
+| Glossário.Entidades — nome canônico e variantes proibidas | coerência entre documentos (`A072Consistencia`, sobre jornada, fluxo, copy revisada e protótipo), D7 (lê esse relatório e endereça o ticket ao dono), D0 e D9 (copiam o glossário intocado) | O órgão com quatro nomes da exp09ef1b passa, porque ninguém lê os documentos juntos |
+| Glossário.Personagens — nome, idade, papel na história | `A072Consistencia`, D7, D0 e D9, como acima · construção: D2, D3, D4, D6, D8 | O beneficiário de 14 anos vira coordenador na copy (exp09ef1b) |
+| Glossário.Números — o quê, valor, unidade | `A072Consistencia`, D7, D0 e D9, como acima · construção: D2, D3, D4, D6, D8 | O mesmo número com duas unidades em dois documentos |
+| Glossário.Rótulos de botão por ação | `A072Consistencia`, D7, D0 e D9, como acima · construção: D2, D3, D4, D6, D8 | A mesma ação com dois rótulos de botão (exp09ef1b: seis) |
+| Glossário.Arquivos — artefato e nome do arquivo | `A072Consistencia` e a conferência das afirmações do QA (`A079QaAfirmacoes`), D7, D0 e D9 | QA e protótipo citam arquivo que a esteira não grava |
 
 ## Conteúdo aprovado — seções do one-pager copiadas literais para o design
 
-O `A16dConteudoAprovadoDesign` copia estas seções, sem reescrita, para `conteudo_aprovado`, cada uma sob o título `## <título> — one-pager §N`. Fluxo, CAA, telas, copy revisada e QA as recebem porque não leem o one-pager; para o que a missão ensina e mede, os textos literais, os tempos e o papel do professor, vale este texto quando a spec diverge. Jornada e copy (passada 1) leem as mesmas seções no one-pager inteiro.
+O `A054ConteudoAprovadoDesign` copia estas seções, sem reescrita, para `conteudo_aprovado`, cada uma sob o título `## <título> — one-pager §N`. Fluxo, CAA, telas, copy revisada e QA as recebem porque não leem o one-pager; para o que a missão ensina e mede, os textos literais, os tempos e o papel do professor, vale este texto quando a spec diverge. Jornada e copy (passada 1) leem as mesmas seções no one-pager inteiro.
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|

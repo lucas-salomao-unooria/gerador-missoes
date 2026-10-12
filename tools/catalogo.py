@@ -637,7 +637,7 @@ def slugs_das_sessoes(base: Optional[Path] = None) -> Set[str]:
 def saude_do_indice(indice: Optional[Dict[str, Any]] = None, base: Optional[Path] = None) -> Dict[str, Any]:
     """Quantas linhas do índice sustentam uma reprovação em V5 — e quantas não.
 
-    A verificação de semelhança só reprova contra uma linha COMPLETA: `01_nucleo_narrativo.md`
+    A verificação de semelhança só reprova contra uma linha COMPLETA: `004_nucleo_narrativo.md`
     instrui que "linha com campo `—` ou `[preencher…]` não serve de comparação". Com o índice
     majoritariamente incompleto, o V5 **se autodesliga** — e em silêncio, que é o problema: o
     dossiê continua mostrando o gate verde. Em 23/09/2026, 10 das 14 fichas (71%) estavam

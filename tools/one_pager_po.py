@@ -172,7 +172,7 @@ def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "") -> Dic
     """Cada trecho do one-pager do PO está no gerado, ou saiu por ordem do pedido conferida em código."""
     vazio = {"total": 0, "perdidas": [], "removidas": 0, "declaradas": 0, "codigos_removidos": []}
     # Sem one-pager não há o que conferir — e o autor ficou mudo. Com ou sem anexo do PO, isso reprova, para o loop
-    # chamá-lo de novo: na exp03ef1b (08/10/2026) o A04 terminou sem texto duas vezes e o gate estrutural quebrou.
+    # chamá-lo de novo: na exp03ef1b (08/10/2026) o A014 terminou sem texto duas vezes e o gate estrutural quebrou.
     if not (gerado or "").strip():
         return {**vazio, "status": "bloqueado", "aplica": bool((po or "").strip()),
                 "achados": [{"severidade": "bloqueio", "codigo": "one-pager-vazio", "etapa": "produto",

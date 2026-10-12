@@ -163,7 +163,7 @@ CHAVES_PRODUTO = frozenset({
 }) | CHAVES_SPEC
 CHAVES_TRANSVERSAL = frozenset({
     "diagnostico_execucao", "diagnostico_status", "diagnostico_status_envelope", "aprendizado_registro",
-    # a ficha do A52: sem cair, a ficha da execução anterior ficava no estado de uma correção que
+    # a ficha do A119: sem cair, a ficha da execução anterior ficava no estado de uma correção que
     # não chega à transversal, e o runner a registraria de novo no catálogo
     "ficha_catalogo", "ficha_catalogo_dados",
 })

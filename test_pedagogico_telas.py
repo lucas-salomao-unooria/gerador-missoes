@@ -497,7 +497,7 @@ def test_miro_desenhado_vira_figura(tmp_path):
 def test_prompt_do_pedagogico_pede_o_passo_a_passo_com_as_telas():
     from prompts import load_prompt
 
-    ped = load_prompt("dev/49_one_pager_pedagogico.md")
+    ped = load_prompt("dev/110_one_pager_pedagogico.md")
     for trecho in ("## Como a missão acontece, passo a passo", "### Antes da aula — o preparo da professora",
                    "### Passo 1 — Desafiar", "### Passo 6 — Refletir", "**Telas deste passo:**",
                    "Seção 3 — Inventário de telas", "Teste do passo a passo",

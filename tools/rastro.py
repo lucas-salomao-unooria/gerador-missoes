@@ -466,7 +466,7 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                     etapa = _DONO_DO_MARCADOR[tipo]
                 elif tipo == "a_validar":
                     # Todo prompt que ensina o 🔵 o descreve como pendência externa a validar
-                    # (criterios-pedagogicos.md:41 · 47_prd_writer.md:151 · 11_gate_final.md:30).
+                    # (criterios-pedagogicos.md:41 · 103_prd_writer.md:151 · 033_gate_final.md:30).
                     # O default era `produto`, bloqueante — o código contradizia o prompt. Um 🔵
                     # que nomeie produto, design ou dev no texto continua bloqueando.
                     etapa = classificar_dono(trecho, "externo", contexto=contexto)

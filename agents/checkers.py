@@ -405,7 +405,7 @@ class SecaoSplitAgent(BaseAgent):
     status_key: str
     rotulo: str = "Split"
     extracoes: List[Dict[str, Any]] = Field(default_factory=list)
-    #: a fonte é um documento, não um veredito (o one-pager do A04): não há envelope a ler, e
+    #: a fonte é um documento, não um veredito (o one-pager do A014): não há envelope a ler, e
     #: procurá-lo gerava um `envelope-ilegivel` em toda execução
     fonte_sem_veredito: bool = False
 
@@ -589,7 +589,7 @@ class ArtefatosDesignAgent(BaseAgent):
     fonte_wireframes: str = "wireframes_cobertura"
     #: Telas no Stitch × inventário da jornada. Na exp09ef1b o Stitch tinha 6 das 16 telas e o QA escreveu
     #: "todas as 16 telas ativas"; aqui só se avisava a falta de `E0-PROF`. Menos telas que o inventário
-    #: bloqueia, com dono `telas` — o `A30bQaAfirmacoes` leva o ticket ao retrabalho.
+    #: bloqueia, com dono `telas` — o `A079QaAfirmacoes` leva o ticket ao retrabalho.
     status_key: str = "stitch_status"
 
     @override
@@ -739,7 +739,7 @@ class QaAfirmacoesAgent(BaseAgent):
             novo["status"], novo["veredito"] = "bloqueado", "vermelho"
             novo["achados"] = list(envelope.get("achados") or []) + [
                 {"id": f"QA-A{i}", **a} for i, a in enumerate(tickets, 1)]
-            delta[self.qa_key] = (qa.rstrip() + "\n\n## Afirmações conferidas em código (A30b)\n\n"
+            delta[self.qa_key] = (qa.rstrip() + "\n\n## Afirmações conferidas em código (A079)\n\n"
                                   + "\n".join(f"- ⛔ `{a['codigo']}` — {a['resumo']}" for a in tickets)
                                   + "\n\nO veredito acima foi reescrito: aprovar com uma contagem que não bate é aprovar "
                                     "o que ninguém viu.\n\n```json\n" + json.dumps(novo, ensure_ascii=False) + "\n```\n")
@@ -1018,7 +1018,7 @@ class CoberturaTelasAgent(BaseAgent):
     o protótipo com um quadro por tela em vez de um por estado, enquanto os gates aprovavam: comparavam
     contagem, não IDs. Aqui a lista vem da tabela «Seção 3» da jornada (`tools/telas.py`) e cada
     derivado (fluxo, copy revisada, cobertura, protótipo) é conferido por conjunto; cada falta sai com o
-    dono do conserto, e o `A30bQaAfirmacoes` a leva ao retrabalho.
+    dono do conserto, e o `A079QaAfirmacoes` a leva ao retrabalho.
     """
 
     report_key: str = "cobertura_telas_report"
@@ -1143,7 +1143,7 @@ class ConsolidacaoBancaAgent(BaseAgent):
     report_key: str = "validacao_dev_report"
     status_key: str = "dev_status"
     rotulo: str = "Banca de dev"
-    #: Grava o status aqui mesmo. A banca de dev tem um gate de envelope depois (A45) que o grava; as bancas de fim
+    #: Grava o status aqui mesmo. A banca de dev tem um gate de envelope depois (A101) que o grava; as bancas de fim
     #: de produto, fim de design e entrada do dev não têm.
     gravar_status: bool = False
     titulo: str = "Validação de insumos"
@@ -1203,7 +1203,7 @@ class DocumentoAusente(RuntimeError):
 class DocumentoObrigatorioAgent(BaseAgent):
     """Para a etapa, com mensagem que se lê, quando um documento de que o resto depende não existe.
 
-    Na exp03ef1b (08/10/2026) o A04 terminou sem texto duas vezes; a esteira seguiu e o gate estrutural quebrou ao
+    Na exp03ef1b (08/10/2026) o A014 terminou sem texto duas vezes; a esteira seguiu e o gate estrutural quebrou ao
     montar o prompt com "Context variable not found: `one_pager`" — e o PO viu só isso. Aqui a parada é no lugar
     certo e diz quem ficou mudo. Fica depois do loop que já chamou o autor de novo.
     """
@@ -1433,7 +1433,7 @@ class RastroCheckAgent(BaseAgent):
             # mandou (exp06ef1b, 08/10/2026: 253 de 304 trechos reescritos num pedido de três correções).
             from tools import one_pager_po as op
 
-            # o brief de escopo sai do `one_pager` antes do gate estrutural (A04bBriefEscopoSplit): o do PO é conferido
+            # o brief de escopo sai do `one_pager` antes do gate estrutural (A018BriefEscopoSplit): o do PO é conferido
             # contra os dois juntos, senão as linhas do brief dele contariam como perdidas
             gerado = "\n\n".join(str(state.get(k, "") or "") for k in ("one_pager", "brief_escopo"))
             resultado = op.conferir(str(state.get("one_pager_po", "") or ""), gerado,
@@ -2466,7 +2466,7 @@ class SaidaDeLoopAgent(BaseAgent):
         rodada = int(state.get(self.rodada_key, 0) or 0) + 1
         # Chave ausente conta como REPROVADA. O `k in state` fazia o loop encerrar com
         # aprovação quando o gate a montante não tinha escrito nada — e era o caso do
-        # `adequacao_status`, que nenhum agente gravava: o `A10bAdequacaoCheck` aprovava
+        # `adequacao_status`, que nenhum agente gravava: o `A028AdequacaoCheck` aprovava
         # sempre, sobre uma chave que nunca existiu.
         reprovados = [
             k for k in self.status_keys

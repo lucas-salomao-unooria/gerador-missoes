@@ -212,6 +212,9 @@ async def _consumir(run_dir: Path, stream: AsyncGenerator[Dict[str, Any], None],
             mudou = False
             if tipo == "agent_started":
                 dados["agente_atual"] = evento.get("agent_name", "")
+                # o que já rodou nesta execução, para a animação da esteira (`pipeline/esteira_visual.py`)
+                if dados["agente_atual"] and dados["agente_atual"] not in dados.setdefault("vistos", []):
+                    dados["vistos"].append(dados["agente_atual"])
                 mudou = True
             elif tipo == "gate_status":
                 dados["gates"] = evento.get("status") or {}
@@ -242,7 +245,7 @@ def _disparar(run_dir: Path, dados: Dict[str, Any], fabrica_stream, nova: bool =
     if em_execucao(run_dir):
         raise ExecucaoEmAndamento("Esta missão já tem uma etapa rodando.")
     agora = time.time()
-    dados = {"situacao": "executando", "agente_atual": "", "gates": {}, "iniciado_em": agora,
+    dados = {"situacao": "executando", "agente_atual": "", "vistos": [], "gates": {}, "iniciado_em": agora,
              "batimento": agora, "backup": "", "erro": "", **dados}
     _gravar_local(run_dir, dados)
     _gravar(run_dir, dados)

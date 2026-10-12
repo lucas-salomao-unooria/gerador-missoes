@@ -276,14 +276,14 @@ async def _rodar(raiz, estado):
 def test_gate_e_anexo_na_esteira():
     """O gate reprova o PRD do bucket dentro do loop; o anexo entra depois, uma vez só, e não em mensagem de pulo."""
     loop = LoopAgent(name="PrdLoop", max_iterations=1, sub_agents=[
-        RastroCheckAgent(name="A48cConteudoAprovadoPrd", modo="aprovado_prd", rotulo="PRD × one-pager aprovado",
+        RastroCheckAgent(name="A106ConteudoAprovadoPrd", modo="aprovado_prd", rotulo="PRD × one-pager aprovado",
                          report_key="conteudo_aprovado_prd_report", status_key="conteudo_aprovado_prd_status",
                          agente="conteudo-aprovado", estrito=False),
-        SaidaDeLoopAgent(name="A48PrdRodada", rotulo="PRD", status_keys=["conteudo_aprovado_prd_status"],
+        SaidaDeLoopAgent(name="A108PrdRodada", rotulo="PRD", status_keys=["conteudo_aprovado_prd_status"],
                          rodada_key="prd_rodada", max_rounds=1),
     ])
     raiz = SequentialAgent(name="Raiz", sub_agents=[
-        loop, AnexoAprovadoAgent(name="A48dAnexoPrd", chave="prd_final", secoes=list(ca.SECOES_PRD))])
+        loop, AnexoAprovadoAgent(name="A109AnexoPrd", chave="prd_final", secoes=list(ca.SECOES_PRD))])
     prd_ruim = _prd(codigos_14=("EF06CO10",), kpi_cobre=False)
     estado = asyncio.run(_rodar(raiz, {"one_pager": ONE_PAGER, "spec_missao": _spec(), "prd_final": prd_ruim}))
     assert estado["conteudo_aprovado_prd_status"] == "bloqueado"
@@ -294,7 +294,7 @@ def test_gate_e_anexo_na_esteira():
     de_novo = asyncio.run(_rodar(raiz, dict(estado)))
     assert de_novo["prd_final"].count(ca.TITULO_ANEXO) == 1
 
-    pulo = "⏭️ `A47PrdWriter` não executado — pipeline bloqueado (x)."
+    pulo = "⏭️ `A103PrdWriter` não executado — pipeline bloqueado (x)."
     estado = asyncio.run(_rodar(
         SequentialAgent(name="R", sub_agents=[AnexoAprovadoAgent(name="A", chave="prd_final", secoes=[11])]),
         {"one_pager": ONE_PAGER, "prd_final": pulo}))
@@ -321,30 +321,30 @@ def test_etapas_montadas_com_os_gates_e_os_anexos():
     dev = build_dev_stage()
     nomes = [a.name for a in agentes_em_ordem(dev)]
     # A51 (07/10/2026): o refazer de dev conferido nos documentos de dev
-    assert nomes[-6:] == ["PrdLoop", "A48dAnexoPrd", "OnePagerPedagogicoLoop", "A49cAnexoPedagogico", "A50Rastreabilidade",
-                          "A51FidelidadeDev"]
+    assert nomes[-6:] == ["PrdLoop", "A109AnexoPrd", "OnePagerPedagogicoLoop", "A114AnexoPedagogico", "A115Rastreabilidade",
+                          "A116FidelidadeDev"]
     prd_loop = next(a for a in agentes_em_ordem(dev) if a.name == "PrdLoop")
-    saida = next(a for a in prd_loop.sub_agents if a.name == "A48PrdRodada")
+    saida = next(a for a in prd_loop.sub_agents if a.name == "A108PrdRodada")
     assert "conteudo_aprovado_prd_status" in saida.status_keys
     ped_loop = next(a for a in agentes_em_ordem(dev) if a.name == "OnePagerPedagogicoLoop")
     assert [a.name for a in ped_loop.sub_agents] == [
-        "A49OnePagerPedagogico", "A49bConteudoAprovadoPedagogico", "A49eCoerenciaPedagogico", "A49PedagogicoRodada"]
+        "A110OnePagerPedagogico", "A111ConteudoAprovadoPedagogico", "A112CoerenciaPedagogico", "A113PedagogicoRodada"]
 
     spec_loop = build_produto_stage(a_partir_de="spec").sub_agents[0]
-    saida = next(a for a in spec_loop.sub_agents if a.name == "A16SpecCheck")
+    saida = next(a for a in spec_loop.sub_agents if a.name == "A049SpecCheck")
     assert "conteudo_aprovado_spec_status" in saida.status_keys
 
 
 def test_prompts_dizem_de_onde_vem_cada_coisa():
     from prompts import load_prompt
 
-    spec = load_prompt("produto/13_spec_missao.md")
+    spec = load_prompt("produto/035_spec_missao.md")
     assert "os ajustes exigidos aqui\nentram na spec" not in spec  # a frase que fez a spec redecidir
     assert "Ressalvas dos pareceres não incorporadas" in spec and "{conteudo_aprovado_spec_report?}" in spec
-    prd = load_prompt("dev/47_prd_writer.md")
+    prd = load_prompt("dev/103_prd_writer.md")
     assert "{adequacao_report?}" not in prd and "{conteudo_aprovado_prd_report?}" in prd
     assert "spec: spec/<slug>-spec.md" not in prd and "produto/05-spec-missao.md" in prd
-    ped = load_prompt("dev/49_one_pager_pedagogico.md")
+    ped = load_prompt("dev/110_one_pager_pedagogico.md")
     for secao in ("## Como a gente sabe que a criança aprendeu", "## Quanto tempo leva e como dividir em aulas",
                   "## O podcast do fechamento", "{conteudo_aprovado_pedagogico_report?}"):
         assert secao in ped, secao
@@ -489,9 +489,9 @@ def test_conteudo_aprovado_chega_aos_agentes_que_nao_leem_o_one_pager():
     assert "## Podcast de recapitulação — one-pager §11" in estado["conteudo_aprovado"]
     assert ROTEIRO.strip() in estado["conteudo_aprovado"] and ca.TITULO_ANEXO not in estado["conteudo_aprovado"]
 
-    assert build_design_stage().sub_agents[0].name == "A16dConteudoAprovadoDesign"
-    for prompt in ("design/23_fluxo.md", "design/25_caa.md", "design/26_telas.md", "design/27_copy_revisao.md",
-                   "design/30_qa_entregaveis.md", "dev/35b_banco_conteudo.md"):
+    assert build_design_stage().sub_agents[0].name == "A054ConteudoAprovadoDesign"
+    for prompt in ("design/062_fluxo.md", "design/064_caa.md", "design/065_telas.md", "design/067_copy_revisao.md",
+                   "design/078_qa_entregaveis.md", "dev/094_banco_conteudo.md"):
         assert "{conteudo_aprovado?}" in load_prompt(prompt), prompt
 
 
@@ -599,8 +599,8 @@ def test_produto_conhece_as_secoes_do_ds_e_o_gate_le_o_briefing():
     nunca viram o "SINALIZAR — não migrar"."""
     from prompts import get_prompt_raw, load_prompt
 
-    for prompt in ("produto/00d_ideacao_mecanismos.md", "produto/01_nucleo_narrativo.md", "produto/04_secoes_apoio.md",
-                   "produto/13_spec_missao.md", "produto/05_gate_estrutural.md",
+    for prompt in ("produto/003_ideacao_mecanismos.md", "produto/004_nucleo_narrativo.md", "produto/014_secoes_apoio.md",
+                   "produto/035_spec_missao.md", "produto/021_gate_estrutural.md",
                    "references/criterios-gate-estrutural.md", "references/formato-spec.md"):
         texto = get_prompt_raw(prompt)
         assert "unoogaleria" in texto, prompt
@@ -608,9 +608,9 @@ def test_produto_conhece_as_secoes_do_ds_e_o_gate_le_o_briefing():
     for prompt in ("references/criterios-experiencia.md", "references/formato-relatorios.md"):
         texto = get_prompt_raw(prompt)
         assert "o briefing fix" in texto and "5 ambientes" not in texto, prompt
-    for prompt in ("produto/05_gate_estrutural.md", "produto/07_revisor_one_pager.md", "produto/11_gate_final.md"):
+    for prompt in ("produto/021_gate_estrutural.md", "produto/revisor_one_pager.md", "produto/033_gate_final.md"):
         assert "{briefing?}" in get_prompt_raw(prompt), prompt
-    for prompt in ("produto/00d_ideacao_mecanismos.md", "produto/01_nucleo_narrativo.md"):
+    for prompt in ("produto/003_ideacao_mecanismos.md", "produto/004_nucleo_narrativo.md"):
         assert "AlbumCard" in load_prompt(prompt), f"{prompt} precisa do inventário do DS"
 
 
@@ -649,7 +649,7 @@ def test_agente_nao_decide_no_lugar_do_po():
     assert dec.com_achados({"status": "aprovado", "achados": []}, propostas)["status"] == "amarelo"
 
     # na esteira: a spec com decisão inventada não passa o gate do conteúdo aprovado
-    check = RastroCheckAgent(name="A15g", modo="aprovado_spec", report_key="r", status_key="s")
+    check = RastroCheckAgent(name="A044", modo="aprovado_spec", report_key="r", status_key="s")
     estado = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[check]),
                                 {"one_pager": ONE_PAGER, "spec_missao": "## 12. Decisões\n" + inventadas[2]}))
     assert estado["s"] == "bloqueado" and "decisao-atribuida-ao-po" in estado["r"]
@@ -657,8 +657,8 @@ def test_agente_nao_decide_no_lugar_do_po():
     # e a regra chega a todo agente que escreve documento
     from prompts import get_prompt_raw
 
-    for prompt in ("produto/01_nucleo_narrativo.md", "produto/13_spec_missao.md", "design/26_telas.md",
-                   "dev/47_prd_writer.md", "dev/49_one_pager_pedagogico.md"):
+    for prompt in ("produto/004_nucleo_narrativo.md", "produto/035_spec_missao.md", "design/065_telas.md",
+                   "dev/103_prd_writer.md", "dev/110_one_pager_pedagogico.md"):
         assert "references/decisoes-do-agente.md" in get_prompt_raw(prompt), prompt
 
 
@@ -700,7 +700,7 @@ def test_ajuste_exigido_pelo_parecer_nao_encerra_o_loop():
     from config import get_settings
 
     def saida(ajustes):
-        agente = SaidaDeLoopAgent(name="A10b", status_keys=["adequacao_status"], rodada_key="rod", max_rounds=2,
+        agente = SaidaDeLoopAgent(name="A028", status_keys=["adequacao_status"], rodada_key="rod", max_rounds=2,
                                   aceitos=["aprovado", "aprovado_com_ressalvas"],
                                   envelope_exige={"adequacao_status": "ajustes_exigidos"})
         loop = LoopAgent(name="L", max_iterations=2, sub_agents=[agente])
@@ -713,7 +713,7 @@ def test_ajuste_exigido_pelo_parecer_nao_encerra_o_loop():
     from agents.produto import build_produto_stage
 
     a10b = next(a for a in build_produto_stage().sub_agents if a.name == "AvaliacoesLoop").sub_agents
-    a10b = next(a for a in a10b if a.name == "A10bAdequacaoCheck")
+    a10b = next(a for a in a10b if a.name == "A028AdequacaoCheck")
     assert a10b.envelope_exige == {"adequacao_status": "ajustes_exigidos"} and a10b.max_rounds >= 2
     assert get_settings().avaliacoes_max_rodadas >= 2
 
@@ -792,11 +792,11 @@ def test_cobertura_de_telas_confere_por_id_em_todo_derivado():
 
 
 def test_prompts_de_telas_nao_mandam_priorizar():
-    """`26_telas.md` mandava "Priorize… Declare o que ficou fora" e o protótipo tinha "Se não couber… na ordem
+    """`065_telas.md` mandava "Priorize… Declare o que ficou fora" e o protótipo tinha "Se não couber… na ordem
     de prioridade": as duas frases eram a causa do Stitch com uma fração das telas."""
     from prompts import get_prompt_raw
 
-    telas_prompt, prototipo = get_prompt_raw("design/26_telas.md"), get_prompt_raw("design/28_prototipo.md")
+    telas_prompt, prototipo = get_prompt_raw("design/065_telas.md"), get_prompt_raw("design/069_prototipo.md")
     assert "**Priorize**" not in telas_prompt and "é assincronia, não falha" not in telas_prompt
     assert "{stitch_links?}" in telas_prompt
     assert "## Se não couber" not in prototipo and "data-screen-id" in prototipo and "data-estado" in prototipo
@@ -1022,7 +1022,7 @@ def test_mutacao_a_matriz_pega_cada_perda_plantada():
              + "\n---\n\n# " + ca.TITULO_ANEXO + "\n\n" + texto["canal_b"][0]}
     assert "perdido-canal_b-prd" not in {a["codigo"] for a in rb.matriz(falso)["achados"]}, "literal no anexo conta"
 
-    # no pedagógico o anexo não salva o corpo: o gate dele (A49b) cobra o Canal B no corpo, e o anexo que a esteira
+    # no pedagógico o anexo não salva o corpo: o gate dele (A111) cobra o Canal B no corpo, e o anexo que a esteira
     # cola traz o §12 inteiro — contado, a coluna saía sempre ✅
     so_no_anexo = ca.com_anexo(base["one_pager_pedagogico"].replace(texto["canal_b"][1], ""), base["one_pager"],
                                ca.SECOES_PEDAGOGICO)
@@ -1073,7 +1073,7 @@ def test_conserto_de_design_pedido_pela_banca_refaz_o_que_deriva_dele():
     assert not {"jornada", "fluxo", "telas", "copy-ptbr-revisao"} & set(MAPA_BANCA)
     assert {"jornada", "fluxo", "telas", "copy-ptbr-revisao"} <= set(BANCA_EXTERNO)
     banca = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "BancaLoop")
-    despacho = next(a for a in banca.sub_agents if a.name == "A46DespachoBanca")
+    despacho = next(a for a in banca.sub_agents if a.name == "A102DespachoBanca")
     existentes = {s.name for s in despacho.sub_agents}
     assert all(n in existentes for nomes in POSFIXO_BANCA.values() for n in nomes)
 

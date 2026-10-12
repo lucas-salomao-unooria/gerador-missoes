@@ -26,9 +26,9 @@ from prompts import load_prompt
 
 #: Letra da dimensão → (sufixo do nome, prompt, sufixo da chave de saída).
 DIMENSOES_LLM: Dict[str, tuple] = {
-    "A": ("ProdutoNarrativa", "dev/39_validacao_produto_narrativa.md", "narrativa"),
-    "B": ("DesignImersao", "dev/40_validacao_design_imersao.md", "imersao"),
-    "C": ("PedagogiaBncc", "dev/41_validacao_pedagogia_bncc.md", "pedagogia"),
+    "A": ("ProdutoNarrativa", "dev/validacao_produto_narrativa.md", "narrativa"),
+    "B": ("DesignImersao", "dev/validacao_design_imersao.md", "imersao"),
+    "C": ("PedagogiaBncc", "dev/validacao_pedagogia_bncc.md", "pedagogia"),
 }
 
 
@@ -36,12 +36,21 @@ def chaves_de_saida(posicao: str, dimensoes: str) -> List[str]:
     return [f"banca_{posicao}_{DIMENSOES_LLM[d][2]}" for d in dimensoes]
 
 
-def get_banca(posicao: str, dimensoes: str, prefixo: str, *, rotulo: str, titulo: str, report_key: str,
+def _nome(numero: int, resto: str, letra: str = "") -> str:
+    """`A047aBancaProdutoNarrativa`: número do passo na esteira, letra quando roda em paralelo."""
+    return f"A{numero:03d}{letra}{resto}"
+
+
+def get_banca(posicao: str, dimensoes: str, numero: int, *, rotulo: str, titulo: str, report_key: str,
               status_key: str, comparar_com: Optional[Dict[str, str]] = None, **kw: Any) -> List[Any]:
-    """`[escopo, dimensões em paralelo, consolidação]` para encaixar numa etapa. A consolidação grava o status."""
+    """`[escopo, dimensões em paralelo, consolidação]` para encaixar numa etapa. A consolidação grava o status.
+
+    `numero` é o do primeiro passo da banca na esteira; os seguintes são consecutivos (no fim de produto o primeiro
+    é a gravação do conteúdo aprovado). As dimensões rodam em paralelo: mesmo número, uma letra cada."""
+    n = numero + (1 if posicao == "produto" else 0)  # o escopo
     juizes = [
         create_llm_agent(
-            name=f"{prefixo}Banca{DIMENSOES_LLM[d][0]}",
+            name=_nome(n + 1, f"Banca{DIMENSOES_LLM[d][0]}", "abcde"[i]),
             description=f"Banca ({posicao}): dimensão {d}, com o escopo desta posição.",
             instruction=load_prompt(DIMENSOES_LLM[d][1]),
             output_key=chave,
@@ -49,23 +58,23 @@ def get_banca(posicao: str, dimensoes: str, prefixo: str, *, rotulo: str, titulo
             deterministico=True,
             **kw,
         )
-        for d, chave in zip(dimensoes, chaves_de_saida(posicao, dimensoes))
+        for i, (d, chave) in enumerate(zip(dimensoes, chaves_de_saida(posicao, dimensoes)))
     ]
     # No fim de produto o `conteudo_aprovado` ainda não existe (é gravado no começo do design e do dev): a banca
     # julgava a spec sem o one-pager e não via a spec divergindo dele — o defeito do "segundo autor" que ela existe
     # para pegar (auditoria de 08/10/2026). O design o regrava ao começar, com o retrato dele.
     from tools.conteudo_aprovado import SECOES_DESIGN
 
-    antes = [ConteudoAprovadoAgent(name=f"{prefixo}ConteudoAprovado", secoes=list(SECOES_DESIGN),
+    antes = [ConteudoAprovadoAgent(name=_nome(numero, "ConteudoAprovado"), secoes=list(SECOES_DESIGN),
                                    description="Grava as seções literais do one-pager para a banca do fim de produto.")
              ] if posicao == "produto" else []
     return antes + [
-        EscopoBancaAgent(name=f"{prefixo}EscopoBanca", posicao=posicao,
+        EscopoBancaAgent(name=_nome(n, "EscopoBanca"), posicao=posicao,
                          description=f"Grava o escopo da banca na posição «{posicao}»."),
-        ParallelAgent(name=f"{prefixo}Banca", description=f"Banca ({posicao}): dimensões {', '.join(dimensoes)} em paralelo.",
+        ParallelAgent(name=_nome(n + 1, "Banca"), description=f"Banca ({posicao}): dimensões {', '.join(dimensoes)} em paralelo.",
                       sub_agents=juizes, before_agent_callback=marcar_heranca),
         ConsolidacaoBancaAgent(
-            name=f"{prefixo}BancaConsolidacao",
+            name=_nome(n + 2, "BancaConsolidacao"),
             description=f"{rotulo}: o veredito é o pior das dimensões, com os bloqueantes lidos dos arquivos de critério.",
             fontes=chaves_de_saida(posicao, dimensoes), report_key=report_key, status_key=status_key,
             rotulo=rotulo, titulo=titulo, gravar_status=True, comparar_com=dict(comparar_com or {}),

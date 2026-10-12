@@ -155,7 +155,7 @@ flowchart TD
         subgraph STAGE_PROD["🧭 Etapa de Produto (ProdutoStage)"]
             P00C["P00c/P00d: Mapa conceitual do material\n+ Ideação de 3 mecanismos"]:::stageStyle
             LOOP_P0{"Loop Núcleo Narrativo ↔ Micro-gate\n+ Juiz de profundidade (≤ 2 rodadas)"}:::gateStyle
-            P0B["P0b: A04SecoesApoio\n(One-pager canônico + Brief)"]:::stageStyle
+            P0B["P0b: A014SecoesApoio\n(One-pager canônico + Brief)"]:::stageStyle
             LOOP_P1{"Loop Gate Estrutural\n(≤ 3 rodadas)"}:::gateStyle
             PAR_AVAL["Paralelo: Avaliação Pedagógica (P2)\n∥ Experiência do Estudante (P3)"]:::stageStyle
             P4_GATE{"Gate Final de Produto (P4c)\nLiberada ou Bloqueada?"}:::gateStyle
@@ -245,35 +245,35 @@ graph TD
     subgraph ORCH["MissionPipelineOrchestrator (SequentialAgent)"]
         
         subgraph PROD["ProdutoStage (SequentialAgent)"]
-            P00c["P00c: A00cMapaConceitual\noutput_key: mapa_conceitual"]
-            P00d["P00d: A00dIdeacaoMecanismos\noutput_key: ideacao_mecanismos"]
+            P00c["P00c: A002MapaConceitual\noutput_key: mapa_conceitual"]
+            P00d["P00d: A003IdeacaoMecanismos\noutput_key: ideacao_mecanismos"]
 
             subgraph LOOP_P0["NucleoNarrativoLoop (LoopAgent ≤ 2 iterações)"]
-                P0a["P0a: A01NucleoNarrativo\noutput_key: nucleo_narrativo"]
-                P0cc["P0cc: A01cCoberturaConceitual (determinístico)\ncobertura_resultado"]
-                P0mg["P0mg: A02MicroGate\noutput_key: micro_gate_report"]
-                P0jp["P0jp: A02bJuizProfundidade\noutput_key: profundidade_report"]
-                P0pc["P0pc: A03bProfundidadeCheck (determinístico)\nstatus_key: profundidade_status"]
-                P0mgc["P0mgc: A03MicroGateCheck (EnvelopeGateAgent)\nstatus_key: micro_gate_status"]
-                P0nc["P0nc: A03cNucleoCheck (SaidaDeLoopAgent)"]
+                P0a["P0a: A004NucleoNarrativo\noutput_key: nucleo_narrativo"]
+                P0cc["P0cc: A006CoberturaConceitual (determinístico)\ncobertura_resultado"]
+                P0mg["P0mg: A007MicroGate\noutput_key: micro_gate_report"]
+                P0jp["P0jp: A008JuizProfundidade\noutput_key: profundidade_report"]
+                P0pc["P0pc: A011ProfundidadeCheck (determinístico)\nstatus_key: profundidade_status"]
+                P0mgc["P0mgc: A012MicroGateCheck (EnvelopeGateAgent)\nstatus_key: micro_gate_status"]
+                P0nc["P0nc: A013NucleoCheck (SaidaDeLoopAgent)"]
 
                 P0a --> P0cc --> P0mg --> P0jp --> P0pc --> P0mgc --> P0nc
                 P0nc -->|Micro-gate ou profundidade reprovado| P0a
             end
             P00c --> P00d --> P0a
 
-            P0B["P0b: A04SecoesApoio\noutput_key: one_pager"]
+            P0B["P0b: A014SecoesApoio\noutput_key: one_pager"]
             
             subgraph LOOP_P1["GateEstruturalLoop (LoopAgent ≤ 3 iterações)"]
-                P1["P1: A05GateEstrutural\noutput_key: gate_estrutural_report"]
-                P1c["P1c: A06GateEstruturalCheck (EnvelopeGateAgent)\nstatus_key: gate_estrutural_status"]
-                P1b["P1b: A07RevisorOnePager\noutput_key: one_pager (corrigido)"]
+                P1["P1: A021GateEstrutural\noutput_key: gate_estrutural_report"]
+                P1c["P1c: A022GateEstruturalCheck (EnvelopeGateAgent)\nstatus_key: gate_estrutural_status"]
+                P1b["P1b: A023RevisorOnePager\noutput_key: one_pager (corrigido)"]
                 P1 --> P1c -->|Se reprovado & iteração < max| P1b --> P1
             end
 
             subgraph PAR_AVAL["AvaliacoesParalelas (ParallelAgent)"]
-                P2["P2: A08AvaliacaoPedagogica\noutput_key: avaliacao_pedagogica_report"]
-                P3["P3: A09ExperienciaEstudante\noutput_key: experiencia_aluno_report"]
+                P2["P2: A024aAvaliacaoPedagogica\noutput_key: avaliacao_pedagogica_report"]
+                P3["P3: A024bExperienciaEstudante\noutput_key: experiencia_aluno_report"]
             end
 
             P4["P4: A10GateFinalProduto\noutput_key: gate_final_report"]
@@ -363,7 +363,7 @@ sequenceDiagram
         Gate-->>Downstream: Libera execução do próximo estágio
     else Status == BLOQUEADO (em Loop e rodada < max_rodadas)
         Gate->>State: Incrementa state[round_key]
-        Gate-->>LLM: Re-executa A07RevisorOnePager aplicando correções prontas
+        Gate-->>LLM: Re-executa A023RevisorOnePager aplicando correções prontas
     else Status == BLOQUEADO (Esgotou rodadas ou Gate Final)
         Gate->>State: Grava state[status_key] = "bloqueado"
         opt Modo Estrito Ativo (PRODUTO_MODO_ESTRITO=true)
@@ -453,11 +453,11 @@ Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as 
 
 **Contenção do que as ferramentas devolvem.** As respostas das ferramentas MCP entram no mesmo turno do agente, e `include_contents="none"` não as descarta: um agente que monta telas acumula dezenas de respostas de escrita, o dump do arquivo e a captura até o modelo recusar a requisição. Foi assim que a jornada estourou o teto de um milhão de tokens com um prompt de 22 KB. Todo agente com ferramentas nasce com dois limitadores em [`agents/callbacks.py`](agents/callbacks.py): a resposta é podada antes de voltar ao modelo (captura de tela sai do contexto, texto longo é truncado) e cada agente tem orçamento acumulado; esgotado, as chamadas seguintes são recusadas com a instrução de entregar o documento com o que já construiu. Vale mais o markdown com o board pela metade do que a execução inteira morrendo.
 
-**Fidelidade ao pedido do PO.** Todos os pedidos de *refazer* continuam valendo, do mais antigo ao mais novo, e chegam a todas as etapas pelas notas de passagem (`pipeline/passagem.py::pedidos_do_po`) — até 06/10/2026 o refazer seguinte apagava o anterior, e a missão do 9º ano saiu com os caminhos A/B trocados. O verificador de fidelidade (`tools/fidelidade.py`, agentes A03a no laço do núcleo e A16c no fim de produto) transforma as TRAVAS, os AJUSTES, as perguntas de VALIDAÇÃO que o PO escreve e o briefing num checklist; o juiz responde item a item com citação e o código confere a citação e as frases entre aspas. Pedido sem prova é 🔴 e recusa o *de acordo*; conflito entre o pedido e uma regra da esteira é decisão do PO (🔵). O *de acordo* que traz mudança de conteúdo é recusado com o caminho do *Refazer*, e o diagnóstico não diz mais "Nada travando" quando um gate pediu uma pessoa.
+**Fidelidade ao pedido do PO.** Todos os pedidos de *refazer* continuam valendo, do mais antigo ao mais novo, e chegam a todas as etapas pelas notas de passagem (`pipeline/passagem.py::pedidos_do_po`) — até 06/10/2026 o refazer seguinte apagava o anterior, e a missão do 9º ano saiu com os caminhos A/B trocados. O verificador de fidelidade (`tools/fidelidade.py`, agentes A010 no laço do núcleo e A050 no fim de produto) transforma as TRAVAS, os AJUSTES, as perguntas de VALIDAÇÃO que o PO escreve e o briefing num checklist; o juiz responde item a item com citação e o código confere a citação e as frases entre aspas. Pedido sem prova é 🔴 e recusa o *de acordo*; conflito entre o pedido e uma regra da esteira é decisão do PO (🔵). O *de acordo* que traz mudança de conteúdo é recusado com o caminho do *Refazer*, e o diagnóstico não diz mais "Nada travando" quando um gate pediu uma pessoa.
 
-**O que um documento afirma, conferido em código.** A missão do 9º ano (exp09ef1b, 06/10/2026) passou pelos juízes com defeitos que nenhum documento mostrava sozinho, e quatro verificadores determinísticos nasceram dela. A **conta da virada** (`tools/mecanica.py`, A03aa no laço do núcleo) refaz o ranking da tabela 1.3 antes e depois do dado que faltava. A **coerência entre documentos** (`tools/consistencia.py`, A29d no design, antes do QA) confere jornada, fluxo, copy revisada, protótipo e PRD contra o `## Glossário canônico` da spec — o órgão tinha quatro nomes e os beneficiários de 14 anos viraram coordenadores na copy — e o modelo de dados do PRD contra ele mesmo e contra a spec (`escola_id` UUID × TEXT). As **afirmações do QA** (`tools/afirmacoes.py`, A30b entre o QA e o veredito) comparam "todas as N telas" e cada caminho citado com o Stitch, o inventário, o protótipo e os arquivos que a esteira grava: o QA aprovou "16 telas" num Stitch com 6; Stitch com menos telas que o inventário vira ticket para `telas`. E o **banco de conteúdo** (A35b escreve; `tools/conteudo.py`, A35c, confere) exige o texto integral de cada documento, tabela e roteiro do brief de assets e as falas da IA simulada por estado; o Status do brief só aceita `a produzir | rascunho | escrito`, porque "Homologado" num arquivo que ninguém escreveu era o que o PRD lia como fato.
+**O que um documento afirma, conferido em código.** A missão do 9º ano (exp09ef1b, 06/10/2026) passou pelos juízes com defeitos que nenhum documento mostrava sozinho, e quatro verificadores determinísticos nasceram dela. A **conta da virada** (`tools/mecanica.py`, A009 no laço do núcleo) refaz o ranking da tabela 1.3 antes e depois do dado que faltava. A **coerência entre documentos** (`tools/consistencia.py`, A072 no design, antes do QA) confere jornada, fluxo, copy revisada, protótipo e PRD contra o `## Glossário canônico` da spec — o órgão tinha quatro nomes e os beneficiários de 14 anos viraram coordenadores na copy — e o modelo de dados do PRD contra ele mesmo e contra a spec (`escola_id` UUID × TEXT). As **afirmações do QA** (`tools/afirmacoes.py`, A079 entre o QA e o veredito) comparam "todas as N telas" e cada caminho citado com o Stitch, o inventário, o protótipo e os arquivos que a esteira grava: o QA aprovou "16 telas" num Stitch com 6; Stitch com menos telas que o inventário vira ticket para `telas`. E o **banco de conteúdo** (A094 escreve; `tools/conteudo.py`, A095, confere) exige o texto integral de cada documento, tabela e roteiro do brief de assets e as falas da IA simulada por estado; o Status do brief só aceita `a produzir | rascunho | escrito`, porque "Homologado" num arquivo que ninguém escreveu era o que o PRD lia como fato.
 
-**O que o PO aprovou chega inteiro ao PRD e ao pedagógico.** A auditoria das 11 missões do bucket (06/10/2026) achou o mesmo defeito em todas: a spec aplicava as ressalvas 🟡 dos pareceres que o PO não tinha incorporado — a exp06ef1b perdeu a EF06CO07 e foi de 29 para 24 minutos em tela, e o dev a devolveu por inconsistência —, nenhuma spec trazia o podcast nem os tempos por etapa, e o PRD trocava o contrato de evidência por chaves de string, não tinha KPI por habilidade e apontava `spec/<slug>-spec.md`, que nunca existiu. Agora a spec traduz o one-pager sem revisá-lo (ressalva recusada vai para a tabela «Ressalvas dos pareceres não incorporadas» do bloco 12), e `tools/conteudo_aprovado.py` confere em código o que tem estrutura firme: as habilidades do §12a contra o bloco 11 da spec e a seção 14 do PRD, o total em tela do §10, o podcast do §11 (com RF no PRD), um KPI de evidência por habilidade e os caminhos de artefato citados — A15g no laço da spec, A48c no do PRD, A49b num laço novo do pedagógico. O que não tem estrutura firme (a régua, as perguntas do Canal B, o roteiro do podcast, o do debate) não é interpretado: A48d e A49c colam no fim do PRD e do pedagógico as seções do one-pager aprovado, literais, e o corpo remete a elas.
+**O que o PO aprovou chega inteiro ao PRD e ao pedagógico.** A auditoria das 11 missões do bucket (06/10/2026) achou o mesmo defeito em todas: a spec aplicava as ressalvas 🟡 dos pareceres que o PO não tinha incorporado — a exp06ef1b perdeu a EF06CO07 e foi de 29 para 24 minutos em tela, e o dev a devolveu por inconsistência —, nenhuma spec trazia o podcast nem os tempos por etapa, e o PRD trocava o contrato de evidência por chaves de string, não tinha KPI por habilidade e apontava `spec/<slug>-spec.md`, que nunca existiu. Agora a spec traduz o one-pager sem revisá-lo (ressalva recusada vai para a tabela «Ressalvas dos pareceres não incorporadas» do bloco 12), e `tools/conteudo_aprovado.py` confere em código o que tem estrutura firme: as habilidades do §12a contra o bloco 11 da spec e a seção 14 do PRD, o total em tela do §10, o podcast do §11 (com RF no PRD), um KPI de evidência por habilidade e os caminhos de artefato citados — A044 no laço da spec, A106 no do PRD, A111 num laço novo do pedagógico. O que não tem estrutura firme (a régua, as perguntas do Canal B, o roteiro do podcast, o do debate) não é interpretado: A109 e A114 colam no fim do PRD e do pedagógico as seções do one-pager aprovado, literais, e o corpo remete a elas.
 
 **Contexto da plataforma pela base publicada no bucket.** Os agentes não leem resumos escritos à mão: leem cópias dos `AGENTS.md`, das regras (`docs/regras/*`), dos ADRs e dos contratos Zod do monorepo `plataforma-unooria`, mais o **contrato da plataforma** (seções do DS, campos do manifesto, portas, última ADR, equipes, evidência), extraído do código. Quem publica é quem conhece: o CI da plataforma grava `gs://entre-redes-dev-base-plataforma/plataforma/<commit>/` a cada push em `dev-local`, e o do storybook grava `design-system/<versao>/` no mesmo bucket a cada versão publicada; cada um troca o próprio `atual.json` por último. É um bucket só da base: o Cloud Run do gerador o monta **só para leitura** em `/app/base-plataforma` (`BASE_PLATAFORMA_DIR`), e a conta do gerador só tem `objectViewer` nele. Até 07/10/2026 a base morava em `base-plataforma/` do bucket das sessões; a barra lateral a listava como missão e o botão de excluir a apagou duas vezes. Cada execução fixa a base que leu no começo (`prompts/base_plataforma.py`) e a registra no cabeçalho do diagnóstico. Até 06/10/2026 isso era uma cópia no git, que ficou 320 commits atrás sem ninguém ver. Para rodar localmente: `gcloud storage rsync -r gs://entre-redes-dev-base-plataforma output/base-plataforma` (ou `BASE_PLATAFORMA_DIR` apontando para uma base gerada com `node scripts/base-do-gerador/extrair.mjs --saida` na plataforma e `node scripts/inventario-para-o-gerador.mjs --saida` no storybook). Os arquivos `plataforma-unooria-software.md`, `-infra.md` e `-design-system.md` viraram índices sobre essas cópias, com a lista do que mais muda num PRD (liberação por turma, `produto`/`unidade` no manifesto, seis papéis, evento `verbo · objeto · resultado · contexto`, cinco caminhos de dado, sala por polling, currículo no servidor, quota em `ia_quotas`, fuso único, fluxo `dev-local → dev → hml → main`). O `_template` da plataforma passou a trazer a fiação completa em 16/09/2026 (ADR-106), então o PRD diz o que trocar primeiro, não o que falta.
 
@@ -718,7 +718,7 @@ A aplicação conta com uma interface visual completa em [Streamlit](file:///Use
 Cada mensagem numa conversa **nova** é uma missão do zero. Para corrigir uma missão existente, abra-a no histórico da barra lateral: com uma sessão aberta, o campo de mensagem passa a **pedir correções nela**.
 
 1. Você escreve o pedido (com anexos opcionais: PDF, Word, Markdown ou texto).
-2. Um agente de triagem (`A00TriagemCorrecao`, fora da esteira) decide de qual etapa recomeçar — `spec`, `design`, `dev` ou `nenhuma` — e resume o pedido. O app mostra a decisão e o motivo; você confirma ou troca a etapa.
+2. Um agente de triagem (`A000TriagemCorrecao`, fora da esteira) decide de qual etapa recomeçar — `spec`, `design`, `dev` ou `nenhuma` — e resume o pedido. O app mostra a decisão e o motivo; você confirma ou troca a etapa.
 3. A esteira roda **só dali em diante**, sobre o estado salvo (`estado.json`): `spec` refaz spec, design e dev (~20 min); `design` refaz design e dev (~15 min); `dev` só dev (~7 min). As etapas anteriores ficam como estão e servem de insumo.
 4. O pedido entra na chave de estado `pedido_correcao`, que **todo agente lê** (rodapé injetado em `agents/base.py`): os autores aplicam no que é seu e registram "O que mudou nesta versão" no documento; o QA e a banca conferem se foi atendido.
 5. O resultado sobrescreve a mesma pasta. Antes disso, o que seria perdido vai para `.correcoes/<data>-<etapa>/` (fora do manifesto e do ZIP). O `conversa.json` preserva a data original, acumula `historico_correcoes` e ganha a mensagem do pedido e do resultado; os detalhes da missão mostram o histórico num expander.

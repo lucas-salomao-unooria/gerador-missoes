@@ -7,7 +7,7 @@ tela, e nenhuma linha deles estava escrita. A IA simulada tinha quatro falas no 
 coluna Status do brief dizia "Homologado", "Pronto para corte" e "Roteiro aprovado" para arquivos
 que não existiam — o PRD leu o status como fato e mandou codificar sobre conteúdo nenhum.
 
-Agora o `A35bBancoConteudo` escreve o texto integral de cada item, e este módulo confere:
+Agora o `A094BancoConteudo` escreve o texto integral de cada item, e este módulo confere:
 
 1. a coluna Status do brief só aceita `a produzir | rascunho | escrito` — homologar, aprovar e dar
    "pronto" é ato humano, e agente que o escreve está afirmando o que ninguém fez (**bloqueio**);
