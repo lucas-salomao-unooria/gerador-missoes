@@ -41,7 +41,7 @@ Compila com `tectonic -X compile manual-gerador-missoes.tex`.
 
 | | |
 |---|---|
-| 📄 **PDF** | [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 93 páginas, 4.ª edição (08/10/2026) |
+| 📄 **PDF** | [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 98 páginas, 5.ª edição (12/10/2026) |
 | 📝 **Fonte** | [`manual-unooria/manual-gerador-missoes.tex`](manual-unooria/manual-gerador-missoes.tex) |
 | 🎨 **Identidade** | Paleta e tipografia do *brandbook*, documentadas em [`manual-unooria/README.md`](manual-unooria/README.md) |
 
@@ -50,8 +50,8 @@ Sete partes, que não precisam ser lidas na ordem:
 | Parte | Título | Responde a |
 |:-:|---|---|
 | I | O que a esteira faz | Que documentos saem, para quem, e o que significa a esteira não abortar. |
-| II | Como usar | O que colocar no briefing (ou o **one-pager do PO**, que vira a base preservada), o **parecer humano entre etapas**, os **pedidos do PO que se acumulam e são conferidos** (e como escrevê-los), a conversa com as etapas, o modo correção e como ler o diagnóstico. |
-| III | Como é construída | Por que 114 passos e não um prompt grande; portões, ciclos, a **banca em quatro posições**, o **conteúdo aprovado conferido até o PRD codificável**, a base da plataforma e o controle anti-alucinação. |
+| II | Como usar | O que colocar no briefing (ou o **one-pager do PO**, que vira a base preservada), o **parecer humano entre etapas**, os **pedidos do PO que se acumulam e são conferidos** (e como escrevê-los), a **conversa sobre a missão**, o acompanhamento da esteira animada, o **custo da missão em reais**, o modo correção e como ler o diagnóstico. |
+| III | Como é construída | Por que 119 passos (numerados de 001 a 119, na ordem em que rodam) e não um prompt grande; portões, ciclos, a **banca em quatro posições**, o **conteúdo aprovado conferido até o PRD codificável**, a base da plataforma e o controle anti-alucinação. |
 | IV | Por que funciona | A jornada de seis etapas, a **profundidade pedagógica** (a anatomia do *ahá*), a carga cognitiva e a régua por idade — com os números e as fontes. |
 | V | O que protege | BNCC e o primado do letramento digital, LGPD art. 14, ética de acolhimento. |
 | VI | Os agentes, um a um | O catálogo completo, com o que cada um faz e em que se apoia. |
@@ -159,7 +159,7 @@ flowchart TD
             LOOP_P1{"Loop Gate Estrutural\n(≤ 3 rodadas)"}:::gateStyle
             PAR_AVAL["Paralelo: Avaliação Pedagógica (P2)\n∥ Experiência do Estudante (P3)"]:::stageStyle
             P4_GATE{"Gate Final de Produto (P4c)\nLiberada ou Bloqueada?"}:::gateStyle
-            P5["P5: A12SpecMissao\n(Contrato dos 12 Blocos)"]:::stageStyle
+            P5["P5: A035SpecMissao\n(Contrato dos 12 Blocos)"]:::stageStyle
             P5C{"P5c: Conformidade BNCC Computação\n(determinístico — bloqueia)"}:::gateStyle
         end
 
@@ -182,12 +182,12 @@ flowchart TD
             V1D{"V1c/V1d: Telemetria + Rastro de Lacunas\n(determinísticos — o que faltou de produto/design/dev)"}:::gateStyle
             BANCA_DEV["Banca Multidisciplinar /validar-missao\n(5 dimensões paralelas: V2a–V2e)"]:::stageStyle
             V3["V3: Consolidação da Banca\n(Veredito 🟢 / 🟡 / 🔴)"]:::gateStyle
-            V4["V4: A46PrdWriter\n(PRD Padrão Ouro de 25 Seções)"]:::stageStyle
+            V4["V4: A103PrdWriter\n(PRD Padrão Ouro de 25 Seções)"]:::stageStyle
             V4C{"V4c: Pendências do PRD\n(só plataforma → 🟡)"}:::gateStyle
         end
 
         subgraph STAGE_TRANS["🧠 Etapa Transversal"]
-            T["T: A50Aprendizado\n(Catálogo, Lacunas & Emendas)"]:::stageStyle
+            T["T: A118Aprendizado\n(Catálogo, Lacunas & Emendas)"]:::stageStyle
         end
     end
 
@@ -276,10 +276,10 @@ graph TD
                 P3["P3: A024bExperienciaEstudante\noutput_key: experiencia_aluno_report"]
             end
 
-            P4["P4: A10GateFinalProduto\noutput_key: gate_final_report"]
-            P4c["P4c: A11GateFinalProdutoCheck (EnvelopeGateAgent)\nstatus_key: gate_final_status"]
-            P5["P5: A12SpecMissao\noutput_key: spec_missao"]
-            P5c["P5c: A13BnccCheck (BnccCheckAgent)\nstatus_key: bncc_status"]
+            P4["P4: A033GateFinalProduto\noutput_key: gate_final_report"]
+            P4c["P4c: A034GateFinalProdutoCheck (EnvelopeGateAgent)\nstatus_key: gate_final_status"]
+            P5["P5: A035SpecMissao\noutput_key: spec_missao"]
+            P5c["P5c: A036BnccCheck (BnccCheckAgent)\nstatus_key: bncc_status"]
 
             P0mgc -->|Escalate on Approve| P0B
             P0B --> LOOP_P1
@@ -288,28 +288,28 @@ graph TD
         end
 
         subgraph DES["DesignStage (SequentialAgent)"]
-            D0["D0: A16FechaLacunas\noutput_key: fechamento_lacunas"]
-            D0c["D0c: A17FechaLacunasSplit (SecaoSplitAgent)\nspec_missao ← spec consolidada · relatorio_lacunas · lacunas_status"]
-            D9["D9: A18AmbienteSimulado 🎨\noutput_key: ambiente_simulado"]
-            D9c["D9c: A19AmbienteSimuladoSplit (SecaoSplitAgent)\nspec_missao ← bloco 14 · ambiente_status"]
-            D1["D1: A20BriefOficio\noutput_key: brief_oficio"]
-            D2["D2: A21Jornada 🎨\noutput_key: jornada_telas"]
-            D3["D3: A22Fluxo 🎨\noutput_key: fluxo_arestas"]
-            D4["D4: A23CopyPtBr\noutput_key: copy_strings"]
-            D4B["D4b: A24Caa\noutput_key: camada_caa"]
-            D5["D5: A25Telas 🎨\noutput_key: wireframes_cobertura"]
-            D6["D6: A26CopyRevisao\noutput_key: copy_strings_revisada"]
-            D7["D7: A29QaEntregaveis 🎨\noutput_key: qa_entregaveis_report"]
-            D7c["D7c: A30QaEntregaveisCheck (EnvelopeGateAgent)\nstatus_key: design_status"]
+            D0["D0: A055FechaLacunas\noutput_key: fechamento_lacunas"]
+            D0c["D0c: A056FechaLacunasSplit (SecaoSplitAgent)\nspec_missao ← spec consolidada · relatorio_lacunas · lacunas_status"]
+            D9["D9: A057AmbienteSimulado 🎨\noutput_key: ambiente_simulado"]
+            D9c["D9c: A058AmbienteSimuladoSplit (SecaoSplitAgent)\nspec_missao ← bloco 14 · ambiente_status"]
+            D1["D1: A060BriefOficio\noutput_key: brief_oficio"]
+            D2["D2: A061Jornada 🎨\noutput_key: jornada_telas"]
+            D3["D3: A062Fluxo 🎨\noutput_key: fluxo_arestas"]
+            D4["D4: A063CopyPtBr\noutput_key: copy_strings"]
+            D4B["D4b: A064Caa\noutput_key: camada_caa"]
+            D5["D5: A065Telas 🎨\noutput_key: wireframes_cobertura"]
+            D6["D6: A067CopyRevisao\noutput_key: copy_strings_revisada"]
+            D7["D7: A078QaEntregaveis 🎨\noutput_key: qa_entregaveis_report"]
+            D7c["D7c: A080QaEntregaveisCheck (EnvelopeGateAgent)\nstatus_key: design_status"]
 
             D0 --> D0c --> D9 --> D9c --> D1 --> D2 --> D3 --> D4 --> D4B --> D5 --> D6 --> D7 --> D7c
         end
 
         subgraph DEV["DevStage (SequentialAgent)"]
-            V0["V0: A32ManifestoCheck (RastroCheckAgent)\nstatus_key: manifesto_status"]
+            V0["V0: A089ManifestoCheck (RastroCheckAgent)\nstatus_key: manifesto_status"]
             subgraph PAR_HANDOFF["HandoffParalelo (ParallelAgent)"]
-                V1["V1: A33HandoffDev\noutput_key: handoff_dev"]
-                V1b["V1b: A34BriefAssets\noutput_key: brief_assets"]
+                V1["V1: A090aHandoffDev\noutput_key: handoff_dev"]
+                V1b["V1b: A090bBriefAssets\noutput_key: brief_assets"]
             end
 
             subgraph BANCA["BancaValidacaoDev (ParallelAgent)"]
@@ -320,17 +320,17 @@ graph TD
                 V2e["V2e: Técnica & Arquitetura\noutput_key: validacao_tecnica_arquitetura"]
             end
 
-            V1c["V1c: A35TelemetriaCheck (RastroCheckAgent)\nstatus_key: telemetria_status"]
-            V1d["V1d: A37LacunaCheck (RastroCheckAgent)\nstatus_key: rastro_lacunas_status"]
-            V3["V3: A43ConsolidacaoBanca\noutput_key: validacao_dev_report"]
-            V3c["V3c: A44ValidacaoDevCheck (EnvelopeGateAgent)\nstatus_key: dev_status"]
-            V4["V4: A46PrdWriter\noutput_key: prd_final"]
-            V4c["V4c: A47PrdCheck (RastroCheckAgent)\nstatus_key: prd_status"]
+            V1c["V1c: A091TelemetriaCheck (RastroCheckAgent)\nstatus_key: telemetria_status"]
+            V1d["V1d: A097LacunaCheck (RastroCheckAgent)\nstatus_key: rastro_lacunas_status"]
+            V3["V3: A100ConsolidacaoBanca\noutput_key: validacao_dev_report"]
+            V3c["V3c: A101ValidacaoDevCheck (EnvelopeGateAgent)\nstatus_key: dev_status"]
+            V4["V4: A103PrdWriter\noutput_key: prd_final"]
+            V4c["V4c: A104PrdCheck (RastroCheckAgent)\nstatus_key: prd_status"]
 
             V0 --> PAR_HANDOFF --> V1c --> V1d --> BANCA --> V3 --> V3c --> V4 --> V4c
         end
 
-        T["T: A50Aprendizado (Transversal)\noutput_key: aprendizado_registro"]
+        T["T: A118Aprendizado (Transversal)\noutput_key: aprendizado_registro"]
 
         PROD --> DES --> DEV --> T
     end
@@ -464,8 +464,8 @@ Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as 
 A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a missão a uma **banca multidisciplinar com 72 critérios de validação (21 bloqueantes)** antes de lavrar o PRD padrão ouro.
 
 ```
-                    ┌─ A33HandoffDev (V1)
-                    │  A34BriefAssets (V1b)
+                    ┌─ A090aHandoffDev (V1)
+                    │  A090bBriefAssets (V1b)
                     │
                     ▼
 ┌───────────────────────────────────────────────────────────┐
@@ -479,11 +479,11 @@ A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a mis
 └───────────────────────────────────────────────────────────┘
                     │
                     ▼
-         A43ConsolidacaoBanca (V3)
+         A100ConsolidacaoBanca (V3)
          Veredito: 🟢 APTO | 🟡 APTO C/ RESSALVAS | 🔴 NÃO APTO
                     │
                     ▼
-         A46PrdWriter (V4) ──▶ PRD.md (25 Seções)
+         A103PrdWriter (V4) ──▶ PRD.md (25 Seções)
 ```
 
 | Agente | ID | Critérios / Rubrica | Saída (`output_key`) | Descrição |
@@ -508,7 +508,7 @@ A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a mis
 
 ### 🧠 Área Transversal de Aprendizado
 
-- **Agente de Aprendizado (`A50Aprendizado` / `T`):**
+- **Agente de Aprendizado (`A118Aprendizado` / `T`):**
   - Roda ao final de toda execução (mesmo que haja bloqueios ou ressalvas).
   - Atualiza o registro em `output/<execucao>/aprendizado.md`.
   - Extrai:
@@ -704,12 +704,16 @@ O redator do PRD e a banca de desenvolvedores utilizam referências técnicas vi
 
 A aplicação conta com uma interface visual completa em [Streamlit](file:///Users/lucassalomao/Documents/Unooria/gerador-missoes/app.py):
 
+- **Esteira animada:** enquanto uma etapa roda, a missão mostra os 119 passos (001 a 119, na ordem de execução; paralelos com letra), o atual pulsando, os feitos em verde, o veredito de cada gate em amarelo ou vermelho e os que não precisaram rodar com borda tracejada. Segue o tema do app ([`pipeline/esteira_visual.py`](pipeline/esteira_visual.py)).
+- **Custo da missão:** tokens de entrada, saída e raciocínio pelo preço Standard do Gemini 3.8 Flash, em reais pela PTAX do Banco Central; ao vivo no topo da esteira e somando todas as execuções da missão, inclusive os *Refazer* e as que falham ([`tools/custo.py`](tools/custo.py)).
+- **Conversa sobre a missão:** um chat só, sobre qualquer etapa ou sobre a passagem entre elas, que lê os documentos e não altera nada ([`pipeline/conversa_etapas.py`](pipeline/conversa_etapas.py)).
+- **Downloads:** download total (`.zip`) e os one-pagers de produto, resumido e pedagógico (`.docx` com a marca).
 - **Streaming em Tempo Real:** Acompanhamento da execução nó a nó, com separação clara entre a saída final de cada agente e seu **fluxo de pensamento (*thinking*)**.
 - **Indicadores de Status dos Gates:** Badges coloridas (🟢 Aprovado, 🟡 Aprovado com Ressalvas / Bypass, 🔴 Bloqueado, ⚪ Pendente).
 - **Abas Especializadas:** Navegação entre PRD renderizado, relatórios de Produto, especificações de Design, banca de Dev, registro de Aprendizado e os links do Stitch e do Miro.
 - **Card de Integrações:** Na barra lateral, o status do Stitch e do Miro, com o botão que conduz o OAuth do Miro sem sair do app.
 - **Histórico Persistente de Missões:** As execuções salvas em `output/` são carregadas na barra lateral, permitindo revisitar missões anteriores, inspecionar estados passados, excluir execuções ou baixar um **arquivo ZIP completo** com todos os artefatos.
-- **Editor de Prompts com Includes Resolvidos:** Uma aba dedicada permite inspecionar e editar qualquer arquivo `.md` de prompt ou referência, com pré-visualização em tempo real das diretivas `<!-- include: references/... -->` expandidas.
+- **Prompts para leitura:** a aba de prompts mostra cada arquivo `.md` de prompt e referência, só para leitura, com as diretivas `<!-- include: references/... -->` expandidas e um `.zip` com todos. O arquivo leva o número do agente que o lê (`design/065_telas.md`); os compartilhados por vários passos não têm número, e a aba lista quem os usa.
 
 ---
 
@@ -757,6 +761,7 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `GOOGLE_API_KEY` | *Obrigatório* | Chave de API do Google Gemini (Google AI Studio ou Vertex AI). |
 | `GEMINI_MODEL` | `gemini-3.8-flash` | Modelo padrão utilizado por todos os agentes do pipeline. |
 | `GEMINI_MODEL_PRD` | `gemini-3.8-flash` | Modelo utilizado pelo redator do PRD (pode ser definido como `gemini-3.8-pro`). |
+| `COTACAO_USD_BRL` | PTAX | Cotação do dólar para o custo da missão em reais. Vazia: PTAX de venda do Banco Central (uma consulta por dia); sem rede, 5,50. |
 | `THINKING_BUDGET` | `2048` | Tokens dedicados ao raciocínio lógico (`0` = desligado, `-1` = dinâmico, `>0` = fixo). |
 | `INCLUDE_THOUGHTS` | `true` | Exibe o fluxo de pensamentos dos agentes na interface gráfica. |
 | `PIPELINE_STAGES` | `produto,design,dev` | Etapas ativas separadas por vírgula (a etapa de aprendizado roda sempre). |
