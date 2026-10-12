@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import shutil
 import time
@@ -32,6 +33,8 @@ from agents.callbacks import (
     texto_de_heranca,
 )
 from pipeline.artifacts import ARTIFACT_FILES
+
+logger = logging.getLogger(__name__)
 
 #: Chave de estado lida por todos os agentes (rodapé injetado em `agents/base.py`).
 KEY_PEDIDO_CORRECAO = "pedido_correcao"
@@ -554,9 +557,26 @@ def fazer_backup(run_dir: Path, etapa: str, removidas: Sequence[str]) -> Path:
     return destino
 
 
-def restaurar_backup(run_dir: Path, backup: Path) -> List[str]:
-    """Devolve à sessão tudo que está no backup (sobrescrevendo). Retorna os caminhos restaurados."""
+def restaurar_backup(run_dir: Path, backup: Path, custo_parcial: Optional[Dict[str, Any]] = None,
+                     etapas: Optional[List[str]] = None) -> List[str]:
+    """Devolve à sessão tudo que está no backup (sobrescrevendo). Retorna os caminhos restaurados.
+
+    O custo não volta com o backup: o que foi gasto foi gasto. O `custo_missao` mais completo (o de agora ou o do
+    backup) fica no estado restaurado, e `custo_parcial` — o que a execução que falhou consumiu até cair — entra
+    como uma linha marcada `falhou` (`tools/custo.py`).
+    """
+    from tools.custo import KEY_CUSTO, acumular
+
     run_dir, backup = Path(run_dir), Path(backup)
+    caminho_estado = run_dir / "estado.json"
+
+    def custo_em(caminho: Path) -> Dict[str, Any]:
+        try:
+            return json.loads(caminho.read_text(encoding="utf-8")).get(KEY_CUSTO) or {}
+        except (OSError, ValueError):
+            return {}
+
+    custo_antes = custo_em(caminho_estado)
     restaurados: List[str] = []
     for arquivo in sorted(p for p in backup.rglob("*") if p.is_file()):
         rel = arquivo.relative_to(backup)
@@ -564,6 +584,19 @@ def restaurar_backup(run_dir: Path, backup: Path) -> List[str]:
         alvo.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(arquivo, alvo)
         restaurados.append(rel.as_posix())
+
+    if caminho_estado.exists():
+        custo = max((custo_antes, custo_em(caminho_estado)), key=lambda c: len(c.get("execucoes") or []))
+        if custo_parcial and (custo_parcial.get("tokens") or {}).get("chamadas"):
+            custo = acumular(custo, {**custo_parcial, "falhou": True}, list(etapas or []))
+        if custo and custo != custo_em(caminho_estado):
+            try:
+                estado = json.loads(caminho_estado.read_text(encoding="utf-8"))
+                estado[KEY_CUSTO] = custo
+                caminho_estado.write_text(json.dumps(estado, indent=2, ensure_ascii=False, default=str),
+                                          encoding="utf-8")
+            except (OSError, ValueError) as exc:
+                logger.warning("Não consegui devolver o custo ao estado restaurado de %s: %s", run_dir.name, exc)
     return restaurados
 
 
@@ -695,6 +728,7 @@ async def executar_correcao_stream(
 
     result: Any = None
     erro: Optional[Dict[str, Any]] = None
+    custo_parcial: Optional[Dict[str, Any]] = None
     async for evento in run_orchestrator_pipeline_stream(
         prompt=briefing,
         user_id=conversa.get("user_id"),
@@ -710,6 +744,8 @@ async def executar_correcao_stream(
             result = evento.get("result")
         elif tipo == "pipeline_error":
             erro = evento
+        elif tipo == "custo_parcial":
+            custo_parcial = evento.get("custo")
         yield evento
 
     registro = RegistroCorrecao(
@@ -730,7 +766,7 @@ async def executar_correcao_stream(
         mensagens.append({"role": "user", "content": pedido.texto.strip()})
 
     if result is None:
-        restaurados = restaurar_backup(run_dir, backup)
+        restaurados = restaurar_backup(run_dir, backup, custo_parcial, stages)
         registro.status = "error"
         detalhe = (erro or {}).get("error") or "o runner terminou sem resultado"
         mensagens.append({"role": "assistant", "content": f"❌ **Correção não aplicada:** {detalhe}. A sessão voltou ao estado anterior."})
@@ -786,6 +822,7 @@ async def iniciar_etapa_stream(
 
     result: Any = None
     erro: Optional[Dict[str, Any]] = None
+    custo_parcial: Optional[Dict[str, Any]] = None
     async for evento in run_orchestrator_pipeline_stream(
         prompt=briefing,
         user_id=conversa.get("user_id"),
@@ -802,10 +839,12 @@ async def iniciar_etapa_stream(
             result = evento.get("result")
         elif tipo == "pipeline_error":
             erro = evento
+        elif tipo == "custo_parcial":
+            custo_parcial = evento.get("custo")
         yield evento
 
     if result is None or getattr(result, "status", "") == "error":
-        restaurados = restaurar_backup(run_dir, backup)
+        restaurados = restaurar_backup(run_dir, backup, custo_parcial, stages)
         detalhe = (erro or {}).get("error") or getattr(result, "error_message", None) or "o runner terminou sem resultado"
         yield {"type": "etapa_error", "etapa": etapa, "error": detalhe, "restaurados": restaurados,
                "timestamp": time.time()}

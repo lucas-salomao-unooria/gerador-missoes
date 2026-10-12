@@ -145,6 +145,37 @@ def create_mission_orchestrator(
     )
 
 
+#: Prompts que nenhum agente dos metadados declara: os juízes genéricos (um por tipo de verificador) e os dois
+#: agentes fora da esteira. `passos_dos_prompts_compartilhados` diz quem os usa, a partir da árvore real.
+ROTULO_PROMPT_COMPARTILHADO = {
+    "transversal/juiz_de_fidelidade.md": "Juiz de fidelidade (compartilhado)",
+    "transversal/juiz_de_achados.md": "Juiz de achados (compartilhado)",
+    "transversal/juiz_de_contradicoes.md": "Juiz de contradições (compartilhado)",
+    "transversal/triagem_correcao.md": "000 · Triagem do pedido de correção (fora da esteira)",
+    "transversal/conversa_etapa.md": "000 · Conversa sobre a missão (fora da esteira)",
+}
+
+
+def passos_dos_prompts_compartilhados() -> Dict[str, List[str]]:
+    """`{prompt: [agentes]}` dos juízes genéricos, pela classe do verificador que os contém, e dos dois de fora."""
+    from agents.checkers import FidelidadeCheckAgent, JuizDeAchadosAgent, JuizDeContradicoesAgent
+    from agents.design import build_design_stage
+    from agents.dev import build_dev_stage
+    from agents.produto import build_produto_stage
+
+    por_classe = {FidelidadeCheckAgent: "transversal/juiz_de_fidelidade.md",
+                  JuizDeAchadosAgent: "transversal/juiz_de_achados.md",
+                  JuizDeContradicoesAgent: "transversal/juiz_de_contradicoes.md"}
+    usos: Dict[str, List[str]] = {"transversal/triagem_correcao.md": ["A000TriagemCorrecao"],
+                                  "transversal/conversa_etapa.md": ["A000ConversaEtapa"]}
+    for raiz in (build_produto_stage(), build_design_stage(), build_dev_stage()):
+        for _, agente in iter_agent_tree(raiz):
+            prompt = next((p for c, p in por_classe.items() if isinstance(agente, c)), None)
+            if prompt and agente.name not in usos.setdefault(prompt, []):
+                usos[prompt].append(agente.name)
+    return usos
+
+
 def iter_agent_tree(agent, depth: int = 0):
     """Percorre a árvore de agentes (para testes e depuração)."""
     yield depth, agent

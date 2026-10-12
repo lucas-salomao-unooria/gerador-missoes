@@ -5028,3 +5028,91 @@ def test_animacao_da_esteira_marca_o_passo_atual_e_o_que_ja_rodou():
     assert s[(47, "a")] == s[(47, "b")] == "atual"
     h = html_da_esteira("design", "A065Telas", [], titulo="⏳", decorrido_s=65)
     assert 'class="p atual"' in h and "1 min 05 s" in h
+
+
+# --------------------------------------------------------------------- custo da missão
+def test_custo_soma_as_execucoes_e_cobra_cache_e_pensamento(monkeypatch):
+    from datetime import date
+
+    from tools import custo
+
+    monkeypatch.setenv("COTACAO_USD_BRL", "5")
+    # 1M de entrada (200 mil em cache), 100 mil de saída e 100 mil de pensamento, na tarifa de 2026
+    t = {"entrada": 1_000_000, "cache": 200_000, "saida": 100_000, "pensamento": 100_000, "chamadas": 3}
+    usd = custo.custo_usd(t, "gemini-3.8-flash", date(2026, 10, 12))
+    assert abs(usd - (0.8 * 0.75 + 0.2 * 0.075 + 0.2 * 3.75)) < 1e-9
+    assert custo.preco("gemini-3.8-flash", date(2027, 1, 1)) == (1.50, 7.50, 0.15)
+    assert custo.custo_usd(t, "modelo-desconhecido") is None
+
+    # o redator do PRD pode usar outro modelo; modelo sem preço não entra e é avisado
+    e1 = custo.custo_da_execucao({"A004NucleoNarrativo": t}, "gemini-3.8-flash", {})
+    e2 = custo.custo_da_execucao({"A103PrdWriter": t, "A014SecoesApoio": t}, "gemini-3.8-flash",
+                                 {"A103PrdWriter": "outro-modelo"})
+    assert e2["modelos_sem_preco"] == ["outro-modelo"] and e2["usd"] == e1["usd"]
+    # refazer soma ao total, não substitui
+    total = custo.acumular(custo.acumular(None, e1, ["produto"]), e2, ["design"])
+    assert len(total["execucoes"]) == 2
+    assert total["total"]["tokens"]["entrada"] == 3_000_000
+    assert abs(total["total"]["brl"] - round(e1["brl"] + e2["brl"], 2)) < 0.011
+    assert custo.brl(1234.5) == "R$ 1.234,50"
+
+
+def test_custo_da_missao_sobrevive_ao_refazer():
+    from pipeline.reexecucao import preparar_estado
+
+    estado = {"custo_missao": {"execucoes": [{"usd": 1.0}], "total": {"usd": 1.0}}, "spec_missao": "x"}
+    for etapa in ("produto", "spec", "design", "dev", "transversal"):
+        limpo, _ = preparar_estado(estado, etapa)
+        assert limpo["custo_missao"] == estado["custo_missao"], etapa
+
+
+def test_cotacao_vem_da_ptax_e_cai_no_padrao_sem_rede(monkeypatch):
+    import io
+    import json as _json
+    from datetime import date
+
+    from tools import custo
+
+    monkeypatch.delenv("COTACAO_USD_BRL", raising=False)
+    custo._CACHE_PTAX.clear()
+    corpo = _json.dumps({"value": [{"cotacaoVenda": 5.01, "dataHoraCotacao": "2026-10-08 13:00:00"},
+                                   {"cotacaoVenda": 4.9892, "dataHoraCotacao": "2026-10-09 13:07:30"}]}).encode()
+    monkeypatch.setattr(custo.urllib.request, "urlopen", lambda url, timeout: io.BytesIO(corpo))
+    assert custo.ptax_venda(date(2026, 10, 12)) == (4.9892, "PTAX 09/10/2026")
+
+    custo._CACHE_PTAX.clear()
+
+    def sem_rede(url, timeout):
+        raise OSError("sem rede")
+
+    monkeypatch.setattr(custo.urllib.request, "urlopen", sem_rede)
+    assert custo.cotacao_usd_brl() == (custo.COTACAO_PADRAO, "padrão (PTAX indisponível)")
+    monkeypatch.setenv("COTACAO_USD_BRL", "5,10")
+    assert custo.cotacao_usd_brl() == (5.10, "COTACAO_USD_BRL")
+
+
+def test_restaurar_backup_nao_apaga_o_custo_e_soma_o_que_a_falha_gastou(tmp_path):
+    import json as _json
+
+    from pipeline.reexecucao import restaurar_backup
+    from tools.custo import acumular, texto_ao_vivo
+
+    linha = {"tokens": {"entrada": 1000, "saida": 10, "chamadas": 2}, "usd": 1.0, "brl": 5.0}
+    antes = acumular(None, linha, ["produto"])                     # o que o backup guardou
+    depois = acumular(antes, linha, ["design"])                    # uma execução completou depois do backup
+    backup = tmp_path / ".correcoes" / "x"
+    backup.mkdir(parents=True)
+    (backup / "estado.json").write_text(_json.dumps({"spec_missao": "velha", "custo_missao": antes}))
+    (tmp_path / "estado.json").write_text(_json.dumps({"spec_missao": "nova", "custo_missao": depois}))
+
+    falha = {"tokens": {"entrada": 500, "saida": 5, "chamadas": 1}, "usd": 0.5, "brl": 2.5}
+    restaurar_backup(tmp_path, backup, falha, ["dev"])
+    estado = _json.loads((tmp_path / "estado.json").read_text())
+    assert estado["spec_missao"] == "velha"                        # o documento volta
+    custo = estado["custo_missao"]                                 # o custo não volta
+    assert len(custo["execucoes"]) == 3 and custo["execucoes"][-1]["falhou"] is True
+    assert custo["total"]["brl"] == 12.5
+    # execução que caiu antes da primeira chamada ao modelo não vira linha
+    restaurar_backup(tmp_path, backup, {"tokens": {"chamadas": 0}}, ["dev"])
+    assert len(_json.loads((tmp_path / "estado.json").read_text())["custo_missao"]["execucoes"]) == 3
+    assert texto_ao_vivo(falha, {"brl": 10}).startswith("💰 R$ 2,50 nesta execução · R$ 12,50 na missão")

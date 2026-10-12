@@ -79,6 +79,7 @@ _CSS = """
 .barra{flex:1;height:6px;border-radius:3px;background:var(--trilho);overflow:hidden;min-width:80px}
 .barra i{display:block;height:100%;background:linear-gradient(90deg,var(--feito),var(--atual));transition:width .6s}
 .pct{color:var(--suave);font-size:12px;white-space:nowrap}
+.custo{width:100%;font-size:12px;color:var(--suave);font-variant-numeric:tabular-nums}
 .raia{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;border-bottom:1px solid var(--borda)}
 .raia.ativa{background:linear-gradient(90deg,transparent,var(--atual-fundo) 50%,transparent);background-size:200% 100%;
 animation:corre 3s linear infinite}
@@ -98,7 +99,7 @@ background:var(--pendente-fundo);color:var(--suave);font-variant-numeric:tabular
 
 
 def html_da_esteira(etapa: str, agente_atual: str, vistos: Iterable[str] = (), *,
-                    titulo: str = "", decorrido_s: Optional[int] = None) -> str:
+                    titulo: str = "", decorrido_s: Optional[int] = None, custo: str = "") -> str:
     """A página da animação: uma raia por etapa, um bloco por passo, o atual pulsando e a raia ativa correndo."""
     passos = passos_da_esteira()
     situacao = situacao_dos_passos(passos, etapa, agente_atual, list(vistos))
@@ -131,5 +132,6 @@ def html_da_esteira(etapa: str, agente_atual: str, vistos: Iterable[str] = (), *
 
     return (f"<!doctype html><html><head><meta charset='utf-8'><style>{_CSS}</style></head><body>"
             f'<div class="topo"><div class="agora">{html.escape(titulo)} {agora}<small>{tempo}</small></div>'
-            f'<div class="barra"><i style="width:{pct}%"></i></div><div class="pct">{pct}% dos passos</div></div>'
+            f'<div class="barra"><i style="width:{pct}%"></i></div><div class="pct">{pct}% dos passos</div>'
+            + (f'<div class="custo">{html.escape(custo)}</div>' if custo else "") + "</div>"
             + "".join(raias) + "</body></html>")

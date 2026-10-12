@@ -529,8 +529,13 @@ def _painel_execucao(run_dir_str: str) -> None:
     decorrido = int(time.time() - float(dados.get("iniciado_em") or time.time()))
     from pipeline.esteira_visual import html_da_esteira
 
+    from tools.custo import texto_ao_vivo
+
+    custo_vivo = dados.get("custo") or {}
     components.html(html_da_esteira(dados.get("etapa", ""), dados.get("agente_atual") or "", dados.get("vistos") or [],
-                                    titulo=f"⏳ {tipo} {etapa} ·", decorrido_s=decorrido), height=330, scrolling=True)
+                                    titulo=f"⏳ {tipo} {etapa} ·", decorrido_s=decorrido,
+                                    custo=texto_ao_vivo(custo_vivo.get("execucao"), custo_vivo.get("missao_antes"))),
+                    height=350, scrolling=True)
     gates = dados.get("gates") or {}
     if gates:
         st.caption(" · ".join(f"{_status_icon(v)} {GATE_LABELS.get(k, k)}" for k, v in gates.items() if k in GATE_LABELS))
@@ -1059,12 +1064,14 @@ async def _acompanhar_esteira(stream, stages: List[Dict[str, Any]], progress, st
 
     def render():
         from pipeline.esteira_visual import etapa_do_agente, html_da_esteira
+        from tools.custo import texto_ao_vivo
 
         with steps_container.container():
             rodou = [k for k, v in status.items() if v in ("done", "running")]
             etapa_atual = etapa_do_agente(active_agent or "")
-            components.html(html_da_esteira(etapa_atual, active_agent or "", rodou, titulo="🔄"),
-                            height=330, scrolling=True)
+            components.html(html_da_esteira(etapa_atual, active_agent or "", rodou, titulo="🔄",
+                                            custo=texto_ao_vivo(custo_vivo.get("custo"), custo_vivo.get("missao_antes"))),
+                            height=350, scrolling=True)
             cols = st.columns(len(stages))
             for col, stage in zip(cols, stages):
                 with col:
@@ -1082,6 +1089,7 @@ async def _acompanhar_esteira(stream, stages: List[Dict[str, Any]], progress, st
                 st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS.get(k, k)}" for k, v in gates.items() if k in GATE_LABELS))
 
     active_agent: Optional[str] = None
+    custo_vivo: Dict[str, Any] = {}
     render()
     result: Optional[PipelineExecutionResult] = None
     registro: Optional[Dict[str, Any]] = None
@@ -1104,6 +1112,9 @@ async def _acompanhar_esteira(stream, stages: List[Dict[str, Any]], progress, st
             continue
         active_agent = update_pipeline_step_status(status, active_agent, event, gates)
 
+        if et == "custo_parcial":
+            custo_vivo = event
+            continue
         if et == "agent_started":
             name = event["agent_name"]
             progress.info(f"🔄 Executando **{name}**…")
@@ -1348,6 +1359,42 @@ def render_saida_agente(value: str, output_key: str, prefix: str):
     st.markdown(sanear_para_streamlit(value))
 
 
+def render_custo_da_missao(estado: Dict[str, Any], prefix: str) -> None:
+    """Tokens e custo da missão inteira — todas as execuções, refazer incluído (`tools/custo.py`)."""
+    from tools.custo import KEY_CUSTO, brl, milhares
+
+    custo = estado.get(KEY_CUSTO) or {}
+    total = custo.get("total") or {}
+    if not total:
+        st.caption("💰 Custo: esta missão foi gerada antes da contagem de custo.")
+        return
+    t = total.get("tokens") or {}
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("💰 Custo total da missão", brl(float(total.get("brl") or 0)), help=f"US$ {float(total.get('usd') or 0):.4f}")
+    c2.metric("Tokens de entrada", milhares(int(t.get("entrada") or 0)),
+              help=f"{milhares(int(t.get('cache') or 0))} vieram do cache, a 10% do preço")
+    c3.metric("Tokens de saída", milhares(int(t.get("saida") or 0) + int(t.get("pensamento") or 0)),
+              help=f"{milhares(int(t.get('pensamento') or 0))} de pensamento (cobrados como saída)")
+    c4.metric("Execuções", len(custo.get("execucoes") or []), help=f"{milhares(int(t.get('chamadas') or 0))} chamadas ao modelo")
+    with st.expander("💰 Custo por execução", expanded=False):
+        linhas = ["| Quando | Etapas | Entrada | Saída | Pensamento | US$ | Cotação | R$ |",
+                  "|---|---|--:|--:|--:|--:|--:|--:|"]
+        for e in custo.get("execucoes") or []:
+            tk = e.get("tokens") or {}
+            etapas_e = ", ".join(e.get("etapas") or []) + (" · ⚠️ falhou" if e.get("falhou") else "")
+            linhas.append(f"| {e.get('quando', '?')} | {etapas_e} | {milhares(int(tk.get('entrada') or 0))} "
+                          f"| {milhares(int(tk.get('saida') or 0))} | {milhares(int(tk.get('pensamento') or 0))} "
+                          f"| {float(e.get('usd') or 0):.4f} | {float(e.get('cotacao') or 0):.4f} "
+                          f"({e.get('fonte_cotacao', '?')}) | {brl(float(e.get('brl') or 0))} |")
+        st.markdown("\n".join(linhas))
+        sem_preco = sorted({m for e in custo.get("execucoes") or [] for m in e.get("modelos_sem_preco") or []})
+        if sem_preco:
+            st.warning(f"Modelo sem preço na tabela: {', '.join(sem_preco)}. O consumo dele não entrou no custo.")
+        st.caption("Preço Standard da API do Gemini por 1 milhão de tokens. O real usa a cotação do momento de cada "
+                   "execução: PTAX de venda do Banco Central, ou `COTACAO_USD_BRL` quando definida no ambiente. "
+                   "A conversa sobre a missão e a triagem de correção não entram.")
+
+
 def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = ""):
     st.markdown("---")
     gates = result.gates
@@ -1379,6 +1426,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
 
     if gates:
         st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS[k]}" for k, v in gates.items() if k in GATE_LABELS))
+    render_custo_da_missao(result.state or {}, prefix)
     if getattr(result, "bypassed", False):
         st.warning("⚠️ **Atenção:** Esta missão avançou com gates bloqueados (modo estrito desativado / bypass). Verifique as pendências nos relatórios e na seção 20 do PRD.")
     historico = _historico_da_sessao(result)
@@ -1674,10 +1722,9 @@ def render_prompt_manager():
     st.markdown("Cada agente lê um arquivo Markdown em `prompts/<área>/`. Diretivas `<!-- include: references/… -->` inserem conhecimento compartilhado em tempo de carga; `{chave}` / `{chave?}` são interpoladas pelo ADK a partir do estado da sessão.")
     areas = list_prompt_files()
 
-    # Um mesmo prompt pode ser lido por mais de um nó: o revisor do one-pager (07) roda de novo como
-    # retrabalho dentro do loop de avaliações (10c). Vale a PRIMEIRA ocorrência, que é a posição
-    # canônica do agente na esteira — indexar pela última fazia o arquivo 07 aparecer rotulado "10c",
-    # e portanto fora de ordem no seletor.
+    # Um mesmo prompt pode ser lido por mais de um nó: o revisor do one-pager (023) roda de novo movido pelo
+    # parecer (029), e as bancas A–C rodam no fim de produto, no fim de design e na entrada do dev. Vale a
+    # PRIMEIRA ocorrência, que é a posição canônica na esteira; as outras aparecem como reúso.
     metadata: Dict[str, Dict[str, Any]] = {}
     reusos: Dict[str, List[str]] = {}
     for m in get_pipeline_agents_metadata(active_only=False):
@@ -1689,8 +1736,23 @@ def render_prompt_manager():
         else:
             metadata[arquivo] = m
 
+    # os juízes genéricos e os dois agentes fora da esteira não estão nos metadados: quem os usa vem da árvore
+    from pipeline.orchestrator import ROTULO_PROMPT_COMPARTILHADO, passos_dos_prompts_compartilhados
+
+    for rel, agentes in passos_dos_prompts_compartilhados().items():
+        if rel in metadata or not agentes:
+            continue
+        rotulo = ROTULO_PROMPT_COMPARTILHADO.get(rel, rel)
+        numero = re.match(r"A(\d{3}[a-z]?)", agentes[0])
+        if numero and not re.match(r"\d", rotulo):
+            rotulo = f"{numero.group(1)} · {rotulo}"
+        metadata[rel] = {"id": agentes[0], "name": rotulo, "output_key": "—",
+                         "description": "Prompt compartilhado: cada agente abaixo o usa com os seus próprios documentos."}
+        if len(agentes) > 1:
+            reusos[rel] = agentes[1:]
+
     def _ordem_do_agente(rel: str) -> tuple[int, str]:
-        """`12 · Veredito` → (12, ''), `10c · Revisor` → (10, 'c'). Ordena pela esteira, não pelo nome do arquivo."""
+        """`023 · Revisor` → (23, ''), `024b · Experiência` → (24, 'b'). Ordena pela esteira, não pelo nome do arquivo."""
         nome = metadata.get(rel, {}).get("name", rel)
         achado = re.match(r"\s*(\d+)([a-z]*)", nome)
         return (int(achado.group(1)), achado.group(2)) if achado else (999, "")
