@@ -108,6 +108,27 @@ def extrair_fichas(repo: Path, ref: str) -> Dict[str, Any]:
     return fichas
 
 
+def extrair_esquema(repo: Path, ref: str) -> Dict[str, Any]:
+    """Tabelas, colunas, tipos e chaves estrangeiras depois de todas as migrations (`tools/esquema_plataforma`)."""
+    import sys
+
+    sys.path.insert(0, str(RAIZ))
+    from tools.esquema_plataforma import ler_migrations
+
+    pastas = sorted(git_ls(repo, ref, "apps/api/prisma/migrations/"))
+    sql = "\n".join(git_show(repo, ref, f"{p}/migration.sql") for p in pastas)
+    tabelas, fks = ler_migrations(sql)
+    return {"tabelas_plataforma": tabelas,
+            "chaves_estrangeiras": {t: {c: list(a) for c, a in r.items()} for t, r in fks.items()}}
+
+
+def tabelas_da_missao(slug: str, tabelas: Dict[str, Dict[str, str]]) -> List[str]:
+    """`exp05ef1b_*` e o prefixo legado `exp_05_*` (missões publicadas antes do id inteiro no nome)."""
+    m = re.match(r"exp(\d{2})", slug)
+    legado = f"exp_{m.group(1)}_" if m and slug.endswith("ef1b") else None
+    return sorted(t for t in tabelas if t.startswith(f"{slug}_") or (legado and t.startswith(legado)))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=str(RAIZ.parent / "plataforma-unooria"), help="Caminho do monorepo da plataforma")
@@ -122,10 +143,13 @@ def main() -> None:
 
     print(f"🔍 Extraindo fichas da plataforma em {repo} @ {args.ref}...")
     fichas = extrair_fichas(repo, args.ref)
+    esquema = extrair_esquema(repo, args.ref)
+    for slug, ficha in fichas.items():
+        ficha["tabelas"] = tabelas_da_missao(slug, esquema["tabelas_plataforma"])
 
     saida = Path(args.saida)
     saida.parent.mkdir(parents=True, exist_ok=True)
-    saida.write_text(json.dumps({"fichas": fichas}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    saida.write_text(json.dumps({"fichas": fichas, **esquema}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"✅ {len(fichas)} fichas técnicas consolidadas salvas em {saida}")
 
 

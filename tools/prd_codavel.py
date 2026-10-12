@@ -208,6 +208,10 @@ def _ficha(prd: str, spec: str, achados: List[Dict[str, str]]) -> None:
         return
     i_hab, i_tipo, i_regra = _coluna(tabela, "habilidade"), _coluna(tabela, "tipo"), _coluna(tabela, "regra")
     colunas = colunas_declaradas(prd)
+    from tools.consistencia import _declaracoes
+
+    s11 = _secao(prd, 11) or prd
+    jsonb = {c for cols in _declaracoes(s11).values() for c, fams in cols.items() if "json" in fams}
     cobertas: Set[str] = set()
     for linha in tabela[1:]:
         def cel(i: Optional[int]) -> str:
@@ -218,6 +222,11 @@ def _ficha(prd: str, spec: str, achados: List[Dict[str, str]]) -> None:
             _achado(achados, "bloqueio", "ficha-tipo-invalido",
                     f"Ficha: tipo «{cel(i_tipo)}» na linha de {cel(i_hab)[:40]}. Só `acao` ou `multipla_escolha`.")
         regra = cel(i_regra)
+        if tipo == "acao" and "[PROPOSTA" in regra:
+            # regra em proposta: o servidor ainda não sabe calcular o nível — o PO decide, e o achado não some
+            _achado(achados, "atencao", "regra-em-proposta",
+                    f"Ficha de {cel(i_hab)[:40]}: a regra é `[PROPOSTA …]`. Sem a decisão do PO, o servidor não sabe "
+                    "calcular o nível desta habilidade.")
         if tipo == "acao" and "[PROPOSTA" not in regra:
             # Item 4 da Etapa 2 (Plano Padrão Ouro): cada ramo da regra de ação (antes do →) precisa ler coluna
             # e expressar predicado formal (OP valor), e não apenas citar palavra solta
@@ -247,6 +256,17 @@ def _ficha(prd: str, spec: str, achados: List[Dict[str, str]]) -> None:
                     if re.search(padrao, condicao, re.IGNORECASE) or re.search(padrao_json, condicao, re.IGNORECASE):
                         tem_predicado = True
                         break
+                # coluna JSONB: a chave lida precisa estar no DEFAULT ou na descrição da seção 11 (plano 2.4)
+                for c in intersecao & jsonb:
+                    for chave in re.findall(rf"\b{re.escape(c)}\s*(?:[:.]\s*|->>?\s*['\"]?)(\w+)", condicao, re.I):
+                        if not re.search(rf"\b{re.escape(chave)}\b", s11, re.I):
+                            _achado(achados, "bloqueio", "regra-chave-jsonb-ausente",
+                                    f"Ficha de {cel(i_hab)[:40]}: a condição lê `{c}` → `{chave}`, mas a seção 11 não "
+                                    f"declara a chave `{chave}` na coluna JSONB `{c}` (nem no DEFAULT nem na descrição). "
+                                    "O servidor grava o que o modelo de dados diz; chave fora dele nunca existe.")
+                            erro_encontrado = True
+                if erro_encontrado:
+                    break
                 if not tem_predicado:
                     _achado(achados, "bloqueio", "regra-sem-predicado",
                             f"Ficha de {cel(i_hab)[:40]}: a condição «{condicao[:80]}» cita coluna mas não expressa um predicado "
@@ -316,7 +336,8 @@ def handoff_no_prd(prd: str, handoff: str) -> List[Dict[str, str]]:
     if not (handoff or "").strip() or not (prd or "").strip():
         return achados
     s19 = _secao(prd, 19)
-    corpo = prd
+    # o nome só na seção 19 é divergência registrada, não presença: antes o corpo incluía a 19 e citar bastava
+    corpo = prd.replace(s19, "") if s19 else prd
 
     def registrado(nome: str) -> bool:
         return nome in s19
@@ -328,6 +349,8 @@ def handoff_no_prd(prd: str, handoff: str) -> List[Dict[str, str]]:
     if not declaradas:
         declaradas = {t for t in _RE_TABELA_DA_MISSAO.findall(handoff)
                       if not re.search(r"_(?:idx|pkey|fkey|key|check|por_escola|uk|unique)$", t)}
+    # a seção 19 nomear a divergência é texto do modelo: não isenta, só tira do bloqueio — o PO vê (plano 2.8)
+    so_registradas = sorted({t for t in declaradas if t not in corpo and registrado(t)})
     tabelas = sorted({t for t in declaradas if t not in corpo and not registrado(t)})
     if tabelas:
         _achado(achados, "bloqueio", "tabela-do-handoff-perdida",
@@ -340,12 +363,17 @@ def handoff_no_prd(prd: str, handoff: str) -> List[Dict[str, str]]:
             continue
         for linha in t[1:]:
             objetos |= set(re.findall(r"\b[a-z_]+:[a-z0-9_:-]+\b", linha[col] if col < len(linha) else ""))
+    so_registradas += sorted(o for o in objetos if o not in corpo and registrado(o))
     eventos = sorted(o for o in objetos if o not in corpo and not registrado(o))
     if eventos:
         _achado(achados, "bloqueio", "evento-do-handoff-perdido",
                 f"Evento(s) do handoff que o PRD não traz nem registra na seção 19: {', '.join(f'`{o}`' for o in eventos[:12])}"
                 f"{' …' if len(eventos) > 12 else ''}. O objeto é o que a conferência de telemetria procura literal.")
-    rotas = sorted({f"{m} {p}" for m, p in _RE_ROTA.findall(handoff) if p.rstrip("/") not in corpo})
+    if so_registradas:
+        _achado(achados, "atencao", "divergencia-do-handoff-registrada",
+                f"O PRD tira do handoff {', '.join(f'`{n}`' for n in so_registradas[:12])} e só registra a troca na seção 19. "
+                "Confira se a divergência tem motivo antes do de acordo.")
+    rotas = sorted({f"{m} {p}" for m, p in _RE_ROTA.findall(handoff) if p.rstrip("/") not in prd})
     if rotas:
         _achado(achados, "atencao", "rota-do-handoff-mudou",
                 f"Rota(s) do handoff que o PRD não repete: {', '.join(f'`{r}`' for r in rotas[:10])}. Se o PRD as trocou pelo "

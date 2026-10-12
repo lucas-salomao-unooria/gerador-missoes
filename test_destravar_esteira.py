@@ -309,10 +309,13 @@ def test_handoff_no_prd_tabela_e_evento_nao_somem_sem_registro():
     codigos = {a["codigo"] for a in handoff_no_prd(prd, handoff)}
     assert codigos == {"tabela-do-handoff-perdida", "evento-do-handoff-perdido"}
     registrado = prd + "\n\n# 19. Decisões\n`exp06ef1b_reflexoes` e `missao:concluir` saem: divergência com o handoff, dono produto.\n"
-    assert handoff_no_prd(registrado, handoff) == []
+    # registrar na seção 19 é texto do modelo: tira do bloqueio, mas fica 🟡 para o PO (plano padrão ouro, 2.8)
+    assert [(a["codigo"], a["severidade"]) for a in handoff_no_prd(registrado, handoff)] == [
+        ("divergencia-do-handoff-registrada", "atencao")]
     rota = handoff_no_prd(prd.replace("POST /exp06ef1b/turmas/:turmaId/zerar", "DELETE /exp06ef1b/turmas/:turmaId")
                           + "\n# 19. Decisões\nexp06ef1b_reflexoes missao:concluir\n", handoff)
-    assert [a["codigo"] for a in rota] == ["rota-do-handoff-mudou"] and rota[0]["severidade"] == "atencao"
+    assert sorted(a["codigo"] for a in rota) == ["divergencia-do-handoff-registrada", "rota-do-handoff-mudou"]
+    assert all(a["severidade"] == "atencao" for a in rota)
 
 
 def test_pedagogico_tem_juiz_de_contradicoes():

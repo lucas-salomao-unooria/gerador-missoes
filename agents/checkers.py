@@ -341,6 +341,33 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
     return _sem_bloco(base, titulo).rstrip() + "\n\n" + bloco.strip() + "\n"
 
 
+def _instabilidade(state: Dict[str, Any], ex: Dict[str, Any], secao: str) -> Optional[Dict[str, Any]]:
+    """Achado `autor-instavel` quando a seção perdeu linhas da versão da execução anterior (`estavel_contra`)."""
+    from pipeline.reexecucao import KEY_ETAPA_DA_CORRECAO, PREFIXO_VERSAO_ANTERIOR
+    from tools.preservacao import linhas_perdidas
+
+    fonte = str(ex["estavel_contra"])
+    anterior = str(state.get(f"{PREFIXO_VERSAO_ANTERIOR}{fonte}") or "")
+    antes = extrair_secao(anterior, ex["inicio"], ex.get("fim")) if anterior.strip() else None
+    if not antes:
+        return None
+    sumiram = linhas_perdidas(documento_sem_moldura(antes), secao)
+    if not sumiram:
+        return None
+    # spec do Gate 0 refeita (produto/spec reexecutados), retrabalho por achado de gate nesta execução ou pedido de
+    # correção de design: a mudança pode ter motivo
+    com_motivo = bool(str(state.get("tickets_retrabalho") or "").strip()) or bool(str(state.get(f"{PREFIXO_VERSAO_ANTERIOR}spec_missao") or "").strip()) or (
+        str(state.get(KEY_ETAPA_DA_CORRECAO) or "") == "design" and str(state.get("pedido_correcao") or "").strip())
+    return {
+        "severidade": "atencao" if com_motivo else "bloqueio", "codigo": "autor-instavel", "etapa": "design",
+        "agente_responsavel": ex.get("preservar") or fonte,
+        "resumo": (f"`{ex['chave']}` perdeu {len(sumiram)} linha(s) da versão da execução anterior"
+                   + (" — confira se o motivo do refazer as cobre" if com_motivo else
+                      ", sem pedido de correção e sem mudança a montante. Devolva cada uma como estava")
+                   + ":\n" + "\n".join(f"    - «{l[:200]}»" for l in sumiram[:15])),
+    }
+
+
 #: `base_preservada_<chave>`: a versão aceita de um documento cuja reescrita perdeu linhas (`SecaoSplitAgent`).
 PREFIXO_BASE_PRESERVADA = "base_preservada_"
 
@@ -363,6 +390,10 @@ class SecaoSplitAgent(BaseAgent):
       preservar     → dono do conserto (slug de retrabalho) quando uma linha do documento ATUAL some
                       do novo (`tools/preservacao.linhas_perdidas`). O D0 da exp06ef1b apagou a
                       pergunta 3 do debate e passou: o tamanho não encolheu o bastante (07/10/2026).
+      estavel_contra → chave autoral cuja versão de antes do refazer (`versao_anterior_<chave>`) traz a mesma
+                      seção: o que ela tinha e a nova não tem é instabilidade do autor. Na exp06ef1b o D0 traduziu
+                      o próprio texto num refazer sem pedido. Sem nada mudado a montante (spec do Gate 0) e sem
+                      pedido de correção de design, é bloqueio; com motivo, 🟡 com as linhas (plano padrão ouro, 2.7).
       bloco_proprio → regex do título do único bloco que este autor escreve (`^## 14`): o documento gravado é a
                       versão aceita com esse bloco trocado pelo da nova — o resto da nova é descartado, e a
                       preservação confere só o que não é dele (`montar_sobre_aceita`).
@@ -403,6 +434,7 @@ class SecaoSplitAgent(BaseAgent):
             faltou: List[tuple] = []
             perdidas: List[Dict[str, Any]] = []
             fora_do_bloco: List[Dict[str, Any]] = []
+            instaveis: List[Dict[str, Any]] = []
             for ex in self.extracoes:
                 chave = ex["chave"]
                 secao = extrair_secao(texto, ex["inicio"], ex.get("fim"))
@@ -461,6 +493,12 @@ class SecaoSplitAgent(BaseAgent):
                                        "no mesmo lugar:\n" + "\n".join(f"    - «{l[:200]}»" for l in sumiram[:15])),
                         })
                         linhas.append(f"⛔ `{chave}`: {len(sumiram)} linha(s) do documento anterior sumiram na reescrita.")
+                if ex.get("estavel_contra"):
+                    achado = _instabilidade(state, ex, secao)
+                    if achado:
+                        (perdidas if achado["severidade"] == "bloqueio" else instaveis).append(achado)
+                        linhas.append(f"{'⛔' if achado['severidade'] == 'bloqueio' else '🟡'} `{chave}`: mudou contra "
+                                      "a versão da execução anterior.")
                 delta[chave] = secao
                 linhas.append(f"✅ `{chave}` gravado a partir de `{self.source_key}` ({len(secao)} caracteres).")
 
@@ -508,6 +546,10 @@ class SecaoSplitAgent(BaseAgent):
                     delta[self.status_key] = "amarelo"
                 env.setdefault("achados", []).extend(fora_do_bloco)
                 linhas.append(f"🟡 {len(fora_do_bloco)} bloco(s) alterado(s) fora do bloco próprio — descartado(s), ver achados.")
+            if instaveis:
+                if delta[self.status_key] != STATUS_BLOQUEADO:
+                    delta[self.status_key] = "amarelo"
+                env.setdefault("achados", []).extend(instaveis)
             if perdidas:
                 delta[self.status_key] = STATUS_BLOQUEADO
                 env["status"] = "bloqueado"
@@ -1671,7 +1713,10 @@ class FidelidadeCheckAgent(BaseAgent):
                 yield evento
             saida = str(ctx.session.state.get(getattr(juiz, "output_key", "") or "", "") or "")
 
-        resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa, parcial=self.parcial)
+        from pipeline.reexecucao import PREFIXO_VERSAO_ANTERIOR
+
+        anteriores = {k: str(state.get(f"{PREFIXO_VERSAO_ANTERIOR}{k}") or "") for k in docs}
+        resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa, parcial=self.parcial, anteriores=anteriores)
         relatorio = fid.relatorio(resultado, itens, missao, self.onde)
         envelope = extrair_envelope(relatorio) or {}
         bloqueios = sum(1 for a in resultado["achados"] if a["severidade"] == "bloqueio")
@@ -2033,6 +2078,8 @@ class DespachoTicketsAgent(BaseAgent):
             chave = getattr(sub, "output_key", None) or ""
             anterior = f"{PREFIXO_ANTERIOR}{chave}" if chave in CHAVES_AUTORAIS else ""
             delta_ticket: Dict[str, Any] = {self.tickets_key: tickets}
+            # a base do refazer (`preparar_estado`) volta depois do autor: zerá-la apagava a versão anterior
+            base_do_refazer = str(state.get(anterior) or "") if anterior else ""
             if anterior and str(state.get(chave) or "").strip():
                 delta_ticket[anterior] = bloco_versao_anterior(chave, str(state.get(chave)))
                 state[anterior] = delta_ticket[anterior]
@@ -2045,9 +2092,9 @@ class DespachoTicketsAgent(BaseAgent):
             async for evento in sub.run_async(ctx):
                 yield evento
             if anterior and anterior in delta_ticket:
-                state[anterior] = ""
+                state[anterior] = base_do_refazer
                 yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
-                            actions=EventActions(state_delta={anterior: ""}))
+                            actions=EventActions(state_delta={anterior: base_do_refazer}))
 
         state[self.tickets_key] = ""
         gastos = int(state.get(KEY_REEXECUCOES, 0) or 0) + llm

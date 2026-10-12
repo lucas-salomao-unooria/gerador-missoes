@@ -157,9 +157,14 @@ def test_spec_que_decide_parametro_do_po_volta_ao_autor():
     decidida = _spec() + "\n- Inatividade: após 45 segundos sem interação, a dica aparece.\n"
     assert "parametro-decidido" in _codigos(ca.validar_spec(decidida, op))
     marcada = _spec() + "\n- Inatividade: após 45 segundos `[PARÂMETRO — a definir por produto: inatividade]`.\n"
-    registrada = _spec() + "\n- Inatividade: 45 s, ratificado no [D0-3].\n"
+    registrada = _spec() + "\n- Inatividade: 45 s, decidido pelo PO no parecer de 08/10/2026.\n"
     for spec in (marcada, registrada, _spec()):
         assert "parametro-decidido" not in _codigos(ca.validar_spec(spec, op))
+    # o D0 ratificar é decisão de agente: não isenta nem bloqueia, fica 🟡 para o PO (plano padrão ouro, 2.8)
+    pelo_d0 = ca.validar_spec(_spec() + "\n- Inatividade: 45 s sem interação, ratificado no [D0-3].\n", op)
+    assert [a["severidade"] for a in pelo_d0["achados"] if a["codigo"] == "parametro-decidido"] == ["atencao"]
+    sem_data = _spec() + "\n- Inatividade: após 45 segundos sem interação, decidido pelo PO.\n"
+    assert "parametro-decidido" in _codigos(ca.validar_spec(sem_data, op))
     assert ca.parametros_decididos("- Inatividade: 45 s sem toque, a dica pisca.", op)
 
 

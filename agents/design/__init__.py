@@ -120,6 +120,8 @@ def get_fecha_lacunas_split() -> SecaoSplitAgent:
                 "backup": "spec_missao_gate0",
                 # o que o Gate 0 escreveu não some na consolidação (exp06ef1b perdeu a pergunta 3 do debate)
                 "preservar": "fecha-lacunas",
+                # entre execuções de refazer, a consolidação não muda sem motivo (exp06ef1b traduziu o próprio texto)
+                "estavel_contra": "fechamento_lacunas",
             },
             {
                 "chave": "relatorio_lacunas",

@@ -494,7 +494,11 @@ _UNIDADE_ESCRITA = {"seg": r"(?:s\b|seg\w*)", "min": r"min\w*", "%": r"%", "pal"
 #: Linha que ainda trata o número como pendente, ou que diz quem o decidiu (o D0 ratificou, o PO homologou).
 _RE_AINDA_PENDENTE = re.compile(r"PAR[ÂA]METRO|PROPOSTA|ABERTO|DECIS[ÃA]O PENDENTE|a definir|validar com (?:o )?PO|"
                                 r"NEEDS CLARIFICATION", re.I)
-_RE_DECISAO_REGISTRADA = re.compile(r"ratificad|homologad|\[D0-\d|parecer d[oe]|decidido (?:pelo|em|no)|PO —", re.I)
+#: Só a decisão do PO com data isenta (princípio 1 do plano padrão ouro). A ratificação pelo D0 (`[D0-n]`,
+#: «ratificado») é de um agente: não isenta, e o número decidido assim fica 🟡 para o PO ver (`_RE_RATIFICADO_PELO_D0`).
+_RE_DECISAO_REGISTRADA = re.compile(r"(?:homologad|parecer d[oe]|decidido (?:pelo|em|no)|PO —|pedido d[oe] PO)"
+                                    r"[^\n]*\b\d{2}/\d{2}/\d{4}\b", re.I)
+_RE_RATIFICADO_PELO_D0 = re.compile(r"ratificad|\[D0-\d", re.I)
 
 
 def _familia_da_unidade(unidade: str) -> str:
@@ -649,8 +653,12 @@ def validar_spec(spec: str, one_pager: str) -> Dict[str, Any]:
             "produto"))
     decididos = parametros_decididos(spec, one_pager)
     # no mesmo assunto bloqueia; número igual em outro assunto (a duração de um áudio) só fica 🟡 para o PO ver
-    for severidade, grupo in (("bloqueio", [d for d in decididos if parametro_no_mesmo_assunto(d[0], d[1], one_pager)]),
-                              ("atencao", [d for d in decididos if not parametro_no_mesmo_assunto(d[0], d[1], one_pager)])):
+    # ratificado pelo D0 é decisão de agente com registro: não bloqueia, mas não some (o PO decide)
+    def bloqueia(d: Tuple[str, str]) -> bool:
+        return parametro_no_mesmo_assunto(d[0], d[1], one_pager) and not _RE_RATIFICADO_PELO_D0.search(d[1])
+
+    for severidade, grupo in (("bloqueio", [d for d in decididos if bloqueia(d)]),
+                              ("atencao", [d for d in decididos if not bloqueia(d)])):
         if not grupo:
             continue
         exemplos = "; ".join(f"{marcador[:110]} → «{linha[:120]}»" for marcador, linha in grupo[:4])

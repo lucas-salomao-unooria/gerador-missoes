@@ -486,9 +486,37 @@ def _tipos(fams: Dict[str, Set[str]]) -> str:
     return " × ".join(sorted("/".join(sorted(t)) for t in fams.values()))
 
 
-#: Tipos canônicos da plataforma (infraestrutura compartilhada de tenant e relações)
+#: Chaves do núcleo → coluna da plataforma que dá o tipo. Sem `fichas-tecnicas.json`, vale o tipo escrito aqui.
 TIPO_DA_PLATAFORMA = {"escola_id": "TEXT", "turma_id": "UUID", "estudante_id": "UUID"}
-_FAMILIA_DA_PLATAFORMA = {"escola_id": "texto", "turma_id": "uuid", "estudante_id": "uuid"}
+_ORIGEM_DO_NUCLEO = {"escola_id": ("turmas", "escola_id"), "turma_id": ("turmas", "id"), "estudante_id": ("users", "id")}
+
+
+def _esperados_da_plataforma(texto: str, decl: Dict[str, Dict[str, Dict[str, Set[str]]]]) -> List[Tuple[str, str, str, str]]:
+    """`(tabela, coluna, TIPO esperado, de onde vem)` para cada coluna do documento que a plataforma tipa.
+
+    Três fontes, todas do esquema real (`tools/esquema_plataforma`, plano padrão ouro 2.2): a tabela já publicada
+    (vale a migration dela), a chave estrangeira (vale o tipo da coluna-alvo) e as chaves do núcleo."""
+    from tools.esquema_plataforma import ler_migrations, tabelas as tabelas_da_plataforma
+
+    plat = tabelas_da_plataforma()
+    esperados: List[Tuple[str, str, str, str]] = []
+    for tabela, colunas in decl.items():
+        publicada = plat.get(tabela) or {}
+        for coluna in colunas:
+            if coluna in publicada:
+                esperados.append((tabela, coluna, publicada[coluna], f"migration publicada de `{tabela}`"))
+    _, fks = ler_migrations(texto or "")
+    for tabela, refs in fks.items():
+        for coluna, (alvo, col_alvo) in refs.items():
+            tipo = (plat.get(alvo) or {}).get(col_alvo)
+            if tipo and coluna in decl.get(tabela, {}):
+                esperados.append((tabela, coluna, tipo, f"chave estrangeira para `{alvo}.{col_alvo}`"))
+    for coluna, (alvo, col_alvo) in _ORIGEM_DO_NUCLEO.items():
+        tipo = (plat.get(alvo) or {}).get(col_alvo) or TIPO_DA_PLATAFORMA[coluna]
+        for tabela, colunas in decl.items():
+            if coluna in colunas:
+                esperados.append((tabela, coluna, tipo, f"chave do núcleo (`{alvo}.{col_alvo}`)"))
+    return esperados
 
 
 def conferir_colunas(texto: str, referencia: str = "", rotulo: str = "PRD", rotulo_ref: str = "spec",
@@ -499,8 +527,8 @@ def conferir_colunas(texto: str, referencia: str = "", rotulo: str = "PRD", rotu
       erDiagram do documento declara = atenção;
     - a mesma coluna com dois tipos no documento = bloqueio — por tabela, e para chaves `*_id` entre
       tabelas (é a mesma chave: `escola_id` não pode ser UUID numa e TEXT na outra);
-    - coluna de infraestrutura compartilhada (`escola_id`, `turma_id`, `estudante_id`) divergente da
-      plataforma = bloqueio irrestrito (sem válvula de escape ou autocertificação);
+    - coluna com tipo diferente da plataforma real (`tools/esquema_plataforma`: tabela já publicada, chave
+      estrangeira para tabela da plataforma, chaves do núcleo) = bloqueio, sem válvula de texto do modelo;
     - quando `referencia` for a spec (`rotulo_ref == "spec"`), compara apenas os nomes das colunas,
       já que tipos SQL cabem exclusivamente ao PRD; quando for outra referência, compara tipos.
     """
@@ -541,15 +569,19 @@ def conferir_colunas(texto: str, referencia: str = "", rotulo: str = "PRD", rotu
                   f"{rotulo}: `{coluna}` aparece com dois tipos ({_tipos(fams)}). A chave é a mesma em todas as tabelas: "
                   f"a migration, o Prisma e a política de RLS (`current_setting(...)::uuid`) precisam de um tipo só.")
 
-    # Validação contra tipos canônicos de infraestrutura da plataforma (aplica-se ao PRD/dev, já que a spec não dita DDL)
+    # Contra a plataforma real: tabela publicada, chave estrangeira e núcleo. Sem válvula de texto do modelo — a
+    # frase «Seguiu a plataforma» não alivia nada (plano padrão ouro, 2.2). A spec não dita DDL e fica de fora.
     if rotulo != "spec":
-        for col_plat, fam_esperada in sorted(_FAMILIA_DA_PLATAFORMA.items()):
-            if col_plat in todas:
-                fams = _por_coluna(decl, col_plat)
-                if fams and (set(fams.keys()) - {fam_esperada}):
-                    falha("bloqueio", "tipo-divergente-da-plataforma",
-                          f"{rotulo}: `{col_plat}` é {_tipos(fams)}, mas na plataforma é {TIPO_DA_PLATAFORMA[col_plat]}. "
-                          f"A chave de infraestrutura precisa seguir a plataforma.")
+        vistos: Set[Tuple[str, str]] = set()
+        for tabela, coluna, tipo, origem in _esperados_da_plataforma(texto, decl):
+            fams = decl.get(tabela, {}).get(coluna) or {}
+            # `TIMESTAMPTZ(6)`, `VARCHAR(16)`: a precisão não muda a família
+            if (tabela, coluna) in vistos or not fams or set(fams) <= {_familia(re.sub(r"\s*\(.*$", "", tipo))}:
+                continue
+            vistos.add((tabela, coluna))
+            falha("bloqueio", "tipo-divergente-da-plataforma",
+                  f"{rotulo}: `{tabela}.{coluna}` é {_tipos(fams)}, mas a plataforma usa {tipo} ({origem}). "
+                  "O tipo segue a plataforma.")
 
     if referencia:
         ref = _declaracoes(referencia)

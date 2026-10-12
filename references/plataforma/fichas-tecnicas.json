@@ -8,7 +8,11 @@
       "modulo_api": "apps/api/src/foto-conta",
       "rotas": [],
       "ficha_evidencia_arquivo": "",
-      "tabelas": []
+      "tabelas": [
+        "exp_01_activities",
+        "exp_01_conclusoes",
+        "exp_01_exp_70_perfis_importados"
+      ]
     },
     "exp02em1b": {
       "slug": "exp02em1b",
@@ -18,7 +22,10 @@
       "modulo_api": "",
       "rotas": [],
       "ficha_evidencia_arquivo": "apps/api/src/evidencias/fichas/exp02em1b.ts",
-      "tabelas": []
+      "tabelas": [
+        "exp02em1b_gate_turma",
+        "exp02em1b_sessoes"
+      ]
     },
     "exp04ef1b": {
       "slug": "exp04ef1b",
@@ -28,7 +35,15 @@
       "modulo_api": "apps/api/src/unootube",
       "rotas": [],
       "ficha_evidencia_arquivo": "apps/api/src/evidencias/fichas/exp04ef1b.ts",
-      "tabelas": []
+      "tabelas": [
+        "exp04ef1b_diagramacoes",
+        "exp04ef1b_gates_turma",
+        "exp04ef1b_pacotes",
+        "exp04ef1b_sessoes",
+        "exp_04_posts_turma",
+        "exp_04_runs",
+        "exp_04_turma_config"
+      ]
     },
     "exp05ef1b": {
       "slug": "exp05ef1b",
@@ -38,7 +53,17 @@
       "modulo_api": "",
       "rotas": [],
       "ficha_evidencia_arquivo": "apps/api/src/evidencias/fichas/exp05ef1b.ts",
-      "tabelas": []
+      "tabelas": [
+        "exp05ef1b_gates_turma",
+        "exp05ef1b_pacotes",
+        "exp05ef1b_reflexoes",
+        "exp05ef1b_sessoes",
+        "exp_05_conteudo_turma",
+        "exp_05_encaminhamentos",
+        "exp_05_gates_turma",
+        "exp_05_reflexoes",
+        "exp_05_sessoes"
+      ]
     },
     "exp06ef1b": {
       "slug": "exp06ef1b",
@@ -48,7 +73,16 @@
       "modulo_api": "apps/api/src/juri-estadual",
       "rotas": [],
       "ficha_evidencia_arquivo": "apps/api/src/evidencias/fichas/exp06ef1b.ts",
-      "tabelas": []
+      "tabelas": [
+        "exp06ef1b_gates_historico",
+        "exp06ef1b_gates_turma",
+        "exp06ef1b_pacotes",
+        "exp06ef1b_sessoes",
+        "exp_06_auditorias",
+        "exp_06_gates_turma",
+        "exp_06_reflexoes",
+        "exp_06_sessoes"
+      ]
     },
     "exp06ef2b": {
       "slug": "exp06ef2b",
@@ -68,7 +102,16 @@
       "modulo_api": "apps/api/src/a-selecao",
       "rotas": [],
       "ficha_evidencia_arquivo": "apps/api/src/evidencias/fichas/exp07ef1b.ts",
-      "tabelas": []
+      "tabelas": [
+        "exp07ef1b_coberturas",
+        "exp07ef1b_gates_turma",
+        "exp07ef1b_reflexoes",
+        "exp07ef1b_sessoes",
+        "exp_07_gates_turma",
+        "exp_07_mensagens",
+        "exp_07_reflexoes",
+        "exp_07_sessoes"
+      ]
     },
     "exp08ef1b": {
       "slug": "exp08ef1b",
@@ -78,7 +121,13 @@
       "modulo_api": "apps/api/src/dossie",
       "rotas": [],
       "ficha_evidencia_arquivo": "apps/api/src/evidencias/fichas/exp08ef1b.ts",
-      "tabelas": []
+      "tabelas": [
+        "exp_08_auditorias",
+        "exp_08_conteudo_turma",
+        "exp_08_gates_turma",
+        "exp_08_respostas_percurso",
+        "exp_08_sessoes"
+      ]
     },
     "exp08ef4b": {
       "slug": "exp08ef4b",
@@ -89,6 +138,1791 @@
       "rotas": [],
       "ficha_evidencia_arquivo": "",
       "tabelas": []
+    }
+  },
+  "tabelas_plataforma": {
+    "escolas": {
+      "id": "TEXT",
+      "nome": "TEXT",
+      "created_at": "TIMESTAMPTZ(6)",
+      "codigo_inep": "TEXT",
+      "tipo": "TEXT",
+      "pai_id": "TEXT",
+      "fonte_id": "TEXT",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "municipio": "TEXT",
+      "uf": "TEXT",
+      "regional_padrao": "BOOLEAN"
+    },
+    "turmas": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "nome": "TEXT",
+      "serie": "TEXT",
+      "periodo_letivo_id": "UUID",
+      "tipo": "TEXT",
+      "turno": "TEXT",
+      "codigo": "TEXT",
+      "fonte_id": "TEXT",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "users": {
+      "id": "UUID",
+      "role": "TEXT",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "username": "TEXT",
+      "display_name": "TEXT",
+      "password_hash": "TEXT",
+      "avatar": "TEXT",
+      "created_at": "TIMESTAMPTZ(6)",
+      "matricula_externa": "TEXT",
+      "fonte_id": "TEXT",
+      "email": "TEXT",
+      "ativo": "BOOLEAN",
+      "senha_provisoria": "BOOLEAN",
+      "senha_definida_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "cpf": "TEXT",
+      "regional_id": "TEXT"
+    },
+    "activities": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "professor_id": "UUID",
+      "titulo": "TEXT",
+      "disciplina": "TEXT",
+      "tema_geral": "TEXT",
+      "recorte": "TEXT",
+      "contexto_aula": "TEXT",
+      "pergunta_chave": "TEXT",
+      "pergunta_origem": "TEXT",
+      "etapa": "TEXT",
+      "ia_ao_vivo": "BOOLEAN",
+      "antagonismo": "JSONB",
+      "categorias_neutras": "TEXT[]",
+      "neutros_no_tema": "TEXT[]",
+      "estilo_visual": "TEXT",
+      "qtd_posts_tese": "INTEGER",
+      "proporcoes": "JSONB",
+      "engine_config": "JSONB",
+      "status": "TEXT",
+      "created_at": "TIMESTAMPTZ(6)"
+    },
+    "authors": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "activity_id": "UUID",
+      "handle": "TEXT",
+      "display_name": "TEXT",
+      "tipo": "TEXT",
+      "lado": "TEXT",
+      "perfil_afim": "TEXT",
+      "verificado": "BOOLEAN",
+      "bio": "TEXT",
+      "voz": "TEXT"
+    },
+    "posts": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "activity_id": "UUID",
+      "author_id": "UUID",
+      "lado": "TEXT",
+      "perfil": "TEXT",
+      "intensidade": "SMALLINT",
+      "categoria": "TEXT",
+      "formato": "TEXT",
+      "caption": "TEXT",
+      "hashtags": "TEXT[]",
+      "emotional_hook": "TEXT",
+      "image_brief": "TEXT",
+      "image_url": "TEXT",
+      "image_status": "TEXT",
+      "likes_count": "INTEGER",
+      "timestamp_label": "TEXT",
+      "aprovado": "BOOLEAN",
+      "created_at": "TIMESTAMPTZ(6)"
+    },
+    "post_comments": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "post_id": "UUID",
+      "author_id": "UUID",
+      "handle": "TEXT",
+      "texto": "TEXT",
+      "likes_count": "INTEGER",
+      "ordem": "SMALLINT",
+      "timestamp_label": "TEXT"
+    },
+    "generation_jobs": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "activity_id": "UUID",
+      "tipo": "TEXT",
+      "payload": "JSONB",
+      "status": "TEXT",
+      "tentativa": "SMALLINT",
+      "erro": "TEXT",
+      "created_at": "TIMESTAMPTZ(6)",
+      "updated_at": "TIMESTAMPTZ(6)"
+    },
+    "runs": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "activity_id": "UUID",
+      "estudante_id": "UUID",
+      "fase": "TEXT",
+      "lado_inicial": "TEXT",
+      "lado_origem": "TEXT",
+      "perfil_jogo": "JSONB",
+      "perfil_origem": "TEXT",
+      "engine_state": "JSONB",
+      "started_at": "TIMESTAMPTZ(6)",
+      "finished_at": "TIMESTAMPTZ(6)",
+      "nome_no_app": "TEXT",
+      "avatar_escolhido": "TEXT"
+    },
+    "events": {
+      "id": "BIGSERIAL",
+      "escola_id": "TEXT",
+      "run_id": "UUID",
+      "post_id": "UUID",
+      "tipo": "TEXT",
+      "payload": "JSONB",
+      "client_ts": "BIGINT",
+      "created_at": "TIMESTAMPTZ(6)"
+    },
+    "student_posts": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "run_id": "UUID",
+      "texto": "TEXT",
+      "template": "TEXT",
+      "lado_inferido": "TEXT",
+      "created_at": "TIMESTAMPTZ(6)"
+    },
+    "perfis_importados": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "activity_id": "UUID",
+      "estudante_id": "UUID",
+      "escores": "JSONB",
+      "dominante": "TEXT",
+      "origem": "TEXT",
+      "lado_forcado": "TEXT",
+      "medido_em": "TIMESTAMPTZ(6)",
+      "created_at": "TIMESTAMPTZ(6)"
+    },
+    "conclusoes": {
+      "run_id": "UUID",
+      "escola_id": "TEXT",
+      "inclinacao": "TEXT",
+      "texto": "TEXT",
+      "created_at": "TIMESTAMPTZ(6)"
+    },
+    "dossiers": {
+      "run_id": "UUID",
+      "escola_id": "TEXT",
+      "data": "JSONB",
+      "created_at": "TIMESTAMPTZ(6)"
+    },
+    "reflexoes": {
+      "run_id": "UUID",
+      "escola_id": "TEXT",
+      "texto": "TEXT",
+      "created_at": "TIMESTAMPTZ(6)",
+      "updated_at": "TIMESTAMPTZ(6)"
+    },
+    "comentarios_da_sessao": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "run_id": "UUID",
+      "post_id": "UUID",
+      "student_post_id": "UUID",
+      "handle": "TEXT",
+      "de_ia": "BOOLEAN",
+      "texto": "TEXT",
+      "created_at": "TIMESTAMPTZ(6)"
+    },
+    "progresso": {
+      "escola_id": "TEXT",
+      "estudante_id": "TEXT",
+      "exp_id": "TEXT",
+      "dados": "JSONB",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "experiencias": {
+      "exp_id": "TEXT",
+      "nome": "TEXT",
+      "versao_ativa": "TEXT",
+      "series": "TEXT[]",
+      "capabilities": "TEXT[]",
+      "viewport": "JSONB",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "publico": "TEXT",
+      "permissoes": "TEXT[]",
+      "unidade": "SMALLINT",
+      "produto": "TEXT"
+    },
+    "ia_uso_diario": {
+      "escola_id": "TEXT",
+      "usuario_id": "TEXT",
+      "dia": "TEXT",
+      "tokens_usados": "INTEGER"
+    },
+    "unootube_sessoes": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "salvos": "TEXT[]",
+      "curtidos": "TEXT[]",
+      "ranking_desbloqueado": "BOOLEAN",
+      "credibilidade_adicionada": "BOOLEAN",
+      "concluido_em": "TIMESTAMPTZ(6)",
+      "reinicios": "SMALLINT",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "planos_de_aula": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "professor_id": "UUID",
+      "serie": "TEXT",
+      "disciplina": "TEXT",
+      "titulo": "TEXT",
+      "status": "TEXT",
+      "tentativas": "SMALLINT",
+      "iniciado_em": "TIMESTAMPTZ(6)",
+      "erro": "TEXT",
+      "tokens_usados": "INTEGER",
+      "caminho_gerado_md": "TEXT",
+      "caminho_html": "TEXT",
+      "created_at": "TIMESTAMPTZ(6)",
+      "updated_at": "TIMESTAMPTZ(6)"
+    },
+    "planos_referencias": {
+      "id": "UUID",
+      "disciplina": "TEXT",
+      "serie": "TEXT",
+      "nome": "TEXT",
+      "texto": "TEXT",
+      "ordem": "INTEGER",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "bem_estar_ciclos": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "professor_id": "UUID",
+      "status": "TEXT",
+      "ordem_itens": "INTEGER[]",
+      "iniciado_em": "TIMESTAMPTZ(6)",
+      "expira_em": "TIMESTAMPTZ(6)",
+      "concluido_em": "TIMESTAMPTZ(6)",
+      "depressao": "INTEGER",
+      "ansiedade": "INTEGER",
+      "estresse": "INTEGER",
+      "created_at": "TIMESTAMPTZ(6)",
+      "updated_at": "TIMESTAMPTZ(6)"
+    },
+    "bem_estar_checkins": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "professor_id": "UUID",
+      "ciclo_id": "UUID",
+      "numero": "SMALLINT",
+      "dia": "TEXT",
+      "status": "TEXT",
+      "itens": "INTEGER[]",
+      "respostas": "JSONB",
+      "texto_livre": "TEXT",
+      "abertura": "TEXT",
+      "pergunta": "TEXT",
+      "acolhimento": "TEXT",
+      "origem_texto": "TEXT",
+      "sinal_de_apoio": "BOOLEAN",
+      "tokens_ia": "INTEGER",
+      "respondido_em": "TIMESTAMPTZ(6)",
+      "created_at": "TIMESTAMPTZ(6)"
+    },
+    "vila_sessoes": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "turma_id": "UUID",
+      "exp_version": "TEXT",
+      "schema_version": "SMALLINT",
+      "bolha": "TEXT",
+      "cartoes_servidos": "SMALLINT",
+      "aberta_em": "TIMESTAMPTZ(6)",
+      "concluida_em": "TIMESTAMPTZ(6)",
+      "duracao_seg": "INTEGER",
+      "duracao_total_seg": "INTEGER",
+      "status": "TEXT",
+      "fogueiras_acesas": "SMALLINT",
+      "pedras_quebradas": "SMALLINT",
+      "aldeoes_ajudados": "SMALLINT",
+      "lampioes_acesos": "SMALLINT",
+      "tochas_acesas": "SMALLINT",
+      "dilemas_vistos": "SMALLINT",
+      "dilemas_resolvidos": "SMALLINT",
+      "distancia_m": "INTEGER",
+      "payload": "JSONB",
+      "leitura_mensagens": "JSONB",
+      "created_at": "TIMESTAMPTZ(6)"
+    },
+    "vila_perfis": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "sessao_id": "UUID",
+      "estudante_id": "UUID",
+      "versao_mapeamento": "SMALLINT",
+      "valores": "JSONB",
+      "graus": "JSONB",
+      "abertura_vs_conservacao": "DOUBLE",
+      "transcendencia_vs_autopromocao": "DOUBLE",
+      "amostra_suficiente": "BOOLEAN",
+      "created_at": "TIMESTAMPTZ(6)"
+    },
+    "vila_bolhas": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "bolha": "TEXT",
+      "atribuida_em": "TIMESTAMPTZ(6)"
+    },
+    "telemetria_eventos": {
+      "event_id": "UUID",
+      "ts": "TIMESTAMPTZ(6)",
+      "escola_id": "TEXT",
+      "estudante_id": "TEXT",
+      "exp_id": "TEXT",
+      "exp_version": "TEXT",
+      "sessao_id": "UUID",
+      "verbo": "TEXT",
+      "objeto": "TEXT",
+      "resultado": "JSONB",
+      "contexto": "JSONB"
+    },
+    "exp_03_sessoes": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "turma_id": "UUID",
+      "passo": "TEXT",
+      "tentativa": "SMALLINT",
+      "minutos_gastos": "INTEGER",
+      "conjuntos": "TEXT[]",
+      "rodadas": "INTEGER",
+      "perguntas_gastas": "INTEGER",
+      "alocacao_alfa": "TEXT",
+      "alocacao_bravo": "TEXT",
+      "justificativa_alfa": "TEXT",
+      "justificativa_bravo": "TEXT",
+      "tokens_gastos": "INTEGER",
+      "chamadas_ia": "INTEGER",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "concluido_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_03_mensagens": {
+      "id": "BIGSERIAL",
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "papel": "TEXT",
+      "texto": "TEXT",
+      "passo": "TEXT",
+      "anexo": "JSONB",
+      "debitou": "BOOLEAN",
+      "tentativa": "SMALLINT",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_03_marcos": {
+      "id": "BIGSERIAL",
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "tentativa": "SMALLINT",
+      "ordem": "INTEGER",
+      "tipo": "TEXT",
+      "minuto": "INTEGER",
+      "dados": "JSONB",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "segundos_restantes": "INTEGER",
+      "motivo_do_fim": "TEXT"
+    },
+    "exp_03_simulacoes": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "ordem": "INTEGER",
+      "alocacao": "JSONB",
+      "desfecho": "JSONB",
+      "minuto_da_saida": "INTEGER",
+      "versao_prompt": "INTEGER",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "esperado": "JSONB"
+    },
+    "exp_03_relogio_turma": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "modo": "TEXT",
+      "iniciado_em": "TIMESTAMPTZ(6)",
+      "duracao_seg": "INTEGER",
+      "encerrado_em": "TIMESTAMPTZ(6)",
+      "pivo_seg": "INTEGER",
+      "pivo_min": "INTEGER",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "periodos_letivos": {
+      "id": "UUID",
+      "tipo": "TEXT",
+      "titulo": "TEXT",
+      "ano": "SMALLINT",
+      "inicio": "DATE",
+      "fim": "DATE",
+      "pai_id": "UUID",
+      "fonte_id": "TEXT",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "matriculas": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "usuario_id": "UUID",
+      "papel": "TEXT",
+      "principal": "BOOLEAN",
+      "inicio": "DATE",
+      "fim": "DATE",
+      "fonte_id": "TEXT",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "lotacoes": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "usuario_id": "UUID",
+      "papel": "TEXT",
+      "principal": "BOOLEAN",
+      "inicio": "DATE",
+      "fim": "DATE",
+      "fonte_id": "TEXT",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "perfis_portateis": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "emissor_contrato": "TEXT",
+      "emissor_hub": "TEXT",
+      "emissor_nome": "TEXT",
+      "emitido_em": "TIMESTAMPTZ(6)",
+      "documento": "JSONB",
+      "assinatura": "TEXT",
+      "verificacao": "TEXT",
+      "importado_por": "UUID",
+      "importado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_01_conclusoes": {
+      "inclinacao_inicial": "TEXT",
+      "trocas": "INTEGER",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_01_activities": {
+      "turma_id": "UUID"
+    },
+    "exp_01_exp_70_perfis_importados": {
+      "vila_sessao_id": "UUID",
+      "versao_mapeamento": "SMALLINT"
+    },
+    "exp_07_sessoes": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "turma_id": "UUID",
+      "passo": "TEXT",
+      "inspecionou_materia": "BOOLEAN",
+      "ouviu_audio": "BOOLEAN",
+      "ouviu_podcast": "BOOLEAN",
+      "cards_lidos": "SMALLINT",
+      "opcao": "TEXT",
+      "latencia_seg": "INTEGER",
+      "desfazer_usado": "SMALLINT",
+      "score": "INTEGER",
+      "reacoes": "JSONB",
+      "turnos_amara": "SMALLINT",
+      "tokens_gastos": "INTEGER",
+      "chamadas_ia": "INTEGER",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "concluido_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_07_mensagens": {
+      "id": "BIGSERIAL",
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "papel": "TEXT",
+      "texto": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_07_reflexoes": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "estrategias": "TEXT[]",
+      "justificativa": "TEXT",
+      "devolutiva": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_07_gates_turma": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "etapa": "TEXT",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "liberacoes": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "exp_id": "TEXT",
+      "estado": "TEXT",
+      "liberada_por": "UUID",
+      "liberada_em": "TIMESTAMPTZ(6)",
+      "encerrada_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_92_configuracoes": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "professor_id": "UUID",
+      "ano_letivo": "SMALLINT",
+      "serie": "TEXT",
+      "componente": "TEXT",
+      "turma_id": "UUID",
+      "divisao_do_ano": "TEXT",
+      "minutos_por_aula": "SMALLINT",
+      "aulas_semanais": "SMALLINT",
+      "grade": "JSONB",
+      "incluir_computacao": "BOOLEAN",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "inicio_do_ano_letivo": "DATE"
+    },
+    "exp_92_planos_anuais": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "professor_id": "UUID",
+      "configuracao_id": "UUID",
+      "titulo": "TEXT",
+      "status": "TEXT",
+      "tentativas": "SMALLINT",
+      "iniciado_em": "TIMESTAMPTZ(6)",
+      "erro": "TEXT",
+      "tokens_usados": "INTEGER",
+      "distribuicao": "JSONB",
+      "distribuicao_computacao": "JSONB",
+      "caminho_gerado_md": "TEXT",
+      "caminho_html": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_92_planos_de_periodo": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "professor_id": "UUID",
+      "plano_anual_id": "UUID",
+      "ordem": "SMALLINT",
+      "inicio": "DATE",
+      "fim": "DATE",
+      "periodo_de_avaliacao": "SMALLINT",
+      "status": "TEXT",
+      "tentativas": "SMALLINT",
+      "iniciado_em": "TIMESTAMPTZ(6)",
+      "erro": "TEXT",
+      "tokens_usados": "INTEGER",
+      "aulas": "JSONB",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_06_sessoes": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "turma_id": "UUID",
+      "passo": "TEXT",
+      "opcao": "TEXT",
+      "latencia_seg": "INTEGER",
+      "houve_inacao_90s": "BOOLEAN",
+      "ordem_blocos": "TEXT[]",
+      "coerente": "BOOLEAN",
+      "score": "INTEGER",
+      "versao_instrumento": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "concluido_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_06_auditorias": {
+      "id": "BIGSERIAL",
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "mensagem_id": "TEXT",
+      "chat_id": "TEXT",
+      "tempo_leitura_s": "INTEGER",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_06_reflexoes": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "texto": "VARCHAR(280)",
+      "chars_count": "INTEGER",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_06_gates_turma": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "etapa": "TEXT",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "disponibilidades": {
+      "id": "UUID",
+      "recurso_id": "TEXT",
+      "escola_id": "TEXT",
+      "ligado": "BOOLEAN",
+      "versao_fixa": "TEXT",
+      "motivo": "TEXT",
+      "definido_por": "UUID",
+      "definido_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "experiencias_versoes": {
+      "exp_id": "TEXT",
+      "versao": "TEXT",
+      "manifesto": "JSONB",
+      "publicada_em": "TIMESTAMPTZ(6)",
+      "publicada_por": "TEXT"
+    },
+    "recursos_auditoria": {
+      "id": "UUID",
+      "recurso_id": "TEXT",
+      "escola_id": "TEXT",
+      "acao": "TEXT",
+      "versao": "TEXT",
+      "motivo": "TEXT",
+      "autor_id": "UUID",
+      "autor_nome": "TEXT",
+      "quando": "TIMESTAMPTZ(6)",
+      "detalhe": "JSONB"
+    },
+    "exp_08_conteudo_turma": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "caso_contextual": "TEXT",
+      "foco_prioritario": "TEXT",
+      "contexto": "JSONB",
+      "prompts_json": "JSONB",
+      "clausulas_json": "JSONB",
+      "aprovado_por_professor": "BOOLEAN",
+      "usou_banco_default": "BOOLEAN",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_08_sessoes": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "turma_id": "UUID",
+      "passo": "TEXT",
+      "clausula_id": "TEXT",
+      "latencia_clausula_seg": "INTEGER",
+      "confirmou_provocacao": "BOOLEAN",
+      "manifesto_markdown": "TEXT",
+      "versao_instrumento": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "concluido_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_08_auditorias": {
+      "id": "BIGSERIAL",
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "prompt_id": "TEXT",
+      "iteracao": "INTEGER",
+      "latencia_seg": "INTEGER",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_08_respostas_percurso": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "palavras_chave_tags": "TEXT[]",
+      "justificativa_texto": "TEXT",
+      "chars_count": "INTEGER",
+      "versao_instrumento": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_08_gates_turma": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "etapa": "TEXT",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_04_turma_config": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "tema": "TEXT",
+      "complexidade": "TEXT",
+      "status_pacote": "TEXT",
+      "pacote": "JSONB",
+      "pacote_da_ia": "BOOLEAN",
+      "latch_liberado": "BOOLEAN",
+      "tentativa": "SMALLINT",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_04_runs": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "estudante_id": "UUID",
+      "tentativa": "SMALLINT",
+      "etapa": "TEXT",
+      "marca_id": "TEXT",
+      "foto_escolhida_id": "VARCHAR(30)",
+      "legenda_escolhida_id": "VARCHAR(30)",
+      "latencia_decisao_ms": "INTEGER",
+      "curtidas_feed": "SMALLINT",
+      "permanencia_feed_ms": "INTEGER",
+      "reflexao_final": "TEXT",
+      "tentativas_reflexao": "SMALLINT",
+      "versao_instrumento": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "concluido_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_04_posts_turma": {
+      "id": "UUID",
+      "run_id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "tentativa": "SMALLINT",
+      "marca_id": "TEXT",
+      "foto_id": "VARCHAR(30)",
+      "legenda_texto": "VARCHAR(100)",
+      "curtidas_simuladas": "INTEGER",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "ia_quotas": {
+      "perfil": "TEXT",
+      "tokens_por_dia": "INTEGER",
+      "motivo": "TEXT",
+      "definido_por": "UUID",
+      "definido_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "prospeccao_leads": {
+      "id": "UUID",
+      "nome": "TEXT",
+      "email": "TEXT",
+      "telefone": "TEXT",
+      "organizacao": "TEXT",
+      "cargo": "TEXT",
+      "consentimento_texto": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_05_conteudo_turma": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "tema": "TEXT",
+      "gatilho": "TEXT",
+      "origem": "TEXT",
+      "mensagens_json": "JSONB",
+      "aprovado_por_professor": "BOOLEAN",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_05_sessoes": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "turma_id": "UUID",
+      "passo": "TEXT",
+      "entrou_em": "TIMESTAMPTZ(6)",
+      "primeiro_encaminhamento_em": "TIMESTAMPTZ(6)",
+      "leu_tudo": "BOOLEAN",
+      "midias_abertas": "TEXT[]",
+      "confirmado_em": "TIMESTAMPTZ(6)",
+      "versao_instrumento": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "concluido_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_05_encaminhamentos": {
+      "id": "BIGSERIAL",
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "mensagem_id": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_05_reflexoes": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "texto": "VARCHAR(500)",
+      "chars_count": "INTEGER",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp_05_gates_turma": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "etapa": "TEXT",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "equipes_montagens": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "exp_id": "TEXT",
+      "modo": "TEXT",
+      "computadores": "INTEGER",
+      "ausentes": "UUID[]",
+      "versao": "INTEGER",
+      "atualizado_por": "UUID",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "atividade_id": "TEXT"
+    },
+    "equipes": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "exp_id": "TEXT",
+      "nome": "TEXT",
+      "ordem": "INTEGER",
+      "atividade_id": "TEXT"
+    },
+    "equipes_membros": {
+      "escola_id": "TEXT",
+      "equipe_id": "UUID",
+      "turma_id": "UUID",
+      "exp_id": "TEXT",
+      "estudante_id": "UUID",
+      "atividade_id": "TEXT"
+    },
+    "evidencias_marcas": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "exp_id": "TEXT",
+      "atividade_id": "TEXT",
+      "rodada": "INTEGER",
+      "estudante_id": "UUID",
+      "habilidade": "TEXT",
+      "marcador": "TEXT",
+      "status": "TEXT",
+      "tipo": "TEXT",
+      "versao_ficha": "INTEGER",
+      "registrada_em": "TIMESTAMPTZ(6)"
+    },
+    "evidencias": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "exp_id": "TEXT",
+      "atividade_id": "TEXT",
+      "rodada": "INTEGER",
+      "estudante_id": "UUID",
+      "habilidade": "TEXT",
+      "status": "TEXT",
+      "origem": "TEXT",
+      "situacao": "TEXT",
+      "fonte_estudante_id": "UUID",
+      "equipe_id": "UUID",
+      "editado_por": "UUID",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "evidencias_eventos": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "exp_id": "TEXT",
+      "atividade_id": "TEXT",
+      "rodada": "INTEGER",
+      "estudante_id": "UUID",
+      "habilidade": "TEXT",
+      "tipo": "TEXT",
+      "de": "JSONB",
+      "para": "JSONB",
+      "autor_id": "UUID",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "experiencias_arquivadas": {
+      "exp_id": "TEXT",
+      "codigo_de_origem": "TEXT",
+      "nome": "TEXT",
+      "versao": "TEXT",
+      "series": "TEXT[]",
+      "unidade": "SMALLINT",
+      "produto": "TEXT",
+      "motivo": "TEXT",
+      "turmas_guardadas": "INTEGER",
+      "estudantes_guardados": "INTEGER",
+      "arquivada_em": "TIMESTAMPTZ(6)"
+    },
+    "exp05ef1b_pacotes": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "disciplina": "TEXT",
+      "tema": "TEXT",
+      "assuntos": "TEXT[]",
+      "contexto": "TEXT",
+      "mensagens_json": "JSONB",
+      "origem": "TEXT",
+      "ativo": "BOOLEAN",
+      "rodada_atual": "SMALLINT",
+      "aprovado_em": "TIMESTAMPTZ(6)",
+      "aprovado_por": "UUID",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp05ef1b_gates_turma": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "fase": "TEXT",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp05ef1b_sessoes": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "pacote_id": "UUID",
+      "rodada": "SMALLINT",
+      "turma_id": "UUID",
+      "entrou_em": "TIMESTAMPTZ(6)",
+      "selecao": "TEXT[]",
+      "confirmado_em": "TIMESTAMPTZ(6)",
+      "tempo_feed_segundos": "INTEGER",
+      "motivo": "TEXT",
+      "votou_em": "TIMESTAMPTZ(6)",
+      "reflexao_em": "TIMESTAMPTZ(6)",
+      "concluido_em": "TIMESTAMPTZ(6)",
+      "versao_instrumento": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp05ef1b_reflexoes": {
+      "escola_id": "TEXT",
+      "estudante_id": "UUID",
+      "pacote_id": "UUID",
+      "rodada": "SMALLINT",
+      "condicional_se": "TEXT",
+      "acao_entao": "VARCHAR(240)",
+      "chars_count": "INTEGER",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp07ef1b_coberturas": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "tema": "TEXT",
+      "foco": "TEXT",
+      "origem": "TEXT",
+      "posts": "JSONB",
+      "midia": "JSONB",
+      "aprovada_por": "UUID",
+      "ativa": "BOOLEAN",
+      "criada_em": "TIMESTAMPTZ(6)",
+      "atualizada_em": "TIMESTAMPTZ(6)",
+      "podcast": "JSONB",
+      "imagens_aprovadas_em": "TIMESTAMPTZ(6)"
+    },
+    "exp07ef1b_gates_turma": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "cobertura_id": "UUID",
+      "rodada": "INTEGER",
+      "etapa": "TEXT",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp07ef1b_sessoes": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "estudante_id": "UUID",
+      "cobertura_id": "UUID",
+      "rodada": "INTEGER",
+      "passo": "TEXT",
+      "selecao": "TEXT[]",
+      "legenda": "VARCHAR(140)",
+      "matriz": "JSONB",
+      "publicada_em": "TIMESTAMPTZ(6)",
+      "concluida_em": "TIMESTAMPTZ(6)",
+      "tempo_feed_s": "INTEGER",
+      "par_sessao_id": "UUID",
+      "par_virtual": "TEXT",
+      "par_rotulo": "TEXT",
+      "versao_instrumento": "TEXT",
+      "criada_em": "TIMESTAMPTZ(6)",
+      "atualizada_em": "TIMESTAMPTZ(6)"
+    },
+    "exp07ef1b_reflexoes": {
+      "sessao_id": "UUID",
+      "escola_id": "TEXT",
+      "texto": "TEXT",
+      "chars": "INTEGER",
+      "criada_em": "TIMESTAMPTZ(6)"
+    },
+    "exp04ef1b_pacotes": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "disciplina": "TEXT",
+      "tema": "TEXT",
+      "topicos": "TEXT",
+      "origem": "TEXT",
+      "noticias": "JSONB",
+      "midia": "JSONB",
+      "aprovado_por": "UUID",
+      "aprovado_em": "TIMESTAMPTZ(6)",
+      "ativo": "BOOLEAN",
+      "geracoes": "INTEGER",
+      "tokens_usados": "INTEGER",
+      "painel_visto_em": "TIMESTAMPTZ(6)",
+      "painel_vistas": "INTEGER",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "midia_aprovada": "JSONB"
+    },
+    "exp04ef1b_gates_turma": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "pacote_id": "UUID",
+      "rodada": "INTEGER",
+      "etapa": "TEXT",
+      "resultado_liberado_em": "TIMESTAMPTZ(6)",
+      "revisao_liberada_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp04ef1b_sessoes": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "estudante_id": "UUID",
+      "pacote_id": "UUID",
+      "rodada": "INTEGER",
+      "passo": "TEXT",
+      "pistas": "JSONB",
+      "slots_ed1": "TEXT[]",
+      "layout_ed1": "TEXT",
+      "origem_layout_ed1": "TEXT",
+      "verificadas_ed1": "INTEGER",
+      "motivo_ed1": "TEXT",
+      "publicada1_em": "TIMESTAMPTZ(6)",
+      "chave_tentativas": "INTEGER",
+      "chave_formada_em": "TIMESTAMPTZ(6)",
+      "slots_ed2": "TEXT[]",
+      "layout_ed2": "TEXT",
+      "origem_layout_ed2": "TEXT",
+      "verificadas_ed2": "INTEGER",
+      "publicada2_em": "TIMESTAMPTZ(6)",
+      "concluida_em": "TIMESTAMPTZ(6)",
+      "versao_instrumento": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp04ef1b_diagramacoes": {
+      "escola_id": "TEXT",
+      "pacote_id": "UUID",
+      "chave": "TEXT",
+      "layout": "TEXT",
+      "tokens": "INTEGER",
+      "criado_em": "TIMESTAMPTZ(6)"
+    },
+    "agente_professor_conversas": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "usuario_id": "UUID",
+      "sessao_id": "TEXT",
+      "titulo": "TEXT",
+      "criada_em": "TIMESTAMPTZ(6)",
+      "atualizada_em": "TIMESTAMPTZ(6)"
+    },
+    "ajuda_sessoes": {
+      "id": "UUID",
+      "usuario_id": "UUID",
+      "escola_id": "TEXT",
+      "perfil": "TEXT",
+      "avatar_sessao_id": "TEXT",
+      "inicio": "TIMESTAMPTZ(6)",
+      "duracao_max_s": "INTEGER",
+      "fim": "TIMESTAMPTZ(6)"
+    },
+    "ajuda_limites": {
+      "chave": "TEXT",
+      "valor": "INTEGER",
+      "motivo": "TEXT",
+      "definido_por": "UUID",
+      "definido_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp06ef1b_pacotes": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "origem": "TEXT",
+      "disciplina": "TEXT",
+      "tema": "TEXT",
+      "assuntos": "TEXT",
+      "contexto": "TEXT",
+      "conteudo": "JSONB",
+      "midia": "JSONB",
+      "ativo": "BOOLEAN",
+      "criado_por": "UUID",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "ia_geracoes": "INTEGER",
+      "ia_tokens": "INTEGER",
+      "imagens_aprovadas_em": "TIMESTAMPTZ(6)",
+      "preparo_iniciado_em": "TIMESTAMPTZ(6)",
+      "aprovado_em": "TIMESTAMPTZ(6)",
+      "aprovado_por": "TEXT",
+      "painel_visto_em": "TIMESTAMPTZ(6)",
+      "painel_vistas": "INTEGER"
+    },
+    "exp06ef1b_gates_turma": {
+      "turma_id": "UUID",
+      "escola_id": "TEXT",
+      "pacote_id": "UUID",
+      "rodada": "INTEGER",
+      "etapa": "TEXT",
+      "galeria_liberada_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "desvio_liberado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp06ef1b_sessoes": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "pacote_id": "UUID",
+      "rodada": "INTEGER",
+      "estudante_id": "UUID",
+      "passo": "TEXT",
+      "semente": "TEXT",
+      "posts_servidos": "JSONB",
+      "curtidos": "JSONB",
+      "permanencias": "JSONB",
+      "voto_projeto": "TEXT",
+      "conviccao": "TEXT",
+      "votado_em": "TIMESTAMPTZ(6)",
+      "auditoria": "JSONB",
+      "revisao_acao": "TEXT",
+      "voto_revisado": "TEXT",
+      "revisado_em": "TIMESTAMPTZ(6)",
+      "cadeia_tentativas": "INTEGER",
+      "cadeia_montada_em": "TIMESTAMPTZ(6)",
+      "mecanismo": "TEXT",
+      "atitude": "TEXT",
+      "cartoes_em": "TIMESTAMPTZ(6)",
+      "concluida_em": "TIMESTAMPTZ(6)",
+      "versao_instrumento": "TEXT",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)",
+      "salvos": "JSONB",
+      "voto_motivo": "TEXT",
+      "voto_trecho": "INTEGER",
+      "complemento_projeto": "TEXT",
+      "revisao_motivo": "TEXT",
+      "revisao_trecho": "INTEGER",
+      "desvio_servidos": "JSONB",
+      "desvio_curtidos": "JSONB",
+      "desvio_salvos": "JSONB",
+      "desvio_permanencias": "JSONB",
+      "desvio_concluido_em": "TIMESTAMPTZ(6)",
+      "feed_iniciado_em": "TIMESTAMPTZ(6)",
+      "cedula_batimento_em": "TIMESTAMPTZ(6)",
+      "cedula_inativa_desde": "TIMESTAMPTZ(6)",
+      "auditoria_status": "VARCHAR(16)",
+      "classificacao_status": "VARCHAR(16)",
+      "logica_status": "VARCHAR(16)",
+      "enquete_ef06co10_alt": "VARCHAR(64)",
+      "enquete_ef06co01_alt": "VARCHAR(64)",
+      "enquete_ef06co03_alt": "VARCHAR(64)"
+    },
+    "podcast_roteiros": {
+      "id": "UUID",
+      "escola_id": "TEXT",
+      "exp_id": "TEXT",
+      "atividade_id": "UUID",
+      "falas": "JSONB",
+      "aprovado_por": "UUID",
+      "aprovado_em": "TIMESTAMPTZ(6)",
+      "criado_em": "TIMESTAMPTZ(6)",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp02em1b_sessoes": {
+      "rodada": "INTEGER"
+    },
+    "exp02em1b_gate_turma": {
+      "escola_id": "TEXT",
+      "turma_id": "UUID",
+      "rodada": "INTEGER",
+      "atualizado_em": "TIMESTAMPTZ(6)"
+    },
+    "exp06ef1b_gates_historico": {
+      "id": "UUID",
+      "turma_id": "UUID",
+      "escola_id": "TEXT",
+      "etapa": "TEXT",
+      "liberada_em": "TIMESTAMPTZ(6)"
+    }
+  },
+  "chaves_estrangeiras": {
+    "escolas": {
+      "pai_id": [
+        "escolas",
+        "id"
+      ]
+    },
+    "turmas": {
+      "escola_id": [
+        "escolas",
+        "id"
+      ],
+      "periodo_letivo_id": [
+        "periodos_letivos",
+        "id"
+      ]
+    },
+    "users": {
+      "escola_id": [
+        "escolas",
+        "id"
+      ],
+      "turma_id": [
+        "turmas",
+        "id"
+      ],
+      "regional_id": [
+        "escolas",
+        "id"
+      ]
+    },
+    "activities": {
+      "professor_id": [
+        "users",
+        "id"
+      ]
+    },
+    "authors": {
+      "activity_id": [
+        "activities",
+        "id"
+      ]
+    },
+    "posts": {
+      "activity_id": [
+        "activities",
+        "id"
+      ],
+      "author_id": [
+        "authors",
+        "id"
+      ]
+    },
+    "post_comments": {
+      "post_id": [
+        "posts",
+        "id"
+      ],
+      "author_id": [
+        "authors",
+        "id"
+      ]
+    },
+    "generation_jobs": {
+      "activity_id": [
+        "activities",
+        "id"
+      ]
+    },
+    "runs": {
+      "activity_id": [
+        "activities",
+        "id"
+      ],
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "events": {
+      "run_id": [
+        "runs",
+        "id"
+      ],
+      "post_id": [
+        "posts",
+        "id"
+      ]
+    },
+    "student_posts": {
+      "run_id": [
+        "runs",
+        "id"
+      ]
+    },
+    "perfis_importados": {
+      "activity_id": [
+        "activities",
+        "id"
+      ],
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "conclusoes": {
+      "run_id": [
+        "runs",
+        "id"
+      ]
+    },
+    "dossiers": {
+      "run_id": [
+        "runs",
+        "id"
+      ]
+    },
+    "reflexoes": {
+      "run_id": [
+        "runs",
+        "id"
+      ]
+    },
+    "comentarios_da_sessao": {
+      "run_id": [
+        "runs",
+        "id"
+      ],
+      "post_id": [
+        "posts",
+        "id"
+      ],
+      "student_post_id": [
+        "student_posts",
+        "id"
+      ]
+    },
+    "unootube_sessoes": {
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "planos_de_aula": {
+      "professor_id": [
+        "users",
+        "id"
+      ]
+    },
+    "bem_estar_ciclos": {
+      "professor_id": [
+        "users",
+        "id"
+      ]
+    },
+    "bem_estar_checkins": {
+      "professor_id": [
+        "users",
+        "id"
+      ],
+      "ciclo_id": [
+        "bem_estar_ciclos",
+        "id"
+      ]
+    },
+    "vila_sessoes": {
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "vila_perfis": {
+      "sessao_id": [
+        "vila_sessoes",
+        "id"
+      ],
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "vila_bolhas": {
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "exp_03_sessoes": {
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "exp_03_relogio_turma": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "periodos_letivos": {
+      "pai_id": [
+        "periodos_letivos",
+        "id"
+      ]
+    },
+    "matriculas": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ],
+      "usuario_id": [
+        "users",
+        "id"
+      ]
+    },
+    "lotacoes": {
+      "escola_id": [
+        "escolas",
+        "id"
+      ],
+      "usuario_id": [
+        "users",
+        "id"
+      ]
+    },
+    "perfis_portateis": {
+      "escola_id": [
+        "escolas",
+        "id"
+      ],
+      "estudante_id": [
+        "users",
+        "id"
+      ],
+      "importado_por": [
+        "users",
+        "id"
+      ]
+    },
+    "exp_01_activities": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp_07_sessoes": {
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "exp_07_gates_turma": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "liberacoes": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ],
+      "liberada_por": [
+        "users",
+        "id"
+      ]
+    },
+    "exp_92_configuracoes": {
+      "professor_id": [
+        "users",
+        "id"
+      ],
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp_92_planos_anuais": {
+      "configuracao_id": [
+        "exp_92_configuracoes",
+        "id"
+      ],
+      "professor_id": [
+        "users",
+        "id"
+      ]
+    },
+    "exp_92_planos_de_periodo": {
+      "plano_anual_id": [
+        "exp_92_planos_anuais",
+        "id"
+      ],
+      "professor_id": [
+        "users",
+        "id"
+      ]
+    },
+    "exp_06_sessoes": {
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "exp_06_gates_turma": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "disponibilidades": {
+      "escola_id": [
+        "escolas",
+        "id"
+      ],
+      "definido_por": [
+        "users",
+        "id"
+      ]
+    },
+    "exp_08_conteudo_turma": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp_08_sessoes": {
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "exp_08_gates_turma": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp_04_turma_config": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp_04_runs": {
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "exp_04_posts_turma": {
+      "run_id": [
+        "exp_04_runs",
+        "id"
+      ]
+    },
+    "exp_05_conteudo_turma": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp_05_sessoes": {
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "exp_05_gates_turma": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "equipes_montagens": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "equipes_membros": {
+      "equipe_id": [
+        "equipes",
+        "id"
+      ],
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "evidencias_marcas": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ],
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "evidencias": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ],
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "evidencias_eventos": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ],
+      "estudante_id": [
+        "users",
+        "id"
+      ]
+    },
+    "exp05ef1b_pacotes": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp05ef1b_gates_turma": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp05ef1b_sessoes": {
+      "estudante_id": [
+        "users",
+        "id"
+      ],
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp07ef1b_coberturas": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp07ef1b_gates_turma": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ],
+      "cobertura_id": [
+        "exp07ef1b_coberturas",
+        "id"
+      ]
+    },
+    "exp07ef1b_sessoes": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ],
+      "estudante_id": [
+        "users",
+        "id"
+      ],
+      "cobertura_id": [
+        "exp07ef1b_coberturas",
+        "id"
+      ]
+    },
+    "exp07ef1b_reflexoes": {
+      "sessao_id": [
+        "exp07ef1b_sessoes",
+        "id"
+      ]
+    },
+    "exp04ef1b_pacotes": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp04ef1b_gates_turma": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ],
+      "pacote_id": [
+        "exp04ef1b_pacotes",
+        "id"
+      ]
+    },
+    "exp04ef1b_sessoes": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ],
+      "estudante_id": [
+        "users",
+        "id"
+      ],
+      "pacote_id": [
+        "exp04ef1b_pacotes",
+        "id"
+      ]
+    },
+    "exp04ef1b_diagramacoes": {
+      "pacote_id": [
+        "exp04ef1b_pacotes",
+        "id"
+      ]
+    },
+    "agente_professor_conversas": {
+      "escola_id": [
+        "escolas",
+        "id"
+      ],
+      "usuario_id": [
+        "users",
+        "id"
+      ]
+    },
+    "exp06ef1b_pacotes": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp06ef1b_gates_turma": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ],
+      "pacote_id": [
+        "exp06ef1b_pacotes",
+        "id"
+      ]
+    },
+    "exp06ef1b_sessoes": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ],
+      "estudante_id": [
+        "users",
+        "id"
+      ],
+      "pacote_id": [
+        "exp06ef1b_pacotes",
+        "id"
+      ]
+    },
+    "exp02em1b_gate_turma": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
+    },
+    "exp06ef1b_gates_historico": {
+      "turma_id": [
+        "turmas",
+        "id"
+      ]
     }
   }
 }

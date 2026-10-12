@@ -195,6 +195,10 @@ CHAVES_AUTORAIS = frozenset({
     "handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico",
 })
 PREFIXO_ANTERIOR = "anterior_"
+#: `versao_anterior_<chave>`: o texto cru da versão de antes do refazer, sem as instruções de `anterior_<chave>`.
+#: Fica até a próxima reexecução: é a prova das ordens de não mexer (`tools/fidelidade.aplicar(anteriores=…)`), e o
+#: retrabalho dos loops não mexe nele (plano padrão ouro, 2.3).
+PREFIXO_VERSAO_ANTERIOR = "versao_anterior_"
 
 CHAVES_POR_ETAPA: Dict[str, frozenset] = {
     "produto": CHAVES_PRODUTO,
@@ -449,6 +453,7 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
         anterior = PREFIXO_ANTERIOR + chave
         if chave not in remover:
             limpo.pop(anterior, None)
+            limpo.pop(PREFIXO_VERSAO_ANTERIOR + chave, None)
             continue
         # a spec que o autor escreveu é a do Gate 0; `spec_missao` pode já trazer a consolidação do D0
         atual = estado.get("spec_missao_gate0") if chave == "spec_missao" else None
@@ -460,6 +465,7 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
             atual = remover_anexo(atual).strip()
         if atual:
             limpo[anterior] = bloco_versao_anterior(chave, atual)
+            limpo[PREFIXO_VERSAO_ANTERIOR + chave] = atual
 
 
 def texto_do_pedido(pedido_md: str) -> str:
