@@ -23,7 +23,7 @@ Reconferir a cada emenda da nossa rubrica, e atualizar a versão lida acima.
 | PROD-04 | Fluxo com estados nomeados | spec bloco 2 + `fluxo` |
 | PROD-07 | Momento de conclusão | spec bloco 2 |
 | PROD-08 | Decisão sobre a revelação | `brief-oficio` + `copy-ptbr` |
-| DES-01 | Seção do DS nomeada e existente | `ambientes.md` + spec bloco 0 |
+| DES-01 | Seção do DS nomeada e existente (e as extras, quando há) | `ambientes.md` + `varias-secoes.md` + spec bloco 0 |
 | DES-02 | Mapa "quem está falando", tela a tela | coluna `seção` no sheet |
 | DES-14 | Visão do professor completa e transversal (cinco telas do preparo, segundo grafo) — **critério escrito e classificado por esta esteira**, não pelo time da plataforma | `071_jornada.md` §1c + `072_fluxo.md` segundo grafo + folha `stitch_links` (D6 do QA já bloqueia a montante) |
 | PED-01 | Códigos BNCC de Letramento Digital | spec bloco 11, conferido pelo `BnccCheck` contra `references/bncc-computacao.json` *(bloqueia apenas em letramento digital; outras regras passam como alerta)* |

@@ -50,6 +50,8 @@ CATEGORIAS: Dict[str, Tuple[str, Tuple[str, ...], str]] = {
     "texto_tela": ("Texto de tela do §4 (one-pager)", ("copy", "prototipo"), "atencao"),
     "tempo": ("Tempo em tela (one-pager §10)", ("spec", "prd", "pedagogico"), "bloqueio"),
     "secao_ds": ("Seção do DS fixada pelo briefing", ("spec", "handoff", "prd"), "bloqueio"),
+    # missão em várias seções do DS (15/10/2026): a extra que o one-pager declara chega até o PRD
+    "secao_extra": ("Seção extra do DS (one-pager)", ("spec", "telas", "handoff", "prd"), "bloqueio"),
     "tela": ("Tela do inventário (jornada)", ("fluxo", "copy", "telas", "prototipo", "stitch", "handoff", "prd"), "bloqueio"),
     "estado": ("Estado do contrato (spec bloco 2)", ("fluxo", "prd"), "atencao"),
     "evento": ("Evento de telemetria (spec 9.4)", ("handoff", "prd"), "atencao"),
@@ -143,6 +145,11 @@ def requisitos(state: Dict[str, Any]) -> List[Dict[str, str]]:
     trava = secao_travada(str(state.get("briefing") or ""))
     if trava:
         req("secao_ds", trava["secao"])
+    from tools.secoes import SECAO_DA_PLATAFORMA, extras
+
+    for s in extras(one_pager):
+        if s != SECAO_DA_PLATAFORMA:
+            req("secao_extra", s)
     for t in telas.inventario(str(state.get("jornada_telas") or ""))["telas"]:
         req("tela", t["id"])
     for e in estados_da_spec(spec):
@@ -172,7 +179,7 @@ def _presente(categoria: str, alvo: str, coluna: str, texto: str) -> bool:
     corpo = ca.remover_anexo(texto) if coluna in ("prd", "pedagogico") else texto
     if categoria == "tempo":
         return bool(re.search(rf"(?<!\d){re.escape(alvo)}\s*(?:min|minutos)\b", corpo, re.I))
-    if categoria == "secao_ds":
+    if categoria in ("secao_ds", "secao_extra"):
         return alvo in corpo.lower()
     if categoria == "tela":
         if coluna == "prototipo":

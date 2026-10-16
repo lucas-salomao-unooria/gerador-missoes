@@ -163,7 +163,7 @@ One-pager para avaliação pedagógica — v<x> (<o que mudou nesta versão, em 
 
 | Campo | Valor |
 |---|---|
-| Ambiente simulado | <app> (seção do DS: <seção>) |
+| Ambiente simulado | <app> (seção do DS: <seção>) [+ <app> (<seção extra>), com a transição em uma linha] |
 | Ano / Faixa | <ano e etapa> |
 | Modalidade | <individual / dupla / grupo, e quem dá o ritmo> |
 | Duração | <n aulas de 50 min (total)> |

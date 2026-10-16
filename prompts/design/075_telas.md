@@ -77,7 +77,7 @@ Dois artefatos, nesta ordem de importância:
 
 **Os nomes dos tokens são fechados.** Use exatamente os nove slots da coleção `wireframe-cinza`: `superficie/base` · `superficie/elevada` · `superficie/midia` · `borda/padrao` · `borda/foco` · `texto/primario` · `texto/secundario` · `acao/primaria` · `acao/secundaria`. **`wf-action-primary`, `wf-border-focus` e qualquer `wf-*` não existem** — foram inventados numa execução anterior, quebram a subida para alta fidelidade e são ❌ no QA. Precisa de um slot fora dos nove? É lacuna a registrar, não nome novo.
 
-**Componente do design system só com nome do inventário abaixo.** A coluna `Componentes do DS` aceita apenas nomes que existem na seção da missão (ou na marca `unooria`); o que você precisar e não estiver lá vai para `Componentes locais (candidatos)`, como composição ou componente novo. Um lint confere a coluna contra este inventário e bloqueia nome que o DS não tem — em 22/09/2026, 32% dos componentes "do DS" das telas não existiam.
+**Componente do design system só com nome do inventário abaixo.** A coluna `Componentes do DS` aceita apenas nomes que existem na seção da missão (ou na marca `unooria`) — com várias seções do DS, na seção **daquela tela**, que você declara na coluna `Seção do DS` da tabela de cobertura: `MessageBubble`, `TabBar` e `PhoneFrame` existem em mais de uma coleção, e um código confere cada tela contra a seção dela; o que você precisar e não estiver lá vai para `Componentes locais (candidatos)`, como composição ou componente novo. Um lint confere a coluna contra este inventário e bloqueia nome que o DS não tem — em 22/09/2026, 32% dos componentes "do DS" das telas não existiam.
 
 <!-- include: references/ds-componentes.md -->
 
@@ -170,11 +170,11 @@ Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica — a redund
 ```
 # Wireframes — <missão>
 
-**Seção do DS usada:** <unooriaai|unoovista|unoochat|tiktooria|novo: nome> (tradução do ambiente em `ambientes.md`) · componentes importados: <lista>
+**Seção do DS usada:** <unooriaai|unoovista|unoochat|tiktooria|novo: nome> [+ extras, com a seção de cada tela na tabela de cobertura] (tradução do ambiente em `ambientes.md`) · componentes importados: <lista>
 **Camada CAA:** aplicada | não aplicável | ausente — <n> telas com restrição CAA construída
 
 ## Cobertura — inventário × frame × estados
-| ID tela | Frame (screenId) | Estados construídos | Strings usadas (chaves) | Placeholders `[[…]]` | Componentes do DS | Componentes locais (candidatos) | CAA construída (símbolo · alvo px · áudio) | Anotações |
+| ID tela | Seção do DS | Frame (screenId) | Estados construídos | Strings usadas (chaves) | Placeholders `[[…]]` | Componentes do DS | Componentes locais (candidatos) | CAA construída (símbolo · alvo px · áudio) | Anotações |
 
 Uma linha por tela do inventário, todas. `Frame (screenId)` leva `—`: o screenId real é o da seção «Telas geradas no Stitch (esteira)» que a esteira anexa a esta cobertura; slug, `*(especificado)*` ou nome montado por você é afirmação falsa (a exp09ef1b declarou dez screenIds que o projeto não tinha).
 

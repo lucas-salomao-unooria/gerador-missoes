@@ -68,3 +68,6 @@ Se a seção trouxer valor em vez de slot, isso é lacuna a registrar no storybo
 Nenhum token, fonte, cor ou componente da seção `unooria` dentro das telas do clone — e vice-versa (DES-13). Os dois escapes conhecidos continuam: tela de contexto antes de entrar e reflexão depois que a simulação fecha, e esses **podem** usar a seção `unooria`.
 
 O mapa de qual seção fala em cada tela é entrega do `copy-ptbr` (coluna `seção` no sheet), porque quem decide quem está falando é quem escreve a fala.
+
+<!-- include: references/varias-secoes.md -->
+

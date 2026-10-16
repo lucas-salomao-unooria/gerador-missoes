@@ -38,7 +38,7 @@ Sua pergunta: **um adulto que não acompanhou a esteira consegue percorrer a mis
 
 {camada_caa?}
 
-**Ambiente simulado — o chrome do app clonado e os rótulos nativos:**
+**Ambiente simulado — o chrome do app clonado e os rótulos nativos** (com várias seções do DS, uma ficha por seção: cada tela usa o chrome da seção dela, e a troca de app acontece pelo gatilho declarado em «Transições» — notificação, link, compartilhar —, nunca por um botão da plataforma):
 
 {ambiente_simulado?}
 

@@ -45,27 +45,42 @@ def _norm(celula: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", celula.lower()) if unicodedata.category(c) != "Mn").strip(" `*_")
 
 
+def _validos(secao: str, marcas: Dict[str, Set[str]], mapa: Dict[str, str]) -> Optional[Set[str]]:
+    """Os nomes da marca de uma seção, mais a `unooria`; `None` quando a seção não é marca do DS (seção nova)."""
+    marca = mapa.get(secao, secao)
+    return (marcas[marca] | marcas.get("unooria", set())) if marca in marcas else None
+
+
 def validar(wireframes: str, spec: str = "") -> List[Dict[str, str]]:
+    """A coluna `Componentes do DS` contra o inventário da seção.
+
+    Com várias seções do DS (15/10/2026), cada tela é conferida contra a seção dela — a coluna `Seção do DS` da
+    tabela de cobertura — e, sem a coluna, contra a união da principal com as extras: `MessageBubble` existe no
+    `unoochat` e no `unoovista`, e só a seção da tela diz se o nome está no lugar certo.
+    """
+    from tools import secoes as sec
+
     marcas, mapa, origem = carregar()
     if not marcas:
         return []
     m = _RE_SECAO.search(spec or "")
-    secao = (m.group(1).lower().strip("`") if m else "")
-    marca = mapa.get(secao, secao)
-    if marca in marcas:
-        validos, onde = marcas[marca] | marcas.get("unooria", set()), f"marca `{marca}` (ou `unooria`)"
+    principal = (m.group(1).lower().strip("`") if m else "")
+    da_missao = [principal, *sec.extras(spec or "")]
+    conjuntos = [v for v in (_validos(s, marcas, mapa) for s in da_missao if s) if v is not None]
+    if conjuntos and len(conjuntos) == len([s for s in da_missao if s]):
+        validos_missao, onde_missao = set().union(*conjuntos), " ou ".join(f"`{s}`" for s in da_missao if s)
         severidade = "bloqueio"
     else:  # seção nova: componente local é legítimo, só está na coluna errada — erro de rótulo
-        validos, onde = set().union(*marcas.values()), "nenhuma marca do DS"
+        validos_missao, onde_missao = set().union(*marcas.values()), "nenhuma marca do DS"
         severidade = "atencao"
-    validos = validos | _FAMILIAS
     achados: List[Dict[str, str]] = []
-    vistos: Set[str] = set()
+    vistos: Set[Tuple[str, str]] = set()
     coluna: Optional[int] = None
+    coluna_secao: Optional[int] = None
     for linha in (wireframes or "").splitlines():
         l = linha.strip()
         if not (l.startswith("|") and l.endswith("|")):
-            coluna = None
+            coluna = coluna_secao = None
             continue
         celulas = [c.strip() for c in l.strip("|").split("|")]
         if set("".join(celulas)) <= set("-: "):
@@ -74,13 +89,21 @@ def validar(wireframes: str, spec: str = "") -> List[Dict[str, str]]:
         alvo = next((k for k, c in enumerate(normal) if "componentes do ds" in c), None)
         if alvo is not None:
             coluna = alvo
+            coluna_secao = next((k for k, c in enumerate(normal) if c.startswith("secao do ds")), None)
             continue
         if coluna is None or coluna >= len(celulas):
             continue
+        validos, onde = validos_missao, f"{onde_missao} (ou `unooria`)" if severidade == "bloqueio" else onde_missao
+        if coluna_secao is not None and coluna_secao < len(celulas):
+            da_tela = _norm(celulas[coluna_secao]).strip("` ")
+            proprios = _validos(da_tela, marcas, mapa) if da_tela else None
+            if proprios is not None:
+                validos, onde = proprios, f"`{da_tela}`, a seção desta tela (ou `unooria`)"
+        validos = validos | _FAMILIAS
         for nome in _RE_NOME.findall(celulas[coluna]):
-            if nome in vistos or nome in validos or _NAO_COMPONENTE.search(nome):
+            if (nome, onde) in vistos or nome in validos or _NAO_COMPONENTE.search(nome):
                 continue
-            vistos.add(nome)
+            vistos.add((nome, onde))
             parecidos = difflib.get_close_matches(nome, sorted(validos), n=2, cutoff=0.6)
             dica = f" Parecido: {', '.join(f'`{p}`' for p in parecidos)}." if parecidos else ""
             achados.append({"severidade": severidade, "codigo": "componente-inexistente", "etapa": "design",

@@ -114,7 +114,7 @@ Registro adulto, operacional, sem infantilização e sem jargão de produto: rot
 
 Tipo: instrução · narrativa · rótulo de UI · feedback de sistema · pergunta de reflexão · texto do professor · erro/falha.
 Chave: `eN.tipo.nome` (ex.: `e3.instrucao.salvar`) — estável; o dev usa a chave.
-Seção: `clone` (personagem-guia e plataforma simulada) ou `unooria` (só na tela de contexto e na reflexão). **Em mini-jogo, `unooria` em tudo** — não há clone.
+Seção: `clone` (personagem-guia e plataforma simulada) ou `unooria` (só na tela de contexto e na reflexão). **Com várias seções do DS** (`secoes_ds_extras`), em vez de `clone` escreva a seção que fala naquela tela (`unoovista`, `unoochat`…), conforme o «Mapa de seções»: cada app tem a voz e os rótulos nativos dele. **Em mini-jogo, `unooria` em tudo** — não há clone.
 Redundância: `texto` · `texto+ícone` · `texto+ícone+áudio`.
 
 ## Strings do professor (preparação/curadoria com IA, dashboard, gatilhos, roteiro de perguntas, erro) — inclui, obrigatoriamente: rótulos e textos de ajuda do recorte da aula (disciplina, tema, assuntos, contexto), o botão do banco padrão, as mensagens de geração em andamento, de falha e de saldo de IA esgotado, os textos da curadoria (editar, regenerar, aprovar) e de pôr a atividade no ar (sem agendamento: a plataforma libera na hora); e, como amostra de conteúdo dinâmico, o recorte preenchido de cada uma das três aulas da tabela do bloco 8

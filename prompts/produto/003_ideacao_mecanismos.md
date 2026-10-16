@@ -56,6 +56,7 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 3. **Distintos de verdade.** Os três diferem no **tipo de decisão** (escolher entre itens · prever um resultado · produzir e publicar algo · configurar ou seguir algo e ver o efeito depois · ordenar ou priorizar · responder a alguém) **e** na **virada** (contraste com colegas · o que nunca apareceu · o efeito do que ele publicou sobre quem viu · a própria previsão desmentida pelo próprio dado). Mudar só o ambiente ou o tema não conta como candidato novo. Ao menos um dos três coloca o estudante no **papel de quem produz** o conteúdo (quem fotografa, publica, encaminha, recomenda), e não só de quem consome.
 4. **A virada é mostrada pelo ambiente, não contada.** Nada de painel da Unooria com percentuais dentro do clone, gráfico de "como o algoritmo funciona" nem aviso da plataforma. O que o estudante deixou de ver, os posts que os colegas receberam, a reação de quem viu o que ele publicou — isso, em conteúdo nativo, é a virada. A tela do professor pode ter dados; a do estudante tem o ambiente.
 5. **Profundidade não é carga.** Cada candidato cabe nos tetos da faixa (opções por decisão, duração por ato, missão inteira até 25 minutos de tela, gestos novos por ato) e respeita a porta de abstração do ano. Um candidato que só fica profundo com mais telas, mais opções ou mais tempo perde para um mais simples que derruba a mesma crença.
+5b. **Mais de uma seção do DS, só quando mede.** Um candidato pode combinar seções (`varias-secoes.md`, dentro de `ambientes.md`) — postar no `unoovista` e ver o compartilhamento chegar ao `unoochat`, por exemplo — quando a seção extra torna observável uma habilidade ou carrega a virada. Diga qual, em uma linha. Respeite o teto do ano (1º–3º EF: 1 · 4º–5º EF: 2 · 6º EF ao 3º EM: 3) e diga como o estudante passa de um app ao outro dentro da história. Trocar só a seção não faz um candidato novo.
 6. **Restrições do briefing valem para os três.** Sem áudio, sem telão (tudo na tela do estudante ou do professor), ambiente simplificado nos anos iniciais, número de itens fixado pelo time — o que o briefing proíbe, nenhum candidato usa.
 7. **Guardrails.** Nenhum candidato rotula o estudante (8.4) nem expõe pelo nome quem "errou" ou "caiu" (8.5): o contraste entre colegas é de escolhas, não de pessoas, e a comparação nominal, quando existe, é conduzida pelo professor.
 8. **Não repita missão do catálogo.** Um candidato cuja decisão e virada cabem numa missão da lista acima (teste de 2 frases da Regra 16 do núcleo) é descartado antes de ser pontuado.
@@ -75,7 +76,7 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 **Mecanismo do briefing:** <resumo em uma linha> | nenhum — ideação livre
 
 ## Candidato A — <nome curto>
-**Ambiente:** <um dos cinco> · **Tipo de decisão:** <≤ 12 palavras> · **Virada:** <tipo>
+**Ambiente:** <seção principal> [+ <seções extras>] · **Transições:** <gatilho na história, ou — com uma seção só> · **Tipo de decisão:** <≤ 12 palavras> · **Virada:** <tipo>
 <Um parágrafo: o que o estudante faz, do Desafiar ao Resultado, sem spoiler no Desafiar.>
 
 | Passo | Neste candidato |

@@ -857,6 +857,15 @@ def validar_manifesto(spec: str, briefing: str = "", one_pager_po: str = "") -> 
     trava = achado_secao_travada(v or "", briefing, "a spec", secoes)
     if trava:
         achados.append({"severidade": trava["severidade"], "campo": "secao_ds", "etapa": "produto", "resumo": trava["resumo"]})
+    # Várias seções do DS (15/10/2026): `secao_ds` é a principal; as extras, o mapa e as transições vêm do bloco 0 e
+    # do bloco 14 — por isso a spec inteira, não só o bloco 0.
+    from tools import secoes as sec
+
+    campos["secoes_ds_extras"] = sec.extras(texto)
+    serie = (series or [None])[0] if series else (id_decomposto or {}).get("serie")
+    for a in sec.validar(texto + "\n\n" + (spec or ""), v or "", "a spec", briefing=briefing, serie=serie,
+                         vocabulario=secoes):
+        achados.append({k: a[k] for k in ("severidade", "campo", "etapa", "resumo")})
 
     # `por-turma` é o único valor que a plataforma aceita (ADR-69), então ausência é
     # default, não defeito: cobrar uma linha que só pode ter um valor é cerimônia.
