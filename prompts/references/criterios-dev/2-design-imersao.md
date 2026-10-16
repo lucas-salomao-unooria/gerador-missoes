@@ -15,11 +15,15 @@ declara que precisa de seção NOVA. Componente/seção que não existe nasce no
 repo `storybook-unooria` e chega por versão publicada ANTES da codificação da
 missão — a spec então lista os componentes faltantes como pré-requisito, com
 responsável. "A gente cria o componente na experiência" = ❌ (viola a regra de
-ouro do DS).
+ouro do DS). **Várias seções** (`secoes_ds_extras`, desde 15/10/2026): cada extra
+segue a mesma regra, dentro do teto do ano (`varias-secoes.md`); o PRD importa uma
+ponte `@edu/ui/ds-*` por seção, sem pré-requisito de plataforma.
 
 ## DES-02 [BLOQUEANTE] — Mapa de "quem está falando", tela a tela
-Toda tela/diálogo/toast classificado: fala o CLONE (seção do clone) ou fala a
-PLATAFORMA (seção `unooria`)? O critério nunca é "vem depois no tempo", e sim
+Toda tela/diálogo/toast classificado: fala o CLONE (seção do clone — com várias
+seções do DS, **qual** clone, conforme o «Mapa de seções») ou fala a
+PLATAFORMA (seção `unooria`)? Cada troca de clone acontece pelo gatilho da
+história declarado em «Transições», nunca por tela da plataforma. O critério nunca é "vem depois no tempo", e sim
 "quem está falando" (ADR-22): na exp-02 o diálogo de limite de 3 salvos fala de
 dentro da ficção (Modal do clone), e o ranking fala pela escola. Missão sem
 revelação no software é 100% seção do clone e NÃO importa `unooria.css` nenhum

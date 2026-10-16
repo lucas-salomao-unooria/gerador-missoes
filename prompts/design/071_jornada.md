@@ -66,6 +66,7 @@ A missão é aplicada pelo professor de **qualquer disciplina**, e a visão dele
 | Evidência registrada | | | |
 
 ### Seção 3 — Inventário de telas (a saída que o wireframe consome)
+<!-- Com várias seções do DS, a coluna «Ambiente» de cada tela diz a seção (`unoovista`, `unoochat`…), conforme o «Mapa de seções» da spec: é por ela que os componentes de cada tela são conferidos. -->
 | ID | Etapa | Ator | Ambiente | Propósito | Peso | Elementos na tela | Ação (verbo nativo) | Resultado da ação | Estados | Cenário de dispositivo | Habilidade (bloco 11) |
 
 **Coluna "Habilidade":** o código da spec cuja ação em tela acontece **nesta** tela, ou `—`. É aqui que nasce o "momento em tela" que o QA (D2) e a banca (PED-02) vão procurar — se você não escrever, eles vão inferir, e inferência de currículo é o que a esteira não pode ter. Toda habilidade do bloco 11 precisa aparecer em pelo menos uma tela; habilidade sem tela é lacuna com dono `gate-estrutural`, e tela `pico` sem habilidade é achado de ofício.
@@ -153,7 +154,7 @@ Colunas que não podem ficar vazias, e por quê:
 ```
 # Jornada — <missão>
 
-**Ambiente:** <nome> · classe: app clonado | mini-jogo · **telas no inventário:** <n>
+**Ambiente:** <nome> [+ <seções extras>] · classe: app clonado | mini-jogo · **telas no inventário:** <n>
 
 ## Seção 1 — Mapa de jornada (tabela raias × etapas)
 ## Seção 1b — Diagrama da jornada (bloco ```mermaid, obrigatório)

@@ -17,6 +17,9 @@ dúvida — dúvida declarada é melhor que lacuna silenciosa.
 - **Seção do design system**: existente (`unooriaai`/`unoovista`/`unoochat`/`tiktooria`;
   a tradução do app do briefing está em `ambientes.md`) ou nova (listar componentes a criar no
   storybook-unooria, com responsável e prazo)
+- **Seções extras do DS** (opcional): outras seções que a missão usa além da principal — por exemplo,
+  postar no `unoovista` e continuar a conversa no `unoochat` —, com o momento em que o estudante passa de uma
+  a outra. Teto por ano: 1º–3º EF uma seção · 4º–5º EF até duas · 6º EF ao 3º EM até três (`varias-secoes.md`)
 
 ## 2. Premissa e objetivos
 - **Premissa em UMA frase**:

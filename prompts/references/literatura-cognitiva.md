@@ -202,6 +202,12 @@ automatizado — o ícone de coração, o botão de play — **não conta**. Der
 ato no 1º–2º ano, 2–3 no 3º–5º, 3–4 nos finais e no Médio. **[EXTRAPOLAÇÃO]** — ninguém
 mediu "elementos de interface".
 
+**Seções do DS por missão:** cada app simulado traz chrome próprio — barra, abas, gestos — que o
+estudante precisa aprender antes de decidir; o segundo app soma elementos novos ao ato em que entra.
+Teto por missão, contando a seção principal e as extras (a da plataforma não conta): **1º–3º EF uma
+seção · 4º–5º EF até duas · 6º EF ao 3º EM até três** (decisão do PO de 15/10/2026). **[EXTRAPOLAÇÃO]**
+— derivada do teto de elementos novos acima; ninguém mediu troca de app em missão escolar.
+
 ---
 
 ## 6. O cenário de piso da escola pública brasileira

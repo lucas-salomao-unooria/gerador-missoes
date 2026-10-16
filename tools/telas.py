@@ -105,8 +105,10 @@ def inventario(jornada: str) -> Dict[str, Any]:
         estados_txt = next((v for k, v in linha_d.items() if k.startswith("estado")), "")
         estados = [e.strip(" `*_.") for e in re.split(r"[,;·/]|\s\+\s", estados_txt)]
         estados = [e for e in estados if e and _norm(e) not in ("—", "-", "n/a", "nenhum", "unico")]
+        # a seção do DS da tela, quando a missão usa mais de uma (15/10/2026): a coluna «Ambiente» do inventário
         telas.append({"id": canonico, "etapa": linha_d.get("etapa", ""), "ator": linha_d.get("ator", ""),
-                      "peso": linha_d.get("peso", ""), "estados": estados})
+                      "peso": linha_d.get("peso", ""), "estados": estados,
+                      "ambiente": linha_d.get("ambiente", "").strip("*_` ")})
     return {"telas": telas, "fora_do_padrao": fora, "tabela": cabecalho is not None}
 
 

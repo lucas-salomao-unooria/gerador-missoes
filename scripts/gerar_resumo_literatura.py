@@ -38,7 +38,8 @@ SECOES = [
 PARAGRAFOS = {
     "1.": ["**Opção visível não é opção lembrada.**"],
     "3.": ["**Teto agregado da missão inteira"],
-    "5.": ["**Narrar ajuda quando:**", "**Narrar atrapalha quando:**", "**Consequência prática:**"],
+    "5.": ["**Narrar ajuda quando:**", "**Narrar atrapalha quando:**", "**Consequência prática:**",
+           "**Elementos novos de interface:**", "**Seções do DS por missão:**"],
 }
 #: Linhas do registro negativo que entram (só o "não use", sem a justificativa longa).
 NEGATIVO_MAX_LINHAS = 4

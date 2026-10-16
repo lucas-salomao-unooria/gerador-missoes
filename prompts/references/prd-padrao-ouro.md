@@ -36,6 +36,7 @@ serie: ["4EF"]            # formato da plataforma; [] = transversal
 unidade: 1 | 2 | 3 | 4 | nenhuma
 ambiente_simulado: <o ambiente da spec (bloco 14): clone da lista fechada, ambiente novo ou mini-jogo>
 secao_ds: <unooriaai|unoovista|unoochat|tiktooria|nova:<nome>|minijogo:<nome>>  # ambientes.md; legada só por decisão do PO
+secoes_ds_extras: [<seção>, …]  # as outras seções do DS da missão (varias-secoes.md); [] = nenhuma. Uma ponte @edu/ui/ds-* por seção
 links: {stitch: <url do projeto>, miro: <url do board — omita se indisponível>, prototipo: design/08-prototipo.html, diagramas: design/09-diagramas.html, spec: produto/05-spec-missao.md, one_pager: produto/00-one-pager.md, pedagogico: one-pager-pedagogico.md}  # só caminhos que a sessão tem: não existe pasta spec/
 data: AAAA-MM-DD
 ---

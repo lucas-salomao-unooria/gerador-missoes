@@ -6,7 +6,7 @@ sources: [literatura-cognitiva.md]
 
 # Régua por idade — resumo operacional
 
-> **Gerado automaticamente** de `literatura-cognitiva.md` por `scripts/gerar_resumo_literatura.py`. Não edite à mão: edite a fonte e regenere. SHA-256 da fonte: `afe07c3a8b4052ea8c1f128fc2f14ea39b21395e73ca8f8f62945f90b0ed7dd5`.
+> **Gerado automaticamente** de `literatura-cognitiva.md` por `scripts/gerar_resumo_literatura.py`. Não edite à mão: edite a fonte e regenere. SHA-256 da fonte: `596a20a313235f4b880459082cc01f4c0222ee2ae5c8790e1dbe89e117bf462c`.
 
 Esta é a **fonte única dos números** que a esteira usa para julgar se uma missão cabe na idade, em uma página. Todo número é **[DADO DIRETO]** (medido), **[EXTRAPOLAÇÃO]** (derivado de princípio) ou **[CONVENÇÃO]** (escolha da equipe); extrapolação justifica ⚠️ com mais frequência que ❌. A fundamentação e as citações estão na fonte — aqui só o que se aplica ao construir tela, copy e jornada.
 
@@ -48,6 +48,10 @@ Esta é a **fonte única dos números** que a esteira usa para julgar se uma mis
 **Narrar atrapalha quando:** há visual concorrente e a narração é palavra por palavra do texto; o texto é longo e o ritmo é do sistema; o estudante já lê com fluência — aí o áudio vira ruído por *expertise reversal*.
 
 **Consequência prática:** a exigência de narração vale para 1º–2º ano e **deve ser removida a partir do 3º**, ou quando houver sinal de fluência. Scaffolding que não é removido vira obstáculo.
+
+**Elementos novos de interface:** a teoria de carga cognitiva sustenta que a memória de trabalho lida com dois a três elementos **novos e interagentes** (Sweller, van Merriënboer & Paas, *Educational Psychology Review*, v. 31, n. 2, p. 261–292, 2019. DOI 10.1007/s10648-019-09465-5). Elemento já automatizado — o ícone de coração, o botão de play — **não conta**. Derivando: ~1–2 gestos novos por ato no 1º–2º ano, 2–3 no 3º–5º, 3–4 nos finais e no Médio. **[EXTRAPOLAÇÃO]** — ninguém mediu "elementos de interface".
+
+**Seções do DS por missão:** cada app simulado traz chrome próprio — barra, abas, gestos — que o estudante precisa aprender antes de decidir; o segundo app soma elementos novos ao ato em que entra. Teto por missão, contando a seção principal e as extras (a da plataforma não conta): **1º–3º EF uma seção · 4º–5º EF até duas · 6º EF ao 3º EM até três** (decisão do PO de 15/10/2026). **[EXTRAPOLAÇÃO]** — derivada do teto de elementos novos acima; ninguém mediu troca de app em missão escolar.
 
 ## O cenário de piso da escola pública (fonte §6)
 

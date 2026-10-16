@@ -84,7 +84,11 @@ Habilidades BNCC Computação — Letramento Digital (núcleo da missão, códig
 [copiado do núcleo — não alterar]
 
 ## 5. Verificação de ambiente
-Tabela: etapa · dentro do ambiente? · escape permitido? · affordance nativa usada
+Tabela: etapa · seção do DS · dentro do ambiente? · escape permitido? · affordance nativa usada
+Com «Seções extras do DS» no cabeçalho, acrescente o «Mapa de seções» e as «Transições», com os cabeçalhos exatos de `varias-secoes.md` (abaixo) — um código confere que cada extra tem linha nas duas e que a missão cabe no teto do ano.
+
+<!-- include: references/varias-secoes.md -->
+
 
 ## 6. Verbos e affordances
 Lista de verbos nativos usados, com antes / verbo / depois. Ausências deliberadas do ambiente.
@@ -158,7 +162,7 @@ Além do one-pager canônico, entregue também um **brief de escopo** curto — 
 <ano/série> · Missão digital <modalidade> · <tempo total> em sala · <status da spec/gate> · <status de protótipo>
 
 # 1. O QUE É ESTA MISSÃO
-# 2. O AMBIENTE — <ambiente simulado>
+# 2. O AMBIENTE — <ambiente simulado> [+ <seções extras>]
 # 3. CAMADA DO PROFESSOR — CONTROLE DE LIBERAÇÃO
 # 4. O PAPEL DO PERSONAGEM-GUIA OU AGENTE DE IA
 # 5. BEATS DA MISSÃO

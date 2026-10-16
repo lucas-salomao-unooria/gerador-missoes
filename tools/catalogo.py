@@ -321,6 +321,8 @@ def ficha_da_execucao(state: Dict[str, Any], sessao: str = "") -> Dict[str, Any]
         # vitrine ("InstaNooria (Instagram)") e só serve canonizada.
         "ambiente": (_ambiente_da_spec(bloco0) or _ambiente(proposta.get("ambiente", ""))
                      or _ambiente(bloco0) or _ambiente(juntos[:6000])).lower(),
+        # as outras seções do DS da missão (15/10/2026): entram na comparação de ambiente
+        "ambientes_extras": _extras(bloco0 or one_pager),
         "eixo": proposta.get("eixo") or _campo_rotulado(bloco1, "Eixo temático", "Eixo"),
         "descoberta": proposta.get("descoberta") or _campo_rotulado(bloco1, "Descoberta central") or _primeira_frase(bloco1),
         "tipo_decisao": proposta.get("tipo_decisao") or _campo_rotulado(bloco1, "Tipo de decisão"),
@@ -442,6 +444,23 @@ def _ano_num(ano: str) -> Optional[int]:
     return int(m.group(1)) if m else None
 
 
+def _extras(texto: str) -> List[str]:
+    from tools.secoes import SECAO_DA_PLATAFORMA, extras
+
+    return [s for s in extras(texto) if s != SECAO_DA_PLATAFORMA]
+
+
+def _ambientes(ficha: Dict[str, Any]) -> set:
+    """Todas as seções do DS da missão, canonizadas: a principal e as extras."""
+    todas = [ficha.get("ambiente") or "", *(ficha.get("ambientes_extras") or [])]
+    return {_canonico(a) for a in todas if a}
+
+
+def mesmo_ambiente(a: Dict[str, Any], b: Dict[str, Any]) -> bool:
+    """Alguma seção em comum — com várias seções, uma missão de `unoovista` + `unoochat` é vizinha das duas."""
+    return bool(_ambientes(a) & _ambientes(b))
+
+
 def semelhanca(a: Dict[str, Any], b: Dict[str, Any]) -> float:
     """0 a 1 — as quatro dimensões que os critérios 2.5 e 2.8 comparam.
 
@@ -451,7 +470,7 @@ def semelhanca(a: Dict[str, Any], b: Dict[str, Any]) -> float:
     as vizinhas que este score trouxe. Por isso o limiar abaixo serve a um aviso, nunca a um veto.
     """
     score = 0.35 * _jaccard(_tokens(a.get("descoberta", "")), _tokens(b.get("descoberta", "")))
-    if a.get("ambiente") and _canonico(a.get("ambiente")) == _canonico(b.get("ambiente")):
+    if mesmo_ambiente(a, b):
         score += 0.25
     if a.get("eixo") and _jaccard(_tokens(a.get("eixo", "")), _tokens(b.get("eixo", ""))) >= 0.5:
         score += 0.20
@@ -485,9 +504,9 @@ def vizinhas(ficha: Dict[str, Any], indice: Optional[Dict[str, Any]] = None, n: 
             continue
         ano_m = _ano_num(m.get("ano", ""))
         perto = ano_alvo is not None and ano_m is not None and abs(ano_alvo - ano_m) <= 1
-        mesmo_ambiente = bool(ficha.get("ambiente")) and _canonico(ficha.get("ambiente")) == _canonico(m.get("ambiente"))
+        ambiente_comum = mesmo_ambiente(ficha, m)
         mesmo_eixo = bool(ficha.get("eixo")) and _jaccard(_tokens(ficha.get("eixo", "")), _tokens(m.get("eixo", ""))) >= 0.5
-        if not (perto or mesmo_ambiente or mesmo_eixo):
+        if not (perto or ambiente_comum or mesmo_eixo):
             continue
         candidatas.append({**m, "semelhanca": semelhanca(ficha, m)})
     candidatas.sort(key=lambda m: (-m["semelhanca"], m.get("slug", "")))

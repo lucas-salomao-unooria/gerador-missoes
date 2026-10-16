@@ -60,7 +60,9 @@ _RE_FOCO_PRIMARIO = re.compile(r"foco\s+prim[áa]rio[^\n]{0,240}", re.IGNORECASE
 #: Linha do briefing que marca a habilidade principal: "EF03CO03 (âncora)".
 _RE_ANCORA = re.compile(r"[âa]ncora|foco\s+prim[áa]rio|principal", re.IGNORECASE)
 #: "Seção do DS: `unoochat`" / "Seção do DS = `unoogaleria`" no cabeçalho do one-pager.
-_RE_SECAO_DO_CABECALHO = re.compile(r"Se[çc][ãa]o do DS\**\s*[:=]\s*\**`?([a-z][\w:-]*)", re.IGNORECASE)
+#: Até 16/10/2026 faltava o espaço depois dos asteriscos: `* **Seção do DS:** `unoochat`` — o formato de 5 dos 7
+#: one-pagers do acervo — não casava, e a trava do briefing nunca era conferida no one-pager.
+_RE_SECAO_DO_CABECALHO = re.compile(r"Se[çc][ãa]o do DS\**\s*[:=]\s*\**\s*`?([a-z][\w:-]*)", re.IGNORECASE)
 
 
 def _linhas(texto: str) -> List[str]:
@@ -262,6 +264,12 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
         trava = achado_secao_travada(cabecalho.group(1), briefing, "o one-pager")
         if trava:
             (bloqueio if trava["severidade"] == "bloqueio" else atencao)("secao-travada-pelo-briefing", "2.1 · 6.4", trava["resumo"])
+
+    # 6b. Várias seções do DS (15/10/2026): extras no cabeçalho, dentro do teto do ano, com mapa e transições.
+    from tools import secoes as sec
+
+    for a in sec.validar(texto, cabecalho.group(1) if cabecalho else "", "o one-pager", briefing=briefing or ""):
+        (bloqueio if a["severidade"] == "bloqueio" else atencao)(a["codigo"], "2.1 · 2.3 · 6.4", a["resumo"])
 
     # 7. Habilidade que o briefing lista não some sem registro, e a âncora dele não troca em silêncio.
     # As três gerações da exp03ef1b cortaram EF03CO01 e EF03CO02 sem uma linha, e a Regra 12 pôs
