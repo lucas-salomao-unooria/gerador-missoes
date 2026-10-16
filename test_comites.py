@@ -367,3 +367,14 @@ def test_comites_da_fabrica_devolvem_a_missao_a_quem_a_escreve(monkeypatch):
     assert state["escritas_nucleo"] == 2, "o núcleo pulou a rodada do achado do A014 e reescreveu na do A004"
     assert state["passadas_gate"] == 2, "o comitê final reprovado refez a cadeia de produto"
     assert state["evidencia_one_pager_status"] == "aprovado" and state["mecanica_one_pager_status"] == "aprovado"
+
+
+def test_teto_do_comite_nao_recusa_o_de_acordo_e_o_12a_fora_de_forma_recusa():
+    from pipeline.passagem import AGUARDANDO, DE_ACORDO, acoes_possiveis
+
+    fluxo = {"etapa": "produto", "situacao": AGUARDANDO}
+    amarelo = {"comite_canal_a_status": "amarelo", "comite_final_status": "amarelo",
+               "evidencia_one_pager_status": "aprovado"}
+    assert DE_ACORDO in acoes_possiveis(fluxo, "produto", amarelo)
+    vermelho = {**amarelo, "evidencia_one_pager_status": "bloqueado"}
+    assert DE_ACORDO not in acoes_possiveis(fluxo, "produto", vermelho)

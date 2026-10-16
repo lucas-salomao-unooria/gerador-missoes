@@ -16,8 +16,8 @@ PAGINAS = {
     9:  "o-que-a-esteira-faz",
     19: "parecer-humano",
     33: "mapa-dos-agentes",
-    50: "anatomia-do-aha",
-    63: "catalogo-de-agentes",
+    55: "anatomia-do-aha",
+    68: "catalogo-de-agentes",
 }
 
 dest = pathlib.Path("previews")

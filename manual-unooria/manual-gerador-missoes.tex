@@ -231,7 +231,7 @@
 
 \vspace{1.1em}
 {\noindent\color{unLavanda}\fontsize{14}{19}\selectfont\itshape
- A esteira de 119 passos que transforma um briefing de meia página\\
+ A esteira de 129 passos que transforma um briefing de meia página\\
  --- ou o \emph{one-pager} que o PO já escreveu --- em um PRD pronto\\ para codificação e em uma missão que a professora aprova.}
 
 \vfill
@@ -248,7 +248,7 @@
 \noindent
 \begin{minipage}[t]{0.49\textwidth}
 {\sffamily\footnotesize\color{unAzul}\bfseries EDIÇÃO}\\[0.25em]
-{\color{white}\small 5.\textsuperscript{a} edição --- 12 de outubro de 2026\\
+{\color{white}\small 6.\textsuperscript{a} edição --- 15 de outubro de 2026\\
 Repositório \cod{gerador-missoes} · rubrica de profundidade v1.21}
 \end{minipage}\hfill
 \begin{minipage}[t]{0.47\textwidth}
@@ -277,15 +277,16 @@ O que este documento é & O manual único do Gerador de Missões. Nasce da fusã
 \addlinespace
 Como foi verificado & Toda descrição de agente, portão, variável de ambiente e artefato foi conferida contra o código do repositório --- \cod{agents/}, \cod{config.py}, \cod{prompts/}, \cod{tools/} --- e não contra os manuais anteriores. Onde os dois divergiam, o código decidiu. A contagem de passos vem da lista de agentes que o próprio código publica para a tela de progresso, e a da árvore, de montar o orquestrador e percorrê-lo. \\
 \addlinespace
-Arquitetura descrita & \textbf{119 passos numerados} --- 43 com modelo de linguagem e 71 em código ---, treze ciclos de correção automática, \textbf{parecer humano entre as etapas}, \textbf{banca em quatro posições} e a \textbf{base da plataforma} lida de um \emph{bucket} próprio, só para leitura. Orquestração em Google ADK, modelo padrão \cod{gemini-3.8-flash}. \\
+Arquitetura descrita & \textbf{129 passos numerados} (144 blocos: 52 com modelo de linguagem, 92 em código), quinze ciclos de correção automática, \textbf{dois comitês pedagógicos}, \textbf{parecer humano entre as etapas}, \textbf{banca em quatro posições} e a \textbf{base da plataforma} lida de um \emph{bucket} próprio, só para leitura. Orquestração em Google ADK, modelo padrão \cod{gemini-3.8-flash}. \\
 \addlinespace
-O que mudou nesta edição & A 5.\textsuperscript{a} edição renumera a esteira de 001 a 119, \textbf{na ordem em que roda} --- paralelo com letra, o resto só com número --- e descreve: a \textbf{conversa única} sobre a missão; a \textbf{esteira animada} com o veredito de cada portão; o \textbf{custo da missão} em reais, ao vivo e somando os \emph{Refazer}; os quatro \textbf{downloads} da missão; e os portões da Etapa~2 do plano padrão ouro --- tipos do PRD contra o esquema real da plataforma, ``não mexer'' provado contra a versão anterior, o D0 estável entre execuções e o fim das isenções pela palavra do modelo. A 4.\textsuperscript{a} edição (08/10) descrevia 114 passos com a numeração antiga. A 3.\textsuperscript{a} edição (06/10/2026) descrevia 81 passos. Em dois dias entraram: o \textbf{\emph{one-pager} do PO como base preservada}; o \textbf{conteúdo aprovado} conferido até o PRD; a \textbf{banca em quatro posições}; o Stitch gerado \textbf{fora do modelo}; o \textbf{PRD codificável}; gates de modelo que \textbf{só bloqueiam com citação que existe}; a \textbf{matriz de rastreabilidade}; o \textbf{corte do modelo} registrado; e a grade publicada da plataforma no catálogo. Quase tudo nasceu de missões reais (Parte~VII). A 2.\textsuperscript{a} edição (25/09) descrevia 72 passos; a 1.\textsuperscript{a} (19/09), 55. \\
+O que mudou nesta edição & A 6.\textsuperscript{a} edição (15/10) descreve os \textbf{dois comitês pedagógicos} de Produto (Seção~\ref{sec:comites}) --- três juízes por painel, unanimidade, voto contado em código e a missão devolvida a quem a escreve ---, o \textbf{Canal A obrigatório em toda habilidade} e o voto do comitê que pode mudar o texto do \emph{one-pager} do PO. A esteira passou a 129 passos, ainda numerados na ordem em que rodam: do 018 ao 032 antigos, mais cinco; do 033 ao 119, mais dez. A 5.\textsuperscript{a} (12/10) renumerou a esteira e trouxe a conversa única, a esteira animada, o custo da missão e os portões da Etapa~2 do plano padrão ouro; a 4.\textsuperscript{a} (08/10, 114 passos), o \emph{one-pager} do PO preservado, o conteúdo aprovado, a banca em quatro posições, o Stitch fora do modelo e o PRD codificável. Antes, 81 passos na 3.\textsuperscript{a} (06/10), 72 na 2.\textsuperscript{a} (25/09) e 55 na 1.\textsuperscript{a} (19/09). Quase tudo nasceu de missões reais (Parte~VII). \\
 \addlinespace
 Identidade visual & Paleta e tipografia do \emph{brandbook} Unooria: azul profundo \cod{\#0e1039} (estrutura), lavanda \cod{\#8b85ac} (inteligência), azul claro \cod{\#7fa5e2} (interface). A fonte institucional é a Garet; nesta composição usamos Montserrat, da mesma família de desenho geométrico, por disponibilidade tipográfica. Verde, âmbar e vermelho aparecem apenas como \textbf{cores funcionais de sinalização}, para reproduzir os três estados que os relatórios da esteira emitem; não são cores de marca e nunca se aplicam ao logotipo. \\
 \bottomrule
 \end{tabularx}
 
 \vspace{0.9em}
+\Needspace*{8\baselineskip}
 \begin{destaque}
 {\sffamily\bfseries\color{unNavy}Uma convenção de leitura.} Ao longo do manual, cada regra da esteira aparece marcada pela natureza da sua fundamentação:\\[0.5em]
 \Evidencia\ deriva de pesquisa publicada, com citação. \quad
@@ -354,7 +355,7 @@ Se você tem quinze minutos e precisa de um só capítulo, leia a Seção~\ref{s
 \midrule
 I & O que a esteira faz & Que documentos saem, para quem, e o que significa a esteira não abortar. \\
 II & Como usar & O que colocar no briefing, como rodar, como ler o diagnóstico quando algo trava. \\
-III & Como é construída & Por que 119 passos e não um prompt grande; portões, ciclos, a banca, a base da plataforma e o controle anti-alucinação. \\
+III & Como é construída & Por que 129 passos e não um prompt grande; portões, ciclos, a banca, a base da plataforma e o controle anti-alucinação. \\
 IV & Por que funciona & A jornada de seis etapas, a carga cognitiva e a régua por idade --- com os números e as fontes. \\
 V & O que protege & BNCC e o primado do letramento digital, LGPD art.~14, ética de acolhimento. \\
 VI & Os agentes, um a um & O catálogo completo, com o que cada um faz e em que se apoia. \\
@@ -388,8 +389,8 @@ Essa parada é a mudança mais importante desde a primeira edição deste manual
 \node[ent,below=0.3cm of b] (m) {\textbf{Material}\\ do bimestre\\ (\cod{.docx}, \cod{.pdf})};
 \node[ent,below=0.3cm of m] (r) {\textbf{Restrições}\\ de sala};
 
-\node[cx,right=1.0cm of m] (e) {119 passos\\[2pt]
-  {\sffamily\scriptsize\mdseries 3 etapas\\ 13 ciclos de correção\\ banca em 4 posições\\ 3 pareceres humanos}};
+\node[cx,right=1.0cm of m] (e) {129 passos\\[2pt]
+  {\sffamily\scriptsize\mdseries 3 etapas\\ 15 ciclos de correção\\ 2 comitês pedagógicos\\ banca em 4 posições\\ 3 pareceres humanos}};
 
 \node[said,right=1.0cm of e,yshift=1.95cm] (s1) {\textbf{one-pager-resumido}\\ o que o time de produto lê};
 \node[said,below=0.16cm of s1] (s2) {\textbf{one-pager-pedagogico}\\ o documento de aprovação};
@@ -553,7 +554,7 @@ A tradução vive num arquivo só (\cod{prompts/references/ambientes.md}) e vale
 
 Quem escolhe a seção é o PO, e a esteira respeita a escolha nos dois sentidos. A seção que o briefing fixa (\cod{secao\_ds: unoogaleria}) é \textbf{trava}: a ficha do manifesto e o \emph{lint} do \emph{one-pager} acusam a missão que a troca, e nenhum revisor a migra por conta própria. E a seção antiga em missão nova só \textbf{bloqueia} quando foi a esteira que a escolheu --- a ficha aponta a sucessora. Quando a antiga está na linha ``Seção do DS'' do \emph{one-pager} que o PO anexou, ou fixada no briefing, ela vira ressalva \statusAmbar\ ``mantida por decisão do PO''. A mensagem do gate sempre disse que a antiga era decisão do PO; até 8 de outubro o código bloqueava assim mesmo, e empurrava a \emph{spec} para a sucessora contra o \emph{one-pager} aprovado.
 
-Pedir uma missão ``no Roblox'' reprova de imediato, e a razão não é gosto: não existe seção de \emph{design system} para construir aquilo, então não há o que especificar, nem o que prototipar, nem o que codificar. A lista fechada é um \Contrato\ da plataforma, não uma preferência de produto. Nos anos iniciais, quando nenhum ambiente serve à intenção pedagógica, a esteira admite outra classe --- o mini-jogo --- decidida pelo agente de ambiente simulado (057).
+Pedir uma missão ``no Roblox'' reprova de imediato, e a razão não é gosto: não existe seção de \emph{design system} para construir aquilo, então não há o que especificar, nem o que prototipar, nem o que codificar. A lista fechada é um \Contrato\ da plataforma, não uma preferência de produto. Nos anos iniciais, quando nenhum ambiente serve à intenção pedagógica, a esteira admite outra classe --- o mini-jogo --- decidida pelo agente de ambiente simulado (067).
 
 \subsection{As duas camadas: o que é fixo e o que a professora parametriza}
 
@@ -685,7 +686,7 @@ O briefing \textbf{entrega a virada}. Há um portão dedicado a isso (agente 007
 Intenção sem mecanismo. O teste do gate estrutural é literal: se você remover a frase, a missão continua igual? Então a frase não descreve nada construível. \\
 \addlinespace
 ``O estudante avalia 15 perfis e classifica cada um como confiável ou não.'' &
-Passa no teste de decisão significativa e reprova no volume e na monotonia: quinze decisões do mesmo tipo excedem o que a faixa sustenta. Vira \Ambar{ressalva} ou reprovação no agente 024b. \\
+Passa no teste de decisão significativa e reprova no volume e na monotonia: quinze decisões do mesmo tipo excedem o que a faixa sustenta. Vira \Ambar{ressalva} ou reprovação no agente 029b. \\
 \addlinespace
 ``Fazer no Roblox, que as crianças amam.'' &
 Ambiente fora da lista fechada. Reprovação imediata --- não existe seção de \emph{design system} para construir. \\
@@ -715,7 +716,7 @@ PDFs entram \textbf{em binário}, aproveitando a capacidade multimodal nativa do
 \begin{itemize}
   \item \textbf{A ideação é dispensada.} Não há três mecanismos candidatos quando o PO já escolheu um.
   \item \textbf{Os agentes de Produto recebem o \emph{one-pager} do PO} --- seções de apoio, gate estrutural, revisor, os três pareceres e o gate final --- com uma regra só: o que eles acharem que deve mudar e o PO não pediu vira \cod{[PROPOSTA — validar com PO: \ldots]} \textbf{ao lado} do texto dele, que fica.
-  \item \textbf{Cada trecho é conferido em código.} Cada linha e cada célula de tabela do \emph{one-pager} do PO tem de estar no gerado: igual, ou com 85\% dos trigramas e os números e nomes intactos. Saem da conta só duas coisas --- a habilidade que o pedido manda remover, e a alteração que o autor declara na tabela ``Alterações sobre o \emph{one-pager} do PO'' citando, entre aspas, o trecho do pedido que a manda fazer. A citação também é conferida.
+  \item \textbf{Cada trecho é conferido em código.} Cada linha e cada célula de tabela do \emph{one-pager} do PO tem de estar no gerado: igual, ou com 85\% dos trigramas e os números e nomes intactos. Saem da conta só duas coisas --- a habilidade que o pedido manda remover, e a alteração que o autor declara na tabela ``Alterações sobre o \emph{one-pager} do PO'' citando, entre aspas, o trecho do pedido que a manda fazer. A citação também é conferida. Desde 15 de outubro, o trecho citado pode ser também o \textbf{voto de um comitê pedagógico} (Seção~\ref{sec:comites}); a ordem explícita do PO de não mexer continua valendo acima dele.
   \item \textbf{A conferência roda duas vezes.} Logo depois das seções de apoio, devolvendo ao autor o que ele reescreveu; e no fim, depois do gate estrutural, dos pareceres e dos revisores --- os que mais reescreviam. Trecho perdido ali vai a um \textbf{restaurador}, que o devolve literal; se ainda faltar, Produto fica \statusVermelho\ e o \emph{de acordo} é recusado.
 \end{itemize}
 
@@ -891,7 +892,7 @@ Com o fluxo de pareceres ativo, o campo de mensagem da missão não fica travado
 \subsection{Acompanhar a execução}
 \label{sec:acompanhar}
 
-Enquanto uma etapa roda, a missão mostra a \textbf{esteira inteira}: uma raia por etapa, um bloco por passo, numerados de 001 a 119. O bloco do passo que roda agora pulsa em azul, e a raia da etapa ativa tem um brilho que corre. No topo, o passo atual, o tempo decorrido, a barra de progresso e o custo até ali (Seção~\ref{sec:custo}). O painel se atualiza sozinho a cada cinco segundos, e a etapa continua no servidor mesmo que você feche a aba.
+Enquanto uma etapa roda, a missão mostra a \textbf{esteira inteira}: uma raia por etapa, um bloco por passo, numerados de 001 a 129. O bloco do passo que roda agora pulsa em azul, e a raia da etapa ativa tem um brilho que corre. No topo, o passo atual, o tempo decorrido, a barra de progresso e o custo até ali (Seção~\ref{sec:custo}). O painel se atualiza sozinho a cada cinco segundos, e a etapa continua no servidor mesmo que você feche a aba.
 
 \begin{center}
 \begin{tabular}{@{}p{3.6cm}p{11.6cm}@{}}
@@ -908,7 +909,7 @@ Enquanto uma etapa roda, a missão mostra a \textbf{esteira inteira}: uma raia p
 \end{tabular}
 \end{center}
 
-A cor de cada portão vem do mesmo veredito que o semáforo abaixo da esteira mostra; passe o mouse no bloco para ver o nome do passo e o veredito. O retrabalho e os juízes internos aparecem no bloco do passo a que pertencem (\cod{A065TelasRetrabalho} pulsa no 065). As cores seguem o tema do aplicativo, claro ou escuro.
+A cor de cada portão vem do mesmo veredito que o semáforo abaixo da esteira mostra; passe o mouse no bloco para ver o nome do passo e o veredito. O retrabalho e os juízes internos aparecem no bloco do passo a que pertencem (\cod{A075TelasRetrabalho} pulsa no 075). As cores seguem o tema do aplicativo, claro ou escuro.
 
 Na aba da missão, quatro botões baixam o que se costuma levar adiante: \textbf{o download total} (o \cod{.zip} com todos os artefatos), e os três \emph{one-pagers} --- \textbf{de produto}, \textbf{resumido} e \textbf{pedagógico} --- em \cod{.docx} com a identidade da Unooria, ou em Markdown quando a exportação ainda não existe.
 
@@ -969,7 +970,7 @@ Quando você está iterando sobre um \emph{prompt} ou investigando um defeito, r
 
 \subsection{Os \emph{prompts}, para ler}
 
-A seção \emph{Prompts e referências} do aplicativo mostra cada \emph{prompt} e cada referência que os agentes leem --- \textbf{só para leitura}. Os \emph{prompts} vão na imagem do aplicativo, e mudá-los é mudar o código, com revisão e teste; editar pela tela durava até o próximo \emph{deploy}. O nome de cada arquivo leva o número do agente que o lê (\cod{design/065\_telas.md} é o \emph{prompt} do passo 065); os que vários passos leem não têm número --- o revisor do \emph{one-pager}, as dimensões A, B e C da banca, os três juízes e a triagem e a conversa --- e a tela mostra todos os passos que os usam. Um botão prepara um \cod{.zip} com todos eles em duas formas: como estão no repositório, com as diretivas de inclusão, e como o modelo os recebe, com as inclusões resolvidas. E este manual, em PDF, fica na barra lateral, logo abaixo do horário em que a sessão expira.
+A seção \emph{Prompts e referências} do aplicativo mostra cada \emph{prompt} e cada referência que os agentes leem --- \textbf{só para leitura}. Os \emph{prompts} vão na imagem do aplicativo, e mudá-los é mudar o código, com revisão e teste; editar pela tela durava até o próximo \emph{deploy}. O nome de cada arquivo leva o número do agente que o lê (\cod{design/075\_telas.md} é o \emph{prompt} do passo 075); os que vários passos leem não têm número --- o revisor do \emph{one-pager}, as dimensões A, B e C da banca, os três juízes e a triagem e a conversa --- e a tela mostra todos os passos que os usam. Um botão prepara um \cod{.zip} com todos eles em duas formas: como estão no repositório, com as diretivas de inclusão, e como o modelo os recebe, com as inclusões resolvidas. E este manual, em PDF, fica na barra lateral, logo abaixo do horário em que a sessão expira.
 
 \subsection{Configuração}
 
@@ -1002,6 +1003,8 @@ Os padrões foram calibrados na operação real e raramente precisam mudar. As e
 {\ttfamily\scriptsize BANCA\_ENTRADA\_ESTRITA} & \footnotesize true & \footnotesize Banca de entrada do Dev \statusVermelho\ impede todo agente de Dev de rodar: construir sobre o que vai mudar é desperdício. Em \cod{false}, o Dev roda e o \statusVermelho\ fica no semáforo. \\
 \addlinespace
 \multicolumn{3}{@{}l}{\sffamily\bfseries\scriptsize\color{unLavanda}TETOS DE CORREÇÃO} \\[2pt]
+{\ttfamily\scriptsize COMITE\_MAX\_RODADAS} & \footnotesize 5 & \footnotesize Voltas do comitê dos canais: núcleo e seções de apoio $\leftrightarrow$ painéis A e B. Esgotado sem unanimidade, a missão segue \statusAmbar\ (Seção~\ref{sec:comites}). \\
+{\ttfamily\scriptsize COMITE\_FINAL\_MAX\_RODADAS} & \footnotesize 2 & \footnotesize Voltas do comitê final: a cadeia de Produto, do núcleo à conferência do PO, $\leftrightarrow$ pedagogia, qualidade e imersão. Esgotado, \statusAmbar. \\
 {\ttfamily\scriptsize GATE\_ESTRUTURAL\_MAX\_RODADAS} & \footnotesize 3 & \footnotesize Ciclo gate estrutural $\leftrightarrow$ revisor do \emph{one-pager}. \\
 {\ttfamily\scriptsize SPEC\_MAX\_RODADAS} & \footnotesize 2 & \footnotesize Ciclo \emph{spec} $\leftrightarrow$ currículo, manifesto, evidência, perguntas, conteúdo aprovado e banca de produto. Vale também para o ciclo do \emph{one-pager} resumido. \\
 {\ttfamily\scriptsize AVALIACOES\_MAX\_RODADAS} & \footnotesize 2 & \footnotesize Ciclo do parecer de adequação: o revisor aplica o ajuste exigido e as avaliações refazem. Em 1, o parecer entra como ressalva. \\
@@ -1118,7 +1121,7 @@ A esteira não aborta por gate reprovado --- mas uma etapa pode parar porque um 
   \item[Rode uma etapa isolada quando estiver iterando.] \cod{PIPELINE\_STAGES} sobre um estado salvo custa minutos em vez de uma execução inteira, e mantém a entrada fixa entre as tentativas.
 \end{description}
 
-\parteUnooria{III}{Como é construída}{Cento e catorze passos não são um capricho de arquitetura. São a resposta a um modo de falha medido.}
+\parteUnooria{III}{Como é construída}{Cento e vinte e nove passos não são um capricho de arquitetura. São a resposta a um modo de falha medido.}
 
 \section{Por que muitos agentes, e não um prompt grande}
 \label{sec:decomposicao}
@@ -1129,7 +1132,7 @@ A pergunta aparece sempre, e a resposta não é ``porque especialização é boa
 
 A etapa de Produto sozinha carrega cerca de \textbf{74 mil \emph{tokens} de instrução e 51 critérios tabelados}. No \emph{benchmark} IFScale, que mede exatamente isso, os melhores modelos de fronteira chegam a 68\% de acurácia quando precisam seguir 500 instruções ao mesmo tempo~\cite{ifscale2025}, com viés sistemático em favor das instruções apresentadas primeiro. Liu et al.~\cite{liu2024} documentam o efeito irmão em contexto longo: o que está no meio é usado pior que o que está nas pontas.
 
-Há evidência interna, e ela é mais convincente que a externa. O \emph{prompt} do agente 024b abre justificando a própria existência:
+Há evidência interna, e ela é mais convincente que a externa. O \emph{prompt} do agente 029b abre justificando a própria existência:
 
 \begin{destaque}
 \itshape ``Esta avaliação existe porque a rubrica original errava sistematicamente aqui: os critérios de faixa etária competiam por atenção com $\sim$30 critérios de outra natureza.''
@@ -1142,22 +1145,23 @@ A versão agregada falhava de modo reprodutível; a decomposta corrigiu. Não é
 Não se divide por etapa cronológica. Divide-se por \textbf{decisão encapsulada}, no sentido clássico de Parnas~\cite{parnas1972}: cada agente responde a uma pergunta que pode ser respondida --- e errada --- independentemente das outras, e emite um envelope JSON que um portão consegue ler.
 
 \begin{center}
-\begin{tabularx}{0.93\textwidth}{>{\sffamily\bfseries\footnotesize\color{unNavy}}p{5.0cm}X}
+\begin{tabularx}{0.93\textwidth}{>{\sffamily\bfseries\footnotesize\color{unNavy}\raggedright\arraybackslash}p{5.4cm}X}
 \toprule
 \sffamily\bfseries\footnotesize\color{unNavy}Agente & \sffamily\bfseries\footnotesize\color{unNavy}A pergunta que ele responde \\
 \midrule
-05 Gate estrutural & A missão tem estrutura construível? \\
-08 Avaliação pedagógica & Cumpre currículo e protege o estudante? \\
-09 Experiência do estudante & Alguém dessa idade consegue viver isso? \\
-30 QA de entregáveis & A construção é fiel ao que foi especificado? \\
-48 Consistência do PRD & O documento final se contradiz? \\
+019a Comitê dos canais & A ação que o estudante faz é a que a habilidade descreve? \\
+026 Gate estrutural & A missão tem estrutura construível? \\
+029a Avaliação pedagógica & Cumpre currículo e protege o estudante? \\
+029b Experiência do estudante & Alguém dessa idade consegue viver isso? \\
+088 QA de entregáveis & A construção é fiel ao que foi especificado? \\
+114 Consistência do PRD & O documento final se contradiz? \\
 \bottomrule
 \end{tabularx}
 \end{center}
 
 \subsection{Redundância não é cobertura}
 
-Três critérios do agente 024b eram testes idênticos a três critérios do agente 021 --- mesma pergunta, mesmo modo de falha. Foram removidos. Knight e Leveson~\cite{knight1986} mostraram, em 27 implementações independentes submetidas a um milhão de testes, que falhas correlacionadas anulam o ganho da redundância. Quando os dois ``avaliadores independentes'' são \emph{prompts} diferentes do \textbf{mesmo modelo}, sobre o \textbf{mesmo texto}, a correlação é ainda maior.
+Três critérios do agente 029b eram testes idênticos a três critérios do agente 026 --- mesma pergunta, mesmo modo de falha. Foram removidos. Knight e Leveson~\cite{knight1986} mostraram, em 27 implementações independentes submetidas a um milhão de testes, que falhas correlacionadas anulam o ganho da redundância. Quando os dois ``avaliadores independentes'' são \emph{prompts} diferentes do \textbf{mesmo modelo}, sobre o \textbf{mesmo texto}, a correlação é ainda maior.
 
 \subsection{O contraponto honesto}
 
@@ -1171,29 +1175,29 @@ A condição de contorno declarada pelos próprios autores é que o multiagente 
 \begin{center}
 \begin{tikzpicture}[
   ag/.style={rectangle,rounded corners=2.5pt,draw=unLavanda!70,fill=unPapel,text=unNavy,
-    text width=2.42cm,align=center,font=\sffamily\scriptsize,minimum height=1.45cm,inner sep=3pt},
+    text width=2.42cm,align=center,font=\sffamily\scriptsize,minimum height=1.3cm,inner sep=3pt},
   det/.style={ag,draw=unAzul,fill=unAzul!13,font=\sffamily\scriptsize\itshape},
   fim/.style={ag,draw=unNavy,fill=unNavy,text=white,font=\sffamily\scriptsize\bfseries},
   seta/.style={-{Stealth[length=2.0mm]},draw=unLavanda,thick},
   faixa/.style={font=\sffamily\scriptsize\bfseries,text=unNavy}]
 
 \node[ag] (p1) {001--003\\ memória, mapa do material, ideação};
-\node[ag,right=0.3cm of p1] (p2) {004--013\\ núcleo e as quatro conferências};
-\node[ag,right=0.3cm of p2] (p3) {014--023\\ \emph{one-pager}, o do PO preservado, gate estrutural};
-\node[ag,right=0.3cm of p3] (p4) {024a--035\\ avaliações, restaurador, gate final, \emph{spec}};
-\node[ag,right=0.3cm of p4] (p5) {036--053\\ currículo, banca, fidelidade, resumido};
+\node[ag,right=0.3cm of p1] (p2) {004--017\\ núcleo, as quatro conferências, seções de apoio};
+\node[ag,right=0.3cm of p2] (p3) {018--022\\ \S12a e os painéis A e B do comitê dos canais};
+\node[ag,right=0.3cm of p3] (p4) {023--042\\ gate estrutural, avaliações, restaurador, comitê final};
+\node[ag,right=0.3cm of p4] (p5) {043--063\\ gate final, \emph{spec}, banca, fidelidade, resumido};
 
-\node[ag,below=1.9cm of p1] (d1) {054--059\\ conteúdo aprovado, lacunas, ambiente};
-\node[ag,right=0.3cm of d1] (d2) {060--064\\ ofício, jornada, fluxo, \emph{copy}, CAA};
-\node[ag,right=0.3cm of d2] (d3) {065--069\\ telas, Stitch fora do modelo, protótipo};
-\node[det,right=0.3cm of d3] (d4) {070--074\\ \emph{lint}, coerência, Miro, cobertura};
-\node[ag,right=0.3cm of d4] (d5) {075--084\\ banca, QA, rastro, matriz, fidelidade};
+\node[ag,below=1.5cm of p1] (d1) {064--069\\ conteúdo aprovado, lacunas, ambiente};
+\node[ag,right=0.3cm of d1] (d2) {070--074\\ ofício, jornada, fluxo, \emph{copy}, CAA};
+\node[ag,right=0.3cm of d2] (d3) {075--079\\ telas, Stitch fora do modelo, protótipo};
+\node[det,right=0.3cm of d3] (d4) {080--084\\ \emph{lint}, coerência, Miro, cobertura};
+\node[ag,right=0.3cm of d4] (d5) {085--094\\ banca, QA, rastro, matriz, fidelidade};
 
-\node[ag,below=1.9cm of d1] (v1) {085--088\\ conteúdo aprovado e banca de entrada};
-\node[ag,right=0.3cm of v1] (v2) {089--097\\ manifesto, \emph{handoff}, assets, banco};
-\node[ag,right=0.3cm of v2] (v3) {098--103\\ banca de dados e técnica, PRD};
-\node[det,right=0.3cm of v3] (v4) {104--109\\ as conferências do PRD};
-\node[fim,right=0.3cm of v4] (fim) {110--119\\ pedagógico, matriz, diagnóstico, catálogo};
+\node[ag,below=1.5cm of d1] (v1) {095--098\\ conteúdo aprovado e banca de entrada};
+\node[ag,right=0.3cm of v1] (v2) {099--107\\ manifesto, \emph{handoff}, assets, banco};
+\node[ag,right=0.3cm of v2] (v3) {108--113\\ banca de dados e técnica, PRD};
+\node[det,right=0.3cm of v3] (v4) {114--119\\ as conferências do PRD};
+\node[fim,right=0.3cm of v4] (fim) {120--129\\ pedagógico, matriz, diagnóstico, catálogo};
 
 \draw[seta] (p1)--(p2); \draw[seta] (p2)--(p3); \draw[seta] (p3)--(p4); \draw[seta] (p4)--(p5);
 \draw[seta] (p5.south) to[out=-90,in=90,looseness=0.9] ([xshift=0.8cm]d1.north);
@@ -1202,24 +1206,26 @@ A condição de contorno declarada pelos próprios autores é que o multiagente 
 \draw[seta] (v1)--(v2); \draw[seta] (v2)--(v3); \draw[seta] (v3)--(v4); \draw[seta] (v4)--(fim);
 
 \node[faixa,above=0.08cm of p1.north west,anchor=south west] {PRODUTO};
+\draw[decorate,decoration={brace,amplitude=4pt},draw=unLavanda,thick]
+  ([yshift=3pt]p2.north west) -- node[midway,above=4pt,font=\sffamily\scriptsize,text=unNavy] {comitê dos canais: até 5 voltas} ([yshift=3pt]p3.north east);
+\draw[decorate,decoration={brace,amplitude=4pt},draw=unLavanda,thick]
+  ([yshift=19pt]p2.north west) -- node[midway,above=4pt,font=\sffamily\scriptsize,text=unNavy] {comitê final: até 2 voltas} ([yshift=19pt]p4.north east);
 \node[faixa,above=0.08cm of d1.north west,anchor=south west] {DESIGN};
 \node[faixa,above=0.08cm of v1.north west,anchor=south west] {DEV};
 
-\node[draw=unAzul,fill=unAzul!13,rounded corners=2pt,font=\sffamily\scriptsize,
-      text=unNavy,inner sep=4pt,below=0.55cm of v3.south] {caixa em azul claro = só passos \textbf{em código}; as outras misturam modelo e código};
 \end{tikzpicture}
-\captionof{figure}{Os 119 passos, na ordem de execução. Desde 12 de outubro de 2026 a numeração \textbf{é} a ordem: contínua de 001 a 119, de Produto a Transversal; passo em paralelo leva número e letra (024a, 024b, 024c), e o resto, só número. A última caixa inclui os três passos transversais. A Parte~VI descreve cada um.}
+\captionof{figure}{Os 129 passos, na ordem de execução: a numeração \textbf{é} a ordem, contínua de 001 a 129; passo em paralelo leva número e letra (029a, 029b, 029c). As chaves marcam os dois comitês pedagógicos, que devolvem a missão ao núcleo e às seções de apoio (Seção~\ref{sec:comites}). Em azul claro, as caixas só com passos \textbf{em código}; as outras misturam modelo e código. A última inclui os três transversais; a Parte~VI descreve cada um.}
 \end{center}
 
 \begin{caixaNorma}{De onde vem a contagem}
-\textbf{119 passos}, numerados de 001 a 119 na ordem em que rodam. Os que rodam em paralelo dividem o número e ganham uma letra --- as três avaliações (024a--024c), as dimensões de cada banca (047a--047b, 076a--076b, 087a--087c), \emph{handoff} e \emph{brief} de assets (090a--090b) e a banca de dados e técnica (099a--099b) ---, e por isso a tela de progresso mostra \textbf{127 blocos}: 56 em Produto, 32 em Design, 36 em Dev e 3 transversais. São 43 agentes de modelo com \emph{prompt} próprio e 84 passos em código. Nove dos passos em código chamam por dentro um juiz de modelo --- os quatro de fidelidade (010, 050, 084, 116), os dois de coerência com o aprovado (107, 112) e os três que separam o que um texto proíbe do que ele afirma (020, 039, 092) ---, mas quem dá o veredito é o código, que confere a citação.
+\textbf{129 passos}, numerados de 001 a 129 na ordem em que rodam. Os que rodam em paralelo dividem o número e ganham uma letra --- os seis juízes do comitê dos canais (019a--019f), as três avaliações (029a--029c), os três juízes do comitê final (040a--040c), as dimensões de cada banca (057a--057b, 086a--086b, 097a--097c), \emph{handoff} e \emph{brief} de assets (100a--100b) e a banca de dados e técnica (109a--109b) ---, e por isso a tela de progresso mostra \textbf{144 blocos}: 73 em Produto, 32 em Design, 36 em Dev e 3 transversais. São 52 agentes de modelo com \emph{prompt} próprio e 92 passos em código. Nove dos passos em código chamam por dentro um juiz de modelo --- os quatro de fidelidade (010, 060, 094, 126), os dois de coerência com o aprovado (117, 122) e os três que separam o que um texto proíbe do que ele afirma (025, 049, 102) ---, mas quem dá o veredito é o código, que confere a citação.
 
-Montada de verdade, a árvore que o orquestrador executa tem \textbf{160} agentes: os 127, mais \textbf{24 cópias} de autores e verificações que os ciclos de retrabalho reexecutam --- com o número do agente original, como \cod{A065TelasRetrabalho} ---, mais os \textbf{9 juízes} internos, também com o número do passo que os contém (\cod{A010FidelidadeNucleoJuiz}). A triagem do pedido de correção e a conversa sobre a missão rodam fora da esteira e levam o número 000.
+Montada de verdade, a árvore que o orquestrador executa tem \textbf{182} agentes numerados: os 144, mais \textbf{24 cópias} de autores e verificações que os ciclos de retrabalho reexecutam --- com o número do agente original, como \cod{A075TelasRetrabalho} ---, mais os \textbf{9 juízes} internos, também com o número do passo que os contém (\cod{A010FidelidadeNucleoJuiz}), mais os \textbf{5 grupos paralelos} que levam o número dos passos que reúnem --- os dois painéis dos comitês (\cod{A019ComiteCanais}, \cod{A040ComiteFinal}) e as três bancas (\cod{A057Banca}, \cod{A086Banca}, \cod{A097Banca}). Os invólucros que isolam um ciclo dentro de outro (Seção~\ref{sec:comites}) não têm número. A triagem do pedido de correção e a conversa sobre a missão rodam fora da esteira e levam o número 000.
 \end{caixaNorma}
 
-\subsection{Produto (001--053): a missão pode ser construída?}
+\subsection{Produto (001--063): a missão pode ser construída?}
 
-Decide \emph{o que} a missão é, e é de longe a etapa mais densa --- 56 dos 127 blocos da tela de progresso. Ela começa \textbf{antes} do núcleo narrativo:
+Decide \emph{o que} a missão é, e é de longe a etapa mais densa --- 73 dos 144 blocos da tela de progresso. Ela começa \textbf{antes} do núcleo narrativo:
 
 \begin{itemize}
   \item a \textbf{memória} (001) recupera do índice as missões mais próximas do ano do briefing --- as já geradas e as publicadas na plataforma ---, para a nova não repetir uma anterior;
@@ -1227,33 +1233,33 @@ Decide \emph{o que} a missão é, e é de longe a etapa mais densa --- 56 dos 12
   \item a \textbf{ideação} (003) produz três mecanismos distintos para aquele conceito, pontuados na rubrica de profundidade. O núcleo desenvolve o escolhido. Com o \emph{one-pager} do PO anexado, a ideação é dispensada: o mecanismo já foi escolhido.
 \end{itemize}
 
-Só então vem o núcleo narrativo, que sai do seu ciclo só quando passa em \textbf{quatro} conferências: o micro-gate de \emph{spoiler}, o juiz de profundidade (Parte~IV), a \textbf{conta da virada} --- se a virada é um ranking que se inverte, o código refaz o ranking --- e a \textbf{fidelidade ao pedido do PO}. Depois, o \emph{one-pager} de 18 seções --- que, havendo \emph{one-pager} do PO, parte dele e é conferido contra ele trecho a trecho (Seção~\ref{sec:onepagerpo}) ---, os critérios do gate estrutural, as avaliações em paralelo, a conferência final do \emph{one-pager} do PO com o restaurador, o gate final e a \textbf{\emph{spec}}: o contrato de 12 blocos, mais o \textbf{glossário canônico} com o nome único de cada coisa.
+Só então vem o núcleo narrativo, que sai do seu ciclo só quando passa em \textbf{quatro} conferências: o micro-gate de \emph{spoiler}, o juiz de profundidade (Parte~IV), a \textbf{conta da virada} --- se a virada é um ranking que se inverte, o código refaz o ranking --- e a \textbf{fidelidade ao pedido do PO}. Depois, o \emph{one-pager} de 18 seções --- que, havendo \emph{one-pager} do PO, parte dele e é conferido contra ele trecho a trecho (Seção~\ref{sec:onepagerpo}). Assim que o \emph{one-pager} define o contrato de evidência (\S12a), o \textbf{comitê dos canais} vota a mecânica e os dois canais de cada habilidade; sem unanimidade, a missão volta ao núcleo e às seções de apoio, que reescrevem (018 a 022). Vêm então os critérios do gate estrutural, as avaliações em paralelo e a conferência final do \emph{one-pager} do PO com o restaurador --- e o \textbf{comitê final} vota pedagogia, qualidade de produto e imersão sobre a missão completa, devolvendo-a, se reprovar, ao começo dessa cadeia (038 a 042). Só depois vêm o gate final e a \textbf{\emph{spec}}: o contrato de 12 blocos, mais o \textbf{glossário canônico} com o nome único de cada coisa.
 
 A \emph{spec} \textbf{traduz o \emph{one-pager} aprovado, não o revisa}. Até 6 de outubro ela era um segundo autor: aplicava as ressalvas \statusAmbar\ dos pareceres que o PO tinha recusado, e tudo a jusante a seguia (Seção~\ref{sec:aprovado}). Hoje a ressalva não incorporada vai para uma tabela própria do bloco 12, e o ciclo da \emph{spec} confere, além de currículo, manifesto, evidência, perguntas e lacunas, a \emph{spec} contra o \emph{one-pager} aprovado e o parecer da \textbf{banca no fim de produto}. Fecha com a fidelidade sobre núcleo, \emph{one-pager} e \emph{spec} juntos, e com o \emph{one-pager} resumido --- em ciclo próprio, conferido contra o canônico.
 
 \begin{caixaConceito}{Por que a conformidade curricular é conferida ainda em Produto}
-A ficha do manifesto (agente 037) e a conformidade BNCC (036) poderiam rodar em Dev, junto com o resto da verificação técnica. Rodam em Produto de propósito: um campo errado ali custa \textbf{uma reescrita da \emph{spec}}; o mesmo campo errado descoberto em Dev custa \textbf{o descarte do Design inteiro}, porque tudo que Design construiu se apoiou na \emph{spec} errada.
+A ficha do manifesto (agente 047) e a conformidade BNCC (046) poderiam rodar em Dev, junto com o resto da verificação técnica. Rodam em Produto de propósito: um campo errado ali custa \textbf{uma reescrita da \emph{spec}}; o mesmo campo errado descoberto em Dev custa \textbf{o descarte do Design inteiro}, porque tudo que Design construiu se apoiou na \emph{spec} errada.
 \end{caixaConceito}
 
-\subsection{Design (054--084): como isso se constrói}
+\subsection{Design (064--094): como isso se constrói}
 
-Começa gravando o \textbf{conteúdo aprovado} (054): as seções do \emph{one-pager} aprovado, literais, para os agentes de design que não leem o \emph{one-pager}. Fecha as lacunas da \emph{spec}, decide o ambiente simulado, confere a \emph{spec} consolidada contra o \emph{one-pager} aprovado, escreve o \emph{briefing} de ofício, e então constrói: jornada e fluxo em \textbf{diagramas Mermaid}, \emph{copy} em duas passadas, camada de acessibilidade, especificação de telas --- que o código gera no Stitch, todas, fora do modelo --- e um \textbf{protótipo HTML navegável} que abre com duplo clique. Antes do QA, o código confere o arquivo do protótipo, a \textbf{coerência entre os documentos} contra o glossário canônico e a \textbf{cobertura de telas por ID} em cada documento. Depois vem a \textbf{banca no fim de design}, o QA de entregáveis e as afirmações do QA conferidas em código. Os achados voltam só para quem tem \emph{ticket}, e cada um recebe a própria versão anterior e o \emph{ticket} completo. Por último, o rastro cobra as lacunas que são de Design, a \textbf{matriz de rastreabilidade} mostra onde cada requisito do produto chegou, e a fidelidade confere o \emph{Refazer} pedido a Design.
+Começa gravando o \textbf{conteúdo aprovado} (064): as seções do \emph{one-pager} aprovado, literais, para os agentes de design que não leem o \emph{one-pager}. Fecha as lacunas da \emph{spec}, decide o ambiente simulado, confere a \emph{spec} consolidada contra o \emph{one-pager} aprovado, escreve o \emph{briefing} de ofício, e então constrói: jornada e fluxo em \textbf{diagramas Mermaid}, \emph{copy} em duas passadas, camada de acessibilidade, especificação de telas --- que o código gera no Stitch, todas, fora do modelo --- e um \textbf{protótipo HTML navegável} que abre com duplo clique. Antes do QA, o código confere o arquivo do protótipo, a \textbf{coerência entre os documentos} contra o glossário canônico e a \textbf{cobertura de telas por ID} em cada documento. Depois vem a \textbf{banca no fim de design}, o QA de entregáveis e as afirmações do QA conferidas em código. Os achados voltam só para quem tem \emph{ticket}, e cada um recebe a própria versão anterior e o \emph{ticket} completo. Por último, o rastro cobra as lacunas que são de Design, a \textbf{matriz de rastreabilidade} mostra onde cada requisito do produto chegou, e a fidelidade confere o \emph{Refazer} pedido a Design.
 
 A regra que governa esta etapa inteira cabe numa linha: \textbf{Design preenche ausência, nunca altera presença.} Onde a \emph{spec} decidiu, Design constrói; onde a \emph{spec} calou, Design decide e registra a decisão com base declarada. Se a decisão pertence a produto, vira um pedido de re-\emph{spec}, não uma escolha silenciosa.
 
-\subsection{Dev (085--116): isso é implementável?}
+\subsection{Dev (095--126): isso é implementável?}
 
-Começa com o conteúdo aprovado e com a \textbf{banca de entrada} (086 a 088): a segunda verificação de produto e de design já aprovados, com a visão cruzada que nenhuma etapa tem sozinha. Ela \textbf{não reescreve nada}; se bloqueia, nenhum agente de Dev roda, e o relatório aponta o dono de cada bloqueio (Seção~\ref{sec:banca}). Passando, o Dev confere a ficha do manifesto, produz o \emph{handoff} e o \emph{brief} de assets, valida o contrato de telemetria, escreve o \textbf{banco de conteúdo} --- o texto integral de cada documento fictício, tabela e roteiro da missão, e as falas da IA simulada --- em ciclo com a conferência dele, e submete os documentos de Dev à banca de dados e de técnica. Escreve o PRD, que passa por quatro conferências em ciclo e recebe, colado no fim, o conteúdo aprovado literal. Por último, o \emph{one-pager} pedagógico --- que é o último documento justamente porque precisa dizer a verdade sobre tudo o que veio antes ---, também em ciclo, também conferido contra o aprovado. Fecham a etapa a matriz de rastreabilidade final e a fidelidade ao \emph{Refazer} pedido a Dev.
+Começa com o conteúdo aprovado e com a \textbf{banca de entrada} (096 a 098): a segunda verificação de produto e de design já aprovados, com a visão cruzada que nenhuma etapa tem sozinha. Ela \textbf{não reescreve nada}; se bloqueia, nenhum agente de Dev roda, e o relatório aponta o dono de cada bloqueio (Seção~\ref{sec:banca}). Passando, o Dev confere a ficha do manifesto, produz o \emph{handoff} e o \emph{brief} de assets, valida o contrato de telemetria, escreve o \textbf{banco de conteúdo} --- o texto integral de cada documento fictício, tabela e roteiro da missão, e as falas da IA simulada --- em ciclo com a conferência dele, e submete os documentos de Dev à banca de dados e de técnica. Escreve o PRD, que passa por quatro conferências em ciclo e recebe, colado no fim, o conteúdo aprovado literal. Por último, o \emph{one-pager} pedagógico --- que é o último documento justamente porque precisa dizer a verdade sobre tudo o que veio antes ---, também em ciclo, também conferido contra o aprovado. Fecham a etapa a matriz de rastreabilidade final e a fidelidade ao \emph{Refazer} pedido a Dev.
 
-\subsection{Transversal (117--119): o que aconteceu, e o que fica}
+\subsection{Transversal (127--129): o que aconteceu, e o que fica}
 
 O diagnóstico determinístico monta o dossiê a partir dos envelopes que os portões gravaram --- roda \textbf{sempre}, inclusive quando tudo o mais falhou, e é essa garantia que sustenta a decisão de não abortar. O agente de aprendizado escreve a leitura em prosa.
 
-O terceiro resolve um problema antigo: \textbf{o registro no catálogo} (119). Até ele existir, duas missões parecidas só eram percebidas por acaso, ou nunca. Agora a ficha entra no índice automaticamente ao fim da esteira, com o \emph{status} derivado dos gates. Missão bloqueada \textbf{entra de propósito}: o que se quer evitar é reinventá-la, não escondê-la. \textbf{Promover é ato humano} --- nenhum agente marca uma missão como aprovada. E identificador que colide com o de outra missão já registrada é \textbf{decisão humana}, não aviso: o diagnóstico confere a colisão antes de fechar, para que ela apareça no dossiê.
+O terceiro resolve um problema antigo: \textbf{o registro no catálogo} (129). Até ele existir, duas missões parecidas só eram percebidas por acaso, ou nunca. Agora a ficha entra no índice automaticamente ao fim da esteira, com o \emph{status} derivado dos gates. Missão bloqueada \textbf{entra de propósito}: o que se quer evitar é reinventá-la, não escondê-la. \textbf{Promover é ato humano} --- nenhum agente marca uma missão como aprovada. E identificador que colide com o de outra missão já registrada é \textbf{decisão humana}, não aviso: o diagnóstico confere a colisão antes de fechar, para que ela apareça no dossiê.
 
 Desde 8 de outubro o índice conhece também \textbf{a grade publicada da plataforma}: uma ficha por missão do catálogo do \emph{hub}, com \emph{status} ``em produção'', importada pelo comando \cod{importar-\allowbreak plataforma} de \cod{scripts/\allowbreak catalogo.py}, que lê o repositório da plataforma pelo \emph{git} sem tocar a pasta de trabalho. Eram 9 missões publicadas, 4 delas nascidas fora do gerador, que a verificação de semelhança não via. E a verificação deixou de comparar a missão com ela mesma: o identificador é ano mais bimestre, então \textbf{o mesmo identificador é a mesma vaga}, e a versão nova de uma missão não é repetição dela --- a do 3.\textsuperscript{o} ano tinha sete tentativas no \emph{bucket}.
 
-\section{Os treze ciclos de correção}
+\section{Os quinze ciclos de correção}
 \label{sec:ciclos}
 
 Quando um portão reprova, quem decide repetir é o \textbf{orquestrador, em código} --- não uma instrução em linguagem natural dentro do \emph{prompt}, que o modelo pode ou não seguir.
@@ -1275,7 +1281,7 @@ Quando um portão reprova, quem decide repetir é o \textbf{orquestrador, em có
 \draw[seta] (g.north) to[out=50,in=130] node[font=\sffamily\scriptsize,above,text=sinalVerde] {aprova} (s.north);
 \draw[volta] (r.south) to[out=-90,in=-90] node[font=\sffamily\scriptsize,below,text=sinalAmbar] {reavalia, até o teto de rodadas} (g.south);
 \end{tikzpicture}
-\captionof{figure}{O padrão comum aos treze ciclos: quem julga não conserta, quem conserta não julga.}
+\captionof{figure}{O padrão comum aos quinze ciclos: quem julga não conserta, quem conserta não julga.}
 \end{center}
 
 \begin{center}
@@ -1293,29 +1299,33 @@ Núcleo & 007, 008, 009 e 010 $\rightarrow$ 004 & \emph{Spoiler}, falta de segre
 \addlinespace
 Seções de apoio & 015 $\rightarrow$ 014 & Trecho do \emph{one-pager} do PO que o autor reescreveu sem pedido. Sem \emph{one-pager} do PO, aprova na primeira rodada, sem custo. Também é aqui que o \emph{one-pager} vazio, cortado pelo modelo, faz o autor ser chamado de novo. \\
 \addlinespace
-Gate estrutural & 021 $\rightarrow$ 023 & Os critérios de estrutura, mais o \emph{lint} de contrato de plataforma (019), que roda a cada rodada. O gate escreve o texto de correção pronto para colar --- é o ciclo mais barato da esteira. \\
+Comitê dos canais & 018, 020 e 021 $\rightarrow$ 004 e 014 & A forma do \S12a e os votos dos painéis A (mecânica e Canal A) e B (Canal B), três juízes cada. Sem unanimidade nos dois, o núcleo e as seções de apoio reescrevem com os relatórios, e a reescrita passa de novo pelas conferências do núcleo. Envolve os dois ciclos acima (Seção~\ref{sec:comites}). \\
 \addlinespace
-Avaliações & 028 $\rightarrow$ 029 & Os ajustes que o parecer de adequação exigiu: o revisor aplica e as três avaliações refazem. Até 7 de outubro vinha desligado e o parecer entrava só como ressalva; parecer com ajuste exigido também não encerra mais o ciclo como se fosse aprovação. \\
+Gate estrutural & 026 $\rightarrow$ 028 & Os critérios de estrutura, mais o \emph{lint} de contrato de plataforma (024), que roda a cada rodada. O gate escreve o texto de correção pronto para colar --- é o ciclo mais barato da esteira. \\
 \addlinespace
-\emph{One-pager} do PO & 030 $\rightarrow$ 032 & A conferência final, depois de gate, pareceres e revisores: o que se perdeu do \emph{one-pager} do PO vai ao restaurador, que o devolve literal. O que um parecer pedia vira proposta ao PO. \\
+Avaliações & 033 $\rightarrow$ 034 & Os ajustes que o parecer de adequação exigiu: o revisor aplica e as três avaliações refazem. Até 7 de outubro vinha desligado e o parecer entrava só como ressalva; parecer com ajuste exigido também não encerra mais o ciclo como se fosse aprovação. Desde 15 de outubro as avaliações não julgam os canais A e B: isso é do comitê dos canais. \\
 \addlinespace
-\emph{Spec} & 036 a 048 $\rightarrow$ 035 & Código da BNCC inexistente ou de outro ano; campo do manifesto fora do vocabulário; habilidade sem evidência; pergunta de produto sem ação que a responda; lacuna de produto deixada na \emph{spec}; a \emph{spec} divergindo do \emph{one-pager} aprovado; e o que a banca no fim de produto achou. \\
+\emph{One-pager} do PO & 035 $\rightarrow$ 037 & A conferência final, depois de gate, pareceres e revisores: o que se perdeu do \emph{one-pager} do PO vai ao restaurador, que o devolve literal. O que um parecer pedia vira proposta ao PO. \\
 \addlinespace
-Resumido & 052 $\rightarrow$ 051 & Habilidade, tempo em tela ou Canal B do resumido diferentes do canônico aprovado. \\
+Comitê final & 038, 039 e 041 $\rightarrow$ 004 e 014 & O \S12a de novo, a conta da virada refeita sobre o \emph{one-pager} e os votos de pedagogia, qualidade de produto e imersão sobre a missão completa. Reprovado, a cadeia inteira --- núcleo, comitê dos canais, gate estrutural, avaliações e conferência do PO --- roda de novo. \\
+\addlinespace
+\emph{Spec} & 046 a 058 $\rightarrow$ 045 & Código da BNCC inexistente ou de outro ano; campo do manifesto fora do vocabulário; habilidade sem evidência; pergunta de produto sem ação que a responda; lacuna de produto deixada na \emph{spec}; a \emph{spec} divergindo do \emph{one-pager} aprovado; e o que a banca no fim de produto achou. \\
+\addlinespace
+Resumido & 062 $\rightarrow$ 061 & Habilidade, tempo em tela ou Canal B do resumido diferentes do canônico aprovado. \\
 \addlinespace
 \multicolumn{3}{@{}l}{\sffamily\bfseries\scriptsize\color{unLavanda}DESIGN} \\[2pt]
-QA de design & 071, 077, 078 e 079 $\rightarrow$ dono do \emph{ticket} & Cada achado tem dono declarado; só os endereçados rodam de novo, e o protótipo, a coerência, a cobertura de telas e o \emph{lint} são refeitos depois deles. Entram aqui a banca no fim de design, o \emph{lint} do protótipo --- que lê o arquivo HTML, não o texto ---, as afirmações do QA conferidas e a \emph{spec} consolidada que piorou em relação ao \emph{one-pager} aprovado. \\
+QA de design & 081, 087, 088 e 089 $\rightarrow$ dono do \emph{ticket} & Cada achado tem dono declarado; só os endereçados rodam de novo, e o protótipo, a coerência, a cobertura de telas e o \emph{lint} são refeitos depois deles. Entram aqui a banca no fim de design, o \emph{lint} do protótipo --- que lê o arquivo HTML, não o texto ---, as afirmações do QA conferidas e a \emph{spec} consolidada que piorou em relação ao \emph{one-pager} aprovado. \\
 \addlinespace
 \multicolumn{3}{@{}l}{\sffamily\bfseries\scriptsize\color{unLavanda}DEV} \\[2pt]
-\emph{Handoff} & 091 $\rightarrow$ 090a & Contrato de eventos, papéis, canal de sala. A correção vem escrita na mensagem do portão. \\
+\emph{Handoff} & 101 $\rightarrow$ 100a & Contrato de eventos, papéis, canal de sala. A correção vem escrita na mensagem do portão. \\
 \addlinespace
-Banco & 095 $\rightarrow$ 094 & Item do \emph{brief} sem texto no banco, podcast reescrito, árvore de intenções do chat ausente. Até 7 de outubro o banco rodava uma vez, e o achado ia direto ao dossiê. \\
+Banco & 105 $\rightarrow$ 104 & Item do \emph{brief} sem texto no banco, podcast reescrito, árvore de intenções do chat ausente. Até 7 de outubro o banco rodava uma vez, e o achado ia direto ao dossiê. \\
 \addlinespace
-Banca & 099a--100 $\rightarrow$ dono do achado & Dados, LGPD e técnica. Conserta \textbf{só documento de Dev} --- \emph{handoff}, \emph{brief}, banco ---, reconferidos depois. Achado sobre a \emph{spec} ou o design vira pendência nomeada para a etapa dona: o Dev não reescreve Produto nem Design. \\
+Banca & 109a--110 $\rightarrow$ dono do achado & Dados, LGPD e técnica. Conserta \textbf{só documento de Dev} --- \emph{handoff}, \emph{brief}, banco ---, reconferidos depois. Achado sobre a \emph{spec} ou o design vira pendência nomeada para a etapa dona: o Dev não reescreve Produto nem Design. \\
 \addlinespace
-PRD & 104 a 107 $\rightarrow$ 103 & Consistência interna, coerência dos KPIs, o PRD contra a plataforma, o design, o \emph{handoff} e o banco, o PRD que ainda não dá para codar, e o corpo do PRD contra o \emph{one-pager} aprovado (Seção~\ref{sec:prdcod}). \\
+PRD & 114 a 117 $\rightarrow$ 113 & Consistência interna, coerência dos KPIs, o PRD contra a plataforma, o design, o \emph{handoff} e o banco, o PRD que ainda não dá para codar, e o corpo do PRD contra o \emph{one-pager} aprovado (Seção~\ref{sec:prdcod}). \\
 \addlinespace
-Pedagógico & 111 e 112 $\rightarrow$ 110 & Habilidade, tempo, podcast ou caminho de arquivo diferentes do aprovado, e contradição comprovada com ele. \\
+Pedagógico & 121 e 122 $\rightarrow$ 120 & Habilidade, tempo, podcast ou caminho de arquivo diferentes do aprovado, e contradição comprovada com ele. \\
 \bottomrule
 \end{longtable}
 \end{center}
@@ -1325,8 +1335,138 @@ Pedagógico & 111 e 112 $\rightarrow$ 110 & Habilidade, tempo, podcast ou caminh
 \begin{caixaGuardrail}{Dois freios, e uma coisa que não volta}
 \textbf{Dois freios.} Cada ciclo tem teto próprio, e existe um orçamento global de reexecuções para a execução inteira (\cod{ORCAMENTO\_REEXECUCOES}, padrão 8). Estourado qualquer um dos dois, a esteira para de tentar, marca pendência humana e segue até o fim --- e o conserto pulado vai ao dossiê com o dono. O orçamento conta o autor de cada conserto e quem chama modelo. Até 8 de outubro ele contava a cadeia inteira de passos em código atrás de cada dono: na primeira execução real do design novo, um conserto custava 11 de um orçamento de 8, e nenhum rodou em duas rodadas (Parte~VII).
 
-\textbf{O que não volta.} Achado cujo dono está numa etapa já aprovada não reabre aquela etapa sozinho: reabri-la invalidaria tudo que foi construído sobre ela. Vira pendência nomeada no diagnóstico, e o caminho é a devolução. Por isso cada etapa tem hoje o seu próprio rastro de lacunas (043, 082 e 097) e a sua banca: a lacuna é cobrada onde ainda há quem a conserte.
+\textbf{O que não volta.} Achado cujo dono está numa etapa já aprovada não reabre aquela etapa sozinho: reabri-la invalidaria tudo que foi construído sobre ela. Vira pendência nomeada no diagnóstico, e o caminho é a devolução. Por isso cada etapa tem hoje o seu próprio rastro de lacunas (053, 092 e 107) e a sua banca: a lacuna é cobrada onde ainda há quem a conserte.
 \end{caixaGuardrail}
+
+\Needspace*{14\baselineskip}
+\section{Os comitês pedagógicos de Produto}
+\label{sec:comites}
+
+Até 15 de outubro de 2026, o sentido pedagógico da mecânica e dos canais de evidência era julgado por um parecer avulso --- o item 5f da avaliação pedagógica (029a) e o eixo~5 do parecer de adequação (029c) --- e consertado por um revisor que não tinha escrito a missão. Com o \emph{one-pager} do PO anexado, o revisor nem podia exigir a mudança: ela virava proposta. A pergunta mais importante de uma missão --- \textbf{o que o estudante faz em tela é o que a habilidade diz, e o sistema consegue medir?} --- passava por um juiz só, e quem respondia a ela não era quem escrevia.
+
+Hoje ela é votada por \textbf{comitês de três juízes}, cada um com uma lente, e a missão só passa com os três de acordo. São dois comitês, em dois momentos de Produto, e os dois seguem as mesmas quatro regras: \textbf{três votos, unanimidade, voto contado em código --- e o comitê não escreve}. Reprovada, a missão volta a quem a escreve.
+
+\begin{center}
+\begin{tikzpicture}[
+  ag/.style={rectangle,rounded corners=2.5pt,draw=unLavanda!70,fill=unPapel,text=unNavy,
+    text width=1.92cm,align=center,font=\sffamily\scriptsize,minimum height=1.25cm,inner sep=3pt},
+  det/.style={ag,draw=unAzul,fill=unAzul!13,font=\sffamily\scriptsize\itshape},
+  juiz/.style={ag,draw=unNavy,fill=unNavy,text=white},
+  seta/.style={-{Stealth[length=2.0mm]},draw=unLavanda,thick},
+  volta/.style={-{Stealth[length=2.0mm]},draw=sinalAmbar,thick,dashed},
+  rotulo/.style={font=\sffamily\scriptsize,text=sinalAmbar}]
+% comitê dos canais
+\node[ag] (n) {004--013\\ núcleo e as quatro conferências};
+\node[ag,right=0.3cm of n] (a) {014--017\\ seções de apoio, o do PO preservado};
+\node[det,right=0.3cm of a] (f) {018\\ forma do \S12a};
+\node[juiz,right=0.3cm of f] (j) {019a--019f\\ painéis A e B, três juízes cada};
+\node[det,right=0.3cm of j] (v) {020--022\\ votos e saída};
+% o resto da cadeia e o comitê final
+\node[ag,below=1.75cm of n] (g) {023--028\\ gate estrutural e revisor};
+\node[ag,right=0.3cm of g] (av) {029a--034\\ avaliações e revisor};
+\node[ag,right=0.3cm of av] (po) {035--037\\ \emph{one-pager} do PO e restaurador};
+\node[det,right=0.3cm of po] (f2) {038--039\\ \S12a e conta da virada};
+\node[juiz,right=0.3cm of f2] (j2) {040a--040c\\ pedagogia, qualidade, imersão};
+\node[det,right=0.3cm of j2] (v2) {041--042\\ votos e saída};
+
+\draw[seta] (n)--(a); \draw[seta] (a)--(f); \draw[seta] (f)--(j); \draw[seta] (j)--(v);
+\draw[seta] (v.south) to[out=-90,in=90,looseness=0.8] (g.north);
+\draw[seta] (g)--(av); \draw[seta] (av)--(po); \draw[seta] (po)--(f2); \draw[seta] (f2)--(j2); \draw[seta] (j2)--(v2);
+
+\draw[volta] (v.north) -- ++(0,0.42) -| node[rotulo,pos=0.25,above=1pt] {sem unanimidade: o 004 e o 014 reescrevem} (n.north);
+\draw[volta] (v2.south) -- ++(0,-0.5) -| node[rotulo,pos=0.25,below=1pt] {reprovado: a cadeia roda de novo a partir do núcleo} ([xshift=-0.62cm]n.west) -- (n.west);
+
+\coordinate (topo1) at ($(n.north)+(0,0.95)$);
+\coordinate (base2) at ($(g.south)+(0,-0.95)$);
+\coordinate (esq) at ($(n.west)+(-0.62,0)$);
+\coordinate (topo0) at ($(n.north)+(0,1.55)$);
+\begin{scope}[on background layer]
+\node[draw=unLavanda,dashed,rounded corners=4pt,fill=unLavanda!7,inner sep=6pt,fit=(n)(v)(topo1)] (cc) {};
+\node[draw=unNavy!55,dashed,rounded corners=5pt,inner sep=9pt,fit=(cc)(v2)(base2)(esq)(topo0)] (cf) {};
+\end{scope}
+\node[fill=white,draw=unLavanda,rounded corners=2pt,inner sep=2.5pt,font=\sffamily\scriptsize\bfseries,text=unNavy] at (cc.north) {COMITÊ DOS CANAIS · até 5 voltas};
+\node[fill=white,draw=unNavy!55,rounded corners=2pt,inner sep=2.5pt,font=\sffamily\scriptsize\bfseries,text=unNavy] at (cf.north) {COMITÊ FINAL · até 2 voltas};
+\end{tikzpicture}
+\captionof{figure}{Os dois comitês envolvem quem escreve a missão. O dos canais roda assim que o \emph{one-pager} define o \S12a; o final envolve a cadeia inteira até a conferência do \emph{one-pager} do PO. Em azul-marinho, os juízes; em azul claro, os passos em código.}
+\end{center}
+
+\subsection{Quem vota, e sobre o quê}
+
+O \textbf{comitê dos canais} roda logo depois de as seções de apoio escreverem o contrato de evidência (\S12a), e tem dois painéis que votam em paralelo, sobre a mesma versão do \emph{one-pager}: o \textbf{painel A} julga a mecânica e a ação do Canal A de cada habilidade; o \textbf{painel B}, a pergunta do Canal B. Cada painel tem a própria unanimidade, e o ciclo só sai quando os dois aprovam. O \textbf{comitê final} roda sobre a missão completa, depois do gate estrutural, das avaliações e da conferência do \emph{one-pager} do PO --- os que mais reescreviam ---, e antes do gate final.
+
+\begin{center}
+\begin{longtable}{>{\raggedright\arraybackslash}p{1.25cm}>{\raggedright\arraybackslash}p{2.6cm}p{10.75cm}}
+\toprule
+\sffamily\bfseries\footnotesize\color{unNavy}Passo & \sffamily\bfseries\footnotesize\color{unNavy}Lente & \sffamily\bfseries\footnotesize\color{unNavy}Reprova quando \\
+\midrule
+\endfirsthead
+\toprule
+\sffamily\bfseries\footnotesize\color{unNavy}Passo & \sffamily\bfseries\footnotesize\color{unNavy}Lente & \sffamily\bfseries\footnotesize\color{unNavy}Reprova quando \\
+\midrule
+\endhead
+\multicolumn{3}{@{}l}{\sffamily\bfseries\scriptsize\color{unLavanda}COMITÊ DOS CANAIS --- PAINEL A: A MECÂNICA E O CANAL A} \\[2pt]
+\footnotesize 019a & \footnotesize Currículo & \footnotesize A ação do Canal A não é o verbo e o objeto do texto oficial da habilidade, feitos pelo estudante em tela, na decisão onde o conceito limiar mora. \\
+\footnotesize 019b & \footnotesize Medida & \footnotesize A regra ternária não é alcançável: há buraco entre os níveis, dá para chegar ao Atingiu por sorte, ou o nível não se calcula pelo que o evento registra. \\
+\footnotesize 019c & \footnotesize Vivência e idade & \footnotesize A ação não é verbo nativo do ambiente, não é vivida na decisão, ou passa dos tetos da faixa etária. \\
+\addlinespace
+\multicolumn{3}{@{}l}{\sffamily\bfseries\scriptsize\color{unLavanda}COMITÊ DOS CANAIS --- PAINEL B: O CANAL B} \\[2pt]
+\footnotesize 019d & \footnotesize Currículo & \footnotesize A pergunta não mede a habilidade da linha, ou o Atingiu não é domínio pleno e autônomo. \\
+\footnotesize 019e & \footnotesize Medida & \footnotesize As três alternativas não discriminam os três níveis: uma se elimina pela linguagem, o grau não é \cod{indicative}, ou o gabarito não fica no servidor. \\
+\footnotesize 019f & \footnotesize Experiência & \footnotesize A pergunta não vem depois do Refletir, ou o repete; sai da língua do ambiente; vaza o resultado; passa do teto de telas e minutos --- e, no 1.\textsuperscript{o} e no 2.\textsuperscript{o} ano, não tem as alternativas todas visíveis e narradas. \\
+\addlinespace
+\multicolumn{3}{@{}l}{\sffamily\bfseries\scriptsize\color{unLavanda}COMITÊ FINAL: A MISSÃO COMPLETA} \\[2pt]
+\footnotesize 040a & \footnotesize Pedagogia & \footnotesize O conceito limiar deixou de ser vivido, o ``ahá'' perdeu algum dos seis passos, ou os canais ficaram incoerentes depois das revisões. \\
+\footnotesize 040b & \footnotesize Qualidade de produto & \footnotesize Não é uma missão só; tempos e tetos não fecham; o papel do professor não está claro; não dá para construir sem inventar. \\
+\footnotesize 040c & \footnotesize Imersão & \footnotesize Falha o teste da porta, da troca ou da chegada (2.3); há verbo que o app real não tem (2.6); a virada é contada, e não mostrada pelo ambiente (2.7); algo quebra o disfarce. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+Antes de qualquer voto, o código confere a \textbf{forma} (018, e de novo no 038): toda habilidade de Computação da seção~2 tem linha no \S12a; \textbf{toda habilidade tem Canal A} --- a coluna diz \cod{A} ou \cod{A + B}, e \cod{B} sozinho é \statusVermelho; a regra ternária escreve os três níveis por extenso; e o Canal B diz o nível de cada alternativa. Os juízes recebem esse relatório e não o repetem. No comitê final, o código também refaz a \textbf{conta da virada} sobre o \emph{one-pager} de agora (039): os revisores podem ter mudado a mecânica depois do núcleo. Sem nenhuma habilidade com Canal B, os juízes do painel B são \textbf{dispensados sem custo} e o voto deles conta como aprovação.
+
+\subsection{Como o voto é contado}
+
+Como na banca e no juiz de profundidade, \textbf{o voto sai dos achados, não do que o juiz declarou} (020 e 021 nos dois painéis, 041 no comitê final):
+
+\begin{itemize}
+  \item \textbf{Unanimidade aprova}: três votos de aprovação em três.
+  \item Um juiz \textbf{reprova só com um achado bloqueante cuja citação literal existe} no núcleo, no \emph{one-pager} ou no \emph{brief} de escopo. Citação que não existe rebaixa o achado; ``reprova'' sem nenhum achado verificável conta como aprovação, com a ressalva no relatório --- não haveria o que o autor corrigir.
+  \item \textbf{Envelope ausente ou ilegível é reprovação}: juiz que não respondeu não aprovou.
+  \item Na \textbf{última volta sem unanimidade}, a missão segue \statusAmbar, com os votos vencidos no parecer do PO.
+\end{itemize}
+
+Os três juízes não são redundância: três \emph{prompts} do mesmo modelo sobre o mesmo texto não se compensam (Seção~\ref{sec:decomposicao}). São \textbf{três perguntas diferentes} sobre a mesma decisão --- se é a habilidade, se dá para medir, se cabe na idade ---, cada uma com o espaço de atenção de um \emph{prompt} inteiro. Da segunda volta em diante, cada juiz recebe o relatório anterior e confere primeiro se o apontado foi corrigido; não abre bloqueio novo sobre trecho que não mudou e que ele mesmo aprovou --- mudar de critério no meio do caminho só gasta o teto.
+
+\subsection{O comitê não escreve: a missão volta a quem a escreve}
+
+Cada achado diz, no campo \cod{autor}, de quem é a correção: o \textbf{núcleo narrativo (004)} responde pela mecânica, pelas seções 0, 1, 3 e 4, pelas tabelas 1.1 a 1.3 e pelo contrato do \textbf{foco primário}; as \textbf{seções de apoio (014)}, pela seção~2, pelas demais linhas do \S12a e pelas seções 5 a 18. A reescrita passa \textbf{de novo pelas conferências do núcleo} (micro-gate, juiz de profundidade, conta da virada e fidelidade): corrigir o canal não pode desfazer a virada. Quando nenhum comitê reprovado aponta achado para o 004 e o \S12a está em forma, o núcleo fica como está e só as seções de apoio reescrevem.
+
+No comitê final, a volta é maior: reprovado, a \textbf{cadeia inteira de Produto roda de novo a partir do núcleo} --- comitê dos canais, gate estrutural, avaliações e conferência do \emph{one-pager} do PO ---, e tudo é conferido outra vez antes do novo voto.
+
+\begin{caixaGuardrail}{O teto, o amarelo e o que bloqueia}
+\textbf{Tetos próprios.} O comitê dos canais vota até \cod{COMITE\_MAX\_RODADAS} voltas (padrão 5); o final, até \cod{COMITE\_FINAL\_MAX\_RODADAS} (padrão 2). No pior caso, são 2~$\times$~5 = \textbf{10 passagens pelo núcleo}; o esperado é uma ou duas voltas por comitê, porque cada volta corrige só o apontado.
+
+\textbf{Esgotado o teto sem unanimidade, a missão segue \statusAmbar}, e os votos vencidos chegam ao parecer do PO. O amarelo do comitê \textbf{não recusa o \emph{de acordo}} (decisão do PO de 15/10/2026): o voto vencido é informação para quem decide. Já o \S12a fora de forma é \statusVermelho\ --- habilidade sem linha, sem Canal A ou sem os três níveis --- e \textbf{recusa} o \emph{de acordo}: forma é conferência, não opinião.
+\end{caixaGuardrail}
+
+\begin{caixaNorma}{Canal A em toda habilidade}
+Até 15 de outubro, só o foco primário precisava de Canal A; as outras habilidades podiam ser medidas apenas pela pergunta. Desde então \textbf{toda habilidade tem Canal A} --- a ação observada é a primeira evidência, e a pergunta do Canal B só soma a ela. A regra está nos \emph{prompts} e no código: \cod{tools/evidencia.py} acusa \cod{habilidade-sem-canal-a} no bloco~11 da \emph{spec} e no \S12a do \emph{one-pager}.
+\end{caixaNorma}
+
+\begin{caixaNorma}{O voto do comitê e o \emph{one-pager} do PO}
+Desde 15 de outubro, por decisão do PO, o voto do comitê \textbf{pode mandar mudar o texto do \emph{one-pager} do PO}. O autor registra a alteração na tabela ``Alterações sobre o \emph{one-pager} do PO'' citando, entre aspas, o trecho do voto que a pediu, e a conferência do \emph{one-pager} do PO (Seção~\ref{sec:onepagerpo}) a aceita como aceita a que cita um pedido --- \cod{tools/one\_pager\_po.conferir(votos=\ldots)}. A ordem explícita do PO de \textbf{não mexer} num trecho continua valendo acima do voto: ali, a mudança vira \cod{[PROPOSTA — validar com PO]}.
+\end{caixaNorma}
+
+\subsection{Um ciclo dentro de outro}
+
+Os comitês são os primeiros ciclos da esteira que envolvem outros ciclos, e isso pediu uma peça de código. No Google ADK, o \cod{LoopAgent} termina quando \textbf{qualquer} evento de um subagente traz \cod{escalate} --- e é com \cod{escalate} que o ciclo do núcleo anuncia que aprovou. Sem cuidado, a saída do ciclo do núcleo encerraria o ciclo do comitê que o contém, antes de qualquer voto. O \cod{LoopIsolado}, em \cod{agents/\allowbreak checkers.py}, envolve cada ciclo interno: repassa uma cópia de cada evento \textbf{sem} o \cod{escalate} --- o original, que o ciclo interno ainda lê, fica intacto --- e \textbf{zera os contadores de rodada} da árvore interna antes de cada volta. Os contadores vivem no estado da sessão; sem zerá-los, na segunda volta do comitê o núcleo entraria com as rodadas esgotadas e sairia sem deixar o autor corrigir nada.
+
+Os relatórios ficam na pasta \cod{produto/} da sessão:
+\begin{itemize}
+  \item \cod{00k-contrato-evidencia-12a.md} --- a forma do \S12a, antes do voto;
+  \item \cod{00l-comite-canais-painel-a.md} e \cod{00m-comite-canais-painel-b.md} --- os votos e os achados de cada painel, por autor;
+  \item \cod{03c-conta-da-virada-one-pager.md} e \cod{03d-comite-final.md} --- a conta refeita no \emph{one-pager} e os votos do comitê final.
+\end{itemize}
 
 \Needspace*{12\baselineskip}
 \section{A banca de validação, em quatro posições}
@@ -1346,13 +1486,13 @@ Hoje a banca roda em quatro posições, com os mesmos critérios e o mesmo model
 \sffamily\bfseries\footnotesize\color{unNavy}Posição & \sffamily\bfseries\footnotesize\color{unNavy}Dimensões & \sffamily\bfseries\footnotesize\color{unNavy}O que pode fazer \\
 \midrule
 \endhead
-\footnotesize\textbf{Fim de produto} (046 a 048) & \footnotesize produto e pedagogia & \footnotesize Julga a \emph{spec} com o conteúdo aprovado do \emph{one-pager} ao lado, antes do parecer do PO. O achado volta ao autor da \emph{spec}, dentro do ciclo dela. \\
+\footnotesize\textbf{Fim de produto} (056 a 058) & \footnotesize produto e pedagogia & \footnotesize Julga a \emph{spec} com o conteúdo aprovado do \emph{one-pager} ao lado, antes do parecer do PO. O achado volta ao autor da \emph{spec}, dentro do ciclo dela. \\
 \addlinespace
-\footnotesize\textbf{Fim de design} (075 a 077) & \footnotesize produto realizado em tela, e design e imersão & \footnotesize Antes do parecer de Design. De produto, só o que se realiza em tela: o fluxo realiza o contrato de estados, a conclusão tem tela, o debate está nas telas do professor, cada modo de erro tem tela. O bloqueio vira \emph{ticket} para o dono refazer nesta etapa. \\
+\footnotesize\textbf{Fim de design} (085 a 087) & \footnotesize produto realizado em tela, e design e imersão & \footnotesize Antes do parecer de Design. De produto, só o que se realiza em tela: o fluxo realiza o contrato de estados, a conclusão tem tela, o debate está nas telas do professor, cada modo de erro tem tela. O bloqueio vira \emph{ticket} para o dono refazer nesta etapa. \\
 \addlinespace
-\footnotesize\textbf{Entrada do Dev} (086 a 088) & \footnotesize produto, design e pedagogia & \footnotesize A \textbf{segunda verificação}, com a visão cruzada: cada estado da \emph{spec} com tela e aresta no fluxo, o professor com as telas dele, os textos aprovados na \emph{copy} como foram aprovados. \textbf{Não manda reescrever nada}: se bloqueia, o Dev não roda, e o relatório separa o que ``passou na etapa e reprova aqui''. \\
+\footnotesize\textbf{Entrada do Dev} (096 a 098) & \footnotesize produto, design e pedagogia & \footnotesize A \textbf{segunda verificação}, com a visão cruzada: cada estado da \emph{spec} com tela e aresta no fluxo, o professor com as telas dele, os textos aprovados na \emph{copy} como foram aprovados. \textbf{Não manda reescrever nada}: se bloqueia, o Dev não roda, e o relatório separa o que ``passou na etapa e reprova aqui''. \\
 \addlinespace
-\footnotesize\textbf{Dentro do Dev} (098 a 100) & \footnotesize dados e técnica & \footnotesize Depois do \emph{handoff}, do \emph{brief} e do banco. Conserta só documento de Dev. \\
+\footnotesize\textbf{Dentro do Dev} (108 a 110) & \footnotesize dados e técnica & \footnotesize Depois do \emph{handoff}, do \emph{brief} e do banco. Conserta só documento de Dev. \\
 \bottomrule
 \end{longtable}
 \end{center}
@@ -1395,37 +1535,40 @@ Há dois tipos, e a diferença entre eles é a espinha dorsal do projeto.
 Micro-gate (007) & rubrica & O briefing ou o núcleo entrega a virada; a escolha não muda nada; a missão repete uma já gerada. \\
 Cobertura conceitual (006) & \textbf{código} & O conceito limiar não vive no Decidir nem no ``ahá''; conceito do material sem destino; anatomia do ``ahá'' incompleta; trecho citado que não existe no material. \\
 Profundidade (008 e 011) & rubrica \newline + \textbf{código} & Nota abaixo de 3 em conceito vivido, aposta comprometida ou ápice do ``ahá''. O juiz dá as notas; \textbf{quem conta o veredito é código}, não a prosa do juiz. \\
-Conta da virada (009) & \textbf{código} & O ranking que o núcleo declara não fecha: refeita a conta com os pesos da tabela, o vencedor não é o declarado, ou é o mesmo antes e depois --- e então não há virada. \\
-Fidelidade ao pedido do PO (010 e 050) & rubrica \newline + \textbf{código} & Pedido de \emph{Refazer} violado ou sem prova (no 010, só o violado: sem prova é \statusAmbar); frase entre aspas das TRAVAS alterada. O juiz cita; \textbf{o código confere a citação}. Conflito com regra da esteira vira \statusDecisao. \\
-\emph{One-pager} do PO preservado (015 e 030) & \textbf{código} & Linha ou célula do \emph{one-pager} que o PO anexou que não está no gerado --- igual, ou com 85\% dos trigramas e números e nomes intactos ---, sem pedido que mande tirá-la. Na conferência final, \statusVermelho\ recusa o \emph{de acordo}. \\
-Contrato de plataforma (019 e 020) & \textbf{código} & Canal de sala por WebSocket, estado no navegador, SAEB em ano não avaliado, número sem origem declarada; seção do DS que o briefing fixou trocada; habilidade do briefing cortada sem pedido do PO; decisão atribuída ao PO sem registro dele. \\
-Gate estrutural (021) & rubrica & Falta mecanismo, há caminho sem tratamento, o ambiente está fora da lista. \\
-Gate final (033) & rubrica & Os três pareceres avaliaram versões diferentes; correção que ficou só no relatório. Não declara mais que o pedido do PO foi atendido: isso é da fidelidade. \\
-Currículo BNCC (036) & \textbf{código} & Código inexistente, de outro ano, ou sem letramento digital. \\
-Manifesto (037 e 089) & \textbf{código} & Campo do bloco 0 ausente ou fora do vocabulário fechado; \textbf{seção antiga do DS em missão nova escolhida pela esteira}, com a sucessora apontada --- a escolhida pelo PO é ressalva. \\
-Matriz de evidência (038 e 039) & \textbf{código} & Habilidade sem momento em tela, sem medida ligada, ou com grau ``pontuado'' sem dois sinais nomeados e gabarito no servidor. \\
-Perguntas de produto (040 a 042) & \textbf{código} \newline + rubrica & Pergunta sem decisão, sem corte ou sem ação declarada na tabela de eventos; e o que regex não vê --- se a pergunta muda mesmo uma decisão nossa, e se é sobre o produto e não sobre a criança. \\
-Rastro da \emph{spec} (043) & \textbf{código} & Lacuna de produto ou de insumo marcada na \emph{spec}: volta para quem a escreveu. Decisão do PO fica \statusAmbar\ no parecer de Produto. \\
-\emph{Spec} $\times$ conteúdo aprovado (044 e 059) & \textbf{código} & A \emph{spec} com outras habilidades, outro tempo em tela, sem o podcast, ou decidindo como fato o que o \emph{one-pager} deixou ``a definir por produto''; glossário que proíbe um termo que o \emph{one-pager} aprovado usa. Em Design, a \emph{spec} consolidada que piorou desde a de Produto. \\
-Banca nas quatro posições (048, 077, 088, 100) & rubrica \newline + \textbf{código} & Critério bloqueante de qualquer dimensão daquela posição, com citação que exista no documento julgado. O veredito é a pior das dimensões, contado em código. \\
-Resumido $\times$ aprovado (052) & \textbf{código} & Resumido com habilidade ou tempo diferentes do canônico. Canal B parafraseado fica \statusAmbar. \\
-Telas no Stitch (066) & \textbf{código} & Menos telas no projeto do que no inventário da jornada; tela do inventário com identificador fora do padrão, que a geração deixava de fora em silêncio. Vira \emph{ticket} para o agente de telas. \\
-\emph{Lint} do protótipo (071) & \textbf{código} & O que o QA não enxerga por ler só o texto: o arquivo HTML em si. \\
-Coerência entre documentos (072) & \textbf{código} & Jornada, fluxo, \emph{copy} e protótipo usando um nome que o glossário canônico proíbe. Papel ou idade de personagem, número, rótulo de botão e nome de arquivo divergentes ficam \statusAmbar. A tabela do glossário republicada não conta como uso, nem a variante curta fora de rótulo. \\
-Cobertura de telas (073) & \textbf{código} & Tela do inventário que falta, \textbf{por identificador}, no fluxo, na \emph{copy} revisada, na especificação de telas ou nos quadros do protótipo; jornada vazia. \\
-QA de design (078) & rubrica & Construção infiel à \emph{spec}; diagrama ausente ou inválido; visão do professor faltando. \\
-Afirmações do QA (079) & \textbf{código} & ``Todas as N telas'' ou ``N de M'' que não batem com o inventário, o Stitch ou o protótipo; caminho de arquivo que a esteira não grava. Reescreve o veredito do QA como bloqueado. \\
-Rastro do design (082) & \textbf{código} & Lacuna de Design deixada aberta, enquanto o designer ainda pode refazer. O que o fechamento de lacunas fechou não conta. \\
-Matriz de rastreabilidade (083 e 115) & \textbf{código} & Requisito do produto --- habilidade, texto literal do PO, tempo, tela, estado, evento, seção do DS --- que não chegou a um documento que tinha de carregá-lo. \\
-Fidelidade ao \emph{Refazer} de Design e de Dev (084 e 116) & rubrica \newline + \textbf{código} & O pedido feito àquela etapa sem prova nos documentos dela. Sem pedido, não roda. \statusVermelho\ recusa o \emph{de acordo}. \\
-Banco de conteúdo (095) & \textbf{código} & Documento, tabela ou roteiro do \emph{brief} sem texto escrito no banco; \emph{status} do \emph{brief} fora de ``a produzir'', ``rascunho'' ou ``escrito'' --- homologar é ato humano; chat em que o estudante escreve sem a árvore de intenções. Fala da IA faltando num estado fica \statusAmbar. \\
-Telemetria (091 e 092) & \textbf{código} & Evento fora do contrato real da API; medida sem tabela de leitura; WebSocket; e o que o \emph{handoff} afirma da plataforma sem existir nela. \\
-Rastro de lacunas (097) & \textbf{código} & Lacuna de Dev --- ou de etapa anterior escrita pelo próprio \emph{handoff} ou \emph{brief} --- aberta antes do PRD. O resto já foi cobrado na etapa dona. \\
-Coerência dos KPIs (105) & \textbf{código} & KPI sem pergunta, sem decisão, sem corte, ou cujo evento não dispara na tela que ele nomeia. \\
-Pendências e consistência do PRD (104) & \textbf{código} & Marcadores deixados por falta de informação; o documento se contradizendo --- dois caminhos para o mesmo módulo, prefixo de tabela fora do padrão, requisito P0 sem teste nem tarefa, evento sem tabela leitora, tarefa que cobre tudo, identificador inválido; \textbf{o que ele afirma da plataforma sem existir nela} (ADR que não existe, versão do DS cravada, seção antiga, agendamento); a mesma coluna com dois tipos, no PRD ou contra a \emph{spec}; tarefa que consome conteúdo que o banco não tem; tela, chave de \emph{copy}, \emph{asset} ou estado do design que não chegou; tabela ou evento do \emph{handoff} que o PRD perdeu; e o PRD que ainda não dá para codar (Seção~\ref{sec:prdcod}). Reprovado, devolve ao redator (108). \\
-PRD $\times$ conteúdo aprovado (106) & \textbf{código} & Habilidade do bloco 11 fora da matriz da seção 14; habilidade sem KPI; outro tempo em tela; podcast sem requisito funcional; caminho de arquivo que a sessão não tem; texto aprovado citado com outra redação. Tempo por etapa divergente fica \statusAmbar. \\
-Coerência com o aprovado (107 e 112) & rubrica \newline + \textbf{código} & O PRD, ou o pedagógico, afirmando o contrário do \emph{one-pager} aprovado --- mecânica, número, regra, texto. O juiz cita os dois lados; o código confere as duas citações. Juiz que não responde é \statusAmbar, não \statusVerde. \\
-Pedagógico $\times$ aprovado (111) & \textbf{código} & Habilidades, tempo em tela, podcast e caminhos de arquivo do pedagógico contra o aprovado. \\
+Conta da virada (009 e 039) & \textbf{código} & O ranking que o núcleo declara não fecha: refeita a conta com os pesos da tabela, o vencedor não é o declarado, ou é o mesmo antes e depois --- e então não há virada. \\
+Fidelidade ao pedido do PO (010 e 060) & rubrica \newline + \textbf{código} & Pedido de \emph{Refazer} violado ou sem prova (no 010, só o violado: sem prova é \statusAmbar); frase entre aspas das TRAVAS alterada. O juiz cita; \textbf{o código confere a citação}. Conflito com regra da esteira vira \statusDecisao. \\
+\emph{One-pager} do PO preservado (015 e 035) & \textbf{código} & Linha ou célula do \emph{one-pager} que o PO anexou que não está no gerado --- igual, ou com 85\% dos trigramas e números e nomes intactos ---, sem pedido que mande tirá-la. Na conferência final, \statusVermelho\ recusa o \emph{de acordo}. \\
+Contrato de plataforma (024 e 025) & \textbf{código} & Canal de sala por WebSocket, estado no navegador, SAEB em ano não avaliado, número sem origem declarada; seção do DS que o briefing fixou trocada; habilidade do briefing cortada sem pedido do PO; decisão atribuída ao PO sem registro dele. \\
+Contrato de evidência do \emph{one-pager} (018 e 038) & \textbf{código} & Habilidade da seção~2 sem linha no \S12a; habilidade sem Canal A (\cod{B} sozinho); regra ternária sem os três níveis por extenso; Canal B sem o nível de cada alternativa. \statusVermelho\ recusa o \emph{de acordo}. \\
+Comitê dos canais (019a a 022) & rubrica \newline + \textbf{código} & Sem unanimidade num dos painéis: a ação do Canal A não é a habilidade, não se mede ou não cabe na idade; a pergunta do Canal B não mede, não discrimina ou quebra a experiência. Só com citação que exista. Volta ao 004 e ao 014; esgotado, \statusAmbar. \\
+Gate estrutural (026) & rubrica & Falta mecanismo, há caminho sem tratamento, o ambiente está fora da lista. \\
+Comitê final (040a a 042) & rubrica \newline + \textbf{código} & Sem unanimidade entre pedagogia, qualidade de produto e imersão, sobre a missão completa. Só com citação que exista. A cadeia roda de novo a partir do núcleo; esgotado, \statusAmbar. \\
+Gate final (043) & rubrica & Os três pareceres avaliaram versões diferentes; correção que ficou só no relatório. Não declara mais que o pedido do PO foi atendido: isso é da fidelidade. \\
+Currículo BNCC (046) & \textbf{código} & Código inexistente, de outro ano, ou sem letramento digital. \\
+Manifesto (047 e 099) & \textbf{código} & Campo do bloco 0 ausente ou fora do vocabulário fechado; \textbf{seção antiga do DS em missão nova escolhida pela esteira}, com a sucessora apontada --- a escolhida pelo PO é ressalva. \\
+Matriz de evidência (048 e 049) & \textbf{código} & Habilidade sem momento em tela, sem medida ligada, ou com grau ``pontuado'' sem dois sinais nomeados e gabarito no servidor. \\
+Perguntas de produto (050 a 052) & \textbf{código} \newline + rubrica & Pergunta sem decisão, sem corte ou sem ação declarada na tabela de eventos; e o que regex não vê --- se a pergunta muda mesmo uma decisão nossa, e se é sobre o produto e não sobre a criança. \\
+Rastro da \emph{spec} (053) & \textbf{código} & Lacuna de produto ou de insumo marcada na \emph{spec}: volta para quem a escreveu. Decisão do PO fica \statusAmbar\ no parecer de Produto. \\
+\emph{Spec} $\times$ conteúdo aprovado (054 e 069) & \textbf{código} & A \emph{spec} com outras habilidades, outro tempo em tela, sem o podcast, ou decidindo como fato o que o \emph{one-pager} deixou ``a definir por produto''; glossário que proíbe um termo que o \emph{one-pager} aprovado usa. Em Design, a \emph{spec} consolidada que piorou desde a de Produto. \\
+Banca nas quatro posições (058, 087, 098, 110) & rubrica \newline + \textbf{código} & Critério bloqueante de qualquer dimensão daquela posição, com citação que exista no documento julgado. O veredito é a pior das dimensões, contado em código. \\
+Resumido $\times$ aprovado (062) & \textbf{código} & Resumido com habilidade ou tempo diferentes do canônico. Canal B parafraseado fica \statusAmbar. \\
+Telas no Stitch (076) & \textbf{código} & Menos telas no projeto do que no inventário da jornada; tela do inventário com identificador fora do padrão, que a geração deixava de fora em silêncio. Vira \emph{ticket} para o agente de telas. \\
+\emph{Lint} do protótipo (081) & \textbf{código} & O que o QA não enxerga por ler só o texto: o arquivo HTML em si. \\
+Coerência entre documentos (082) & \textbf{código} & Jornada, fluxo, \emph{copy} e protótipo usando um nome que o glossário canônico proíbe. Papel ou idade de personagem, número, rótulo de botão e nome de arquivo divergentes ficam \statusAmbar. A tabela do glossário republicada não conta como uso, nem a variante curta fora de rótulo. \\
+Cobertura de telas (083) & \textbf{código} & Tela do inventário que falta, \textbf{por identificador}, no fluxo, na \emph{copy} revisada, na especificação de telas ou nos quadros do protótipo; jornada vazia. \\
+QA de design (088) & rubrica & Construção infiel à \emph{spec}; diagrama ausente ou inválido; visão do professor faltando. \\
+Afirmações do QA (089) & \textbf{código} & ``Todas as N telas'' ou ``N de M'' que não batem com o inventário, o Stitch ou o protótipo; caminho de arquivo que a esteira não grava. Reescreve o veredito do QA como bloqueado. \\
+Rastro do design (092) & \textbf{código} & Lacuna de Design deixada aberta, enquanto o designer ainda pode refazer. O que o fechamento de lacunas fechou não conta. \\
+Matriz de rastreabilidade (093 e 125) & \textbf{código} & Requisito do produto --- habilidade, texto literal do PO, tempo, tela, estado, evento, seção do DS --- que não chegou a um documento que tinha de carregá-lo. \\
+Fidelidade ao \emph{Refazer} de Design e de Dev (094 e 126) & rubrica \newline + \textbf{código} & O pedido feito àquela etapa sem prova nos documentos dela. Sem pedido, não roda. \statusVermelho\ recusa o \emph{de acordo}. \\
+Banco de conteúdo (105) & \textbf{código} & Documento, tabela ou roteiro do \emph{brief} sem texto escrito no banco; \emph{status} do \emph{brief} fora de ``a produzir'', ``rascunho'' ou ``escrito'' --- homologar é ato humano; chat em que o estudante escreve sem a árvore de intenções. Fala da IA faltando num estado fica \statusAmbar. \\
+Telemetria (101 e 102) & \textbf{código} & Evento fora do contrato real da API; medida sem tabela de leitura; WebSocket; e o que o \emph{handoff} afirma da plataforma sem existir nela. \\
+Rastro de lacunas (107) & \textbf{código} & Lacuna de Dev --- ou de etapa anterior escrita pelo próprio \emph{handoff} ou \emph{brief} --- aberta antes do PRD. O resto já foi cobrado na etapa dona. \\
+Coerência dos KPIs (115) & \textbf{código} & KPI sem pergunta, sem decisão, sem corte, ou cujo evento não dispara na tela que ele nomeia. \\
+Pendências e consistência do PRD (114) & \textbf{código} & Marcadores deixados por falta de informação; o documento se contradizendo --- dois caminhos para o mesmo módulo, prefixo de tabela fora do padrão, requisito P0 sem teste nem tarefa, evento sem tabela leitora, tarefa que cobre tudo, identificador inválido; \textbf{o que ele afirma da plataforma sem existir nela} (ADR que não existe, versão do DS cravada, seção antiga, agendamento); a mesma coluna com dois tipos, no PRD ou contra a \emph{spec}; tarefa que consome conteúdo que o banco não tem; tela, chave de \emph{copy}, \emph{asset} ou estado do design que não chegou; tabela ou evento do \emph{handoff} que o PRD perdeu; e o PRD que ainda não dá para codar (Seção~\ref{sec:prdcod}). Reprovado, devolve ao redator (118). \\
+PRD $\times$ conteúdo aprovado (116) & \textbf{código} & Habilidade do bloco 11 fora da matriz da seção 14; habilidade sem KPI; outro tempo em tela; podcast sem requisito funcional; caminho de arquivo que a sessão não tem; texto aprovado citado com outra redação. Tempo por etapa divergente fica \statusAmbar. \\
+Coerência com o aprovado (117 e 122) & rubrica \newline + \textbf{código} & O PRD, ou o pedagógico, afirmando o contrário do \emph{one-pager} aprovado --- mecânica, número, regra, texto. O juiz cita os dois lados; o código confere as duas citações. Juiz que não responde é \statusAmbar, não \statusVerde. \\
+Pedagógico $\times$ aprovado (121) & \textbf{código} & Habilidades, tempo em tela, podcast e caminhos de arquivo do pedagógico contra o aprovado. \\
 \bottomrule
 \end{longtable}
 \end{center}
@@ -1435,7 +1578,7 @@ A Etapa~2 do plano padrão ouro mexeu em regras de vários portões, sempre com 
 \begin{itemize}
   \item \textbf{Tipos do PRD contra a plataforma real.} A \emph{spec} não escreve mais tipo SQL --- só nomes de coluna, significado e canal; o DDL é do PRD. O PRD é conferido contra o esquema que as \emph{migrations} da plataforma produzem (\cod{references/plataforma/fichas-tecnicas.json}): a tabela já publicada, a chave estrangeira (vale o tipo da coluna de destino) e as chaves do núcleo. A frase ``seguiu a plataforma'' deixou de aliviar qualquer coisa.
   \item \textbf{``Não mexer'' provado contra a versão anterior.} Uma ordem de não alterar um documento é conferida em código contra a versão de antes do \emph{Refazer}: diferença zero passa; linha que saiu bloqueia. Sem citação e sem portão de preservação para aquele objeto, bloqueia.
-  \item \textbf{O D0 estável.} Entre execuções, a \emph{spec} consolidada pelo fechamento de lacunas (055) é conferida contra a da execução anterior; linha que some sem pedido e sem mudança a montante bloqueia.
+  \item \textbf{O D0 estável.} Entre execuções, a \emph{spec} consolidada pelo fechamento de lacunas (065) é conferida contra a da execução anterior; linha que some sem pedido e sem mudança a montante bloqueia.
   \item \textbf{A ficha de evidência com predicado}: a regra precisa comparar uma coluna com um valor, e a chave lida numa coluna JSONB precisa estar declarada no modelo de dados.
   \item \textbf{Decisão do PO só com data}: a decisão escrita no PRD vale se tiver a data de um parecer ou pedido da própria sessão. Ratificação do D0, divergência citada só na seção 19 e regra em \cod{[PROPOSTA]} deixaram de sumir: viram \statusAmbar\ para o PO ver.
   \item \textbf{O D9 e o bloco 0}: a mudança no bloco 0 só entra com a \cod{[RS-AMB]} aceita; qualquer outra mudança fora do bloco 14 é descartada e vira \statusAmbar\ com o que mudou.
@@ -1445,7 +1588,7 @@ A Etapa~2 do plano padrão ouro mexeu em regras de vários portões, sempre com 
 \section{O que impede o sistema de alucinar}
 \label{sec:anti}
 
-Decompor em 119 passos resolve densidade de instrução e cria um problema novo: contrato de interface~\cite{cemri2025}. Sete regras de engenharia de contexto sustentam as fronteiras.
+Decompor em 129 passos resolve densidade de instrução e cria um problema novo: contrato de interface~\cite{cemri2025}. Sete regras de engenharia de contexto sustentam as fronteiras.
 
 \begin{enumerate}
   \item \textbf{Isolamento total de contexto.} Todos os agentes, com a única exceção do 004, rodam com \cod{include\_\allowbreak contents="none"}: não herdam o histórico da conversa. Recebem exclusivamente o que foi interpolado no próprio \emph{prompt}, a partir do estado da sessão. Sem isso, a poluição de contexto se acumula e cada agente passa a ``lembrar'' de versões antigas dos documentos.
@@ -1461,7 +1604,7 @@ Decompor em 119 passos resolve densidade de instrução e cria um problema novo:
 \end{lstlisting}
   \item \textbf{Decisões de produto protegidas.} Decisão estratégica que depende de premissa de negócio ausente no briefing é marcada como \cod{[DECISÃO PENDENTE — responsável de produto]}. Os agentes são \textbf{proibidos de inventá-la}, e o diagnóstico a endereça a uma pessoa. É o oposto do comportamento padrão de um modelo de linguagem, que é preencher a lacuna com o plausível.
   \item \textbf{O que um modelo afirma é afirmação, não fato.} Quando um agente escreve algo que tem resposta exata --- ``todas as 16 telas'', ``o projeto A vence pelo custo'', ``a frase está no documento'', ``arquivo homologado'', ``ADR-108'' ---, o código confere contra a fonte: o inventário, a conta refeita, o texto do documento, o vocabulário fechado, o contrato da plataforma. Juiz que diz ``atendido'' sem uma citação que exista vale como não comprovado. Na dúvida, a conferência falha fechada.
-  \item \textbf{Gate de modelo só bloqueia com citação que existe.} Até 8 de outubro, o micro-gate, o gate estrutural, os três pareceres, o gate final, o juiz das perguntas, o QA de design e a banca decidiam portas reais --- o \statusVermelho\ deles devolve documento ou recusa \emph{de acordo} --- sem que nada conferisse em que trecho estava o problema. Hoje cada achado bloqueante traz o trecho literal do documento avaliado, e o código o procura: \textbf{citação que não existe rebaixa o achado a atenção}, e se todos os bloqueios caem o veredito vira \statusAmbar, com o envelope corrigido no relatório. O bloqueio era do juiz, não do documento. Achado bloqueante \emph{sem} citação continua bloqueando, por cautela.
+  \item \textbf{Gate de modelo só bloqueia com citação que existe.} Até 8 de outubro, o micro-gate, o gate estrutural, os três pareceres, o gate final, o juiz das perguntas, o QA de design e a banca decidiam portas reais --- o \statusVermelho\ deles devolve documento ou recusa \emph{de acordo} --- sem que nada conferisse em que trecho estava o problema. Hoje cada achado bloqueante traz o trecho literal do documento avaliado, e o código o procura: \textbf{citação que não existe rebaixa o achado a atenção}, e se todos os bloqueios caem o veredito vira \statusAmbar, com o envelope corrigido no relatório. O bloqueio era do juiz, não do documento. Achado bloqueante \emph{sem} citação continua bloqueando, por cautela. Os comitês pedagógicos nasceram com a regra mais estrita: o voto de reprovação \textbf{precisa} de um achado com citação que exista (Seção~\ref{sec:comites}).
   \item \textbf{O que o PO aprovou viaja literal.} As seções do \emph{one-pager} aprovado chegam a cada agente de Design e de Dev como o \textbf{conteúdo aprovado}, copiadas pela esteira, não resumidas por um agente; e as que o gabarito do PRD e do pedagógico não tinha onde pôr --- currículo, papel do professor, tempos e cenários de aula, podcast, contrato de evidência, hipóteses --- são \textbf{coladas literais no fim} dos dois documentos. O redator remete a elas e não as reescreve (Seção~\ref{sec:aprovado}).
 \end{enumerate}
 
@@ -1644,7 +1787,7 @@ A ordem importa, e antes ela estava errada: o núcleo inventava o mecanismo e de
  {{\sffamily\small\bfseries 003 · Ideação}\\[4pt]
   \textbf{Três} mecanismos distintos para aquele conceito limiar, cada um com a anatomia do ``ahá'' escrita e pontuado na rubrica. O mecanismo que veio no briefing entra como um dos candidatos.};
 \node[cx,fill=unNavy,text=white,right=0.35cm of b] (c)
- {{\sffamily\small\bfseries 01 · Núcleo}\\[4pt]
+ {{\sffamily\small\bfseries 004 · Núcleo}\\[4pt]
   Desenvolve \textbf{o escolhido}, e escreve duas tabelas novas: os conceitos vividos em tela e a anatomia do ``ahá'' em seis passos.};
 \draw[seta] (a)--(b); \draw[seta] (b)--(c);
 \end{tikzpicture}
@@ -1962,7 +2105,7 @@ A decisão se apoia em três razões, e vale enunciá-las porque elas são conte
 
 \subsection{Como o verificador de BNCC funciona}
 
-Modelos de linguagem inventam códigos curriculares com naturalidade e confiança. Por isso a esteira \textbf{não confia na memória do modelo}: o agente 036 é código Python puro, que consulta a lista oficial do MEC em \cod{prompts/references/bncc-computacao.json}.
+Modelos de linguagem inventam códigos curriculares com naturalidade e confiança. Por isso a esteira \textbf{não confia na memória do modelo}: o agente 046 é código Python puro, que consulta a lista oficial do MEC em \cod{prompts/references/bncc-computacao.json}.
 
 \begin{center}
 \begin{tikzpicture}[
@@ -2046,7 +2189,7 @@ A esteira converte isso em três exigências verificadas --- duas delas por cód
 \begin{enumerate}
   \item \textbf{Nada de captura abusiva de mídia.} É vedado exigir que o estudante grave vídeo do próprio rosto, foto de casa ou áudio aberto sem justificativa pedagógica indispensável e consentimento dos responsáveis.
   \item \textbf{Isolamento por turma e escola.} Todo acesso a banco de dados roda sob política estrita de isolamento (\cod{FORCE ROW LEVEL SECURITY}). Dado de criança de uma escola não pode, sob nenhuma hipótese de falha de software, ser visto por outra instituição.
-  \item \textbf{Telemetria de progresso, não de pessoa.} Os eventos registram o percurso na missão --- que etapa foi concluída, quantas tentativas --- e nunca localização geográfica ou identificador de publicidade. O contrato de evento é conferido literalmente pelo agente 091: verbo, objeto, resultado e contexto, com tabela de leitura declarada.
+  \item \textbf{Telemetria de progresso, não de pessoa.} Os eventos registram o percurso na missão --- que etapa foi concluída, quantas tentativas --- e nunca localização geográfica ou identificador de publicidade. O contrato de evento é conferido literalmente pelo agente 101: verbo, objeto, resultado e contexto, com tabela de leitura declarada.
 \end{enumerate}
 
 \section{Ética de acolhimento e não-rotulação}
@@ -2085,12 +2228,12 @@ Esta parte existe por uma razão específica: uma regra que não diz de onde vei
 \end{center}
 
 \begin{destaque}
-São \textbf{119 passos}, em \textbf{127 blocos} quando os paralelos se desdobram: 43 agentes com modelo de linguagem e \textbf{84 verificações em código} --- Python, marcadas em azul claro nas tabelas. Dois terços da esteira não usam modelo para decidir, e isso é o desenho, não uma economia: toda regra que \emph{pode} ser mecânica foi tirada dos avaliadores. Nove delas --- as de fidelidade (010, 050, 084 e 116), as de coerência com o aprovado (107 e 112) e os juízes de achados (020, 039 e 092) --- chamam por dentro um juiz de modelo, mas quem dá o veredito é o código, que confere a citação do juiz.
+São \textbf{129 passos}, em \textbf{144 blocos} quando os paralelos se desdobram: 52 agentes com modelo de linguagem e \textbf{92 verificações em código} --- Python, marcadas em azul claro nas tabelas. Dois terços da esteira não usam modelo para decidir, e isso é o desenho, não uma economia: toda regra que \emph{pode} ser mecânica foi tirada dos avaliadores. Nove delas --- as de fidelidade (010, 060, 094 e 126), as de coerência com o aprovado (117 e 122) e os juízes de achados (025, 049 e 102) --- chamam por dentro um juiz de modelo, mas quem dá o veredito é o código, que confere a citação do juiz.
 
-A numeração é contínua e segue a ordem de execução, de 001 a 119 (renumerada em 12 de outubro de 2026; até então havia números repetidos e fora de ordem). O revisor do \emph{one-pager} aparece duas vezes, como 023 (movido pelo gate estrutural) e como 029 (movido pelo parecer de adequação), lendo o mesmo \emph{prompt}; a ficha do manifesto é conferida em Produto (037) e de novo em Dev (089), contra o mesmo vocabulário. Os \emph{prompts} das dimensões A, B e C da banca são os mesmos no fim de produto (047), no fim de design (076) e na entrada do Dev (087).
+A numeração é contínua e segue a ordem de execução, de 001 a 129 (renumerada em 12 de outubro de 2026, quando havia números repetidos e fora de ordem, e de novo em 15 de outubro, quando os comitês pedagógicos entraram no lugar que ocupam na execução: do 018 ao 032 antigos, mais cinco; do 033 ao 119, mais dez). O revisor do \emph{one-pager} aparece duas vezes, como 028 (movido pelo gate estrutural) e como 034 (movido pelo parecer de adequação), lendo o mesmo \emph{prompt}; a ficha do manifesto é conferida em Produto (047) e de novo em Dev (099), contra o mesmo vocabulário. Os \emph{prompts} das dimensões A, B e C da banca são os mesmos no fim de produto (057), no fim de design (086) e na entrada do Dev (097).
 \end{destaque}
 
-\section{Produto (001--053)}
+\section{Produto (001--063)}
 
 \begin{center}
 \begin{longtable}{p{2.6cm}p{5.2cm}p{7.2cm}}
@@ -2114,7 +2257,7 @@ A numeração é contínua e segue a ordem de execução, de 001 a 119 (renumera
 \addlinespace
 \textcolor{unAzul}{\textbf{006}} Cobertura conceitual & Núcleo $\times$ mapa: o limiar vive no Decidir ou no ``ahá'', todo conceito tem destino, a anatomia tem os seis passos, e \textbf{o trecho citado existe mesmo no material}. & \Contrato\ interno. A última regra existe porque citação inventada é o modo de falha mais fácil de um modelo obrigado a fundamentar. \\
 \addlinespace
-\textbf{007} Micro-gate do núcleo & \emph{Spoiler}, \emph{gap} de informação, escolha significativa, \emph{job-to-be-done} e semelhança com missão anterior --- a mesma missão em outra versão não conta. & \Convencao\ derivada de 01. Separar quem escreve de quem critica reduz autopreferência~\cite{zheng2023}. Só bloqueia com citação que exista. \\
+\textbf{007} Micro-gate do núcleo & \emph{Spoiler}, \emph{gap} de informação, escolha significativa, \emph{job-to-be-done} e semelhança com missão anterior --- a mesma missão em outra versão não conta. & \Convencao\ derivada do 004. Separar quem escreve de quem critica reduz autopreferência~\cite{zheng2023}. Só bloqueia com citação que exista. \\
 \addlinespace
 \textbf{008} Juiz de profundidade & Nota de 1 a 4 em seis dimensões, com trecho citado e instrução de reescrita. & \Evidencia\ e \Convencao\ declarada: a anatomia do ``ahá'' tem lastro em previsão e conflito cognitivo; \textbf{os cortes estão por calibrar}. \\
 \addlinespace
@@ -2130,80 +2273,110 @@ A numeração é contínua e segue a ordem de execução, de 001 a 119 (renumera
 \addlinespace
 \textcolor{unAzul}{\textbf{017}} \emph{One-pager} existe & Sem \emph{one-pager} depois das duas tentativas do 014, a etapa para com uma mensagem que diz quem ficou mudo e por quê. & \Contrato\ interno. Antes, o gate seguinte quebrava com o nome de uma variável. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{018}} \emph{Brief} de escopo separado & Separa o \emph{brief} de escopo do \emph{one-pager} canônico, antes do revisor, para que cada um siga para quem o lê. & \Contrato\ interno: cópia literal é trabalho de código. \\
+\textcolor{unAzul}{\textbf{018}} Contrato de evidência do \emph{one-pager} & O \S12a onde ele nasce: toda habilidade de Computação da seção~2 com linha; Canal A em toda habilidade (\cod{A} ou \cod{A + B}; \cod{B} sozinho reprova); regra ternária com os três níveis por extenso; Canal B com o nível de cada alternativa. Forma antes de voto. & \Contrato\ interno e decisão do PO de 15/10/2026 (Canal A obrigatório). Fora de forma, \statusVermelho\ recusa o \emph{de acordo}. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{019}} Contrato de plataforma & \emph{Lint} a cada rodada do gate: canal de sala por consulta periódica, estado no servidor, SAEB só nos anos avaliados, número com origem; seção do DS e habilidades que o briefing fixou; decisão atribuída ao PO sem registro dele. & \Contrato\ da plataforma e do briefing. O pedido mais recente do PO vence o briefing original. \\
+\textbf{019a} Comitê dos canais: currículo & Painel A. A ação do Canal A de cada habilidade é o verbo e o objeto do texto oficial, feitos em tela, na decisão onde o limiar mora. & \Contrato: BNCC Computação~\cite{cne2022}. Vota; não escreve (Seção~\ref{sec:comites}). \\
 \addlinespace
-\textbf{020} Juiz do contrato de produto & Sobre os achados do contrato de plataforma (019), retira o de uso vedado quando o texto só cita a regra para vedá-la --- com a citação literal conferida pelo código. & \Convencao. O juiz decide só o que a regra não decide; quem aplica é o código, que confere a citação. \\
+\textbf{019b} Comitê dos canais: medida & Painel A. A regra ternária é alcançável, sem buraco, sem Atingiu por sorte e calculável pelo que o evento registra. & \Contrato\ do grau de medida (Parte~V) e \Convencao\ para a regra ternária. \\
 \addlinespace
-\textbf{021} Gate estrutural & Critérios de estrutura, ambiente, logística, evidências, viabilidade e infraestrutura. Lê o briefing. Escreve a correção pronta para colar. & \Convencao\ com critérios de \Evidencia: teto de decisões e duração vêm da fonte única. Rubrica com teste prático e contraexemplo sustenta concordância~\cite{jonsson2007}. \\
+\textbf{019c} Comitê dos canais: vivência e idade & Painel A. A ação é verbo nativo do ambiente, vivida na decisão e dentro dos tetos da faixa. & \Evidencia\ para os tetos, da fonte única~\cite{sweller2019}; \Convencao\ para o verbo nativo. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{022}} Veredito do gate & Lê o envelope JSON e decide repetir, seguir ou bloquear. ``NÃO APROVADO'' sem envelope reprova. & \Contrato\ interno. \\
+\textbf{019d} Comitê dos canais: currículo & Painel B. A pergunta mede a habilidade da linha, e o Atingiu é domínio pleno e autônomo. Dispensado sem custo quando nenhuma habilidade tem Canal B --- como os outros dois do painel. & \Contrato: BNCC Computação~\cite{cne2022}. \\
 \addlinespace
-\textbf{023} Revisor do \emph{one-pager} & Aplica o complemento que o gate escreveu; não inventa decisão de produto, não desfaz restrição do briefing --- registra o conflito. & \Convencao. Separa julgar de consertar. \\
+\textbf{019e} Comitê dos canais: medida & Painel B. As três alternativas discriminam os três níveis, nenhuma se elimina pela linguagem, o grau é \cod{indicative} e o gabarito fica no servidor. & \Convencao\ de medida, com o teste de quem não fez a missão. \\
 \addlinespace
-\textbf{024a} Avaliação pedagógica & Currículo, papel do professor, \emph{guardrails} e a relação entre o que a interface permite e o que ela protege. & \Contrato: BNCC Computação~\cite{cne2022}. A regra de que só letramento digital bloqueia é decisão de governança, declarada como tal. \\
+\textbf{019f} Comitê dos canais: experiência & Painel B. Depois do Refletir sem repeti-lo, na língua do ambiente, sem vazar resultado, dentro do teto de telas e minutos; no 1.\textsuperscript{o} e no 2.\textsuperscript{o} ano, alternativas todas visíveis e narradas. & \Evidencia\ para os tetos e a leitura nos anos iniciais (fonte única); \Convencao\ para a forma diegética. \\
 \addlinespace
-\textbf{024b} Experiência do estudante & Carga cognitiva, faixa etária, linguagem, duração e agência. & \Evidencia\ --- o passo mais ancorado da esteira~\cite{gathercole2004,cowan2016,godwin2016,betts2006,moreno2002,kalyuga2003}. Todos os números vêm da fonte única. \\
+\textcolor{unAzul}{\textbf{020}} · \textcolor{unAzul}{\textbf{021}} Votos dos painéis A e B & Contam os três votos de cada painel a partir dos achados: unanimidade aprova; reprova só o achado bloqueante com citação literal que existe; envelope ausente é reprovação; última volta sem unanimidade, \statusAmbar. & \Contrato\ interno, contra a leniência de avaliadores~\cite{zheng2023}. \\
 \addlinespace
-\textbf{024c} Adequação pedagógica & Parecer em seis eixos com ajustes acionáveis. Recebe o briefing. & \Evidencia~\cite{biggs1982,osterhaus2021,starks2024}; \Contrato\ para a BNCC; \Convencao\ para o placar. Não carrega régua própria. \\
+\textcolor{unAzul}{\textbf{022}} Saída do comitê dos canais & Os dois painéis unânimes e o \S12a em forma encerram o ciclo; senão, núcleo e seções de apoio reescrevem com os relatórios, até \cod{COMITE\_MAX\_RODADAS} (padrão 5). & \Contrato\ interno. O comitê não escreve: quem corrige é quem escreveu. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{025}} Veredito da avaliação pedagógica & Lê o envelope da avaliação pedagógica (critérios 4.x, 5.1/5.2, 8.x) e grava o \emph{status}. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{023}} \emph{Brief} de escopo separado & Separa o \emph{brief} de escopo do \emph{one-pager} canônico, antes do revisor, para que cada um siga para quem o lê. & \Contrato\ interno: cópia literal é trabalho de código. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{026}} Veredito da experiência do estudante & Lê o envelope da experiência do estudante (3.x, 6.x). Sinaliza, não trava: os tetos dessa dimensão são extrapolação, não medida. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{024}} Contrato de plataforma & \emph{Lint} a cada rodada do gate: canal de sala por consulta periódica, estado no servidor, SAEB só nos anos avaliados, número com origem; seção do DS e habilidades que o briefing fixou; decisão atribuída ao PO sem registro dele. & \Contrato\ da plataforma e do briefing. O pedido mais recente do PO vence o briefing original. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{027}} Veredito da adequação pedagógica & Lê o envelope do parecer de adequação e grava o \emph{status}. & \Contrato\ interno. \\
+\textbf{025} Juiz do contrato de produto & Sobre os achados do contrato de plataforma (024), retira o de uso vedado quando o texto só cita a regra para vedá-la --- com a citação literal conferida pelo código. & \Convencao. O juiz decide só o que a regra não decide; quem aplica é o código, que confere a citação. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{028}} Veredito do parecer & Parecer sem ajuste exigido encerra o ciclo; com ajuste, devolve ao revisor. & \Contrato\ interno. \\
+\textbf{026} Gate estrutural & Critérios de estrutura, ambiente, logística, evidências, viabilidade e infraestrutura. Lê o briefing. Escreve a correção pronta para colar. & \Convencao\ com critérios de \Evidencia: teto de decisões e duração vêm da fonte única. Rubrica com teste prático e contraexemplo sustenta concordância~\cite{jonsson2007}. \\
 \addlinespace
-\textbf{029} Revisor movido pelo parecer & O mesmo agente 023, aplicando os ajustes que o parecer exigiu. & \Convencao. \\
+\textcolor{unAzul}{\textbf{027}} Veredito do gate & Lê o envelope JSON e decide repetir, seguir ou bloquear. ``NÃO APROVADO'' sem envelope reprova. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{030}} · \textcolor{unAzul}{\textbf{031}} \emph{One-pager} do PO, depois dos pareceres & A conferência final, depois de gate, pareceres e revisores. Trecho perdido sem pedido vai ao restaurador; se sobrar, Produto fica \statusVermelho. & \Contrato\ com o PO. \\
+\textbf{028} Revisor do \emph{one-pager} & Aplica o complemento que o gate escreveu; não inventa decisão de produto, não desfaz restrição do briefing --- registra o conflito. & \Convencao. Separa julgar de consertar. \\
 \addlinespace
-\textbf{032} Restaurador do \emph{one-pager} do PO & Devolve, literais, os trechos do PO que a esteira reescreveu; o que um gate ou parecer pedia vira \cod{[PROPOSTA — validar com PO]}. & \Convencao. Quem decide mudar o \emph{one-pager} do PO é o PO. \\
+\textbf{029a} Avaliação pedagógica & Currículo, papel do professor, \emph{guardrails} e a relação entre o que a interface permite e o que ela protege. Desde 15/10/2026 não julga os canais A e B (item 5f): são do comitê dos canais. & \Contrato: BNCC Computação~\cite{cne2022}. A regra de que só letramento digital bloqueia é decisão de governança, declarada como tal. \\
 \addlinespace
-\textbf{033} Gate final de produto & Coerência entre os três pareceres e veredito de liberação. Não declara que o pedido do PO foi atendido --- isso é da fidelidade. & \Convencao. Existe porque avaliadores paralelos podem julgar \emph{versões diferentes} do mesmo documento~\cite{cemri2025}. \\
+\textbf{029b} Experiência do estudante & Carga cognitiva, faixa etária, linguagem, duração e agência. & \Evidencia\ --- o passo mais ancorado da esteira~\cite{gathercole2004,cowan2016,godwin2016,betts2006,moreno2002,kalyuga2003}. Todos os números vêm da fonte única. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{034}} Veredito final & Lê o envelope do gate final. & \Contrato\ interno. \\
+\textbf{029c} Adequação pedagógica & Parecer em seis eixos com ajustes acionáveis. Recebe o briefing. O eixo~5 não reabre o \S12a: os canais são do comitê dos canais. & \Evidencia~\cite{biggs1982,osterhaus2021,starks2024}; \Contrato\ para a BNCC; \Convencao\ para o placar. Não carrega régua própria. \\
 \addlinespace
-\textbf{035} \emph{Spec} da missão & Os 12 blocos do contrato contra o qual Design e Dev constroem, mais o \textbf{glossário canônico}. \textbf{Traduz o \emph{one-pager} aprovado, não o revisa}: tempos e cenários no bloco 6, podcast no 8, habilidades no 11; ressalva que o PO não incorporou vai para uma tabela própria do bloco 12. & \Contrato\ --- manifesto da plataforma, isolamento por linha, contrato de eventos. O glossário é \Convencao\ de coerência, conferida em código adiante (072). \\
+\textcolor{unAzul}{\textbf{030}} Veredito da avaliação pedagógica & Lê o envelope da avaliação pedagógica (critérios 4.x, 5.1/5.2, 8.x) e grava o \emph{status}. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{036}} Conformidade BNCC & Código existe, é do ano, e há letramento digital. Confere também \textbf{o que a \emph{spec} diz sobre a habilidade}, e lê as subseções numeradas do bloco. & \Contrato, verificado em código~\cite{cne2022}. \\
+\textcolor{unAzul}{\textbf{031}} Veredito da experiência do estudante & Lê o envelope da experiência do estudante (3.x, 6.x). Sinaliza, não trava: os tetos dessa dimensão são extrapolação, não medida. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{037}} Ficha do manifesto & Dez campos do bloco 0 contra o vocabulário fechado. Seção antiga do DS escolhida pela esteira bloqueia e aponta a sucessora; a escolhida pelo PO é ressalva; a que o briefing fixa é trava. & \Contrato. Roda em Produto porque o conserto ali custa uma reescrita da \emph{spec}, não o descarte do Design. \\
+\textcolor{unAzul}{\textbf{032}} Veredito da adequação pedagógica & Lê o envelope do parecer de adequação e grava o \emph{status}. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{038}} Matriz de evidência & Grau \cod{scored} com dois sinais nomeados, toda habilidade com momento em tela e medida ligada, gabarito no servidor. & \Contrato. Das 25 medidas \cod{scored} das primeiras execuções, só 10 nomeavam dois sinais. \\
+\textcolor{unAzul}{\textbf{033}} Veredito do parecer & Parecer sem ajuste exigido encerra o ciclo; com ajuste, devolve ao revisor. & \Contrato\ interno. \\
 \addlinespace
-\textbf{039} Juiz da matriz de evidência & Sobre os achados da matriz de evidência (038), retira o de uso vedado quando o texto só cita para vedar, com citação conferida. & \Convencao, com a mesma conferência de citação do 020. \\
+\textbf{034} Revisor movido pelo parecer & O mesmo agente 028, aplicando os ajustes que o parecer exigiu. & \Convencao. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{040}} Perguntas de produto & Quantidade fechada, decisão com limiar, corte do vocabulário, e a ação que responde cada pergunta declarada na tabela de eventos. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{035}} · \textcolor{unAzul}{\textbf{036}} \emph{One-pager} do PO, depois dos pareceres & A conferência final, depois de gate, pareceres e revisores. Trecho perdido sem pedido vai ao restaurador; se sobrar, Produto fica \statusVermelho. & \Contrato\ com o PO. \\
 \addlinespace
-\textbf{041} Juiz das perguntas & O que regex não vê: a pergunta muda uma decisão nossa, é sobre o produto e não sobre a criança, e não é uma transversal repintada. & \Convencao. \\
+\textbf{037} Restaurador do \emph{one-pager} do PO & Devolve, literais, os trechos do PO que a esteira reescreveu; o que um gate ou parecer pedia vira \cod{[PROPOSTA — validar com PO]}. & \Convencao. Quem decide mudar o \emph{one-pager} do PO é o PO --- e ele decidiu que o voto do comitê pode mandar (Seção~\ref{sec:comites}). \\
 \addlinespace
-\textcolor{unAzul}{\textbf{042}} Veredito do juiz & Reprovação em pergunta declarada pelo responsável de produto bloqueia; em proposta, segue como ressalva para ele decidir. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{038}} Contrato de evidência, antes do comitê final & O \S12a de novo, sobre o \emph{one-pager} depois do gate estrutural, dos pareceres e dos revisores. & \Contrato\ interno, como o 018. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{043}} Rastro de lacunas da \emph{spec} & Marcadores de lacuna na \emph{spec}, por dono: o de produto ou de insumo volta para quem escreveu a \emph{spec}; a decisão do PO fica \statusAmbar; o de Design e o de Dev ficam para a etapa delas. & \Contrato\ interno. Cobra cada lacuna na etapa que ainda pode consertá-la. \\
+\textcolor{unAzul}{\textbf{039}} Conta da virada no \emph{one-pager} & Refaz o ranking da tabela 1.3 sobre o \emph{one-pager} de agora: os revisores podem ter mudado a mecânica depois do núcleo. & \Contrato\ interno, como o 009. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{044}} \emph{Spec} $\times$ \emph{one-pager} aprovado & As mesmas habilidades do contrato de evidência, o mesmo tempo em tela, o podcast; parâmetro ``a definir por produto'' que a \emph{spec} decidiu; glossário que proíbe termo aprovado. Divergência volta ao autor da \emph{spec}. & \Contrato\ com o PO. Nasceu da \emph{spec} como segundo autor (Seção~\ref{sec:aprovado}). \\
+\textbf{040a} Comitê final: pedagogia & Limiar vivido, ``ahá'' com os seis passos e canais ainda coerentes depois das revisões. & \Evidencia\ e \Convencao, como o juiz de profundidade (Seção~\ref{sec:profundidade}). \\
 \addlinespace
-\textcolor{unAzul}{\textbf{045}} Conteúdo aprovado para a banca & Grava as seções literais do \emph{one-pager} aprovado para a banca do fim de produto, que sem elas julgava a \emph{spec} sem o \emph{one-pager}. & \Contrato\ interno. \\
+\textbf{040b} Comitê final: qualidade de produto & Uma missão só, tempos e tetos que fecham, papel do professor claro, construível sem inventar. & \Convencao\ de produto, com os tetos da fonte única. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{046}} Escopo da banca de produto & Grava o escopo da banca na posição «produto», antes das dimensões rodarem em paralelo. & \Contrato\ interno (Seção~\ref{sec:banca}). \\
+\textbf{040c} Comitê final: imersão & Testes da porta, da troca e da chegada (2.3), verbos nativos (2.6), virada mostrada pelo ambiente (2.7) e nada que quebre o disfarce. & \Convencao\ de imersão, declarada como tal. \\
 \addlinespace
-\textbf{047a--048} Banca no fim de produto & As dimensões de produto e de pedagogia sobre a \emph{spec}, com o conteúdo aprovado ao lado; a consolidação, em código, dá o pior das duas. & \Contrato\ e \Evidencia, como a banca de Dev. O achado volta ao autor da \emph{spec} antes do parecer do PO --- ver Seção~\ref{sec:banca}. \\
+\textcolor{unAzul}{\textbf{041}} · \textcolor{unAzul}{\textbf{042}} Votos e saída do comitê final & Contam os três votos com as citações conferidas. Unânimes, com o \S12a em forma e a conta da virada fechando, encerram o ciclo; senão, a cadeia de Produto roda de novo a partir do núcleo, até \cod{COMITE\_FINAL\_MAX\_RODADAS} (padrão 2). Esgotado, \statusAmbar. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{049}} Veredito da \emph{spec} & Currículo, manifesto, evidência, perguntas, lacunas, conteúdo aprovado e banca conformes encerram o ciclo. & \Contrato\ interno. \\
+\textbf{043} Gate final de produto & Coerência entre os três pareceres e veredito de liberação. Não declara que o pedido do PO foi atendido --- isso é da fidelidade. & \Convencao. Existe porque avaliadores paralelos podem julgar \emph{versões diferentes} do mesmo documento~\cite{cemri2025}. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{050}} Fidelidade ao pedido do PO e ao briefing & Núcleo, \emph{one-pager} e \emph{spec} juntos contra os pedidos feitos a Produto e o briefing. Pedido sem prova é \statusVermelho\ e recusa o \emph{de acordo}; conflito com regra da esteira vira decisão do PO (\statusDecisao). & \Contrato\ com quem pediu. O juiz é modelo (\cod{61\_juiz\_de\_fidelidade}); o veredito é do código. \\
+\textcolor{unAzul}{\textbf{044}} Veredito final & Lê o envelope do gate final. & \Contrato\ interno. \\
 \addlinespace
-\textbf{051} \emph{One-pager} resumido & O formato curto do time de produto: ficha, ideia, componente curricular, socioemocionais, seis etapas, professor, contrato de evidência e \emph{takeaway}. Sai em três formatos; vale o canônico. & \Convencao\ de comunicação, com regras explícitas de registro --- ver Seção~\ref{sec:resumido}. \\
+\textbf{045} \emph{Spec} da missão & Os 12 blocos do contrato contra o qual Design e Dev constroem, mais o \textbf{glossário canônico}. \textbf{Traduz o \emph{one-pager} aprovado, não o revisa}: tempos e cenários no bloco 6, podcast no 8, habilidades no 11; ressalva que o PO não incorporou vai para uma tabela própria do bloco 12. & \Contrato\ --- manifesto da plataforma, isolamento por linha, contrato de eventos. O glossário é \Convencao\ de coerência, conferida em código adiante (082). \\
 \addlinespace
-\textcolor{unAzul}{\textbf{052}} · \textcolor{unAzul}{\textbf{053}} Resumido conferido & As habilidades, o tempo em tela e o Canal B do resumido contra o canônico; divergente volta ao autor. & \Contrato\ interno. Em 7 de 15 sessões o resumido não trazia o Canal B aprovado. \\
+\textcolor{unAzul}{\textbf{046}} Conformidade BNCC & Código existe, é do ano, e há letramento digital. Confere também \textbf{o que a \emph{spec} diz sobre a habilidade}, e lê as subseções numeradas do bloco. & \Contrato, verificado em código~\cite{cne2022}. \\
+\addlinespace
+\textcolor{unAzul}{\textbf{047}} Ficha do manifesto & Dez campos do bloco 0 contra o vocabulário fechado. Seção antiga do DS escolhida pela esteira bloqueia e aponta a sucessora; a escolhida pelo PO é ressalva; a que o briefing fixa é trava. & \Contrato. Roda em Produto porque o conserto ali custa uma reescrita da \emph{spec}, não o descarte do Design. \\
+\addlinespace
+\textcolor{unAzul}{\textbf{048}} Matriz de evidência & Grau \cod{scored} com dois sinais nomeados, toda habilidade com momento em tela e medida ligada, gabarito no servidor. & \Contrato. Das 25 medidas \cod{scored} das primeiras execuções, só 10 nomeavam dois sinais. \\
+\addlinespace
+\textbf{049} Juiz da matriz de evidência & Sobre os achados da matriz de evidência (048), retira o de uso vedado quando o texto só cita para vedar, com citação conferida. & \Convencao, com a mesma conferência de citação do 025. \\
+\addlinespace
+\textcolor{unAzul}{\textbf{050}} Perguntas de produto & Quantidade fechada, decisão com limiar, corte do vocabulário, e a ação que responde cada pergunta declarada na tabela de eventos. & \Contrato\ interno. \\
+\addlinespace
+\textbf{051} Juiz das perguntas & O que regex não vê: a pergunta muda uma decisão nossa, é sobre o produto e não sobre a criança, e não é uma transversal repintada. & \Convencao. \\
+\addlinespace
+\textcolor{unAzul}{\textbf{052}} Veredito do juiz & Reprovação em pergunta declarada pelo responsável de produto bloqueia; em proposta, segue como ressalva para ele decidir. & \Contrato\ interno. \\
+\addlinespace
+\textcolor{unAzul}{\textbf{053}} Rastro de lacunas da \emph{spec} & Marcadores de lacuna na \emph{spec}, por dono: o de produto ou de insumo volta para quem escreveu a \emph{spec}; a decisão do PO fica \statusAmbar; o de Design e o de Dev ficam para a etapa delas. & \Contrato\ interno. Cobra cada lacuna na etapa que ainda pode consertá-la. \\
+\addlinespace
+\textcolor{unAzul}{\textbf{054}} \emph{Spec} $\times$ \emph{one-pager} aprovado & As mesmas habilidades do contrato de evidência, o mesmo tempo em tela, o podcast; parâmetro ``a definir por produto'' que a \emph{spec} decidiu; glossário que proíbe termo aprovado. Divergência volta ao autor da \emph{spec}. & \Contrato\ com o PO. Nasceu da \emph{spec} como segundo autor (Seção~\ref{sec:aprovado}). \\
+\addlinespace
+\textcolor{unAzul}{\textbf{055}} Conteúdo aprovado para a banca & Grava as seções literais do \emph{one-pager} aprovado para a banca do fim de produto, que sem elas julgava a \emph{spec} sem o \emph{one-pager}. & \Contrato\ interno. \\
+\addlinespace
+\textcolor{unAzul}{\textbf{056}} Escopo da banca de produto & Grava o escopo da banca na posição «produto», antes das dimensões rodarem em paralelo. & \Contrato\ interno (Seção~\ref{sec:banca}). \\
+\addlinespace
+\textbf{057a--058} Banca no fim de produto & As dimensões de produto e de pedagogia sobre a \emph{spec}, com o conteúdo aprovado ao lado; a consolidação, em código, dá o pior das duas. & \Contrato\ e \Evidencia, como a banca de Dev. O achado volta ao autor da \emph{spec} antes do parecer do PO --- ver Seção~\ref{sec:banca}. \\
+\addlinespace
+\textcolor{unAzul}{\textbf{059}} Veredito da \emph{spec} & Currículo, manifesto, evidência, perguntas, lacunas, conteúdo aprovado e banca conformes encerram o ciclo. & \Contrato\ interno. \\
+\addlinespace
+\textcolor{unAzul}{\textbf{060}} Fidelidade ao pedido do PO e ao briefing & Núcleo, \emph{one-pager} e \emph{spec} juntos contra os pedidos feitos a Produto e o briefing. Pedido sem prova é \statusVermelho\ e recusa o \emph{de acordo}; conflito com regra da esteira vira decisão do PO (\statusDecisao). & \Contrato\ com quem pediu. O juiz é modelo (\cod{transversal/\allowbreak juiz\_de\_fidelidade.md}); o veredito é do código. \\
+\addlinespace
+\textbf{061} \emph{One-pager} resumido & O formato curto do time de produto: ficha, ideia, componente curricular, socioemocionais, seis etapas, professor, contrato de evidência e \emph{takeaway}. Sai em três formatos; vale o canônico. & \Convencao\ de comunicação, com regras explícitas de registro --- ver Seção~\ref{sec:resumido}. \\
+\addlinespace
+\textcolor{unAzul}{\textbf{062}} · \textcolor{unAzul}{\textbf{063}} Resumido conferido & As habilidades, o tempo em tela e o Canal B do resumido contra o canônico; divergente volta ao autor. & \Contrato\ interno. Em 7 de 15 sessões o resumido não trazia o Canal B aprovado. \\
 \bottomrule
 \end{longtable}
 \end{center}
 
-\section{Design (054--084)}
+\section{Design (064--094)}
 
 \begin{center}
 \begin{longtable}{p{2.6cm}p{5.2cm}p{7.2cm}}
@@ -2215,66 +2388,66 @@ A numeração é contínua e segue a ordem de execução, de 001 a 119 (renumera
 \sffamily\bfseries\footnotesize\color{unNavy}Agente & \sffamily\bfseries\footnotesize\color{unNavy}O que faz & \sffamily\bfseries\footnotesize\color{unNavy}Em que se apoia \\
 \midrule
 \endhead
-\textcolor{unAzul}{\textbf{054}} Conteúdo aprovado & Grava as seções do \emph{one-pager} aprovado, literais, para os agentes de design que não leem o \emph{one-pager}. Depois de um \emph{Refazer} de Produto, cada autor recebe também o que mudou nelas. & \Contrato\ com o PO. \\
+\textcolor{unAzul}{\textbf{064}} Conteúdo aprovado & Grava as seções do \emph{one-pager} aprovado, literais, para os agentes de design que não leem o \emph{one-pager}. Depois de um \emph{Refazer} de Produto, cada autor recebe também o que mudou nelas. & \Contrato\ com o PO. \\
 \addlinespace
-\textbf{055} Fechamento de lacunas & Varre a \emph{spec} célula a célula, registra decisões com base declarada e pedidos de re-\emph{spec}, e consolida. & \Convencao. Preenche ausência, nunca altera presença --- a regra existe para que Design não redecida produto. \\
+\textbf{065} Fechamento de lacunas & Varre a \emph{spec} célula a célula, registra decisões com base declarada e pedidos de re-\emph{spec}, e consolida. & \Convencao. Preenche ausência, nunca altera presença --- a regra existe para que Design não redecida produto. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{056}} Separação e consolidação & Copia a \emph{spec} consolidada, preserva a original e separa o relatório de preenchimento. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{066}} Separação e consolidação & Copia a \emph{spec} consolidada, preserva a original e separa o relatório de preenchimento. & \Contrato\ interno. \\
 \addlinespace
-\textbf{057} Ambiente simulado & Condicional: decide o ambiente quando a \emph{spec} cala --- app clonado, app novo ou mini-jogo. Dormente, emite só a ficha que os demais consomem. & \Contrato\ (a lista fechada de seções do \emph{design system}) mais \Convencao\ para o mini-jogo dos anos iniciais. \\
+\textbf{067} Ambiente simulado & Condicional: decide o ambiente quando a \emph{spec} cala --- app clonado, app novo ou mini-jogo. Dormente, emite só a ficha que os demais consomem. & \Contrato\ (a lista fechada de seções do \emph{design system}) mais \Convencao\ para o mini-jogo dos anos iniciais. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{058}} \emph{Spec} com o bloco do ambiente & Copia a ficha do ambiente para a \emph{spec} e registra o estado. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{068}} \emph{Spec} com o bloco do ambiente & Copia a ficha do ambiente para a \emph{spec} e registra o estado. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{059}} \emph{Spec} consolidada $\times$ aprovado & A \emph{spec} que o fechamento de lacunas e o ambiente reescreveram, contra o \emph{one-pager} aprovado. Só o que piorou desde a de Produto vira \emph{ticket}, pelo QA. & \Contrato\ com o PO. Linha da \emph{spec} perdida na consolidação bloqueia. \\
+\textcolor{unAzul}{\textbf{069}} \emph{Spec} consolidada $\times$ aprovado & A \emph{spec} que o fechamento de lacunas e o ambiente reescreveram, contra o \emph{one-pager} aprovado. Só o que piorou desde a de Produto vira \emph{ticket}, pelo QA. & \Contrato\ com o PO. Linha da \emph{spec} perdida na consolidação bloqueia. \\
 \addlinespace
-\textbf{060} Briefing de ofício & Aposta, forma do arco, pico, \emph{beat} memorável, mapa de \emph{beats} e não-negociáveis. & \Convencao\ de ofício narrativo. \textbf{É a parte menos fundamentável da esteira, e está declarada assim}: são heurísticas de dramaturgia, não achados. \\
+\textbf{070} Briefing de ofício & Aposta, forma do arco, pico, \emph{beat} memorável, mapa de \emph{beats} e não-negociáveis. & \Convencao\ de ofício narrativo. \textbf{É a parte menos fundamentável da esteira, e está declarada assim}: são heurísticas de dramaturgia, não achados. \\
 \addlinespace
-\textbf{061} Jornada · \textbf{062} Fluxo & Raias por etapa, cenários de dispositivo e inventário de telas, com identificadores no padrão; grafo de estados com condições, gates e cinco testes de fluxo. Ambos em Mermaid. & \Convencao. O diagrama existe porque representação externa reduz a carga de manter a estrutura na cabeça~\cite{sweller2019}. \\
+\textbf{071} Jornada · \textbf{072} Fluxo & Raias por etapa, cenários de dispositivo e inventário de telas, com identificadores no padrão; grafo de estados com condições, gates e cinco testes de fluxo. Ambos em Mermaid. & \Convencao. O diagrama existe porque representação externa reduz a carga de manter a estrutura na cabeça~\cite{sweller2019}. \\
 \addlinespace
-\textbf{063} · \textbf{067} \emph{Copy} (duas passadas) & Dicionário de \emph{strings} por tela, calibrado à faixa; depois revisão dentro da tela já construída. & \Evidencia\ para a calibragem de linguagem por faixa (fonte única) e \Convencao\ para o formato de duas passadas. \\
+\textbf{073} · \textbf{077} \emph{Copy} (duas passadas) & Dicionário de \emph{strings} por tela, calibrado à faixa; depois revisão dentro da tela já construída. & \Evidencia\ para a calibragem de linguagem por faixa (fonte única) e \Convencao\ para o formato de duas passadas. \\
 \addlinespace
-\textbf{064} Camada CAA & Símbolos, modos alternativos de resposta e pranchas de comunicação. Só roda quando a faixa ou a \emph{spec} pedem. & \Contrato\ de acessibilidade. A regra de que o símbolo vem \emph{junto} do texto, nunca no lugar dele, é redundância deliberada e benéfica para quem não decodifica com fluência~\cite{knoop2018}. \\
+\textbf{074} Camada CAA & Símbolos, modos alternativos de resposta e pranchas de comunicação. Só roda quando a faixa ou a \emph{spec} pedem. & \Contrato\ de acessibilidade. A regra de que o símbolo vem \emph{junto} do texto, nunca no lugar dele, é redundância deliberada e benéfica para quem não decodifica com fluência~\cite{knoop2018}. \\
 \addlinespace
-\textbf{065} Telas & Especificação por tela e estado sobre a seção do \emph{design system} do ambiente, com a tabela ``Geração no Stitch'': uma linha por tela e estado, com o \emph{prompt}. & \Contrato\ (tokens do \emph{design system}) mais \Evidencia\ para o teto de elementos novos por tela~\cite{sweller2019}. \\
+\textbf{075} Telas & Especificação por tela e estado sobre a seção do \emph{design system} do ambiente, com a tabela ``Geração no Stitch'': uma linha por tela e estado, com o \emph{prompt}. & \Contrato\ (tokens do \emph{design system}) mais \Evidencia\ para o teto de elementos novos por tela~\cite{sweller2019}. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{066}} Telas no Stitch & Gera no Stitch, fora do modelo, toda tela e estado da tabela e do inventário da jornada, em paralelo, e registra o identificador que o Stitch devolveu. A refeita nasce ``· vN''. & \Contrato\ interno. O modelo gerava de 27\% a 68\% do inventário (Seção~\ref{sec:integracoes}). \\
+\textcolor{unAzul}{\textbf{076}} Telas no Stitch & Gera no Stitch, fora do modelo, toda tela e estado da tabela e do inventário da jornada, em paralelo, e registra o identificador que o Stitch devolveu. A refeita nasce ``· vN''. & \Contrato\ interno. O modelo gerava de 27\% a 68\% do inventário (Seção~\ref{sec:integracoes}). \\
 \addlinespace
-\textcolor{unAzul}{\textbf{068}} \emph{Copy} preservada & Reanexa à \emph{copy} revisada, sem mudança, as seções da primeira passada que a revisão descartou --- \emph{prompts}, banco curado, roteiro do podcast. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{078}} \emph{Copy} preservada & Reanexa à \emph{copy} revisada, sem mudança, as seções da primeira passada que a revisão descartou --- \emph{prompts}, banco curado, roteiro do podcast. & \Contrato\ interno. \\
 \addlinespace
-\textbf{069} Protótipo & Arquivo HTML único, sem dependências, com as telas navegáveis --- um quadro marcado por estado ---, o painel da etapa e as cadências do pico. & \Convencao. É o artefato que a revisão humana abre; a exigência de arquivo único e offline é operacional. \\
+\textbf{079} Protótipo & Arquivo HTML único, sem dependências, com as telas navegáveis --- um quadro marcado por estado ---, o painel da etapa e as cadências do pico. & \Convencao. É o artefato que a revisão humana abre; a exigência de arquivo único e offline é operacional. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{070}} Artefatos e links & Separa o HTML do relatório, colhe os links das telas --- só da versão atual --- e monta a folha de diagramas. \textbf{Conta as telas do projeto contra o inventário da jornada}: faltando tela, ou tela com identificador fora do padrão, bloqueia com dono no agente de telas. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{080}} Artefatos e links & Separa o HTML do relatório, colhe os links das telas --- só da versão atual --- e monta a folha de diagramas. \textbf{Conta as telas do projeto contra o inventário da jornada}: faltando tela, ou tela com identificador fora do padrão, bloqueia com dono no agente de telas. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{071}} \emph{Lint} do protótipo & Confere o arquivo HTML em si --- o que o QA de entregáveis não vê, porque lê só o texto. & \Contrato\ interno. Existe porque o QA auditava a \emph{descrição} do protótipo e dava por bom um arquivo que não abria como descrito. \\
+\textcolor{unAzul}{\textbf{081}} \emph{Lint} do protótipo & Confere o arquivo HTML em si --- o que o QA de entregáveis não vê, porque lê só o texto. & \Contrato\ interno. Existe porque o QA auditava a \emph{descrição} do protótipo e dava por bom um arquivo que não abria como descrito. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{072}} Coerência entre documentos & Jornada, fluxo, \emph{copy} revisada e protótipo contra o glossário canônico da \emph{spec}. Variante proibida de um nome bloqueia; papel ou idade de personagem, número, rótulo de botão e nome de arquivo divergentes ficam \statusAmbar. & \Contrato\ interno. Cada documento, sozinho, pode estar bem escrito; a contradição só aparece lendo todos juntos. \\
+\textcolor{unAzul}{\textbf{082}} Coerência entre documentos & Jornada, fluxo, \emph{copy} revisada e protótipo contra o glossário canônico da \emph{spec}. Variante proibida de um nome bloqueia; papel ou idade de personagem, número, rótulo de botão e nome de arquivo divergentes ficam \statusAmbar. & \Contrato\ interno. Cada documento, sozinho, pode estar bem escrito; a contradição só aparece lendo todos juntos. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{074}} Espelho no Miro & Publica no Miro os mesmos diagramas Mermaid, como board navegável. & \Convencao. O texto continua sendo a fonte e a integração indisponível não interrompe a esteira. \\
+\textcolor{unAzul}{\textbf{084}} Espelho no Miro & Publica no Miro os mesmos diagramas Mermaid, como board navegável. & \Convencao. O texto continua sendo a fonte e a integração indisponível não interrompe a esteira. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{075}} Escopo da banca de design & Grava o escopo da banca na posição «design». & \Contrato\ interno (Seção~\ref{sec:banca}). \\
+\textcolor{unAzul}{\textbf{085}} Escopo da banca de design & Grava o escopo da banca na posição «design». & \Contrato\ interno (Seção~\ref{sec:banca}). \\
 \addlinespace
-\textcolor{unAzul}{\textbf{073}} Cobertura de telas & Toda tela do inventário no fluxo, na \emph{copy} revisada, na especificação e nos quadros do protótipo, \textbf{por identificador}; falta vira \emph{ticket} com o dono. & \Contrato\ interno. Contar telas não basta: cinco quadros com três estados da mesma tela aprovavam com três telas faltando. \\
+\textcolor{unAzul}{\textbf{083}} Cobertura de telas & Toda tela do inventário no fluxo, na \emph{copy} revisada, na especificação e nos quadros do protótipo, \textbf{por identificador}; falta vira \emph{ticket} com o dono. & \Contrato\ interno. Contar telas não basta: cinco quadros com três estados da mesma tela aprovavam com três telas faltando. \\
 \addlinespace
-\textbf{076a--077} Banca no fim de design & Produto realizado em tela, e design e imersão, sobre os documentos de design; a consolidação dá o pior das duas. O bloqueio vira \emph{ticket} nesta etapa. & \Contrato\ e \Convencao. Ver Seção~\ref{sec:banca}. \\
+\textbf{086a--087} Banca no fim de design & Produto realizado em tela, e design e imersão, sobre os documentos de design; a consolidação dá o pior das duas. O bloqueio vira \emph{ticket} nesta etapa. & \Contrato\ e \Convencao. Ver Seção~\ref{sec:banca}. \\
 \addlinespace
-\textbf{078} QA de entregáveis & Fidelidade à \emph{spec}, \emph{diff} de \emph{strings}, currículo, faixa, fluxo, \textbf{visão do professor}, briefing, ambiente e CAA. & \Convencao, com uma regra de \Evidencia: é proibido reportar número que não foi medido. Só bloqueia com citação que exista. \\
+\textbf{088} QA de entregáveis & Fidelidade à \emph{spec}, \emph{diff} de \emph{strings}, currículo, faixa, fluxo, \textbf{visão do professor}, briefing, ambiente e CAA. & \Convencao, com uma regra de \Evidencia: é proibido reportar número que não foi medido. Só bloqueia com citação que exista. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{079}} Afirmações do QA & As contagens de telas que o QA escreveu (``todas as N telas'', ``N de M'') contra o inventário, o Stitch e o protótipo, e os nomes de arquivo contra os que a esteira grava. Divergência reescreve o veredito do QA como bloqueado. & \Contrato\ interno. O QA é um modelo: o que ele escreve sobre contagem é afirmação, não fato. \\
+\textcolor{unAzul}{\textbf{089}} Afirmações do QA & As contagens de telas que o QA escreveu (``todas as N telas'', ``N de M'') contra o inventário, o Stitch e o protótipo, e os nomes de arquivo contra os que a esteira grava. Divergência reescreve o veredito do QA como bloqueado. & \Contrato\ interno. O QA é um modelo: o que ele escreve sobre contagem é afirmação, não fato. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{080}} Veredito de design & Lê o envelope do QA. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{090}} Veredito de design & Lê o envelope do QA. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{082}} Rastro de lacunas do design & Marcadores de lacuna na \emph{spec} consolidada e nos documentos de design: o de Design bloqueia a etapa; o que o fechamento de lacunas fechou não conta; o de Produto já aprovado e o de Dev ficam \statusAmbar. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{092}} Rastro de lacunas do design & Marcadores de lacuna na \emph{spec} consolidada e nos documentos de design: o de Design bloqueia a etapa; o que o fechamento de lacunas fechou não conta; o de Produto já aprovado e o de Dev ficam \statusAmbar. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{083}} Matriz de rastreabilidade & Cada requisito do produto procurado em cada documento de design; o que se perdeu sai com o dono. & \Contrato\ interno --- ver Seção~\ref{sec:aprovado}. \\
+\textcolor{unAzul}{\textbf{093}} Matriz de rastreabilidade & Cada requisito do produto procurado em cada documento de design; o que se perdeu sai com o dono. & \Contrato\ interno --- ver Seção~\ref{sec:aprovado}. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{084}} Fidelidade ao \emph{Refazer} de design & Cada pedido feito ao Design conferido na \emph{spec} consolidada, no \emph{brief}, na jornada, no fluxo, na \emph{copy}, na CAA e nas telas. Sem pedido de Design, não roda. & \Contrato\ com quem pediu. O juiz cita, o código confere. \\
+\textcolor{unAzul}{\textbf{094}} Fidelidade ao \emph{Refazer} de design & Cada pedido feito ao Design conferido na \emph{spec} consolidada, no \emph{brief}, na jornada, no fluxo, na \emph{copy}, na CAA e nas telas. Sem pedido de Design, não roda. & \Contrato\ com quem pediu. O juiz cita, o código confere. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{081}} Retrabalho de design & Reexecuta só os agentes com \emph{ticket}, na ordem de precedência --- telas antes da \emph{copy} ---, cada um com a própria versão anterior, e refaz o protótipo, o \emph{lint}, a coerência e a cobertura depois. & \Contrato\ interno. O despacho é seletivo porque redundância com falhas correlacionadas não aumenta cobertura~\cite{knight1986}. \\
+\textcolor{unAzul}{\textbf{091}} Retrabalho de design & Reexecuta só os agentes com \emph{ticket}, na ordem de precedência --- telas antes da \emph{copy} ---, cada um com a própria versão anterior, e refaz o protótipo, o \emph{lint}, a coerência e a cobertura depois. & \Contrato\ interno. O despacho é seletivo porque redundância com falhas correlacionadas não aumenta cobertura~\cite{knight1986}. \\
 \bottomrule
 \end{longtable}
 \end{center}
 
-\section{Dev (085--116) e transversal (117--119)}
+\section{Dev (095--126) e transversal (127--129)}
 
 \begin{center}
 \begin{longtable}{p{2.6cm}p{5.2cm}p{7.2cm}}
@@ -2286,69 +2459,69 @@ A numeração é contínua e segue a ordem de execução, de 001 a 119 (renumera
 \sffamily\bfseries\footnotesize\color{unNavy}Agente & \sffamily\bfseries\footnotesize\color{unNavy}O que faz & \sffamily\bfseries\footnotesize\color{unNavy}Em que se apoia \\
 \midrule
 \endhead
-\textcolor{unAzul}{\textbf{085}} Conteúdo aprovado & As mesmas seções literais do Design, para o banco de conteúdo, a banca e o PRD. & \Contrato\ com o PO. \\
+\textcolor{unAzul}{\textbf{095}} Conteúdo aprovado & As mesmas seções literais do Design, para o banco de conteúdo, a banca e o PRD. & \Contrato\ com o PO. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{086}} Escopo da banca de entrada & Grava o escopo da banca na posição «entrada» do Dev. & \Contrato\ interno (Seção~\ref{sec:banca}). \\
+\textcolor{unAzul}{\textbf{096}} Escopo da banca de entrada & Grava o escopo da banca na posição «entrada» do Dev. & \Contrato\ interno (Seção~\ref{sec:banca}). \\
 \addlinespace
-\textbf{087a--087c} · \textcolor{unAzul}{\textbf{088}} Banca de entrada & Produto, design e pedagogia sobre o que as duas etapas aprovaram, com a visão cruzada. Não reescreve nada; \statusVermelho\ impede o Dev de rodar e lista os bloqueios por dono. & \Contrato\ e \Evidencia. A segunda verificação existe para pegar quem aprovou sem ler e a correção que não pegou. \\
+\textbf{097a--097c} · \textcolor{unAzul}{\textbf{098}} Banca de entrada & Produto, design e pedagogia sobre o que as duas etapas aprovaram, com a visão cruzada. Não reescreve nada; \statusVermelho\ impede o Dev de rodar e lista os bloqueios por dono. & \Contrato\ e \Evidencia. A segunda verificação existe para pegar quem aprovou sem ler e a correção que não pegou. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{089}} Ficha do manifesto & Bloco 0 contra as listas fechadas: produto, séries, unidade, público, \emph{viewport}, permissões, \emph{capabilities}, seção do DS, liberação por turma. Não conforme impede o PRD. & \Contrato\ da plataforma. \\
+\textcolor{unAzul}{\textbf{099}} Ficha do manifesto & Bloco 0 contra as listas fechadas: produto, séries, unidade, público, \emph{viewport}, permissões, \emph{capabilities}, seção do DS, liberação por turma. Não conforme impede o PRD. & \Contrato\ da plataforma. \\
 \addlinespace
-\textbf{090a} \emph{Handoff} para dev & Modelo de insumo preenchido, \emph{stories} com critérios fechados, eventos, escopo V1/V2 e hipóteses. & \Contrato\ da plataforma: assinatura de evento, papéis, canal de sala. \\
+\textbf{100a} \emph{Handoff} para dev & Modelo de insumo preenchido, \emph{stories} com critérios fechados, eventos, escopo V1/V2 e hipóteses. & \Contrato\ da plataforma: assinatura de evento, papéis, canal de sala. \\
 \addlinespace
-\textbf{090b} \emph{Brief} de assets & Inventário, especificação por tipo, critérios de reprovação e ordem de produção. O \emph{status} de cada item tem vocabulário fechado: ``a produzir'', ``rascunho'' ou ``escrito''. & \Convencao\ de produção. Homologar e dar ``pronto'' é ato humano, e um agente que o escreve afirma o que ninguém fez. \\
+\textbf{100b} \emph{Brief} de assets & Inventário, especificação por tipo, critérios de reprovação e ordem de produção. O \emph{status} de cada item tem vocabulário fechado: ``a produzir'', ``rascunho'' ou ``escrito''. & \Convencao\ de produção. Homologar e dar ``pronto'' é ato humano, e um agente que o escreve afirma o que ninguém fez. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{091}} Contrato de telemetria & Evento = verbo · objeto · resultado · contexto; medida com tabela de leitura; sem WebSocket; seis papéis; quota declarada. E o que o \emph{handoff} afirma da plataforma, contra o contrato da base. & \Contrato. Comparação literal contra o contrato real da API. \\
+\textcolor{unAzul}{\textbf{101}} Contrato de telemetria & Evento = verbo · objeto · resultado · contexto; medida com tabela de leitura; sem WebSocket; seis papéis; quota declarada. E o que o \emph{handoff} afirma da plataforma, contra o contrato da base. & \Contrato. Comparação literal contra o contrato real da API. \\
 \addlinespace
-\textbf{092} Juiz da telemetria & Sobre os achados do contrato de telemetria (091), retira o de uso vedado quando o texto só cita para vedar, com citação conferida. & \Convencao, com a mesma conferência de citação do 020. \\
+\textbf{102} Juiz da telemetria & Sobre os achados do contrato de telemetria (101), retira o de uso vedado quando o texto só cita para vedar, com citação conferida. & \Convencao, com a mesma conferência de citação do 025. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{093}} Veredito do \emph{handoff} & Telemetria conforme encerra o ciclo; reprovada devolve o \emph{handoff} com o relatório. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{103}} Veredito do \emph{handoff} & Telemetria conforme encerra o ciclo; reprovada devolve o \emph{handoff} com o relatório. & \Contrato\ interno. \\
 \addlinespace
-\textbf{094} Banco de conteúdo & O texto integral de cada item do \emph{brief} --- documentos fictícios, atas, tabelas, transcrições, roteiros ---, as falas da IA simulada por estado e, quando o estudante escreve no chat, a \textbf{árvore de intenções}: gatilhos fechados e a resposta para o que não casa. Lê o núcleo aprovado. & \Convencao\ de produção. Existe porque o banco padrão saía só \emph{descrito}, e o PRD mandava codificar sobre conteúdo que não existia. \\
+\textbf{104} Banco de conteúdo & O texto integral de cada item do \emph{brief} --- documentos fictícios, atas, tabelas, transcrições, roteiros ---, as falas da IA simulada por estado e, quando o estudante escreve no chat, a \textbf{árvore de intenções}: gatilhos fechados e a resposta para o que não casa. Lê o núcleo aprovado. & \Convencao\ de produção. Existe porque o banco padrão saía só \emph{descrito}, e o PRD mandava codificar sobre conteúdo que não existia. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{095}} Banco de conteúdo conferido & Item do \emph{brief} sem texto no banco bloqueia; \emph{status} fora do vocabulário bloqueia; chat sem árvore de intenções bloqueia; estado em que a IA fala sem fala escrita fica \statusAmbar. Em ciclo com o 094. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{105}} Banco de conteúdo conferido & Item do \emph{brief} sem texto no banco bloqueia; \emph{status} fora do vocabulário bloqueia; chat sem árvore de intenções bloqueia; estado em que a IA fala sem fala escrita fica \statusAmbar. Em ciclo com o 104. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{096}} Saída do ciclo do banco & Banco de conteúdo conferido encerra o ciclo; com bloqueio, o banco reescreve com o relatório. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{106}} Saída do ciclo do banco & Banco de conteúdo conferido encerra o ciclo; com bloqueio, o banco reescreve com o relatório. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{097}} Rastro de lacunas & Marcadores em \emph{spec}, design, \emph{handoff} e assets, \textbf{por dono}. Só impede o PRD a lacuna de Dev --- ou a de etapa anterior escrita pelo próprio \emph{handoff} ou \emph{brief}. O que depende da plataforma vira pendência humana \statusAmbar. & \Contrato\ interno. A categoria \emph{humano} foi criada depois da primeira execução completa --- ver Seção~\ref{sec:execucoes}. \\
+\textcolor{unAzul}{\textbf{107}} Rastro de lacunas & Marcadores em \emph{spec}, design, \emph{handoff} e assets, \textbf{por dono}. Só impede o PRD a lacuna de Dev --- ou a de etapa anterior escrita pelo próprio \emph{handoff} ou \emph{brief}. O que depende da plataforma vira pendência humana \statusAmbar. & \Contrato\ interno. A categoria \emph{humano} foi criada depois da primeira execução completa --- ver Seção~\ref{sec:execucoes}. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{098}} Escopo da banca de Dev & Grava o escopo da banca dentro do Dev: dados e técnica, conserto só de documento de Dev. & \Contrato\ interno (Seção~\ref{sec:banca}). \\
+\textcolor{unAzul}{\textbf{108}} Escopo da banca de Dev & Grava o escopo da banca dentro do Dev: dados e técnica, conserto só de documento de Dev. & \Contrato\ interno (Seção~\ref{sec:banca}). \\
 \addlinespace
-\textbf{099a} · \textbf{099b} Banca de dados e técnica & Dados, telemetria e LGPD; técnica e arquitetura. Em paralelo, sobre os documentos de Dev. & \Contrato. A separação existe porque um avaliador único com 70 critérios erra de forma sistemática~\cite{ifscale2025} e porque falhas correlacionadas não se compensam~\cite{knight1986}. \\
+\textbf{109a} · \textbf{109b} Banca de dados e técnica & Dados, telemetria e LGPD; técnica e arquitetura. Em paralelo, sobre os documentos de Dev. & \Contrato. A separação existe porque um avaliador único com 70 critérios erra de forma sistemática~\cite{ifscale2025} e porque falhas correlacionadas não se compensam~\cite{knight1986}. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{100}} Consolidação da banca & Veredito único \statusVerde\,/\,\statusAmbar\,/\,\statusVermelho: \textbf{a pior das dimensões}, com os bloqueantes lidos do arquivo de critérios e só os achados com citação que exista. & \Contrato: regra determinística. A consolidação deixou de ser feita por um modelo justamente porque ele arredondava para cima. \\
+\textcolor{unAzul}{\textbf{110}} Consolidação da banca & Veredito único \statusVerde\,/\,\statusAmbar\,/\,\statusVermelho: \textbf{a pior das dimensões}, com os bloqueantes lidos do arquivo de critérios e só os achados com citação que exista. & \Contrato: regra determinística. A consolidação deixou de ser feita por um modelo justamente porque ele arredondava para cima. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{101}} Veredito de dev & Lê o envelope da banca. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{111}} Veredito de dev & Lê o envelope da banca. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{102}} Retrabalho da banca & Reexecuta o autor do documento de Dev que o achado aponta --- \emph{handoff}, \emph{brief} ou banco --- e reconfere o que ele reescreveu. Achado sobre a \emph{spec} ou o design vira pendência nomeada para a etapa dona. & \Contrato\ interno. Até 8 de outubro, este passo reescrevia jornada, fluxo, telas e \emph{copy} depois do parecer de Design. \\
+\textcolor{unAzul}{\textbf{112}} Retrabalho da banca & Reexecuta o autor do documento de Dev que o achado aponta --- \emph{handoff}, \emph{brief} ou banco --- e reconfere o que ele reescreveu. Achado sobre a \emph{spec} ou o design vira pendência nomeada para a etapa dona. & \Contrato\ interno. Até 8 de outubro, este passo reescrevia jornada, fluxo, telas e \emph{copy} depois do parecer de Design. \\
 \addlinespace
-\textbf{103} PRD padrão ouro & As 23 seções que alimentam quem codifica, com o contexto da plataforma lido da base fixada. Remete ao conteúdo aprovado em vez de reescrevê-lo; não crava versão do DS; não escreve \emph{status} de gate. & \Contrato\ da plataforma e da LGPD (dado de criança e adolescente). \\
+\textbf{113} PRD padrão ouro & As 23 seções que alimentam quem codifica, com o contexto da plataforma lido da base fixada. Remete ao conteúdo aprovado em vez de reescrevê-lo; não crava versão do DS; não escreve \emph{status} de gate. & \Contrato\ da plataforma e da LGPD (dado de criança e adolescente). \\
 \addlinespace
-\textcolor{unAzul}{\textbf{104}} Pendências e consistência do PRD & Marcadores, consistência interna, o PRD contra a plataforma, o design, o \emph{handoff} e o banco, e o PRD que ainda não dá para codar (Seção~\ref{sec:prdcod}). & \Contrato. Determinístico porque é comparação literal --- e porque o PRD é o documento com mais restrições simultâneas da esteira. \\
+\textcolor{unAzul}{\textbf{114}} Pendências e consistência do PRD & Marcadores, consistência interna, o PRD contra a plataforma, o design, o \emph{handoff} e o banco, e o PRD que ainda não dá para codar (Seção~\ref{sec:prdcod}). & \Contrato. Determinístico porque é comparação literal --- e porque o PRD é o documento com mais restrições simultâneas da esteira. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{105}} Coerência KPI $\leftrightarrow$ evento $\leftrightarrow$ tela & Todo indicador com pergunta, decisão, corte e um evento que dispara \emph{na tela que ele nomeia}; os sinais universais das perguntas transversais presentes na tabela de eventos. & \Contrato\ interno. Um indicador que ninguém consegue calcular promete um número que não existe. \\
+\textcolor{unAzul}{\textbf{115}} Coerência KPI $\leftrightarrow$ evento $\leftrightarrow$ tela & Todo indicador com pergunta, decisão, corte e um evento que dispara \emph{na tela que ele nomeia}; os sinais universais das perguntas transversais presentes na tabela de eventos. & \Contrato\ interno. Um indicador que ninguém consegue calcular promete um número que não existe. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{106}} PRD $\times$ \emph{one-pager} aprovado & As habilidades na matriz da seção 14, um KPI por habilidade, o tempo em tela, o podcast com requisito funcional, só caminhos de arquivo que existem, e o texto aprovado sem outra redação. & \Contrato\ com o PO. \\
+\textcolor{unAzul}{\textbf{116}} PRD $\times$ \emph{one-pager} aprovado & As habilidades na matriz da seção 14, um KPI por habilidade, o tempo em tela, o podcast com requisito funcional, só caminhos de arquivo que existem, e o texto aprovado sem outra redação. & \Contrato\ com o PO. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{107}} · \textcolor{unAzul}{\textbf{112}} Coerência com o aprovado & Um juiz aponta onde o corpo do PRD --- e, no ciclo seguinte, o do pedagógico --- afirma o contrário do conteúdo aprovado, citando os dois lados; o código confere as citações. & \Contrato\ com o PO. O pedagógico era o único documento aprovado por pessoas sem juiz de contradições. \\
+\textcolor{unAzul}{\textbf{117}} · \textcolor{unAzul}{\textbf{122}} Coerência com o aprovado & Um juiz aponta onde o corpo do PRD --- e, no ciclo seguinte, o do pedagógico --- afirma o contrário do conteúdo aprovado, citando os dois lados; o código confere as citações. & \Contrato\ com o PO. O pedagógico era o único documento aprovado por pessoas sem juiz de contradições. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{108}} Veredito do PRD & PRD conferido encerra o ciclo; reprovado devolve ao redator com a própria versão, até o teto. & \Contrato\ interno. Foi o último ciclo a ganhar volta --- ver Seção~\ref{sec:terceira}. \\
+\textcolor{unAzul}{\textbf{118}} Veredito do PRD & PRD conferido encerra o ciclo; reprovado devolve ao redator com a própria versão, até o teto. & \Contrato\ interno. Foi o último ciclo a ganhar volta --- ver Seção~\ref{sec:terceira}. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{109}} · \textcolor{unAzul}{\textbf{114}} Anexos do conteúdo aprovado & Colam no fim do PRD e do pedagógico, literais, as seções do \emph{one-pager} aprovado que o gabarito não tinha onde pôr. & \Contrato\ com o PO. Inteiro, o texto não tem como perder nada. \\
+\textcolor{unAzul}{\textbf{119}} · \textcolor{unAzul}{\textbf{124}} Anexos do conteúdo aprovado & Colam no fim do PRD e do pedagógico, literais, as seções do \emph{one-pager} aprovado que o gabarito não tinha onde pôr. & \Contrato\ com o PO. Inteiro, o texto não tem como perder nada. \\
 \addlinespace
-\textbf{110} \emph{One-pager} pedagógico & A missão inteira em linguagem de sala de aula, com o papel do professor, as telas do Stitch debaixo de cada passo, os links do protótipo e as perguntas de aprovação. Sai em Markdown, \cod{.docx} e \cod{.html}. & \Convencao\ de comunicação, com uma regra que vale citar: \textbf{nenhuma ressalva sobrevivente pode ser omitida}, mesmo com veredito verde~\cite{zheng2023}. \\
+\textbf{120} \emph{One-pager} pedagógico & A missão inteira em linguagem de sala de aula, com o papel do professor, as telas do Stitch debaixo de cada passo, os links do protótipo e as perguntas de aprovação. Sai em Markdown, \cod{.docx} e \cod{.html}. & \Convencao\ de comunicação, com uma regra que vale citar: \textbf{nenhuma ressalva sobrevivente pode ser omitida}, mesmo com veredito verde~\cite{zheng2023}. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{111}} · \textcolor{unAzul}{\textbf{113}} Pedagógico conferido & Habilidades, tempo em tela, podcast e caminhos de arquivo contra o aprovado; divergente volta ao redator. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{121}} · \textcolor{unAzul}{\textbf{123}} Pedagógico conferido & Habilidades, tempo em tela, podcast e caminhos de arquivo contra o aprovado; divergente volta ao redator. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{115}} Matriz de rastreabilidade final & A mesma matriz do design, agora até o PRD e o pedagógico. Entra no semáforo de Dev. & \Contrato\ interno. \\
+\textcolor{unAzul}{\textbf{125}} Matriz de rastreabilidade final & A mesma matriz do design, agora até o PRD e o pedagógico. Entra no semáforo de Dev. & \Contrato\ interno. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{116}} Fidelidade ao \emph{Refazer} de dev & Cada pedido feito ao Dev conferido no \emph{handoff}, no \emph{brief}, no banco, no PRD e no pedagógico. Sem pedido de Dev, não roda. & \Contrato\ com quem pediu. \\
+\textcolor{unAzul}{\textbf{126}} Fidelidade ao \emph{Refazer} de dev & Cada pedido feito ao Dev conferido no \emph{handoff}, no \emph{brief}, no banco, no PRD e no pedagógico. Sem pedido de Dev, não roda. & \Contrato\ com quem pediu. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{117}} Diagnóstico da execução & O dossiê: como cada portão se saiu, o que trava, de quem é cada conserto, o que saiu provisório e que documento faltou --- e, no cabeçalho, de qual base da plataforma a missão foi escrita. Sem modelo de linguagem. & \Contrato\ interno. \textbf{Roda sempre}, inclusive quando tudo o mais falhou --- é a peça que sustenta a decisão de não abortar. \\
+\textcolor{unAzul}{\textbf{127}} Diagnóstico da execução & O dossiê: como cada portão se saiu, o que trava, de quem é cada conserto, o que saiu provisório e que documento faltou --- e, no cabeçalho, de qual base da plataforma a missão foi escrita. Sem modelo de linguagem. & \Contrato\ interno. \textbf{Roda sempre}, inclusive quando tudo o mais falhou --- é a peça que sustenta a decisão de não abortar. \\
 \addlinespace
-\textbf{118} Aprendizado & A leitura em prosa do diagnóstico, mais padrões aprendidos, lacunas com dono e candidatos a critério. & \Convencao. \\
+\textbf{128} Aprendizado & A leitura em prosa do diagnóstico, mais padrões aprendidos, lacunas com dono e candidatos a critério. & \Convencao. \\
 \addlinespace
-\textcolor{unAzul}{\textbf{119}} Registro no catálogo & A memória entre execuções: registra a missão no índice, mostra as mais próximas e acusa identificador repetido --- que é decisão humana, não aviso. \emph{Status} derivado dos gates. & \Contrato\ interno. \textbf{Promover é ato humano}. Missão bloqueada entra no índice de propósito: o que se quer evitar é reinventá-la. \\
+\textcolor{unAzul}{\textbf{129}} Registro no catálogo & A memória entre execuções: registra a missão no índice, mostra as mais próximas e acusa identificador repetido --- que é decisão humana, não aviso. \emph{Status} derivado dos gates. & \Contrato\ interno. \textbf{Promover é ato humano}. Missão bloqueada entra no índice de propósito: o que se quer evitar é reinventá-la. \\
 \bottomrule
 \end{longtable}
 \end{center}
@@ -2582,7 +2755,7 @@ A missão do 9.\textsuperscript{o} ano --- \cod{exp09ef1b}, ``O Dossiê Invisív
 \sffamily\bfseries\footnotesize\color{unNavy}O defeito & \sffamily\bfseries\footnotesize\color{unNavy}Por que nenhum portão viu & \sffamily\bfseries\footnotesize\color{unNavy}O que entrou \\
 \midrule
 \endhead
-\footnotesize \textbf{Caminhos A e B invertidos} em relação ao que o PO pediu. & \footnotesize O PO pediu \emph{Refazer} duas vezes; o segundo pedido apagou o primeiro, que era o que definia A e B. E o gate final escreveu que o pedido estava ``integralmente atendido''. & \footnotesize Os pedidos se acumulam e chegam a todas as etapas; a fidelidade confere cada um, com citação (010 e 050). \\
+\footnotesize \textbf{Caminhos A e B invertidos} em relação ao que o PO pediu. & \footnotesize O PO pediu \emph{Refazer} duas vezes; o segundo pedido apagou o primeiro, que era o que definia A e B. E o gate final escreveu que o pedido estava ``integralmente atendido''. & \footnotesize Os pedidos se acumulam e chegam a todas as etapas; a fidelidade confere cada um, com citação (010 e 060). \\
 \addlinespace
 \footnotesize \textbf{A frase da descoberta cortada} --- a parte final, a que dava sentido, sumiu. & \footnotesize Nada comparava o texto entre aspas do PO com o documento. & \footnotesize Frase entre aspas nas TRAVAS é conferida letra por letra, sem juiz. \\
 \addlinespace
@@ -2590,11 +2763,11 @@ A missão do 9.\textsuperscript{o} ano --- \cod{exp09ef1b}, ``O Dossiê Invisív
 \addlinespace
 \footnotesize \textbf{O projeto ``invisível'' trocado} (Ana virou João), e com isso \textbf{a conta do custo por vaga não fechava}: o projeto que devia perder já vencia antes da virada. & \footnotesize O juiz de profundidade deu nota 4 à virada citando justamente o custo. Ninguém fez a conta. & \footnotesize A tabela 1.3 do núcleo e a conta refeita em código (009); a troca de nome é item de fidelidade. \\
 \addlinespace
-\footnotesize \textbf{O banco padrão e as falas da IA só descritos}: atas, tabelas e cadernos apareciam no \emph{brief} com peso e tela, sem uma linha escrita; a IA tinha quatro falas na missão inteira; o \emph{brief} marcava ``Homologado'' em arquivo inexistente. & \footnotesize Ninguém tinha a tarefa de escrever o conteúdo, e o PRD leu o \emph{status} como fato. & \footnotesize O banco de conteúdo (094) e a conferência dele (095); \emph{status} com vocabulário fechado. \\
+\footnotesize \textbf{O banco padrão e as falas da IA só descritos}: atas, tabelas e cadernos apareciam no \emph{brief} com peso e tela, sem uma linha escrita; a IA tinha quatro falas na missão inteira; o \emph{brief} marcava ``Homologado'' em arquivo inexistente. & \footnotesize Ninguém tinha a tarefa de escrever o conteúdo, e o PRD leu o \emph{status} como fato. & \footnotesize O banco de conteúdo (104) e a conferência dele (105); \emph{status} com vocabulário fechado. \\
 \addlinespace
-\footnotesize \textbf{Quatro nomes para o mesmo órgão} municipal; beneficiários de 14 anos que viraram coordenadores na \emph{copy}; ``2 dias por semana'' que virou ``180 dias de registros''. & \footnotesize Cada documento, sozinho, estava bem escrito. Nenhum agente lia os cinco juntos, e não havia lista do que é canônico. & \footnotesize O glossário canônico na \emph{spec} e a coerência entre documentos (072). \\
+\footnotesize \textbf{Quatro nomes para o mesmo órgão} municipal; beneficiários de 14 anos que viraram coordenadores na \emph{copy}; ``2 dias por semana'' que virou ``180 dias de registros''. & \footnotesize Cada documento, sozinho, estava bem escrito. Nenhum agente lia os cinco juntos, e não havia lista do que é canônico. & \footnotesize O glossário canônico na \emph{spec} e a coerência entre documentos (082). \\
 \addlinespace
-\footnotesize \textbf{O QA aprovou ``todas as 16 telas''} ao lado de um Stitch com 6, e apontou o protótipo num arquivo que a esteira não grava. & \footnotesize O QA é um modelo; o que ele escreve sobre contagem ninguém conferia. & \footnotesize As afirmações do QA conferidas (079) e o Stitch contado contra o inventário (066) --- e, depois, gerado inteiro fora do modelo (066). \\
+\footnotesize \textbf{O QA aprovou ``todas as 16 telas''} ao lado de um Stitch com 6, e apontou o protótipo num arquivo que a esteira não grava. & \footnotesize O QA é um modelo; o que ele escreve sobre contagem ninguém conferia. & \footnotesize As afirmações do QA conferidas (089) e o Stitch contado contra o inventário (076) --- e, depois, gerado inteiro fora do modelo (076). \\
 \addlinespace
 \footnotesize \textbf{O PRD preso à plataforma de 16 de setembro}: seção \cod{chatgpt}, uma ``ADR-108 proposta'', DS 0.2.2 --- e sem atividades, equipes nem evidência. & \footnotesize A cópia da plataforma no repositório estava 320 \emph{commits} atrás, e nada dizia de quando ela era. & \footnotesize A base no \emph{bucket}, publicada pela própria plataforma; o PRD conferido contra o contrato; a base no cabeçalho do diagnóstico (Seção~\ref{sec:base}). \\
 \addlinespace
@@ -2749,10 +2922,15 @@ output/20261008-101500-session_0a1b2c3d/
 |   |-- 00d-one-pager-resumido.{md,docx,html}  # o formato do time de produto
 |   |-- 00e-contrato-produto.md     # lint de contrato de plataforma
 |   |-- 00f-brief-escopo.md         # o brief de escopo, separado
+|   |-- 00k-contrato-evidencia-12a.md   # a forma do 12a, antes do voto
+|   |-- 00l-comite-canais-painel-a.md   # mecanica e Canal A: votos e achados
+|   |-- 00m-comite-canais-painel-b.md   # Canal B: votos e achados
 |   |-- 01-gate-estrutural.md       # os criterios e o envelope
 |   |-- 02-avaliacao-pedagogica.md  # BNCC, professor e guardrails
 |   |-- 03-experiencia-aluno.md     # carga cognitiva, faixa e agencia
 |   |-- 03b-adequacao-pedagogica.md # parecer em seis eixos
+|   |-- 03c-conta-da-virada-one-pager.md  # a conta da tabela 1.3, no one-pager
+|   |-- 03d-comite-final.md         # pedagogia, qualidade e imersao
 |   |-- 04-gate-final.md            # liberacao formal de produto
 |   |-- 05-spec-missao.md           # o contrato de construcao + glossario canonico
 |   |-- 05a-spec-missao-gate0.md    # a spec antes do fechamento de lacunas
@@ -2866,7 +3044,9 @@ O \cod{PRD.md} segue um gabarito único (\cod{prompts/references/prd-padrao-ouro
   \item[Banco de conteúdo] O texto integral de cada documento, tabela e roteiro que a missão mostra, e as falas da IA simulada por estado. Escrito por agente, com \emph{status} ``escrito''; homologar é da curadoria.
   \item[Base da plataforma] O retrato da plataforma e do \emph{design system} que a execução leu, publicado pelo CI de cada um num \emph{bucket} próprio, que o gerador só lê, e fixado no começo da execução. O diagnóstico diz qual foi.
   \item[CAA] Comunicação aumentativa e alternativa: símbolos, pranchas e modos de resposta para estudantes que não respondem por texto.
+  \item[Canal A, Canal B] As duas evidências de cada habilidade no \S12a: a \textbf{ação} que o sistema observa em tela e classifica em três níveis (Canal A, obrigatório em toda habilidade desde 15/10/2026) e a \textbf{pergunta} de três alternativas, uma por nível, que soma a ela (Canal B, opcional).
   \item[Citação conferida] O trecho literal que um juiz de modelo traz para sustentar um achado, procurado pelo código no documento. Citação que não existe rebaixa o achado.
+  \item[Comitê pedagógico] Três juízes de modelo, cada um com uma lente, que votam sobre a missão em Produto: o comitê dos canais (mecânica, Canal A e Canal B) e o comitê final (pedagogia, qualidade e imersão). Unanimidade aprova, o voto é contado em código e o comitê não escreve: reprovada, a missão volta ao núcleo e às seções de apoio.
   \item[Conceito limiar] O conceito do material do bimestre que, uma vez compreendido, muda como o estudante vê o resto. Sai do mapa conceitual e tem de viver no Decidir ou no ``ahá''.
   \item[Conteúdo aprovado] As seções do \emph{one-pager} aprovado, literais, entregues a cada agente de Design e de Dev e coladas no fim do PRD e do pedagógico. É contra ele que os documentos a jusante são conferidos.
   \item[Conta da virada] A tabela 1.3 do núcleo: opções, critérios, pesos e valores antes e depois do dado que faltava. O código refaz o ranking e confere que a virada existe.
@@ -2884,7 +3064,7 @@ O \cod{PRD.md} segue um gabarito único (\cod{prompts/references/prd-padrao-ouro
   \item[Matriz de rastreabilidade] Cada requisito do produto procurado em cada documento que tem de carregá-lo, com o dono de cada perda. Sai no fim do Design e no fim do Dev.
   \item[Micro-gate] O portão do agente 007, que audita o núcleo narrativo antes de qualquer construção.
   \item[Ofício] O papel que o estudante assume na simulação, e que justifica as ferramentas que ele usa.
-  \item[\emph{One-pager}] O documento canônico de 18 seções (Produto) e, no fim da esteira, o documento de validação humana (agente 110).
+  \item[\emph{One-pager}] O documento canônico de 18 seções (Produto) e, no fim da esteira, o documento de validação humana (agente 120).
   \item[\emph{One-pager} do PO] O \emph{one-pager} que o PO anexa a uma conversa nova. Vira a base da missão: a esteira completa e confere trecho a trecho, e não o redesenha.
   \item[Passagem] O momento entre duas etapas: semáforo dos gates, parecer do dono, recebimento pelo dono seguinte. Registrada no histórico da missão.
   \item[Pedido do PO] O comentário de um \emph{Refazer}. Todos se acumulam e valem para todas as etapas. O verificador de fidelidade o recorta em código, frase a frase e item a item, em qualquer formato; os blocos TRAVAS, AJUSTE e VALIDAÇÃO são aceitos, não obrigatórios.
@@ -3048,7 +3228,7 @@ ZHENG, L.; CHIANG, W.-L.; SHENG, Y. et al. Judging LLM-as-a-judge with MT-Bench 
 \includegraphics[width=4.6cm]{marca/logotipo-navy.png}\\[1.4em]
 {\color{unLavanda}\rule{3.0cm}{1.2pt}}\\[1.2em]
 {\sffamily\color{unNavy}\small Manual do Gerador de Missões}\\[0.3em]
-{\color{unLavanda}\footnotesize Outubro de 2026 · 4.\textsuperscript{a} edição · documento de trabalho, uso interno}\\[0.3em]
+{\color{unLavanda}\footnotesize Outubro de 2026 · 6.\textsuperscript{a} edição · documento de trabalho, uso interno}\\[0.3em]
 {\color{unLavanda}\footnotesize Unooria Educação e Tecnologia}
 \end{center}
 \vfill
