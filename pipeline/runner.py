@@ -50,8 +50,11 @@ STATUS_KEYS = [
     "catalogo_indice_status",
     "micro_gate_status",
     "micro_gate_rodada",
+    "evidencia_one_pager_status",
+    "comite_canal_a_status", "comite_canal_b_status", "comite_canais_rodada",
     "gate_estrutural_status",
     "gate_estrutural_rodada",
+    "mecanica_one_pager_status", "comite_final_status", "comite_final_externo_rodada",
     "avaliacao_status", "experiencia_status", "adequacao_status", "gate_final_status",
     "bncc_status",
     "lacunas_status",
@@ -224,7 +227,7 @@ _RE_VARIAVEL_AUSENTE = re.compile(r"Context variable not found: `(\w+)` in agent
 
 
 def mensagem_de_erro(exc: BaseException) -> str:
-    """O erro como o PO consegue ler. O ADK diz "Context variable not found: `one_pager` in agent 'A021…'" quando o
+    """O erro como o PO consegue ler. O ADK diz "Context variable not found: `one_pager` in agent 'A026…'" quando o
     agente que escreve um documento termina sem texto e o seguinte precisa dele (exp03ef1b, 08/10/2026, duas vezes)."""
     m = _RE_VARIAVEL_AUSENTE.search(str(exc))
     if m:
@@ -391,7 +394,7 @@ async def run_orchestrator_pipeline_stream(
                 _cfg = get_settings()
                 yield {"type": "custo_parcial", "timestamp": time.time(),
                        "custo": _custo_da_execucao(tokens_por_agente, _cfg.gemini_model,
-                                                   {"A103PrdWriter": _cfg.gemini_model_prd}),
+                                                   {"A113PrdWriter": _cfg.gemini_model_prd}),
                        "missao_antes": ((initial_state or {}).get(_KEY_CUSTO) or {}).get("total") or {}}
 
             if author != current_agent and author != "user":
@@ -494,7 +497,7 @@ async def run_orchestrator_pipeline_stream(
         # uma linha, e o total é o da missão inteira.
         from tools.custo import KEY_CUSTO, acumular, custo_da_execucao
 
-        modelo_por_agente = {"A103PrdWriter": settings_exec.gemini_model_prd}
+        modelo_por_agente = {"A113PrdWriter": settings_exec.gemini_model_prd}
         esta = custo_da_execucao(tokens_por_agente, settings_exec.gemini_model, modelo_por_agente)
         final_state["execucao"]["custo"] = esta
         final_state[KEY_CUSTO] = acumular((initial_state or {}).get(KEY_CUSTO) or final_state.get(KEY_CUSTO),

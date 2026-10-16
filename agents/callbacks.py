@@ -151,7 +151,7 @@ def marcar_heranca(callback_context: CallbackContext) -> Optional[types.Content]
 def preservar_one_pager(callback_context: CallbackContext) -> None:
     """Guarda a primeira versão do one-pager antes de o revisor começar a sobrescrevê-la.
 
-    `A023RevisorOnePager` grava na mesma chave que o autor (`one_pager`), de propósito —
+    `A028RevisorOnePager` grava na mesma chave que o autor (`one_pager`), de propósito —
     é assim que os 17 prompts a jusante leem sempre a versão corrente. O efeito colateral
     é que a versão original desaparecia: a spec tinha `spec_missao_gate0`, o one-pager não
     tinha equivalente. Sem ele, não há como mostrar o que mudou entre rodadas.
@@ -303,6 +303,53 @@ IDEACAO_DISPENSADA = (
 )
 
 
+def pular_juiz_sem_canal_b(chave: str):
+    """before_agent_callback de um juiz do painel B: missão sem Canal B no §12a não tem pergunta a julgar.
+
+    O juiz não roda e o voto dele é gravado como dispensado (aprova sem custo). O `Content` devolvido não vai sozinho
+    para o `output_key` — só o que o callback põe no estado entra no evento —, por isso a gravação explícita.
+    """
+    def _callback(callback_context: CallbackContext) -> Optional[types.Content]:
+        from tools.comite import envelope_dispensado
+        from tools.evidencia import habilidades_com_canal_b
+
+        com_b = habilidades_com_canal_b(str(callback_context.state.get("one_pager") or ""))
+        if com_b is None or com_b:
+            return None
+        texto = envelope_dispensado("nenhuma habilidade do §12a tem Canal B: não há pergunta a julgar")
+        callback_context.state[chave] = texto
+        return types.Content(role="model", parts=[types.Part(text=texto)])
+
+    return _callback
+
+
+#: Os comitês cujo voto devolve a missão a quem a escreve (`agents/comite.py`).
+STATUS_DOS_COMITES = ("comite_canal_a_status", "comite_canal_b_status", "comite_final_status")
+
+
+def manter_nucleo_sem_achado_do_a004(callback_context: CallbackContext) -> Optional[types.Content]:
+    """before_agent_callback do loop do núcleo dentro dos comitês: sem nada para o A004, o núcleo fica como está.
+
+    Reprovada por um comitê, a missão volta ao núcleo e às seções de apoio. Quando nenhum comitê reprovado aponta
+    achado para o A004 — nem achado sem autor — e o contrato do §12a está em forma, reescrever o núcleo só gastaria o
+    autor, o micro-gate e o juiz de profundidade para devolver o mesmo texto. Na dúvida, o núcleo roda.
+    """
+    from tools import citacoes
+
+    state = callback_context.state
+    if not str(state.get("nucleo_narrativo") or "").strip():
+        return None
+    reprovados = [e for e in (state.get(f"{k}_envelope") for k in STATUS_DOS_COMITES)
+                  if isinstance(e, dict) and str(e.get("status") or "") == "bloqueado"]
+    if not reprovados or str(state.get("evidencia_one_pager_status") or "") == "bloqueado":
+        return None
+    if any(str(a.get("autor") or "") in ("A004", "") for e in reprovados for a in e.get("achados") or []
+           if isinstance(a, dict) and citacoes.bloqueante(a)):
+        return None
+    return types.Content(role="model", parts=[types.Part(
+        text="⏭️ Núcleo mantido: os comitês não apontaram nada para o A004 nesta rodada; só as seções de apoio corrigem.")])
+
+
 def dispensar_ideacao_com_one_pager_do_po(callback_context: CallbackContext) -> Optional[types.Content]:
     """before_agent_callback da ideação: com o one-pager do PO no estado, não se inventam três mecanismos.
 
@@ -318,7 +365,7 @@ def dispensar_ideacao_com_one_pager_do_po(callback_context: CallbackContext) -> 
 def desembrulhar_documento(chave: str):
     """after_agent_callback: tira a cerca ```markdown que envolve o documento inteiro, logo que ele é gravado.
 
-    Na exp09ef1b o redator embrulhou o PRD: a conferência PRD × aprovado (A106) não achava a §14 dentro da cerca e
+    Na exp09ef1b o redator embrulhou o PRD: a conferência PRD × aprovado (A116) não achava a §14 dentro da cerca e
     acusava habilidade sem KPI que estava lá, deixava passar o tempo de etapa divergente, e o anexo literal entrava
     depois da cerca — aí a gravação não reconhecia mais o invólucro e o `PRD.md` abria como bloco de código.
     """

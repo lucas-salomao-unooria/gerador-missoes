@@ -32,6 +32,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from google.adk.agents.base_agent import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event, EventActions
+from google.adk.utils.context_utils import Aclosing
 from google.genai import types
 from pydantic import Field
 from typing_extensions import override
@@ -589,7 +590,7 @@ class ArtefatosDesignAgent(BaseAgent):
     fonte_wireframes: str = "wireframes_cobertura"
     #: Telas no Stitch × inventário da jornada. Na exp09ef1b o Stitch tinha 6 das 16 telas e o QA escreveu
     #: "todas as 16 telas ativas"; aqui só se avisava a falta de `E0-PROF`. Menos telas que o inventário
-    #: bloqueia, com dono `telas` — o `A079QaAfirmacoes` leva o ticket ao retrabalho.
+    #: bloqueia, com dono `telas` — o `A089QaAfirmacoes` leva o ticket ao retrabalho.
     status_key: str = "stitch_status"
 
     @override
@@ -739,7 +740,7 @@ class QaAfirmacoesAgent(BaseAgent):
             novo["status"], novo["veredito"] = "bloqueado", "vermelho"
             novo["achados"] = list(envelope.get("achados") or []) + [
                 {"id": f"QA-A{i}", **a} for i, a in enumerate(tickets, 1)]
-            delta[self.qa_key] = (qa.rstrip() + "\n\n## Afirmações conferidas em código (A079)\n\n"
+            delta[self.qa_key] = (qa.rstrip() + "\n\n## Afirmações conferidas em código (A089)\n\n"
                                   + "\n".join(f"- ⛔ `{a['codigo']}` — {a['resumo']}" for a in tickets)
                                   + "\n\nO veredito acima foi reescrito: aprovar com uma contagem que não bate é aprovar "
                                     "o que ninguém viu.\n\n```json\n" + json.dumps(novo, ensure_ascii=False) + "\n```\n")
@@ -1018,7 +1019,7 @@ class CoberturaTelasAgent(BaseAgent):
     o protótipo com um quadro por tela em vez de um por estado, enquanto os gates aprovavam: comparavam
     contagem, não IDs. Aqui a lista vem da tabela «Seção 3» da jornada (`tools/telas.py`) e cada
     derivado (fluxo, copy revisada, cobertura, protótipo) é conferido por conjunto; cada falta sai com o
-    dono do conserto, e o `A079QaAfirmacoes` a leva ao retrabalho.
+    dono do conserto, e o `A089QaAfirmacoes` a leva ao retrabalho.
     """
 
     report_key: str = "cobertura_telas_report"
@@ -1143,7 +1144,7 @@ class ConsolidacaoBancaAgent(BaseAgent):
     report_key: str = "validacao_dev_report"
     status_key: str = "dev_status"
     rotulo: str = "Banca de dev"
-    #: Grava o status aqui mesmo. A banca de dev tem um gate de envelope depois (A101) que o grava; as bancas de fim
+    #: Grava o status aqui mesmo. A banca de dev tem um gate de envelope depois (A111) que o grava; as bancas de fim
     #: de produto, fim de design e entrada do dev não têm.
     gravar_status: bool = False
     titulo: str = "Validação de insumos"
@@ -1237,7 +1238,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria | evidencia | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico | aprovado_resumido | aprovado_spec_design
+    modo: str  # lacunas | manifesto | telemetria | evidencia | evidencia_one_pager | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico | aprovado_resumido | aprovado_spec_design
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -1285,6 +1286,12 @@ class RastroCheckAgent(BaseAgent):
 
             resultado = ev.validar(str(state.get(self.spec_key, "") or ""))
             relatorio = ev.relatorio(resultado, missao)
+        elif self.modo == "evidencia_one_pager":
+            # O §12a onde ele nasce, a cada rodada dos comitês: forma antes de voto (comitês de 15/10/2026).
+            from tools import evidencia as ev
+
+            resultado = ev.conferir_one_pager(str(state.get("one_pager", "") or ""))
+            relatorio = ev.relatorio_one_pager(resultado, missao)
         elif self.modo == "perguntas":
             # As cinco perguntas de produto do sub-bloco 9f, onde a pergunta NASCE. Conferir aqui
             # custa uma reescrita da spec; deixar passar custa o PRD inteiro duas etapas adiante.
@@ -1433,11 +1440,14 @@ class RastroCheckAgent(BaseAgent):
             # mandou (exp06ef1b, 08/10/2026: 253 de 304 trechos reescritos num pedido de três correções).
             from tools import one_pager_po as op
 
-            # o brief de escopo sai do `one_pager` antes do gate estrutural (A018BriefEscopoSplit): o do PO é conferido
+            # o brief de escopo sai do `one_pager` antes do gate estrutural (A023BriefEscopoSplit): o do PO é conferido
             # contra os dois juntos, senão as linhas do brief dele contariam como perdidas
             gerado = "\n\n".join(str(state.get(k, "") or "") for k in ("one_pager", "brief_escopo"))
+            from tools.comite import texto_votos
+
             resultado = op.conferir(str(state.get("one_pager_po", "") or ""), gerado,
-                                    briefing=str(state.get("briefing", "") or ""), pedidos=_pedidos_de_produto(state))
+                                    briefing=str(state.get("briefing", "") or ""), pedidos=_pedidos_de_produto(state),
+                                    votos=texto_votos(state))
             relatorio = op.relatorio(resultado, missao)
         elif self.modo == "aprovado_spec_design":
             # a spec que o D0 e o D9 reescreveram: só o que eles pioraram, com o dono do D0 (07/10/2026)
@@ -2310,12 +2320,15 @@ class MecanicaCheckAgent(BaseAgent):
 
     report_key: str = "mecanica_report"
     status_key: str = "mecanica_status"
+    #: O documento que traz a tabela 1.3. Nos comitês é o `one_pager`: o autor pode ter mudado a mecânica depois do
+    #: loop do núcleo, e a conta é refeita sobre a versão que o comitê julga.
+    chave: str = "nucleo_narrativo"
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         from tools import mecanica as mec
 
-        nucleo = str(ctx.session.state.get("nucleo_narrativo", "") or "")
+        nucleo = str(ctx.session.state.get(self.chave, "") or "")
         resultado = mec.validar(nucleo)
         relatorio = mec.relatorio(resultado, extrair_slug(nucleo) or "")
         icone = {"aprovado": "✅", "amarelo": "🟡", "bloqueado": "⛔"}[resultado["status"]]
@@ -2466,7 +2479,7 @@ class SaidaDeLoopAgent(BaseAgent):
         rodada = int(state.get(self.rodada_key, 0) or 0) + 1
         # Chave ausente conta como REPROVADA. O `k in state` fazia o loop encerrar com
         # aprovação quando o gate a montante não tinha escrito nada — e era o caso do
-        # `adequacao_status`, que nenhum agente gravava: o `A028AdequacaoCheck` aprovava
+        # `adequacao_status`, que nenhum agente gravava: o `A033AdequacaoCheck` aprovava
         # sempre, sobre uma chave que nunca existiu.
         reprovados = [
             k for k in self.status_keys
@@ -2516,3 +2529,106 @@ class SaidaDeLoopAgent(BaseAgent):
             content=types.Content(role="model", parts=[types.Part(text=msg)]),
             actions=EventActions(state_delta=delta, escalate=escalate or None),
         )
+
+
+class ComiteVotosAgent(BaseAgent):
+    """Conta os votos de um painel do comitê pedagógico (`tools/comite.py`). Determinístico.
+
+    Três juízes votam em paralelo; este agente lê os três relatórios, confere no documento julgado a citação de cada
+    bloqueio e grava o veredito: unanimidade aprova; sem ela, a missão volta a quem a escreve (A004 e A014), e na última
+    rodada segue com 🟡 e os votos vencidos à vista. Não registra degradação — o 🟡 do teto vai ao parecer do PO.
+    """
+
+    #: chave de saída de cada juiz → rótulo dele no relatório
+    fontes: Dict[str, str] = Field(default_factory=dict)
+    #: onde a citação de cada bloqueio é conferida
+    documentos: List[str] = Field(default_factory=lambda: ["nucleo_narrativo", "one_pager", "brief_escopo"])
+    report_key: str
+    status_key: str
+    round_key: str
+    max_rounds: int = 5
+    rotulo: str = "Comitê"
+    titulo: str = "Comitê pedagógico"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import citacoes, comite
+
+        state = ctx.session.state
+        rodada = int(state.get(self.round_key, 0) or 0) + 1
+        resultado = comite.consolidar({k: str(state.get(k, "") or "") for k in self.fontes},
+                                      citacoes.texto_dos_documentos(state, self.documentos), rodada, self.max_rounds)
+        missao = extrair_slug(str(state.get("one_pager") or state.get("nucleo_narrativo") or "")) or ""
+        relatorio = comite.relatorio(resultado, self.titulo, self.fontes, missao)
+        n = len(resultado["votos"])
+        icone = {"aprovado": "✅", "amarelo": "🟡", "bloqueado": "🔁"}[resultado["status"]]
+        msg = (f"{icone} {self.rotulo}: {n - resultado['contra']} de {n} aprovam na rodada "
+               f"{rodada}/{self.max_rounds} — `{resultado['status']}`.")
+        yield Event(
+            invocation_id=ctx.invocation_id,
+            author=self.name,
+            branch=ctx.branch,
+            content=types.Content(role="model", parts=[types.Part(text=msg)]),
+            actions=EventActions(state_delta={self.report_key: relatorio,
+                                              self.status_key: resultado["status"],
+                                              f"{self.status_key}_envelope": comite.envelope(resultado),
+                                              self.round_key: rodada}),
+        )
+
+
+#: Atributos em que um agente guarda o contador de rodada que lê e incrementa.
+_CAMPOS_DE_RODADA = ("round_key", "rodada_key")
+
+
+def chaves_de_rodada(agente: BaseAgent) -> List[str]:
+    """Os contadores de rodada de um agente e de toda a árvore abaixo dele."""
+    chaves: List[str] = []
+    for campo in _CAMPOS_DE_RODADA:
+        valor = getattr(agente, campo, "")
+        if isinstance(valor, str) and valor:
+            chaves.append(valor)
+    for sub in agente.sub_agents:
+        chaves += chaves_de_rodada(sub)
+    return list(dict.fromkeys(chaves))
+
+
+class LoopIsolado(BaseAgent):
+    """Roda um loop dentro de outro sem que a saída de um encerre o outro.
+
+    O `LoopAgent` do ADK encerra quando QUALQUER evento de um subagente traz `escalate`
+    (`google/adk/agents/loop_agent.py`), e o loop interno repassa o evento da saída dele. Sem isolar, o comitê dos
+    canais terminaria no instante em que o loop do núcleo aprovasse. Este agente repassa uma cópia de cada evento sem
+    `escalate` — o original, que o loop interno ainda lê depois do `yield`, fica intacto.
+
+    E zera, antes de cada volta, os contadores de rodada da árvore interna: eles vivem no estado da sessão, e na segunda
+    volta do comitê o núcleo entraria com as rodadas esgotadas e sairia sem deixar o autor corrigir nada.
+    """
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        interno = self.sub_agents[0]
+        state = ctx.session.state
+        sujos = {k: 0 for k in chaves_de_rodada(interno) if int(state.get(k, 0) or 0)}
+        if sujos:
+            yield Event(
+                invocation_id=ctx.invocation_id,
+                author=self.name,
+                branch=ctx.branch,
+                content=types.Content(role="model", parts=[types.Part(
+                    text=f"🔁 {interno.name}: nova volta, contadores de rodada zerados.")]),
+                actions=EventActions(state_delta=sujos),
+            )
+        async with Aclosing(interno.run_async(ctx)) as agen:
+            async for event in agen:
+                if event.actions and event.actions.escalate:
+                    copia = event.model_copy()
+                    copia.actions = event.actions.model_copy(update={"escalate": None})
+                    yield copia
+                else:
+                    yield event
+
+
+def isolar(loop: BaseAgent) -> LoopIsolado:
+    """`LoopIsolado` com o nome do loop que ele envolve."""
+    return LoopIsolado(name=f"{loop.name}Isolado", description=f"{loop.description} (isolado: dentro de outro loop)",
+                       sub_agents=[loop])

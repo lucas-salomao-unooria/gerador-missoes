@@ -74,6 +74,11 @@ KNOWN_STATE_KEYS = {
     "conteudo_aprovado_prd_status", "conteudo_aprovado_pedagogico_report", "conteudo_aprovado_pedagogico_status",
     "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "one_pager_po", "one_pager_po_report", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
+    # os comitês pedagógicos (15/10/2026)
+    "evidencia_one_pager_report", "mecanica_one_pager_report", "comite_canal_a_report", "comite_canal_b_report",
+    "comite_final_report", "comite_canal_a_curriculo", "comite_canal_a_medida", "comite_canal_a_vivencia",
+    "comite_canal_b_curriculo", "comite_canal_b_medida", "comite_canal_b_experiencia", "comite_final_pedagogia",
+    "comite_final_qualidade", "comite_final_imersao",
     "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida",
     # a banca nas quatro posições (08/10/2026)
     *("rodada_anterior_" + c for c in ("spec_missao", "one_pager_resumido", "handoff_dev", "brief_assets",
@@ -129,28 +134,35 @@ REQUIRED_ALLOWED = {"one_pager", "gate_estrutural_report", "nucleo_narrativo"}
 
 EXPECTED_AGENTS = {
     "A002MapaConceitual", "A003IdeacaoMecanismos", "A006CoberturaConceitual", "A008JuizProfundidade",
-    "A011ProfundidadeCheck", "A013NucleoCheck", "A010FidelidadeNucleo", "A050FidelidadeProduto", "A009ContaDaVirada",
+    "A011ProfundidadeCheck", "A013NucleoCheck", "A010FidelidadeNucleo", "A060FidelidadeProduto", "A009ContaDaVirada",
     "NucleoNarrativoLoop", "A004NucleoNarrativo", "A007MicroGate", "A012MicroGateCheck", "A014SecoesApoio",
-    "GateEstruturalLoop", "A019ContratoProdutoCheck", "A021GateEstrutural", "A022GateEstruturalCheck", "A023RevisorOnePager",
-    "AvaliacoesParalelas", "A024aAvaliacaoPedagogica", "A024bExperienciaEstudante",
-    "A024cAdequacaoPedagogica",
-    "A028AdequacaoCheck",
-    "A029RevisorOnePagerParecer",
-    "AvaliacoesLoop", "A033GateFinalProduto",
-    "A034GateFinalProdutoCheck", "A035SpecMissao", "A036BnccCheck", "A051OnePagerResumido", "DesignStage", "A055FechaLacunas", "A056FechaLacunasSplit",
-    "A057AmbienteSimulado", "A058AmbienteSimuladoSplit", "A060BriefOficio", "A061Jornada",
-    "A062Fluxo", "A063CopyPtBr", "A064Caa", "A065Telas", "A067CopyRevisao", "A078QaEntregaveis",
-    "A069Prototipo", "A070ArtefatosDesign", "A074EspelhoMiro", "A072Consistencia", "A079QaAfirmacoes", "A080QaEntregaveisCheck", "DevStage", "A089ManifestoCheck", "HandoffParalelo", "A090aHandoffDev", "A090bBriefAssets", "A094BancoConteudo", "A095ConteudoCheck",
-    "A091TelemetriaCheck", "A097LacunaCheck", "A104PrdCheck",
-    "BancaValidacaoDev", "A099aBancaDadosLgpd", "A099bBancaTecnicaArquitetura",
+    "GateEstruturalLoop", "A024ContratoProdutoCheck", "A026GateEstrutural", "A027GateEstruturalCheck", "A028RevisorOnePager",
+    "AvaliacoesParalelas", "A029aAvaliacaoPedagogica", "A029bExperienciaEstudante",
+    "A029cAdequacaoPedagogica",
+    "A033AdequacaoCheck",
+    "A034RevisorOnePagerParecer",
+    "AvaliacoesLoop", "A043GateFinalProduto",
+    "A044GateFinalProdutoCheck", "A045SpecMissao", "A046BnccCheck", "A061OnePagerResumido", "DesignStage", "A065FechaLacunas", "A066FechaLacunasSplit",
+    "A067AmbienteSimulado", "A068AmbienteSimuladoSplit", "A070BriefOficio", "A071Jornada",
+    "A072Fluxo", "A073CopyPtBr", "A074Caa", "A075Telas", "A077CopyRevisao", "A088QaEntregaveis",
+    "A079Prototipo", "A080ArtefatosDesign", "A084EspelhoMiro", "A082Consistencia", "A089QaAfirmacoes", "A090QaEntregaveisCheck", "DevStage", "A099ManifestoCheck", "HandoffParalelo", "A100aHandoffDev", "A100bBriefAssets", "A104BancoConteudo", "A105ConteudoCheck",
+    "A101TelemetriaCheck", "A107LacunaCheck", "A114PrdCheck",
+    "BancaValidacaoDev", "A109aBancaDadosLgpd", "A109bBancaTecnicaArquitetura",
     # a banca nas quatro posições (08/10/2026): fim de produto, fim de design e entrada do dev
-    "A047aBancaProdutoNarrativa", "A047bBancaPedagogiaBncc", "A048BancaConsolidacao",
-    "A076aBancaProdutoNarrativa", "A076bBancaDesignImersao", "A077BancaConsolidacao",
-    "A087aBancaProdutoNarrativa", "A087bBancaDesignImersao", "A087cBancaPedagogiaBncc", "A088BancaConsolidacao",
+    "A057aBancaProdutoNarrativa", "A057bBancaPedagogiaBncc", "A058BancaConsolidacao",
+    "A086aBancaProdutoNarrativa", "A086bBancaDesignImersao", "A087BancaConsolidacao",
+    "A097aBancaProdutoNarrativa", "A097bBancaDesignImersao", "A097cBancaPedagogiaBncc", "A098BancaConsolidacao",
     "DevConstrucao",
-    "A100ConsolidacaoBanca", "A101ValidacaoDevCheck", "A103PrdWriter", "A110OnePagerPedagogico",
-    "A118Aprendizado",
-    "A117Diagnostico", "ProdutoStage",
+    "A110ConsolidacaoBanca", "A111ValidacaoDevCheck", "A113PrdWriter", "A120OnePagerPedagogico",
+    "A128Aprendizado",
+    "A127Diagnostico", "ProdutoStage",
+    # os comitês pedagógicos (15/10/2026): o dos canais envolve os autores, o final envolve a cadeia de produto
+    "ComiteCanaisLoop", "ComiteFinalLoop", "NucleoNarrativoLoopIsolado", "ComiteCanaisLoopIsolado",
+    "A018EvidenciaOnePager", "A019ComiteCanais", "A019aComiteCanalACurriculo", "A019bComiteCanalAMedida",
+    "A019cComiteCanalAVivencia", "A019dComiteCanalBCurriculo", "A019eComiteCanalBMedida", "A019fComiteCanalBExperiencia",
+    "A020VotosCanalA", "A021VotosCanalB", "A022ComiteCanaisRodada", "A038EvidenciaOnePagerFinal",
+    "A039ContaDaViradaOnePager", "A040ComiteFinal", "A040aComiteFinalPedagogia", "A040bComiteFinalQualidade",
+    "A040cComiteFinalImersao", "A041VotosFinal", "A042ComiteFinalRodada",
 }
 
 
@@ -220,21 +232,36 @@ def test_arvore_de_agentes():
                                                   "A007MicroGate", "A008JuizProfundidade", "A009ContaDaVirada", "A010FidelidadeNucleo",
                                                   "A011ProfundidadeCheck", "A012MicroGateCheck", "A013NucleoCheck"]
     produto = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "ProdutoStage")
-    assert [a.name for a in produto.sub_agents][:4] == ["A001VizinhasCatalogo", "A002MapaConceitual",
-                                                        "A003IdeacaoMecanismos", "NucleoNarrativoLoop"]
+    assert [a.name for a in produto.sub_agents][:5] == ["A001VizinhasCatalogo", "A002MapaConceitual",
+                                                        "A003IdeacaoMecanismos", "ComiteFinalLoop", "A043GateFinalProduto"]
+    # os comitês só julgam: o loop de cada um envolve quem escreve a missão, isolado (`agents/comite.py`)
+    final = produto.find_agent("ComiteFinalLoop")
+    assert [a.name for a in final.sub_agents] == [
+        "ComiteCanaisLoopIsolado", "GateEstruturalLoopIsolado", "AvaliacoesLoopIsolado", "OnePagerPoLoopIsolado",
+        "A038EvidenciaOnePagerFinal", "A039ContaDaViradaOnePager", "A040ComiteFinal", "A041VotosFinal",
+        "A042ComiteFinalRodada"]
+    assert final.max_iterations == settings.comite_final_max_rodadas
+    canais = produto.find_agent("ComiteCanaisLoop")
+    assert [a.name for a in canais.sub_agents] == [
+        "NucleoNarrativoLoopIsolado", "SecoesApoioLoopIsolado", "A017OnePagerExiste", "A018EvidenciaOnePager",
+        "A019ComiteCanais", "A020VotosCanalA", "A021VotosCanalB", "A022ComiteCanaisRodada"]
+    assert canais.max_iterations == settings.comite_max_rodadas
+    assert [j.output_key for j in canais.find_agent("A019ComiteCanais").sub_agents] == [
+        "comite_canal_a_curriculo", "comite_canal_a_medida", "comite_canal_a_vivencia",
+        "comite_canal_b_curriculo", "comite_canal_b_medida", "comite_canal_b_experiencia"]
 
     loop = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "GateEstruturalLoop")
     assert isinstance(loop, LoopAgent) and loop.max_iterations == settings.gate_estrutural_max_rodadas
     # O lint vem antes do gate, dentro do loop: cada rodada relê a versão corrente do one-pager.
-    # `A018BriefEscopoSplit` entra desde 23/09/2026: o A014 entrega one-pager E brief de escopo
+    # `A023BriefEscopoSplit` entra desde 23/09/2026: o A014 entrega one-pager E brief de escopo
     # na mesma `output_key`, e o A07 devolve só o one-pager revisado — o brief evaporava a
     # cada execução, sem erro e sem artefato.
     # o juiz de achados roda entre o lint e o gate: o gate estrutural lê o relatório já revisto
-    assert [a.name for a in loop.sub_agents] == ["A018BriefEscopoSplit", "A019ContratoProdutoCheck", "A020JuizContratoProduto",
-                                                 "A021GateEstrutural", "A022GateEstruturalCheck", "A023RevisorOnePager"]
+    assert [a.name for a in loop.sub_agents] == ["A023BriefEscopoSplit", "A024ContratoProdutoCheck", "A025JuizContratoProduto",
+                                                 "A026GateEstrutural", "A027GateEstruturalCheck", "A028RevisorOnePager"]
     banca = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "BancaValidacaoDev")
     # dentro do dev só dados e técnica; produto, design e pedagogia rodam no fim das etapas e na entrada (08/10/2026)
-    assert [j.name for j in banca.sub_agents] == ["A099aBancaDadosLgpd", "A099bBancaTecnicaArquitetura"]
+    assert [j.name for j in banca.sub_agents] == ["A109aBancaDadosLgpd", "A109bBancaTecnicaArquitetura"]
 
     # metadados coerentes com a árvore
     meta_ids = {m["id"] for m in get_pipeline_agents_metadata()}
@@ -248,7 +275,7 @@ def test_arvore_de_agentes():
 
     # etapas desligáveis
     so_produto = create_mission_orchestrator(stages=["produto"])
-    assert [a.name for a in so_produto.sub_agents] == ["ProdutoStage", "A117Diagnostico", "A118Aprendizado", "A119RegistroCatalogo"]
+    assert [a.name for a in so_produto.sub_agents] == ["ProdutoStage", "A127Diagnostico", "A128Aprendizado", "A129RegistroCatalogo"]
     print(f"   ✓ árvore com {len(names)} agentes ({len(llm_agents)} LLM); loop, paralelos e metadados coerentes")
 
 
@@ -533,7 +560,7 @@ def test_bncc_validador_e_gate():
         name="Root",
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text=_SPEC_BNCC.format(codigos="EF04CO08 · EF05CO02")),
-            BnccCheckAgent(name="A036BnccCheck", estrito=True),
+            BnccCheckAgent(name="A046BnccCheck", estrito=True),
             FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=marcar_heranca),
         ],
     )
@@ -549,7 +576,7 @@ def test_bncc_validador_e_gate():
         name="Root2",
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text=_SPEC_BNCC.format(codigos="EF05CO08 · EF05CO02")),
-            BnccCheckAgent(name="A036BnccCheck", estrito=True),
+            BnccCheckAgent(name="A046BnccCheck", estrito=True),
             FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=marcar_heranca),
         ],
     )
@@ -730,7 +757,7 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
 
     # `RS-n pendente` e `[verificar no repositório:]` têm dono fixo, e desde 23/09/2026 o dono
     # mudou: os dois eram bloqueantes (produto e dev) enquanto os PRÓPRIOS PROMPTS mandavam
-    # escrevê-los — 055_fechamento_lacunas.md manda carimbar o RS-n, e 34/47 mandam marcar o
+    # escrevê-los — 065_fechamento_lacunas.md manda carimbar o RS-n, e 34/47 mandam marcar o
     # que só quem tem o monorepo confere. A esteira reprovava o agente por obedecer. Agora:
     # RS-n é pedido ao Gate 0/PO (humano) e o marcador de repositório é de plataforma.
     r_fixos = varrer_lacunas(fontes, {
@@ -809,7 +836,7 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text="# Spec\nSlug: exp05ef2b\n"),
             FakeAgent(name="Handoff", key="handoff_dev", text=st["handoff_dev"]),
-            RastroCheckAgent(name="A097LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
+            RastroCheckAgent(name="A107LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
             FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=marcar_heranca),
         ],
     )
@@ -822,7 +849,7 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
         name="Root2",
         sub_agents=[
             FakeAgent(name="Handoff", key="handoff_dev", text="[LACUNA — dono: plataforma] ponte tiktooria"),
-            RastroCheckAgent(name="A097LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
+            RastroCheckAgent(name="A107LacunaCheck", modo="lacunas", rotulo="Rastro", report_key="rastro_lacunas_report", status_key="rastro_lacunas_status", fontes=fontes, estrito=True),
             FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=marcar_heranca),
         ],
     )
@@ -834,7 +861,7 @@ Tabelas: `exp08ef2b_gates_turma` lida por polling HTTP de 3s.
             # `liberacao` ausente é default (corte A8); o que reprova é declarar outro
             # valor — aqui a ficha perde o `id`, que não tem default nenhum.
             FakeAgent(name="Spec", key="spec_missao", text=_SPEC_MANIFESTO_OK.replace("- `id: exp05ef2b`\n", "")),
-            RastroCheckAgent(name="A089ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
+            RastroCheckAgent(name="A099ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
             FakeAgent(name="Jusante", key="handoff_dev", text="h", before_agent_callback=marcar_heranca),
         ],
     )
@@ -908,7 +935,7 @@ def test_capacidade_de_plataforma_nao_bloqueia():
         name="Root",
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text=spec("[forms, microphone]", _BLOCO9_COMPLETO)),
-            RastroCheckAgent(name="A089ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
+            RastroCheckAgent(name="A099ManifestoCheck", modo="manifesto", rotulo="Manifesto", report_key="manifesto_report", status_key="manifesto_status", estrito=True),
             FakeAgent(name="Jusante", key="prd_final", text="prd", before_agent_callback=marcar_heranca),
         ],
     )
@@ -1055,40 +1082,40 @@ def test_estagio_produto_parcial_spec():
     from pipeline.orchestrator import STAGE_SPEC, create_mission_orchestrator, iter_agent_tree, stages_para_ui
 
     orch = create_mission_orchestrator(stages=["spec"])
-    assert [a.name for a in orch.sub_agents] == ["ProdutoStage", "A117Diagnostico", "A118Aprendizado", "A119RegistroCatalogo"]
+    assert [a.name for a in orch.sub_agents] == ["ProdutoStage", "A127Diagnostico", "A128Aprendizado", "A129RegistroCatalogo"]
     produto = orch.sub_agents[0]
     # o resumido em loop com a conferência contra o canônico (07/10/2026)
-    assert [a.name for a in produto.sub_agents] == ["SpecLoop", "A050FidelidadeProduto", "OnePagerResumidoLoop"]
+    assert [a.name for a in produto.sub_agents] == ["SpecLoop", "A060FidelidadeProduto", "OnePagerResumidoLoop"]
     assert [a.name for a in produto.sub_agents[2].sub_agents] == [
-        "A051OnePagerResumido", "A052ConteudoAprovadoResumido", "A053ResumidoRodada"]
-    # `A038EvidenciaCheck` entra desde 23/09/2026: grau `scored` com dois sinais, habilidade do
+        "A061OnePagerResumido", "A062ConteudoAprovadoResumido", "A063ResumidoRodada"]
+    # `A048EvidenciaCheck` entra desde 23/09/2026: grau `scored` com dois sinais, habilidade do
     # bloco 11 com momento e medida, gabarito no servidor. Eram três exigências que a spec
     # declarava em prosa e nenhuma verificação tocava — PED-04 é bloqueante e ninguém o conferia.
-    # `A040PerguntasCheck` e o juiz `A041JuizPerguntas` entram em 23/09/2026: as cinco perguntas
+    # `A050PerguntasCheck` e o juiz `A051JuizPerguntas` entram em 23/09/2026: as cinco perguntas
     # de produto do sub-bloco 9f nasciam na spec sem nenhum gate, e o `validar_kpis` do PRD recebia
     # a spec como parâmetro morto — a pergunta podia morrer entre produto e dev sem deixar rastro.
     assert [a.name for a in produto.sub_agents[0].sub_agents] == [
-        "A035SpecMissao", "A036BnccCheck", "A037ManifestoCheckProduto", "A038EvidenciaCheck",
+        "A045SpecMissao", "A046BnccCheck", "A047ManifestoCheckProduto", "A048EvidenciaCheck",
         # juiz de achados (23/09/2026): o regex marca "gabarito no cliente", o juiz decide se o texto
         # afirma ou cita para vedar, e o achado só sai com citação literal conferida
-        "A039JuizEvidencia",
-        "A040PerguntasCheck", "A041JuizPerguntas", "A042JuizPerguntasCheck",
+        "A049JuizEvidencia",
+        "A050PerguntasCheck", "A051JuizPerguntas", "A052JuizPerguntasCheck",
         # rastro de lacunas da spec (25/09/2026): a pendência de produto só era cobrada em dev,
         # que não reescreve a spec — e barrava o PRD da exp04ef1b sem ninguém poder fechá-la
-        "A043RastroSpec",
+        "A053RastroSpec",
         # spec × one-pager aprovado (06/10/2026): a spec aplicava ressalvas que o PO tinha recusado —
         # a exp06ef1b perdeu uma habilidade e cinco minutos de tela — e ninguém via
-        "A044ConteudoAprovadoSpec",
+        "A054ConteudoAprovadoSpec",
         # a banca no fim de produto (08/10/2026): o achado volta ao autor da spec antes do parecer
-        "A045ConteudoAprovado", "A046EscopoBanca", "A047Banca", "A048BancaConsolidacao", "A049SpecCheck"]
+        "A055ConteudoAprovado", "A056EscopoBanca", "A057Banca", "A058BancaConsolidacao", "A059SpecCheck"]
     assert produto.sub_agents[0].max_iterations == max(1, get_settings().spec_max_rodadas)
     nomes = [a.name for _, a in iter_agent_tree(orch)]
-    assert "A004NucleoNarrativo" not in nomes and "A021GateEstrutural" not in nomes
+    assert "A004NucleoNarrativo" not in nomes and "A026GateEstrutural" not in nomes
     assert not any(getattr(a, "include_contents", "none") == "default" for _, a in iter_agent_tree(orch) if isinstance(a, LlmAgent)), \
         "nenhum agente da correção lê a mensagem do usuário: o pedido viaja pelo estado"
 
     completo = create_mission_orchestrator(stages=["spec", "design", "dev"])
-    assert [a.name for a in completo.sub_agents] == ["ProdutoStage", "DesignStage", "DevStage", "A117Diagnostico", "A118Aprendizado", "A119RegistroCatalogo"]
+    assert [a.name for a in completo.sub_agents] == ["ProdutoStage", "DesignStage", "DevStage", "A127Diagnostico", "A128Aprendizado", "A129RegistroCatalogo"]
     todos = [a.name for _, a in iter_agent_tree(completo)]
     assert len(todos) == len(set(todos)), "nome duplicado na árvore parcial"
     # "produto" e "spec" juntos: a etapa inteira vence
@@ -1104,11 +1131,11 @@ def test_estagio_produto_parcial_spec():
     assert [s["key"] for s in stages_para_ui(["dev"])] == ["dev", "transversal"]
     assert [s["key"] for s in stages_para_ui(["produto", "design", "dev"])] == ["produto", "design", "dev", "transversal"]
     assert [m["id"] for m in STAGE_SPEC["agents"]] == [
-        "A035SpecMissao", "A036BnccCheck", "A037ManifestoCheckProduto", "A038EvidenciaCheck",
-        "A040PerguntasCheck", "A041JuizPerguntas", "A042JuizPerguntasCheck",
-        "A044ConteudoAprovadoSpec", "A047aBancaProdutoNarrativa", "A047bBancaPedagogiaBncc", "A048BancaConsolidacao",
-        "A049SpecCheck", "A050FidelidadeProduto", "A051OnePagerResumido",
-        "A052ConteudoAprovadoResumido", "A053ResumidoRodada"]
+        "A045SpecMissao", "A046BnccCheck", "A047ManifestoCheckProduto", "A048EvidenciaCheck",
+        "A050PerguntasCheck", "A051JuizPerguntas", "A052JuizPerguntasCheck",
+        "A054ConteudoAprovadoSpec", "A057aBancaProdutoNarrativa", "A057bBancaPedagogiaBncc", "A058BancaConsolidacao",
+        "A059SpecCheck", "A060FidelidadeProduto", "A061OnePagerResumido",
+        "A062ConteudoAprovadoResumido", "A063ResumidoRodada"]
     print("   ✓ estágio parcial spec: SpecLoop + resumido, sem núcleo; stages_para_ui resolve spec")
 
 
@@ -1165,7 +1192,7 @@ def test_mensagem_de_pulo_nao_vira_prd():
     """O texto que o ADK grava ao pular um agente não pode virar PRD nem artefato."""
     from pipeline.artifacts import e_mensagem_de_pulo
 
-    pulo = "⏭️ `A103PrdWriter` não executado — pipeline bloqueado (Ficha do manifesto bloqueado (1 lacuna(s)))."
+    pulo = "⏭️ `A113PrdWriter` não executado — pipeline bloqueado (Ficha do manifesto bloqueado (1 lacuna(s)))."
     assert e_mensagem_de_pulo(pulo)
     assert not e_mensagem_de_pulo("# PRD — missão\n\nconteúdo de verdade")
     assert not e_mensagem_de_pulo(None) and not e_mensagem_de_pulo("")
@@ -1205,7 +1232,7 @@ def test_contencao_de_resposta_de_ferramenta():
         name = "get_screenshot"
 
     class _Ctx:
-        agent_name = "A061Jornada"
+        agent_name = "A071Jornada"
 
         def __init__(self):
             self.state = {}
@@ -1482,14 +1509,14 @@ def test_artefatos_html_e_links():
         sub_agents=[
             FakeAgent(name="Jornada", key="jornada_telas", text="j\n```mermaid\nflowchart LR\nA-->B\n```"),
             FakeAgent(name="Proto", key="prototipo_html", text=f"```html\n{doc}\n```\n# Relatório do protótipo"),
-            ArtefatosDesignAgent(name="A070ArtefatosDesign"),
+            ArtefatosDesignAgent(name="A080ArtefatosDesign"),
         ],
     )
     _, state = asyncio.run(_run(root))
     assert state["prototipo_arquivo"] == doc
     assert "Relatório do protótipo" in state["prototipo_relatorio"]
     assert state["diagramas_html"].count("<section>") == 1
-    assert "prototipo_arquivo" not in "".join(load_prompt(f"design/{n}", **CONFIG_VARS) for n in ["078_qa_entregaveis.md"])
+    assert "prototipo_arquivo" not in "".join(load_prompt(f"design/{n}", **CONFIG_VARS) for n in ["088_qa_entregaveis.md"])
     print("   ✓ artefatos: protótipo separado do relatório, diagramas montados do Mermaid, projeto do Stitch reconhecido")
 
 
@@ -1589,7 +1616,7 @@ def test_miro_espelha_o_mermaid_sem_rede():
             sub_agents=[
                 FakeAgent(name="Jornada", key="jornada_telas", text="j\n```mermaid\nflowchart TD\nA-->B\n```"),
                 FakeAgent(name="Fluxo", key="fluxo_arestas", text="f\n```mermaid\nflowchart LR\nC-->D\n```"),
-                EspelhoMiroAgent(name="A074EspelhoMiro"),
+                EspelhoMiroAgent(name="A084EspelhoMiro"),
             ],
         )
         _, state = asyncio.run(_run(root))
@@ -1611,8 +1638,8 @@ def test_miro_espelha_o_mermaid_sem_rede():
             name="Root2",
             sub_agents=[
                 FakeAgent(name="Jornada", key="jornada_telas", text="j\n```mermaid\nflowchart TD\nA-->B\n```"),
-                EspelhoMiroAgent(name="A074EspelhoMiro"),
-                EspelhoMiroAgent(name="A074EspelhoMiroRetrabalho"),
+                EspelhoMiroAgent(name="A084EspelhoMiro"),
+                EspelhoMiroAgent(name="A084EspelhoMiroRetrabalho"),
             ],
         )
         _, state = asyncio.run(_run(root))
@@ -1657,7 +1684,7 @@ def test_miro_indisponivel_nao_derruba_a_esteira():
             name="Root",
             sub_agents=[
                 FakeAgent(name="Jornada", key="jornada_telas", text="j\n```mermaid\nflowchart TD\nA-->B\n```"),
-                EspelhoMiroAgent(name="A074EspelhoMiro"),
+                EspelhoMiroAgent(name="A084EspelhoMiro"),
             ],
         )
         _, state = asyncio.run(_run(root))
@@ -1740,7 +1767,7 @@ def test_one_pager_pedagogico_em_docx():
     # a mensagem de pulo não vira documento
     from pipeline.artifacts import e_mensagem_de_pulo
 
-    assert e_mensagem_de_pulo("⏭️ `A110OnePagerPedagogico` não executado — pipeline bloqueado (x).")
+    assert e_mensagem_de_pulo("⏭️ `A120OnePagerPedagogico` não executado — pipeline bloqueado (x).")
     print("   ✓ one-pager pedagógico: .docx com títulos, listas e tabela; envelope e marcação fora do documento")
 
 
@@ -1794,7 +1821,7 @@ def test_one_pagers_com_identidade_visual():
     # Sem o documento, nada é escrito: a esteira bloqueada não produz capa de missão nenhuma.
     with tempfile.TemporaryDirectory() as tmp:
         vazio = exportar_one_pagers(
-            {"one_pager_pedagogico": "⏭️ `A110OnePagerPedagogico` não executado — pipeline bloqueado (x)."},
+            {"one_pager_pedagogico": "⏭️ `A120OnePagerPedagogico` não executado — pipeline bloqueado (x)."},
             Path(tmp),
             "exp03ilha",
         )
@@ -2037,7 +2064,7 @@ def test_base_da_plataforma_lida_do_bucket_e_fixada_por_execucao():
         assert not sobra, f"{copia}: o ADK interpolaria {sobra}"
 
     # cada arquivo da base entra uma vez só por prompt
-    prd = load_prompt("dev/103_prd_writer.md")
+    prd = load_prompt("dev/113_prd_writer.md")
     assert prd.count("<!-- início de references/plataforma/contrato-plataforma.md -->") == 1
 
     # a base não se edita pela esteira
@@ -2092,7 +2119,7 @@ def test_esteira_nao_aborta_e_emite_diagnostico():
             FakeAgent(name="Spec", key="spec_missao", text="# Spec\nSlug: exp05ef2b\n", before_agent_callback=marcar_heranca),
             FakeAgent(name="Prd", key="prd_final", text="# PRD", before_agent_callback=marcar_heranca),
             FakeAgent(name="OnePager", key="one_pager_pedagogico", text="# One-pager", before_agent_callback=marcar_heranca),
-            DiagnosticoAgent(name="A117Diagnostico", description="d"),
+            DiagnosticoAgent(name="A127Diagnostico", description="d"),
         ],
     )
     _, state = asyncio.run(_run(root))
@@ -2291,9 +2318,9 @@ def test_loop_da_spec_corrige_na_segunda_rodada():
         max_iterations=2,
         sub_agents=[
             SpecQueAprende(name="Spec", description="spec"),
-            BnccCheckAgent(name="A036BnccCheck", description="bncc", estrito=True),
+            BnccCheckAgent(name="A046BnccCheck", description="bncc", estrito=True),
             SaidaDeLoopAgent(
-                name="A049SpecCheck", description="saida", rotulo="Spec",
+                name="A059SpecCheck", description="saida", rotulo="Spec",
                 status_keys=["bncc_status"], rodada_key="spec_rodada", max_rounds=2,
             ),
         ],
@@ -2460,7 +2487,7 @@ def test_prd_tem_ciclo_de_correcao():
     from agents.dev import agentes_em_ordem, DEV_METADATA, build_dev_stage
 
     nomes = {m["id"] for m in DEV_METADATA}
-    assert {"A103PrdWriter", "A104PrdCheck", "A108PrdRodada"} <= nomes, sorted(nomes)
+    assert {"A113PrdWriter", "A114PrdCheck", "A118PrdRodada"} <= nomes, sorted(nomes)
 
     def achatar(agentes):
         for a in agentes:
@@ -2470,7 +2497,7 @@ def test_prd_tem_ciclo_de_correcao():
     loop = [a for a in achatar([build_dev_stage()]) if a.name == "PrdLoop"]
     assert loop, "PrdLoop não está montado na etapa de dev"
     dentro = {a.name for a in achatar(loop[0].sub_agents)}
-    assert {"A103PrdWriter", "A104PrdCheck", "A108PrdRodada"} <= dentro, sorted(dentro)
+    assert {"A113PrdWriter", "A114PrdCheck", "A118PrdRodada"} <= dentro, sorted(dentro)
     print("   ✓ redator do PRD e gate de consistência estão no mesmo loop, com saída por rodada")
 
 
@@ -2521,7 +2548,7 @@ def test_prompt_reusado_mantem_o_numero_canonico():
             metadata[arquivo] = m
 
     revisor = metadata["produto/revisor_one_pager.md"]["name"]
-    assert revisor.startswith("023"), revisor
+    assert revisor.startswith("028"), revisor
     assert reusos["produto/revisor_one_pager.md"], "o reuso precisa ficar visível para quem edita"
 
     # o número do rótulo tem que crescer junto com o nome do arquivo, dentro de cada área
@@ -2892,7 +2919,7 @@ def test_gaps_estruturais_da_auditoria():
 
     # G4 — o gate estrutural passa a receber a rodada que o prompt afirma receber
     from prompts.loader import load_prompt
-    assert "{gate_estrutural_rodada?}" in load_prompt("produto/021_gate_estrutural.md")
+    assert "{gate_estrutural_rodada?}" in load_prompt("produto/026_gate_estrutural.md")
 
     print("   ✓ gaps estruturais: índice cego avisa, brief sobrevive ao revisor, protótipo é lido, gate sabe a rodada")
 
@@ -2965,7 +2992,7 @@ def test_conteudo_imersao_e_escola_publica():
     """Acessibilidade contável, spoiler a jusante e o cenário que não se corta."""
     from prompts.loader import load_prompt
 
-    qa = load_prompt("design/078_qa_entregaveis.md")
+    qa = load_prompt("design/088_qa_entregaveis.md")
     # F1 — não havia NENHUMA linha de acessibilidade contável na esteira: era texto sem verificação
     assert "4,5:1" in qa and "Ordem de foco" in qa, "contraste e ordem de foco não são contáveis"
     assert "64×64" in qa, "o alvo de toque já existia e não pode ter saído"
@@ -2987,7 +3014,7 @@ def test_conteudo_imersao_e_escola_publica():
     assert "D3b" in qa and "Spoiler a jusante" in qa
 
     # F5 — dois a quatro por aparelho é o primeiro cenário da escola pública, não variação de luxo
-    telas = load_prompt("design/065_telas.md")
+    telas = load_prompt("design/075_telas.md")
     assert "estado degradado 2–4 por aparelho" in telas
     # desde 07/10/2026 nenhuma tela se corta (o Stitch saía com 27% a 68% do inventário): o 2–4 está
     # entre as telas obrigatórias como todas as outras
@@ -3121,11 +3148,11 @@ def test_custo_e_tendencia_da_esteira():
     # O `usage_metadata` de cada evento era descartado: ninguém sabia o custo nem qual agente pesa
     st = {"execucao": {"modelo": "gemini-3.8-flash", "seed_juiz": 20260923, "temperatura_juiz": 0.1,
                        "duracao_s": 742.3, "tokens": {"entrada": 1_840_000, "saida": 210_000, "chamadas": 41},
-                       "tokens_por_agente": {"A103PrdWriter": {"entrada": 390_000, "saida": 48_000, "chamadas": 2}}}}
+                       "tokens_por_agente": {"A113PrdWriter": {"entrada": 390_000, "saida": 48_000, "chamadas": 2}}}}
     bloco = bloco_de_execucao(st)
     assert "2.050.000" in bloco, "o total de tokens precisa aparecer no dossiê"
     assert "seed `20260923`" in bloco, "sem seed e modelo, duas execuções não são comparáveis"
-    assert "A103PrdWriter" in bloco and "390.000" in bloco
+    assert "A113PrdWriter" in bloco and "390.000" in bloco
     assert bloco_de_execucao({}) == "", "execução sem o bloco não quebra o dossiê"
 
     # série temporal: a queda de achados entre a primeira e a segunda metade da janela
@@ -3170,14 +3197,14 @@ def test_agentes_novos_rodam_de_ponta_a_ponta():
         FakeAgent(name="Prd", key="prd_final", text="# PRD\n`exp06ef1b_sessoes`\n"),
         FakeAgent(name="V1", key="validacao_produto_narrativa",
                   text='```json\n{"status": "aprovado", "achados": []}\n```'),
-        RastroCheckAgent(name="A038EvidenciaCheck", modo="evidencia", rotulo="Matriz de evidência",
+        RastroCheckAgent(name="A048EvidenciaCheck", modo="evidencia", rotulo="Matriz de evidência",
                          report_key="evidencia_report", status_key="evidencia_status", estrito=False),
-        RastroCheckAgent(name="A105KpisCheck", modo="kpis", rotulo="KPI",
+        RastroCheckAgent(name="A115KpisCheck", modo="kpis", rotulo="KPI",
                          report_key="kpis_report", status_key="kpis_status", estrito=False),
-        RastroCheckAgent(name="A040PerguntasCheck", modo="perguntas", rotulo="Perguntas de produto (9f)",
+        RastroCheckAgent(name="A050PerguntasCheck", modo="perguntas", rotulo="Perguntas de produto (9f)",
                          report_key="perguntas_report", status_key="perguntas_status", estrito=False),
-        PrototipoLintAgent(name="A071PrototipoLint"),
-        ConsolidacaoBancaAgent(name="A100", fontes=["validacao_produto_narrativa"]),
+        PrototipoLintAgent(name="A081PrototipoLint"),
+        ConsolidacaoBancaAgent(name="A110", fontes=["validacao_produto_narrativa"]),
     ])
     _, st = asyncio.run(_run(root))
 
@@ -3529,9 +3556,9 @@ def test_lint_do_prototipo_roda_de_novo_no_retrabalho():
     HTML velho — com a instrução de tratá-lo como fato."""
     from agents.design import POSFIXO_RETRABALHO, _agentes_de_retrabalho
 
-    assert "A071PrototipoLintRetrabalho" in POSFIXO_RETRABALHO
+    assert "A081PrototipoLintRetrabalho" in POSFIXO_RETRABALHO
     # depois de separar o HTML do relatório, senão lint o documento antigo de novo
-    assert POSFIXO_RETRABALHO.index("A070ArtefatosDesignRetrabalho") < POSFIXO_RETRABALHO.index("A071PrototipoLintRetrabalho")
+    assert POSFIXO_RETRABALHO.index("A080ArtefatosDesignRetrabalho") < POSFIXO_RETRABALHO.index("A081PrototipoLintRetrabalho")
     nomes = {a.name for a in _agentes_de_retrabalho()}
     assert set(POSFIXO_RETRABALHO) <= nomes, f"posfixo sem agente: {set(POSFIXO_RETRABALHO) - nomes}"
     print("   ✓ o lint do protótipo roda de novo depois de todo retrabalho de design")
@@ -3684,7 +3711,7 @@ def test_nenhum_prompt_manda_usar_ferramenta_que_o_agente_nao_tem():
             if isinstance(a, LlmAgent)]
     drive = _re.compile(r"google drive|google docs|gdocs|create_file|gdrive", _re.I)
     stitch = _re.compile(r"\b(?:upload_design_md|list_screens|get_screen|create_project|generate_screen)\w*", _re.I)
-    com_stitch = ("A065Telas", "A078QaEntregaveis")  # os que chamam `stitch_tools_or_empty`
+    com_stitch = ("A075Telas", "A088QaEntregaveis")  # os que chamam `stitch_tools_or_empty`
 
     falhas = {a.name: sorted(set(drive.findall(str(a.instruction)))) for a in llms}
     falhas = {k: v for k, v in falhas.items() if v}
@@ -3770,7 +3797,7 @@ def test_todo_dono_que_um_gate_pode_escrever_tem_destino():
     despachos = {a.name: a for _, a in iter_agent_tree(create_mission_orchestrator(stages=["produto", "design", "dev"]))
                  if isinstance(a, DespachoTicketsAgent)}
     kw = dict(stitch_mcp_mode="off", stitch_project_url_base="u", gate_max_rodadas=3, qa_max_rodadas=2)
-    fontes = {"A081DespachoDesign": "design/078_qa_entregaveis.md", "A102DespachoBanca": "dev/validacao_design_imersao.md"}
+    fontes = {"A091DespachoDesign": "design/088_qa_entregaveis.md", "A112DespachoBanca": "dev/validacao_design_imersao.md"}
     for nome, prompt in fontes.items():
         d = despachos[nome]
         bloco = _re.search(r'"agente_responsavel":\s*((?:"[^"]+"\s*\|?\s*)+)', load_prompt(prompt, **kw)).group(1)
@@ -3861,7 +3888,7 @@ def test_correcao_parcial_apaga_tudo_que_a_etapa_vai_regravar():
     for etapa in ("produto", "spec", "design", "dev"):
         escritas = set()
         for _, a in iter_agent_tree(create_mission_orchestrator(stages=ETAPA_PARA_STAGES[etapa])):
-            if a.name in ("A117Diagnostico", "A118Aprendizado", "A119RegistroCatalogo"):
+            if a.name in ("A127Diagnostico", "A128Aprendizado", "A129RegistroCatalogo"):
                 continue  # transversal: refeitos em toda execução
             for attr in ("output_key", "report_key", "status_key", "round_key", "rodada_key"):
                 if getattr(a, attr, None):
@@ -3942,7 +3969,7 @@ def test_correcao_de_produto_refaz_desde_o_nucleo_com_o_material_da_origem():
     # 1. refaz produto, design e dev — e os gates de produto estão na árvore
     assert ETAPA_PARA_STAGES["produto"] == ["produto", "design", "dev"]
     nomes = [a.name for _, a in iter_agent_tree(create_mission_orchestrator(stages=ETAPA_PARA_STAGES["produto"]))]
-    for gate in ("A004NucleoNarrativo", "A021GateEstrutural", "A024aAvaliacaoPedagogica", "A033GateFinalProduto"):
+    for gate in ("A004NucleoNarrativo", "A026GateEstrutural", "A029aAvaliacaoPedagogica", "A043GateFinalProduto"):
         assert gate in nomes, gate
     assert len(nomes) == len(set(nomes))
 
@@ -4161,7 +4188,7 @@ def test_rotas_citadas_em_modulo_da_plataforma_existem_nela():
 
     from prompts import REFERENCES_DIR, load_prompt
     for texto in ((REFERENCES_DIR / "formato-spec.md").read_text(encoding="utf-8"),
-                  load_prompt("produto/035_spec_missao.md"), load_prompt("dev/103_prd_writer.md")):
+                  load_prompt("produto/045_spec_missao.md"), load_prompt("dev/113_prd_writer.md")):
         assert "instancie o padrão de Atividade" not in texto and "padrão de Atividade da plataforma" not in texto
         assert "não se reusa" in texto
     print("   ✓ rotas: inexistente e verbo errado acusados; proposta, módulo próprio e slug no parâmetro passam")
@@ -4218,7 +4245,7 @@ def test_componentes_do_ds_conferidos_contra_o_inventario():
     assert tela("nova:galeria-infantil", "`GradeAlbum2x2`") == [("componente-inexistente", "atencao")]
     assert tela("unitube", "`VideoCard`") == [], "unitube é a marca unootube"
 
-    for prompt in ("design/065_telas.md", "design/057_ambiente_simulado.md"):
+    for prompt in ("design/075_telas.md", "design/067_ambiente_simulado.md"):
         texto = load_prompt(prompt, stitch_mcp_mode="off", stitch_project_url_base="u")
         assert "Você não tem como conferir" not in texto and "`PostCard`" in texto, prompt
 
@@ -4527,12 +4554,12 @@ def test_rastro_cobra_cada_etapa_pelo_que_e_dela():
 
     # e os três pontos estão ligados na esteira
     spec_loop = _build_spec_loop({}, get_settings(), 2)
-    rastro_spec = next(a for a in spec_loop.sub_agents if a.name == "A043RastroSpec")
-    saida = next(a for a in spec_loop.sub_agents if a.name == "A049SpecCheck")
+    rastro_spec = next(a for a in spec_loop.sub_agents if a.name == "A053RastroSpec")
+    saida = next(a for a in spec_loop.sub_agents if a.name == "A059SpecCheck")
     assert rastro_spec.etapa == "produto" and "rastro_spec_status" in saida.status_keys
-    rastro_design = next(a for a in build_design_stage().sub_agents if a.name == "A082RastroDesign")
-    assert rastro_design.name == "A082RastroDesign" and rastro_design.etapa == "design"
-    a38 = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "A097LacunaCheck")
+    rastro_design = next(a for a in build_design_stage().sub_agents if a.name == "A092RastroDesign")
+    assert rastro_design.name == "A092RastroDesign" and rastro_design.etapa == "design"
+    a38 = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "A107LacunaCheck")
     assert a38.etapa == "dev" and a38.fontes == FONTES_DEV
     assert "rastro_spec_status" in chaves_da_etapa("produto") and "rastro_design_status" in chaves_da_etapa("design")
     print("   ✓ rastro por etapa: D0 fecha, ratificação é do PO, cada etapa cobra o que é dela")
@@ -4853,8 +4880,8 @@ def test_gate_de_coerencia_no_design():
     from agents.design import POSFIXO_RETRABALHO, build_design_stage
 
     nomes = [a.name for a in build_design_stage().sub_agents]
-    assert nomes.index("A071PrototipoLint") < nomes.index("A072Consistencia") < nomes.index("QaDesignLoop")
-    assert POSFIXO_RETRABALHO.index("A071PrototipoLintRetrabalho") < POSFIXO_RETRABALHO.index("A072ConsistenciaRetrabalho")
+    assert nomes.index("A081PrototipoLint") < nomes.index("A082Consistencia") < nomes.index("QaDesignLoop")
+    assert POSFIXO_RETRABALHO.index("A081PrototipoLintRetrabalho") < POSFIXO_RETRABALHO.index("A082ConsistenciaRetrabalho")
     from agents.design import get_consistencia_check
 
     estado = {"spec_missao": _fixture_exp09("spec.md") + _GLOSSARIO_EXP09,
@@ -4913,7 +4940,7 @@ def test_afirmacoes_do_qa_conferidas_em_codigo():
             yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
 
     assert extrair_envelope(qa)["status"] == "aprovado"
-    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), QaAfirmacoesAgent(name="A079")])))
+    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), QaAfirmacoesAgent(name="A089")])))
     env = extrair_envelope(st["qa_entregaveis_report"])
     assert env["status"] == "bloqueado" and inferir_status(st["qa_entregaveis_report"], env) == "bloqueado"
     assert {a["codigo"] for a in env["achados"]} >= {"afirmacao-stitch", "arquivo-inexistente", "stitch-incompleto"}
@@ -4924,9 +4951,9 @@ def test_afirmacoes_do_qa_conferidas_em_codigo():
 
     # a banca de design vem antes do QA (08/10/2026); o QA, as afirmações e o veredito seguem em sequência
     nomes_qa = [a.name for a in build_qa_design_loop().sub_agents]
-    i = nomes_qa.index("A078QaEntregaveis")
-    assert nomes_qa[:3] == ["A075EscopoBanca", "A076Banca", "A077BancaConsolidacao"]
-    assert nomes_qa[i:i + 3] == ["A078QaEntregaveis", "A079QaAfirmacoes", "A080QaEntregaveisCheck"]
+    i = nomes_qa.index("A088QaEntregaveis")
+    assert nomes_qa[:3] == ["A085EscopoBanca", "A086Banca", "A087BancaConsolidacao"]
+    assert nomes_qa[i:i + 3] == ["A088QaEntregaveis", "A089QaAfirmacoes", "A090QaEntregaveisCheck"]
     print("   ✓ afirmações do QA: 16 telas num Stitch com 6 e um arquivo que não existe reprovam a rodada")
 
 
@@ -4978,8 +5005,8 @@ def test_banco_de_conteudo_escrito_e_status_humano_no_brief():
     assert "tarefa-sem-conteudo" in {a["codigo"] for a in validar_prd(prd, banco=banco)["achados"]}
 
     # os prompts: o brief tem vocabulário fechado, e o PRD lê o banco
-    assert "`a produzir | rascunho | escrito`" in load_prompt("dev/090b_brief_assets.md")
-    assert "{banco_conteudo?}" in load_prompt("dev/103_prd_writer.md")
+    assert "`a produzir | rascunho | escrito`" in load_prompt("dev/100b_brief_assets.md")
+    assert "{banco_conteudo?}" in load_prompt("dev/113_prd_writer.md")
     print("   ✓ banco de conteúdo: Homologado/Pronto para corte do brief real e os IDs sem texto bloqueiam")
 
 
@@ -4989,9 +5016,9 @@ def test_banco_de_conteudo_no_estagio_de_dev():
 
     nomes = [a.name for a in agentes_em_ordem(build_dev_stage())]
     # desde 07/10/2026 o banco e o verificador estão num loop: o bloqueio volta ao banco com o relatório
-    assert nomes.index("HandoffLoop") < nomes.index("BancoLoop") < nomes.index("A097LacunaCheck")
+    assert nomes.index("HandoffLoop") < nomes.index("BancoLoop") < nomes.index("A107LacunaCheck")
     loop = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "BancoLoop")
-    assert [a.name for a in loop.sub_agents] == ["A094BancoConteudo", "A095ConteudoCheck", "A096BancoRodada"]
+    assert [a.name for a in loop.sub_agents] == ["A104BancoConteudo", "A105ConteudoCheck", "A106BancoRodada"]
     assert ("banco_conteudo", "dev/01e-banco-conteudo.md") in ARTIFACT_FILES
 
     estado = {"spec_missao": _fixture_exp09("spec.md") + _GLOSSARIO_EXP09, "brief_assets": _fixture_exp09("brief_assets.md"),
@@ -5003,7 +5030,7 @@ def test_banco_de_conteudo_no_estagio_de_dev():
         async def _run_async_impl(self, ctx):
             yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
 
-    original = next(a for a in loop.sub_agents if a.name == "A095ConteudoCheck")
+    original = next(a for a in loop.sub_agents if a.name == "A105ConteudoCheck")
     check = original.model_copy(update={"parent_agent": None})
     _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), check])))
     assert st["conteudo_status"] == "bloqueado"
@@ -5018,15 +5045,15 @@ def test_animacao_da_esteira_marca_o_passo_atual_e_o_que_ja_rodou():
 
     passos = passos_da_esteira()
     # o retrabalho cai no passo do agente pai, e a etapa sai do número
-    assert etapa_do_agente("A065TelasRetrabalho") == "design"
-    s = situacao_dos_passos(passos, "design", "A065TelasRetrabalho", ["A055FechaLacunas"])
-    assert s[(65, "")] == "atual" and s[(55, "")] == "feito"
-    assert all(v == "feito" for (n, _), v in s.items() if n < 54)  # produto inteiro antes do design
-    assert s[(103, "")] == "pendente"
+    assert etapa_do_agente("A075TelasRetrabalho") == "design"
+    s = situacao_dos_passos(passos, "design", "A075TelasRetrabalho", ["A065FechaLacunas"])
+    assert s[(75, "")] == "atual" and s[(65, "")] == "feito"
+    assert all(v == "feito" for (n, _), v in s.items() if n < 64)  # produto inteiro antes do design
+    assert s[(113, "")] == "pendente"
     # o contêiner paralelo pulsa o grupo inteiro
-    s = situacao_dos_passos(passos, "produto", "A047Banca", [])
-    assert s[(47, "a")] == s[(47, "b")] == "atual"
-    h = html_da_esteira("design", "A065Telas", [], titulo="⏳", decorrido_s=65)
+    s = situacao_dos_passos(passos, "produto", "A057Banca", [])
+    assert s[(57, "a")] == s[(57, "b")] == "atual"
+    h = html_da_esteira("design", "A075Telas", [], titulo="⏳", decorrido_s=65)
     assert 'class="p atual"' in h and "1 min 05 s" in h
 
 
@@ -5046,8 +5073,8 @@ def test_custo_soma_as_execucoes_e_cobra_cache_e_pensamento(monkeypatch):
 
     # o redator do PRD pode usar outro modelo; modelo sem preço não entra e é avisado
     e1 = custo.custo_da_execucao({"A004NucleoNarrativo": t}, "gemini-3.8-flash", {})
-    e2 = custo.custo_da_execucao({"A103PrdWriter": t, "A014SecoesApoio": t}, "gemini-3.8-flash",
-                                 {"A103PrdWriter": "outro-modelo"})
+    e2 = custo.custo_da_execucao({"A113PrdWriter": t, "A014SecoesApoio": t}, "gemini-3.8-flash",
+                                 {"A113PrdWriter": "outro-modelo"})
     assert e2["modelos_sem_preco"] == ["outro-modelo"] and e2["usd"] == e1["usd"]
     # refazer soma ao total, não substitui
     total = custo.acumular(custo.acumular(None, e1, ["produto"]), e2, ["design"])
@@ -5121,13 +5148,13 @@ def test_restaurar_backup_nao_apaga_o_custo_e_soma_o_que_a_falha_gastou(tmp_path
 def test_animacao_pinta_o_veredito_e_marca_o_que_nao_precisou_rodar():
     from pipeline.esteira_visual import cores_dos_passos, html_da_esteira, passos_da_esteira, situacao_dos_passos
 
-    # o juiz 020 não emitiu evento e a execução já está no 022: ficou para trás sem rodar
-    s = situacao_dos_passos(passos_da_esteira(), "produto", "A022GateEstruturalCheck", ["A019ContratoProdutoCheck"])
-    assert s[(20, "")] == "pulado" and s[(19, "")] == "feito" and s[(23, "")] == "pendente"
+    # o juiz 025 não emitiu evento e a execução já está no 027: ficou para trás sem rodar
+    s = situacao_dos_passos(passos_da_esteira(), "produto", "A027GateEstruturalCheck", ["A024ContratoProdutoCheck"])
+    assert s[(25, "")] == "pulado" and s[(24, "")] == "feito" and s[(28, "")] == "pendente"
     cores = cores_dos_passos({"gate_estrutural_status": "bloqueado", "bncc_status": "amarelo",
                               "micro_gate_status": "aprovado"})
-    assert cores[(22, "")][0] == "vermelho" and cores[(36, "")][0] == "amarelo" and (12, "") not in cores
-    h = html_da_esteira("produto", "A040PerguntasCheck", ["A022GateEstruturalCheck", "A036BnccCheck"],
+    assert cores[(27, "")][0] == "vermelho" and cores[(46, "")][0] == "amarelo" and (12, "") not in cores
+    h = html_da_esteira("produto", "A050PerguntasCheck", ["A027GateEstruturalCheck", "A046BnccCheck"],
                         gates={"gate_estrutural_status": "bloqueado", "bncc_status": "amarelo"}, escuro=True)
     assert 'class="p vermelho"' in h and 'class="p amarelo"' in h and "não precisou rodar" in h
     assert "class='esteira escuro'" in h

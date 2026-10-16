@@ -26,12 +26,17 @@ ARTIFACT_FILES = [
     ("micro_gate_report", "produto/00b-micro-gate.md"),
     ("profundidade_report", "produto/00j-juiz-profundidade.md"),
     ("one_pager", "produto/00-one-pager.md"),
+    ("evidencia_one_pager_report", "produto/00k-contrato-evidencia-12a.md"),
+    ("comite_canal_a_report", "produto/00l-comite-canais-painel-a.md"),
+    ("comite_canal_b_report", "produto/00m-comite-canais-painel-b.md"),
     ("brief_escopo", "produto/00f-brief-escopo.md"),
     ("contrato_produto_report", "produto/00e-contrato-produto.md"),
     ("gate_estrutural_report", "produto/01-gate-estrutural.md"),
     ("avaliacao_pedagogica_report", "produto/02-avaliacao-pedagogica.md"),
     ("experiencia_aluno_report", "produto/03-experiencia-aluno.md"),
     ("adequacao_report", "produto/03b-adequacao-pedagogica.md"),
+    ("mecanica_one_pager_report", "produto/03c-conta-da-virada-one-pager.md"),
+    ("comite_final_report", "produto/03d-comite-final.md"),
     ("gate_final_report", "produto/04-gate-final.md"),
     ("spec_missao", "produto/05-spec-missao.md"),
     ("one_pager_gate0", "produto/00c-one-pager-original.md"),
@@ -140,7 +145,7 @@ def e_mensagem_de_pulo(valor: Any) -> bool:
     """O ADK grava no `output_key` o texto do callback que pulou o agente.
 
     Sem este filtro, um pipeline bloqueado produz um `PRD.md` de 88 bytes dizendo
-    "A103PrdWriter não executado" — e a interface, que só testa se a chave existe,
+    "A113PrdWriter não executado" — e a interface, que só testa se a chave existe,
     anuncia "PRD gerado".
     """
     if not isinstance(valor, str):

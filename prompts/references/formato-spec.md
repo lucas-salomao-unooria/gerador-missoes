@@ -246,12 +246,13 @@ A coluna «Medida do bloco 9» precisa nomear uma medida que existe lá — habi
 nada mede é currículo no papel, e some do relatório do professor. Nas primeiras execuções, 40
 códigos de Computação foram declarados e ~38 não tinham nenhum dado ligado.
 
-«Canal de evidência» é `A` (ação do estudante, classificada pelo servidor), `B` (pergunta de
-múltipla escolha depois do Refletir) ou `A + B`, copiado da seção 12a do one-pager; não confundir
-com o canal do dado (operacional × analítico) do bloco 9. «Regra ternária» diz o que separa
+«Canal de evidência» é `A` (ação do estudante, classificada pelo servidor) ou `A + B` (a ação
+mais a pergunta de múltipla escolha depois do Refletir), copiado da seção 12a do one-pager — `B`
+sozinho não existe: toda habilidade tem Canal A, e um código confere; não confundir com o canal do
+dado (operacional × analítico) do bloco 9. «Regra ternária» diz o que separa
 **Atingiu**, **Em processo** e **Não atingiu** — por extenso, porque os círculos coloridos são
-veredito de gate. Com Canal B, a regra é o mapeamento das três alternativas, e a pergunta com as
-alternativas vai no bloco 9. O Canal B **soma** evidência: a linha continua com momento em tela e
+veredito de gate. Com `A + B`, a regra da ação vem primeiro e o mapeamento das três alternativas a acompanha;
+a pergunta com as alternativas vai no bloco 9. O Canal B **soma** evidência: a linha continua com momento em tela e
 ação observável. No 1º e no 2º ano, as três alternativas ficam na tela ao mesmo tempo (opção
 visível sobe o teto da faixa de duas para três, critério 3.5) e são narradas (6.1).
 

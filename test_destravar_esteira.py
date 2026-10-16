@@ -131,10 +131,10 @@ def test_writers_do_dev_desembrulham_a_saida():
 def test_banca_de_produto_recebe_o_one_pager_antes_de_julgar():
     from agents.banca import get_banca
 
-    produto = get_banca("produto", "AC", 45, rotulo="Banca de produto", titulo="t", report_key="r", status_key="s")
-    assert produto[0].name == "A045ConteudoAprovado" and produto[1].name == "A046EscopoBanca"
-    design = get_banca("design", "AB", 75, rotulo="Banca de design", titulo="t", report_key="r", status_key="s")
-    assert design[0].name == "A075EscopoBanca", "no design o conteúdo aprovado já existe, com o retrato da etapa"
+    produto = get_banca("produto", "AC", 55, rotulo="Banca de produto", titulo="t", report_key="r", status_key="s")
+    assert produto[0].name == "A055ConteudoAprovado" and produto[1].name == "A056EscopoBanca"
+    design = get_banca("design", "AB", 85, rotulo="Banca de design", titulo="t", report_key="r", status_key="s")
+    assert design[0].name == "A085EscopoBanca", "no design o conteúdo aprovado já existe, com o retrato da etapa"
 
 
 def test_pedido_do_po_que_retira_habilidade_vence_o_briefing_original():
@@ -183,15 +183,19 @@ def test_documento_obrigatorio_para_a_etapa_com_mensagem_legivel():
 
     from agents.produto import build_produto_stage
 
-    nomes = [a.name for a in build_produto_stage().sub_agents]
+    def em_ordem(agente):
+        return [agente] + [d for sub in agente.sub_agents for d in em_ordem(sub)]
+
+    # dentro dos comitês (15/10/2026) a ordem continua: seções de apoio → one-pager existe → gate estrutural
+    nomes = [a.name for a in em_ordem(build_produto_stage())]
     assert nomes.index("SecoesApoioLoop") < nomes.index("A017OnePagerExiste") < nomes.index("GateEstruturalLoop")
 
 
 def test_erro_de_variavel_ausente_vira_mensagem_que_o_po_le():
     from pipeline.runner import mensagem_de_erro
 
-    msg = mensagem_de_erro(KeyError("Context variable not found: `one_pager` in agent 'A021GateEstrutural'."))
-    assert "`one_pager`" in msg and "A021GateEstrutural" in msg and "terminou sem texto" in msg
+    msg = mensagem_de_erro(KeyError("Context variable not found: `one_pager` in agent 'A026GateEstrutural'."))
+    assert "`one_pager`" in msg and "A026GateEstrutural" in msg and "terminou sem texto" in msg
     assert mensagem_de_erro(RuntimeError("outra coisa")) == "outra coisa"
 
 
@@ -323,7 +327,7 @@ def test_pedagogico_tem_juiz_de_contradicoes():
 
     loop = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "OnePagerPedagogicoLoop")
     nomes = [a.name for a in loop.sub_agents]
-    assert nomes.index("A112CoerenciaPedagogico") < nomes.index("A113PedagogicoRodada")
+    assert nomes.index("A122CoerenciaPedagogico") < nomes.index("A123PedagogicoRodada")
     assert "coerencia_pedagogico_status" in loop.sub_agents[-1].status_keys
 
 
@@ -378,8 +382,8 @@ def test_gates_de_llm_pedem_citacao_e_sabem_o_que_avaliam():
     from pipeline.orchestrator import iter_agent_tree  # noqa: F401  (só garante que o módulo carrega)
     from prompts import load_prompt
 
-    for p in ("produto/007_micro_gate.md", "produto/021_gate_estrutural.md", "produto/033_gate_final.md",
-              "design/078_qa_entregaveis.md", "dev/validacao_produto_narrativa.md"):
+    for p in ("produto/007_micro_gate.md", "produto/026_gate_estrutural.md", "produto/043_gate_final.md",
+              "design/088_qa_entregaveis.md", "dev/validacao_produto_narrativa.md"):
         assert "o código confere" in load_prompt(p).lower(), p
 
     def todos(a):
@@ -389,8 +393,8 @@ def test_gates_de_llm_pedem_citacao_e_sabem_o_que_avaliam():
 
     gates = {a.name: a for raiz in (build_produto_stage(), build_design_stage()) for a in todos(raiz)
              if type(a).__name__ == "EnvelopeGateAgent"}
-    for nome in ("A012MicroGateCheck", "A022GateEstruturalCheck", "A025AvaliacaoCheck", "A027AdequacaoCheck",
-                 "A034GateFinalProdutoCheck", "A042JuizPerguntasCheck", "A080QaEntregaveisCheck"):
+    for nome in ("A012MicroGateCheck", "A027GateEstruturalCheck", "A030AvaliacaoCheck", "A032AdequacaoCheck",
+                 "A044GateFinalProdutoCheck", "A052JuizPerguntasCheck", "A090QaEntregaveisCheck"):
         assert gates[nome].documentos, nome
 
 
@@ -498,7 +502,7 @@ def test_fidelidade_do_nucleo_e_parcial_so_violacao_bloqueia():
         for s in getattr(a, "sub_agents", []) or []:
             yield from todos(s)
     nucleo = next(a for a in todos(build_produto_stage()) if a.name == "A010FidelidadeNucleo")
-    fim = next(a for a in todos(build_produto_stage()) if a.name == "A050FidelidadeProduto")
+    fim = next(a for a in todos(build_produto_stage()) if a.name == "A060FidelidadeProduto")
     assert nucleo.parcial and not fim.parcial
 
 
@@ -523,7 +527,7 @@ def test_split_tira_a_moldura_do_agente_e_a_preservacao_nao_faz_ping_pong():
 def test_prototipo_pede_cada_pergunta_do_canal_b_em_quadro_e_sem_gabarito():
     from prompts import load_prompt
 
-    p = load_prompt("design/069_prototipo.md")
+    p = load_prompt("design/079_prototipo.md")
     assert "um quadro\npor item" in p or "um quadro por item" in p.replace("\n", " ")
     assert "sem o rótulo de nível" in p
 
@@ -544,7 +548,7 @@ def test_estados_da_spec_nao_contam_o_gatilho_em_snake_case():
 def test_prototipo_mostra_distratores_de_toda_escolha():
     from prompts import load_prompt
 
-    assert "distratores" in load_prompt("design/069_prototipo.md")
+    assert "distratores" in load_prompt("design/079_prototipo.md")
 
 
 def test_listagem_do_stitch_segue_paginas_e_busca_por_id_o_que_faltou(monkeypatch):

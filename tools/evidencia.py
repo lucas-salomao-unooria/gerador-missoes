@@ -46,6 +46,17 @@ _RE_CANAL = re.compile(r"^[\W_]*(?:(?i:canal)\s+)?(A\s*\+\s*B|B\s*\+\s*A|A|B)(?!
 _NIVEIS = (re.compile(r"(?<!nao )\batingiu\b"), re.compile(r"\bem processo\b"), re.compile(r"\bnao atingiu\b"))
 
 
+#: Desde 15/10/2026 toda habilidade tem Canal A: a pergunta do Canal B só soma evidência (decisão do PO).
+_RESUMO_SEM_CANAL_A = (
+    "`{codigo}`: canal só `B`. Toda habilidade tem Canal A — uma ação nativa do ambiente com regra ternária —, e a "
+    "pergunta de múltipla escolha só soma evidência a ela. Declare `A` ou `A + B`, com a ação e a regra; se nenhuma "
+    "ação da missão exercita a habilidade, o defeito está na mecânica, e uma pergunta no fim não o conserta.")
+
+
+def _so_canal_b(canal: str) -> bool:
+    return re.sub(r"\s+", "", canal or "").upper() == "B"
+
+
 def _norm(texto: str) -> str:
     sem = "".join(c for c in unicodedata.normalize("NFD", texto.lower()) if unicodedata.category(c) != "Mn")
     return sem.strip(" `*_|")
@@ -159,6 +170,8 @@ def validar(spec: str) -> Dict[str, Any]:
             falha("habilidade-sem-canal",
                   f"`{c}`: a coluna «Canal de evidência» não diz `A` (ação), `B` (pergunta) nem `A + B`. "
                   f"Sem canal, quem implementa não sabe de onde sai o nível — e inventa a classificação.")
+        elif _so_canal_b(canal.group(1)):
+            falha("habilidade-sem-canal-a", _RESUMO_SEM_CANAL_A.format(codigo=c))
         regra = _norm(linha.get("regra ternaria", ""))
         if not all(n.search(regra) for n in _NIVEIS):
             falha("regra-ternaria-ausente",
@@ -201,3 +214,153 @@ def relatorio(resultado: Dict[str, Any], missao: str = "") -> str:
         {"agente": AGENTE, "missao": missao, "status": resultado["status"], "achados": resultado["achados"]},
         ensure_ascii=False, indent=2), "```"]
     return "\n".join(linhas)
+
+
+# --------------------------------------------------------------------------- §12a do one-pager
+#: O contrato de evidência do one-pager, conferido onde ele nasce. Os comitês julgam o sentido de cada canal; aqui se
+#: confere o que é forma — se a forma falha, o voto não chega a ser gasto (comitês de 15/10/2026).
+AGENTE_ONE_PAGER = "evidencia-one-pager"
+_RE_12A_TITULO = re.compile(r"^#{2,5}\s*[*_]*\s*12a\b", re.M | re.I)
+CABECALHO_12A = ("| Habilidade (código) | Canal de evidência | Canal A: ação · etapa · regra ternária (Atingiu / Em "
+                 "processo / Não atingiu) | Canal B: pergunta · 3 alternativas com o nível de cada uma, sem ordem fixa · "
+                 "componente que renderiza |")
+
+
+def _coluna_12a(nome: str) -> str:
+    """Papel de uma coluna do §12a pelo nome normalizado. Dois formatos convivem no acervo: uma linha por habilidade
+    com as colunas «Canal A: …» e «Canal B: …» (o do A014), e uma linha por habilidade e canal, com a coluna «Canal»
+    dizendo qual (exp09ef1b)."""
+    if nome.startswith("habilidade"):
+        return "habilidade"
+    if nome.startswith("canal de evidencia") or nome in ("canal", "canais"):
+        return "canal"
+    if re.match(r"canal a\b", nome):
+        return "canal_a"
+    if re.match(r"canal b\b", nome):
+        return "canal_b"
+    return ""
+
+
+def _contrato_12a(trecho: str) -> Optional[Dict[str, Dict[str, Any]]]:
+    """Por código: os canais declarados e o texto de cada um. `None` sem tabela reconhecível no §12a."""
+    papeis: Optional[List[str]] = None
+    contrato: Dict[str, Dict[str, Any]] = {}
+    linhas = 0
+    for bruta in trecho.splitlines()[1:]:
+        linha = bruta.strip()
+        if not (linha.startswith("|") and linha.endswith("|")):
+            if papeis is not None and linhas:
+                break
+            continue
+        celulas = [c.strip() for c in linha.strip("|").split("|")]
+        if set("".join(celulas)) <= set("-: "):
+            continue
+        if papeis is None:
+            candidatos = [_coluna_12a(_norm(c)) for c in celulas]
+            if {"habilidade", "canal"} <= set(candidatos):
+                papeis = candidatos
+            continue
+        linhas += 1
+        por_papel: Dict[str, str] = {}
+        resto: List[str] = []
+        for i, celula in enumerate(celulas):
+            papel = papeis[i] if i < len(papeis) else ""
+            if papel:
+                por_papel[papel] = por_papel.get(papel, "") + " " + celula
+            else:
+                resto.append(celula)
+        canal = _RE_CANAL.match(por_papel.get("canal", "").strip())
+        canais = set(re.sub(r"[^AB]", "", canal.group(1).upper())) if canal else set()
+        largo = "canal_a" in papeis or "canal_b" in papeis
+        for c in bncc.extrair_codigos(por_papel.get("habilidade", "")):
+            item = contrato.setdefault(c, {"canais": set(), "texto_a": "", "texto_b": ""})
+            item["canais"] |= canais
+            if largo:
+                item["texto_a"] += " " + por_papel.get("canal_a", "")
+                item["texto_b"] += " " + por_papel.get("canal_b", "")
+            else:  # uma linha por canal: o resto da linha é o contrato daquele canal
+                chave = "texto_b" if canais == {"B"} else "texto_a"
+                item[chave] += " " + " ".join(resto)
+    return contrato if papeis is not None else None
+
+
+def _vazia(celula: str) -> bool:
+    return not re.sub(r"[\s`*_—–\-.]", "", celula or "")
+
+
+def conferir_one_pager(one_pager: str) -> Dict[str, Any]:
+    """O §12a do one-pager: toda habilidade de Computação da §2 tem contrato, com Canal A e regra ternária; o Canal B,
+    quando existe, mapeia as alternativas aos três níveis. O sentido de cada canal é dos comitês, não deste gate."""
+    from tools.conteudo_aprovado import secao
+
+    texto = one_pager or ""
+    achados: List[Dict[str, str]] = []
+
+    def falha(codigo: str, resumo: str) -> None:
+        achados.append({"severidade": "bloqueio", "codigo": codigo, "etapa": "produto",
+                        "agente_responsavel": "one-pager", "resumo": resumo})
+
+    s12 = secao(texto, 12) or ""
+    m = _RE_12A_TITULO.search(s12)
+    if not m:
+        falha("12a-ausente", "O one-pager não tem o §12a «Contrato de evidência por habilidade»: sem ele, nenhuma "
+                             "habilidade diz de onde sai o nível do estudante.")
+        return {"status": "bloqueado", "achados": achados, "codigos": []}
+    contrato = _contrato_12a(s12[m.start():])
+    if contrato is None:
+        falha("12a-sem-tabela", f"O §12a não tem a tabela do contrato. Cabeçalho a copiar: `{CABECALHO_12A}`")
+        return {"status": "bloqueado", "achados": achados, "codigos": []}
+
+    for c in bncc.extrair_codigos(secao(texto, 2) or ""):
+        if c not in contrato:
+            falha("habilidade-sem-contrato", f"`{c}` está na seção 2 e não tem linha no §12a: habilidade sem contrato "
+                                             f"de evidência é habilidade que nada mede.")
+    for c, item in contrato.items():
+        if not item["canais"]:
+            falha("habilidade-sem-canal", f"`{c}`: a coluna do canal não diz `A` nem `A + B`.")
+            continue
+        if "A" not in item["canais"]:
+            falha("habilidade-sem-canal-a", _RESUMO_SEM_CANAL_A.format(codigo=c))
+            continue
+        if not all(n.search(_norm(item["texto_a"])) for n in _NIVEIS):
+            falha("regra-ternaria-ausente",
+                  f"`{c}`: o Canal A não diz, por extenso, o que separa Atingiu, Em processo e Não atingiu na ação "
+                  f"observada. Sem a regra, quem implementa inventa a classificação.")
+        if "B" in item["canais"]:
+            if _vazia(item["texto_b"]):
+                falha("canal-b-vazio", f"`{c}`: canal `A + B`, mas o Canal B está vazio: declare a pergunta e as três "
+                                       f"alternativas, ou mude o canal para `A`.")
+            elif not all(n.search(_norm(item["texto_b"])) for n in _NIVEIS):
+                falha("canal-b-sem-niveis", f"`{c}`: as alternativas do Canal B não dizem a qual nível cada uma leva "
+                                            f"(Atingiu · Em processo · Não atingiu).")
+    status = "bloqueado" if achados else "aprovado"
+    return {"status": status, "achados": achados, "codigos": list(contrato)}
+
+
+def relatorio_one_pager(resultado: Dict[str, Any], missao: str = "") -> str:
+    import json
+
+    icone = {"aprovado": "🟢 CONTRATO COMPLETO", "bloqueado": "🔴 BLOQUEADO"}[resultado["status"]]
+    linhas = [f"# Contrato de evidência do one-pager (§12a) — {missao or 'missão'}", "", f"**Veredito: {icone}**", "",
+              f"Habilidades com linha no §12a: **{len(resultado['codigos'])}**", ""]
+    if resultado["achados"]:
+        linhas += ["## Achados", ""] + [f"- ❌ **{a['codigo']}** — {a['resumo']}" for a in resultado["achados"]]
+    else:
+        linhas.append("Nenhum achado: toda habilidade da seção 2 tem linha no §12a, com Canal A e regra ternária, e "
+                      "todo Canal B declara o nível de cada alternativa.")
+    linhas += ["", "```json", json.dumps(
+        {"agente": AGENTE_ONE_PAGER, "missao": missao, "status": resultado["status"], "achados": resultado["achados"]},
+        ensure_ascii=False, indent=2), "```"]
+    return "\n".join(linhas)
+
+
+def habilidades_com_canal_b(one_pager: str) -> Optional[List[str]]:
+    """Códigos com Canal B no §12a; `None` quando o §12a não se lê — aí ninguém pula o painel B por engano."""
+    from tools.conteudo_aprovado import secao
+
+    s12 = secao(one_pager or "", 12) or ""
+    m = _RE_12A_TITULO.search(s12)
+    contrato = _contrato_12a(s12[m.start():]) if m else None
+    if contrato is None:
+        return None
+    return [c for c, item in contrato.items() if "B" in item["canais"]]

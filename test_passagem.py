@@ -384,10 +384,10 @@ class TestOrquestradorEDossie(unittest.TestCase):
         from pipeline.orchestrator import create_mission_orchestrator, iter_agent_tree
 
         nomes = {a.name for _, a in iter_agent_tree(create_mission_orchestrator(stages=["produto"], com_transversal=False))}
-        self.assertNotIn("A117Diagnostico", nomes)
-        self.assertNotIn("A119RegistroCatalogo", nomes)
+        self.assertNotIn("A127Diagnostico", nomes)
+        self.assertNotIn("A129RegistroCatalogo", nomes)
         com = {a.name for _, a in iter_agent_tree(create_mission_orchestrator(stages=["produto"]))}
-        self.assertIn("A117Diagnostico", com)
+        self.assertIn("A127Diagnostico", com)
 
     def test_dossie_ganha_a_secao_passagens(self):
         from tools.diagnostico import bloco_de_passagens

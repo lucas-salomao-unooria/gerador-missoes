@@ -162,7 +162,7 @@ def _presente(categoria: str, alvo: str, coluna: str, texto: str) -> bool:
         if coluna == "prototipo":
             fonte = ca._texto_visivel(texto)
         elif coluna == "pedagogico":
-            # o gate do pedagógico (A111) cobra o Canal B e o debate no corpo; o anexo que a esteira cola no fim
+            # o gate do pedagógico (A121) cobra o Canal B e o debate no corpo; o anexo que a esteira cola no fim
             # traz o §12 e o §9 inteiros, e contá-lo deixava a coluna sempre ✅. No PRD o anexo conta: o corpo
             # remete a ele por desenho.
             fonte = ca.remover_anexo(texto)

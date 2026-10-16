@@ -29,6 +29,18 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 
 {one_pager_po_report?}
 
+**Comitês pedagógicos na rodada anterior** (vazios até um comitê reprovar). O comitê não escreve, e a correção é sua: corrija **só os achados atribuídos a `A014`** — a seção 2, as linhas do §12a das demais habilidades e as seções 5 a 18 —, partindo do one-pager que você entregou e mudando só o que os achados pedem. Os achados de `A004` o núcleo acima já corrigiu: copie dele a seção 4 e o contrato do foco primário. Habilidade secundária sem ação que a exercite sai da seção 2 quando o achado manda. Com one-pager do PO anexado, o voto pode mandar mudar o texto dele — registre na tabela «Alterações sobre o one-pager do PO», citando entre aspas o `Corrigir` do achado; se o pedido do PO manda **não mexer** naquele objeto, não mude: escreva `[PROPOSTA — validar com PO: …]` ao lado.
+
+{comite_canal_a_report?}
+
+{comite_canal_b_report?}
+
+{comite_final_report?}
+
+**Contrato de evidência do one-pager (§12a), conferido em código** — habilidade sem Canal A, sem regra ternária por extenso ou com Canal B sem os três níveis volta aqui; o foco primário é seu (seção 4), as demais linhas são das seções de apoio:
+
+{evidencia_one_pager_report?}
+
 <!-- include: references/one-pager-do-po.md -->
 
 ## Regras
@@ -96,7 +108,11 @@ Roteiro completo, 2 apresentadores, 5 blocos (abertura ~30s, recapitulação ~1�
 ## 12. Evidências e dados
 O que é capturado, quando, finalidade, retenção, acesso; o que NÃO é coletado; graus de medida; canal; texto livre de menor; segredo de servidor; gabarito. A Atividade guarda `disciplina` e o recorte da aula como metadados do professor (rótulo do relatório pós-aula); nunca são dado do estudante.
 
-**12a. Contrato de evidência por habilidade.** Copie da seção 4 do núcleo o contrato do foco primário (Regra 17 do P0a) e estenda-o a **toda habilidade de Computação da seção 2**, uma linha cada. Os níveis vão por extenso — Atingiu · Em processo · Não atingiu —, nunca com os círculos de veredito dos gates.
+**12a. Contrato de evidência por habilidade.** Copie da seção 4 do núcleo o contrato do foco primário (Regra 17 do P0a) e estenda-o a **toda habilidade de Computação da seção 2**, uma linha cada. Os níveis vão por extenso — Atingiu · Em processo · Não atingiu —, nunca com os círculos de veredito dos gates. **Toda habilidade tem Canal A** — o canal é `A` ou `A + B`; `B` sozinho é ❌ (decisão do PO de 15/10/2026). Habilidade secundária que nenhuma ação da missão exercita sai da seção 2 (critério 5.2): a pergunta do Canal B não a sustenta sozinha. Escreva o contrato nesta tabela, com este cabeçalho exato — um código confere a forma dela antes de o comitê votar:
+
+  `| Habilidade (código) | Canal de evidência | Canal A: ação · etapa · regra ternária (Atingiu / Em processo / Não atingiu) | Canal B: pergunta · 3 alternativas com o nível de cada uma, sem ordem fixa · componente que renderiza |`
+
+  Com canal `A`, a última coluna fica `—`.
 - **Canal A:** o evento que o sistema registra (verbo + objeto), o campo do `resultado` ou do `contexto` que distingue os três níveis, e a regra ternária explícita ("servidor calcula, nunca aceita").
 - **Canal B:** a pergunta, as 3 alternativas com o nível de cada uma (sem ordem fixa: o servidor sorteia a cada exibição), o componente que a renderiza sem quebrar a imersão — do DS da seção quando existir; senão, componente local declarado como pré-requisito na seção 16, nunca apresentado como "do DS" — e a confirmação de que o estudante vê apenas "resposta enviada" ou o equivalente diegético: sem nota, sem resultado, sem sinal de acerto.
 - **Gabarito no servidor:** o mapeamento alternativa → nível vive só no servidor. O cliente envia a alternativa escolhida (identificador opaco) pela rota do módulo e nunca recebe qual alternativa corresponde a qual nível.

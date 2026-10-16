@@ -133,11 +133,11 @@ def test_agente_de_telas_nao_tem_mais_as_ferramentas_de_geracao():
     from prompts import get_prompt_raw
 
     estagio = build_design_stage()
-    telas_agente = next(a for a in estagio.sub_agents if a.name == "A065Telas")
+    telas_agente = next(a for a in estagio.sub_agents if a.name == "A075Telas")
     assert not telas_agente.tools
     nomes = [a.name for a in estagio.sub_agents]
-    assert nomes.index("A065Telas") + 1 == nomes.index("A066StitchGeracao")
-    prompt = get_prompt_raw("design/065_telas.md")
+    assert nomes.index("A075Telas") + 1 == nomes.index("A076StitchGeracao")
+    prompt = get_prompt_raw("design/075_telas.md")
     assert "## Geração no Stitch" in prompt and "Você não chama o Stitch" in prompt and "`create_project`" not in prompt
 
 

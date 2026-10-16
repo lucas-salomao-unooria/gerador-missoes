@@ -111,7 +111,7 @@ class TestContexto(unittest.TestCase):
 
     def test_documento_pulado_nao_entra(self):
         self.assertIn("brief_oficio", conversa.documentos_da_etapa(ESTADO, "design"))
-        estado = {**ESTADO, "brief_oficio": "⏭️ A060BriefOficio não executado: etapa bloqueada"}
+        estado = {**ESTADO, "brief_oficio": "⏭️ A070BriefOficio não executado: etapa bloqueada"}
         self.assertNotIn("brief_oficio", conversa.documentos_da_etapa(estado, "design"))
 
     def test_produto_nao_le_documento_de_design(self):
@@ -160,8 +160,8 @@ class TestContexto(unittest.TestCase):
         ctx = conversa.montar_contexto({"one_pager": "x"}, _fluxo("produto"), "dev")
         self.assertIn("ainda não começou", ctx)
         self.assertIn("Nenhum documento desta etapa foi gravado ainda.", ctx)
-        ctx = conversa.montar_contexto(ESTADO, _fluxo("design", GERANDO), "design", {"agente_atual": "A063CopyPtBr"})
-        self.assertIn("Design gerando agora (agente atual: A063CopyPtBr)", ctx)
+        ctx = conversa.montar_contexto(ESTADO, _fluxo("design", GERANDO), "design", {"agente_atual": "A073CopyPtBr"})
+        self.assertIn("Design gerando agora (agente atual: A073CopyPtBr)", ctx)
 
     def test_historico_so_as_ultimas_trocas_e_cortadas(self):
         mensagens = []

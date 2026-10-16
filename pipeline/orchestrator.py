@@ -6,7 +6,7 @@
     ├── ProdutoStage   (SequentialAgent)  one-pager → gate estrutural (loop) → avaliações (paralelo) → gate final → spec
     ├── DesignStage    (SequentialAgent)  briefing → jornada 🎨 → fluxo 🎨 → copy → wireframes 🎨 → copy 2 → QA
     ├── DevStage       (SequentialAgent)  handoff ∥ assets → banca (5 ∥) → consolidação → PRD
-    └── A118Aprendizado (transversal)
+    └── A128Aprendizado (transversal)
 
 Controle de fluxo determinístico: os `EnvelopeGateAgent` leem o envelope JSON dos
 relatórios e gravam o status no `session.state`; os agentes a jusante carregam o
@@ -47,7 +47,7 @@ STAGES: List[Dict[str, Any]] = [
 
 #: Etapa parcial do modo correção (`pipeline/reexecucao.py`): só spec ↔ gates → one-pager resumido.
 #: Fica fora de `STAGES` de propósito — não é uma etapa que a configuração liga, e listá-la
-#: duplicaria os agentes A035–A051 nos metadados da UI.
+#: duplicaria os agentes A045–A061 nos metadados da UI.
 STAGE_SPEC: Dict[str, Any] = {"key": "spec", "name": "Produto (spec)", "icon": "🧭", "container": "ProdutoStage", "agents": PRODUTO_METADATA_SPEC}
 
 FINAL_OUTPUT_KEY = "prd_final"

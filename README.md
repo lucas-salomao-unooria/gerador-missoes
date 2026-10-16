@@ -51,7 +51,7 @@ Sete partes, que não precisam ser lidas na ordem:
 |:-:|---|---|
 | I | O que a esteira faz | Que documentos saem, para quem, e o que significa a esteira não abortar. |
 | II | Como usar | O que colocar no briefing (ou o **one-pager do PO**, que vira a base preservada), o **parecer humano entre etapas**, os **pedidos do PO que se acumulam e são conferidos** (e como escrevê-los), a **conversa sobre a missão**, o acompanhamento da esteira animada, o **custo da missão em reais**, o modo correção e como ler o diagnóstico. |
-| III | Como é construída | Por que 119 passos (numerados de 001 a 119, na ordem em que rodam) e não um prompt grande; portões, ciclos, a **banca em quatro posições**, o **conteúdo aprovado conferido até o PRD codificável**, a base da plataforma e o controle anti-alucinação. |
+| III | Como é construída | Por que 129 passos (numerados de 001 a 129, na ordem em que rodam) e não um prompt grande; portões, ciclos, os **comitês pedagógicos**, a **banca em quatro posições**, o **conteúdo aprovado conferido até o PRD codificável**, a base da plataforma e o controle anti-alucinação. |
 | IV | Por que funciona | A jornada de seis etapas, a **profundidade pedagógica** (a anatomia do *ahá*), a carga cognitiva e a régua por idade — com os números e as fontes. |
 | V | O que protege | BNCC e o primado do letramento digital, LGPD art. 14, ética de acolhimento. |
 | VI | Os agentes, um a um | O catálogo completo, com o que cada um faz e em que se apoia. |
@@ -156,10 +156,12 @@ flowchart TD
             P00C["P00c/P00d: Mapa conceitual do material\n+ Ideação de 3 mecanismos"]:::stageStyle
             LOOP_P0{"Loop Núcleo Narrativo ↔ Micro-gate\n+ Juiz de profundidade (≤ 2 rodadas)"}:::gateStyle
             P0B["P0b: A014SecoesApoio\n(One-pager canônico + Brief)"]:::stageStyle
+            COM_CANAIS{"Comitê dos canais (≤ 5)\npainéis A e B, 3 juízes cada, unanimidade"}:::gateStyle
             LOOP_P1{"Loop Gate Estrutural\n(≤ 3 rodadas)"}:::gateStyle
             PAR_AVAL["Paralelo: Avaliação Pedagógica (P2)\n∥ Experiência do Estudante (P3)"]:::stageStyle
+            COM_FINAL{"Comitê final (≤ 2)\npedagogia · qualidade · imersão"}:::gateStyle
             P4_GATE{"Gate Final de Produto (P4c)\nLiberada ou Bloqueada?"}:::gateStyle
-            P5["P5: A035SpecMissao\n(Contrato dos 12 Blocos)"]:::stageStyle
+            P5["P5: A045SpecMissao\n(Contrato dos 12 Blocos)"]:::stageStyle
             P5C{"P5c: Conformidade BNCC Computação\n(determinístico — bloqueia)"}:::gateStyle
         end
 
@@ -182,12 +184,12 @@ flowchart TD
             V1D{"V1c/V1d: Telemetria + Rastro de Lacunas\n(determinísticos — o que faltou de produto/design/dev)"}:::gateStyle
             BANCA_DEV["Banca Multidisciplinar /validar-missao\n(5 dimensões paralelas: V2a–V2e)"]:::stageStyle
             V3["V3: Consolidação da Banca\n(Veredito 🟢 / 🟡 / 🔴)"]:::gateStyle
-            V4["V4: A103PrdWriter\n(PRD Padrão Ouro de 25 Seções)"]:::stageStyle
+            V4["V4: A113PrdWriter\n(PRD Padrão Ouro de 25 Seções)"]:::stageStyle
             V4C{"V4c: Pendências do PRD\n(só plataforma → 🟡)"}:::gateStyle
         end
 
         subgraph STAGE_TRANS["🧠 Etapa Transversal"]
-            T["T: A118Aprendizado\n(Catálogo, Lacunas & Emendas)"]:::stageStyle
+            T["T: A128Aprendizado\n(Catálogo, Lacunas & Emendas)"]:::stageStyle
         end
     end
 
@@ -214,9 +216,13 @@ flowchart TD
     MIRO_MCP -.-> ESPELHO
 
     LOOP_P0 -->|Núcleo aprovado| P0B
-    P0B --> LOOP_P1
+    P0B --> COM_CANAIS
+    COM_CANAIS -.->|reprovado: volta a quem escreve| LOOP_P0
+    COM_CANAIS -->|unânime| LOOP_P1
     LOOP_P1 -->|Aprovado| PAR_AVAL
-    PAR_AVAL --> P4_GATE
+    PAR_AVAL --> COM_FINAL
+    COM_FINAL -.->|reprovado: refaz a cadeia| LOOP_P0
+    COM_FINAL -->|unânime| P4_GATE
     P4_GATE -->|Liberada| P5
     P4_GATE -.->|Bloqueada em Modo Estrito| BLOCK_STOP["⛔ Interrompe Design e Dev"]:::gateStyle
     P5 --> P5C
@@ -265,21 +271,21 @@ graph TD
             P0B["P0b: A014SecoesApoio\noutput_key: one_pager"]
             
             subgraph LOOP_P1["GateEstruturalLoop (LoopAgent ≤ 3 iterações)"]
-                P1["P1: A021GateEstrutural\noutput_key: gate_estrutural_report"]
-                P1c["P1c: A022GateEstruturalCheck (EnvelopeGateAgent)\nstatus_key: gate_estrutural_status"]
-                P1b["P1b: A023RevisorOnePager\noutput_key: one_pager (corrigido)"]
+                P1["P1: A026GateEstrutural\noutput_key: gate_estrutural_report"]
+                P1c["P1c: A027GateEstruturalCheck (EnvelopeGateAgent)\nstatus_key: gate_estrutural_status"]
+                P1b["P1b: A028RevisorOnePager\noutput_key: one_pager (corrigido)"]
                 P1 --> P1c -->|Se reprovado & iteração < max| P1b --> P1
             end
 
             subgraph PAR_AVAL["AvaliacoesParalelas (ParallelAgent)"]
-                P2["P2: A024aAvaliacaoPedagogica\noutput_key: avaliacao_pedagogica_report"]
-                P3["P3: A024bExperienciaEstudante\noutput_key: experiencia_aluno_report"]
+                P2["P2: A029aAvaliacaoPedagogica\noutput_key: avaliacao_pedagogica_report"]
+                P3["P3: A029bExperienciaEstudante\noutput_key: experiencia_aluno_report"]
             end
 
-            P4["P4: A033GateFinalProduto\noutput_key: gate_final_report"]
-            P4c["P4c: A034GateFinalProdutoCheck (EnvelopeGateAgent)\nstatus_key: gate_final_status"]
-            P5["P5: A035SpecMissao\noutput_key: spec_missao"]
-            P5c["P5c: A036BnccCheck (BnccCheckAgent)\nstatus_key: bncc_status"]
+            P4["P4: A043GateFinalProduto\noutput_key: gate_final_report"]
+            P4c["P4c: A044GateFinalProdutoCheck (EnvelopeGateAgent)\nstatus_key: gate_final_status"]
+            P5["P5: A045SpecMissao\noutput_key: spec_missao"]
+            P5c["P5c: A046BnccCheck (BnccCheckAgent)\nstatus_key: bncc_status"]
 
             P0mgc -->|Escalate on Approve| P0B
             P0B --> LOOP_P1
@@ -288,28 +294,28 @@ graph TD
         end
 
         subgraph DES["DesignStage (SequentialAgent)"]
-            D0["D0: A055FechaLacunas\noutput_key: fechamento_lacunas"]
-            D0c["D0c: A056FechaLacunasSplit (SecaoSplitAgent)\nspec_missao ← spec consolidada · relatorio_lacunas · lacunas_status"]
-            D9["D9: A057AmbienteSimulado 🎨\noutput_key: ambiente_simulado"]
-            D9c["D9c: A058AmbienteSimuladoSplit (SecaoSplitAgent)\nspec_missao ← bloco 14 · ambiente_status"]
-            D1["D1: A060BriefOficio\noutput_key: brief_oficio"]
-            D2["D2: A061Jornada 🎨\noutput_key: jornada_telas"]
-            D3["D3: A062Fluxo 🎨\noutput_key: fluxo_arestas"]
-            D4["D4: A063CopyPtBr\noutput_key: copy_strings"]
-            D4B["D4b: A064Caa\noutput_key: camada_caa"]
-            D5["D5: A065Telas 🎨\noutput_key: wireframes_cobertura"]
-            D6["D6: A067CopyRevisao\noutput_key: copy_strings_revisada"]
-            D7["D7: A078QaEntregaveis 🎨\noutput_key: qa_entregaveis_report"]
-            D7c["D7c: A080QaEntregaveisCheck (EnvelopeGateAgent)\nstatus_key: design_status"]
+            D0["D0: A065FechaLacunas\noutput_key: fechamento_lacunas"]
+            D0c["D0c: A066FechaLacunasSplit (SecaoSplitAgent)\nspec_missao ← spec consolidada · relatorio_lacunas · lacunas_status"]
+            D9["D9: A067AmbienteSimulado 🎨\noutput_key: ambiente_simulado"]
+            D9c["D9c: A068AmbienteSimuladoSplit (SecaoSplitAgent)\nspec_missao ← bloco 14 · ambiente_status"]
+            D1["D1: A070BriefOficio\noutput_key: brief_oficio"]
+            D2["D2: A071Jornada 🎨\noutput_key: jornada_telas"]
+            D3["D3: A072Fluxo 🎨\noutput_key: fluxo_arestas"]
+            D4["D4: A073CopyPtBr\noutput_key: copy_strings"]
+            D4B["D4b: A074Caa\noutput_key: camada_caa"]
+            D5["D5: A075Telas 🎨\noutput_key: wireframes_cobertura"]
+            D6["D6: A077CopyRevisao\noutput_key: copy_strings_revisada"]
+            D7["D7: A088QaEntregaveis 🎨\noutput_key: qa_entregaveis_report"]
+            D7c["D7c: A090QaEntregaveisCheck (EnvelopeGateAgent)\nstatus_key: design_status"]
 
             D0 --> D0c --> D9 --> D9c --> D1 --> D2 --> D3 --> D4 --> D4B --> D5 --> D6 --> D7 --> D7c
         end
 
         subgraph DEV["DevStage (SequentialAgent)"]
-            V0["V0: A089ManifestoCheck (RastroCheckAgent)\nstatus_key: manifesto_status"]
+            V0["V0: A099ManifestoCheck (RastroCheckAgent)\nstatus_key: manifesto_status"]
             subgraph PAR_HANDOFF["HandoffParalelo (ParallelAgent)"]
-                V1["V1: A090aHandoffDev\noutput_key: handoff_dev"]
-                V1b["V1b: A090bBriefAssets\noutput_key: brief_assets"]
+                V1["V1: A100aHandoffDev\noutput_key: handoff_dev"]
+                V1b["V1b: A100bBriefAssets\noutput_key: brief_assets"]
             end
 
             subgraph BANCA["BancaValidacaoDev (ParallelAgent)"]
@@ -320,17 +326,17 @@ graph TD
                 V2e["V2e: Técnica & Arquitetura\noutput_key: validacao_tecnica_arquitetura"]
             end
 
-            V1c["V1c: A091TelemetriaCheck (RastroCheckAgent)\nstatus_key: telemetria_status"]
-            V1d["V1d: A097LacunaCheck (RastroCheckAgent)\nstatus_key: rastro_lacunas_status"]
-            V3["V3: A100ConsolidacaoBanca\noutput_key: validacao_dev_report"]
-            V3c["V3c: A101ValidacaoDevCheck (EnvelopeGateAgent)\nstatus_key: dev_status"]
-            V4["V4: A103PrdWriter\noutput_key: prd_final"]
-            V4c["V4c: A104PrdCheck (RastroCheckAgent)\nstatus_key: prd_status"]
+            V1c["V1c: A101TelemetriaCheck (RastroCheckAgent)\nstatus_key: telemetria_status"]
+            V1d["V1d: A107LacunaCheck (RastroCheckAgent)\nstatus_key: rastro_lacunas_status"]
+            V3["V3: A110ConsolidacaoBanca\noutput_key: validacao_dev_report"]
+            V3c["V3c: A111ValidacaoDevCheck (EnvelopeGateAgent)\nstatus_key: dev_status"]
+            V4["V4: A113PrdWriter\noutput_key: prd_final"]
+            V4c["V4c: A114PrdCheck (RastroCheckAgent)\nstatus_key: prd_status"]
 
             V0 --> PAR_HANDOFF --> V1c --> V1d --> BANCA --> V3 --> V3c --> V4 --> V4c
         end
 
-        T["T: A118Aprendizado (Transversal)\noutput_key: aprendizado_registro"]
+        T["T: A128Aprendizado (Transversal)\noutput_key: aprendizado_registro"]
 
         PROD --> DES --> DEV --> T
     end
@@ -363,7 +369,7 @@ sequenceDiagram
         Gate-->>Downstream: Libera execução do próximo estágio
     else Status == BLOQUEADO (em Loop e rodada < max_rodadas)
         Gate->>State: Incrementa state[round_key]
-        Gate-->>LLM: Re-executa A023RevisorOnePager aplicando correções prontas
+        Gate-->>LLM: Re-executa A028RevisorOnePager aplicando correções prontas
     else Status == BLOQUEADO (Esgotou rodadas ou Gate Final)
         Gate->>State: Grava state[status_key] = "bloqueado"
         opt Modo Estrito Ativo (PRODUTO_MODO_ESTRITO=true)
@@ -396,12 +402,18 @@ A área de Produto garante que nenhuma missão siga para concepção visual ou c
 | **Veredito do micro-gate** | `P0mgc` | Determinístico | `{micro_gate_report}` | `micro_gate_status` | Registra se o núcleo passou em spoiler, gap, escolha e job. Teto de 2 rodadas; esgotado, segue com o achado registrado — quem bloqueia a missão é o gate estrutural. |
 | **Saída do loop do núcleo** | `P0nc` | Determinístico (`SaidaDeLoopAgent`) | `micro_gate_status`, `profundidade_status` | `nucleo_rodada` | Encerra o loop só com micro-gate **e** profundidade aprovados; qualquer um reprovado devolve o núcleo ao P0a com os relatórios. |
 | **Seções de apoio e brief** | `P0b` | `LlmAgent` | `{nucleo_narrativo}`, `{briefing?}` | `one_pager` | Completa o one-pager canônico (seções 2 e 5–18) sobre o núcleo aprovado, sem alterar as seções validadas, e entrega junto o brief de escopo para leitura rápida. Recebe o contrato de plataforma (`capacidades-plataforma.md`) e a regra de origem dos parâmetros: número que não vem do núcleo nem do briefing sai como `[PARÂMETRO — a definir por produto]`. |
+| **Contrato de evidência do one-pager (§12a)** | `018` / `038` | Determinístico (`RastroCheckAgent`, modo `evidencia_one_pager`) | `one_pager` | `evidencia_one_pager_status`, `evidencia_one_pager_report` | Forma antes de voto ([`tools/evidencia.py`](tools/evidencia.py)): toda habilidade da seção 2 com linha no §12a, **Canal A em toda habilidade** (`A` ou `A + B`; `B` sozinho é 🔴, decisão do PO de 15/10/2026), regra ternária com os três níveis por extenso e Canal B com o nível de cada alternativa. Roda no comitê dos canais e de novo antes do comitê final. |
+| **Comitê dos canais — painéis A e B** | `019a`–`019f` | 6 × `LlmAgent` (Paralelo, seed fixo) | `{one_pager?}`, `{nucleo_narrativo?}`, `{evidencia_one_pager_report?}`, relatório anterior | `comite_canal_a_*`, `comite_canal_b_*` | Painel A (mecânica e Canal A): currículo, medida, vivência e idade. Painel B (Canal B): currículo, medida, experiência — dispensado sem custo quando nenhuma habilidade tem Canal B. Cada juiz vota com achados de trecho literal e diz a quem cabe a correção (`A004` ou `A014`). O juízo de canal saiu das avaliações (P2 5f, adequação eixo 5). |
+| **Votos dos painéis** | `020`, `021` | Determinístico (`ComiteVotosAgent`) | relatórios dos juízes, `one_pager`, `nucleo_narrativo` | `comite_canal_a_status`, `comite_canal_b_status` + relatórios | [`tools/comite.py`](tools/comite.py): **unanimidade** aprova; voto que reprova sem bloqueio de citação conferida conta como aprovação; envelope ausente reprova; na última rodada sem unanimidade, 🟡 com os votos vencidos. |
+| **Saída do comitê dos canais** | `022` | Determinístico (`SaidaDeLoopAgent`) | os dois painéis e o §12a | `comite_canais_rodada` | O comitê **não escreve**: reprovada, a missão volta ao núcleo (A004) e às seções de apoio (A014), que reescrevem com os relatórios e passam de novo pelos gates do núcleo — o loop do comitê envolve os loops dos autores, isolados (`LoopIsolado`). O núcleo é pulado quando nada é dele. Até `COMITE_MAX_RODADAS` (5). |
 | **Contrato de plataforma e origem dos parâmetros** | `P0c` | Determinístico (`RastroCheckAgent`, modo `one_pager`) | `one_pager`, `nucleo_narrativo`, `briefing` | `contrato_produto_report`, `contrato_produto_status` | Roda dentro do loop do gate, antes do P1, a cada rodada (`tools/contrato_produto.py`): ⛔ WebSocket/socket.io como canal de sala (a plataforma sincroniza por polling HTTP, ADR-93/94); ⚠️ progresso em `localStorage`/`IndexedDB` (estado é do servidor, 4.6); ⚠️ descritor SAEB fora de 2º/5º/9º EF e 3ª EM; ⚠️ número com unidade sem origem no núcleo/briefing e sem marcador; ⚠️ código de Computação fora de Cultura Digital sem etapa. Não bloqueia sozinho: o gate aplica cada achado no critério indicado e o revisor corrige. |
 | **Gate estrutural** | `P1` | `LlmAgent` (Loop) | `{one_pager}` | `gate_estrutural_report` | Avalia **23 critérios** obrigatórios agrupados em: Estrutura, Ambiente simulado, Logística e tempo, Evidências e Fechamento de spec. Emite o envelope JSON. |
 | **Veredito do gate estrutural** | `P1c` | `EnvelopeGateAgent` (Determinístico) | `gate_estrutural_report` | `gate_estrutural_status` | Analisa o envelope. Se aprovado, encerra o loop; se reprovado, aciona o revisor; se esgotar as 3 rodadas em modo estrito, bloqueia o pipeline. |
 | **Revisor do one-pager** | `P1b` | `LlmAgent` (Loop) | `{one_pager}`, `{gate_estrutural_report}` | `one_pager` | Aplica as correções sugeridas no relatório do gate estrutural ("complemento pronto para colar"). **Nunca inventa decisões de negócio (marcadas como 🔵)**. |
 | **Avaliação pedagógica** | `P2` | `LlmAgent` (Paralelo) | `{one_pager}` | `avaliacao_pedagogica_report` | Checa a descoberta central, o alinhamento à BNCC (habilidades de Língua Portuguesa e Computação), o papel docente mediador e a tensão *affordance × guardrail*. |
 | **Experiência do aluno** | `P3` | `LlmAgent` (Paralelo) | `{one_pager}` | `experiencia_aluno_report` | Valida a adequação etária (cognitiva e motora), vocabulário, carga de leitura, agência e relevância cultural para o estudante. |
+| **Conta da virada no one-pager** | `039` | Determinístico (`MecanicaCheckAgent`, `chave=one_pager`) | `one_pager` | `mecanica_one_pager_status` | Refaz a tabela 1.3 sobre o one-pager de agora: o gate estrutural e os revisores podem ter mudado a mecânica depois do núcleo. |
+| **Comitê final** | `040a`–`040c`, `041`, `042` | 3 × `LlmAgent` + votos + saída | o one-pager completo, `{brief_escopo?}`, conferências desta rodada | `comite_final_status`, `comite_final_report` | Pedagogia (limiar vivido, aha, canais ainda coerentes), qualidade de produto (uma missão só, tempos e tetos que fecham, construível) e imersão (porta, troca e chegada, verbos nativos, virada mostrada pelo ambiente), com unanimidade. Reprovado, **a cadeia de produto roda de novo a partir do núcleo** — comitê dos canais, gate estrutural, avaliações, conferência do PO — até `COMITE_FINAL_MAX_RODADAS` (2). |
 | **Gate final de produto** | `P4` | `LlmAgent` | `{one_pager}`, relatórios de P1, P2 e P3 | `gate_final_report` | Valida a coerência cruzada entre todos os pareceres anteriores. Emite o veredito definitivo: 🟢 LIBERADA ou 🔴 BLOQUEADA. |
 | **Veredito final de produto** | `P4c` | `EnvelopeGateAgent` (Determinístico) | `gate_final_report` | `gate_final_status` | Registra a liberação ou bloqueio no estado global e sinaliza `skip_if_blocked` se modo estrito estiver ativo. |
 | **Spec da missão** | `P5` | `LlmAgent` | `{one_pager}`, `{gate_final_report}` | `spec_missao` | Converte o one-pager aprovado no contrato técnico dos **12 blocos de construção**, contra o qual Design e Dev construirão. |
@@ -453,19 +465,19 @@ Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as 
 
 **Contenção do que as ferramentas devolvem.** As respostas das ferramentas MCP entram no mesmo turno do agente, e `include_contents="none"` não as descarta: um agente que monta telas acumula dezenas de respostas de escrita, o dump do arquivo e a captura até o modelo recusar a requisição. Foi assim que a jornada estourou o teto de um milhão de tokens com um prompt de 22 KB. Todo agente com ferramentas nasce com dois limitadores em [`agents/callbacks.py`](agents/callbacks.py): a resposta é podada antes de voltar ao modelo (captura de tela sai do contexto, texto longo é truncado) e cada agente tem orçamento acumulado; esgotado, as chamadas seguintes são recusadas com a instrução de entregar o documento com o que já construiu. Vale mais o markdown com o board pela metade do que a execução inteira morrendo.
 
-**Fidelidade ao pedido do PO.** Todos os pedidos de *refazer* continuam valendo, do mais antigo ao mais novo, e chegam a todas as etapas pelas notas de passagem (`pipeline/passagem.py::pedidos_do_po`) — até 06/10/2026 o refazer seguinte apagava o anterior, e a missão do 9º ano saiu com os caminhos A/B trocados. O verificador de fidelidade (`tools/fidelidade.py`, agentes A010 no laço do núcleo e A050 no fim de produto) transforma as TRAVAS, os AJUSTES, as perguntas de VALIDAÇÃO que o PO escreve e o briefing num checklist; o juiz responde item a item com citação e o código confere a citação e as frases entre aspas. Pedido sem prova é 🔴 e recusa o *de acordo*; conflito entre o pedido e uma regra da esteira é decisão do PO (🔵). O *de acordo* que traz mudança de conteúdo é recusado com o caminho do *Refazer*, e o diagnóstico não diz mais "Nada travando" quando um gate pediu uma pessoa.
+**Fidelidade ao pedido do PO.** Todos os pedidos de *refazer* continuam valendo, do mais antigo ao mais novo, e chegam a todas as etapas pelas notas de passagem (`pipeline/passagem.py::pedidos_do_po`) — até 06/10/2026 o refazer seguinte apagava o anterior, e a missão do 9º ano saiu com os caminhos A/B trocados. O verificador de fidelidade (`tools/fidelidade.py`, agentes A010 no laço do núcleo e A060 no fim de produto) transforma as TRAVAS, os AJUSTES, as perguntas de VALIDAÇÃO que o PO escreve e o briefing num checklist; o juiz responde item a item com citação e o código confere a citação e as frases entre aspas. Pedido sem prova é 🔴 e recusa o *de acordo*; conflito entre o pedido e uma regra da esteira é decisão do PO (🔵). O *de acordo* que traz mudança de conteúdo é recusado com o caminho do *Refazer*, e o diagnóstico não diz mais "Nada travando" quando um gate pediu uma pessoa.
 
-**O que um documento afirma, conferido em código.** A missão do 9º ano (exp09ef1b, 06/10/2026) passou pelos juízes com defeitos que nenhum documento mostrava sozinho, e quatro verificadores determinísticos nasceram dela. A **conta da virada** (`tools/mecanica.py`, A009 no laço do núcleo) refaz o ranking da tabela 1.3 antes e depois do dado que faltava. A **coerência entre documentos** (`tools/consistencia.py`, A072 no design, antes do QA) confere jornada, fluxo, copy revisada, protótipo e PRD contra o `## Glossário canônico` da spec — o órgão tinha quatro nomes e os beneficiários de 14 anos viraram coordenadores na copy — e o modelo de dados do PRD contra ele mesmo e contra a spec (`escola_id` UUID × TEXT). As **afirmações do QA** (`tools/afirmacoes.py`, A079 entre o QA e o veredito) comparam "todas as N telas" e cada caminho citado com o Stitch, o inventário, o protótipo e os arquivos que a esteira grava: o QA aprovou "16 telas" num Stitch com 6; Stitch com menos telas que o inventário vira ticket para `telas`. E o **banco de conteúdo** (A094 escreve; `tools/conteudo.py`, A095, confere) exige o texto integral de cada documento, tabela e roteiro do brief de assets e as falas da IA simulada por estado; o Status do brief só aceita `a produzir | rascunho | escrito`, porque "Homologado" num arquivo que ninguém escreveu era o que o PRD lia como fato.
+**O que um documento afirma, conferido em código.** A missão do 9º ano (exp09ef1b, 06/10/2026) passou pelos juízes com defeitos que nenhum documento mostrava sozinho, e quatro verificadores determinísticos nasceram dela. A **conta da virada** (`tools/mecanica.py`, A009 no laço do núcleo) refaz o ranking da tabela 1.3 antes e depois do dado que faltava. A **coerência entre documentos** (`tools/consistencia.py`, A082 no design, antes do QA) confere jornada, fluxo, copy revisada, protótipo e PRD contra o `## Glossário canônico` da spec — o órgão tinha quatro nomes e os beneficiários de 14 anos viraram coordenadores na copy — e o modelo de dados do PRD contra ele mesmo e contra a spec (`escola_id` UUID × TEXT). As **afirmações do QA** (`tools/afirmacoes.py`, A089 entre o QA e o veredito) comparam "todas as N telas" e cada caminho citado com o Stitch, o inventário, o protótipo e os arquivos que a esteira grava: o QA aprovou "16 telas" num Stitch com 6; Stitch com menos telas que o inventário vira ticket para `telas`. E o **banco de conteúdo** (A104 escreve; `tools/conteudo.py`, A105, confere) exige o texto integral de cada documento, tabela e roteiro do brief de assets e as falas da IA simulada por estado; o Status do brief só aceita `a produzir | rascunho | escrito`, porque "Homologado" num arquivo que ninguém escreveu era o que o PRD lia como fato.
 
-**O que o PO aprovou chega inteiro ao PRD e ao pedagógico.** A auditoria das 11 missões do bucket (06/10/2026) achou o mesmo defeito em todas: a spec aplicava as ressalvas 🟡 dos pareceres que o PO não tinha incorporado — a exp06ef1b perdeu a EF06CO07 e foi de 29 para 24 minutos em tela, e o dev a devolveu por inconsistência —, nenhuma spec trazia o podcast nem os tempos por etapa, e o PRD trocava o contrato de evidência por chaves de string, não tinha KPI por habilidade e apontava `spec/<slug>-spec.md`, que nunca existiu. Agora a spec traduz o one-pager sem revisá-lo (ressalva recusada vai para a tabela «Ressalvas dos pareceres não incorporadas» do bloco 12), e `tools/conteudo_aprovado.py` confere em código o que tem estrutura firme: as habilidades do §12a contra o bloco 11 da spec e a seção 14 do PRD, o total em tela do §10, o podcast do §11 (com RF no PRD), um KPI de evidência por habilidade e os caminhos de artefato citados — A044 no laço da spec, A106 no do PRD, A111 num laço novo do pedagógico. O que não tem estrutura firme (a régua, as perguntas do Canal B, o roteiro do podcast, o do debate) não é interpretado: A109 e A114 colam no fim do PRD e do pedagógico as seções do one-pager aprovado, literais, e o corpo remete a elas.
+**O que o PO aprovou chega inteiro ao PRD e ao pedagógico.** A auditoria das 11 missões do bucket (06/10/2026) achou o mesmo defeito em todas: a spec aplicava as ressalvas 🟡 dos pareceres que o PO não tinha incorporado — a exp06ef1b perdeu a EF06CO07 e foi de 29 para 24 minutos em tela, e o dev a devolveu por inconsistência —, nenhuma spec trazia o podcast nem os tempos por etapa, e o PRD trocava o contrato de evidência por chaves de string, não tinha KPI por habilidade e apontava `spec/<slug>-spec.md`, que nunca existiu. Agora a spec traduz o one-pager sem revisá-lo (ressalva recusada vai para a tabela «Ressalvas dos pareceres não incorporadas» do bloco 12), e `tools/conteudo_aprovado.py` confere em código o que tem estrutura firme: as habilidades do §12a contra o bloco 11 da spec e a seção 14 do PRD, o total em tela do §10, o podcast do §11 (com RF no PRD), um KPI de evidência por habilidade e os caminhos de artefato citados — A054 no laço da spec, A116 no do PRD, A121 num laço novo do pedagógico. O que não tem estrutura firme (a régua, as perguntas do Canal B, o roteiro do podcast, o do debate) não é interpretado: A119 e A124 colam no fim do PRD e do pedagógico as seções do one-pager aprovado, literais, e o corpo remete a elas.
 
 **Contexto da plataforma pela base publicada no bucket.** Os agentes não leem resumos escritos à mão: leem cópias dos `AGENTS.md`, das regras (`docs/regras/*`), dos ADRs e dos contratos Zod do monorepo `plataforma-unooria`, mais o **contrato da plataforma** (seções do DS, campos do manifesto, portas, última ADR, equipes, evidência), extraído do código. Quem publica é quem conhece: o CI da plataforma grava `gs://entre-redes-dev-base-plataforma/plataforma/<commit>/` a cada push em `dev-local`, e o do storybook grava `design-system/<versao>/` no mesmo bucket a cada versão publicada; cada um troca o próprio `atual.json` por último. É um bucket só da base: o Cloud Run do gerador o monta **só para leitura** em `/app/base-plataforma` (`BASE_PLATAFORMA_DIR`), e a conta do gerador só tem `objectViewer` nele. Até 07/10/2026 a base morava em `base-plataforma/` do bucket das sessões; a barra lateral a listava como missão e o botão de excluir a apagou duas vezes. Cada execução fixa a base que leu no começo (`prompts/base_plataforma.py`) e a registra no cabeçalho do diagnóstico. Até 06/10/2026 isso era uma cópia no git, que ficou 320 commits atrás sem ninguém ver. Para rodar localmente: `gcloud storage rsync -r gs://entre-redes-dev-base-plataforma output/base-plataforma` (ou `BASE_PLATAFORMA_DIR` apontando para uma base gerada com `node scripts/base-do-gerador/extrair.mjs --saida` na plataforma e `node scripts/inventario-para-o-gerador.mjs --saida` no storybook). Os arquivos `plataforma-unooria-software.md`, `-infra.md` e `-design-system.md` viraram índices sobre essas cópias, com a lista do que mais muda num PRD (liberação por turma, `produto`/`unidade` no manifesto, seis papéis, evento `verbo · objeto · resultado · contexto`, cinco caminhos de dado, sala por polling, currículo no servidor, quota em `ia_quotas`, fuso único, fluxo `dev-local → dev → hml → main`). O `_template` da plataforma passou a trazer a fiação completa em 16/09/2026 (ADR-106), então o PRD diz o que trocar primeiro, não o que falta.
 
 A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a missão a uma **banca multidisciplinar com 72 critérios de validação (21 bloqueantes)** antes de lavrar o PRD padrão ouro.
 
 ```
-                    ┌─ A090aHandoffDev (V1)
-                    │  A090bBriefAssets (V1b)
+                    ┌─ A100aHandoffDev (V1)
+                    │  A100bBriefAssets (V1b)
                     │
                     ▼
 ┌───────────────────────────────────────────────────────────┐
@@ -479,11 +491,11 @@ A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a mis
 └───────────────────────────────────────────────────────────┘
                     │
                     ▼
-         A100ConsolidacaoBanca (V3)
+         A110ConsolidacaoBanca (V3)
          Veredito: 🟢 APTO | 🟡 APTO C/ RESSALVAS | 🔴 NÃO APTO
                     │
                     ▼
-         A103PrdWriter (V4) ──▶ PRD.md (25 Seções)
+         A113PrdWriter (V4) ──▶ PRD.md (25 Seções)
 ```
 
 | Agente | ID | Critérios / Rubrica | Saída (`output_key`) | Descrição |
@@ -508,7 +520,7 @@ A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a mis
 
 ### 🧠 Área Transversal de Aprendizado
 
-- **Agente de Aprendizado (`A118Aprendizado` / `T`):**
+- **Agente de Aprendizado (`A128Aprendizado` / `T`):**
   - Roda ao final de toda execução (mesmo que haja bloqueios ou ressalvas).
   - Atualiza o registro em `output/<execucao>/aprendizado.md`.
   - Extrai:
@@ -704,7 +716,7 @@ O redator do PRD e a banca de desenvolvedores utilizam referências técnicas vi
 
 A aplicação conta com uma interface visual completa em [Streamlit](file:///Users/lucassalomao/Documents/Unooria/gerador-missoes/app.py):
 
-- **Esteira animada:** enquanto uma etapa roda, a missão mostra os 119 passos (001 a 119, na ordem de execução; paralelos com letra), o atual pulsando, os feitos em verde, o veredito de cada gate em amarelo ou vermelho e os que não precisaram rodar com borda tracejada. Segue o tema do app ([`pipeline/esteira_visual.py`](pipeline/esteira_visual.py)).
+- **Esteira animada:** enquanto uma etapa roda, a missão mostra os 129 passos (001 a 129, na ordem de execução; paralelos com letra), o atual pulsando, os feitos em verde, o veredito de cada gate em amarelo ou vermelho e os que não precisaram rodar com borda tracejada. Segue o tema do app ([`pipeline/esteira_visual.py`](pipeline/esteira_visual.py)).
 - **Custo da missão:** tokens de entrada, saída e raciocínio pelo preço Standard do Gemini 3.8 Flash, em reais pela PTAX do Banco Central; ao vivo no topo da esteira e somando todas as execuções da missão, inclusive os *Refazer* e as que falham ([`tools/custo.py`](tools/custo.py)).
 - **Conversa sobre a missão:** um chat só, sobre qualquer etapa ou sobre a passagem entre elas, que lê os documentos e não altera nada ([`pipeline/conversa_etapas.py`](pipeline/conversa_etapas.py)).
 - **Downloads:** download total (`.zip`) e os one-pagers de produto, resumido e pedagógico (`.docx` com a marca).
@@ -713,7 +725,7 @@ A aplicação conta com uma interface visual completa em [Streamlit](file:///Use
 - **Abas Especializadas:** Navegação entre PRD renderizado, relatórios de Produto, especificações de Design, banca de Dev, registro de Aprendizado e os links do Stitch e do Miro.
 - **Card de Integrações:** Na barra lateral, o status do Stitch e do Miro, com o botão que conduz o OAuth do Miro sem sair do app.
 - **Histórico Persistente de Missões:** As execuções salvas em `output/` são carregadas na barra lateral, permitindo revisitar missões anteriores, inspecionar estados passados, excluir execuções ou baixar um **arquivo ZIP completo** com todos os artefatos.
-- **Prompts para leitura:** a aba de prompts mostra cada arquivo `.md` de prompt e referência, só para leitura, com as diretivas `<!-- include: references/... -->` expandidas e um `.zip` com todos. O arquivo leva o número do agente que o lê (`design/065_telas.md`); os compartilhados por vários passos não têm número, e a aba lista quem os usa.
+- **Prompts para leitura:** a aba de prompts mostra cada arquivo `.md` de prompt e referência, só para leitura, com as diretivas `<!-- include: references/... -->` expandidas e um `.zip` com todos. O arquivo leva o número do agente que o lê (`design/075_telas.md`); os compartilhados por vários passos não têm número, e a aba lista quem os usa.
 
 ---
 
@@ -770,6 +782,8 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `BNCC_CHECK_ESTRITO` | `true` | Gate determinístico depois da spec: habilidade inexistente, de outro ano ou sem letramento digital trava a esteira. |
 | `PROFUNDIDADE_ESTRITA` | `true` | Profundidade pedagógica reprovada na última rodada do núcleo fica 🔴 e o *de acordo* de produto é recusado. `false` rebaixa a 🟡 com a ressalva, sem mudar notas nem rodadas — para usar enquanto os cortes da rubrica são calibrados contra as revisões do time pedagógico. |
 | `GATE_ESTRUTURAL_MAX_RODADAS` | `3` | Número máximo de ciclos entre o Gate Estrutural e o Revisor do One-pager. |
+| `COMITE_MAX_RODADAS` | `5` | Rodadas do comitê dos canais (painéis A e B, unanimidade). Reprovado, a missão volta ao núcleo e às seções de apoio; esgotado, segue 🟡 com os votos vencidos no parecer. |
+| `COMITE_FINAL_MAX_RODADAS` | `2` | Rodadas do comitê final. Cada rodada reprovada refaz a cadeia de produto a partir do núcleo, então o custo multiplica (pior caso: 2 × 5 passagens pelo núcleo); esgotado, segue 🟡. |
 | `OUTPUT_DIR` | `output` | Diretório local para gravação persistente dos artefatos. |
 | `STITCH_MCP_MODE` | `auto` | Modo do Stitch MCP: `auto`, `remote`, `proxy` ou `off`. Em `auto`, liga `remote` se houver chave. |
 | `STITCH_API_KEY` | — | Chave do Google Stitch. Sem ela o modo `remote` degrada para desligado, com aviso no log. |
