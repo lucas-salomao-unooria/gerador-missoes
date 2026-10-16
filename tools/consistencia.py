@@ -10,7 +10,7 @@ de botão diferentes entre jornada, fluxo e copy ("Usar banco padrão" × "Usar 
 Cada documento, lido sozinho, estava bem escrito; nenhum agente lia os cinco juntos, e nenhum tinha
 uma lista do que é canônico.
 
-Agora a spec traz o bloco `## Glossário canônico` (`prompts/produto/035_spec_missao.md`) e este módulo
+Agora a spec traz o bloco `## Glossário canônico` (`prompts/produto/045_spec_missao.md`) e este módulo
 confere os documentos a jusante contra ele:
 
 - variante proibida de uma entidade = **bloqueio** (é o mesmo órgão com outro nome na tela);

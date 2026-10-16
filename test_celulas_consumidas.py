@@ -30,17 +30,17 @@ ONE_PAGER = PROMPTS / "produto" / "014_secoes_apoio.md"
 
 #: Código de agente usado na tabela → nome do agente em `agents/design/__init__.py`.
 AGENTES = {
-    "D0": "A055FechaLacunas",
-    "D9": "A057AmbienteSimulado",
-    "D1": "A060BriefOficio",
-    "D2": "A061Jornada",
-    "D3": "A062Fluxo",
-    "D4": "A063CopyPtBr",
-    "D4b": "A064Caa",
-    "D5": "A065Telas",
-    "D6": "A067CopyRevisao",
-    "D8": "A069Prototipo",
-    "D7": "A078QaEntregaveis",
+    "D0": "A065FechaLacunas",
+    "D9": "A067AmbienteSimulado",
+    "D1": "A070BriefOficio",
+    "D2": "A071Jornada",
+    "D3": "A072Fluxo",
+    "D4": "A073CopyPtBr",
+    "D4b": "A074Caa",
+    "D5": "A075Telas",
+    "D6": "A077CopyRevisao",
+    "D8": "A079Prototipo",
+    "D7": "A088QaEntregaveis",
 }
 
 #: Prompts fora do cruzamento «bloco citado → linha que aponta o agente». O D0 percorre a tabela inteira:

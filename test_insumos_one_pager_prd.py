@@ -142,12 +142,12 @@ def test_design_e_dev_recebem_o_nucleo_e_o_banco_nao_le_o_nucleo_antigo():
 
     assert {1, 3, 4, 8, 13} <= set(ca.SECOES_DESIGN)
     design, dev = build_design_stage().sub_agents[0], agentes_em_ordem(build_dev_stage())[0]
-    assert design.secoes == list(ca.SECOES_DESIGN) and dev.name == "A085ConteudoAprovadoDev"
+    assert design.secoes == list(ca.SECOES_DESIGN) and dev.name == "A095ConteudoAprovadoDev"
     # o dev regravava a chave só com as seções do PRD: banca e retrabalhos de design perdiam §8, §13 e o núcleo
     assert dev.secoes == list(ca.SECOES_DESIGN)
-    banco = load_prompt("dev/094_banco_conteudo.md")
+    banco = load_prompt("dev/104_banco_conteudo.md")
     assert "{nucleo_narrativo" not in banco and "{conteudo_aprovado?}" in banco
-    for prompt in ("design/063_copy_ptbr.md", "design/067_copy_revisao.md"):
+    for prompt in ("design/073_copy_ptbr.md", "design/077_copy_revisao.md"):
         assert "§4" in load_prompt(prompt) and "PROPOSTA — validar com PO: «texto aprovado»" in load_prompt(prompt), prompt
 
 
@@ -193,8 +193,8 @@ def test_resumido_em_loop_e_o_prompt_manda_o_canonico_vencer():
 
     loop = build_produto_stage().sub_agents[-1]
     assert loop.name == "OnePagerResumidoLoop"
-    assert [a.name for a in loop.sub_agents] == ["A051OnePagerResumido", "A052ConteudoAprovadoResumido", "A053ResumidoRodada"]
-    prompt = load_prompt("produto/051_one_pager_resumido.md")
+    assert [a.name for a in loop.sub_agents] == ["A061OnePagerResumido", "A062ConteudoAprovadoResumido", "A063ResumidoRodada"]
+    prompt = load_prompt("produto/061_one_pager_resumido.md")
     assert "a spec vence e você registra" not in prompt and "**vale o canônico**" in prompt
     assert "{conteudo_aprovado_resumido_report?}" in prompt
 
@@ -227,8 +227,8 @@ def test_spec_consolidada_so_acusa_o_que_o_d0_piorou():
     from agents.design import MAPA_RETRABALHO, build_design_stage
 
     nomes = [a.name for a in build_design_stage().sub_agents]
-    assert nomes.index("A058AmbienteSimuladoSplit") + 1 == nomes.index("A059SpecConsolidada")
-    assert MAPA_RETRABALHO["fecha-lacunas"][-1] == "A059SpecConsolidadaRetrabalho"
+    assert nomes.index("A068AmbienteSimuladoSplit") + 1 == nomes.index("A069SpecConsolidada")
+    assert MAPA_RETRABALHO["fecha-lacunas"][-1] == "A069SpecConsolidadaRetrabalho"
 
 
 # --------------------------------------------------------------------------- refazer produto: o que mudou
@@ -292,8 +292,8 @@ def test_cada_etapa_confere_o_refazer_que_foi_pedido_a_ela():
     from agents.design import build_design_stage
     from agents.dev import agentes_em_ordem, build_dev_stage
 
-    assert build_design_stage().sub_agents[-1].name == "A084FidelidadeDesign"
-    assert agentes_em_ordem(build_dev_stage())[-1].name == "A116FidelidadeDev"
+    assert build_design_stage().sub_agents[-1].name == "A094FidelidadeDesign"
+    assert agentes_em_ordem(build_dev_stage())[-1].name == "A126FidelidadeDev"
 
 
 def test_devolutiva_que_achou_o_problema_chega_ao_refazer_e_o_conteudo_muda_em_produto():
@@ -363,8 +363,8 @@ def test_banca_nas_quatro_posicoes_e_o_dev_so_conserta_dev():
     # dentro do dev: só documento de dev, e o que ele reescreve é reconferido
     assert set(MAPA_BANCA) == {"handoff-dev", "brief-assets", "banco-conteudo"} and ORDEM_BANCA[-1] == "banco-conteudo"
     assert {"jornada", "fluxo", "telas", "copy-ptbr-revisao", "spec-missao"} <= set(BANCA_EXTERNO)
-    assert POSFIXO_BANCA == {"banco-conteudo": ["A095ConteudoCheckRetrabalhoBanca"],
-                             "handoff-dev": ["A091TelemetriaCheckRetrabalhoBanca"]}
+    assert POSFIXO_BANCA == {"banco-conteudo": ["A105ConteudoCheckRetrabalhoBanca"],
+                             "handoff-dev": ["A101TelemetriaCheckRetrabalhoBanca"]}
     banca_dev = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "BancaLoop")
     juizes = next(a for a in banca_dev.sub_agents if a.name == "BancaValidacaoDev").sub_agents
     assert [j.output_key for j in juizes] == ["validacao_dados_lgpd", "validacao_tecnica_arquitetura"]
@@ -373,17 +373,17 @@ def test_banca_nas_quatro_posicoes_e_o_dev_so_conserta_dev():
     # fim de produto: dentro do loop da spec, e o loop só termina com a banca liberada
     loop_spec = _build_spec_loop({}, get_settings(), 2)
     nomes = [a.name for a in loop_spec.sub_agents]
-    assert nomes.index("A048BancaConsolidacao") < nomes.index("A049SpecCheck")
+    assert nomes.index("A058BancaConsolidacao") < nomes.index("A059SpecCheck")
     assert "banca_produto_status" in loop_spec.sub_agents[-1].status_keys
 
-    # fim de design: antes do QA, e o bloqueio vira ticket pelo A079
+    # fim de design: antes do QA, e o bloqueio vira ticket pelo A089
     qa = [a.name for a in build_qa_design_loop().sub_agents]
-    assert qa.index("A077BancaConsolidacao") < qa.index("A078QaEntregaveis")
+    assert qa.index("A087BancaConsolidacao") < qa.index("A088QaEntregaveis")
 
     # entrada do dev: antes de qualquer agente de dev, comparando com as etapas
     dev = build_dev_stage()
     topo = [a.name for a in dev.sub_agents]
-    assert topo == ["A085ConteudoAprovadoDev", "A086EscopoBanca", "A087Banca", "A088BancaConsolidacao", "DevConstrucao"]
+    assert topo == ["A095ConteudoAprovadoDev", "A096EscopoBanca", "A097Banca", "A098BancaConsolidacao", "DevConstrucao"]
     entrada = dev.sub_agents[3]
     assert entrada.status_key == "banca_entrada_status" and entrada.gravar_status
     assert set(entrada.comparar_com) == {"produto", "design"}
@@ -414,7 +414,7 @@ def test_matriz_final_no_semaforo_de_dev_e_a_do_design_no_de_design():
     from pipeline import passagem
     from pipeline.artifacts import ARTIFACT_FILES
 
-    a50 = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "A115Rastreabilidade")
+    a50 = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "A125Rastreabilidade")
     assert (a50.report_key, a50.status_key) == ("rastreabilidade_dev_report", "rastreabilidade_dev_status")
     assert "rastreabilidade_dev_status" in passagem.chaves_da_etapa("dev")
     assert "rastreabilidade_status" in passagem.chaves_da_etapa("design")
@@ -499,7 +499,7 @@ def test_juiz_de_contradicoes_so_vale_com_as_duas_citacoes_conferidas():
 
     prd_loop = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "PrdLoop")
     nomes = [a.name for a in prd_loop.sub_agents]
-    assert nomes.index("A107CoerenciaPrd") < nomes.index("A108PrdRodada")
+    assert nomes.index("A117CoerenciaPrd") < nomes.index("A118PrdRodada")
     assert "coerencia_prd_status" in prd_loop.sub_agents[-1].status_keys
 
 

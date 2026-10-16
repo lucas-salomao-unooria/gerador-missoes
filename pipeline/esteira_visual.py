@@ -1,10 +1,10 @@
 """A esteira em movimento: todos os passos, o que já rodou e onde a execução está agora.
 
 Sem Streamlit: devolve o HTML que o app põe num `components.html`. A tela de progresso mostrava só o nome do agente
-atual (`agente atual: A065Telas`), e ninguém sabia quanto faltava nem em que parte da esteira a missão estava.
+atual (`agente atual: A075Telas`), e ninguém sabia quanto faltava nem em que parte da esteira a missão estava.
 
-O passo de um agente sai do número no nome (`A065Telas` → 065): o retrabalho (`A065TelasRetrabalho`) e o juiz
-interno (`A010FidelidadeNucleoJuiz`) caem no passo do agente pai, e os que rodam em paralelo (`A024a`, `A024b`)
+O passo de um agente sai do número no nome (`A075Telas` → 065): o retrabalho (`A075TelasRetrabalho`) e o juiz
+interno (`A010FidelidadeNucleoJuiz`) caem no passo do agente pai, e os que rodam em paralelo (`A029a`, `A029b`)
 ficam empilhados no mesmo passo.
 """
 
@@ -22,7 +22,7 @@ ORDEM_ETAPAS = ("produto", "design", "dev", "transversal")
 
 
 def passo_do_agente(nome: str) -> Optional[Tuple[int, str]]:
-    """`(65, "")` de `A065TelasRetrabalho`; `None` para o que não é passo da esteira (loops, contêineres)."""
+    """`(65, "")` de `A075TelasRetrabalho`; `None` para o que não é passo da esteira (loops, contêineres)."""
     m = _RE_PASSO.match(nome or "")
     return (int(m.group(1)), m.group(2)) if m else None
 
@@ -41,7 +41,7 @@ def passos_da_esteira() -> List[Dict[str, Any]]:
 
 
 #: Gates gravados fora da árvore das etapas (transversal).
-_GATES_FORA_DA_ARVORE = {"diagnostico_status": "A117Diagnostico", "catalogo_indice_status": "A119RegistroCatalogo"}
+_GATES_FORA_DA_ARVORE = {"diagnostico_status": "A127Diagnostico", "catalogo_indice_status": "A129RegistroCatalogo"}
 
 
 @lru_cache(maxsize=1)
@@ -89,7 +89,7 @@ def cores_dos_passos(gates: Optional[Dict[str, Any]]) -> Dict[Tuple[int, str], T
 
 
 def etapa_do_agente(nome: str) -> str:
-    """A etapa do passo do agente (`A065TelasRetrabalho` → design); vazio se não é passo da esteira."""
+    """A etapa do passo do agente (`A075TelasRetrabalho` → design); vazio se não é passo da esteira."""
     p = passo_do_agente(nome)
     return next((q["etapa"] for q in passos_da_esteira() if p and q["num"] == p[0]), "")
 

@@ -1006,16 +1006,16 @@ def update_pipeline_step_status(
             "A007MicroGate",
             "A012MicroGateCheck",
             "A014SecoesApoio",
-            "A021GateEstrutural",
-            "A022GateEstruturalCheck",
-            "A023RevisorOnePager",
+            "A026GateEstrutural",
+            "A027GateEstruturalCheck",
+            "A028RevisorOnePager",
         ):
             ge_st = str(gates.get("gate_estrutural_status", "")).strip().lower()
             if ge_st in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
-                if status.get("A023RevisorOnePager") == "pending":
-                    status["A023RevisorOnePager"] = "done"
-            if status.get("A022GateEstruturalCheck") == "running":
-                status["A022GateEstruturalCheck"] = "done"
+                if status.get("A028RevisorOnePager") == "pending":
+                    status["A028RevisorOnePager"] = "done"
+            if status.get("A027GateEstruturalCheck") == "running":
+                status["A027GateEstruturalCheck"] = "done"
 
     elif et == "agent_chunk":
         name = event.get("agent_name", "")
@@ -1027,16 +1027,16 @@ def update_pipeline_step_status(
         gates.update(new_status)
         ge_st = str(new_status.get("gate_estrutural_status") or gates.get("gate_estrutural_status") or "").strip().lower()
         if ge_st in ("aprovado", "success", "concluido", "concluído", "liberada", "apto", "verde", "🟢"):
-            if status.get("A023RevisorOnePager") == "pending":
-                status["A023RevisorOnePager"] = "done"
-            if status.get("A022GateEstruturalCheck") == "running":
-                status["A022GateEstruturalCheck"] = "done"
-        if new_status.get("gate_final_status") and status.get("A034GateFinalProdutoCheck") == "running":
-            status["A034GateFinalProdutoCheck"] = "done"
-        if new_status.get("design_status") and status.get("A080QaEntregaveisCheck") == "running":
-            status["A080QaEntregaveisCheck"] = "done"
-        if new_status.get("dev_status") and status.get("A101ValidacaoDevCheck") == "running":
-            status["A101ValidacaoDevCheck"] = "done"
+            if status.get("A028RevisorOnePager") == "pending":
+                status["A028RevisorOnePager"] = "done"
+            if status.get("A027GateEstruturalCheck") == "running":
+                status["A027GateEstruturalCheck"] = "done"
+        if new_status.get("gate_final_status") and status.get("A044GateFinalProdutoCheck") == "running":
+            status["A044GateFinalProdutoCheck"] = "done"
+        if new_status.get("design_status") and status.get("A090QaEntregaveisCheck") == "running":
+            status["A090QaEntregaveisCheck"] = "done"
+        if new_status.get("dev_status") and status.get("A111ValidacaoDevCheck") == "running":
+            status["A111ValidacaoDevCheck"] = "done"
 
     elif et == "pipeline_completed":
         result = event.get("result")
@@ -1050,8 +1050,8 @@ def update_pipeline_step_status(
         # Se o gate estrutural foi aprovado (ou o pipeline avançou), o revisor fica concluído (verde):
         # O revisor do one-pager só roda quando o gate reprova: aprovado de primeira, ele
         # não tem o que corrigir — e isso é sucesso, não passo pulado.
-        if status.get("A023RevisorOnePager") == "pending":
-            status["A023RevisorOnePager"] = "done"
+        if status.get("A028RevisorOnePager") == "pending":
+            status["A028RevisorOnePager"] = "done"
 
         # Nenhum agente deve permanecer indefinidamente com ícone de ampulheta (pending) após
         # conclusão. A esteira não pula mais ninguém por causa de gate reprovado: quem ficou
@@ -1488,11 +1488,11 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
                 continue
             shown = True
             if key == "prototipo_html":
-                # a saída do A069 vem como ```html … ``` + envelope JSON; o iframe abriria em modo
+                # a saída do A079 vem como ```html … ``` + envelope JSON; o iframe abriria em modo
                 # quirks com as crases e o JSON escritos na página. O arquivo limpo está no estado.
                 value = result.state.get("prototipo_arquivo") or value
             with st.expander(f"{meta['icon']} {meta['name']}", expanded=False):
-                if meta.get("id") == "A023RevisorOnePager" and "A023RevisorOnePager" not in (result.step_outputs or {}):
+                if meta.get("id") == "A028RevisorOnePager" and "A028RevisorOnePager" not in (result.step_outputs or {}):
                     st.caption("ℹ️ *One-pager aprovado no gate estrutural sem necessidade de revisão. Exibindo a versão aprovada:*")
                 render_saida_agente(value, output_key=key, prefix=f"{prefix}_{key}")
         if not shown:

@@ -71,7 +71,7 @@ SECOES_NUCLEO: Tuple[int, ...] = (1, 3, 4)
 #: E §0, §5, §16 e §18 (identificação, verificação de ambiente, escopo V1/V2, decisões e propostas), que a
 #: auditoria do PR #32 achou faltando: com elas, design e dev recebem o one-pager inteiro, seção por seção.
 SECOES_DESIGN: Tuple[int, ...] = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18)
-#: O dev recebe o mesmo que o design. Até 07/10/2026 o `A085ConteudoAprovadoDev` regravava a chave com as
+#: O dev recebe o mesmo que o design. Até 07/10/2026 o `A095ConteudoAprovadoDev` regravava a chave com as
 #: seções do PRD, e a banca — e os agentes de design que ela reaciona — perdiam §8, §13 e o núcleo; o banco de
 #: conteúdo lia o núcleo de antes da revisão do one-pager (`nucleo_narrativo`).
 SECOES_DEV: Tuple[int, ...] = SECOES_DESIGN
@@ -1014,7 +1014,7 @@ _RE_HABILIDADE_SO_CITADA = re.compile(r"PROPOSTA|a confirmar|DIVERG[ÊE]NCIA|ABE
 def validar_resumido(resumido: str, spec: str, one_pager: str) -> Dict[str, Any]:
     """O one-pager resumido contra o canônico aprovado e a spec.
 
-    O resumido é o que o time de produto lê para aprovar a missão pedagogicamente (A051); o canônico é o que
+    O resumido é o que o time de produto lê para aprovar a missão pedagogicamente (A061); o canônico é o que
     segue para design e dev. Até 07/10/2026 nada os comparava, e o prompt mandava a spec vencer quando os dois
     divergiam. Confere as habilidades do bloco 11 (já conferidas contra o §12a), o tempo em tela do §10 e o Canal
     B com o texto aprovado — o contrato de evidência do resumido usa as alternativas como tabela de marcadores, e

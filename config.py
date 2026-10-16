@@ -168,6 +168,14 @@ class AppSettings(BaseSettings):
         default_factory=lambda: int(os.getenv("AVALIACOES_MAX_RODADAS", "2")),
         description="Rodadas do loop avaliações ↔ revisor do one-pager movido pelo parecer de adequação. 2 (padrão) = o revisor aplica o ajuste exigido e as avaliações refazem; 1 = sem correção automática",
     )
+    comite_max_rodadas: int = Field(
+        default_factory=lambda: int(os.getenv("COMITE_MAX_RODADAS", "5")),
+        description="Rodadas do comitê dos canais (painéis A e B, três juízes cada, unanimidade). Reprovado, a missão volta ao núcleo e às seções de apoio; esgotado, segue 🟡 com os votos vencidos no parecer",
+    )
+    comite_final_max_rodadas: int = Field(
+        default_factory=lambda: int(os.getenv("COMITE_FINAL_MAX_RODADAS", "2")),
+        description="Rodadas do comitê final (pedagogia, qualidade, imersão). Cada rodada reprovada refaz a cadeia de produto a partir do núcleo — comitê dos canais, gate estrutural, avaliações —, então o custo multiplica; esgotado, segue 🟡",
+    )
     qa_design_max_rodadas: int = Field(
         default_factory=lambda: int(os.getenv("QA_DESIGN_MAX_RODADAS", "2")),
         description="Rodadas máximas do loop QA de entregáveis ↔ retrabalho dos agentes com ticket. 1 = uma passada só, sem retrabalho",

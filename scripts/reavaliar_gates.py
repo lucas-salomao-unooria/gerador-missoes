@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from tools import bncc, contrato_produto, evidencia, kpis, rastro  # noqa: E402
 from tools.diagnostico import GATES, coletar  # noqa: E402
 
-#: As mesmas fontes que o A097 lê — a lista vive em `tools/rastro.py`, sem espelho aqui.
+#: As mesmas fontes que o A107 lê — a lista vive em `tools/rastro.py`, sem espelho aqui.
 FONTES_LACUNAS: List[Dict[str, str]] = rastro.FONTES_DEV
 
 ICONE = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴", "devolvido": "🔴", "—": "·"}

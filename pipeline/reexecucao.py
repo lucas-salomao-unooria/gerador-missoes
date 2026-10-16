@@ -163,10 +163,21 @@ CHAVES_PRODUTO = frozenset({
     "adequacao_report", "adequacao_status", "adequacao_status_envelope", "avaliacoes_rodada",
     "gate_final_report", "gate_final_status", "gate_final_status_envelope",
     "juiz_contrato_produto_saida",
+    # os comitês pedagógicos (15/10/2026): sem apagar, um refazer começava com as rodadas esgotadas e o núcleo
+    # pulado por um voto da execução anterior (`agents.callbacks.manter_nucleo_sem_achado_do_a004`)
+    "evidencia_one_pager_report", "evidencia_one_pager_status", "evidencia_one_pager_status_envelope",
+    "mecanica_one_pager_report", "mecanica_one_pager_status", "mecanica_one_pager_status_envelope",
+    "comite_canal_a_curriculo", "comite_canal_a_medida", "comite_canal_a_vivencia",
+    "comite_canal_b_curriculo", "comite_canal_b_medida", "comite_canal_b_experiencia",
+    "comite_final_pedagogia", "comite_final_qualidade", "comite_final_imersao",
+    "comite_canal_a_report", "comite_canal_a_status", "comite_canal_a_status_envelope", "comite_canal_a_rodada",
+    "comite_canal_b_report", "comite_canal_b_status", "comite_canal_b_status_envelope", "comite_canal_b_rodada",
+    "comite_final_report", "comite_final_status", "comite_final_status_envelope", "comite_final_rodada",
+    "comite_canais_rodada", "comite_final_externo_rodada",
 }) | CHAVES_SPEC
 CHAVES_TRANSVERSAL = frozenset({
     "diagnostico_execucao", "diagnostico_status", "diagnostico_status_envelope", "aprendizado_registro",
-    # a ficha do A119: sem cair, a ficha da execução anterior ficava no estado de uma correção que
+    # a ficha do A129: sem cair, a ficha da execução anterior ficava no estado de uma correção que
     # não chega à transversal, e o runner a registraria de novo no catálogo
     "ficha_catalogo", "ficha_catalogo_dados",
 })
@@ -181,7 +192,7 @@ CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_r
                              "etapa_da_correcao", "escopo_banca", KEY_AGENTES_DEGRADADOS,
                              "contradicoes_documento", "contradicoes_referencia",
                              # a versão da rodada anterior de cada loop: some ao sair do loop, e aqui se a execução caiu
-                             *(f"rodada_anterior_{c}" for c in ("spec_missao", "one_pager_resumido", "handoff_dev",
+                             *(f"rodada_anterior_{c}" for c in ("one_pager", "spec_missao", "one_pager_resumido", "handoff_dev",
                                                                 "brief_assets", "prd_final", "one_pager_pedagogico"))})
 #: Em que etapa começou a correção desta execução (vazio sem pedido de correção).
 KEY_ETAPA_DA_CORRECAO = "etapa_da_correcao"
@@ -232,6 +243,7 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Avaliação pedagógica": "produto",
     "Experiência do estudante": "produto",
     "Gate final de produto": "produto",
+    "Contrato de evidência do one-pager (§12a)": "produto",
     # o one-pager do PO reescrito só se conserta refazendo o one-pager, não a spec
     "One-pager do PO preservado": "produto",
     "Conformidade BNCC Computação": "spec",

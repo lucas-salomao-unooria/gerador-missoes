@@ -2,7 +2,7 @@
 
 Quem aprova a missão lê o pedagógico e não abre o Stitch por fora. O documento conta a missão
 passo a passo, e cada passo termina numa linha «Telas deste passo: `E2-ALU-01` · …» com os IDs do
-inventário da jornada (`prompts/dev/110_one_pager_pedagogico.md`). Na exportação, essa linha vira a
+inventário da jornada (`prompts/dev/120_one_pager_pedagogico.md`). Na exportação, essa linha vira a
 imagem de cada tela, com a legenda `ID — título`, logo abaixo do passo.
 
 De onde vêm as imagens: a folha `stitch_links` (`design/10-stitch-telas.md`), que o

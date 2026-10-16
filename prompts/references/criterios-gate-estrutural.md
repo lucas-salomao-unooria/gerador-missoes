@@ -2,8 +2,10 @@
 
 <!-- v1.21 — 25/09/2026 — o que mudou (revisão do PO: contrato de evidência por habilidade, C10):
   7.3 exige canal (A ação · B pergunta · A + B) e regra ternária por extenso por habilidade; foco primário sempre com Canal A ·
+  15/10/2026 — toda habilidade com Canal A (`A` ou `A + B`; `B` sozinho é ❌), conferido em código no §12a e no bloco 11 ·
   Pedagógicos: 5.2 — a pergunta de Canal B não é momento em tela ·
   Núcleo: Regra 17 (contrato do foco primário) · One-pager: seção 12a · Gate estrutural: passo 8d · P2: 5f · Adequação: eixo 5 por canal ·
+  15/10/2026 — o sentido de cada canal sai do P2 (5f) e da adequação (eixo 5) e vai para o comitê dos canais, que vota com três juízes ·
   Spec: matriz do bloco 11 com «Canal de evidência» e «Regra ternária» conferidas em código (tools/evidencia.py); Canal B no bloco 9, pela rota operacional, `indicative` sozinho; no 1º–2º ano, as três alternativas visíveis ao mesmo tempo (3.5) e narradas (6.1). -->
 
 <!-- v1.19 — 22/09/2026 — o que mudou (auditoria de imersão + proposta de emendas):
@@ -69,7 +71,7 @@
 |-|-|-|-|
 |7.1|**Registro automático de percurso** — A plataforma captura as ações do aluno sem trabalho extra do professor|Obrigatório|O professor precisa anotar algo manualmente?|
 |7.2|**Métricas internas sem virar avaliação formal** — Rankings/pontuações dentro da simulação OK, desde que nunca virem nota escolar ou conceito formal|Obrigatório|Alguma métrica da simulação vaza para avaliação formal (boletim, conceito)?|
-|7.3|**Evidências listadas** — O one-pager descreve o que será capturado|Obrigatório|Está claro quais dados o professor terá acesso ao final? **Contrato por habilidade (seção 12a):** cada habilidade de Computação diz o canal da evidência — `A` (ação do estudante), `B` (pergunta de três alternativas depois do Refletir) ou `A + B` — e a regra que separa Atingiu, Em processo e Não atingiu, por extenso. Habilidade sem canal ou sem regra → ❌. O foco primário tem sempre Canal A.|
+|7.3|**Evidências listadas** — O one-pager descreve o que será capturado|Obrigatório|Está claro quais dados o professor terá acesso ao final? **Contrato por habilidade (seção 12a):** cada habilidade de Computação diz o canal da evidência — `A` (ação do estudante) ou `A + B` (a ação mais a pergunta de três alternativas depois do Refletir) — e a regra que separa Atingiu, Em processo e Não atingiu, por extenso. Habilidade sem canal, só com `B` ou sem regra → ❌: toda habilidade tem Canal A.|
 |7.4|**Contribuição ao perfil comportamental** — Sinais comportamentais (não temáticos) identificados|Obrigatório — aplicado como sugestão|Liste 1-2 sinais comportamentais candidatos que a mecânica da missão já gera, mesmo que o perfil unificado ainda não exista na plataforma.|
 
 ---

@@ -126,9 +126,9 @@ def codigos_retirados(texto: str) -> Set[str]:
     return {c for f in frases if _RE_REMOVER.search(f) for c in _RE_CODIGO.findall(f)}
 
 
-def codigos_removidos(po: str, briefing: str = "", pedidos: str = "") -> Set[str]:
-    """Habilidades do one-pager do PO que o pedido manda tirar."""
-    return codigos_retirados(f"{briefing}\n{pedidos}") & set(_RE_CODIGO.findall(po or ""))
+def codigos_removidos(po: str, briefing: str = "", pedidos: str = "", votos: str = "") -> Set[str]:
+    """Habilidades do one-pager do PO que o pedido — ou o voto de um comitê pedagógico — manda tirar."""
+    return codigos_retirados(f"{briefing}\n{pedidos}\n{votos}") & set(_RE_CODIGO.findall(po or ""))
 
 
 def alteracoes_declaradas(gerado: str) -> List[Dict[str, str]]:
@@ -168,8 +168,11 @@ def _pedido_confere(celula: str, fonte: str) -> Optional[str]:
     return None
 
 
-def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "") -> Dict[str, Any]:
-    """Cada trecho do one-pager do PO está no gerado, ou saiu por ordem do pedido conferida em código."""
+def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "", votos: str = "") -> Dict[str, Any]:
+    """Cada trecho do one-pager do PO está no gerado, ou saiu por ordem do pedido conferida em código.
+
+    `votos` são os relatórios dos comitês pedagógicos: desde 15/10/2026 o comitê pode mandar reescrever o texto do PO
+    (decisão do PO), e a alteração vale quando cita, entre aspas, o trecho do voto que a pediu."""
     vazio = {"total": 0, "perdidas": [], "removidas": 0, "declaradas": 0, "codigos_removidos": []}
     # Sem one-pager não há o que conferir — e o autor ficou mudo. Com ou sem anexo do PO, isso reprova, para o loop
     # chamá-lo de novo: na exp03ef1b (08/10/2026) o A014 terminou sem texto duas vezes e o gate estrutural quebrou.
@@ -182,8 +185,8 @@ def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "") -> Dic
 
     novo = _norm(_sem_secoes_que_nao_contam(gerado))
     tri_novo = _trigramas(novo)
-    removidos = codigos_removidos(po, briefing, pedidos)
-    fonte = f"{briefing}\n{pedidos}"
+    removidos = codigos_removidos(po, briefing, pedidos, votos)
+    fonte = f"{briefing}\n{pedidos}\n{votos}"
     declaradas = alteracoes_declaradas(gerado)
     validas = [_norm(d["trecho"]) for d in declaradas if _pedido_confere(d["pedido"], fonte)]
     sem_prova = [d for d in declaradas if not _pedido_confere(d["pedido"], fonte)]
@@ -225,8 +228,8 @@ def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "") -> Dic
             "severidade": "bloqueio", "codigo": "alteracao-sem-pedido", "etapa": "produto",
             "agente_responsavel": "one-pager",
             "resumo": (f"A alteração «{d['trecho'][:160]}» → «{d['ficou'][:160]}» não cita, entre aspas, um trecho que "
-                       "exista no pedido do PO. Sem o pedido, devolva o texto do PO e, se achar que precisa mudar, "
-                       "escreva ao lado `[PROPOSTA — validar com PO: …]`."),
+                       "exista no pedido do PO nem no voto de um comitê. Sem o pedido, devolva o texto do PO e, se "
+                       "achar que precisa mudar, escreva ao lado `[PROPOSTA — validar com PO: …]`."),
         })
     return {"status": "bloqueado" if achados else "aprovado", "aplica": True, "achados": achados,
             "total": len(todas), "perdidas": perdidas, "removidas": n_removidas, "declaradas": n_declaradas,

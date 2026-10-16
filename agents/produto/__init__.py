@@ -5,45 +5,44 @@ Ordem (SequentialAgent):
                                  trecho citado; as crenças de entrada que o bimestre derruba)
   p00d A003IdeacaoMecanismos → ideacao_mecanismos (três mecanismos distintos, pontuados na
                                  rubrica de profundidade; o núcleo desenvolve o escolhido)
-  ┌─ LoopAgent (≤ 2 rodadas) ─────────────────────────────────────────┐
-  │ p0a A004NucleoNarrativo   → nucleo_narrativo                     │
-  │ p0cc A006CoberturaConceitual → cobertura_resultado (determinístico) │
-  │ p0mg A007MicroGate        → micro_gate_report                    │
-  │ p0jp A008JuizProfundidade → profundidade_report (notas P1–P6)   │
-  │ p0pc A011ProfundidadeCheck → profundidade_status (contado nas notas) │
-  │ p0mgc A012MicroGateCheck       → micro_gate_status                    │
-  │ p0nc A013NucleoCheck     → sai quando micro-gate E profundidade passam │
-  └───────────────────────────────────────────────────────────────────┘
-  p0b A014SecoesApoio         → one_pager  (núcleo + seções 2, 5–18 + brief)
-  ┌─ LoopAgent (≤ N rodadas) ─────────────────────────────────────────┐
-  │ p0c A019ContratoProdutoCheck → contrato_produto_report (lint: canal │
-  │      de sala, estado no servidor, SAEB, números sem origem)       │
-  ┌─ LoopAgent (≤ N rodadas) ─────────────────────────────────────────┐
-  │ p1  A021GateEstrutural    → gate_estrutural_report               │
-  │ p1c A022GateEstruturalCheck    → gate_estrutural_status (escalate)    │
-  │ p1b A023RevisorOnePager   → one_pager (corrigido)                │
-  └───────────────────────────────────────────────────────────────────┘
-  ┌─ ParallelAgent ──────────────────────────────────────────────────┐
-  │ p2  A024aAvaliacaoPedagogica → avaliacao_pedagogica_report       │
-  │ p3  A024bExperienciaEstudante    → experiencia_aluno_report          │
-  └───────────────────────────────────────────────────────────────────┘
-  p4  A033GateFinalProduto    → gate_final_report
+  ┌─ ComiteFinalLoop (≤ COMITE_FINAL_MAX_RODADAS, padrão 2) ──────────────────┐
+  │ ┌─ ComiteCanaisLoop (≤ COMITE_MAX_RODADAS, padrão 5) ───────────────────┐ │
+  │ │ [isolado] NucleoNarrativoLoop (≤ 2): A004 núcleo → A005–A012 → A013    │ │
+  │ │           (pulado quando nenhum comitê reprovado aponta para o A004)  │ │
+  │ │ [isolado] SecoesApoioLoop (≤ 2): A014 seções de apoio → A015 → A016    │ │
+  │ │ A017 one-pager existe                                                 │ │
+  │ │ A018 contrato de evidência do §12a (determinístico: Canal A em toda   │ │
+  │ │      habilidade, regra ternária, níveis do Canal B)                   │ │
+  │ │ A019a–f painéis A (mecânica e Canal A) e B (Canal B), 3 juízes cada   │ │
+  │ │ A020/A021 votos (unanimidade, citação conferida) → A022 saída: volta  │ │
+  │ │      ao A004 e ao A014 com os relatórios; esgotado, segue 🟡           │ │
+  │ └───────────────────────────────────────────────────────────────────────┘ │
+  │ [isolado] GateEstruturalLoop (≤ N): A023 brief → A024–A025 contrato →      │
+  │           A026 gate estrutural → A027 veredito → A028 revisor             │
+  │ [isolado] AvaliacoesLoop (≤ 2): A029a–c avaliações (sem julgar canal) →    │
+  │           A030–A033 vereditos → A034 revisor movido pelo parecer          │
+  │ [isolado] OnePagerPoLoop (≤ 2): A035–A036 conferência do PO → A037        │
+  │ A038 §12a de novo · A039 conta da virada sobre o one-pager                │
+  │ A040a–c comitê final (pedagogia, qualidade, imersão) → A041 votos →       │
+  │ A042 saída: reprovado, a cadeia roda de novo a partir do núcleo           │
+  └───────────────────────────────────────────────────────────────────────────┘
+  p4  A043GateFinalProduto    → gate_final_report
   p4c GateFinalCheck           → gate_final_status
-  p5  A035SpecMissao          → spec_missao   (saída final de Produto)
-  p5c A036BnccCheck                → bncc_status   (determinístico: bloco 11 × BNCC Computação oficial;
+  p5  A045SpecMissao          → spec_missao   (saída final de Produto)
+  p5c A046BnccCheck                → bncc_status   (determinístico: bloco 11 × BNCC Computação oficial;
                                  não conforme bloqueia design e dev)
-  p5d A040PerguntasCheck     → perguntas_status (determinístico: as 5 perguntas do 9f, com decisão
+  p5d A050PerguntasCheck     → perguntas_status (determinístico: as 5 perguntas do 9f, com decisão
                                  com limiar e ação que existe na tabela de eventos)
-  p5e A041JuizPerguntas      → juiz_perguntas_report (o que só se julga lendo: a pergunta muda
+  p5e A051JuizPerguntas      → juiz_perguntas_report (o que só se julga lendo: a pergunta muda
                                  uma decisão nossa e é sobre o produto, não sobre a criança)
-  p5f A043RastroSpec         → rastro_spec_status (determinístico: marcador de lacuna na spec;
+  p5f A053RastroSpec         → rastro_spec_status (determinístico: marcador de lacuna na spec;
                                  o de produto volta para a spec, o do PO fica 🟡 no parecer)
-  p5g A044ConteudoAprovadoSpec → conteudo_aprovado_spec_status (determinístico: habilidades,
+  p5g A054ConteudoAprovadoSpec → conteudo_aprovado_spec_status (determinístico: habilidades,
                                  tempo em tela e podcast iguais aos do one-pager aprovado)
   ┌── OnePagerResumidoLoop (até SPEC_MAX_RODADAS) ─────────────────────────┐
-  │ p6  A051OnePagerResumido   → one_pager_resumido (o formato curto do time de produto para │
+  │ p6  A061OnePagerResumido   → one_pager_resumido (o formato curto do time de produto para │
   │                              avaliação pedagógica, derivado do canônico e da spec conferida) │
-  │ p6b A052ConteudoAprovadoResumido → habilidades, tempo e Canal B × canônico aprovado │
+  │ p6b A062ConteudoAprovadoResumido → habilidades, tempo e Canal B × canônico aprovado │
   └────────────────────────────────────────────────────────────────────────┘
 """
 
@@ -59,6 +58,7 @@ from google.adk.agents.sequential_agent import SequentialAgent
 
 from agents.base import create_llm_agent
 from agents.banca import get_banca
+from agents.comite import build_comite_canais_loop, build_comite_final_loop
 from agents.juiz import get_fidelidade_check, get_juiz_de_achados
 from agents.callbacks import dispensar_ideacao_com_one_pager_do_po, marcar_heranca, preservar_one_pager
 from agents.checkers import (
@@ -158,7 +158,7 @@ def get_brief_escopo_split() -> SecaoSplitAgent:
     existe justamente para quem não vai auditar critério por critério.
     """
     return SecaoSplitAgent(
-        name="A018BriefEscopoSplit",
+        name="A023BriefEscopoSplit",
         description="Separa o brief de escopo do one-pager canônico para `brief_escopo`, antes do revisor.",
         rotulo="Brief de escopo",
         source_key="one_pager",
@@ -200,10 +200,10 @@ def get_gate_estrutural_agent(max_rodadas: Optional[int] = None, **kw) -> LlmAge
     # do gate promete uma rodada que o LoopAgent nunca executa (e vice-versa).
     rodadas = max_rodadas or get_settings().gate_estrutural_max_rodadas
     return create_llm_agent(
-        name="A021GateEstrutural",
+        name="A026GateEstrutural",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Gate estrutural: completude, ambiente, verbos nativos, logística, evidências e fechamento de spec.",
-        instruction=load_prompt("produto/021_gate_estrutural.md", gate_max_rodadas=rodadas),
+        instruction=load_prompt("produto/026_gate_estrutural.md", gate_max_rodadas=rodadas),
         output_key="gate_estrutural_report",
         **kw,
     )
@@ -211,7 +211,7 @@ def get_gate_estrutural_agent(max_rodadas: Optional[int] = None, **kw) -> LlmAge
 
 def get_revisor_one_pager_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A023RevisorOnePager",
+        name="A028RevisorOnePager",
         description="Aplica ao one-pager as correções prontas do gate estrutural, sem inventar decisões de produto.",
         instruction=load_prompt("produto/revisor_one_pager.md"),
         output_key="one_pager",
@@ -221,9 +221,9 @@ def get_revisor_one_pager_agent(**kw) -> LlmAgent:
 
 def get_restaurador_one_pager_po_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A032RestaurarOnePagerPo",
+        name="A037RestaurarOnePagerPo",
         description="Devolve ao one-pager os trechos do one-pager do PO que a esteira reescreveu sem pedido; o que um gate ou parecer pedia vira proposta ao PO.",
-        instruction=load_prompt("produto/032_restaurar_one_pager_po.md"),
+        instruction=load_prompt("produto/037_restaurar_one_pager_po.md"),
         output_key="one_pager",
         **kw,
     )
@@ -249,10 +249,10 @@ ONE_PAGER_PO_RODADAS = 2
 
 def get_avaliacao_pedagogica_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A024aAvaliacaoPedagogica",
+        name="A029aAvaliacaoPedagogica",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Avaliação pedagógica: descoberta central, papel do professor, BNCC e guardrails éticos.",
-        instruction=load_prompt("produto/024a_avaliacao_pedagogica.md"),
+        instruction=load_prompt("produto/029a_avaliacao_pedagogica.md"),
         output_key="avaliacao_pedagogica_report",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -261,10 +261,10 @@ def get_avaliacao_pedagogica_agent(**kw) -> LlmAgent:
 
 def get_adequacao_pedagogica_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A024cAdequacaoPedagogica",
+        name="A029cAdequacaoPedagogica",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Parecer de adequação pedagógica em seis eixos: alinhamento curricular, demanda cognitiva, carga acidental, viabilidade na escola pública, evidência de aprendizagem e equidade.",
-        instruction=load_prompt("produto/024c_adequacao_pedagogica.md"),
+        instruction=load_prompt("produto/029c_adequacao_pedagogica.md"),
         output_key="adequacao_report",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -273,10 +273,10 @@ def get_adequacao_pedagogica_agent(**kw) -> LlmAgent:
 
 def get_experiencia_aluno_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A024bExperienciaEstudante",
+        name="A029bExperienciaEstudante",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Experiência do aluno por faixa etária: carga decisória, linguagem, duração e complexidade.",
-        instruction=load_prompt("produto/024b_experiencia_estudante.md"),
+        instruction=load_prompt("produto/029b_experiencia_estudante.md"),
         output_key="experiencia_aluno_report",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -285,10 +285,10 @@ def get_experiencia_aluno_agent(**kw) -> LlmAgent:
 
 def get_gate_final_produto_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A033GateFinalProduto",
+        name="A043GateFinalProduto",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Gate final de produto: coerência entre missão e vereditos; libera ou bloqueia para design/dev.",
-        instruction=load_prompt("produto/033_gate_final.md"),
+        instruction=load_prompt("produto/043_gate_final.md"),
         output_key="gate_final_report",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -297,9 +297,9 @@ def get_gate_final_produto_agent(**kw) -> LlmAgent:
 
 def get_spec_missao_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A035SpecMissao",
+        name="A045SpecMissao",
         description="Traduz o one-pager aprovado na especificação de missão (12 blocos) — o contrato da construção.",
-        instruction=load_prompt("produto/035_spec_missao.md"),
+        instruction=load_prompt("produto/045_spec_missao.md"),
         output_key="spec_missao",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -308,9 +308,9 @@ def get_spec_missao_agent(**kw) -> LlmAgent:
 
 def get_one_pager_resumido_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A051OnePagerResumido",
+        name="A061OnePagerResumido",
         description="One-pager resumido para avaliação pedagógica, no formato do time de produto: ficha, ideia em prosa, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário por habilidade e takeaway. Condensa o canônico e a spec aprovados; não decide nada novo.",
-        instruction=load_prompt("produto/051_one_pager_resumido.md"),
+        instruction=load_prompt("produto/061_one_pager_resumido.md"),
         output_key="one_pager_resumido",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -333,7 +333,7 @@ def _resumido_loop(kw: dict, settings) -> LoopAgent:
         sub_agents=[
             get_one_pager_resumido_agent(**kw),
             RastroCheckAgent(
-                name="A052ConteudoAprovadoResumido",
+                name="A062ConteudoAprovadoResumido",
                 description="One-pager resumido × canônico aprovado e spec: as habilidades do bloco 11, o tempo em tela do §10 e o Canal B com o texto do §12a. Divergência volta ao autor do resumido.",
                 modo="aprovado_resumido",
                 rotulo="Resumido × one-pager aprovado",
@@ -344,7 +344,7 @@ def _resumido_loop(kw: dict, settings) -> LoopAgent:
                 before_agent_callback=marcar_heranca,
             ),
             SaidaDeLoopAgent(
-                name="A053ResumidoRodada",
+                name="A063ResumidoRodada",
                 description="Resumido fiel ao canônico encerra o loop; divergente volta ao autor com o relatório.",
                 rotulo="One-pager resumido",
                 status_keys=["conteudo_aprovado_resumido_status"],
@@ -368,10 +368,10 @@ def get_vizinhas_catalogo_agent(nome: str) -> VizinhasCatalogoAgent:
 
 def get_juiz_perguntas_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A041JuizPerguntas",
+        name="A051JuizPerguntas",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description="Juiz das cinco perguntas de produto do 9f: cada uma muda uma decisão nossa, é sobre o produto e não sobre a criança, e a ação nomeada a responde.",
-        instruction=load_prompt("produto/041_juiz_perguntas.md"),
+        instruction=load_prompt("produto/051_juiz_perguntas.md"),
         output_key="juiz_perguntas_report",
         before_agent_callback=marcar_heranca,
         **kw,
@@ -387,13 +387,13 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
         sub_agents=[
             get_spec_missao_agent(**kw),
             BnccCheckAgent(
-                name="A036BnccCheck",
+                name="A046BnccCheck",
                 description="Confere o bloco 11 da spec contra a lista oficial da BNCC Computação: código existe, é do ano da missão e há letramento digital.",
                 estrito=settings.bncc_check_estrito,
                 before_agent_callback=marcar_heranca,
             ),
             RastroCheckAgent(
-                name="A037ManifestoCheckProduto",
+                name="A047ManifestoCheckProduto",
                 description="Ficha do manifesto no bloco 0 da spec, conferida ainda em Produto: campo fora do vocabulário fechado volta para quem escreveu a spec.",
                 modo="manifesto",
                 rotulo="Ficha do manifesto (produto)",
@@ -403,7 +403,7 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
                 before_agent_callback=marcar_heranca,
             ),
             RastroCheckAgent(
-                name="A038EvidenciaCheck",
+                name="A048EvidenciaCheck",
                 description="Matriz de evidência pedagógica: grau `scored` com dois sinais, toda habilidade do bloco 11 com momento em tela e medida do bloco 9, gabarito declarado no servidor.",
                 modo="evidencia",
                 rotulo="Matriz de evidência pedagógica",
@@ -412,10 +412,10 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
                 estrito=settings.esteira_estrita,
                 before_agent_callback=marcar_heranca,
             ),
-            get_juiz_de_achados("A039JuizEvidencia", status_key="evidencia_status", report_key="evidencia_report",
+            get_juiz_de_achados("A049JuizEvidencia", status_key="evidencia_status", report_key="evidencia_report",
                                 fonte_key="spec_missao", gate_rotulo="Matriz de evidência pedagógica", **kw),
             RastroCheckAgent(
-                name="A040PerguntasCheck",
+                name="A050PerguntasCheck",
                 description="Sub-bloco 9f: cinco perguntas de produto, cada uma com decisão que tem limiar, corte válido e uma ação declarada na tabela de eventos que a responde com número.",
                 modo="perguntas",
                 rotulo="Perguntas de produto (9f)",
@@ -426,7 +426,7 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
             ),
             get_juiz_perguntas_agent(**kw),
             EnvelopeGateAgent(
-                name="A042JuizPerguntasCheck",
+                name="A052JuizPerguntasCheck",
                 documentos=["spec_missao", "perguntas_po"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 report_key="juiz_perguntas_report",
                 status_key="juiz_perguntas_status",
@@ -439,7 +439,7 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
             # barrava o PRD numa etapa que não reescreve a spec (exp04ef1b, 25/09/2026). Aqui ela
             # volta para quem a escreveu, e a decisão do PO aparece no semáforo do parecer.
             RastroCheckAgent(
-                name="A043RastroSpec",
+                name="A053RastroSpec",
                 description="Marcadores de lacuna na spec: pendência de produto ou de insumo volta para quem escreveu a spec; decisão do PO fica 🟡 no parecer; a de design e a de dev ficam para a etapa delas.",
                 modo="lacunas",
                 rotulo="Rastro de lacunas da spec",
@@ -455,7 +455,7 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
             # que o PO não tinha incorporado — a exp06ef1b perdeu a EF06CO07 e foi de 29 para 24 min em
             # tela —, e tudo a jusante seguia a spec sem nenhum gate ver.
             RastroCheckAgent(
-                name="A044ConteudoAprovadoSpec",
+                name="A054ConteudoAprovadoSpec",
                 description="Spec × one-pager aprovado: as habilidades do contrato de evidência (§12a), o tempo total em tela (§10) e o podcast (§11). Divergência volta ao autor da spec.",
                 modo="aprovado_spec",
                 rotulo="Spec × one-pager aprovado",
@@ -467,11 +467,11 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
             ),
             # A banca no fim de produto (dimensões de produto e pedagogia), antes do parecer do PO: o achado volta ao
             # autor da spec na próxima rodada. A mesma banca roda de novo na entrada do dev (decisão de 08/10/2026).
-            *get_banca("produto", "AC", 45, rotulo="Banca de produto",
+            *get_banca("produto", "AC", 55, rotulo="Banca de produto",
                        titulo="Banca de validação — fim de produto",
                        report_key="banca_produto_report", status_key="banca_produto_status", **kw),
             SaidaDeLoopAgent(
-                name="A049SpecCheck",
+                name="A059SpecCheck",
                 description="Currículo, manifesto, matriz de evidência, perguntas de produto, lacunas e fidelidade ao one-pager aprovado conformes encerram o loop; reprovados devolvem a spec ao autor com os relatórios.",
                 rotulo="Spec da missão",
                 status_keys=["bncc_status", "manifesto_status", "evidencia_status",
@@ -584,9 +584,9 @@ def build_produto_stage(
             get_brief_escopo_split(),
             # Antes do gate, a cada rodada: WebSocket como canal de sala, estado em
             # `localStorage`, SAEB fora do ano e número sem origem nasciam aqui e só eram pegos
-            # duas etapas depois (A091) ou nunca. O lint não bloqueia sozinho — o gate aplica.
+            # duas etapas depois (A101) ou nunca. O lint não bloqueia sozinho — o gate aplica.
             RastroCheckAgent(
-                name="A019ContratoProdutoCheck",
+                name="A024ContratoProdutoCheck",
                 description="Contrato de plataforma e origem dos parâmetros no one-pager: canal de sala por polling, estado no servidor, SAEB só nos anos avaliados, número com origem ou marcador. Alimenta o gate estrutural.",
                 modo="one_pager",
                 rotulo="Contrato de plataforma e origem dos parâmetros",
@@ -594,12 +594,12 @@ def build_produto_stage(
                 status_key="contrato_produto_status",
                 estrito=False,
             ),
-            get_juiz_de_achados("A020JuizContratoProduto", status_key="contrato_produto_status",
+            get_juiz_de_achados("A025JuizContratoProduto", status_key="contrato_produto_status",
                                 report_key="contrato_produto_report", fonte_key="one_pager",
                                 gate_rotulo="Contrato de plataforma e origem dos parâmetros", **kw),
             get_gate_estrutural_agent(max_rodadas=rodadas, **kw),
             EnvelopeGateAgent(
-                name="A022GateEstruturalCheck",
+                name="A027GateEstruturalCheck",
                 documentos=["one_pager", "brief_escopo", "briefing"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o envelope do gate estrutural e decide repetir, seguir ou bloquear.",
                 rotulo="Gate estrutural",
@@ -621,7 +621,7 @@ def build_produto_stage(
     # exigido nunca era aplicado e o gate final reprovava a missão por ele (exp03ef1b). Custa
     # reexecutar os três avaliadores só quando o parecer exige ajuste.
     revisor_pos_parecer = get_revisor_one_pager_agent(**kw)
-    revisor_pos_parecer.name = "A029RevisorOnePagerParecer"
+    revisor_pos_parecer.name = "A034RevisorOnePagerParecer"
     revisor_pos_parecer.description = (
         f"{revisor_pos_parecer.description} (rodada movida pelo parecer de adequação pedagógica)"
     )
@@ -652,11 +652,11 @@ def build_produto_stage(
             avaliacoes,
             # Os três relatórios pedagógicos produziam veredito e NINGUÉM o lia: não havia
             # `*_status` para eles em `tools/diagnostico.py`, e o `adequacao_status` que o
-            # `A028AdequacaoCheck` consultava nunca era escrito por agente nenhum — o loop
+            # `A033AdequacaoCheck` consultava nunca era escrito por agente nenhum — o loop
             # encerrava com aprovação sobre uma chave inexistente. Em 14 execuções, o parecer
             # de adequação emitiu 40 achados de conteúdo real e nenhum foi fechado.
             EnvelopeGateAgent(
-                name="A025AvaliacaoCheck",
+                name="A030AvaliacaoCheck",
                 documentos=["one_pager", "brief_escopo", "material_anexado"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o veredito da avaliação pedagógica (critérios 4.x, 5.1/5.2, 8.x).",
                 rotulo="Avaliação pedagógica",
@@ -665,7 +665,7 @@ def build_produto_stage(
                 block_pipeline_on_fail=estrito,
             ),
             EnvelopeGateAgent(
-                name="A026ExperienciaCheck",
+                name="A031ExperienciaCheck",
                 documentos=["one_pager", "brief_escopo"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o veredito da experiência do estudante (3.x, 6.x). Sinaliza, não trava: os tetos desta dimensão são [EXTRAPOLAÇÃO], não medida.",
                 rotulo="Experiência do estudante",
@@ -674,7 +674,7 @@ def build_produto_stage(
                 block_pipeline_on_fail=False,
             ),
             EnvelopeGateAgent(
-                name="A027AdequacaoCheck",
+                name="A032AdequacaoCheck",
                 documentos=["one_pager", "brief_escopo", "material_anexado"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o veredito do parecer de adequação pedagógica.",
                 rotulo="Adequação pedagógica",
@@ -683,7 +683,7 @@ def build_produto_stage(
                 block_pipeline_on_fail=False,
             ),
             SaidaDeLoopAgent(
-                name="A028AdequacaoCheck",
+                name="A033AdequacaoCheck",
                 description="Parecer sem ajuste exigido encerra o loop; com ajuste, o revisor aplica e as avaliações refazem.",
                 rotulo="Adequação pedagógica",
                 status_keys=["adequacao_status", "avaliacao_status"],
@@ -727,9 +727,9 @@ def build_produto_stage(
         description="Conferência final do one-pager do PO ↔ restaurador, antes do gate final.",
         max_iterations=ONE_PAGER_PO_RODADAS,
         sub_agents=[
-            get_one_pager_po_check("A030OnePagerPoCheck", estrito=settings.esteira_estrita),
+            get_one_pager_po_check("A035OnePagerPoCheck", estrito=settings.esteira_estrita),
             SaidaDeLoopAgent(
-                name="A031OnePagerPoRodada",
+                name="A036OnePagerPoRodada",
                 description="One-pager do PO preservado segue para o gate final; trecho perdido vai ao restaurador.",
                 rotulo="One-pager do PO",
                 status_keys=["one_pager_po_status"],
@@ -752,16 +752,22 @@ def build_produto_stage(
             # candidatos para o conceito central dele. O núcleo desenvolve um, não improvisa.
             get_mapa_conceitual_agent(**kw),
             get_ideacao_mecanismos_agent(**kw),
-            nucleo_loop,
-            secoes_apoio_loop,
-            DocumentoObrigatorioAgent(name="A017OnePagerExiste", chave="one_pager", autor="A014SecoesApoio",
-                                      description="Sem one-pager depois de duas tentativas do A014, a etapa para com mensagem legível."),
-            gate_loop,
-            avaliacoes_loop,
-            one_pager_po_loop,
+            # Os comitês só julgam; reprovada, a missão volta a quem a escreve (A004 e A014) e passa de novo pelos
+            # gates do núcleo — por isso o loop do comitê envolve os loops dos autores (`agents/comite.py`).
+            build_comite_final_loop([
+                build_comite_canais_loop([
+                    nucleo_loop,
+                    secoes_apoio_loop,
+                    DocumentoObrigatorioAgent(name="A017OnePagerExiste", chave="one_pager", autor="A014SecoesApoio",
+                                              description="Sem one-pager depois de duas tentativas do A014, a etapa para com mensagem legível."),
+                ], **kw),
+                gate_loop,
+                avaliacoes_loop,
+                one_pager_po_loop,
+            ], **kw),
             get_gate_final_produto_agent(**kw),
             EnvelopeGateAgent(
-                name="A034GateFinalProdutoCheck",
+                name="A044GateFinalProdutoCheck",
                 documentos=["one_pager", "brief_escopo", "gate_estrutural_report", "avaliacao_pedagogica_report", "experiencia_aluno_report", "adequacao_report"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o veredito do gate final de produto (🟢 liberada / 🔴 bloqueada).",
                 rotulo="Gate final de produto",
@@ -771,7 +777,7 @@ def build_produto_stage(
             ),
             spec_loop,
             _fidelidade_de_produto(kw),
-            # Depois da spec, de propósito: o bloco 11 já passou pelo A036, então o resumido
+            # Depois da spec, de propósito: o bloco 11 já passou pelo A046, então o resumido
             # copia códigos conferidos em vez dos que a seção 2 do canônico ainda podia trocar.
             _resumido_loop(kw, settings),
         ],
@@ -781,22 +787,22 @@ def build_produto_stage(
 def _fidelidade_de_produto(kw: Dict[str, Any]):
     """A conferência final: núcleo, one-pager e spec contra todos os pedidos do PO e o briefing.
     Com 🔴 aqui, o *de acordo* de produto é recusado (`pipeline/passagem.py`)."""
-    return get_fidelidade_check("A050FidelidadeProduto", status_key="fidelidade_status", report_key="fidelidade_report",
+    return get_fidelidade_check("A060FidelidadeProduto", status_key="fidelidade_status", report_key="fidelidade_report",
                                 documentos=["nucleo_narrativo", "one_pager", "spec_missao"],
                                 onde="fim de produto", etapas_pedido=list(ETAPAS_DO_PEDIDO_DE_PRODUTO), **kw)
 
 
 #: Os pedidos de refazer que produto confere: os de produto e os registros antigos, sem etapa. O pedido feito a
-#: design ou a dev é conferido no fim daquela etapa (A084, A51): aqui ele reprovava o núcleo por um botão de tela.
+#: design ou a dev é conferido no fim daquela etapa (A094, A51): aqui ele reprovava o núcleo por um botão de tela.
 ETAPAS_DO_PEDIDO_DE_PRODUTO = ("produto", "")
 
 
 #: Agentes do estágio parcial "spec" (correção a partir da spec), na ordem em que rodam.
-SPEC_AGENT_IDS = ["A035SpecMissao", "A036BnccCheck", "A037ManifestoCheckProduto", "A038EvidenciaCheck",
-                  "A040PerguntasCheck", "A041JuizPerguntas", "A042JuizPerguntasCheck",
-                  "A044ConteudoAprovadoSpec", "A047aBancaProdutoNarrativa", "A047bBancaPedagogiaBncc",
-                  "A048BancaConsolidacao", "A049SpecCheck", "A050FidelidadeProduto", "A051OnePagerResumido",
-                  "A052ConteudoAprovadoResumido", "A053ResumidoRodada"]
+SPEC_AGENT_IDS = ["A045SpecMissao", "A046BnccCheck", "A047ManifestoCheckProduto", "A048EvidenciaCheck",
+                  "A050PerguntasCheck", "A051JuizPerguntas", "A052JuizPerguntasCheck",
+                  "A054ConteudoAprovadoSpec", "A057aBancaProdutoNarrativa", "A057bBancaPedagogiaBncc",
+                  "A058BancaConsolidacao", "A059SpecCheck", "A060FidelidadeProduto", "A061OnePagerResumido",
+                  "A062ConteudoAprovadoResumido", "A063ResumidoRodada"]
 
 PRODUTO_METADATA = [
     {"id": "A001VizinhasCatalogo", "name": "001 · Missões já geradas (determinístico)", "icon": "🗂️", "output_key": "missoes_vizinhas", "prompt_file": None, "description": "Lê o índice de missões e entrega ao núcleo as mais próximas do ano do briefing, para a missão nova não repetir uma anterior."},
@@ -816,45 +822,62 @@ PRODUTO_METADATA = [
     {"id": "A015OnePagerPoCheck", "name": "015 · One-pager do PO preservado (determinístico)", "icon": "📌", "output_key": "one_pager_po_report", "prompt_file": None, "description": "Quando o PO anexou o one-pager: cada trecho dele (linha e célula de tabela) está no one-pager das seções de apoio, ou saiu porque o pedido mandou. Trecho perdido volta ao A014 com a lista. Sem anexo, não se aplica."},
     {"id": "A016SecoesApoioRodada", "name": "016 · Saída das seções de apoio (determinístico)", "icon": "🔀", "output_key": "secoes_apoio_rodada", "prompt_file": None, "description": "One-pager do PO preservado encerra o loop das seções de apoio; trecho perdido devolve ao A014."},
     {"id": "A017OnePagerExiste", "name": "017 · One-pager existe (determinístico)", "icon": "🧱", "output_key": None, "prompt_file": None, "description": "Se o A014 terminou sem texto nas duas tentativas, a etapa para aqui com uma mensagem que diz quem ficou mudo — antes, o gate estrutural quebrava com «Context variable not found»."},
-    {"id": "A018BriefEscopoSplit", "name": "018 · Brief de escopo separado (determinístico)", "icon": "🔀", "output_key": "brief_escopo_status", "prompt_file": None, "description": "Separa o brief de escopo do one-pager canônico para `brief_escopo`, antes do revisor."},
-    {"id": "A019ContratoProdutoCheck", "name": "019 · Contrato de plataforma e origem dos parâmetros (determinístico)", "icon": "📡", "output_key": "contrato_produto_report", "prompt_file": None, "description": "Lint do one-pager a cada rodada do gate: canal de sala por polling (nunca WebSocket), estado no servidor (sem localStorage/IndexedDB), SAEB só nos anos avaliados, número com origem ou marcador. O gate aplica; o revisor corrige."},
-    {"id": "A020JuizContratoProduto", "name": "020 · Juiz do contrato de produto", "icon": "⚖️", "output_key": "contrato_produto_status", "prompt_file": None, "description": "Juiz de achados sobre `Contrato de plataforma e origem dos parâmetros`: retira o achado de uso vedado quando o texto só cita para vedar — com citação literal conferida."},
-    {"id": "A021GateEstrutural", "name": "021 · Gate estrutural", "icon": "🚧", "output_key": "gate_estrutural_report", "prompt_file": "produto/021_gate_estrutural.md", "description": "critérios: estrutura, ambiente, logística, evidências, viabilidade e infraestrutura."},
-    {"id": "A022GateEstruturalCheck", "name": "022 · Veredito do gate (determinístico)", "icon": "🔀", "output_key": "gate_estrutural_status", "prompt_file": None, "description": "Lê o envelope JSON e decide repetir, seguir ou bloquear."},
-    {"id": "A023RevisorOnePager", "name": "023 · Revisor do one-pager", "icon": "🩹", "output_key": "one_pager", "prompt_file": "produto/revisor_one_pager.md", "description": "Aplica o complemento pronto-pra-colar do gate; não inventa decisão de produto."},
-    {"id": "A024aAvaliacaoPedagogica", "name": "024a · Avaliação pedagógica", "icon": "🎓", "output_key": "avaliacao_pedagogica_report", "prompt_file": "produto/024a_avaliacao_pedagogica.md", "description": "BNCC, professor, guardrails e affordance × guardrail (paralelo com P3)."},
-    {"id": "A024bExperienciaEstudante", "name": "024b · Experiência do estudante", "icon": "🧒", "output_key": "experiencia_aluno_report", "prompt_file": "produto/024b_experiencia_estudante.md", "description": "Carga cognitiva, faixa etária e agência (paralelo com P2)."},
-    {"id": "A024cAdequacaoPedagogica", "name": "024c · Adequação pedagógica", "icon": "⚖️", "output_key": "adequacao_report", "prompt_file": "produto/024c_adequacao_pedagogica.md", "description": "Seis eixos com parecer e ajustes acionáveis: currículo, demanda cognitiva, carga acidental, viabilidade na escola pública, evidência de aprendizagem e equidade. Parecer entra como ressalva, não bloqueia."},
-    {"id": "A025AvaliacaoCheck", "name": "025 · Veredito da avaliação pedagógica (determinístico)", "icon": "🔀", "output_key": "avaliacao_status", "prompt_file": None, "description": "Lê o veredito da avaliação pedagógica (critérios 4.x, 5.1/5.2, 8.x)."},
-    {"id": "A026ExperienciaCheck", "name": "026 · Veredito da experiência do estudante (determinístico)", "icon": "🔀", "output_key": "experiencia_status", "prompt_file": None, "description": "Lê o veredito da experiência do estudante (3.x, 6.x). Sinaliza, não trava: os tetos desta dimensão são [EXTRAPOLAÇÃO], não medida."},
-    {"id": "A027AdequacaoCheck", "name": "027 · Veredito da adequação pedagógica (determinístico)", "icon": "🔀", "output_key": "adequacao_status", "prompt_file": None, "description": "Lê o veredito do parecer de adequação pedagógica."},
-    {"id": "A028AdequacaoCheck", "name": "028 · Veredito do parecer (determinístico)", "icon": "🔀", "output_key": "avaliacoes_rodada", "prompt_file": None, "description": "Parecer sem ajuste exigido encerra o ciclo das avaliações; com ajuste, devolve ao revisor do one-pager."},
-    {"id": "A029RevisorOnePagerParecer", "name": "029 · Revisor movido pelo parecer", "icon": "🩹", "output_key": "one_pager", "prompt_file": "produto/revisor_one_pager.md", "description": "Aplica ao one-pager os ajustes exigidos pelo parecer de adequação (padrão: 2 rodadas; AVALIACOES_MAX_RODADAS=1 desliga)."},
-    {"id": "A030OnePagerPoCheck", "name": "030 · One-pager do PO preservado, depois dos pareceres (determinístico)", "icon": "📌", "output_key": "one_pager_po_report", "prompt_file": None, "description": "A conferência final, depois do gate estrutural, dos pareceres e dos revisores: trecho do one-pager do PO perdido sem pedido deixa produto 🔴 e vai ao restaurador."},
-    {"id": "A031OnePagerPoRodada", "name": "031 · Saída da conferência do one-pager do PO (determinístico)", "icon": "🔀", "output_key": "one_pager_po_rodada", "prompt_file": None, "description": "Preservado segue para o gate final; perdido vai ao restaurador uma vez."},
-    {"id": "A032RestaurarOnePagerPo", "name": "032 · Restaurador do one-pager do PO", "icon": "🧷", "output_key": "one_pager", "prompt_file": "produto/032_restaurar_one_pager_po.md", "description": "Devolve ao one-pager, literalmente, os trechos do PO que a esteira reescreveu; o que um gate ou parecer pedia vira [PROPOSTA — validar com PO]."},
-    {"id": "A033GateFinalProduto", "name": "033 · Gate final de produto", "icon": "🏁", "output_key": "gate_final_report", "prompt_file": "produto/033_gate_final.md", "description": "Coerência entre missão e vereditos; libera ou bloqueia para design/dev."},
-    {"id": "A034GateFinalProdutoCheck", "name": "034 · Veredito final (determinístico)", "icon": "🔀", "output_key": "gate_final_status", "prompt_file": None, "description": "Lê o envelope do gate final."},
-    {"id": "A035SpecMissao", "name": "035 · Spec da missão", "icon": "📜", "output_key": "spec_missao", "prompt_file": "produto/035_spec_missao.md", "description": "Os 12 blocos da spec — contrato contra o qual design e dev constroem."},
-    {"id": "A036BnccCheck", "name": "036 · Conformidade BNCC Computação (determinístico)", "icon": "📚", "output_key": "bncc_report", "prompt_file": None, "description": "Bloco 11 × lista oficial do MEC: código existe, é do ano da missão e inclui letramento digital. Não conforme bloqueia design e dev."},
-    {"id": "A037ManifestoCheckProduto", "name": "037 · Ficha do manifesto (determinístico)", "icon": "🪪", "output_key": "manifesto_report", "prompt_file": None, "description": "Bloco 0 da spec × listas fechadas da plataforma, conferido ainda em Produto: campo errado volta para quem escreveu a spec, em vez de custar o design inteiro."},
-    {"id": "A038EvidenciaCheck", "name": "038 · Matriz de evidência pedagógica (determinístico)", "icon": "🔬", "output_key": "evidencia_report", "prompt_file": None, "description": "Bloco 9 × bloco 11: grau `scored` com dois sinais nomeados, toda habilidade com momento em tela e medida ligada, gabarito declarado no servidor."},
-    {"id": "A039JuizEvidencia", "name": "039 · Juiz da matriz de evidência", "icon": "⚖️", "output_key": "evidencia_status", "prompt_file": None, "description": "Juiz de achados sobre `Matriz de evidência pedagógica`: retira o achado de uso vedado quando o texto só cita para vedar — com citação literal conferida."},
-    {"id": "A040PerguntasCheck", "name": "040 · Perguntas de produto, sub-bloco 9f (determinístico)", "icon": "❓", "output_key": "perguntas_report", "prompt_file": None, "description": "As cinco perguntas de produto: quantidade fechada, decisão com limiar, corte do vocabulário, e a ação que responde cada uma declarada na tabela de eventos do bloco 9 com payload que mede."},
-    {"id": "A041JuizPerguntas", "name": "041 · Juiz das perguntas de produto", "icon": "⚖️", "output_key": "juiz_perguntas_report", "prompt_file": "produto/041_juiz_perguntas.md", "description": "O que não se confere por regex: a pergunta muda uma decisão nossa, é sobre o produto e não sobre a criança, a ação nomeada a responde, e ela não é uma transversal repintada."},
-    {"id": "A042JuizPerguntasCheck", "name": "042 · Veredito do juiz das perguntas (determinístico)", "icon": "🔀", "output_key": "juiz_perguntas_status", "prompt_file": None, "description": "Lê o envelope do juiz: ❌ em pergunta declarada pelo PO bloqueia; ❌ só em proposta segue como ressalva para o PO decidir."},
-    {"id": "A043RastroSpec", "name": "043 · Rastro de lacunas da spec (determinístico)", "icon": "🧭", "output_key": "rastro_spec_report", "prompt_file": None, "description": "Marcadores de lacuna na spec, por dono: o de produto ou de insumo volta para quem escreveu a spec; a decisão do PO fica 🟡 no semáforo do parecer; o de design e o de dev ficam para a etapa delas."},
-    {"id": "A044ConteudoAprovadoSpec", "name": "044 · Spec × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_spec_report", "prompt_file": None, "description": "A spec traduz o one-pager que o PO aprovou: mesmas habilidades do contrato de evidência (§12a), mesmo tempo total em tela (§10) e o podcast (§11) declarado. Ressalva de parecer que o PO não incorporou não muda a spec."},
-    {"id": "A045ConteudoAprovado", "name": "045 · Conteúdo aprovado para a banca de produto (determinístico)", "icon": "🔀", "output_key": None, "prompt_file": None, "description": "Grava as seções literais do one-pager para a banca do fim de produto."},
-    {"id": "A046EscopoBanca", "name": "046 · Escopo da banca de produto (determinístico)", "icon": "🔀", "output_key": None, "prompt_file": None, "description": "Grava o escopo da banca na posição «produto»."},
-    {"id": "A047aBancaProdutoNarrativa", "name": "047a · Banca no fim de produto: produto e narrativa", "icon": "🅰️", "output_key": "banca_produto_narrativa", "prompt_file": "dev/validacao_produto_narrativa.md", "description": "Os critérios PROD da banca que a spec decide, antes do parecer do PO. O achado volta ao autor da spec na próxima rodada."},
-    {"id": "A047bBancaPedagogiaBncc", "name": "047b · Banca no fim de produto: pedagogia e BNCC", "icon": "🅲", "output_key": "banca_produto_pedagogia", "prompt_file": "dev/validacao_pedagogia_bncc.md", "description": "Os critérios PED da banca sobre a spec, antes do parecer do PO."},
-    {"id": "A048BancaConsolidacao", "name": "048 · Banca de produto (determinístico)", "icon": "⚖️", "output_key": "banca_produto_report", "prompt_file": None, "description": "Veredito da banca no fim de produto: o pior das dimensões, com os bloqueantes lidos dos arquivos de critério. 🔴 devolve a spec ao autor e, esgotadas as rodadas, recusa o de acordo."},
-    {"id": "A049SpecCheck", "name": "049 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
-    {"id": "A050FidelidadeProduto", "name": "050 · Fidelidade ao pedido do PO e ao briefing", "icon": "📌", "output_key": "fidelidade_report", "prompt_file": None, "description": "Núcleo, one-pager e spec contra todos os pedidos do PO e o briefing. Pedido sem prova é 🔴 e recusa o de acordo de produto; conflito com regra da esteira vira decisão do PO."},
-    {"id": "A051OnePagerResumido", "name": "051 · One-pager resumido", "icon": "🗂️", "output_key": "one_pager_resumido", "prompt_file": "produto/051_one_pager_resumido.md", "description": "O one-pager no formato do time de produto para avaliação pedagógica: ficha, ideia, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário e takeaway. Sai em .md, .docx e .html."},
-    {"id": "A052ConteudoAprovadoResumido", "name": "052 · Resumido × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_resumido_report", "prompt_file": None, "description": "As habilidades do bloco 11, o tempo em tela do §10 e o Canal B com o texto do §12a no resumido que o time lê para aprovar. Divergência volta ao autor do resumido."},
-    {"id": "A053ResumidoRodada", "name": "053 · Veredito do resumido (determinístico)", "icon": "🔁", "output_key": "resumido_rodada", "prompt_file": None, "description": "Resumido fiel encerra o loop; divergente volta ao autor com o relatório, até o teto de rodadas."},
+    {"id": "A018EvidenciaOnePager", "name": "018 · Contrato de evidência do one-pager (determinístico)", "icon": "🔬", "output_key": "evidencia_one_pager_report", "prompt_file": None, "description": "O §12a onde ele nasce: toda habilidade da seção 2 com linha, Canal A e regra ternária por extenso, e Canal B com o nível de cada alternativa. Forma antes de voto: o que falha aqui volta ao autor sem gastar o comitê."},
+    {"id": "A019aComiteCanalACurriculo", "name": "019a · Comitê dos canais: A·1 Currículo", "icon": "🧑‍⚖️", "output_key": "comite_canal_a_curriculo", "prompt_file": "produto/comite_canal_a_curriculo.md", "description": "Painel A: a ação do Canal A de cada habilidade é o verbo e o objeto do texto oficial, na decisão onde o limiar mora."},
+    {"id": "A019bComiteCanalAMedida", "name": "019b · Comitê dos canais: A·2 Medida", "icon": "🧑‍⚖️", "output_key": "comite_canal_a_medida", "prompt_file": "produto/comite_canal_a_medida.md", "description": "Painel A: a regra ternária é alcançável, sem buraco, sem Atingiu por sorte e calculável pelo que o evento registra."},
+    {"id": "A019cComiteCanalAVivencia", "name": "019c · Comitê dos canais: A·3 Vivência e idade", "icon": "🧑‍⚖️", "output_key": "comite_canal_a_vivencia", "prompt_file": "produto/comite_canal_a_vivencia.md", "description": "Painel A: a ação é verbo nativo, vivida na decisão e dentro dos tetos da faixa."},
+    {"id": "A019dComiteCanalBCurriculo", "name": "019d · Comitê dos canais: B·1 Currículo", "icon": "🧑‍⚖️", "output_key": "comite_canal_b_curriculo", "prompt_file": "produto/comite_canal_b_curriculo.md", "description": "Painel B: a pergunta mede a habilidade da linha, e o Atingiu é domínio pleno e autônomo."},
+    {"id": "A019eComiteCanalBMedida", "name": "019e · Comitê dos canais: B·2 Medida", "icon": "🧑‍⚖️", "output_key": "comite_canal_b_medida", "prompt_file": "produto/comite_canal_b_medida.md", "description": "Painel B: as três alternativas discriminam os níveis e nenhuma se elimina pela linguagem."},
+    {"id": "A019fComiteCanalBExperiencia", "name": "019f · Comitê dos canais: B·3 Experiência", "icon": "🧑‍⚖️", "output_key": "comite_canal_b_experiencia", "prompt_file": "produto/comite_canal_b_experiencia.md", "description": "Painel B: depois do Refletir sem repeti-lo, na língua do ambiente, sem vazar resultado e dentro do teto."},
+    {"id": "A020VotosCanalA", "name": "020 · Votos do painel A (determinístico)", "icon": "🗳️", "output_key": "comite_canal_a_report", "prompt_file": None, "description": "Conta os três votos do painel A (mecânica e Canal A) com as citações conferidas: unanimidade aprova; sem ela, a missão volta ao núcleo (A004) e às seções de apoio (A014)."},
+    {"id": "A021VotosCanalB", "name": "021 · Votos do painel B (determinístico)", "icon": "🗳️", "output_key": "comite_canal_b_report", "prompt_file": None, "description": "Conta os três votos do painel B (Canal B): unanimidade aprova; sem ela, a missão volta a quem a escreve. Sem Canal B na missão, os juízes são dispensados sem custo."},
+    {"id": "A022ComiteCanaisRodada", "name": "022 · Saída do comitê dos canais (determinístico)", "icon": "🔁", "output_key": "comite_canais_rodada", "prompt_file": None, "description": "Os dois painéis unânimes e o §12a em forma encerram o loop; senão, núcleo e seções de apoio reescrevem com os relatórios, até COMITE_MAX_RODADAS (padrão 5). Esgotado, segue 🟡 com os votos vencidos no parecer."},
+    {"id": "A023BriefEscopoSplit", "name": "023 · Brief de escopo separado (determinístico)", "icon": "🔀", "output_key": "brief_escopo_status", "prompt_file": None, "description": "Separa o brief de escopo do one-pager canônico para `brief_escopo`, antes do revisor."},
+    {"id": "A024ContratoProdutoCheck", "name": "024 · Contrato de plataforma e origem dos parâmetros (determinístico)", "icon": "📡", "output_key": "contrato_produto_report", "prompt_file": None, "description": "Lint do one-pager a cada rodada do gate: canal de sala por polling (nunca WebSocket), estado no servidor (sem localStorage/IndexedDB), SAEB só nos anos avaliados, número com origem ou marcador. O gate aplica; o revisor corrige."},
+    {"id": "A025JuizContratoProduto", "name": "025 · Juiz do contrato de produto", "icon": "⚖️", "output_key": "contrato_produto_status", "prompt_file": None, "description": "Juiz de achados sobre `Contrato de plataforma e origem dos parâmetros`: retira o achado de uso vedado quando o texto só cita para vedar — com citação literal conferida."},
+    {"id": "A026GateEstrutural", "name": "026 · Gate estrutural", "icon": "🚧", "output_key": "gate_estrutural_report", "prompt_file": "produto/026_gate_estrutural.md", "description": "critérios: estrutura, ambiente, logística, evidências, viabilidade e infraestrutura."},
+    {"id": "A027GateEstruturalCheck", "name": "027 · Veredito do gate (determinístico)", "icon": "🔀", "output_key": "gate_estrutural_status", "prompt_file": None, "description": "Lê o envelope JSON e decide repetir, seguir ou bloquear."},
+    {"id": "A028RevisorOnePager", "name": "028 · Revisor do one-pager", "icon": "🩹", "output_key": "one_pager", "prompt_file": "produto/revisor_one_pager.md", "description": "Aplica o complemento pronto-pra-colar do gate; não inventa decisão de produto."},
+    {"id": "A029aAvaliacaoPedagogica", "name": "029a · Avaliação pedagógica", "icon": "🎓", "output_key": "avaliacao_pedagogica_report", "prompt_file": "produto/029a_avaliacao_pedagogica.md", "description": "BNCC, professor, guardrails e affordance × guardrail (paralelo com P3)."},
+    {"id": "A029bExperienciaEstudante", "name": "029b · Experiência do estudante", "icon": "🧒", "output_key": "experiencia_aluno_report", "prompt_file": "produto/029b_experiencia_estudante.md", "description": "Carga cognitiva, faixa etária e agência (paralelo com P2)."},
+    {"id": "A029cAdequacaoPedagogica", "name": "029c · Adequação pedagógica", "icon": "⚖️", "output_key": "adequacao_report", "prompt_file": "produto/029c_adequacao_pedagogica.md", "description": "Seis eixos com parecer e ajustes acionáveis: currículo, demanda cognitiva, carga acidental, viabilidade na escola pública, evidência de aprendizagem e equidade. Parecer entra como ressalva, não bloqueia."},
+    {"id": "A030AvaliacaoCheck", "name": "030 · Veredito da avaliação pedagógica (determinístico)", "icon": "🔀", "output_key": "avaliacao_status", "prompt_file": None, "description": "Lê o veredito da avaliação pedagógica (critérios 4.x, 5.1/5.2, 8.x)."},
+    {"id": "A031ExperienciaCheck", "name": "031 · Veredito da experiência do estudante (determinístico)", "icon": "🔀", "output_key": "experiencia_status", "prompt_file": None, "description": "Lê o veredito da experiência do estudante (3.x, 6.x). Sinaliza, não trava: os tetos desta dimensão são [EXTRAPOLAÇÃO], não medida."},
+    {"id": "A032AdequacaoCheck", "name": "032 · Veredito da adequação pedagógica (determinístico)", "icon": "🔀", "output_key": "adequacao_status", "prompt_file": None, "description": "Lê o veredito do parecer de adequação pedagógica."},
+    {"id": "A033AdequacaoCheck", "name": "033 · Veredito do parecer (determinístico)", "icon": "🔀", "output_key": "avaliacoes_rodada", "prompt_file": None, "description": "Parecer sem ajuste exigido encerra o ciclo das avaliações; com ajuste, devolve ao revisor do one-pager."},
+    {"id": "A034RevisorOnePagerParecer", "name": "034 · Revisor movido pelo parecer", "icon": "🩹", "output_key": "one_pager", "prompt_file": "produto/revisor_one_pager.md", "description": "Aplica ao one-pager os ajustes exigidos pelo parecer de adequação (padrão: 2 rodadas; AVALIACOES_MAX_RODADAS=1 desliga)."},
+    {"id": "A035OnePagerPoCheck", "name": "035 · One-pager do PO preservado, depois dos pareceres (determinístico)", "icon": "📌", "output_key": "one_pager_po_report", "prompt_file": None, "description": "A conferência final, depois do gate estrutural, dos pareceres e dos revisores: trecho do one-pager do PO perdido sem pedido deixa produto 🔴 e vai ao restaurador."},
+    {"id": "A036OnePagerPoRodada", "name": "036 · Saída da conferência do one-pager do PO (determinístico)", "icon": "🔀", "output_key": "one_pager_po_rodada", "prompt_file": None, "description": "Preservado segue para o gate final; perdido vai ao restaurador uma vez."},
+    {"id": "A037RestaurarOnePagerPo", "name": "037 · Restaurador do one-pager do PO", "icon": "🧷", "output_key": "one_pager", "prompt_file": "produto/037_restaurar_one_pager_po.md", "description": "Devolve ao one-pager, literalmente, os trechos do PO que a esteira reescreveu; o que um gate ou parecer pedia vira [PROPOSTA — validar com PO]."},
+    {"id": "A038EvidenciaOnePagerFinal", "name": "038 · Contrato de evidência, antes do comitê final (determinístico)", "icon": "🔬", "output_key": "evidencia_one_pager_report", "prompt_file": None, "description": "O §12a de novo, sobre o one-pager depois do gate estrutural, dos pareceres e dos revisores."},
+    {"id": "A039ContaDaViradaOnePager", "name": "039 · Conta da virada no one-pager (determinístico)", "icon": "🧮", "output_key": "mecanica_one_pager_report", "prompt_file": None, "description": "Refaz o ranking da tabela 1.3 sobre o one-pager de agora: os revisores podem ter mudado a mecânica depois do núcleo."},
+    {"id": "A040aComiteFinalPedagogia", "name": "040a · Comitê final: F·1 Pedagogia", "icon": "🧑‍⚖️", "output_key": "comite_final_pedagogia", "prompt_file": "produto/comite_final_pedagogia.md", "description": "Comitê final: limiar vivido, aha com os seis passos e canais ainda coerentes depois das revisões."},
+    {"id": "A040bComiteFinalQualidade", "name": "040b · Comitê final: F·2 Qualidade de produto", "icon": "🧑‍⚖️", "output_key": "comite_final_qualidade", "prompt_file": "produto/comite_final_qualidade.md", "description": "Comitê final: uma missão só, tempos e tetos que fecham, professor claro e construível sem inventar."},
+    {"id": "A040cComiteFinalImersao", "name": "040c · Comitê final: F·3 Imersão", "icon": "🧑‍⚖️", "output_key": "comite_final_imersao", "prompt_file": "produto/comite_final_imersao.md", "description": "Comitê final: porta, troca e chegada diegéticas, verbos nativos e virada mostrada pelo ambiente."},
+    {"id": "A041VotosFinal", "name": "041 · Votos do comitê final (determinístico)", "icon": "🗳️", "output_key": "comite_final_report", "prompt_file": None, "description": "Conta os votos de pedagogia, qualidade e imersão com as citações conferidas: unanimidade aprova; sem ela, a missão volta ao A004 e ao A014."},
+    {"id": "A042ComiteFinalRodada", "name": "042 · Saída do comitê final (determinístico)", "icon": "🔁", "output_key": "comite_final_externo_rodada", "prompt_file": None, "description": "Os três de acordo, o §12a em forma e a conta da virada fechando encerram o loop; senão, a cadeia de produto roda de novo a partir do núcleo, até COMITE_FINAL_MAX_RODADAS (padrão 2). Esgotado, segue 🟡."},
+    {"id": "A043GateFinalProduto", "name": "043 · Gate final de produto", "icon": "🏁", "output_key": "gate_final_report", "prompt_file": "produto/043_gate_final.md", "description": "Coerência entre missão e vereditos; libera ou bloqueia para design/dev."},
+    {"id": "A044GateFinalProdutoCheck", "name": "044 · Veredito final (determinístico)", "icon": "🔀", "output_key": "gate_final_status", "prompt_file": None, "description": "Lê o envelope do gate final."},
+    {"id": "A045SpecMissao", "name": "045 · Spec da missão", "icon": "📜", "output_key": "spec_missao", "prompt_file": "produto/045_spec_missao.md", "description": "Os 12 blocos da spec — contrato contra o qual design e dev constroem."},
+    {"id": "A046BnccCheck", "name": "046 · Conformidade BNCC Computação (determinístico)", "icon": "📚", "output_key": "bncc_report", "prompt_file": None, "description": "Bloco 11 × lista oficial do MEC: código existe, é do ano da missão e inclui letramento digital. Não conforme bloqueia design e dev."},
+    {"id": "A047ManifestoCheckProduto", "name": "047 · Ficha do manifesto (determinístico)", "icon": "🪪", "output_key": "manifesto_report", "prompt_file": None, "description": "Bloco 0 da spec × listas fechadas da plataforma, conferido ainda em Produto: campo errado volta para quem escreveu a spec, em vez de custar o design inteiro."},
+    {"id": "A048EvidenciaCheck", "name": "048 · Matriz de evidência pedagógica (determinístico)", "icon": "🔬", "output_key": "evidencia_report", "prompt_file": None, "description": "Bloco 9 × bloco 11: grau `scored` com dois sinais nomeados, toda habilidade com momento em tela e medida ligada, gabarito declarado no servidor."},
+    {"id": "A049JuizEvidencia", "name": "049 · Juiz da matriz de evidência", "icon": "⚖️", "output_key": "evidencia_status", "prompt_file": None, "description": "Juiz de achados sobre `Matriz de evidência pedagógica`: retira o achado de uso vedado quando o texto só cita para vedar — com citação literal conferida."},
+    {"id": "A050PerguntasCheck", "name": "050 · Perguntas de produto, sub-bloco 9f (determinístico)", "icon": "❓", "output_key": "perguntas_report", "prompt_file": None, "description": "As cinco perguntas de produto: quantidade fechada, decisão com limiar, corte do vocabulário, e a ação que responde cada uma declarada na tabela de eventos do bloco 9 com payload que mede."},
+    {"id": "A051JuizPerguntas", "name": "051 · Juiz das perguntas de produto", "icon": "⚖️", "output_key": "juiz_perguntas_report", "prompt_file": "produto/051_juiz_perguntas.md", "description": "O que não se confere por regex: a pergunta muda uma decisão nossa, é sobre o produto e não sobre a criança, a ação nomeada a responde, e ela não é uma transversal repintada."},
+    {"id": "A052JuizPerguntasCheck", "name": "052 · Veredito do juiz das perguntas (determinístico)", "icon": "🔀", "output_key": "juiz_perguntas_status", "prompt_file": None, "description": "Lê o envelope do juiz: ❌ em pergunta declarada pelo PO bloqueia; ❌ só em proposta segue como ressalva para o PO decidir."},
+    {"id": "A053RastroSpec", "name": "053 · Rastro de lacunas da spec (determinístico)", "icon": "🧭", "output_key": "rastro_spec_report", "prompt_file": None, "description": "Marcadores de lacuna na spec, por dono: o de produto ou de insumo volta para quem escreveu a spec; a decisão do PO fica 🟡 no semáforo do parecer; o de design e o de dev ficam para a etapa delas."},
+    {"id": "A054ConteudoAprovadoSpec", "name": "054 · Spec × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_spec_report", "prompt_file": None, "description": "A spec traduz o one-pager que o PO aprovou: mesmas habilidades do contrato de evidência (§12a), mesmo tempo total em tela (§10) e o podcast (§11) declarado. Ressalva de parecer que o PO não incorporou não muda a spec."},
+    {"id": "A055ConteudoAprovado", "name": "055 · Conteúdo aprovado para a banca de produto (determinístico)", "icon": "🔀", "output_key": None, "prompt_file": None, "description": "Grava as seções literais do one-pager para a banca do fim de produto."},
+    {"id": "A056EscopoBanca", "name": "056 · Escopo da banca de produto (determinístico)", "icon": "🔀", "output_key": None, "prompt_file": None, "description": "Grava o escopo da banca na posição «produto»."},
+    {"id": "A057aBancaProdutoNarrativa", "name": "057a · Banca no fim de produto: produto e narrativa", "icon": "🅰️", "output_key": "banca_produto_narrativa", "prompt_file": "dev/validacao_produto_narrativa.md", "description": "Os critérios PROD da banca que a spec decide, antes do parecer do PO. O achado volta ao autor da spec na próxima rodada."},
+    {"id": "A057bBancaPedagogiaBncc", "name": "057b · Banca no fim de produto: pedagogia e BNCC", "icon": "🅲", "output_key": "banca_produto_pedagogia", "prompt_file": "dev/validacao_pedagogia_bncc.md", "description": "Os critérios PED da banca sobre a spec, antes do parecer do PO."},
+    {"id": "A058BancaConsolidacao", "name": "058 · Banca de produto (determinístico)", "icon": "⚖️", "output_key": "banca_produto_report", "prompt_file": None, "description": "Veredito da banca no fim de produto: o pior das dimensões, com os bloqueantes lidos dos arquivos de critério. 🔴 devolve a spec ao autor e, esgotadas as rodadas, recusa o de acordo."},
+    {"id": "A059SpecCheck", "name": "059 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
+    {"id": "A060FidelidadeProduto", "name": "060 · Fidelidade ao pedido do PO e ao briefing", "icon": "📌", "output_key": "fidelidade_report", "prompt_file": None, "description": "Núcleo, one-pager e spec contra todos os pedidos do PO e o briefing. Pedido sem prova é 🔴 e recusa o de acordo de produto; conflito com regra da esteira vira decisão do PO."},
+    {"id": "A061OnePagerResumido", "name": "061 · One-pager resumido", "icon": "🗂️", "output_key": "one_pager_resumido", "prompt_file": "produto/061_one_pager_resumido.md", "description": "O one-pager no formato do time de produto para avaliação pedagógica: ficha, ideia, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário e takeaway. Sai em .md, .docx e .html."},
+    {"id": "A062ConteudoAprovadoResumido", "name": "062 · Resumido × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_resumido_report", "prompt_file": None, "description": "As habilidades do bloco 11, o tempo em tela do §10 e o Canal B com o texto do §12a no resumido que o time lê para aprovar. Divergência volta ao autor do resumido."},
+    {"id": "A063ResumidoRodada", "name": "063 · Veredito do resumido (determinístico)", "icon": "🔁", "output_key": "resumido_rodada", "prompt_file": None, "description": "Resumido fiel encerra o loop; divergente volta ao autor com o relatório, até o teto de rodadas."},
 ]
 
 PRODUTO_METADATA_SPEC = [m for m in PRODUTO_METADATA if m["id"] in SPEC_AGENT_IDS]

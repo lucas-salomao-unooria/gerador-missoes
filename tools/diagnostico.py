@@ -28,11 +28,16 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "profundidade_status", "rotulo": "Profundidade pedagógica", "etapa": "produto", "rodada": "profundidade_rodada"},
     {"status": "mecanica_status", "rotulo": "Conta da virada", "etapa": "produto", "rodada": "nucleo_rodada"},
     {"status": "fidelidade_nucleo_status", "rotulo": "Fidelidade ao pedido do PO (núcleo)", "etapa": "produto", "rodada": "nucleo_rodada"},
+    {"status": "evidencia_one_pager_status", "rotulo": "Contrato de evidência do one-pager (§12a)", "etapa": "produto", "rodada": "comite_canais_rodada"},
+    {"status": "comite_canal_a_status", "rotulo": "Comitê dos canais — painel A (mecânica e Canal A)", "etapa": "produto", "rodada": "comite_canal_a_rodada"},
+    {"status": "comite_canal_b_status", "rotulo": "Comitê dos canais — painel B (Canal B)", "etapa": "produto", "rodada": "comite_canal_b_rodada"},
     {"status": "brief_escopo_status", "rotulo": "Brief de escopo separado do one-pager", "etapa": "produto", "rodada": None},
     {"status": "gate_estrutural_status", "rotulo": "Gate estrutural", "etapa": "produto", "rodada": "gate_estrutural_rodada"},
     {"status": "avaliacao_status", "rotulo": "Avaliação pedagógica", "etapa": "produto", "rodada": "avaliacoes_rodada"},
     {"status": "experiencia_status", "rotulo": "Experiência do estudante", "etapa": "produto", "rodada": "avaliacoes_rodada"},
     {"status": "adequacao_status", "rotulo": "Adequação pedagógica", "etapa": "produto", "rodada": "avaliacoes_rodada"},
+    {"status": "mecanica_one_pager_status", "rotulo": "Conta da virada no one-pager", "etapa": "produto", "rodada": "comite_final_rodada"},
+    {"status": "comite_final_status", "rotulo": "Comitê final — pedagogia, qualidade e imersão", "etapa": "produto", "rodada": "comite_final_rodada"},
     {"status": "gate_final_status", "rotulo": "Gate final de produto", "etapa": "produto", "rodada": None},
     {"status": "bncc_status", "rotulo": "Conformidade BNCC", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "fidelidade_status", "rotulo": "Fidelidade ao pedido do PO e ao briefing", "etapa": "produto", "rodada": None},
@@ -87,7 +92,7 @@ CONSULTIVOS = [
 _ICONE = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴", "devolvido": "🔴"}
 
 #: Artefatos dos dois agentes transversais, que rodam depois deste diagnóstico.
-#: A ficha do catálogo é gravada pelo A119, que roda depois do dossiê: as gerações de 23/09 a
+#: A ficha do catálogo é gravada pelo A129, que roda depois do dossiê: as gerações de 23/09 a
 #: listavam como "ausente" com o arquivo presente na pasta.
 _ESCRITOS_DEPOIS = ("diagnostico_execucao", "aprendizado_registro", "ficha_catalogo")
 

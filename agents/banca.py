@@ -37,7 +37,7 @@ def chaves_de_saida(posicao: str, dimensoes: str) -> List[str]:
 
 
 def _nome(numero: int, resto: str, letra: str = "") -> str:
-    """`A047aBancaProdutoNarrativa`: número do passo na esteira, letra quando roda em paralelo."""
+    """`A057aBancaProdutoNarrativa`: número do passo na esteira, letra quando roda em paralelo."""
     return f"A{numero:03d}{letra}{resto}"
 
 

@@ -2,13 +2,13 @@
 
 Dois passos, sempre os últimos, e nenhum deles depende de a esteira ter dado certo:
 
-  A117Diagnostico (determinístico) → diagnostico_execucao
+  A127Diagnostico (determinístico) → diagnostico_execucao
       O dossiê: como cada portão se saiu, o que trava, de quem é cada conserto, o que saiu
       provisório e qual documento não foi produzido. Lê os envelopes que os gates já
       gravaram no estado; não usa modelo de linguagem, então não falha junto com a esteira.
 
-  A118Aprendizado (LLM) → aprendizado_registro
-  A119RegistroCatalogo (determinístico) → ficha_catalogo (memória entre execuções)
+  A128Aprendizado (LLM) → aprendizado_registro
+  A129RegistroCatalogo (determinístico) → ficha_catalogo (memória entre execuções)
       A leitura em prosa do dossiê, mais a memória do processo: catálogo, padrões,
       lacunas por classe, candidatos a critério. Nunca edita prompt de agente.
 """
@@ -26,14 +26,14 @@ from prompts import load_prompt
 
 def get_diagnostico_agent() -> DiagnosticoAgent:
     return DiagnosticoAgent(
-        name="A117Diagnostico",
+        name="A127Diagnostico",
         description="Dossiê determinístico da execução: portões, impedimentos por dono, decisões humanas, o que saiu provisório e documentos ausentes.",
     )
 
 
 def get_registro_catalogo_agent() -> RegistroCatalogoAgent:
     return RegistroCatalogoAgent(
-        name="A119RegistroCatalogo",
+        name="A129RegistroCatalogo",
         description="Registra a missão na memória do gerador: ficha desta execução, missões mais próximas no índice e colisão de slug. Roda depois do aprendizado, que é quem escreve os campos de julgamento.",
     )
 
@@ -43,9 +43,9 @@ def get_aprendizado_agent(
     include_thoughts: Optional[bool] = None,
 ) -> LlmAgent:
     return create_llm_agent(
-        name="A118Aprendizado",
+        name="A128Aprendizado",
         description="Registra o que a execução ensinou: catálogo, padrões, lacunas por classe e candidatos a critério.",
-        instruction=load_prompt("transversal/118_aprendizado.md"),
+        instruction=load_prompt("transversal/128_aprendizado.md"),
         output_key="aprendizado_registro",
         thinking_budget=thinking_budget,
         include_thoughts=include_thoughts,
@@ -89,7 +89,7 @@ def get_conversa_etapa_agent(thinking_budget: Optional[int] = 2048) -> LlmAgent:
 
 
 TRANSVERSAL_METADATA = [
-    {"id": "A117Diagnostico", "name": "117 · Diagnóstico da execução (determinístico)", "icon": "🩺", "output_key": "diagnostico_execucao", "prompt_file": None, "description": "Como cada portão se saiu, o que trava e de quem é cada conserto, o que saiu provisório e que documento faltou. Sem LLM — roda mesmo quando tudo o mais falhou."},
-    {"id": "A118Aprendizado", "name": "118 · Aprendizado", "icon": "🧠", "output_key": "aprendizado_registro", "prompt_file": "transversal/118_aprendizado.md", "description": "A leitura em prosa do diagnóstico, mais catálogo, padrões aprendidos, lacunas com dono/classe e candidatos a critério."},
-    {"id": "A119RegistroCatalogo", "name": "119 · Registro no catálogo (determinístico)", "icon": "🗂️", "output_key": "ficha_catalogo", "prompt_file": None, "description": "A memória entre execuções: registra esta missão no índice, mostra as mais próximas e acusa slug repetido. Sem LLM — status derivado dos gates, promover é ato humano."},
+    {"id": "A127Diagnostico", "name": "127 · Diagnóstico da execução (determinístico)", "icon": "🩺", "output_key": "diagnostico_execucao", "prompt_file": None, "description": "Como cada portão se saiu, o que trava e de quem é cada conserto, o que saiu provisório e que documento faltou. Sem LLM — roda mesmo quando tudo o mais falhou."},
+    {"id": "A128Aprendizado", "name": "128 · Aprendizado", "icon": "🧠", "output_key": "aprendizado_registro", "prompt_file": "transversal/128_aprendizado.md", "description": "A leitura em prosa do diagnóstico, mais catálogo, padrões aprendidos, lacunas com dono/classe e candidatos a critério."},
+    {"id": "A129RegistroCatalogo", "name": "129 · Registro no catálogo (determinístico)", "icon": "🗂️", "output_key": "ficha_catalogo", "prompt_file": None, "description": "A memória entre execuções: registra esta missão no índice, mostra as mais próximas e acusa slug repetido. Sem LLM — status derivado dos gates, promover é ato humano."},
 ]

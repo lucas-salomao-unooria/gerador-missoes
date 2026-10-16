@@ -529,34 +529,34 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
 
         status = {
             "OnePagerAgent": "done",
-            "A021GateEstrutural": "done",
-            "A022GateEstruturalCheck": "running",
-            "A023RevisorOnePager": "pending",
-            "A024aAvaliacaoPedagogica": "pending",
+            "A026GateEstrutural": "done",
+            "A027GateEstruturalCheck": "running",
+            "A028RevisorOnePager": "pending",
+            "A029aAvaliacaoPedagogica": "pending",
         }
         gates = {}
-        active_agent = "A022GateEstruturalCheck"
+        active_agent = "A027GateEstruturalCheck"
 
-        # A022GateEstruturalCheck aprova o gate estrutural na rodada 1
+        # A027GateEstruturalCheck aprova o gate estrutural na rodada 1
         active_agent = update_pipeline_step_status(
             status,
             active_agent,
             {"type": "gate_status", "status": {"gate_estrutural_status": "aprovado"}},
             gates,
         )
-        self.assertEqual(status["A022GateEstruturalCheck"], "done")
-        self.assertEqual(status["A023RevisorOnePager"], "done", "Revisor deve ficar verde (done) ao aprovar o gate")
+        self.assertEqual(status["A027GateEstruturalCheck"], "done")
+        self.assertEqual(status["A028RevisorOnePager"], "done", "Revisor deve ficar verde (done) ao aprovar o gate")
 
-        # Início do próximo agente (A024aAvaliacaoPedagogica)
+        # Início do próximo agente (A029aAvaliacaoPedagogica)
         active_agent = update_pipeline_step_status(
             status,
             active_agent,
-            {"type": "agent_started", "agent_name": "A024aAvaliacaoPedagogica"},
+            {"type": "agent_started", "agent_name": "A029aAvaliacaoPedagogica"},
             gates,
         )
-        self.assertEqual(active_agent, "A024aAvaliacaoPedagogica")
-        self.assertEqual(status["A023RevisorOnePager"], "done")
-        self.assertEqual(status["A024aAvaliacaoPedagogica"], "running")
+        self.assertEqual(active_agent, "A029aAvaliacaoPedagogica")
+        self.assertEqual(status["A028RevisorOnePager"], "done")
+        self.assertEqual(status["A029aAvaliacaoPedagogica"], "running")
 
         # Conclusão do pipeline
         res = PipelineExecutionResult(
@@ -572,8 +572,8 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
             {"type": "pipeline_completed", "result": res},
             gates,
         )
-        self.assertEqual(status["A023RevisorOnePager"], "done")
-        self.assertEqual(status["A024aAvaliacaoPedagogica"], "done")
+        self.assertEqual(status["A028RevisorOnePager"], "done")
+        self.assertEqual(status["A029aAvaliacaoPedagogica"], "done")
         self.assertNotIn("pending", status.values(), "Nenhum agente ativo deve ficar como pending (ampulheta)")
 
     def test_update_pipeline_step_status_revisor_runs_when_gate_blocked(self):
@@ -581,12 +581,12 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
 
         status = {
             "OnePagerAgent": "done",
-            "A021GateEstrutural": "done",
-            "A022GateEstruturalCheck": "running",
-            "A023RevisorOnePager": "pending",
+            "A026GateEstrutural": "done",
+            "A027GateEstruturalCheck": "running",
+            "A028RevisorOnePager": "pending",
         }
         gates = {}
-        active_agent = "A022GateEstruturalCheck"
+        active_agent = "A027GateEstruturalCheck"
 
         # Gate bloqueado na rodada 1: revisor ainda pendente até iniciar
         active_agent = update_pipeline_step_status(
@@ -595,25 +595,25 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
             {"type": "gate_status", "status": {"gate_estrutural_status": "bloqueado"}},
             gates,
         )
-        self.assertEqual(status["A023RevisorOnePager"], "pending")
+        self.assertEqual(status["A028RevisorOnePager"], "pending")
 
         # Revisor inicia a execução
         active_agent = update_pipeline_step_status(
             status,
             active_agent,
-            {"type": "agent_started", "agent_name": "A023RevisorOnePager"},
+            {"type": "agent_started", "agent_name": "A028RevisorOnePager"},
             gates,
         )
-        self.assertEqual(status["A023RevisorOnePager"], "running")
+        self.assertEqual(status["A028RevisorOnePager"], "running")
 
         # Próxima rodada do gate inicia
         active_agent = update_pipeline_step_status(
             status,
             active_agent,
-            {"type": "agent_started", "agent_name": "A021GateEstrutural"},
+            {"type": "agent_started", "agent_name": "A026GateEstrutural"},
             gates,
         )
-        self.assertEqual(status["A023RevisorOnePager"], "done")
+        self.assertEqual(status["A028RevisorOnePager"], "done")
 
 
 
@@ -1269,7 +1269,7 @@ class TestAcompanharEsteira(unittest.TestCase):
 
         async def stream():
             yield {"type": "correcao_started", "etapa": "dev", "stages": ["dev"], "backup": ".correcoes/x-dev", "chaves_removidas": []}
-            yield {"type": "agent_started", "agent_name": "A090aHandoffDev"}
+            yield {"type": "agent_started", "agent_name": "A100aHandoffDev"}
             yield {"type": "pipeline_completed", "result": result}
             yield {"type": "correcao_completed", "result": result, "registro": {"etapa": "dev", "status": "success"}}
 

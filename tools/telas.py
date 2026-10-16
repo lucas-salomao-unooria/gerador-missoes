@@ -25,7 +25,7 @@ AGENTE = "cobertura-telas"
 #: protótipo marca estado com sufixo de letra (`E0-PROF-03b`) — os dois contam como a tela base.
 RE_ID = re.compile(r"\bE(\d)[-_](ALU|PROF|SIS)[-_](\d{2})([A-Za-z])?(?![\w])")
 _RE_ID_CANONICO = re.compile(r"^E\d-(?:ALU|PROF|SIS)-\d{2}$")
-#: As cinco telas do preparo do professor são obrigatórias (`prompts/design/061_jornada.md`).
+#: As cinco telas do preparo do professor são obrigatórias (`prompts/design/071_jornada.md`).
 PREPARO_DO_PROFESSOR = tuple(f"E0-PROF-0{n}" for n in range(1, 6))
 _RE_COMENTARIO = re.compile(r"<!--.*?-->|/\*.*?\*/", re.S)
 _RE_TAG_COM_QUADRO = re.compile(r"<[^>]*\bdata-screen-id\s*=[^>]*>", re.I)

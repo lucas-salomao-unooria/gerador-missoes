@@ -162,6 +162,21 @@ def test_alteracao_pedida_vale_so_com_o_trecho_do_pedido_conferido():
     assert {a["codigo"] for a in r["achados"]} == {"trecho-do-po-perdido", "alteracao-sem-pedido"}
 
 
+def test_alteracao_pedida_por_voto_de_comite_vale_com_o_trecho_do_voto():
+    """Desde 15/10/2026 o comitê pedagógico pode mandar reescrever o texto do PO (decisão do PO); a alteração cita o voto."""
+    trecho = "* **Formato:** Diálogo dinâmico entre dois jovens apresentadores da Unooria (Bia e Rafa)."
+    novo = ONE_PAGER_PO.replace(trecho, "* **Formato:** Diálogo dinâmico entre dois jovens apresentadores da Unooria (Bia e Tiago).")
+    tabela = ("\n### Alterações sobre o one-pager do PO\n| Trecho do PO | Como ficou | Pedido |\n|---|---|---|\n"
+              "| Diálogo dinâmico entre dois jovens apresentadores da Unooria (Bia e Rafa). | (Bia e Tiago) | "
+              "Voto do comitê: «o apresentador precisa ter nome diferente do personagem Rafa da etapa 2» |\n")
+    voto = ("# Comitê final\n- **F2-1** (Qualidade): nomes repetidos confundem. **Corrigir:** o apresentador precisa ter "
+            "nome diferente do personagem Rafa da etapa 2\n")
+    r = op.conferir(ONE_PAGER_PO, novo + tabela, BRIEFING, votos=voto)
+    assert r["status"] == "aprovado" and r["declaradas"] == 1, r["achados"]
+    # sem o voto, a mesma alteração não tem pedido
+    assert op.conferir(ONE_PAGER_PO, novo + tabela, BRIEFING)["status"] == "bloqueado"
+
+
 def test_colar_o_trecho_no_changelog_nao_conta_como_preservar():
     trecho = "* Arrastar blocos para os slots de um a quatro com feedback sonoro discreto ao encaixar."
     gerado = ONE_PAGER_PO.replace(trecho, "* Construir o programa condicional em blocos.")
@@ -247,13 +262,13 @@ def test_runner_guarda_o_one_pager_do_po_e_o_salvo_vence():
 def test_quem_escreve_e_quem_avalia_recebem_o_one_pager_do_po():
     from prompts import load_prompt
 
-    for arquivo in ("004_nucleo_narrativo", "014_secoes_apoio", "021_gate_estrutural", "revisor_one_pager",
-                    "024a_avaliacao_pedagogica", "024b_experiencia_estudante", "024c_adequacao_pedagogica", "033_gate_final",
-                    "032_restaurar_one_pager_po"):
+    for arquivo in ("004_nucleo_narrativo", "014_secoes_apoio", "026_gate_estrutural", "revisor_one_pager",
+                    "029a_avaliacao_pedagogica", "029b_experiencia_estudante", "029c_adequacao_pedagogica", "043_gate_final",
+                    "037_restaurar_one_pager_po"):
         texto = load_prompt(f"produto/{arquivo}.md")
         assert "{one_pager_po?}" in texto, arquivo
     # o parecer que exigiu trocar o mecanismo da exp06ef1b não via o briefing
-    assert "{briefing?}" in load_prompt("produto/024c_adequacao_pedagogica.md")
+    assert "{briefing?}" in load_prompt("produto/029c_adequacao_pedagogica.md")
 
 
 def test_fidelidade_le_o_briefing_em_prosa_e_a_ordem_de_nao_mexer_vira_trava():

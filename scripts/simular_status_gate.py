@@ -227,12 +227,12 @@ Cobertura estrutural e pedagógica validada.
         # Cenário 1: treat_indefinido_as_blocked = True (comportamento padrão)
         print("\n>>> EXECUÇÃO CENÁRIO 1: treat_indefinido_as_blocked = True (Padrão do Pipeline)")
         fake_gate_p4 = FakeAgent(
-            name="A033GateFinalProduto",
+            name="A043GateFinalProduto",
             key="gate_final_report",
             text=relatorio_gate,
         )
         check_p4_bloqueante = EnvelopeGateAgent(
-            name="A034GateFinalProdutoCheck",
+            name="A044GateFinalProdutoCheck",
             rotulo="Gate Final de Produto",
             report_key="gate_final_report",
             status_key="gate_final_status",
@@ -271,12 +271,12 @@ Cobertura estrutural e pedagógica validada.
         print("\n" + "-" * 70)
         print(">>> EXECUÇÃO CENÁRIO 2: treat_indefinido_as_blocked = False (Comparativo)")
         fake_gate_p4_2 = FakeAgent(
-            name="A033GateFinalProduto",
+            name="A043GateFinalProduto",
             key="gate_final_report",
             text=relatorio_gate,
         )
         check_p4_permissivo = EnvelopeGateAgent(
-            name="A034GateFinalProdutoCheck",
+            name="A044GateFinalProdutoCheck",
             rotulo="Gate Final de Produto",
             report_key="gate_final_report",
             status_key="gate_final_status",
