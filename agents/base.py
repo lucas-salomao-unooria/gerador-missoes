@@ -152,10 +152,12 @@ def create_llm_agent(
     if output_key in CHAVES_AUTORAIS:
         # Na correção pontual o documento do autor já foi editado em código (`tools/edicao_pontual.py`): ele não roda.
         # Vem antes do callback do agente, que só vale quando o autor escreve.
-        from agents.callbacks import travar_documento_na_correcao_pontual
+        # Na rodada de retrabalho de um loop, o que os gates apontaram vira trocas e o autor não reemite o documento
+        # inteiro (`retrabalhar_por_trocas`) — na geração e na correção.
+        from agents.callbacks import retrabalhar_por_trocas, travar_documento_na_correcao_pontual
 
         travar = travar_documento_na_correcao_pontual(output_key)
-        before_agent_callback = [travar] + (list(before_agent_callback) if isinstance(before_agent_callback, list)
+        before_agent_callback = [travar, retrabalhar_por_trocas(output_key)] + (list(before_agent_callback) if isinstance(before_agent_callback, list)
                                             else [before_agent_callback] if before_agent_callback is not None else [])
     if before_agent_callback is not None:
         kwargs["before_agent_callback"] = before_agent_callback

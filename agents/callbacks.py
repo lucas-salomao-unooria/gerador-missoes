@@ -377,6 +377,49 @@ def travar_documento_na_correcao_pontual(chave: str):
     return _travar
 
 
+#: Trocas aplicadas por retrabalho nos loops: `[{chave, edicoes}]`, para o dossiê e a auditoria.
+KEY_TROCAS_DE_RETRABALHO = "trocas_de_retrabalho"
+#: Troca o editor nos testes (mesma assinatura de `pipeline.reexecucao.propor_edicao`). None = o editor de verdade.
+PROPONENTE_DE_RETRABALHO = None
+
+
+def retrabalhar_por_trocas(chave: str):
+    """before_agent_callback dos autores: na rodada de retrabalho de um loop, o documento é corrigido por trocas.
+
+    Vale na geração e no refazer. Quando um gate reprovava, o autor reemitia o documento inteiro a partir da versão da
+    rodada (`rodada_anterior_<chave>`), e o que já tinha passado podia mudar sem nenhum gate conferir de novo — a mesma
+    deriva que fazia a correção de um número reescrever a spec. Aqui o editor (`tools/edicao_pontual.py`) recebe os
+    relatórios dos gates reprovados (`retrabalho_<chave>`, gravado por `agents.checkers.SaidaDeLoopAgent`) e devolve
+    trocas; o código as aplica e o autor não roda. Se o editor diz que é estrutural, ou as trocas não se aplicam, o
+    autor reescreve como antes. Desligado por `RETRABALHO_POR_TROCAS=false`.
+    """
+
+    async def _retrabalhar(callback_context: CallbackContext) -> Optional[types.Content]:
+        from config import get_settings
+
+        state = callback_context.state
+        motivos = str(state.get(f"retrabalho_{chave}") or "").strip()
+        documento = str(state.get(chave) or "")
+        if not motivos or not documento.strip() or not get_settings().retrabalho_por_trocas:
+            return None
+        from pipeline.reexecucao import editar
+        from tools.edicao_pontual import como_dicts
+
+        resultado, proposta = await editar(motivos, "retrabalho", {chave: documento},
+                                           proponente=PROPONENTE_DE_RETRABALHO)
+        # consumido: o próximo autor da mesma chave nesta rodada (o revisor) não refaz a correção
+        state[f"retrabalho_{chave}"] = ""
+        if resultado is None or not resultado.aplicadas:
+            logger.info("Retrabalho de %s volta ao autor: %s", chave, getattr(proposta, "motivo", ""))
+            return None
+        state[KEY_TROCAS_DE_RETRABALHO] = list(state.get(KEY_TROCAS_DE_RETRABALHO) or []) + [
+            {"chave": chave, "edicoes": como_dicts(resultado.aplicadas), "pendencias": list(proposta.pendencias)}]
+        return types.Content(role="model", parts=[types.Part(text=resultado.documentos[chave])])
+
+    _retrabalhar.__name__ = f"retrabalhar_{chave}_por_trocas"
+    return _retrabalhar
+
+
 def dispensar_ideacao_com_one_pager_do_po(callback_context: CallbackContext) -> Optional[types.Content]:
     """before_agent_callback da ideação: com o one-pager do PO no estado, não se inventam três mecanismos.
 

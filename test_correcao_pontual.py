@@ -430,3 +430,72 @@ def test_juiz_que_nao_respondeu_e_julgado_de_novo_sem_editar():
         assert registro["passadas"] == 2 and len(registro["edicoes"]) == 1
     finally:
         f.fechar()
+
+
+# ------------------------------------------------------------------ retrabalho por trocas nos loops (geração e correção)
+from google.adk.agents.base_agent import BaseAgent  # noqa: E402
+from google.adk.events import Event, EventActions  # noqa: E402
+
+
+class _GateQueReprovaUmaVez(BaseAgent):
+    """Reprova enquanto a Etapa 5 disser «parecer de mais de 70%»; aprova depois."""
+
+    async def _run_async_impl(self, ctx):
+        reprovado = "parecer de mais de 70%" in str(ctx.session.state.get("one_pager") or "")
+        envelope = {"status": "bloqueado" if reprovado else "aprovado", "achados": [
+            {"severidade": "bloqueio", "codigo": "conta", "resumo": "a conta está errada",
+             "citacao": "faz a queda parecer de mais de 70%"}] if reprovado else []}
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta={
+            "gate_status": envelope["status"], "gate_status_envelope": envelope,
+            "gate_report": "A Etapa 5 erra a conta: 15 → 8 é ≈47%." if reprovado else ""}))
+
+
+def _loop_de_retrabalho():
+    from agents.base import create_llm_agent
+    from agents.checkers import SaidaDeLoopAgent
+
+    autor = create_llm_agent(name="A014SecoesApoio", instruction="escreva", description="autor",
+                             output_key="one_pager", model="modelo-que-nao-existe")
+    return LoopAgent(name="L", max_iterations=3, sub_agents=[
+        _GateQueReprovaUmaVez(name="Gate"),
+        SaidaDeLoopAgent(name="Saida", status_keys=["gate_status"], rodada_key="r", max_rounds=3, autor_keys=["one_pager"]),
+        autor,
+    ])
+
+
+def test_retrabalho_do_loop_corrige_por_trocas_sem_o_autor_reescrever():
+    import agents.callbacks as cb
+
+    pedidos = []
+
+    async def editor(pedido, etapa, documentos, *, erros="", achados=""):
+        pedidos.append(pedido)
+        return _proposta(_NUMERO)
+
+    with mock.patch.dict(os.environ, {"RETRABALHO_POR_TROCAS": "true"}), \
+            mock.patch.object(cb, "PROPONENTE_DE_RETRABALHO", editor):
+        final = asyncio.run(_rodar(_loop_de_retrabalho(), {"one_pager": ONE_PAGER}))
+    # o modelo do autor não existe: se ele tivesse rodado, a execução teria quebrado
+    assert final["one_pager"] == ONE_PAGER.replace("parecer de mais de 70%.", "parecer de cerca de 47%.")
+    assert final["gate_status"] == "aprovado" and final["r"] == 2
+    assert "a conta está errada" in pedidos[0] and "15 → 8" in pedidos[0]
+    assert final["trocas_de_retrabalho"][0]["chave"] == "one_pager" and final["retrabalho_one_pager"] == ""
+
+
+def test_retrabalho_estrutural_volta_ao_autor():
+    import agents.callbacks as cb
+    from agents.callbacks import retrabalhar_por_trocas
+
+    async def editor(pedido, etapa, documentos, *, erros="", achados=""):
+        return ed.Proposta(modo=ed.MODO_ESTRUTURAL, motivo="a seção inteira tem de ser outra")
+
+    contexto = mock.Mock()
+    contexto.state = {"one_pager": ONE_PAGER, "retrabalho_one_pager": "reescreva a seção 4 inteira"}
+    with mock.patch.dict(os.environ, {"RETRABALHO_POR_TROCAS": "true"}), \
+            mock.patch.object(cb, "PROPONENTE_DE_RETRABALHO", editor):
+        assert asyncio.run(retrabalhar_por_trocas("one_pager")(contexto)) is None
+    assert contexto.state["retrabalho_one_pager"] == "" and contexto.state["one_pager"] == ONE_PAGER
+    # sem rodada de retrabalho (primeira rodada, geração normal), nada acontece
+    contexto.state = {"one_pager": ONE_PAGER}
+    with mock.patch.dict(os.environ, {"RETRABALHO_POR_TROCAS": "true"}):
+        assert asyncio.run(retrabalhar_por_trocas("one_pager")(contexto)) is None

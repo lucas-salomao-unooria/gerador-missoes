@@ -755,7 +755,9 @@ Desde 19/10/2026 toda correção com pedido — pelo chat ou pelo *Refazer* do p
 5. **O que a correção causou volta ao editor** com os relatórios dos gates, e os gates julgam de novo (`CORRECAO_PONTUAL_PASSADAS`, padrão 2 passadas).
 6. **Fidelidade**: a ordem "não mexa no resto" se prova em código — cada documento é a versão anterior mais as suas trocas, e nada além. A ordem de não mexer de **outra** rodada (ou do briefing) não trava o pedido novo: vira 🟡, porque entre dois pedidos vale o mais novo.
 
-A geração do zero não muda: os loops de autor ↔ gate, os comitês e as bancas seguem como estão. `CORRECAO_PONTUAL=false` volta toda correção ao refazer pelos autores.
+**O mesmo padrão na geração nova — retrabalho por trocas.** Quando um gate reprova dentro de um loop (comitês e seções de apoio do one-pager, spec, resumido, handoff, PRD, pedagógico), o autor reemitia o documento inteiro, e o que já tinha passado podia mudar sem nenhum gate conferir de novo. Agora o `SaidaDeLoopAgent` grava o que os gates reprovaram (`retrabalho_<chave>`), e na rodada seguinte o editor transforma isso em trocas (`agents.callbacks.retrabalhar_por_trocas`): o código aplica, o autor não roda, e o que não foi apontado fica idêntico. Se a correção é estrutural, ou as trocas não se aplicam, o autor reescreve como antes. As trocas ficam em `trocas_de_retrabalho`. Vale na geração e no refazer; `RETRABALHO_POR_TROCAS=false` desliga.
+
+`CORRECAO_PONTUAL=false` volta toda correção ao refazer pelos autores.
 
 ### 🔐 Login
 
@@ -797,6 +799,7 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `PROFUNDIDADE_ESTRITA` | `true` | Profundidade pedagógica reprovada na última rodada do núcleo fica 🔴 e o *de acordo* de produto é recusado. `false` rebaixa a 🟡 com a ressalva, sem mudar notas nem rodadas — para usar enquanto os cortes da rubrica são calibrados contra as revisões do time pedagógico. |
 | `GATE_ESTRUTURAL_MAX_RODADAS` | `3` | Número máximo de ciclos entre o Gate Estrutural e o Revisor do One-pager. |
 | `CORRECAO_PONTUAL` | `true` | Correção de missão já gerada como edição pontual: editor + gates + linha de base, sem reescrever documentos. `false` volta ao refazer pelos autores. Pedido estrutural refaz a etapa nos dois casos. |
+| `RETRABALHO_POR_TROCAS` | `true` | Na rodada de retrabalho de um loop (geração ou correção), o que os gates reprovaram vira trocas no documento; o autor só reescreve quando a correção é estrutural. |
 | `CORRECAO_PONTUAL_PASSADAS` | `2` | Passadas dos gates numa correção pontual; da segunda em diante, o editor conserta o que a correção causou. `1` = sem conserto automático. |
 | `COMITE_MAX_RODADAS` | `5` | Rodadas do comitê dos canais (painéis A e B, unanimidade). Reprovado, a missão volta ao núcleo e às seções de apoio; esgotado, segue 🟡 com os votos vencidos no parecer. |
 | `COMITE_FINAL_MAX_RODADAS` | `2` | Rodadas do comitê final. Cada rodada reprovada refaz a cadeia de produto a partir do núcleo, então o custo multiplica (pior caso: 2 × 5 passagens pelo núcleo); esgotado, segue 🟡. |

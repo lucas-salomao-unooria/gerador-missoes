@@ -2456,6 +2456,29 @@ def bloco_versao_da_rodada(chave: str, documento: str) -> str:
     ])
 
 
+#: `retrabalho_<chave>`: o que os gates reprovaram na rodada, enquanto o loop repete.
+PREFIXO_RETRABALHO = "retrabalho_"
+
+
+def motivos_do_retrabalho(state: Dict[str, Any], reprovados: List[str]) -> str:
+    """Os relatórios dos gates reprovados na rodada, como pedido de correção para o editor de trocas."""
+    from tools import citacoes
+
+    blocos = ["Os gates desta rodada reprovaram o documento. Corrija exatamente o que eles apontam, com o mínimo de "
+              "trocas; o que eles não apontam já passou e não pode mudar.", ""]
+    for k in reprovados:
+        relatorio = str(state.get(k[: -len("_status")] + "_report") or "").strip() if k.endswith("_status") else ""
+        envelope = state.get(f"{k}_envelope")
+        bloqueios = [a for a in ((envelope or {}).get("achados") or []) if isinstance(a, dict) and citacoes.bloqueante(a)]
+        blocos.append(f"### Gate `{k}`")
+        blocos += [f"- {a.get('codigo') or a.get('id') or 'achado'}: {a.get('resumo') or ''}"
+                   + (f" — trecho: «{citacoes.citacao(a)}»" if citacoes.citacao(a) else "") for a in bloqueios]
+        if relatorio:
+            blocos += ["", relatorio[:8000]]
+        blocos.append("")
+    return "\n".join(blocos).strip()
+
+
 class SaidaDeLoopAgent(BaseAgent):
     """Encerra um `LoopAgent` quando todos os gates da rodada passaram — ou quando o teto caiu.
 
@@ -2529,6 +2552,10 @@ class SaidaDeLoopAgent(BaseAgent):
             documento = str(state.get(chave, "") or "").strip()
             delta[f"{PREFIXO_RODADA_ANTERIOR}{chave}"] = (
                 bloco_versao_da_rodada(chave, documento) if documento and not escalate else "")
+            # O que os gates reprovaram, para o retrabalho por trocas (`agents.callbacks.retrabalhar_por_trocas`): na
+            # rodada seguinte o documento é corrigido trecho a trecho, e o que já passou não muda.
+            delta[f"{PREFIXO_RETRABALHO}{chave}"] = (
+                motivos_do_retrabalho(state, reprovados) if documento and not escalate else "")
 
         yield Event(
             invocation_id=ctx.invocation_id,
