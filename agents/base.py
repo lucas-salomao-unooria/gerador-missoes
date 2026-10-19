@@ -149,6 +149,14 @@ def create_llm_agent(
     from agents.callbacks import registrar_corte_do_modelo
 
     kwargs["after_model_callback"] = registrar_corte_do_modelo
+    if output_key in CHAVES_AUTORAIS:
+        # Na correção pontual o documento do autor já foi editado em código (`tools/edicao_pontual.py`): ele não roda.
+        # Vem antes do callback do agente, que só vale quando o autor escreve.
+        from agents.callbacks import travar_documento_na_correcao_pontual
+
+        travar = travar_documento_na_correcao_pontual(output_key)
+        before_agent_callback = [travar] + (list(before_agent_callback) if isinstance(before_agent_callback, list)
+                                            else [before_agent_callback] if before_agent_callback is not None else [])
     if before_agent_callback is not None:
         kwargs["before_agent_callback"] = before_agent_callback
     if after_agent_callback is not None:

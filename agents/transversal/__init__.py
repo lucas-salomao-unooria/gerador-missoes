@@ -70,6 +70,24 @@ def get_triagem_correcao_agent(thinking_budget: Optional[int] = 1024) -> LlmAgen
     )
 
 
+def get_editor_pontual_agent(thinking_budget: Optional[int] = 4096) -> LlmAgent:
+    """Transforma o pedido de correção em trocas trecho a trecho (`tools/edicao_pontual.py`), ou diz que é estrutural.
+
+    Roda FORA da esteira, como a triagem (`pipeline/reexecucao.propor_edicao`), e não entra em `TRANSVERSAL_METADATA`.
+    Não é autor: o `output_key` não é documento, então não recebe `anterior_` nem é travado na correção pontual. É
+    determinístico para que o mesmo pedido sobre os mesmos documentos dê as mesmas trocas.
+    """
+    return create_llm_agent(
+        name="A000EditorPontual",
+        description="Correção pontual: aplica o pedido do PO como trocas literais nos documentos da etapa, sem reescrevê-los.",
+        instruction=load_prompt("transversal/editor_pontual.md"),
+        output_key="edicao_pontual",
+        thinking_budget=thinking_budget,
+        include_thoughts=False,
+        deterministico=True,
+    )
+
+
 def get_conversa_etapa_agent(thinking_budget: Optional[int] = 2048) -> LlmAgent:
     """Responde perguntas sobre uma etapa da missão, sem alterar nada (`pipeline/conversa_etapas.py`).
 

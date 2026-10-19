@@ -290,6 +290,7 @@ async def run_orchestrator_pipeline_stream(
     run_dir: Optional[Path] = None,
     registrar_conversa: bool = True,
     com_transversal: bool = True,
+    modo_pontual: bool = False,
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Executa o pipeline e emite eventos: pipeline_started, agent_started, agent_chunk,
     agent_thought_chunk, gate_status, pipeline_completed | pipeline_error."""
@@ -322,6 +323,7 @@ async def run_orchestrator_pipeline_stream(
             modo_estrito=modo_estrito,
             stages=stages,
             com_transversal=com_transversal,
+            modo_pontual=modo_pontual,
         )
         session_service = InMemorySessionService()
         session = await session_service.create_session(

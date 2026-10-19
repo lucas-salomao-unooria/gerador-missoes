@@ -55,6 +55,7 @@ from .callbacks import (
     KEY_AGENTES_DEGRADADOS,
     KEY_DEGRADACOES,
     KEY_HERANCA,
+    KEY_MODO_CORRECAO,
     KEY_PIPELINE_BLOQUEADO,
     KEY_PIPELINE_MOTIVO,
     STATUS_APROVADO,
@@ -1726,7 +1727,14 @@ class FidelidadeCheckAgent(BaseAgent):
         from pipeline.reexecucao import PREFIXO_VERSAO_ANTERIOR
 
         anteriores = {k: str(state.get(f"{PREFIXO_VERSAO_ANTERIOR}{k}") or "") for k in docs}
-        resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa, parcial=self.parcial, anteriores=anteriores)
+        # Numa correção, a ordem de não mexer de outra rodada não trava o pedido desta; na pontual, as trocas aplicadas
+        # provam em código o que ficou como estava (`tools.fidelidade.aplicar`).
+        correntes = ({o for o, t in pedidos if _norm_simples(t)[:200] in _norm_simples(corrente)}
+                     | {"pedido de correção desta execução"}) if corrente.strip() else None
+        edicoes = (list(state.get("edicoes_pontuais") or [])
+                   if state.get(KEY_MODO_CORRECAO) == "pontual" else None)
+        resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa, parcial=self.parcial, anteriores=anteriores,
+                                edicoes=edicoes, origens_correntes=correntes)
         relatorio = fid.relatorio(resultado, itens, missao, self.onde)
         envelope = extrair_envelope(relatorio) or {}
         bloqueios = sum(1 for a in resultado["achados"] if a["severidade"] == "bloqueio")
@@ -2574,6 +2582,45 @@ class ComiteVotosAgent(BaseAgent):
                                               f"{self.status_key}_envelope": comite.envelope(resultado),
                                               self.round_key: rodada}),
         )
+
+
+class LinhaDeBaseAgent(BaseAgent):
+    """Fim da etapa na correção pontual: cada bloqueio dos gates contra o veredito de antes (`tools/linha_de_base.py`).
+
+    Determinístico. Só entra na árvore no modo pontual (`pipeline.orchestrator.create_mission_orchestrator`); fora dele,
+    sem `modo_correcao`, não faz nada. Rebaixa a 🟡 o bloqueio que cita trecho que a correção não tocou e que o gate
+    não acusava antes, mantém o que já bloqueava e o que a correção causou, e grava o relatório que o PO lê.
+    """
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from pipeline.reexecucao import CHAVES_POR_ETAPA
+        from tools import edicao_pontual, linha_de_base
+
+        state = ctx.session.state
+        if state.get(KEY_MODO_CORRECAO) != "pontual":
+            return
+        etapa = str(state.get("etapa_da_correcao") or "")
+        chaves = sorted(k for k in CHAVES_POR_ETAPA.get(etapa, ()) if k.endswith("_status") and k in state)
+        from pipeline.reexecucao import PREFIXO_VERSAO_ANTERIOR
+
+        edicoes = list(state.get("edicoes_pontuais") or [])
+        anteriores = {e.get("documento"): str(state.get(PREFIXO_VERSAO_ANTERIOR + str(e.get("documento"))) or "")
+                      for e in edicoes}
+        delta, linhas = linha_de_base.aplicar(dict(state), dict(state.get(linha_de_base.KEY_LINHA_DE_BASE) or {}),
+                                              edicoes, chaves, anteriores=anteriores)
+        missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
+        delta[linha_de_base.KEY_LINHA_DE_BASE_REPORT] = linha_de_base.relatorio(
+            linhas, edicao_pontual.resumo(edicoes), missao)
+        delta["linha_de_base_linhas"] = linhas
+        novos = len(linha_de_base.bloqueios_novos(linhas))
+        rebaixados = sum(1 for l in linhas if l["origem"] in (linha_de_base.TEXTO_INALTERADO,
+                                                                linha_de_base.FORA_DA_CORRECAO))
+        msg = (f"📏 Linha de base: {len(linhas)} bloqueio(s) nos gates — {rebaixados} não ligados às trocas "
+               f"(rebaixados a 🟡), {novos} causados pela correção.")
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta=delta))
 
 
 #: Atributos em que um agente guarda o contador de rodada que lê e incrementa.

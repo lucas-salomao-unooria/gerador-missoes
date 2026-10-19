@@ -10,3 +10,6 @@ import os
 from pathlib import Path
 
 os.environ.setdefault("BASE_PLATAFORMA_DIR", str(Path(__file__).resolve().parent / "fixtures" / "base-plataforma"))
+# A correção pontual chama o editor (um modelo) antes da esteira. Teste não chama modelo: os que exercitam a correção
+# pontual a ligam e injetam um editor falso (`executar_correcao_stream(..., proponente=...)`).
+os.environ.setdefault("CORRECAO_PONTUAL", "false")

@@ -350,6 +350,33 @@ def manter_nucleo_sem_achado_do_a004(callback_context: CallbackContext) -> Optio
         text="⏭️ Núcleo mantido: os comitês não apontaram nada para o A004 nesta rodada; só as seções de apoio corrigem.")])
 
 
+#: Modo da correção corrente (`pipeline/reexecucao.py`): `pontual` trava os autores; ausente na geração e no refazer.
+KEY_MODO_CORRECAO = "modo_correcao"
+#: Documentos cujo autor não roda na correção pontual: o texto deles é o que o editor deixou (`tools/edicao_pontual.py`).
+KEY_DOCUMENTOS_TRAVADOS = "documentos_travados"
+
+
+def travar_documento_na_correcao_pontual(chave: str):
+    """before_agent_callback dos autores: na correção pontual, o documento já editado não é reescrito.
+
+    O `Content` devolvido é o próprio documento — vai para o `output_key` sem mudar uma letra, e o agente não roda.
+    Até 19/10/2026 a correção reexecutava cada autor sobre `anterior_<chave>`, e a troca de um número devolvia a spec
+    com metade das linhas diferentes (exp03em1b, 13/10/2026). Fora da correção pontual, não faz nada.
+    """
+
+    def _travar(callback_context: CallbackContext) -> Optional[types.Content]:
+        state = callback_context.state
+        if state.get(KEY_MODO_CORRECAO) != "pontual" or chave not in (state.get(KEY_DOCUMENTOS_TRAVADOS) or []):
+            return None
+        documento = str(state.get(chave) or "")
+        if not documento.strip():
+            return None
+        return types.Content(role="model", parts=[types.Part(text=documento)])
+
+    _travar.__name__ = f"travar_{chave}_na_correcao_pontual"
+    return _travar
+
+
 def dispensar_ideacao_com_one_pager_do_po(callback_context: CallbackContext) -> Optional[types.Content]:
     """before_agent_callback da ideação: com o one-pager do PO no estado, não se inventam três mecanismos.
 
