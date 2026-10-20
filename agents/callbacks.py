@@ -379,6 +379,8 @@ def travar_documento_na_correcao_pontual(chave: str):
 
 #: Trocas aplicadas por retrabalho nos loops: `[{chave, edicoes}]`, para o dossiê e a auditoria.
 KEY_TROCAS_DE_RETRABALHO = "trocas_de_retrabalho"
+#: Rodadas de retrabalho que voltaram ao autor (estrutural, ou trocas que não se aplicaram): `[{chave, motivo}]`.
+KEY_RETRABALHO_AO_AUTOR = "retrabalho_ao_autor"
 #: Troca o editor nos testes (mesma assinatura de `pipeline.reexecucao.propor_edicao`). None = o editor de verdade.
 PROPONENTE_DE_RETRABALHO = None
 
@@ -414,7 +416,11 @@ def retrabalhar_por_trocas(chave: str):
         # consumido: o próximo autor da mesma chave nesta rodada (o revisor) não refaz a correção
         state[f"retrabalho_{chave}"] = ""
         if resultado is None or not resultado.aplicadas:
-            logger.info("Retrabalho de %s volta ao autor: %s", chave, getattr(proposta, "motivo", ""))
+            motivo = getattr(proposta, "motivo", "") or "o editor não devolveu troca"
+            logger.info("Retrabalho de %s volta ao autor: %s", chave, motivo)
+            # à vista no estado: quantas rodadas o editor resolveu e quantas voltaram ao autor, e por quê
+            state[KEY_RETRABALHO_AO_AUTOR] = list(state.get(KEY_RETRABALHO_AO_AUTOR) or []) + [
+                {"chave": chave, "motivo": motivo[:400]}]
             return None
         state[KEY_TROCAS_DE_RETRABALHO] = list(state.get(KEY_TROCAS_DE_RETRABALHO) or []) + [
             {"chave": chave, "edicoes": como_dicts(resultado.aplicadas), "pendencias": list(proposta.pendencias)}]
