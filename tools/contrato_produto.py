@@ -244,13 +244,15 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
     for i, linha in enumerate(linhas2):
         for c in extrair_codigos(linha):
             hab = habs.get(c)
-            if not hab or hab["eixo"] == "CD":
+            # no EM (sem eixo) a lista proposta de letramento faz o papel de Cultura Digital
+            if not hab or hab["eixo"] == "CD" or (hab["eixo"] is None and hab.get("letramento_digital")):
                 continue
             janela = " ".join(linhas2[i : i + 3])
             if not _RE_ETAPA.search(janela) and c not in com_etapa_no_12a:
+                eixo = hab["eixo"] or f"EM, competência {hab['competencia']}"
                 atencao(
                     "codigo-fora-do-eixo", "5.2",
-                    f"`{c}` ({hab['eixo']}: “{hab['habilidade'][:80]}…”) está na seção 2 sem a etapa em que o estudante exercita o texto oficial. "
+                    f"`{c}` ({eixo}: “{hab['habilidade'][:80]}…”) está na seção 2 sem a etapa em que o estudante exercita o texto oficial. "
                     "Código que o livro cita mas a ação em tela não exercita sai do documento.",
                 )
 
