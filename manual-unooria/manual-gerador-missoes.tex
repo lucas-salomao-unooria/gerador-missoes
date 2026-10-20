@@ -279,7 +279,7 @@ Como foi verificado & Toda descrição de agente, portão, variável de ambiente
 \addlinespace
 Arquitetura descrita & \textbf{129 passos numerados} (144 blocos: 52 com modelo de linguagem, 92 em código), quinze ciclos de correção automática, \textbf{dois comitês pedagógicos}, \textbf{parecer humano entre as etapas}, \textbf{banca em quatro posições} e a \textbf{base da plataforma} lida de um \emph{bucket} próprio, só para leitura. Orquestração em Google ADK, modelo padrão \cod{gemini-3.8-flash}. \\
 \addlinespace
-O que mudou nesta edição & A 7.\textsuperscript{a} edição (19/10) descreve a \textbf{correção pontual} (Seção~\ref{sec:pontual}) --- o pedido de correção vira trocas trecho a trecho, os autores não reescrevem, todos os portões julgam e a \textbf{linha de base} separa o \statusVermelho\ que a correção causou do que ela não tocou --- e o \textbf{retrabalho por trocas} nos ciclos de correção da geração (Seção~\ref{sec:ciclos}). A 6.\textsuperscript{a} (15/10) descreve os \textbf{dois comitês pedagógicos} de Produto (Seção~\ref{sec:comites}) --- três juízes por painel, unanimidade, voto contado em código e a missão devolvida a quem a escreve ---, o \textbf{Canal A obrigatório em toda habilidade} e o voto do comitê que pode mudar o texto do \emph{one-pager} do PO. A esteira passou a 129 passos, ainda numerados na ordem em que rodam: do 018 ao 032 antigos, mais cinco; do 033 ao 119, mais dez. A 5.\textsuperscript{a} (12/10) renumerou a esteira e trouxe a conversa única, a esteira animada, o custo da missão e os portões da Etapa~2 do plano padrão ouro; a 4.\textsuperscript{a} (08/10, 114 passos), o \emph{one-pager} do PO preservado, o conteúdo aprovado, a banca em quatro posições, o Stitch fora do modelo e o PRD codificável. Antes, 81 passos na 3.\textsuperscript{a} (06/10), 72 na 2.\textsuperscript{a} (25/09) e 55 na 1.\textsuperscript{a} (19/09). Quase tudo nasceu de missões reais (Parte~VII). \\
+O que mudou nesta edição & A 7.\textsuperscript{a} edição (19/10) descreve a \textbf{correção pontual} (Seção~\ref{sec:pontual}) --- o pedido de correção vira trocas trecho a trecho, os autores não reescrevem, todos os portões julgam e a \textbf{linha de base} separa o \statusVermelho\ que a correção causou do que ela não tocou --- e o \textbf{retrabalho por trocas} nos ciclos de correção da geração (Seção~\ref{sec:ciclos}), e ganha o \textbf{fluxograma passo a passo} dos 129 passos, gerado do código (Apêndice~\ref{sec:fluxograma}). A 6.\textsuperscript{a} (15/10) descreve os \textbf{dois comitês pedagógicos} de Produto (Seção~\ref{sec:comites}) --- três juízes por painel, unanimidade, voto contado em código e a missão devolvida a quem a escreve ---, o \textbf{Canal A obrigatório em toda habilidade} e o voto do comitê que pode mudar o texto do \emph{one-pager} do PO. A esteira passou a 129 passos, ainda numerados na ordem em que rodam: do 018 ao 032 antigos, mais cinco; do 033 ao 119, mais dez. A 5.\textsuperscript{a} (12/10) renumerou a esteira e trouxe a conversa única, a esteira animada, o custo da missão e os portões da Etapa~2 do plano padrão ouro; a 4.\textsuperscript{a} (08/10, 114 passos), o \emph{one-pager} do PO preservado, o conteúdo aprovado, a banca em quatro posições, o Stitch fora do modelo e o PRD codificável. Antes, 81 passos na 3.\textsuperscript{a} (06/10), 72 na 2.\textsuperscript{a} (25/09) e 55 na 1.\textsuperscript{a} (19/09). Quase tudo nasceu de missões reais (Parte~VII). \\
 \addlinespace
 Identidade visual & Paleta e tipografia do \emph{brandbook} Unooria: azul profundo \cod{\#0e1039} (estrutura), lavanda \cod{\#8b85ac} (inteligência), azul claro \cod{\#7fa5e2} (interface). A fonte institucional é a Garet; nesta composição usamos Montserrat, da mesma família de desenho geométrico, por disponibilidade tipográfica. Verde, âmbar e vermelho aparecem apenas como \textbf{cores funcionais de sinalização}, para reproduzir os três estados que os relatórios da esteira emitem; não são cores de marca e nunca se aplicam ao logotipo. \\
 \bottomrule
@@ -2940,6 +2940,20 @@ O mesmo vale para este manual. Ele descreve um sistema que muda, e a única form
 \appendix
 \renewcommand{\thesection}{\Alph{section}}
 \setcounter{section}{0}
+
+\section{O fluxograma passo a passo}
+\label{sec:fluxograma}
+
+O catálogo da Parte~VI explica cada agente em prosa. O \textbf{fluxograma da esteira}, documento à parte ao lado deste manual (\cod{manual-unooria/fluxograma-dos-agentes.pdf}), desenha os 129 passos (144 blocos) na ordem em que rodam, um bloco por agente ou portão, com:
+
+\begin{itemize}[leftmargin=1.2em]
+  \item o tipo --- \textbf{modelo}, \textbf{código}, \textbf{portão} ou \textbf{saída de loop};
+  \item o que faz e o objetivo;
+  \item o que \textbf{entra} e o que \textbf{sai} --- as chaves do estado da sessão, com o arquivo em que cada uma aparece;
+  \item os ciclos de correção a que pertence, onde cada ciclo começa e para onde volta quando reprova, e o que roda em paralelo.
+\end{itemize}
+
+Ele é \textbf{gerado do código} por \cod{scripts/gerar\_fluxograma.py}: os ciclos vêm da árvore real do orquestrador; as entradas de um agente de modelo, das variáveis do \emph{prompt} dele; as de um verificador, dos campos e das chaves que a classe lê; os arquivos, do mapa de artefatos. Um teste (\cod{test\_fluxograma.py}) falha quando a esteira muda e o fluxograma não foi gerado de novo.
 
 \section{A árvore de artefatos de uma execução}
 \label{ap:artefatos}

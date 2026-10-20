@@ -3,6 +3,8 @@
 
 > 📘 **Manual do Gerador de Missões:** [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 107 páginas com identidade visual Unooria, 7.ª edição. É a documentação para **usar e entender** a esteira; este README é a referência técnica do repositório. Prévia das páginas logo abaixo, em [Manual](#-manual).
 >
+> 🗺️ **Fluxograma da esteira:** [`manual-unooria/fluxograma-dos-agentes.pdf`](manual-unooria/fluxograma-dos-agentes.pdf) — os 129 passos (144 blocos) na ordem em que rodam: o que cada agente ou portão faz, o objetivo, o que entra e o que sai (com o arquivo da sessão), os ciclos de correção e os paralelos. Gerado do código por `python scripts/gerar_fluxograma.py`; `test_fluxograma.py` acusa quando fica desatualizado.
+>
 > O manual unifica e substitui os dois documentos anteriores — o [guia de funcionamento](documentacao-latex/guia-do-gerador-de-missoes.pdf) (operação) e o [manual completo e explicativo](manual-gerador-missoes/manual_gerador_missoes.pdf) (fundamentação), mantidos no repositório como histórico.
 
 Pipeline multiagente de nível de produção construído com o **Google ADK (Agent Development Kit)** e modelos **Google Gemini** (com suporte a *Thinking Mode* nativo). O sistema traduz a ideia bruta ou o *one-pager* de uma missão de letramento digital em um **PRD (Product Requirements Document) padrão ouro com 25 seções**, complementado por especificações de design, jornada e fluxo em Mermaid (espelhados em board do Miro), telas no Stitch, protótipo HTML navegável e validação técnica por banca multidisciplinar, pronto para alimentar agentes de codificação no monorepo `plataforma-unooria`.
