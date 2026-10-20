@@ -248,7 +248,7 @@
 \noindent
 \begin{minipage}[t]{0.49\textwidth}
 {\sffamily\footnotesize\color{unAzul}\bfseries EDIÇÃO}\\[0.25em]
-{\color{white}\small 6.\textsuperscript{a} edição --- 15 de outubro de 2026\\
+{\color{white}\small 7.\textsuperscript{a} edição --- 19 de outubro de 2026\\
 Repositório \cod{gerador-missoes} · rubrica de profundidade v1.21}
 \end{minipage}\hfill
 \begin{minipage}[t]{0.47\textwidth}
@@ -279,7 +279,7 @@ Como foi verificado & Toda descrição de agente, portão, variável de ambiente
 \addlinespace
 Arquitetura descrita & \textbf{129 passos numerados} (144 blocos: 52 com modelo de linguagem, 92 em código), quinze ciclos de correção automática, \textbf{dois comitês pedagógicos}, \textbf{parecer humano entre as etapas}, \textbf{banca em quatro posições} e a \textbf{base da plataforma} lida de um \emph{bucket} próprio, só para leitura. Orquestração em Google ADK, modelo padrão \cod{gemini-3.8-flash}. \\
 \addlinespace
-O que mudou nesta edição & A 6.\textsuperscript{a} edição (15/10) descreve os \textbf{dois comitês pedagógicos} de Produto (Seção~\ref{sec:comites}) --- três juízes por painel, unanimidade, voto contado em código e a missão devolvida a quem a escreve ---, o \textbf{Canal A obrigatório em toda habilidade} e o voto do comitê que pode mudar o texto do \emph{one-pager} do PO. A esteira passou a 129 passos, ainda numerados na ordem em que rodam: do 018 ao 032 antigos, mais cinco; do 033 ao 119, mais dez. A 5.\textsuperscript{a} (12/10) renumerou a esteira e trouxe a conversa única, a esteira animada, o custo da missão e os portões da Etapa~2 do plano padrão ouro; a 4.\textsuperscript{a} (08/10, 114 passos), o \emph{one-pager} do PO preservado, o conteúdo aprovado, a banca em quatro posições, o Stitch fora do modelo e o PRD codificável. Antes, 81 passos na 3.\textsuperscript{a} (06/10), 72 na 2.\textsuperscript{a} (25/09) e 55 na 1.\textsuperscript{a} (19/09). Quase tudo nasceu de missões reais (Parte~VII). \\
+O que mudou nesta edição & A 7.\textsuperscript{a} edição (19/10) descreve a \textbf{correção pontual} (Seção~\ref{sec:pontual}) --- o pedido de correção vira trocas trecho a trecho, os autores não reescrevem, todos os portões julgam e a \textbf{linha de base} separa o \statusVermelho\ que a correção causou do que ela não tocou --- e o \textbf{retrabalho por trocas} nos ciclos de correção da geração (Seção~\ref{sec:ciclos}), e ganha o \textbf{fluxograma passo a passo} dos 129 passos, gerado do código (Apêndice~\ref{sec:fluxograma}). A 6.\textsuperscript{a} (15/10) descreve os \textbf{dois comitês pedagógicos} de Produto (Seção~\ref{sec:comites}) --- três juízes por painel, unanimidade, voto contado em código e a missão devolvida a quem a escreve ---, o \textbf{Canal A obrigatório em toda habilidade} e o voto do comitê que pode mudar o texto do \emph{one-pager} do PO. A esteira passou a 129 passos, ainda numerados na ordem em que rodam: do 018 ao 032 antigos, mais cinco; do 033 ao 119, mais dez. A 5.\textsuperscript{a} (12/10) renumerou a esteira e trouxe a conversa única, a esteira animada, o custo da missão e os portões da Etapa~2 do plano padrão ouro; a 4.\textsuperscript{a} (08/10, 114 passos), o \emph{one-pager} do PO preservado, o conteúdo aprovado, a banca em quatro posições, o Stitch fora do modelo e o PRD codificável. Antes, 81 passos na 3.\textsuperscript{a} (06/10), 72 na 2.\textsuperscript{a} (25/09) e 55 na 1.\textsuperscript{a} (19/09). Quase tudo nasceu de missões reais (Parte~VII). \\
 \addlinespace
 Identidade visual & Paleta e tipografia do \emph{brandbook} Unooria: azul profundo \cod{\#0e1039} (estrutura), lavanda \cod{\#8b85ac} (inteligência), azul claro \cod{\#7fa5e2} (interface). A fonte institucional é a Garet; nesta composição usamos Montserrat, da mesma família de desenho geométrico, por disponibilidade tipográfica. Verde, âmbar e vermelho aparecem apenas como \textbf{cores funcionais de sinalização}, para reproduzir os três estados que os relatórios da esteira emitem; não são cores de marca e nunca se aplicam ao logotipo. \\
 \bottomrule
@@ -785,7 +785,7 @@ São quatro momentos, nesta ordem:
 
 \begin{enumerate}
   \item \textbf{O semáforo, que é da máquina.} Os gates da etapa, \statusVerde\ \statusAmbar\ \statusVermelho, como sempre. Ele não decide nada sozinho --- informa.
-  \item \textbf{O parecer do dono da etapa.} \emph{De acordo} libera, e exige um comentário --- que não é formalidade: ele segue para os agentes das etapas seguintes, no bloco ``Notas de passagem''. \emph{Refazer} transforma o comentário em pedido de correção e refaz \textbf{só aquela etapa}, voltando ao parecer da mesma pessoa. A etapa refeita parte da \textbf{versão anterior} dos documentos, não de uma folha em branco: o que não foi pedido continua como estava.
+  \item \textbf{O parecer do dono da etapa.} \emph{De acordo} libera, e exige um comentário --- que não é formalidade: ele segue para os agentes das etapas seguintes, no bloco ``Notas de passagem''. \emph{Refazer} transforma o comentário em pedido de correção e refaz \textbf{só aquela etapa}, voltando ao parecer da mesma pessoa. A etapa refeita parte da \textbf{versão anterior} dos documentos, não de uma folha em branco: o que não foi pedido continua como estava --- e, desde a 7.\textsuperscript{a} edição, ela nem é reescrita: o pedido vira trocas trecho a trecho, e os portões julgam a missão corrigida (Seção~\ref{sec:pontual}).
   \item \textbf{O recebimento pelo dono da etapa seguinte.} \emph{Iniciar} dispara a etapa dele. \emph{Devolver}, com comentário, reabre o parecer anterior --- e \textbf{não refaz nada sozinho}: quem recebeu a devolutiva decide entre refazer, reafirmar o \emph{de acordo} ou, se vê que a causa vem de antes, \textbf{repassar a devolução} à etapa anterior sem refazer o que não é dele --- Design devolve a Produto o que o Dev lhe devolveu. O \emph{Refazer} que vem depois leva a cadeia inteira de devolutivas (Dev $\rightarrow$ Design $\rightarrow$ Produto), não só a última.
   \item \textbf{O fechamento.} O \emph{de acordo} do Dev encerra a missão: diagnóstico, aprendizado e registro no catálogo rodam só aí. Missão entregue ainda pode voltar: quem responde por Dev (ou o \cod{admin}) a \emph{devolve} a Design, com comentário, e ela reabre ali sem rodar nada sozinha.
 \end{enumerate}
@@ -951,11 +951,31 @@ Cada mensagem numa conversa \emph{nova} cria uma missão do zero. Para corrigir 
   \item Você escreve o pedido, com anexos se precisar.
   \item Um agente de triagem, \textbf{fora da esteira}, decide de qual etapa recomeçar --- \emph{spec}, design, dev ou nenhuma --- e mostra a decisão com o motivo. Você confirma ou troca. O que o \emph{one-pager} fixa --- habilidades, Canal B, debate, podcast, tempos, parâmetros --- a triagem manda sempre para Produto.
   \item A esteira roda \textbf{só dali em diante}, sobre o estado salvo. Refazer da \emph{spec} custa cerca de vinte minutos; do design, quinze; só o dev, sete.
-  \item O pedido entra numa chave de estado que \textbf{todo agente lê}: os autores aplicam no que é seu e registram ``o que mudou nesta versão''; o QA e a banca conferem se foi atendido.
+  \item O pedido é aplicado como \textbf{correção pontual} (Seção~\ref{sec:pontual}): um editor o transforma em trocas, o código as aplica e os portões julgam. Só o pedido estrutural --- outra direção para a missão --- volta aos autores, que aplicam no que é seu e registram ``o que mudou nesta versão''.
   \item O que seria perdido é copiado para uma pasta oculta antes de sobrescrever --- e há \textbf{desfazer a última correção}, que restaura documentos, estado e conversa.
 \end{enumerate}
 
 Com o fluxo de pareceres ativo, a correção livre pelo chat fica desligada, porque o \emph{Refazer} do cartão faz o mesmo passando pelo dono.
+
+\subsection{A correção pontual: editar, não reescrever}
+\label{sec:pontual}
+
+Até 19 de outubro, corrigir era reexecutar. Cada autor da etapa reescrevia o seu documento a partir da versão anterior, e os portões julgavam a missão inteira com as regras do dia --- inclusive as que nasceram depois que o PO a aprovou. Na missão do 3.\textsuperscript{o} ano do Ensino Médio, o PO pediu para trocar ``mais de 70\%'' por ``cerca de 47\%'' em três lugares. A \emph{spec} voltou com metade das linhas diferentes, a seção do DS migrada e os conceitos renomeados, e a missão, que não tinha nenhum \statusVermelho, saiu com dois: BNCC, porque o bloco 11 foi reescrito, e fidelidade, porque ``preservar todo o restante sem alteração'' não tinha como ser provado. Quanto mais o PO escrevia ``não mexa no resto'', mais vermelho aparecia.
+
+Hoje toda correção com pedido --- pelo chat ou pelo \emph{Refazer} --- começa como edição:
+
+\begin{enumerate}
+  \item \textbf{Um editor} (fora da esteira) lê o pedido e os documentos da etapa e devolve \textbf{trocas}: ``este trecho, letra por letra, vira este''. Ele procura cada lugar onde a decisão mora --- núcleo, \emph{one-pager}, \emph{spec}, resumido --- e segue as consequências: o número calculado a partir do que mudou, a régua ternária que usa o limite, a transição e o evento da regra de mecânica. Mudança de mecânica, de regra, de lógica de etapa, de texto ou de habilidade \textbf{é edição}. Descartar a direção da missão é \textbf{estrutural}, e aí a etapa é refeita pelos autores como antes.
+  \item \textbf{O código aplica.} Cada trecho tem de existir uma única vez; com uma falha, nada é aplicado e o editor recebe o motivo. O que nenhuma troca tocou fica idêntico \textbf{por construção}.
+  \item \textbf{Todos os portões julgam a missão corrigida}, uma vez. Os autores não rodam --- repetir a rodada só faria os portões julgarem o mesmo texto.
+  \item \textbf{A linha de base} compara cada bloqueio com o veredito do mesmo portão antes da correção. Fica \statusVermelho\ o que a correção causou --- cita o texto trocado, o põe entre aspas ou aponta a seção ou etapa editada ---, o que já bloqueava antes e o juiz que não respondeu. Vira \statusAmbar\ o que não se liga às trocas: leitura do juiz sobre o que não mudou, ou regra criada depois da versão aprovada. Tudo fica à vista em \cod{linha-de-base-da-correcao.md}.
+  \item \textbf{O que a correção causou volta ao editor} com os relatórios, e os portões julgam de novo. Se só um juiz não respondeu, os portões julgam de novo sem editar.
+  \item \textbf{A fidelidade prova ``não mexa no resto'' em código}: cada documento é a versão anterior mais as suas trocas, e nada além. A ordem de não mexer de \emph{outra} rodada, ou do briefing, não trava o pedido novo --- vira \statusAmbar, porque entre dois pedidos vale o mais novo.
+\end{enumerate}
+
+\begin{caixaConceito}{Atualizar a missão às regras novas é um pedido, não um efeito colateral}
+Uma missão aprovada em 2 de outubro não tinha o comitê dos canais, a conta da virada nem a recusa da seção de DS legada. Corrigir um número nela não deve migrá-la para essas regras sem ninguém pedir. Elas aparecem como \statusAmbar\ no relatório da linha de base; quem quer a missão nas regras atuais pede isso no \emph{Refazer}, e o pedido é tratado como qualquer outro. A conferência final (``não alterar nada, só refazer as conferências'') vira, na correção pontual, \textbf{zero trocas}: só os portões rodam.
+\end{caixaConceito}
 
 \subsection{Rodar uma etapa isolada}
 
@@ -1285,6 +1305,8 @@ Quando um portão reprova, quem decide repetir é o \textbf{orquestrador, em có
 \end{tikzpicture}
 \captionof{figure}{O padrão comum aos quinze ciclos: quem julga não conserta, quem conserta não julga.}
 \end{center}
+
+\paragraph{O conserto é por trocas.} Desde a 7.\textsuperscript{a} edição, o corretor dos ciclos que devolvem o documento ao autor --- os comitês e as seções de apoio do \emph{one-pager}, a \emph{spec}, o resumido, o \emph{handoff}, o PRD e o pedagógico --- não reemite o documento inteiro. A saída do ciclo grava o que os portões reprovaram, e na rodada seguinte o mesmo editor da correção pontual (Seção~\ref{sec:pontual}) o transforma em trocas: o código aplica, o autor não roda, e o que o portão não apontou fica idêntico. Antes, o que já tinha passado podia mudar na reescrita sem nenhum portão conferir de novo. Só a correção estrutural, ou a troca que não se aplica, volta ao autor. Vale na geração e na correção.
 
 \begin{center}
 \begin{longtable}{>{\raggedright\arraybackslash}p{2.3cm}>{\raggedright\arraybackslash}p{4.0cm}p{8.3cm}}
@@ -2876,6 +2898,33 @@ O Dev foi medido do outro lado. A etapa de Dev da missão do 9.\textsuperscript{
 \textbf{Gate novo que gera ruído não protege: ele trava o retrabalho que deveria consertar.} Treze falsos positivos consumiram o orçamento que a lacuna real precisava. Por isso cada verificador desta edição foi calibrado nas sessões reais do \emph{bucket} antes de bloquear --- a conferência do \emph{one-pager} do PO dá zero perdas na versão só reformatada; a régua estrita de literais não criou falso positivo novo nas missões do 1.\textsuperscript{o}, do 6.\textsuperscript{o} e do 9.\textsuperscript{o} ano --- e o teste de mutação confere que ele ainda pega a perda que deve pegar.
 \end{caixaConceito}
 
+\section{A correção que reescrevia a missão}
+\label{sec:licao-pontual}
+
+Em 19 de outubro, o PO resumiu o problema numa frase: \emph{``quando a missão é reprocessada para mudar um ponto específico, o gerador altera a missão e começa a dar bloqueios que não tinha antes''}. O acervo do \emph{bucket} confirmou. Na missão do 3.\textsuperscript{o} ano do Ensino Médio, a troca de um número deixou a \emph{spec} com 49\% das linhas iguais e dois \statusVermelho\ novos. Na correção seguinte, a ordem ``trocar APENAS o número'' de uma rodada anterior reprovou a migração de DS que o pedido novo mandava fazer. E, com a \emph{spec} 97\% igual, dois juízes passaram de \statusVerde\ para \statusAmbar\ só por variação do sorteio.
+
+A causa não era excesso de portões. Era usar para \textbf{corrigir} o mesmo caminho que serve para \textbf{gerar}: reescrever e julgar tudo. A correção pontual (Seção~\ref{sec:pontual}) e o retrabalho por trocas (Seção~\ref{sec:ciclos}) foram medidos em execuções reais, sobre cópias locais das sessões:
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{4.4cm}X}
+\toprule
+\textbf{Caso} & \textbf{Resultado} \\
+\midrule
+Troca de um número (3EM, pedido de 13/10) & Antes: cerca de 300 linhas da \emph{spec} mudadas e \statusVermelho\ em BNCC e fidelidade. Agora: 4 trocas, 2 linhas da \emph{spec} mudadas, nenhum \statusVermelho, fidelidade provada pelas trocas, cerca de 7 minutos. \\
+\addlinespace
+Mudança de mecânica (3EM, pedido de 14/10: errata opcional e sequência terminal) & 12 trocas em quatro documentos, de 2 a 5 linhas por documento. Duas trocas apagaram texto do \emph{one-pager} do PO; o portão acusou, e na segunda passada o editor o devolveu com mais duas. Sobrou o \statusVermelho\ de BNCC, que já existia antes, marcado como pré-existente. Uma falha de juiz injetada na banca foi rejulgada na segunda passada. \\
+\addlinespace
+Geração nova de Produto (3EM) & \emph{Success}, nenhum \statusVermelho, 20 \statusVerde. O comitê corrigiu o \S12a com 5 trocas e depois mais uma; a \emph{spec}, com 5 --- sem reemitir documento inteiro. \\
+%GERACAO2%
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{caixaConceito}{O princípio}
+\textbf{Um portão julga o que mudou contra o que estava aprovado; o resto é informação.} Regra criada depois da aprovação, ou leitura do juiz sobre texto que ninguém tocou, aparece --- mas não trava a correção de um ponto. E quem conserta edita: o que o portão não apontou não pode mudar, porque nenhum portão vai conferir de novo.
+\end{caixaConceito}
+
 \section{A consequência de método}
 
 Há uma mudança que vale mais que qualquer número corrigido: a fonte única da régua passou a ter uma seção de \textbf{registro negativo} --- o que \emph{não} sustenta a régua e não deve voltar (Parte~IV). Sem ela, uma fundamentação refutada tende a reaparecer na revisão seguinte, porque o argumento de autoridade sobrevive ao artigo que o derrubou.
@@ -2891,6 +2940,20 @@ O mesmo vale para este manual. Ele descreve um sistema que muda, e a única form
 \appendix
 \renewcommand{\thesection}{\Alph{section}}
 \setcounter{section}{0}
+
+\section{O fluxograma passo a passo}
+\label{sec:fluxograma}
+
+O catálogo da Parte~VI explica cada agente em prosa. O \textbf{fluxograma da esteira}, documento à parte ao lado deste manual (\cod{manual-unooria/fluxograma-dos-agentes.pdf}), desenha os 129 passos (144 blocos) na ordem em que rodam, um bloco por agente ou portão, com:
+
+\begin{itemize}[leftmargin=1.2em]
+  \item o tipo --- \textbf{modelo}, \textbf{código}, \textbf{portão} ou \textbf{saída de loop};
+  \item o que faz e o objetivo;
+  \item o que \textbf{entra} e o que \textbf{sai} --- as chaves do estado da sessão, com o arquivo em que cada uma aparece;
+  \item os ciclos de correção a que pertence, onde cada ciclo começa e para onde volta quando reprova, e o que roda em paralelo.
+\end{itemize}
+
+Ele é \textbf{gerado do código} por \cod{scripts/gerar\_fluxograma.py}: os ciclos vêm da árvore real do orquestrador; as entradas de um agente de modelo, das variáveis do \emph{prompt} dele; as de um verificador, dos campos e das chaves que a classe lê; os arquivos, do mapa de artefatos. Um teste (\cod{test\_fluxograma.py}) falha quando a esteira muda e o fluxograma não foi gerado de novo.
 
 \section{A árvore de artefatos de uma execução}
 \label{ap:artefatos}

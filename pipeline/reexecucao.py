@@ -382,6 +382,15 @@ class RegistroCorrecao:
     etapa_sugerida: str = ""
     #: Preenchido quando a correção foi desfeita (`desfazer_correcao`).
     desfeita_em: str = ""
+    #: `pontual` (trocas do editor, autores travados) ou `refazer` (os autores reescrevem a etapa).
+    modo: str = ""
+    #: Por que não foi pontual: o editor classificou o pedido como estrutural, ou as trocas não se aplicaram.
+    motivo_modo: str = ""
+    #: As trocas aplicadas, na ordem (`tools/edicao_pontual.py`), e o que o editor deixou para o PO decidir.
+    edicoes: List[Dict[str, str]] = field(default_factory=list)
+    pendencias: List[str] = field(default_factory=list)
+    #: Passadas dos gates (a segunda em diante consertou bloqueios que a correção causou).
+    passadas: int = 0
 
 
 # ------------------------------------------------------------------ estado
@@ -526,6 +535,170 @@ def preparar_estado(
     return limpo, removidas
 
 
+def preparar_estado_pontual(
+    estado: Dict[str, Any], etapa: str, pedido_md: Optional[str], documentos: Dict[str, str],
+    edicoes: Sequence[Dict[str, Any]],
+) -> Tuple[Dict[str, Any], List[str]]:
+    """Estado para a correção pontual: o de `preparar_estado`, com os documentos da etapa já editados e travados.
+
+    Os gates da etapa caem, como num refazer, e são julgados de novo; os autores não rodam
+    (`agents.callbacks.travar_documento_na_correcao_pontual`). `versao_anterior_<chave>` fica com a versão de antes —
+    a fidelidade prova com ela que nada além das trocas mudou. A linha de base guarda o veredito de cada gate antes da
+    correção (`tools/linha_de_base.py`). Pura, sem I/O.
+    """
+    from agents.callbacks import KEY_DOCUMENTOS_TRAVADOS, KEY_MODO_CORRECAO
+    from tools import edicao_pontual, linha_de_base
+
+    limpo, removidas = preparar_estado(estado, etapa, pedido_md)
+    travados: List[str] = []
+    for chave in edicao_pontual.travados(etapa):
+        texto = documentos.get(chave) if chave in documentos else estado.get(chave)
+        if not str(texto or "").strip():
+            continue
+        limpo[chave] = texto
+        # o autor não roda: a instrução de "parta da versão anterior" não tem leitor
+        limpo.pop(PREFIXO_ANTERIOR + chave, None)
+        travados.append(chave)
+    if etapa == "produto" and limpo.get("one_pager"):
+        # `agents.callbacks.preservar_one_pager` roda depois do autor, que não roda: o original desta versão é o editado
+        limpo["one_pager_gate0"] = limpo["one_pager"]
+    if limpo.get(KEY_PEDIDO_CORRECAO):
+        # quem lê o pedido aqui são os gates e juízes: os autores desta etapa não rodam
+        limpo[KEY_PEDIDO_CORRECAO] += (
+            "\n\n### Modo desta correção: edição pontual\n\nO pedido foi aplicado como trocas trecho a trecho, listadas "
+            "abaixo; os documentos diferem da versão anterior só por elas, e nenhum autor reescreveu nada. Ao julgar, "
+            "confira se as trocas atendem ao pedido e se quebraram algo.\n\n" + edicao_pontual.resumo(edicoes))
+    limpo[KEY_MODO_CORRECAO] = edicao_pontual.MODO_PONTUAL
+    limpo[KEY_DOCUMENTOS_TRAVADOS] = travados
+    limpo["edicoes_pontuais"] = [dict(e) for e in edicoes]
+    limpo[linha_de_base.KEY_LINHA_DE_BASE] = linha_de_base.capturar(
+        estado, sorted(k for k in CHAVES_POR_ETAPA.get(etapa, ()) if k.endswith("_status")))
+    return limpo, removidas
+
+
+def validador_do_po(estado: Dict[str, Any], pedido_extra: str = ""):
+    """Recusa a troca que faz o one-pager do PO perder texto (`tools.one_pager_po.perdidos_pela_edicao`). None sem PO."""
+    po = str(estado.get("one_pager_po") or "")
+    if not po.strip():
+        return None
+    from tools.comite import texto_votos
+    from tools.one_pager_po import perdidos_pela_edicao
+
+    pedidos = "\n".join(str(p.get("texto") or "") for p in (estado.get(KEY_PEDIDOS_DO_PO) or []) if isinstance(p, dict))
+    brief = str(estado.get("brief_escopo") or "")
+
+    def validar(documentos: Dict[str, str]) -> List[str]:
+        if "one_pager" not in documentos:
+            return []
+        return perdidos_pela_edicao(po, str(estado.get("one_pager") or "") + "\n\n" + brief,
+                                    documentos["one_pager"] + "\n\n" + brief, str(estado.get("briefing") or ""),
+                                    pedidos + "\n" + pedido_extra, texto_votos(estado))
+
+    return validar
+
+
+#: Tentativas do editor quando alguma troca não se aplica (trecho que não existe ou que se repete).
+TENTATIVAS_DO_EDITOR = 3
+
+
+def texto_para_o_editor(pedido: "PedidoCorrecao") -> str:
+    """O pedido como o PO escreveu, com o texto dos anexos — sem o cabeçalho da esteira."""
+    partes = [pedido.texto.strip() or "(sem texto)"]
+    for nome, conteudo in pedido.anexos:
+        partes += ["", f"### Anexo: {nome}", "", conteudo.strip()]
+    for nome in pedido.anexos_sem_texto:
+        partes.append(f"\n### Anexo: {nome} — sem texto extraível; considere só o que o pedido diz sobre ele.")
+    return "\n".join(partes)
+
+
+def achados_para_o_editor(linhas: Sequence[Dict[str, Any]], estado: Dict[str, Any]) -> str:
+    """Os bloqueios que a correção pode ter causado, para o editor consertar com novas trocas."""
+    if not linhas:
+        return ""
+    blocos = ["## Bloqueios que os gates acusaram depois das suas trocas", "",
+              "As trocas abaixo já estão aplicadas nos documentos que você recebeu. Os gates julgaram a missão "
+              "corrigida e acusaram estes bloqueios, que citam o texto que você pôs ou não citam trecho. Acrescente "
+              "trocas que os resolvam **sem desfazer o pedido do PO**. Se um bloqueio não é consequência das suas "
+              "trocas nem do pedido, não mexa: devolva `edicoes` vazia e explique em `pendencias`.", ""]
+    for l in linhas:
+        blocos.append(f"- `{l['gate']}` — {l.get('codigo') or 'achado'}: {l.get('resumo') or ''}")
+    relatorios = []
+    for gate in dict.fromkeys(l["gate"] for l in linhas):
+        texto = str(estado.get(gate[: -len("_status")] + "_report") or "").strip()
+        if texto:
+            relatorios.append(f"### Relatório de `{gate}`\n\n{texto[:6000]}")
+    return "\n".join(blocos + ([""] + relatorios if relatorios else []))
+
+
+async def propor_edicao(
+    pedido_texto: str, etapa: str, documentos: Dict[str, str], *, erros: str = "", achados: str = "",
+    thinking_budget: Optional[int] = 4096,
+) -> Any:
+    """Roda o editor num runner mínimo, fora da esteira. Falha de rede ou modelo vira proposta estrutural."""
+    from tools.edicao_pontual import MODO_ESTRUTURAL, Proposta, ler_proposta, renderizar
+
+    try:
+        from google.adk.runners import InMemoryRunner
+
+        from agents.transversal import get_editor_pontual_agent
+        from pipeline.runner import build_user_message
+
+        app = "EditorPontual"
+        runner = InMemoryRunner(agent=get_editor_pontual_agent(thinking_budget=thinking_budget), app_name=app)
+        sessao = await runner.session_service.create_session(app_name=app, user_id="editor", state={
+            "pedido_pontual": pedido_texto, "etapa_da_correcao": etapa,
+            "documentos_pontuais": renderizar(documentos),
+            "erros_da_edicao": erros, "achados_da_edicao": achados,
+        })
+        async for _ in runner.run_async(user_id="editor", session_id=sessao.id,
+                                        new_message=build_user_message("Aplique o pedido como trocas.", None)):
+            pass
+        final = await runner.session_service.get_session(app_name=app, user_id="editor", session_id=sessao.id)
+        return ler_proposta(str((final.state if final else {}).get("edicao_pontual") or ""))
+    except Exception as exc:  # pragma: no cover - rede/modelo
+        logger.warning("Editor pontual falhou: %s", exc)
+        return Proposta(modo=MODO_ESTRUTURAL, motivo=f"falha no editor: {exc}")
+
+
+async def editar(
+    pedido_texto: str, etapa: str, documentos: Dict[str, str], *, achados: str = "",
+    proponente: Any = None, validador: Any = None,
+) -> Tuple[Any, Any]:
+    """`(resultado | None, proposta)`: as trocas aplicadas aos documentos, ou None se o pedido não cabe numa edição.
+
+    O editor tem `TENTATIVAS_DO_EDITOR` chances: troca que não se aplica volta a ele com o motivo, e também a que o
+    `validador` recusa (`validador(documentos_novos) -> [falhas]`, ex.: texto do one-pager do PO apagado).
+    `proponente` troca o editor nos testes (mesma assinatura de `propor_edicao`).
+    """
+    from tools.edicao_pontual import MODO_ESTRUTURAL, Proposta, aplicar
+
+    proponente = proponente or propor_edicao
+    erros = ""
+    proposta = Proposta(modo=MODO_ESTRUTURAL)
+    for _ in range(TENTATIVAS_DO_EDITOR):
+        proposta = await proponente(pedido_texto, etapa, documentos, erros=erros, achados=achados)
+        if not proposta.pontual:
+            return None, proposta
+        resultado = aplicar(documentos, proposta.edicoes)
+        if resultado.ok and validador is not None:
+            recusas = list(validador(resultado.documentos) or [])
+            if recusas:
+                from tools.one_pager_po import COMO_RESPEITAR_O_PO
+
+                erros = ("## Suas trocas da tentativa anterior foram recusadas\n\nNenhuma foi aplicada. "
+                         + COMO_RESPEITAR_O_PO + " Refaça a lista inteira corrigindo isto:\n\n"
+                         + "\n".join(f"- {r}" for r in recusas))
+                continue
+        if resultado.ok:
+            return resultado, proposta
+        erros = ("## Suas trocas da tentativa anterior não se aplicaram\n\nNenhuma foi aplicada. Refaça a lista "
+                 "inteira corrigindo estas:\n\n" + "\n".join(f"- {f}" for f in resultado.falhas))
+    proposta.motivo = (f"as trocas não se aplicaram em {TENTATIVAS_DO_EDITOR} tentativas — "
+                       + (erros.splitlines()[-1][2:] if erros else "sem detalhe"))
+    proposta.modo = MODO_ESTRUTURAL
+    return None, proposta
+
+
 # ------------------------------------------------------------------ arquivos e backup
 def arquivos_das_chaves(chaves: Iterable[str]) -> List[str]:
     """Caminhos relativos (na pasta da sessão) dos artefatos que essas chaves geram.
@@ -639,6 +812,21 @@ def mensagem_de_correcao(registro: RegistroCorrecao) -> str:
     icone = {"success": "🟢", "bypassed": "🟡", "blocked": "🔴", "error": "❌"}.get(registro.status, "⚪")
     de_onde = "só diagnóstico e aprendizado" if registro.etapa == "transversal" else f"**{registro.etapa}**"
     motivo = registro.triagem.get("motivo") if isinstance(registro.triagem, dict) else ""
+    if registro.modo == "pontual":
+        from tools.edicao_pontual import resumo
+
+        docs = sorted({e.get("documento", "") for e in registro.edicoes})
+        return (
+            f"🔧 **Correção pontual aplicada em {registro.quando}** — {len(registro.edicoes)} troca(s) em "
+            f"{', '.join(f'`{d}`' for d in docs) or 'nenhum documento'}; o resto ficou idêntico. Os gates de "
+            f"**{registro.etapa}** julgaram a missão corrigida ({registro.passadas} passada(s)). Status: {icone} "
+            f"{registro.status}.\n\n{resumo(registro.edicoes)}"
+            + ("\n\n**Para o PO decidir:**\n" + "\n".join(f"- {p}" for p in registro.pendencias)
+               if registro.pendencias else "")
+            + "\n\nDe onde veio cada bloqueio está em `linha-de-base-da-correcao.md`."
+        )
+    if registro.motivo_modo:
+        motivo = f"refeita pelos autores: {registro.motivo_modo}"
     return (
         f"🔧 **Correção aplicada em {registro.quando}** — a esteira recomeçou de {de_onde}"
         + (f" ({motivo})" if motivo else "")
@@ -701,9 +889,16 @@ async def executar_correcao_stream(
     *,
     so_esta_etapa: bool = False,
     notas_de_passagem: Optional[str] = None,
+    proponente: Any = None,
     **opcoes_runner: Any,
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Reexecuta `etapa` (e as seguintes) sobre a sessão em `run_dir`, gravando na mesma pasta.
+
+    Com pedido, a correção é **pontual** primeiro (`tools/edicao_pontual.py`): o editor transforma o pedido em trocas,
+    o código as aplica, os autores não rodam e os gates julgam a missão corrigida; a linha de base separa o bloqueio que
+    a correção causou do que ela não tocou, e o causado volta ao editor (até `correcao_pontual_passadas`). Só quando o
+    editor diz que o pedido é estrutural — ou as trocas não se aplicam — a etapa é refeita pelos autores, como era.
+    `proponente` troca o editor nos testes.
 
     `notas_de_passagem`, quando vem, substitui a do estado salvo: é o *refazer* do parecer humano,
     e uma refação invalida os pareceres da própria etapa — o texto velho não pode seguir aos agentes.
@@ -716,49 +911,126 @@ async def executar_correcao_stream(
 
     run_dir = Path(run_dir)
     estado, conversa, briefing = carregar_sessao(run_dir)
+    recusa = None
     if etapa == "produto":
         material, recusa = material_para_refazer_produto(estado, conversa, pedido)
-        if recusa:
-            # nada foi tocado ainda: sem backup, sem estado limpo, sem registro de correção
-            yield {"type": "correcao_error", "error": recusa, "registro": None, "restaurados": [], "timestamp": time.time()}
-            return
-        estado = {**estado, "material_anexado": material}
+        if not recusa:
+            estado = {**estado, "material_anexado": material}
+    from config import get_settings
+    from tools import edicao_pontual, linha_de_base
+    from tools.custo import KEY_CUSTO
+
     tem_pedido = bool(pedido and (pedido.texto.strip() or pedido.anexos or pedido.anexos_sem_texto))
     pedido_md = pedido.como_markdown(etapa) if tem_pedido else None
-    limpo, removidas = preparar_estado(estado, etapa, pedido_md)
-    if notas_de_passagem is not None:
-        limpo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
-    limpo[KEY_PEDIDOS_DO_PO] = _pedidos_do_po(conversa)
+    settings = get_settings()
+    inicio = time.time()
+    documentos = edicao_pontual.documentos_da_etapa(estado, etapa)
+    edicoes: List[Dict[str, Any]] = []
+    pendencias: List[str] = []
+    modo, motivo_modo = "refazer", ""
+    if settings.correcao_pontual and tem_pedido and pedido and documentos:
+        yield {"type": "edicao_started", "etapa": etapa, "passada": 1, "timestamp": time.time()}
+        # o texto do one-pager do PO só sai pelo pedido dele: a troca que o apaga sem isso volta ao editor
+        guarda = validador_do_po({**estado, KEY_PEDIDOS_DO_PO: _pedidos_do_po(conversa)}, texto_para_o_editor(pedido))
+        resultado, proposta = await editar(texto_para_o_editor(pedido), etapa, documentos, proponente=proponente,
+                                           validador=guarda)
+        if resultado is not None:
+            modo, documentos = edicao_pontual.MODO_PONTUAL, resultado.documentos
+            edicoes, pendencias = edicao_pontual.como_dicts(resultado.aplicadas), list(proposta.pendencias)
+        else:
+            motivo_modo = proposta.motivo or "o editor classificou o pedido como estrutural"
+        yield {"type": "edicao_completed", "etapa": etapa, "modo": modo, "motivo": proposta.motivo,
+               "edicoes": edicoes, "pendencias": pendencias, "timestamp": time.time()}
+    pontual = modo == edicao_pontual.MODO_PONTUAL
+    if recusa and not pontual:
+        # sem o material, só a edição pontual cabe: refazer o núcleo sem ele geraria outra missão. Nada foi tocado ainda:
+        # sem backup, sem estado limpo, sem registro de correção
+        yield {"type": "correcao_error", "error": recusa, "registro": None, "restaurados": [], "timestamp": time.time()}
+        return
+
+    def estado_inicial() -> Tuple[Dict[str, Any], List[str]]:
+        if pontual:
+            novo, chaves = preparar_estado_pontual(estado, etapa, pedido_md, documentos, edicoes)
+        else:
+            novo, chaves = preparar_estado(estado, etapa, pedido_md)
+        if notas_de_passagem is not None:
+            novo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
+        novo[KEY_PEDIDOS_DO_PO] = _pedidos_do_po(conversa)
+        return novo, chaves
+
+    limpo, removidas = estado_inicial()
     backup = fazer_backup(run_dir, etapa, removidas)
     stages = _stages_de(etapa, so_esta_etapa)
-    inicio = time.time()
     quando = time.strftime("%d/%m/%Y %H:%M:%S")
     yield {
-        "type": "correcao_started", "etapa": etapa, "stages": stages,
+        "type": "correcao_started", "etapa": etapa, "stages": stages, "modo": modo,
         "backup": backup.relative_to(run_dir).as_posix(), "chaves_removidas": removidas, "timestamp": inicio,
     }
 
     result: Any = None
     erro: Optional[Dict[str, Any]] = None
     custo_parcial: Optional[Dict[str, Any]] = None
-    async for evento in run_orchestrator_pipeline_stream(
-        prompt=briefing,
-        user_id=conversa.get("user_id"),
-        session_id=conversa.get("session_id"),
-        stages=stages,
-        initial_state=limpo,
-        run_dir=run_dir,
-        registrar_conversa=False,
-        **opcoes_runner,
-    ):
-        tipo = evento.get("type")
-        if tipo == "pipeline_completed":
-            result = evento.get("result")
-        elif tipo == "pipeline_error":
-            erro = evento
-        elif tipo == "custo_parcial":
-            custo_parcial = evento.get("custo")
-        yield evento
+    passadas_max = max(1, int(settings.correcao_pontual_passadas)) if pontual else 1
+    passada = 0
+    while passada < passadas_max:
+        passada += 1
+        result, erro = None, None
+        async for evento in run_orchestrator_pipeline_stream(
+            prompt=briefing,
+            user_id=conversa.get("user_id"),
+            session_id=conversa.get("session_id"),
+            stages=stages,
+            initial_state=limpo,
+            run_dir=run_dir,
+            registrar_conversa=False,
+            modo_pontual=pontual,
+            **opcoes_runner,
+        ):
+            tipo = evento.get("type")
+            if tipo == "pipeline_completed":
+                result = evento.get("result")
+            elif tipo == "pipeline_error":
+                erro = evento
+            elif tipo == "custo_parcial":
+                custo_parcial = evento.get("custo")
+            yield evento
+        if result is None or not pontual or passada >= passadas_max:
+            break
+        # O que a correção causou volta ao editor, com os relatórios: ele acrescenta trocas, e os gates julgam de novo
+        final = dict(getattr(result, "state", None) or {})
+        linhas = final.get("linha_de_base_linhas") or []
+        novos = linha_de_base.bloqueios_novos(linhas)
+        if not novos:
+            if any(l.get("origem") == linha_de_base.FALHA_DE_EXECUCAO for l in linhas):
+                # um juiz não respondeu: não há o que editar, mas há o que julgar de novo
+                yield {"type": "edicao_completed", "etapa": etapa, "modo": "rejulgar", "motivo": "juiz sem resposta",
+                       "edicoes": [], "pendencias": pendencias, "timestamp": time.time()}
+                limpo, _ = estado_inicial()
+                if final.get(KEY_CUSTO):
+                    limpo[KEY_CUSTO] = final[KEY_CUSTO]
+                continue
+            break
+        yield {"type": "edicao_started", "etapa": etapa, "passada": passada + 1, "bloqueios": len(novos),
+               "timestamp": time.time()}
+        conserto, proposta = await editar(texto_para_o_editor(pedido), etapa, documentos,
+                                          achados=achados_para_o_editor(novos, final), proponente=proponente,
+                                          validador=validador_do_po({**final, "one_pager": documentos.get("one_pager", "")},
+                                                                    texto_para_o_editor(pedido)))
+        if conserto is None or not conserto.aplicadas:
+            pendencias += [p for p in getattr(proposta, "pendencias", []) if p not in pendencias]
+            yield {"type": "edicao_completed", "etapa": etapa, "modo": "sem-conserto", "motivo": proposta.motivo,
+                   "edicoes": [], "pendencias": pendencias, "timestamp": time.time()}
+            break
+        documentos = conserto.documentos
+        edicoes += edicao_pontual.como_dicts(conserto.aplicadas)
+        pendencias += [p for p in proposta.pendencias if p not in pendencias]
+        yield {"type": "edicao_completed", "etapa": etapa, "modo": modo, "motivo": proposta.motivo,
+               "edicoes": edicao_pontual.como_dicts(conserto.aplicadas), "pendencias": pendencias,
+               "timestamp": time.time()}
+        limpo, _ = estado_inicial()
+        # o custo da passada anterior já foi gasto: a seguinte acumula sobre ele
+        if final.get(KEY_CUSTO):
+            limpo[KEY_CUSTO] = final[KEY_CUSTO]
 
     registro = RegistroCorrecao(
         quando=quando,
@@ -772,6 +1044,11 @@ async def executar_correcao_stream(
         chaves_removidas=removidas,
         backup=backup.relative_to(run_dir).as_posix(),
         etapa_sugerida=str(_triagem_como_dict(triagem).get("etapa") or ""),
+        modo=modo if tem_pedido else "",
+        motivo_modo=motivo_modo,
+        edicoes=edicoes,
+        pendencias=pendencias,
+        passadas=passada,
     )
     mensagens: List[Dict[str, Any]] = []
     if tem_pedido and pedido and pedido.texto.strip():

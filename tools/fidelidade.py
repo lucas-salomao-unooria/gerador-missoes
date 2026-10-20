@@ -473,12 +473,25 @@ def _literal_presente(frase: str, documentos_norm: str) -> bool:
 
 def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, str],
             etapa: str = "produto", parcial: bool = False,
-            anteriores: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+            anteriores: Optional[Dict[str, str]] = None,
+            edicoes: Optional[List[Dict[str, Any]]] = None,
+            origens_correntes: Optional[set] = None) -> Dict[str, Any]:
     """`{status, achados, conferidos}` a partir dos itens, da saída do juiz e dos documentos.
 
     `etapa` é a de quem responde pelos documentos: o pedido de refazer do design é conferido nos documentos de
     design, e o achado é dele. `anteriores` (`{chave: texto}`, a versão de antes do refazer) prova as ordens de não
-    mexer: documento inteiro por comparação em código; parte dele pela citação do juiz, idêntica nas duas versões."""
+    mexer: documento inteiro por comparação em código; parte dele pela citação do juiz, idêntica nas duas versões.
+
+    `edicoes` (correção pontual, `tools/edicao_pontual.py`): as trocas que a correção aplicou. Com elas, a ordem de não
+    mexer se prova inteira em código — cada documento é a versão anterior mais as trocas dele, e nada além. Até
+    19/10/2026 "preservar todo o restante sem alteração" era 🔴 sem prova possível (exp03em1b, 13/10/2026).
+
+    `origens_correntes` (numa correção): as origens do pedido desta execução. A ordem de não mexer de outra rodada, ou
+    do briefing, não trava o pedido novo — ele pode mudar exatamente aquilo, e entre dois pedidos vale o mais novo
+    (`pipeline.passagem.notas_de_passagem`). O briefing "trocar APENAS o número" reprovava em 🔴 a migração de DS que
+    o pedido seguinte mandou fazer (exp03em1b, 14/10/2026). Ela fica como atenção, à vista do PO."""
+    from tools import edicao_pontual
+
     anteriores = {k: v for k, v in (anteriores or {}).items() if (v or "").strip()}
     doc_anterior = _norm("\n".join(anteriores.values()))
     doc = _norm("\n".join(documentos.values()))
@@ -490,6 +503,7 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
     decisoes = _decisoes(saida_juiz)
     achados: List[Dict[str, str]] = []
     conferidos: List[Dict[str, str]] = []
+    ordens_antigas: set = set()
 
     def achado(item: Dict[str, str], severidade: str, codigo: str, resumo: str) -> None:
         # `parcial`: o documento é só um pedaço do que o pedido cobre (o núcleo, seções 0/1/3/4). Falta de prova ali é
@@ -497,6 +511,9 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         # de produto. A exp06ef1b (08/10/2026) saía 🔴 no núcleo por «painel docente na Seção 9», com o fim 🟢 25/25.
         if parcial and severidade == "bloqueio" and codigo not in ("pedido-violado", "frase-do-po-alterada"):
             severidade = "atencao"
+        if item["id"] in ordens_antigas and severidade == "bloqueio":
+            severidade = "atencao"
+            resumo = f"[ordem de não mexer de outra rodada — o pedido desta correção prevalece] {resumo}"
         achados.append({"id": item["id"], "severidade": severidade, "codigo": codigo, "etapa": etapa,
                         "origem": item["origem"], "resumo": resumo})
 
@@ -530,6 +547,15 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
                         and all(_citacao_confere(c, doc) and not _norm(c) in _norm(it["texto"]) for c in varias))
         if so_preservacao(it["texto"]) and veredito != "conflito_com_regra":
             # Ordem de não mexer: a prova é a versão anterior, nunca a palavra do juiz (plano padrão ouro, 2.3)
+            provados = [c for c in documentos if c in anteriores]
+            if edicoes is not None and provados and all(
+                    edicao_pontual.reaplicar(anteriores[c], documentos[c], c, edicoes) for c in provados):
+                conferidos.append({"id": it["id"], "texto": trecho, "prova": (
+                    f"correção pontual: {', '.join(provados)} = versão anterior + {len(edicoes)} troca(s) do pedido, "
+                    "nada além")})
+                continue
+            if origens_correntes is not None and it["origem"] not in origens_correntes:
+                ordens_antigas.add(it["id"])
             nomeados = _documentos_nomeados(it["texto"], documentos, anteriores)
             if nomeados:
                 saidas = {c: _diferenca(anteriores[c], documentos[c]) for c in nomeados}

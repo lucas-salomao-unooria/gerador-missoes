@@ -115,6 +115,10 @@ KNOWN_STATE_KEYS = {
     "degradacoes", "heranca_degradada", "agentes_degradados",
     # modo correção (pipeline/reexecucao.py): pedido lido por todo agente, triagem e seu insumo
     "pedido_correcao", "triagem_correcao", "mapa_da_missao",
+    # correção pontual (tools/edicao_pontual.py): o editor, fora da esteira, e o que a linha de base lê
+    "pedido_pontual", "documentos_pontuais", "etapa_da_correcao", "erros_da_edicao", "achados_da_edicao",
+    "edicao_pontual", "edicoes_pontuais", "modo_correcao", "documentos_travados", "linha_de_base",
+    "linha_de_base_report",
     # parecer humano entre etapas (`pipeline/passagem.py`): notas no rodapé, pareceres no dossiê
     "notas_de_passagem", "pareceres_humanos",
     # conversa com as etapas (`pipeline/conversa_etapas.py`): fora da esteira, só o agente de conversa lê

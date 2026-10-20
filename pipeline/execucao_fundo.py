@@ -220,6 +220,10 @@ async def _consumir(run_dir: Path, stream: AsyncGenerator[Dict[str, Any], None],
             elif tipo == "gate_status":
                 dados["gates"] = evento.get("status") or {}
                 mudou = True
+            elif tipo == "edicao_started":
+                # a correção pontual começa pelo editor, fora da esteira (`pipeline/reexecucao.editar`)
+                dados["agente_atual"] = "A000EditorPontual"
+                mudou = True
             elif tipo == "custo_parcial":
                 # o custo ao vivo (`tools/custo.py`): só no disco local, como o resto do progresso
                 dados["custo"] = {"execucao": evento.get("custo") or {}, "missao_antes": evento.get("missao_antes") or {}}

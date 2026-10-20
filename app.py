@@ -1201,8 +1201,10 @@ def _run_async(coro):
 
 
 ETAPAS_DE_CORRECAO = ["produto", "spec", "design", "dev"]
-LEGENDAS_ETAPA = {"produto": "Missão inteira, desde o núcleo (~30 min)", "spec": "Spec + design + dev (~20 min)",
-                  "design": "Design + dev (~15 min)", "dev": "Só dev (~7 min)"}
+#: Com `CORRECAO_PONTUAL` (padrão), o pedido entra como edição e só os gates rodam; o tempo entre parênteses é o do
+#: pedido estrutural, que refaz a etapa pelos autores.
+LEGENDAS_ETAPA = {"produto": "Produto: edição pontual + gates (estrutural: desde o núcleo, ~30 min)",
+                  "spec": "Spec + design + dev (~20 min)", "design": "Design + dev (~15 min)", "dev": "Só dev (~7 min)"}
 
 
 def _iniciar_correcao(user_prompt: str, doc_batch: Optional[DocumentBatch]) -> None:

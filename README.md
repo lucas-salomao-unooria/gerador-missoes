@@ -1,7 +1,9 @@
 # 🌌 Gerador de Missões Unooria — Produto → Design → Dev
 
 
-> 📘 **Manual do Gerador de Missões:** [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 93 páginas com identidade visual Unooria, 4.ª edição. É a documentação para **usar e entender** a esteira; este README é a referência técnica do repositório. Prévia das páginas logo abaixo, em [Manual](#-manual).
+> 📘 **Manual do Gerador de Missões:** [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 107 páginas com identidade visual Unooria, 7.ª edição. É a documentação para **usar e entender** a esteira; este README é a referência técnica do repositório. Prévia das páginas logo abaixo, em [Manual](#-manual).
+>
+> 🗺️ **Fluxograma da esteira:** [`manual-unooria/fluxograma-dos-agentes.pdf`](manual-unooria/fluxograma-dos-agentes.pdf) — os 129 passos (144 blocos) na ordem em que rodam: o que cada agente ou portão faz, o objetivo, o que entra e o que sai (com o arquivo da sessão), os ciclos de correção e os paralelos. Gerado do código por `python scripts/gerar_fluxograma.py`; `test_fluxograma.py` acusa quando fica desatualizado.
 >
 > O manual unifica e substitui os dois documentos anteriores — o [guia de funcionamento](documentacao-latex/guia-do-gerador-de-missoes.pdf) (operação) e o [manual completo e explicativo](manual-gerador-missoes/manual_gerador_missoes.pdf) (fundamentação), mantidos no repositório como histórico.
 
@@ -60,6 +62,9 @@ Sete partes, que não precisam ser lidas na ordem:
 > Toda descrição de agente, portão, variável de ambiente e artefato no manual foi conferida contra o
 > código deste repositório — `agents/`, `config.py`, `prompts/` — e não contra a documentação anterior.
 > Ao mudar a esteira, o catálogo da Parte VI é o primeiro trecho a revisar.
+>
+> **7.ª edição (19/10/2026):** acrescenta a correção pontual (o pedido vira trocas, os autores não reescrevem, a
+> linha de base separa o 🔴 da correção do que ela não tocou) e o retrabalho por trocas nos ciclos de correção da geração.
 >
 > **4.ª edição (08/10/2026):** cobre o one-pager do PO como base preservada, o conteúdo aprovado
 > entregue literal a design e dev e conferido até o PRD, a banca de validação em quatro posições, o
@@ -744,6 +749,21 @@ Cada mensagem numa conversa **nova** é uma missão do zero. Para corrigir uma m
 
 A lógica vive em `pipeline/reexecucao.py` e é a mesma do script `scripts/rerodar_etapa.py` (abaixo). Missão do zero continua pelo botão **➕ Nova Missão**.
 
+#### ✂️ Correção pontual: editar, não reescrever
+
+Desde 19/10/2026 toda correção com pedido — pelo chat ou pelo *Refazer* do parecer — começa como **edição**. Até então cada autor da etapa reescrevia o seu documento a partir da versão anterior, e os gates julgavam a missão inteira com as regras do dia: no acervo, a troca de um número (exp03em1b, "mais de 70%" → "≈47%") devolveu a spec com 49% das linhas iguais, o DS migrado, conceitos renomeados e dois 🔴 que a missão não tinha.
+
+1. **Editor** (`A000EditorPontual`, fora da esteira, `prompts/transversal/editor_pontual.md`): lê o pedido e os documentos da etapa e devolve trocas `{documento, de, para}` — todo lugar onde a decisão mora (núcleo, one-pager, spec, resumido) e as consequências dela (números derivados, regra ternária, transição, evento). Mecânica, regra, lógica de etapa, número, texto e habilidade são edição; descartar a direção da missão é **estrutural**, e aí a etapa é refeita pelos autores como antes.
+2. **Código aplica** (`tools/edicao_pontual.py`): cada `de` tem de existir uma única vez, letra por letra; tudo ou nada. Troca que não se aplica volta ao editor com o motivo (3 tentativas). O que nenhuma troca tocou fica idêntico por construção.
+3. **Gates julgam a missão corrigida**, todos, uma vez (`limitar_a_uma_rodada`): os autores não rodam (`travar_documento_na_correcao_pontual`), e repetir a rodada só julgaria o mesmo texto.
+4. **Linha de base** (`tools/linha_de_base.py`, `A000LinhaDeBase`): cada bloqueio é comparado com o veredito do mesmo gate antes da correção e com as trocas. Fica 🔴 o que cita o texto que as trocas tiraram ou puseram, o que (sem citação) põe esse texto entre aspas ou aponta a seção/etapa editada, o que já bloqueava antes (marcado como pré-existente) e o juiz que não respondeu. Vira 🟡 o que cita trecho que a correção não tocou e o que não se liga às trocas — ruído do juiz ou regra/gate posterior à versão aprovada (na reexecução real da exp03em1b, 9 dos 10 🔴 eram de gates criados depois da aprovação). O relatório é `linha-de-base-da-correcao.md`.
+5. **O que a correção causou volta ao editor** com os relatórios dos gates, e os gates julgam de novo (`CORRECAO_PONTUAL_PASSADAS`, padrão 2 passadas).
+6. **Fidelidade**: a ordem "não mexa no resto" se prova em código — cada documento é a versão anterior mais as suas trocas, e nada além. A ordem de não mexer de **outra** rodada (ou do briefing) não trava o pedido novo: vira 🟡, porque entre dois pedidos vale o mais novo.
+
+**O mesmo padrão na geração nova — retrabalho por trocas.** Quando um gate reprova dentro de um loop (comitês e seções de apoio do one-pager, spec, resumido, handoff, PRD, pedagógico), o autor reemitia o documento inteiro, e o que já tinha passado podia mudar sem nenhum gate conferir de novo. Agora o `SaidaDeLoopAgent` grava o que os gates reprovaram (`retrabalho_<chave>`), e na rodada seguinte o editor transforma isso em trocas (`agents.callbacks.retrabalhar_por_trocas`): o código aplica, o autor não roda, e o que não foi apontado fica idêntico. Se a correção é estrutural, ou as trocas não se aplicam, o autor reescreve como antes. As trocas ficam em `trocas_de_retrabalho`. Vale na geração e no refazer; `RETRABALHO_POR_TROCAS=false` desliga.
+
+`CORRECAO_PONTUAL=false` volta toda correção ao refazer pelos autores.
+
 ### 🔐 Login
 
 O app exige login: quatro contas fixas, uma por papel — `produto`, `design`, `dev` e `admin` —, sem provedor de identidade. A sessão vale **4 h a partir do login** (expiração absoluta) e sobrevive ao recarregar a página: o JWT fica num cookie `SameSite=Strict`, gravado por um componente CCv2 (`tools/cookie_sessao.py`), porque o Streamlit só lê cookies. **Sair** revoga o token (`output/.auth/revogados.json`). Cinco senhas erradas seguidas travam a conta por 5 min.
@@ -783,6 +803,9 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `BNCC_CHECK_ESTRITO` | `true` | Gate determinístico depois da spec: habilidade inexistente, de outro ano ou sem letramento digital trava a esteira. |
 | `PROFUNDIDADE_ESTRITA` | `true` | Profundidade pedagógica reprovada na última rodada do núcleo fica 🔴 e o *de acordo* de produto é recusado. `false` rebaixa a 🟡 com a ressalva, sem mudar notas nem rodadas — para usar enquanto os cortes da rubrica são calibrados contra as revisões do time pedagógico. |
 | `GATE_ESTRUTURAL_MAX_RODADAS` | `3` | Número máximo de ciclos entre o Gate Estrutural e o Revisor do One-pager. |
+| `CORRECAO_PONTUAL` | `true` | Correção de missão já gerada como edição pontual: editor + gates + linha de base, sem reescrever documentos. `false` volta ao refazer pelos autores. Pedido estrutural refaz a etapa nos dois casos. |
+| `RETRABALHO_POR_TROCAS` | `true` | Na rodada de retrabalho de um loop (geração ou correção), o que os gates reprovaram vira trocas no documento; o autor só reescreve quando a correção é estrutural. |
+| `CORRECAO_PONTUAL_PASSADAS` | `2` | Passadas dos gates numa correção pontual; da segunda em diante, o editor conserta o que a correção causou. `1` = sem conserto automático. |
 | `COMITE_MAX_RODADAS` | `5` | Rodadas do comitê dos canais (painéis A e B, unanimidade). Reprovado, a missão volta ao núcleo e às seções de apoio; esgotado, segue 🟡 com os votos vencidos no parecer. |
 | `COMITE_FINAL_MAX_RODADAS` | `2` | Rodadas do comitê final. Cada rodada reprovada refaz a cadeia de produto a partir do núcleo, então o custo multiplica (pior caso: 2 × 5 passagens pelo núcleo); esgotado, segue 🟡. |
 | `OUTPUT_DIR` | `output` | Diretório local para gravação persistente dos artefatos. |

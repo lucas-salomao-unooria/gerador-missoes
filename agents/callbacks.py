@@ -350,6 +350,86 @@ def manter_nucleo_sem_achado_do_a004(callback_context: CallbackContext) -> Optio
         text="⏭️ Núcleo mantido: os comitês não apontaram nada para o A004 nesta rodada; só as seções de apoio corrigem.")])
 
 
+#: Modo da correção corrente (`pipeline/reexecucao.py`): `pontual` trava os autores; ausente na geração e no refazer.
+KEY_MODO_CORRECAO = "modo_correcao"
+#: Documentos cujo autor não roda na correção pontual: o texto deles é o que o editor deixou (`tools/edicao_pontual.py`).
+KEY_DOCUMENTOS_TRAVADOS = "documentos_travados"
+
+
+def travar_documento_na_correcao_pontual(chave: str):
+    """before_agent_callback dos autores: na correção pontual, o documento já editado não é reescrito.
+
+    O `Content` devolvido é o próprio documento — vai para o `output_key` sem mudar uma letra, e o agente não roda.
+    Até 19/10/2026 a correção reexecutava cada autor sobre `anterior_<chave>`, e a troca de um número devolvia a spec
+    com metade das linhas diferentes (exp03em1b, 13/10/2026). Fora da correção pontual, não faz nada.
+    """
+
+    def _travar(callback_context: CallbackContext) -> Optional[types.Content]:
+        state = callback_context.state
+        if state.get(KEY_MODO_CORRECAO) != "pontual" or chave not in (state.get(KEY_DOCUMENTOS_TRAVADOS) or []):
+            return None
+        documento = str(state.get(chave) or "")
+        if not documento.strip():
+            return None
+        return types.Content(role="model", parts=[types.Part(text=documento)])
+
+    _travar.__name__ = f"travar_{chave}_na_correcao_pontual"
+    return _travar
+
+
+#: Trocas aplicadas por retrabalho nos loops: `[{chave, edicoes}]`, para o dossiê e a auditoria.
+KEY_TROCAS_DE_RETRABALHO = "trocas_de_retrabalho"
+#: Rodadas de retrabalho que voltaram ao autor (estrutural, ou trocas que não se aplicaram): `[{chave, motivo}]`.
+KEY_RETRABALHO_AO_AUTOR = "retrabalho_ao_autor"
+#: Troca o editor nos testes (mesma assinatura de `pipeline.reexecucao.propor_edicao`). None = o editor de verdade.
+PROPONENTE_DE_RETRABALHO = None
+
+
+def retrabalhar_por_trocas(chave: str):
+    """before_agent_callback dos autores: na rodada de retrabalho de um loop, o documento é corrigido por trocas.
+
+    Vale na geração e no refazer. Quando um gate reprovava, o autor reemitia o documento inteiro a partir da versão da
+    rodada (`rodada_anterior_<chave>`), e o que já tinha passado podia mudar sem nenhum gate conferir de novo — a mesma
+    deriva que fazia a correção de um número reescrever a spec. Aqui o editor (`tools/edicao_pontual.py`) recebe os
+    relatórios dos gates reprovados (`retrabalho_<chave>`, gravado por `agents.checkers.SaidaDeLoopAgent`) e devolve
+    trocas; o código as aplica e o autor não roda. Se o editor diz que é estrutural, ou as trocas não se aplicam, o
+    autor reescreve como antes. Desligado por `RETRABALHO_POR_TROCAS=false`.
+    """
+
+    async def _retrabalhar(callback_context: CallbackContext) -> Optional[types.Content]:
+        from config import get_settings
+
+        state = callback_context.state
+        motivos = str(state.get(f"retrabalho_{chave}") or "").strip()
+        documento = str(state.get(chave) or "")
+        if not motivos or not documento.strip() or not get_settings().retrabalho_por_trocas:
+            return None
+        from pipeline.reexecucao import editar, validador_do_po
+        from tools.edicao_pontual import como_dicts
+
+        # o voto do comitê pode mudar o texto do PO, mas só com a proposta ao lado ou o voto citado na tabela de
+        # alterações: a troca que o apaga volta ao editor (`tools.one_pager_po.perdidos_pela_edicao`)
+        resultado, proposta = await editar(motivos, "retrabalho", {chave: documento},
+                                           proponente=PROPONENTE_DE_RETRABALHO,
+                                           validador=validador_do_po(state.to_dict() if hasattr(state, "to_dict") else dict(state))
+                                           if chave == "one_pager" else None)
+        # consumido: o próximo autor da mesma chave nesta rodada (o revisor) não refaz a correção
+        state[f"retrabalho_{chave}"] = ""
+        if resultado is None or not resultado.aplicadas:
+            motivo = getattr(proposta, "motivo", "") or "o editor não devolveu troca"
+            logger.info("Retrabalho de %s volta ao autor: %s", chave, motivo)
+            # à vista no estado: quantas rodadas o editor resolveu e quantas voltaram ao autor, e por quê
+            state[KEY_RETRABALHO_AO_AUTOR] = list(state.get(KEY_RETRABALHO_AO_AUTOR) or []) + [
+                {"chave": chave, "motivo": motivo[:400]}]
+            return None
+        state[KEY_TROCAS_DE_RETRABALHO] = list(state.get(KEY_TROCAS_DE_RETRABALHO) or []) + [
+            {"chave": chave, "edicoes": como_dicts(resultado.aplicadas), "pendencias": list(proposta.pendencias)}]
+        return types.Content(role="model", parts=[types.Part(text=resultado.documentos[chave])])
+
+    _retrabalhar.__name__ = f"retrabalhar_{chave}_por_trocas"
+    return _retrabalhar
+
+
 def dispensar_ideacao_com_one_pager_do_po(callback_context: CallbackContext) -> Optional[types.Content]:
     """before_agent_callback da ideação: com o one-pager do PO no estado, não se inventam três mecanismos.
 

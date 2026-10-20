@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional
 
 from google.adk.agents.sequential_agent import SequentialAgent
 
+from agents.checkers import LinhaDeBaseAgent
 from agents.design import DESIGN_METADATA, build_design_stage
 from agents.dev import DEV_METADATA, build_dev_stage
 from agents.produto import PRODUTO_METADATA, PRODUTO_METADATA_SPEC, build_produto_stage
@@ -101,6 +102,7 @@ def create_mission_orchestrator(
     modo_estrito: Optional[bool] = None,
     stages: Optional[List[str]] = None,
     com_transversal: bool = True,
+    modo_pontual: bool = False,
 ) -> SequentialAgent:
     """Cria o orquestrador raiz com as etapas Produto → Design → Dev → Aprendizado.
 
@@ -124,6 +126,15 @@ def create_mission_orchestrator(
         sub_agents.append(build_design_stage(t_budget, inc_thoughts))
     if "dev" in active:
         sub_agents.append(build_dev_stage(t_budget, inc_thoughts))
+    if modo_pontual:
+        # Correção pontual (`pipeline/reexecucao.py`): os documentos já vêm editados e os autores não rodam
+        # (`agents.callbacks.travar_documento_na_correcao_pontual`). Os gates julgam uma vez — repetir a rodada só os
+        # faria julgar o mesmo texto —, e o que a correção causou volta ao editor fora da esteira. No fim, a linha de
+        # base separa o bloqueio da correção do que ela não tocou.
+        for etapa in sub_agents:
+            limitar_a_uma_rodada(etapa)
+        sub_agents.append(LinhaDeBaseAgent(name="A000LinhaDeBase",
+                                           description="Correção pontual: bloqueios dos gates × veredito de antes."))
     # O diagnóstico vem antes do aprendizado: é ele quem monta o dossiê que o aprendizado
     # lê para escrever a leitura em prosa. Ambos rodam sempre — a esteira não aborta mais,
     # e mesmo que abortasse, estes dois são o que explica o que houve.
@@ -174,6 +185,23 @@ def passos_dos_prompts_compartilhados() -> Dict[str, List[str]]:
             if prompt and agente.name not in usos.setdefault(prompt, []):
                 usos[prompt].append(agente.name)
     return usos
+
+
+def limitar_a_uma_rodada(raiz) -> None:
+    """Todo loop da árvore roda uma volta, e cada gate decide na primeira rodada (registra a reprovação, não a adia).
+
+    O comitê fica de fora: na última rodada ele vira 🟡 por desenho, e na correção pontual o voto vencido tem de
+    chegar como 🔴 à linha de base e ao editor.
+    """
+    from google.adk.agents.loop_agent import LoopAgent
+
+    from agents.checkers import ComiteVotosAgent
+
+    for _, agente in iter_agent_tree(raiz):
+        if isinstance(agente, LoopAgent):
+            agente.max_iterations = 1
+        elif not isinstance(agente, ComiteVotosAgent) and isinstance(getattr(agente, "max_rounds", None), int):
+            agente.max_rounds = 1
 
 
 def iter_agent_tree(agent, depth: int = 0):

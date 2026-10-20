@@ -98,6 +98,8 @@ ARTIFACT_FILES = [
     ("rastreabilidade_report", "matriz-de-rastreabilidade.md"),
     # a final do dev, quando existe, substitui a do design no mesmo arquivo (o laço grava na ordem desta lista)
     ("rastreabilidade_dev_report", "matriz-de-rastreabilidade.md"),
+    # a correção pontual: as trocas aplicadas e de onde veio cada bloqueio dos gates (`tools/linha_de_base.py`)
+    ("linha_de_base_report", "linha-de-base-da-correcao.md"),
     ("diagnostico_execucao", "diagnostico-execucao.md"),
     ("aprendizado_registro", "aprendizado.md"),
     ("ficha_catalogo", "catalogo-ficha.md"),

@@ -129,6 +129,21 @@ class AppSettings(BaseSettings):
         default_factory=lambda: _env_bool("BNCC_CHECK_ESTRITO", "true"),
         description="Se true, spec com habilidade BNCC inexistente, de outro ano ou sem letramento digital marca a herança como degradada em design e dev",
     )
+    # Correção de missão já gerada (`pipeline/reexecucao.py`): o pedido vira trocas trecho a trecho e os autores não
+    # reescrevem nada; os gates julgam uma vez e a linha de base separa o 🔴 da correção do que ela não tocou.
+    # Desligado, toda correção reexecuta os autores da etapa, como até 19/10/2026.
+    correcao_pontual: bool = Field(
+        default_factory=lambda: _env_bool("CORRECAO_PONTUAL", "true"),
+        description="Se verdadeiro, a correção de uma missão é aplicada como edição pontual (editor + gates + linha de base); pedido estrutural continua refazendo a etapa",
+    )
+    retrabalho_por_trocas: bool = Field(
+        default_factory=lambda: _env_bool("RETRABALHO_POR_TROCAS", "true"),
+        description="Se verdadeiro, na rodada de retrabalho de um loop (geração ou correção) o que os gates reprovaram vira trocas no documento, e o autor só reescreve quando a correção é estrutural",
+    )
+    correcao_pontual_passadas: int = Field(
+        default_factory=lambda: int(os.getenv("CORRECAO_PONTUAL_PASSADAS", "2")),
+        description="Passadas dos gates numa correção pontual. Na segunda em diante, o editor recebe os bloqueios que a correção causou e acrescenta trocas. 1 = sem conserto automático",
+    )
     produto_modo_estrito: bool = Field(
         default_factory=lambda: _env_bool("PRODUTO_MODO_ESTRITO", "true"),
         description="Se verdadeiro, missão reprovada nos gates de produto marca a herança como degradada para design e dev",
