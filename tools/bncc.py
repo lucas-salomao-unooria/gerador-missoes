@@ -270,7 +270,18 @@ def validar_spec(spec: str, material: str = "") -> Dict[str, Any]:
         primeira = trecho.split("\n", 1)[0].lower()
         primeira = "".join(ch for ch in unicodedata.normalize("NFD", primeira) if unicodedata.category(ch) != "Mn")
         declarado_eixo = next((e for e, nomes in _EIXOS.items() if any(n in primeira for n in nomes)), None)
-        if declarado_eixo and declarado_eixo != hab["eixo"]:
+        # No EM não há eixo oficial (`eixo` é null): "Cultura Digital" num EM13 da lista proposta de
+        # letramento é a leitura da Unooria, não divergência — antes bloqueava com "na BNCC ele é None".
+        # Fora da lista, "Cultura Digital" é declarar letramento que o código não tem: bloqueia.
+        if declarado_eixo and hab["eixo"] is None:
+            if declarado_eixo == "CD" and not hab.get("letramento_digital"):
+                achados.append({"severidade": "bloqueio", "codigo": "eixo-divergente",
+                                "resumo": f"`{c}` aparece como Cultura Digital; no EM não há eixo (competência {hab['competencia']}) "
+                                          f"e ele não está na lista proposta de letramento digital."})
+            elif declarado_eixo != "CD":
+                achados.append({"severidade": "atencao", "codigo": "eixo-no-em",
+                                "resumo": f"`{c}` aparece com eixo, mas o EM não separa por eixo (competência {hab['competencia']})."})
+        elif declarado_eixo and declarado_eixo != hab["eixo"]:
             nomes = {"CD": "Cultura Digital", "MD": "Mundo Digital", "PC": "Pensamento Computacional"}
             achados.append({"severidade": "bloqueio", "codigo": "eixo-divergente",
                             "resumo": f"`{c}` aparece como {nomes[declarado_eixo]}; na BNCC ele é {nomes.get(hab['eixo'], hab['eixo'])}. "

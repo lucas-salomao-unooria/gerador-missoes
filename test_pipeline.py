@@ -4150,6 +4150,19 @@ def test_bncc_confere_eixo_texto_e_o_que_e_declarado():
                   f"| Mundo Digital | `EF06CO07` | *{inventado}* | Etapa 4: o estudante compara dois feeds lado a lado. |\n"
                   f"| Cultura Digital | `EF06CO09` | {of9} | Etapa 5: o estudante escolhe o que publicar. |")
     assert "texto-divergente" in cods(validar_spec(tabela))
+
+    # EM não tem eixo: `EM13CO25` como Cultura Digital é a leitura proposta, não "na BNCC ele é None"
+    of25 = "Dialogar em ambientes virtuais com segurança e respeito às diferenças culturais e pessoais, reconhecendo e denunciando atitudes abusivas."
+    em = f"# Spec\n## 0. Ficha\n- séries: [\"1EM\"]\n## 11. Currículo\n* **`EM13CO25` — Cultura Digital**\n  * **Texto oficial:** {of25}\n  * **Momento em tela:** Etapa 3.\n## 12. Decisões\n"
+    r = validar_spec(em)
+    assert r["status"] == "aprovado" and "eixo-divergente" not in cods(r), r["achados"]
+    assert not any("None" in a["resumo"] for a in r["achados"]), r["achados"]
+    # vale para as três séries, e EM13 fora da lista proposta como Cultura Digital continua bloqueando
+    for s in ("2EM", "3EM"):
+        assert validar_spec(em.replace("1EM", s))["status"] == "aprovado", s
+    from tools.bncc import habilidades
+    fora = em.replace("EM13CO25", "EM13CO01").replace(of25, habilidades()["EM13CO01"]["habilidade"])
+    assert "eixo-divergente" in cods(validar_spec(fora)), validar_spec(fora)["achados"]
     print("   ✓ BNCC: eixo e texto conferidos contra o oficial (ou o material), e letramento só do que é declarado")
 
 
