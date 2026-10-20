@@ -1,7 +1,7 @@
 # 🌌 Gerador de Missões Unooria — Produto → Design → Dev
 
 
-> 📘 **Manual do Gerador de Missões:** [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 93 páginas com identidade visual Unooria, 4.ª edição. É a documentação para **usar e entender** a esteira; este README é a referência técnica do repositório. Prévia das páginas logo abaixo, em [Manual](#-manual).
+> 📘 **Manual do Gerador de Missões:** [`manual-unooria/manual-gerador-missoes.pdf`](manual-unooria/manual-gerador-missoes.pdf) — 107 páginas com identidade visual Unooria, 7.ª edição. É a documentação para **usar e entender** a esteira; este README é a referência técnica do repositório. Prévia das páginas logo abaixo, em [Manual](#-manual).
 >
 > O manual unifica e substitui os dois documentos anteriores — o [guia de funcionamento](documentacao-latex/guia-do-gerador-de-missoes.pdf) (operação) e o [manual completo e explicativo](manual-gerador-missoes/manual_gerador_missoes.pdf) (fundamentação), mantidos no repositório como histórico.
 
@@ -60,6 +60,9 @@ Sete partes, que não precisam ser lidas na ordem:
 > Toda descrição de agente, portão, variável de ambiente e artefato no manual foi conferida contra o
 > código deste repositório — `agents/`, `config.py`, `prompts/` — e não contra a documentação anterior.
 > Ao mudar a esteira, o catálogo da Parte VI é o primeiro trecho a revisar.
+>
+> **7.ª edição (19/10/2026):** acrescenta a correção pontual (o pedido vira trocas, os autores não reescrevem, a
+> linha de base separa o 🔴 da correção do que ela não tocou) e o retrabalho por trocas nos ciclos de correção da geração.
 >
 > **4.ª edição (08/10/2026):** cobre o one-pager do PO como base preservada, o conteúdo aprovado
 > entregue literal a design e dev e conferido até o PRD, a banca de validação em quatro posições, o

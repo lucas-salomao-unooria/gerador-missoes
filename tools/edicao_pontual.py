@@ -29,8 +29,9 @@ DOCUMENTOS_POR_ETAPA: Dict[str, Tuple[str, ...]] = {
 #: Documentos autorais que a etapa tem e o editor não toca: ficam travados como estão (o autor não roda). O mapa e a
 #: ideação são a origem do núcleo; refazê-los numa correção pontual sortearia outro mecanismo.
 TRAVADOS_SEM_EDICAO: Dict[str, Tuple[str, ...]] = {"produto": ("mapa_conceitual", "ideacao_mecanismos")}
-#: Documento maior que isto não vai ao editor: o protótipo HTML chega a centenas de KB e afogaria o resto.
-MAX_CARACTERES_DOCUMENTO = 200_000
+#: Documento maior que isto não vai ao editor. É folga, não corte: os protótipos HTML do acervo têm de 110 a 135 KB, e
+#: 1 milhão de caracteres (~250 mil tokens) ainda cabe no contexto do modelo com os outros documentos da etapa.
+MAX_CARACTERES_DOCUMENTO = 1_000_000
 
 MODO_PONTUAL = "pontual"
 MODO_ESTRUTURAL = "estrutural"

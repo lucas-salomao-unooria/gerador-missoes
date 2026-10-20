@@ -236,6 +236,34 @@ def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "", votos:
             "codigos_removidos": sorted(removidos)}
 
 
+def perdidos_pela_edicao(po: str, antes: str, depois: str, briefing: str = "", pedidos: str = "",
+                         votos: str = "") -> List[str]:
+    """O que uma edição do one-pager faz o PO perder: trecho que estava preservado em `antes` e não está em `depois`,
+    e alteração declarada sem o pedido ou o voto citado. Vazio quando a edição respeita o one-pager do PO.
+
+    É a mesma conferência do gate (`conferir`), aplicada antes de aceitar as trocas do editor
+    (`pipeline.reexecucao.editar`): na geração real da exp03ef1b (19/10/2026), o retrabalho por trocas atendeu ao
+    comitê reescrevendo 6 dos 304 trechos do PO — perguntas do Canal B — sem a proposta ao lado nem o voto citado.
+    """
+    if not (po or "").strip():
+        return []
+    a = conferir(po, antes, briefing, pedidos, votos)
+    d = conferir(po, depois, briefing, pedidos, votos)
+    ja = {_norm(u["texto"]) for u in a.get("perdidas") or []}
+    novos = [f"apaga ou reescreve texto do one-pager do PO: «{u['texto'][:240]}»"
+             for u in d.get("perdidas") or [] if _norm(u["texto"]) not in ja]
+    sem_prova_antes = {x["resumo"] for x in a["achados"] if x["codigo"] == "alteracao-sem-pedido"}
+    novos += [x["resumo"] for x in d["achados"] if x["codigo"] == "alteracao-sem-pedido" and x["resumo"] not in sem_prova_antes]
+    return novos
+
+
+#: O que o editor recebe quando as trocas ferem o one-pager do PO.
+COMO_RESPEITAR_O_PO = (
+    "O one-pager do PO é a missão aprovada: o texto dele não sai. Mantenha cada trecho do PO como está e escreva a "
+    "mudança ao lado, como `[PROPOSTA — validar com PO: …]`; ou, se um voto de comitê ou um pedido do PO a manda "
+    "fazer, registre-a na tabela «Alterações sobre o one-pager do PO» citando entre aspas o trecho do voto ou do pedido.")
+
+
 def relatorio(resultado: Dict[str, Any], missao: str = "") -> str:
     titulo = f"# One-pager do PO × one-pager gerado — {missao or 'missão'}"
     if not resultado.get("aplica") and resultado["status"] == "aprovado":

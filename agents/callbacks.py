@@ -402,11 +402,15 @@ def retrabalhar_por_trocas(chave: str):
         documento = str(state.get(chave) or "")
         if not motivos or not documento.strip() or not get_settings().retrabalho_por_trocas:
             return None
-        from pipeline.reexecucao import editar
+        from pipeline.reexecucao import editar, validador_do_po
         from tools.edicao_pontual import como_dicts
 
+        # o voto do comitê pode mudar o texto do PO, mas só com a proposta ao lado ou o voto citado na tabela de
+        # alterações: a troca que o apaga volta ao editor (`tools.one_pager_po.perdidos_pela_edicao`)
         resultado, proposta = await editar(motivos, "retrabalho", {chave: documento},
-                                           proponente=PROPONENTE_DE_RETRABALHO)
+                                           proponente=PROPONENTE_DE_RETRABALHO,
+                                           validador=validador_do_po(state.to_dict() if hasattr(state, "to_dict") else dict(state))
+                                           if chave == "one_pager" else None)
         # consumido: o próximo autor da mesma chave nesta rodada (o revisor) não refaz a correção
         state[f"retrabalho_{chave}"] = ""
         if resultado is None or not resultado.aplicadas:

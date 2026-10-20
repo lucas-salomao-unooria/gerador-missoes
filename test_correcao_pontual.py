@@ -499,3 +499,61 @@ def test_retrabalho_estrutural_volta_ao_autor():
     contexto.state = {"one_pager": ONE_PAGER}
     with mock.patch.dict(os.environ, {"RETRABALHO_POR_TROCAS": "true"}):
         assert asyncio.run(retrabalhar_por_trocas("one_pager")(contexto)) is None
+
+
+def test_design_inteiro_vai_ao_editor_inclusive_o_prototipo():
+    prototipo = "<html><body>" + ("<div class='tela'>texto</div>\n" * 9000) + "<p>Etapa 5: mais de 70%</p></body></html>"
+    estado = {"jornada_telas": "# Jornada\n\nE5: mais de 70%\n", "copy_strings_revisada": "E5-ALU-01: mais de 70%\n",
+              "prototipo_html": prototipo, "wireframes_cobertura": "# Wireframes\n"}
+    docs = ed.documentos_da_etapa(estado, "design")
+    assert set(docs) == set(estado) and len(prototipo) > 250_000
+    assert "grande demais" not in ed.renderizar(docs) and "<p>Etapa 5: mais de 70%</p>" in ed.renderizar(docs)
+    r = ed.aplicar(docs, [ed.Edicao("prototipo_html", "<p>Etapa 5: mais de 70%</p>", "<p>Etapa 5: cerca de 47%</p>"),
+                          ed.Edicao("copy_strings_revisada", "E5-ALU-01: mais de 70%", "E5-ALU-01: cerca de 47%")])
+    assert r.ok and "cerca de 47%" in r.documentos["prototipo_html"]
+    assert set(ed.travados("design")) >= set(estado)
+
+
+# ------------------------------------------------------------------ o one-pager do PO não perde texto por troca
+PO = ("# One-pager do PO\n\n## 12a. Contrato de evidência\n\n"
+      "**Pergunta:** \"O que significa a palavra DECOMPOSIÇÃO que você usou na missão?\"\n\n"
+      "## 9. Conceitos\n\nO estudante compara as duas notícias e decide qual publicar no mural da turma.\n")
+
+
+def test_troca_que_apaga_texto_do_po_e_detectada():
+    from tools.one_pager_po import perdidos_pela_edicao
+
+    reescrita = PO.replace("O que significa a palavra DECOMPOSIÇÃO que você usou na missão?",
+                           "Como você dividiu a notícia em partes?")
+    assert perdidos_pela_edicao(PO, PO, reescrita) and "DECOMPOSIÇÃO" in perdidos_pela_edicao(PO, PO, reescrita)[0]
+    com_proposta = PO.replace("missão?\"\n", "missão?\" [PROPOSTA — validar com PO: «Como você dividiu a notícia?»]\n")
+    assert perdidos_pela_edicao(PO, PO, com_proposta) == []
+
+
+def test_retrabalho_que_apagaria_o_texto_do_po_volta_ao_editor():
+    import agents.callbacks as cb
+    from agents.callbacks import retrabalhar_por_trocas
+
+    pergunta = "**Pergunta:** \"O que significa a palavra DECOMPOSIÇÃO que você usou na missão?\""
+    respostas = [
+        _proposta(("one_pager", pergunta, "**Pergunta:** \"Como você dividiu a notícia em partes?\"")),
+        _proposta(("one_pager", pergunta,
+                   pergunta + " [PROPOSTA — validar com PO: «Como você dividiu a notícia em partes?»]")),
+    ]
+    erros = []
+
+    async def editor(pedido, etapa, documentos, *, erros_="", achados="", **kw):
+        erros.append(kw.get("erros", ""))
+        return respostas[len(erros) - 1]
+
+    async def editor_compat(pedido, etapa, documentos, *, erros="", achados=""):
+        return await editor(pedido, etapa, documentos, erros=erros, achados=achados)
+
+    contexto = mock.Mock()
+    contexto.state = {"one_pager": PO, "one_pager_po": PO, "retrabalho_one_pager": "B1-1: a pergunta mede memória"}
+    with mock.patch.dict(os.environ, {"RETRABALHO_POR_TROCAS": "true"}), \
+            mock.patch.object(cb, "PROPONENTE_DE_RETRABALHO", editor_compat):
+        conteudo = asyncio.run(retrabalhar_por_trocas("one_pager")(contexto))
+    texto = conteudo.parts[0].text
+    assert "DECOMPOSIÇÃO" in texto and "[PROPOSTA — validar com PO" in texto
+    assert len(erros) == 2 and "foram recusadas" in erros[1] and "DECOMPOSIÇÃO" in erros[1]

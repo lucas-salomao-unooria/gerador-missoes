@@ -576,6 +576,27 @@ def preparar_estado_pontual(
     return limpo, removidas
 
 
+def validador_do_po(estado: Dict[str, Any], pedido_extra: str = ""):
+    """Recusa a troca que faz o one-pager do PO perder texto (`tools.one_pager_po.perdidos_pela_edicao`). None sem PO."""
+    po = str(estado.get("one_pager_po") or "")
+    if not po.strip():
+        return None
+    from tools.comite import texto_votos
+    from tools.one_pager_po import perdidos_pela_edicao
+
+    pedidos = "\n".join(str(p.get("texto") or "") for p in (estado.get(KEY_PEDIDOS_DO_PO) or []) if isinstance(p, dict))
+    brief = str(estado.get("brief_escopo") or "")
+
+    def validar(documentos: Dict[str, str]) -> List[str]:
+        if "one_pager" not in documentos:
+            return []
+        return perdidos_pela_edicao(po, str(estado.get("one_pager") or "") + "\n\n" + brief,
+                                    documentos["one_pager"] + "\n\n" + brief, str(estado.get("briefing") or ""),
+                                    pedidos + "\n" + pedido_extra, texto_votos(estado))
+
+    return validar
+
+
 #: Tentativas do editor quando alguma troca não se aplica (trecho que não existe ou que se repete).
 TENTATIVAS_DO_EDITOR = 3
 
@@ -641,12 +662,13 @@ async def propor_edicao(
 
 async def editar(
     pedido_texto: str, etapa: str, documentos: Dict[str, str], *, achados: str = "",
-    proponente: Any = None,
+    proponente: Any = None, validador: Any = None,
 ) -> Tuple[Any, Any]:
     """`(resultado | None, proposta)`: as trocas aplicadas aos documentos, ou None se o pedido não cabe numa edição.
 
-    O editor tem `TENTATIVAS_DO_EDITOR` chances: troca que não se aplica volta a ele com o motivo. `proponente` troca
-    o editor nos testes (mesma assinatura de `propor_edicao`).
+    O editor tem `TENTATIVAS_DO_EDITOR` chances: troca que não se aplica volta a ele com o motivo, e também a que o
+    `validador` recusa (`validador(documentos_novos) -> [falhas]`, ex.: texto do one-pager do PO apagado).
+    `proponente` troca o editor nos testes (mesma assinatura de `propor_edicao`).
     """
     from tools.edicao_pontual import MODO_ESTRUTURAL, Proposta, aplicar
 
@@ -658,6 +680,15 @@ async def editar(
         if not proposta.pontual:
             return None, proposta
         resultado = aplicar(documentos, proposta.edicoes)
+        if resultado.ok and validador is not None:
+            recusas = list(validador(resultado.documentos) or [])
+            if recusas:
+                from tools.one_pager_po import COMO_RESPEITAR_O_PO
+
+                erros = ("## Suas trocas da tentativa anterior foram recusadas\n\nNenhuma foi aplicada. "
+                         + COMO_RESPEITAR_O_PO + " Refaça a lista inteira corrigindo isto:\n\n"
+                         + "\n".join(f"- {r}" for r in recusas))
+                continue
         if resultado.ok:
             return resultado, proposta
         erros = ("## Suas trocas da tentativa anterior não se aplicaram\n\nNenhuma foi aplicada. Refaça a lista "
@@ -899,7 +930,10 @@ async def executar_correcao_stream(
     modo, motivo_modo = "refazer", ""
     if settings.correcao_pontual and tem_pedido and pedido and documentos:
         yield {"type": "edicao_started", "etapa": etapa, "passada": 1, "timestamp": time.time()}
-        resultado, proposta = await editar(texto_para_o_editor(pedido), etapa, documentos, proponente=proponente)
+        # o texto do one-pager do PO só sai pelo pedido dele: a troca que o apaga sem isso volta ao editor
+        guarda = validador_do_po({**estado, KEY_PEDIDOS_DO_PO: _pedidos_do_po(conversa)}, texto_para_o_editor(pedido))
+        resultado, proposta = await editar(texto_para_o_editor(pedido), etapa, documentos, proponente=proponente,
+                                           validador=guarda)
         if resultado is not None:
             modo, documentos = edicao_pontual.MODO_PONTUAL, resultado.documentos
             edicoes, pendencias = edicao_pontual.como_dicts(resultado.aplicadas), list(proposta.pendencias)
@@ -979,7 +1013,9 @@ async def executar_correcao_stream(
         yield {"type": "edicao_started", "etapa": etapa, "passada": passada + 1, "bloqueios": len(novos),
                "timestamp": time.time()}
         conserto, proposta = await editar(texto_para_o_editor(pedido), etapa, documentos,
-                                          achados=achados_para_o_editor(novos, final), proponente=proponente)
+                                          achados=achados_para_o_editor(novos, final), proponente=proponente,
+                                          validador=validador_do_po({**final, "one_pager": documentos.get("one_pager", "")},
+                                                                    texto_para_o_editor(pedido)))
         if conserto is None or not conserto.aplicadas:
             pendencias += [p for p in getattr(proposta, "pendencias", []) if p not in pendencias]
             yield {"type": "edicao_completed", "etapa": etapa, "modo": "sem-conserto", "motivo": proposta.motivo,
