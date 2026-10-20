@@ -4157,6 +4157,12 @@ def test_bncc_confere_eixo_texto_e_o_que_e_declarado():
     r = validar_spec(em)
     assert r["status"] == "aprovado" and "eixo-divergente" not in cods(r), r["achados"]
     assert not any("None" in a["resumo"] for a in r["achados"]), r["achados"]
+    # vale para as três séries, e EM13 fora da lista proposta como Cultura Digital continua bloqueando
+    for s in ("2EM", "3EM"):
+        assert validar_spec(em.replace("1EM", s))["status"] == "aprovado", s
+    from tools.bncc import habilidades
+    fora = em.replace("EM13CO25", "EM13CO01").replace(of25, habilidades()["EM13CO01"]["habilidade"])
+    assert "eixo-divergente" in cods(validar_spec(fora)), validar_spec(fora)["achados"]
     print("   ✓ BNCC: eixo e texto conferidos contra o oficial (ou o material), e letramento só do que é declarado")
 
 
