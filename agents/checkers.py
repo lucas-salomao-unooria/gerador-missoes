@@ -1658,7 +1658,8 @@ class FidelidadeCheckAgent(BaseAgent):
 
     O código monta o checklist — TRAVAS, AJUSTES e perguntas de VALIDAÇÃO de todos os pedidos de
     refazer, frases entre aspas, e o direcionamento, os passos e os elementos fixos do briefing —, o
-    juiz (sub-agente) responde item a item com citação, e o código confere frase literal e citação.
+    juiz (sub-agente) responde item a item com citação, e o código confere frase literal e citação. O
+    intérprete (segundo sub-agente, opcional) lê só o pedido e separa o texto ditado do texto a tirar.
     Sem nada a conferir, o juiz não roda. Pedido do PO sem prova é 🔴: no fim de produto, isso
     recusa o *de acordo*; no laço do núcleo, devolve o núcleo ao autor com o relatório.
     """
@@ -1672,6 +1673,7 @@ class FidelidadeCheckAgent(BaseAgent):
     parcial: bool = False
     entrada_key: str = "fidelidade_entrada"
     documentos_key: str = "fidelidade_documentos"
+    interpretacao_entrada_key: str = "interpretacao_entrada"
     #: Só os pedidos de refazer destas etapas (`pedidos_do_po[].etapa`; `""` = registro antigo, sem etapa); vazio =
     #: todos. Até 07/10/2026 o checklist de produto juntava os refazer de todas as etapas — o «AJUSTE 1 — botão da
     #: E3-ALU-02» pedido ao design reprovava o núcleo num refazer de produto seguinte —, e um refazer de design ou
@@ -1724,6 +1726,21 @@ class FidelidadeCheckAgent(BaseAgent):
                 yield evento
             saida = str(ctx.session.state.get(getattr(juiz, "output_key", "") or "", "") or "")
 
+        # O intérprete lê só o pedido e diz que texto o PO mandou pôr e tirar — qualquer que seja o verbo, com ou sem
+        # aspas; o código confere cada trecho no item e no documento (`tools.fidelidade.interpretacao`).
+        lidos: Dict[str, Dict[str, Any]] = {}
+        do_po = fid.para_o_interprete(itens)
+        if do_po and docs and len(self.sub_agents) > 1:
+            entrada_po = json.dumps(do_po, ensure_ascii=False, indent=1)
+            state[self.interpretacao_entrada_key] = entrada_po
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                        actions=EventActions(state_delta={self.interpretacao_entrada_key: entrada_po}))
+            interprete = self.sub_agents[1]
+            async for evento in interprete.run_async(ctx):
+                yield evento
+            lidos = fid.interpretacao(
+                str(ctx.session.state.get(getattr(interprete, "output_key", "") or "", "") or ""), itens)
+
         from pipeline.reexecucao import PREFIXO_VERSAO_ANTERIOR
 
         anteriores = {k: str(state.get(f"{PREFIXO_VERSAO_ANTERIOR}{k}") or "") for k in docs}
@@ -1734,7 +1751,7 @@ class FidelidadeCheckAgent(BaseAgent):
         edicoes = (list(state.get("edicoes_pontuais") or [])
                    if state.get(KEY_MODO_CORRECAO) == "pontual" else None)
         resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa, parcial=self.parcial, anteriores=anteriores,
-                                edicoes=edicoes, origens_correntes=correntes)
+                                edicoes=edicoes, origens_correntes=correntes, interpretacao=lidos)
         relatorio = fid.relatorio(resultado, itens, missao, self.onde)
         envelope = extrair_envelope(relatorio) or {}
         bloqueios = sum(1 for a in resultado["achados"] if a["severidade"] == "bloqueio")
@@ -1750,6 +1767,7 @@ class FidelidadeCheckAgent(BaseAgent):
                         f"{self.status_key}_envelope": envelope,
                         self.entrada_key: "",
                         self.documentos_key: "",
+                        self.interpretacao_entrada_key: "",
                     }))
 
 

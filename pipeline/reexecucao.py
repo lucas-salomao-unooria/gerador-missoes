@@ -77,7 +77,7 @@ CHAVES_DEV = frozenset({
     "conteudo_aprovado_pedagogico_status_envelope", "pedagogico_rodada",
     "juiz_telemetria_saida",
     # o refazer de dev conferido nos documentos de dev (07/10/2026)
-    "fidelidade_dev_report", "fidelidade_dev_status", "fidelidade_dev_status_envelope", "juiz_fidelidade_dev_saida",
+    "fidelidade_dev_report", "fidelidade_dev_status", "fidelidade_dev_status_envelope", "juiz_fidelidade_dev_saida", "interpretacao_fidelidade_dev_saida",
     # a matriz final, com chave própria para entrar no semáforo de dev (07/10/2026)
     "rastreabilidade_dev_report", "rastreabilidade_dev_status", "rastreabilidade_dev_status_envelope",
     # o corpo do PRD × conteúdo aprovado, pelo juiz de contradições (08/10/2026)
@@ -106,7 +106,7 @@ CHAVES_DESIGN = frozenset({
     "qa_afirmacoes_report", "qa_afirmacoes_status", "qa_afirmacoes_status_envelope",
     # o refazer de design conferido nos documentos de design (07/10/2026)
     "fidelidade_design_report", "fidelidade_design_status", "fidelidade_design_status_envelope",
-    "juiz_fidelidade_design_saida",
+    "juiz_fidelidade_design_saida", "interpretacao_fidelidade_design_saida",
     # a spec consolidada pelo D0/D9 × one-pager aprovado (07/10/2026)
     "conteudo_aprovado_spec_design_report", "conteudo_aprovado_spec_design_status",
     "conteudo_aprovado_spec_design_status_envelope",
@@ -126,6 +126,7 @@ CHAVES_SPEC = frozenset({
     "perguntas_report", "perguntas_status", "perguntas_status_envelope",
     # a fidelidade final roda também na correção a partir da spec
     "fidelidade_report", "fidelidade_status", "fidelidade_status_envelope", "juiz_fidelidade_saida",
+    "interpretacao_fidelidade_saida",
     "juiz_perguntas_report", "juiz_perguntas_status", "juiz_perguntas_status_envelope",
     "juiz_perguntas_rodada", "juiz_evidencia_saida",
     "rastro_spec_report", "rastro_spec_status", "rastro_spec_status_envelope",
@@ -147,7 +148,7 @@ CHAVES_PRODUTO = frozenset({
     "profundidade_report", "profundidade_status", "profundidade_status_envelope", "profundidade_rodada",
     "fidelidade_nucleo_report", "fidelidade_nucleo_status", "fidelidade_nucleo_status_envelope",
     "mecanica_report", "mecanica_status", "mecanica_status_envelope",
-    "juiz_fidelidade_nucleo_saida",
+    "juiz_fidelidade_nucleo_saida", "interpretacao_fidelidade_nucleo_saida",
     "nucleo_rodada",
     "missoes_vizinhas", "catalogo_indice_status", "catalogo_indice_status_envelope",
     # `one_pager_gate0` só é gravado se não existe (`agents.callbacks.preservar_one_pager`): sem cair aqui, o
@@ -188,7 +189,7 @@ CHAVES_TRANSVERSAL = frozenset({
 #: a originam (`conteudo_aprovado_base_design`, `conteudo_aprovado_base_dev`) ficam de propósito fora de toda
 #: lista: têm de sobreviver ao refazer de produto para dizer o que mudou nele.
 CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_rota", "juiz_achados_entrada",
-                             "fidelidade_entrada", "fidelidade_documentos", "mudancas_no_aprovado",
+                             "fidelidade_entrada", "fidelidade_documentos", "interpretacao_entrada", "mudancas_no_aprovado",
                              "etapa_da_correcao", "escopo_banca", KEY_AGENTES_DEGRADADOS,
                              "contradicoes_documento", "contradicoes_referencia",
                              # a versão da rodada anterior de cada loop: some ao sair do loop, e aqui se a execução caiu

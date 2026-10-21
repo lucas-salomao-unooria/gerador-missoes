@@ -385,6 +385,53 @@ def para_o_juiz(itens: List[Dict[str, str]]) -> List[Dict[str, str]]:
             for i in itens if i["tipo"] != "literal"]
 
 
+def para_o_interprete(itens: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    """O que o intérprete lê: só os itens do PO — o briefing não manda trocar texto."""
+    return [{"id": i["id"], "origem": i["origem"], "texto": i["texto"]}
+            for i in itens if i["tipo"] != "literal" and i["origem"] != "briefing"]
+
+
+def interpretacao(saida: str, itens: List[Dict[str, str]]) -> Dict[str, Dict[str, Any]]:
+    """`{id: {inserir, remover, outras_exigencias, cabecalho}}` lido da resposta do intérprete, conferido em código.
+
+    O PO dita texto de mil jeitos («usar: X», «passa a ser X», «Atingiu: X»), e a regra do texto ditado só via aspas:
+    na exp03em1b (21/10/2026) o texto novo estava no documento letra por letra e a fidelidade saiu 🔴 por
+    `citou-o-pedido`. O intérprete (LLM determinístico, sem ver os documentos) diz o que é texto a pôr e o que é texto
+    a tirar; o código só aceita trecho que está, letra por letra, no item. O resto é descartado e o item segue como era.
+    """
+    textos = {i["id"]: _norm(i["texto"]) for i in para_o_interprete(itens)}
+    dados: Dict[str, Any] = {}
+    for bruto in reversed(re.findall(r"```json\s*(.*?)```", saida or "", re.S)):
+        try:
+            dados = json.loads(bruto)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(dados, dict) and isinstance(dados.get("itens"), list):
+            break
+        dados = {}
+    lidos: Dict[str, Dict[str, Any]] = {}
+    for d in dados.get("itens") or []:
+        if not isinstance(d, dict) or str(d.get("id")) not in textos:
+            continue
+        alvo = textos[str(d.get("id"))]
+
+        def do_item(chave: str, minimo: int) -> List[str]:
+            return [str(t) for t in (d.get(chave) or []) if isinstance(t, str)
+                    and len(_norm(t)) >= minimo and _norm(t) in alvo]
+
+        inserir = do_item("inserir", MIN_CITACAO)
+        # o lado velho de uma troca é curto («eixo zero»), mas uma palavra solta casaria em qualquer lugar
+        remover = [t for t in do_item("remover", 8) if _palavras(t) >= 2
+                   and not any(_norm(t) in _norm(s) or _norm(s) in _norm(t) for s in inserir)]
+        lidos[str(d.get("id"))] = {
+            "inserir": inserir, "remover": remover,
+            # na dúvida o item pede mais do que os trechos: a prova em código não basta
+            "outras_exigencias": d.get("outras_exigencias") is not False,
+            "cabecalho": d.get("cabecalho") is True and not inserir and not remover,
+        }
+    return lidos
+
+
 #: Objetos de uma ordem de não mexer que têm gate de preservação próprio em código (linhas perdidas, conteúdo
 #: aprovado, rastreabilidade, registro do Stitch, consistência do Canal B e dos estados). Sem citação, a ordem sobre
 #: um destes fica 🟡 — o gate dele confere; sobre qualquer outra coisa (mecânica, regra, narrativa), 🔴.
@@ -475,7 +522,8 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
             etapa: str = "produto", parcial: bool = False,
             anteriores: Optional[Dict[str, str]] = None,
             edicoes: Optional[List[Dict[str, Any]]] = None,
-            origens_correntes: Optional[set] = None) -> Dict[str, Any]:
+            origens_correntes: Optional[set] = None,
+            interpretacao: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
     """`{status, achados, conferidos}` a partir dos itens, da saída do juiz e dos documentos.
 
     `etapa` é a de quem responde pelos documentos: o pedido de refazer do design é conferido nos documentos de
@@ -489,7 +537,12 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
     `origens_correntes` (numa correção): as origens do pedido desta execução. A ordem de não mexer de outra rodada, ou
     do briefing, não trava o pedido novo — ele pode mudar exatamente aquilo, e entre dois pedidos vale o mais novo
     (`pipeline.passagem.notas_de_passagem`). O briefing "trocar APENAS o número" reprovava em 🔴 a migração de DS que
-    o pedido seguinte mandou fazer (exp03em1b, 14/10/2026). Ela fica como atenção, à vista do PO."""
+    o pedido seguinte mandou fazer (exp03em1b, 14/10/2026). Ela fica como atenção, à vista do PO.
+
+    `interpretacao` (`interpretacao(saida_do_interprete, itens)`): o texto que cada item do PO manda pôr e tirar. Item
+    sem outra exigência se prova em código — o texto ditado no corpo do documento, o texto a tirar fora dele —, com ou
+    sem aspas e qualquer que seja o verbo. Texto a tirar que ficou é bloqueio. O cabeçalho que só anuncia os itens
+    seguintes vale pela prova deles (exp03em1b, 21/10/2026)."""
     from tools import edicao_pontual
 
     anteriores = {k: v for k, v in (anteriores or {}).items() if (v or "").strip()}
@@ -500,6 +553,7 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
     from tools.one_pager_po import _sem_secoes_que_nao_contam
 
     corpo = _norm("\n".join(_sem_secoes_que_nao_contam(d) for d in documentos.values()))
+    corpo_anterior = _norm("\n".join(_sem_secoes_que_nao_contam(d) for d in anteriores.values()))
     decisoes = _decisoes(saida_juiz)
     achados: List[Dict[str, str]] = []
     conferidos: List[Dict[str, str]] = []
@@ -604,12 +658,45 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
                        f"Ordem de não mexer sobre o que nenhum gate preserva, sem trecho idêntico nas duas versões: "
                        f"«{trecho}». {explicacao}")
             continue
+        lido = (interpretacao or {}).get(it["id"]) or {}
+        inserir, remover = lido.get("inserir") or [], lido.get("remover") or []
+        if remover and veredito != "conflito_com_regra":
+            # O texto a tirar conta no corpo, fora do texto novo que o contém («eixo» dentro de «eixo zero»). Ele pode
+            # existir em outro lugar da missão por direito («nota metodológica» sai do critério e fica na mecânica):
+            # com a versão anterior, só fica se nenhuma ocorrência saiu; sem ela, é atenção, nunca bloqueio.
+            def fora_do_novo(texto: str) -> str:
+                for s in inserir:
+                    texto = texto.replace(_norm(s), " ")
+                return texto
+
+            agora = fora_do_novo(corpo)
+            presentes = [r for r in remover if _norm(r) in agora]
+            if presentes and corpo_anterior:
+                antes = fora_do_novo(corpo_anterior)
+                ficou = [r for r in presentes if agora.count(_norm(r)) >= antes.count(_norm(r))]
+                if ficou:
+                    achado(it, "bloqueio" if do_po else "atencao", "remocao-nao-aplicada",
+                           f"O pedido manda tirar «{ficou[0][:160]}», e nenhuma ocorrência saiu do documento: «{trecho}».")
+                    continue
+            elif presentes:
+                achado(it, "atencao", "remocao-a-conferir",
+                       f"O pedido manda tirar «{presentes[0][:160]}», e o trecho ainda aparece no documento — confira se "
+                       f"é o mesmo lugar: «{trecho}».")
+                continue
+        texto_lido_prova = (bool(inserir or remover) and not lido.get("outras_exigencias", True)
+                            and veredito not in ("violado", "conflito_com_regra")
+                            and all(_trecho_confere(s, corpo) for s in inserir))
         if veredito == "atendido" and _citacao_confere(citacao, doc) and not _norm(citacao) in _norm(it["texto"]):
             conferidos.append({"id": it["id"], "texto": trecho, "prova": citacao[:240]})
         elif todas_provam:
             conferidos.append({"id": it["id"], "texto": trecho, "prova": " · ".join(c[:120] for c in varias)[:400]})
         elif ditado or sem_exigencia:
             conferidos.append({"id": it["id"], "texto": trecho, "prova": citacao[:240]})
+        elif texto_lido_prova:
+            # o texto que o PO ditou, com ou sem aspas, está no corpo; o que mandou tirar, não
+            prova = (f"texto ditado no documento: {' · '.join(s[:120] for s in inserir)}" if inserir
+                     else f"texto retirado do documento: {' · '.join(r[:120] for r in remover)}")
+            conferidos.append({"id": it["id"], "texto": trecho, "prova": prova[:400]})
         elif veredito == "contexto" and (not _RE_ACAO.search(it["texto"]) or _RE_REMETE_A_LISTA.search(it["texto"])):
             # título ou contexto do pedido, sem verbo de ação: não há o que provar
             conferidos.append({"id": it["id"], "texto": trecho, "prova": "(contexto do pedido, sem exigência)"})
@@ -631,6 +718,22 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         else:
             achado(it, "bloqueio" if do_po else "atencao", "nao-tratado" if veredito else "nao-julgado",
                    f"{'Pedido do PO' if do_po else 'Elemento do briefing'} sem prova de que foi aplicado: «{trecho}». {explicacao}")
+    # O cabeçalho que só anuncia os itens seguintes («Corrigir os critérios das seguintes habilidades.») não tem trecho
+    # próprio no documento: vale pela prova dos itens do mesmo pedido, quando todos a têm.
+    provados = {c["id"] for c in conferidos}
+    sem_prova_propria = ("sem-prova", "citou-o-pedido", "nao-tratado", "nao-julgado", "exigencia-dispensada")
+    cabecalhos = {i for i, lido in (interpretacao or {}).items() if lido.get("cabecalho")}
+    for it in itens:
+        if it["id"] not in cabecalhos:
+            continue
+        meus = [a for a in achados if a["id"] == it["id"]]
+        # os outros cabeçalhos não contam: dois títulos sem prova própria não se travam um ao outro
+        irmaos = [i["id"] for i in itens if i["origem"] == it["origem"] and i["id"] not in cabecalhos]
+        if meus and irmaos and all(a["codigo"] in sem_prova_propria for a in meus) \
+                and all(i in provados for i in irmaos):
+            achados = [a for a in achados if a["id"] != it["id"]]
+            conferidos.append({"id": it["id"], "texto": it["texto"][:240],
+                               "prova": f"cabeçalho do pedido: os {len(irmaos)} item(ns) que ele anuncia têm prova"})
     if any(a["severidade"] == "bloqueio" for a in achados):
         status = "bloqueado"
     else:
