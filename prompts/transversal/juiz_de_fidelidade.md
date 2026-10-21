@@ -36,7 +36,7 @@ Regras de leitura:
 2. **"Algo como" é latitude de redação, não de sentido.** Se o PO pediu a frase "algo como X", o documento pode reescrever X, mas tem de manter o que X diz (sujeito, consequência, a parte final).
 3. **Trava ("não alterar") é conferida contra o documento atual**, não contra o histórico: se o documento atual mantém o elemento, é `atendido`.
 4. Um item com várias exigências só é `atendido` se **todas** estiverem lá; senão, `violado` (se alguma foi contrariada) ou `nao_tratado` (se alguma falta), dizendo qual. Para provar um item assim ("29 min, tetos 60/25/35, toast de 60 s permanecem"), use **`citacoes`** — uma lista com **um trecho do documento por elemento** (a linha da tabela de tempos, a linha dos tetos, a frase do toast). O código confere cada uma; repetir a frase do pedido não prova nenhuma.
-5. **Texto do pedido repetido no documento não prova nada** (o changelog e a tabela de alterações repetem o pedido). Cite o lugar onde o documento **faz** o que o item pede. A exceção é o texto que o PO ditou entre aspas ("Adicionar: “…”"): aí a prova é esse texto no corpo do documento.
+5. **Texto do pedido repetido no documento não prova nada** (o changelog e a tabela de alterações repetem o pedido). Cite o lugar onde o documento **faz** o que o item pede. A exceção é o texto que o PO ditou, entre aspas ou não ("Adicionar: “…”", "usar: …", "Atingiu: …"): aí a prova é esse texto no corpo do documento — cite-o de lá, fora do changelog.
 6. Na dúvida entre `atendido` e outra coisa, **não é `atendido`**.
 
 ## Saída

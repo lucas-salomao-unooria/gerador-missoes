@@ -48,6 +48,14 @@ def get_fidelidade_check(nome: str, *, status_key: str, report_key: str, documen
         output_key=f"juiz_{base}_saida",
         **kw,
     )
+    interprete = create_llm_agent(
+        name=f"{nome}Interprete",
+        deterministico=True,  # lê o pedido: mesmo pedido, mesma leitura
+        description="Lê só o pedido do PO e separa, item a item, o texto que ele ditou do texto que mandou tirar — qualquer verbo, com ou sem aspas.",
+        instruction=load_prompt("transversal/interprete_do_pedido.md"),
+        output_key=f"interpretacao_{base}_saida",
+        **kw,
+    )
     return FidelidadeCheckAgent(
         parcial=parcial,
         name=nome,
@@ -56,7 +64,7 @@ def get_fidelidade_check(nome: str, *, status_key: str, report_key: str, documen
         status_key=status_key, report_key=report_key, documentos=list(documentos), onde=onde,
         etapas_pedido=list(etapas_pedido or []), com_briefing=com_briefing, etapa=etapa,
         incluir_corrente=incluir_corrente,
-        sub_agents=[juiz],
+        sub_agents=[juiz, interprete],
     )
 
 

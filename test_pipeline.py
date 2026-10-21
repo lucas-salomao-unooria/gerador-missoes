@@ -57,7 +57,7 @@ KNOWN_STATE_KEYS = {
     "briefing", "nucleo_narrativo", "micro_gate_report", "micro_gate_status", "micro_gate_rodada",
     "mapa_conceitual", "ideacao_mecanismos", "cobertura_report", "profundidade_report", "profundidade_status",
     "profundidade_rodada", "nucleo_rodada",
-    "fidelidade_nucleo_report", "fidelidade_report", "fidelidade_entrada", "fidelidade_documentos", "mecanica_report",
+    "fidelidade_nucleo_report", "fidelidade_report", "fidelidade_entrada", "fidelidade_documentos", "interpretacao_entrada", "mecanica_report",
     "one_pager", "gate_estrutural_report", "gate_estrutural_status", "gate_estrutural_rodada",
     "contrato_produto_report", "contrato_produto_status",
     "avaliacao_pedagogica_report", "experiencia_aluno_report", "adequacao_report", "gate_final_report", "gate_final_status",
@@ -79,7 +79,8 @@ KNOWN_STATE_KEYS = {
     "comite_final_report", "comite_canal_a_curriculo", "comite_canal_a_medida", "comite_canal_a_vivencia",
     "comite_canal_b_curriculo", "comite_canal_b_medida", "comite_canal_b_experiencia", "comite_final_pedagogia",
     "comite_final_qualidade", "comite_final_imersao",
-    "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida",
+    "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida", "interpretacao_fidelidade_saida",
+    "interpretacao_fidelidade_nucleo_saida", "interpretacao_fidelidade_design_saida", "interpretacao_fidelidade_dev_saida",
     # a banca nas quatro posições (08/10/2026)
     *("rodada_anterior_" + c for c in ("spec_missao", "one_pager_resumido", "handoff_dev", "brief_assets",
                                        "prd_final", "one_pager_pedagogico", "banco_conteudo", "mapa_conceitual",
@@ -5175,3 +5176,95 @@ def test_animacao_pinta_o_veredito_e_marca_o_que_nao_precisou_rodar():
                         gates={"gate_estrutural_status": "bloqueado", "bncc_status": "amarelo"}, escuro=True)
     assert 'class="p vermelho"' in h and 'class="p amarelo"' in h and "não precisou rodar" in h
     assert "class='esteira escuro'" in h
+
+
+def test_fidelidade_entende_texto_ditado_sem_aspas_pelo_interprete():
+    """exp03em1b (21/10/2026): o PO ditou o critério novo sem aspas («Remover “X” e usar: Y»), a correção aplicou Y
+    letra por letra e a fidelidade saiu 🔴 por `citou-o-pedido`. O intérprete (LLM, só o pedido) diz o que é texto a pôr
+    e a tirar; o código confere cada trecho no item e no documento."""
+    import json as _json
+
+    from tools import fidelidade as fid
+
+    origem = "refazer Produto · produto · 21/10/2026 15:49:07"
+    novo = "marcou corretamente no checklist os elementos de truncamento de eixo e recorte de escala como vetores de distorção"
+    velho = "associando a desmontagem geométrica"
+    itens = [
+        {"id": "F1", "origem": origem, "tipo": "pedido",
+         "texto": "Corrigir os critérios ternários do Canal A das seguintes habilidades."},
+        {"id": "F2", "origem": origem, "tipo": "pedido",
+         "texto": f"Remover “{velho}” e usar: {novo}."},
+        {"id": "F3", "origem": origem, "tipo": "pedido",
+         "texto": "Em processo: Abriu o anexo somente após o nudge do sistema e não voltou à base."},
+    ]
+    anterior = {"one_pager": f"**Atingiu:** Desmonta o gráfico {velho}.\n**Em processo:** Abre o anexo tarde."}
+    docs = {"one_pager": f"**Atingiu:** {novo[0].upper()}{novo[1:]}.\n"
+                         "**Em processo:** Abriu o anexo somente após o nudge do sistema e não voltou à base."}
+    juiz = "```json\n" + _json.dumps({"decisoes": [
+        {"id": "F1", "veredito": "atendido", "citacao": "Corrigir os critérios ternários do Canal A das seguintes habilidades."},
+        {"id": "F2", "veredito": "atendido", "citacao": novo},
+        {"id": "F3", "veredito": "atendido", "citacao": "Abriu o anexo somente após o nudge do sistema e não voltou à base."},
+    ]}, ensure_ascii=False) + "\n```"
+
+    def leitura(**por_id):
+        base = {"F1": {"cabecalho": True}, "F2": {"inserir": [novo], "remover": [velho], "outras_exigencias": False},
+                "F3": {"inserir": ["Abriu o anexo somente após o nudge do sistema e não voltou à base."],
+                       "outras_exigencias": False}}
+        base.update(por_id)
+        return "```json\n" + _json.dumps({"itens": [{"id": k, **v} for k, v in base.items()]}, ensure_ascii=False) + "\n```"
+
+    # sem o intérprete, o que a esteira fazia: a citação está no documento, mas também no pedido
+    r = fid.aplicar(itens, juiz, docs, anteriores=anterior)
+    assert {(a["id"], a["codigo"]) for a in r["achados"]} == {("F1", "citou-o-pedido"), ("F2", "citou-o-pedido")}
+    # com ele: texto ditado no corpo, texto velho fora, e o cabeçalho vale pela prova dos itens que anuncia
+    r = fid.aplicar(itens, juiz, docs, anteriores=anterior, interpretacao=fid.interpretacao(leitura(), itens))
+    assert r["status"] == "aprovado", r["achados"]
+    prova = {c["id"]: c["prova"] for c in r["conferidos"]}
+    assert prova["F2"].startswith("texto ditado no documento") and prova["F1"].startswith("cabeçalho do pedido")
+
+    # o texto velho ficou: bloqueio, mesmo com o novo no lugar
+    com_velho = {"one_pager": docs["one_pager"] + f"\nO aluno desmonta o gráfico {velho}."}
+    r = fid.aplicar(itens, juiz, com_velho, anteriores=anterior, interpretacao=fid.interpretacao(leitura(), itens))
+    assert ("F2", "remocao-nao-aplicada", "bloqueio") in {(a["id"], a["codigo"], a["severidade"]) for a in r["achados"]}
+    # ...a não ser que tenha saído do lugar pedido e fique só onde já estava por direito
+    anterior2 = {"one_pager": anterior["one_pager"] + f"\nNa mecânica, o aluno vai {velho}."}
+    docs2 = {"one_pager": docs["one_pager"] + f"\nNa mecânica, o aluno vai {velho}."}
+    assert fid.aplicar(itens, juiz, docs2, anteriores=anterior2,
+                       interpretacao=fid.interpretacao(leitura(), itens))["status"] == "aprovado"
+    # sem versão anterior não há como contar: atenção, nunca bloqueio
+    r = fid.aplicar(itens, juiz, docs2, interpretacao=fid.interpretacao(leitura(), itens))
+    assert ("F2", "remocao-a-conferir", "atencao") in {(a["id"], a["codigo"], a["severidade"]) for a in r["achados"]}
+
+    # o que o intérprete devolve só vale se está no item, letra por letra: trecho inventado é descartado
+    inventado = fid.interpretacao(leitura(F2={"inserir": ["um critério que o PO nunca escreveu no pedido"],
+                                              "outras_exigencias": False}), itens)
+    assert inventado["F2"]["inserir"] == [] and fid.aplicar(itens, juiz, docs, anteriores=anterior,
+                                                           interpretacao=inventado)["status"] == "bloqueado"
+    # item que pede mais do que o texto (ou na dúvida, sem a resposta): a prova em código não basta
+    mais = fid.interpretacao(leitura(F2={"inserir": [novo], "remover": [velho]}), itens)
+    assert mais["F2"]["outras_exigencias"] is True
+    assert "F2" in {a["id"] for a in fid.aplicar(itens, juiz, docs, anteriores=anterior, interpretacao=mais)["achados"]}
+    # o veredito `violado` do juiz prevalece sobre o texto presente
+    violado = juiz.replace('"F2", "veredito": "atendido"', '"F2", "veredito": "violado"')
+    assert fid.aplicar(itens, violado, docs, anteriores=anterior,
+                       interpretacao=fid.interpretacao(leitura(), itens))["status"] == "bloqueado"
+    # cabeçalho com um item do mesmo pedido sem prova não se aprova pela vizinhança
+    r = fid.aplicar(itens, juiz, {"one_pager": f"**Atingiu:** {novo}."}, anteriores=anterior,
+                    interpretacao=fid.interpretacao(leitura(), itens))
+    assert "F1" in {a["id"] for a in r["achados"]}
+    # o intérprete só lê o pedido do PO: o briefing não entra
+    assert [i["id"] for i in fid.para_o_interprete(itens + [{"id": "F9", "origem": "briefing", "tipo": "briefing",
+                                                             "texto": "x"}])] == ["F1", "F2", "F3"]
+
+
+def test_fidelidade_tem_interprete_deterministico_que_nao_ve_os_documentos():
+    from agents.juiz import get_fidelidade_check
+
+    a = get_fidelidade_check("AXFid", status_key="fidelidade_status", report_key="fidelidade_report",
+                             documentos=["one_pager"], onde="teste")
+    juiz, interprete = a.sub_agents
+    assert interprete.output_key == "interpretacao_fidelidade_saida"
+    assert interprete.generate_content_config.temperature == get_settings().temperatura_juiz
+    assert interprete.generate_content_config.seed is not None
+    assert "{interpretacao_entrada?}" in interprete.instruction
+    assert "{fidelidade_documentos?}" not in interprete.instruction, "o intérprete lê só o pedido"
