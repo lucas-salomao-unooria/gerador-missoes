@@ -5480,3 +5480,66 @@ def test_a089_aceita_ticket_de_gate_sem_codigo():
     assert env["status"] == "bloqueado"
     ticket = next(a for a in env["achados"] if a.get("agente_responsavel") == "telas")
     assert ticket["id"] == "DES-06" and "DES-06" in st["qa_entregaveis_report"]
+
+
+_RECUSA_STITCH = "Resource has been exhausted (e.g. check quota)."
+
+
+def test_stitch_que_recusa_por_cota_vira_pendencia_externa_sem_retrabalho():
+    """exp03em1b (22/10/2026): a cota do Stitch acabou; ele respondeu a recusa como texto numa resposta de sucesso, a
+    esteira registrou «sem resposta do Stitch» nas 53 telas, conciliou e tentou de novo, e o ticket foi ao agente de
+    telas — que não tinha o que consertar. A recusa vai ao relatório com o texto do Stitch, sem conciliação nem nova
+    tentativa, e o bloqueio fica sem dono (pendência externa)."""
+    from tools import afirmacoes as af
+    from tools import stitch_geracao as sg
+    from tools.stitch_cliente import recusa
+
+    assert recusa({"texto": _RECUSA_STITCH}) and recusa({"texto": "The caller does not have permission"})
+    assert not recusa({"texto": "Tela gerada."}) and not recusa({"screens": []}) and not recusa(None)
+
+    chamadas, esperas = [], []
+
+    def stitch(ferramenta, argumentos):
+        chamadas.append(ferramenta)
+        if ferramenta == "generate_screen_from_text":
+            return {"texto": _RECUSA_STITCH}
+        return {}
+
+    itens = [{"id": "E1-ALU-01", "estado": e, "dispositivo": "MOBILE", "prompt": "Galeria.", "origem": "telas"}
+             for e in ("padrão", "erro")]
+    saida = sg.gerar(itens, {}, projeto="4044680601076201931", design_system="assets/1", titulo_projeto="x",
+                     chamar=stitch, paralelo=2, esperar=esperas.append)
+    assert all(r["erro"] == f"Stitch recusou: {_RECUSA_STITCH}" for r in saida["resultado"]), saida["resultado"]
+    assert chamadas.count("generate_screen_from_text") == 2 and not esperas, "recusa não se concilia nem se repete"
+    assert sg.recusa_da_geracao(saida) == _RECUSA_STITCH
+
+    folha = "| Tela | Dispositivo |\n|---|---|\n"
+    jornada = "## Seção 3\n\n| ID | Tela | Estados |\n|---|---|---|\n| E1-ALU-01 | t | padrão |\n"
+    externo = af.cobertura_stitch(folha, jornada, recusa=_RECUSA_STITCH)
+    a = externo["achados"][0]
+    assert externo["status"] == "bloqueado" and a["codigo"] == "stitch-recusou" and a["agente_responsavel"] is None
+    assert a["classe"] == "pendencia-externa" and _RECUSA_STITCH in a["resumo"]
+    # sem recusa, a tela que falta continua indo ao agente de telas
+    assert af.cobertura_stitch(folha, jornada)["achados"][0]["agente_responsavel"] == "telas"
+
+
+def test_afirmacao_do_qa_e_conferida_na_parte_da_frase_em_que_esta():
+    """exp03em1b (22/10/2026): «0 de 23 telas … geradas no Stitch; protótipo HTML navegável íntegro com 23 telas» — o
+    gate viu «protótipo» na mesma linha e comparou o 0 do Stitch com as 23 telas do protótipo."""
+    from tools import afirmacoes as af
+
+    ids = [f"E1-ALU-0{i}" for i in range(1, 4)]
+    jornada = "## Seção 3\n\n| ID | Tela | Estados |\n|---|---|---|\n" + "\n".join(f"| {i} | t | padrão |" for i in ids)
+    html = "<html>" + "".join(f"<section data-screen-id='{i}'></section>" for i in ids) + "</html>"
+    folha = "| Tela | Dispositivo |\n|---|---|\n"
+    linha = ("**Inspeção:** Stitch conferido (projeto `projects/1` consultado via `list_screens`: 0 de 3 telas do "
+             "inventário geradas no Stitch; protótipo HTML navegável íntegro com 3 telas inventariadas)")
+    assert not af.conferir_qa(linha, folha, jornada, html)["achados"]
+    # o mesmo, em duas frases da mesma linha
+    duas = ("O gerador upstream do Stitch não realizou o upload das telas no projeto `projects/1` (0 de 3 telas no "
+            "Stitch). A liberação deve ser homologada com base no protótipo HTML funcional (`design/08-prototipo.html`).")
+    assert not af.conferir_qa(duas, folha, jornada, html)["achados"]
+    # a afirmação errada sobre o protótipo, no trecho dele, continua acusada
+    errada = linha.replace("íntegro com 3 telas inventariadas", "íntegro com 3 de 3 telas, e todas as 5 telas no lint")
+    codigos = {a["codigo"] for a in af.conferir_qa(errada, folha, jornada, html)["achados"]}
+    assert "afirmacao-prototipo" in codigos and "afirmacao-stitch" not in codigos, codigos

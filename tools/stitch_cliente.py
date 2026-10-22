@@ -61,6 +61,18 @@ def _headers() -> Dict[str, str]:
     return h
 
 
+#: O Stitch responde a recusa como texto numa resposta de sucesso: «Resource has been exhausted (e.g. check quota).»
+#: Na exp03em1b (22/10/2026) a cota acabou e a esteira registrou «sem resposta do Stitch» em todas as telas.
+_RE_RECUSA = re.compile(r"resource has been exhausted|check quota|quota exceeded|rate limit|caller does not have "
+                        r"permission|permission denied|unauthenticated|api key not valid", re.I)
+
+
+def recusa(resposta: Any) -> str:
+    """O texto da recusa do Stitch numa resposta de `chamar`, ou "" quando a resposta não é uma recusa."""
+    texto = resposta.get("texto") if isinstance(resposta, dict) else None
+    return texto.strip() if isinstance(texto, str) and _RE_RECUSA.search(texto) else ""
+
+
 def chamar(ferramenta: str, argumentos: Dict[str, Any], timeout: int = 180) -> Dict[str, Any]:
     """Uma chamada `tools/call` ao endpoint MCP, devolvendo o JSON já desembrulhado."""
     s = get_settings()
