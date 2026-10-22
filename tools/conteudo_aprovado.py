@@ -249,6 +249,12 @@ _ROTULOS_DE_METADADO = frozenset({"duração", "duracao", "formato", "participan
                                   "público", "publico", "tom", "objetivo", "título", "titulo", "episódio", "nota",
                                   "trilha", "quando", "roteiro", "resumo", "voz", "público-alvo",
                                   "publico-alvo"})
+#: Primeira palavra de rubrica de produção sonora (`**Trilha sonora:**`, `**Efeito sonoro:**`, `**Áudio de vinheta:**`):
+#: indica o que tocar, não o que alguém diz — nunca é voz, nem repetida. Na exp02em1b (22/10/2026) «Trilha sonora»
+#: aparecia duas vezes, contava como personagem, e o banco foi reprovado no dev por reescrever a rubrica.
+_RE_RUBRICA_SONORA = re.compile(
+    r"^(?:trilha|efeitos?|sfx|vinheta|[áa]udio|m[úu]sica|som|sons|sonoplastia|ru[íi]do|ambi[êe]ncia|fundo|bgm|jingle)\b",
+    re.I)
 
 
 #: O título de cada etapa do §4 (`### Etapa 3: Decidir`, `### 3. Decidir`, `#### Etapa 5b: Revisar`) e o bloco
@@ -342,6 +348,8 @@ def literais(one_pager: str) -> Dict[str, List[str]]:
         vezes[nome.strip()] = vezes.get(nome.strip(), 0) + 1
     def e_voz(nome: str) -> bool:
         nome = nome.strip()
+        if _RE_RUBRICA_SONORA.match(nome):
+            return False
         return vezes[nome] >= 2 or (" " not in nome and nome[:1].isupper() and nome.lower() not in _ROTULOS_DE_METADADO)
 
     podcast = [fala.strip().strip('"“”*').strip() for nome, fala in falas if e_voz(nome)]
