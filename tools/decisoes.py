@@ -115,30 +115,42 @@ def com_achados(resultado: Dict[str, Any], novos: List[Dict[str, str]]) -> Dict[
 _RE_CELULAS = re.compile(r"^\s*\|(.+)\|\s*$")
 #: A fonte da lacuna é o parecer de quem liberou a etapa (`notas_de_passagem`): «Parecer humano do produto (21/10/2026)».
 _FONTE_PARECER = re.compile(r"\bparecer\b", re.IGNORECASE)
+#: Relatórios da própria esteira que também se chamam parecer («Parecer de Adequação Pedagógica»): não são do PO.
+_FONTE_DE_AGENTE = re.compile(r"adequa|pedag[óo]gic|estrutural|\bgate\b|banca|comit|juiz|avalia", re.IGNORECASE)
+_RE_DATA = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
 
 
-def lacunas_fechadas_pelo_agente(relatorio_lacunas: str, com_parecer: bool = False) -> List[str]:
+def _cita_parecer_humano(fonte: str, pareceres: str) -> bool:
+    """A fonte cita um parecer humano que existe na sessão: diz «parecer», não é relatório de agente, e cada data
+    que ela traz está nos pareceres registrados. Sem data, não há como conferir — e não conta."""
+    if not _FONTE_PARECER.search(fonte) or _FONTE_DE_AGENTE.search(fonte):
+        return False
+    datas = _RE_DATA.findall(fonte)
+    return bool(datas) and all(d in pareceres for d in datas)
+
+
+def lacunas_fechadas_pelo_agente(relatorio_lacunas: str, pareceres: str = "") -> List[str]:
     """Linhas da tabela do D0 com classe `mecanica`/`curriculo` e cor que não é vermelha.
 
     O prompt do D0 diz que as duas classes são sempre vermelhas — decisão humana. Na exp01ef1b o D0-7
     saiu `classe: curriculo, cor: verde` e marcou "Resolvido" num `[ABERTO — dono: editorial]`: a
     pendência sumiu do dossiê. Lido pelo nome das colunas «Classe» e «Cor».
 
-    `com_parecer` (a sessão tem parecer do PO): a linha cuja fonte é o parecer não é do agente — a decisão
-    humana já foi tomada, e o D0 só a aplicou. Na exp02em1b (22/10/2026) o PO aprovou no parecer de produto as
-    duas propostas de mecânica, o D0 fechou-as citando o parecer, e este gate mandou reabri-las para o PO.
-    Essas linhas saem em `lacunas_fechadas_pelo_parecer`, para a pessoa conferir.
+    `pareceres` (o texto dos pareceres e pedidos do PO na sessão): a linha cuja fonte é um desses pareceres não é
+    do agente — a decisão humana já foi tomada, e o D0 só a aplicou. Na exp02em1b (22/10/2026) o PO aprovou no
+    parecer de produto as duas propostas de mecânica, o D0 fechou-as citando o parecer, e este gate mandou
+    reabri-las para o PO. Essas linhas saem em `lacunas_fechadas_pelo_parecer`, para a pessoa conferir.
     """
-    return [linha for linha, parecer in _lacunas_fechadas(relatorio_lacunas) if not (com_parecer and parecer)]
+    return [linha for linha, humano in _lacunas_fechadas(relatorio_lacunas, pareceres) if not humano]
 
 
-def lacunas_fechadas_pelo_parecer(relatorio_lacunas: str) -> List[str]:
-    """As linhas de `lacunas_fechadas_pelo_agente` cuja fonte cita o parecer humano."""
-    return [linha for linha, parecer in _lacunas_fechadas(relatorio_lacunas) if parecer]
+def lacunas_fechadas_pelo_parecer(relatorio_lacunas: str, pareceres: str) -> List[str]:
+    """As linhas de `lacunas_fechadas_pelo_agente` cuja fonte cita um parecer humano registrado em `pareceres`."""
+    return [linha for linha, humano in _lacunas_fechadas(relatorio_lacunas, pareceres) if humano]
 
 
-def _lacunas_fechadas(relatorio_lacunas: str) -> List[tuple]:
-    """`(linha, fonte_cita_parecer)` de cada lacuna de mecânica ou currículo que não saiu vermelha."""
+def _lacunas_fechadas(relatorio_lacunas: str, pareceres: str = "") -> List[tuple]:
+    """`(linha, fonte_cita_parecer_humano)` de cada lacuna de mecânica ou currículo que não saiu vermelha."""
     import unicodedata
 
     def norm(t: str) -> str:
@@ -163,5 +175,5 @@ def _lacunas_fechadas(relatorio_lacunas: str) -> List[tuple]:
         classe, cor = norm(d.get("classe", "")), norm(d.get("cor", ""))
         if classe in ("mecanica", "curriculo") and cor and "vermelh" not in cor and "🔴" not in d.get("cor", ""):
             fonte = " ".join(v for k, v in d.items() if k.startswith(("fonte", "base")))
-            saida.append((re.sub(r"\s+", " ", linha.strip())[:220], bool(_FONTE_PARECER.search(fonte))))
+            saida.append((re.sub(r"\s+", " ", linha.strip())[:220], bool(pareceres) and _cita_parecer_humano(fonte, pareceres)))
     return saida

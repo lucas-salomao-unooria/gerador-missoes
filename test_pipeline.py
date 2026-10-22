@@ -5383,13 +5383,50 @@ def test_afirmacao_do_qa_em_telas_estados_conta_as_linhas_do_stitch():
 def test_qa_que_relata_o_ticket_de_arquivo_inexistente_nao_e_acusado_de_novo():
     """exp01em1b (22/10/2026): na rodada 2 o QA relatou o ticket da rodada 1 — «Citação no relatório de QA ao caminho
     inexistente `design/04-copy-passada2.md`» — e o gate o acusou de citar o arquivo outra vez. Toda rodada que
-    relatasse o ticket seria reprovada por ele."""
+    relatasse o ticket seria reprovada por ele. Só deixa de acusar o caminho que a rodada anterior acusou, com a
+    negação colada nele."""
+    from agents.checkers import QaAfirmacoesAgent
     from tools import afirmacoes as af
 
+    p, outro = "design/04-copy-passada2.md", "design/06-copy-ptbr.md"
     relato = ("3. **Ticket QA-A1 (`arquivo-inexistente`):**\n"
-              "   - *Apontamento:* Citação no relatório de QA ao caminho inexistente `design/04-copy-passada2.md`.\n"
+              f"   - *Apontamento:* Citação no relatório de QA ao caminho inexistente `{p}`.\n"
               "   - *Situação na rodada 2:* **RESOLVIDO.** Referências agora apontam para `design/08-prototipo.html`.\n")
-    assert af.conferir_qa(relato)["status"] == "aprovado", af.conferir_qa(relato)["achados"]
-    # citar o arquivo como se existisse continua reprovando
-    r = af.conferir_qa("- *ONDE:* `design/04-copy-passada2.md`, tabela de strings.\n")
-    assert [a["codigo"] for a in r["achados"]] == ["arquivo-inexistente"]
+    assert af.conferir_qa(relato, ja_apontados=[p])["status"] == "aprovado"
+    assert af.conferir_qa(f"- QA-A1: `{p}`, que a esteira não grava — RESOLVIDO.", ja_apontados=[p])["status"] == "aprovado"
+    # sem rodada anterior que o tenha acusado, ou citado como real, continua reprovando
+    for qa, apontados in ((relato, []), (f"- ONDE: `{p}`, tabela de strings.", [p]),
+                          (f"- ONDE: `{p}` — não existe divergência entre as chaves.", [p]),
+                          (f"- Chave inexistente no glossário; ver `{p}`, tabela.", [p])):
+        assert af.conferir_qa(qa, ja_apontados=apontados)["status"] == "bloqueado", qa
+    r = af.conferir_qa(f"- Caminho inexistente `{p}`; agora em `{outro}`.", ja_apontados=[p])
+    assert [a["resumo"].split("`")[1] for a in r["achados"]] == [outro]
+
+    # no loop: o envelope da rodada 1 ainda está no estado quando o A089 roda na rodada 2
+    rodada1 = af.conferir_qa(f"- ONDE: `{p}`, tabela de strings.")
+    assert af.arquivos_apontados(rodada1) == [p]
+    estado = {"qa_entregaveis_report": relato + '\n```json\n{"agente": "qa-entregaveis", "status": "aprovado", "achados": []}\n```\n',
+              "qa_afirmacoes_status_envelope": {"status": "bloqueado", "achados": rodada1["achados"]}}
+
+    class Semente(BaseAgent):
+        @override
+        async def _run_async_impl(self, ctx):
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
+
+    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), QaAfirmacoesAgent(name="A089")])))
+    assert st["qa_afirmacoes_status"] == "aprovado", st["qa_afirmacoes_status_envelope"]
+
+
+def test_d0_so_aceita_o_parecer_humano_registrado_na_sessao():
+    """«Parecer de Adequação Pedagógica» é relatório da esteira, e parecer sem data não se confere: os dois continuam ⛔."""
+    from tools.decisoes import lacunas_fechadas_pelo_agente, lacunas_fechadas_pelo_parecer
+
+    tabela = ("| ID | Célula | Classe | Cor | Fonte de preenchimento | Quem |\n|---|---|---|---|---|---|\n"
+              "| L-07 | `0.x` | `mecanica` | Verde | {} | D2 |\n")
+    humano = tabela.format("Parecer humano do produto (21/10/2026)")
+    assert not lacunas_fechadas_pelo_agente(humano, _NOTAS_PARECER_EXP02EM1B)
+    assert lacunas_fechadas_pelo_parecer(humano, _NOTAS_PARECER_EXP02EM1B)
+    assert lacunas_fechadas_pelo_agente(humano)  # sem parecer na sessão
+    for fonte in ("Parecer de Adequação Pedagógica (21/10/2026)", "parecer do gate estrutural", "Parecer do PO",
+                  "Parecer do PO (15/10/2026)"):
+        assert lacunas_fechadas_pelo_agente(tabela.format(fonte), _NOTAS_PARECER_EXP02EM1B), fonte
