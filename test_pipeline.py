@@ -5430,3 +5430,29 @@ def test_d0_so_aceita_o_parecer_humano_registrado_na_sessao():
     for fonte in ("Parecer de Adequação Pedagógica (21/10/2026)", "parecer do gate estrutural", "Parecer do PO",
                   "Parecer do PO (15/10/2026)"):
         assert lacunas_fechadas_pelo_agente(tabela.format(fonte), _NOTAS_PARECER_EXP02EM1B), fonte
+
+
+def test_rubrica_de_producao_do_podcast_nao_e_fala():
+    """exp02em1b (22/10/2026): «Trilha sonora» aparecia duas vezes no §11 e, por isso, contava como personagem — as
+    rubricas de música viraram falas literais, e o banco, que as reescreveu, foi reprovado no dev («1 de 15»). Nos 60
+    one-pagers do bucket, «Áudio de vinheta» e «Efeito sonoro» tinham o mesmo destino."""
+    from tools.conteudo_aprovado import literais
+
+    s11 = ("## 11. Podcast de recapitulação\n\n**[Bloco 1: Abertura — ~15s]**\n"
+           "- **Trilha sonora:** Batida eletrônica leve, moderna e curiosa.\n"
+           "- **Alex:** E aí, galera! Bem-vindos ao podcast da missão de hoje, sobre o efeito amplificador.\n"
+           "- **Sam:** Hoje a gente vai entender por que aquele post bombou às duas da manhã.\n"
+           "- **Efeito sonoro:** Notificação de celular vibrando três vezes seguidas na mesa.\n"
+           "- **Áudio de vinheta:** Assinatura sonora da Unooria tocando por alguns segundos.\n"
+           "**[Bloco 5: Encerramento — ~15s]**\n"
+           "- **Sam:** Pense nisso e converse com sua turma e seu professor. Valeu, e até a próxima missão!\n"
+           "- **Alex:** Até mais, galera! Desconectem-se e descansem!\n"
+           "- **Trilha sonora:** Encerramento enérgico que esmaece gradualmente.\n"
+           "- **Efeito sonoro:** Notificação de celular vibrando três vezes seguidas na mesa.\n"
+           "- **Áudio de vinheta:** Assinatura sonora da Unooria tocando por alguns segundos.\n\n## 12. Evidência\n")
+    falas = literais(s11)["podcast"]
+    assert len(falas) == 4 and all(not f.startswith(("Batida", "Encerramento", "Notificação", "Assinatura")) for f in falas)
+    # personagem com nome composto continua sendo voz
+    assert "Bom dia, turma! Hoje vamos falar de algoritmos." in literais(
+        "## 11. Podcast\n- **Professora Helena:** Bom dia, turma! Hoje vamos falar de algoritmos.\n"
+        "- **Professora Helena:** E vamos descobrir quem decide o que aparece no seu feed.\n## 12. x\n")["podcast"]
