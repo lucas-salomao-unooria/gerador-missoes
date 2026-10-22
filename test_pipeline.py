@@ -5378,3 +5378,18 @@ def test_afirmacao_do_qa_em_telas_estados_conta_as_linhas_do_stitch():
     for n, s in ((6, ""), (5, "/estados")):
         r = af.conferir_qa(linha.format(n=n, s=s), folha, jornada)
         assert [a["codigo"] for a in r["achados"]] == ["afirmacao-stitch"], (n, s, r["achados"])
+
+
+def test_qa_que_relata_o_ticket_de_arquivo_inexistente_nao_e_acusado_de_novo():
+    """exp01em1b (22/10/2026): na rodada 2 o QA relatou o ticket da rodada 1 — «Citação no relatório de QA ao caminho
+    inexistente `design/04-copy-passada2.md`» — e o gate o acusou de citar o arquivo outra vez. Toda rodada que
+    relatasse o ticket seria reprovada por ele."""
+    from tools import afirmacoes as af
+
+    relato = ("3. **Ticket QA-A1 (`arquivo-inexistente`):**\n"
+              "   - *Apontamento:* Citação no relatório de QA ao caminho inexistente `design/04-copy-passada2.md`.\n"
+              "   - *Situação na rodada 2:* **RESOLVIDO.** Referências agora apontam para `design/08-prototipo.html`.\n")
+    assert af.conferir_qa(relato)["status"] == "aprovado", af.conferir_qa(relato)["achados"]
+    # citar o arquivo como se existisse continua reprovando
+    r = af.conferir_qa("- *ONDE:* `design/04-copy-passada2.md`, tabela de strings.\n")
+    assert [a["codigo"] for a in r["achados"]] == ["arquivo-inexistente"]

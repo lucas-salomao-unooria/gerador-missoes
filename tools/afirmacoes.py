@@ -30,6 +30,8 @@ _RE_TODAS = re.compile(r"\btodas\s+as\s+(\d+)\s+telas\b", re.I)
 _RE_PARCIAL = re.compile(r"\b(\d+)\s*(?:/|de)\s*(\d+)\s+telas\b|\b(\d+)\s+telas\s+encontradas\s+de\s+(\d+)\b", re.I)
 #: «todas as 50 telas/estados» conta as linhas da folha (estados), não as telas distintas (exp02em1b, 22/10/2026)
 _RE_E_ESTADOS = re.compile(r"\s*(?:/|e|ou)\s*estados\b", re.I)
+#: «Citação ao caminho inexistente `design/04-copy-passada2.md`»: a rodada 2 do QA relata o ticket da 1 (exp01em1b)
+_RE_DIZ_INEXISTENTE = re.compile(r"inexistente|n[ãa]o\s+existe|n[ãa]o\s+grava", re.I)
 _RE_ARTEFATO = re.compile(r"(?<![\w/.-])((?:design|dev|produto)/[\w.-]+\.(?:md|html|docx|json)|\d{2}[a-z]?-[\w-]+\.(?:md|html|docx))\b")
 
 
@@ -165,6 +167,8 @@ def conferir_qa(qa: str, folha_stitch: str = "", jornada: str = "", prototipo_ht
         sem_ext = citado.rsplit(".", 1)[0]
         if sem_ext not in validos:
             linha = (qa or "")[(qa or "").rfind("\n", 0, m.start()) + 1:].split("\n", 1)[0]
+            if _RE_DIZ_INEXISTENTE.search(linha):
+                continue  # o QA relata o ticket da rodada anterior, não aponta para o arquivo
             falha("arquivo-inexistente", f"O QA cita `{citado}`, que a esteira não grava (o protótipo é "
                                          f"`design/08-prototipo.html`; a lista está em `pipeline/artifacts.py`).", linha)
     status = "bloqueado" if achados else "aprovado"
