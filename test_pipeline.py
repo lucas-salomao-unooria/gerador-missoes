@@ -5456,3 +5456,27 @@ def test_rubrica_de_producao_do_podcast_nao_e_fala():
     assert "Bom dia, turma! Hoje vamos falar de algoritmos." in literais(
         "## 11. Podcast\n- **Professora Helena:** Bom dia, turma! Hoje vamos falar de algoritmos.\n"
         "- **Professora Helena:** E vamos descobrir quem decide o que aparece no seu feed.\n## 12. x\n")["podcast"]
+
+
+def test_a089_aceita_ticket_de_gate_sem_codigo():
+    """exp03em1b (22/10/2026): a banca de design saiu bloqueada; o achado dela tem `id` (`DES-06`), não `codigo`
+    (`tools/banca._envelope_json` só grava o que veio), e o A089 caiu com KeyError: 'codigo' ao montar o ticket —
+    quatro execuções de design seguidas falharam sem veredito."""
+    from agents.checkers import QaAfirmacoesAgent
+
+    banca = {"id": "DES-06", "severidade": "bloqueio", "agente_responsavel": "telas", "dimensao": "banca_design_imersao",
+             "resumo": "A tela E3-ALU-01 não mostra o feed do Unoovista que a spec descreve."}
+    estado = {"qa_entregaveis_report": '```json\n{"agente": "qa-entregaveis", "status": "aprovado", "achados": []}\n```\n',
+              "banca_design_status": "bloqueado",
+              "banca_design_status_envelope": {"status": "bloqueado", "achados": [banca]}}
+
+    class Semente(BaseAgent):
+        @override
+        async def _run_async_impl(self, ctx):
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
+
+    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), QaAfirmacoesAgent(name="A089")])))
+    env = extrair_envelope(st["qa_entregaveis_report"])
+    assert env["status"] == "bloqueado"
+    ticket = next(a for a in env["achados"] if a.get("agente_responsavel") == "telas")
+    assert ticket["id"] == "DES-06" and "DES-06" in st["qa_entregaveis_report"]
