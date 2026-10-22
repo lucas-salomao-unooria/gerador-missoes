@@ -141,8 +141,8 @@ rebaixa nada. Decida assim, e só assim:
 | ⛔ **DEVOLVIDO AO PRODUTO** | O defeito está na spec, não na construção: o design fez o que a spec mandava e a spec está errada. Nunca use isto para defeito de tela. |
 
 **O modo de inspeção não é veredito.** Declare-o na linha `Inspeção:` e siga. Se o Stitch está
-desligado (`stitch_links` declara `off`), confira na jornada e no protótipo: tela ausente do
-Stitch **não é** ❌ nesse caso.
+desligado (modo `off` na seção das ferramentas Stitch, ou nenhuma folha de telas do Stitch nesta execução), confira na
+jornada e no protótipo: tela ausente do Stitch **não é** ❌ nesse caso, e não cite contagem de telas do Stitch.
 
 **Evidência obrigatória.** Nunca marque ✅ sem citar onde no documento a evidência está (seção e
 trecho). ✅ sem citação vale ⚠️. Um ❌ sem o trecho que o sustenta não é ticket, é opinião.

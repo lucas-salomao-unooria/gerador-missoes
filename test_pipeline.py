@@ -5543,3 +5543,91 @@ def test_afirmacao_do_qa_e_conferida_na_parte_da_frase_em_que_esta():
     errada = linha.replace("íntegro com 3 telas inventariadas", "íntegro com 3 de 3 telas, e todas as 5 telas no lint")
     codigos = {a["codigo"] for a in af.conferir_qa(errada, folha, jornada, html)["achados"]}
     assert "afirmacao-prototipo" in codigos and "afirmacao-stitch" not in codigos, codigos
+
+
+def test_lint_acusa_protótipo_que_mostra_todos_os_quadros_ao_mesmo_tempo():
+    """exp03em1b (22/10/2026): `.quadro-tela { display: none }` escondia os quadros, mas `.moldura-mobile` e
+    `.moldura-desktop` declaravam `display: flex` depois, com o mesmo peso — as 61 telas ficavam empilhadas (rolagem
+    infinita) e os botões, que trocavam a tela ativa, pareciam não funcionar. O lint de texto deu 🟢."""
+    from tools import prototipo as lint
+
+    css = (".quadro-tela { display: none; position: relative; }\n"
+           ".quadro-tela.tela-ativa { display: flex; flex-direction: column; }\n"
+           ".moldura-mobile { width: 375px; height: 812px; display: flex; flex-direction: column; }\n"
+           ".moldura-desktop { width: 980px; display: flex; }\n")
+    quadros = ('<div class="quadro-tela moldura-desktop tela-ativa" data-screen-id="E0-PROF-01">E0-PROF-01</div>'
+               '<div class="quadro-tela moldura-desktop" data-screen-id="E0-PROF-02">E0-PROF-02</div>'
+               '<div class="quadro-tela moldura-mobile" data-screen-id="E1-ALU-01">E1-ALU-01</div>')
+    html = f"<html><head><style>{css}</style></head><body>{quadros}</body></html>"
+    r = lint.validar(html, ["E0-PROF-01", "E0-PROF-02", "E1-ALU-01"])
+    achado = next(a for a in r["achados"] if a["codigo"] == "quadros-todos-visiveis")
+    assert r["status"] == "bloqueado" and achado["severidade"] == "bloqueio" and ".moldura-" in achado["resumo"]
+
+    # escondendo com um seletor mais forte que o da moldura, só o ativo aparece
+    certo = html.replace(".quadro-tela { display: none;", ".quadro-tela:not(.tela-ativa) { display: none !important; }\n"
+                                                         ".quadro-tela {")
+    assert not [a for a in lint.validar(certo, ["E0-PROF-01", "E0-PROF-02", "E1-ALU-01"])["achados"]
+                if a["codigo"] == "quadros-todos-visiveis"]
+    # a regra de ocultar vindo depois da moldura também resolve
+    depois = html.replace("</style>", ".quadro-tela:not(.tela-ativa) { display: none; }</style>")
+    assert lint.validar(depois, ["E0-PROF-01", "E0-PROF-02", "E1-ALU-01"])["status"] == "aprovado"
+    # protótipo que esconde pelo JavaScript (sem regra de ocultar no CSS) não é julgado aqui
+    js = html.replace(".quadro-tela { display: none;", ".quadro-tela {")
+    assert lint.validar(js, ["E0-PROF-01", "E0-PROF-02", "E1-ALU-01"])["status"] == "aprovado"
+
+
+def test_stitch_desligado_na_execucao_nao_gera_nem_confere(monkeypatch):
+    """22/10/2026: a cota do Stitch acabou com tantos repasses, e os prompts de geração ainda não foram refinados. O
+    controle da barra lateral (desligado por padrão) vale para a execução inteira: com ele desligado, o modo vira
+    `off` — sem ferramentas MCP, prompts dizendo `off`, nada gerado (A076), nada colhido nem conferido (A080)."""
+    import config
+    from agents.checkers import ArtefatosDesignAgent, StitchGeracaoAgent
+    from tools.stitch_mcp import stitch_tools_or_empty
+
+    monkeypatch.setenv("STITCH_MCP_MODE", "remote")
+    monkeypatch.setenv("STITCH_API_KEY", "chave-de-teste")
+    monkeypatch.delenv("STITCH_LIGADO", raising=False)
+    s = config.AppSettings()
+    monkeypatch.setattr(config, "get_settings", lambda: s)
+    import tools.stitch_mcp as sm
+    monkeypatch.setattr(sm, "get_settings", lambda: s, raising=False)
+    try:
+        config.fixar_stitch(None)
+        assert s.stitch_mcp_mode == "off" and not s.is_stitch_enabled, "sem nada fixado, vale STITCH_LIGADO (padrão: não)"
+        assert s.stitch_configurado and "Gerar telas no Stitch" in s.stitch_status_label
+        assert stitch_tools_or_empty(["list_screens"]) == []
+        config.fixar_stitch(True)
+        assert s.stitch_mcp_mode == "remote" and s.is_stitch_enabled
+        config.fixar_stitch(False)
+        assert s.stitch_mcp_mode == "off"
+
+        chamadas = []
+        monkeypatch.setattr("tools.stitch_cliente.chamar", lambda *a, **k: chamadas.append(a) or {})
+        estado = {"wireframes_cobertura": "## Geração no Stitch\n| ID | Estado | Dispositivo | Prompt |\n|---|---|---|---|\n"
+                                          "| E1-ALU-01 | padrão | MOBILE | Galeria. |\n",
+                  "jornada_telas": "## Seção 3\n\n| ID | Tela | Estados |\n|---|---|---|\n| E1-ALU-01 | t | padrão |\n",
+                  "stitch_project_id": "4044680601076201931", "prototipo_html": "<html><body>x</body></html>"}
+
+        class Semente(BaseAgent):
+            @override
+            async def _run_async_impl(self, ctx):
+                yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
+
+        _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[
+            Semente(name="S"), StitchGeracaoAgent(name="A076"), ArtefatosDesignAgent(name="A080")])))
+        assert not chamadas, "desligado, o Stitch não é chamado"
+        assert "stitch_status" not in st and "stitch_links" not in st and not st.get("stitch_geracao")
+    finally:
+        config.fixar_stitch(None)
+
+
+def test_stitch_ligado_vem_do_env_fora_do_app(monkeypatch):
+    import config
+
+    monkeypatch.setenv("STITCH_MCP_MODE", "remote")
+    monkeypatch.setenv("STITCH_API_KEY", "chave-de-teste")
+    monkeypatch.setenv("STITCH_LIGADO", "true")
+    config.fixar_stitch(None)
+    assert config.AppSettings().is_stitch_enabled
+    monkeypatch.setenv("STITCH_MCP_MODE", "off")
+    assert not config.AppSettings().is_stitch_enabled and not config.AppSettings().stitch_configurado

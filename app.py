@@ -449,7 +449,7 @@ def render_aguardando_voce(sessoes: List[Dict[str, Any]], sessao: Optional[Sessa
 
 def _opcoes_runner(opts: Dict[str, Any]) -> Dict[str, Any]:
     return {"thinking_budget": opts["thinking_budget"], "include_thoughts": opts["include_thoughts"],
-            "modo_estrito": opts["modo_estrito"]}
+            "modo_estrito": opts["modo_estrito"], "stitch_ligado": opts["stitch_ligado"]}
 
 
 @st.cache_data(show_spinner=False, max_entries=8)
@@ -958,6 +958,14 @@ def render_sidebar() -> Dict[str, Any]:
         # include_thoughts = st.toggle("Exibir pensamentos dos agentes", value=settings.include_thoughts)
         include_thoughts=True
 
+        # Desligado por padrão (22/10/2026): os repasses e ajustes estouraram a cota do Stitch, e os prompts de geração
+        # ainda não foram refinados. Desligado, a esteira não gera nem confere nada no Stitch: fica o protótipo HTML.
+        stitch_ligado = st.toggle(
+            "Gerar telas no Stitch", value=False, key="stitch_ligado", disabled=not settings.stitch_configurado,
+            help="Ligado: o design gera as telas no Stitch e o QA as confere lá. Desligado: nada vai ao Stitch — a "
+                 "especificação visual fica na tabela de telas e no protótipo HTML. Vale para a próxima execução "
+                 "(missão nova, iniciar ou refazer etapa).")
+
         st.markdown("---")
         st.markdown("#### 🧩 Etapas e agentes")
         for stage in get_pipeline_stages(active_only=False):
@@ -977,7 +985,8 @@ def render_sidebar() -> Dict[str, Any]:
             st.rerun()
 
     return {"stages": stages, "modo_estrito": modo_estrito, "thinking_budget": thinking_presets[selected_label],
-            "include_thoughts": include_thoughts, "parecer_humano": parecer_humano}
+            "include_thoughts": include_thoughts, "parecer_humano": parecer_humano,
+            "stitch_ligado": bool(stitch_ligado and settings.stitch_configurado)}
 
 
 def update_pipeline_step_status(
@@ -1174,6 +1183,7 @@ async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_co
         modo_estrito=opts["modo_estrito"],
         stages=opts["stages"],
         doc_batch=doc_batch,
+        stitch_ligado=opts["stitch_ligado"],
     )
     result, _ = await _acompanhar_esteira(stream, stages_para_ui(opts["stages"]), progress, steps_container)
     return result
@@ -1186,6 +1196,7 @@ async def execute_correcao(run_dir: Path, etapa: str, pedido: PedidoCorrecao, tr
         thinking_budget=opts["thinking_budget"],
         include_thoughts=opts["include_thoughts"],
         modo_estrito=opts["modo_estrito"],
+        stitch_ligado=opts["stitch_ligado"],
     )
     return await _acompanhar_esteira(stream, stages_para_ui(ETAPA_PARA_STAGES[etapa]), progress, steps_container)
 
