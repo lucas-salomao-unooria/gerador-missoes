@@ -536,12 +536,13 @@ class SecaoSplitAgent(BaseAgent):
                     })
             # lacuna de mecânica ou currículo é decisão humana: o D0 não a fecha em verde
             if self.source_key == "fechamento_lacunas":
-                from tools.decisoes import ha_registro_do_po, lacunas_fechadas_pelo_agente, lacunas_fechadas_pelo_parecer
+                from tools.decisoes import lacunas_fechadas_pelo_agente, lacunas_fechadas_pelo_parecer
 
-                # a tabela do Passo 2 está na resposta inteira
-                com_parecer = ha_registro_do_po(state)
-                fechadas = lacunas_fechadas_pelo_agente(texto, com_parecer=com_parecer)
-                pelo_parecer = lacunas_fechadas_pelo_parecer(texto) if com_parecer else []
+                # a tabela do Passo 2 está na resposta inteira; a fonte que cita parecer é conferida contra estes
+                pareceres = str(state.get("notas_de_passagem") or "") + json.dumps(
+                    state.get("pedidos_do_po") or [], ensure_ascii=False, default=str)
+                fechadas = lacunas_fechadas_pelo_agente(texto, pareceres)
+                pelo_parecer = lacunas_fechadas_pelo_parecer(texto, pareceres)
                 if pelo_parecer:
                     # como `decisao-atribuida-ao-po` com registro: o código não sabe se o parecer diz isto
                     if delta[self.status_key] != STATUS_BLOQUEADO:
@@ -732,8 +733,10 @@ class QaAfirmacoesAgent(BaseAgent):
 
         state = ctx.session.state
         qa = str(state.get(self.qa_key, "") or "")
+        # o envelope da rodada anterior ainda está no estado: o que ele acusou, o QA desta rodada pode relatar
         resultado = af.conferir_qa(qa, str(state.get("stitch_links", "") or ""), str(state.get("jornada_telas", "") or ""),
-                                   str(state.get("prototipo_arquivo", "") or ""))
+                                   str(state.get("prototipo_arquivo", "") or ""),
+                                   ja_apontados=af.arquivos_apontados(state.get(f"{self.status_key}_envelope")))
         missao = extrair_slug(str(state.get("spec_missao") or "")) or ""
         relatorio = af.relatorio(resultado, missao)
         delta: Dict[str, Any] = {self.report_key: relatorio, self.status_key: resultado["status"],
