@@ -30,6 +30,9 @@ _RE_TODAS = re.compile(r"\btodas\s+as\s+(\d+)\s+telas\b", re.I)
 _RE_PARCIAL = re.compile(r"\b(\d+)\s*(?:/|de)\s*(\d+)\s+telas\b|\b(\d+)\s+telas\s+encontradas\s+de\s+(\d+)\b", re.I)
 #: «todas as 50 telas/estados» conta as linhas da folha (estados), não as telas distintas (exp02em1b, 22/10/2026)
 _RE_E_ESTADOS = re.compile(r"\s*(?:/|e|ou)\s*estados\b", re.I)
+#: Onde uma afirmação termina: «;» ou fim de frase (ponto seguido de maiúscula), e o que diz de quem ela fala.
+_RE_FIM_DE_TRECHO = re.compile(r";|(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ])")
+_RE_SUJEITO = re.compile(r"stitch|prot[óo]tipo|\blint\b", re.I)
 #: «Citação ao caminho inexistente `design/04-copy-passada2.md`»: a rodada 2 do QA relata o ticket da 1 (exp01em1b).
 #: A negação tem de estar colada no caminho — «chave inexistente; ver `x.md`» e «`x.md` — não existe divergência»
 #: citam o arquivo como real.
@@ -66,8 +69,12 @@ def telas_do_stitch(folha: str) -> Optional[List[str]]:
     return telas
 
 
-def cobertura_stitch(folha: str, jornada: str) -> Dict[str, Any]:
-    """Telas no Stitch × inventário da jornada. Menos telas que o inventário = bloqueio, dono `telas`."""
+def cobertura_stitch(folha: str, jornada: str, recusa: str = "") -> Dict[str, Any]:
+    """Telas no Stitch × inventário da jornada. Menos telas que o inventário = bloqueio, dono `telas`.
+
+    `recusa`: o Stitch recusou a geração (cota, permissão — `tools.stitch_geracao.recusa_da_geracao`). A falta continua
+    bloqueio, mas sem dono: o agente de telas não tem o que consertar, e o retrabalho dele só queimava rodadas.
+    """
     telas = telas_do_stitch(folha)
     inventario = telas_do_inventario(jornada)
     achados: List[Dict[str, str]] = []
@@ -95,7 +102,15 @@ def cobertura_stitch(folha: str, jornada: str) -> Dict[str, Any]:
     # inteira no ticket — cortada em 10, o retrabalho desenhava só as dez e o resto nunca chegava.
     no_stitch = {i for t in telas for i in ids_de_tela(t)}
     faltando = [t for t in inventario if t not in no_stitch]
-    if faltando:
+    if faltando and recusa:
+        achados.append({
+            "severidade": "bloqueio", "codigo": "stitch-recusou", "etapa": "design", "agente_responsavel": None,
+            "classe": "pendencia-externa",
+            "resumo": f"O Stitch tem {len(no_stitch & set(inventario))} de {len(inventario)} tela(s) do inventário da "
+                      f"jornada, e recusou a geração: «{recusa[:200]}». Não é defeito das telas: renove a cota (ou a "
+                      f"permissão) da chave do Stitch e rode o design de novo. Faltam: {', '.join(faltando)}.",
+        })
+    elif faltando:
         achados.append({
             "severidade": "bloqueio", "codigo": "stitch-incompleto", "etapa": "design", "agente_responsavel": "telas",
             "resumo": f"O Stitch tem {len(no_stitch & set(inventario))} de {len(inventario)} tela(s) do inventário da jornada. "
@@ -143,18 +158,23 @@ def conferir_qa(qa: str, folha_stitch: str = "", jornada: str = "", prototipo_ht
         achados.append({"severidade": "bloqueio", "codigo": codigo, "etapa": "design", "agente_responsavel": None,
                         "resumo": f"{resumo} Trecho do QA: `{linha.strip()[:200].replace('`', chr(39))}`"})
 
-    for linha in (qa or "").splitlines():
-        afirmadas = [(int(m.group(1)), None, bool(_RE_E_ESTADOS.match(linha, m.end()))) for m in _RE_TODAS.finditer(linha)]
-        for m in _RE_PARCIAL.finditer(linha):
+    for linha, trecho in ((l, t) for l in (qa or "").splitlines() for t in _RE_FIM_DE_TRECHO.split(l)):
+        afirmadas = [(int(m.group(1)), None, m) for m in _RE_TODAS.finditer(trecho)]
+        for m in _RE_PARCIAL.finditer(trecho):
             achadas, total = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
-            afirmadas.append((int(total), int(achadas), bool(_RE_E_ESTADOS.match(linha, m.end()))))
+            afirmadas.append((int(total), int(achadas), m))
         if not afirmadas:
             continue
-        fala_do_stitch = bool(re.search(r"stitch", linha, re.I))
-        fala_do_prototipo = bool(re.search(r"prot[óo]tipo|\blint\b", linha, re.I))
         # «todas as 5 telas do preparo `E0-PROF-01` a `05`» fala de um grupo nomeado, não do projeto inteiro
-        cita_grupo = bool(_RE_ID_TELA.search(linha))
-        for total, achadas, com_estados in afirmadas:
+        cita_grupo = bool(_RE_ID_TELA.search(trecho))
+        for total, achadas, m in afirmadas:
+            com_estados = bool(_RE_E_ESTADOS.match(trecho, m.end()))
+            # A contagem é do seu sujeito: o que vem logo depois dela («23 telas no Stitch»), senão o da frase, senão o
+            # da linha. «0 de 23 telas no Stitch. … protótipo HTML funcional» comparava o 0 com o protótipo (exp03em1b).
+            depois = trecho[m.end():m.end() + 40]
+            sujeito = next(s for s in (depois, trecho, linha) if _RE_SUJEITO.search(s) or s is linha)
+            fala_do_stitch = bool(re.search(r"stitch", sujeito, re.I))
+            fala_do_prototipo = bool(re.search(r"prot[óo]tipo|\blint\b", sujeito, re.I))
             contadas = achadas if achadas is not None else total
             if cita_grupo and inventario and contadas < len(inventario):
                 continue

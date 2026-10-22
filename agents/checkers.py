@@ -679,7 +679,8 @@ class ArtefatosDesignAgent(BaseAgent):
                     linhas.append(f"🔗 Stitch: {len(dados['telas'])} tela(s) no projeto `{pid}` — link no relatório e no PRD.")
                     from tools.afirmacoes import cobertura_stitch
 
-                    cob = cobertura_stitch(delta[self.links_key], str(state.get("jornada_telas", "") or ""))
+                    cob = cobertura_stitch(delta[self.links_key], str(state.get("jornada_telas", "") or ""),
+                                           recusa=str(state.get("stitch_geracao_recusa") or ""))
                     delta[self.status_key] = cob["status"]
                     delta[f"{self.status_key}_envelope"] = {"agente": "stitch-cobertura", "status": cob["status"],
                                                             "achados": cob["achados"], "precisa_humano": False}
@@ -963,6 +964,8 @@ class StitchGeracaoAgent(BaseAgent):
             self.design_system_key: saida["design_system"] or "",
             self.registro_key: saida["registro"],
             self.relatorio_key: corpo + "\n\n" + sg.relatorio(saida, url_do_projeto(saida["projeto"])),
+            # a cobertura do A080 lê: falta por recusa do Stitch (cota) é pendência externa, não retrabalho de telas
+            "stitch_geracao_recusa": sg.recusa_da_geracao(saida),
         }
         faltaram = [r for r in saida["resultado"] if not r["screen_id"]]
         msg = (f"🖼️ Stitch: {len(saida['resultado']) - len(faltaram)} de {len(saida['resultado'])} (tela, estado) no projeto "

@@ -28,6 +28,8 @@ import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Dict, List, Optional
 
+from tools.stitch_cliente import recusa
+
 from tools import telas
 
 logger = logging.getLogger("stitch_geracao")
@@ -171,6 +173,18 @@ def _screen_id(resposta: Any, projeto: str) -> Optional[str]:
     return m.group(1).lower() if m else None
 
 
+#: Erro de item que o Stitch recusou (cota, permissão) — `tools.stitch_cliente.recusa`.
+PREFIXO_RECUSA = "Stitch recusou: "
+
+
+def recusa_da_geracao(saida: Dict[str, Any]) -> str:
+    """O texto da recusa do Stitch numa saída de `gerar`, ou "" quando nenhum item foi recusado."""
+    for r in saida.get("resultado") or []:
+        if str(r.get("erro") or "").startswith(PREFIXO_RECUSA):
+            return r["erro"][len(PREFIXO_RECUSA):]
+    return ""
+
+
 def gerar(itens: List[Dict[str, str]], registro: Dict[str, Dict[str, str]], *, projeto: Optional[str],
           design_system: Optional[str], titulo_projeto: str, chamar: Callable, paralelo: int = 4,
           esperar: Callable[[float], None] = time.sleep, tentativas_de_conciliacao: int = 3) -> Dict[str, Any]:
@@ -214,16 +228,19 @@ def gerar(itens: List[Dict[str, str]], registro: Dict[str, Dict[str, str]], *, p
         if design_system:
             argumentos["designSystem"] = design_system
         try:
-            return {"item": item, "screen_id": _screen_id(chamar("generate_screen_from_text", argumentos), projeto) or "",
-                    "erro": ""}
+            resposta = chamar("generate_screen_from_text", argumentos)
         except Exception as exc:  # timeout ou queda: a geração pode ter dado certo — concilia depois
             return {"item": item, "screen_id": "", "erro": str(exc)[:200]}
+        negado = recusa(resposta)
+        if negado:  # cota, permissão: nada foi gerado, e tentar de novo agora não muda nada
+            return {"item": item, "screen_id": "", "erro": f"{PREFIXO_RECUSA}{negado}"[:300]}
+        return {"item": item, "screen_id": _screen_id(resposta, projeto) or "", "erro": ""}
 
     feitos: List[Dict[str, Any]] = []
     if pendentes:
         with ThreadPoolExecutor(max_workers=max(1, paralelo)) as pool:
             feitos = list(pool.map(um, pendentes))
-    sem_id = [f for f in feitos if not f["screen_id"]]
+    sem_id = [f for f in feitos if not f["screen_id"] and not f["erro"].startswith(PREFIXO_RECUSA)]
     # conciliação: relê o projeto antes de tentar de novo (a ferramenta pede para não repetir em timeout)
     for _ in range(tentativas_de_conciliacao if sem_id else 0):
         esperar(30)
