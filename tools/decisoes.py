@@ -113,21 +113,38 @@ def com_achados(resultado: Dict[str, Any], novos: List[Dict[str, str]]) -> Dict[
 
 
 _RE_CELULAS = re.compile(r"^\s*\|(.+)\|\s*$")
+#: A fonte da lacuna é o parecer de quem liberou a etapa (`notas_de_passagem`): «Parecer humano do produto (21/10/2026)».
+_FONTE_PARECER = re.compile(r"\bparecer\b", re.IGNORECASE)
 
 
-def lacunas_fechadas_pelo_agente(relatorio_lacunas: str) -> List[str]:
+def lacunas_fechadas_pelo_agente(relatorio_lacunas: str, com_parecer: bool = False) -> List[str]:
     """Linhas da tabela do D0 com classe `mecanica`/`curriculo` e cor que não é vermelha.
 
     O prompt do D0 diz que as duas classes são sempre vermelhas — decisão humana. Na exp01ef1b o D0-7
     saiu `classe: curriculo, cor: verde` e marcou "Resolvido" num `[ABERTO — dono: editorial]`: a
     pendência sumiu do dossiê. Lido pelo nome das colunas «Classe» e «Cor».
+
+    `com_parecer` (a sessão tem parecer do PO): a linha cuja fonte é o parecer não é do agente — a decisão
+    humana já foi tomada, e o D0 só a aplicou. Na exp02em1b (22/10/2026) o PO aprovou no parecer de produto as
+    duas propostas de mecânica, o D0 fechou-as citando o parecer, e este gate mandou reabri-las para o PO.
+    Essas linhas saem em `lacunas_fechadas_pelo_parecer`, para a pessoa conferir.
     """
+    return [linha for linha, parecer in _lacunas_fechadas(relatorio_lacunas) if not (com_parecer and parecer)]
+
+
+def lacunas_fechadas_pelo_parecer(relatorio_lacunas: str) -> List[str]:
+    """As linhas de `lacunas_fechadas_pelo_agente` cuja fonte cita o parecer humano."""
+    return [linha for linha, parecer in _lacunas_fechadas(relatorio_lacunas) if parecer]
+
+
+def _lacunas_fechadas(relatorio_lacunas: str) -> List[tuple]:
+    """`(linha, fonte_cita_parecer)` de cada lacuna de mecânica ou currículo que não saiu vermelha."""
     import unicodedata
 
     def norm(t: str) -> str:
         return "".join(c for c in unicodedata.normalize("NFD", t.lower()) if unicodedata.category(c) != "Mn").strip(" `*_")
 
-    saida: List[str] = []
+    saida: List[tuple] = []
     cabecalho: List[str] = []
     for linha in (relatorio_lacunas or "").splitlines():
         m = _RE_CELULAS.match(linha)
@@ -145,5 +162,6 @@ def lacunas_fechadas_pelo_agente(relatorio_lacunas: str) -> List[str]:
         d = dict(zip(cabecalho, celulas))
         classe, cor = norm(d.get("classe", "")), norm(d.get("cor", ""))
         if classe in ("mecanica", "curriculo") and cor and "vermelh" not in cor and "🔴" not in d.get("cor", ""):
-            saida.append(re.sub(r"\s+", " ", linha.strip())[:220])
+            fonte = " ".join(v for k, v in d.items() if k.startswith(("fonte", "base")))
+            saida.append((re.sub(r"\s+", " ", linha.strip())[:220], bool(_FONTE_PARECER.search(fonte))))
     return saida

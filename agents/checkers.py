@@ -399,6 +399,10 @@ class SecaoSplitAgent(BaseAgent):
       bloco_proprio → regex do título do único bloco que este autor escreve (`^## 14`): o documento gravado é a
                       versão aceita com esse bloco trocado pelo da nova — o resto da nova é descartado, e a
                       preservação confere só o que não é dele (`montar_sobre_aceita`).
+      bloco_autoral → regex do título do bloco que este autor escreve inteiro, num documento em que ele também mexe
+                      fora dele (o D0 marca `Resolvido em [D0-n]` nos blocos 0–12): a preservação não confere esse
+                      bloco, e o resto da nova versão é gravado como veio. Na exp02em1b (22/10/2026) a rodada 1 do D0,
+                      reprovada, virou a base, e a rodada 2 foi acusada de apagar o [D0-7] que ela mesma escrevera.
 
     Seção ausente, curta ou sem o conteúdo exigido → a chave é mantida como está e o evento avisa.
     """
@@ -481,9 +485,9 @@ class SecaoSplitAgent(BaseAgent):
                     chave_base = f"{PREFIXO_BASE_PRESERVADA}{chave}"
                     base = str(state.get(chave_base) or "") or str(state.get(chave))
                     comparada = documento_sem_moldura(base)
-                    if proprio:
+                    if proprio or ex.get("bloco_autoral"):
                         # o bloco do próprio autor ele pode reescrever; o resto é o que veio antes dele
-                        comparada = _sem_bloco(comparada, proprio)
+                        comparada = _sem_bloco(comparada, proprio or ex["bloco_autoral"])
                     sumiram = linhas_perdidas(comparada, secao)
                     delta[chave_base] = base if sumiram else ""
                     if sumiram:
@@ -532,9 +536,24 @@ class SecaoSplitAgent(BaseAgent):
                     })
             # lacuna de mecânica ou currículo é decisão humana: o D0 não a fecha em verde
             if self.source_key == "fechamento_lacunas":
-                from tools.decisoes import lacunas_fechadas_pelo_agente
+                from tools.decisoes import ha_registro_do_po, lacunas_fechadas_pelo_agente, lacunas_fechadas_pelo_parecer
 
-                fechadas = lacunas_fechadas_pelo_agente(texto)  # a tabela do Passo 2 está na resposta inteira
+                # a tabela do Passo 2 está na resposta inteira
+                com_parecer = ha_registro_do_po(state)
+                fechadas = lacunas_fechadas_pelo_agente(texto, com_parecer=com_parecer)
+                pelo_parecer = lacunas_fechadas_pelo_parecer(texto) if com_parecer else []
+                if pelo_parecer:
+                    # como `decisao-atribuida-ao-po` com registro: o código não sabe se o parecer diz isto
+                    if delta[self.status_key] != STATUS_BLOQUEADO:
+                        delta[self.status_key] = "amarelo"
+                    linhas.append(f"🟡 {len(pelo_parecer)} lacuna(s) de mecânica ou currículo fechada(s) pelo parecer do PO.")
+                    env.setdefault("achados", []).append({
+                        "severidade": "atencao", "codigo": "mecanica-pelo-parecer", "etapa": "design",
+                        "agente_responsavel": "fecha-lacunas",
+                        "resumo": ("Lacuna de mecânica ou currículo fechada pelo D0 com base no parecer do PO. O código não "
+                                   "sabe se o parecer diz isto — confira antes do de acordo:\n"
+                                   + "\n".join(f"    - {l}" for l in pelo_parecer[:10])),
+                    })
                 if fechadas:
                     perdidas.append({
                         "severidade": "bloqueio", "codigo": "decisao-de-produto-pelo-agente", "etapa": "design",
