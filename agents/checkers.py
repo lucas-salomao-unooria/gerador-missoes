@@ -764,7 +764,9 @@ class QaAfirmacoesAgent(BaseAgent):
             novo["achados"] = list(envelope.get("achados") or []) + [
                 {"id": f"QA-A{i}", **a} for i, a in enumerate(tickets, 1)]
             delta[self.qa_key] = (qa.rstrip() + "\n\n## Afirmações conferidas em código (A089)\n\n"
-                                  + "\n".join(f"- ⛔ `{a['codigo']}` — {a['resumo']}" for a in tickets)
+                                  # o achado da banca vem com `id` (DES-06), sem `codigo` (exp03em1b, 22/10/2026)
+                                  + "\n".join(f"- ⛔ `{a.get('codigo') or a.get('id') or 'achado'}` — {a.get('resumo', '')}"
+                                              for a in tickets)
                                   + "\n\nO veredito acima foi reescrito: aprovar com uma contagem que não bate é aprovar "
                                     "o que ninguém viu.\n\n```json\n" + json.dumps(novo, ensure_ascii=False) + "\n```\n")
         msg = ("✅ Afirmações do QA: contagens e arquivos batem." if not tickets else
