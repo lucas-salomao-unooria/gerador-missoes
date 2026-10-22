@@ -291,6 +291,7 @@ async def run_orchestrator_pipeline_stream(
     registrar_conversa: bool = True,
     com_transversal: bool = True,
     modo_pontual: bool = False,
+    stitch_ligado: Optional[bool] = None,
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Executa o pipeline e emite eventos: pipeline_started, agent_started, agent_chunk,
     agent_thought_chunk, gate_status, pipeline_completed | pipeline_error."""
@@ -316,6 +317,11 @@ async def run_orchestrator_pipeline_stream(
         base = base_plataforma.ler_atual()
         base_plataforma.fixar(base)
         logger.info(base.resumo())
+        # O Stitch desta execução (o controle da barra lateral), fixado antes de montar os agentes: as ferramentas MCP
+        # e o `{stitch_mcp_mode}` dos prompts saem dele. `None` (scripts) fica com `STITCH_LIGADO`.
+        from config import fixar_stitch
+
+        fixar_stitch(stitch_ligado)
         orchestrator = create_mission_orchestrator(
             name=orchestrator_name,
             thinking_budget=thinking_budget,
@@ -352,6 +358,8 @@ async def run_orchestrator_pipeline_stream(
                 "catalogo_missoes": catalogo_para_prompt(),
                 # Qual retrato da plataforma e do DS esta execução leu — vai para o diagnóstico.
                 **base.para_estado(),
+                # e se ela gerou e conferiu telas no Stitch
+                "stitch_ligado": settings.stitch_ligado,
             },
         )
         adk_artifacts_dir = settings.output_path / ".adk_artifacts"

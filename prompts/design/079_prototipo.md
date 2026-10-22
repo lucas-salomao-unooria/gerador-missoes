@@ -58,7 +58,7 @@ Sua pergunta: **um adulto que não acompanhou a esteira consegue percorrer a mis
 
 - **Trilho à esquerda**, agrupado pelas etapas da jornada. Cada item traz o ID da tela e o nome do estado. Clicar salta para a tela.
 - **Barra superior**: nome da etapa, as marcas da tela (pico, aha, trava), o ID e o contador de posição.
-- **Palco central**: o quadro da tela, em escala automática para caber na janela.
+- **Palco central**: o quadro da tela, em escala automática para caber na janela. **Um quadro por vez**: só o ativo aparece. A classe de moldura (`moldura-mobile`, `moldura-desktop`) não declara `display`; quem esconde os outros quadros é um seletor mais forte que ela (`.quadro-tela:not(.tela-ativa) { display: none !important; }`). Na exp03em1b a moldura declarava `display: flex` depois do `display: none` e as 61 telas apareceram empilhadas — a navegação parecia quebrada. O lint confere.
 - **Painel da etapa**, ao lado do palco: o texto que o one-pager escreveu para aquela etapa, exibido enquanto qualquer tela da etapa estiver aberta. É o que faz a demo ser lida por quem não acompanhou a esteira: a tela mostra o **como**, esse painel diz o **porquê**. Se o one-pager não tiver texto para a etapa, use o mecanismo da spec (bloco 2) e **declare a fonte** numa linha de 13px no rodapé do painel.
 - **Rodapé**: três campos vindos da jornada — a tela, a ação do estudante e o que muda depois.
 - **Navegação**: setas do teclado e botões. Foco visível em tudo que é focável.

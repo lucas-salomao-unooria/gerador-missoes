@@ -49,9 +49,17 @@ class TestStitchModeAutoDetect(unittest.TestCase):
         "auto", que não é nem `remote` nem `proxy`, e o Stitch ficava desligado com a
         chave no lugar — silenciosamente, porque o rótulo da UI dizia só "desconhecido".
         """
-        with mock.patch.dict(os.environ, {"STITCH_MCP_MODE": "auto", "STITCH_API_KEY": "chave-de-teste"}):
+        with mock.patch.dict(os.environ, {"STITCH_MCP_MODE": "auto", "STITCH_API_KEY": "chave-de-teste",
+                                          "STITCH_LIGADO": "true"}):
+            self.assertEqual(AppSettings().stitch_mcp_mode_raw, "remote")
+            self.assertTrue(AppSettings().stitch_configurado)
             self.assertEqual(AppSettings().stitch_mcp_mode, "remote")
             self.assertTrue(AppSettings().is_stitch_enabled)
+        # configurado, mas desligado (o padrão desde 22/10/2026): o modo da execução é `off`
+        with mock.patch.dict(os.environ, {"STITCH_MCP_MODE": "auto", "STITCH_API_KEY": "chave-de-teste",
+                                          "STITCH_LIGADO": "false"}):
+            self.assertTrue(AppSettings().stitch_configurado)
+            self.assertEqual(AppSettings().stitch_mcp_mode, "off")
 
 
 class TestMiroModeAutoDetect(unittest.TestCase):

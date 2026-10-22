@@ -7,8 +7,9 @@ a política dos gates e a persistência dos artefatos gerados.
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from dotenv import load_dotenv
 from pydantic import Field
@@ -21,6 +22,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 
 def _env_bool(name: str, default: str) -> bool:
     return os.getenv(name, default).strip().lower() in ("true", "1", "yes", "sim")
+
+
+#: O Stitch ligado ou não NESTA execução — o controle da barra lateral, fixado pelo runner na thread da execução
+#: (`fixar_stitch`), como a base da plataforma. Sem nada fixado (scripts, testes), vale `STITCH_LIGADO`.
+_stitch_execucao = threading.local()
+
+
+def fixar_stitch(ligado: Optional[bool]) -> None:
+    """Liga, desliga ou solta (`None`) o Stitch para a execução desta thread."""
+    _stitch_execucao.ligado = ligado
 
 
 def _detect_stitch_mode() -> str:
@@ -215,6 +226,9 @@ class AppSettings(BaseSettings):
         default_factory=lambda: _detect_stitch_mode(),
         description="off | remote (stitch.googleapis.com/mcp, X-Goog-Api-Key) | proxy (npx @_davideast/stitch-mcp, conserta os schemas)",
     )
+    # Desligado por padrão (22/10/2026): os repasses e ajustes estouraram a cota, e os prompts de geração ainda não
+    # foram refinados. No app vale o controle da barra lateral; aqui, o que vale fora dele.
+    stitch_ligado_padrao: bool = Field(default_factory=lambda: _env_bool("STITCH_LIGADO", "false"))
     stitch_api_key: str = Field(
         default_factory=lambda: os.getenv("STITCH_API_KEY", ""),
         description="Chave de API do Stitch (Google Labs). Não expira e dispensa projeto no Google Cloud",
@@ -324,7 +338,19 @@ class AppSettings(BaseSettings):
 
     @property
     def stitch_mcp_mode(self) -> str:
-        return self.stitch_mcp_mode_raw
+        """O modo desta execução: `off` quando o Stitch está desligado nela, mesmo com a chave no lugar — e então as
+        ferramentas MCP, os prompts (`{stitch_mcp_mode}`), a geração (A076) e a conferência (A080) ficam desligados."""
+        return self.stitch_mcp_mode_raw if self.stitch_ligado else "off"
+
+    @property
+    def stitch_configurado(self) -> bool:
+        """Há chave e modo para falar com o Stitch — o que o `.env` permite, não o que a execução usa."""
+        return self.stitch_mcp_mode_raw in ("remote", "proxy")
+
+    @property
+    def stitch_ligado(self) -> bool:
+        fixado = getattr(_stitch_execucao, "ligado", None)
+        return self.stitch_ligado_padrao if fixado is None else bool(fixado)
 
     @property
     def miro_mode(self) -> str:
@@ -342,13 +368,16 @@ class AppSettings(BaseSettings):
 
     @property
     def stitch_status_label(self) -> str:
-        if self.stitch_mcp_mode == "off":
+        modo = self.stitch_mcp_mode_raw
+        if modo == "off":
             return "⚪ Desligado (defina STITCH_API_KEY)"
-        if self.stitch_mcp_mode == "remote":
-            return "🟢 Remoto (chave de API)" if self.stitch_api_key else "🔴 Remoto sem STITCH_API_KEY"
-        if self.stitch_mcp_mode == "proxy":
-            return "🟢 Proxy (npx @_davideast/stitch-mcp)"
-        return f"🔴 Modo desconhecido ({self.stitch_mcp_mode})"
+        if modo not in ("remote", "proxy"):
+            return f"🔴 Modo desconhecido ({modo})"
+        # o que o `.env` permite; se cada execução usa, quem diz é o controle «Gerar telas no Stitch»
+        if modo == "remote" and not self.stitch_api_key:
+            return "🔴 Remoto sem STITCH_API_KEY"
+        base = "🟢 Remoto (chave de API)" if modo == "remote" else "🟢 Proxy (npx @_davideast/stitch-mcp)"
+        return base + " · liga e desliga em «Gerar telas no Stitch»"
 
     @property
     def is_miro_enabled(self) -> bool:

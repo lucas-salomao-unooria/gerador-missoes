@@ -103,7 +103,8 @@ jornada (seção 1c), no fluxo (segundo grafo, "Fluxo do professor"), no Stitch
 professor), sobre o kit do DS do hub — não sobre a seção do ambiente simulado.
 A tela de recorte e a de curadoria mostram uma aula de disciplina diferente do
 banco default, tirada da tabela "a mesma missão em três aulas" do bloco 8 da
-spec. Tela do preparo ausente do Stitch é `[LACUNA — dono: telas]`; fluxo do
+spec. Tela do preparo ausente do Stitch é `[LACUNA — dono: telas]` quando o Stitch está ligado nesta execução; desligado
+(sem folha de telas do Stitch), a conferência é no protótipo, e a ausência no Stitch não é lacuna; fluxo do
 professor ausente é lacuna com dono `fluxo`; formulário que só aceita um tipo de
 conteúdo sem `[LIMITE DE TRANSVERSALIDADE]` declarado é achado com dono
 `gate-estrutural`.

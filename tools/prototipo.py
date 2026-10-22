@@ -61,6 +61,15 @@ def validar(html: str, telas_declaradas: Optional[List[str]] = None) -> Dict[str
               "Nenhum identificador `E<etapa>-<ator>-<n>` no protótipo: sem isso não há como "
               "casar tela construída com tela declarada, e o QA vira leitura de relatório.")
 
+    visiveis = quadros_sempre_visiveis(texto)
+    if visiveis:
+        falha("quadros-todos-visiveis",
+              f"{visiveis['visiveis']} quadros ficam visíveis ao mesmo tempo: `{visiveis['esconde']}` esconde os quadros, "
+              f"mas `{visiveis['reexibe']}` declara `display` depois, com peso igual ou maior, e os reexibe. O protótipo vira "
+              f"uma rolagem com todas as telas empilhadas, e a navegação parece não funcionar. Esconda os quadros com um "
+              f"seletor mais forte que o da moldura (`.quadro-tela:not(.tela-ativa) {{ display: none !important; }}`) ou "
+              f"tire o `display` da classe de moldura.")
+
     rascunhos = sorted(set(m.group(0) for m in _RE_RASCUNHO.finditer(_RE_COMENTARIO.sub(" ", texto))))
     if rascunhos:
         falha("marcador-de-rascunho",
@@ -70,6 +79,59 @@ def validar(html: str, telas_declaradas: Optional[List[str]] = None) -> Dict[str
     bloqueios = [a for a in achados if a["severidade"] == "bloqueio"]
     status = "bloqueado" if bloqueios else ("amarelo" if achados else "aprovado")
     return {"status": status, "achados": achados, "telas": telas, "declaradas": declaradas}
+
+
+_RE_ESTILO = re.compile(r"<style\b[^>]*>(.*?)</style>", re.S | re.I)
+_RE_REGRA_CSS = re.compile(r"([^{}]+)\{([^{}]*)\}")
+#: `.a.b` e `.a:not(.b)` — o conserto que o achado recomenda usa o `:not`
+_RE_SO_CLASSES = re.compile(r"^((?:\.[\w-]+)+)((?::not\(\.[\w-]+\))*)$")
+_RE_DISPLAY = re.compile(r"(?:^|;)\s*display\s*:\s*([\w-]+)\s*(!\s*important)?", re.I)
+_RE_QUADRO = re.compile(r"<[a-z][\w-]*\b[^>]*\bdata-screen-id\s*=[^>]*>", re.I)
+_RE_CLASSE_ATTR = re.compile(r"\bclass\s*=\s*[\"']([^\"']*)[\"']", re.I)
+_RE_ESTILO_ATTR = re.compile(r"\bstyle\s*=\s*[\"']([^\"']*)[\"']", re.I)
+
+
+def quadros_sempre_visiveis(html: str) -> Optional[Dict[str, Any]]:
+    """O CSS esconde os quadros e outra regra os reexibe: `{visiveis, esconde, reexibe}`, ou None.
+
+    Uma cascata em miniatura, só com seletores de classe (`.a`, `.a.b`): para cada quadro `[data-screen-id]`, a regra
+    de `display` que vence — `!important`, depois mais classes, depois a última. Só julga o quadro que alguma regra
+    manda esconder: protótipo que esconde pelo JavaScript não tem essa regra, e fica de fora. Na exp03em1b
+    (22/10/2026) `.moldura-mobile { display: flex }` vinha depois de `.quadro-tela { display: none }` e as 61 telas
+    apareciam juntas.
+    """
+    css = _RE_COMENTARIO.sub(" ", " ".join(_RE_ESTILO.findall(html or "")))
+    regras = []
+    for ordem, (seletores, corpo) in enumerate(_RE_REGRA_CSS.findall(css)):
+        m = None
+        for m in _RE_DISPLAY.finditer(corpo):
+            pass  # a última declaração de display do bloco vale
+        if not m:
+            continue
+        for seletor in (s.strip() for s in seletores.split(",")):
+            s = _RE_SO_CLASSES.match(seletor)
+            if s:
+                fora = set(re.findall(r":not\(\.([\w-]+)\)", s.group(2)))
+                regras.append({"classes": set(s.group(1)[1:].split(".")), "fora": fora, "seletor": seletor,
+                               "valor": m.group(1).lower(), "importante": bool(m.group(2)), "ordem": ordem})
+    visiveis, esconde, reexibe = 0, "", ""
+    for tag in _RE_QUADRO.findall(html or ""):
+        c = _RE_CLASSE_ATTR.search(tag)
+        classes = set(c.group(1).split()) if c else set()
+        valem = [r for r in regras if r["classes"] <= classes and not r["fora"] & classes]
+        oculta = next((r for r in valem if r["valor"] == "none"), None)
+        if not oculta:
+            continue
+        vence = max(valem, key=lambda r: (r["importante"], len(r["classes"]) + len(r["fora"]), r["ordem"]))
+        inline = _RE_DISPLAY.search(";" + (_RE_ESTILO_ATTR.search(tag) or [None, ""])[1])
+        valor = inline.group(1).lower() if inline and not vence["importante"] else vence["valor"]
+        if valor != "none":
+            visiveis += 1
+            if vence["valor"] != "none" and not reexibe and vence["classes"] != oculta["classes"] | {"tela-ativa"}:
+                esconde, reexibe = oculta["seletor"], vence["seletor"]
+    if visiveis < 2:
+        return None
+    return {"visiveis": visiveis, "esconde": esconde or ".quadro-tela", "reexibe": reexibe or "estilo do quadro"}
 
 
 def relatorio(resultado: Dict[str, Any], missao: str = "") -> str:
