@@ -5268,3 +5268,113 @@ def test_fidelidade_tem_interprete_deterministico_que_nao_ve_os_documentos():
     assert interprete.generate_content_config.seed is not None
     assert "{interpretacao_entrada?}" in interprete.instruction
     assert "{fidelidade_documentos?}" not in interprete.instruction, "o intérprete lê só o pedido"
+
+
+# --- exp02em1b (22/10/2026): o design saiu 🔴 com três falsos positivos de gate, nenhum defeito da missão ---------
+_NOTAS_PARECER_EXP02EM1B = (
+    "## Pareceres de quem liberou as etapas\n\n### Produto · produto · 21/10/2026 15:43:51\n\n> Propostas:\n"
+    "> [PROPOSTA: validar com PO: Preservação de duas seções do DS (unooriaai + unoovista) em sessão de 50 minutos] → aprovado\n"
+    "> [PROPOSTA: validar com PO: Sinalização voluntária de EM13CO08 no Unoovista sem pop-up impositivo] → aprovado\n")
+_SPEC_GATE0_EXP02EM1B = (
+    "# Spec — exp02em1b v1.2\n\n## 8. Professora, preparação e parametrização com IA\n"
+    "1. Vocês acham que a rede entregou essa postagem às duas da manhã porque o texto era bom?\n"
+    "2. O que o algoritmo ganha quando alguém fica acordado reagindo a uma postagem polêmica?\n"
+    + "".join(f"- Linha {i} do roteiro do debate coletivo com a turma inteira sobre a amplificação do post.\n"
+              for i in range(30))
+    + "\n## 12. Decisões fechadas neste gate\n"
+    "| Preservação de 2 seções do DS (`unooriaai` + `unoovista`) em aula de 50 min | `[PROPOSTA — validar com PO]` |\n"
+    "| Sinalização voluntária de `EM13CO08` via menus contextuais sem pop-up impositivo | `[PROPOSTA — validar com PO]` |\n")
+_D0_7 = ("| `[D0-7]` | `0.duas_secoes_ds` e `12.pendencia_duas_secoes` | Homologação da preservação das 2 seções do DS "
+         "(`unooriaai` e `unoovista`) em aula de 50 minutos. | Parecer do responsável de produto (21/10/2026) | Não precisa (verde) |\n")
+_D0_8 = ("| `[D0-8]` | `2.sinalizacao_voluntaria_co08` e `12.pendencia_co08` | Homologação da sinalização voluntária de "
+         "`EM13CO08` via menus de contexto sem janelas impositivas. | Parecer do responsável de produto (21/10/2026) | "
+         "Não precisa (verde) |\n")
+_D0_CANAL_B = ("| `[D0-{n}]` | `9.componente_canal_b` e `12.pendencia_storypoll` | Adoção da alternativa de Modal Neutro de "
+               "Verificação institucional para o Canal B. | Parecer do responsável de produto (21/10/2026) | Sim (amarelo) |\n")
+
+
+def _saida_d0(tabela_passo2: str, bloco13: str, gate0: str = _SPEC_GATE0_EXP02EM1B) -> str:
+    return ("## Passo 2 — Classificar e rotear\n\n| ID | Célula (bloco.campo) | Classe | Cor | Fonte de preenchimento | "
+            "Quem consumiria |\n|---|---|---|---|---|---|\n" + tabela_passo2
+            + "\n## Passo 5 — Spec consolidada\n\n" + gate0 + "\n## 13. Decisões D0\n\n| Decisão | Célula | Decisão tomada | "
+            "Base | Reversível? |\n|---|---|---|---|---|\n" + bloco13
+            + "\n## Passo 5b — Relatório de preenchimento\n\n" + "O D0 preencheu as lacunas com o parecer do produto. " * 3
+            + "\n\n## Passo 6 — Devolutiva ao produto\n\nNada.\n\n```json\n"
+            + json.dumps({"agente": "fecha-lacunas", "missao": "exp02em1b", "status": "aprovado", "achados": []}) + "\n```\n")
+
+
+def _rodar_split_d0(estado):
+    from agents.design import get_fecha_lacunas_split
+
+    class Semente(BaseAgent):
+        @override
+        async def _run_async_impl(self, ctx):
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
+
+    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), get_fecha_lacunas_split()])))
+    return st
+
+
+def _codigos(st, chave="lacunas_status_envelope"):
+    return {a["codigo"]: a for a in (st.get(chave) or {}).get("achados") or []}
+
+
+def test_d0_fecha_lacuna_de_mecanica_pelo_parecer_do_po_sem_bloquear():
+    """exp02em1b: o PO aprovou no parecer de produto as duas propostas de mecânica; o D0 aplicou o parecer e o gate o
+    acusou de decidir no lugar do PO. Com parecer na sessão e a fonte citando-o, é ⚠️ a conferir; sem parecer, ⛔."""
+    tabela = ("| L-07 | `0.duas_secoes_ds` / `12.pendencia_duas_secoes` | `mecanica` | Verde | Parecer humano do produto "
+              "(21/10/2026) | D2, D5 |\n"
+              "| L-08 | `2.voluntariedade_co08` / `12.pendencia_co08` | `mecanica` | Verde | Parecer humano do produto "
+              "(21/10/2026) | D2, D4 |\n")
+    fonte = _saida_d0(tabela, _D0_7 + _D0_8 + _D0_CANAL_B.format(n=9))
+    st = _rodar_split_d0({"fechamento_lacunas": fonte, "spec_missao": _SPEC_GATE0_EXP02EM1B,
+                          "notas_de_passagem": _NOTAS_PARECER_EXP02EM1B})
+    achados = _codigos(st)
+    assert st["lacunas_status"] == "amarelo", achados
+    assert "decisao-de-produto-pelo-agente" not in achados
+    assert achados["mecanica-pelo-parecer"]["severidade"] == "atencao" and "L-07" in achados["mecanica-pelo-parecer"]["resumo"]
+
+    # sem parecer na sessão, citar um parecer não basta
+    st = _rodar_split_d0({"fechamento_lacunas": fonte, "spec_missao": _SPEC_GATE0_EXP02EM1B})
+    assert st["lacunas_status"] == "bloqueado" and "decisao-de-produto-pelo-agente" in _codigos(st)
+    # com parecer, mas fechada por inferência do agente, continua ⛔
+    inferida = tabela.replace("Parecer humano do produto (21/10/2026)", "inferência na faixa")
+    st = _rodar_split_d0({"fechamento_lacunas": _saida_d0(inferida, _D0_7 + _D0_8), "spec_missao": _SPEC_GATE0_EXP02EM1B,
+                          "notas_de_passagem": _NOTAS_PARECER_EXP02EM1B})
+    assert st["lacunas_status"] == "bloqueado" and "decisao-de-produto-pelo-agente" in _codigos(st)
+
+
+def test_d0_reescreve_o_proprio_bloco_13_sem_acusar_linhas_perdidas():
+    """exp02em1b: a rodada 1 do D0 (reprovada) virou a base da preservação; a rodada 2 tirou do bloco 13 o [D0-7] e o
+    [D0-8] e foi acusada de apagar o que «o autor de antes» escreveu — o autor era ela mesma. O texto do Gate 0
+    (blocos 0–12) continua protegido."""
+    rodada1 = _saida_d0("", _D0_7 + _D0_8 + _D0_CANAL_B.format(n=9))
+    st1 = _rodar_split_d0({"fechamento_lacunas": rodada1, "spec_missao": _SPEC_GATE0_EXP02EM1B})
+    assert "[D0-8]" in st1["spec_missao"]
+
+    rodada2 = _saida_d0("", _D0_CANAL_B.format(n=7))
+    st2 = _rodar_split_d0({**st1, "fechamento_lacunas": rodada2})
+    assert "linhas-perdidas" not in _codigos(st2), _codigos(st2)
+
+    sem_pergunta = _saida_d0("", _D0_CANAL_B.format(n=7), gate0=_SPEC_GATE0_EXP02EM1B.replace(
+        "2. O que o algoritmo ganha quando alguém fica acordado reagindo a uma postagem polêmica?\n", ""))
+    st3 = _rodar_split_d0({**st1, "fechamento_lacunas": sem_pergunta})
+    perdidas = _codigos(st3)["linhas-perdidas"]["resumo"]
+    assert st3["lacunas_status"] == "bloqueado" and "o algoritmo ganha" in perdidas and "[D0-8]" not in perdidas
+
+
+def test_afirmacao_do_qa_em_telas_estados_conta_as_linhas_do_stitch():
+    """exp02em1b: o QA escreveu «todas as 50 telas/estados» — a primeira tabela da folha do Stitch tem 50 linhas de
+    estado de 19 telas — e o gate comparou 50 com 19."""
+    from tools import afirmacoes as af
+
+    ids = ["E0-PROF-01", "E1-ALU-01", "E2-ALU-01"]
+    jornada = "## Seção 3\n\n| ID | Tela | Estados |\n|---|---|---|\n" + "\n".join(f"| {i} | t | padrão |" for i in ids)
+    folha = "| Tela | Dispositivo |\n|---|---|\n" + "\n".join(
+        f"| {i} — {e} | DESKTOP |" for i in ids for e in ("padrão", "erro"))
+    linha = "2. Projeto Stitch `projects/1` (todas as {n} telas{s} geradas em escala de cinza lo-fi rigorosa).\n"
+    assert af.conferir_qa(linha.format(n=6, s="/estados"), folha, jornada)["status"] == "aprovado"
+    assert af.conferir_qa(linha.format(n=3, s="/estados"), folha, jornada)["status"] == "aprovado"
+    for n, s in ((6, ""), (5, "/estados")):
+        r = af.conferir_qa(linha.format(n=n, s=s), folha, jornada)
+        assert [a["codigo"] for a in r["achados"]] == ["afirmacao-stitch"], (n, s, r["achados"])

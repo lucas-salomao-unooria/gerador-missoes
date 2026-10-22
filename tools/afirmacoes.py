@@ -28,6 +28,8 @@ AGENTE = "qa-afirmacoes"
 _RE_ID_TELA = re.compile(r"\bE\d-(?:ALU|PROF|SIS)-\d{2}\b")
 _RE_TODAS = re.compile(r"\btodas\s+as\s+(\d+)\s+telas\b", re.I)
 _RE_PARCIAL = re.compile(r"\b(\d+)\s*(?:/|de)\s*(\d+)\s+telas\b|\b(\d+)\s+telas\s+encontradas\s+de\s+(\d+)\b", re.I)
+#: «todas as 50 telas/estados» conta as linhas da folha (estados), não as telas distintas (exp02em1b, 22/10/2026)
+_RE_E_ESTADOS = re.compile(r"\s*(?:/|e|ou)\s*estados\b", re.I)
 _RE_ARTEFATO = re.compile(r"(?<![\w/.-])((?:design|dev|produto)/[\w.-]+\.(?:md|html|docx|json)|\d{2}[a-z]?-[\w-]+\.(?:md|html|docx))\b")
 
 
@@ -130,27 +132,32 @@ def conferir_qa(qa: str, folha_stitch: str = "", jornada: str = "", prototipo_ht
                         "resumo": f"{resumo} Trecho do QA: `{linha.strip()[:200].replace('`', chr(39))}`"})
 
     for linha in (qa or "").splitlines():
-        afirmadas = [(int(m.group(1)), None) for m in _RE_TODAS.finditer(linha)]
+        afirmadas = [(int(m.group(1)), None, bool(_RE_E_ESTADOS.match(linha, m.end()))) for m in _RE_TODAS.finditer(linha)]
         for m in _RE_PARCIAL.finditer(linha):
             achadas, total = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
-            afirmadas.append((int(total), int(achadas)))
+            afirmadas.append((int(total), int(achadas), bool(_RE_E_ESTADOS.match(linha, m.end()))))
         if not afirmadas:
             continue
         fala_do_stitch = bool(re.search(r"stitch", linha, re.I))
         fala_do_prototipo = bool(re.search(r"prot[óo]tipo|\blint\b", linha, re.I))
         # «todas as 5 telas do preparo `E0-PROF-01` a `05`» fala de um grupo nomeado, não do projeto inteiro
         cita_grupo = bool(_RE_ID_TELA.search(linha))
-        for total, achadas in afirmadas:
+        for total, achadas, com_estados in afirmadas:
             contadas = achadas if achadas is not None else total
             if cita_grupo and inventario and contadas < len(inventario):
                 continue
-            if fala_do_stitch and stitch is not None and contadas != len(stitch):
-                falha("afirmacao-stitch", f"O QA afirma {contadas} telas no Stitch; o projeto tem {len(stitch)}.", linha)
+            # «N telas/estados» pode contar as telas ou as linhas de estado da folha: as duas leituras batem
+            no_stitch = {len(stitch)} if stitch is not None else set()
+            if com_estados and linhas_stitch is not None:
+                no_stitch.add(len(linhas_stitch))
+            if fala_do_stitch and stitch is not None and contadas not in no_stitch:
+                tem = f"{len(stitch)} telas e {len(linhas_stitch)} estados" if com_estados else f"{len(stitch)}"
+                falha("afirmacao-stitch", f"O QA afirma {contadas} telas no Stitch; o projeto tem {tem}.", linha)
             if fala_do_prototipo and no_prototipo is not None and contadas != len(no_prototipo):
                 falha("afirmacao-prototipo", f"O QA afirma {contadas} telas no protótipo; o arquivo tem "
                                              f"{len(no_prototipo)}.", linha)
             # "todas as N" e "a de N" afirmam também o tamanho do inventário — salvo quando falam do Stitch
-            if inventario and not fala_do_stitch and total != len(inventario):
+            if inventario and not fala_do_stitch and not com_estados and total != len(inventario):
                 falha("afirmacao-inventario", f"O QA afirma {total} telas no inventário; a jornada declara "
                                               f"{len(inventario)}.", linha)
     for m in _RE_ARTEFATO.finditer(qa or ""):

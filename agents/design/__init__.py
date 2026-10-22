@@ -120,6 +120,8 @@ def get_fecha_lacunas_split() -> SecaoSplitAgent:
                 "backup": "spec_missao_gate0",
                 # o que o Gate 0 escreveu não some na consolidação (exp06ef1b perdeu a pergunta 3 do debate)
                 "preservar": "fecha-lacunas",
+                # o bloco 13 é todo do D0: entre rodadas ele o reescreve (exp02em1b, 22/10/2026)
+                "bloco_autoral": r"^##\s*13\b.*$",
                 # entre execuções de refazer, a consolidação não muda sem motivo (exp06ef1b traduziu o próprio texto)
                 "estavel_contra": "fechamento_lacunas",
             },

@@ -64,7 +64,7 @@ Percorra o checklist de células consumidas contra a spec. Para cada célula: �
 
 | ID | Célula (bloco.campo) | Classe | Cor | Fonte de preenchimento (one-pager §, catálogo:missão, padrão:nome, inferência) | Quem consumiria (D2–D8) |
 
-Classes: `estado` · `handoff` · `evidencia` · `dispositivo` · `copy-fonte` · `acessibilidade` · `dados` · `duracao` · `mecanica` · `curriculo`. As duas últimas são sempre vermelhas.
+Classes: `estado` · `handoff` · `evidencia` · `dispositivo` · `copy-fonte` · `acessibilidade` · `dados` · `duracao` · `mecanica` · `curriculo`. As duas últimas são sempre vermelhas — salvo quando um parecer humano em «Pareceres de quem liberou as etapas» já decidiu aquela lacuna: a decisão é do PO, não sua. Aplique-a e escreva na Fonte `Parecer de <etapa> (<data>)`; o código só aceita fonte que cite o parecer, e a pessoa confere antes do de acordo. Sem parecer que a decida, continua vermelha.
 
 ## Passo 3 — Decidir
 
