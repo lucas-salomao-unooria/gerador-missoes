@@ -314,7 +314,8 @@ def test_com_spec_gate0_a_edicao_em_linha_do_design_nao_vira_produto():
 def test_acervo_spec_gate0_inferida():
     estados = [(m, ACERVO / m / "estado.json") for m in ("exp03ef1b", "exp01em1b-76d9af6e", "exp06ef1b")]
     q = pg.quadro(pg.avaliar_arquivos(estados))
-    assert q["spec_gate0_inferida"] == ["exp01em1b-76d9af6e", "exp03ef1b"]
+    # a 76d9af6e do acervo chegou ao design (23/10/2026): a spec do Gate 0 é a cópia, não a inferida
+    assert q["spec_gate0_inferida"] == ["exp03ef1b"]
     assert q["spec_gate0"]["exp03ef1b"] == {"parametro": 0, "proposta": 3}
     assert q["spec_gate0"]["exp01em1b-76d9af6e"] == {"parametro": 4, "proposta": 5}
 
@@ -328,7 +329,9 @@ def test_quadro_do_acervo_sem_conflito_nem_d0_no_one_pager():
     assert q["bloco_13_na_spec"] == "2 de 3"
     assert q["conflito_documentos"] == 0 and q["d0_no_one_pager"] == 0
     assert q["parametro_one_pager"] == {"exp02ef1b-4fd72a9a": 4}
-    assert q["contrato_trocado_ou_ausente_no_prd"] == {"exp06ef1b": ["§15 35 palavras ausente"]}
+    # os dois casos reais do plano: o teto homologado que sumiu e a H1 do §17 reescrita no corpo do PRD
+    assert q["contrato_trocado_ou_ausente_no_prd"] == {"exp06ef1b": ["§15 35 palavras ausente"],
+                                                       "exp02ef1b-4fd72a9a": ["§17 30% trocado (25%)"]}
 
 
 def test_regressao_gates_propagacao_nao_reprova(monkeypatch, capsys):
