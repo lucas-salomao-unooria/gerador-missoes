@@ -97,7 +97,18 @@ def documentos(state: Dict[str, Any]) -> Dict[str, str]:
               | set(PROCEDENCIA_DEV) | set(CITAM_D0)) - {"spec_produto"}
     docs = {k: str(state.get(k) or "") for k in chaves}
     docs["spec_produto"] = spec_de_produto(docs.get("spec_missao", ""))
+    if spec_gate0_inferida(state):
+        docs["spec_missao_gate0"] = docs["spec_produto"]
     return docs
+
+
+def spec_gate0_inferida(state: Dict[str, Any]) -> bool:
+    """Sem `spec_missao_gate0`, a spec do Gate 0 é a `spec_missao` sem os blocos 13 e 14. Sessões antigas e as que
+    pararam em produto não gravam a cópia do Gate 0 (no acervo de 23/10/2026: exp01em1b, exp03ef1b, exp01em1b-e3980485,
+    exp01em1b-76d9af6e e exp02em1b-60cfa7f4), e a régua contava 0 [PARÂMETRO] na spec do Gate 0 e dava ao design o
+    que estava na spec de produto. É aproximação quando a sessão passou pelo design: edição em linha do A066/A068
+    fora dos blocos 13/14 conta como produto, e o relatório avisa."""
+    return not str(state.get("spec_missao_gate0") or "").strip() and bool(str(state.get("spec_missao") or "").strip())
 
 
 # --------------------------------------------------------------------------- normalização
@@ -492,7 +503,8 @@ def _procedencia(achou: Callable[[str], bool], proprio: str) -> Tuple[str, List[
     if onde_contrato:
         return "produto", onde_contrato
     if achou("spec_missao"):
-        return "design", ["spec_missao (blocos 13/14)"]
+        # não é só bloco 13/14: o A066/A068 também edita em linha a spec aprovada no Gate 0
+        return "design", ["spec_missao (fora da spec do Gate 0)"]
     for etapa, chaves in (("design", PROCEDENCIA_DESIGN), ("dev", PROCEDENCIA_DEV)):
         onde = [k for k in chaves if k != proprio and achou(k)]
         if onde:
@@ -629,12 +641,17 @@ CITAM_D0 = ("one_pager", "one_pager_resumido", "nucleo_narrativo", "brief_oficio
 
 
 def d0_a_jusante(state: Dict[str, Any], docs: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-    """Relatório 4: ids [D0-n] na spec, se o bloco 13 está lá, e cada citação a jusante de id que a spec não tem."""
+    """Relatório 4: ids [D0-n] definidos no bloco 13 da spec, se o bloco está lá, e cada citação a jusante de id que
+    o bloco não tem. As marcas «Resolvido em [D0-n]» nas células da spec ficam quando o bloco 13 se perde (exp01ef1b,
+    exp05ef1b e exp03ef1b-317df247 citam D0-1 e D0-7, ou D0-1 e D0-2, fora dele): contá-las como definição escondia
+    os órfãos. Elas saem à parte, em `fora_do_bloco_13`."""
     from tools.conteudo_aprovado import remover_anexo
 
     docs = docs or documentos(state)
     spec = docs.get("spec_missao", "")
-    na_spec = sorted({int(x) for x in _RE_D0.findall(spec)})
+    b13 = bloco_13(spec)
+    na_spec = sorted({int(x) for x in _RE_D0.findall(b13)})
+    fora_do_bloco = sorted({int(x) for x in _RE_D0.findall(spec.replace(b13, "") if b13 else spec)})
     citacoes, orfas = {}, {}
     for k in CITAM_D0:
         texto = docs.get(k, "")
@@ -646,20 +663,23 @@ def d0_a_jusante(state: Dict[str, Any], docs: Optional[Dict[str, str]] = None) -
             fora = sorted({int(x) for x in ids} - set(na_spec))
             if fora:
                 orfas[k] = fora
-    return {"decisoes": len(decisoes_d0(state)), "na_spec": na_spec, "bloco_13": bool(bloco_13(spec).strip()),
-            "citacoes": citacoes, "orfas": orfas}
+    return {"decisoes": len(decisoes_d0(state)), "na_spec": na_spec, "bloco_13": bool(b13.strip()),
+            "fora_do_bloco_13": fora_do_bloco, "citacoes": citacoes, "orfas": orfas}
 
 
 # --------------------------------------------------------------------------- quadro e relatório
 _RE_CONFLITO_INSTRUCAO = re.compile(r"\[CONFLITO\s*[—–-]\s*([^×\]\n]{1,40}?)\s*×")
 
 
-def marcadores(state: Dict[str, Any]) -> Dict[str, Any]:
+def marcadores(state: Dict[str, Any], docs: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     """[PARÂMETRO]/[PROPOSTA] abertos no one-pager e na spec do Gate 0; [CONFLITO] nos documentos e nas notas."""
+    docs = docs or documentos(state)
+
     def conta(k: str, tipo: str) -> int:
-        return sum(1 for m in marcadores_abertos(str(state.get(k) or "")) if m["tipo"] == tipo)
+        return sum(1 for m in marcadores_abertos(docs.get(k, "")) if m["tipo"] == tipo)
 
     return {
+        "spec_gate0_inferida": spec_gate0_inferida(state),
         "one_pager": {"parametro": conta("one_pager", "parametro"), "proposta": conta("one_pager", "proposta")},
         "spec_gate0": {"parametro": conta("spec_missao_gate0", "parametro"), "proposta": conta("spec_missao_gate0", "proposta")},
         "conflito_documentos": sum(len(re.findall(r"\[CONFLITO", str(state.get(k) or ""))) for k in DOCUMENTOS_DE_SAIDA),
@@ -686,7 +706,7 @@ def avaliar(state: Dict[str, Any], conversa: Optional[Dict[str, Any]] = None) ->
         "d0_respec": len(env.get("respec") or []),
         "sem_origem": sem_origem(state, docs, corpus),
         "d0_a_jusante": d0_a_jusante(state, docs),
-        "marcadores": marcadores(state),
+        "marcadores": marcadores(state, docs),
         "s4_rastreabilidade": s4,
     }
 
@@ -720,6 +740,7 @@ def quadro(resultados: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
                                 if r["marcadores"]["one_pager"]["parametro"]},
         "spec_gate0": {m: r["marcadores"]["spec_gate0"] for m, r in resultados.items()
                        if any(r["marcadores"]["spec_gate0"].values())},
+        "spec_gate0_inferida": sorted(m for m, r in resultados.items() if r["marcadores"]["spec_gate0_inferida"]),
         "s4_na_copy": _soma_fracoes(r["s4_rastreabilidade"].get("copy") for r in com_d0.values()),
         "s4_no_prototipo": _soma_fracoes(r["s4_rastreabilidade"].get("prototipo") for r in com_d0.values()),
         "frases_de_pedido_so_a_jusante": sum(1 for f in frases if f["situacao"] == "so-a-jusante"),
@@ -746,7 +767,9 @@ def relatorio(res: Dict[str, Any], missao: str = "") -> str:
          "(plano «Produto dono do contrato», PR 1).", ""]
     mk = res["marcadores"]
     L += [f"Marcadores abertos: one-pager {mk['one_pager']['parametro']} [PARÂMETRO] e {mk['one_pager']['proposta']} "
-          f"[PROPOSTA]; spec do Gate 0 {mk['spec_gate0']['parametro']} e {mk['spec_gate0']['proposta']}. "
+          f"[PROPOSTA]; spec do Gate 0 {mk['spec_gate0']['parametro']} e {mk['spec_gate0']['proposta']}"
+          + (" (sem `spec_missao_gate0`: lida da `spec_missao` sem os blocos 13/14, com as edições em linha do "
+             "design, se houver)" if mk.get("spec_gate0_inferida") else "") + ". "
           f"[CONFLITO] nos documentos: {mk['conflito_documentos']}"
           + (f" (a instrução está nas notas de passagem: {', '.join(mk['conflito_instrucao'])} × one-pager)."
              if mk["conflito_instrucao"] else "."), ""]
@@ -812,8 +835,10 @@ def relatorio(res: Dict[str, Any], missao: str = "") -> str:
 
     j = res["d0_a_jusante"]
     L += ["## 4. [D0-n] citados a jusante e ausentes da spec", "",
-          f"Decisões D0: {j['decisoes']}. Na spec: {', '.join(f'D0-{i}' for i in j['na_spec']) or 'nenhuma'}; "
-          f"bloco 13 {'presente' if j['bloco_13'] else 'ausente'}.", ""]
+          f"Decisões D0: {j['decisoes']}. No bloco 13 da spec: {', '.join(f'D0-{i}' for i in j['na_spec']) or 'nenhuma'}; "
+          f"bloco 13 {'presente' if j['bloco_13'] else 'ausente'}."
+          + (f" Citados na spec fora do bloco 13 (marcas, não definição): "
+             f"{', '.join(f'D0-{i}' for i in j['fora_do_bloco_13'])}." if j.get("fora_do_bloco_13") else ""), ""]
     for k, c in j["citacoes"].items():
         orf = j["orfas"].get(k)
         L.append(f"- {k}: {c['mencoes']} menção(ões), ids {', '.join(f'D0-{i}' for i in c['ids'])}"

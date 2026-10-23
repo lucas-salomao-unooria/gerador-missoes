@@ -247,6 +247,21 @@ def test_mutante_apagar_bloco_13(exp06ef1b):
     assert sem["orfas"]["handoff_dev"] == [1, 2, 3, 4, 5]
 
 
+def test_mutante_apagar_bloco_13_com_marcas_fora_do_bloco():
+    """exp01ef1b: a spec cita D0-1 e D0-7 fora do bloco 13 («Resolvido em [D0-7]» nas células). Essas marcas ficam
+    quando o bloco se perde e não podem contar como definição, senão D0-1 e D0-7 somem dos órfãos."""
+    state = _estado("exp01ef1b")
+    real = pg.d0_a_jusante(state)
+    assert real["na_spec"] == [1, 2, 3, 4, 5, 6, 7] and real["fora_do_bloco_13"] == [1, 7] and real["orfas"] == {}
+    mutante = copy.deepcopy(state)
+    mutante["spec_missao"] = mutante["spec_missao"].replace(pg.bloco_13(mutante["spec_missao"]), "")
+    sem = pg.d0_a_jusante(mutante)
+    assert sem["na_spec"] == [] and sem["fora_do_bloco_13"] == [1, 7]
+    assert sem["orfas"]["brief_oficio"] == [1]
+    assert sem["orfas"]["handoff_dev"] == [1, 2, 3, 5]
+    assert sem["orfas"]["prototipo_html"] == [1, 2, 3, 6]
+
+
 def test_acervo_exp02ef1b_d0_citados_fora_da_spec(exp02ef1b):
     """O bloco 13 se perdeu (linhas-perdidas) e o design cita [D0-n] que a spec não tem."""
     j = pg.d0_a_jusante(exp02ef1b)
@@ -268,6 +283,42 @@ def test_spec_de_produto_tira_os_blocos_13_e_14():
     assert pg.bloco_13(spec).startswith("## 13.")
 
 
+# --------------------------------------------------------------------------- spec do Gate 0 ausente
+_SPEC_SEM_GATE0 = ("# Spec\n\n## 6. Regras\n\nTeto de 35 palavras. [PARÂMETRO — produto: duração do podcast]\n\n"
+                   "## 13. Decisões D0\n\n[D0-1] Animação de 400 ms; balão de 90 s.\n\n## Glossário\n\nX\n")
+
+
+def test_sem_spec_gate0_a_spec_de_produto_faz_as_vezes():
+    """Sessão antiga ou parada em produto: sem `spec_missao_gate0`, a régua contava 0 [PARÂMETRO] no Gate 0 e dava ao
+    design o que estava na spec de produto (exp03ef1b e exp01em1b-76d9af6e no acervo de 23/10/2026)."""
+    state = {"spec_missao": _SPEC_SEM_GATE0, "prd_final": "35 palavras; 90 s."}
+    assert pg.spec_gate0_inferida(state)
+    mk = pg.marcadores(state)
+    assert mk["spec_gate0_inferida"] and mk["spec_gate0"] == {"parametro": 1, "proposta": 0}
+    nums = pg.sem_origem(state)["prd"]["numeros"]
+    assert nums["produto"] == [{"numero": "35 palavras", "onde": ["spec_missao_gate0"]}]
+    assert nums["design"] == [{"numero": "90 s", "onde": ["spec_missao (fora da spec do Gate 0)"]}]
+    assert "spec do Gate 0 1 e 0 (sem `spec_missao_gate0`" in pg.relatorio(pg.avaliar(state), "x")
+
+
+def test_com_spec_gate0_a_edicao_em_linha_do_design_nao_vira_produto():
+    """Com a cópia do Gate 0, o que só está na `spec_missao` (bloco 13 ou edição em linha do A066/A068) é design."""
+    gate0 = "# Spec\n\n## 6. Regras\n\nTeto de 30 palavras.\n"
+    state = {"spec_missao_gate0": gate0, "spec_missao": _SPEC_SEM_GATE0, "prd_final": "30 palavras; 35 palavras."}
+    assert not pg.spec_gate0_inferida(state) and not pg.marcadores(state)["spec_gate0_inferida"]
+    nums = pg.sem_origem(state)["prd"]["numeros"]
+    assert [i["numero"] for i in nums["produto"]] == ["30 palavras"]
+    assert nums["design"] == [{"numero": "35 palavras", "onde": ["spec_missao (fora da spec do Gate 0)"]}]
+
+
+def test_acervo_spec_gate0_inferida():
+    estados = [(m, ACERVO / m / "estado.json") for m in ("exp03ef1b", "exp01em1b-76d9af6e", "exp06ef1b")]
+    q = pg.quadro(pg.avaliar_arquivos(estados))
+    assert q["spec_gate0_inferida"] == ["exp01em1b-76d9af6e", "exp03ef1b"]
+    assert q["spec_gate0"]["exp03ef1b"] == {"parametro": 0, "proposta": 3}
+    assert q["spec_gate0"]["exp01em1b-76d9af6e"] == {"parametro": 4, "proposta": 5}
+
+
 # --------------------------------------------------------------------------- quadro e integração
 def test_quadro_do_acervo_sem_conflito_nem_d0_no_one_pager():
     estados = [(m, ACERVO / m / "estado.json") for m in ("exp06ef1b", "exp02ef1b-4fd72a9a", "exp03em1b-b2e7b4a3")]
@@ -283,6 +334,9 @@ def test_quadro_do_acervo_sem_conflito_nem_d0_no_one_pager():
 def test_regressao_gates_propagacao_nao_reprova(monkeypatch, capsys):
     from scripts import regressao_gates
 
+    # main() grava BASE_PLATAFORMA_DIR quando falta, e o valor ficava no processo para os testes seguintes. Com o
+    # setenv, o monkeypatch devolve o estado original no fim (o delenv de variável ausente não registra o que desfazer)
+    monkeypatch.setenv("BASE_PLATAFORMA_DIR", str(RAIZ / "fixtures" / "base-plataforma"))
     monkeypatch.setattr(sys, "argv", ["regressao_gates.py", "--propagacao", "exp07ef1b"])
     assert regressao_gates.main() == 0
     saida = capsys.readouterr().out

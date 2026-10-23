@@ -148,7 +148,7 @@ Na exp02ef1b foram 6 refazeres de design em 23/10, quatro deles por causa de um 
 - **D10 — Fonte da verdade para codar.** O PRD é mandatório, ou a spec de produto vence?
 - **D11 — Casos concretos da exp02ef1b.** H1 com 30% ou 25%; 5A com 3 opções («Lugar») ou 2; E5-ALU-02 trava em «Criança lendo» ou deixa errar (dimensão D3); teto de 15 palavras e reescrita do Canal B.
 - **D12 — Caso concreto da exp02em1b.** O StoryPoll recusado em 21/10 continua no one-pager, na spec, na jornada e no fluxo.
-- **D13 — Missões já geradas** (exp02ef1b; exp06ef1b em codificação). Reconciliar one-pager e spec, regenerar depois dos PRs ou registrar na §19?
+- **D13 — Missões já geradas** (exp02ef1b; exp06ef1b, que se supunha em codificação e não está: ver o ajuste aprovado no fim). Reconciliar one-pager e spec, regenerar depois dos PRs ou registrar na §19?
 - **D14 — Escopo.** Teto de tempo e custo por missão, autorização da ordem dos PRs e uso das 5 sessões como acervo de regressão.
 
 ## Recomendação para cada decisão
@@ -169,5 +169,9 @@ Cada recomendação parte dos dados acima. Aprovadas em bloco, tornam o plano ex
 | D10 | A fonte da verdade é a spec de produto mais o anexo de design. O PRD deriva delas, e divergência é defeito (gate do PR 4) | É o que o PR 4 torna verificável. O PRD da exp02ef1b se contradiz (25% no corpo, 30% no anexo) |
 | D11 | Na exp02ef1b, reconduzir por produto pontual quando o PR 5 existir: textos e 2 opções na 5A como o PO pediu em 23/10 (decisão explícita mais recente); H1 e PQ-01 com 30% (o aprovado no §17; os 25% eram proposta); E5-ALU-02 deixa escolher o atributo errado, como manda a spec, para a dimensão D3 discriminar; Canal B volta ao texto aprovado | Segue a regra «vale o pedido mais novo do PO, mas no documento de produto». Travar em «Criança lendo» zera o poder de medida da D3 |
 | D12 | Remover o StoryPoll da exp02em1b por produto pontual, citando a decisão do PO de 21/10 15:43 | Decisão explícita do PO que a esteira perdeu |
-| D13 | exp02ef1b: reconciliar como no D11. exp06ef1b (em codificação): registrar as 35 palavras na §19 e avisar quem codifica; não regenerar | Regenerar uma missão em codificação custa mais que o defeito, que é um teto de texto |
+| D13 | exp02ef1b: reconciliar como no D11. exp06ef1b: ajustar como as demais (ver o ajuste aprovado abaixo) | Texto original: «exp06ef1b (em codificação): registrar as 35 palavras na §19 e avisar quem codifica; não regenerar». Partia de a missão estar em codificação, o que não era o caso |
 | D14 | Ordem 1→9. Acervo de regressão com as 5 sessões e os 2 PRDs. Teto: produto até +1 chamada por refazer, medido no PR 6 antes do merge | Os PRs 1 a 4 não mudam papéis e já fecham as perdas silenciosas e a incoerência do PRD |
+
+**Aprovado em 23/10/2026:** D1–D14 em bloco, com um ajuste no D13. A exp06ef1b ainda não foi codificada e pode ser ajustada como as demais; a recomendação de só registrar as 35 palavras na §19 sem regenerar não vale mais.
+
+Depois dos PRs, o usuário vai refazer na esteira a exp02ef1b, a exp02em1b, a exp01em1b e a exp03em1b. Não há reconciliação manual de sessões: o código precisa produzir o resultado certo nessas reexecuções.
