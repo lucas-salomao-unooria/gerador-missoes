@@ -420,6 +420,41 @@ def _severidade_na_etapa(severidade: str, dono: str, documento: str, etapa_corre
     return severidade, ""
 
 
+#: Outra cor de pictograma seguida de palavra na mesma linha: «🟡 Brincar, 🔵 Estudar, 🟢 Comer» é série, não pendência.
+_RE_SERIE_DE_CORES = re.compile(r"[🟡🟢🔴🟠🟣🟤⚪⚫]️?\s*[\"“']?[A-Za-zÀ-ú]")
+_CORES = set("🟡🟢🔴🟠🟣🟤⚪⚫🔵")
+#: O que faz de um 🔵 uma pendência, logo depois dele: «🔵 a validar», «🔵 pendente», «🔵 confirmar com…» — e não o
+#: rótulo de botão adiante na mesma frase («… "Confirmar Enquadramento"»).
+_RE_PENDENCIA_AZUL = re.compile(r"^\W{0,3}(?:a\s+)?(?:validar|pend[eê]n|confirmar|definir|verificar|homologar|aguard)",
+                                re.IGNORECASE)
+
+
+def _e_pictograma_azul(texto: str, inicio: int) -> bool:
+    """O 🔵 em `inicio` é conteúdo da missão (pictograma, rótulo de botão), não o marcador «🔵 a validar».
+
+    Na exp02ef1b (23/10/2026) a intenção comunicativa se escolhe por «🟡 Brincar · 🔵 Estudar · 🟢 Comer»: o rastro achou
+    13 pendências em spec, jornada, telas, copy, CAA e ambiente, e uma virou bloqueio de design. É pictograma o 🔵 entre
+    aspas, numa série de cores na mesma linha, ou rótulo curto de célula de tabela — sempre sem palavra de pendência.
+    """
+    ini_linha = texto.rfind("\n", 0, inicio) + 1
+    fim_linha = texto.find("\n", inicio)
+    linha = texto[ini_linha:fim_linha if fim_linha >= 0 else len(texto)]
+    pos = inicio - ini_linha
+    depois = linha[pos + 1:]
+    celula = depois.split("|", 1)[0] if linha.lstrip().startswith("|") else depois[:60]
+    if _RE_PENDENCIA_AZUL.search(celula):
+        return False
+    if linha[pos - 1:pos] in ("\"", "“", "'", "‘", "`"):
+        return True
+    if _RE_SERIE_DE_CORES.search(linha):
+        return True
+    # cores encostadas: «Tocar (pictograma 🟡🔵🟢)»
+    if _CORES & {linha[pos - 1:pos], linha[pos + 1:pos + 2]}:
+        return True
+    palavras = re.findall(r"[A-Za-zÀ-ú]+", celula)
+    return linha.lstrip().startswith("|") and 1 <= len(palavras) <= 3
+
+
 def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                    etapa_corrente: Optional[str] = None) -> Dict[str, Any]:
     """`fontes` = [{"chave": <state key>, "rotulo": <nome legível>, "etapa_padrao": <etapa>}].
@@ -450,6 +485,8 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                 # marcadores `[NEEDS CLARIFICATION]` foram saneados" virava pendência humana e deixava
                 # o PRD 🟡 (24/09/2026). Pendência de verdade vem sem crase, ou com a pergunta dentro.
                 if not dono_raw and texto[m.start() - 1:m.start()] == "`" and texto[m.end():m.end() + 1] == "`":
+                    continue
+                if tipo == "a_validar" and _e_pictograma_azul(texto, m.start()):
                     continue
                 linha, contexto = _linha_e_contexto(texto, m.start(), m.end())
                 fechado = _RE_RESOLVIDO_D0.search(linha)
