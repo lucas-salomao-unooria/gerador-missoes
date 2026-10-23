@@ -162,7 +162,14 @@ def so_preservacao(texto: str) -> bool:
     spec, telas, fluxo, copy nem protótipo» e o design saiu 🔴 com 14 de 15 itens provados. O que não pode mudar é
     conferido em código pelos gates de preservação (linhas perdidas, rastreabilidade, registro do Stitch).
     """
-    return bool(_RE_PRESERVACAO.search(texto or "")) and not _RE_ACAO.search(_RE_PRESERVACAO.sub(" ", texto or ""))
+    texto = _RE_RELATIVA_DESCRITIVA.sub(" ", texto or "")
+    return bool(_RE_PRESERVACAO.search(texto)) and not _RE_ACAO.search(_RE_PRESERVACAO.sub(" ", texto))
+
+
+#: Oração relativa com verbo conjugado descreve, não manda: «o apressado que não mexe no banco» (exp01em1b, 23/10/2026).
+#: A ordem tem infinitivo ou dever — «o que não mudar», «o que não deve mudar» — e continua sendo preservação.
+_RE_RELATIVA_DESCRITIVA = re.compile(
+    r"\bquem?\s+n[ãa]o\s+(?:alter|mud|mex|ger|regener|refaz|reescrev|troc|toc)(?:a|e|am|em)\b", re.IGNORECASE)
 
 
 _RE_REMETE_A_LISTA = re.compile(r"\b(?:cada\s+(?:ponto|item)|(?:pontos|itens)\s+(?:abaixo|a\s+seguir|seguintes)|"
@@ -437,7 +444,6 @@ def interpretacao(saida: str, itens: List[Dict[str, str]]) -> Dict[str, Dict[str
 #: um destes fica 🟡 — o gate dele confere; sobre qualquer outra coisa (mecânica, regra, narrativa), 🔴.
 _RE_OBJETO_COM_GATE = re.compile(
     r"\b(?:spec|texto literal|textos literais|copy|telas?|wireframes?|stitch|podcast|canal b|estados?|fsm)\b")
-
 #: Documento inteiro nomeado numa ordem de não mexer → chaves do estado que o guardam. A ordem sobre o documento
 #: inteiro se prova em código contra `anterior_<chave>` (`pipeline/reexecucao.py`), sem juiz.
 _DOCUMENTO_INTEIRO = (

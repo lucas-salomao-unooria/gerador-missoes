@@ -5659,3 +5659,21 @@ def test_rastro_nao_le_pictograma_azul_como_pendencia():
                  "| EF06CO03 | 🔵 a validar | evidência na Etapa 3 |\n")
     r = varrer_lacunas(fontes, {"wireframes_cobertura": canonicos}, etapa_corrente="design")
     assert len([a for a in r["achados"] if a["tipo"] == "a_validar"]) == 3, r["achados"]
+
+
+def test_fidelidade_nao_le_descricao_como_ordem_de_preservacao():
+    """exp01em1b (23/10/2026): o pedido de refazer trazia «Isso resolve P3 (…) e P6 (o apressado que não mexe no banco
+    e o investigador que monta a correção têm desfechos diferentes no reteste).» — a oração relativa descreve o aluno,
+    não manda preservar, e saía 🔴 `preservacao-sem-prova`. «Manter o restante» segue bloqueando sem prova: sem trocas
+    pontuais, nada prova que o restante ficou (`test_preservar_todo_o_restante_se_prova_pelas_trocas`)."""
+    from tools import fidelidade as fid
+
+    descricao = ("Isso resolve P3 (a escolha do aluno tem consequência, a correção que ele monta muda o resultado) e P6 "
+                 "(o apressado que não mexe no banco e o investigador que monta a correção têm desfechos diferentes no reteste).")
+    assert not fid.so_preservacao(descricao)
+    assert fid.so_preservacao("Não mexer no podcast.") and fid.so_preservacao("Manter o restante")
+    # ordem de verdade, mesmo com «que não»: infinitivo ou dever
+    assert fid.so_preservacao("O que NÃO deve mudar (preservar integralmente)")
+    assert fid.so_preservacao("O que NÃO mudar: foco primário EF01CO06 intacto")
+    assert not fid.so_preservacao("O resto é fricção de interface que não gera aprendizagem.")
+
