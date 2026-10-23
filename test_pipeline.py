@@ -5631,3 +5631,31 @@ def test_stitch_ligado_vem_do_env_fora_do_app(monkeypatch):
     assert config.AppSettings().is_stitch_enabled
     monkeypatch.setenv("STITCH_MCP_MODE", "off")
     assert not config.AppSettings().is_stitch_enabled and not config.AppSettings().stitch_configurado
+
+
+def test_rastro_nao_le_pictograma_azul_como_pendencia():
+    """exp02ef1b (23/10/2026): a missão usa «🟡 Brincar · 🔵 Estudar · 🟢 Comer» como pictogramas de intenção; o rastro
+    lê 🔵 como «pendência a validar» e achou 13 — uma delas bloqueio de design, porque «Estilo wireframe» vinha depois.
+    Pictograma entre aspas, numa série de cores ou como rótulo curto de célula não é marcador; o 🔵 canônico continua."""
+    from tools.rastro import varrer_lacunas
+
+    linhas_reais = (
+        '| E3-ALU-01 | primeira vez (scaffolding 5s) | MOBILE | E3-ALU-01 — Trava-Enquadramento. Barra inferior com 3 chips '
+        'seletores: "🟡 Brincar", "🔵 Estudar", "🟢 Comer". Rodapé: Botão primário "Confirmar Enquadramento" desabilitado. '
+        'Estilo wireframe cinza puro. |\n'
+        "- Seletor horizontal com 3 chips/pictogramas de intenção comunicativa (🟡 Brincar, 🔵 Estudar, 🟢 Comer).\n"
+        "| `E3-ALU-01` | `e3.tag.estudar` | rótulo de UI | `unoogaleria` | 🔵 Estudar | 2 | `texto+ícone` | `plataforma simulada` |\n"
+        "| 🟡 BRINCAR             | 🔵 ESTUDAR             | 🟢 COMER               | 📷 ENQUADRAR           |\n"
+        '*"Toque no símbolo do que você quer mostrar (🟡 Brincar, 🔵 Estudar ou 🟢 Comer)."*\n'
+        "| `E3-ALU-01` | E3 | ALU | Tocar (pictograma 🟡🔵🟢) → Arrastar e Redimensionar (moldura) → Tocar |\n")
+    fontes = [{"chave": "wireframes_cobertura", "rotulo": "telas", "etapa_padrao": "design"}]
+    r = varrer_lacunas(fontes, {"wireframes_cobertura": linhas_reais}, etapa_corrente="design")
+    assert not [a for a in r["achados"] if a["tipo"] == "a_validar"], r["achados"]
+    assert r["status"] == "aprovado"
+
+    # o 🔵 de verdade continua sendo pendência
+    canonicos = ("- Código EM13CO08: 🔵 a validar com a coordenação pedagógica.\n"
+                 "| 5.1 | BNCC Computação — letramento digital mapeado | 🔵 |\n"
+                 "| EF06CO03 | 🔵 a validar | evidência na Etapa 3 |\n")
+    r = varrer_lacunas(fontes, {"wireframes_cobertura": canonicos}, etapa_corrente="design")
+    assert len([a for a in r["achados"] if a["tipo"] == "a_validar"]) == 3, r["achados"]
