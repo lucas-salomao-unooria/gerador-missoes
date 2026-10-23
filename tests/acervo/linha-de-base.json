@@ -277,6 +277,38 @@
       "status": "aprovado",
       "codigos": []
     },
+    "rastro_design_status": {
+      "status": "amarelo",
+      "codigos": [
+        "a_validar"
+      ]
+    },
+    "consistencia_status": {
+      "status": "amarelo",
+      "codigos": [
+        "rotulo-divergente"
+      ]
+    },
+    "prototipo_lint_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "qa_afirmacoes_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastreabilidade_status": {
+      "status": "amarelo",
+      "codigos": [
+        "perdido-estado-fluxo",
+        "perdido-texto_tela-copy",
+        "perdido-texto_tela-prototipo"
+      ]
+    },
     "fidelidade_status": {
       "status": "aprovado",
       "codigos": []
@@ -488,6 +520,10 @@
       "status": "aprovado",
       "codigos": []
     },
+    "conteudo_aprovado_pedagogico_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
     "rastro_design_status": {
       "status": "aprovado",
       "codigos": []
@@ -515,7 +551,48 @@
     "rastreabilidade_status": {
       "status": "amarelo",
       "codigos": [
-        "perdido-estado-fluxo"
+        "perdido-estado-fluxo",
+        "perdido-estado-prd",
+        "perdido-proposta-prd"
+      ]
+    },
+    "telemetria_status": {
+      "status": "amarelo",
+      "codigos": [
+        "ds-versao-cravada"
+      ]
+    },
+    "conteudo_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "a_validar",
+        "adr-inexistente",
+        "adr-numero-errado",
+        "adr-sem-proposta",
+        "ds-versao-cravada",
+        "estado-da-spec-sem-mapa",
+        "sem-idempotencia",
+        "tarefa-nao-atomica"
+      ]
+    },
+    "kpis_status": {
+      "status": "amarelo",
+      "codigos": [
+        "kpi-operacional-com-resultado"
+      ]
+    },
+    "conteudo_aprovado_prd_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_lacunas_status": {
+      "status": "amarelo",
+      "codigos": [
+        "a_validar"
       ]
     },
     "fidelidade_status": {
@@ -530,8 +607,8 @@
       "status": "bloqueado",
       "codigos": [
         "exigencia-dispensada",
-        "preservacao-sem-prova",
-        "sem-prova"
+        "pedido-violado",
+        "remocao-a-conferir"
       ]
     }
   },
@@ -585,16 +662,54 @@
       "status": "aprovado",
       "codigos": []
     },
-    "fidelidade_status": {
+    "rastro_design_status": {
       "status": "amarelo",
       "codigos": [
-        "remocao-a-conferir"
+        "aberto"
+      ]
+    },
+    "consistencia_status": {
+      "status": "amarelo",
+      "codigos": [
+        "rotulo-divergente",
+        "texto-de-tela-reescrito"
+      ]
+    },
+    "prototipo_lint_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "qa_afirmacoes_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "arquivo-inexistente"
+      ]
+    },
+    "rastreabilidade_status": {
+      "status": "amarelo",
+      "codigos": [
+        "perdido-texto_tela-copy",
+        "perdido-texto_tela-prototipo"
+      ]
+    },
+    "fidelidade_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "citou-o-pedido"
       ]
     },
     "fidelidade_nucleo_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_design_status": {
       "status": "bloqueado",
       "codigos": [
-        "citou-o-pedido",
+        "exigencia-dispensada",
         "sem-prova"
       ]
     }
@@ -1039,6 +1154,133 @@
     }
   },
   "exp06ef1b": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "manifesto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "contrato_produto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "decisao-atribuida-ao-po"
+      ]
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_pedagogico_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_design_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "consistencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "prototipo_lint_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "qa_afirmacoes_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastreabilidade_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "telemetria_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "adr-inexistente"
+      ]
+    },
+    "conteudo_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "adr-inexistente",
+        "adr-sem-proposta",
+        "coluna-da-spec-ausente",
+        "ds-versao-cravada"
+      ]
+    },
+    "kpis_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_prd_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_lacunas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_nucleo_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "citou-o-pedido",
+        "nao-tratado",
+        "preservacao-sem-citacao"
+      ]
+    },
+    "fidelidade_design_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_dev_status": {
+      "status": "aprovado",
+      "codigos": []
+    }
+  },
+  "exp06ef1b-53e011b6": {
     "bncc_status": {
       "status": "aprovado",
       "codigos": []
