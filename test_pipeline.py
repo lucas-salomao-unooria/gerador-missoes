@@ -5717,3 +5717,55 @@ def test_fidelidade_prova_texto_ditado_e_nao_cobra_remocao_do_que_nao_existia():
                     anteriores={"one_pager": antes + "\nAtingiu: abre a Central de Apoio."},
                     interpretacao=fid.interpretacao(leitura, itens))
     assert [(a["id"], a["codigo"]) for a in r["achados"]] == [("F27", "remocao-nao-aplicada")], r["achados"]
+
+
+def test_gates_e_geracao_consistentes_no_retrabalho_e_na_correcao_pontual():
+    """23/10/2026 — três inconsistências entre geração e gate, cada uma sem resposta que passasse:
+    - exp03ef1b: no retrabalho só o D0 roda; a spec que ele reemite não tem o bloco 14 do D9, e ninguém o regravava;
+    - exp02ef1b: o PO colou os relatos de gate no refazer; a esteira os leu como ordem («manda tirar «Publicar no Álbum»»)
+      e o editor desfez a troca que o próprio PO tinha pedido;
+    - exp02ef1b: a troca pedida pelo PO mudou a linha do glossário da spec, e o gate de preservação a acusava de perdida."""
+    from agents.design import get_fecha_lacunas_split
+    from tools import fidelidade as fid
+
+    # relato de gate colado não vira item
+    colado = ("Ajustes necessários:\n❌ remocao-nao-aplicada · O pedido manda tirar «Publicar no Álbum», e nenhuma "
+              "ocorrência saiu do documento: «Botão: “Publicar no Álbum” Ajuste solicitado: Para o exemplo de leitura:».\n")
+    original = "Botão: “Publicar no Álbum”\nAjuste solicitado: Botão: “Colocar no álbum”."
+    itens = fid.montar_checklist([("refazer Design · design · 23/10 13:24", original), ("refazer Design · design · 23/10 14:37", colado)], "")
+    assert not [i for i in itens if "manda tirar" in i["texto"] or "remocao-nao-aplicada" in i["texto"]], itens
+    assert fid.sem_relatos_de_gate(colado).strip() == "Ajustes necessários:"
+    # o que o PO escreveu depois da seta é dele e fica
+    assert fid.sem_relatos_de_gate("❌ sem-codigo · Nenhum código no bloco 11. -> as habilidades foram trabalhadas") == "as habilidades foram trabalhadas"
+
+    gate0 = ("# Spec — exp03ef1b\n\n## 8. Professora\n" + "".join(f"- Roteiro {i} do debate com a turma sobre a foto da escola.\n" for i in range(30))
+             + "\n## Glossário canônico\n| Ação | Rótulo |\n|---|---|\n| Confirmar o segundo envio na Fase 5B | `Publicar no Álbum` |\n")
+    bloco14 = "## 14. Ambiente simulado (D9)\n- **Nome do ambiente que o estudante vê:** Unoojornal\n- **Ponte de importação:** `@edu/ui/ds-unoojornal`\n"
+    aceita = gate0 + "\n## 13. Decisões D0\n| `[D0-1]` | x |\n\n" + bloco14
+
+    def saida_d0(spec):
+        return ("## Passo 5 — Spec consolidada\n\n" + spec + "\n## Passo 5b — Relatório de preenchimento\n\n"
+                + "O D0 preencheu as lacunas desta rodada de retrabalho. " * 3 + "\n\n## Passo 6 — Devolutiva\n\nNada.\n"
+                '```json\n{"agente": "fecha-lacunas", "status": "aprovado", "achados": []}\n```\n')
+
+    def rodar(estado):
+        class Semente(BaseAgent):
+            @override
+            async def _run_async_impl(self, ctx):
+                yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
+        _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), get_fecha_lacunas_split()])))
+        return st
+
+    # retrabalho do D0 sem o bloco 14: ele volta da versão aceita, e nada é acusado de perdido
+    st = rodar({"fechamento_lacunas": saida_d0(gate0 + "\n## 13. Decisões D0\n| `[D0-1]` | x |\n"), "spec_missao": aceita})
+    assert "Ponte de importação" in st["spec_missao"] and st["lacunas_status"] != "bloqueado", st.get("lacunas_status_envelope")
+
+    # a troca que o PO pediu muda a linha do glossário: atenção, não perda
+    trocada = aceita.replace("`Publicar no Álbum`", "`Colocar no álbum`")
+    pedidos = [{"etapa": "design", "texto": original}]
+    st = rodar({"fechamento_lacunas": saida_d0(trocada.split("\n## 14")[0]), "spec_missao": aceita, "pedidos_do_po": pedidos})
+    codigos = {a["codigo"]: a["severidade"] for a in (st.get("lacunas_status_envelope") or {}).get("achados") or []}
+    assert codigos.get("linha-trocada-a-pedido") == "atencao" and "linhas-perdidas" not in codigos, codigos
+    # sem pedido que cite o texto, a mesma mudança continua sendo perda
+    st = rodar({"fechamento_lacunas": saida_d0(trocada.split("\n## 14")[0]), "spec_missao": aceita})
+    assert st["lacunas_status"] == "bloqueado"

@@ -358,6 +358,29 @@ PRIORIDADE: Tuple[Tuple[str, int], ...] = (
     ("ajuste", 12), ("pedido", 30), ("literal", 8), ("validacao", 12), ("trava", 18), ("briefing", 16))
 
 
+#: Relato de gate colado num pedido: «❌ remocao-nao-aplicada · O pedido manda tirar «X»…». Ele aponta para um item de
+#: pedido anterior, que segue em vigor; lido como ordem, a esteira obedecia à mensagem do gate. Na exp02ef1b
+#: (23/10/2026) o PO colou os achados e o editor pontual trocou «Colocar no álbum» de volta para «Publicar no Álbum».
+_RE_RELATO_DE_GATE = re.compile(
+    r"^\s*(?:[❌⚠️🟡🔴⛔✅]️?\s*)?`?[a-z]+(?:-[a-z]+)+`?\s*·|"
+    r"O pedido manda tirar «|O juiz (?:diz que atende|tratou como contexto)|Ordem de não mexer sobre|"
+    r"Pedido do PO sem prova|citou o próprio pedido|Devolva cada uma, no mesmo lugar", re.IGNORECASE)
+
+
+def sem_relatos_de_gate(texto: str) -> str:
+    """O pedido sem as linhas que são relato de gate colado — o item que o relato cita já está no pedido de origem.
+    O que o PO escreveu depois de uma seta («❌ sem-codigo · … -> as habilidades foram trabalhadas…») é dele, e fica."""
+    saida = []
+    for linha in (texto or "").splitlines():
+        if not _RE_RELATO_DE_GATE.search(linha):
+            saida.append(linha)
+            continue
+        resposta = re.search(r"\s(?:->|→|=>)\s*(\S.*)$", linha)
+        if resposta:
+            saida.append(resposta.group(1))
+    return "\n".join(saida)
+
+
 def montar_checklist(pedidos: List[Tuple[str, str]], briefing: str) -> List[Dict[str, str]]:
     """`pedidos` = [(origem, texto)], do mais antigo ao mais novo. Ids F1…Fn, sem repetição.
 
@@ -366,7 +389,7 @@ def montar_checklist(pedidos: List[Tuple[str, str]], briefing: str) -> List[Dict
     """
     brutos: List[Dict[str, str]] = []
     for origem, texto in reversed(pedidos):
-        brutos += itens_do_pedido(texto, origem)
+        brutos += itens_do_pedido(sem_relatos_de_gate(texto), origem)
     brutos += itens_do_briefing(briefing)
     vistos, unicos = set(), []
     for tipo, teto in PRIORIDADE:

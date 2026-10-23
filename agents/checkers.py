@@ -263,6 +263,26 @@ def documento_sem_moldura(secao: str) -> str:
     return limpo.strip() if limpo != miolo else secao
 
 
+def _bloco(documento: str, titulo: str) -> str:
+    """O bloco cujo título casa `titulo` (regex de linha) — dele até o próximo `## ` ou o fim; "" sem ele."""
+    m = re.search(titulo, documento or "", re.MULTILINE)
+    if not m:
+        return ""
+    fim = re.search(r"^## ", documento[m.end():], re.MULTILINE)
+    return documento[m.start():m.end() + fim.start()] if fim else documento[m.start():]
+
+
+def _cita_texto_do_po(linha: str, state: Dict[str, Any]) -> bool:
+    """A linha traz um texto que um pedido do PO pôs entre aspas para trocar (sem os relatos de gate que ele colou)."""
+    from tools.fidelidade import sem_relatos_de_gate
+
+    pedidos = " ".join(sem_relatos_de_gate(str(p.get("texto") or "")) for p in state.get("pedidos_do_po") or []
+                       if isinstance(p, dict))
+    citados = {c.strip().lower() for c in re.findall(r"[“\"«]([^”\"»\n]{4,80})[”\"»]", pedidos)}
+    alvo = (linha or "").lower()
+    return any(c in alvo for c in citados)
+
+
 def _sem_bloco(documento: str, titulo: str) -> str:
     """O documento sem o bloco cujo título casa `titulo` (regex de linha) — dele até o próximo `## ` ou o fim."""
     m = re.search(titulo, documento or "", re.MULTILINE)
@@ -475,6 +495,15 @@ class SecaoSplitAgent(BaseAgent):
                 backup = ex.get("backup")
                 if backup and state.get(chave) and not state.get(backup):
                     delta[backup] = state.get(chave)
+                if ex.get("carregar_blocos") and aceita.strip():
+                    # O bloco de outro autor que esta reescrita omitiu volta como estava: no retrabalho só o D0 roda,
+                    # e o bloco 14 do D9 sumia da spec (exp03ef1b, 23/10/2026) — ninguém o regravava.
+                    for regex in ex["carregar_blocos"]:
+                        if not re.search(regex, secao, re.MULTILINE):
+                            bloco = _bloco(documento_sem_moldura(aceita), regex)
+                            if bloco:
+                                secao = secao.rstrip() + "\n\n" + bloco.strip() + "\n"
+                                linhas.append(f"↩️ `{chave}`: bloco de outro autor que a reescrita omitiu carregado da versão aceita.")
                 if ex.get("preservar") and str(state.get(chave) or "").strip():
                     from tools.preservacao import linhas_perdidas
 
@@ -489,6 +518,19 @@ class SecaoSplitAgent(BaseAgent):
                         # o bloco do próprio autor ele pode reescrever; o resto é o que veio antes dele
                         comparada = _sem_bloco(comparada, proprio or ex["bloco_autoral"])
                     sumiram = linhas_perdidas(comparada, secao)
+                    # A linha que tinha um texto que o PO mandou trocar muda por ordem dele: é atenção, não perda.
+                    # Na exp02ef1b (23/10/2026) o PO trocou «Publicar no Álbum» por «Colocar no álbum» e a linha do
+                    # glossário da spec, trocada, bloqueava — um gate mandava trocar e o outro proibia.
+                    pedidas = [l for l in sumiram if _cita_texto_do_po(l, state)]
+                    sumiram = [l for l in sumiram if l not in pedidas]
+                    if pedidas:
+                        instaveis.append({
+                            "severidade": "atencao", "codigo": "linha-trocada-a-pedido", "etapa": "design",
+                            "agente_responsavel": ex["preservar"],
+                            "resumo": (f"`{chave}`: {len(pedidas)} linha(s) do documento anterior mudaram porque traziam um "
+                                       "texto que o PO mandou trocar — confira se a troca está certa:\n"
+                                       + "\n".join(f"    - «{l[:200]}»" for l in pedidas[:10])),
+                        })
                     delta[chave_base] = base if sumiram else ""
                     if sumiram:
                         perdidas.append({

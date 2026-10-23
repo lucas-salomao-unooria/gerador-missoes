@@ -603,8 +603,11 @@ TENTATIVAS_DO_EDITOR = 3
 
 
 def texto_para_o_editor(pedido: "PedidoCorrecao") -> str:
-    """O pedido como o PO escreveu, com o texto dos anexos — sem o cabeçalho da esteira."""
-    partes = [pedido.texto.strip() or "(sem texto)"]
+    """O pedido como o PO escreveu, com o texto dos anexos — sem o cabeçalho da esteira, e sem o relato de gate que ele
+    colou: o editor obedecia à mensagem do gate como se fosse ordem (`tools.fidelidade.sem_relatos_de_gate`)."""
+    from tools.fidelidade import sem_relatos_de_gate
+
+    partes = [sem_relatos_de_gate(pedido.texto).strip() or "(sem texto)"]
     for nome, conteudo in pedido.anexos:
         partes += ["", f"### Anexo: {nome}", "", conteudo.strip()]
     for nome in pedido.anexos_sem_texto:

@@ -122,6 +122,8 @@ def get_fecha_lacunas_split() -> SecaoSplitAgent:
                 "preservar": "fecha-lacunas",
                 # o bloco 13 é todo do D0: entre rodadas ele o reescreve (exp02em1b, 22/10/2026)
                 "bloco_autoral": r"^##\s*13\b.*$",
+                # o bloco 14 é do D9, que não roda no retrabalho do D0: o que o D0 omitir volta da versão aceita
+                "carregar_blocos": [r"^##\s*14\b.*$"],
                 # entre execuções de refazer, a consolidação não muda sem motivo (exp06ef1b traduziu o próprio texto)
                 "estavel_contra": "fechamento_lacunas",
             },
