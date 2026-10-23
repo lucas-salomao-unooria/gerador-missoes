@@ -192,7 +192,41 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
             rastro.varrer_lacunas(rastro.FONTES_DEV, state, etapa_corrente="dev")
         )
 
+    gates.update(_fidelidades(state))
     return gates
+
+
+#: As fidelidades, com a resposta do juiz e do intérprete que a execução gravou: o código que confere essas respostas
+#: (`tools.fidelidade.aplicar`) é determinístico, e foi onde nasceu a maior parte dos falsos 🔴 de 21–23/10/2026.
+_FIDELIDADES = (
+    ("fidelidade_status", "juiz_fidelidade_saida", "interpretacao_fidelidade_saida",
+     ("nucleo_narrativo", "one_pager", "spec_missao"), ("produto", "")),
+    ("fidelidade_nucleo_status", "juiz_fidelidade_nucleo_saida", "interpretacao_fidelidade_nucleo_saida",
+     ("nucleo_narrativo",), ("produto", "")),
+    ("fidelidade_design_status", "juiz_fidelidade_design_saida", "interpretacao_fidelidade_design_saida",
+     ("spec_missao", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings_revisada", "camada_caa",
+      "wireframes_cobertura"), ("design",)),
+    ("fidelidade_dev_status", "juiz_fidelidade_dev_saida", "interpretacao_fidelidade_dev_saida",
+     ("handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico"), ("dev",)),
+)
+
+
+def _fidelidades(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    from tools import fidelidade as fid
+
+    saida: Dict[str, Dict[str, Any]] = {}
+    for status, juiz, interprete, documentos, etapas in _FIDELIDADES:
+        if not str(state.get(juiz) or "").strip():
+            continue
+        pedidos = [(str(p.get("origem") or f"refazer {p.get('etapa')}"), str(p.get("texto") or ""))
+                   for p in state.get("pedidos_do_po") or [] if isinstance(p, dict) and (p.get("etapa") or "") in etapas]
+        itens = fid.montar_checklist(pedidos, "")
+        docs = {k: str(state.get(k) or "") for k in documentos if str(state.get(k) or "").strip()}
+        anteriores = {k: str(state.get(f"versao_anterior_{k}") or "") for k in docs}
+        res = fid.aplicar(itens, str(state[juiz]), docs, etapa=etapas[0] or "produto", anteriores=anteriores,
+                          interpretacao=fid.interpretacao(str(state.get(interprete) or ""), itens))
+        saida[status] = _extrair_status_e_codigos(res)
+    return saida
 
 
 def avaliar_acervo(acervo_dir: Path) -> Dict[str, Dict[str, Dict[str, Any]]]:
