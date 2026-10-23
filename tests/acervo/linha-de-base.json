@@ -1,0 +1,1509 @@
+{
+  "exp01ef1b": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "manifesto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "?"
+      ]
+    },
+    "evidencia_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "habilidade-sem-canal-a"
+      ]
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "amarelo",
+      "codigos": [
+        "aberto"
+      ]
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "podcast-ausente",
+        "roteiro-reescrito"
+      ]
+    },
+    "contrato_produto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "agendamento"
+      ]
+    },
+    "evidencia_one_pager_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "habilidade-sem-canal-a"
+      ]
+    },
+    "mecanica_one_pager_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conta-ausente"
+      ]
+    },
+    "mecanica_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conta-ausente"
+      ]
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_pedagogico_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "roteiro-reescrito"
+      ]
+    },
+    "rastro_design_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "consistencia_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "glossario-ausente",
+        "podcast-reescrito",
+        "roteiro-reescrito",
+        "texto-de-tela-reescrito"
+      ]
+    },
+    "prototipo_lint_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_telas_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "prototipo-sem-quadros-marcados"
+      ]
+    },
+    "qa_afirmacoes_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastreabilidade_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "perdido-estado-fluxo",
+        "perdido-estado-prd",
+        "perdido-podcast-banco",
+        "perdido-podcast-copy",
+        "perdido-proposta-prd",
+        "perdido-roteiro-copy",
+        "perdido-roteiro-pedagogico",
+        "perdido-roteiro-spec",
+        "perdido-tela-stitch",
+        "perdido-texto_tela-copy",
+        "perdido-texto_tela-prototipo"
+      ]
+    },
+    "telemetria_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "podcast-reescrito"
+      ]
+    },
+    "prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "adr-inexistente",
+        "adr-numero-errado",
+        "adr-sem-proposta",
+        "adr-titulo-divergente",
+        "asset-fora-do-inventario",
+        "ausencia-perdida",
+        "capacidade-inexistente",
+        "chave-de-copy-ausente",
+        "coluna-da-spec-ausente",
+        "erros-sem-tabela",
+        "estado-da-spec-sem-mapa",
+        "existente-sem-decisao",
+        "experiencia-ja-existe",
+        "ficha-ausente",
+        "ia-sem-tabela",
+        "manifesto-ausente",
+        "proposta-perdida",
+        "rf-p0-sem-criterio",
+        "rota-do-handoff-mudou",
+        "rota-do-molde-ausente",
+        "rotas-sem-id",
+        "schema-indefinido",
+        "sem-grant",
+        "sem-idempotencia",
+        "sem-rate-limit",
+        "sessao-sem-rodada",
+        "status-de-gate-no-corpo",
+        "tipo-divergente-da-plataforma"
+      ]
+    },
+    "kpis_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "kpi-alvo-inventado",
+        "kpi-operacional-com-resultado",
+        "kpi-tela-divergente"
+      ]
+    },
+    "conteudo_aprovado_prd_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_lacunas_status": {
+      "status": "aprovado",
+      "codigos": []
+    }
+  },
+  "exp01em1b": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": [
+        "EM13CO20"
+      ]
+    },
+    "manifesto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "?"
+      ]
+    },
+    "evidencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "podcast-ausente"
+      ]
+    },
+    "contrato_produto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "agendamento"
+      ]
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conta-ausente"
+      ]
+    },
+    "mecanica_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conta-ausente"
+      ]
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "aprovado",
+      "codigos": []
+    }
+  },
+  "exp01em1b-76d9af6e": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": [
+        "EM13CO20"
+      ]
+    },
+    "manifesto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "amarelo",
+      "codigos": [
+        "a_validar"
+      ]
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "contrato_produto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_nucleo_status": {
+      "status": "aprovado",
+      "codigos": []
+    }
+  },
+  "exp01em1b-e3980485": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": [
+        "EM13CO20",
+        "EM13CO26"
+      ]
+    },
+    "manifesto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "contrato_produto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "nao-julgado",
+        "preservacao-sem-prova"
+      ]
+    },
+    "fidelidade_nucleo_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "nao-julgado",
+        "preservacao-sem-prova"
+      ]
+    }
+  },
+  "exp01em1b-e89e91b3": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": [
+        "EM13CO20"
+      ]
+    },
+    "manifesto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "contrato_produto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_design_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "consistencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "prototipo_lint_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "qa_afirmacoes_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "afirmacao-prototipo",
+        "arquivo-inexistente"
+      ]
+    },
+    "rastreabilidade_status": {
+      "status": "amarelo",
+      "codigos": [
+        "perdido-estado-fluxo",
+        "perdido-texto_tela-copy",
+        "perdido-texto_tela-prototipo"
+      ]
+    },
+    "fidelidade_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conflito-pedido-regra",
+        "sem-prova"
+      ]
+    },
+    "fidelidade_nucleo_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "nao-tratado"
+      ]
+    }
+  },
+  "exp02ef1b-4fd72a9a": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "manifesto_status": {
+      "status": "amarelo",
+      "codigos": [
+        "?"
+      ]
+    },
+    "evidencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "contrato_produto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_design_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "consistencia_status": {
+      "status": "amarelo",
+      "codigos": [
+        "rotulo-divergente"
+      ]
+    },
+    "prototipo_lint_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_telas_status": {
+      "status": "amarelo",
+      "codigos": [
+        "estados-fora-do-prototipo"
+      ]
+    },
+    "qa_afirmacoes_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastreabilidade_status": {
+      "status": "amarelo",
+      "codigos": [
+        "perdido-estado-fluxo"
+      ]
+    },
+    "fidelidade_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_nucleo_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_design_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "exigencia-dispensada",
+        "preservacao-sem-prova",
+        "sem-prova"
+      ]
+    }
+  },
+  "exp02em1b-60cfa7f4": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": [
+        "EM13CO08",
+        "EM13CO14",
+        "EM13CO24",
+        "EM13CO26"
+      ]
+    },
+    "manifesto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "contrato_produto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_status": {
+      "status": "amarelo",
+      "codigos": [
+        "remocao-a-conferir"
+      ]
+    },
+    "fidelidade_nucleo_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "citou-o-pedido",
+        "sem-prova"
+      ]
+    }
+  },
+  "exp03ef1b": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "manifesto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "?"
+      ]
+    },
+    "evidencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "podcast-ausente"
+      ]
+    },
+    "contrato_produto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "agendamento",
+        "numero-sem-origem"
+      ]
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conta-ausente"
+      ]
+    },
+    "mecanica_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conta-ausente"
+      ]
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "amarelo",
+      "codigos": [
+        "canal-b-reescrito"
+      ]
+    }
+  },
+  "exp03ef1b-317df247": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "manifesto_status": {
+      "status": "amarelo",
+      "codigos": [
+        "?"
+      ]
+    },
+    "evidencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "amarelo",
+      "codigos": [
+        "aberto"
+      ]
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "contrato_produto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_design_status": {
+      "status": "amarelo",
+      "codigos": [
+        "aberto"
+      ]
+    },
+    "consistencia_status": {
+      "status": "amarelo",
+      "codigos": [
+        "rotulo-divergente"
+      ]
+    },
+    "prototipo_lint_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_telas_status": {
+      "status": "amarelo",
+      "codigos": [
+        "estados-fora-do-prototipo"
+      ]
+    },
+    "qa_afirmacoes_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "arquivo-inexistente"
+      ]
+    },
+    "rastreabilidade_status": {
+      "status": "amarelo",
+      "codigos": [
+        "perdido-estado-fluxo"
+      ]
+    },
+    "fidelidade_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_nucleo_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "nao-tratado"
+      ]
+    }
+  },
+  "exp03em1b-b2e7b4a3": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": [
+        "EM13CO14",
+        "EM13CO21",
+        "EM13CO22",
+        "EM13CO26"
+      ]
+    },
+    "manifesto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "gabarito-no-cliente"
+      ]
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "contrato_produto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_design_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "consistencia_status": {
+      "status": "amarelo",
+      "codigos": [
+        "rotulo-divergente"
+      ]
+    },
+    "prototipo_lint_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "qa_afirmacoes_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastreabilidade_status": {
+      "status": "amarelo",
+      "codigos": [
+        "perdido-estado-fluxo",
+        "perdido-texto_tela-copy",
+        "perdido-texto_tela-prototipo"
+      ]
+    },
+    "fidelidade_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "citou-o-pedido",
+        "nao-julgado",
+        "sem-prova"
+      ]
+    },
+    "fidelidade_nucleo_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "nao-julgado",
+        "nao-tratado",
+        "preservacao-sem-prova"
+      ]
+    },
+    "fidelidade_design_status": {
+      "status": "aprovado",
+      "codigos": []
+    }
+  },
+  "exp05ef1b": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "manifesto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "?"
+      ]
+    },
+    "evidencia_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "gabarito-nao-declarado",
+        "habilidade-sem-matriz",
+        "tabela-medidas-ausente"
+      ]
+    },
+    "perguntas_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "core-action-ausente",
+        "declared-lessons-ausente",
+        "perguntas-herdadas-ausente",
+        "pq-tabela-ausente",
+        "sinal-universal-ausente"
+      ]
+    },
+    "rastro_spec_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "a_validar",
+        "aberto"
+      ]
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "parametro-decidido",
+        "podcast-ausente"
+      ]
+    },
+    "contrato_produto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "agendamento",
+        "numero-sem-origem"
+      ]
+    },
+    "evidencia_one_pager_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "12a-ausente"
+      ]
+    },
+    "mecanica_one_pager_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conta-ausente"
+      ]
+    },
+    "mecanica_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conta-ausente"
+      ]
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_pedagogico_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "podcast-ausente"
+      ]
+    },
+    "rastro_design_status": {
+      "status": "amarelo",
+      "codigos": [
+        "a_validar",
+        "aberto"
+      ]
+    },
+    "consistencia_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "glossario-ausente",
+        "podcast-reescrito",
+        "texto-de-tela-reescrito"
+      ]
+    },
+    "prototipo_lint_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "componente-inexistente"
+      ]
+    },
+    "cobertura_telas_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "prototipo-sem-quadros-marcados"
+      ]
+    },
+    "qa_afirmacoes_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "arquivo-inexistente"
+      ]
+    },
+    "rastreabilidade_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "perdido-estado-fluxo",
+        "perdido-podcast-copy",
+        "perdido-podcast-prd",
+        "perdido-tela-stitch",
+        "perdido-texto_tela-copy",
+        "perdido-texto_tela-prototipo"
+      ]
+    },
+    "telemetria_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "agendamento-inexistente",
+        "gabarito-no-cliente",
+        "ponte-legada",
+        "rota-fora-do-modulo",
+        "rota-verbo-errado",
+        "websocket-mencao"
+      ]
+    },
+    "prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "a_validar",
+        "aberto",
+        "asset-fora-do-inventario",
+        "ausencia-perdida",
+        "chave-de-copy-ausente",
+        "chave-sem-onde-vive",
+        "ds-versao-cravada",
+        "erros-sem-tabela",
+        "evento-perdido",
+        "existente-sem-decisao",
+        "ficha-ausente",
+        "ia-sem-tabela",
+        "manifesto-ausente",
+        "ponte-legada",
+        "rota-do-handoff-mudou",
+        "rota-do-molde-ausente",
+        "rotas-sem-id",
+        "sem-idempotencia",
+        "sem-rate-limit",
+        "sessao-sem-rodada",
+        "status-de-gate-no-corpo",
+        "tipo-divergente-da-plataforma"
+      ]
+    },
+    "kpis_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "sinal-universal-ausente",
+        "tabela-kpi-ausente"
+      ]
+    },
+    "conteudo_aprovado_prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "artefato-inexistente",
+        "habilidade-sem-kpi",
+        "podcast-sem-requisito"
+      ]
+    },
+    "rastro_lacunas_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "a_validar",
+        "aberto"
+      ]
+    }
+  },
+  "exp06ef1b": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "manifesto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "evidencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "contrato_produto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "decisao-atribuida-ao-po"
+      ]
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_pedagogico_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_design_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "consistencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "prototipo_lint_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "qa_afirmacoes_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastreabilidade_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "telemetria_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "adr-inexistente"
+      ]
+    },
+    "conteudo_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "adr-inexistente",
+        "adr-sem-proposta",
+        "coluna-da-spec-ausente",
+        "ds-versao-cravada"
+      ]
+    },
+    "kpis_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_prd_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_lacunas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_nucleo_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "citou-o-pedido",
+        "nao-tratado",
+        "preservacao-sem-citacao"
+      ]
+    },
+    "fidelidade_design_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "fidelidade_dev_status": {
+      "status": "aprovado",
+      "codigos": []
+    }
+  },
+  "exp07ef1b": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "manifesto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "?"
+      ]
+    },
+    "evidencia_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "gabarito-nao-declarado",
+        "habilidade-sem-matriz",
+        "tabela-medidas-ausente"
+      ]
+    },
+    "perguntas_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "core-action-ausente",
+        "declared-lessons-ausente",
+        "perguntas-herdadas-ausente",
+        "pq-tabela-ausente",
+        "sinal-universal-ausente"
+      ]
+    },
+    "rastro_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "roteiro-reescrito"
+      ]
+    },
+    "contrato_produto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "estado-cliente",
+        "numero-sem-origem",
+        "saeb-fora-do-ano",
+        "websocket"
+      ]
+    },
+    "evidencia_one_pager_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "12a-ausente"
+      ]
+    },
+    "mecanica_one_pager_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conta-ausente"
+      ]
+    },
+    "mecanica_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conta-ausente"
+      ]
+    },
+    "conteudo_aprovado_pedagogico_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "artefato-inexistente",
+        "podcast-ausente",
+        "roteiro-reescrito"
+      ]
+    },
+    "rastro_design_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "consistencia_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "glossario-ausente",
+        "podcast-reescrito",
+        "roteiro-reescrito",
+        "texto-de-tela-reescrito"
+      ]
+    },
+    "prototipo_lint_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "componente-inexistente"
+      ]
+    },
+    "cobertura_telas_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "preparo-do-professor-ausente",
+        "prototipo-sem-quadros-marcados"
+      ]
+    },
+    "qa_afirmacoes_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "arquivo-inexistente"
+      ]
+    },
+    "rastreabilidade_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "perdido-estado-fluxo",
+        "perdido-estado-prd",
+        "perdido-podcast-copy",
+        "perdido-podcast-prd",
+        "perdido-roteiro-copy",
+        "perdido-roteiro-pedagogico",
+        "perdido-roteiro-prd",
+        "perdido-roteiro-spec",
+        "perdido-tela-stitch",
+        "perdido-texto_tela-copy",
+        "perdido-texto_tela-prototipo"
+      ]
+    },
+    "telemetria_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "ponte-legada"
+      ]
+    },
+    "prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "asset-fora-do-inventario",
+        "ausencia-perdida",
+        "capacidade-inexistente",
+        "chave-de-copy-ausente",
+        "ds-versao-cravada",
+        "estado-da-spec-sem-mapa",
+        "evento-perdido",
+        "existente-sem-decisao",
+        "experiencia-ja-existe",
+        "ficha-ausente",
+        "manifesto-ausente",
+        "modelo-ia-divergente",
+        "ponte-legada",
+        "rota-fora-do-modulo",
+        "secao-11-ausente",
+        "secao-12-ausente",
+        "sessao-sem-rodada",
+        "status-de-gate-no-corpo",
+        "tipo-divergente-da-plataforma"
+      ]
+    },
+    "kpis_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "sinal-universal-ausente",
+        "tabela-kpi-ausente"
+      ]
+    },
+    "conteudo_aprovado_prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "artefato-inexistente",
+        "habilidade-sem-kpi",
+        "literal-parafraseado",
+        "podcast-sem-requisito",
+        "secao-14-ausente"
+      ]
+    },
+    "rastro_lacunas_status": {
+      "status": "aprovado",
+      "codigos": []
+    }
+  },
+  "exp09ef1b": {
+    "bncc_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "manifesto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "?"
+      ]
+    },
+    "evidencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "perguntas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "contrato_produto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "agendamento",
+        "numero-sem-origem"
+      ]
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conta-ausente"
+      ]
+    },
+    "mecanica_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "conta-ausente"
+      ]
+    },
+    "conteudo_aprovado_resumido_status": {
+      "status": "amarelo",
+      "codigos": [
+        "canal-b-reescrito"
+      ]
+    },
+    "conteudo_aprovado_pedagogico_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "artefato-inexistente",
+        "canal-b-reescrito",
+        "podcast-ausente",
+        "roteiro-reescrito"
+      ]
+    },
+    "rastro_design_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "consistencia_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "coluna-inexistente",
+        "glossario-ausente",
+        "podcast-reescrito",
+        "texto-de-tela-reescrito"
+      ]
+    },
+    "prototipo_lint_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_telas_status": {
+      "status": "amarelo",
+      "codigos": [
+        "estados-fora-do-prototipo"
+      ]
+    },
+    "qa_afirmacoes_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "afirmacao-stitch",
+        "arquivo-inexistente"
+      ]
+    },
+    "rastreabilidade_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "perdido-canal_b-pedagogico",
+        "perdido-canal_b-prd",
+        "perdido-podcast-copy",
+        "perdido-podcast-prd",
+        "perdido-proposta-prd",
+        "perdido-roteiro-pedagogico",
+        "perdido-roteiro-prd",
+        "perdido-tela-stitch",
+        "perdido-texto_tela-copy",
+        "perdido-texto_tela-prototipo"
+      ]
+    },
+    "telemetria_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "agendamento-inexistente",
+        "evidencia-tabela-propria",
+        "ponte-legada",
+        "zerar-arquiva"
+      ]
+    },
+    "prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "adr-numero-errado",
+        "agendamento-inexistente",
+        "asset-fora-do-inventario",
+        "ausencia-perdida",
+        "chave-de-copy-ausente",
+        "chave-sem-onde-vive",
+        "coluna-da-spec-ausente",
+        "ds-versao-cravada",
+        "evidencia-tabela-propria",
+        "ficha-ausente",
+        "manifesto-ausente",
+        "plano-sem-porta",
+        "ponte-legada",
+        "proposta-perdida",
+        "registro-da-plataforma-ausente",
+        "rota-do-handoff-mudou",
+        "schema-indefinido",
+        "secao-11-ausente",
+        "secao-12-ausente",
+        "sessao-sem-rodada",
+        "status-de-gate-no-corpo",
+        "zerar-arquiva"
+      ]
+    },
+    "kpis_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "kpi-alvo-inventado",
+        "kpi-herdada-reescrita"
+      ]
+    },
+    "conteudo_aprovado_prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "artefato-inexistente",
+        "habilidade-sem-kpi",
+        "podcast-sem-requisito",
+        "secao-14-ausente"
+      ]
+    },
+    "rastro_lacunas_status": {
+      "status": "aprovado",
+      "codigos": []
+    }
+  }
+}
