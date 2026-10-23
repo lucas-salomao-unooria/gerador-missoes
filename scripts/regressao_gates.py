@@ -8,6 +8,11 @@ Uso:
     python scripts/regressao_gates.py --gravar-linha-de-base
     python scripts/regressao_gates.py --comparar
     python scripts/regressao_gates.py [missao]
+    python scripts/regressao_gates.py --propagacao [missao]
+
+Em modo --propagacao:
+    Imprime a matriz de propagação (`tools/propagacao.py`) de cada missão do acervo e o quadro somado.
+    É relatório: não compara com a linha de base nem reprova (plano «Produto dono do contrato», PR 1).
 
 Em modo --comparar:
     Compara o resultado atual contra a linha de base congelada.
@@ -301,6 +306,8 @@ def main() -> int:
                         help="Grava o resultado atual como nova linha de base")
     parser.add_argument("--comparar", action="store_true",
                         help="Compara o resultado atual contra a linha de base gravada e falha se houver mudança")
+    parser.add_argument("--propagacao", action="store_true",
+                        help="Imprime a matriz de propagação do acervo (só leitura: não compara nem reprova)")
     parser.add_argument("missao", nargs="?", default=None,
                         help="Filtrar por slug específico de missão")
 
@@ -319,6 +326,21 @@ def main() -> int:
 
     print(f"📂 Acervo: {args.acervo_dir}")
     print(f"🏛️ Base plataforma: {os.environ.get('BASE_PLATAFORMA_DIR', '(padrão do código)')}")
+
+    if args.propagacao:
+        from tools import propagacao
+
+        estados = propagacao.estados_em([args.acervo_dir])
+        if args.missao:
+            estados = [(m, c) for m, c in estados if m == args.missao]
+            if not estados:
+                print(f"❌ Missão '{args.missao}' não encontrada no acervo.", file=sys.stderr)
+                return 1
+        resultados = propagacao.avaliar_arquivos(estados)
+        for missao, res in resultados.items():
+            print("\n" + propagacao.relatorio(res, missao))
+        print(propagacao.relatorio_quadro(propagacao.quadro(resultados)))
+        return 0
 
     atual = avaliar_acervo(args.acervo_dir)
     print(f"✅ {len(atual)} missões avaliadas com sucesso.")
