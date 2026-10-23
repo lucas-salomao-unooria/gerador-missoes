@@ -679,7 +679,16 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
             presentes = [r for r in remover if _norm(r) in agora]
             if presentes and corpo_anterior:
                 antes = fora_do_novo(corpo_anterior)
-                ficou = [r for r in presentes if agora.count(_norm(r)) >= antes.count(_norm(r))]
+                # O que não existia antes não tinha como sair: o PO citou de memória («onde diz “abre a Central de
+                # Apoio”» num critério que dizia «acessa a central de apoio») e a troca foi feita. Se o texto aparece
+                # agora, é novo e em outro lugar — atenção, não bloqueio (exp02em1b, 23/10/2026).
+                novos = [r for r in presentes if antes.count(_norm(r)) == 0]
+                ficou = [r for r in presentes if r not in novos and agora.count(_norm(r)) >= antes.count(_norm(r))]
+                if novos and not ficou:
+                    achado(it, "atencao", "remocao-a-conferir",
+                           f"O pedido manda tirar «{novos[0][:160]}», que não estava na versão anterior e agora aparece "
+                           f"em outro lugar — confira se o pedido mirava esse trecho: «{trecho}».")
+                    continue
                 if ficou:
                     achado(it, "bloqueio" if do_po else "atencao", "remocao-nao-aplicada",
                            f"O pedido manda tirar «{ficou[0][:160]}», e nenhuma ocorrência saiu do documento: «{trecho}».")
@@ -689,7 +698,14 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
                        f"O pedido manda tirar «{presentes[0][:160]}», e o trecho ainda aparece no documento — confira se "
                        f"é o mesmo lugar: «{trecho}».")
                 continue
-        texto_lido_prova = (bool(inserir or remover) and not lido.get("outras_exigencias", True)
+        # O item que é só o texto ditado («“Você é moderador…”») não tem outra exigência, diga o intérprete o que disser.
+        # Pode sobrar um rótulo sem verbo: o título da seção seguinte do pedido («2. Central de Apoio — nova tela»)
+        # gruda no item quando não tem ponto final (exp02em1b, 23/10/2026).
+        resto = _norm(re.sub(r"[“”\"«»]", " ", it["texto"]))
+        for s in inserir:
+            resto = resto.replace(_norm(s), " ")
+        so_o_texto = bool(inserir) and len(resto.split()) <= 8 and not _RE_ACAO.search(resto)
+        texto_lido_prova = (bool(inserir or remover) and (so_o_texto or not lido.get("outras_exigencias", True))
                             and veredito not in ("violado", "conflito_com_regra")
                             and all(_trecho_confere(s, corpo) for s in inserir))
         if veredito == "atendido" and _citacao_confere(citacao, doc) and not _norm(citacao) in _norm(it["texto"]):
