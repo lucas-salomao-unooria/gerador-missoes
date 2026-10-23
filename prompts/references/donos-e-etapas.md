@@ -46,9 +46,9 @@ etapa anterior escrita num documento **desta** etapa continua bloqueando: foi es
 escreveu.
 
 **Lacuna fechada pelo fechamento de lacunas (D0).** Quando uma decisão `[D0-n]` do bloco 13 fecha
-um `[ABERTO — …]` da spec, a linha dele ganha ` — Resolvido em [D0-n]`, e o rastro deixa de
-contá-la — desde que o `[D0-n]` exista no bloco 13. Marca que aponta para um D0 inexistente
-continua aberta.
+um `[ABERTO — …]` da spec, o D0 registra o marcador, literal, no mapa célula → D0 do fim do bloco
+13, e o rastro deixa de contá-lo — desde que o `[D0-n]` exista no bloco 13. Mapa (ou a marca
+antiga ` — Resolvido em [D0-n]`) que aponta para um D0 inexistente continua aberto.
 
 ## Como escrever o marcador
 

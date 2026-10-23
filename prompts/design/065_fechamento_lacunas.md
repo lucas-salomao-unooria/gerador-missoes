@@ -56,6 +56,8 @@ Sua pergunta: **o que falta para a spec ser completa o suficiente para D1–D8 c
 
 Regra de ouro: **verde e amarelo só preenchem se a resposta é derivável da missão que está no produto** — one-pager, spec, catálogo ou padrão da plataforma. Se você precisou inventar, é vermelho. Vermelho vai ao Gate 0 como **pedido de re-spec** com texto proposto; ele julga, você não.
 
+**`[PARÂMETRO]` e `[PROPOSTA]` da spec são do PO, em qualquer classe.** Fechar um `[PARÂMETRO — a definir por produto …]` (mesmo adotando a sugestão que o próprio produto escreveu) ou tornar contratual uma `[PROPOSTA — validar com PO …]` é decisão de produto — também quando a lacuna é de duração, dados ou acessibilidade, que a tabela acima deixa em verde ou amarelo. Só feche com um parecer humano **datado** em «Pareceres de quem liberou as etapas» que decida aquele item, citando-o na Base (`Parecer de <etapa> (<data>)`); «Tudo de acordo» genérico não decide proposta. Sem esse parecer, não decida: escreva no bloco 13 `[ABERTO — dono: PO: <o marcador> — sugestão: <valor> · alternativas: …]`, e os agentes seguintes usam a sugestão marcada como pendente. O código confere: `[D0-n]` que fecha marcador do Gate 0 sem parecer datado, ou com classe `mecanica*`, `curriculo*`, `parametro*` ou fora da lista do Passo 2, volta para você como bloqueio.
+
 ## Passo 1 — Varredura
 
 Percorra o checklist de células consumidas contra a spec. Para cada célula: ✅ presente · ⚠️ ausente · 🟡 ambígua (duas leituras possíveis — ambiguidade é lacuna). Some as lacunas do relatório do Gate 0 que ele deixou abertas. Não repita como lacuna o que o Gate 0 marcou como **ausência deliberada**.
@@ -64,7 +66,7 @@ Percorra o checklist de células consumidas contra a spec. Para cada célula: �
 
 | ID | Célula (bloco.campo) | Classe | Cor | Fonte de preenchimento (one-pager §, catálogo:missão, padrão:nome, inferência) | Quem consumiria (D2–D8) |
 
-Classes: `estado` · `handoff` · `evidencia` · `dispositivo` · `copy-fonte` · `acessibilidade` · `dados` · `duracao` · `mecanica` · `curriculo`. As duas últimas são sempre vermelhas — salvo quando um parecer humano em «Pareceres de quem liberou as etapas» já decidiu aquela lacuna: a decisão é do PO, não sua. Aplique-a e escreva na Fonte `Parecer de <etapa> (<data>)`; o código só aceita fonte que cite o parecer, e a pessoa confere antes do de acordo. Sem parecer que a decida, continua vermelha.
+Classes (lista fechada — use o nome exato, sem sufixo): `estado` · `handoff` · `evidencia` · `dispositivo` · `copy-fonte` · `acessibilidade` · `dados` · `duracao` · `mecanica` · `curriculo`. As duas últimas são sempre vermelhas — salvo quando um parecer humano em «Pareceres de quem liberou as etapas» já decidiu aquela lacuna: a decisão é do PO, não sua. Aplique-a e escreva na Fonte `Parecer de <etapa> (<data>)`; o código só aceita fonte que cite o parecer, e a pessoa confere antes do de acordo. Sem parecer que a decida, continua vermelha.
 
 ## Passo 3 — Decidir
 
@@ -90,11 +92,23 @@ Bloqueia: <D2 | D3 | D4 | D5 | D8> — e se nada bloqueia, não é re-spec, é a
 
 Rode com o Gate 0 em **no máximo duas rodadas**. O que ele negar volta ao produto (PM orquestrador) com o seu texto — você não contorna. Se um re-spec bloqueia D2, a missão **não segue** para D1 até resolver; se bloqueia só D4/D5, segue com a lacuna carimbada como `RS-n pendente` para os agentes downstream não redescobrirem.
 
-## Passo 5 — Spec consolidada
+## Passo 5 — Bloco 13 (a spec é montada pelo código)
 
-Emita a **spec completa**: o texto original do Gate 0 intocado (inclusive o `## Glossário canônico`, que o verificador de coerência lê depois de você), mais um **bloco 13 — Decisões D0** com todas as decisões `[D0-n]` e os `[RS-n]` pendentes. Cada decisão referencia o bloco/campo que preenche. Downstream, `spec_missao` **é esta spec consolidada** — D1 a D8 não precisam saber que você existiu, só que a célula tem resposta e a marca `[D0-n]` diz de onde veio.
+Emita **só o bloco 13**, começando pelo título `## 13. Decisões D0`: todas as decisões `[D0-n]`, os `[RS-n]` pendentes e os `[ABERTO — dono: PO: …]` que você não pode fechar. Cada decisão referencia o bloco/campo que preenche. Subtítulos dentro do bloco são `###` — um `## ` encerra o bloco. **Não copie a spec do Gate 0**: o código monta `spec_missao` com o texto do Gate 0 intocado (blocos 0–12 e `## Glossário canônico`), o seu bloco 13 e o bloco 14 que já houver. Downstream, `spec_missao` é essa spec montada — D1 a D8 não precisam saber que você existiu, só que a célula tem resposta e a marca `[D0-n]` diz de onde veio.
 
-**Uma única alteração no texto do Gate 0 é permitida:** quando uma `[D0-n]` fecha um marcador `[ABERTO — …]` da spec, acrescente ao fim da linha dele — e só dela — ` — Resolvido em [D0-n]`. O rastro de lacunas lê essa marca e deixa de cobrar o que você fechou, desde que o `[D0-n]` exista no bloco 13; sem ela, a pendência que você resolveu volta a barrar o design e o PRD. Não apague nem reescreva o marcador: quem lê precisa ver o que estava aberto e onde foi fechado.
+**O texto do Gate 0 não muda por você.** Se uma linha dele precisasse mudar, isso é decisão do PO: escreva no bloco 13 `[ABERTO — dono: PO: …]` com o texto que proporia. O que vier diferente do Gate 0 na sua resposta é descartado pelo código e aparece ao PO no cartão do parecer de design como `[ABERTO — dono: PO]`.
+
+**Mapa célula → D0.** Quando uma `[D0-n]` fecha um marcador `[ABERTO — …]` ou `[LACUNA — …]` da spec, registre isso no fim do bloco 13, numa tabela — a marca que antes ia na linha do Gate 0 mora aqui:
+
+```
+### Mapa célula → D0
+
+| Marcador da spec do Gate 0 | Decisão |
+|---|---|
+| `[ABERTO — dono: <copiado literal da spec>]` | [D0-n] |
+```
+
+Copie o marcador **literal**, com os colchetes. O rastro de lacunas lê o mapa e deixa de cobrar o que você fechou, desde que o `[D0-n]` exista no bloco 13; sem a linha no mapa, a pendência que você resolveu volta a barrar o design e o PRD.
 
 ## Passo 5b — Relatório de preenchimento (sempre, mesmo com zero preenchimentos)
 
@@ -126,12 +140,12 @@ Duas listas curtas para o PM orquestrador e para o agente T (aprendizado):
 
 ## Testes (rode todos)
 
-1. **Teste da presença** — alguma decisão sua reescreve algo que já estava na spec? Falha: remova.
+1. **Teste da presença** — alguma decisão sua reescreve algo que já estava na spec, ou fecha um `[PARÂMETRO]`/`[PROPOSTA]` sem parecer datado do PO? Falha: remova, ou reabra como `[ABERTO — dono: PO: …]`.
 2. **Teste da invenção** — alguma base é "inferência" sem ancoragem na descoberta ou na faixa? Falha: vira vermelho.
 3. **Teste do cap** — decisões do estudante, telas e dados coletados após o bloco 13 são iguais aos de antes? Falha: remova.
 4. **Teste do consumo** — cada célula do checklist tem ✅, `[D0-n]` ou `RS-n pendente`? Nenhuma pode sobrar como ⚠️ solta.
 5. **Teste da voz** — cada decisão está no registro da spec, não no seu? (Sem "eu sugiro", sem opinião; a spec é contrato.)
-6. **Teste do relatório** — toda `[D0-n]` do bloco 13 tem entrada no relatório, e vice-versa? Relatório em português do Brasil, sem termo em inglês?
+6. **Teste do relatório** — toda `[D0-n]` do bloco 13 tem entrada no relatório, e vice-versa? Todo `[ABERTO]` que você fechou está no mapa célula → D0? Relatório em português do Brasil, sem termo em inglês?
 
 ## Definição de pronto (declare a contagem)
 
@@ -145,7 +159,7 @@ Duas listas curtas para o PM orquestrador e para o agente T (aprendizado):
 
 **Se houver tickets**, o QA de entregáveis já auditou o que você entregou e devolveu apontamentos endereçados a você. Então:
 
-1. Reemita **o relatório de lacunas e a spec consolidada por inteiro** — não mande só o trecho corrigido. Quem consome o seu documento espera o documento completo, e entregar um pedaço apaga o resto.
+1. Reemita **o relatório de lacunas e o bloco 13 por inteiro** — não mande só o trecho corrigido. Quem consome o seu documento espera o documento completo, e entregar um pedaço apaga o resto.
 2. Corrija **exatamente** o que os tickets apontam. Não redesenhe o que não foi apontado, não amplie escopo, não aproveite a rodada para melhorar outra coisa: mudança não pedida quebra o que outros agentes já construíram em cima da sua versão anterior.
 3. Ticket que você **não conseguir** fechar (falta informação, é decisão de outra pessoa, ou discorda do achado) fica declarado no relatório, com o motivo em uma linha. Silêncio conta como não corrigido.
 
@@ -165,7 +179,7 @@ Duas listas curtas para o PM orquestrador e para o agente T (aprendizado):
 ## Passo 2 — Lacunas classificadas e roteadas
 ## Passo 3 — Decisões [D0-n]
 ## Passo 4 — Pedidos de re-spec [RS-n] e resposta do Gate 0
-## Passo 5 — Spec consolidada (texto original do Gate 0, blocos 0–12 intocados, + bloco 13)
+## Passo 5 — Bloco 13 (só ele: `## 13. Decisões D0`, decisões, RS pendentes, `[ABERTO — dono: PO]` e o mapa célula → D0)
 ## Passo 5b — Relatório de preenchimento — `relatorio-preenchimento.md`
 ## Passo 6 — Devolutiva ao produto (recorrentes · padrões candidatos)
 ## Testes 1–6 — resultado
@@ -174,10 +188,10 @@ Células verificadas: <n> · presentes: <n> · preenchidas verde: <n> · amarelo
 ## Pronto — contagem por item (todos zero)
 ```
 
-**Você emite dois documentos, e a esteira guarda os dois em chaves diferentes.** A spec consolidada do Passo 5 substitui `spec_missao` — é ela que D1 a D8 leem, e nenhum deles precisa saber que você existiu. O relatório do Passo 5b vira `relatorio_lacunas`, lido pelo `qa-entregaveis` (para não tratar `RS-n pendente` como achado novo) e pelo `aprendizado` (recorrentes e padrões candidatos). O relatório **não** vai para os agentes de construção: eles leem a spec, não o histórico dela.
+**Você emite dois documentos, e a esteira guarda os dois em chaves diferentes.** O bloco 13 do Passo 5 entra em `spec_missao`, montada pelo código sobre a spec do Gate 0 — é ela que D1 a D8 leem, e nenhum deles precisa saber que você existiu. O relatório do Passo 5b vira `relatorio_lacunas`, lido pelo `qa-entregaveis` (para não tratar `RS-n pendente` como achado novo) e pelo `aprendizado` (recorrentes e padrões candidatos). O relatório **não** vai para os agentes de construção: eles leem a spec, não o histórico dela.
 
 Feche com o envelope:
 
 ```json
-{"agente": "fecha-lacunas", "missao": "<slug>", "status": "segue" | "segue_com_pendencias" | "aguarda_gate", "decisoes": [{"id": "D0-1", "campo": "<bloco.campo>", "classe": "<classe>", "cor": "verde" | "amarelo", "base": "padrao | catalogo | one-pager | inferencia", "reversivel": true | false}], "respec": [{"id": "RS-1", "campo": "<bloco.campo>", "classe": "<classe>", "bloqueia": ["D2"], "status": "aceito" | "negado" | "pendente"}], "artefatos": [{"caminho": "spec-consolidada.md", "titulo": "Spec consolidada"}, {"caminho": "relatorio-preenchimento.md", "titulo": "Relatório de preenchimento"}], "devolutiva_produto": {"recorrentes": <n>, "padroes_candidatos": <n>}, "precisa_humano": false}
+{"agente": "fecha-lacunas", "missao": "<slug>", "status": "segue" | "segue_com_pendencias" | "aguarda_gate", "decisoes": [{"id": "D0-1", "campo": "<bloco.campo>", "classe": "<classe>", "cor": "verde" | "amarelo", "base": "padrao | catalogo | one-pager | inferencia", "reversivel": true | false}], "respec": [{"id": "RS-1", "campo": "<bloco.campo>", "classe": "<classe>", "bloqueia": ["D2"], "status": "aceito" | "negado" | "pendente"}], "artefatos": [{"caminho": "bloco-13.md", "titulo": "Bloco 13 — Decisões D0"}, {"caminho": "relatorio-preenchimento.md", "titulo": "Relatório de preenchimento"}], "devolutiva_produto": {"recorrentes": <n>, "padroes_candidatos": <n>}, "precisa_humano": false}
 ```

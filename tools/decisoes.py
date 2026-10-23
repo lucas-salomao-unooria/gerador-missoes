@@ -129,8 +129,37 @@ def _cita_parecer_humano(fonte: str, pareceres: str) -> bool:
     return bool(datas) and all(d in pareceres for d in datas)
 
 
+#: As classes que o D0 pode declarar (prompt 065, Passo 2). A conferência era por igualdade com `mecanica` e
+#: `curriculo`, e a `mecanica_param` da exp02ef1b (10% da moldura, 23/10/2026) passou: o rótulo é do próprio agente.
+CLASSES_D0 = ("estado", "handoff", "evidencia", "dispositivo", "copy-fonte", "acessibilidade", "dados", "duracao",
+              "mecanica", "curriculo")
+#: Prefixos de classe que são sempre de produto — decisão do PO (plano «Produto dono do contrato», PR 2).
+PREFIXOS_DE_PRODUTO = ("mecanica", "curriculo", "parametro")
+
+
+def _norm_classe(texto: str) -> str:
+    import unicodedata
+
+    return "".join(c for c in unicodedata.normalize("NFD", (texto or "").lower())
+                   if unicodedata.category(c) != "Mn").strip(" `*_")
+
+
+def classe_de_produto(classe: str) -> str:
+    """O motivo de a classe declarada ser de produto, ou "" se é uma classe de design da lista.
+
+    Lista branca e prefixo: `mecanica*`, `curriculo*` e `parametro*` são de produto; o que não está na lista também,
+    porque a lista é o que o prompt deixa o D0 decidir. Classe composta («`handoff` / `copy-fonte`») vale por partes."""
+    partes = [p for p in (_norm_classe(x) for x in re.split(r"[/·,+]|\be\b", _norm_classe(classe))) if p]
+    for parte in partes or [""]:
+        if parte.startswith(PREFIXOS_DE_PRODUTO):
+            return f"classe `{parte}` é de produto"
+        if parte not in CLASSES_D0:
+            return f"classe `{parte or '—'}` fora da lista do D0 ({', '.join(CLASSES_D0)})"
+    return ""
+
+
 def lacunas_fechadas_pelo_agente(relatorio_lacunas: str, pareceres: str = "") -> List[str]:
-    """Linhas da tabela do D0 com classe `mecanica`/`curriculo` e cor que não é vermelha.
+    """Linhas da tabela do D0 com classe de produto (`classe_de_produto`) e cor que não é vermelha.
 
     O prompt do D0 diz que as duas classes são sempre vermelhas — decisão humana. Na exp01ef1b o D0-7
     saiu `classe: curriculo, cor: verde` e marcou "Resolvido" num `[ABERTO — dono: editorial]`: a
@@ -172,8 +201,81 @@ def _lacunas_fechadas(relatorio_lacunas: str, pareceres: str = "") -> List[tuple
         if "classe" not in cabecalho or "cor" not in cabecalho:
             continue
         d = dict(zip(cabecalho, celulas))
-        classe, cor = norm(d.get("classe", "")), norm(d.get("cor", ""))
-        if classe in ("mecanica", "curriculo") and cor and "vermelh" not in cor and "🔴" not in d.get("cor", ""):
+        classe, cor = d.get("classe", ""), norm(d.get("cor", ""))
+        if classe_de_produto(classe) and cor and "vermelh" not in cor and "🔴" not in d.get("cor", ""):
             fonte = " ".join(v for k, v in d.items() if k.startswith(("fonte", "base")))
             saida.append((re.sub(r"\s+", " ", linha.strip())[:220], bool(pareceres) and _cita_parecer_humano(fonte, pareceres)))
     return saida
+
+
+def _parecer_datado(base: str, pareceres: str) -> bool:
+    """A base cita um parecer humano registrado na sessão, com data, e não é o «Tudo de acordo» genérico — que não
+    aprova PROPOSTA (plano, D3: o D0-4 da exp02ef1b tornou PQ-01..05 «contratuais» a partir de um)."""
+    from tools.propagacao import _RE_PARECER_GENERICO
+
+    # o D0 também escreve a data em ISO («Parecer de Produto (2026-10-23)», exp03ef1b); o parecer gravado é dd/mm/aaaa
+    base = re.sub(r"\b(\d{4})-(\d{2})-(\d{2})\b", r"\3/\2/\1", base or "")
+    return bool(pareceres) and _cita_parecer_humano(base, pareceres) and not _RE_PARECER_GENERICO.search(base)
+
+
+def _marcadores_com_contexto(texto: str) -> List[Dict[str, str]]:
+    """Os [PARÂMETRO]/[PROPOSTA] do texto; o que não traz descrição dentro dos colchetes — «| Preservação de 2 seções
+    do DS … | `[PROPOSTA — validar com PO]` |», bloco 12 da exp02em1b — ganha a da própria linha. O número sugerido
+    continua só o de dentro do marcador: «aula de 50 min» na linha não é sugestão."""
+    from tools.propagacao import marcadores_abertos
+
+    saida: List[Dict[str, str]] = []
+    for linha in (texto or "").splitlines():
+        for mk in marcadores_abertos(linha):
+            if not mk["descricao"].strip(" `*|"):
+                contexto = linha.replace(mk["texto"], " ")
+                mk = {**mk, "descricao": contexto, "sugestao": ""}
+            saida.append(mk)
+    return saida
+
+
+def decisoes_d0_de_produto(fechamento: str, envelope: Dict[str, Any] | None, spec_gate0: str,
+                           pareceres: str = "", classes_na_tabela: bool = True) -> tuple:
+    """`(sem_parecer, pelo_parecer)`: as decisões [D0-n] que decidem no lugar do PO, em linhas para o achado.
+
+    Todo [D0-n] que fecha um [PARÂMETRO] ou promove uma [PROPOSTA] da spec do Gate 0 é decisão de produto, qualquer
+    que seja a classe — inclusive duração, dados e acessibilidade, que a tabela de autoridade do D0 deixa em verde ou
+    amarelo. Foi assim que o teto de 15 palavras, a moldura de 10%, os 45 s e as PQ-01..05 da exp02ef1b, e o StoryPoll
+    da exp02em1b, saíram do D0 sem o PO (plano «Produto dono do contrato», PR 2). Com parecer datado na base, a decisão
+    é do PO e o D0 só a aplicou: sai em `pelo_parecer`, para a pessoa conferir.
+
+    `classes_na_tabela=False` (o D0 não trouxe a tabela do Passo 2 com Classe e Cor): a classe declarada no envelope é
+    conferida aqui, por lista branca e prefixo."""
+    from tools.propagacao import decisoes_d0, fecha_marcador
+
+    marcadores = _marcadores_com_contexto(spec_gate0)
+    sem_parecer: List[str] = []
+    pelo_parecer: List[str] = []
+    for d in decisoes_d0({"fechamento_lacunas": fechamento, "lacunas_status_envelope": envelope or {}}):
+        if "vermelh" in _norm_classe(d["cor"]) or "🔴" in d["cor"]:
+            continue
+        motivos = []
+        fechado = fecha_marcador(f"{d['campo']} {d['titulo']}", d["decisao"], marcadores) if marcadores else None
+        if fechado:
+            motivos.append(f"fecha {fechado[:110]}")
+        # classe que o D0 não declarou («?»: sem envelope) não tem o que conferir; o marcador fechado, sim
+        if not classes_na_tabela and d["classe"] not in ("", "?") and classe_de_produto(d["classe"]):
+            motivos.append(classe_de_produto(d["classe"]))
+        if not motivos:
+            continue
+        linha = f"[{d['id']}] {d['campo'] or d['titulo']} · classe `{d['classe']}` · " + " · ".join(motivos)
+        base = f"{d.get('base_texto', '')} {d.get('base', '')}"
+        (pelo_parecer if _parecer_datado(base, pareceres) else sem_parecer).append(re.sub(r"\s+", " ", linha)[:260])
+    return sem_parecer, pelo_parecer
+
+
+def tabela_de_classes(relatorio_lacunas: str) -> bool:
+    """O texto traz a tabela do Passo 2 com as colunas «Classe» e «Cor»."""
+    for linha in (relatorio_lacunas or "").splitlines():
+        m = _RE_CELULAS.match(linha)
+        if m:
+            cab = [_norm_classe(c) for c in m.group(1).split("|")]
+            if "classe" in cab and "cor" in cab:
+                return True
+    return False
+

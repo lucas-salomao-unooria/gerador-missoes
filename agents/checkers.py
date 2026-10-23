@@ -300,14 +300,88 @@ def _sem_bloco(documento: str, titulo: str) -> str:
     return "\n"
 
 
-def _blocos_numerados(documento: str) -> Dict[str, str]:
-    """`{"0": corpo, "1": corpo, …}` dos blocos `## N` do documento — do título até o próximo `## ` ou o fim."""
-    blocos: Dict[str, str] = {}
-    marcas = list(re.finditer(r"^##\s*(\d{1,2})\b.*$", documento or "", re.MULTILINE))
-    for m in marcas:
-        fim = re.search(r"^## ", documento[m.end():], re.MULTILINE)
-        blocos[m.group(1)] = documento[m.start():m.end() + fim.start()] if fim else documento[m.start():]
-    return blocos
+def _secoes(documento: str) -> Dict[str, str]:
+    """`{chave: corpo}` das seções `## ` do documento — do título até o próximo `## ` ou o fim —, mais o preâmbulo
+    (chave `""`, o que vem antes da primeira). A chave é o número do bloco (`## 6. Tetos` → `"6"`) ou o título sem
+    acento e em minúsculas (`## Glossário canônico` → `"glossario canonico"`): o glossário é texto do Gate 0 como os
+    blocos 0–12, e a troca do rótulo «Publicar no Álbum» na exp02ef1b (23/10/2026) foi feita justamente nele."""
+    import unicodedata
+
+    secoes: Dict[str, str] = {}
+    marcas = list(re.finditer(r"^##\s+(.*)$", documento or "", re.MULTILINE))
+    if marcas and documento[:marcas[0].start()].strip():
+        secoes[""] = documento[:marcas[0].start()]
+    elif not marcas and (documento or "").strip():
+        secoes[""] = documento
+    for i, m in enumerate(marcas):
+        fim = marcas[i + 1].start() if i + 1 < len(marcas) else len(documento)
+        numero = re.match(r"\**\s*(\d{1,2})\b", m.group(1))
+        chave = numero.group(1) if numero else " ".join(re.sub(r"[^a-z0-9]+", " ", "".join(
+            c for c in unicodedata.normalize("NFD", m.group(1).lower()) if unicodedata.category(c) != "Mn")).split())
+        secoes.setdefault(chave, documento[m.start():fim])
+    return secoes
+
+
+def _linhas_normalizadas(corpo: str) -> List[str]:
+    """As linhas com conteúdo, sem espaço sobrando e sem régua (`---`): cópia por modelo que só mexe em espaço ou põe um
+    separador antes do bloco 13 não é mudança (era o único «diff» do glossário em 53e011b6 e 76d9af6e)."""
+    return [" ".join(l.split()) for l in (corpo or "").splitlines()
+            if l.strip() and not re.fullmatch(r"\s*(?:-{3,}|\*{3,}|_{3,})\s*", l)]
+
+
+#: A marca que o D0 punha na linha do `[ABERTO …]` que fechou: ` — Resolvido em [D0-9]`.
+_RE_MARCA_RESOLVIDO = re.compile(r"\s*[—–-]?\s*\(?resolvid[oa]s?\s+(?:em|no|na|pel[oa])\s*\[?\s*D0-0*(\d+)\s*\]?\)?\.?",
+                                 re.IGNORECASE)
+
+
+def _recolher_marcas_resolvido(aceita: str, nova: str) -> tuple:
+    """`(nova_sem_marcas, mapa)`: as marcas «Resolvido em [D0-n]» que a nova acrescentou a linhas da aceita saem da
+    linha e viram linhas do mapa célula → D0 (`(marcador, n)`), que mora no bloco 13.
+
+    A spec é montada em código desde 23/10/2026 (plano «Produto dono do contrato», PR 2): o texto do Gate 0 não muda
+    mais, nem pela marca. O D0 que ainda a escrever não muda o Gate 0 — a marca vai para o mapa, que o rastro lê
+    (`tools/rastro.mapa_celula_d0`)."""
+    from tools.rastro import marcadores_de_lacuna
+
+    def celula(limpa: str) -> List[str]:
+        # o marcador que o rastro lê; sem ele, o [PARÂMETRO]/[PROPOSTA] ou o começo da linha, para quem lê o mapa
+        achados = marcadores_de_lacuna(limpa) or re.findall(r"\[(?:PAR[ÂA]METRO|PROPOSTA)[^\]\n]{0,300}\]", limpa)
+        return achados or [" ".join(limpa.strip(" |").replace("|", "·").split())[:120]]
+
+    da_aceita = set(_linhas_normalizadas(aceita))
+    mapa: List[tuple] = []
+    saida: List[str] = []
+    for linha in (nova or "").splitlines():
+        m = _RE_MARCA_RESOLVIDO.search(linha)
+        if m:
+            limpa = (linha[:m.start()] + linha[m.end():]).rstrip()
+            if " ".join(limpa.split()) in da_aceita:
+                for marcador in celula(limpa):
+                    if (marcador, int(m.group(1))) not in mapa:
+                        mapa.append((marcador, int(m.group(1))))
+                linha = limpa
+        saida.append(linha)
+    return "\n".join(saida), mapa
+
+
+def tabela_do_mapa(mapa: List[tuple]) -> str:
+    """O mapa célula → D0 em Markdown, no formato que o rastro lê."""
+    return ("### Mapa célula → D0\n\n| Marcador da spec do Gate 0 | Decisão |\n|---|---|\n"
+            + "".join(f"| `{marcador.replace('|', '·').replace('`', '')}` | [D0-{n}] |\n" for marcador, n in mapa))
+
+
+def _inserir_bloco(base: str, bloco: str, titulo: str, proprio: Optional[str]) -> str:
+    """`base` com `bloco` no lugar do bloco `titulo`; sem ele, antes do primeiro bloco de número maior, ou no fim.
+
+    O bloco 13 vai antes do 14: no retrabalho só o D0 roda, e a spec do D9 já tem o bloco 14 (exp03ef1b, 23/10/2026)."""
+    atual = _bloco(base, titulo)
+    if atual.strip():
+        return base.replace(atual.rstrip(), bloco.strip(), 1)
+    if proprio and proprio.isdigit():
+        for m in re.finditer(r"^##\s*\**\s*(\d{1,2})\b.*$", base, re.MULTILINE):
+            if int(m.group(1)) > int(proprio):
+                return base[:m.start()].rstrip() + "\n\n" + bloco.strip() + "\n\n" + base[m.start():].lstrip()
+    return base.rstrip() + "\n\n" + bloco.strip() + "\n"
 
 
 def bloco0_pode_mudar(envelope: Optional[Dict[str, Any]]) -> bool:
@@ -319,8 +393,14 @@ def bloco0_pode_mudar(envelope: Optional[Dict[str, Any]]) -> bool:
             and str(respec.get("status") or "").lower() == "aceito")
 
 
+#: Blocos da spec que não são texto do Gate 0: o 13 é do D0 e o 14 é do D9.
+BLOCOS_DO_DESIGN = ("13", "14")
+
+
 def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool = False,
-                        avisos: Optional[List[Dict[str, Any]]] = None) -> str:
+                        avisos: Optional[List[Dict[str, Any]]] = None, autor: str = "D9",
+                        agente: str = "ambiente-simulado", estrito: bool = False,
+                        estado: Optional[Dict[str, Any]] = None) -> str:
     """A versão aceita com o bloco `titulo` tirado da nova; o resto da nova é descartado.
 
     O D9 acrescenta o bloco 14 e recopiava, por modelo, os 60 KB dos blocos 0–13 do D0. Na exp06ef1b (09/10/2026)
@@ -328,9 +408,19 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
     inglês: a preservação acusou, com razão, e o design terminou 🔴 duas vezes. Cópia literal é trabalho de código.
     Sem o bloco na nova, devolve a nova como veio — a preservação confere a cópia como antes.
 
+    Desde 23/10/2026 o D0 também passa por aqui (bloco 13): a spec é a do Gate 0 + 13 + 14, montada em código. Antes, o
+    D0 reemitia a spec inteira, a preservação acusava linhas-perdidas, a base preservada era a do Gate 0, e o D9 montava
+    por cima dela — o bloco 13 sumiu em 60cfa7f4 e 4fd72a9a, e o PRD da 4fd72a9a citava D0-1 e D0-6 de uma spec sem
+    nenhum (plano «Produto dono do contrato», PR 2). As marcas «Resolvido em [D0-n]» que a nova acrescentar ao texto do
+    Gate 0 viram o mapa célula → D0 no fim do bloco 13 (`_recolher_marcas_resolvido`).
+
     Única exceção: o bloco 0 da nova entra quando `bloco0_aceito` (`bloco0_pode_mudar`: ambiente novo ou existente
-    com a `[RS-AMB]` aceita). Qualquer outra diferença nos blocos copiados é descartada e vai para `avisos` como 🟡
-    «D9 alterou fora do bloco 14», com o que mudou — antes era descartada em silêncio (plano padrão ouro, 2.5).
+    com a `[RS-AMB]` aceita). Qualquer outra diferença nas seções copiadas é descartada e vai para `avisos`, com o que
+    mudou — antes era descartada em silêncio (plano padrão ouro, 2.5):
+    - no texto do Gate 0 (preâmbulo, blocos 0–12, glossário), como `[ABERTO — dono: PO]`: a mudança é de produto, e só o
+      PO a decide. Até a rota de produto do PR 5, aparece no cartão do parecer de design (`decisao_humana`) e só
+      bloqueia com ESTEIRA_ESTRITA (`estrito`);
+    - no bloco do outro autor do design (13 ou 14), como 🟡 «alterou fora do bloco».
     """
     m = re.search(titulo, nova or "", re.MULTILINE)
     if not m:
@@ -339,28 +429,64 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
     bloco = nova[m.start():m.end() + fim.start()] if fim else nova[m.start():]
     proprio = (re.search(r"(\d{1,2})", titulo) or [None, None])[1]
 
+    mapa: List[tuple] = []
+    if proprio == "13":
+        nova, mapa = _recolher_marcas_resolvido(aceita, nova)
+        if mapa:
+            bloco = bloco.rstrip() + "\n\n" + tabela_do_mapa(mapa)
     base = aceita
-    dos_aceitos, dos_novos = _blocos_numerados(aceita), _blocos_numerados(nova)
-    for numero, corpo_aceito in dos_aceitos.items():
-        corpo_novo = dos_novos.get(numero)
-        if numero == proprio or corpo_novo is None or corpo_novo.strip() == corpo_aceito.strip():
+    dos_aceitos, dos_novos = _secoes(aceita), _secoes(nova)
+    for chave, corpo_aceito in dos_aceitos.items():
+        corpo_novo = dos_novos.get(chave)
+        if chave == proprio or corpo_novo is None or not corpo_novo.strip():
             continue
-        if numero == "0" and bloco0_aceito:
+        antes, depois = _linhas_normalizadas(corpo_aceito), _linhas_normalizadas(corpo_novo)
+        if antes == depois:
+            continue
+        if chave == "0" and bloco0_aceito:
             base = base.replace(corpo_aceito.rstrip(), corpo_novo.rstrip(), 1)
             continue
-        if avisos is not None:
-            import difflib
+        if avisos is None:
+            continue
+        import difflib
 
-            diff = [l for l in difflib.unified_diff(corpo_aceito.strip().splitlines(), corpo_novo.strip().splitlines(),
-                                                    lineterm="", n=0) if l[:1] in "+-" and l[:3] not in ("+++", "---")]
+        diff = [l for l in difflib.unified_diff(antes, depois, lineterm="", n=0)
+                if l[:1] in "+-" and l[:3] not in ("+++", "---")]
+        if not chave and not any(l.startswith("-") for l in diff):
+            continue  # frase do agente antes da spec («Abaixo é emitida a especificação…», 4fd72a9a): não é o Gate 0
+        nome = f"o bloco {chave}" if chave.isdigit() else ("o cabeçalho" if not chave else f"a seção «{chave}»")
+        if chave in BLOCOS_DO_DESIGN:
             avisos.append({
                 "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": "design",
-                "agente_responsavel": "ambiente-simulado",
-                "resumo": (f"D9 alterou fora do bloco {proprio or titulo}: o bloco {numero} veio diferente do aceito e a "
-                           "mudança foi descartada" + (" (o bloco 0 só muda por `[RS-AMB]` aceita)" if numero == "0" else "")
-                           + ":\n" + "\n".join(f"    {l[:200]}" for l in diff[:15])),
+                "agente_responsavel": agente,
+                "resumo": (f"{autor} alterou fora do bloco {proprio or titulo}: {nome} veio diferente do aceito e a "
+                           "mudança foi descartada:\n" + "\n".join(f"    {l[:200]}" for l in diff[:15])),
             })
-    return _sem_bloco(base, titulo).rstrip() + "\n\n" + bloco.strip() + "\n"
+            continue
+        # Texto do Gate 0: quem muda é o PO. A troca que um pedido do PO fez em design também vem para cá — o pedido
+        # vale, mas no documento de produto (plano, D4 e D11); até o PR 5 o caminho é devolver a Produto.
+        a_pedido = [l for l in diff if l.startswith("-") and _cita_texto_do_po(l, estado or {})]
+        avisos.append({
+            "severidade": "bloqueio" if estrito else "decisao_humana", "codigo": "alterou-fora-do-proprio-bloco",
+            "etapa": "design", "agente_responsavel": "PO", "autor": agente, "aberto_dono_po": True,
+            "resumo": (f"[ABERTO — dono: PO: {autor} quis mudar {nome} da spec do Gate 0, e a spec é montada em código — a "
+                       "mudança não entrou]. O texto de produto só muda em produto: se ela deve valer, devolva a "
+                       "Produto com a decisão"
+                       + (" (a linha trazia um texto que o PO mandou trocar em design)" if a_pedido else "")
+                       + (". Com ESTEIRA_ESTRITA, o de acordo de design espera essa decisão" if estrito else "")
+                       + (" (o bloco 0 só muda por `[RS-AMB]` aceita)" if chave == "0" else "")
+                       + ":\n" + "\n".join(f"    {l[:200]}" for l in diff[:15])
+                       + (f"\n    … e mais {len(diff) - 15} linha(s)" if len(diff) > 15 else "")),
+        })
+    novas = [c for c in dos_novos if c not in dos_aceitos and c != proprio and c and dos_novos[c].strip()]
+    if novas and avisos is not None:
+        avisos.append({
+            "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": "design",
+            "agente_responsavel": agente,
+            "resumo": (f"{autor} trouxe seção(ões) que a spec aceita não tem, fora do bloco {proprio or titulo}, e elas "
+                       "foram descartadas: " + ", ".join(f"«{c}»" for c in novas[:8])),
+        })
+    return _inserir_bloco(base, bloco, titulo, proprio)
 
 
 def _instabilidade(state: Dict[str, Any], ex: Dict[str, Any], secao: str) -> Optional[Dict[str, Any]]:
@@ -373,7 +499,14 @@ def _instabilidade(state: Dict[str, Any], ex: Dict[str, Any], secao: str) -> Opt
     antes = extrair_secao(anterior, ex["inicio"], ex.get("fim")) if anterior.strip() else None
     if not antes:
         return None
-    sumiram = linhas_perdidas(documento_sem_moldura(antes), secao)
+    antes = documento_sem_moldura(antes)
+    if ex.get("bloco_proprio"):
+        # o autor que escreve um bloco só responde por ele: a versão anterior do D0 trazia a spec inteira, e a nova só
+        # o bloco 13 — comparar as duas inteiras acusaria o texto do Gate 0, que ele não escreve mais (23/10/2026)
+        antes = _bloco(antes, ex["bloco_proprio"])
+        if not antes.strip():
+            return None
+    sumiram = linhas_perdidas(antes, secao)
     if not sumiram:
         return None
     # spec do Gate 0 refeita (produto/spec reexecutados), retrabalho por achado de gate nesta execução ou pedido de
@@ -416,13 +549,17 @@ class SecaoSplitAgent(BaseAgent):
                       seção: o que ela tinha e a nova não tem é instabilidade do autor. Na exp06ef1b o D0 traduziu
                       o próprio texto num refazer sem pedido. Sem nada mudado a montante (spec do Gate 0) e sem
                       pedido de correção de design, é bloqueio; com motivo, 🟡 com as linhas (plano padrão ouro, 2.7).
-      bloco_proprio → regex do título do único bloco que este autor escreve (`^## 14`): o documento gravado é a
-                      versão aceita com esse bloco trocado pelo da nova — o resto da nova é descartado, e a
-                      preservação confere só o que não é dele (`montar_sobre_aceita`).
+      bloco_proprio → regex do título do único bloco que este autor escreve (`^## 13` do D0, `^## 14` do D9): o
+                      documento gravado é a versão aceita com esse bloco trocado pelo da nova — o resto da nova é
+                      descartado, e a preservação confere só o que não é dele (`montar_sobre_aceita`). A mudança no
+                      texto do Gate 0 vira `[ABERTO — dono: PO]` no cartão do parecer (bloqueio só com `estrito`).
+      bloco_obrigatorio → sem o `bloco_proprio` na nova, a chave fica como estava e o achado é bloqueio: o D0 sem o
+                      bloco 13 deixava a jusante citando [D0-n] que a spec não tem (60cfa7f4 e 4fd72a9a, 23/10/2026).
+      autor         → nome do autor nos achados («D0», «D9»).
       bloco_autoral → regex do título do bloco que este autor escreve inteiro, num documento em que ele também mexe
-                      fora dele (o D0 marca `Resolvido em [D0-n]` nos blocos 0–12): a preservação não confere esse
-                      bloco, e o resto da nova versão é gravado como veio. Na exp02em1b (22/10/2026) a rodada 1 do D0,
-                      reprovada, virou a base, e a rodada 2 foi acusada de apagar o [D0-7] que ela mesma escrevera.
+                      fora dele: a preservação não confere esse bloco, e o resto da nova versão é gravado como veio.
+                      Na exp02em1b (22/10/2026) a rodada 1 do D0, reprovada, virou a base, e a rodada 2 foi acusada de
+                      apagar o [D0-7] que ela mesma escrevera. O D0 passou a `bloco_proprio` em 23/10/2026.
 
     Seção ausente, curta ou sem o conteúdo exigido → a chave é mantida como está e o evento avisa.
     """
@@ -434,6 +571,8 @@ class SecaoSplitAgent(BaseAgent):
     #: a fonte é um documento, não um veredito (o one-pager do A014): não há envelope a ler, e
     #: procurá-lo gerava um `envelope-ilegivel` em toda execução
     fonte_sem_veredito: bool = False
+    #: ESTEIRA_ESTRITA: a mudança no texto do Gate 0 (`[ABERTO — dono: PO]`) bloqueia; sem ela, é decisão humana 🟡
+    estrito: bool = False
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -467,13 +606,27 @@ class SecaoSplitAgent(BaseAgent):
                 if secao is not None:
                     secao = documento_sem_moldura(secao)
                 proprio = ex.get("bloco_proprio")
+                bruta = secao or ""  # o que o autor escreveu, antes da montagem
                 aceita = str(state.get(f"{PREFIXO_BASE_PRESERVADA}{chave}") or "") or str(state.get(chave) or "")
-                if secao is not None and proprio and aceita.strip():
+                sem_o_proprio = bool(secao is not None and proprio and ex.get("bloco_obrigatorio")
+                                     and not re.search(proprio, secao, re.MULTILINE))
+                if secao is not None and proprio and aceita.strip() and not sem_o_proprio:
                     env_fonte = None if self.fonte_sem_veredito else extrair_envelope(texto)
                     secao = montar_sobre_aceita(documento_sem_moldura(aceita), secao, proprio,
-                                                bloco0_aceito=bloco0_pode_mudar(env_fonte), avisos=fora_do_bloco)
+                                                bloco0_aceito=bloco0_pode_mudar(env_fonte), avisos=fora_do_bloco,
+                                                autor=ex.get("autor", "D9"), agente=ex.get("preservar") or self.name,
+                                                estrito=self.estrito, estado=state)
                 motivo: Optional[str] = None
-                if secao is None:
+                if sem_o_proprio:
+                    motivo = "a resposta não traz o bloco próprio do autor"
+                    perdidas.append({
+                        "severidade": "bloqueio", "codigo": "bloco-proprio-ausente", "etapa": "design",
+                        "agente_responsavel": ex.get("preservar") or self.name,
+                        "resumo": (f"{ex.get('autor', self.rotulo)} respondeu sem o bloco que só ele escreve "
+                                   f"(`{proprio}`): `{chave}` ficou como estava, e quem citar a jusante uma decisão "
+                                   "dele cita o que a spec não tem. Reemita o bloco inteiro."),
+                    })
+                elif secao is None:
                     motivo = "seção não encontrada no relatório"
                 elif len(secao) < int(ex.get("minimo_chars", 0) or 0):
                     motivo = f"seção curta demais ({len(secao)} caracteres)"
@@ -542,7 +695,7 @@ class SecaoSplitAgent(BaseAgent):
                         })
                         linhas.append(f"⛔ `{chave}`: {len(sumiram)} linha(s) do documento anterior sumiram na reescrita.")
                 if ex.get("estavel_contra"):
-                    achado = _instabilidade(state, ex, secao)
+                    achado = _instabilidade(state, ex, _bloco(bruta, proprio) if proprio else secao)
                     if achado:
                         (perdidas if achado["severidade"] == "bloqueio" else instaveis).append(achado)
                         linhas.append(f"{'⛔' if achado['severidade'] == 'bloqueio' else '🟡'} `{chave}`: mudou contra "
@@ -578,38 +731,59 @@ class SecaoSplitAgent(BaseAgent):
                     })
             # lacuna de mecânica ou currículo é decisão humana: o D0 não a fecha em verde
             if self.source_key == "fechamento_lacunas":
-                from tools.decisoes import lacunas_fechadas_pelo_agente, lacunas_fechadas_pelo_parecer
+                from tools.decisoes import (decisoes_d0_de_produto, lacunas_fechadas_pelo_agente,
+                                            lacunas_fechadas_pelo_parecer, tabela_de_classes)
+                from tools.propagacao import spec_de_produto
 
                 # a tabela do Passo 2 está na resposta inteira; a fonte que cita parecer é conferida contra estes
                 pareceres = str(state.get("notas_de_passagem") or "") + json.dumps(
                     state.get("pedidos_do_po") or [], ensure_ascii=False, default=str)
                 fechadas = lacunas_fechadas_pelo_agente(texto, pareceres)
                 pelo_parecer = lacunas_fechadas_pelo_parecer(texto, pareceres)
+                # e todo [D0-n] que fecha [PARÂMETRO] ou promove [PROPOSTA] do Gate 0, qualquer que seja a classe
+                spec_gate0 = str(state.get("spec_missao_gate0") or delta.get("spec_missao_gate0")
+                                 or spec_de_produto(str(state.get("spec_missao") or "")))
+                marcador_sem, marcador_pelo = decisoes_d0_de_produto(
+                    texto, envelope, spec_gate0, pareceres, classes_na_tabela=tabela_de_classes(texto))
+                fechadas += marcador_sem
+                pelo_parecer += marcador_pelo
                 if pelo_parecer:
                     # como `decisao-atribuida-ao-po` com registro: o código não sabe se o parecer diz isto
                     if delta[self.status_key] != STATUS_BLOQUEADO:
                         delta[self.status_key] = "amarelo"
-                    linhas.append(f"🟡 {len(pelo_parecer)} lacuna(s) de mecânica ou currículo fechada(s) pelo parecer do PO.")
+                    linhas.append(f"🟡 {len(pelo_parecer)} decisão(ões) de produto aplicada(s) pelo D0 a partir do parecer do PO.")
                     env.setdefault("achados", []).append({
                         "severidade": "atencao", "codigo": "mecanica-pelo-parecer", "etapa": "design",
                         "agente_responsavel": "fecha-lacunas",
-                        "resumo": ("Lacuna de mecânica ou currículo fechada pelo D0 com base no parecer do PO. O código não "
-                                   "sabe se o parecer diz isto — confira antes do de acordo:\n"
-                                   + "\n".join(f"    - {l}" for l in pelo_parecer[:10])),
+                        "resumo": ("Lacuna de produto (mecânica, currículo, [PARÂMETRO] ou [PROPOSTA] do Gate 0) fechada "
+                                   "pelo D0 com base no parecer do PO. O código não sabe se o parecer diz isto — confira "
+                                   "antes do de acordo:\n" + "\n".join(f"    - {l}" for l in pelo_parecer[:10])),
                     })
                 if fechadas:
                     perdidas.append({
                         "severidade": "bloqueio", "codigo": "decisao-de-produto-pelo-agente", "etapa": "design",
                         "agente_responsavel": "fecha-lacunas",
-                        "resumo": ("Lacuna de mecânica ou currículo fechada pelo D0 — as duas classes são sempre vermelhas "
-                                   "(decisão do PO). Reabra cada uma como `[ABERTO — dono: PO: …]` com as alternativas, "
-                                   "sem marcar Resolvido:\n" + "\n".join(f"    - {l}" for l in fechadas[:10])),
+                        "resumo": ("Decisão de produto fechada pelo D0 sem parecer datado do PO: classe de produto "
+                                   "(`mecanica*`, `curriculo*`, `parametro*` ou fora da lista) ou [PARÂMETRO]/[PROPOSTA] da "
+                                   "spec do Gate 0, inclusive em duração, dados e acessibilidade. Reabra cada uma como "
+                                   "`[ABERTO — dono: PO: …]` no bloco 13, com a sugestão e as alternativas, sem decidir:\n"
+                                   + "\n".join(f"    - {l}" for l in fechadas[:12])
+                                   + (f"\n    - … e mais {len(fechadas) - 12}" if len(fechadas) > 12 else "")),
                     })
             if fora_do_bloco:
                 if delta[self.status_key] != STATUS_BLOQUEADO:
                     delta[self.status_key] = "amarelo"
-                env.setdefault("achados", []).extend(fora_do_bloco)
-                linhas.append(f"🟡 {len(fora_do_bloco)} bloco(s) alterado(s) fora do bloco próprio — descartado(s), ver achados.")
+                env.setdefault("achados", []).extend(a for a in fora_do_bloco if a["severidade"] != "bloqueio")
+                perdidas.extend(a for a in fora_do_bloco if a["severidade"] == "bloqueio")
+                abertos = [a for a in fora_do_bloco if a.get("aberto_dono_po")]
+                if abertos:
+                    # a mudança no texto do Gate 0 é decisão do PO: o cartão do parecer abre o achado
+                    env["precisa_humano"] = True
+                    linhas.append(f"🧑 {len(abertos)} mudança(s) no texto do Gate 0 descartada(s) — `[ABERTO — dono: PO]` "
+                                  "no cartão do parecer de design.")
+                outros = len(fora_do_bloco) - len(abertos)
+                if outros:
+                    linhas.append(f"🟡 {outros} bloco(s) alterado(s) fora do bloco próprio — descartado(s), ver achados.")
             if instaveis:
                 if delta[self.status_key] != STATUS_BLOQUEADO:
                     delta[self.status_key] = "amarelo"
@@ -797,8 +971,10 @@ class QaAfirmacoesAgent(BaseAgent):
                     if a.get("severidade") != "bloqueio":
                         continue
                     if chave in ("lacunas_status", "ambiente_status") and a.get("codigo") not in (
-                            "linhas-perdidas", "decisao-de-produto-pelo-agente"):
-                        continue  # o resto do envelope do D0/D9 é do autor, não do código
+                            "linhas-perdidas", "decisao-de-produto-pelo-agente", "bloco-proprio-ausente"):
+                        # o resto do envelope do D0/D9 é do autor, não do código; e a mudança no texto do Gate 0
+                        # (`[ABERTO — dono: PO]`) é do PO: outra rodada do autor não a resolve
+                        continue
                     tickets.append(a)
         envelope = extrair_envelope(qa)
         if tickets and envelope is not None:

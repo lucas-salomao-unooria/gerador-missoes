@@ -5303,7 +5303,7 @@ def _saida_d0(tabela_passo2: str, bloco13: str, gate0: str = _SPEC_GATE0_EXP02EM
             + json.dumps({"agente": "fecha-lacunas", "missao": "exp02em1b", "status": "aprovado", "achados": []}) + "\n```\n")
 
 
-def _rodar_split_d0(estado):
+def _rodar_split_d0(estado, estrito=None):
     from agents.design import get_fecha_lacunas_split
 
     class Semente(BaseAgent):
@@ -5311,7 +5311,10 @@ def _rodar_split_d0(estado):
         async def _run_async_impl(self, ctx):
             yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
 
-    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), get_fecha_lacunas_split()])))
+    split = get_fecha_lacunas_split()
+    if estrito is not None:
+        split.estrito = estrito
+    _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), split])))
     return st
 
 
@@ -5356,11 +5359,20 @@ def test_d0_reescreve_o_proprio_bloco_13_sem_acusar_linhas_perdidas():
     st2 = _rodar_split_d0({**st1, "fechamento_lacunas": rodada2})
     assert "linhas-perdidas" not in _codigos(st2), _codigos(st2)
 
+    # Desde 23/10/2026 a spec é montada em código (plano «Produto dono do contrato», PR 2): a pergunta que o D0 deixou de
+    # copiar não some — fica do Gate 0 —, e a mudança que ele fez no texto do Gate 0 vira `[ABERTO — dono: PO]` no
+    # cartão do parecer de design: decisão humana, que só bloqueia com ESTEIRA_ESTRITA.
     sem_pergunta = _saida_d0("", _D0_CANAL_B.format(n=7), gate0=_SPEC_GATE0_EXP02EM1B.replace(
         "2. O que o algoritmo ganha quando alguém fica acordado reagindo a uma postagem polêmica?\n", ""))
-    st3 = _rodar_split_d0({**st1, "fechamento_lacunas": sem_pergunta})
-    perdidas = _codigos(st3)["linhas-perdidas"]["resumo"]
-    assert st3["lacunas_status"] == "bloqueado" and "o algoritmo ganha" in perdidas and "[D0-8]" not in perdidas
+    st3 = _rodar_split_d0({**st1, "fechamento_lacunas": sem_pergunta}, estrito=False)
+    aberto = _codigos(st3)["alterou-fora-do-proprio-bloco"]
+    assert "o algoritmo ganha" in st3["spec_missao"] and "linhas-perdidas" not in _codigos(st3)
+    assert aberto["severidade"] == "decisao_humana" and aberto["resumo"].startswith("[ABERTO — dono: PO")
+    assert "o algoritmo ganha" in aberto["resumo"] and "[D0-8]" not in aberto["resumo"]
+    assert st3["lacunas_status"] == "amarelo" and st3["lacunas_status_envelope"]["precisa_humano"]
+    st3e = _rodar_split_d0({**st1, "fechamento_lacunas": sem_pergunta}, estrito=True)
+    assert st3e["lacunas_status"] == "bloqueado"
+    assert _codigos(st3e)["alterou-fora-do-proprio-bloco"]["severidade"] == "bloqueio"
 
 
 def test_afirmacao_do_qa_em_telas_estados_conta_as_linhas_do_stitch():
@@ -5748,24 +5760,32 @@ def test_gates_e_geracao_consistentes_no_retrabalho_e_na_correcao_pontual():
                 + "O D0 preencheu as lacunas desta rodada de retrabalho. " * 3 + "\n\n## Passo 6 — Devolutiva\n\nNada.\n"
                 '```json\n{"agente": "fecha-lacunas", "status": "aprovado", "achados": []}\n```\n')
 
-    def rodar(estado):
+    def rodar(estado, estrito=False):
         class Semente(BaseAgent):
             @override
             async def _run_async_impl(self, ctx):
                 yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta=estado))
-        _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), get_fecha_lacunas_split()])))
+        split = get_fecha_lacunas_split()
+        split.estrito = estrito
+        _, st = asyncio.run(_run(SequentialAgent(name="R", sub_agents=[Semente(name="S"), split])))
         return st
 
     # retrabalho do D0 sem o bloco 14: ele volta da versão aceita, e nada é acusado de perdido
     st = rodar({"fechamento_lacunas": saida_d0(gate0 + "\n## 13. Decisões D0\n| `[D0-1]` | x |\n"), "spec_missao": aceita})
     assert "Ponte de importação" in st["spec_missao"] and st["lacunas_status"] != "bloqueado", st.get("lacunas_status_envelope")
 
-    # a troca que o PO pediu muda a linha do glossário: atenção, não perda
+    # A troca que o PO pediu em design muda a linha do glossário, que é texto do Gate 0. Desde 23/10/2026 a spec é
+    # montada em código: a troca não entra na spec de produto — vale, mas no documento de produto (plano «Produto dono
+    # do contrato», D4 e D11) — e vira `[ABERTO — dono: PO]` no cartão do parecer, dizendo que o PO a pediu.
     trocada = aceita.replace("`Publicar no Álbum`", "`Colocar no álbum`")
     pedidos = [{"etapa": "design", "texto": original}]
     st = rodar({"fechamento_lacunas": saida_d0(trocada.split("\n## 14")[0]), "spec_missao": aceita, "pedidos_do_po": pedidos})
-    codigos = {a["codigo"]: a["severidade"] for a in (st.get("lacunas_status_envelope") or {}).get("achados") or []}
-    assert codigos.get("linha-trocada-a-pedido") == "atencao" and "linhas-perdidas" not in codigos, codigos
-    # sem pedido que cite o texto, a mesma mudança continua sendo perda
-    st = rodar({"fechamento_lacunas": saida_d0(trocada.split("\n## 14")[0]), "spec_missao": aceita})
-    assert st["lacunas_status"] == "bloqueado"
+    achados = {a["codigo"]: a for a in (st.get("lacunas_status_envelope") or {}).get("achados") or []}
+    aberto = achados["alterou-fora-do-proprio-bloco"]
+    assert "`Publicar no Álbum`" in st["spec_missao"] and "Colocar no álbum" not in st["spec_missao"]
+    assert aberto["severidade"] == "decisao_humana" and "o PO mandou trocar" in aberto["resumo"], aberto
+    assert "linhas-perdidas" not in achados and st["lacunas_status"] == "amarelo"
+    # sem pedido que cite o texto, a mesma mudança é do D0 — e, com ESTEIRA_ESTRITA, bloqueia
+    st = rodar({"fechamento_lacunas": saida_d0(trocada.split("\n## 14")[0]), "spec_missao": aceita}, estrito=True)
+    aberto = {a["codigo"]: a for a in st["lacunas_status_envelope"]["achados"]}["alterou-fora-do-proprio-bloco"]
+    assert st["lacunas_status"] == "bloqueado" and "o PO mandou trocar" not in aberto["resumo"]
