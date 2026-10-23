@@ -5677,3 +5677,43 @@ def test_fidelidade_nao_le_descricao_como_ordem_de_preservacao():
     assert fid.so_preservacao("O que NÃO mudar: foco primário EF01CO06 intacto")
     assert not fid.so_preservacao("O resto é fricção de interface que não gera aprendizagem.")
 
+
+
+def test_fidelidade_prova_texto_ditado_e_nao_cobra_remocao_do_que_nao_existia():
+    """exp02em1b (23/10/2026), reprocesso de produto por correção pontual:
+    - F5 era o próprio texto do overlay, entre aspas; o juiz disse «atendido» sem citação, o intérprete marcou «outras
+      exigências», e o texto literal no one-pager não contou como prova → 🔴 `sem-prova`.
+    - F27 mandava trocar «abre a Central de Apoio» no critério da CO08 — o critério dizia «acessa a central de apoio»;
+      a troca foi feita, e a tabela de verbos ganhou «abre a Central de Apoio, seleciona relato e encaminha». 0 → 1
+      ocorrência virou 🔴 `remocao-nao-aplicada`."""
+    from tools import fidelidade as fid
+
+    cta = ("Você é moderador do perfil do grêmio estudantil no Unoovista. O post sobre dietas viralizou e saiu da bolha da "
+           "escola. O perfil é responsabilidade de vocês: analisem a repercussão e decidam o que fazer com a publicação.")
+    origem = "refazer Produto · produto · 23/10/2026"
+    # o título da seção seguinte do pedido, sem ponto final, gruda no item do texto ditado
+    itens = [{"id": "F5", "origem": origem, "tipo": "pedido", "texto": f"“{cta}” 2. Central de Apoio — nova tela"},
+             {"id": "F27", "origem": origem, "tipo": "pedido",
+              "texto": "Atualizar o critério da CO08: onde diz “abre a Central de Apoio”, trocar para “encaminha um relato "
+                       "pela Central de Apoio”."}]
+    antes = ("Overlay: nenhum.\n| `encaminhar` relato | aciona o atendimento. |\n"
+             "Atingiu: preserva privacidade, denuncia perfis e busca ajuda (acessa a central de apoio).")
+    agora = (f"Overlay fixo nas bordas do Unoovista: “{cta}”\n"
+             "| `encaminhar` relato | abre a Central de Apoio, seleciona relato e encaminha à escola. |\n"
+             "Atingiu: preserva privacidade, denuncia perfis e encaminha um relato pela Central de Apoio.")
+    juiz = '```json\n{"decisoes":[{"id":"F5","veredito":"atendido","citacao":""},' \
+           '{"id":"F27","veredito":"atendido","citacao":"encaminha um relato pela Central de Apoio"}]}\n```'
+    leitura = ('```json\n{"itens":[{"id":"F5","inserir":["' + cta + '"],"remover":[],"outras_exigencias":true,'
+               '"cabecalho":false},{"id":"F27","inserir":["encaminha um relato pela Central de Apoio"],'
+               '"remover":["abre a Central de Apoio"],"outras_exigencias":true,"cabecalho":false}]}\n```')
+    r = fid.aplicar(itens, juiz, {"one_pager": agora}, anteriores={"one_pager": antes},
+                    interpretacao=fid.interpretacao(leitura, itens))
+    assert not [a for a in r["achados"] if a["severidade"] == "bloqueio"], r["achados"]
+    assert "F5" in {c["id"] for c in r["conferidos"]}
+    assert [(a["id"], a["codigo"]) for a in r["achados"]] == [("F27", "remocao-a-conferir")], r["achados"]
+
+    # a remoção que existia e não saiu continua bloqueando
+    r = fid.aplicar(itens[1:], juiz, {"one_pager": agora + "\nAtingiu: abre a Central de Apoio."},
+                    anteriores={"one_pager": antes + "\nAtingiu: abre a Central de Apoio."},
+                    interpretacao=fid.interpretacao(leitura, itens))
+    assert [(a["id"], a["codigo"]) for a in r["achados"]] == [("F27", "remocao-nao-aplicada")], r["achados"]
