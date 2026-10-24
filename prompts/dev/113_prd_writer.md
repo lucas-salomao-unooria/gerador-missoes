@@ -164,6 +164,12 @@ PRD da exp01ef1b (07/10/2026) abriu com uma seção «Status dos gates» feita c
 
 {one_pager?}
 
+**Textos-chave do one-pager aprovado, com ID** (montados pela esteira, por código — plano «Produto dono do contrato», PR 7):
+
+{textos_chave_tabela?}
+
+O corpo cita o texto-chave pelo ID (`TC-07`) ou literal, nunca com outra redação: a esteira põe a tabela no anexo, troca por código a citação reescrita quase igual, e o gate do PRD (`literal-parafraseado`) recusa a mais distante. O nº de opções de cada escolha é o da tabela.
+
 **Spec da missão (contrato):**
 
 {spec_missao?}

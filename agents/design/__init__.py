@@ -19,6 +19,9 @@ HTML é o que a revisão humana de fato abre.
   d4b A074Caa                → camada_caa      (camada CAA; ele mesmo decide se roda)
   d5  A075Telas    → wireframes_cobertura
   d6  A077CopyRevisao        → copy_strings_revisada (passada 2)
+  d6c A078bTextosChave       → copy_strings_revisada com os textos-chave do one-pager copiados por código ·
+                                 textos_chave_status (determinístico, PR 7: divergência que sobra bloqueia; a redação
+                                 do design vira [PROPOSTA] ao PO)
   d8  A079Prototipo          → prototipo_html  (protótipo navegável)
   d8c A080ArtefatosDesign         → prototipo_arquivo (.html) · prototipo_relatorio · stitch_links
                                  · diagramas_html — determinístico, o HTML nunca entra em prompt
@@ -26,6 +29,9 @@ HTML é o que a revisão humana de fato abre.
                                  protótipo contra o glossário canônico da spec)
   d8f A083CoberturaTelas         → cobertura_telas_status (determinístico: toda tela do inventário
                                  da jornada no fluxo, na copy, na cobertura e no protótipo, por ID)
+  d8g A083bArestasContrato       → arestas_status (determinístico, PR 7: aresta do fluxo ou regra de habilitação
+                                 que muda o que o aluno faz em relação ao bloco 2 da spec vira [PROPOSTA] ao PO;
+                                 decompor estado é livre — D7)
   d7  A088QaEntregaveis      → qa_entregaveis_report (gate de design)
   d7b A089QaAfirmacoes          → qa_afirmacoes_status (determinístico: contagens de telas e nomes de
                                  arquivo do QA contra o real; divergência reescreve o QA como bloqueado)
@@ -52,10 +58,11 @@ from google.adk.agents.loop_agent import LoopAgent
 from google.adk.agents.sequential_agent import SequentialAgent
 
 from agents.base import create_llm_agent
-from agents.callbacks import marcar_heranca
+from agents.callbacks import copiar_textos_chave, marcar_heranca
 from agents.banca import get_banca
 from agents.juiz import get_fidelidade_check
 from agents.checkers import (
+    ArestasContratoAgent,
     ArtefatosDesignAgent,
     CoberturaTelasAgent,
     CopyPreservadaAgent,
@@ -69,6 +76,7 @@ from agents.checkers import (
     EspelhoMiroAgent,
     RastroCheckAgent,
     SecaoSplitAgent,
+    TextosChaveCopyAgent,
 )
 from config import get_settings
 from prompts import load_prompt
@@ -242,6 +250,8 @@ def get_copy_ptbr_agent(**kw) -> LlmAgent:
         instruction=load_prompt("design/073_copy_ptbr.md"),
         output_key="copy_strings",
         before_agent_callback=marcar_heranca,
+        # o texto-chave do one-pager entra na copy por código, não pela redação do modelo (PR 7, D1)
+        after_agent_callback=copiar_textos_chave("copy_strings"),
         **kw,
     )
 
@@ -341,7 +351,8 @@ MAPA_RETRABALHO = {
     "brief-oficio": ["A070BriefOficioRetrabalho"],
     "jornada": ["A071JornadaRetrabalho"],
     "fluxo": ["A072FluxoRetrabalho"],
-    "copy-ptbr-revisao": ["A077CopyRevisaoRetrabalho", "A078CopyPreservadaRetrabalho"],
+    # a revisão refeita volta a receber os textos-chave por código, e o gate confere de novo (PR 7)
+    "copy-ptbr-revisao": ["A077CopyRevisaoRetrabalho", "A078CopyPreservadaRetrabalho", "A078bTextosChaveRetrabalho"],
     "caa": ["A074CaaRetrabalho"],
     "telas": ["A075TelasRetrabalho", "A076StitchGeracaoRetrabalho"],
     # o protótipo tinha dono no QA e nenhuma rota: o ticket ia para "sem rota" (auditoria 07/10/2026)
@@ -355,7 +366,7 @@ MAPA_RETRABALHO = {
 #: com a instrução de tratá-lo como fato. Visto na auditoria de 23/09/2026.
 POSFIXO_RETRABALHO = ["A079PrototipoRetrabalho", "A080ArtefatosDesignRetrabalho",
                       "A081PrototipoLintRetrabalho", "A082ConsistenciaRetrabalho",
-                      "A083CoberturaTelasRetrabalho", "A084EspelhoMiroRetrabalho"]
+                      "A083CoberturaTelasRetrabalho", "A083bArestasContratoRetrabalho", "A084EspelhoMiroRetrabalho"]
 
 #: Tickets endereçados a estes donos não são desta etapa: o QA está devolvendo ao produto.
 RETRABALHO_EXTERNO = ["gate-estrutural"]
@@ -398,6 +409,8 @@ def _agentes_de_retrabalho(**kw) -> list:
         StitchGeracaoAgent(name="A076StitchGeracaoRetrabalho",
                            description="Gera no mesmo projeto do Stitch só o que o retrabalho das telas mudou ou ainda falta."),
         CopyPreservadaAgent(name="A078CopyPreservadaRetrabalho"),
+        TextosChaveCopyAgent(name="A078bTextosChaveRetrabalho",
+                             description="Copia de novo os textos-chave do one-pager para a copy revisada no retrabalho e confere."),
         ArtefatosDesignAgent(
             name="A080ArtefatosDesignRetrabalho",
             description="Reextrai o HTML do protótipo, os links do Stitch e a folha de diagramas depois de uma rodada de retrabalho.",
@@ -406,6 +419,8 @@ def _agentes_de_retrabalho(**kw) -> list:
         get_consistencia_check("A082ConsistenciaRetrabalho"),
         CoberturaTelasAgent(name="A083CoberturaTelasRetrabalho",
                             description="Reconfere, por ID, toda tela do inventário em todo derivado depois do retrabalho."),
+        ArestasContratoAgent(name="A083bArestasContratoRetrabalho", estrito=get_settings().esteira_estrita,
+                             description="Reconfere as arestas do fluxo e as regras de habilitação contra o bloco 2 depois do retrabalho."),
         EspelhoMiroAgent(
             name="A084EspelhoMiroRetrabalho",
             description="Reenvia ao mesmo board do Miro os diagramas corrigidos na rodada de retrabalho.",
@@ -531,6 +546,14 @@ def build_design_stage(
             # A revisão descartava prompts, banco curado e podcast em 8 de 8 sessões, com o prompt mandando
             # manter: copiar sem mudança é trabalho do código (auditoria de 07/10/2026).
             CopyPreservadaAgent(name="A078CopyPreservada", before_agent_callback=marcar_heranca),
+            # Depois da revisão e da preservação: o texto-chave do one-pager entra na copy por código, a redação do
+            # design vira proposta ao PO, e o que o código não conserta bloqueia (PR 7, D1). Antes do protótipo, que
+            # tira o texto das telas da copy.
+            TextosChaveCopyAgent(
+                name="A078bTextosChave",
+                description="Copia por código os textos-chave do one-pager (§4, Canal B, opções, podcast, roteiro) para a linha da copy revisada que os traz; a redação do design vira [PROPOSTA] ao PO; opção a menos ou a mais bloqueia.",
+                before_agent_callback=marcar_heranca,
+            ),
             get_prototipo_agent(**kw),
             ArtefatosDesignAgent(
                 name="A080ArtefatosDesign",
@@ -549,6 +572,14 @@ def build_design_stage(
             CoberturaTelasAgent(
                 name="A083CoberturaTelas",
                 description="Confere, por ID, toda tela do inventário da jornada no fluxo, na copy revisada, na cobertura dos wireframes e nos quadros do protótipo; falta vira ticket com o dono.",
+                before_agent_callback=marcar_heranca,
+            ),
+            # As arestas do fluxo e as regras de habilitação das telas contra o bloco 2 da spec: decompor estado é livre
+            # (D7); a guarda que muda o que o aluno faz, decide ou vê vai ao PO como proposta (PR 7).
+            ArestasContratoAgent(
+                name="A083bArestasContrato",
+                description="Arestas do fluxo e regras «habilitado só com…» das telas × bloco 2 da spec: guarda que exige a resposta certa ou que afrouxa um gatilho da spec vira [PROPOSTA] ao PO; decompor estado é livre.",
+                estrito=get_settings().esteira_estrita,
                 before_agent_callback=marcar_heranca,
             ),
             EspelhoMiroAgent(
@@ -610,11 +641,13 @@ DESIGN_METADATA = [
     {"id": "A076StitchGeracao", "name": "076 · Telas no Stitch (determinístico)", "icon": "🖼️", "output_key": "stitch_geracao", "prompt_file": None, "description": "Gera no Stitch, fora do modelo, toda (tela, estado) da tabela do agente de telas e do inventário da jornada, em paralelo; o screenId é o que o Stitch devolve."},
     {"id": "A077CopyRevisao", "name": "077 · Copy PT-BR (passada 2)", "icon": "🔍", "output_key": "copy_strings_revisada", "prompt_file": "design/077_copy_revisao.md", "description": "Revisão em contexto de tela."},
     {"id": "A078CopyPreservada", "name": "078 · Copy preservada (determinístico)", "icon": "📌", "output_key": "copy_strings_revisada", "prompt_file": None, "description": "Reanexa à copy revisada, sem mudança, as seções da passada 1 que a revisão não trouxe (prompts e schemas, banco curado, roteiro do podcast)."},
+    {"id": "A078bTextosChave", "name": "078b · Textos-chave na copy (determinístico)", "icon": "🔑", "output_key": "textos_chave_report", "prompt_file": None, "description": "Copia por código os textos-chave do one-pager aprovado (aspas do §4, Canal B, opções de cada escolha, podcast, roteiro do professor) para a linha da copy que os traz, pelo ID ou pelo texto. A redação que o design tinha escrito vira [PROPOSTA — validar com PO], para o PO pedir no Refazer; opção a menos ou a mais bloqueia e volta ao dono da copy (PR 7)."},
     {"id": "A079Prototipo", "name": "079 · Protótipo navegável (HTML)", "icon": "🖥️", "output_key": "prototipo_html", "prompt_file": "design/079_prototipo.md", "description": "Arquivo HTML único e sem dependências com as telas navegáveis, o painel da etapa vindo do one-pager e as cadências do pico. Salvo como `design/08-prototipo.html`."},
     {"id": "A080ArtefatosDesign", "name": "080 · Artefatos e links (determinístico)", "icon": "🔗", "output_key": "stitch_links", "prompt_file": None, "description": "Separa o HTML do protótipo do relatório, colhe os links das telas no Stitch e monta a folha de diagramas. Stitch com menos telas que o inventário da jornada bloqueia (`stitch_status`, dono `telas`)."},
     {"id": "A081PrototipoLint", "name": "081 · Lint do protótipo (determinístico)", "icon": "🧹", "output_key": "prototipo_lint_report", "prompt_file": None, "description": "Confere o arquivo do protótipo HTML: o que o QA de entregáveis não vê por ler só o texto. Reprovado devolve ao protótipo no retrabalho de design."},
     {"id": "A082Consistencia", "name": "082 · Coerência entre documentos (determinístico)", "icon": "📖", "output_key": "consistencia_report", "prompt_file": None, "description": "Jornada, fluxo, copy revisada e protótipo contra o glossário canônico da spec: variante proibida de entidade bloqueia; papel ou idade de personagem, número com unidade, rótulo de botão e nome de arquivo divergentes ficam 🟡. Pegou os quatro nomes do órgão da exp09ef1b."},
     {"id": "A083CoberturaTelas", "name": "083 · Cobertura de telas (determinístico)", "icon": "🧮", "output_key": "cobertura_telas_report", "prompt_file": None, "description": "Toda tela do inventário da jornada no fluxo, na copy revisada, na cobertura dos wireframes e nos quadros do protótipo, conferida por ID; falta vira ticket com o dono (`cobertura_telas_status`)."},
+    {"id": "A083bArestasContrato", "name": "083b · Fluxo e telas × bloco 2 (determinístico)", "icon": "🧷", "output_key": "arestas_report", "prompt_file": None, "description": "Arestas do fluxo e regras de habilitação das telas contra a mecânica da spec de produto: guarda que só deixa seguir com a resposta certa, ou que troca o «e» de um gatilho da spec por «ou», vira [PROPOSTA — validar com PO]; estado novo de decomposição é livre (D7). Bloqueia com ESTEIRA_ESTRITA; sem ela, é decisão humana no cartão de design (PR 7)."},
     {"id": "A084EspelhoMiro", "name": "084 · Espelho no Miro (determinístico)", "icon": "🪞", "output_key": "miro_links", "prompt_file": None, "description": "Publica no Miro, como board navegável, os mesmos diagramas Mermaid da jornada e do fluxo. O Mermaid continua sendo a fonte; Miro indisponível não interrompe a esteira."},
     {"id": "A085EscopoBanca", "name": "085 · Escopo da banca de design (determinístico)", "icon": "🔀", "output_key": None, "prompt_file": None, "description": "Grava o escopo da banca na posição «design»."},
     {"id": "A086aBancaProdutoNarrativa", "name": "086a · Banca no fim de design: produto realizado em tela", "icon": "🅰️", "output_key": "banca_design_narrativa", "prompt_file": "dev/validacao_produto_narrativa.md", "description": "Os critérios PROD que se realizam em tela — fluxo × contrato de estados, momento de conclusão, condução do debate, modos de erro —, antes do parecer de design."},

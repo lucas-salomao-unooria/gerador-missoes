@@ -37,7 +37,13 @@ A missão possui dois tipos de texto:
 
 {one_pager?}
 
-O texto que o §4 do one-pager põe na tela entre aspas — a pergunta da aposta e as alternativas, as falas do personagem-guia, as mensagens do sistema, o caso de transferência — é a redação que o PO aprovou: entra no sheet palavra por palavra. Se o teto de palavras da faixa (abaixo) obrigar a mudar, mude e registre em «Strings que precisam de decisão» `[PROPOSTA — validar com PO: «texto aprovado» → «texto novo» · por quê]`, com o texto aprovado entre aspas. Fala do professor em sala e exemplo do que o estudante diria («ex.: "…"») não são texto de tela. Nas sessões até 07/10/2026, a passada 1 perdia mais da metade desses textos, e nenhuma etapa seguinte os recuperava.
+O texto que o §4 do one-pager põe na tela entre aspas — a pergunta da aposta e as alternativas, as falas do personagem-guia, as mensagens do sistema, o caso de transferência — é a redação que o PO aprovou.
+
+**Textos-chave do one-pager aprovado — com ID e travados** (plano «Produto dono do contrato», PR 7, D1). A tabela abaixo é montada pela esteira, por código, das aspas do §4, da pergunta e das alternativas do Canal B (§12a), das opções de cada escolha, do roteiro do professor (§9) e do podcast (§11):
+
+{textos_chave_tabela?}
+
+Cada texto-chave entra no sheet **palavra por palavra**, numa linha que cita o ID na coluna Nota (`TC-07`; a opção de uma escolha, `TC-12.2`). Toda escolha tem uma linha por opção, com o nº de opções do one-pager — nem uma a menos, nem uma a mais. Você não reescreve texto-chave: a esteira copia por código o texto aprovado para a linha que o cita (ou que traz uma reescrita dele), e a redação que estava lá vira proposta ao PO na seção «Textos-chave aprovados — conferência da esteira»; opção a menos ou a mais volta para você. Se o teto de palavras da faixa ou a tela pedirem outra redação, mantenha o texto aprovado na linha e escreva em «Strings que precisam de decisão» `[PROPOSTA — validar com PO: TC-07 «texto aprovado» → «texto novo» · por quê]` (o ID primeiro, como na seção da esteira: é por ele que o gate lista a proposta ao PO): o PO decide no Refazer, e o texto muda no one-pager — de lá desce por código. Microcopy (rótulo de botão, aviso, estado de tela, mensagem de sistema que não está na tabela) é sua. Fala do professor em sala e exemplo do que o estudante diria («ex.: "…"») não são texto de tela. Nas sessões até 07/10/2026, a passada 1 perdia mais da metade desses textos, e nenhuma etapa seguinte os recuperava; na exp02ef1b (23/10/2026) a revisão trocou as opções da 5A e tirou «Lugar».
 
 **Ambiente simulado (D9) — rótulos nativos literais e o padrão de conteúdo (o schema que os prompts de conteúdo dinâmico preenchem):**
 
@@ -120,6 +126,7 @@ Tipo: instrução · narrativa · rótulo de UI · feedback de sistema · pergun
 Chave: `eN.tipo.nome` (ex.: `e3.instrucao.salvar`) — estável; o dev usa a chave.
 Seção: `clone` (personagem-guia e plataforma simulada) ou `unooria` (só na tela de contexto e na reflexão). **Com várias seções do DS** (`secoes_ds_extras`), em vez de `clone` escreva a seção que fala naquela tela (`unoovista`, `unoochat`…), conforme o «Mapa de seções»: cada app tem a voz e os rótulos nativos dele. **Em mini-jogo, `unooria` em tudo** — não há clone.
 Redundância: `texto` · `texto+ícone` · `texto+ícone+áudio`.
+Nota: na linha que traz um texto-chave, o ID dele (`TC-07`, a opção `TC-12.2`) — é por ele que a esteira copia o texto aprovado.
 
 ## Strings do professor (preparação/curadoria com IA, dashboard, gatilhos, roteiro de perguntas, erro) — inclui, obrigatoriamente: rótulos e textos de ajuda do recorte da aula (disciplina, tema, assuntos, contexto), o botão do banco padrão, as mensagens de geração em andamento, de falha e de saldo de IA esgotado, os textos da curadoria (editar, regenerar, aprovar) e de pôr a atividade no ar (sem agendamento: a plataforma libera na hora); e, como amostra de conteúdo dinâmico, o recorte preenchido de cada uma das três aulas da tabela do bloco 8
 ## Prompts e Schemas para Conteúdo Dinâmico gerado por IA (posts, comentários, personas) + Amostras do Banco Curado Default

@@ -68,7 +68,7 @@ from google.adk.agents.sequential_agent import SequentialAgent
 from agents.banca import get_banca, pular_se_banca_de_entrada_bloqueou
 from agents.juiz import get_fidelidade_check, get_juiz_de_achados, get_juiz_de_contradicoes
 from agents.base import create_llm_agent
-from agents.callbacks import desembrulhar_documento, marcar_heranca
+from agents.callbacks import copiar_textos_chave, desembrulhar_documento, marcar_heranca
 from agents.checkers import (
     AnexoAprovadoAgent,
     ConsolidacaoBancaAgent,
@@ -93,6 +93,8 @@ def get_handoff_dev_agent(**kw) -> LlmAgent:
         instruction=load_prompt("dev/100a_handoff_dev.md"),
         output_key="handoff_dev",
         before_agent_callback=marcar_heranca,
+        # a citação de texto-chave reescrita quase igual volta ao texto aprovado por código (PR 7, D1)
+        after_agent_callback=copiar_textos_chave("handoff_dev"),
         **kw,
     )
 
@@ -166,7 +168,7 @@ def get_prd_writer_agent(**kw) -> LlmAgent:
         output_key="prd_final",
         model=settings.gemini_model_prd,
         before_agent_callback=marcar_heranca,
-        after_agent_callback=desembrulhar_documento("prd_final"),
+        after_agent_callback=[desembrulhar_documento("prd_final"), copiar_textos_chave("prd_final")],
         **kw,
     )
 
@@ -178,7 +180,7 @@ def get_one_pager_pedagogico_agent(**kw) -> LlmAgent:
         instruction=load_prompt("dev/120_one_pager_pedagogico.md"),
         output_key="one_pager_pedagogico",
         before_agent_callback=marcar_heranca,
-        after_agent_callback=desembrulhar_documento("one_pager_pedagogico"),
+        after_agent_callback=[desembrulhar_documento("one_pager_pedagogico"), copiar_textos_chave("one_pager_pedagogico")],
         **kw,
     )
 

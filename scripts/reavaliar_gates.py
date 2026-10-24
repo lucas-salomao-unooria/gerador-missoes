@@ -119,6 +119,15 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
     if prd:
         novos["montagem_prd_status"] = montagem.validar_prd(state)
 
+    # PR 7: os textos-chave na copy e o fluxo × bloco 2 da spec
+    from tools import arestas, textos_chave
+
+    if state.get("copy_strings_revisada"):
+        novos["textos_chave_status"] = textos_chave.conferir_copy(str(state["copy_strings_revisada"]),
+                                                                  textos_chave.da_sessao(state))
+    if state.get("fluxo_arestas"):
+        novos["arestas_status"] = arestas.validar(state)
+
     novos["contrato_produto_status"] = contrato_produto.validar_one_pager(
         one_pager, state.get("nucleo_narrativo", "") or "", state.get("briefing", "") or "",
         decisoes_do_po=state.get("decisoes_do_po") or [],

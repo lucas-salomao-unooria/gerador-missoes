@@ -231,3 +231,45 @@ def resumo(edicoes: Iterable[Union[Edicao, Dict[str, Any]]], limite: int = 160) 
         linhas.append(f"{n}. `{e.documento}` — «{de[:limite]}» → «{para[:limite] or '(removido)'}»"
                       + (f" — {e.motivo}" if e.motivo else ""))
     return "\n".join(linhas) or "Nenhuma troca."
+
+
+def trocas_por_linhas(documento: str, antes: str, depois: str, motivo: str = "") -> List[Edicao]:
+    """As trocas, linha a linha, que levam `antes` a `depois`: cada bloco de linhas que mudou vira uma troca, com as
+    linhas vizinhas como contexto até o `de` ser único no texto da hora (como `aplicar` exige).
+
+    É como um passo determinístico registra o que mudou num documento travado da correção pontual: `reaplicar` refaz as
+    trocas do pedido e estas, e a prova das ordens de não mexer continua de pé. A cópia dos textos-chave (A078b, PR 7)
+    mexia na copy depois do editor, e a fidelidade de design ganhava `preservacao-sem-prova` (exp02ef1b, 24/10/2026).
+    Vazio quando não há diferença, ou quando as trocas não reproduzem `depois` letra por letra.
+    """
+    import difflib
+
+    a, b = (antes or "").split("\n"), (depois or "").split("\n")
+    if a == b:
+        return []
+    edicoes: List[Edicao] = []
+    atual = list(a)
+    deslocamento = 0
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        if tag == "equal":
+            continue
+        ini, fim, novo = i1 + deslocamento, i2 + deslocamento, b[j1:j2]
+        acima = abaixo = 0
+        while True:
+            de = "\n".join(atual[ini - acima: fim + abaixo])
+            if de.strip() and len(_localizar("\n".join(atual), de)) == 1:
+                break
+            if ini - acima > 0 and (acima <= abaixo or fim + abaixo >= len(atual)):
+                acima += 1
+            elif fim + abaixo < len(atual):
+                abaixo += 1
+            else:
+                return []
+        para = "\n".join(atual[ini - acima: ini] + novo + atual[fim: fim + abaixo])
+        edicoes.append(Edicao(documento=documento, de=de, para=para, motivo=motivo))
+        atual = atual[:ini] + novo + atual[fim:]
+        deslocamento += (j2 - j1) - (i2 - i1)
+    resultado = aplicar({documento: antes or ""}, edicoes)
+    if not resultado.ok or resultado.documentos[documento] != (depois or ""):
+        return []
+    return edicoes

@@ -28,6 +28,9 @@ Ordem (SequentialAgent):
   └───────────────────────────────────────────────────────────────────────────┘
   p4  A043GateFinalProduto    → gate_final_report
   p4c GateFinalCheck           → gate_final_status
+  p4d A044bTextosChave         → textos_chave (registro de IDs) · textos_chave_tabela (determinístico, PR 7: os
+                                 textos-chave do one-pager — aspas do §4, Canal B, opções, roteiro, podcast — com
+                                 ID estável; roda também na correção pontual de produto)
   p5  A045SpecMissao          → spec_missao   (saída final de Produto)
   p5a A045bCompletudeSpec     → completude_spec (o que o D0 fechava no design e é de produto: estado, handoff,
                                  evidência, dados e retenção, duração e tetos, painel, PQ e KPI, texto do
@@ -78,6 +81,7 @@ from agents.checkers import (
     ProfundidadeCheckAgent,
     RastroCheckAgent,
     SaidaDeLoopAgent,
+    TextosChaveAgent,
     VizinhasCatalogoAgent,
     isolar,
 )
@@ -881,6 +885,12 @@ def build_produto_stage(
                 status_key="gate_final_status",
                 block_pipeline_on_fail=estrito,
             ),
+            # O one-pager está fechado: os textos-chave ganham ID antes da spec, que os cita, e do de acordo, que mostra a
+            # tabela (PR 7, D1). Na correção pontual roda também — o texto que o editor trocou guarda o ID.
+            TextosChaveAgent(
+                name="A044bTextosChave",
+                description="Tabela de textos-chave com ID estável, montada por código do one-pager aprovado (§4, §12a, §9, §11): o texto igual ou trocado no mesmo lugar guarda o ID, o novo ganha o próximo número.",
+            ),
             spec_loop,
             _fidelidade_de_produto(kw),
             # Depois da spec, de propósito: o bloco 11 já passou pelo A046, então o resumido
@@ -965,6 +975,7 @@ PRODUTO_METADATA = [
     {"id": "A042ComiteFinalRodada", "name": "042 · Saída do comitê final (determinístico)", "icon": "🔁", "output_key": "comite_final_externo_rodada", "prompt_file": None, "description": "Os três de acordo, o §12a em forma e a conta da virada fechando encerram o loop; senão, a cadeia de produto roda de novo a partir do núcleo, até COMITE_FINAL_MAX_RODADAS (padrão 2). Esgotado, segue 🟡."},
     {"id": "A043GateFinalProduto", "name": "043 · Gate final de produto", "icon": "🏁", "output_key": "gate_final_report", "prompt_file": "produto/043_gate_final.md", "description": "Coerência entre missão e vereditos; libera ou bloqueia para design/dev."},
     {"id": "A044GateFinalProdutoCheck", "name": "044 · Veredito final (determinístico)", "icon": "🔀", "output_key": "gate_final_status", "prompt_file": None, "description": "Lê o envelope do gate final."},
+    {"id": "A044bTextosChave", "name": "044b · Textos-chave com ID (determinístico)", "icon": "🔑", "output_key": "textos_chave_tabela", "prompt_file": None, "description": "Os textos-chave do one-pager aprovado — aspas do §4, pergunta e alternativas do Canal B (§12a), opções de cada escolha com o nº de opções, roteiro do professor (§9), podcast (§11) — numa tabela com ID estável (`TC-07`, a opção `TC-12.2`), montada por código. O cartão do de acordo a mostra; design e dev a recebem no conteúdo aprovado, e o código copia cada texto até a copy (PR 7)."},
     {"id": "A045SpecMissao", "name": "045 · Spec da missão", "icon": "📜", "output_key": "spec_missao", "prompt_file": "produto/045_spec_missao.md", "description": "Os 12 blocos da spec — contrato contra o qual design e dev constroem."},
     {"id": "A045bCompletudeSpec", "name": "045b · Completude da spec", "icon": "🧩", "output_key": "completude_spec", "prompt_file": "produto/046_completude_spec.md", "description": "O que o D0 fechava no design e é de produto (estado, handoff, evidência, dados e retenção, duração e tetos, painel docente, PQ e KPI, texto do professor, revezamento), em produto: decisões [CP-n] com base declarada no bloco 15 da spec, padrões da plataforma aplicados e listados no de acordo, e o que é do PO como [PARÂMETRO]/[PROPOSTA]/[ABERTO — dono: PO] na lista do de acordo. Nas rodadas seguintes do loop só roda se a spec perdeu o bloco 15; na correção pontual não roda."},
     {"id": "A045cCompletudeSpecSplit", "name": "045c · Spec com o bloco 15 (determinístico)", "icon": "✂️", "output_key": "relatorio_completude", "prompt_file": None, "description": "Monta em código a spec de produto — a do A045 com o bloco 15 da completude no lugar, o resto descartado —, separa o relatório de completude e registra `completude_status`. [PARÂMETRO]/[PROPOSTA] fechado pela completude sem parecer datado do PO bloqueia."},

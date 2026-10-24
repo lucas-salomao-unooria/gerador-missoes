@@ -78,6 +78,12 @@ podcast e os caminhos de arquivo que você cita. A correção é copiar de onde 
 
 {one_pager?}
 
+**Textos-chave do one-pager aprovado, com ID** (montados pela esteira, por código — plano «Produto dono do contrato», PR 7):
+
+{textos_chave_tabela?}
+
+O texto que o professor lê ou a criança ouve e que é texto-chave entra com as palavras da tabela, ou pelo ID: a esteira troca por código a citação reescrita quase igual, e a tabela vai no anexo.
+
 **Briefing de ofício (a aposta, o pico, o momento do "ahá"):**
 
 {brief_oficio?}

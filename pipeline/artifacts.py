@@ -43,6 +43,8 @@ ARTIFACT_FILES = [
     ("spec_missao_gate0", "produto/05a-spec-missao-gate0.md"),
     ("bncc_report", "produto/05b-conformidade-bncc.md"),
     ("one_pager_resumido", "produto/00d-one-pager-resumido.md"),
+    # os textos-chave com ID (PR 7): a tabela que o de acordo mostra e que design e dev recebem
+    ("textos_chave_tabela", "produto/00n-textos-chave.md"),
     ("fechamento_lacunas", "design/00-fechamento-lacunas.md"),
     ("relatorio_lacunas", "design/00a-relatorio-lacunas.md"),
     # o anexo de design da spec (PR 6): blocos 13 (D0-UX) e 14 (D9), fora de `produto/05-spec-missao.md`
@@ -51,6 +53,7 @@ ARTIFACT_FILES = [
     ("brief_oficio", "design/01-briefing-oficio.md"),
     ("jornada_telas", "design/02-jornada-telas.md"),
     ("fluxo_arestas", "design/03-fluxo-arestas.md"),
+    ("arestas_report", "design/03b-fluxo-x-spec.md"),
     ("copy_strings", "design/04-copy-strings.md"),
     ("camada_caa", "design/04b-camada-caa.md"),
     ("wireframes_cobertura", "design/05-wireframes-cobertura.md"),
@@ -62,6 +65,7 @@ ARTIFACT_FILES = [
     ("miro_links", "design/11-miro-boards.md"),
     ("prototipo_lint_report", "design/06b-lint-prototipo.md"),
     ("consistencia_report", "design/06c-coerencia-documentos.md"),
+    ("textos_chave_report", "design/06d-textos-chave.md"),
     ("qa_entregaveis_report", "design/07-qa-entregaveis.md"),
     ("qa_afirmacoes_report", "design/07b-qa-afirmacoes.md"),
     ("rastro_design_report", "design/12-rastro-lacunas-design.md"),
