@@ -525,8 +525,10 @@
       "codigos": []
     },
     "rastro_design_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "d0-orfao"
+      ]
     },
     "consistencia_status": {
       "status": "amarelo",
@@ -573,6 +575,7 @@
         "adr-inexistente",
         "adr-numero-errado",
         "adr-sem-proposta",
+        "d0-orfao",
         "ds-versao-cravada",
         "estado-da-spec-sem-mapa",
         "sem-idempotencia",
@@ -590,9 +593,10 @@
       "codigos": []
     },
     "rastro_lacunas_status": {
-      "status": "amarelo",
+      "status": "bloqueado",
       "codigos": [
-        "a_validar"
+        "a_validar",
+        "d0-orfao"
       ]
     },
     "fidelidade_status": {
@@ -663,9 +667,10 @@
       "codigos": []
     },
     "rastro_design_status": {
-      "status": "amarelo",
+      "status": "bloqueado",
       "codigos": [
-        "aberto"
+        "aberto",
+        "d0-orfao"
       ]
     },
     "consistencia_status": {

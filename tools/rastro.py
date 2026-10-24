@@ -378,19 +378,122 @@ _RE_RESOLVIDO_D0 = re.compile(r"resolvid[oa]s?\s+(?:em|no|na|pel[oa])\s*\[?\s*D0
 _RE_DECISAO_D0 = re.compile(r"\[\s*D0-0*(\d+)\s*\]")
 
 
+#: O título do mapa célula → D0, dentro do bloco 13: «### Mapa célula → D0».
+_RE_TITULO_MAPA_D0 = re.compile(r"^#{2,4}\s*\**\s*Mapa\s+c[ée]lula\b.*$", re.IGNORECASE | re.MULTILINE)
+_RE_TITULO_QUALQUER = re.compile(r"^#{1,4}\s", re.MULTILINE)
+
+
+def marcadores_de_lacuna(texto: str) -> List[str]:
+    """Os marcadores de lacuna (`[ABERTO …]`, `[LACUNA …]`, `[NEEDS CLARIFICATION …]`) do texto, na ordem."""
+    saida: List[str] = []
+    for tipo, regex in _MARCADORES:
+        if tipo in ("lacuna", "aberto", "needs_clarification"):
+            saida += [m.group(0).strip() for m in regex.finditer(texto or "") if m.group(0).strip() not in saida]
+    return saida
+
+
+def _norm_marcador(trecho: str) -> str:
+    return " ".join(re.sub(r"[—–]", "-", (trecho or "").replace("`", "").replace("*", "")).lower().split())
+
+
+def _linhas_do_mapa(texto: str) -> List[str]:
+    """As linhas das seções «Mapa célula → D0» do texto (do título ao próximo título)."""
+    linhas: List[str] = []
+    for m in _RE_TITULO_MAPA_D0.finditer(texto or ""):
+        prox = _RE_TITULO_QUALQUER.search(texto, m.end())
+        linhas += texto[m.end(): prox.start() if prox else len(texto)].splitlines()
+    return linhas
+
+
+def mapa_celula_d0(texto: str) -> Dict[str, int]:
+    """`{marcador normalizado: n}` do mapa célula → D0 do bloco 13.
+
+    Desde 23/10/2026 a spec é a do Gate 0 + 13 + 14, montada em código: o D0 não escreve mais ` — Resolvido em [D0-n]`
+    na linha do `[ABERTO]` que fechou (plano «Produto dono do contrato», PR 2). A marca passou a viver no bloco 13, numa
+    tabela «marcador → decisão», e some com ele — nunca fica marcando o texto do Gate 0 sem a decisão que a sustenta."""
+    mapa: Dict[str, int] = {}
+    for linha in _linhas_do_mapa(texto):
+        d0 = _RE_DECISAO_D0.findall(linha)
+        if not d0:
+            continue
+        for marcador in marcadores_de_lacuna(linha):
+            mapa.setdefault(_norm_marcador(marcador), int(d0[-1]))
+    return mapa
+
+
 def _decisoes_d0(textos: List[str]) -> set:
     """Números das decisões `[D0-n]` que existem: citadas numa linha que não é a marca de resolvido.
 
     A marca sozinha não fecha nada. Em 25/09/2026 (exp04ef1b) a linha `[ABERTO — dono: produto:
     Ratificação formal do teto de texto…] — Resolvido em [D0-09]` barrou o PRD, com o `[D0-9]`
-    decidido no bloco 13 — mas uma marca que aponta para um D0 inexistente é pendência aberta.
+    decidido no bloco 13 — mas uma marca que aponta para um D0 inexistente é pendência aberta. A linha do mapa célula
+    → D0 também não define decisão: é a marca, só que no bloco 13.
     """
     numeros: set = set()
     for texto in textos:
+        do_mapa = {l.strip() for l in _linhas_do_mapa(texto)}
         for linha in texto.splitlines():
-            if not _RE_RESOLVIDO_D0.search(linha):
+            if not _RE_RESOLVIDO_D0.search(linha) and linha.strip() not in do_mapa:
                 numeros.update(int(n) for n in _RE_DECISAO_D0.findall(linha))
     return numeros
+
+
+_RE_TITULO_13 = re.compile(r"^##\s*\**\s*13\b.*$", re.MULTILINE)
+_RE_D0_CITADO = re.compile(r"\bD0-0*(\d+)\b")
+
+
+def decisoes_do_bloco_13(spec: str) -> Optional[set]:
+    """Os números [D0-n] que o bloco 13 da spec define (sem as linhas do mapa célula → D0), ou `None` sem o bloco."""
+    m = _RE_TITULO_13.search(spec or "")
+    if not m:
+        return None
+    fim = re.search(r"^## ", spec[m.end():], re.MULTILINE)
+    bloco = spec[m.start(): m.end() + fim.start() if fim else len(spec)]
+    do_mapa = {l.strip() for l in _linhas_do_mapa(bloco)}
+    return {int(n) for linha in bloco.splitlines() if linha.strip() not in do_mapa for n in _RE_D0_CITADO.findall(linha)}
+
+
+def d0_orfaos(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Achado `d0-orfao` para cada documento que cita [D0-n] que o bloco 13 da spec não define.
+
+    O PRD da 4fd72a9a (exp02ef1b, 22/10/2026) citava D0-1 e D0-6 apontando para `produto/05-spec-missao.md`, que não
+    tinha nenhum: o bloco 13 tinha caído na montagem (linhas-perdidas). O fluxo, a copy, as telas e a CAA dela e da
+    60cfa7f4 (exp02em1b), e o handoff dela, citavam o mesmo vazio. Quem lê a citação abre a spec e não acha a decisão (plano «Produto dono do
+    contrato», PR 2). A spec é a que os documentos apontam (`spec_missao`); o anexo do PRD não conta."""
+    from tools.conteudo_aprovado import remover_anexo
+
+    spec = str(state.get("spec_missao") or "")
+    definidos = decisoes_do_bloco_13(spec)
+    saida: List[Dict[str, Any]] = []
+    for fonte in fontes:
+        texto = state.get(fonte["chave"])
+        if fonte["chave"] == "spec_missao" or not isinstance(texto, str) or not texto:
+            continue
+        if fonte["chave"] == "prd_final":
+            texto = remover_anexo(texto)
+        elif fonte["chave"] == "ambiente_simulado":
+            # o D9 recopia o bloco 13 inteiro, e o código descarta a cópia: só o bloco 14 é dele. Na exp03ef1b-317df247 a
+            # cópia trazia um D0-7 da rodada anterior do D0, que a spec montada já não tinha
+            texto = "\n".join(m.group(0) for m in re.finditer(r"^##\s*(?:Bloco\s*)?14\b.*?(?=^## |\Z)", texto,
+                                                                re.MULTILINE | re.DOTALL))
+        orfaos = sorted({int(n) for n in _RE_D0_CITADO.findall(texto)} - (definidos or set()))
+        if not orfaos:
+            continue
+        ids = ", ".join(f"D0-{n}" for n in orfaos)
+        etapa = fonte.get("etapa_padrao", "dev")
+        saida.append({
+            "tipo": "d0_orfao", "codigo": "d0-orfao", "trecho": ids,
+            "contexto": (f"«{fonte['rotulo']}» cita {ids}, que " + ("a spec não tem: ela está sem o bloco 13"
+                         if definidos is None else "o bloco 13 da spec não define")
+                         + ". A decisão citada precisa existir na spec para a qual o documento aponta."),
+            "resumo": (f"«{fonte['rotulo']}» cita {ids} — " + ("a spec está sem o bloco 13 (decisões do D0)"
+                       if definidos is None else "decisão(ões) que o bloco 13 da spec não tem")
+                       + ": confira a citação ou o bloco 13."),
+            "documento": fonte["rotulo"],
+            "dono": "fecha-lacunas" if definidos is None else fonte["rotulo"],
+            "etapa": etapa,
+        })
+    return saida
 
 
 def _severidade_na_etapa(severidade: str, dono: str, documento: str, etapa_corrente: Optional[str]) -> tuple:
@@ -469,6 +572,10 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
     resolvidos: List[Dict[str, Any]] = []
     textos = [t for f in fontes if isinstance(t := state.get(f["chave"]), str) and t]
     decisoes_d0 = _decisoes_d0(textos)
+    mapa_d0: Dict[str, int] = {}
+    for texto_fonte in textos:
+        for marcador, n in mapa_celula_d0(texto_fonte).items():
+            mapa_d0.setdefault(marcador, n)
     etapa_do_documento = {f["rotulo"]: f.get("etapa_padrao", "dev") for f in fontes}
     for fonte in fontes:
         texto = state.get(fonte["chave"])
@@ -490,9 +597,10 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                     continue
                 linha, contexto = _linha_e_contexto(texto, m.start(), m.end())
                 fechado = _RE_RESOLVIDO_D0.search(linha)
-                if tipo in ("lacuna", "aberto", "needs_clarification") and fechado and int(fechado.group(1)) in decisoes_d0:
+                n_d0 = int(fechado.group(1)) if fechado else mapa_d0.get(_norm_marcador(trecho))
+                if tipo in ("lacuna", "aberto", "needs_clarification") and n_d0 is not None and n_d0 in decisoes_d0:
                     if not any(r["trecho"] == trecho[:160] for r in resolvidos):
-                        resolvidos.append({"trecho": trecho[:160], "documento": fonte["rotulo"], "d0": f"D0-{fechado.group(1)}"})
+                        resolvidos.append({"trecho": trecho[:160], "documento": fonte["rotulo"], "d0": f"D0-{n_d0}"})
                     continue
                 if tipo in ("rs_pendente", "verificar_repositorio"):
                     # Dono fixo, do contrato: `RS-n pendente` é pedido ao Gate 0/PO que só
@@ -531,6 +639,9 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                     achado["motivo"] = motivo
                 vistos[chave] = achado
                 achados.append(achado)
+    for orfao in d0_orfaos(fontes, state):
+        severidade, motivo = _severidade_na_etapa("bloqueio", orfao["etapa"], orfao["etapa"], etapa_corrente)
+        achados.append({**orfao, "severidade": severidade, **({"motivo": motivo} if motivo else {})})
     # Marcador de repositório é pendência de plataforma — mas um documento cravejado deles não
     # consultou o gabarito que a esteira já tem nas cópias sincronizadas, e isso é defeito de
     # construção. O teto separa "não tenho como conferir este nome" de "não li a referência".

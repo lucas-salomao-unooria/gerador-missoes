@@ -145,7 +145,7 @@ Uma linha por célula que algum agente **lê como contrato**. A varredura do D0 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
 | 12.decisão · quem decidiu · data · alternativas descartadas | D0 (não repetir como lacuna o que foi decidido), D7 (pendências herdadas) | D0 reabre o que o Gate 0 fechou |
-| 12.decisão em aberto — `[ABERTO — dono]` no bloco 12 e no campo afetado | D0 (é a lista inicial de lacunas; fecha com ` — Resolvido em [D0-n]`), D7 (pendências humanas herdadas), rastro de lacunas (`A092RastroDesign` cobra a linha até a marca do D0) | Lacuna sem dono; a pendência que o D0 fechou volta a barrar o design e o PRD |
+| 12.decisão em aberto — `[ABERTO — dono]` no bloco 12 e no campo afetado | D0 (é a lista inicial de lacunas; fecha com uma linha no mapa célula → D0 do bloco 13), D7 (pendências humanas herdadas), rastro de lacunas (`A092RastroDesign` cobra a linha até o mapa do D0) | Lacuna sem dono; a pendência que o D0 fechou volta a barrar o design e o PRD |
 
 ## Glossário canônico
 
@@ -189,7 +189,7 @@ Fora da varredura: é a saída do próprio D0.
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
-| 13.decisões `[D0-n]` — célula preenchida, decisão, base, reversível | todos de D1 a D8 (leem a célula preenchida como contrato), D9 (copia o bloco palavra por palavra, teste 4b), D7 (`[D0-n]` que contraria a spec original vira ticket `fecha-lacunas`), rastro de lacunas (` — Resolvido em [D0-n]` só fecha com o `[D0-n]` aqui) | O D9 regenera a spec do original e apaga o D0; a pendência fechada volta a barrar |
+| 13.decisões `[D0-n]` — célula preenchida, decisão, base, reversível | todos de D1 a D8 (leem a célula preenchida como contrato), D9 (copia o bloco palavra por palavra, teste 4b), D7 (`[D0-n]` que contraria a spec original vira ticket `fecha-lacunas`), rastro de lacunas (o mapa célula → D0 só fecha com o `[D0-n]` aqui), gate de `[D0-n]` órfão (toda citação a jusante precisa existir aqui) | A jusante cita decisão que a spec não tem; a pendência fechada volta a barrar |
 | 13.`RS-n` pendentes — re-spec que o Gate 0 não respondeu | D7 (riscos aceitos; `RS-n` negado e contornado, ou pendente e honrado pela tela, é ⛔), rastro de lacunas | Os agentes a jusante redescobrem a lacuna, um por um |
 
 ## Bloco 14 — Ambiente simulado

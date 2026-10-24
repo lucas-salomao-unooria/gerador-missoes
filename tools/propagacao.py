@@ -331,6 +331,23 @@ def marcadores_abertos(texto: str) -> List[Dict[str, str]]:
     return saida
 
 
+def fecha_marcador(campo_titulo: str, decisao: str, marcadores: Sequence[Dict[str, str]]) -> Optional[str]:
+    """O primeiro [PARÂMETRO]/[PROPOSTA] de `marcadores` que a decisão fecha, ou `None`: o assunto do marcador está no
+    campo e no título da decisão (2 palavras ou mais, e ao menos um terço das dele), ou a decisão adota o número que o
+    marcador sugere. É a régua que deu, na exp02ef1b, os 15 palavras, os 10%, os 45 s e as PQ-01..05 do D0 como
+    fechamento de marcador do produto; `tools/decisoes.py` a usa no gate do D0 (PR 2)."""
+    palavras_d0 = _significativas(campo_titulo)
+    numeros_d0 = numeros(decisao)
+    for mk in marcadores:
+        desc = _significativas(mk["descricao"].split("sugest")[0])
+        comuns = desc & palavras_d0
+        sugeridos = numeros(mk.get("sugestao", mk["descricao"]))
+        if (len(comuns) >= 2 and len(comuns) * 3 >= len(desc)) or any(
+                t in numeros_d0 and t[1] != "px" for t in sugeridos):
+            return mk["texto"]
+    return None
+
+
 def _pareceres_texto(state: Dict[str, Any], conversa: Optional[Dict[str, Any]]) -> str:
     """Tudo o que o PO disse na sessão: notas de passagem, pedidos e, com a conversa, os pareceres (com a data)."""
     partes = [str(state.get("notas_de_passagem") or "")]
@@ -443,17 +460,10 @@ def classificar_d0(d: Dict[str, Any], docs: Dict[str, str], pareceres: str = "",
         motivos.append(f"classe declarada `{d.get('classe')}` é de produto")
     if re.search(r"pendencia", chave):
         motivos.append("fecha pendência do contrato")
-    palavras_d0 = _significativas(campo_titulo)
     numeros_d0 = numeros(decisao)
-    for mk in marcadores_abertos(contrato):
-        desc = _significativas(mk["descricao"].split("sugest")[0])
-        comuns = desc & palavras_d0
-        sugeridos = numeros(mk["descricao"])
-        fecha = (len(comuns) >= 2 and len(comuns) * 3 >= len(desc)) or any(
-            t in numeros_d0 and t[1] != "px" for t in sugeridos)
-        if fecha:
-            motivos.append(f"fecha {mk['texto'][:110]}")
-            break
+    fechado = fecha_marcador(campo_titulo, decisao, marcadores_abertos(contrato))
+    if fechado:
+        motivos.append(f"fecha {fechado[:110]}")
     # número que o contrato não tem só informa: na rodada de 23/10/2026 eram tempos de animação e passos de slider
     # (exp02em1b D0-3, exp03em1b D0-9), que são UI; o número de regra de produto chega aqui fechando um [PARÂMETRO]
     novos = [f"{n} {u}" for n, u in numeros_d0 if u in ("s", "min", "%", "palavras") and not tem_numero(contrato, (n, u))]
