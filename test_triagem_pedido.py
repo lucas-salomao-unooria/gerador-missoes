@@ -741,3 +741,120 @@ def test_execucao_em_segundo_plano_repassa_o_pedido_de_devolver():
         assert passagem.ler_fluxo(run_dir)["situacao"] == passagem.AGUARDANDO
     finally:
         shutil.rmtree(temp, ignore_errors=True)
+
+
+# ------------------------------------------------------------------ revisão do PR 5 (24/10, 2ª rodada)
+def test_editor_de_produto_sem_trocas_e_com_pendencia_nao_segue_ao_design():
+    """O editor de produto não trocou nada e deixou o item para o PO (regra 6 do `editor_pontual.md`: o pedido contraria
+    a decisão gravada no de acordo). Seguir ao design deixava o one-pager com «Publicar no Álbum», a copy com «Colocar
+    no álbum» e o A094 dando o item por aplicado a montante."""
+    c = _Cascata()
+    try:
+        recusa = ed.Proposta(modo=ed.MODO_PONTUAL, motivo="o pedido contraria a decisão do PO",
+                             pendencias=["o item 1 contraria a decisão do PO de 21/10; fica para o PO"])
+        eventos = c.rodar(_divisao().como_dict(), {"produto": [recusa], "design": [_proposta(_BOTAO_COPY, _PATIO_COPY)]})
+        assert eventos[-1]["type"] == "correcao_error" and eventos[-1]["pede_devolver"] is True
+        assert "contraria a decisão do PO de 21/10" in eventos[-1]["error"] and "Devolver" in eventos[-1]["error"]
+        assert eventos[-1]["pendencias"] == ["o item 1 contraria a decisão do PO de 21/10; fica para o PO"]
+        assert not any(e["type"] == "cascata_produto_sem_trocas" for e in eventos)
+        assert not c.runs and [e["etapa"] for e in c.editor] == ["produto"]
+        assert c.estado_final() == c.estado and not (c.run_dir / ".correcoes").exists()
+    finally:
+        c.fechar()
+
+
+def test_sem_trocas_e_sem_pendencia_segue_e_mostra_o_motivo_do_editor():
+    c = _Cascata()
+    try:
+        sem_trocas = ed.Proposta(modo=ed.MODO_PONTUAL, motivo="o one-pager já diz «Colocar no álbum» na 5B")
+        eventos = c.rodar(_divisao().como_dict(), {"produto": [sem_trocas], "design": [_proposta(_PATIO_COPY)]})
+        aviso = next(e for e in eventos if e["type"] == "cascata_produto_sem_trocas")
+        assert aviso["motivo"] == "o one-pager já diz «Colocar no álbum» na 5B" and aviso["motivo"] in aviso["mensagem"]
+        assert eventos[-1]["type"] == "correcao_completed"
+    finally:
+        c.fechar()
+
+
+def test_pendencia_do_passo_de_produto_com_trocas_chega_ao_design_como_nao_aplicada():
+    c = _Cascata()
+    try:
+        parcial = _proposta(_BOTAO_1P, _BOTAO_SPEC, pendencias=["o tempo da etapa 3 contraria a decisão do PO"])
+        c.rodar(_divisao().como_dict(), {"produto": [parcial], "design": [_proposta(_BOTAO_COPY, _PATIO_COPY)]})
+        assert [r["stages"] for r in c.runs] == [["produto"], ["design"]]
+        nota = c.editor[-1]["pedido"]
+        assert "**não aplicou**" in nota and "o tempo da etapa 3 contraria a decisão do PO" in nota
+    finally:
+        c.fechar()
+
+
+def test_design_que_falha_depois_de_produto_diz_que_produto_ficou_aplicado():
+    c = _Cascata()
+    try:
+        eventos = c.rodar(_divisao().como_dict(), {"produto": [_proposta(_BOTAO_1P, _BOTAO_SPEC)],
+                                                   "design": [_proposta(_BOTAO_COPY, _PATIO_COPY)]}, falha_em=("design",))
+        erro = eventos[-1]
+        assert erro["type"] == "correcao_error" and erro["aplicados_antes"] == ["produto"]
+        assert "ficaram aplicados" in erro["error"] and not erro.get("pede_devolver")
+        assert erro["registro"]["cascata"]["aplicados_antes"] == ["produto"]
+        conversa = json.loads((c.run_dir / "conversa.json").read_text(encoding="utf-8"))
+        ultima = conversa["messages"][-1]["content"]
+        assert "O passo de design da cascata falhou" in ultima and "voltou ao estado anterior" not in ultima
+        # o erro do primeiro passo continua «nada foi aplicado», sem aplicados_antes
+        c2 = _Cascata()
+        try:
+            eventos = c2.rodar(_divisao().como_dict(), {"produto": [_proposta(_BOTAO_1P, _BOTAO_SPEC)],
+                                                        "design": []}, falha_em=("produto",))
+            assert eventos[-1]["type"] == "correcao_error" and "aplicados_antes" not in eventos[-1]
+            ultima = json.loads((c2.run_dir / "conversa.json").read_text(encoding="utf-8"))["messages"][-1]["content"]
+            assert "voltou ao estado anterior" in ultima
+        finally:
+            c2.fechar()
+    finally:
+        c.fechar()
+
+
+def test_refazer_que_nao_aplicou_nada_nao_da_os_itens_de_produto_por_aplicados():
+    """Revisão do PR 5 (24/10): o refazer recusado (Devolver) seguia nas notas como «já aplicado no one-pager», e o A094
+    das execuções seguintes o listava como aplicado a montante — inclusive depois de um De acordo no design."""
+    from agents.checkers import FidelidadeCheckAgent
+
+    fluxo = {**passagem.novo_fluxo(), "etapa": "design", "situacao": passagem.AGUARDANDO}
+    novo, _ = passagem.aplicar(fluxo, passagem.REFAZER, _sessao("design"), PEDIDO, ESTADO_ITENS,
+                               divisao=_divisao().como_dict())
+    # erro comum de execução não marca: produto pode ter sido aplicado antes do design falhar
+    assert not passagem.concluir_execucao(novo, False, None)["pareceres"][-1].get("nao_aplicado")
+    novo = passagem.concluir_execucao(novo, False, None, pede_devolver=True)
+    assert novo["pareceres"][-1]["nao_aplicado"] is True
+    pedidos = passagem.pedidos_do_po(novo)
+    assert [(p["etapa"], p.get("a_montante_de"), p.get("pendente_em")) for p in pedidos] == [
+        ("produto", None, "produto"), ("design", None, None)]
+    assert "NÃO APLICADOS" in pedidos[0]["origem"]
+    assert "NÃO APLICADOS" in passagem.notas_de_passagem(novo)
+
+    agente = FidelidadeCheckAgent(name="A094", status_key="fid_status", report_key="fid_report",
+                                  documentos=["copy_strings_revisada"], etapas_pedido=["design"], com_briefing=False,
+                                  etapa="design", incluir_corrente=False)
+    final = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[agente]),
+                               {"copy_strings_revisada": "Marque no pátio.", "pedidos_do_po": pedidos}))
+    assert "aplicado a montante" not in final["fid_report"]
+    assert "Publicar no Álbum" not in final["fid_report"].split("```json")[0]  # nem cobrado no design
+
+
+def test_item_de_design_de_um_pedido_de_dev_sai_como_de_design_na_prova():
+    from agents.checkers import FidelidadeCheckAgent
+    from pipeline.reexecucao import PedidoCorrecao
+    from tools.fidelidade import aplicados_a_montante
+
+    assert "item de produto" in aplicados_a_montante([("o", "Botão")])[0]["prova"]
+    prova = aplicados_a_montante([("o", "Botão", "design")])[0]["prova"]
+    assert "item de design" in prova and "fidelidade de design" in prova and "produto" not in prova
+    d = tp.dividir(PEDIDO, "dev", ESTADO_ITENS, [{"n": 1, "dono": "dev"}, {"n": 2, "dono": "design"}])
+    assert [i.dono for i in d.itens] == [tp.PRODUTO, tp.DESIGN]
+    agente = FidelidadeCheckAgent(name="A126", status_key="fid_status", report_key="fid_report",
+                                  documentos=["handoff_dev"], etapas_pedido=["dev"], com_briefing=False,
+                                  etapa="dev", incluir_corrente=False)
+    estado = {"handoff_dev": "handoff", "etapa_da_correcao": "dev", "divisao_do_pedido": d.como_dict(),
+              "pedido_correcao": PedidoCorrecao(texto=PEDIDO).como_markdown("dev")}
+    relatorio = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[agente]), estado))["fid_report"]
+    assert "item de produto pela triagem" in relatorio and "item de design pela triagem" in relatorio
+    assert "conferido pela fidelidade de design" in relatorio
