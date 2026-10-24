@@ -96,7 +96,9 @@ gestos que exigem demonstração animada.
 **A missão é transversal: quem a prepara é o professor de qualquer disciplina.** Contrato de customização = **recorte da aula**: `disciplina` (lista fechada dos componentes curriculares da BNCC + `projeto-interdisciplinar`), `tema` (≤ 60 caracteres), `assuntos` (3 a 6 itens, ≤ 600 caracteres no total — os objetos de conhecimento da aula), `contexto` opcional (turma, escola, região, ≤ 120), `foco` opcional (≤ 120). Campos curtos porque alimentam um prompt: o teto é a primeira barreira contra injeção (mesmo desenho do esquema de parâmetros do preparo do Júri, em `references/plataforma/exemplo-juri-contrato-rotas.md`). O professor **não** declara habilidades BNCC da própria disciplina. · Regras e schemas Zod de geração de conteúdo por IA (Vertex AI Gemini, só via `apps/api/src/ai`), no molde dos schemas do Júri (exp06ef1b), incluindo a homologação em que o professor edita **qualquer** texto do pacote antes de aprovar · **Rotas do preparo docente: no módulo da própria missão, no molde do Júri (`juri-estadual`, exp06ef1b; `references/plataforma/exemplo-juri-contrato-rotas.md`) — `POST /<modulo>/turmas/«turmaId»/gerar-conteudo` → `GET …/conteudo` → `POST …/homologar` (o professor edita e aprova) → `POST …/gate` (libera a turma), com o painel em `GET …/turmas/«turmaId»/painel`; é o que `juri-estadual` (exp06ef1b), `quem-mandou-isso` (exp05ef1b) e `foto-conta` (exp01ef1b) fazem. O módulo `/atividades` é o motor do Instanooria (exp08ef1b) e **não se reusa**: citar `/atividades/«id»/aprovar`, `/pacote` ou `/curadoria` é citar rota que não existe** · fluxo de curadoria docente (preview, edição de postagens e aprovação **antes da aula**, ADR-66/67) · banco curado default (fallback imediato sem IA) · **tabela "A mesma missão em três aulas"** copiada do one-pager (Português, Ciências/Biologia, História: recorte · o que a IA gera · o que não muda), ou o marcador `[LIMITE DE TRANSVERSALIDADE — dono: produto]` onde couber · **perfil de quota de IA consumido** (`ia_quotas` por perfil, ADR-105) e o que o estudante e a professora veem sem saldo (429, na voz da ficção) · gatilhos de handoff · comportamento da plataforma em cada mediação e pausas (relógio coletivo = tabela `expNNefNb_gates_turma` por polling, ADR-93/94 — nunca WebSocket) · dados do painel docente · roteiro de perguntas, no momento em que o one-pager o coloca · **podcast de recapitulação** do §11 do one-pager: título, vozes, duração, quando toca, quem toca e o aviso ao professor (o roteiro fica no one-pager e ninguém a jusante o reescreve; nas 11 missões do bucket até 06/10/2026 nenhuma spec o trazia, e design e brief de assets reescreveram o áudio).
 
 ## 9. Evidências e dados
-Campo por campo: o que é coletado, quando, finalidade, retenção, acesso.
+Campo por campo: o que é coletado, quando, finalidade, retenção, acesso. **Retenção, PII de menor, texto livre e mídia
+seguem o padrão da plataforma** (`references/padrao-plataforma-retencao-lgpd.md`): cite o padrão pelo nome
+(`padrão: retencao-lacuna-assumida`) e escreva só o que é da missão — prazo próprio não se inventa (decisão D6, 24/10/2026).
 E a lista do que **não** é coletado nem calculado. Mais, obrigatoriamente:
 
 **Graus de medida.** Por medida: `scored` (≥2 sinais independentes, tem
@@ -228,7 +230,9 @@ na linha da sessão, o que acontece com linhas antigas quando sobe, e se
 (ADR-98/99); proibido formatar data na mão.
 
 ## 10. Cenários de dispositivo
-Os três, com o que muda e a garantia de que a descoberta chega.
+Os três, com o que muda e a garantia de que a descoberta chega. **Aparelho compartilhado segue o padrão da plataforma**
+(`references/padrao-plataforma-revezamento.md`): cite `padrão: revezamento-pela-plataforma` — a missão não prescreve
+papéis nem rodízio (o PO recusou na exp06ef1b) — e escreva só o teste da descoberta no cenário 2–4.
 
 ## 11. Currículo
 Habilidades e códigos **confirmados**, com o momento em tela de cada um — **os mesmos do contrato
@@ -319,9 +323,21 @@ A spec só muda por reabertura do Gate 0. Agente de construção não edita spec
 
 O `## Glossário canônico` faz parte do texto do Gate 0, como os blocos 0–12: quem acrescenta bloco depois dele o copia intocado.
 
-**Blocos acrescentados pela esteira de design (não alteram os blocos 0–12).** Depois do Gate 0, dois agentes anexam blocos à spec sem tocar no texto original:
+**Bloco acrescentado em produto, antes do de acordo (é texto de produto como os blocos 0–12).** Desde 24/10/2026
+(PR 6 do plano «Produto dono do contrato») o que o D0 fechava no design e é de produto fecha em produto, antes da banca e
+do parecer:
 
-- **Bloco 13 — Decisões D0** (`fecha-lacunas`): decisões `[D0-n]` que preenchem ausências deriváveis da missão, com base declarada, e os pedidos de re-spec `[RS-n]` pendentes. Preenche ausência, nunca altera presença.
+- **Bloco 15 — Completude de produto** (`completude-spec`, passo 045b, prompt 046): decisões `[CP-n]` que preenchem as células de produto que a esteira consome (estado, handoff, evidência, dados e retenção, duração e tetos, painel docente, PQ e KPI, texto do professor, revezamento), com base declarada; os padrões da plataforma aplicados; as perguntas ao PO (`[PARÂMETRO]`, `[PROPOSTA]`, `[ABERTO — dono: PO]`) que o de acordo responde; e o mapa célula → decisão. O passo emite só o bloco 15, e o código o monta na spec sem tocar os blocos 0–12.
+
+**Anexo de design (não altera a spec de produto).** Depois do de acordo de produto a `spec_missao` não muda mais. Os dois
+agentes de design gravam num documento à parte, `design/00-anexo-design-spec.md` (`anexo_design_spec`):
+
+- **Bloco 13 — Decisões D0** (`fecha-lacunas`, D0-UX): decisões `[D0-n]` só de UI/UX — a tela de cada estado, gesto, scaffolding, acessibilidade de componente, dispositivo — que preenchem ausências deriváveis da missão, com base declarada, os pedidos de re-spec `[RS-n]` pendentes e os `[ABERTO — dono: PO]` do que é de produto. Preenche ausência, nunca altera presença.
 - **Bloco 14 — Ambiente simulado** (`ambiente-simulado`): a ficha do ambiente — uma por seção quando a missão usa mais de uma, mais o «Mapa de seções» e as «Transições» — nome, seção do DS, verbos do bloco 4 com rótulo literal, dispositivo nativo, estados e o que a plataforma real não tem. Emitido mesmo quando a spec já nomeia o ambiente (dormente).
 
-Bloco 0–12 diferente do texto do Gate 0 continua sendo violação; bloco 13 ou 14 ausente numa spec que passou pela esteira de design é sinal de que D0 ou D9 não rodaram. Desde 23/10/2026 a spec é montada pelo código (Gate 0 + 13 + 14): D0 e D9 emitem o próprio bloco, e o que vier diferente do Gate 0 é descartado e aparece ao PO como `[ABERTO — dono: PO]` no cartão do parecer de design. O `[ABERTO — …]` que uma decisão do D0 fechou fica registrado no **mapa célula → D0**, uma tabela no fim do bloco 13 (`| marcador literal | [D0-n] |`), e o rastro de lacunas deixa de cobrar essa linha — a marca ` — Resolvido em [D0-n]` na linha do Gate 0 não é mais escrita.
+A fonte da verdade para codar é a spec de produto mais o anexo de design; o PRD deriva delas (D10). O anexo é montado
+pelo código: D0 e D9 emitem o próprio bloco, e o que vier diferente do texto de produto (blocos 0–12, glossário, bloco
+15) é descartado e aparece ao PO como `[ABERTO — dono: PO]` no cartão do parecer de design. O `[ABERTO — …]` que uma
+decisão fechou fica registrado no **mapa célula → decisão** do bloco que a tomou (`| marcador literal | [D0-n] |` no 13,
+`| marcador literal | [CP-n] |` no 15), e o rastro de lacunas deixa de cobrar essa linha. Missão gerada antes do PR 6
+traz os blocos 13 e 14 dentro da spec; a esteira ainda a lê assim, e o design refeito monta o anexo.

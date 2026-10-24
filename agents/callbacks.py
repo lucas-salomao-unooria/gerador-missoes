@@ -430,6 +430,37 @@ def retrabalhar_por_trocas(chave: str):
     return _retrabalhar
 
 
+def manter_completude_entre_rodadas(callback_context: CallbackContext) -> Optional[types.Content]:
+    """before_agent_callback do passo de completude da spec (A045b, PR 6): roda uma vez por execução do SpecLoop.
+
+    Roda na primeira rodada; de novo no loop dela (`CompletudeLoop`) quando o código a reprovou; e de novo quando o A045
+    reescreveu a spec inteira e o bloco 15 sumiu. Nas outras rodadas do SpecLoop, a spec que volta ao A045 por um gate
+    reprovado é corrigida por trocas (`retrabalhar_por_trocas`) e continua com o bloco 15: rodar a completude de novo seria
+    uma chamada grande a mais por rodada, e o teto aprovado é uma a mais por refazer de produto (plano, D14). O `Content`
+    devolvido é a resposta anterior com o bloco 15 trocado pelo que está na spec agora — o split monta o mesmo bloco, e a
+    troca que o retrabalho fez nele fica."""
+    state = callback_context.state
+    if not int(state.get("spec_rodada") or 0):
+        return None
+    if str(state.get("completude_status") or "") == "bloqueado" and int(state.get("completude_rodada") or 0) < 2:
+        return None  # a segunda rodada do loop da completude: ela corrige o que o código acusou
+    anterior = str(state.get("completude_spec") or "")
+    spec = str(state.get("spec_missao") or "")
+    titulo = re.compile(r"^##\s*\**\s*15\b.*$", re.MULTILINE)
+
+    def bloco(texto: str) -> str:
+        m = titulo.search(texto or "")
+        if not m:
+            return ""
+        fim = re.search(r"^## ", texto[m.end():], re.MULTILINE)
+        return texto[m.start(): m.end() + fim.start() if fim else len(texto)]
+
+    atual, velho = bloco(spec), bloco(anterior)
+    if not atual.strip() or not velho.strip():
+        return None
+    return types.Content(role="model", parts=[types.Part(text=anterior.replace(velho, atual.rstrip() + "\n\n", 1))])
+
+
 def dispensar_ideacao_com_one_pager_do_po(callback_context: CallbackContext) -> Optional[types.Content]:
     """before_agent_callback da ideação: com o one-pager do PO no estado, não se inventam três mecanismos.
 

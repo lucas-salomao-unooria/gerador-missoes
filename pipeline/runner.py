@@ -57,6 +57,7 @@ STATUS_KEYS = [
     "mecanica_one_pager_status", "comite_final_status", "comite_final_externo_rodada",
     "avaliacao_status", "experiencia_status", "adequacao_status", "gate_final_status",
     "bncc_status",
+    "completude_status",
     "lacunas_status",
     "ambiente_status",
     "design_status", "prototipo_lint_status", "cobertura_telas_status", "rastreabilidade_status", "brief_escopo_status",

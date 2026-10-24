@@ -1,6 +1,6 @@
 ---
 name: pronto
-description: Definição de pronto por agente — só o que se conta. Verificada pelo próprio agente antes de entregar, e declarada no envelope. Lido por fecha-lacunas, ambiente-simulado, jornada, fluxo, copy-ptbr, caa, telas e pelo gate de ofício.
+description: Definição de pronto por agente — só o que se conta. Verificada pelo próprio agente antes de entregar, e declarada no envelope. Lido por completude-spec, fecha-lacunas, ambiente-simulado, jornada, fluxo, copy-ptbr, caa, telas e pelo gate de ofício.
 sources: [chat]
 ---
 
@@ -87,17 +87,36 @@ Só conta quando o gate de aplicabilidade deu "roda". Em `nao_aplicavel`, a cont
 | `[[placeholder]]` não resolvido na entrega final | |
 | Elemento contado acima do teto da tela na Seção 4 | Conta como em `rubrica-oficio.md` |
 
-## fecha-lacunas
+## completude-spec
+
+O passo de completude da spec, em produto (prompt 046, desde 24/10/2026).
 
 | Conta | Zero significa |
 |---|---|
-| Célula do checklist (`celulas-consumidas.md`) sem ✅, `[D0-n]` ou `RS-n pendente` | Varredura completa — nenhuma ⚠️ solta |
+| Célula de produto do checklist (`celulas-consumidas.md`) sem ✅, `[CP-n]` ou marcador para o PO | Varredura completa — nenhuma ⚠️ solta |
+| Decisão `[CP-n]` que reescreve texto já presente na spec | Preenche ausência, nunca altera presença |
+| `[PARÂMETRO]` ou `[PROPOSTA]` da spec fechado sem parecer datado do PO | Quem decide é o PO, no de acordo |
+| Decisão com base "inferência" sem frase ancorada na descoberta ou na faixa | Inferência sem âncora é invenção — vira marcador para o PO |
+| Decisão que aumenta decisões do estudante, telas ou dados coletados | O cap é do produto, e só o PO o muda |
+| Lacuna de classe `mecanica` ou `curriculo` decidida | As duas classes são sempre do PO |
+| Prazo de retenção ou protocolo de revezamento escrito pela missão | É padrão da plataforma: cite-o |
+| `[CP-n]` do bloco 15 sem entrada no relatório de completude, ou vice-versa | Os dois documentos dizem a mesma coisa |
+| Linha fora do bloco 15 | A spec do A045 é montada em código |
+| Termo em inglês no relatório de completude | Quem lê é o PO |
+
+## fecha-lacunas
+
+O D0-UX, no design (desde 24/10/2026 só UI/UX; o que é de produto fecha em produto, no passo de completude da spec).
+
+| Conta | Zero significa |
+|---|---|
+| Célula de UI/UX do checklist (`celulas-consumidas.md`) sem ✅, `[D0-n]` ou `[ABERTO — dono: PO]` | Varredura completa — nenhuma ⚠️ solta |
 | Decisão `[D0-n]` que reescreve texto já presente na spec | Preenche ausência, nunca altera presença |
+| Decisão `[D0-n]` de classe fora de estado (de tela), gesto, scaffolding, acessibilidade, dispositivo | O resto é de produto — vira `[ABERTO — dono: PO]` |
 | Decisão com base "inferência" sem frase ancorada na descoberta ou na faixa | Inferência sem âncora é invenção — vira vermelho |
 | Decisão que aumenta decisões do estudante, telas ou dados coletados | O cap é do produto |
-| Lacuna de classe `mecanica` ou `curriculo` decidida em verde ou amarelo | As duas classes são sempre vermelhas |
 | `[RS-n]` sem "Bloqueia" preenchido | Sem bloqueio não é re-spec, é anotação |
-| Bloco 0–12 da spec consolidada diferente do texto do Gate 0 | A spec original é intocada |
+| Linha da spec de produto (blocos 0–12, glossário, bloco 15) reescrita | A spec de produto é intocada no design |
 | `[D0-n]` do bloco 13 sem entrada no relatório de preenchimento, ou vice-versa | Os dois documentos dizem a mesma coisa |
 | Termo em inglês no relatório de preenchimento | Quem lê é a PM e a professora |
 | Decisão em voz de opinião ("sugiro", "acho") | A spec é contrato |
@@ -109,7 +128,7 @@ Dormente conta só as três primeiras linhas; o resto é para quando decidiu.
 | Conta | Zero significa |
 |---|---|
 | Verbo do bloco 4 sem rótulo literal e componente do DS na ficha | Ficha incompleta — D2 e D4 vão inventar |
-| Bloco 1–13 da spec consolidada alterado (inclusive o bloco 13 do D0) | Regenerar do original apaga o D0 |
+| Spec de produto ou bloco 13 do anexo alterado | Regenerar do original apaga o D0; o texto de produto é do PO |
 | Decisões, telas ou dados coletados diferentes de antes do bloco 14 | O cap é do produto |
 | Ambiente novo sem a Passada 1 mostrando em qual critério **cada** um dos cinco falhou | Falha só em (3) ou (4) não justifica criar |
 | Missão de 1º–5º sem a tabela da Passada 1b preenchida (mesmo com resposta "não") | O próximo agente precisa saber que foi considerado |

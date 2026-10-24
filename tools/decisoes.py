@@ -129,10 +129,25 @@ def _cita_parecer_humano(fonte: str, pareceres: str) -> bool:
     return bool(datas) and all(d in pareceres for d in datas)
 
 
-#: As classes que o D0 pode declarar (prompt 065, Passo 2). A conferência era por igualdade com `mecanica` e
-#: `curriculo`, e a `mecanica_param` da exp02ef1b (10% da moldura, 23/10/2026) passou: o rótulo é do próprio agente.
-CLASSES_D0 = ("estado", "handoff", "evidencia", "dispositivo", "copy-fonte", "acessibilidade", "dados", "duracao",
-              "mecanica", "curriculo")
+#: As classes que o D0 podia declarar até o PR 6 (prompt 065, Passo 2), com o design decidindo duração, dados, estados e
+#: texto do professor. Ficam para ler as sessões anteriores (a montagem do PRD de uma missão desenhada antes do PR 6).
+#: A conferência era por igualdade com `mecanica` e `curriculo`, e a `mecanica_param` da exp02ef1b (10% da moldura,
+#: 23/10/2026) passou: o rótulo é do próprio agente.
+CLASSES_D0_LEGADO = ("estado", "handoff", "evidencia", "dispositivo", "copy-fonte", "acessibilidade", "dados", "duracao",
+                     "mecanica", "curriculo")
+#: As classes do D0-UX (PR 6, decisão D2): o design decide só UI/UX — o estado de tela (falha, espera, vazio, reentrada na
+#: voz da ficção: decomposição, D7), gesto, desvanecimento do apoio (scaffolding), acessibilidade de componente e
+#: adaptação de tela por dispositivo. Pela régua do PR 1 (`tools/propagacao.classificar_d0`), é onde estão as cerca de 20
+#: das 34 decisões D0 do acervo que o plano mantém no design. O resto do D0 virou o passo de completude da spec em produto
+#: (`prompts/produto/046_completude_spec.md`): as 9 decisões que criavam produto e as 2 que aplicavam decisão do PO nunca
+#: gravada saíram do design (plano, «Agente por agente», A065).
+CLASSES_D0 = ("estado", "gesto", "scaffolding", "acessibilidade", "dispositivo")
+#: As classes do passo de completude de produto (prompt 046): o que o D0 decidia no lugar do PO e mais o que o plano dá a
+#: produto — teto, painel docente, PQ e KPI, retenção, revezamento, regra por inferência (D6: retenção e revezamento são
+#: padrão de plataforma; painel e PQ/KPI, por missão). `estado` aparece nas duas: em produto, o contrato de estados do
+#: bloco 2 com o padrão da plataforma aplicado (D5); no design, a tela de cada estado.
+CLASSES_DE_PRODUTO = ("estado", "handoff", "evidencia", "copy-fonte", "dados", "retencao", "duracao", "teto", "parametro",
+                      "painel", "pq-kpi", "revezamento", "regra", "mecanica", "curriculo")
 #: Prefixos de classe que são sempre de produto — decisão do PO (plano «Produto dono do contrato», PR 2).
 PREFIXOS_DE_PRODUTO = ("mecanica", "curriculo", "parametro")
 
@@ -144,17 +159,25 @@ def _norm_classe(texto: str) -> str:
                    if unicodedata.category(c) != "Mn").strip(" `*_")
 
 
-def classe_de_produto(classe: str) -> str:
-    """O motivo de a classe declarada ser de produto, ou "" se é uma classe de design da lista.
+def classe_de_produto(classe: str, legado: bool = False) -> str:
+    """O motivo de a classe declarada pelo D0 ser de produto, ou "" se é uma classe que o design decide.
 
     Lista branca e prefixo: `mecanica*`, `curriculo*` e `parametro*` são de produto; o que não está na lista também,
-    porque a lista é o que o prompt deixa o D0 decidir. Classe composta («`handoff` / `copy-fonte`») vale por partes."""
+    porque a lista é o que o prompt deixa o D0 decidir. Classe composta («`handoff` / `copy-fonte`») vale por partes.
+
+    Desde o PR 6 a lista é a do D0-UX (`CLASSES_D0`): handoff, evidência, dados, duração e texto do professor são do
+    passo de completude de produto; o estado fica no design só como tela (o contrato de estados é de produto). `legado=True` lê com a lista de antes (`CLASSES_D0_LEGADO`): a missão desenhada
+    antes do PR 6 decidiu essas classes no design, e o PRD dela as cita — reler com a régua nova mudaria o veredito do
+    que já foi aprovado."""
+    lista = CLASSES_D0_LEGADO if legado else CLASSES_D0
     partes = [p for p in (_norm_classe(x) for x in re.split(r"[/·,+]|\be\b", _norm_classe(classe))) if p]
     for parte in partes or [""]:
         if parte.startswith(PREFIXOS_DE_PRODUTO):
             return f"classe `{parte}` é de produto"
-        if parte not in CLASSES_D0:
-            return f"classe `{parte or '—'}` fora da lista do D0 ({', '.join(CLASSES_D0)})"
+        if not legado and parte not in lista and parte.startswith(CLASSES_DE_PRODUTO):
+            return f"classe `{parte}` é de produto — decide-a o passo de completude da spec, em produto (prompt 046)"
+        if parte not in lista:
+            return f"classe `{parte or '—'}` fora da lista do D0{'' if legado else '-UX'} ({', '.join(lista)})"
     return ""
 
 
@@ -234,8 +257,13 @@ def _marcadores_com_contexto(texto: str) -> List[Dict[str, str]]:
     return saida
 
 
+#: A decisão que escreve o marcador em vez de decidir: «[PARÂMETRO — a definir por produto: … · sugestão: 45 s]».
+_RE_DEIXA_AO_PO = re.compile(r"\[(?:PAR[ÂA]METRO|PROPOSTA)\b|\[ABERTO\s*[—–-]\s*dono:\s*(?:o\s+)?PO\b", re.I)
+
+
 def decisoes_d0_de_produto(fechamento: str, envelope: Dict[str, Any] | None, spec_gate0: str,
-                           pareceres: str = "", classes_na_tabela: bool = True) -> tuple:
+                           pareceres: str = "", classes_na_tabela: bool = True, topicos: bool = False,
+                           prefixo: str = "D0", legado: bool = False) -> tuple:
     """`(sem_parecer, pelo_parecer)`: as decisões [D0-n] que decidem no lugar do PO, em linhas para o achado.
 
     Todo [D0-n] que fecha um [PARÂMETRO] ou promove uma [PROPOSTA] da spec do Gate 0 é decisão de produto, qualquer
@@ -245,22 +273,34 @@ def decisoes_d0_de_produto(fechamento: str, envelope: Dict[str, Any] | None, spe
     é do PO e o D0 só a aplicou: sai em `pelo_parecer`, para a pessoa conferir.
 
     `classes_na_tabela=False` (o D0 não trouxe a tabela do Passo 2 com Classe e Cor): a classe declarada no envelope é
-    conferida aqui, por lista branca e prefixo."""
-    from tools.propagacao import decisoes_d0, fecha_marcador
+    conferida aqui, por lista branca e prefixo.
+
+    `topicos=True` (o D0-UX do PR 6): a decisão que trata de painel docente, PQ e KPI, retenção de dados, revezamento ou
+    texto do professor é de produto mesmo com classe de UI — o revezamento da exp03em1b (D0-8) e a retenção da exp02ef1b
+    (D0-8) vieram com classe `dispositivo` e `dados`. `prefixo="CP"` confere as decisões do passo de completude de
+    produto (prompt 046): em produto, o que fecha [PARÂMETRO]/[PROPOSTA] sem parecer datado também é do PO."""
+    from tools.propagacao import decisoes_do_agente, fecha_marcador, topico_de_produto
 
     marcadores = _marcadores_com_contexto(spec_gate0)
     sem_parecer: List[str] = []
     pelo_parecer: List[str] = []
-    for d in decisoes_d0({"fechamento_lacunas": fechamento, "lacunas_status_envelope": envelope or {}}):
+    for d in decisoes_do_agente(fechamento, envelope or {}, prefixo):
         if "vermelh" in _norm_classe(d["cor"]) or "🔴" in d["cor"]:
             continue
+        if prefixo != "D0" and _RE_DEIXA_AO_PO.search(d["decisao"]):
+            continue  # a decisão da completude que escreve o marcador deixa a pergunta ao PO: é o que se pede dela
         motivos = []
         fechado = fecha_marcador(f"{d['campo']} {d['titulo']}", d["decisao"], marcadores) if marcadores else None
         if fechado:
             motivos.append(f"fecha {fechado[:110]}")
         # classe que o D0 não declarou («?»: sem envelope) não tem o que conferir; o marcador fechado, sim
-        if not classes_na_tabela and d["classe"] not in ("", "?") and classe_de_produto(d["classe"]):
-            motivos.append(classe_de_produto(d["classe"]))
+        if prefixo == "D0" and not classes_na_tabela and d["classe"] not in ("", "?") and classe_de_produto(
+                d["classe"], legado=legado):
+            motivos.append(classe_de_produto(d["classe"], legado=legado))
+        if topicos and not motivos:
+            topico = topico_de_produto(d)
+            if topico:
+                motivos.append(f"tópico de produto: {topico}")
         if not motivos:
             continue
         linha = f"[{d['id']}] {d['campo'] or d['titulo']} · classe `{d['classe']}` · " + " · ".join(motivos)
