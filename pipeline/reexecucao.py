@@ -524,6 +524,8 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
     reexecução anterior (produto refeito apaga design e dev, que só rodam no próximo *iniciar*)
     conserva a base que aquela reexecução guardou — senão o design chegaria sem nada.
     """
+    from tools import governanca
+
     for chave in CHAVES_AUTORAIS:
         anterior = PREFIXO_ANTERIOR + chave
         if chave not in remover:
@@ -539,6 +541,11 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
             from tools.conteudo_aprovado import remover_anexo
 
             atual = remover_anexo(atual).strip()
+        if chave in governanca.SECAO_DE_PENDENCIAS:
+            # as pendências de governança da liberação de produto também são da esteira (PR 9): na base que o autor
+            # mantém «palavra por palavra», ele as recopiaria como texto dele; o callback do redator as recoloca como
+            # estão agora (revisão do PR #75, 24/10/2026)
+            atual = governanca.sem_bloco(atual).strip()
         if atual:
             limpo[anterior] = bloco_versao_anterior(chave, atual)
             limpo[PREFIXO_VERSAO_ANTERIOR + chave] = atual

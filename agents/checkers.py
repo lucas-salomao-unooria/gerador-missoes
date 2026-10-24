@@ -3209,8 +3209,15 @@ class SaidaDeLoopAgent(BaseAgent):
         # A versão desta rodada vai ao autor na seguinte, para ele corrigir em vez de reescrever do zero: só o que o
         # gate confere ficava protegido entre rodadas, e o resto podia mudar sem ninguém ver (auditoria de 07/10/2026).
         # Ao sair do loop, a chave some.
+        from tools import governanca
+
         for chave in self.autor_keys:
             documento = str(state.get(chave, "") or "").strip()
+            if chave in governanca.SECAO_DE_PENDENCIAS:
+                # as pendências de governança são da esteira (PR 9): na versão da rodada, que o autor mantém «palavra
+                # por palavra», ele as recopiaria como texto dele; o callback dele as recoloca como estão agora (revisão
+                # do PR #75, 24/10/2026)
+                documento = governanca.sem_bloco(documento).strip()
             delta[f"{PREFIXO_RODADA_ANTERIOR}{chave}"] = (
                 bloco_versao_da_rodada(chave, documento) if documento and not escalate else "")
             # O que os gates reprovaram, para o retrabalho por trocas (`agents.callbacks.retrabalhar_por_trocas`): na

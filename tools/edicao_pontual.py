@@ -87,6 +87,7 @@ def documentos_da_etapa(estado: Dict[str, Any], etapa: str, versao_anterior: boo
     de uma cascata: a correção de produto que veio antes apagou design e dev do estado e guardou a versão deles ali.
     """
     from tools.conteudo_aprovado import remover_anexo
+    from tools.governanca import SECAO_DE_PENDENCIAS, sem_bloco
 
     docs: Dict[str, str] = {}
     for chave in DOCUMENTOS_POR_ETAPA.get(etapa, ()):
@@ -97,6 +98,10 @@ def documentos_da_etapa(estado: Dict[str, Any], etapa: str, versao_anterior: boo
         if chave in ("prd_final", "one_pager_pedagogico"):
             # o anexo literal é da esteira (`AnexoAprovadoAgent`), que o põe de novo depois
             texto = remover_anexo(texto)
+        if chave in SECAO_DE_PENDENCIAS:
+            # as pendências de governança também (PR 9): o documento travado as recebe de novo, como estão agora
+            # (`agents.callbacks.travar_documento_na_correcao_pontual`)
+            texto = sem_bloco(texto)
         if texto.strip():
             docs[chave] = texto
     return docs
