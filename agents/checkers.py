@@ -447,7 +447,7 @@ BLOCOS_DO_DESIGN = ("13", "14")
 def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool = False,
                         avisos: Optional[List[Dict[str, Any]]] = None, autor: str = "D9",
                         agente: str = "ambiente-simulado", estrito: bool = False,
-                        estado: Optional[Dict[str, Any]] = None) -> str:
+                        estado: Optional[Dict[str, Any]] = None, etapa: str = "design") -> str:
     """A versão aceita com o bloco `titulo` tirado da nova; o resto da nova é descartado.
 
     O D9 acrescenta o bloco 14 e recopiava, por modelo, os 60 KB dos blocos 0–13 do D0. Na exp06ef1b (09/10/2026)
@@ -468,6 +468,11 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
       PO a decide. Até a rota de produto do PR 5, aparece no cartão do parecer de design (`decisao_humana`) e só
       bloqueia com ESTEIRA_ESTRITA (`estrito`);
     - no bloco do outro autor do design (13 ou 14), como 🟡 «alterou fora do bloco».
+
+    Desde o PR 6 a `aceita` do D0 e do D9 é a spec de produto mais o anexo de design (`tools/anexo_design.py`), e o
+    bloco 15 (completude de produto) é texto de produto como os blocos 0–12. `etapa="produto"` é a montagem do passo de
+    completude sobre a spec do A045: a diferença fora do bloco 15 é só descartada, com atenção — em produto não há PO a
+    consultar sobre o próprio texto de produto, e a mudança que o passo quiser vai no bloco 15 como proposta.
     """
     m = re.search(titulo, nova or "", re.MULTILINE)
     if not m:
@@ -502,6 +507,16 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
         if not chave and not any(l.startswith("-") for l in diff):
             continue  # frase do agente antes da spec («Abaixo é emitida a especificação…», 4fd72a9a): não é o Gate 0
         nome = f"o bloco {chave}" if chave.isdigit() else ("o cabeçalho" if not chave else f"a seção «{chave}»")
+        if etapa == "produto":
+            avisos.append({
+                "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": "produto",
+                "agente_responsavel": agente,
+                "resumo": (f"{autor} trouxe {nome} diferente da spec escrita pelo A045, e a mudança foi descartada: o passo "
+                           f"de completude escreve só o bloco {proprio or titulo}. O que precisar mudar no texto da spec "
+                           "vai no bloco dele como `[PROPOSTA — validar com PO: …]` ou `[ABERTO — dono: PO: …]`:\n"
+                           + "\n".join(f"    {l[:200]}" for l in diff[:15])),
+            })
+            continue
         if chave in BLOCOS_DO_DESIGN:
             avisos.append({
                 "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": "design",
@@ -553,7 +568,7 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
     novas = [c for c in dos_novos if c not in dos_aceitos and c != proprio and c and dos_novos[c].strip()]
     if novas and avisos is not None:
         avisos.append({
-            "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": "design",
+            "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": etapa,
             "agente_responsavel": agente,
             "resumo": (f"{autor} trouxe seção(ões) que a spec aceita não tem, fora do bloco {proprio or titulo}, e elas "
                        "foram descartadas: " + ", ".join(f"«{c}»" for c in novas[:8])),
@@ -632,6 +647,11 @@ class SecaoSplitAgent(BaseAgent):
                       fora dele: a preservação não confere esse bloco, e o resto da nova versão é gravado como veio.
                       Na exp02em1b (22/10/2026) a rodada 1 do D0, reprovada, virou a base, e a rodada 2 foi acusada de
                       apagar o [D0-7] que ela mesma escrevera. O D0 passou a `bloco_proprio` em 23/10/2026.
+      anexo_de      → chave da spec de produto (`spec_missao`) quando `chave` é o anexo de design (PR 6): a montagem é
+                      feita sobre a spec de produto mais o anexo aceito — a mudança no texto de produto continua virando
+                      `[ABERTO — dono: PO]` —, mas só os blocos 13 e 14 são gravados, no anexo. A spec de produto não
+                      muda no design (`tools/anexo_design.py`).
+      etapa         → etapa dos achados da montagem (`design`, ou `produto` no passo de completude da spec).
 
     Seção ausente, curta ou sem o conteúdo exigido → a chave é mantida como está e o evento avisa.
     """
@@ -645,6 +665,14 @@ class SecaoSplitAgent(BaseAgent):
     fonte_sem_veredito: bool = False
     #: ESTEIRA_ESTRITA: a mudança no texto do Gate 0 (`[ABERTO — dono: PO]`) bloqueia; sem ela, é decisão humana 🟡
     estrito: bool = False
+    #: Na correção pontual o split não roda: o editor já trocou o documento montado (a spec), e montar de novo a partir da
+    #: fonte antiga desfaria a troca. É o caso do passo de completude da spec (PR 6). Vale também sem a fonte travada: na
+    #: sessão anterior ao PR 6 não há resposta da completude a travar, e montar o bloco 15 sobre a spec editada poria nela
+    #: conteúdo além das trocas pedidas (revisão do PR #73, 24/10/2026).
+    pular_na_correcao_pontual: bool = False
+    #: Chave onde os achados do split saem em Markdown, para o autor ler na rodada seguinte do loop dele (a completude da
+    #: spec, PR 6). Vazia: só o envelope.
+    relatorio_key: str = ""
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -652,6 +680,14 @@ class SecaoSplitAgent(BaseAgent):
         texto = str(state.get(self.source_key, "") or "")
         delta: Dict[str, Any] = {}
         linhas: List[str] = []
+        from agents.callbacks import KEY_MODO_CORRECAO
+
+        if self.pular_na_correcao_pontual and state.get(KEY_MODO_CORRECAO) == "pontual":
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                        content=types.Content(role="model", parts=[types.Part(text=(
+                            f"⏭️ {self.rotulo}: correção pontual — o documento montado foi editado trecho a trecho e "
+                            "fica como está."))]))
+            return
 
         if not texto.strip():
             # O status era simplesmente NÃO GRAVADO, e `tools/diagnostico.py` pula gate ausente
@@ -680,19 +716,38 @@ class SecaoSplitAgent(BaseAgent):
                 proprio = ex.get("bloco_proprio")
                 bruta = secao or ""  # o que o autor escreveu, antes da montagem
                 aceita = str(state.get(f"{PREFIXO_BASE_PRESERVADA}{chave}") or "") or str(state.get(chave) or "")
+                anexo_de = ex.get("anexo_de")
+                if anexo_de:
+                    # PR 6: o D0 e o D9 montam sobre a spec de produto mais o anexo aceito, e gravam só o anexo
+                    from tools.anexo_design import blocos_do_anexo
+
+                    blocos_aceitos = blocos_do_anexo(aceita)
+                    aceita_montagem = documento_sem_moldura(str(state.get(anexo_de) or "")).rstrip() + (
+                        "\n\n" + blocos_aceitos if blocos_aceitos.strip() else "")
+                else:
+                    aceita_montagem = documento_sem_moldura(aceita)
                 sem_o_proprio = bool(secao is not None and proprio and ex.get("bloco_obrigatorio")
                                      and not re.search(proprio, secao, re.MULTILINE))
-                if secao is not None and proprio and aceita.strip() and not sem_o_proprio:
+                if secao is not None and proprio and aceita_montagem.strip() and not sem_o_proprio:
                     env_fonte = None if self.fonte_sem_veredito else extrair_envelope(texto)
-                    secao = montar_sobre_aceita(documento_sem_moldura(aceita), secao, proprio,
+                    secao = montar_sobre_aceita(aceita_montagem, secao, proprio,
                                                 bloco0_aceito=bloco0_pode_mudar(env_fonte), avisos=fora_do_bloco,
                                                 autor=ex.get("autor", "D9"), agente=ex.get("preservar") or self.name,
-                                                estrito=self.estrito, estado=state)
+                                                estrito=self.estrito, estado=state, etapa=ex.get("etapa", "design"))
+                if anexo_de and secao is not None and not sem_o_proprio:
+                    from tools.anexo_design import blocos_do_anexo, montar_anexo
+
+                    secao = montar_anexo(blocos_do_anexo(secao), extrair_slug(str(state.get(anexo_de) or "")) or "")
                 motivo: Optional[str] = None
-                if sem_o_proprio:
+                if (anexo_de and not sem_o_proprio and bruta and proprio
+                        and not re.search(proprio, bruta, re.MULTILINE)):
+                    # sem o bloco dele, o anexo montado seria a cópia que o autor fez do bloco do outro (o D9 que
+                    # recopia o 13 e esquece o 14): o anexo fica como estava
+                    motivo = "a resposta não traz o bloco próprio do autor — o anexo de design fica como estava"
+                elif sem_o_proprio:
                     motivo = "a resposta não traz o bloco próprio do autor"
                     perdidas.append({
-                        "severidade": "bloqueio", "codigo": "bloco-proprio-ausente", "etapa": "design",
+                        "severidade": "bloqueio", "codigo": "bloco-proprio-ausente", "etapa": ex.get("etapa", "design"),
                         "agente_responsavel": ex.get("preservar") or self.name,
                         "resumo": (f"{ex.get('autor', self.rotulo)} respondeu sem o bloco que só ele escreve "
                                    f"(`{proprio}`): `{chave}` ficou como estava, e quem citar a jusante uma decisão "
@@ -739,6 +794,11 @@ class SecaoSplitAgent(BaseAgent):
                     chave_base = f"{PREFIXO_BASE_PRESERVADA}{chave}"
                     base = str(state.get(chave_base) or "") or str(state.get(chave))
                     comparada = documento_sem_moldura(base)
+                    if anexo_de:
+                        from tools.anexo_design import blocos_do_anexo
+
+                        # o cabeçalho do anexo é do código: só os blocos do design contam como linhas do autor
+                        comparada = blocos_do_anexo(comparada)
                     if proprio or ex.get("bloco_autoral"):
                         # o bloco do próprio autor ele pode reescrever; o resto é o que veio antes dele
                         comparada = _sem_bloco(comparada, proprio or ex["bloco_autoral"])
@@ -812,11 +872,13 @@ class SecaoSplitAgent(BaseAgent):
                     state.get("pedidos_do_po") or [], ensure_ascii=False, default=str)
                 fechadas = lacunas_fechadas_pelo_agente(texto, pareceres)
                 pelo_parecer = lacunas_fechadas_pelo_parecer(texto, pareceres)
-                # e todo [D0-n] que fecha [PARÂMETRO] ou promove [PROPOSTA] do Gate 0, qualquer que seja a classe
+                # e todo [D0-n] que fecha [PARÂMETRO] ou promove [PROPOSTA] da spec de produto, qualquer que seja a
+                # classe, ou que trata de tópico de produto (painel, PQ e KPI, retenção, revezamento, texto do
+                # professor): desde o PR 6 o D0 é só UI/UX, e o resto é do passo de completude da spec, em produto
                 spec_gate0 = str(state.get("spec_missao_gate0") or delta.get("spec_missao_gate0")
                                  or spec_de_produto(str(state.get("spec_missao") or "")))
                 marcador_sem, marcador_pelo = decisoes_d0_de_produto(
-                    texto, envelope, spec_gate0, pareceres, classes_na_tabela=tabela_de_classes(texto))
+                    texto, envelope, spec_gate0, pareceres, classes_na_tabela=tabela_de_classes(texto), topicos=True)
                 fechadas += marcador_sem
                 pelo_parecer += marcador_pelo
                 if pelo_parecer:
@@ -835,12 +897,44 @@ class SecaoSplitAgent(BaseAgent):
                     perdidas.append({
                         "severidade": "bloqueio", "codigo": "decisao-de-produto-pelo-agente", "etapa": "design",
                         "agente_responsavel": "fecha-lacunas",
-                        "resumo": ("Decisão de produto fechada pelo D0 sem parecer datado do PO: classe de produto "
-                                   "(`mecanica*`, `curriculo*`, `parametro*` ou fora da lista) ou [PARÂMETRO]/[PROPOSTA] da "
-                                   "spec do Gate 0, inclusive em duração, dados e acessibilidade. Reabra cada uma como "
-                                   "`[ABERTO — dono: PO: …]` no bloco 13, com a sugestão e as alternativas, sem decidir:\n"
+                        "resumo": ("Decisão de produto fechada pelo D0 sem parecer datado do PO: classe fora da lista "
+                                   "do D0-UX (estado de tela, gesto, scaffolding, acessibilidade, dispositivo), tópico de produto ou "
+                                   "[PARÂMETRO]/[PROPOSTA] da spec de produto. Desde o PR 6 quem decide isso é o passo de "
+                                   "completude da spec, em produto, antes do de acordo. Reabra cada uma como "
+                                   "`[ABERTO — dono: PO: …]` no bloco 13, com a sugestão e as alternativas, sem decidir — "
+                                   "o PO a leva a produto pelo **Refazer** (triagem) ou por **Devolver**:\n"
                                    + "\n".join(f"    - {l}" for l in fechadas[:12])
                                    + (f"\n    - … e mais {len(fechadas) - 12}" if len(fechadas) > 12 else "")),
+                    })
+            if self.source_key == "completude_spec":
+                # PR 6: o passo de completude decide em produto o que o D0 decidia no design — mas não o que é do PO. O
+                # [CP-n] que fecha um [PARÂMETRO] ou promove uma [PROPOSTA] da spec sem parecer datado volta a ele: a
+                # sugestão vai como marcador, e o PO a responde na lista do de acordo (`tools/fechar_contrato.py`)
+                from tools.decisoes import decisoes_d0_de_produto
+
+                pareceres = str(state.get("notas_de_passagem") or "") + json.dumps(
+                    state.get("pedidos_do_po") or [], ensure_ascii=False, default=str)
+                spec_do_a045 = _sem_bloco(str(state.get("spec_missao") or ""), r"^##\s*\**\s*15\b.*$")
+                sem_parecer, pelo_parecer = decisoes_d0_de_produto(texto, envelope, spec_do_a045, pareceres, prefixo="CP")
+                if pelo_parecer:
+                    if delta[self.status_key] != STATUS_BLOQUEADO:
+                        delta[self.status_key] = "amarelo"
+                    env.setdefault("achados", []).append({
+                        "severidade": "atencao", "codigo": "decisao-do-po-pelo-parecer", "etapa": "produto",
+                        "agente_responsavel": "completude-spec",
+                        "resumo": ("[PARÂMETRO]/[PROPOSTA] da spec fechado pelo passo de completude com base no parecer "
+                                   "do PO. O código não sabe se o parecer diz isto — confira antes do de acordo:\n"
+                                   + "\n".join(f"    - {l}" for l in pelo_parecer[:10])),
+                    })
+                if sem_parecer:
+                    perdidas.append({
+                        "severidade": "bloqueio", "codigo": "decisao-do-po-pelo-agente", "etapa": "produto",
+                        "agente_responsavel": "completude-spec",
+                        "resumo": ("[PARÂMETRO]/[PROPOSTA] da spec fechado pelo passo de completude sem parecer datado "
+                                   "do PO. Quem decide é o PO, no de acordo de produto: reescreva cada um no bloco 15 "
+                                   "como o marcador, com a sugestão — `[PARÂMETRO — a definir por produto: … · sugestão: "
+                                   "…]` ou `[PROPOSTA — validar com PO: …]` —, sem decidir:\n"
+                                   + "\n".join(f"    - {l}" for l in sem_parecer[:12])),
                     })
             if fora_do_bloco:
                 if delta[self.status_key] != STATUS_BLOQUEADO:
@@ -865,6 +959,11 @@ class SecaoSplitAgent(BaseAgent):
                 env["status"] = "bloqueado"
                 env.setdefault("achados", []).extend(perdidas)
             delta[f"{self.status_key}_envelope"] = env
+            if self.relatorio_key:
+                achados_md = [f"- {'⛔' if a.get('severidade') == 'bloqueio' else '🟡'} `{a.get('codigo') or 'achado'}`: "
+                              f"{a.get('resumo') or ''}" for a in env.get("achados") or [] if isinstance(a, dict)]
+                delta[self.relatorio_key] = (f"## {self.rotulo} — o que o código conferiu na sua resposta\n\n"
+                                             + ("\n".join(achados_md) if achados_md else "Nada a corrigir.") + "\n")
             bruto = (envelope or {}).get("status") or status
             icone = "🔴" if status == STATUS_BLOQUEADO else "🟢"
             linhas.append(f"{icone} {self.rotulo}: status `{bruto}` (informativo — o pipeline segue).")
@@ -1399,9 +1498,10 @@ class PrototipoLintAgent(BaseAgent):
         resultado = lint.validar(html, declaradas)
         # A coluna `Componentes do DS` das telas, contra o inventário do storybook: fato conferível,
         # que o QA recebia como afirmação (32% eram nomes que o DS não tem).
+        from tools.anexo_design import spec_consolidada
         from tools.componentes_ds import validar as validar_componentes
-        resultado["achados"] += validar_componentes(str(state.get(self.telas_key, "") or ""),
-                                                    str(state.get("spec_missao", "") or ""))
+        # a spec de produto mais o anexo de design (PR 6), como a regressão a lê
+        resultado["achados"] += validar_componentes(str(state.get(self.telas_key, "") or ""), spec_consolidada(state))
         for a in resultado["achados"]:  # sem dono o ticket ia para "sem rota"
             a.setdefault("agente_responsavel", "telas" if a.get("codigo") == "componente-inexistente" else "prototipo")
         if any(a["severidade"] == "bloqueio" for a in resultado["achados"]):
@@ -1569,6 +1669,15 @@ class RastroCheckAgent(BaseAgent):
     #: pelo que é dela; o de outra etapa sai 🟡 (`tools/rastro._severidade_na_etapa`).
     etapa: Optional[str] = None
 
+    def _spec(self, state: Any) -> str:
+        """A spec que o verificador lê. Em design e dev, a `spec_missao` é a de produto e os blocos 13 e 14 moram no anexo
+        de design (PR 6): a missão inteira é a soma (`tools.anexo_design.spec_consolidada`). Em produto não há anexo."""
+        if self.spec_key == "spec_missao":
+            from tools.anexo_design import spec_consolidada
+
+            return spec_consolidada(state)
+        return str(state.get(self.spec_key, "") or "")
+
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         state = ctx.session.state
@@ -1591,7 +1700,7 @@ class RastroCheckAgent(BaseAgent):
             relatorio = relatorio_contrato_produto(resultado, missao)
         elif self.modo == "manifesto":
             # o briefing entra para conferir a seção do DS que ele fixou (exp03ef1b, 07/10/2026)
-            resultado = validar_manifesto(str(state.get(self.spec_key, "") or ""),
+            resultado = validar_manifesto(self._spec(state),
                                           briefing=str(state.get("briefing", "") or ""),
                                           one_pager_po=str(state.get("one_pager_po", "") or ""))
             relatorio = relatorio_manifesto(resultado, missao)
@@ -1603,7 +1712,7 @@ class RastroCheckAgent(BaseAgent):
             # habilidade com momento em tela e medida ligada, gabarito declarado no servidor.
             from tools import evidencia as ev
 
-            resultado = ev.validar(str(state.get(self.spec_key, "") or ""))
+            resultado = ev.validar(self._spec(state))
             relatorio = ev.relatorio(resultado, missao)
         elif self.modo == "evidencia_one_pager":
             # O §12a onde ele nasce, a cada rodada dos comitês: forma antes de voto (comitês de 15/10/2026).
@@ -1616,14 +1725,14 @@ class RastroCheckAgent(BaseAgent):
             # custa uma reescrita da spec; deixar passar custa o PRD inteiro duas etapas adiante.
             from tools import kpis as kp
 
-            resultado = kp.validar_9f(str(state.get(self.spec_key, "") or ""))
+            resultado = kp.validar_9f(self._spec(state))
             relatorio = kp.relatorio_9f(resultado, missao)
         elif self.modo == "kpis":
             # Coerência KPI ↔ evento ↔ tela no PRD.
             from tools import kpis as kp
 
             resultado = kp.validar_kpis(str(state.get("prd_final", "") or ""),
-                                        str(state.get(self.spec_key, "") or ""),
+                                        self._spec(state),
                                         one_pager=str(state.get("one_pager", "") or ""))
             relatorio = kp.relatorio(resultado, missao)
         elif self.modo == "consistencia":
@@ -1655,7 +1764,7 @@ class RastroCheckAgent(BaseAgent):
             from tools import conteudo as ct
             from tools.consistencia import validar as validar_glossario
 
-            spec = str(state.get(self.spec_key, "") or "")
+            spec = self._spec(state)
             banco = str(state.get("banco_conteudo", "") or "")
             resultado = ct.validar(str(state.get("brief_assets", "") or ""), banco, spec)
             # o banco escreve nomes, idades e números: o mesmo glossário que confere a copy o confere
@@ -1681,7 +1790,7 @@ class RastroCheckAgent(BaseAgent):
             # segundo caso que faz quem codifica escolher um caminho ao acaso.
             r_lacunas = varrer_lacunas(self.fontes, dict(state))
             r_consistencia = validar_prd(str(state.get("prd_final", "") or ""),
-                                         spec=str(state.get(self.spec_key, "") or ""),
+                                         spec=self._spec(state),
                                          banco=str(state.get("banco_conteudo", "") or ""),
                                          aprovado=str(state.get("one_pager", "") or ""))
             # O PRD contra o design da mesma sessão (exp01ef1b, 07/10/2026: 0 de 90 chaves de copy, 1 de 28
@@ -1690,12 +1799,12 @@ class RastroCheckAgent(BaseAgent):
             from tools import cobertura_design as cdz
 
             r_design = cdz.validar(str(state.get("prd_final", "") or ""),
-                                   {**dict(state), "spec_missao": state.get(self.spec_key, "")})
+                                   {**dict(state), "spec_missao": self._spec(state)})
             # O PRD dá para codar: rotas do molde com Zod e erros, IA com prompt e schema, DDL, ficha de evidência com
             # regra sobre colunas e a árvore do chat (`tools/prd_codavel.py`, auditoria de 08/10/2026)
             from tools import prd_codavel as pc
 
-            r_codavel = pc.validar(str(state.get("prd_final", "") or ""), str(state.get(self.spec_key, "") or ""),
+            r_codavel = pc.validar(str(state.get("prd_final", "") or ""), self._spec(state),
                                    str(state.get("banco_conteudo", "") or ""), handoff=str(state.get("handoff_dev", "") or ""))
             ordem = ("bloqueado", "amarelo", "aprovado")
             resultado = {
@@ -1721,7 +1830,7 @@ class RastroCheckAgent(BaseAgent):
             from tools import conteudo_aprovado as ca
 
             one_pager = str(state.get("one_pager", "") or "")
-            spec = str(state.get(self.spec_key, "") or "")
+            spec = self._spec(state)
             if self.modo == "aprovado_spec":
                 resultado, documento = ca.validar_spec(spec, one_pager), "spec"
                 # o glossário que a spec escreve não pode proibir o que o PO escreveu (exp01ef1b, 08/10/2026: proibiu
@@ -1781,8 +1890,11 @@ class RastroCheckAgent(BaseAgent):
             # a spec que o D0 e o D9 reescreveram: só o que eles pioraram, com o dono do D0 (07/10/2026)
             from tools import conteudo_aprovado as ca
 
-            resultado = ca.validar_spec_consolidada(str(state.get(self.spec_key, "") or ""),
-                                                    str(state.get("spec_missao_gate0", "") or ""),
+            # desde o PR 6 o D0 e o D9 não reescrevem a spec: a consolidada é a de produto mais o anexo de design, e a
+            # régua é a spec de produto (a do Gate 0, na sessão anterior)
+            resultado = ca.validar_spec_consolidada(self._spec(state),
+                                                    str(state.get("spec_missao_gate0", "") or "")
+                                                    or str(state.get("spec_missao", "") or ""),
                                                     str(state.get("one_pager", "") or ""))
             relatorio = ca.relatorio(resultado, "spec consolidada", missao)
         else:

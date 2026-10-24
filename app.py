@@ -128,7 +128,8 @@ GATE_LABELS = {
     "gate_estrutural_status": "Gate estrutural",
     "gate_final_status": "Gate final de produto",
     "bncc_status": "Conformidade BNCC Computação",
-    "lacunas_status": "Fechamento de lacunas",
+    "completude_status": "Completude da spec",
+    "lacunas_status": "Fechamento de lacunas (D0-UX)",
     "ambiente_status": "Ambiente simulado",
     "consistencia_status": "Coerência entre documentos",
     "stitch_status": "Telas no Stitch × inventário",
@@ -723,8 +724,9 @@ def _render_padroes(estado: Dict[str, Any], etapa: str) -> None:
         for p in padroes:
             st.markdown(f"- `{p['nome']}`{' 🟡' if p['amarelo'] else ''} — {p['rotulo']}")
         if not padroes:
-            st.caption("O one-pager e a spec não citam padrão. Onde a spec cala, o fechamento de lacunas (D0) aplica os "
-                       "padrões no design, e eles aparecem aqui no parecer de design.")
+            st.caption("O one-pager e a spec não citam padrão. Onde a spec cala, o passo de completude da spec aplica os "
+                       "padrões da plataforma no bloco 15, e eles aparecem aqui; os de UI/UX que o D0 aplica no anexo de "
+                       "design aparecem no parecer de design.")
 
 
 def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[str, Any]) -> Dict[str, Dict[str, str]]:

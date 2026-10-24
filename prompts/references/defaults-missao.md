@@ -1,19 +1,19 @@
 ---
 name: defaults-missao
-description: Respostas-padrão da plataforma por classe de lacuna. O fecha-lacunas aplica antes de decidir sozinho; missão irmã no catálogo vem depois; one-pager depois; inferência por último. Rascunho v0 — cada padrão marca de onde saiu e o que ainda precisa de confirmação do produto.
+description: Respostas-padrão da plataforma por classe de lacuna. O passo de completude da spec (produto) aplica antes de decidir sozinho, e o D0-UX (design) só os de UI; missão irmã no catálogo vem depois; one-pager depois; inferência por último. Rascunho v0 — cada padrão marca de onde saiu e o que ainda precisa de confirmação do produto.
 sources: [criterios-gate-estrutural, criterios-experiencia, criterios-pedagogicos, formato-spec, criterios-dev/4-dados-telemetria-lgpd, pronto, padroes-aprendidos, chat]
 status: rascunho v0 — validar com produto (PM) e pedagogia antes de tratar como contrato
 ---
 
 # Padrões da plataforma por classe de lacuna
 
-**O que este arquivo é.** Quando a spec cala sobre algo que a esteira precisa e a resposta é a mesma para toda missão, a resposta está aqui. O D0 cita o padrão pelo nome (`padrão: <nome>`) na base da decisão `[D0-n]`, e a decisão é **verde** — não precisa de validação humana, porque a plataforma já decidiu.
+**O que este arquivo é.** Quando a spec cala sobre algo que a esteira precisa e a resposta é a mesma para toda missão, a resposta está aqui. Desde 24/10/2026 (PR 6 do plano «Produto dono do contrato», decisão D5) quem aplica é **produto**: o passo de completude da spec cita o padrão pelo nome (`padrão: <nome>`) na base da decisão `[CP-n]` do bloco 15, e o de acordo de produto lista cada padrão citado como «padrão aplicado» — sem aceite item a item (enquanto este arquivo for rascunho, «padrão a confirmar»). O D0-UX, no design, só detalha a tela do que a spec de produto já decidiu (a tela de cada estado, o gesto, a adaptação de tela por cenário) e aplica os padrões de UI que ela ainda não trouxer (`gesto-com-demonstracao`, `nada-so-por-cor`). Retenção de dados e revezamento têm referência própria: `padrao-plataforma-retencao-lgpd.md` e `padrao-plataforma-revezamento.md` (D6).
 
 **Nenhum número aqui é fonte.** Padrão de duração, de opções ou de etapas cita `literatura-cognitiva.md` pela seção; o valor pode aparecer como lembrete, mas quem vale é a fonte. Foi assim que este arquivo carregou por semanas tetos de duração revogados (12/15/20 min) sem que ninguém percebesse.
 
 **O que este arquivo não é.** Padrão não substitui mecânica. Se aplicar um padrão exige inventar o que o estudante faz, quantas decisões toma ou que dado é coletado, a lacuna é vermelha e vai ao Gate 0 — não importa quão razoável o padrão pareça.
 
-**Ordem de preferência do D0:** padrão daqui → missão irmã no catálogo → one-pager → inferência. Padrão marcado 🟡 exige que a decisão saia **amarela** (reversível, com "Quem deve olhar" no relatório), porque a plataforma ainda não fechou a resposta.
+**Ordem de preferência (completude de produto e D0-UX):** padrão daqui → missão irmã no catálogo → one-pager → inferência. Padrão marcado 🟡 exige que a decisão saia **amarela** (reversível, com "Quem deve olhar" no relatório), porque a plataforma ainda não fechou a resposta.
 
 Cada padrão diz de onde saiu. Padrão sem fonte não entra — vira candidato em `candidatos-a-criterio.md` até alguém confirmar.
 
@@ -54,7 +54,7 @@ Cada padrão diz de onde saiu. Padrão sem fonte não entra — vira candidato e
 |---|---|---|
 | `tres-cenarios` | Os três cenários existem sempre: **1:1**, **2–4 por aparelho**, **projeção única**. Para cada um a spec responde "o que muda" e "a descoberta chega?". | critério 10.1 |
 | `1-1-e-o-cenario-base` | O cenário 1:1 é o de referência: o wireframe é desenhado para ele e os outros dois derivam. | d2, d5 |
-| `2-4-decide-em-grupo-registra-por-grupo` 🟡 | Em 2–4 por aparelho, **a conta é do grupo**, com identidade escolhida pelo grupo por affordance nativa (nome de usuário, nome no grupo, foto entre as do banco); a decisão é do grupo e a evidência é **por grupo**, não por criança; a plataforma não tenta inferir quem tocou. O protocolo de revezamento por etapa (quem toca, como decide, como registra desacordo) é da spec (critério 10.2). | critério 10.1 · bloco 9 (não rotular estudante, 8.4) · confirmar com dados |
+| `2-4-decide-em-grupo-registra-por-grupo` 🟡 | Em 2–4 por aparelho, **a conta é do grupo**, com identidade escolhida pelo grupo por affordance nativa (nome de usuário, nome no grupo, foto entre as do banco); a decisão é do grupo e a evidência é **por grupo**, não por criança; a plataforma não tenta inferir quem tocou. A missão não prescreve revezamento: o protocolo é padrão da plataforma (`padrao-plataforma-revezamento.md`, D6). | critério 10.1 · bloco 9 (não rotular estudante, 8.4) · confirmar com dados |
 | `projecao-e-conduzida-pela-professora` | Em projeção única, quem toca é a professora e a turma decide em voz alta; a tela usa o viewport docente/projeção 1366×768, alvos ≥ 88×88, e a descoberta precisa chegar **sem** a mecânica individual. Se não chega, a spec tem que dizer o que substitui. | critério 10.1 · d4b (88×88) · d5 |
 
 ## Classe `copy-fonte` — o que a professora diz e o que o guia fala (bloco 8)
@@ -80,8 +80,8 @@ Cada padrão diz de onde saiu. Padrão sem fonte não entra — vira candidato e
 
 | Nome | Padrão | Fonte |
 |---|---|---|
-| `so-o-que-a-decisao-produz` | Quando o bloco 9 não lista os dados, o D0 lista **apenas** o que as decisões já definidas produzem (escolha, opções, ordem, etapa, cenário de dispositivo). Nome, voz, imagem, texto livre e tempo de tela **não entram** por padrão. | d0 (autoridade) · bloco 9 (lista do que não é coletado) |
-| `retencao-declarada-ou-lacuna` 🟡 | Sem prazo de retenção na spec, o D0 registra a lacuna com dono **responsável de dados**, não inventa prazo. | DAD-10 |
+| `so-o-que-a-decisao-produz` | Quando o bloco 9 não lista os dados, a completude de produto lista **apenas** o que as decisões já definidas produzem (escolha, opções, ordem, etapa, cenário de dispositivo). Nome, voz, imagem, texto livre e tempo de tela **não entram** por padrão. | d0 (autoridade) · bloco 9 (lista do que não é coletado) |
+| `retencao-declarada-ou-lacuna` 🟡 | Sem prazo de retenção na spec, a completude de produto cita o padrão `retencao-lacuna-assumida` (`padrao-plataforma-retencao-lgpd.md`): lacuna com dono **responsável de dados**, sem prazo inventado. | DAD-10 |
 | `servidor-calcula` | O cliente envia medidas brutas; o servidor deriva tudo o que vira número. Gabarito, parâmetros e prompt de sistema nunca vão ao bundle. | formato-spec bloco 9 |
 | `sem-placar-entre-estudantes` | Nada ordena, pontua ou cronometra crianças entre si. Consequência e hierarquia existem **dentro da simulação**, nunca como avaliação da criança. | critério 3.3 · 8.5 · PED-07 |
 
@@ -89,11 +89,11 @@ Cada padrão diz de onde saiu. Padrão sem fonte não entra — vira candidato e
 
 | Nome | Padrão | Fonte |
 |---|---|---|
-| `teto-por-ato` | Ato dentro do teto da faixa em `literatura-cognitiva.md` §3 (1º–2º: 6–8 min · 3º–5º: 8–10 · 6º–9º: 10–12 · EM: 12–15), e missão inteira ≤ 25 min de tempo-aluno em aula de 50. Sem estimativa na spec, o D0 usa o teto da faixa como **máximo** e marca amarelo. Os valores antigos (12/15/20) foram revogados na revisão de setembro de 2026 da fonte. | critério 6.2 · `literatura-cognitiva.md` §3 |
+| `teto-por-ato` | Ato dentro do teto da faixa em `literatura-cognitiva.md` §3 (1º–2º: 6–8 min · 3º–5º: 8–10 · 6º–9º: 10–12 · EM: 12–15), e missão inteira ≤ 25 min de tempo-aluno em aula de 50. Sem estimativa na spec, a completude de produto usa o teto da faixa como **máximo** e marca amarelo. Os valores antigos (12/15/20) foram revogados na revisão de setembro de 2026 da fonte. | critério 6.2 · `literatura-cognitiva.md` §3 |
 | `piso-conta-consumo-e-negociacao` | A estimativa inclui consumo de conteúdo, navegação e negociação em grupo — não só a decisão. | critério 6.2 (piso) |
 | `fase-de-minijogo` | Mini-jogo: fase ≤ ~90 s em 1º–2º, ≤ ~180 s em 3º–5º. | d9 (adequação por faixa) |
 
-## Tetos de referência (não são padrões — são a régua que o D0 não pode ultrapassar)
+## Tetos de referência (não são padrões — são a régua que a completude e o D0 não podem ultrapassar)
 
 | Faixa | Opções por comparação | Decisões significativas | Etapas cognitivas sem apoio |
 |---|---|---|---|

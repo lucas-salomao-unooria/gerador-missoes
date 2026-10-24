@@ -26,6 +26,10 @@ Na passada 1 você escreveu as strings a partir do inventário. Agora cada strin
 
 {spec_missao?}
 
+**Anexo de design da spec (decisões de UI/UX do D0 e ficha do ambiente do D9, em `design/00-anexo-design-spec.md` — junto com a spec de produto, é o contrato; vazio numa missão anterior a 24/10/2026, que traz as duas coisas dentro da spec):**
+
+{anexo_design_spec?}
+
 **Conteúdo aprovado pelo PO — cópia literal do one-pager** (o núcleo — descoberta central e anatomia do aha (§1), narrativa e personagem (§3), as 6 etapas com o texto que a tela mostra (§4) —, currículo, estados de falha — inclusive de mídia —, papel do professor, tempos e cenários de aula, podcast com o roteiro, contrato de evidência com o Canal B, cenários de dispositivo — projeção e 2 a 4 por aparelho —, verbos e affordances, caminhos degenerados, guardrails e IA, tetos da faixa, hipóteses). Até 07/10/2026 você não recebia o one-pager: o que a spec não trazia não existia para você, e na exp01ef1b se perderam as travas do professor, o podcast e a redação do debate. A pergunta e as alternativas do Canal B, as perguntas do debate e o roteiro do podcast entram no sheet copiados daqui, palavra por palavra. Um gate confere a copy contra este texto, e o que estiver diferente volta para você.
 
 O texto que o §4 põe na tela entre aspas — a pergunta da aposta e as alternativas, as falas da personagem, as mensagens do sistema, o caso de transferência — também entra no sheet palavra por palavra: é a redação que o PO aprovou. Se o teto de palavras da faixa obrigar a mudar, mude e registre em «Strings que precisam de decisão» `[PROPOSTA — validar com PO: «texto aprovado» → «texto novo» · por quê]`, com o texto aprovado entre aspas. Fala do professor em sala e exemplo do que o estudante diria («ex.: "…"») não são texto de tela. Um gate conta quantos desses textos chegaram ao sheet e mostra ao PO os que faltam.

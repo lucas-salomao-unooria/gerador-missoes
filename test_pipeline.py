@@ -62,6 +62,9 @@ KNOWN_STATE_KEYS = {
     "contrato_produto_report", "contrato_produto_status",
     "avaliacao_pedagogica_report", "experiencia_aluno_report", "adequacao_report", "gate_final_report", "gate_final_status",
     "spec_missao", "spec_missao_gate0", "bncc_status", "bncc_report", "fechamento_lacunas", "relatorio_lacunas", "lacunas_status",
+    # PR 6 do plano «Produto dono do contrato» (24/10/2026): completude da spec em produto e anexo de design
+    "completude_spec", "relatorio_completude", "completude_status", "anexo_design_spec", "completude_report",
+    "completude_rodada",
     "ambiente_simulado", "ambiente_status",
     "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
     "wireframes_cobertura", "copy_strings_revisada", "qa_entregaveis_report", "design_status",
@@ -151,7 +154,7 @@ EXPECTED_AGENTS = {
     "A033AdequacaoCheck",
     "A034RevisorOnePagerParecer",
     "AvaliacoesLoop", "A043GateFinalProduto",
-    "A044GateFinalProdutoCheck", "A045SpecMissao", "A046BnccCheck", "A061OnePagerResumido", "DesignStage", "A065FechaLacunas", "A066FechaLacunasSplit",
+    "A044GateFinalProdutoCheck", "A045SpecMissao", "A045bCompletudeSpec", "A045cCompletudeSpecSplit", "A046BnccCheck", "A061OnePagerResumido", "DesignStage", "A065FechaLacunas", "A066FechaLacunasSplit",
     "A067AmbienteSimulado", "A068AmbienteSimuladoSplit", "A070BriefOficio", "A071Jornada",
     "A072Fluxo", "A073CopyPtBr", "A074Caa", "A075Telas", "A077CopyRevisao", "A088QaEntregaveis",
     "A079Prototipo", "A080ArtefatosDesign", "A084EspelhoMiro", "A082Consistencia", "A089QaAfirmacoes", "A090QaEntregaveisCheck", "DevStage", "A099ManifestoCheck", "HandoffParalelo", "A100aHandoffDev", "A100bBriefAssets", "A104BancoConteudo", "A105ConteudoCheck",
@@ -413,15 +416,18 @@ def test_modo_nao_estrito_nao_bloqueia():
 
 # --------------------------------------------------------------------------- 5. split D0/D9
 def test_secao_split_d0_e_d9():
+    """D0 e D9 gravam no anexo de design, montado em código; a spec de produto não muda (PR 6, 24/10/2026)."""
     from agents.design import get_ambiente_simulado_split, get_fecha_lacunas_split
+    from tools.anexo_design import montar_anexo
 
     spec_original = "# Spec — Teste v1\n\n**1EF · instanooria**\n\n## 0. Identificação de plataforma\n" + ("Slug exp-99-teste. " * 90) + "\n\n## 12. Decisões fechadas neste gate\nnenhuma\n"
-    spec_consolidada = spec_original + "\n## 13. Decisões D0\n[D0-1] 2.estado_espera — Decisão: tela congela.\n"
+    bloco13 = "## 13. Decisões D0\n[D0-1] 4.gesto_arrastar — Decisão: demonstração no primeiro arrastar.\n"
+    spec_consolidada = spec_original + "\n" + bloco13
     d0_out = (
         "# Fechamento de lacunas — teste\n**Veredito: 🟢 SEGUE PARA D1**\n\n## Passo 1 — Varredura\n...\n"
-        "## Passo 5 — Spec consolidada (texto original do Gate 0, blocos 0–12 intocados, + bloco 13)\n" + spec_consolidada +
+        "## Passo 5 — Bloco 13 (só ele)\n" + spec_consolidada +
         "\n## Passo 5b — Relatório de preenchimento — `relatorio-preenchimento.md`\n"
-        "### [D0-1] Tela de espera\n**O que faltava:** o que a criança vê enquanto a professora fala.\n**O que entrou:** a tela congela.\n\n"
+        "### [D0-1] Demonstração do arrastar\n**O que faltava:** como a criança descobre o arrastar.\n**O que entrou:** a demonstração.\n\n"
         "## Passo 6 — Devolutiva ao produto\n- nada\n\n## Testes 1–6 — resultado\nok\n\n"
         '```json\n{"agente": "fecha-lacunas", "missao": "exp-99-teste", "status": "segue_com_pendencias", "decisoes": [], "respec": []}\n```'
     )
@@ -434,9 +440,10 @@ def test_secao_split_d0_e_d9():
         ],
     )
     _, state = asyncio.run(_run(root))
-    assert state["spec_missao"].startswith("# Spec — Teste v1"), state["spec_missao"][:80]
-    assert "## 13. Decisões D0" in state["spec_missao"] and "Passo 5b" not in state["spec_missao"]
-    assert state["spec_missao_gate0"] == spec_original
+    # a spec de produto fica como o PO a aprovou; o bloco 13 vai para o anexo de design
+    assert state["spec_missao"] == spec_original and "spec_missao_gate0" not in state
+    anexo = state["anexo_design_spec"]
+    assert "## 13. Decisões D0" in anexo and "Passo 5b" not in anexo and "## 0." not in anexo
     assert state["relatorio_lacunas"].startswith("### [D0-1]") and "Passo 6" not in state["relatorio_lacunas"]
     # `segue_com_pendencias` é o que o nome diz: segue, COM pendências. Desde 23/09/2026 o
     # dossiê grava o veredito como o agente o deu, em vez de achatar tudo em "aprovado" — em
@@ -445,72 +452,75 @@ def test_secao_split_d0_e_d9():
     assert state["lacunas_status"] == "amarelo"
     assert not state.get(KEY_PIPELINE_BLOQUEADO)
 
-    # D9 dormente: reemite a spec (blocos 1–13 + bloco 14); o split troca spec_missao e não bloqueia
+    # D9 dormente: reemite a spec (de produto + bloco 13 + bloco 14); o split grava só o bloco 14, no anexo
     spec_com_14 = spec_consolidada + "\n## 14. Ambiente simulado (D9)\ninstanooria · dormente\n"
     d9_out = (
         "# Ambiente simulado — teste\n**Veredito: ⚪ DORMENTE (spec já nomeia instanooria)**\n\n"
-        "## Passo 4 — Spec consolidada (blocos 1–13 do D0 intocados + bloco 14)\n" + spec_com_14 +
+        "## Passo 4 — Spec consolidada (spec de produto e bloco 13 intocados + bloco 14)\n" + spec_com_14 +
         "\n## Bloco 14 — Ficha do ambiente\nnome: instanooria\n\n## Testes — resultado\nok\n\n"
         '```json\n{"agente": "ambiente-simulado", "missao": "exp-99-teste", "status": "dormente"}\n```'
     )
     root2 = SequentialAgent(
         name="Root2",
         sub_agents=[
-            FakeAgent(name="Spec", key="spec_missao", text=spec_consolidada),
+            FakeAgent(name="Spec", key="spec_missao", text=spec_original),
+            FakeAgent(name="Anexo", key="anexo_design_spec", text=montar_anexo(bloco13)),
             FakeAgent(name="D9", key="ambiente_simulado", text=d9_out),
             get_ambiente_simulado_split(),
         ],
     )
     _, state2 = asyncio.run(_run(root2))
-    assert "## 14. Ambiente simulado" in state2["spec_missao"] and "## 13. Decisões D0" in state2["spec_missao"]
-    assert "Bloco 14 — Ficha" not in state2["spec_missao"]
+    anexo2 = state2["anexo_design_spec"]
+    assert "## 14. Ambiente simulado" in anexo2 and "## 13. Decisões D0" in anexo2 and state2["spec_missao"] == spec_original
+    assert "Bloco 14 — Ficha" not in anexo2
     assert state2["ambiente_status"] == "aprovado"
 
     # D9 devolvendo SÓ o bloco 14 sob o heading do Passo 4: é o pedaço novo, não a spec
     # consolidada. Aceitá-lo apagava blocos 0–13 — a ficha do manifesto sumia e o dev
     # bloqueava com 10 campos ausentes (visto em 2026-09-17: spec de 35 KB virou 5 KB).
-    spec_grande = spec_consolidada + ("Bloco de spec com conteúdo real. " * 400)
+    spec_grande = spec_original + ("Bloco de spec com conteúdo real. " * 400)
     so_o_bloco = "## 14. Ambiente simulado (D9)\n" + ("instanooria, chrome, verbos e tokens. " * 60)
     d9_fragmento = (
         "# Ambiente simulado — teste\n\n"
         "## Passo 4 — Spec consolidada (blocos 1–13 + bloco 14)\n" + so_o_bloco +
         "\n## Bloco 14 — Ficha do ambiente\nnome: instanooria\n"
     )
-    # o fragmento passa em `minimo_chars`; é a comparação com o documento atual que o pega
-    assert len(so_o_bloco) > 1500
     root_frag = SequentialAgent(
         name="RootFrag",
         sub_agents=[
             FakeAgent(name="Spec", key="spec_missao", text=spec_grande),
+            FakeAgent(name="Anexo", key="anexo_design_spec", text=montar_anexo(bloco13)),
             FakeAgent(name="D9", key="ambiente_simulado", text=d9_fragmento),
             get_ambiente_simulado_split(),
         ],
     )
     _, state_frag = asyncio.run(_run(root_frag))
-    # desde 09/10/2026 os blocos 0–13 vêm da spec aceita pelo código (`montar_sobre_aceita`): o D9 que devolve só o
-    # bloco 14 não apaga nada — a spec fica inteira, com o bloco novo no fim
-    assert state_frag["spec_missao"].startswith(spec_grande.rstrip()), "a spec foi trocada por um fragmento"
-    assert state_frag["spec_missao"].count("## 14. Ambiente simulado") == 1
+    # a spec de produto vem do estado e o bloco 13 do anexo aceito, pelo código (`montar_sobre_aceita`): o D9 que
+    # devolve só o bloco 14 não apaga nada
+    assert state_frag["spec_missao"] == spec_grande, "a spec foi trocada por um fragmento"
+    assert state_frag["anexo_design_spec"].count("## 14. Ambiente simulado") == 1
+    assert "## 13. Decisões D0" in state_frag["anexo_design_spec"]
 
-    # D9 sem a seção de spec (saída fora do formato) e com aguarda_gate: mantém a spec, marca 🔴, pipeline segue
+    # D9 sem a seção de spec (saída fora do formato) e com aguarda_gate: mantém spec e anexo, marca 🔴, pipeline segue
     d9_ruim = '# Ambiente simulado\n**Veredito: 🔴 AGUARDA GATE 0**\n\n```json\n{"agente": "ambiente-simulado", "status": "aguarda_gate"}\n```'
     root3 = SequentialAgent(
         name="Root3",
         sub_agents=[
-            FakeAgent(name="Spec", key="spec_missao", text=spec_consolidada),
+            FakeAgent(name="Spec", key="spec_missao", text=spec_original),
+            FakeAgent(name="Anexo", key="anexo_design_spec", text=montar_anexo(bloco13)),
             FakeAgent(name="D9", key="ambiente_simulado", text=d9_ruim),
             get_ambiente_simulado_split(),
             FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=marcar_heranca),
         ],
     )
     _, state3 = asyncio.run(_run(root3))
-    assert state3["spec_missao"] == spec_consolidada
+    assert state3["spec_missao"] == spec_original and state3["anexo_design_spec"] == montar_anexo(bloco13)
     # `aguarda_gate` é o D9 devolvendo a decisão ao Gate 0 / PO: pendência humana, não
     # impedimento. Lido como bloqueio, travava a esteira num impasse que nenhum agente
     # resolve — não existe loop que devolva a decisão ao Gate 0 (23/09/2026).
     assert state3["ambiente_status"] == "amarelo"
     assert state3.get("brief_oficio") == "brief" and not state3.get(KEY_PIPELINE_BLOQUEADO)
-    print("   ✓ split D0/D9: spec consolidada, cópia da original, relatório separado, status informativo")
+    print("   ✓ split D0/D9: anexo de design montado em código, spec de produto intocada, relatório separado")
 
 
 # --------------------------------------------------------------------------- 6. BNCC Computação
@@ -1104,7 +1114,11 @@ def test_estagio_produto_parcial_spec():
     # de produto do sub-bloco 9f nasciam na spec sem nenhum gate, e o `validar_kpis` do PRD recebia
     # a spec como parâmetro morto — a pergunta podia morrer entre produto e dev sem deixar rastro.
     assert [a.name for a in produto.sub_agents[0].sub_agents] == [
-        "A045SpecMissao", "A046BnccCheck", "A047ManifestoCheckProduto", "A048EvidenciaCheck",
+        "A045SpecMissao",
+        # completude da spec (PR 6, 24/10/2026): o que o D0 fechava no design e é de produto, antes dos gates e da banca;
+        # isolada, para a saída dela não encerrar o SpecLoop (revisão do PR #73)
+        "CompletudeLoopIsolado",
+        "A046BnccCheck", "A047ManifestoCheckProduto", "A048EvidenciaCheck",
         # juiz de achados (23/09/2026): o regex marca "gabarito no cliente", o juiz decide se o texto
         # afirma ou cita para vedar, e o achado só sai com citação literal conferida
         "A049JuizEvidencia",
@@ -1140,7 +1154,8 @@ def test_estagio_produto_parcial_spec():
     assert [s["key"] for s in stages_para_ui(["dev"])] == ["dev", "transversal"]
     assert [s["key"] for s in stages_para_ui(["produto", "design", "dev"])] == ["produto", "design", "dev", "transversal"]
     assert [m["id"] for m in STAGE_SPEC["agents"]] == [
-        "A045SpecMissao", "A046BnccCheck", "A047ManifestoCheckProduto", "A048EvidenciaCheck",
+        "A045SpecMissao", "A045bCompletudeSpec", "A045cCompletudeSpecSplit", "A045dCompletudeRodada", "A046BnccCheck",
+        "A047ManifestoCheckProduto", "A048EvidenciaCheck",
         "A050PerguntasCheck", "A051JuizPerguntas", "A052JuizPerguntasCheck",
         "A054ConteudoAprovadoSpec", "A057aBancaProdutoNarrativa", "A057bBancaPedagogiaBncc", "A058BancaConsolidacao",
         "A059SpecCheck", "A060FidelidadeProduto", "A061OnePagerResumido",
@@ -5357,7 +5372,8 @@ def test_d0_reescreve_o_proprio_bloco_13_sem_acusar_linhas_perdidas():
     (blocos 0–12) continua protegido."""
     rodada1 = _saida_d0("", _D0_7 + _D0_8 + _D0_CANAL_B.format(n=9))
     st1 = _rodar_split_d0({"fechamento_lacunas": rodada1, "spec_missao": _SPEC_GATE0_EXP02EM1B})
-    assert "[D0-8]" in st1["spec_missao"]
+    # PR 6: o bloco 13 vai para o anexo de design, e a spec de produto não muda
+    assert "[D0-8]" in st1["anexo_design_spec"] and st1["spec_missao"] == _SPEC_GATE0_EXP02EM1B
 
     rodada2 = _saida_d0("", _D0_CANAL_B.format(n=7))
     st2 = _rodar_split_d0({**st1, "fechamento_lacunas": rodada2})

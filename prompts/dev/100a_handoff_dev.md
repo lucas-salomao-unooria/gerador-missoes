@@ -8,6 +8,10 @@ Você fecha os critérios 9.1, 9.2 e 9.3 da rubrica. Seu leitor é o dev — e o
 
 {spec_missao?}
 
+**Anexo de design da spec (decisões de UI/UX do D0 e ficha do ambiente do D9, em `design/00-anexo-design-spec.md` — junto com a spec de produto, é o contrato; vazio numa missão anterior a 24/10/2026, que traz as duas coisas dentro da spec):**
+
+{anexo_design_spec?}
+
 **Jornada — inventário de telas e direção:**
 
 {jornada_telas?}
@@ -103,12 +107,12 @@ As hipóteses são as do §17 do one-pager aprovado: **remeta a elas** (`§17 do
 
 ## O handoff monta, não decide — o que um gate determinístico confere
 
-A fonte da verdade é a spec de produto (blocos 0 a 12) e o one-pager aprovado, com as decisões de UI do design (bloco 13 da spec, as decisões D0). O handoff deriva deles: divergência é defeito, e volta para você com o relatório abaixo. O gate confere:
+A fonte da verdade é a spec de produto (blocos 0 a 12 e o bloco 15 de completude) e o one-pager aprovado, com o anexo de design (`design/00-anexo-design-spec.md`: as decisões D0 de UI do bloco 13 e a ficha do ambiente do bloco 14). O handoff deriva deles: divergência é defeito, e volta para você com o relatório abaixo. O gate confere:
 
-1. **Número de regra com origem.** Todo número de regra (%, segundos, minutos, teto ou piso de palavras e caracteres, nº de opções ou alternativas) está no contrato: one-pager, spec, bloco 13, decisões do PO no de acordo. Não precisam de origem os de dono plataforma (polling, TTL, p95, uptime, lote da SDK, `px`; timeout e tempo limite só de requisição, API, sessão ou rede — «tempo limite de 45 s para responder» é regra da mecânica), a medida de layout e a contagem de palavras de uma string. Número que o contrato não tem sai, ou vira `[PROPOSTA — validar com PO: …]`.
+1. **Número de regra com origem.** Todo número de regra (%, segundos, minutos, teto ou piso de palavras e caracteres, nº de opções ou alternativas) está no contrato: one-pager, spec, bloco 13 do anexo de design, decisões do PO no de acordo. Não precisam de origem os de dono plataforma (polling, TTL, p95, uptime, lote da SDK, `px`; timeout e tempo limite só de requisição, API, sessão ou rede — «tempo limite de 45 s para responder» é regra da mecânica), a medida de layout e a contagem de palavras de uma string. Número que o contrato não tem sai, ou vira `[PROPOSTA — validar com PO: …]`.
 2. **Hipótese e meta iguais às do contrato.** Hipótese com o número do §17 (ou nenhum, remetendo a ele); o alvo e o limiar de um KPI que cita uma `PQ-nn` são os da linha dela no 9f da spec.
 3. **Estado do contrato.** A máquina de estados usa os nomes do «Contrato de estados» da spec (estado de decomposição do fluxo do design, com o nome do fluxo, também vale); nenhum nome novo.
-4. **Origem verdadeira.** Número com origem citada em produto («§17 do one-pager», «spec, bloco 9f») tem de estar lá. Decisão do D0 é do design: cite-a como `produto/05-spec-missao.md › Bloco 13`, nunca como «contratual» ou «decisão do PO».
+4. **Origem verdadeira.** Número com origem citada em produto («§17 do one-pager», «spec, bloco 9f») tem de estar lá. Decisão do D0 é do design: cite-a como `design/00-anexo-design-spec.md › Bloco 13`, nunca como «contratual» ou «decisão do PO».
 5. **Texto-chave literal.** O texto que o PO aprovou palavra por palavra (Canal B, debate, texto de tela do §4) vai pela chave da copy ou literal — nunca uma terceira versão.
 
 Quando o próprio contrato diverge (o one-pager diz um número e a linha correspondente da spec, ou a linha do 9f que cita a hipótese, diz outro; linha marcada `[PROPOSTA]` não conta), não escolha: siga o one-pager **e** registre na seção 7 `[ABERTO — dono: produto: <onde> diz X e <onde> diz Y]`. É pendência do PO, e o rastro a conta. O registro não substitui o número certo: hipótese com outro número bloqueia sempre, e cópia errada se corrige, não vai a produto.

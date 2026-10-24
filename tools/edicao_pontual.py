@@ -27,8 +27,10 @@ DOCUMENTOS_POR_ETAPA: Dict[str, Tuple[str, ...]] = {
     "dev": ("handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico"),
 }
 #: Documentos autorais que a etapa tem e o editor não toca: ficam travados como estão (o autor não roda). O mapa e a
-#: ideação são a origem do núcleo; refazê-los numa correção pontual sortearia outro mecanismo.
-TRAVADOS_SEM_EDICAO: Dict[str, Tuple[str, ...]] = {"produto": ("mapa_conceitual", "ideacao_mecanismos")}
+#: ideação são a origem do núcleo; refazê-los numa correção pontual sortearia outro mecanismo. A resposta do passo de
+#: completude (PR 6) já está dentro da spec, no bloco 15, e é lá que o editor a troca: refazê-la desfaria a troca.
+TRAVADOS_SEM_EDICAO: Dict[str, Tuple[str, ...]] = {"produto": ("mapa_conceitual", "ideacao_mecanismos", "completude_spec"),
+                                                   "spec": ("completude_spec",)}
 #: Documento maior que isto não vai ao editor. É folga, não corte: os protótipos HTML do acervo têm de 110 a 135 KB, e
 #: 1 milhão de caracteres (~250 mil tokens) ainda cabe no contexto do modelo com os outros documentos da etapa.
 MAX_CARACTERES_DOCUMENTO = 1_000_000
@@ -77,8 +79,9 @@ class Resultado:
 def documentos_da_etapa(estado: Dict[str, Any], etapa: str, versao_anterior: bool = False) -> Dict[str, str]:
     """`{chave: texto}` dos documentos que o editor pode trocar, na versão que o autor escreveu.
 
-    A spec é a do Gate 0 quando existe: `spec_missao` pode já trazer a consolidação do D0, e a base de um refazer é a
-    do autor (`pipeline.reexecucao._guardar_versoes_anteriores`). Documento vazio fica de fora.
+    A spec é a do Gate 0 quando existe: na sessão anterior ao PR 6, `spec_missao` pode já trazer a consolidação do D0, e
+    a base de um refazer é a do autor (`pipeline.reexecucao._guardar_versoes_anteriores`). Na sessão nova a `spec_missao`
+    é a de produto, com o bloco 15 da completude. Documento vazio fica de fora.
 
     `versao_anterior`: o documento que falta no estado vem de `versao_anterior_<chave>`. É o passo de design (ou de dev)
     de uma cascata: a correção de produto que veio antes apagou design e dev do estado e guardou a versão deles ali.

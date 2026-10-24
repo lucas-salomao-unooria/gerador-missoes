@@ -157,3 +157,5 @@ Não aproveite a rodada para melhorar outra coisa: mudança não pedida invalida
 ## Saída
 
 Entregue **apenas** a spec em Markdown, começando por `# Spec — <missão> v<x>`, com a linha de identificação (`**Ano/faixa · Ambiente · Rubrica v1.21 · Gate final: <🟢/🟡/🔴> em <data>**`) e os 12 blocos numerados, seguidos do `## Glossário canônico`.
+
+**O bloco 15 não é seu.** Logo depois de você, o passo de completude da spec fecha as lacunas de produto que o design consumiria (estado, handoff, evidência, dados e retenção, duração e tetos, painel, PQ e KPI, texto do professor, revezamento) e o código acrescenta o bloco 15 à sua spec. Não o escreva nem o copie da versão anterior: o que ele decidir que deva estar num bloco seu vem como proposta ao PO. Retenção de dados e revezamento citam o padrão da plataforma (`padrao-plataforma-retencao-lgpd.md`, `padrao-plataforma-revezamento.md`), não se escrevem por missão.

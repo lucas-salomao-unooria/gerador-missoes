@@ -18,6 +18,10 @@ D0 não decide ambiente (é vermelho para ele). Você é quem decide — mas só
 
 {spec_missao?}
 
+**Anexo de design (o bloco 13 do D0 e, numa rodada de correção, o seu bloco 14 anterior):**
+
+{anexo_design_spec?}
+
 **One-pager aprovado (para inferir onde a experiência "mora" quando a spec cala):**
 
 {one_pager?}
@@ -207,11 +211,11 @@ Envie a decisão como `[RS-AMB]` no formato de re-spec do D0. Escolha de ambient
 
 ## Passo 4 — Spec consolidada + insumos para a esteira
 
-**Você parte da spec consolidada que o D0 entregou, não do texto original do Gate 0.** Reemita-a inteira com os blocos 0–13 **intocados, incluindo o bloco 13 (Decisões D0) e o `## Glossário canônico`**, e acrescente **bloco 14 — Ambiente simulado (D9)**: nome, seção do DS, verbos nativos com rótulo literal, dispositivo nativo, estados, e o que o ambiente não tem. Regenerar a spec a partir do original apaga o trabalho do D0 — se o bloco 13 não estiver na sua saída, você perdeu as decisões dele. **O bloco 0 só muda por `[RS-AMB]` aceita** (ambiente novo ou existente): o código grava a spec aceita com o seu bloco 14 e descarta qualquer outra mudança: no texto do Gate 0 (blocos 0–12 e glossário) ela aparece ao PO como `[ABERTO — dono: PO]` no cartão do parecer de design, e no bloco 13 como 🟡 «D9 alterou fora do bloco 14».
+**Você parte da spec de produto e do anexo de design que o D0 entregou** (o bloco 13, em `anexo_design_spec`). Reemita a spec de produto inteira com os blocos 0–12, o `## Glossário canônico` e o bloco 15 (completude de produto) **intocados**, o bloco 13 do anexo **intocado**, e acrescente **bloco 14 — Ambiente simulado (D9)**: nome, seção do DS, verbos nativos com rótulo literal, dispositivo nativo, estados, e o que o ambiente não tem. **Desde 24/10/2026 a spec de produto não muda no design:** o código grava o seu bloco 14 no anexo de design (`design/00-anexo-design-spec.md`), ao lado do 13, e descarta qualquer outra mudança — no texto de produto (blocos 0–12, glossário e bloco 15) ela aparece ao PO como `[ABERTO — dono: PO]` no cartão do parecer de design, e no bloco 13 como 🟡 «D9 alterou fora do bloco 14». **O bloco 0 só muda por `[RS-AMB]` aceita** (ambiente novo ou existente), e mesmo assim é o PO quem a grava em produto.
 
-**Intocado é cópia sem acréscimo.** Nos blocos 0–12 e no glossário você não completa nada: nome de componente do DS, linha nova de transição ou de erro, regra de primeiro uso, de agrupamento ou de feedback vão no **bloco 14**, nunca na linha do Gate 0 que você está copiando. Acréscimo ali conta como mudança do Gate 0 — com ESTEIRA_ESTRITA, bloqueia o de acordo de design até o PO decidir. Na exp01em1b-76d9af6e (23/10/2026) o D9 acrescentou uma «Demonstração de primeiro uso», uma transição `ERRO_MIDIA_FALHOU` e reescreveu a linha de estudantes por dispositivo; na exp06ef1b-53e011b6 acrescentou `StoryPoll`, `ListItem / PostCard` e `PuzzleBlock` às linhas «Componente» do Gate 0.
+**Intocado é cópia sem acréscimo.** Nos blocos 0–12, no glossário e no bloco 15 você não completa nada: nome de componente do DS, linha nova de transição ou de erro, regra de primeiro uso, de agrupamento ou de feedback vão no **bloco 14**, nunca na linha da spec de produto que você está copiando. Acréscimo ali conta como mudança de produto — com ESTEIRA_ESTRITA, bloqueia o de acordo de design até o PO decidir. Na exp01em1b-76d9af6e (23/10/2026) o D9 acrescentou uma «Demonstração de primeiro uso», uma transição `ERRO_MIDIA_FALHOU` e reescreveu a linha de estudantes por dispositivo; na exp06ef1b-53e011b6 acrescentou `StoryPoll`, `ListItem / PostCard` e `PuzzleBlock` às linhas «Componente» do Gate 0.
 
-O **bloco 14 completo também vai para `ambiente_simulado`**, como documento próprio: é ele que D1, D2, D4, D5, V1 e o QA recebem. A spec é o contrato; `ambiente_simulado` é o documento de trabalho. Os dois dizem a mesma coisa, e é você quem garante isso.
+O **bloco 14 completo também vai para `ambiente_simulado`**, como documento próprio: é ele que D1, D2, D4, D5, V1 e o QA recebem. A spec de produto mais o anexo de design são o contrato; `ambiente_simulado` é o documento de trabalho. Os dois dizem a mesma coisa, e é você quem garante isso.
 
 Downstream: D1 lê "o que não tem" para decidir o que sai de propósito; D2 usa os verbos literais; D4 usa o padrão de conteúdo; D5 importa a seção; V1 implementa a casca.
 
@@ -224,9 +228,9 @@ Ambiente novo também gera **dois artefatos para a plataforma**, fora da missão
 1. **Teste do verbo** — cada verbo do bloco 4 tem rótulo literal e componente do DS? Um sem → não é ambiente, é lacuna.
 2. **Teste da preferência** — se você criou ambiente novo, a Passada 1 mostra em qual critério **cada** um dos cinco falhou? Falha em critério (3) ou (4) sozinho não justifica criar.
 2b. **Teste da classe** — se você escolheu mini-jogo, as **quatro** condições da Passada 1b estão preenchidas e passaram? Uma só que falhe e a classe é app clonado. E se você escolheu app clonado numa missão de anos iniciais, a tabela da 1b está preenchida mostrando qual condição falhou?
-3. **Teste da presença** — você alterou algum bloco 1–13 da spec? Falha: remova.
+3. **Teste da presença** — você alterou alguma linha da spec de produto (blocos 0–12, glossário, bloco 15) ou do bloco 13? Falha: remova.
 4. **Teste do cap** — decisões, telas e dados coletados iguais aos de antes do bloco 14?
-4b. **Teste do bloco 13** — as decisões `[D0-n]` do fechamento de lacunas estão na sua spec consolidada, palavra por palavra? Falha: você regenerou a spec do original e apagou o D0.
+4b. **Teste do bloco 13** — as decisões `[D0-n]` do anexo de design estão na sua saída, palavra por palavra? Falha: você apagou o D0.
 5. **Teste do DS** — algum token, cor ou fonte fora do DS? Algum componente local que uma composição de existentes resolvia?
 6. **Teste do reconhecimento** *(só app clonado)* — um estudante da faixa olha o chrome e diz que app é? Se a resposta é "um app qualquer", o ambiente não está pronto.
 7. **Teste da língua** — nome do ambiente e tudo que uma pessoa lê em PT-BR; identificadores de contrato intocados.
@@ -279,7 +283,7 @@ Ambiente novo também gera **dois artefatos para a plataforma**, fora da missão
 ## Passada 2 — Definição do app clonado novo (se houve) + seção do DS
 ## Passada 2b — Ficha do mini-jogo (se houve) + seção `minijogo-<nome>` sobre a identidade Unooria
 ## Passo 3 — [RS-AMB] e resposta do Gate 0 — pule se dormente
-## Passo 4 — Spec consolidada (blocos 0–13 do D0 intocados + bloco 14) · propostas para `ambientes.md` e DS
+## Passo 4 — Spec consolidada (spec de produto e bloco 13 intocados + bloco 14) · propostas para `ambientes.md` e DS
 ## Bloco 14 — Ficha do ambiente (sempre, inclusive dormente — é o que D1, D2, D4, D5, V1 e o QA consomem)
 App clonado: nome · seção do DS · dispositivo nativo · chrome · **tabela verbo do bloco 4 → rótulo literal na tela → componente do DS** · padrão de conteúdo e schema mínimo · estados que a seção já traz · **o que a plataforma real NÃO tem** (linha proposta para a tabela de ausências de `ambientes.md`).
 Mini-jogo: a ficha completa da Passada 2b, mais **o pedido à jornada** — intervalo de fases que a mecânica do bloco 2 comporta, e a exigência de uma habilidade do bloco 11 por fase.

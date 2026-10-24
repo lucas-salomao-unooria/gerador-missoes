@@ -14,16 +14,17 @@ saiu com a Hipótese 1 a 25% no corpo e a 30% no anexo, e o da exp06ef1b sem o t
 divergência é defeito** — um gate determinístico a confere (abaixo, «O PRD monta, não decide»). A ordem
 de precedência:
 
-1. **O one-pager aprovado pelo PO e a spec de produto** (blocos 0 a 12 de `produto/05-spec-missao.md`,
-   com as decisões que o PO gravou no de acordo, «valor — PO, parecer de <data>») decidem o que a
+1. **O one-pager aprovado pelo PO e a spec de produto** (`produto/05-spec-missao.md`: blocos 0 a 12 e o
+   bloco 15 de completude, com as decisões que o PO gravou no de acordo, «valor — PO, parecer de <data>») decidem o que a
    missão é, ensina e mede. Onde a spec detalha o one-pager, vale a spec; onde as duas divergem num
    número ou numa habilidade, é defeito a montante e **não se decide no PRD**: o corpo segue o
    one-pager, e a seção 19 registra `[ABERTO — dono: produto: <onde> diz X e <onde> diz Y]`, com os
    dois valores. É pendência do PO: o PRD não sai pronto até ele decidir.
-2. **O anexo de design** — as decisões D0 do bloco 13 e a ficha do ambiente do bloco 14, que até
-   segunda ordem moram no mesmo arquivo da spec — e os documentos de design e o handoff decidem como
-   a missão aparece e é construída. Decisão do D0 é do design: cite-a como
-   `produto/05-spec-missao.md › Bloco 13`, nunca como «contratual» nem como «decisão do PO».
+2. **O anexo de design** (`design/00-anexo-design-spec.md`: as decisões D0 de UI/UX do bloco 13 e a
+   ficha do ambiente do bloco 14 — numa missão anterior a 24/10/2026, os dois blocos estão dentro da
+   spec) e os documentos de design e o handoff decidem como a missão aparece e é construída. Decisão
+   do D0 é do design: cite-a como `design/00-anexo-design-spec.md › Bloco 13`, nunca como «contratual»
+   nem como «decisão do PO». Decisão `[CP-n]` do bloco 15 é de produto, e o PO a aprovou no de acordo.
 3. **Relatórios de gate** dizem o que já foi conferido. Recomendação que não está na spec foi
    recusada ou adiada pelo PO: **não a aplique**. A spec traz as recusadas na tabela «Ressalvas dos
    pareceres não incorporadas» do bloco 12; elas vão para a seção 19 como registro, nunca para o
@@ -71,7 +72,8 @@ codifica precisa para implementar, e um gate determinístico confere os quatro p
 - **Professor:** a story e o RF do professor citam o roteiro de perguntas do debate no momento em
   que o one-pager o coloca, remetendo ao anexo (§9) para o texto.
 - **Caminhos de artefato só os que existem:** `produto/00-one-pager.md`, `produto/00d-one-pager-resumido.md`,
-  `produto/05-spec-missao.md`, `design/01-briefing-oficio.md`, `design/02-jornada-telas.md`,
+  `produto/05-spec-missao.md`, `design/00-anexo-design-spec.md` (só quando o anexo veio preenchido acima),
+  `design/01-briefing-oficio.md`, `design/02-jornada-telas.md`,
   `design/03-fluxo-arestas.md`, `design/05-wireframes-cobertura.md`, `design/06-copy-strings-revisada.md`,
   `design/08-prototipo.html`, `design/09-diagramas.html`, `design/10-stitch-telas.md`, `dev/01-handoff-dev.md`,
   `dev/01b-brief-assets.md`, `dev/01e-banco-conteudo.md`, `one-pager-pedagogico.md` — e
@@ -125,7 +127,8 @@ determinístico (`prd-codavel`) lê o PRD como ele e devolve a você o que falta
 ## O PRD monta, não decide — o que o gate confere no corpo
 
 Um gate determinístico (`montagem`) lê o corpo do PRD, sem o anexo, contra o contrato — o one-pager,
-a spec de produto, as decisões D0 da lista branca do bloco 13 e as decisões do PO no de acordo — e
+a spec de produto, as decisões D0 da lista branca do bloco 13 (no anexo de design) e as decisões do PO
+no de acordo — e
 devolve a você cada divergência:
 
 1. **Número de regra com origem no contrato.** Todo número de regra — porcentagem, segundos,
@@ -164,6 +167,10 @@ PRD da exp01ef1b (07/10/2026) abriu com uma seção «Status dos gates» feita c
 **Spec da missão (contrato):**
 
 {spec_missao?}
+
+**Anexo de design da spec (decisões de UI/UX do D0 e ficha do ambiente do D9, em `design/00-anexo-design-spec.md` — junto com a spec de produto, é o contrato; vazio numa missão anterior a 24/10/2026, que traz as duas coisas dentro da spec):**
+
+{anexo_design_spec?}
 
 Os relatórios dos gates de produto (estrutural, avaliação pedagógica, experiência, adequação, gate
 final) não entram aqui desde 06/10/2026: o que eles pediram e o PO aceitou já está no one-pager e na

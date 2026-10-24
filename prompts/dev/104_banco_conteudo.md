@@ -8,6 +8,10 @@ O brief de assets **descreve** o que a missão exibe. Você **escreve**. Na miss
 
 {spec_missao?}
 
+**Anexo de design da spec (decisões de UI/UX do D0 e ficha do ambiente do D9, em `design/00-anexo-design-spec.md` — junto com a spec de produto, é o contrato; vazio numa missão anterior a 24/10/2026, que traz as duas coisas dentro da spec):**
+
+{anexo_design_spec?}
+
 **Conteúdo aprovado pelo PO — cópia literal do one-pager** (o núcleo — descoberta central, anatomia do aha e a conta da virada (§1), narrativa e personagem (§3), as 6 etapas com o texto que a tela mostra (§4) —, currículo, estados de falha, papel do professor, tempos e cenários de aula, podcast com o roteiro, contrato de evidência com o Canal B, cenários de dispositivo, verbos e affordances, caminhos degenerados, guardrails e IA, tetos da faixa, hipóteses). Até 07/10/2026 você não recebia o one-pager: o que a spec não trazia não existia para você, e na exp01ef1b se perderam as travas do professor, o podcast e a redação do debate. O roteiro do podcast que vai para a gravação é o daqui (§11), com as mesmas vozes e falas: copie-o inteiro, não escreva outro. Um gate confere.
 
 **A virada, os números e o que o estudante tem de poder descobrir** estão aqui: no §1 (a descoberta central, a anatomia do aha e a conta da virada) e no §4 (as 6 etapas). É a versão que o PO aprovou — até 07/10/2026 você lia o núcleo de antes da revisão do one-pager, e o número ou a habilidade que o gate estrutural tinha mudado chegava velho ao banco.

@@ -1,19 +1,19 @@
 ---
 name: celulas-consumidas
-description: Checklist de toda célula da spec que os agentes de design (D1–D9) e o handoff de dev vão procurar, e das seções do one-pager que o design recebe literais. Lido pelo fecha-lacunas na varredura (Passo 1). Célula ausente aqui é lacuna que a esteira vai redescobrir seis vezes.
+description: Checklist de toda célula da spec que os agentes de design (D1–D9) e o handoff de dev vão procurar, e das seções do one-pager que o design recebe literais. Lido na varredura pelo passo de completude da spec (produto, prompt 046 — as células de produto) e pelo D0-UX (design — o que a spec deixa de UI/UX). Célula ausente aqui é lacuna que a esteira vai redescobrir seis vezes.
 sources: [formato-spec, prompts/design/*, tools/conteudo_aprovado.py (SECOES_DESIGN), auditoria de 07/10/2026, test_celulas_consumidas.py]
 ---
 
 # Células consumidas pela esteira
 
-Uma linha por célula que algum agente **lê como contrato**. A varredura do D0 percorre esta lista contra a spec e marca cada linha ✅ presente · ⚠️ ausente · 🟡 ambígua. A coluna "Quem consome" diz quem devolveria a missão se a célula não existisse — é a mesma informação que o D0 usa na coluna "Bloqueia" dos pedidos de re-spec.
+Uma linha por célula que algum agente **lê como contrato**. A varredura percorre esta lista contra a spec e marca cada linha ✅ presente · ⚠️ ausente · 🟡 ambígua. Desde 24/10/2026 (PR 6 do plano «Produto dono do contrato») ela roda duas vezes: em produto, o passo de completude da spec fecha as células de produto (estado, handoff, evidência, dados e retenção, duração e tetos, painel docente, PQ e KPI, texto do professor, revezamento) no bloco 15 da spec, antes do de acordo; no design, o D0-UX só decide o que é de UI/UX (a tela de cada estado, gesto, scaffolding, acessibilidade de componente, dispositivo) no bloco 13 do anexo de design. A coluna "Quem consome" diz quem devolveria a missão se a célula não existisse — é a mesma informação que o D0 usa na coluna "Bloqueia" dos pedidos de re-spec.
 
 **Notação.** `bloco.campo`, com os blocos de `references/formato-spec.md`. Agentes de design: D0 fecha-lacunas · D9 ambiente simulado · D1 briefing de ofício · D2 jornada · D3 fluxo · D4 copy, passada 1 · D4b camada CAA · D5 telas · D6 copy revisada, passada 2 · D8 protótipo · D7 QA de entregáveis. Entre parênteses vai o detalhe — a seção, o teste ou, logo depois de D7, a **dimensão do QA**: `D7 (D8)` é a dimensão D8 do QA (ambiente simulado), não o protótipo. Fora do design: V1 é a implementação (handoff de dev e PRD); TEC-01 e as bancas são do gate de dev. **Lacuna do consumidor** marca o agente que deveria ler a célula e cujo prompt não diz como; a lista está no fim. O D0 roteia a lacuna a ele mesmo assim — o conserto é no prompt, não na spec.
 
 **O que entra na varredura.**
 - **Blocos 0–12 e o `## Glossário canônico`** — o texto do Gate 0, célula a célula.
 - **Conteúdo aprovado** — as seções do one-pager que a esteira copia literais para o design. Não são células: cada linha diz em que célula da spec a seção se espelha. Quando a célula-espelho falta, a seção é a base do preenchimento (`one-pager §N`).
-- **Blocos 13 e 14 não entram.** O 13 é a saída do próprio D0; o 14 é escrito pelo D9, que roda depois. Estão aqui para dizer de que célula cada campo herda a lacuna e quem os lê.
+- **Blocos 13, 14 e 15 não entram.** O 15 é a saída do passo de completude (spec de produto); o 13 é a saída do próprio D0 e o 14 é escrito pelo D9, que roda depois — os dois no anexo de design, fora da spec. O 13 e o 14 estão aqui para dizer de que célula cada campo herda a lacuna e quem os lê.
 
 ## Bloco 0 — Identificação de plataforma
 
@@ -182,6 +182,16 @@ O `A064ConteudoAprovadoDesign` copia estas seções, sem reescrita, para `conteu
 | §16 Requisitos técnicos e escopo — espelho: bloco 0 e escopo V1/V2 do bloco 12 | D5 (o que a V1 tem em tela), D7 (escopo V1 × V2 conferido no design) | O escopo V1/V2 que o PO aprovou não chegava ao design nem à banca |
 | §17 Hipóteses de validação — sem espelho na spec | D7 (cada hipótese com a tela ou o evento que a observa) | — |
 | §18 Decisões de direção, trade-offs e propostas — espelho: bloco 12 | D3, D5, D6 (o trade-off que o PO aceitou não se desfaz no design), D7 (as `[PROPOSTA]` seguem marcadas) | Os trade-offs aprovados e as propostas pendentes só chegavam pela spec |
+
+## Bloco 15 — Completude de produto
+
+Fora da varredura: é a saída do passo de completude da spec, em produto (desde 24/10/2026). Fica na spec de produto, e o PO o aprova no de acordo com o resto.
+
+| Célula | Quem consome | Sem ela |
+|---|---|---|
+| 15.decisões `[CP-n]` — célula de produto preenchida, decisão, base declarada | D0 (o que o bloco respondeu não se decide de novo), D9 (copia intocado), D1, D2, D3, D4, D5, D7 (leem a célula preenchida como contrato), V1, rastro de lacunas (o mapa célula → decisão só fecha com o `[CP-n]` aqui), gate de `[CP-n]` órfão | O design volta a decidir produto; a pendência fechada volta a barrar |
+| 15.padrões da plataforma aplicados | D0 (não reaplica), D7, V1 | O mesmo padrão aplicado duas vezes, com textos diferentes |
+| 15.perguntas ao PO — `[PARÂMETRO]`, `[PROPOSTA]`, `[ABERTO — dono: PO]` com a sugestão | D0 (usa a sugestão como pendente, nunca a fecha), D7, V1 | O design decide no lugar do PO |
 
 ## Bloco 13 — Decisões D0
 

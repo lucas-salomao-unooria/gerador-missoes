@@ -41,6 +41,7 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "gate_final_status", "rotulo": "Gate final de produto", "etapa": "produto", "rodada": None},
     {"status": "bncc_status", "rotulo": "Conformidade BNCC", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "fidelidade_status", "rotulo": "Fidelidade ao pedido do PO e ao briefing", "etapa": "produto", "rodada": None},
+    {"status": "completude_status", "rotulo": "Completude da spec (produto)", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "lacunas_status", "rotulo": "Fechamento de lacunas (D0)", "etapa": "design", "rodada": None},
     {"status": "ambiente_status", "rotulo": "Ambiente simulado (D9)", "etapa": "design", "rodada": None},
     {"status": "conteudo_aprovado_spec_design_status", "rotulo": "Spec consolidada × one-pager aprovado", "etapa": "design", "rodada": "qa_design_rodada"},

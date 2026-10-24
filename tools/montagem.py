@@ -26,8 +26,8 @@ c) **estados da §6 iguais aos do contrato.** Todo estado do «Contrato de estad
    design nomeia não é invenção (D7: estado do fluxo é detalhe de design).
 d) **decisão de design não vira origem de produto.** Número com origem citada em produto («(§17 do one-pager)»,
    «(spec, bloco 9f)») tem de estar lá; `[D0-n]` citado como «contratual», «do PO» ou com origem no one-pager é
-   decisão do design vestida de produto. Até o PR 6, `produto/05-spec-missao.md › Bloco 13` (e o 14, que mora no mesmo
-   arquivo) é citação legítima.
+   decisão do design vestida de produto. Citar o bloco 13 ou o 14 é legítimo: desde o PR 6 eles moram no anexo de design
+   (`design/00-anexo-design-spec.md`), e na missão desenhada antes dele, em `produto/05-spec-missao.md`.
 
 Divergência que o próprio contrato tem — na origem certa: a linha correspondente da spec, ou a linha do 9f que cita a
 hipótese, com outro número que o §15 ou o §17; o que vem marcado `[PROPOSTA]`/`[PARÂMETRO]` não conta — não se
@@ -82,12 +82,18 @@ def bloco_13_da_lista_branca(state: Dict[str, Any]) -> Tuple[str, List[str]]:
     from tools import decisoes as dec
     from tools.propagacao import _pareceres_texto, decisoes_d0
 
-    linhas = _linhas_do_bloco_13(str(state.get("spec_missao") or ""))
+    from tools.anexo_design import KEY_ANEXO, spec_consolidada
+
+    # o bloco 13 mora no anexo de design desde o PR 6; na sessão anterior, dentro da `spec_missao`
+    linhas = _linhas_do_bloco_13(spec_consolidada(state))
     if not linhas:
         return "", []
+    # a missão desenhada antes do PR 6 é lida com a lista do D0 de então: o PRD dela cita decisões de duração e de dados
+    # que eram do design, e reler com a régua do D0-UX mudaria o veredito do que já foi aprovado
+    legado = not str(state.get(KEY_ANEXO) or "").strip()
     de_produto: Set[str] = set()
     for d in decisoes_d0(state):
-        if d["classe"] not in ("", "?") and dec.classe_de_produto(d["classe"]):
+        if d["classe"] not in ("", "?") and dec.classe_de_produto(d["classe"], legado=legado):
             de_produto.add(d["id"])
     sem_parecer, _ = dec.decisoes_d0_de_produto(
         str(state.get("fechamento_lacunas") or ""), state.get("lacunas_status_envelope") or {},
@@ -115,8 +121,9 @@ def _texto_das_decisoes_do_po(decisoes_do_po: Optional[Sequence[Dict[str, Any]]]
 
 
 def contrato(state: Dict[str, Any]) -> Dict[str, str]:
-    """Os textos do contrato, por fonte: `spec_produto` é a `spec_missao` sem os blocos 13 e 14; `bloco_13` só as
-    decisões da lista branca; `decisoes_do_po` o que o PO fixou no de acordo."""
+    """Os textos do contrato, por fonte: `spec_produto` é a `spec_missao` sem os blocos 13 e 14 (desde o PR 6 ela não os
+    tem: o bloco 15, de completude, é de produto e conta); `bloco_13` só as decisões da lista branca, lidas do anexo de
+    design; `decisoes_do_po` o que o PO fixou no de acordo."""
     docs = {k: str(state.get(k) or "") for k in FONTES_DO_CONTRATO}
     docs["spec_produto"] = spec_de_produto(str(state.get("spec_missao") or ""))
     docs["bloco_13"], _ = bloco_13_da_lista_branca(state)
@@ -605,12 +612,14 @@ def identificadores_do_design(design: str) -> Set[str]:
 #: Origem de produto citada entre parênteses ao lado do número: «(§17 do one-pager)», «(spec, bloco 9f)».
 _RE_ORIGEM_CITADA = re.compile(r"\(([^()\n]{0,80}?(?:one[- ]?pager|spec|bloco|§)[^()\n]{0,60})\)", re.I)
 _RE_D0_CITADO = re.compile(r"\bD0-0*(\d+)\b")
-#: Atribuição de produto ao lado de um [D0-n]: o D0 é decisão do design (até o PR 6, do bloco 13 da spec).
+#: Atribuição de produto ao lado de um [D0-n]: o D0 é decisão do design (do anexo de design; até o PR 6, do bloco 13
+#: dentro da spec).
 _RE_ATRIBUI_PRODUTO = re.compile(
     r"contratua(?:l|is)|decis[ãa]o\s+(?:do|de)\s+(?:PO|produto)|(?:aprovad|ratificad|homologad|decidid)[oa]s?\s+pel[oa]\s+PO|"
     r"produto/00|one[- ]?pager|n[úu]cleo", re.I)
-#: Até o PR 6 o bloco 13 (e o 14, no mesmo arquivo) mora em `produto/05-spec-missao.md`: citá-lo é legítimo.
-_RE_BLOCO_DO_DESIGN = re.compile(r"bloco\s*1[34]\b|›\s*bloco\s*1[34]", re.I)
+#: O bloco 13 e o 14 são do design — no anexo (`design/00-anexo-design-spec.md`) desde o PR 6, e em
+#: `produto/05-spec-missao.md` na missão anterior: citá-los é legítimo.
+_RE_BLOCO_DO_DESIGN = re.compile(r"bloco\s*1[34]\b|›\s*bloco\s*1[34]|anexo\s+de\s+design|00-anexo-design-spec", re.I)
 
 
 def _fonte_citada(origem: str, docs: Dict[str, str]) -> Optional[Tuple[str, str]]:

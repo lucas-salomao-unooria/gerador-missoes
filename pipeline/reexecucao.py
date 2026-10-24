@@ -96,6 +96,8 @@ CHAVES_DESIGN = frozenset({
     "conteudo_aprovado",
     "fechamento_lacunas", "relatorio_lacunas", "lacunas_status", "lacunas_status_envelope",
     "ambiente_simulado", "ambiente_status", "ambiente_status_envelope", "base_preservada_spec_missao",
+    # o anexo de design (PR 6): os blocos 13 e 14 que o D0 e o D9 montam, fora da spec de produto
+    "anexo_design_spec", "base_preservada_anexo_design_spec",
     "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
     "wireframes_cobertura", "copy_strings_revisada", "prototipo_html", "prototipo_arquivo",
     "prototipo_relatorio", "diagramas_html", "stitch_links", "miro_links",
@@ -121,6 +123,9 @@ CHAVES_DESIGN = frozenset({
 #: (`agents/checkers.py`, SecaoSplitAgent) — senão a spec velha seria preservada como "original".
 CHAVES_SPEC = frozenset({
     "spec_missao", "spec_missao_gate0", "spec_rodada",
+    # o passo de completude da spec (PR 6): o bloco 15 e o relatório
+    "completude_spec", "relatorio_completude", "completude_status", "completude_status_envelope",
+    "completude_report", "completude_rodada", "completude_chamou_o_modelo",
     "bncc_report", "bncc_status", "bncc_status_envelope",
     "one_pager_resumido",
     # gates da spec criados em 22–23/09/2026. `juiz_perguntas_rodada` é o que doía: sem apagar,
@@ -214,8 +219,8 @@ KEY_EDICOES_A_MONTANTE = "edicoes_a_montante"
 #: como estava: apagado o documento, ele escrevia do zero, e a ideação sorteava outro mecanismo.
 #: Acrescentar uma pergunta de evidência à spec devolvia outra missão inteira.
 CHAVES_AUTORAIS = frozenset({
-    "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao", "one_pager_resumido",
-    "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
+    "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao", "completude_spec",
+    "one_pager_resumido", "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
     "camada_caa", "wireframes_cobertura", "copy_strings_revisada", "prototipo_html",
     "handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico",
 })
@@ -500,7 +505,8 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
             limpo.pop(anterior, None)
             limpo.pop(PREFIXO_VERSAO_ANTERIOR + chave, None)
             continue
-        # a spec que o autor escreveu é a do Gate 0; `spec_missao` pode já trazer a consolidação do D0
+        # a spec que o autor escreveu é a do Gate 0; `spec_missao` pode já trazer a consolidação do D0 (sessão anterior
+        # ao PR 6 — na nova, a `spec_missao` é a de produto e não há cópia do Gate 0)
         atual = estado.get("spec_missao_gate0") if chave == "spec_missao" else None
         atual = str(atual or estado.get(chave) or "").strip()
         if chave in ("prd_final", "one_pager_pedagogico"):
@@ -541,9 +547,17 @@ def preparar_estado(
     removidas = sorted(k for k in estado if k in remover)
     limpo = {k: v for k, v in estado.items() if k not in remover and not str(k).startswith("temp:")}
     _guardar_versoes_anteriores(estado, limpo, remover)
-    if etapa == "design" and limpo.get("spec_missao_gate0"):
-        # o D0 consolida a spec por cima de `spec_missao`; para refazer o design, volta à do Gate 0
-        limpo["spec_missao"] = limpo["spec_missao_gate0"]
+    if etapa == "design":
+        # Desde o PR 6 o refazer de design não toca a spec: o D0 e o D9 gravam no anexo de design (`anexo_design_spec`,
+        # que cai com o design), e a `spec_missao` é a aprovada em produto — aqui é no-op. Até o PR 6 a spec voltava à do
+        # Gate 0 em todo refazer de design, e o bloco 13 se perdia (60cfa7f4 e 4fd72a9a). Só a sessão anterior, que
+        # traz os blocos 13 e 14 dentro da `spec_missao`, volta uma vez à spec de produto, e o design refeito monta o
+        # anexo (exp02ef1b, exp02em1b, exp01em1b e exp03em1b, refeitas depois do PR 6).
+        from tools.anexo_design import spec_de_produto_legada
+
+        legada = spec_de_produto_legada(limpo)
+        if legada is not None:
+            limpo["spec_missao"] = legada
     if etapa == "transversal":
         # só diagnóstico e aprendizado: a herança descreve a execução que está sendo diagnosticada
         pass

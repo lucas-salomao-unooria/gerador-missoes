@@ -126,7 +126,8 @@ O que é capturado, quando, finalidade, retenção, acesso; o que NÃO é coleta
 Se o núcleo não trouxe o contrato do foco primário, sinalize `[INCONSISTÊNCIA DETECTADA — o P0a precisa declarar o canal de evidência do foco primário (Regra 17)]`.
 
 ## 13. Cenários de dispositivo
-1:1 · 2–4 por dispositivo · projeção única — o que muda e se a descoberta chega.
+1:1 · 2–4 por dispositivo · projeção única — o que muda e se a descoberta chega. No aparelho compartilhado, cite o
+padrão da plataforma (`references/padrao-plataforma-revezamento.md`): a missão não prescreve papéis nem rodízio.
 
 ## 14. Guardrails e IA
 IA na preparação docente, privacidade, sem rotulação do estudante, tom sem julgamento, affordance × guardrail.

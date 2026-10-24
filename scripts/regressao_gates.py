@@ -56,6 +56,7 @@ from tools import (
     afirmacoes, telas, prototipo, mecanica, rastreabilidade, componentes_ds, montagem
 )
 from pipeline.artifacts import caminhos_de_artefato
+from tools.anexo_design import spec_consolidada
 
 
 def _extrair_status_e_codigos(res: Any) -> Dict[str, Any]:
@@ -75,6 +76,8 @@ def _extrair_status_e_codigos(res: Any) -> Dict[str, Any]:
 def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     """Calcula todos os gates determinísticos aplicáveis a um estado.json."""
     spec = str(state.get("spec_missao", "") or "")
+    # design e dev leem a spec de produto mais o anexo de design (PR 6); a sessão anterior traz os blocos dentro da spec
+    spec_c = spec_consolidada(state)
     prd = str(state.get("prd_final", "") or "")
     handoff = str(state.get("handoff_dev", "") or "")
     one_pager = str(state.get("one_pager", "") or "")
@@ -128,7 +131,7 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         )
     if one_pager_ped:
         gates["conteudo_aprovado_pedagogico_status"] = _extrair_status_e_codigos(
-            conteudo_aprovado.validar_pedagogico(one_pager_ped, spec, one_pager, caminhos_de_artefato())
+            conteudo_aprovado.validar_pedagogico(one_pager_ped, spec_c, one_pager, caminhos_de_artefato())
         )
 
     # === DESIGN ===
@@ -147,7 +150,7 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
 
         decs = sorted(set(re.findall(r"\bE\d-(?:ALU|PROF|SIS)-\d{2}\b", jornada)))
         r_pl = prototipo.validar(proto_arq, decs)
-        r_pl["achados"] += componentes_ds.validar(str(state.get("wireframes_cobertura", "") or ""), spec)
+        r_pl["achados"] += componentes_ds.validar(str(state.get("wireframes_cobertura", "") or ""), spec_c)
         if any(a.get("severidade") == "bloqueio" for a in r_pl.get("achados", [])):
             r_pl["status"] = "bloqueado"
         elif r_pl.get("achados") and r_pl.get("status") == "aprovado":
@@ -168,12 +171,12 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
             # handoff e PRD montam, não decidem (plano «Produto dono do contrato», PR 4)
             gates["montagem_handoff_status"] = _extrair_status_e_codigos(montagem.validar_handoff(state))
         if banco:
-            r_cnt = conteudo.validar(brief_assets, banco, spec)
+            r_cnt = conteudo.validar(brief_assets, banco, spec_c)
             r_cnt["achados"] += consistencia.validar(
-                spec, {"banco de conteúdo": banco}, exigir_glossario=False, etapa="dev", aprovado=one_pager
+                spec_c, {"banco de conteúdo": banco}, exigir_glossario=False, etapa="dev", aprovado=one_pager
             )["achados"]
             r_cnt["achados"] += conteudo_aprovado.validar_banco(banco, one_pager)
-            r_cnt["achados"] += [{**a, "etapa": "dev"} for a in prd_codavel.validar_intencoes(banco, spec)]
+            r_cnt["achados"] += [{**a, "etapa": "dev"} for a in prd_codavel.validar_intencoes(banco, spec_c)]
             if any(a.get("severidade") == "bloqueio" for a in r_cnt.get("achados", [])):
                 r_cnt["status"] = "bloqueado"
             elif r_cnt.get("achados") and r_cnt.get("status") == "aprovado":
@@ -182,18 +185,18 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
 
         if prd:
             r_lac = rastro.varrer_lacunas(rastro.FONTES_DEV, state)
-            r_c_prd = rastro.validar_prd(prd, spec=spec, banco=banco, aprovado=one_pager)
-            r_cdz = cobertura_design.validar(prd, {**state, "spec_missao": spec})
-            r_cod = prd_codavel.validar(prd, spec, banco, handoff=handoff)
+            r_c_prd = rastro.validar_prd(prd, spec=spec_c, banco=banco, aprovado=one_pager)
+            r_cdz = cobertura_design.validar(prd, {**state, "spec_missao": spec_c})
+            r_cod = prd_codavel.validar(prd, spec_c, banco, handoff=handoff)
             ordem = ("bloqueado", "amarelo", "aprovado")
             r_prd_tot = {
                 "status": min((r_lac["status"], r_cdz["status"], r_c_prd["status"], r_cod["status"]), key=ordem.index),
                 "achados": list(r_lac["achados"]) + list(r_cdz["achados"]) + list(r_c_prd["achados"]) + list(r_cod["achados"]),
             }
             gates["prd_status"] = _extrair_status_e_codigos(r_prd_tot)
-            gates["kpis_status"] = _extrair_status_e_codigos(kpis.validar_kpis(prd, spec, one_pager=one_pager))
+            gates["kpis_status"] = _extrair_status_e_codigos(kpis.validar_kpis(prd, spec_c, one_pager=one_pager))
             gates["conteudo_aprovado_prd_status"] = _extrair_status_e_codigos(
-                conteudo_aprovado.validar_prd(prd, spec, one_pager, caminhos_de_artefato())
+                conteudo_aprovado.validar_prd(prd, spec_c, one_pager, caminhos_de_artefato())
             )
             gates["montagem_prd_status"] = _extrair_status_e_codigos(montagem.validar_prd(state))
 

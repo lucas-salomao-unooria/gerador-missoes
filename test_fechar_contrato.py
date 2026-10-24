@@ -353,10 +353,10 @@ def test_mudanca_do_design_no_gate0_aceita_na_devolucao_entra_no_texto():
     d = fc.decidir(itens, {itens[0].id: {"resposta": fc.ACEITAR}}, "24/10/2026 09:00:00", "produto")
     novos, falhas = fc.aplicar_edicoes(st, d.edicoes)
     assert not falhas
-    for chave in ("spec_missao_gate0", "spec_missao"):
-        assert "Linha três da identificação" in novos[chave] and "Linha 3 da identificação" not in novos[chave]
-    assert "## 13. Decisões D0" in novos["spec_missao"]
-    de_novo = t._rodar({"spec_missao": novos["spec_missao_gate0"],
+    assert "Linha três da identificação" in novos["spec_missao"] and "Linha 3 da identificação" not in novos["spec_missao"]
+    # PR 6: o bloco 13 mora no anexo de design, e a spec de produto é a única cópia do texto a trocar
+    assert "## 13. Decisões D0" not in novos["spec_missao"] and "## 13. Decisões D0" in st["anexo_design_spec"]
+    de_novo = t._rodar({"spec_missao": novos["spec_missao"],
                         "fechamento_lacunas": t._saida_d0(trocada + "\n" + t.BLOCO13)}, t._splits(True)[0])
     assert "alterou-fora-do-proprio-bloco" not in t._achados(de_novo) and de_novo["lacunas_status"] == "aprovado"
 

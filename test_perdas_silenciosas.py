@@ -10,6 +10,10 @@ silenciosas do D0, sem mudar papéis.
   datado é decisão de produto, inclusive em duração, dados e acessibilidade;
 - [D0-n] citado a jusante precisa existir no bloco 13 da spec apontada.
 
+Desde o PR 6 (24/10/2026) o bloco 13 e o 14 moram no anexo de design (`anexo_design_spec`), a spec de produto não muda
+no design, e o D0 é só UI/UX: as classes estado, handoff, dados, duração e texto do professor passaram ao passo de
+completude da spec, em produto. Os testes abaixo conferem as mesmas perdas na arquitetura nova.
+
 Tudo determinístico, sem modelo: as respostas do D0 e do D9 são as gravadas nas sessões do acervo (`tests/acervo`).
 """
 from __future__ import annotations
@@ -32,6 +36,7 @@ from typing_extensions import override
 from agents.design import get_ambiente_simulado_split, get_fecha_lacunas_split
 from tools import propagacao as pg
 from tools import rastro
+from tools.anexo_design import blocos_do_anexo, montar_anexo, spec_consolidada
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -88,54 +93,61 @@ GATE0 = ("# Spec — exp99 v1\n\n**2EF · unoogaleria**\n\n## 0. Identificação
            "string de interface, sugestão: 15]`.\n- `[ABERTO — dono: produto: Ratificação do teto de texto]`\n"
          + "\n## 12. Decisões fechadas neste gate\n- Debate: «O que a foto mostra?»\n\n## Glossário canônico\n"
            "| Ação | Rótulo |\n|---|---|\n| Confirmar | `Publicar no Álbum` |\n")
-BLOCO13 = ("## 13. Decisões D0\n\n### [D0-1] 2.estado_espera — Tela de espera\n- **Decisão:** a tela congela enquanto "
-           "a professora fala.\n- **Base:** padrão `espera-de-professora`.\n")
+BLOCO13 = ("## 13. Decisões D0\n\n### [D0-1] 4.gesto_arrastar — Demonstração do arrastar\n- **Decisão:** o primeiro "
+           "arrastar mostra a demonstração animada.\n- **Base:** padrão `gesto-com-demonstracao`.\n")
 BLOCO14 = "## 14. Ambiente simulado (D9)\n- **Nome do ambiente:** Unoogaleria\n- **Ponte:** `@edu/ui/ds-unoogaleria`\n"
 
 
 def _saida_d0(passo5: str, tabela: str = "", envelope: Dict[str, Any] | None = None) -> str:
     env = envelope or {"agente": "fecha-lacunas", "status": "segue", "decisoes": [
-        {"id": "D0-1", "campo": "2.estado_espera", "classe": "estado", "cor": "verde", "base": "padrao"}]}
+        {"id": "D0-1", "campo": "4.gesto_arrastar", "classe": "gesto", "cor": "verde", "base": "padrao"}]}
     return ("# Fechamento de lacunas — exp99\n\n## Passo 2 — Lacunas classificadas e roteadas\n\n" + tabela
-            + "\n## Passo 3 — Decisões [D0-n]\n\n### [D0-1] 2.estado_espera\nDecisão: a tela congela.\nBase: padrão.\n\n"
+            + "\n## Passo 3 — Decisões [D0-n]\n\n### [D0-1] 4.gesto_arrastar\nDecisão: demonstração no primeiro uso.\n"
+            "Base: padrão.\n\n"
             + "## Passo 5 — Bloco 13\n\n" + passo5 + "\n## Passo 5b — Relatório de preenchimento\n\n"
-            + "### [D0-1] Tela de espera\n**O que faltava:** o que a criança vê enquanto a professora fala.\n\n"
+            + "### [D0-1] Demonstração do arrastar\n**O que faltava:** como a criança descobre que pode arrastar.\n\n"
             + "## Passo 6 — Devolutiva ao produto\n\nNada.\n\n```json\n" + json.dumps(env, ensure_ascii=False) + "\n```\n")
 
 
-def test_d0_que_emite_so_o_bloco_13_ganha_a_spec_do_gate0_montada_em_codigo():
+def test_d0_que_emite_so_o_bloco_13_grava_o_anexo_e_a_spec_de_produto_nao_muda():
+    """PR 6: o bloco 13 vai para o anexo de design, montado em código; a `spec_missao` fica a aprovada em produto, sem cópia
+    do Gate 0 (não há o que restaurar), e quem lê a missão inteira lê as duas."""
     st = _rodar({"spec_missao": GATE0, "fechamento_lacunas": _saida_d0(BLOCO13)}, _splits()[0])
-    assert st["spec_missao"].startswith(GATE0.rstrip()) and "## 13. Decisões D0" in st["spec_missao"]
-    assert st["spec_missao_gate0"] == GATE0 and st["lacunas_status"] == "aprovado", _achados(st)
+    assert st["spec_missao"] == GATE0 and "spec_missao_gate0" not in st
+    anexo = st["anexo_design_spec"]
+    assert anexo.startswith("# Anexo de design da spec") and "## 13. Decisões D0" in anexo and "## 0." not in anexo
+    assert spec_consolidada(st).startswith(GATE0.rstrip()) and "## 13. Decisões D0" in spec_consolidada(st)
+    assert st["lacunas_status"] == "aprovado", _achados(st)
     assert st["relatorio_lacunas"].startswith("### [D0-1]")
 
 
 def test_retrabalho_do_d0_troca_o_bloco_13_no_lugar_e_mantem_o_14():
-    """No retrabalho só o D0 roda, e a spec já tem o bloco 14 do D9 (exp03ef1b, 23/10/2026): o 13 novo entra no lugar do
-    antigo, antes do 14."""
-    aceita = GATE0 + "\n" + BLOCO13 + "\n" + BLOCO14
-    novo13 = BLOCO13.replace("a tela congela", "a tela congela e mostra a professora")
-    st = _rodar({"spec_missao": aceita, "spec_missao_gate0": GATE0, "fechamento_lacunas": _saida_d0(novo13)},
-                _splits()[0])
-    spec = st["spec_missao"]
-    assert "mostra a professora" in spec and spec.count("## 13.") == 1 and spec.index("## 13.") < spec.index("## 14.")
-    assert "Unoogaleria" in spec and "linhas-perdidas" not in _achados(st)
+    """No retrabalho só o D0 roda, e o anexo já tem o bloco 14 do D9 (exp03ef1b, 23/10/2026): o 13 novo entra no lugar do
+    antigo, antes do 14, e a spec de produto não muda."""
+    novo13 = BLOCO13.replace("mostra a demonstração animada", "mostra a demonstração animada com o dedo")
+    st = _rodar({"spec_missao": GATE0, "anexo_design_spec": montar_anexo(BLOCO13 + "\n" + BLOCO14),
+                 "fechamento_lacunas": _saida_d0(novo13)}, _splits()[0])
+    anexo = st["anexo_design_spec"]
+    assert "com o dedo" in anexo and anexo.count("## 13.") == 1 and anexo.index("## 13.") < anexo.index("## 14.")
+    assert "Unoogaleria" in anexo and "linhas-perdidas" not in _achados(st) and st["spec_missao"] == GATE0
 
 
 def test_d0_no_formato_antigo_nao_muda_o_gate0_e_as_marcas_viram_o_mapa():
-    """O D0 que ainda reemitir a spec inteira com « — Resolvido em [D0-1]» na linha do [ABERTO]: o texto do Gate 0 fica
-    como estava, a marca vai para o mapa célula → D0 do bloco 13, e o rastro a reconhece."""
+    """O D0 que ainda reemitir a spec inteira com « — Resolvido em [D0-1]» na linha do [ABERTO]: o texto de produto fica
+    como estava, a marca vai para o mapa célula → D0 do bloco 13 (no anexo), e o rastro a reconhece."""
     marcada = GATE0.replace("Ratificação do teto de texto]`", "Ratificação do teto de texto]` — Resolvido em [D0-1]")
     st = _rodar({"spec_missao": GATE0, "fechamento_lacunas": _saida_d0(marcada + "\n" + BLOCO13)}, _splits()[0])
-    spec = st["spec_missao"]
-    assert "Resolvido em" not in spec and spec.startswith(GATE0.rstrip())
-    assert "### Mapa célula → D0" in pg.bloco_13(spec) and "alterou-fora-do-proprio-bloco" not in _achados(st)
-    assert rastro.mapa_celula_d0(spec) == {"[aberto - dono: produto: ratificação do teto de texto]": 1}
-    r = rastro.varrer_lacunas(rastro.FONTES_SPEC, {"spec_missao": spec}, etapa_corrente="design")
+    spec, anexo = st["spec_missao"], st["anexo_design_spec"]
+    assert spec == GATE0 and "Resolvido em" not in anexo
+    assert "### Mapa célula → D0" in pg.bloco_13(anexo) and "alterou-fora-do-proprio-bloco" not in _achados(st)
+    assert rastro.mapa_celula_d0(anexo) == {"[aberto - dono: produto: ratificação do teto de texto]": 1}
+    r = rastro.varrer_lacunas(rastro.FONTES_DESIGN, {"spec_missao": spec, "anexo_design_spec": anexo},
+                              etapa_corrente="design")
     assert [x["d0"] for x in r["resolvidos"]] == ["D0-1"], r["achados"]
     # o mapa que aponta para um D0 que o bloco 13 não define não fecha nada
-    sem_d0 = spec.replace("### [D0-1] 2.estado_espera — Tela de espera", "### Decisão removida")
-    r = rastro.varrer_lacunas(rastro.FONTES_SPEC, {"spec_missao": sem_d0}, etapa_corrente="design")
+    sem_d0 = anexo.replace("### [D0-1] 4.gesto_arrastar — Demonstração do arrastar", "### Decisão removida")
+    r = rastro.varrer_lacunas(rastro.FONTES_DESIGN, {"spec_missao": spec, "anexo_design_spec": sem_d0},
+                              etapa_corrente="design")
     assert not r["resolvidos"] and any("Ratificação do teto" in a["trecho"] for a in r["achados"])
 
 
@@ -147,7 +159,7 @@ def test_mudanca_no_texto_do_gate0_vira_aberto_dono_po(estrito, severidade, stat
     trocada = GATE0.replace("Linha 3 da identificação", "Linha três da identificação")
     st = _rodar({"spec_missao": GATE0, "fechamento_lacunas": _saida_d0(trocada + "\n" + BLOCO13)}, _splits(estrito)[0])
     aberto = _achados(st)["alterou-fora-do-proprio-bloco"]
-    assert "Linha 3 da identificação" in st["spec_missao"] and "Linha três" not in st["spec_missao"]
+    assert "Linha 3 da identificação" in st["spec_missao"] and "Linha três" not in st["spec_missao"] + st["anexo_design_spec"]
     assert aberto["resumo"].startswith("[ABERTO — dono: PO: D0 quis mudar o bloco 0") and aberto["aberto_dono_po"]
     assert aberto["severidade"] == severidade and st["lacunas_status"] == status
     assert st["lacunas_status_envelope"]["precisa_humano"]
@@ -158,34 +170,36 @@ def test_mudanca_no_texto_do_gate0_vira_aberto_dono_po(estrito, severidade, stat
 
 
 def test_d9_que_muda_o_gate0_tambem_vira_aberto_e_o_bloco_13_continua_aviso():
-    aceita = GATE0 + "\n" + BLOCO13
-    copia = aceita.replace("sugestão: 15]`", "sugestão: 15]` (15 palavras)").replace("a tela congela", "a tela trava")
+    copia = (GATE0 + "\n" + BLOCO13).replace("sugestão: 15]`", "sugestão: 15]` (15 palavras)").replace(
+        "mostra a demonstração", "esconde a demonstração")
     d9 = ("# Ambiente simulado\n\n## Passo 4 — Spec consolidada\n\n" + copia + "\n" + BLOCO14
           + "\n## Bloco 14 — Ficha do ambiente\nnome: Unoogaleria\n\n```json\n"
           + json.dumps({"agente": "ambiente-simulado", "status": "dormente"}) + "\n```\n")
-    st = _rodar({"spec_missao": aceita, "ambiente_simulado": d9}, _splits(False)[1])
+    st = _rodar({"spec_missao": GATE0, "anexo_design_spec": montar_anexo(BLOCO13), "ambiente_simulado": d9},
+                _splits(False)[1])
     achados = (st.get("ambiente_status_envelope") or {}).get("achados") or []
     assert {a["severidade"] for a in achados} == {"decisao_humana", "atencao"}, achados
     assert any(a.get("aberto_dono_po") and "D9 quis mudar o bloco 6" in a["resumo"] for a in achados)
-    assert "(15 palavras)" not in st["spec_missao"] and "a tela trava" not in st["spec_missao"]
-    assert "## 14. Ambiente simulado" in st["spec_missao"]
+    assert st["spec_missao"] == GATE0 and "esconde a demonstração" not in st["anexo_design_spec"]
+    assert "## 14. Ambiente simulado" in st["anexo_design_spec"] and "## 13. Decisões D0" in st["anexo_design_spec"]
 
 
 def test_mutante_apagar_bloco_13_na_resposta_do_d0():
     """Mutante «apagar bloco 13»: o D0 sem o bloco não troca a spec, e o achado volta a ele como ticket."""
     st = _rodar({"spec_missao": GATE0, "fechamento_lacunas": _saida_d0("Sem decisões nesta rodada.\n")}, _splits()[0])
-    assert st["spec_missao"] == GATE0 and st["lacunas_status"] == "bloqueado"
+    assert st["spec_missao"] == GATE0 and not st.get("anexo_design_spec") and st["lacunas_status"] == "bloqueado"
     assert _achados(st)["bloco-proprio-ausente"]["agente_responsavel"] == "fecha-lacunas"
 
 
-def test_mutante_apagar_bloco_13_da_spec_deixa_as_citacoes_orfas():
-    """Mutante «apagar bloco 13» na spec: quem cita [D0-n] a jusante cita o que a spec não tem — bloqueio do design no
-    documento de design, do PRD no PRD; no dev, o órfão de um documento de design fica 🟡 (herança)."""
+def test_mutante_apagar_bloco_13_do_anexo_deixa_as_citacoes_orfas():
+    """Mutante «apagar bloco 13» no anexo de design: quem cita [D0-n] a jusante cita o que o anexo não tem — bloqueio do
+    design no documento de design, do PRD no PRD; no dev, o órfão de um documento de design fica 🟡 (herança)."""
     state = _remontar(_estado("exp06ef1b-53e011b6"))
-    estado = {**_estado("exp06ef1b-53e011b6"), "spec_missao": state["spec_missao"]}
+    estado = {**_estado("exp06ef1b-53e011b6"), "spec_missao": state["spec_missao"],
+              "anexo_design_spec": state["anexo_design_spec"]}
     assert not rastro.d0_orfaos(rastro.FONTES_DEV + [{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], estado)
     mutante = copy.deepcopy(estado)
-    mutante["spec_missao"] = mutante["spec_missao"].replace(pg.bloco_13(mutante["spec_missao"]), "")
+    mutante["anexo_design_spec"] = mutante["anexo_design_spec"].replace(pg.bloco_13(mutante["anexo_design_spec"]), "")
     mutante["jornada_telas"] += "\n- A tela de espera segue o [D0-1].\n"
     mutante["prd_final"] = "## 1. Visão\nA retomada segue a Decisão contratual [D0-1].\n"
     design = rastro.varrer_lacunas(rastro.FONTES_DESIGN, mutante, etapa_corrente="design")
@@ -204,8 +218,13 @@ _TABELA = ("| ID | Célula (bloco.campo) | Classe | Cor | Fonte de preenchimento
 
 
 @pytest.mark.parametrize("classe, barra", [("mecanica_x", True), ("mecanica_param", True), ("parametro-tempo", True),
-                                           ("curriculo", True), ("inventada", True), ("estado", False),
-                                           ("`handoff` / `copy-fonte`", False)])
+                                           ("curriculo", True), ("inventada", True),
+                                           # PR 6: handoff, texto do professor, dados e duração são de produto; o
+                                           # estado fica no design como tela
+                                           ("estado", False), ("`handoff` / `copy-fonte`", True), ("duracao", True),
+                                           ("dados", True), ("`estado` / `evidencia`", True),
+                                           ("gesto", False), ("`acessibilidade` / `dispositivo`", False),
+                                           ("scaffolding", False)])
 def test_mutante_classe_mecanica_x_barrada_por_prefixo_e_lista_branca(classe, barra):
     """Mutante «classe mecanica_x»: a `mecanica_param` da exp02ef1b passou porque a comparação era por igualdade."""
     st = _rodar({"spec_missao": GATE0, "fechamento_lacunas": _saida_d0(BLOCO13, _TABELA.format(classe=classe))},
@@ -222,13 +241,16 @@ def test_classe_de_produto_so_no_envelope_tambem_e_barrada():
 
 def test_exp02ef1b_d0_que_fecha_parametro_e_proposta_e_produto_em_qualquer_classe():
     """4fd72a9a: o teto de 15 palavras (acessibilidade), a moldura de 10% (mecanica_param), os 45 s (duração) e as
-    PQ-01..05 (dados, «Tudo de acordo» genérico) fecharam marcador do Gate 0 sem parecer datado. D0-5 a D0-8, não."""
+    PQ-01..05 (dados, «Tudo de acordo» genérico) fecharam marcador do Gate 0 sem parecer datado. Desde o PR 6 o D0 é só
+    UI/UX, e o painel docente com interseção < 50% (D0-7) e a retenção por ano letivo (D0-8) — produto criado no design,
+    na classificação da análise de 23/10 — também voltam como de produto. D0-5 e D0-6, não."""
     st = _remontar(_estado("exp02ef1b-4fd72a9a"))
     resumo = _achados(st)["decisao-de-produto-pelo-agente"]["resumo"]
-    for d0 in ("[D0-1]", "[D0-2]", "[D0-3]", "[D0-4]"):
+    for d0 in ("[D0-1]", "[D0-2]", "[D0-3]", "[D0-4]", "[D0-7]", "[D0-8]"):
         assert d0 in resumo, d0
-    for d0 in ("[D0-5]", "[D0-6]", "[D0-7]", "[D0-8]"):
+    for d0 in ("[D0-5]", "[D0-6]"):
         assert d0 not in resumo, d0
+    assert "tópico de produto: painel docente" in resumo and "tópico de produto: dados e retenção" in resumo
     assert "classe `acessibilidade`" in resumo and "classe `duracao`" in resumo and "classe `dados`" in resumo
 
 
@@ -257,27 +279,31 @@ def test_parecer_datado_libera_e_tudo_de_acordo_nao():
 @pytest.mark.parametrize("missao", ("exp02em1b-60cfa7f4", "exp02ef1b-4fd72a9a"))
 def test_bloco_13_nao_se_perde_mais_nas_sessoes_que_o_perderam(missao):
     """Reprodução sem modelo: a resposta gravada do D0 e a do D9, montadas pelo código sobre a spec do Gate 0 da sessão.
-    Antes o split acusava linhas-perdidas e o D9 montava por cima do Gate 0 — sem o bloco 13."""
+    Antes o split acusava linhas-perdidas e o D9 montava por cima do Gate 0 — sem o bloco 13. Desde o PR 6 os dois blocos
+    vão para o anexo de design, e a spec de produto não muda."""
     state = _estado(missao)
     assert not pg.d0_a_jusante(state)["bloco_13"] and pg.d0_a_jusante(state)["orfas"]
     st = _remontar(state, estrito=True)
-    spec = st["spec_missao"]
-    assert spec.startswith(state["spec_missao_gate0"].rstrip()), "o texto do Gate 0 mudou"
-    assert "## 14." in spec and spec.index("## 13.") < spec.index("## 14.")
+    assert st["spec_missao"] == state["spec_missao_gate0"], "a spec de produto mudou no design"
+    anexo = st["anexo_design_spec"]
+    assert "## 14." in anexo and anexo.index("## 13.") < anexo.index("## 14.")
     assert "linhas-perdidas" not in _achados(st) and "linhas-perdidas" not in _achados(st, "ambiente_status_envelope")
-    depois = pg.d0_a_jusante({**state, "spec_missao": spec})
+    depois = pg.d0_a_jusante({**state, "spec_missao": st["spec_missao"], "anexo_design_spec": anexo})
     assert depois["bloco_13"] and depois["orfas"] == {}, depois["orfas"]
     assert set(depois["na_spec"]) >= {int(d["id"].split("-")[1]) for d in pg.decisoes_d0(state)}
 
 
 def test_acervo_bloco_13_em_5_de_5_e_nenhum_d0_orfao_depois_da_montagem():
     """A régua do PR 1 (`tools/propagacao.py`) sobre as 5 sessões do plano: antes, bloco 13 em 3 de 5 e 35 citações
-    órfãs; depois da montagem em código, 5 de 5 e nenhuma."""
+    órfãs; depois da montagem em código — no anexo de design, desde o PR 6 —, 5 de 5 e nenhuma."""
     antes, depois = {}, {}
     for missao in CINCO:
         state = _estado(missao)
         antes[missao] = pg.d0_a_jusante(state)
-        depois[missao] = pg.d0_a_jusante({**state, "spec_missao": _remontar(state)["spec_missao"]})
+        st = _remontar(state)
+        depois[missao] = pg.d0_a_jusante({**state, "spec_missao": st["spec_missao"],
+                                          "anexo_design_spec": st["anexo_design_spec"]})
+        assert st["spec_missao"] == state["spec_missao_gate0"], missao
     assert sum(r["bloco_13"] for r in antes.values()) == 3
     assert sum(len(v) for r in antes.values() for v in r["orfas"].values()) == 35
     assert sum(r["bloco_13"] for r in depois.values()) == 5
@@ -294,4 +320,4 @@ def test_instabilidade_do_d0_compara_so_o_bloco_13():
     sem_decisao = _saida_d0("## 13. Decisões D0\n\nNenhuma lacuna encontrada.\n")
     st = _rodar({"spec_missao": GATE0, "fechamento_lacunas": sem_decisao,
                  "versao_anterior_fechamento_lacunas": anterior}, _splits()[0])
-    assert "autor-instavel" in _achados(st) and "a tela congela" in _achados(st)["autor-instavel"]["resumo"]
+    assert "autor-instavel" in _achados(st) and "mostra a demonstração" in _achados(st)["autor-instavel"]["resumo"]

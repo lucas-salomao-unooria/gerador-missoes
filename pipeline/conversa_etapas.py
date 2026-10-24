@@ -55,7 +55,7 @@ PEDIDO_RASCUNHO = "[rascunho do comentário do parecer]"
 PRIORIDADE: Dict[str, Tuple[str, ...]] = {
     "produto": ("one_pager", "spec_missao", "nucleo_narrativo", "one_pager_resumido", "gate_final_report"),
     "design": ("jornada_telas", "fluxo_arestas", "copy_strings_revisada", "wireframes_cobertura", "camada_caa",
-               "brief_oficio", "ambiente_simulado", "fechamento_lacunas", "qa_entregaveis_report"),
+               "brief_oficio", "anexo_design_spec", "ambiente_simulado", "fechamento_lacunas", "qa_entregaveis_report"),
     "dev": ("prd_final", "handoff_dev", "brief_assets", "validacao_dev_report", "one_pager_pedagogico"),
 }
 # na conversa única, o principal de cada etapa antes de qualquer relatório
@@ -64,7 +64,9 @@ PRIORIDADE[MISSAO] = ("one_pager", "spec_missao", "jornada_telas", "fluxo_aresta
                       "gate_final_report", "qa_entregaveis_report", "validacao_dev_report", "nucleo_narrativo",
                       "wireframes_cobertura", "camada_caa", "brief_oficio", "ambiente_simulado", "fechamento_lacunas")
 #: O que a etapa recebe da anterior e costuma entrar na pergunta ("o design seguiu a spec?").
-A_MONTANTE: Dict[str, Tuple[str, ...]] = {"produto": (), "design": ("spec_missao",), "dev": ("spec_missao",), MISSAO: ()}
+A_MONTANTE: Dict[str, Tuple[str, ...]] = {"produto": (), "design": ("spec_missao",),
+                                          # a spec de produto mais o anexo de design (PR 6)
+                                          "dev": ("spec_missao", "anexo_design_spec"), MISSAO: ()}
 #: HTML do protótipo e dos diagramas: ~240 mil caracteres de marcação que não respondem nada que a
 #: jornada, o fluxo e a copy não respondam.
 FORA_DO_CONTEXTO = frozenset({"prototipo_html", "prototipo_arquivo", "diagramas_html"})

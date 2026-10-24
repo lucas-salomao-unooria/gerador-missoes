@@ -29,6 +29,12 @@ Ordem (SequentialAgent):
   p4  A043GateFinalProduto    → gate_final_report
   p4c GateFinalCheck           → gate_final_status
   p5  A045SpecMissao          → spec_missao   (saída final de Produto)
+  p5a A045bCompletudeSpec     → completude_spec (o que o D0 fechava no design e é de produto: estado, handoff,
+                                 evidência, dados e retenção, duração e tetos, painel, PQ e KPI, texto do
+                                 professor, revezamento; o que é do PO vira marcador e vai ao de acordo)
+  p5b A045cCompletudeSpecSplit → spec_missao com o bloco 15 montado em código · relatorio_completude ·
+                                 completude_status   (A045b e A045c num loop de até 2 rodadas: a segunda só
+                                 quando o código reprova a completude, e só ela refaz)
   p5c A046BnccCheck                → bncc_status   (determinístico: bloco 11 × BNCC Computação oficial;
                                  não conforme bloqueia design e dev)
   p5d A050PerguntasCheck     → perguntas_status (determinístico: as 5 perguntas do 9f, com decisão
@@ -60,7 +66,8 @@ from agents.base import create_llm_agent
 from agents.banca import get_banca
 from agents.comite import build_comite_canais_loop, build_comite_final_loop
 from agents.juiz import get_fidelidade_check, get_juiz_de_achados
-from agents.callbacks import dispensar_ideacao_com_one_pager_do_po, marcar_heranca, preservar_one_pager
+from agents.callbacks import (dispensar_ideacao_com_one_pager_do_po, manter_completude_entre_rodadas, marcar_heranca,
+                              preservar_one_pager)
 from agents.checkers import (
     DocumentoObrigatorioAgent,
     SecaoSplitAgent,
@@ -72,6 +79,7 @@ from agents.checkers import (
     RastroCheckAgent,
     SaidaDeLoopAgent,
     VizinhasCatalogoAgent,
+    isolar,
 )
 from config import get_settings
 from prompts import load_prompt
@@ -306,6 +314,99 @@ def get_spec_missao_agent(**kw) -> LlmAgent:
     )
 
 
+def get_completude_spec_agent(**kw) -> LlmAgent:
+    """O que o D0 fechava no design e é de produto, agora em produto, antes da banca e do parecer (PR 6, decisão D2).
+
+    O D0 tomou 34 decisões em 5 sessões; 9 criavam produto (15 palavras, 10% e 45 s na exp02ef1b; retenção, 6 métricas do
+    painel e revezamento de 4 na exp03em1b) e 2 aplicavam decisão do PO que nunca foi gravada (90 s e 45 palavras na
+    exp02em1b). Aqui elas nascem onde o PO as vê: o que é derivável da missão ou de padrão da plataforma entra no bloco 15
+    da spec; o que é decisão do PO vira [PARÂMETRO]/[PROPOSTA]/[ABERTO — dono: PO] e cai na lista do de acordo."""
+    return create_llm_agent(
+        name="A045bCompletudeSpec",
+        description="Completude da spec em produto: varredura das células de produto que a esteira consome, decisões [CP-n] com base declarada (padrão da plataforma, one-pager, catálogo), e o que é do PO como marcador para o de acordo — no bloco 15 da spec.",
+        instruction=load_prompt("produto/046_completude_spec.md"),
+        output_key="completude_spec",
+        # nas rodadas seguintes do SpecLoop, só roda de novo se a spec perdeu o bloco 15: é uma chamada a mais por
+        # refazer de produto, não por rodada (teto do plano, D14)
+        before_agent_callback=[marcar_heranca, manter_completude_entre_rodadas],
+        **kw,
+    )
+
+
+def get_completude_spec_split() -> SecaoSplitAgent:
+    """Monta em código a spec com o bloco 15 da completude, sem tocar o que o A045 escreveu (como o D0 desde o PR 2)."""
+    return SecaoSplitAgent(
+        name="A045cCompletudeSpecSplit",
+        description="Monta em código a spec de produto — a do A045 com o bloco 15 da completude no lugar —, separa o relatório de completude e registra `completude_status`. [PARÂMETRO]/[PROPOSTA] fechado sem parecer datado do PO bloqueia.",
+        rotulo="Completude da spec (produto)",
+        source_key="completude_spec",
+        status_key="completude_status",
+        estrito=get_settings().esteira_estrita,
+        # na correção pontual o editor já trocou a spec montada (bloco 15 inclusive); montar de novo a desfaria
+        pular_na_correcao_pontual=True,
+        # o que o código acusou na resposta, para a completude corrigir na segunda rodada do loop dela
+        relatorio_key="completude_report",
+        extracoes=[
+            {
+                "chave": "spec_missao",
+                "inicio": COMPLETUDE_INICIO,
+                "fim": COMPLETUDE_FIM,
+                "exigir": r"^##\s*15\b",
+                "minimo_chars": 120,
+                "bloco_proprio": r"^##\s*15\b.*$",
+                "bloco_obrigatorio": True,
+                "autor": "Completude (045b)",
+                "etapa": "produto",
+            },
+            {
+                "chave": "relatorio_completude",
+                "inicio": COMPLETUDE_FIM,
+                "fim": COMPLETUDE_RELATORIO_FIM,
+                "minimo_chars": 80,
+            },
+        ],
+    )
+
+
+#: Rodadas da completude quando o próprio split a reprova (decidiu no lugar do PO, ou veio sem o bloco 15).
+COMPLETUDE_MAX_RODADAS = 2
+
+
+def _completude_loop(**kw) -> LoopAgent:
+    """Completude ↔ o split que a confere, até passar ou esgotar 2 rodadas — só a completude refaz.
+
+    Um 🔴 da completude deixaria a etapa de produto sem *de acordo* (só com exceção) até um refazer de produto inteiro.
+    Devolvê-lo ao A045 pelo SpecLoop faria o autor da spec reescrevê-la por um achado que não é dele. Aqui a segunda
+    rodada é só da completude, com o que o código acusou (`completude_report`): a chamada a mais existe só quando ela
+    falha (teto do plano, D14)."""
+    return LoopAgent(
+        name="CompletudeLoop",
+        description="Completude da spec ↔ conferência em código do bloco 15, até passar ou esgotar 2 rodadas.",
+        max_iterations=COMPLETUDE_MAX_RODADAS,
+        sub_agents=[
+            get_completude_spec_agent(**kw),
+            get_completude_spec_split(),
+            SaidaDeLoopAgent(
+                name="A045dCompletudeRodada",
+                description="Completude conferida encerra o loop; reprovada pelo código (decidiu no lugar do PO, ou veio sem o bloco 15) volta a ela com os achados.",
+                rotulo="Completude da spec",
+                status_keys=["completude_status"],
+                rodada_key="completude_rodada",
+                max_rounds=COMPLETUDE_MAX_RODADAS,
+                # na correção pontual o split não roda (a spec veio editada) e o status fica ausente: não é reprovação
+                aceitos=["aprovado", "amarelo", ""],
+            ),
+        ],
+    )
+
+
+#: Headings da «Saída obrigatória» do prompt 046, como os do D0 (`agents/design`): o bloco 15 vem no Passo 4.
+_H = r"^#{2,3}\s*"
+COMPLETUDE_INICIO = _H + r"Passo 4\b.*$"     # "## Passo 4 — Bloco 15 (...)"
+COMPLETUDE_FIM = _H + r"Passo 5\b.*$"        # "## Passo 5 — Relatório de completude"
+COMPLETUDE_RELATORIO_FIM = _H + r"Passo 6\b.*$"  # "## Passo 6 — Testes"
+
+
 def get_one_pager_resumido_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A061OnePagerResumido",
@@ -386,6 +487,11 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
         max_iterations=rodadas_spec,
         sub_agents=[
             get_spec_missao_agent(**kw),
+            # PR 6: o que o D0 fechava no design e é de produto fecha aqui, antes dos gates, da banca e do parecer — os
+            # gates conferem a spec completa, e o PO vê no de acordo o que ficou para ele. Isolado: o LoopAgent do ADK
+            # encerra no primeiro `escalate` de qualquer subagente, e a saída da completude encerraria o SpecLoop sem o
+            # BNCC, os gates, a banca e o A059 (revisão do PR #73, 24/10/2026)
+            isolar(_completude_loop(**kw)),
             BnccCheckAgent(
                 name="A046BnccCheck",
                 description="Confere o bloco 11 da spec contra a lista oficial da BNCC Computação: código existe, é do ano da missão e há letramento digital.",
@@ -798,7 +904,8 @@ ETAPAS_DO_PEDIDO_DE_PRODUTO = ("produto", "")
 
 
 #: Agentes do estágio parcial "spec" (correção a partir da spec), na ordem em que rodam.
-SPEC_AGENT_IDS = ["A045SpecMissao", "A046BnccCheck", "A047ManifestoCheckProduto", "A048EvidenciaCheck",
+SPEC_AGENT_IDS = ["A045SpecMissao", "A045bCompletudeSpec", "A045cCompletudeSpecSplit", "A045dCompletudeRodada",
+                  "A046BnccCheck", "A047ManifestoCheckProduto", "A048EvidenciaCheck",
                   "A050PerguntasCheck", "A051JuizPerguntas", "A052JuizPerguntasCheck",
                   "A054ConteudoAprovadoSpec", "A057aBancaProdutoNarrativa", "A057bBancaPedagogiaBncc",
                   "A058BancaConsolidacao", "A059SpecCheck", "A060FidelidadeProduto", "A061OnePagerResumido",
@@ -859,6 +966,9 @@ PRODUTO_METADATA = [
     {"id": "A043GateFinalProduto", "name": "043 · Gate final de produto", "icon": "🏁", "output_key": "gate_final_report", "prompt_file": "produto/043_gate_final.md", "description": "Coerência entre missão e vereditos; libera ou bloqueia para design/dev."},
     {"id": "A044GateFinalProdutoCheck", "name": "044 · Veredito final (determinístico)", "icon": "🔀", "output_key": "gate_final_status", "prompt_file": None, "description": "Lê o envelope do gate final."},
     {"id": "A045SpecMissao", "name": "045 · Spec da missão", "icon": "📜", "output_key": "spec_missao", "prompt_file": "produto/045_spec_missao.md", "description": "Os 12 blocos da spec — contrato contra o qual design e dev constroem."},
+    {"id": "A045bCompletudeSpec", "name": "045b · Completude da spec", "icon": "🧩", "output_key": "completude_spec", "prompt_file": "produto/046_completude_spec.md", "description": "O que o D0 fechava no design e é de produto (estado, handoff, evidência, dados e retenção, duração e tetos, painel docente, PQ e KPI, texto do professor, revezamento), em produto: decisões [CP-n] com base declarada no bloco 15 da spec, padrões da plataforma aplicados e listados no de acordo, e o que é do PO como [PARÂMETRO]/[PROPOSTA]/[ABERTO — dono: PO] na lista do de acordo. Nas rodadas seguintes do loop só roda se a spec perdeu o bloco 15; na correção pontual não roda."},
+    {"id": "A045cCompletudeSpecSplit", "name": "045c · Spec com o bloco 15 (determinístico)", "icon": "✂️", "output_key": "relatorio_completude", "prompt_file": None, "description": "Monta em código a spec de produto — a do A045 com o bloco 15 da completude no lugar, o resto descartado —, separa o relatório de completude e registra `completude_status`. [PARÂMETRO]/[PROPOSTA] fechado pela completude sem parecer datado do PO bloqueia."},
+    {"id": "A045dCompletudeRodada", "name": "045d · Saída da completude (determinístico)", "icon": "🔀", "output_key": "completude_rodada", "prompt_file": None, "description": "Completude conferida encerra o loop dela; reprovada pelo código (decidiu no lugar do PO, ou veio sem o bloco 15) volta só a ela, uma vez, com os achados — o autor da spec não reescreve por isso."},
     {"id": "A046BnccCheck", "name": "046 · Conformidade BNCC Computação (determinístico)", "icon": "📚", "output_key": "bncc_report", "prompt_file": None, "description": "Bloco 11 × lista oficial do MEC: código existe, é do ano da missão e inclui letramento digital. Não conforme bloqueia design e dev."},
     {"id": "A047ManifestoCheckProduto", "name": "047 · Ficha do manifesto (determinístico)", "icon": "🪪", "output_key": "manifesto_report", "prompt_file": None, "description": "Bloco 0 da spec × listas fechadas da plataforma, conferido ainda em Produto: campo errado volta para quem escreveu a spec, em vez de custar o design inteiro."},
     {"id": "A048EvidenciaCheck", "name": "048 · Matriz de evidência pedagógica (determinístico)", "icon": "🔬", "output_key": "evidencia_report", "prompt_file": None, "description": "Bloco 9 × bloco 11: grau `scored` com dois sinais nomeados, toda habilidade com momento em tela e medida ligada, gabarito declarado no servidor."},

@@ -14,6 +14,10 @@ Você constrói todas as telas do inventário — estudante e professor — em *
 
 {spec_missao?}
 
+**Anexo de design da spec (decisões de UI/UX do D0 e ficha do ambiente do D9, em `design/00-anexo-design-spec.md` — junto com a spec de produto, é o contrato; vazio numa missão anterior a 24/10/2026, que traz as duas coisas dentro da spec):**
+
+{anexo_design_spec?}
+
 **Conteúdo aprovado pelo PO — cópia literal do one-pager** (o núcleo — descoberta central e anatomia do aha (§1), narrativa e personagem (§3), as 6 etapas com o texto que a tela mostra (§4): o texto entre aspas ali é o que a tela exibe, não um exemplo —, currículo, estados de falha — inclusive de mídia —, papel do professor, tempos e cenários de aula, podcast com o roteiro, contrato de evidência com o Canal B, cenários de dispositivo — projeção e 2 a 4 por aparelho —, verbos e affordances, caminhos degenerados, guardrails e IA, tetos da faixa, hipóteses). Até 07/10/2026 você não recebia o one-pager: o que a spec não trazia não existia para você, e na exp01ef1b se perderam as travas do professor, o podcast e a redação do debate. As telas do professor (preparo, travas, painel) e o que a criança vê saem daqui e da spec. Texto escrito na tela da criança só se o one-pager o permite.
 
 {conteudo_aprovado?}

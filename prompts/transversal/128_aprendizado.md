@@ -39,6 +39,10 @@ Você tem duas funções, nesta ordem de importância:
 
 {spec_missao?}
 
+**Anexo de design da spec (decisões de UI/UX do D0 e ficha do ambiente do D9, em `design/00-anexo-design-spec.md` — junto com a spec de produto, é o contrato; vazio numa missão anterior a 24/10/2026, que traz as duas coisas dentro da spec):**
+
+{anexo_design_spec?}
+
 **Relatório de fechamento de lacunas (D0) — o Passo 6 traz as lacunas recorrentes (candidatas a campo obrigatório do one-pager) e os padrões aplicados três ou mais vezes (candidatos a `references/defaults-missao.md`):**
 
 {relatorio_lacunas?}
