@@ -87,6 +87,17 @@ _RE_GATILHO = re.compile(r"\b(?:depois|ap[óo]s|antes|at[ée])\s+d?[aeo]?s?\s*(?
 _RE_TEMA_DE_PRODUTO = re.compile(
     r"\b(?:regras?|gatilhos?|estados?|habilidades?|EF\d{2}CO\d{2}|EM13CO\d{2}|CO\d{2}|tern[áa]ri\w*|r[ée]gua|"
     r"forma\s+de\s+avalia\w*|crit[ée]rios?\s+de\s+avalia\w*|mec[âa]nica\w*)\b", re.I)
+#: Trocar o ambiente, a seção do DS ou a classe (app clonado ↔ mini-jogo) é decisão de produto desde o PR 8 (D8): «trocar o
+#: ambiente para o Unoovista», «transformar a etapa num mini-jogo», «usar outra seção do DS». A palavra solta não conta —
+#: «o botão do mini-jogo ficou pequeno» e «dentro do ambiente» são de design.
+_RE_TROCA_DE_AMBIENTE = re.compile(
+    r"\b(?:troc|mud|substitu|alter(?!nativ))\w*\s+(?:(?:o|a|de|do|da)\s+)?(?:ambiente|se[çc][ãa]o\s+do\s+DS|secao_ds|"
+    r"classe)\b"
+    r"|\b(?:transform|vir|pass|troc|mud)\w*\s+(?:\S+\s+){0,4}?(?:em|para|por|num|numa)\s+(?:um\s+|uma\s+)?"
+    r"(?:mini-?\s?jogo|minijogo|app\s+clonado|outr[oa]\s+ambiente|ambiente\s+nov[oa])\b"
+    r"|\b(?:ambiente|se[çc][ãa]o(?:\s+do\s+DS)?)\s+nov[oa]\b|\boutr[oa]\s+(?:ambiente|se[çc][ãa]o\s+do\s+DS)\b"
+    r"|\bus(?:ar|e|em)\s+(?:o\s+|a\s+)?(?:se[çc][ãa]o\s+)?`?(?:unoovista|unoochat|unooriaai|tiktooria|unoogaleria|"
+    r"unoojornal|unooblog)\b", re.I)
 #: Sempre de produto, com ou sem verbo: Canal B e podcast são textos-chave do one-pager (D1). Desde o PR 7, também o item
 #: que cita o ID de um texto-chave (`TC-07`, a opção `TC-12.2`): a proposta do design que o PO aceita no Refazer chega
 #: com o ID dela (`tools/textos_chave.py`).
@@ -431,6 +442,12 @@ def regra_de_produto(texto: str, docs: Dict[str, str], linhas: Optional[Dict[str
         estrutura = _RE_ESTRUTURA_DA_MECANICA.search(frase)
         if estrutura and _muda(frase):
             motivos.append(f"muda a mecânica («{frase[:70]}»)")
+            break
+    for frase in _frases(sem_citacoes):
+        troca = _RE_TROCA_DE_AMBIENTE.search(frase)
+        # o padrão já traz o verbo; basta que ele não venha negado («Não trocar o ambiente»)
+        if troca and not any(p in ("nao", "nem", "sem", "nunca") for p in _palavras(frase[: troca.start()])[-2:]):
+            motivos.append(f"muda o ambiente ou a classe («{frase[:70]}»)")
             break
     return list(dict.fromkeys(motivos))
 

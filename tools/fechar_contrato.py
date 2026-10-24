@@ -48,8 +48,12 @@ MUDANCA_GATE0 = "mudanca_gate0"
 #: Texto-chave que a criança lê acima do teto de palavras (PR 7 do plano, D1): o lint de produto o acusa, e o PO mantém o
 #: texto ou escreve outro (`tools/textos_chave.py`).
 TEXTO_TETO = "texto_teto"
+#: Ambiente novo ou mini-jogo que a spec fixa sem o PO ter decidido (PR 8 do plano, D8): a escolha é dele, e entra na lista
+#: como proposta mesmo quando o autor da spec não escreveu o marcador (`tools/ambiente.escolha_do_po`).
+ESCOLHA_AMBIENTE = "escolha_ambiente"
 ROTULO_TIPO = {PARAMETRO: "[PARÂMETRO]", PROPOSTA: "[PROPOSTA]", ABERTO_PO: "[ABERTO — dono: PO]",
-               MUDANCA_GATE0: "Mudança do design no texto do Gate 0", TEXTO_TETO: "Texto-chave acima do teto"}
+               MUDANCA_GATE0: "Mudança do design no texto do Gate 0", TEXTO_TETO: "Texto-chave acima do teto",
+               ESCOLHA_AMBIENTE: "[PROPOSTA] Ambiente novo ou mini-jogo"}
 
 #: Onde o contrato aberto é procurado. A spec é a do Gate 0: na sessão anterior ao PR 6, `spec_missao` pode já trazer os
 #: blocos 13 e 14 do design; na nova ela é a de produto, com o bloco 15 da completude, cujos marcadores entram na lista.
@@ -114,7 +118,7 @@ class Item:
     texto_chave: str = ""
 
     def opcoes(self) -> List[str]:
-        if self.tipo == MUDANCA_GATE0:
+        if self.tipo in (MUDANCA_GATE0, ESCOLHA_AMBIENTE):
             return [ACEITAR, RECUSAR]
         if self.tipo == TEXTO_TETO:
             # manter o texto aprovado (a sugestão) ou escrever outro; recusar o texto é escrever outro
@@ -296,7 +300,35 @@ def itens_em_aberto(estado: Dict[str, Any]) -> List[Item]:
     for item in itens:
         texto = " ".join([item.assunto, item.sugestao] + [o.descricao for o in item.ocorrencias])
         item.ui = _e_ui(texto)
-    return itens + mudancas_do_design(estado) + textos_acima_do_teto(estado)
+    return itens + escolhas_de_ambiente(estado) + mudancas_do_design(estado) + textos_acima_do_teto(estado)
+
+
+def escolhas_de_ambiente(estado: Dict[str, Any]) -> List[Item]:
+    """O ambiente novo ou o mini-jogo que o bloco 0 da spec fixa sem decisão do PO, sem marcador e sem o briefing o fixar:
+    um item de proposta, para aceitar ou recusar (PR 8 do plano, decisão D8). Com o marcador escrito, o item é o do
+    marcador; com a resposta gravada, não há item. O que o de acordo grava vai na linha da `secao_ds`, depois do valor —
+    «— aprovada — PO, parecer de <data>» —, sem mudar o campo que o manifesto lê."""
+    from tools import ambiente as amb
+
+    docs = documentos(estado)
+    spec = docs[DOC_SPEC]
+    decidido = amb.classe_e_ambiente(spec)
+    if not decidido["nova"]:
+        return []
+    escolha = amb.escolha_do_po(spec, docs[DOC_ONE_PAGER], str(estado.get("briefing") or ""),
+                                estado.get(KEY_DECISOES) or [], decidido,
+                                one_pager_po=str(estado.get("one_pager_po") or ""))
+    if escolha != "silencio":
+        return []
+    linha = next((l for l in spec.splitlines()
+                  if re.search(r"secao_ds\W{0,6}" + re.escape(decidido["secao"]).replace(":", r"\s*:\s*"), l, re.I)), "")
+    if not linha:
+        return []
+    rotulo = "mini-jogo" if decidido["classe"] == amb.MINI_JOGO else "ambiente novo"
+    return [Item(id=_id(ESCOLHA_AMBIENTE, decidido["secao"]), tipo=ESCOLHA_AMBIENTE,
+                 assunto=f"{rotulo} `{decidido['secao']}` — a spec fixa a classe e o ambiente sem decisão do PO",
+                 sugestao=f"aprovar o {rotulo} `{decidido['secao']}`",
+                 ocorrencias=[Ocorrencia(documento=DOC_SPEC, linha=linha, marcador="", tipo=ESCOLHA_AMBIENTE)])]
 
 
 def textos_acima_do_teto(estado: Dict[str, Any]) -> List[Item]:
@@ -588,6 +620,19 @@ def decidir(itens: Sequence[Item], respostas: Optional[Dict[str, Dict[str, str]]
                 saida.edicoes.append({"tipo": "trocas", "documento": DOC_SPEC, "bloco": item.bloco,
                                       "trocas": item.trocas})
             gravado = "mudança aplicada à spec do Gate 0" if resposta == ACEITAR else "mudança recusada"
+        if item.tipo == ESCOLHA_AMBIENTE:
+            # a decisão vai depois do valor da `secao_ds`: o campo continua legível para o manifesto e o D9, e a escolha
+            # passa a ter dono (`tools/ambiente.escolha_do_po` lê «aprovada|recusada — PO, parecer de»)
+            gravado = f"{'aprovada' if resposta == ACEITAR else 'recusada'} — PO, parecer de {data}"
+            for oc in item.ocorrencias:
+                atual = por_linha.get((oc.documento, oc.linha), oc.linha)
+                por_linha[(oc.documento, oc.linha)] = atual.rstrip() + f" — {gravado}"
+            saida.decisoes.append({
+                "id": item.id, "tipo": item.tipo, "assunto": item.assunto, "sugestao": item.sugestao,
+                "resposta": resposta, "valor": valor, "gravado": gravado, "quando": quando, "como": como,
+                "origem": str(r.get("origem") or "cartão do de acordo"), "ocorrencias": len(item.ocorrencias),
+            })
+            continue
         for oc in item.ocorrencias:
             texto = _texto_gravado(item, oc, resposta, valor, data)
             gravado = gravado or texto
