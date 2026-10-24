@@ -456,6 +456,14 @@ def _recopia_do_d0(chave: str, corpo_d9: str, aceita: str, estado: Optional[Dict
     return _linhas_normalizadas(corpo_d0) == _linhas_normalizadas(corpo_d9)
 
 
+def _d9_travado(estado: Optional[Dict[str, Any]]) -> bool:
+    """Correção pontual de design com o D9 travado: a resposta dele é a da execução anterior, e ele não roda nesta."""
+    from agents.callbacks import KEY_DOCUMENTOS_TRAVADOS, KEY_MODO_CORRECAO
+
+    e = estado or {}
+    return e.get(KEY_MODO_CORRECAO) == "pontual" and "ambiente_simulado" in (e.get(KEY_DOCUMENTOS_TRAVADOS) or [])
+
+
 def montar_sobre_aceita(aceita: str, nova: str, titulo: str,
                         avisos: Optional[List[Dict[str, Any]]] = None, autor: str = "D9",
                         agente: str = "ambiente-simulado", estrito: bool = False,
@@ -572,6 +580,19 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str,
             # PR 8: o D9 não decide produto — a mudança dele no texto de produto não vai ao PO como troca a aceitar; volta
             # a ele, como a decisão de produto do D0 (`decisao-de-produto-pelo-agente`, A066), e o que for de produto ele
             # devolve como proposta
+            if _d9_travado(estado):
+                # Correção pontual de design: o D9 não roda, e a resposta é a de antes — na exp01em1b-76d9af6e, a que
+                # escreveu nos blocos 2, 3, 7 e 10. O ticket iria a quem não pode reescrever, e o design ficava 🔴 sem
+                # saída (revisão do PR #76, 24/10/2026). O texto fora do bloco 14 é descartado de qualquer forma: aqui só
+                # o bloco 14 é conferido
+                avisos.append({
+                    "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": "design",
+                    "agente_responsavel": agente,
+                    "resumo": (f"{autor} trazia {nome} diferente da spec de produto numa resposta de antes, travada nesta "
+                               "correção pontual: a cópia foi descartada, e só o bloco 14 foi conferido. Para o D9 "
+                               "reescrever a resposta, use o Refazer completo de design."),
+                })
+                continue
             if _recopia_do_d0(chave, corpo_novo, aceita, estado):
                 # Antes do PR 2 o D0 reescrevia a spec inteira, e o D9 partia dela: a seção que ele trouxe é a do D0,
                 # palavra por palavra (exp01ef1b, 06/10/2026). Não é decisão dele, e a mudança já foi descartada
@@ -611,6 +632,26 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str,
                        + (f"\n    … e mais {len(diff) - 15} linha(s)" if len(diff) > 15 else "")),
         })
     novas = [c for c in dos_novos if c not in dos_aceitos and c != proprio and c and dos_novos[c].strip()]
+    if novas and avisos is not None and proprio == "14" and not _d9_travado(estado):
+        # Seção nova do D9 com regra ou fase de jogo: «## Regras e fases do mini-jogo» depois do bloco 14 era só
+        # descartada, com atenção, e escapava ao gate do jogo (revisão do PR #76, 24/10/2026). É decisão de produto como
+        # a do bloco 14
+        from tools.ambiente import jogo_no_bloco_14
+
+        for c in list(novas):
+            jogo = jogo_no_bloco_14(dos_novos[c], aceita)
+            if not jogo:
+                continue
+            novas.remove(c)
+            avisos.append({
+                "severidade": "bloqueio", "codigo": "decisao-de-produto-pelo-agente", "etapa": "design",
+                "agente_responsavel": agente, "bloco": c,
+                "resumo": (f"{autor} trouxe a seção «{c}» fora do bloco 14, com regra ou fase de jogo que a spec não tem, e "
+                           "ela não entrou: quantas fases, a regra de cada uma, o que vence e o que perde e como o "
+                           "progresso aparece são conteúdo de produto desde o PR 8, no bloco 2 da spec. Tire a seção e, se "
+                           "o jogo precisa de outra regra, devolva-a a produto:\n"
+                           + "\n".join(f"    - «{l[:180]}»" for l in jogo[:10])),
+            })
     if novas and avisos is not None:
         avisos.append({
             "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": etapa,

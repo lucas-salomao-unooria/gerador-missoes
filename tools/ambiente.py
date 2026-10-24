@@ -46,8 +46,10 @@ D9_DEVOLUCAO_INICIO = r"^#{2,3}\s*Passo 3\b.*$"
 
 _RE_CLASSE_LINHA = re.compile(r"(?:classe_ambiente|classe\s+do\s+ambiente)[`*_]*\s*[:=]\s*[`*_]*\s*([^\n`|]+)", re.I)
 _RE_CLASSE_VALOR = re.compile(r"\b(mini-?\s?jogo|minijogo|app[\s-]+clonado)\b", re.I)
-_RE_CLASSE_NO_BLOCO = re.compile(r"^[\s>*-]*(?:\*\*)?classe(?:\s+do\s+ambiente)?(?:\*\*)?\s*:\s*(?:\*\*)?\s*([^\n]+)$",
-                                 re.I | re.M)
+#: «Classe:» no começo da linha ou depois de «·» na mesma linha — a linha que o 067 prescreve é «- **Seção do DS:** `…` ·
+#: **Classe:** mini-jogo» (revisão do PR #76, 24/10/2026: só o começo da linha era lido, e a troca de classe passava).
+_RE_CLASSE_NO_BLOCO = re.compile(
+    r"(?:^[\s>*-]*|[·|]\s*)(?:\*\*)?classe(?:\s+do\s+ambiente)?(?:\*\*)?\s*:\s*(?:\*\*)?\s*([^\n·|]+)", re.I | re.M)
 _RE_FICHA_DE_MINIJOGO = re.compile(r"^#{1,4}\s*mini-?jogo\s*[—–-]", re.I | re.M)
 _RE_ROTULO_SECAO = re.compile(r"se[çc][ãa]o\s+(?:principal\s+)?(?:do\s+)?(?:ds|design\s+system)\b[^:\n]{0,40}:\s*(.+)$",
                               re.I | re.M)
@@ -59,14 +61,26 @@ _RE_TITULO_REGRAS = re.compile(r"\bregras\b.*\bfases\b", re.I)
 _RE_REGRA = re.compile(r"^\s*(?:[-*]\s+)?[`*]{0,2}R(\d{1,2})[`*]{0,2}(?=[\s:—–.)-])\s*[:—–.)-]?\s*(.+?)\s*$", re.M)
 #: Marcador do contrato aberto: a escolha que espera o PO.
 _RE_MARCADOR_DO_PO = re.compile(r"\[(?:PROPOSTA|PAR[ÂA]METRO)\b[^\]\n]*\]|\[ABERTO\s*[—–-]\s*dono:\s*(?:o\s+)?PO\b[^\]\n]*\]")
-#: O que o de acordo de produto grava no lugar do marcador: «<valor> — PO, parecer de <data>» (`tools/fechar_contrato`).
-_RE_PARECER_DO_PO = re.compile(r"\bPO,\s*parecer\s+de\b", re.I)
-_RE_RECUSA = re.compile(r"\brecusad[oa]s?\b", re.I)
+#: Os marcadores que podem perguntar a escolha da classe ou do ambiente (o [PARÂMETRO] pergunta um valor, nunca ela).
+_RE_PROPOSTA_ABERTA = re.compile(r"\[PROPOSTA\b([^\]\n]*)\]|\[ABERTO\s*[—–-]\s*dono:\s*(?:o\s+)?PO\b([^\]\n]*)\]")
+#: O que o de acordo de produto grava no lugar da proposta (`tools/fechar_contrato._texto_gravado`) e na linha da
+#: `secao_ds` (`escolhas_de_ambiente`): «aprovada — PO, parecer de <data>[: <a proposta>]» ou «recusada — …».
+_RE_DECISAO_GRAVADA = re.compile(r"\b(aprovad[oa]s?|recusad[oa]s?)\s*[—–-]\s*PO,\s*parecer\s+de\s+[\d/]+(?:\s*:\s*(.*))?",
+                                 re.I)
+#: «Outro valor» numa proposta: «<valor> — PO, parecer de <data> (no lugar da proposta: <a proposta>)».
+_RE_OUTRO_GRAVADO = re.compile(r"(\S[^—–\n]*?)\s*[—–-]\s*PO,\s*parecer\s+de\s+[\d/]+\s*\(no\s+lugar\s+da\s+proposta:\s*"
+                               r"([^)\n]*)\)", re.I)
 _RE_MINIJOGO = re.compile(r"\bmini-?\s?jogos?\b|\bminijogos?\b", re.I)
 _RE_AMBIENTE_NOVO = re.compile(r"\bambiente\s+novo\b|\bapp\s+novo\b|\bse[çc][ãa]o\s+nova\b|\bnova\s*:", re.I)
-#: A linha que fala da escolha da classe, não de um parâmetro do jogo.
-_RE_FALA_DA_CLASSE = re.compile(r"\bclasse\b|\bambiente\b|app\s+clonado|no\s+lugar|em\s+vez|secao_ds|se[çc][ãa]o\s+do\s+DS",
-                                re.I)
+#: Onde a proposta da escolha começa: a classe, o ambiente novo ou a seção — «mini-jogo `minijogo:<nome>` no lugar de app
+#: clonado» (o formato de `ambiente-e-minijogo.md`), «ambiente novo `nova:<nome>`» (o do manifesto). «Duração da fase do
+#: `minijogo:<nome>`» nomeia a seção e não é a escolha: é um parâmetro do jogo.
+_RE_INICIO_DA_ESCOLHA = re.compile(
+    r"^(?:(?:usar|adotar|criar|montar|manter|aprovar|propor|trocar\s+para)\s+)?(?:(?:o|a|um|uma|como)\s+)*"
+    r"(?:mini-?\s?jogos?\b|minijogos?\b|ambientes?\s+nov[oa]s?\b|apps?\s+nov[oa]s?\b|se[çc][ãa]o\s+nova\b|classe\b|"
+    r"ambiente\b|se[çc][ãa]o\s+do\s+ds\b|secao_ds\b|(?:nova|minijogo):)", re.I)
+#: Palavras que negam o mini-jogo pedido no briefing: «não é mini-jogo», «nada de mini-jogo», «em vez de mini-jogo».
+_NEGACOES = frozenset({"nao", "nem", "sem", "nunca", "jamais", "nada", "evitar", "vez", "lugar"})
 #: Linha de regra ou fase de jogo dentro do bloco 14: o que é conteúdo de produto desde este PR.
 _RE_DEFINE_JOGO = re.compile(
     r"(?:como\s+se\s+(?:vence|perde)|o\s+que\s+(?:é|e)\s+uma\s+fase|quantas\s+fases|fases_sugeridas|"
@@ -130,18 +144,33 @@ def regras_e_fases(texto: str) -> Dict[str, Any]:
     """As regras (`R1`…) e as fases (tabela com a coluna «Fase» ou «#») da seção «Regras e fases» do texto — o bloco 2
     da spec de um mini-jogo, ou a Seção 5 da jornada. `{secao, regras: {n: texto}, fases: {n: {nome, regra, linha}}}`;
     sem a seção, tudo vazio. «n/a — ambiente é app clonado» não tem regra nem fase (as 12 jornadas do acervo)."""
-    from tools.cobertura_design import _secao_por_titulo, tabelas
+    from tools.cobertura_design import _secao_por_titulo
 
     corpo = _secao_por_titulo(texto or "", _RE_TITULO_REGRAS) or ""
+    return {"secao": bool(corpo.strip()), **_ler_regras_e_fases(corpo)}
+
+
+#: Coluna que só uma tabela de fases de jogo tem: com ela, a coluna «#» é o número da fase, fora da seção «Regras e
+#: fases». Sem ela, «| # | Componente | Tokens |» da ficha não é fase.
+_RE_COLUNA_DE_JOGO = re.compile(r"^(?:regra|como\s+vence|vence|como\s+perde|perde|ideia\s+nova|verbo\s+do\s+jogo)")
+
+
+def _ler_regras_e_fases(corpo: str, fora_da_secao: bool = False) -> Dict[str, Any]:
+    """`{regras, fases}` do corpo. `fora_da_secao`: o corpo não é a seção «Regras e fases» (o bloco 14 inteiro), e a
+    tabela só é de fases com a coluna «Fase», ou com «#» e uma coluna de jogo (regra, vence, perde, ideia nova)."""
+    from tools.cobertura_design import tabelas
+
     regras: Dict[int, str] = {}
-    for m in _RE_REGRA.finditer(corpo):
+    for m in _RE_REGRA.finditer(corpo or ""):
         if m.group(0).lstrip().startswith("|"):
             continue
         regras.setdefault(int(m.group(1)), m.group(2).strip(" `*"))
     fases: Dict[int, Dict[str, str]] = {}
-    for cab, linhas in tabelas(corpo):
-        col_n = next((c for c in cab if c in ("#", "n", "no", "nº", "n.º", "numero", "número")
-                      or c.startswith("fase")), None)
+    for cab, linhas in tabelas(corpo or ""):
+        numero = [c for c in cab if c in ("#", "n", "no", "nº", "n.º", "numero", "número") or c.startswith("fase")]
+        if fora_da_secao and not any(_RE_COLUNA_DE_JOGO.match(c) for c in cab):
+            numero = [c for c in numero if c.startswith("fase")]
+        col_n = numero[0] if numero else None
         if not col_n:
             continue
         col_nome = next((c for c in cab if c.startswith("nome")), None)
@@ -153,71 +182,159 @@ def regras_e_fases(texto: str) -> Dict[str, Any]:
             nome = linha.get(col_nome, "") if col_nome else re.sub(r"^\D*\d{1,2}\s*[—–:.-]?\s*", "", linha.get(col_n, ""))
             fases.setdefault(int(m.group(0)), {"nome": nome.strip(" `*"), "regra": (linha.get(col_regra, "") if col_regra
                                                                                     else "").strip(" `*"),
-                                               "linha": " | ".join(v for v in linha.values())[:240]})
-    return {"secao": bool(corpo.strip()), "regras": regras, "fases": fases}
+                                               "linha": " | ".join(v for v in linha.values())[:240],
+                                               "inteira": " ".join(linha.values())})
+    return {"regras": regras, "fases": fases}
+
+
+def _cabeca_da_proposta(texto: str) -> str:
+    """A proposta sem o «por quê» e a alternativa, sem marcação e em minúsculas: «mini-jogo minijogo:varal no lugar de app
+    clonado»."""
+    cabeca = re.split(r"\s+·\s+|\s*\bpor\s+qu[eê]\s*:", texto or "", maxsplit=1, flags=re.I)[0]
+    cabeca = re.sub(r"[`*]+", " ", cabeca).lower()
+    cabeca = re.sub(r"\b(nova|minijogo)\s*:\s*", r"\1:", cabeca)
+    return " ".join(cabeca.split()).strip(" .;:—–-")
+
+
+def sobre_a_escolha(texto: str, secao: str = "") -> bool:
+    """A proposta (ou o assunto dela) pergunta a escolha da classe ou do ambiente — e não um parâmetro do jogo.
+
+    Ela nomeia a escolha (a seção `nova:`/`minijogo:` — a do bloco 0, quando `secao` vem —, «mini-jogo» ou «ambiente
+    novo») e começa por ela («mini-jogo `minijogo:<nome>` no lugar de app clonado», o formato de
+    `ambiente-e-minijogo.md`), ou troca a classe ou a seção por ela («trocar a `unoogaleria` pelo `minijogo:<nome>`»). Na
+    revisão do PR #76 (24/10/2026) bastava a linha citar a seção: «Duração da fase do `minijogo:varal-do-dia`: 90 s — PO,
+    parecer de …» contava como o PO ter aprovado o mini-jogo. Na dúvida, não é a escolha — e o de acordo a pergunta."""
+    cabeca = _cabeca_da_proposta(texto)
+    if not cabeca or not _nomeia_a_escolha(cabeca, secao):
+        return False
+    comeca = bool(_RE_INICIO_DA_ESCOLHA.match(cabeca) or (secao and cabeca.startswith(secao)))
+    contra = re.search(r"\b(?:no\s+lugar|em\s+vez)\s+d[eoa]s?\s+", cabeca)
+    if contra:
+        antes, depois = cabeca[:contra.start()], cabeca[contra.end():]
+        # a escolha é o que entra, não o que sai: «usar a unoochat no lugar do `minijogo:x`» recusa o mini-jogo
+        if not _nomeia_a_escolha(antes, secao) or (secao and secao in depois):
+            return False
+        alvo = (r"(?:(?:o|a|um|uma)\s+)?(?:apps?\b|ambientes?\b|se[çc][ãa]o\b|classe\b|"
+                + "|".join(re.escape(v) for v in sorted(_vocabulario(), key=len, reverse=True)) + ")")
+        return comeca or bool(re.match(alvo, depois))
+    if comeca:
+        return True
+    troca = re.search(r"\btroc\w*\b.{0,60}?\b(?:pel[oa]s?|por|para)\s+(.*)$", cabeca)
+    return bool(troca and _nomeia_a_escolha(troca.group(1), secao))
+
+
+def _nomeia_a_escolha(texto: str, secao: str = "") -> bool:
+    """O texto nomeia o ambiente novo ou o mini-jogo — a seção do bloco 0, quando vem, e não outra `nova:`/`minijogo:`."""
+    tokens = re.findall(r"\b(?:nova|minijogo):[a-z0-9][a-z0-9-]*", texto)
+    if secao and tokens and secao not in tokens:
+        return False  # a proposta de outro ambiente novo não responde por este
+    return bool(tokens or (secao and secao in texto) or _RE_MINIJOGO.search(texto) or _RE_AMBIENTE_NOVO.search(texto))
+
+
+def _linha_da_secao(linha: str, secao: str) -> bool:
+    """A linha que fixa a seção: o campo `secao_ds` da spec ou a «Seção do DS:» do one-pager, com a seção do bloco 0."""
+    if re.search(r"secao_ds\W{0,6}" + re.escape(secao).replace(":", r"\s*:\s*"), linha, re.I):
+        return True
+    rotulo = _RE_ROTULO_SECAO.search(linha)
+    return bool(rotulo and secao in re.sub(r"\s*:\s*", ":", rotulo.group(1).lower()))
+
+
+def _minijogo_no_briefing(briefing: str) -> bool:
+    """O briefing pede mini-jogo: a palavra sem negação nas três antes — «não é mini-jogo», «nada de mini-jogo», «app
+    clonado em vez de mini-jogo» não pedem (revisão do PR #76: só a palavra contava)."""
+    for m in _RE_MINIJOGO.finditer(briefing or ""):
+        antes = re.sub(r"[^a-z0-9]+", " ", _sem_acento(briefing[max(0, m.start() - 60): m.start()]).lower()).split()
+        if not set(antes[-3:]) & _NEGACOES:
+            return True
+    return False
+
+
+def _escolha(spec: str, one_pager: str = "", briefing: str = "", decisoes_do_po: Optional[Iterable[Any]] = None,
+             decidido: Optional[Dict[str, Any]] = None, one_pager_po: str = "") -> Dict[str, str]:
+    """`{status, valor}` de `escolha_do_po`; `valor` é o que o PO escreveu no lugar da proposta («outro valor»)."""
+    from tools.rastro import secao_travada
+
+    d = decidido or classe_e_ambiente(spec)
+    if not d["nova"]:
+        return {"status": "nao_se_aplica", "valor": ""}
+    secao = d["secao"]
+    aprovada = recusada = pendente = False
+    valor = ""
+    for texto in (spec, one_pager):
+        for linha in (texto or "").splitlines():
+            da_secao = _linha_da_secao(linha, secao)
+            # a resposta gravada: na linha da seção (o item que o de acordo abre sozinho grava ali, sem a proposta) ou
+            # com a proposta da escolha depois dos dois-pontos. «90 s — PO, parecer de» é um [PARÂMETRO]: não conta
+            for m in _RE_DECISAO_GRAVADA.finditer(linha):
+                proposta = (m.group(2) or "").strip()
+                if (da_secao and not proposta) or (proposta and sobre_a_escolha(proposta, secao)):
+                    if m.group(1).lower().startswith("recusad"):
+                        recusada = True
+                    else:
+                        aprovada = True
+            for m in _RE_OUTRO_GRAVADO.finditer(linha):
+                # «outro valor» na proposta da escolha é recusa da seção proposta: a que o PO escreveu vai a produto
+                # pelo Refazer, nunca vale como aprovação (revisão do PR #76: «unoojornal — PO, parecer de … (no lugar da
+                # proposta: mini-jogo …)» aprovava o mini-jogo)
+                if sobre_a_escolha(m.group(2), secao):
+                    recusada, valor = True, m.group(1).strip(" -*`")
+            for m in _RE_PROPOSTA_ABERTA.finditer(linha):
+                if m.group(1) is not None:
+                    partes = re.split(r"\bPO\s*:", m.group(1), maxsplit=1)
+                    descricao = partes[1] if len(partes) > 1 else ""
+                else:
+                    descricao = m.group(2).lstrip(" :—–-")
+                if (da_secao and not descricao.strip()) or sobre_a_escolha(descricao, secao):
+                    pendente = True
+    ultima: Optional[Dict[str, Any]] = None
+    for registro in decisoes_do_po or []:
+        if not isinstance(registro, dict):
+            continue
+        assunto = str(registro.get("assunto") or "")
+        tipo = str(registro.get("tipo") or "")
+        if tipo == "escolha_ambiente":
+            # o item que o de acordo abre sozinho é de uma seção: a recusa de `nova:x` não responde por `minijogo:y`
+            if re.search(r"`\s*" + re.escape(secao).replace(":", r"\s*:\s*") + r"\s*`", assunto.lower()):
+                ultima = registro
+        elif tipo in ("proposta", "aberto_po", "") and sobre_a_escolha(assunto, secao):
+            ultima = registro
+    if ultima is not None:
+        resposta = str(ultima.get("resposta") or "")
+        if resposta == "aceitar":
+            aprovada, recusada = True, False
+        elif resposta in ("recusar", "outro"):
+            aprovada, recusada = False, True
+            valor = str(ultima.get("valor") or "") if resposta == "outro" else ""
+    if recusada:
+        return {"status": "recusada", "valor": valor}
+    if aprovada:
+        return {"status": "aprovada", "valor": ""}
+    trava = secao_travada(briefing or "", {})
+    if trava and trava.get("explicita"):
+        if trava["secao"] == secao:
+            return {"status": "briefing", "valor": ""}
+        # o briefing fixou outra seção: a palavra «mini-jogo» nele não decide esta (a trava é conferida no manifesto)
+    elif d["classe"] == MINI_JOGO and _minijogo_no_briefing(briefing):
+        return {"status": "briefing", "valor": ""}
+    # o one-pager que o PO anexou é documento dele: a «Seção do DS» do cabeçalho vale como o briefing (como a legada em
+    # `rastro._legada_fixada_pelo_po`)
+    cabecalho = re.search(r"Se[çc][ãa]o do DS\**\s*[:=]\s*\**\s*`?([a-z][\w:-]*)", (one_pager_po or "")[:6000], re.I)
+    if cabecalho and re.sub(r"\s*:\s*", ":", cabecalho.group(1).lower()) == secao:
+        return {"status": "briefing", "valor": ""}
+    return {"status": "pendente" if pendente else "silencio", "valor": ""}
 
 
 def escolha_do_po(spec: str, one_pager: str = "", briefing: str = "", decisoes_do_po: Optional[Iterable[Any]] = None,
                   decidido: Optional[Dict[str, Any]] = None, one_pager_po: str = "") -> str:
     """Quem decidiu o ambiente novo ou o mini-jogo do bloco 0: `briefing` (o briefing ou o one-pager que o PO anexou o
-    fixam) · `aprovada` · `recusada` (o PO respondeu no de acordo, «— PO, parecer de <data>») · `pendente` (o marcador
-    espera o de acordo) · `silencio` (ninguém perguntou) · `nao_se_aplica` (ambiente existente da lista: produto escolhe
-    pela tabela de `ambientes.md`)."""
-    from tools.rastro import secao_travada
+    fixam) · `aprovada` · `recusada` (o PO respondeu no de acordo, «— PO, parecer de <data>»; «outro valor» na proposta
+    da escolha é recusa) · `pendente` (o marcador espera o de acordo) · `silencio` (ninguém perguntou) · `nao_se_aplica`
+    (ambiente existente da lista: produto escolhe pela tabela de `ambientes.md`).
 
-    d = decidido or classe_e_ambiente(spec)
-    if not d["nova"]:
-        return "nao_se_aplica"
-    secao = d["secao"]
-    minijogo = d["classe"] == MINI_JOGO
-
-    def fala_da_escolha(linha: str) -> bool:
-        # a seção nomeada, ou a classe com a palavra da escolha: «mini-jogo no lugar de app clonado». Só «mini-jogo» não
-        # basta — o [PARÂMETRO] da duração da fase do mini-jogo é outra decisão do PO, não a da classe
-        if secao and secao in linha.lower():
-            return True
-        if minijogo:
-            return bool(_RE_MINIJOGO.search(linha) and _RE_FALA_DA_CLASSE.search(linha))
-        return bool(_RE_AMBIENTE_NOVO.search(linha))
-
-    aprovada = recusada = pendente = False
-    for texto in (spec, one_pager):
-        for linha in (texto or "").splitlines():
-            if not fala_da_escolha(linha):
-                continue
-            if _RE_PARECER_DO_PO.search(linha):
-                if _RE_RECUSA.search(linha):
-                    recusada = True
-                else:
-                    aprovada = True
-            elif _RE_MARCADOR_DO_PO.search(linha):
-                pendente = True
-    ultima = None
-    for registro in decisoes_do_po or []:
-        if not isinstance(registro, dict):
-            continue
-        assunto = str(registro.get("assunto") or "")
-        if registro.get("tipo") == "escolha_ambiente" or fala_da_escolha(assunto):
-            ultima = str(registro.get("resposta") or "")
-    if ultima == "recusar":
-        recusada, aprovada = True, False
-    elif ultima in ("aceitar", "outro"):
-        aprovada, recusada = True, False
-    if recusada:
-        return "recusada"
-    if aprovada:
-        return "aprovada"
-    trava = secao_travada(briefing or "", {})
-    if trava and trava.get("explicita") and trava["secao"] == secao:
-        return "briefing"
-    if minijogo and _RE_MINIJOGO.search(briefing or ""):
-        return "briefing"
-    # o one-pager que o PO anexou é documento dele: a «Seção do DS» do cabeçalho vale como o briefing (como a legada em
-    # `rastro._legada_fixada_pelo_po`)
-    cabecalho = re.search(r"Se[çc][ãa]o do DS\**\s*[:=]\s*\**\s*`?([a-z][\w:-]*)", (one_pager_po or "")[:6000], re.I)
-    if cabecalho and re.sub(r"\s*:\s*", ":", cabecalho.group(1).lower()) == secao:
-        return "briefing"
-    return "pendente" if pendente else "silencio"
+    Só a linha da escolha conta: a da `secao_ds` (ou a «Seção do DS:» do one-pager), a proposta da escolha
+    (`sobre_a_escolha`) e o registro `escolha_ambiente` da mesma seção. Linha que só cita a seção — o [PARÂMETRO] da
+    duração da fase do mini-jogo — não responde a escolha."""
+    return _escolha(spec, one_pager, briefing, decisoes_do_po, decidido, one_pager_po)["status"]
 
 
 def conferir_spec(spec: str, serie: Optional[str] = None, briefing: str = "", one_pager: str = "",
@@ -258,14 +375,17 @@ def conferir_spec(spec: str, serie: Optional[str] = None, briefing: str = "", on
                            "one-pager. A jornada só mapeia as telas para elas; se a decisão é do PO, escreva "
                            "`[ABERTO — dono: PO: regras e fases do mini-jogo …]` com a sugestão.")})
     if conferir_escolha and d["nova"]:
-        escolha = escolha_do_po(spec, one_pager, briefing, decisoes_do_po, d, one_pager_po=one_pager_po)
+        resposta = _escolha(spec, one_pager, briefing, decisoes_do_po, d, one_pager_po=one_pager_po)
+        escolha = resposta["status"]
         rotulo = "o mini-jogo" if d["classe"] == MINI_JOGO else "o ambiente novo"
         if escolha == "recusada":
             achados.append({"severidade": "bloqueio", "campo": "secao_ds", "etapa": "produto",
                             "codigo": "escolha-de-ambiente-recusada", "resumo": (
-                                f"O PO recusou {rotulo} (`{d['secao']}`) no de acordo, e o bloco 0 ainda o fixa. Refaça a "
-                                "spec com um ambiente existente da lista de `ambientes.md` (ambiente existente antes de "
-                                "ambiente novo).")})
+                                f"O PO recusou {rotulo} (`{d['secao']}`) no de acordo, e o bloco 0 ainda o fixa. "
+                                + (f"Ele escreveu «{resposta['valor']}» no lugar: a troca vai a produto pelo **Refazer**, "
+                                   "e a spec volta com ela. " if resposta["valor"] else "")
+                                + "Refaça a spec com um ambiente existente da lista de `ambientes.md` (ambiente "
+                                "existente antes de ambiente novo).")})
         elif escolha == "pendente":
             achados.append({"severidade": "atencao", "campo": "secao_ds", "etapa": "produto",
                             "codigo": "escolha-de-ambiente-com-o-po", "resumo": (
@@ -292,17 +412,25 @@ def bloco_14(texto: str) -> str:
     return texto[m.start(): m.end() + fim.start()] if fim else texto[m.start():]
 
 
-def secoes_do_bloco_14(bloco: str, envelope: Optional[Dict[str, Any]] = None) -> List[str]:
+def secoes_do_bloco_14(bloco: str, envelope: Optional[Dict[str, Any]] = None, decidida: str = "") -> List[str]:
     """As seções do DS que a ficha nomeia: a primeira de cada linha «Seção do DS:» (o valor, conhecido ou não — é o que
-    pega a seção inventada sem prefixo), as outras dela que sejam seção conhecida, `secao_ds:` e o envelope."""
+    pega a seção inventada sem prefixo), as outras dela que sejam seção conhecida, `secao_ds:` e o envelope.
+
+    `decidida`: a `secao_ds` do bloco 0. Com ela `nova:<nome>` ou `minijogo:<nome>`, a ficha que escreve só `<nome>` nomeia
+    a mesma seção — e `minijogo-<nome>`, o nome da seção do DS do mini-jogo no prompt 067, é `minijogo:<nome>` (revisão do
+    PR #76, 24/10/2026: as duas formas bloqueavam o mini-jogo e o ambiente novo que o PO aprovou)."""
     vocab = _vocabulario()
     por_tamanho = sorted(vocab, key=len, reverse=True)
     saida: List[str] = []
+    nome_decidido = decidida.split(":", 1)[1] if decidida.startswith(("nova:", "minijogo:")) else ""
 
     def pôr(token: str, primeiro: bool) -> None:
         t = re.sub(r"\s*:\s*", ":", token.strip().strip("`*_ ,.;").lower())
         # a ponte ou o nome do pacote da seção (`@edu/ui/ds-unoochat`, `ds-unoochat`) nomeiam a mesma seção
         t = re.sub(r"^ds-", "", re.sub(r"^@?edu/ui/", "", t))
+        t = re.sub(r"^minijogo-(?=[a-z0-9])", "minijogo:", t)
+        if nome_decidido and t == nome_decidido:
+            t = decidida
         if not t or not _RE_TOKEN_SECAO.match(t) or t in _NAO_SAO_SECAO:
             return
         if t not in vocab and not t.startswith(("nova:", "minijogo:")):
@@ -352,15 +480,29 @@ def classes_do_bloco_14(bloco: str, envelope: Optional[Dict[str, Any]] = None) -
 
 def jogo_no_bloco_14(bloco: str, spec: str) -> List[str]:
     """As linhas do bloco 14 que definem regra ou fase de jogo e que a spec não traz, iguais: regra `R<n>`, tabela de
-    fases, «como se vence/perde uma fase», «quantas fases». Citar a regra da spec palavra por palavra não é decidir."""
+    fases, «como se vence/perde uma fase», «quantas fases». Citar a regra da spec palavra por palavra não é decidir.
+
+    A regra e a tabela são procuradas no bloco inteiro, não só sob um título «Regras e fases»: «### Regras do jogo» com
+    `R1`, ou uma tabela «| Fase | Nome |» solta na ficha, passavam (revisão do PR #76, 24/10/2026). Fora da seção, a
+    tabela com a coluna «#» só é de fases com uma coluna de jogo (regra, vence, perde) — «| # | Componente |» é da ficha."""
     da_spec = {_norm(l) for l in (spec or "").splitlines() if l.strip()}
-    rf = regras_e_fases(bloco)
-    saida = [f"R{n} {t}" for n, t in sorted(rf["regras"].items())]
-    saida += [f"fase {n}: {f['linha']}" for n, f in sorted(rf["fases"].items())]
+    secao = regras_e_fases(bloco)
+    solto = _ler_regras_e_fases(bloco, fora_da_secao=True)
+    regras = {**solto["regras"], **secao["regras"]}
+    fases = {**solto["fases"], **secao["fases"]}
+    saida = [f"R{n} {t}" for n, t in sorted(regras.items())]
+    # a linha da tabela de fases igual à da spec é cópia: compara as células, sem a barra
+    saida += [f"fase {n}: {f['linha']}" for n, f in sorted(fases.items()) if _norm(f["inteira"]) not in da_spec]
     for linha in (bloco or "").splitlines():
         if _RE_DEFINE_JOGO.search(linha) and re.search(r":\s*\S", linha) and _norm(linha) not in da_spec:
             saida.append(linha.strip()[:200])
     return [s for s in dict.fromkeys(saida) if _norm(s) not in da_spec]
+
+
+def _placeholder(proposta: str) -> bool:
+    """A proposta é só o formato: «…», «<a troca> · por quê: <…> · alternativa: <…>» — nada além de marcação."""
+    resto = re.sub(r"<[^>]*>|…|\.\.\.|\b(?:por\s+qu[eê]|alternativa)\s*:", " ", proposta or "", flags=re.I)
+    return not re.search(r"\w", resto)
 
 
 def devolucoes_do_d9(texto: str, envelope: Optional[Dict[str, Any]] = None) -> List[str]:
@@ -372,10 +514,10 @@ def devolucoes_do_d9(texto: str, envelope: Optional[Dict[str, Any]] = None) -> L
     for d in (bruto if isinstance(bruto, list) else [bruto] if bruto else []):
         if isinstance(d, dict):
             partes = [str(d.get(k) or "").strip() for k in ("proposta", "por_que", "alternativa")]
-            if partes[0]:
+            if partes[0] and not _placeholder(partes[0]):
                 saida.append(partes[0] + (f" · por quê: {partes[1]}" if partes[1] else "")
                              + (f" · alternativa: {partes[2]}" if partes[2] else ""))
-        elif isinstance(d, str) and d.strip():
+        elif isinstance(d, str) and d.strip() and not _placeholder(d):
             saida.append(d.strip())
     m = re.search(D9_DEVOLUCAO_INICIO, texto or "", re.M)
     if m:
@@ -383,6 +525,10 @@ def devolucoes_do_d9(texto: str, envelope: Optional[Dict[str, Any]] = None) -> L
         trecho = texto[m.end(): m.end() + fim.start()] if fim else texto[m.end():]
         for marcador in re.finditer(r"\[PROPOSTA\b[^\]\n]*?:\s*([^\]\n]+)\]", trecho):
             proposta = marcador.group(1).strip()
+            if _placeholder(proposta):
+                # «Nenhuma. Nenhum verbo pede `[PROPOSTA — validar com PO: …]`»: o formato citado, não uma devolução — com
+                # ESTEIRA_ESTRITA virava bloqueio (revisão do PR #76, 24/10/2026)
+                continue
             if not any(_norm(proposta)[:60] in _norm(s) or _norm(s)[:60] in _norm(proposta) for s in saida):
                 saida.append(proposta)
     respec = env.get("respec") if isinstance(env.get("respec"), dict) else {}
@@ -406,7 +552,7 @@ def conferir_d9(texto: str, envelope: Optional[Dict[str, Any]], estado: Dict[str
     spec = str(estado.get("spec_missao") or "")
     decidido = classe_e_ambiente(spec)
     bloco = bloco_14(_passo4(texto) or "")
-    nomeadas = secoes_do_bloco_14(bloco, envelope)
+    nomeadas = secoes_do_bloco_14(bloco, envelope, decidida=decidido["secao"])
     classes = classes_do_bloco_14(bloco, envelope)
     devolucoes = devolucoes_do_d9(texto, envelope)
     achados: List[Dict[str, Any]] = []

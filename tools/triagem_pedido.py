@@ -90,14 +90,40 @@ _RE_TEMA_DE_PRODUTO = re.compile(
 #: Trocar o ambiente, a seção do DS ou a classe (app clonado ↔ mini-jogo) é decisão de produto desde o PR 8 (D8): «trocar o
 #: ambiente para o Unoovista», «transformar a etapa num mini-jogo», «usar outra seção do DS». A palavra solta não conta —
 #: «o botão do mini-jogo ficou pequeno» e «dentro do ambiente» são de design.
+#:
+#: Revisão do PR #76 (24/10/2026): a frase da devolução do D9 que o PO cola no Refazer («[PROPOSTA — validar com PO:
+#: trocar a `unoogaleria` pelo `unoochat` …]»), «trocar X pelo Y» e «mudar para o unoovista» não iam a produto; «seção
+#: nova» de um documento, «classe CSS» e «ambiente sonoro» iam. Agora o ambiente é a seção do DS (a lista, `nova:` ou
+#: `minijogo:`) ou o ambiente da missão; o verbo é o do pedido (infinitivo ou imperativo: «sua ação mudou o ambiente»,
+#: das 1178 frases de pedido do acervo e do bucket, descreve a missão).
+_SECOES_DO_DS = (r"(?:unoovista|unoochat|unooriaai|tiktooria|unoogaleria|unoojornal|unooblog|unootube|unitube|"
+                 r"instanooria|whatsappmobile|chatgpt|(?:nova|minijogo)\s*:\s*[a-z][\w-]*)")
+_VERBO_DE_TROCA = (r"(?:troc(?:ar|ar[ií]a|ando)|troqu(?:e|em)|mud(?:ar|e|em|ando|aria)|substitu(?:ir|a|am|indo|iria)|"
+                   r"alter(?:ar|e|em|ando|aria)|pass(?:ar|e|em|ando|aria)|lev(?:ar|e|em)|mov(?:er|a|am))")
+#: O ambiente da missão, não o sonoro, o visual ou o da sala.
+_AMBIENTE = r"ambiente(?!\s+(?:sonoro|visual|gr[áa]fico|de\s+(?:sala|aula|aprendizagem|estudo|trabalho)|escolar|calmo))"
 _RE_TROCA_DE_AMBIENTE = re.compile(
-    r"\b(?:troc|mud|substitu|alter(?!nativ))\w*\s+(?:(?:o|a|de|do|da)\s+)?(?:ambiente|se[çc][ãa]o\s+do\s+DS|secao_ds|"
-    r"classe)\b"
+    rf"\b{_VERBO_DE_TROCA}\s+(?:(?:o|a|de|do|da)\s+)?(?:{_AMBIENTE}|se[çc][ãa]o\s+do\s+DS|secao_ds|"
+    r"classe\s+do\s+ambiente)\b"
+    # «trocar a unoogaleria pelo unoochat», «substituir o app por um mini-jogo»
+    rf"|\b{_VERBO_DE_TROCA}\s+(?:[^.;\n]{{0,60}}?\s)?(?:pel[oa]s?|por)\s+(?:(?:o|a|um|uma)\s+)?"
+    rf"(?:se[çc][ãa]o\s+(?:do\s+DS\s+)?)?`?{_SECOES_DO_DS}"
+    # «mudar para o unoovista», «passar a missão para a seção unoovista», «mudar a etapa 3 para o unoochat»; «passar a
+    # foto para o unoochat» é verbo da missão, não troca de ambiente
+    rf"|\b{_VERBO_DE_TROCA}\s+(?:(?:(?:a|o|esta|essa)\s+)?(?:miss[ãa]o|etapa|atividade|{_AMBIENTE}|app|tela)\b"
+    r"[^.;\n]{0,30}?\s)?(?:para|pr[oa])\s+(?:(?:o|a)\s+)?(?:se[çc][ãa]o\s+(?:do\s+DS\s+)?|app\s+)?"
+    rf"`?{_SECOES_DO_DS}"
     r"|\b(?:transform|vir|pass|troc|mud)\w*\s+(?:\S+\s+){0,4}?(?:em|para|por|num|numa)\s+(?:um\s+|uma\s+)?"
-    r"(?:mini-?\s?jogo|minijogo|app\s+clonado|outr[oa]\s+ambiente|ambiente\s+nov[oa])\b"
-    r"|\b(?:ambiente|se[çc][ãa]o(?:\s+do\s+DS)?)\s+nov[oa]\b|\boutr[oa]\s+(?:ambiente|se[çc][ãa]o\s+do\s+DS)\b"
-    r"|\bus(?:ar|e|em)\s+(?:o\s+|a\s+)?(?:se[çc][ãa]o\s+)?`?(?:unoovista|unoochat|unooriaai|tiktooria|unoogaleria|"
-    r"unoojornal|unooblog)\b", re.I)
+    rf"(?:mini-?\s?jogo|minijogo|app\s+clonado|outr[oa]\s+{_AMBIENTE}|ambiente\s+nov[oa])\b"
+    r"|\bmini-?\s?jogo\s+no\s+lugar\s+d[eoa]\s+app\b|\bapp\s+clonado\s+no\s+lugar\s+d[eoa]\s+mini-?\s?jogo\b"
+    rf"|\b{_AMBIENTE}\s+nov[oa]\b|\bse[çc][ãa]o\s+(?:nova\s+)?do\s+DS\s+nova\b|\bnova\s+se[çc][ãa]o\s+do\s+DS\b"
+    rf"|\boutr[oa]\s+(?:{_AMBIENTE}|se[çc][ãa]o\s+do\s+DS)\b"
+    rf"|\bus(?:ar|e|em)\s+(?:o\s+|a\s+)?(?:se[çc][ãa]o\s+)?`?{_SECOES_DO_DS}", re.I)
+#: A proposta que o PO cola no Refazer — a devolução do D9 ou de um gate, «[PROPOSTA — validar com PO: …]» — que cita a
+#: seção do DS ou a classe: a troca de ambiente proposta, que o PO aceita pedindo-a.
+_RE_PROPOSTA_DE_AMBIENTE = re.compile(
+    rf"\[PROPOSTA\b[^\]\n]*?(?:{_SECOES_DO_DS}|mini-?\s?jogo|minijogo|app\s+clonado|classe\s+do\s+ambiente|"
+    rf"{_AMBIENTE}\s+nov[oa])", re.I)
 #: Sempre de produto, com ou sem verbo: Canal B e podcast são textos-chave do one-pager (D1). Desde o PR 7, também o item
 #: que cita o ID de um texto-chave (`TC-07`, a opção `TC-12.2`): a proposta do design que o PO aceita no Refazer chega
 #: com o ID dela (`tools/textos_chave.py`).
@@ -449,6 +475,11 @@ def regra_de_produto(texto: str, docs: Dict[str, str], linhas: Optional[Dict[str
         if troca and not any(p in ("nao", "nem", "sem", "nunca") for p in _palavras(frase[: troca.start()])[-2:]):
             motivos.append(f"muda o ambiente ou a classe («{frase[:70]}»)")
             break
+    else:
+        # o marcador é lido no item inteiro: as frases o partem no «validar com PO:»
+        proposta = _RE_PROPOSTA_DE_AMBIENTE.search(sem_citacoes)
+        if proposta:
+            motivos.append(f"proposta de troca do ambiente ou da classe («{proposta.group(0)[:70]}»)")
     return list(dict.fromkeys(motivos))
 
 

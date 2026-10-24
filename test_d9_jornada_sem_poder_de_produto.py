@@ -202,6 +202,95 @@ def test_com_o_marcador_escrito_o_item_e_o_do_marcador_e_app_clonado_nao_tem_ite
         assert not fc.escolhas_de_ambiente(_estado(missao))
 
 
+# --------------------------------------------------------------------------- 2b. revisão do PR #76: só a escolha responde
+PROPOSTA_3EF = ("- [PROPOSTA — validar com PO: mini-jogo `minijogo:varal-do-dia` no lugar de app clonado · por quê: os verbos "
+                "são genéricos · alternativa: unoojornal]\n")
+
+
+def test_proposta_da_escolha_so_aceita_ou_recusa_e_a_resposta_grava_a_escolha():
+    """A proposta que pergunta a classe só tem aceitar ou recusar: «outro valor» gravava «unoojornal — PO, parecer de …»
+    na linha dela, a `secao_ds` seguia com o mini-jogo, e o código lia como aprovado (revisão do PR #76)."""
+    estado = {"spec_missao": _spec_minijogo(extra=PROPOSTA_3EF)}
+    itens = fc.itens_em_aberto(estado)
+    escolha = [i for i in itens if i.escolha_ambiente]
+    assert len(escolha) == 1 and escolha[0].tipo == fc.PROPOSTA and escolha[0].opcoes() == [fc.ACEITAR, fc.RECUSAR]
+    assert amb.escolha_do_po(estado["spec_missao"]) == "pendente"
+    with pytest.raises(fc.RespostaInvalida):
+        fc.decidir(itens, {escolha[0].id: {"resposta": fc.OUTRO, "valor": "unoojornal"}}, "24/10/2026 10:00:00", "c")
+    for resposta, esperado in ((fc.ACEITAR, "aprovada"), (fc.RECUSAR, "recusada")):
+        d = fc.decidir(itens, {escolha[0].id: {"resposta": resposta}}, "24/10/2026 10:00:00", "produto")
+        novos, falhas = fc.aplicar_edicoes(estado, d.edicoes)
+        assert not falhas
+        assert amb.escolha_do_po(novos["spec_missao"]) == esperado
+        assert amb.escolha_do_po(estado["spec_missao"], decisoes_do_po=d.decisoes) == esperado
+        assert not [i for i in fc.itens_em_aberto({**estado, **novos, "decisoes_do_po": d.decisoes})
+                    if i.tipo == fc.ESCOLHA_AMBIENTE]
+    # os parâmetros do jogo continuam com «outro valor»: não são a escolha
+    parametro = "- `[PARÂMETRO — a definir por produto: duração da fase do `minijogo:varal-do-dia`, sugestão: 90 s]`\n"
+    outros = [i for i in fc.itens_em_aberto({"spec_missao": _spec_minijogo(extra=PROPOSTA_3EF + parametro)})
+              if not i.escolha_ambiente]
+    assert outros and all(fc.OUTRO in i.opcoes() for i in outros)
+
+
+def test_outro_valor_na_proposta_da_escolha_e_recusa_e_vai_a_produto():
+    """Mutante «o PO responde outro valor ao mini-jogo»: a resposta de antes do PR, ainda no texto ou no registro, é
+    recusa da seção proposta — o manifesto bloqueia, e o D9 não monta o jogo."""
+    gravada = ("- unoojornal — PO, parecer de 24/10/2026 (no lugar da proposta: mini-jogo `minijogo:varal-do-dia` no "
+               "lugar de app clonado)\n")
+    spec = _spec_minijogo(extra=gravada)
+    assert amb.escolha_do_po(spec) == "recusada"
+    recusa = [a for a in amb.conferir_spec(spec, serie="2EF") if a["codigo"] == "escolha-de-ambiente-recusada"]
+    assert recusa and recusa[0]["severidade"] == "bloqueio" and "«unoojornal»" in recusa[0]["resumo"]
+    assert "escolha-de-ambiente-recusada" in [a.get("codigo") for a in validar_manifesto(spec)["achados"]]
+    casca = ("## 14. Ambiente simulado (D9)\n\n- **Nome:** Varal · **Seção do DS:** `minijogo:varal-do-dia` · "
+             "**Classe:** mini-jogo\n")
+    d9 = amb.conferir_d9(_saida_d9(casca), None, {"spec_missao": spec})
+    assert "escolha-de-ambiente-recusada" in _codigos(d9["achados"])
+    registro = [{"id": "x", "tipo": fc.PROPOSTA, "assunto": "mini-jogo `minijogo:varal-do-dia` no lugar de app clonado",
+                 "resposta": fc.OUTRO, "valor": "unoojornal"}]
+    assert amb.escolha_do_po(_spec_minijogo(extra=PROPOSTA_3EF), decisoes_do_po=registro) == "recusada"
+
+
+@pytest.mark.parametrize("linha", [
+    # o [PARÂMETRO] respondido que cita a seção não é a escolha da classe
+    "- Duração da fase do `minijogo:varal-do-dia`: 90 s — PO, parecer de 24/10/2026\n",
+    # nem a proposta de um parâmetro do jogo, aprovada
+    "- aprovada — PO, parecer de 24/10/2026: duração da fase do `minijogo:varal-do-dia` em 90 s\n",
+    # nem a proposta que tira o mini-jogo, aprovada
+    "- aprovada — PO, parecer de 24/10/2026: usar a `unoochat` no lugar do `minijogo:varal-do-dia`\n",
+])
+def test_linha_que_so_cita_a_secao_nao_responde_a_escolha(linha):
+    spec = _spec_minijogo(extra=linha)
+    assert amb.escolha_do_po(spec) == "silencio"
+    assert "escolha-de-ambiente-sem-o-po" in _codigos(amb.conferir_spec(spec, serie="2EF"))
+    assert [i for i in fc.itens_em_aberto({"spec_missao": spec}) if i.tipo == fc.ESCOLHA_AMBIENTE]
+
+
+def test_registro_da_escolha_de_outra_secao_nao_responde_por_esta():
+    """A recusa de `nova:pistagrama` não é a do `minijogo:varal-do-dia`: sem comparar a seção, ele saía «recusado» e o de
+    acordo não abria o item dele."""
+    outra = [{"tipo": fc.ESCOLHA_AMBIENTE, "assunto": "ambiente novo `nova:pistagrama` — a spec fixa…", "resposta": "recusar"}]
+    spec = _spec_minijogo()
+    assert amb.escolha_do_po(spec, decisoes_do_po=outra) == "silencio"
+    assert [i for i in fc.itens_em_aberto({"spec_missao": spec, "decisoes_do_po": outra})
+            if i.tipo == fc.ESCOLHA_AMBIENTE]
+    desta = [{"tipo": fc.ESCOLHA_AMBIENTE, "assunto": "mini-jogo `minijogo:varal-do-dia` — a spec fixa…",
+              "resposta": "recusar"}]
+    assert amb.escolha_do_po(spec, decisoes_do_po=desta) == "recusada"
+
+
+@pytest.mark.parametrize("briefing, esperado", [
+    ("Quero um mini-jogo de ordenar fotos.", "briefing"),
+    ("secao_ds: minijogo:varal-do-dia", "briefing"),
+    ("Não é mini-jogo: a turma usa a galeria.", "silencio"),
+    ("Nada de mini-jogo nesta missão.", "silencio"),
+    ("App clonado, em vez de mini-jogo.", "silencio"),
+    ("secao_ds: minijogo:outro-jogo", "silencio"),
+])
+def test_briefing_so_decide_o_minijogo_quando_o_pede(briefing, esperado):
+    assert amb.escolha_do_po(_spec_minijogo(), briefing=briefing) == esperado
+
+
 # --------------------------------------------------------------------------- 3. o D9: só a ficha do bloco 14
 BLOCO14_GALERIA = ("## 14. Ambiente simulado (D9)\n\n### 14.1 Ficha\n- **Nome do app que o estudante vê:** Unoogaleria\n"
                    "- **Seção do DS:** `unoogaleria` · **Classe:** app clonado\n- **Chrome:** álbum, grade e visualizador.\n")
@@ -311,6 +400,116 @@ def test_bloco_14_com_regra_ou_fase_de_jogo_bloqueia_e_a_citacao_literal_da_spec
     assert jogo and "R3" in jogo[0]["resumo"] and "Como se vence" in jogo[0]["resumo"]
     copiada = casca + "\n**Como o progresso aparece:** um mapa com dois varais; o feito fica colorido.\n"
     assert _d9(spec, _saida_d9(copiada, env))["ambiente_status"] == "aprovado"
+
+
+MINIJOGO_APROVADO = "- `secao_ds: minijogo:varal-do-dia` — aprovada — PO, parecer de 24/10/2026"
+ENV_MINIJOGO = {"agente": "ambiente-simulado", "status": "dormente",
+                "ambiente": {"classe": "mini-jogo", "secao_ds": "minijogo:varal-do-dia"}, "devolucao": None}
+
+
+@pytest.mark.parametrize("secao, decidida, linha", [
+    # o prompt 067 manda montar «a seção do DS `minijogo-<nome>` sobre `unooria`»
+    ("minijogo:varal-do-dia", MINIJOGO_APROVADO, "- **Seção do DS:** `minijogo-varal-do-dia` sobre `unooria`"),
+    ("minijogo:varal-do-dia", MINIJOGO_APROVADO, "- **Seção do DS:** `minijogo:varal-do-dia` · **Classe:** mini-jogo"),
+    # o ambiente novo aprovado, nomeado sem o prefixo `nova:`
+    ("nova:pistagrama", "- `secao_ds: nova:pistagrama` — aprovada — PO, parecer de 24/10/2026",
+     "- **Seção do DS:** `pistagrama` · **Classe:** app clonado"),
+])
+def test_ficha_do_minijogo_e_do_ambiente_novo_aprovados_nao_e_falso_positivo(secao, decidida, linha):
+    """Revisão do PR #76: a ficha com `minijogo-<nome>` ou com o nome do ambiente novo sem prefixo bloqueava como decisão
+    de produto e era descartada do anexo — justamente no caminho que o PO aprovou."""
+    spec = _spec(secao, serie="2EF").replace(f"- `secao_ds: {secao}`", decidida).replace(REGRAS_E_FASES_SLOT,
+                                                                                       REGRAS_E_FASES)
+    assert amb.escolha_do_po(spec) == "aprovada"
+    r = amb.conferir_d9(_saida_d9("## 14. Ambiente simulado (D9)\n\n" + linha + "\n"), None, {"spec_missao": spec})
+    assert not r["descartar"] and r["achados"] == [], r["achados"]
+    assert secao in r["nomeadas"]
+    # o mesmo nome numa spec que decidiu outra seção continua sendo a seção inventada
+    outra = amb.conferir_d9(_saida_d9("## 14. Ambiente simulado (D9)\n\n" + linha + "\n"), None,
+                            {"spec_missao": _spec_app("unoochat")})
+    assert outra["descartar"] and "decisao-de-produto-pelo-agente" in _codigos(outra["achados"])
+
+
+@pytest.mark.parametrize("linha, bloqueia", [
+    # a linha que o template do 067 prescreve: a classe depois de «·»
+    ("- **Seção do DS:** `unoogaleria` · **Classe:** mini-jogo", True),
+    ("- **Nome:** Galeria · **Seção do DS:** `unoogaleria` · **Classe:** app clonado · **Dispositivo:** celular", False),
+])
+def test_classe_depois_do_ponto_na_linha_da_secao_e_lida(linha, bloqueia):
+    st = _d9(_spec_app(), _saida_d9("## 14. Ambiente simulado (D9)\n\n" + linha + "\n", {"agente": "ambiente-simulado"}))
+    assert ("decisao-de-produto-pelo-agente" in _codigos(_achados(st))) is bloqueia, _achados(st)
+    assert (st["ambiente_status"] == "bloqueado") is bloqueia
+
+
+@pytest.mark.parametrize("trecho, bloqueia", [
+    ("### Regras do jogo\n- `R1` Toque na foto certa.\n", True),
+    ("| Fase | Nome |\n|---|---|\n| 1 | Varal da noite |\n", True),
+    ("| # | Regra da fase | Como vence |\n|---|---|---|\n| 1 | Pendure tudo | três fotos |\n", True),
+    # a tabela da ficha com a coluna «#» não é de fases
+    ("| # | Componente | Tokens usados |\n|---|---|---|\n| 1 | Área de jogo | `space-4` |\n", False),
+    # a linha da tabela de fases igual à da spec é cópia, não decisão
+    ("| Fase | Nome | Ideia nova | Regra da fase | Verbo do jogo | Como vence | Como perde | Habilidade |\n"
+     "|---|---|---|---|---|---|---|---|\n| 1 | Varal da manhã | ordem de duas fotos | Ponha a foto do café antes da "
+     "escola. | ordenar | duas fotos no lugar | foto fora do lugar volta | `EF02CO05` |\n", False),
+])
+def test_regra_e_fase_de_jogo_em_qualquer_lugar_do_bloco_14(trecho, bloqueia):
+    """Só sob um título «Regras … fases» a regra e a tabela eram vistas: «### Regras do jogo» com `R1`, ou «| Fase | Nome
+    |» solta, passavam (revisão do PR #76)."""
+    spec = _spec_minijogo().replace("- `secao_ds: minijogo:varal-do-dia`", MINIJOGO_APROVADO)
+    casca = ("## 14. Ambiente simulado (D9)\n\n- **Nome:** Varal · **Seção do DS:** `minijogo:varal-do-dia` · "
+             "**Classe:** mini-jogo\n\n" + trecho)
+    st = _d9(spec, _saida_d9(casca, ENV_MINIJOGO))
+    assert ("decisao-de-produto-pelo-agente" in _codigos(_achados(st))) is bloqueia, _achados(st)
+
+
+def test_secao_nova_fora_do_bloco_14_com_regra_de_jogo_bloqueia_e_sem_jogo_e_atencao():
+    """«## Regras e fases do mini-jogo» depois do bloco 14 era descartada só com atenção, e escapava ao gate do jogo."""
+    spec = _spec_minijogo().replace("- `secao_ds: minijogo:varal-do-dia`", MINIJOGO_APROVADO)
+    casca = ("## 14. Ambiente simulado (D9)\n\n- **Seção do DS:** `minijogo:varal-do-dia` · **Classe:** mini-jogo\n\n")
+    jogo = casca + "## Regras e fases do mini-jogo\n\n- `R3` Quem errar perde uma vida.\n"
+    st = _d9(spec, _saida_d9(jogo, ENV_MINIJOGO))
+    produto = [a for a in _achados(st) if a["codigo"] == "decisao-de-produto-pelo-agente"]
+    assert len(produto) == 1 and "R3" in produto[0]["resumo"] and st["ambiente_status"] == "bloqueado"
+    assert "perde uma vida" not in st[KEY_ANEXO]
+    notas = _d9(spec, _saida_d9(casca + "## Notas da ficha\n\n- conferir o contraste no projetor.\n", ENV_MINIJOGO))
+    assert notas["ambiente_status"] == "amarelo" and _codigos(_achados(notas)) == ["alterou-fora-do-proprio-bloco"]
+    # a seção nova que copia a regra da spec palavra por palavra não decide nada
+    copia = _d9(spec, _saida_d9(casca + "## Regras do jogo (da spec)\n\n- `R1` Toque na foto que veio primeiro.\n",
+                                ENV_MINIJOGO))
+    assert "decisao-de-produto-pelo-agente" not in _codigos(_achados(copia))
+
+
+@pytest.mark.parametrize("passo3", [
+    "Nenhuma. Nenhum verbo pede `[PROPOSTA — validar com PO: …]`.",
+    "Nenhuma — o formato seria `[PROPOSTA — validar com PO: <a troca> · por quê: <…> · alternativa: <…>]`.",
+])
+def test_placeholder_no_passo_3_nao_e_devolucao(passo3):
+    """«Nenhuma. Nenhum verbo pede `[PROPOSTA — validar com PO: …]`» virava a devolução «…», bloqueio com
+    ESTEIRA_ESTRITA (revisão do PR #76)."""
+    assert amb.devolucoes_do_d9(_saida_d9(devolucao=passo3)) == []
+    assert _d9(_spec_app(), _saida_d9(devolucao=passo3), estrito=True)["ambiente_status"] == "aprovado"
+
+
+def test_correcao_pontual_com_o_d9_travado_confere_so_o_bloco_14():
+    """Na correção pontual de design o D9 não roda e a resposta é a de antes: na exp01em1b-76d9af6e, a que escreveu nos
+    blocos 2, 3, 7 e 10 do Gate 0. O ticket iria ao D9, que não pode reescrever, e o design ficava 🔴 sem saída. Com ele
+    travado, o texto fora do bloco 14 é descartado com atenção; fora da correção pontual, continua bloqueando."""
+    estado = _estado("exp01em1b-76d9af6e")
+    produto = estado["spec_missao_gate0"]
+    bloco13 = _bloco(estado["spec_missao"], "13") or _bloco(str(estado["fechamento_lacunas"]), "13")
+    base = {k: estado[k] for k in ("ambiente_simulado", "fechamento_lacunas", "briefing", "one_pager") if k in estado}
+    base.update({"spec_missao": produto, KEY_ANEXO: montar_anexo(bloco13)})
+    split = get_ambiente_simulado_split()
+    split.estrito = True
+    travado = t._rodar({**base, "modo_correcao": "pontual", "documentos_travados": ["ambiente_simulado"]}, split)
+    assert travado["ambiente_status"] == "amarelo", _achados(travado)
+    assert not [a for a in _achados(travado) if a["severidade"] == "bloqueio"]
+    assert any("Refazer completo de design" in a["resumo"] for a in _achados(travado))
+    outro_split = get_ambiente_simulado_split()
+    outro_split.estrito = True
+    solto = t._rodar(dict(base), outro_split)
+    assert solto["ambiente_status"] == "bloqueado"
+    assert "decisao-de-produto-pelo-agente" in _codigos(_achados(solto))
 
 
 @pytest.mark.parametrize("estrito, status", [(False, "amarelo"), (True, "bloqueado")])
@@ -478,12 +677,45 @@ def test_jornada_do_acervo_sem_falso_positivo(missao):
     ("O botão do mini-jogo ficou pequeno: aumentar.", False),
     ("Deixar o texto que aparece dentro do ambiente mais curto.", False),
     ("Não trocar o ambiente.", False),
+    # revisão do PR #76: a devolução do D9 que o PO cola no Refazer, e as formas naturais da troca
+    ("[PROPOSTA — validar com PO: trocar a `unoogaleria` pelo `unoochat` · por quê: o verbo encaminhar não existe numa "
+     "galeria · alternativa: unoovista]", True),
+    ("[PROPOSTA — validar com PO: `unoochat` no lugar da `unoogaleria` · por quê: encaminhar]", True),
+    ("Trocar a unoogaleria pelo unoochat.", True),
+    ("Mudar para o unoovista.", True),
+    ("Passar a missão para a seção unoovista.", True),
+    ("Mini-jogo no lugar de app clonado na etapa 3.", True),
+    # e o que é de design: seção de documento, classe CSS, ambiente sonoro, verbo da missão
+    ("Adicionar uma seção nova na tela de reflexão com as respostas da turma.", False),
+    ("Criar uma seção nova no relatório do professor.", False),
+    ("Alterar a classe CSS do botão de enviar.", False),
+    ("Mudar o ambiente sonoro da tela 3 para mais calmo.", False),
+    ("O aluno vê que sua ação mudou o ambiente.", False),
+    ("O aluno deve passar a foto para o unoochat.", False),
 ])
 def test_triagem_leva_a_troca_de_ambiente_a_produto(pedido, vai):
     from tools.triagem_pedido import regra_de_produto
 
     motivos = regra_de_produto(pedido, {})
-    assert any(m.startswith("muda o ambiente ou a classe") for m in motivos) is vai, motivos
+    assert any(m.startswith(("muda o ambiente ou a classe", "proposta de troca do ambiente")) for m in motivos) is vai, \
+        motivos
+
+
+def test_triagem_sem_falso_positivo_nos_pedidos_do_acervo():
+    """Nenhum pedido do PO gravado no acervo troca o ambiente: nenhuma frase deles casa a troca de ambiente."""
+    import re
+
+    from tools.triagem_pedido import _RE_PROPOSTA_DE_AMBIENTE, _RE_TROCA_DE_AMBIENTE
+
+    frases = 0
+    for p in ACERVO.glob("*/estado.json"):
+        for pedido in json.loads(p.read_text(encoding="utf-8")).get("pedidos_do_po") or []:
+            texto = str(pedido.get("texto") or "") if isinstance(pedido, dict) else str(pedido)
+            for frase in re.split(r"(?<=[.!?:])\s+|\n+", texto):
+                frases += 1
+                assert not _RE_TROCA_DE_AMBIENTE.search(frase), (p.parent.name, frase)
+            assert not _RE_PROPOSTA_DE_AMBIENTE.search(texto), (p.parent.name, texto[:200])
+    assert frases > 50
 
 
 def test_classe_ambiente_e_do_po_no_d0_e_na_completude():
@@ -510,6 +742,9 @@ def test_prompts_de_produto_decidem_e_o_d9_e_a_jornada_nao():
         assert "Gate de aplicabilidade" in load_prompt(prompt), prompt
     d9 = get_prompt_raw("design/067_ambiente_simulado.md")
     assert "Você não decide nada de produto" in d9 and "Passada 2b" not in d9 and "[RS-AMB]" not in d9
+    # o prompt diz o que o código faz: no bloco 13 do D0 o texto do D9 é atenção, não bloqueio (revisão do PR #76)
+    assert "no bloco 13, descarta com atenção" in d9 and "bloco 13 do anexo **(código)**" not in get_prompt_raw(
+        "references/pronto.md")
     assert "## Bloco 14 — Ficha do ambiente" in d9 and '"status": "dormente", "ambiente"' in d9
     jornada = get_prompt_raw("design/071_jornada.md")
     assert "Agora você copia e mapeia: nada mais." in jornada and "O jogo desta missão é seu" not in jornada

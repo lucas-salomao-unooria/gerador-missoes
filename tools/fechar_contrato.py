@@ -116,9 +116,14 @@ class Item:
     detalhe: str = ""
     #: Só em `texto_teto`: o texto-chave como está no one-pager (é ele que a troca procura nas linhas).
     texto_chave: str = ""
+    #: A proposta que pergunta a escolha da classe ou do ambiente (`tools/ambiente.sobre_a_escolha`), PR 8 (D8): só
+    #: aceitar ou recusar. «Outro valor» gravava «unoojornal — PO, parecer de …» na linha da proposta do mini-jogo, a
+    #: `secao_ds` seguia com ele e o código o lia como aprovado (revisão do PR #76, 24/10/2026). Outra seção é refazer
+    #: produto: o PO recusa e pede a troca no Refazer.
+    escolha_ambiente: bool = False
 
     def opcoes(self) -> List[str]:
-        if self.tipo in (MUDANCA_GATE0, ESCOLHA_AMBIENTE):
+        if self.tipo in (MUDANCA_GATE0, ESCOLHA_AMBIENTE) or self.escolha_ambiente:
             return [ACEITAR, RECUSAR]
         if self.tipo == TEXTO_TETO:
             # manter o texto aprovado (a sugestão) ou escrever outro; recusar o texto é escrever outro
@@ -300,7 +305,25 @@ def itens_em_aberto(estado: Dict[str, Any]) -> List[Item]:
     for item in itens:
         texto = " ".join([item.assunto, item.sugestao] + [o.descricao for o in item.ocorrencias])
         item.ui = _e_ui(texto)
+    _marcar_escolhas_de_ambiente(estado, itens)
     return itens + escolhas_de_ambiente(estado) + mudancas_do_design(estado) + textos_acima_do_teto(estado)
+
+
+def _marcar_escolhas_de_ambiente(estado: Dict[str, Any], itens: Sequence[Item]) -> None:
+    """Marca a [PROPOSTA] (ou o [ABERTO — dono: PO]) que pergunta a escolha da classe ou do ambiente: só aceitar ou
+    recusar, e a resposta é gravada como a de `tools/ambiente.escolha_do_po` a lê (PR 8, D8)."""
+    from tools import ambiente as amb
+
+    decidido = amb.classe_e_ambiente(documentos(estado)[DOC_SPEC])
+    secao = decidido["secao"] if decidido["nova"] else ""
+    for item in itens:
+        if item.tipo not in (PROPOSTA, ABERTO_PO):
+            continue
+        if any(amb.sobre_a_escolha(o.descricao or item.assunto, secao) for o in item.ocorrencias) \
+                or amb.sobre_a_escolha(item.assunto, secao):
+            item.escolha_ambiente = True
+            item.ui = False
+            item.sugestao = item.sugestao or item.assunto
 
 
 def escolhas_de_ambiente(estado: Dict[str, Any]) -> List[Item]:
@@ -454,6 +477,11 @@ def _texto_gravado(item: Item, oc: Ocorrencia, resposta: str, valor: str, data: 
     """O que entra no lugar do marcador: «<valor> — PO, parecer de <data>»."""
     marca = f"PO, parecer de {data}"
     cabeca = _cabeca(oc.descricao)
+    if item.escolha_ambiente:
+        # a escolha da classe ou do ambiente, também no [ABERTO — dono: PO]: «aprovada|recusada — PO, parecer de <data>:
+        # <a proposta>», a forma que `tools/ambiente.escolha_do_po` lê
+        proposta = oc.descricao or item.assunto
+        return f"{'aprovada' if resposta == ACEITAR else 'recusada'} — {marca}" + (f": {proposta}" if proposta else "")
     if resposta == DESIGN:
         return f"[ABERTO — dono: design: {cabeca or item.assunto} · deixado para o design no parecer de produto de {data}]"
     if resposta == RECUSAR:
