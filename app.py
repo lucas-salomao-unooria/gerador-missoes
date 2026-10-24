@@ -64,6 +64,7 @@ from tools.auth import (
     validar_token,
 )
 from tools import fechar_contrato
+from tools import governanca
 from tools import triagem_pedido
 from tools.doc_parser import EXTENSOES_ACEITAS, DocumentBatch, validate_and_process_batch
 from tools.markdown_blocos import desembrulhar_documento, sanear_para_streamlit
@@ -510,14 +511,28 @@ def _render_trilha(fluxo: Dict[str, Any]) -> None:
             icone = "⬜"
         marcas.append(f"{icone} {passagem.ROTULO_ETAPA[etapa]}")
     st.markdown(" → ".join(marcas))
+    _render_governanca(fluxo)
     if pareceres:
         with st.expander(f"🗒️ Pareceres ({len(pareceres)})", expanded=False):
             nomes = {passagem.DE_ACORDO: "de acordo", passagem.REFAZER: "refazer", passagem.DEVOLVER: "devolveu",
                      passagem.EXCECAO: "liberou com exceção"}
             for p in reversed(pareceres):
                 invalido = "" if p.get("valido", True) else " · ~~substituído por uma versão refeita~~"
+                sem_conta = f" · 🟡 {governanca.SEM_CONTA_PRODUTO}" if governanca.liberou_sem_conta_produto(p) else ""
                 st.markdown(f"**{passagem.ROTULO_ETAPA.get(p['etapa'], p['etapa'])}** · {nomes.get(p['acao'], p['acao'])} · "
-                            f"{p['como']} · {p['quando']} (rodada {p.get('rodada', 1)}){invalido}\n\n{_citar(p['comentario'])}")
+                            f"{p['como']} · {p['quando']} (rodada {p.get('rodada', 1)}){sem_conta}{invalido}\n\n"
+                            f"{_citar(p['comentario'])}")
+                j = p.get("justificativa_excecao")
+                if isinstance(j, dict) and j.get("texto"):
+                    st.markdown(f"Justificativa da exceção ({j.get('como', '')}, {j.get('quando', '')}):\n\n"
+                                f"{_citar(str(j['texto']))}")
+
+
+def _render_governanca(fluxo: Dict[str, Any]) -> None:
+    """A liberação de produto em vigor sem a conta produto, e a exceção do admin com 🔴 em produto, à vista no cartão
+    (plano «Produto dono do contrato», PR 9, D9). A conta design segue liberando produto: o cartão só não o esconde."""
+    for p in passagem.governanca(fluxo)["pendencias"]:
+        st.caption(f"🟡 {p['resumo'][0].upper()}{p['resumo'][1:]}.")
 
 
 def _tema_escuro() -> bool:
@@ -606,11 +621,12 @@ def _render_profundidade(estado: Dict[str, Any]) -> None:
 
 def _decidir(run_dir: Path, fluxo: Dict[str, Any], acao: str, comentario: str,
              estado: Dict[str, Any], opts: Dict[str, Any], conferencia: Optional[Dict[str, str]] = None,
-             decisoes: Optional[Dict[str, Dict[str, str]]] = None, divisao: Optional[Dict[str, Any]] = None) -> None:
+             decisoes: Optional[Dict[str, Dict[str, str]]] = None, divisao: Optional[Dict[str, Any]] = None,
+             leitura: Optional[List[str]] = None, justificativa: str = "") -> None:
     sessao = sessao_atual()
     try:
         novo, efeito = passagem.aplicar(fluxo, acao, sessao, comentario, estado, conferencia, decisoes,
-                                        divisao=divisao)
+                                        divisao=divisao, leitura=leitura, justificativa=justificativa)
         # no de acordo de produto, as respostas do contrato entram no one-pager e na spec antes de o fluxo liberar o design
         gravado = passagem.registrar_decisao(run_dir, fluxo, novo, acao)
         if efeito:
@@ -752,12 +768,16 @@ def _render_textos_chave(estado: Dict[str, Any]) -> None:
         st.markdown(tabela)
 
 
-def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[str, Any]) -> Dict[str, Dict[str, str]]:
+def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[str, Any],
+                            pode_ficar_sem_resposta: bool = True) -> Dict[str, Dict[str, Any]]:
     """A lista do contrato de produto em aberto, com a resposta do PO a cada item (plano «Produto dono do contrato», PR 3).
 
     Cada [PARÂMETRO], [PROPOSTA] e [ABERTO — dono: PO] do one-pager e da spec do Gate 0 aparece com a sugestão do agente;
     a resposta entra no texto como «<valor> — PO, parecer de <data>» quando o de acordo é registrado. O que o PO já
     respondeu (num de acordo anterior, antes de um refazer) vem preenchido. A lógica é toda de `tools/fechar_contrato.py`.
+
+    Item sem resposta pede «Li» para a liberação sair (conferência de leitura, PR 9): a resposta leva `lido`. Com
+    `pode_ficar_sem_resposta` falso (ESTEIRA_ESTRITA sem a exceção do admin), o «Li» não aparece: só a resposta vale.
     """
     itens = fechar_contrato.itens_em_aberto(estado)
     perdidas = fechar_contrato.decisoes_perdidas(estado, itens)
@@ -830,7 +850,35 @@ def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[s
                 anteriores[item.id]["origem"] if item.id in anteriores and anteriores[item.id]["resposta"] == escolha
                 else "cartão do de acordo")
             respostas[item.id] = {"resposta": escolha or "", "valor": valor, "origem": origem}
+            if not escolha and pode_ficar_sem_resposta:
+                # conferência de leitura (PR 9): sem resposta, o item fica aberto ao design, e quem libera diz que leu
+                respostas[item.id]["lido"] = st.checkbox("Li este item — fica sem resposta", key=f"{chave}_lido")
     return respostas
+
+
+def _render_conferencia_de_leitura(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[str, Any],
+                                   contrato_aberto: Optional[bool] = None) -> List[str]:
+    """As pendências 🟡 que pedem decisão do PO nos gates de produto, cada uma com «Li e decidi» (PR 9 do plano «Produto
+    dono do contrato»). Os itens do contrato ficam na lista acima, com a resposta ou o «Li». Devolve os ids marcados.
+
+    A conferência de leitura do de acordo de produto estava desligada desde 25/09/2026 (05feeaf): volta só quando há
+    marcador aberto — sem nenhum, o cartão não mostra nada e o de acordo segue como antes. `contrato_aberto` é se a
+    lista acima tem item: com ela, o F7 que só a resume não pede leitura de novo."""
+    itens = passagem.pendencias_de_conferencia(estado, contrato_aberto=contrato_aberto)
+    if not itens:
+        return []
+    base = f"leitura_{run_dir.name}_{fluxo.get('versao', 0)}"
+    lidos: List[str] = []
+    with st.container(border=True):
+        st.markdown(f"**🧐 Conferência de leitura — {len(itens)} pendência(s) 🟡 que pedem decisão do PO**")
+        st.caption("Os gates de produto deixaram estas decisões para o PO. Para liberar, confirme cada uma: lida e "
+                   "decidida — seguir com ela registrada, ou usar **Refazer** com o que mudar.")
+        for item in itens:
+            rotulo = GATE_LABELS.get(item.get("gate", ""), item.get("gate", ""))
+            if st.checkbox(f"Li e decidi: {item['assunto'][:300]}", key=f"{base}_{item['id']}",
+                           help=f"{rotulo} · `{item['tipo']}`"):
+                lidos.append(item["id"])
+    return lidos
 
 
 def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) -> None:
@@ -886,8 +934,12 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
         st.caption(f"🔒 Aguardando **{passagem.rotulo_donos(dono or '')}**. Você está como {sessao.rotulo}.")
         return
     decisoes: Optional[Dict[str, Dict[str, str]]] = None
+    leitura: List[str] = []
     if etapa == "produto" and (passagem.DE_ACORDO in acoes or passagem.EXCECAO in acoes):
-        decisoes = _render_contrato_aberto(run_dir, fluxo, estado)
+        decisoes = _render_contrato_aberto(
+            run_dir, fluxo, estado,
+            pode_ficar_sem_resposta=passagem.EXCECAO in acoes or not get_settings().esteira_estrita)
+        leitura = _render_conferencia_de_leitura(run_dir, fluxo, estado, contrato_aberto=bool(decisoes))
 
     comentario = ""
     if any(a != passagem.INICIAR for a in acoes):
@@ -919,18 +971,32 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
         st.markdown("**Para liberar, responda com o que você leu no núcleo (1.1 e 1.2):**")
         for chave, pergunta in perguntas:
             conferencia[chave] = st.text_input(pergunta, key=f"conferencia_{chave}_{run_dir.name}_{fluxo.get('versao', 0)}")
+    justificativa = ""
+    if passagem.EXCECAO in acoes and passagem.exige_justificativa(etapa, passagem.EXCECAO, estado):
+        # D9 do plano «Produto dono do contrato»: a exceção com 🔴 em produto não sai sem justificativa escrita
+        justificativa = st.text_area(
+            "Justificativa da exceção (obrigatória para liberar produto com gate 🔴)",
+            key=f"justificativa_{run_dir.name}_{fluxo.get('versao', 0)}", height=100,
+            placeholder="Por que liberar com o gate vermelho, e quem resolve o que ficou. Fica no parecer, no estado "
+                        "da missão e no dossiê, com a sua conta e a data.")
     if passagem.REFAZER in acoes and etapa in ("design", "dev") and _painel_triagem(run_dir, fluxo, estado, opts):
         return
     colunas = st.columns(len(acoes))
     for coluna, acao in zip(colunas, acoes):
         primario = acao in (passagem.DE_ACORDO, passagem.INICIAR)
+        # sem justificativa, o botão da exceção com 🔴 em produto não libera (a regra também está em `passagem.aplicar`)
+        sem_justificativa = (acao == passagem.EXCECAO and passagem.exige_justificativa(etapa, acao, estado)
+                             and not governanca.justificativa_valida(justificativa))
         if coluna.button(_rotulo_acao(acao, etapa, fluxo), key=f"acao_{acao}_{run_dir.name}_{fluxo.get('versao', 0)}",
-                         type="primary" if primario else "secondary", use_container_width=True):
+                         type="primary" if primario else "secondary", use_container_width=True,
+                         disabled=sem_justificativa,
+                         help="Escreva a justificativa da exceção para liberar." if sem_justificativa else None):
             if acao == passagem.REFAZER and etapa in ("design", "dev"):
                 # o pedido feito em design ou dev é dividido por dono antes de rodar: o de produto vai a produto (D4)
                 _triar_refazer(run_dir, fluxo, comentario, estado)
             else:
-                _decidir(run_dir, fluxo, acao, comentario, estado, opts, conferencia, decisoes)
+                _decidir(run_dir, fluxo, acao, comentario, estado, opts, conferencia, decisoes,
+                         leitura=leitura, justificativa=justificativa)
 
 
 def render_passagem(run_dir: Path, opts: Dict[str, Any]) -> bool:
