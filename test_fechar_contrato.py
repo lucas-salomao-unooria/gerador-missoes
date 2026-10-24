@@ -373,18 +373,25 @@ def test_mudanca_do_design_no_gate0_aceita_na_devolucao_entra_no_texto():
     assert "alterou-fora-do-proprio-bloco" not in t._achados(de_novo) and de_novo["lacunas_status"] == "aprovado"
 
 
-@pytest.mark.parametrize("missao", ["exp01em1b-76d9af6e", "exp06ef1b-53e011b6"])
-def test_mudancas_reais_do_d0_e_do_d9_se_aplicam_inteiras(missao):
-    """As mudanças que o D0 e o D9 gravados fizeram no Gate 0 (5 blocos na 76d9af6e, 2 na 53e011b6) se aplicam por
-    código; a mesma troca trazida pelos dois é um item só."""
+@pytest.mark.parametrize("missao, blocos_do_d9", [("exp01em1b-76d9af6e", {"2", "3", "7", "10"}),
+                                                  ("exp06ef1b-53e011b6", {"9"})])
+def test_mudancas_reais_do_d0_se_aplicam_inteiras_e_as_do_d9_voltam_a_ele(missao, blocos_do_d9):
+    """As mudanças que o D0 gravado fez no Gate 0 se aplicam por código no de acordo. As do D9 não são mais item do PO
+    (PR 8, decisão D8): o D9 não decide produto, e o texto dele no Gate 0 bloqueia como decisão de produto e volta a ele
+    como ticket — na 76d9af6e, o estado `ERRO_MIDIA_FALHOU` (bloco 2), a regra do bloco 3, a «Demonstração de primeiro
+    uso» (bloco 7) e os papéis por aparelho (bloco 10); na 53e011b6, os componentes nas linhas do bloco 9. O que ele
+    recopiou do D0 é do D0."""
     import test_perdas_silenciosas as t
 
     st = t._remontar(t._estado(missao), estrito=True)
     itens = [i for i in fc.itens_em_aberto(st) if i.tipo == fc.MUDANCA_GATE0]
-    assert len(itens) == {"exp01em1b-76d9af6e": 5, "exp06ef1b-53e011b6": 2}[missao]
+    assert itens and all(i.assunto.startswith("D0 quis mudar") for i in itens), [i.assunto for i in itens]
     d = fc.decidir(itens, {i.id: {"resposta": fc.ACEITAR} for i in itens}, "24/10/2026 09:00:00", "produto")
     _, falhas = fc.aplicar_edicoes(st, d.edicoes)
     assert not falhas
+    do_d9 = [a for a in st["ambiente_status_envelope"]["achados"] if a["codigo"] == "decisao-de-produto-pelo-agente"]
+    assert {a["bloco"] for a in do_d9} == blocos_do_d9 and st["ambiente_status"] == "bloqueado"
+    assert all(a["agente_responsavel"] == "ambiente-simulado" and not a.get("aberto_dono_po") for a in do_d9)
 
 
 # --------------------------------------------------------------------------- rastro e padrões

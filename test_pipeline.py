@@ -423,7 +423,9 @@ def test_secao_split_d0_e_d9():
     from agents.design import get_ambiente_simulado_split, get_fecha_lacunas_split
     from tools.anexo_design import montar_anexo
 
-    spec_original = "# Spec — Teste v1\n\n**1EF · instanooria**\n\n## 0. Identificação de plataforma\n" + ("Slug exp-99-teste. " * 90) + "\n\n## 12. Decisões fechadas neste gate\nnenhuma\n"
+    # a spec de produto fixa o ambiente no bloco 0: desde o PR 8 o D9 o lê dali, e a spec calada volta a produto
+    spec_original = ("# Spec — Teste v1\n\n**1EF · instanooria**\n\n## 0. Identificação de plataforma\n- `secao_ds: instanooria`\n"
+                     + ("Slug exp-99-teste. " * 90) + "\n\n## 12. Decisões fechadas neste gate\nnenhuma\n")
     bloco13 = "## 13. Decisões D0\n[D0-1] 4.gesto_arrastar — Decisão: demonstração no primeiro arrastar.\n"
     spec_consolidada = spec_original + "\n" + bloco13
     d0_out = (
@@ -505,6 +507,8 @@ def test_secao_split_d0_e_d9():
     assert "## 13. Decisões D0" in state_frag["anexo_design_spec"]
 
     # D9 sem a seção de spec (saída fora do formato) e com aguarda_gate: mantém spec e anexo, marca 🔴, pipeline segue
+    split_nao_estrito = get_ambiente_simulado_split()
+    split_nao_estrito.estrito = False
     d9_ruim = '# Ambiente simulado\n**Veredito: 🔴 AGUARDA GATE 0**\n\n```json\n{"agente": "ambiente-simulado", "status": "aguarda_gate"}\n```'
     root3 = SequentialAgent(
         name="Root3",
@@ -512,7 +516,7 @@ def test_secao_split_d0_e_d9():
             FakeAgent(name="Spec", key="spec_missao", text=spec_original),
             FakeAgent(name="Anexo", key="anexo_design_spec", text=montar_anexo(bloco13)),
             FakeAgent(name="D9", key="ambiente_simulado", text=d9_ruim),
-            get_ambiente_simulado_split(),
+            split_nao_estrito,
             FakeAgent(name="Jusante", key="brief_oficio", text="brief", before_agent_callback=marcar_heranca),
         ],
     )
@@ -520,9 +524,12 @@ def test_secao_split_d0_e_d9():
     assert state3["spec_missao"] == spec_original and state3["anexo_design_spec"] == montar_anexo(bloco13)
     # `aguarda_gate` é o D9 devolvendo a decisão ao Gate 0 / PO: pendência humana, não
     # impedimento. Lido como bloqueio, travava a esteira num impasse que nenhum agente
-    # resolve — não existe loop que devolva a decisão ao Gate 0 (23/09/2026).
+    # resolve — não existe loop que devolva a decisão ao Gate 0 (23/09/2026). Desde o PR 8 (24/10/2026) é a devolução
+    # a produto (`[PROPOSTA — validar com PO]`, rota do PR 5): decisão humana sem ESTEIRA_ESTRITA — com ela, o de acordo
+    # de design espera o PO, como a proposta do fluxo (PR 7) —, e a esteira segue nos dois casos.
     assert state3["ambiente_status"] == "amarelo"
     assert state3.get("brief_oficio") == "brief" and not state3.get(KEY_PIPELINE_BLOQUEADO)
+    assert [a["codigo"] for a in state3["ambiente_status_envelope"]["achados"]] == ["devolucao-a-produto"]
     print("   ✓ split D0/D9: anexo de design montado em código, spec de produto intocada, relatório separado")
 
 
