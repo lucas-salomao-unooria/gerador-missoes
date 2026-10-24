@@ -20,7 +20,7 @@ import re
 import shutil
 import time
 from types import SimpleNamespace
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -335,6 +335,10 @@ class PedidoCorrecao:
     #: O que a esteira diz sobre o pedido — a divisão da triagem na cascata (`tools/triagem_pedido.py`). Fica fora do
     #: «Pedido, na íntegra»: a fidelidade confere só o que o PO escreveu (`texto_do_pedido`).
     nota_da_esteira: str = ""
+    #: Os textos-chave que o pedido cita pelo ID (`TC-07`), expandidos pela esteira — o texto aprovado e a proposta do
+    #: design registrada na copy (`tools.textos_chave.citados_no_pedido`, `executar_correcao_stream`). Também fora do
+    #: «Pedido, na íntegra».
+    textos_chave_citados: str = ""
 
     @classmethod
     def de_doc_batch(cls, texto: str, doc_batch: Any) -> "PedidoCorrecao":
@@ -371,6 +375,8 @@ class PedidoCorrecao:
         linhas += [f"> {l}" if l.strip() else ">" for l in self.texto.strip().splitlines()] or ["> (vazio)"]
         if self.nota_da_esteira.strip():
             linhas += ["", "### Divisão do pedido pela triagem", "", self.nota_da_esteira.strip()]
+        if self.textos_chave_citados.strip():
+            linhas += ["", self.textos_chave_citados.strip()]
         linhas += ["", "### Material anexado ao pedido", ""]
         if not self.anexos and not self.anexos_sem_texto:
             linhas.append("Nenhum.")
@@ -701,6 +707,8 @@ def texto_para_o_editor(pedido: "PedidoCorrecao") -> str:
     partes = [sem_relatos_de_gate(pedido.texto).strip() or "(sem texto)"]
     if pedido.nota_da_esteira.strip():
         partes += ["", "### Divisão do pedido pela triagem", "", pedido.nota_da_esteira.strip()]
+    if pedido.textos_chave_citados.strip():
+        partes += ["", pedido.textos_chave_citados.strip()]
     for nome, conteudo in pedido.anexos:
         partes += ["", f"### Anexo: {nome}", "", conteudo.strip()]
     for nome in pedido.anexos_sem_texto:
@@ -1040,6 +1048,14 @@ async def executar_correcao_stream(
     from tools.custo import KEY_CUSTO
 
     tem_pedido = bool(pedido and (pedido.texto.strip() or pedido.anexos or pedido.anexos_sem_texto))
+    if tem_pedido and pedido and not pedido.textos_chave_citados:
+        # «aceito a proposta TC-02»: o ID não está em documento nenhum da etapa, e o editor e os juízes não sabiam a que
+        # texto o pedido se referia (revisão do PR 7, 24/10/2026). Na cascata, cada passo expande sobre o estado dele
+        from tools.textos_chave import citados_no_pedido
+
+        citados = citados_no_pedido(pedido.texto, estado)
+        if citados:
+            pedido = replace(pedido, textos_chave_citados=citados)
     pedido_md = pedido.como_markdown(etapa) if tem_pedido else None
     settings = get_settings()
     inicio = time.time()
@@ -1561,8 +1577,9 @@ class Triagem:
         )
 
 
-def montar_mapa_da_missao(estado: Dict[str, Any]) -> str:
-    """O que a triagem precisa saber da missão sem ler os documentos inteiros."""
+def montar_mapa_da_missao(estado: Dict[str, Any], pedido: str = "") -> str:
+    """O que a triagem precisa saber da missão sem ler os documentos inteiros — e, quando o `pedido` cita texto-chave
+    pelo ID, o texto aprovado e a proposta de cada um (`tools.textos_chave.citados_no_pedido`)."""
     from pipeline.artifacts import extrair_slug
     from pipeline.runner import STATUS_KEYS
 
@@ -1590,6 +1607,12 @@ def montar_mapa_da_missao(estado: Dict[str, Any]) -> str:
     docs_dev = [k for k in ("handoff_dev", "brief_assets", "validacao_dev_report", "prd_final", "one_pager_pedagogico") if estado.get(k)]
     if docs_dev:
         linhas.append("- **Documentos de dev:** " + ", ".join(docs_dev))
+    if pedido.strip():
+        from tools.textos_chave import citados_no_pedido
+
+        citados = citados_no_pedido(pedido, estado)
+        if citados:
+            linhas += ["", citados]
     return "\n".join(linhas)
 
 
@@ -1612,7 +1635,7 @@ async def triar_pedido(
         runner = InMemoryRunner(agent=get_triagem_correcao_agent(thinking_budget=thinking_budget), app_name=app)
         sessao = await runner.session_service.create_session(
             app_name=app, user_id="triagem",
-            state={"briefing": str(estado.get("briefing") or ""), "mapa_da_missao": montar_mapa_da_missao(estado),
+            state={"briefing": str(estado.get("briefing") or ""), "mapa_da_missao": montar_mapa_da_missao(estado, pedido.texto),
                    "itens_do_pedido": numerados(pedido.texto)},
         )
         async for _ in runner.run_async(user_id="triagem", session_id=sessao.id, new_message=build_user_message(pedido.texto, doc_batch)):

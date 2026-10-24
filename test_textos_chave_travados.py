@@ -339,7 +339,9 @@ def test_callback_copia_na_passada_1_e_na_citacao_do_prd():
     copiar_textos_chave("copy_strings")(SimpleNamespace(state=estado))
     assert f"| {pergunta.texto} | 19 |" in estado["copy_strings"]
     quase = pergunta.texto.replace("é mais importante aparecer", "é mais importante que apareça")
-    longe = "Para mostrar que duas crianças estudam juntas, o que deve aparecer na foto?"
+    # a redação distante que ninguém registrou (a do design, «…estudam juntas, o que deve aparecer na foto?», é a
+    # proposta TC-02 da copy e volta ao aprovado sem a régua — teste da segunda revisão, abaixo)
+    longe = "O que a foto precisa ter para provar que as duas crianças estudam juntas?"
     estado["prd_final"] = (f"# PRD\n\nA pergunta: \"{quase}\"\n\nNo corpo antigo: \"{longe}\"\n\n---\n\n# {TITULO_ANEXO}\n\n"
                            f"Anexo com \"{quase}\" literal do jeito que veio.\n")
     copiar_textos_chave("prd_final")(SimpleNamespace(state=estado))
@@ -824,3 +826,176 @@ def test_gate_e_revisor_nao_encurtam_o_texto_chave_acima_do_teto(prompt):
     bruto = get_prompt_raw(prompt)
     trecho = bruto[bruto.index("`texto-chave-acima-do-teto`"):][:260]
     assert "não entra no complemento nem é reescrito" in trecho and "de acordo" in trecho and "PO mantém ou troca" in trecho
+
+
+# --------------------------------------------------------------------------- segunda revisão do PR #74 (24/10/2026)
+REESCRITA_TC02 = "Para mostrar que duas crianças estudam juntas, o que deve aparecer na foto?"
+
+
+def _estado_com_a_esteira(missao: str = "exp02ef1b-4fd72a9a") -> Dict[str, Any]:
+    """O estado com a copy como o A078b a deixa: o texto aprovado na linha e a redação do design na seção da esteira."""
+    estado = _estado(missao)
+    estado["copy_strings_revisada"] = tk.aplicar_na_copy(estado["copy_strings_revisada"], tk.da_sessao(estado))["texto"]
+    return estado
+
+
+def test_pedido_que_cita_so_o_id_chega_expandido_ao_editor_aos_juizes_e_a_triagem():
+    """«Aceito a proposta TC-02»: o ID não está no núcleo, no one-pager, no resumido nem na spec. A esteira expande por
+    código o texto aprovado e a proposta registrada na copy — no pedido do editor, no do estado (que os juízes leem) e no
+    mapa da triagem —, fora do «Pedido, na íntegra» que a fidelidade confere."""
+    from pipeline.reexecucao import PedidoCorrecao, montar_mapa_da_missao, texto_do_pedido, texto_para_o_editor
+
+    estado = _estado_com_a_esteira()
+    aprovado = tk.por_id(tk.da_sessao(estado))["TC-02"].texto
+    citados = tk.citados_no_pedido("Aceito a proposta TC-02.", estado)
+    assert f"texto aprovado: «{aprovado}»" in citados
+    assert f"(`TC-02`): «{aprovado}» → «{REESCRITA_TC02}»" in citados
+    assert tk.citados_no_pedido("Trocar o botão Publicar.", estado) == ""
+    assert "não está na tabela" in tk.citados_no_pedido("E a TC-77?", estado)
+    # a escolha traz as opções com os IDs, e as propostas das opções
+    escolha = tk.citados_no_pedido("TC-01", estado)
+    assert "`TC-01.3` «Lugar»" in escolha and "«Cor da roupa» → «A cor da roupa»" in escolha
+    pedido = PedidoCorrecao(texto="Aceito a proposta TC-02.", textos_chave_citados=citados)
+    assert citados in texto_para_o_editor(pedido)
+    md = pedido.como_markdown("produto")
+    assert citados in md and texto_do_pedido(md) == "Aceito a proposta TC-02."
+    assert REESCRITA_TC02 in montar_mapa_da_missao(estado, "Aceito a proposta TC-02.")
+    assert tk.TITULO_CITADOS not in montar_mapa_da_missao(estado)
+
+
+def test_aceito_tc_02_na_exp02ef1b_desce_pela_cascata_ate_o_one_pager():
+    """A rota do PR 5 com o pedido só pelo ID: a triagem leva o item a produto, o editor de produto recebe o texto
+    aprovado e a proposta (sem isso não trocava nada, e a cascata acabava em Devolver) e troca no one-pager; o design
+    recebe o texto novo como aprovado e a redação velha como aprovada antes."""
+    import os
+    import tempfile
+    from unittest import mock
+
+    import pipeline.runner as runner_mod
+    from pipeline.reexecucao import PedidoCorrecao, executar_cascata_stream
+    from tools.edicao_pontual import Proposta, trocas_por_linhas
+    from tools.triagem_pedido import PRODUTO, dividir
+
+    estado = _estado_com_a_esteira()
+    pedido = "Aceito a proposta TC-02 do design para a pergunta do Canal B."
+    divisao = dividir(pedido, "design", estado, [])
+    assert [i.dono for i in divisao.itens] == [PRODUTO]
+    run_dir = Path(tempfile.mkdtemp()) / "20261024-000000-session_tc02"
+    run_dir.mkdir(parents=True)
+    (run_dir / "estado.json").write_text(json.dumps(estado), encoding="utf-8")
+    (run_dir / "conversa.json").write_text(json.dumps({"session_id": "s", "user_id": "u", "prompt": "briefing",
+                                                       "created_at": "24/10/2026 10:00:00", "messages": []}), "utf-8")
+    editor, runs = [], []
+
+    async def proponente(texto, etapa, documentos, *, erros="", achados=""):
+        editor.append({"etapa": etapa, "pedido": texto})
+        if etapa != "produto":
+            return Proposta(modo="pontual", motivo="o design acompanha", edicoes=[])
+        # o editor só sabe o texto pelo que a esteira expandiu
+        m = re.search(r"\(`TC-02`\): «(.+?)» → «(.+?)»", texto)
+        if not m:
+            return Proposta(modo="pontual", motivo="não sei a que texto o TC-02 se refere", edicoes=[],
+                            pendencias=["TC-02 sem texto"])
+        de, para = m.groups()
+        # em todo lugar onde o texto aprovado está (a linha do §12a se repete no one-pager: a troca leva contexto)
+        trocas = [e for chave, doc in documentos.items() if de in doc
+                  for e in trocas_por_linhas(chave, doc, doc.replace(de, para), "TC-02")]
+        return Proposta(modo="pontual", motivo="aceita a proposta TC-02", edicoes=trocas)
+
+    async def falso(**kwargs):
+        from pipeline.runner import PipelineExecutionResult
+
+        runs.append(kwargs)
+        novo = dict(kwargs["initial_state"], linha_de_base_linhas=[])
+        (Path(kwargs["run_dir"]) / "estado.json").write_text(json.dumps(novo), encoding="utf-8")
+        yield {"type": "pipeline_completed", "result": PipelineExecutionResult(
+            session_id=kwargs["session_id"], user_id=kwargs["user_id"], prompt=kwargs["prompt"], final_output="ok",
+            state=novo, status="success", output_dir=str(kwargs["run_dir"]))}
+
+    async def coletar():
+        return [e async for e in executar_cascata_stream(run_dir, "design", PedidoCorrecao(texto=pedido),
+                                                         divisao.como_dict(), None, proponente=proponente)]
+
+    with mock.patch.dict(os.environ, {"CORRECAO_PONTUAL": "true", "CORRECAO_PONTUAL_PASSADAS": "1"}), \
+            mock.patch.object(runner_mod, "run_orchestrator_pipeline_stream", falso):
+        eventos = asyncio.run(coletar())
+    assert not [e for e in eventos if e["type"] == "correcao_error"], eventos
+    aprovado = tk.por_id(tk.da_sessao(estado))["TC-02"].texto
+    assert [e["etapa"] for e in editor] == ["produto", "design"]
+    assert f"«{aprovado}» → «{REESCRITA_TC02}»" in editor[0]["pedido"]
+    produto = runs[0]["initial_state"]
+    assert REESCRITA_TC02 in produto["one_pager"] and aprovado not in produto["one_pager"]
+    assert REESCRITA_TC02 in (produto.get("spec_missao_gate0") or produto["spec_missao"])
+    assert tk.TITULO_CITADOS in produto["pedido_correcao"]
+    # no passo de design o texto novo já é o aprovado, com o velho no histórico — o A078b o leva à linha da copy
+    assert f"texto aprovado: «{REESCRITA_TC02}»" in editor[1]["pedido"]
+    assert f"redações aprovadas antes: «{aprovado}»" in editor[1]["pedido"]
+    assert "(já é o texto aprovado)" in editor[1]["pedido"]
+
+
+def test_citacao_que_e_a_proposta_registrada_volta_ao_aprovado_no_handoff_gravado_da_exp02ef1b():
+    """O handoff da exp02ef1b cita a pergunta do Canal B na redação do design (semelhança 0,71, abaixo da régua de 0,85
+    dos documentos de dev): é a proposta TC-02 que o A078b registra na copy, e volta ao aprovado por código. No PRD, a
+    linha da proposta na 19.3 fica; a especificação da tela volta."""
+    from agents.callbacks import copiar_textos_chave
+
+    estado = _estado_com_a_esteira()
+    aprovado = tk.por_id(tk.da_sessao(estado))["TC-02"].texto
+    assert tk.semelhanca(aprovado, REESCRITA_TC02) < tk.CORTE_DOCUMENTO
+    assert tk.aplicar_em_documento(estado["handoff_dev"], tk.da_sessao(estado))[1] == []  # sem as propostas, nada
+    copiar_textos_chave("handoff_dev")(SimpleNamespace(state=estado))
+    assert estado["handoff_dev"].count(REESCRITA_TC02) == 0 and estado["handoff_dev"].count(aprovado) == 1
+    prd = estado["prd_final"]
+    copiar_textos_chave("prd_final")(SimpleNamespace(state=estado))
+    linhas = [l for l in estado["prd_final"].splitlines() if REESCRITA_TC02 in l]
+    assert linhas and all("[PROPOSTA" in l for l in linhas)
+    assert estado["prd_final"].count(aprovado) == prd.count(aprovado) + 1
+    # sem a seção da esteira (sessão anterior ao PR 7 refeita só no dev), o callback acha a mesma proposta
+    antiga = _estado()
+    copiar_textos_chave("handoff_dev")(SimpleNamespace(state=antiga))
+    assert antiga["handoff_dev"].count(aprovado) == 1
+
+
+def test_redacao_aprovada_antes_desce_sem_a_regua_e_a_ambigua_fica():
+    """A redação que o PO trocou (`antes`) é mapeamento exato para o texto novo: a citação dela desce ao handoff e ao
+    PRD mesmo distante da nova. A mesma redação registrada para dois textos-chave não se troca, e a citação distante sem
+    registro continua com os gates."""
+    velho = "Para mostrar em uma foto que duas crianças estão estudando juntas, o que é mais importante aparecer?"
+    novo = "O que precisa aparecer na foto para mostrar duas crianças estudando juntas?"
+    tc = tk.TextoChave(id="TC-02", tipo=tk.CANAL_B, origem="§12a", texto=novo, antes=[velho])
+    assert tk.semelhanca(velho, novo) < tk.CORTE_DOCUMENTO
+    doc = f"# Handoff\n\nA folha mostra *\"{velho}\"* e três cartões.\n"
+    saida, trocas = tk.aplicar_em_documento(doc, [tc])
+    assert trocas == [("TC-02", novo, velho)] and f"*\"{novo}\"*" in saida
+    outro = tk.TextoChave(id="TC-09", tipo=tk.TELA, origem="§4", texto="Outro texto da tela, bem diferente deste.",
+                          antes=[velho])
+    assert tk.aplicar_em_documento(doc, [tc, outro]) == (doc, [])
+    distante = "# Handoff\n\nA folha mostra \"O que a foto precisa ter para provar que estudam juntas?\".\n"
+    assert tk.aplicar_em_documento(distante, [tc]) == (distante, [])
+    # a proposta já decidida (o aprovado dela não é mais o texto-chave) não manda nada
+    decidida = [("TC-02", velho, "O que a foto precisa ter para provar que estudam juntas?")]
+    assert tk.aplicar_em_documento(distante, [tc], decidida) == (distante, [])
+    aberta = [("TC-02", novo, "O que a foto precisa ter para provar que estudam juntas?")]
+    assert tk.aplicar_em_documento(distante, [tc], aberta)[1][0][0] == "TC-02"
+
+
+@pytest.mark.parametrize("missao", ["exp06ef1b", "exp06ef1b-53e011b6", "exp03ef1b-317df247"])
+def test_copy_sem_quebra_no_fim_volta_igual_e_a_pontual_nao_registra_troca(missao):
+    """As copies do acervo terminam na cerca do envelope, sem «\\n». A cópia por código devolvia o texto com a quebra a
+    mais, e na correção pontual o A078b gravava a copy e registrava em `edicoes_pontuais` a troca «}\\n```» →
+    «}\\n```\\n», com o motivo «copiados por código» e nada copiado."""
+    from agents.checkers import TextosChaveCopyAgent
+
+    base = _estado_pontual(missao)
+    copia = base["copy_strings_revisada"]
+    assert not copia.endswith("\n")
+    aplicado = tk.aplicar_na_copy(copia, tk.da_sessao(base), anotar_sem_troca=False)
+    assert aplicado["copiados"] == 0 and aplicado["texto"] == copia
+    final = asyncio.run(_rodar(TextosChaveCopyAgent(name="A078bTextosChave"), base))
+    assert final["copy_strings_revisada"] == copia
+    assert final["edicoes_pontuais"] == base["edicoes_pontuais"]
+    # o fim que veio é o fim que fica, com ou sem a seção da esteira
+    assert tk.aplicar_na_copy(copia + "\n", tk.da_sessao(base))["texto"].endswith("```\n")
+    com_secao = tk.aplicar_na_copy(_estado("exp02ef1b-4fd72a9a")["copy_strings_revisada"],
+                                   tk.da_sessao(_estado("exp02ef1b-4fd72a9a")))["texto"]
+    assert not com_secao.endswith("\n") and tk.TITULO_SECAO_COPY in com_secao

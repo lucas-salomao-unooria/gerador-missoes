@@ -558,7 +558,11 @@ def copiar_textos_chave(chave: str):
             # na correção pontual o autor não roda (e este callback também não); se rodar, não anota linha sem troca
             novo = tk.aplicar_na_copy(texto, tcs, anotar_sem_troca=state.get(KEY_MODO_CORRECAO) != "pontual")["texto"]
         else:
-            novo, _ = tk.aplicar_em_documento(texto, tcs)
+            # as propostas do design para os textos-chave, as que o A078b registrou na copy e as que ele registraria
+            # (sessão anterior ao PR 7 refeita só no dev): a citação que é uma delas volta ao aprovado sem a régua
+            copia = str(state.get("copy_strings_revisada") or state.get("copy_strings") or "")
+            propostas = tk.aplicar_na_copy(copia, tcs)["propostas"] if copia.strip() else []
+            novo, _ = tk.aplicar_em_documento(texto, tcs, propostas)
         if novo != texto:
             state[chave] = novo
         return None

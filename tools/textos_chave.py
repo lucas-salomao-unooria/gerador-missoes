@@ -826,6 +826,60 @@ def propostas_registradas(texto: str) -> List[Tuple[str, str, str]]:
     return saida
 
 
+#: Onde a copy com as propostas do design está: a revisada; a da execução anterior, quando o passo de produto da cascata
+#: já a apagou do estado (`pipeline/reexecucao.py`, `versao_anterior_<chave>`); a da passada 1.
+_CHAVES_DA_COPY = ("copy_strings_revisada", "versao_anterior_copy_strings_revisada", "copy_strings")
+TITULO_CITADOS = "Textos-chave citados no pedido"
+
+
+def citados_no_pedido(pedido: str, estado: Dict[str, Any]) -> str:
+    """Os textos-chave que o pedido cita pelo ID, expandidos por código: a linha da tabela (ID, tipo, origem, texto
+    aprovado, as redações aprovadas antes) e as propostas do design registradas na copy para o ID. Vazio quando o pedido
+    não cita ID.
+
+    O ID não está em nenhum documento de produto (a tabela vive ao lado do one-pager): o PO que escreve no Refazer só
+    «aceito a proposta TC-02» manda a produto um item que o editor pontual não sabia a que texto se referia — não trocava
+    nada, e a cascata acabava em Devolver (revisão do PR 7, 24/10/2026, exp02ef1b)."""
+    citados = list(dict.fromkeys(ids_citados(pedido)))
+    if not citados:
+        return ""
+    tcs = da_sessao(estado)
+    tabela_ = por_id(tcs)
+    aposentados = {str(d.get("id") or ""): d for d in registro(estado).get("aposentados") or [] if isinstance(d, dict)}
+    copy = next((str(estado.get(k)) for k in _CHAVES_DA_COPY if str(estado.get(k) or "").strip()), "")
+    propostas = propostas_registradas(copy)
+    linhas = [f"### {TITULO_CITADOS}", "",
+              "O pedido cita textos-chave pelo ID. O ID não aparece no núcleo, no one-pager, no resumido nem na spec: "
+              "procure pelo **texto aprovado**. Aceitar uma proposta é trocar o texto aprovado pelo texto proposto, letra "
+              "por letra, em todo lugar onde ele está. Expandidos pela esteira, da tabela do one-pager aprovado e das "
+              "propostas do design registradas na copy:", ""]
+    for ident in citados:
+        tc = tabela_.get(ident)
+        if tc is None:
+            velho = aposentados.get(ident)
+            linhas.append(f"- `{ident}` — não está na tabela do one-pager aprovado"
+                          + (f" (saiu do one-pager; o último texto era «{velho.get('texto')}»)" if velho else
+                             " (ID desconhecido)") + ": não há texto aprovado com este ID.")
+            continue
+        if tc.tipo == OPCOES:
+            linhas.append(f"- `{tc.id}` — escolha com {tc.n} opções ({tc.origem}): "
+                          + " · ".join(f"`{o.id}` «{o.texto}»" for o in tcs if o.tipo == OPCAO and o.grupo == tc.id))
+        else:
+            grupo = tabela_.get(tc.grupo) if tc.grupo else None
+            linhas.append(f"- `{tc.id}` — {ROTULO_TIPO.get(tc.tipo, tc.tipo)} ({tc.origem}"
+                          + (f", opção da escolha `{grupo.id}`: {grupo.texto}" if grupo else "")
+                          + f") — texto aprovado: «{tc.texto}»")
+        if tc.antes:
+            linhas.append("  - redações aprovadas antes: " + " · ".join(f"«{a}»" for a in tc.antes))
+        doid = [(i, a, p) for i, a, p in propostas if i == tc.id or (tc.tipo == OPCOES and i.startswith(tc.id + "."))]
+        for i, aprovado, proposto in doid:
+            ja = " (já é o texto aprovado)" if mesmo_texto(tabela_[i].texto if i in tabela_ else "", proposto) else ""
+            linhas.append(f"  - proposta do design registrada na copy (`{i}`): «{aprovado}» → «{proposto}»{ja}")
+        if not doid:
+            linhas.append("  - nenhuma proposta do design registrada na copy para este ID")
+    return "\n".join(linhas)
+
+
 def _candidatos(linhas: Sequence[str], ocupadas: Set[int]) -> List[Tuple[int, str]]:
     """`(linha, trecho)` onde uma reescrita de texto-chave pode estar: célula de tabela, texto entre aspas e a fala depois
     de um rótulo (`**Clara:** …`)."""
@@ -1077,10 +1131,13 @@ def aplicar_na_copy(copy: str, tcs: Sequence[TextoChave], anotar_sem_troca: bool
             divergentes.append({"grupo": g, "faltam": [], "a_mais": [c]})
     vistas = {(i, literal(p)) for i, _, p in novas}
     propostas = novas + [(i, a, p) for i, a, p in anteriores if (i, literal(p)) not in vistas]
-    texto = "\n".join(linhas).rstrip() + "\n"
+    texto = "\n".join(linhas)
     secao = _secao_da_copy(propostas, sem_linha)
     if secao:
         texto = texto.rstrip() + "\n\n" + secao
+    # o fim do texto como veio: as 12 copies do acervo terminam na cerca do envelope, sem «\n», e a quebra a mais virava,
+    # na correção pontual, uma troca falsa em `edicoes_pontuais` sem nada copiado (revisão do PR 7, 24/10/2026)
+    texto = texto.rstrip() + (copy or "")[len((copy or "").rstrip()):]
     return {"texto": texto, "propostas_novas": novas, "propostas": propostas, "sem_linha": sem_linha,
             "opcoes_divergentes": divergentes, "ids_desconhecidos": sorted(set(desconhecidos)), "copiados": copiados}
 
@@ -1206,9 +1263,40 @@ def relatorio(resultado: Dict[str, Any], missao: str = "") -> str:
 CORTE_DOCUMENTO = 0.85
 
 
-def aplicar_em_documento(texto: str, tcs: Sequence[TextoChave]) -> Tuple[str, List[Tuple[str, str, str]]]:
-    """`(texto, trocas)`: no corpo (sem o anexo literal), cada citação entre aspas que é reescrita quase igual de um
-    texto-chave (semelhança ≥ `CORTE_DOCUMENTO`) passa a ser o texto aprovado. `trocas` = `(ID, aprovado, como estava)`."""
+def _exato(texto: str) -> str:
+    """Para casar uma redação registrada com a citação: `literal`, sem o ponto final — e sem lacuna preenchida."""
+    return literal(texto).rstrip(". ")
+
+
+def _redacoes_registradas(tcs: Sequence[TextoChave], propostas: Sequence[Tuple[str, str, str]]
+                          ) -> Dict[str, List[TextoChave]]:
+    """`{redação: [textos-chave]}` das redações que são, por registro, outra versão de um texto-chave: as aprovadas antes
+    (`antes`, o PO trocou o texto) e o lado proposto das propostas do design ainda abertas para o mesmo ID."""
+    ids = por_id(tcs)
+    saida: Dict[str, List[TextoChave]] = {}
+    for t in tcs:
+        if t.tipo in TIPOS_DE_TEXTO:
+            for a in t.antes:
+                if not mesmo_texto(t.texto, a):
+                    saida.setdefault(_exato(a), []).append(t)
+    for i, aprovado, proposto in propostas:
+        t = ids.get(i)
+        if t is not None and t.tipo in TIPOS_DE_TEXTO and mesmo_texto(t.texto, aprovado) \
+                and not mesmo_texto(t.texto, proposto):
+            saida.setdefault(_exato(proposto), []).append(t)
+    return {k: list({t.id: t for t in v}.values()) for k, v in saida.items() if k}
+
+
+def aplicar_em_documento(texto: str, tcs: Sequence[TextoChave], propostas: Sequence[Tuple[str, str, str]] = ()
+                         ) -> Tuple[str, List[Tuple[str, str, str]]]:
+    """`(texto, trocas)`: no corpo (sem o anexo literal), cada citação entre aspas que é reescrita de um texto-chave passa
+    a ser o texto aprovado. `trocas` = `(ID, aprovado, como estava)`.
+
+    Reescrita é a citação quase igual (semelhança ≥ `CORTE_DOCUMENTO`) ou, sem régua, a que é letra por letra uma redação
+    registrada do mesmo texto-chave: uma aprovada antes (`antes`) ou o lado proposto de uma das `propostas` do design
+    (`(ID, aprovado, proposto)`, as da copy). Na exp02ef1b, a pergunta do Canal B que o design reescreveu («Para mostrar
+    que duas crianças estudam juntas…», semelhança 0,71) é a proposta TC-02 que o A078b grava na copy, e seguia no
+    handoff e no PRD (revisão do PR 7, 24/10/2026)."""
     from tools.conteudo_aprovado import TITULO_ANEXO, remover_anexo
 
     if not (texto or "").strip() or not tcs:
@@ -1216,13 +1304,15 @@ def aplicar_em_documento(texto: str, tcs: Sequence[TextoChave]) -> Tuple[str, Li
     corpo = remover_anexo(texto)
     anexo = texto[len(corpo.rstrip("\n")):] if TITULO_ANEXO in texto and texto.startswith(corpo.rstrip("\n")) else ""
     alvos = [t for t in tcs if t.tipo in TIPOS_DE_TEXTO and palavras(t.texto) >= 3]
+    textos = [t for t in tcs if t.tipo in TIPOS_DE_TEXTO]
+    registradas = _redacoes_registradas(tcs, propostas)
     trocas: List[Tuple[str, str, str]] = []
     #: `(início, fim, texto aprovado)` de cada citação trocada: a troca é feita na posição dela — trocar a primeira
     #: ocorrência do texto pegaria a mesma redação dentro de uma proposta, mais acima no documento
     pedacos: List[Tuple[int, int, str]] = []
     for m in list(re.finditer(r"[\"“«]([^\"”»\n]{12,400})[\"”»]", corpo)):
         citado = m.group(1).strip().strip("*").strip()
-        if any(mesmo_texto(t.texto, citado) for t in alvos):
+        if any(mesmo_texto(t.texto, citado) for t in textos):
             continue  # o texto-chave, com o ponto final ou sem ele (PRD da exp01ef1b)
         inicio = corpo.rfind("\n", 0, m.start()) + 1
         fim = corpo.find("\n", m.end())
@@ -1231,8 +1321,11 @@ def aplicar_em_documento(texto: str, tcs: Sequence[TextoChave]) -> Tuple[str, Li
             # a redação que o design propôs, registrada para o PO (a 19.3 do PRD lista o texto literal de cada
             # [PROPOSTA] aberta): trocá-la pelo aprovado deixava «aprovado» → «aprovado», e a proposta sumia
             continue
-        melhor, valor = None, 0.0
-        for t in alvos:
+        donos = registradas.get(_exato(citado), [])
+        if len(donos) > 1:
+            continue  # a mesma redação registrada para dois textos-chave: não há como saber qual
+        melhor, valor = (donos[0], 1.0) if donos else (None, 0.0)
+        for t in ([] if donos else alvos):
             if not mesmos_numeros(t, citado):
                 continue  # «…: 1/3» não é reescrita de «…: 3/3» (exp03em1b)
             v = semelhanca(t.texto, citado)
