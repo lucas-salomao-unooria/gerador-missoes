@@ -99,7 +99,19 @@ Máquina de estados por tela (estado, gatilho, destino, o que persiste) · gatil
 Vocabulário xAPI (`attempted`, `interacted`, `progressed`, `completed`, `scored`) com o significado **nesta missão** · entidades a persistir (`expNNefNb_*`, `expNNefNb_pacotes` — o pacote que o professor homologou, com o conteúdo em JSONB validado pelo Zod da homologação, `ativo` e os contadores de IA; a sessão leva `pacote_id` e `rodada`, `escola_id`, RLS) · os nove campos: relógio coletivo · dependências entre missões · tema claro/escuro · versão do instrumento · concorrência · sobrevive a F5 · volume de eventos por sessão × turma · esforço e risco · segunda aplicação.
 
 ### 6. Hipóteses de validação (9.3)
-O que se assume · o que observar · o que indica falha — priorize o que a construção introduziu de novo.
+As hipóteses são as do §17 do one-pager aprovado: **remeta a elas** (`§17 do one-pager · H1…Hn`), sem reescrevê-las. O handoff da exp02ef1b (23/10/2026) reescreveu as três: a H1 saiu com 25% no lugar dos 30% do §17, a H2 ganhou uma meta de 70% que o PO nunca fixou — e o PRD herdou os números trocados. Aqui entra só o que a construção introduziu de novo e o §17 não cobre: o que se assume · o que observar · o que indica falha, sem número que o contrato não tem — número novo é `[PROPOSTA — validar com PO: <o número> · por quê]`.
+
+## O handoff monta, não decide — o que um gate determinístico confere
+
+A fonte da verdade é a spec de produto (blocos 0 a 12) e o one-pager aprovado, com as decisões de UI do design (bloco 13 da spec, as decisões D0). O handoff deriva deles: divergência é defeito, e volta para você com o relatório abaixo. O gate confere:
+
+1. **Número de regra com origem.** Todo número de regra (%, segundos, minutos, teto ou piso de palavras e caracteres, nº de opções ou alternativas) está no contrato: one-pager, spec, bloco 13, decisões do PO no de acordo. Não precisam de origem os de dono plataforma (polling, TTL, p95, uptime, lote da SDK, `px`), a medida de layout e a contagem de palavras de uma string. Número que o contrato não tem sai, ou vira `[PROPOSTA — validar com PO: …]`.
+2. **Hipótese e meta iguais às do contrato.** Hipótese com o número do §17 (ou nenhum, remetendo a ele); o alvo e o limiar de um KPI que cita uma `PQ-nn` são os da linha dela no 9f da spec.
+3. **Estado do contrato.** A máquina de estados usa os nomes do «Contrato de estados» da spec (estado de decomposição do fluxo do design, com o nome do fluxo, também vale); nenhum nome novo.
+4. **Origem verdadeira.** Número com origem citada em produto («§17 do one-pager», «spec, bloco 9f») tem de estar lá. Decisão do D0 é do design: cite-a como `produto/05-spec-missao.md › Bloco 13`, nunca como «contratual» ou «decisão do PO».
+5. **Texto-chave literal.** O texto que o PO aprovou palavra por palavra (Canal B, debate, texto de tela do §4) vai pela chave da copy ou literal — nunca uma terceira versão.
+
+Quando o próprio contrato diverge (o one-pager diz um número e a spec, outro), não escolha: siga o one-pager e registre na seção 7 `[ABERTO — dono: produto: <onde> diz X e <onde> diz Y]`. É pendência do PO, e o rastro a conta.
 
 ## Regras
 
@@ -117,6 +129,10 @@ O que se assume · o que observar · o que indica falha — priorize o que a con
 
 {telemetria_report?}
 
+**Handoff monta, não decide (gate determinístico sobre o seu handoff contra o contrato de produto):**
+
+{montagem_handoff_report?}
+
 **Rastro de lacunas (marcadores deixados nos documentos da esteira):**
 
 {rastro_lacunas_report?}
@@ -127,7 +143,7 @@ O que se assume · o que observar · o que indica falha — priorize o que a con
 
 Bloco vazio = primeira passada, escreva normalmente.
 
-Com relatório, **reemita o handoff inteiro** corrigindo o que foi apontado. Os achados do contrato de telemetria são mecânicos e a correção vem escrita na própria mensagem — campo `dados` que a api descarta em silêncio, papel que não existe mais, WebSocket onde a plataforma exige polling em `expNNefNb_gates_turma`, evento sem tabela de leitura. Não discuta o gate: ele compara o seu texto com o contrato real da plataforma, que está nas referências acima.
+Com relatório, **reemita o handoff inteiro** corrigindo o que foi apontado. Os achados de montagem também têm correção certa: o número, a hipótese, a meta e o nome de estado são os do contrato, copiados — ou o número sai, ou vira proposta. Os achados do contrato de telemetria são mecânicos e a correção vem escrita na própria mensagem — campo `dados` que a api descarta em silêncio, papel que não existe mais, WebSocket onde a plataforma exige polling em `expNNefNb_gates_turma`, evento sem tabela de leitura. Não discuta o gate: ele compara o seu texto com o contrato real da plataforma, que está nas referências acima.
 
 Achado cujo dono **não é você** (produto, design, plataforma) fica declarado, não corrigido: você não reescreve spec nem jornada.
 
