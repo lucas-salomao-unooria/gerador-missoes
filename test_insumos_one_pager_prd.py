@@ -147,8 +147,9 @@ def test_design_e_dev_recebem_o_nucleo_e_o_banco_nao_le_o_nucleo_antigo():
     assert dev.secoes == list(ca.SECOES_DESIGN)
     banco = load_prompt("dev/104_banco_conteudo.md")
     assert "{nucleo_narrativo" not in banco and "{conteudo_aprovado?}" in banco
+    # desde a revisão do PR #74 (24/10/2026) o ID do texto-chave vem antes do par, como na seção da esteira
     for prompt in ("design/073_copy_ptbr.md", "design/077_copy_revisao.md"):
-        assert "§4" in load_prompt(prompt) and "PROPOSTA — validar com PO: «texto aprovado»" in load_prompt(prompt), prompt
+        assert "§4" in load_prompt(prompt) and "PROPOSTA — validar com PO: TC-07 «texto aprovado»" in load_prompt(prompt), prompt
 
 
 # --------------------------------------------------------------------------- a spec não decide no lugar do PO

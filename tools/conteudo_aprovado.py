@@ -782,7 +782,8 @@ def validar_copy(copy_revisada: str, one_pager: str) -> List[Dict[str, str]]:
             f"{len(faltam)} de {len(tela)} textos que o §4 do one-pager aprovado põe na tela entre aspas não estão na "
             f"copy revisada, nem com 85% da redação: {exemplos}. Dono: `copy-ptbr-revisao`. Copie do conteúdo aprovado "
             "(§4); se o teto de palavras da faixa obrigar a mudar, registre em «Strings que precisam de decisão» "
-            "`[PROPOSTA — validar com PO: «texto aprovado» → «texto novo» · por quê]`.", "design", severidade="atencao"))
+            "`[PROPOSTA — validar com PO: TC-nn «texto aprovado» → «texto novo» · por quê]`, com o ID do texto-chave "
+            "(é o formato que `tools/textos_chave.py` lê para levar a proposta ao PO).", "design", severidade="atencao"))
     for a in achados:
         a["agente_responsavel"] = "copy-ptbr-revisao"
     return achados

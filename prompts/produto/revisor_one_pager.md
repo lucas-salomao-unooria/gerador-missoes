@@ -22,7 +22,7 @@ O gate estrutural bloqueou a missão e escreveu, no bloco **"Complemento — pro
 
 {contrato_produto_report?}
 
-Os achados dele já estão refletidos no relatório do gate; se algum não estiver, aplique do mesmo jeito: ⛔ WebSocket vira polling HTTP em `expNNefNb_gates_turma` sem inventar intervalo; ⚠️ estado de cliente sai do texto (o que se preserva fica, onde se guarda não); ⚠️ SAEB fora do ano vira "N/A — ano não avaliado pelo SAEB"; ⚠️ número sem origem vira `[PARÂMETRO — a definir por produto: <o quê>]` ou some, nunca fica como fato. ⛔ seção travada pelo briefing: a missão volta à seção que o briefing fixou. ⛔ habilidade do briefing que sumiu: volta, ou entra na seção 18 como `[PROPOSTA — validar com PO: tirar <código> · por quê]`. ⛔ decisão atribuída ao PO sem parecer dele: a frase vira `[PROPOSTA — validar com PO: …]`.
+Os achados dele já estão refletidos no relatório do gate; se algum não estiver, aplique do mesmo jeito: ⛔ WebSocket vira polling HTTP em `expNNefNb_gates_turma` sem inventar intervalo; ⚠️ estado de cliente sai do texto (o que se preserva fica, onde se guarda não); ⚠️ SAEB fora do ano vira "N/A — ano não avaliado pelo SAEB"; ⚠️ número sem origem vira `[PARÂMETRO — a definir por produto: <o quê>]` ou some, nunca fica como fato. ⛔ seção travada pelo briefing: a missão volta à seção que o briefing fixou. ⛔ habilidade do briefing que sumiu: volta, ou entra na seção 18 como `[PROPOSTA — validar com PO: tirar <código> · por quê]`. ⛔ decisão atribuída ao PO sem parecer dele: a frase vira `[PROPOSTA — validar com PO: …]`. ⚠️ `texto-chave-acima-do-teto` não entra no complemento nem é reescrito: vai à lista do de acordo, e o PO mantém ou troca o texto — não o encurte.
 
 **Parecer de adequação pedagógica (quando houver):**
 
