@@ -15,6 +15,10 @@ acordo de produto, e a marca segue; o refazer de produto o invalida, e a marca p
 O bloco que entra nos documentos não leva texto livre de ninguém (nem a justificativa, que fica no parecer, no estado
 e no dossiê) nem marcador de lacuna: os gates do handoff e do PRD — montagem, status de gate no corpo, rastro — não
 o leem como número de regra, status nem pendência de outra etapa, e o redator não tem como «consertá-lo».
+
+O bloco é da esteira, como o anexo literal do PRD: sai da base que o autor recebe (`anterior_<chave>`,
+`rodada_anterior_<chave>`, os documentos do editor de trocas) e volta, como está agora, em todo caminho que escreve o
+documento — o callback do redator, o documento travado na correção pontual, o retrabalho por trocas e o A119.
 """
 from __future__ import annotations
 
@@ -131,6 +135,15 @@ def marca(gov: Optional[Dict[str, Any]]) -> str:
 #: O título é também o marcador: comentário HTML apareceria cru no `.docx` (como no anexo do conteúdo aprovado).
 TITULO_BLOCO = "Pendências de governança da liberação de produto (registradas pela esteira)"
 _RE_TITULO_BLOCO = re.compile(r"^#{1,6}\s*\**\s*Pend[êe]ncias de governan[çc]a da libera[çc][ãa]o de produto\b", re.I)
+#: A frase de abertura, fixa, entre o título e os itens.
+ABERTURA_BLOCO = ("Registradas por código a partir dos pareceres da missão (plano «Produto dono do contrato», D9). Não "
+                  "impedem a codificação e não são decisão deste documento.")
+#: As linhas que a esteira escreve no bloco, além do título: a abertura e os dois itens de `linhas_do_bloco`. Só elas saem
+#: com o bloco — o item que o autor escreveu logo depois, na mesma seção, fica (revisão do PR #75, 24/10/2026: uma troca
+#: do retrabalho do PrdLoop ancorada na última linha do bloco punha «- [PENDÊNCIA] H1 do corpo (25%) diverge do §17
+#: (30%)» depois dela, e o A119 a apagava junto com o bloco).
+_RE_LINHA_DO_BLOCO = re.compile(r"^\s*(?:Registradas por c[óo]digo a partir dos pareceres da miss[ãa]o\b"
+                                r"|[-*]\s*🟡\s*\*\*\s*(?:Liberado sem a conta produto|Exce[çc][ãa]o do admin em produto))")
 _RE_TITULO = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 _RE_CERCA = re.compile(r"^\s*(```|~~~)")
 
@@ -167,9 +180,7 @@ def bloco(gov: Optional[Dict[str, Any]], nivel: int = 3) -> str:
     linhas = linhas_do_bloco(gov)
     if not linhas:
         return ""
-    return "\n".join([f"{'#' * nivel} {TITULO_BLOCO}", "",
-                      "Registradas por código a partir dos pareceres da missão (plano «Produto dono do contrato», D9). Não "
-                      "impedem a codificação e não são decisão deste documento.", ""] + linhas) + "\n"
+    return "\n".join([f"{'#' * nivel} {TITULO_BLOCO}", "", ABERTURA_BLOCO, ""] + linhas) + "\n"
 
 
 def _titulos(texto: str) -> List[Tuple[int, int, int, str]]:
@@ -192,8 +203,9 @@ def _regua(linha: str) -> bool:
 
 
 def sem_bloco(texto: str) -> str:
-    """O documento sem o bloco de governança — do título até o próximo título ou régua, que são do documento e ficam,
-    com as linhas em branco que o separavam. Idempotente; sem o bloco, devolve o texto como veio."""
+    """O documento sem o bloco de governança: o título, a abertura e os itens que a esteira escreve, com as linhas em
+    branco entre eles. O que vem depois — título, régua ou texto do autor na mesma seção — fica, separado do que vinha
+    antes por uma linha em branco. Idempotente; sem o bloco, devolve o texto como veio."""
     linhas = (texto or "").splitlines(keepends=True)
     saida: List[str] = []
     dentro, cerca, achou = False, False, False
@@ -205,12 +217,13 @@ def sem_bloco(texto: str) -> str:
             while saida and not saida[-1].strip():
                 saida.pop()
             continue
-        if dentro and not cerca and (_RE_TITULO.match(linha.rstrip("\n")) or _regua(linha)):
+        if dentro:
+            if not cerca and (not linha.strip() or _RE_LINHA_DO_BLOCO.match(linha)):
+                continue
             dentro = False
             if saida and saida[-1].strip():
                 saida.append("\n")
-        if not dentro:
-            saida.append(linha)
+        saida.append(linha)
     if not achou:
         return texto or ""
     junto = "".join(saida)
