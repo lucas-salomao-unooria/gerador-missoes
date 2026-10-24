@@ -138,6 +138,8 @@ _RE_TITULO_BLOCO = re.compile(r"^#{1,6}\s*\**\s*Pend[êe]ncias de governan[çc]a
 #: A frase de abertura, fixa, entre o título e os itens.
 ABERTURA_BLOCO = ("Registradas por código a partir dos pareceres da missão (plano «Produto dono do contrato», D9). Não "
                   "impedem a codificação e não são decisão deste documento.")
+#: O fecho do item «liberado sem a conta produto»: diz o que o item é, sem pedir ação de ninguém antes de codificar.
+REGISTRO_SEM_CONDICAO = "Registro de governança: não condiciona a codificação."
 #: As linhas que a esteira escreve no bloco, além do título: a abertura e os dois itens de `linhas_do_bloco`. Só elas saem
 #: com o bloco — o item que o autor escreveu logo depois, na mesma seção, fica (revisão do PR #75, 24/10/2026: uma troca
 #: do retrabalho do PrdLoop ancorada na última linha do bloco punha «- [PENDÊNCIA] H1 do corpo (25%) diverge do §17
@@ -158,13 +160,18 @@ def linhas_do_bloco(gov: Optional[Dict[str, Any]]) -> List[str]:
 
     Redação conferida contra os gates do PRD e do handoff: sem número com unidade (montagem), sem «gate: 🔴» nem
     «status do gate» (status de gate no corpo), sem `[ABERTO — dono: PO …]` — que o conferidor da plataforma leria como a
-    decisão do PO sobre a experiência existente — e sem 🔵 (o rastro o contaria como pendência a validar)."""
+    decisão do PO sobre a experiência existente — e sem 🔵 (o rastro o contaria como pendência a validar).
+
+    É registro, não pré-requisito: o D9 pede a marca, não uma confirmação do PO antes de codificar. A banca de dev (LLM,
+    «Ausência é NOK») lê o handoff, e o agente de codificação lê o PRD. Até a revisão do PR #75 (24/10/2026), o item dizia
+    que o PO «confirma o one-pager e a spec de produto antes de a missão ser codificada» — contradizia a abertura e, nas
+    reexecuções liberadas pela conta design, punha uma condição de codificação na frente dos dois."""
     saida: List[str] = []
     for p in (gov or {}).get("pendencias") or []:
         if p.get("codigo") == LIBERADO_SEM_CONTA:
             saida.append(f"- 🟡 **Liberado sem a conta produto** — o de acordo de produto em vigor foi dado por "
-                         f"`{p.get('como', '')}` em {p.get('quando', '')}, e não pela conta `produto`. Quem responde é o "
-                         "PO: ele confirma o one-pager e a spec de produto antes de a missão ser codificada.")
+                         f"`{p.get('como', '')}` em {p.get('quando', '')}, e não pela conta `produto`. "
+                         f"{REGISTRO_SEM_CONDICAO}")
         elif p.get("codigo") == EXCECAO_COM_VERMELHO:
             j = p.get("justificativa") or {}
             nomes = ", ".join(f"`{g}`" for g in p.get("gates") or [])

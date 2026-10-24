@@ -11,14 +11,16 @@ liberação de produto.
   o PO confirma ter lido ou decidido cada item; sem marcador, o de acordo segue como antes.
 
 Casos reais: no acervo de 23/10/2026, 1 de 5 liberações de produto veio da conta produto; as em vigor da exp02em1b
-(23/10 16:03) e da exp02ef1b (22/10 15:27) são da conta design, e a exceção do admin de 23/10 15:57 na exp02ef1b dizia
-«aprovado com falso positivo». Tudo sem modelo.
+(23/10 16:03) e da exp02ef1b (22/10 15:27) são da conta design. As duas exceções do admin das sessões de 24/10 foram de
+design — a de 23/10 15:57 na exp02ef1b dizia só «aprovado com falso positivo» —, e nenhuma de produto teve 🔴: a
+justificativa obrigatória vale só para produto. Tudo sem modelo.
 """
 from __future__ import annotations
 
 import asyncio
 import copy
 import json
+import re
 import warnings
 from pathlib import Path
 from typing import Any, Dict
@@ -476,6 +478,40 @@ def test_bloco_nao_leva_texto_livre_nem_marcador_de_lacuna():
     from tools.conferir_prd_plataforma import _decisao_do_po_provada
 
     assert not _decisao_do_po_provada(texto, {"23/10/2026"})
+
+
+#: Frase que faz do bloco um pré-requisito de codificação: confirmação de alguém «antes de» codificar, ou um responsável
+#: que precisa agir. A banca de dev (LLM, «Ausência é NOK») lê o handoff, e o agente de codificação lê o PRD.
+_RE_CONDICIONA_CODIFICACAO = re.compile(r"\bantes\s+d[ea]\s+(?:a\s+miss[ãa]o\s+ser\s+)?codific|\bconfirma\b"
+                                        r"|\bquem\s+responde\b", re.I)
+
+
+def test_bloco_e_registro_e_nao_condiciona_a_codificacao_exp02ef1b():
+    """Com os pareceres reais da exp02ef1b (a conta design liberou produto em 22/10/2026 15:27:27), o item diz que é
+    registro e não pede confirmação do PO antes de codificar — o D9 pede a marca, não um pré-requisito. Até a revisão do
+    PR #75 ele dizia «Quem responde é o PO: ele confirma o one-pager e a spec de produto antes de a missão ser
+    codificada», logo abaixo da abertura «Não impedem a codificação»."""
+    g = passagem.governanca(FLUXO_EXP02EF1B)
+    texto = gov.bloco(g)
+    item = gov.linhas_do_bloco(g)[0]
+    assert gov.ABERTURA_BLOCO in texto and item.endswith(gov.REGISTRO_SEM_CONDICAO)
+    assert "`design (como Produto)` em 22/10/2026 15:27:27, e não pela conta `produto`" in item
+    for g_ in (g, GOV_DUAS):
+        assert not _RE_CONDICIONA_CODIFICACAO.search(gov.bloco(g_)), gov.bloco(g_)
+    # o bloco com a redação antiga, já num documento, sai inteiro e dá lugar ao de agora
+    antigo = gov.bloco(g).replace(gov.REGISTRO_SEM_CONDICAO, "Quem responde é o PO: ele confirma o one-pager e a spec "
+                                  "de produto antes de a missão ser codificada.")
+    prd = PRD.replace("- item\n", "- item\n\n" + antigo)
+    novo = gov.com_pendencias(prd, g, "prd_final")
+    assert novo.count(gov.TITULO_BLOCO) == 1 and not _RE_CONDICIONA_CODIFICACAO.search(novo)
+    assert novo == gov.com_pendencias(PRD, g, "prd_final")
+
+
+def test_mutante_bloco_que_condiciona_a_codificacao_e_pego(monkeypatch):
+    """Mutante: o item volta a pedir a confirmação do PO antes de codificar."""
+    monkeypatch.setattr(gov, "REGISTRO_SEM_CONDICAO", "Quem responde é o PO: ele confirma o one-pager e a spec de "
+                        "produto antes de a missão ser codificada.")
+    assert _RE_CONDICIONA_CODIFICACAO.search(gov.bloco(passagem.governanca(FLUXO_EXP02EF1B)))
 
 
 def _gates_que_leem_handoff_e_prd(state: Dict[str, Any]) -> Dict[str, Any]:
