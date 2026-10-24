@@ -363,6 +363,32 @@ def test_linha_de_proposta_nao_e_divergencia_do_contrato():
     assert "divergência é do próprio contrato" not in r["achados"][0]["resumo"]
 
 
+#: O item de lista da spec que corresponde à H1, com outro número (revisão do PR #71, 23/10/2026).
+ITEM_25 = "\n## 7. Hipóteses\n- *Indica falha:* Mais de 25% das duplas confirmarem na posição default{}.\n"
+
+
+def test_item_de_lista_com_proposta_nao_e_divergencia_do_contrato():
+    """Fora de tabela, `[PROPOSTA]` faz do item inteiro proposta, e o `[PARÂMETRO]` só o valor dentro dele: nenhum dos
+    dois é divergência do contrato. Só a linha de tabela saía, e o item virava divergência que o PRD só passava
+    registrando `[ABERTO — dono: produto]` — que o rastro conta como bloqueio."""
+    # mutante: sem marcador, o item firme com 25% é divergência do contrato na origem certa
+    firme = SPEC + ITEM_25.format("")
+    assert [(d["secao"], d["contrato"], d["outro"], d["onde"])
+            for d in montagem.divergencias_do_contrato(ONE_PAGER, firme)] == [("§17", "30%", "25%", "a spec")]
+    assert "divergencia-do-contrato-sem-registro" in _codigos(montagem.validar_prd(_sintetico(spec_missao=firme)))
+    proposta = SPEC + ITEM_25.format(" `[PROPOSTA — validar com PO]`")
+    parametro = SPEC + ITEM_25.format("").replace("Mais de 25%", "Mais de [PARÂMETRO — a definir: limiar, sugestão: 25%]")
+    for spec in (proposta, parametro):
+        assert not montagem.divergencias_do_contrato(ONE_PAGER, spec)
+        assert montagem.validar_prd(_sintetico(spec_missao=spec))["status"] == "aprovado"
+    # o `[PARÂMETRO]` não leva junto o número firme da mesma linha: 25% fora dos colchetes continua divergência
+    misto = SPEC + ITEM_25.format(" `[PARÂMETRO — a definir: amostra mínima]`")
+    assert [d["outro"] for d in montagem.divergencias_do_contrato(ONE_PAGER, misto)] == ["25%"]
+    assert "Mais de 25% das duplas" not in montagem.sem_linhas_abertas(proposta)
+    item = montagem.sem_linhas_abertas(parametro).splitlines()[-1]
+    assert "Mais de" in item and "25%" not in item
+
+
 def test_divergencia_do_contrato_pela_linha_da_spec_e_faixa_nao_diverge():
     """O §15 diz 20 palavras e a linha correspondente da spec, 15: divergência na origem certa. Já o «8 a 10 palavras»
     do one-pager com 8 na spec (exp03ef1b) é detalhe dentro da faixa."""

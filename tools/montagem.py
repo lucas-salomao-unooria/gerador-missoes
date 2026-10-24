@@ -30,8 +30,8 @@ d) **decisão de design não vira origem de produto.** Número com origem citada
    arquivo) é citação legítima.
 
 Divergência que o próprio contrato tem — na origem certa: a linha correspondente da spec, ou a linha do 9f que cita a
-hipótese, com outro número que o §15 ou o §17; linha marcada `[PROPOSTA]`/`[PARÂMETRO]` não conta — não se resolve
-no PRD: o corpo segue o one-pager *e* o PRD registra a divergência na seção 19 (no handoff, na seção 7) como
+hipótese, com outro número que o §15 ou o §17; o que vem marcado `[PROPOSTA]`/`[PARÂMETRO]` não conta — não se
+resolve no PRD: o corpo segue o one-pager *e* o PRD registra a divergência na seção 19 (no handoff, na seção 7) como
 `[ABERTO — dono: produto: …]` com os dois valores. O registro é exigência a mais, nunca saída para o corpo trocado. O
 rastro conta esse marcador como pendência de produto, e o PRD continua não pronto até o PO decidir.
 """
@@ -347,10 +347,24 @@ def hipoteses_e_tetos(one_pager: str, corpo: str, exigir_tetos: bool = True) -> 
 _RE_MARCADOR_ABERTO_NA_LINHA = re.compile(r"\[(?:PAR[ÂA]METRO|PROPOSTA)\b", re.I)
 
 
+#: Fora de tabela, `[PROPOSTA …]` marca o item inteiro como proposta («- *Indica falha:* Mais de 25% das duplas …
+#: `[PROPOSTA — validar com PO]`»); `[PARÂMETRO …]` marca só o valor dentro dos colchetes («Mais de [PARÂMETRO — a
+#: definir: limiar, sugestão: 25%] das duplas»). Revisão do PR #71 (23/10/2026): só a linha de tabela saía, e o item
+#: de lista com a proposta virava divergência do contrato — o formato está em 17 itens de lista do acervo, como a
+#: «[PROPOSTA P0b — validar com PO: … máx. 45 palavras…]» da exp01em1b-e3980485.
+_RE_PROPOSTA_NA_LINHA = re.compile(r"\[PROPOSTA\b", re.I)
+
+
 def sem_linhas_abertas(texto: str) -> str:
-    """O texto sem as linhas de tabela que carregam `[PROPOSTA …]` ou `[PARÂMETRO …]` aberto."""
-    return "\n".join(l for l in (texto or "").splitlines()
-                     if not (l.count("|") >= 2 and _RE_MARCADOR_ABERTO_NA_LINHA.search(l)))
+    """O texto sem o que é proposta: a linha de tabela com `[PROPOSTA …]` ou `[PARÂMETRO …]` aberto, a linha fora de
+    tabela com `[PROPOSTA …]`, e o conteúdo de `[PARÂMETRO …]` nas demais."""
+    saida = []
+    for l in (texto or "").splitlines():
+        if not _RE_MARCADOR_ABERTO_NA_LINHA.search(l):
+            saida.append(l)
+        elif l.count("|") < 2 and not _RE_PROPOSTA_NA_LINHA.search(l):
+            saida.append(_RE_MARCADOR_ABERTO.sub(" ", l))
+    return "\n".join(saida)
 
 
 def _faixa_do_contrato(linha_contrato: str, tok: Tuple[str, str]) -> bool:
@@ -363,9 +377,9 @@ def _faixa_do_contrato(linha_contrato: str, tok: Tuple[str, str]) -> bool:
 def divergencias_do_contrato(one_pager: str, spec: str) -> List[Dict[str, str]]:
     """Onde o próprio contrato diverge, na origem certa: a linha correspondente da spec de produto (régua de linha do
     PR 1) com outro número para o §15 ou o §17, e a linha do 9f que cita a hipótese (`H1`, «Hipótese 1») com
-    porcentagem que a hipótese de mesmo número do §17 não tem. Linha de tabela com marcador aberto não conta: é
-    proposta. Independe do corpo — com o corpo já certo, a divergência continua do PO, e a seção de pendências a
-    registra com os dois valores."""
+    porcentagem que a hipótese de mesmo número do §17 não tem. O que é proposta não conta (`sem_linhas_abertas`).
+    Independe do corpo — com o corpo já certo, a divergência continua do PO, e a seção de pendências a registra com os
+    dois valores."""
     from tools.conteudo_aprovado import secao
 
     spec_firme = sem_linhas_abertas(spec)

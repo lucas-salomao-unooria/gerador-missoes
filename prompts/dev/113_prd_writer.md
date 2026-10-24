@@ -146,7 +146,7 @@ devolve a você cada divergência:
    9f)») tem de estar lá; `[D0-n]` não é «contratual» nem «do PO».
 
 Divergência que o próprio contrato tem (a linha da spec que corresponde ao §15 ou ao §17, ou a
-linha do 9f que cita a hipótese, traz outro número; linha marcada `[PROPOSTA]` ou `[PARÂMETRO]` é
+linha do 9f que cita a hipótese, traz outro número; o que vem marcado `[PROPOSTA]` ou `[PARÂMETRO]` é
 proposta e não conta) pede as duas coisas: o corpo com o número do one-pager **e** a seção 19 com
 `[ABERTO — dono: produto: …]` e os dois valores. O registro nunca substitui o corpo certo: hipótese
 ou teto com outro número no corpo bloqueia sempre, registrado ou não.
