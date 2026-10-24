@@ -453,7 +453,8 @@ def manter_completude_entre_rodadas(callback_context: CallbackContext) -> Option
     cada volta: `completude_rodada` 0 é a primeira passada da volta, e 1 é o refazer dela, que só existe quando o código a
     reprovou. O refazer chama o modelo só se a primeira passada da volta o chamou (`KEY_COMPLETUDE_CHAMOU`): a resposta
     mantida que segue reprovada já teve o refazer dela, e chamar de novo a cada rodada da spec passaria do teto (revisão
-    do PR #73, 24/10/2026).
+    do PR #73, 24/10/2026). Pelo mesmo teto, a resposta que veio sem o bloco 15 não é pedida de novo nas voltas seguintes:
+    só o A045 que reescreveu a spec, com a resposta anterior trazendo o bloco, faz a completude rodar de novo.
 
     Na correção pontual não roda nunca, nem na sessão anterior ao PR 6, que não tem `completude_spec` para travar: o
     editor trocou a spec, e o bloco 15 novo sobre ela seria conteúdo além das trocas pedidas (exp02ef1b e exp02em1b, que o
@@ -481,12 +482,22 @@ def manter_completude_entre_rodadas(callback_context: CallbackContext) -> Option
         return texto[m.start(): m.end() + fim.start() if fim else len(texto)]
 
     atual, velho = bloco(spec), bloco(anterior)
-    if not atual.strip() or not velho.strip():
+    mantida = anterior.replace(velho, atual.rstrip() + "\n\n", 1) if atual.strip() and velho.strip() else anterior
+    if refazer_da_volta and not state.get(KEY_COMPLETUDE_CHAMOU):
+        # a primeira passada da volta manteve a resposta sem chamar o modelo: o refazer também não chama
+        return types.Content(role="model", parts=[types.Part(text=mantida)])
+    if not velho.strip():
+        # a resposta da completude veio sem o bloco 15, e o modelo já respondeu nesta execução (a volta 0 sempre o chama,
+        # e a resposta mantida traz o bloco): chamar de novo a cada volta somaria 2 chamadas por rodada da spec só no
+        # caminho de falha. O split segue reprovando, e o 🔴 fica à vista (revisão do PR #73, 24/10/2026)
+        state[KEY_COMPLETUDE_CHAMOU] = False
+        return types.Content(role="model", parts=[types.Part(text=anterior)])
+    if not atual.strip():
         state[KEY_COMPLETUDE_CHAMOU] = True
         return None
     if not refazer_da_volta:
         state[KEY_COMPLETUDE_CHAMOU] = False
-    return types.Content(role="model", parts=[types.Part(text=anterior.replace(velho, atual.rstrip() + "\n\n", 1))])
+    return types.Content(role="model", parts=[types.Part(text=mantida)])
 
 
 def dispensar_ideacao_com_one_pager_do_po(callback_context: CallbackContext) -> Optional[types.Content]:

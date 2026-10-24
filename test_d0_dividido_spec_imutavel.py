@@ -482,6 +482,59 @@ def test_completude_reprovada_sempre_nao_passa_do_teto_nas_rodadas_da_spec(monke
     assert st["chamadas_completude"] == 2 and st["completude_status"] == "bloqueado"
 
 
+class _CompletudeSemBloco15(BaseAgent):
+    """Responde toda vez sem o bloco 15 no Passo 4: o código a reprova sempre, e não há bloco para manter entre as voltas."""
+
+    @override
+    async def _run_async_impl(self, ctx):
+        n = int(ctx.session.state.get("chamadas_completude") or 0) + 1
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta={
+            "completude_spec": _saida(bloco="Sem bloco desta vez.\n"), "chamadas_completude": n}))
+
+
+@pytest.mark.parametrize("reescreve", [False, True])
+def test_completude_sem_bloco_15_nao_passa_do_teto_nas_rodadas_da_spec(monkeypatch, reescreve):
+    """Revisão do PR #73 (24/10/2026): a resposta sem o bloco 15 deixava `bloco(anterior)` vazio, e cada volta do SpecLoop
+    chamava o modelo duas vezes (6 chamadas em 3 rodadas). São as 2 da primeira volta, reescreva o A045 a spec ou não."""
+    loop = _spec_loop_real(monkeypatch, _CompletudeSemBloco15(name="A045b", before_agent_callback=_callback_com_output_key),
+                           reescreve=reescreve, rodadas=3)
+    st = t._rodar({}, loop)
+    assert st["rodou_depois_da_completude"] == 3 and st["spec_rodada"] == 3
+    assert st["chamadas_completude"] == 2 and st["completude_status"] == "bloqueado"
+    assert "## 15." not in st["spec_missao"]
+
+
+def test_completude_sem_bloco_15_e_depois_com_ele_volta_a_rodar_so_se_a_spec_o_perder(monkeypatch):
+    """A resposta que traz o bloco 15 depois do refazer segue mantida nas voltas seguintes, sem chamada nova."""
+
+    class _SemBlocoNaPrimeira(BaseAgent):
+        @override
+        async def _run_async_impl(self, ctx):
+            n = int(ctx.session.state.get("chamadas_completude") or 0) + 1
+            texto = _saida(bloco="Sem bloco desta vez.\n") if n == 1 else _saida()
+            yield Event(invocation_id=ctx.invocation_id, author=self.name,
+                        actions=EventActions(state_delta={"completude_spec": texto, "chamadas_completude": n}))
+
+    loop = _spec_loop_real(monkeypatch, _SemBlocoNaPrimeira(name="A045b", before_agent_callback=_callback_com_output_key),
+                           rodadas=3)
+    st = t._rodar({}, loop)
+    assert st["chamadas_completude"] == 2 and st["completude_status"] == "amarelo"
+    assert st["spec_missao"].count("## 15.") == 1 and "Linha dois" in st["spec_missao"]
+
+
+def test_refazer_da_volta_que_nao_chamou_o_modelo_nao_chama_mesmo_sem_o_bloco_na_spec():
+    """O refazer só chama o modelo se a primeira passada da volta o chamou, ainda que a spec esteja sem o bloco 15 nessa
+    hora: a primeira passada já decidiu que a resposta de antes vale nesta volta."""
+    from types import SimpleNamespace
+
+    from agents.callbacks import KEY_COMPLETUDE_CHAMOU
+
+    estado = {"spec_rodada": 1, "completude_rodada": 1, "completude_status": "bloqueado", KEY_COMPLETUDE_CHAMOU: False,
+              "spec_missao": SPEC_A045, "completude_spec": _saida()}
+    conteudo = manter_completude_entre_rodadas(SimpleNamespace(state=estado))
+    assert conteudo is not None and conteudo.parts[0].text == _saida()
+
+
 def test_completude_que_erra_uma_vez_no_spec_loop_real(monkeypatch):
     loop = _spec_loop_real(monkeypatch, _CompletudeQueErraUmaVez(name="A045b",
                                                                  before_agent_callback=_callback_com_output_key))
