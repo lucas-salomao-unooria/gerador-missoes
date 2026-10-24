@@ -285,21 +285,47 @@ def _cita_texto_do_po(linha: str, state: Dict[str, Any]) -> bool:
 
 def _explicada_a_montante(diff: List[str], state: Dict[str, Any]) -> bool:
     """Toda linha da diferença é a troca que a correção de produto da cascata fez (`edicoes_a_montante`): a linha que
-    sai da spec aceita está no `para` de uma troca, e a que o autor trazia está no `de`. O D0 de antes do PR 2 trazia a
-    spec inteira; numa cascata, a dele é a versão de antes da correção de produto, e a diferença não é mudança dele."""
+    sai da spec aceita é a do autor com as trocas aplicadas, ou é uma linha do `para` de uma troca (a que o autor trazia,
+    do `de`). O D0 de antes do PR 2 trazia a spec inteira; numa cascata, a dele é a versão de antes da correção de
+    produto, e a diferença não é mudança dele.
+
+    A troca só cobre a linha se é ela, ou quase toda ela (≥ 60%, com 3 palavras ou mais): com «a troca está na linha»,
+    uma troca «3» → «2» explicava qualquer linha com «2», e a mudança espontânea do D0 no texto do Gate 0 deixava de ser
+    `[ABERTO — dono: PO]` (revisão do PR 5, 24/10). Troca curta só explica pelo par de linhas, que é exato."""
     from tools.fidelidade import _norm
 
     trocas = [e for e in state.get("edicoes_a_montante") or [] if isinstance(e, dict)]
     if not trocas or not diff:
         return False
-    para = [_norm(str(e.get("para") or "")) for e in trocas]
-    de = [_norm(str(e.get("de") or "")) for e in trocas]
-    for linha in diff:
-        corpo = _norm(linha[1:])
-        if not corpo:
-            continue
-        fontes = para if linha.startswith("-") else de
-        if not any(corpo in f or f in corpo for f in fontes if f):
+    pares = [(_norm(str(e.get("de") or "")), _norm(str(e.get("para") or ""))) for e in trocas]
+    sai = [_norm(l[1:]) for l in diff if l.startswith("-")]
+    entra = [_norm(l[1:]) for l in diff if l.startswith("+")]
+    explicadas_sai, explicadas_entra = set(), set()
+    # o par exato: a linha do autor, com as trocas de produto aplicadas, é a linha da spec aceita
+    for j, linha in enumerate(entra):
+        trocada = linha
+        for de, para in pares:
+            if de:
+                trocada = trocada.replace(de, para)
+        if trocada != linha and trocada in sai:
+            explicadas_entra.add(j)
+            explicadas_sai.add(sai.index(trocada))
+
+    def coberta(corpo: str, textos: List[str]) -> bool:
+        for texto in textos:
+            if not texto:
+                continue
+            if corpo == texto or (len(texto.split()) >= 3 and texto in corpo and len(texto) >= 0.6 * len(corpo)):
+                return True
+        return False
+
+    linhas_para = [_norm(l) for e in trocas for l in str(e.get("para") or "").splitlines() if l.strip()]
+    linhas_de = [_norm(l) for e in trocas for l in str(e.get("de") or "").splitlines() if l.strip()]
+    for k, corpo in enumerate(sai):
+        if corpo and k not in explicadas_sai and not coberta(corpo, linhas_para):
+            return False
+    for k, corpo in enumerate(entra):
+        if corpo and k not in explicadas_entra and not coberta(corpo, linhas_de):
             return False
     return True
 

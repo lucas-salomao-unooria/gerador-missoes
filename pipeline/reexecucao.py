@@ -643,11 +643,21 @@ def validador_das_decisoes(estado: Dict[str, Any]):
         return None
 
     def validar(documentos: Dict[str, str]) -> List[str]:
-        antes = "\n".join(str(estado.get(k) or "") for k in ("one_pager", "spec_missao_gate0", "spec_missao"))
-        depois = "\n".join(documentos.get(k, "") for k in ("one_pager", "spec_missao"))
-        return [f"a troca apaga a decisão do PO gravada no de acordo de produto: «{g[:160]}» — ela fica como está; "
-                "se o pedido a contraria, registre em `pendencias`" for g in dict.fromkeys(gravadas)
-                if g in antes and g not in depois]
+        # por documento e por contagem: `fechar_contrato` grava a decisão no one-pager e na spec, e a troca que a apaga
+        # de um só passava porque o outro ainda a dizia; com dois itens de mesmo valor e data, sumia uma das ocorrências
+        # (revisão do PR 5, 24/10)
+        erros = []
+        for g in dict.fromkeys(gravadas):
+            for chave in ("one_pager", "spec_missao"):
+                if chave not in documentos:
+                    continue
+                antes = str(estado.get("spec_missao_gate0") or estado.get("spec_missao") or "") if chave == "spec_missao" \
+                    else str(estado.get(chave) or "")
+                if antes.count(g) > documentos[chave].count(g):
+                    erros.append(f"a troca apaga do {'one-pager' if chave == 'one_pager' else 'spec'} a decisão do PO "
+                                 f"gravada no de acordo de produto: «{g[:160]}» — ela fica como está; se o pedido a "
+                                 "contraria, registre em `pendencias`")
+        return erros
 
     return validar
 
@@ -1260,10 +1270,11 @@ async def executar_cascata_stream(
     passos = ([PRODUTO] if d.tem_produto else []) + ([DESIGN] if etapa == DEV and (d.tem_produto or d.de(DESIGN))
                                                      else []) + [etapa]
     a_montante: List[Dict[str, Any]] = []
-    # um passo que rodou apagou do estado os documentos das etapas seguintes (guardados em `versao_anterior_<chave>`)
-    anterior_rodou = False
     for n, passo in enumerate(passos, 1):
         ultimo = n == len(passos)
+        # só o último passo fecha a missão: diagnóstico, aprendizado e catálogo no passo de produto rodavam sobre uma
+        # missão sem design e dev — o passo acabou de apagá-los (`pipeline/orchestrator.py`; revisão do PR 5, 24/10)
+        opcoes = opcoes_runner if ultimo else {**opcoes_runner, "com_transversal": False}
         info = {"de": etapa, "passo": f"{n}/{len(passos)} ({passo})", "divisao": d.como_dict()}
         if passo == PRODUTO:
             item_pedido = PedidoCorrecao(
@@ -1276,7 +1287,10 @@ async def executar_cascata_stream(
             item_pedido = PedidoCorrecao(texto=pedido.texto, anexos=list(pedido.anexos),
                                          anexos_sem_texto=list(pedido.anexos_sem_texto),
                                          nota_da_esteira=nota_para_a_etapa(d))
-            kwargs = dict(docs_da_versao_anterior=anterior_rodou, base_da_linha_de_base=estado_antes,
+            # um passo anterior desta cascata — ou da que falhou antes dela, com produto já aplicado — apagou do estado os
+            # documentos da etapa e os guardou em `versao_anterior_<chave>`; sem eles, o editor não era chamado e o
+            # design era refeito pelos autores (revisão do PR 5, 24/10). O que está no estado continua valendo
+            kwargs = dict(docs_da_versao_anterior=True, base_da_linha_de_base=estado_antes,
                           edicoes_a_montante=list(a_montante))
         registro: Dict[str, Any] = {}
         final: Dict[str, Any] = {}
@@ -1284,7 +1298,7 @@ async def executar_cascata_stream(
         async for evento in executar_correcao_stream(
                 run_dir, passo, item_pedido, triagem, so_esta_etapa=so_esta_etapa if ultimo else True,
                 notas_de_passagem=notas_de_passagem, proponente=proponente, divisao=d.como_dict(), cascata=info,
-                **kwargs, **opcoes_runner):
+                **kwargs, **opcoes):
             tipo = evento.get("type")
             if tipo == "correcao_error":
                 yield evento
@@ -1297,7 +1311,6 @@ async def executar_cascata_stream(
             yield evento
         if passo != PRODUTO:
             a_montante += [dict(e) for e in registro.get("edicoes") or []]
-            anterior_rodou = anterior_rodou or bool(registro)
             continue
         if sem_trocas:
             yield {"type": "cascata_produto_sem_trocas", "timestamp": time.time(),
@@ -1317,7 +1330,6 @@ async def executar_cascata_stream(
             yield {"type": "correcao_error", "registro": registro, "restaurados": restaurados, "timestamp": time.time(),
                    "error": erro, "pede_devolver": True}
             return
-        anterior_rodou = True
         a_montante += [dict(e) for e in registro.get("edicoes") or []]
 
 
