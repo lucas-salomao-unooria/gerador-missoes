@@ -466,9 +466,14 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
         # Texto do Gate 0: quem muda é o PO. A troca que um pedido do PO fez em design também vem para cá — o pedido
         # vale, mas no documento de produto (plano, D4 e D11); até o PR 5 o caminho é devolver a Produto.
         a_pedido = [l for l in diff if l.startswith("-") and _cita_texto_do_po(l, estado or {})]
+        from tools.fechar_contrato import trocas_de_linhas
+
         avisos.append({
             "severidade": "bloqueio" if estrito else "decisao_humana", "codigo": "alterou-fora-do-proprio-bloco",
             "etapa": "design", "agente_responsavel": "PO", "autor": agente, "aberto_dono_po": True,
+            # as trocas por linha, para o de acordo de produto gravá-las se o PO aceitar (plano, PR 3): devolvida a
+            # Produto, a missão mostra a mudança na lista do cartão, e o «aceitar» a põe no texto do Gate 0
+            "bloco": chave, "trocas": trocas_de_linhas(antes, depois),
             "resumo": (f"[ABERTO — dono: PO: {autor} quis mudar {nome} da spec do Gate 0, e a spec é montada em código — a "
                        "mudança não entrou]. O texto de produto só muda em produto: se ela deve valer, devolva a "
                        "Produto com a decisão"
@@ -1514,6 +1519,7 @@ class RastroCheckAgent(BaseAgent):
                 registro_do_po=decisoes.ha_registro_do_po(dict(state)),
                 one_pager_po=str(state.get("one_pager_po", "") or ""),
                 pedidos=_pedidos_de_produto(state),
+                decisoes_do_po=state.get("decisoes_do_po") or [],
             )
             relatorio = relatorio_contrato_produto(resultado, missao)
         elif self.modo == "manifesto":

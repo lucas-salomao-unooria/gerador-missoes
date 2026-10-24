@@ -114,7 +114,8 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
 
     if one_pager:
         gates["contrato_produto_status"] = _extrair_status_e_codigos(
-            contrato_produto.validar_one_pager(one_pager, nucleo=nucleo, briefing=briefing, one_pager_po=one_pager_po)
+            contrato_produto.validar_one_pager(one_pager, nucleo=nucleo, briefing=briefing, one_pager_po=one_pager_po,
+                                               decisoes_do_po=state.get("decisoes_do_po") or [])
         )
         # os comitês pedagógicos (15/10/2026): o §12a e a conta da virada conferidos sobre o one-pager
         gates["evidencia_one_pager_status"] = _extrair_status_e_codigos(evidencia.conferir_one_pager(one_pager))

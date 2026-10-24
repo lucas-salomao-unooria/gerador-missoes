@@ -112,7 +112,8 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
     novos["kpis_status"] = kpis.validar_kpis(prd, spec)
 
     novos["contrato_produto_status"] = contrato_produto.validar_one_pager(
-        one_pager, state.get("nucleo_narrativo", "") or "", state.get("briefing", "") or ""
+        one_pager, state.get("nucleo_narrativo", "") or "", state.get("briefing", "") or "",
+        decisoes_do_po=state.get("decisoes_do_po") or [],
     )
     return novos
 
