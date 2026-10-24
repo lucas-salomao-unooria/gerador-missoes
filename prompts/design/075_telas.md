@@ -121,6 +121,8 @@ Sequência: **importar** a seção do ambiente (chrome, navegação, affordances
 
 Padrão · Primeira vez com scaffolding (anos iniciais, decisão com ferramenta de investigação) · Pós-ação · Espera de professor (toda tela ligada a handoff) · Degradado (2–4 por dispositivo) · Vazio/carregando · **Falha na voz da ficção** (do bloco 2 da spec).
 
+**A regra «habilitado só com…» de cada tela é a do bloco 2 da spec** (plano «Produto dono do contrato», D7). Estado de tela a mais é livre; a condição que libera o aluno não. O botão que avança habilita com o que a spec exige, e só com isso: exigir a resposta certa onde a spec deixa o aluno errar, ou nomear a opção que libera (`habilitado após selecionar «Criança lendo»`), muda o que ele decide — e a escolha deixa de medir. Siga a spec e registre `[PROPOSTA — validar com PO: <tela> · o que muda para o aluno · por quê]` em «Lacunas»: um gate confere as regras de habilitação contra o bloco 2 (`arestas_status`) e as leva ao PO. O texto que a tela mostra e que é texto-chave (`TC-nn` na tabela do conteúdo aprovado) é o literal da copy.
+
 ## Camada CAA — quando o `camada_caa` vier preenchido
 
 As restrições do mapa CAA são **restrição de build**, no mesmo nível do teto de elementos:
@@ -135,7 +137,9 @@ Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica — a redund
 
 ## Telas de professor — obrigatórias (4.3 e 4.4)
 
-**Preparo (Seção 1c da jornada — a missão é customizada pelo professor de qualquer disciplina):** `E0-PROF-01` catálogo/escolher a missão · `E0-PROF-02` recorte da aula (disciplina em `Selection`, tema, assuntos em lista, contexto; botão "usar banco padrão") — **construída nos dois estados**: banco padrão em primeiro nível e recorte abaixo (missão de 1º–5º ano) e recorte em primeiro nível com o banco padrão a um toque (6º ano em diante), conforme o critério 4.3 (teste de posição) · `E0-PROF-03` geração em andamento (progresso, e o estado sem saldo de IA) · `E0-PROF-04` curadoria do pacote (prévia dos itens gerados, editar qualquer texto, regenerar item, aprovar) · `E0-PROF-05` pôr a atividade no ar (libera a missão na sala na hora; a plataforma não tem agendamento). Estados a gerar: padrão · gerando · sem saldo · pacote pronto. **A tela de recorte e a de curadoria saem preenchidas com uma das três aulas da tabela "a mesma missão em três aulas" do bloco 8 — uma disciplina diferente do banco default**, para que quem lê veja o que o professor de Biologia ou de História faria.
+**Preparo (Seção 1c da jornada — a missão é customizada pelo professor de qualquer disciplina):** as cinco telas do padrão da plataforma, `E0-PROF-01…05` — o recorte da aula construído nos dois estados do critério 4.3, os estados a gerar, e o recorte e a curadoria preenchidos com uma aula de disciplina diferente do banco default —, como estão em `references/padrao-plataforma-preparo-professor.md` (incluído abaixo).
+
+<!-- include: references/padrao-plataforma-preparo-professor.md -->
 
 **Condução (4.4):** dashboard em tempo real (quem está em que etapa, **o que pede ação**) · controles de handoff · evidências agregadas da turma · evidência individual (com o grau da medida ao lado). Dados vêm da raia "Evidência capturada". Nenhuma comparação nominal de mérito (8.5); nenhuma coluna ordenável com medida de criança (PED-07).
 

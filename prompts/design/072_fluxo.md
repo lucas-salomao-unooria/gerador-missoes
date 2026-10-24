@@ -50,13 +50,17 @@ Para o diagrama ficar legível:
 
 **Estados vêm da spec, não de você.** O bloco 2 nomeia os estados que viram enum no código. Estado que você precisou criar para o grafo fechar (`DEC_*` de decisão, `DEG_*` de caminho degenerado, `ST_*_LOCKED` de bloqueio) é legítimo **se estiver marcado como novo** — numa tabela "Estados não nomeados na spec", com o motivo e o bloco que o implica. Sem essa tabela, o handoff para dev leva os 14 da spec e perde os 20 seus; com ela, o `handoff-dev` sabe o que é contrato e o que é proposta. Estado novo que muda mecânica é lacuna com dono `gate-estrutural`, não nó.
 
+**Decompor é livre; mudar o que o aluno faz, decide ou vê não é** (plano «Produto dono do contrato», D7). Quebrar um estado da spec em telas e estados intermediários é detalhe de design — os 55 estados novos das sessões de 23/10/2026 eram quase todos decomposição. A guarda de cada aresta do aluno, porém, é a do bloco 2 da spec: o que **Bloqueia**, o que **Ordena** e o gatilho do contrato de estados. Aresta que só deixa seguir com a resposta certa onde a spec deixa escolher (na exp02ef1b, a A20 travou a 5B em «Criança lendo» e a dimensão D3 deixou de medir), que troca o «e» de um gatilho da spec por «ou» (a A13: `Pronto` OU fim do tempo, contra «conclusão das marcações e fim do tempo»), que tira ou acrescenta opção, ou que monta mecânica que a spec não tem, não entra no grafo: siga a spec e registre a mudança em `## Propostas ao produto` como `[PROPOSTA — validar com PO: aresta <id> · o que muda para o aluno · por quê]`. Um gate confere as arestas contra o bloco 2 (`arestas_status`) e leva a guarda mudada ao PO, que decide no Refazer.
+
 **Arestas — toda uma tem condição escrita.** O rótulo diz o que faz a transição acontecer, não o que significa: ✅ `toca no 🔖` · `4 de 4 encaminhadas` · `professora toca Liberar` · `timer 7 dias`; ❌ `avança` · `próximo passo`. **Rótulo no desenho ≤ 3 palavras**; a condição completa mora na lista. Cores: preto principal · cinza alternativo/volta · tracejado automático · vermelho erro/degradado.
 
 **Layout:** passo horizontal = largura do nó + 200 px; nós secundários em faixa própria abaixo (nunca sob o nó pai); notas e legenda só depois de o grafo estar dimensionado.
 
 ## O segundo grafo — fluxo do professor (obrigatório)
 
-A visão do professor é entregável: quem prepara a missão é o professor de qualquer disciplina, e o board no Miro espelha este grafo ao lado do do estudante. Em **bloco Mermaid próprio**, sob o título fixo `## Fluxo do professor (Mermaid — obrigatório)`: nós `E0-PROF-01…05` (escolher a missão · recorte da aula · geração em andamento · curadoria do pacote · pôr no ar) com os estados encostados `vazio`, `gerando`, `sem saldo de IA`, `falha da geração (503)`, `pacote pronto`, `editado`, `ativado`; a decisão `banco default × gerar com IA`, com o **caminho curto** `E0-PROF-02 -->|usar banco padrão| E0-PROF-05` como aresta própria (o critério 4.3 exige que a missão rode inteira por ele); a volta `curadoria → editar → aprovar`; o gate `ativar atividade`, cuja saída liga ao grafo do estudante pela aresta `atividade ativada → E1-ALU-01`; e os gates de condução (liberar etapa, pausar, zerar turma) com as duas saídas. Os cinco testes abaixo valem para este grafo também. Rótulos de aresta vêm do bloco 8 da spec (`POST /<modulo>/turmas/«turmaId»/gerar-conteudo`, `GET …/conteudo`, `POST …/homologar`, `POST …/gate`) — nada inventado. O módulo `/atividades` é o motor do Instanooria e não se reusa (`formato-spec`, bloco 8).
+A visão do professor é entregável: quem prepara a missão é o professor de qualquer disciplina, e o board no Miro espelha este grafo ao lado do do estudante. O preparo é **padrão da plataforma**, igual em toda missão (D7): os nós `E0-PROF-01…05`, os estados encostados, o caminho curto do banco padrão como aresta própria, a volta da curadoria, o gate de ativação que liga ao grafo do estudante, os gates de condução e os rótulos vindos do bloco 8 estão em `references/padrao-plataforma-preparo-professor.md`, seção «No fluxo — o segundo grafo» — incluído abaixo. Os cinco testes valem para este grafo também.
+
+<!-- include: references/padrao-plataforma-preparo-professor.md -->
 
 ## Os cinco testes (rode todos, sempre)
 
@@ -126,6 +130,8 @@ n nós · n telas · n estados · n decisões · n gates · n arestas · n dead 
 Passo horizontal usado · maior rótulo (palavras) · resultado do screenshot (colisões restantes e por quê) — ou "não verificado visualmente: <motivo>"
 
 ## Lacunas de mecânica encontradas (dono `gate-estrutural`)
+
+## Propostas ao produto (guarda que mudaria o que o aluno faz, decide ou vê — o grafo segue a spec; vazia, escreva «nenhuma»)
 
 ## Pronto — contagem por item
 ```

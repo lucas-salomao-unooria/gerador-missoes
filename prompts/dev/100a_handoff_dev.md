@@ -58,6 +58,10 @@ Você fecha os critérios 9.1, 9.2 e 9.3 da rubrica. Seu leitor é o dev — e o
 
 {one_pager?}
 
+**Textos-chave do one-pager aprovado, com ID** (montados pela esteira, por código — plano «Produto dono do contrato», PR 7):
+
+{textos_chave_tabela?}
+
 ## Gabarito do insumo (preencha integralmente)
 
 <!-- include: references/modelo-de-insumo.md -->
@@ -113,7 +117,7 @@ A fonte da verdade é a spec de produto (blocos 0 a 12 e o bloco 15 de completud
 2. **Hipótese e meta iguais às do contrato.** Hipótese com o número do §17 (ou nenhum, remetendo a ele); o alvo e o limiar de um KPI que cita uma `PQ-nn` são os da linha dela no 9f da spec.
 3. **Estado do contrato.** A máquina de estados usa os nomes do «Contrato de estados» da spec (estado de decomposição do fluxo do design, com o nome do fluxo, também vale); nenhum nome novo.
 4. **Origem verdadeira.** Número com origem citada em produto («§17 do one-pager», «spec, bloco 9f») tem de estar lá. Decisão do D0 é do design: cite-a como `design/00-anexo-design-spec.md › Bloco 13`, nunca como «contratual» ou «decisão do PO».
-5. **Texto-chave literal.** O texto que o PO aprovou palavra por palavra (Canal B, debate, texto de tela do §4) vai pela chave da copy ou literal — nunca uma terceira versão.
+5. **Texto-chave literal.** O texto que o PO aprovou palavra por palavra (Canal B, debate, texto de tela do §4, opções, podcast — a tabela «Textos-chave aprovados (TC)» acima) vai pela chave da copy, pelo ID (`TC-07`) ou literal — nunca uma terceira versão. A citação entre aspas reescrita quase igual volta ao texto aprovado por código; a mais distante bloqueia.
 
 Quando o próprio contrato diverge (o one-pager diz um número e a linha correspondente da spec, ou a linha do 9f que cita a hipótese, diz outro; linha marcada `[PROPOSTA]` não conta), não escolha: siga o one-pager **e** registre na seção 7 `[ABERTO — dono: produto: <onde> diz X e <onde> diz Y]`. É pendência do PO, e o rastro a conta. O registro não substitui o número certo: hipótese com outro número bloqueia sempre, e cópia errada se corrige, não vai a produto.
 
