@@ -573,3 +573,41 @@ def test_outro_texto_do_po_entra_tambem_na_spec_que_copia_o_canal_b():
     novos, falhas = fc.aplicar_edicoes(estado, d.edicoes)
     assert not falhas and set(novos) == {"one_pager", "spec_missao_gate0", "spec_missao"}
     assert all(novo in texto and item.texto_chave not in texto for texto in novos.values())
+
+
+def test_proposta_decidida_pelo_po_sai_da_secao_da_esteira():
+    """Cascata do PR 5: o PO aceita no Refazer a redação que o design propôs (ou escreve outra), o editor de produto a põe
+    no one-pager e o texto-chave muda — a proposta antiga sai da seção da esteira em vez de ficar no cartão para sempre."""
+    estado = _estado()
+    tcs = tk.da_sessao(estado)
+    pergunta = next(t for t in tcs if t.tipo == tk.CANAL_B)
+    com_proposta = tk.aplicar_na_copy(_copy_de_teste().replace(pergunta.texto + " | 19 |", "Pronto | 1 |"), tcs)["texto"]
+    novo = "O que precisa aparecer na foto?"
+    _, registro = tk.atualizar(estado)
+    trocado = {**estado, "one_pager": estado["one_pager"].replace(pergunta.texto, novo), tk.KEY_REGISTRO: registro}
+    tcs2 = tk.da_sessao(trocado)
+    assert next(t for t in tcs2 if t.tipo == tk.CANAL_B).id == pergunta.id
+    depois = tk.aplicar_na_copy(com_proposta, tcs2)
+    assert f"| {novo} |" in depois["texto"]  # o texto novo desce por código para a linha que cita o ID
+    assert not any(p == "Pronto" for _, _, p in depois["propostas"])
+    # e a redação aprovada antes, que estava na linha, não vira proposta do design: ela só desce
+    assert not [p for p in depois["propostas"] if p[2].startswith("Para mostrar em uma foto")]
+
+
+def test_cascata_em_sessao_sem_registro_leva_o_texto_novo_a_linha_da_copy():
+    """As quatro missões refeitas depois do PR 7 não têm registro: na correção pontual de produto, os IDs saem do
+    one-pager de antes do pedido (`versao_anterior_one_pager`). O texto que o PO trocou guarda o ID e a redação velha, e
+    a linha da copy que ainda a traz — sem citar o ID — recebe a nova por código, sem proposta."""
+    estado = _estado()
+    pergunta = next(t for t in tk.da_sessao(estado) if t.tipo == tk.CANAL_B)
+    novo = "O que precisa aparecer na foto para mostrar duas crianças estudando juntas?"
+    corrigido = {**estado, "versao_anterior_one_pager": estado["one_pager"],
+                 "one_pager": estado["one_pager"].replace(pergunta.texto, novo)}
+    tcs, registro = tk.atualizar(corrigido)
+    nova = next(t for t in tcs if t.tipo == tk.CANAL_B)
+    assert nova.id == pergunta.id and nova.texto == novo and nova.antes == [pergunta.texto]
+    assert registro["itens"][[d["id"] for d in registro["itens"]].index(nova.id)]["antes"] == [pergunta.texto]
+    copia = _copy_de_teste().replace("| `TC-02` |", "| — |")
+    aplicado = tk.aplicar_na_copy(copia, tcs)
+    assert f"| {novo} |" in aplicado["texto"] and f"`{nova.id}`" in aplicado["texto"]
+    assert not aplicado["propostas"]

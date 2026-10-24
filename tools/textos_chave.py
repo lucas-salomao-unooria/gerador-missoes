@@ -90,6 +90,9 @@ class TextoChave:
     grupo: str = ""
     n: int = 0
     opcoes: List[str] = field(default_factory=list)
+    #: As redações aprovadas antes desta, com o mesmo ID (o PO trocou o texto no one-pager). A linha da copy que ainda
+    #: traz uma delas recebe o texto novo por código, sem virar proposta do design.
+    antes: List[str] = field(default_factory=list)
 
     def como_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -98,7 +101,14 @@ class TextoChave:
 def de_dict(d: Dict[str, Any]) -> TextoChave:
     return TextoChave(id=str(d.get("id") or ""), tipo=str(d.get("tipo") or ""), origem=str(d.get("origem") or ""),
                       texto=str(d.get("texto") or ""), grupo=str(d.get("grupo") or ""), n=int(d.get("n") or 0),
-                      opcoes=[str(o) for o in d.get("opcoes") or []])
+                      opcoes=[str(o) for o in d.get("opcoes") or []], antes=[str(a) for a in d.get("antes") or []])
+
+
+def _herdar(novo: "TextoChave", antigo: "TextoChave") -> None:
+    """O ID e as redações anteriores do texto-chave pareado; a redação de antes entra no histórico se mudou."""
+    novo.id = antigo.id
+    trocou = literal(antigo.texto) != literal(novo.texto)
+    novo.antes = (list(antigo.antes) + ([antigo.texto] if trocou else []))[-5:]
 
 
 # --------------------------------------------------------------------------- normalização
@@ -455,7 +465,7 @@ def numerar(extraidos: Sequence[TextoChave], anteriores: Optional[Dict[str, Any]
     for i, tc in enumerate(novos):
         antigo = pares.get(i)
         if antigo is not None:
-            tc.id = antigo.id
+            _herdar(tc, antigo)
         else:
             tc.id = formatar_id(proximo)
             proximo += 1
@@ -480,7 +490,7 @@ def _opcoes_numeradas(grupo: TextoChave, antigas: List[TextoChave], aposentados:
     numero = partes_do_id(grupo.id)[0]
     for i, op in enumerate(novas):
         if i in pares:
-            op.id = pares[i].id
+            _herdar(op, pares[i])
         else:
             op.id = formatar_id(numero, proximo)
             proximo += 1
@@ -549,6 +559,14 @@ def registro(estado: Dict[str, Any]) -> Dict[str, Any]:
         itens = ler_tabela(str(estado.get(chave) or ""))
         if itens:
             return {"itens": itens, "aposentados": [], "origem": chave}
+    # a sessão anterior ao PR 7 numa correção ou num refazer de produto: os IDs saem do one-pager de antes do pedido
+    # (`versao_anterior_one_pager`), e o texto que o PO trocou guarda o ID e a redação velha — sem isto, a linha da copy
+    # com a redação velha não tinha como receber a nova (a cascata das quatro missões refeitas depois do PR 7)
+    anterior = str(estado.get("versao_anterior_one_pager") or "")
+    if anterior.strip():
+        itens, _ = numerar(extrair(anterior))
+        if itens:
+            return {"itens": [t.como_dict() for t in itens], "aposentados": [], "origem": "versao_anterior_one_pager"}
     return {"itens": [], "aposentados": []}
 
 
@@ -895,7 +913,10 @@ def aplicar_na_copy(copy: str, tcs: Sequence[TextoChave]) -> Dict[str, Any]:
         return {"texto": copy or "", "propostas_novas": [], "propostas": [], "sem_linha": [], "opcoes_divergentes": [],
                 "ids_desconhecidos": [], "copiados": 0}
     ids = por_id(tcs)
-    anteriores = [(i, a, p) for i, a, p in propostas_registradas(copy) if i in ids and literal(p) != literal(ids[i].texto)]
+    # a proposta de uma execução anterior continua enquanto o texto-chave é o mesmo de quando ela foi feita: se o PO o
+    # trocou no one-pager (aceitando a proposta ou escrevendo outro texto), ela já foi decidida e sai
+    anteriores = [(i, a, p) for i, a, p in propostas_registradas(copy)
+                  if i in ids and mesmo_texto(ids[i].texto, a) and not mesmo_texto(ids[i].texto, p)]
     texto = remover_secao(copy)
     linhas = texto.split("\n")
     do_texto = {literal(t.texto): t for t in tcs if t.tipo in TIPOS_DE_TEXTO}
@@ -918,11 +939,17 @@ def aplicar_na_copy(copy: str, tcs: Sequence[TextoChave]) -> Dict[str, Any]:
         celulas, cabecalho, ipt = strings[i]
         ligados.setdefault(alvo.id, []).append(i)
         mudou = False
+
+        def proposta(escrito: str) -> None:
+            # a redação aprovada antes (o PO trocou o texto) só desce: não é proposta do design
+            if not any(mesmo_texto(a, escrito) for a in alvo.antes):
+                novas.append((alvo.id, alvo.texto, literal(escrito)))
+
         if trecho == _JA_ESTA:
             pass
         elif trecho is not None and trecho != celulas[ipt] and trecho in celulas[ipt]:
             if not mesmo_texto(alvo.texto, trecho) and not presente(alvo, _documento_literal(trecho)):
-                novas.append((alvo.id, alvo.texto, literal(trecho)))
+                proposta(trecho)
                 celulas[ipt] = celulas[ipt].replace(trecho, alvo.texto, 1)
                 ipal = _coluna(cabecalho, "palavras")
                 if ipal is not None and ipal < len(celulas):
@@ -930,7 +957,7 @@ def aplicar_na_copy(copy: str, tcs: Sequence[TextoChave]) -> Dict[str, Any]:
                 mudou = True
                 copiados += 1
         elif not mesmo_texto(alvo.texto, celulas[ipt]):
-            novas.append((alvo.id, alvo.texto, literal(celulas[ipt])))
+            proposta(celulas[ipt])
             celulas[ipt] = alvo.texto
             ipal = _coluna(cabecalho, "palavras")
             if ipal is not None and ipal < len(celulas):
@@ -954,7 +981,8 @@ def aplicar_na_copy(copy: str, tcs: Sequence[TextoChave]) -> Dict[str, Any]:
             ligar(i, alvo, anotar=False, trecho=_trecho_do_texto_chave(alvo, celulas[ipt]))
             continue
         alvo = do_texto.get(literal(celulas[ipt])) or next(
-            (t for t in com_lacuna if mesmo_texto(t.texto, celulas[ipt])), None)
+            (t for t in com_lacuna if mesmo_texto(t.texto, celulas[ipt])), None) or next(
+            (t for t in tcs if t.tipo in TIPOS_DE_TEXTO and any(mesmo_texto(a, celulas[ipt]) for a in t.antes)), None)
         if alvo is not None:
             ligar(i, alvo, anotar=True)
 
