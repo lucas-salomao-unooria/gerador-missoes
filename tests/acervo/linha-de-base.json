@@ -23,7 +23,8 @@
     "rastro_spec_status": {
       "status": "amarelo",
       "codigos": [
-        "aberto"
+        "aberto",
+        "proposta"
       ]
     },
     "conteudo_aprovado_spec_status": {
@@ -68,8 +69,10 @@
       ]
     },
     "rastro_design_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "proposta"
+      ]
     },
     "consistencia_status": {
       "status": "bloqueado",
@@ -139,6 +142,7 @@
         "ficha-ausente",
         "ia-sem-tabela",
         "manifesto-ausente",
+        "proposta",
         "proposta-perdida",
         "rf-p0-sem-criterio",
         "rota-do-handoff-mudou",
@@ -166,8 +170,10 @@
       "codigos": []
     },
     "rastro_lacunas_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "proposta"
+      ]
     }
   },
   "exp01em1b": {
@@ -192,8 +198,10 @@
       "codigos": []
     },
     "rastro_spec_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "proposta"
+      ]
     },
     "conteudo_aprovado_spec_status": {
       "status": "bloqueado",
@@ -250,7 +258,9 @@
     "rastro_spec_status": {
       "status": "amarelo",
       "codigos": [
-        "a_validar"
+        "a_validar",
+        "parametro",
+        "proposta"
       ]
     },
     "conteudo_aprovado_spec_status": {
@@ -280,7 +290,9 @@
     "rastro_design_status": {
       "status": "amarelo",
       "codigos": [
-        "a_validar"
+        "a_validar",
+        "parametro",
+        "proposta"
       ]
     },
     "consistencia_status": {
@@ -339,8 +351,10 @@
       "codigos": []
     },
     "rastro_spec_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "proposta"
+      ]
     },
     "conteudo_aprovado_spec_status": {
       "status": "aprovado",
@@ -493,8 +507,11 @@
       "codigos": []
     },
     "rastro_spec_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "parametro",
+        "proposta"
+      ]
     },
     "conteudo_aprovado_spec_status": {
       "status": "aprovado",
@@ -527,7 +544,9 @@
     "rastro_design_status": {
       "status": "bloqueado",
       "codigos": [
-        "d0-orfao"
+        "d0-orfao",
+        "parametro",
+        "proposta"
       ]
     },
     "consistencia_status": {
@@ -578,6 +597,8 @@
         "d0-orfao",
         "ds-versao-cravada",
         "estado-da-spec-sem-mapa",
+        "parametro",
+        "proposta",
         "sem-idempotencia",
         "tarefa-nao-atomica"
       ]
@@ -596,7 +617,9 @@
       "status": "bloqueado",
       "codigos": [
         "a_validar",
-        "d0-orfao"
+        "d0-orfao",
+        "parametro",
+        "proposta"
       ]
     },
     "fidelidade_status": {
@@ -639,8 +662,11 @@
       "codigos": []
     },
     "rastro_spec_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "parametro",
+        "proposta"
+      ]
     },
     "conteudo_aprovado_spec_status": {
       "status": "aprovado",
@@ -670,7 +696,9 @@
       "status": "bloqueado",
       "codigos": [
         "aberto",
-        "d0-orfao"
+        "d0-orfao",
+        "parametro",
+        "proposta"
       ]
     },
     "consistencia_status": {
@@ -739,8 +767,10 @@
       "codigos": []
     },
     "rastro_spec_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "proposta"
+      ]
     },
     "conteudo_aprovado_spec_status": {
       "status": "bloqueado",
@@ -800,7 +830,9 @@
     "rastro_spec_status": {
       "status": "amarelo",
       "codigos": [
-        "aberto"
+        "aberto",
+        "parametro",
+        "proposta"
       ]
     },
     "conteudo_aprovado_spec_status": {
@@ -830,7 +862,9 @@
     "rastro_design_status": {
       "status": "amarelo",
       "codigos": [
-        "aberto"
+        "aberto",
+        "parametro",
+        "proposta"
       ]
     },
     "consistencia_status": {
@@ -897,8 +931,10 @@
       "codigos": []
     },
     "rastro_spec_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "proposta"
+      ]
     },
     "conteudo_aprovado_spec_status": {
       "status": "aprovado",
@@ -925,8 +961,10 @@
       "codigos": []
     },
     "rastro_design_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "proposta"
+      ]
     },
     "consistencia_status": {
       "status": "amarelo",
@@ -1008,7 +1046,8 @@
       "status": "bloqueado",
       "codigos": [
         "a_validar",
-        "aberto"
+        "aberto",
+        "parametro"
       ]
     },
     "conteudo_aprovado_spec_status": {
@@ -1057,7 +1096,8 @@
       "status": "amarelo",
       "codigos": [
         "a_validar",
-        "aberto"
+        "aberto",
+        "parametro"
       ]
     },
     "consistencia_status": {
@@ -1124,6 +1164,7 @@
         "ficha-ausente",
         "ia-sem-tabela",
         "manifesto-ausente",
+        "parametro",
         "ponte-legada",
         "rota-do-handoff-mudou",
         "rota-do-molde-ausente",
@@ -1154,7 +1195,8 @@
       "status": "bloqueado",
       "codigos": [
         "a_validar",
-        "aberto"
+        "aberto",
+        "parametro"
       ]
     }
   },
@@ -1606,8 +1648,10 @@
       "codigos": []
     },
     "rastro_spec_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "proposta"
+      ]
     },
     "conteudo_aprovado_spec_status": {
       "status": "aprovado",
@@ -1652,8 +1696,10 @@
       ]
     },
     "rastro_design_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "proposta"
+      ]
     },
     "consistencia_status": {
       "status": "bloqueado",
@@ -1721,6 +1767,7 @@
         "manifesto-ausente",
         "plano-sem-porta",
         "ponte-legada",
+        "proposta",
         "proposta-perdida",
         "registro-da-plataforma-ausente",
         "rota-do-handoff-mudou",
@@ -1749,8 +1796,10 @@
       ]
     },
     "rastro_lacunas_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "proposta"
+      ]
     }
   }
 }
