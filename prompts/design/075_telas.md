@@ -90,9 +90,9 @@ Dois artefatos, nesta ordem de importância:
 
 <!-- include: references/ambientes.md -->
 
-**A lista acima é a lista fechada.** Se o `ambiente_simulado` traz um ambiente **novo** (status `novo`), a seção dele ainda não está nessa lista: use a especificação da seção que o D9 entregou — inventário de chrome, componentes e tokens — como se fosse uma entrada da lista. Não redesenhe o chrome por conta própria e não caia de volta num dos cinco porque o novo não está listado.
+**A lista acima é a lista fechada.** Se a spec decidiu um ambiente **novo** (`secao_ds: nova:<nome>`, escolha do PO em produto desde 24/10/2026), a seção dele ainda não está nessa lista: use a especificação da seção que o D9 entregou na ficha — inventário de chrome, componentes e tokens — como se fosse uma entrada da lista. Não redesenhe o chrome por conta própria e não caia de volta num dos cinco porque o novo não está listado.
 
-**Se a classe do ambiente for mini-jogo**, o que você importa é a seção `minijogo-<nome>` e o que você monta são **as fases da seção 5 da jornada**, uma a uma:
+**Se a classe do ambiente for mini-jogo** (`classe_ambiente` do bloco 0 da spec), o que você importa é a seção `minijogo-<nome>` e o que você monta são **as fases da seção 5 da jornada** — as da spec, com as telas que a jornada deu a cada uma —, uma a uma:
 
 - Um frame por fase, mais os frames de `fase vencida`, `fase perdida`, `mapa de mundo` e `demonstração`. ID no padrão do inventário; o nome do frame diz qual fase é.
 - **A demonstração é asset, não desenho.** No lo-fi ela é um marcador de posição declarado (o quadro, a proporção, a duração) que vai para o `brief-assets` — não tente desenhar a animação quadro a quadro.

@@ -84,6 +84,7 @@ Habilidades BNCC Computação — Letramento Digital (núcleo da missão, códig
 [copiado do núcleo — não alterar]
 
 ## 5. Verificação de ambiente
+A classe do ambiente (app clonado | mini-jogo) e a seção do DS vêm da seção 0 do núcleo, como estão — inclusive o `[PROPOSTA — validar com PO: …]` de ambiente novo ou mini-jogo, que é decisão do PO no de acordo. No mini-jogo, as regras e as fases do jogo estão na seção 4 (núcleo): não as reescreva aqui nem em outra seção.
 Tabela: etapa · seção do DS · dentro do ambiente? · escape permitido? · affordance nativa usada
 Com «Seções extras do DS» no cabeçalho, acrescente o «Mapa de seções» e as «Transições», com os cabeçalhos exatos de `varias-secoes.md` (abaixo) — um código confere que cada extra tem linha nas duas e que a missão cabe no teto do ano.
 

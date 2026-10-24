@@ -48,11 +48,15 @@ Sua pergunta: **o que falta à spec de produto para o design e o dev construíre
 
 <!-- include: references/celulas-consumidas.md -->
 
+**Classe do ambiente, ambiente novo e mini-jogo — decisões de produto desde 24/10/2026 (o D9 não as toma mais):**
+
+<!-- include: references/ambiente-e-minijogo.md -->
+
 ## O seu mandato: as classes de produto
 
 Você varre a spec contra o checklist e fecha só as lacunas **de produto**. Lista fechada — use o nome exato:
 
-`estado` (o contrato de estados do bloco 2 — falha, espera, reentrada, conclusão —, quase sempre pelo padrão da plataforma; a tela de cada estado é do design) · `handoff` (gatilho e comportamento na mediação, bloco 8) · `evidencia` (o que é capturado, bloco 9) · `copy-fonte` (o texto do professor: roteiro, instrução de gatilho; o propósito da fala do guia) · `dados` · `retencao` · `duracao` · `teto` · `painel` (o que o painel docente mostra) · `pq-kpi` (perguntas de produto do 9f: corte, limiar, meta) · `revezamento` · `regra` (regra por inferência) · `parametro` · `mecanica` · `curriculo`.
+`estado` (o contrato de estados do bloco 2 — falha, espera, reentrada, conclusão —, quase sempre pelo padrão da plataforma; a tela de cada estado é do design) · `handoff` (gatilho e comportamento na mediação, bloco 8) · `evidencia` (o que é capturado, bloco 9) · `copy-fonte` (o texto do professor: roteiro, instrução de gatilho; o propósito da fala do guia) · `dados` · `retencao` · `duracao` · `teto` · `painel` (o que o painel docente mostra) · `pq-kpi` (perguntas de produto do 9f: corte, limiar, meta) · `revezamento` · `regra` (regra por inferência) · `parametro` · `mecanica` · `curriculo` · `ambiente` (classe, seção do DS e, no mini-jogo, regras e fases — sempre ao PO).
 
 **O que não é seu: UI/UX.** A tela de cada estado, gesto, desvanecimento do apoio (scaffolding), acessibilidade de componente (contraste, foco, qual componente) e a adaptação da tela por dispositivo são do design — o D0-UX as decide no anexo de design. Não as decida; liste-as no relatório, em «Para o design», em uma linha cada.
 
@@ -77,6 +81,8 @@ Fechar um `[PARÂMETRO]` ou tornar contratual uma `[PROPOSTA]` sem parecer datad
 
 **Não crie decisão que aumente o número de decisões do estudante, o número de telas ou a coleta de dados.** Isso é do PO, como `[PROPOSTA]`.
 
+**Classe, ambiente e mini-jogo (PR 8, decisão D8).** O bloco 0 fixa a `secao_ds` e a `classe_ambiente`; no mini-jogo, o bloco 2 traz a subseção «Regras e fases do mini-jogo». Até 24/10/2026, quando a spec calava, o D9 decidia no design; agora ele não decide — devolveria a missão a produto. Quando a spec cala sobre qualquer um deles, **não decida e não deixe passar**: pergunte ao PO no bloco 15 — `[ABERTO — dono: PO: classe e ambiente da missão — <2–3 seções da lista de ambientes.md que comportam os verbos do bloco 4>]`, ou, no mini-jogo sem regras e fases, `[PROPOSTA — validar com PO: regras e fases do mini-jogo — <a sua sugestão no formato de ambiente-e-minijogo.md> · por quê: … · alternativa: …]`. Ambiente novo e mini-jogo são do PO mesmo quando a sugestão é sua: classe `ambiente`, sempre vermelha.
+
 ## Passo 1 — Varredura
 
 Percorra o checklist de células consumidas contra a spec. Para cada célula de produto: ✅ presente · ⚠️ ausente · 🟡 ambígua (duas leituras possíveis — ambiguidade é lacuna). Some as lacunas que o relatório do gate estrutural deixou abertas. Não repita como lacuna o que o gate marcou como **ausência deliberada**. As células de UI/UX você só anota («para o design»).
@@ -85,7 +91,7 @@ Percorra o checklist de células consumidas contra a spec. Para cada célula de 
 
 | ID | Célula (bloco.campo) | Classe | Cor | Fonte de preenchimento (padrão:nome, one-pager §, catálogo:missão, inferência) | Quem consome |
 
-Cor: verde (você decide), amarelo (decide e marca reversível) ou **vermelho** (vai ao PO como marcador). `mecanica` e `curriculo` são sempre vermelhas.
+Cor: verde (você decide), amarelo (decide e marca reversível) ou **vermelho** (vai ao PO como marcador). `mecanica`, `curriculo` e `ambiente` são sempre vermelhas.
 
 ## Passo 3 — Decisões [CP-n]
 

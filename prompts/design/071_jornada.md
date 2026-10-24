@@ -89,42 +89,33 @@ A tela `pico` tem teto **menor** que as vizinhas. **A coluna "Teto de elementos 
 
 ### Seção 5 — Regras, fases e mecânicas (só quando o ambiente é mini-jogo)
 
-O `ambiente-simulado` entregou a **casca**: que tipo de jogo é, o que é uma fase, o que a vence, o que a perde, como o progresso aparece. **O jogo desta missão é seu.** Sem esta seção, o mini-jogo chega ao wireframe como uma área de jogo vazia, e o dev inventa a regra — que é o pior lugar possível para a regra nascer.
+**As regras e as fases do jogo são de produto** (desde 24/10/2026, PR 8 do plano «Produto dono do contrato», decisão D8): quantas fases, em que ordem, a regra de cada uma, o que a vence e o que a perde, e como o progresso aparece estão na spec, no bloco 2, na subseção «Regras e fases do mini-jogo» — aprovadas pelo PO. Até ali esta seção as escrevia, e o jogo da missão nascia no design. **Agora você copia e mapeia: nada mais.**
 
-**As regras do jogo** — 3 a 6 linhas, as invariantes que valem em **todas** as fases, escritas como a criança entenderia:
+**As regras do jogo** — copie da spec, palavra por palavra, com o mesmo número:
 
 ```
-R1 <uma frase, verbo no imperativo, sem subordinada>
+R1 <a regra R1 da spec, igual>
 R2 …
 ```
 
-Regra que só vale numa fase não é regra: é a ideia nova daquela fase, e mora na tabela abaixo.
+**As fases e as telas:**
 
-**As fases:**
+| Fase | Nome (da spec) | Regra da fase (da spec, igual) | Telas (IDs do inventário) | Beat | Estados (em fase · vencida · perdida) |
 
-| # | Nome da fase | Ideia nova que apresenta | Regra da fase (uma frase, na voz da criança) | Verbo do jogo | Como vence | Como perde | O que muda depois | Beat | Habilidade (bloco 11) | Telas |
+Uma linha por fase da spec, na ordem da spec, com o número dela. O que é seu é a coluna **Telas** — quais telas do inventário cada fase ocupa — e o **Beat** do mapa do briefing em que ela se ancora. A habilidade de cada fase também é da spec: a coluna «Habilidade» do inventário (Seção 3) a repete na tela que a exerce.
 
-Colunas que não podem ficar vazias, e por quê:
-
-- **Ideia nova** — uma por fase, nunca duas. Duas ideias novas numa fase é um corte mal feito: separe em duas.
-- **Habilidade (bloco 11)** — cada fase carrega o momento em tela de uma habilidade que **já está na spec**. Você não escolhe habilidade nem acrescenta; você aponta qual das que existem a fase exerce, e onde. **Fase sem habilidade sai** — é recreação, e recreação não passa no QA.
-- **Beat** — a fase se ancora num beat do mapa do briefing. Fase fora do mapa de beats é fase fora da missão.
-- **Como perde** — sempre existe, e a resposta sempre devolve ao **começo da fase**. Se você escreveu algo que tira a criança do jogo, acumula penalidade ou apaga progresso, está contra a casca: devolva ao `ambiente-simulado`.
-
-**A progressão** — a ordem das fases e por que esta ordem. A gramática da casca é apresenta → varia → cobra: a fase que introduz a ideia num lugar seguro vem antes da que a varia, que vem antes da que a cobra. Se a sua ordem foge disso, diga por quê em uma linha.
-
-**Contagem de fases × cap de decisões.** Fase **não é** decisão nova por definição: a mesma decisão exercida em outro contexto continua sendo uma decisão do mesmo tipo. Mas se uma fase pede do estudante uma decisão de **tipo diferente**, ela conta no cap do bloco 6 — e você recontabiliza. Estourou, é lacuna ao gate, não fase a mais.
+**Regra ou fase nova não entra aqui.** Se para a jornada funcionar o jogo precisa de outra fase, de outra regra, de outro tipo de vitória ou de outro mapa de progresso, isso é produto: escreva em «Lacunas» `[PROPOSTA — validar com PO: <a fase ou a regra, e por quê>]` e construa com o que a spec tem. Um gate em código confere esta seção contra a spec: fase com número que a spec não tem, regra `R<n>` que ela não tem, ou regra com outro texto, viram proposta ao PO no cartão do parecer de design — e não entram no jogo da missão.
 
 **O que vai para o fluxo.** Cada fase é um nó com três estados próprios (em fase · vencida · perdida) e o ciclo de nova tentativa é **intencional**: declare-o assim para o `fluxo`, junto do que o encerra (vencer a fase). Sem essa declaração, o teste 5 do fluxo acusa ciclo involuntário e a missão volta sem motivo.
 
-**Faixa.** Em 1º–2º ano, toda regra nova entra por demonstração antes da fase que a usa, e nenhuma regra pode existir só escrita — a coluna "Regra da fase" é o texto que o **áudio** fala, não o que a criança lê sozinha.
+**Faixa.** Em 1º–2º ano, toda regra nova entra por demonstração antes da fase que a usa — a tela da demonstração é sua, a regra não —, e a coluna «Regra da fase» é o texto que o **áudio** fala, não o que a criança lê sozinha.
 
 ## Regras de construção
 
 - Não invente beats. Verbo nativo é literal (copie da spec, bloco 4).
 - **Conte as decisões enquanto mapeia** e compare com o cap da faixa (spec, bloco 6). Se estourar, reporte como lacuna ao gate.
 - Legenda no board: ✅ dentro · ⚡ escape · ⚠️ lacuna · 🔴 violação.
-- **Mini-jogo:** você desenha as fases, nunca a casca. Se para a sua fase funcionar o jogo precisa de outro tipo de vitória, de outro mapa de progresso ou de um verbo que a casca não tem, isso é achado com dono `ambiente-simulado` — não construa em volta.
+- **Mini-jogo:** você não desenha o jogo nem a casca — as regras e as fases são da spec (produto), a casca de UI é da ficha do D9. Você mapeia as telas para as fases. Se o jogo precisa de outra fase, regra, vitória ou mapa, é `[PROPOSTA — validar com PO]` em «Lacunas»; se precisa de um verbo que a casca não tem, é achado com dono `ambiente-simulado` — não construa em volta.
 
 ## Definição de pronto (declare a contagem; zero em todos os itens)
 
@@ -169,11 +160,11 @@ Colunas que não podem ficar vazias, e por quê:
 ## Seção 2 — Cenários de dispositivo
 ## Seção 3 — Inventário de telas
 ## Seção 4 — Direção por tela + nota de aderência ao mapa de beats (cada marca, a tela que a carrega, e onde você se afastou e por quê)
-## Seção 5 — Regras, fases e mecânicas (só mini-jogo; escreva `n/a — ambiente é app clonado` caso contrário)
+## Seção 5 — Regras, fases e mecânicas (só mini-jogo: as regras e as fases copiadas da spec e as telas de cada fase; escreva `n/a — ambiente é app clonado` caso contrário)
 ## Lacunas (toda célula ⚠️/🔴 com o critério associado, classe e dono)
 ## Contagens
 Decisões do mesmo tipo: <n> vs cap · telas: <n> · pico: 1 · alta: <n> · média: <n> · serviço: <n>
-Mini-jogo: fases <n> (intervalo pedido pelo D9: <min>–<max>) · fases com habilidade do bloco 11: <n> de <n> · ideias novas: <n>
+Mini-jogo: fases <n> (as da spec: <n>) · fases com tela: <n> de <n> · regras copiadas: <n> de <n>
 ## Pronto — contagem por item (todos zero)
 ```
 

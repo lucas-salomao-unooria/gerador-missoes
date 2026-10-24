@@ -76,7 +76,7 @@ Inclua os **estados de falha** do bloco 2 da spec (conexão, sessão expirada, m
 **Mini-jogo.** Quando a jornada trouxer a seção 5 (regras, fases e mecânicas), cada **fase é um nó de Tela** com três estados encostados: `em fase` · `vencida` · `perdida`. O `mapa de mundo` é um nó próprio, e é para ele que toda fase vencida volta. Três coisas mudam nos testes:
 
 - O **ciclo de nova tentativa** (`perdida → em fase`) é intencional por definição — a jornada já o declarou. Registre-o assim no teste 5, com o que o encerra (vencer a fase), e não o conte como achado.
-- A aresta de `perdida` **nunca** vai para o início do jogo nem para fora do jogo. Se você precisou desenhar isso, a casca foi violada: achado com dono `ambiente-simulado`.
+- A aresta de `perdida` **nunca** vai para o início do jogo nem para fora do jogo — a regra é da spec (produto, bloco 2), desde 24/10/2026. Se você precisou desenhar isso porque a spec pede, é achado com dono `gate-estrutural`; senão, o fluxo segue a spec. Fase que a spec não tem não vira nó: é proposta ao PO.
 - Fase sem aresta de saída em `vencida` é dead end de verdade, inclusive na última fase — a última vence para o fim do jogo, não para lugar nenhum.
 
 ## Definição de pronto (declare a contagem)

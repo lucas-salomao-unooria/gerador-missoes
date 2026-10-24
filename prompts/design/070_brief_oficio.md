@@ -30,7 +30,7 @@ O gate de produto respondeu *isso pode ser construído?*. Você responde *como i
 
 {ambiente_simulado?}
 
-`dormente` significa que a spec já nomeia o ambiente e ele existe no DS. Vazio significa que o D9 não rodou: use o ambiente da spec e não decida ambiente você — isso não é seu.
+O D9 é sempre `dormente` desde 24/10/2026: a classe e o ambiente são os que produto decidiu na spec (`classe_ambiente`, `secao_ds`), e a ficha dele é a casca de UI. Vazio significa que o D9 não rodou: use o ambiente da spec e não decida ambiente você — isso não é seu.
 
 ## Catálogo (para diferenciação de forma)
 
