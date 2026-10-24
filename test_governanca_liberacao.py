@@ -273,13 +273,61 @@ def test_excecao_do_admin_tambem_confirma_a_leitura():
 
 
 def test_pendencias_reais_da_exp01em1b_pedem_leitura():
-    """A exp01em1b (e3980485) chegou ao parecer de produto com 4 conflitos «pedido × regra» e o F7 das propostas P0b em
-    🟡: decisões do PO que o semáforo amarelo não pedia a ninguém."""
+    """A exp01em1b (e3980485) chegou ao parecer de produto com 4 conflitos «pedido × regra» em 🟡: decisões do PO que o
+    semáforo amarelo não pedia a ninguém. O F7 das propostas P0b, que só resume itens da lista do contrato (19), não pede
+    um segundo «Li e decidi»."""
     estado = _estado("exp01em1b-e3980485")
-    pend = [i for i in passagem.itens_de_conferencia(estado) if i["origem"] == passagem.PENDENCIA]
-    assert {i["tipo"] for i in pend} == {"conflito-pedido-regra", "F7"}
+    itens = passagem.itens_de_conferencia(estado)
+    pend = [i for i in itens if i["origem"] == passagem.PENDENCIA]
+    assert {i["tipo"] for i in pend} == {"conflito-pedido-regra"}
     # os 3 conflitos da fidelidade do one-pager (🔴) citam 3 dos 4 pedidos da do núcleo (🟡): cada pedido é lido uma vez
-    assert len(pend) == 5
+    assert len(pend) == 4 and len(itens) - len(pend) == 19
+
+
+def test_aberto_de_outro_dono_nao_e_pedido_ao_po_exp01ef1b():
+    """Na exp01ef1b, o rastro da spec deixou em 🟡, como decisão humana, um «[ABERTO — dono: editorial: Confirmação
+    documental dos códigos interdisciplinares EF15LP14…]»: não é do PO, e a conferência o pedia como pendência que o PO
+    precisava decidir (revisão do PR #75, 24/10/2026)."""
+    estado = _estado("exp01ef1b")
+    achados = [a for a in estado["rastro_spec_status_envelope"]["achados"] if a.get("severidade") == "decisao_humana"]
+    assert any("[ABERTO — dono: editorial:" in a["resumo"] for a in achados)
+    assert passagem.pendencias_de_conferencia(estado) == []
+    itens = passagem.itens_de_conferencia(estado)
+    assert len(itens) == 14 and all(i["origem"] == passagem.CONTRATO for i in itens)
+    # o mesmo vale para outro dono qualquer; o conflito «pedido × regra» segue pedindo leitura
+    sintetico = {**VERDE, "gate_final_status": "amarelo", "gate_final_status_envelope": {"achados": [
+        {"severidade": "decisao_humana", "codigo": "humano", "resumo": "[ABERTO — dono: design: altura da moldura]"},
+        {"severidade": "decisao_humana", "codigo": "humano", "resumo": "[ABERTO—dono:plataforma: câmera no tablet]"},
+        {"severidade": "decisao_humana", "codigo": "conflito-pedido-regra",
+         "resumo": "O pedido conflita com uma regra da esteira — decisão do PO, não do agente: «sem a etapa 5»."}]}}
+    assert [i["tipo"] for i in passagem.itens_de_conferencia(sintetico)] == ["conflito-pedido-regra"]
+
+
+def test_f7_que_resume_a_lista_do_contrato_nao_pede_leitura_de_novo_exp02ef1b():
+    """Na exp02ef1b, o F7 do gate final dizia «Parâmetros de inatividade (45s), processamento de IA, teto de palavras
+    (15) e área mínima (10%) aguardam homologação pelo PO» — 4 dos 16 itens da lista do contrato, que o PO já responde
+    um a um. Sem lista, o F7 é o único lugar da pendência e pede leitura (revisão do PR #75, 24/10/2026)."""
+    estado = _estado("exp02ef1b-4fd72a9a")
+    f7 = [a for a in estado["gate_final_status_envelope"]["achados"]
+          if a.get("codigo") == "F7" and a.get("severidade") == "decisao_humana"]
+    assert len(f7) == 1 and "aguardam homologação pelo PO" in f7[0]["resumo"]
+    itens = passagem.itens_de_conferencia(estado)
+    assert len(itens) == 16 and all(i["origem"] == passagem.CONTRATO for i in itens)
+    # o cartão passa se a lista que ele já montou tem item; sem isso, a lista é montada aqui
+    assert passagem.pendencias_de_conferencia(estado) == passagem.pendencias_de_conferencia(estado, True) == []
+    assert [i["tipo"] for i in passagem.pendencias_de_conferencia(estado, contrato_aberto=False)] == ["F7"]
+
+
+def test_mutante_conferencia_que_pede_o_que_nao_e_do_po_e_pega(monkeypatch):
+    """Mutante: a conferência de antes da revisão do PR #75 — só o [ABERTO — dono: PO] ficava de fora, e o F7 entrava
+    mesmo com a lista do contrato aberta. A exp01ef1b e a exp02ef1b pediam um «Li e decidi» cada."""
+    import re
+
+    monkeypatch.setattr(passagem, "_RE_MARCADOR_FORA_DA_CONFERENCIA", re.compile(
+        r"\[(?:PAR[ÂA]METRO|PROPOSTA)\b|\[ABERTO\s*[—–-]\s*dono:\s*(?:o\s+)?PO\b", re.I))
+    monkeypatch.setattr(passagem, "CODIGOS_QUE_RESUMEM_O_CONTRATO", frozenset())
+    assert [i["tipo"] for i in passagem.pendencias_de_conferencia(_estado("exp01ef1b"))] == ["humano"]
+    assert [i["tipo"] for i in passagem.pendencias_de_conferencia(_estado("exp02ef1b-4fd72a9a"))] == ["F7"]
 
 
 def test_mutante_conferencia_sempre_ligada_e_pega():
@@ -521,18 +569,15 @@ def test_redator_e_handoff_tem_o_callback():
         assert f"registrar_governanca_{agente.output_key}" in nomes
 
 
-def test_anexo_do_prd_atualiza_o_bloco_tambem_na_correcao_pontual():
-    """Na correção pontual o redator não roda (nem o callback dele): o A119 põe o bloco como está agora."""
+def _rodar(agentes: list, estado: Dict[str, Any]) -> Dict[str, Any]:
+    """Roda os agentes em sequência num runner mínimo e devolve o estado final. Sem modelo: os agentes aqui são
+    determinísticos ou autores travados (o callback devolve o documento e o modelo não é chamado)."""
     from google.adk.agents.sequential_agent import SequentialAgent
     from google.adk.runners import InMemoryRunner
     from google.genai import types
 
-    from agents.checkers import AnexoAprovadoAgent
-    from tools.conteudo_aprovado import TITULO_ANEXO
-
-    async def rodar(estado):
-        agente = AnexoAprovadoAgent(name="A119AnexoPrd", chave="prd_final", secoes=[2])
-        runner = InMemoryRunner(agent=SequentialAgent(name="R", sub_agents=[agente]), app_name="teste")
+    async def rodar():
+        runner = InMemoryRunner(agent=SequentialAgent(name="R", sub_agents=agentes), app_name="teste")
         await runner.session_service.create_session(app_name="teste", user_id="u", session_id="s", state=estado)
         async for _ in runner.run_async(user_id="u", session_id="s",
                                         new_message=types.Content(role="user", parts=[types.Part(text="go")])):
@@ -540,9 +585,198 @@ def test_anexo_do_prd_atualiza_o_bloco_tambem_na_correcao_pontual():
         final = await runner.session_service.get_session(app_name="teste", user_id="u", session_id="s")
         return dict(final.state)
 
+    return asyncio.run(rodar())
+
+
+def _a119():
+    from agents.checkers import AnexoAprovadoAgent
+    from tools.conteudo_aprovado import SECOES_PRD
+
+    return AnexoAprovadoAgent(name="A119AnexoPrd", chave="prd_final", secoes=list(SECOES_PRD), rotulo="Anexo do PRD")
+
+
+def test_anexo_do_prd_atualiza_o_bloco_tambem_na_correcao_pontual():
+    """Na correção pontual o redator não roda (nem o callback dele): o A119 põe o bloco como está agora."""
+    from tools.conteudo_aprovado import TITULO_ANEXO
+
     estado = {"prd_final": PRD, "one_pager": "# One-pager\n\n## 2. Currículo\n\nEF06CO01\n", gov.KEY_GOVERNANCA: GOV_DUAS}
-    final = asyncio.run(rodar(estado))["prd_final"]
+    final = _rodar([_a119()], estado)["prd_final"]
     assert final.index(gov.TITULO_BLOCO) < final.index(TITULO_ANEXO)
+
+
+#: O de acordo de produto em vigor da exp02ef1b, como está no `conversa.json` da sessão 4fd72a9a (bucket, 24/10/2026):
+#: a conta design liberou produto em 22/10/2026 15:27:27. A exceção do admin de 23/10 15:57:54 foi de design, não de
+#: produto. A sessão está em dev, aguardando parecer — o caminho do D11 é Refazer em dev → triagem → cascata.
+PARECERES_EXP02EF1B = [
+    {"etapa": "produto", "acao": "de_acordo", "autor": "design", "como": "design (como Produto)",
+     "comentario": "Tudo de acordo e podemos seguir design", "quando": "22/10/2026 15:27:27", "rodada": 1,
+     "valido": True, "excecao": False,
+     "gates": {"gate_final_status": "🟡", "rastro_spec_status": "🟡", "bncc_status": "🟢"}},
+    {"etapa": "design", "acao": "excecao", "autor": "admin", "como": "admin (como Design)",
+     "comentario": "aprovado com falso positivo", "quando": "23/10/2026 15:57:54", "rodada": 7, "valido": True,
+     "excecao": True, "gates": {"design_status": "🔴", "lacunas_status": "🔴"}},
+]
+FLUXO_EXP02EF1B = {**novo_fluxo(), "etapa": "dev", "situacao": AGUARDANDO, "versao": 22,
+                   "pareceres": PARECERES_EXP02EF1B}
+#: Uma linha do handoff da exp02ef1b que aparece uma vez só: a troca de dev da cascata.
+LINHA_DO_HANDOFF = "- **Software clonado**: `Unoogaleria` (aplicativo e visualizador escolar de fotos e álbuns)."
+
+
+def _dev_pontual_exp02ef1b():
+    """O estado da correção pontual de dev da exp02ef1b, como `executar_correcao_stream` o monta: os documentos do
+    editor, a troca aplicada, o estado travado e a governança gravada a partir dos pareceres."""
+    from pipeline import reexecucao as rx
+    from tools import edicao_pontual as ed
+
+    estado = _estado("exp02ef1b-4fd72a9a")
+    troca = {"documento": "handoff_dev", "de": LINHA_DO_HANDOFF,
+             "para": LINHA_DO_HANDOFF.replace("fotos e álbuns", "fotos e álbuns da turma")}
+    r = ed.aplicar(ed.documentos_da_etapa(estado, "dev"), [ed.Edicao(**troca)])
+    assert r.ok
+    limpo, _ = rx.preparar_estado_pontual(estado, "dev", "### Pedido, na íntegra\n\n> fotos e álbuns da turma",
+                                          r.documentos, [troca])
+    rx._com_governanca(limpo, {"session_id": "4fd72a9a", "fluxo": FLUXO_EXP02EF1B})
+    return limpo, troca
+
+
+def test_handoff_travado_na_correcao_pontual_de_dev_recebe_o_bloco_exp02ef1b():
+    """Na correção pontual de dev o handoff está entre os documentos travados: o redator não roda, o callback dele também
+    não, e nenhum passo depois do HandoffLoop reescreve o handoff. Antes da revisão do PR #75, o PRD da exp02ef1b saía
+    com a pendência (pelo A119) e o handoff sem ela. Os autores rodam de verdade, travados, sem modelo."""
+    from agents.dev import get_handoff_dev_agent, get_prd_writer_agent
+    from tools import edicao_pontual as ed
+
+    limpo, troca = _dev_pontual_exp02ef1b()
+    assert {"handoff_dev", "prd_final"} <= set(limpo["documentos_travados"])
+    assert [p["codigo"] for p in limpo[gov.KEY_GOVERNANCA]["pendencias"]] == [gov.LIBERADO_SEM_CONTA]
+    assert gov.TITULO_BLOCO not in limpo["handoff_dev"]  # o handoff do acervo é anterior ao PR 9
+    final = _rodar([get_handoff_dev_agent(), get_prd_writer_agent(), _a119()], limpo)
+    for chave in ("handoff_dev", "prd_final"):
+        assert final[chave].count(gov.TITULO_BLOCO) == 1, chave
+        assert "`design (como Produto)` em 22/10/2026 15:27:27" in final[chave]
+        assert "Exceção do admin em produto" not in final[chave]  # a de 23/10 15:57 foi de design
+    handoff = final["handoff_dev"]
+    assert handoff.index("## 7. Lacunas e pendências carregadas") < handoff.index(gov.TITULO_BLOCO)
+    # nada além da troca: a prova das ordens de não mexer continua valendo, e a troca está lá
+    assert troca["para"] in handoff
+    assert ed.reaplicar(limpo["versao_anterior_handoff_dev"], handoff, "handoff_dev", [troca])
+
+
+def test_mutante_handoff_travado_sem_governanca_e_pego(monkeypatch):
+    """Mutante: o documento travado volta como o editor o deixou, sem as pendências de governança — o handoff da
+    exp02ef1b em dev pontual saía sem o bloco."""
+    import agents.callbacks as cb
+    from agents.dev import get_handoff_dev_agent
+
+    monkeypatch.setattr(cb, "documento_com_governanca", lambda state, chave, texto: texto)
+    limpo, _ = _dev_pontual_exp02ef1b()
+    assert gov.TITULO_BLOCO not in _rodar([get_handoff_dev_agent()], limpo)["handoff_dev"]
+
+
+ITEM_DO_AUTOR = "- [PENDÊNCIA] H1 do corpo (25%) diverge do §17 (30%) — dono: produto"
+
+
+def _prd_com_item_depois_do_bloco():
+    """O PRD real da exp02ef1b com o bloco e, logo depois dele, um item que o retrabalho do PrdLoop pôs por troca ancorada
+    na última linha do bloco — o caso da revisão do PR #75 (24/10/2026)."""
+    from tools import edicao_pontual as ed
+    from tools.conteudo_aprovado import remover_anexo
+
+    estado = _estado("exp02ef1b-4fd72a9a")
+    g = passagem.governanca(FLUXO_EXP02EF1B)
+    prd = gov.com_pendencias(remover_anexo(estado["prd_final"]), g, "prd_final")
+    ultima = gov.linhas_do_bloco(g)[-1]
+    r = ed.aplicar({"prd_final": prd}, [ed.Edicao("prd_final", ultima, f"{ultima}\n{ITEM_DO_AUTOR}")])
+    assert r.ok and ITEM_DO_AUTOR in r.documentos["prd_final"]
+    return {"one_pager": estado["one_pager"], "prd_final": r.documentos["prd_final"], gov.KEY_GOVERNANCA: g}
+
+
+def test_item_do_autor_depois_do_bloco_sobrevive_ao_a119():
+    """O A119 troca o bloco pelo de agora: sai só o que a esteira escreveu (título, abertura e os dois itens), e o item
+    que o autor pôs depois dele fica — antes ele sumia em silêncio, depois de os gates do loop o terem aprovado."""
+    estado = _prd_com_item_depois_do_bloco()
+    final = _rodar([_a119()], estado)["prd_final"]
+    assert ITEM_DO_AUTOR in final and final.count(gov.TITULO_BLOCO) == 1
+    assert final.index(ITEM_DO_AUTOR) < final.index(gov.TITULO_BLOCO) < final.index("# 20. Testes")
+    corpo = final.split("# 20. Testes")[0]
+    assert gov.com_pendencias(corpo, estado[gov.KEY_GOVERNANCA], "prd_final") == corpo  # idempotente
+    # o bloco sai inteiro, e só ele
+    assert gov.sem_bloco(corpo).count("Liberado sem a conta produto") == 0 and ITEM_DO_AUTOR in gov.sem_bloco(corpo)
+
+
+def _sem_bloco_guloso(texto: str) -> str:
+    """O `sem_bloco` de antes da revisão do PR #75: do título do bloco até o próximo título ou régua."""
+    saida, dentro, achou = [], False, False
+    for linha in (texto or "").splitlines(keepends=True):
+        if gov._RE_TITULO_BLOCO.match(linha):
+            dentro = achou = True
+            while saida and not saida[-1].strip():
+                saida.pop()
+            continue
+        if dentro and (gov._RE_TITULO.match(linha.rstrip("\n")) or gov._regua(linha)):
+            dentro = False
+            if saida and saida[-1].strip():
+                saida.append("\n")
+        if not dentro:
+            saida.append(linha)
+    return "".join(saida) if achou else texto
+
+
+def test_mutante_sem_bloco_guloso_e_pego(monkeypatch):
+    """Mutante: o `sem_bloco` que apaga tudo do título do bloco até o próximo título — o item do autor some no A119."""
+    monkeypatch.setattr(gov, "sem_bloco", _sem_bloco_guloso)
+    assert ITEM_DO_AUTOR not in _rodar([_a119()], _prd_com_item_depois_do_bloco())["prd_final"]
+
+
+HANDOFF = "# Handoff\n\n## 6. Hipóteses\n\nH1\n\n## 7. Lacunas e pendências carregadas\n\n- L1\n\n## 8. Fim\n\nfim\n"
+
+
+def test_base_do_autor_e_do_editor_vem_sem_o_bloco():
+    """O bloco é da esteira, como o anexo: o autor não o recebe na base que mantém «palavra por palavra» — no refazer
+    (`anterior_<chave>`), na rodada seguinte do loop (`rodada_anterior_<chave>`) e no editor da correção pontual."""
+    from agents.checkers import SaidaDeLoopAgent
+    from pipeline import reexecucao as rx
+    from tools import edicao_pontual as ed
+
+    com = {"prd_final": gov.com_pendencias(PRD, GOV_DUAS, "prd_final"),
+           "handoff_dev": gov.com_pendencias(HANDOFF, GOV_DUAS, "handoff_dev")}
+    assert all(gov.TITULO_BLOCO in t for t in com.values())
+    estado = {**VERDE, **com, gov.KEY_GOVERNANCA: GOV_DUAS}
+    limpo, _ = rx.preparar_estado(estado, "dev")
+    docs = ed.documentos_da_etapa(estado, "dev")
+    saida = SaidaDeLoopAgent(name="S", status_keys=["g_status"], rodada_key="r", max_rounds=3,
+                             autor_keys=["prd_final", "handoff_dev"])
+    rodada = _rodar([saida], {**estado, "g_status": "bloqueado"})
+    for chave, original in (("prd_final", PRD), ("handoff_dev", HANDOFF)):
+        assert limpo[f"versao_anterior_{chave}"] == original.strip()
+        assert original.strip() in limpo[f"anterior_{chave}"] and gov.TITULO_BLOCO not in limpo[f"anterior_{chave}"]
+        assert docs[chave] == original
+        base = rodada[f"rodada_anterior_{chave}"]
+        assert original.strip() in base and gov.TITULO_BLOCO not in base and "Liberado sem a conta produto" not in base
+
+
+def test_retrabalho_por_trocas_esconde_o_bloco_do_editor_e_o_recoloca():
+    """Na rodada de retrabalho o editor de trocas corrige o PRD sem ver o bloco, e o PRD volta com ele como está agora —
+    o after_agent_callback do redator não roda quando a troca resolve."""
+    import os
+    from unittest import mock
+
+    import agents.callbacks as cb
+    from tools import edicao_pontual as ed
+
+    vistos = []
+
+    async def editor(pedido, etapa, documentos, *, erros="", achados=""):
+        vistos.append(documentos["prd_final"])
+        return ed.Proposta(modo=ed.MODO_PONTUAL, edicoes=[ed.Edicao("prd_final", "- item", "- item revisto")])
+
+    contexto = _Contexto({"prd_final": gov.com_pendencias(PRD, GOV_DUAS, "prd_final"),
+                          "retrabalho_prd_final": "M1: o item da 19.1 está incompleto", gov.KEY_GOVERNANCA: GOV_DUAS})
+    with mock.patch.dict(os.environ, {"RETRABALHO_POR_TROCAS": "true"}), \
+            mock.patch.object(cb, "PROPONENTE_DE_RETRABALHO", editor):
+        conteudo = asyncio.run(cb.retrabalhar_por_trocas("prd_final")(contexto))
+    assert vistos == [PRD]
+    assert conteudo.parts[0].text == gov.com_pendencias(PRD.replace("- item", "- item revisto"), GOV_DUAS, "prd_final")
 
 
 # --------------------------------------------------------------------------- o cartão no app
@@ -632,3 +866,24 @@ def test_cartao_do_design_liberado_pede_a_leitura_da_pendencia_e_marca_a_liberac
     at.run()
     assert any("Liberado sem a conta produto — o de acordo de produto em vigor é de design (como Produto)" in c.value
                for c in at.caption)
+
+
+def test_cartao_com_a_lista_do_contrato_nao_pede_leitura_do_f7_exp02ef1b(tmp_path, monkeypatch):
+    """O cartão de produto da exp02ef1b: a lista do contrato (16 itens) pede resposta ou «Li» a cada item, e o F7 que a
+    resume não aparece de novo como «Li e decidi» — o cartão e o `aplicar` leem a mesma regra."""
+    pytest.importorskip("streamlit.testing.v1")
+    from streamlit.testing.v1 import AppTest
+
+    e = _estado("exp02ef1b-4fd72a9a")
+    estado = {k: e[k] for k in ("one_pager", "spec_missao_gate0", "nucleo_narrativo", "gate_final_status",
+                                "gate_final_status_envelope")}
+    estado["spec_missao"] = e["spec_missao_gate0"]
+    run_dir = _sessao_em_disco(tmp_path, estado, _aguardando(versao=1))
+    monkeypatch.setenv("GOV_RUN_DIR", str(run_dir))
+    monkeypatch.setenv("GOV_PAPEL", "design")
+    at = AppTest.from_function(_roteiro_do_cartao, default_timeout=60)
+    at.run()
+    assert not at.exception
+    assert any("Contrato de produto em aberto — 16 item(ns)" in m.value for m in at.markdown)
+    assert not [c for c in at.checkbox if c.label.startswith("Li e decidi:")]
+    assert not any("Conferência de leitura" in m.value for m in at.markdown)
