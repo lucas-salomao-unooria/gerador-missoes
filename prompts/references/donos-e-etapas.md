@@ -56,10 +56,14 @@ Escreva `[ABERTO — dono: <um dos sete>: <o que falta>]`. Se o dono é uma pess
 (PO, coordenação, jurídico), a etapa é `humano` ou `externo` — e aí o marcador **não trava a
 esteira**, aparece no dossiê com `precisa_humano: true` e segue.
 
-Três marcadores têm dono fixo, porque o prompt que os cria já sabe quem fecha:
+Cinco marcadores têm dono fixo, porque o prompt que os cria já sabe quem fecha:
 
 - `RS-n pendente` → **`humano`**. É pedido ao Gate 0 ou ao PO que o fechamento de lacunas
   registrou; não existe loop que devolva isso a um agente.
+- `[PARÂMETRO — a definir por produto: …]` e `[PROPOSTA — validar com PO: …]` → **`humano`**. São o
+  contrato que produto deixou para o PO decidir: o de acordo de produto lista cada um no cartão, e a
+  resposta entra no one-pager e na spec do Gate 0 como «<valor> — PO, parecer de <data>». Até lá
+  ficam 🟡, pendência do PO — nenhum agente os fecha, nem o D0.
 - `[verificar no repositório]` → **`plataforma`**. Os agentes não têm o monorepo por desenho,
   só as cópias sincronizadas: o marcador é instrução para quem codifica. Oito ou mais no mesmo
   documento é outra história — aí o documento não conhece o gabarito, e isso é achado de `dev`.
@@ -227,6 +231,8 @@ Três marcadores têm dono fixo, porque o prompt que os cria já sabe quem fecha
   ],
   "marcadores": {
     "rs_pendente": "humano",
+    "parametro": "humano",
+    "proposta": "humano",
     "verificar_repositorio": "plataforma",
     "a_validar": "externo"
   },

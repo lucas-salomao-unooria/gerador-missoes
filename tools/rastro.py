@@ -237,7 +237,15 @@ _MARCADORES = [
     # pendência de produto a frase que afirma justamente a ausência delas, e 13 artefatos a
     # jusante saíram `[PROVISÓRIO]`. Um 🔵 de verdade abre a pendência, não a conta.
     ("a_validar", re.compile(r"(?<![0-9])(?<![0-9] )🔵[^\n]{0,120}")),
+    # O contrato que produto deixou para o PO (`[PARÂMETRO — a definir por produto: …]`, `[PROPOSTA — validar com PO: …]`):
+    # é pendência do PO, que o de acordo de produto fecha (`tools/fechar_contrato.py`). Até 23/10/2026 o rastro não os
+    # contava, e a spec chegava ao design com 4–6 [PARÂMETRO] e 5–13 [PROPOSTA] em 🟢 (plano «Produto dono do contrato», PR 3)
+    ("parametro", re.compile(r"\[PAR[ÂA]METRO\b\s*([^\]\n]*?)\s*\]")),
+    ("proposta", re.compile(r"\[PROPOSTA\b\s*([^\]\n]*?)\s*\]")),
 ]
+#: Marcadores do contrato aberto: a descrição que é só reticência ou `<placeholder>` cita o formato
+#: («Aplicação do marcador `[PARÂMETRO — a definir por produto: …]`», one-pager da exp02em1b).
+_RE_CONTRATO_CITADO = re.compile(r"(?::|^)\s*(?:…|\.\.\.|<[^>]*>)\s*$")
 
 # Os prompts citam o formato do marcador para ensinar o agente a usá-lo — e a citação
 # tem a mesma forma do marcador. Um documento que diz "Lista de pendências
@@ -595,6 +603,8 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                     continue
                 if tipo == "a_validar" and _e_pictograma_azul(texto, m.start()):
                     continue
+                if tipo in ("parametro", "proposta") and (not dono_raw or _RE_CONTRATO_CITADO.search(dono_raw)):
+                    continue  # `[PROPOSTA]` sozinho, ou com «…», é o nome do marcador citado na prosa
                 linha, contexto = _linha_e_contexto(texto, m.start(), m.end())
                 fechado = _RE_RESOLVIDO_D0.search(linha)
                 n_d0 = int(fechado.group(1)) if fechado else mapa_d0.get(_norm_marcador(trecho))
@@ -602,7 +612,7 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                     if not any(r["trecho"] == trecho[:160] for r in resolvidos):
                         resolvidos.append({"trecho": trecho[:160], "documento": fonte["rotulo"], "d0": f"D0-{n_d0}"})
                     continue
-                if tipo in ("rs_pendente", "verificar_repositorio"):
+                if tipo in ("rs_pendente", "verificar_repositorio", "parametro", "proposta"):
                     # Dono fixo, do contrato: `RS-n pendente` é pedido ao Gate 0/PO que só
                     # pessoa fecha, e `[verificar no repositório]` é instrução para quem
                     # codifica — os agentes não têm o monorepo por desenho. Os dois eram
