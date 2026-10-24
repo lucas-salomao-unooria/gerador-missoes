@@ -69,8 +69,9 @@ def get_fidelidade_check(nome: str, *, status_key: str, report_key: str, documen
 
 
 def get_juiz_de_contradicoes(nome: str, *, documento_key: str, referencia_key: str, report_key: str, status_key: str,
-                             dono: str, rotulo: str, **kw) -> JuizDeContradicoesAgent:
-    """O par (verificador + juiz de contradições), uma instância por ponto da esteira."""
+                             dono: str, rotulo: str, etapa: str = "dev", **kw) -> JuizDeContradicoesAgent:
+    """O par (verificador + juiz de contradições), uma instância por ponto da esteira. `etapa` é a dona do documento
+    (o pedagógico é do design desde o PR 10)."""
     base = status_key.removesuffix("_status")
     juiz = create_llm_agent(
         name=f"{nome}Juiz",
@@ -84,5 +85,5 @@ def get_juiz_de_contradicoes(nome: str, *, documento_key: str, referencia_key: s
         name=nome,
         description=f"{rotulo}: o juiz cita os dois lados de cada contradição, o código confere as citações; comprovada é bloqueio para `{dono}`.",
         documento_key=documento_key, referencia_key=referencia_key, report_key=report_key, status_key=status_key,
-        dono=dono, rotulo=rotulo, sub_agents=[juiz],
+        dono=dono, rotulo=rotulo, etapa=etapa, sub_agents=[juiz],
     )

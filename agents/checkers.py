@@ -1779,7 +1779,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria | evidencia | evidencia_one_pager | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico | aprovado_resumido | aprovado_spec_design | montagem_prd | montagem_handoff
+    modo: str  # lacunas | manifesto | telemetria | evidencia | evidencia_one_pager | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico | aprovado_resumido | aprovado_spec_design | montagem_prd | montagem_handoff | montagem_pedagogico
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -1984,7 +1984,9 @@ class RastroCheckAgent(BaseAgent):
             resultado = dec.com_achados(resultado, dec.achados(
                 str(state.get(chave, "") or ""), f"A {documento}" if documento == "spec" else f"O {documento}",
                 dec.ha_registro_do_po(dict(state)),
-                etapa="produto" if self.modo in ("aprovado_spec", "aprovado_resumido") else "dev"))
+                # o pedagógico fecha o design desde o PR 10 (24/10/2026)
+                etapa={"aprovado_spec": "produto", "aprovado_resumido": "produto",
+                       "aprovado_pedagogico": "design"}.get(self.modo, "dev")))
             relatorio = ca.relatorio(resultado, documento, missao)
         elif self.modo == "one_pager_po":
             # O one-pager que o PO anexou é a missão: cada trecho dele está no gerado, ou saiu porque o pedido
@@ -2009,6 +2011,13 @@ class RastroCheckAgent(BaseAgent):
             documento = "prd" if self.modo == "montagem_prd" else "handoff"
             resultado = (montagem.validar_prd if documento == "prd" else montagem.validar_handoff)(dict(state))
             relatorio = montagem.relatorio(resultado, documento, missao)
+        elif self.modo == "montagem_pedagogico":
+            # O pedagógico monta, não decide (PR 10): fecha o design e é a base do de acordo de design; número, hipótese,
+            # teto, texto-chave e tempo da narrativa conferidos contra o contrato, e os subtítulos da esteira contra ele
+            from tools import pedagogico
+
+            resultado = pedagogico.validar(dict(state))
+            relatorio = pedagogico.relatorio(resultado, missao)
         elif self.modo == "aprovado_spec_design":
             # a spec que o D0 e o D9 reescreveram: só o que eles pioraram, com o dono do D0 (07/10/2026)
             from tools import conteudo_aprovado as ca
@@ -2082,6 +2091,10 @@ class AnexoAprovadoAgent(BaseAgent):
     chave: str
     secoes: List[int] = Field(default_factory=list)
     rotulo: str = "Anexo do conteúdo aprovado"
+    #: Onde guardar uma cópia do documento pronto. O A124 grava o retrato do pedagógico no fim do design
+    #: (`tools.pedagogico.KEY_RETRATO`): é o texto sobre o qual o de acordo de design é dado, e o dev confere que ele não
+    #: mudou (PR 10).
+    retrato_key: str = ""
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -2110,6 +2123,8 @@ class AnexoAprovadoAgent(BaseAgent):
                 corpo = governanca.com_pendencias(ca.remover_anexo(corpo), governanca.da_sessao(state), self.chave)
             novo = ca.com_anexo(corpo, one_pager, self.secoes, tk.tabela(tk.da_sessao(dict(state))))
             delta[self.chave] = novo
+            if self.retrato_key:
+                delta[self.retrato_key] = novo
             msg = (f"📎 {self.rotulo}: seções {', '.join(f'§{n}' for n in self.secoes)} do one-pager aprovado, literais."
                    if ca.TITULO_ANEXO in novo else f"⚠️ {self.rotulo}: o one-pager não tem nenhuma das seções.")
         yield Event(
@@ -2413,6 +2428,8 @@ class JuizDeContradicoesAgent(BaseAgent):
     status_key: str
     dono: str
     rotulo: str = "Coerência com o conteúdo aprovado"
+    #: A etapa dona do documento, que os achados levam: o pedagógico é do design desde o PR 10 (24/10/2026).
+    etapa: str = "dev"
     entrada_documento_key: str = "contradicoes_documento"
     entrada_referencia_key: str = "contradicoes_referencia"
 
@@ -2445,7 +2462,7 @@ class JuizDeContradicoesAgent(BaseAgent):
             no_doc, na_ref = str(c.get("citacao_documento") or ""), str(c.get("citacao_referencia") or "")
             if _citacao_confere(no_doc, doc_norm) and _citacao_confere(na_ref, ref_norm):
                 achados.append({
-                    "severidade": "bloqueio", "codigo": f"contradicao-{c.get('tipo') or 'mecanica'}", "etapa": "dev",
+                    "severidade": "bloqueio", "codigo": f"contradicao-{c.get('tipo') or 'mecanica'}", "etapa": self.etapa,
                     "agente_responsavel": self.dono,
                     "resumo": (f"O documento diz «{no_doc[:160]}» e o conteúdo aprovado diz «{na_ref[:160]}». "
                                f"{str(c.get('explicacao') or '').strip()} Siga o aprovado; se a plataforma não permite, "
