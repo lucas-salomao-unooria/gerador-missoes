@@ -80,6 +80,9 @@ KNOWN_STATE_KEYS = {
     "conteudo_aprovado_prd_status", "conteudo_aprovado_pedagogico_report", "conteudo_aprovado_pedagogico_status",
     # handoff e PRD montam, não decidem (PR 4 do plano «Produto dono do contrato», 23/10/2026)
     "montagem_handoff_report", "montagem_handoff_status", "montagem_prd_report", "montagem_prd_status",
+    # o pedagógico fecha o design e monta sobre o contrato; o dev só acrescenta (PR 10, 24/10/2026)
+    "montagem_pedagogico_report", "montagem_pedagogico_status", "pedagogico_do_design", "pedagogico_pendencias_dev",
+    "pedagogico_dev_report", "pedagogico_dev_status",
     "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "one_pager_po", "one_pager_po_report", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
     # os comitês pedagógicos (15/10/2026)
@@ -1823,9 +1826,10 @@ def test_one_pagers_com_identidade_visual():
         run_dir = Path(tmp)
         gerados = exportar_one_pagers(estado, run_dir, "exp03ilha")
         nomes = sorted(p.relative_to(run_dir).as_posix() for p in gerados)
+        # o pedagógico fecha o design desde o PR 10 (24/10/2026): sai na pasta de design
         assert nomes == [
-            "one-pager-pedagogico.docx",
-            "one-pager-pedagogico.html",
+            "design/14-one-pager-pedagogico.docx",
+            "design/14-one-pager-pedagogico.html",
             "produto/00-one-pager.docx",
             "produto/00-one-pager.html",
             "produto/00d-one-pager-resumido.docx",
@@ -1833,13 +1837,13 @@ def test_one_pagers_com_identidade_visual():
         ]
 
         # O `.html` abre sozinho depois de baixado: logotipo embutido, nada em disco ao lado.
-        pagina = (run_dir / "one-pager-pedagogico.html").read_text(encoding="utf-8")
+        pagina = (run_dir / "design/14-one-pager-pedagogico.html").read_text(encoding="utf-8")
         assert f"#{marca.NAVY}" in pagina and "data:image/png;base64," in pagina
         assert "Detetives da Ilha" in pagina and 'href="design/08-prototipo.html"' in pagina
         assert "<blockquote>" in pagina  # o pedido de aprovação abre o documento
 
         # O `.docx` carrega a marca: fundo navy na capa, Montserrat nos títulos, link clicável.
-        with zipfile.ZipFile(run_dir / "one-pager-pedagogico.docx") as z:
+        with zipfile.ZipFile(run_dir / "design/14-one-pager-pedagogico.docx") as z:
             documento = z.read("word/document.xml").decode()
             assert f'w:fill="{marca.NAVY}"' in documento and "<w:hyperlink" in documento
             assert marca.FONTE_CORPO in z.read("word/styles.xml").decode()

@@ -121,7 +121,8 @@ def test_prd_embrulhado_e_desembrulhado_ao_ser_gravado_e_antes_do_anexo():
 
 
 def test_writers_do_dev_desembrulham_a_saida():
-    from agents.dev import get_one_pager_pedagogico_agent, get_prd_writer_agent
+    from agents.dev import get_prd_writer_agent
+    from agents.pedagogico import get_one_pager_pedagogico_agent
 
     for agente in (get_prd_writer_agent(), get_one_pager_pedagogico_agent()):
         assert agente.after_agent_callback is not None, agente.name
@@ -323,9 +324,10 @@ def test_handoff_no_prd_tabela_e_evento_nao_somem_sem_registro():
 
 
 def test_pedagogico_tem_juiz_de_contradicoes():
-    from agents.dev import agentes_em_ordem, build_dev_stage
+    from agents.design import build_design_stage
 
-    loop = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "OnePagerPedagogicoLoop")
+    # o pedagógico fecha o design desde o PR 10 (24/10/2026)
+    loop = next(a for a in build_design_stage().sub_agents if a.name == "OnePagerPedagogicoLoop")
     nomes = [a.name for a in loop.sub_agents]
     assert nomes.index("A122CoerenciaPedagogico") < nomes.index("A123PedagogicoRodada")
     assert "coerencia_pedagogico_status" in loop.sub_agents[-1].status_keys
