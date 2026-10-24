@@ -87,8 +87,10 @@ _RE_GATILHO = re.compile(r"\b(?:depois|ap[óo]s|antes|at[ée])\s+d?[aeo]?s?\s*(?
 _RE_TEMA_DE_PRODUTO = re.compile(
     r"\b(?:regras?|gatilhos?|estados?|habilidades?|EF\d{2}CO\d{2}|EM13CO\d{2}|CO\d{2}|tern[áa]ri\w*|r[ée]gua|"
     r"forma\s+de\s+avalia\w*|crit[ée]rios?\s+de\s+avalia\w*|mec[âa]nica\w*)\b", re.I)
-#: Sempre de produto, com ou sem verbo: Canal B e podcast são textos-chave do one-pager (D1).
-_RE_SEMPRE_PRODUTO = re.compile(r"\bcanal\s*b\b|\bpodcast\w*", re.I)
+#: Sempre de produto, com ou sem verbo: Canal B e podcast são textos-chave do one-pager (D1). Desde o PR 7, também o item
+#: que cita o ID de um texto-chave (`TC-07`, a opção `TC-12.2`): a proposta do design que o PO aceita no Refazer chega
+#: com o ID dela (`tools/textos_chave.py`).
+_RE_SEMPRE_PRODUTO = re.compile(r"\bcanal\s*b\b|\bpodcast\w*|\bTC-\d{1,3}(?:\.\d{1,2})?\b", re.I)
 _RE_OPCOES = re.compile(r"\bop[çc](?:[ãa]o|[õo]es)\b|\balternativas?\b", re.I)
 _RE_DE_PARA_NUMERO = re.compile(r"\bde\s+(\d+(?:[.,]\d+)?)\s*\S{0,12}\s+(?:para|por|→|->)\s+(\d+(?:[.,]\d+)?)", re.I)
 _RE_NUMERO = re.compile(r"(?<![\w.,/])(\d+(?:[.,]\d+)?)\s?(%|segundos?\b|seg\b|s\b|minutos?\b|min\b|palavras\b|"
@@ -400,7 +402,9 @@ def regra_de_produto(texto: str, docs: Dict[str, str], linhas: Optional[Dict[str
                 motivos.append(f"a frase «{frase[:80]}» está em {_onde(onde)}")
                 break
     if _RE_SEMPRE_PRODUTO.search(texto):
-        motivos.append(f"fala de {_RE_SEMPRE_PRODUTO.search(texto).group(0)}, texto-chave do one-pager")
+        citado = _RE_SEMPRE_PRODUTO.search(texto).group(0)
+        motivos.append(f"cita o texto-chave {citado.upper()} do one-pager" if citado.upper().startswith("TC-")
+                       else f"fala de {citado}, texto-chave do one-pager")
     # opções: o item lista as novas («Opções: “A atividade” · “A cor da roupa”», 13:24), ou muda as que existem na
     # mesma frase («tirar a opção “Lugar”», «deixar só 2 opções»)
     if _RE_OPCOES.search(texto) and (novos_txt or any(_RE_OPCOES.search(f) and _muda(f, com_pedido=True)

@@ -1133,9 +1133,11 @@ class QaAfirmacoesAgent(BaseAgent):
         # Stitch e cobertura de telas por ID: o bloqueio deles vira ticket com o dono do conserto
         # e os de lint, consistência e preservação da spec: dependiam de o QA ler o relatório e escrever o
         # ticket, e o protótipo nem tinha rota (auditoria de 07/10/2026)
+        # e os textos-chave na copy (PR 7): a opção a menos ou a mais que o código não conserta volta ao dono da copy; a
+        # proposta do design ao PO (`decisao_humana`) não é ticket
         for chave in ("stitch_status", "cobertura_telas_status", "prototipo_lint_status", "consistencia_status",
                       "lacunas_status", "ambiente_status", "conteudo_aprovado_spec_design_status",
-                      "banca_design_status"):
+                      "banca_design_status", "textos_chave_status"):
             if str(state.get(chave, "")) == "bloqueado":
                 envelope_gate = state.get(f"{chave}_envelope") or {}
                 for a in envelope_gate.get("achados") or []:
@@ -1424,6 +1426,116 @@ class CopyPreservadaAgent(BaseAgent):
         else:
             msg = f"📌 Copy revisada: reanexadas da passada 1, sem mudança — {', '.join(r['reanexadas'])}."
             delta = {self.depois_key: r["texto"]}
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta=delta))
+
+
+class TextosChaveAgent(BaseAgent):
+    """Determinístico: a tabela de textos-chave com ID, gravada no fim de produto (`tools/textos_chave.py`, PR 7).
+
+    Lê do one-pager aprovado as aspas do §4, o Canal B do §12a, as escolhas com o nº de opções, o roteiro do §9 e o
+    podcast do §11, e dá a cada texto um ID estável (`TC-07`) — o mesmo do registro anterior, quando o texto é o mesmo ou
+    foi trocado no mesmo lugar. Roda também na correção pontual de produto: o editor troca o texto no one-pager, e o
+    registro acompanha, com o mesmo ID. Grava `textos_chave` (o registro, fora das listas de limpeza: sobrevive ao
+    refazer) e `textos_chave_tabela` (o que o cartão do de acordo e o conteúdo aprovado mostram).
+    """
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import textos_chave as tk
+
+        state = ctx.session.state
+        one_pager = str(state.get("one_pager", "") or "")
+        if not one_pager.strip():
+            return
+        tcs, registro = tk.atualizar(dict(state))
+        teto = tk.teto_de_palavras(one_pager, str(state.get("briefing", "") or ""))
+        delta = {tk.KEY_REGISTRO: registro, tk.KEY_TABELA: tk.tabela(tcs, teto, registro["aposentados"])}
+        acima = tk.acima_do_teto(tcs, teto, state.get("decisoes_do_po") or [])
+        n = len([t for t in tcs if t.tipo != tk.OPCAO])
+        msg = (f"🔑 Textos-chave: {n} texto(s) do one-pager aprovado com ID (§4, §12a, §9, §11)"
+               + (f", {len(registro['aposentados'])} aposentado(s)" if registro["aposentados"] else "") + "."
+               + (f" {len(acima)} acima do teto de {teto['valor']} palavras ({teto['origem']}): vão ao de acordo, para o "
+                  "PO manter ou trocar." if acima else ""))
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta=delta))
+
+
+class TextosChaveCopyAgent(BaseAgent):
+    """Determinístico: os textos-chave copiados por código para a copy, e o gate que confere (PR 7, D1).
+
+    A revisão da copy reescrevia o texto que o PO aprovou: na exp02ef1b, as alternativas do Canal B e as opções da 5A
+    saíram com outra redação, e a opção «Lugar» sumiu. Aqui a linha que traz o texto-chave (pelo ID ou pelo texto)
+    recebe o texto aprovado, e a redação do design vira `[PROPOSTA — validar com PO]` na seção da esteira — o PO a pede
+    no Refazer, e a triagem do PR 5 leva o item a produto. O que o código não conserta (opção a menos ou a mais) bloqueia,
+    e o A089 o leva ao dono da copy. Grava o registro de IDs se a sessão ainda não tinha (missão anterior ao PR 7).
+    """
+
+    chave: str = "copy_strings_revisada"
+    report_key: str = "textos_chave_report"
+    status_key: str = "textos_chave_status"
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from pipeline.artifacts import e_mensagem_de_pulo
+        from tools import textos_chave as tk
+
+        state = ctx.session.state
+        copy = str(state.get(self.chave, "") or "")
+        if not copy.strip() or e_mensagem_de_pulo(copy):
+            return
+        tcs, registro = tk.atualizar(dict(state))
+        aplicado = tk.aplicar_na_copy(copy, tcs)
+        resultado = tk.conferir_copy(aplicado["texto"], tcs)
+        missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
+        relatorio = tk.relatorio(resultado, missao)
+        delta: Dict[str, Any] = {self.report_key: relatorio, self.status_key: resultado["status"],
+                                 f"{self.status_key}_envelope": extrair_envelope(relatorio) or {}}
+        if aplicado["texto"] != copy:
+            delta[self.chave] = aplicado["texto"]
+        if not (isinstance(state.get(tk.KEY_REGISTRO), dict) and state[tk.KEY_REGISTRO].get("itens")):
+            delta[tk.KEY_REGISTRO] = registro
+        marca = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
+        msg = (f"{marca} Textos-chave na copy: {aplicado['copiados']} copiado(s) por código"
+               + (f", {len(aplicado['propostas'])} proposta(s) do design ao PO" if aplicado["propostas"] else "") + "."
+               + "".join(f"\n- {'⛔' if a['severidade'] == 'bloqueio' else '⚠️'} {a['resumo'][:220]}"
+                         for a in resultado["achados"]))
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    content=types.Content(role="model", parts=[types.Part(text=msg)]),
+                    actions=EventActions(state_delta=delta))
+
+
+class ArestasContratoAgent(BaseAgent):
+    """Determinístico: arestas do fluxo e regras de habilitação das telas × bloco 2 da spec (`tools/arestas.py`, PR 7).
+
+    Estado novo é decomposição e é livre (D7). A guarda que muda o que o aluno faz, decide ou vê — só segue com a
+    resposta certa, ou com uma de duas condições que a spec pede juntas — vira `[PROPOSTA — validar com PO]`, com dono
+    PO: bloqueia com ESTEIRA_ESTRITA, e sem ela é decisão humana no cartão de design. Não vira ticket do QA: quem decide
+    se a mudança vale é o PO (Refazer → triagem → produto), e sem ela o design segue a spec.
+    """
+
+    report_key: str = "arestas_report"
+    status_key: str = "arestas_status"
+    estrito: bool = False
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import arestas as ar
+
+        state = ctx.session.state
+        if not str(state.get("fluxo_arestas", "") or "").strip():
+            return
+        resultado = ar.validar(dict(state), estrito=self.estrito)
+        missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
+        relatorio = ar.relatorio(resultado, missao)
+        delta = {self.report_key: relatorio, self.status_key: resultado["status"],
+                 f"{self.status_key}_envelope": extrair_envelope(relatorio) or {}}
+        marca = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
+        msg = (f"{marca} Fluxo e telas × bloco 2: {resultado['contagem'].get('arestas', 0)} aresta(s) conferida(s)."
+               + "".join(f"\n- {'⛔' if a['severidade'] == 'bloqueio' else '🧑'} {a['resumo'][:240]}"
+                         for a in resultado["achados"]))
         yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
                     content=types.Content(role="model", parts=[types.Part(text=msg)]),
                     actions=EventActions(state_delta=delta))
@@ -1974,9 +2086,13 @@ class AnexoAprovadoAgent(BaseAgent):
         else:
             from pipeline.artifacts import desembrulhar_cerca
 
+            from tools import textos_chave as tk
+
             # a cerca ```markdown em volta do documento sai antes: anexo colado depois dela impedia a gravação de
-            # reconhecer o invólucro, e o arquivo abria como bloco de código
-            novo = ca.com_anexo(desembrulhar_cerca(str(documento)), one_pager, self.secoes)
+            # reconhecer o invólucro, e o arquivo abria como bloco de código. A tabela dos textos-chave entra no anexo: o
+            # corpo os cita pelo ID (PR 7)
+            novo = ca.com_anexo(desembrulhar_cerca(str(documento)), one_pager, self.secoes,
+                                tk.tabela(tk.da_sessao(dict(state))))
             delta[self.chave] = novo
             msg = (f"📎 {self.rotulo}: seções {', '.join(f'§{n}' for n in self.secoes)} do one-pager aprovado, literais."
                    if ca.TITULO_ANEXO in novo else f"⚠️ {self.rotulo}: o one-pager não tem nenhuma das seções.")
@@ -2013,6 +2129,20 @@ class ConteudoAprovadoAgent(BaseAgent):
         literal = ca.secoes_literais(str(state.get("one_pager", "") or ""), self.secoes)
         texto = ca.NOTA_CONTEUDO_APROVADO + "\n\n" + literal if literal else ""
         delta: Dict[str, Any] = {self.chave: texto}
+        # a tabela dos textos-chave com ID (PR 7) vai junto: os autores citam o ID, e o código copia o texto. Recalculada
+        # aqui do one-pager de agora — a missão anterior ao PR 7 não passou pelo A044b — com os IDs do registro
+        from tools import textos_chave as tk
+
+        tcs, registro = tk.atualizar(dict(state))
+        if tcs:
+            one_pager = str(state.get("one_pager", "") or "")
+            tabela = tk.tabela(tcs, tk.teto_de_palavras(one_pager, str(state.get("briefing", "") or "")),
+                               registro["aposentados"])
+            delta[tk.KEY_TABELA] = tabela
+            if texto:
+                delta[self.chave] = texto + "\n\n" + tabela
+            if not (isinstance(state.get(tk.KEY_REGISTRO), dict) and state[tk.KEY_REGISTRO].get("itens")):
+                delta[tk.KEY_REGISTRO] = registro
         msg = (f"📎 Conteúdo aprovado: §{', §'.join(str(n) for n in self.secoes)} do one-pager, literais, para os agentes "
                f"que não leem o one-pager." if texto else "⏭️ Conteúdo aprovado: one-pager sem as seções.")
         if self.chave_base:

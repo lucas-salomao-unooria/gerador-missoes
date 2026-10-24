@@ -49,6 +49,8 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "consistencia_status", "rotulo": "Coerência entre documentos", "etapa": "design", "rodada": None},
     {"status": "stitch_status", "rotulo": "Telas no Stitch × inventário", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "cobertura_telas_status", "rotulo": "Cobertura de telas por ID", "etapa": "design", "rodada": "qa_design_rodada"},
+    {"status": "textos_chave_status", "rotulo": "Textos-chave na copy", "etapa": "design", "rodada": "qa_design_rodada"},
+    {"status": "arestas_status", "rotulo": "Fluxo e telas × bloco 2 da spec", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "qa_afirmacoes_status", "rotulo": "Afirmações do QA conferidas", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "design_status", "rotulo": "QA de entregáveis", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "rastro_design_status", "rotulo": "Rastro de lacunas do design", "etapa": "design", "rodada": None},

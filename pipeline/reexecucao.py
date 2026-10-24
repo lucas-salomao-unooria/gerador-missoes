@@ -118,6 +118,9 @@ CHAVES_DESIGN = frozenset({
     # a banca no fim de design (08/10/2026)
     "banca_design_narrativa", "banca_design_imersao",
     "banca_design_report", "banca_design_status", "banca_design_status_envelope",
+    # os textos-chave na copy e o fluxo × bloco 2 da spec (PR 7 do plano «Produto dono do contrato»)
+    "textos_chave_report", "textos_chave_status", "textos_chave_status_envelope",
+    "arestas_report", "arestas_status", "arestas_status_envelope",
 }) | CHAVES_DEV
 #: `spec_missao_gate0` tem de cair: o split do D0 só grava esse backup se ele não existir
 #: (`agents/checkers.py`, SecaoSplitAgent) — senão a spec velha seria preservada como "original".
@@ -183,6 +186,9 @@ CHAVES_PRODUTO = frozenset({
     "comite_canal_b_report", "comite_canal_b_status", "comite_canal_b_status_envelope", "comite_canal_b_rodada",
     "comite_final_report", "comite_final_status", "comite_final_status_envelope", "comite_final_rodada",
     "comite_canais_rodada", "comite_final_externo_rodada",
+    # a tabela dos textos-chave (PR 7) é refeita pelo A044b sobre o one-pager novo. O registro dos IDs
+    # (`textos_chave`) fica fora de toda lista, de propósito: o ID sobrevive ao refazer
+    "textos_chave_tabela",
 }) | CHAVES_SPEC
 CHAVES_TRANSVERSAL = frozenset({
     "diagnostico_execucao", "diagnostico_status", "diagnostico_status_envelope", "aprendizado_registro",

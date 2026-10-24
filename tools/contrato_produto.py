@@ -337,6 +337,23 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
         if a["codigo"] == "decisao-atribuida-ao-po":
             (bloqueio if a["severidade"] == "bloqueio" else atencao)(a["codigo"], "9.1", a["resumo"])
 
+    # 9. Texto-chave que a criança lê acima do teto de palavras (plano «Produto dono do contrato», PR 7, D1): o do §15
+    # aprovado, ou o da faixa (`references/teto-palavras-por-faixa.md`, rascunho). Não bloqueia e não é para o revisor
+    # reescrever: é pendência do de acordo de produto — o PO mantém o texto ou escreve outro (`tools/fechar_contrato.py`).
+    from tools import textos_chave as tk
+
+    teto = tk.teto_de_palavras(texto, briefing or "")
+    acima = tk.acima_do_teto(tk.numerar(tk.extrair(texto))[0], teto, decisoes_do_po)
+    if acima:
+        atencao(
+            "texto-chave-acima-do-teto", "6.1",
+            f"{len(acima)} texto(s)-chave que a criança lê passam do teto de {teto['valor']} palavras "
+            f"{'por frase' if teto.get('por') == 'frase' else 'por texto'} ({teto['origem']}): "
+            + "; ".join(f"«{t.texto[:90]}» ({n})" for t, n in acima[:6]) + ("…" if len(acima) > 6 else "")
+            + ". Não reescreva o texto aprovado aqui: cada um vai à lista do de acordo de produto, e o PO mantém o texto "
+            "ou escreve outro.",
+        )
+
     if any(a["severidade"] == "bloqueio" for a in achados):
         status = "bloqueado"
     elif achados:

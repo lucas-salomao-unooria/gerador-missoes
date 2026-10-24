@@ -533,6 +533,39 @@ def desembrulhar_documento(chave: str):
     return _callback
 
 
+def copiar_textos_chave(chave: str):
+    """after_agent_callback: os textos-chave do one-pager copiados por código para o documento que o autor acabou de
+    gravar (PR 7 do plano «Produto dono do contrato», D1).
+
+    Na copy (passada 1), a linha que traz o texto-chave recebe o texto aprovado, e a redação do autor vira proposta ao
+    PO na seção da esteira (`tools.textos_chave.aplicar_na_copy`); a revisão da copy e o gate vêm depois, no
+    `TextosChaveCopyAgent`. No handoff, no PRD e no pedagógico, a citação entre aspas que é reescrita quase igual de um
+    texto-chave passa a ser o texto aprovado (`aplicar_em_documento`) — a reescrita mais distante fica com os gates
+    (montagem, A116, A121). O LLM não reescreve o texto-chave: o código o copia.
+    """
+    def _callback(callback_context: CallbackContext) -> None:
+        from pipeline.artifacts import e_mensagem_de_pulo
+        from tools import textos_chave as tk
+
+        state = callback_context.state
+        texto = state.get(chave)
+        if not isinstance(texto, str) or not texto.strip() or e_mensagem_de_pulo(texto):
+            return None
+        tcs = tk.da_sessao(state)
+        if not tcs:
+            return None
+        if chave in ("copy_strings", "copy_strings_revisada"):
+            novo = tk.aplicar_na_copy(texto, tcs)["texto"]
+        else:
+            novo, _ = tk.aplicar_em_documento(texto, tcs)
+        if novo != texto:
+            state[chave] = novo
+        return None
+
+    _callback.__name__ = f"copiar_textos_chave_{chave}"
+    return _callback
+
+
 #: Prefixo da chave em que fica o aviso de resposta cortada pelo modelo, por agente (`bloqueio_modelo_<nome>`).
 PREFIXO_BLOQUEIO_MODELO = "bloqueio_modelo_"
 _AVISOS_DE_CORTE = {

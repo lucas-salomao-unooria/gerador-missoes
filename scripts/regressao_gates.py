@@ -53,7 +53,8 @@ _garantir_base_plataforma()
 from tools import (
     bncc, contrato_produto, evidencia, kpis, rastro, consistencia,
     conteudo, conteudo_aprovado, cobertura_design, prd_codavel,
-    afirmacoes, telas, prototipo, mecanica, rastreabilidade, componentes_ds, montagem
+    afirmacoes, telas, prototipo, mecanica, rastreabilidade, componentes_ds, montagem,
+    arestas, textos_chave
 )
 from pipeline.artifacts import caminhos_de_artefato
 from tools.anexo_design import spec_consolidada
@@ -158,6 +159,14 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         gates["prototipo_lint_status"] = _extrair_status_e_codigos(r_pl)
 
         gates["cobertura_telas_status"] = _extrair_status_e_codigos(telas.cobertura(state))
+        # PR 7 do plano «Produto dono do contrato»: os textos-chave do one-pager na copy como a sessão a gravou (sem a
+        # cópia por código, que é do A078b) e as arestas do fluxo × bloco 2 da spec. O fluxo sem ESTEIRA_ESTRITA: a
+        # régua mede a proposta ao PO (decisão humana 🟡); o estrito só a promove a bloqueio
+        if copy_rev:
+            gates["textos_chave_status"] = _extrair_status_e_codigos(
+                textos_chave.conferir_copy(copy_rev, textos_chave.da_sessao(state)))
+        if str(state.get("fluxo_arestas") or "").strip():
+            gates["arestas_status"] = _extrair_status_e_codigos(arestas.validar(state, estrito=False))
         if qa_rep:
             gates["qa_afirmacoes_status"] = _extrair_status_e_codigos(
                 afirmacoes.conferir_qa(qa_rep, stitch_links, jornada, proto_arq)

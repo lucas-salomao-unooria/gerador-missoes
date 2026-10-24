@@ -729,6 +729,29 @@ def _render_padroes(estado: Dict[str, Any], etapa: str) -> None:
                        "design aparecem no parecer de design.")
 
 
+def _render_textos_chave(estado: Dict[str, Any]) -> None:
+    """A tabela dos textos-chave com ID, no cartão do de acordo de produto (plano «Produto dono do contrato», PR 7, D1).
+
+    É o texto que o PO aprova palavra por palavra — aspas do §4, Canal B, opções de cada escolha, roteiro do professor,
+    podcast — e que a esteira copia por código até a copy. A sessão anterior ao PR 7 não tem a tabela gravada: ela é
+    montada aqui das mesmas seções, só para mostrar."""
+    from tools import textos_chave as tk
+
+    tabela = str(estado.get(tk.KEY_TABELA) or "")
+    if not tabela.strip():
+        one_pager = str(estado.get("one_pager") or "")
+        tcs, registro = tk.atualizar(estado)
+        tabela = tk.tabela(tcs, tk.teto_de_palavras(one_pager, str(estado.get("briefing") or "")), registro["aposentados"])
+    if not tabela.strip():
+        return
+    n = len(re.findall(r"^\| `TC-\d+` \|", tabela, re.M))
+    with st.expander(f"🔑 Textos-chave aprovados — {n} com ID (copiados por código até a copy)", expanded=False):
+        st.caption("O que o PO aprova palavra por palavra. O design não os reescreve: a linha da copy recebe o texto por "
+                   "código, e a redação que o design quiser vira proposta ao PO. Texto acima do teto da faixa aparece na "
+                   "lista do contrato abaixo, para manter ou trocar.")
+        st.markdown(tabela)
+
+
 def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[str, Any]) -> Dict[str, Dict[str, str]]:
     """A lista do contrato de produto em aberto, com a resposta do PO a cada item (plano «Produto dono do contrato», PR 3).
 
@@ -856,6 +879,8 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
                       else ", ou peça ao admin uma liberação com exceção."))
     if situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA) and etapa in ("produto", "design"):
         _render_padroes(estado, etapa)
+    if situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA) and etapa == "produto":
+        _render_textos_chave(estado)
     if not acoes:
         dono = passagem.dono_da_vez(fluxo)
         st.caption(f"🔒 Aguardando **{passagem.rotulo_donos(dono or '')}**. Você está como {sessao.rotulo}.")

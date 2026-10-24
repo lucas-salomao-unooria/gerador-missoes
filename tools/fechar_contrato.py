@@ -45,8 +45,11 @@ PARAMETRO = "parametro"
 PROPOSTA = "proposta"
 ABERTO_PO = "aberto_po"
 MUDANCA_GATE0 = "mudanca_gate0"
+#: Texto-chave que a criança lê acima do teto de palavras (PR 7 do plano, D1): o lint de produto o acusa, e o PO mantém o
+#: texto ou escreve outro (`tools/textos_chave.py`).
+TEXTO_TETO = "texto_teto"
 ROTULO_TIPO = {PARAMETRO: "[PARÂMETRO]", PROPOSTA: "[PROPOSTA]", ABERTO_PO: "[ABERTO — dono: PO]",
-               MUDANCA_GATE0: "Mudança do design no texto do Gate 0"}
+               MUDANCA_GATE0: "Mudança do design no texto do Gate 0", TEXTO_TETO: "Texto-chave acima do teto"}
 
 #: Onde o contrato aberto é procurado. A spec é a do Gate 0: na sessão anterior ao PR 6, `spec_missao` pode já trazer os
 #: blocos 13 e 14 do design; na nova ela é a de produto, com o bloco 15 da completude, cujos marcadores entram na lista.
@@ -107,10 +110,15 @@ class Item:
     trocas: List[Dict[str, Any]] = field(default_factory=list)
     bloco: str = ""
     detalhe: str = ""
+    #: Só em `texto_teto`: o texto-chave como está no one-pager (é ele que a troca procura nas linhas).
+    texto_chave: str = ""
 
     def opcoes(self) -> List[str]:
         if self.tipo == MUDANCA_GATE0:
             return [ACEITAR, RECUSAR]
+        if self.tipo == TEXTO_TETO:
+            # manter o texto aprovado (a sugestão) ou escrever outro; recusar o texto é escrever outro
+            return [ACEITAR, OUTRO]
         saida = [ACEITAR] if self.sugestao else []
         saida += [OUTRO, RECUSAR]
         if self.ui:
@@ -288,7 +296,30 @@ def itens_em_aberto(estado: Dict[str, Any]) -> List[Item]:
     for item in itens:
         texto = " ".join([item.assunto, item.sugestao] + [o.descricao for o in item.ocorrencias])
         item.ui = _e_ui(texto)
-    return itens + mudancas_do_design(estado)
+    return itens + mudancas_do_design(estado) + textos_acima_do_teto(estado)
+
+
+def textos_acima_do_teto(estado: Dict[str, Any]) -> List[Item]:
+    """Os textos-chave que a criança lê acima do teto de palavras — o do §15 aprovado, ou o da faixa (rascunho) —, um
+    item cada, menos os que o PO já manteve ou reescreveu. O lint de produto os acusa (A024, `texto-chave-acima-do-teto`)
+    e o PO decide aqui: manter o texto, ou escrever outro, que entra no one-pager no lugar dele."""
+    from tools import textos_chave as tk
+
+    one_pager = str(estado.get("one_pager") or "")
+    if not one_pager.strip():
+        return []
+    teto = tk.teto_de_palavras(one_pager, str(estado.get("briefing") or ""))
+    tcs = tk.da_sessao(estado)
+    itens: List[Item] = []
+    for tc, n in tk.acima_do_teto(tcs, teto, estado.get(KEY_DECISOES) or []):
+        linhas = [l for l in one_pager.splitlines() if tc.texto in l]
+        por = "por frase" if teto.get("por") == "frase" else "por texto"
+        itens.append(Item(
+            id=_id(TEXTO_TETO, tk.literal(tc.texto)), tipo=TEXTO_TETO,
+            assunto=f"{tc.id} ({tc.origem}) «{tc.texto}» — {n} palavras, teto de {teto['valor']} {por} ({teto['origem']})",
+            sugestao="manter o texto aprovado", texto_chave=tc.texto,
+            ocorrencias=[Ocorrencia(documento=DOC_ONE_PAGER, linha=l, marcador=tc.texto, tipo=TEXTO_TETO) for l in linhas]))
+    return itens
 
 
 # ------------------------------------------------------------------ mudanças do design no texto do Gate 0
@@ -463,7 +494,12 @@ def respostas_anteriores(estado: Dict[str, Any], fluxo: Optional[Dict[str, Any]]
     saida: Dict[str, Dict[str, str]] = {}
     for item in itens:
         for quando, d in registros:
-            mesmo = d.get("id") == item.id or (d.get("assunto") and _parecidos(str(d["assunto"]), item.assunto))
+            if (item.tipo == TEXTO_TETO) != (d.get("tipo") == TEXTO_TETO):
+                # o texto-chave acima do teto só casa com a decisão dele, pelo ID: pelo assunto, «teto de palavras por
+                # parágrafo → 45 palavras» (de acordo de 21/10 da exp02em1b) trocava o texto do Canal B por «45 palavras»
+                continue
+            mesmo = d.get("id") == item.id or (item.tipo != TEXTO_TETO and d.get("assunto")
+                                               and _parecidos(str(d["assunto"]), item.assunto))
             if not mesmo:
                 continue
             if "texto_direita" in d:
@@ -526,6 +562,23 @@ def decidir(itens: Sequence[Item], respostas: Optional[Dict[str, Dict[str, str]]
         if any(c in valor for c in "[]\n|"):
             raise RespostaInvalida(f"«{item.assunto[:80]}»: o valor não pode ter colchetes nem barra vertical.")
         gravado = ""
+        if item.tipo == TEXTO_TETO:
+            # manter não troca nada; outro texto entra no lugar do texto-chave, em toda linha do one-pager que o traz
+            if resposta == OUTRO:
+                for oc in item.ocorrencias:
+                    atual = por_linha.get((oc.documento, oc.linha), oc.linha)
+                    por_linha[(oc.documento, oc.linha)] = atual.replace(item.texto_chave, valor)
+                gravado = valor
+            else:
+                gravado = f"«{item.texto_chave}» mantido acima do teto — PO, parecer de {data}"
+            saida.decisoes.append({
+                "id": item.id, "tipo": item.tipo, "assunto": item.assunto, "sugestao": item.sugestao,
+                "resposta": resposta, "valor": valor, "gravado": gravado, "quando": quando, "como": como,
+                "origem": str(r.get("origem") or "cartão do de acordo"), "ocorrencias": len(item.ocorrencias),
+                # o texto que vale depois da decisão: o lint e o cartão não o acusam de novo
+                "texto": valor if resposta == OUTRO else item.texto_chave,
+            })
+            continue
         if item.tipo == MUDANCA_GATE0:
             if resposta == ACEITAR:
                 saida.edicoes.append({"tipo": "trocas", "documento": DOC_SPEC, "bloco": item.bloco,
@@ -704,6 +757,8 @@ def decisoes_perdidas(estado: Dict[str, Any], itens: Sequence[Item]) -> List[Dic
     for d in ultimas.values():
         if d.get("tipo") == MUDANCA_GATE0 or not d.get("gravado"):
             continue
+        if d.get("tipo") == TEXTO_TETO and d.get("resposta") != OUTRO:
+            continue  # manter o texto não grava nada no one-pager
         if str(d["gravado"]) in corpo or (d.get("resposta") == DESIGN and "deixado para o design" in corpo):
             continue
         if any(i.id == d["id"] or _parecidos(str(d.get("assunto") or ""), i.assunto) for i in itens):

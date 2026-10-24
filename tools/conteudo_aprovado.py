@@ -210,18 +210,20 @@ def mudancas_no_aprovado(anterior: str, atual: str, limite: int = LIMITE_MUDANCA
     ] + corpo)
 
 
-def anexo(one_pager: str, secoes: Sequence[int]) -> str:
-    """As seções aprovadas, literais, sob um título único. Vazio se o one-pager não tem nenhuma."""
+def anexo(one_pager: str, secoes: Sequence[int], textos_chave: str = "") -> str:
+    """As seções aprovadas, literais, sob um título único — e, quando vem, a tabela dos textos-chave com ID
+    (`tools/textos_chave.py`, PR 7), que o corpo cita pelo ID. Vazio se o one-pager não tem nenhuma seção."""
     partes = secoes_literais(one_pager, secoes)
     if not partes:
         return ""
-    return "\n".join(["---", "", f"# {TITULO_ANEXO}", "", NOTA_ANEXO.format(origem=_origem(one_pager)), "", partes])
+    return "\n".join(["---", "", f"# {TITULO_ANEXO}", "", NOTA_ANEXO.format(origem=_origem(one_pager)), "", partes]
+                     + ([textos_chave.strip(), ""] if (textos_chave or "").strip() else []))
 
 
-def com_anexo(documento: str, one_pager: str, secoes: Sequence[int]) -> str:
+def com_anexo(documento: str, one_pager: str, secoes: Sequence[int], textos_chave: str = "") -> str:
     """O documento com o anexo atual no fim, trocando o de uma rodada anterior."""
     corpo = remover_anexo(documento or "").rstrip()
-    extra = anexo(one_pager, secoes)
+    extra = anexo(one_pager, secoes, textos_chave)
     return f"{corpo}\n\n{extra}" if extra else corpo + "\n"
 
 
@@ -287,20 +289,45 @@ def textos_de_tela(one_pager: str) -> List[str]:
     "…"»), aspas quebradas por crase, rótulo de até duas palavras, e o bloco de evidência que fecha o §4 (o Canal B
     tem conferência própria). Calibrado nas 15 sessões do bucket de 25/09 a 07/10/2026: de 7 a 28 textos por missão.
     """
-    saida: List[str] = []
-    dentro = False
-    #: recuo da linha oral que abre uma lista: os itens mais recuados abaixo dela são falas dela
-    #: («- **Mediação do professor:**» seguido de «  * "Quem aqui escolheu a capa?"»)
-    recuo_oral: Optional[int] = None
+    return [t for _, t in textos_de_tela_por_etapa(one_pager)]
+
+
+#: O número da etapa no título do §4: «### Etapa 3: Decidir», «### 3. Decidir», «#### Etapa 5b: Revisar».
+_RE_NUMERO_DA_ETAPA = re.compile(r"^#{2,6}\s*(?:Etapa\s*)?(\d\s*[a-z]?)", re.I)
+
+
+def linhas_das_etapas(one_pager: str) -> Iterable[Tuple[str, Optional[str]]]:
+    """`(etapa, linha)` de cada linha do §4 que está dentro de uma etapa, sem o bloco de evidência que fecha a seção;
+    o título de cada etapa sai como `(etapa, None)`. `etapa` é o número do título («3», «5b»). A mesma leitura do
+    `textos_de_tela`; os textos-chave (PR 7) a usam para saber de que etapa é cada texto e cada escolha."""
+    etapa = ""
     for linha in (secao(one_pager or "", 4) or "").splitlines():
         s = linha.strip()
         if _RE_TITULO_EVIDENCIA.match(s):
-            dentro = False
+            etapa = ""
             continue
         if _RE_TITULO_ETAPA.match(s):
-            dentro, recuo_oral = True, None
+            m = _RE_NUMERO_DA_ETAPA.match(s)
+            etapa = re.sub(r"\s+", "", m.group(1)) if m else "?"
+            yield etapa, None
             continue
-        if not dentro or not s:
+        if etapa:
+            yield etapa, linha
+
+
+def textos_de_tela_por_etapa(one_pager: str) -> List[Tuple[str, str]]:
+    """`(etapa, texto)` do que o §4 põe na tela entre aspas, na ordem — o `textos_de_tela` com a etapa de cada texto."""
+    saida: List[Tuple[str, str]] = []
+    vistos: Set[str] = set()
+    #: recuo da linha oral que abre uma lista: os itens mais recuados abaixo dela são falas dela
+    #: («- **Mediação do professor:**» seguido de «  * "Quem aqui escolheu a capa?"»)
+    recuo_oral: Optional[int] = None
+    for etapa, linha in linhas_das_etapas(one_pager):
+        if linha is None:
+            recuo_oral = None  # título de etapa: a lista oral da etapa anterior acabou
+            continue
+        s = linha.strip()
+        if not s:
             continue
         recuo = len(linha) - len(linha.lstrip())
         if recuo_oral is not None and recuo > recuo_oral:
@@ -315,8 +342,9 @@ def textos_de_tela(one_pager: str) -> List[str]:
             t = m.group(1).strip().strip("*").strip()
             if len(t) < 12 or t[0] in ",;:.)]" or "`" in t or _RE_FALA_A_TURMA.search(t):
                 continue
-            if len(t.split()) >= 3 and t not in saida:
-                saida.append(t)
+            if len(t.split()) >= 3 and t not in vistos:
+                vistos.add(t)
+                saida.append((etapa, t))
     return saida
 
 
@@ -853,6 +881,13 @@ def literais_parafraseados(documento: str, one_pager: str) -> List[Tuple[str, st
 
     lit = literais(one_pager)
     alvos = [t for qual in ("canal_b", "roteiro", "texto_tela") for t in lit.get(qual) or []]
+    # e os textos-chave do PR 7 (`tools/textos_chave.py`): o Canal B sem os rótulos «Pergunta:»/«Atingiu:» — na exp02ef1b
+    # as alternativas vêm em «*Alt 1:* "…" `[Atingiu]`», e a leitura antiga não achava nenhuma — e as opções de cada escolha
+    from tools import textos_chave as tk
+
+    chave = tk.extrair(one_pager)
+    alvos += [t.texto for t in chave if t.tipo in (tk.TELA, tk.CANAL_B, tk.ROTEIRO) and t.texto not in alvos]
+    alvos += [o for t in chave if t.tipo == tk.OPCOES for o in t.opcoes if o not in alvos]
     citados = list(dict.fromkeys(m.group(1).strip() for m in _RE_ENTRE_ASPAS.finditer(documento or "")
                                  if len(m.group(1).strip()) >= 12))
     if not alvos or not citados:
