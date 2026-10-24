@@ -74,11 +74,14 @@ class Resultado:
         return not self.falhas
 
 
-def documentos_da_etapa(estado: Dict[str, Any], etapa: str) -> Dict[str, str]:
+def documentos_da_etapa(estado: Dict[str, Any], etapa: str, versao_anterior: bool = False) -> Dict[str, str]:
     """`{chave: texto}` dos documentos que o editor pode trocar, na versão que o autor escreveu.
 
     A spec é a do Gate 0 quando existe: `spec_missao` pode já trazer a consolidação do D0, e a base de um refazer é a
     do autor (`pipeline.reexecucao._guardar_versoes_anteriores`). Documento vazio fica de fora.
+
+    `versao_anterior`: o documento que falta no estado vem de `versao_anterior_<chave>`. É o passo de design (ou de dev)
+    de uma cascata: a correção de produto que veio antes apagou design e dev do estado e guardou a versão deles ali.
     """
     from tools.conteudo_aprovado import remover_anexo
 
@@ -86,6 +89,8 @@ def documentos_da_etapa(estado: Dict[str, Any], etapa: str) -> Dict[str, str]:
     for chave in DOCUMENTOS_POR_ETAPA.get(etapa, ()):
         texto = estado.get("spec_missao_gate0") if chave == "spec_missao" and etapa in ("produto", "spec") else None
         texto = str(texto or estado.get(chave) or "")
+        if versao_anterior and not texto.strip():
+            texto = str(estado.get(f"versao_anterior_{chave}") or "")
         if chave in ("prd_final", "one_pager_pedagogico"):
             # o anexo literal é da esteira (`AnexoAprovadoAgent`), que o põe de novo depois
             texto = remover_anexo(texto)

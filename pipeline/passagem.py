@@ -28,7 +28,7 @@ import json
 import logging
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -88,17 +88,19 @@ MAX_DE_ACORDO_ULTIMA_ETAPA = 400
 #: Onde uma mudança de conteúdo vale, por etapa. Em design e dev, o *refazer* não muda o one-pager, e os gates
 #: conferem design e dev contra ele: o Canal B reescrito num refazer de dev voltava ao texto antigo pelo gate do
 #: pedagógico, e o anexo do PRD seguia com o §12a de antes (auditoria de 07/10/2026). O que o one-pager decide
-#: muda em produto; o resto, na etapa.
+#: muda em produto; o resto, na etapa. Desde o PR 5 do plano «Produto dono do contrato» (23/10/2026), o *refazer* de
+#: design e de dev passa pela triagem item a item: o que é de produto vai antes ao one-pager e à spec do Gate 0.
 COMO_MUDAR_CONTEUDO: Dict[str, str] = {
     "produto": ("Para a mudança valer, use **Refazer** com este mesmo texto — a etapa é refeita aplicando-o e volta "
                 "ao seu parecer."),
-    "design": ("Se ela muda o que o one-pager aprovou (texto que a criança ou o professor lê, regra, número, "
-               "habilidade, tempo), use **Devolver** até Produto: o one-pager só muda lá, e design e dev são "
-               "conferidos contra ele. Se é só do design (tela, fluxo, copy que o one-pager não fixa), use **Refazer** "
-               "com este mesmo texto."),
-    "dev": ("Se ela muda o que o one-pager aprovou (texto que a criança ou o professor lê, regra, número, "
-            "habilidade, tempo), use **Devolver** — o Design repassa a Produto, onde o one-pager muda; design e dev "
-            "são conferidos contra ele. Se é só do dev (handoff, PRD, banco), use **Refazer** com este mesmo texto."),
+    "design": ("Use **Refazer** com este mesmo texto: a triagem o divide item a item, e o que muda o one-pager aprovado "
+               "(texto que a criança ou o professor lê, regra, número, habilidade, tempo) vai primeiro a Produto — o "
+               "one-pager e a spec do Gate 0 mudam lá —, e o resto se aplica no design. Você vê a divisão antes de "
+               "confirmar. Item que a triagem não sabe de quem é pede **Devolver** até Produto."),
+    "dev": ("Use **Refazer** com este mesmo texto: a triagem o divide item a item, e o que muda o one-pager aprovado "
+            "(texto que a criança ou o professor lê, regra, número, habilidade, tempo) vai primeiro a Produto, depois "
+            "ao Design e só então ao dev. Você vê a divisão antes de confirmar. Item que a triagem não sabe de quem é "
+            "pede **Devolver**."),
 }
 _RE_CONTEUDO = re.compile(r"\bPergunta\s+\d|\bAlternativas?\b|\bCen[áa]rio:|\bAJUSTE\s+\d|\bTRAVAS?\b", re.IGNORECASE)
 
@@ -270,11 +272,15 @@ def _invalidar_a_partir_de(pareceres: List[Dict[str, Any]], etapa: str) -> None:
 
 @dataclass(frozen=True)
 class Efeito:
-    """O que precisa rodar depois da decisão. `tipo`: `iniciar` | `refazer` | `encerrar`."""
+    """O que precisa rodar depois da decisão. `tipo`: `iniciar` | `refazer` | `encerrar`.
+
+    `divisao`: no *refazer* de design ou dev, o pedido dividido por dono (`tools/triagem_pedido.py`) — com item de
+    produto, `pipeline/execucao_fundo.py` roda a cascata (`pipeline.reexecucao.executar_cascata_stream`)."""
 
     tipo: str
     etapa: str
     pedido: str = ""
+    divisao: Optional[Dict[str, Any]] = field(default=None, compare=False, hash=False)
 
 
 def perguntas_de_conferencia(etapa: str, acao: str) -> Tuple[Tuple[str, str], ...]:
@@ -285,6 +291,7 @@ def perguntas_de_conferencia(etapa: str, acao: str) -> Tuple[Tuple[str, str], ..
 def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
             estado: Dict[str, Any], conferencia: Optional[Dict[str, str]] = None,
             decisoes: Optional[Dict[str, Dict[str, str]]] = None, estrito: Optional[bool] = None,
+            divisao: Optional[Dict[str, Any]] = None,
             ) -> Tuple[Dict[str, Any], Optional[Efeito]]:
     """Aplica a decisão e devolve `(fluxo_novo, efeito)`. Pura: não toca disco.
 
@@ -292,7 +299,9 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
     respostas às `CONFERENCIA_DE_ACORDO` da etapa, quando a ação a libera. `decisoes` traz as
     respostas do PO à lista do contrato aberto (`{id do item: {resposta, valor}}`), no de acordo de
     produto: o registro leva as decisões e as trocas que `tools.fechar_contrato.gravar` grava no
-    one-pager e na spec do Gate 0. Levanta `DecisaoInvalida` com a razão para a tela mostrar.
+    one-pager e na spec do Gate 0. `divisao` é o *refazer* de design ou dev dividido pela triagem
+    (`tools.triagem_pedido.Divisao.como_dict`), que o PO viu e confirmou: item sem dono recusa o refazer (D4, B), e o
+    registro e o efeito levam a divisão. Levanta `DecisaoInvalida` com a razão para a tela mostrar.
     """
     etapa = fluxo["etapa"]
     if acao not in acoes_possiveis(fluxo, sessao.papel, estado, estrito):
@@ -309,6 +318,20 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
             raise DecisaoInvalida(
                 f"Este comentário parece trazer mudança de conteúdo ({motivo}). Pelo *de acordo* ela não entra em "
                 "documento nenhum: ele só registra que a etapa está pronta como está. " + COMO_MUDAR_CONTEUDO[etapa])
+    if acao == REFAZER and divisao is not None and etapa in ("design", "dev"):
+        from tools.triagem_pedido import Divisao, ROTULO_DONO
+
+        lida = Divisao.de_dict(divisao)
+        if lida is None:
+            raise DecisaoInvalida("A divisão do pedido pela triagem veio ilegível. Peça a triagem de novo.")
+        if lida.indefinidos:
+            # D4, opção B: sem saber o dono, o item não vai a design (o one-pager ficaria dizendo outra coisa) nem a
+            # produto por conta da esteira — quem decide é o PO, em produto
+            nomes = "; ".join(f"{i.n}. «{i.rotulo(60)}»" for i in lida.indefinidos[:5])
+            raise DecisaoInvalida(
+                f"A triagem não soube o dono de {len(lida.indefinidos)} item(ns) do pedido: {nomes}. Mande cada um a "
+                f"Produto na divisão, ou use **Devolver** até Produto com o pedido — {ROTULO_DONO.get(etapa, etapa)} "
+                "não aplica item que pode mudar o one-pager aprovado.")
     respostas: Dict[str, str] = {}
     for chave, pergunta in perguntas_de_conferencia(etapa, acao):
         resposta = str((conferencia or {}).get(chave) or "").strip()
@@ -334,6 +357,8 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
     }
     if respostas:
         registro["conferencia"] = respostas
+    if acao == REFAZER and divisao is not None and etapa in ("design", "dev"):
+        registro["divisao"] = dict(divisao)
     if etapa == "produto" and acao in (DE_ACORDO, EXCECAO):
         registro.update(_fechar_contrato(estado, acao, decisoes, registro["quando"], registro["como"], estrito))
     efeito: Optional[Efeito] = None
@@ -352,7 +377,7 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
             pedido += (f"\n\nDevolutiva que motivou o retrabalho ({devolutiva['como']}, {devolutiva['quando']}):\n"
                        f"{devolutiva['comentario']}")
         novo["situacao"] = REFAZENDO
-        efeito = Efeito("refazer", etapa, pedido)
+        efeito = Efeito("refazer", etapa, pedido, registro.get("divisao"))
     elif acao == INICIAR:
         novo["situacao"] = GERANDO
         efeito = Efeito("iniciar", etapa)
@@ -413,19 +438,71 @@ def _fechar_contrato(estado: Dict[str, Any], acao: str, decisoes: Optional[Dict[
     return saida
 
 
-def concluir_execucao(fluxo: Dict[str, Any], ok: bool) -> Dict[str, Any]:
-    """Depois que o efeito rodou: a etapa volta ao parecer do dono, ou a missão é entregue."""
+def concluir_execucao(fluxo: Dict[str, Any], ok: bool, estado: Optional[Dict[str, Any]] = None,
+                      pede_devolver: bool = False) -> Dict[str, Any]:
+    """Depois que o efeito rodou: a etapa volta ao parecer do dono, ou a missão é entregue.
+
+    Ticket do QA ou da banca com dono `gate-estrutural` é devolução a produto (`devolucoes_a_produto`, gravado por
+    `agents.checkers.DespachoTicketsAgent`): a missão volta ao parecer de Produto com os tickets como devolutiva, como
+    se o dono da etapa tivesse devolvido. Até o PR 5 do plano «Produto dono do contrato» (23/10/2026) o ticket era
+    `RETRABALHO_EXTERNO`: ficava numa mensagem, não rodava nada, e o design construía sobre o defeito de produto.
+
+    `pede_devolver`: o *refazer* triado não aplicou nada e pede **Devolver** a Produto (D4, opção B). A etapa volta ao
+    parecer do dono, como estava antes do pedido — em «falhou», a única ação seria refazer de novo."""
     novo = json.loads(json.dumps(fluxo))
     situacao = novo.get("situacao")
-    if not ok:
+    if not ok and pede_devolver and situacao == REFAZENDO:
+        novo["situacao"] = AGUARDANDO
+    elif not ok:
         novo["falhou_refazendo"] = situacao == REFAZENDO
         novo["situacao"] = FALHOU if situacao != ENCERRANDO else AGUARDANDO
     elif situacao == ENCERRANDO:
         novo["situacao"] = ENTREGUE
     else:
         novo["situacao"] = AGUARDANDO
+        tickets = devolucoes_a_produto(estado or {})
+        if tickets and novo.get("etapa") in ("design", "dev") and situacao in (GERANDO, REFAZENDO):
+            _devolver_a_produto(novo, tickets)
     novo["atualizado_em"] = _agora()
     return novo
+
+
+#: Onde `agents.checkers.DespachoTicketsAgent` grava os tickets endereçados a produto, por gate.
+KEY_DEVOLUCOES_A_PRODUTO = "devolucoes_a_produto"
+
+
+def devolucoes_a_produto(estado: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Os tickets com dono `gate-estrutural` da última rodada de cada gate, sem repetir."""
+    vistos, saida = set(), []
+    por_gate = estado.get(KEY_DEVOLUCOES_A_PRODUTO)
+    for gate, tickets in (por_gate.items() if isinstance(por_gate, dict) else []):
+        for t in tickets or []:
+            if not isinstance(t, dict):
+                continue
+            chave = (gate, str(t.get("id") or ""), str(t.get("resumo") or "")[:120])
+            if chave not in vistos:
+                vistos.add(chave)
+                saida.append({**t, "gate": gate})
+    return saida
+
+
+def _devolver_a_produto(fluxo: Dict[str, Any], tickets: List[Dict[str, Any]]) -> None:
+    """Registra a devolução da esteira a produto, com os tickets como comentário, e reabre o parecer de produto."""
+    etapa = fluxo.get("etapa")
+    pareceres: List[Dict[str, Any]] = fluxo.setdefault("pareceres", [])
+    rodada = 1 + sum(1 for p in pareceres if p.get("etapa") == "produto" and p.get("acao") in (REFAZER, DEVOLVER))
+    comentario = "\n".join(
+        [f"O QA de {ROTULO_ETAPA.get(etapa, etapa)} endereçou a produto (dono `gate-estrutural`) {len(tickets)} "
+         "ticket(s) que o design não pode consertar — a decisão é do PO, no one-pager e na spec:", ""]
+        + [f"- `{t.get('id') or t.get('codigo') or '—'}` ({t.get('gate', '')}) — {str(t.get('resumo') or '')[:400]}"
+           for t in tickets[:12]]
+        + ([f"- … e mais {len(tickets) - 12}"] if len(tickets) > 12 else []))
+    _invalidar_a_partir_de(pareceres, "produto")
+    pareceres.append({"etapa": "produto", "acao": DEVOLVER, "autor": "esteira",
+                      "como": f"QA de {ROTULO_ETAPA.get(etapa, etapa)} (devolução automática)", "comentario": comentario,
+                      "quando": _agora(), "rodada": rodada, "assinatura": "", "valido": True, "gates": {},
+                      "excecao": False, "automatica": True, "tickets": tickets})
+    fluxo.update(etapa="produto", situacao=DEVOLVIDA)
 
 
 def ultima_devolutiva(fluxo: Dict[str, Any], etapa: str) -> Optional[Dict[str, Any]]:
@@ -458,9 +535,38 @@ def pedidos_do_po(fluxo: Optional[Dict[str, Any]]) -> List[Dict[str, str]]:
     """
     if not fluxo:
         return []
-    return [{"origem": f"refazer {ROTULO_ETAPA.get(p.get('etapa'), p.get('etapa'))} · {p.get('como', '')} · {p.get('quando', '')}",
-             "etapa": str(p.get("etapa") or ""), "texto": str(p.get("comentario") or "")}
-            for p in fluxo.get("pareceres") or [] if p.get("acao") == REFAZER and str(p.get("comentario") or "").strip()]
+    saida: List[Dict[str, str]] = []
+    for p in fluxo.get("pareceres") or []:
+        if p.get("acao") != REFAZER or not str(p.get("comentario") or "").strip():
+            continue
+        origem = f"refazer {ROTULO_ETAPA.get(p.get('etapa'), p.get('etapa'))} · {p.get('como', '')} · {p.get('quando', '')}"
+        saida += _pedido_por_dono(origem, str(p.get("etapa") or ""), str(p.get("comentario") or ""), p.get("divisao"))
+    return saida
+
+
+def _pedido_por_dono(origem: str, etapa: str, texto: str, divisao: Any) -> List[Dict[str, str]]:
+    """O pedido de refazer como os agentes o recebem: inteiro, ou — quando a triagem o dividiu e algum item não é da
+    etapa — um pedido por dono. O de produto vale em produto (a fidelidade de produto o confere, inclusive num refazer
+    de produto seguinte) e diz de onde veio (`a_montante_de`); o da etapa leva os itens dela e o contexto. Até o PR 5
+    (23/10/2026) o pedido inteiro era da etapa, e o A094 cobrava em design o botão que a spec do Gate 0 nomeia."""
+    from tools.triagem_pedido import DESIGN, DEV, PRODUTO, ROTULO_DONO, Divisao
+
+    d = Divisao.de_dict(divisao) if isinstance(divisao, dict) else None
+    if d is None or all(i.dono == etapa for i in d.itens):
+        return [{"origem": origem, "etapa": etapa, "texto": texto}]
+    saida: List[Dict[str, str]] = []
+    for dono in (PRODUTO, DESIGN, DEV):
+        if dono not in (PRODUTO, etapa) and not (dono == DESIGN and etapa == DEV):
+            continue
+        itens = d.texto_de(dono, com_contexto=dono == etapa)
+        if not d.de(dono) or not itens.strip():
+            continue
+        entrada = {"origem": f"{origem} · itens de {ROTULO_DONO[dono].lower()} (triagem)", "etapa": dono,
+                   "texto": itens}
+        if dono != etapa:
+            entrada["a_montante_de"] = etapa
+        saida.append(entrada)
+    return saida
 
 
 def notas_de_passagem(fluxo: Optional[Dict[str, Any]]) -> str:
@@ -484,11 +590,13 @@ def notas_de_passagem(fluxo: Optional[Dict[str, Any]]) -> str:
         linhas += ["## Pedidos de refazer do PO, em vigor", "",
                    "Todos continuam valendo, do mais antigo ao mais novo — um pedido não apaga o anterior. Onde dois "
                    "se contradizem, vale o mais novo. Aplique as TRAVAS e os AJUSTES no que é seu, e responda às "
-                   "perguntas de VALIDAÇÃO que o PO escreveu: a fidelidade a eles é conferida depois. Pedido feito a "
-                   "design ou a dev não muda o one-pager aprovado, e design e dev são conferidos contra ele: se o "
-                   "pedido muda o que o one-pager decide — habilidade, tempo, texto que a criança ou o professor lê, "
-                   "número, regra de mecânica —, aplique o que é da sua etapa e registre o resto como "
-                   "`[CONFLITO — pedido do PO × one-pager aprovado: …]`. Essa mudança se faz em produto.", ""]
+                   "perguntas de VALIDAÇÃO que o PO escreveu: a fidelidade a eles é conferida depois. O pedido feito a "
+                   "design ou a dev passa pela triagem item a item: o que é de produto aparece aqui como «itens de "
+                   "produto (triagem)» e já foi aplicado no one-pager e na spec do Gate 0 — acompanhe-o onde o texto "
+                   "aparece no seu documento, sem decidir de novo. Pedido sem essa divisão (anterior a 23/10/2026) não "
+                   "muda o one-pager aprovado: se ele muda o que o one-pager decide — habilidade, tempo, texto que a "
+                   "criança ou o professor lê, número, regra de mecânica —, aplique o que é da sua etapa e registre o "
+                   "resto como `[CONFLITO — pedido do PO × one-pager aprovado: …]`. Essa mudança se faz em produto.", ""]
         for i, p in enumerate(pedidos, 1):
             linhas.append(f"### Pedido {i} · {p['origem']}")
             linhas += [""] + [f"> {l}" if l.strip() else ">" for l in p["texto"].splitlines()] + [""]

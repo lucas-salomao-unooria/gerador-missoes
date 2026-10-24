@@ -195,11 +195,18 @@ CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_r
                              "fidelidade_entrada", "fidelidade_documentos", "interpretacao_entrada", "mudancas_no_aprovado",
                              "etapa_da_correcao", "escopo_banca", KEY_AGENTES_DEGRADADOS,
                              "contradicoes_documento", "contradicoes_referencia",
+                             # a cascata do pedido triado (PR 5 do plano «Produto dono do contrato»): a divisão e as
+                             # trocas de produto valem para a correção que as gravou, não para a seguinte
+                             "divisao_do_pedido", "edicoes_a_montante", "devolucoes_a_produto",
                              # a versão da rodada anterior de cada loop: some ao sair do loop, e aqui se a execução caiu
                              *(f"rodada_anterior_{c}" for c in ("one_pager", "spec_missao", "one_pager_resumido", "handoff_dev",
                                                                 "brief_assets", "prd_final", "one_pager_pedagogico"))})
 #: Em que etapa começou a correção desta execução (vazio sem pedido de correção).
 KEY_ETAPA_DA_CORRECAO = "etapa_da_correcao"
+#: A divisão do pedido por dono (`tools/triagem_pedido.Divisao.como_dict`) e as trocas que o passo de produto da cascata
+#: aplicou — lidas pela fidelidade, pela linha de base e pela montagem da spec do design.
+KEY_DIVISAO_DO_PEDIDO = "divisao_do_pedido"
+KEY_EDICOES_A_MONTANTE = "edicoes_a_montante"
 
 #: Documentos escritos por um AUTOR (não por gate). Quando uma reexecução os apaga, a versão que
 #: existia vai para `anterior_<chave>` e o autor a recebe no prompt (`agents/base.py`) como base.
@@ -314,6 +321,9 @@ class PedidoCorrecao:
     anexos: List[Tuple[str, str]] = field(default_factory=list)
     #: Anexos cujo texto não pôde ser extraído (PDF digitalizado, por exemplo).
     anexos_sem_texto: List[str] = field(default_factory=list)
+    #: O que a esteira diz sobre o pedido — a divisão da triagem na cascata (`tools/triagem_pedido.py`). Fica fora do
+    #: «Pedido, na íntegra»: a fidelidade confere só o que o PO escreveu (`texto_do_pedido`).
+    nota_da_esteira: str = ""
 
     @classmethod
     def de_doc_batch(cls, texto: str, doc_batch: Any) -> "PedidoCorrecao":
@@ -348,6 +358,8 @@ class PedidoCorrecao:
             "",
         ]
         linhas += [f"> {l}" if l.strip() else ">" for l in self.texto.strip().splitlines()] or ["> (vazio)"]
+        if self.nota_da_esteira.strip():
+            linhas += ["", "### Divisão do pedido pela triagem", "", self.nota_da_esteira.strip()]
         linhas += ["", "### Material anexado ao pedido", ""]
         if not self.anexos and not self.anexos_sem_texto:
             linhas.append("Nenhum.")
@@ -397,6 +409,9 @@ class RegistroCorrecao:
     pendencias: List[str] = field(default_factory=list)
     #: Passadas dos gates (a segunda em diante consertou bloqueios que a correção causou).
     passadas: int = 0
+    #: Passo de uma cascata (pedido de design ou dev com itens de produto, `executar_cascata_stream`): de onde veio o
+    #: pedido, o passo e a divisão que o PO confirmou.
+    cascata: Dict[str, Any] = field(default_factory=dict)
 
 
 # ------------------------------------------------------------------ estado
@@ -543,7 +558,8 @@ def preparar_estado(
 
 def preparar_estado_pontual(
     estado: Dict[str, Any], etapa: str, pedido_md: Optional[str], documentos: Dict[str, str],
-    edicoes: Sequence[Dict[str, Any]],
+    edicoes: Sequence[Dict[str, Any]], *, base_da_linha_de_base: Optional[Dict[str, Any]] = None,
+    edicoes_a_montante: Optional[Sequence[Dict[str, Any]]] = None, divisao: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Dict[str, Any], List[str]]:
     """Estado para a correção pontual: o de `preparar_estado`, com os documentos da etapa já editados e travados.
 
@@ -551,6 +567,11 @@ def preparar_estado_pontual(
     (`agents.callbacks.travar_documento_na_correcao_pontual`). `versao_anterior_<chave>` fica com a versão de antes —
     a fidelidade prova com ela que nada além das trocas mudou. A linha de base guarda o veredito de cada gate antes da
     correção (`tools/linha_de_base.py`). Pura, sem I/O.
+
+    Na cascata (`executar_cascata_stream`), a linha de base vem do estado de antes da cascata
+    (`base_da_linha_de_base`): o passo de produto apagou os vereditos de design e dev, e sem eles todo 🔴 antigo de
+    design pareceria causado pela correção. `edicoes_a_montante` são as trocas de produto que a etapa acompanha — o
+    bloqueio que cita o texto delas é da correção, não ruído do juiz —, e `divisao`, o que a triagem deu a cada dono.
     """
     from agents.callbacks import KEY_DOCUMENTOS_TRAVADOS, KEY_MODO_CORRECAO
     from tools import edicao_pontual, linha_de_base
@@ -578,7 +599,12 @@ def preparar_estado_pontual(
     limpo[KEY_DOCUMENTOS_TRAVADOS] = travados
     limpo["edicoes_pontuais"] = [dict(e) for e in edicoes]
     limpo[linha_de_base.KEY_LINHA_DE_BASE] = linha_de_base.capturar(
-        estado, sorted(k for k in CHAVES_POR_ETAPA.get(etapa, ()) if k.endswith("_status")))
+        base_da_linha_de_base if base_da_linha_de_base is not None else estado,
+        sorted(k for k in CHAVES_POR_ETAPA.get(etapa, ()) if k.endswith("_status")))
+    if edicoes_a_montante:
+        limpo[KEY_EDICOES_A_MONTANTE] = [dict(e) for e in edicoes_a_montante]
+    if divisao:
+        limpo[KEY_DIVISAO_DO_PEDIDO] = dict(divisao)
     return limpo, removidas
 
 
@@ -603,6 +629,36 @@ def validador_do_po(estado: Dict[str, Any], pedido_extra: str = ""):
     return validar
 
 
+def validador_das_decisoes(estado: Dict[str, Any]):
+    """Recusa a troca que apaga do one-pager ou da spec uma decisão do PO gravada no de acordo de produto
+    (`tools.fechar_contrato`, «<valor> — PO, parecer de <data>»). None sem decisão gravada.
+
+    Na cascata, o pedido feito em design vira correção de produto; o editor podia reescrever a linha que traz a resposta
+    do PO e a decisão sumia do texto — `decisoes_do_po` continuava no estado, mas o contrato não a dizia mais."""
+    from tools.fechar_contrato import KEY_DECISOES
+
+    gravadas = [str(d.get("gravado") or "") for d in estado.get(KEY_DECISOES) or []
+                if isinstance(d, dict) and str(d.get("gravado") or "").strip()]
+    if not gravadas:
+        return None
+
+    def validar(documentos: Dict[str, str]) -> List[str]:
+        antes = "\n".join(str(estado.get(k) or "") for k in ("one_pager", "spec_missao_gate0", "spec_missao"))
+        depois = "\n".join(documentos.get(k, "") for k in ("one_pager", "spec_missao"))
+        return [f"a troca apaga a decisão do PO gravada no de acordo de produto: «{g[:160]}» — ela fica como está; "
+                "se o pedido a contraria, registre em `pendencias`" for g in dict.fromkeys(gravadas)
+                if g in antes and g not in depois]
+
+    return validar
+
+
+def _juntar_validadores(*validadores):
+    ativos = [v for v in validadores if v is not None]
+    if not ativos:
+        return None
+    return lambda documentos: [f for v in ativos for f in (v(documentos) or [])]
+
+
 #: Tentativas do editor quando alguma troca não se aplica (trecho que não existe ou que se repete).
 TENTATIVAS_DO_EDITOR = 3
 
@@ -613,6 +669,8 @@ def texto_para_o_editor(pedido: "PedidoCorrecao") -> str:
     from tools.fidelidade import sem_relatos_de_gate
 
     partes = [sem_relatos_de_gate(pedido.texto).strip() or "(sem texto)"]
+    if pedido.nota_da_esteira.strip():
+        partes += ["", "### Divisão do pedido pela triagem", "", pedido.nota_da_esteira.strip()]
     for nome, conteudo in pedido.anexos:
         partes += ["", f"### Anexo: {nome}", "", conteudo.strip()]
     for nome in pedido.anexos_sem_texto:
@@ -821,6 +879,11 @@ def mensagem_de_correcao(registro: RegistroCorrecao) -> str:
     icone = {"success": "🟢", "bypassed": "🟡", "blocked": "🔴", "error": "❌"}.get(registro.status, "⚪")
     de_onde = "só diagnóstico e aprendizado" if registro.etapa == "transversal" else f"**{registro.etapa}**"
     motivo = registro.triagem.get("motivo") if isinstance(registro.triagem, dict) else ""
+    cascata = ""
+    if registro.cascata:
+        cascata = (f"\n\n🪜 Passo {registro.cascata.get('passo', '?')} da cascata do pedido feito em "
+                   f"**{registro.cascata.get('de', '?')}** — os itens de produto vão primeiro ao one-pager e à spec do "
+                   "Gate 0, e depois a etapa os acompanha.")
     if registro.modo == "pontual":
         from tools.edicao_pontual import resumo
 
@@ -833,6 +896,7 @@ def mensagem_de_correcao(registro: RegistroCorrecao) -> str:
             + ("\n\n**Para o PO decidir:**\n" + "\n".join(f"- {p}" for p in registro.pendencias)
                if registro.pendencias else "")
             + "\n\nDe onde veio cada bloqueio está em `linha-de-base-da-correcao.md`."
+            + cascata
         )
     if registro.motivo_modo:
         motivo = f"refeita pelos autores: {registro.motivo_modo}"
@@ -841,6 +905,7 @@ def mensagem_de_correcao(registro: RegistroCorrecao) -> str:
         + (f" ({motivo})" if motivo else "")
         + f". Status: {icone} {registro.status}. "
         "Veja as abas abaixo; o que mudou está na seção \"O que mudou nesta versão\" de cada documento refeito."
+        + cascata
     )
 
 
@@ -899,6 +964,14 @@ async def executar_correcao_stream(
     so_esta_etapa: bool = False,
     notas_de_passagem: Optional[str] = None,
     proponente: Any = None,
+    exigir_pontual: bool = False,
+    pular_sem_trocas: bool = False,
+    docs_da_versao_anterior: bool = False,
+    guardar_decisoes: bool = False,
+    base_da_linha_de_base: Optional[Dict[str, Any]] = None,
+    edicoes_a_montante: Optional[Sequence[Dict[str, Any]]] = None,
+    divisao: Optional[Dict[str, Any]] = None,
+    cascata: Optional[Dict[str, Any]] = None,
     **opcoes_runner: Any,
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Reexecuta `etapa` (e as seguintes) sobre a sessão em `run_dir`, gravando na mesma pasta.
@@ -915,6 +988,13 @@ async def executar_correcao_stream(
     Emite `correcao_started`, repassa os eventos do runner e fecha com `correcao_completed`
     (`result` + `registro`) ou `correcao_error` (backup restaurado). `opcoes_runner` vai para
     `run_orchestrator_pipeline_stream` (thinking_budget, include_thoughts, modo_estrito…).
+
+    Os passos de uma cascata (`executar_cascata_stream`) usam o resto: `exigir_pontual` recusa sem tocar em nada o
+    pedido que não cabe numa edição (o passo de produto não refaz o núcleo pelos autores — é Devolver a Produto);
+    `pular_sem_trocas` fecha com `correcao_sem_trocas`, sem rodar os gates, quando o editor não tem o que trocar (o
+    item já está no one-pager e na spec); `docs_da_versao_anterior` dá ao editor os documentos da etapa que o passo
+    anterior apagou (`versao_anterior_<chave>`); `guardar_decisoes` recusa a troca que apaga decisão do PO gravada no de
+    acordo; `base_da_linha_de_base`, `edicoes_a_montante`, `divisao` e `cascata` seguem para o estado e o registro.
     """
     from pipeline.runner import run_orchestrator_pipeline_stream
 
@@ -933,7 +1013,7 @@ async def executar_correcao_stream(
     pedido_md = pedido.como_markdown(etapa) if tem_pedido else None
     settings = get_settings()
     inicio = time.time()
-    documentos = edicao_pontual.documentos_da_etapa(estado, etapa)
+    documentos = edicao_pontual.documentos_da_etapa(estado, etapa, versao_anterior=docs_da_versao_anterior)
     edicoes: List[Dict[str, Any]] = []
     pendencias: List[str] = []
     modo, motivo_modo = "refazer", ""
@@ -941,6 +1021,8 @@ async def executar_correcao_stream(
         yield {"type": "edicao_started", "etapa": etapa, "passada": 1, "timestamp": time.time()}
         # o texto do one-pager do PO só sai pelo pedido dele: a troca que o apaga sem isso volta ao editor
         guarda = validador_do_po({**estado, KEY_PEDIDOS_DO_PO: _pedidos_do_po(conversa)}, texto_para_o_editor(pedido))
+        if guardar_decisoes:
+            guarda = _juntar_validadores(guarda, validador_das_decisoes(estado))
         resultado, proposta = await editar(texto_para_o_editor(pedido), etapa, documentos, proponente=proponente,
                                            validador=guarda)
         if resultado is not None:
@@ -951,6 +1033,23 @@ async def executar_correcao_stream(
         yield {"type": "edicao_completed", "etapa": etapa, "modo": modo, "motivo": proposta.motivo,
                "edicoes": edicoes, "pendencias": pendencias, "timestamp": time.time()}
     pontual = modo == edicao_pontual.MODO_PONTUAL
+    if exigir_pontual and not pontual:
+        # Na cascata, o item de produto que não cabe numa edição pede o refazer de produto pelos autores — isso é o
+        # Devolver a Produto, com o PO no parecer, não um efeito colateral do pedido feito em design (D4, opção B).
+        # Nada foi tocado: sem backup, sem estado limpo, sem registro
+        motivo = motivo_modo or ("a correção pontual está desligada (CORRECAO_PONTUAL=false)"
+                                 if not settings.correcao_pontual else "o editor não devolveu trocas")
+        yield {"type": "correcao_error", "registro": None, "restaurados": [], "timestamp": time.time(),
+               "pede_devolver": True,
+               "error": (f"os itens de produto do pedido não cabem numa correção pontual de {etapa} ({motivo}). "
+                         "Nada foi aplicado. Use **Devolver** até Produto com o pedido: o one-pager só muda lá.")}
+        return
+    if pular_sem_trocas and pontual and not edicoes:
+        # O que o item pede já está no one-pager e na spec (exp02em1b, 23/10 17:08: o pedido de design repetia o refazer
+        # de produto das 11:01, já aplicado). Rodar os gates de produto sobre o mesmo texto custaria de 10 a 24 min
+        yield {"type": "correcao_sem_trocas", "etapa": etapa, "pendencias": pendencias,
+               "motivo": proposta.motivo if settings.correcao_pontual else "", "timestamp": time.time()}
+        return
     if recusa and not pontual:
         # sem o material, só a edição pontual cabe: refazer o núcleo sem ele geraria outra missão. Nada foi tocado ainda:
         # sem backup, sem estado limpo, sem registro de correção
@@ -959,9 +1058,15 @@ async def executar_correcao_stream(
 
     def estado_inicial() -> Tuple[Dict[str, Any], List[str]]:
         if pontual:
-            novo, chaves = preparar_estado_pontual(estado, etapa, pedido_md, documentos, edicoes)
+            novo, chaves = preparar_estado_pontual(estado, etapa, pedido_md, documentos, edicoes,
+                                                   base_da_linha_de_base=base_da_linha_de_base,
+                                                   edicoes_a_montante=edicoes_a_montante, divisao=divisao)
         else:
             novo, chaves = preparar_estado(estado, etapa, pedido_md)
+            if divisao:
+                novo[KEY_DIVISAO_DO_PEDIDO] = dict(divisao)
+            if edicoes_a_montante:
+                novo[KEY_EDICOES_A_MONTANTE] = [dict(e) for e in edicoes_a_montante]
         if notas_de_passagem is not None:
             novo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
         novo[KEY_PEDIDOS_DO_PO] = _pedidos_do_po(conversa)
@@ -1023,8 +1128,10 @@ async def executar_correcao_stream(
                "timestamp": time.time()}
         conserto, proposta = await editar(texto_para_o_editor(pedido), etapa, documentos,
                                           achados=achados_para_o_editor(novos, final), proponente=proponente,
-                                          validador=validador_do_po({**final, "one_pager": documentos.get("one_pager", "")},
-                                                                    texto_para_o_editor(pedido)))
+                                          validador=_juntar_validadores(
+                                              validador_do_po({**final, "one_pager": documentos.get("one_pager", "")},
+                                                              texto_para_o_editor(pedido)),
+                                              validador_das_decisoes(estado) if guardar_decisoes else None))
         if conserto is None or not conserto.aplicadas:
             pendencias += [p for p in getattr(proposta, "pendencias", []) if p not in pendencias]
             yield {"type": "edicao_completed", "etapa": etapa, "modo": "sem-conserto", "motivo": proposta.motivo,
@@ -1058,6 +1165,7 @@ async def executar_correcao_stream(
         edicoes=edicoes,
         pendencias=pendencias,
         passadas=passada,
+        cascata=dict(cascata or {}),
     )
     mensagens: List[Dict[str, Any]] = []
     if tem_pedido and pedido and pedido.texto.strip():
@@ -1078,6 +1186,139 @@ async def executar_correcao_stream(
     mensagens.append({"role": "assistant", "content": mensagem_de_correcao(registro), "pipeline_result": result})
     mesclar_conversa(run_dir, conversa, result, registro, mensagens)
     yield {"type": "correcao_completed", "result": result, "registro": asdict(registro), "timestamp": time.time()}
+
+
+def _registrar_cascata_desfeita(run_dir: Path, registro: Dict[str, Any], erro: str) -> None:
+    """Depois de restaurar o backup do passo de produto, a conversa volta sem o registro dele: o histórico ganha a
+    entrada, marcada como desfeita, e a mensagem diz por quê — senão o pedido sumia sem rastro."""
+    try:
+        _, conversa, briefing = carregar_sessao(run_dir)
+        campos = {k: registro[k] for k in RegistroCorrecao.__dataclass_fields__ if k in registro}
+        entrada = RegistroCorrecao(**campos)
+        entrada.status, entrada.desfeita_em = "desfeita", time.strftime("%d/%m/%Y %H:%M:%S")
+        falso = SimpleNamespace(status=str(conversa.get("status") or "success"), state={}, gates=conversa.get("gates") or {},
+                                duration_seconds=conversa.get("duration_seconds", 0.0), attached_files=[],
+                                step_thoughts=conversa.get("step_thoughts") or {}, session_id=conversa.get("session_id", ""),
+                                user_id=conversa.get("user_id", ""), prompt=briefing)
+        mesclar_conversa(run_dir, conversa, falso, entrada,
+                         [{"role": "assistant", "content": f"❌ **Pedido não aplicado:** {erro}"}])
+    except Exception as exc:  # o registro é para gente ler; a restauração já aconteceu
+        logger.warning("Não consegui registrar a cascata desfeita em %s: %s", Path(run_dir).name, exc)
+
+
+def precisa_de_cascata(divisao: Any) -> bool:
+    """O pedido dividido tem item que a etapa não aplica sozinha: de produto, ou de design num pedido feito ao dev."""
+    from tools.triagem_pedido import DESIGN, DEV, Divisao
+
+    d = Divisao.de_dict(divisao) if isinstance(divisao, dict) else divisao
+    return bool(d and (d.tem_produto or (d.etapa == DEV and d.de(DESIGN))))
+
+
+async def executar_cascata_stream(
+    run_dir: Path,
+    etapa: str,
+    pedido: PedidoCorrecao,
+    divisao: Dict[str, Any],
+    triagem: Any = None,
+    *,
+    so_esta_etapa: bool = True,
+    notas_de_passagem: Optional[str] = None,
+    proponente: Any = None,
+    **opcoes_runner: Any,
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """Pedido do PO feito em design ou dev com item de produto: produto pontual, depois design e dev pontuais (D4, A).
+
+    Plano «Produto dono do contrato», PR 5. Na exp02ef1b (23/10 13:24) o PO pediu ao design textos de tela, as opções da
+    5A e o botão «Publicar no Álbum», que está quatro vezes na spec do Gate 0: tudo ficou nos documentos de design, o
+    one-pager seguiu dizendo outra coisa, e o pedido custou quatro refazeres de design (~2 h). Aqui:
+
+    1. **Produto pontual**, só com os itens que a triagem deu a produto (`tools/triagem_pedido.py`): o editor troca no
+       núcleo, no one-pager, no resumido e na spec do Gate 0, e os gates de produto julgam com a linha de base. A
+       decisão que o PO gravou no de acordo (`decisoes_do_po`) não pode sair do texto. Se os itens não cabem numa
+       edição, nada é aplicado e o PO devolve a Produto (D4, B); se a correção deixa bloqueio novo em produto que o
+       editor não consertou, a sessão volta ao estado de antes da cascata, com o mesmo recado. Se o one-pager e a
+       spec já dizem o que o item pede, o passo não roda os gates.
+    2. **Design pontual** (e **dev**, quando o pedido foi feito ao dev) com o pedido inteiro e a divisão: os itens de
+       produto já estão a montante, a etapa os acompanha onde o texto aparece e aplica os seus. A linha de base é a de
+       antes da cascata, e as trocas de produto contam como da correção.
+
+    Item sem dono não chega aqui: `pipeline.passagem.aplicar` recusa o Refazer (D4, B). Custo medido nas sessões de
+    23/10: produto pontual 614–1.418 s + design pontual 278–1.448 s.
+    """
+    from tools.triagem_pedido import DESIGN, DEV, PRODUTO, Divisao, nota_para_a_etapa
+
+    run_dir = Path(run_dir)
+    d = Divisao.de_dict(divisao)
+    if d is None or d.indefinidos:
+        sem_dono = len(d.indefinidos) if d else 0
+        yield {"type": "correcao_error", "registro": None, "restaurados": [], "timestamp": time.time(),
+               "pede_devolver": True,
+               "error": (f"a triagem não soube o dono de {sem_dono} item(ns) do pedido. Nada foi aplicado: use "
+                         "**Devolver** até Produto com o pedido, ou mande esses itens a produto na divisão.")}
+        return
+    estado_antes, _, _ = carregar_sessao(run_dir)
+    passos = ([PRODUTO] if d.tem_produto else []) + ([DESIGN] if etapa == DEV and (d.tem_produto or d.de(DESIGN))
+                                                     else []) + [etapa]
+    a_montante: List[Dict[str, Any]] = []
+    # um passo que rodou apagou do estado os documentos das etapas seguintes (guardados em `versao_anterior_<chave>`)
+    anterior_rodou = False
+    for n, passo in enumerate(passos, 1):
+        ultimo = n == len(passos)
+        info = {"de": etapa, "passo": f"{n}/{len(passos)} ({passo})", "divisao": d.como_dict()}
+        if passo == PRODUTO:
+            item_pedido = PedidoCorrecao(
+                texto=d.texto_de(PRODUTO), anexos=list(pedido.anexos), anexos_sem_texto=list(pedido.anexos_sem_texto),
+                nota_da_esteira=(f"Estes são os itens de produto de um pedido feito pelo PO em {etapa}, triados item a "
+                                 "item. Aplique-os onde a decisão mora — núcleo, one-pager, resumido e spec do Gate 0 —; "
+                                 f"{etapa} os acompanha depois."))
+            kwargs = dict(exigir_pontual=True, pular_sem_trocas=True, guardar_decisoes=True)
+        else:
+            item_pedido = PedidoCorrecao(texto=pedido.texto, anexos=list(pedido.anexos),
+                                         anexos_sem_texto=list(pedido.anexos_sem_texto),
+                                         nota_da_esteira=nota_para_a_etapa(d))
+            kwargs = dict(docs_da_versao_anterior=anterior_rodou, base_da_linha_de_base=estado_antes,
+                          edicoes_a_montante=list(a_montante))
+        registro: Dict[str, Any] = {}
+        final: Dict[str, Any] = {}
+        sem_trocas = False
+        async for evento in executar_correcao_stream(
+                run_dir, passo, item_pedido, triagem, so_esta_etapa=so_esta_etapa if ultimo else True,
+                notas_de_passagem=notas_de_passagem, proponente=proponente, divisao=d.como_dict(), cascata=info,
+                **kwargs, **opcoes_runner):
+            tipo = evento.get("type")
+            if tipo == "correcao_error":
+                yield evento
+                return
+            if tipo == "correcao_sem_trocas":
+                sem_trocas = True
+            if tipo == "correcao_completed":
+                registro = dict(evento.get("registro") or {})
+                final = dict(getattr(evento.get("result"), "state", None) or {})
+            yield evento
+        if passo != PRODUTO:
+            a_montante += [dict(e) for e in registro.get("edicoes") or []]
+            anterior_rodou = anterior_rodou or bool(registro)
+            continue
+        if sem_trocas:
+            yield {"type": "cascata_produto_sem_trocas", "timestamp": time.time(),
+                   "mensagem": "o one-pager e a spec do Gate 0 já dizem o que os itens de produto pedem"}
+            continue
+        from tools import linha_de_base
+
+        novos = linha_de_base.bloqueios_novos(final.get("linha_de_base_linhas") or [])
+        if novos and registro.get("backup"):
+            # A correção de produto quebrou o que estava aprovado e o editor não consertou: o design não constrói sobre
+            # isso. A sessão volta a antes da cascata, e o PO decide em produto (Devolver)
+            restaurados = restaurar_backup(run_dir, run_dir / str(registro["backup"]))
+            erro = (f"os itens de produto causaram {len(novos)} bloqueio(s) em produto que a correção pontual não "
+                    "resolveu (" + "; ".join(f"`{l['gate']}`" for l in novos[:4]) + "). A missão voltou ao estado de "
+                    "antes do pedido. Use **Devolver** até Produto com o pedido.")
+            _registrar_cascata_desfeita(run_dir, registro, erro)
+            yield {"type": "correcao_error", "registro": registro, "restaurados": restaurados, "timestamp": time.time(),
+                   "error": erro, "pede_devolver": True}
+            return
+        anterior_rodou = True
+        a_montante += [dict(e) for e in registro.get("edicoes") or []]
 
 
 async def iniciar_etapa_stream(
@@ -1198,6 +1439,8 @@ class Triagem:
     resumo_anexos: str = ""
     confianca: str = ""
     bruto: str = ""
+    #: O dono de cada item numerado do pedido (`[{n, dono, motivo}]`, `tools.triagem_pedido.numerados`).
+    itens: List[Dict[str, Any]] = field(default_factory=list)
 
     @property
     def confiavel(self) -> bool:
@@ -1226,8 +1469,10 @@ class Triagem:
                 envelope = dados
                 break
         etapa = str(envelope.get("etapa") or "").strip().lower()
+        itens = [dict(i) for i in envelope.get("itens") or [] if isinstance(i, dict)]
         if etapa not in ETAPAS_DE_TRIAGEM:
-            return cls(etapa="indefinida", motivo="a triagem não devolveu uma etapa válida", bruto=texto or "")
+            return cls(etapa="indefinida", motivo="a triagem não devolveu uma etapa válida", bruto=texto or "",
+                       itens=itens)
         return cls(
             etapa=etapa,
             motivo=str(envelope.get("motivo") or "").strip(),
@@ -1235,6 +1480,7 @@ class Triagem:
             resumo_anexos=str(envelope.get("resumo_anexos") or "").strip(),
             confianca=str(envelope.get("confianca") or "").strip().lower(),
             bruto=texto or "",
+            itens=itens,
         )
 
 
@@ -1273,7 +1519,12 @@ def montar_mapa_da_missao(estado: Dict[str, Any]) -> str:
 async def triar_pedido(
     pedido: PedidoCorrecao, doc_batch: Any, estado: Dict[str, Any], *, thinking_budget: Optional[int] = 1024
 ) -> Triagem:
-    """Roda o agente de triagem num runner mínimo, fora da esteira. Falha vira `indefinida`."""
+    """Roda o agente de triagem num runner mínimo, fora da esteira. Falha vira `indefinida`.
+
+    Leva os itens do pedido numerados (`tools.triagem_pedido.numerados`): quando a etapa é design ou dev, a resposta
+    dá o dono de cada item, e o código o junta à regra conservadora (`tools.triagem_pedido.dividir`)."""
+    from tools.triagem_pedido import numerados
+
     try:
         from google.adk.runners import InMemoryRunner
 
@@ -1284,7 +1535,8 @@ async def triar_pedido(
         runner = InMemoryRunner(agent=get_triagem_correcao_agent(thinking_budget=thinking_budget), app_name=app)
         sessao = await runner.session_service.create_session(
             app_name=app, user_id="triagem",
-            state={"briefing": str(estado.get("briefing") or ""), "mapa_da_missao": montar_mapa_da_missao(estado)},
+            state={"briefing": str(estado.get("briefing") or ""), "mapa_da_missao": montar_mapa_da_missao(estado),
+                   "itens_do_pedido": numerados(pedido.texto)},
         )
         async for _ in runner.run_async(user_id="triagem", session_id=sessao.id, new_message=build_user_message(pedido.texto, doc_batch)):
             pass
@@ -1296,6 +1548,17 @@ async def triar_pedido(
 
 def triar_pedido_sync(pedido: PedidoCorrecao, doc_batch: Any, estado: Dict[str, Any], **kwargs: Any) -> Triagem:
     return asyncio.run(triar_pedido(pedido, doc_batch, estado, **kwargs))
+
+
+async def triar_divisao(pedido: PedidoCorrecao, etapa: str, estado: Dict[str, Any], *, triador: Any = None,
+                        **kwargs: Any) -> Tuple[Triagem, Any]:
+    """`(triagem, divisão)` do pedido feito no parecer de `etapa` (design ou dev): a triagem do LLM dá um dono por item,
+    e a regra conservadora manda a produto o que ela pega (`tools.triagem_pedido.dividir`). `triador` troca a triagem
+    nos testes (mesma assinatura de `triar_pedido`)."""
+    from tools.triagem_pedido import dividir
+
+    triagem = await (triador or triar_pedido)(pedido, None, estado, **kwargs)
+    return triagem, dividir(pedido.texto, etapa, estado, triagem.itens)
 
 
 # ------------------------------------------------------------------ desfazer
