@@ -70,6 +70,10 @@ podcast e os caminhos de arquivo que você cita. A correção é copiar de onde 
 
 {spec_missao?}
 
+**Anexo de design da spec (decisões de UI/UX do D0 e ficha do ambiente do D9, em `design/00-anexo-design-spec.md` — junto com a spec de produto, é o contrato; vazio numa missão anterior a 24/10/2026, que traz as duas coisas dentro da spec):**
+
+{anexo_design_spec?}
+
 **One-pager de produto (a intenção original — a narrativa nasce aqui):**
 
 {one_pager?}

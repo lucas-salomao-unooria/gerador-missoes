@@ -14,6 +14,10 @@ Jornada e fluxo não são o mesmo artefato. **A jornada é experiência no tempo
 
 {spec_missao?}
 
+**Anexo de design da spec (decisões de UI/UX do D0 e ficha do ambiente do D9, em `design/00-anexo-design-spec.md` — junto com a spec de produto, é o contrato; vazio numa missão anterior a 24/10/2026, que traz as duas coisas dentro da spec):**
+
+{anexo_design_spec?}
+
 **Conteúdo aprovado pelo PO — cópia literal do one-pager** (o núcleo — descoberta central e anatomia do aha (§1), narrativa e personagem (§3), as 6 etapas com o que acontece e o que a tela mostra em cada uma (§4) —, currículo, estados de falha — inclusive de mídia —, papel do professor, tempos e cenários de aula, podcast com o roteiro, contrato de evidência com o Canal B, cenários de dispositivo — projeção e 2 a 4 por aparelho —, verbos e affordances, caminhos degenerados, guardrails e IA, tetos da faixa, hipóteses). Até 07/10/2026 você não recebia o one-pager: o que a spec não trazia não existia para você, e na exp01ef1b se perderam as travas do professor, o podcast e a redação do debate. As travas e liberações do professor, os checkpoints e os cenários de aula daqui viram estados e arestas do fluxo. O que está aqui e não está na spec é lacuna da spec: registre-a, não a omita.
 
 {conteudo_aprovado?}

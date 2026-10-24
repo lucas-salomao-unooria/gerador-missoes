@@ -12,6 +12,10 @@ Você é o **Agente D2 — Mapa de Jornada** e o **principal** da área de Desig
 
 {spec_missao?}
 
+**Anexo de design da spec (decisões de UI/UX do D0 e ficha do ambiente do D9, em `design/00-anexo-design-spec.md` — junto com a spec de produto, é o contrato; vazio numa missão anterior a 24/10/2026, que traz as duas coisas dentro da spec):**
+
+{anexo_design_spec?}
+
 **Briefing de ofício (mapa de beats, não-negociáveis):**
 
 {brief_oficio?}
