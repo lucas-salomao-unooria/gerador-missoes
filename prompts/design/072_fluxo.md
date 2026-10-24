@@ -58,9 +58,10 @@ Para o diagrama ficar legível:
 
 ## O segundo grafo — fluxo do professor (obrigatório)
 
-A visão do professor é entregável: quem prepara a missão é o professor de qualquer disciplina, e o board no Miro espelha este grafo ao lado do do estudante. O preparo é **padrão da plataforma**, igual em toda missão (D7): os nós `E0-PROF-01…05`, os estados encostados, o caminho curto do banco padrão como aresta própria, a volta da curadoria, o gate de ativação que liga ao grafo do estudante, os gates de condução e os rótulos vindos do bloco 8 estão em `references/padrao-plataforma-preparo-professor.md`, seção «No fluxo — o segundo grafo» — incluído abaixo. Os cinco testes valem para este grafo também.
+A visão do professor é entregável: quem prepara a missão é o professor de qualquer disciplina, e o board no Miro espelha este grafo ao lado do do estudante. O preparo é **padrão da plataforma**, igual em toda missão (D7): os nós `E0-PROF-01…05`, os estados encostados, o caminho curto do banco padrão como aresta própria, a volta da curadoria, o gate de ativação que liga ao grafo do estudante, os gates de condução e os rótulos vindos do bloco 8 estão em `references/padrao-plataforma-preparo-professor-fluxo.md`, com a definição das cinco telas em `references/padrao-plataforma-preparo-professor.md` — os dois incluídos abaixo. Os cinco testes valem para este grafo também.
 
 <!-- include: references/padrao-plataforma-preparo-professor.md -->
+<!-- include: references/padrao-plataforma-preparo-professor-fluxo.md -->
 
 ## Os cinco testes (rode todos, sempre)
 

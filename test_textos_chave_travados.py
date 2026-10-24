@@ -476,34 +476,67 @@ def test_decomposicao_nao_e_achado_e_guarda_que_trava_na_resposta_certa_e():
 
 # --------------------------------------------------------------------------- E0-PROF como padrão da plataforma
 PREPARO = "references/padrao-plataforma-preparo-professor.md"
+#: O bloco de cada agente e um trecho que só ele traz: o prompt inclui a definição comum e só o próprio bloco (revisão de
+#: 24/10/2026 — com a referência inteira, a jornada recebia a ordem de desenhar o grafo do professor e as regras do QA).
+BLOCOS_DO_PREPARO = {
+    "jornada": "Tabela própria, **colunas** = os passos do preparo no hub mais a aula",
+    "fluxo": "sob o título fixo `## Fluxo do professor (Mermaid — obrigatório)`",
+    "telas": "**Estados a gerar** (Stitch): padrão · gerando · sem saldo · pacote pronto.",
+    "prototipo": "`E0-PROF-01…05` navegáveis (escolher a missão → recorte da aula → geração em andamento",
+    "qa": "tela do professor ausente do Stitch é ⛔ com dono `telas`",
+}
 
 
-@pytest.mark.parametrize("prompt, exigencias", [
-    ("design/071_jornada.md", ["`E0-PROF-01` **Escolher a missão no catálogo.**", "Unooria Hub (kit configuração)",
-                               "Escolher a missão → Recorte da aula (disciplina · tema · assuntos · contexto)",
-                               "As telas de condução", "a mesma missão em três aulas"]),
-    ("design/072_fluxo.md", ["## Fluxo do professor (Mermaid — obrigatório)",
-                             "`E0-PROF-02 -->|usar banco padrão| E0-PROF-05`", "`atividade ativada → E1-ALU-01`",
-                             "O módulo `/atividades` é o motor do Instanooria e não se reusa"]),
-    ("design/075_telas.md", ["**Construída nos dois estados**", "padrão · gerando · sem saldo · pacote pronto",
-                             "uma disciplina diferente do banco default"]),
-    ("design/079_prototipo.md", ["**O trilho do professor é obrigatório e começa antes da aula:**",
-                                 "a transição «atividade ativada» levando à primeira tela do estudante"]),
-    ("design/088_qa_entregaveis.md", ["tela do professor ausente do Stitch é ⛔ com dono `telas`",
-                                      "caminho curto** `E0-PROF-01 → 02 → 05`", "Teste das três disciplinas",
-                                      "Simulação de preparo em minutos"]),
+@pytest.mark.parametrize("prompt, bloco, exigencias", [
+    ("design/071_jornada.md", "jornada", ["`E0-PROF-01` **Escolher a missão no catálogo.**", "Unooria Hub (kit configuração)",
+                                          "Escolher a missão → Recorte da aula (disciplina · tema · assuntos · contexto)",
+                                          "As telas de condução", "a mesma missão em três aulas"]),
+    ("design/072_fluxo.md", "fluxo", ["## Fluxo do professor (Mermaid — obrigatório)",
+                                      "`E0-PROF-02 -->|usar banco padrão| E0-PROF-05`", "`atividade ativada → E1-ALU-01`",
+                                      "O módulo `/atividades` é o motor do Instanooria e não se reusa"]),
+    ("design/075_telas.md", "telas", ["**construída nos dois estados**", "padrão · gerando · sem saldo · pacote pronto",
+                                      "uma disciplina diferente do banco default"]),
+    ("design/079_prototipo.md", "prototipo", ["**O trilho do professor é obrigatório e começa antes da aula:**",
+                                              "a transição «atividade ativada» levando à primeira tela do estudante"]),
+    ("design/088_qa_entregaveis.md", "qa", ["tela do professor ausente do Stitch é ⛔ com dono `telas`",
+                                            "caminho curto** `E0-PROF-01 → 02 → 05`", "Teste das três disciplinas",
+                                            "Simulação de preparo em minutos"]),
 ])
-def test_preparo_do_professor_saiu_do_prompt_e_o_prompt_ainda_pede_o_mesmo(prompt, exigencias):
+def test_preparo_do_professor_saiu_do_prompt_e_o_prompt_ainda_pede_o_mesmo(prompt, bloco, exigencias):
     """D7: o fluxo fixo E0-PROF-01…05 vira padrão da plataforma em references/, e cada prompt de design o cita — o
-    texto expandido traz as mesmas exigências que o prompt trazia."""
+    texto expandido traz as mesmas exigências que o prompt trazia, e só elas: a definição das cinco telas e o bloco do
+    próprio agente, nenhum dos outros quatro (o 071 não pede o grafo do professor; o 072 não pede a conferência do QA)."""
     from prompts import get_prompt_raw, load_prompt
 
     bruto = get_prompt_raw(prompt)
-    assert f"<!-- include: {PREPARO} -->" in bruto
+    proprio = PREPARO.replace(".md", f"-{bloco}.md")
+    assert f"<!-- include: {PREPARO} -->" in bruto and f"<!-- include: {proprio} -->" in bruto
     assert "`E0-PROF-03` Geração em andamento (progresso por polling" not in bruto  # a descrição mora na referência
     expandido = load_prompt(prompt, stitch_mcp_mode="x", stitch_project_url_base="x", qa_max_rodadas=2)
     for e in exigencias:
         assert e in expandido, (prompt, e)
+    assert BLOCOS_DO_PREPARO[bloco] in expandido
+    for outro, trecho in BLOCOS_DO_PREPARO.items():
+        if outro != bloco:
+            assert trecho not in expandido, (prompt, outro)
+            assert f"preparo-professor-{outro}.md -->" not in bruto
+
+
+def test_nenhum_prompt_inclui_bloco_do_preparo_de_outro_agente():
+    """A definição comum não traz instrução de agente nenhum, e cada bloco é incluído só pelo prompt dele."""
+    from prompts import get_prompt_raw
+    from prompts.loader import PROMPTS_DIR
+
+    comum = get_prompt_raw(PREPARO)
+    for trecho in BLOCOS_DO_PREPARO.values():
+        assert trecho not in comum
+    donos = {"jornada": "071_jornada.md", "fluxo": "072_fluxo.md", "telas": "075_telas.md",
+             "prototipo": "079_prototipo.md", "qa": "088_qa_entregaveis.md"}
+    for md in PROMPTS_DIR.rglob("*.md"):
+        texto = md.read_text(encoding="utf-8")
+        for bloco, dono in donos.items():
+            if f"include: references/padrao-plataforma-preparo-professor-{bloco}.md" in texto:
+                assert md.name == dono, (md.name, bloco)
 
 
 # --------------------------------------------------------------------------- a esteira

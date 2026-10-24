@@ -59,9 +59,10 @@ O arquivo `design/09-diagramas.html` é montado automaticamente a partir deste b
 Célula sem resposta na spec é `⚠️ lacuna`, nunca invenção.
 
 ### Seção 1c — Jornada do professor (preparo e condução)
-A missão é aplicada pelo professor de **qualquer disciplina**, e a visão dele é entregável tanto quanto a do estudante. O preparo é **padrão da plataforma**, igual em toda missão (D7): a tabela, as raias, os estados e a linha por disciplina estão em `references/padrao-plataforma-preparo-professor.md`, seção «Na jornada» — incluído abaixo. A condução (gates, dashboard, relatório) vem da spec da missão.
+A missão é aplicada pelo professor de **qualquer disciplina**, e a visão dele é entregável tanto quanto a do estudante. O preparo é **padrão da plataforma**, igual em toda missão (D7): a tabela, as raias, os estados e a linha por disciplina estão em `references/padrao-plataforma-preparo-professor-jornada.md`, com a definição das cinco telas em `references/padrao-plataforma-preparo-professor.md` — os dois incluídos abaixo. A condução (gates, dashboard, relatório) vem da spec da missão.
 
 <!-- include: references/padrao-plataforma-preparo-professor.md -->
+<!-- include: references/padrao-plataforma-preparo-professor-jornada.md -->
 
 ### Seção 2 — Cenários de dispositivo
 | | 1 estudante/dispositivo | 2–4 por dispositivo | Projeção única |

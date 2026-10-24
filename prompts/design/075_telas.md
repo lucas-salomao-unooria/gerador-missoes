@@ -137,9 +137,10 @@ Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica — a redund
 
 ## Telas de professor — obrigatórias (4.3 e 4.4)
 
-**Preparo (Seção 1c da jornada — a missão é customizada pelo professor de qualquer disciplina):** as cinco telas do padrão da plataforma, `E0-PROF-01…05` — o recorte da aula construído nos dois estados do critério 4.3, os estados a gerar, e o recorte e a curadoria preenchidos com uma aula de disciplina diferente do banco default —, como estão em `references/padrao-plataforma-preparo-professor.md` (incluído abaixo).
+**Preparo (Seção 1c da jornada — a missão é customizada pelo professor de qualquer disciplina):** as cinco telas do padrão da plataforma, `E0-PROF-01…05` — o recorte da aula construído nos dois estados do critério 4.3, os estados a gerar, e o recorte e a curadoria preenchidos com uma aula de disciplina diferente do banco default —, como estão em `references/padrao-plataforma-preparo-professor-telas.md`, com a definição das cinco telas em `references/padrao-plataforma-preparo-professor.md` (os dois incluídos abaixo).
 
 <!-- include: references/padrao-plataforma-preparo-professor.md -->
+<!-- include: references/padrao-plataforma-preparo-professor-telas.md -->
 
 **Condução (4.4):** dashboard em tempo real (quem está em que etapa, **o que pede ação**) · controles de handoff · evidências agregadas da turma · evidência individual (com o grau da medida ao lado). Dados vêm da raia "Evidência capturada". Nenhuma comparação nominal de mérito (8.5); nenhuma coluna ordenável com medida de criança (PED-07).
 

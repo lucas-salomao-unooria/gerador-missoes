@@ -91,9 +91,10 @@ Isto decide o layout do palco e é onde protótipo de missão costuma mentir. A 
 
 - **`viewport` declarado** (a casca de aparelho, tipicamente 375×812): a tela da criança é de celular, mas aparece **dentro de uma moldura de aparelho centralizada numa página desktop**. Desenhe assim: fundo de página desktop, a moldura do aparelho ao centro com cantos arredondados e uma borda de 8 a 10px em `borda/padrao`, e a tela por dentro nas medidas declaradas. É o que a criança vê de verdade num Chromebook.
 - **Sem `viewport`**: a experiência ocupa a janela inteira. O palco é a área útil do desktop, tipicamente 1366×768.
-- **Telas de professor e de projeção** são sempre desktop cheio, sem moldura de aparelho, mesmo numa missão cuja tela de estudante é de celular. Marque no trilho a qual ator cada tela pertence. **O trilho do professor é obrigatório e começa antes da aula:** as cinco telas do preparo, navegáveis, como manda o padrão da plataforma (`references/padrao-plataforma-preparo-professor.md`, seção «No protótipo», incluído logo abaixo).
+- **Telas de professor e de projeção** são sempre desktop cheio, sem moldura de aparelho, mesmo numa missão cuja tela de estudante é de celular. Marque no trilho a qual ator cada tela pertence. **O trilho do professor é obrigatório e começa antes da aula:** as cinco telas do preparo, navegáveis, como manda o padrão da plataforma (`references/padrao-plataforma-preparo-professor-prototipo.md`, com a definição das cinco telas em `references/padrao-plataforma-preparo-professor.md` — os dois incluídos logo abaixo).
 
 <!-- include: references/padrao-plataforma-preparo-professor.md -->
+<!-- include: references/padrao-plataforma-preparo-professor-prototipo.md -->
 
 Uma linha de 11px abaixo da moldura diz o que ela é: `casca de aparelho 375×812 dentro do hub` ou `janela do hub, 1366×768`. Sem isso, quem revisa mede a tela errada e pede mudança que não existe.
 
