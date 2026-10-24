@@ -60,6 +60,7 @@ from tools.auth import (
     emitir_token,
     validar_token,
 )
+from tools import fechar_contrato
 from tools.doc_parser import EXTENSOES_ACEITAS, DocumentBatch, validate_and_process_batch
 from tools.markdown_blocos import desembrulhar_documento, sanear_para_streamlit
 
@@ -599,20 +600,121 @@ def _render_profundidade(estado: Dict[str, Any]) -> None:
 
 
 def _decidir(run_dir: Path, fluxo: Dict[str, Any], acao: str, comentario: str,
-             estado: Dict[str, Any], opts: Dict[str, Any], conferencia: Optional[Dict[str, str]] = None) -> None:
+             estado: Dict[str, Any], opts: Dict[str, Any], conferencia: Optional[Dict[str, str]] = None,
+             decisoes: Optional[Dict[str, Dict[str, str]]] = None) -> None:
     sessao = sessao_atual()
     try:
-        novo, efeito = passagem.aplicar(fluxo, acao, sessao, comentario, estado, conferencia)
-        gravado = passagem.registrar_fluxo(run_dir, novo, fluxo.get("versao", 0))
+        novo, efeito = passagem.aplicar(fluxo, acao, sessao, comentario, estado, conferencia, decisoes)
+        # no de acordo de produto, as respostas do contrato entram no one-pager e na spec antes de o fluxo liberar o design
+        gravado = passagem.registrar_decisao(run_dir, fluxo, novo, acao)
         if efeito:
             execucao_fundo.executar_efeito(run_dir, efeito, passagem.notas_de_passagem(gravado), **_opcoes_runner(opts))
-    except (passagem.DecisaoInvalida, passagem.ConflitoDeVersao, execucao_fundo.ExecucaoEmAndamento) as exc:
+    except (passagem.DecisaoInvalida, passagem.ConflitoDeVersao, execucao_fundo.ExecucaoEmAndamento,
+            fechar_contrato.RespostaInvalida) as exc:
         st.error(str(exc))
         return
     execucao_fundo.notificar({"tipo": "parecer", "run_dir": str(run_dir), "acao": acao, "etapa": fluxo["etapa"],
                               "autor": sessao.assinatura_de(fluxo["etapa"])})
     invalidar_cache_sessoes()
     st.rerun()
+
+
+def _render_padroes(estado: Dict[str, Any], etapa: str) -> None:
+    """Os padrões de `defaults-missao.md` aplicados nos documentos da etapa, como «padrão a confirmar» (plano, D5).
+
+    O arquivo é rascunho v0 e é a base de 16 das 34 decisões D0 do acervo: até ser validado, quem libera a etapa vê o que
+    foi aplicado por padrão — sem aceite item a item, que multiplicaria o trabalho do PO sem informação nova."""
+    padroes = fechar_contrato.padroes_aplicados(estado, etapa)
+    validados = fechar_contrato.defaults_validados()
+    if not padroes and (validados or etapa != "produto"):
+        return
+    rotulo = "padrão aplicado" if validados else "padrão a confirmar"
+    with st.expander(f"📐 Padrões da plataforma — {len(padroes)} aplicado(s) · {rotulo}", expanded=False):
+        if not validados:
+            st.caption("`prompts/references/defaults-missao.md` ainda é rascunho v0: cada padrão aplicado é **padrão a "
+                       "confirmar**. Não pede aceite item a item — a validação é do arquivo, uma vez, com produto.")
+        for p in padroes:
+            st.markdown(f"- `{p['nome']}`{' 🟡' if p['amarelo'] else ''} — {p['rotulo']}")
+        if not padroes:
+            st.caption("O one-pager e a spec não citam padrão. Onde a spec cala, o fechamento de lacunas (D0) aplica os "
+                       "padrões no design, e eles aparecem aqui no parecer de design.")
+
+
+def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[str, Any]) -> Dict[str, Dict[str, str]]:
+    """A lista do contrato de produto em aberto, com a resposta do PO a cada item (plano «Produto dono do contrato», PR 3).
+
+    Cada [PARÂMETRO], [PROPOSTA] e [ABERTO — dono: PO] do one-pager e da spec do Gate 0 aparece com a sugestão do agente;
+    a resposta entra no texto como «<valor> — PO, parecer de <data>» quando o de acordo é registrado. O que o PO já
+    respondeu (num de acordo anterior, antes de um refazer) vem preenchido. A lógica é toda de `tools/fechar_contrato.py`.
+    """
+    itens = fechar_contrato.itens_em_aberto(estado)
+    perdidas = fechar_contrato.decisoes_perdidas(estado, itens)
+    if perdidas:
+        st.warning("⚠️ O refazer de produto apagou do one-pager e da spec decisões que o PO já tinha gravado — o marcador "
+                   "também não voltou, então elas não estão na lista abaixo. Use **Refazer** com cada uma para "
+                   "devolvê-la ao texto:\n\n" + "\n".join(
+                       f"- «{d.get('assunto', '')[:120]}» → {fechar_contrato.ROTULO_RESPOSTA.get(d.get('resposta'), '')}"
+                       + (f" «{d['valor']}»" if d.get("valor") else "") + f" ({d.get('quando', '')})" for d in perdidas))
+    if not itens:
+        return {}
+    anteriores = fechar_contrato.respostas_anteriores(estado, fluxo, itens)
+    base = f"contrato_{run_dir.name}_{fluxo.get('versao', 0)}"
+    for item in itens:
+        chave = f"{base}_{item.id}"
+        if chave not in st.session_state and item.id in anteriores:
+            st.session_state[chave] = anteriores[item.id]["resposta"]
+            if anteriores[item.id].get("valor"):
+                st.session_state[f"{chave}_valor"] = anteriores[item.id]["valor"]
+    respostas: Dict[str, Dict[str, str]] = {}
+    with st.container(border=True):
+        st.markdown(f"**📌 Contrato de produto em aberto — {len(itens)} item(ns) para o PO decidir**")
+        st.caption("Cada resposta entra no one-pager e na spec do Gate 0 como «valor — PO, parecer de <data>» quando o "
+                   "de acordo é registrado, antes de o design começar. «Tudo de acordo» no comentário não aprova "
+                   "proposta: só esta lista responde. Item sem resposta segue aberto para o design ver como pendência"
+                   + (" — e, com ESTEIRA_ESTRITA, o de acordo não sai sem resposta." if get_settings().esteira_estrita
+                      else "."))
+        if st.button("✅ Aceitar as sugestões desta lista", key=f"{base}_aceitar_todas",
+                     help="Marca «Aceitar a sugestão» em todo item ainda sem resposta que tem sugestão. Confira e "
+                          "registre o de acordo: vale como decisão datada do PO sobre a lista que está na tela."):
+            for item in itens:
+                chave = f"{base}_{item.id}"
+                if not st.session_state.get(chave) and fechar_contrato.ACEITAR in item.opcoes():
+                    st.session_state[chave] = fechar_contrato.ACEITAR
+                    st.session_state[f"{chave}_origem"] = "aceitar as sugestões"
+            st.rerun()
+        for item in itens:
+            chave = f"{base}_{item.id}"
+            st.markdown(f"{fechar_contrato.ROTULO_TIPO.get(item.tipo, item.tipo)} **{item.assunto}**")
+            detalhes = [f"onde: {item.onde()}"]
+            if item.sugestao and item.tipo != fechar_contrato.PROPOSTA:
+                detalhes.insert(0, f"sugestão do agente: **{item.sugestao}**")
+            if item.id in anteriores:
+                detalhes.append(f"já respondido em {anteriores[item.id]['origem']} — confirme")
+            st.caption(" · ".join(detalhes))
+            if item.detalhe:
+                with st.expander("O que o design quis mudar", expanded=False):
+                    st.code(item.detalhe, language="diff")
+            elif item.ocorrencias:
+                with st.expander("Onde está no texto", expanded=False):
+                    for o in item.ocorrencias[:6]:
+                        st.caption(f"{fechar_contrato.ROTULO_DOC.get(o.documento, o.documento)}: {o.linha.strip()[:400]}")
+            extra = {} if chave in st.session_state else {"index": None}
+            escolha = st.radio("Resposta", item.opcoes(), key=chave, horizontal=True, label_visibility="collapsed",
+                               format_func=lambda o: fechar_contrato.ROTULO_RESPOSTA.get(o, o), **extra)
+            valor = ""
+            if escolha == fechar_contrato.OUTRO:
+                valor = st.text_input("Outro valor", key=f"{chave}_valor", placeholder="O valor que entra no texto")
+            if escolha == fechar_contrato.RECUSAR and item.tipo == fechar_contrato.PROPOSTA:
+                mencoes = fechar_contrato.mencoes_fora(estado, item)
+                if mencoes:
+                    st.caption("⚠️ O de acordo grava a recusa no lugar da proposta, mas o texto ainda fala dela: "
+                               + ", ".join(f"«{t}» {n}×" for t, n in mencoes.items())
+                               + ". Para tirar do one-pager e da spec, use **Refazer** citando esta recusa.")
+            origem = (st.session_state.get(f"{chave}_origem") if escolha == fechar_contrato.ACEITAR else None) or (
+                anteriores[item.id]["origem"] if item.id in anteriores and anteriores[item.id]["resposta"] == escolha
+                else "cartão do de acordo")
+            respostas[item.id] = {"resposta": escolha or "", "valor": valor, "origem": origem}
+    return respostas
 
 
 def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) -> None:
@@ -654,10 +756,15 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
         st.warning("🔴 Há gate reprovado nesta etapa: ela não pode ser liberada. Refaça com um comentário do que mudar"
                    + (", ou libere com exceção (fica registrado no dossiê)." if passagem.EXCECAO in acoes
                       else ", ou peça ao admin uma liberação com exceção."))
+    if situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA) and etapa in ("produto", "design"):
+        _render_padroes(estado, etapa)
     if not acoes:
         dono = passagem.dono_da_vez(fluxo)
         st.caption(f"🔒 Aguardando **{passagem.rotulo_donos(dono or '')}**. Você está como {sessao.rotulo}.")
         return
+    decisoes: Optional[Dict[str, Dict[str, str]]] = None
+    if etapa == "produto" and (passagem.DE_ACORDO in acoes or passagem.EXCECAO in acoes):
+        decisoes = _render_contrato_aberto(run_dir, fluxo, estado)
 
     comentario = ""
     if any(a != passagem.INICIAR for a in acoes):
@@ -693,7 +800,7 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
         primario = acao in (passagem.DE_ACORDO, passagem.INICIAR)
         if coluna.button(_rotulo_acao(acao, etapa, fluxo), key=f"acao_{acao}_{run_dir.name}_{fluxo.get('versao', 0)}",
                          type="primary" if primario else "secondary", use_container_width=True):
-            _decidir(run_dir, fluxo, acao, comentario, estado, opts, conferencia)
+            _decidir(run_dir, fluxo, acao, comentario, estado, opts, conferencia, decisoes)
 
 
 def render_passagem(run_dir: Path, opts: Dict[str, Any]) -> bool:

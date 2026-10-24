@@ -52,8 +52,11 @@ _RE_NUMERO = re.compile(
 )
 #: `[CONVENÇÃO]`, `[EXTRAPOLAÇÃO]` e `[INFERÊNCIA]` são os rótulos de origem da literatura-cognitiva: o
 #: número diz de onde veio, e é isso que a regra pede.
+#: «90 segundos — PO, parecer de 24/10/2026» é a resposta do PO que o de acordo de produto gravou no lugar do
+#: [PARÂMETRO] (`tools/fechar_contrato.py`): tem origem. Sem ela aqui, o refazer de produto reabria o número.
 _MARCADORES = ("[PROPOSTA", "[PARÂMETRO", "[PARAMETRO", "[DECISÃO PENDENTE", "[DECISAO PENDENTE", "🔵",
-               "[CONVENÇÃO", "[CONVENCAO", "[EXTRAPOLAÇÃO", "[EXTRAPOLACAO", "[INFERÊNCIA", "[INFERENCIA")
+               "[CONVENÇÃO", "[CONVENCAO", "[EXTRAPOLAÇÃO", "[EXTRAPOLACAO", "[INFERÊNCIA", "[INFERENCIA",
+               "PO, parecer de")
 _RE_ETAPA = re.compile(r"desafiar|navegar|decidir|resultado|aha|explicar|refletir|etapa|\bE[1-6]\b", re.IGNORECASE)
 #: "Foco primário BNCC (Regra 12): `EF03CO08`" — a linha onde o one-pager crava a habilidade principal.
 _RE_FOCO_PRIMARIO = re.compile(r"foco\s+prim[áa]rio[^\n]{0,240}", re.IGNORECASE)

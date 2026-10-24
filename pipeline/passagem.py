@@ -201,7 +201,24 @@ def dono_da_vez(fluxo: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def acoes_possiveis(fluxo: Dict[str, Any], papel: str, estado: Dict[str, Any]) -> List[str]:
+def _estrito(estrito: Optional[bool]) -> bool:
+    """ESTEIRA_ESTRITA, a menos que o chamador diga (os testes dizem)."""
+    if estrito is not None:
+        return estrito
+    from config import get_settings
+
+    return bool(get_settings().esteira_estrita)
+
+
+def contrato_em_aberto(estado: Dict[str, Any]) -> list:
+    """Os itens que o PO decide no de acordo de produto (`tools/fechar_contrato.py`)."""
+    from tools.fechar_contrato import itens_em_aberto
+
+    return itens_em_aberto(estado)
+
+
+def acoes_possiveis(fluxo: Dict[str, Any], papel: str, estado: Dict[str, Any],
+                    estrito: Optional[bool] = None) -> List[str]:
     """O que `papel` pode fazer agora. O `admin` pode tudo o que o dono pode, mais a exceção."""
     etapa, situacao = fluxo["etapa"], fluxo["situacao"]
     if not pode_agir(papel, etapa):
@@ -211,7 +228,11 @@ def acoes_possiveis(fluxo: Dict[str, Any], papel: str, estado: Dict[str, Any]) -
     if situacao in (AGUARDANDO, DEVOLVIDA):
         acoes.append(DE_ACORDO if not vermelho else "")
         acoes.append(REFAZER)
-        if vermelho and papel == "admin":
+        # Com ESTEIRA_ESTRITA, produto não sai com [PARÂMETRO]/[PROPOSTA] sem resposta — salvo exceção do admin, que fica
+        # registrada com o que ficou sem resposta (plano «Produto dono do contrato», D3)
+        sem_resposta_possivel = (etapa == "produto" and papel == "admin" and not vermelho and _estrito(estrito)
+                                 and bool(contrato_em_aberto(estado)))
+        if (vermelho or sem_resposta_possivel) and papel == "admin":
             acoes.append(EXCECAO)
     if situacao in (AGUARDANDO, DEVOLVIDA) and etapa_anterior(etapa):
         # Quem gerou pode ver que o problema vem de antes. Também depois de receber uma devolução: o Dev
@@ -252,15 +273,18 @@ def perguntas_de_conferencia(etapa: str, acao: str) -> Tuple[Tuple[str, str], ..
 
 def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
             estado: Dict[str, Any], conferencia: Optional[Dict[str, str]] = None,
+            decisoes: Optional[Dict[str, Dict[str, str]]] = None, estrito: Optional[bool] = None,
             ) -> Tuple[Dict[str, Any], Optional[Efeito]]:
     """Aplica a decisão e devolve `(fluxo_novo, efeito)`. Pura: não toca disco.
 
     `sessao` é um `tools.auth.Sessao` (usa `.papel` e `.assinatura_de`). `conferencia` traz as
-    respostas às `CONFERENCIA_DE_ACORDO` da etapa, quando a ação a libera. Levanta
-    `DecisaoInvalida` com a razão para a tela mostrar.
+    respostas às `CONFERENCIA_DE_ACORDO` da etapa, quando a ação a libera. `decisoes` traz as
+    respostas do PO à lista do contrato aberto (`{id do item: {resposta, valor}}`), no de acordo de
+    produto: o registro leva as decisões e as trocas que `tools.fechar_contrato.gravar` grava no
+    one-pager e na spec do Gate 0. Levanta `DecisaoInvalida` com a razão para a tela mostrar.
     """
     etapa = fluxo["etapa"]
-    if acao not in acoes_possiveis(fluxo, sessao.papel, estado):
+    if acao not in acoes_possiveis(fluxo, sessao.papel, estado, estrito):
         raise DecisaoInvalida(
             f"{ROTULO_ETAPA.get(etapa, etapa)} está em '{fluxo['situacao']}': "
             f"a ação '{acao}' não cabe ao papel {sessao.papel}.")
@@ -299,6 +323,8 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
     }
     if respostas:
         registro["conferencia"] = respostas
+    if etapa == "produto" and acao in (DE_ACORDO, EXCECAO):
+        registro.update(_fechar_contrato(estado, acao, decisoes, registro["quando"], registro["como"], estrito))
     efeito: Optional[Efeito] = None
 
     if acao in (DE_ACORDO, EXCECAO):
@@ -328,6 +354,39 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
     novo.pop("falhou_refazendo", None)
     novo["atualizado_em"] = _agora()
     return novo, efeito
+
+
+def _fechar_contrato(estado: Dict[str, Any], acao: str, decisoes: Optional[Dict[str, Dict[str, str]]],
+                     quando: str, como: str, estrito: Optional[bool]) -> Dict[str, Any]:
+    """As respostas do PO à lista do contrato aberto, conferidas, e as trocas que o de acordo grava.
+
+    Só a lista responde: «Tudo de acordo» no comentário não aprova [PROPOSTA] — foi assim que o D0-4 da exp02ef1b tornou
+    PQ-01..05 «contratuais» (22/10/2026). Com ESTEIRA_ESTRITA, o de acordo não sai com item sem resposta; a exceção do
+    admin sai, e o registro diz o que ficou sem resposta (D3)."""
+    from tools import fechar_contrato as fc
+
+    itens = fc.itens_em_aberto(estado)
+    if not itens:
+        return {}
+    try:
+        decisao = fc.decidir(itens, decisoes, quando, como)
+    except fc.RespostaInvalida as exc:
+        raise DecisaoInvalida(str(exc)) from exc
+    _, falhas = fc.aplicar_edicoes(estado, decisao.edicoes)
+    if falhas:
+        raise DecisaoInvalida("As respostas não puderam ser gravadas — " + "; ".join(falhas[:3])
+                              + ". Recarregue a missão: o texto mudou desde que a lista foi montada. Se é uma mudança do "
+                              "design no Gate 0, use Refazer com ela.")
+    if decisao.sem_resposta and acao == DE_ACORDO and _estrito(estrito):
+        nomes = "; ".join(f"«{s['assunto'][:70]}»" for s in decisao.sem_resposta[:5])
+        mais = f" e mais {len(decisao.sem_resposta) - 5}" if len(decisao.sem_resposta) > 5 else ""
+        raise DecisaoInvalida(
+            f"O contrato de produto tem {len(decisao.sem_resposta)} item(ns) sem resposta: {nomes}{mais}. Com "
+            "ESTEIRA_ESTRITA, o de acordo de produto não sai com [PARÂMETRO] ou [PROPOSTA] aberto: responda cada item na "
+            "lista do cartão (ou «Aceitar as sugestões»), ou peça ao admin a liberação com exceção. «Tudo de acordo» no "
+            "comentário não aprova proposta.")
+    return {"decisoes_contrato": decisao.decisoes, "sem_resposta": decisao.sem_resposta,
+            "edicoes_contrato": decisao.edicoes, "itens_no_cartao": len(itens)}
 
 
 def concluir_execucao(fluxo: Dict[str, Any], ok: bool) -> Dict[str, Any]:
@@ -384,12 +443,19 @@ def notas_de_passagem(fluxo: Optional[Dict[str, Any]]) -> str:
     """Markdown dos pedidos de refazer e dos pareceres *de acordo* válidos (`{notas_de_passagem?}`)."""
     if not fluxo:
         return ""
+    from tools.fechar_contrato import notas as notas_do_contrato
+
     validos = [p for p in fluxo.get("pareceres") or []
                if p.get("acao") in (DE_ACORDO, EXCECAO) and p.get("valido", True)]
     pedidos = pedidos_do_po(fluxo)
-    if not validos and not pedidos:
+    # As decisões do PO no contrato valem também depois de um refazer, que invalida o de acordo: na exp02em1b o de
+    # acordo de 21/10/2026 15:43 (90 s, 45 palavras, StoryPoll recusado) sumiu das notas no refazer de 23/10
+    contrato = notas_do_contrato(fluxo)
+    if not validos and not pedidos and not contrato:
         return ""
     linhas: List[str] = []
+    if contrato:
+        linhas += [contrato.rstrip(), ""]
     if pedidos:
         linhas += ["## Pedidos de refazer do PO, em vigor", "",
                    "Todos continuam valendo, do mais antigo ao mais novo — um pedido não apaga o anterior. Onde dois "
@@ -412,6 +478,9 @@ def notas_de_passagem(fluxo: Optional[Dict[str, Any]]) -> str:
                    "decidir em produto.", ""]
         for p in validos:
             marca = " — **liberada com exceção** (havia gate 🔴)" if p.get("excecao") else ""
+            if p.get("excecao") and p.get("sem_resposta") and "🔴" not in (p.get("gates") or {}).values():
+                marca = (f" — **liberada com exceção** ({len(p['sem_resposta'])} item(ns) do contrato de produto sem "
+                         "resposta do PO: seguem como `[PARÂMETRO]`/`[PROPOSTA]`, e não são do design decidir)")
             linhas.append(f"### {ROTULO_ETAPA.get(p['etapa'], p['etapa'])} · {p['como']} · {p['quando']}{marca}")
             linhas += [""] + [f"> {l}" if l.strip() else ">" for l in p["comentario"].splitlines()] + [""]
     return "\n".join(linhas).rstrip() + "\n"
@@ -443,6 +512,27 @@ def registrar_fluxo(run_dir: Path, fluxo: Dict[str, Any], versao_lida: Optional[
     conversa["fluxo"] = gravado
     caminho.write_text(json.dumps(conversa, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
     return gravado
+
+
+def registrar_decisao(run_dir: Path, fluxo_lido: Dict[str, Any], novo: Dict[str, Any], acao: str) -> Dict[str, Any]:
+    """Grava a decisão: no de acordo de produto, primeiro as respostas do contrato no one-pager e na spec do Gate 0
+    (`tools.fechar_contrato.gravar`), depois o fluxo. Se o fluxo não pode ser gravado (outra pessoa decidiu antes), o
+    `estado.json` volta como estava. Devolve o fluxo gravado.
+
+    A ordem garante que o design só fica liberado com as respostas já no texto que ele vai ler (plano, PR 3)."""
+    from tools import fechar_contrato
+
+    anterior: Optional[Dict[str, str]] = None
+    registro = (novo.get("pareceres") or [{}])[-1]
+    if (fluxo_lido.get("etapa") == "produto" and acao in (DE_ACORDO, EXCECAO)
+            and (registro.get("edicoes_contrato") or registro.get("decisoes_contrato"))):
+        anterior = fechar_contrato.gravar(run_dir, registro)
+    try:
+        return registrar_fluxo(run_dir, novo, fluxo_lido.get("versao", 0))
+    except ConflitoDeVersao:
+        if anterior:
+            fechar_contrato.desfazer(run_dir, anterior)
+        raise
 
 
 def quem_age(fluxo: Optional[Dict[str, Any]]) -> str:
