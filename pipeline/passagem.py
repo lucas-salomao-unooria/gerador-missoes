@@ -299,9 +299,16 @@ def exige_justificativa(etapa: str, acao: str, estado: Dict[str, Any]) -> bool:
     return etapa == "produto" and acao == EXCECAO and "🔴" in semaforo_da_etapa(estado, etapa).values()
 
 
-#: Marcador do contrato no resumo de um achado: o item já está na lista do de acordo (`tools/fechar_contrato.py`), e a
-#: conferência não o pede duas vezes — o rastro da spec repete como decisão humana cada [ABERTO — dono: PO].
-_RE_MARCADOR_DO_CONTRATO = re.compile(r"\[(?:PAR[ÂA]METRO|PROPOSTA)\b|\[ABERTO\s*[—–-]\s*dono:\s*(?:o\s+)?PO\b", re.I)
+#: Marcador no resumo de um achado que a conferência não pede: `[PARÂMETRO]`, `[PROPOSTA]` e `[ABERTO — dono: PO]` já
+#: estão na lista do de acordo (`tools/fechar_contrato.py`) — o rastro da spec repete cada um como decisão humana —, e o
+#: `[ABERTO — dono: <outro>]` não é do PO: na exp01ef1b, o rastro da spec pedia como «decisão do PO» o
+#: «[ABERTO — dono: editorial: Confirmação documental dos códigos interdisciplinares…]» (revisão do PR #75, 24/10/2026).
+_RE_MARCADOR_FORA_DA_CONFERENCIA = re.compile(r"\[(?:PAR[ÂA]METRO|PROPOSTA)\b|\[ABERTO\s*[—–-]\s*dono\s*:", re.I)
+#: Achados que resumem em texto as propostas e os parâmetros que aguardam o PO — o F7 do gate final («Parâmetros de
+#: inatividade (45s), processamento de IA, teto de palavras (15) e área mínima (10%) aguardam homologação pelo PO», na
+#: exp02ef1b, são 4 dos 16 itens da lista). Com a lista do contrato aberta, o PO responde a ela, e o resumo não pede um
+#: segundo «Li e decidi»; sem lista, ele é o único lugar onde a pendência aparece e entra (revisão do PR #75, 24/10/2026).
+CODIGOS_QUE_RESUMEM_O_CONTRATO = frozenset({"F7"})
 CONTRATO = "contrato"
 PENDENCIA = "pendencia"
 
@@ -313,15 +320,20 @@ def itens_de_conferencia(estado: Dict[str, Any]) -> List[Dict[str, str]]:
     eram sentidas como mais um bloqueio. Ela volta só quando há o que decidir (plano «Produto dono do contrato», PR 9):
     os itens da lista do contrato (`[PARÂMETRO]`, `[PROPOSTA]`, `[ABERTO — dono: PO]`, mudança do design no Gate 0 e
     texto-chave acima do teto, PR 3 e PR 7) e as pendências 🟡 que pedem decisão do PO nos gates de produto — achado de
-    severidade `decisao_humana` («F7 — propostas aguardando homologação do PO», «conflito-pedido-regra»). Sem nenhum
-    deles, o de acordo segue como antes. Pura."""
-    return ([{"id": i.id, "origem": CONTRATO, "tipo": i.tipo, "assunto": i.assunto} for i in contrato_em_aberto(estado)]
-            + pendencias_de_conferencia(estado))
+    severidade `decisao_humana` («conflito-pedido-regra»; o F7 «propostas aguardando homologação do PO» só quando a
+    lista está vazia, porque ele a resume). Sem nenhum deles, o de acordo segue como antes. Pura."""
+    contrato = contrato_em_aberto(estado)
+    return ([{"id": i.id, "origem": CONTRATO, "tipo": i.tipo, "assunto": i.assunto} for i in contrato]
+            + pendencias_de_conferencia(estado, contrato_aberto=bool(contrato)))
 
 
-def pendencias_de_conferencia(estado: Dict[str, Any]) -> List[Dict[str, str]]:
+def pendencias_de_conferencia(estado: Dict[str, Any], contrato_aberto: Optional[bool] = None) -> List[Dict[str, str]]:
     """Só as pendências 🟡 de decisão do PO nos gates de produto, sem a lista do contrato — que custa quase um segundo
-    numa missão grande e o cartão já monta na lista dele. Pura."""
+    numa missão grande e o cartão já monta na lista dele. Pura.
+
+    Fica de fora o achado que cita um marcador da lista ou de outro dono (`_RE_MARCADOR_FORA_DA_CONFERENCIA`) e, com a
+    lista aberta, o que só a resume (`CODIGOS_QUE_RESUMEM_O_CONTRATO`). `contrato_aberto` é se a lista tem item — o
+    cartão já a montou; sem ele, a lista é montada aqui, e só quando há um resumo desses a decidir."""
     itens: List[Dict[str, str]] = []
     vistos = set()
     for chave, icone in semaforo_da_etapa(estado, "produto").items():
@@ -333,8 +345,13 @@ def pendencias_de_conferencia(estado: Dict[str, Any]) -> List[Dict[str, str]]:
                     and str(a.get("resumo") or "").strip()):
                 continue
             resumo = " ".join(str(a["resumo"]).split())
-            if _RE_MARCADOR_DO_CONTRATO.search(resumo):
+            if _RE_MARCADOR_FORA_DA_CONFERENCIA.search(resumo):
                 continue
+            if str(a.get("codigo") or "") in CODIGOS_QUE_RESUMEM_O_CONTRATO:
+                if contrato_aberto is None:
+                    contrato_aberto = bool(contrato_em_aberto(estado))
+                if contrato_aberto:
+                    continue
             # o mesmo achado em dois gates é uma leitura só: na exp01em1b (e3980485) a fidelidade do núcleo e a do
             # one-pager citam os mesmos pedidos em conflito com regra, cada uma com a explicação dela — vale a citação
             citacao = re.search(r"«(.+?)»", resumo)

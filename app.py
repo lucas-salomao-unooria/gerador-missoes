@@ -856,13 +856,15 @@ def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[s
     return respostas
 
 
-def _render_conferencia_de_leitura(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[str, Any]) -> List[str]:
+def _render_conferencia_de_leitura(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[str, Any],
+                                   contrato_aberto: Optional[bool] = None) -> List[str]:
     """As pendências 🟡 que pedem decisão do PO nos gates de produto, cada uma com «Li e decidi» (PR 9 do plano «Produto
     dono do contrato»). Os itens do contrato ficam na lista acima, com a resposta ou o «Li». Devolve os ids marcados.
 
     A conferência de leitura do de acordo de produto estava desligada desde 25/09/2026 (05feeaf): volta só quando há
-    marcador aberto — sem nenhum, o cartão não mostra nada e o de acordo segue como antes."""
-    itens = passagem.pendencias_de_conferencia(estado)
+    marcador aberto — sem nenhum, o cartão não mostra nada e o de acordo segue como antes. `contrato_aberto` é se a
+    lista acima tem item: com ela, o F7 que só a resume não pede leitura de novo."""
+    itens = passagem.pendencias_de_conferencia(estado, contrato_aberto=contrato_aberto)
     if not itens:
         return []
     base = f"leitura_{run_dir.name}_{fluxo.get('versao', 0)}"
@@ -937,7 +939,7 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
         decisoes = _render_contrato_aberto(
             run_dir, fluxo, estado,
             pode_ficar_sem_resposta=passagem.EXCECAO in acoes or not get_settings().esteira_estrita)
-        leitura = _render_conferencia_de_leitura(run_dir, fluxo, estado)
+        leitura = _render_conferencia_de_leitura(run_dir, fluxo, estado, contrato_aberto=bool(decisoes))
 
     comentario = ""
     if any(a != passagem.INICIAR for a in acoes):
