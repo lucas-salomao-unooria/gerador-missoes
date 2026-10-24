@@ -2097,13 +2097,18 @@ class AnexoAprovadoAgent(BaseAgent):
         else:
             from pipeline.artifacts import desembrulhar_cerca
 
+            from tools import governanca
             from tools import textos_chave as tk
 
             # a cerca ```markdown em volta do documento sai antes: anexo colado depois dela impedia a gravação de
             # reconhecer o invólucro, e o arquivo abria como bloco de código. A tabela dos textos-chave entra no anexo: o
             # corpo os cita pelo ID (PR 7)
-            novo = ca.com_anexo(desembrulhar_cerca(str(documento)), one_pager, self.secoes,
-                                tk.tabela(tk.da_sessao(dict(state))))
+            corpo = desembrulhar_cerca(str(documento))
+            if self.chave in governanca.SECAO_DE_PENDENCIAS:
+                # as pendências de governança da liberação de produto, como estão agora — também na correção pontual, em
+                # que o redator não roda e o callback dele também não (PR 9 do plano «Produto dono do contrato», D9)
+                corpo = governanca.com_pendencias(ca.remover_anexo(corpo), governanca.da_sessao(state), self.chave)
+            novo = ca.com_anexo(corpo, one_pager, self.secoes, tk.tabela(tk.da_sessao(dict(state))))
             delta[self.chave] = novo
             msg = (f"📎 {self.rotulo}: seções {', '.join(f'§{n}' for n in self.secoes)} do one-pager aprovado, literais."
                    if ca.TITULO_ANEXO in novo else f"⚠️ {self.rotulo}: o one-pager não tem nenhuma das seções.")

@@ -493,9 +493,12 @@ def _decisoes(saida_juiz: str) -> Dict[str, Dict[str, Any]]:
 
 
 def _sem_anexo(texto: str) -> str:
+    """Sem o que a esteira escreve por código depois do autor: o anexo literal e, no handoff e no PRD, as pendências de
+    governança da liberação de produto (PR 9) — a correção pontual que as atualiza não muda o que o autor escreveu."""
     from tools.conteudo_aprovado import remover_anexo
+    from tools.governanca import sem_bloco
 
-    return remover_anexo(texto or "")
+    return sem_bloco(remover_anexo(texto or ""))
 
 
 def _documentos_nomeados(texto: str, documentos: Dict[str, str], anteriores: Dict[str, str]) -> List[str]:

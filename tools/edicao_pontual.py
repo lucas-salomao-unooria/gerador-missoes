@@ -194,16 +194,18 @@ def aplicar(documentos: Dict[str, str], edicoes: Iterable[Edicao]) -> Resultado:
 def reaplicar(anterior: str, atual: str, documento: str, edicoes: Iterable[Union[Edicao, Dict[str, Any]]]) -> bool:
     """O documento atual é a versão anterior mais as trocas dele, e nada além? É a prova das ordens de não mexer.
 
-    Compara sem o anexo da esteira (o PRD e o pedagógico ganham o anexo literal depois do autor) e sem espaço nas
-    pontas de cada linha.
+    Compara sem o anexo da esteira (o PRD e o pedagógico ganham o anexo literal depois do autor), sem as pendências de
+    governança que a esteira escreve no handoff e no PRD (PR 9: o A119 as atualiza também na correção pontual) e sem
+    espaço nas pontas de cada linha.
     """
     from tools.conteudo_aprovado import remover_anexo
+    from tools.governanca import sem_bloco
 
     proprias = [e for e in (_como_edicao(x) for x in edicoes) if e.documento == documento]
-    resultado = aplicar({documento: remover_anexo(anterior or "")}, proprias)
+    resultado = aplicar({documento: sem_bloco(remover_anexo(anterior or ""))}, proprias)
     if not resultado.ok:
         return False
-    return _linhas(resultado.documentos[documento]) == _linhas(remover_anexo(atual or ""))
+    return _linhas(resultado.documentos[documento]) == _linhas(sem_bloco(remover_anexo(atual or "")))
 
 
 def _linhas(texto: str) -> List[str]:

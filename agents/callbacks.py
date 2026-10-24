@@ -571,6 +571,31 @@ def copiar_textos_chave(chave: str):
     return _callback
 
 
+def registrar_governanca(chave: str):
+    """after_agent_callback do handoff e do PRD: as pendências de governança da liberação de produto entram por código
+    na seção de pendências (§7 do handoff, §19 do PRD) — PR 9 do plano «Produto dono do contrato», D9.
+
+    Lidas de `governanca_produto`, que a execução grava a partir dos pareceres: «liberado sem a conta produto» (as
+    liberações em vigor da exp02em1b e da exp02ef1b, de 22 e 23/10/2026, são da conta design) e a exceção do admin com
+    🔴 em produto. O redator não as escreve nem as tira: o bloco de uma rodada anterior é trocado, e sem pendência ele
+    sai. Logo depois do autor, para os gates do loop lerem o mesmo texto que vai para quem codifica."""
+    def _callback(callback_context: CallbackContext) -> None:
+        from pipeline.artifacts import e_mensagem_de_pulo
+        from tools import governanca
+
+        state = callback_context.state
+        texto = state.get(chave)
+        if not isinstance(texto, str) or not texto.strip() or e_mensagem_de_pulo(texto):
+            return None
+        novo = governanca.com_pendencias(texto, governanca.da_sessao(state), chave)
+        if novo != texto:
+            state[chave] = novo
+        return None
+
+    _callback.__name__ = f"registrar_governanca_{chave}"
+    return _callback
+
+
 #: Prefixo da chave em que fica o aviso de resposta cortada pelo modelo, por agente (`bloqueio_modelo_<nome>`).
 PREFIXO_BLOQUEIO_MODELO = "bloqueio_modelo_"
 _AVISOS_DE_CORTE = {

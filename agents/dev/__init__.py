@@ -44,7 +44,8 @@ Ordem (SequentialAgent):
   │                            redator com o relatório do gate)     │
   └────────────────────────────────────────────────────────────────┘
   v4d A119AnexoPrd             → prd_final + anexo literal do one-pager aprovado (§2, 9, 10,
-                               11, 12, 17): o que nenhum gabarito tinha onde pôr
+                               11, 12, 17): o que nenhum gabarito tinha onde pôr; e, na §19, as
+                               pendências de governança da liberação de produto (PR 9, D9)
   ┌── OnePagerPedagogicoLoop (até PRD_MAX_RODADAS) ─────────────────┐
   │ v5  A120OnePagerPedagogico → one_pager_pedagogico ← entregável   │
   │       para GENTE: o documento que o time pedagógico lê para      │
@@ -68,7 +69,7 @@ from google.adk.agents.sequential_agent import SequentialAgent
 from agents.banca import get_banca, pular_se_banca_de_entrada_bloqueou
 from agents.juiz import get_fidelidade_check, get_juiz_de_achados, get_juiz_de_contradicoes
 from agents.base import create_llm_agent
-from agents.callbacks import copiar_textos_chave, desembrulhar_documento, marcar_heranca
+from agents.callbacks import copiar_textos_chave, desembrulhar_documento, marcar_heranca, registrar_governanca
 from agents.checkers import (
     AnexoAprovadoAgent,
     ConsolidacaoBancaAgent,
@@ -93,8 +94,9 @@ def get_handoff_dev_agent(**kw) -> LlmAgent:
         instruction=load_prompt("dev/100a_handoff_dev.md"),
         output_key="handoff_dev",
         before_agent_callback=marcar_heranca,
-        # a citação de texto-chave reescrita quase igual volta ao texto aprovado por código (PR 7, D1)
-        after_agent_callback=copiar_textos_chave("handoff_dev"),
+        # a citação de texto-chave reescrita quase igual volta ao texto aprovado por código (PR 7, D1), e a liberação de
+        # produto sem a conta produto entra na seção 7 como pendência de governança (PR 9, D9)
+        after_agent_callback=[copiar_textos_chave("handoff_dev"), registrar_governanca("handoff_dev")],
         **kw,
     )
 
@@ -168,7 +170,8 @@ def get_prd_writer_agent(**kw) -> LlmAgent:
         output_key="prd_final",
         model=settings.gemini_model_prd,
         before_agent_callback=marcar_heranca,
-        after_agent_callback=[desembrulhar_documento("prd_final"), copiar_textos_chave("prd_final")],
+        after_agent_callback=[desembrulhar_documento("prd_final"), copiar_textos_chave("prd_final"),
+                              registrar_governanca("prd_final")],
         **kw,
     )
 
@@ -629,7 +632,7 @@ DEV_METADATA = [
     {"id": "A116bMontagemPrd", "name": "116b · PRD monta, não decide (determinístico)", "icon": "🧩", "output_key": "montagem_prd_report", "prompt_file": None, "description": "O corpo do PRD contra o contrato de produto: número de regra com origem no contrato, hipóteses do §17 e metas do 9f com os números deles, tetos do §15 presentes, estados da §6 iguais aos do contrato, nenhuma decisão de design citada como produto. Divergência do próprio contrato só passa registrada na seção 19 com dono produto."},
     {"id": "A117CoerenciaPrd", "name": "117 · Coerência do PRD com o one-pager aprovado", "icon": "⚖️", "output_key": "coerencia_prd_report", "prompt_file": None, "description": "Um juiz aponta onde o corpo do PRD afirma o contrário do conteúdo aprovado — mecânica, número, regra, texto —, citando os dois lados; o código confere as citações. Contradição comprovada volta ao redator."},
     {"id": "A118PrdRodada", "name": "118 · Veredito do PRD (determinístico)", "icon": "🔁", "output_key": "prd_rodada", "prompt_file": None, "description": "PRD consistente encerra o loop; reprovado devolve ao redator com o relatório do gate, até o teto de rodadas."},
-    {"id": "A119AnexoPrd", "name": "119 · Anexo do conteúdo aprovado no PRD (determinístico)", "icon": "📎", "output_key": "prd_final", "prompt_file": None, "description": "Cola no fim do PRD, literais, as seções do one-pager aprovado que o gabarito não tinha onde pôr: currículo, papel do professor, tempos e cenários de aula, podcast com roteiro, contrato de evidência e hipóteses."},
+    {"id": "A119AnexoPrd", "name": "119 · Anexo do conteúdo aprovado no PRD (determinístico)", "icon": "📎", "output_key": "prd_final", "prompt_file": None, "description": "Cola no fim do PRD, literais, as seções do one-pager aprovado que o gabarito não tinha onde pôr: currículo, papel do professor, tempos e cenários de aula, podcast com roteiro, contrato de evidência e hipóteses. E põe na seção 19, por código, as pendências de governança da liberação de produto — liberado sem a conta produto, exceção do admin com gate vermelho — como estão agora, também na correção pontual."},
     {"id": "A120OnePagerPedagogico", "name": "120 · One-pager pedagógico (validação humana)", "icon": "🧑‍🏫", "output_key": "one_pager_pedagogico", "prompt_file": "dev/120_one_pager_pedagogico.md", "description": "A missão inteira em linguagem de sala de aula, com o papel do professor, os links do protótipo e as perguntas de aprovação. Salvo em Markdown e `.docx`."},
     {"id": "A121ConteudoAprovadoPedagogico", "name": "121 · Pedagógico × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_pedagogico_report", "prompt_file": None, "description": "As habilidades do bloco 11, o tempo em tela, o podcast e os caminhos de artefato do pedagógico contra o one-pager aprovado. Divergência volta ao redator."},
     {"id": "A122CoerenciaPedagogico", "name": "122 · Coerência do pedagógico com o one-pager aprovado", "icon": "⚖️", "output_key": "coerencia_pedagogico_report", "prompt_file": None, "description": "O mesmo juiz do PRD, sobre o documento que o time pedagógico aprova: contradição com o conteúdo aprovado, com as duas citações conferidas, volta ao redator."},
