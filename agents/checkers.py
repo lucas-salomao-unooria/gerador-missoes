@@ -456,6 +456,23 @@ def _recopia_do_d0(chave: str, corpo_d9: str, aceita: str, estado: Optional[Dict
     return _linhas_normalizadas(corpo_d0) == _linhas_normalizadas(corpo_d9)
 
 
+def _so_prosa_do_agente(cabecalho_aceito: List[str], preambulo: List[str]) -> bool:
+    """O preâmbulo da resposta é só a frase do agente: nenhuma linha dele é igual, nem parecida (60% ou mais), a uma
+    linha do cabeçalho da spec aceita.
+
+    Desde o PR 2 o D0 emite só o bloco 13, e desde o PR 8 o D9 emite só o bloco 14 — mas 11 das 12 respostas do D9 no
+    acervo abrem o Passo 4 com prosa («Abaixo segue a íntegra…», «Abaixo é emitida…», «Abaixo é reapresentada…»), as das
+    quatro missões a refazer incluídas. Com a spec inteira atrás, a frase vinha junto da cópia do cabeçalho e o diff só
+    tinha «+». Com só o bloco, sobra a frase, o diff ganha o «-» do cabeçalho, e «Abaixo segue o bloco 14…» bloqueava
+    como decisão de produto o refazer da exp02ef1b, exp02em1b, exp01em1b e exp03em1b, com ou sem ESTEIRA_ESTRITA; no D0
+    virava `[ABERTO — dono: PO]` (revisão do PR #76, 24/10/2026). O cabeçalho reescrito continua sendo mudança: na
+    exp03ef1b-317df247 o título vem igual e o «Gate final: 🟡» vira 🟢."""
+    import difflib
+
+    return not any(nova == aceita or difflib.SequenceMatcher(None, nova, aceita).ratio() >= 0.6
+                   for nova in preambulo for aceita in cabecalho_aceito)
+
+
 def _d9_travado(estado: Optional[Dict[str, Any]]) -> bool:
     """Correção pontual de design com o D9 travado: a resposta dele é a da execução anterior, e ele não roda nesta."""
     from agents.callbacks import KEY_DOCUMENTOS_TRAVADOS, KEY_MODO_CORRECAO
@@ -533,6 +550,8 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str,
                 if l[:1] in "+-" and l[:3] not in ("+++", "---")]
         if not chave and not any(l.startswith("-") for l in diff):
             continue  # frase do agente antes da spec («Abaixo é emitida a especificação…», 4fd72a9a): não é o Gate 0
+        if not chave and _so_prosa_do_agente(antes, depois):
+            continue  # a mesma frase, sem a cópia da spec atrás dela: a resposta de hoje traz só o bloco do autor
         nome = f"o bloco {chave}" if chave.isdigit() else ("o cabeçalho" if not chave else f"a seção «{chave}»")
         if etapa == "produto":
             avisos.append({

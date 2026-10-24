@@ -72,8 +72,7 @@
     "ambiente_status": {
       "status": "amarelo",
       "codigos": [
-        "alterou-fora-do-proprio-bloco",
-        "escolha-de-ambiente-sem-o-po"
+        "alterou-fora-do-proprio-bloco"
       ]
     },
     "rastro_design_status": {

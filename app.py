@@ -827,6 +827,13 @@ def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[s
             if item.id in anteriores:
                 detalhes.append(f"já respondido em {anteriores[item.id]['origem']} — confirme")
             st.caption(" · ".join(detalhes))
+            if item.define_secao:
+                # PR 8 (D8): a spec calada — a resposta entra também como `secao_ds` no bloco 0 (`fechar_contrato.decidir`)
+                from tools.ambiente import secoes_para_o_de_acordo
+
+                st.caption("A seção que você escrever entra também como `secao_ds` no bloco 0 da spec (app clonado): "
+                           + ", ".join(f"`{s}`" for s in secoes_para_o_de_acordo())
+                           + ". Ambiente novo ou mini-jogo pedem o **Refazer** de produto, com a spec refeita.")
             if item.detalhe:
                 with st.expander("O que o design quis mudar", expanded=False):
                     st.code(item.detalhe, language="diff")

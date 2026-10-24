@@ -81,10 +81,19 @@ _RE_INICIO_DA_ESCOLHA = re.compile(
     r"ambiente\b|se[çc][ãa]o\s+do\s+ds\b|secao_ds\b|(?:nova|minijogo):)", re.I)
 #: Palavras que negam o mini-jogo pedido no briefing: «não é mini-jogo», «nada de mini-jogo», «em vez de mini-jogo».
 _NEGACOES = frozenset({"nao", "nem", "sem", "nunca", "jamais", "nada", "evitar", "vez", "lugar"})
-#: Linha de regra ou fase de jogo dentro do bloco 14: o que é conteúdo de produto desde este PR.
+#: Linha de regra ou fase de jogo dentro do bloco 14: o que é conteúdo de produto desde este PR. Procurado só no rótulo da
+#: linha (`_RE_LINHA_COM_ROTULO`): «Demonstração na tela: … o áudio lê a regra da fase» é UI que cita o termo.
 _RE_DEFINE_JOGO = re.compile(
-    r"(?:como\s+se\s+(?:vence|perde)|o\s+que\s+(?:é|e)\s+uma\s+fase|quantas\s+fases|fases_sugeridas|"
+    r"(?:como\s+(?:se\s+)?(?:vence|perde)|o\s+que\s+(?:é|e)\s+uma\s+fase|quantas\s+fases|fases_sugeridas|"
     r"intervalo\s+de\s+fases|regra\s+da\s+fase|como\s+o\s+progresso\s+aparece|vence\s+a\s+fase|perde\s+a\s+fase)", re.I)
+#: A linha «rótulo: valor» da ficha — o rótulo é o que vem antes dos primeiros dois-pontos, sem a marca de lista ou de
+#: título. A linha de tabela fica de fora: as fases em tabela são lidas por `_ler_regras_e_fases`.
+_RE_LINHA_COM_ROTULO = re.compile(r"^\s*(?:#{1,6}\s+)?(?:[-*+]\s+|\d{1,2}[.)]\s+)?([^:\n|]{1,80}):(.*)$")
+#: Palavras que fazem da seção citada depois delas, na linha «Seção do DS:», contexto e não seção da ficha: «`unoochat`
+#: (… não o legado `whatsappmobile`)», «sucessora de `whatsappmobile`», «em vez de `instanooria`».
+_RE_SECAO_DE_CONTEXTO = re.compile(
+    r"\b(?:nao|nem|legad[oa]s?|antig[oa]s?|sucessor[a]?\s+d[eoa]s?|em\s+vez\s+d[eoa]s?|no\s+lugar\s+d[eoa]s?|"
+    r"substitu\w*)\b")
 
 
 # ------------------------------------------------------------------ normalização
@@ -231,6 +240,50 @@ def _nomeia_a_escolha(texto: str, secao: str = "") -> bool:
     return bool(tokens or (secao and secao in texto) or _RE_MINIJOGO.search(texto) or _RE_AMBIENTE_NOVO.search(texto))
 
 
+def escolha_a_conferir(secao: str, briefing: str = "", secoes: Optional[Dict[str, Optional[str]]] = None) -> bool:
+    """A escolha do PO sobre o ambiente novo ou o mini-jogo do bloco 0 é conferida — a mesma regra do manifesto
+    (`tools.rastro.validar_manifesto`), em todo lugar que a confere ou a pergunta: não quando a seção nova repete uma
+    coleção que o DS já tem (`colecao_que_ja_cobre`: `nova:galeriadefotos` → `unoogaleria`) nem quando o briefing fixa
+    outra seção (`achado_secao_travada`). Nos dois casos o manifesto bloqueia por outro motivo, mais preciso, e a seção não
+    vale nem com o PO aprovando. Na revisão do PR #76 (24/10/2026), o de acordo da exp01ef1b pedia ao PO a aprovação do
+    `nova:galeriadefotos`, que o gate ignorava, e o D9 a cobrava como `escolha-de-ambiente-sem-o-po`."""
+    from tools import rastro
+
+    secao = (secao or "").strip().strip("`").lower()
+    if not secao:
+        return False
+    if secoes is None:
+        secoes = rastro.secoes_ds()
+    if re.match(r"^nova\s*:", secao) and rastro.colecao_que_ja_cobre(secao.split(":", 1)[1], secoes):
+        return False
+    return not rastro.achado_secao_travada(secao, briefing or "", "a spec", secoes)
+
+
+def secoes_para_o_de_acordo() -> List[str]:
+    """As seções que o PO pode escrever no de acordo para a spec calada: a lista de missão nova de `ambientes.md` (as do
+    DS, menos as legadas e a da plataforma). Ambiente novo e mini-jogo pedem a spec refeita — os componentes da seção
+    nova, as regras e as fases do jogo no bloco 2 —, e a legada só vale fixada no briefing ou no one-pager do PO."""
+    from tools import rastro
+
+    try:
+        todas = set(rastro.secoes_ds())
+    except Exception:  # pragma: no cover - base da plataforma indisponível
+        todas = set()
+    return sorted(todas - set(rastro.SECOES_LEGADAS) - {SECAO_DA_PLATAFORMA})
+
+
+#: O marcador que pergunta a classe e o ambiente da spec calada — o que o 046 escreve no bloco 15: «[ABERTO — dono: PO:
+#: classe e ambiente da missão — `unoogaleria`, `unoochat` ou `unoovista`]».
+_RE_PERGUNTA_DA_SECAO = re.compile(
+    r"\bclasse\s+e\s+(?:o\s+)?ambiente\b|\bambiente\s+da\s+miss[ãa]o\b|\bse[çc][ãa]o\s+do\s+(?:ds|design\s+system)\b|"
+    r"\bsecao_ds\b", re.I)
+
+
+def pergunta_a_secao(texto: str) -> bool:
+    """O marcador pergunta a classe e o ambiente da missão (a `secao_ds` que o bloco 0 não tem)."""
+    return bool(_RE_PERGUNTA_DA_SECAO.search(texto or ""))
+
+
 def _linha_da_secao(linha: str, secao: str) -> bool:
     """A linha que fixa a seção: o campo `secao_ds` da spec ou a «Seção do DS:» do one-pager, com a seção do bloco 0."""
     if re.search(r"secao_ds\W{0,6}" + re.escape(secao).replace(":", r"\s*:\s*"), linha, re.I):
@@ -374,7 +427,7 @@ def conferir_spec(spec: str, serie: Optional[str] = None, briefing: str = "", on
                            "a subseção «Regras e fases do mini-jogo» do bloco 2 (`formato-spec.md`), copiada do §4 do "
                            "one-pager. A jornada só mapeia as telas para elas; se a decisão é do PO, escreva "
                            "`[ABERTO — dono: PO: regras e fases do mini-jogo …]` com a sugestão.")})
-    if conferir_escolha and d["nova"]:
+    if conferir_escolha and d["nova"] and escolha_a_conferir(d["secao"], briefing):
         resposta = _escolha(spec, one_pager, briefing, decisoes_do_po, d, one_pager_po=one_pager_po)
         escolha = resposta["status"]
         rotulo = "o mini-jogo" if d["classe"] == MINI_JOGO else "o ambiente novo"
@@ -444,10 +497,19 @@ def secoes_do_bloco_14(bloco: str, envelope: Optional[Dict[str, Any]] = None, de
 
     for m in _RE_ROTULO_SECAO.finditer(bloco or ""):
         valor = m.group(1)
-        tokens = re.findall(r"`([^`\n]+)`", valor)
-        if tokens:
-            for i, token in enumerate(tokens):
-                pôr(token, i == 0)
+        crases = list(re.finditer(r"`([^`\n]+)`", valor))
+        if crases:
+            fim = 0
+            for i, crase in enumerate(crases):
+                entre = _sem_acento(valor[fim:crase.start()]).lower()
+                fim = crase.end()
+                if i and _RE_SECAO_DE_CONTEXTO.search(entre):
+                    # «`unoochat` (tema claro, ADR-134 — não o legado `whatsappmobile`)»: a legada é contexto, não seção
+                    # da ficha. A tabela de `ambientes.md` traz «`unoochat` (e o legado `whatsappmobile`)», e o D9 já
+                    # escreveu contexto nesta linha (8ce9c32d, 25/09/2026); no refazer da exp03em1b a ficha era descartada
+                    # e bloqueava como decisão de produto (revisão do PR #76, 24/10/2026)
+                    continue
+                pôr(crase.group(1), i == 0)
             continue
         # sem crase, só a palavra que é seção conhecida conta: «nenhuma seção nova», «Galeria de fotos» não são valor
         primeira = re.match(r"[\s*_]*([a-z][\w:-]*)", valor, re.I)
@@ -484,8 +546,17 @@ def jogo_no_bloco_14(bloco: str, spec: str) -> List[str]:
 
     A regra e a tabela são procuradas no bloco inteiro, não só sob um título «Regras e fases»: «### Regras do jogo» com
     `R1`, ou uma tabela «| Fase | Nome |» solta na ficha, passavam (revisão do PR #76, 24/10/2026). Fora da seção, a
-    tabela com a coluna «#» só é de fases com uma coluna de jogo (regra, vence, perde) — «| # | Componente |» é da ficha."""
+    tabela com a coluna «#» só é de fases com uma coluna de jogo (regra, vence, perde) — «| # | Componente |» é da ficha.
+
+    A linha em prosa conta só quando o termo está no rótulo, antes dos dois-pontos («**Como se vence uma fase:** …»), e o
+    valor não é o texto do bloco 2 da spec. Na revisão do PR #76 (24/10/2026) bastava a linha citar o termo: as linhas que
+    o próprio template do 067 pede — «Demonstração na tela: … o áudio do guia lê a regra da fase», «Estados de tela do jogo:
+    … quando a criança vence a fase, confete», «Mapa de mundo como tela: …; como o progresso aparece: …» — bloqueavam a
+    ficha do mini-jogo aprovado."""
+    from tools.bncc import secao_bloco
+
     da_spec = {_norm(l) for l in (spec or "").splitlines() if l.strip()}
+    bloco2 = f" {_norm(secao_bloco(spec or '', 2) or spec or '')} "
     secao = regras_e_fases(bloco)
     solto = _ler_regras_e_fases(bloco, fora_da_secao=True)
     regras = {**solto["regras"], **secao["regras"]}
@@ -494,8 +565,15 @@ def jogo_no_bloco_14(bloco: str, spec: str) -> List[str]:
     # a linha da tabela de fases igual à da spec é cópia: compara as células, sem a barra
     saida += [f"fase {n}: {f['linha']}" for n, f in sorted(fases.items()) if _norm(f["inteira"]) not in da_spec]
     for linha in (bloco or "").splitlines():
-        if _RE_DEFINE_JOGO.search(linha) and re.search(r":\s*\S", linha) and _norm(linha) not in da_spec:
-            saida.append(linha.strip()[:200])
+        m = _RE_LINHA_COM_ROTULO.match(linha)
+        if not m or not _RE_DEFINE_JOGO.search(m.group(1)) or not m.group(2).strip(" *_`"):
+            continue
+        valor = _norm(m.group(2))
+        # «Regra da fase 1: Ponha a foto do café antes da escola.» repete o bloco 2: cópia, não decisão (com três palavras
+        # ou mais — «Quantas fases: 3» não se confere por trecho)
+        if _norm(linha) in da_spec or (len(valor.split()) >= 3 and f" {valor} " in bloco2):
+            continue
+        saida.append(linha.strip()[:200])
     return [s for s in dict.fromkeys(saida) if _norm(s) not in da_spec]
 
 
@@ -601,7 +679,10 @@ def conferir_d9(texto: str, envelope: Optional[Dict[str, Any]], estado: Dict[str
                            "affordances, verbos com rótulo e componente, a seção do DS): tire estas linhas e, se o jogo "
                            "precisa de outra regra, devolva-a a produto:\n"
                            + "\n".join(f"    - «{l[:180]}»" for l in jogo[:10]))})
-        if decidido["nova"]:
+        # a escolha do PO pela mesma regra do manifesto: a seção nova que repete uma coleção do DS, ou que o briefing não
+        # fixou porque fixou outra, é bloqueada lá — cobrá-la aqui pedia ao PO o que o gate ignora (exp01ef1b,
+        # `nova:galeriadefotos`; revisão do PR #76, 24/10/2026)
+        if decidido["nova"] and escolha_a_conferir(decidido["secao"], str(estado.get("briefing") or "")):
             escolha = escolha_do_po(spec, str(estado.get("one_pager") or ""), str(estado.get("briefing") or ""),
                                     estado.get("decisoes_do_po") or [], decidido,
                                     one_pager_po=str(estado.get("one_pager_po") or ""))

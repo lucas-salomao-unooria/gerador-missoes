@@ -1041,9 +1041,6 @@ def validar_manifesto(spec: str, briefing: str = "", one_pager_po: str = "", one
 
     v = _campo(texto, "secao_ds"); campos["secao_ds"] = v
     secoes = secoes_ds()
-    #: a classe e o ambiente são conferidos em `tools/ambiente.py` (PR 8); a escolha do PO só quando a seção nova não
-    #: repete uma coleção que o DS já tem (aí o bloqueio é outro, e mais preciso)
-    conferir_escolha = True
     if not v or not (v.lower() in secoes or re.match(r"^(nova|minijogo)\s*:\s*\S+", v, re.IGNORECASE)):
         # Desde o PR 8 (24/10/2026, decisão D8) a classe e o ambiente são decididos em produto: a spec que cala não é mais
         # do D9, que não cria ambiente — ele devolve a produto. Até aqui a mensagem dava o dono ao design.
@@ -1065,7 +1062,6 @@ def validar_manifesto(spec: str, briefing: str = "", one_pager_po: str = "", one
     elif v.lower() in secoes and not secoes[v.lower()]:
         achados.append({"severidade": "atencao", "campo": "secao_ds", "etapa": "plataforma", "resumo": f"`{v}` existe no DS mas não tem ponte em `@edu/ui`; criar a ponte é pré-requisito de plataforma."})
     elif re.match(r"^nova\s*:", v, re.IGNORECASE) and colecao_que_ja_cobre(v.split(":", 1)[1], secoes):
-        conferir_escolha = False
         colecao = colecao_que_ja_cobre(v.split(":", 1)[1], secoes)
         ponte = secoes.get(colecao)
         achados.append({"severidade": "bloqueio", "campo": "secao_ds", "etapa": "produto", "resumo": (
@@ -1079,13 +1075,14 @@ def validar_manifesto(spec: str, briefing: str = "", one_pager_po: str = "", one
     if trava:
         achados.append({"severidade": trava["severidade"], "campo": "secao_ds", "etapa": "produto", "resumo": trava["resumo"]})
     # PR 8 (decisão D8): a classe do ambiente coerente com a seção, o mini-jogo só no 1º–5º e com as regras e as fases na
-    # spec, e o ambiente novo ou o mini-jogo como escolha do PO — nunca decidido em silêncio
+    # spec, e o ambiente novo ou o mini-jogo como escolha do PO — nunca decidido em silêncio. A escolha do PO só quando a
+    # seção nova não repete uma coleção do DS e o briefing não fixa outra (aí o bloqueio é o de cima, mais preciso): a
+    # regra é `ambiente.escolha_a_conferir`, a mesma do de acordo e do D9
     from tools import ambiente as amb
 
     serie_do_manifesto = (series or [None])[0] if series else (id_decomposto or {}).get("serie")
     for a in amb.conferir_spec(spec or "", serie=serie_do_manifesto, briefing=briefing, one_pager=one_pager,
-                               one_pager_po=one_pager_po, decisoes_do_po=decisoes_do_po,
-                               conferir_escolha=conferir_escolha and not trava):
+                               one_pager_po=one_pager_po, decisoes_do_po=decisoes_do_po):
         achados.append(a)
     campos["classe_ambiente"] = amb.classe_e_ambiente(spec or "")["classe"]
     # Várias seções do DS (15/10/2026): `secao_ds` é a principal; as extras, o mapa e as transições vêm do bloco 0 e

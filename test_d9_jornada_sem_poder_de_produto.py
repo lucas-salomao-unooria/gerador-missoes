@@ -291,6 +291,116 @@ def test_briefing_so_decide_o_minijogo_quando_o_pede(briefing, esperado):
     assert amb.escolha_do_po(_spec_minijogo(), briefing=briefing) == esperado
 
 
+# --------------------------------------------------------------------------- 2c. revisão do PR #76, segunda rodada
+def test_secao_nova_que_o_manifesto_bloqueia_por_outro_motivo_nao_vira_escolha_exp01ef1b():
+    """A exp01ef1b fixa `nova:galeriadefotos`, e o DS já tem a `unoogaleria`: o manifesto bloqueia por isso, e a escolha do
+    PO não é conferida. O de acordo abria assim mesmo «[PROPOSTA] Ambiente novo ou mini-jogo» para aprovar a seção, e o
+    D9 a cobrava — o PO aprovaria o que o gate ignora (o teste do PR 9 contava 15 itens no lugar de 14)."""
+    estado = _estado("exp01ef1b")
+    assert amb.classe_e_ambiente(estado["spec_missao"])["secao"] == "nova:galeriadefotos"
+    assert not amb.escolha_a_conferir("nova:galeriadefotos")
+    assert fc.escolhas_de_ambiente(estado) == []
+    assert not [i for i in fc.itens_em_aberto(estado) if i.tipo == fc.ESCOLHA_AMBIENTE or i.escolha_ambiente]
+    secao = [a for a in validar_manifesto(estado["spec_missao"])["achados"] if a.get("campo") == "secao_ds"]
+    assert len(secao) == 1 and "`unoogaleria`" in secao[0]["resumo"] and secao[0]["severidade"] == "bloqueio"
+    d9 = amb.conferir_d9(str(estado["ambiente_simulado"]), None, estado)
+    assert "escolha-de-ambiente-sem-o-po" not in _codigos(d9["achados"])
+
+
+def test_briefing_que_fixa_outra_secao_nao_abre_a_escolha_do_ambiente_novo():
+    """O briefing fixou `unoochat` e a spec fixa `nova:pistagrama`: a trava do manifesto bloqueia. O item da escolha, a
+    marca da proposta e o achado do D9 seguem a mesma regra; sem a trava, a escolha volta a ser cobrada."""
+    pr = "- [PROPOSTA — validar com PO: ambiente novo `nova:pistagrama` · por quê: verbos de mapa · alternativa: unoovista]\n"
+    briefing = "secao_ds: unoochat"
+    spec = _spec_app("nova:pistagrama")
+    assert not amb.escolha_a_conferir("nova:pistagrama", briefing)
+    assert fc.escolhas_de_ambiente({"spec_missao": spec, "briefing": briefing}) == []
+    marcada = [i for i in fc.itens_em_aberto({"spec_missao": _spec_app("nova:pistagrama", extra=pr), "briefing": briefing})
+               if "pistagrama" in i.assunto]
+    assert marcada and not marcada[0].escolha_ambiente and not marcada[0].ui
+    assert "escolha-de-ambiente-sem-o-po" not in _codigos(
+        amb.conferir_d9(_saida_d9(), None, {"spec_missao": spec, "briefing": briefing})["achados"])
+    manifesto = validar_manifesto(spec, briefing=briefing)["achados"]
+    assert any("O briefing fixou a seção" in a["resumo"] for a in manifesto)
+    assert not [a for a in manifesto if str(a.get("codigo") or "").startswith("escolha-de-ambiente")]
+    # sem a trava, a escolha é cobrada nos três lugares
+    assert [i.tipo for i in fc.escolhas_de_ambiente({"spec_missao": spec})] == [fc.ESCOLHA_AMBIENTE]
+    assert "escolha-de-ambiente-sem-o-po" in _codigos(amb.conferir_d9(_saida_d9(), None, {"spec_missao": spec})["achados"])
+
+
+ABERTO_DA_SECAO = ("\n## 15. Completude de produto\n- [ABERTO — dono: PO: classe e ambiente da missão — `unoogaleria`, "
+                   "`unoochat` ou `unoovista`]\n")
+
+
+def test_spec_calada_a_secao_que_o_po_escreve_entra_no_bloco_0():
+    """O 046 pergunta a classe e o ambiente no bloco 15 da spec calada. A resposta do PO ficava só lá, e o manifesto e o D9
+    seguiam acusando a `secao_ds` ausente: a rota «a completude pergunta, e o PO decide no de acordo» não fechava."""
+    estado = {"spec_missao": _spec_app("") + ABERTO_DA_SECAO}
+    assert "secao_ds" in [a["campo"] for a in validar_manifesto(estado["spec_missao"])["achados"]]
+    itens = [i for i in fc.itens_em_aberto(estado) if i.define_secao]
+    assert len(itens) == 1 and itens[0].opcoes() == [fc.OUTRO, fc.RECUSAR]
+    d = fc.decidir(itens, {itens[0].id: {"resposta": fc.OUTRO, "valor": "`unoochat`"}}, "24/10/2026 10:00:00", "produto")
+    novos, falhas = fc.aplicar_edicoes(estado, d.edicoes)
+    assert not falhas
+    spec = novos["spec_missao"]
+    assert "- `secao_ds: unoochat` — PO, parecer de 24/10/2026" in amb._bloco0(spec)
+    assert "- `unoochat` — PO, parecer de 24/10/2026" in spec  # o bloco 15 guarda a resposta como o PO a escreveu
+    assert amb.classe_e_ambiente(spec)["classe"] == amb.APP_CLONADO and amb.classe_e_ambiente(spec)["secao"] == "unoochat"
+    assert not [a for a in validar_manifesto(spec)["achados"] if a.get("campo") == "secao_ds"]
+    d9 = amb.conferir_d9(_saida_d9(BLOCO14_GALERIA.replace("unoogaleria", "unoochat")), None, {"spec_missao": spec})
+    assert "ambiente-ausente-na-spec" not in _codigos(d9["achados"]) and not d9["descartar"]
+    assert not fc.decisoes_perdidas({**estado, **novos, "decisoes_do_po": d.decisoes},
+                                    fc.itens_em_aberto({**estado, **novos}))
+
+
+@pytest.mark.parametrize("valor, trecho", [
+    ("nova:pistagrama", "Refazer"),
+    ("minijogo:varal-do-dia", "Refazer"),
+    ("whatsappmobile", "legada"),
+    ("o chat do zap", "seção da lista"),
+])
+def test_spec_calada_so_aceita_uma_secao_da_lista(valor, trecho):
+    """Ambiente novo e mini-jogo pedem a spec refeita, a legada só vale fixada no briefing do PO, e prosa não é seção: o de
+    acordo recusa a resposta com o caminho, em vez de gravar no bloco 0 o que o manifesto bloquearia."""
+    estado = {"spec_missao": _spec_app("") + ABERTO_DA_SECAO}
+    itens = [i for i in fc.itens_em_aberto(estado) if i.define_secao]
+    with pytest.raises(fc.RespostaInvalida, match=trecho):
+        fc.decidir(itens, {itens[0].id: {"resposta": fc.OUTRO, "valor": valor}}, "24/10/2026 10:00:00", "produto")
+
+
+def test_spec_calada_com_a_sugestao_de_uma_secao_da_lista_aceita_e_grava():
+    com_sugestao = ABERTO_DA_SECAO.replace("— `unoogaleria`", "· sugestão: `unoogaleria` · ou")
+    estado = {"spec_missao": _spec_app("") + com_sugestao}
+    itens = [i for i in fc.itens_em_aberto(estado) if i.define_secao]
+    assert itens[0].secao_sugerida == "unoogaleria" and itens[0].opcoes() == [fc.ACEITAR, fc.OUTRO, fc.RECUSAR]
+    d = fc.decidir(itens, fc.aceitar_sugestoes(itens), "24/10/2026 10:00:00", "produto")
+    novos, _ = fc.aplicar_edicoes(estado, d.edicoes)
+    assert amb.classe_e_ambiente(novos["spec_missao"])["secao"] == "unoogaleria"
+    # recusar não escreve no bloco 0, e a spec que já fixa a seção não tem item que a defina
+    r = fc.decidir(itens, {itens[0].id: {"resposta": fc.RECUSAR}}, "24/10/2026 10:00:00", "produto")
+    assert amb.classe_e_ambiente(fc.aplicar_edicoes(estado, r.edicoes)[0]["spec_missao"])["secao"] == ""
+    assert not [i for i in fc.itens_em_aberto({"spec_missao": _spec_app() + ABERTO_DA_SECAO}) if i.define_secao]
+
+
+@pytest.mark.parametrize("resposta", [fc.ACEITAR, fc.RECUSAR])
+def test_escolha_em_vigor_sem_o_sufixo_nao_e_decisao_perdida(resposta):
+    """O refazer de produto reescreve a linha da `secao_ds` sem «— aprovada — PO, parecer de …». A escolha continua valendo
+    pelo registro (o item não volta), e contá-la como perdida travava o de acordo com ESTEIRA_ESTRITA mandando «Use
+    Refazer» para uma decisão em vigor."""
+    spec = _spec_minijogo()
+    estado = {"spec_missao": spec, "one_pager": "# One-pager\n"}
+    itens = [i for i in fc.itens_em_aberto(estado) if i.tipo == fc.ESCOLHA_AMBIENTE]
+    d = fc.decidir(itens, {itens[0].id: {"resposta": resposta}}, "24/10/2026 09:00:00", "produto")
+    refeito = {**estado, "decisoes_do_po": d.decisoes}  # a spec do refazer, sem o sufixo
+    assert amb.escolha_do_po(spec, decisoes_do_po=d.decisoes) in ("aprovada", "recusada")
+    assert not [i for i in fc.itens_em_aberto(refeito) if i.tipo == fc.ESCOLHA_AMBIENTE]
+    assert fc.decisoes_perdidas(refeito, fc.itens_em_aberto(refeito)) == []
+    # o refazer trocou a seção: a recusa foi cumprida; a aprovação, não — essa continua perdida
+    trocado = {**refeito, "spec_missao": _spec_app("unoochat")}
+    perdidas = fc.decisoes_perdidas(trocado, fc.itens_em_aberto(trocado))
+    assert [p["resposta"] for p in perdidas] == ([] if resposta == fc.RECUSAR else [fc.ACEITAR])
+
+
 # --------------------------------------------------------------------------- 3. o D9: só a ficha do bloco 14
 BLOCO14_GALERIA = ("## 14. Ambiente simulado (D9)\n\n### 14.1 Ficha\n- **Nome do app que o estudante vê:** Unoogaleria\n"
                    "- **Seção do DS:** `unoogaleria` · **Classe:** app clonado\n- **Chrome:** álbum, grade e visualizador.\n")
@@ -462,6 +572,77 @@ def test_regra_e_fase_de_jogo_em_qualquer_lugar_do_bloco_14(trecho, bloqueia):
     assert ("decisao-de-produto-pelo-agente" in _codigos(_achados(st))) is bloqueia, _achados(st)
 
 
+#: A ficha do mini-jogo no formato que o 067 prescreve, preenchida: as linhas de UI citam «regra da fase», «vence a fase»
+#: e «como o progresso aparece» sem defini-los.
+FICHA_DO_TEMPLATE_067 = """## 14. Ambiente simulado (D9)
+
+- **Nome:** Varal do dia · **Seção do DS:** `minijogo:varal-do-dia` · **Classe:** mini-jogo
+- **Dispositivo nativo:** desktop cheio
+- **Área de jogo:** o varal no centro da tela; a cesta de fotos embaixo, fora da área de jogo.
+- **Verbos do jogo:** ordenar → «Pendurar» → `DraggableCard`
+- **Demonstração na tela:** o quadro de demonstração aparece no centro; o áudio do guia lê a regra da fase.
+- **Mapa de mundo como tela:** dois nós no varal; como o progresso aparece: o nó feito fica colorido, como diz o bloco 2.
+- **Estados de tela do jogo:** início · demonstração · em fase · vencida (quando a criança vence a fase, confete) · perdida · mapa · fim
+- **Identidade visual:** seção `unooria` do DS — tokens, tipografia e componentes.
+- **O que o jogo NÃO tem:** placar entre estudantes · vidas que expulsam · tempo como nota.
+- **Restrições de acessibilidade:** alvo ≥ 64×64 px · vão ≥ 16 px · nenhuma regra só por cor.
+
+| # | Componente | Origem | Tokens usados | Verbo que sustenta |
+|---|---|---|---|---|
+| 1 | Área de jogo | composição de existentes | `space-4` | ordenar |
+"""
+
+
+@pytest.mark.parametrize("linha, bloqueia", [
+    ("", False),
+    # o rótulo define a regra: é produto
+    ("- **Como se vence uma fase:** pendurar três fotos em dez segundos.", True),
+    ("- **Como perde:** a foto cai do varal e a fase recomeça.", True),
+    ("- **Quantas fases:** 3", True),
+    ("- **Regra da fase 1:** Ponha a foto do jantar antes do café.", True),
+    # o rótulo que repete o bloco 2 da spec, palavra por palavra, é cópia
+    ("- **Regra da fase 1:** Ponha a foto do café antes da escola.", False),
+])
+def test_ficha_do_template_067_preenchida_nao_e_regra_de_jogo(linha, bloqueia):
+    """Revisão do PR #76: a linha que só cita o termo — a demonstração que lê a regra da fase, o estado «vencida» quando a
+    criança vence a fase, o mapa de mundo com «como o progresso aparece» no meio — bloqueava a ficha do mini-jogo aprovado.
+    Só o rótulo, antes dos dois-pontos, define a regra."""
+    spec = _spec_minijogo().replace("- `secao_ds: minijogo:varal-do-dia`", MINIJOGO_APROVADO)
+    ficha = FICHA_DO_TEMPLATE_067 + (linha + "\n" if linha else "")
+    st = _d9(spec, _saida_d9(ficha, ENV_MINIJOGO))
+    assert ("decisao-de-produto-pelo-agente" in _codigos(_achados(st))) is bloqueia, _achados(st)
+    assert (st["ambiente_status"] == "bloqueado") is bloqueia
+    if not bloqueia:
+        assert "Demonstração na tela" in st[KEY_ANEXO]
+
+
+@pytest.mark.parametrize("linha, nomeadas", [
+    ("- **Seção do DS:** `unoochat` (tema claro, ADR-134 — não o legado `whatsappmobile`, só escuro) · **Classe:** app "
+     "clonado", ["unoochat"]),
+    ("- **Seção do DS:** `unoochat` (e o legado `whatsappmobile`)", ["unoochat"]),
+    ("- **Seção do DS:** `unoochat`, sucessora de `whatsappmobile`", ["unoochat"]),
+    ("- **Seção do DS:** `unoochat` em vez de `instanooria`", ["unoochat"]),
+    # a segunda seção sem palavra de contexto continua contando (a extra que o bloco 0 não declarou)
+    ("- **Seção do DS:** `unoochat` + `unoovista`", ["unoochat", "unoovista"]),
+    # a primeira conta sempre: «`whatsappmobile` (não a `unoochat`)» nomeia a legada
+    ("- **Seção do DS:** `whatsappmobile` (não a `unoochat`)", ["whatsappmobile"]),
+])
+def test_secao_legada_citada_como_contexto_nao_e_secao_da_ficha(linha, nomeadas):
+    assert amb.secoes_do_bloco_14("## 14. Ambiente simulado (D9)\n" + linha + "\n") == nomeadas
+
+
+def test_refazer_da_exp03em1b_com_a_legada_como_contexto_passa():
+    """A tabela de `ambientes.md` que o D9 lê traz «`unoochat` (e o legado `whatsappmobile`)», e ele já escreveu contexto
+    na linha da seção (8ce9c32d). Na exp03em1b a ficha era descartada e bloqueava como decisão de produto."""
+    estado = _estado("exp03em1b-b2e7b4a3")
+    ficha = ("## 14. Ambiente simulado (D9)\n\n- **Nome do app que o estudante vê:** Unoochat\n- **Seção do DS:** `unoochat` "
+             "(tema claro, ADR-134 — não o legado `whatsappmobile`, só escuro) · **Classe:** app clonado\n")
+    env = {"agente": "ambiente-simulado", "status": "dormente",
+           "ambiente": {"classe": "app-clonado", "secao_ds": "unoochat"}, "devolucao": None}
+    r = amb.conferir_d9(_saida_d9(ficha, env), env, {**estado, "spec_missao": estado["spec_missao_gate0"]})
+    assert r["nomeadas"] == ["unoochat"] and not r["descartar"] and r["achados"] == [], r["achados"]
+
+
 def test_secao_nova_fora_do_bloco_14_com_regra_de_jogo_bloqueia_e_sem_jogo_e_atencao():
     """«## Regras e fases do mini-jogo» depois do bloco 14 era descartada só com atenção, e escapava ao gate do jogo."""
     spec = _spec_minijogo().replace("- `secao_ds: minijogo:varal-do-dia`", MINIJOGO_APROVADO)
@@ -568,10 +749,17 @@ def test_a_ficha_gravada_no_acervo_nomeia_o_ambiente_da_spec_e_nao_traz_jogo(mis
     assert r["nomeadas"], "a ficha não nomeou a seção — o leitor não a achou"
 
 
+#: A frase com que 11 das 12 respostas do D9 do acervo abrem o Passo 4 — no formato de hoje, sem a spec atrás dela.
+PROSA_DO_D9 = "Abaixo segue o bloco 14 do anexo de design, a ficha de UI do ambiente decidido em produto.\n\n"
+
+
+@pytest.mark.parametrize("antes", ["", PROSA_DO_D9])
 @pytest.mark.parametrize("missao", sorted(REFAZER))
-def test_refazer_das_quatro_missoes_com_o_d9_novo_passa(missao):
+def test_refazer_das_quatro_missoes_com_o_d9_novo_passa(missao, antes):
     """O refazer de design com o D9 deste PR: ele responde só com o bloco 14 (o da sessão gravada), sobre a spec de produto
-    e o anexo com o bloco 13 — o split grava a ficha, e nada bloqueia, com ESTEIRA_ESTRITA."""
+    e o anexo com o bloco 13 — o split grava a ficha, e nada bloqueia, com ESTEIRA_ESTRITA. Também com a frase do D9 antes
+    do bloco: sem a spec atrás, ela era comparada ao cabeçalho da spec e bloqueava como decisão de produto (revisão do PR
+    #76, 24/10/2026)."""
     estado = _estado(missao)
     gravada = str(estado["ambiente_simulado"])
     from agents.callbacks import extrair_envelope
@@ -584,10 +772,48 @@ def test_refazer_das_quatro_missoes_com_o_d9_novo_passa(missao):
     # o escreve — aqui, o da resposta gravada dele
     bloco13 = _bloco(estado["spec_missao"], "13") or _bloco(str(estado["fechamento_lacunas"]), "13")
     anexo = montar_anexo(bloco13)
-    st = _d9(produto, _saida_d9(bloco14, novo), estrito=True, anexo=anexo)
+    st = _d9(produto, _saida_d9(bloco14, novo, antes=antes), estrito=True, anexo=anexo)
     assert st["ambiente_status"] != "bloqueado", _achados(st)
     assert not [a for a in _achados(st) if a["severidade"] == "bloqueio"]
     assert "## 14." in st[KEY_ANEXO] and "## 13." in st[KEY_ANEXO] and st["spec_missao"] == produto
+    assert "Abaixo segue" not in st[KEY_ANEXO] and "Abaixo segue" not in st["spec_missao"]
+
+
+def test_cabecalho_reescrito_antes_do_bloco_14_continua_bloqueando():
+    """A frase sem nada do cabeçalho é do agente; o cabeçalho reescrito não. Na exp03ef1b-317df247 o D9 trouxe o título
+    igual e o «Gate final: 🟡» como 🟢 — continua decisão de produto, e a do acervo continua bloqueada."""
+    spec = "# Spec — exp99 v1\n\n**2º ano EF · Unoogaleria · Gate final: 🟡 em 2026-10-22**\n\n" + _spec_app().split("\n", 1)[1]
+    trocado = PROSA_DO_D9 + "# Spec — exp99 v1\n\n**2º ano EF · Unoogaleria · Gate final: 🟢 em 2026-10-22**\n\n"
+    st = _d9(spec, _saida_d9(antes=trocado), estrito=False)
+    produto = [a for a in _achados(st) if a["codigo"] == "decisao-de-produto-pelo-agente"]
+    assert produto and "🟢" in produto[0]["resumo"] and st["ambiente_status"] == "bloqueado"
+    # só a linha do cabeçalho, reescrita, sem o título: parecida com a aceita, também não é prosa
+    so_a_linha = "**2º ano EF · Unoogaleria · Gate final: 🟢 em 2026-10-23**\n\n"
+    assert _d9(spec, _saida_d9(antes=so_a_linha))["ambiente_status"] == "bloqueado"
+    assert _d9(spec, _saida_d9(antes=PROSA_DO_D9))["ambiente_status"] == "aprovado"
+    r = amb.reavaliar_d9(_estado("exp03ef1b-317df247"))
+    assert any(a["codigo"] == "decisao-de-produto-pelo-agente" and a.get("bloco") == "" for a in r["achados"])
+
+
+def test_frase_do_d0_antes_do_bloco_13_nao_e_mudanca_no_cabecalho():
+    """O D0 passa pela mesma montagem desde o PR 2, e a frase dele antes do bloco 13 virava `[ABERTO — dono: PO]` no
+    cabeçalho — com ESTEIRA_ESTRITA, bloqueio no refazer das quatro missões. O cabeçalho reescrito por ele continua indo
+    ao PO."""
+    from agents.design import get_fecha_lacunas_split
+
+    def d0(antes: str) -> list:
+        resposta = ("# D0\n\n## Passo 5 — Bloco 13\n\n" + antes + t.BLOCO13 + "\n## Passo 5b — Relatório\n\n"
+                    + "Nenhuma lacuna de UI/UX encontrada; a spec de produto responde a todas as células. " * 2
+                    + "\n\n## Passo 6 — Devolutiva\n\nnada\n")
+        split = get_fecha_lacunas_split()
+        split.estrito = True
+        st = t._rodar({"spec_missao": _spec_app(), "fechamento_lacunas": resposta}, split)
+        return [a for a in (st.get("lacunas_status_envelope") or {}).get("achados") or []
+                if a.get("codigo") == "alterou-fora-do-proprio-bloco"]
+
+    assert d0("") == [] and d0("Abaixo segue o bloco 13 do anexo de design.\n\n") == []
+    reescrito = d0("# Spec — exp99 v2\n\n")
+    assert reescrito and reescrito[0]["severidade"] == "bloqueio" and reescrito[0].get("aberto_dono_po")
 
 
 # --------------------------------------------------------------------------- 4. a jornada só mapeia as telas

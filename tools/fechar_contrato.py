@@ -121,10 +121,19 @@ class Item:
     #: `secao_ds` seguia com ele e o código o lia como aprovado (revisão do PR #76, 24/10/2026). Outra seção é refazer
     #: produto: o PO recusa e pede a troca no Refazer.
     escolha_ambiente: bool = False
+    #: O marcador que pergunta a classe e o ambiente da spec calada (o `[ABERTO — dono: PO: classe e ambiente da missão —
+    #: …]` do 046), PR 8 (D8): a seção que o PO escreve entra também como `secao_ds` no bloco 0, logo depois de
+    #: `ancora_secao` (o título do bloco), e `secao_sugerida` é a sugestão do agente quando ela é uma seção da lista.
+    define_secao: bool = False
+    ancora_secao: str = ""
+    secao_sugerida: str = ""
 
     def opcoes(self) -> List[str]:
         if self.tipo in (MUDANCA_GATE0, ESCOLHA_AMBIENTE) or self.escolha_ambiente:
             return [ACEITAR, RECUSAR]
+        if self.define_secao:
+            # a seção da missão nunca fica para o design (D8); aceitar só quando a sugestão é uma seção da lista
+            return ([ACEITAR] if self.secao_sugerida else []) + [OUTRO, RECUSAR]
         if self.tipo == TEXTO_TETO:
             # manter o texto aprovado (a sugestão) ou escrever outro; recusar o texto é escrever outro
             return [ACEITAR, OUTRO]
@@ -311,19 +320,61 @@ def itens_em_aberto(estado: Dict[str, Any]) -> List[Item]:
 
 def _marcar_escolhas_de_ambiente(estado: Dict[str, Any], itens: Sequence[Item]) -> None:
     """Marca a [PROPOSTA] (ou o [ABERTO — dono: PO]) que pergunta a escolha da classe ou do ambiente: só aceitar ou
-    recusar, e a resposta é gravada como a de `tools/ambiente.escolha_do_po` a lê (PR 8, D8)."""
+    recusar, e a resposta é gravada como a de `tools/ambiente.escolha_do_po` a lê (PR 8, D8).
+
+    Duas exceções, da revisão do PR #76 (24/10/2026):
+    - a seção nova que o manifesto bloqueia por outro motivo (`ambiente.escolha_a_conferir`: repete uma coleção do DS, ou
+      o briefing fixa outra) não é escolha a aprovar — o «aceitar» não a liberaria. A proposta fica um item comum;
+    - na spec calada (bloco 0 sem `secao_ds`), o marcador que pergunta a classe e o ambiente é `define_secao`: a seção
+      que o PO escrever entra também no bloco 0. Até aqui a resposta ficava só no bloco 15, e o manifesto e o D9 seguiam
+      acusando a `secao_ds` ausente."""
     from tools import ambiente as amb
 
-    decidido = amb.classe_e_ambiente(documentos(estado)[DOC_SPEC])
+    spec = documentos(estado)[DOC_SPEC]
+    decidido = amb.classe_e_ambiente(spec)
     secao = decidido["secao"] if decidido["nova"] else ""
+    a_conferir = not decidido["nova"] or amb.escolha_a_conferir(decidido["secao"], str(estado.get("briefing") or ""))
+    ancora = next((l for l in spec.splitlines() if re.match(r"^##\s*\**\s*0\s*[.—–-]", l)), "")
     for item in itens:
         if item.tipo not in (PROPOSTA, ABERTO_PO):
             continue
-        if any(amb.sobre_a_escolha(o.descricao or item.assunto, secao) for o in item.ocorrencias) \
-                or amb.sobre_a_escolha(item.assunto, secao):
-            item.escolha_ambiente = True
-            item.ui = False
-            item.sugestao = item.sugestao or item.assunto
+        textos = [o.descricao or item.assunto for o in item.ocorrencias] + [item.assunto]
+        if (not decidido["secao"] and ancora
+                and any(amb.pergunta_a_secao(t) and not re.search(r"\bextras?\b", t, re.I) for t in textos)):
+            item.define_secao, item.ancora_secao, item.ui = True, ancora, False
+            item.secao_sugerida = _secao_do_de_acordo(item.sugestao, levantar=False)
+            continue
+        if any(amb.sobre_a_escolha(t, secao) for t in textos):
+            item.ui = False  # o ambiente nunca fica para o design (D8)
+            if a_conferir:
+                item.escolha_ambiente = True
+                item.sugestao = item.sugestao or item.assunto
+
+
+def _secao_do_de_acordo(valor: str, levantar: bool = True) -> str:
+    """A seção que o PO escreveu para a spec calada, normalizada (`unoochat`), se ela é uma da lista de missão nova de
+    `ambientes.md`. Fora dela, `RespostaInvalida` com o caminho — ou "" com `levantar` falso (a sugestão do agente)."""
+    from tools import ambiente as amb
+
+    secao = re.sub(r"^secao_ds\s*:\s*", "", " ".join((valor or "").replace("`", " ").replace("*", " ").split()).lower())
+    secao = re.sub(r"\s*:\s*", ":", secao).strip(" .;")
+    validas = amb.secoes_para_o_de_acordo()
+    if secao in validas:
+        return secao
+    if not levantar:
+        return ""
+    from tools.rastro import SECOES_LEGADAS
+
+    if re.match(r"^(?:nova|minijogo):", secao):
+        motivo = ("ambiente novo e mini-jogo pedem a spec refeita (os componentes da seção nova; no mini-jogo, as regras e "
+                  "as fases no bloco 2): deixe este item sem resposta e peça-o no **Refazer** de produto")
+    elif secao in SECOES_LEGADAS:
+        motivo = ("seção legada só vale fixada no briefing ou no one-pager que o PO anexou (ADR-133 a 138): use a "
+                  "sucessora da lista, ou peça a legada no **Refazer** de produto")
+    else:
+        motivo = "escreva uma seção da lista, como está"
+    raise RespostaInvalida(f"«{valor}» não é seção para a spec: {motivo}. Seções da lista: "
+                           + ", ".join(f"`{s}`" for s in validas) + ".")
 
 
 def escolhas_de_ambiente(estado: Dict[str, Any]) -> List[Item]:
@@ -337,6 +388,11 @@ def escolhas_de_ambiente(estado: Dict[str, Any]) -> List[Item]:
     spec = docs[DOC_SPEC]
     decidido = amb.classe_e_ambiente(spec)
     if not decidido["nova"]:
+        return []
+    if not amb.escolha_a_conferir(decidido["secao"], str(estado.get("briefing") or "")):
+        # a regra do manifesto: a seção nova que repete uma coleção do DS (`nova:galeriadefotos` da exp01ef1b) ou que o
+        # briefing não fixou porque fixou outra é bloqueada lá, e o «aceitar» do PO não a liberaria — o item pedia uma
+        # aprovação que o gate ignora (revisão do PR #76, 24/10/2026)
         return []
     escolha = amb.escolha_do_po(spec, docs[DOC_ONE_PAGER], str(estado.get("briefing") or ""),
                                 estado.get(KEY_DECISOES) or [], decidido,
@@ -661,6 +717,15 @@ def decidir(itens: Sequence[Item], respostas: Optional[Dict[str, Dict[str, str]]
                 "origem": str(r.get("origem") or "cartão do de acordo"), "ocorrencias": len(item.ocorrencias),
             })
             continue
+        if item.define_secao and resposta in (ACEITAR, OUTRO):
+            # A spec calada: a seção que o PO escolheu entra também no bloco 0, como `secao_ds`, logo depois do título —
+            # é o campo que o manifesto e o D9 leem. Só ficava no bloco 15, e a missão seguia com `secao_ds` ausente e
+            # `ambiente-ausente-na-spec` (revisão do PR #76, 24/10/2026). A classe vem da seção: toda seção da lista é app
+            # clonado; ambiente novo e mini-jogo pedem o Refazer (`_secao_do_de_acordo`)
+            secao = _secao_do_de_acordo(valor if resposta == OUTRO else item.secao_sugerida)
+            atual = por_linha.get((DOC_SPEC, item.ancora_secao), item.ancora_secao)
+            por_linha[(DOC_SPEC, item.ancora_secao)] = (atual.rstrip()
+                                                         + f"\n- `secao_ds: {secao}` — PO, parecer de {data}")
         for oc in item.ocorrencias:
             texto = _texto_gravado(item, oc, resposta, valor, data)
             gravado = gravado or texto
@@ -840,8 +905,33 @@ def decisoes_perdidas(estado: Dict[str, Any], itens: Sequence[Item]) -> List[Dic
             continue
         if any(i.id == d["id"] or _parecidos(str(d.get("assunto") or ""), i.assunto) for i in itens):
             continue  # reaberto: volta ao cartão, já respondido
+        if d.get("tipo") == ESCOLHA_AMBIENTE and _escolha_em_vigor(estado, d):
+            continue
         saida.append(d)
     return saida
+
+
+def _escolha_em_vigor(estado: Dict[str, Any], d: Dict[str, Any]) -> bool:
+    """A escolha do ambiente novo ou do mini-jogo que o PO respondeu continua valendo sem o sufixo no texto.
+
+    O refazer de produto reescreve a linha da `secao_ds` sem «— aprovada — PO, parecer de …», mas a `escolha_do_po` honra
+    a decisão pelo registro e não reabre o item: a seção que importa continua lá. Contá-la como perdida travava o de
+    acordo com ESTEIRA_ESTRITA e mandava «Use Refazer» para uma decisão em vigor (revisão do PR #76, 24/10/2026). A
+    recusa de uma seção que a spec não fixa mais também foi cumprida: o refazer trocou o ambiente, como a recusa pedia."""
+    from tools import ambiente as amb
+
+    m = re.search(r"`\s*((?:nova|minijogo)\s*:\s*[a-z0-9][a-z0-9-]*)\s*`", str(d.get("assunto") or ""), re.I)
+    if not m:
+        return False
+    secao = re.sub(r"\s*:\s*", ":", m.group(1).lower())
+    docs = documentos(estado)
+    decidido = amb.classe_e_ambiente(docs[DOC_SPEC])
+    if decidido["secao"] != secao:
+        return d.get("resposta") == RECUSAR
+    escolha = amb.escolha_do_po(docs[DOC_SPEC], docs[DOC_ONE_PAGER], str(estado.get("briefing") or ""),
+                                estado.get(KEY_DECISOES) or [], decidido,
+                                one_pager_po=str(estado.get("one_pager_po") or ""))
+    return escolha in ("aprovada", "recusada")
 
 
 def notas(fluxo: Optional[Dict[str, Any]]) -> str:
