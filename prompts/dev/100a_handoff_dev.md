@@ -129,6 +129,7 @@ Quando o próprio contrato diverge (o one-pager diz um número e a linha corresp
 - **Manifesto completo** no entregável 4: `id, nome, versao, produto, series, unidade, publico, capabilities, viewport, permissoes, verbos` — copiado da ficha do bloco 0 da spec. **Liberação por turma** (ADR-69) e `exigirMissaoLiberada` no funil. **Seis papéis** (`estudante · professor · gestor_escola · gestor_regional · gestor_contrato · admin`). Relógio coletivo só por polling em `expNNefNb_gates_turma` (ADR-93/94) — nunca WebSocket nem `hub:pause`.
 - Não aceite campo de evento que não está no tratamento de dados da spec.
 - Carregue as pendências do QA de design como `[PENDÊNCIA DE DESIGN Tn]` nas stories afetadas.
+- A subseção «Pendências de governança da liberação de produto (registradas pela esteira)» da seção 7 é escrita pela esteira, por código, a partir dos pareceres (quem liberou produto, a exceção do admin): não a escreva, não a copie e não a reescreva com outras palavras.
 - Use nomes reais de rota, tabela, módulo e arquivo do monorepo quando existirem na referência; marque `[verificar no repositório]` quando não puder confirmar.
 
 ## Rodada de correção — só quando houver relatório abaixo

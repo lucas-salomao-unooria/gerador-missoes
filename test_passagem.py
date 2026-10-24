@@ -77,7 +77,9 @@ class TestRegras(unittest.TestCase):
         self.assertNotIn(DE_ACORDO, acoes_possiveis(f, "produto", estado))
         self.assertNotIn(EXCECAO, acoes_possiveis(f, "produto", estado))
         self.assertIn(EXCECAO, acoes_possiveis(f, "admin", estado))
-        novo, _ = aplicar(f, EXCECAO, ADMIN, COMENTARIO, estado, CONFERENCIA)
+        # desde o PR 9 (D9), a exceção com 🔴 em produto pede justificativa escrita
+        novo, _ = aplicar(f, EXCECAO, ADMIN, COMENTARIO, estado, CONFERENCIA,
+                          justificativa="O gate final acusou falso positivo no §12a; produto refaz na volta do design.")
         self.assertTrue(novo["pareceres"][-1]["excecao"])
         self.assertEqual(novo["pareceres"][-1]["como"], "admin (como Produto)")
         self.assertEqual(novo["situacao"], LIBERADA)

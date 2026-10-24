@@ -359,9 +359,15 @@ KEY_DOCUMENTOS_TRAVADOS = "documentos_travados"
 def travar_documento_na_correcao_pontual(chave: str):
     """before_agent_callback dos autores: na correção pontual, o documento já editado não é reescrito.
 
-    O `Content` devolvido é o próprio documento — vai para o `output_key` sem mudar uma letra, e o agente não roda.
-    Até 19/10/2026 a correção reexecutava cada autor sobre `anterior_<chave>`, e a troca de um número devolvia a spec
-    com metade das linhas diferentes (exp03em1b, 13/10/2026). Fora da correção pontual, não faz nada.
+    O `Content` devolvido é o próprio documento — vai para o `output_key` sem mudar uma letra do que o editor deixou, e o
+    agente não roda. Até 19/10/2026 a correção reexecutava cada autor sobre `anterior_<chave>`, e a troca de um número
+    devolvia a spec com metade das linhas diferentes (exp03em1b, 13/10/2026). Fora da correção pontual, não faz nada.
+
+    A única coisa que muda é o que a esteira escreve: no handoff e no PRD, as pendências de governança da liberação de
+    produto, como estão agora (`documento_com_governanca`). O after_agent_callback do redator não roda com o agente
+    travado, e nenhum passo determinístico reescreve o handoff depois do HandoffLoop (o PRD tem o A119): na correção
+    pontual de dev da exp02ef1b — produto liberado pela conta design em 22/10/2026 15:27 —, o PRD saía com a pendência
+    e o handoff sem ela (revisão do PR #75, 24/10/2026).
     """
 
     def _travar(callback_context: CallbackContext) -> Optional[types.Content]:
@@ -371,6 +377,7 @@ def travar_documento_na_correcao_pontual(chave: str):
         documento = str(state.get(chave) or "")
         if not documento.strip():
             return None
+        documento = documento_com_governanca(state, chave, documento)
         return types.Content(role="model", parts=[types.Part(text=documento)])
 
     _travar.__name__ = f"travar_{chave}_na_correcao_pontual"
@@ -405,8 +412,12 @@ def retrabalhar_por_trocas(chave: str):
         if not motivos or not documento.strip() or not get_settings().retrabalho_por_trocas:
             return None
         from pipeline.reexecucao import editar, validador_do_po
+        from tools import governanca
         from tools.edicao_pontual import como_dicts
 
+        if chave in governanca.SECAO_DE_PENDENCIAS:
+            # as pendências de governança são da esteira: o editor não as vê, e elas voltam abaixo como estão agora
+            documento = governanca.sem_bloco(documento)
         # o voto do comitê pode mudar o texto do PO, mas só com a proposta ao lado ou o voto citado na tabela de
         # alterações: a troca que o apaga volta ao editor (`tools.one_pager_po.perdidos_pela_edicao`)
         resultado, proposta = await editar(motivos, "retrabalho", {chave: documento},
@@ -424,7 +435,8 @@ def retrabalhar_por_trocas(chave: str):
             return None
         state[KEY_TROCAS_DE_RETRABALHO] = list(state.get(KEY_TROCAS_DE_RETRABALHO) or []) + [
             {"chave": chave, "edicoes": como_dicts(resultado.aplicadas), "pendencias": list(proposta.pendencias)}]
-        return types.Content(role="model", parts=[types.Part(text=resultado.documentos[chave])])
+        corrigido = documento_com_governanca(state, chave, resultado.documentos[chave])
+        return types.Content(role="model", parts=[types.Part(text=corrigido)])
 
     _retrabalhar.__name__ = f"retrabalhar_{chave}_por_trocas"
     return _retrabalhar
@@ -568,6 +580,44 @@ def copiar_textos_chave(chave: str):
         return None
 
     _callback.__name__ = f"copiar_textos_chave_{chave}"
+    return _callback
+
+
+def documento_com_governanca(state: Any, chave: str, texto: str) -> str:
+    """O handoff ou o PRD com as pendências de governança da liberação de produto como estão agora
+    (`tools.governanca.com_pendencias`, lidas de `governanca_produto`). Outro documento volta como veio.
+
+    É o mesmo bloco em todo caminho que escreve o documento: o redator (`registrar_governanca`), o documento travado na
+    correção pontual (`travar_documento_na_correcao_pontual`) e o retrabalho por trocas (`retrabalhar_por_trocas`) — nos
+    dois últimos o agente não roda, e o after_agent_callback dele também não."""
+    from tools import governanca
+
+    if chave not in governanca.SECAO_DE_PENDENCIAS:
+        return texto
+    return governanca.com_pendencias(texto, governanca.da_sessao(state), chave)
+
+
+def registrar_governanca(chave: str):
+    """after_agent_callback do handoff e do PRD: as pendências de governança da liberação de produto entram por código
+    na seção de pendências (§7 do handoff, §19 do PRD) — PR 9 do plano «Produto dono do contrato», D9.
+
+    Lidas de `governanca_produto`, que a execução grava a partir dos pareceres: «liberado sem a conta produto» (as
+    liberações em vigor da exp02em1b e da exp02ef1b, de 22 e 23/10/2026, são da conta design) e a exceção do admin com
+    🔴 em produto. O redator não as escreve nem as tira: o bloco de uma rodada anterior é trocado, e sem pendência ele
+    sai. Logo depois do autor, para os gates do loop lerem o mesmo texto que vai para quem codifica."""
+    def _callback(callback_context: CallbackContext) -> None:
+        from pipeline.artifacts import e_mensagem_de_pulo
+
+        state = callback_context.state
+        texto = state.get(chave)
+        if not isinstance(texto, str) or not texto.strip() or e_mensagem_de_pulo(texto):
+            return None
+        novo = documento_com_governanca(state, chave, texto)
+        if novo != texto:
+            state[chave] = novo
+        return None
+
+    _callback.__name__ = f"registrar_governanca_{chave}"
     return _callback
 
 
