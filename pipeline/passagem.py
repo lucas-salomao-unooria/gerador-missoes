@@ -315,8 +315,14 @@ def itens_de_conferencia(estado: Dict[str, Any]) -> List[Dict[str, str]]:
     texto-chave acima do teto, PR 3 e PR 7) e as pendências 🟡 que pedem decisão do PO nos gates de produto — achado de
     severidade `decisao_humana` («F7 — propostas aguardando homologação do PO», «conflito-pedido-regra»). Sem nenhum
     deles, o de acordo segue como antes. Pura."""
-    itens: List[Dict[str, str]] = [{"id": i.id, "origem": CONTRATO, "tipo": i.tipo, "assunto": i.assunto}
-                                   for i in contrato_em_aberto(estado)]
+    return ([{"id": i.id, "origem": CONTRATO, "tipo": i.tipo, "assunto": i.assunto} for i in contrato_em_aberto(estado)]
+            + pendencias_de_conferencia(estado))
+
+
+def pendencias_de_conferencia(estado: Dict[str, Any]) -> List[Dict[str, str]]:
+    """Só as pendências 🟡 de decisão do PO nos gates de produto, sem a lista do contrato — que custa quase um segundo
+    numa missão grande e o cartão já monta na lista dele. Pura."""
+    itens: List[Dict[str, str]] = []
     vistos = set()
     for chave, icone in semaforo_da_etapa(estado, "produto").items():
         envelope = estado.get(f"{chave}_envelope")

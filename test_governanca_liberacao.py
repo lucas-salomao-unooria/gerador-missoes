@@ -250,6 +250,7 @@ def test_pendencia_amarela_que_pede_o_po_entra_uma_vez_e_pede_leitura():
     estado = _com_pendencia_do_po(VERDE)
     itens = passagem.itens_de_conferencia(estado)
     assert [(i["origem"], i["tipo"]) for i in itens] == [(passagem.PENDENCIA, "F7")]
+    assert passagem.pendencias_de_conferencia(estado) == itens  # o que o cartão usa, sem montar a lista do contrato
     with pytest.raises(DecisaoInvalida, match="sem leitura confirmada"):
         aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, estado)
     novo, _ = aplicar(_aguardando(), DE_ACORDO, PO, COMENTARIO, estado, leitura=[itens[0]["id"]])

@@ -862,7 +862,7 @@ def _render_conferencia_de_leitura(run_dir: Path, fluxo: Dict[str, Any], estado:
 
     A conferência de leitura do de acordo de produto estava desligada desde 25/09/2026 (05feeaf): volta só quando há
     marcador aberto — sem nenhum, o cartão não mostra nada e o de acordo segue como antes."""
-    itens = [i for i in passagem.itens_de_conferencia(estado) if i["origem"] == passagem.PENDENCIA]
+    itens = passagem.pendencias_de_conferencia(estado)
     if not itens:
         return []
     base = f"leitura_{run_dir.name}_{fluxo.get('versao', 0)}"
