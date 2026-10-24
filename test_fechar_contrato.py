@@ -209,7 +209,11 @@ def test_tudo_de_acordo_sem_a_lista_nao_aprova_proposta_e_com_estrita_recusa():
     estado = _produto_estado()
     with pytest.raises(DecisaoInvalida, match="sem resposta"):
         aplicar(_fluxo(), DE_ACORDO, PO, COMENTARIO, estado, estrito=True)
-    novo, _ = aplicar(_fluxo(), DE_ACORDO, PO, COMENTARIO, estado, estrito=False)
+    # sem a estrita, o item sem resposta sai — e, desde o PR 9, com a leitura de cada um confirmada no cartão
+    with pytest.raises(DecisaoInvalida, match="sem leitura confirmada"):
+        aplicar(_fluxo(), DE_ACORDO, PO, COMENTARIO, estado, estrito=False)
+    lidos = [i["id"] for i in passagem.itens_de_conferencia(estado)]
+    novo, _ = aplicar(_fluxo(), DE_ACORDO, PO, COMENTARIO, estado, estrito=False, leitura=lidos)
     registro = novo["pareceres"][-1]
     assert registro["decisoes_contrato"] == [] and registro["edicoes_contrato"] == []
     assert len(_sem_teto(registro["sem_resposta"])) == 10
@@ -228,8 +232,9 @@ def test_excecao_do_admin_sai_com_o_que_ficou_sem_resposta():
     assert EXCECAO in acoes_possiveis(_fluxo(), "admin", estado, estrito=True)
     assert EXCECAO not in acoes_possiveis(_fluxo(), "produto", estado, estrito=True)
     assert EXCECAO not in acoes_possiveis(_fluxo(), "admin", estado, estrito=False)
+    lidos = [i["id"] for i in passagem.itens_de_conferencia(estado)]
     novo, _ = aplicar(_fluxo(), EXCECAO, ADMIN, "Libero sem fechar: o PO decide os parâmetros depois.", estado,
-                      estrito=True)
+                      estrito=True, leitura=lidos)
     registro = novo["pareceres"][-1]
     assert registro["excecao"] and len(_sem_teto(registro["sem_resposta"])) == 10
     assert "item(ns) do contrato de produto sem resposta" in passagem.notas_de_passagem(novo)

@@ -50,6 +50,19 @@ def _pedidos_do_po(conversa: Dict[str, Any]) -> List[Dict[str, str]]:
 
     return pedidos_do_po(fluxo_de(conversa or {}))
 
+
+def _com_governanca(estado: Dict[str, Any], conversa: Dict[str, Any]) -> None:
+    """Grava no estado quem liberou produto, com papel e data (`tools/governanca.py`, PR 9 do plano «Produto dono do
+    contrato»), a partir dos pareceres do fluxo. A cada etapa que começa — refazer, correção pontual, cada passo da
+    cascata —, para a marca «liberado sem a conta produto» chegar ao handoff e ao PRD como estava na decisão, e não como
+    a execução anterior a deixou. Sessão sem parecer humano não ganha a chave."""
+    from pipeline.passagem import fluxo_de, governanca
+    from tools.governanca import KEY_GOVERNANCA
+
+    fluxo = fluxo_de(conversa or {})
+    if fluxo is not None:
+        estado[KEY_GOVERNANCA] = governanca(fluxo)
+
 #: Etapas de onde uma correção pode recomeçar, na ordem da esteira. `transversal` refaz só
 #: diagnóstico e aprendizado. `produto` entrou em 23/09/2026: sem ela, a triagem mandava para `spec`
 #: pedidos de mecânica, etapas e narrativa — e a correção a partir da spec não refaz o one-pager nem
@@ -1116,6 +1129,7 @@ async def executar_correcao_stream(
         if notas_de_passagem is not None:
             novo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
         novo[KEY_PEDIDOS_DO_PO] = _pedidos_do_po(conversa)
+        _com_governanca(novo, conversa)
         return novo, chaves
 
     limpo, removidas = estado_inicial()
@@ -1447,6 +1461,7 @@ async def iniciar_etapa_stream(
         stages, com_transversal = [etapa], False
     limpo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
     limpo[KEY_PEDIDOS_DO_PO] = _pedidos_do_po(conversa)
+    _com_governanca(limpo, conversa)
     backup = fazer_backup(run_dir, f"passagem-{etapa}", removidas)
     inicio = time.time()
     yield {"type": "etapa_started", "etapa": etapa, "stages": stages, "timestamp": inicio,
