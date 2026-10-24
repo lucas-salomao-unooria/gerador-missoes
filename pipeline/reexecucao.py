@@ -1185,7 +1185,14 @@ async def executar_correcao_stream(
         restaurados = restaurar_backup(run_dir, backup, custo_parcial, stages)
         registro.status = "error"
         detalhe = (erro or {}).get("error") or "o runner terminou sem resultado"
-        mensagens.append({"role": "assistant", "content": f"❌ **Correção não aplicada:** {detalhe}. A sessão voltou ao estado anterior."})
+        antes = list((cascata or {}).get("aplicados_antes") or [])
+        if antes:
+            # passo de cascata: o passo anterior não foi desfeito (revisão do PR 5, 24/10)
+            texto = (f"❌ **O passo de {etapa} da cascata falhou:** {detalhe}. Os itens de {', '.join(antes)} ficaram "
+                     f"aplicados; só {etapa} voltou ao estado de antes do passo — refaça {etapa} com **Refazer**.")
+        else:
+            texto = f"❌ **Correção não aplicada:** {detalhe}. A sessão voltou ao estado anterior."
+        mensagens.append({"role": "assistant", "content": texto})
         falso_result = SimpleNamespace(status="error", state={}, gates={}, duration_seconds=registro.duracao_s,
                                        attached_files=[], step_thoughts={}, session_id=conversa.get("session_id", ""),
                                        user_id=conversa.get("user_id", ""), prompt=briefing)
@@ -1246,8 +1253,10 @@ async def executar_cascata_stream(
        núcleo, no one-pager, no resumido e na spec do Gate 0, e os gates de produto julgam com a linha de base. A
        decisão que o PO gravou no de acordo (`decisoes_do_po`) não pode sair do texto. Se os itens não cabem numa
        edição, nada é aplicado e o PO devolve a Produto (D4, B); se a correção deixa bloqueio novo em produto que o
-       editor não consertou, a sessão volta ao estado de antes da cascata, com o mesmo recado. Se o one-pager e a
-       spec já dizem o que o item pede, o passo não roda os gates.
+       editor não consertou, a sessão volta ao estado de antes da cascata, com o mesmo recado. Se o editor não propõe
+       troca, o passo não roda os gates: sem pendência, o one-pager e a spec já dizem o que o item pede; com pendência,
+       o editor deixou o item para o PO, e nada é aplicado (Devolver). A pendência de um passo com trocas vai na nota
+       do passo seguinte, que não a dá por aplicada.
     2. **Design pontual** (e **dev**, quando o pedido foi feito ao dev) com o pedido inteiro e a divisão: os itens de
        produto já estão a montante, a etapa os acompanha onde o texto aparece e aplica os seus. A linha de base é a de
        antes da cascata, e as trocas de produto contam como da correção.
@@ -1270,12 +1279,16 @@ async def executar_cascata_stream(
     passos = ([PRODUTO] if d.tem_produto else []) + ([DESIGN] if etapa == DEV and (d.tem_produto or d.de(DESIGN))
                                                      else []) + [etapa]
     a_montante: List[Dict[str, Any]] = []
+    pendencias_de_produto: List[str] = []
+    concluidos: List[str] = []
     for n, passo in enumerate(passos, 1):
         ultimo = n == len(passos)
         # só o último passo fecha a missão: diagnóstico, aprendizado e catálogo no passo de produto rodavam sobre uma
         # missão sem design e dev — o passo acabou de apagá-los (`pipeline/orchestrator.py`; revisão do PR 5, 24/10)
         opcoes = opcoes_runner if ultimo else {**opcoes_runner, "com_transversal": False}
         info = {"de": etapa, "passo": f"{n}/{len(passos)} ({passo})", "divisao": d.como_dict()}
+        if concluidos:
+            info["aplicados_antes"] = list(concluidos)
         if passo == PRODUTO:
             item_pedido = PedidoCorrecao(
                 texto=d.texto_de(PRODUTO), anexos=list(pedido.anexos), anexos_sem_texto=list(pedido.anexos_sem_texto),
@@ -1284,9 +1297,16 @@ async def executar_cascata_stream(
                                  f"{etapa} os acompanha depois."))
             kwargs = dict(exigir_pontual=True, pular_sem_trocas=True, guardar_decisoes=True)
         else:
+            nota = nota_para_a_etapa(d)
+            if pendencias_de_produto:
+                # o passo de produto aplicou trocas, mas deixou parte para o PO: a etapa não a dá por aplicada
+                # (revisão do PR 5, 24/10: as pendências sumiam e o design aplicava o que produto recusou)
+                nota += ("\n\nO passo de produto **não aplicou** o que segue — ficou para o PO decidir em produto. Não "
+                         "o dê por aplicado a montante nem o aplique nos documentos desta etapa:\n\n"
+                         + "\n".join(f"- {p}" for p in pendencias_de_produto))
             item_pedido = PedidoCorrecao(texto=pedido.texto, anexos=list(pedido.anexos),
                                          anexos_sem_texto=list(pedido.anexos_sem_texto),
-                                         nota_da_esteira=nota_para_a_etapa(d))
+                                         nota_da_esteira=nota)
             # um passo anterior desta cascata — ou da que falhou antes dela, com produto já aplicado — apagou do estado os
             # documentos da etapa e os guardou em `versao_anterior_<chave>`; sem eles, o editor não era chamado e o
             # design era refeito pelos autores (revisão do PR 5, 24/10). O que está no estado continua valendo
@@ -1294,27 +1314,50 @@ async def executar_cascata_stream(
                           edicoes_a_montante=list(a_montante))
         registro: Dict[str, Any] = {}
         final: Dict[str, Any] = {}
-        sem_trocas = False
+        sem_trocas: Optional[Dict[str, Any]] = None
         async for evento in executar_correcao_stream(
                 run_dir, passo, item_pedido, triagem, so_esta_etapa=so_esta_etapa if ultimo else True,
                 notas_de_passagem=notas_de_passagem, proponente=proponente, divisao=d.como_dict(), cascata=info,
                 **kwargs, **opcoes):
             tipo = evento.get("type")
             if tipo == "correcao_error":
+                if concluidos and not evento.get("pede_devolver"):
+                    # o passo anterior ficou aplicado (one-pager e spec do Gate 0 já mudaram): só este voltou ao estado
+                    # de antes dele, e é este que se refaz — «a sessão voltou ao estado anterior» era falso
+                    erro = str(evento.get("error") or "o runner terminou sem resultado")
+                    evento = {**evento, "aplicados_antes": list(concluidos), "error": (
+                        f"{erro}. Os itens de {', '.join(concluidos)} desta cascata ficaram aplicados; só o passo de "
+                        f"{passo} voltou ao estado anterior — refaça {passo} com **Refazer**")}
                 yield evento
                 return
             if tipo == "correcao_sem_trocas":
-                sem_trocas = True
+                sem_trocas = dict(evento)
             if tipo == "correcao_completed":
                 registro = dict(evento.get("registro") or {})
                 final = dict(getattr(evento.get("result"), "state", None) or {})
             yield evento
         if passo != PRODUTO:
             a_montante += [dict(e) for e in registro.get("edicoes") or []]
+            concluidos.append(passo)
             continue
-        if sem_trocas:
-            yield {"type": "cascata_produto_sem_trocas", "timestamp": time.time(),
-                   "mensagem": "o one-pager e a spec do Gate 0 já dizem o que os itens de produto pedem"}
+        if sem_trocas is not None:
+            pendencias = [str(p) for p in sem_trocas.get("pendencias") or [] if str(p).strip()]
+            if pendencias:
+                # Sem trocas e com pendências, o editor não aplicou o item — a regra 6 do `editor_pontual.md` manda
+                # registrar, sem trocar, o pedido que contraria a decisão do PO gravada no de acordo. Seguir ao design
+                # deixava o one-pager com o valor antigo e o design com o novo, e o A094 dava o item por «aplicado a
+                # montante» (revisão do PR 5, 24/10). Nada foi tocado: é Devolver a Produto (D4, B)
+                yield {"type": "correcao_error", "registro": None, "restaurados": [], "timestamp": time.time(),
+                       "pede_devolver": True, "pendencias": pendencias,
+                       "error": ("o editor de produto não aplicou os itens de produto do pedido e os deixou para o PO "
+                                 "decidir: " + "; ".join(pendencias) + ". Nada foi aplicado. Use **Devolver** até "
+                                 "Produto com o pedido: o one-pager só muda lá.")}
+                return
+            motivo = str(sem_trocas.get("motivo") or "").strip()
+            yield {"type": "cascata_produto_sem_trocas", "timestamp": time.time(), "motivo": motivo,
+                   "mensagem": ("o editor de produto não propôs troca"
+                                + (f": {motivo}" if motivo else " — o one-pager e a spec do Gate 0 já dizem o que os "
+                                   "itens de produto pedem"))}
             continue
         from tools import linha_de_base
 
@@ -1331,6 +1374,8 @@ async def executar_cascata_stream(
                    "error": erro, "pede_devolver": True}
             return
         a_montante += [dict(e) for e in registro.get("edicoes") or []]
+        pendencias_de_produto = [str(p) for p in registro.get("pendencias") or [] if str(p).strip()]
+        concluidos.append(passo)
 
 
 async def iniciar_etapa_stream(

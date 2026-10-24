@@ -1340,7 +1340,11 @@ async def _acompanhar_esteira(stream, stages: List[Dict[str, Any]], progress, st
             registro = event.get("registro")
             # na cascata, o passo anterior pode ter terminado: o resultado dele não é o da correção
             result = None
-            progress.error(f"❌ Correção não aplicada: {event.get('error')}. A sessão voltou ao estado anterior.")
+            if event.get("aplicados_antes"):
+                # cascata: o passo de produto ficou aplicado e só o seguinte voltou atrás (revisão do PR 5, 24/10)
+                progress.error(f"❌ A correção ficou pela metade: {event.get('error')}.")
+            else:
+                progress.error(f"❌ Correção não aplicada: {event.get('error')}. A sessão voltou ao estado anterior.")
             continue
         active_agent = update_pipeline_step_status(status, active_agent, event, gates)
 
@@ -1512,6 +1516,12 @@ def _aplicar_correcao(run_dir: Path, etapa: str, pedido: PedidoCorrecao, triagem
         progress.info(f"🔧 Iniciando a correção a partir de **{etapa}**…")
         result, registro = _run_async(execute_correcao(run_dir, etapa, pedido, triagem, opts, progress, steps, divisao))
         resumo = mensagem_de_correcao(RegistroCorrecao(**registro)) if registro else "❌ Correção não aplicada."
+        antes = list(((registro or {}).get("cascata") or {}).get("aplicados_antes") or [])
+        if not result and antes:
+            resumo = (f"❌ **A correção ficou pela metade:** os itens de {', '.join(antes)} ficaram aplicados, e o "
+                      f"passo de {registro.get('etapa', '?')} falhou. Refaça "
+                      f"{registro.get('etapa', '?')} — **Refazer** no parecer, ou o mesmo pedido de novo aqui: o passo de "
+                      "produto não troca o que já está aplicado, e o seguinte parte da versão anterior dos documentos.")
         if result:
             st.markdown(resumo)
             render_pipeline_details(result, key_prefix="live")
