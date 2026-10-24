@@ -1487,7 +1487,8 @@ class TextosChaveCopyAgent(BaseAgent):
         if not copy.strip() or e_mensagem_de_pulo(copy):
             return
         tcs, registro = tk.atualizar(dict(state))
-        aplicado = tk.aplicar_na_copy(copy, tcs)
+        pontual = state.get(KEY_MODO_CORRECAO) == "pontual"
+        aplicado = tk.aplicar_na_copy(copy, tcs, anotar_sem_troca=not pontual)
         resultado = tk.conferir_copy(aplicado["texto"], tcs)
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
         relatorio = tk.relatorio(resultado, missao)
@@ -1495,6 +1496,16 @@ class TextosChaveCopyAgent(BaseAgent):
                                  f"{self.status_key}_envelope": extrair_envelope(relatorio) or {}}
         if aplicado["texto"] != copy:
             delta[self.chave] = aplicado["texto"]
+            if pontual:
+                # Na correção pontual a copy é a versão anterior mais as trocas, e é isso que prova as ordens de não
+                # mexer (`edicao_pontual.reaplicar`, A094): o que o código copiou entra como troca, com o motivo. Sem
+                # isto, a fidelidade de design ganhava `preservacao-sem-prova` (simulação na exp02ef1b, 24/10/2026).
+                from tools import edicao_pontual
+
+                trocas = edicao_pontual.trocas_por_linhas(self.chave, copy, aplicado["texto"], tk.MOTIVO_TROCA_DA_COPY)
+                if trocas:
+                    delta["edicoes_pontuais"] = (list(state.get("edicoes_pontuais") or [])
+                                                 + edicao_pontual.como_dicts(trocas))
         if not (isinstance(state.get(tk.KEY_REGISTRO), dict) and state[tk.KEY_REGISTRO].get("itens")):
             delta[tk.KEY_REGISTRO] = registro
         marca = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]

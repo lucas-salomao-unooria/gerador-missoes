@@ -555,7 +555,8 @@ def copiar_textos_chave(chave: str):
         if not tcs:
             return None
         if chave in ("copy_strings", "copy_strings_revisada"):
-            novo = tk.aplicar_na_copy(texto, tcs)["texto"]
+            # na correção pontual o autor não roda (e este callback também não); se rodar, não anota linha sem troca
+            novo = tk.aplicar_na_copy(texto, tcs, anotar_sem_troca=state.get(KEY_MODO_CORRECAO) != "pontual")["texto"]
         else:
             novo, _ = tk.aplicar_em_documento(texto, tcs)
         if novo != texto:

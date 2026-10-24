@@ -611,3 +611,183 @@ def test_cascata_em_sessao_sem_registro_leva_o_texto_novo_a_linha_da_copy():
     aplicado = tk.aplicar_na_copy(copia, tcs)
     assert f"| {novo} |" in aplicado["texto"] and f"`{nova.id}`" in aplicado["texto"]
     assert not aplicado["propostas"]
+
+
+# --------------------------------------------------------------------------- revisão do PR #74 (24/10/2026)
+def test_outro_numero_e_outro_texto_na_copy_real_da_exp03em1b():
+    """A cota «Publicações Oficiais Disponíveis: 1/3» da E4-ALU-04 está certa (a jornada diz «cota 1/3»): para a
+    semelhança ela era reescrita do TC-09 «Publicações Disponíveis: 2/3» (o contador depois da 1ª publicação, outra
+    tela), virava 2/3 e gerava proposta falsa ao PO. Com outro número, é outro texto: a linha fica e o TC-09 fica sem
+    linha. A mesma sequência de números dos dois lados («Origem 0» × «Origem 0%») continua reescrita."""
+    estado = _estado("exp03em1b-b2e7b4a3")
+    tcs = tk.da_sessao(estado)
+    tc09 = tk.por_id(tcs)["TC-09"]
+    assert tc09.texto == "Publicações Disponíveis: 2/3"
+    original = next(l for l in estado["copy_strings_revisada"].splitlines() if "e4.feed.cota_atualizada" in l)
+    aplicado = tk.aplicar_na_copy(estado["copy_strings_revisada"], tcs)
+    assert next(l for l in aplicado["texto"].splitlines() if "e4.feed.cota_atualizada" in l) == original
+    assert "Publicações Oficiais Disponíveis: 1/3" in original
+    assert not [p for p in aplicado["propostas"] if p[0] == "TC-09"]
+    assert "TC-09" in {t.id for t in aplicado["sem_linha"]}
+    assert ("TC-06.1", "Escala Absoluta (Origem 0)", "Escala Absoluta (Origem 0%)") in aplicado["propostas_novas"]
+    # o texto-chave com lacuna aceita o número que a copy põe nela (`X%` → `68%`, exp01em1b-76d9af6e)
+    lacuna = tk.TextoChave(id="TC-11", tipo=tk.TELA, origem="§4", texto="Na sua turma: X% apostou no cumprimento")
+    assert tk.mesmos_numeros(lacuna, "Na sua turma: 68% apostou no cumprimento")
+    assert tk.mesmos_numeros(tk.TextoChave(id="TC-02", tipo=tk.TELA, origem="§4", texto="Você tem R$ 12.000."),
+                             "Você tem R$ 12000 agora.")
+    assert not tk.mesmos_numeros(tc09, "Publicações Oficiais Disponíveis: 1/3")
+
+
+def test_citacao_com_outro_numero_no_prd_nao_vira_o_texto_chave():
+    """No PRD, «o contador mostra “Publicações Oficiais Disponíveis: 1/3” depois da errata» casava com o TC-03 «…: 3/3»
+    (semelhança ≥ 0,85) e saía «3/3»."""
+    tcs = tk.da_sessao(_estado("exp03em1b-b2e7b4a3"))
+    prd = "# PRD\n\nNa E4, o contador mostra “Publicações Oficiais Disponíveis: 1/3” depois da errata.\n"
+    assert tk.aplicar_em_documento(prd, tcs) == (prd, [])
+    # e a citação quase igual, com os mesmos números, continua voltando ao texto aprovado
+    quase = "# PRD\n\nO topo mostra “Publicacoes Oficiais Disponiveis: 3/3” na abertura.\n"
+    novo, trocas = tk.aplicar_em_documento(quase, tcs)
+    assert trocas and trocas[0][0] == "TC-03" and "“Publicações Oficiais Disponíveis: 3/3”" in novo
+
+
+def test_linha_da_19_3_com_as_propostas_do_design_fica_como_esta():
+    """O item 13 do prompt 113 manda listar na 19.3 o texto literal de cada [PROPOSTA] aberta. O callback trocava o lado
+    proposto pelo aprovado (≥ 0,85) e a linha ficava «aprovado» → «aprovado»: a redação do design sumia do documento
+    que o dev e o PO leem (exp02ef1b TC-01.2, TC-03.1 e TC-03.2)."""
+    from agents.callbacks import copiar_textos_chave
+
+    estado = _estado()
+    tcs = tk.da_sessao(estado)
+    propostas = [l[2:] for l in tk.aplicar_na_copy(estado["copy_strings_revisada"], tcs)["texto"].splitlines()
+                 if l.startswith("- [PROPOSTA")]
+    assert len(propostas) == 5
+    tabela = ("## 19.3 Decisões do agente a revisar\n\n| Marcador | Origem |\n|---|---|\n"
+              + "".join(f"| {p} | copy revisada |\n" for p in propostas))
+    prd = f"# PRD\n\n{tabela}\nNa E6 a alternativa «As duas crianças vestindo a mesma camiseta da escola.» aparece.\n"
+    novo, trocas = tk.aplicar_em_documento(prd, tcs)
+    assert novo.startswith(f"# PRD\n\n{tabela}")  # a 19.3 intacta
+    # a citação solta depois dela é que volta ao texto aprovado — na posição dela, não na da proposta acima
+    assert [t[0] for t in trocas] == ["TC-03.2"]
+    assert "Na E6 a alternativa «As duas crianças usando a mesma camiseta da escola.» aparece." in novo
+    # a linha que compara o aprovado com outra redação, sem o marcador, também é comparação, não citação a corrigir
+    comparacao = ("# PRD\n\n| TC-03.2 | «As duas crianças usando a mesma camiseta da escola.» | «As duas crianças vestindo "
+                  "a mesma camiseta da escola.» |\n")
+    assert tk.aplicar_em_documento(comparacao, tcs) == (comparacao, [])
+    # e a proposta que não repete o texto aprovado continua sendo proposta
+    so_proposta = ("# PRD\n\n- [PROPOSTA — validar com PO: TC-03.2 · trocar por «As duas crianças vestindo a mesma camiseta "
+                   "da escola.» · a palavra da turma]\n")
+    assert tk.aplicar_em_documento(so_proposta, tcs) == (so_proposta, [])
+    estado["prd_final"] = prd
+    copiar_textos_chave("prd_final")(SimpleNamespace(state=estado))
+    assert tabela in estado["prd_final"]
+
+
+def _estado_pontual(missao: str) -> Dict[str, Any]:
+    estado = _estado(missao)
+    base = {k: estado[k] for k in ("one_pager", "briefing", "spec_missao")}
+    base.update({"copy_strings_revisada": estado["copy_strings_revisada"], "modo_correcao": "pontual",
+                 "versao_anterior_copy_strings_revisada": estado["copy_strings_revisada"],
+                 "edicoes_pontuais": [{"documento": "one_pager", "de": "x", "para": "y", "motivo": "pedido"}]})
+    return base
+
+
+@pytest.mark.parametrize("missao", ["exp03em1b-b2e7b4a3", "exp02em1b-60cfa7f4", "exp02ef1b-4fd72a9a"])
+def test_correcao_pontual_nao_anota_linha_sem_troca_e_registra_o_que_copiou(missao):
+    """Na correção pontual a copy é a versão anterior mais as trocas, e é isso que prova as ordens de não mexer. O A078b
+    anotava `TC-nn` em toda linha que já trazia o texto (de 14 a 64 por missão) e a prova caía: agora só a linha cujo
+    texto mudou ganha o ID, e o que o código copiou entra em `edicoes_pontuais` — `reaplicar` volta a provar."""
+    from agents.checkers import TextosChaveCopyAgent
+    from tools import edicao_pontual
+
+    base = _estado_pontual(missao)
+    anterior = base["copy_strings_revisada"]
+    final = asyncio.run(_rodar(TextosChaveCopyAgent(name="A078bTextosChave"), base))
+    copia = final["copy_strings_revisada"]
+    mudadas = [(a, b) for a, b in zip(anterior.splitlines(), copia.splitlines()) if a != b]
+    # toda linha mudada trocou texto (não só ganhou o ID na nota)
+    assert all(re.sub(r"\s*`TC-\d+(?:\.\d+)?`", "", b) != a for a, b in mudadas)
+    fora = tk.aplicar_na_copy(anterior, tk.da_sessao(base))["texto"]
+    assert len(mudadas) < sum(1 for a, b in zip(anterior.splitlines(), fora.splitlines()) if a != b)
+    trocas = final["edicoes_pontuais"][1:]
+    assert final["edicoes_pontuais"][0]["motivo"] == "pedido"
+    assert trocas and all(e["motivo"] == tk.MOTIVO_TROCA_DA_COPY for e in trocas)
+    assert edicao_pontual.reaplicar(anterior, copia, "copy_strings_revisada", final["edicoes_pontuais"])
+    # fora da correção pontual, nada vai para `edicoes_pontuais`
+    geral = {k: v for k, v in base.items() if k not in ("modo_correcao", "edicoes_pontuais")}
+    final2 = asyncio.run(_rodar(TextosChaveCopyAgent(name="A078bTextosChave"), geral))
+    assert "edicoes_pontuais" not in final2
+
+
+def test_trocas_por_linhas_reproduzem_o_documento():
+    from tools import edicao_pontual as ep
+
+    assert ep.trocas_por_linhas("d", "a\nb", "a\nb") == []
+    # a linha que se repete leva contexto até ser única
+    trocas = ep.trocas_por_linhas("d", "a\nb\na\nb\n", "a\nb\na\nc\n", "m")
+    assert ep.aplicar({"d": "a\nb\na\nb\n"}, trocas).documentos["d"] == "a\nb\na\nc\n"
+    assert all(e.motivo == "m" for e in trocas)
+    # acréscimo no fim (a seção da esteira)
+    assert ep.aplicar({"d": "x\ny"}, ep.trocas_por_linhas("d", "x\ny", "x\ny\n\n## Seção\n")).documentos["d"] == "x\ny\n\n## Seção\n"
+
+
+def test_proposta_do_design_nos_dois_formatos_chega_ao_gate():
+    """Os prompts 073 e 077 pediam `[PROPOSTA — validar com PO: «aprovado» → «novo» · TC-07 · por quê]`, e o leitor só
+    casava `PO: TC-07 «…» → «…»`: a proposta que o design escrevia em «Strings que precisam de decisão» não chegava ao
+    🧑 do gate. Os dois formatos são lidos, a linha da proposta não é tratada como string de tela, e o formato que os
+    prompts pedem agora (o ID primeiro) é o da esteira."""
+    from prompts import get_prompt_raw
+
+    tcs = tk.da_sessao(_estado())
+    pergunta = next(t for t in tcs if t.tipo == tk.CANAL_B)
+    atividade = next(t for t in tcs if t.tipo == tk.OPCAO and t.texto == "Atividade")
+    decisao = ("\n## Strings que precisam de decisão\n\n"
+               f"- [PROPOSTA — validar com PO: «{pergunta.texto}» → «O que precisa aparecer na foto?» · {pergunta.id} · "
+               "a frase passa do teto da faixa]\n"
+               f"- [PROPOSTA — validar com PO: {atividade.id} «Atividade» → «A atividade» · artigo para a leitura em voz]\n")
+    copia = _copy_de_teste() + decisao
+    assert tk.propostas_registradas(copia) == [
+        (pergunta.id, pergunta.texto, "O que precisa aparecer na foto?"), (atividade.id, "Atividade", "A atividade")]
+    aplicado = tk.aplicar_na_copy(copia, tcs)
+    assert decisao.strip() in aplicado["texto"]  # a seção do design não é tocada
+    r = tk.conferir_copy(aplicado["texto"], tcs)
+    achado = next(a for a in r["achados"] if a["codigo"] == "texto-chave-proposta")
+    assert "O que precisa aparecer na foto?" in achado["resumo"] and "A atividade" in achado["resumo"]
+    assert not [a for a in r["achados"] if a["severidade"] == "bloqueio"]
+    # idempotente: a proposta copiada para a seção da esteira não se duplica
+    de_novo = tk.aplicar_na_copy(aplicado["texto"], tcs)
+    assert de_novo["texto"] == aplicado["texto"] and len(de_novo["propostas"]) == 2
+    # a proposta com aspas duplas, para um texto-chave sem linha, também não é string a corrigir
+    fala = next(t for t in tcs if t.tipo == tk.PODCAST and "turma do segundo ano" in t.texto)
+    reescrita = fala.texto.replace("turma do segundo ano", "turma da segunda série")
+    so_proposta = _copy_de_teste() + f"\n- [PROPOSTA — validar com PO: {fala.id} → \"{reescrita}\" · ritmo da fala]\n"
+    aplicado = tk.aplicar_na_copy(so_proposta, tcs)
+    assert f"\"{reescrita}\"" in aplicado["texto"] and fala.id in {t.id for t in aplicado["sem_linha"]}
+    # o exemplo de cada prompt de copy é lido pelo código
+    for prompt in ("design/073_copy_ptbr.md", "design/077_copy_revisao.md"):
+        exemplo = re.search(r"`(\[PROPOSTA — validar com PO: TC-07[^`]*\])`", get_prompt_raw(prompt)).group(1)
+        assert tk.propostas_registradas(exemplo) == [("TC-07", "texto aprovado", "texto novo")], prompt
+
+
+def test_teto_na_faixa_e_o_limite_de_cima():
+    """«máximo de 8 a 10 palavras» (exp03ef1b) é teto 10, e «40 a 50 palavras» (exp07ef1b) é 50 — o limite de baixo
+    acusava texto demais no de acordo."""
+    def s15(linha: str) -> str:
+        return f"## 15. Restrições\n\n{linha}\n"
+
+    assert tk.teto_do_one_pager(s15("* Manchetes: frases curtas (máximo de 8 a 10 palavras)."))[0] == 10
+    assert tk.teto_do_one_pager(s15("* Legendas: Máximo de 40 a 50 palavras por publicação."))[0] == 50
+    assert tk.teto_do_one_pager(s15("* Balões: até 18 palavras."))[0] == 18
+    # no acervo, o maior teto de cada missão vem de outra linha: nada muda
+    assert tk.teto_do_one_pager(_estado("exp03ef1b")["one_pager"])[0] == 18
+    assert tk.teto_do_one_pager(_estado("exp07ef1b")["one_pager"])[0] == 65
+
+
+@pytest.mark.parametrize("prompt", ["produto/026_gate_estrutural.md", "produto/revisor_one_pager.md"])
+def test_gate_e_revisor_nao_encurtam_o_texto_chave_acima_do_teto(prompt):
+    """O 026 manda pôr cada ⚠️ do lint no complemento, e o revisor aplica o que faltar: o texto-chave acima do teto é a
+    exceção — vai ao de acordo, e o PO mantém ou troca."""
+    from prompts import get_prompt_raw
+
+    bruto = get_prompt_raw(prompt)
+    trecho = bruto[bruto.index("`texto-chave-acima-do-teto`"):][:260]
+    assert "não entra no complemento nem é reescrito" in trecho and "de acordo" in trecho and "PO mantém ou troca" in trecho

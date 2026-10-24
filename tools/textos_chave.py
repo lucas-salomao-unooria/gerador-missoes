@@ -60,6 +60,8 @@ TIPOS_DE_TEXTO = (TELA, CANAL_B, OPCAO, ROTEIRO, PODCAST)
 TITULO_TABELA = "Textos-chave aprovados (TC)"
 #: A seção que a esteira escreve na copy: as propostas do design e os textos-chave sem linha no sheet.
 TITULO_SECAO_COPY = "Textos-chave aprovados — conferência da esteira"
+#: O motivo das trocas que a cópia por código registra na correção pontual (`edicoes_pontuais`).
+MOTIVO_TROCA_DA_COPY = "textos-chave do one-pager aprovado copiados por código para a copy (A078b, PR 7)"
 
 _RE_ID = re.compile(r"\bTC-(\d{1,3})(?:\.(\d{1,2}))?\b")
 
@@ -189,6 +191,19 @@ def corte(texto: str) -> float:
     `conteudo_aprovado.literais_parafraseados` (calibrada no PRD da exp06ef1b): abaixo de 30 caracteres, só o quase
     igual — «Galeria Oculta da Mostra» se parece com «Acessar Feed da Mostra» por acaso."""
     return 0.6 if len(_chave(texto)) >= 30 else 0.8
+
+
+def _numeros(texto: str) -> List[str]:
+    """Os números do texto, na ordem; o ponto de milhar não conta («R$ 12.000» é «R$ 12000»)."""
+    return re.findall(r"\d+(?:,\d+)?", re.sub(r"(?<=\d)\.(?=\d{3}(?!\d))", "", texto or ""))
+
+
+def mesmos_numeros(tc: "TextoChave", outro: str) -> bool:
+    """O outro texto traz os números do texto-chave, na mesma ordem — ou o texto-chave tem lacuna (`X%`, `[…]`), que a
+    copy preenche com o número dela. Para a semelhança, «1/3» e «2/3» são o mesmo texto; não são: na exp03em1b
+    (24/10/2026) a cota «Publicações Oficiais Disponíveis: 1/3» da E4-ALU-04 virava «2/3» (o contador depois da 1ª
+    publicação, outra tela), com proposta falsa ao PO, e a citação «…: 1/3» do PRD virava «3/3»."""
+    return _padrao(tc.texto) is not None or _numeros(literal(tc.texto)) == _numeros(literal(outro))
 
 
 def presente(tc: "TextoChave", documento_literal: str) -> bool:
@@ -660,8 +675,9 @@ def tetos_por_faixa(raiz: Optional[Path] = None) -> Tuple[Dict[str, int], str]:
     return tetos, status
 
 
-#: Número que a linha do §15 declara como teto de palavras: «35 palavras por balão», «no máximo 45 palavras».
-_RE_TETO_PALAVRAS = re.compile(r"(?<![\d.,])(\d{1,3})\s*(?:a\s*\d{1,3}\s*)?palavras?\b", re.I)
+#: Número que a linha do §15 declara como teto de palavras: «35 palavras por balão», «no máximo 45 palavras». Na faixa
+#: («8 a 10 palavras», exp03ef1b; «40 a 50 palavras», exp07ef1b), o teto é o limite de cima (grupo 2).
+_RE_TETO_PALAVRAS = re.compile(r"(?<![\d.,])(\d{1,3})\s*(?:(?:a|até|-|–)\s*(\d{1,3})\s*)?palavras?\b", re.I)
 _RE_MARCADOR_ABERTO = re.compile(r"\[(?:PAR[ÂA]METRO|PROPOSTA|ABERTO|DECIS[ÃA]O PENDENTE)[^\]]*\]", re.I)
 
 
@@ -678,7 +694,7 @@ def teto_do_one_pager(one_pager: str) -> Optional[Tuple[int, str]]:
             continue
         limpa = _RE_MARCADOR_ABERTO.sub(" ", linha)
         for m in _RE_TETO_PALAVRAS.finditer(limpa):
-            n = int(m.group(1))
+            n = int(m.group(2) or m.group(1))
             if n > 0:
                 candidatos.append((n, linha.strip()))
     return max(candidatos, key=lambda c: c[0]) if candidatos else None
@@ -783,16 +799,31 @@ def remover_secao(texto: str, titulo: str = TITULO_SECAO_COPY) -> str:
     return (corpo + ("\n\n" + resto.lstrip() if resto.strip() else "")).rstrip() + "\n"
 
 
-_RE_PROPOSTA_DA_ESTEIRA = re.compile(
-    r"\[PROPOSTA\s*—\s*validar com PO:\s*(TC-\d{1,3}(?:\.\d{1,2})?)\s*«(.*?)»\s*→\s*«(.*?)»", re.S)
+_RE_MARCADOR_PROPOSTA = re.compile(r"\[PROPOSTA\s*[—–-]\s*validar com PO\s*:", re.I)
+#: O par «aprovado» → «proposto» dentro da proposta: com aspas angulares (o formato da esteira e dos prompts) ou, sem
+#: elas, com aspas duplas.
+_RE_PAR_ANGULAR = re.compile(r"«([^»\n]+)»\s*(?:→|->)\s*«([^»\n]+)»")
+_RE_PAR_DUPLAS = re.compile(r"[\"“]([^\"”\n]+)[\"”]\s*(?:→|->)\s*[\"“]([^\"”\n]+)[\"”]")
 
 
 def propostas_registradas(texto: str) -> List[Tuple[str, str, str]]:
-    """`(ID, aprovado, proposto)` das propostas que a seção da esteira já registrou na copy."""
-    m = re.search(rf"^(#{{1,6}})\s*{re.escape(TITULO_SECAO_COPY)}\s*$", texto or "", re.M)
-    if not m:
-        return []
-    return [(a, b, c) for a, b, c in _RE_PROPOSTA_DA_ESTEIRA.findall(texto[m.end():])]
+    """`(ID, aprovado, proposto)` de cada `[PROPOSTA — validar com PO: …]` da copy que nomeia um texto-chave: as da
+    seção da esteira (`TC-07 «aprovado» → «proposto»`) e as que o design escreve em «Strings que precisam de decisão»,
+    com o ID antes ou depois do par (`«aprovado» → «proposto» · TC-07 · por quê`, o formato que os prompts 073 e 077
+    pediam até 24/10/2026 — sem esta leitura, a proposta do design não chegava ao 🧑 do gate)."""
+    saida: List[Tuple[str, str, str]] = []
+    for linha in (texto or "").splitlines():
+        marcas = list(_RE_MARCADOR_PROPOSTA.finditer(linha))
+        for k, m in enumerate(marcas):
+            trecho = linha[m.end(): marcas[k + 1].start() if k + 1 < len(marcas) else len(linha)]
+            par = _RE_PAR_ANGULAR.search(trecho) or _RE_PAR_DUPLAS.search(trecho)
+            if not par:
+                continue
+            ids = ids_citados(trecho[: par.start()] + " " + trecho[par.end():])
+            item = (ids[0], par.group(1).strip(), par.group(2).strip()) if ids else None
+            if item and (item[0], literal(item[2])) not in {(i, literal(p)) for i, _, p in saida}:
+                saida.append(item)
+    return saida
 
 
 def _candidatos(linhas: Sequence[str], ocupadas: Set[int]) -> List[Tuple[int, str]]:
@@ -804,8 +835,8 @@ def _candidatos(linhas: Sequence[str], ocupadas: Set[int]) -> List[Tuple[int, st
         if re.match(r"^\s*(```|~~~)", linha):
             cerca = not cerca
             continue
-        if cerca or i in ocupadas:
-            continue
+        if cerca or i in ocupadas or _RE_MARCADOR_PROPOSTA.search(linha):
+            continue  # a proposta ao PO cita a outra redação de propósito: não é string de tela a corrigir
         s = linha.strip()
         if s.startswith("|") and not _e_separador(s):
             saida += [(i, c) for c in _celulas(s) if palavras(c) >= 2]
@@ -870,6 +901,8 @@ def _melhor(tc: TextoChave, candidatos: Sequence[Tuple[int, str]]) -> Optional[T
         kb = _chave(trecho)
         if not kb or not (0.5 <= len(kb) / max(1, len(ka)) <= 2.0) or _cita_inteiro(ka, kb):
             continue
+        if not mesmos_numeros(tc, trecho):
+            continue  # outro número é outro texto («…: 1/3» × «…: 2/3», exp03em1b)
         if curto:
             palavras_b = set(kb.split())
             if len(palavras_a & palavras_b) * 2 < len(palavras_a | palavras_b):
@@ -895,11 +928,14 @@ def _trocar_trecho(linha: str, trecho: str, novo: str) -> str:
     return linha.replace(trecho, novo, 1)
 
 
-def aplicar_na_copy(copy: str, tcs: Sequence[TextoChave]) -> Dict[str, Any]:
+def aplicar_na_copy(copy: str, tcs: Sequence[TextoChave], anotar_sem_troca: bool = True) -> Dict[str, Any]:
     """Copia por código os textos-chave para a copy. Pura.
 
     - A linha da tabela de strings que cita o ID (`TC-07`, em qualquer coluna) ou que traz o próprio texto recebe o texto
-      aprovado na coluna PT-BR, e a contagem de palavras. A redação que estava lá, se era outra, vira proposta.
+      aprovado na coluna PT-BR, e a contagem de palavras. A redação que estava lá, se era outra, vira proposta. O ID vai
+      para a coluna de notas da linha ligada pelo texto — menos, com `anotar_sem_troca=False` (a correção pontual), na
+      linha que já trazia o texto aprovado: ali a copy é a versão anterior mais as trocas, e a nota mudava de 14 a 64
+      linhas por missão sem trocar texto nenhum (exp03em1b, exp02em1b, exp01em1b-76d9af6e, exp02ef1b; 24/10/2026).
     - O texto-chave que nenhuma linha cita e que não está literal na copy, mas tem uma reescrita (célula, texto entre
       aspas, fala do podcast) com a semelhança da régua da paráfrase, tem a reescrita trocada pelo aprovado — e a
       reescrita vira proposta. Sem reescrita, ele vai à lista dos sem linha, na seção da esteira.
@@ -964,7 +1000,7 @@ def aplicar_na_copy(copy: str, tcs: Sequence[TextoChave]) -> Dict[str, Any]:
                 celulas[ipal] = str(palavras(alvo.texto))
             mudou = True
             copiados += 1
-        if anotar:
+        if anotar and (mudou or anotar_sem_troca):
             inota = _coluna(cabecalho, "nota", "revis")
             if inota is not None and inota < len(celulas) and alvo.id not in ids_citados(celulas[inota]):
                 celulas[inota] = (celulas[inota] + f" `{alvo.id}`").strip()
@@ -1181,19 +1217,37 @@ def aplicar_em_documento(texto: str, tcs: Sequence[TextoChave]) -> Tuple[str, Li
     anexo = texto[len(corpo.rstrip("\n")):] if TITULO_ANEXO in texto and texto.startswith(corpo.rstrip("\n")) else ""
     alvos = [t for t in tcs if t.tipo in TIPOS_DE_TEXTO and palavras(t.texto) >= 3]
     trocas: List[Tuple[str, str, str]] = []
-    novo = corpo
+    #: `(início, fim, texto aprovado)` de cada citação trocada: a troca é feita na posição dela — trocar a primeira
+    #: ocorrência do texto pegaria a mesma redação dentro de uma proposta, mais acima no documento
+    pedacos: List[Tuple[int, int, str]] = []
     for m in list(re.finditer(r"[\"“«]([^\"”»\n]{12,400})[\"”»]", corpo)):
         citado = m.group(1).strip().strip("*").strip()
         if any(mesmo_texto(t.texto, citado) for t in alvos):
             continue  # o texto-chave, com o ponto final ou sem ele (PRD da exp01ef1b)
+        inicio = corpo.rfind("\n", 0, m.start()) + 1
+        fim = corpo.find("\n", m.end())
+        linha = corpo[inicio: fim if fim >= 0 else len(corpo)]
+        if _RE_MARCADOR_PROPOSTA.search(linha):
+            # a redação que o design propôs, registrada para o PO (a 19.3 do PRD lista o texto literal de cada
+            # [PROPOSTA] aberta): trocá-la pelo aprovado deixava «aprovado» → «aprovado», e a proposta sumia
+            continue
         melhor, valor = None, 0.0
         for t in alvos:
+            if not mesmos_numeros(t, citado):
+                continue  # «…: 1/3» não é reescrita de «…: 3/3» (exp03em1b)
             v = semelhanca(t.texto, citado)
             if v > valor:
                 melhor, valor = t, v
-        if melhor is not None and valor >= max(CORTE_DOCUMENTO, corte(melhor.texto)):
-            novo = novo.replace(m.group(1), melhor.texto, 1)
-            trocas.append((melhor.id, melhor.texto, citado))
+        if melhor is None or valor < max(CORTE_DOCUMENTO, corte(melhor.texto)):
+            continue
+        resto = linha[: m.start() - inicio] + " " + linha[m.end() - inicio:]
+        if presente(melhor, _documento_literal(resto)):
+            continue  # a linha compara o aprovado com outra redação: não é citação a corrigir
+        pedacos.append((m.start(1), m.end(1), melhor.texto))
+        trocas.append((melhor.id, melhor.texto, citado))
     if not trocas:
         return texto, []
+    novo = corpo
+    for ini, fim_, aprovado in reversed(pedacos):
+        novo = novo[:ini] + aprovado + novo[fim_:]
     return (novo.rstrip("\n") + anexo) if anexo else novo, trocas
