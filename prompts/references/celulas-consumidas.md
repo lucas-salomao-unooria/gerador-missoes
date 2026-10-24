@@ -201,7 +201,7 @@ Fora da varredura: é a saída do próprio D0.
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
-| 13.decisões `[D0-n]` — célula preenchida, decisão, base, reversível | todos de D1 a D8 (leem a célula preenchida como contrato), D9 (lê; não copia nem muda — texto dele fora do bloco 14 bloqueia), D7 (`[D0-n]` que contraria a spec original vira ticket `fecha-lacunas`), rastro de lacunas (o mapa célula → D0 só fecha com o `[D0-n]` aqui), gate de `[D0-n]` órfão (toda citação a jusante precisa existir aqui) | A jusante cita decisão que a spec não tem; a pendência fechada volta a barrar |
+| 13.decisões `[D0-n]` — célula preenchida, decisão, base, reversível | todos de D1 a D8 (leem a célula preenchida como contrato), D9 (lê; não copia nem muda — texto dele no bloco 13 é descartado com atenção), D7 (`[D0-n]` que contraria a spec original vira ticket `fecha-lacunas`), rastro de lacunas (o mapa célula → D0 só fecha com o `[D0-n]` aqui), gate de `[D0-n]` órfão (toda citação a jusante precisa existir aqui) | A jusante cita decisão que a spec não tem; a pendência fechada volta a barrar |
 | 13.`RS-n` pendentes — re-spec que o Gate 0 não respondeu | D7 (riscos aceitos; `RS-n` negado e contornado, ou pendente e honrado pela tela, é ⛔), rastro de lacunas | Os agentes a jusante redescobrem a lacuna, um por um |
 
 ## Bloco 14 — Ambiente simulado

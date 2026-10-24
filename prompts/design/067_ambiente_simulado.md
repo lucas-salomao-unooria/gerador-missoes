@@ -86,8 +86,10 @@ Emita **só o bloco 14**, começando pelo título `## 14. Ambiente simulado (D9)
 Um gate em código confere o que você escreve, e **bloqueia como decisão de produto** (volta a você como ticket):
 
 - bloco 14 que nomeia **seção ou classe diferente do bloco 0** — a ficha não entra no anexo;
-- bloco 14 que traz **regra ou fase de jogo** (regra `R<n>`, tabela de fases, «como se vence/perde uma fase», «quantas fases», «como o progresso aparece») que a spec não tem — cite «as regras e as fases são as do bloco 2 da spec» e pare aí;
-- **texto seu fora do bloco 14**: linha da spec de produto ou do bloco 13 que você reescreveu, completou ou acrescentou. Nome de componente do DS, transição, regra de primeiro uso ou de feedback vão no bloco 14; o que muda produto (estado, transição do contrato de estados, regra, dispositivo) é devolução. Na exp01em1b-76d9af6e (23/10/2026) você acrescentou ao texto do Gate 0 uma «Demonstração de primeiro uso», um estado `ERRO_MIDIA_FALHOU` e uma nova divisão de papéis por dispositivo; na exp06ef1b-53e011b6, `StoryPoll`, `ListItem / PostCard` e `PuzzleBlock` às linhas «Componente».
+- bloco 14 que traz **regra ou fase de jogo** (regra `R<n>`, tabela de fases, «como se vence/perde uma fase», «quantas fases», «como o progresso aparece») que a spec não tem, em qualquer lugar do bloco — cite «as regras e as fases são as do bloco 2 da spec» e pare aí. Seção `## ` sua fora do bloco 14 com regra ou fase de jogo também bloqueia;
+- **texto seu na spec de produto** (blocos 0–12, glossário, bloco 15): linha que você reescreveu, completou ou acrescentou. Nome de componente do DS, transição, regra de primeiro uso ou de feedback vão no bloco 14; o que muda produto (estado, transição do contrato de estados, regra, dispositivo) é devolução. Na exp01em1b-76d9af6e (23/10/2026) você acrescentou ao texto do Gate 0 uma «Demonstração de primeiro uso», um estado `ERRO_MIDIA_FALHOU` e uma nova divisão de papéis por dispositivo; na exp06ef1b-53e011b6, `StoryPoll`, `ListItem / PostCard` e `PuzzleBlock` às linhas «Componente».
+
+O que você mudar no **bloco 13** (do D0) ou numa seção `## ` nova sem jogo não bloqueia, mas é descartado e aparece como atenção 🟡 no cartão: o bloco 13 é decisão de UI do D0, não de produto, e só ele o escreve.
 
 O **bloco 14 completo também vai para `ambiente_simulado`**, que D1, D2, D4, D5, V1 e o QA recebem. Downstream: D1 lê "o que não tem" para decidir o que sai de propósito; D2 usa os verbos literais; D4 usa o padrão de conteúdo; D5 importa a seção; V1 implementa a casca.
 
@@ -134,7 +136,7 @@ Ambiente novo e mini-jogo também geram **proposta de linha para `references/amb
 
 1. **Teste do verbo** — cada verbo do bloco 4 tem rótulo literal e componente do DS? Um sem → devolução a produto, não ficha incompleta.
 2. **Teste do bloco 0** — a seção e a classe da ficha são, palavra por palavra, as do bloco 0 (e as extras, as de `secoes_ds_extras`)? Falha: corrija a ficha; se a decidida não serve, devolva.
-3. **Teste da presença** — você escreveu alguma linha fora do bloco 14 — na spec de produto ou no bloco 13? Falha: remova (o código bloqueia).
+3. **Teste da presença** — você escreveu alguma linha fora do bloco 14 — na spec de produto ou no bloco 13? Falha: remova (na spec de produto o código bloqueia; no bloco 13, descarta com atenção).
 4. **Teste do jogo** — a ficha traz regra, fase, vitória, derrota ou progresso que a spec não tem? Falha: remova; é de produto (o código bloqueia).
 5. **Teste do cap** — decisões, telas e dados coletados iguais aos de antes do bloco 14?
 6. **Teste do DS** — algum token, cor ou fonte fora do DS? Algum componente local que uma composição de existentes resolvia?

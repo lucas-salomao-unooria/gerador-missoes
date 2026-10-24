@@ -128,9 +128,10 @@ Sem poder de produto desde 24/10/2026 (PR 8, decisão D8): a classe e o ambiente
 | Conta | Zero significa |
 |---|---|
 | Verbo do bloco 4 sem rótulo literal e componente do DS na ficha | Ficha incompleta — D2 e D4 vão inventar |
-| Texto escrito fora do bloco 14 — spec de produto (blocos 0–12, glossário, bloco 15) ou bloco 13 do anexo **(código)** | O texto de produto é do PO; o do bloco 13 é do D0 |
+| Texto escrito na spec de produto (blocos 0–12, glossário, bloco 15) **(código)** | O texto de produto é do PO |
+| Texto escrito no bloco 13 do anexo (descartado com atenção 🟡 pelo código, sem bloquear) | O bloco 13 é do D0 |
 | Ambiente ou classe no bloco 14 diferente do bloco 0 da spec **(código)** | Decidir o ambiente é de produto: o que não cabe volta como devolução |
-| Regra ou fase de jogo no bloco 14 — quantas fases, a regra de cada uma, como vence, como perde, como o progresso aparece **(código)** | É conteúdo de produto, no bloco 2 |
+| Regra ou fase de jogo no bloco 14, ou numa seção `## ` nova fora dele — quantas fases, a regra de cada uma, como vence, como perde, como o progresso aparece **(código)** | É conteúdo de produto, no bloco 2 |
 | Spec calada sobre o ambiente, ou ambiente que não comporta os verbos, sem devolução no Passo 3 e no envelope | O D9 não cria: devolve a produto |
 | Decisões, telas ou dados coletados diferentes de antes do bloco 14 | O cap é do produto |
 | Token, cor ou fonte fora do DS na seção do ambiente | A marca é forma e chrome, não paleta |

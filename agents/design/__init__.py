@@ -13,8 +13,8 @@ HTML é o que a revisão humana de fato abre.
                                  do bloco 0 da spec e emite só a ficha de UI do bloco 14; spec calada ou ambiente
                                  que não comporta os verbos vira devolução a produto, não criação)
   d9c A068AmbienteSimuladoSplit   → anexo_design_spec (com bloco 14) · ambiente_status (determinístico, PR 8: bloco 14
-                                 com outro ambiente ou classe, regra ou fase de jogo, ou texto do D9 fora do bloco 14
-                                 bloqueia como decisão de produto; a devolução vira [PROPOSTA] ao PO)
+                                 com outro ambiente ou classe, regra ou fase de jogo, ou texto do D9 na spec de
+                                 produto bloqueia como decisão de produto; a devolução vira [PROPOSTA] ao PO)
   d1  A070BriefOficio        → brief_oficio
   d2  A071Jornada      → jornada_telas   (mapa de jornada + inventário + direção)
   d3  A072Fluxo        → fluxo_arestas   (grafo de telas + 5 testes)
@@ -54,8 +54,8 @@ aparece como 🔴 na UI e o pipeline segue com os `RS-n` carimbados como pendent
 
 Desde o PR 8 do plano (24/10/2026, decisão D8) a classe do ambiente (app clonado | mini-jogo), o ambiente e as regras e
 fases do mini-jogo são decididos em produto (`prompts/references/ambiente-e-minijogo.md`). O D9 não decide nada: lê o
-bloco 0 da spec e emite a ficha de UI; o texto dele fora do bloco 14 é decisão de produto e bloqueia (como a do D0 no
-A066), e a jornada só mapeia as telas para as fases da spec (`tools/ambiente.py`).
+bloco 0 da spec e emite a ficha de UI; o texto dele na spec de produto é decisão de produto e bloqueia (como a do D0 no
+A066; no bloco 13 do D0, é descartado com atenção), e a jornada só mapeia as telas para as fases da spec (`tools/ambiente.py`).
 """
 
 from __future__ import annotations
@@ -200,7 +200,7 @@ def get_spec_consolidada_check(nome: str) -> RastroCheckAgent:
 def get_ambiente_simulado_split() -> SecaoSplitAgent:
     return SecaoSplitAgent(
         name="A068AmbienteSimuladoSplit",
-        description="Monta em código o anexo de design com o bloco 14 do D9 em `anexo_design_spec`, sem tocar a spec de produto, e registra `ambiente_status`. Bloco 14 com ambiente ou classe diferente do bloco 0, regra ou fase de jogo, ou texto do D9 fora do bloco 14 bloqueia como decisão de produto; a devolução do D9 vira [PROPOSTA — validar com PO].",
+        description="Monta em código o anexo de design com o bloco 14 do D9 em `anexo_design_spec`, sem tocar a spec de produto, e registra `ambiente_status`. Bloco 14 com ambiente ou classe diferente do bloco 0, regra ou fase de jogo, ou texto do D9 na spec de produto bloqueia como decisão de produto; a devolução do D9 vira [PROPOSTA — validar com PO].",
         rotulo="Ambiente simulado (D9)",
         source_key="ambiente_simulado",
         status_key="ambiente_status",
@@ -644,7 +644,7 @@ DESIGN_METADATA = [
     {"id": "A065FechaLacunas", "name": "065 · Fechamento de lacunas de UI/UX (D0-UX)", "icon": "🧩", "output_key": "fechamento_lacunas", "prompt_file": "design/065_fechamento_lacunas.md", "description": "Mandato só de UI/UX desde o PR 6: varredura do que a spec de produto deixa da tela de cada estado, gesto, scaffolding, acessibilidade de componente e dispositivo, decisões [D0-n] com base declarada, bloco 13 do anexo de design (com o mapa célula → D0) e relatório de preenchimento. O que é de produto vira `[ABERTO — dono: PO]`."},
     {"id": "A066FechaLacunasSplit", "name": "066 · Relatório de lacunas + anexo de design (determinístico)", "icon": "✂️", "output_key": "relatorio_lacunas", "prompt_file": None, "description": "Monta em código o anexo de design (`anexo_design_spec`, `design/00-anexo-design-spec.md`) — bloco 13 do D0 + bloco 14 que já houver —, sem tocar a spec de produto; separa o relatório e registra `lacunas_status`. Mudança no texto de produto vira `[ABERTO — dono: PO]`; decisão de produto (classe fora do D0-UX, tópico de produto, [PARÂMETRO]/[PROPOSTA] fechado sem parecer datado) bloqueia."},
     {"id": "A067AmbienteSimulado", "name": "067 · Ambiente simulado", "icon": "🏝️", "output_key": "ambiente_simulado", "prompt_file": "design/067_ambiente_simulado.md", "description": "Sem poder de produto desde o PR 8 (decisão D8): lê a classe (app clonado | mini-jogo) e o ambiente que produto fixou no bloco 0 da spec e emite só a ficha de UI do bloco 14 — chrome, navegação, affordances, verbos nativos com rótulo literal e componente, a seção do DS só com tokens existentes — que D1, D2, D4, D5 e o QA consomem. Spec calada, ou ambiente que não comporta os verbos do bloco 4, vira devolução a produto (`[PROPOSTA — validar com PO]`), não criação."},
-    {"id": "A068AmbienteSimuladoSplit", "name": "068 · Anexo com bloco 14 (determinístico)", "icon": "✂️", "output_key": "ambiente_status", "prompt_file": None, "description": "Grava o bloco 14 do D9 no anexo de design, sem tocar a spec de produto, e registra `ambiente_status`. Bloco 14 que nomeia ambiente ou classe diferente do bloco 0, que traz regra ou fase de jogo, ou texto do D9 fora do bloco 14 bloqueia como decisão de produto (o padrão do A066) e volta ao D9; o bloco 14 com outro ambiente não entra no anexo. Spec calada sobre o ambiente bloqueia com dono PO, e a devolução do D9 vai ao cartão como `[PROPOSTA — validar com PO]` (PR 8)."},
+    {"id": "A068AmbienteSimuladoSplit", "name": "068 · Anexo com bloco 14 (determinístico)", "icon": "✂️", "output_key": "ambiente_status", "prompt_file": None, "description": "Grava o bloco 14 do D9 no anexo de design, sem tocar a spec de produto, e registra `ambiente_status`. Bloco 14 que nomeia ambiente ou classe diferente do bloco 0, que traz regra ou fase de jogo, ou texto do D9 na spec de produto bloqueia como decisão de produto (o padrão do A066) e volta ao D9 — numa correção pontual com o D9 travado, só o bloco 14 é conferido; o bloco 14 com outro ambiente não entra no anexo. Spec calada sobre o ambiente bloqueia com dono PO, e a devolução do D9 vai ao cartão como `[PROPOSTA — validar com PO]` (PR 8)."},
     {"id": "A069SpecConsolidada", "name": "069 · Spec consolidada × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_spec_design_report", "prompt_file": None, "description": "A spec de produto mais o anexo de design (D0 e D9) contra o one-pager aprovado: habilidades, tempo em tela, podcast, Canal B, debate e parâmetros a definir. Só o que o anexo piorou contra a spec de produto; o conserto vai ao D0 pelo QA."},
     {"id": "A070BriefOficio", "name": "070 · Briefing de ofício", "icon": "🎯", "output_key": "brief_oficio", "prompt_file": "design/070_brief_oficio.md", "description": "Aposta, forma do arco, pico, beat memorável, mapa de beats, não-negociáveis."},
     {"id": "A071Jornada", "name": "071 · Jornada (Mermaid)", "icon": "🗺️", "output_key": "jornada_telas", "prompt_file": "design/071_jornada.md", "description": "Raias × 6 etapas, cenários de dispositivo, inventário de telas e direção por tela. No mini-jogo, a Seção 5 copia as regras e as fases da spec e só mapeia as telas de cada fase; regra ou fase nova vai a produto como proposta (PR 8)."},
