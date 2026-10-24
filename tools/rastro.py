@@ -1355,6 +1355,20 @@ def relatorio_telemetria(resultado: Dict[str, Any], missao: str = "", rodada: in
 #: Requisitos que uma única tarefa pode cobrir antes de deixar de ser tarefa. Convenção de
 #: produto para forçar decomposição — não há achado de literatura atrás deste número.
 TETO_RF_POR_TAREFA = 6
+#: A suíte de ponta a ponta percorre a jornada inteira: cobrir todos os RFs é a definição dela, não falta de
+#: decomposição. Nas 13 execuções de dev de 25/09 a 23/10/2026 o `tarefa-nao-atomica` só acusou suíte E2E
+#: («T-013 | Implementar suíte de testes de ponta a ponta (e2e Playwright) | RF-001..RF-013», exp02em1b).
+_RE_TAREFA_E2E = re.compile(r"(?:su[íi]te|testes?)\b[^|\n]{0,40}(?:\be2e\b|ponta a ponta|end[- ]to[- ]end|playwright)|"
+                            r"(?:\be2e\b|ponta a ponta|playwright)[^|\n]{0,40}\b(?:su[íi]te|testes?)\b", re.I)
+
+
+def _tarefa_e2e(linha: str) -> bool:
+    """A descrição da tarefa (a célula logo depois do `T-NNN`) é a suíte E2E. Só a descrição: a coluna de teste de
+    uma tarefa de implementação também cita e2e, e essa continua sendo cobrada."""
+    celulas = [c.strip() for c in linha.strip().strip("|").split("|")]
+    i = next((k for k, c in enumerate(celulas) if re.search(r"\bT-\d{3}\b", c)), None)
+    return i is not None and i + 1 < len(celulas) and bool(_RE_TAREFA_E2E.search(celulas[i + 1]))
+
 
 #: `RF-001..RF-014`, `RF-001 a RF-014`, `RF-001 até RF-014`, `RF-001–RF-014`.
 _RE_INTERVALO_RF = re.compile(r"\bRF-(\d{3})\s*(?:\.\.\.?|--?|–|—|a|at[ée])\s*(?:RF-)?(\d{3})\b", re.I)
@@ -1441,6 +1455,8 @@ def validar_prd(prd: str, spec: str = "", banco: str = "", aprovado: str = "") -
 
     # 4. tarefa não atômica
     for m in re.finditer(r"\b(T-\d{3})\b[^\n]*?(todos os RFs?|todas as RFs?|todos os requisitos)", texto, re.I):
+        if _tarefa_e2e(texto[texto.rfind("\n", 0, m.start()) + 1:m.end()]):
+            continue
         falha("tarefa-nao-atomica",
               f"`{m.group(1)}` cobre \"{m.group(2)}\". Tarefa que fecha tudo não é verificável nem divisível.",
               severidade="atencao")
@@ -1452,7 +1468,7 @@ def validar_prd(prd: str, spec: str = "", banco: str = "", aprovado: str = "") -
     # lista de tarefas.
     for linha in texto.splitlines():
         tarefa = re.search(r"\bT-\d{3}\b", linha)
-        if not tarefa or "|" not in linha:
+        if not tarefa or "|" not in linha or _tarefa_e2e(linha):
             continue
         cobertos = _rfs_da_linha(linha)
         if len(cobertos) > TETO_RF_POR_TAREFA:
