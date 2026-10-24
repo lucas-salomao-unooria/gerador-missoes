@@ -786,6 +786,23 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
     return {"status": status, "achados": achados, "conferidos": conferidos}
 
 
+def aplicados_a_montante(pedidos: List[Tuple[str, str]]) -> List[Dict[str, str]]:
+    """Os itens de outro dono que a triagem tirou desta etapa, como conferidos: aplicados a montante.
+
+    O pedido do PO feito em design ou dev é dividido pela triagem (`tools/triagem_pedido.py`, PR 5 do plano «Produto
+    dono do contrato»): o item de produto vai ao one-pager e à spec do Gate 0 por correção pontual de produto, e a
+    fidelidade de produto o confere lá. Aqui ele aparece, sem cobrança — o A094 da exp02ef1b (23/10/2026) mandava
+    «aplique o pedido como o PO o escreveu» nos documentos de design, e o design mudava produto."""
+    saida = []
+    for n, (origem, texto) in enumerate(pedidos, 1):
+        cabeca = next((l.strip(" #>*-•") for l in (texto or "").splitlines() if l.strip(" #>*-•")), "")
+        if cabeca:
+            saida.append({"id": f"M{n}", "texto": cabeca[:240],
+                          "prova": f"aplicado a montante — item de produto pela triagem ({origem[:120]}), conferido "
+                                   "pela fidelidade de produto"})
+    return saida
+
+
 def relatorio(resultado: Dict[str, Any], itens: List[Dict[str, str]], missao: str = "", onde: str = "") -> str:
     icone = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
     titulo = "# Fidelidade ao pedido do PO e ao briefing" + (f" — {missao}" if missao else "") + (f" ({onde})" if onde else "")
@@ -800,7 +817,8 @@ def relatorio(resultado: Dict[str, Any], itens: List[Dict[str, str]], missao: st
             marca = {"bloqueio": "🔴", "atencao": "🟡", "decisao_humana": "🔵"}.get(a["severidade"], "⚪")
             linhas.append(f"- {marca} **{a['id']}** ({a['origem']}) — {a['resumo']}")
         linhas += ["", "Quem escreveu o documento: aplique o pedido como o PO o escreveu. Se ele conflita com uma regra "
-                   "da esteira, não escolha — registre `[ABERTO — PO]` citando os dois.", ""]
+                   "da esteira, não escolha — registre `[ABERTO — PO]` citando os dois. O item que a triagem mandou a "
+                   "produto não é cobrado aqui: ele foi aplicado a montante, no one-pager e na spec do Gate 0.", ""]
     if resultado["conferidos"]:
         linhas += ["## Conferido", ""]
         linhas += [f"- ✅ **{c['id']}** — {c['texto'][:140]} → «{c['prova'][:160]}»" for c in resultado["conferidos"]]

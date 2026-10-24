@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
 from google.adk.agents.base_agent import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
@@ -283,6 +283,27 @@ def _cita_texto_do_po(linha: str, state: Dict[str, Any]) -> bool:
     return any(c in alvo for c in citados)
 
 
+def _explicada_a_montante(diff: List[str], state: Dict[str, Any]) -> bool:
+    """Toda linha da diferença é a troca que a correção de produto da cascata fez (`edicoes_a_montante`): a linha que
+    sai da spec aceita está no `para` de uma troca, e a que o autor trazia está no `de`. O D0 de antes do PR 2 trazia a
+    spec inteira; numa cascata, a dele é a versão de antes da correção de produto, e a diferença não é mudança dele."""
+    from tools.fidelidade import _norm
+
+    trocas = [e for e in state.get("edicoes_a_montante") or [] if isinstance(e, dict)]
+    if not trocas or not diff:
+        return False
+    para = [_norm(str(e.get("para") or "")) for e in trocas]
+    de = [_norm(str(e.get("de") or "")) for e in trocas]
+    for linha in diff:
+        corpo = _norm(linha[1:])
+        if not corpo:
+            continue
+        fontes = para if linha.startswith("-") else de
+        if not any(corpo in f or f in corpo for f in fontes if f):
+            return False
+    return True
+
+
 def _sem_bloco(documento: str, titulo: str) -> str:
     """O documento sem o bloco cujo título casa `titulo` (regex de linha) — dele até o próximo `## ` ou o fim."""
     m = re.search(titulo, documento or "", re.MULTILINE)
@@ -464,8 +485,29 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
             })
             continue
         # Texto do Gate 0: quem muda é o PO. A troca que um pedido do PO fez em design também vem para cá — o pedido
-        # vale, mas no documento de produto (plano, D4 e D11); até o PR 5 o caminho é devolver a Produto.
+        # vale, mas no documento de produto (plano, D4 e D11). Desde o PR 5 (23/10/2026) esse pedido tem rota: a triagem
+        # do Refazer manda o item a produto, e a cascata o aplica no one-pager e na spec do Gate 0 antes do design. O
+        # `[ABERTO — dono: PO]` provisório do PR 2 sai daí, e o achado fica à vista como atenção:
+        # - a diferença que só repete o que a correção de produto da cascata trocou (`edicoes_a_montante`): o autor
+        #   trazia a versão de antes da troca, e a de produto vale;
+        # - a linha que traz texto que o PO mandou trocar num pedido de design: a rota é o Refazer, não o cartão.
         a_pedido = [l for l in diff if l.startswith("-") and _cita_texto_do_po(l, estado or {})]
+        a_montante = _explicada_a_montante(diff, estado or {})
+        if a_montante or a_pedido:
+            avisos.append({
+                "severidade": "atencao", "codigo": "gate0-aplicado-a-montante" if a_montante else "alterou-fora-do-proprio-bloco",
+                "etapa": "design", "agente_responsavel": agente,
+                "resumo": ((f"{autor} trazia {nome} da spec do Gate 0 como estava antes da correção de produto desta "
+                            "cascata (pedido do PO triado para produto): vale o texto de produto, e a versão do "
+                            f"{autor} foi descartada")
+                           if a_montante else
+                           (f"{autor} quis mudar {nome} da spec do Gate 0 com um texto que o PO mandou trocar num "
+                            "pedido de design — a mudança não entrou. O pedido vale no documento de produto: use "
+                            "**Refazer** com ele, e a triagem leva o item a produto (cascata)"))
+                + ":\n" + "\n".join(f"    {l[:200]}" for l in diff[:15])
+                + (f"\n    … e mais {len(diff) - 15} linha(s)" if len(diff) > 15 else ""),
+            })
+            continue
         from tools.fechar_contrato import trocas_de_linhas
 
         avisos.append({
@@ -475,9 +517,8 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
             # Produto, a missão mostra a mudança na lista do cartão, e o «aceitar» a põe no texto do Gate 0
             "bloco": chave, "trocas": trocas_de_linhas(antes, depois),
             "resumo": (f"[ABERTO — dono: PO: {autor} quis mudar {nome} da spec do Gate 0, e a spec é montada em código — a "
-                       "mudança não entrou]. O texto de produto só muda em produto: se ela deve valer, devolva a "
-                       "Produto com a decisão"
-                       + (" (a linha trazia um texto que o PO mandou trocar em design)" if a_pedido else "")
+                       "mudança não entrou]. O texto de produto só muda em produto: se ela deve valer, peça-a no "
+                       "**Refazer** (a triagem leva o item a produto) ou devolva a Produto com a decisão"
                        + (". Com ESTEIRA_ESTRITA, o de acordo de design espera essa decisão" if estrito else "")
                        + (" (o bloco 0 só muda por `[RS-AMB]` aceita)" if chave == "0" else "")
                        + ":\n" + "\n".join(f"    {l[:200]}" for l in diff[:15])
@@ -1948,6 +1989,21 @@ class FidelidadeCheckAgent(BaseAgent):
     #: A etapa que os achados levam.
     etapa: str = "produto"
 
+    def _corrente_da_etapa(self, state: Any, corrente: str) -> Tuple[str, List[Tuple[str, str]]]:
+        """`(texto que esta etapa confere, [(origem, texto) aplicados a montante])` do pedido corrente dividido pela
+        triagem (`divisao_do_pedido`). Sem divisão, o pedido inteiro é da etapa, como antes."""
+        from tools.triagem_pedido import DESIGN, DEV, PRODUTO, Divisao
+
+        d = Divisao.de_dict(state.get("divisao_do_pedido"))
+        if d is None or not d.itens:
+            return corrente, []
+        if all(i.dono == self.etapa for i in d.itens):
+            return corrente, []
+        donos_a_montante = (PRODUTO,) + ((DESIGN,) if self.etapa == DEV else ())
+        a_montante = [(f"pedido de correção desta execução · item {i.n} ({i.dono}, triagem)", i.texto)
+                      for i in d.itens if i.dono in donos_a_montante]
+        return d.texto_de(self.etapa, com_contexto=self.etapa == d.etapa), a_montante
+
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         from tools import fidelidade as fid
@@ -1965,6 +2021,17 @@ class FidelidadeCheckAgent(BaseAgent):
         # por `pipeline.reexecucao.preparar_estado`): a correção pela triagem não vira parecer e não está em
         # `pedidos_do_po`; a de produto atravessa design e dev na mesma execução e não é deles (auditoria do PR #32).
         corrente_e_daqui = self.incluir_corrente or str(state.get("etapa_da_correcao") or "") in self.etapas_pedido
+        # O pedido dividido pela triagem (PR 5 do plano «Produto dono do contrato»): a etapa confere só os itens dela, e
+        # o de produto foi aplicado a montante — no one-pager e na spec do Gate 0 — e conferido pela fidelidade de
+        # produto. Na exp02ef1b (23/10/2026) o A094 cobrava no design o botão «Publicar no Álbum» que a spec nomeia.
+        a_montante = [(str(p.get("origem") or "pedido"), str(p.get("texto") or ""))
+                      for p in state.get("pedidos_do_po") or []
+                      if isinstance(p, dict) and str(p.get("a_montante_de") or "") in self.etapas_pedido]
+        if corrente_e_daqui and corrente.strip() and not self.incluir_corrente:
+            corrente, do_corrente = self._corrente_da_etapa(state, corrente)
+            # no parecer, o mesmo item já veio registrado como pedido de produto: aparece uma vez só
+            a_montante += [(o, t) for o, t in do_corrente
+                           if not any(_norm_simples(t)[:200] in _norm_simples(r) for _, r in a_montante)]
         if (corrente_e_daqui and corrente.strip()
                 and not any(_norm_simples(t)[:200] in _norm_simples(corrente) for _, t in pedidos)):
             pedidos.append(("pedido de correção desta execução", corrente))
@@ -2012,6 +2079,7 @@ class FidelidadeCheckAgent(BaseAgent):
                    if state.get(KEY_MODO_CORRECAO) == "pontual" else None)
         resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa, parcial=self.parcial, anteriores=anteriores,
                                 edicoes=edicoes, origens_correntes=correntes, interpretacao=lidos)
+        resultado["conferidos"] += fid.aplicados_a_montante(a_montante)
         relatorio = fid.relatorio(resultado, itens, missao, self.onde)
         envelope = extrair_envelope(relatorio) or {}
         bloqueios = sum(1 for a in resultado["achados"] if a["severidade"] == "bloqueio")
@@ -2136,6 +2204,12 @@ def _norm_simples(texto: str) -> str:
 
 #: Tickets que um gate emitiu e nenhum agente pôde executar. O dossiê os lista como pendência humana.
 KEY_TICKETS_SEM_ROTA = "tickets_sem_rota"
+#: Tickets com dono `gate-estrutural` da última rodada de cada gate (`{rótulo: [tickets]}`): no fim da etapa a missão
+#: volta ao parecer de Produto com eles (`pipeline.passagem.concluir_execucao`). Até o PR 5 do plano «Produto dono do
+#: contrato» (23/10/2026) eram `RETRABALHO_EXTERNO`: uma mensagem, e nada rodava.
+KEY_DEVOLUCOES_A_PRODUTO = "devolucoes_a_produto"
+#: O dono que é produto: o ticket a ele é devolução real, não pendência na mensagem.
+DONO_PRODUTO = "gate-estrutural"
 
 
 class DespachoTicketsAgent(BaseAgent):
@@ -2214,12 +2288,18 @@ class DespachoTicketsAgent(BaseAgent):
         status = inferir_status(relatorio, envelope)
 
         if status == STATUS_APROVADO:
+            atuais = dict(state.get(KEY_DEVOLUCOES_A_PRODUTO) or {})
+            if atuais.pop(self.rotulo, None) is not None:
+                # o gate aprovou nesta rodada: o ticket a produto da rodada anterior não vale mais
+                yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                            actions=EventActions(state_delta={KEY_DEVOLUCOES_A_PRODUTO: atuais}))
             return
 
         from tools.rastro import normalizar_dono
 
         por_slug: Dict[str, List[Dict[str, Any]]] = {}
         pendentes_externos: List[str] = []
+        a_produto: List[Dict[str, Any]] = []
         # Ticket que ninguém pode executar. Antes eram três descartes silenciosos — sem dono,
         # dono com nome que o mapa não conhece, e agente de retrabalho ausente —, e o 🔴 do
         # gate voltava na rodada seguinte sem que alguém soubesse que o conserto não saiu.
@@ -2236,6 +2316,10 @@ class DespachoTicketsAgent(BaseAgent):
                 continue
             if slug in self.externos:
                 pendentes_externos.append(f"`{achado.get('id', '?')}` → `{slug}`")
+                if slug == DONO_PRODUTO:
+                    a_produto.append({"id": str(achado.get("id") or achado.get("codigo") or "—"),
+                                      "codigo": str(achado.get("codigo") or ""),
+                                      "resumo": str(achado.get("resumo") or "")[:600]})
                 continue
             if slug in self.mapa:
                 por_slug.setdefault(slug, []).append(achado)
@@ -2266,6 +2350,15 @@ class DespachoTicketsAgent(BaseAgent):
                 por_agente.setdefault(nome, []).extend(por_slug[slug])
 
         delta_sem_rota: Dict[str, Any] = {}
+        devolucoes = dict(state.get(KEY_DEVOLUCOES_A_PRODUTO) or {})
+        if a_produto or self.rotulo in devolucoes:
+            # a última rodada do gate manda: a devolução que ele não repete caiu
+            if a_produto:
+                devolucoes[self.rotulo] = a_produto
+            else:
+                devolucoes.pop(self.rotulo, None)
+            state[KEY_DEVOLUCOES_A_PRODUTO] = devolucoes
+            delta_sem_rota[KEY_DEVOLUCOES_A_PRODUTO] = devolucoes
         if sem_rota:
             registrados = list(state.get(KEY_TICKETS_SEM_ROTA) or [])
             vistos = {(r.get("gate"), r.get("id"), r.get("dono")) for r in registrados}
@@ -2283,6 +2376,8 @@ class DespachoTicketsAgent(BaseAgent):
             msg = f"⏭️ {self.rotulo}: nenhum ticket com dono executável nesta etapa."
             if pendentes_externos:
                 msg += " Devolução a outra etapa: " + ", ".join(pendentes_externos) + "."
+            if a_produto:
+                msg += " No fim da etapa a missão volta ao parecer de Produto com estes ticket(s)."
             msg += aviso_sem_rota
             yield Event(
                 invocation_id=ctx.invocation_id,
@@ -2337,7 +2432,9 @@ class DespachoTicketsAgent(BaseAgent):
                     f"nesta execução). Os {len(nomes_na_ordem)} conserto(s) desta rodada ficam para uma pessoa; "
                     "a esteira segue e o diagnóstico final lista cada um com o dono."
                 ))]),
-                actions=EventActions(state_delta={KEY_PIPELINE_BLOQUEADO: True, KEY_TICKETS_SEM_ROTA: registrados}),
+                actions=EventActions(state_delta={KEY_PIPELINE_BLOQUEADO: True, KEY_TICKETS_SEM_ROTA: registrados,
+                                                  **({KEY_DEVOLUCOES_A_PRODUTO: delta_sem_rota[KEY_DEVOLUCOES_A_PRODUTO]}
+                                                     if KEY_DEVOLUCOES_A_PRODUTO in delta_sem_rota else {})}),
             )
             return
 
@@ -2345,6 +2442,8 @@ class DespachoTicketsAgent(BaseAgent):
         aviso = f"🔁 {self.rotulo}: reexecutando {len(nomes_na_ordem)} agente(s) com ticket — {resumo}."
         if pendentes_externos:
             aviso += " Fora desta etapa (não reexecutado): " + ", ".join(pendentes_externos) + "."
+        if a_produto:
+            aviso += " No fim da etapa a missão volta ao parecer de Produto com o(s) ticket(s) de `gate-estrutural`."
         aviso += aviso_sem_rota
         yield Event(
             invocation_id=ctx.invocation_id,
@@ -2910,13 +3009,18 @@ class LinhaDeBaseAgent(BaseAgent):
         from pipeline.reexecucao import PREFIXO_VERSAO_ANTERIOR
 
         edicoes = list(state.get("edicoes_pontuais") or [])
+        # Na cascata (pedido de design ou dev com item de produto), as trocas de produto também são da correção: o
+        # bloqueio de design que cita o texto novo do one-pager é consequência dela, não ruído do juiz
+        a_montante = [e for e in state.get("edicoes_a_montante") or [] if isinstance(e, dict)]
         anteriores = {e.get("documento"): str(state.get(PREFIXO_VERSAO_ANTERIOR + str(e.get("documento"))) or "")
                       for e in edicoes}
         delta, linhas = linha_de_base.aplicar(dict(state), dict(state.get(linha_de_base.KEY_LINHA_DE_BASE) or {}),
-                                              edicoes, chaves, anteriores=anteriores)
+                                              edicoes + a_montante, chaves, anteriores=anteriores)
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
-        delta[linha_de_base.KEY_LINHA_DE_BASE_REPORT] = linha_de_base.relatorio(
-            linhas, edicao_pontual.resumo(edicoes), missao)
+        trocas_md = edicao_pontual.resumo(edicoes) + (
+            "\n\n**Trocas a montante (correção de produto desta cascata):**\n\n" + edicao_pontual.resumo(a_montante)
+            if a_montante else "")
+        delta[linha_de_base.KEY_LINHA_DE_BASE_REPORT] = linha_de_base.relatorio(linhas, trocas_md, missao)
         delta["linha_de_base_linhas"] = linhas
         novos = len(linha_de_base.bloqueios_novos(linhas))
         rebaixados = sum(1 for l in linhas if l["origem"] in (linha_de_base.TEXTO_INALTERADO,
