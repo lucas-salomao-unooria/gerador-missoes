@@ -135,8 +135,9 @@ _RE_TITULO = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 _RE_CERCA = re.compile(r"^\s*(```|~~~)")
 
 #: Onde cada documento lista as pendências: o PRD na seção 19, o handoff na seção 7 («Lacunas e pendências»).
-SECAO_DE_PENDENCIAS: Dict[str, Tuple[int, str]] = {"prd_final": (19, r"pend[êe]ncias"),
-                                                   "handoff_dev": (7, r"lacunas\s+e\s+pend")}
+#: «Dependências» (a §15 do PRD) não é «pendências»: a palavra começa no limite.
+SECAO_DE_PENDENCIAS: Dict[str, Tuple[int, str]] = {"prd_final": (19, r"\bpend[êe]ncias|\bquest[õo]es\s+abertas"),
+                                                   "handoff_dev": (7, r"\blacunas\s+e\s+pend")}
 
 
 def linhas_do_bloco(gov: Optional[Dict[str, Any]]) -> List[str]:
@@ -217,15 +218,24 @@ def sem_bloco(texto: str) -> str:
 
 
 def _secao(texto: str, numero: int, titulo: str) -> Optional[Tuple[int, int, int]]:
-    """(início do conteúdo, fim, nível) da seção `numero` — ou, sem o número, da que tem o título — fora do bloco."""
+    """(início do conteúdo, fim, nível) da seção de pendências, fora do bloco: a que tem o número e o título; senão a
+    que tem o título; senão a que tem o número — em cada caso, a mais alta na hierarquia. O handoff tem «### 7. Design»
+    dentro do modelo de insumo antes de «## 7. Lacunas e pendências» (as sete sessões do acervo), e o PRD da exp05ef1b
+    chama a 19 de «Riscos e mitigações» e põe as pendências em «Questões abertas e pendências humanas»."""
     titulos = [t for t in _titulos(texto) if not _RE_TITULO_BLOCO.match("# " + t[3])]
-    padroes = (re.compile(rf"^{numero}\s*(?:\.(?![\dA-Za-z])|[—–-])"), re.compile(titulo, re.I))
-    for padrao in padroes:
-        for i, (_, fim, nivel, nome) in enumerate(titulos):
-            if padrao.search(nome) if padrao is padroes[1] else padrao.match(nome):
-                fim_secao = next((ini for ini, _, n, _ in titulos[i + 1:] if n <= nivel), len(texto))
-                return fim, fim_secao, nivel
-    return None
+    por_numero = re.compile(rf"^{numero}\s*(?:\.(?![\dA-Za-z])|[—–-])")
+    por_titulo = re.compile(titulo, re.I)
+
+    def achar(cabe: Any) -> Optional[Tuple[int, int, int]]:
+        candidatos = [(i, t) for i, t in enumerate(titulos) if cabe(t[3])]
+        if not candidatos:
+            return None
+        i, (_, fim, nivel, _) = min(candidatos, key=lambda c: c[1][2])
+        fim_secao = next((ini for ini, _, n, _ in titulos[i + 1:] if n <= nivel), len(texto))
+        return fim, fim_secao, nivel
+
+    return (achar(lambda nome: por_numero.match(nome) and por_titulo.search(nome))
+            or achar(lambda nome: por_titulo.search(nome)) or achar(lambda nome: por_numero.match(nome)))
 
 
 def com_pendencias(documento: str, gov: Optional[Dict[str, Any]], chave: str) -> str:
@@ -246,7 +256,7 @@ def com_pendencias(documento: str, gov: Optional[Dict[str, Any]], chave: str) ->
         m = re.search(r"\n\s*---\s*\n\s*$", corpo)
         if m:
             corpo, resto = corpo[:m.start() + 1], corpo[m.start() + 1:] + resto
-    numero, titulo = SECAO_DE_PENDENCIAS.get(chave, (19, r"pend[êe]ncias"))
+    numero, titulo = SECAO_DE_PENDENCIAS.get(chave, SECAO_DE_PENDENCIAS["prd_final"])
     secao = _secao(corpo, numero, titulo)
     novo_bloco = bloco(gov, nivel=(secao[2] + 1) if secao else 2)
     if not novo_bloco:

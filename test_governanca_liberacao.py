@@ -398,9 +398,18 @@ def test_bloco_entra_no_fim_da_secao_19_e_e_idempotente():
 def test_bloco_vai_a_secao_7_do_handoff_e_o_anexo_fica_no_fim():
     from tools.conteudo_aprovado import TITULO_ANEXO, com_anexo
 
-    handoff = "# Handoff\n\n## 6. Hipóteses\n\nH1\n\n## 7. Lacunas e pendências carregadas (dono e classe)\n\n- L1\n"
+    # o modelo de insumo tem «### 7. Design» antes da seção 7 do handoff (as sete sessões do acervo)
+    handoff = ("# Handoff\n\n## 1. Modelo de insumo\n\n### 7. Design\n\nDS unoovista\n\n### 8. Dados\n\nnenhum\n\n"
+               "## 6. Hipóteses\n\nH1\n\n## 7. Lacunas e pendências carregadas (dono e classe)\n\n- L1\n")
     novo = gov.com_pendencias(handoff, GOV_DUAS, "handoff_dev")
-    assert novo.index("## 7. Lacunas") < novo.index(gov.TITULO_BLOCO)
+    assert novo.index("## 7. Lacunas") < novo.index(gov.TITULO_BLOCO) and f"### {gov.TITULO_BLOCO}" in novo
+    real = _estado("exp02ef1b-4fd72a9a")["handoff_dev"]
+    novo = gov.com_pendencias(real, GOV_DUAS, "handoff_dev")
+    assert novo.index("## 7. Lacunas e pendências carregadas") < novo.index(gov.TITULO_BLOCO)
+    # «Dependências» (a §15 do PRD) não é a seção de pendências, e sem número a 19 se acha pelo título
+    prd = "# PRD\n\n# 15. Dependências e pré-requisitos\n\n- ADR\n\n# 21. Riscos\n\n### Questões abertas e pendências\n\n- Q1\n"
+    novo = gov.com_pendencias(prd, GOV_DUAS, "prd_final")
+    assert novo.index("Questões abertas e pendências") < novo.index(gov.TITULO_BLOCO)
     com = com_anexo(PRD, "# One-pager\n\n## 2. Currículo\n\nEF06CO01\n", [2])
     novo = gov.com_pendencias(com, GOV_DUAS, "prd_final")
     assert novo.index(gov.TITULO_BLOCO) < novo.index("## 20. Fim") < novo.index(TITULO_ANEXO)
