@@ -652,7 +652,11 @@ def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[s
     if perdidas:
         st.warning("⚠️ O refazer de produto apagou do one-pager e da spec decisões que o PO já tinha gravado — o marcador "
                    "também não voltou, então elas não estão na lista abaixo. Use **Refazer** com cada uma para "
-                   "devolvê-la ao texto:\n\n" + "\n".join(
+                   "devolvê-la ao texto"
+                   + (" — com ESTEIRA_ESTRITA, o de acordo não sai antes disso, salvo exceção do admin"
+                      if get_settings().esteira_estrita else
+                      " — se der o de acordo assim, as notas de passagem as levam como «não está no texto: vale a decisão»")
+                   + ":\n\n" + "\n".join(
                        f"- «{d.get('assunto', '')[:120]}» → {fechar_contrato.ROTULO_RESPOSTA.get(d.get('resposta'), '')}"
                        + (f" «{d['valor']}»" if d.get("valor") else "") + f" ({d.get('quando', '')})" for d in perdidas))
     if not itens:

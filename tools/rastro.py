@@ -246,6 +246,16 @@ _MARCADORES = [
 #: Marcadores do contrato aberto: a descrição que é só reticência ou `<placeholder>` cita o formato
 #: («Aplicação do marcador `[PARÂMETRO — a definir por produto: …]`», one-pager da exp02em1b).
 _RE_CONTRATO_CITADO = re.compile(r"(?::|^)\s*(?:…|\.\.\.|<[^>]*>)\s*$")
+#: O marcador sem descrição logo depois da palavra «marcador» também é o nome dele citado na prosa: «Quatro propostas
+#: pontuais submetidas ao PO registradas com marcador normativo `[PROPOSTA P0b — validar com PO]`» (spec da
+#: exp01em1b-e3980485, 22/10/2026) virava item do cartão de produto. Só a palavra separa: na exp03ef1b e na exp05ef1b
+#: há [PROPOSTA] sem descrição, fora de tabela, que é pendência de verdade («… 2 notícias") [PROPOSTA — validar com PO]»).
+_RE_CITA_O_MARCADOR = re.compile(r"\bmarcador(?:es)?\b[^\n`\[\]]{0,30}`?\s*$", re.IGNORECASE)
+
+
+def cita_o_marcador(antes_na_linha: str) -> bool:
+    """O texto da linha antes do marcador termina em «marcador …»: o marcador é citado, não aberto."""
+    return bool(_RE_CITA_O_MARCADOR.search(antes_na_linha or ""))
 
 # Os prompts citam o formato do marcador para ensinar o agente a usá-lo — e a citação
 # tem a mesma forma do marcador. Um documento que diz "Lista de pendências
@@ -605,6 +615,9 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                     continue
                 if tipo in ("parametro", "proposta") and (not dono_raw or _RE_CONTRATO_CITADO.search(dono_raw)):
                     continue  # `[PROPOSTA]` sozinho, ou com «…», é o nome do marcador citado na prosa
+                if (tipo in ("parametro", "proposta") and ":" not in dono_raw
+                        and cita_o_marcador(texto[texto.rfind("\n", 0, m.start()) + 1:m.start()])):
+                    continue  # «registradas com marcador normativo `[PROPOSTA P0b — validar com PO]`»
                 linha, contexto = _linha_e_contexto(texto, m.start(), m.end())
                 fechado = _RE_RESOLVIDO_D0.search(linha)
                 n_d0 = int(fechado.group(1)) if fechado else mapa_d0.get(_norm_marcador(trecho))

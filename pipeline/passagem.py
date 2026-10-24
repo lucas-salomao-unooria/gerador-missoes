@@ -25,11 +25,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 ORDEM: Tuple[str, ...] = ("produto", "design", "dev")
 ROTULO_ETAPA = {"produto": "Produto", "design": "Design", "dev": "Dev"}
@@ -217,6 +220,14 @@ def contrato_em_aberto(estado: Dict[str, Any]) -> list:
     return itens_em_aberto(estado)
 
 
+def contrato_pendente(estado: Dict[str, Any]) -> bool:
+    """Há item do contrato sem fechar, ou decisão do PO que um refazer apagou do texto (`decisoes_perdidas`)."""
+    from tools.fechar_contrato import decisoes_perdidas
+
+    itens = contrato_em_aberto(estado)
+    return bool(itens) or bool(decisoes_perdidas(estado, itens))
+
+
 def acoes_possiveis(fluxo: Dict[str, Any], papel: str, estado: Dict[str, Any],
                     estrito: Optional[bool] = None) -> List[str]:
     """O que `papel` pode fazer agora. O `admin` pode tudo o que o dono pode, mais a exceção."""
@@ -231,7 +242,7 @@ def acoes_possiveis(fluxo: Dict[str, Any], papel: str, estado: Dict[str, Any],
         # Com ESTEIRA_ESTRITA, produto não sai com [PARÂMETRO]/[PROPOSTA] sem resposta — salvo exceção do admin, que fica
         # registrada com o que ficou sem resposta (plano «Produto dono do contrato», D3)
         sem_resposta_possivel = (etapa == "produto" and papel == "admin" and not vermelho and _estrito(estrito)
-                                 and bool(contrato_em_aberto(estado)))
+                                 and contrato_pendente(estado))
         if (vermelho or sem_resposta_possivel) and papel == "admin":
             acoes.append(EXCECAO)
     if situacao in (AGUARDANDO, DEVOLVIDA) and etapa_anterior(etapa):
@@ -366,7 +377,8 @@ def _fechar_contrato(estado: Dict[str, Any], acao: str, decisoes: Optional[Dict[
     from tools import fechar_contrato as fc
 
     itens = fc.itens_em_aberto(estado)
-    if not itens:
+    perdidas = fc.decisoes_perdidas(estado, itens)
+    if not itens and not perdidas:
         return {}
     try:
         decisao = fc.decidir(itens, decisoes, quando, como)
@@ -385,8 +397,20 @@ def _fechar_contrato(estado: Dict[str, Any], acao: str, decisoes: Optional[Dict[
             "ESTEIRA_ESTRITA, o de acordo de produto não sai com [PARÂMETRO] ou [PROPOSTA] aberto: responda cada item na "
             "lista do cartão (ou «Aceitar as sugestões»), ou peça ao admin a liberação com exceção. «Tudo de acordo» no "
             "comentário não aprova proposta.")
-    return {"decisoes_contrato": decisao.decisoes, "sem_resposta": decisao.sem_resposta,
-            "edicoes_contrato": decisao.edicoes, "itens_no_cartao": len(itens)}
+    if perdidas and acao == DE_ACORDO and _estrito(estrito):
+        # O refazer apagou do texto a decisão, e o marcador não voltou: o design não a aplica (065, D3), e ela sumiria a
+        # jusante. Com ESTEIRA_ESTRITA, produto a repõe (Refazer) antes do de acordo — ou o admin libera com exceção
+        nomes = "; ".join(f"«{str(d.get('assunto') or '')[:70]}»" for d in perdidas[:5])
+        raise DecisaoInvalida(
+            f"{len(perdidas)} decisão(ões) do PO no contrato não está(ão) mais no one-pager nem na spec do Gate 0 — um "
+            f"refazer de produto reescreveu o trecho: {nomes}. Com ESTEIRA_ESTRITA, o de acordo de produto não sai assim: "
+            "use Refazer citando cada decisão, para ela voltar ao texto, ou peça ao admin a liberação com exceção.")
+    saida = {"decisoes_contrato": decisao.decisoes, "sem_resposta": decisao.sem_resposta,
+             "edicoes_contrato": decisao.edicoes, "itens_no_cartao": len(itens)}
+    if perdidas:
+        saida["decisoes_fora_do_texto"] = [{k: d.get(k) for k in ("id", "tipo", "assunto", "resposta", "valor", "quando", "como")}
+                                           for d in perdidas]
+    return saida
 
 
 def concluir_execucao(fluxo: Dict[str, Any], ok: bool) -> Dict[str, Any]:
@@ -519,7 +543,8 @@ def registrar_decisao(run_dir: Path, fluxo_lido: Dict[str, Any], novo: Dict[str,
     (`tools.fechar_contrato.gravar`), depois o fluxo. Se o fluxo não pode ser gravado (outra pessoa decidiu antes), o
     `estado.json` volta como estava. Devolve o fluxo gravado.
 
-    A ordem garante que o design só fica liberado com as respostas já no texto que ele vai ler (plano, PR 3)."""
+    A ordem garante que o design só fica liberado com as respostas já no texto que ele vai ler (plano, PR 3). Gravado o
+    fluxo, o `.docx` e o `.html` do one-pager são regerados com as respostas."""
     from tools import fechar_contrato
 
     anterior: Optional[Dict[str, str]] = None
@@ -528,11 +553,19 @@ def registrar_decisao(run_dir: Path, fluxo_lido: Dict[str, Any], novo: Dict[str,
             and (registro.get("edicoes_contrato") or registro.get("decisoes_contrato"))):
         anterior = fechar_contrato.gravar(run_dir, registro)
     try:
-        return registrar_fluxo(run_dir, novo, fluxo_lido.get("versao", 0))
-    except ConflitoDeVersao:
+        gravado = registrar_fluxo(run_dir, novo, fluxo_lido.get("versao", 0))
+    except Exception:
+        # conflito de versão ou falha de disco: sem o fluxo, as respostas não valem, e o texto volta como estava
         if anterior:
             fechar_contrato.desfazer(run_dir, anterior)
         raise
+    if anterior and any(e.get("documento") == fechar_contrato.DOC_ONE_PAGER
+                        for e in registro.get("edicoes_contrato") or []):
+        try:
+            fechar_contrato.exportar_one_pager(run_dir)
+        except Exception as exc:  # o export é para gente ler; a decisão já está gravada
+            logger.warning("O .docx/.html do one-pager não foi regerado depois do de acordo: %s", exc)
+    return gravado
 
 
 def quem_age(fluxo: Optional[Dict[str, Any]]) -> str:

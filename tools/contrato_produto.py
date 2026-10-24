@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Sequence, Set
 
 from tools.bncc import extrair_codigos, extrair_serie, habilidades, secao_bloco
 from tools.rastro import _usado_afirmativamente
@@ -52,11 +52,8 @@ _RE_NUMERO = re.compile(
 )
 #: `[CONVENÇÃO]`, `[EXTRAPOLAÇÃO]` e `[INFERÊNCIA]` são os rótulos de origem da literatura-cognitiva: o
 #: número diz de onde veio, e é isso que a regra pede.
-#: «90 segundos — PO, parecer de 24/10/2026» é a resposta do PO que o de acordo de produto gravou no lugar do
-#: [PARÂMETRO] (`tools/fechar_contrato.py`): tem origem. Sem ela aqui, o refazer de produto reabria o número.
 _MARCADORES = ("[PROPOSTA", "[PARÂMETRO", "[PARAMETRO", "[DECISÃO PENDENTE", "[DECISAO PENDENTE", "🔵",
-               "[CONVENÇÃO", "[CONVENCAO", "[EXTRAPOLAÇÃO", "[EXTRAPOLACAO", "[INFERÊNCIA", "[INFERENCIA",
-               "PO, parecer de")
+               "[CONVENÇÃO", "[CONVENCAO", "[EXTRAPOLAÇÃO", "[EXTRAPOLACAO", "[INFERÊNCIA", "[INFERENCIA")
 _RE_ETAPA = re.compile(r"desafiar|navegar|decidir|resultado|aha|explicar|refletir|etapa|\bE[1-6]\b", re.IGNORECASE)
 #: "Foco primário BNCC (Regra 12): `EF03CO08`" — a linha onde o one-pager crava a habilidade principal.
 _RE_FOCO_PRIMARIO = re.compile(r"foco\s+prim[áa]rio[^\n]{0,240}", re.IGNORECASE)
@@ -124,9 +121,30 @@ def _serie(one_pager: str) -> Dict[str, Any]:
     return serie
 
 
+def _numeros_decididos(decisoes_do_po: Optional[Sequence[Dict[str, Any]]]) -> Set[str]:
+    """Os números com unidade que o PO fixou no de acordo de produto (`estado.decisoes_do_po`, `tools/fechar_contrato.py`).
+
+    «90 segundos — PO, parecer de 24/10/2026» tem origem: sem isto, o refazer de produto reabria o número decidido.
+    Conta só o valor aceito ou escrito pelo PO — não a marca «PO, parecer de», que qualquer autor pode escrever ao lado
+    de outro número («60 segundos — PO, parecer de …» passava no lint), nem a proposta que ele recusou."""
+    textos = []
+    for d in decisoes_do_po or []:
+        if not isinstance(d, dict):
+            continue
+        if d.get("resposta") == "outro":
+            textos.append(str(d.get("valor") or ""))
+        elif d.get("resposta") == "aceitar":
+            textos.append(str(d.get("gravado") or ""))
+    return _numeros_com_unidade("\n".join(textos))
+
+
 def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
-                      registro_do_po: bool = False, one_pager_po: str = "", pedidos: str = "") -> Dict[str, Any]:
+                      registro_do_po: bool = False, one_pager_po: str = "", pedidos: str = "",
+                      decisoes_do_po: Optional[Sequence[Dict[str, Any]]] = None) -> Dict[str, Any]:
     """Aplica as regras ao one-pager. Devolve `status`, `achados` e a série lida.
+
+    `decisoes_do_po` são as respostas do de acordo de produto (`estado.decisoes_do_po`): o número que o PO fixou ali
+    tem origem, como o do one-pager dele.
 
     `one_pager_po` é o one-pager que o PO anexou (`tools/one_pager_po.py`): o número que ele fixou tem
     origem — a decisão é dele —, e a linha dele que a plataforma não comporta fica, com a proposta ao lado.
@@ -219,6 +237,7 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
 
     # 4. Número com unidade sem origem no núcleo nem no briefing e sem marcador.
     origem = _numeros_com_unidade((nucleo or "") + "\n" + (briefing or "") + "\n" + (one_pager_po or ""))
+    origem |= _numeros_decididos(decisoes_do_po)
     sem_origem: List[str] = []
     for n in SECOES_NUMERICAS:
         secao = secao_bloco(texto, n)

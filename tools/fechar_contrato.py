@@ -32,6 +32,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from tools.rastro import cita_o_marcador
+
 ACEITAR = "aceitar"
 OUTRO = "outro"
 RECUSAR = "recusar"
@@ -208,6 +210,10 @@ def ocorrencias(texto: str, documento: str) -> List[Ocorrencia]:
                 tipo, interno = ABERTO_PO, m.group(3)
             desc = _descricao(tipo, interno)
             if _RE_PLACEHOLDER.match(desc) and ("…" in interno or "..." in interno or "<" in interno):
+                continue
+            if not desc and cita_o_marcador(linha[:m.start()]):
+                # «… registradas com marcador normativo `[PROPOSTA P0b — validar com PO]`» (exp01em1b-e3980485): virava
+                # o 12º item do cartão, e o «Aceitar as sugestões» gravava a frase de resumo como proposta aprovada
                 continue
             saida.append(Ocorrencia(documento=documento, linha=linha, marcador=m.group(0), tipo=tipo, descricao=desc))
     return saida
@@ -614,11 +620,16 @@ def aplicar_edicoes(estado: Dict[str, Any], edicoes: Iterable[Dict[str, Any]]) -
     return ({} if falhas else novos), falhas
 
 
+#: Marca do arquivo que não existia antes de `gravar`: o `desfazer` o apaga em vez de reescrevê-lo.
+_NAO_EXISTIA = "\x00não existia"
+
+
 def gravar(run_dir: Path, decisao: Dict[str, Any]) -> Dict[str, str]:
     """Grava no `estado.json` da sessão as trocas e as decisões de um de acordo, e reescreve os artefatos tocados.
 
-    `decisao` é o registro do parecer (`decisoes_contrato`, `edicoes_contrato`). Devolve o texto anterior do
-    `estado.json` (`{"estado.json": …}`), para quem gravou desfazer se o fluxo não puder ser registrado."""
+    `decisao` é o registro do parecer (`decisoes_contrato`, `edicoes_contrato`). Devolve o texto anterior de cada arquivo
+    que reescreveu (`{"estado.json": …, "produto/00-one-pager.md": …}`), para quem gravou desfazer se o fluxo não puder
+    ser registrado — os `.md` também: só o `estado.json` voltava, e o one-pager em disco ficava com a decisão desfeita."""
     from pipeline.artifacts import ARTIFACT_FILES, desembrulhar_cerca
 
     caminho = Path(run_dir) / "estado.json"
@@ -629,20 +640,53 @@ def gravar(run_dir: Path, decisao: Dict[str, Any]) -> Dict[str, str]:
         raise RespostaInvalida("A gravação no one-pager e na spec falhou: " + "; ".join(falhas))
     estado.update(novos)
     estado[KEY_DECISOES] = list(estado.get(KEY_DECISOES) or []) + list(decisao.get("decisoes_contrato") or [])
-    caminho.write_text(json.dumps(estado, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
     arquivos = dict(ARTIFACT_FILES)
-    for chave, texto in novos.items():
-        if chave in arquivos:
-            destino = Path(run_dir) / arquivos[chave]
-            destino.parent.mkdir(parents=True, exist_ok=True)
-            destino.write_text(desembrulhar_cerca(texto).strip() + "\n", encoding="utf-8")
-    return {"estado.json": anterior}
+    destinos = {arquivos[chave]: Path(run_dir) / arquivos[chave] for chave in novos if chave in arquivos}
+    guardado: Dict[str, str] = {"estado.json": anterior}
+    for relativo, destino in destinos.items():
+        guardado[relativo] = destino.read_text(encoding="utf-8") if destino.exists() else _NAO_EXISTIA
+    try:
+        caminho.write_text(json.dumps(estado, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+        for chave, texto in novos.items():
+            if chave in arquivos:
+                destino = destinos[arquivos[chave]]
+                destino.parent.mkdir(parents=True, exist_ok=True)
+                destino.write_text(desembrulhar_cerca(texto).strip() + "\n", encoding="utf-8")
+    except OSError:
+        desfazer(run_dir, guardado)
+        raise
+    return guardado
 
 
 def desfazer(run_dir: Path, anterior: Dict[str, str]) -> None:
-    """Volta o `estado.json` gravado por `gravar` (o fluxo não pôde ser registrado)."""
-    if anterior.get("estado.json"):
-        (Path(run_dir) / "estado.json").write_text(anterior["estado.json"], encoding="utf-8")
+    """Volta o `estado.json` e os artefatos gravados por `gravar` (o fluxo não pôde ser registrado)."""
+    for relativo, texto in anterior.items():
+        destino = Path(run_dir) / relativo
+        if texto == _NAO_EXISTIA:
+            destino.unlink(missing_ok=True)
+        elif texto:
+            destino.write_text(texto, encoding="utf-8")
+
+
+def exportar_one_pager(run_dir: Path) -> List[Path]:
+    """Regera o `.docx` e o `.html` do one-pager de produto depois que o de acordo gravou as respostas nele.
+
+    Os dois saem do Markdown em `pipeline.artifacts.exportar_one_pagers`, que só rodava ao fim de uma execução: até a
+    próxima etapa salvar os artefatos, o documento para gente ler ficava com os [PARÂMETRO] que o PO já tinha fechado.
+    Só o de produto: o resumido não é editado pelo de acordo, e o pedagógico baixa as telas do Stitch. Falha aqui não
+    desfaz a decisão — o Markdown e o `estado.json` já estão gravados; perde-se a formatação, não o conteúdo."""
+    from agents.callbacks import extrair_slug
+    from pipeline.artifacts import exportar_one_pagers
+
+    try:
+        estado = json.loads((Path(run_dir) / "estado.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    one_pager = str(estado.get("one_pager") or "")
+    if not one_pager.strip():
+        return []
+    slug = extrair_slug(str(estado.get("spec_missao") or one_pager)) or Path(run_dir).name
+    return exportar_one_pagers({"one_pager": one_pager}, Path(run_dir), slug)
 
 
 # ------------------------------------------------------------------ o que o cartão e os agentes leem
@@ -669,24 +713,38 @@ def decisoes_perdidas(estado: Dict[str, Any], itens: Sequence[Item]) -> List[Dic
 
 def notas(fluxo: Optional[Dict[str, Any]]) -> str:
     """Markdown das decisões do PO no contrato, para as notas de passagem — de todos os de acordo de produto, inclusive
-    os que um refazer invalidou: a decisão não deixa de valer porque a etapa foi refeita. A mais nova vence."""
+    os que um refazer invalidou: a decisão não deixa de valer porque a etapa foi refeita. A mais nova vence.
+
+    A decisão que o último de acordo de produto registrou como fora do texto (`decisoes_fora_do_texto`: o refazer a
+    apagou, e o PO liberou assim) sai marcada — dizer aos agentes que ela «já está gravada» fazia o design seguir o
+    texto e a decisão sumir a jusante."""
     ultimas: Dict[str, Dict[str, Any]] = {}
+    fora: set = set()
     for p in (fluxo or {}).get("pareceres") or []:
         if p.get("etapa") == "produto" and p.get("acao") in ("de_acordo", "excecao"):
             for d in p.get("decisoes_contrato") or []:
                 ultimas[str(d.get("id") or d.get("assunto"))] = d
+            fora = {str(d.get("id") or d.get("assunto")) for d in p.get("decisoes_fora_do_texto") or []}
+            for d in p.get("decisoes_fora_do_texto") or []:
+                ultimas.setdefault(str(d.get("id") or d.get("assunto")), d)
     if not ultimas:
         return ""
     linhas = ["## Decisões do PO no contrato de produto", "",
-              "O PO respondeu no de acordo de produto, e as respostas já estão gravadas no one-pager e na spec do Gate 0 "
+              "O PO respondeu no de acordo de produto, e as respostas estão gravadas no one-pager e na spec do Gate 0 "
               "(«<valor> — PO, parecer de <data>»). Elas valem como o resto do texto aprovado: não as reabra, não as "
               "decida de novo e não as aplique por conta própria — o texto do one-pager e da spec já as traz. Proposta "
               "recusada não se implementa. Item deixado para o design é do design decidir (UI).", ""]
-    for d in ultimas.values():
+    if fora & set(ultimas):
+        linhas += ["As marcadas **«não está no texto»** são a exceção: um refazer de produto apagou a resposta do "
+                   "one-pager e da spec depois que o PO decidiu, e o de acordo saiu assim. Vale a decisão, não o texto: "
+                   "não a decida de novo e não siga o que o texto disser em contrário sobre o mesmo assunto — registre a "
+                   "divergência como pendência de produto (`[ABERTO — dono: PO]`).", ""]
+    for chave, d in ultimas.items():
         valor = f" «{d['valor']}»" if d.get("valor") else ""
+        marca = " — **não está no texto: vale a decisão**" if chave in fora else ""
         linhas.append(f"- {ROTULO_TIPO.get(d.get('tipo'), d.get('tipo'))} {d.get('assunto', '')[:160]} → "
                       f"**{ROTULO_RESPOSTA.get(d.get('resposta'), d.get('resposta'))}**{valor} "
-                      f"({d.get('como', '')}, {d.get('quando', '')})")
+                      f"({d.get('como', '') or 'parecer anterior'}, {d.get('quando', '')}){marca}")
     return "\n".join(linhas) + "\n"
 
 

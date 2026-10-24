@@ -101,6 +101,24 @@ def test_lista_agrupa_o_mesmo_assunto_do_one_pager_e_da_spec():
     assert not any("…" == i.assunto for i in itens)
 
 
+def test_marcador_citado_depois_de_marcador_nao_e_item():
+    """exp01em1b-e3980485, uma das missões que serão refeitas: «Quatro propostas pontuais submetidas ao PO registradas
+    com marcador normativo `[PROPOSTA P0b — validar com PO]`» virava o 12º item, e o «Aceitar as sugestões» gravava a
+    frase de resumo como proposta aprovada. O [PROPOSTA] sem descrição em prosa que não cita o marcador continua item
+    (exp03ef1b-317df247, exp05ef1b)."""
+    itens = fc.itens_em_aberto(_estado("exp01em1b-e3980485"))
+    assert len(itens) == 11
+    assert not any("Nenhuma pendência" in i.assunto for i in itens)
+    assert any("dois cards anônimos" in i.assunto for i in fc.itens_em_aberto(_estado("exp03ef1b-317df247")))
+    assert any(i.assunto.startswith("Manutenção da cota de 8 mensagens") or "cota de 8 mensagens" in i.assunto
+               for i in fc.itens_em_aberto(_estado("exp05ef1b")))
+    # o rastro lê igual: a frase de resumo não é pendência do PO
+    spec = fc.documentos(_estado("exp01em1b-e3980485"))[fc.DOC_SPEC]
+    resumo = next(l for l in spec.splitlines() if "marcador normativo" in l)
+    r = rastro.varrer_lacunas(rastro.FONTES_SPEC, {"spec_missao": resumo}, etapa_corrente="produto")
+    assert r["achados"] == [] and r["status"] == "aprovado"
+
+
 def test_deixar_para_o_design_so_no_que_e_de_ui():
     itens = fc.itens_em_aberto(_estado("exp03em1b-b2e7b4a3"))
     lupa = _por_assunto(itens, "lupa/zoom")
@@ -156,6 +174,8 @@ def test_de_acordo_de_21_10_volta_preenchido_e_grava_no_one_pager_e_na_spec(tmp_
     assert re.findall(r"\[PAR[ÂA]METRO[^\]]*\]", final["one_pager"]) == ["[PARÂMETRO — a definir por produto: …]"]
     # o artefato do one-pager é reescrito, e as decisões ficam no estado (fora de toda lista do refazer)
     assert f"90 segundos — PO, parecer de {data}" in (tmp_path / "produto" / "00-one-pager.md").read_text(encoding="utf-8")
+    # e o .html do one-pager, que é o que se lê, sai regerado com as respostas — antes ficava com os [PARÂMETRO]
+    assert f"90 segundos — PO, parecer de {data}" in (tmp_path / "produto" / "00-one-pager.html").read_text(encoding="utf-8")
     assert len(final[fc.KEY_DECISOES]) == 10
     # o design recebe as decisões nas notas de passagem
     notas = passagem.notas_de_passagem(gravado)
@@ -271,12 +291,49 @@ def test_decisao_sobrevive_ao_refazer_de_produto(tmp_path):
     perdidas = fc.decisoes_perdidas(sumiu, fc.itens_em_aberto(sumiu))
     assert [d["assunto"] for d in perdidas] == ["tempo de inatividade no chat"]
 
+    # com ESTEIRA_ESTRITA, o de acordo não sai com a decisão fora do texto: o design não a aplica, e ela sumiria
+    refeito = passagem.concluir_execucao(refeito, True)
+    with pytest.raises(DecisaoInvalida, match="não está\\(ão\\) mais no one-pager"):
+        aplicar(refeito, DE_ACORDO, PO, COMENTARIO, sumiu, estrito=True)
+    assert EXCECAO in acoes_possiveis(refeito, "admin", sumiu, estrito=True)
+    # sem a estrita, sai — e as notas dizem que a decisão não está no texto, em vez de «já está gravada»
+    liberado, _ = aplicar(refeito, DE_ACORDO, PO, COMENTARIO, sumiu, estrito=False)
+    registro = liberado["pareceres"][-1]
+    assert [d["assunto"] for d in registro["decisoes_fora_do_texto"]] == ["tempo de inatividade no chat"]
+    notas = passagem.notas_de_passagem(liberado)
+    linha = next(l for l in notas.splitlines() if "tempo de inatividade no chat" in l)
+    assert "não está no texto: vale a decisão" in linha
+    assert sum("não está no texto: vale a decisão" in l for l in notas.splitlines()) == 1
+    # com a decisão de volta ao texto, a marca sai das notas
+    de_volta, _ = aplicar(refeito, DE_ACORDO, PO, COMENTARIO, gravado, estrito=True)
+    assert "não está no texto" not in passagem.notas_de_passagem(de_volta)
 
-def test_lint_de_numero_sem_origem_aceita_a_decisao_gravada():
+
+def test_lint_de_numero_sem_origem_aceita_so_o_numero_que_o_po_decidiu():
     """Sem isto, o refazer de produto reabria o número decidido: o lint chamava «90 segundos — PO, parecer de …» de
-    número sem origem, e o revisor o trocava de volta por [PARÂMETRO]."""
-    assert contrato_produto._tem_marcador("Após 90 segundos — PO, parecer de 24/10/2026, exibe o nudge.")
-    assert not contrato_produto._tem_marcador("Após 90 segundos, exibe o nudge.")
+    número sem origem, e o revisor o trocava de volta por [PARÂMETRO]. Mas a marca sozinha não é origem: um autor que
+    escreve «60 segundos — PO, parecer de …» sem o PO ter decidido 60 é pego."""
+    estado = _produto_estado()
+    itens = fc.itens_em_aberto(estado)
+    d = fc.decidir(itens, fc.aceitar_sugestoes(itens), "24/10/2026 09:00:00", "produto")
+    novos, falhas = fc.aplicar_edicoes(estado, d.edicoes)
+    assert not falhas
+    one_pager = novos["one_pager"]
+    assert "90 segundos — PO, parecer de 24/10/2026" in one_pager
+
+    def sem_origem(texto, decisoes):
+        r = contrato_produto.validar_one_pager(texto, nucleo=estado.get("nucleo_narrativo", ""),
+                                               decisoes_do_po=decisoes)
+        return " ".join(a["resumo"] for a in r["achados"] if a["codigo"] == "numero-sem-origem")
+
+    assert "90 segundos" in sem_origem(one_pager, [])  # sem a decisão gravada, o número não tem origem
+    assert "90 segundos" not in sem_origem(one_pager, d.decisoes)
+    inventado = one_pager.replace("90 segundos — PO, parecer de", "60 segundos — PO, parecer de")
+    assert "60 segundos" in sem_origem(inventado, d.decisoes)
+    # a proposta recusada não dá origem ao número dela
+    recusa = [{**x, "resposta": fc.RECUSAR} for x in d.decisoes]
+    assert "90 segundos" in sem_origem(one_pager, recusa)
+    assert not contrato_produto._tem_marcador("Após 90 segundos — PO, parecer de 24/10/2026, exibe o nudge.")
 
 
 # --------------------------------------------------------------------------- mudança do design no Gate 0
@@ -323,7 +380,8 @@ def test_rastro_conta_marcador_aberto_como_pendencia_do_po():
     texto = ("- Teto: `[PARÂMETRO — a definir por produto: teto de palavras, sugestão: 45 palavras]`.\n"
              "| PQ-01 | Qual a proporção…? | `[PROPOSTA — validar com PO]` |\n"
              "- L2 — Aplicação do marcador `[PARÂMETRO — a definir por produto: …]`.\n"
-             "- Os marcadores [PARÂMETRO] e [PROPOSTA] saem do de acordo.\n")
+             "- Os marcadores [PARÂMETRO] e [PROPOSTA] saem do de acordo.\n"
+             "- Quatro propostas registradas com marcador normativo `[PROPOSTA P0b — validar com PO]`.\n")
     r = rastro.varrer_lacunas(rastro.FONTES_SPEC, {"spec_missao": texto}, etapa_corrente="produto")
     tipos = sorted(a["tipo"] for a in r["achados"])
     assert tipos == ["parametro", "proposta"], r["achados"]
@@ -358,9 +416,16 @@ def test_conflito_de_versao_desfaz_a_gravacao(tmp_path):
     (tmp_path / "estado.json").write_text(original, encoding="utf-8")
     # outra pessoa decidiu antes: o fluxo em disco está na versão 9
     (tmp_path / "conversa.json").write_text(json.dumps({"fluxo": {**fluxo, "versao": 9}}), encoding="utf-8")
+    # o one-pager em disco existia; a spec do Gate 0 não
+    (tmp_path / "produto").mkdir()
+    (tmp_path / "produto" / "00-one-pager.md").write_text(estado["one_pager"], encoding="utf-8")
     with pytest.raises(passagem.ConflitoDeVersao):
         passagem.registrar_decisao(tmp_path, fluxo, novo, DE_ACORDO)
     assert (tmp_path / "estado.json").read_text(encoding="utf-8") == original
+    # os .md reescritos voltam também: antes ficavam com a decisão que o conflito desfez
+    assert (tmp_path / "produto" / "00-one-pager.md").read_text(encoding="utf-8") == estado["one_pager"]
+    assert not (tmp_path / "produto" / "05a-spec-missao-gate0.md").exists()
+    assert not (tmp_path / "produto" / "00-one-pager.html").exists()
 
 
 # --------------------------------------------------------------------------- o cartão no app
