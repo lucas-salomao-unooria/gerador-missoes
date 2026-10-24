@@ -65,6 +65,9 @@ KNOWN_STATE_KEYS = {
     # PR 6 do plano «Produto dono do contrato» (24/10/2026): completude da spec em produto e anexo de design
     "completude_spec", "relatorio_completude", "completude_status", "anexo_design_spec", "completude_report",
     "completude_rodada",
+    # PR 7: os textos-chave com ID (registro e tabela), na copy e no fluxo × bloco 2
+    "textos_chave", "textos_chave_tabela", "textos_chave_report", "textos_chave_status", "arestas_report",
+    "arestas_status",
     "ambiente_simulado", "ambiente_status",
     "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
     "wireframes_cobertura", "copy_strings_revisada", "qa_entregaveis_report", "design_status",

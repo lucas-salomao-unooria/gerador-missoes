@@ -37,7 +37,8 @@
     "contrato_produto_status": {
       "status": "bloqueado",
       "codigos": [
-        "agendamento"
+        "agendamento",
+        "texto-chave-acima-do-teto"
       ]
     },
     "evidencia_one_pager_status": {
@@ -92,6 +93,17 @@
       "codigos": [
         "prototipo-sem-quadros-marcados"
       ]
+    },
+    "textos_chave_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-divergente",
+        "texto-chave-sem-linha"
+      ]
+    },
+    "arestas_status": {
+      "status": "aprovado",
+      "codigos": []
     },
     "qa_afirmacoes_status": {
       "status": "aprovado",
@@ -229,7 +241,8 @@
     "contrato_produto_status": {
       "status": "bloqueado",
       "codigos": [
-        "agendamento"
+        "agendamento",
+        "texto-chave-acima-do-teto"
       ]
     },
     "evidencia_one_pager_status": {
@@ -285,8 +298,10 @@
       "codigos": []
     },
     "contrato_produto_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "texto-chave-acima-do-teto"
+      ]
     },
     "evidencia_one_pager_status": {
       "status": "aprovado",
@@ -323,6 +338,17 @@
       "codigos": []
     },
     "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "textos_chave_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-divergente",
+        "texto-chave-sem-linha"
+      ]
+    },
+    "arestas_status": {
       "status": "aprovado",
       "codigos": []
     },
@@ -378,8 +404,10 @@
       "codigos": []
     },
     "contrato_produto_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "texto-chave-acima-do-teto"
+      ]
     },
     "evidencia_one_pager_status": {
       "status": "aprovado",
@@ -440,8 +468,10 @@
       "codigos": []
     },
     "contrato_produto_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "texto-chave-acima-do-teto"
+      ]
     },
     "evidencia_one_pager_status": {
       "status": "aprovado",
@@ -472,6 +502,16 @@
       "codigos": []
     },
     "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "textos_chave_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-divergente"
+      ]
+    },
+    "arestas_status": {
       "status": "aprovado",
       "codigos": []
     },
@@ -535,8 +575,10 @@
       "codigos": []
     },
     "contrato_produto_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "texto-chave-acima-do-teto"
+      ]
     },
     "evidencia_one_pager_status": {
       "status": "aprovado",
@@ -582,6 +624,20 @@
         "estados-fora-do-prototipo"
       ]
     },
+    "textos_chave_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "opcoes-divergentes",
+        "texto-chave-divergente"
+      ]
+    },
+    "arestas_status": {
+      "status": "amarelo",
+      "codigos": [
+        "guarda-afrouxada",
+        "guarda-exige-acerto"
+      ]
+    },
     "qa_afirmacoes_status": {
       "status": "aprovado",
       "codigos": []
@@ -603,7 +659,8 @@
     "montagem_handoff_status": {
       "status": "bloqueado",
       "codigos": [
-        "hipotese-diverge"
+        "hipotese-diverge",
+        "texto-chave-reescrito"
       ]
     },
     "conteudo_status": {
@@ -706,8 +763,10 @@
       "codigos": []
     },
     "contrato_produto_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "texto-chave-acima-do-teto"
+      ]
     },
     "evidencia_one_pager_status": {
       "status": "aprovado",
@@ -746,6 +805,17 @@
       "codigos": []
     },
     "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "textos_chave_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-divergente",
+        "texto-chave-sem-linha"
+      ]
+    },
+    "arestas_status": {
       "status": "aprovado",
       "codigos": []
     },
@@ -815,7 +885,8 @@
       "status": "bloqueado",
       "codigos": [
         "agendamento",
-        "numero-sem-origem"
+        "numero-sem-origem",
+        "texto-chave-acima-do-teto"
       ]
     },
     "evidencia_one_pager_status": {
@@ -873,8 +944,10 @@
       "codigos": []
     },
     "contrato_produto_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "texto-chave-acima-do-teto"
+      ]
     },
     "evidencia_one_pager_status": {
       "status": "aprovado",
@@ -915,6 +988,14 @@
       "codigos": [
         "estados-fora-do-prototipo"
       ]
+    },
+    "textos_chave_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "arestas_status": {
+      "status": "aprovado",
+      "codigos": []
     },
     "qa_afirmacoes_status": {
       "status": "bloqueado",
@@ -974,8 +1055,10 @@
       "codigos": []
     },
     "contrato_produto_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "texto-chave-acima-do-teto"
+      ]
     },
     "evidencia_one_pager_status": {
       "status": "aprovado",
@@ -1010,6 +1093,17 @@
       "codigos": []
     },
     "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "textos_chave_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-divergente",
+        "texto-chave-sem-linha"
+      ]
+    },
+    "arestas_status": {
       "status": "aprovado",
       "codigos": []
     },
@@ -1094,7 +1188,8 @@
       "status": "bloqueado",
       "codigos": [
         "agendamento",
-        "numero-sem-origem"
+        "numero-sem-origem",
+        "texto-chave-acima-do-teto"
       ]
     },
     "evidencia_one_pager_status": {
@@ -1152,6 +1247,17 @@
       "codigos": [
         "prototipo-sem-quadros-marcados"
       ]
+    },
+    "textos_chave_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-divergente",
+        "texto-chave-sem-linha"
+      ]
+    },
+    "arestas_status": {
+      "status": "aprovado",
+      "codigos": []
     },
     "qa_afirmacoes_status": {
       "status": "bloqueado",
@@ -1277,7 +1383,8 @@
     "contrato_produto_status": {
       "status": "bloqueado",
       "codigos": [
-        "decisao-atribuida-ao-po"
+        "decisao-atribuida-ao-po",
+        "texto-chave-acima-do-teto"
       ]
     },
     "evidencia_one_pager_status": {
@@ -1313,6 +1420,14 @@
       "codigos": []
     },
     "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "textos_chave_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "arestas_status": {
       "status": "aprovado",
       "codigos": []
     },
@@ -1421,7 +1536,8 @@
     "contrato_produto_status": {
       "status": "bloqueado",
       "codigos": [
-        "decisao-atribuida-ao-po"
+        "decisao-atribuida-ao-po",
+        "texto-chave-acima-do-teto"
       ]
     },
     "evidencia_one_pager_status": {
@@ -1457,6 +1573,14 @@
       "codigos": []
     },
     "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "textos_chave_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "arestas_status": {
       "status": "aprovado",
       "codigos": []
     },
@@ -1582,6 +1706,7 @@
         "estado-cliente",
         "numero-sem-origem",
         "saeb-fora-do-ano",
+        "texto-chave-acima-do-teto",
         "websocket"
       ]
     },
@@ -1636,6 +1761,17 @@
         "preparo-do-professor-ausente",
         "prototipo-sem-quadros-marcados"
       ]
+    },
+    "textos_chave_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-divergente",
+        "texto-chave-sem-linha"
+      ]
+    },
+    "arestas_status": {
+      "status": "aprovado",
+      "codigos": []
     },
     "qa_afirmacoes_status": {
       "status": "bloqueado",
@@ -1816,6 +1952,17 @@
       "codigos": [
         "estados-fora-do-prototipo"
       ]
+    },
+    "textos_chave_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-divergente",
+        "texto-chave-sem-linha"
+      ]
+    },
+    "arestas_status": {
+      "status": "aprovado",
+      "codigos": []
     },
     "qa_afirmacoes_status": {
       "status": "bloqueado",

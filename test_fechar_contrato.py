@@ -82,11 +82,21 @@ def _por_assunto(itens, trecho: str):
     return next(i for i in itens if trecho in i.assunto)
 
 
+def _marcadores(itens):
+    """Os itens dos marcadores (PR 3), sem os textos-chave acima do teto que o PR 7 acrescentou à lista."""
+    return [i for i in itens if getattr(i, "tipo", None) != fc.TEXTO_TETO and (
+        not isinstance(i, dict) or i.get("tipo") != fc.TEXTO_TETO)]
+
+
+def _sem_teto(registros):
+    return [r for r in registros if r.get("tipo") != fc.TEXTO_TETO]
+
+
 # --------------------------------------------------------------------------- a lista do cartão
 def test_lista_agrupa_o_mesmo_assunto_do_one_pager_e_da_spec():
     """60cfa7f4: 4 [PARÂMETRO] e 13 [PROPOSTA] na spec do Gate 0, 3 + 3 no one-pager — 10 decisões. O parâmetro do
     one-pager sem sugestão ganha a da spec (90 s); a linha do bloco 12 que registra a mesma proposta é o mesmo item."""
-    itens = fc.itens_em_aberto(_produto_estado())
+    itens = _marcadores(fc.itens_em_aberto(_produto_estado()))
     assert len(itens) == 10
     tempo = _por_assunto(itens, "tempo de inatividade no chat")
     assert tempo.tipo == fc.PARAMETRO and tempo.sugestao == "90 segundos"
@@ -106,7 +116,7 @@ def test_marcador_citado_depois_de_marcador_nao_e_item():
     com marcador normativo `[PROPOSTA P0b — validar com PO]`» virava o 12º item, e o «Aceitar as sugestões» gravava a
     frase de resumo como proposta aprovada. O [PROPOSTA] sem descrição em prosa que não cita o marcador continua item
     (exp03ef1b-317df247, exp05ef1b)."""
-    itens = fc.itens_em_aberto(_estado("exp01em1b-e3980485"))
+    itens = _marcadores(fc.itens_em_aberto(_estado("exp01em1b-e3980485")))
     assert len(itens) == 11
     assert not any("Nenhuma pendência" in i.assunto for i in itens)
     assert any("dois cards anônimos" in i.assunto for i in fc.itens_em_aberto(_estado("exp03ef1b-317df247")))
@@ -157,7 +167,9 @@ def test_de_acordo_de_21_10_volta_preenchido_e_grava_no_one_pager_e_na_spec(tmp_
     novo, efeito = aplicar(fluxo, DE_ACORDO, PO, COMENTARIO, estado, decisoes=respostas, estrito=True)
     assert efeito is None and novo["situacao"] == LIBERADA and novo["etapa"] == "design"
     registro = novo["pareceres"][-1]
-    assert not registro["sem_resposta"] and len(registro["decisoes_contrato"]) == 10
+    assert not registro["sem_resposta"] and len(_sem_teto(registro["decisoes_contrato"])) == 10
+    # e os textos-chave acima do teto da faixa (PR 7) foram mantidos pelo «Aceitar as sugestões», sem troca no texto
+    assert {d["resposta"] for d in registro["decisoes_contrato"] if d["tipo"] == fc.TEXTO_TETO} == {fc.ACEITAR}
     gravado = passagem.registrar_decisao(tmp_path, fluxo, novo, DE_ACORDO)
     assert gravado["versao"] == 4
 
@@ -176,7 +188,7 @@ def test_de_acordo_de_21_10_volta_preenchido_e_grava_no_one_pager_e_na_spec(tmp_
     assert f"90 segundos — PO, parecer de {data}" in (tmp_path / "produto" / "00-one-pager.md").read_text(encoding="utf-8")
     # e o .html do one-pager, que é o que se lê, sai regerado com as respostas — antes ficava com os [PARÂMETRO]
     assert f"90 segundos — PO, parecer de {data}" in (tmp_path / "produto" / "00-one-pager.html").read_text(encoding="utf-8")
-    assert len(final[fc.KEY_DECISOES]) == 10
+    assert len(_sem_teto(final[fc.KEY_DECISOES])) == 10
     # o design recebe as decisões nas notas de passagem
     notas = passagem.notas_de_passagem(gravado)
     assert "Decisões do PO no contrato de produto" in notas and "StoryPoll" in notas and "**Recusar**" in notas
@@ -200,14 +212,14 @@ def test_tudo_de_acordo_sem_a_lista_nao_aprova_proposta_e_com_estrita_recusa():
     novo, _ = aplicar(_fluxo(), DE_ACORDO, PO, COMENTARIO, estado, estrito=False)
     registro = novo["pareceres"][-1]
     assert registro["decisoes_contrato"] == [] and registro["edicoes_contrato"] == []
-    assert len(registro["sem_resposta"]) == 10
+    assert len(_sem_teto(registro["sem_resposta"])) == 10
 
 
 def test_resposta_parcial_com_estrita_lista_o_que_falta():
     estado = _produto_estado()
     itens = fc.itens_em_aberto(estado)
     so_um = {itens[0].id: {"resposta": fc.ACEITAR}}
-    with pytest.raises(DecisaoInvalida, match="9 item"):
+    with pytest.raises(DecisaoInvalida, match=f"{len(itens) - 1} item"):
         aplicar(_fluxo(), DE_ACORDO, PO, COMENTARIO, estado, decisoes=so_um, estrito=True)
 
 
@@ -219,7 +231,7 @@ def test_excecao_do_admin_sai_com_o_que_ficou_sem_resposta():
     novo, _ = aplicar(_fluxo(), EXCECAO, ADMIN, "Libero sem fechar: o PO decide os parâmetros depois.", estado,
                       estrito=True)
     registro = novo["pareceres"][-1]
-    assert registro["excecao"] and len(registro["sem_resposta"]) == 10
+    assert registro["excecao"] and len(_sem_teto(registro["sem_resposta"])) == 10
     assert "item(ns) do contrato de produto sem resposta" in passagem.notas_de_passagem(novo)
 
 
@@ -272,7 +284,7 @@ def test_decisao_sobrevive_ao_refazer_de_produto(tmp_path):
     assert not refeito["pareceres"][-2]["valido"]
     assert "Decisões do PO no contrato de produto" in passagem.notas_de_passagem(refeito)
     limpo, _ = preparar_estado(gravado, "produto", "pedido")
-    assert len(limpo[fc.KEY_DECISOES]) == 10 and "90 segundos — PO" in limpo["anterior_one_pager"]
+    assert len(_sem_teto(limpo[fc.KEY_DECISOES])) == 10 and "90 segundos — PO" in limpo["anterior_one_pager"]
 
     # o autor reescreve o one-pager e reabre o marcador: volta ao cartão já respondido
     reaberto = {**gravado, "one_pager": estado["one_pager"]}
@@ -446,12 +458,14 @@ def test_cartao_do_app_mostra_a_lista_preenchida_e_aceita_as_sugestoes():
              "valido": False, "comentario": "[PARÂMETRO: a definir por produto: tempo de inatividade no chat] → 90s"}]}
         st.session_state["_respostas"] = app._render_contrato_aberto(Path("/tmp/sessao-teste"), fluxo, estado)
 
+    # os textos-chave acima do teto (PR 7) entram na mesma lista, com «manter o texto aprovado» como sugestão
+    teto = len(fc.textos_acima_do_teto(_estado()))
     at = AppTest.from_function(roteiro, default_timeout=60)
     at.run()
-    assert not at.exception and len(at.radio) == 10
+    assert not at.exception and len(at.radio) == 10 + teto
     respostas = at.session_state["_respostas"]
-    assert sorted(r["resposta"] for r in respostas.values()) == [""] * 9 + [fc.ACEITAR]
+    assert sorted(r["resposta"] for r in respostas.values()) == [""] * (9 + teto) + [fc.ACEITAR]
     at.button[0].click().run()
     respostas = at.session_state["_respostas"]
     assert all(r["resposta"] == fc.ACEITAR for r in respostas.values())
-    assert sum(1 for r in respostas.values() if r["origem"] == "aceitar as sugestões") == 9
+    assert sum(1 for r in respostas.values() if r["origem"] == "aceitar as sugestões") == 9 + teto
