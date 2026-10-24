@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from gabarito_estados import achados_da_montagem, corpo, estado, rotulo
+from gabarito_estados import DOCUMENTO, achados_da_montagem, corpo, estado, rotulo
 from tools import montagem
 
 BLOQUEIA = ("trocado", "acrescentado")
@@ -79,6 +79,39 @@ def test_v_h1_30_contra_25_no_corpo_do_prd_da_exp02ef1b():
     """No PRD a H1 com 25% sai da régua de linha (o corpo repete a frase do §17): continua bloqueando."""
     assert any("30%" in a["resumo"] and "25%" in a["resumo"] and a["severidade"] == "bloqueio"
                for a in achados_da_montagem("R13", "prd") if a["codigo"] == "hipotese-diverge")
+
+
+#: Mutantes da H1 30×25 da exp02ef1b sobre o estado real (revisão do PR #77, 24/10/2026): a mesma troca com outra
+#: redação do comparativo. Na leitura que pedia comparativo de lista curta ou população, todos passavam sem achado.
+H1_HANDOFF = "Se mais de 25% das duplas"
+H1_PRD = ("Mais de 25% das duplas desistirem de ajustar a moldura e clicarem em confirmar na posição default sem "
+          "interagir (alimenta PQ-01).")
+MUTANTES_H1 = [
+    ("handoff", H1_HANDOFF, "Se 25% ou mais das duplas"),
+    ("handoff", H1_HANDOFF, "Se a desistência das duplas superar 25%"),
+    ("handoff", H1_HANDOFF, "Se a taxa de desistência for maior que 25%"),
+    ("handoff", H1_HANDOFF, "Se a desistência passar de 25%"),
+    ("handoff", H1_HANDOFF, "Se a desistência ultrapassar 25%"),
+    ("handoff", H1_HANDOFF, "Se a desistência exceder 25%"),
+    ("handoff", H1_HANDOFF, "Se mais que 25% das duplas"),
+    ("handoff", H1_HANDOFF, "Se a taxa de desistência de 25% for atingida, ou"),
+    ("prd", H1_PRD, "Se a desistência das duplas na moldura superar 25% (alimenta PQ-01)."),
+    ("prd", H1_PRD, "25% ou mais das duplas desistem da moldura (alimenta PQ-01)."),
+    ("prd", H1_PRD, "A desistência for maior do que 25% das duplas (alimenta PQ-01)."),
+    ("prd", H1_PRD, "Se a taxa de desistência ultrapassar 25% (alimenta PQ-01)."),
+]
+
+
+@pytest.mark.parametrize("caso", MUTANTES_H1, ids=lambda c: f"{c[0]}/{c[2]}")
+def test_v_h1_30_contra_25_com_qualquer_comparativo(caso):
+    documento, original, mutante = caso
+    st = estado("R13")
+    chave = DOCUMENTO[documento]
+    assert original in st[chave], f"o {documento} de {rotulo('R13')} não tem «{original}»"
+    st[chave] = st[chave].replace(original, mutante)
+    r = montagem.validar_prd(st) if documento == "prd" else montagem.validar_handoff(st)
+    assert any(a["codigo"] == "hipotese-diverge" and a["severidade"] == "bloqueio" and "30%" in a["resumo"]
+               and "escreve 25%" in a["resumo"] for a in r["achados"]), mutante
 
 
 def test_v_duracao_que_o_contrato_nao_tem_continua_meta():

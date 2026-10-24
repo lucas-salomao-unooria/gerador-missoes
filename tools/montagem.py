@@ -131,23 +131,56 @@ _RE_VALOR_AFIRMADO = re.compile(
     r"\b(?:pode|podem|deve|devem)\s+(?:ser|ficar|ter)\b|\bseja\b|\bpassa(?:r|m)?\s+(?:a\s+ser|a\s+ter|para)\b|"
     r"\bvolta(?:r|m)?\s+(?:a\s+ser|para)\b|\b(?:mud|troc|alter|ajust|corrig)(?:e|ar|a|em)\s+para\b|"
     r"\bfi(?:ca|car|que|quem)\s+(?:com|em)\b|\bratific|\bhomolog|\bdecid[oi]\b|\bdefin[oi]\b|\baprovo\b|\bconfirmo\b|"
-    r"\baceito\b|\bsolicitad[oa]\b", re.I)
-#: O que o PO cita como errado ou antigo, entre o número anterior e este: «o PRD está com 25%», «hoje», «em vez de 25%»,
-#: «não 25%». Esse número não vira origem — a não ser que um valor afirmado venha depois da citação («a H1 está errada:
-#: deve ser 30%»).
+    r"\baceito\b|\bsolicitad[oa]\b|\bt[êe]m\s+(?:de|que)\s+(?:ser|ter|ficar)\b", re.I)
+#: O que o PO cita como errado ou antigo, entre o marcador afirmado e o número: «o PRD está com 25%», «hoje», «em vez de
+#: 25%», «não 25%», «o PRD usou 25%», «o §17 diz 30%», «o timer tem 45 s». Esse número não vira origem — a não ser que
+#: um valor afirmado venha depois da citação («a H1 está errada: deve ser 30%»).
 _RE_VALOR_CITADO = re.compile(
     r"\best[áa]\s+(?:com|em|escrit[oa]|como)\b|\bestava(?:m)?\b|\bhoje\b|\batual(?:mente)?\b|\bem\s+vez\s+de\b|"
-    r"\bno\s+lugar\s+de\b|\bao\s+inv[ée]s\s+de\b|\berrad[oa]s?\b|\bincorret[oa]s?\b|\bera(?:m)?\b|\bn[ãa]o\b", re.I)
+    r"\bno\s+lugar\s+de\b|\bao\s+inv[ée]s\s+de\b|\berrad[oa]s?\b|\bincorret[oa]s?\b|\bera(?:m)?\b|\bn[ãa]o\b|"
+    r"\bus(?:ou|a|ava|aram|am)\b|\bescrev(?:e|eu|ia|eram|em)\b|\bdi(?:z|zia|sse|zem)\b|"
+    r"\bt(?:em|inha|êm)\b(?!\s+(?:de|que)\b)|\btr(?:ouxe|az|aziam?)\b|\bp(?:[ôo]s|[õo]e|useram)\b|"
+    r"\bcoloc(?:ou|a|aram)\b|\baparec(?:e|eu|em)\b|\bmostr(?:a|ou|ava)\b|\bcit(?:a|ou)\b", re.I)
 #: Logo depois do número: «de 25% para 30%», «25% → 30%» (o de antes da seta sai); «o 25% está errado».
 _RE_CITADO_DEPOIS = re.compile(r"^\s*(?:para\b|→|->|=>)|^[^\d]{0,30}?\b(?:errad[oa]s?|incorret[oa]s?)\b", re.I)
 #: Frase: o ponto seguido de maiúscula ou a quebra de linha — «máx. 10 palavras» não corta a frase.
 _RE_FIM_DE_FRASE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ])|\n")
+#: Fronteira de oração dentro da frase. A adversativa encerra o alcance do marcador: «Decidi: o timer tem 45 s no
+#: handoff, mas deve ser 60 s». Os dois-pontos depois do marcador abrem o que ele afirma, e o ponto e vírgula separa os
+#: itens dessa lista — «O teto … está ratificado …: resumo de notícia com 25 a 35 palavras; manchete com até 10
+#: palavras» (exp04ef1b, 25/09/2026); sem os dois-pontos, o ponto e vírgula também encerra o alcance.
+_RE_FRONTEIRA_DE_ORACAO = re.compile(r"[;:]|\b(?:mas|por[ée]m|contudo|entretanto|todavia)\b", re.I)
+
+
+def _marcador_que_rege(frase: str, inicio: int) -> Optional[int]:
+    """O fim do marcador afirmado que rege o número que começa em `inicio`, ou None. Rege o marcador da própria oração;
+    o de antes vale só pelos dois-pontos que abrem o que ele afirma (com ponto e vírgula entre os itens), nunca por
+    cima de adversativa."""
+    fronteiras = list(_RE_FRONTEIRA_DE_ORACAO.finditer(frase, 0, inicio))
+
+    def ultimo_marcador(de: int, ate: int) -> Optional[int]:
+        ms = list(_RE_VALOR_AFIRMADO.finditer(frase, de, ate))
+        return ms[-1].end() if ms else None
+
+    proprio = ultimo_marcador(fronteiras[-1].end() if fronteiras else 0, inicio)
+    if proprio is not None:
+        return proprio
+    k = len(fronteiras)
+    # sobe pelos itens separados por ponto e vírgula até os dois-pontos que os abrem
+    while k and fronteiras[k - 1].group(0) == ";":
+        k -= 1
+    if not k or fronteiras[k - 1].group(0) != ":":
+        return None
+    return ultimo_marcador(fronteiras[k - 2].end() if k > 1 else 0, fronteiras[k - 1].start())
 
 
 def _valores_afirmados(texto: str) -> List[Tuple[str, str]]:
-    """Os números (com unidade) que o pedido afirma como valor novo, na frase de um `_RE_VALOR_AFIRMADO` — sem o relato
-    de gate colado, sem o que vem entre aspas (o texto que o PO cita para trocar) e sem o que ele cita como errado ou
-    antigo (`_RE_VALOR_CITADO`, `_RE_CITADO_DEPOIS`)."""
+    """Os números (com unidade) que o pedido afirma como valor novo, regidos por um `_RE_VALOR_AFIRMADO`
+    (`_marcador_que_rege`) — sem o relato de gate colado, sem o que vem entre aspas (o texto que o PO cita para trocar)
+    e sem o que ele cita como errado ou antigo entre o marcador e o número (`_RE_VALOR_CITADO`, `_RE_CITADO_DEPOIS`).
+
+    Revisão do PR #77 (24/10/2026): bastava o marcador em qualquer lugar antes do número, na mesma frase, e «Deve ser
+    30%; o PRD usou 25%» ou «Decidi: o timer tem 45 s no handoff, mas deve ser 60 s» faziam origem do número citado."""
     from tools.fidelidade import sem_relatos_de_gate
     from tools.propagacao import _RE_NUMERO, _UNIDADE
 
@@ -155,12 +188,13 @@ def _valores_afirmados(texto: str) -> List[Tuple[str, str]]:
     for frase in _RE_FIM_DE_FRASE.split(_RE_CITACAO.sub(" ", sem_relatos_de_gate(texto or ""))):
         ms = list(_RE_NUMERO.finditer(frase))
         for i, m in enumerate(ms):
-            antes = frase[ms[i - 1].end() if i else 0:m.start()]
             depois = frase[m.end():ms[i + 1].start() if i + 1 < len(ms) else len(frase)]
-            citado = list(_RE_VALOR_CITADO.finditer(antes))
-            if citado and not _RE_VALOR_AFIRMADO.search(antes[citado[-1].end():]):
+            rege = _marcador_que_rege(frase, m.start())
+            if rege is None or _RE_CITADO_DEPOIS.search(depois):
                 continue
-            if _RE_CITADO_DEPOIS.search(depois) or not _RE_VALOR_AFIRMADO.search(frase[:m.start()]):
+            entre = frase[rege:m.start()]
+            citado = list(_RE_VALOR_CITADO.finditer(entre))
+            if citado and not _RE_VALOR_AFIRMADO.search(entre[citado[-1].end():]):
                 continue
             tok = (m.group(1).replace(",", "."), _UNIDADE[m.group(2).lower()])
             if tok not in saida:
@@ -177,15 +211,33 @@ def _texto_dos_pedidos_do_po(state: Dict[str, Any]) -> str:
     (`_valores_afirmados`): o que ele cita para trocar — entre aspas, «texto atual», «está com», relato de gate —
     não."""
     pedidos = [p for p in state.get("pedidos_do_po") or [] if isinstance(p, dict)]
-    textos = [str(p.get("texto") or "") for p in pedidos
-              if str(p.get("etapa") or "") in ("design", "dev") and not p.get("pendente_em")]
+    # o pedido dividido pela triagem que voltou ao PO para Devolver: o item de outro dono ficou `pendente_em`, e o
+    # contexto do pedido (o «Resumo geral»), que vai junto no texto da etapa, repete o número dele — nem o contexto nem
+    # o número do item pendente viram origem (revisão do PR #77, 24/10/2026)
+    pendentes = {_refazer_de(p) for p in pedidos if p.get("pendente_em")}
+    numeros_pendentes = {t for p in pedidos if p.get("pendente_em") for t in numeros(str(p.get("texto") or ""))}
+    textos: List[Tuple[str, bool]] = []
+    for p in pedidos:
+        if str(p.get("etapa") or "") not in ("design", "dev") or p.get("pendente_em"):
+            continue
+        texto, com_pendente = str(p.get("texto") or ""), _refazer_de(p) in pendentes
+        if com_pendente and str(p.get("contexto") or "").strip():
+            texto = texto.replace(str(p["contexto"]).strip(), " ")
+        textos.append((texto, com_pendente))
     if not pedidos:
-        textos = [str(p.get("comentario") or "") for p in state.get("pareceres_humanos") or []
+        textos = [(str(p.get("comentario") or ""), False) for p in state.get("pareceres_humanos") or []
                   if isinstance(p, dict) and p.get("acao") == "refazer" and p.get("etapa") in ("design", "dev")]
     valores: List[Tuple[str, str]] = []
-    for t in textos:
-        valores += [v for v in _valores_afirmados(t) if v not in valores]
+    for t, com_pendente in textos:
+        valores += [v for v in _valores_afirmados(t)
+                    if v not in valores and not (com_pendente and v in numeros_pendentes)]
     return "\n".join(f"{_fmt(v)} — pedido do PO ao refazer" for v in valores)
+
+
+def _refazer_de(pedido: Dict[str, Any]) -> str:
+    """O refazer de onde o pedido veio: a origem sem o sufixo que a divisão por dono acrescenta
+    (`pipeline/passagem.py::_pedido_por_dono`)."""
+    return str(pedido.get("origem") or "").split(" · itens de ")[0]
 
 
 def _teto_da_faixa(state: Dict[str, Any]) -> str:
@@ -297,9 +349,9 @@ _RE_PLATAFORMA = re.compile(
     r"\bGET\s+/|"
     # a origem declarada é a plataforma: «(contrato da plataforma)», «(ADR-105)»
     r"\bADR-\d|contrato da plataforma|\(plataforma\)|"
-    # a espera do carregamento é da casca: a «barra de progresso contínua com estimativa tranquilizadora de 10 a 20
-    # segundos» da geração por IA, no handoff da exp06ef1b-727a3c2d (24/10/2026)
-    r"barra de progresso|indicador de progresso|spinner|skeleton", re.I)
+    # a espera do carregamento é da casca (handoff da exp06ef1b-727a3c2d, 24/10/2026); a barra de progresso, que também
+    # mostra o tempo de uma rodada, está em `_PLATAFORMA_COM_CONTEXTO`
+    r"spinner|skeleton", re.I)
 #: Termos que também nomeiam regra da mecânica: só são de plataforma com o contexto técnico na mesma linha. «Tempo
 #: limite de 45 s para responder» é decisão de produto (os 45 s da exp02ef1b foram o D0 decidindo no lugar do PO);
 #: «timeout > 10 s» de rede (exp06ef1b), «Timeout» da API de IA (exp05ef1b), o «lote de 50 eventos / 10 s da SDK»
@@ -315,6 +367,11 @@ _PLATAFORMA_COM_CONTEXTO = (
     (re.compile(r"\blote\b", re.I), re.compile(r"eventos?|\bSDK\b|telemetria", re.I)),
     (re.compile(r"disponibilidade|erro t[ée]cnico", re.I),
      re.compile(r"infra|\bbug\b|servidor|\bAPI\b|\bSLA\b|\bSLO\b|" + _CONTEXTO_DE_REDE, re.I)),
+    # a «barra de progresso contínua com estimativa tranquilizadora de 10 a 20 segundos» da geração por IA (handoff da
+    # exp06ef1b-727a3c2d, 24/10/2026) é espera da casca; a «barra de progresso do tempo da rodada: 45 s» é a mecânica,
+    # decisão de produto (revisão do PR #77)
+    (re.compile(r"barra de progresso|indicador de progresso", re.I),
+     re.compile(r"carreg|gera[çc][ãa]o|gerando|\bIA\b|\bespera\b|aguard|estimativ", re.I)),
 )
 
 
@@ -335,17 +392,41 @@ _RE_TETO_OU_PISO = re.compile(r"m[áa]x|teto|limite|\bat[ée]\b|≤|<=|n[ãa]o (
 #: (exp04ef1b), «legendas com 39 a 46 palavras (teto: 60)» (exp06ef1b), «`e6.pergunta.em13co26` (49 palavras)»
 #: (exp02em1b) — análise de 24/10/2026.
 _RE_TETO_ANTES = re.compile(_RE_TETO_OU_PISO.pattern + r"|\bcap\b|limitad[oa]s?\b", re.I)
-#: «frases com até 17 palavras (teto da faixa: 20 palavras)»: o número seguido do teto entre parênteses é a medida.
-_RE_TETO_DEPOIS = re.compile(r"^\s*\(\s*(?:teto|m[áa]x|limite)", re.I)
+#: «frases com até 17 palavras (teto da faixa: 20 palavras)», «legendas com 39 a 46 palavras (teto: 60)»: o número
+#: seguido do teto com outro número — solto ou da mesma unidade — é a medida, e o teto é o outro. «(teto do D0-09)» e
+#: «(máx. 2 linhas)» não trazem outro número de palavras: são o teto deste.
+_TETO_DEPOIS = (r"^\s*[(,—–]?\s*(?:teto|m[áa]x|limite)[^)\n;|]*?(?<![\w.,-])\d+(?:[.,]\d+)?"
+                r"\s*(?:{unidade}\b|[)\n;,|]|$)")
+#: O teto ou o piso logo depois do número: «35 palavras no máximo», «35 palavras (teto)», «(teto do D0-09)», «8 a 10
+#: palavras, sem exceder o teto», «35 palavras ou menos». Revisão do PR #77 (24/10/2026): só o marcador de antes
+#: contava, e o teto novo sem origem escrito assim deixava de ser cobrado.
+_RE_TETO_POSPOSTO = re.compile(
+    r"^\s*(?:,\s*)?(?:\(\s*(?:teto|m[áa]x|limite|piso|m[íi]n)|no\s+m[áa]ximo|no\s+m[íi]nimo|ou\s+(?:menos|mais)\b|"
+    r"(?:de\s+|como\s+)?(?:teto|limite|piso)\b|(?:sem|n[ãa]o\s+(?:pode|deve)(?:m)?)\s+(?:exceder|ultrapassar|passar))",
+    re.I)
+#: O marcador que vem logo antes da vírgula que o separa do número: «balões com, no máximo, 35 palavras».
+_RE_MARCADOR_E_VIRGULA = re.compile(r"(m[áa]x(?:imo)?|m[íi]n(?:imo)?|teto|limite|piso)\.?\s*,\s*$", re.I)
 
 
 def _teto_rege(linha: str, tok: Tuple[str, str]) -> bool:
-    """Algum teto ou piso rege este número de palavras ou caracteres na linha (em alguma das ocorrências dele)."""
+    """Algum teto ou piso rege este número de palavras ou caracteres na linha (em alguma das ocorrências dele): logo
+    antes dele, na mesma oração; logo depois (`_RE_TETO_POSPOSTO`); ou, em linha de tabela, na célula anterior
+    («| Balão | Teto | 35 palavras |»). A medida seguida do teto com outro número (`_TETO_DEPOIS`) não é regida."""
     num = re.escape(tok[0]).replace(r"\.", "[.,]")
+    tabela = linha.count("|") >= 2
     for m in re.finditer(rf"(?<![\w.,]){num}\s?{tok[1]}", linha, re.I):
-        antes = re.split(r"[,;|()]", linha[max(0, m.start() - 40):m.start()])[-1]
-        if _RE_TETO_ANTES.search(antes) and not _RE_TETO_DEPOIS.match(linha[m.end():]):
+        depois = linha[m.end():]
+        if re.match(_TETO_DEPOIS.format(unidade=tok[1]), depois, re.I):
+            continue
+        trecho = _RE_MARCADOR_E_VIRGULA.sub(r"\1 ", linha[max(0, m.start() - 40):m.start()])
+        if _RE_TETO_ANTES.search(re.split(r"[,;|()]", trecho)[-1]) or _RE_TETO_POSPOSTO.match(depois):
             return True
+        if tabela:
+            celulas = linha[:m.start()].split("|")
+            # o número abre a célula, e a anterior é só o marcador — sem número dela
+            if (len(celulas) >= 3 and not re.search(r"\w", re.sub(r"[*_`~≈]", "", celulas[-1]))
+                    and _RE_TETO_ANTES.search(celulas[-2]) and not re.search(r"\d", celulas[-2])):
+                return True
     return False
 
 
@@ -606,30 +687,45 @@ def _numeros_de_hipotese(texto: str) -> List[Tuple[str, str]]:
     return [t for t in numeros(_RE_CITACAO.sub(" ", texto)) if t[1] in ("%", "s", "min") and float(t[0]) not in (0, 100)]
 
 
-#: A porcentagem que é meta de hipótese vem com comparativo («pelo menos 70%», «< 60%», «mais de 25%», «entre 15%») ou
-#: com a população («35% dos estudantes», «80% da turma»). A da mecânica não: «taxa real de ~75% de invisibilidade» do
-#: PRD e «a taxa de 75% da Galeria Oculta» do handoff da exp06ef1b eram os 12 de 16 projetos ocultos, não meta da H2
-#: (análise de 24/10/2026).
-_RE_COMPARATIVO_ANTES = re.compile(r"(?:pelo menos|ao menos|no m[íi]nimo|no m[áa]ximo|mais de|menos de|acima de|"
-                                   r"abaixo de|at[ée]|entre|superior(?:es)? a|inferior(?:es)? a|[<>≤≥]=?)\s*~?\s*$",
-                                   re.I)
-_RE_POPULACAO_DEPOIS = re.compile(r"^\s*d[aeo]s?\s+(?:estudantes|alun[oa]s|turmas?|duplas|crian[çc]as|jurados|"
-                                  r"conselheiros|professor(?:es|as)|participantes|grupos|equipes|jovens|respondentes|"
-                                  r"usu[áa]rios|sala)\b", re.I)
+#: O comparativo da meta, logo antes da porcentagem: «mais de 25%», «superar 25%», «maior que 25%», «a partir de 25%»…
+#: (`_RE_MAIS`), «menos de 60%», «abaixo de 60%», «no máximo 60%»… (`_RE_MENOS`). Logo depois: «25% ou mais».
+_RE_MAIS = (r"(?:\b(?:mais\s+(?:de|que|do\s+que)|acima\s+de|superior(?:es)?\s+a|maior(?:es)?\s+(?:do\s+)?que|"
+            r"igual\s+ou\s+(?:superior|maior)\s+(?:a|que)|a\s+partir\s+de|pelo\s+menos|ao\s+menos|no\s+m[íi]nimo|"
+            r"super(?:ar|arem|a|am|e|em)|ultrapass(?:ar|arem|a|am|e|em)|exced(?:er|erem|e|em|a|am)|"
+            r"pass(?:ar|arem|a|am|e|em)\s+de)\b|>=?|≥)")
+_RE_MENOS = (r"(?:\b(?:menos\s+(?:de|que|do\s+que)|abaixo\s+de|inferior(?:es)?\s+a|menor(?:es)?\s+(?:do\s+)?que|"
+             r"igual\s+ou\s+(?:inferior|menor)\s+(?:a|que)|no\s+m[áa]ximo|at[ée])(?!\w)|<=?|≤)")
+_RE_COMPARATIVO_ANTES = re.compile(rf"(?:{_RE_MAIS}|{_RE_MENOS}|entre)\s*~?\s*$", re.I)
+_RE_COMPARATIVO_DEPOIS = re.compile(r"^\s*ou\s+(mais|menos)\b", re.I)
+_RE_POPULACAO_DEPOIS = re.compile(r"^\s*(?:ou\s+(?:mais|menos)\s+)?d[aeo]s?\s+(?:estudantes|alun[oa]s|turmas?|duplas|"
+                                  r"crian[çc]as|jurados|conselheiros|professor(?:es|as)|participantes|grupos|equipes|"
+                                  r"jovens|respondentes|usu[áa]rios|sala)\b", re.I)
+#: A porcentagem da mecânica vem marcada como tal, sem comparativo: «taxa real de ~75% de invisibilidade» do PRD e «a
+#: taxa de 75% da Galeria Oculta» do handoff da exp06ef1b eram os 12 de 16 projetos ocultos, não meta da H2 (análise de
+#: 24/10/2026). «taxa de desistência de 25%» não é esse caso: a taxa ali é a medida da hipótese.
+_RE_MECANICA_ANTES = re.compile(r"(?:\btaxa\s+(?:real\s+)?de\s*~?|~)\s*$", re.I)
 
 
 def _metas_do_corpo(texto: str) -> List[Tuple[str, str]]:
-    """Os números de hipótese do corpo que podem ser meta: a duração (s, min) e a porcentagem com comparativo ou
-    população (`_RE_COMPARATIVO_ANTES`, `_RE_POPULACAO_DEPOIS`)."""
+    """Os números de hipótese do corpo que podem ser meta: a duração (s, min) e toda porcentagem, menos a que vem
+    marcada como mecânica (`_RE_MECANICA_ANTES`) sem comparativo nem população.
+
+    Revisão do PR #77 (24/10/2026): a leitura pedia o comparativo de uma lista curta ou a população, e fora disso a
+    porcentagem sumia em silêncio — «Se a desistência das duplas superar 25%», «25% ou mais das duplas», «maior que
+    25%» tiravam do gate a H1 30×25 da exp02ef1b (D11). O lado conservador é o contrário: só sai a marcada."""
     limpo = _RE_CITACAO.sub(" ", texto or "").replace("$", "").replace("\\%", "%").replace("\\ge", "≥").replace(
         "\\le", "≤")
     saida = []
     for t in _numeros_de_hipotese(limpo):
         if t[1] == "%":
             num = re.escape(t[0]).replace(r"\.", "[.,]")
-            if not any(_RE_COMPARATIVO_ANTES.search(limpo[max(0, m.start() - 25):m.start()])
-                       or _RE_POPULACAO_DEPOIS.match(limpo[m.end():m.end() + 40])
-                       for m in re.finditer(rf"(?<![\w.,]){num}\s?%", limpo)):
+            ocorrencias = list(re.finditer(rf"(?<![\w.,]){num}\s?%", limpo))
+            if ocorrencias and all(
+                    _RE_MECANICA_ANTES.search(limpo[max(0, m.start() - 25):m.start()])
+                    and not _RE_COMPARATIVO_ANTES.search(limpo[max(0, m.start() - 25):m.start()])
+                    and not _RE_COMPARATIVO_DEPOIS.match(limpo[m.end():m.end() + 20])
+                    and not _RE_POPULACAO_DEPOIS.match(limpo[m.end():m.end() + 40])
+                    for m in ocorrencias):
                 continue
         saida.append(t)
     return saida
@@ -654,15 +750,15 @@ def _mesma_hipotese(a: str, b: str) -> bool:
     return len(_radicais(a) & _radicais(b)) >= 3
 
 
-_RE_MAIS = r"(?:mais de|acima de|superior(?:es)? a|>=?|≥)"
-_RE_MENOS = r"(?:menos de|abaixo de|inferior(?:es)? a|<=?|≤)"
-
-
 def _direcao(texto: str, tok: Tuple[str, str]) -> str:
-    """`mais` ou `menos`: o comparativo logo antes da porcentagem; vazio sem comparativo."""
+    """`mais` ou `menos`: o comparativo logo antes da porcentagem («superar 25%», «menos de 60%») ou logo depois
+    («25% ou mais»); vazio sem comparativo."""
     num = re.escape(tok[0]).replace(r"\.", "[.,]")
     m = re.search(rf"({_RE_MAIS}|{_RE_MENOS})\s*~?\s*{num}\s?%", texto or "", re.I)
-    return "" if not m else ("mais" if re.fullmatch(_RE_MAIS, m.group(1), re.I) else "menos")
+    if m:
+        return "mais" if re.fullmatch(_RE_MAIS, m.group(1), re.I) else "menos"
+    m = re.search(rf"(?<![\w.,]){num}\s?%\s*ou\s+(mais|menos)\b", texto or "", re.I)
+    return m.group(1).lower() if m else ""
 
 
 #: Situações de `hipoteses_reescritas` que são dúvida, não divergência certa: saem como `hipotese-a-conferir`, atenção.
@@ -676,7 +772,8 @@ def hipoteses_reescritas(one_pager: str, corpo: str, spec: str = "",
     quantifica e o corpo inventou a meta (H2 do mesmo handoff: «menos de 70%»).
 
     Análise de 24/10/2026 (7 execuções de dev vistas pelo PO), o que deixou de ser divergência certa:
-    - porcentagem da mecânica não é meta (`_metas_do_corpo`); duração que o §17 não quantifica e que o contrato tem é
+    - porcentagem marcada como mecânica («taxa real de ~75%») não é meta (`_metas_do_corpo`) — qualquer outra é, com
+      qualquer redação do comparativo; duração que o §17 não quantifica e que o contrato tem é
       parâmetro da mecânica citado («retenção >5s», «zoom-out de 2,5s», PRDs da exp06ef1b e da exp01ef1b) — a que o
       contrato não tem continua meta inventada («`tempo_feed_segundos` < 180s» na H1 do PRD da exp05ef1b);
     - `limiar-do-9f` (dúvida): o número é o limiar da `PQ-nn` que a própria hipótese cita, numa linha firme do 9f (sem

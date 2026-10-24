@@ -636,3 +636,105 @@ def test_limiar_da_pq_citada_e_duvida_e_nao_some_atras_da_regua_de_linha():
                            "mostrou tudo.")
     sem_meta["one_pager"] = ONE_PAGER
     assert _codigos(montagem.validar_handoff(sem_meta)) == ["hipotese-diverge"]
+
+
+# --------------------------------------------------------------------------- revisão do PR #77 (24/10/2026)
+def test_toda_porcentagem_da_hipotese_e_meta_menos_a_marcada_como_mecanica():
+    """A leitura pedia comparativo de lista curta ou população, e «superar 25%», «25% ou mais», «maior que 25%»,
+    «taxa de desistência de 25%» sumiam em silêncio. Só sai a porcentagem marcada como mecânica, sem comparativo."""
+    for linha in ("Se a desistência das duplas superar 25%.", "Se 25% ou mais das duplas desistirem.",
+                  "Se a taxa de desistência for maior que 25%.", "Se a desistência passar de 25%.",
+                  "Se a desistência ultrapassar 25%.", "Se a desistência exceder 25%.", "Se mais que 25% desistirem.",
+                  "Se a taxa de desistência de 25% for atingida.", "A partir de 25% das duplas.",
+                  "Igual ou superior a 25%.", "Menor do que 25% das duplas."):
+        assert montagem._metas_do_corpo(linha) == [("25", "%")], linha
+    for linha in ("o grid com 12 projetos ocultos (taxa real de ~75% de invisibilidade)",
+                  "o confronto entre a projeção da sala e a taxa de 75% da Galeria Oculta",
+                  "a galeria esconde ~75% dos projetos"):
+        assert montagem._metas_do_corpo(linha) == [], linha
+    # a marca de mecânica não vale contra comparativo nem população
+    assert montagem._metas_do_corpo("taxa de 75% das duplas") == [("75", "%")]
+    assert montagem._metas_do_corpo("mais de ~75% acertam") == [("75", "%")]
+
+
+def test_direcao_do_comparativo_antes_e_depois_da_porcentagem():
+    for texto, direcao in (("superar 25%", "mais"), ("ultrapassarem 25%", "mais"), ("passar de 25%", "mais"),
+                           ("maior do que 25%", "mais"), ("a partir de 25%", "mais"), ("25% ou mais", "mais"),
+                           ("igual ou superior a 25%", "mais"), ("pelo menos 25%", "mais"),
+                           ("menor que 25%", "menos"), ("menos que 25%", "menos"), ("25% ou menos", "menos"),
+                           ("igual ou inferior a 25%", "menos"), ("no máximo 25%", "menos"), ("taxa de 25%", "")):
+        assert montagem._direcao(texto, ("25", "%")) == direcao, texto
+
+
+def test_marcador_do_po_rege_so_a_propria_oracao():
+    """Um «deve ser», «solicitado» ou «decidi» no começo da frase regia todos os números seguintes. Rege a própria
+    oração; o de antes só pelos dois-pontos que abrem o que ele afirma, nunca por cima de adversativa — e o número
+    citado com «usou», «escreve», «diz», «tem» depois do marcador não vira origem."""
+    assert montagem._valores_afirmados("Deve ser 30%; o PRD usou 25%.") == [("30", "%")]
+    assert montagem._valores_afirmados("A meta da H1 deve ser 30%: o PRD usou 25%.") == [("30", "%")]
+    assert montagem._valores_afirmados("Ajuste solicitado: o PRD escreve 25% na H1, mas o §17 diz 30%.") == []
+    assert montagem._valores_afirmados("Decidi: o timer tem 45 s no handoff, mas deve ser 60 s.") == [("60", "s")]
+    for texto in ("Deve ser 30%; a H2 com 70%.", "O PRD trouxe 25%.", "Confirmo que o PRD pôs 25%.",
+                  "Ratifico: o PRD colocou 25%.", "Decidi que aparece 25% no PRD."):
+        assert ("70", "%") not in montagem._valores_afirmados(texto) and (
+            "25", "%") not in montagem._valores_afirmados(texto), texto
+    # a lista que os dois-pontos abrem continua afirmada, item a item (exp04ef1b, 25/09/2026)
+    assert montagem._valores_afirmados(
+        "O teto de texto está ratificado e fechado no [D0-09] da spec: resumo de notícia com 25 a 35 palavras; "
+        "manchete com até 10 palavras (8 a 10).") == [("35", "palavras"), ("10", "palavras")]
+    assert montagem._valores_afirmados("O balão tem que ter no máximo 35 palavras.") == [("35", "palavras")]
+    assert montagem._valores_afirmados("Deve ser 30% ou 40%.") == [("30", "%"), ("40", "%")]
+
+
+def test_contexto_do_pedido_com_item_pendente_nao_e_origem():
+    """O pedido dividido que voltou ao PO para Devolver: o item de produto ficou `pendente_em`, e o «Resumo geral», que
+    vai junto no texto de dev, repete o número dele. Nem o contexto nem o número pendente viram origem; o que o item
+    de dev afirma, sim."""
+    from pipeline.passagem import _pedido_por_dono
+
+    divisao = {"etapa": "dev",
+               "contexto": "## Resumo geral\nA meta da H1 deve ser 30% e o resumo deve ter 40 palavras.",
+               "itens": [{"n": 1, "texto": "## H1\nA meta da H1 deve ser 30%.", "dono": "produto"},
+                         {"n": 2, "texto": "## Timer\nO timer da rodada deve ser 60 s.", "dono": "dev"}]}
+    pendente = _pedido_por_dono("refazer Dev · completo · 24/10/2026 10:00", "dev", "", divisao, nao_aplicado=True)
+    assert [p.get("pendente_em") for p in pendente] == ["produto", None]
+    assert "Resumo geral" in pendente[1]["texto"] and pendente[1]["contexto"].startswith("## Resumo geral")
+    origem = montagem.contrato({"pedidos_do_po": pendente})["pedidos_do_po"]
+    assert "60 s" in origem and "30%" not in origem and "40 palavras" not in origem, origem
+    # aplicado a montante, o item de produto já está no one-pager, e o contexto volta a valer
+    aplicado = _pedido_por_dono("refazer Dev · completo · 24/10/2026 10:00", "dev", "", divisao)
+    assert "40 palavras" in montagem.contrato({"pedidos_do_po": aplicado})["pedidos_do_po"]
+    # o pedido gravado antes do campo `contexto`: o número do item pendente não vira origem pelo texto de dev
+    sem_campo = [{k: v for k, v in p.items() if k != "contexto"} for p in pendente]
+    origem = montagem.contrato({"pedidos_do_po": sem_campo})["pedidos_do_po"]
+    assert "60 s" in origem and "30%" not in origem, origem
+
+
+def test_teto_posposto_separado_por_virgula_ou_na_celula_anterior():
+    """Só o marcador logo antes do número contava: o teto novo escrito depois dele, separado por vírgula ou na célula
+    vizinha da tabela deixava de pedir origem. A medida seguida do teto com outro número continua sendo medida."""
+    for linha, numero in (("Balões de notificação com 35 palavras no máximo.", "35"),
+                          ("RNF: balões com, no máximo, 35 palavras.", "35"),
+                          ("| Balão da comissão | Teto | 35 palavras |", "35"),
+                          ("| Balão da comissão | 35 palavras (teto) |", "35"),
+                          ("Resumo entre 25 e 35 palavras (teto do D0-09).", "35"),
+                          ("Manchetes de 8 a 10 palavras, sem exceder o teto.", "10"),
+                          ("Legenda de 35 palavras ou menos.", "35"),
+                          ("Balão com 35 palavras (máx. 2 linhas).", "35")):
+        assert montagem.numeros_de_regra(linha) == [(numero, "palavras")], linha
+    for linha in ("legendas com 39 a 46 palavras (teto: 60)", "`e6.pergunta.em13co26` (49 palavras)",
+                  "| Fala de Bento | 21 palavras | teto da faixa |", "| Teto da faixa: 20 | Fala com 21 palavras |",
+                  "Fala de Bento com 21 palavras, teto da faixa: 20 palavras."):
+        assert ("21", "palavras") not in montagem.numeros_de_regra(linha) and (
+            "46", "palavras") not in montagem.numeros_de_regra(linha) and (
+            "49", "palavras") not in montagem.numeros_de_regra(linha), linha
+
+
+def test_barra_de_progresso_so_e_plataforma_na_espera_do_carregamento():
+    """A barra que mostra o tempo da rodada é a mecânica (decisão de produto, como os 45 s da exp02ef1b); a da espera
+    da geração por IA é a casca (handoff da exp06ef1b-727a3c2d)."""
+    assert montagem.numeros_de_regra("Barra de progresso do tempo da rodada: 45 s para responder.") == [("45", "s")]
+    assert montagem.numeros_de_regra("Indicador de progresso da rodada com 30 s.") == [("30", "s")]
+    assert montagem.numeros_de_regra("Barra de progresso contínua com estimativa tranquilizadora de 10 a 20 segundos "
+                                     "da geração por IA.") == []
+    assert montagem.numeros_de_regra("Indicador de progresso durante o carregamento de 3 s.") == []
