@@ -131,8 +131,9 @@ devolve a você cada divergência:
 1. **Número de regra com origem no contrato.** Todo número de regra — porcentagem, segundos,
    minutos, teto ou piso de palavras e caracteres, nº de opções ou alternativas — está no contrato.
    Não precisam de origem os de dono plataforma (polling, TTL, p95, uptime, lote da SDK, `px`,
-   o que cita ADR ou o contrato da plataforma), a medida de layout e a contagem de palavras de uma
-   string. A sugestão de um `[PARÂMETRO …]` ainda aberto não é contrato. Número que o contrato não
+   o que cita ADR ou o contrato da plataforma; timeout e tempo limite só de requisição, API, sessão
+   ou rede — «tempo limite de 45 s para responder» é regra da mecânica), a medida de layout e a
+   contagem de palavras de uma string. A sugestão de um `[PARÂMETRO …]` ainda aberto não é contrato. Número que o contrato não
    tem sai do corpo ou vira `[PROPOSTA — validar com PO: <o número> · por quê]` (e vai para a 19.3).
 2. **Hipóteses, metas e tetos iguais aos do contrato.** Cada hipótese com os números da hipótese de
    mesmo número do §17 (sem número quando ele não tem); o alvo e o limiar de decisão de um KPI que
@@ -144,9 +145,11 @@ devolve a você cada divergência:
 4. **Origem verdadeira.** Número com origem citada em produto («(§17 do one-pager)», «(spec, bloco
    9f)») tem de estar lá; `[D0-n]` não é «contratual» nem «do PO».
 
-Divergência que o próprio contrato tem (o número do corpo também está no contrato, em outro lugar)
-só passa registrada na seção 19 como `[ABERTO — dono: produto: …]` com os dois valores — e o corpo
-segue o one-pager.
+Divergência que o próprio contrato tem (a linha da spec que corresponde ao §15 ou ao §17, ou a
+linha do 9f que cita a hipótese, traz outro número; linha marcada `[PROPOSTA]` ou `[PARÂMETRO]` é
+proposta e não conta) pede as duas coisas: o corpo com o número do one-pager **e** a seção 19 com
+`[ABERTO — dono: produto: …]` e os dois valores. O registro nunca substitui o corpo certo: hipótese
+ou teto com outro número no corpo bloqueia sempre, registrado ou não.
 
 ## Insumos do pipeline
 
@@ -274,9 +277,10 @@ do corpo, ou `[PROPOSTA — validar com PO: …]`; `hipotese-diverge` → a hip�
 dela; `meta-diverge-9f` → o alvo e o limiar da linha da `PQ-nn` no 9f; `teto-ausente` /
 `teto-diverge` → o teto do §15 no RNF e nas stories; `estado-do-contrato-ausente` /
 `estado-fora-do-contrato` → a §6 com os estados do contrato, com os mesmos nomes;
-`origem-de-produto-falsa` → a origem que tem o número, e o D0 citado como bloco 13. Se o achado diz
-que o número também está no contrato, a divergência é de produto: o corpo segue o one-pager e a seção
-19 registra `[ABERTO — dono: produto: <onde> diz X e <onde> diz Y]`.
+`origem-de-produto-falsa` → a origem que tem o número, e o D0 citado como bloco 13;
+`divergencia-do-contrato-sem-registro` → o corpo segue o one-pager e, além disso, a seção 19 registra
+`[ABERTO — dono: produto: <onde> diz X e <onde> diz Y]` (o achado traz o texto). Só registre
+divergência que o gate apontou como do contrato: cópia errada se corrige no corpo, não vai a produto.
 
 {montagem_prd_report?}
 

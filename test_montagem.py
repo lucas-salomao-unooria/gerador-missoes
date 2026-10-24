@@ -50,13 +50,27 @@ def _achado(r: Dict[str, Any], codigo: str) -> List[Dict[str, str]]:
 # --------------------------------------------------------------------------- os dois casos reais
 def test_h1_25_contra_30_reprova_o_prd_da_exp02ef1b():
     """O PRD da exp02ef1b escreveu a Hipótese 1 com 25% (o limiar da PQ-01, então [PROPOSTA]); o §17 diz 30%. O A117
-    deu 🟢. Aqui reprova, e diz que o 25% também está no contrato — a divergência é do próprio contrato."""
+    deu 🟢. Aqui reprova. Os 25% eram proposta (D11): a linha da PQ-01 tem `[PROPOSTA]`, então não é divergência do
+    contrato, e o redator não é mandado a produto por uma cópia errada."""
     estado = _estado("exp02ef1b-4fd72a9a")
     r = montagem.validar_prd(estado)
     assert r["status"] == "bloqueado"
     h = _achado(r, "hipotese-diverge")
-    assert h and "30%" in h[0]["resumo"] and "25%" in h[0]["resumo"] and "também está no contrato" in h[0]["resumo"]
+    assert h and "30%" in h[0]["resumo"] and "25%" in h[0]["resumo"]
+    assert "divergência é do próprio contrato" not in h[0]["resumo"]
     assert h[0]["agente_responsavel"] == "prd-writer"
+    assert not montagem.divergencias_do_contrato(estado["one_pager"], montagem._spec_produto(estado))
+    assert not _achado(r, "divergencia-do-contrato-sem-registro")
+
+    # mutante da revisão de 23/10: o registro na §19 com 25% no corpo não salva o PRD
+    registrado = copy.deepcopy(estado)
+    titulo = "# 19. Decisões (ADR) e pendências"
+    assert titulo in estado["prd_final"]
+    registrado["prd_final"] = estado["prd_final"].replace(
+        titulo, titulo + "\n\n- [ABERTO — dono: produto: o §17 diz 30% na H1 e o 9f diz 25% na PQ-01]\n", 1)
+    r = montagem.validar_prd(registrado)
+    assert r["status"] == "bloqueado" and _achado(r, "hipotese-diverge")
+    assert not _achado(r, "divergencia-registrada")
 
     # mutante: o corpo com o número do §17 — a divergência some
     corrigido = copy.deepcopy(estado)
@@ -230,6 +244,27 @@ def test_numero_de_regra_sem_origem_e_a_proposta():
     assert montagem.validar_prd(_sintetico(prd_final=proposta))["status"] == "aprovado"
 
 
+def test_tempo_limite_da_mecanica_nao_e_plataforma():
+    """«Tempo limite» só é plataforma com contexto técnico (HTTP, requisição, API, sessão/JWT, rede). Os 45 s da
+    exp02ef1b para responder eram decisão de produto tomada pelo D0."""
+    mecanica = _prd({"- RNF-SYNC-001": "- RF-MEC-004: tempo limite de 45 s para responder ao desafio.\n- RNF-SYNC-001"})
+    r = montagem.validar_prd(_sintetico(prd_final=mecanica))
+    assert _codigos(r) == ["numero-sem-origem"] and "45 s" in r["achados"][0]["resumo"]
+    for linha in ("- RF-MEC-004: timeout de 45 s até a criança escolher a carta.",
+                  "- RF-MEC-004: a cada 45 s a dica pisca na tela.",
+                  "- RF-MEC-004: o lote de cartas some depois de 45 s.",
+                  "- RF-MEC-004: a criança ganha um token a cada 45 segundos de foco."):
+        r = montagem.validar_prd(_sintetico(prd_final=_prd({"- RNF-SYNC-001": linha + "\n- RNF-SYNC-001"})))
+        assert _codigos(r) == ["numero-sem-origem"], linha
+    for linha in ("- RNF-REDE-001: timeout de 45 s na requisição HTTP da geração.",
+                  "- RNF-REDE-001: tempo limite de 45 s da API de IA.",
+                  "- RNF-REDE-001: a sessão expira por tempo limite de 45 min (JWT).",
+                  "- RNF-TEL-001: lote de 50 eventos a cada 10 s da SDK.",
+                  "- RNF-IA-001: no máximo 45% da cota em tokens de IA por turma."):
+        r = montagem.validar_prd(_sintetico(prd_final=_prd({"- RNF-SYNC-001": linha + "\n- RNF-SYNC-001"})))
+        assert r["status"] == "aprovado", (linha, r["achados"])
+
+
 def test_sugestao_de_parametro_aberto_nao_e_contrato_e_a_decisao_do_po_e():
     """A sugestão dentro de um [PARÂMETRO] aberto é do agente; vira contrato quando o PO a aceita no de acordo (PR 3)."""
     op = ONE_PAGER.replace("## 17.", "- Inatividade: [PARÂMETRO — a definir por produto: inatividade, sugestão: 45 s]\n\n## 17.")
@@ -257,27 +292,87 @@ def test_bloco_13_pela_lista_branca():
     assert _codigos(r) == ["numero-sem-origem"] and "4 s" in r["achados"][0]["resumo"]
 
 
-def test_hipotese_trocada_e_a_divergencia_registrada_na_19():
-    """H1 com 25%: o 25% está no 9f (PQ-01), então a divergência é do próprio contrato. Só passa registrada na 19 com
-    dono produto e os dois valores — e aí é pendência do PO (atenção, etapa produto), que o rastro conta."""
+#: A PQ-01 decidida a 25% e ligada à H1 (que o §17 diz 30%): o próprio contrato diverge, na origem certa.
+SPEC_DIVERGENTE = SPEC.replace("| `scored decisao:moldura` | PO |", "| `scored decisao:moldura` | H1 · PO |")
+REGISTRO = "- [ABERTO — dono: produto: o §17 diz 30% na H1 e o 9f diz 25% na PQ-01]"
+
+
+def test_hipotese_trocada_bloqueia_mesmo_com_registro_na_19():
+    """Sem divergência no contrato (a PQ-01 não cita a H1), o 25% no corpo é só cópia errada: bloqueia, sem mandar o
+    redator a produto, e o registro na 19 não o salva."""
     trocado = _prd({"Mais de 30% das duplas": "Mais de 25% das duplas"})
     r = montagem.validar_prd(_sintetico(prd_final=trocado))
-    assert _codigos(r) == ["hipotese-diverge"] and "também está no contrato" in r["achados"][0]["resumo"]
-
-    registrado = trocado.replace("- Nenhuma.", "- [ABERTO — dono: produto: o §17 diz 30% na H1 e o 9f diz 25% na PQ-01]")
+    assert _codigos(r) == ["hipotese-diverge"]
+    assert "divergência é do próprio contrato" not in r["achados"][0]["resumo"]
+    registrado = trocado.replace("- Nenhuma.", REGISTRO)
     r = montagem.validar_prd(_sintetico(prd_final=registrado))
-    assert r["status"] == "amarelo" and _codigos(r) == ["divergencia-registrada"]
-    assert r["achados"][0]["etapa"] == "produto"
+    assert r["status"] == "bloqueado" and _codigos(r) == ["hipotese-diverge"]
+
+
+def test_divergencia_do_contrato_exige_corpo_certo_e_registro_na_19():
+    """A PQ-01 do 9f cita a H1 com 25%, e o §17 diz 30%: a divergência é do próprio contrato. O corpo segue o §17 e,
+    além disso, a 19 a registra com dono produto e os dois valores — aí é pendência do PO (atenção, etapa produto),
+    que o rastro conta. Cada metade sozinha bloqueia."""
     from tools import rastro
 
-    lac = rastro.varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}],
-                                {"prd_final": registrado})
-    assert lac["status"] == "bloqueado"  # o PRD não sai pronto até o PO decidir
+    div = montagem.divergencias_do_contrato(ONE_PAGER, SPEC_DIVERGENTE)
+    assert [(d["contrato"], d["outro"], d["onde"]) for d in div] == [("30%", "25%", "o 9f da spec (PQ-01)")]
 
-    # número que o contrato não tem não se registra: o corpo copia o §17
-    inventado = _prd({"Mais de 30% das duplas": "Mais de 22% das duplas"}).replace(
-        "- Nenhuma.", "- [ABERTO — dono: produto: o §17 diz 30% e o corpo diz 22%]")
-    assert montagem.validar_prd(_sintetico(prd_final=inventado))["status"] == "bloqueado"
+    # 30% no corpo + registro → amarelo, e o PRD não sai pronto até o PO decidir
+    certo = PRD_BOM.replace("- Nenhuma.", REGISTRO)
+    r = montagem.validar_prd(_sintetico(spec_missao=SPEC_DIVERGENTE, prd_final=certo))
+    assert r["status"] == "amarelo" and _codigos(r) == ["divergencia-registrada"]
+    assert r["achados"][0]["etapa"] == "produto" and r["achados"][0]["severidade"] == "atencao"
+    lac = rastro.varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], {"prd_final": certo})
+    assert lac["status"] == "bloqueado"
+
+    # mutante: 30% no corpo sem o registro → bloqueado
+    r = montagem.validar_prd(_sintetico(spec_missao=SPEC_DIVERGENTE))
+    assert r["status"] == "bloqueado" and _codigos(r) == ["divergencia-do-contrato-sem-registro"]
+    assert "[ABERTO — dono: produto: o §17 diz 30% e o 9f da spec (PQ-01) diz 25%]" in r["achados"][0]["resumo"]
+
+    # mutante: 25% no corpo + registro → bloqueado (o registro não substitui o corpo certo)
+    errado = _prd({"Mais de 30% das duplas": "Mais de 25% das duplas"}).replace("- Nenhuma.", REGISTRO)
+    r = montagem.validar_prd(_sintetico(spec_missao=SPEC_DIVERGENTE, prd_final=errado))
+    assert r["status"] == "bloqueado" and "hipotese-diverge" in _codigos(r)
+    assert "divergência é do próprio contrato" in _achado(r, "hipotese-diverge")[0]["resumo"]
+
+    # registro com número que o contrato não tem não vale
+    outro = PRD_BOM.replace("- Nenhuma.", "- [ABERTO — dono: produto: o §17 diz 30% e o 9f diz 22%]")
+    assert montagem.validar_prd(_sintetico(spec_missao=SPEC_DIVERGENTE, prd_final=outro))["status"] == "bloqueado"
+
+    # no handoff, o registro é na seção 7
+    handoff = ("# Handoff para dev\n\n## 6. Hipóteses de validação\nAs do §17 do one-pager.\n\n"
+               "## 7. Lacunas e pendências carregadas\n- Nenhuma.\n")
+    r = montagem.validar_handoff(_sintetico(spec_missao=SPEC_DIVERGENTE, handoff_dev=handoff))
+    assert _codigos(r) == ["divergencia-do-contrato-sem-registro"] and "seção 7" in r["achados"][0]["resumo"]
+    r = montagem.validar_handoff(_sintetico(spec_missao=SPEC_DIVERGENTE, handoff_dev=handoff.replace("- Nenhuma.",
+                                                                                                    REGISTRO)))
+    assert r["status"] == "amarelo" and _codigos(r) == ["divergencia-registrada"]
+
+
+def test_linha_de_proposta_nao_e_divergencia_do_contrato():
+    """A PQ-01 da exp02ef1b tinha «>25%» numa célula e `[PROPOSTA — validar com PO]` na última: a linha inteira é
+    proposta, e não faz o 25% da H1 virar divergência do contrato (D11: os 25% eram proposta)."""
+    proposta = SPEC_DIVERGENTE.replace("| H1 · PO |", "| H1 · `[PROPOSTA — validar com PO]` |")
+    assert not montagem.divergencias_do_contrato(ONE_PAGER, proposta)
+    assert montagem.validar_prd(_sintetico(spec_missao=proposta))["status"] == "aprovado"
+    trocado = _prd({"Mais de 30% das duplas": "Mais de 25% das duplas"})
+    r = montagem.validar_prd(_sintetico(spec_missao=proposta, prd_final=trocado))
+    assert _codigos(r) == ["hipotese-diverge"]
+    assert "divergência é do próprio contrato" not in r["achados"][0]["resumo"]
+
+
+def test_divergencia_do_contrato_pela_linha_da_spec_e_faixa_nao_diverge():
+    """O §15 diz 20 palavras e a linha correspondente da spec, 15: divergência na origem certa. Já o «8 a 10 palavras»
+    do one-pager com 8 na spec (exp03ef1b) é detalhe dentro da faixa."""
+    spec = SPEC + "\n## 6. Tetos\n- **Teto de palavras por string de interface:** no máximo 15 palavras por balão.\n"
+    div = montagem.divergencias_do_contrato(ONE_PAGER, spec)
+    assert [(d["secao"], d["contrato"], d["outro"], d["onde"]) for d in div] == [("§15", "20 palavras", "15 palavras",
+                                                                                  "a spec")]
+    faixa = ONE_PAGER.replace("no máximo 20 palavras por balão", "no máximo de 8 a 10 palavras por balão")
+    spec_faixa = SPEC + "\n## 6. Tetos\n- **Teto de palavras por string de interface:** no máximo 8 palavras por balão.\n"
+    assert not montagem.divergencias_do_contrato(faixa, spec_faixa)
 
 
 def test_hipotese_sem_numero_que_ganhou_meta():

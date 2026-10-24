@@ -29,10 +29,11 @@ d) **decisão de design não vira origem de produto.** Número com origem citada
    decisão do design vestida de produto. Até o PR 6, `produto/05-spec-missao.md › Bloco 13` (e o 14, que mora no mesmo
    arquivo) é citação legítima.
 
-Divergência que o próprio contrato tem — o número do corpo também está no contrato, em outro lugar — não se resolve
-no PRD: o corpo segue o one-pager, e o PRD só sai com ela registrada na seção 19 (no handoff, na seção 7) como
-`[ABERTO — dono: produto: …]` com os dois valores. O rastro conta esse marcador como pendência de produto, e o PRD
-continua não pronto até o PO decidir: a divergência vira item obrigatório da §19, com dono produto.
+Divergência que o próprio contrato tem — na origem certa: a linha correspondente da spec, ou a linha do 9f que cita a
+hipótese, com outro número que o §15 ou o §17; linha marcada `[PROPOSTA]`/`[PARÂMETRO]` não conta — não se resolve
+no PRD: o corpo segue o one-pager *e* o PRD registra a divergência na seção 19 (no handoff, na seção 7) como
+`[ABERTO — dono: produto: …]` com os dois valores. O registro é exigência a mais, nunca saída para o corpo trocado. O
+rastro conta esse marcador como pendência de produto, e o PRD continua não pronto até o PO decidir.
 """
 from __future__ import annotations
 
@@ -131,7 +132,9 @@ _RE_MARCADOR_ABERTO = re.compile(r"\[(?:PAR[ÂA]METRO|PROPOSTA)\b[^\]\n]*\]", re
 
 
 def texto_do_contrato(docs: Dict[str, str]) -> str:
-    """O contrato num texto só, sem o conteúdo dos marcadores abertos."""
+    """O contrato num texto só, sem o conteúdo dos marcadores abertos. Serve só de origem para o número de regra: a
+    linha do 9f marcada `[PROPOSTA]` continua valendo como origem do alvo que o KPI copia dela (regra 8 do redator),
+    mas não decide divergência do contrato (`divergencias_do_contrato` tira a linha inteira)."""
     return _RE_MARCADOR_ABERTO.sub(" ", "\n".join(docs.values()))
 
 
@@ -192,15 +195,38 @@ def _linhas_do_corpo(texto: str, pular_secoes: bool = True) -> List[str]:
 #: hub; lote de 50 eventos / 10 s da SDK; Web Vitals; disponibilidade e latência). No acervo de 23/10/2026 eram 3 s de
 #: polling em 5 dos 6 PRDs, TTL 15 min, LCP 2 s, uptime 99,5%.
 _RE_PLATAFORMA = re.compile(
-    r"polling|sondagem|\bTTL\b|\bJWT\b|token|\bLCP\b|\bINP\b|\bCLS\b|\bp9[59]\b|percentil|uptime|disponibilidade|"
-    r"lat[êe]ncia|\b5xx\b|\b(?:HTTP|erro|status|c[óo]digo)\s*\d{3}\b|\b429\b|taxa de erro|erro t[ée]cnico|falha de (?:carregamento|renderiza)|web ?vitals|"
-    r"amostragem|\blote\b|batch|timeout|tempo limite|retry|backoff|\bcache\b|RNF-(?:PERF|DISP|SEG)|"
+    r"polling|sondagem|\bTTL\b|\bJWT\b|\bLCP\b|\bINP\b|\bCLS\b|\bp9[59]\b|percentil|uptime|"
+    r"lat[êe]ncia|\b5xx\b|\b(?:HTTP|erro|status|c[óo]digo)\s*\d{3}\b|\b429\b|taxa de erro|falha de (?:carregamento|renderiza)|web ?vitals|"
+    r"amostragem|batch|retry|backoff|RNF-(?:PERF|DISP|SEG)|"
     r"F5\b|recarreg|reconex|Cloud ?Run|\bCDN\b|bundle|\bKB\b|\bMB\b|throttl|debounce|quota|cota de IA|"
     # consulta periódica a uma rota é polling com outro nome («consultando `GET /juri-estadual/gate` a cada 3
     # segundos», PRD da exp06ef1b)
-    r"\bGET\s+/|a cada \d+(?:[.,]\d+)?\s*(?:s\b|seg)|"
+    r"\bGET\s+/|"
     # a origem declarada é a plataforma: «(contrato da plataforma)», «(ADR-105)»
     r"\bADR-\d|contrato da plataforma|\(plataforma\)", re.I)
+#: Termos que também nomeiam regra da mecânica: só são de plataforma com o contexto técnico na mesma linha. «Tempo
+#: limite de 45 s para responder» é decisão de produto (os 45 s da exp02ef1b foram o D0 decidindo no lugar do PO);
+#: «timeout > 10 s» de rede (exp06ef1b), «Timeout» da API de IA (exp05ef1b), o «lote de 50 eventos / 10 s da SDK»
+#: (exp07ef1b), «tokens de IA» e o «erro técnico → bug de infra» do KPI T10 são plataforma (acervo, revisão de
+#: 23/10/2026).
+_CONTEXTO_DE_REDE = (r"HTTP|requisi[çc]|\bAPI\b|sess[ãa]o|\bJWT\b|servidor|endpoint|\brede\b|conex[ãa]o|offline|"
+                     r"\b(?:GET|POST|PUT|PATCH|DELETE)\s+/|\bCDN\b|navegador|service ?worker|\bSDK\b")
+_PLATAFORMA_COM_CONTEXTO = (
+    (re.compile(r"timeout|tempo limite|\bcache\b|a cada \d+(?:[.,]\d+)?\s*(?:s\b|seg)", re.I),
+     re.compile(_CONTEXTO_DE_REDE, re.I)),
+    (re.compile(r"\btokens?\b", re.I),
+     re.compile(r"tokens?\s+(?:de\s+)?(?:IA|acesso|sess[ãa]o|autentica)|(?:access|refresh|id)[ _-]?token|\bJWT\b", re.I)),
+    (re.compile(r"\blote\b", re.I), re.compile(r"eventos?|\bSDK\b|telemetria", re.I)),
+    (re.compile(r"disponibilidade|erro t[ée]cnico", re.I),
+     re.compile(r"infra|\bbug\b|servidor|\bAPI\b|\bSLA\b|\bSLO\b|" + _CONTEXTO_DE_REDE, re.I)),
+)
+
+
+def de_plataforma(linha: str) -> bool:
+    """A linha fala de infraestrutura: termo inequívoco, ou termo ambíguo com o contexto técnico ao lado."""
+    if _RE_PLATAFORMA.search(linha or ""):
+        return True
+    return any(termo.search(linha or "") and contexto.search(linha or "") for termo, contexto in _PLATAFORMA_COM_CONTEXTO)
 #: Porcentagem de layout: o que a tela ocupa é desenho (a folha de 75% e o overlay de 70% da exp02ef1b). A área mínima
 #: da moldura não entra aqui: os 10% da exp02ef1b são regra da mecânica, que o D0 decidiu no lugar do PO.
 _RE_LAYOUT = re.compile(r"viewport|altura|largura|overlay|opacidade|cobr[ie]|ocupa|\bfolha\b|modal|drawer|"
@@ -236,7 +262,7 @@ _RE_FORMULARIO_DO_PREPARO = re.compile(r"dropdown|lista suspensa|\bselect\b|disc
 def numeros_de_regra(linha: str) -> List[Tuple[str, str]]:
     """Os números de regra da linha, fora de citação e de código em linha: %, s, min e palavras ou caracteres com teto
     ou piso — sem os de plataforma, de layout e o 100%, que é «todos». Contagens de opção vêm à parte."""
-    if _RE_PLATAFORMA.search(linha):
+    if de_plataforma(linha):
         return []
     limpa = _RE_CITACAO.sub(" ", linha)
     saida = []
@@ -265,7 +291,7 @@ def numeros_sem_origem(corpo: str, contrato_texto: str) -> List[Dict[str, str]]:
                 continue
             vistos.add(tok)
             saida.append({"numero": _fmt(tok), "linha": re.sub(r"\s+", " ", linha).strip()[:180]})
-        if _RE_PLATAFORMA.search(linha) or _RE_FORMULARIO_DO_PREPARO.search(linha):
+        if de_plataforma(linha) or _RE_FORMULARIO_DO_PREPARO.search(linha):
             continue
         for tok in _contagens(_RE_CITACAO.sub(" ", linha)):
             if ("#",) + tok in vistos or tok in contagens_do_contrato:
@@ -293,11 +319,12 @@ def _tok(fmt: str) -> Tuple[str, str]:
     return numeros(fmt)[0] if numeros(fmt) else (fmt, "")
 
 
-def hipoteses_e_tetos(one_pager: str, corpo: str, contrato_texto: str, pendencias: str,
-                      exigir_tetos: bool = True) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
-    """`(divergentes, registradas)`: números do §17 trocados no corpo e, com `exigir_tetos`, os do §15 ausentes ou
-    trocados (régua do PR 1, `propagacao.contrato_no_corpo`). Trocado por um número que o contrato também tem é
-    divergência do próprio contrato: passa se a seção de pendências a registra com dono produto e os dois valores.
+def hipoteses_e_tetos(one_pager: str, corpo: str, exigir_tetos: bool = True) -> List[Dict[str, str]]:
+    """Números do §17 trocados no corpo e, com `exigir_tetos`, os do §15 ausentes ou trocados (régua do PR 1,
+    `propagacao.contrato_no_corpo`). Todo item bloqueia: o corpo diz o que o one-pager diz, mesmo quando o próprio
+    contrato diverge — aí a seção de pendências registra a divergência *além* do corpo certo
+    (`divergencias_do_contrato`), nunca no lugar dele. Até a revisão de 23/10/2026, o registro na §19 tirava o item
+    daqui, e a H1 com 25% no corpo da exp02ef1b passava como 🟡 com uma linha só.
 
     O handoff não repete os tetos nem as hipóteses (remete ao §17): nele só conta o trocado. A hipótese é comparada
     também item a item (`hipoteses_reescritas`): o handoff da exp02ef1b parafraseou a H1 inteira com 25%, e a linha
@@ -311,19 +338,58 @@ def hipoteses_e_tetos(one_pager: str, corpo: str, contrato_texto: str, pendencia
         if not any(c["secao"] == "§17" and set(h["corpo"].split(", ")) <= set(c["corpo"].split(", "))
                    for c in candidatos) and (h["secao"], h["contrato"], h["corpo"]) not in vistos:
             candidatos.append(h)
-    divergentes, registradas = [], []
-    for c in candidatos:
-        item = {**c}
-        if c["situacao"] in ("trocado", "acrescentado"):
-            corpo_toks = [_tok(x.strip()) for x in c["corpo"].split(",")]
-            if c["situacao"] == "trocado" and all(tem_numero(contrato_texto, t) for t in corpo_toks):
-                linha = _registro(pendencias, *[_tok(x.strip()) for x in c["contrato"].split(",")], *corpo_toks)
-                if linha:
-                    registradas.append({**item, "registro": linha[:180]})
-                    continue
-                item["no_contrato"] = "sim"
-        divergentes.append(item)
-    return divergentes, registradas
+    return candidatos
+
+
+#: Linha de tabela com marcador aberto: o número de qualquer célula dela é proposta, não contrato. A PQ-01 da exp02ef1b
+#: trazia «>25% → …» numa célula e `[PROPOSTA — validar com PO]` na última — os 25% eram proposta (D11), e a limpeza
+#: só de dentro dos colchetes os deixava contar como origem da H1 com 25%.
+_RE_MARCADOR_ABERTO_NA_LINHA = re.compile(r"\[(?:PAR[ÂA]METRO|PROPOSTA)\b", re.I)
+
+
+def sem_linhas_abertas(texto: str) -> str:
+    """O texto sem as linhas de tabela que carregam `[PROPOSTA …]` ou `[PARÂMETRO …]` aberto."""
+    return "\n".join(l for l in (texto or "").splitlines()
+                     if not (l.count("|") >= 2 and _RE_MARCADOR_ABERTO_NA_LINHA.search(l)))
+
+
+def _faixa_do_contrato(linha_contrato: str, tok: Tuple[str, str]) -> bool:
+    """O número da spec aparece solto na linha do one-pager — «máximo de 8 a 10 palavras» no §15 da exp03ef1b, e a
+    spec escolheu 8: é detalhe dentro da faixa, não divergência."""
+    n = tok[0].replace(".", "[.,]")
+    return bool(re.search(rf"(?<![\d.,]){n}(?![\d.,]|\d)", linha_contrato or ""))
+
+
+def divergencias_do_contrato(one_pager: str, spec: str) -> List[Dict[str, str]]:
+    """Onde o próprio contrato diverge, na origem certa: a linha correspondente da spec de produto (régua de linha do
+    PR 1) com outro número para o §15 ou o §17, e a linha do 9f que cita a hipótese (`H1`, «Hipótese 1») com
+    porcentagem que a hipótese de mesmo número do §17 não tem. Linha de tabela com marcador aberto não conta: é
+    proposta. Independe do corpo — com o corpo já certo, a divergência continua do PO, e a seção de pendências a
+    registra com os dois valores."""
+    from tools.conteudo_aprovado import secao
+
+    spec_firme = sem_linhas_abertas(spec)
+    saida: List[Dict[str, str]] = []
+    for c in contrato_no_corpo(one_pager, spec_firme, secoes=(15, 17)):
+        if c["situacao"] != "trocado":
+            continue
+        outros = [_tok(x.strip()) for x in c["corpo"].split(",")]
+        if all(_faixa_do_contrato(c["linha"], t) for t in outros):
+            continue
+        saida.append({"secao": c["secao"], "contrato": c["contrato"], "outro": c["corpo"], "onde": "a spec",
+                      "linha": c["linha"], "linha_outra": c["linha_corpo"]})
+    do_17 = _itens_de_hipotese(secao(one_pager or "", 17) or "")
+    for pq, linha in _linhas_9f(spec_firme).items():
+        for n, texto in do_17.items():
+            if not re.search(rf"\bH0*{n}\b|hip[óo]tese\s+0*{n}\b", linha, re.I):
+                continue
+            da_h = [t for t in _numeros_de_hipotese(texto) if t[1] == "%"]
+            outros = [t for t in _numeros_de_hipotese(linha) if t[1] == "%" and not tem_numero(texto, t)]
+            if da_h and outros:
+                saida.append({"secao": "§17", "contrato": ", ".join(_fmt(t) for t in da_h),
+                              "outro": ", ".join(_fmt(t) for t in outros), "onde": f"o 9f da spec ({pq})",
+                              "linha": texto.strip().splitlines()[0][:200], "linha_outra": linha[:200]})
+    return saida
 
 
 _RE_TITULO_HIPOTESE = re.compile(r"^(#{1,6})\s+.*hip[óo]tese", re.I)
@@ -652,9 +718,10 @@ def _validar(documento: str, texto: str, state: Dict[str, Any]) -> Dict[str, Any
             "`[PROPOSTA — validar com PO: <o número> · por quê]` (ela vai para a seção 19.3). Polling, TTL, p95 e o que "
             "mais for da plataforma não precisam de origem no contrato.", documento))
 
-    # b) hipóteses, tetos e metas
-    divergentes, registradas = hipoteses_e_tetos(one_pager, corpo, contrato_texto, pendencias,
-                                                 exigir_tetos=(documento == "prd"))
+    # b) hipóteses, tetos e metas — o corpo trocado bloqueia sempre; a divergência do próprio contrato, na origem
+    # certa, pede o registro na seção de pendências além do corpo certo
+    divergentes = hipoteses_e_tetos(one_pager, corpo, exigir_tetos=(documento == "prd"))
+    do_contrato = divergencias_do_contrato(one_pager, spec)
     for c in divergentes:
         if c["secao"] == "§17":
             codigo, o_que = "hipotese-diverge", "hipótese"
@@ -670,21 +737,34 @@ def _validar(documento: str, texto: str, state: Dict[str, Any]) -> Dict[str, Any
                       f"{c['corpo']}: «{c['linha_corpo'][:140]}». O corpo diz o que o {c['secao']} diz, com as "
                       "palavras e os números dele" + (" — ou remete ao §17 sem reescrevê-lo." if documento == "handoff"
                                                        else "."))
-            if c.get("no_contrato"):
-                resumo += (f" O {c['corpo']} também está no contrato, em outro lugar: a divergência é do próprio "
-                           f"contrato, e não se decide aqui — o corpo segue o one-pager, e a {pendencias_rotulo} "
-                           f"registra `[ABERTO — dono: produto: {c['secao']} diz {c['contrato']} e <onde> diz "
-                           f"{c['corpo']}]`.")
+            origem = next((d for d in do_contrato if d["secao"] == c["secao"] and d["contrato"] == c["contrato"]
+                           and set(c["corpo"].split(", ")) <= set(d["outro"].split(", "))), None)
+            if origem:
+                resumo += (f" O {c['corpo']} é o que {origem['onde']} diz: a divergência é do próprio contrato e não "
+                           f"se decide aqui — o corpo segue o one-pager ({c['contrato']}) e, além disso, a "
+                           f"{pendencias_rotulo} a registra com dono produto.")
         else:
             resumo = (f"O {rotulo} não traz o teto do {c['secao']} do one-pager ({c['contrato']}): «{c['linha'][:140]}». "
                       "Teto da faixa é requisito de quem codifica: leve-o ao RNF e à story das telas que ele limita.")
         achados.append(_achado(codigo, resumo, documento))
-    for r in registradas:
-        achados.append(_achado(
-            "divergencia-registrada",
-            f"{r['secao']} do one-pager diz {r['contrato']}, o corpo diz {r['corpo']}, e o contrato tem os dois: está "
-            f"registrado na {pendencias_rotulo} com dono produto («{r['registro'][:120]}»). É pendência do PO, e o "
-            "rastro a conta.", documento, severidade="atencao", etapa="produto"))
+    registradas: List[Dict[str, str]] = []
+    for d in do_contrato:
+        toks = [_tok(x.strip()) for x in d["contrato"].split(",")] + [_tok(x.strip()) for x in d["outro"].split(",")]
+        linha = _registro(pendencias, *toks)
+        if linha:
+            registradas.append({**d, "registro": linha[:180]})
+            achados.append(_achado(
+                "divergencia-registrada",
+                f"O {d['secao']} do one-pager diz {d['contrato']} e {d['onde']} diz {d['outro']}: está registrado na "
+                f"{pendencias_rotulo} com dono produto («{linha[:120]}»). É pendência do PO, e o rastro a conta.",
+                documento, severidade="atencao", etapa="produto"))
+        else:
+            achados.append(_achado(
+                "divergencia-do-contrato-sem-registro",
+                f"O próprio contrato diverge: o {d['secao']} do one-pager diz {d['contrato']} («{d['linha'][:110]}») e "
+                f"{d['onde']} diz {d['outro']} («{d['linha_outra'][:110]}»). Não se decide no {rotulo}: o corpo segue "
+                f"o one-pager e a {pendencias_rotulo} registra `[ABERTO — dono: produto: o {d['secao']} diz "
+                f"{d['contrato']} e {d['onde']} diz {d['outro']}]`, com os dois valores.", documento))
     metas = metas_contra_9f(corpo, spec)
     if metas:
         achados.append(_achado(
@@ -743,6 +823,7 @@ def _validar(documento: str, texto: str, state: Dict[str, Any]) -> Dict[str, Any
 
     return {"status": _status(achados), "achados": achados, "registradas": registradas,
             "contagem": {"numeros_sem_origem": len(sem_origem), "divergentes": len(divergentes),
+                         "divergencias_do_contrato": len(do_contrato),
                          "metas_9f": len(metas), "estados_ausentes": len(ausentes),
                          "estados_inventados": len(inventados), "origens_falsas": len(falsas)}}
 
