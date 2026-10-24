@@ -426,6 +426,8 @@ def bloco_de_passagens(state: Dict[str, Any]) -> str:
     Vem de `pareceres_humanos`, que a rodada final da esteira com parecer humano copia do `fluxo`
     do `conversa.json` (`pipeline/reexecucao.py`, `iniciar_etapa_stream`). Sem parecer humano, vazio.
     """
+    from tools import governanca
+
     pareceres = [p for p in (state.get("pareceres_humanos") or []) if isinstance(p, dict)]
     if not pareceres:
         return ""
@@ -434,6 +436,13 @@ def bloco_de_passagens(state: Dict[str, Any]) -> str:
     linhas = ["## Passagens", "",
               "Cada etapa só seguiu depois do parecer de quem responde por ela. Pareceres de uma versão que",
               "depois foi refeita aparecem riscados.", ""]
+    # A governança da liberação de produto em vigor, antes da trilha (PR 9 do plano «Produto dono do contrato», D9): em
+    # 23/10/2026, 1 de 5 liberações de produto do acervo veio da conta produto
+    gov = governanca.de_produto(pareceres)
+    for pendencia in gov["pendencias"]:
+        linhas.append(f"- 🟡 **{pendencia['resumo'][0].upper()}{pendencia['resumo'][1:]}**.")
+    if gov["pendencias"]:
+        linhas.append("")
     for etapa in ("produto", "design", "dev"):
         da_etapa = [p for p in pareceres if p.get("etapa") == etapa]
         if not da_etapa:
@@ -443,8 +452,22 @@ def bloco_de_passagens(state: Dict[str, Any]) -> str:
         linhas.append("")
         for p in da_etapa:
             texto = " ".join(str(p.get("comentario") or "").split())
-            linha = f"- {p.get('quando', '?')} · {p.get('como', '?')} {nomes.get(p.get('acao'), p.get('acao'))}: {texto}"
+            marca = f" 🟡 *{governanca.SEM_CONTA_PRODUTO}*" if governanca.liberou_sem_conta_produto(p) else ""
+            acao = nomes.get(p.get("acao"), p.get("acao"))
+            linha = f"- {p.get('quando', '?')} · {p.get('como', '?')}{marca} {acao}: {texto}"
             linhas.append(linha if p.get("valido", True) else f"- ~~{linha[2:]}~~")
+            j = p.get("justificativa_excecao")
+            if isinstance(j, dict) and governanca.justificativa_valida(j.get("texto")):
+                linhas.append(f"  - Justificativa da exceção, escrita por {j.get('como') or j.get('autor') or '?'} em "
+                              f"{j.get('quando') or p.get('quando', '?')}: «{' '.join(str(j['texto']).split())}»")
+            elif etapa == "produto" and p.get("acao") == "excecao" and governanca.gates_vermelhos(p):
+                linhas.append("  - 🟡 Sem justificativa registrada: a exceção é anterior à justificativa obrigatória "
+                              "(24/10/2026).")
+            conferencia = [c for c in p.get("conferencia_de_leitura") or [] if isinstance(c, dict)]
+            if conferencia:
+                decididos = sum(1 for c in conferencia if c.get("como") == "decidido")
+                linhas.append(f"  - Conferência de leitura: {len(conferencia)} marcador(es) aberto(s) — {decididos} "
+                              f"decidido(s) na lista do contrato, {len(conferencia) - decididos} lido(s).")
         linhas.append("")
     return "\n".join(linhas).rstrip()
 

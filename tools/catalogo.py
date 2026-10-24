@@ -290,6 +290,7 @@ def _porta(valor: str) -> str:
 def ficha_da_execucao(state: Dict[str, Any], sessao: str = "") -> Dict[str, Any]:
     """A ficha de catálogo desta execução, extraída do estado. Campo ausente sai vazio, nunca inventado."""
     from agents.callbacks import extrair_slug
+    from tools import governanca
     from tools.bncc import secao_bloco
 
     spec = str(state.get("spec_missao") or "")
@@ -330,6 +331,9 @@ def ficha_da_execucao(state: Dict[str, Any], sessao: str = "") -> Dict[str, Any]
         "habilidade_primaria": proposta.get("habilidade_primaria") or _habilidade_primaria(spec, nucleo),
         "status": "bloqueada" if bloqueada else "em criação",
         "gates": gates,
+        # «🟡 liberado sem a conta produto — design (como Produto), <data>», ou vazio (PR 9 do plano «Produto dono do
+        # contrato», D9): o catálogo diz quem liberou produto, sem mudar o status — é governança, não veredito
+        "liberacao_produto": governanca.marca(governanca.da_sessao(state)),
         "gerada_em": time.strftime("%Y-%m-%d"),
         "origem": "esteira",
         # Achados dos pareceres pedagógicos, com o slug de padrão, para `recorrencias()`
@@ -714,6 +718,10 @@ def relatorio_markdown(resultado: Dict[str, Any], missao: str = "") -> str:
     linhas = [f"# Registro no catálogo de missões — {missao or f.get('slug') or 'missão'}", ""]
     linhas.append(f"**Registrada como:** `{f.get('status', '—')}` · índice com **{resultado.get('total', 0)}** missão(ões).")
     linhas.append("")
+    if f.get("liberacao_produto"):
+        linhas.append(f"**Liberação de produto:** {f['liberacao_produto']}. O status não muda: é registro de "
+                      "governança (plano «Produto dono do contrato», D9).")
+        linhas.append("")
     linhas.append("O registro é fato, não juízo: toda execução entra, inclusive a bloqueada — senão a mesma ideia volta a ser gerada. Promover para `validada`, `aprovada` ou `em produção` é ato humano (`scripts/catalogo.py promover`).")
     linhas.append("")
     linhas.append("## Ficha desta missão")
