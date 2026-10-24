@@ -118,6 +118,8 @@ KNOWN_STATE_KEYS = {
     "degradacoes", "heranca_degradada", "agentes_degradados",
     # modo correção (pipeline/reexecucao.py): pedido lido por todo agente, triagem e seu insumo
     "pedido_correcao", "triagem_correcao", "mapa_da_missao",
+    # o pedido feito em design ou dev, numerado para a triagem dar um dono por item (tools/triagem_pedido.py)
+    "itens_do_pedido",
     # correção pontual (tools/edicao_pontual.py): o editor, fora da esteira, e o que a linha de base lê
     "pedido_pontual", "documentos_pontuais", "etapa_da_correcao", "erros_da_edicao", "achados_da_edicao",
     "edicao_pontual", "edicoes_pontuais", "modo_correcao", "documentos_travados", "linha_de_base",
@@ -5778,15 +5780,20 @@ def test_gates_e_geracao_consistentes_no_retrabalho_e_na_correcao_pontual():
 
     # A troca que o PO pediu em design muda a linha do glossário, que é texto do Gate 0. Desde 23/10/2026 a spec é
     # montada em código: a troca não entra na spec de produto — vale, mas no documento de produto (plano «Produto dono
-    # do contrato», D4 e D11) — e vira `[ABERTO — dono: PO]` no cartão do parecer, dizendo que o PO a pediu.
+    # do contrato», D4 e D11). O PR 5 deu rota a esse pedido (a triagem do Refazer o leva a produto): o achado fica à
+    # vista como atenção, apontando o Refazer, e sai do `[ABERTO — dono: PO]` provisório do PR 2 — nem com ESTEIRA_ESTRITA
+    # ele bloqueia.
     trocada = aceita.replace("`Publicar no Álbum`", "`Colocar no álbum`")
     pedidos = [{"etapa": "design", "texto": original}]
-    st = rodar({"fechamento_lacunas": saida_d0(trocada.split("\n## 14")[0]), "spec_missao": aceita, "pedidos_do_po": pedidos})
-    achados = {a["codigo"]: a for a in (st.get("lacunas_status_envelope") or {}).get("achados") or []}
-    aberto = achados["alterou-fora-do-proprio-bloco"]
-    assert "`Publicar no Álbum`" in st["spec_missao"] and "Colocar no álbum" not in st["spec_missao"]
-    assert aberto["severidade"] == "decisao_humana" and "o PO mandou trocar" in aberto["resumo"], aberto
-    assert "linhas-perdidas" not in achados and st["lacunas_status"] == "amarelo"
+    for estrito in (False, True):
+        st = rodar({"fechamento_lacunas": saida_d0(trocada.split("\n## 14")[0]), "spec_missao": aceita,
+                    "pedidos_do_po": pedidos}, estrito=estrito)
+        achados = {a["codigo"]: a for a in (st.get("lacunas_status_envelope") or {}).get("achados") or []}
+        aviso = achados["alterou-fora-do-proprio-bloco"]
+        assert "`Publicar no Álbum`" in st["spec_missao"] and "Colocar no álbum" not in st["spec_missao"]
+        assert aviso["severidade"] == "atencao" and "o PO mandou trocar" in aviso["resumo"], aviso
+        assert "Refazer" in aviso["resumo"] and not aviso.get("aberto_dono_po")
+        assert "linhas-perdidas" not in achados and st["lacunas_status"] == "amarelo"
     # sem pedido que cite o texto, a mesma mudança é do D0 — e, com ESTEIRA_ESTRITA, bloqueia
     st = rodar({"fechamento_lacunas": saida_d0(trocada.split("\n## 14")[0]), "spec_missao": aceita}, estrito=True)
     aberto = {a["codigo"]: a for a in st["lacunas_status_envelope"]["achados"]}["alterou-fora-do-proprio-bloco"]

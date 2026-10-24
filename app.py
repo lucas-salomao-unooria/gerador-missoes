@@ -31,9 +31,12 @@ from pipeline.reexecucao import (
     carregar_sessao,
     correcao_desfazivel,
     desfazer_correcao,
+    executar_cascata_stream,
     executar_correcao_stream,
     historico_de,
     mensagem_de_correcao,
+    precisa_de_cascata,
+    triar_divisao,
     triar_pedido,
 )
 from pipeline.runner import PipelineExecutionResult, run_orchestrator_pipeline_stream
@@ -61,6 +64,7 @@ from tools.auth import (
     validar_token,
 )
 from tools import fechar_contrato
+from tools import triagem_pedido
 from tools.doc_parser import EXTENSOES_ACEITAS, DocumentBatch, validate_and_process_batch
 from tools.markdown_blocos import desembrulhar_documento, sanear_para_streamlit
 
@@ -601,10 +605,11 @@ def _render_profundidade(estado: Dict[str, Any]) -> None:
 
 def _decidir(run_dir: Path, fluxo: Dict[str, Any], acao: str, comentario: str,
              estado: Dict[str, Any], opts: Dict[str, Any], conferencia: Optional[Dict[str, str]] = None,
-             decisoes: Optional[Dict[str, Dict[str, str]]] = None) -> None:
+             decisoes: Optional[Dict[str, Dict[str, str]]] = None, divisao: Optional[Dict[str, Any]] = None) -> None:
     sessao = sessao_atual()
     try:
-        novo, efeito = passagem.aplicar(fluxo, acao, sessao, comentario, estado, conferencia, decisoes)
+        novo, efeito = passagem.aplicar(fluxo, acao, sessao, comentario, estado, conferencia, decisoes,
+                                        divisao=divisao)
         # no de acordo de produto, as respostas do contrato entram no one-pager e na spec antes de o fluxo liberar o design
         gravado = passagem.registrar_decisao(run_dir, fluxo, novo, acao)
         if efeito:
@@ -617,6 +622,88 @@ def _decidir(run_dir: Path, fluxo: Dict[str, Any], acao: str, comentario: str,
                               "autor": sessao.assinatura_de(fluxo["etapa"])})
     invalidar_cache_sessoes()
     st.rerun()
+
+
+def _chave_triagem(run_dir: Path, fluxo: Dict[str, Any]) -> str:
+    return f"triagem_refazer_{run_dir.name}_{fluxo.get('versao', 0)}"
+
+
+def _triar_refazer(run_dir: Path, fluxo: Dict[str, Any], comentario: str, estado: Dict[str, Any]) -> None:
+    """O *Refazer* de design ou dev passa pela triagem antes de rodar (plano «Produto dono do contrato», PR 5): o LLM dá
+    o dono de cada item, a regra conservadora manda a produto o que ela pega, e o PO vê a divisão antes de confirmar."""
+    if passagem.caracteres_uteis(comentario) < passagem.MIN_CARACTERES_COMENTARIO:
+        st.error(f"O comentário é obrigatório e precisa de ao menos {passagem.MIN_CARACTERES_COMENTARIO} letras ou "
+                 "números: registre o que precisa mudar, e por quê.")
+        return
+    with st.spinner("🧭 Triando o pedido item a item…"):
+        triagem, divisao = _run_async(triar_divisao(PedidoCorrecao(texto=comentario), fluxo["etapa"], estado))
+    st.session_state[_chave_triagem(run_dir, fluxo)] = {"comentario": comentario, "divisao": divisao.como_dict(),
+                                                         "motivo": triagem.motivo}
+    st.rerun()
+
+
+def _render_divisao(divisao: "triagem_pedido.Divisao", chave: str) -> "triagem_pedido.Divisao":
+    """A divisão do pedido com a escolha do PO: o item que a regra pôs em produto fica lá; os outros ele pode mandar a
+    Produto ou deixar na etapa. Devolve a divisão com as escolhas."""
+    etapa = triagem_pedido.ROTULO_DONO.get(divisao.etapa, divisao.etapa)
+    escolhas: Dict[int, bool] = {}
+    for item in divisao.itens:
+        if item.forcado:
+            st.markdown(f"🏷️ **{item.n}. {item.rotulo()}** → **Produto**")
+            st.caption("Regra: " + "; ".join(item.regra))
+        else:
+            rotulo = f"{item.n}. {item.rotulo()} — mandar a Produto"
+            escolhas[item.n] = st.checkbox(rotulo, value=item.dono == triagem_pedido.PRODUTO, key=f"{chave}_{item.n}")
+            if item.dono == triagem_pedido.INDEFINIDO and not escolhas[item.n]:
+                st.caption("⚠️ A triagem não soube o dono deste item: mande-o a Produto ou devolva o pedido a Produto.")
+            else:
+                st.caption(f"Triagem: {triagem_pedido.ROTULO_DONO.get(item.dono, item.dono)}"
+                           + (f" — {item.motivo_triagem}" if item.motivo_triagem else ""))
+        with st.expander("Texto do item", expanded=False):
+            st.markdown(item.texto)
+    if divisao.contexto.strip():
+        # o que não virou item também fica à vista: o PO confere que nenhum pedido ficou de fora da divisão
+        with st.expander("Contexto do pedido — não é item: vai só à etapa, não a Produto", expanded=False):
+            st.markdown(divisao.contexto)
+    final = triagem_pedido.com_escolhas_do_po(divisao, escolhas)
+    produto, fica = final.de(triagem_pedido.PRODUTO), [i for i in final.itens if i.dono not in (
+        triagem_pedido.PRODUTO, triagem_pedido.INDEFINIDO)]
+    st.markdown(f"**Vai a Produto:** {len(produto)} item(ns) · **Fica em {etapa}:** {len(fica)} item(ns)"
+                + (f" · **Sem dono:** {len(final.indefinidos)}" if final.indefinidos else ""))
+    if produto:
+        st.caption("Os itens de Produto viram correção pontual do núcleo, do one-pager e da spec do Gate 0 (de 10 a 24 "
+                   f"min, medido nas sessões de 23/10) e depois {etapa} pontual (de 5 a 24 min), em cascata. A decisão "
+                   "que o PO gravou no de acordo de produto não sai do texto.")
+    return final
+
+
+def _painel_triagem(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[str, Any], opts: Dict[str, Any]) -> bool:
+    """A divisão pendente do *Refazer*, com Confirmar e Cancelar. `True` se o painel está aberto."""
+    pendente = st.session_state.get(_chave_triagem(run_dir, fluxo))
+    if not pendente:
+        return False
+    divisao = triagem_pedido.Divisao.de_dict(pendente.get("divisao"))
+    with st.container(border=True):
+        st.markdown(f"**🧭 Triagem do pedido — o que vai a Produto e o que fica em "
+                    f"{passagem.ROTULO_ETAPA.get(fluxo['etapa'], fluxo['etapa'])}**")
+        if pendente.get("motivo"):
+            st.caption(f"Triagem: {pendente['motivo']}")
+        final = _render_divisao(divisao, _chave_triagem(run_dir, fluxo)) if divisao else None
+        if final is None or final.indefinidos:
+            st.warning("Há item sem dono: a esteira não o aplica pela metade. Mande-o a Produto acima, ou cancele e use "
+                       "**Devolver** até Produto com o pedido.")
+        ok, nao = st.columns(2)
+        confirmar = ok.button("✅ Confirmar e refazer", type="primary", use_container_width=True,
+                              disabled=final is None or bool(final.indefinidos),
+                              key=f"{_chave_triagem(run_dir, fluxo)}_ok")
+        cancelar = nao.button("✖️ Cancelar", use_container_width=True, key=f"{_chave_triagem(run_dir, fluxo)}_nao")
+    if cancelar:
+        st.session_state.pop(_chave_triagem(run_dir, fluxo), None)
+        st.rerun()
+    if confirmar and final is not None:
+        st.session_state.pop(_chave_triagem(run_dir, fluxo), None)
+        _decidir(run_dir, fluxo, passagem.REFAZER, pendente["comentario"], estado, opts, divisao=final.como_dict())
+    return True
 
 
 def _render_padroes(estado: Dict[str, Any], etapa: str) -> None:
@@ -742,6 +829,11 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
         dev = passagem.ultima_devolutiva(fluxo, etapa)
         if dev:
             st.warning(f"⤴️ **Devolvida por {dev['como']}** em {dev['quando']}:\n\n{_citar(dev['comentario'])}")
+    if situacao == passagem.AGUARDANDO and etapa in ("design", "dev"):
+        # a cascata do pedido triado não aplicou nada: a etapa está como antes do pedido, e o caminho é Devolver (D4, B)
+        ultima = execucao_fundo.ler_execucao(run_dir) or {}
+        if ultima.get("pede_devolver") and ultima.get("erro"):
+            st.warning(f"↩️ O último **Refazer** não foi aplicado — {ultima['erro']}")
     if situacao == passagem.LIBERADA:
         anterior = passagem.etapa_anterior(etapa)
         ultimo = next((p for p in reversed(fluxo.get("pareceres") or [])
@@ -787,8 +879,9 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
                          "De acordo: o que você conferiu. É a última etapa: o comentário não chega a agente nenhum.\n")
                         + ("Mudança de conteúdo (perguntas, textos, regras): use Refazer, que aplica o pedido.\n"
                            if etapa == "produto" else
-                           "Mudança no que o one-pager aprovou (perguntas, textos, regras, habilidades, tempos): "
-                           "devolva até Produto — o one-pager só muda lá. Refazer aqui muda o que é desta etapa.\n")
+                           "Refazer: a triagem divide o pedido item a item — o que muda o one-pager aprovado (textos, "
+                           "regras, habilidades, tempos, opções) vai antes a Produto, e você vê a divisão antes de "
+                           "confirmar.\n")
                         + "Refazer ou devolver: o que precisa mudar, e por quê.")
         st.caption(f"Mínimo de {passagem.MIN_CARACTERES_COMENTARIO} letras ou números. Iniciar não pede comentário.")
     # As perguntas de conferência só existem para quem libera a etapa: refazer e devolver não as pedem.
@@ -799,12 +892,18 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
         st.markdown("**Para liberar, responda com o que você leu no núcleo (1.1 e 1.2):**")
         for chave, pergunta in perguntas:
             conferencia[chave] = st.text_input(pergunta, key=f"conferencia_{chave}_{run_dir.name}_{fluxo.get('versao', 0)}")
+    if passagem.REFAZER in acoes and etapa in ("design", "dev") and _painel_triagem(run_dir, fluxo, estado, opts):
+        return
     colunas = st.columns(len(acoes))
     for coluna, acao in zip(colunas, acoes):
         primario = acao in (passagem.DE_ACORDO, passagem.INICIAR)
         if coluna.button(_rotulo_acao(acao, etapa, fluxo), key=f"acao_{acao}_{run_dir.name}_{fluxo.get('versao', 0)}",
                          type="primary" if primario else "secondary", use_container_width=True):
-            _decidir(run_dir, fluxo, acao, comentario, estado, opts, conferencia, decisoes)
+            if acao == passagem.REFAZER and etapa in ("design", "dev"):
+                # o pedido feito em design ou dev é dividido por dono antes de rodar: o de produto vai a produto (D4)
+                _triar_refazer(run_dir, fluxo, comentario, estado)
+            else:
+                _decidir(run_dir, fluxo, acao, comentario, estado, opts, conferencia, decisoes)
 
 
 def render_passagem(run_dir: Path, opts: Dict[str, Any]) -> bool:
@@ -1239,7 +1338,13 @@ async def _acompanhar_esteira(stream, stages: List[Dict[str, Any]], progress, st
             continue
         if et == "correcao_error":
             registro = event.get("registro")
-            progress.error(f"❌ Correção não aplicada: {event.get('error')}. A sessão voltou ao estado anterior.")
+            # na cascata, o passo anterior pode ter terminado: o resultado dele não é o da correção
+            result = None
+            if event.get("aplicados_antes"):
+                # cascata: o passo de produto ficou aplicado e só o seguinte voltou atrás (revisão do PR 5, 24/10)
+                progress.error(f"❌ A correção ficou pela metade: {event.get('error')}.")
+            else:
+                progress.error(f"❌ Correção não aplicada: {event.get('error')}. A sessão voltou ao estado anterior.")
             continue
         active_agent = update_pipeline_step_status(status, active_agent, event, gates)
 
@@ -1300,16 +1405,19 @@ async def execute_pipeline(prompt: str, opts: Dict[str, Any], progress, steps_co
     return result
 
 
-async def execute_correcao(run_dir: Path, etapa: str, pedido: PedidoCorrecao, triagem: Optional[Triagem], opts: Dict[str, Any], progress, steps_container):
-    """Correção de uma sessão aberta: só as etapas a partir de `etapa`, na mesma pasta."""
-    stream = executar_correcao_stream(
-        run_dir, etapa, pedido, triagem,
-        thinking_budget=opts["thinking_budget"],
-        include_thoughts=opts["include_thoughts"],
-        modo_estrito=opts["modo_estrito"],
-        stitch_ligado=opts["stitch_ligado"],
-    )
-    return await _acompanhar_esteira(stream, stages_para_ui(ETAPA_PARA_STAGES[etapa]), progress, steps_container)
+async def execute_correcao(run_dir: Path, etapa: str, pedido: PedidoCorrecao, triagem: Optional[Triagem], opts: Dict[str, Any], progress, steps_container,
+                           divisao: Optional[Dict[str, Any]] = None):
+    """Correção de uma sessão aberta: só as etapas a partir de `etapa`, na mesma pasta. Com item de produto num pedido
+    de design ou dev, a cascata: produto pontual primeiro (`executar_cascata_stream`)."""
+    opcoes = dict(thinking_budget=opts["thinking_budget"], include_thoughts=opts["include_thoughts"],
+                  modo_estrito=opts["modo_estrito"], stitch_ligado=opts["stitch_ligado"])
+    if divisao and precisa_de_cascata(divisao):
+        stream = executar_cascata_stream(run_dir, etapa, pedido, divisao, triagem, so_esta_etapa=False, **opcoes)
+        stages = ["produto"] + list(ETAPA_PARA_STAGES[etapa])
+    else:
+        stream = executar_correcao_stream(run_dir, etapa, pedido, triagem, divisao=divisao, **opcoes)
+        stages = ETAPA_PARA_STAGES[etapa]
+    return await _acompanhar_esteira(stream, stages_para_ui(stages), progress, steps_container)
 
 
 def _run_async(coro):
@@ -1372,8 +1480,23 @@ def _render_card_correcao(pendente: Dict[str, Any], opts: Dict[str, Any]) -> Non
             captions=[LEGENDAS_ETAPA[e] for e in ETAPAS_DE_CORRECAO], key="correcao_etapa",
         )
         st.caption("As etapas anteriores à escolhida não são reavaliadas: ficam como estão e servem de insumo.")
+        divisao = None
+        if escolha in ("design", "dev"):
+            # recomeçar em design ou dev: o que é de produto vai antes ao one-pager e à spec (plano, PR 5)
+            try:
+                estado_sessao, _, _ = carregar_sessao(run_dir)
+            except Exception:
+                estado_sessao = {}
+            with st.container(border=True):
+                st.markdown("**🧭 O que vai a Produto e o que fica na etapa**")
+                divisao = _render_divisao(triagem_pedido.dividir(pedido.texto, escolha, estado_sessao, triagem.itens),
+                                          f"correcao_divisao_{escolha}")
+            if divisao.indefinidos:
+                st.warning("Há item sem dono: mande-o a Produto acima, ou recomece de **produto**.")
         col_ok, col_nao = st.columns([1, 1])
-        aplicar = col_ok.button("▶️ Aplicar correção", type="primary", disabled=escolha is None, key="correcao_aplicar", use_container_width=True)
+        aplicar = col_ok.button("▶️ Aplicar correção", type="primary",
+                                disabled=escolha is None or bool(divisao and divisao.indefinidos),
+                                key="correcao_aplicar", use_container_width=True)
         cancelar = col_nao.button("✖️ Cancelar", key="correcao_cancelar", use_container_width=True)
     if cancelar:
         if st.session_state.messages and st.session_state.messages[-1].get("role") == "user":
@@ -1382,16 +1505,23 @@ def _render_card_correcao(pendente: Dict[str, Any], opts: Dict[str, Any]) -> Non
         st.rerun()
     if aplicar and escolha:
         st.session_state.correcao_pendente = None
-        _aplicar_correcao(run_dir, escolha, pedido, triagem, opts)
+        _aplicar_correcao(run_dir, escolha, pedido, triagem, opts, divisao.como_dict() if divisao else None)
 
 
-def _aplicar_correcao(run_dir: Path, etapa: str, pedido: PedidoCorrecao, triagem: Triagem, opts: Dict[str, Any]) -> None:
+def _aplicar_correcao(run_dir: Path, etapa: str, pedido: PedidoCorrecao, triagem: Triagem, opts: Dict[str, Any],
+                      divisao: Optional[Dict[str, Any]] = None) -> None:
     with st.chat_message("assistant"):
         progress = st.empty()
         steps = st.empty()
         progress.info(f"🔧 Iniciando a correção a partir de **{etapa}**…")
-        result, registro = _run_async(execute_correcao(run_dir, etapa, pedido, triagem, opts, progress, steps))
+        result, registro = _run_async(execute_correcao(run_dir, etapa, pedido, triagem, opts, progress, steps, divisao))
         resumo = mensagem_de_correcao(RegistroCorrecao(**registro)) if registro else "❌ Correção não aplicada."
+        antes = list(((registro or {}).get("cascata") or {}).get("aplicados_antes") or [])
+        if not result and antes:
+            resumo = (f"❌ **A correção ficou pela metade:** os itens de {', '.join(antes)} ficaram aplicados, e o "
+                      f"passo de {registro.get('etapa', '?')} falhou. Refaça "
+                      f"{registro.get('etapa', '?')} — **Refazer** no parecer, ou o mesmo pedido de novo aqui: o passo de "
+                      "produto não troca o que já está aplicado, e o seguinte parte da versão anterior dos documentos.")
         if result:
             st.markdown(resumo)
             render_pipeline_details(result, key_prefix="live")

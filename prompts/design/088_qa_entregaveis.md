@@ -149,7 +149,7 @@ trecho). ✅ sem citação vale ⚠️. Um ❌ sem o trecho que o sustenta não 
 
 ## Pré-check de lacunas — antes de qualquer dimensão
 
-Colete toda lacuna aberta declarada nos relatórios de **fechamento de lacunas, ambiente, jornada, fluxo, copy, CAA e wireframes**. Lacuna com dono `gate-estrutural` → ⛔ devolve ao produto, não consome rodada. Lacuna com dono de design (`fecha-lacunas`, `ambiente-simulado`, `jornada`, `fluxo`, `copy-ptbr`, `caa`, `telas`, `copy-ptbr-revisao`) → 🔁 ticket ao dono. Você **não fecha lacuna**.
+Colete toda lacuna aberta declarada nos relatórios de **fechamento de lacunas, ambiente, jornada, fluxo, copy, CAA e wireframes**. Lacuna com dono `gate-estrutural` → ⛔ devolve ao produto, não consome rodada — e devolve de verdade: no fim do design a missão volta ao parecer de Produto com o seu ticket como devolutiva (desde 23/10/2026). Use esse dono só para o que o design não pode resolver sem mudar o one-pager ou a spec do Gate 0. Lacuna com dono de design (`fecha-lacunas`, `ambiente-simulado`, `jornada`, `fluxo`, `copy-ptbr`, `caa`, `telas`, `copy-ptbr-revisao`) → 🔁 ticket ao dono. Você **não fecha lacuna**.
 
 `RS-n pendente` carimbado pelo `fecha-lacunas` não é achado seu: é ressalva declarada. Conte-a em "riscos aceitos" e siga. `RS-n` que o Gate 0 **negou** e que a construção contornou mesmo assim é ⛔ devolução.
 

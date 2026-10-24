@@ -160,16 +160,23 @@ def conferir_execucao_morta(run_dir: Path, agora: Optional[float] = None) -> boo
     return True
 
 
-def _fechar(run_dir: Path, dados: Dict[str, Any], ok: bool, erro: str = "") -> None:
-    """Grava o fim da execução e devolve a missão ao dono da etapa."""
+def _fechar(run_dir: Path, dados: Dict[str, Any], ok: bool, erro: str = "", pede_devolver: bool = False) -> None:
+    """Grava o fim da execução e devolve a missão ao dono da etapa.
+
+    `pede_devolver`: a cascata do pedido triado não aplicou nada (item sem dono, item de produto que não cabe numa
+    edição, bloqueio novo em produto) e a sessão está como antes do pedido. A etapa volta ao parecer — não a «falhou»,
+    que só oferece rodar de novo —, para o dono poder **Devolver** a Produto (plano «Produto dono do contrato», D4, B)."""
     dados = {**dados, "situacao": "concluida" if ok else "falhou", "erro": erro, "terminou_em": time.time(),
-             "batimento": time.time()}
+             "batimento": time.time(), "pede_devolver": bool(pede_devolver and not ok)}
     _gravar_local(run_dir, dados)
     _gravar(run_dir, dados)
     fluxo = passagem.ler_fluxo(run_dir)
     if fluxo:
+        # o estado diz se o QA devolveu a produto (ticket com dono `gate-estrutural`): a missão volta ao parecer de Produto
+        estado = _ler(Path(run_dir) / "estado.json") if ok else None
         _tentar(f"atualizar o fluxo de {run_dir.name}",
-                lambda: passagem.registrar_fluxo(run_dir, passagem.concluir_execucao(fluxo, ok), None))
+                lambda: passagem.registrar_fluxo(
+                    run_dir, passagem.concluir_execucao(fluxo, ok, estado, pede_devolver=pede_devolver), None))
     notificar({"tipo": "execucao_terminou", "run_dir": str(run_dir), "ok": ok, "etapa": dados.get("etapa"),
                "erro": erro})
 
@@ -186,16 +193,22 @@ def notificar(evento: Dict[str, Any]) -> None:
 # ------------------------------------------------------------------ execução
 def _stream_do_efeito(run_dir: Path, efeito: passagem.Efeito, notas: str,
                       opcoes: Dict[str, Any]) -> AsyncGenerator[Dict[str, Any], None]:
-    from pipeline.reexecucao import PedidoCorrecao, executar_correcao_stream, iniciar_etapa_stream
+    from pipeline.reexecucao import (PedidoCorrecao, executar_cascata_stream, executar_correcao_stream,
+                                     iniciar_etapa_stream, precisa_de_cascata)
 
     if efeito.tipo == "iniciar":
         return iniciar_etapa_stream(run_dir, efeito.etapa, notas, **opcoes)
     if efeito.tipo == "encerrar":
         return iniciar_etapa_stream(run_dir, "transversal", notas, **opcoes)
+    if efeito.tipo == "refazer" and efeito.divisao and precisa_de_cascata(efeito.divisao):
+        # pedido de design ou dev com item de produto: produto pontual, depois a etapa (plano, PR 5, D4)
+        return executar_cascata_stream(run_dir, efeito.etapa, PedidoCorrecao(texto=efeito.pedido), efeito.divisao,
+                                       None, so_esta_etapa=True, notas_de_passagem=notas, com_transversal=False,
+                                       **opcoes)
     if efeito.tipo == "refazer":
         # só esta etapa: a seguinte espera o parecer, e roda quando o dono dela iniciar
         return executar_correcao_stream(run_dir, efeito.etapa, PedidoCorrecao(texto=efeito.pedido), None,
-                                        so_esta_etapa=True, notas_de_passagem=notas,
+                                        so_esta_etapa=True, notas_de_passagem=notas, divisao=efeito.divisao,
                                         com_transversal=False, **opcoes)
     raise ValueError(f"efeito desconhecido: {efeito.tipo!r}")
 
@@ -206,7 +219,7 @@ _FIM_ERRO = {"etapa_error", "correcao_error", "pipeline_error"}
 
 async def _consumir(run_dir: Path, stream: AsyncGenerator[Dict[str, Any], None], dados: Dict[str, Any],
                     nova: bool) -> None:
-    ok, erro = False, ""
+    ok, erro, pede_devolver = False, "", False
     try:
         async for evento in stream:
             tipo = evento.get("type")
@@ -239,13 +252,14 @@ async def _consumir(run_dir: Path, stream: AsyncGenerator[Dict[str, Any], None],
                 erro = "" if ok else str(getattr(resultado, "error_message", "") or "erro no runner")
             elif tipo in _FIM_ERRO:
                 ok, erro = False, str(evento.get("error") or "erro no runner")
+                pede_devolver = bool(evento.get("pede_devolver"))
             if mudou:
                 dados["batimento"] = time.time()
                 _gravar_local(run_dir, dados)
     except Exception as exc:  # a thread não pode morrer calada: o fluxo ficaria "gerando" para sempre
         logger.exception("Execução em segundo plano falhou em %s", run_dir)
         ok, erro = False, str(exc)
-    _fechar(run_dir, dados, ok, erro)
+    _fechar(run_dir, dados, ok, erro, pede_devolver)
 
 
 def _disparar(run_dir: Path, dados: Dict[str, Any], fabrica_stream, nova: bool = False) -> None:
