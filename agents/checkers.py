@@ -665,8 +665,10 @@ class SecaoSplitAgent(BaseAgent):
     fonte_sem_veredito: bool = False
     #: ESTEIRA_ESTRITA: a mudança no texto do Gate 0 (`[ABERTO — dono: PO]`) bloqueia; sem ela, é decisão humana 🟡
     estrito: bool = False
-    #: Na correção pontual com a fonte travada, o split não roda: o editor já trocou o documento montado (a spec), e montar
-    #: de novo a partir da fonte antiga desfaria a troca. É o caso do passo de completude da spec (PR 6).
+    #: Na correção pontual o split não roda: o editor já trocou o documento montado (a spec), e montar de novo a partir da
+    #: fonte antiga desfaria a troca. É o caso do passo de completude da spec (PR 6). Vale também sem a fonte travada: na
+    #: sessão anterior ao PR 6 não há resposta da completude a travar, e montar o bloco 15 sobre a spec editada poria nela
+    #: conteúdo além das trocas pedidas (revisão do PR #73, 24/10/2026).
     pular_na_correcao_pontual: bool = False
     #: Chave onde os achados do split saem em Markdown, para o autor ler na rodada seguinte do loop dele (a completude da
     #: spec, PR 6). Vazia: só o envelope.
@@ -678,10 +680,9 @@ class SecaoSplitAgent(BaseAgent):
         texto = str(state.get(self.source_key, "") or "")
         delta: Dict[str, Any] = {}
         linhas: List[str] = []
-        from agents.callbacks import KEY_DOCUMENTOS_TRAVADOS, KEY_MODO_CORRECAO
+        from agents.callbacks import KEY_MODO_CORRECAO
 
-        if (self.pular_na_correcao_pontual and state.get(KEY_MODO_CORRECAO) == "pontual"
-                and self.source_key in (state.get(KEY_DOCUMENTOS_TRAVADOS) or [])):
+        if self.pular_na_correcao_pontual and state.get(KEY_MODO_CORRECAO) == "pontual":
             yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
                         content=types.Content(role="model", parts=[types.Part(text=(
                             f"⏭️ {self.rotulo}: correção pontual — o documento montado foi editado trecho a trecho e "

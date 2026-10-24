@@ -430,6 +430,15 @@ def retrabalhar_por_trocas(chave: str):
     return _retrabalhar
 
 
+#: Marca, no estado, se o passo de completude chamou o modelo na volta corrente do `CompletudeLoop` (ou manteve a resposta).
+KEY_COMPLETUDE_CHAMOU = "completude_chamou_o_modelo"
+#: O que o passo de completude grava quando não roda na correção pontual de uma sessão que não o tinha
+#: (`pipeline.artifacts.e_mensagem_de_pulo` o reconhece e não grava artefato).
+COMPLETUDE_PULADA_NA_CORRECAO = (
+    "⏭️ A045bCompletudeSpec não executado — correção pontual: a spec foi editada trecho a trecho e o passo de completude "
+    "não acrescenta nada além das trocas pedidas. O bloco 15 nasce no próximo refazer de produto.")
+
+
 def manter_completude_entre_rodadas(callback_context: CallbackContext) -> Optional[types.Content]:
     """before_agent_callback do passo de completude da spec (A045b, PR 6): roda uma vez por execução do SpecLoop.
 
@@ -438,12 +447,28 @@ def manter_completude_entre_rodadas(callback_context: CallbackContext) -> Option
     reprovado é corrigida por trocas (`retrabalhar_por_trocas`) e continua com o bloco 15: rodar a completude de novo seria
     uma chamada grande a mais por rodada, e o teto aprovado é uma a mais por refazer de produto (plano, D14). O `Content`
     devolvido é a resposta anterior com o bloco 15 trocado pelo que está na spec agora — o split monta o mesmo bloco, e a
-    troca que o retrabalho fez nele fica."""
+    troca que o retrabalho fez nele fica.
+
+    O `CompletudeLoop` roda isolado dentro do SpecLoop (`agents.checkers.LoopIsolado`), que zera `completude_rodada` a
+    cada volta: `completude_rodada` 0 é a primeira passada da volta, e 1 é o refazer dela, que só existe quando o código a
+    reprovou. O refazer chama o modelo só se a primeira passada da volta o chamou (`KEY_COMPLETUDE_CHAMOU`): a resposta
+    mantida que segue reprovada já teve o refazer dela, e chamar de novo a cada rodada da spec passaria do teto (revisão
+    do PR #73, 24/10/2026).
+
+    Na correção pontual não roda nunca, nem na sessão anterior ao PR 6, que não tem `completude_spec` para travar: o
+    editor trocou a spec, e o bloco 15 novo sobre ela seria conteúdo além das trocas pedidas (exp02ef1b e exp02em1b, que o
+    plano reconduz por produto pontual, D11/D12)."""
     state = callback_context.state
-    if not int(state.get("spec_rodada") or 0):
-        return None
-    if str(state.get("completude_status") or "") == "bloqueado" and int(state.get("completude_rodada") or 0) < 2:
+    if state.get(KEY_MODO_CORRECAO) == "pontual":
+        anterior = str(state.get("completude_spec") or "")
+        return types.Content(role="model", parts=[types.Part(text=anterior if anterior.strip()
+                                                              else COMPLETUDE_PULADA_NA_CORRECAO)])
+    refazer_da_volta = int(state.get("completude_rodada") or 0) >= 1
+    if refazer_da_volta and str(state.get("completude_status") or "") == "bloqueado" and state.get(KEY_COMPLETUDE_CHAMOU):
         return None  # a segunda rodada do loop da completude: ela corrige o que o código acusou
+    if not refazer_da_volta and not int(state.get("spec_rodada") or 0):
+        state[KEY_COMPLETUDE_CHAMOU] = True
+        return None
     anterior = str(state.get("completude_spec") or "")
     spec = str(state.get("spec_missao") or "")
     titulo = re.compile(r"^##\s*\**\s*15\b.*$", re.MULTILINE)
@@ -457,7 +482,10 @@ def manter_completude_entre_rodadas(callback_context: CallbackContext) -> Option
 
     atual, velho = bloco(spec), bloco(anterior)
     if not atual.strip() or not velho.strip():
+        state[KEY_COMPLETUDE_CHAMOU] = True
         return None
+    if not refazer_da_volta:
+        state[KEY_COMPLETUDE_CHAMOU] = False
     return types.Content(role="model", parts=[types.Part(text=anterior.replace(velho, atual.rstrip() + "\n\n", 1))])
 
 

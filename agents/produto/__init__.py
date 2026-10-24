@@ -79,6 +79,7 @@ from agents.checkers import (
     RastroCheckAgent,
     SaidaDeLoopAgent,
     VizinhasCatalogoAgent,
+    isolar,
 )
 from config import get_settings
 from prompts import load_prompt
@@ -487,8 +488,10 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
         sub_agents=[
             get_spec_missao_agent(**kw),
             # PR 6: o que o D0 fechava no design e é de produto fecha aqui, antes dos gates, da banca e do parecer — os
-            # gates conferem a spec completa, e o PO vê no de acordo o que ficou para ele
-            _completude_loop(**kw),
+            # gates conferem a spec completa, e o PO vê no de acordo o que ficou para ele. Isolado: o LoopAgent do ADK
+            # encerra no primeiro `escalate` de qualquer subagente, e a saída da completude encerraria o SpecLoop sem o
+            # BNCC, os gates, a banca e o A059 (revisão do PR #73, 24/10/2026)
+            isolar(_completude_loop(**kw)),
             BnccCheckAgent(
                 name="A046BnccCheck",
                 description="Confere o bloco 11 da spec contra a lista oficial da BNCC Computação: código existe, é do ano da missão e há letramento digital.",
@@ -963,7 +966,7 @@ PRODUTO_METADATA = [
     {"id": "A043GateFinalProduto", "name": "043 · Gate final de produto", "icon": "🏁", "output_key": "gate_final_report", "prompt_file": "produto/043_gate_final.md", "description": "Coerência entre missão e vereditos; libera ou bloqueia para design/dev."},
     {"id": "A044GateFinalProdutoCheck", "name": "044 · Veredito final (determinístico)", "icon": "🔀", "output_key": "gate_final_status", "prompt_file": None, "description": "Lê o envelope do gate final."},
     {"id": "A045SpecMissao", "name": "045 · Spec da missão", "icon": "📜", "output_key": "spec_missao", "prompt_file": "produto/045_spec_missao.md", "description": "Os 12 blocos da spec — contrato contra o qual design e dev constroem."},
-    {"id": "A045bCompletudeSpec", "name": "045b · Completude da spec", "icon": "🧩", "output_key": "completude_spec", "prompt_file": "produto/046_completude_spec.md", "description": "O que o D0 fechava no design e é de produto (estado, handoff, evidência, dados e retenção, duração e tetos, painel docente, PQ e KPI, texto do professor, revezamento), em produto: decisões [CP-n] com base declarada no bloco 15 da spec, padrões da plataforma aplicados e listados no de acordo, e o que é do PO como [PARÂMETRO]/[PROPOSTA]/[ABERTO — dono: PO] na lista do de acordo. Nas rodadas seguintes do loop só roda se a spec perdeu o bloco 15."},
+    {"id": "A045bCompletudeSpec", "name": "045b · Completude da spec", "icon": "🧩", "output_key": "completude_spec", "prompt_file": "produto/046_completude_spec.md", "description": "O que o D0 fechava no design e é de produto (estado, handoff, evidência, dados e retenção, duração e tetos, painel docente, PQ e KPI, texto do professor, revezamento), em produto: decisões [CP-n] com base declarada no bloco 15 da spec, padrões da plataforma aplicados e listados no de acordo, e o que é do PO como [PARÂMETRO]/[PROPOSTA]/[ABERTO — dono: PO] na lista do de acordo. Nas rodadas seguintes do loop só roda se a spec perdeu o bloco 15; na correção pontual não roda."},
     {"id": "A045cCompletudeSpecSplit", "name": "045c · Spec com o bloco 15 (determinístico)", "icon": "✂️", "output_key": "relatorio_completude", "prompt_file": None, "description": "Monta em código a spec de produto — a do A045 com o bloco 15 da completude no lugar, o resto descartado —, separa o relatório de completude e registra `completude_status`. [PARÂMETRO]/[PROPOSTA] fechado pela completude sem parecer datado do PO bloqueia."},
     {"id": "A045dCompletudeRodada", "name": "045d · Saída da completude (determinístico)", "icon": "🔀", "output_key": "completude_rodada", "prompt_file": None, "description": "Completude conferida encerra o loop dela; reprovada pelo código (decidiu no lugar do PO, ou veio sem o bloco 15) volta só a ela, uma vez, com os achados — o autor da spec não reescreve por isso."},
     {"id": "A046BnccCheck", "name": "046 · Conformidade BNCC Computação (determinístico)", "icon": "📚", "output_key": "bncc_report", "prompt_file": None, "description": "Bloco 11 × lista oficial do MEC: código existe, é do ano da missão e inclui letramento digital. Não conforme bloqueia design e dev."},

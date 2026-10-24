@@ -399,3 +399,157 @@ def test_refazer_de_design_das_sessoes_antigas_volta_a_spec_de_produto_e_monta_o
     # refazer de novo, agora com o anexo: no-op na spec
     de_novo, _ = preparar_estado(st, "design")
     assert de_novo["spec_missao"] == st["spec_missao"] and ad.KEY_ANEXO not in de_novo
+
+
+# --------------------------------------------------------------------------- 5. o CompletudeLoop dentro do SpecLoop
+# Revisão do PR #73 (24/10/2026): o LoopAgent do ADK encerra no primeiro `escalate` de qualquer subagente, e o
+# CompletudeLoop, posto direto no SpecLoop, encerrava o SpecLoop logo depois da completude — sem BNCC, gates, banca e A059,
+# e sem segunda rodada. Os testes abaixo usam o SpecLoop de `_build_spec_loop`, com o CompletudeLoop real.
+class _Marcador(BaseAgent):
+    """Um agente posterior à completude no SpecLoop (o lugar do A046BnccCheck): conta quantas vezes rodou."""
+
+    @override
+    async def _run_async_impl(self, ctx):
+        n = int(ctx.session.state.get("rodou_depois_da_completude") or 0) + 1
+        yield Event(invocation_id=ctx.invocation_id, author=self.name,
+                    actions=EventActions(state_delta={"rodou_depois_da_completude": n}))
+
+
+class _CompletudeQueSempreErra(BaseAgent):
+    """Decide no lugar do PO toda vez: o código a reprova sempre."""
+
+    @override
+    async def _run_async_impl(self, ctx):
+        n = int(ctx.session.state.get("chamadas_completude") or 0) + 1
+        decisoes = [{"id": "CP-2", "campo": "3.inatividade_chat", "classe": "parametro", "cor": "verde", "base": "inferencia"}]
+        errada = _saida(passo3="### [CP-2] 3.inatividade_chat — Tempo de inatividade no chat\nDecisão: aviso depois de 90 "
+                               "segundos.\nBase: inferência\n", decisoes=decisoes)
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, actions=EventActions(state_delta={
+            "completude_spec": errada, "chamadas_completude": n}))
+
+
+def _spec_loop_real(monkeypatch, completude: BaseAgent, *, reescreve: bool = False, rodadas: int = 2) -> LoopAgent:
+    """O SpecLoop de `_build_spec_loop`, com o elemento da completude como ele o monta (o CompletudeLoop real, isolado),
+    só o modelo trocado: o A045 é o falso, a completude conta as chamadas, e os agentes de modelo do resto (juízes, banca)
+    dão lugar a um marcador e à saída da rodada."""
+    import agents.produto as produto
+    from agents.checkers import LoopIsolado
+    from config import get_settings
+
+    monkeypatch.setattr(produto, "get_completude_spec_agent", lambda **kw: completude)
+    loop = produto._build_spec_loop({}, get_settings(), rodadas)
+    assert [a.name for a in loop.sub_agents[:3]] == ["A045SpecMissao", "CompletudeLoopIsolado", "A046BnccCheck"]
+    elemento = loop.sub_agents[1]
+    assert isinstance(elemento, LoopIsolado) and elemento.sub_agents[0].name == "CompletudeLoop"
+    assert elemento.sub_agents[0].sub_agents[0] is completude
+    loop.sub_agents = [_A045(name="A045", reescreve=reescreve), elemento, _Marcador(name="A046BnccCheck"),
+                       _Rodada(name="A059")]
+    return loop
+
+
+@pytest.mark.parametrize("reescreve, chamadas", [(False, 1), (True, 2)])
+def test_spec_loop_real_roda_o_que_vem_depois_da_completude_e_faz_a_segunda_rodada(monkeypatch, reescreve, chamadas):
+    loop = _spec_loop_real(monkeypatch, _Completude(name="A045b", before_agent_callback=_callback_com_output_key),
+                           reescreve=reescreve)
+    st = t._rodar({}, loop)
+    assert st["rodou_depois_da_completude"] == 2, "o SpecLoop encerrou na saída da completude"
+    assert st["spec_rodada"] == 2 and st["chamadas_completude"] == chamadas
+    assert st["spec_missao"].count("## 15.") == 1
+    if not reescreve:
+        assert "Linha dois" in st["spec_missao"], "a troca do retrabalho se perdeu na montagem"
+
+
+def test_mutante_completude_loop_sem_isolar_encerra_o_spec_loop():
+    """O defeito que o `isolar` conserta: com o CompletudeLoop direto no SpecLoop, o marcador não roda."""
+    from agents.produto import _completude_loop
+
+    completude = _completude_loop()
+    completude.sub_agents[0] = _Completude(name="A045b", before_agent_callback=_callback_com_output_key)
+    loop = LoopAgent(name="SpecLoop", max_iterations=2, sub_agents=[
+        _A045(name="A045"), completude, _Marcador(name="A046BnccCheck"), _Rodada(name="A059")])
+    st = t._rodar({}, loop)
+    assert "rodou_depois_da_completude" not in st and "spec_rodada" not in st
+
+
+def test_completude_reprovada_sempre_nao_passa_do_teto_nas_rodadas_da_spec(monkeypatch):
+    """O LoopIsolado zera `completude_rodada` a cada volta do SpecLoop. Sem a marca de quem chamou o modelo na volta, a
+    completude ainda reprovada chamaria o modelo de novo a cada rodada da spec: são 2 chamadas, as da primeira volta."""
+    loop = _spec_loop_real(monkeypatch, _CompletudeQueSempreErra(name="A045b",
+                                                                 before_agent_callback=_callback_com_output_key),
+                           rodadas=3)
+    st = t._rodar({}, loop)
+    assert st["rodou_depois_da_completude"] == 3 and st["spec_rodada"] == 3
+    assert st["chamadas_completude"] == 2 and st["completude_status"] == "bloqueado"
+
+
+def test_completude_que_erra_uma_vez_no_spec_loop_real(monkeypatch):
+    loop = _spec_loop_real(monkeypatch, _CompletudeQueErraUmaVez(name="A045b",
+                                                                 before_agent_callback=_callback_com_output_key))
+    st = t._rodar({}, loop)
+    assert st["rodou_depois_da_completude"] == 2 and st["chamadas_completude"] == 2
+    assert st["completude_status"] == "amarelo" and "aviso depois de 90" not in st["spec_missao"]
+
+
+# --------------------------------------------------------------------------- 6. correção pontual de sessão antiga
+def _completude_com_os_callbacks_do_agente_real() -> BaseAgent:
+    """A completude que conta as chamadas ao modelo, com a cadeia de callbacks do A045bCompletudeSpec de verdade (travar
+    na correção pontual, retrabalho por trocas, herança e `manter_completude_entre_rodadas`), e o `output_key` imitado."""
+    import inspect
+
+    cadeia = get_completude_spec_agent().canonical_before_agent_callbacks
+
+    async def _callbacks(callback_context):
+        for callback in cadeia:
+            conteudo = callback(callback_context=callback_context)
+            conteudo = await conteudo if inspect.isawaitable(conteudo) else conteudo
+            if conteudo is not None:
+                callback_context.state["completude_spec"] = conteudo.parts[0].text
+                return conteudo
+        return None
+
+    return _Completude(name="A045b", before_agent_callback=_callbacks)
+
+
+@pytest.mark.parametrize("missao", ["exp02ef1b-4fd72a9a", "exp02em1b-60cfa7f4", "exp03em1b-b2e7b4a3"])
+def test_produto_pontual_de_sessao_antiga_nao_roda_a_completude(monkeypatch, missao):
+    """A sessão anterior ao PR 6 não tem `completude_spec` para travar. O plano reconduz a exp02ef1b e a exp02em1b por
+    produto pontual (D11/D12): a spec sai só com as trocas pedidas — sem bloco 15 nem chamada de modelo."""
+    import agents.produto as produto
+    from agents.callbacks import COMPLETUDE_PULADA_NA_CORRECAO, KEY_DOCUMENTOS_TRAVADOS
+    from agents.checkers import isolar
+    from agents.produto import _completude_loop
+    from pipeline.artifacts import e_mensagem_de_pulo
+    from pipeline.reexecucao import preparar_estado_pontual
+    from tools import edicao_pontual
+
+    estado = t._estado(missao)
+    assert not str(estado.get("completude_spec") or "").strip()
+    docs = edicao_pontual.documentos_da_etapa(estado, "produto")
+    spec = docs["spec_missao"]
+    linha = next(l for l in spec.splitlines() if len(l.strip()) > 30)
+    editada = spec.replace(linha, linha + " (troca do PO)", 1)
+    limpo, _ = preparar_estado_pontual(estado, "produto", "Trocar uma linha.", {**docs, "spec_missao": editada},
+                                       [{"documento": "spec_missao", "de": linha, "para": linha + " (troca do PO)"}])
+    assert "completude_spec" not in limpo[KEY_DOCUMENTOS_TRAVADOS]
+    monkeypatch.setattr(produto, "get_completude_spec_agent", lambda **kw: _completude_com_os_callbacks_do_agente_real())
+    st = t._rodar(limpo, isolar(_completude_loop()))
+    assert "chamadas_completude" not in st, "a completude chamou o modelo na correção pontual"
+    assert st["spec_missao"] == editada and "## 15." not in st["spec_missao"]
+    assert st["completude_spec"] == COMPLETUDE_PULADA_NA_CORRECAO and e_mensagem_de_pulo(st["completude_spec"])
+    assert "completude_status" not in st
+
+
+def test_produto_pontual_com_completude_mantem_a_resposta_e_nao_monta(monkeypatch):
+    """Sessão nova: a resposta fica como está e o split não monta de novo (a troca do editor no bloco 15 fica) — mesmo se
+    a lista de travados não a trouxer."""
+    import agents.produto as produto
+    from agents.callbacks import KEY_DOCUMENTOS_TRAVADOS, KEY_MODO_CORRECAO
+    from agents.checkers import isolar
+    from agents.produto import _completude_loop
+
+    monkeypatch.setattr(produto, "get_completude_spec_agent", lambda **kw: _completude_com_os_callbacks_do_agente_real())
+    editada = (SPEC_A045 + "\n" + BLOCO15).replace("sem affordance de avanço", "com o mapa da turma")
+    st = t._rodar({"spec_missao": editada, "completude_spec": _saida(), KEY_MODO_CORRECAO: "pontual",
+                   KEY_DOCUMENTOS_TRAVADOS: ["spec_missao"]}, isolar(_completude_loop()))
+    assert "chamadas_completude" not in st
+    assert st["spec_missao"] == editada and st["completude_spec"] == _saida() and "completude_status" not in st

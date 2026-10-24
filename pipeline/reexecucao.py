@@ -125,7 +125,7 @@ CHAVES_SPEC = frozenset({
     "spec_missao", "spec_missao_gate0", "spec_rodada",
     # o passo de completude da spec (PR 6): o bloco 15 e o relatório
     "completude_spec", "relatorio_completude", "completude_status", "completude_status_envelope",
-    "completude_report", "completude_rodada",
+    "completude_report", "completude_rodada", "completude_chamou_o_modelo",
     "bncc_report", "bncc_status", "bncc_status_envelope",
     "one_pager_resumido",
     # gates da spec criados em 22–23/09/2026. `juiz_perguntas_rodada` é o que doía: sem apagar,

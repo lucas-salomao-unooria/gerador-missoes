@@ -1115,8 +1115,9 @@ def test_estagio_produto_parcial_spec():
     # a spec como parâmetro morto — a pergunta podia morrer entre produto e dev sem deixar rastro.
     assert [a.name for a in produto.sub_agents[0].sub_agents] == [
         "A045SpecMissao",
-        # completude da spec (PR 6, 24/10/2026): o que o D0 fechava no design e é de produto, antes dos gates e da banca
-        "CompletudeLoop",
+        # completude da spec (PR 6, 24/10/2026): o que o D0 fechava no design e é de produto, antes dos gates e da banca;
+        # isolada, para a saída dela não encerrar o SpecLoop (revisão do PR #73)
+        "CompletudeLoopIsolado",
         "A046BnccCheck", "A047ManifestoCheckProduto", "A048EvidenciaCheck",
         # juiz de achados (23/09/2026): o regex marca "gabarito no cliente", o juiz decide se o texto
         # afirma ou cita para vedar, e o achado só sai com citação literal conferida
