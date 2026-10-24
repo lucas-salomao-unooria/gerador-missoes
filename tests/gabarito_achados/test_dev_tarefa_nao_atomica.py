@@ -29,6 +29,10 @@ def test_fp_suite_e2e_nao_dispara(caso):
     "| `T-005` | Implementar serviço | RF-001..RF-014 | src/api.ts |",
     "| T-005 | Implementar o módulo da missão | RF-001..RF-014 | src/x.ts | `scripts/e2e/estudante/03.mjs` |",
     "| T-009 | Implementar todas as telas | Todos os RFs | apps/experiencias/x |",
+    # a descrição cita e2e, mas implementa a missão inteira (revisão do PR #77, 24/10/2026)
+    "| T-005 | Implementar todas as telas do aluno e testes e2e | RF-001..RF-014 | x |",
+    "| T-005 | Implementar o módulo inteiro com testes Playwright | Todos os RFs | x |",
+    "| T-005 | Testes e2e e as telas do aluno | Todos os RFs | x |",
 ])
 def test_v_tarefa_de_implementacao_que_fecha_tudo_dispara(linha):
     assert [a for a in rastro.validar_prd(linha)["achados"] if a["codigo"] == "tarefa-nao-atomica"], linha
