@@ -78,6 +78,31 @@ def test_pedido_por_tela_da_exp02ef1b_manda_a_produto_o_que_esta_na_spec_e_deixa
     assert "Resumo geral" in d.texto_de(tp.DESIGN, com_contexto=True)
 
 
+def test_tela_com_titulo_de_introducao_ou_resumo_e_item_e_nao_contexto():
+    """Revisão do PR 5 (24/10): a palavra «introdução» ou «resumo» em qualquer lugar do título tirava a seção da divisão;
+    a tela «E1-ALU-01 — Introdução» com «Publicar no Álbum» (4 vezes na spec do Gate 0) ia inteira só ao design."""
+    estado = _estado("exp02ef1b-4fd72a9a")
+    pedido = ("## E1-ALU-01 — Introdução\nTrocar “Publicar no Álbum” por “Colocar no álbum”.\n\n"
+              "## E2-ALU-01 — Galeria\nTrocar o título por “Sua galeria”.\n\n"
+              "## Resumo geral dos ajustes\nManter as interações.")
+    d = tp.dividir(pedido, "design", estado, [{"n": 1, "dono": "design"}, {"n": 2, "dono": "design"}])
+    assert [(i.titulo, i.dono) for i in d.itens] == [("E1-ALU-01 — Introdução", tp.PRODUTO),
+                                                     ("E2-ALU-01 — Galeria", tp.DESIGN)]
+    assert "Publicar no Álbum" in d.texto_de(tp.PRODUTO)
+    assert d.contexto == "## Resumo geral dos ajustes\nManter as interações."
+
+
+@pytest.mark.parametrize("titulo, contexto", [
+    ("Resumo geral dos ajustes", True), ("Contexto", True), ("Contexto do pedido:", True), ("**Visão geral**", True),
+    ("Observações gerais", True), ("Introdução", True),
+    # título ambíguo é item: o lado conservador
+    ("E1-ALU-01 — Introdução", False), ("E0-PROF-05 — Card de resumo", False), ("Contexto da cena", False),
+    ("Resumo da etapa 3", False), ("Introdução da 5A", False),
+])
+def test_titulo_de_contexto(titulo, contexto):
+    assert tp._titulo_de_contexto(titulo) is contexto
+
+
 def test_sem_a_triagem_do_llm_o_que_a_regra_nao_pega_fica_sem_dono():
     estado = _estado("exp02ef1b-4fd72a9a")
     d = tp.dividir(_pedido(estado, "23/10/2026 13:24"), "design", estado, None)
@@ -111,6 +136,21 @@ def test_pedido_em_lista_da_exp02em1b_vai_todo_a_produto():
     ("Mudar a pergunta do Canal B.", True),
     ("Trocar o podcast do professor.", True),
     ("Mudar a forma de avaliação da EF02CO01.", True),
+    # formas de pedir sem verbo de troca (revisão do PR 5, 24/10), entre elas o corte do D11
+    ("O tempo da etapa 3 deve ser 9 minutos.", True),
+    ("Quero 2 opções na 5A em vez de 3.", True),
+    ("A 5A deve ter só duas opções.", True),
+    ("Usar 30% na H1.", True),
+    ("Na H1, o corte é 30%, não 25%.", True),
+    ("Teto de 20 palavras no Canal A.", True),
+    ("Remover a fase 2 do mini-jogo.", True),
+    ("O feedback deve aparecer só depois da segunda tentativa.", True),
+    # «criança» e «alternativa» não são verbo de mudança; cartas na tela não são contrato
+    ("Mostrar a criança as alternativas maiores.", False),
+    ("A criança precisa ver 3 cartas na tela.", False),
+    # «usar» conta para número e opções, não para «estado» (exp06ef1b, 09/10 12:11: pedido de dev)
+    ("No fluxo, usar os nomes de estado da spec para os modos de falha.", False),
+    ("Na etapa 3, trocar a cor do botão para verde.", False),
     # palavra solta citada casa com qualquer texto; botão maior é UI
     ("Trocar o texto do botão “Pronto” por “Seguir”.", False),
     ("Deixar o botão maior e com mais contraste.", False),
@@ -310,6 +350,33 @@ def test_d0_com_a_spec_de_antes_da_cascata_nao_vira_aberto_do_po():
     assert avisos[0]["aberto_dono_po"] and avisos[0]["severidade"] == "bloqueio"
 
 
+def test_troca_curta_a_montante_nao_explica_qualquer_linha_do_d0():
+    """Revisão do PR 5 (24/10): com «a troca está na linha», a troca «3» → «2» explicava qualquer linha com «2», e a
+    mudança espontânea do D0 no texto do Gate 0 virava atenção em vez de `[ABERTO — dono: PO]`."""
+    from agents.checkers import montar_sobre_aceita
+
+    aceita = ("# Spec\n\n## 2. Mecânica\n- A 5A tem 2 opções.\n- A 5B libera em 2 toques.\n\n"
+              "## 13. Decisões D0\n| `[D0-1]` | x |\n")
+    montante = [{"documento": "spec_missao", "de": "3", "para": "2"}]
+    # o D0 trazia a linha de antes da troca: o par exato explica, mesmo com a troca curta
+    avisos = []
+    montar_sobre_aceita(aceita, aceita.replace("tem 2 opções", "tem 3 opções"), r"^## 13", avisos=avisos, autor="D0",
+                        estado={"edicoes_a_montante": montante}, estrito=True)
+    assert [a["codigo"] for a in avisos] == ["gate0-aplicado-a-montante"]
+    # o D0 mudou outra linha, que só por acaso tem «2»: continua `[ABERTO — dono: PO]`
+    avisos = []
+    montar_sobre_aceita(aceita, aceita.replace("libera em 2 toques", "libera em 4 toques"), r"^## 13", avisos=avisos,
+                        autor="D0", estado={"edicoes_a_montante": montante}, estrito=True)
+    assert avisos[0]["aberto_dono_po"] and avisos[0]["codigo"] == "alterou-fora-do-proprio-bloco"
+    # troca longa que cobre só um pedaço da linha também não explica a linha inteira
+    longa = [{"documento": "spec_missao", "de": "em 9 toques", "para": "em 2 toques"}]
+    avisos = []
+    montar_sobre_aceita(aceita, aceita.replace("A 5B libera em 2 toques.", "A 5B libera em 9 toques, sem limite de "
+                                                                           "tempo e com dica sonora."),
+                        r"^## 13", avisos=avisos, autor="D0", estado={"edicoes_a_montante": longa}, estrito=True)
+    assert avisos[0]["aberto_dono_po"]
+
+
 # ------------------------------------------------------------------ linha de base com as trocas a montante
 def test_linha_de_base_conta_as_trocas_de_produto_como_da_correcao():
     from agents.checkers import LinhaDeBaseAgent
@@ -382,17 +449,27 @@ class _Cascata:
 
         return falso
 
-    def rodar(self, divisao, por_etapa, linhas_por_run=None, etapa="design", pedido=PEDIDO):
+    def rodar(self, divisao, por_etapa, linhas_por_run=None, etapa="design", pedido=PEDIDO, falha_em=(), **opcoes):
         import pipeline.runner as runner_mod
         from pipeline.reexecucao import PedidoCorrecao, executar_cascata_stream
 
         async def coletar():
             return [e async for e in executar_cascata_stream(
                 self.run_dir, etapa, PedidoCorrecao(texto=pedido), divisao, None,
-                proponente=self.proponente(por_etapa))]
+                proponente=self.proponente(por_etapa), **opcoes)]
+
+        runner = self.runner(linhas_por_run or {})
+
+        async def com_falha(**kwargs):
+            if kwargs["stages"][0] in falha_em:
+                self.runs.append(kwargs)
+                yield {"type": "pipeline_error", "error": "o runner caiu"}
+                return
+            async for evento in runner(**kwargs):
+                yield evento
 
         with mock.patch.dict(os.environ, {"CORRECAO_PONTUAL": "true", "CORRECAO_PONTUAL_PASSADAS": "2"}), \
-                mock.patch.object(runner_mod, "run_orchestrator_pipeline_stream", self.runner(linhas_por_run or {})):
+                mock.patch.object(runner_mod, "run_orchestrator_pipeline_stream", com_falha):
             return asyncio.run(coletar())
 
     def estado_final(self):
@@ -442,6 +519,62 @@ def test_cascata_aplica_produto_antes_e_o_design_acompanha():
         assert len(conversa["historico_correcoes"]) == 2 and "cascata do pedido feito em" in conversa["messages"][-1]["content"]
     finally:
         c.fechar()
+
+
+def test_so_o_ultimo_passo_da_cascata_fecha_a_missao():
+    """Revisão do PR 5 (24/10): pela correção do chat, o passo de produto rodava diagnóstico, aprendizado e catálogo sobre
+    a missão cujo design ele tinha acabado de apagar."""
+    c = _Cascata()
+    try:
+        c.rodar(_divisao().como_dict(), {"produto": [_proposta(_BOTAO_1P, _BOTAO_SPEC)],
+                                         "design": [_proposta(_PATIO_COPY)]}, com_transversal=True)
+        assert [(r["stages"], r["com_transversal"]) for r in c.runs] == [(["produto"], False), (["design"], True)]
+    finally:
+        c.fechar()
+
+
+def test_refazer_depois_do_design_que_falhou_corrige_o_design_pontualmente():
+    """Revisão do PR 5 (24/10): produto aplicado, design falhou (o backup devolve o estado sem os documentos de design);
+    no Refazer seguinte produto sai sem trocas, e o design tem de partir da versão anterior, pelo editor — não pelos
+    autores."""
+    c = _Cascata()
+    try:
+        eventos = c.rodar(_divisao().como_dict(), {"produto": [_proposta(_BOTAO_1P, _BOTAO_SPEC)],
+                                                   "design": [_proposta(_BOTAO_COPY, _PATIO_COPY)]}, falha_em=("design",))
+        assert eventos[-1]["type"] == "correcao_error"
+        intermediario = c.estado_final()
+        assert "Colocar no álbum" in intermediario["one_pager"] and not intermediario.get("copy_strings_revisada")
+        c.runs, c.editor = [], []
+        sem_trocas = ed.Proposta(modo=ed.MODO_PONTUAL, motivo="o one-pager já diz isso")
+        eventos = c.rodar(_divisao().como_dict(), {"produto": [sem_trocas],
+                                                   "design": [_proposta(_BOTAO_COPY, _PATIO_COPY)]})
+        assert [r["stages"] for r in c.runs] == [["design"]]
+        assert c.editor[-1]["etapa"] == "design" and c.editor[-1]["documentos"]["copy_strings_revisada"] == COPY.strip()
+        design = c.runs[0]["initial_state"]
+        assert design["modo_correcao"] == ed.MODO_PONTUAL
+        assert "Marque no pátio." in design["copy_strings_revisada"] and "Colocar no álbum" in design["copy_strings_revisada"]
+        assert eventos[-1]["type"] == "correcao_completed"
+    finally:
+        c.fechar()
+
+
+def test_decisao_do_po_e_conferida_em_cada_documento_e_por_contagem():
+    """Revisão do PR 5 (24/10): a decisão sumia do one-pager e a guarda não recusava porque a spec ainda a dizia."""
+    from pipeline.reexecucao import validador_das_decisoes
+
+    g = "90 s — PO, parecer de 21/10/2026"
+    estado = {"one_pager": f"Tempo: {g}\nOutro tempo: {g}\n", "spec_missao_gate0": f"- Tempo: {g}\n",
+              "spec_missao": f"- Tempo: {g}\n\n## 13. D0\n", "decisoes_do_po": [{"gravado": g}, {"gravado": g}]}
+    validar = validador_das_decisoes(estado)
+    assert validar({"one_pager": estado["one_pager"], "spec_missao": estado["spec_missao_gate0"]}) == []
+    # só o one-pager perde a decisão; a spec ainda a diz
+    erros = validar({"one_pager": "Tempo: 60 s\nOutro tempo: 60 s\n", "spec_missao": estado["spec_missao_gate0"]})
+    assert len(erros) == 1 and "one-pager" in erros[0]
+    # dois itens com o mesmo valor e a mesma data: apagar uma das ocorrências também é apagar
+    assert validar({"one_pager": f"Tempo: {g}\nOutro tempo: 60 s\n", "spec_missao": estado["spec_missao_gate0"]})
+    # só a spec perde
+    erros = validar({"one_pager": estado["one_pager"], "spec_missao": "- Tempo: 60 s\n"})
+    assert len(erros) == 1 and "spec" in erros[0]
 
 
 def test_cascata_nao_apaga_a_decisao_do_po_gravada_no_de_acordo():
