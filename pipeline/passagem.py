@@ -294,8 +294,9 @@ def perguntas_de_conferencia(etapa: str, acao: str) -> Tuple[Tuple[str, str], ..
 # ------------------------------------------------------------------ governança da liberação de produto (D9)
 def exige_justificativa(etapa: str, acao: str, estado: Dict[str, Any]) -> bool:
     """A exceção do admin que libera produto com gate 🔴 exige justificativa escrita (plano «Produto dono do contrato»,
-    D9). Até 24/10/2026 bastava o comentário de toda ação: a de 23/10 15:57 na exp02ef1b dizia «aprovado com falso
-    positivo», sem dizer qual gate nem por quê. Em design e dev, a exceção segue como antes."""
+    D9), e só em produto: em design e dev, a exceção segue como antes. Nas sessões de 24/10/2026 não há exceção de
+    produto com 🔴; as duas do admin foram de design, e a regra não as pegaria. Elas mostram o comentário que não justifica
+    nada: a de 23/10 15:57 na exp02ef1b dizia só «aprovado com falso positivo», sem dizer qual gate nem por quê."""
     return etapa == "produto" and acao == EXCECAO and "🔴" in semaforo_da_etapa(estado, etapa).values()
 
 
