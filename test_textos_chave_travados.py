@@ -560,3 +560,16 @@ def test_cartao_de_produto_mostra_a_tabela_dos_textos_chave():
     assert not at.exception
     assert at.expander[0].label.startswith("🔑 Textos-chave aprovados — 21 com ID")
     assert any("TC-01" in m.value for m in at.markdown)
+
+
+def test_outro_texto_do_po_entra_tambem_na_spec_que_copia_o_canal_b():
+    """O Canal B da exp02ef1b está no one-pager e no bloco 9 da spec do Gate 0: o texto que o PO escreve no de acordo
+    entra nos dois — trocado só no one-pager, a spec ficava com o texto velho."""
+    estado = _estado()
+    item = next(i for i in fc.itens_em_aberto(estado) if i.tipo == fc.TEXTO_TETO and "Para mostrar" in i.assunto)
+    assert {o.documento for o in item.ocorrencias} == {fc.DOC_ONE_PAGER, fc.DOC_SPEC}
+    novo = "O que precisa aparecer na foto?"
+    d = fc.decidir([item], {item.id: {"resposta": fc.OUTRO, "valor": novo}}, "24/10/2026 10:00:00", "produto")
+    novos, falhas = fc.aplicar_edicoes(estado, d.edicoes)
+    assert not falhas and set(novos) == {"one_pager", "spec_missao_gate0", "spec_missao"}
+    assert all(novo in texto and item.texto_chave not in texto for texto in novos.values())

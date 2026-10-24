@@ -311,14 +311,18 @@ def textos_acima_do_teto(estado: Dict[str, Any]) -> List[Item]:
     teto = tk.teto_de_palavras(one_pager, str(estado.get("briefing") or ""))
     tcs = tk.da_sessao(estado)
     itens: List[Item] = []
+    spec = documentos(estado)[DOC_SPEC]
     for tc, n in tk.acima_do_teto(tcs, teto, estado.get(KEY_DECISOES) or []):
-        linhas = [l for l in one_pager.splitlines() if tc.texto in l]
         por = "por frase" if teto.get("por") == "frase" else "por texto"
+        # o texto que o PO escreve no lugar entra no one-pager e na spec do Gate 0 que o copia (o Canal B do bloco 9):
+        # trocado só no one-pager, a spec seguia com o texto velho e o conteúdo aprovado da spec o acusava
+        ocorrencias = [Ocorrencia(documento=documento, linha=l, marcador=tc.texto, tipo=TEXTO_TETO)
+                       for documento, texto in ((DOC_ONE_PAGER, one_pager), (DOC_SPEC, spec))
+                       for l in dict.fromkeys(texto.splitlines()) if tc.texto in l]
         itens.append(Item(
             id=_id(TEXTO_TETO, tk.literal(tc.texto)), tipo=TEXTO_TETO,
             assunto=f"{tc.id} ({tc.origem}) «{tc.texto}» — {n} palavras, teto de {teto['valor']} {por} ({teto['origem']})",
-            sugestao="manter o texto aprovado", texto_chave=tc.texto,
-            ocorrencias=[Ocorrencia(documento=DOC_ONE_PAGER, linha=l, marcador=tc.texto, tipo=TEXTO_TETO) for l in linhas]))
+            sugestao="manter o texto aprovado", texto_chave=tc.texto, ocorrencias=ocorrencias))
     return itens
 
 
