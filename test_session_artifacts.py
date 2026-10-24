@@ -880,10 +880,20 @@ class TestReexecucao(unittest.TestCase):
         self.assertEqual(limpo["pedido_correcao"], "PEDIDO")
         self.assertIn("spec_missao", removidas)
 
-        design, _ = preparar_estado(self._estado(), "design")
-        self.assertEqual(design["spec_missao"], "spec gate0", "design refeito parte da spec do Gate 0")
+        # PR 6 (24/10/2026): o refazer de design não toca a spec de produto — o reset para a do Gate 0 virou no-op —, e
+        # o anexo de design cai com o design
+        design, _ = preparar_estado({**self._estado(), "anexo_design_spec": "## 13. Decisões D0"}, "design")
+        self.assertEqual(design["spec_missao"], "spec consolidada", "o refazer de design não muda a spec de produto")
+        self.assertNotIn("anexo_design_spec", design)
         self.assertNotIn("jornada_telas", design)
         self.assertNotIn("pedido_correcao", design)
+        # a sessão anterior ao PR 6 traz os blocos 13 e 14 dentro da spec: volta uma vez à spec de produto
+        legada = {**self._estado(), "spec_missao": "spec gate0\n\n## 13. Decisões D0\n[D0-1] x\n\n## 14. Ambiente\ny\n"}
+        design, _ = preparar_estado(legada, "design")
+        self.assertEqual(design["spec_missao"], "spec gate0", "a sessão antiga volta à spec do Gate 0")
+        sem_gate0 = {k: v for k, v in legada.items() if k != "spec_missao_gate0"}
+        design, _ = preparar_estado(sem_gate0, "design")
+        self.assertEqual(design["spec_missao"].strip(), "spec gate0", "sem a cópia do Gate 0, a spec sem os blocos 13 e 14")
 
         dev, _ = preparar_estado(self._estado(), "dev")
         self.assertEqual(dev["spec_missao"], "spec consolidada", "dev lê a spec consolidada pelo D0")

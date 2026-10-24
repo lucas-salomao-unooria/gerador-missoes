@@ -45,6 +45,8 @@ ARTIFACT_FILES = [
     ("one_pager_resumido", "produto/00d-one-pager-resumido.md"),
     ("fechamento_lacunas", "design/00-fechamento-lacunas.md"),
     ("relatorio_lacunas", "design/00a-relatorio-lacunas.md"),
+    # o anexo de design da spec (PR 6): blocos 13 (D0-UX) e 14 (D9), fora de `produto/05-spec-missao.md`
+    ("anexo_design_spec", "design/00-anexo-design-spec.md"),
     ("ambiente_simulado", "design/00b-ambiente-simulado.md"),
     ("brief_oficio", "design/01-briefing-oficio.md"),
     ("jornada_telas", "design/02-jornada-telas.md"),
@@ -68,6 +70,9 @@ ARTIFACT_FILES = [
     ("juiz_perguntas_report", "produto/05e-juiz-perguntas-de-produto.md"),
     ("rastro_spec_report", "produto/05f-rastro-lacunas-spec.md"),
     ("conteudo_aprovado_spec_report", "produto/05g-conteudo-aprovado.md"),
+    # o passo de completude da spec (PR 6): a resposta inteira e o relatório; o bloco 15 está na própria spec
+    ("completude_spec", "produto/05h-completude-spec.md"),
+    ("relatorio_completude", "produto/05i-relatorio-completude.md"),
     ("manifesto_report", "dev/00-ficha-manifesto.md"),
     ("handoff_dev", "dev/01-handoff-dev.md"),
     ("brief_assets", "dev/01b-brief-assets.md"),

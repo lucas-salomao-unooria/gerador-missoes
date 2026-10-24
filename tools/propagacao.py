@@ -96,6 +96,11 @@ def documentos(state: Dict[str, Any]) -> Dict[str, str]:
     chaves = (set(CONTRATO) | set(DOCUMENTOS_DE_SAIDA) | set(CONTRATO_PROCEDENCIA) | set(PROCEDENCIA_DESIGN)
               | set(PROCEDENCIA_DEV) | set(CITAM_D0)) - {"spec_produto"}
     docs = {k: str(state.get(k) or "") for k in chaves}
+    # desde o PR 6 os blocos 13 e 14 moram no anexo de design: a `spec_missao` da régua é a spec de produto mais o anexo,
+    # como a da sessão anterior, que os trazia dentro (`tools.anexo_design.spec_consolidada`)
+    from tools.anexo_design import spec_consolidada
+
+    docs["spec_missao"] = spec_consolidada(state)
     docs["spec_produto"] = spec_de_produto(docs.get("spec_missao", ""))
     if spec_gate0_inferida(state):
         docs["spec_missao_gate0"] = docs["spec_produto"]
@@ -265,6 +270,21 @@ _TEXTO_PRODUTO: Tuple[Tuple[str, "re.Pattern[str]"], ...] = (
     ("revezamento", re.compile(r"revezamento", re.I)),
     ("dados e retenção", re.compile(r"reten[çc][ãa]o|ano letivo|anonimiza", re.I)),
 )
+
+
+def topico_de_produto(d: Dict[str, Any]) -> str:
+    """O tópico que o plano dá a produto (painel, PQ e KPI, dados e retenção, texto do professor, revezamento) no campo,
+    no título ou no texto da decisão, ou "" — a mesma régua de `classificar_d0`, para o D0-UX do PR 6."""
+    chave = re.sub(r"[\s-]+", "_", _sem_acento(f"{d.get('campo', '')} {d.get('titulo', '')} {d.get('base', '')}"))
+    for nome, rx in _TOPICO_PRODUTO:
+        if rx.search(chave):
+            return nome
+    for nome, rx in _TEXTO_PRODUTO:
+        if rx.search(str(d.get("decisao") or "")):
+            return nome
+    return ""
+
+
 #: Número que decide regra de produto (tempo, teto, porcentagem). `px` é alvo de toque: acessibilidade de componente.
 _RE_NUMERO = re.compile(r"(?<![\w.,/])(\d+(?:[.,]\d+)?)\s?(%|segundos?\b|seg\b|s\b|minutos?\b|min\b|palavras\b|caracteres\b|px\b)",
                         re.I)
@@ -375,12 +395,19 @@ def recusas_do_po(pareceres: str) -> List[Dict[str, Any]]:
 
 def decisoes_d0(state: Dict[str, Any]) -> List[Dict[str, Any]]:
     """As decisões do D0: o envelope dá classe, cor e base declaradas; o «Passo 3» do fechamento dá o texto."""
-    fechamento = str(state.get("fechamento_lacunas") or "")
+    return decisoes_do_agente(str(state.get("fechamento_lacunas") or ""), state.get("lacunas_status_envelope") or {})
+
+
+def decisoes_do_agente(fechamento: str, envelope: Dict[str, Any], prefixo: str = "D0") -> List[Dict[str, Any]]:
+    """As decisões `[<prefixo>-n]` de uma resposta no formato do D0: as do D0 (`D0`) ou as do passo de completude de
+    produto (`CP`, prompt 046, PR 6), que segue o mesmo formato — «Passo 3» com as decisões e o envelope com a classe."""
     i = fechamento.find("Passo 3")
     j = fechamento.find("Passo 4", i + 1) if i >= 0 else -1
     trecho = fechamento[i:j] if i >= 0 and j > i else fechamento
     textos: Dict[str, Dict[str, str]] = {}
-    cabecalhos = list(_RE_D0_CABECALHO.finditer(trecho))
+    cabecalho_re = _RE_D0_CABECALHO if prefixo == "D0" else re.compile(
+        rf"^[#>\s`*-]*\[({re.escape(prefixo)}-\d+)\]\**\s*(.*)$", re.M)
+    cabecalhos = list(cabecalho_re.finditer(trecho))
     for k, m in enumerate(cabecalhos):
         if m.group(1) in textos:
             continue
@@ -392,7 +419,7 @@ def decisoes_d0(state: Dict[str, Any]) -> List[Dict[str, Any]]:
             campos.setdefault(chave, re.sub(r"\s+", " ", valor.replace("```", " ")).strip(" -—*`"))
         textos[m.group(1)] = {"titulo": m.group(2).strip(" *`"), "decisao": campos.get("decisao", corpo.strip()[:1500]),
                               "base_texto": campos.get("base", "")}
-    envelope = state.get("lacunas_status_envelope") or {}
+    envelope = envelope if isinstance(envelope, dict) else {}
     declaradas = [d for d in envelope.get("decisoes") or [] if isinstance(d, dict) and d.get("id")]
     if not declaradas:
         declaradas = [{"id": i} for i in textos]

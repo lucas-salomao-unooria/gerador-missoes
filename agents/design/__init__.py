@@ -4,12 +4,14 @@ Ordem (SequentialAgent). O MCP do Figma foi removido — não há cliente oficia
 aqui, e board em ferramenta que ninguém abre não é entregável. A jornada e o fluxo saem em
 Mermaid (remontados em `design/09-diagramas.html`), as telas saem no Stitch, e o protótipo
 HTML é o que a revisão humana de fato abre.
-  d0  A065FechaLacunas       → fechamento_lacunas   (varredura, decisões [D0-n], re-specs [RS-n])
-  d0c A066FechaLacunasSplit       → spec_missao (montada em código: Gate 0 + bloco 13 [+ 14]) ·
-                                 spec_missao_gate0 (cópia da original) · relatorio_lacunas · lacunas_status
+  d0  A065FechaLacunas       → fechamento_lacunas   (D0-UX: varredura de UI/UX, decisões [D0-n] só da tela de
+                                 cada estado, gesto, scaffolding, acessibilidade de componente e dispositivo; o resto é
+                                 de produto)
+  d0c A066FechaLacunasSplit       → anexo_design_spec (montado em código: bloco 13 [+ 14]) · relatorio_lacunas ·
+                                 lacunas_status — a `spec_missao` de produto não muda
   d9  A067AmbienteSimulado    → ambiente_simulado   (condicional: decide o ambiente quando a
                                  spec cala; dormente emite só a ficha do bloco 14)
-  d9c A068AmbienteSimuladoSplit   → spec_missao (com bloco 14) · ambiente_status
+  d9c A068AmbienteSimuladoSplit   → anexo_design_spec (com bloco 14) · ambiente_status
   d1  A070BriefOficio        → brief_oficio
   d2  A071Jornada      → jornada_telas   (mapa de jornada + inventário + direção)
   d3  A072Fluxo        → fluxo_arestas   (grafo de telas + 5 testes)
@@ -33,9 +35,10 @@ HTML é o que a revisão humana de fato abre.
 
 D0 e D9 emitem dois documentos numa única resposta (o bloco deles e o próprio relatório). Um
 `LlmAgent` grava uma só chave, então cada um é seguido por um `SecaoSplitAgent` determinístico que
-monta a spec em código — a aceita com o bloco 13 (D0) ou 14 (D9) trocado — em `spec_missao`: é
-assim que D1–D7 leem a spec consolidada sem saber que D0/D9 existiram, e o texto do Gate 0 não muda
-por modelo (mudança nele vira `[ABERTO — dono: PO]` no cartão do parecer de design). O status de D0 e D9 é
+monta em código o anexo de design — o aceito com o bloco 13 (D0) ou 14 (D9) trocado — em `anexo_design_spec`
+(`design/00-anexo-design-spec.md`). Desde o PR 6 do plano «Produto dono do contrato» a `spec_missao` é a de produto,
+igual à que o PO aprovou: o design não a escreve, e D1–D7 leem a spec de produto mais o anexo. O texto de produto não
+muda por modelo (mudança nele vira `[ABERTO — dono: PO]` no cartão do parecer de design). O status de D0 e D9 é
 informativo: não há loop de re-spec com o Gate 0 na esteira, então `aguarda_gate`
 aparece como 🔴 na UI e o pipeline segue com os `RS-n` carimbados como pendentes.
 """
@@ -69,6 +72,7 @@ from agents.checkers import (
 )
 from config import get_settings
 from prompts import load_prompt
+from tools.anexo_design import KEY_ANEXO
 from tools.conteudo_aprovado import SECOES_DESIGN
 from tools.rastro import FONTES_DESIGN
 from tools.stitch_mcp import STITCH_TOOLS_QA, stitch_tools_or_empty
@@ -82,6 +86,8 @@ D0_RELATORIO_FIM = _H + r"Passo 6\b.*$"      # "## Passo 6 — Devolutiva ao pro
 D9_SPEC_INICIO = _H + r"Passo 4\b.*$"        # "## Passo 4 — Spec consolidada (blocos 1–13 ... + bloco 14)"
 D9_SPEC_FIM = _H + r"Bloco 14\b.*$"          # "## Bloco 14 — Ficha do ambiente"
 SPEC_MINIMO_CHARS = 1500
+#: O anexo de design tem só os blocos 13 e 14 (PR 6): o mínimo é o do bloco, não o da spec inteira.
+ANEXO_MINIMO_CHARS = 200
 
 
 def _stitch_vars() -> dict:
@@ -95,7 +101,7 @@ def _stitch_vars() -> dict:
 def get_fecha_lacunas_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A065FechaLacunas",
-        description="Fechamento de lacunas da spec antes do design: varredura célula a célula, decisões [D0-n] com base declarada, pedidos de re-spec [RS-n] e spec consolidada com bloco 13.",
+        description="D0-UX, antes do design: varredura do que a spec de produto deixa de UI/UX, decisões [D0-n] só da tela de cada estado, gesto, scaffolding, acessibilidade de componente e dispositivo, e o bloco 13 do anexo de design.",
         instruction=load_prompt("design/065_fechamento_lacunas.md"),
         output_key="fechamento_lacunas",
         before_agent_callback=marcar_heranca,
@@ -106,25 +112,26 @@ def get_fecha_lacunas_agent(**kw) -> LlmAgent:
 def get_fecha_lacunas_split() -> SecaoSplitAgent:
     return SecaoSplitAgent(
         name="A066FechaLacunasSplit",
-        description="Monta em código a spec consolidada — a do Gate 0 + o bloco 13 do D0 + o bloco 14 que já houver — em `spec_missao`, preserva a original em `spec_missao_gate0`, separa o relatório de preenchimento em `relatorio_lacunas` e registra `lacunas_status`.",
+        description="Monta em código o anexo de design — o bloco 13 do D0 e o bloco 14 que já houver — em `anexo_design_spec`, sem tocar a spec de produto; separa o relatório de preenchimento em `relatorio_lacunas` e registra `lacunas_status`.",
         rotulo="Fechamento de lacunas (D0)",
         source_key="fechamento_lacunas",
         status_key="lacunas_status",
         estrito=get_settings().esteira_estrita,
         extracoes=[
             {
-                "chave": "spec_missao",
+                # PR 6 do plano «Produto dono do contrato» (23/10/2026): o bloco 13 vai para o anexo de design, e a
+                # `spec_missao` fica a aprovada em produto. Até aqui o A066 reescrevia a spec, que tinha dois autores
+                # sob um nome só e voltava ao Gate 0 em todo refazer de design
+                "chave": KEY_ANEXO,
+                "anexo_de": "spec_missao",
                 "inicio": D0_SPEC_INICIO,
                 "fim": D0_SPEC_FIM,
                 "exigir": r"^##\s*13\b",
-                "minimo_chars": SPEC_MINIMO_CHARS,
-                "minimo_fracao": 0.8,
-                "backup": "spec_missao_gate0",
-                # o que o Gate 0 escreveu não some na consolidação (exp06ef1b perdeu a pergunta 3 do debate)
+                "minimo_chars": ANEXO_MINIMO_CHARS,
+                # o que o autor de antes escreveu no anexo (o bloco 14 do D9) não some na consolidação
                 "preservar": "fecha-lacunas",
-                # Spec montada em código, como a do D9 desde 7fdcb19: do D0 só entra o bloco 13, no lugar dele. O D0
-                # reemitia a spec inteira, a preservação acusava linhas-perdidas, e o D9 montava por cima do Gate 0 —
-                # o bloco 13 sumiu em 60cfa7f4 e 4fd72a9a (plano «Produto dono do contrato», PR 2, 23/10/2026)
+                # Montado em código, como desde 23/10/2026 (PR 2): do D0 só entra o bloco 13, no lugar dele. O D0 reemitia
+                # a spec inteira, a preservação acusava linhas-perdidas, e o bloco 13 sumiu em 60cfa7f4 e 4fd72a9a
                 "bloco_proprio": r"^##\s*13\b.*$",
                 "bloco_obrigatorio": True,
                 "autor": "D0",
@@ -159,7 +166,7 @@ def get_spec_consolidada_check(nome: str) -> RastroCheckAgent:
     `bncc_status` e o `conteudo_aprovado_spec_status` ficavam verdes sobre uma spec que o design tinha trocado."""
     return RastroCheckAgent(
         name=nome,
-        description="Spec consolidada pelo D0 e pelo D9 × one-pager aprovado: habilidades, tempo em tela, podcast, Canal B, debate e parâmetros a definir — só o que piorou desde a spec do Gate 0.",
+        description="Spec de produto mais o anexo de design (D0 e D9) × one-pager aprovado: habilidades, tempo em tela, podcast, Canal B, debate e parâmetros a definir — só o que o anexo piorou contra a spec de produto.",
         modo="aprovado_spec_design",
         rotulo="Spec consolidada × one-pager aprovado",
         report_key="conteudo_aprovado_spec_design_report",
@@ -173,21 +180,21 @@ def get_spec_consolidada_check(nome: str) -> RastroCheckAgent:
 def get_ambiente_simulado_split() -> SecaoSplitAgent:
     return SecaoSplitAgent(
         name="A068AmbienteSimuladoSplit",
-        description="Copia a spec consolidada com o bloco 14 do D9 para `spec_missao` e registra `ambiente_status` (dormente | existente | novo | aguarda_gate).",
+        description="Monta em código o anexo de design com o bloco 14 do D9 em `anexo_design_spec`, sem tocar a spec de produto, e registra `ambiente_status` (dormente | existente | novo | aguarda_gate).",
         rotulo="Ambiente simulado (D9)",
         source_key="ambiente_simulado",
         status_key="ambiente_status",
         estrito=get_settings().esteira_estrita,
         extracoes=[
             {
-                "chave": "spec_missao",
+                "chave": KEY_ANEXO,
+                "anexo_de": "spec_missao",
                 "inicio": D9_SPEC_INICIO,
                 "fim": D9_SPEC_FIM,
                 "exigir": r"14",
-                "minimo_chars": SPEC_MINIMO_CHARS,
-                "minimo_fracao": 0.8,
+                "minimo_chars": ANEXO_MINIMO_CHARS,
                 "preservar": "ambiente-simulado",
-                # blocos 0–13 copiados da spec aceita pelo código; do D9 só entra o bloco 14
+                # a spec de produto e o bloco 13 vêm do estado, pelo código; do D9 só entra o bloco 14 (PR 6: no anexo)
                 "bloco_proprio": r"^##\s*14\b.*$",
                 "autor": "D9",
             },
@@ -324,7 +331,7 @@ ORDEM_RETRABALHO = [
 
 #: Slug do envelope → cadeia de agentes que o conserto exige, em ordem.
 #: D0 e D9 emitem dois documentos numa resposta só: sem o split logo atrás, a correção
-#: fica presa no relatório e nunca chega à `spec_missao` que o resto da esteira lê.
+#: fica presa no relatório e nunca chega ao anexo de design (`anexo_design_spec`) que o resto da esteira lê.
 MAPA_RETRABALHO = {
     "fecha-lacunas": ["A065FechaLacunasRetrabalho", "A066FechaLacunasSplitRetrabalho", "A069SpecConsolidadaRetrabalho"],
     "ambiente-simulado": ["A067AmbienteSimuladoRetrabalho", "A068AmbienteSimuladoSplitRetrabalho",
@@ -378,7 +385,7 @@ def _agentes_de_retrabalho(**kw) -> list:
         agente.description = f"{agente.description} (rodada de retrabalho: só roda com ticket do QA)"
         agentes.append(agente)
 
-    # Determinísticos: sem eles a correção do D0/D9 não vira `spec_missao` e o HTML do
+    # Determinísticos: sem eles a correção do D0/D9 não vira o anexo de design e o HTML do
     # protótipo não é separado do relatório que o acompanha.
     split_lacunas = get_fecha_lacunas_split()
     split_lacunas.name = "A066FechaLacunasSplitRetrabalho"
@@ -459,7 +466,7 @@ def build_qa_design_loop(**kw) -> LoopAgent:
             ),
             EnvelopeGateAgent(
                 name="A090QaEntregaveisCheck",
-                documentos=["spec_missao", "jornada_telas", "fluxo_arestas", "copy_strings_revisada", "camada_caa", "wireframes_cobertura", "prototipo_arquivo", "prototipo_relatorio", "stitch_links", "ambiente_simulado", "brief_oficio"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
+                documentos=["spec_missao", KEY_ANEXO, "jornada_telas", "fluxo_arestas", "copy_strings_revisada", "camada_caa", "wireframes_cobertura", "prototipo_arquivo", "prototipo_relatorio", "stitch_links", "ambiente_simulado", "brief_oficio"],  # citação dos bloqueios conferida em código (`tools/citacoes.py`)
                 description="Lê o veredito do QA de entregáveis: aprovado encerra o loop; 🔴 na última rodada impede o dev e o PRD (modo estrito).",
                 rotulo="QA de entregáveis (design)",
                 report_key="qa_entregaveis_report",
@@ -554,7 +561,7 @@ def build_design_stage(
             # Cobrada aqui, ela aparece no parecer de design, onde o designer ainda pode refazer.
             RastroCheckAgent(
                 name="A092RastroDesign",
-                description="Marcadores de lacuna na spec consolidada e nos documentos de design: o de design bloqueia; o que o D0 fechou (mapa célula → D0 do bloco 13) não conta; o de produto já aprovado e o de dev ficam 🟡; [D0-n] citado e ausente do bloco 13 bloqueia.",
+                description="Marcadores de lacuna na spec de produto, no anexo de design e nos documentos de design: o de design bloqueia; o que o D0 fechou (mapa célula → D0 do bloco 13) ou a completude de produto fechou (mapa do bloco 15) não conta; o de produto já aprovado e o de dev ficam 🟡; [D0-n] citado e ausente do bloco 13 do anexo bloqueia.",
                 modo="lacunas",
                 rotulo="Rastro de lacunas do design",
                 report_key="rastro_design_report",
@@ -581,18 +588,19 @@ def build_design_stage(
     )
 
 
-#: Onde o pedido de refazer de design tem de aparecer: o que o design escreve, e a spec que o D0 e o D9 consolidam.
-FIDELIDADE_DOCUMENTOS_DESIGN = ["spec_missao", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings_revisada",
+#: Onde o pedido de refazer de design tem de aparecer: o que o design escreve — desde o PR 6, o anexo de design no lugar
+#: da spec, que o design não muda (o item de produto é conferido a montante: «aplicado a montante», PR 5).
+FIDELIDADE_DOCUMENTOS_DESIGN = [KEY_ANEXO, "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings_revisada",
                                 "camada_caa", "wireframes_cobertura"]
 
 
 DESIGN_METADATA = [
     {"id": "A064ConteudoAprovadoDesign", "name": "064 · Conteúdo aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado", "prompt_file": None, "description": "As seções do one-pager aprovado — o núcleo (descoberta, narrativa e as 6 etapas com o texto de tela), currículo, falhas, professor, tempos e cenários, podcast, contrato de evidência, dispositivos, hipóteses —, literais, para os agentes de design que não leem o one-pager."},
-    {"id": "A065FechaLacunas", "name": "065 · Fechamento de lacunas", "icon": "🧩", "output_key": "fechamento_lacunas", "prompt_file": "design/065_fechamento_lacunas.md", "description": "Varredura da spec célula a célula, decisões [D0-n] com base declarada, pedidos de re-spec [RS-n], bloco 13 (com o mapa célula → D0) e relatório de preenchimento."},
-    {"id": "A066FechaLacunasSplit", "name": "066 · Relatório de lacunas + spec consolidada (determinístico)", "icon": "✂️", "output_key": "relatorio_lacunas", "prompt_file": None, "description": "Monta `spec_missao` em código — spec do Gate 0 + bloco 13 do D0 + bloco 14 (original preservada em `spec_missao_gate0`) —, separa o relatório e registra `lacunas_status`. Mudança no texto do Gate 0 vira `[ABERTO — dono: PO]`; decisão de produto sem parecer datado bloqueia."},
+    {"id": "A065FechaLacunas", "name": "065 · Fechamento de lacunas de UI/UX (D0-UX)", "icon": "🧩", "output_key": "fechamento_lacunas", "prompt_file": "design/065_fechamento_lacunas.md", "description": "Mandato só de UI/UX desde o PR 6: varredura do que a spec de produto deixa da tela de cada estado, gesto, scaffolding, acessibilidade de componente e dispositivo, decisões [D0-n] com base declarada, bloco 13 do anexo de design (com o mapa célula → D0) e relatório de preenchimento. O que é de produto vira `[ABERTO — dono: PO]`."},
+    {"id": "A066FechaLacunasSplit", "name": "066 · Relatório de lacunas + anexo de design (determinístico)", "icon": "✂️", "output_key": "relatorio_lacunas", "prompt_file": None, "description": "Monta em código o anexo de design (`anexo_design_spec`, `design/00-anexo-design-spec.md`) — bloco 13 do D0 + bloco 14 que já houver —, sem tocar a spec de produto; separa o relatório e registra `lacunas_status`. Mudança no texto de produto vira `[ABERTO — dono: PO]`; decisão de produto (classe fora do D0-UX, tópico de produto, [PARÂMETRO]/[PROPOSTA] fechado sem parecer datado) bloqueia."},
     {"id": "A067AmbienteSimulado", "name": "067 · Ambiente simulado", "icon": "🏝️", "output_key": "ambiente_simulado", "prompt_file": "design/067_ambiente_simulado.md", "description": "Condicional: decide o ambiente (app clonado existente, app novo ou mini-jogo) quando a spec cala; dormente emite só a ficha do bloco 14 que D1, D2, D4, D5 e o QA consomem."},
-    {"id": "A068AmbienteSimuladoSplit", "name": "068 · Spec com bloco 14 (determinístico)", "icon": "✂️", "output_key": "ambiente_status", "prompt_file": None, "description": "Copia a spec com o bloco 14 para `spec_missao` e registra `ambiente_status`."},
-    {"id": "A069SpecConsolidada", "name": "069 · Spec consolidada × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_spec_design_report", "prompt_file": None, "description": "A spec que o D0 e o D9 reescreveram, contra o one-pager aprovado: habilidades, tempo em tela, podcast, Canal B, debate e parâmetros a definir. Só o que piorou desde a spec do Gate 0; o conserto vai ao D0 pelo QA."},
+    {"id": "A068AmbienteSimuladoSplit", "name": "068 · Anexo com bloco 14 (determinístico)", "icon": "✂️", "output_key": "ambiente_status", "prompt_file": None, "description": "Grava o bloco 14 do D9 no anexo de design, sem tocar a spec de produto, e registra `ambiente_status`."},
+    {"id": "A069SpecConsolidada", "name": "069 · Spec consolidada × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_spec_design_report", "prompt_file": None, "description": "A spec de produto mais o anexo de design (D0 e D9) contra o one-pager aprovado: habilidades, tempo em tela, podcast, Canal B, debate e parâmetros a definir. Só o que o anexo piorou contra a spec de produto; o conserto vai ao D0 pelo QA."},
     {"id": "A070BriefOficio", "name": "070 · Briefing de ofício", "icon": "🎯", "output_key": "brief_oficio", "prompt_file": "design/070_brief_oficio.md", "description": "Aposta, forma do arco, pico, beat memorável, mapa de beats, não-negociáveis."},
     {"id": "A071Jornada", "name": "071 · Jornada (Mermaid)", "icon": "🗺️", "output_key": "jornada_telas", "prompt_file": "design/071_jornada.md", "description": "Raias × 6 etapas, cenários de dispositivo, inventário de telas e direção por tela."},
     {"id": "A072Fluxo", "name": "072 · Fluxo de telas (Mermaid)", "icon": "🕸️", "output_key": "fluxo_arestas", "prompt_file": "design/072_fluxo.md", "description": "Grafo de telas com condições, gates e os 5 testes de fluxo."},
@@ -616,7 +624,7 @@ DESIGN_METADATA = [
     {"id": "A089QaAfirmacoes", "name": "089 · Afirmações do QA (determinístico)", "icon": "🔎", "output_key": "qa_afirmacoes_report", "prompt_file": None, "description": "Contagens de telas (\"todas as N telas\", \"N de M\") e nomes de arquivo que o QA escreveu, contra o inventário da jornada, o Stitch, o protótipo e `pipeline/artifacts.py`. Divergência reescreve o veredito do QA como bloqueado; Stitch com menos telas que o inventário vira ticket para `telas`. Pegou as \"16 telas\" de um Stitch com 6 na exp09ef1b."},
     {"id": "A090QaEntregaveisCheck", "name": "090 · Veredito de design (determinístico)", "icon": "🔀", "output_key": "design_status", "prompt_file": None, "description": "Lê o envelope do QA de entregáveis."},
     {"id": "A091DespachoDesign", "name": "091 · Retrabalho de design (determinístico)", "icon": "🔁", "output_key": "tickets_retrabalho", "prompt_file": None, "description": "Reexecuta só os agentes com ticket do QA, na ordem de precedência do prompt, e refaz o protótipo depois."},
-    {"id": "A092RastroDesign", "name": "092 · Rastro de lacunas do design (determinístico)", "icon": "🧭", "output_key": "rastro_design_report", "prompt_file": None, "description": "Marcadores de lacuna na spec consolidada e nos documentos de design: o de design bloqueia a etapa; o que o fechamento de lacunas fechou (mapa célula → D0 do bloco 13) não conta; o de produto já aprovado e o de dev ficam 🟡; [D0-n] citado e ausente do bloco 13 bloqueia."},
+    {"id": "A092RastroDesign", "name": "092 · Rastro de lacunas do design (determinístico)", "icon": "🧭", "output_key": "rastro_design_report", "prompt_file": None, "description": "Marcadores de lacuna na spec de produto, no anexo de design e nos documentos de design: o de design bloqueia a etapa; o que o D0 fechou (mapa célula → D0 do bloco 13) e a completude de produto (mapa do bloco 15) não conta; o de produto já aprovado e o de dev ficam 🟡; [D0-n] citado e ausente do bloco 13 do anexo bloqueia."},
     {"id": "A093RastreabilidadeDesign", "name": "093 · Matriz de rastreabilidade (determinístico)", "icon": "🧷", "output_key": "rastreabilidade_report", "prompt_file": None, "description": "Cada requisito do produto (habilidades, textos literais, tempo, telas, estados, seção do DS) procurado em cada artefato de design; o que se perdeu sai com o dono."},
-    {"id": "A094FidelidadeDesign", "name": "094 · Fidelidade ao refazer de design", "icon": "📌", "output_key": "fidelidade_design_report", "prompt_file": None, "description": "Cada pedido de refazer feito ao design (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) conferido na spec consolidada, no brief, na jornada, no fluxo, na copy, na CAA e nas telas: o juiz cita, o código confere. Sem pedido de design, não roda. 🔴 recusa o de acordo."},
+    {"id": "A094FidelidadeDesign", "name": "094 · Fidelidade ao refazer de design", "icon": "📌", "output_key": "fidelidade_design_report", "prompt_file": None, "description": "Cada pedido de refazer feito ao design (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) conferido no anexo de design, no brief, na jornada, no fluxo, na copy, na CAA e nas telas: o juiz cita, o código confere. Sem pedido de design, não roda. 🔴 recusa o de acordo."},
 ]

@@ -370,6 +370,8 @@ FONTES_SPEC: List[Dict[str, str]] = [
     {"chave": "spec_missao", "rotulo": "spec da missão", "etapa_padrao": "produto"},
 ]
 FONTES_DESIGN: List[Dict[str, str]] = FONTES_SPEC + [
+    # o bloco 13 (D0-UX) e o 14 (D9) moram no anexo de design desde o PR 6: a `spec_missao` é a de produto
+    {"chave": "anexo_design_spec", "rotulo": "anexo de design da spec", "etapa_padrao": "design"},
     {"chave": "jornada_telas", "rotulo": "jornada", "etapa_padrao": "design"},
     {"chave": "fluxo_arestas", "rotulo": "fluxo", "etapa_padrao": "design"},
     {"chave": "copy_strings_revisada", "rotulo": "copy revisada", "etapa_padrao": "design"},
@@ -392,8 +394,14 @@ _POSICAO_NA_ESTEIRA = {"input": 0, "produto": 0, "design": 1, "dev": 2}
 
 #: `— Resolvido em [D0-09]`: a marca que o fechamento de lacunas (D0) põe na linha do `[ABERTO]`
 #: que ele fechou. O número é comparado sem zero à esquerda, porque o bloco 13 escreve `[D0-9]`.
-_RE_RESOLVIDO_D0 = re.compile(r"resolvid[oa]s?\s+(?:em|no|na|pel[oa])\s*\[?\s*D0-0*(\d+)\s*\]?", re.IGNORECASE)
+#: Desde o PR 6 as decisões do passo de completude de produto (`[CP-n]`, bloco 15 da spec) fecham célula do mesmo jeito.
+_RE_RESOLVIDO_D0 = re.compile(r"resolvid[oa]s?\s+(?:em|no|na|pel[oa])\s*\[?\s*(D0|CP)-0*(\d+)\s*\]?", re.IGNORECASE)
 _RE_DECISAO_D0 = re.compile(r"\[\s*D0-0*(\d+)\s*\]")
+_RE_DECISAO = re.compile(r"\[\s*(D0|CP)-0*(\d+)\s*\]", re.IGNORECASE)
+
+
+def _id(prefixo: str, numero: str) -> str:
+    return f"{prefixo.upper()}-{int(numero)}"
 
 
 #: O título do mapa célula → D0, dentro do bloco 13: «### Mapa célula → D0».
@@ -429,14 +437,31 @@ def mapa_celula_d0(texto: str) -> Dict[str, int]:
     Desde 23/10/2026 a spec é a do Gate 0 + 13 + 14, montada em código: o D0 não escreve mais ` — Resolvido em [D0-n]`
     na linha do `[ABERTO]` que fechou (plano «Produto dono do contrato», PR 2). A marca passou a viver no bloco 13, numa
     tabela «marcador → decisão», e some com ele — nunca fica marcando o texto do Gate 0 sem a decisão que a sustenta."""
-    mapa: Dict[str, int] = {}
+    return {k: int(v.split("-")[1]) for k, v in mapa_celula(texto).items() if v.startswith("D0-")}
+
+
+def mapa_celula(texto: str) -> Dict[str, str]:
+    """`{marcador normalizado: "D0-n" | "CP-n"}` dos mapas célula → decisão: o do bloco 13 (D0-UX, no anexo de design) e
+    o do bloco 15 (completude de produto, na spec, PR 6)."""
+    mapa: Dict[str, str] = {}
     for linha in _linhas_do_mapa(texto):
-        d0 = _RE_DECISAO_D0.findall(linha)
-        if not d0:
+        ids = _RE_DECISAO.findall(linha)
+        if not ids:
             continue
         for marcador in marcadores_de_lacuna(linha):
-            mapa.setdefault(_norm_marcador(marcador), int(d0[-1]))
+            mapa.setdefault(_norm_marcador(marcador), _id(*ids[-1]))
     return mapa
+
+
+def _decisoes(textos: List[str]) -> set:
+    """Os ids `D0-n` e `CP-n` que existem: citados numa linha que não é a marca de resolvido nem do mapa (`_decisoes_d0`)."""
+    ids: set = set()
+    for texto in textos:
+        do_mapa = {l.strip() for l in _linhas_do_mapa(texto)}
+        for linha in texto.splitlines():
+            if not _RE_RESOLVIDO_D0.search(linha) and linha.strip() not in do_mapa:
+                ids.update(_id(p, n) for p, n in _RE_DECISAO.findall(linha))
+    return ids
 
 
 def _decisoes_d0(textos: List[str]) -> set:
@@ -456,61 +481,78 @@ def _decisoes_d0(textos: List[str]) -> set:
     return numeros
 
 
-_RE_TITULO_13 = re.compile(r"^##\s*\**\s*13\b.*$", re.MULTILINE)
-_RE_D0_CITADO = re.compile(r"\bD0-0*(\d+)\b")
-
-
 def decisoes_do_bloco_13(spec: str) -> Optional[set]:
     """Os números [D0-n] que o bloco 13 da spec define (sem as linhas do mapa célula → D0), ou `None` sem o bloco."""
-    m = _RE_TITULO_13.search(spec or "")
+    return decisoes_do_bloco(spec, "13", "D0")
+
+
+def decisoes_do_bloco(spec: str, numero: str, prefixo: str) -> Optional[set]:
+    """Os números `[<prefixo>-n]` que o bloco `## <numero>` define (sem as linhas do mapa célula → decisão), ou `None`
+    sem o bloco: o 13 (D0, no anexo de design) e o 15 (completude de produto, `CP`, na spec — PR 6)."""
+    m = re.search(rf"^##\s*\**\s*{numero}\b.*$", spec or "", re.MULTILINE)
     if not m:
         return None
     fim = re.search(r"^## ", spec[m.end():], re.MULTILINE)
     bloco = spec[m.start(): m.end() + fim.start() if fim else len(spec)]
     do_mapa = {l.strip() for l in _linhas_do_mapa(bloco)}
-    return {int(n) for linha in bloco.splitlines() if linha.strip() not in do_mapa for n in _RE_D0_CITADO.findall(linha)}
+    citado = re.compile(rf"\b{prefixo}-0*(\d+)\b")
+    return {int(n) for linha in bloco.splitlines() if linha.strip() not in do_mapa for n in citado.findall(linha)}
+
+
+#: Onde mora a decisão de cada prefixo citado a jusante (PR 6): o D0-UX no bloco 13 do anexo de design, a completude de
+#: produto no bloco 15 da spec. `(prefixo, bloco, código do achado, dono quando o bloco falta, onde o bloco mora)`.
+_DECISOES_CITAVEIS = (
+    ("D0", "13", "d0-orfao", "fecha-lacunas", "no anexo de design (decisões do D0)"),
+    ("CP", "15", "cp-orfao", "completude-spec", "na spec de produto (completude, passo 046)"),
+)
 
 
 def d0_orfaos(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Achado `d0-orfao` para cada documento que cita [D0-n] que o bloco 13 da spec não define.
+    """Achado `d0-orfao` para cada documento que cita [D0-n] que o bloco 13 não define — e `cp-orfao` para [CP-n] que o
+    bloco 15 da spec não define.
 
     O PRD da 4fd72a9a (exp02ef1b, 22/10/2026) citava D0-1 e D0-6 apontando para `produto/05-spec-missao.md`, que não
     tinha nenhum: o bloco 13 tinha caído na montagem (linhas-perdidas). O fluxo, a copy, as telas e a CAA dela e da
     60cfa7f4 (exp02em1b), e o handoff dela, citavam o mesmo vazio. Quem lê a citação abre a spec e não acha a decisão (plano «Produto dono do
-    contrato», PR 2). A spec é a que os documentos apontam (`spec_missao`); o anexo do PRD não conta."""
+    contrato», PR 2). Desde o PR 6 o bloco 13 mora no anexo de design, e a régua lê a spec de produto mais o anexo
+    (`tools.anexo_design.spec_consolidada`); na sessão anterior, a `spec_missao` com os blocos dentro. O anexo do PRD não
+    conta."""
+    from tools.anexo_design import KEY_ANEXO, spec_consolidada
     from tools.conteudo_aprovado import remover_anexo
 
-    spec = str(state.get("spec_missao") or "")
-    definidos = decisoes_do_bloco_13(spec)
+    spec = spec_consolidada(state)
     saida: List[Dict[str, Any]] = []
-    for fonte in fontes:
-        texto = state.get(fonte["chave"])
-        if fonte["chave"] == "spec_missao" or not isinstance(texto, str) or not texto:
-            continue
-        if fonte["chave"] == "prd_final":
-            texto = remover_anexo(texto)
-        elif fonte["chave"] == "ambiente_simulado":
-            # o D9 recopia o bloco 13 inteiro, e o código descarta a cópia: só o bloco 14 é dele. Na exp03ef1b-317df247 a
-            # cópia trazia um D0-7 da rodada anterior do D0, que a spec montada já não tinha
-            texto = "\n".join(m.group(0) for m in re.finditer(r"^##\s*(?:Bloco\s*)?14\b.*?(?=^## |\Z)", texto,
-                                                                re.MULTILINE | re.DOTALL))
-        orfaos = sorted({int(n) for n in _RE_D0_CITADO.findall(texto)} - (definidos or set()))
-        if not orfaos:
-            continue
-        ids = ", ".join(f"D0-{n}" for n in orfaos)
-        etapa = fonte.get("etapa_padrao", "dev")
-        saida.append({
-            "tipo": "d0_orfao", "codigo": "d0-orfao", "trecho": ids,
-            "contexto": (f"«{fonte['rotulo']}» cita {ids}, que " + ("a spec não tem: ela está sem o bloco 13"
-                         if definidos is None else "o bloco 13 da spec não define")
-                         + ". A decisão citada precisa existir na spec para a qual o documento aponta."),
-            "resumo": (f"«{fonte['rotulo']}» cita {ids} — " + ("a spec está sem o bloco 13 (decisões do D0)"
-                       if definidos is None else "decisão(ões) que o bloco 13 da spec não tem")
-                       + ": confira a citação ou o bloco 13."),
-            "documento": fonte["rotulo"],
-            "dono": "fecha-lacunas" if definidos is None else fonte["rotulo"],
-            "etapa": etapa,
-        })
+    for prefixo, numero, codigo, dono_do_bloco, onde in _DECISOES_CITAVEIS:
+        definidos = decisoes_do_bloco(spec, numero, prefixo)
+        citado = re.compile(rf"\b{prefixo}-0*(\d+)\b")
+        for fonte in fontes:
+            texto = state.get(fonte["chave"])
+            if fonte["chave"] in ("spec_missao", KEY_ANEXO) or not isinstance(texto, str) or not texto:
+                continue
+            if fonte["chave"] == "prd_final":
+                texto = remover_anexo(texto)
+            elif fonte["chave"] == "ambiente_simulado":
+                # o D9 recopia o bloco 13 inteiro, e o código descarta a cópia: só o bloco 14 é dele. Na exp03ef1b-317df247
+                # a cópia trazia um D0-7 da rodada anterior do D0, que a spec montada já não tinha
+                texto = "\n".join(m.group(0) for m in re.finditer(r"^##\s*(?:Bloco\s*)?14\b.*?(?=^## |\Z)", texto,
+                                                                    re.MULTILINE | re.DOTALL))
+            orfaos = sorted({int(n) for n in citado.findall(texto)} - (definidos or set()))
+            if not orfaos:
+                continue
+            ids = ", ".join(f"{prefixo}-{n}" for n in orfaos)
+            etapa = fonte.get("etapa_padrao", "dev")
+            saida.append({
+                "tipo": codigo.replace("-", "_"), "codigo": codigo, "trecho": ids,
+                "contexto": (f"«{fonte['rotulo']}» cita {ids}, que " + (f"não existe: falta o bloco {numero} {onde}"
+                             if definidos is None else f"o bloco {numero} {onde} não define")
+                             + ". A decisão citada precisa existir no documento para o qual ele aponta."),
+                "resumo": (f"«{fonte['rotulo']}» cita {ids} — " + (f"falta o bloco {numero} {onde}"
+                           if definidos is None else f"decisão(ões) que o bloco {numero} {onde} não tem")
+                           + f": confira a citação ou o bloco {numero}."),
+                "documento": fonte["rotulo"],
+                "dono": dono_do_bloco if definidos is None else fonte["rotulo"],
+                "etapa": etapa,
+            })
     return saida
 
 
@@ -589,11 +631,12 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
     vistos: Dict[tuple, Dict[str, Any]] = {}
     resolvidos: List[Dict[str, Any]] = []
     textos = [t for f in fontes if isinstance(t := state.get(f["chave"]), str) and t]
-    decisoes_d0 = _decisoes_d0(textos)
-    mapa_d0: Dict[str, int] = {}
+    # as decisões que fecham célula: [D0-n] do bloco 13 (anexo de design) e [CP-n] do bloco 15 (spec de produto, PR 6)
+    decisoes = _decisoes(textos)
+    mapa: Dict[str, str] = {}
     for texto_fonte in textos:
-        for marcador, n in mapa_celula_d0(texto_fonte).items():
-            mapa_d0.setdefault(marcador, n)
+        for marcador, ident in mapa_celula(texto_fonte).items():
+            mapa.setdefault(marcador, ident)
     etapa_do_documento = {f["rotulo"]: f.get("etapa_padrao", "dev") for f in fontes}
     for fonte in fontes:
         texto = state.get(fonte["chave"])
@@ -620,10 +663,10 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                     continue  # «registradas com marcador normativo `[PROPOSTA P0b — validar com PO]`»
                 linha, contexto = _linha_e_contexto(texto, m.start(), m.end())
                 fechado = _RE_RESOLVIDO_D0.search(linha)
-                n_d0 = int(fechado.group(1)) if fechado else mapa_d0.get(_norm_marcador(trecho))
-                if tipo in ("lacuna", "aberto", "needs_clarification") and n_d0 is not None and n_d0 in decisoes_d0:
+                ident = _id(*fechado.groups()) if fechado else mapa.get(_norm_marcador(trecho))
+                if tipo in ("lacuna", "aberto", "needs_clarification") and ident is not None and ident in decisoes:
                     if not any(r["trecho"] == trecho[:160] for r in resolvidos):
-                        resolvidos.append({"trecho": trecho[:160], "documento": fonte["rotulo"], "d0": f"D0-{n_d0}"})
+                        resolvidos.append({"trecho": trecho[:160], "documento": fonte["rotulo"], "d0": ident})
                     continue
                 if tipo in ("rs_pendente", "verificar_repositorio", "parametro", "proposta"):
                     # Dono fixo, do contrato: `RS-n pendente` é pedido ao Gate 0/PO que só

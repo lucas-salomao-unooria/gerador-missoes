@@ -48,7 +48,8 @@ MUDANCA_GATE0 = "mudanca_gate0"
 ROTULO_TIPO = {PARAMETRO: "[PARÂMETRO]", PROPOSTA: "[PROPOSTA]", ABERTO_PO: "[ABERTO — dono: PO]",
                MUDANCA_GATE0: "Mudança do design no texto do Gate 0"}
 
-#: Onde o contrato aberto é procurado. A spec é a do Gate 0: `spec_missao` pode já trazer os blocos 13 e 14 do design.
+#: Onde o contrato aberto é procurado. A spec é a do Gate 0: na sessão anterior ao PR 6, `spec_missao` pode já trazer os
+#: blocos 13 e 14 do design; na nova ela é a de produto, com o bloco 15 da completude, cujos marcadores entram na lista.
 DOC_ONE_PAGER = "one_pager"
 DOC_SPEC = "spec"
 CHAVES_SPEC = ("spec_missao_gate0", "spec_missao")
@@ -767,9 +768,9 @@ def defaults_validados(raiz: Optional[Path] = None) -> bool:
     return bool(status) and not status.lower().startswith("rascunho")
 
 
-#: Onde cada etapa aplica padrão: produto, no one-pager e na spec do Gate 0 (hoje não aplica: é o PR 6); o D0, no
-#: bloco 13.
-_DOCS_DOS_PADROES = {"design": ("fechamento_lacunas", "spec_missao", "ambiente_simulado")}
+#: Onde cada etapa aplica padrão: produto, no one-pager e na spec — o passo de completude os aplica no bloco 15 desde o
+#: PR 6 (D5) —; o D0-UX, no bloco 13 do anexo de design.
+_DOCS_DOS_PADROES = {"design": ("fechamento_lacunas", "anexo_design_spec", "ambiente_simulado")}
 
 
 def padroes_aplicados(estado: Dict[str, Any], etapa: str, raiz: Optional[Path] = None) -> List[Dict[str, Any]]:

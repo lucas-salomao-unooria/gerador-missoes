@@ -160,7 +160,7 @@ def _status_da_dimensao(envelope: Optional[Dict[str, Any]], travam: frozenset) -
 
 
 #: O que a banca avalia, nas quatro posições: a citação de cada NOK é conferida nestes documentos.
-DOCUMENTOS_DA_BANCA = ("spec_missao", "conteudo_aprovado", "jornada_telas", "fluxo_arestas", "copy_strings_revisada",
+DOCUMENTOS_DA_BANCA = ("spec_missao", "anexo_design_spec", "conteudo_aprovado", "jornada_telas", "fluxo_arestas", "copy_strings_revisada",
                        "wireframes_cobertura", "brief_oficio", "camada_caa", "stitch_links", "prototipo_relatorio",
                        "handoff_dev", "brief_assets", "banco_conteudo")
 
