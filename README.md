@@ -332,13 +332,15 @@ graph TD
             end
 
             V1c["V1c: A101TelemetriaCheck (RastroCheckAgent)\nstatus_key: telemetria_status"]
+            V1g["V1g: A101bMontagemHandoff (RastroCheckAgent)\nstatus_key: montagem_handoff_status"]
             V1d["V1d: A107LacunaCheck (RastroCheckAgent)\nstatus_key: rastro_lacunas_status"]
             V3["V3: A110ConsolidacaoBanca\noutput_key: validacao_dev_report"]
             V3c["V3c: A111ValidacaoDevCheck (EnvelopeGateAgent)\nstatus_key: dev_status"]
             V4["V4: A113PrdWriter\noutput_key: prd_final"]
             V4c["V4c: A114PrdCheck (RastroCheckAgent)\nstatus_key: prd_status"]
+            V4b["V4b: A116bMontagemPrd (RastroCheckAgent)\nstatus_key: montagem_prd_status"]
 
-            V0 --> PAR_HANDOFF --> V1c --> V1d --> BANCA --> V3 --> V3c --> V4 --> V4c
+            V0 --> PAR_HANDOFF --> V1c --> V1g --> V1d --> BANCA --> V3 --> V3c --> V4 --> V4c --> V4b
         end
 
         T["T: A128Aprendizado (Transversal)\noutput_key: aprendizado_registro"]
@@ -477,6 +479,8 @@ Antes de qualquer construção, dois agentes preparam a spec: o **D0** fecha as 
 
 **O que o PO aprovou chega inteiro ao PRD e ao pedagógico.** A auditoria das 11 missões do bucket (06/10/2026) achou o mesmo defeito em todas: a spec aplicava as ressalvas 🟡 dos pareceres que o PO não tinha incorporado — a exp06ef1b perdeu a EF06CO07 e foi de 29 para 24 minutos em tela, e o dev a devolveu por inconsistência —, nenhuma spec trazia o podcast nem os tempos por etapa, e o PRD trocava o contrato de evidência por chaves de string, não tinha KPI por habilidade e apontava `spec/<slug>-spec.md`, que nunca existiu. Agora a spec traduz o one-pager sem revisá-lo (ressalva recusada vai para a tabela «Ressalvas dos pareceres não incorporadas» do bloco 12), e `tools/conteudo_aprovado.py` confere em código o que tem estrutura firme: as habilidades do §12a contra o bloco 11 da spec e a seção 14 do PRD, o total em tela do §10, o podcast do §11 (com RF no PRD), um KPI de evidência por habilidade e os caminhos de artefato citados — A054 no laço da spec, A116 no do PRD, A121 num laço novo do pedagógico. O que não tem estrutura firme (a régua, as perguntas do Canal B, o roteiro do podcast, o do debate) não é interpretado: A119 e A124 colam no fim do PRD e do pedagógico as seções do one-pager aprovado, literais, e o corpo remete a elas.
 
+**PRD e handoff montam, não decidem.** A fonte da verdade para codar é a spec de produto mais o anexo de design, e o PRD deriva delas (plano «Produto dono do contrato», PR 4, decisão D10). Em 23/10/2026 o juiz de coerência deu 🟢 ao PRD da exp02ef1b com a Hipótese 1 a 25% no corpo e a 30% no anexo, e o da exp06ef1b saiu sem o teto de 35 palavras do §15. `tools/montagem.py` confere em código, no handoff (A101b) e no corpo do PRD (A116b): número de regra com origem no contrato (one-pager, spec de produto, decisões D0 da lista branca, decisões do PO no de acordo — a sugestão de um `[PARÂMETRO]` aberto não conta), hipóteses do §17 e metas do 9f com os números deles, tetos do §15 presentes, estados da §6 iguais aos do contrato e nenhuma decisão de design citada como produto. Divergência que o próprio contrato tem só passa registrada na seção 19 como `[ABERTO — dono: produto: …]`, que o rastro conta como pendência do PO.
+
 **Contexto da plataforma pela base publicada no bucket.** Os agentes não leem resumos escritos à mão: leem cópias dos `AGENTS.md`, das regras (`docs/regras/*`), dos ADRs e dos contratos Zod do monorepo `plataforma-unooria`, mais o **contrato da plataforma** (seções do DS, campos do manifesto, portas, última ADR, equipes, evidência), extraído do código. Quem publica é quem conhece: o CI da plataforma grava `gs://entre-redes-dev-base-plataforma/plataforma/<commit>/` a cada push em `dev-local`, e o do storybook grava `design-system/<versao>/` no mesmo bucket a cada versão publicada; cada um troca o próprio `atual.json` por último. É um bucket só da base: o Cloud Run do gerador o monta **só para leitura** em `/app/base-plataforma` (`BASE_PLATAFORMA_DIR`), e a conta do gerador só tem `objectViewer` nele. Até 07/10/2026 a base morava em `base-plataforma/` do bucket das sessões; a barra lateral a listava como missão e o botão de excluir a apagou duas vezes. Cada execução fixa a base que leu no começo (`prompts/base_plataforma.py`) e a registra no cabeçalho do diagnóstico. Até 06/10/2026 isso era uma cópia no git, que ficou 320 commits atrás sem ninguém ver. Para rodar localmente: `gcloud storage rsync -r gs://entre-redes-dev-base-plataforma output/base-plataforma` (ou `BASE_PLATAFORMA_DIR` apontando para uma base gerada com `node scripts/base-do-gerador/extrair.mjs --saida` na plataforma e `node scripts/inventario-para-o-gerador.mjs --saida` no storybook). Os arquivos `plataforma-unooria-software.md`, `-infra.md` e `-design-system.md` viraram índices sobre essas cópias, com a lista do que mais muda num PRD (liberação por turma, `produto`/`unidade` no manifesto, seis papéis, evento `verbo · objeto · resultado · contexto`, cinco caminhos de dado, sala por polling, currículo no servidor, quota em `ia_quotas`, fuso único, fluxo `dev-local → dev → hml → main`). O `_template` da plataforma passou a trazer a fiação completa em 16/09/2026 (ADR-106), então o PRD diz o que trocar primeiro, não o que falta.
 
 A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a missão a uma **banca multidisciplinar com 72 critérios de validação (21 bloqueantes)** antes de lavrar o PRD padrão ouro.
@@ -510,6 +514,7 @@ A etapa de Dev materializa o handoff para a equipe de tecnologia e submete a mis
 | **Handoff para dev** | `V1` | Modelo de Insumo | `handoff_dev` | Preenche o modelo de insumo com User Stories fechadas (com travas 🔒), catálogo de eventos de telemetria e escopo V1 vs V2. |
 | **Brief de assets** | `V1b` | Rubrica de Assets | `brief_assets` | Inventário completo de produção: imagens, áudios, mockups, critérios de reprovação e ordem de criação. |
 | **Telemetria e arquitetura** | `V1c` | Determinístico | `telemetria_status`, `telemetria_report` | Confere no handoff o contrato real de evento (`verbo · objeto · resultado · contexto`, sem campo `dados`), tabela `expNNefNb_*` de leitura das medidas, ausência de WebSocket/`hub:pause` (ADR-93/94), seis papéis (ADR-80) e quota em `ia_quotas` (ADR-105). |
+| **Handoff monta, não decide** | `V1g` | Determinístico (`tools/montagem.py`) | `montagem_handoff_status`, `montagem_handoff_report` | O handoff contra o contrato de produto (one-pager, spec de produto, decisões D0 da lista branca do bloco 13, decisões do PO no de acordo): número de regra sem origem no contrato, hipótese do §17 reescrita (a H1 da exp02ef1b saiu com 25% no lugar de 30%), meta de `PQ-nn` diferente da do 9f, estado que nem o contrato nem o fluxo nomeiam, texto-chave do PO com outra redação e decisão do D0 citada como produto voltam ao V1. Polling, TTL, p95, `px` e o que cita ADR são da plataforma e não precisam de origem. |
 | **Rastro de lacunas** | `V1d` | Determinístico | `rastro_lacunas_status`, `rastro_lacunas_report` | Conta os marcadores `[LACUNA — dono]`, `[ABERTO — dono]`, `[NEEDS CLARIFICATION]`, `[verificar no repositório]`, `RS-n pendente` e `🔵` em spec, design, handoff e assets, e diz **o que faltou de input, produto, design ou dev**. Com `etapa=dev`, só lacuna de **dev** — ou uma de etapa anterior escrita pelo próprio handoff ou brief — impede o PRD; a de produto ou de design num documento delas já foi cobrada no rastro da etapa dona e fica 🟡, «de etapa anterior». Lacuna cuja dona é a **plataforma** (ADR nova, componente de DS, ponte) vira pendência humana e deixa o PRD 🟡. |
 | **Banca: Produto & Narrativa** | `V2a` | `PROD-01` a `16` (4 bloqueantes) | `validacao_produto_narrativa` | Avalia clareza do problema, coerência narrativa, loop de engajamento e métricas de sucesso. |
 | **Banca: Design & Imersão** | `V2b` | `DES-01` a `13` (4 bloqueantes) | `validacao_design_imersao` | Avalia fidelidade ao ambiente simulado, consistência de layout e acessibilidade visual. |
@@ -668,9 +673,11 @@ output/20260904-143000-exp-04-fake-news/
 │   ├── 02e-banca-tecnica-arquitetura.md # Validação TEC-01…13
 │   ├── 00-ficha-manifesto.md          # V0: bloco 0 × listas fechadas da plataforma
 │   ├── 01c-telemetria-check.md        # V1c: contrato de evento e proibições de arquitetura
+│   ├── 01g-montagem-handoff.md        # V1g: o handoff contra o contrato de produto (monta, não decide)
 │   ├── 01d-rastro-lacunas.md          # V1d: o que faltou de input/produto/design/dev/plataforma
 │   ├── 03-banca-consolidada.md        # Veredito consolidado da banca
-│   └── 04-pendencias-do-prd.md        # V4c: marcadores deixados no PRD
+│   ├── 04-pendencias-do-prd.md        # V4c: marcadores deixados no PRD
+│   └── 04e-montagem-prd.md            # V4b: o corpo do PRD contra o contrato (números, hipóteses, metas, tetos, estados)
 ├── one-pager-pedagogico.md            # V5: o documento de validação humana
 ├── one-pager-pedagogico.docx          # o mesmo, com a marca, para quem não lê Markdown
 └── one-pager-pedagogico.html          # o mesmo, para apresentar e imprimir em PDF

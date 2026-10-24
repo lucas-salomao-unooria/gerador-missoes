@@ -10,6 +10,9 @@ Ordem (SequentialAgent):
   └────────────────────────────────────────────────────────────────┘
   v1c A101TelemetriaCheck       → telemetria_status (contrato real de evento, tabela de leitura,
                                sem WebSocket, papéis e quota atuais)
+  v1g A101bMontagemHandoff      → montagem_handoff_status (o handoff monta, não decide: número de
+                               regra com origem no contrato, hipótese igual à do §17, meta igual à
+                               do 9f, estado do contrato — PR 4 do plano «Produto dono do contrato»)
   v1e A104BancoConteudo        → banco_conteudo  (o texto integral de cada item de conteúdo do brief
                                e as falas da IA simulada por estado — `dev/01e-banco-conteudo.md`)
   v1f A105ConteudoCheck        → conteudo_status (determinístico: todo ID de texto do brief tem bloco;
@@ -34,6 +37,9 @@ Ordem (SequentialAgent):
   │ v4a A116ConteudoAprovadoPrd → conteudo_aprovado_prd_status      │
   │                            (habilidades, KPI por habilidade,    │
   │                            tempo, podcast e caminhos × one-pager)│
+  │ v4b A116bMontagemPrd      → montagem_prd_status (o PRD monta,    │
+  │                            não decide: números, hipóteses, metas,│
+  │                            tetos e estados × contrato)          │
   │ v4r A118PrdRodada         → prd_rodada (reprovado devolve ao     │
   │                            redator com o relatório do gate)     │
   └────────────────────────────────────────────────────────────────┘
@@ -191,7 +197,7 @@ MAPA_BANCA = {
 # do §11 (só o A105 o confere) e o contrato de telemetria (A101). O veredito velho seguia no semáforo de dev.
 POSFIXO_BANCA = {
     "banco-conteudo": ["A105ConteudoCheckRetrabalhoBanca"],
-    "handoff-dev": ["A101TelemetriaCheckRetrabalhoBanca"],
+    "handoff-dev": ["A101TelemetriaCheckRetrabalhoBanca", "A101bMontagemHandoffRetrabalhoBanca"],
 }
 
 #: Ordem entre donos: o banco lê o brief, então conserta depois dele.
@@ -232,8 +238,25 @@ def _agentes_de_retrabalho_banca(**kw) -> list:
             modo="telemetria", rotulo="Contrato de telemetria e arquitetura", report_key="telemetria_report",
             status_key="telemetria_status", estrito=estrito,
         ),
+        # e contra o contrato de produto: a banca reescreve o handoff, e a hipótese trocada voltava sem conferência
+        _montagem_handoff("A101bMontagemHandoffRetrabalhoBanca", estrito,
+                          "O handoff reescrito pela banca, conferido de novo contra o contrato de produto: números de "
+                          "regra, hipóteses do §17, metas do 9f e estados."),
     ]
     return agentes
+
+
+#: Rótulos dos gates do PR 4 («PRD e handoff montam, não decidem», `tools/montagem.py`).
+ROTULO_MONTAGEM_HANDOFF = "Handoff monta, não decide"
+ROTULO_MONTAGEM_PRD = "PRD monta, não decide"
+
+
+def _montagem_handoff(nome: str, estrito: bool, descricao: str, **kw) -> RastroCheckAgent:
+    return RastroCheckAgent(
+        name=nome, description=descricao, modo="montagem_handoff", rotulo=ROTULO_MONTAGEM_HANDOFF,
+        report_key="montagem_handoff_report", status_key="montagem_handoff_status", agente="montagem-dev",
+        estrito=estrito, **kw,
+    )
 
 
 def build_dev_stage(
@@ -310,11 +333,19 @@ def build_dev_stage(
                         get_juiz_de_achados("A102JuizTelemetria", status_key="telemetria_status",
                                             report_key="telemetria_report", fonte_key="handoff_dev",
                                             gate_rotulo="Contrato de telemetria e arquitetura", **kw),
+                        # O handoff monta, não decide (PR 4, D10): o da exp02ef1b reescreveu as três hipóteses do §17
+                        # (H1 com 25% no lugar de 30%) e o PRD herdou o número trocado.
+                        _montagem_handoff(
+                            "A101bMontagemHandoff", estrito,
+                            "O handoff contra o contrato de produto: número de regra com origem no contrato, hipótese "
+                            "igual à do §17, meta igual à do 9f, estado do contrato, texto-chave literal e nenhuma "
+                            "decisão de design citada como produto.",
+                            before_agent_callback=marcar_heranca),
                         SaidaDeLoopAgent(
                             name="A103HandoffCheck",
-                            description="Contrato conforme encerra o loop; reprovado devolve o handoff ao V1 com o relatório do gate.",
+                            description="Contrato de telemetria e montagem conformes encerram o loop; reprovado devolve o handoff ao V1 com os relatórios dos gates.",
                             rotulo="Handoff de dev",
-                            status_keys=["telemetria_status"],
+                            status_keys=["telemetria_status", "montagem_handoff_status"],
                             rodada_key="handoff_rodada",
                             max_rounds=rodadas_handoff,
                             autor_keys=["handoff_dev", "brief_assets"],
@@ -447,6 +478,19 @@ def build_dev_stage(
                             estrito=estrito,
                             before_agent_callback=marcar_heranca,
                         ),
+                        # O PRD monta, não decide (PR 4, D10): o juiz abaixo deu 🟢 ao PRD da exp02ef1b com 25% no corpo e
+                        # 30% no anexo; o código confere número, hipótese, meta, teto e estado contra o contrato.
+                        RastroCheckAgent(
+                            name="A116bMontagemPrd",
+                            description="O corpo do PRD contra o contrato de produto: número de regra com origem no contrato, hipóteses do §17 e metas do 9f com os números deles, tetos do §15 presentes, estados da §6 iguais aos do contrato e nenhuma decisão de design citada como produto. Divergência do próprio contrato só passa registrada na seção 19 com dono produto.",
+                            modo="montagem_prd",
+                            rotulo=ROTULO_MONTAGEM_PRD,
+                            report_key="montagem_prd_report",
+                            status_key="montagem_prd_status",
+                            agente="montagem-dev",
+                            estrito=estrito,
+                            before_agent_callback=marcar_heranca,
+                        ),
                         # O corpo do PRD contra o conteúdo aprovado, na mecânica que o código não confere (decisão de 08/10/2026):
                         # o juiz cita os dois lados, o código confere; contradição comprovada volta ao redator.
                         get_juiz_de_contradicoes("A117CoerenciaPrd", documento_key="prd_final", referencia_key="conteudo_aprovado",
@@ -456,7 +500,8 @@ def build_dev_stage(
                             name="A118PrdRodada",
                             description="PRD consistente encerra o loop; reprovado devolve ao redator com o relatório do gate.",
                             rotulo="Consistência do PRD",
-                            status_keys=["prd_status", "kpis_status", "conteudo_aprovado_prd_status", "coerencia_prd_status"],
+                            status_keys=["prd_status", "kpis_status", "conteudo_aprovado_prd_status", "montagem_prd_status",
+                                         "coerencia_prd_status"],
                             rodada_key="prd_rodada",
                             max_rounds=rodadas_prd,
                             autor_keys=["prd_final"],
@@ -562,7 +607,8 @@ DEV_METADATA = [
     {"id": "A100bBriefAssets", "name": "100b · Brief de assets", "icon": "🎬", "output_key": "brief_assets", "prompt_file": "dev/100b_brief_assets.md", "description": "Inventário de assets, spec por tipo, critérios de reprovação, ordem de produção."},
     {"id": "A101TelemetriaCheck", "name": "101 · Contrato de telemetria e arquitetura (determinístico)", "icon": "📡", "output_key": "telemetria_report", "prompt_file": None, "description": "Evento = verbo · objeto · resultado · contexto (sem `dados`), medida com tabela de leitura, sem WebSocket, seis papéis, quota em `ia_quotas`."},
     {"id": "A102JuizTelemetria", "name": "102 · Juiz da telemetria", "icon": "⚖️", "output_key": "telemetria_status", "prompt_file": None, "description": "Juiz de achados sobre `Contrato de telemetria e arquitetura`: retira o achado de uso vedado quando o texto só cita para vedar — com citação literal conferida."},
-    {"id": "A103HandoffCheck", "name": "103 · Veredito do handoff (determinístico)", "icon": "🔀", "output_key": "handoff_rodada", "prompt_file": None, "description": "Contrato de telemetria conforme encerra o loop; reprovado devolve o handoff ao V1 com o relatório."},
+    {"id": "A101bMontagemHandoff", "name": "101b · Handoff monta, não decide (determinístico)", "icon": "🧩", "output_key": "montagem_handoff_report", "prompt_file": None, "description": "O handoff contra o contrato de produto (one-pager, spec de produto, lista branca do bloco 13, decisões do PO): número de regra sem origem, hipótese reescrita do §17, meta fora do 9f, estado inventado, texto-chave reescrito e decisão de design citada como produto voltam ao V1."},
+    {"id": "A103HandoffCheck", "name": "103 · Veredito do handoff (determinístico)", "icon": "🔀", "output_key": "handoff_rodada", "prompt_file": None, "description": "Contrato de telemetria e montagem conformes encerram o loop; reprovado devolve o handoff ao V1 com os relatórios."},
     {"id": "A104BancoConteudo", "name": "104 · Banco de conteúdo", "icon": "📚", "output_key": "banco_conteudo", "prompt_file": "dev/104_banco_conteudo.md", "description": "O texto integral de cada item de conteúdo do brief (documentos fictícios, atas, tabelas cujas linhas não entregam a resposta, transcrições, roteiros) e a árvore de falas da IA simulada por estado. Status `escrito` — homologar é da curadoria. Salvo em `dev/01e-banco-conteudo.md`."},
     {"id": "A105ConteudoCheck", "name": "105 · Banco de conteúdo conferido (determinístico)", "icon": "🗂️", "output_key": "conteudo_report", "prompt_file": None, "description": "ID de texto/documento/tabela/roteiro do brief sem bloco no banco bloqueia; Status do brief fora de `a produzir | rascunho | escrito` (\"Homologado\", \"Pronto para corte\") bloqueia; estado de fala da IA sem fala fica 🟡."},
     {"id": "A106BancoRodada", "name": "106 · Saída do loop do banco de conteúdo (determinístico)", "icon": "🔀", "output_key": None, "prompt_file": None, "description": "Banco conferido encerra o loop; com bloqueio, o banco reescreve com o relatório."},
@@ -578,6 +624,7 @@ DEV_METADATA = [
     # sem esta linha o gate rodava, podia bloquear, e a tela não tinha onde mostrar o relatório (24/09/2026)
     {"id": "A115KpisCheck", "name": "115 · Coerência KPI ↔ evento ↔ tela (determinístico)", "icon": "📈", "output_key": "kpis_report", "prompt_file": None, "description": "Todo KPI com pergunta, decisão, corte e evento que dispara na tela que ele nomeia; os sinais universais das transversais de dono missão na tabela de eventos, com a IA ao estudante decidida pela spec."},
     {"id": "A116ConteudoAprovadoPrd", "name": "116 · PRD × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_prd_report", "prompt_file": None, "description": "As habilidades do bloco 11 na matriz da seção 14, um KPI por habilidade, o tempo em tela do one-pager, o podcast com requisito funcional e só caminhos de artefato que existem na sessão. Divergência volta ao redator."},
+    {"id": "A116bMontagemPrd", "name": "116b · PRD monta, não decide (determinístico)", "icon": "🧩", "output_key": "montagem_prd_report", "prompt_file": None, "description": "O corpo do PRD contra o contrato de produto: número de regra com origem no contrato, hipóteses do §17 e metas do 9f com os números deles, tetos do §15 presentes, estados da §6 iguais aos do contrato, nenhuma decisão de design citada como produto. Divergência do próprio contrato só passa registrada na seção 19 com dono produto."},
     {"id": "A117CoerenciaPrd", "name": "117 · Coerência do PRD com o one-pager aprovado", "icon": "⚖️", "output_key": "coerencia_prd_report", "prompt_file": None, "description": "Um juiz aponta onde o corpo do PRD afirma o contrário do conteúdo aprovado — mecânica, número, regra, texto —, citando os dois lados; o código confere as citações. Contradição comprovada volta ao redator."},
     {"id": "A118PrdRodada", "name": "118 · Veredito do PRD (determinístico)", "icon": "🔁", "output_key": "prd_rodada", "prompt_file": None, "description": "PRD consistente encerra o loop; reprovado devolve ao redator com o relatório do gate, até o teto de rodadas."},
     {"id": "A119AnexoPrd", "name": "119 · Anexo do conteúdo aprovado no PRD (determinístico)", "icon": "📎", "output_key": "prd_final", "prompt_file": None, "description": "Cola no fim do PRD, literais, as seções do one-pager aprovado que o gabarito não tinha onde pôr: currículo, papel do professor, tempos e cenários de aula, podcast com roteiro, contrato de evidência e hipóteses."},
