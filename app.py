@@ -661,6 +661,10 @@ def _render_divisao(divisao: "triagem_pedido.Divisao", chave: str) -> "triagem_p
                            + (f" — {item.motivo_triagem}" if item.motivo_triagem else ""))
         with st.expander("Texto do item", expanded=False):
             st.markdown(item.texto)
+    if divisao.contexto.strip():
+        # o que não virou item também fica à vista: o PO confere que nenhum pedido ficou de fora da divisão
+        with st.expander("Contexto do pedido — não é item: vai só à etapa, não a Produto", expanded=False):
+            st.markdown(divisao.contexto)
     final = triagem_pedido.com_escolhas_do_po(divisao, escolhas)
     produto, fica = final.de(triagem_pedido.PRODUTO), [i for i in final.itens if i.dono not in (
         triagem_pedido.PRODUTO, triagem_pedido.INDEFINIDO)]

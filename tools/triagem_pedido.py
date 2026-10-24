@@ -43,16 +43,46 @@ MIN_PALAVRAS_FRASE = 8
 _RE_TITULO = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
 _RE_MARCA_LISTA = re.compile(r"^(\s*)(?:[-*•]|\d{1,2}[.)])\s+\S")
 #: Seção do pedido que não pede nada: o resumo e o contexto valem para todos os itens, não são item (exp02ef1b, 23/10
-#: 13:24: o «Resumo geral dos ajustes» só repete os itens e pede para manter as interações).
-_RE_TITULO_DE_CONTEXTO = re.compile(r"\b(?:resumo|contexto|vis[ãa]o\s+geral|observa[çc][õo]es\s+gerais|introdu)",
-                                    re.I)
+#: 13:24: o «Resumo geral dos ajustes» só repete os itens e pede para manter as interações). O título inteiro tem de ser
+#: isso — a palavra e, no máximo, um qualificador do pedido —, sem ID de tela: buscada em qualquer lugar do título, a
+#: palavra tirava da divisão a tela «E1-ALU-01 — Introdução» ou o «Card de resumo» da E0-PROF-05, e o texto dela não
+#: chegava à regra, ao PO nem a produto (revisão do PR 5, 24/10). Título ambíguo é item: é o lado conservador.
+_RE_TITULO_DE_CONTEXTO = re.compile(
+    r"^(?:resumo|contexto|vis[ãa]o\s+geral|observa[çc][õo]es(?:\s+gerais)?|introdu[çc][ãa]o)"
+    r"(?:\s+(?:geral|gerais|d[oa]s?\s+(?:pedidos?|ajustes?|altera[çc](?:[ãa]o|[õo]es)|mudan[çc]as?|corre[çc](?:[ãa]o|[õo]es))))*"
+    r"\s*:?$", re.I)
+_RE_ID_DE_TELA = re.compile(r"\bE\d+-(?:ALU|PROF)-\d+", re.I)
 _ASPAS = (("“", "”"), ('"', '"'), ("«", "»"), ("‘", "’"))
 #: Verbo que muda alguma coisa — a palavra-chave só conta na frase que tem um deles: «A porcentagem é uma regra do
-#: sistema» (exp02ef1b, E3-ALU-01) não muda regra nenhuma.
+#: sistema» (exp02ef1b, E3-ALU-01) não muda regra nenhuma. Fora da lista ficam os substantivos que o radical casava
+#: («criança», «alternativa»: «A criança precisa ver 3 cartas» ia a produto; revisão do PR 5, 24/10).
 _RE_VERBO_DE_MUDANCA = re.compile(
-    r"\b(?:troc\w*|mud\w*|alter\w*|substitu\w*|acrescent\w*|inclu\w*|cri\w*|tir\w*|retir\w*|remov\w*|exclu\w*|"
-    r"passa\w*|atualiz\w*|aument\w*|reduz\w*|diminu\w*|nov[oa]s?|elimin\w*|adicion\w*|reescrev\w*|corrig\w*|"
-    r"ajust\w*|tro[cq]u\w*|subir|baixar|dobr\w*|deix\w*)\b", re.I)
+    r"\b(?:troc\w*|mud\w*|alter(?!nativ)\w*|substitu\w*|acrescent\w*|inclu\w*|cri(?!an[çc])\w*|tir\w*|retir\w*|"
+    r"remov\w*|exclu\w*|passa\w*|atualiz\w*|aument\w*|reduz\w*|diminu\w*|nov[oa]s?|elimin\w*|adicion\w*|"
+    r"reescrev\w*|corrig\w*|ajust\w*|tro[cq]u\w*|subir|baixar|dobr\w*|deix\w*)\b", re.I)
+#: Forma de pedir sem verbo de troca («deve ser 9 minutos», «quero 2 opções», «usar 30%», «em vez de 3»): passava pela
+#: regra (revisão do PR 5, 24/10). Conta só para número, opções e gatilho — com «estado» ou «regra», «usar os nomes de
+#: estado da spec» (exp06ef1b, 09/10 12:11) é pedido de dev, não mudança de estado.
+_RE_FORMA_DE_PEDIDO = re.compile(
+    r"\b(?:us[ae]r?|usem|quer\w*|quero|em\s+vez\s+d[eao]s?|no\s+lugar\s+d[eao]s?|ser\s+de|"
+    r"dev(?:e|em|eria|eriam)\s+(?:ser|ter|ficar|aparecer|mostrar|haver|valer|durar|come[çc]ar|terminar|liberar))\b",
+    re.I)
+#: «Na H1, o corte é 30%, não 25%» (o caso do D11): o número novo e, depois da vírgula, o que ele substitui.
+_RE_N_NAO_M = re.compile(r"(\d+(?:[.,]\d+)?)\s*\S{0,12},?\s+n[ãa]o\s+(?:os?\s+|as?\s+)?(\d+(?:[.,]\d+)?)", re.I)
+#: Número que mede o que o plano dá a produto (tempo, opções, palavras, %, rodadas e tentativas): fora de citação, conta
+#: como mudança mesmo sem verbo («Teto de 20 palavras no Canal A.»). Cartas, fotos, pares e px ficam de fora: são
+#: conteúdo e tela, e «ver 3 cartas na tela» não é contrato.
+_RE_NUMERO_DE_PRODUTO = re.compile(r"(?<![\w.,/])\d+(?:[.,]\d+)?\s?(?:%|segundos?\b|seg\b|s\b|minutos?\b|min\b|"
+                                   r"palavras\b|caracteres\b|op[çc][õo]es\b|alternativas\b|tentativas\b|rodadas\b)",
+                                   re.I)
+#: Tirar ou pôr uma fase, rodada ou etapa muda a mecânica: «Remover a fase 2 do mini-jogo.»
+_RE_ESTRUTURA_DA_MECANICA = re.compile(
+    r"\b(?:tir|retir|remov|exclu|elimin|acrescent|adicion|inclu|cri(?!an[çc])|junt|separ|divid)\w*\s+"
+    r"(?:(?:a|o|as|os|uma?|mais|outra|nova|novo|toda|todo)\s+){0,2}(?:fases?|rodadas?|etapas?|tentativas?)\b", re.I)
+#: Gatilho: o que destrava o quê, contado em tentativas, erros, acertos ou rodadas («O feedback deve aparecer só depois da
+#: segunda tentativa.»).
+_RE_GATILHO = re.compile(r"\b(?:depois|ap[óo]s|antes|at[ée])\s+d?[aeo]?s?\s*(?:\w+\s+){0,2}"
+                         r"(?:tentativas?|erros?|acertos?|rodadas?)\b", re.I)
 #: O que o item muda e o plano dá a produto (D1, D6, D7): regra, gatilho, estado, habilidade e a régua dela.
 _RE_TEMA_DE_PRODUTO = re.compile(
     r"\b(?:regras?|gatilhos?|estados?|habilidades?|EF\d{2}CO\d{2}|EM13CO\d{2}|CO\d{2}|tern[áa]ri\w*|r[ée]gua|"
@@ -165,6 +195,11 @@ def _aspas_abertas(linha: str, abertas: bool) -> bool:
     return abertas
 
 
+def _titulo_de_contexto(titulo: str) -> bool:
+    limpo = re.sub(r"\s+", " ", titulo.strip(" #*_`\t")).strip()
+    return bool(_RE_TITULO_DE_CONTEXTO.match(limpo)) and not _RE_ID_DE_TELA.search(limpo)
+
+
 def _secoes_por_titulo(texto: str) -> Optional[Tuple[str, List[Tuple[str, str]]]]:
     """`(contexto, [(título, trecho)])` pelas seções de título mais fundas; None se o pedido não tem dois títulos."""
     linhas = texto.splitlines()
@@ -179,7 +214,7 @@ def _secoes_por_titulo(texto: str) -> Optional[Tuple[str, List[Tuple[str, str]]]
         if not corpo:
             continue  # título que só abre subtítulos («## Pedidos de ajustes»)
         trecho = "\n".join(linhas[i: fim]).strip()
-        if _RE_TITULO_DE_CONTEXTO.search(titulo):
+        if _titulo_de_contexto(titulo):
             contexto.append(trecho)
         else:
             secoes.append((titulo.strip(" #*"), trecho))
@@ -311,13 +346,15 @@ def _frases(texto: str) -> List[str]:
     return [f.strip() for f in re.split(r"(?<=[.!?:])\s+|\n+", texto or "") if f.strip()]
 
 
-def _muda(frase: str) -> bool:
+def _muda(frase: str, com_pedido: bool = False) -> bool:
     """A frase tem verbo de mudança que não está negado: «Não alterar telas, mecânica nem os demais textos aprovados»
-    (exp06ef1b, 09/10 12:11) é ordem de não mexer, não mudança de mecânica."""
-    for m in _RE_VERBO_DE_MUDANCA.finditer(frase or ""):
-        antes = _palavras(frase[: m.start()])[-2:]
-        if not any(p in ("nao", "nem", "sem", "nunca") for p in antes):
-            return True
+    (exp06ef1b, 09/10 12:11) é ordem de não mexer, não mudança de mecânica. `com_pedido` aceita também a forma de pedir
+    sem verbo de troca (`_RE_FORMA_DE_PEDIDO`)."""
+    for regex in (_RE_VERBO_DE_MUDANCA, _RE_FORMA_DE_PEDIDO) if com_pedido else (_RE_VERBO_DE_MUDANCA,):
+        for m in regex.finditer(frase or ""):
+            antes = _palavras(frase[: m.start()])[-2:]
+            if not any(p in ("nao", "nem", "sem", "nunca") for p in antes):
+                return True
     return False
 
 
@@ -334,8 +371,9 @@ def regra_de_produto(texto: str, docs: Dict[str, str], linhas: Optional[Dict[str
 
     - o texto-alvo (o que o item cita para trocar ou tirar, ou uma frase dele com 8 palavras ou mais) está em núcleo,
       one-pager, one-pager resumido ou spec do Gate 0;
-    - o item muda opções, número (um número novo, ou «de N para M»), regra, gatilho, estado ou habilidade (a palavra e
-      um verbo de mudança na mesma frase), ou fala de Canal B ou podcast.
+    - o item muda opções, número (um número novo, «de N para M», «N, não M», ou tempo, opções, palavras, %, rodadas e
+      tentativas fora de citação), regra, gatilho, estado, habilidade ou fases e rodadas da mecânica (a palavra e um
+      verbo ou forma de pedido na mesma frase), ou fala de Canal B ou podcast.
     Palavra solta citada («Pronto») não conta: casa com qualquer texto."""
     linhas = linhas if linhas is not None else _linhas_normalizadas(docs)
     motivos: List[str] = []
@@ -365,25 +403,30 @@ def regra_de_produto(texto: str, docs: Dict[str, str], linhas: Optional[Dict[str
         motivos.append(f"fala de {_RE_SEMPRE_PRODUTO.search(texto).group(0)}, texto-chave do one-pager")
     # opções: o item lista as novas («Opções: “A atividade” · “A cor da roupa”», 13:24), ou muda as que existem na
     # mesma frase («tirar a opção “Lugar”», «deixar só 2 opções»)
-    if _RE_OPCOES.search(texto) and (novos_txt or any(_RE_OPCOES.search(f) and _muda(f)
+    if _RE_OPCOES.search(texto) and (novos_txt or any(_RE_OPCOES.search(f) and _muda(f, com_pedido=True)
                                                       for f in _frases(texto))):
         motivos.append("muda as opções que o aluno vê")
-    if _RE_DE_PARA_NUMERO.search(sem_citacoes):
-        m = _RE_DE_PARA_NUMERO.search(sem_citacoes)
-        motivos.append(f"muda número ({m.group(0).strip()[:40]})")
+    de_para = _RE_DE_PARA_NUMERO.search(sem_citacoes) or _RE_N_NAO_M.search(sem_citacoes)
+    if de_para:
+        motivos.append(f"muda número ({de_para.group(0).strip()[:40]})")
     else:
         numeros_novos = _numeros(" ".join(novos_txt)) - _numeros(" ".join(atuais_txt))
         if numeros_novos:
             motivos.append("muda número (" + ", ".join(f"{n} {u}" for n, u in sorted(numeros_novos)) + ")")
         else:
             for frase in _frases(sem_citacoes):
-                if _RE_NUMERO.search(frase) and _muda(frase):
+                if (_RE_NUMERO.search(frase) and _muda(frase, com_pedido=True)) or _RE_NUMERO_DE_PRODUTO.search(frase):
                     motivos.append(f"muda número ({frase[:60]})")
                     break
     for frase in _frases(sem_citacoes):
         tema = _RE_TEMA_DE_PRODUTO.search(frase)
-        if tema and _muda(frase):
-            motivos.append(f"muda {tema.group(0).lower()} («{frase[:70]}»)")
+        if tema and _muda(frase) or not tema and _RE_GATILHO.search(frase) and _muda(frase, com_pedido=True):
+            motivos.append(f"muda {tema.group(0).lower() if tema else 'gatilho'} («{frase[:70]}»)")
+            break
+    for frase in _frases(sem_citacoes):
+        estrutura = _RE_ESTRUTURA_DA_MECANICA.search(frase)
+        if estrutura and _muda(frase):
+            motivos.append(f"muda a mecânica («{frase[:70]}»)")
             break
     return list(dict.fromkeys(motivos))
 
