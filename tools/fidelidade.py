@@ -29,7 +29,7 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 #: Itens demais tornam o juiz raso. O que passa disto é cortado do fim (briefing primeiro).
 MAX_ITENS = 60
@@ -786,20 +786,26 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
     return {"status": status, "achados": achados, "conferidos": conferidos}
 
 
-def aplicados_a_montante(pedidos: List[Tuple[str, str]]) -> List[Dict[str, str]]:
+def aplicados_a_montante(pedidos: Sequence[Tuple[str, ...]]) -> List[Dict[str, str]]:
     """Os itens de outro dono que a triagem tirou desta etapa, como conferidos: aplicados a montante.
 
     O pedido do PO feito em design ou dev é dividido pela triagem (`tools/triagem_pedido.py`, PR 5 do plano «Produto
     dono do contrato»): o item de produto vai ao one-pager e à spec do Gate 0 por correção pontual de produto, e a
     fidelidade de produto o confere lá. Aqui ele aparece, sem cobrança — o A094 da exp02ef1b (23/10/2026) mandava
-    «aplique o pedido como o PO o escreveu» nos documentos de design, e o design mudava produto."""
+    «aplique o pedido como o PO o escreveu» nos documentos de design, e o design mudava produto.
+
+    Cada entrada é `(origem, texto)` ou `(origem, texto, dono)`: no dev, o item de design de um pedido de dev também
+    vem a montante, e a prova diz de quem é e que fidelidade o confere (revisão do PR 5, 24/10: saía como de
+    produto). Sem dono, é de produto."""
     saida = []
-    for n, (origem, texto) in enumerate(pedidos, 1):
+    for n, entrada in enumerate(pedidos, 1):
+        origem, texto = entrada[0], entrada[1]
+        dono = (entrada[2] if len(entrada) > 2 else "") or "produto"
         cabeca = next((l.strip(" #>*-•") for l in (texto or "").splitlines() if l.strip(" #>*-•")), "")
         if cabeca:
             saida.append({"id": f"M{n}", "texto": cabeca[:240],
-                          "prova": f"aplicado a montante — item de produto pela triagem ({origem[:120]}), conferido "
-                                   "pela fidelidade de produto"})
+                          "prova": f"aplicado a montante — item de {dono} pela triagem ({origem[:120]}), conferido "
+                                   f"pela fidelidade de {dono}"})
     return saida
 
 
@@ -816,9 +822,12 @@ def relatorio(resultado: Dict[str, Any], itens: List[Dict[str, str]], missao: st
         for a in resultado["achados"]:
             marca = {"bloqueio": "🔴", "atencao": "🟡", "decisao_humana": "🔵"}.get(a["severidade"], "⚪")
             linhas.append(f"- {marca} **{a['id']}** ({a['origem']}) — {a['resumo']}")
+        # só quando há item aplicado a montante: o do refazer que não aplicou nada não está no one-pager (24/10)
+        a_montante = any(str(c.get("prova") or "").startswith("aplicado a montante") for c in resultado["conferidos"])
         linhas += ["", "Quem escreveu o documento: aplique o pedido como o PO o escreveu. Se ele conflita com uma regra "
-                   "da esteira, não escolha — registre `[ABERTO — PO]` citando os dois. O item que a triagem mandou a "
-                   "produto não é cobrado aqui: ele foi aplicado a montante, no one-pager e na spec do Gate 0.", ""]
+                   "da esteira, não escolha — registre `[ABERTO — PO]` citando os dois."
+                   + (" O item que a triagem mandou a outro dono não é cobrado aqui: ele foi aplicado a montante, no "
+                      "one-pager e na spec do Gate 0." if a_montante else ""), ""]
     if resultado["conferidos"]:
         linhas += ["## Conferido", ""]
         linhas += [f"- ✅ **{c['id']}** — {c['texto'][:140]} → «{c['prova'][:160]}»" for c in resultado["conferidos"]]

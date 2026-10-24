@@ -448,11 +448,18 @@ def concluir_execucao(fluxo: Dict[str, Any], ok: bool, estado: Optional[Dict[str
     `RETRABALHO_EXTERNO`: ficava numa mensagem, não rodava nada, e o design construía sobre o defeito de produto.
 
     `pede_devolver`: o *refazer* triado não aplicou nada e pede **Devolver** a Produto (D4, opção B). A etapa volta ao
-    parecer do dono, como estava antes do pedido — em «falhou», a única ação seria refazer de novo."""
+    parecer do dono, como estava antes do pedido — em «falhou», a única ação seria refazer de novo. O parecer desse
+    refazer fica marcado `nao_aplicado`: os itens de outro dono não viram «aplicado a montante» (`pedidos_do_po`)."""
     novo = json.loads(json.dumps(fluxo))
     situacao = novo.get("situacao")
     if not ok and pede_devolver and situacao == REFAZENDO:
         novo["situacao"] = AGUARDANDO
+        # Sem a marca, o refazer não aplicado seguia nas notas como «já aplicado no one-pager e na spec do Gate 0», e o
+        # A094/A126 das execuções seguintes o davam por aplicado a montante (revisão do PR 5, 24/10)
+        refazer = next((p for p in reversed(novo.get("pareceres") or [])
+                        if p.get("etapa") == novo.get("etapa") and p.get("acao") == REFAZER), None)
+        if refazer is not None:
+            refazer["nao_aplicado"] = True
     elif not ok:
         novo["falhou_refazendo"] = situacao == REFAZENDO
         novo["situacao"] = FALHOU if situacao != ENCERRANDO else AGUARDANDO
@@ -540,15 +547,21 @@ def pedidos_do_po(fluxo: Optional[Dict[str, Any]]) -> List[Dict[str, str]]:
         if p.get("acao") != REFAZER or not str(p.get("comentario") or "").strip():
             continue
         origem = f"refazer {ROTULO_ETAPA.get(p.get('etapa'), p.get('etapa'))} · {p.get('como', '')} · {p.get('quando', '')}"
-        saida += _pedido_por_dono(origem, str(p.get("etapa") or ""), str(p.get("comentario") or ""), p.get("divisao"))
+        saida += _pedido_por_dono(origem, str(p.get("etapa") or ""), str(p.get("comentario") or ""), p.get("divisao"),
+                                  nao_aplicado=bool(p.get("nao_aplicado")))
     return saida
 
 
-def _pedido_por_dono(origem: str, etapa: str, texto: str, divisao: Any) -> List[Dict[str, str]]:
+def _pedido_por_dono(origem: str, etapa: str, texto: str, divisao: Any,
+                     nao_aplicado: bool = False) -> List[Dict[str, str]]:
     """O pedido de refazer como os agentes o recebem: inteiro, ou — quando a triagem o dividiu e algum item não é da
     etapa — um pedido por dono. O de produto vale em produto (a fidelidade de produto o confere, inclusive num refazer
     de produto seguinte) e diz de onde veio (`a_montante_de`); o da etapa leva os itens dela e o contexto. Até o PR 5
-    (23/10/2026) o pedido inteiro era da etapa, e o A094 cobrava em design o botão que a spec do Gate 0 nomeia."""
+    (23/10/2026) o pedido inteiro era da etapa, e o A094 cobrava em design o botão que a spec do Gate 0 nomeia.
+
+    `nao_aplicado`: a cascata desse refazer não aplicou nada (`concluir_execucao` com `pede_devolver`). Os itens de
+    outro dono não levam `a_montante_de` — não foram aplicados a montante — e levam `pendente_em`, com a origem dizendo
+    que esperam a decisão do PO."""
     from tools.triagem_pedido import DESIGN, DEV, PRODUTO, ROTULO_DONO, Divisao
 
     d = Divisao.de_dict(divisao) if isinstance(divisao, dict) else None
@@ -563,7 +576,11 @@ def _pedido_por_dono(origem: str, etapa: str, texto: str, divisao: Any) -> List[
             continue
         entrada = {"origem": f"{origem} · itens de {ROTULO_DONO[dono].lower()} (triagem)", "etapa": dono,
                    "texto": itens}
-        if dono != etapa:
+        if dono != etapa and nao_aplicado:
+            entrada["origem"] += (f" · NÃO APLICADOS: o refazer voltou ao PO para Devolver até "
+                                  f"{ROTULO_DONO[dono]}")
+            entrada["pendente_em"] = dono
+        elif dono != etapa:
             entrada["a_montante_de"] = etapa
         saida.append(entrada)
     return saida
@@ -593,7 +610,10 @@ def notas_de_passagem(fluxo: Optional[Dict[str, Any]]) -> str:
                    "perguntas de VALIDAÇÃO que o PO escreveu: a fidelidade a eles é conferida depois. O pedido feito a "
                    "design ou a dev passa pela triagem item a item: o que é de produto aparece aqui como «itens de "
                    "produto (triagem)» e já foi aplicado no one-pager e na spec do Gate 0 — acompanhe-o onde o texto "
-                   "aparece no seu documento, sem decidir de novo. Pedido sem essa divisão (anterior a 23/10/2026) não "
+                   "aparece no seu documento, sem decidir de novo. O marcado «NÃO APLICADOS» não chegou ao one-pager "
+                   "nem à spec: não o dê por aplicado nem o aplique na sua etapa — quem decide é o PO, na etapa dona do item; se "
+                   "o seu documento depende dele, registre `[CONFLITO — pedido do PO × one-pager aprovado: …]`. "
+                   "Pedido sem essa divisão (anterior a 23/10/2026) não "
                    "muda o one-pager aprovado: se ele muda o que o one-pager decide — habilidade, tempo, texto que a "
                    "criança ou o professor lê, número, regra de mecânica —, aplique o que é da sua etapa e registre o "
                    "resto como `[CONFLITO — pedido do PO × one-pager aprovado: …]`. Essa mudança se faz em produto.", ""]

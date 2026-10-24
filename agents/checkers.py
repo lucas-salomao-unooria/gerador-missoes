@@ -2015,8 +2015,8 @@ class FidelidadeCheckAgent(BaseAgent):
     #: A etapa que os achados levam.
     etapa: str = "produto"
 
-    def _corrente_da_etapa(self, state: Any, corrente: str) -> Tuple[str, List[Tuple[str, str]]]:
-        """`(texto que esta etapa confere, [(origem, texto) aplicados a montante])` do pedido corrente dividido pela
+    def _corrente_da_etapa(self, state: Any, corrente: str) -> Tuple[str, List[Tuple[str, str, str]]]:
+        """`(texto que esta etapa confere, [(origem, texto, dono) aplicados a montante])` do pedido corrente dividido pela
         triagem (`divisao_do_pedido`). Sem divisão, o pedido inteiro é da etapa, como antes."""
         from tools.triagem_pedido import DESIGN, DEV, PRODUTO, Divisao
 
@@ -2026,7 +2026,7 @@ class FidelidadeCheckAgent(BaseAgent):
         if all(i.dono == self.etapa for i in d.itens):
             return corrente, []
         donos_a_montante = (PRODUTO,) + ((DESIGN,) if self.etapa == DEV else ())
-        a_montante = [(f"pedido de correção desta execução · item {i.n} ({i.dono}, triagem)", i.texto)
+        a_montante = [(f"pedido de correção desta execução · item {i.n} ({i.dono}, triagem)", i.texto, i.dono)
                       for i in d.itens if i.dono in donos_a_montante]
         return d.texto_de(self.etapa, com_contexto=self.etapa == d.etapa), a_montante
 
@@ -2050,14 +2050,14 @@ class FidelidadeCheckAgent(BaseAgent):
         # O pedido dividido pela triagem (PR 5 do plano «Produto dono do contrato»): a etapa confere só os itens dela, e
         # o de produto foi aplicado a montante — no one-pager e na spec do Gate 0 — e conferido pela fidelidade de
         # produto. Na exp02ef1b (23/10/2026) o A094 cobrava no design o botão «Publicar no Álbum» que a spec nomeia.
-        a_montante = [(str(p.get("origem") or "pedido"), str(p.get("texto") or ""))
+        a_montante = [(str(p.get("origem") or "pedido"), str(p.get("texto") or ""), str(p.get("etapa") or ""))
                       for p in state.get("pedidos_do_po") or []
                       if isinstance(p, dict) and str(p.get("a_montante_de") or "") in self.etapas_pedido]
         if corrente_e_daqui and corrente.strip() and not self.incluir_corrente:
             corrente, do_corrente = self._corrente_da_etapa(state, corrente)
             # no parecer, o mesmo item já veio registrado como pedido de produto: aparece uma vez só
-            a_montante += [(o, t) for o, t in do_corrente
-                           if not any(_norm_simples(t)[:200] in _norm_simples(r) for _, r in a_montante)]
+            a_montante += [(o, t, dono) for o, t, dono in do_corrente
+                           if not any(_norm_simples(t)[:200] in _norm_simples(r) for _, r, _ in a_montante)]
         if (corrente_e_daqui and corrente.strip()
                 and not any(_norm_simples(t)[:200] in _norm_simples(corrente) for _, t in pedidos)):
             pedidos.append(("pedido de correção desta execução", corrente))
