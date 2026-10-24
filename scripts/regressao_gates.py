@@ -54,7 +54,7 @@ from tools import (
     bncc, contrato_produto, evidencia, kpis, rastro, consistencia,
     conteudo, conteudo_aprovado, cobertura_design, prd_codavel,
     afirmacoes, telas, prototipo, mecanica, rastreabilidade, componentes_ds, montagem,
-    arestas, textos_chave
+    arestas, textos_chave, pedagogico
 )
 from pipeline.artifacts import caminhos_de_artefato
 from tools.anexo_design import spec_consolidada
@@ -134,6 +134,9 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         gates["conteudo_aprovado_pedagogico_status"] = _extrair_status_e_codigos(
             conteudo_aprovado.validar_pedagogico(one_pager_ped, spec_c, one_pager, caminhos_de_artefato())
         )
+        # o pedagógico monta, não decide (PR 10): a narrativa contra o contrato. A sessão do acervo traz o pedagógico
+        # gerado no dev, sem os subtítulos da esteira: a leitura é tolerante (o gate não os cobra de quem não tem nenhum)
+        gates["montagem_pedagogico_status"] = _extrair_status_e_codigos(pedagogico.validar(state))
 
     # === DESIGN ===
     if proto_arq or jornada:
@@ -224,11 +227,12 @@ _FIDELIDADES = (
      ("nucleo_narrativo", "one_pager", "spec_missao"), ("produto", "")),
     ("fidelidade_nucleo_status", "juiz_fidelidade_nucleo_saida", "interpretacao_fidelidade_nucleo_saida",
      ("nucleo_narrativo",), ("produto", "")),
+    # o pedagógico é documento de design desde o PR 10 (24/10/2026)
     ("fidelidade_design_status", "juiz_fidelidade_design_saida", "interpretacao_fidelidade_design_saida",
      ("spec_missao", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings_revisada", "camada_caa",
-      "wireframes_cobertura"), ("design",)),
+      "wireframes_cobertura", "one_pager_pedagogico"), ("design",)),
     ("fidelidade_dev_status", "juiz_fidelidade_dev_saida", "interpretacao_fidelidade_dev_saida",
-     ("handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico"), ("dev",)),
+     ("handoff_dev", "brief_assets", "banco_conteudo", "prd_final"), ("dev",)),
 )
 
 

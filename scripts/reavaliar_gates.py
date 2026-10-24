@@ -118,6 +118,11 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
         novos["montagem_handoff_status"] = montagem.validar_handoff(state)
     if prd:
         novos["montagem_prd_status"] = montagem.validar_prd(state)
+    # PR 10: o pedagógico fecha o design e monta sobre o contrato
+    if state.get("one_pager_pedagogico"):
+        from tools import pedagogico
+
+        novos["montagem_pedagogico_status"] = pedagogico.validar(state)
 
     # PR 7: os textos-chave na copy e o fluxo × bloco 2 da spec
     from tools import arestas, textos_chave

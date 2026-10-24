@@ -9,7 +9,7 @@ import mimetypes
 import re
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from agents.callbacks import extrair_slug
 from config import get_settings
@@ -69,6 +69,11 @@ ARTIFACT_FILES = [
     ("qa_entregaveis_report", "design/07-qa-entregaveis.md"),
     ("qa_afirmacoes_report", "design/07b-qa-afirmacoes.md"),
     ("rastro_design_report", "design/12-rastro-lacunas-design.md"),
+    # o one-pager pedagógico fecha o design desde o PR 10 (24/10/2026): até lá ficava na raiz, saído do fim do dev
+    ("one_pager_pedagogico", "design/14-one-pager-pedagogico.md"),
+    ("conteudo_aprovado_pedagogico_report", "design/14a-conteudo-aprovado-pedagogico.md"),
+    ("montagem_pedagogico_report", "design/14b-montagem-pedagogico.md"),
+    ("coerencia_pedagogico_report", "design/14c-coerencia-pedagogico.md"),
     ("evidencia_report", "produto/05c-matriz-evidencia.md"),
     ("perguntas_report", "produto/05d-perguntas-de-produto.md"),
     ("juiz_perguntas_report", "produto/05e-juiz-perguntas-de-produto.md"),
@@ -92,7 +97,8 @@ ARTIFACT_FILES = [
     ("validacao_tecnica_arquitetura", "dev/02e-banca-tecnica-arquitetura.md"),
     ("validacao_dev_report", "dev/03-banca-consolidada.md"),
     ("prd_final", "PRD.md"),
-    ("one_pager_pedagogico", "one-pager-pedagogico.md"),
+    # o dev só acrescenta ao pedagógico (PR 10): o guarda que confere o texto aprovado e a seção das pendências do dev
+    ("pedagogico_dev_report", "dev/07-pedagogico-no-dev.md"),
     ("kpis_report", "dev/04b-kpis-check.md"),
     ("prd_check_report", "dev/04-pendencias-do-prd.md"),
     ("conteudo_aprovado_prd_report", "dev/04c-conteudo-aprovado-prd.md"),
@@ -105,7 +111,6 @@ ARTIFACT_FILES = [
     ("conteudo_aprovado_spec_design_report", "design/00c-spec-consolidada-x-one-pager.md"),
     ("fidelidade_design_report", "design/13-fidelidade-refazer-design.md"),
     ("fidelidade_dev_report", "dev/06-fidelidade-refazer-dev.md"),
-    ("conteudo_aprovado_pedagogico_report", "dev/05-conteudo-aprovado-pedagogico.md"),
     ("rastreabilidade_report", "matriz-de-rastreabilidade.md"),
     # a final do dev, quando existe, substitui a do design no mesmo arquivo (o laço grava na ordem desta lista)
     ("rastreabilidade_dev_report", "matriz-de-rastreabilidade.md"),
@@ -115,6 +120,13 @@ ARTIFACT_FILES = [
     ("aprendizado_registro", "aprendizado.md"),
     ("ficha_catalogo", "catalogo-ficha.md"),
 ]
+
+#: Onde o artefato da chave ficava antes de mudar de pasta: a gravação apaga o de antes quando grava o novo, e o backup de
+#: uma reexecução o leva junto (`pipeline.reexecucao.arquivos_das_chaves`). O pedagógico saiu da raiz no PR 10.
+CAMINHOS_LEGADOS: Dict[str, Tuple[str, ...]] = {
+    "one_pager_pedagogico": ("one-pager-pedagogico.md", "one-pager-pedagogico.docx", "one-pager-pedagogico.html"),
+    "conteudo_aprovado_pedagogico_report": ("dev/05-conteudo-aprovado-pedagogico.md",),
+}
 
 STAGE_NAMES = {
     "produto": "🧭 Produto",
@@ -261,11 +273,37 @@ ONE_PAGERS_COM_MARCA = [
     ),
     (
         "one_pager_pedagogico",
-        "one-pager-pedagogico",
+        "design/14-one-pager-pedagogico",
         "One-pager pedagógico",
         "Para leitura e aprovação do time pedagógico",
     ),
 ]
+
+
+def documento_para_gravar(state: Dict[str, Any], chave: str) -> Any:
+    """O valor que vai para o arquivo da chave. O pedagógico sai como gente o lê: o texto aprovado no de acordo de design
+    e, no fim, a seção que o dev acrescenta (`tools.pedagogico.completo`, PR 10) — guardada à parte no estado, para o
+    texto aprovado não mudar."""
+    if chave == "one_pager_pedagogico":
+        from tools.pedagogico import completo
+
+        return completo(state)
+    return state.get(chave)
+
+
+def migrar_caminhos_legados(run_dir: Path, gravados: List[str]) -> List[str]:
+    """Apaga o arquivo de antes da mudança de pasta de cada chave cujo arquivo novo foi gravado agora — o conteúdo é o
+    mesmo, da mesma chave. Devolve os caminhos apagados."""
+    apagados: List[str] = []
+    for chave, legados in CAMINHOS_LEGADOS.items():
+        if chave not in gravados:
+            continue
+        for rel in legados:
+            caminho = Path(run_dir) / rel
+            if caminho.is_file():
+                caminho.unlink()
+                apagados.append(rel)
+    return apagados
 
 
 def caminhos_de_artefato() -> List[str]:
@@ -297,7 +335,7 @@ def exportar_one_pagers(state: Dict[str, Any], run_dir: Path, slug: str) -> List
     """
     gerados: List[Path] = []
     for chave, base, etiqueta, subtitulo in ONE_PAGERS_COM_MARCA:
-        documento = state.get(chave)
+        documento = documento_para_gravar(state, chave)
         if not documento or not isinstance(documento, str) or e_mensagem_de_pulo(documento):
             continue
 
@@ -361,8 +399,9 @@ def save_run_artifacts(
     run_dir.mkdir(parents=True, exist_ok=True)
 
     written = 0
+    gravadas: List[str] = []
     for key, rel in ARTIFACT_FILES:
-        value = state.get(key)
+        value = documento_para_gravar(state, key)
         if not value or e_mensagem_de_pulo(value):
             continue
         path = run_dir / rel
@@ -370,6 +409,9 @@ def save_run_artifacts(
         text = value if isinstance(value, str) else json.dumps(value, indent=2, ensure_ascii=False)
         path.write_text(desembrulhar_cerca(text).strip() + "\n", encoding="utf-8")
         written += 1
+        gravadas.append(key)
+    # a sessão gravada antes do PR 10 tinha o pedagógico na raiz: o de lá sai, para não ficar um de cada versão
+    migrar_caminhos_legados(run_dir, gravadas)
 
 
     # Os one-pagers também com a marca: quem os lê não lê Markdown, e são eles que circulam

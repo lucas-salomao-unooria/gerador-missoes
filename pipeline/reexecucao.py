@@ -83,14 +83,14 @@ CHAVES_DEV = frozenset({
     "validacao_dados_lgpd", "validacao_tecnica_arquitetura", "validacao_dev_report",
     "dev_status", "dev_status_envelope", "banca_rodada",
     "prd_final", "prd_check_report", "prd_status", "prd_status_envelope", "prd_rodada",
-    "one_pager_pedagogico",
+    # o pedagógico é do design desde o PR 10 (24/10/2026): refazer só dev não o apaga nem o regenera. Do dev é só a
+    # seção das pendências dele e o guarda que confere o texto aprovado no de acordo de design
+    "pedagogico_pendencias_dev", "pedagogico_dev_report", "pedagogico_dev_status", "pedagogico_dev_status_envelope",
     # gate de KPI do PRD (23/09/2026): sem apagar, uma correção que caísse antes dele deixava
     # no dossiê o veredito da execução anterior como se fosse desta
     "kpis_report", "kpis_status", "kpis_status_envelope",
-    # PRD e pedagógico × one-pager aprovado (06/10/2026)
+    # PRD × one-pager aprovado (06/10/2026)
     "conteudo_aprovado_prd_report", "conteudo_aprovado_prd_status", "conteudo_aprovado_prd_status_envelope",
-    "conteudo_aprovado_pedagogico_report", "conteudo_aprovado_pedagogico_status",
-    "conteudo_aprovado_pedagogico_status_envelope", "pedagogico_rodada",
     "juiz_telemetria_saida",
     # o refazer de dev conferido nos documentos de dev (07/10/2026)
     "fidelidade_dev_report", "fidelidade_dev_status", "fidelidade_dev_status_envelope", "juiz_fidelidade_dev_saida", "interpretacao_fidelidade_dev_saida",
@@ -98,8 +98,6 @@ CHAVES_DEV = frozenset({
     "rastreabilidade_dev_report", "rastreabilidade_dev_status", "rastreabilidade_dev_status_envelope",
     # o corpo do PRD × conteúdo aprovado, pelo juiz de contradições (08/10/2026)
     "coerencia_prd_report", "coerencia_prd_status", "coerencia_prd_status_envelope", "juiz_coerencia_prd_saida",
-    "coerencia_pedagogico_report", "coerencia_pedagogico_status", "coerencia_pedagogico_status_envelope",
-    "juiz_coerencia_pedagogico_saida",
     # a banca de entrada do dev, segunda verificação de produto e design (08/10/2026)
     "banca_entrada_narrativa", "banca_entrada_imersao", "banca_entrada_pedagogia",
     "banca_entrada_report", "banca_entrada_status", "banca_entrada_status_envelope",
@@ -134,6 +132,14 @@ CHAVES_DESIGN = frozenset({
     # os textos-chave na copy e o fluxo × bloco 2 da spec (PR 7 do plano «Produto dono do contrato»)
     "textos_chave_report", "textos_chave_status", "textos_chave_status_envelope",
     "arestas_report", "arestas_status", "arestas_status_envelope",
+    # o one-pager pedagógico fecha o design desde o PR 10 (24/10/2026): o documento, os gates dele, a montagem do
+    # contrato e o retrato que o dev confere. Refazer design o regera sobre a versão anterior (`anterior_<chave>`)
+    "one_pager_pedagogico", "pedagogico_do_design", "pedagogico_rodada",
+    "conteudo_aprovado_pedagogico_report", "conteudo_aprovado_pedagogico_status",
+    "conteudo_aprovado_pedagogico_status_envelope",
+    "montagem_pedagogico_report", "montagem_pedagogico_status", "montagem_pedagogico_status_envelope",
+    "coerencia_pedagogico_report", "coerencia_pedagogico_status", "coerencia_pedagogico_status_envelope",
+    "juiz_coerencia_pedagogico_saida",
 }) | CHAVES_DEV
 #: `spec_missao_gate0` tem de cair: o split do D0 só grava esse backup se ele não existir
 #: (`agents/checkers.py`, SecaoSplitAgent) — senão a spec velha seria preservada como "original".
@@ -297,7 +303,11 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Banca de design": "design",
     "Banca de entrada do dev": "dev",
     "Coerência do PRD com o one-pager aprovado": "dev",
-    "Coerência do pedagógico com o one-pager aprovado": "dev",
+    # o pedagógico fecha o design desde o PR 10 (24/10/2026)
+    "Coerência do pedagógico com o one-pager aprovado": "design",
+    "Pedagógico × one-pager aprovado": "design",
+    "Pedagógico monta, não decide": "design",
+    "Pedagógico aprovado, no dev": "dev",
     "Fechamento de lacunas (D0)": "design",
     "Ambiente simulado (D9)": "design",
     "QA de entregáveis (design)": "design",
@@ -316,7 +326,6 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Coerência KPI ↔ evento ↔ tela": "dev",
     "PRD × one-pager aprovado": "dev",
     "PRD monta, não decide": "dev",
-    "Pedagógico × one-pager aprovado": "dev",
     "Consistência do PRD": "dev",
 }
 _ETAPAS_REFEITAS: Dict[str, frozenset] = {
@@ -590,6 +599,14 @@ def preparar_estado(
         legada = spec_de_produto_legada(limpo)
         if legada is not None:
             limpo["spec_missao"] = legada
+    if etapa == "dev":
+        # O pedagógico é do design desde o PR 10: refazer só dev não o apaga nem o regenera, e o dev confere que ele
+        # continua o do de acordo de design (A119b). A sessão anterior, com o pedagógico gerado no dev, não tem o retrato
+        # do design: o pedagógico que ela tem passa a ser o retrato (exp02ef1b, refeita depois do PR 10).
+        from tools.pedagogico import KEY, KEY_RETRATO
+
+        if str(limpo.get(KEY) or "").strip() and not str(limpo.get(KEY_RETRATO) or "").strip():
+            limpo[KEY_RETRATO] = limpo[KEY]
     if etapa == "transversal":
         # só diagnóstico e aprendizado: a herança descreve a execução que está sendo diagnosticada
         pass
@@ -831,6 +848,8 @@ def arquivos_das_chaves(chaves: Iterable[str]) -> List[str]:
     Inclui os irmãos exportados com a marca (`.docx`/`.html` do mesmo nome), que não estão em
     `ARTIFACT_FILES` mas nascem da mesma chave.
     """
+    from pipeline.artifacts import CAMINHOS_LEGADOS
+
     chaves = set(chaves)
     caminhos: List[str] = []
     for chave, rel in ARTIFACT_FILES:
@@ -842,6 +861,9 @@ def arquivos_das_chaves(chaves: Iterable[str]) -> List[str]:
             irmao = base + ext
             if irmao != rel and irmao not in caminhos:
                 caminhos.append(irmao)
+        # o arquivo de antes da mudança de pasta (o pedagógico na raiz, até o PR 10) vai junto para o backup: senão
+        # ficava órfão ao lado do novo
+        caminhos += [c for c in CAMINHOS_LEGADOS.get(chave, ()) if c not in caminhos]
     return caminhos
 
 
@@ -1623,10 +1645,12 @@ def montar_mapa_da_missao(estado: Dict[str, Any], pedido: str = "") -> str:
     cabecalhos = re.findall(r"^#{1,3}\s+(.+)$", spec, flags=re.MULTILINE)[:40]
     if cabecalhos:
         linhas.append("- **Estrutura da spec:** " + " · ".join(c.strip() for c in cabecalhos))
-    docs_design = [k for k in ("brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings_revisada", "wireframes_cobertura", "prototipo_html", "camada_caa") if estado.get(k)]
+    docs_design = [k for k in ("brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings_revisada", "wireframes_cobertura", "prototipo_html", "camada_caa",
+                               # o pedagógico fecha o design desde o PR 10: pedido sobre ele é de design (ou de produto)
+                               "one_pager_pedagogico") if estado.get(k)]
     if docs_design:
         linhas.append("- **Documentos de design:** " + ", ".join(docs_design))
-    docs_dev = [k for k in ("handoff_dev", "brief_assets", "validacao_dev_report", "prd_final", "one_pager_pedagogico") if estado.get(k)]
+    docs_dev = [k for k in ("handoff_dev", "brief_assets", "validacao_dev_report", "prd_final") if estado.get(k)]
     if docs_dev:
         linhas.append("- **Documentos de dev:** " + ", ".join(docs_dev))
     if pedido.strip():

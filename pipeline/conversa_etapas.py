@@ -54,9 +54,11 @@ PEDIDO_RASCUNHO = "[rascunho do comentário do parecer]"
 #: Documentos lidos primeiro, nesta ordem. O resto da etapa entra depois, relatórios antes.
 PRIORIDADE: Dict[str, Tuple[str, ...]] = {
     "produto": ("one_pager", "spec_missao", "nucleo_narrativo", "one_pager_resumido", "gate_final_report"),
-    "design": ("jornada_telas", "fluxo_arestas", "copy_strings_revisada", "wireframes_cobertura", "camada_caa",
-               "brief_oficio", "anexo_design_spec", "ambiente_simulado", "fechamento_lacunas", "qa_entregaveis_report"),
-    "dev": ("prd_final", "handoff_dev", "brief_assets", "validacao_dev_report", "one_pager_pedagogico"),
+    # o pedagógico fecha o design desde o PR 10 (24/10/2026): é o documento do de acordo de design, lido primeiro
+    "design": ("one_pager_pedagogico", "jornada_telas", "fluxo_arestas", "copy_strings_revisada", "wireframes_cobertura",
+               "camada_caa", "brief_oficio", "anexo_design_spec", "ambiente_simulado", "fechamento_lacunas",
+               "qa_entregaveis_report"),
+    "dev": ("prd_final", "handoff_dev", "brief_assets", "validacao_dev_report", "pedagogico_pendencias_dev"),
 }
 # na conversa única, o principal de cada etapa antes de qualquer relatório
 PRIORIDADE[MISSAO] = ("one_pager", "spec_missao", "jornada_telas", "fluxo_arestas", "copy_strings_revisada",
@@ -65,11 +67,14 @@ PRIORIDADE[MISSAO] = ("one_pager", "spec_missao", "jornada_telas", "fluxo_aresta
                       "wireframes_cobertura", "camada_caa", "brief_oficio", "ambiente_simulado", "fechamento_lacunas")
 #: O que a etapa recebe da anterior e costuma entrar na pergunta ("o design seguiu a spec?").
 A_MONTANTE: Dict[str, Tuple[str, ...]] = {"produto": (), "design": ("spec_missao",),
-                                          # a spec de produto mais o anexo de design (PR 6)
-                                          "dev": ("spec_missao", "anexo_design_spec"), MISSAO: ()}
+                                          # a spec de produto mais o anexo de design (PR 6), e o pedagógico aprovado no
+                                          # de acordo de design (PR 10)
+                                          "dev": ("spec_missao", "anexo_design_spec", "one_pager_pedagogico"), MISSAO: ()}
 #: HTML do protótipo e dos diagramas: ~240 mil caracteres de marcação que não respondem nada que a
 #: jornada, o fluxo e a copy não respondam.
-FORA_DO_CONTEXTO = frozenset({"prototipo_html", "prototipo_arquivo", "diagramas_html"})
+FORA_DO_CONTEXTO = frozenset({"prototipo_html", "prototipo_arquivo", "diagramas_html",
+                              # o retrato do pedagógico (PR 10) é cópia do pedagógico: entraria duas vezes
+                              "pedagogico_do_design"})
 #: Veredito vai no semáforo; envelope repete o relatório; `_rodada` é contador; `_gate0` é a versão
 #: anterior à revisão do gate.
 SUFIXOS_FORA = ("_status", "_status_envelope", "_rodada", "_gate0")
