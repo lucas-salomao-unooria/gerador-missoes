@@ -117,6 +117,14 @@
       "status": "aprovado",
       "codigos": []
     },
+    "montagem_handoff_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "hipotese-diverge",
+        "numero-sem-origem",
+        "texto-chave-reescrito"
+      ]
+    },
     "conteudo_status": {
       "status": "bloqueado",
       "codigos": [
@@ -168,6 +176,15 @@
     "conteudo_aprovado_prd_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "montagem_prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "estado-do-contrato-ausente",
+        "estado-fora-do-contrato",
+        "meta-diverge-9f",
+        "numero-sem-origem"
+      ]
     },
     "rastro_lacunas_status": {
       "status": "amarelo",
@@ -583,6 +600,12 @@
         "ds-versao-cravada"
       ]
     },
+    "montagem_handoff_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "hipotese-diverge"
+      ]
+    },
     "conteudo_status": {
       "status": "aprovado",
       "codigos": []
@@ -612,6 +635,16 @@
     "conteudo_aprovado_prd_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "montagem_prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "estado-do-contrato-ausente",
+        "estado-fora-do-contrato",
+        "hipotese-diverge",
+        "numero-sem-origem",
+        "origem-de-produto-falsa"
+      ]
     },
     "rastro_lacunas_status": {
       "status": "bloqueado",
@@ -1148,6 +1181,14 @@
         "websocket-mencao"
       ]
     },
+    "montagem_handoff_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "hipotese-diverge",
+        "numero-sem-origem",
+        "texto-chave-reescrito"
+      ]
+    },
     "prd_status": {
       "status": "bloqueado",
       "codigos": [
@@ -1189,6 +1230,14 @@
         "artefato-inexistente",
         "habilidade-sem-kpi",
         "podcast-sem-requisito"
+      ]
+    },
+    "montagem_prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "hipotese-diverge",
+        "numero-sem-origem",
+        "teto-ausente"
       ]
     },
     "rastro_lacunas_status": {
@@ -1281,6 +1330,13 @@
         "adr-inexistente"
       ]
     },
+    "montagem_handoff_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "hipotese-diverge",
+        "numero-sem-origem"
+      ]
+    },
     "conteudo_status": {
       "status": "aprovado",
       "codigos": []
@@ -1301,6 +1357,16 @@
     "conteudo_aprovado_prd_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "montagem_prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "estado-do-contrato-ausente",
+        "estado-fora-do-contrato",
+        "meta-diverge-9f",
+        "numero-sem-origem",
+        "teto-ausente"
+      ]
     },
     "rastro_lacunas_status": {
       "status": "aprovado",
@@ -1408,6 +1474,13 @@
         "adr-inexistente"
       ]
     },
+    "montagem_handoff_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "hipotese-diverge",
+        "numero-sem-origem"
+      ]
+    },
     "conteudo_status": {
       "status": "aprovado",
       "codigos": []
@@ -1428,6 +1501,16 @@
     "conteudo_aprovado_prd_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "montagem_prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "estado-do-contrato-ausente",
+        "estado-fora-do-contrato",
+        "meta-diverge-9f",
+        "numero-sem-origem",
+        "teto-ausente"
+      ]
     },
     "rastro_lacunas_status": {
       "status": "aprovado",
@@ -1582,6 +1665,13 @@
         "ponte-legada"
       ]
     },
+    "montagem_handoff_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "hipotese-diverge",
+        "numero-sem-origem"
+      ]
+    },
     "prd_status": {
       "status": "bloqueado",
       "codigos": [
@@ -1621,6 +1711,13 @@
         "literal-parafraseado",
         "podcast-sem-requisito",
         "secao-14-ausente"
+      ]
+    },
+    "montagem_prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "numero-sem-origem",
+        "teto-ausente"
       ]
     },
     "rastro_lacunas_status": {
@@ -1751,6 +1848,13 @@
         "zerar-arquiva"
       ]
     },
+    "montagem_handoff_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "hipotese-diverge",
+        "numero-sem-origem"
+      ]
+    },
     "prd_status": {
       "status": "bloqueado",
       "codigos": [
@@ -1793,6 +1897,15 @@
         "habilidade-sem-kpi",
         "podcast-sem-requisito",
         "secao-14-ausente"
+      ]
+    },
+    "montagem_prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "hipotese-diverge",
+        "meta-diverge-9f",
+        "numero-sem-origem",
+        "teto-ausente"
       ]
     },
     "rastro_lacunas_status": {

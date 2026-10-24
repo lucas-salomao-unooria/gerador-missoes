@@ -53,7 +53,7 @@ _garantir_base_plataforma()
 from tools import (
     bncc, contrato_produto, evidencia, kpis, rastro, consistencia,
     conteudo, conteudo_aprovado, cobertura_design, prd_codavel,
-    afirmacoes, telas, prototipo, mecanica, rastreabilidade, componentes_ds
+    afirmacoes, telas, prototipo, mecanica, rastreabilidade, componentes_ds, montagem
 )
 from pipeline.artifacts import caminhos_de_artefato
 
@@ -165,6 +165,8 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     if prd or handoff:
         if handoff:
             gates["telemetria_status"] = _extrair_status_e_codigos(rastro.validar_telemetria(handoff))
+            # handoff e PRD montam, não decidem (plano «Produto dono do contrato», PR 4)
+            gates["montagem_handoff_status"] = _extrair_status_e_codigos(montagem.validar_handoff(state))
         if banco:
             r_cnt = conteudo.validar(brief_assets, banco, spec)
             r_cnt["achados"] += consistencia.validar(
@@ -193,6 +195,7 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
             gates["conteudo_aprovado_prd_status"] = _extrair_status_e_codigos(
                 conteudo_aprovado.validar_prd(prd, spec, one_pager, caminhos_de_artefato())
             )
+            gates["montagem_prd_status"] = _extrair_status_e_codigos(montagem.validar_prd(state))
 
         gates["rastro_lacunas_status"] = _extrair_status_e_codigos(
             rastro.varrer_lacunas(rastro.FONTES_DEV, state, etapa_corrente="dev")

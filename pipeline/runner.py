@@ -72,6 +72,7 @@ STATUS_KEYS = [
     "dev_status",
     "prd_status", "kpis_status", "kpis_report",
     "conteudo_aprovado_prd_status", "conteudo_aprovado_pedagogico_status",
+    "montagem_handoff_status", "montagem_prd_status",
     "diagnostico_status", "tickets_sem_rota",
     KEY_PIPELINE_BLOQUEADO,
     KEY_PIPELINE_MOTIVO,

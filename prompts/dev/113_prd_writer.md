@@ -8,12 +8,22 @@ O dev devolveu a exp06ef1b por "inconsistência entre PRD e documentação de pr
 quatro habilidades e 29 minutos em tela, e o PRD saiu com três e 24. A auditoria das 11 missões do
 bucket (06/10/2026) achou o mesmo padrão em todas: o PRD trocava o contrato de evidência por chaves
 de string, não dava requisito ao podcast, não trazia os tempos nem os cenários de aula, reescrevia as
-hipóteses e as metas, e apontava arquivos que não existem. A ordem de precedência:
+hipóteses e as metas, e apontava arquivos que não existem. Em 23/10/2026 o PRD da exp02ef1b ainda
+saiu com a Hipótese 1 a 25% no corpo e a 30% no anexo, e o da exp06ef1b sem o teto de 35 palavras do
+§15. **A fonte da verdade para codar é a spec de produto mais o anexo de design; o PRD deriva delas, e
+divergência é defeito** — um gate determinístico a confere (abaixo, «O PRD monta, não decide»). A ordem
+de precedência:
 
-1. **O one-pager aprovado pelo PO e a spec** decidem o que a missão é, ensina e mede. Onde a spec
-   detalha o one-pager, vale a spec; onde as duas divergem num número ou numa habilidade, é defeito
-   a montante — siga o one-pager e registre a divergência na seção 19 com dono `produto`.
-2. **Design e handoff** decidem como a missão aparece e é construída.
+1. **O one-pager aprovado pelo PO e a spec de produto** (blocos 0 a 12 de `produto/05-spec-missao.md`,
+   com as decisões que o PO gravou no de acordo, «valor — PO, parecer de <data>») decidem o que a
+   missão é, ensina e mede. Onde a spec detalha o one-pager, vale a spec; onde as duas divergem num
+   número ou numa habilidade, é defeito a montante e **não se decide no PRD**: o corpo segue o
+   one-pager, e a seção 19 registra `[ABERTO — dono: produto: <onde> diz X e <onde> diz Y]`, com os
+   dois valores. É pendência do PO: o PRD não sai pronto até ele decidir.
+2. **O anexo de design** — as decisões D0 do bloco 13 e a ficha do ambiente do bloco 14, que até
+   segunda ordem moram no mesmo arquivo da spec — e os documentos de design e o handoff decidem como
+   a missão aparece e é construída. Decisão do D0 é do design: cite-a como
+   `produto/05-spec-missao.md › Bloco 13`, nunca como «contratual» nem como «decisão do PO».
 3. **Relatórios de gate** dizem o que já foi conferido. Recomendação que não está na spec foi
    recusada ou adiada pelo PO: **não a aplique**. A spec traz as recusadas na tabela «Ressalvas dos
    pareceres não incorporadas» do bloco 12; elas vão para a seção 19 como registro, nunca para o
@@ -49,7 +59,8 @@ codifica precisa para implementar, e um gate determinístico confere os quatro p
   corrige. **Alvo e limiar só se o one-pager (§17) ou o 9f da spec os fixam**; sem eles, `Alvo: sem
   meta — primeira medição`. Na exp01ef1b os seis KPIs de habilidade saíram com metas inventadas, e
   três liam uma tabela onde a habilidade nunca era gravada. E as **hipóteses do §17 com as palavras e
-  os números delas** — meta que não está no one-pager nem no 9f da spec não se inventa aqui.
+  os números delas** — meta que não está no one-pager nem no 9f da spec não se inventa aqui, e a
+  hipótese que o §17 não quantifica continua sem número.
 - **Seção 5:** o total em tela **igual ao do §10**, a tabela por etapa (em tela · fora da tela), os
   checkpoints e os cenários de aula (aula única, duas aulas, sessões fracionadas).
 - **Seção 8:** quando o §11 traz podcast, **um RF para ele** — quem toca, em que tela, em que
@@ -110,6 +121,35 @@ determinístico (`prd-codavel`) lê o PRD como ele e devolve a você o que falta
 7. **Missão em que o estudante escreve para um interlocutor simulado:** a seção 8 ou a 12 remete à **árvore de
    intenções** do banco de conteúdo (`dev/01e-banco-conteudo.md`), diz que ela vive em `conteudo.ts` no servidor e
    que a detecção roda no servidor. Não repita os gatilhos: cite a tabela.
+
+## O PRD monta, não decide — o que o gate confere no corpo
+
+Um gate determinístico (`montagem`) lê o corpo do PRD, sem o anexo, contra o contrato — o one-pager,
+a spec de produto, as decisões D0 da lista branca do bloco 13 e as decisões do PO no de acordo — e
+devolve a você cada divergência:
+
+1. **Número de regra com origem no contrato.** Todo número de regra — porcentagem, segundos,
+   minutos, teto ou piso de palavras e caracteres, nº de opções ou alternativas — está no contrato.
+   Não precisam de origem os de dono plataforma (polling, TTL, p95, uptime, lote da SDK, `px`,
+   o que cita ADR ou o contrato da plataforma; timeout e tempo limite só de requisição, API, sessão
+   ou rede — «tempo limite de 45 s para responder» é regra da mecânica), a medida de layout e a
+   contagem de palavras de uma string. A sugestão de um `[PARÂMETRO …]` ainda aberto não é contrato. Número que o contrato não
+   tem sai do corpo ou vira `[PROPOSTA — validar com PO: <o número> · por quê]` (e vai para a 19.3).
+2. **Hipóteses, metas e tetos iguais aos do contrato.** Cada hipótese com os números da hipótese de
+   mesmo número do §17 (sem número quando ele não tem); o alvo e o limiar de decisão de um KPI que
+   cita `PQ-nn` são os da linha dela no 9f; cada teto do §15 (palavras por string, minutos por ato)
+   aparece no corpo, no RNF e nas stories das telas que ele limita.
+3. **Estados da §6 iguais aos do contrato.** As colunas de estado e o diagrama da §6 usam exatamente
+   os estados do «Contrato de estados» da spec — todos, inclusive falha e espera —, e nenhum nome que
+   nem o contrato nem o fluxo do design tenham. O nome do design só aparece no de-para.
+4. **Origem verdadeira.** Número com origem citada em produto («(§17 do one-pager)», «(spec, bloco
+   9f)») tem de estar lá; `[D0-n]` não é «contratual» nem «do PO».
+
+Divergência que o próprio contrato tem (a linha da spec que corresponde ao §15 ou ao §17, ou a
+linha do 9f que cita a hipótese, traz outro número; o que vem marcado `[PROPOSTA]` ou `[PARÂMETRO]` é
+proposta e não conta) pede as duas coisas: o corpo com o número do one-pager **e** a seção 19 com
+`[ABERTO — dono: produto: …]` e os dois valores. O registro nunca substitui o corpo certo: hipótese
+ou teto com outro número no corpo bloqueia sempre, registrado ou não.
 
 ## Insumos do pipeline
 
@@ -230,6 +270,20 @@ one-pager em todo lugar que fala de tempo em tela, inclusive guardrail e RNF; `p
 
 {conteudo_aprovado_prd_report?}
 
+**PRD monta, não decide (gate determinístico, também bloqueante):**
+
+A correção é copiar do contrato, nunca decidir: `numero-sem-origem` → o número do contrato, ou fora
+do corpo, ou `[PROPOSTA — validar com PO: …]`; `hipotese-diverge` → a hipótese do §17 com os números
+dela; `meta-diverge-9f` → o alvo e o limiar da linha da `PQ-nn` no 9f; `teto-ausente` /
+`teto-diverge` → o teto do §15 no RNF e nas stories; `estado-do-contrato-ausente` /
+`estado-fora-do-contrato` → a §6 com os estados do contrato, com os mesmos nomes;
+`origem-de-produto-falsa` → a origem que tem o número, e o D0 citado como bloco 13;
+`divergencia-do-contrato-sem-registro` → o corpo segue o one-pager e, além disso, a seção 19 registra
+`[ABERTO — dono: produto: <onde> diz X e <onde> diz Y]` (o achado traz o texto). Só registre
+divergência que o gate apontou como do contrato: cópia errada se corrige no corpo, não vai a produto.
+
+{montagem_prd_report?}
+
 **Coerência com o one-pager aprovado (um juiz cita o seu corpo e o conteúdo aprovado em cada contradição; o código conferiu as duas citações — bloqueante):**
 
 {coerencia_prd_report?}
@@ -259,7 +313,9 @@ acaso, e a partir daí o resto do PRD deixa de valer contra o que foi escrito.
    codifica inventa caminho de asset — o brief dá o arquivo e o peso, o banco dá o texto. A exp01ef1b
    tinha 29 IDs no brief, e o PRD de 07/10/2026 citava um.
 8. **Um nome por estado.** O do contrato de estados da spec, igual ao valor do CHECK, em stories,
-   rotas, eventos e testes; o nome do design só aparece no de-para da seção 6.
+   rotas, eventos e testes; o nome do design só aparece no de-para da seção 6. Não crie vocabulário
+   próprio: o PRD da exp02ef1b trocou os 15 estados do contrato por `desafiar`, `explicar_padroes`…,
+   dizendo seguir «rigorosamente o contrato», e largou `PROCESSANDO_RESPOSTA_VISITA`.
 9. **Nenhum `*Schema` nem `*Dto` sem definição.** A rota traz o Zod de entrada e de resposta escrito
    no PRD (seção 12.1); citar `ParametrosDoPreparoExp01ef1bSchema` sem dizer o que ele tem (PRD da
    exp01ef1b, 07/10/2026) deixa os campos e os limites para quem codifica.
@@ -275,7 +331,7 @@ acaso, e a partir daí o resto do PRD deixa de valer contra o que foi escrito.
 5. **Itens 🔒 do handoff viram RF P0** e entram no V1.
 6. **Plano de implementação (seção 17) com caminhos reais do monorepo**, seguindo a checklist de nascimento: worktree `pnpm worktree criar expNNefNb --fatia …` sobre `origin/dev-local` (ADR-61/71/101) → `pnpm new:exp` **só se o id não está na tabela de experiências do contrato** (se está, a missão é atualização da existente: a mesma pasta, o mesmo módulo, a mesma porta, versão acima, e a seção 19 leva `[ABERTO — dono: PO: substituir a existente ou outro código]` — ou, se o PO já decidiu na sessão, `Decisão do PO (<pedido|parecer>, DD/MM/AAAA): substituir a existente` —; o PRD da exp01ef1b de 07/10/2026 mandava `pnpm new:exp exp01ef1b` na porta 5186, e a plataforma já tem a exp01ef1b na 5183) — o `_template` já traz o DS na última versão publicada (versão única, ADR-139; não crave número), `@edu/ui`, `bootstrap.tsx`, `lib/{tipos,api,telemetria,textos}.ts` e `versao.test.ts` (ADR-106); o PRD diz o que trocar primeiro: porta, manifesto, seção do clone, eventos → `public/experiencia.json` completo (seção 17.1) → porta em `apps/hub/lib/experiencias-dev.ts` → módulo `apps/api/src/<slug-curto>/` no molde do Júri (`vocabulario.ts` · `conteudo.ts` · `invariantes.ts` · `erros.ts` · `contrato-de-rotas.ts` · `prompts.ts` · `regras/` · service com `comTenancy` · controllers por papel · `@Contrato` · module) com `exigirMissaoLiberada` no funil de estudante → migration Prisma `expNNefNb_*` no molde de `exemplo-migration-exp06ef1b.md` (o pacote, o gate e a sessão por rodada; CHECKs de estado e de latch; índice único parcial; RLS `ENABLE`+`FORCE`; `GRANT` à `app_runtime`) → ficha em `apps/api/src/evidencias/fichas/<expId>.ts` → podcast pelo módulo da plataforma, quando há → versão em três lugares → hub do professor (seção 17.3: catálogo, guia, despachantes, preparo, BFF) → liberação de demo em `apps/api/prisma/catalogo-e-liberacoes.ts` → e2e por papel em `scripts/e2e/<papel>/` → `midia-externa.json` se houver mídia ≥ 2 MB → painel `/unooria` (provar que desliga) → `AGENTS.md`/`CLAUDE.md`/`README.md`, LaTeX e ADR. Exemplares a imitar: `apps/api/src/juri-estadual/` + `apps/experiencias/exp06ef1b/` (atividade, rodada, ficha, equipe, podcast); `apps/api/src/a-selecao/` para zerar = rodada; `apps/api/src/unoogpt/` para IA que responde ao estudante — **não** `unootube` (arquivado) nem a exp-08. Comandos exatos (`pnpm turbo typecheck lint test build`, `node scripts/e2e/rodar.mjs estudante`). Seção **"O que NÃO fazer"** técnica (componente local, `console.*`, `any`, gabarito no bundle, Redis/estado global, WebSocket ou `hub:pause` como canal de sala, campo `dados` em evento, `@Roles("gestor")` ou `admin-contrato`, quota de IA por env, formatar data na mão, chamar IA fora de `apps/api/src/ai`, chamar IA aberta em tempo real no cliente do estudante sem curadoria prévia docente, tocar `migrations/` existentes, apagar ou arquivar sessão para zerar, tabela própria de nota ou enquete, mp3 de podcast no bundle ou no inventário, nome de estudante em payload…).
 7. **Tarefas (seção 18)** atômicas e ordenadas: contratos → testes → implementação → docs; cada uma com RFs cobertos, arquivos, dependências, `[P]` se paralelizável, **comando de verificação** e o teste que a prova (`arquivo › caso`).
-8. **KPI aponta para algo que o mede.** A tabela da seção 2 sai no formato do gabarito, e um gate determinístico a confere. Cada linha traz, obrigatoriamente: a **pergunta** que o número responde, a **decisão** que muda conforme o valor, o **corte** (`rede · escola · missao · serie · turma · professor`), a **tela** onde o evento dispara, o(s) **`EVT-`** que alimentam, **como calcula** (citando os campos de `resultado`/`contexto` que o evento de fato carrega) e o **baseline**. Os `EVT-P*` não passam por `track` — o sinal é a escrita de uma coluna do módulo e **não tem `resultado` nem `contexto`**: o KPI que os usa calcula com a coluna onde o sinal grava (`sum(<id>_pacotes.ia_tokens)`, `painel_vistas >= 2`), nunca com `resultado.x`, e você não inventa campo de payload para ele. Sem pergunta e sem decisão, o número é métrica de vaidade — foi o que aconteceu em 34 dos 49 KPIs gerados até 22/09. Baseline é o número **com a origem entre parênteses** (`45% (playtest 12/08, n=23)`) ou o literal `sem baseline — primeira medição`: `0%` não é medida, é espaço em branco vestido de número. **Alvo e Prazo** vêm do §17 do one-pager ou do 9f da spec, com a origem; sem eles, `sem meta — primeira medição` e `—` — os exemplos do gabarito não são metas. O KPI que herda uma pergunta transversal (as `T` de dono `missao` do catálogo abaixo) usa `Tela: —`, a pergunta dela com as palavras dela e **só os sinais que o catálogo lista para ela**; a tabela de eventos traz **todos** os sinais universais (`EVT-U*` e `EVT-P*`) com o id, o verbo e o objeto do catálogo, e esses ids nunca nomeiam evento da mecânica. Copie do sub-bloco 9f da spec as perguntas que a missão declarou — elas vêm do PO, não se inventam aqui. **As cinco `PQ-nn` da spec têm de aparecer na coluna `PQ`**: o gate cruza as duas tabelas e acusa tanto a pergunta que ficou pelo caminho quanto o `PQ-` que você citou e a spec não declara.
+8. **KPI aponta para algo que o mede.** A tabela da seção 2 sai no formato do gabarito, e um gate determinístico a confere. Cada linha traz, obrigatoriamente: a **pergunta** que o número responde, a **decisão** que muda conforme o valor, o **corte** (`rede · escola · missao · serie · turma · professor`), a **tela** onde o evento dispara, o(s) **`EVT-`** que alimentam, **como calcula** (citando os campos de `resultado`/`contexto` que o evento de fato carrega) e o **baseline**. Os `EVT-P*` não passam por `track` — o sinal é a escrita de uma coluna do módulo e **não tem `resultado` nem `contexto`**: o KPI que os usa calcula com a coluna onde o sinal grava (`sum(<id>_pacotes.ia_tokens)`, `painel_vistas >= 2`), nunca com `resultado.x`, e você não inventa campo de payload para ele. Sem pergunta e sem decisão, o número é métrica de vaidade — foi o que aconteceu em 34 dos 49 KPIs gerados até 22/09. Baseline é o número **com a origem entre parênteses** (`45% (playtest 12/08, n=23)`) ou o literal `sem baseline — primeira medição`: `0%` não é medida, é espaço em branco vestido de número. **Alvo e Prazo** vêm do §17 do one-pager ou do 9f da spec, com a origem; sem eles, `sem meta — primeira medição` e `—` — os exemplos do gabarito não são metas. O KPI que cita uma `PQ-nn` leva **o alvo e o limiar de decisão da linha dela no 9f**, copiados — não o de outra pergunta nem o de uma hipótese; o PRD da exp06ef1b deu 85% ao KPI da PQ-02, que no 9f tem 70%. O KPI que herda uma pergunta transversal (as `T` de dono `missao` do catálogo abaixo) usa `Tela: —`, a pergunta dela com as palavras dela e **só os sinais que o catálogo lista para ela**; a tabela de eventos traz **todos** os sinais universais (`EVT-U*` e `EVT-P*`) com o id, o verbo e o objeto do catálogo, e esses ids nunca nomeiam evento da mecânica. Copie do sub-bloco 9f da spec as perguntas que a missão declarou — elas vêm do PO, não se inventam aqui. **As cinco `PQ-nn` da spec têm de aparecer na coluna `PQ`**: o gate cruza as duas tabelas e acusa tanto a pergunta que ficou pelo caminho quanto o `PQ-` que você citou e a spec não declara.
 9. **Dados, Curadoria e LGPD**: `estudante_id` opaco, PII zero em eventos, evento = `track(verbo, objeto, <resultado, contexto>)` sem campo `dados`, cada medida com **tabela de leitura** nomeada, texto livre de menor em tabela própria com `chars_count` lida só pelo professor, graus de medida com o lugar onde moram, caminho por dado (cinco), `versao_instrumento`, **`rodada`** (reaplicar soma a rodada; nada se apaga nem se arquiva — não existe coluna `tentativa` de reaplicação), o que nunca vai ao bundle, retenção declarada ou lacuna assumida, fuso único (ADR-98/99), LGPD art. 14; curadoria humana obrigatória (Human-in-the-Loop) para todo conteúdo gerado por IA com fallback garantido para o banco curado default quando a spec o tem e perfil de quota (`ia_quotas`, ADR-105) declarado. Tipos e chaves do modelo de dados são os da plataforma (seção 11 do gabarito): `escola_id TEXT`, `turma_id` e `estudante_id` UUID com FK.
 10. **Capacidade que a plataforma ainda não tem não é impedimento, é pré-requisito.** Se a missão grava voz, usa câmera, grava vídeo ou pede qualquer capacidade da seção 3 de `capacidades-plataforma.md`, o PRD a leva inteira: a tabela de pré-requisitos na seção 15 (com arquivos a tocar, componente de DS a criar e ADR necessária), o item na seção 19 com dono `plataforma`, a degradação sem o recurso na seção 8, o destino da mídia na seção 11 e o contrato de dados na seção 14. A esteira marca o PRD 🟡 por ela. **Nunca** troque a mecânica por uma mais pobre só porque a capacidade não existe hoje, e **nunca** escreva a missão como se ela já existisse.
 11. **Design**: referencie a folha de diagramas, o projeto no Stitch e os IDs de tela; **uma story por tela, com todas as chaves de string dela e onde cada uma vive** (seção 7 do gabarito — a chave, não o texto, que mora no sheet); seção do DS por tela ("quem está falando"), componentes do DS a usar via ponte `@edu/ui/ds*`, viewport, permissões de iframe, assets ≥ 2 MB no bucket `-assets`; **acessibilidade por tela** e, quando a camada CAA veio preenchida, a prancha, os pictogramas e as chaves de instrução CAA (seção 10.2). **A visão do professor é parte do produto:** o RF de parametrização nomeia o recorte da aula (disciplina, tema, assuntos, contexto) e a curadoria; as telas `E0-PROF-01…05` entram na seção de design com os links do Stitch e o fluxo do professor do board, e no hub pelos arquivos da seção 17.3; o contrato de rotas do preparo fica no módulo da própria missão, no molde do Júri — `POST /<modulo>/turmas/«turmaId»/gerar-conteudo` (rascunho, não persiste) → `POST …/homologar` (o professor edita e aprova; cria a atividade pronta) → imagens em duas fases, quando há → `POST …/turmas/«turmaId»/pacotes/«pacoteId»/em-andamento` (põe no ar e libera a missão na sala) → `POST …/gate` (etapas), com o painel em `GET …/turmas/«turmaId»/painel` e `POST …/zerar` (rodada nova); é o que `juri-estadual` (exp06ef1b) e `jornal-escola` (exp04ef1b) fazem. Cada ação do professor do §9 do one-pager vira rota (seção 12.2). O módulo `/atividades` é o motor do Instanooria (exp08ef1b: antagonismo, perfis da vila) e **não se reusa**: citar `/atividades/«id»/aprovar`, `/pacote` ou `/curadoria` é citar rota que não existe; a tabela "a mesma missão em três aulas" do bloco 8 vira fixture dos testes de geração.

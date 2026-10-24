@@ -1489,7 +1489,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria | evidencia | evidencia_one_pager | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico | aprovado_resumido | aprovado_spec_design
+    modo: str  # lacunas | manifesto | telemetria | evidencia | evidencia_one_pager | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico | aprovado_resumido | aprovado_spec_design | montagem_prd | montagem_handoff
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -1701,6 +1701,15 @@ class RastroCheckAgent(BaseAgent):
                                     briefing=str(state.get("briefing", "") or ""), pedidos=_pedidos_de_produto(state),
                                     votos=texto_votos(state))
             relatorio = op.relatorio(resultado, missao)
+        elif self.modo in ("montagem_prd", "montagem_handoff"):
+            # PRD e handoff montam, não decidem (plano «Produto dono do contrato», PR 4, D10): número de regra, hipótese,
+            # meta, teto e estado do corpo conferidos contra o contrato. O A117 deu 🟢 ao PRD da exp02ef1b com a H1 a 25%
+            # no corpo e a 30% no anexo; o da exp06ef1b saiu sem o teto de 35 palavras do §15 (23/10/2026).
+            from tools import montagem
+
+            documento = "prd" if self.modo == "montagem_prd" else "handoff"
+            resultado = (montagem.validar_prd if documento == "prd" else montagem.validar_handoff)(dict(state))
+            relatorio = montagem.relatorio(resultado, documento, missao)
         elif self.modo == "aprovado_spec_design":
             # a spec que o D0 e o D9 reescreveram: só o que eles pioraram, com o dono do D0 (07/10/2026)
             from tools import conteudo_aprovado as ca

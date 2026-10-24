@@ -543,15 +543,16 @@ def _sobreposicao(a: set, b: set) -> float:
     return len(a & b) / max(1, len(a | b))
 
 
-def contrato_no_corpo(one_pager: str, corpo: str) -> List[Dict[str, str]]:
+def contrato_no_corpo(one_pager: str, corpo: str, secoes: Sequence[int] = SECOES_DE_NUMERO) -> List[Dict[str, str]]:
     """Números do one-pager (§10, §15, §17) que o corpo não traz: `trocado` quando a linha correspondente do corpo
     (a mais parecida, por palavras) tem outro número da mesma unidade — H1 da exp02ef1b, 30% no one-pager e 25% no
-    corpo do PRD —, `ausente` quando o número não aparece no corpo (as 35 palavras da exp06ef1b)."""
+    corpo do PRD —, `ausente` quando o número não aparece no corpo (as 35 palavras da exp06ef1b). `secoes` restringe:
+    o gate do PR 4 (`tools/montagem.py`) confere só o §15 e o §17 — o tempo do §10 é do A116."""
     from tools.conteudo_aprovado import secao
 
     linhas_corpo = [(l, _assinatura(l)) for l in (corpo or "").splitlines() if l.strip()]
     saida = []
-    for n_secao in SECOES_DE_NUMERO:
+    for n_secao in secoes:
         for linha in (secao(one_pager or "", n_secao) or "").splitlines():
             # zero não é regra que propague («0 palavras de leitura autônoma», «0 min» de mediação na tabela de tempos)
             toks = [t for t in numeros(linha) if t[1] != "px" and float(t[0]) != 0]

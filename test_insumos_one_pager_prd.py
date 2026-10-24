@@ -363,8 +363,9 @@ def test_banca_nas_quatro_posicoes_e_o_dev_so_conserta_dev():
     # dentro do dev: só documento de dev, e o que ele reescreve é reconferido
     assert set(MAPA_BANCA) == {"handoff-dev", "brief-assets", "banco-conteudo"} and ORDEM_BANCA[-1] == "banco-conteudo"
     assert {"jornada", "fluxo", "telas", "copy-ptbr-revisao", "spec-missao"} <= set(BANCA_EXTERNO)
+    # o handoff reescrito pela banca é reconferido também contra o contrato de produto (PR 4, 23/10/2026)
     assert POSFIXO_BANCA == {"banco-conteudo": ["A105ConteudoCheckRetrabalhoBanca"],
-                             "handoff-dev": ["A101TelemetriaCheckRetrabalhoBanca"]}
+                             "handoff-dev": ["A101TelemetriaCheckRetrabalhoBanca", "A101bMontagemHandoffRetrabalhoBanca"]}
     banca_dev = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "BancaLoop")
     juizes = next(a for a in banca_dev.sub_agents if a.name == "BancaValidacaoDev").sub_agents
     assert [j.output_key for j in juizes] == ["validacao_dados_lgpd", "validacao_tecnica_arquitetura"]

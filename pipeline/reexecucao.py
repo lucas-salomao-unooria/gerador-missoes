@@ -62,6 +62,9 @@ CHAVES_DEV = frozenset({
     "handoff_dev", "brief_assets", "handoff_rodada",
     "banco_conteudo", "conteudo_report", "conteudo_status", "conteudo_status_envelope", "banco_rodada",
     "telemetria_report", "telemetria_status", "telemetria_status_envelope",
+    # handoff e PRD montam, não decidem (PR 4 do plano «Produto dono do contrato», 23/10/2026)
+    "montagem_handoff_report", "montagem_handoff_status", "montagem_handoff_status_envelope",
+    "montagem_prd_report", "montagem_prd_status", "montagem_prd_status_envelope",
     "rastro_lacunas_report", "rastro_lacunas_status", "rastro_lacunas_status_envelope",
     "validacao_produto_narrativa", "validacao_design_imersao", "validacao_pedagogia_bncc",
     "validacao_dados_lgpd", "validacao_tecnica_arquitetura", "validacao_dev_report",
@@ -272,6 +275,7 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Coerência entre documentos": "design",
     "Ficha do manifesto": "dev",
     "Contrato de telemetria e arquitetura": "dev",
+    "Handoff monta, não decide": "dev",
     "Banco de conteúdo": "dev",
     "Handoff de dev": "dev",
     "Rastro de lacunas antes do PRD": "dev",
@@ -280,6 +284,7 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Pendências e consistência do PRD": "dev",
     "Coerência KPI ↔ evento ↔ tela": "dev",
     "PRD × one-pager aprovado": "dev",
+    "PRD monta, não decide": "dev",
     "Pedagógico × one-pager aprovado": "dev",
     "Consistência do PRD": "dev",
 }

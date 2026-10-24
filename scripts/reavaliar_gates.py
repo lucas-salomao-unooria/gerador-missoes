@@ -111,6 +111,14 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
     novos["evidencia_status"] = evidencia.validar(spec)
     novos["kpis_status"] = kpis.validar_kpis(prd, spec)
 
+    # PR 4 do plano «Produto dono do contrato»: handoff e PRD montam, não decidem
+    from tools import montagem
+
+    if handoff:
+        novos["montagem_handoff_status"] = montagem.validar_handoff(state)
+    if prd:
+        novos["montagem_prd_status"] = montagem.validar_prd(state)
+
     novos["contrato_produto_status"] = contrato_produto.validar_one_pager(
         one_pager, state.get("nucleo_narrativo", "") or "", state.get("briefing", "") or "",
         decisoes_do_po=state.get("decisoes_do_po") or [],
