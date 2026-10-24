@@ -294,6 +294,8 @@ dela; `meta-diverge-9f` → o alvo e o limiar da linha da `PQ-nn` no 9f; `teto-a
 `divergencia-do-contrato-sem-registro` → o corpo segue o one-pager e, além disso, a seção 19 registra
 `[ABERTO — dono: produto: <onde> diz X e <onde> diz Y]` (o achado traz o texto). Só registre
 divergência que o gate apontou como do contrato: cópia errada se corrige no corpo, não vai a produto.
+`hipotese-a-conferir` (⚠️, não bloqueia) é dúvida para o PO, não divergência certa: o seguro é a
+hipótese do §17 com os números dela e o limiar da `PQ-nn` citado à parte.
 
 {montagem_prd_report?}
 

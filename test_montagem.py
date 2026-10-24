@@ -522,3 +522,117 @@ def test_gates_ligados_aos_loops_e_aos_prompts():
     assert "{montagem_handoff_report?}" in load_prompt("dev/100a_handoff_dev.md")
     redator = load_prompt("dev/113_prd_writer.md")
     assert "{montagem_prd_report?}" in redator and "[ABERTO — dono: produto:" in redator
+
+
+# --------------------------------------------------------------------------- calibragem C1 (24/10/2026)
+# Os gates de montagem deram 🔴 nas 7 execuções de dev que o PO viu, com acerto e ruído na mesma lista. Os casos reais
+# estão no gabarito (`tests/gabarito_achados/`); aqui, as guardas sintéticas de cada calibragem.
+GUARDRAIL = _prd({"- RNF-SYNC-001": "- Guardrail: abandono na Etapa 2 abaixo de 5% dos estudantes.\n- RNF-SYNC-001"})
+
+
+def _pedido(texto: str, etapa: str = "dev", **extra: str) -> Dict[str, Any]:
+    return {"origem": f"refazer {etapa} · {etapa} · 24/10/2026 10:00", "etapa": etapa, "texto": texto, **extra}
+
+
+def test_pedido_do_po_so_o_valor_que_ele_afirma_vira_origem():
+    """O pedido de refazer em prosa livre cita também o número errado: só o valor que o PO afirma como novo vira origem
+    («deve ser», «volta para», «pode ser», «ratifico»…). O que ele cita — entre aspas, «texto atual», «está com»,
+    «hoje», «em vez de», o relato de gate colado — não."""
+    def origem(*textos: str, etapa: str = "dev") -> str:
+        return montagem.contrato({"pedidos_do_po": [_pedido(t, etapa) for t in textos]})["pedidos_do_po"]
+
+    assert origem("O PRD está com 25%, deve ser 30%.") == "30% — pedido do PO ao refazer"
+    assert origem("Texto atual: «Mais de 25% das duplas»\nO PRD hoje está com 25%.\n"
+                  "Ajuste solicitado: a H1 volta para 30%.") == "30% — pedido do PO ao refazer"
+    assert origem("Deve ser 30% e o 25% está errado.", "Use 30% em vez de 25%.") == "30% — pedido do PO ao refazer"
+    assert origem("teto de palavras estou ratificando que pode ser ate 10 palavras") == (
+        "10 palavras — pedido do PO ao refazer")
+    # sem valor afirmado, nada: o conservador é o número continuar pedindo origem
+    for texto in ("A H1 é 25%.", "mudar de 25% para 30%", "o PRD trocou o 30% aprovado por 25%", "Não use 25%.",
+                  "❌ numero-sem-origem · 5% em «abandono abaixo de 5%»\nhipotese-diverge · o PRD escreve 25%"):
+        assert "25%" not in origem(texto) and "5%" not in origem(texto), texto
+    # o pedido de produto vai ao one-pager pela cascata; o item que voltou ao PO para Devolver não foi aplicado
+    assert origem("Deve ser 7%.", etapa="produto") == ""
+    assert montagem.contrato({"pedidos_do_po": [_pedido("Deve ser 7%.", pendente_em="produto")]})["pedidos_do_po"] == ""
+    # sem `pedidos_do_po` (sessão anterior a ele), os pareceres refazer de design e dev
+    parecer = {"etapa": "dev", "acao": "refazer", "comentario": "O teto pode ser até 12 palavras."}
+    assert "12 palavras" in montagem.contrato({"pareceres_humanos": [parecer]})["pedidos_do_po"]
+
+
+def test_pedido_do_po_ao_refazer_dev_e_origem_no_gate():
+    assert _codigos(montagem.validar_prd(_sintetico(prd_final=GUARDRAIL))) == ["numero-sem-origem"]
+    decidido = [_pedido("O guardrail do PRD está com 7%, deve ser 5%.")]
+    assert montagem.validar_prd(_sintetico(prd_final=GUARDRAIL, pedidos_do_po=decidido))["status"] == "aprovado"
+    for pedidos in ([_pedido("O guardrail deve ser 7%; hoje está 5%.")], [_pedido("Deve ser 5%.", etapa="produto")]):
+        r = montagem.validar_prd(_sintetico(prd_final=GUARDRAIL, pedidos_do_po=pedidos))
+        assert _codigos(r) == ["numero-sem-origem"] and "5%" in r["achados"][0]["resumo"], pedidos
+
+
+def test_numero_de_palavras_so_conta_quando_o_teto_o_rege():
+    """«(teto da faixa: 20 palavras)» ao lado de «até 17 palavras» não faz do 17 um teto; «em até 17 palavras» faz."""
+    assert montagem.numeros_de_regra("respeitando os tetos da faixa (fala de Bento com 21 palavras)") == []
+    assert montagem.numeros_de_regra("frases com até 17 palavras (teto da faixa: 20 palavras)") == [("20", "palavras")]
+    assert montagem.numeros_de_regra("Crachá exibe nome, selo e mandato em até 17 palavras.") == [("17", "palavras")]
+    assert montagem.numeros_de_regra("bloqueia se o bastidor ultrapassar 40 palavras") == [("40", "palavras")]
+
+
+def test_fonte_externa_e_nota_de_acessibilidade_so_tiram_a_porcentagem():
+    assert montagem.numeros_de_regra("Pesquisas do CETIC.br apontam que menos de 15% compreendem o feed.") == []
+    assert montagem.numeros_de_regra("| Acessibilidade | Lighthouse Accessibility Score ≥ 98% |") == []
+    assert montagem.numeros_de_regra("Exemplo no painel: índice da sala (ex.: 73%) e taxa de revisão.") == []
+    # a duração da mecânica na mesma linha continua pedindo origem
+    assert montagem.numeros_de_regra("Segundo o IBGE, 40% das escolas…; cada rodada dura 45 s.") == [("45", "s")]
+    assert montagem.numeros_de_regra("Tempo de resposta de 45 s, ajustável (WCAG 2.2.1).") == [("45", "s")]
+
+
+def test_recorte_da_aula_so_os_limites_da_plataforma():
+    """tema ≤ 60, assuntos ≤ 600 e contexto ≤ 120 caracteres são o contrato de customização da plataforma; outro teto
+    para o mesmo campo é decisão e pede origem."""
+    assert montagem.numeros_de_regra(
+        "O professor digita o tema (máx. 60 caracteres) e os tópicos (máx. 600 caracteres).") == []
+    assert montagem.numeros_de_regra("Campo de tema com no máximo 80 caracteres.") == [("80", "caracteres")]
+    assert montagem.numeros_de_regra("Resposta aberta com piso de 15 caracteres.") == [("15", "caracteres")]
+
+
+def test_payload_da_spec_e_o_teto_da_faixa_sao_origem():
+    """`{"segundos_sem_acao": 90}` na tabela de eventos da spec é a origem dos «90s sem ação»; o teto da faixa da missão
+    (references/teto-palavras-por-faixa.md) é padrão da plataforma — só o da faixa dela."""
+    assert montagem.tem_numero(montagem.texto_do_contrato({"spec": '| `EVT-U04` | `{"segundos_sem_acao": 90}` |'}),
+                               ("90", "s"))
+    assert "20 palavras" in montagem.contrato({"one_pager": "# One-pager — exp06ef1b"})["teto_da_faixa"]
+    assert "10 palavras" in montagem.contrato({"one_pager": "# One-pager — exp02ef1b"})["teto_da_faixa"]
+    assert "20 palavras" not in montagem.contrato({"one_pager": "# One-pager — exp02ef1b"})["teto_da_faixa"]
+
+
+ONE_PAGER_H1_85 = ONE_PAGER.replace(
+    "- **Hipótese 1 (Usabilidade):** a dupla ajusta a moldura em menos de 90 segundos.\n"
+    "  - *Indica falha:* Mais de 30% das duplas confirmarem na posição default.\n",
+    "- **Hipótese 1 (Moldura):** pelo menos 85% das duplas ajustam a moldura antes de confirmar a fotografia.\n")
+SPEC_PQ01_80 = SPEC.replace("| >25% → animação demonstrativa |", "| <80% → animação demonstrativa |")
+
+
+def _handoff_h1(linha: str) -> Dict[str, Any]:
+    handoff = "# Handoff\n\n## 6. Hipóteses de validação\n\n" + linha + "\n\n## 7. Lacunas e pendências\n\n- Nenhuma.\n"
+    return _sintetico(one_pager=ONE_PAGER_H1_85, spec_missao=SPEC_PQ01_80, spec_missao_gate0=SPEC_PQ01_80,
+                      handoff_dev=handoff)
+
+
+def test_limiar_da_pq_citada_e_duvida_e_nao_some_atras_da_regua_de_linha():
+    """O handoff copia a frase da H1 do §17 com o limiar da PQ-01 (80%, linha firme do 9f) no lugar da meta (85%): a
+    régua de linha do §17 acusava a troca e escondia a leitura por hipótese, que sabe da pergunta citada. Sai como
+    dúvida, atenção. A hipótese trocada (outra coisa, mesmo citando a PQ-01 com 80%) continua bloqueando."""
+    r = montagem.validar_handoff(_handoff_h1("- **Hipótese 1 (Moldura, PQ-01):** pelo menos 80% das duplas ajustam a "
+                                             "moldura antes de confirmar a fotografia."))
+    assert _codigos(r) == ["hipotese-a-conferir"] and r["status"] == "amarelo"
+    assert r["achados"][0]["resumo"].startswith("Dúvida, não divergência certa: a H1 do §17 do one-pager tem 85%")
+    assert "limiar da PQ-01" in r["achados"][0]["resumo"]
+
+    trocada = montagem.validar_handoff(_handoff_h1(
+        "- **Hipótese 1 (Busca ativa, PQ-01):** pelo menos 80% dos estudantes pesquisam hashtags fora do feed."))
+    assert _codigos(trocada) == ["hipotese-diverge"] and trocada["status"] == "bloqueado"
+
+    # sem meta no §17, o limiar da PQ não vira dúvida: continua meta acrescentada
+    sem_meta = _handoff_h1("- **Hipótese 2 (Virada, PQ-01):** pelo menos 80% das crianças reconhecem que a foto não "
+                           "mostrou tudo.")
+    sem_meta["one_pager"] = ONE_PAGER
+    assert _codigos(montagem.validar_handoff(sem_meta)) == ["hipotese-diverge"]
