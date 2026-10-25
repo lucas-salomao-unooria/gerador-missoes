@@ -16,8 +16,9 @@ Quatro peças:
   narrativa de sala de aula e remete aos subtítulos. Idempotente: a montagem de uma rodada anterior é trocada.
 - **Gate de montagem** (`validar`, A121b), no molde do gate do PRD (`tools/montagem.py`, PR 4): na narrativa, número de
   regra sem origem no contrato, hipótese do §17 ou teto do §15 com outro número, texto-chave reescrito, origem de produto
-  falsa, tempo de etapa que não é o do §10, e subtítulo da esteira mexido. Habilidade, tempo total e podcast ficam com o
-  A121 (`conteudo_aprovado.validar_pedagogico`), como o A116 ao lado do A116b no PRD.
+  falsa, tempo de etapa que não é o do §10, e subtítulo da esteira mexido. Número, hipótese, teto e origem não são
+  cobrados na pendência nem no changelog (`sem_registro`), como a §19 e a §22 do PRD. Habilidade, tempo total e podcast
+  ficam com o A121 (`conteudo_aprovado.validar_pedagogico`), como o A116 ao lado do A116b no PRD.
 - **O dev só acrescenta** (`no_dev`, A119b): as pendências da banca de dev e do rastro de lacunas do dev vão numa seção
   própria, guardada à parte (`pedagogico_pendencias_dev`) e juntada no fim do documento na exportação (`completo`). O
   texto aprovado no de acordo de design é conferido contra o retrato que o design gravou (`pedagogico_do_design`, A124)
@@ -366,20 +367,42 @@ def contrato_firme(state: Dict[str, Any]) -> Tuple[Dict[str, str], str]:
     return docs, montagem.texto_do_contrato({k: montagem.sem_linhas_abertas(v) for k, v in docs.items()})
 
 
-def sem_preparo(texto: str) -> str:
-    """A narrativa sem os subtítulos «Antes da aula» (o preparo do professor, `E0-PROF`): o preparo é padrão da
-    plataforma, igual em toda missão (D7), e o número dele não é regra desta missão — «a página da missão com duas
-    opções simples», no pedagógico da exp02ef1b, é a tela de recorte da aula, não uma escolha da criança."""
+def _sem_secoes(texto: str, cabe) -> str:
+    """O texto sem cada seção cujo `(nível, título normalizado)` `cabe`, do título ao próximo de nível igual ou mais
+    alto."""
     saida = texto or ""
     while True:
         titulos = _titulos(saida)
-        k = next((k for k, t in enumerate(titulos) if t[2] >= 3 and _titulo_norm(t[3]).startswith("antes da aula")),
-                 None)
+        k = next((k for k, t in enumerate(titulos) if cabe(t[2], _titulo_norm(t[3]))), None)
         if k is None:
             return saida
         ini, _, nivel, _ = titulos[k]
         fim = next((i for i, _, n, _ in titulos[k + 1:] if n <= nivel), len(saida))
         saida = saida[:ini] + saida[fim:]
+
+
+def sem_preparo(texto: str) -> str:
+    """A narrativa sem os subtítulos «Antes da aula» (o preparo do professor, `E0-PROF`): o preparo é padrão da
+    plataforma, igual em toda missão (D7), e o número dele não é regra desta missão — «a página da missão com duas
+    opções simples», no pedagógico da exp02ef1b, é a tela de recorte da aula, não uma escolha da criança."""
+    return _sem_secoes(texto, lambda nivel, titulo: nivel >= 3 and titulo.startswith("antes da aula"))
+
+
+#: As seções do gabarito (`prompts/dev/120_one_pager_pedagogico.md`) que registram, não afirmam: a de pendências, onde
+#: o prompt manda pôr a proposta ainda aberta («como proposta»), e o changelog, que traz o número de antes da mudança.
+#: São a §19 e a §22 do PRD, que o gate dele pula (`montagem._linhas_do_corpo`). «O que precisamos que você aprove» fica
+#: na conferência: são perguntas ao time pedagógico, e o prompt não manda proposta para lá.
+SECOES_DE_REGISTRO = ("o que ainda esta em aberto", "o que mudou nesta versao")
+
+
+def sem_registro(texto: str) -> str:
+    """A narrativa sem as seções de pendência e de histórico (`SECOES_DE_REGISTRO`): o que ela afirma como a missão.
+
+    Até a revisão do PR #79 (24/10/2026) o A121b conferia a narrativa inteira e bloqueava o que a esteira manda
+    escrever: a proposta em «O que ainda está em aberto» (os 40% da PQ-01 da exp02em1b, os 25% da PQ-01 da exp02ef1b,
+    que só existem em linha `[PROPOSTA]`), a recondução da H1 de 25% para 30% no changelog da exp02ef1b (D11) e as
+    «até 10 palavras» do changelog da exp04ef1b. Na correção pontual de design, com uma rodada só, o 🔴 ficava."""
+    return _sem_secoes(texto, lambda nivel, titulo: nivel == 2 and titulo.startswith(SECOES_DE_REGISTRO))
 
 
 def hipoteses_citadas(texto: str, one_pager: str) -> List[Dict[str, str]]:
@@ -457,10 +480,14 @@ def validar(state: Dict[str, Any]) -> Dict[str, Any]:
         return {"status": "aprovado", "achados": [], "contagem": {"documento": 0}}
     one_pager = str(state.get("one_pager") or "")
     texto = narrativa(documento)
+    # número, hipótese, teto e origem citada, só no que a narrativa afirma: a pendência e o changelog registram a
+    # proposta e o número de antes, como a §19 e a §22 do PRD (revisão do PR #79). Texto-chave e tempo de etapa valem
+    # no texto todo
+    afirmado = sem_registro(texto)
     docs, origem = contrato_firme(state)
     achados: List[Dict[str, str]] = []
 
-    sem_origem = montagem.numeros_sem_origem(sem_preparo(texto), origem)
+    sem_origem = montagem.numeros_sem_origem(sem_preparo(afirmado), origem)
     if sem_origem:
         achados.append(_achado(
             "numero-sem-origem",
@@ -470,9 +497,9 @@ def validar(state: Dict[str, Any]) -> Dict[str, Any]:
             + ". O pedagógico monta, não decide: copie o número do one-pager, ou remeta ao subtítulo «Do one-pager "
             "aprovado» que o traz; proposta em aberto entra em «O que ainda está em aberto», como proposta."))
 
-    hipoteses = hipoteses_citadas(texto, one_pager)
+    hipoteses = hipoteses_citadas(afirmado, one_pager)
     vistos = {(h["hipotese"], h["corpo"]) for h in hipoteses}
-    for c in contrato_no_corpo(one_pager, texto, secoes=(15, 17)):
+    for c in contrato_no_corpo(one_pager, afirmado, secoes=(15, 17)):
         if c["situacao"] != "trocado":
             continue
         if c["secao"] == "§17" and any(set(c["corpo"].split(", ")) <= set(h["corpo"].split(", ")) for h in hipoteses):
@@ -484,11 +511,13 @@ def validar(state: Dict[str, Any]) -> Dict[str, Any]:
         codigo = "hipotese-diverge" if c["secao"] == "§17" else "teto-diverge"
         achados.append(_achado(codigo, (
             f"O {c['secao']} do one-pager diz {c['contrato']} («{c['linha'][:120]}»), e a narrativa do pedagógico escreve "
-            f"{c['corpo']}: «{c['linha_corpo'][:140]}». O pedagógico diz o que o one-pager diz, com os números dele.")))
+            f"{c['corpo']}: «{c['linha_corpo'][:140]}». O pedagógico diz o que o one-pager diz, com os números dele; "
+            "outro número, como proposta, entra em «O que ainda está em aberto».")))
     for h in hipoteses:
         achados.append(_achado("hipotese-diverge", (
             f"A {h['hipotese']} do §17 do one-pager diz {h['contrato']}, e a narrativa do pedagógico escreve {h['corpo']}: "
-            f"«{h['linha'][:140]}». A hipótese é a do one-pager aprovado; outro número é decisão do PO.")))
+            f"«{h['linha'][:140]}». A hipótese é a do one-pager aprovado; outro número é decisão do PO e, como proposta, "
+            "entra em «O que ainda está em aberto».")))
 
     reescritos = textos_chave_reescritos(texto, state)
     if reescritos:
@@ -499,7 +528,7 @@ def validar(state: Dict[str, Any]) -> Dict[str, Any]:
             + ". A narrativa cita o texto aprovado ou remete ao subtítulo «Do one-pager aprovado» que o traz — nunca uma "
             "terceira versão; mudança é pedido do PO no Refazer, que a triagem leva a Produto."))
 
-    falsas = montagem.origens_falsas(texto, docs)
+    falsas = montagem.origens_falsas(afirmado, docs)
     if falsas:
         achados.append(_achado(
             "origem-de-produto-falsa",
@@ -555,8 +584,9 @@ def relatorio(resultado: Dict[str, Any], missao: str = "") -> str:
     icone = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
     L = [f"# Pedagógico monta, não decide — {missao or 'missão'}", "",
          f"**Veredito: {icone}** · a narrativa contra o contrato (one-pager, spec de produto, lista branca do anexo de "
-         "design, decisões do PO): números de regra, hipóteses e tetos, textos-chave, origem citada e tempos por etapa; "
-         "e os subtítulos «Do one-pager aprovado», que a esteira monta por código.", ""]
+         "design, decisões do PO): números de regra, hipóteses e tetos e origem citada (fora de «O que ainda está em "
+         "aberto» e de «O que mudou nesta versão», que registram a proposta e o número de antes), textos-chave e tempos "
+         "por etapa; e os subtítulos «Do one-pager aprovado», que a esteira monta por código.", ""]
     if resultado.get("contagem", {}).get("legado") and resultado.get("contagem", {}).get("documento"):
         L += ["> Pedagógico sem os subtítulos da esteira: gerado antes de 24/10/2026, no dev. A narrativa é conferida do "
               "mesmo jeito; o refazer de design o monta sobre o contrato.", ""]

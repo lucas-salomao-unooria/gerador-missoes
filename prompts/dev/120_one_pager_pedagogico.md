@@ -69,7 +69,8 @@ quase igual, e um gate devolve a você a reescrita mais distante.
 regra que você escrever tem de estar no one-pager aprovado ou na spec, com o mesmo valor — um gate confere («Pedagógico
 monta, não decide») e devolve o documento com o número sem origem. Hipótese do §17 e teto do §15, se você os citar, com
 os números deles. O que está como `[PROPOSTA]` ou `[PARÂMETRO]` ainda não é decisão: entra em «O que ainda está em
-aberto», como proposta, nunca como fato da missão.
+aberto», como proposta, nunca como fato da missão. Essa seção e «O que mudou nesta versão», que traz o número de antes
+de cada mudança, são as únicas em que o gate não cobra a origem do número.
 
 ## Rodada de correção — só quando houver relatório abaixo
 
