@@ -579,6 +579,9 @@ def validar(state: Dict[str, Any]) -> Dict[str, Any]:
     afirmado, sem_registro = registro_conferido(texto, "\n".join(docs.values()))
     achados: List[Dict[str, str]] = []
 
+    # 🟡, como no PRD e no handoff (C7, 25/10/2026): o que é «número de regra» é leitura de sentido (`tools/severidade.py`)
+    from tools.severidade import BLOQUEIO, INTERPRETACAO, por_prova
+
     sem_origem = montagem.numeros_sem_origem(sem_preparo(afirmado), origem)
     if sem_origem:
         achados.append(_achado(
@@ -589,7 +592,8 @@ def validar(state: Dict[str, Any]) -> Dict[str, Any]:
             + ". O pedagógico monta, não decide: copie o número do one-pager, ou remeta ao subtítulo «Do one-pager "
             "aprovado» que o traz. Proposta em aberto entra em «O que ainda está em aberto», marcada como proposta "
             "(«[PROPOSTA…]», «proposta» ou o ID da PQ) e com o número que produto registrou. No changelog, só o número de "
-            "antes («de X para…», «era X») fica fora da conferência: o de agora é o da missão."))
+            "antes («de X para…», «era X») fica fora da conferência: o de agora é o da missão. Não bloqueia: o código "
+            "não sabe com certeza se cada número é de regra — confira.", por_prova(BLOQUEIO, INTERPRETACAO)))
     if sem_registro:
         achados.append(_achado(
             "numero-sem-origem",
@@ -597,7 +601,8 @@ def validar(state: Dict[str, Any]) -> Dict[str, Any]:
             "nem como proposta registrada (one-pager, spec, decisões do PO): "
             + montagem._exemplos(f"{i['numero']} em «{i['linha'][:110]}»" for i in sem_registro)
             + ". A pendência registra a proposta que produto já fez, com o número dela; número novo é decisão do PO, "
-            "pedida no Refazer, que a triagem leva a Produto."))
+            "pedida no Refazer, que a triagem leva a Produto. Não bloqueia: o código não sabe com certeza se cada "
+            "número é de regra — confira.", por_prova(BLOQUEIO, INTERPRETACAO)))
 
     hipoteses = hipoteses_citadas(afirmado, one_pager)
     vistos = {(h["hipotese"], h["corpo"]) for h in hipoteses}

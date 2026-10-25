@@ -19,7 +19,7 @@ import asyncio
 import json
 import re
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator, Dict
 
 from google.adk.agents.base_agent import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
@@ -465,7 +465,8 @@ def test_correcao_pontual_de_design_sem_pedagogico_tem_a_rodada_de_correcao_do_r
              if isinstance(getattr(a, "max_rounds", None), int) and not isinstance(a, ComiteVotosAgent)}
     assert gates.pop("A123PedagogicoRodada") == rodadas and set(gates.values()) == {1}, gates
 
-    ruim = _NARRATIVA_MINIMA + "\nA missão espera que 37% das crianças acertem a pergunta do fim.\n"
+    # o 🔴 é a origem citada que não tem o número (prova em código): o número sem origem sozinho é 🟡 desde a C7
+    ruim = _NARRATIVA_MINIMA + "\nA missão espera que 37% das crianças acertem a pergunta do fim (§17 do one-pager).\n"
     boa = _NARRATIVA_MINIMA
     for nome in ("exp02em1b-60cfa7f4", "exp01em1b-76d9af6e", "exp03em1b-b2e7b4a3"):
         estado = _estado(nome)
@@ -475,7 +476,7 @@ def test_correcao_pontual_de_design_sem_pedagogico_tem_a_rodada_de_correcao_do_r
         raiz, loop = _fechamento_pontual([ruim, boa])
         assert loop.max_iterations == rodadas
         final = asyncio.run(_rodar(raiz, inicial))
-        # a primeira versão bloqueou (37% sem origem), voltou ao redator, e a segunda passou
+        # a primeira versão bloqueou (37% citado do §17, que não o tem), voltou ao redator, e a segunda passou
         assert final["redator_chamadas"] == 2 and final["pedagogico_rodada"] == 2, nome
         assert final["montagem_pedagogico_status"] == "aprovado", (nome, final["montagem_pedagogico_report"][:400])
         assert "37%" not in final["one_pager_pedagogico"] and final[pg.KEY_RETRATO] == final["one_pager_pedagogico"]
@@ -486,7 +487,8 @@ def test_correcao_pontual_de_design_sem_pedagogico_tem_a_rodada_de_correcao_do_r
     documentos = edicao_pontual.documentos_da_etapa(estado, "design")
     assert "one_pager_pedagogico" in documentos
     documentos["one_pager_pedagogico"] = _na_secao(documentos["one_pager_pedagogico"], "Em uma frase",
-                                                   "A missão espera que 37% das crianças acertem a pergunta do fim.")
+                                                   "A missão espera que 37% das crianças acertem a pergunta do fim "
+                                                   "(§17 do one-pager).")
     inicial, _ = preparar_estado_pontual(estado, "design", "Trocar o texto do botão.", documentos, [])
     assert pg.travado_nesta_correcao(inicial)
     raiz, _ = _fechamento_pontual([boa])
@@ -506,6 +508,14 @@ def test_gate_aprova_o_montado_e_le_o_legado_com_tolerancia():
     assert pg.validar({})["status"] == "aprovado"
 
 
+def _acusa(r: Dict[str, Any], codigo: str) -> bool:
+    """O gate acusa `codigo` com a severidade da política (C7, `tools/severidade.py`): o número sem origem é leitura de
+    sentido e sai 🟡; o resto do que este arquivo confere é comparação literal e bloqueia."""
+    meus = [a for a in r["achados"] if a["codigo"] == codigo]
+    severidade = "atencao" if codigo == "numero-sem-origem" else "bloqueio"
+    return bool(meus) and r["status"] != "aprovado" and all(a["severidade"] == severidade for a in meus)
+
+
 def test_mutante_pedagogico_com_h1_25_em_vez_de_30():
     """A cadeia da exp02ef1b (D11): a H1 do §17 diz 30%, e os 25% eram proposta (PQ-01 `[PROPOSTA]`). No que o
     pedagógico afirma da missão, a H1 com 25% bloqueia — citada pelo número ou parafraseada. Em «O que ainda está em
@@ -520,11 +530,12 @@ def test_mutante_pedagogico_com_h1_25_em_vez_de_30():
     assert r["status"] == "bloqueado"
     assert {"hipotese-diverge", "numero-sem-origem"} <= {a["codigo"] for a in r["achados"]}
     assert all(a["etapa"] == "design" and a["agente_responsavel"] == pg.DONO for a in r["achados"])
-    # parafraseada, sem dizer «hipótese 1»: os 25% só existem numa linha de proposta, e proposta não é origem
+    # parafraseada, sem dizer «hipótese 1»: os 25% só existem numa linha de proposta, e proposta não é origem. Desde a
+    # C7 (25/10/2026) é 🟡 a conferir: dizer que o número é «de regra» é leitura de sentido (`tools/severidade.py`)
     parafrase = "Se mais de 25% das duplas desistirem de ajustar a moldura, a professora retoma o gesto com a turma."
     r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(estado["one_pager_pedagogico"],
                                                                 "Por que isso importa nesta idade", parafrase)})
-    assert r["status"] == "bloqueado" and "numero-sem-origem" in {a["codigo"] for a in r["achados"]}
+    assert _acusa(r, "numero-sem-origem")
 
     # na esteira: o A121b reprova, e o loop devolve ao redator
     from agents.checkers import RastroCheckAgent
@@ -620,7 +631,7 @@ def test_pendencia_e_changelog_registram_proposta_e_numero_de_antes():
         # pedagógico, que fica na conferência (o prompt não manda proposta para lá)
         for secao in ("O que a missão ensina", "O que precisamos que você aprove"):
             r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, secao, proposta)})
-            assert r["status"] == "bloqueado" and "numero-sem-origem" in {a["codigo"] for a in r["achados"]}, (nome, secao)
+            assert _acusa(r, "numero-sem-origem"), (nome, secao)
 
     # a exp02ef1b, que vai ser refeita com a H1 reconduzida a 30% (D11): o changelog conta a volta, e a pendência pode
     # trazer a proposta de mudar a hipótese, com o marcador. O changelog afirma o estado novo (3ª revisão): as «até 10
@@ -697,7 +708,7 @@ def test_registro_nao_e_porta_no_changelog_nem_na_pendencia(monkeypatch):
         assert len(casos) == (8 if nome != "exp02em1b-60cfa7f4" else 6), nome  # a H1 da exp02em1b não tem número
         for rotulo, secao, linha, codigo in casos:
             r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, secao, linha)})
-            assert r["status"] == "bloqueado" and codigo in {a["codigo"] for a in r["achados"]}, (nome, rotulo, r)
+            assert _acusa(r, codigo), (nome, rotulo, r)
         # o legítimo continua passando: o número de antes é o que sai, a proposta marcada e registrada também
         legitimos = [("O que ainda está em aberto", f"- Ainda é proposta, a decidir por produto: {numero} ({pq})."),
                      ("O que ainda está em aberto", f"- [PROPOSTA — validar com PO: {numero} ({pq})]")]
@@ -1109,7 +1120,8 @@ def test_custo_pior_caso_do_pedagogico_declarado_no_readme(monkeypatch):
     from tools import edicao_pontual
 
     conta = {"redator": 0, "editor": 0, "juiz": 0}
-    ruim = _NARRATIVA_MINIMA + "\nA missão espera que 37% das crianças acertem a pergunta do fim.\n"
+    # o 🔴 é a origem citada que não tem o número (prova em código): o número sem origem sozinho é 🟡 desde a C7
+    ruim = _NARRATIVA_MINIMA + "\nA missão espera que 37% das crianças acertem a pergunta do fim (§17 do one-pager).\n"
 
     class Redator(BaseAgent):
         @override
