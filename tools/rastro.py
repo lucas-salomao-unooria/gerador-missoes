@@ -692,10 +692,13 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                 severidade, motivo = _severidade_na_etapa(
                     "decisao_humana" if etapa == "humano" else "atencao" if etapa in ETAPAS_NAO_BLOQUEANTES else "bloqueio",
                     etapa, fonte.get("etapa_padrao", "dev"), etapa_corrente)
+                # a linha e o marcador inteiros: vão ao cartão do PO, e o corte em 200/160 partia a palavra no meio
+                # (as linhas «[ABERTO — dono: PO: …» das sessões de 24/10/2026 passam de 200 caracteres). A chave de
+                # repetição acima e a lista de resolvidos não dependem deste campo.
                 achado = {
                     "tipo": tipo,
-                    "trecho": trecho[:160],
-                    "contexto": linha[:200],
+                    "trecho": trecho,
+                    "contexto": linha,
                     "documento": fonte["rotulo"],
                     "dono": dono_raw[:80] or "—",
                     "etapa": etapa,
@@ -845,7 +848,9 @@ def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", 
         "veredito": {"aprovado": "verde", "amarelo": "amarelo", "bloqueado": "vermelho"}[r["status"]],
         "por_etapa": pe,
         "achados": [
-            {"severidade": a["severidade"], "classe": a["tipo"], "codigo": a["etapa"], "agente_responsavel": _dono_roteavel(a), "documento": a["documento"], "resumo": (a.get("contexto") or a["trecho"])[:120]}
+            # o trecho inteiro: o corte em 120 caracteres partia a palavra («…EF15AR05 na gra») no cartão do PO, que
+            # é onde esta pendência aparece (25/10/2026); a linha também sai inteira da varredura (`varrer_lacunas`)
+            {"severidade": a["severidade"], "classe": a["tipo"], "codigo": a["etapa"], "agente_responsavel": _dono_roteavel(a), "documento": a["documento"], "resumo": a.get("contexto") or a["trecho"]}
             for a in r["achados"]
         ],
         "precisa_humano": r["status"] != "aprovado",

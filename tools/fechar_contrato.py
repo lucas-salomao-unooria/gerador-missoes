@@ -704,12 +704,13 @@ def decidir(itens: Sequence[Item], respostas: Optional[Dict[str, Dict[str, str]]
             saida.sem_resposta.append({"id": item.id, "tipo": item.tipo, "assunto": item.assunto})
             continue
         if resposta not in item.opcoes():
-            raise RespostaInvalida(f"«{ROTULO_RESPOSTA.get(resposta, resposta)}» não cabe em «{item.assunto[:80]}»"
+            # o assunto inteiro nas mensagens que o cartão mostra: com o corte em 80, o PO não sabia qual item era
+            raise RespostaInvalida(f"«{ROTULO_RESPOSTA.get(resposta, resposta)}» não cabe em «{item.assunto}»"
                                    + (": deixar para o design só vale para o que é de UI" if resposta == DESIGN else ""))
         if resposta == OUTRO and not valor:
-            raise RespostaInvalida(f"«{item.assunto[:80]}»: escreva o outro valor.")
+            raise RespostaInvalida(f"«{item.assunto}»: escreva o outro valor.")
         if any(c in valor for c in "[]\n|"):
-            raise RespostaInvalida(f"«{item.assunto[:80]}»: o valor não pode ter colchetes nem barra vertical.")
+            raise RespostaInvalida(f"«{item.assunto}»: o valor não pode ter colchetes nem barra vertical.")
         gravado = ""
         if item.tipo == TEXTO_TETO:
             # manter não troca nada; outro texto entra no lugar do texto-chave, em toda linha do one-pager que o traz
@@ -842,7 +843,7 @@ def aplicar_edicoes(estado: Dict[str, Any], edicoes: Iterable[Dict[str, Any]]) -
         if not alguma:
             falhas.append(f"troca {n} ({ROTULO_DOC.get(str(e.get('documento')), e.get('documento'))}): "
                           + ("as linhas do design não estão mais, iguais, na spec do Gate 0" if e.get("tipo") == "trocas"
-                             else f"a linha não está mais no documento: «{str(e.get('de'))[:120]}»"))
+                             else f"a linha não está mais no documento: «{e.get('de')}»"))
     return ({} if falhas else novos), falhas
 
 
@@ -995,7 +996,7 @@ def notas(fluxo: Optional[Dict[str, Any]]) -> str:
     for chave, d in ultimas.items():
         valor = f" «{d['valor']}»" if d.get("valor") else ""
         marca = " — **não está no texto: vale a decisão**" if chave in fora else ""
-        linhas.append(f"- {ROTULO_TIPO.get(d.get('tipo'), d.get('tipo'))} {d.get('assunto', '')[:160]} → "
+        linhas.append(f"- {ROTULO_TIPO.get(d.get('tipo'), d.get('tipo'))} {d.get('assunto', '')} → "
                       f"**{ROTULO_RESPOSTA.get(d.get('resposta'), d.get('resposta'))}**{valor} "
                       f"({d.get('como', '') or 'parecer anterior'}, {d.get('quando', '')}){marca}")
     return "\n".join(linhas) + "\n"

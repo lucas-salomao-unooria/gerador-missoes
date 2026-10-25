@@ -63,6 +63,7 @@ from tools.auth import (
     emitir_token,
     validar_token,
 )
+from tools import explicacoes
 from tools import fechar_contrato
 from tools import governanca
 from tools import triagem_pedido
@@ -572,30 +573,114 @@ def _painel_execucao(run_dir_str: str) -> None:
     st.caption("A execução continua no servidor mesmo se você fechar esta aba. A missão volta para a fila de quem dá o próximo parecer.")
 
 
-def _render_motivos_do_semaforo(estado: Dict[str, Any], semaforo: Dict[str, str]) -> None:
-    """O porquê de cada 🔴 e 🟡, direto no cartão: quem dá o parecer decide sem abrir relatório.
+#: Quantos itens de uma lista aparecem antes do «Ver todos»: o resto fica a um clique, nunca cortado em silêncio.
+PRIMEIROS_N = 5
+
+
+def _texto_da_missao(texto: str) -> str:
+    """Texto da missão (trecho, texto do verificador) inteiro, como citação: `$` e tabelas saneados para a tela."""
+    return _citar(sanear_para_streamlit(str(texto or "").strip()))
+
+
+def _lista_com_ver_todos(itens: List[Any], desenhar: Any, chave: str, rotulo: str = "Ver todos",
+                         n: int = PRIMEIROS_N) -> None:
+    """Os primeiros `n` itens e, se houver mais, um «Ver todos (M)» que mostra o resto. Antes, as listas do cartão
+    cortavam em silêncio (as 5 primeiras pendências, as 6 primeiras ocorrências, os 12 primeiros tickets) e o PO não
+    sabia o que ficou de fora (25/10/2026)."""
+    for i in itens[:n]:
+        desenhar(i)
+    resto = itens[n:]
+    if resto and st.toggle(f"{rotulo} ({len(itens)})", key=chave,
+                           help=f"Mostrando {n} de {len(itens)}. Ligue para ver a lista inteira."):
+        for i in resto:
+            desenhar(i)
+
+
+def _render_detalhes_tecnicos(item: "explicacoes.Item") -> None:
+    """O código, o verificador e o texto original, inteiros, recolhidos: para quem conhece a esteira."""
+    a = item.achado
+    with st.expander("🔧 Detalhes técnicos", expanded=False):
+        partes = []
+        if a.get("codigo"):
+            partes.append(f"código `{a['codigo']}`")
+        if a.get("id") and a.get("id") != a.get("codigo"):
+            partes.append(f"id `{a['id']}`")
+        if item.gate:
+            partes.append(f"verificador `{item.gate}` ({GATE_LABELS.get(item.gate, item.gate)})")
+        if a.get("severidade"):
+            original = f" (era `{a['severidade_original']}`)" if a.get("severidade_original") else ""
+            partes.append(f"severidade `{a['severidade']}`{original}")
+        if a.get("agente_responsavel"):
+            partes.append(f"agente `{a['agente_responsavel']}`")
+        if item.tambem_em:
+            partes.append("também em " + ", ".join(f"`{g}`" for g in item.tambem_em))
+        if partes:
+            st.caption(" · ".join(partes))
+        if item.texto_original:
+            st.markdown("**Texto original do verificador:**\n\n" + _texto_da_missao(item.texto_original))
+        for campo, rotulo in (("onde", "Onde"), ("documento", "Documento"), ("por_que", "Por quê"),
+                              ("como", "Como resolver"), ("criterio", "Critério"), ("dimensao", "Dimensão"),
+                              ("padrao", "Padrão"), ("origem", "Origem")):
+            if a.get(campo):
+                st.markdown(f"**{rotulo}:** {sanear_para_streamlit(str(a[campo]))}")
+
+
+def _render_item_explicado(item: "explicacoes.Item", chave: str) -> None:
+    """Um achado para quem não é engenheiro: o que aconteceu, por que importa, o que fazer e quem resolve — e o trecho
+    real da missão, inteiro. O código e o texto do verificador ficam nos detalhes técnicos."""
+    exp = item.explicacao
+    icone, palavras = explicacoes.severidade_em_palavras(item.severidade)
+    st.markdown(f"{icone} **{exp.titulo}** — *{palavras}*")
+    st.markdown(f"{exp.o_que_aconteceu}\n\n**Por que importa:** {exp.por_que_importa}\n\n"
+                f"**O que fazer:** {item.o_que_fazer}")
+    if exp.texto_e_o_caso and item.texto_original:
+        st.markdown("**O que o revisor apontou nesta missão:**\n\n"
+                    + _texto_da_missao(explicacoes.sem_prefixo(item.texto_original)))
+    if item.trechos:
+        st.markdown(f"**{'Trecho' if len(item.trechos) == 1 else 'Trechos'} da missão"
+                    + (f" ({len(item.trechos)})" if len(item.trechos) > 1 else "") + ":**")
+        _lista_com_ver_todos(item.trechos, lambda t: st.markdown(_texto_da_missao(t)), f"{chave}_trechos")
+    nota = item.nota
+    if nota:
+        st.caption(f"ℹ️ {nota}")
+    st.caption(f"Quem resolve: **{explicacoes.ROTULO_QUEM.get(item.quem, item.quem)}** · Quem apontou: "
+               f"{explicacoes.nome_do_gate(item.gate, GATE_LABELS) or 'a esteira'}")
+    if item.achado:
+        _render_detalhes_tecnicos(item)
+
+
+def _render_achados_explicados(itens: List["explicacoes.Item"], chave: str) -> None:
+    """Os achados agrupados por quem resolve, do que impede seguir ao que é só para conferir."""
+    for quem, lista in explicacoes.agrupar_por_quem(itens):
+        pede_alguem = any(i.severidade in (explicacoes.BLOQUEIO, explicacoes.DECISAO_HUMANA) for i in lista)
+        # o grupo com 🔴 ou decisão de pessoa abre sozinho: decisão humana escondida num expander fechado era o
+        # «Nada travando» da tela (06/10/2026); o que é só para conferir fica recolhido, como antes
+        with st.expander(f"{explicacoes.TITULO_GRUPO.get(quem, quem)} — {explicacoes.contagem(lista)}",
+                         expanded=pede_alguem):
+            st.caption(explicacoes.EXPLICA_GRUPO.get(quem, ""))
+
+            def desenhar(par: Tuple[int, "explicacoes.Item"], _q: str = quem) -> None:
+                with st.container(border=True):
+                    _render_item_explicado(par[1], f"{chave}_{_q}_{par[0]}")
+
+            _lista_com_ver_todos(list(enumerate(lista)), desenhar, f"{chave}_{quem}_todos")
+
+
+def _render_motivos_do_semaforo(estado: Dict[str, Any], semaforo: Dict[str, str], chave: str = "semaforo",
+                                etapa: str = "") -> None:
+    """O porquê de cada 🔴 e 🟡, direto no cartão e em linguagem simples: quem dá o parecer decide sem abrir relatório.
 
     Antes do parecer humano, isso vinha no dossiê final. Agora o dossiê só roda depois do de acordo do
-    Dev, e o cartão mostrava o 🔴 sem dizer o que bloqueou (24/09/2026).
+    Dev, e o cartão mostrava o 🔴 sem dizer o que bloqueou (24/09/2026). Até 25/10/2026 o cartão mostrava o código e o
+    texto do verificador («`numero-sem-origem` · 11 parâmetro(s) numérico(s)…»), que nem o PO entendia: agora cada
+    achado vem explicado (`tools/explicacoes.py`), agrupado por quem resolve, com o texto original nos detalhes.
     """
-    for chave, icone in semaforo.items():
-        if icone not in ("🔴", "🟡"):
-            continue
-        envelope = estado.get(f"{chave}_envelope")
-        achados = [a for a in (envelope.get("achados") if isinstance(envelope, dict) else None) or []
-                   if isinstance(a, dict) and a.get("resumo")]
-        rotulo = GATE_LABELS.get(chave, chave)
-        # 🟡 que pede pessoa abre como o 🔴: decisão humana escondida num expander fechado era o
-        # "Nada travando" da tela (06/10/2026).
-        pede_pessoa = (isinstance(envelope, dict) and bool(envelope.get("precisa_humano"))) or any(
-            str(a.get("severidade")) == "decisao_humana" for a in achados)
-        with st.expander(f"{icone} {rotulo} — {len(achados)} achado(s)", expanded=icone == "🔴" or pede_pessoa):
-            if not achados:
-                st.caption("O gate não detalhou os achados no envelope: veja o relatório dele nos passos da esteira.")
-            for a in achados:
-                marca = {"bloqueio": "❌", "decisao_humana": "🧑"}.get(str(a.get("severidade")), "⚠️")
-                codigo = f"`{a['codigo']}` · " if a.get("codigo") else ""
-                st.markdown(f"{marca} {codigo}{a['resumo']}")
+    # a etapa do cartão: em design e dev o «Refazer de produto» não existe, e um 🔴 esconde o «De acordo» de todo item
+    itens = explicacoes.itens_do_semaforo(estado, semaforo, etapa)
+    if not itens:
+        return
+    st.caption(f"O que os sinais querem dizer: {explicacoes.LEGENDA}.")
+    _render_achados_explicados(itens, chave)
 
 
 def _render_profundidade(estado: Dict[str, Any]) -> None:
@@ -838,7 +923,7 @@ def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[s
                       if get_settings().esteira_estrita else
                       " — se der o de acordo assim, as notas de passagem as levam como «não está no texto: vale a decisão»")
                    + ":\n\n" + "\n".join(
-                       f"- «{d.get('assunto', '')[:120]}» → {fechar_contrato.ROTULO_RESPOSTA.get(d.get('resposta'), '')}"
+                       f"- «{d.get('assunto', '')}» → {fechar_contrato.ROTULO_RESPOSTA.get(d.get('resposta'), '')}"
                        + (f" «{d['valor']}»" if d.get("valor") else "") + f" ({d.get('quando', '')})" for d in perdidas))
     if not itens:
         return {}
@@ -892,9 +977,14 @@ def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[s
                 with st.expander("O que o design quis mudar", expanded=False):
                     st.code(item.detalhe, language="diff")
             elif item.ocorrencias:
-                with st.expander("Onde está no texto", expanded=False):
-                    for o in item.ocorrencias[:6]:
-                        st.caption(f"{fechar_contrato.ROTULO_DOC.get(o.documento, o.documento)}: {o.linha.strip()[:400]}")
+                # cada linha inteira e todas as ocorrências: o corte em 6 linhas de 400 caracteres escondia onde o
+                # marcador também estava (25/10/2026)
+                with st.expander(f"Onde está no texto ({len(item.ocorrencias)})", expanded=False):
+                    _lista_com_ver_todos(
+                        item.ocorrencias,
+                        lambda o: st.markdown(f"**{fechar_contrato.ROTULO_DOC.get(o.documento, o.documento)}:**\n\n"
+                                              + _texto_da_missao(o.linha)),
+                        f"{chave}_ocorrencias", rotulo="Ver todas")
             extra = {} if chave in st.session_state else {"index": None}
             escolha = st.radio("Resposta", item.opcoes(), key=chave, horizontal=True, label_visibility="collapsed",
                                format_func=lambda o: fechar_contrato.ROTULO_RESPOSTA.get(o, o), **extra)
@@ -932,13 +1022,20 @@ def _render_conferencia_de_leitura(run_dir: Path, fluxo: Dict[str, Any], estado:
     lidos: List[str] = []
     with st.container(border=True):
         st.markdown(f"**🧐 Conferência de leitura — {len(itens)} pendência(s) 🟡 que pedem decisão do PO**")
-        st.caption("Os gates de produto deixaram estas decisões para o PO. Para liberar, confirme cada uma: lida e "
+        st.caption("Os revisores de produto deixaram estas decisões para o PO. Para liberar, confirme cada uma: lida e "
                    "decidida — seguir com ela registrada, ou usar **Refazer** com o que mudar.")
         for item in itens:
             rotulo = GATE_LABELS.get(item.get("gate", ""), item.get("gate", ""))
-            if st.checkbox(f"Li e decidi: {item['assunto'][:300]}", key=f"{base}_{item['id']}",
-                           help=f"{rotulo} · `{item['tipo']}`"):
-                lidos.append(item["id"])
+            explicado = explicacoes.explicacao_de_pendencia(item)
+            with st.container(border=True):
+                st.markdown(f"🧑 **{explicado.explicacao.titulo}** — {explicado.explicacao.o_que_aconteceu}\n\n"
+                            f"**O que fazer:** {explicado.o_que_fazer}")
+                # o assunto inteiro no rótulo: com o corte em 300 caracteres o PO marcava «Li e decidi» sobre meia
+                # frase (25/10/2026); o `$` escapado não vira fórmula no rótulo
+                if st.checkbox(f"Li e decidi: {item['assunto']}".replace("$", "\\$"), key=f"{base}_{item['id']}",
+                               help=f"{rotulo} · `{item['tipo']}`"):
+                    lidos.append(item["id"])
+                _render_detalhes_tecnicos(explicado)
     return lidos
 
 
@@ -955,14 +1052,22 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
 
     semaforo = passagem.semaforo_da_etapa(estado, etapa)
     if semaforo and situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA):
-        st.markdown("**Semáforo da etapa:** " + " · ".join(f"{icone} {GATE_LABELS.get(k, k)}" for k, icone in semaforo.items()))
+        # o nome simples de cada verificador (`tools/explicacoes.py`): «Rastro de lacunas da spec» era jargão para o PO
+        st.markdown("**Semáforo da etapa:** " + " · ".join(
+            f"{icone} {explicacoes.nome_do_gate(k, GATE_LABELS)}" for k, icone in semaforo.items()))
         if etapa == "produto":
             _render_profundidade(estado)
-        _render_motivos_do_semaforo(estado, semaforo)
+        _render_motivos_do_semaforo(estado, semaforo, f"semaforo_{run_dir.name}_{fluxo.get('versao', 0)}", etapa)
     if situacao == passagem.DEVOLVIDA:
         dev = passagem.ultima_devolutiva(fluxo, etapa)
         if dev:
             st.warning(f"⤴️ **Devolvida por {dev['como']}** em {dev['quando']}:\n\n{_citar(dev['comentario'])}")
+            tickets = [t for t in dev.get("tickets") or [] if isinstance(t, dict) and str(t.get("resumo") or "").strip()]
+            if tickets:
+                # a devolução automática do QA (PR 5): cada ticket explicado, como os achados do semáforo
+                st.markdown(f"**Os {len(tickets)} ponto(s) que voltaram a produto, explicados:**")
+                _render_achados_explicados([explicacoes.item(t, str(t.get("gate") or ""), "🔴", etapa) for t in tickets],
+                                           f"devolutiva_{run_dir.name}_{fluxo.get('versao', 0)}")
     if situacao == passagem.AGUARDANDO and etapa in ("design", "dev"):
         # a cascata do pedido triado não aplicou nada: a etapa está como antes do pedido, e o caminho é Devolver (D4, B)
         ultima = execucao_fundo.ler_execucao(run_dir) or {}
@@ -983,7 +1088,9 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
 
     acoes = passagem.acoes_possiveis(fluxo, sessao.papel, estado)
     if "🔴" in semaforo.values() and situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA):
-        st.warning("🔴 Há gate reprovado nesta etapa: ela não pode ser liberada. Refaça com um comentário do que mudar"
+        st.warning("🔴 Um verificador desta etapa marcou um ponto que **impede seguir**: a etapa não pode ser liberada "
+                   "assim. Acima, cada ponto diz o que aconteceu e quem resolve. Use **Refazer** com um comentário do "
+                   "que mudar"
                    + (", ou libere com exceção (fica registrado no dossiê)." if passagem.EXCECAO in acoes
                       else ", ou peça ao admin uma liberação com exceção."))
     if situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA) and etapa == "design":
@@ -1528,7 +1635,8 @@ async def _acompanhar_esteira(stream, stages: List[Dict[str, Any]], progress, st
                 motivo = getattr(result, "gate_que_bloqueou", None) or "gate de produto"
                 progress.warning(
                     f"⛔ Missão bloqueada em **{result.duration_seconds:.0f}s** — **{motivo}**. "
-                    f"O PRD não foi gerado; o relatório do gate diz o que faltou e de quem."
+                    f"⛔ quer dizer que {explicacoes.SEMAFORO_EM_PALAVRAS['⛔']}. O PRD não foi gerado; abaixo, cada "
+                    "ponto diz o que aconteceu e quem resolve."
                 )
             elif getattr(result, "bypassed", False):
                 progress.warning(f"⚠️ Pipeline concluído com gates bypassados em **{result.duration_seconds:.0f}s**. PRD gerado com pendências — artefatos em `{result.output_dir}`.")
@@ -1847,6 +1955,15 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
 
     if gates:
         st.markdown("**Gates:** " + " · ".join(f"{_status_icon(v)} {GATE_LABELS[k]}" for k, v in gates.items() if k in GATE_LABELS))
+        semaforo = {k: _status_icon(v) for k, v in gates.items() if k in GATE_LABELS}
+        pasta_da_missao = Path(getattr(result, "output_dir", "") or "")
+        if (any(i in ("🔴", "🟡") for i in semaforo.values()) and isinstance(result.state, dict)
+                and not (pasta_da_missao.is_dir() and passagem.ler_fluxo(pasta_da_missao) is not None)):
+            # a missão sem parecer humano não tem o cartão de passagem: o porquê de cada 🔴 e 🟡 fica aqui, explicado
+            # (com parecer humano, o cartão já o mostra, etapa por etapa)
+            with st.container(border=True):
+                st.markdown("**Por que a missão parou ou ficou com ressalvas**")
+                _render_motivos_do_semaforo(result.state, semaforo, f"detalhes_{prefix}")
     render_custo_da_missao(result.state or {}, prefix)
     if getattr(result, "bypassed", False):
         st.warning("⚠️ **Atenção:** Esta missão avançou com gates bloqueados (modo estrito desativado / bypass). Verifique as pendências nos relatórios e na seção 20 do PRD.")
@@ -2464,12 +2581,15 @@ def main():
                     elif getattr(result, "bloqueado", False):
                         motivo = getattr(result, "gate_que_bloqueou", None) or "um gate da esteira"
                         summary = (
-                            f"⛔ **PRD não gerado — {motivo}.** A esteira parou no gate que faltou informação; "
-                            f"o relatório dele, nas abas abaixo, diz o que faltou e quem resolve."
+                            f"⛔ **PRD não gerado — {motivo}.** A esteira parou num verificador ({explicacoes.SEMAFORO_EM_PALAVRAS['⛔']}). "
+                            "Abaixo, «Por que a missão parou ou ficou com ressalvas» diz o que aconteceu e quem resolve."
                         )
                     else:
                         summary = result.final_output
-                    st.markdown(sanear_para_streamlit(summary if len(summary) < 4000 else summary[:4000] + "\n\n…"))
+                    # o resumo longo continua inteiro na aba 📘 PRD logo abaixo: o corte aqui é só da mensagem, e diz isso
+                    st.markdown(sanear_para_streamlit(
+                        summary if len(summary) < 4000 else
+                        summary[:4000] + "\n\n*(continua — o texto inteiro está na aba 📘 PRD, logo abaixo)*"))
                     render_pipeline_details(result, key_prefix="live")
                     st.session_state.messages.append({"role": "assistant", "content": summary if len(summary) < 4000 else "Resultado do pipeline:", "pipeline_result": result})
                     if result.output_dir:

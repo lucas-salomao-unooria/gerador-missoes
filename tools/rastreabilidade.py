@@ -233,6 +233,9 @@ def matriz(state: Dict[str, Any]) -> Dict[str, Any]:
                 "agente_responsavel": dono,
                 "resumo": (f"{len(faltando)} de {len(do_tipo)} — {rotulo} — não chegaram a «{rotulo_col}»: {exemplos}"
                            + ("…" if len(faltando) > 6 else "") + "."),
+                # a lista inteira, cada texto inteiro, para o cartão do PO (25/10/2026): o resumo acima segue curto
+                # porque volta aos autores no retrabalho, e o cartão mostrava só 6 itens de 70 caracteres
+                "faltando": [{"id": r["id"], "texto": r["texto"]} for r in faltando],
             })
     status = ("bloqueado" if any(a["severidade"] == "bloqueio" for a in achados)
               else ("amarelo" if achados else "aprovado"))
