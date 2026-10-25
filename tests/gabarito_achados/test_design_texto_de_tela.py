@@ -102,4 +102,10 @@ def test_v_dispara(caso):
 def test_v_texto_de_tela_reescrito_continua_na_copy(execucao):
     reescrito = [a["resumo"] for a in achados_de_consistencia(execucao) if a["codigo"] == "texto-de-tela-reescrito"]
     assert reescrito and "«Prévia do Post»" in reescrito[0]
-    assert "Vocês acham" not in reescrito[0] and "errei na IA" not in reescrito[0]
+
+
+@pytest.mark.parametrize("execucao", [F60, "D01"], ids=rotulo)
+def test_fp_fala_fora_do_texto_de_tela_reescrito(execucao):
+    """O mesmo achado V não cita a fala do professor nem a hipotética (FP do levantamento), que não são texto de tela."""
+    reescrito = [a["resumo"] for a in achados_de_consistencia(execucao) if a["codigo"] == "texto-de-tela-reescrito"]
+    assert reescrito and "Vocês acham" not in reescrito[0] and "errei na IA" not in reescrito[0]

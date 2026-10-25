@@ -444,14 +444,17 @@ def _literal_confere(trecho: str, documento_norm: str) -> bool:
     A lacuna do texto aprovado é curinga: cada pedaço entre lacunas confere sozinho, com as mesmas regras. A copy que a
     preenche («…para o recorte da aula. A coordenação…») ou a omite («Comitê Municipal de Políticas Públicas», sem o
     «[recorte da aula: parâmetro do professor]») traz o texto aprovado — a matriz cobrava a lacuna literal na
-    exp01em1b-e89e91b3 e na exp03em1b (levantamento de deficiências de design, 24/10/2026).
+    exp01em1b-e89e91b3 e na exp03em1b (levantamento de deficiências de design, 24/10/2026). O texto que é só lacuna, ou
+    cujos pedaços fora dela têm uma palavra só («Olá, [nome]!», «[Opção]»), confere inteiro, como sem lacuna: sem pedaço
+    para conferir, o curinga o daria sempre como presente — no Canal B, no roteiro, no banco e na paráfrase também
+    (revisão do PR #81, 25/10/2026).
     """
     import difflib
 
     from tools.fidelidade import _norm
 
     pedacos = _pedacos_sem_lacuna(trecho)
-    if pedacos is not None:
+    if pedacos:
         return all(_literal_confere(p, documento_norm) for p in pedacos)
     alvo = _norm(trecho)
     if not alvo:

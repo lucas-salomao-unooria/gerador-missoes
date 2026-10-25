@@ -348,6 +348,9 @@ _RE_SEPARADOR_DE_TABELA = re.compile(r"\|[\s:|-]+\|?")
 #: Linha que fala do desenho Mermaid: o que ela cita entre aspas são rótulos de aresta («Maior rótulo no Mermaid: 2
 #: palavras (ex.: "Publicar Unoovista", …)»).
 _RE_LINHA_DO_MERMAID = re.compile(r"\bmermaid\b", re.I)
+#: Linha que cita uma aresta pelo id: «Saída via A02 ('toca Abrir Album')» (exp02ef1b-4fd72a9a) ou a linha da tabela de
+#: arestas que começa pelo id («| A05 | `E3-ALU-01` | …»). O id da tela (`E1-ALU-01`) não é id de aresta.
+_RE_LINHA_DE_ARESTA = re.compile(r"(?i:\bvia|\baresta)\s+`?[A-Z]{1,3}\d{1,3}\b(?!-)|^\s*\|\s*`?[A-Z]{1,3}\d{1,3}`?\s*\|")
 #: O título do documento de produto e o nome que o estudante vê: «# Spec — O Porta-Voz dos Dados v1.1».
 _RE_TITULO_DA_MISSAO = re.compile(r"^#\s+(?:Spec|One-pager|N[úu]cleo narrativo)\s*[—–-]\s*(.+?)(?:\s+v\d+(?:\.\d+)*)?\s*$",
                                   re.M | re.I)
@@ -389,22 +392,28 @@ def _candidatos_a_rotulo(texto: str, nomes_da_missao: Set[str] = frozenset(),
     - o verbo entre crases na coluna de gesto da jornada (`Acessar` / `Digitar`, `Fixar` aviso de cuidado, na exp02em1b) —
       só na jornada (`coluna_de_gesto`): é o documento que tem a coluna e a raia do verbo nativo (prompt 071);
     - o rótulo de aresta do Mermaid, que o prompt do fluxo limita a três palavras (072): «Publicar Unoovista» na
-      exp02em1b, «Toca modulo teste» na exp01em1b, citados na linha que fala do desenho Mermaid ou fora dele;
+      exp02em1b, «Toca modulo teste» na exp01em1b — só na linha que fala do desenho Mermaid, dentro dele ou na que cita
+      a aresta pelo id. Em outra linha do fluxo ou do PRD, o botão com o mesmo texto do rótulo continua conferido, e a
+      linha do Mermaid só dispensa o que é rótulo de aresta (revisão do PR #81, 25/10/2026);
     - o nome da missão no card do professor («O Porta-Voz dos Dados», exp03em1b);
     - o trecho entre o fecho de uma citação e a abertura da seguinte («) | Disparar simulação (», exp01em1b)."""
-    cands: List[Tuple[str, int, bool]] = []
+    cands: List[Tuple[str, int, bool, bool]] = []
     pos = 0
     linhas = texto.splitlines(keepends=True)
     gesto: Set[int] = set()  # as colunas de gesto da tabela corrente
+    no_mermaid = False
     for i, linha in enumerate(linhas):
         s = linha.strip()
+        if s.startswith("```"):
+            no_mermaid = not no_mermaid and bool(re.match(r"```\s*mermaid\b", s, re.I))
+        de_aresta = no_mermaid or bool(_RE_LINHA_DO_MERMAID.search(linha) or _RE_LINHA_DE_ARESTA.search(linha))
         eh_tab = s.startswith("|")
         if not eh_tab:
             gesto = set()
         elif coluna_de_gesto and i + 1 < len(linhas) and _RE_SEPARADOR_DE_TABELA.fullmatch(linhas[i + 1].strip()):
             gesto = {j for j, c in enumerate(s.strip("|").split("|")) if _RE_GESTO.search(c)}
         raia_de_gesto = coluna_de_gesto and eh_tab and bool(_RE_GESTO.search(s.strip("|").split("|")[0]))
-        if _RE_ROTULO_CONTEXTO.search(linha) and not _RE_LINHA_DO_MERMAID.search(linha):
+        if _RE_ROTULO_CONTEXTO.search(linha):
             for m in _RE_ENTRE_ASPAS.finditer(linha):
                 aspa = m.group(0)[0]
                 coluna = linha[:m.start()].count("|") - 1
@@ -415,13 +424,13 @@ def _candidatos_a_rotulo(texto: str, nomes_da_missao: Set[str] = frozenset(),
                     continue
                 # entre crases ou aspas simples é código: «disparar a transição para `unoovista`», no critério de aceite
                 # do botão de publicar do PRD da exp02em1b, é nome de estado, não rótulo (24/10/2026)
-                cands.append((m.group(1), pos + m.start(), eh_tab or aspa in "`'"))
+                cands.append((m.group(1), pos + m.start(), eh_tab or aspa in "`'", de_aresta))
         if eh_tab and _RE_CHAVE_DE_BOTAO.search(linha):
-            cands += [(c, pos, True) for c in (x.strip() for x in s.strip("|").split("|"))]
+            cands += [(c, pos, True, False) for c in (x.strip() for x in s.strip("|").split("|"))]
         pos += len(linha)
     arestas = rotulos_de_aresta(texto)
     saida = []
-    for bruto, p, eh_tabela in cands:
+    for bruto, p, eh_tabela, de_aresta in cands:
         c = _limpa(bruto)
         if not c or not re.search(r"[A-Za-zÀ-ú]", c) or re.search(r"[_/]|\w\.\w|^E\d-|^[A-Z0-9_]+$", c):
             continue
@@ -429,7 +438,7 @@ def _candidatos_a_rotulo(texto: str, nomes_da_missao: Set[str] = frozenset(),
             continue  # o miolo entre duas citações, não uma citação
         if (eh_tabela or bruto.startswith("'")) and len(c.split()) == 1 and c.islower():
             continue
-        if not 1 <= len(c.split()) <= 8 or _norm(c) in arestas or _norm(c) in nomes_da_missao:
+        if not 1 <= len(c.split()) <= 8 or (de_aresta and _norm(c) in arestas) or _norm(c) in nomes_da_missao:
             continue
         saida.append((c, p))
     return saida

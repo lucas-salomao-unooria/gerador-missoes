@@ -87,6 +87,22 @@ def test_mutante_botao_na_tabela_de_arestas_continua_acusado():
     assert _cita(_rotulos("fluxo", texto), "Publicar no feed")
 
 
+@pytest.mark.parametrize("linha", [
+    "- Na tela de publicação, o estudante toca o botão \"Publicar Unoovista\".\n",  # outra linha do fluxo
+    "| `E3-ALU-01` | Card do post | Estudante clica no botão \"Publicar Unoovista\" |\n",  # tabela sem id de aresta
+])
+def test_mutante_rotulo_de_aresta_fora_da_linha_de_aresta_continua_acusado(linha):
+    """A dispensa do rótulo de aresta vale na linha do desenho e na que cita a aresta pelo id, não no documento todo."""
+    assert _cita(_rotulos("fluxo", FLUXO + linha), "Publicar Unoovista")
+    assert _cita(_rotulos("PRD", FLUXO + linha), "Publicar Unoovista")
+
+
+def test_mutante_linha_do_mermaid_so_dispensa_rotulo_de_aresta():
+    """A linha que fala do Mermaid não é ignorada inteira: o botão que não é rótulo de aresta continua conferido."""
+    texto = FLUXO + "- O botão \"Publicar Unoovista no feed\" leva ao estado E4 do diagrama Mermaid.\n"
+    assert _cita(_rotulos("fluxo", texto), "Publicar Unoovista no feed")
+
+
 def test_nome_da_missao_no_card_nao_e_botao():
     texto = "| P02 | `E0-PROF-01` | `E0-PROF-02` | Professor clica no card da missão \"O Porta-Voz dos Dados\" |\n"
     assert _rotulos("fluxo", texto) == []
@@ -132,6 +148,20 @@ def test_lacuna_do_texto_aprovado_e_curinga(documento):
 def test_mutante_pedaco_entre_lacunas_trocado_continua_acusado(documento):
     aprovado = "Tentei entrar na Trilha Avançada do [recorte da aula] para estudar para a prova, mas o bot me bloqueou"
     assert ca.literais_ausentes(documento, [aprovado]) == [aprovado]
+
+
+@pytest.mark.parametrize("aprovado, documento", [
+    ("Olá, [nome]!", "Tchau, Ana! Boas-vindas à missão."),          # só pedaço de uma palavra fora da lacuna
+    ("[Opção votada]", "O estudante vê a opção que escolheu."),       # só lacuna
+    ("{nome}, vote!", "Ana, escolha a sua opção."),
+])
+def test_mutante_texto_so_de_lacuna_nao_confere_por_vacuidade(aprovado, documento):
+    """Sem pedaço de duas palavras para conferir, o curinga não dá o texto como presente: confere inteiro, sem lacuna."""
+    assert ca.literais_ausentes(documento, [aprovado]) == [aprovado]
+
+
+def test_texto_so_de_lacuna_confere_quando_esta_literal():
+    assert ca.literais_ausentes("Na tela: Olá, [nome]! Vamos começar.", ["Olá, [nome]!"]) == []
 
 
 def _s4(*linhas: str) -> str:
