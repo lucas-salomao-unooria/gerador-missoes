@@ -654,28 +654,28 @@ def _literal_presente(frase: str, documentos_norm: str) -> bool:
     return bool(alvo) and alvo in documentos_norm
 
 
-def _ditado_no_corpo(citacoes: Sequence[str], texto_item: str, corpo: str, corpo_anterior: str,
-                     remover: Sequence[str] = ()) -> bool:
-    """As citações do juiz são o texto do próprio PO, e ele entrou no corpo do documento: o pedido foi aplicado.
+def _ditado_no_corpo(citacoes: Sequence[str], texto_item: str, corpo: str, corpo_anterior: str) -> bool:
+    """As citações do juiz são o texto do próprio PO, e ele entrou no corpo do documento.
 
     Cada citação tem de estar, letra por letra, no item (com `MIN_PALAVRAS_LITERAL` palavras ou mais) e no corpo — e,
     havendo versão anterior, não estar nela: o texto que já estava no documento antes do pedido (o «texto atual» que o PO
-    cita para trocar) não prova nada. Nem o que o intérprete leu como texto a tirar. E o texto entre aspas do item que
-    continua no documento como estava (`_citado_ficou`) deixa a prova com o juiz: pode ser o texto que o PO mandou tirar.
-    Comparação literal, sem ler o verbo.
+    cita para trocar) não prova nada. E o texto entre aspas do item que continua no documento como estava
+    (`_citado_ficou`) deixa a prova com o juiz: pode ser o texto que o PO mandou tirar. Comparação literal, sem ler o
+    verbo — por isso só prova sozinha na ordem de não mexer, em que o único verbo é o de preservar; no item com outro
+    verbo, sem a leitura do intérprete, é 🟡 (`texto-ditado-a-conferir`): «não mostrar X» e «usar: X» ficam iguais.
 
     Na exp03em1b (b2e7b4a3, 21/10/2026) o PO escreveu «Remover “associando a desmontagem geométrica” e usar: marcou
     corretamente no checklist os elementos de truncamento de eixo e recorte de escala como vetores de distorção.»; o texto
-    novo estava no one-pager e na spec, e o F12 saiu 🔴 `citou-o-pedido` — a citação do juiz era o texto ditado. O
-    intérprete (c8a36d2) cobre o caso quando responde; esta conferência não depende dele (C2, 25/10/2026)."""
+    novo estava no one-pager e na spec, e o F12 saiu 🔴 `citou-o-pedido` — a citação do juiz era o texto ditado. Com o
+    intérprete (c8a36d2), o texto vai para `inserir` e prova; sem ele, o F12 fica 🟡 (C2, 25/10/2026)."""
     citacoes = [c for c in citacoes if (c or "").strip()]
     if not citacoes:
         return False
-    item, tirar = _norm(texto_item), [_norm(r) for r in remover if _norm(r)]
+    item = _norm(texto_item)
     for c in citacoes:
         alvo = _norm(c)
         if (_palavras(c) < MIN_PALAVRAS_LITERAL or alvo not in item or alvo not in corpo
-                or (corpo_anterior and alvo in corpo_anterior) or any(r in alvo or alvo in r for r in tirar)):
+                or (corpo_anterior and alvo in corpo_anterior)):
             return False
     return not _citado_ficou(texto_item, [_norm(c) for c in citacoes], corpo, corpo_anterior)
 
@@ -712,46 +712,33 @@ def _quando(origem: str) -> Optional[Tuple[int, ...]]:
     return (int(a), int(mes), int(d), int(h or 0), int(mi or 0), int(s or 0))
 
 
-def superado_por(item: Dict[str, str], explicacao: str, itens: List[Dict[str, str]],
+def superado_por(item: Dict[str, str], decisao: Dict[str, Any], itens: List[Dict[str, str]],
                  provados: set) -> Optional[Tuple[str, List[str]]]:
-    """`(origem, [ids com prova])` do pedido mais novo do PO que prevaleceu sobre o item, ou `None`.
+    """`(origem, [ids])` do pedido mais novo do PO que prevaleceu sobre o item, ou `None`.
 
-    O juiz rotula `conflito_com_regra` o item que um pedido mais novo do PO contrariou, e explica qual. A explicação é
-    prosa; dela o código só usa referência estruturada, comparada letra por letra: o id de um item do checklist («F1, F2
-    e F5») ou a data e hora gravadas na origem de um pedido («22/10/2026 17:59:11»; a data sozinha só quando o item não
-    é do mesmo dia). O pedido apontado tem de ser mais novo que o item, e os itens dele que o juiz aponta têm de ter
-    prova (pela data, ao menos um) — senão o conflito segue para o PO. Entre dois pedidos vale o mais novo (`pipeline.passagem.notas_de_passagem`), e o briefing é mais velho
-    que todos.
+    O juiz rotula `conflito_com_regra` o item que um pedido mais novo do PO contrariou, e diz em `superado_por` (lista
+    de ids do checklist) quais itens do pedido novo o documento segue. Só esse campo vale: a `explicacao` é prosa, e
+    o id que ela cita de passagem («o pedido F1 não trata disso») não diz que o documento segue F1. Cada id apontado
+    tem de ser de um pedido mais novo que o item e ter prova — senão o conflito segue para o PO. Entre dois pedidos vale
+    o mais novo (`pipeline.passagem.notas_de_passagem`), e o briefing é mais velho que todos.
 
     Na exp01em1b (e3980485, 22/10/2026) o PO inverteu a ordem construção → descoberta, o documento seguiu o pedido, e
     quatro itens do briefing v4.1 saíram 🔵 `conflito-pedido-regra` no núcleo e no fim de produto, com o juiz explicando
     que o documento «segue o pedido de refazer mais recente do próprio PO (22/10/2026 17:59:11, F1-F5)». O PO já tinha
-    decidido (C2, 25/10/2026). O conflito com regra da esteira de verdade («a regra 7 do núcleo impõe trava
-    irreversível») não aponta pedido mais novo, e continua decisão humana."""
+    decidido (C2, 25/10/2026). Até a revisão da C2 o código lia os ids e a data na prosa da explicação; a regra 7 do
+    núcleo com «o pedido F1 não trata disso» virava superado e perdia o 🔵. A resposta gravada antes do campo continua
+    🔵 — quem confirma é o PO."""
     meu = _quando(item.get("origem") or "")
-    if meu is None or not (explicacao or "").strip():
+    bruto = (decisao or {}).get("superado_por")
+    # só a lista que o prompt pede: «F1 e F2» numa string já é prosa
+    if meu is None or not isinstance(bruto, list):
         return None
+    apontados = list(dict.fromkeys(str(i).strip() for i in bruto if str(i).strip()))
     novos = {i["id"]: i["origem"] for i in itens
              if i["id"] != item["id"] and i["origem"] != "briefing" and (_quando(i["origem"]) or (-1,)) > meu}
-    if not novos:
+    if not apontados or not all(i in novos and i in provados for i in apontados):
         return None
-    citados = list(dict.fromkeys(f"F{n}" for n in re.findall(r"\bF(\d{1,3})\b", explicacao) if f"F{n}" in novos))
-    if citados:
-        # apontou itens do pedido novo: todos têm de ter prova — senão o documento não segue o pedido, e o PO decide
-        return (novos[citados[0]], citados) if all(i in provados for i in citados) else None
-    meu_dia = _RE_QUANDO.search(item.get("origem") or "")
-    for origem in dict.fromkeys(novos.values()):
-        m = _RE_QUANDO.search(origem)
-        if not m:
-            continue
-        dia = f"{m.group(1)}/{m.group(2)}/{m.group(3)}"
-        hora = f"{dia} {m.group(4)}:{m.group(5)}" if m.group(4) else ""
-        apontado = (hora and hora in explicacao) or (
-            dia in explicacao and not (meu_dia and meu_dia.group(0).startswith(dia)))
-        provas = [i for i, o in novos.items() if o == origem and i in provados]
-        if apontado and provas:
-            return origem, provas
-    return None
+    return novos[apontados[0]], apontados
 
 
 #: O campo que fixa a seção do DS num item do briefing («secao_ds: unoogaleria») — dado estruturado, lido como o
@@ -826,7 +813,8 @@ def secao_travada_conferida(texto_item: str, documentos: Dict[str, str],
 #: O que, no documento parcial (o núcleo), é falta de prova e não contradição: sai do escopo e fica para o fim de
 #: produto, que confere núcleo, one-pager e spec juntos.
 SEM_PROVA_NO_RECORTE = frozenset({"nao-tratado", "sem-prova", "citou-o-pedido", "exigencia-dispensada",
-                                  "preservacao-sem-prova", "preservacao-sem-citacao"})
+                                  "preservacao-sem-prova", "preservacao-sem-citacao", "texto-ditado-a-conferir",
+                                  "superado-em-parte"})
 
 
 def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, str],
@@ -1064,13 +1052,18 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         elif veredito == "violado":
             achado(it, "bloqueio", "pedido-violado" if do_po else "briefing-violado",
                    f"O documento contraria {'o pedido do PO' if do_po else 'o briefing'}: «{trecho}». {explicacao}")
-        # o juiz citou o pedido, e o texto é o que o PO ditou, novo no corpo (`_ditado_no_corpo`) — a não ser que o
-        # intérprete diga que o item pede mais do que o texto: aí a prova em código não basta
-        elif (veredito == "atendido" and not (lido and lido.get("outras_exigencias", True))
+        # O juiz citou o pedido, e o texto é o que o PO escreveu, novo no corpo (`_ditado_no_corpo`), sem a leitura do
+        # intérprete. A comparação é literal e não lê o verbo: «usar: X» e «não mostrar X» ficam iguais, e X novo no
+        # corpo pode ser o pedido cumprido ou o contrário dele. Fica 🟡, com a dúvida dita; com a leitura, a prova é a
+        # do `texto_lido_prova` (o texto em `inserir`). Na revisão da C2 (25/10/2026) «Na tela de abertura, não mostrar
+        # a frase …», com a frase nova no one-pager, saía ✅ «texto ditado pelo PO»; na main era 🔴 `citou-o-pedido`.
+        elif (veredito == "atendido" and not lido
               and _ditado_no_corpo(ditadas := [citacao] if citacao.strip() else varias, it["texto"], corpo,
-                                   corpo_anterior, remover)):
-            conferidos.append({"id": it["id"], "texto": trecho,
-                               "prova": ("texto ditado pelo PO no documento: " + " · ".join(c[:120] for c in ditadas))[:400]})
+                                   corpo_anterior)):
+            achado(it, "atencao", "texto-ditado-a-conferir",
+                   f"O juiz citou o próprio pedido, e o texto citado é o que o PO escreveu e entrou no documento (não "
+                   f"estava na versão anterior): «{ditadas[0][:160]}». Sem a leitura do intérprete, o código não sabe se "
+                   f"o pedido manda pôr ou tirar esse texto — confira: «{trecho}».")
         elif veredito == "atendido" and len(_norm(citacao)) >= MIN_CITACAO and _norm(citacao) in _norm(it["texto"]):
             achado(it, "bloqueio" if do_po else "atencao", "citou-o-pedido",
                    f"O juiz diz que atende, mas citou o próprio pedido em vez do documento: «{trecho}».")
@@ -1087,12 +1080,24 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         meus = [a for a in achados if a["id"] == it["id"] and a["codigo"] == "conflito-pedido-regra"]
         if not meus:
             continue
-        superado = superado_por(it, str((decisoes.get(it["id"]) or {}).get("explicacao") or ""), itens, provados)
-        if superado:
-            achados = [a for a in achados if a not in meus]
-            conferidos.append({"id": it["id"], "texto": it["texto"][:240], "prova": (
-                f"superado pelo pedido mais novo do PO ({superado[0][:80]}), que o documento segue: "
-                f"{', '.join(superado[1])} com prova")})
+        superado = superado_por(it, decisoes.get(it["id"]) or {}, itens, provados)
+        if not superado:
+            continue
+        achados = [a for a in achados if a not in meus]
+        if _RE_PRESERVACAO.search(it["texto"]):
+            # A ordem de não mexer lista várias coisas, e o pedido novo contraria uma: o resto continua valendo e não
+            # tem prova aqui. Na exp01em1b (e89e91b3, 21/10/2026) «Manter integralmente: o nome da missão, o slug, o
+            # ambiente…, Canal A e Canal B…» foi superada no Canal B pelo pedido de 21/10 09:44:36 — AMBÍGUO no
+            # levantamento (revisão da C2, 25/10/2026).
+            achado(it, "atencao", "superado-em-parte", (
+                f"Um pedido mais novo do PO ({superado[0][:80]}; {', '.join(superado[1])}, com prova) contraria esta "
+                f"ordem de não mexer, e o documento o segue. O que o pedido novo não contrariou continua valendo e não "
+                f"tem prova aqui — confira: «{it['texto'][:240]}». "
+                f"{str((decisoes.get(it['id']) or {}).get('explicacao') or '').strip()}").strip())
+            continue
+        conferidos.append({"id": it["id"], "texto": it["texto"][:240], "prova": (
+            f"superado pelo pedido mais novo do PO ({superado[0][:80]}), que o documento segue: "
+            f"{', '.join(superado[1])} com prova")})
     # O cabeçalho que só anuncia os itens seguintes («Corrigir os critérios das seguintes habilidades.») não tem trecho
     # próprio no documento: vale pela prova dos itens do mesmo pedido, quando todos a têm.
     provados = {c["id"] for c in conferidos}

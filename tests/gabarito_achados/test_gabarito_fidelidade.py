@@ -23,8 +23,54 @@ F4F = "acervo:exp02ef1b-4fd72a9a"
 T27 = "exp03ef1b-274a2e75"
 
 
+#: O juiz de hoje diz no campo `superado_por` quais itens do pedido mais novo do PO o documento segue (revisão da C2,
+#: 25/10/2026); as respostas gravadas são de antes do campo e os apontavam na explicação. O gabarito põe no campo os ids
+#: que a explicação gravada apontava — no fim de produto da e3980485, a do F28 e a do F31 só davam a data, e os ids são
+#: os que o juiz do núcleo da mesma execução apontou para o mesmo item.
+SUPERADO_NO_CAMPO = {
+    (E39, "nucleo"): {
+        "No v4.1, ele monta a configuração escolhendo critérios de um banco de": ["F1", "F2", "F5"],
+        "Quem não quiser montar, segue com a configuração padrão (B-B-A). Mecan": ["F2", "F3", "F9"],
+        "A narrativa é “antes de aplicar a sua, vamos testar a versão que está": ["F2", "F6"],
+        "A construção do aluno fica guardada pra Etapa 5.": ["F1", "F2"],
+    },
+    (E39, "produto"): {
+        "No v4.1, ele monta a configuração escolhendo critérios de um banco de": ["F1", "F2", "F3", "F4", "F5"],
+        "Quem não quiser montar, segue com a configuração padrão (B-B-A). Mecan": ["F2", "F3", "F9"],
+        "A narrativa é “antes de aplicar a sua, vamos testar a versão que está": ["F2", "F6"],
+    },
+    # «Remoção completa de Canal B» — o pedido de 21/10 09:44:36, item 1 (F1 e F2 do checklist)
+    (E89, "produto"): {"Manter integralmente: o nome da missão, o slug, o ambiente (chatgpt)": ["F1", "F2"]},
+}
+
+
+def _juiz_de_hoje(st, execucao: str, gate: str):
+    """A resposta gravada do juiz com o `superado_por` que o prompt de hoje pede; `None` se o caso não tem."""
+    saida = None
+    for trecho, ids in SUPERADO_NO_CAMPO.get((execucao, gate), {}).items():
+        saida = juiz_alterado(st, gate, trecho, saida=saida, superado_por=ids)
+    return saida
+
+
 def _reavaliado(execucao: str, gate: str):
-    return reavaliar(estado(execucao), gate)
+    st = estado(execucao)
+    return reavaliar(st, gate, juiz=_juiz_de_hoje(st, execucao, gate))
+
+
+def _leitura(st, gate: str, por_trecho):
+    """A saída do intérprete com a leitura dos itens que têm os trechos, nos ids gravados (o b2e7b4a3 é de antes do
+    intérprete, c8a36d2)."""
+    import json
+
+    from gabarito_fidelidade import GATES, _id_gravado, _linhas_do_relatorio
+
+    linhas = _linhas_do_relatorio(str(st.get(GATES[gate][2]) or ""))
+    itens = []
+    for trecho, campos in por_trecho.items():
+        antigo = _id_gravado(linhas, trecho)
+        assert antigo, trecho
+        itens.append({"id": antigo, **campos})
+    return "```json\n" + json.dumps({"itens": itens}, ensure_ascii=False) + "\n```"
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -140,8 +186,6 @@ FP_SUPERADO = [
     ("P247", E39, "produto", "No v4.1, ele monta a configuração escolhendo critérios de um banco de"),
     ("P248", E39, "produto", "Quem não quiser montar, segue com a configuração padrão (B-B-A). Mecan"),
     ("P249", E39, "produto", "A narrativa é “antes de aplicar a sua, vamos testar a versão que está"),
-    # AMBÍGUO no levantamento: o pedido de 01/10 mandava manter o Canal B, o de 21/10 09:44:36 mandou tirar
-    ("P129", E89, "produto", "Manter integralmente: o nome da missão, o slug, o ambiente (chatgpt)"),
 ]
 
 
@@ -155,6 +199,48 @@ def test_fp_item_superado_por_pedido_mais_novo_do_po_nao_e_conflito(caso):
     assert prova and prova.startswith("superado pelo pedido mais novo do PO"), prova
 
 
+def test_superado_em_parte_ordem_de_nao_mexer_fica_em_atencao():
+    """P129 (AMBÍGUO no levantamento) — e89e91b3 F35: «Manter integralmente: o nome da missão, o slug, o ambiente…,
+    Canal A e Canal B…» (01/10) e o pedido de 21/10 09:44:36 mandou tirar o Canal B. O pedido novo prevalece no Canal B;
+    o resto da ordem não tem prova aqui. Nem 🔵 nem ✅: 🟡, para confirmar."""
+    itens, r = _reavaliado(E89, "produto")
+    it = item(itens, "Manter integralmente: o nome da missão, o slug, o ambiente (chatgpt)")
+    assert codigos_do_item(r, it["id"]) == [("superado-em-parte", "atencao")]
+    assert prova_do_item(r, it["id"]) is None
+    assert "F1, F2" in next(a["resumo"] for a in r["achados"] if a["id"] == it["id"])
+
+
+def test_v_resposta_gravada_sem_o_campo_continua_decisao_do_po():
+    """A resposta gravada antes do campo `superado_por` apontava «F1-F5» só na explicação: continua 🔵."""
+    itens, r = reavaliar(estado(E39), "produto")
+    it = item(itens, "No v4.1, ele monta a configuração escolhendo critérios de um banco de")
+    assert codigos_do_item(r, it["id"]) == [("conflito-pedido-regra", "decisao_humana")]
+
+
+def test_v_id_citado_de_passagem_na_explicacao_nao_supera():
+    """Mutante da revisão da C2: conflito real com regra da esteira, cuja explicação cita um item novo de passagem."""
+    st = estado(E39)
+    trecho = "No v4.1, ele monta a configuração escolhendo critérios de um banco de"
+    juiz = juiz_alterado(st, "produto", trecho, explicacao=(
+        "A regra 7 do núcleo impõe trava irreversível na escolha; o pedido F1 não trata disso."))
+    itens, r = reavaliar(st, "produto", juiz=juiz)
+    assert codigos_do_item(r, item(itens, trecho)["id"]) == [("conflito-pedido-regra", "decisao_humana")]
+
+
+def test_v_superado_por_item_que_nao_e_de_pedido_mais_novo_continua_decisao_do_po():
+    """Mutante: `superado_por` aponta um item do briefing (mais velho, e com prova) ou um id que não existe — o PO
+    decide."""
+    st = estado(E39)
+    trecho = "No v4.1, ele monta a configuração escolhendo critérios de um banco de"
+    itens, r = reavaliar(st, "produto")
+    do_briefing = item(itens, "A pegada que eu deixo / O perfil que fala por mim")["id"]
+    assert prova_do_item(r, do_briefing) and item(itens, "A pegada que eu deixo")["origem"] == "briefing"
+    for ids in ([do_briefing], ["F1", "F999"], "F1 e F2"):
+        juiz = juiz_alterado(st, "produto", trecho, superado_por=ids)
+        itens, r = reavaliar(st, "produto", juiz=juiz)
+        assert codigos_do_item(r, item(itens, trecho)["id"]) == [("conflito-pedido-regra", "decisao_humana")], ids
+
+
 def test_v_conflito_sem_pedido_mais_novo_apontado_continua_decisao_do_po():
     """Mutante: a explicação do juiz não aponta item nem data de pedido mais novo — conflito com regra da esteira."""
     st = estado(E39)
@@ -165,10 +251,11 @@ def test_v_conflito_sem_pedido_mais_novo_apontado_continua_decisao_do_po():
 
 
 def test_v_conflito_apontando_pedido_novo_sem_prova_continua_decisao_do_po():
-    """Mutante: um dos itens do pedido novo que o juiz aponta («F1, F2 e F5») não tem prova — o PO decide."""
+    """Mutante: um dos itens do pedido novo que o juiz aponta em `superado_por` («F1, F2 e F5») não tem prova — o PO
+    decide."""
     st = estado(E39)
-    juiz = juiz_alterado(st, "nucleo", "Não há banco de critérios nesse momento.", veredito="nao_tratado", citacao="",
-                         citacoes=[])
+    juiz = juiz_alterado(st, "nucleo", "Não há banco de critérios nesse momento.", saida=_juiz_de_hoje(st, E39, "nucleo"),
+                         veredito="nao_tratado", citacao="", citacoes=[])
     itens, r = reavaliar(st, "nucleo", juiz=juiz)
     alvo = item(itens, "No v4.1, ele monta a configuração escolhendo critérios de um banco de")
     assert codigos_do_item(r, alvo["id"]) == [("conflito-pedido-regra", "decisao_humana")]
@@ -218,12 +305,89 @@ def test_fp_criterio_ditado_com_nao_altera_nao_e_ordem_de_preservacao():
 # (4) Texto ditado pelo PO presente, letra por letra, no documento = aplicado
 # ---------------------------------------------------------------------------------------------------------------------
 
-def test_fp_texto_ditado_sem_aspas_presente_no_documento_prova_o_item():
-    """P210 — b2e7b4a3 F12 (🔴 `citou-o-pedido` no fim de produto, 21/10/2026), sem depender do intérprete."""
+F12_DITADO = "Remover “associando a desmontagem geométrica” e usar: marcou"
+NOVO_F12 = "marcou corretamente no checklist os elementos de truncamento de eixo e recorte de escala como vetores de distorção"
+
+
+def test_fp_texto_ditado_sem_aspas_sem_o_interprete_fica_em_atencao():
+    """P210 — b2e7b4a3 F12 (🔴 `citou-o-pedido` no fim de produto, 21/10/2026). A execução é de antes do intérprete: o
+    texto do PO é novo no corpo, mas a comparação literal não lê o verbo — 🟡 com a dúvida, não 🔴 nem ✅."""
     itens, r = _reavaliado(B2E, "produto")
-    it = item(itens, "Remover “associando a desmontagem geométrica” e usar: marcou")
+    it = item(itens, F12_DITADO)
+    assert codigos_do_item(r, it["id"]) == [("texto-ditado-a-conferir", "atencao")]
+    assert prova_do_item(r, it["id"]) is None
+
+
+def test_fp_texto_ditado_sem_aspas_com_o_interprete_prova_o_item():
+    """O mesmo F12 com a leitura que o intérprete dá (c8a36d2): o texto a pôr no corpo, o texto a tirar fora."""
+    st = estado(B2E)
+    st["interpretacao_fidelidade_saida"] = _leitura(st, "produto", {F12_DITADO: {
+        "inserir": [NOVO_F12], "remover": ["associando a desmontagem geométrica"], "outras_exigencias": False}})
+    itens, r = reavaliar(st, "produto")
+    it = item(itens, F12_DITADO)
     assert codigos_do_item(r, it["id"]) == []
-    assert prova_do_item(r, it["id"]).startswith("texto ditado pelo PO no documento")
+    assert prova_do_item(r, it["id"]).startswith("texto ditado no documento")
+
+
+def test_duvida_do_texto_ditado_e_do_superado_em_parte_sai_do_recorte_do_nucleo():
+    """No núcleo (parcial), as duas atenções novas são falta de prova, não contradição: saem do recorte e o fim de
+    produto as confere."""
+    import json
+
+    from tools import fidelidade as fid
+
+    frase = "o aluno descobre sozinho qual é a resposta certa do desafio"
+    itens = [
+        {"id": "F1", "origem": "refazer Produto · produto · 22/10/2026 10:00:00", "tipo": "pedido",
+         "texto": f"Na tela de abertura, não mostrar a frase {frase}."},
+        {"id": "F2", "origem": "refazer Produto · produto · 22/10/2026 10:00:00", "tipo": "pedido",
+         "texto": "Tirar o Canal B da Etapa 3."},
+        {"id": "F3", "origem": "refazer Produto · produto · 01/10/2026 10:00:00", "tipo": "pedido",
+         "texto": "Manter integralmente: o nome da missão, o slug e o Canal B da Etapa 3."},
+    ]
+    juiz = "```json\n" + json.dumps({"decisoes": [
+        {"id": "F1", "veredito": "atendido", "citacao": frase},
+        {"id": "F2", "veredito": "atendido", "citacao": "A Etapa 3 avalia só pelo Canal A, sem enquete."},
+        {"id": "F3", "veredito": "conflito_com_regra", "superado_por": ["F2"], "explicacao": ""},
+    ]}, ensure_ascii=False) + "\n```"
+    docs = {"nucleo_narrativo": f"Na abertura, {frase}.\nA Etapa 3 avalia só pelo Canal A, sem enquete."}
+    anteriores = {"nucleo_narrativo": "Na abertura, o aluno escolhe um caminho.\nA Etapa 3 tem enquete (Canal B)."}
+    inteiro = fid.aplicar(itens, juiz, docs, anteriores=anteriores)
+    assert {(a["id"], a["codigo"]) for a in inteiro["achados"]} == {
+        ("F1", "texto-ditado-a-conferir"), ("F3", "superado-em-parte")}
+    parcial = fid.aplicar(itens, juiz, docs, anteriores=anteriores, parcial=True)
+    assert parcial["achados"] == [] and parcial["status"] == "aprovado"
+    assert {f["id"] for f in parcial["fora_do_recorte"]} == {"F1", "F3"}
+
+
+PROIBICOES_SEM_ASPAS = [
+    "Na tela de abertura, não mostrar a frase",
+    "Remover da tela de abertura",
+    "Tirar o trecho",
+]
+
+
+@pytest.mark.parametrize("ordem", PROIBICOES_SEM_ASPAS)
+def test_v_proibicao_sem_aspas_com_o_texto_novo_no_corpo_nao_prova(ordem):
+    """Mutante da revisão da C2: o item manda tirar ou não mostrar o texto (sem aspas), o juiz diz «atendido» citando
+    esse texto, e ele é novo no corpo. Sem o intérprete: 🟡, nunca ✅. Com a leitura dele: o texto em `remover` não
+    prova, e a leitura sem o texto em `inserir` volta a `citou-o-pedido`."""
+    st = estado(B2E)
+    troca = {"Remover “associando a desmontagem geométrica” e usar:": ordem}
+    itens, r = reavaliar(st, "produto", trocas_no_item=troca)
+    it = item(itens, NOVO_F12)
+    assert codigos_do_item(r, it["id"]) == [("texto-ditado-a-conferir", "atencao")]
+    assert prova_do_item(r, it["id"]) is None
+
+    st["interpretacao_fidelidade_saida"] = _leitura(st, "produto", {F12_DITADO: {
+        "inserir": [], "remover": [NOVO_F12], "outras_exigencias": False}})
+    itens, r = reavaliar(st, "produto", trocas_no_item=troca)
+    it = item(itens, NOVO_F12)
+    assert prova_do_item(r, it["id"]) is None and codigos_do_item(r, it["id"]), r["achados"]
+
+    st["interpretacao_fidelidade_saida"] = _leitura(st, "produto", {F12_DITADO: {"inserir": [], "remover": []}})
+    itens, r = reavaliar(st, "produto", trocas_no_item=troca)
+    assert codigos_do_item(r, item(itens, NOVO_F12)["id"]) == [("citou-o-pedido", "bloqueio")]
 
 
 def test_v_texto_ditado_com_o_texto_citado_ainda_no_documento_nao_prova():
@@ -279,12 +443,15 @@ def test_fp_cabecalho_marcado_pelo_interprete_vale_pela_prova_dos_itens():
     from gabarito_fidelidade import _id_gravado, _linhas_do_relatorio
 
     antigo = _id_gravado(_linhas_do_relatorio(st["fidelidade_report"]), trecho)
+    f12 = _id_gravado(_linhas_do_relatorio(st["fidelidade_report"]), F12_DITADO)
     st["interpretacao_fidelidade_saida"] = "```json\n" + json.dumps(
-        {"itens": [{"id": antigo, "cabecalho": True, "inserir": [], "remover": []}]}) + "\n```"
+        {"itens": [{"id": antigo, "cabecalho": True, "inserir": [], "remover": []},
+                   {"id": f12, "inserir": [NOVO_F12], "remover": ["associando a desmontagem geométrica"],
+                    "outras_exigencias": False}]}, ensure_ascii=False) + "\n```"
     itens, r = reavaliar(st, "produto")
     it = item(itens, trecho)
-    # o cabeçalho só cai se todos os itens do mesmo pedido têm prova; os outros achados da execução são do F12 e do F27,
-    # que esta correção resolve
+    # o cabeçalho só cai se todos os itens do mesmo pedido têm prova; os outros achados da execução eram do F12 (que o
+    # intérprete prova) e do F27 (a ordem de não mexer que é o texto ditado)
     assert codigos_do_item(r, it["id"]) == [], r["achados"]
 
 

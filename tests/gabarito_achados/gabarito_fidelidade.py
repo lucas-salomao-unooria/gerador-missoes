@@ -96,6 +96,11 @@ def _remapear(saida: str, chave: str, mapa: Dict[str, str]) -> str:
             continue
         por_id = {str(d.get("id")): d for d in dados[chave] if isinstance(d, dict)}
         novos = [{**por_id[antigo], "id": novo} for novo, antigo in mapa.items() if antigo in por_id]
+        # `superado_por` também traz ids (do checklist da época); o que não casa fica marcado e não vale como prova
+        inverso = {antigo: novo for novo, antigo in mapa.items()}
+        for d in novos:
+            if isinstance(d.get("superado_por"), list):
+                d["superado_por"] = [inverso.get(str(i), f"?{i}") for i in d["superado_por"]]
         return "```json\n" + json.dumps({chave: novos}, ensure_ascii=False) + "\n```"
     return saida or ""
 
@@ -163,13 +168,13 @@ def fora_do_recorte(resultado: Dict[str, Any], id_: str) -> bool:
     return any(f["id"] == id_ for f in resultado.get("fora_do_recorte") or [])
 
 
-def juiz_alterado(st: Dict[str, Any], gate: str, trecho: str, **campos: Any) -> str:
-    """A resposta gravada do juiz com a decisão do item que tem o trecho alterada (mutante). O id é o gravado, achado
-    pela linha do relatório."""
+def juiz_alterado(st: Dict[str, Any], gate: str, trecho: str, saida: Optional[str] = None, **campos: Any) -> str:
+    """A resposta gravada do juiz (ou `saida`, para encadear) com a decisão do item que tem o trecho alterada
+    (mutante). O id é o gravado, achado pela linha do relatório."""
     k_juiz, _, k_rel = GATES[gate][:3]
     antigo = _id_gravado(_linhas_do_relatorio(str(st.get(k_rel) or "")), trecho)
     assert antigo, f"o relatório gravado não tem «{trecho}»"
-    saida = str(st.get(k_juiz) or "")
+    saida = str(st.get(k_juiz) or "") if saida is None else saida
     for bruto in reversed(re.findall(r"```json\s*(.*?)```", saida, re.S)):
         try:
             dados = json.loads(bruto)

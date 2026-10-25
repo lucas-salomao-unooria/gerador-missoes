@@ -663,6 +663,7 @@
     "fidelidade_status": {
       "status": "bloqueado",
       "codigos": [
+        "conflito-pedido-regra",
         "sem-prova"
       ]
     },
@@ -1394,7 +1395,8 @@
       "status": "bloqueado",
       "codigos": [
         "nao-julgado",
-        "sem-prova"
+        "sem-prova",
+        "texto-ditado-a-conferir"
       ]
     },
     "fidelidade_nucleo_status": {
@@ -1833,7 +1835,8 @@
       "codigos": [
         "citou-o-pedido",
         "nao-tratado",
-        "preservacao-sem-citacao"
+        "preservacao-sem-citacao",
+        "texto-ditado-a-conferir"
       ]
     },
     "fidelidade_design_status": {
@@ -2021,7 +2024,8 @@
       "codigos": [
         "citou-o-pedido",
         "nao-tratado",
-        "preservacao-sem-citacao"
+        "preservacao-sem-citacao",
+        "texto-ditado-a-conferir"
       ]
     },
     "fidelidade_design_status": {
