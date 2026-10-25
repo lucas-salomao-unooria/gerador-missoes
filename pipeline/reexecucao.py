@@ -114,6 +114,8 @@ CHAVES_DESIGN = frozenset({
     "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings", "camada_caa",
     "wireframes_cobertura", "copy_strings_revisada", "prototipo_html", "prototipo_arquivo",
     "prototipo_relatorio", "diagramas_html", "stitch_links", "miro_links",
+    # o veredito do espelho no Miro (C4, 24/10/2026): o board ausente vai ao semáforo do design
+    "miro_report", "miro_status", "miro_status_envelope",
     "qa_entregaveis_report", "design_status", "design_status_envelope", "qa_design_rodada",
     "prototipo_lint_report", "prototipo_lint_status", "prototipo_lint_status_envelope",
     "rastro_design_report", "rastro_design_status", "rastro_design_status_envelope",
