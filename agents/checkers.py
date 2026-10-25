@@ -3577,6 +3577,10 @@ class SaidaDeLoopAgent(BaseAgent):
     #: Os documentos que o autor do loop escreve: quando o loop repete, a versão desta rodada vai a ele em
     #: `rodada_anterior_<chave>` (`agents/base.py`).
     autor_keys: List[str] = Field(default_factory=list)
+    #: Documentos, além dos de `autor_keys`, cujo corte pelo limite de saída do modelo reprova a rodada — sem ganhar a
+    #: versão da rodada nem o retrabalho por trocas. É o núcleo: o A004 da 3ef2b escreve as seções 0, 1, 3 e 4 do
+    #: one-pager do PO (≈150 mil caracteres), perto do limite de saída, e o loop dele não tem `autor_keys`.
+    cortes_de: List[str] = Field(default_factory=list)
     #: Na correção pontual, as rodadas só caem a uma quando os autores do loop estão travados: o autor que escreve um
     #: documento que falta tem a rodada de correção dele (`pipeline.orchestrator.limitar_a_uma_rodada`). É o pedagógico
     #: da missão desenhada antes do PR 10 (exp02em1b, exp01em1b e exp03em1b, revisão do PR #79, 24/10/2026).
@@ -3621,8 +3625,32 @@ class SaidaDeLoopAgent(BaseAgent):
         delta: Dict[str, Any] = {self.rodada_key: rodada}
         if reprovados and esgotou:
             delta.update(_ajustes_nao_aplicados(state, self.envelope_exige, rodada))
+        # O documento do autor cortado pelo limite de saída do modelo não passa como aprovado, mesmo com os gates verdes
+        # (`agents.callbacks.registrar_corte_do_modelo`). Na 3ef2b (e2e de 25/10/2026) o one-pager cortado em 218 mil
+        # caracteres era gravado calado e o loop reenviava a mesma instrução cinco vezes. O autor tem uma tentativa nova,
+        # com o aviso do corte na instrução e sem retrabalho por trocas (troca não completa documento cortado); cortado
+        # de novo, ou no teto, o loop sai 🔴 — outra rodada igual daria o mesmo corte — e o diagnóstico diz por quê.
+        from agents.callbacks import cortes_dos_documentos
 
-        if not reprovados and ao_po:
+        cortados = cortes_dos_documentos(state, list(self.autor_keys) + list(self.cortes_de))
+        corte_sem_saida = bool(cortados) and (esgotou or any(int(c.get("vezes") or 0) >= 2 for c in cortados))
+        for c in cortados if corte_sem_saida else []:
+            registrar_degradacao(state, delta, f"corte_do_modelo_{c.get('chave')}",
+                                 f"o {c.get('agente')} foi cortado pelo limite de saída do modelo em {c.get('caracteres')} "
+                                 f"caracteres: o documento `{c.get('chave')}` está incompleto")
+            state = {**state, **delta}
+
+        if cortados:
+            docs = ", ".join(f"`{c.get('chave')}` ({c.get('agente')}, {c.get('caracteres')} caracteres)" for c in cortados)
+            if corte_sem_saida:
+                msg = (f"⛔ {self.rotulo}: documento cortado pelo limite de saída do modelo — {docs}. Repetir daria o mesmo "
+                       "corte: a esteira segue com o documento incompleto, e o diagnóstico registra.")
+                escalate = True
+            else:
+                msg = (f"✂️ {self.rotulo}: rodada {rodada}/{self.max_rounds} — documento cortado pelo limite de saída do "
+                       f"modelo ({docs}). O autor escreve de novo, avisado do corte.")
+                escalate = False
+        elif not reprovados and ao_po:
             # «✅ tudo conforme» com o gate ainda 🔴 contradizia a nota do PO logo abaixo (revisão do PR #83, 25/10/2026)
             msg = f"🧑 {self.rotulo}: nada para o autor corrigir na rodada {rodada}; o 🔴 restante vai ao PO."
             escalate = True
@@ -3659,12 +3687,14 @@ class SaidaDeLoopAgent(BaseAgent):
                 # por palavra», ele as recopiaria como texto dele; o callback dele as recoloca como estão agora (revisão
                 # do PR #75, 24/10/2026)
                 documento = governanca.sem_bloco(documento).strip()
+            # o documento cortado não é base: «palavra por palavra» sobre ele reproduziria o corte
+            cortado = any(c.get("chave") == chave for c in cortados)
             delta[f"{PREFIXO_RODADA_ANTERIOR}{chave}"] = (
-                bloco_versao_da_rodada(chave, documento) if documento and not escalate else "")
+                bloco_versao_da_rodada(chave, documento) if documento and not escalate and not cortado else "")
             # O que os gates reprovaram, para o retrabalho por trocas (`agents.callbacks.retrabalhar_por_trocas`): na
             # rodada seguinte o documento é corrigido trecho a trecho, e o que já passou não muda.
             delta[f"{PREFIXO_RETRABALHO}{chave}"] = (
-                motivos_do_retrabalho(state, reprovados, ao_po) if documento and not escalate else "")
+                motivos_do_retrabalho(state, reprovados, ao_po) if documento and not escalate and not cortado else "")
 
         yield Event(
             invocation_id=ctx.invocation_id,

@@ -122,6 +122,26 @@ ARTIFACT_FILES = [
     ("ficha_catalogo", "catalogo-ficha.md"),
 ]
 
+#: Documentos do mapa que podem faltar sem que nada tenha falhado (G26, e2e de 25/10/2026): o diagnóstico das três missões
+#: normais listava «Ausentes (6)» — todos estes. A spec do Gate 0 é legado (desde o PR 6 nenhum split grava o backup, e
+#: quem a lê cai na `spec_missao`: `tools/arestas.py`, `tools/montagem.py`, `tools/anexo_design.py`); as dimensões A, B e C
+#: da banca saíram do dev em 08/10/2026 (banca em quatro posições: lá ficam só D e E). Ficam no mapa para as sessões
+#: antigas, que as têm.
+DOCS_LEGADOS = frozenset({"spec_missao_gate0", "validacao_produto_narrativa", "validacao_design_imersao",
+                          "validacao_pedagogia_bncc"})
+
+
+def documentos_dispensados(state: Dict[str, Any]) -> frozenset:
+    """As chaves do mapa que esta execução não precisava produzir: o legado, as telas do Stitch com o Stitch desligado e a
+    linha de base fora da correção pontual."""
+    dispensados = set(DOCS_LEGADOS)
+    if not state.get("stitch_ligado"):
+        dispensados.add("stitch_links")
+    if state.get("modo_correcao") != "pontual":
+        dispensados.add("linha_de_base_report")
+    return frozenset(dispensados)
+
+
 #: Onde o artefato da chave ficava antes de mudar de pasta: a gravação apaga o de antes quando grava o novo, e o backup de
 #: uma reexecução o leva junto (`pipeline.reexecucao.arquivos_das_chaves`). O pedagógico saiu da raiz no PR 10.
 CAMINHOS_LEGADOS: Dict[str, Tuple[str, ...]] = {

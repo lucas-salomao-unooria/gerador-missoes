@@ -223,6 +223,9 @@ CHAVES_PRODUTO = frozenset({
     # a tabela dos textos-chave (PR 7) é refeita pelo A044b sobre o one-pager novo. O registro dos IDs
     # (`textos_chave`) fica fora de toda lista, de propósito: o ID sobrevive ao refazer
     "textos_chave_tabela",
+    # as trocas que não se aplicaram no one-pager do PO grande (`tools/one_pager_grande.py`, e2e de 25/10/2026): o
+    # one-pager refeito traz as dele
+    "trocas_nao_aplicadas",
 }) | CHAVES_SPEC
 CHAVES_TRANSVERSAL = frozenset({
     "diagnostico_execucao", "diagnostico_status", "diagnostico_status_envelope", "aprendizado_registro",
@@ -645,6 +648,13 @@ def preparar_estado(
     removidas = sorted(k for k in estado if k in remover)
     limpo = {k: v for k, v in estado.items() if k not in remover and not str(k).startswith("temp:")}
     _guardar_versoes_anteriores(estado, limpo, remover)
+    from agents.callbacks import KEY_CORTES_DO_MODELO
+
+    cortes = limpo.get(KEY_CORTES_DO_MODELO)
+    if isinstance(cortes, dict):
+        # o documento cortado que esta etapa refaz deixa de estar cortado; o das outras etapas continua à vista
+        limpo[KEY_CORTES_DO_MODELO] = {a: c for a, c in cortes.items()
+                                       if not (isinstance(c, dict) and c.get("chave") in remover)}
     if etapa == "design":
         # Desde o PR 6 o refazer de design não toca a spec: o D0 e o D9 gravam no anexo de design (`anexo_design_spec`,
         # que cai com o design), e a `spec_missao` é a aprovada em produto — aqui é no-op. Até o PR 6 a spec voltava à do
@@ -728,8 +738,11 @@ def preparar_estado_pontual(
     return limpo, removidas
 
 
-def validador_do_po(estado: Dict[str, Any], pedido_extra: str = ""):
-    """Recusa a troca que faz o one-pager do PO perder texto (`tools.one_pager_po.perdidos_pela_edicao`). None sem PO."""
+def validador_do_po(estado: Dict[str, Any], pedido_extra: str = "", antes: Optional[str] = None):
+    """Recusa a troca que faz o one-pager do PO perder texto (`tools.one_pager_po.perdidos_pela_edicao`). None sem PO.
+
+    `antes`: o documento sobre o qual as trocas são feitas, quando não é o `one_pager` do estado — o one-pager montado por
+    código para as trocas do A014 com o one-pager do PO grande (`tools/one_pager_grande.py`)."""
     po = str(estado.get("one_pager_po") or "")
     if not po.strip():
         return None
@@ -742,7 +755,8 @@ def validador_do_po(estado: Dict[str, Any], pedido_extra: str = ""):
     def validar(documentos: Dict[str, str]) -> List[str]:
         if "one_pager" not in documentos:
             return []
-        return perdidos_pela_edicao(po, str(estado.get("one_pager") or "") + "\n\n" + brief,
+        base = str(estado.get("one_pager") or "") if antes is None else antes
+        return perdidos_pela_edicao(po, base + "\n\n" + brief,
                                     documentos["one_pager"] + "\n\n" + brief, str(estado.get("briefing") or ""),
                                     pedidos + "\n" + pedido_extra, texto_votos(estado))
 
@@ -791,6 +805,24 @@ def _juntar_validadores(*validadores):
 
 #: Tentativas do editor quando alguma troca não se aplica (trecho que não existe ou que se repete).
 TENTATIVAS_DO_EDITOR = 3
+#: No retrabalho dos loops, acima disto (tokens estimados do maior documento), uma tentativa só. Na 1em1b do e2e de
+#: 25/10/2026, o retrabalho do one-pager de 71 mil caracteres gastou 3 chamadas de ≈7 min cada para terminar em «o editor
+#: não devolveu uma proposta legível» — 22 dos 63 minutos de produto. A falha em documento grande se repete, e ali o autor
+#: reescreve mais rápido.
+EDITOR_UMA_TENTATIVA_ACIMA_DE = 20_000
+
+
+def tentativas_do_editor(documentos: Dict[str, str]) -> int:
+    """Tentativas do editor no retrabalho dos loops (`agents.callbacks.retrabalhar_por_trocas`), pelo maior documento.
+
+    Só lá: a correção pontual recebe todos os documentos da etapa, e nas 15 missões do acervo o one-pager de produto e o
+    protótipo de design já passam do limite — com a medida aplicada a ela, a correção pontual validada no PR #52 perdia
+    a 2ª e a 3ª tentativas em toda missão, e o pedido do PO caía no refazer da etapa inteira (revisão do PR #87,
+    25/10/2026). Ela fica com `TENTATIVAS_DO_EDITOR`."""
+    from tools.contexto import estimar_tokens
+
+    maior = max((estimar_tokens(t) for t in documentos.values()), default=0)
+    return 1 if maior > EDITOR_UMA_TENTATIVA_ACIMA_DE else TENTATIVAS_DO_EDITOR
 
 
 def texto_para_o_editor(pedido: "PedidoCorrecao") -> str:
@@ -853,28 +885,48 @@ async def propor_edicao(
                                         new_message=build_user_message("Aplique o pedido como trocas.", None)):
             pass
         final = await runner.session_service.get_session(app_name=app, user_id="editor", session_id=sessao.id)
-        return ler_proposta(str((final.state if final else {}).get("edicao_pontual") or ""))
+        estado_final = final.state if final else {}
+        proposta = ler_proposta(str(estado_final.get("edicao_pontual") or ""))
+        return com_corte_do_editor(proposta, estado_final)
     except Exception as exc:  # pragma: no cover - rede/modelo
         logger.warning("Editor pontual falhou: %s", exc)
         return Proposta(modo=MODO_ESTRUTURAL, motivo=f"falha no editor: {exc}")
 
 
+def com_corte_do_editor(proposta: Any, estado_do_editor: Dict[str, Any]) -> Any:
+    """A proposta com o motivo de o editor ter sido cortado pelo modelo, quando foi (`agents.callbacks.registrar_corte_do_modelo`).
+
+    «O editor não devolveu uma proposta legível» não dizia por quê (1em1b e 3ef2b, e2e de 25/10/2026): a resposta cortada
+    no meio do JSON é ilegível, e só o motivo do corte diz que repetir não adianta."""
+    from agents.callbacks import KEY_CORTES_DO_MODELO, PREFIXO_BLOQUEIO_MODELO
+
+    corte = (estado_do_editor.get(KEY_CORTES_DO_MODELO) or {}).get("A000EditorPontual")
+    if isinstance(corte, dict):
+        proposta.motivo = (f"o editor foi cortado pelo limite de saída do modelo em {corte.get('caracteres')} caracteres"
+                           + (f" — {proposta.motivo}" if proposta.motivo else ""))
+    elif str(estado_do_editor.get(f"{PREFIXO_BLOQUEIO_MODELO}A000EditorPontual") or "").strip():
+        proposta.motivo = "o modelo cortou a resposta do editor" + (f" — {proposta.motivo}" if proposta.motivo else "")
+    return proposta
+
+
 async def editar(
     pedido_texto: str, etapa: str, documentos: Dict[str, str], *, achados: str = "",
-    proponente: Any = None, validador: Any = None,
+    proponente: Any = None, validador: Any = None, tentativas: Optional[int] = None,
 ) -> Tuple[Any, Any]:
     """`(resultado | None, proposta)`: as trocas aplicadas aos documentos, ou None se o pedido não cabe numa edição.
 
-    O editor tem `TENTATIVAS_DO_EDITOR` chances: troca que não se aplica volta a ele com o motivo, e também a que o
-    `validador` recusa (`validador(documentos_novos) -> [falhas]`, ex.: texto do one-pager do PO apagado).
-    `proponente` troca o editor nos testes (mesma assinatura de `propor_edicao`).
+    O editor tem `TENTATIVAS_DO_EDITOR` chances (ou `tentativas`; o retrabalho dos loops passa uma só com documento
+    grande, `tentativas_do_editor`): troca que não se
+    aplica volta a ele com o motivo, e também a que o `validador` recusa (`validador(documentos_novos) -> [falhas]`, ex.:
+    texto do one-pager do PO apagado). `proponente` troca o editor nos testes (mesma assinatura de `propor_edicao`).
     """
     from tools.edicao_pontual import MODO_ESTRUTURAL, Proposta, aplicar
 
     proponente = proponente or propor_edicao
     erros = ""
     proposta = Proposta(modo=MODO_ESTRUTURAL)
-    for _ in range(TENTATIVAS_DO_EDITOR):
+    tentativas = tentativas or TENTATIVAS_DO_EDITOR
+    for _ in range(tentativas):
         proposta = await proponente(pedido_texto, etapa, documentos, erros=erros, achados=achados)
         if not proposta.pontual:
             return None, proposta
@@ -892,7 +944,7 @@ async def editar(
             return resultado, proposta
         erros = ("## Suas trocas da tentativa anterior não se aplicaram\n\nNenhuma foi aplicada. Refaça a lista "
                  "inteira corrigindo estas:\n\n" + "\n".join(f"- {f}" for f in resultado.falhas))
-    proposta.motivo = (f"as trocas não se aplicaram em {TENTATIVAS_DO_EDITOR} tentativas — "
+    proposta.motivo = (f"as trocas não se aplicaram em {tentativas} tentativa{'s' if tentativas > 1 else ''} — "
                        + (erros.splitlines()[-1][2:] if erros else "sem detalhe"))
     proposta.modo = MODO_ESTRUTURAL
     return None, proposta

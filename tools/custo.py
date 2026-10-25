@@ -115,9 +115,12 @@ def custo_da_execucao(tokens_por_agente: Dict[str, Dict[str, int]], modelo: str,
         else:
             usd += c
     cotacao, fonte = cotacao_usd_brl()
+    # Os tokens por agente vão junto, em cada linha de `custo_missao.execucoes`: o `execucao` do estado é só o da última
+    # execução, e nas missões do e2e de 25/10/2026 só sobrava o A128Aprendizado (G19)
     return {"tokens": _soma(list(tokens_por_agente.values())), "usd": round(usd, 4), "cotacao": cotacao,
             "fonte_cotacao": fonte,
-            "brl": round(usd * cotacao, 2), "modelos_sem_preco": sorted(sem_preco)}
+            "brl": round(usd * cotacao, 2), "modelos_sem_preco": sorted(sem_preco),
+            "tokens_por_agente": {a: dict(t) for a, t in tokens_por_agente.items()}}
 
 
 def acumular(anterior: Optional[Dict[str, Any]], execucao: Dict[str, Any], etapas: List[str],

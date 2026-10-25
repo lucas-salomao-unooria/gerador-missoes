@@ -26,6 +26,7 @@ def create_llm_agent(
     after_agent_callback: Any = None,
     before_tool_callback: Any = None,
     after_tool_callback: Any = None,
+    before_model_callback: Any = None,
 ) -> LlmAgent:
     """Cria um LlmAgent com ThinkingConfig e callbacks padronizados.
 
@@ -51,6 +52,9 @@ def create_llm_agent(
             `agents.callbacks` — resposta de ferramenta MCP é a maior fonte de estouro
             do teto do modelo, e o histórico de chamada não é descartado por
             `include_contents="none"`.
+        before_model_callback: o do agente (ex.: o A004 troca o histórico pela mensagem do PO). Depois dele entra,
+            em todo agente, o orçamento de contexto (`agents.callbacks.orcamento_de_contexto`): mede a requisição já
+            montada e não a manda acima do teto do modelo.
     """
     # import tardio: `pipeline.reexecucao` importa `agents.callbacks`, que importa este módulo
     from pipeline.reexecucao import CHAVES_AUTORAIS, PREFIXO_ANTERIOR
@@ -146,9 +150,13 @@ def create_llm_agent(
             kwargs["before_tool_callback"] = before_tool_callback
         if after_tool_callback is not None:
             kwargs["after_tool_callback"] = after_tool_callback
-    from agents.callbacks import registrar_corte_do_modelo
+    from agents.callbacks import orcamento_de_contexto, registrar_corte_do_modelo
 
     kwargs["after_model_callback"] = registrar_corte_do_modelo
+    # O do agente primeiro (ele muda o que vai ao modelo); o orçamento mede o que sobrou (3ef2b, e2e de 25/10/2026)
+    proprios = (list(before_model_callback) if isinstance(before_model_callback, list)
+                else [before_model_callback] if before_model_callback is not None else [])
+    kwargs["before_model_callback"] = proprios + [orcamento_de_contexto(deterministico)]
     if output_key in CHAVES_AUTORAIS:
         # Na correção pontual o documento do autor já foi editado em código (`tools/edicao_pontual.py`): ele não roda.
         # Vem antes do callback do agente, que só vale quando o autor escreve.

@@ -341,13 +341,39 @@ def manter_nucleo_sem_achado_do_a004(callback_context: CallbackContext) -> Optio
         return None
     reprovados = [e for e in (state.get(f"{k}_envelope") for k in STATUS_DOS_COMITES)
                   if isinstance(e, dict) and str(e.get("status") or "") == "bloqueado"]
-    if not reprovados or str(state.get("evidencia_one_pager_status") or "") == "bloqueado":
+    evidencia_bloqueada = str(state.get("evidencia_one_pager_status") or "") == "bloqueado"
+    if not reprovados and not evidencia_bloqueada:
         return None
     if any(str(a.get("autor") or "") in ("A004", "") for e in reprovados for a in e.get("achados") or []
            if isinstance(a, dict) and citacoes.bloqueante(a)):
         return None
+    # O §12a reprovado só devolve o núcleo quando o achado é do contrato do foco primário, que o A004 escreve na seção 4.
+    # Na 3ef2b (25/10/2026), com os dois painéis aprovados, o núcleo era reescrito a cada volta só porque o §12a do A014
+    # vinha truncado — e a volta extra engordava o histórico do A004 até o 400 de 1 milhão de tokens (T23).
+    if evidencia_bloqueada and _achado_do_12a_e_do_nucleo(state):
+        return None
     return types.Content(role="model", parts=[types.Part(
-        text="⏭️ Núcleo mantido: os comitês não apontaram nada para o A004 nesta rodada; só as seções de apoio corrigem.")])
+        text="⏭️ Núcleo mantido: os comitês e o §12a não apontaram nada para o A004 nesta rodada; só as seções de apoio "
+             "corrigem.")])
+
+
+_RE_CODIGO_BNCC = re.compile(r"\bE[FMI]\d{2}[A-Z]{2}\d{2,3}\b")
+
+
+def _achado_do_12a_e_do_nucleo(state: Any) -> bool:
+    """Algum achado do §12a cita habilidade que o núcleo traz — o foco primário, cujo contrato é do A004. Sem envelope
+    legível, ou achado sem código (o §12a ausente ou sem tabela, que o A014 monta), não é do núcleo; na dúvida sobre o
+    envelope, o núcleo roda."""
+    envelope = state.get("evidencia_one_pager_status_envelope")
+    if not isinstance(envelope, dict):
+        return True
+    nucleo = str(state.get("nucleo_narrativo") or "")
+    for achado in envelope.get("achados") or []:
+        if not isinstance(achado, dict):
+            continue
+        if any(c in nucleo for c in _RE_CODIGO_BNCC.findall(str(achado.get("resumo") or ""))):
+            return True
+    return False
 
 
 #: Modo da correção corrente (`pipeline/reexecucao.py`): `pontual` trava os autores; ausente na geração e no refazer.
@@ -411,7 +437,14 @@ def retrabalhar_por_trocas(chave: str):
         documento = str(state.get(chave) or "")
         if not motivos or not documento.strip() or not get_settings().retrabalho_por_trocas:
             return None
-        from pipeline.reexecucao import editar, validador_do_po
+        if chave == "one_pager":
+            from tools.one_pager_grande import por_trocas
+
+            if por_trocas(state):
+                # com o one-pager do PO grande, quem escreve o one-pager já trabalha por trocas e leva estes motivos
+                # (`montar_one_pager_por_trocas`): um editor por rodada, e sem volta ao autor que reescreveria tudo
+                return None
+        from pipeline.reexecucao import editar, tentativas_do_editor, validador_do_po
         from tools import governanca
         from tools.edicao_pontual import como_dicts
 
@@ -420,8 +453,10 @@ def retrabalhar_por_trocas(chave: str):
             documento = governanca.sem_bloco(documento)
         # o voto do comitê pode mudar o texto do PO, mas só com a proposta ao lado ou o voto citado na tabela de
         # alterações: a troca que o apaga volta ao editor (`tools.one_pager_po.perdidos_pela_edicao`)
+        # documento grande, uma tentativa só (`tentativas_do_editor`): aqui o autor reescreve se o editor falhar
         resultado, proposta = await editar(motivos, "retrabalho", {chave: documento},
                                            proponente=PROPONENTE_DE_RETRABALHO,
+                                           tentativas=tentativas_do_editor({chave: documento}),
                                            validador=validador_do_po(state.to_dict() if hasattr(state, "to_dict") else dict(state))
                                            if chave == "one_pager" else None)
         # consumido: o próximo autor da mesma chave nesta rodada (o revisor) não refaz a correção
@@ -440,6 +475,76 @@ def retrabalhar_por_trocas(chave: str):
 
     _retrabalhar.__name__ = f"retrabalhar_{chave}_por_trocas"
     return _retrabalhar
+
+
+#: Troca o editor do one-pager montado por trocas nos testes (mesma assinatura de `pipeline.reexecucao.propor_edicao`).
+PROPONENTE_DO_ONE_PAGER_GRANDE = None
+
+
+def montar_one_pager_por_trocas(papel: str):
+    """before_agent_callback de quem escreve o `one_pager` (A014, A028, A034, A037): com o one-pager do PO grande demais
+    para ser reescrito, o documento é montado por código e o modelo devolve só as trocas (`tools/one_pager_grande.py`).
+
+    Na 3ef2b (e2e de 25/10/2026) o one-pager do PO tinha 360 mil caracteres; o A014 o reescrevia inteiro e era cortado
+    perto de 218 mil, o A037 também, e o comitê dos canais rodava cinco vezes até o 400. Aqui: a base é montada por
+    código (o one-pager do PO ou o da rodada, com o núcleo copiado); o editor recebe a tarefa do papel e os relatórios e
+    devolve trocas; as que se aplicam e respeitam o one-pager do PO entram, as outras viram `[ABERTO — dono: PO: …]` no
+    fim da seção 18. O `Content` devolvido vai para o `output_key`, e o autor não roda. Com o one-pager do PO que cabe,
+    não faz nada — o autor escreve como sempre.
+    """
+
+    async def _montar(callback_context: CallbackContext) -> Optional[types.Content]:
+        from tools import one_pager_grande as og
+
+        state = callback_context.state
+        if not og.por_trocas(state):
+            return None
+        from pipeline.reexecucao import propor_edicao, validador_do_po
+        from tools.edicao_pontual import aplicar_parcial, como_dicts
+
+        estado = state.to_dict() if hasattr(state, "to_dict") else dict(state)
+        base = og.base_do_papel(estado, papel)
+        motivos = str(state.get("retrabalho_one_pager") or "")
+        proponente = PROPONENTE_DO_ONE_PAGER_GRANDE or propor_edicao
+        proposta = await proponente(og.pedido(estado, papel, base, motivos), "produto", {"one_pager": base},
+                                    erros="", achados="")
+        # consumido: o retrabalho desta rodada foi ao editor junto com a tarefa do papel
+        state["retrabalho_one_pager"] = ""
+        edicoes = list(proposta.edicoes) if proposta.pontual else []
+        resultado = aplicar_parcial({"one_pager": base}, edicoes, validador_do_po(estado, antes=base))
+        nao_aplicadas = []
+        for falha in resultado.falhas:
+            m = re.match(r"edição (\d+)", falha)
+            e = edicoes[int(m.group(1)) - 1] if m and 0 < int(m.group(1)) <= len(edicoes) else None
+            if e is not None:
+                nao_aplicadas.append({"papel": papel, "motivo": e.motivo, "de": e.de[:400], "para": e.para[:400],
+                                      "falha": falha[:400]})
+        if not proposta.pontual:
+            # o editor não devolveu trocas: o documento fica como a base (o PO preservado), e o motivo fica à vista
+            nao_aplicadas.append({"papel": papel, "motivo": "", "de": "", "para": "",
+                                  "falha": (proposta.motivo or "o editor não devolveu trocas")[:400]})
+            logger.warning("One-pager por trocas (%s): o editor não devolveu trocas — %s", papel, proposta.motivo)
+        documento = og.com_pendencias(resultado.documentos["one_pager"], [
+            og.linha_de_pendencia(papel, n["motivo"], n["de"], n["para"], n["falha"]) for n in nao_aplicadas if n["de"]]
+            + [og.linha_do_editor(papel, p) for p in proposta.pendencias])
+        if nao_aplicadas:
+            state[og.KEY_TROCAS_NAO_APLICADAS] = list(state.get(og.KEY_TROCAS_NAO_APLICADAS) or []) + nao_aplicadas
+        state[KEY_TROCAS_DE_RETRABALHO] = list(state.get(KEY_TROCAS_DE_RETRABALHO) or []) + [
+            {"chave": "one_pager", "papel": papel, "edicoes": como_dicts(resultado.aplicadas),
+             "pendencias": list(proposta.pendencias)}]
+        cortes = state.get(KEY_CORTES_DO_MODELO) or {}
+        if isinstance(cortes, dict) and any(isinstance(c, dict) and c.get("chave") == "one_pager" for c in cortes.values()):
+            # o one-pager agora é montado inteiro por código: o corte de uma tentativa anterior não vale mais
+            state[KEY_CORTES_DO_MODELO] = {k: c for k, c in cortes.items()
+                                           if not (isinstance(c, dict) and c.get("chave") == "one_pager")}
+        if not str(state.get("one_pager_gate0") or "").strip():
+            state["one_pager_gate0"] = documento  # o que o `preservar_one_pager` do A014 faria, que não roda aqui
+        logger.info("One-pager por trocas (%s): %d troca(s) aplicada(s), %d não aplicada(s)", papel,
+                    len(resultado.aplicadas), len(nao_aplicadas))
+        return types.Content(role="model", parts=[types.Part(text=documento)])
+
+    _montar.__name__ = f"montar_one_pager_por_trocas_{papel}"
+    return _montar
 
 
 #: Marca, no estado, se o passo de completude chamou o modelo na volta corrente do `CompletudeLoop` (ou manteve a resposta).
@@ -653,28 +758,153 @@ _AVISOS_DE_CORTE = {
 }
 
 
+#: Respostas cortadas pelo limite de saída do modelo **com texto**, por agente: `{agente: {chave, caracteres, motivo,
+#: vezes}}`. Sai do registro quando o mesmo agente, ou outro que escreve a mesma chave, termina inteiro. Lido pela saída
+#: dos loops (`SaidaDeLoopAgent`) e pelo diagnóstico (`tools/diagnostico.py`).
+KEY_CORTES_DO_MODELO = "cortes_do_modelo"
+
+
+def _chave_de_saida(callback_context: Any) -> str:
+    agente = getattr(getattr(callback_context, "_invocation_context", None), "agent", None)
+    return str(getattr(agente, "output_key", "") or "")
+
+
 def registrar_corte_do_modelo(callback_context: CallbackContext, llm_response: Any) -> None:
-    """after_model_callback de todo agente: resposta sem texto cortada pelo modelo fica registrada para a tentativa seguinte.
+    """after_model_callback de todo agente: resposta cortada pelo modelo fica registrada — com ou sem texto.
 
     Na exp03ef1b (08/10/2026) o A014 terminou com `FinishReason.RECITATION` e nenhum texto, duas vezes: o filtro de
     recitação do Gemini corta a saída que reproduz texto publicado — e o one-pager transcreve o texto oficial da
     BNCC. A esteira não registrava o motivo, o loop chamava o agente de novo com a mesma instrução e o resultado era
     o mesmo. Aqui o motivo vai ao estado e a próxima instrução do mesmo agente o recebe (`agents.base`).
+
+    O corte por `MAX_TOKENS` **com texto** também. Na 3ef2b (e2e de 25/10/2026) o A014 devolvia o one-pager do PO de 360
+    mil caracteres cortado sempre perto de 218 mil (≈65 mil tokens, o limite de saída), e a resposta parcial era gravada
+    como one-pager sem aviso nenhum: o loop reenviava a mesma instrução cinco vezes. Agora o corte vai a
+    `cortes_do_modelo`, que a saída do loop trata como reprovação e o diagnóstico mostra ao PO (`documento-cortado-pelo-modelo`).
     """
     conteudo = getattr(llm_response, "content", None)
     partes = list(getattr(conteudo, "parts", None) or [])
     texto = "".join(p.text or "" for p in partes if getattr(p, "text", None) and not getattr(p, "thought", False))
-    chave = f"{PREFIXO_BLOQUEIO_MODELO}{callback_context.agent_name}"
+    agente = callback_context.agent_name
+    chave = f"{PREFIXO_BLOQUEIO_MODELO}{agente}"
     if getattr(llm_response, "partial", False):
         return None
     motivo = str(getattr(llm_response, "finish_reason", "") or getattr(llm_response, "error_code", "") or "")
     motivo = motivo.split(".")[-1].upper()
+    state = callback_context.state
+    cortes = state.get(KEY_CORTES_DO_MODELO) or {}
+    if texto.strip() and motivo == "MAX_TOKENS":
+        anterior = cortes.get(agente) if isinstance(cortes, dict) else None
+        vezes = int((anterior or {}).get("vezes", 0) or 0) + 1
+        state[KEY_CORTES_DO_MODELO] = {**(cortes if isinstance(cortes, dict) else {}), agente: {
+            "agente": agente, "chave": _chave_de_saida(callback_context), "caracteres": len(texto),
+            "motivo": motivo, "vezes": vezes}}
+        state[chave] = ("## Sua tentativa anterior foi cortada pelo modelo\n\nNa tentativa anterior, a resposta passou do "
+                        f"limite de tamanho do modelo e foi cortada em {len(texto)} caracteres, antes de terminar. Nesta "
+                        "tentativa, seja mais enxuto no raciocínio e não repita trechos já escritos; o documento precisa "
+                        "sair inteiro.")
+        logging.getLogger(__name__).warning("Resposta de %s cortada pelo limite de saída do modelo em %d caracteres",
+                                            agente, len(texto))
+        return None
     if texto.strip() or getattr(llm_response, "turn_complete", None) is False:
-        if callback_context.state.get(chave):
-            callback_context.state[chave] = ""
+        if state.get(chave):
+            state[chave] = ""
+        saida = _chave_de_saida(callback_context)
+
+        def _substituido(k: str, c: Any) -> bool:
+            return k == agente or bool(saida and isinstance(c, dict) and c.get("chave") == saida)
+
+        if texto.strip() and isinstance(cortes, dict) and any(_substituido(k, c) for k, c in cortes.items()):
+            # terminou inteiro desta vez: o documento cortado foi substituído — também quando quem o cortou foi outro
+            # agente da mesma chave. O registro é por agente e a saída do loop o lê por documento: o A028 que reescreve o
+            # one-pager do A014 cortado, ou o A079PrototipoRetrabalho depois do A079Prototipo, deixavam o corte velho no
+            # registro, e o loop saía 🔴 com `pipeline_bloqueado` sobre um documento inteiro (revisão do PR #87, 25/10/2026)
+            state[KEY_CORTES_DO_MODELO] = {k: c for k, c in cortes.items() if not _substituido(k, c)}
         return None
     if motivo and motivo not in ("STOP", "FINISH_REASON_UNSPECIFIED"):
         aviso = _AVISOS_DE_CORTE.get(motivo, f"o modelo devolveu a resposta vazia (motivo `{motivo}`). Escreva o documento inteiro.")
-        callback_context.state[chave] = f"## Sua tentativa anterior foi cortada pelo modelo\n\nNa tentativa anterior, {aviso}"
-        logging.getLogger(__name__).warning("Resposta de %s cortada pelo modelo: %s", callback_context.agent_name, motivo)
+        state[chave] = f"## Sua tentativa anterior foi cortada pelo modelo\n\nNa tentativa anterior, {aviso}"
+        logging.getLogger(__name__).warning("Resposta de %s cortada pelo modelo: %s", agente, motivo)
     return None
+
+
+def cortes_dos_documentos(state: Any, chaves: Any) -> list:
+    """Os cortes registrados (`KEY_CORTES_DO_MODELO`) cujo documento é uma das `chaves`."""
+    cortes = state.get(KEY_CORTES_DO_MODELO) or {}
+    if not isinstance(cortes, dict):
+        return []
+    return [c for c in cortes.values() if isinstance(c, dict) and c.get("chave") in set(chaves or ())]
+
+
+# --------------------------------------------------------------------- contexto de cada chamada ao modelo
+#: O que fica na mensagem do PO, para o A004, no lugar do one-pager dele — que já está inteiro na instrução.
+PONTEIRO_PO_NA_MENSAGEM = ("(o texto integral deste anexo — o one-pager do PO — está na sua instrução, na seção «One-pager "
+                           "do PO»; não é repetido aqui)")
+
+
+def so_a_mensagem_do_po(callback_context: CallbackContext, llm_request: Any) -> None:
+    """before_model_callback do A004: o histórico da conversa vira só a mensagem original do PO, com os anexos.
+
+    O A004 é o único agente da esteira que vê a mensagem do PO (`include_contents="default"`), e o ADK manda junto
+    **todo** o histórico da sessão: cada saída do A014, os núcleos anteriores, os juízes, rodada após rodada. Na 3ef2b
+    (e2e de 25/10/2026) a 5ª volta do comitê dos canais passou de 1.048.576 tokens e a missão caiu com 400. O que o A004
+    precisa de rodadas anteriores chega pelo estado, na instrução (`{nucleo_narrativo?}`, os relatórios dos comitês e dos
+    gates). O one-pager do PO também ia duas vezes — no anexo da mensagem e na instrução (`one-pager-do-po.md`): na
+    mensagem, ele vira um ponteiro.
+    """
+    original = getattr(callback_context, "user_content", None)
+    po = str(callback_context.state.get("one_pager_po") or "")
+    partes = []
+    for parte in getattr(original, "parts", None) or []:
+        texto = getattr(parte, "text", None)
+        if texto and po.strip() and po in texto:
+            parte = types.Part(text=texto.replace(po, PONTEIRO_PO_NA_MENSAGEM, 1))
+        partes.append(parte)
+    if not partes:
+        partes = [types.Part(text="Siga a instrução do sistema.")]
+    llm_request.contents = [types.Content(role="user", parts=partes)]
+    return None
+
+
+def orcamento_de_contexto(deterministico: bool):
+    """before_model_callback de todo agente: cabe no modelo? (`tools/contexto.py`).
+
+    Na ordem: o one-pager do PO grande vai para o começo da instrução (o prefixo comum é o que o cache implícito do
+    Gemini reaproveita); o juiz (`deterministico`) perde o que é repetido e, acima do orçamento, o que é longo e não é
+    contrato, com o corte registrado em `contexto_cortado_<agente>`; e a requisição que ainda passa do teto não sai —
+    `ContextoGrandeDemais`, com o agente, o tamanho e as maiores chaves do estado, no lugar do 400 do modelo depois de
+    uma hora e meia (3ef2b, 25/10/2026).
+    """
+
+    def _callback(callback_context: CallbackContext, llm_request: Any) -> None:
+        from tools import contexto
+
+        state = callback_context.state
+        agente = callback_context.agent_name
+        # o 400 do modelo, se vier, é desta chamada: a mensagem do runner nomeia este agente (`pipeline.runner`)
+        contexto.anotar_chamada(agente)
+        estado = state.to_dict() if hasattr(state, "to_dict") else dict(state)
+        config = getattr(llm_request, "config", None)
+        instrucao = contexto.instrucao_da_requisicao(llm_request)
+        if config is not None and isinstance(getattr(config, "system_instruction", None), str) and instrucao:
+            nova = instrucao
+            if deterministico and agente not in contexto.SEM_ORCAMENTO:
+                # o corte antes: o one-pager do PO que sai do juiz não vai para o começo da instrução
+                nova, cortes = contexto.cortar_para_o_orcamento(nova, estado)
+                chave = f"contexto_cortado_{agente}"
+                if cortes:
+                    state[chave] = cortes
+                    logger.info("%s: contexto cortado para caber no orçamento — %s", agente, "; ".join(cortes))
+                elif state.get(chave):
+                    state[chave] = []  # a chamada desta rodada coube inteira
+            nova = contexto.po_primeiro(nova, estado)
+            if nova != instrucao:
+                config.system_instruction = nova
+        tokens_instrucao, tokens_historico = contexto.tokens_da_requisicao(llm_request)
+        total = tokens_instrucao + tokens_historico
+        if total > contexto.TETO_PREVOO:
+            raise contexto.ContextoGrandeDemais(agente, total, tokens_historico, contexto.maiores_chaves(estado))
+        return None
+
+    _callback.__name__ = "orcamento_de_contexto_juiz" if deterministico else "orcamento_de_contexto"
+    return _callback
