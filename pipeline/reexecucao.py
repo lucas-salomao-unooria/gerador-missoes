@@ -538,7 +538,8 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
 
     Documento que não vai ser reescrito perde a base velha. Documento já apagado por uma
     reexecução anterior (produto refeito apaga design e dev, que só rodam no próximo *iniciar*)
-    conserva a base que aquela reexecução guardou — senão o design chegaria sem nada.
+    conserva a base que aquela reexecução guardou — senão o design chegaria sem nada —, salvo o
+    pedagógico cuja base é anterior ao design que está na sessão (`base_do_pedagogico_vencida`).
     """
     from tools import governanca
 
@@ -562,9 +563,37 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
             # mantém «palavra por palavra», ele as recopiaria como texto dele; o callback do redator as recoloca como
             # estão agora (revisão do PR #75, 24/10/2026)
             atual = governanca.sem_bloco(atual).strip()
+        if not atual and chave == "one_pager_pedagogico" and base_do_pedagogico_vencida(estado):
+            limpo.pop(anterior, None)
+            limpo.pop(PREFIXO_VERSAO_ANTERIOR + chave, None)
+            continue
         if atual:
             limpo[anterior] = bloco_versao_anterior(chave, atual)
             limpo[PREFIXO_VERSAO_ANTERIOR + chave] = atual
+
+
+def base_do_pedagogico_vencida(estado: Dict[str, Any]) -> bool:
+    """A base guardada do pedagógico (`anterior_`/`versao_anterior_one_pager_pedagogico`) é anterior ao design que está
+    na sessão: o estado tem documentos de design (`jornada_telas`), mas não o pedagógico nem o retrato que o design deixa
+    dele (`pedagogico_do_design`).
+
+    É a missão desenhada antes do PR 10 que teve produto refeito depois do dev: a exp02em1b-60cfa7f4 guarda o pedagógico
+    do dev de 22/10, de antes das duas correções de produto de 23/10 (o overlay de CTA e a Central de Apoio), e o design
+    de 23/10 rodou sem ele. Conservada, a base ia ao redator para manter «palavra por palavra», com o aviso de mudanças no
+    aprovado vazio — o A064 do design o calcula contra o retrato do design, que já tem as mudanças —, e a fidelidade de
+    design provava as ordens de não mexer contra ela (`preservacao-sem-prova`; 3ª revisão do PR #79, 24/10/2026). Sem a
+    base, o redator escreve do zero sobre o contrato de agora, como nas outras missões sem pedagógico. A outra saída —
+    conservar a base e calcular as mudanças do pedagógico contra o retrato do dev (`conteudo_aprovado_base_dev`) — ficou
+    de fora: pedia um aviso de mudanças só do pedagógico no prompt de todos os autores, e a base seria ainda o texto do
+    dev, sem os subtítulos da esteira; nas missões do acervo que ainda têm o pedagógico do dev, o one-pager não mudou
+    depois dele.
+
+    Sem documento de design no estado, a base é de um refazer de produto à espera do *Iniciar* (o pedagógico que o design
+    gerou, ou o do dev numa sessão anterior): continua valendo."""
+    from tools.pedagogico import KEY_RETRATO
+
+    return (bool(str(estado.get("jornada_telas") or "").strip())
+            and not str(estado.get(KEY_RETRATO) or "").strip())
 
 
 def texto_do_pedido(pedido_md: str) -> str:

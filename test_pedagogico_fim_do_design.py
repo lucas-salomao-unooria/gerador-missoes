@@ -962,3 +962,101 @@ def test_pedido_sobre_o_pedagogico_feito_no_dev_vai_ao_design_e_o_de_produto_a_p
     d = dividir("No one-pager pedagógico, a seção «Em uma frase» fica curta demais.", "design", estado,
                 [{"n": 1, "dono": "design"}])
     assert d.itens[0].dono == PRODUTO and "one-pager resumido" in d.itens[0].regra[0]
+
+
+# --------------------------------------------------------------------------- 7. terceira revisão (24/10/2026)
+def _pontual_na_jornada(estado, pedido):
+    """A correção pontual de design com uma troca na jornada (o pedido do PO) — o caminho do Refazer com comentário."""
+    from pipeline.reexecucao import preparar_estado_pontual
+    from tools import edicao_pontual
+
+    documentos = edicao_pontual.documentos_da_etapa(estado, "design")
+    linha = next(l for l in documentos["jornada_telas"].splitlines()
+                 if len(l.strip()) > 40 and documentos["jornada_telas"].count(l) == 1)
+    edicao = {"documento": "jornada_telas", "de": linha, "para": linha + " (ajustado)", "motivo": "pedido"}
+    res = edicao_pontual.aplicar(documentos, [edicao_pontual._como_edicao(edicao)])
+    assert res.ok, res.falhas
+    return preparar_estado_pontual(estado, "design", pedido, res.documentos, [edicao])[0]
+
+
+def _preservacao_sem_prova(inicial, pedido):
+    """O A094 (a parte determinística) sobre o pedagógico que o redator escreve do zero."""
+    from agents.design import FIDELIDADE_DOCUMENTOS_DESIGN
+    from tools import fidelidade as fid
+
+    final = {**inicial, "one_pager_pedagogico": ca.com_anexo(pg.montar(_NARRATIVA_MINIMA, inicial),
+                                                             inicial["one_pager"], ca.SECOES_PEDAGOGICO)}
+    itens = fid.montar_checklist([("pedido de correção desta execução", pedido)], "")
+    docs = {k: str(final.get(k) or "") for k in FIDELIDADE_DOCUMENTOS_DESIGN if str(final.get(k) or "").strip()}
+    anteriores = {k: str(final.get(f"versao_anterior_{k}") or "") for k in docs}
+    r = fid.aplicar(itens, "", docs, etapa="design", anteriores=anteriores, edicoes=list(final["edicoes_pontuais"]),
+                    origens_correntes={"pedido de correção desta execução"})
+    return [a for a in r["achados"] if a["codigo"] == "preservacao-sem-prova"]
+
+
+def test_base_do_pedagogico_anterior_ao_design_nao_vai_ao_redator_nem_a_fidelidade(monkeypatch):
+    """3ª revisão do PR #79 (24/10/2026), p8 e p2: na exp02em1b-60cfa7f4 a base do pedagógico era a do dev de 22/10, de
+    antes das duas correções de produto de 23/10 (overlay de CTA e Central de Apoio). O redator a recebia para manter
+    «palavra por palavra», com `mudancas_no_aprovado` vazio, e a fidelidade de design provava contra ela «Não alterar o
+    resto da missão.» (🔴 `preservacao-sem-prova`). Agora o redator escreve do zero. Mutante: a base conservada."""
+    from pipeline import reexecucao as rx
+
+    estado = _estado("exp02em1b-60cfa7f4")
+    assert not estado.get("one_pager_pedagogico") and not estado.get(pg.KEY_RETRATO) and estado["jornada_telas"]
+    velho = estado["versao_anterior_one_pager_pedagogico"]
+    assert "Central de Apoio" not in velho and "Central de Apoio" in estado["one_pager"]
+    pedido = "Não alterar o resto da missão."
+    pedagogico = ("anterior_one_pager_pedagogico", "versao_anterior_one_pager_pedagogico")
+
+    def caminhos():
+        return {"refazer pelos autores": rx.preparar_estado(estado, "design", "Refazer o design.")[0],
+                "correção pontual": _pontual_na_jornada(estado, pedido),
+                "refazer de produto": rx.preparar_estado(estado, "produto")[0]}
+
+    for rotulo, inicial in caminhos().items():
+        assert not any(k in inicial for k in pedagogico), rotulo
+        # os outros documentos de design guardam a base deles, como antes
+        assert inicial.get("versao_anterior_jornada_telas"), rotulo
+    assert caminhos()["refazer pelos autores"].get("anterior_jornada_telas")
+    assert _preservacao_sem_prova(caminhos()["correção pontual"], pedido) == []
+
+    # mutante: a base velha conservada — o redator a recebe, e a fidelidade não prova a ordem de não mexer
+    monkeypatch.setattr(rx, "base_do_pedagogico_vencida", lambda e: False)
+    inicial = caminhos()["correção pontual"]
+    assert inicial["versao_anterior_one_pager_pedagogico"] == velho
+    assert "Parta dela" in inicial["anterior_one_pager_pedagogico"]
+    assert _preservacao_sem_prova(inicial, pedido)
+
+
+def test_base_do_pedagogico_na_cascata_e_no_iniciar_depois_de_produto(monkeypatch):
+    """3ª revisão do PR #79 (24/10/2026): a regra da base vencida vale também no passo de produto da cascata, que guarda
+    as versões anteriores de design para o passo de design editar (`docs_da_versao_anterior`) — senão o pedagógico de
+    22/10 da exp02em1b voltava como documento travado da correção. E não quebra o refazer de produto à espera do
+    Iniciar: sem documento de design no estado, a base que ele guardou continua valendo. Mutante: a base conservada."""
+    from pipeline import reexecucao as rx
+    from tools import edicao_pontual
+
+    estado = _estado("exp02em1b-60cfa7f4")
+    troca = [{"documento": "one_pager", "de": "x", "para": "y"}]
+    produto = rx.preparar_estado_pontual(estado, "produto", "Trocar um número.", {}, troca)[0]
+    assert "versao_anterior_one_pager_pedagogico" not in produto and produto["versao_anterior_jornada_telas"]
+    docs = edicao_pontual.documentos_da_etapa(produto, "design", versao_anterior=True)
+    assert "jornada_telas" in docs and "one_pager_pedagogico" not in docs
+    design = rx.preparar_estado_pontual(produto, "design", "Trocar um número.", docs, [])[0]
+    assert "one_pager_pedagogico" not in design["documentos_travados"]
+    assert not design.get("anterior_one_pager_pedagogico")
+
+    # a sessão com o pedagógico do design: o refazer de produto guarda a base, e o segundo refazer (antes do Iniciar),
+    # sem documento de design no estado, a conserva — é ela que o redator recebe no Iniciar
+    desenhada = _ate_o_fim_do_design(_estado())
+    p1 = rx.preparar_estado(desenhada, "produto")[0]
+    assert "jornada_telas" not in p1 and ca.TITULO_ANEXO not in p1["versao_anterior_one_pager_pedagogico"]
+    p2 = rx.preparar_estado(p1, "produto")[0]
+    assert p2["versao_anterior_one_pager_pedagogico"] == p1["versao_anterior_one_pager_pedagogico"]
+    assert p2["anterior_one_pager_pedagogico"] == p1["anterior_one_pager_pedagogico"]
+    # e na cascata, o passo de design edita a versão dele
+    assert "one_pager_pedagogico" in edicao_pontual.documentos_da_etapa(p1, "design", versao_anterior=True)
+
+    monkeypatch.setattr(rx, "base_do_pedagogico_vencida", lambda e: False)
+    produto = rx.preparar_estado_pontual(estado, "produto", "Trocar um número.", {}, troca)[0]
+    assert "one_pager_pedagogico" in edicao_pontual.documentos_da_etapa(produto, "design", versao_anterior=True)
