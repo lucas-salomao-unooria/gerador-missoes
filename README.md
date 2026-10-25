@@ -572,6 +572,7 @@ Para garantir que o pipeline funcione como uma esteira industrial confiável, ad
 1. **Isolamento Total de Contexto (`include_contents="none"`):**
    - No Google ADK, agentes configurados com `include_contents="default"` herdam o histórico completo de conversação do runner, gerando poluição contextual e alucinações cumulativas.
    - No Gerador de Missões, **todos os agentes (exceto P0a) operam com `include_contents="none"`**. Eles recebem única e exclusivamente os dados necessários explicitamente interpolados em seu prompt de sistema através das variáveis `{chave}` do `session.state`.
+   - O P0a (A004) vê a mensagem do PO com os anexos, **e só ela** (`agents.callbacks.so_a_mensagem_do_po`): o histórico da sessão crescia a cada volta do comitê até passar de 1.048.576 tokens (3ef2b, e2e de 25/10/2026), e o one-pager do PO, que já está na instrução dele, vira um ponteiro na mensagem.
 2. **Interpolação Segura com Fallback (`{chave?}`):**
    - Variáveis com `{chave}` estrita falham imediatamente se a chave não existir no estado.
    - Variáveis marcadas com `{chave?}` degradam graciosamente se a etapa correspondente não tiver sido executada (ex.: rodar diretamente a etapa de Dev).
@@ -604,6 +605,13 @@ Para garantir que o pipeline funcione como uma esteira industrial confiável, ad
      | `ressalva_repete_decisao_do_po` | recontagem dos juízes de produto | só pista, como acima | 0,97 / 1,00 (37) |
 
      Não entra onde não ganhou: texto de tela × fala, lacuna do texto aprovado, «é o mesmo botão do glossário?» e mesma hipótese. O gabarito (`tests/gabarito_achados/classificador/`) roda no CI pelo cache versionado `fixtures/classificador-cache.json`, sem chamar o modelo; mudar o texto de uma pergunta exige subir a versão e regravar o cache (`scripts/gravar_cache_classificador.py`).
+
+7. **Orçamento de contexto e one-pager do PO grande (`tools/contexto.py`, `tools/one_pager_grande.py`, e2e de 25/10/2026):**
+   - **Pré-voo em toda chamada:** a requisição já montada é estimada (caracteres ÷ 3,3) e, acima de 900 mil tokens, não sai — o erro nomeia o agente, o tamanho e as três maiores chaves do estado (`ContextoGrandeDemais`). O `400 INVALID_ARGUMENT` é marcado `deterministico` no `pipeline_error`: tentar de novo sem mudar a entrada dá o mesmo erro.
+   - **One-pager do PO acima de ≈40 mil tokens** (o da 3ef2b tem 360 mil caracteres; os do acervo, até 71 mil): quem escreve o `one_pager` (A014, A028, A034, A037) não o reescreve. O código monta a base (o one-pager do PO, com as seções 0, 1, 3 e 4 e a 18-parcial copiadas do núcleo), o editor de trocas devolve só as trocas, e a que não se aplica vira `[ABERTO — dono: PO: …]` no fim da seção 18. Abaixo disso, nada muda.
+   - **Corte por limite de saída com texto** é registrado (`cortes_do_modelo`): a saída do loop não o aprova, dá ao autor uma tentativa avisada e, cortado de novo, segue 🔴 com `documento-cortado-pelo-modelo` no diagnóstico.
+   - **Juízes:** com o one-pager do PO grande e a conferência dele aprovada, o juiz não recebe o one-pager do PO ao lado do one-pager da missão que o preserva; acima de 400 mil tokens, perde o histórico de versões, o brief repetido e o corpo da seção 18 — nunca as seções 0 a 17. O one-pager do PO grande vai para o começo da instrução de quem o lê (o prefixo comum é o que o cache implícito do Gemini reaproveita).
+   - **Na queda,** o estado parcial, os artefatos e os tokens por agente ficam na sessão (ou em `.falhas/`, numa reexecução); cada linha de `custo_missao.execucoes` leva os tokens por agente. `python scripts/medir_contexto.py <estado.json> [--po one-pager.md]` mede, sem chamar o modelo, a instrução de cada agente antes e depois do orçamento.
 
 ---
 
