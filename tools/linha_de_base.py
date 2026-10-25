@@ -20,6 +20,11 @@ cada achado bloqueante de cada gate é classificado contra o veredito do mesmo g
   da seção de DS legada — nenhum ligado às 4 trocas do número.
 - **falha de execução** — o juiz não respondeu (`dimensao-ausente`): bloqueia. Não é veredito sobre a missão, mas
   resposta que não chegou não é aprovação.
+- **documento novo** — o gate julga um documento que a correção gerou inteiro, porque ele faltava: o one-pager
+  pedagógico da missão desenhada antes do PR 10, que o redator escreve na correção pontual de design. Bloqueia, como na
+  geração — o texto todo é desta execução, e rebaixá-lo como «trecho que a correção não tocou» aprovaria no de acordo
+  de design um documento que ninguém conferiu. Não volta ao editor, que não tem o documento (revisão do PR #79,
+  24/10/2026).
 """
 from __future__ import annotations
 
@@ -39,6 +44,7 @@ PRE_EXISTENTE = "pre-existente"
 TEXTO_INALTERADO = "texto-inalterado"
 FORA_DA_CORRECAO = "fora-da-correcao"
 FALHA_DE_EXECUCAO = "falha-de-execucao"
+DOCUMENTO_NOVO = "documento-novo"
 #: Códigos de achado que dizem que o juiz não respondeu — não são leitura da missão.
 CODIGOS_DE_FALHA = frozenset({"dimensao-ausente"})
 #: Onde um achado sem citação aponta: "Seção 12a", "§9", "bloco 11", "Etapa 5".
@@ -126,12 +132,16 @@ def classificar(achado: Dict[str, Any], base_do_gate: Optional[Dict[str, Any]], 
 
 def aplicar(estado: Dict[str, Any], base: Dict[str, Dict[str, Any]], edicoes: Iterable[Dict[str, Any]],
             chaves_status: Iterable[str], anteriores: Optional[Dict[str, str]] = None,
+            gates_de_documento_novo: Iterable[str] = (),
             ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """`(delta, linhas)`: os vereditos reescritos e o que aconteceu com cada achado bloqueante.
 
     Só rebaixa: nenhum veredito sobe para 🔴 aqui. Gate que perde todos os bloqueios vira 🟡 (`veredito_original`
     guarda o que o juiz deu). Sem bloqueio vivo nas etapas refeitas, a marca de degradação delas cai.
+    `gates_de_documento_novo`: os gates de um documento que a correção gerou inteiro — os bloqueios deles ficam
+    (`DOCUMENTO_NOVO`).
     """
+    novos_docs = set(gates_de_documento_novo)
     chaves_status = list(chaves_status)
     edicoes = [dict(e) for e in edicoes]
     # o que as trocas tiraram e o que puseram: um achado sobre qualquer dos dois é da correção
@@ -149,7 +159,7 @@ def aplicar(estado: Dict[str, Any], base: Dict[str, Dict[str, Any]], edicoes: It
             continue
         rebaixados = 0
         for a in bloqueios:
-            origem = classificar(a, base.get(k), alterado_norm, lugares)
+            origem = DOCUMENTO_NOVO if k in novos_docs else classificar(a, base.get(k), alterado_norm, lugares)
             linhas.append({"gate": k, "origem": origem, "codigo": str(a.get("codigo") or a.get("id") or ""),
                            "resumo": str(a.get("resumo") or "")[:240], "antes": (base.get(k) or {}).get("status") or "—"})
             a["linha_de_base"] = origem
@@ -190,7 +200,8 @@ def _degradacoes_sem_gate_vivo(estado: Dict[str, Any], delta: Dict[str, Any],
 ROTULO_ORIGEM = {DA_EDICAO: "🔴 causado pela correção", PRE_EXISTENTE: "🔴 já bloqueava antes",
                  TEXTO_INALTERADO: "🟡 trecho inalterado — rebaixado",
                  FORA_DA_CORRECAO: "🟡 não ligado às trocas — rebaixado",
-                 FALHA_DE_EXECUCAO: "🔴 o juiz não respondeu — mantido"}
+                 FALHA_DE_EXECUCAO: "🔴 o juiz não respondeu — mantido",
+                 DOCUMENTO_NOVO: "🔴 documento gerado nesta correção — mantido"}
 
 
 def relatorio(linhas: List[Dict[str, Any]], edicoes_md: str, missao: str = "") -> str:

@@ -27,7 +27,9 @@ Quatro peças:
 
 A sessão anterior ao PR 10 traz o pedagógico gerado em dev, sem os subtítulos da esteira: a leitura é tolerante (o gate
 não cobra subtítulo de quem não tem nenhum), o refazer de design gera o novo, e o refazer só de dev não o apaga nem o
-regenera — o pedagógico que existe passa a ser o retrato (`pipeline.reexecucao.preparar_estado`).
+regenera — o pedagógico que existe passa a ser o retrato (`pipeline.reexecucao.preparar_estado`). A sessão desenhada
+antes do PR 10 sem pedagógico o ganha no próximo design: no Iniciar, no refazer e também na correção pontual de design,
+em que o redator escreve o documento que falta (`gerado_nesta_correcao`).
 """
 from __future__ import annotations
 
@@ -53,6 +55,8 @@ PREFIXO_BLOCO = "Do one-pager aprovado —"
 TITULO_SECAO_DEV = "Pendências do dev — acrescentadas pela esteira"
 #: O motivo das trocas que a montagem registra na correção pontual (`edicoes_pontuais`).
 MOTIVO_TROCA = "contrato do one-pager aprovado copiado por código no pedagógico (A120b, PR 10)"
+#: Os gates do pedagógico no design: o A121, o A121b e o juiz A122.
+GATES = ("conteudo_aprovado_pedagogico_status", "montagem_pedagogico_status", "coerencia_pedagogico_status")
 
 #: Cada bloco da esteira, a seção do gabarito (`prompts/dev/120_one_pager_pedagogico.md`) em que ele entra — pelo começo
 #: do título, sem acento nem caixa — e o título da seção quando o redator não a escreveu.
@@ -86,6 +90,32 @@ def _pulo(texto: Any) -> bool:
     from pipeline.artifacts import e_mensagem_de_pulo
 
     return e_mensagem_de_pulo(texto)
+
+
+def travado_nesta_correcao(state: Dict[str, Any]) -> bool:
+    """O pedagógico é documento travado da correção pontual corrente: o editor de design o recebeu, e o documento é a
+    versão anterior mais as trocas.
+
+    Olha os documentos travados, e não só o modo: o `modo_correcao` da última correção ficava gravado no estado
+    (60cfa7f4, b2e7b4a3, 4fd72a9a e e89e91b3 têm «pontual»), e o refazer de design e o Iniciar depois de uma correção
+    pontual de produto pareciam correção pontual de design (revisão do PR #79, 24/10/2026)."""
+    from agents.callbacks import KEY_DOCUMENTOS_TRAVADOS, KEY_MODO_CORRECAO
+
+    return state.get(KEY_MODO_CORRECAO) == "pontual" and KEY in (state.get(KEY_DOCUMENTOS_TRAVADOS) or [])
+
+
+def gerado_nesta_correcao(state: Dict[str, Any]) -> bool:
+    """Correção pontual em que o redator gerou o pedagógico: ele não estava travado e existe agora.
+
+    É a missão desenhada antes do PR 10, sem pedagógico (exp02em1b, exp01em1b e exp03em1b): o documento falta, e o
+    redator o escreve mesmo na correção pontual de design — os demais documentos seguem travados. Os gates dele o julgam
+    como na geração: o texto é todo desta execução, e a linha de base não o rebaixa como «trecho que a correção não
+    tocou» (`tools.linha_de_base.DOCUMENTO_NOVO`)."""
+    from agents.callbacks import KEY_MODO_CORRECAO
+
+    documento = state.get(KEY)
+    return (state.get(KEY_MODO_CORRECAO) == "pontual" and not travado_nesta_correcao(state)
+            and isinstance(documento, str) and bool(documento.strip()) and not _pulo(documento))
 
 
 _RE_ENVELOPE = re.compile(r"^\s*```json\s*\{.*\}\s*```\s*$", re.S)
@@ -677,7 +707,10 @@ def para_o_de_acordo(state: Dict[str, Any]) -> Dict[str, Any]:
         "texto": documento if existe else "",
         "markdown": f"{ARQUIVO_BASE}.md", "docx": f"{ARQUIVO_BASE}.docx", "html": f"{ARQUIVO_BASE}.html",
         "links": links_do_prototipo(state),
+        # O Refazer de design o gera também na correção pontual, que é o caminho padrão do Refazer com comentário: o
+        # redator escreve o documento que falta, e os outros documentos de design seguem travados (revisão do PR #79)
         "aviso": "" if existe else (
             "Esta sessão não tem o one-pager pedagógico: o design dela rodou antes de 24/10/2026, quando ele saía no fim "
-            "do dev. O de acordo de design é dado sobre ele — use Refazer para o design gerá-lo."),
+            "do dev. O de acordo de design é dado sobre ele — use Refazer, com o que mais quiser mudar no design: o "
+            "design o gera, e na correção pontual os outros documentos de design ficam como estão."),
     }

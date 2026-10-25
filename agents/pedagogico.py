@@ -2,53 +2,30 @@
 
 - `ContratoNoPedagogicoAgent` (A120b), no loop do pedagógico, logo depois do redator: monta por código o que o PO
   aprovou — habilidades, a pergunta do fim, os tempos, o podcast e o roteiro da conversa — e devolve ao texto aprovado a
-  citação quase igual de um texto-chave. Roda também na correção pontual, em que o redator não roda, e registra o que
-  mudou como troca: o documento continua sendo a versão anterior mais as trocas.
+  citação quase igual de um texto-chave. Roda também na correção pontual: com o pedagógico travado (o redator não roda),
+  registra o que mudou como troca, e o documento continua sendo a versão anterior mais as trocas.
 - `PedagogicoNoDevAgent` (A119b), no dev: o pedagógico aprovado no de acordo de design, conferido contra o retrato do
   design (e devolvido a ele se mudou), e as pendências do dev numa seção própria, guardada à parte.
-- `pular_pedagogico_sem_documento_na_correcao_pontual`: na correção pontual de uma sessão desenhada antes do PR 10, sem
-  pedagógico para travar, o loop não roda — o pedagógico nasce no próximo refazer de design, como o bloco 15 da
-  completude nasce no próximo refazer de produto.
+
+O loop roda em todo design: na geração, no Iniciar, no refazer e na correção pontual. Na correção pontual com o
+pedagógico travado, o redator não roda (`agents.callbacks.travar_documento_na_correcao_pontual`) e o A120b registra o que
+muda como troca; sem pedagógico (missão desenhada antes do PR 10), o redator escreve o documento que falta, e os outros
+documentos de design seguem travados.
 """
 from __future__ import annotations
 
-from typing import Any, AsyncGenerator, Dict, Optional
+from typing import Any, AsyncGenerator, Dict
 
 from google.adk.agents.base_agent import BaseAgent
-from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event, EventActions
 from google.genai import types
 from typing_extensions import override
 
-from .callbacks import KEY_MODO_CORRECAO, extrair_envelope, extrair_slug
+from .callbacks import extrair_envelope, extrair_slug
 
 #: Rótulo do guarda do dev (A119b): é por ele que a degradação se registra e que a herança sabe de que etapa ela é.
 ROTULO_NO_DEV = "Pedagógico aprovado, no dev"
-
-#: O que o loop do pedagógico emite quando não roda na correção pontual de uma sessão sem pedagógico.
-PEDAGOGICO_PULADO_NA_CORRECAO = (
-    "⏭️ OnePagerPedagogicoLoop não executado — correção pontual de uma missão desenhada antes de 24/10/2026, sem "
-    "one-pager pedagógico para travar: ele nasce no próximo refazer de design, que o monta sobre o contrato.")
-
-
-def pular_pedagogico_sem_documento_na_correcao_pontual(callback_context: CallbackContext) -> Optional[types.Content]:
-    """before_agent_callback do loop do pedagógico: na correção pontual sem pedagógico, o loop não roda.
-
-    Na correção pontual os autores não escrevem nada além das trocas (`agents.callbacks.travar_documento_na_correcao_
-    pontual`); o redator do pedagógico sem documento para travar escreveria um inteiro — conteúdo além do pedido. As
-    três missões desenhadas antes do PR 10 que o usuário vai refazer (exp02em1b, exp01em1b e exp03em1b) não têm
-    pedagógico: no refazer de design ele é gerado; na correção pontual, não."""
-    from pipeline.artifacts import e_mensagem_de_pulo
-    from tools.pedagogico import KEY
-
-    state = callback_context.state
-    if state.get(KEY_MODO_CORRECAO) != "pontual":
-        return None
-    documento = state.get(KEY)
-    if isinstance(documento, str) and documento.strip() and not e_mensagem_de_pulo(documento):
-        return None
-    return types.Content(role="model", parts=[types.Part(text=PEDAGOGICO_PULADO_NA_CORRECAO)])
 
 
 class ContratoNoPedagogicoAgent(BaseAgent):
@@ -79,11 +56,13 @@ class ContratoNoPedagogicoAgent(BaseAgent):
             blocos = pg.blocos_do_contrato(estado)
             if novo != documento:
                 delta[self.chave] = novo
-                if state.get(KEY_MODO_CORRECAO) == "pontual":
+                if pg.travado_nesta_correcao(state):
                     # Na correção pontual o pedagógico é a versão anterior mais as trocas, e é isso que prova as ordens de
                     # não mexer (`edicao_pontual.reaplicar`, A094): o que a montagem mudou entra como troca, com o motivo —
                     # como a cópia dos textos-chave na copy (A078b, PR 7). Mudou porque o contrato mudou a montante (o
                     # passo de produto da cascata), ou porque a sessão é anterior ao PR 10 e não tinha os subtítulos.
+                    # Só com o pedagógico travado: o que o redator acabou de escrever não é troca, e o `modo_correcao`
+                    # de uma correção anterior não faz do design inteiro uma correção pontual (revisão do PR #79).
                     from tools import edicao_pontual
 
                     trocas = edicao_pontual.trocas_por_linhas(self.chave, documento, novo, pg.MOTIVO_TROCA)
@@ -189,8 +168,10 @@ def build_fechamento_pedagogico(**kw) -> list:
             name="OnePagerPedagogicoLoop",
             description="One-pager pedagógico ↔ contrato e conferência contra o one-pager aprovado, até bater ou esgotar as rodadas.",
             max_iterations=rodadas,
-            # na correção pontual de uma missão desenhada antes do PR 10 não há pedagógico para travar: o loop não roda
-            before_agent_callback=[pular_pedagogico_sem_documento_na_correcao_pontual, marcar_heranca],
+            # Roda também na correção pontual de uma missão desenhada antes do PR 10, sem pedagógico para travar: o
+            # documento falta, e o redator o escreve (exp02em1b, exp01em1b e exp03em1b). Até a revisão do PR #79 o loop
+            # era pulado ali, e o de acordo de design dessas três saía sem o documento a aprovar
+            before_agent_callback=marcar_heranca,
             sub_agents=[
                 get_one_pager_pedagogico_agent(**kw),
                 ContratoNoPedagogicoAgent(

@@ -3322,8 +3322,14 @@ class LinhaDeBaseAgent(BaseAgent):
         a_montante = [e for e in state.get("edicoes_a_montante") or [] if isinstance(e, dict)]
         anteriores = {e.get("documento"): str(state.get(PREFIXO_VERSAO_ANTERIOR + str(e.get("documento"))) or "")
                       for e in edicoes}
+        # O pedagógico que o redator gerou nesta correção, porque a missão foi desenhada antes do PR 10 e não o tinha, é
+        # julgado inteiro pelos gates dele, como na geração (revisão do PR #79, 24/10/2026)
+        from tools import pedagogico
+
+        gates_novos = pedagogico.GATES if pedagogico.gerado_nesta_correcao(state) else ()
         delta, linhas = linha_de_base.aplicar(dict(state), dict(state.get(linha_de_base.KEY_LINHA_DE_BASE) or {}),
-                                              edicoes + a_montante, chaves, anteriores=anteriores)
+                                              edicoes + a_montante, chaves, anteriores=anteriores,
+                                              gates_de_documento_novo=gates_novos)
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
         trocas_md = edicao_pontual.resumo(edicoes) + (
             "\n\n**Trocas a montante (correção de produto desta cascata):**\n\n" + edicao_pontual.resumo(a_montante)

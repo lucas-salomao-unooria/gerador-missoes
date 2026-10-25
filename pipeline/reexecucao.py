@@ -228,6 +228,13 @@ CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_r
                              # a cascata do pedido triado (PR 5 do plano «Produto dono do contrato»): a divisão e as
                              # trocas de produto valem para a correção que as gravou, não para a seguinte
                              "divisao_do_pedido", "edicoes_a_montante", "devolucoes_a_produto",
+                             # o modo da correção pontual, os documentos que ela travou e as trocas dela também: ficavam
+                             # gravados no estado (60cfa7f4, b2e7b4a3, 4fd72a9a e e89e91b3 têm «pontual»), e o Iniciar e o
+                             # refazer pelos autores que vinham depois rodavam como se fossem correção pontual — o
+                             # pedagógico não era gerado, e a fidelidade de design recebia as trocas de outra correção
+                             # como se fossem desta (revisão do PR #79, 24/10/2026). A correção pontual os grava de novo
+                             # (`preparar_estado_pontual`)
+                             "modo_correcao", "documentos_travados", "edicoes_pontuais",
                              # a versão da rodada anterior de cada loop: some ao sair do loop, e aqui se a execução caiu
                              *(f"rodada_anterior_{c}" for c in ("one_pager", "spec_missao", "one_pager_resumido", "handoff_dev",
                                                                 "brief_assets", "prd_final", "one_pager_pedagogico"))})
