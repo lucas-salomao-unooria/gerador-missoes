@@ -1876,19 +1876,44 @@ NO_VERMELHO = ("Enquanto este ponto impedir seguir, o botão «De acordo» não 
                "pedido fica registrado) ou a liberação com exceção pelo administrador.")
 
 
-def o_que_fazer(explicacao: Explicacao, sev: str) -> str:
-    """O «O que fazer» coerente com a severidade: com 🔴, sem «Não trava a etapa» e sem mandar registrar no de acordo,
-    que não aparece. As entradas que mudam de sentido com o 🔴 têm texto próprio em `_SE_BLOQUEIO`; isto é a rede."""
+#: O ponto 🟡 ou 🧑 que manda ao de acordo, quando outro ponto da mesma etapa é 🔴 (`passagem.acoes_possiveis` esconde
+#: o «De acordo» se qualquer verificador da etapa está 🔴).
+OUTRO_NO_VERMELHO = ("Agora o botão «De acordo» não aparece, porque outro ponto desta etapa impede seguir: resolva "
+                     "aquele primeiro. Este você registra no pedido de **Refazer** ou no de acordo, quando ele voltar.")
+#: No cartão de design ou dev não há «Refazer de produto»: o pedido que muda produto vai pelo Refazer da etapa, com o
+#: item marcado «mandar a Produto» na divisão do pedido (D4, opção A — `tools/triagem_pedido.py`); se a cascata não
+#: aplicar nada, o próprio cartão pede **Devolver** (D4, opção B).
+PRODUTO_PELA_ETAPA = ("Neste cartão, o pedido que muda produto vai pelo **Refazer** desta etapa: na divisão do pedido, "
+                      "marque o item «mandar a Produto», que é aplicado no one-pager e na spec antes. Se o Refazer não "
+                      "aplicar, use **Devolver** até Produto.")
+_REFAZER_DE_PRODUTO = re.compile(r"\*\*Refazer\*\* de produto")
+
+
+def o_que_fazer(explicacao: Explicacao, sev: str, etapa: str = "", etapa_travada: bool = False) -> str:
+    """O «O que fazer» coerente com a severidade e com o cartão em que aparece.
+
+    Com 🔴, sem «Não trava a etapa» e sem mandar registrar no de acordo, que não aparece. As entradas que mudam de
+    sentido com o 🔴 têm texto próprio em `_SE_BLOQUEIO`; isto é a rede. `etapa`: no cartão de design ou dev, o
+    «**Refazer** de produto» vira o Refazer da etapa — o botão de produto não existe ali (revisão do PR #82: 5 itens do
+    rastro na session_8ce9c32d, dev). `etapa_travada`: outro verificador da etapa está 🔴, e o 🟡 que manda ao de
+    acordo diz que ele não aparece agora."""
     texto = explicacao.o_que_fazer
-    if sev != BLOQUEIO:
-        return texto
-    for regra, troca in _SO_SEM_TRAVA:
-        texto = regra.sub(troca, texto)
-    frases = [f for f in re.split(r"(?<=[.!?])\s+", texto.strip()) if f.strip()]
-    ficam = [f for f in frases if "de acordo" not in f]
-    if len(ficam) < len(frases):
-        ficam.append(NO_VERMELHO)
-    return " ".join(ficam) or NO_VERMELHO
+    pela_etapa = etapa in (DESIGN, DEV) and bool(_REFAZER_DE_PRODUTO.search(texto))
+    if pela_etapa:
+        texto = _REFAZER_DE_PRODUTO.sub("**Refazer** desta etapa", texto)
+    if sev == BLOQUEIO:
+        for regra, troca in _SO_SEM_TRAVA:
+            texto = regra.sub(troca, texto)
+        frases = [f for f in re.split(r"(?<=[.!?])\s+", texto.strip()) if f.strip()]
+        ficam = [f for f in frases if "de acordo" not in f]
+        if len(ficam) < len(frases):
+            ficam.append(NO_VERMELHO)
+        texto = " ".join(ficam) or NO_VERMELHO
+    elif etapa_travada and ("de acordo" in texto or re.search(r"\b[Ss]iga\b", texto)):
+        texto = f"{texto.rstrip()} {OUTRO_NO_VERMELHO}"
+    if pela_etapa:
+        texto = f"{texto.rstrip()} {PRODUTO_PELA_ETAPA}"
+    return texto
 
 
 # ------------------------------------------------------------------ o que o padrão do juiz de adequação quer dizer
@@ -2335,6 +2360,11 @@ class Item:
     severidade: str
     trechos: List[str]
     tambem_em: List[str] = field(default_factory=list)
+    #: a etapa do cartão e se algum verificador dela está 🔴 — mudam o «O que fazer» (`o_que_fazer`)
+    etapa: str = ""
+    etapa_travada: bool = False
+    #: o achado veio como bloqueio de um verificador 🟡 e o cartão o mostra como decisão (`item`)
+    rebaixado_pelo_verificador: bool = False
 
     @property
     def texto_original(self) -> str:
@@ -2342,17 +2372,33 @@ class Item:
 
     @property
     def o_que_fazer(self) -> str:
-        """O que fazer, coerente com a severidade deste item — é o que o cartão mostra."""
-        return o_que_fazer(self.explicacao, self.severidade)
+        """O que fazer, coerente com a severidade deste item e com o cartão — é o que o cartão mostra."""
+        return o_que_fazer(self.explicacao, self.severidade, self.etapa, self.etapa_travada)
+
+    @property
+    def nota(self) -> str:
+        """Por que o item não aparece com a severidade que o verificador gravou, em palavras; vazio se aparece."""
+        if self.rebaixado_pelo_verificador:
+            return ("O revisor marcou este ponto como impeditivo, mas o verificador que o reuniu ficou 🟡: ele não "
+                    "impede seguir. Leia e decida se ele muda a missão.")
+        return nota_de_rebaixamento(self.achado)
 
 
-def item(achado: Mapping[str, Any], gate: str = "", icone_gate: str = "") -> Item:
+def item(achado: Mapping[str, Any], gate: str = "", icone_gate: str = "", etapa: str = "",
+         etapa_travada: bool = False) -> Item:
     sev = severidade(achado, icone_gate)
+    # O juiz de LLM grava achado em bloqueio dentro de envelope 🟡 (session_274a2e75, adequação: `demanda_cognitiva` em
+    # bloqueio com `aprovado_com_ressalvas`; session_8ce9c32d, rastro de dev: `produto` em bloqueio). O semáforo vale o
+    # verificador, e o «De acordo» aparece: o cartão dizia «🔴 Impede seguir» ao lado dele. Vira decisão de pessoa.
+    rebaixado = icone_gate == "🟡" and sev == BLOQUEIO
+    if rebaixado:
+        sev = DECISAO_HUMANA
     exp = explicar(achado, gate, sev)
     return Item(gate=gate, icone_gate=icone_gate, achado=dict(achado), explicacao=exp,
                 quem=quem_resolve(achado, gate, exp), severidade=sev,
                 # quando o texto do juiz é o caso, ele já sai inteiro: os trechos são só os campos de citação
-                trechos=trechos(achado, do_texto=not exp.texto_e_o_caso))
+                trechos=trechos(achado, do_texto=not exp.texto_e_o_caso),
+                etapa=etapa, etapa_travada=etapa_travada, rebaixado_pelo_verificador=rebaixado)
 
 
 def _sem_detalhe(gate: str, icone: str) -> Item:
@@ -2365,11 +2411,14 @@ def _sem_detalhe(gate: str, icone: str) -> Item:
     return Item(gate, icone, {}, exp, exp.quem or ESTEIRA, BLOQUEIO if icone == "🔴" else ATENCAO, [])
 
 
-def itens_do_semaforo(estado: Mapping[str, Any], semaforo: Mapping[str, str]) -> List[Item]:
+def itens_do_semaforo(estado: Mapping[str, Any], semaforo: Mapping[str, str], etapa: str = "") -> List[Item]:
     """Os achados dos verificadores 🔴 e 🟡 da etapa, explicados, sem repetir o mesmo achado de dois verificadores.
 
     Ordem: o que impede seguir, depois o que pede decisão, depois o que é para conferir. Verificador 🔴 ou 🟡 sem
-    achado vira um item que diz isso — antes, o cartão mostrava «0 achado(s)» e nada mais."""
+    achado vira um item que diz isso — antes, o cartão mostrava «0 achado(s)» e nada mais. `etapa`: a do cartão; com
+    qualquer 🔴 no semáforo, o «De acordo» não aparece, e todo item sabe disso (`passagem.acoes_possiveis`). Sem etapa
+    (a missão sem parecer humano, nos detalhes do resultado) não há «De acordo» a esconder."""
+    travada = bool(etapa) and "🔴" in semaforo.values()
     saida: List[Item] = []
     por_chave: Dict[Tuple[str, str], Item] = {}
     for gate, icone in semaforo.items():
@@ -2386,7 +2435,7 @@ def itens_do_semaforo(estado: Mapping[str, Any], semaforo: Mapping[str, str]) ->
             if chave in por_chave:
                 por_chave[chave].tambem_em.append(gate)
                 continue
-            novo = item(a, gate, icone)
+            novo = item(a, gate, icone, etapa, travada)
             por_chave[chave] = novo
             saida.append(novo)
     saida.sort(key=lambda i: _ORDEM_SEVERIDADE.get(i.severidade, 3))

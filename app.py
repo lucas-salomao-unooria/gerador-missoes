@@ -640,7 +640,7 @@ def _render_item_explicado(item: "explicacoes.Item", chave: str) -> None:
         st.markdown(f"**{'Trecho' if len(item.trechos) == 1 else 'Trechos'} da missão"
                     + (f" ({len(item.trechos)})" if len(item.trechos) > 1 else "") + ":**")
         _lista_com_ver_todos(item.trechos, lambda t: st.markdown(_texto_da_missao(t)), f"{chave}_trechos")
-    nota = explicacoes.nota_de_rebaixamento(item.achado)
+    nota = item.nota
     if nota:
         st.caption(f"ℹ️ {nota}")
     st.caption(f"Quem resolve: **{explicacoes.ROTULO_QUEM.get(item.quem, item.quem)}** · Quem apontou: "
@@ -666,7 +666,8 @@ def _render_achados_explicados(itens: List["explicacoes.Item"], chave: str) -> N
             _lista_com_ver_todos(list(enumerate(lista)), desenhar, f"{chave}_{quem}_todos")
 
 
-def _render_motivos_do_semaforo(estado: Dict[str, Any], semaforo: Dict[str, str], chave: str = "semaforo") -> None:
+def _render_motivos_do_semaforo(estado: Dict[str, Any], semaforo: Dict[str, str], chave: str = "semaforo",
+                                etapa: str = "") -> None:
     """O porquê de cada 🔴 e 🟡, direto no cartão e em linguagem simples: quem dá o parecer decide sem abrir relatório.
 
     Antes do parecer humano, isso vinha no dossiê final. Agora o dossiê só roda depois do de acordo do
@@ -674,7 +675,8 @@ def _render_motivos_do_semaforo(estado: Dict[str, Any], semaforo: Dict[str, str]
     texto do verificador («`numero-sem-origem` · 11 parâmetro(s) numérico(s)…»), que nem o PO entendia: agora cada
     achado vem explicado (`tools/explicacoes.py`), agrupado por quem resolve, com o texto original nos detalhes.
     """
-    itens = explicacoes.itens_do_semaforo(estado, semaforo)
+    # a etapa do cartão: em design e dev o «Refazer de produto» não existe, e um 🔴 esconde o «De acordo» de todo item
+    itens = explicacoes.itens_do_semaforo(estado, semaforo, etapa)
     if not itens:
         return
     st.caption(f"O que os sinais querem dizer: {explicacoes.LEGENDA}.")
@@ -1055,7 +1057,7 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
             f"{icone} {explicacoes.nome_do_gate(k, GATE_LABELS)}" for k, icone in semaforo.items()))
         if etapa == "produto":
             _render_profundidade(estado)
-        _render_motivos_do_semaforo(estado, semaforo, f"semaforo_{run_dir.name}_{fluxo.get('versao', 0)}")
+        _render_motivos_do_semaforo(estado, semaforo, f"semaforo_{run_dir.name}_{fluxo.get('versao', 0)}", etapa)
     if situacao == passagem.DEVOLVIDA:
         dev = passagem.ultima_devolutiva(fluxo, etapa)
         if dev:
@@ -1064,7 +1066,7 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
             if tickets:
                 # a devolução automática do QA (PR 5): cada ticket explicado, como os achados do semáforo
                 st.markdown(f"**Os {len(tickets)} ponto(s) que voltaram a produto, explicados:**")
-                _render_achados_explicados([explicacoes.item(t, str(t.get("gate") or ""), "🔴") for t in tickets],
+                _render_achados_explicados([explicacoes.item(t, str(t.get("gate") or ""), "🔴", etapa) for t in tickets],
                                            f"devolutiva_{run_dir.name}_{fluxo.get('versao', 0)}")
     if situacao == passagem.AGUARDANDO and etapa in ("design", "dev"):
         # a cascata do pedido triado não aplicou nada: a etapa está como antes do pedido, e o caminho é Devolver (D4, B)
