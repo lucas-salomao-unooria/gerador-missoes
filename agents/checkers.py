@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Dict, List, Optional, Sequence, Tuple
 
 from google.adk.agents.base_agent import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
@@ -3369,8 +3369,12 @@ def bloco_versao_da_rodada(chave: str, documento: str) -> str:
 PREFIXO_RETRABALHO = "retrabalho_"
 
 
-def motivos_do_retrabalho(state: Dict[str, Any], reprovados: List[str]) -> str:
-    """Os relatórios dos gates reprovados na rodada, como pedido de correção para o editor de trocas."""
+def motivos_do_retrabalho(state: Dict[str, Any], reprovados: List[str], ao_po: Sequence[str] = ()) -> str:
+    """Os relatórios dos gates reprovados na rodada, como pedido de correção para o editor de trocas.
+
+    Os bloqueios que vão ao PO (`tools/rota_achados.py`), dos gates reprovados e dos que reprovaram só por eles (`ao_po`),
+    entram no fim como contexto: o achado misto da 76d9af6e (PED-06, 23/10/2026) também apontava uma falta na tabela 9b
+    da spec, e sem o contexto essa parte sumia do retrabalho. Eles não decidem a rodada (`SaidaDeLoopAgent`)."""
     from tools import citacoes
 
     blocos = ["Os gates desta rodada reprovaram o documento. Corrija exatamente o que eles apontam, com o mínimo de "
@@ -3386,6 +3390,15 @@ def motivos_do_retrabalho(state: Dict[str, Any], reprovados: List[str]) -> str:
                    + (f" — trecho: «{citacoes.citacao(a)}»" if citacoes.citacao(a) else "") for a in bloqueios]
         if relatorio:
             blocos += ["", relatorio[:8000]]
+        blocos.append("")
+    do_po = [(k, a) for k in list(reprovados) + [g for g in ao_po if g not in reprovados]
+             for a in ((state.get(f"{k}_envelope") or {}).get("achados") or [])
+             if isinstance(a, dict) and citacoes.bloqueante(a) and a.get("rota") == "po"]
+    if do_po:
+        blocos += ["### Contexto: achados que vão ao PO",
+                   "O conteúdo citado é do one-pager, e quem decide é o PO. Não altere o que o one-pager decide nem o "
+                   "contrarie; se o achado também aponta uma falta na spec, conserte só essa falta.", ""]
+        blocos += [f"- `{k}` · {a.get('codigo') or a.get('id') or 'achado'}: {a.get('resumo') or ''}" for k, a in do_po]
         blocos.append("")
     return "\n".join(blocos).strip()
 
@@ -3541,7 +3554,7 @@ class SaidaDeLoopAgent(BaseAgent):
             # O que os gates reprovaram, para o retrabalho por trocas (`agents.callbacks.retrabalhar_por_trocas`): na
             # rodada seguinte o documento é corrigido trecho a trecho, e o que já passou não muda.
             delta[f"{PREFIXO_RETRABALHO}{chave}"] = (
-                motivos_do_retrabalho(state, reprovados) if documento and not escalate else "")
+                motivos_do_retrabalho(state, reprovados, ao_po) if documento and not escalate else "")
 
         yield Event(
             invocation_id=ctx.invocation_id,

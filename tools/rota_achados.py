@@ -10,6 +10,12 @@ confere) está no documento do dono — o one-pager — e não está no document
 do one-pager, e quem decide é o PO, no parecer de produto (Refazer com a mudança, que refaz o one-pager). O achado fica
 bloqueante (o veredito do gate não muda, e o de acordo continua recusado com o 🔴); só deixa de mandar o autor que não é
 dono reescrever. Achado sem citação, com citação curta ou que também está no documento do autor segue com o autor.
+
+Achado misto — o resumo do PED-06 também dizia «além de faltar a definição explícita de zero e none na tabela 9b da
+spec» — não é partido: separar a parte da spec seria interpretar a prosa do juiz. Quando o loop roda por outro bloqueio, o
+achado do PO vai ao autor como contexto (`motivos_do_retrabalho`: «não altere o que o one-pager decide»), sem gastar
+rodada por ele; quando ele é o único bloqueio, o loop não roda, e a parte da spec chega ao autor pelo Refazer de produto
+do PO, que refaz o one-pager e a spec com o pedido.
 """
 from __future__ import annotations
 
@@ -24,11 +30,10 @@ def marcar(envelope: Optional[Dict[str, Any]], documento_do_dono: str, documento
     """Marca, no lugar, cada achado bloqueante cuja citação está no documento do dono e não no do autor. Devolve os
     marcados (os já marcados antes não contam de novo)."""
     from tools import citacoes
-    from tools.fidelidade import _citacao_confere, _norm
 
     if not isinstance(envelope, dict) or not str(documento_do_dono or "").strip():
         return []
-    dono, autor = _norm(documento_do_dono), _norm(documento_do_autor or "")
+    dono, autor = citacoes.normalizar(documento_do_dono), citacoes.normalizar(documento_do_autor or "")
     marcados: List[Dict[str, Any]] = []
     for a in envelope.get("achados") or []:
         if not isinstance(a, dict) or not citacoes.bloqueante(a) or a.get("rota") == ROTA_PO:
@@ -36,7 +41,7 @@ def marcar(envelope: Optional[Dict[str, Any]], documento_do_dono: str, documento
         cit = citacoes.citacao(a)
         if not cit or len(cit.split()) < citacoes.MIN_PALAVRAS:
             continue
-        if _citacao_confere(cit, dono) and not (autor and _citacao_confere(cit, autor)):
+        if citacoes.existe(cit, dono) and not (autor and citacoes.existe(cit, autor)):
             a["rota"] = ROTA_PO
             a["resumo"] = f"{_PREFIXO} {a.get('resumo') or ''}".strip()
             marcados.append(a)
