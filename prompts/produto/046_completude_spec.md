@@ -71,7 +71,7 @@ Regra de ouro: **verde e amarelo só preenchem se a resposta é derivável da mi
 
 **Como se pergunta ao PO.** Não decida: escreva, no bloco 15, o marcador com a sua sugestão — é ele que vira item da lista do *de acordo* de produto, com as opções aceitar, outro valor, recusar ou deixar para o design:
 
-- número de regra: `[PARÂMETRO — a definir por produto: <o que é> · sugestão: <valor>]`;
+- número de regra: `[PARÂMETRO — a definir por produto: <o que é> · sugestão: <valor>]` (atenção: metas técnicas de desempenho, renderização e confiabilidade de infraestrutura — como `60 FPS`, taxa de quadros, queda de frame, latência p95/p99, falhas técnicas ≤ 1%, polling e reconexão — pertencem à `[PLATAFORMA]` / ADR e nunca são perguntadas ao PO como `[PARÂMETRO]` ou `[ABERTO — dono: PO]`);
 - regra, métrica do painel, corte ou meta de PQ que você propõe: `[PROPOSTA — validar com PO: <o que você propõe> · por quê: <o ganho> · alternativa: <outra>]`;
 - o que você não tem como propor: `[ABERTO — dono: PO: <a decisão, com 2–3 alternativas>]`.
 

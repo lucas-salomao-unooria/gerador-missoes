@@ -93,13 +93,17 @@ def consolidar(relatorios: Dict[str, str], documentos: str = "", rodada: int = 1
         status = "bloqueado"
 
     achados: List[Dict[str, Any]] = []
+    por_autor: Dict[str, List[Dict[str, Any]]] = {}
     for chave, v in votos.items():
         for a in v["achados"]:
-            achados.append({**a, "juiz": chave, "autor": autor_do_achado(a)})
-    por_autor: Dict[str, List[Dict[str, Any]]] = {}
-    for a in achados:
-        if citacoes.bloqueante(a):
-            por_autor.setdefault(a["autor"], []).append(a)
+            item = {**a, "juiz": chave, "autor": autor_do_achado(a)}
+            if citacoes.bloqueante(item):
+                por_autor.setdefault(item["autor"], []).append(item)
+            if status == "amarelo" and citacoes.bloqueante(item):
+                # No teto de rodadas (veredito 🟡), achados de juízes vencidos seguem como ressalva («segue com
+                # ressalva») no envelope, sem contar como bloqueio residual na saúde da missão (G08).
+                item = {**item, "severidade": "atencao", "rebaixado_no_teto": True}
+            achados.append(item)
     return {"status": status, "unanime": unanime, "rodada": rodada, "max_rodadas": max_rodadas,
             "votos": votos, "achados": achados, "por_autor": por_autor,
             "contra": sum(1 for v in votos.values() if v["voto"] == "reprova")}

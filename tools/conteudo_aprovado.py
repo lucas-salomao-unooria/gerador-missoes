@@ -242,7 +242,9 @@ def codigos_aprovados(one_pager: str) -> List[str]:
 #: Texto entre aspas logo depois do rótulo: `**Pergunta:** "…"`, `Pergunta: *"…"*`, `- **Atingiu:** "…"`.
 #: A régua do Canal A vem sem aspas e fica de fora — ela é conferida pelo anexo, não aqui.
 _RE_CANAL_B = re.compile(
-    r"(?:Pergunta|Atingiu|Em processo|N[ãa]o atingiu)\s*\**\s*:?\s*\**\s*:?\s*\*?\s*[\"“]([^\"”\n]{12,}?)[\"”]", re.I)
+    r"(?:Pergunta|Atingiu|Em processo|N[ãa]o atingiu)\s*\**\s*:\s*\**\s*\*?[\"“]([^\"”\n]{12,}?)[\"”]",
+    re.I,
+)
 _RE_TITULO_ROTEIRO = re.compile(r"^#{2,6}[^\n]*\b(?:roteiro|perguntas)\b[^\n]*$", re.I | re.M)
 _RE_PERGUNTA = re.compile(r"[\"“]([^\"”\n]{12,}\?)[\"”]")
 _RE_FALA = re.compile(r"^\s*(?:[-*]\s+)?\*\*([^*\n]{2,30}?):\*\*\s*(.{20,})$", re.M)
@@ -456,7 +458,13 @@ def _literal_confere(trecho: str, documento_norm: str) -> bool:
     pedacos = _pedacos_sem_lacuna(trecho)
     if pedacos:
         return all(_literal_confere(p, documento_norm) for p in pedacos)
-    alvo = _norm(trecho)
+    # G14: remove prefixo de alternativa/item («1.», «a)», «*Alt 1:*») e sufixo de régua («[Atingiu]») quando o trecho
+    # foi extraído com moldura de lista/tabela
+    limpo = re.sub(r"^\s*(?:\*?\s*alt(?:ernativa)?\s*\d+\s*[:.)]\s*\*?|\d+\s*[.)]\s*|[a-d]\s*[.)]\s*)", "",
+                   trecho or "", flags=re.I)
+    limpo = re.sub(r"\s*`?\[(?:N[ãa]o\s+atingiu|Em\s+desenvolvimento|Atingiu|Ainda\s+n[ãa]o)\]`?\s*$", "",
+                   limpo, flags=re.I)
+    alvo = _norm(limpo) or _norm(trecho)
     if not alvo:
         return True
     if alvo in documento_norm:
@@ -931,8 +939,12 @@ def literais_parafraseados(documento: str, one_pager: str) -> List[Tuple[str, st
     chave = tk.extrair(one_pager)
     alvos += [t.texto for t in chave if t.tipo in (tk.TELA, tk.CANAL_B, tk.ROTEIRO) and t.texto not in alvos]
     alvos += [o for t in chave if t.tipo == tk.OPCOES for o in t.opcoes if o not in alvos]
-    citados = list(dict.fromkeys(m.group(1).strip() for m in _RE_ENTRE_ASPAS.finditer(documento or "")
-                                 if len(m.group(1).strip()) >= 12))
+    alvos_norm = {_norm(x) for x in alvos if _norm(x)}
+    citados = list(dict.fromkeys(
+        m.group(1).strip() for m in _RE_ENTRE_ASPAS.finditer(documento or "")
+        if len(m.group(1).strip()) >= 12 and _norm(m.group(1).strip()) not in alvos_norm
+        and all(literais_ausentes(m.group(1).strip(), [x]) for x in alvos)
+    ))
     if not alvos or not citados:
         return []
     saida: List[Tuple[str, str]] = []

@@ -134,14 +134,22 @@ devolve a você cada divergência:
 1. **Número de regra com origem no contrato.** Todo número de regra — porcentagem, segundos,
    minutos, teto ou piso de palavras e caracteres, nº de opções ou alternativas — está no contrato.
    Não precisam de origem os de dono plataforma (polling, TTL, p95, uptime, lote da SDK, `px`,
-   o que cita ADR ou o contrato da plataforma; timeout e tempo limite só de requisição, API, sessão
-   ou rede — «tempo limite de 45 s para responder» é regra da mecânica), a medida de layout e a
-   contagem de palavras de uma string. A sugestão de um `[PARÂMETRO …]` ainda aberto não é contrato. Número que o contrato não
-   tem sai do corpo ou vira `[PROPOSTA — validar com PO: <o número> · por quê]` (e vai para a 19.3).
+   `60 FPS`, taxa de quadros, queda de frame, falhas técnicas ≤ 1%, o que cita ADR ou o contrato da
+   plataforma; timeout e tempo limite só de requisição, API, sessão ou rede — «tempo limite de 45 s
+   para responder» é regra da mecânica; metas técnicas de desempenho/confiabilidade pertencem à
+   `[PLATAFORMA]` / ADR e nunca vão para a seção 19 como decisão aberta do PO), a medida de layout e a
+   contagem de palavras de uma string. Se um `[PARÂMETRO — … sugestão: X]` da spec continuar aberto
+   porque a etapa rodou sem de acordo humano, você pode adotar a sugestão `X` como **constante
+   configurável** desde que registre a pendência (`PEND-nn`) na seção 19 apontando para o parâmetro
+   aberto. Números técnicos de implementação (transições, subdivisão de animação) sem origem em produto
+   ficam como 🟡 (`numero-sem-origem`, a conferir) ou entram como `[PROPOSTA — validar com PO: <o número> · por quê]` (na 19.3).
 2. **Hipóteses, metas e tetos iguais aos do contrato.** Cada hipótese com os números da hipótese de
    mesmo número do §17 (sem número quando ele não tem); o alvo e o limiar de decisão de um KPI que
-   cita `PQ-nn` são os da linha dela no 9f; cada teto do §15 (palavras por string, minutos por ato)
-   aparece no corpo, no RNF e nas stories das telas que ele limita.
+   cita `PQ-nn` são os da linha dela no 9f (se a linha do 9f trouxer `[PROPOSTA — validar com PO: …]`
+   na meta, mantenha o marcador `[PROPOSTA — validar com PO: meta <valor> · por quê]` também na célula
+   do KPI no PRD ou escreva `sem meta — primeira medição` — retirar o marcador aciona `kpi-alvo-inventado`);
+   cada teto do §15 (palavras por string, minutos por ato) aparece no corpo, no RNF e nas stories das
+   telas que ele limita.
 3. **Estados da §6 iguais aos do contrato.** As colunas de estado e o diagrama da §6 usam exatamente
    os estados do «Contrato de estados» da spec — todos, inclusive falha e espera —, e nenhum nome que
    nem o contrato nem o fluxo do design tenham. O nome do design só aparece no de-para.

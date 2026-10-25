@@ -855,6 +855,7 @@
         "estado-da-spec-sem-mapa",
         "parametro",
         "proposta",
+        "regra-sem-ramo-residual",
         "sem-idempotencia"
       ]
     },
@@ -1596,8 +1597,7 @@
       "status": "bloqueado",
       "codigos": [
         "hipotese-diverge",
-        "numero-sem-origem",
-        "texto-chave-reescrito"
+        "numero-sem-origem"
       ]
     },
     "prd_status": {
@@ -1802,7 +1802,8 @@
         "adr-inexistente",
         "adr-sem-proposta",
         "coluna-da-spec-ausente",
-        "ds-versao-cravada"
+        "ds-versao-cravada",
+        "regra-sem-ramo-residual"
       ]
     },
     "kpis_status": {
@@ -1991,7 +1992,8 @@
         "adr-inexistente",
         "adr-sem-proposta",
         "coluna-da-spec-ausente",
-        "ds-versao-cravada"
+        "ds-versao-cravada",
+        "regra-sem-ramo-residual"
       ]
     },
     "kpis_status": {

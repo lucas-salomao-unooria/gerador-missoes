@@ -16,6 +16,7 @@ inteiro em `state["<status_key>_envelope"]`, com `achados[]`, severidade, dono e
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Optional
 
 #: Ordem de execução. `rodada` só existe nos gates que vivem dentro de um LoopAgent.
@@ -169,6 +170,11 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
                 if severidade in _BLOQUEIA and status.strip().lower() not in ("bloqueado", "devolvido"):
                     severidade = "atencao"
                 resumo = (achado.get("resumo") or achado.get("trecho") or "").strip()
+                if chave == "dev_status":
+                    prd_final = str(state.get("prd_final") or "")
+                    ids_citados = re.findall(r"`([A-Za-z0-9_./:-]{3,})`", resumo)
+                    if prd_final and ids_citados and all(i in prd_final for i in ids_citados):
+                        resumo = f"{resumo} [tratado no PRD — conferir]".strip()
                 if severidade in _BLOQUEIA and liberado:
                     # liberado por uma pessoa que viu o gate em 🔴: fica registrado, não impede
                     severidade = "atencao"

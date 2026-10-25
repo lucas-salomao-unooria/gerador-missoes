@@ -320,7 +320,8 @@ def itens_em_aberto(estado: Dict[str, Any]) -> List[Item]:
         texto = " ".join([item.assunto, item.sugestao] + [o.descricao for o in item.ocorrencias])
         item.ui = _e_ui(texto)
     _marcar_escolhas_de_ambiente(estado, itens)
-    return itens + escolhas_de_ambiente(estado) + mudancas_do_design(estado) + textos_acima_do_teto(estado)
+    return (itens + escolhas_de_ambiente(estado) + mudancas_do_design(estado)
+            + textos_acima_do_teto(estado) + variantes_do_one_pager(estado))
 
 
 def _marcar_escolhas_de_ambiente(estado: Dict[str, Any], itens: Sequence[Item]) -> None:
@@ -415,9 +416,38 @@ def escolhas_de_ambiente(estado: Dict[str, Any]) -> List[Item]:
 
     docs = documentos(estado)
     spec = docs[DOC_SPEC]
+    briefing = str(estado.get("briefing") or "")
     decidido = amb.classe_e_ambiente(spec)
     if not decidido["nova"]:
-        return []
+        # G17: quando o briefing não trava `secao_ds` e a spec escolheu uma seção padrão sem o PO ter fixado no
+        # briefing ou no one-pager dele, expõe confirmação no de acordo (se já não houver item de ambiente na lista).
+        from tools import rastro
+
+        secao_spec = decidido.get("secao") or ""
+        one_pager = docs[DOC_ONE_PAGER]
+        if not secao_spec or not briefing.strip() or rastro.secao_travada(briefing):
+            return []
+        ja_respondeu = any(
+            isinstance(d, dict) and secao_spec in str(d.get("assunto") or "") + " " + str(d.get("valor") or "")
+            for d in (estado.get(KEY_DECISOES) or [])
+        )
+        fontes_po = "\n".join([briefing, one_pager, str(estado.get("one_pager_po") or "")])
+        if ja_respondeu or re.search(rf"\b{re.escape(secao_spec)}\b", fontes_po, re.I):
+            return []
+        if any(amb.pergunta_a_secao(o.descricao) or amb.sobre_a_escolha(o.descricao, secao_spec)
+               for oc in ocorrencias(spec, DOC_SPEC) for o in [oc]):
+            return []
+        linha = next((l for l in spec.splitlines()
+                      if re.search(r"secao_ds\W{0,6}" + re.escape(secao_spec), l, re.I)), "")
+        if not linha or "PO, parecer de" in linha:
+            return []
+        return [Item(
+            id=_id(ABERTO_PO, f"secao_ds:{secao_spec}"),
+            tipo=ABERTO_PO,
+            assunto=f"seção do DS `{secao_spec}` escolhida pela spec (briefing sem trava explícita)",
+            sugestao=f"confirmar `{secao_spec}`",
+            ocorrencias=[Ocorrencia(documento=DOC_SPEC, linha=linha, marcador="", tipo=ABERTO_PO)],
+        )]
     if not amb.escolha_a_conferir(decidido["secao"], str(estado.get("briefing") or "")):
         # a regra do manifesto: a seção nova que repete uma coleção do DS (`nova:galeriadefotos` da exp01ef1b) ou que o
         # briefing não fixou porque fixou outra com `secao_ds:` é bloqueada lá, e o «aceitar» do PO não a liberaria — o
@@ -463,6 +493,41 @@ def textos_acima_do_teto(estado: Dict[str, Any]) -> List[Item]:
             id=_id(TEXTO_TETO, tk.literal(tc.texto)), tipo=TEXTO_TETO,
             assunto=f"{tc.id} ({tc.origem}) «{tc.texto}» — {n} palavras, teto de {teto['valor']} {por} ({teto['origem']})",
             sugestao="manter o texto aprovado", texto_chave=tc.texto, ocorrencias=ocorrencias))
+    return itens
+
+
+def variantes_do_one_pager(estado: Dict[str, Any]) -> List[Item]:
+    """As variantes quase iguais de textos-chave na mesma etapa do one-pager (G03 + Decisão 2): lista como 🟡 no de
+    acordo («variantes: qual vale?») sem decidir sozinha."""
+    from tools import textos_chave as tk
+
+    one_pager = str(estado.get("one_pager") or "")
+    if not one_pager.strip():
+        return []
+    tcs = tk.da_sessao(estado)
+    pares = tk.variantes_de_texto_chave(tcs)
+    if not pares:
+        return []
+    spec = documentos(estado)[DOC_SPEC]
+    decisoes = estado.get(KEY_DECISOES) or []
+    itens: List[Item] = []
+    for a, b, _ in pares:
+        chave = f"{a.id}/{b.id}"
+        if any(isinstance(d, dict) and (a.texto in str(d.get("assunto") or "") or b.texto in str(d.get("assunto") or ""))
+               for d in decisoes):
+            continue
+        ocorrencias = [Ocorrencia(documento=documento, linha=l, marcador=b.texto, tipo=TEXTO_TETO)
+                       for documento, texto in ((DOC_ONE_PAGER, one_pager), (DOC_SPEC, spec))
+                       for l in dict.fromkeys(texto.splitlines()) if b.texto in l]
+        itens.append(Item(
+            id=_id(TEXTO_TETO, f"variantes|{tk.literal(a.texto)}|{tk.literal(b.texto)}"),
+            tipo=TEXTO_TETO,
+            assunto=(f"Variantes quase iguais em {a.origem} (`{chave}`): qual vale? "
+                     f"`{a.id}` «{a.texto}» × `{b.id}` «{b.texto}»"),
+            sugestao=a.texto,
+            texto_chave=b.texto,
+            ocorrencias=ocorrencias,
+        ))
     return itens
 
 

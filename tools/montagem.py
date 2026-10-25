@@ -189,7 +189,35 @@ def contrato(state: Dict[str, Any]) -> Dict[str, str]:
     docs["trocas_da_correcao"] = _texto_das_trocas_da_correcao(state)
     docs["teto_da_faixa"] = _teto_da_faixa(state)
     docs["perguntas_transversais"] = perguntas_transversais()
+    docs["copy_aprovada"] = _texto_da_copy_revisada(str(state.get("copy_strings_revisada") or ""))
+    docs["parametros_configuraveis"] = _sugestoes_de_parametros_abertos_com_pend(state)
     return docs
+
+
+def _texto_da_copy_revisada(copy_md: str) -> str:
+    """Os textos de interface da `copy_strings_revisada` (sem a coluna de contagem de palavras): quando o PRD ou o
+    handoff citam sem aspas uma frase literal da copy («Restam 30 segundos para concluir»), o número vem da copy."""
+    linhas = []
+    for l in (copy_md or "").splitlines():
+        if l.strip().startswith("|"):
+            celulas = [c.strip() for c in l.strip().strip("|").split("|")]
+            # pula a última coluna quando é só o inteiro da contagem de palavras
+            if len(celulas) >= 3 and re.fullmatch(r"\d+", celulas[-1]):
+                celulas = celulas[:-1]
+            linhas.append(" | ".join(celulas))
+    return "\n".join(linhas)
+
+
+def _sugestoes_de_parametros_abertos_com_pend(state: Dict[str, Any]) -> str:
+    """Decisão 4 (25/10/2026): quando não houve de acordo humano para fechar um `[PARÂMETRO — … sugestão: X]` da spec,
+    o PRD pode adotar a sugestão `X` como constante configurável desde que registre a pendência (`PEND` / `[PARÂMETRO` /
+    `[ABERTO`) na seção 19 (ou seção 7 do handoff)."""
+    spec_raw = str(state.get("spec_missao") or "")
+    prd_ou_handoff = str(state.get("prd_final") or "") + "\n" + str(state.get("handoff_dev") or "")
+    if not re.search(r"\bPEND-\d+\b|\[(?:PAR[ÂA]METRO|ABERTO)\b|constante\s+configur[áa]vel", prd_ou_handoff, re.I):
+        return ""
+    sugestoes = re.findall(r"\[PAR[ÂA]METRO\b[^\]\n]*?sugest[ãa]o\s*:\s*([^\]\n]+)\]", spec_raw, re.I)
+    return "\n".join(sugestoes)
 
 
 #: Marcador aberto não é decisão: a sugestão dentro de `[PARÂMETRO — …, sugestão: 10%]` é do agente de produto, e o
@@ -268,6 +296,7 @@ def _linhas_do_corpo(texto: str, pular_secoes: bool = True) -> List[str]:
 _RE_PLATAFORMA = re.compile(
     r"polling|sondagem|\bTTL\b|\bJWT\b|\bLCP\b|\bINP\b|\bCLS\b|\bp9[59]\b|percentil|uptime|"
     r"lat[êe]ncia|\b5xx\b|\b(?:HTTP|erro|status|c[óo]digo)\s*\d{3}\b|\b429\b|taxa de erro|falha de (?:carregamento|renderiza)|web ?vitals|"
+    r"\b\d+\s*FPS\b|taxa de quadros|queda de frame|falhas?\s+t[ée]cnicas?|"
     r"amostragem|batch|retry|backoff|RNF-(?:PERF|DISP|SEG)|"
     r"F5\b|recarreg|reconex|Cloud ?Run|\bCDN\b|bundle|\bKB\b|\bMB\b|throttl|debounce|quota|cota de IA|"
     # consulta periódica a uma rota é polling com outro nome («consultando `GET /juri-estadual/gate` a cada 3
@@ -1313,8 +1342,10 @@ def _validar(documento: str, texto: str, state: Dict[str, Any]) -> Dict[str, Any
             "meta-diverge-9f",
             "KPI com alvo ou limiar que não é o da pergunta dele no 9f da spec: "
             + _exemplos(f"{m['kpi']} ({m['pq']}, {m['coluna']}): {m['corpo']} — no 9f, {m['spec']}" for m in metas)
-            + ". Meta e limiar de uma `PQ-nn` são os da linha dela no 9f, copiados; outro número é decisão do PO "
-            "(`[PROPOSTA — validar com PO: …]`).", documento))
+            + ". Meta e limiar de uma `PQ-nn` são os da linha dela no 9f, copiados; se a linha do 9f está marcada "
+            "`[PROPOSTA …]`, mantenha o marcador `[PROPOSTA — validar com PO: meta <valor> · por quê]` também na célula "
+            "do KPI no PRD (ou escreva `sem meta — primeira medição`), pois retirar o marcador transforma proposta em "
+            "meta decidida e aciona `kpi-alvo-inventado`.", documento))
 
     # c) estados
     if documento == "prd":

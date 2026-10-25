@@ -192,8 +192,12 @@ def conferir_qa(qa: str, folha_stitch: str = "", jornada: str = "", prototipo_ht
             if fala_do_prototipo and no_prototipo is not None and contadas != len(no_prototipo):
                 falha("afirmacao-prototipo", f"O QA afirma {contadas} telas no protótipo; o arquivo tem "
                                              f"{len(no_prototipo)}.", linha)
-            # "todas as N" e "a de N" afirmam também o tamanho do inventário — salvo quando falam do Stitch
-            if inventario and not fala_do_stitch and not com_estados and total != len(inventario):
+            # "todas as N" e "a de N" afirmam também o tamanho do inventário — salvo quando falam do Stitch ou
+            # quando é uma contagem parcial («25 de 26 telas renderizam no protótipo») sem falar de inventário/jornada
+            fala_do_inventario = bool(re.search(r"invent[áa]rio|jornada|escopo", sujeito, re.I))
+            if (inventario and not fala_do_stitch and not com_estados
+                    and (fala_do_inventario or (achadas is None and not fala_do_prototipo))
+                    and total != len(inventario)):
                 falha("afirmacao-inventario", f"O QA afirma {total} telas no inventário; a jornada declara "
                                               f"{len(inventario)}.", linha)
     for m in _RE_ARTEFATO.finditer(qa or ""):

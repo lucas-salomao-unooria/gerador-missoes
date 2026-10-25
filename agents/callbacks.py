@@ -409,6 +409,11 @@ def retrabalhar_por_trocas(chave: str):
         state = callback_context.state
         motivos = str(state.get(f"retrabalho_{chave}") or "").strip()
         documento = str(state.get(chave) or "")
+        # Quando o loop repete (`rodada_anterior_<chave>` preenchido) mas nenhum gate reprovou esta chave (ex.:
+        # `brief_assets` no HandoffLoop quando o achado era só de `handoff_dev`), devolve o documento atual intacto
+        # sem chamar o editor nem o autor (G06, 25/10/2026).
+        if not motivos and documento.strip() and str(state.get(f"rodada_anterior_{chave}") or "").strip():
+            return types.Content(role="model", parts=[types.Part(text=documento_com_governanca(state, chave, documento))])
         if not motivos or not documento.strip() or not get_settings().retrabalho_por_trocas:
             return None
         from pipeline.reexecucao import editar, validador_do_po

@@ -422,21 +422,38 @@ def validar_kpis(prd: str, spec: str = "", one_pager: str = "") -> Dict[str, Any
         # `≥ 70%` e o redator o imitou (auditoria de 07/10/2026).
         alvo = _col(linha, "alvo", "meta")
         if alvo and "[PROPOSTA" not in alvo.upper() and not re.search(r"sem meta", alvo, re.I):
-            inventados = sorted(_numeros(alvo) - origem_das_metas)
+            # Parênteses de origem (`(produto/05-spec-missao.md, Bloco 9f)`, `(§17 do one-pager)`) trazem números
+            # de arquivo/bloco/seção (`05`, `9`, `17`) que não são o valor da meta (G05, 25/10/2026).
+            alvo_sem_origem = re.sub(
+                r"\([^)]*(?:spec|one-?pager|bloco|se[cç][aã]o|§|\d{2}-[a-z0-9_-]+\.md|PQ-\d+|T\d+)[^)]*\)",
+                " ",
+                alvo,
+                flags=re.I,
+            )
+            alvo_sem_origem = re.sub(r"\b\d{2}-[a-z0-9_-]+\.(?:md|html|json)\b", " ", alvo_sem_origem, flags=re.I)
+            alvo_sem_origem = re.sub(r"\b(?:bloco|se[cç][aã]o|§)\s*\d+[a-z]?\b", " ", alvo_sem_origem, flags=re.I)
+            inventados = sorted(_numeros(alvo_sem_origem) - origem_das_metas)
             if inventados:
                 falha("kpi-alvo-inventado",
-                      f"{nome} tem alvo `{alvo.strip()[:40]}` e o número não está no §17 do one-pager nem no 9f da spec. "
-                      "Meta é decisão do PO: escreva `sem meta — primeira medição`, ou marque "
+                      f"{nome} tem alvo `{alvo.strip()[:40]}` e o número não está no §17 do one-pager nem no 9f da spec "
+                      "(ou no 9f ele está marcado `[PROPOSTA …]`, que não é meta decidida pelo PO). "
+                      "Meta é decisão do PO: escreva `sem meta — primeira medição`, ou mantenha o marcador "
                       "`[PROPOSTA — validar com PO: <meta> · por quê]`.")
 
     # a leitura precisa ter leitor: a fila analítica não é lugar onde alguém lê
     for linha in tab_evt:
         onde = _col(linha, "onde e lido", "tabela leitora", "leitor")
+        ids = _RE_EVT.findall(" ".join(linha.values()))
+        id_evt = ids[0] if ids else "evento"
         if onde and re.search(r"/telemetry/(batch|beacon)|telemetria_eventos|pub/?sub", onde, re.I) \
                 and not re.search(LEITOR_VALIDO, onde, re.I):
-            ids = _RE_EVT.findall(" ".join(linha.values()))
             falha("leitura-sem-leitor",
-                  f"`{ids[0] if ids else 'evento'}` declara leitura em `{onde.strip()[:40]}`. {MENSAGEM_LEITOR}")
+                  f"`{id_evt}` declara leitura em `{onde.strip()[:40]}`. {MENSAGEM_LEITOR}")
+        elif onde and id_evt.startswith("EVT-E") and re.search(r"_[a-z0-9_]+\b", onde, re.I) \
+                and not re.search(r"\b[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\b", onde, re.I):
+            atencao("evento-operacional-sem-coluna",
+                    f"`{id_evt}` declara leitura na tabela `{onde.strip()[:50]}` sem nomear a coluna (`tabela.coluna`) "
+                    "onde o evento operacional é persistido.")
 
     # Os sinais universais das transversais de dono `missao` estão na tabela, com o id, o verbo e
     # o objeto do catálogo. É o que a missão deve às perguntas do PO — mesmo sem KPI próprio para
