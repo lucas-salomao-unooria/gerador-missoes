@@ -133,16 +133,50 @@ def _e_conteudo(palavra: str) -> bool:
     return palavra.isdigit() or (len(palavra) >= 4 and palavra not in _SEM_CONTEUDO)
 
 
+def _normalizado(valor: str, unidade: str) -> str:
+    u = unidade.lower()
+    u = ("s" if u.startswith("s") else "min" if u.startswith("min") else "palavras" if u.startswith("palavra")
+         else "cartoes" if u.startswith("cart") else u)
+    return f"{valor.replace(',', '.')} {u}"
+
+
 def numeros_com_unidade(texto: str) -> List[str]:
     """`["29 min", "60 s", "25 palavras"]`, na ordem e normalizados («60 segundos» e «60s» são «60 s»)."""
     saida: List[str] = []
     for valor, unidade in _RE_NUMERO_COM_UNIDADE.findall(texto or ""):
-        u = unidade.lower()
-        u = ("s" if u.startswith("s") else "min" if u.startswith("min") else "palavras" if u.startswith("palavra")
-             else "cartoes" if u.startswith("cart") else u)
-        n = f"{valor.replace(',', '.')} {u}"
+        n = _normalizado(valor, unidade)
         if n not in saida:
             saida.append(n)
+    return saida
+
+
+#: A referência do critério com que o juiz compara o valor que o PO decidiu: «(29 min) excede o teto de 25 min» (P053,
+#: 727a3c2d), «excede o teto de 25 min» (P157, 53e011b6). Só depois da comparação — exceder, ultrapassar, passar,
+#: superar, acima de —, para que «o limite de 30 s da Seção 7» não passe por referência.
+_RE_REFERENCIA_DO_CRITERIO = re.compile(
+    r"\b(?:exced\w*|(?:ultra)?pass\w*|super\w*|acima)\s+(?:d?[oa]s?\s+)?(?:tetos?|limites?|cap|recomenda[çc][ãa]o|"
+    r"recomendad[oa]s?)\s+(?:\w+\s+){0,2}?de\s*$", re.IGNORECASE)
+
+
+def numeros_divergentes(texto: str, decididos: Sequence[str], aceitos: Sequence[str] = ()) -> List[str]:
+    """Os números com unidade do texto na unidade de um valor `decididos` que não são nenhum dos `decididos` nem dos
+    `aceitos` (os números do item em que o PO decide): o valor que o achado contrapõe à decisão.
+
+    Revisão do PR #80 (24/10/2026): bastava o valor decidido aparecer no achado, e a ressalva que denuncia o documento
+    descumprindo a decisão saía da contagem como se a repetisse — «O teto de 45 palavras por parágrafo aceito pelo PO no
+    de acordo é excedido: o parágrafo 3 do chat tem 62 palavras» (exp02em1b), «Tempo em tela de 29 min homologado pelo
+    PO no Pedido 13, mas a Seção 10 agora soma 34 min» (exp06ef1b). A referência do critério
+    (`_RE_REFERENCIA_DO_CRITERIO`) não conta."""
+    unidades = {n.split(" ", 1)[1] for n in decididos}
+    ok = set(decididos) | set(aceitos)
+    saida: List[str] = []
+    for m in _RE_NUMERO_COM_UNIDADE.finditer(texto or ""):
+        n = _normalizado(m.group(1), m.group(2))
+        if n.split(" ", 1)[1] not in unidades or n in ok or n in saida:
+            continue
+        if _RE_REFERENCIA_DO_CRITERIO.search(texto[max(0, m.start() - 80):m.start()]):
+            continue
+        saida.append(n)
     return saida
 
 
@@ -193,6 +227,9 @@ class RegistroDoPO:
     - a linha tem um trecho literal de ao menos `TRECHO_LITERAL` palavras de um texto do PO (com `TRECHO_CONTEUDO` de
       conteúdo, fora o vocabulário da atribuição), num item ou linha do PO que decide e não nega nem manda mudar;
     - a linha cita o «Pedido N» das notas de passagem, e um item desse pedido decide e traz o mesmo número com unidade.
+
+    Na decisão gravada e no «Pedido N», como no trecho literal, outro número na unidade do valor decidido que o item do
+    PO não tem impede a confirmação (`numeros_divergentes`): é o documento descumprindo a decisão, não a repetindo.
 
     O resto continua ⚠️ «confira»: a generalização («Todas as pendências foram homologadas no Pedido 13») o código não
     prova."""
@@ -275,7 +312,8 @@ class RegistroDoPO:
         return saida
 
     def decisao_gravada(self, texto: str) -> str:
-        """O assunto da decisão do de acordo (`decisoes_do_po`) que o texto repete — mesmo valor e mesmo assunto.
+        """O assunto da decisão do de acordo (`decisoes_do_po`) que o texto repete — mesmo valor e mesmo assunto, e
+        nenhum outro número na unidade do valor (`numeros_divergentes`).
 
         Só a sugestão que o PO aceitou e o valor que ele escreveu: a recusada não é decisão a favor. Até a revisão do PR
         #80 (24/10/2026) a recusa contava com o valor da sugestão, e «StoryPoll … (aprovado pelo PO)» saía confirmada
@@ -288,8 +326,10 @@ class RegistroDoPO:
             valor = str(d.get("valor") or "") if resposta == OUTRO else str(d.get("sugestao") or d.get("valor") or "")
             if not valor.strip():
                 continue
-            do_valor = set(numeros_com_unidade(valor))
-            if (bool(do_valor) and do_valor <= numeros) or (
+            do_valor = numeros_com_unidade(valor)
+            if do_valor and numeros_divergentes(texto, do_valor):
+                continue  # «… de 90 segundos homologado pelo PO, mas a Seção 7 dispara o aviso aos 30 segundos»
+            if (bool(do_valor) and set(do_valor) <= numeros) or (
                     len(valor) >= 8 and " ".join(_palavras_planas(valor)) in plano):
                 return f"{str(d.get('assunto') or '')[:80]} ({d.get('quando') or 'de acordo de produto'})"
         return ""
@@ -324,15 +364,18 @@ class RegistroDoPO:
 
     def pedido_citado(self, linha: str) -> str:
         """A linha cita o «Pedido N», e um item desse pedido decide (sem negar nem mandar mudar) e traz o mesmo número com
-        unidade."""
+        unidade — sem outro número na unidade dele que o item não tenha (`numeros_divergentes`): «29 min homologado pelo
+        PO no Pedido 13, mas a Seção 10 agora soma 34 min» não repete o Pedido 13, denuncia o documento."""
         numeros = set(numeros_com_unidade(linha))
         for m in _RE_PEDIDO_N.finditer(linha):
             n = int(m.group(1))
             if not 1 <= n <= len(self.pedidos):
                 continue
             for unidade in _unidades(self.pedidos[n - 1]):
-                if (_RE_DECIDE.search(unidade) and not _nao_decide(unidade)
-                        and numeros & set(numeros_com_unidade(unidade))):
+                do_item = numeros_com_unidade(unidade)
+                comuns = [x for x in do_item if x in numeros]
+                if (_RE_DECIDE.search(unidade) and not _nao_decide(unidade) and comuns
+                        and not numeros_divergentes(linha, comuns, do_item)):
                     return f"Pedido {n}: «{unidade[:120]}»"
         return ""
 
@@ -351,8 +394,10 @@ class RegistroDoPO:
 
     def decisao_repetida(self, texto: str) -> str:
         """O registro do PO que um achado de juiz só repete: decisão gravada, trecho literal, «Pedido N», ou o primeiro
-        número com unidade do achado (o valor de que ele fala) num item em que o PO decide, com o mesmo assunto. O achado
-        sobre o que o PO recusou no de acordo não repete decisão nenhuma: fica."""
+        número com unidade do achado (o valor de que ele fala) num item em que o PO decide, com o mesmo assunto e sem
+        outro número na unidade dele que o item não tenha (`numeros_divergentes`). O achado sobre o que o PO recusou no
+        de acordo não repete decisão nenhuma: fica. Nem o que contrapõe à decisão o valor que o documento traz («O tempo
+        de tela aceito pelo PO (29 min) foi ultrapassado: a jornada da Seção 10 soma 34 min»)."""
         if self.decisao_recusada(texto):
             return ""
         motivo = self.decisao_gravada(texto) or self.pedido_citado(texto)
@@ -366,7 +411,8 @@ class RegistroDoPO:
             return ""
         palavras = {p for p in _palavras_planas(texto) if _e_conteudo(p) and not p.isdigit()}
         for unidade, do_po, nums, decide in self._unidades_do_po():
-            if decide and numeros[0] in nums and len(palavras & set(do_po)) >= 2:
+            if (decide and numeros[0] in nums and len(palavras & set(do_po)) >= 2
+                    and not numeros_divergentes(texto, numeros[:1], sorted(nums))):
                 return f"o PO decidiu {numeros[0]}: «{unidade[:120]}»"
         return ""
 

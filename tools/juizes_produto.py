@@ -15,7 +15,9 @@ quando há qualquer um deles. No levantamento de produto de 24/10/2026 (15 sess�
 Aqui, sem mexer no que o juiz bloqueou:
 
 - o achado que diz que o PO decidiu e que os registros do PO confirmam (`tools.decisoes.RegistroDoPO.decisao_repetida`)
-  sai da contagem e vai para `decisoes_do_po_registradas` no envelope;
+  sai da contagem e vai para `decisoes_do_po_registradas` no envelope. O que põe ao lado do valor decidido outro valor
+  na mesma unidade — o documento descumprindo a decisão: «teto de 45 palavras aceito pelo PO… o parágrafo 3 tem 62
+  palavras» — continua contando (`tools.decisoes.numeros_divergentes`);
 - no gate final, o `decisao_humana` que só fala das propostas e dos parâmetros abertos vai para `na_lista_do_de_acordo`,
   quando a lista do de acordo tem itens e o que o achado diz está neles (`_so_do_contrato`). Sem itens na lista, ou com
   um assunto que eles não têm, o achado fica: a pendência que o código não acha não some;
