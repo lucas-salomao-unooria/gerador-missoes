@@ -285,9 +285,14 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
         })
     # A troca que a esteira quis fazer no one-pager do PO grande e não se aplicou (`tools/one_pager_grande.py`): o texto
     # ficou como estava, e a mudança é decisão do PO.
+    trocas_vistas: set = set()
     for item in state.get("trocas_nao_aplicadas") or []:
         if not isinstance(item, dict):
             continue
+        chave_troca = (str(item.get("papel") or ""), str(item.get("de") or "")[:160], str(item.get("para") or "")[:160], str(item.get("falha") or "")[:120])
+        if chave_troca in trocas_vistas:
+            continue
+        trocas_vistas.add(chave_troca)
         sem_troca = not str(item.get("de") or "").strip()
         achados.append({
             "gate": "One-pager montado por trocas", "etapa": "produto", "id": item.get("papel") or "—",
@@ -308,6 +313,24 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
                             "dono": "produto", "resumo": a["resumo"]})
     except Exception:  # pragma: no cover - índice ilegível não derruba o dossiê
         pass
+
+    # Desduplica achados idênticos propagados entre gates cumulativos (ex.: rastro de spec → design → dev → prd
+    # ou rastreabilidade design → dev): preserva a primeira ocorrência no gate de origem e anota os demais em `tambem_em`.
+    achados_unicos: List[Dict[str, Any]] = []
+    indice_por_chave: Dict[tuple, Dict[str, Any]] = {}
+    for a in achados:
+        resumo_norm = re.sub(r"\s+", " ", (a.get("resumo") or "")).strip().lower()
+        if a["severidade"] not in _BLOQUEIA and resumo_norm:
+            chave_dedup = (a["severidade"], str(a.get("codigo") or ""), resumo_norm)
+            if chave_dedup in indice_por_chave:
+                prim = indice_por_chave[chave_dedup]
+                outros = prim.setdefault("tambem_em", [])
+                if a["gate"] != prim["gate"] and a["gate"] not in outros:
+                    outros.append(a["gate"])
+                continue
+            indice_por_chave[chave_dedup] = a
+        achados_unicos.append(a)
+    achados = achados_unicos
 
     # a reprovação registrada que uma pessoa liberou sai das que impedem e vai para a seção própria, com quem e quando
     degradacoes, liberadas = liberacao.separar_degradacoes(state, pareceres)

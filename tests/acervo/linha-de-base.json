@@ -821,8 +821,7 @@
       "status": "amarelo",
       "codigos": [
         "perdido-estado-fluxo",
-        "perdido-estado-prd",
-        "perdido-proposta-prd"
+        "perdido-estado-prd"
       ]
     },
     "telemetria_status": {

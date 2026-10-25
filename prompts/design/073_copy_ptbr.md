@@ -81,7 +81,13 @@ Rótulo nativo do ambiente é reproduzido **caractere a caractere**, nunca reesc
 
 **Em mini-jogo são dois registros, não três.** Não existe plataforma simulada, então o registro do meio some. Personagem-guia e Unooria continuam distintos na voz, mas os dois ficam na seção `unooria` — inclusive o personagem-guia, que ali não tem clone a que pertencer. O teste do "quem fala" continua valendo com dois.
 
-Três testes (registre o resultado; falha é devolução): **teste da boca** (leia em voz alta no ritmo de uma criança da faixa) · **teste do exclamativo** (conte as exclamações da missão inteira) · **teste do "quem fala"** (cobrindo o falante, dá para saber quem é?).
+Quatro testes (registre o resultado; falha é devolução): **teste da boca** (leia em voz alta no ritmo de uma criança da faixa) · **teste do exclamativo** (conte as exclamações da missão inteira) · **teste do "quem fala"** (cobrindo o falante, dá para saber quem é?) · **teste da palavra** (para cada string, existe palavra ou construção mais simples que diz o mesmo? Troque antes de fechar).
+
+## Linguagem simples e mínimo de palavras (teste do corte)
+
+- **Linguagem simples para a faixa da missão:** palavra do dia a dia, verbo no lugar de substantivo abstrato, voz ativa, uma ideia por frase, um termo por conceito, sem sigla ou estrangeirismo desnecessário, sem sentido figurado nem dupla negação.
+- **Mínimo de palavras (teste do corte):** toda palavra que, tirada, não muda a ação nem o sentido sai — desde que a frase continue gramatical e a redundância de acessibilidade permaneça intacta (nunca encolha até virar telegrama).
+- **Texto aprovado pelo PO difícil para a faixa não se altera na linha:** mantenha o texto aprovado e registre em «Strings que precisam de decisão» `[PROPOSTA — validar com PO: TC-07 «texto aprovado» → «versão mais simples» · por quê]`.
 
 ## Proibições
 
@@ -131,7 +137,7 @@ Nota: na linha que traz um texto-chave, o ID dele (`TC-07`, a opção `TC-12.2`)
 ## Strings do professor (preparação/curadoria com IA, dashboard, gatilhos, roteiro de perguntas, erro) — inclui, obrigatoriamente: rótulos e textos de ajuda do recorte da aula (disciplina, tema, assuntos, contexto), o botão do banco padrão, as mensagens de geração em andamento, de falha e de saldo de IA esgotado, os textos da curadoria (editar, regenerar, aprovar) e de pôr a atividade no ar (sem agendamento: a plataforma libera na hora); e, como amostra de conteúdo dinâmico, o recorte preenchido de cada uma das três aulas da tabela do bloco 8
 ## Prompts e Schemas para Conteúdo Dinâmico gerado por IA (posts, comentários, personas) + Amostras do Banco Curado Default
 ## Roteiro do podcast — as falas do §11 do one-pager, literais (vozes, ordem e texto); só escreva um roteiro se o one-pager não tiver nenhum (5 blocos, falas alternadas, "estudante", 3–5 min). A esteira confere as falas contra o one-pager: na exp01ef1b a copy reescreveu as 9 e o banco gravou outro roteiro
-## Testes de voz — resultado (boca · exclamativo · quem fala)
+## Testes de voz — resultado (boca · exclamativo · quem fala · palavra)
 ## Strings que não couberam / precisam de decisão de design
 ## Glossário por faixa (termos novos e trocados)
 ## Pronto — contagem por item

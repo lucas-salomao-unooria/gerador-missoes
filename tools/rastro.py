@@ -687,6 +687,10 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
         texto = state.get(fonte["chave"])
         if not texto or not isinstance(texto, str):
             continue
+        if fonte["chave"] in ("prd_final", "one_pager_pedagogico"):
+            from tools.conteudo_aprovado import remover_anexo
+
+            texto = remover_anexo(texto)
         documentos_lidos.append(fonte["rotulo"])
         for tipo, regex in _MARCADORES:
             for m in regex.finditer(texto):
@@ -703,9 +707,10 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                     continue
                 if tipo in ("parametro", "proposta") and (not dono_raw or _RE_CONTRATO_CITADO.search(dono_raw)):
                     continue  # `[PROPOSTA]` sozinho, ou com «…», é o nome do marcador citado na prosa
-                if (tipo in ("parametro", "proposta") and ":" not in dono_raw
-                        and cita_o_marcador(texto[texto.rfind("\n", 0, m.start()) + 1:m.start()])):
-                    continue  # «registradas com marcador normativo `[PROPOSTA P0b — validar com PO]`»
+                if tipo in ("parametro", "proposta") and ":" not in dono_raw and cita_o_marcador(
+                    texto[texto.rfind("\n", 0, m.start()) + 1:m.start()]
+                ):
+                    continue  # «registradas com marcador normativo `[PROPOSTA P0b — validar com PO]`» é nota sobre o formato
                 linha, contexto = _linha_e_contexto(texto, m.start(), m.end())
                 fechado = _RE_RESOLVIDO_D0.search(linha)
                 ident = _id(*fechado.groups()) if fechado else mapa.get(_norm_marcador(trecho))

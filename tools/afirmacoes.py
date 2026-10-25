@@ -38,7 +38,7 @@ _RE_SUJEITO = re.compile(r"stitch|prot[óo]tipo|\blint\b", re.I)
 #: citam o arquivo como real.
 _RE_INEXISTENTE_ANTES = re.compile(
     r"(?:(?:inexistentes?|n[ãa]o\s+existe)\W{0,4}|"
-    r"(?:arquivo-inexistente|(?:caminho|chave|arquivo)\s+inexistente)\b[^\n]{0,45})$",
+    r"(?:arquivo-inexistente|(?:caminho|chave|arquivo)\s+inexistente)\b[^;\n]{0,45})$",
     re.I,
 )
 #: Depois do caminho, também o aposto: «… citou a chave de caminho 'design/06-copy-revisada.md', arquivo não gravado na

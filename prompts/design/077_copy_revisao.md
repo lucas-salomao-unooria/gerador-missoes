@@ -55,12 +55,15 @@ O texto que o §4 põe na tela entre aspas — a pergunta da aposta e as alterna
 5. **Registro de voz por tela**: um único registro por tela; `seção` coerente com "quem está falando" (clone × unooria).
 6. **Estados**: toda variação (vazio, espera, degradado, falha na voz da ficção) tem string própria.
 7. **Strings de erro/falha**: nunca stack trace, nunca branding da plataforma dentro do clone, nunca silêncio.
-8. Reaplique os três testes de voz (boca · exclamativo · quem fala) sobre o conjunto final.
+8. Reaplique os quatro testes de voz (boca · exclamativo · quem fala · palavra) sobre o conjunto final. O teste da palavra: para cada string, existe palavra ou construção mais simples que diz o mesmo? Troque e registre na coluna «Revisão».
 9. **CAA, quando o `camada_caa` vier preenchido**: cada símbolo acionável do mapa tem uma chave de áudio que existe de verdade no sheet, na voz do personagem-guia e no registro da tela? Você **não reescreve o símbolo** (isso é do `caa`) nem muda o conceito que ele representa — escreve a fala que ele lê e as strings da professora para a mediação. Símbolo sem chave de áudio é lacuna com dono `caa`.
+10. **Linguagem simples em contexto**: reaplique, sobre cada string na tela, as regras de «Linguagem simples» da passada 1 para a faixa da missão: palavra do dia a dia, verbo no lugar de substantivo abstrato, voz ativa, uma ideia por frase, um termo por conceito, sem sigla ou estrangeirismo desnecessário, sem sentido figurado. Aplique também o **teste do corte** («Mínimo de palavras» da passada 1): palavra que, tirada, não muda a ação nem o sentido sai, mas a frase continua gramatical e a redundância de acessibilidade fica. Em tela cheia, o que parecia simples pode competir com outro texto e ficar pesado; simplifique ali, sem encolher até virar telegrama. Isso inclui os prompts do gerador e as amostras do banco curado, **mas lembre: eles seguem sem mudança nesta passada**. Se quebrarem a regra, é lacuna com dono `copy-ptbr` (passada 1), não edição sua. Texto aprovado pelo PO difícil para a faixa não se altera: vira `[PROPOSTA — validar com PO: TC-07 «texto aprovado» → «versão mais simples» · por quê]` (com o ID do texto-chave primeiro, quando for texto-chave).
 
 Você não muda verbo de interação, não inventa fala do personagem-guia onde a spec reserva silêncio, não cria string para tela fora do inventário. E não escreve texto para o que o ambiente não tem: as ausências da seção (bloco 14) e da missão (bloco 5) valem para a copy — string de botão, aba ou recurso declarado ausente é ❌, mesmo "por realismo".
 
 ## Definição de pronto (declare a contagem)
+
+Além dos itens de `copy-ptbr` abaixo, declare com zero como alvo: palavra fora do vocabulário da faixa sem entrada no glossário; string com passiva, negação dupla, sentido figurado, sigla ou estrangeirismo desnecessário; texto aprovado pelo PO difícil para a faixa que foi alterado em vez de virar `[PROPOSTA …]`.
 
 <!-- include: references/pronto.md -->
 
@@ -97,7 +100,7 @@ Você não muda verbo de interação, não inventa fala do personagem-guia onde 
 ## Prompts e schemas para conteúdo dinâmico (da passada 1, sem mudança)
 ## Banco curado default (da passada 1, sem mudança)
 ## Seções carregadas da passada 1
-## Testes de voz — resultado final
+## Testes de voz — resultado final (boca · exclamativo · quem fala · palavra)
 ## Glossário por faixa (atualizado)
 ## Lacunas (dono e classe)
 ## Pronto — contagem por item

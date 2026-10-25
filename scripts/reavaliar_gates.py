@@ -176,7 +176,9 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
             r_cons["status"] = "amarelo"
         novos["consistencia_status"] = r_cons
         novos["cobertura_telas_status"] = telas.cobertura(state)
-        novos["rastreabilidade_status"] = rastreabilidade.matriz(state)
+        novos["rastreabilidade_status"] = rastreabilidade.matriz(
+            state, colunas_veredito=("spec", "jornada", "fluxo", "copy", "telas", "prototipo", "stitch")
+        )
     if handoff or prd or state.get("banco_conteudo"):
         novos["rastreabilidade_dev_status"] = rastreabilidade.matriz(state, colunas_veredito=("handoff", "banco", "prd"))
     qa_texto = str(state.get("qa_design_report") or state.get("qa_entregaveis_report") or "")

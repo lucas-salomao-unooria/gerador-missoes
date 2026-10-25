@@ -110,11 +110,26 @@ def propostas_da_spec(spec: str) -> List[str]:
 
     saida: List[str] = []
     for linha in (spec or "").splitlines():
-        if not RE_PROPOSTA.search(linha):
+        m = RE_PROPOSTA.search(linha)
+        if not m:
             continue
+        marcador = m.group(0).strip()
         ids = _RE_ID_DECISAO.findall(linha)
-        alvo = ids[0] if ids else re.sub(r"\s+", " ", RE_PROPOSTA.sub("", linha)).strip(" |*-")[:80]
-        if alvo and alvo not in saida:
+        if ids:
+            alvo = ids[0]
+        elif ":" in marcador:
+            miolo = marcador.split(":", 1)[1].rstrip("]").split("·")[0].strip(" \"'«»")
+            alvo = re.sub(r"\s+", " ", miolo)[:80]
+        elif f"`{marcador}`" in linha:
+            # Rótulo genérico `` `[PROPOSTA — validar com PO]` `` citado entre crases (ex.: coluna «Quem decidiu» do
+            # Bloco 12 ou nota explicativa): não traz proposta própria dentro dos colchetes.
+            continue
+        elif linha.strip().startswith("|"):
+            cels = [c.strip() for c in linha.strip().strip("|").split("|")]
+            alvo = re.sub(r"\s+", " ", RE_PROPOSTA.sub("", cels[0])).strip(" `*|-")[:80] if cels else ""
+        else:
+            alvo = re.sub(r"\s+", " ", RE_PROPOSTA.sub("", linha)).strip(" |*-`")[:80]
+        if alvo and len(alvo) >= 3 and alvo not in saida:
             saida.append(alvo)
     return saida
 
@@ -206,7 +221,7 @@ def _presente(categoria: str, alvo: str, coluna: str, texto: str) -> bool:
             + "\n"
             + _secao_md(corpo, r"19\.2|19\.3|pend[êe]ncias")
         )
-        if alvo in secao_revisar:
+        if alvo.lower() in secao_revisar.lower():
             return True
         m_pq = re.fullmatch(r"PQ-0*(\d+)", alvo, re.I)
         if m_pq:
@@ -216,7 +231,25 @@ def _presente(categoria: str, alvo: str, coluna: str, texto: str) -> bool:
                     return True
             if re.search(rf"\bPQ-0*{n_alvo}\b", secao_revisar, re.I):
                 return True
-        return any(alvo in l and ("PROPOSTA" in l.upper() or "PEND-" in l.upper()) for l in corpo.splitlines())
+        if any(alvo.lower() in l.lower() and ("PROPOSTA" in l.upper() or "PEND-" in l.upper()) for l in corpo.splitlines()):
+            return True
+        pals = ca._palavras_de_assunto(alvo)
+        if pals:
+            limiar = 1 if len(pals) <= 3 else max(2, int(len(pals) * 0.5))
+            for l in secao_revisar.splitlines():
+                pals_l = ca._palavras_de_assunto(l)
+                if re.search(r"\b(?:strings?|tc-\d+)\b", l, re.I):
+                    pals_l = pals_l | {"frases", "textos", "chave"}
+                if len(pals & pals_l) >= limiar:
+                    return True
+            for l in corpo.splitlines():
+                if "PROPOSTA" in l.upper() or "PEND-" in l.upper():
+                    pals_l = ca._palavras_de_assunto(l)
+                    if re.search(r"\b(?:strings?|tc-\d+)\b", l, re.I):
+                        pals_l = pals_l | {"frases", "textos", "chave"}
+                    if len(pals & pals_l) >= limiar:
+                        return True
+        return False
     if categoria == "estado":
         # sem caixa, como o gate do PRD (`e3_voto_lacrado` no CHECK vale), e com fronteira: `E3_VOTO` não é `E3_VOTO_LACRADO`
         return bool(re.search(rf"(?<!\w){re.escape(alvo.lower())}(?!\w)", corpo.lower()))

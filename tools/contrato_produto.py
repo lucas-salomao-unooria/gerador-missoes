@@ -264,6 +264,12 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
     secao12 = secao_bloco(texto, 12) or ""
     com_etapa_no_12a = {c for l in _linhas(secao12) if _RE_ETAPA.search(l) for c in extrair_codigos(l)}
     for i, linha in enumerate(linhas2):
+        if re.search(
+            r"\(\s*fora\s+d[ae]\s+miss[ãa]o|\bfora\s+d[ae]\s+miss[ãa]o\b|\bhabilidades?\s+fora\b|\bn[ãa]o\s+reivindicad[ao]s?\b|\bn[ãa]o\s+exercitad[ao]s?\b|\bdescartad[ao]s?\b",
+            linha,
+            re.I,
+        ):
+            continue
         for c in extrair_codigos(linha):
             hab = habs.get(c)
             # no EM (sem eixo) a lista proposta de letramento faz o papel de Cultura Digital
