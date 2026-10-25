@@ -548,7 +548,6 @@
       "status": "amarelo",
       "codigos": [
         "perdido-estado-fluxo",
-        "perdido-texto_tela-copy",
         "perdido-texto_tela-prototipo"
       ]
     },
@@ -643,10 +642,8 @@
       ]
     },
     "consistencia_status": {
-      "status": "amarelo",
-      "codigos": [
-        "rotulo-divergente"
-      ]
+      "status": "aprovado",
+      "codigos": []
     },
     "prototipo_lint_status": {
       "status": "aprovado",
@@ -837,7 +834,6 @@
     "consistencia_status": {
       "status": "amarelo",
       "codigos": [
-        "rotulo-divergente",
         "texto-de-tela-reescrito"
       ]
     },

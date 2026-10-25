@@ -62,6 +62,7 @@ STATUS_KEYS = [
     "ambiente_status",
     "design_status", "prototipo_lint_status", "cobertura_telas_status", "rastreabilidade_status", "brief_escopo_status",
     "textos_chave_status", "arestas_status",
+    "miro_status",
     "manifesto_status", "evidencia_status", "evidencia_report",
     "perguntas_status", "perguntas_report",
     "juiz_perguntas_status", "juiz_perguntas_rodada",

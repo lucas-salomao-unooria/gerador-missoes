@@ -1361,8 +1361,9 @@ class EspelhoMiroAgent(BaseAgent):
 
     O board é **espelho**, nunca fonte: quem manda é o Mermaid versionado. Por isso todo
     o corpo roda sob `try/except` e, quando o Miro não responde, grava-se a folha de
-    indisponibilidade em vez de nada — artefato ausente vira achado no QA, e uma
-    integração desligada não é defeito da missão.
+    indisponibilidade em vez de nada — uma integração desligada não é defeito da missão.
+    A falta do board vai ao semáforo do design (`miro_status`, 🟡 sem bloquear; ⚪ com o
+    Miro desligado), nunca só à folha (C4, levantamento de 24/10/2026).
     """
 
     jornada_key: str = "jornada_telas"
@@ -1374,10 +1375,14 @@ class EspelhoMiroAgent(BaseAgent):
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         from config import get_settings
         from tools.miro_cliente import (
+            KEY_REPORT,
+            KEY_STATUS,
+            conferir_espelho,
             folha_de_indisponibilidade,
             montar_folha_de_links,
             motivo_de_indisponibilidade,
             publicar_diagramas,
+            relatorio_espelho,
         )
 
         state = ctx.session.state
@@ -1386,12 +1391,16 @@ class EspelhoMiroAgent(BaseAgent):
 
         jornada = str(state.get(self.jornada_key, "") or "")
         fluxo = str(state.get(self.fluxo_key, "") or "")
+        ligado = get_settings().is_miro_enabled
+        dados: Optional[Dict[str, Any]] = None
+        motivo = ""
 
-        if not get_settings().is_miro_enabled:
+        if not ligado:
             delta[self.links_key] = folha_de_indisponibilidade("MIRO_MODE=off", titulo)
             mensagem = "⚪ Miro desligado — a folha registra a ausência e a esteira segue."
         elif not (jornada or fluxo):
-            delta[self.links_key] = folha_de_indisponibilidade("jornada e fluxo vazios", titulo)
+            motivo = "jornada e fluxo vazios"
+            delta[self.links_key] = folha_de_indisponibilidade(motivo, titulo)
             mensagem = "⚠️ Nada a espelhar: jornada e fluxo não produziram diagrama."
         else:
             try:
@@ -1405,6 +1414,13 @@ class EspelhoMiroAgent(BaseAgent):
                 motivo = motivo_de_indisponibilidade(exc)
                 delta[self.links_key] = folha_de_indisponibilidade(motivo, titulo)
                 mensagem = f"⚠️ Não consegui espelhar no Miro: {motivo}"
+        # O board ausente vai ao semáforo do design (🟡; ⚪ com o Miro desligado), nunca em silêncio: na exp06ef1b
+        # (28/09/2026) o espelho falhou com os cinco gates de design 🟢 (V13, levantamento de 24/10/2026)
+        resultado = conferir_espelho(ligado, jornada, fluxo, dados=dados, motivo=motivo,
+                                     board_anterior=state.get(self.board_key))
+        relatorio = relatorio_espelho(resultado, titulo)
+        delta.update({KEY_STATUS: resultado["status"], KEY_REPORT: relatorio,
+                      f"{KEY_STATUS}_envelope": extrair_envelope(relatorio) or {}})
 
         yield Event(
             invocation_id=ctx.invocation_id,

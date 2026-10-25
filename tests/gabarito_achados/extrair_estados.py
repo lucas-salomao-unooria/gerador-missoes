@@ -1,10 +1,12 @@
 """Monta os estados do gabarito de achados a partir das sessões do bucket (só leitura sobre elas).
 
-O gabarito (`tests/gabarito_achados/test_*.py`) roda os gates determinísticos de dev sobre o estado real de cada
-execução em que o achado foi classificado — verdadeiro (V) ou falso positivo (FP) — no levantamento de deficiências de
-24/10/2026. Este script grava, por sessão, um `<missão>-<sessão>.json.xz` com as execuções dela: só as chaves que
-esses gates leem (`CHAVES`), e dos pareceres humanos só o pedido de refazer de design e dev (etapa, ação, comentário,
-data), sem conta nem assinatura. Os documentos repetem de uma execução para a outra; o xz guarda cada um uma vez.
+O gabarito (`tests/gabarito_achados/test_*.py`) roda os gates determinísticos de dev e de design sobre o estado real de
+cada execução em que o achado foi classificado — verdadeiro (V) ou falso positivo (FP) — no levantamento de deficiências
+de 24/10/2026. Este script grava, por sessão, um `<missão>-<sessão>.json.xz` com as execuções dela: só as chaves que
+esses gates leem (`CHAVES`; nas execuções de design, também `CHAVES_DESIGN`), e dos pareceres humanos só o pedido de
+refazer de design e dev (etapa, ação, comentário, data), sem conta nem assinatura. Os documentos repetem de uma execução
+para a outra; o xz guarda cada um uma vez. As execuções de design que terminaram no estado final da sessão vêm do acervo
+de regressão (`acervo:<nome>`), sem cópia aqui.
 
 Uso (a pasta é a cópia das sessões do bucket, `<sessão>/estado.json` e `<sessão>/.correcoes/<quando>-<etapa>/`):
 
@@ -16,7 +18,7 @@ import json
 import lzma
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 ESTADOS = Path(__file__).resolve().parent / "estados"
 
@@ -27,6 +29,13 @@ CHAVES = ("anexo_design_spec", "banco_conteudo", "briefing", "decisoes_do_po", "
           "fluxo_arestas", "handoff_dev", "jornada_telas", "lacunas_status_envelope", "modo_correcao",
           "notas_de_passagem", "nucleo_narrativo", "one_pager", "one_pager_po", "pareceres_humanos", "pedidos_do_po",
           "prd_final", "slug", "spec_missao", "spec_missao_gate0", "wireframes_cobertura")
+#: E o que os gates de design do gabarito leem a mais (C4, 24/10/2026): a coerência entre documentos, a matriz de
+#: rastreabilidade, as afirmações do QA e o split do D0 e do D9 refeito sobre a resposta gravada — conferido: com estas
+#: chaves, os quatro dão o mesmo resultado que com o estado inteiro. E o envelope do D9 gravado na execução, que é a
+#: evidência do achado.
+CHAVES_DESIGN = ("ambiente_simulado", "ambiente_status_envelope", "copy_strings_revisada", "documentos_travados", "one_pager_pedagogico",
+                 "prototipo_arquivo", "prototipo_relatorio", "qa_afirmacoes_status_envelope", "qa_entregaveis_report",
+                 "stitch_links")
 
 #: As 13 execuções de dev de 25/09 a 23/10/2026 (`deficiencias/dev/achados.csv`, coluna `run`): id → (missão, sessão,
 #: pasta da cópia, momento). `.correcoes/<quando>-<etapa>` é o estado que o PO tinha diante de si ao pedir o refazer.
@@ -55,12 +64,20 @@ EXECUCOES = {
 }
 
 
+#: As execuções de design de que o gabarito precisa e que não estão no acervo (`deficiencias/design/achados.csv`, coluna
+#: `execucao`): id → (missão, sessão, pasta da cópia, momento).
+EXECUCOES_DESIGN = {
+    "D01": ("exp02em1b", "60cfa7f4", "20261021-110215-session_60cfa7f4/.correcoes/20261022-120224-dev",
+            "1ª execução de design (22/10/2026 08:35), como estava quando o PO pediu refazer de dev (12:02)"),
+}
+
+
 def arquivo_da_sessao(missao: str, sessao: str) -> Path:
     return ESTADOS / f"{missao}-{sessao}.json.xz"
 
 
-def _enxuto(estado: Dict[str, Any]) -> Dict[str, Any]:
-    saida = {k: estado[k] for k in CHAVES if k in estado}
+def _enxuto(estado: Dict[str, Any], chaves: Tuple[str, ...] = CHAVES) -> Dict[str, Any]:
+    saida = {k: estado[k] for k in chaves if k in estado}
     if "pareceres_humanos" in saida:
         saida["pareceres_humanos"] = [
             {k: p.get(k) for k in ("etapa", "acao", "comentario", "quando")}
@@ -71,10 +88,12 @@ def _enxuto(estado: Dict[str, Any]) -> Dict[str, Any]:
 
 def main(raw: Path) -> None:
     por_sessao: Dict[str, Dict[str, Any]] = {}
-    for rid, (missao, sessao, pasta, momento) in EXECUCOES.items():
+    execucoes = [(rid, e, CHAVES) for rid, e in EXECUCOES.items()]
+    execucoes += [(rid, e, CHAVES + CHAVES_DESIGN) for rid, e in EXECUCOES_DESIGN.items()]
+    for rid, (missao, sessao, pasta, momento), chaves in execucoes:
         estado = json.loads((raw / pasta / "estado.json").read_text(encoding="utf-8"))
         s = por_sessao.setdefault(f"{missao}-{sessao}", {"missao": missao, "sessao": sessao, "execucoes": {}})
-        s["execucoes"][rid] = {"momento": momento, "estado": _enxuto(estado)}
+        s["execucoes"][rid] = {"momento": momento, "estado": _enxuto(estado, chaves)}
     ESTADOS.mkdir(exist_ok=True)
     for s in por_sessao.values():
         dados = json.dumps(s, ensure_ascii=False, indent=0, sort_keys=True).encode("utf-8")
