@@ -36,7 +36,7 @@ O grafo é **Mermaid**, sempre, num bloco ` ```mermaid `. Você não constrói b
 
 Para o diagrama ficar legível:
 
-- Um nó por tela ou estado, identificado pelo código da tela; nada de frase dentro do nó.
+- Um nó por tela ou estado: a tela pelo código do inventário (`E2_ALU_01`); o estado do contrato pelo nome **literal** do bloco 2 da spec (`EST_02_NAVEGAR_CHAT`, com a grafia e a caixa de lá); nada de frase dentro do nó. Nó de tela não substitui o nome do estado: a tabela de-para abaixo diz qual estado do contrato cada tela realiza.
 - A condição vai **no rótulo da aresta**: `E2 -->|escolheu salvar| E3`.
 - Estado de erro e de saída com forma ou classe própria (`classDef erro`), para saltarem à vista.
 - O ciclo de nova tentativa, quando existir, entra declarado — o teste 5 exige que todo ciclo seja intencional.
@@ -49,6 +49,8 @@ Para o diagrama ficar legível:
 **Nós — quatro tipos:** Tela (retângulo arredondado, com o ID do inventário) · Estado (retângulo menor encostado na tela: vazio, bloqueado, primeira vez, degradado, falha) · Decisão (losango — bifurcação por escolha do estudante) · Gate (retângulo de traço grosso — a plataforma trava e só a professora libera). Confundir gate com decisão é o erro que faz o dev implementar avanço automático onde a spec pede handoff.
 
 **Estados vêm da spec, não de você.** O bloco 2 nomeia os estados que viram enum no código. Estado que você precisou criar para o grafo fechar (`DEC_*` de decisão, `DEG_*` de caminho degenerado, `ST_*_LOCKED` de bloqueio) é legítimo **se estiver marcado como novo** — numa tabela "Estados não nomeados na spec", com o motivo e o bloco que o implica. Sem essa tabela, o handoff para dev leva os 14 da spec e perde os 20 seus; com ela, o `handoff-dev` sabe o que é contrato e o que é proposta. Estado novo que muda mecânica é lacuna com dono `gate-estrutural`, não nó.
+
+**Todo estado do contrato tem nome no fluxo — a seção `## De-para nó → estado do contrato (bloco 2)`.** Uma linha por nó do grafo do estudante (tela, estado de falha, espera, decisão), com o nome **literal** do estado do bloco 2 que o nó realiza, copiado da spec. Decompor continua livre (D7): três telas podem realizar o mesmo estado, e o nó de decomposição leva o estado do contrato de que ele é parte. Cada estado do bloco 2 aparece ao menos uma vez na coluna «Estado do contrato»; o estado inicial do contrato pode ser o `[*]` do diagrama. Não escreva «cobre 100% dos estados» sem a tabela: a matriz de rastreabilidade procura cada nome do bloco 2, literal, no fluxo. É desta tabela que o handoff e o PRD tiram o estado de cada tela: nas sessões de 25/10/2026, os fluxos da exp02ef1b e da exp02em1b só tinham IDs de tela (14 de 15 e 6 de 10 estados do contrato ausentes, e o da exp02em1b afirmava cobrir 100%), e o handoff da exp02em1b inventou `EST_02_NAVEGAR_PREVIA`, `EST_04_MODERACAO` e `EST_04_CENTRAL_APOIO` para telas que a spec põe dentro de `EST_02_NAVEGAR_CHAT` e `EST_04_FEED_NOTURNO`.
 
 **Decompor é livre; mudar o que o aluno faz, decide ou vê não é** (plano «Produto dono do contrato», D7). Quebrar um estado da spec em telas e estados intermediários é detalhe de design — os 55 estados novos das sessões de 23/10/2026 eram quase todos decomposição. A guarda de cada aresta do aluno, porém, é a do bloco 2 da spec: o que **Bloqueia**, o que **Ordena** e o gatilho do contrato de estados. Aresta que só deixa seguir com a resposta certa onde a spec deixa escolher (na exp02ef1b, a A20 travou a 5B em «Criança lendo» e a dimensão D3 deixou de medir), que troca o «e» de um gatilho da spec por «ou» (a A13: `Pronto` OU fim do tempo, contra «conclusão das marcações e fim do tempo»), que tira ou acrescenta opção, ou que monta mecânica que a spec não tem, não entra no grafo: siga a spec e registre a mudança em `## Propostas ao produto` como `[PROPOSTA — validar com PO: aresta <id> · o que muda para o aluno · por quê]`. Um gate confere as arestas contra o bloco 2 (`arestas_status`) e leva a guarda mudada ao PO, que decide no Refazer.
 
@@ -118,6 +120,9 @@ stateDiagram-v2
 stateDiagram-v2
   ...
 ```
+
+## De-para nó → estado do contrato (bloco 2)
+| Nó do fluxo | Tela (ID do inventário) | Estado do contrato (bloco 2, nome literal) |
 
 ## Lista de arestas (o que o dev implementa)
 | # | De | Para | Condição completa | Tipo (principal·alternativo·automático·erro) | Reversível? | Responsável (estudante·professora·plataforma) |
