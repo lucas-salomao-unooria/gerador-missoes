@@ -137,7 +137,51 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
         novos["montagem_pedagogico_status"] = pedagogico.validar(state)
 
     # PR 7: os textos-chave na copy e o fluxo × bloco 2 da spec
-    from tools import arestas, textos_chave
+    from tools import afirmacoes, arestas, consistencia, conteudo_aprovado, rastreabilidade, telas, textos_chave
+    from pipeline.artifacts import caminhos_de_artefato
+
+    spec_c = state.get("spec_missao_consolidada") or spec
+    if spec_gate0 and one_pager:
+        r_cas = conteudo_aprovado.validar_spec(spec_gate0, one_pager)
+        conflitos = consistencia.glossario_contra_o_aprovado(spec_gate0, one_pager)
+        if conflitos:
+            r_cas = {**r_cas, "status": "bloqueado", "achados": list(r_cas.get("achados", [])) + conflitos}
+        novos["conteudo_aprovado_spec_status"] = r_cas
+    if spec_c and one_pager and state.get("spec_missao_consolidada"):
+        novos["conteudo_aprovado_spec_design_status"] = conteudo_aprovado.validar_spec(spec_c, one_pager)
+    if state.get("one_pager_resumido") and one_pager:
+        novos["conteudo_aprovado_resumido_status"] = conteudo_aprovado.validar_resumido(
+            str(state["one_pager_resumido"]), spec_gate0, one_pager
+        )
+    if state.get("one_pager_pedagogico") and one_pager:
+        novos["conteudo_aprovado_pedagogico_status"] = conteudo_aprovado.validar_pedagogico(
+            str(state["one_pager_pedagogico"]), spec_c, one_pager, caminhos_de_artefato()
+        )
+    if prd and one_pager:
+        novos["conteudo_aprovado_prd_status"] = conteudo_aprovado.validar_prd(
+            prd, spec_c, one_pager, caminhos_de_artefato()
+        )
+    if state.get("prototipo_html_arquivo") or state.get("jornada_telas"):
+        r_cons = consistencia.validar_estado(state)
+        r_cons["achados"] = list(r_cons.get("achados", [])) + conteudo_aprovado.validar_copy(
+            str(state.get("copy_strings_revisada") or ""), one_pager
+        ) + conteudo_aprovado.validar_literais_design(
+            str(state.get("camada_caa") or ""), str(state.get("prototipo_html_arquivo") or ""), one_pager
+        )
+        if any(a.get("severidade") == "bloqueio" for a in r_cons["achados"]):
+            r_cons["status"] = "bloqueado"
+        elif r_cons["achados"] and r_cons.get("status") == "aprovado":
+            r_cons["status"] = "amarelo"
+        novos["consistencia_status"] = r_cons
+        novos["cobertura_telas_status"] = telas.cobertura(state)
+        novos["rastreabilidade_status"] = rastreabilidade.matriz(state)
+    if state.get("qa_design_report"):
+        novos["qa_afirmacoes_status"] = afirmacoes.conferir_qa(
+            str(state["qa_design_report"]),
+            str(state.get("stitch_links") or ""),
+            str(state.get("jornada_telas") or ""),
+            str(state.get("prototipo_html_arquivo") or ""),
+        )
 
     if state.get("copy_strings_revisada"):
         novos["textos_chave_status"] = textos_chave.conferir_copy(str(state["copy_strings_revisada"]),
@@ -150,9 +194,13 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
 
         novos["ambiente_status"] = ambiente.reavaliar_d9(state)
 
+    from tools.decisoes import ha_registro_do_po
+
     novos["contrato_produto_status"] = contrato_produto.validar_one_pager(
         one_pager, state.get("nucleo_narrativo", "") or "", state.get("briefing", "") or "",
+        one_pager_po=state.get("one_pager_po", "") or "",
         decisoes_do_po=state.get("decisoes_do_po") or [],
+        registro_do_po=ha_registro_do_po(state),
     )
     return novos
 

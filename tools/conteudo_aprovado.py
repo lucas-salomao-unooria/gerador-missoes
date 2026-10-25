@@ -939,6 +939,13 @@ def literais_parafraseados(documento: str, one_pager: str) -> List[Tuple[str, st
     chave = tk.extrair(one_pager)
     alvos += [t.texto for t in chave if t.tipo in (tk.TELA, tk.CANAL_B, tk.ROTEIRO) and t.texto not in alvos]
     alvos += [o for t in chave if t.tipo == tk.OPCOES for o in t.opcoes if o not in alvos]
+    # Decisão 2: todas as variantes aprovadas na mesma etapa (`tk.variantes_de_texto_chave`) são textos legítimos do
+    # one-pager — citar uma variante aprovada não é parafrasear a outra
+    grupos_por_norm: Dict[str, List[str]] = {}
+    for a_tc, b_tc, _ in tk.variantes_de_texto_chave(chave):
+        na, nb = _norm(a_tc.texto), _norm(b_tc.texto)
+        grupos_por_norm.setdefault(na, [a_tc.texto]).append(b_tc.texto)
+        grupos_por_norm.setdefault(nb, [b_tc.texto]).append(a_tc.texto)
     alvos_norm = {_norm(x) for x in alvos if _norm(x)}
     citados = list(dict.fromkeys(
         m.group(1).strip() for m in _RE_ENTRE_ASPAS.finditer(documento or "")
@@ -949,8 +956,9 @@ def literais_parafraseados(documento: str, one_pager: str) -> List[Tuple[str, st
         return []
     saida: List[Tuple[str, str]] = []
     for alvo in alvos:
-        if not literais_ausentes(documento, [alvo]):
-            continue  # está literal
+        grupo_alvo = grupos_por_norm.get(_norm(alvo), [alvo])
+        if any(not literais_ausentes(documento, [v]) for v in grupo_alvo):
+            continue  # está literal (ou uma variante aprovada da mesma etapa está literal)
         a = _norm(alvo)
         melhor = max(citados, key=lambda c: difflib.SequenceMatcher(None, a, _norm(c), autojunk=False).ratio())
         # rótulo curto parece com outro rótulo curto por acaso («Galeria Oculta da Mostra» × «Acessar Feed da

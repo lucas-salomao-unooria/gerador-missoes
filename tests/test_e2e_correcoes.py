@@ -223,3 +223,16 @@ def test_g25_afirmacoes_parcial_do_prototipo_nao_acusa_inventario():
     qa = "No teste visual, 8 de 9 telas renderizam sem corte no protótipo."
     res = afirmacoes.conferir_qa(qa, jornada=jornada, prototipo_html=proto)
     assert not [a for a in res["achados"] if a["codigo"] == "afirmacao-inventario"]
+
+
+def test_decisao2_literais_parafraseados_respeita_variantes_aprovadas():
+    """Decisão 2: duas variantes quase iguais da mesma etapa no one-pager não se acusam como paráfrase em `literais_parafraseados` nem `textos_chave_reescritos`."""
+    one_pager = (
+        "## 4. Jornada\n"
+        "- **Etapa 2 — Navegar:** O aluno recebe a instrução \"Marque no pátio o que ficou fora da sua foto.\"\n"
+        "- Na variante da biblioteca, lê \"Marque na biblioteca o que ficou fora da sua foto.\"\n"
+    )
+    prd = "Na tela E2-ALU-01 exibimos o enunciado \"Marque na biblioteca o que ficou fora da sua foto.\"."
+    assert conteudo_aprovado.literais_parafraseados(prd, one_pager) == []
+    assert montagem.textos_chave_reescritos(prd, one_pager) == []
+
