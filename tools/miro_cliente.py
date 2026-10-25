@@ -272,8 +272,9 @@ def publicar_diagramas(
     # O mapa novo substitui o antigo: o servidor reemite o id de cada elemento que
     # continua no board, e some com o de quem saiu.
     widgets = ids_dos_widgets(resposta.get("result_svg")) or widgets
-    for falha in resposta.get("failed_items") or []:
-        ressalvas.append(f"o Miro recusou um item: {str(falha)[:160]}")
+    recusados = list(resposta.get("failed_items") or [])
+    for falha in recusados:
+        ressalvas.append(f"o Miro recusou um item: {sem_segredo(str(falha))[:160]}")
 
     return {
         "board_id": id_do_board(board_url),
@@ -282,6 +283,7 @@ def publicar_diagramas(
         "widgets": widgets,
         "diagramas": [{"id": d["id"], "titulo": d["titulo"]} for d in diagramas],
         "ressalvas": ressalvas,
+        "recusados": len(recusados),
     }
 
 
@@ -319,20 +321,40 @@ def montar_folha_de_links(dados: Dict[str, Any], titulo: str = "") -> str:
 
 
 def folha_de_indisponibilidade(motivo: str, titulo: str = "") -> str:
-    """Grava-se isto mesmo com o Miro fora: artefato ausente vira achado no QA."""
+    """Grava-se isto mesmo com o Miro fora: a folha não fica ausente, e a falta do board vai ao semáforo do design."""
     cabecalho = f"# Board no Miro — {titulo}".rstrip(" —")
     return (
         f"{cabecalho}\n\n"
-        f"**MIRO: indisponível — {motivo}.** A fonte dos diagramas continua sendo o "
+        f"**MIRO: indisponível — {sem_segredo(motivo)}.** A fonte dos diagramas continua sendo o "
         "Mermaid em `design/09-diagramas.html`, com a jornada em "
         "`design/02-jornada-telas.md` e o fluxo em `design/03-fluxo-arestas.md`.\n\n"
         "Isto **não é um achado de QA**: o espelho no Miro é conveniência, e a esteira "
-        "entrega a missão sem ele.\n"
+        "entrega a missão sem ele. A falta do board aparece no semáforo do design, no gate "
+        f"«{ROTULO_GATE}», sem bloquear.\n"
     )
 
 
+#: O que, numa mensagem de erro, pode ser credencial: o cabeçalho `Bearer …`, `access_token=…`, um JWT, um segredo longo.
+_RE_SEGREDO = re.compile(
+    r"(?i)\bbearer\s+[^\s'\",;]+|"
+    r"\b(?:access_token|refresh_token|id_token|client_secret|client_id|code_verifier|authorization|token|code)"
+    r"(\s*[=:]\s*[\"']?)(?:bearer\s+)?[^\s'\",;&}]+|"
+    r"\b[\w-]{8,}\.[\w-]{8,}\.[\w-]{8,}\b|\b[A-Za-z0-9_\-]{32,}\b")
+
+
+def sem_segredo(texto: str) -> str:
+    """A mensagem sem o que pode ser credencial do Miro: ela vai à folha, ao relatório do gate e ao cartão do parecer."""
+    def troca(m: "re.Match[str]") -> str:
+        if m.group(1) is not None:
+            nome = m.group(0)[: m.start(1) - m.start(0)]
+            return f"{nome}{m.group(1)}[oculto]"
+        return "[oculto]"
+
+    return _RE_SEGREDO.sub(troca, texto or "")
+
+
 def motivo_de_indisponibilidade(exc: BaseException) -> str:
-    """Traduz a falha para uma linha que o relatório pode mostrar a um humano."""
+    """Traduz a falha para uma linha que o relatório pode mostrar a um humano, sem credencial."""
     if isinstance(exc, httpx.HTTPStatusError):
         codigo = exc.response.status_code
         if codigo == 401:
@@ -347,4 +369,69 @@ def motivo_de_indisponibilidade(exc: BaseException) -> str:
     if isinstance(exc, httpx.HTTPError):
         return "falha de rede ao falar com o Miro"
     texto = str(exc).strip() or exc.__class__.__name__
-    return texto[:160]
+    return sem_segredo(texto)[:160]
+
+
+# ----------------------------------------------------------------------- gate
+#: O veredito do espelho, no semáforo do design. Na exp06ef1b (727a3c2d, 28/09/2026) o espelho falhou, os cinco gates de
+#: design ficaram 🟢 e o PO só soube ao abrir a missão («Fluxos não foram gerados, algum problema na ponte mermaid-miro»):
+#: o único conserto foi refazer o design inteiro, 1.698 s (V13 do levantamento de deficiências de design, 24/10/2026).
+#: O board é espelho, nunca fonte: a falta dele é 🟡 — não impede o de acordo nem gera ticket a agente de design —, e o
+#: Miro desligado por configuração (`MIRO_MODE=off`) é ⚪, nunca 🟢.
+KEY_STATUS = "miro_status"
+KEY_REPORT = "miro_report"
+ROTULO_GATE = "Espelho dos diagramas no Miro"
+AGENTE = "espelho-miro"
+DESLIGADO = "desligado"
+
+
+def conferir_espelho(ligado: bool, jornada: str = "", fluxo: str = "", dados: Optional[Dict[str, Any]] = None,
+                     motivo: str = "", board_anterior: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """`{status, achados}` do espelho: `aprovado` com o board completo, `amarelo` com o board ausente ou incompleto e
+    `desligado` com o Miro desligado por configuração. `dados` é o retorno de `publicar_diagramas`; `motivo`, o da falha
+    (`motivo_de_indisponibilidade`)."""
+    if not ligado:
+        return {"status": DESLIGADO, "achados": []}
+    achados: List[Dict[str, Any]] = []
+    anterior = str((board_anterior or {}).get("url_board") or "")
+    if dados is None:
+        resumo = (f"O board do Miro não foi {'atualizado' if anterior else 'criado'}: {sem_segredo(motivo or 'sem motivo')}. "
+                  + (f"O board da execução anterior ({anterior}) ficou como estava e pode não ter os diagramas desta. "
+                     if anterior else "A etapa saiu sem board. ")
+                  + "Os diagramas da jornada e do fluxo continuam em `design/09-diagramas.html`, que é a fonte. Para ter o "
+                    "board, reconecte o Miro (barra lateral) se a conexão caiu e rode o design de novo.")
+        achados.append({"severidade": "atencao", "codigo": "miro-indisponivel", "etapa": "design",
+                        "agente_responsavel": None, "classe": "pendencia-externa", "resumo": resumo})
+    else:
+        espelhados = {d.get("id") for d in dados.get("diagramas") or []}
+        faltam = [nome for nome, doc in (("jornada", jornada), ("fluxo", fluxo))
+                  if str(doc or "").strip() and nome not in espelhados]
+        recusados = int(dados.get("recusados") or 0)
+        if faltam or recusados:
+            partes = ([f"sem o diagrama de {' e de '.join(faltam)}"] if faltam else []) + (
+                [f"{recusados} item(ns) recusado(s) pelo Miro"] if recusados else [])
+            achados.append({
+                "severidade": "atencao", "codigo": "miro-board-incompleto", "etapa": "design", "agente_responsavel": None,
+                "classe": "pendencia-externa",
+                "resumo": (f"O board do Miro ({dados.get('url_board') or '—'}) saiu incompleto: {'; '.join(partes)}. "
+                           "Os diagramas continuam em `design/09-diagramas.html`; as ressalvas estão em "
+                           "`design/11-miro-boards.md`.")})
+    return {"status": "amarelo" if achados else "aprovado", "achados": achados}
+
+
+def relatorio_espelho(resultado: Dict[str, Any], missao: str = "") -> str:
+    """O relatório do gate, com o envelope JSON que o dossiê e o cartão do parecer leem."""
+    icone = {"aprovado": "🟢", "amarelo": "🟡", DESLIGADO: "⚪"}.get(resultado["status"], "⚪")
+    linhas = [f"# {ROTULO_GATE}{f' — {missao}' if missao else ''}", "",
+              f"**Veredito: {icone}** · o board é espelho do Mermaid da jornada e do fluxo; a falta dele não bloqueia.",
+              ""]
+    if resultado["status"] == DESLIGADO:
+        linhas.append("- O Miro está desligado nesta instalação (`MIRO_MODE=off`): não há board, e os diagramas ficam em "
+                      "`design/09-diagramas.html`.")
+    elif not resultado["achados"]:
+        linhas.append("- Board publicado com os diagramas da jornada e do fluxo.")
+    for a in resultado["achados"]:
+        linhas.append(f"- ⚠️ `{a['codigo']}` — {a['resumo']}")
+    env = {"agente": AGENTE, "missao": missao, "status": resultado["status"], "achados": resultado["achados"],
+           "precisa_humano": False}
+    return "\n".join(linhas) + "\n\n```json\n" + json.dumps(env, ensure_ascii=False, indent=1) + "\n```\n"

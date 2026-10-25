@@ -26,6 +26,7 @@ humana: quem decide é o PO, não o agente.
 """
 from __future__ import annotations
 
+import functools
 import json
 import re
 import unicodedata
@@ -381,6 +382,64 @@ def sem_relatos_de_gate(texto: str) -> str:
     return "\n".join(saida)
 
 
+#: O texto que a esteira escreve em volta do pedido de refazer (`pipeline.reexecucao.PedidoCorrecao.como_markdown`): o
+#: cabeçalho «Esta execução refaz a etapa…», o título «Pedido, na íntegra» com o «>» de cada linha do PO, a divisão da
+#: triagem, os textos-chave citados, o material anexado e as três regras de «Como agir».
+_RE_PREAMBULO_DA_ESTEIRA = re.compile(r"Esta execução refaz a etapa `[^`\n]*`.*?(?:não de uma folha em branco\.|\n\s*\n|\Z)",
+                                      re.S)
+#: O título e as linhas citadas logo abaixo dele, que são o pedido do PO: a primeira linha sem «>» já não é do bloco.
+_RE_PEDIDO_NA_INTEGRA = re.compile(
+    r"^#{2,4}[ \t]*Pedido, na íntegra[ \t]*\n((?:[ \t]*(?:>[^\n]*)?\n)*(?:[ \t]*>[^\n]*)?)", re.M)
+_RE_TITULO = re.compile(r"^#{1,3}[ \t]+\S", re.M)
+_RE_MATERIAL_ANEXADO = re.compile(r"^#{2,4}[ \t]*Material anexado ao pedido[ \t]*$", re.M)
+_RE_TITULO_COMO_AGIR = re.compile(r"^#{2,4}[ \t]*Como agir[ \t]*$", re.M)
+
+
+def _plana(linha: str) -> str:
+    """A linha sem negrito e com espaço único: a regra copiada da tela perde os `**`."""
+    return re.sub(r"[*\s]+", " ", linha or "").strip()
+
+
+@functools.lru_cache(maxsize=1)
+def _blocos_da_esteira() -> Tuple["re.Pattern[str]", frozenset]:
+    """`(blocos com título que são da esteira, regras de «Como agir» planas)`, lidos do próprio `como_markdown`: se a
+    esteira mudar o texto, a limpeza acompanha."""
+    from pipeline.reexecucao import PedidoCorrecao
+    from tools.textos_chave import TITULO_CITADOS
+
+    titulos = "|".join(re.escape(t) for t in ("Divisão do pedido pela triagem", TITULO_CITADOS))
+    blocos = re.compile(rf"^#{{2,4}}[ \t]*(?:{titulos})[ \t]*\n.*?(?=^#{{1,3}}[ \t]+\S|\Z)", re.S | re.M)
+    modelo = PedidoCorrecao(texto="-").como_markdown("produto")
+    regras = frozenset(_plana(l) for l in _RE_TITULO_COMO_AGIR.split(modelo, 1)[-1].splitlines() if l.strip())
+    return blocos, regras
+
+
+def sem_texto_da_esteira(texto: str) -> str:
+    """O pedido sem o texto que a esteira escreve em volta dele no refazer.
+
+    Na exp06ef1b (727a3c2d, 08/10/2026 11:08) o cabeçalho «Esta execução refaz a etapa `produto`… a pedido de uma
+    pessoa» entrou no checklist como item do PO e saiu 🔴 duas vezes, no núcleo (`sem-prova`) e no fim de produto
+    (`pedido-violado`). A fidelidade passou a ler só o «Pedido, na íntegra» do pedido corrente (`texto_do_pedido`, 84354c2,
+    08/10 12:27); aqui o mesmo vale para qualquer pedido — inclusive o markdown do refazer que o PO cola num pedido novo.
+
+    Saem só os blocos fixos da esteira; o que o PO escreve antes ou depois deles fica. Até a revisão do PR #80
+    (24/10/2026) o corte ia do «Pedido, na íntegra» e do «Como agir» até o fim, e os itens novos que o PO escrevia depois
+    do markdown colado sumiam do checklist."""
+    blocos, regras = _blocos_da_esteira()
+    t = _RE_PREAMBULO_DA_ESTEIRA.sub("", texto or "")
+    t = _RE_PEDIDO_NA_INTEGRA.sub(
+        lambda m: "\n".join(re.sub(r"^\s*>\s?", "", l) for l in m.group(1).splitlines()) + "\n", t)
+    t = blocos.sub("", t)
+    m = _RE_MATERIAL_ANEXADO.search(t)
+    while m:
+        # o anexo pode ter títulos próprios: o bloco vai até o «Como agir» que o segue e, sem ele, até o próximo título
+        fim = _RE_TITULO_COMO_AGIR.search(t, m.end()) or _RE_TITULO.search(t, m.end())
+        t = t[:m.start()] + (t[fim.start():] if fim else "")
+        m = _RE_MATERIAL_ANEXADO.search(t, m.start())
+    linhas = [l for l in t.splitlines() if not _RE_TITULO_COMO_AGIR.match(l) and _plana(l) not in regras]
+    return "\n".join(linhas).strip()
+
+
 def montar_checklist(pedidos: List[Tuple[str, str]], briefing: str) -> List[Dict[str, str]]:
     """`pedidos` = [(origem, texto)], do mais antigo ao mais novo. Ids F1…Fn, sem repetição.
 
@@ -389,7 +448,7 @@ def montar_checklist(pedidos: List[Tuple[str, str]], briefing: str) -> List[Dict
     """
     brutos: List[Dict[str, str]] = []
     for origem, texto in reversed(pedidos):
-        brutos += itens_do_pedido(sem_relatos_de_gate(texto), origem)
+        brutos += itens_do_pedido(sem_relatos_de_gate(sem_texto_da_esteira(texto)), origem)
     brutos += itens_do_briefing(briefing)
     vistos, unicos = set(), []
     for tipo, teto in PRIORIDADE:

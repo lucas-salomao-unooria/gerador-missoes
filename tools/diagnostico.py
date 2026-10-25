@@ -52,6 +52,8 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "textos_chave_status", "rotulo": "Textos-chave na copy", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "arestas_status", "rotulo": "Fluxo e telas × bloco 2 da spec", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "qa_afirmacoes_status", "rotulo": "Afirmações do QA conferidas", "etapa": "design", "rodada": "qa_design_rodada"},
+    # o board ausente não fica em silêncio (V13, exp06ef1b): 🟡 sem bloquear, ⚪ com o Miro desligado (C4, 24/10/2026)
+    {"status": "miro_status", "rotulo": "Espelho dos diagramas no Miro", "etapa": "design", "rodada": None},
     {"status": "design_status", "rotulo": "QA de entregáveis", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "rastro_design_status", "rotulo": "Rastro de lacunas do design", "etapa": "design", "rodada": None},
     {"status": "manifesto_status", "rotulo": "Ficha do manifesto", "etapa": "produto", "rodada": "spec_rodada"},

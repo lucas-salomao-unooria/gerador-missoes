@@ -118,15 +118,22 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         gates["conteudo_aprovado_spec_status"] = _extrair_status_e_codigos(r_cas)
 
     if one_pager:
+        from tools.decisoes import ha_registro_do_po
+
+        # o registro do PO, como o A024 o passa (C3, 24/10/2026): sem ele, toda atribuição ao PO era ⛔ aqui e ⚠️ na esteira
         gates["contrato_produto_status"] = _extrair_status_e_codigos(
             contrato_produto.validar_one_pager(one_pager, nucleo=nucleo, briefing=briefing, one_pager_po=one_pager_po,
-                                               decisoes_do_po=state.get("decisoes_do_po") or [])
+                                               decisoes_do_po=state.get("decisoes_do_po") or [],
+                                               registro_do_po=ha_registro_do_po(state))
         )
         # os comitês pedagógicos (15/10/2026): o §12a e a conta da virada conferidos sobre o one-pager
         gates["evidencia_one_pager_status"] = _extrair_status_e_codigos(evidencia.conferir_one_pager(one_pager))
         gates["mecanica_one_pager_status"] = _extrair_status_e_codigos(mecanica.validar(one_pager))
     if nucleo:
         gates["mecanica_status"] = _extrair_status_e_codigos(mecanica.validar(nucleo))
+    # C3 (24/10/2026): a cobertura conceitual com o material da sessão, e os juízes de produto e a banca do fim de produto
+    # recontados em código sobre o relatório que a execução gravou
+    gates.update(_produto_recontado(state))
     if one_pager_res:
         gates["conteudo_aprovado_resumido_status"] = _extrair_status_e_codigos(
             conteudo_aprovado.validar_resumido(one_pager_res, spec, one_pager)
@@ -240,6 +247,41 @@ _FIDELIDADES = (
     ("fidelidade_dev_status", "juiz_fidelidade_dev_saida", "interpretacao_fidelidade_dev_saida",
      ("handoff_dev", "brief_assets", "banco_conteudo", "prd_final"), ("dev",)),
 )
+
+
+#: Os juízes de LLM de produto que o `EnvelopeGateAgent` reconta (`tools/juizes_produto.py`): relatório, status e se a
+#: proposta aberta vai à lista do de acordo.
+_JUIZES_DE_PRODUTO = (
+    ("avaliacao_pedagogica_report", "avaliacao_status", False),
+    ("experiencia_aluno_report", "experiencia_status", False),
+    ("gate_final_report", "gate_final_status", True),
+)
+
+
+def _produto_recontado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """O que o C3 mudou em produto, sobre o que a execução gravou: a cobertura conceitual (o mapa contra o material da
+    sessão), os juízes recontados e a banca do fim de produto consolidada com o escopo da posição."""
+    from agents.callbacks import extrair_envelope
+    from tools import banca as bnc
+    from tools import juizes_produto, profundidade
+    from tools.citacoes import texto_dos_documentos
+
+    saida: Dict[str, Dict[str, Any]] = {}
+    nucleo, mapa = str(state.get("nucleo_narrativo") or ""), str(state.get("mapa_conceitual") or "")
+    if nucleo.strip() and mapa.strip():
+        saida["cobertura_conceitual"] = _extrair_status_e_codigos(
+            profundidade.validar_cobertura(nucleo, mapa, profundidade.material_da_sessao(state)))
+    for relatorio, chave, contrato in _JUIZES_DE_PRODUTO:
+        if str(state.get(relatorio) or "").strip():
+            saida[chave] = _extrair_status_e_codigos(
+                juizes_produto.status_recontado(str(state[relatorio]), state, contrato))
+    fontes = ("banca_produto_narrativa", "banca_produto_pedagogia")
+    if any(str(state.get(f) or "").strip() for f in fontes):
+        resultado = bnc.consolidar({f: extrair_envelope(str(state.get(f) or "")) for f in fontes},
+                                   texto_dos_documentos(state, bnc.DOCUMENTOS_DA_BANCA))
+        saida["banca_produto_status"] = {"status": resultado["status"], "codigos": sorted(
+            {str(a.get("id") or a.get("codigo") or "?") for a in resultado["achados"] if isinstance(a, dict)})}
+    return saida
 
 
 def _fidelidades(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:

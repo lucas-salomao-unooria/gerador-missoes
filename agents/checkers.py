@@ -141,12 +141,27 @@ class EnvelopeGateAgent(BaseAgent):
     #: Os documentos que o gate avalia (chaves do estado). Com eles, a citação de cada achado bloqueante é conferida
     #: (`tools/citacoes.py`): a que não existe rebaixa o achado, e se todos os bloqueios caem, o veredito vira 🟡.
     documentos: List[str] = Field(default_factory=list)
+    #: Juiz de produto recontado em código (`tools/juizes_produto.py`): a ressalva que diz que o PO decidiu continua
+    #: contando, marcada «a conferir» com a pista de onde a decisão parece estar (exp06ef1b, 08/10/2026: os 29 min que o PO
+    #: aceitou voltavam em três juízes; a 3ª revisão do PR #80, 25/10/2026, parou de tirá-la da contagem).
+    recontar_decisoes_do_po: bool = False
+    #: Com a recontagem: o `decisao_humana` que só fala das propostas e parâmetros abertos vai à lista do de acordo de
+    #: produto (PR 3) em vez de rebaixar o gate final — 🟡 em 15 de 15 sessões por construção (levantamento de 24/10).
+    contrato_no_de_acordo: bool = False
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         state = ctx.session.state
         relatorio = str(state.get(self.report_key, "") or "")
         envelope = extrair_envelope(relatorio)
+        nota_recontagem = ""
+        if self.recontar_decisoes_do_po and envelope:
+            from tools import juizes_produto
+
+            novo, nota_recontagem = juizes_produto.recontar(envelope, dict(state), self.contrato_no_de_acordo)
+            if nota_recontagem:
+                envelope = novo
+                relatorio += nota_recontagem + "\n\n```json\n" + json.dumps(envelope, ensure_ascii=False) + "\n```\n"
         status = inferir_status(relatorio, envelope)
         nota_citacao = ""
         if self.documentos and envelope and isinstance(envelope.get("achados"), list) and status == STATUS_BLOQUEADO:
@@ -179,7 +194,7 @@ class EnvelopeGateAgent(BaseAgent):
         # cheios de amarelo. O que o time lia era um verde que o juiz não deu.
         registrado = STATUS_BLOQUEADO if truncado else status_registrado(relatorio, envelope)
         delta = {self.status_key: registrado, f"{self.status_key}_envelope": envelope or {}}
-        if nota_citacao:
+        if nota_citacao or nota_recontagem:
             delta[self.report_key] = relatorio
         if self.round_key:
             delta[self.round_key] = rodada
@@ -1361,8 +1376,9 @@ class EspelhoMiroAgent(BaseAgent):
 
     O board é **espelho**, nunca fonte: quem manda é o Mermaid versionado. Por isso todo
     o corpo roda sob `try/except` e, quando o Miro não responde, grava-se a folha de
-    indisponibilidade em vez de nada — artefato ausente vira achado no QA, e uma
-    integração desligada não é defeito da missão.
+    indisponibilidade em vez de nada — uma integração desligada não é defeito da missão.
+    A falta do board vai ao semáforo do design (`miro_status`, 🟡 sem bloquear; ⚪ com o
+    Miro desligado), nunca só à folha (C4, levantamento de 24/10/2026).
     """
 
     jornada_key: str = "jornada_telas"
@@ -1374,10 +1390,14 @@ class EspelhoMiroAgent(BaseAgent):
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         from config import get_settings
         from tools.miro_cliente import (
+            KEY_REPORT,
+            KEY_STATUS,
+            conferir_espelho,
             folha_de_indisponibilidade,
             montar_folha_de_links,
             motivo_de_indisponibilidade,
             publicar_diagramas,
+            relatorio_espelho,
         )
 
         state = ctx.session.state
@@ -1386,12 +1406,16 @@ class EspelhoMiroAgent(BaseAgent):
 
         jornada = str(state.get(self.jornada_key, "") or "")
         fluxo = str(state.get(self.fluxo_key, "") or "")
+        ligado = get_settings().is_miro_enabled
+        dados: Optional[Dict[str, Any]] = None
+        motivo = ""
 
-        if not get_settings().is_miro_enabled:
+        if not ligado:
             delta[self.links_key] = folha_de_indisponibilidade("MIRO_MODE=off", titulo)
             mensagem = "⚪ Miro desligado — a folha registra a ausência e a esteira segue."
         elif not (jornada or fluxo):
-            delta[self.links_key] = folha_de_indisponibilidade("jornada e fluxo vazios", titulo)
+            motivo = "jornada e fluxo vazios"
+            delta[self.links_key] = folha_de_indisponibilidade(motivo, titulo)
             mensagem = "⚠️ Nada a espelhar: jornada e fluxo não produziram diagrama."
         else:
             try:
@@ -1405,6 +1429,13 @@ class EspelhoMiroAgent(BaseAgent):
                 motivo = motivo_de_indisponibilidade(exc)
                 delta[self.links_key] = folha_de_indisponibilidade(motivo, titulo)
                 mensagem = f"⚠️ Não consegui espelhar no Miro: {motivo}"
+        # O board ausente vai ao semáforo do design (🟡; ⚪ com o Miro desligado), nunca em silêncio: na exp06ef1b
+        # (28/09/2026) o espelho falhou com os cinco gates de design 🟢 (V13, levantamento de 24/10/2026)
+        resultado = conferir_espelho(ligado, jornada, fluxo, dados=dados, motivo=motivo,
+                                     board_anterior=state.get(self.board_key))
+        relatorio = relatorio_espelho(resultado, titulo)
+        delta.update({KEY_STATUS: resultado["status"], KEY_REPORT: relatorio,
+                      f"{KEY_STATUS}_envelope": extrair_envelope(relatorio) or {}})
 
         yield Event(
             invocation_id=ctx.invocation_id,
@@ -3241,8 +3272,11 @@ class CoberturaConceitualAgent(BaseAgent):
 
         state = ctx.session.state
         nucleo = str(state.get("nucleo_narrativo", "") or "")
-        resultado = prof.validar_cobertura(nucleo, str(state.get("mapa_conceitual", "") or ""),
-                                           str(state.get("material_anexado", "") or ""))
+        mapa = str(state.get("mapa_conceitual", "") or "")
+        # o material que o PO colou num pedido ou parecer também é material (exp04ef1b, 25/09/2026)
+        material = "\n\n".join(m for m in (str(state.get("material_anexado", "") or ""), prof.material_do_po(dict(state)))
+                               if m.strip())
+        resultado = prof.validar_cobertura(nucleo, mapa, material)
         relatorio = prof.relatorio_cobertura(resultado, extrair_slug(nucleo) or "")
         bloqueios = [a for a in resultado["achados"] if a["severidade"] == "bloqueio"]
         icone = {"aprovado": "✅", "amarelo": "🟡", "bloqueado": "⛔"}[resultado["status"]]
