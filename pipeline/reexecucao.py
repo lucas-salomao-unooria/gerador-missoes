@@ -585,8 +585,8 @@ def base_do_pedagogico_vencida(estado: Dict[str, Any]) -> bool:
     base, o redator escreve do zero sobre o contrato de agora, como nas outras missões sem pedagógico. A outra saída —
     conservar a base e calcular as mudanças do pedagógico contra o retrato do dev (`conteudo_aprovado_base_dev`) — ficou
     de fora: pedia um aviso de mudanças só do pedagógico no prompt de todos os autores, e a base seria ainda o texto do
-    dev, sem os subtítulos da esteira; nas missões do acervo que ainda têm o pedagógico do dev, o one-pager não mudou
-    depois dele.
+    dev, sem os subtítulos da esteira; nas três missões do acervo com o pedagógico e o retrato do dev (exp02ef1b,
+    exp06ef1b e exp06ef1b-53e011b6), o one-pager não mudou depois dele.
 
     Sem documento de design no estado, a base é de um refazer de produto à espera do *Iniciar* (o pedagógico que o design
     gerou, ou o do dev numa sessão anterior): continua valendo."""
