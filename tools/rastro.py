@@ -1370,6 +1370,32 @@ def relatorio_telemetria(resultado: Dict[str, Any], missao: str = "", rodada: in
 #: Requisitos que uma única tarefa pode cobrir antes de deixar de ser tarefa. Convenção de
 #: produto para forçar decomposição — não há achado de literatura atrás deste número.
 TETO_RF_POR_TAREFA = 6
+#: A suíte de ponta a ponta percorre a jornada inteira: cobrir todos os RFs é a definição dela, não falta de
+#: decomposição. Nas 13 execuções de dev de 25/09 a 23/10/2026 o `tarefa-nao-atomica` só acusou suíte E2E
+#: («T-013 | Implementar suíte de testes de ponta a ponta (e2e Playwright) | RF-001..RF-013», exp02em1b).
+#: A descrição é a suíte: começa por «suíte» ou «testes», com o verbo antes ou não («Implementar suíte de testes de
+#: ponta a ponta», «Suíte E2E automatizada…»), e diz que é de ponta a ponta.
+_RE_TAREFA_E_A_SUITE = re.compile(r"^[*_`\s]*(?:(?:escrever|construir|implementar|criar|montar|desenvolver)\s+"
+                                  r"(?:a\s+|as\s+|os\s+|uma\s+)?)?(?:su[íi]te|testes?)\b", re.I)
+_RE_E2E = re.compile(r"\be2e\b|ponta a ponta|end[- ]to[- ]end|playwright", re.I)
+#: E não implementa também telas, módulo ou serviço: «Implementar todas as telas do aluno e testes e2e» não começa pela
+#: suíte, e «Testes e2e e as telas do aluno» implementa as telas — continuam cobradas (revisão do PR #77, 24/10/2026).
+_RE_IMPLEMENTA_TAMBEM = re.compile(
+    r"(?:\b(?:implement\w*|constru\w*|cri(?:ar|a|e)|desenvolv\w*|e)\b|\+)\s+(?:\w+\s+){0,3}?"
+    r"(?:telas?|m[óo]dulos?|servi[çc]os?|endpoints?|componentes?|rotas?|apis?)\b", re.I)
+
+
+def _tarefa_e2e(linha: str) -> bool:
+    """A descrição da tarefa (a célula logo depois do `T-NNN`) é a suíte E2E e nada mais. Só a descrição: a coluna de
+    teste de uma tarefa de implementação também cita e2e, e essa continua sendo cobrada."""
+    celulas = [c.strip() for c in linha.strip().strip("|").split("|")]
+    i = next((k for k, c in enumerate(celulas) if re.search(r"\bT-\d{3}\b", c)), None)
+    if i is None or i + 1 >= len(celulas):
+        return False
+    descricao = celulas[i + 1]
+    m = _RE_TAREFA_E_A_SUITE.match(descricao)
+    return bool(m and _RE_E2E.search(descricao) and not _RE_IMPLEMENTA_TAMBEM.search(descricao[m.end():]))
+
 
 #: `RF-001..RF-014`, `RF-001 a RF-014`, `RF-001 até RF-014`, `RF-001–RF-014`.
 _RE_INTERVALO_RF = re.compile(r"\bRF-(\d{3})\s*(?:\.\.\.?|--?|–|—|a|at[ée])\s*(?:RF-)?(\d{3})\b", re.I)
@@ -1456,6 +1482,8 @@ def validar_prd(prd: str, spec: str = "", banco: str = "", aprovado: str = "") -
 
     # 4. tarefa não atômica
     for m in re.finditer(r"\b(T-\d{3})\b[^\n]*?(todos os RFs?|todas as RFs?|todos os requisitos)", texto, re.I):
+        if _tarefa_e2e(texto[texto.rfind("\n", 0, m.start()) + 1:m.end()]):
+            continue
         falha("tarefa-nao-atomica",
               f"`{m.group(1)}` cobre \"{m.group(2)}\". Tarefa que fecha tudo não é verificável nem divisível.",
               severidade="atencao")
@@ -1467,7 +1495,7 @@ def validar_prd(prd: str, spec: str = "", banco: str = "", aprovado: str = "") -
     # lista de tarefas.
     for linha in texto.splitlines():
         tarefa = re.search(r"\bT-\d{3}\b", linha)
-        if not tarefa or "|" not in linha:
+        if not tarefa or "|" not in linha or _tarefa_e2e(linha):
             continue
         cobertos = _rfs_da_linha(linha)
         if len(cobertos) > TETO_RF_POR_TAREFA:

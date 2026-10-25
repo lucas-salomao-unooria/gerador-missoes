@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 AGENTE = "prd-codavel"
 DONO = "prd-writer"
@@ -325,6 +325,55 @@ _RE_TABELA_DA_MISSAO = re.compile(r"\b(exp\d{2}e[fm]\d[ab]_[a-z0-9_]+)\b")
 _RE_ROTA = re.compile(r"\b(GET|POST|PUT|PATCH|DELETE)\s+`?(/[\w/:{}.-]+)")
 
 
+#: `p1..p3` na tabela de-para da seção 19 do PRD vale por `p1`, `p2` e `p3` (exp06ef1b-53e011b6, 10/10/2026).
+_RE_INTERVALO_NA_ROTA = re.compile(r"([A-Za-z_]*)(\d+)\.\.\1?(\d+)")
+
+
+def _rotas_normalizadas(texto: str) -> Set[Tuple[str, Tuple[str, ...]]]:
+    """`(MÉTODO, segmentos)` de cada rota do texto, com o parâmetro normalizado (`:id`, `:turmaId`, `{id}` → `{p}`) e o
+    intervalo `p1..p3` expandido."""
+    from tools.rotas_plataforma import _normalizar
+
+    saida: Set[Tuple[str, Tuple[str, ...]]] = set()
+    for metodo, caminho in _RE_ROTA.findall(texto or ""):
+        m = _RE_INTERVALO_NA_ROTA.search(caminho)
+        variantes = [caminho]
+        if m and int(m.group(3)) - int(m.group(2)) < 20:
+            variantes = [caminho[:m.start()] + f"{m.group(1)}{i}" + caminho[m.end():]
+                         for i in range(int(m.group(2)), int(m.group(3)) + 1)]
+        saida |= {(metodo.upper(), tuple(_normalizar(v))) for v in variantes}
+    return saida
+
+
+def _rota_no_prd(metodo: str, caminho: str, rotas_do_prd: Set[Tuple[str, Tuple[str, ...]]]) -> bool:
+    """O PRD tem a rota com outro nome de parâmetro: `POST /efeito-amplificador/turmas/:id/gate` no handoff e
+    `…/turmas/:turmaId/gate` no PRD da exp02em1b (22/10/2026) são a mesma rota. `rotas_do_prd` vem de
+    `_rotas_normalizadas`."""
+    from tools.rotas_plataforma import _normalizar
+
+    return (metodo.upper(), tuple(_normalizar(caminho))) in rotas_do_prd
+
+
+def _rota_literal_no_prd(metodo: str, caminho: str, prd: str) -> bool:
+    """O PRD escreve a rota do handoff com o mesmo verbo: «POST /x», «POST `/x`», em tabela «| `POST` | `/x` |», e com o
+    prefixo do módulo que o handoff abreviou — «`GET /painel`» no handoff da exp02ef1b-4fd72a9a é a
+    «| GET | `/galeria/turmas/:turmaId/painel` |» do PRD. O caminho sozinho não basta: o PRD que troca o verbo, ou que só
+    tem o caminho dentro de outra rota, perdeu a rota (revisão do PR #77, 24/10/2026)."""
+    c = re.escape(caminho.rstrip("/"))
+    return bool(re.search(rf"\b{metodo}`?\s*(?:\|\s*)?`?(?:/[\w:{{}}.-]+)*?{c}(?![\w:{{}}-])", prd or ""))
+
+
+def _rota_da_plataforma(metodo: str, caminho: str) -> bool:
+    """A rota é da plataforma (índice `openapi-rotas.json` da base): `POST /telemetry/batch`, `POST
+    /observabilidade/vitals`, `PUT /salas/turma/:turmaId/missoes/:expId`. O PRD codifica o módulo da missão; não precisa
+    repetir a casca que o handoff cita (exp02em1b, 22/10/2026). Verbo errado não é da plataforma e continua cobrado."""
+    from tools.rotas_plataforma import _casa, _normalizar, carregar
+
+    rotas, _ = carregar()
+    citada = _normalizar(caminho)
+    return any(m == metodo.upper() and _casa(citada, r) for m, r in rotas)
+
+
 def handoff_no_prd(prd: str, handoff: str) -> List[Dict[str, str]]:
     """O que o handoff entregou ao PRD não some no caminho: tabela da missão, evento, rota.
 
@@ -373,7 +422,14 @@ def handoff_no_prd(prd: str, handoff: str) -> List[Dict[str, str]]:
         _achado(achados, "atencao", "divergencia-do-handoff-registrada",
                 f"O PRD tira do handoff {', '.join(f'`{n}`' for n in so_registradas[:12])} e só registra a troca na seção 19. "
                 "Confira se a divergência tem motivo antes do de acordo.")
-    rotas = sorted({f"{m} {p}" for m, p in _RE_ROTA.findall(handoff) if p.rstrip("/") not in prd})
+    # rota normalizada (`:id` = `:turmaId`, `p1..p3` expandido) e a da plataforma de mesmo verbo não contam: 29 das 35
+    # rotas acusadas nas 13 execuções de dev de 25/09 a 23/10/2026 eram isso (análise de 24/10/2026). O atalho literal
+    # confere verbo e caminho: só o caminho deixava passar o PRD que troca o verbo da rota (`POST` → `PUT`) sem dizer
+    # (revisão do PR #77, 24/10/2026)
+    rotas_do_prd = _rotas_normalizadas(prd)
+    rotas = sorted({f"{m} {p}" for m, p in _RE_ROTA.findall(handoff)
+                    if not _rota_literal_no_prd(m, p, prd) and not _rota_no_prd(m, p, rotas_do_prd)
+                    and not _rota_da_plataforma(m, p)})
     if rotas:
         _achado(achados, "atencao", "rota-do-handoff-mudou",
                 f"Rota(s) do handoff que o PRD não repete: {', '.join(f'`{r}`' for r in rotas[:10])}. Se o PRD as trocou pelo "

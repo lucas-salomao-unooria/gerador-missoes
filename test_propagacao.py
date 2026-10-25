@@ -344,3 +344,13 @@ def test_regressao_gates_propagacao_nao_reprova(monkeypatch, capsys):
     assert regressao_gates.main() == 0
     saida = capsys.readouterr().out
     assert "# Propagação — exp07ef1b" in saida and "# Quadro da propagação" in saida
+
+
+def test_numeros_em_latex():
+    """O redator escreve número em LaTeX («$\\ge 80\\%$ das duplas», «$\\le 15$ palavras», PRD e handoff da exp02ef1b):
+    `numeros()` tirava só `$` e `\\le`, e a porcentagem com `\\%` não era número (revisão do PR #77, 24/10/2026)."""
+    assert pg.numeros("$\\ge 80\\%$ das duplas") == [("80", "%")]
+    assert pg.numeros("Teto estrito de $\\leq 15$ palavras") == [("15", "palavras")]
+    assert pg.numeros("entre $10\\%$ e $20\\%$ da foto") == [("10", "%"), ("20", "%")]
+    assert pg.tem_numero("o limiar é $\\ge 80\\%$", ("80", "%"))
+    assert pg.sem_latex("$\\left( x \\right)$ e $\\ge 5$") == "\\left( x \\right) e ≥ 5"

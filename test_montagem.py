@@ -522,3 +522,287 @@ def test_gates_ligados_aos_loops_e_aos_prompts():
     assert "{montagem_handoff_report?}" in load_prompt("dev/100a_handoff_dev.md")
     redator = load_prompt("dev/113_prd_writer.md")
     assert "{montagem_prd_report?}" in redator and "[ABERTO — dono: produto:" in redator
+
+
+# --------------------------------------------------------------------------- calibragem C1 (24/10/2026)
+# Os gates de montagem deram 🔴 nas 7 execuções de dev que o PO viu, com acerto e ruído na mesma lista. Os casos reais
+# estão no gabarito (`tests/gabarito_achados/`); aqui, as guardas sintéticas de cada calibragem.
+GUARDRAIL = _prd({"- RNF-SYNC-001": "- Guardrail: abandono na Etapa 2 abaixo de 5% dos estudantes.\n- RNF-SYNC-001"})
+
+
+def _pedido(texto: str, etapa: str = "dev") -> Dict[str, Any]:
+    return {"origem": f"refazer {etapa} · {etapa} · 24/10/2026 10:00", "etapa": etapa, "texto": texto}
+
+
+def _troca(de: str, para: str, documento: str = "prd_final") -> Dict[str, str]:
+    return {"documento": documento, "de": de, "para": para, "motivo": "pedido do PO"}
+
+
+def test_pedido_em_prosa_nao_e_origem_de_numero():
+    """Terceira revisão do PR #77 (24/10/2026), decisão de desenho: ler intenção em linguagem natural por regex errava
+    a cada ajuste — «Não aceito o limiar de 80%» fazia origem do 80% inventado, e «Trocar 80% por 70%» não dava o 70%.
+    O pedido em prosa livre não é origem: nem o valor que o PO afirma, nem o que ele cita. O valor novo chega ao
+    contrato pela triagem (produto o grava no one-pager e na spec), pelo de acordo (`decisoes_do_po`) ou pela troca da
+    correção pontual."""
+    for texto in ("O guardrail do PRD está com 7%, deve ser 5%.", "Deve ser 5%.", "Não aceito 5% no guardrail.",
+                  "O teto pode ser até 5%.", "Ratifico: resumo de notícia com 5%; manchete com 5%."):
+        for estado in ({"pedidos_do_po": [_pedido(texto)]},
+                       {"pareceres_humanos": [{"etapa": "dev", "acao": "refazer", "comentario": texto}]}):
+            r = montagem.validar_prd(_sintetico(prd_final=GUARDRAIL, **estado))
+            assert _codigos(r) == ["numero-sem-origem"] and "5%" in r["achados"][0]["resumo"], texto
+            assert "pedidos_do_po" not in montagem.contrato(estado)
+
+
+def test_troca_da_correcao_pontual_e_origem_so_do_numero_que_ela_trouxe():
+    """O lado «para» da troca que a correção pontual de design ou dev aplicou (`edicoes_pontuais`) é origem — só o
+    número que o «de» não tinha, só na correção pontual em curso e nunca a troca de documento de produto (que já é o
+    contrato, ou foi desfeita por outra correção de produto)."""
+    def com(*trocas: Dict[str, str], modo: str = "pontual") -> Dict[str, Any]:
+        return _sintetico(prd_final=GUARDRAIL, modo_correcao=modo, edicoes_pontuais=list(trocas))
+
+    assert montagem.validar_prd(com(_troca("abaixo de 7%", "abaixo de 5%")))["status"] == "aprovado"
+    assert montagem.contrato(com(_troca("abaixo de 7%", "abaixo de 5%")))["trocas_da_correcao"] == (
+        "5% — troca da correção pontual")
+    for estado in (com(_troca("abaixo de 7%", "abaixo de 5%"), modo=""),
+                   com(_troca("abaixo de 5% (ex.)", "abaixo de 5%")),
+                   com(_troca("abaixo de 5%", "abaixo de 7%")),
+                   com(_troca("abaixo de 7%", "abaixo de 5%", documento="one_pager")),
+                   com(_troca("abaixo de 7%", "abaixo de 5%", documento="spec_missao"))):
+        r = montagem.validar_prd(estado)
+        assert _codigos(r) == ["numero-sem-origem"] and "5%" in r["achados"][0]["resumo"], estado["edicoes_pontuais"]
+    # a decisão do PO no de acordo continua origem
+    decidido = _sintetico(prd_final=GUARDRAIL, decisoes_do_po=[{"resposta": "outro", "valor": "guardrail de 5%"}])
+    assert montagem.validar_prd(decidido)["status"] == "aprovado"
+
+
+def test_decisao_e_troca_nao_entram_na_mecanica_da_hipotese():
+    """Pedido, decisão e troca não dizem que um número é parâmetro da mecânica: a porcentagem «marcada» como taxa
+    continua meta se só eles a têm (revisão do PR #77 — «A H1 não pode ter 25%» tirava do gate a H1 30×25 da
+    exp02ef1b)."""
+    handoff = ("# Handoff\n\n## 6. Hipóteses de validação\n\n- **Hipótese 1 (Usabilidade):** a dupla ajusta a moldura "
+               "em menos de 90 segundos.\n  - *Indica falha:* Se a taxa de 25% de desistência for atingida pelas "
+               "duplas.\n\n## 7. Lacunas e pendências\n\n- Nenhuma.\n")
+    for extra in ({}, {"pedidos_do_po": [_pedido("A H1 não pode ter 25%: o §17 diz 30%.")]},
+                  {"decisoes_do_po": [{"resposta": "outro", "valor": "taxa de 25% de desistência"}]},
+                  {"modo_correcao": "pontual", "edicoes_pontuais": [_troca("x", "taxa de 25%", "handoff_dev")]}):
+        r = montagem.validar_handoff(_sintetico(handoff_dev=handoff, **extra))
+        assert any(a["codigo"] == "hipotese-diverge" and "escreve 25%" in a["resumo"] for a in r["achados"]), extra
+
+
+def test_numero_de_palavras_so_conta_quando_o_teto_o_rege():
+    """«(teto da faixa: 20 palavras)» ao lado de «até 17 palavras» não faz do 17 um teto; «em até 17 palavras» faz."""
+    assert montagem.numeros_de_regra("respeitando os tetos da faixa (fala de Bento com 21 palavras)") == []
+    assert montagem.numeros_de_regra("frases com até 17 palavras (teto da faixa: 20 palavras)") == [("20", "palavras")]
+    assert montagem.numeros_de_regra("Crachá exibe nome, selo e mandato em até 17 palavras.") == [("17", "palavras")]
+    assert montagem.numeros_de_regra("bloqueia se o bastidor ultrapassar 40 palavras") == [("40", "palavras")]
+
+
+#: As redações do teto inventado de 40 palavras do handoff da exp06ef1b-53e011b6 que a main acusava e a segunda revisão
+#: perdeu (o marcador só valia nos 40 caracteres antes do número, cortados em `,;|()`), mais o LaTeX do PRD da
+#: exp02ef1b-4fd72a9a (terceira revisão do PR #77, 24/10/2026).
+TETOS_ESCRITOS_DE_OUTRO_JEITO = (
+    "- Teto de palavras do texto de bastidor de cada projeto: 40 palavras.",
+    "- Teto de palavras por texto de bastidor do projeto: 40 palavras.",
+    "- Texto de bastidor (teto): 40 palavras.",
+    "- Texto de bastidor (máx.): 40 palavras.",
+    "- O texto de bastidor tem 40 palavras, que é o teto.",
+    "- 40 palavras é o teto do texto de bastidor.",
+    "- O bastidor precisa caber em 40 palavras.",
+    "- Teto de leitura de 60 palavras por legenda de estande e 40 palavras por texto de bastidor.",
+    "- Teto estrito de $\\le 40$ palavras por texto de bastidor.",
+    "- Strings do bastidor: $\\le 40$ palavras.",
+    "- Strings do bastidor com no máximo $40$ palavras.",
+    "- Teto do texto de bastidor (40 palavras).",
+)
+
+
+def test_teto_em_qualquer_ponto_da_oracao_e_em_latex():
+    for linha in TETOS_ESCRITOS_DE_OUTRO_JEITO:
+        assert ("40", "palavras") in montagem.numeros_de_regra(linha), linha
+    # as medidas do diagnóstico continuam medidas, com o teto em qualquer ponto antes: o número seguido do teto com
+    # outro número, a medida entre parênteses logo depois do identificador e a contagem «com exatamente N palavras»
+    for linha in ("Teto da faixa respeitado: fala com exatamente 21 palavras (cumprindo teto ≤ 25).",
+                  "Teto da faixa respeitado: fala de Bento com 21 palavras (cumpre teto ≤ 25) e suporte TTS.",
+                  "Teto prático da faixa: a pergunta `e6.pergunta.em13co26` (21 palavras) vai em 2 blocos.",
+                  "Teto prático da faixa: a pergunta e6.pergunta.em13co26 (21 palavras) vai em 2 blocos.",
+                  "Respeitando o teto, o balão com exatamente 21 palavras.",
+                  "Copy nos tetos da faixa (resumo de 25 a 35 palavras, fala de Bento com 21 palavras).",
+                  "Teto estrito de 0 palavras visuais. Strings em caixa alta de 1 a 21 palavras."):
+        assert ("21", "palavras") not in montagem.numeros_de_regra(linha), linha
+    # «e o teto» depois do número é outro teto, não o deste
+    assert montagem.numeros_de_regra("Bastidor com 21 palavras e o teto da legenda em 60.") == []
+    # o parêntese fechado com número solto dentro é de outro número
+    assert ("40", "palavras") not in montagem.numeros_de_regra("Legendas (teto: 60 palavras) e bastidor com 40 palavras.")
+    # o piso seguido do teto com outro número é regra, não medida: só dentro do parêntese o teto depois faz medida
+    assert montagem.numeros_de_regra("Validador exige piso de 15 caracteres e teto de 240 caracteres no campo.") == [
+        ("15", "caracteres"), ("240", "caracteres")]
+
+
+def test_fonte_externa_e_nota_de_acessibilidade_so_tiram_a_porcentagem():
+    assert montagem.numeros_de_regra("Pesquisas do CETIC.br apontam que menos de 15% compreendem o feed.") == []
+    assert montagem.numeros_de_regra("| Acessibilidade | Lighthouse Accessibility Score ≥ 98% |") == []
+    assert montagem.numeros_de_regra("Exemplo no painel: índice da sala (ex.: 73%) e taxa de revisão.") == []
+    # a duração da mecânica na mesma linha continua pedindo origem
+    assert montagem.numeros_de_regra("Segundo o IBGE, 40% das escolas…; cada rodada dura 45 s.") == [("45", "s")]
+    assert montagem.numeros_de_regra("Tempo de resposta de 45 s, ajustável (WCAG 2.2.1).") == [("45", "s")]
+
+
+def test_recorte_da_aula_so_os_limites_da_plataforma():
+    """tema ≤ 60, assuntos ≤ 600 e contexto ≤ 120 caracteres são o contrato de customização da plataforma; outro teto
+    para o mesmo campo é decisão e pede origem."""
+    assert montagem.numeros_de_regra(
+        "O professor digita o tema (máx. 60 caracteres) e os tópicos (máx. 600 caracteres).") == []
+    assert montagem.numeros_de_regra("Campo de tema com no máximo 80 caracteres.") == [("80", "caracteres")]
+    assert montagem.numeros_de_regra("Resposta aberta com piso de 15 caracteres.") == [("15", "caracteres")]
+
+
+def test_payload_da_spec_e_o_teto_da_faixa_sao_origem():
+    """`{"segundos_sem_acao": 90}` na tabela de eventos da spec é a origem dos «90s sem ação»; o teto da faixa da missão
+    (references/teto-palavras-por-faixa.md) é padrão da plataforma — só o da faixa dela."""
+    assert montagem.tem_numero(montagem.texto_do_contrato({"spec": '| `EVT-U04` | `{"segundos_sem_acao": 90}` |'}),
+                               ("90", "s"))
+    assert "20 palavras" in montagem.contrato({"one_pager": "# One-pager — exp06ef1b"})["teto_da_faixa"]
+    assert "10 palavras" in montagem.contrato({"one_pager": "# One-pager — exp02ef1b"})["teto_da_faixa"]
+    assert "20 palavras" not in montagem.contrato({"one_pager": "# One-pager — exp02ef1b"})["teto_da_faixa"]
+
+
+ONE_PAGER_H1_85 = ONE_PAGER.replace(
+    "- **Hipótese 1 (Usabilidade):** a dupla ajusta a moldura em menos de 90 segundos.\n"
+    "  - *Indica falha:* Mais de 30% das duplas confirmarem na posição default.\n",
+    "- **Hipótese 1 (Moldura):** pelo menos 85% das duplas ajustam a moldura antes de confirmar a fotografia.\n")
+SPEC_PQ01_80 = SPEC.replace("| >25% → animação demonstrativa |", "| <80% → animação demonstrativa |")
+
+
+def _handoff_h1(linha: str) -> Dict[str, Any]:
+    handoff = "# Handoff\n\n## 6. Hipóteses de validação\n\n" + linha + "\n\n## 7. Lacunas e pendências\n\n- Nenhuma.\n"
+    return _sintetico(one_pager=ONE_PAGER_H1_85, spec_missao=SPEC_PQ01_80, spec_missao_gate0=SPEC_PQ01_80,
+                      handoff_dev=handoff)
+
+
+def test_limiar_da_pq_citada_e_duvida_so_quando_o_corpo_nao_reproduz_a_frase_do_17():
+    """O corpo escreve o limiar da PQ-01 (80%, linha firme do 9f) que a hipótese cita no lugar da meta do §17 (85%).
+    Com outro comparativo e outro predicado — a pergunta da PQ, não a frase da meta — é dúvida, atenção. Reproduzir a
+    frase do §17 com o número trocado é divergência certa, mesmo com a PQ firme no outro número (terceira revisão do PR
+    #77: a H1 30×25 da exp02ef1b, que o PO acusou em 23/10, viraria dúvida com a PQ-01 homologada a 25%). A hipótese
+    trocada (outra coisa, mesmo citando a PQ-01 com 80%) continua bloqueando."""
+    r = montagem.validar_handoff(_handoff_h1("- **Hipótese 1 (Moldura, PQ-01):** as duplas ajustam a moldura antes de "
+                                             "confirmar a fotografia; falha se menos de 80% das duplas tocarem nas "
+                                             "alças."))
+    assert _codigos(r) == ["hipotese-a-conferir"] and r["status"] == "amarelo"
+    assert r["achados"][0]["resumo"].startswith("Dúvida, não divergência certa: a H1 do §17 do one-pager tem 85%")
+    assert "limiar da PQ-01" in r["achados"][0]["resumo"]
+
+    for linha in ("- **Hipótese 1 (Moldura, PQ-01):** pelo menos 80% das duplas ajustam a moldura antes de confirmar a "
+                  "fotografia.",
+                  "- **Hipótese 1 (Moldura, PQ-01):** a meta é que pelo menos 80% das duplas ajustem a moldura antes de "
+                  "confirmar."):
+        copiada = montagem.validar_handoff(_handoff_h1(linha))
+        assert _codigos(copiada) == ["hipotese-diverge"] and copiada["status"] == "bloqueado", linha
+        assert "escreve 80%" in copiada["achados"][0]["resumo"]
+
+    trocada = montagem.validar_handoff(_handoff_h1(
+        "- **Hipótese 1 (Busca ativa, PQ-01):** pelo menos 80% dos estudantes pesquisam hashtags fora do feed."))
+    assert _codigos(trocada) == ["hipotese-diverge"] and trocada["status"] == "bloqueado"
+
+    # sem meta no §17, o limiar da PQ não vira dúvida: continua meta acrescentada
+    sem_meta = _handoff_h1("- **Hipótese 2 (Virada, PQ-01):** pelo menos 80% das crianças reconhecem que a foto não "
+                           "mostrou tudo.")
+    sem_meta["one_pager"] = ONE_PAGER
+    assert _codigos(montagem.validar_handoff(sem_meta)) == ["hipotese-diverge"]
+
+
+def test_complemento_so_com_outro_predicado_ou_o_mesmo_negado():
+    """100 − x com o comparativo invertido é dúvida só se o predicado também muda; o mesmo predicado com o critério
+    invertido é divergência certa (terceira revisão do PR #77: «Se menos de 70% das duplas desistirem» contra «Mais de
+    30% das duplas desistirem» saía 🟡)."""
+    def situacao(falha: str) -> List[str]:
+        corpo = ("## 6. Hipóteses de validação\n\n- **Hipótese 1 (Usabilidade):** a dupla ajusta a moldura em menos de "
+                 "90 segundos.\n  - *Indica falha:* " + falha + "\n")
+        return [i["situacao"] for i in montagem.hipoteses_e_tetos(ONE_PAGER, corpo, exigir_tetos=False, spec=SPEC,
+                                                                   contrato_texto="") if i["secao"] == "§17"]
+
+    assert situacao("Se menos de 70% das duplas confirmarem na posição default.") == ["trocado"]
+    assert situacao("Se menos de 70% das duplas ajustarem a moldura antes de confirmar.") == ["complemento"]
+    assert situacao("Se menos de 70% das duplas não confirmarem na posição default.") == ["complemento"]
+# --------------------------------------------------------------------------- revisão do PR #77 (24/10/2026)
+def test_toda_porcentagem_da_hipotese_e_meta_menos_a_marcada_como_mecanica():
+    """A leitura pedia comparativo de lista curta ou população, e «superar 25%», «25% ou mais», «maior que 25%»,
+    «taxa de desistência de 25%» sumiam em silêncio. Só sai a porcentagem marcada como mecânica, sem comparativo."""
+    for linha in ("Se a desistência das duplas superar 25%.", "Se 25% ou mais das duplas desistirem.",
+                  "Se a taxa de desistência for maior que 25%.", "Se a desistência passar de 25%.",
+                  "Se a desistência ultrapassar 25%.", "Se a desistência exceder 25%.", "Se mais que 25% desistirem.",
+                  "Se a taxa de desistência de 25% for atingida.", "A partir de 25% das duplas.",
+                  "Igual ou superior a 25%.", "Menor do que 25% das duplas."):
+        assert montagem._metas_do_corpo(linha) == [("25", "%")], linha
+    # a mecânica dos 12 de 16 projetos ocultos, que o one-pager da exp06ef1b tem fora do §17 e do 9f
+    mecanica = montagem._contrato_da_mecanica(
+        "## 4. Etapas\n- A taxa de invisibilidade de cada jurado será de 60% a 75%.\n"
+        "## 17. Hipóteses de validação\n- H1: mais de 25% das duplas desistem.\n"
+        "## 18. Decisões\n| PQ-01 | Quantas duplas desistem? | >25% → animação |\n")
+    for linha in ("o grid com 12 projetos ocultos (taxa real de ~75% de invisibilidade)",
+                  "o confronto entre a projeção da sala e a taxa de 75% da Galeria Oculta"):
+        assert montagem._metas_do_corpo(linha, mecanica) == [], linha
+        # sem o contrato, a marca não basta
+        assert montagem._metas_do_corpo(linha) == [("75", "%")], linha
+    # a marca de mecânica não vale contra comparativo nem população, e o «~» solto não marca nada
+    assert montagem._metas_do_corpo("taxa de 75% das duplas", mecanica) == [("75", "%")]
+    assert montagem._metas_do_corpo("mais de ~75% acertam", mecanica) == [("75", "%")]
+    assert montagem._metas_do_corpo("a galeria esconde ~75% dos projetos", mecanica) == [("75", "%")]
+    # revisão do PR #77 (24/10/2026): a porcentagem que o contrato só tem no §17 ou no limiar de uma PQ do 9f é meta,
+    # mesmo marcada como taxa — os 25% da H1 da exp02ef1b
+    assert "25%" not in mecanica
+    for linha in ("Se a desistência chegar a ~25%, ou", "Se ~25% desistirem, ou",
+                  "Se a taxa de 25% de desistência for atingida pelas duplas, ou",
+                  "A taxa de 25% de desistência na moldura for atingida (alimenta PQ-01).",
+                  "Desistência na moldura em ~25% (alimenta PQ-01)."):
+        assert montagem._metas_do_corpo(linha, mecanica) == [("25", "%")], linha
+
+
+def test_direcao_do_comparativo_antes_e_depois_da_porcentagem():
+    for texto, direcao in (("superar 25%", "mais"), ("ultrapassarem 25%", "mais"), ("passar de 25%", "mais"),
+                           ("maior do que 25%", "mais"), ("a partir de 25%", "mais"), ("25% ou mais", "mais"),
+                           ("igual ou superior a 25%", "mais"), ("pelo menos 25%", "mais"),
+                           ("menor que 25%", "menos"), ("menos que 25%", "menos"), ("25% ou menos", "menos"),
+                           ("igual ou inferior a 25%", "menos"), ("no máximo 25%", "menos"), ("taxa de 25%", "")):
+        assert montagem._direcao(texto, ("25", "%")) == direcao, texto
+
+
+def test_teto_posposto_separado_por_virgula_ou_na_celula_anterior():
+    """Só o marcador logo antes do número contava: o teto novo escrito depois dele, separado por vírgula ou na célula
+    vizinha da tabela deixava de pedir origem. A medida seguida do teto com outro número continua sendo medida."""
+    for linha, numero in (("Balões de notificação com 35 palavras no máximo.", "35"),
+                          ("RNF: balões com, no máximo, 35 palavras.", "35"),
+                          ("| Balão da comissão | Teto | 35 palavras |", "35"),
+                          ("| Balão da comissão | 35 palavras (teto) |", "35"),
+                          ("Resumo entre 25 e 35 palavras (teto do D0-09).", "35"),
+                          ("Balão de notificação: 35 palavras (teto do §15).", "35"),
+                          ("Balão de notificação: 40 palavras (teto do § 15).", "40"),
+                          ("Manchetes de 8 a 10 palavras, sem exceder o teto.", "10"),
+                          ("Legenda de 35 palavras ou menos.", "35"),
+                          ("Balão com 35 palavras (máx. 2 linhas).", "35")):
+        assert montagem.numeros_de_regra(linha) == [(numero, "palavras")], linha
+    for linha in ("legendas com 39 a 46 palavras (teto: 60)", "`e6.pergunta.em13co26` (49 palavras)",
+                  "| Fala de Bento | 21 palavras | teto da faixa |", "| Teto da faixa: 20 | Fala com 21 palavras |",
+                  "Fala de Bento com 21 palavras, teto da faixa: 20 palavras."):
+        assert ("21", "palavras") not in montagem.numeros_de_regra(linha) and (
+            "46", "palavras") not in montagem.numeros_de_regra(linha) and (
+            "49", "palavras") not in montagem.numeros_de_regra(linha), linha
+
+
+def test_barra_de_progresso_so_e_plataforma_na_espera_do_carregamento():
+    """A barra que mostra o tempo da rodada é a mecânica (decisão de produto, como os 45 s da exp02ef1b); a da espera
+    da geração por IA é a casca (handoff da exp06ef1b-727a3c2d)."""
+    assert montagem.numeros_de_regra("Barra de progresso do tempo da rodada: 45 s para responder.") == [("45", "s")]
+    assert montagem.numeros_de_regra("Indicador de progresso da rodada com 30 s.") == [("30", "s")]
+    assert montagem.numeros_de_regra("Barra de progresso contínua com estimativa tranquilizadora de 10 a 20 segundos "
+                                     "da geração por IA.") == []
+    assert montagem.numeros_de_regra("Indicador de progresso durante o carregamento de 3 s.") == []
+    assert montagem.numeros_de_regra("Spinner por 3 s enquanto a IA gera.") == []
+    # sai só a duração da espera, na oração dela: a regra ao lado continua pedindo origem (terceira revisão do PR #77 —
+    # spinner, skeleton e barra de progresso tiravam a linha inteira)
+    assert montagem.numeros_de_regra(
+        "Pausa 1: o cliente envia os Stories e aguarda; o painel plota a barra de progresso em tempo real e, ao atingir "
+        "≥ 60% de submissões, habilita o mural.") == [("60", "%")]
+    assert montagem.numeros_de_regra("Barra de progresso da rodada: a IA avalia a resposta, e o estudante tem 25 "
+                                     "segundos para responder.") == [("25", "s")]
+    assert montagem.numeros_de_regra("Skeleton da galeria; a dica aparece após 25 segundos sem toque.") == [("25", "s")]

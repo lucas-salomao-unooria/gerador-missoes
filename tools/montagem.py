@@ -11,15 +11,20 @@ Quatro conferências, no corpo (sem o anexo literal que a esteira cola no fim):
 
 a) **número de regra e texto-chave com origem no contrato.** Todo número de regra (%, s, min, palavras com teto,
    contagens de opção) existe no contrato: one-pager, núcleo, briefing, spec de produto (a spec sem os blocos 13 e
-   14), as linhas do bloco 13 cuja decisão passa pela lista branca do PR 2 (`tools/decisoes.py`) e as decisões do PO
-   gravadas no de acordo (`estado.decisoes_do_po`, PR 3). Ficam de fora os de dono plataforma (polling, TTL, p95,
-   uptime, lote da SDK, `px`), a medida de layout (`75% da tela`), a contagem de palavras de uma string e o que vem
-   marcado `[PROPOSTA — validar com PO: …]`, que é proposta e não decisão. No handoff, o texto-chave do PO (Canal B,
+   14), as linhas do bloco 13 cuja decisão passa pela lista branca do PR 2 (`tools/decisoes.py`), as decisões do PO
+   gravadas no de acordo (`estado.decisoes_do_po`, PR 3), o lado «para» das trocas da correção pontual de design ou
+   dev (`edicoes_pontuais`) e o teto de palavras da faixa da missão — o pedido do PO em prosa livre não é origem. Ficam
+   de fora os de dono plataforma (polling, TTL, p95, uptime, lote da SDK, `px`), a duração da espera de carregamento,
+   a medida de layout (`75% da tela`), a medida de uma string que nenhum teto rege, o
+   exemplo «(ex.: …)», a estatística de fonte externa, a nota de acessibilidade, os limites do recorte da aula e o que
+   vem marcado `[PROPOSTA — validar com PO: …]`, que é proposta e não decisão. No handoff, o texto-chave do PO (Canal B,
    debate, texto de tela do §4) citado com outra redação também volta; no PRD isso já é o `literal-parafraseado` do
    A116.
 b) **hipóteses, metas e tetos iguais aos do contrato.** O número de cada hipótese do §17 está na linha
    correspondente do corpo (H1 25×30 da exp02ef1b); o alvo e o limiar de decisão de cada KPI que cita uma `PQ-nn` são
-   os da linha dela no 9f da spec; no PRD, cada teto do §15 está no corpo (as 35 palavras da exp06ef1b).
+   os da linha dela no 9f da spec; no PRD, cada teto do §15 está no corpo (as 35 palavras da exp06ef1b). O que não é
+   divergência certa — o limiar da `PQ-nn` citada no lugar da meta do §17, o complemento dela — sai como dúvida
+   (`hipotese-a-conferir`, atenção), separada do bloqueio no relatório.
 c) **estados da §6 iguais aos do contrato.** Todo estado do «Contrato de estados» da spec está nas colunas de estado
    e no diagrama da §6, e nenhum estado ali é inventado (o PRD da exp02ef1b trocou os 15 nomes do contrato por
    `desafiar`, `explicar_padroes`…, e largou `PROCESSANDO_RESPOSTA_VISITA`). Estado de decomposição que o fluxo do
@@ -41,10 +46,12 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from tools.propagacao import (
+    _ALIAS,
     _fmt,
     bloco_13,
     contrato_no_corpo,
     numeros,
+    sem_latex,
     spec_de_produto,
     tem_numero,
 )
@@ -120,14 +127,66 @@ def _texto_das_decisoes_do_po(decisoes_do_po: Optional[Sequence[Dict[str, Any]]]
     return "\n".join(textos)
 
 
+#: Documentos de produto: a troca de uma correção pontual de produto já está no one-pager e na spec, que são o
+#: contrato; e a de uma correção de produto antiga, que outra desfez, não pode continuar valendo como origem.
+_DOCUMENTOS_DE_PRODUTO = frozenset({"nucleo_narrativo", "one_pager", "spec_missao", "one_pager_resumido"})
+
+
+def _texto_das_trocas_da_correcao(state: Dict[str, Any]) -> str:
+    """Os números que a correção pontual de design ou de dev trocou a pedido do PO (`edicoes_pontuais`,
+    `tools/edicao_pontual.py`): o lado «para» de cada troca, só o número que o «de» não tinha — o que a troca trouxe,
+    não o que ela só repete. Vale na correção pontual em curso (`modo_correcao`), como lêem as trocas os outros gates.
+
+    O pedido do PO em prosa livre deixou de ser origem de número (terceira revisão do PR #77, 24/10/2026): ler intenção
+    em linguagem natural por regex errava a cada ajuste — «Não aceito o limiar de 80%», «O KPI-08 não pode ter 80%»
+    faziam origem do 80% inventado do KPI-08 da exp02ef1b, e «Trocar 80% por 70%», «Mudar de 80% para 70%» não davam o
+    70%. Desde o PR 5 (#72), o pedido feito em design ou dev que muda número passa pela triagem
+    (`tools/triagem_pedido.py`) e vai a produto, que o grava no one-pager e na spec; o de acordo grava as decisões em
+    `decisoes_do_po` (PR 3, #70). Origem é o que está escrito em estrutura: o contrato, as decisões e as trocas."""
+    from tools.edicao_pontual import MODO_PONTUAL
+
+    # `agents.callbacks.KEY_MODO_CORRECAO`, lido pela chave para o gate não importar o ADK
+    if state.get("modo_correcao") != MODO_PONTUAL:
+        return ""
+    valores: List[Tuple[str, str]] = []
+    for e in state.get("edicoes_pontuais") or []:
+        if not isinstance(e, dict) or str(e.get("documento") or "") in _DOCUMENTOS_DE_PRODUTO:
+            continue
+        antes = numeros(str(e.get("de") or ""))
+        valores += [t for t in numeros(str(e.get("para") or "")) if t not in antes and t not in valores]
+    return "\n".join(f"{_fmt(v)} — troca da correção pontual" for v in valores)
+
+
+#: Fontes do contrato que são decisão do PO sobre o documento, não o texto do contrato: valem como origem de número,
+#: nunca como a mecânica da hipótese (`_contrato_da_mecanica`) — a decisão não diz que um número é parâmetro da
+#: mecânica e não meta (revisão do PR #77, 24/10/2026: o pedido «A H1 não pode ter 25%» tirava do gate a H1 30×25 da
+#: exp02ef1b, porque o 25% do pedido entrava na mecânica).
+_FONTES_DE_DECISAO = ("decisoes_do_po", "trocas_da_correcao")
+
+
+def _teto_da_faixa(state: Dict[str, Any]) -> str:
+    """O teto de palavras por frase da faixa da missão (`references/teto-palavras-por-faixa.md`), que o handoff da
+    exp06ef1b-727a3c2d citou como «teto da faixa: 20 palavras» (6º ano): é padrão da plataforma, não decisão do
+    redator. Só o da faixa da missão — o 20 do 6º–9º não vira origem numa missão do 1º ano."""
+    from tools.textos_chave import faixa, tetos_por_faixa
+
+    f = faixa(*(str(state.get(k) or "") for k in ("slug", "one_pager", "briefing", "spec_missao")))
+    teto = tetos_por_faixa()[0].get(f) if f else None
+    return f"teto da faixa {f}: {teto} palavras por frase" if teto else ""
+
+
 def contrato(state: Dict[str, Any]) -> Dict[str, str]:
     """Os textos do contrato, por fonte: `spec_produto` é a `spec_missao` sem os blocos 13 e 14 (desde o PR 6 ela não os
     tem: o bloco 15, de completude, é de produto e conta); `bloco_13` só as decisões da lista branca, lidas do anexo de
-    design; `decisoes_do_po` o que o PO fixou no de acordo."""
+    design; `decisoes_do_po` o que o PO fixou no de acordo; `trocas_da_correcao` o que a correção pontual de design ou
+    de dev trocou a pedido dele; `teto_da_faixa` o padrão de palavras por frase da faixa. O pedido em prosa livre não
+    entra (`_texto_das_trocas_da_correcao`)."""
     docs = {k: str(state.get(k) or "") for k in FONTES_DO_CONTRATO}
     docs["spec_produto"] = spec_de_produto(str(state.get("spec_missao") or ""))
     docs["bloco_13"], _ = bloco_13_da_lista_branca(state)
     docs["decisoes_do_po"] = _texto_das_decisoes_do_po(state.get("decisoes_do_po"))
+    docs["trocas_da_correcao"] = _texto_das_trocas_da_correcao(state)
+    docs["teto_da_faixa"] = _teto_da_faixa(state)
     docs["perguntas_transversais"] = perguntas_transversais()
     return docs
 
@@ -142,7 +201,11 @@ def texto_do_contrato(docs: Dict[str, str]) -> str:
     """O contrato num texto só, sem o conteúdo dos marcadores abertos. Serve só de origem para o número de regra: a
     linha do 9f marcada `[PROPOSTA]` continua valendo como origem do alvo que o KPI copia dela (regra 8 do redator),
     mas não decide divergência do contrato (`divergencias_do_contrato` tira a linha inteira)."""
-    return _RE_MARCADOR_ABERTO.sub(" ", "\n".join(docs.values()))
+    texto = _RE_MARCADOR_ABERTO.sub(" ", "\n".join(docs.values()))
+    # o payload do evento diz a unidade no nome da chave: `{"segundos_sem_acao": 90}` na tabela de eventos da spec é a
+    # origem dos «90s sem ação» do handoff e do PRD da exp04ef1b (24/10/2026)
+    return re.sub(r"(\w*(segundos|minutos)\w*)[\"']?\s*:\s*(\d+(?:\.\d+)?)",
+                  lambda m: f"{m.group(1)} {m.group(3)} {'s' if m.group(2) == 'segundos' else 'min'}", texto)
 
 
 def perguntas_transversais() -> str:
@@ -234,6 +297,35 @@ def de_plataforma(linha: str) -> bool:
     if _RE_PLATAFORMA.search(linha or ""):
         return True
     return any(termo.search(linha or "") and contexto.search(linha or "") for termo, contexto in _PLATAFORMA_COM_CONTEXTO)
+
+
+#: A espera do carregamento é da casca: a duração dela não é regra da missão — a «barra de progresso contínua com
+#: estimativa tranquilizadora de 10 a 20 segundos» da geração por IA (handoff da exp06ef1b-727a3c2d, 24/10/2026). Sai só
+#: a duração, na mesma oração. Revisão do PR #77 (24/10/2026): spinner, skeleton e a barra de progresso tiravam a linha
+#: inteira, e «ao atingir ≥ 60% de submissões» na linha da barra (a Pausa 1 da exp07ef1b), «a dica aparece após 25
+#: segundos» depois de «Skeleton da galeria;» deixavam de pedir origem. A barra ou o indicador de progresso só é espera
+#: com carregamento, geração, IA, espera ou estimativa na oração: a barra do tempo da rodada é a mecânica.
+_RE_ESPERA = re.compile(r"spinner|skeleton", re.I)
+_RE_PROGRESSO = re.compile(r"barra de progresso|indicador de progresso", re.I)
+_RE_CONTEXTO_DE_ESPERA = re.compile(r"carreg|gera[çc][ãa]o|gerando|\bIA\b|\bespera\b|aguard|estimativ", re.I)
+#: A oração da duração: entre ponto e vírgula, vírgula, célula de tabela e fim de frase.
+_RE_FRONTEIRA_DA_ESPERA = re.compile(r"[;,|]|(?<=[.!?])\s")
+
+
+def _duracao_de_espera(linha: str, tok: Tuple[str, str]) -> bool:
+    """Alguma ocorrência da duração está numa oração de espera de carregamento: spinner, skeleton, ou barra/indicador
+    de progresso com o contexto da espera."""
+    num = re.escape(tok[0]).replace(r"\.", "[.,]")
+    unidade = "|".join(re.escape(a) for a in _ALIAS[tok[1]])
+    for m in re.finditer(rf"(?<![\w.,]){num}\s?(?:{unidade})\b", linha or "", re.I):
+        antes = list(_RE_FRONTEIRA_DA_ESPERA.finditer(linha, 0, m.start()))
+        depois = _RE_FRONTEIRA_DA_ESPERA.search(linha, m.end())
+        oracao = linha[antes[-1].end() if antes else 0:depois.start() if depois else len(linha)]
+        if _RE_ESPERA.search(oracao) or (_RE_PROGRESSO.search(oracao) and _RE_CONTEXTO_DE_ESPERA.search(oracao)):
+            return True
+    return False
+
+
 #: Porcentagem de layout: o que a tela ocupa é desenho (a folha de 75% e o overlay de 70% da exp02ef1b). A área mínima
 #: da moldura não entra aqui: os 10% da exp02ef1b são regra da mecânica, que o D0 decidiu no lugar do PO.
 _RE_LAYOUT = re.compile(r"viewport|altura|largura|overlay|opacidade|cobr[ie]|ocupa|\bfolha\b|modal|drawer|"
@@ -241,6 +333,108 @@ _RE_LAYOUT = re.compile(r"viewport|altura|largura|overlay|opacidade|cobr[ie]|ocu
 #: Palavras e caracteres só são regra quando a linha diz teto ou piso; «(13 palavras)» ao lado de uma string é medida.
 _RE_TETO_OU_PISO = re.compile(r"m[áa]x|teto|limite|\bat[ée]\b|≤|<=|n[ãa]o (?:pode|deve)|exced|ultrapass|passa de|m[íi]nim|piso|≥|"
                               r">=|pelo menos|no m[íi]nimo", re.I)
+#: E o teto ou o piso tem de reger aquele número: vir antes dele, na mesma oração. Bastava a linha dizer «teto» em
+#: qualquer lugar, e a medida da string ao lado virava regra: «fala de Bento com 21 palavras» (exp04ef1b), «legendas com
+#: 39 a 46 palavras (teto: 60)» (exp06ef1b), «`e6.pergunta.em13co26` (49 palavras)» (exp02em1b) — análise de 24/10/2026.
+#: Na revisão do PR #77 (24/10/2026) o marcador valia só nos 40 caracteres antes do número, cortados em `,;|()`, e o
+#: teto inventado escrito de outro jeito sumia («Teto de palavras do texto de bastidor de cada projeto: 40 palavras»,
+#: «Texto de bastidor (teto): 40 palavras», «Teto de leitura de 60 palavras por legenda e 40 palavras por bastidor»):
+#: agora vale a oração inteira, e só sai a medida que o diagnóstico classificou (`_e_medida`).
+_RE_TETO_ANTES = re.compile(_RE_TETO_OU_PISO.pattern + r"|\bcap\b|limitad[oa]s?\b|\bcab(?:er|e|em)\s+em\b", re.I)
+#: Onde a oração do teto acaba: ponto e vírgula, célula de tabela e fim de frase. A vírgula e os dois-pontos não cortam
+#: («Teto de palavras do bastidor de cada projeto: 40 palavras»). O parêntese aberto que diz alguma coisa antes do
+#: número é a sua oração, e o item de lista dentro dele também («respeitando os tetos da faixa (resumo de 25 a 35
+#: palavras, …, fala de Bento com 21 palavras)» — o 21 é a medida da fala); o que abre pelo número é o valor do que vem
+#: antes («Teto do bastidor (40 palavras)»). O parêntese fechado corta só com número solto dentro («(teto)», «(máx.)»,
+#: «(D0-09)» e «(§15)» não cortam).
+_RE_FIM_DA_ORACAO_DO_TETO = re.compile(r"[;|]|(?<=[.!?])\s+(?=[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ])")
+_RE_NUMERO_SOLTO = re.compile(r"(?<![\w.,§-])(?<!§\s)\d")
+#: «frases com até 17 palavras (teto da faixa: 20 palavras)», «legendas com 39 a 46 palavras (teto: 60)», «fala com
+#: exatamente 21 palavras (cumprindo teto ≤ 25)»: o número seguido do teto com outro número — solto ou da mesma unidade
+#: — é a medida, e o teto é o outro. «(teto do D0-09)», «(teto do §15)» e «(máx. 2 linhas)» não trazem outro número de
+#: palavras: são o teto deste (o «§15» é a seção onde moram os tetos, não um teto de 15 — revisão do PR #77).
+_TETO_DEPOIS = (r"^\s*(?:\(\s*(?:[^\W\d]+\s+){{0,2}}?|[,—–]\s*)?(?:teto|m[áa]x|limite)[^)\n;|]*?(?<![\w.,§-])"
+                r"(?<!§\s)\d+(?:[.,]\d+)?\s*(?:{unidade}\b|[)\n;,|]|$)")
+#: A medida da string logo depois do identificador ou da copy citada: «`e6.pergunta.em13co26` (49 palavras)»
+#: (exp02em1b). `_CITADO` marca, na linha limpa, onde estava o texto entre aspas ou crases.
+_CITADO = "\ue000"
+_RE_IDENTIFICADOR_E_PARENTESE = re.compile(r"(?:\ue000|\b[\w-]+(?:[._][\w-]+)+)\s*\(\s*$")
+#: «fala de Bento com exatamente 21 palavras» (exp04ef1b): a contagem da copy, não um teto.
+_RE_EXATAMENTE = re.compile(r"\b(?:com|em)\s+exatamente\s+$", re.I)
+#: O teto ou o piso logo depois do número: «35 palavras no máximo», «35 palavras (teto)», «(teto do D0-09)», «8 a 10
+#: palavras, sem exceder o teto», «35 palavras ou menos», «40 palavras, que é o teto», «40 palavras é o teto».
+_RE_TETO_POSPOSTO = re.compile(
+    r"^\s*(?:,\s*)?(?:\(\s*(?:teto|m[áa]x|limite|piso|m[íi]n)|no\s+m[áa]ximo|no\s+m[íi]nimo|ou\s+(?:menos|mais)\b|"
+    r"(?:de\s+|como\s+)?(?:teto|limite|piso)\b|(?:sem|n[ãa]o\s+(?:pode|deve)(?:m)?)\s+(?:exceder|ultrapassar|passar)|"
+    r"(?:que\s+)?(?:é|s[ãa]o|ser[áa]|seria)\s+o\s+(?:teto|limite|m[áa]ximo|piso|m[íi]nimo)\b)",
+    re.I)
+
+
+def _oracao_do_teto(antes: str) -> str:
+    """O trecho da oração antes do número onde um teto o rege (`_RE_FIM_DA_ORACAO_DO_TETO`, parêntese)."""
+    fronteiras = list(_RE_FIM_DA_ORACAO_DO_TETO.finditer(antes))
+    trecho = antes[fronteiras[-1].end():] if fronteiras else antes
+    abertos: List[int] = []
+    corte = 0
+    for i, c in enumerate(trecho):
+        if c == "(":
+            abertos.append(i)
+        elif c == ")" and abertos:
+            j = abertos.pop()
+            if _RE_NUMERO_SOLTO.search(trecho[j + 1:i]):
+                corte = i + 1
+    if abertos and re.search(r"[^\W\d_]", trecho[abertos[-1] + 1:]):
+        itens = list(re.finditer(r"[,;]", trecho[abertos[-1]:]))
+        corte = max(corte, abertos[-1] + (itens[-1].end() if itens else 1))
+    return trecho[corte:]
+
+
+def _e_medida(antes: str, depois: str, unidade: str) -> bool:
+    """A ocorrência é a medida de uma string, não um teto (os FP do diagnóstico de 24/10/2026): seguida do teto com
+    outro número (`_TETO_DEPOIS`), entre parênteses logo depois de identificador ou copy citada, ou «com/em exatamente
+    N palavras»."""
+    return bool(re.match(_TETO_DEPOIS.format(unidade=unidade), depois, re.I)
+                or (_RE_IDENTIFICADOR_E_PARENTESE.search(antes) and re.match(r"\s*\)", depois))
+                or _RE_EXATAMENTE.search(antes))
+
+
+def _teto_rege(linha: str, tok: Tuple[str, str]) -> bool:
+    """Algum teto ou piso rege este número de palavras ou caracteres na linha (em alguma das ocorrências dele): antes
+    dele, em qualquer ponto da mesma oração (`_oracao_do_teto`); logo depois (`_RE_TETO_POSPOSTO`); ou, em linha de
+    tabela, na célula anterior («| Balão | Teto | 35 palavras |»). A medida (`_e_medida`) não é regida."""
+    num = re.escape(tok[0]).replace(r"\.", "[.,]")
+    tabela = linha.count("|") >= 2
+    for m in re.finditer(rf"(?<![\w.,]){num}\s?{tok[1]}", linha, re.I):
+        antes, depois = linha[:m.start()], linha[m.end():]
+        if _e_medida(antes, depois, tok[1]):
+            continue
+        if _RE_TETO_ANTES.search(_oracao_do_teto(antes)) or _RE_TETO_POSPOSTO.match(depois):
+            return True
+        if tabela:
+            celulas = antes.split("|")
+            # o número abre a célula, e a anterior é só o marcador — sem número dela
+            if (len(celulas) >= 3 and not re.search(r"\w", re.sub(r"[*_`~≈]", "", celulas[-1]))
+                    and _RE_TETO_ANTES.search(celulas[-2]) and not re.search(r"\d", celulas[-2])):
+                return True
+    return False
+
+
+#: Exemplo não é regra: «índice médio de invisibilidade da sala (ex.: 73%)» no painel do handoff da exp06ef1b.
+_RE_EXEMPLO = re.compile(r"\(\s*(?:ex\.|exemplo|e\.g\.|por exemplo)[^)\n]*\)", re.I)
+#: Estatística de fonte externa citada como contexto: «Pesquisas do CETIC.br (TIC Kids Online Brasil 2024) apontam que
+#: … menos de 15% compreendem…» no §1 do PRD da exp06ef1b-727a3c2d (24/10/2026) é dado do mundo, não regra da missão.
+#: Só a porcentagem: a duração ou o teto na mesma linha continuam pedindo origem.
+_RE_FONTE_EXTERNA = re.compile(r"\b(?:CETIC|TIC Kids|IBGE|PNAD|INEP|SAEB|PISA|OCDE|OECD|UNICEF|UNESCO|Datafolha)\b")
+#: A nota de acessibilidade medida por ferramenta é da casca: «Lighthouse Accessibility Score ≥ 98%» no RNF do PRD da
+#: exp04ef1b-8ce9c32d (24/10/2026). Também só a porcentagem: o tempo de uma mecânica que cita a WCAG («ajustável, WCAG
+#: 2.2.1») continua sendo decisão de produto.
+_RE_FERRAMENTA_DE_ACESSIBILIDADE = re.compile(r"Lighthouse|\bWCAG\b|axe-core", re.I)
+#: O recorte da aula do E0-PROF é o contrato de customização da plataforma, o mesmo em toda missão
+#: (`references/formato-spec.md`: `tema` ≤ 60, `assuntos` ≤ 600, `contexto` e `foco` ≤ 120 caracteres): os «máx. 60 /
+#: 600 caracteres» do handoff da exp04ef1b-8ce9c32d (24/10/2026). Só esses números, na linha que fala do recorte: outro
+#: teto de caracteres para o mesmo campo continua pedindo origem.
+_RE_RECORTE_DA_AULA = re.compile(r"disciplina|\btema\b|assuntos|t[óo]picos|contexto|recorte da aula|E0-PROF", re.I)
+_LIMITES_DO_RECORTE = frozenset({"60", "600", "120"})
 #: Contagem de opções que é texto-chave (D1: nº de opções): «3 alternativas», «duas opções».
 _NUMERO_POR_EXTENSO = {"um": "1", "uma": "1", "dois": "2", "duas": "2", "tres": "3", "três": "3", "quatro": "4",
                        "cinco": "5", "seis": "6", "sete": "7", "oito": "8", "nove": "9", "dez": "10"}
@@ -267,18 +461,26 @@ _RE_FORMULARIO_DO_PREPARO = re.compile(r"dropdown|lista suspensa|\bselect\b|disc
 
 
 def numeros_de_regra(linha: str) -> List[Tuple[str, str]]:
-    """Os números de regra da linha, fora de citação e de código em linha: %, s, min e palavras ou caracteres com teto
-    ou piso — sem os de plataforma, de layout e o 100%, que é «todos». Contagens de opção vêm à parte."""
+    """Os números de regra da linha (também em LaTeX), fora de citação, de código em linha e de exemplo «(ex.: …)»: %,
+    s, min e palavras ou caracteres que um teto ou piso rege — sem os de plataforma, de layout, a duração da espera de
+    carregamento, a estatística externa, a nota de acessibilidade, os limites do recorte da aula e o 100%, que é
+    «todos». Contagens de opção vêm à parte."""
     if de_plataforma(linha):
         return []
-    limpa = _RE_CITACAO.sub(" ", linha)
+    linha = sem_latex(linha)
+    limpa = _RE_EXEMPLO.sub(" ", _RE_CITACAO.sub(f" {_CITADO} ", linha))
     saida = []
     for n, u in numeros(limpa):
         if u == "px" or float(n) == 0 or (u == "%" and float(n) == 100):
             continue
-        if u == "%" and _RE_LAYOUT.search(limpa):
+        if u == "%" and (_RE_LAYOUT.search(limpa) or _RE_FONTE_EXTERNA.search(linha)
+                         or _RE_FERRAMENTA_DE_ACESSIBILIDADE.search(linha)):
             continue
-        if u in ("palavras", "caracteres") and not _RE_TETO_OU_PISO.search(limpa):
+        if u in ("s", "min") and _duracao_de_espera(limpa, (n, u)):
+            continue
+        if u in ("palavras", "caracteres") and not _teto_rege(limpa, (n, u)):
+            continue
+        if u == "caracteres" and n in _LIMITES_DO_RECORTE and _RE_RECORTE_DA_AULA.search(linha):
             continue
         saida.append((n, u))
     return saida
@@ -326,7 +528,8 @@ def _tok(fmt: str) -> Tuple[str, str]:
     return numeros(fmt)[0] if numeros(fmt) else (fmt, "")
 
 
-def hipoteses_e_tetos(one_pager: str, corpo: str, exigir_tetos: bool = True) -> List[Dict[str, str]]:
+def hipoteses_e_tetos(one_pager: str, corpo: str, exigir_tetos: bool = True, spec: str = "",
+                      contrato_texto: Optional[str] = None) -> List[Dict[str, str]]:
     """Números do §17 trocados no corpo e, com `exigir_tetos`, os do §15 ausentes ou trocados (régua do PR 1,
     `propagacao.contrato_no_corpo`). Todo item bloqueia: o corpo diz o que o one-pager diz, mesmo quando o próprio
     contrato diverge — aí a seção de pendências registra a divergência *além* do corpo certo
@@ -335,13 +538,25 @@ def hipoteses_e_tetos(one_pager: str, corpo: str, exigir_tetos: bool = True) -> 
 
     O handoff não repete os tetos nem as hipóteses (remete ao §17): nele só conta o trocado. A hipótese é comparada
     também item a item (`hipoteses_reescritas`): o handoff da exp02ef1b parafraseou a H1 inteira com 25%, e a linha
-    não casava por palavras com a do §17."""
+    não casava por palavras com a do §17.
+
+    Com `spec`, o item que não é divergência certa sai como dúvida (`situacao` `limiar-do-9f` ou `complemento`, ver
+    `hipoteses_reescritas`): o gate o mostra como atenção, não bloqueia. A leitura por hipótese não dá dúvida quando o
+    corpo reproduz a frase do §17 com o número trocado (`_reproduz_a_frase`)."""
     corpo = "\n".join(_linhas_do_corpo(corpo))
     candidatos = [c for c in contrato_no_corpo(one_pager, corpo, secoes=(15, 17))
                   # a hipótese ausente do corpo não é número trocado: o PRD remete ao anexo, e o handoff ao §17
                   if not (c["situacao"] == "ausente" and (c["secao"] == "§17" or not exigir_tetos))]
     vistos = {(c["secao"], c["contrato"], c["corpo"]) for c in candidatos}
-    for h in hipoteses_reescritas(one_pager, corpo):
+    for h in hipoteses_reescritas(one_pager, corpo, spec, contrato_texto):
+        if h["situacao"] in SITUACOES_DE_DUVIDA:
+            # a mesma troca que a régua de linha acusou (a linha do corpo tem as palavras da do §17): quem decide é a
+            # leitura por hipótese, que sabe da pergunta citada, do comparativo e do predicado — e que já não dá dúvida
+            # quando o corpo reproduz a frase do §17 com o número trocado (`_reproduz_a_frase`)
+            mesma = [c for c in candidatos if c["secao"] == "§17" and c["situacao"] == "trocado" and "hipotese" not in c
+                     and c["contrato"] in h["contrato"].split(", ") and c["corpo"] == h["corpo"]]
+            candidatos = [c for c in candidatos if c not in mesma]
+            vistos -= {(c["secao"], c["contrato"], c["corpo"]) for c in mesma}
         if not any(c["secao"] == "§17" and set(h["corpo"].split(", ")) <= set(c["corpo"].split(", "))
                    for c in candidatos) and (h["secao"], h["contrato"], h["corpo"]) not in vistos:
             candidatos.append(h)
@@ -467,25 +682,208 @@ def _numeros_de_hipotese(texto: str) -> List[Tuple[str, str]]:
     return [t for t in numeros(_RE_CITACAO.sub(" ", texto)) if t[1] in ("%", "s", "min") and float(t[0]) not in (0, 100)]
 
 
-def hipoteses_reescritas(one_pager: str, corpo: str) -> List[Dict[str, str]]:
+#: O comparativo da meta, logo antes da porcentagem: «mais de 25%», «superar 25%», «maior que 25%», «a partir de 25%»…
+#: (`_RE_MAIS`), «menos de 60%», «abaixo de 60%», «no máximo 60%»… (`_RE_MENOS`). Logo depois: «25% ou mais».
+_RE_MAIS = (r"(?:\b(?:mais\s+(?:de|que|do\s+que)|acima\s+de|superior(?:es)?\s+a|maior(?:es)?\s+(?:do\s+)?que|"
+            r"igual\s+ou\s+(?:superior|maior)\s+(?:a|que)|a\s+partir\s+de|pelo\s+menos|ao\s+menos|no\s+m[íi]nimo|"
+            r"super(?:ar|arem|a|am|e|em)|ultrapass(?:ar|arem|a|am|e|em)|exced(?:er|erem|e|em|a|am)|"
+            r"pass(?:ar|arem|a|am|e|em)\s+de)\b|>=?|≥)")
+_RE_MENOS = (r"(?:\b(?:menos\s+(?:de|que|do\s+que)|abaixo\s+de|inferior(?:es)?\s+a|menor(?:es)?\s+(?:do\s+)?que|"
+             r"igual\s+ou\s+(?:inferior|menor)\s+(?:a|que)|no\s+m[áa]ximo|at[ée])(?!\w)|<=?|≤)")
+_RE_COMPARATIVO_ANTES = re.compile(rf"(?:{_RE_MAIS}|{_RE_MENOS}|entre)\s*~?\s*$", re.I)
+_RE_COMPARATIVO_DEPOIS = re.compile(r"^\s*ou\s+(mais|menos)\b", re.I)
+_RE_POPULACAO_DEPOIS = re.compile(r"^\s*(?:ou\s+(?:mais|menos)\s+)?d[aeo]s?\s+(?:estudantes|alun[oa]s|turmas?|duplas|"
+                                  r"crian[çc]as|jurados|conselheiros|professor(?:es|as)|participantes|grupos|equipes|"
+                                  r"jovens|respondentes|usu[áa]rios|sala)\b", re.I)
+#: A porcentagem da mecânica vem marcada como tal, sem comparativo: «taxa real de ~75% de invisibilidade» do PRD e «a
+#: taxa de 75% da Galeria Oculta» do handoff da exp06ef1b eram os 12 de 16 projetos ocultos, não meta da H2 (análise de
+#: 24/10/2026). «taxa de desistência de 25%» não é esse caso: a taxa ali é a medida da hipótese. O «~» solto não marca
+#: nada (revisão do PR #77, 24/10/2026: «Se a desistência chegar a ~25%» tirava a H1 30×25 da exp02ef1b do gate).
+_RE_MECANICA_ANTES = re.compile(r"\btaxa\s+(?:real\s+)?de\s*~?\s*$", re.I)
+
+
+def _contrato_da_mecanica(contrato_texto: str) -> str:
+    """O contrato sem o §17 (as metas) e sem as linhas de tabela com `PQ-nn` (os limiares do 9f): onde a porcentagem
+    marcada como mecânica tem de estar para não ser meta. Os 75% da exp06ef1b estão na conta da invisibilidade do
+    one-pager e da spec; os 25% da exp02ef1b, só no limiar da PQ-01 — «a taxa de 25% de desistência» é a meta."""
+    from tools.kpis import _RE_PQ
+
+    saida: List[str] = []
+    nivel: Optional[int] = None
+    for linha in (contrato_texto or "").splitlines():
+        m = re.match(r"^(#{1,6})\s+(.*)$", linha)
+        if m:
+            if nivel is not None and len(m.group(1)) <= nivel:
+                nivel = None
+            if nivel is None and re.match(r"^(?:§\s*)?17\s*(?:\.(?![\dA-Za-z])|[—–-])", m.group(2).strip("*_ ")):
+                nivel = len(m.group(1))
+                continue
+        if nivel is None and not ("|" in linha and _RE_PQ.search(linha)):
+            saida.append(linha)
+    return "\n".join(saida)
+
+
+def _metas_do_corpo(texto: str, mecanica: str = "") -> List[Tuple[str, str]]:
+    """Os números de hipótese do corpo que podem ser meta: a duração (s, min) e toda porcentagem, menos a que vem
+    marcada como mecânica (`_RE_MECANICA_ANTES`) sem comparativo nem população e que o contrato tem fora do §17 e do
+    9f (`mecanica`, de `_contrato_da_mecanica`). Sem o contrato, a marca não basta: a porcentagem é meta.
+
+    Revisão do PR #77 (24/10/2026): a leitura pedia o comparativo de uma lista curta ou a população, e fora disso a
+    porcentagem sumia em silêncio — «Se a desistência das duplas superar 25%», «25% ou mais das duplas», «maior que
+    25%» tiravam do gate a H1 30×25 da exp02ef1b (D11). O lado conservador é o contrário: só sai a marcada. Na segunda
+    revisão, a marca sozinha ainda tirava «Se a taxa de 25% de desistência for atingida»: a mecânica é a do contrato."""
+    limpo = _RE_CITACAO.sub(" ", texto or "").replace("$", "").replace("\\%", "%").replace("\\ge", "≥").replace(
+        "\\le", "≤")
+    saida = []
+    for t in _numeros_de_hipotese(limpo):
+        if t[1] == "%" and tem_numero(mecanica, t):
+            num = re.escape(t[0]).replace(r"\.", "[.,]")
+            ocorrencias = list(re.finditer(rf"(?<![\w.,]){num}\s?%", limpo))
+            if ocorrencias and all(
+                    _RE_MECANICA_ANTES.search(limpo[max(0, m.start() - 25):m.start()])
+                    and not _RE_COMPARATIVO_ANTES.search(limpo[max(0, m.start() - 25):m.start()])
+                    and not _RE_COMPARATIVO_DEPOIS.match(limpo[m.end():m.end() + 20])
+                    and not _RE_POPULACAO_DEPOIS.match(limpo[m.end():m.end() + 40])
+                    for m in ocorrencias):
+                continue
+        saida.append(t)
+    return saida
+
+
+#: Palavras de qualquer hipótese: não dizem se duas hipóteses falam da mesma coisa.
+_GENERICAS_DE_HIPOTESE = frozenset("""estudante estudantes aluno alunos alunas turma turmas crianca criancas dupla
+duplas jurado jurados conselheiro conselheiros hipotese eficacia falha indica observar etapa assume proporcao
+percentual quantos quantas antes depois durante menos""".split())
+
+
+def _radicais(texto: str) -> Set[str]:
+    from tools.propagacao import _palavras
+
+    texto = re.sub(r"\bPQ-?\d+\b|\bH\d+\b", " ", _RE_CITACAO.sub(" ", texto or ""))
+    return {p[:5] for p in _palavras(texto) if len(p) >= 5 and p not in _GENERICAS_DE_HIPOTESE}
+
+
+def _mesma_hipotese(a: str, b: str) -> bool:
+    """As duas falam da mesma coisa: 3 radicais de conteúdo em comum. A H1 do handoff da exp06ef1b-727a3c2d e a do §17
+    têm 7 («afuni», «curte», «posts»…); a H3, trocada por «Adoção da Busca Ativa», tem 1 («bolha»)."""
+    return len(_radicais(a) & _radicais(b)) >= 3
+
+
+def _direcao(texto: str, tok: Tuple[str, str]) -> str:
+    """`mais` ou `menos`: o comparativo logo antes da porcentagem («superar 25%», «menos de 60%») ou logo depois
+    («25% ou mais»); vazio sem comparativo."""
+    num = re.escape(tok[0]).replace(r"\.", "[.,]")
+    m = re.search(rf"({_RE_MAIS}|{_RE_MENOS})\s*~?\s*{num}\s?%", texto or "", re.I)
+    if m:
+        return "mais" if re.fullmatch(_RE_MAIS, m.group(1), re.I) else "menos"
+    m = re.search(rf"(?<![\w.,]){num}\s?%\s*ou\s+(mais|menos)\b", texto or "", re.I)
+    return m.group(1).lower() if m else ""
+
+
+#: Situações de `hipoteses_reescritas` que são dúvida, não divergência certa: saem como `hipotese-a-conferir`, atenção.
+SITUACOES_DE_DUVIDA = ("limiar-do-9f", "complemento")
+#: Onde acaba o predicado da porcentagem — o que a hipótese diz da população que o número conta: «Mais de 30% das
+#: duplas desistirem de ajustar a moldura e clicarem em confirmar na posição default sem interagir.»
+_RE_FIM_DO_PREDICADO = re.compile(r"[;:|(\n]|\.(?!\d)")
+#: Negação explícita do predicado, logo depois da população: «dos estudantes não conseguirem», «das duplas que não
+#: concluírem». A de uma oração subordinada mais adiante («projetos que nunca viram») não nega a meta.
+_RE_PREDICADO_NEGADO = re.compile(r"^\s*(?:d[aeo]s?\s+[^\W\d]+\s+)?(?:que\s+)?(?:n[ãa]o|nunca|jamais)\b", re.I)
+
+
+def _predicado(texto: str, tok: Tuple[str, str]) -> str:
+    """O que vem depois da porcentagem até o fim da oração (`_RE_FIM_DO_PREDICADO`); vazio se ela não está no texto."""
+    limpo = sem_latex(_RE_CITACAO.sub(" ", texto or ""))
+    num = re.escape(tok[0]).replace(r"\.", "[.,]")
+    m = re.search(rf"(?<![\w.,]){num}\s?%", limpo)
+    if not m:
+        return ""
+    fim = _RE_FIM_DO_PREDICADO.search(limpo, m.end())
+    return limpo[m.end():fim.start() if fim else len(limpo)]
+
+
+def _mesmo_predicado(a: str, b: str) -> bool:
+    """Os dois predicados falam da mesma coisa: 2 radicais de conteúdo em comum. «das duplas desistirem de ajustar as
+    alças e confirmarem na posição central default» e «das duplas desistirem de ajustar a moldura e clicarem em
+    confirmar na posição default» têm 5; «concluírem o agrupamento com a justificativa correta» e «parearem cartas
+    justificando pela cor do uniforme» (H3 da exp02ef1b), 1."""
+    return len(_radicais(a) & _radicais(b)) >= 2
+
+
+def _reproduz_a_frase(texto: str, fora: Sequence[Tuple[str, str]], do_17: str,
+                      aprovados: Sequence[Tuple[str, str]]) -> bool:
+    """O corpo reproduz a frase da meta do §17 com o número trocado: cada número dele tem, no §17, uma meta da mesma
+    unidade com o mesmo comparativo e o mesmo predicado. É a H1 da exp02ef1b — «Se mais de 25% das duplas desistirem
+    de ajustar as alças e confirmarem na posição central default» contra «Mais de 30% das duplas desistirem de ajustar
+    a moldura …» —, que o PO acusou em 23/10/2026: divergência certa, mesmo com uma PQ firme no outro número."""
+    return all(any(a[1] == t[1] and _direcao(texto, t) == _direcao(do_17, a)
+                   and _mesmo_predicado(_predicado(texto, t), _predicado(do_17, a)) for a in aprovados)
+               for t in fora)
+
+
+def _complemento_pelo_predicado(texto: str, tok: Tuple[str, str], do_17: str, aprovado: Tuple[str, str]) -> bool:
+    """100 − x com o comparativo invertido só é o complemento quando o predicado também muda: outro predicado («mais
+    de 40% parearem pela cor» × «menos de 60% concluírem com a justificativa correta», exp02ef1b) ou o mesmo negado
+    («mais de 30% desistirem» × «menos de 70% não desistirem»). O mesmo predicado com o critério invertido — «menos de
+    70% das duplas desistirem» contra «mais de 30% das duplas desistirem» — é divergência certa (revisão do PR #77)."""
+    p_corpo, p_17 = _predicado(texto, tok), _predicado(do_17, aprovado)
+    return (not _mesmo_predicado(p_corpo, p_17)
+            or bool(_RE_PREDICADO_NEGADO.match(p_corpo)) != bool(_RE_PREDICADO_NEGADO.match(p_17)))
+
+
+def hipoteses_reescritas(one_pager: str, corpo: str, spec: str = "",
+                         contrato_texto: Optional[str] = None) -> List[Dict[str, str]]:
     """Hipótese do corpo com número que a hipótese de mesmo número do §17 não tem: `trocado` quando a do §17 tem
     outro número da mesma unidade (H1: 30% no §17, 25% no handoff da exp02ef1b), `acrescentado` quando ela não
-    quantifica e o corpo inventou a meta (H2 do mesmo handoff: «menos de 70%»)."""
+    quantifica e o corpo inventou a meta (H2 do mesmo handoff: «menos de 70%»).
+
+    Análise de 24/10/2026 (7 execuções de dev vistas pelo PO), o que deixou de ser divergência certa:
+    - porcentagem marcada como mecânica («taxa real de ~75%») não é meta (`_metas_do_corpo`) — qualquer outra é, com
+      qualquer redação do comparativo; duração que o §17 não quantifica e que o contrato tem é
+      parâmetro da mecânica citado («retenção >5s», «zoom-out de 2,5s», PRDs da exp06ef1b e da exp01ef1b) — a que o
+      contrato não tem continua meta inventada («`tempo_feed_segundos` < 180s» na H1 do PRD da exp05ef1b);
+    - `limiar-do-9f` (dúvida): o número é o limiar da `PQ-nn` que a própria hipótese cita, numa linha firme do 9f (sem
+      `[PROPOSTA]`), e a hipótese fala da mesma coisa que a do §17 — meta do §17 (85%) × limiar da PQ-01 (80%) no
+      handoff da exp06ef1b-727a3c2d. A H3 do mesmo handoff, que trocou a hipótese inteira, continua `trocado`; e a
+      frase do §17 reproduzida com o número trocado também (`_reproduz_a_frase`, a H1 30×25 da exp02ef1b);
+    - `complemento` (dúvida): 100 − x com o comparativo invertido e outro predicado, ou o mesmo negado — «mais de 40%
+      parearem pela cor» no §17 e «menos de 60% … com a justificativa correta» no handoff da exp02ef1b. Só é a mesma
+      regra se ninguém ficar fora dos dois. O mesmo predicado com o critério invertido é `trocado`
+      (`_complemento_pelo_predicado`)."""
     from tools.conteudo_aprovado import secao
+    from tools.kpis import _RE_PQ, _pq_id
 
     do_17 = _itens_de_hipotese(secao(one_pager or "", 17) or "")
     do_corpo = _itens_de_hipotese(_secoes_de_hipotese(corpo))
+    nove_f = _linhas_9f(sem_linhas_abertas(spec)) if spec else {}
+    mecanica = _contrato_da_mecanica(contrato_texto or "")
     saida = []
     for n, texto in do_corpo.items():
         if n not in do_17:
             continue
         aprovados = _numeros_de_hipotese(do_17[n])
-        fora = [t for t in _numeros_de_hipotese(texto) if not tem_numero(do_17[n], t)]
+        unidades = {u for _, u in aprovados}
+        fora = [t for t in _metas_do_corpo(texto, mecanica) if not tem_numero(do_17[n], t)
+                and (t[1] == "%" or t[1] in unidades or contrato_texto is None or not tem_numero(contrato_texto, t))]
         if not fora:
             continue
         mesma_unidade = [t for t in aprovados if t[1] in {u for _, u in fora}]
+        situacao, pq = ("trocado" if mesma_unidade else "acrescentado"), ""
+        citadas = [_pq_id(x) for x in _RE_PQ.findall(texto) if _pq_id(x) in nove_f]
+        do_9f = {p: _pct(nove_f[p]) for p in citadas}
+        # só quando o §17 quantifica a hipótese: sem meta no §17, o número do corpo continua `acrescentado`
+        if mesma_unidade and all(t[1] == "%" for t in fora) and _mesma_hipotese(do_17[n], texto):
+            pq = next((p for p in citadas if all(t[0] in do_9f[p] for t in fora)), "")
+            if pq and _reproduz_a_frase(texto, fora, do_17[n], aprovados):
+                pq = ""
+            elif pq:
+                situacao = "limiar-do-9f"
+            elif all(any(abs(float(t[0]) + float(a[0]) - 100) < 1e-9 and a[1] == "%"
+                         and {_direcao(texto, t), _direcao(do_17[n], a)} == {"mais", "menos"}
+                         and _complemento_pelo_predicado(texto, t, do_17[n], a) for a in aprovados)
+                     for t in fora):
+                situacao = "complemento"
         linha_corpo = next((l for l in texto.splitlines() if any(tem_numero(l, t) for t in fora)), texto)
-        saida.append({"secao": "§17", "situacao": "trocado" if mesma_unidade else "acrescentado",
+        saida.append({"secao": "§17", "situacao": situacao, "pq": pq,
                       "contrato": ", ".join(_fmt(t) for t in mesma_unidade) or "nenhum número",
                       "corpo": ", ".join(_fmt(t) for t in fora), "hipotese": f"H{n}",
                       "linha": do_17[n].strip().splitlines()[0][:200], "linha_corpo": linha_corpo.strip()[:200]})
@@ -724,6 +1122,7 @@ def _validar(documento: str, texto: str, state: Dict[str, Any]) -> Dict[str, Any
         return {"status": "aprovado", "achados": [], "registradas": [], "contagem": {}}
     docs = contrato(state)
     contrato_texto = texto_do_contrato(docs)
+    contrato_escrito = texto_do_contrato({k: v for k, v in docs.items() if k not in _FONTES_DE_DECISAO})
     one_pager = docs["one_pager"]
     spec = _spec_produto(state)
     pendencias = (secao_numerada(corpo, 19, "pend[êe]ncias") if documento == "prd"
@@ -735,7 +1134,7 @@ def _validar(documento: str, texto: str, state: Dict[str, Any]) -> Dict[str, Any
         achados.append(_achado(
             "numero-sem-origem",
             f"{len(sem_origem)} número(s) de regra do corpo do {rotulo} não estão no contrato (one-pager, spec de "
-            f"produto, decisões da lista branca do bloco 13, decisões do PO no de acordo): "
+            f"produto, decisões da lista branca do bloco 13, decisões do PO no de acordo e trocas da correção pontual): "
             + _exemplos(f"{i['numero']} em «{i['linha'][:110]}»" for i in sem_origem)
             + f". O {rotulo} monta, não decide: copie o número do contrato, tire-o, ou marque a linha "
             "`[PROPOSTA — validar com PO: <o número> · por quê]` (ela vai para a seção 19.3). Polling, TTL, p95 e o que "
@@ -743,13 +1142,30 @@ def _validar(documento: str, texto: str, state: Dict[str, Any]) -> Dict[str, Any
 
     # b) hipóteses, tetos e metas — o corpo trocado bloqueia sempre; a divergência do próprio contrato, na origem
     # certa, pede o registro na seção de pendências além do corpo certo
-    divergentes = hipoteses_e_tetos(one_pager, corpo, exigir_tetos=(documento == "prd"))
+    divergentes = hipoteses_e_tetos(one_pager, corpo, exigir_tetos=(documento == "prd"), spec=spec,
+                                    contrato_texto=contrato_escrito)
     do_contrato = divergencias_do_contrato(one_pager, spec)
     for c in divergentes:
         if c["secao"] == "§17":
             codigo, o_que = "hipotese-diverge", "hipótese"
         else:
             codigo, o_que = ("teto-ausente", "teto") if c["situacao"] == "ausente" else ("teto-diverge", "teto")
+        # dúvida, não divergência certa: atenção, separada do bloqueio pelo código (análise de 24/10/2026)
+        if c["situacao"] in SITUACOES_DE_DUVIDA:
+            if c["situacao"] == "limiar-do-9f":
+                por_que = (f"que é o limiar da {c['pq']} no 9f da spec — a pergunta que a própria hipótese cita, "
+                           "numa linha firme do contrato. Meta da hipótese e limiar de decisão da pergunta não são a "
+                           "mesma grandeza")
+            else:
+                por_que = ("o complemento do número do §17 com o comparativo invertido. Só é a mesma regra se ninguém "
+                           "ficar fora dos dois lados (quem não conclui conta como falha num e não no outro)")
+            achados.append(_achado(
+                "hipotese-a-conferir",
+                f"Dúvida, não divergência certa: a {c['hipotese']} do §17 do one-pager tem {c['contrato']}, e o "
+                f"{rotulo} escreve {c['corpo']}, {por_que}: «{c['linha_corpo'][:140]}». Confira com o PO antes do de "
+                "acordo; o seguro é copiar o §17" + (" (ou remeter a ele)" if documento == "handoff" else "")
+                + (f" e citar o limiar da {c['pq']} à parte." if c["pq"] else "."), documento, severidade="atencao"))
+            continue
         if c["situacao"] == "acrescentado":
             resumo = (f"A {c.get('hipotese', 'hipótese')} do §17 do one-pager não tem número, e o {rotulo} lhe dá "
                       f"{c['corpo']}: «{c['linha_corpo'][:140]}». Meta de hipótese é decisão do PO: "
@@ -873,8 +1289,16 @@ def relatorio(resultado: Dict[str, Any], documento: str, missao: str = "") -> st
          "decisões do PO): números de regra, hipóteses e metas, tetos, estados e origem citada.", ""]
     if not resultado["achados"]:
         L.append("- Tudo o que o corpo afirma de produto está no contrato, com os mesmos números e estados.")
-    for a in resultado["achados"]:
-        L.append(f"- {'⛔' if a['severidade'] == 'bloqueio' else '⚠️'} `{a['codigo']}` — {a['resumo']}")
+    # divergência certa e dúvida em blocos separados, para o PO e para o retrabalho: das 7 execuções de dev vistas pelo
+    # PO até 23/10/2026, todas saíram 🔴 com acerto e ruído na mesma lista (análise de 24/10/2026)
+    certas = [a for a in resultado["achados"] if a["severidade"] == "bloqueio"]
+    duvidas = [a for a in resultado["achados"] if a["severidade"] != "bloqueio"]
+    if certas and duvidas:
+        L.append("**Divergência certa — bloqueia; o redator corrige:**")
+    L += [f"- ⛔ `{a['codigo']}` — {a['resumo']}" for a in certas]
+    if certas and duvidas:
+        L += ["", "**Dúvida ou registro — não bloqueia; o PO confere antes do de acordo:**"]
+    L += [f"- ⚠️ `{a['codigo']}` — {a['resumo']}" for a in duvidas]
     envelope = {"agente": AGENTE, "missao": missao or "", "status": resultado["status"],
                 "achados": [{"severidade": a["severidade"], "classe": "montagem", "codigo": a["codigo"],
                              "agente_responsavel": a["agente_responsavel"], "resumo": a["resumo"]}

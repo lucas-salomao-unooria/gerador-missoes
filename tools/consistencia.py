@@ -348,7 +348,10 @@ def _candidatos_a_rotulo(texto: str) -> List[Tuple[str, int]]:
     for linha in texto.splitlines(keepends=True):
         if _RE_ROTULO_CONTEXTO.search(linha):
             eh_tab = linha.lstrip().startswith("|")
-            cands += [(m.group(1), pos + m.start(), eh_tab) for m in _RE_ENTRE_ASPAS.finditer(linha)]
+            # entre crases ou aspas simples é código: «disparar a transição para `unoovista`», no critério de aceite
+            # do botão de publicar do PRD da exp02em1b, é nome de estado, não rótulo (24/10/2026)
+            cands += [(m.group(1), pos + m.start(), eh_tab or m.group(0)[0] in "`'")
+                      for m in _RE_ENTRE_ASPAS.finditer(linha)]
         if linha.lstrip().startswith("|") and _RE_CHAVE_DE_BOTAO.search(linha):
             cands += [(c, pos, True) for c in (x.strip() for x in linha.strip().strip("|").split("|"))]
         pos += len(linha)
@@ -465,7 +468,10 @@ def _declaracoes(texto: str) -> Dict[str, Dict[str, Dict[str, Set[str]]]]:
                 col = re.sub(r"[`*]", "", partes[0]).strip().lower()
                 if col in ("coluna", "campo", "nome", "name") or re.match(r"^:?-+:?$", col):
                     continue
-                tipo_match = re.search(r"\b(" + _RE_TIPO + r")\b", partes[1], re.I)
+                # o tipo abre a célula (`UUID`, `TEXT NOT NULL`): solto no meio da prosa, «sem navegação na internet
+                # real» da linha `| `unooriaai` | … |` da spec da exp02em1b virava a coluna `unooriaai` REAL
+                # (24/10/2026)
+                tipo_match = re.match(r"^[\s`*_]*(" + _RE_TIPO + r")\b", partes[1], re.I)
                 if tipo_match and re.match(r"^[a-z0-9_]+$", col):
                     anota(tabela_atual, col, tipo_match.group(1))
         elif re.match(r"^#{1,4}\s+", linha):
