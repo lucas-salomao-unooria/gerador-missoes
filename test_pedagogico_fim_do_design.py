@@ -1211,3 +1211,64 @@ def test_backup_do_refazer_so_de_dev_leva_o_pedagogico_e_a_restauracao_o_desfaz(
     monkeypatch.setattr(rx, "reescritos_sem_cair", lambda removidas: [])
     antes, depois = refazer_dev_e_desfazer(_estado(), tmp_path / "mutante", raiz_antiga=True)
     assert antes and not any(c.startswith("one-pager-pedagogico") for c in depois)
+
+
+def test_prototipo_do_cartao_e_link_clicavel_e_o_guia_aponta_a_pasta_de_design(tmp_path, monkeypatch):
+    """3ª revisão do PR #79 (24/10/2026), M4: no cartão do de acordo de design, o protótipo aparecia como caminho em código
+    («Protótipo navegável (`design/08-prototipo.html`)»), sem clique, ao lado do Miro clicável — e é por ele que o time
+    valida a missão. Agora o arquivo da sessão é servido pelo Streamlit (`MediaFileManager`, como `st.image`) e abre numa
+    aba. E o guia em LaTeX apontava `one-pager-pedagogico.md` na raiz."""
+    import types as tipos
+
+    import streamlit.runtime as rt
+    from streamlit.runtime.media_file_manager import MediaFileManager
+    from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+
+    import app
+
+    (tmp_path / "design").mkdir()
+    html = b"<!doctype html><title>prototipo</title>"
+    (tmp_path / "design" / "08-prototipo.html").write_bytes(html)
+    armazenamento = MemoryMediaFileStorage("/media")
+    with monkeypatch.context() as m:
+        m.setattr(rt, "exists", lambda: True)
+        m.setattr(rt, "get_instance", lambda: tipos.SimpleNamespace(media_file_mgr=MediaFileManager(armazenamento)))
+        url = app._url_do_link(tmp_path, "design/08-prototipo.html")
+        assert re.fullmatch(r"/media/[0-9a-f]+\.html", url), url
+        servido = armazenamento.get_file(url.rsplit("/", 1)[1].split(".")[0])
+        assert servido.content == html and servido.mimetype == "text/html" and servido.kind.name == "MEDIA"
+        assert app._url_do_link(tmp_path, "https://miro.com/app/board/x=/") == "https://miro.com/app/board/x=/"
+        # sem o arquivo, o caminho — nunca uma exceção no cartão
+        assert app._url_do_link(tmp_path, "design/09-diagramas.html") == "design/09-diagramas.html"
+    # fora do servidor (o AppTest), também o caminho
+    assert app._url_do_link(tmp_path, "design/08-prototipo.html") == "design/08-prototipo.html"
+
+    # o cartão de verdade (AppTest): todo link é link, nenhum caminho em código
+    pytest = __import__("pytest")
+    pytest.importorskip("streamlit.testing.v1")
+    from streamlit.testing.v1 import AppTest
+
+    def roteiro():
+        import json as _json
+        import os
+        from pathlib import Path as _Path
+
+        import app as _app
+
+        run_dir = _Path(os.environ["CARTAO_RUN_DIR"])
+        _app._render_documento_a_aprovar(run_dir, _json.loads((run_dir / "estado.json").read_text("utf-8")), "design")
+
+    estado = _ate_o_fim_do_design(_estado())
+    estado["miro_links"] = "Board: https://miro.com/app/board/uXjVabc=/"
+    (tmp_path / "estado.json").write_text(json.dumps(estado), encoding="utf-8")
+    monkeypatch.setenv("CARTAO_RUN_DIR", str(tmp_path))
+    monkeypatch.chdir(Path(__file__).resolve().parent)
+    at = AppTest.from_function(roteiro, default_timeout=60)
+    at.run()
+    assert not at.exception, at.exception
+    links = next(m.value for m in at.markdown if m.value.startswith("**Protótipo e telas:**"))
+    assert "[Protótipo navegável](" in links and "[Board no Miro](https://miro.com" in links
+    assert "`design/" not in links, links
+
+    guia = (Path(__file__).resolve().parent / "documentacao-latex" / "guia-do-gerador-de-missoes.tex").read_text("utf-8")
+    assert r"\cod{one-pager-pedagogico.md}" not in guia and r"\cod{design/14-one-pager-pedagogico.md}" in guia

@@ -768,6 +768,25 @@ def _render_textos_chave(estado: Dict[str, Any]) -> None:
         st.markdown(tabela)
 
 
+def _url_do_link(run_dir: Path, alvo: str) -> str:
+    """O endereço que abre o link do cartão no navegador. Link externo (Stitch, Miro) fica como está; o arquivo da sessão
+    (o protótipo, os diagramas) é servido pelo Streamlit, como as imagens de `st.image` (`MediaFileManager`), e abre numa
+    aba. Até a 3ª revisão do PR #79 (24/10/2026) o protótipo aparecia como caminho em código, sem clique — e é por ele
+    que o time valida a missão. Sem o arquivo, ou fora do servidor (o AppTest), o caminho relativo à sessão."""
+    if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", alvo):
+        return alvo
+    arquivo = Path(run_dir) / alvo
+    try:
+        from streamlit import runtime
+
+        if arquivo.is_file() and runtime.exists():
+            mime = "text/html" if arquivo.suffix.lower() in (".html", ".htm") else "application/octet-stream"
+            return runtime.get_instance().media_file_mgr.add(str(arquivo), mime, f"documento_a_aprovar/{alvo}")
+    except Exception as exc:  # o link não pode derrubar o cartão do de acordo
+        st.caption(f"⚠️ Não consegui servir `{alvo}`: {exc}")
+    return alvo
+
+
 def _render_documento_a_aprovar(run_dir: Path, estado: Dict[str, Any], etapa: str) -> None:
     """O documento sobre o qual o *de acordo* da etapa é dado — no design, o one-pager pedagógico, com os links do
     protótipo (PR 10 do plano «Produto dono do contrato», 24/10/2026). O time validava a missão pelos protótipos contra o
@@ -786,8 +805,7 @@ def _render_documento_a_aprovar(run_dir: Path, estado: Dict[str, Any], etapa: st
                        "de produto e aplica no pedagógico o que é de design.")
         if doc["links"]:
             st.markdown("**Protótipo e telas:** " + " · ".join(
-                f"[{l['rotulo']}]({l['alvo']})" if l["alvo"].startswith("http") else f"{l['rotulo']} (`{l['alvo']}`)"
-                for l in doc["links"]))
+                f"[{l['rotulo']}]({_url_do_link(run_dir, l['alvo'])})" for l in doc["links"]))
         if doc["existe"]:
             docx = run_dir / doc["docx"]
             if docx.exists():
