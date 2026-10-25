@@ -183,6 +183,11 @@ def aplicar(estado: Dict[str, Any], base: Dict[str, Dict[str, Any]], edicoes: It
             # O relatório termina no envelope novo e o cabeçalho diz o veredito novo. Até 25/10/2026 só a nota entrava, e
             # a fidelidade de e89e91b3 e 60cfa7f4 seguia «Veredito: 🔴» com o envelope antigo no fim e o status em 🟡
             delta[relatorio_key] = relatorio_com_envelope(estado[relatorio_key], novo, nota)
+        elif nota and not relatorio_key and isinstance(estado.get(k[: -len("_status")] + "_report"), str):
+            # gate sem relatório próprio (`SEM_RELATORIO_PROPRIO`): o relatório é a resposta do agente, com o envelope
+            # dele, e fica; a nota do veredito 🟡 entra no fim, como até 25/10/2026, para relatório e status não divergirem
+            chave_nota = k[: -len("_status")] + "_report"
+            delta[chave_nota] = estado[chave_nota] + "\n\n" + nota
         delta[f"{k}_envelope"] = novo
     delta.update(_degradacoes_sem_gate_vivo(estado, delta, chaves_status))
     return delta, linhas

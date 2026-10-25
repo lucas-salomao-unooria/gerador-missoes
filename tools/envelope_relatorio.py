@@ -32,7 +32,11 @@ RELATORIO_DO_GATE: Dict[str, str] = {
     "avaliacao_status": "avaliacao_pedagogica_report",
     "experiencia_status": "experiencia_aluno_report",
 }
-SEM_RELATORIO_PROPRIO = frozenset({"lacunas_status", "ambiente_status", "completude_status"})
+#: O `stitch_status` também: o `ArtefatosDesignAgent` grava o envelope «stitch-cobertura» só em `stitch_status_envelope`,
+#: e o `prototipo_relatorio` termina no envelope «prototipo-navegavel» do A080 (nas 3 sessões do acervo com `stitch_status`).
+#: Pôr o da cobertura ali trocaria o envelope do protótipo pelo do Stitch (revisão do PR #83, 25/10/2026). Nesses gates a
+#: linha de base só acrescenta a nota ao `<gate>_report`, quando ele existe, sem trocar envelope (`tools/linha_de_base.py`).
+SEM_RELATORIO_PROPRIO = frozenset({"lacunas_status", "ambiente_status", "completude_status", "stitch_status"})
 
 _RE_BLOCO_JSON = re.compile(r"```json\s*(\{.*?\})\s*```", re.DOTALL)
 _RE_VEREDITO = re.compile(r"\*\*Veredito:\s*[^*\n]*\*\*")
