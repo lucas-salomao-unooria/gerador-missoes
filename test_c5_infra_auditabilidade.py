@@ -282,6 +282,38 @@ def test_linha_de_base_regrava_o_relatorio_com_o_envelope_novo():
     assert not concordam(antigo, delta["fidelidade_status_envelope"])
 
 
+@pytest.mark.parametrize("missao,achado", [("exp02em1b-60cfa7f4", "F21"), ("exp01em1b-e89e91b3", "F26")])
+def test_linha_de_base_troca_a_marca_do_achado_rebaixado_no_corpo(missao, achado):
+    """O corpo da fidelidade gravada marca «🔴 **F21**» (60cfa7f4) e «🔴 **F26**» (e89e91b3) com o achado já em atenção no
+    envelope. A linha de base troca a marca de cada achado que rebaixou, como o #84 (C2) faz (revisão do PR #83)."""
+    from tools import linha_de_base
+
+    gravado = _estado(missao)
+    relatorio = gravado["fidelidade_report"]
+    assert f"🔴 **{achado}**" in relatorio, "o defeito, como gravado"
+    # o envelope de antes da linha de base: o achado ainda bloqueio, o gate 🔴
+    achados = []
+    for a in gravado["fidelidade_status_envelope"]["achados"]:
+        a = {k: v for k, v in a.items() if k not in ("linha_de_base", "severidade_original")}
+        if a.get("id") == achado:
+            a["severidade"] = "bloqueio"
+        achados.append(a)
+    envelope = {**gravado["fidelidade_status_envelope"], "status": "bloqueado", "achados": achados}
+    envelope.pop("veredito_original", None)
+    estado = {"fidelidade_status": "bloqueado", "fidelidade_status_envelope": envelope, "fidelidade_report": relatorio}
+    delta, _ = linha_de_base.aplicar(estado, {}, [{"de": "trecho que nenhum achado cita", "para": "outro"}],
+                                     ["fidelidade_status"])
+    assert delta["fidelidade_status"] == "amarelo"
+    novo = delta["fidelidade_report"]
+    assert f"🔴 **{achado}**" not in novo and f"🟡 **{achado}**" in novo
+    assert extrair_envelope(novo) == delta["fidelidade_status_envelope"]
+    # mutante: o achado que não rebaixou mantém a marca
+    outro = "🔴 **ZZ9**"
+    delta2, _ = linha_de_base.aplicar({**estado, "fidelidade_report": relatorio + "\n" + outro}, {},
+                                      [{"de": "trecho que nenhum achado cita", "para": "outro"}], ["fidelidade_status"])
+    assert outro in delta2["fidelidade_report"]
+
+
 def test_mapa_do_relatorio_cobre_cada_gate_da_arvore_do_orquestrador():
     """Cada par (status, relatório) dos agentes da árvore real ou bate com `relatorio_do_gate`, ou é de um gate sem
     relatório próprio. Na revisão do PR #83 (25/10/2026), `stitch_status` (relatório `prototipo_relatorio`) e
@@ -488,6 +520,42 @@ def test_ped06_da_76d9af6e_vai_ao_po_e_nao_gasta_a_rodada_do_autor_da_spec():
     sem_rota = _rodar(SaidaDeLoopAgent(name="Saida", status_keys=["bncc_status", "banca_produto_status"],
                                        rodada_key="spec_rodada", max_rounds=2, autor_keys=["spec_missao"]), base)
     assert "PED-06" in sem_rota["retrabalho_spec_missao"]
+
+
+def _textos_dos_eventos(agente: BaseAgent, estado: Dict[str, Any]) -> List[str]:
+    async def _coletar() -> List[str]:
+        runner = InMemoryRunner(agent=SequentialAgent(name="R", sub_agents=[agente]), app_name="t")
+        await runner.session_service.create_session(app_name="t", user_id="u", session_id="s",
+                                                    state=copy.deepcopy(estado))
+        textos = []
+        async for evento in runner.run_async(user_id="u", session_id="s",
+                                             new_message=types.Content(role="user", parts=[types.Part(text="go")])):
+            for parte in (evento.content.parts if evento.content else None) or []:
+                textos.append(parte.text or "")
+        return textos
+
+    return asyncio.run(_coletar())
+
+
+def test_saida_do_loop_so_com_achado_do_po_nao_diz_tudo_conforme():
+    """Com a banca 🔴 só por achado do PO, o evento dizia «✅ tudo conforme» e logo abaixo «vai ao PO» (revisão do PR
+    #83, 25/10/2026)."""
+    from agents.checkers import SaidaDeLoopAgent
+
+    envelope = {"achados": [{"id": "PED-06", "severidade": "bloqueio", "rota": rota_achados.ROTA_PO}]}
+    base = {"banca_produto_status": "bloqueado", "banca_produto_status_envelope": envelope, "bncc_status": "aprovado",
+            "spec_rodada": 0}
+
+    def _saida():
+        return SaidaDeLoopAgent(name="Saida", status_keys=["bncc_status", "banca_produto_status"],
+                                rodada_key="spec_rodada", max_rounds=2, autor_keys=["spec_missao"], rotulo="Spec")
+
+    texto = "\n".join(_textos_dos_eventos(_saida(), base))
+    assert "tudo conforme" not in texto and "✅" not in texto
+    assert texto.startswith("🧑 Spec: nada para o autor corrigir") and "vai ao PO" in texto
+    # mutante: sem achado do PO, o gate aprovado continua com o «tudo conforme»
+    aprovado = dict(base, banca_produto_status="aprovado", banca_produto_status_envelope={})
+    assert "✅ Spec: tudo conforme" in "\n".join(_textos_dos_eventos(_saida(), aprovado))
 
 
 def test_ped06_misto_chega_ao_autor_como_contexto_quando_o_loop_roda_por_outro_gate():

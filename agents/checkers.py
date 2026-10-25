@@ -3516,7 +3516,11 @@ class SaidaDeLoopAgent(BaseAgent):
         if reprovados and esgotou:
             delta.update(_ajustes_nao_aplicados(state, self.envelope_exige, rodada))
 
-        if not reprovados:
+        if not reprovados and ao_po:
+            # «✅ tudo conforme» com o gate ainda 🔴 contradizia a nota do PO logo abaixo (revisão do PR #83, 25/10/2026)
+            msg = f"🧑 {self.rotulo}: nada para o autor corrigir na rodada {rodada}; o 🔴 restante vai ao PO."
+            escalate = True
+        elif not reprovados:
             msg = f"✅ {self.rotulo}: tudo conforme na rodada {rodada}."
             escalate = True
         elif esgotou:
