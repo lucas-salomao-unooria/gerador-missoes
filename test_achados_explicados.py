@@ -7,6 +7,7 @@ texto original nos detalhes técnicos; e os textos de `pipeline/passagem.py` que
 """
 from __future__ import annotations
 
+import ast
 import inspect
 import json
 import re
@@ -71,15 +72,199 @@ def test_catalogo_cobre_as_sessoes_brutas_e_os_prs_abertos():
     assert ex.codigos_sem_explicacao(CODIGOS_FORA_DO_ACERVO) == []
 
 
-def test_codigos_literais_do_codigo_fonte_tem_explicacao():
-    """Lista os códigos escritos literalmente em `tools/`, `agents/` e `pipeline/` sem explicação: código novo de gate
-    pede a entrada dele no catálogo (o texto genérico é a rede, não o caminho)."""
-    literais = set()
+#: Os construtores de achado dos verificadores: o código vai como argumento, não num dicionário literal.
+_CONSTRUTORES = {"falha", "falta", "_achado", "atencao", "bloqueio", "_falha", "_bloqueio", "_atencao"}
+#: Onde o achado grava o campo da ficha técnica, que `rastro.relatorio_manifesto` usa como código.
+_ARQUIVOS_DA_FICHA = {"rastro.py", "ambiente.py", "secoes.py"}
+
+
+def _assinatura(fn: ast.FunctionDef):
+    nomes = [a.arg for a in fn.args.args]
+    chave = "codigo" if "codigo" in nomes else "campo" if "campo" in nomes else None
+    if chave is None:
+        return None
+    padroes = {n: d.value for n, d in zip(nomes[len(nomes) - len(fn.args.defaults):], fn.args.defaults)
+               if isinstance(d, ast.Constant)}
+    i_sev = next((nomes.index(n) for n in ("severidade", "sev") if n in nomes), None)
+    if fn.name.lstrip("_") in ("bloqueio", "falta"):
+        fixa = "bloqueio"
+    elif fn.name.lstrip("_") == "atencao":
+        fixa = "atencao"
+    elif i_sev is None:
+        # a severidade está no dicionário que o construtor monta — constante ou calculada («?», pode ser bloqueio)
+        sevs = {v.value if isinstance(v, ast.Constant) else "?" for n in ast.walk(fn) if isinstance(n, ast.Dict)
+                for k, v in zip(n.keys, n.values) if isinstance(k, ast.Constant) and k.value == "severidade"}
+        fixa = "?" if (not sevs or "?" in sevs) else "/".join(sorted(sevs))
+    else:
+        fixa = None
+    return {"chave": chave, "i": nomes.index(chave), "i_sev": i_sev, "padrao": padroes.get("severidade"),
+            "fixa": fixa}
+
+
+def codigos_emitidos():
+    """`[(código, verificador, severidade, onde)]` de todo achado com código literal em `tools/`, `agents/` e
+    `pipeline/`: dicionários `{"codigo": …}` e chamadas `falha(…)`, `_achado(…)`, `bloqueio(…)`, `atencao(…)`,
+    `falta(…)`. A severidade «?» é a calculada na hora (ESTEIRA_ESTRITA, por exemplo): pode ser bloqueio. O campo da
+    ficha técnica (`"campo": …`) sai com o verificador `manifesto_status`, onde ele é o código."""
+    saida = []
     for pasta in ("tools", "agents", "pipeline"):
-        for arq in (RAIZ / pasta).rglob("*.py"):
-            literais |= set(re.findall(r'"codigo":\s*"([a-zA-Z0-9_.()-]+)"', arq.read_text(encoding="utf-8")))
-    sem = sorted(c for c in literais if not ex.tem_explicacao(c))
+        for arq in sorted((RAIZ / pasta).rglob("*.py")):
+            arvore = ast.parse(arq.read_text(encoding="utf-8"))
+
+            def visita(no, locais):
+                if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)):
+                    locais = dict(locais)
+                    for filho in ast.iter_child_nodes(no):
+                        if isinstance(filho, (ast.FunctionDef, ast.AsyncFunctionDef)) and filho.name in _CONSTRUTORES:
+                            sig = _assinatura(filho)
+                            if sig:
+                                locais[filho.name] = sig
+                if isinstance(no, ast.Call) and isinstance(no.func, ast.Name) and no.func.id in locais:
+                    sig = locais[no.func.id]
+                    arg = no.args[sig["i"]] if len(no.args) > sig["i"] else next(
+                        (k.value for k in no.keywords if k.arg == sig["chave"]), None)
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                        sev = sig["fixa"] or sig["padrao"]
+                        dado = no.args[sig["i_sev"]] if sig["i_sev"] is not None and len(no.args) > sig["i_sev"] \
+                            else next((k.value for k in no.keywords if k.arg in ("severidade", "sev")), None)
+                        if dado is not None:
+                            sev = dado.value if isinstance(dado, ast.Constant) else "?"
+                        gate = "manifesto_status" if sig["chave"] == "campo" else ""
+                        saida.append((arg.value, gate, sev or "?", f"{arq.name}:{no.lineno}"))
+                if isinstance(no, ast.Dict):
+                    d = {k.value: v for k, v in zip(no.keys, no.values) if isinstance(k, ast.Constant)}
+                    sv = d.get("severidade")
+                    sev = sv.value if isinstance(sv, ast.Constant) else "?"
+                    if isinstance(d.get("codigo"), ast.Constant) and isinstance(d["codigo"].value, str):
+                        saida.append((d["codigo"].value, "", sev, f"{arq.name}:{no.lineno}"))
+                    if (arq.name in _ARQUIVOS_DA_FICHA and isinstance(d.get("campo"), ast.Constant)
+                            and isinstance(d["campo"].value, str)):
+                        saida.append((d["campo"].value, "manifesto_status", sev, f"{arq.name}:{no.lineno}"))
+                for filho in ast.iter_child_nodes(no):
+                    visita(filho, locais)
+
+            visita(arvore, {})
+    return saida
+
+
+def test_codigos_do_codigo_fonte_tem_explicacao():
+    """Todo código que um verificador escreve — em dicionário ou pelo construtor de achado — tem a entrada dele: o texto
+    genérico é a rede, não o caminho. Até a revisão do PR #82 o teste só lia dicionários literais, e 138 códigos
+    passados a `falha(…)`/`_achado(…)` caíam no genérico (`kpi-sem-evento`, `pq-faltando`, `prototipo-nao-abre`…)."""
+    emitidos = codigos_emitidos()
+    vistos = {c for c, *_ in emitidos}
+    # a varredura enxerga os construtores, não só os dicionários
+    assert {"kpi-sem-evento", "pq-faltando", "prototipo-nao-abre", "habilidade-sem-medida", "numero-divergente",
+            "evento-sem-leitor", "secao_ds", "letramento", "eixo-divergente"} <= vistos
+    assert len(vistos) > 300
+    sem = sorted({(g, c, onde) for c, g, sev, onde in emitidos
+                  if ex.explicar({"codigo": c, "severidade": sev, "resumo": "x"}, g).generica})
     assert sem == [], f"códigos sem explicação no catálogo: {sem}"
+
+
+_SO_SEM_TRAVA = re.compile(r"[Nn]ão trava|não bloqueia|siga com ele registrado|siga e registre|não impede")
+
+
+def test_achado_que_impede_seguir_nunca_diz_que_nao_trava_nem_manda_ao_de_acordo():
+    """Com 🔴 o «De acordo» não aparece (`passagem.acoes_possiveis`). Revisão do PR #82: `letramento` e
+    `eixo-divergente`, emitidos como bloqueio por `tools/bncc.py`, saíam com «🔴 Impede seguir» e, logo abaixo, «Não trava
+    a etapa»; `secao_ds` (rastro e ambiente) e `decisao-atribuida-ao-po` (decisoes) também."""
+    emitidos = codigos_emitidos()
+    talvez_bloqueio = {(c, g) for c, g, sev, _ in emitidos if sev in ("bloqueio", "?")}
+    assert {("letramento", ""), ("eixo-divergente", ""), ("secao_ds", "manifesto_status"),
+            ("decisao-atribuida-ao-po", ""), ("numero-sem-origem", "")} <= talvez_bloqueio
+    errados = []
+    for c, g in sorted(talvez_bloqueio):
+        i = ex.item({"codigo": c, "severidade": "bloqueio", "resumo": "x"}, g, "🔴")
+        e = i.explicacao
+        fazer = i.o_que_fazer
+        if (_SO_SEM_TRAVA.search(" ".join((e.o_que_aconteceu, e.por_que_importa, fazer)))
+                or "de acordo" in fazer.replace(ex.NO_VERMELHO, "")):
+            errados.append((c, g, fazer))
+    assert errados == []
+    # o mesmo código em 🟡 continua dizendo que não trava, quando é o caso
+    assert "Não trava a etapa" in ex.item({"codigo": "letramento", "severidade": "atencao", "resumo": "x"},
+                                          "bncc_status", "🟡").o_que_fazer
+
+
+def test_letramento_explica_o_achado_real_no_ef_e_no_em():
+    ef = {"severidade": "bloqueio", "codigo": "letramento", "resumo": (
+        "Nenhuma habilidade de letramento digital (Cultura Digital) compatível com a série. É o único recorte da BNCC "
+        "que bloqueia — e falta.")}
+    i = ex.item(ef, "bncc_status", "🔴")
+    assert i.explicacao.titulo == "Falta habilidade de letramento digital da série"
+    assert "Ensino Médio" not in i.explicacao.o_que_aconteceu and "proposta" not in i.explicacao.o_que_aconteceu
+    assert "Não trava" not in i.o_que_fazer and "de acordo" not in i.o_que_fazer
+    em = {"severidade": "atencao", "codigo": "letramento", "resumo": (
+        "Nenhuma habilidade da lista proposta de letramento digital do EM. O anexo não tem eixo no Médio, então isto "
+        "não bloqueia — a avaliação pedagógica decide.")}
+    i = ex.item(em, "bncc_status", "🟡")
+    assert i.explicacao.titulo == "Nenhuma habilidade da lista proposta de letramento digital do Ensino Médio"
+    assert "pedagogia" in i.o_que_fazer and "Não trava a etapa" in i.o_que_fazer
+    # a família EM13 «proposta» é outro achado, com a entrada própria
+    em13 = ex.item({"severidade": "atencao", "codigo": "EM13CO20", "resumo": "`EM13CO20` conta como letramento "
+                    "digital pela leitura **proposta** do EM (sem eixo oficial) — validar com pedagogia."},
+                   "bncc_status", "🟡")
+    assert em13.explicacao.titulo == "Habilidade do Ensino Médio lida como letramento digital"
+    assert em13.explicacao is not ex.CATALOGO["letramento"]
+
+
+def test_bncc_real_letramento_e_eixo_divergente_no_cartao():
+    """O achado que `tools/bncc.py` emite de verdade numa missão do EF (o caso da exp02ef1b, que volta à esteira): os
+    dois saem 🔴, e o texto não diz o contrário."""
+    from tools import bncc
+
+    spec = ("## 0. Identificação\n- `series: [\"6EF\"]`\n\n## 11. Currículo\n"
+            "- `EF06CO07` — Cultura Digital: texto qualquer.\n")
+    achados = {a["codigo"]: a for a in bncc.validar_spec(spec)["achados"]}
+    assert achados["letramento"]["severidade"] == achados["eixo-divergente"]["severidade"] == "bloqueio"
+    for codigo, titulo in (("letramento", "Falta habilidade de letramento digital da série"),
+                           ("eixo-divergente", "Habilidade classificada no eixo errado")):
+        i = ex.item(achados[codigo], "bncc_status", "🔴")
+        assert (i.severidade, i.explicacao.titulo) == ("bloqueio", titulo)
+        assert "Não trava" not in i.o_que_fazer and "de acordo" not in i.o_que_fazer
+
+
+def test_secao_ds_explica_o_bloqueio_e_a_pendencia_de_plataforma():
+    legada = {"severidade": "bloqueio", "codigo": "secao_ds", "agente_responsavel": "produto", "resumo": (
+        "`unoogaleria` é seção legada: missão nova não reproduz a identidade de app de terceiro (ADR-133 a 138) e usa "
+        "`unoovista` — veja `ambientes.md`.")}
+    i = ex.item(legada, "manifesto_status", "🔴")
+    assert i.explicacao.titulo == "O ambiente da missão não pode seguir como está" and i.quem == ex.PO
+    assert "Não trava" not in i.o_que_fazer
+    ponte = {"severidade": "atencao", "codigo": "secao_ds", "agente_responsavel": "plataforma",
+             "resumo": "`unoovista` existe no DS mas não tem ponte em `@edu/ui`."}
+    i = ex.item(ponte, "manifesto_status", "🟡")
+    assert i.explicacao.titulo == "Seção nova do design system" and i.quem == ex.DEV
+    # o campo «produto» da ficha não é pendência de produto
+    campo = ex.explicar({"severidade": "bloqueio", "codigo": "produto", "resumo": "x"}, "manifesto_status")
+    assert campo.titulo.startswith("Ficha técnica da missão") and not campo.generica
+
+
+def test_decisao_atribuida_ao_po_diz_o_caminho_que_existe():
+    """⛔ sem registro do PO: o de acordo não aparece, e o pedido de Refazer é o registro que o faz cair para ⚠️
+    (`decisoes.ha_registro_do_po`). ⚠️ com registro: confirmar no de acordo."""
+    from tools import decisoes
+
+    texto = "O PO decidiu manter 3 opções na escolha da etapa 5."
+    sem, = decisoes.achados(texto, "O one-pager", registro_do_po=False)
+    com, = decisoes.achados(texto, "O one-pager", registro_do_po=True)
+    assert (sem["severidade"], com["severidade"]) == ("bloqueio", "atencao")
+    i = ex.item(sem, "contrato_produto_status", "🔴")
+    assert "use **Refazer** dizendo isso" in i.o_que_fazer and "de acordo" not in i.o_que_fazer
+    assert "não tem nenhum pedido nem parecer do PO" in i.explicacao.o_que_aconteceu
+    i = ex.item(com, "contrato_produto_status", "🟡")
+    assert "confirme no comentário do de acordo" in i.o_que_fazer
+    assert decisoes.ha_registro_do_po({"pedidos_do_po": [{"texto": "a decisão é minha"}]})
+
+
+def test_rede_do_o_que_fazer_com_bloqueio():
+    """A entrada sem variante de bloqueio perde o que só vale sem trava e ganha o caminho que existe."""
+    exp = ex._x("t", "a", "b", "Confira o valor e registre no de acordo. Não trava a etapa.", ex.PO)
+    assert ex.o_que_fazer(exp, ex.ATENCAO) == exp.o_que_fazer
+    assert ex.o_que_fazer(exp, ex.BLOQUEIO) == ex.NO_VERMELHO
+    exp = ex._x("t", "a", "b", "Use **Refazer** no parecer de produto, citando o ponto, ou siga com ele registrado.")
+    assert ex.o_que_fazer(exp, ex.BLOQUEIO) == "Use **Refazer** no parecer de produto, citando o ponto."
 
 
 def test_codigo_desconhecido_cai_no_generico_honesto_com_o_detalhe():
@@ -392,3 +577,21 @@ def test_matriz_de_rastreabilidade_grava_a_lista_inteira_para_o_cartao():
         ts = ex.trechos(a)
         assert len(ts) == len(a["faltando"])
         assert all(f["texto"] in t for f, t in zip(a["faltando"], ts))
+
+
+def test_rastro_leva_a_linha_e_o_marcador_inteiros_ao_cartao():
+    """`rastro.varrer_lacunas` cortava a linha em 200 caracteres e o marcador em 160 (revisão do PR #82): as linhas
+    «[ABERTO — dono: PO: …» das sessões de 24/10/2026 passam disso, e o cartão as mostrava partidas no meio da palavra."""
+    from tools import rastro
+
+    pergunta = "confirmar com a coordenação pedagógica se a habilidade EF15AR05 entra na grade do 1º ano " * 4
+    linha = f"- Tempo de tela por etapa [ABERTO — dono: PO: {pergunta.strip()}] fica para o parecer."
+    assert len(linha) > 300
+    r = rastro.varrer_lacunas([{"chave": "spec_missao", "rotulo": "spec", "etapa_padrao": "produto"}],
+                              {"spec_missao": "# Spec\n\n" + linha + "\n"}, etapa_corrente="produto")
+    achado, = r["achados"]
+    assert achado["contexto"] == linha and pergunta.strip() in achado["trecho"]
+    relatorio = rastro.relatorio_lacunas(r, "Rastro da spec", "exp00ef1b")
+    assert pergunta.strip() in relatorio
+    envelope = json.loads(relatorio[relatorio.index("{", relatorio.rindex("```json")):relatorio.rindex("```")])
+    assert envelope["achados"][0]["resumo"] == linha
