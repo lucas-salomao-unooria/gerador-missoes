@@ -26,6 +26,7 @@ da sessão, `X.json` ou `conversa.json` ao lado do estado, é lida quando existe
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import re
 import sys
@@ -315,10 +316,35 @@ def alvo_de_toque_minimo(raiz: Optional[Path] = None) -> int:
     return int(m.group(1)) if m else 64
 
 
+#: O redator escreve número em LaTeX: «$\ge 80\%$ das duplas», «Teto estrito de $\le 15$ palavras» (PRD e handoff da
+#: exp02ef1b-4fd72a9a, 22/10/2026). Só `$` e `\le` saíam, e toda porcentagem com `\%` ficava fora da conferência — o
+#: «$\ge 80\%$» inventado no PRD não era número (revisão do PR #77, 24/10/2026).
+_LATEX = ((re.compile(r"\\leq?(?![A-Za-z])"), "≤"), (re.compile(r"\\geq?(?![A-Za-z])"), "≥"),
+          (re.compile(r"\\lt(?![A-Za-z])"), "<"), (re.compile(r"\\gt(?![A-Za-z])"), ">"), (re.compile(r"\\%"), "%"),
+          (re.compile(r"\$"), ""))
+
+
+def sem_latex(texto: str) -> str:
+    """O texto com `$`, `\\le`/`\\leq`, `\\ge`/`\\geq`, `\\lt`/`\\gt` e `\\%` trocados pelo que eles escrevem."""
+    texto = texto or ""
+    if "$" not in texto and "\\" not in texto:
+        return texto
+    return _sem_latex(texto)
+
+
+@functools.lru_cache(maxsize=256)
+def _sem_latex(texto: str) -> str:
+    """`sem_latex` com cache: `tem_numero` relê o mesmo contrato a cada número do corpo."""
+    for rx, troca in _LATEX:
+        texto = rx.sub(troca, texto)
+    return texto
+
+
 def numeros(texto: str) -> List[Tuple[str, str]]:
-    """(número, unidade canônica) de cada número com unidade, na ordem, sem repetição."""
+    """(número, unidade canônica) de cada número com unidade, na ordem, sem repetição — também em LaTeX
+    (`sem_latex`)."""
     vistos: List[Tuple[str, str]] = []
-    for m in _RE_NUMERO.finditer((texto or "").replace("$", "").replace("\\le", "≤")):
+    for m in _RE_NUMERO.finditer(sem_latex(texto)):
         tok = (m.group(1).replace(",", "."), _UNIDADE[m.group(2).lower()])
         if tok not in vistos:
             vistos.append(tok)
@@ -330,7 +356,7 @@ def tem_numero(texto: str, tok: Tuple[str, str]) -> bool:
     num = re.escape(n).replace(r"\.", "[.,]")
     for a in _ALIAS[u]:
         fim = r"\b" if a[-1].isalnum() else ""
-        if re.search(rf"(?<![\w.,]){num}\s?{re.escape(a)}{fim}", (texto or "").replace("$", ""), re.I):
+        if re.search(rf"(?<![\w.,]){num}\s?{re.escape(a)}{fim}", sem_latex(texto), re.I):
             return True
     return False
 

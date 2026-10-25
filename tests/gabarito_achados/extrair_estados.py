@@ -21,11 +21,12 @@ from typing import Any, Dict
 ESTADOS = Path(__file__).resolve().parent / "estados"
 
 #: O que os gates do gabarito leem do estado (montagem do PRD e do handoff, rastro do PRD, PRD codável e a
-#: conferência com a plataforma), medido em 24/10/2026.
-CHAVES = ("anexo_design_spec", "banco_conteudo", "briefing", "decisoes_do_po", "fechamento_lacunas", "fluxo_arestas",
-          "handoff_dev", "jornada_telas", "lacunas_status_envelope", "notas_de_passagem", "nucleo_narrativo",
-          "one_pager", "one_pager_po", "pareceres_humanos", "pedidos_do_po", "prd_final", "slug", "spec_missao",
-          "spec_missao_gate0", "wireframes_cobertura")
+#: conferência com a plataforma), medido em 24/10/2026. `edicoes_pontuais` e `modo_correcao`: as trocas da correção
+#: pontual, origem de número da montagem desde a terceira revisão do PR #77.
+CHAVES = ("anexo_design_spec", "banco_conteudo", "briefing", "decisoes_do_po", "edicoes_pontuais", "fechamento_lacunas",
+          "fluxo_arestas", "handoff_dev", "jornada_telas", "lacunas_status_envelope", "modo_correcao",
+          "notas_de_passagem", "nucleo_narrativo", "one_pager", "one_pager_po", "pareceres_humanos", "pedidos_do_po",
+          "prd_final", "slug", "spec_missao", "spec_missao_gate0", "wireframes_cobertura")
 
 #: As 13 execuções de dev de 25/09 a 23/10/2026 (`deficiencias/dev/achados.csv`, coluna `run`): id → (missão, sessão,
 #: pasta da cópia, momento). `.correcoes/<quando>-<etapa>` é o estado que o PO tinha diante de si ao pedir o refazer.

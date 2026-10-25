@@ -705,10 +705,6 @@ def _pedido_por_dono(origem: str, etapa: str, texto: str, divisao: Any,
             continue
         entrada = {"origem": f"{origem} · itens de {ROTULO_DONO[dono].lower()} (triagem)", "etapa": dono,
                    "texto": itens}
-        if dono == etapa and d.contexto.strip():
-            # o contexto vai no texto e também à parte: com item de outro dono pendente, ele não é origem de número
-            # (`tools/montagem.py::_texto_dos_pedidos_do_po`, revisão do PR #77)
-            entrada["contexto"] = d.contexto.strip()
         if dono != etapa and nao_aplicado:
             entrada["origem"] += (f" · NÃO APLICADOS: o refazer voltou ao PO para Devolver até "
                                   f"{ROTULO_DONO[dono]}")

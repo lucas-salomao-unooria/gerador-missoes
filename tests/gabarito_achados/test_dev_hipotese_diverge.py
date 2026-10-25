@@ -121,6 +121,51 @@ def test_v_h1_30_contra_25_com_qualquer_comparativo(caso):
                and "escreve 25%" in a["resumo"] for a in r["achados"]), mutante
 
 
+def _pq01_homologada(st):
+    """A PQ-01 do 9f da exp02ef1b sem o `[PROPOSTA]`: a linha firme com «>25% → …», como se o PO a homologasse."""
+    for chave in ("spec_missao", "spec_missao_gate0", "anexo_design_spec"):
+        if isinstance(st.get(chave), str):
+            st[chave] = "\n".join(l.replace("`[PROPOSTA — validar com PO]`", "PO (homologado)") if "| PQ-01 |" in l else l
+                                   for l in st[chave].splitlines())
+    return st
+
+
+@pytest.mark.parametrize("documento", ("handoff", "prd"))
+def test_v_h1_30_contra_25_bloqueia_mesmo_com_a_pq01_homologada(documento):
+    """Terceira revisão do PR #77 (24/10/2026): se o PO homologar a PQ-01 como está (25%), a H1 com 25% que a cita
+    virava `limiar-do-9f` (🟡) no handoff e no PRD, e nada bloqueava — o caso que o PO acusou em 23/10. O corpo
+    reproduz a frase da meta do §17 («Mais de 30% das duplas desistirem de ajustar …») com o número trocado:
+    divergência certa, com ou sem PQ firme no outro número."""
+    st = _pq01_homologada(estado("R13"))
+    assert "PO (homologado)" in st["spec_missao"]
+    r = montagem.validar_prd(st) if documento == "prd" else montagem.validar_handoff(st)
+    assert any(a["codigo"] == "hipotese-diverge" and a["severidade"] == "bloqueio" and "30%" in a["resumo"]
+               and "escreve 25%" in a["resumo"] for a in r["achados"])
+    assert not [a for a in r["achados"] if a["codigo"] == "hipotese-a-conferir" and "a H1 do §17" in a["resumo"]]
+
+
+#: O mesmo predicado do §17 com o critério invertido (100 − x e o comparativo trocado) não é complemento: é divergência
+#: certa. Na segunda revisão saíam 🟡 (`complemento`) — terceira revisão do PR #77.
+MESMO_PREDICADO_INVERTIDO = [
+    ("handoff", "Se mais de 25% das duplas desistirem", "Se menos de 70% das duplas desistirem", "30%"),
+    ("prd", "Mais de 25% das duplas desistirem", "Menos de 70% das duplas desistirem", "30%"),
+    ("handoff", "Se menos de 60% das duplas concluírem o agrupamento com a justificativa semântica correta",
+     "Se menos de 60% das duplas parearem cartas justificando pela cor do uniforme ou pelo fundo", "40%"),
+]
+
+
+@pytest.mark.parametrize("caso", MESMO_PREDICADO_INVERTIDO, ids=lambda c: f"{c[0]}/{c[2]}")
+def test_v_mesmo_predicado_com_o_criterio_invertido_bloqueia(caso):
+    documento, original, mutante, do_17 = caso
+    st = estado("R13")
+    chave = DOCUMENTO[documento]
+    assert original in st[chave], f"o {documento} de {rotulo('R13')} não tem «{original}»"
+    st[chave] = st[chave].replace(original, mutante)
+    r = montagem.validar_prd(st) if documento == "prd" else montagem.validar_handoff(st)
+    assert any(a["codigo"] == "hipotese-diverge" and a["severidade"] == "bloqueio" and f"com {do_17}" in a["resumo"]
+               for a in r["achados"]), mutante
+
+
 def test_v_duracao_que_o_contrato_nao_tem_continua_meta():
     """exp05ef1b (acervo): «verificado por `tempo_feed_segundos` < 180s» na H1 do PRD — o §17 não quantifica e nenhum
     documento do contrato tem 180 s: meta inventada, não parâmetro da mecânica."""
