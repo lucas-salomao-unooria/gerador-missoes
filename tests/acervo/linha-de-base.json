@@ -59,6 +59,26 @@
         "conta-ausente"
       ]
     },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "gate_final_status": {
+      "status": "amarelo",
+      "codigos": [
+        "5.3",
+        "9.1",
+        "E1-A1"
+      ]
+    },
     "conteudo_aprovado_resumido_status": {
       "status": "aprovado",
       "codigos": []
@@ -272,6 +292,24 @@
         "conta-ausente"
       ]
     },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "gate_final_status": {
+      "status": "amarelo",
+      "codigos": [
+        "F7"
+      ]
+    },
     "conteudo_aprovado_resumido_status": {
       "status": "aprovado",
       "codigos": []
@@ -325,6 +363,33 @@
     "mecanica_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "gate_final_status": {
+      "status": "amarelo",
+      "codigos": [
+        "F7"
+      ]
+    },
+    "banca_produto_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "PED-02",
+        "PED-05",
+        "PED-06",
+        "PROD-14"
+      ]
     },
     "conteudo_aprovado_resumido_status": {
       "status": "aprovado",
@@ -439,6 +504,26 @@
       "status": "aprovado",
       "codigos": []
     },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "gate_final_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "banca_produto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
     "conteudo_aprovado_resumido_status": {
       "status": "aprovado",
       "codigos": []
@@ -502,6 +587,32 @@
     "mecanica_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "gate_final_status": {
+      "status": "amarelo",
+      "codigos": [
+        "F7"
+      ]
+    },
+    "banca_produto_status": {
+      "status": "amarelo",
+      "codigos": [
+        "PED-02",
+        "PED-12",
+        "PROD-16"
+      ]
     },
     "conteudo_aprovado_resumido_status": {
       "status": "aprovado",
@@ -612,6 +723,39 @@
     "mecanica_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "amarelo",
+      "codigos": [
+        "5.3",
+        "5.6"
+      ]
+    },
+    "experiencia_status": {
+      "status": "amarelo",
+      "codigos": [
+        "6.1"
+      ]
+    },
+    "gate_final_status": {
+      "status": "amarelo",
+      "codigos": [
+        "F7"
+      ]
+    },
+    "banca_produto_status": {
+      "status": "amarelo",
+      "codigos": [
+        "PED-13",
+        "PROD-05",
+        "PROD-10",
+        "PROD-14",
+        "PROD-16"
+      ]
     },
     "conteudo_aprovado_resumido_status": {
       "status": "aprovado",
@@ -812,6 +956,26 @@
       "status": "aprovado",
       "codigos": []
     },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "gate_final_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "banca_produto_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
     "conteudo_aprovado_resumido_status": {
       "status": "aprovado",
       "codigos": []
@@ -942,6 +1106,24 @@
         "conta-ausente"
       ]
     },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "gate_final_status": {
+      "status": "amarelo",
+      "codigos": [
+        "F7"
+      ]
+    },
     "conteudo_aprovado_resumido_status": {
       "status": "amarelo",
       "codigos": [
@@ -995,6 +1177,28 @@
       "codigos": []
     },
     "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "gate_final_status": {
+      "status": "amarelo",
+      "codigos": [
+        "F7"
+      ]
+    },
+    "banca_produto_status": {
       "status": "aprovado",
       "codigos": []
     },
@@ -1115,6 +1319,28 @@
     "mecanica_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "gate_final_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "banca_produto_status": {
+      "status": "amarelo",
+      "codigos": [
+        "PED-01"
+      ]
     },
     "conteudo_aprovado_resumido_status": {
       "status": "aprovado",
@@ -1258,6 +1484,30 @@
       "status": "bloqueado",
       "codigos": [
         "conta-ausente"
+      ]
+    },
+    "avaliacao_status": {
+      "status": "amarelo",
+      "codigos": [
+        "5.3",
+        "5.5",
+        "5.6"
+      ]
+    },
+    "experiencia_status": {
+      "status": "amarelo",
+      "codigos": [
+        "6.2"
+      ]
+    },
+    "gate_final_status": {
+      "status": "amarelo",
+      "codigos": [
+        "5.3",
+        "5.5",
+        "5.6",
+        "6.2",
+        "9.1"
       ]
     },
     "conteudo_aprovado_resumido_status": {
@@ -1439,9 +1689,8 @@
       "codigos": []
     },
     "contrato_produto_status": {
-      "status": "bloqueado",
+      "status": "amarelo",
       "codigos": [
-        "decisao-atribuida-ao-po",
         "texto-chave-acima-do-teto"
       ]
     },
@@ -1454,6 +1703,30 @@
       "codigos": []
     },
     "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "amarelo",
+      "codigos": [
+        "6.2"
+      ]
+    },
+    "gate_final_status": {
+      "status": "amarelo",
+      "codigos": [
+        "F7"
+      ]
+    },
+    "banca_produto_status": {
       "status": "aprovado",
       "codigos": []
     },
@@ -1604,9 +1877,8 @@
       "codigos": []
     },
     "contrato_produto_status": {
-      "status": "bloqueado",
+      "status": "amarelo",
       "codigos": [
-        "decisao-atribuida-ao-po",
         "texto-chave-acima-do-teto"
       ]
     },
@@ -1619,6 +1891,30 @@
       "codigos": []
     },
     "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "amarelo",
+      "codigos": [
+        "6.2"
+      ]
+    },
+    "gate_final_status": {
+      "status": "amarelo",
+      "codigos": [
+        "F7"
+      ]
+    },
+    "banca_produto_status": {
       "status": "aprovado",
       "codigos": []
     },
@@ -1808,6 +2104,22 @@
       "status": "bloqueado",
       "codigos": [
         "conta-ausente"
+      ]
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "amarelo",
+      "codigos": [
+        "6.2"
+      ]
+    },
+    "gate_final_status": {
+      "status": "amarelo",
+      "codigos": [
+        "F7"
       ]
     },
     "conteudo_aprovado_pedagogico_status": {
@@ -2006,6 +2318,26 @@
       "status": "bloqueado",
       "codigos": [
         "conta-ausente"
+      ]
+    },
+    "cobertura_conceitual": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "avaliacao_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "experiencia_status": {
+      "status": "amarelo",
+      "codigos": [
+        "6.2"
+      ]
+    },
+    "gate_final_status": {
+      "status": "amarelo",
+      "codigos": [
+        "F7"
       ]
     },
     "conteudo_aprovado_resumido_status": {

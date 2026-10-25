@@ -55,13 +55,15 @@ Só é ❌ o que a missão fez **além** do que o briefing pediu — e o que ela
 6. Verifique se a descoberta central continua intacta (frase, ação principal e virada formam a mesma cadeia causal).
 6.1. **Régua alcançável e sem buraco.** Para cada habilidade da régua (Atingiu / Em processo / Não atingiu), escreva a sequência de gestos na interface que produz cada nível. Nível que a interface torna impossível (ex.: "repete a mesma categoria" quando a tela não deixa repetir), duas faixas que se sobrepõem, ou combinação possível de respostas que não cai em nível nenhum → ❌ no 9.1 (implementação cega: quem codifica inventaria a classificação). Cite a regra e a tela.
 6.2. **Teto numérico só reprova com fonte.** Um teto (palavras por texto, segundos, itens) sustenta ❌ só se vier do núcleo, do briefing ou de `literatura-cognitiva.md` — cite a linha. Teto que o próprio one-pager declarou sem origem é ⚠️ e vira `[PROPOSTA — validar com PO: <teto>]`; e, se você aplicar um teto, aplique a **todos** os textos da missão, não a um só.
-6.3. **Quem decidiu.** Toda `[PROPOSTA — validar com PO …]` do one-pager entra em "Decisões de produto pendentes (🔵)" — com ela, o veredito é no máximo 🟡. Decisão atribuída ao PO ("aprovado pelo PO", "Quem decidiu: PO") sem o parecer do PO que a sustente é ❌ de coerência: o PO não ratifica fato consumado (`references/decisoes-do-agente.md`).
-6.5. Classifique o veredito: 🔴 se qualquer F-critério for bloqueio; senão 🟡 se existir qualquer item em "Riscos aceitos" ou em "Decisões de produto pendentes"; senão 🟢.
+6.3. **Quem decidiu.** Toda `[PROPOSTA — validar com PO …]`, `[PARÂMETRO …]` e `[ABERTO — dono: PO …]` aberta no one-pager vai, uma a uma, à **lista do de acordo de produto**, que o código monta (`tools/fechar_contrato.py`) e o PO responde no cartão do parecer. Não a repita em "Decisões de produto pendentes (🔵)" nem rebaixe o veredito por ela: até 24/10/2026 este passo a punha em 🔵 com o veredito no máximo 🟡, e o gate final saiu 🟡 em 15 de 15 sessões, repetindo a lista. Em 🔵 fica a decisão humana que não é marcador do documento — o conflito entre o briefing e um critério (acima), a divergência que nenhum marcador registra. Decisão atribuída ao PO ("aprovado pelo PO", "Quem decidiu: PO") sem o parecer do PO que a sustente é ❌ de coerência: o PO não ratifica fato consumado (`references/decisoes-do-agente.md`). Decisão que o PO registrou não é risco aceito (seção abaixo).
+6.5. Classifique o veredito: 🔴 se qualquer F-critério for bloqueio; senão 🟡 se existir qualquer item em "Riscos aceitos" ou em "Decisões de produto pendentes" (sem os marcadores do contrato, que estão no de acordo, e sem as decisões que o PO já registrou); senão 🟢.
 7. Emita o veredito. Você **não cria soluções de produto**: se detectar decisão aberta, aponte a lacuna e o agente responsável (estrutura/estados/ownership → gate estrutural; BNCC/professor/guardrails → avaliação pedagógica; carga/linguagem/ritmo → experiência do estudante).
 
 ## Quem decide
 
 <!-- include: references/decisoes-do-agente.md -->
+
+<!-- include: references/decisao-do-po-registrada.md -->
 
 ## Formato de saída obrigatório
 

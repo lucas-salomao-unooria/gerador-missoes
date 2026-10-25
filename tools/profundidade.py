@@ -82,10 +82,51 @@ def _achado(codigo: str, resumo: str, severidade: str = "bloqueio", dono: str = 
             "agente_responsavel": dono, "resumo": resumo}
 
 
+#: Aspas e apóstrofos de qualquer tipografia: o mapa cita o material entre aspas e troca as aspas internas dele.
+_RE_ASPAS = re.compile(r"[\"'“”‘’«»‹›„‟`´]")
+_TRACOS = str.maketrans({"—": "-", "–": "-", "‐": "-", "‑": "-", "−": "-", "\u00a0": " ", "\u202f": " ", "…": "..."})
+
+
 def _plano(texto: str) -> str:
-    """Texto normalizado para procurar uma citação: sem acento, sem markdown, espaço único."""
-    sem_md = re.sub(r"[*_`#>|]", " ", texto or "")
+    """Texto normalizado para procurar uma citação: sem acento, sem markdown, sem aspas, espaço único.
+
+    As aspas saem dos dois lados: na exp02em1b (60cfa7f4, 21/10/2026) o material diz «…mas o "engajamento". O
+    algoritmo prioriza…» e o mapa, citando entre aspas, escreveu «mas o 'engajamento'» ou tirou as aspas internas
+    («metadados, que são…» contra «coleta "metadados", que são…»): três `trecho-inexistente` falsos em todo refazer."""
+    sem_md = re.sub(r"[*_#>|]", " ", _RE_ASPAS.sub("", (texto or "").translate(_TRACOS)))
     return re.sub(r"\s+", " ", _norm(sem_md)).strip()
+
+
+_RE_MATERIAL_DO_PEDIDO = re.compile(r"^### Material anexado ao pedido\s*\n(.*?)(?=^### Como agir|\Z)", re.S | re.M)
+
+
+def material_do_po(state: Dict[str, Any]) -> str:
+    """O material que o PO trouxe depois da geração — colado no texto de um pedido ou parecer, ou anexado ao pedido de
+    refazer —, que o mapa conceitual também pode citar.
+
+    Até 24/10/2026 a cobertura comparava só com `material_anexado`. Na exp04ef1b (8ce9c32d, 25/09/2026) o PO colou o
+    material do bimestre no parecer de refazer («Segue o material trabalhado no bimestre…»), o mapa citou cinco trechos
+    dele, e os cinco saíram `trecho-inexistente` em todas as execuções seguintes. O anexo de um refazer também não entra
+    em `material_anexado` quando a sessão já o tinha (`pipeline.reexecucao.material_para_refazer_produto`). Do pedido
+    corrente entra só o que a pessoa escreveu e anexou — o cabeçalho da esteira não é material."""
+    from pipeline.reexecucao import texto_do_pedido
+
+    partes = [str(p.get("texto") or "") for p in state.get("pedidos_do_po") or [] if isinstance(p, dict)]
+    partes += [str(p.get("comentario") or "") for p in state.get("pareceres_humanos") or [] if isinstance(p, dict)]
+    # nas notas de passagem, o que está citado com «>» é a palavra do PO (pedidos e pareceres); o resto é da esteira
+    partes.append("\n".join(re.sub(r"^>\s?", "", l) for l in str(state.get("notas_de_passagem") or "").splitlines()
+                            if l.startswith(">")))
+    pedido = str(state.get("pedido_correcao") or "")
+    partes.append(texto_do_pedido(pedido))
+    anexos = _RE_MATERIAL_DO_PEDIDO.search(pedido)
+    if anexos:
+        partes.append(anexos.group(1))
+    return "\n\n".join(p for p in partes if p.strip())
+
+
+def material_da_sessao(state: Dict[str, Any]) -> str:
+    """O material anexado à geração mais o que o PO trouxe depois (`material_do_po`)."""
+    return "\n\n".join(p for p in (str(state.get("material_anexado") or ""), material_do_po(state)) if p.strip())
 
 
 def ler_mapa(mapa: str) -> Dict[str, Any]:

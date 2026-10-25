@@ -773,6 +773,8 @@ def build_produto_stage(
                 report_key="avaliacao_pedagogica_report",
                 status_key="avaliacao_status",
                 block_pipeline_on_fail=estrito,
+                # o 4.1 da exp06ef1b repetia os 29 min que o PO aceitou no Pedido 13 (08/10/2026)
+                recontar_decisoes_do_po=True,
             ),
             EnvelopeGateAgent(
                 name="A031ExperienciaCheck",
@@ -782,6 +784,8 @@ def build_produto_stage(
                 report_key="experiencia_aluno_report",
                 status_key="experiencia_status",
                 block_pipeline_on_fail=False,
+                # o 6.2 da exp06ef1b repetia os 29 min que o PO aceitou no Pedido 13 (08/10/2026)
+                recontar_decisoes_do_po=True,
             ),
             EnvelopeGateAgent(
                 name="A032AdequacaoCheck",
@@ -884,6 +888,10 @@ def build_produto_stage(
                 report_key="gate_final_report",
                 status_key="gate_final_status",
                 block_pipeline_on_fail=estrito,
+                # 🟡 em 15 de 15 sessões por construção (levantamento de 24/10/2026): a proposta aberta vai à lista do de
+                # acordo (PR 3); a ressalva que diz que o PO decidiu fica, marcada «a conferir» (`tools/juizes_produto.py`)
+                recontar_decisoes_do_po=True,
+                contrato_no_de_acordo=True,
             ),
             # O one-pager está fechado: os textos-chave ganham ID antes da spec, que os cita, e do de acordo, que mostra a
             # tabela (PR 7, D1). Na correção pontual roda também — o texto que o editor trocou guarda o ID.
