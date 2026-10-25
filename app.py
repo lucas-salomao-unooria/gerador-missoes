@@ -632,7 +632,7 @@ def _render_item_explicado(item: "explicacoes.Item", chave: str) -> None:
     icone, palavras = explicacoes.severidade_em_palavras(item.severidade)
     st.markdown(f"{icone} **{exp.titulo}** — *{palavras}*")
     st.markdown(f"{exp.o_que_aconteceu}\n\n**Por que importa:** {exp.por_que_importa}\n\n"
-                f"**O que fazer:** {exp.o_que_fazer}")
+                f"**O que fazer:** {item.o_que_fazer}")
     if exp.texto_e_o_caso and item.texto_original:
         st.markdown("**O que o revisor apontou nesta missão:**\n\n"
                     + _texto_da_missao(explicacoes.sem_prefixo(item.texto_original)))
@@ -1027,7 +1027,7 @@ def _render_conferencia_de_leitura(run_dir: Path, fluxo: Dict[str, Any], estado:
             explicado = explicacoes.explicacao_de_pendencia(item)
             with st.container(border=True):
                 st.markdown(f"🧑 **{explicado.explicacao.titulo}** — {explicado.explicacao.o_que_aconteceu}\n\n"
-                            f"**O que fazer:** {explicado.explicacao.o_que_fazer}")
+                            f"**O que fazer:** {explicado.o_que_fazer}")
                 # o assunto inteiro no rótulo: com o corte em 300 caracteres o PO marcava «Li e decidi» sobre meia
                 # frase (25/10/2026); o `$` escapado não vira fórmula no rótulo
                 if st.checkbox(f"Li e decidi: {item['assunto']}".replace("$", "\\$"), key=f"{base}_{item['id']}",

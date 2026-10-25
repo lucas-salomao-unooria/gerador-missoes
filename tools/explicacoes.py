@@ -96,9 +96,11 @@ _DEV_LE = "O PRD é o documento que o dev usa para programar a missão."
 
 CATALOGO: Dict[str, Explicacao] = {
     # ---------------------------------------------------------- decisões do PO e o contrato de produto
+    # ⚠️: a sessão tem pedido ou parecer do PO (`tools/decisoes.py`); o ⛔ sem registro está em `_SE_BLOQUEIO`
     "decisao-atribuida-ao-po": _x(
         "Decisão escrita como se fosse do PO",
-        "O texto diz que o PO decidiu algo, mas a esteira não acha essa decisão nos pareceres nem nos pedidos do PO.",
+        "O texto diz que o PO decidiu algo. A sessão tem pedidos ou pareceres do PO, mas a esteira não sabe se algum "
+        "deles diz isso.",
         "Se o PO não decidiu, a missão segue com uma escolha do agente disfarçada de decisão do PO, e ninguém volta "
         "para conferir.",
         "Leia cada frase abaixo. Se a decisão é sua, confirme no comentário do de acordo. Se não é, use **Refazer** "
@@ -182,12 +184,16 @@ CATALOGO: Dict[str, Explicacao] = {
         "Esta missão já existe na plataforma, e falta a decisão do PO",
         "Já há uma missão publicada com este código, e o texto não registra se esta a substitui ou ganha outro código.",
         "Sem essa decisão, o dev não sabe se atualiza a missão que está no ar ou cria uma nova.",
-        "Decida: substituir a existente ou dar outro código. Registre no de acordo.", PO),
+        # sempre 🔴 (`tools/conferir_prd_plataforma.py`), no dev: o de acordo não aparece, e a decisão vale com a data
+        # de um pedido do PO nesta sessão
+        "Decida: substituir a existente ou dar outro código, e escreva a decisão no pedido de **Refazer** de dev: o PRD "
+        "a registra com a data do seu pedido.", PO),
     "experiencia-ja-existe": _x(
         "Esta missão já existe na plataforma",
         "Já há uma missão publicada com este código; o documento para o dev a trata como nova.",
         "O dev pode criar uma segunda versão em vez de atualizar a que está no ar.",
-        "Decida se esta missão atualiza a existente ou ganha outro código, e registre no de acordo.", PO),
+        "Decida se esta missão atualiza a existente ou ganha outro código, e escreva a decisão no pedido de "
+        "**Refazer** de dev.", PO),
     # ---------------------------------------------------------- pedido do PO aplicado ou não
     "nao-tratado": _x(
         "Pedido do PO sem sinal de que foi feito",
@@ -384,11 +390,15 @@ CATALOGO: Dict[str, Explicacao] = {
         "No Ensino Médio a BNCC não separa as habilidades de computação por eixo; a esteira usa uma leitura proposta.",
         "A classificação pode não ser a que a pedagogia adota.",
         "Valide com a pedagogia e registre no de acordo. Não trava a etapa.", PO),
+    # `letramento` é o achado do recorte de letramento digital que falta (`tools/bncc.py`): no EM é 🟡 (a lista do EM é
+    # proposta, a pedagogia decide); no EF é 🔴 — a variante está em `_SE_BLOQUEIO`. Até a revisão do PR #82 o texto
+    # daqui era o da família EM13 «proposta» e terminava em «Não trava a etapa» também no 🔴 do EF.
     "letramento": _x(
-        "Habilidade do Ensino Médio lida como letramento digital",
-        "A habilidade conta como letramento digital por uma leitura proposta do Ensino Médio, que não tem eixo "
-        "oficial.",
-        "A classificação pode não ser a que a pedagogia adota.",
+        "Nenhuma habilidade da lista proposta de letramento digital do Ensino Médio",
+        "Nenhuma das habilidades da BNCC declaradas está na lista proposta de letramento digital do Ensino Médio. No "
+        "Médio a BNCC não separa as habilidades por eixo, então a lista é uma leitura proposta, não oficial.",
+        "Letramento digital é o recorte da BNCC que a missão precisa cobrir; no Médio, quem decide se ela cobre é a "
+        "avaliação pedagógica.",
         "Valide com a pedagogia e registre no de acordo. Não trava a etapa.", PO),
     "decisao-produto": _x(
         "Decisão de produto pendente sobre a BNCC",
@@ -954,11 +964,14 @@ CATALOGO: Dict[str, Explicacao] = {
         "Uma habilidade aparece com um texto que não é o oficial da BNCC.",
         "A escola confere o texto oficial; outro texto parece outra habilidade.",
         "Peça, com **Refazer** de produto, o texto oficial (está no detalhe).", PO),
+    # sempre 🔴 em `tools/bncc.py`: o eixo errado declara letramento digital que a habilidade não tem
     "eixo-divergente": _x(
         "Habilidade classificada no eixo errado",
-        "A habilidade aparece num eixo da BNCC que não é o dela.",
-        "A classificação errada confunde a leitura curricular da missão.",
-        "Peça a correção com **Refazer** de produto. Não trava a etapa.", PO),
+        "A habilidade aparece num eixo da BNCC que não é o dela — ou, no Ensino Médio, aparece como Cultura Digital "
+        "(letramento digital) sem estar na lista de letramento.",
+        "O eixo decide o que a missão pode declarar como letramento digital: com o eixo errado, ela promete à escola um "
+        "recorte que não cobre.",
+        "Peça, com **Refazer** de produto, que a habilidade apareça com o eixo oficial (o trecho diz qual).", PO),
     # ---------------------------------------------------------- pedagógico e Stitch
     "pedagogico-ausente": _x(
         "Falta o one-pager pedagógico",
@@ -1003,6 +1016,738 @@ CATALOGO: Dict[str, Explicacao] = {
         "Peça **Refazer** da etapa. Se voltar a acontecer, avise o time técnico.", ESTEIRA),
 }
 
+# ------------------------------------------------------------------ códigos que o acervo ainda não mostrou
+# Os verificadores determinísticos emitem estes códigos por `falha(…)`, `_achado(…)`, `bloqueio(…)` e `atencao(…)`, e
+# não só em dicionário literal. A revisão do PR #82 (25/10/2026) achou 138 deles no texto genérico — `kpi-sem-evento`,
+# `pq-faltando`, `prototipo-nao-abre`, vários 🔴 —, que o acervo de 15 missões ainda não tinha mostrado. O teste varre
+# as chamadas e exige a entrada de cada um.
+_REFAZER_DEV = "Peça, com **Refazer** de dev, "
+_REFAZER_DESIGN = "Peça **Refazer** de design."
+_REFAZER_DA_ETAPA = "Peça, com **Refazer** desta etapa, "
+for _codigo_novo, _exp_nova in {
+    # ---------------------------------------------------------- como cada habilidade é medida (spec e one-pager)
+    "12a-sem-tabela": _x(
+        "Falta a tabela de como cada habilidade é medida",
+        "O one-pager não traz a tabela que diz, para cada habilidade, de qual ação da criança sai o nível dela.",
+        "Sem ela, ninguém sabe como a missão mostra ao professor o que a criança aprendeu.",
+        _REFAZER_PRODUTO, PO),
+    "canal-b-vazio": _x(
+        "Pergunta do fim prometida e não escrita",
+        "A habilidade diz que também é medida por uma pergunta no fim da missão, mas a pergunta e as alternativas não "
+        "estão lá.",
+        "A habilidade fica sem a medida prometida.",
+        "Peça, com **Refazer** de produto, a pergunta com as três alternativas — ou que a habilidade seja medida só "
+        "pela ação na tela.", PO),
+    "canal-b-sem-niveis": _x(
+        "Pergunta do fim sem dizer o nível de cada resposta",
+        "As alternativas da pergunta do fim não dizem a qual nível cada uma leva (Atingiu, Em processo, Não atingiu).",
+        "O professor não teria como ler a resposta da criança.",
+        _REFAZER_PRODUTO, PO),
+    "grau-invalido": _x(
+        "Medida sem dizer quão confiável é",
+        "Uma medida não diz se é só um indício ou uma nota calculada.",
+        "O relatório do professor misturaria medida forte com indício.",
+        _REFAZER_PRODUTO, PO),
+    "scored-1-sinal": _x(
+        "Nota calculada com um sinal só",
+        "Uma medida se apresenta como nota calculada, mas só tem um sinal do que a criança fez; a regra pede ao menos "
+        "dois sinais independentes.",
+        "Um sinal só é indício, não nota: o professor confiaria demais nele.",
+        "Peça, com **Refazer** de produto, um segundo sinal — ou que a medida passe a ser só indício.", PO),
+    "habilidade-sem-canal": _x(
+        "Habilidade sem dizer como é medida",
+        "A tabela não diz se a habilidade é medida pela ação na tela, por uma pergunta no fim ou pelos dois.",
+        "Quem programa inventa a forma de medir.",
+        _REFAZER_PRODUTO, PO),
+    "habilidade-sem-contrato": _x(
+        "Habilidade sem regra de medida",
+        "Uma habilidade declarada não tem linha na tabela que diz como ela é medida.",
+        "Habilidade que nada mede some do relatório do professor.",
+        _REFAZER_PRODUTO, PO),
+    "habilidade-sem-medida": _x(
+        "Habilidade que nenhuma medida acompanha",
+        "Nenhuma das medidas da missão está ligada a esta habilidade.",
+        "Habilidade que nada mede é currículo só no papel: some do relatório do professor.",
+        _REFAZER_PRODUTO, PO),
+    "habilidade-sem-momento": _x(
+        "Habilidade sem o momento em que é medida",
+        "A tabela não aponta a etapa ou a tela em que a criança mostra a habilidade.",
+        "Sem o momento, o design não sabe onde pôr a ação que mede.",
+        _REFAZER_PRODUTO, PO),
+    "regra-ternaria-ausente": _x(
+        "Falta a regra dos três níveis",
+        "A habilidade não diz, por extenso, o que separa Atingiu, Em processo e Não atingiu.",
+        "Quem programa decidiria sozinho como classificar a criança.",
+        _REFAZER_PRODUTO, PO),
+    # ---------------------------------------------------------- profundidade pedagógica (núcleo)
+    "anatomia-ausente": _x(
+        "Falta o roteiro da descoberta («Anatomia do aha»)",
+        "O núcleo não traz a tabela de seis passos que mostra como a criança chega à descoberta central.",
+        "Sem o roteiro, ninguém confere se a missão tem uma descoberta ou só uma sequência de passos.",
+        _REFAZER_PRODUTO, PO),
+    "anatomia-incompleta": _x(
+        "Roteiro da descoberta incompleto",
+        "Um passo da «Anatomia do aha» está vazio, curto demais ou só com um marcador.",
+        "O passo que falta é justamente onde a descoberta pode não acontecer.",
+        _REFAZER_PRODUTO, PO),
+    "cobertura-ausente": _x(
+        "Falta a tabela dos conceitos do material vividos na tela",
+        "O núcleo não diz, conceito a conceito do material do bimestre, o que a criança faz na tela e como o "
+        "professor aprofunda.",
+        "Não dá para saber se a missão cobre o material.",
+        _REFAZER_PRODUTO, PO),
+    "conceito-sem-destino": _x(
+        "Conceito do material esquecido",
+        "Um conceito central do material não aparece na missão nem foi deixado de fora com justificativa.",
+        "O conceito pode ter sido esquecido sem ninguém decidir isso.",
+        _REFAZER_PRODUTO, PO),
+    "fora-sem-justificativa": _x(
+        "Conceito deixado de fora sem dizer por quê",
+        "Um conceito do material ficou de fora sem dizer por que não cabe nesta missão nem em que semana do bimestre "
+        "ele é tratado.",
+        "O professor não sabe onde a turma vê esse conceito.",
+        _REFAZER_PRODUTO, PO),
+    "limiar-fora": _x(
+        "O conceito central do bimestre ficou de fora",
+        "O conceito que o material existe para mudar no estudante (o conceito limiar) não está no núcleo da missão.",
+        "A virada da missão precisa ser sobre ele; sem ele, a missão perde o propósito.",
+        _REFAZER_PRODUTO, PO),
+    "limiar-fora-do-aha": _x(
+        "O conceito central não está na decisão nem na descoberta",
+        "O conceito limiar aparece só numa etapa secundária; ele precisa estar no momento em que a criança decide ou "
+        "no resultado, onde acontece a descoberta.",
+        "É a escolha da criança sobre ele que a virada desmonta.",
+        _REFAZER_PRODUTO, PO),
+    "crenca-sem-id": _x(
+        "A crença que a missão derruba não está identificada",
+        "O passo «Crença de entrada» não aponta qual crença do mapa de conceitos a missão derruba.",
+        "Fica difícil conferir se a virada mexe na crença certa.",
+        _REFAZER_PRODUTO, PO),
+    "mapa-ausente": _x(
+        "Sem mapa de conceitos do material",
+        "Não há mapa de conceitos legível: a esteira não conferiu se a missão cobre o material do bimestre.",
+        "A missão pode estar certa — mas ninguém mediu.",
+        "Se quiser a conferência, peça **Refazer** de produto; senão, siga e registre no de acordo.", PO),
+    "trecho-sem-citacao": _x(
+        "Conceito sem a citação do material",
+        "Um conceito do mapa não cita entre aspas o trecho do material de onde saiu.",
+        "Conceito sem citação pode ter sido inventado pelo agente, e não vir do bimestre.",
+        "Confira o conceito no material. Se estiver errado, use **Refazer** de produto.", PO),
+    # ---------------------------------------------------------- a conta da virada (tabela 1.3)
+    "conta-nao-fecha": _x(
+        "A conta da virada não fecha",
+        "Com os critérios e os pesos da própria tabela, o vencedor calculado não é o que o texto declara.",
+        "A criança que refizer a conta vê outro resultado: a descoberta desmorona.",
+        _REFAZER_PRODUTO, PO),
+    "empate": _x(
+        "Empate na conta da virada",
+        "Duas opções empatam na conta; a missão não teria o que recomendar.",
+        "Sem um vencedor, não há virada para a criança perceber.",
+        _REFAZER_PRODUTO, PO),
+    "sem-virada": _x(
+        "A conta não muda: não há virada",
+        "Antes e depois do dado novo, o vencedor calculado é o mesmo.",
+        "Sem mudança, a criança não vive a descoberta que a missão promete.",
+        _REFAZER_PRODUTO, PO),
+    "sentido-indefinido": _x(
+        "Critério da conta sem dizer se vale mais ou menos",
+        "Um critério da conta não diz se ganha o maior ou o menor valor.",
+        "Sem isso, a conta não pode ser refeita nem conferida.",
+        _REFAZER_PRODUTO, PO),
+    "tabela-ilegivel": _x(
+        "Tabela da conta da virada ilegível",
+        "A tabela da conta existe, mas sem as colunas esperadas (Opção, Critério, Melhor quando, Peso, Antes, Depois) "
+        "com números.",
+        "A esteira não consegue refazer a conta para conferir a virada.",
+        _REFAZER_PRODUTO, PO),
+    "valor-sem-numero": _x(
+        "Conta da virada com valores faltando",
+        "Algumas linhas da tabela da conta não têm número em Antes ou em Depois.",
+        "A conta não pode ser feita.",
+        _REFAZER_PRODUTO, PO),
+    "vencedor-nao-declarado": _x(
+        "Conta sem o vencedor declarado",
+        "A tabela da conta não declara qual opção vence antes (ou depois) do dado novo.",
+        "Não dá para conferir se a virada acontece.",
+        _REFAZER_PRODUTO, PO),
+    "nao-se-aplica-sem-motivo": _x(
+        "Conta da virada dispensada sem motivo",
+        "A tabela da conta diz que não se aplica a esta missão, sem dizer por quê.",
+        "A descoberta pode ficar sem a conta que a mostra.",
+        "Confira se a missão dispensa mesmo a conta. Se não dispensa, use **Refazer** de produto.", PO),
+    # ---------------------------------------------------------- briefing e one-pager
+    "ancora-do-briefing-trocada": _x(
+        "Habilidade principal diferente da do briefing",
+        "O briefing marca uma habilidade como a principal, e o one-pager pôs outra como foco.",
+        "A troca pode ser certa, mas é decisão do PO, não do agente.",
+        "Confira a troca. Se ela vale, registre no de acordo; se não, use **Refazer** de produto pedindo a habilidade "
+        "do briefing.", PO),
+    "habilidade-do-briefing-sumiu": _x(
+        "Habilidade do briefing sumiu do one-pager",
+        "O briefing lista habilidades da BNCC que o one-pager não menciona.",
+        "Cortar habilidade do briefing é decisão do PO, não do agente.",
+        "Use **Refazer** de produto pedindo que a habilidade volte. Se você quer mesmo cortá-la, diga isso no pedido, "
+        "para que o one-pager registre a decisão como sua.", PO),
+    "habilidade-acrescentada": _x(
+        "Habilidade que o aprovado não tem",
+        "Uma habilidade da BNCC aparece neste documento e não está no material aprovado.",
+        "A missão prometeria à escola algo que o PO não aprovou.",
+        _REFAZER_DA_ETAPA + "que a habilidade saia. Se ela deve entrar, o pedido é a produto.", None),
+    "habilidade-perdida": _x(
+        "Habilidade aprovada que sumiu",
+        "Uma habilidade do material aprovado sumiu deste documento.",
+        "O que o PO aprovou se perde no caminho.",
+        _REFAZER_DA_ETAPA + "que a habilidade volte.", None),
+    "tempo-alterado": _x(
+        "Tempo da missão diferente do aprovado",
+        "O documento declara um tempo total na tela diferente do que o one-pager aprovado dá.",
+        "A aula foi planejada com o tempo aprovado.",
+        _REFAZER_DA_ETAPA + "o tempo aprovado. Se você quer outro tempo, o pedido é a produto.", None),
+    "tempo-de-etapa-divergente": _x(
+        "Tempo por etapa diferente do aprovado",
+        "O tempo na tela de cada etapa não bate com a tabela de tempos do one-pager aprovado.",
+        "A aula foi planejada com os tempos aprovados.",
+        "Confira os tempos. Se a diferença não tem motivo, peça, com **Refazer** desta etapa, os tempos aprovados.",
+        None),
+    "divergencia-do-contrato-sem-registro": _x(
+        "O próprio material aprovado se contradiz",
+        "Duas partes do material aprovado (o one-pager e a especificação, por exemplo) dizem coisas diferentes sobre o "
+        "mesmo ponto, e isso não está registrado como pendência.",
+        "O documento não pode escolher sozinho qual vale: a escolha é do PO.",
+        "Decida qual vale e peça a correção a produto (**Refazer** de produto, ou devolva a missão a produto).", PO),
+    "divergencia-registrada": _x(
+        "Contradição no aprovado, já registrada para o PO",
+        "Duas partes do material aprovado divergem, e isso está registrado como pendência de produto.",
+        "Até o PO decidir, o dev não sabe qual vale.",
+        "Decida qual vale e registre no de acordo, ou use **Refazer** de produto.", PO),
+    # ---------------------------------------------------------- perguntas de produto da especificação (bloco 9)
+    "spec-sem-tabela-eventos": _x(
+        "Especificação sem a tabela de ações registradas",
+        "A esteira não achou, na especificação, a tabela das ações da criança que a missão registra.",
+        "As perguntas de produto não podem ser conferidas com o que a missão de fato registra.",
+        _REFAZER_PRODUTO, PO),
+    "core-action-formato": _x(
+        "Ação central da missão fora do formato",
+        "A ação central da missão não está no formato «verbo objeto» que a plataforma registra.",
+        "A decisão central da criança não seria registrada.",
+        _REFAZER_PRODUTO, PO),
+    "core-action-sem-evento": _x(
+        "Ação central que nada registra",
+        "A ação central da missão não está na tabela de ações registradas.",
+        "A decisão central da criança não seria medida.",
+        _REFAZER_PRODUTO, PO),
+    "herdada-inexistente": _x(
+        "Pergunta comum que não existe",
+        "A missão herda uma pergunta comum a todas as missões (T1 a T21) que não existe.",
+        "A pergunta não tem resposta nem comparação com as outras missões.",
+        _REFAZER_PRODUTO, PO),
+    "herdada-faltando": _x(
+        "Faltam perguntas comuns que a missão deve herdar",
+        "A missão deixa de fora perguntas comuns a todas as missões que cabem a ela responder.",
+        "As missões deixam de ser comparáveis.",
+        _REFAZER_PRODUTO, PO),
+    "herdada-plataforma": _x(
+        "Pergunta comum que só a plataforma responde",
+        "A missão herda uma pergunta que só a plataforma consegue responder; a missão não tem esse dado.",
+        "A pergunta ficaria sem resposta.",
+        "Peça, com **Refazer** de produto, que ela saia da lista.", PO),
+    "pq-faltando": _x(
+        "Faltam perguntas de produto",
+        "A especificação tem menos perguntas de produto do que a missão precisa.",
+        "O que o time quer aprender com os dados da missão fica sem pergunta.",
+        "Peça, com **Refazer** de produto, as perguntas que faltam: o agente pode propor, e você valida.", PO),
+    "pq-excedente": _x(
+        "Perguntas de produto demais",
+        "A missão tem mais perguntas de produto do que o limite.",
+        "Pergunta demais dilui as que mudam decisão.",
+        "Escolha as que mudam decisão e peça, com **Refazer** de produto, que as outras saiam.", PO),
+    "pq-sem-pergunta": _x(
+        "Linha de pergunta de produto vazia",
+        "Uma linha da tabela de perguntas de produto não tem a pergunta.",
+        "Não há o que medir.",
+        _REFAZER_PRODUTO, PO),
+    "pq-nao-e-pergunta": _x(
+        "Pergunta de produto que não é pergunta",
+        "Uma «pergunta» de produto está escrita como afirmação.",
+        "Sem pergunta, não há resposta que mude decisão.",
+        _REFAZER_PRODUTO, PO),
+    "pq-duplicada": _x(
+        "Pergunta de produto repetida",
+        "Duas linhas fazem a mesma pergunta de produto.",
+        "Uma pergunta escrita duas vezes ocupa o lugar de outra.",
+        _REFAZER_PRODUTO, PO),
+    "pq-sem-decisao": _x(
+        "Pergunta de produto sem a decisão que dispara",
+        "A pergunta não diz o que o time decide com a resposta.",
+        "Pergunta que não muda nada é curiosidade.",
+        _REFAZER_PRODUTO, PO),
+    "pq-decisao-sem-limiar": _x(
+        "Decisão sem o número que a dispara",
+        "A pergunta diz que decisão tomar, mas não a partir de quanto.",
+        "Ninguém saberia quando agir.",
+        _REFAZER_PRODUTO, PO),
+    "pq-sem-corte": _x(
+        "Pergunta sem dizer como a resposta é lida",
+        "A pergunta não diz o recorte da resposta (por turma, por escola…).",
+        "A resposta pode ser lida do jeito errado.",
+        _REFAZER_PRODUTO, PO),
+    "pq-corte-invalido": _x(
+        "Pergunta com recorte desconhecido",
+        "A pergunta usa um recorte (por turma, por escola…) fora da lista aceita.",
+        "A plataforma não saberia separar a resposta assim.",
+        _REFAZER_PRODUTO, PO),
+    "pq-sem-acao": _x(
+        "Pergunta sem a ação que a responde",
+        "A pergunta não nomeia a ação da criança que a responde.",
+        "Ninguém saberia de onde tirar a resposta.",
+        _REFAZER_PRODUTO, PO),
+    "pq-acao-sem-evento": _x(
+        "Pergunta respondida por uma ação que nada registra",
+        "A pergunta aponta uma ação que não está na tabela de ações registradas.",
+        "Ninguém registra o que responderia a pergunta.",
+        _REFAZER_PRODUTO, PO),
+    "pq-evento-nao-mede": _x(
+        "Pergunta que pede um número que ninguém registra",
+        "A pergunta aponta uma ação registrada que só diz que aconteceu, não quanto.",
+        "A pergunta pede um número que a missão não guarda.",
+        _REFAZER_PRODUTO, PO),
+    "pq-origem-invalida": _x(
+        "Pergunta sem dizer de onde veio",
+        "A pergunta não diz se veio do PO ou se é proposta do agente.",
+        "Proposta do agente pode passar por decisão do PO.",
+        _REFAZER_PRODUTO, PO),
+    "pq-acoes-pouco-distintas": _x(
+        "Perguntas de produto que medem a mesma coisa",
+        "Várias perguntas se apoiam na mesma ação da criança: na prática, são uma pergunta só.",
+        "O time aprende menos do que parece.",
+        _REFAZER_PRODUTO, PO),
+    # ---------------------------------------------------------- indicadores do PRD
+    "kpi-sem-pergunta": _x(
+        "Indicador sem a pergunta que responde",
+        "Um indicador do PRD não diz que pergunta ele responde.",
+        "Número sem pergunta não muda decisão.",
+        _REFAZER_DEV + "a pergunta de cada indicador.", DEV),
+    "kpi-sem-decisao": _x(
+        "Indicador sem a decisão que dispara",
+        "Um indicador não diz o que muda conforme o valor.",
+        "Número que não muda decisão é enfeite.",
+        _REFAZER_DEV + "a decisão de cada indicador.", DEV),
+    "kpi-sem-evento": _x(
+        "Indicador sem a ação que o alimenta",
+        "Um indicador não diz de qual ação registrada da criança ele sai.",
+        "Ninguém sabe de onde o número sai.",
+        _REFAZER_DEV + "a ação que alimenta o indicador.", DEV),
+    "kpi-evento-inexistente": _x(
+        "Indicador usa uma ação que não existe",
+        "Um indicador cita uma ação registrada que não está na tabela de ações.",
+        "O número nunca seria calculado.",
+        _REFAZER_DEV + "que o indicador use uma ação da tabela.", DEV),
+    "kpi-aponta-tabela-ou-rota": _x(
+        "Indicador alimentado pela coisa errada",
+        "Um indicador diz que sai de uma tabela de dados ou de um endereço do sistema, e não de uma ação registrada da "
+        "criança.",
+        "Tabela guarda; o que se conta é a ação.",
+        _REFAZER_DEV + "a ação que alimenta o indicador.", DEV),
+    "kpi-herdada-inexistente": _x(
+        "Indicador herda uma pergunta que não existe",
+        "Um indicador cita uma pergunta comum (T1 a T21) que não existe.",
+        "O indicador não tem pergunta de verdade.",
+        _REFAZER_DEV + "a pergunta comum certa.", DEV),
+    "kpi-herdada-evento": _x(
+        "Indicador comum calculado com outra ação",
+        "Um indicador herdado das perguntas comuns a todas as missões usa uma ação diferente da prevista.",
+        "As missões deixam de ser comparáveis.",
+        _REFAZER_DEV + "a ação prevista para a pergunta comum.", DEV),
+    "kpi-herdada-plataforma": _x(
+        "Indicador que só a plataforma calcula",
+        "Um indicador herda uma pergunta que só a plataforma responde; a missão não tem o dado.",
+        "O indicador ficaria sem número.",
+        _REFAZER_DEV + "que o indicador saia e vire pendência de plataforma.", DEV),
+    "kpi-pq-inexistente": _x(
+        "Indicador para uma pergunta de produto que não existe",
+        "O PRD cita uma pergunta de produto que a especificação não tem.",
+        "Quem decide o que se quer saber é produto, com o PO — o PRD não inventa pergunta.",
+        _REFAZER_DEV + "que o indicador saia, ou leve a pergunta a produto.", DEV),
+    "pq-sem-kpi": _x(
+        "Pergunta de produto sem indicador no PRD",
+        "Uma pergunta de produto decidida na especificação não tem indicador no PRD.",
+        "A pergunta se perde entre produto e dev.",
+        _REFAZER_DEV + "o indicador da pergunta.", DEV),
+    "corte-invalido": _x(
+        "Indicador com recorte desconhecido",
+        "Um indicador usa um recorte (por turma, por escola…) fora da lista aceita.",
+        "A plataforma não saberia separar o número assim.",
+        _REFAZER_DEV + "um recorte da lista.", DEV),
+    "baseline-ausente": _x(
+        "Indicador sem ponto de partida",
+        "Um indicador não diz o valor de partida nem que ele ainda não existe.",
+        "Sem ponto de partida, não dá para saber se a missão melhorou algo.",
+        _REFAZER_DEV + "o valor com a fonte — ou a frase «sem baseline — primeira medição».", DEV),
+    "baseline-zero": _x(
+        "Ponto de partida «0%» que ninguém mediu",
+        "Um indicador tem ponto de partida 0%, sem fonte.",
+        "Zero inventado parece medição.",
+        _REFAZER_DEV + "o valor com a fonte — ou a frase «sem baseline — primeira medição».", DEV),
+    "baseline-sem-origem": _x(
+        "Ponto de partida sem fonte",
+        "Um indicador tem um valor de partida sem dizer de onde veio.",
+        "Número sem fonte pode ter sido inventado.",
+        "Confira de onde veio o número. Se não há fonte, peça, com **Refazer** de dev, que ele saia.", DEV),
+    "payload-nao-computa": _x(
+        "Indicador calculado com dado que ninguém registra",
+        "Um indicador usa dados que nenhuma ação registrada carrega.",
+        "O número não pode ser calculado.",
+        _REFAZER_DEV + "que a ação registre o dado, ou outro cálculo.", DEV),
+    "leitura-sem-leitor": _x(
+        "Dado lido num lugar que ninguém lê",
+        "Uma ação registrada diz que é lida num canal que a plataforma não tem.",
+        "O dado é guardado e nunca chega ao painel.",
+        _REFAZER_DEV + "o leitor certo (a tabela da missão).", DEV),
+    "sinal-ia-sem-ia-ao-estudante": _x(
+        "Registro de IA numa missão em que a IA não fala com o aluno",
+        "O PRD registra ações de uma IA que responde ao estudante, mas nesta missão a IA não fala com o aluno.",
+        "O indicador mediria algo que não acontece.",
+        _REFAZER_DEV + "que esses registros saiam.", DEV),
+    "sinal-universal-divergente": _x(
+        "Ação comum a todas as missões registrada com outro nome",
+        "Uma ação comum a todas as missões aparece com outro nome.",
+        "As missões deixam de ser comparáveis.",
+        _REFAZER_DEV + "o nome do catálogo.", DEV),
+    "tabela-evt-ausente": _x(
+        "Tabela de ações ilegível",
+        "A esteira não achou a tabela de ações registradas (com a coluna «Quando dispara») para conferir os "
+        "indicadores.",
+        "Os indicadores ficaram sem conferência.",
+        "Confira a tabela no PRD. Se ela falta, peça **Refazer** de dev.", DEV),
+    # ---------------------------------------------------------- registro das ações e o PRD
+    "tabela-eventos": _x(
+        "Falta a tabela de ações registradas",
+        "A passagem ao dev não tem a tabela das ações da criança que a missão registra.",
+        "Sem ela, os indicadores não têm de onde sair.",
+        _REFAZER_DEV + "a tabela de ações.", DEV),
+    "resultado-contexto": _x(
+        "Registro de ações sem os campos que a plataforma guarda",
+        "A tabela de ações não tem as colunas «resultado» e «contexto», os únicos dados extras que a plataforma "
+        "guarda.",
+        "O que a criança fez seria registrado sem o detalhe.",
+        _REFAZER_DEV + "as duas colunas.", DEV),
+    "campo-dados": _x(
+        "Registro de ação com um campo que a plataforma descarta",
+        "Ações da criança são registradas com um campo «dados», que a plataforma não tem e descarta sem avisar.",
+        "Esses dados se perderiam.",
+        _REFAZER_DEV + "os campos «resultado» e «contexto».", DEV),
+    "tabela-leitura": _x(
+        "Falta a tabela de onde o professor lê os dados",
+        "Nenhuma tabela própria da missão foi nomeada; é dela que saem as medidas que o professor vê.",
+        "A medida não existiria.",
+        _REFAZER_DEV + "a tabela da missão.", DEV),
+    "prefixo-tabela": _x(
+        "Nome de tabela fora do padrão",
+        "Uma tabela de dados tem o nome fora do padrão da plataforma (o código da missão, sem separador no meio).",
+        "Os nomes deixam de bater entre as partes do sistema.",
+        _REFAZER_DEV + "o nome no padrão.", DEV),
+    "papeis": _x(
+        "Papéis de usuário antigos",
+        "O documento usa papéis de usuário que a plataforma não tem mais; ela tem seis (estudante, professor, três "
+        "níveis de gestor e administrador).",
+        "Permissão com papel errado não funciona.",
+        _REFAZER_DEV + "os papéis da plataforma.", DEV),
+    "rota-motor": _x(
+        "Registro numa rota de outra missão",
+        "O documento grava ações numa rota de uma missão antiga, em vez da rota do próprio módulo.",
+        "Os registros iriam para o lugar errado.",
+        _REFAZER_DEV + "a rota do módulo da missão.", DEV),
+    "quota-env": _x(
+        "Limite de uso de IA no lugar antigo",
+        "O documento põe o limite de uso de IA numa configuração que não existe mais; hoje ele é por perfil.",
+        "O limite não funcionaria.",
+        _REFAZER_DEV + "o limite por perfil.", DEV),
+    "enum-estado": _x(
+        "Estado guardado num formato que a plataforma não usa",
+        "O documento guarda o estado da missão num formato que a plataforma não adota.",
+        "Quem programa seguiria um molde diferente do da plataforma.",
+        _REFAZER_DEV + "o formato da plataforma.", DEV),
+    "evento-sem-leitor": _x(
+        "Ação registrada que ninguém lê",
+        "O PRD diz que uma ação da criança é lida por um canal que a plataforma não tem.",
+        "O dado é registrado e nunca chega ao painel.",
+        _REFAZER_DEV + "o leitor certo (a tabela da missão).", DEV),
+    "rf-sem-rastro": _x(
+        "Requisito obrigatório sem tarefa",
+        "Um requisito obrigatório do PRD não está ligado a nenhuma tarefa do plano de implementação.",
+        "Ele pode ficar sem ser programado.",
+        _REFAZER_DEV + "a tarefa do requisito.", DEV),
+    "identificador-invalido": _x(
+        "Nome inválido no código",
+        "Um nome do PRD tem hífen, o que não vale no código.",
+        "Quem programa inventaria outro nome, e as partes deixariam de se encontrar.",
+        _REFAZER_DEV + "um nome válido.", DEV),
+    "caminho-divergente": _x(
+        "Missão com duas pastas",
+        "O PRD declara mais de uma pasta para a mesma missão.",
+        "Quem programa não sabe onde criar os arquivos.",
+        _REFAZER_DEV + "uma pasta só.", DEV),
+    "tipo-divergente": _x(
+        "Mesmo dado com dois tipos",
+        "Um campo do modelo de dados aparece com dois tipos diferentes (texto num lugar e número no outro, por "
+        "exemplo).",
+        "Quem programa não sabe qual é o certo.",
+        _REFAZER_DEV + "um tipo só.", DEV),
+    "tipo-divergente-de-spec": _x(
+        "Campo com tipo diferente do da especificação",
+        "Um campo de dados tem um tipo no PRD e outro na especificação, sem registro da troca.",
+        "Quem programa não sabe qual vale.",
+        _REFAZER_DEV + "o tipo da especificação, ou a troca registrada.", DEV),
+    # ---------------------------------------------------------- PRD pronto para programar
+    "zerar-com-delete": _x(
+        "«Zerar» apaga dados",
+        "O PRD faz o «zerar» da missão apagando os dados; na plataforma, zerar abre uma rodada nova e guarda a "
+        "anterior.",
+        "Apagar perde o histórico da turma.",
+        _REFAZER_DEV + "o zerar da plataforma.", DEV),
+    "contrato-sem-zod": _x(
+        "Comunicação com o servidor descrita só em texto",
+        "O PRD descreve o que cada endereço do servidor recebe e devolve em prosa, sem o formato exato dos dados.",
+        "Quem programa escolhe os campos, e os erros só aparecem na sala.",
+        _REFAZER_DEV + "o formato exato.", DEV),
+    "contrato-frouxo": _x(
+        "Formato de dados que aceita qualquer coisa",
+        "O PRD descreve dados com um tipo que aceita qualquer coisa, sem os campos.",
+        "Quem programa escolhe os campos, e os erros só aparecem na sala.",
+        _REFAZER_DEV + "os campos declarados.", DEV),
+    "ia-sem-prompt": _x(
+        "Falta o texto do que se pede à IA",
+        "O PRD lista chamadas de IA sem o texto do pedido (o prompt) de cada uma.",
+        "Quem programa escreveria o pedido sozinho — e é ele que decide o que a criança vê.",
+        _REFAZER_DEV + "o texto de cada pedido à IA.", DEV),
+    "ia-saida-sem-schema": _x(
+        "Resposta da IA sem formato definido",
+        "O PRD não define o formato exato do que a IA devolve.",
+        "A missão aceitaria qualquer resposta da IA, inclusive uma quebrada.",
+        _REFAZER_DEV + "o formato da resposta.", DEV),
+    "modelo-sem-ddl": _x(
+        "Modelo de dados só em texto",
+        "O PRD não traz a definição exata das tabelas de dados (tipos, obrigatoriedade, ligações).",
+        "Quem programa decidiria sozinho como guardar os dados da missão.",
+        _REFAZER_DEV + "a definição das tabelas.", DEV),
+    "nivel-em-tabela-da-missao": _x(
+        "Nível da criança guardado no lugar errado",
+        "O PRD guarda o nível da criança numa tabela da própria missão; na plataforma ele fica no registro comum de "
+        "evidências.",
+        "O painel do professor não acharia o nível.",
+        _REFAZER_DEV + "o registro comum.", DEV),
+    "sem-force-rls": _x(
+        "Falta a proteção de dados por escola",
+        "O modelo de dados do PRD não traz o bloco que garante que cada escola só veja os próprios dados.",
+        "Sem ele, dados de uma escola poderiam aparecer para outra.",
+        _REFAZER_DEV + "o bloco de proteção.", DEV),
+    "ficha-tipo-invalido": _x(
+        "Regra de nível com tipo desconhecido",
+        "Uma linha da ficha de evidência tem um tipo que não existe (só vale ação ou múltipla escolha).",
+        "O servidor não saberia calcular o nível.",
+        _REFAZER_DEV + "o tipo certo.", DEV),
+    "ficha-sem-habilidade": _x(
+        "Habilidade sem regra de nível no PRD",
+        "A ficha de evidência do PRD não tem linha para uma habilidade da missão.",
+        "O painel do professor ficaria sem o nível dessa habilidade.",
+        _REFAZER_DEV + "a linha da habilidade.", DEV),
+    "regra-em-proposta": _x(
+        "Regra de nível ainda em proposta",
+        "A regra que calcula o nível de uma habilidade ainda é proposta, à espera do PO.",
+        "Sem a decisão do PO, o servidor não sabe calcular o nível.",
+        "Decida a regra e registre no de acordo, ou peça que produto a feche.", PO),
+    "regra-sem-coluna": _x(
+        "Regra de nível que não lê nenhum dado guardado",
+        "A condição da regra de nível não usa nenhum dado que o modelo de dados declara.",
+        "O servidor não tem como aplicar a regra.",
+        _REFAZER_DEV + "a regra sobre um dado guardado.", DEV),
+    "regra-sem-predicado": _x(
+        "Regra de nível em palavras soltas",
+        "A condição da regra de nível cita um dado, mas não diz a comparação (por exemplo, «tentativas = 1»).",
+        "O servidor não saberia quando a criança atingiu o nível.",
+        _REFAZER_DEV + "a comparação.", DEV),
+    "regra-chave-jsonb-ausente": _x(
+        "Regra de nível lê um dado que não é guardado",
+        "A regra de nível de uma habilidade lê um dado que o modelo de dados não declara.",
+        "Dado que não é guardado nunca existe: o nível nunca seria calculado.",
+        _REFAZER_DEV + "o dado no modelo de dados.", DEV),
+    "chat-sem-intencoes": _x(
+        "Conversa simulada sem as respostas previstas",
+        "A missão tem um chat com um personagem simulado, e o banco de conteúdo não traz a tabela do que ele responde "
+        "a cada mensagem.",
+        "Quem programa inventaria o que o personagem diz.",
+        _REFAZER_DEV + "a tabela de respostas do chat.", DEV),
+    "intencao-sem-gatilho": _x(
+        "Resposta do chat sem o que a dispara",
+        "Uma resposta prevista do chat não diz que mensagem da criança a dispara.",
+        "A resposta nunca apareceria.",
+        _REFAZER_DEV + "o gatilho de cada resposta.", DEV),
+    "intencao-sem-fallback": _x(
+        "Chat sem resposta para mensagem inesperada",
+        "A tabela do chat não diz o que o personagem responde quando a mensagem da criança não casa com nada previsto.",
+        "A criança pode ficar sem resposta.",
+        _REFAZER_DEV + "a resposta padrão.", DEV),
+    "prd-sem-intencoes": _x(
+        "PRD não diz onde ficam as respostas do chat",
+        "O PRD não aponta a tabela de respostas do chat nem onde a mensagem da criança é interpretada.",
+        "Quem programa não sabe de onde tirar as respostas.",
+        _REFAZER_DEV + "a referência à tabela do chat.", DEV),
+    "tabela-do-handoff-perdida": _x(
+        "Tabela da passagem ao dev que sumiu do PRD",
+        "Tabelas de dados declaradas na passagem ao dev não estão no PRD, nem registradas como divergência.",
+        "Quem programa não sabe se a tabela existe.",
+        _REFAZER_DEV + "as tabelas, ou a troca registrada.", DEV),
+    "evento-do-handoff-perdido": _x(
+        "Ação registrada na passagem que sumiu do PRD",
+        "Ações da criança que a passagem ao dev registra não estão no PRD, nem como divergência.",
+        "O dado dessas ações não seria guardado, e os indicadores ficam sem ele.",
+        _REFAZER_DEV + "as ações, ou a troca registrada.", DEV),
+    "divergencia-do-handoff-registrada": _x(
+        "O PRD mudou algo da passagem ao dev e registrou",
+        "O PRD tira itens da passagem ao dev e só registra a troca na lista de divergências.",
+        "A troca pode ter motivo, mas alguém precisa conferir.",
+        "Confira se a troca tem motivo antes de liberar.", DEV),
+    # ---------------------------------------------------------- a missão na plataforma
+    "id-nao-derivado": _x(
+        "Código da missão fora da regra da plataforma",
+        "O código da missão no PRD não é o que a plataforma deriva da série e da unidade.",
+        "A missão seria registrada com outro código, e a pasta e o endereço não bateriam.",
+        _REFAZER_DEV + "o código derivado.", DEV),
+    "manifesto-invalido": _x(
+        "Ficha técnica que a plataforma recusaria",
+        "A ficha técnica da missão não passa na conferência que a plataforma faz ao publicar.",
+        "A missão não seria publicada.",
+        _REFAZER_DEV + "a ficha corrigida.", DEV),
+    "manifesto-chave-inexistente": _x(
+        "Ficha técnica com campos desconhecidos",
+        "A ficha técnica da missão traz campos que a plataforma não reconhece.",
+        "A publicação da missão pode falhar.",
+        _REFAZER_DEV + "só os campos da plataforma.", DEV),
+    "manifesto-capability": _x(
+        "Recurso que a plataforma não oferece",
+        "A ficha técnica pede um recurso que a plataforma não tem.",
+        "Até a plataforma oferecer, essa parte da missão não funciona.",
+        "Combine com o time de plataforma, ou peça, com **Refazer** de dev, que o recurso saia.", DEV),
+    "manifesto-permissao": _x(
+        "Permissão que a plataforma não concede",
+        "A ficha técnica pede uma permissão do navegador (câmera, microfone…) que a plataforma não concede.",
+        "Essa parte da missão não funcionaria.",
+        "Combine com o time de plataforma, ou peça, com **Refazer** de dev, que a permissão saia.", DEV),
+    "ponte-inexistente": _x(
+        "Pacote de componentes que não existe",
+        "O PRD usa um pacote de componentes do design system que a plataforma não tem.",
+        "O código não funcionaria.",
+        _REFAZER_DEV + "um dos pacotes existentes (estão no detalhe).", DEV),
+    # ---------------------------------------------------------- banco de conteúdo
+    "conteudo-ausente": _x(
+        "Textos da missão que faltam no banco de conteúdo",
+        "Itens previstos não têm o texto inteiro no banco de conteúdo (notícias, posts, falas).",
+        "A criança veria a tela vazia.",
+        _REFAZER_DEV + "os textos que faltam.", DEV),
+    "fala-ausente": _x(
+        "Fala do personagem de IA faltando",
+        "Em alguns momentos em que o personagem de IA deveria falar, o banco de conteúdo não tem a fala.",
+        "A criança ficaria sem a resposta prevista.",
+        _REFAZER_DEV + "as falas que faltam.", DEV),
+    "status-humano": _x(
+        "Texto marcado como aprovado pelo próprio agente",
+        "O banco de conteúdo marca um texto como homologado ou aprovado; quem escreve o banco só pode marcar "
+        "«escrito».",
+        "Aprovar é da curadoria humana: a marca esconderia que ninguém revisou.",
+        "Peça **Refazer** de dev.", DEV),
+    # ---------------------------------------------------------- protótipo e pedagógico (design)
+    "prototipo-nao-abre": _x(
+        "O protótipo não abre no navegador",
+        "O arquivo do protótipo não é uma página que o navegador abre.",
+        "Ninguém consegue ver nem conferir as telas.",
+        "Peça **Refazer** de design. Se voltar a acontecer, avise o time técnico.", DESIGN),
+    "quadros-todos-visiveis": _x(
+        "Todas as telas aparecem empilhadas",
+        "No protótipo, as telas que deviam aparecer uma de cada vez ficam visíveis ao mesmo tempo.",
+        "A navegação parece não funcionar, e o QA confere a coisa errada.",
+        _REFAZER_DESIGN, DESIGN),
+    "sem-id-de-tela": _x(
+        "Telas do protótipo sem o código de tela",
+        "Nenhuma tela do protótipo tem o código de tela (como E3-ALU-01).",
+        "Sem o código, não dá para conferir se cada tela prevista foi construída.",
+        _REFAZER_DESIGN, DESIGN),
+    "telas-ausentes": _x(
+        "Telas previstas que não estão no protótipo",
+        "Algumas telas da lista de telas da missão não aparecem no protótipo.",
+        "O QA confere o que está na tela, não o que o relatório promete.",
+        "Peça, com **Refazer** de design, as telas que faltam (estão no trecho).", DESIGN),
+    "telas-nao-declaradas": _x(
+        "Tela no protótipo que a lista de telas não tem",
+        "O protótipo tem uma tela que a lista de telas da missão não declara.",
+        "Ou a lista está desatualizada, ou o protótipo inventou uma tela.",
+        "Confira a tela. Se ela não devia existir, peça **Refazer** de design.", DESIGN),
+    "marcador-de-rascunho": _x(
+        "Marca de rascunho no protótipo",
+        "O protótipo ainda tem marcas de rascunho (texto provisório ou lembretes).",
+        "O QA confere o que a criança veria: rascunho na tela não é tela pronta.",
+        _REFAZER_DESIGN, DESIGN),
+    "afirmacao-inventario": _x(
+        "O QA conta outro número de telas",
+        "O relatório de QA afirma um número de telas diferente do que a lista de telas declara.",
+        "O relatório pode estar conferindo outra coisa.",
+        _REFAZER_DESIGN, DESIGN),
+    "bloco-do-contrato-ausente": _x(
+        "Parte do aprovado sumiu do pedagógico",
+        "Partes que a esteira copia do one-pager aprovado não estão no one-pager pedagógico.",
+        "O que o PO aprovou some do documento de sala de aula.",
+        _REFAZER_DESIGN, DESIGN),
+    "bloco-do-contrato-alterado": _x(
+        "Parte copiada do aprovado mudou no pedagógico",
+        "Partes que a esteira copia do one-pager aprovado aparecem diferentes no one-pager pedagógico.",
+        "O texto aprovado pelo PO não muda no design.",
+        "Peça **Refazer** de design. Se a mudança é sua, peça-a a produto, com **Refazer** de produto.", DESIGN),
+    "texto-chave-proposta": _x(
+        "O design propôs outra redação para um texto aprovado",
+        "O design propôs outra redação para textos que o PO aprovou palavra por palavra; vale o aprovado até o PO "
+        "decidir.",
+        "Texto aprovado só muda pelo PO.",
+        "Leia as propostas. Se quer alguma, peça a troca com **Refazer** de produto; se não, siga — vale o aprovado.",
+        PO),
+    "texto-chave-id-desconhecido": _x(
+        "Texto das telas que o aprovado não tem mais",
+        "Os textos das telas citam textos-chave que o one-pager aprovado não tem (mais).",
+        "O texto pode ter saído num refazer de produto.",
+        "Confira a linha. Se o texto saiu do aprovado, peça **Refazer** de design.", DESIGN),
+    # ---------------------------------------------------------- mesmos nomes em todos os documentos
+    "variante-proibida": _x(
+        "Nome proibido para um personagem ou elemento",
+        "Um documento usa uma forma de nome que a lista oficial de nomes proíbe; o nome oficial está no trecho.",
+        "Dois nomes para a mesma coisa confundem a criança e quem programa.",
+        _REFAZER_DA_ETAPA + "que o documento use o nome oficial.", None),
+    "idade-divergente": _x(
+        "Idade de personagem diferente da oficial",
+        "Um documento dá a um personagem uma idade diferente da que a lista oficial fixa.",
+        "A criança e o professor veriam dois dados para o mesmo personagem.",
+        "Peça que o documento use a idade oficial (está no trecho). Em geral é ajuste simples.", None),
+    "papel-divergente": _x(
+        "Personagem com papel diferente do oficial",
+        "Um personagem aparece coordenando ou respondendo por algo que não é o papel dele na lista oficial.",
+        "A história fica incoerente entre os documentos.",
+        "Peça que o documento use o papel oficial (está no trecho).", None),
+    "numero-divergente": _x(
+        "Número diferente do oficial",
+        "Um documento usa um número diferente do que a lista oficial fixa (por exemplo, a quantidade de rodadas).",
+        "Quem desenha e quem programa ficam sem saber qual vale.",
+        "Peça que o documento use o número oficial (está no trecho).", None),
+    "arquivo-divergente": _x(
+        "Nome de arquivo diferente entre documentos",
+        "Um documento cita um arquivo com um nome diferente do que foi de fato gerado.",
+        "Quem procura o arquivo não o acha.",
+        "Peça que o documento use o nome certo (está no trecho). Em geral é ajuste simples.", None),
+    "glossario-vazio": _x(
+        "Lista oficial de nomes vazia",
+        "A especificação tem o título da lista oficial de nomes, mas nenhuma tabela legível dentro dele.",
+        "Sem a lista, cada documento batiza as coisas de um jeito.",
+        _REFAZER_PRODUTO, PO),
+}.items():
+    # entrada que já existe vence: estas cobrem só o que faltava
+    CATALOGO.setdefault(_codigo_novo, _exp_nova)
+
 #: Falhas da execução, não da missão: o texto é o mesmo para todas.
 _FALHA_DA_ESTEIRA = _x(
     "Falha da esteira nesta execução",
@@ -1014,7 +1759,7 @@ for _c in ("envelope-ilegivel", "juiz-sem-voto", "juiz-sem-veredito", "notas-ile
            "nucleo-vazio", "banco-vazio", "fontes-vazias", "fonte-vazia", "veredito-incoerente",
            "voto-sem-achado-verificavel", "ticket-sem-rota", "dimensao-ausente", "gabarito-desconhecido",
            "conceito-desconhecido", "etapa-invalida", "acao-vazia", "tarefa-sem-conteudo", "stitch-sem-projeto",
-           "stitch-recusou", "stitch-incompleto"):
+           "stitch-recusou", "stitch-incompleto", "spec-vazia", "prototipo-vazio"):
     CATALOGO.setdefault(_c, _FALHA_DA_ESTEIRA)
 
 #: Sinônimos: o rastro de lacunas grava o tipo do marcador; o diagnóstico, o dono.
@@ -1024,6 +1769,127 @@ CATALOGO.setdefault("pendencia-plataforma", _x(
     "Até a plataforma entregar, essa parte da missão não funciona.",
     "Combine com o time de plataforma quem resolve e quando. Não trava a etapa.", DEV))
 CATALOGO.setdefault("plataforma", CATALOGO["pendencia-plataforma"])
+
+# ------------------------------------------------------------------ quando o achado impede seguir
+#: O mesmo código sai 🟡 numa situação e 🔴 noutra: `letramento` no EM e no EF, `secao_ds` pendência de plataforma ou
+#: seção legada, `decisao-atribuida-ao-po` com e sem registro do PO, `numero-sem-origem` no one-pager e no PRD, a escolha
+#: do PO com ESTEIRA_ESTRITA. Com 🔴 o «De acordo» não aparece (`pipeline.passagem.acoes_possiveis`): a explicação não
+#: manda registrar nele nem diz que não trava. Revisão do PR #82 (25/10/2026): o PO via «🔴 Impede seguir» e, logo
+#: abaixo, «Não trava a etapa» — justamente no gate da BNCC, o único recorte bloqueante.
+_SE_BLOQUEIO: Dict[str, Explicacao] = {
+    "letramento": _x(
+        "Falta habilidade de letramento digital da série",
+        "Nenhuma das habilidades da BNCC declaradas é de letramento digital (o eixo Cultura Digital) e do ano da "
+        "missão.",
+        "No Ensino Fundamental, a missão precisa de ao menos uma habilidade de letramento digital do ano: é o recorte "
+        "da BNCC que impede seguir quando falta.",
+        "Use **Refazer** de produto pedindo uma habilidade de Cultura Digital do ano que descreva o que a criança faz. "
+        "Se nenhuma descreve, o time decide mudar a série ou a âncora curricular — diga a decisão no pedido.", PO),
+    "secao_ds": _x(
+        "O ambiente da missão não pode seguir como está",
+        "A seção do design system em que a missão acontece (o app simulado ou o mini-jogo) não pode ficar como a "
+        "especificação diz: é uma seção antiga, que imita app de terceiro; repete uma coleção que o design system já "
+        "tem; contraria o briefing; ou é um ambiente novo que o PO não escolheu ou recusou. O motivo exato está no "
+        "trecho abaixo.",
+        "O ambiente é decisão de produto e define o que o design desenha e o que a plataforma precisa ter: com o "
+        "ambiente errado, a missão inteira vai para o lugar errado.",
+        "Leia o motivo e use **Refazer** de produto com a seção certa. Se a escolha é sua (manter a seção antiga, por "
+        "exemplo), diga isso no pedido de **Refazer**, para que a especificação a registre como decisão sua.", PO),
+    "decisao-atribuida-ao-po": _x(
+        "Decisão escrita como se fosse do PO",
+        "O texto diz que o PO decidiu algo, e a sessão não tem nenhum pedido nem parecer do PO que diga isso.",
+        "Se o PO não decidiu, a missão segue com uma escolha do agente disfarçada de decisão do PO, e ninguém volta "
+        "para conferir.",
+        # `decisoes.ha_registro_do_po`: o pedido de refazer é registro do PO, e com ele o achado cai para ⚠️
+        "Leia cada frase abaixo. Se a decisão é sua, use **Refazer** dizendo isso: o pedido fica registrado e o ponto "
+        "deixa de travar. Se não é, use **Refazer** pedindo que ela vire proposta para você validar.", PO),
+    "numero-sem-origem": _x(
+        "Número sem fonte",
+        "O documento apresenta números (tempos, quantidades, limites) como decididos, sem que venham do material "
+        "aprovado nem de uma decisão do PO.",
+        "Número que ninguém decidiu vira regra da missão sem que o PO perceba.",
+        "Confira cada número abaixo. Este documento só usa números que produto decidiu: peça, com **Refazer** desta "
+        "etapa, que o número seja copiado do aprovado, saia ou vire proposta para o PO. Se o número deve valer, o "
+        "pedido é a produto.", None),
+    "ambiente-ausente-na-spec": _x(
+        "Falta escolher o app simulado",
+        "A especificação de produto não diz qual app a missão imita (Instagram, WhatsApp…) nem se é mini-jogo.",
+        "Sem essa escolha, o design decidiria sozinho a cara da missão.",
+        "Devolva a missão a produto dizendo qual app ela imita, ou se é mini-jogo: a escolha é sua e entra na "
+        "especificação.", PO),
+    "guarda-afrouxada": _x(
+        "Caminho entre telas mais solto do que a regra",
+        "Uma passagem entre telas deixa a criança avançar em mais situações do que a especificação permite.",
+        "A criança pode pular uma etapa que a missão precisa.",
+        "Peça, com **Refazer** de design, que a passagem siga a regra da especificação. Se você quer mudar a regra, o "
+        "pedido é a produto.", PO),
+    "guarda-exige-acerto": _x(
+        "Passagem que só aceita a resposta certa",
+        "Uma passagem entre telas só deixa a criança seguir se acertar, e a especificação não pede acerto ali.",
+        "A missão deixa de medir quem erra — e o erro é parte da descoberta.",
+        "Peça, com **Refazer** de design, que a criança possa seguir mesmo errando, como a especificação pede. Se você "
+        "quer a trava, o pedido é a produto.", PO),
+}
+
+#: A família EM13 que conta como letramento pela leitura **proposta** do EM (`tools/bncc.py`, sempre 🟡). Até a revisão do
+#: PR #82 ela usava a entrada `letramento`, que é outro achado.
+_LETRAMENTO_PROPOSTO_EM = _x(
+    "Habilidade do Ensino Médio lida como letramento digital",
+    "A habilidade conta como letramento digital por uma leitura proposta do Ensino Médio, que não tem eixo oficial.",
+    "A classificação pode não ser a que a pedagogia adota.",
+    "Valide com a pedagogia e registre no de acordo. Não trava a etapa.", PO)
+
+#: A ficha técnica (bloco 0 da spec, `rastro.validar_manifesto`) grava o nome do campo como código do achado: `produto`
+#: ali é o campo «produto» da ficha, não uma pendência de produto.
+_CAMPOS_DA_FICHA = {
+    "id": "o código da missão", "series": "a série (ano) da missão", "unidade": "a unidade (bimestre)",
+    "viewport": "o tamanho de tela", "publico": "o público (quem usa a missão)",
+    "produto": "o produto da plataforma em que a missão entra", "liberacao": "a regra de liberação da missão",
+    "capabilities": "os recursos da plataforma que a missão usa",
+    "permissoes": "as permissões do navegador (câmera, microfone…)",
+    "classe_ambiente": "o tipo de ambiente (app simulado ou mini-jogo)",
+    "secoes_ds_extras": "as seções extras do design system",
+}
+
+
+def _campo_da_ficha(campo: str) -> Explicacao:
+    nome = _CAMPOS_DA_FICHA[campo]
+    return _x(f"Ficha técnica da missão: {nome}",
+              f"A ficha técnica que registra a missão na plataforma (o começo da especificação) tem um problema em "
+              f"{nome}. O motivo está abaixo.",
+              "A plataforma usa a ficha para publicar e mostrar a missão: campo errado ou faltando impede publicar, ou "
+              "leva a missão para o lugar errado.",
+              "Leia o motivo e peça a correção com **Refazer** da etapa que escreveu a ficha (em geral, produto).",
+              None, caso=True)
+
+
+#: Frases que só valem quando o ponto não trava. Com 🔴, saem; a menção ao «De acordo» vira o caminho que existe.
+_SO_SEM_TRAVA = (
+    (re.compile(r"\s*Não trava a etapa\.?"), ""),
+    (re.compile(r"\s*(?:,|—)?\s*ou siga com ele registrado"), ""),
+    (re.compile(r"; senão, siga e registre no de acordo"), ""),
+    (re.compile(r"; se não, siga e registre por quê(?: no comentário)?"),
+     "; se não concorda, fale com o administrador: só ele libera com exceção, que fica registrada"),
+)
+#: O que dizer no lugar de «registre no de acordo» quando o ponto impede seguir.
+NO_VERMELHO = ("Enquanto este ponto impedir seguir, o botão «De acordo» não aparece: o caminho é **Refazer** (o seu "
+               "pedido fica registrado) ou a liberação com exceção pelo administrador.")
+
+
+def o_que_fazer(explicacao: Explicacao, sev: str) -> str:
+    """O «O que fazer» coerente com a severidade: com 🔴, sem «Não trava a etapa» e sem mandar registrar no de acordo,
+    que não aparece. As entradas que mudam de sentido com o 🔴 têm texto próprio em `_SE_BLOQUEIO`; isto é a rede."""
+    texto = explicacao.o_que_fazer
+    if sev != BLOQUEIO:
+        return texto
+    for regra, troca in _SO_SEM_TRAVA:
+        texto = regra.sub(troca, texto)
+    frases = [f for f in re.split(r"(?<=[.!?])\s+", texto.strip()) if f.strip()]
+    ficam = [f for f in frases if "de acordo" not in f]
+    if len(ficam) < len(frases):
+        ficam.append(NO_VERMELHO)
+    return " ".join(ficam) or NO_VERMELHO
+
 
 # ------------------------------------------------------------------ o que o padrão do juiz de adequação quer dizer
 #: O juiz de adequação escreve o código que quiser (`demanda_cognitiva`, `2`, `E3`), mas o `padrao` é de uma lista
@@ -1257,7 +2123,7 @@ def _do_gate(gate: str) -> Optional[Explicacao]:
 def _familia(codigo: str, gate: str, achado: Mapping[str, Any]) -> Optional[Explicacao]:
     if _RE_BNCC.match(codigo):
         if gate == "bncc_status" and "proposta" in str(achado.get("resumo") or "").lower():
-            return CATALOGO["letramento"]
+            return _LETRAMENTO_PROPOSTO_EM
         return _x("Habilidade da BNCC a conferir",
                   f"A habilidade {codigo} da BNCC foi apontada pelo verificador (o motivo está abaixo).",
                   "A habilidade é o que a missão promete ensinar à escola: citação errada é promessa errada.",
@@ -1285,10 +2151,15 @@ def _codigo(achado: Mapping[str, Any]) -> str:
     return str(achado.get("codigo") or "").strip()
 
 
-def explicar(achado: Mapping[str, Any], gate: str = "") -> Explicacao:
-    """A explicação de um achado: catálogo pelo código, família do código, padrão do juiz, verificador — nessa ordem.
-    Sem nenhum, a genérica."""
+def explicar(achado: Mapping[str, Any], gate: str = "", sev: Optional[str] = None) -> Explicacao:
+    """A explicação de um achado: a variante de bloqueio, o campo da ficha técnica, o catálogo pelo código, a família do
+    código, o padrão do juiz, o verificador — nessa ordem. Sem nenhum, a genérica. `sev` é a severidade já calculada
+    (o item a tira também do ícone do verificador); sem ela, vale a do achado."""
     codigo = _codigo(achado)
+    if (sev or severidade(achado)) == BLOQUEIO and codigo in _SE_BLOQUEIO:
+        return _SE_BLOQUEIO[codigo]
+    if gate == "manifesto_status" and codigo in _CAMPOS_DA_FICHA:
+        return _campo_da_ficha(codigo)
     if codigo in CATALOGO:
         return CATALOGO[codigo]
     familia = _familia(codigo, gate, achado) if codigo else None
@@ -1469,11 +2340,17 @@ class Item:
     def texto_original(self) -> str:
         return str(self.achado.get("resumo") or "")
 
+    @property
+    def o_que_fazer(self) -> str:
+        """O que fazer, coerente com a severidade deste item — é o que o cartão mostra."""
+        return o_que_fazer(self.explicacao, self.severidade)
+
 
 def item(achado: Mapping[str, Any], gate: str = "", icone_gate: str = "") -> Item:
-    exp = explicar(achado, gate)
+    sev = severidade(achado, icone_gate)
+    exp = explicar(achado, gate, sev)
     return Item(gate=gate, icone_gate=icone_gate, achado=dict(achado), explicacao=exp,
-                quem=quem_resolve(achado, gate, exp), severidade=severidade(achado, icone_gate),
+                quem=quem_resolve(achado, gate, exp), severidade=sev,
                 # quando o texto do juiz é o caso, ele já sai inteiro: os trechos são só os campos de citação
                 trechos=trechos(achado, do_texto=not exp.texto_e_o_caso))
 
