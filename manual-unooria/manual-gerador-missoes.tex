@@ -749,6 +749,8 @@ O registro diz ``Design'', não qual designer. Isso é deliberado: o que precisa
 
 Quem age em cada etapa: \textbf{Produto} --- \cod{produto} e \cod{design}; \textbf{Design} --- \cod{design}; \textbf{Dev} --- \cod{dev}; o \cod{admin} em todas. Missão nova é criada por \cod{produto}, \cod{design} ou \cod{admin}.
 
+O \cod{design} pode liberar Produto, mas não escondido: a liberação de Produto em vigor que não veio da conta \cod{produto} fica marcada \statusAmbar\ ``liberado sem a conta produto'' --- no cartão da missão, no catálogo, no dossiê e na seção de pendências do \emph{handoff} e do PRD, escrita por código. O parecer e o estado da missão guardam quem liberou, com o papel e a data. Em 23 de outubro, uma em cinco liberações de Produto tinha vindo da conta \cod{produto}.
+
 O login é da aplicação, não da rede: os endereços temporários de download continuam acessíveis a quem tiver o link exato.
 \end{caixaNorma}
 
@@ -785,7 +787,7 @@ São quatro momentos, nesta ordem:
 
 \begin{enumerate}
   \item \textbf{O semáforo, que é da máquina.} Os gates da etapa, \statusVerde\ \statusAmbar\ \statusVermelho, como sempre. Ele não decide nada sozinho --- informa.
-  \item \textbf{O parecer do dono da etapa.} \emph{De acordo} libera, e exige um comentário --- que não é formalidade: ele segue para os agentes das etapas seguintes, no bloco ``Notas de passagem''. \emph{Refazer} transforma o comentário em pedido de correção e refaz \textbf{só aquela etapa}, voltando ao parecer da mesma pessoa. A etapa refeita parte da \textbf{versão anterior} dos documentos, não de uma folha em branco: o que não foi pedido continua como estava --- e, desde a 7.\textsuperscript{a} edição, ela nem é reescrita: o pedido vira trocas trecho a trecho, e os portões julgam a missão corrigida (Seção~\ref{sec:pontual}).
+  \item \textbf{O parecer do dono da etapa.} \emph{De acordo} libera, e exige um comentário --- que não é formalidade: ele segue para os agentes das etapas seguintes, no bloco ``Notas de passagem''. \emph{Refazer} transforma o comentário em pedido de correção e refaz \textbf{só aquela etapa}, voltando ao parecer da mesma pessoa. A etapa refeita parte da \textbf{versão anterior} dos documentos, não de uma folha em branco: o que não foi pedido continua como estava --- e, desde a 7.\textsuperscript{a} edição, ela nem é reescrita: o pedido vira trocas trecho a trecho, e os portões julgam a missão corrigida (Seção~\ref{sec:pontual}). No \emph{de acordo} de Produto, quando há marcador aberto --- parâmetro ou proposta à espera do PO, texto-chave acima do teto, pendência \statusAmbar\ que pede decisão dele ---, quem libera confirma ter lido ou decidido \textbf{cada item}; sem marcador aberto, nada muda.
   \item \textbf{O recebimento pelo dono da etapa seguinte.} \emph{Iniciar} dispara a etapa dele. \emph{Devolver}, com comentário, reabre o parecer anterior --- e \textbf{não refaz nada sozinho}: quem recebeu a devolutiva decide entre refazer, reafirmar o \emph{de acordo} ou, se vê que a causa vem de antes, \textbf{repassar a devolução} à etapa anterior sem refazer o que não é dele --- Design devolve a Produto o que o Dev lhe devolveu. O \emph{Refazer} que vem depois leva a cadeia inteira de devolutivas (Dev $\rightarrow$ Design $\rightarrow$ Produto), não só a última.
   \item \textbf{O fechamento.} O \emph{de acordo} do Dev encerra a missão: diagnóstico, aprendizado e registro no catálogo rodam só aí. Missão entregue ainda pode voltar: quem responde por Dev (ou o \cod{admin}) a \emph{devolve} a Design, com comentário, e ela reabre ali sem rodar nada sozinha.
 \end{enumerate}
@@ -801,7 +803,7 @@ Design e Dev são conferidos contra o \emph{one-pager} que o PO aprovou (Seção
 \end{caixaNorma}
 
 \begin{caixaGuardrail}{Gate vermelho e a exceção do admin}
-Com um gate \statusVermelho, o botão \emph{De acordo} \textbf{não aparece}. Só a conta \cod{admin} libera, e a liberação entra no dossiê marcada como \textbf{exceção} --- a esteira não esquece que alguém passou por cima de um bloqueio.
+Com um gate \statusVermelho, o botão \emph{De acordo} \textbf{não aparece}. Só a conta \cod{admin} libera, e a liberação entra no dossiê marcada como \textbf{exceção} --- a esteira não esquece que alguém passou por cima de um bloqueio. Em Produto, a exceção com gate \statusVermelho\ exige \textbf{justificativa escrita}, num campo próprio: sem ela o botão não libera, e só espaço ou pontuação não conta. A justificativa fica no parecer, no estado e no dossiê, com a conta e a data.
 
 As etapas rodam em segundo plano: dá para fechar a aba, e a missão volta para a fila \emph{Aguardando você} de quem dá o próximo parecer. Um batimento de 30 segundos detecta execução morta --- reinício ou \emph{deploy} no meio --- e restaura o backup. \textbf{Não faça \emph{deploy} com missão gerando.}
 \end{caixaGuardrail}
@@ -2738,7 +2740,7 @@ Por isso a esteira deixou de correr sozinha do briefing ao PRD. Hoje cada etapa 
 
 \textbf{Devolver não refaz nada sozinho.} Quem recebe uma etapa e discorda devolve \emph{o parecer} para quem o deu --- e é essa pessoa que decide entre refazer e reafirmar. A alternativa, disparar o retrabalho automaticamente, transfere a decisão para quem não respondeu por ela.
 
-\textbf{A exceção fica marcada.} Com gate vermelho não há \emph{de acordo}; só a conta de administração libera, e a liberação entra no dossiê como exceção. O sistema não impede que se passe por cima de um bloqueio --- ele impede que isso passe despercebido.
+\textbf{A exceção fica marcada.} Com gate vermelho não há \emph{de acordo}; só a conta de administração libera, e a liberação entra no dossiê como exceção. O sistema não impede que se passe por cima de um bloqueio --- ele impede que isso passe despercebido. Pela mesma razão, em Produto a exceção pede justificativa escrita, e a liberação que não vem da conta \cod{produto} sai marcada: quem libera continua podendo liberar; o que não pode é ficar sem nome.
 \end{caixaConceito}
 
 \subsection{E uma coisa que a esteira passou a saber}

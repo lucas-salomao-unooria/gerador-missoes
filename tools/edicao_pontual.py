@@ -87,6 +87,7 @@ def documentos_da_etapa(estado: Dict[str, Any], etapa: str, versao_anterior: boo
     de uma cascata: a correção de produto que veio antes apagou design e dev do estado e guardou a versão deles ali.
     """
     from tools.conteudo_aprovado import remover_anexo
+    from tools.governanca import SECAO_DE_PENDENCIAS, sem_bloco
 
     docs: Dict[str, str] = {}
     for chave in DOCUMENTOS_POR_ETAPA.get(etapa, ()):
@@ -97,6 +98,10 @@ def documentos_da_etapa(estado: Dict[str, Any], etapa: str, versao_anterior: boo
         if chave in ("prd_final", "one_pager_pedagogico"):
             # o anexo literal é da esteira (`AnexoAprovadoAgent`), que o põe de novo depois
             texto = remover_anexo(texto)
+        if chave in SECAO_DE_PENDENCIAS:
+            # as pendências de governança também (PR 9): o documento travado as recebe de novo, como estão agora
+            # (`agents.callbacks.travar_documento_na_correcao_pontual`)
+            texto = sem_bloco(texto)
         if texto.strip():
             docs[chave] = texto
     return docs
@@ -194,16 +199,18 @@ def aplicar(documentos: Dict[str, str], edicoes: Iterable[Edicao]) -> Resultado:
 def reaplicar(anterior: str, atual: str, documento: str, edicoes: Iterable[Union[Edicao, Dict[str, Any]]]) -> bool:
     """O documento atual é a versão anterior mais as trocas dele, e nada além? É a prova das ordens de não mexer.
 
-    Compara sem o anexo da esteira (o PRD e o pedagógico ganham o anexo literal depois do autor) e sem espaço nas
-    pontas de cada linha.
+    Compara sem o anexo da esteira (o PRD e o pedagógico ganham o anexo literal depois do autor), sem as pendências de
+    governança que a esteira escreve no handoff e no PRD (PR 9: o A119 as atualiza também na correção pontual) e sem
+    espaço nas pontas de cada linha.
     """
     from tools.conteudo_aprovado import remover_anexo
+    from tools.governanca import sem_bloco
 
     proprias = [e for e in (_como_edicao(x) for x in edicoes) if e.documento == documento]
-    resultado = aplicar({documento: remover_anexo(anterior or "")}, proprias)
+    resultado = aplicar({documento: sem_bloco(remover_anexo(anterior or ""))}, proprias)
     if not resultado.ok:
         return False
-    return _linhas(resultado.documentos[documento]) == _linhas(remover_anexo(atual or ""))
+    return _linhas(resultado.documentos[documento]) == _linhas(sem_bloco(remover_anexo(atual or "")))
 
 
 def _linhas(texto: str) -> List[str]:

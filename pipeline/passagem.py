@@ -71,6 +71,9 @@ MIN_CARACTERES_COMENTARIO = 20
 #: **Desligada em 25/09/2026:** o time sentiu as duas perguntas como mais um bloqueio para liberar
 #: produto. O mecanismo fica: `perguntas_de_conferencia`, `aplicar` e o cartão do app leem este
 #: dicionário, e vazio não pede nada. Para religar, descomente a entrada de produto.
+#:
+#: Desde o PR 9 do plano «Produto dono do contrato» (24/10/2026, D9) a conferência que vale é a de leitura item a item
+#: (`itens_de_conferencia`): ela só aparece quando há marcador aberto, e estas duas perguntas seguem desligadas.
 CONFERENCIA_DE_ACORDO: Dict[str, Tuple[Tuple[str, str], ...]] = {
     # "produto": (
     #     ("crenca", "Que crença do estudante cai no aha, e em que momento da tela ela cai?"),
@@ -288,10 +291,114 @@ def perguntas_de_conferencia(etapa: str, acao: str) -> Tuple[Tuple[str, str], ..
     return CONFERENCIA_DE_ACORDO.get(etapa, ()) if acao in (DE_ACORDO, EXCECAO) else ()
 
 
+# ------------------------------------------------------------------ governança da liberação de produto (D9)
+def exige_justificativa(etapa: str, acao: str, estado: Dict[str, Any]) -> bool:
+    """A exceção do admin que libera produto com gate 🔴 exige justificativa escrita (plano «Produto dono do contrato»,
+    D9), e só em produto: em design e dev, a exceção segue como antes. Nas sessões de 24/10/2026 não há exceção de
+    produto com 🔴; as duas do admin foram de design, e a regra não as pegaria. Elas mostram o comentário que não justifica
+    nada: a de 23/10 15:57 na exp02ef1b dizia só «aprovado com falso positivo», sem dizer qual gate nem por quê."""
+    return etapa == "produto" and acao == EXCECAO and "🔴" in semaforo_da_etapa(estado, etapa).values()
+
+
+#: Marcador no resumo de um achado que a conferência não pede: `[PARÂMETRO]`, `[PROPOSTA]` e `[ABERTO — dono: PO]` já
+#: estão na lista do de acordo (`tools/fechar_contrato.py`) — o rastro da spec repete cada um como decisão humana —, e o
+#: `[ABERTO — dono: <outro>]` não é do PO: na exp01ef1b, o rastro da spec pedia como «decisão do PO» o
+#: «[ABERTO — dono: editorial: Confirmação documental dos códigos interdisciplinares…]» (revisão do PR #75, 24/10/2026).
+_RE_MARCADOR_FORA_DA_CONFERENCIA = re.compile(r"\[(?:PAR[ÂA]METRO|PROPOSTA)\b|\[ABERTO\s*[—–-]\s*dono\s*:", re.I)
+#: Achados que resumem em texto as propostas e os parâmetros que aguardam o PO — o F7 do gate final («Parâmetros de
+#: inatividade (45s), processamento de IA, teto de palavras (15) e área mínima (10%) aguardam homologação pelo PO», na
+#: exp02ef1b, são 4 dos 16 itens da lista). Com a lista do contrato aberta, o PO responde a ela, e o resumo não pede um
+#: segundo «Li e decidi»; sem lista, ele é o único lugar onde a pendência aparece e entra (revisão do PR #75, 24/10/2026).
+CODIGOS_QUE_RESUMEM_O_CONTRATO = frozenset({"F7"})
+CONTRATO = "contrato"
+PENDENCIA = "pendencia"
+
+
+def itens_de_conferencia(estado: Dict[str, Any]) -> List[Dict[str, str]]:
+    """O que o PO confirma ter lido ou decidido antes do de acordo de produto — vazio quando não há marcador aberto.
+
+    A conferência de leitura do de acordo de produto foi desligada em 25/09/2026 (05feeaf): as duas perguntas fixas
+    eram sentidas como mais um bloqueio. Ela volta só quando há o que decidir (plano «Produto dono do contrato», PR 9):
+    os itens da lista do contrato (`[PARÂMETRO]`, `[PROPOSTA]`, `[ABERTO — dono: PO]`, mudança do design no Gate 0 e
+    texto-chave acima do teto, PR 3 e PR 7) e as pendências 🟡 que pedem decisão do PO nos gates de produto — achado de
+    severidade `decisao_humana` («conflito-pedido-regra»; o F7 «propostas aguardando homologação do PO» só quando a
+    lista está vazia, porque ele a resume). Sem nenhum deles, o de acordo segue como antes. Pura."""
+    contrato = contrato_em_aberto(estado)
+    return ([{"id": i.id, "origem": CONTRATO, "tipo": i.tipo, "assunto": i.assunto} for i in contrato]
+            + pendencias_de_conferencia(estado, contrato_aberto=bool(contrato)))
+
+
+def pendencias_de_conferencia(estado: Dict[str, Any], contrato_aberto: Optional[bool] = None) -> List[Dict[str, str]]:
+    """Só as pendências 🟡 de decisão do PO nos gates de produto, sem a lista do contrato — que custa quase um segundo
+    numa missão grande e o cartão já monta na lista dele. Pura.
+
+    Fica de fora o achado que cita um marcador da lista ou de outro dono (`_RE_MARCADOR_FORA_DA_CONFERENCIA`) e, com a
+    lista aberta, o que só a resume (`CODIGOS_QUE_RESUMEM_O_CONTRATO`). `contrato_aberto` é se a lista tem item — o
+    cartão já a montou; sem ele, a lista é montada aqui, e só quando há um resumo desses a decidir."""
+    itens: List[Dict[str, str]] = []
+    vistos = set()
+    for chave, icone in semaforo_da_etapa(estado, "produto").items():
+        envelope = estado.get(f"{chave}_envelope")
+        if icone not in ("🟡", "🔴") or not isinstance(envelope, dict):
+            continue
+        for a in envelope.get("achados") or []:
+            if not (isinstance(a, dict) and str(a.get("severidade")) == "decisao_humana"
+                    and str(a.get("resumo") or "").strip()):
+                continue
+            resumo = " ".join(str(a["resumo"]).split())
+            if _RE_MARCADOR_FORA_DA_CONFERENCIA.search(resumo):
+                continue
+            if str(a.get("codigo") or "") in CODIGOS_QUE_RESUMEM_O_CONTRATO:
+                if contrato_aberto is None:
+                    contrato_aberto = bool(contrato_em_aberto(estado))
+                if contrato_aberto:
+                    continue
+            # o mesmo achado em dois gates é uma leitura só: na exp01em1b (e3980485) a fidelidade do núcleo e a do
+            # one-pager citam os mesmos pedidos em conflito com regra, cada uma com a explicação dela — vale a citação
+            citacao = re.search(r"«(.+?)»", resumo)
+            chave_achado = (citacao.group(1) if citacao else resumo).lower()
+            carga = f"{a.get('codigo') or ''}|{chave_achado}".encode("utf-8")
+            ident = "pendencia-" + hashlib.sha1(carga).hexdigest()[:10]
+            if ident in vistos:
+                continue
+            vistos.add(ident)
+            itens.append({"id": ident, "origem": PENDENCIA, "tipo": str(a.get("codigo") or "decisao_humana"),
+                          "assunto": resumo[:400], "gate": chave})
+    return itens
+
+
+def conferir_leitura(itens: List[Dict[str, str]], decisoes: Optional[Dict[str, Dict[str, Any]]],
+                     leitura: Optional[Any]) -> List[Dict[str, str]]:
+    """O registro da conferência: cada item como «decidido» (respondido na lista do contrato) ou «lido» (confirmado no
+    cartão). Levanta `DecisaoInvalida` com os que faltam. Item do contrato com «lido» na resposta conta como lido."""
+    lidos = {str(i) for i in (leitura or ())}
+    registro: List[Dict[str, str]] = []
+    faltam: List[Dict[str, str]] = []
+    for item in itens:
+        resposta = (decisoes or {}).get(item["id"]) or {}
+        if item["origem"] == CONTRATO and str(resposta.get("resposta") or "").strip():
+            como = "decidido"
+        elif item["id"] in lidos or (item["origem"] == CONTRATO and resposta.get("lido")):
+            como = "lido"
+        else:
+            faltam.append(item)
+            continue
+        registro.append({"id": item["id"], "origem": item["origem"], "tipo": item["tipo"],
+                         "assunto": item["assunto"][:200], "como": como})
+    if faltam:
+        nomes = "; ".join(f"«{f['assunto'][:70]}»" for f in faltam[:5])
+        mais = f" e mais {len(faltam) - 5}" if len(faltam) > 5 else ""
+        raise DecisaoInvalida(
+            f"Há {len(itens)} marcador(es) aberto(s) em produto, e {len(faltam)} ainda sem leitura confirmada: "
+            f"{nomes}{mais}. Antes de liberar, responda cada item na lista do contrato ou marque «Li» nele, e confirme "
+            "cada pendência 🟡 da conferência de leitura do cartão.")
+    return registro
+
+
 def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
             estado: Dict[str, Any], conferencia: Optional[Dict[str, str]] = None,
             decisoes: Optional[Dict[str, Dict[str, str]]] = None, estrito: Optional[bool] = None,
-            divisao: Optional[Dict[str, Any]] = None,
+            divisao: Optional[Dict[str, Any]] = None, leitura: Optional[Any] = None, justificativa: str = "",
             ) -> Tuple[Dict[str, Any], Optional[Efeito]]:
     """Aplica a decisão e devolve `(fluxo_novo, efeito)`. Pura: não toca disco.
 
@@ -301,8 +408,12 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
     produto: o registro leva as decisões e as trocas que `tools.fechar_contrato.gravar` grava no
     one-pager e na spec do Gate 0. `divisao` é o *refazer* de design ou dev dividido pela triagem
     (`tools.triagem_pedido.Divisao.como_dict`), que o PO viu e confirmou: item sem dono recusa o refazer (D4, B), e o
-    registro e o efeito levam a divisão. Levanta `DecisaoInvalida` com a razão para a tela mostrar.
+    registro e o efeito levam a divisão. `leitura` são os ids de `itens_de_conferencia` que quem libera produto marcou
+    como lidos, e `justificativa`, o texto da exceção do admin com 🔴 em produto (D9). Levanta `DecisaoInvalida` com a
+    razão para a tela mostrar.
     """
+    from tools import governanca as gov
+
     etapa = fluxo["etapa"]
     if acao not in acoes_possiveis(fluxo, sessao.papel, estado, estrito):
         raise DecisaoInvalida(
@@ -312,6 +423,12 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
     if acao != INICIAR and caracteres_uteis(comentario) < MIN_CARACTERES_COMENTARIO:
         raise DecisaoInvalida(f"O comentário é obrigatório e precisa de ao menos {MIN_CARACTERES_COMENTARIO} "
                               "letras ou números: registre o que você viu e o que decidiu.")
+    justificativa = (justificativa or "").strip()
+    if exige_justificativa(etapa, acao, estado) and not gov.justificativa_valida(justificativa):
+        raise DecisaoInvalida(
+            "A exceção que libera produto com gate 🔴 exige justificativa escrita: por que liberar assim, apesar de "
+            "quais gates, e quem resolve o que ficou. Ela fica no parecer, no estado da missão e no dossiê, com o seu "
+            "nome e a data. Só espaços ou pontuação não contam.")
     if acao == DE_ACORDO:
         motivo = parece_ajuste(comentario, ultima_etapa=proxima_etapa(etapa) is None)
         if motivo:
@@ -361,6 +478,18 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
         registro["divisao"] = dict(divisao)
     if etapa == "produto" and acao in (DE_ACORDO, EXCECAO):
         registro.update(_fechar_contrato(estado, acao, decisoes, registro["quando"], registro["como"], estrito))
+        # depois do contrato: com ESTEIRA_ESTRITA, o item sem resposta é recusado lá com a mensagem do contrato
+        itens = itens_de_conferencia(estado)
+        if itens:
+            registro["conferencia_de_leitura"] = conferir_leitura(itens, decisoes, leitura)
+        if gov.liberou_sem_conta_produto(registro):
+            # quem liberou, com papel e data, fica no registro (autor, como, quando) e na marca que cartão, catálogo,
+            # dossiê e as pendências do handoff e do PRD leem (`tools/governanca.py`)
+            registro["liberado_sem_conta_produto"] = True
+        if acao == EXCECAO and justificativa:
+            registro["justificativa_excecao"] = {
+                "texto": justificativa, "autor": sessao.papel, "como": registro["como"], "quando": registro["quando"],
+                "gates_vermelhos": gov.gates_vermelhos(registro)}
     efeito: Optional[Efeito] = None
 
     if acao in (DE_ACORDO, EXCECAO):
@@ -697,7 +826,40 @@ def registrar_decisao(run_dir: Path, fluxo_lido: Dict[str, Any], novo: Dict[str,
             fechar_contrato.exportar_one_pager(run_dir)
         except Exception as exc:  # o export é para gente ler; a decisão já está gravada
             logger.warning("O .docx/.html do one-pager não foi regerado depois do de acordo: %s", exc)
+    gravar_governanca(run_dir, gravado)
     return gravado
+
+
+def governanca(fluxo: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """A governança da liberação de produto deste fluxo (`tools.governanca.de_produto`)."""
+    from tools import governanca as gov
+
+    return gov.de_produto((fluxo or {}).get("pareceres") or [])
+
+
+def gravar_governanca(run_dir: Path, fluxo: Dict[str, Any]) -> bool:
+    """Grava no `estado.json` quem liberou produto, com papel e data, quando a decisão a mudou (`governanca_produto`).
+
+    Depois do fluxo: a fonte da verdade são os pareceres, e cada etapa que começa recalcula a chave a partir deles;
+    aqui ela fica certa já entre a decisão e a próxima execução (o catálogo `reconstruir` lê o `estado.json`). Falha de
+    disco não desfaz a decisão gravada. Devolve se gravou."""
+    from tools.governanca import KEY_GOVERNANCA
+
+    caminho = Path(run_dir) / "estado.json"
+    try:
+        estado = json.loads(caminho.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    nova = governanca(fluxo)
+    if estado.get(KEY_GOVERNANCA) == nova or (not nova["historico"] and KEY_GOVERNANCA not in estado):
+        return False
+    estado[KEY_GOVERNANCA] = nova
+    try:
+        caminho.write_text(json.dumps(estado, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+    except OSError as exc:
+        logger.warning("A governança da liberação de produto não foi gravada no estado.json: %s", exc)
+        return False
+    return True
 
 
 def quem_age(fluxo: Optional[Dict[str, Any]]) -> str:

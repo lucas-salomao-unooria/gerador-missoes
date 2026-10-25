@@ -164,6 +164,12 @@ def listar() -> int:
         print("Índice vazio. Rode `reconstruir` e `importar-markdown`."); return 0
     print(f"{len(missoes)} missão(ões) · índice gerado em {indice.get('gerado_em') or '—'}\n")
     print(cat.tabela_markdown(missoes))
+    sem_conta = [m for m in missoes if m.get("liberacao_produto")]
+    if sem_conta:
+        # D9 do plano «Produto dono do contrato»: quem liberou produto fica à vista, sem mudar o status
+        print(f"\n🟡 {len(sem_conta)} missão(ões) com produto liberado sem a conta produto:")
+        for m in sem_conta:
+            print(f"   - {m.get('sessao')} ({m.get('slug') or '?'}): {m['liberacao_produto']}")
     lacunas = [m for m in missoes if cat.tem_lacuna(m)]
     if lacunas:
         print(f"\n⚠️ {len(lacunas)} missão(ões) com campo de comparação vazio — não sustentam reprovação em V5:")

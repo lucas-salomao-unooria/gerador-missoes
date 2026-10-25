@@ -31,9 +31,11 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
 
-      - name: 🔍 Rodar Testes de Pipeline e Sessões
+      # A suíte inteira (test_*.py da raiz e tests/), não uma lista fixa: com a lista, os testes dos PRs de 23–24/10
+      # (textos-chave, governança, D9, gabarito de achados) não rodavam no CI e a falha da árvore mesclada passava.
+      - name: 🔍 Rodar a Suíte Completa
         run: |
-          pytest test_pipeline.py test_session_artifacts.py test_auth.py test_passagem.py test_conversa_etapas.py test_regressao_gates.py test_propagacao.py tests/gabarito_achados -v
+          pytest -q -p no:cacheprovider
 
   deploy:
     name: 🚀 Build & Deploy no Cloud Run (DEV)
