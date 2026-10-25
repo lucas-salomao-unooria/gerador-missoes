@@ -75,6 +75,8 @@ STATUS_KEYS = [
     "prd_status", "kpis_status", "kpis_report",
     "conteudo_aprovado_prd_status", "conteudo_aprovado_pedagogico_status",
     "montagem_handoff_status", "montagem_prd_status",
+    # o pedagógico monta sobre o contrato no fim do design, e o dev só acrescenta (PR 10)
+    "montagem_pedagogico_status", "pedagogico_dev_status",
     "diagnostico_status", "tickets_sem_rota",
     KEY_PIPELINE_BLOQUEADO,
     KEY_PIPELINE_MOTIVO,

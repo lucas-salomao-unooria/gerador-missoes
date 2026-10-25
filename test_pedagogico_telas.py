@@ -260,9 +260,11 @@ def test_pedagogico_sai_com_a_imagem_de_cada_tela_debaixo_do_passo(tmp_path, mon
 
     monkeypatch.setattr(il, "baixar_http", baixar)
     gerados = exportar_one_pagers(_estado(), tmp_path, "exp01ef1b")
-    assert {p.name for p in gerados} == {"one-pager-pedagogico.docx", "one-pager-pedagogico.html"}
+    # na pasta de design desde o PR 10 (24/10/2026)
+    assert {p.relative_to(tmp_path).as_posix() for p in gerados} == {"design/14-one-pager-pedagogico.docx",
+                                                                     "design/14-one-pager-pedagogico.html"}
 
-    sequencia, texto = _sequencia(tmp_path / "one-pager-pedagogico.docx")
+    sequencia, texto = _sequencia(tmp_path / "design/14-one-pager-pedagogico.docx")
     passos = [s for s in sequencia if s[0] in ("Heading 3", "imagem")]
     assert passos == [
         ("Heading 3", "Antes da aula — o preparo da professora"),
@@ -279,12 +281,12 @@ def test_pedagogico_sai_com_a_imagem_de_cada_tela_debaixo_do_passo(tmp_path, mon
     assert '"agente"' not in texto
     # só as telas citadas são baixadas, na largura de leitura
     assert sorted(pedidos) == sorted(URL.format(k) + "=w1200" for k in cores)
-    with zipfile.ZipFile(tmp_path / "one-pager-pedagogico.docx") as z:
+    with zipfile.ZipFile(tmp_path / "design/14-one-pager-pedagogico.docx") as z:
         midias = [n for n in z.namelist() if n.startswith("word/media/")]
     assert len(midias) >= 3
 
     # o .html leva as mesmas imagens, embutidas (o endereço do Stitch vence em dias), na mesma ordem
-    pagina = (tmp_path / "one-pager-pedagogico.html").read_text(encoding="utf-8")
+    pagina = (tmp_path / "design/14-one-pager-pedagogico.html").read_text(encoding="utf-8")
     posicoes = [pagina.index(f'alt="{r}"') for r in ("E0-PROF-02 — Preparação da aula",
                                                       "E3-ALU-01 — Apresentação da aposta",
                                                       "E3-ALU-02 — Aposta travada com cadeado")]
@@ -294,7 +296,7 @@ def test_pedagogico_sai_com_a_imagem_de_cada_tela_debaixo_do_passo(tmp_path, mon
     pedidos.clear()
     monkeypatch.setattr(il, "baixar_http", lambda url: (_ for _ in ()).throw(AssertionError("baixou de novo")))
     exportar_one_pagers(_estado(), tmp_path, "exp01ef1b")
-    assert ("imagem", "E3-ALU-02 — Aposta travada com cadeado") in _sequencia(tmp_path / "one-pager-pedagogico.docx")[0]
+    assert ("imagem", "E3-ALU-02 — Aposta travada com cadeado") in _sequencia(tmp_path / "design/14-one-pager-pedagogico.docx")[0]
     from pipeline.artifacts import generate_artifact_manifest
 
     assert not any(m["path"].startswith(".cache") for m in generate_artifact_manifest(tmp_path))
@@ -314,10 +316,10 @@ def test_falha_de_download_nao_derruba_a_exportacao(tmp_path, monkeypatch, sem_r
     monkeypatch.setattr(il, "baixar_http", baixar)
     gerados = exportar_one_pagers(_estado(), tmp_path, "exp01ef1b")
     assert len(gerados) == 2
-    sequencia, texto = _sequencia(tmp_path / "one-pager-pedagogico.docx")
+    sequencia, texto = _sequencia(tmp_path / "design/14-one-pager-pedagogico.docx")
     assert ("imagem", "E3-ALU-02 — Aposta travada com cadeado") in sequencia
     assert "E3-ALU-01 — Apresentação da aposta: imagem indisponível" in texto
-    documento = zipfile.ZipFile(tmp_path / "one-pager-pedagogico.docx").read("word/_rels/document.xml.rels").decode()
+    documento = zipfile.ZipFile(tmp_path / "design/14-one-pager-pedagogico.docx").read("word/_rels/document.xml.rels").decode()
     assert URL.format("e3alu01") in documento, "a legenda leva o link para abrir a imagem fora"
     # rede fora não se resolve com outro endereço: a versão original não é tentada depois do timeout
     assert sum("e3alu01" in t for t in tentativas) == 1
@@ -368,7 +370,7 @@ def test_renderizador_desligado_nao_faz_requisicao(tmp_path, monkeypatch, sem_re
 
     estado = _estado(stitch_links="", miro_board={"url_board": "https://miro.com/app/board/abc=/", "widgets": {}})
     exportar_one_pagers(estado, tmp_path, "exp01ef1b")
-    sequencia, texto = _sequencia(tmp_path / "one-pager-pedagogico.docx")
+    sequencia, texto = _sequencia(tmp_path / "design/14-one-pager-pedagogico.docx")
     assert ("Heading 3", "O mapa da missão: jornada e fluxo") in sequencia
     assert "design/09-diagramas.html" in texto and "https://miro.com/app/board/abc=/" in texto
     assert not any(s[0] == "imagem" and "Jornada" in (s[1] or "") for s in sequencia)

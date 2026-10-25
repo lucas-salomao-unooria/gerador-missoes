@@ -98,12 +98,13 @@ COMO_MUDAR_CONTEUDO: Dict[str, str] = {
                 "ao seu parecer."),
     "design": ("Use **Refazer** com este mesmo texto: a triagem o divide item a item, e o que muda o one-pager aprovado "
                "(texto que a criança ou o professor lê, regra, número, habilidade, tempo) vai primeiro a Produto — o "
-               "one-pager e a spec do Gate 0 mudam lá —, e o resto se aplica no design. Você vê a divisão antes de "
-               "confirmar. Item que a triagem não sabe de quem é pede **Devolver** até Produto."),
+               "one-pager e a spec do Gate 0 mudam lá, e o one-pager pedagógico os recebe por código —, e o resto se "
+               "aplica no design, inclusive a narrativa do pedagógico. Você vê a divisão antes de confirmar. Item que a "
+               "triagem não sabe de quem é pede **Devolver** até Produto."),
     "dev": ("Use **Refazer** com este mesmo texto: a triagem o divide item a item, e o que muda o one-pager aprovado "
             "(texto que a criança ou o professor lê, regra, número, habilidade, tempo) vai primeiro a Produto, depois "
-            "ao Design e só então ao dev. Você vê a divisão antes de confirmar. Item que a triagem não sabe de quem é "
-            "pede **Devolver**."),
+            "ao Design e só então ao dev. O one-pager pedagógico é do Design desde 24/10/2026: o que você pedir nele vai "
+            "ao Design. Você vê a divisão antes de confirmar. Item que a triagem não sabe de quem é pede **Devolver**."),
 }
 _RE_CONTEUDO = re.compile(r"\bPergunta\s+\d|\bAlternativas?\b|\bCen[áa]rio:|\bAJUSTE\s+\d|\bTRAVAS?\b", re.IGNORECASE)
 
@@ -216,6 +217,23 @@ def _estrito(estrito: Optional[bool]) -> bool:
     from config import get_settings
 
     return bool(get_settings().esteira_estrita)
+
+
+#: O documento sobre o qual o *de acordo* de cada etapa é dado, quando ela tem um. O de design é o one-pager pedagógico
+#: desde o PR 10 (24/10/2026): o time validava a missão pelos protótipos contra um one-pager de produto que não a descreve
+#: inteira, e voltava para refazer porque não ficava claro o que a missão ia ser.
+DOCUMENTO_A_APROVAR: Dict[str, str] = {"design": "one_pager_pedagogico"}
+
+
+def documento_a_aprovar(estado: Dict[str, Any], etapa: str) -> Optional[Dict[str, Any]]:
+    """O que o cartão do *de acordo* mostra como o documento a aprovar — o pedagógico no design, com os links do
+    protótipo (`tools.pedagogico.para_o_de_acordo`) —, ou `None` se a etapa não tem um. A missão desenhada antes do PR 10
+    não tem o pedagógico: o cartão avisa (`aviso`), e o *de acordo* segue valendo sobre os documentos de design."""
+    if DOCUMENTO_A_APROVAR.get(etapa) != "one_pager_pedagogico":
+        return None
+    from tools.pedagogico import para_o_de_acordo
+
+    return para_o_de_acordo(estado)
 
 
 def contrato_em_aberto(estado: Dict[str, Any]) -> list:
