@@ -340,40 +340,116 @@ def _numeros(g: Dict[str, Any], rotulo: str, texto: str) -> List[Dict[str, str]]
     return achados
 
 
-def _candidatos_a_rotulo(texto: str) -> List[Tuple[str, int]]:
+#: A coluna de gesto da jornada — «Ação (verbo nativo)» no inventário de telas — e a raia «Estudante — faz (verbo
+#: nativo)» do mapa: entre crases, ali, vai o verbo literal do ambiente (`Acessar`, `Fixar` aviso de cuidado), não o texto
+#: do botão (prompt 071).
+_RE_GESTO = re.compile(r"verbo|gesto|\bfaz\b", re.I)
+_RE_SEPARADOR_DE_TABELA = re.compile(r"\|[\s:|-]+\|?")
+#: Linha que fala do desenho Mermaid: o que ela cita entre aspas são rótulos de aresta («Maior rótulo no Mermaid: 2
+#: palavras (ex.: "Publicar Unoovista", …)»).
+_RE_LINHA_DO_MERMAID = re.compile(r"\bmermaid\b", re.I)
+#: Linha que cita uma aresta pelo id: «Saída via A02 ('toca Abrir Album')» (exp02ef1b-4fd72a9a) ou a linha da tabela de
+#: arestas que começa pelo id («| A05 | `E3-ALU-01` | …»). O id da tela (`E1-ALU-01`) não é id de aresta.
+_RE_LINHA_DE_ARESTA = re.compile(r"(?i:\bvia|\baresta)\s+`?[A-Z]{1,3}\d{1,3}\b(?!-)|^\s*\|\s*`?[A-Z]{1,3}\d{1,3}`?\s*\|")
+#: O título do documento de produto e o nome que o estudante vê: «# Spec — O Porta-Voz dos Dados v1.1».
+_RE_TITULO_DA_MISSAO = re.compile(r"^#\s+(?:Spec|One-pager|N[úu]cleo narrativo)\s*[—–-]\s*(.+?)(?:\s+v\d+(?:\.\d+)*)?\s*$",
+                                  re.M | re.I)
+_RE_NOME_QUE_O_ESTUDANTE_VE = re.compile(r"^[\s*-]*Nome que o estudante v[êe]\W{0,4}:\W{0,4}(.+?)\s*$", re.M | re.I)
+
+
+def nomes_da_missao(*documentos: str) -> Set[str]:
+    """O nome da missão (normalizado), do título da spec e do one-pager e do «Nome que o estudante vê» do §0."""
+    nomes = set()
+    for doc in documentos:
+        for rx in (_RE_TITULO_DA_MISSAO, _RE_NOME_QUE_O_ESTUDANTE_VE):
+            nomes |= {_norm(_limpa(m.group(1))) for m in rx.finditer(doc or "")}
+    return {n for n in nomes if len(n.split()) >= 2}
+
+
+def rotulos_de_aresta(texto: str) -> Set[str]:
+    """Os rótulos das arestas dos blocos Mermaid do documento (normalizados): `A -->|toca Abrir| B` (flowchart),
+    `A -- toca Abrir --> B` e `A --> B: toca Abrir` (stateDiagram)."""
+    rotulos = set()
+    for bloco in re.findall(r"```\s*mermaid\b(.*?)(?:```|\Z)", texto or "", re.S | re.I):
+        for linha in bloco.splitlines():
+            if not re.search(r"--|==|-\.", linha):
+                continue
+            for m in re.finditer(r"\|\s*\"?([^|\"\n]+?)\"?\s*\||(?:--|==)\s+([^->|\n][^>|\n]*?)\s+(?:--|==)>", linha):
+                rotulos.add(_norm(m.group(1) or m.group(2)))
+            m = re.search(r"(?:-->|==>|-\.->)\s*[\w\[\]*]+(?:\s*:::\s*\w+)?\s*:\s*([^\n]+?)\s*$", linha)
+            if m:
+                rotulos.add(_norm(m.group(1)))
+    return {r for r in rotulos if r}
+
+
+def _candidatos_a_rotulo(texto: str, nomes_da_missao: Set[str] = frozenset(),
+                         coluna_de_gesto: bool = False) -> List[Tuple[str, int]]:
     """Textos citados como rótulo: entre aspas/crases numa linha que fala de botão, ou na célula de uma
-    linha da tabela de copy cuja chave é de botão (`e0.rotulo.botao_configurar`)."""
-    cands: List[Tuple[str, int, bool]] = []
+    linha da tabela de copy cuja chave é de botão (`e0.rotulo.botao_configurar`).
+
+    Não são rótulo de botão (11 dos 16 `rotulo-divergente` do design em 4 sessões de 22–23/10/2026 eram isto; o
+    levantamento de deficiências de design de 24/10/2026):
+    - o verbo entre crases na coluna de gesto da jornada (`Acessar` / `Digitar`, `Fixar` aviso de cuidado, na exp02em1b) —
+      só na jornada (`coluna_de_gesto`): é o documento que tem a coluna e a raia do verbo nativo (prompt 071);
+    - o rótulo de aresta do Mermaid, que o prompt do fluxo limita a três palavras (072): «Publicar Unoovista» na
+      exp02em1b, «Toca modulo teste» na exp01em1b — só na linha que fala do desenho Mermaid, dentro dele ou na que cita
+      a aresta pelo id. Em outra linha do fluxo ou do PRD, o botão com o mesmo texto do rótulo continua conferido, e a
+      linha do Mermaid só dispensa o que é rótulo de aresta (revisão do PR #81, 25/10/2026);
+    - o nome da missão no card do professor («O Porta-Voz dos Dados», exp03em1b);
+    - o trecho entre o fecho de uma citação e a abertura da seguinte («) | Disparar simulação (», exp01em1b)."""
+    cands: List[Tuple[str, int, bool, bool]] = []
     pos = 0
-    for linha in texto.splitlines(keepends=True):
+    linhas = texto.splitlines(keepends=True)
+    gesto: Set[int] = set()  # as colunas de gesto da tabela corrente
+    no_mermaid = False
+    for i, linha in enumerate(linhas):
+        s = linha.strip()
+        if s.startswith("```"):
+            no_mermaid = not no_mermaid and bool(re.match(r"```\s*mermaid\b", s, re.I))
+        de_aresta = no_mermaid or bool(_RE_LINHA_DO_MERMAID.search(linha) or _RE_LINHA_DE_ARESTA.search(linha))
+        eh_tab = s.startswith("|")
+        if not eh_tab:
+            gesto = set()
+        elif coluna_de_gesto and i + 1 < len(linhas) and _RE_SEPARADOR_DE_TABELA.fullmatch(linhas[i + 1].strip()):
+            gesto = {j for j, c in enumerate(s.strip("|").split("|")) if _RE_GESTO.search(c)}
+        raia_de_gesto = coluna_de_gesto and eh_tab and bool(_RE_GESTO.search(s.strip("|").split("|")[0]))
         if _RE_ROTULO_CONTEXTO.search(linha):
-            eh_tab = linha.lstrip().startswith("|")
-            # entre crases ou aspas simples é código: «disparar a transição para `unoovista`», no critério de aceite
-            # do botão de publicar do PRD da exp02em1b, é nome de estado, não rótulo (24/10/2026)
-            cands += [(m.group(1), pos + m.start(), eh_tab or m.group(0)[0] in "`'")
-                      for m in _RE_ENTRE_ASPAS.finditer(linha)]
-        if linha.lstrip().startswith("|") and _RE_CHAVE_DE_BOTAO.search(linha):
-            cands += [(c, pos, True) for c in (x.strip() for x in linha.strip().strip("|").split("|"))]
+            for m in _RE_ENTRE_ASPAS.finditer(linha):
+                aspa = m.group(0)[0]
+                coluna = linha[:m.start()].count("|") - 1
+                # o verbo, não o botão que o gesto aciona: «Clicar em `Liberar Missão para a Turma`» e «clica no botão
+                # (`Banco Padrão`)» citam o botão (exp03ef1b-317df247), e continuam conferidos
+                if (eh_tab and aspa in "`'" and (raia_de_gesto or coluna in gesto)
+                        and not _RE_ROTULO_CONTEXTO.search(linha[:m.start()].rsplit("|", 1)[-1])):
+                    continue
+                # entre crases ou aspas simples é código: «disparar a transição para `unoovista`», no critério de aceite
+                # do botão de publicar do PRD da exp02em1b, é nome de estado, não rótulo (24/10/2026)
+                cands.append((m.group(1), pos + m.start(), eh_tab or aspa in "`'", de_aresta))
+        if eh_tab and _RE_CHAVE_DE_BOTAO.search(linha):
+            cands += [(c, pos, True, False) for c in (x.strip() for x in s.strip("|").split("|"))]
         pos += len(linha)
+    arestas = rotulos_de_aresta(texto)
     saida = []
-    for bruto, p, eh_tabela in cands:
+    for bruto, p, eh_tabela, de_aresta in cands:
         c = _limpa(bruto)
         if not c or not re.search(r"[A-Za-zÀ-ú]", c) or re.search(r"[_/]|\w\.\w|^E\d-|^[A-Z0-9_]+$", c):
             continue
+        if "|" in c or c[0] in ")]},;:" or c[-1] in "([{,;":
+            continue  # o miolo entre duas citações, não uma citação
         if (eh_tabela or bruto.startswith("'")) and len(c.split()) == 1 and c.islower():
             continue
-        if not 1 <= len(c.split()) <= 8:
+        if not 1 <= len(c.split()) <= 8 or (de_aresta and _norm(c) in arestas) or _norm(c) in nomes_da_missao:
             continue
         saida.append((c, p))
     return saida
 
 
-def _rotulos(g: Dict[str, Any], rotulo: str, texto: str) -> List[Dict[str, str]]:
+def _rotulos(g: Dict[str, Any], rotulo: str, texto: str, nomes_da_missao: Set[str] = frozenset()) -> List[Dict[str, str]]:
     if not g["rotulos"]:
         return []
     canonicos = {_norm(r["rotulo"]) for r in g["rotulos"]}
     achados, vistos = [], set()
-    for cand, pos in _candidatos_a_rotulo(texto):
+    for cand, pos in _candidatos_a_rotulo(texto, nomes_da_missao, coluna_de_gesto=rotulo == "jornada"):
         if _norm(cand) in canonicos:
             continue
         palavras = _palavras(cand)
@@ -665,11 +741,12 @@ def validar(spec: str, documentos: Dict[str, str], exigir_glossario: bool = True
                                    "A spec tem o título `## Glossário canônico`, mas nenhuma tabela legível dentro dele.",
                                    "spec", etapa="produto"))
     else:
+        nomes = nomes_da_missao(spec, aprovado)
         for rotulo, texto in documentos.items():
             if not (texto or "").strip():
                 continue
             for checar in (_entidades, _personagens, _numeros, _rotulos, _arquivos):
-                for a in checar(g, rotulo, texto):
+                for a in (checar(g, rotulo, texto, nomes) if checar is _rotulos else checar(g, rotulo, texto)):
                     a["etapa"] = etapa
                     achados.append(a)
     status = "bloqueado" if any(a["severidade"] == "bloqueio" for a in achados) else ("amarelo" if achados else "aprovado")

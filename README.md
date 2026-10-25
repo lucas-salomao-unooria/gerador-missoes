@@ -621,7 +621,7 @@ O módulo [`tools/stitch_mcp.py`](tools/stitch_mcp.py) entrega o toolset aos age
 
 ### 🪞 Miro — o espelho dos diagramas (D2 e D3)
 
-A jornada e o fluxo saem em **Mermaid**, e é o Mermaid que entra no PRD, nos gates e no `design/09-diagramas.html`. Depois da etapa, um passo determinístico publica esse mesmo bloco como board navegável e grava o link em `design/11-miro-boards.md`. **O board é espelho, nunca fonte**: editá-lo não altera a missão, e a ausência dele não é achado de QA.
+A jornada e o fluxo saem em **Mermaid**, e é o Mermaid que entra no PRD, nos gates e no `design/09-diagramas.html`. Depois da etapa, um passo determinístico publica esse mesmo bloco como board navegável e grava o link em `design/11-miro-boards.md`. **O board é espelho, nunca fonte**: editá-lo não altera a missão, e a ausência dele não é achado de QA. Também não fica em silêncio: o passo grava o gate «Espelho dos diagramas no Miro» (`miro_status`) no semáforo do design — 🟡 quando o Miro está ligado e o board não saiu ou saiu incompleto, com o motivo e sem credencial; ⚪ com o Miro desligado; nunca 🟢 sem board. Na exp06ef1b (28/09/2026) o espelho falhou com os cinco gates de design 🟢, e o PO só soube ao abrir a missão.
 
 Aqui o modelo **não** usa ferramenta nenhuma. Quem publica é [`tools/miro_cliente.py`](tools/miro_cliente.py), chamando o MCP por JSON-RPC fora do turno do agente. O motivo é concreto: deixar um LLM construir board item a item foi o que estourou o teto de contexto no D2 quando os diagramas viviam no FigJam. O espelho aproveita que `canvas_create_from_svg` aceita Mermaid nativo dentro de um `<foreignObject data-type="diagram">` — então não há parser, nem layout a manter.
 
@@ -635,7 +635,7 @@ Dois detalhes que custam caro quando esquecidos:
 | Modo | Transporte | Quando usar |
 |---|---|---|
 | `remote` | `mcp.miro.com` com OAuth 2.1 + registro dinâmico | Padrão local (`auto` resolve para cá). |
-| `off` | — | Deploy, CI e testes: a folha sai com `MIRO: indisponível` e a esteira segue. |
+| `off` | — | Deploy, CI e testes: a folha sai com `MIRO: indisponível`, o gate do espelho fica ⚪ e a esteira segue. |
 
 ## 📦 Artefatos Gerados e o PRD Padrão Ouro
 

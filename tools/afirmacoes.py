@@ -37,8 +37,12 @@ _RE_SUJEITO = re.compile(r"stitch|prot[óo]tipo|\blint\b", re.I)
 #: A negação tem de estar colada no caminho — «chave inexistente; ver `x.md`» e «`x.md` — não existe divergência»
 #: citam o arquivo como real.
 _RE_INEXISTENTE_ANTES = re.compile(r"(?:inexistentes?|n[ãa]o\s+existe)\W{0,4}$", re.I)
+#: Depois do caminho, também o aposto: «… citou a chave de caminho 'design/06-copy-revisada.md', arquivo não gravado na
+#: esteira» — o relato do ticket QA-A1 na rodada 2 da exp03em1b, acusado de novo mesmo com o caminho já apontado (V82,
+#: 23/10/2026; levantamento de deficiências de design, 24/10/2026).
 _RE_INEXISTENTE_DEPOIS = re.compile(
-    r"^\W{0,4}(?:,?\s*que\s+(?:a\s+esteira\s+)?)?(?:(?:[ée]\s+)?inexistente|n[ãa]o\s+grava|"
+    r"^\W{0,4}(?:,?\s*que\s+(?:a\s+esteira\s+)?|,?\s*(?:(?:um|o)\s+)?arquivo\s+(?:que\s+(?:a\s+esteira\s+)?)?)?"
+    r"(?:(?:[ée]\s+)?inexistente|n[ãa]o\s+grava(?:d[oa])?\b|"
     r"n[ãa]o\s+existe(?=\s*(?:[.;:,)]|$|n[ao]\s+esteira)))", re.I)
 _RE_ARTEFATO = re.compile(r"(?<![\w/.-])((?:design|dev|produto)/[\w.-]+\.(?:md|html|docx|json)|\d{2}[a-z]?-[\w-]+\.(?:md|html|docx))\b")
 
