@@ -272,10 +272,16 @@ _RE_ENTRE_ASPAS = re.compile(r"[\"“]([^\"”\n]*)[\"”]")
 _RE_LINHA_ORAL = re.compile(
     r"quem conduz|professor\w*\b[^\"“\n]{0,60}?\b(?:pergunta|diz|orienta|refor[çc]a|conduz|lan[çc]a|fecha|chama|"
     r"paralisa|projeta|encerra|provoca|comenta|retoma|media)|pergunta[- ]ponte|pergunta mediada|debate mediado|"
-    r"media[çc][ãa]o|\boral(?:mente)?\b|roda de conversa|descarte previsto", re.I)
-#: Aspas depois disto, na mesma linha, são exemplo do que o estudante faria ou diria, não texto aprovado.
-_RE_ANTES_DE_EXEMPLO = re.compile(r"\bex\.?\s*:|\bexemplo|algo como|\brespond(?:em|e)\b|estudantes? (?:diz|dizem|fala|falam|escreve)",
-                                  re.I)
+    r"media[çc][ãa]o|\boral(?:mente)?\b|roda de conversa|descarte previsto|"
+    # a pergunta com que o professor abre a conversa: «3. Pergunta disparadora: "Vocês acham que a rede…?"», na
+    # condução do aha da exp02em1b, era cobrada na copy e no protótipo como texto de tela (levantamento de 24/10/2026)
+    r"pergunta disparadora", re.I)
+#: Aspas depois disto, na mesma linha, são exemplo do que o estudante faria ou diria, não texto aprovado. Também a fala
+#: hipotética: «se alguém disser "aconteceu isso porque eu errei na IA"» (exp02em1b, 24/10/2026).
+_RE_ANTES_DE_EXEMPLO = re.compile(
+    r"\bex\.?\s*:|\bexemplo|algo como|\brespond(?:em|e)\b|estudantes? (?:diz|dizem|fala|falam|escreve)|"
+    r"\b(?:algu[ée]m|estudantes?|alunos?|alunas?|crian[çc]as?|turma)\s+(?:disser|disserem|falar|falarem|"
+    r"argumentar|argumentarem|alegar|alegarem|reclamar|reclamarem)\b", re.I)
 #: Fala dirigida à turma, sem rótulo na linha: «Turma, olhem…», «Quem marcou monstro, levante a mão!».
 _RE_FALA_A_TURMA = re.compile(r"^(?:turma|pessoal|gente|crian[çc]as|detetives)\b|levant\w*\s+a\s+m[ãa]o|\b(?:olhem|vejam|observem)\b",
                               re.I)
@@ -402,6 +408,31 @@ def _ocorrencias(texto: str, alvo: str) -> List[int]:
     return saida
 
 
+#: A lacuna que a plataforma ou o professor preenche: «[recorte da aula: parâmetro do professor]», «{motivo}». A mesma
+#: leitura dos textos-chave (`tools/textos_chave._RE_LACUNA`), sem o `X%` e as reticências, que lá são do texto-chave.
+_RE_LACUNA = re.compile(r"\s*(?:\[[^\]\n]{1,120}\]|\{[^}\n]{1,60}\})\s*")
+#: A ligação que sai junto com a lacuna quando a copy a omite: «na Trilha Avançada do [recorte da aula] para estudar» →
+#: «na trilha avançada para estudar».
+_LIGACAO_DA_LACUNA = frozenset("a o as os ao aos à às de do da dos das no na nos nas em para pelo pela com".split())
+
+
+def _pedacos_sem_lacuna(trecho: str) -> Optional[List[str]]:
+    """Os pedaços do texto aprovado entre as lacunas (de duas palavras ou mais), ou None quando ele não tem lacuna."""
+    partes = _RE_LACUNA.split(trecho or "")
+    if len(partes) < 2:
+        return None
+    pedacos = []
+    for i, parte in enumerate(partes):
+        palavras = parte.split()
+        if i < len(partes) - 1:
+            while palavras and palavras[-1].lower() in _LIGACAO_DA_LACUNA:
+                palavras.pop()
+        pedaco = " ".join(palavras).strip(" ,;:.—–-")
+        if len(pedaco.split()) >= 2:
+            pedacos.append(pedaco)
+    return pedacos
+
+
 def _literal_confere(trecho: str, documento_norm: str) -> bool:
     """O texto aprovado está no documento: 85% contínuos, e o começo, o fim e as negações dele intactos.
 
@@ -409,11 +440,19 @@ def _literal_confere(trecho: str, documento_norm: str) -> bool:
     Para texto aprovado palavra por palavra ela deixava passar a troca das últimas palavras e o "não" inserido perto
     do começo — mutações que a matriz não pegava (auditoria do padrão ouro, 08/10/2026). Aqui, na região que casou,
     as três primeiras e as três últimas palavras do trecho têm de estar, e o número de negações tem de ser o mesmo.
+
+    A lacuna do texto aprovado é curinga: cada pedaço entre lacunas confere sozinho, com as mesmas regras. A copy que a
+    preenche («…para o recorte da aula. A coordenação…») ou a omite («Comitê Municipal de Políticas Públicas», sem o
+    «[recorte da aula: parâmetro do professor]») traz o texto aprovado — a matriz cobrava a lacuna literal na
+    exp01em1b-e89e91b3 e na exp03em1b (levantamento de deficiências de design, 24/10/2026).
     """
     import difflib
 
     from tools.fidelidade import _norm
 
+    pedacos = _pedacos_sem_lacuna(trecho)
+    if pedacos is not None:
+        return all(_literal_confere(p, documento_norm) for p in pedacos)
     alvo = _norm(trecho)
     if not alvo:
         return True
