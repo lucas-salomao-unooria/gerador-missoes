@@ -1719,12 +1719,16 @@
       "codigos": []
     },
     "experiencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "6.2"
+      ]
     },
     "gate_final_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "F7"
+      ]
     },
     "banca_produto_status": {
       "status": "aprovado",
@@ -1903,12 +1907,16 @@
       "codigos": []
     },
     "experiencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "6.2"
+      ]
     },
     "gate_final_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "amarelo",
+      "codigos": [
+        "F7"
+      ]
     },
     "banca_produto_status": {
       "status": "aprovado",
