@@ -100,11 +100,13 @@ CATALOGO: Dict[str, Explicacao] = {
     "decisao-atribuida-ao-po": _x(
         "Decisão escrita como se fosse do PO",
         "O texto diz que o PO decidiu algo. A sessão tem pedidos ou pareceres do PO, mas a esteira não sabe se algum "
-        "deles diz isso.",
+        "deles diz isso. Ao lado de cada frase vai uma pista de onde a decisão parece estar — e, quando há, a leitura "
+        "de um verificador automático de sentido; as frases que ele não acha confirmadas vêm primeiro. A pista não "
+        "confirma nada: só a sua resposta confirma.",
         "Se o PO não decidiu, a missão segue com uma escolha do agente disfarçada de decisão do PO, e ninguém volta "
         "para conferir.",
-        "Leia cada frase abaixo. Se a decisão é sua, confirme no comentário do de acordo. Se não é, use **Refazer** "
-        "pedindo que ela vire proposta para você validar.", PO),
+        "Leia cada frase abaixo, a começar pelas primeiras. Se a decisão é sua, confirme no comentário do de acordo. Se "
+        "não é, use **Refazer** pedindo que ela vire proposta para você validar.", PO),
     "propostas-a-revisar": _x(
         "Sugestões do agente esperando o PO",
         "O agente deixou propostas marcadas para o PO validar. Elas não travam a etapa, mas ainda não são decisão.",
@@ -257,11 +259,16 @@ CATALOGO: Dict[str, Explicacao] = {
         "O PO pediu para tirar um texto, e ele ainda aparece no documento — talvez em outro lugar.",
         "O texto que o PO mandou tirar pode continuar na missão.",
         "Confira onde o texto ainda aparece. Se deveria ter saído, use **Refazer** citando o lugar.", None),
+    # 🟡 desde a C7 (25/10/2026): o verbo achado pelo código não prova que a frase pede algo; o verificador automático de
+    # sentido é a segunda leitura, e a leitura dele vai no texto do achado
     "exigencia-dispensada": _x(
         "Frase do pedido tratada como comentário",
-        "O revisor tratou uma frase do pedido do PO como contexto, mas ela pede uma mudança.",
-        "Essa parte do pedido pode ter ficado de fora.",
-        "Confira se o que a frase pede está no documento. Se não está, use **Refazer** repetindo a frase.", None),
+        "O revisor tratou uma frase do pedido do PO como contexto (um comentário, um título, uma justificativa), mas "
+        "ela pode estar pedindo uma mudança. A esteira não tem certeza: decidir se a frase pede algo é ler o sentido "
+        "dela, e o texto abaixo diz o que o verificador automático de sentido leu.",
+        "Se a frase pedia uma mudança, essa parte do pedido pode ter ficado de fora.",
+        "Confira se o que a frase pede está no documento. Se não está, use **Refazer** repetindo a frase. Não trava a "
+        "etapa.", None),
     "linha-trocada-a-pedido": _x(
         "Linha trocada a pedido do PO",
         "Uma linha do documento foi trocada para atender a um pedido do PO.",
@@ -426,10 +433,12 @@ CATALOGO: Dict[str, Explicacao] = {
         "Sem a decisão, a missão não tem habilidade da BNCC que a sustente.",
         "Decida a série ou a âncora curricular e use **Refazer** de produto com a decisão.", PO),
     # ---------------------------------------------------------- números e metas
+    # 🟡 desde a C7 no PRD, no handoff e no pedagógico: dizer que o número é «de regra» é leitura de sentido do código
     "numero-sem-origem": _x(
         "Número sem fonte",
         "O texto apresenta números (tempos, quantidades, limites) como decididos, sem que venham do one-pager, do "
-        "briefing ou de uma decisão do PO.",
+        "briefing ou de uma decisão do PO. A esteira não tem certeza de que cada um é uma regra da missão — pode ser um "
+        "exemplo, uma medida de tela ou um número da plataforma.",
         "Número que ninguém decidiu vira regra da missão sem que o PO perceba.",
         "Confira cada número abaixo. Se ele vale, confirme na lista do contrato ou no de acordo; se não, use "
         "**Refazer** pedindo que ele vire «a definir por produto».", None),
@@ -450,10 +459,14 @@ CATALOGO: Dict[str, Explicacao] = {
         "Confirme o número certo. Se for o do one-pager, peça **Refazer** desta etapa para copiá-lo.", PO),
     "hipotese-a-conferir": _x(
         "Número da hipótese a conferir",
-        "A hipótese do one-pager tem um número, e este documento usa outro que pode ser de outra coisa (o limiar de "
-        "uma pergunta). É dúvida, não erro certo.",
-        "Se forem a mesma coisa, há dois números para a mesma meta.",
-        "Confira os dois números e registre no de acordo qual vale. Não trava a etapa.", PO),
+        "Este documento escreve na hipótese um número que o one-pager não tem nela, e ele pode ser de outra coisa: o "
+        "limiar de uma pergunta de produto, a conta complementar, ou um detalhe do jogo que a hipótese só cita (um "
+        "tempo de animação, um peso de pontuação). A esteira lê o número de dois jeitos — pelas regras do código e por "
+        "um verificador automático de sentido —, e as leituras não batem (o texto abaixo traz as duas). É dúvida, não "
+        "erro certo.",
+        "Se o número for a meta da hipótese, há duas metas para a mesma hipótese, e o time mede a missão com a errada.",
+        "Confira o número: se for a meta, peça que o documento use o do one-pager; se for detalhe do jogo, nada a "
+        "corrigir. Registre no de acordo. Não trava a etapa.", PO),
     "teto-ausente": _x(
         "O limite de tempo aprovado não chegou ao PRD",
         "O one-pager aprovado define um teto (por exemplo, minutos seguidos de tela) e o PRD não o traz. " + _DEV_LE,
@@ -536,7 +549,9 @@ CATALOGO: Dict[str, Explicacao] = {
     # ---------------------------------------------------------- design: nomes, textos e telas
     "rotulo-divergente": _x(
         "Mesmo botão com nomes diferentes",
-        "Um botão (ou outro rótulo) aparece com um nome diferente do nome oficial definido no glossário da missão.",
+        "Um botão (ou outro rótulo) aparece com um nome diferente do nome oficial definido no glossário da missão. O "
+        "que um verificador automático de sentido leu como outra coisa (o verbo de um gesto, o nome de um estado ou de "
+        "uma seta do diagrama) já ficou de fora.",
         "A criança e o professor podem ver dois nomes para a mesma coisa; o dev não sabe qual programar.",
         "Peça que o documento use o nome oficial (está no trecho). Em geral é ajuste simples.", None),
     "glossario-ausente": _x(
@@ -1795,6 +1810,8 @@ CATALOGO.setdefault("plataforma", CATALOGO["pendencia-plataforma"])
 #: do PO com ESTEIRA_ESTRITA. Com 🔴 o «De acordo» não aparece (`pipeline.passagem.acoes_possiveis`): a explicação não
 #: manda registrar nele nem diz que não trava. Revisão do PR #82 (25/10/2026): o PO via «🔴 Impede seguir» e, logo
 #: abaixo, «Não trava a etapa» — justamente no gate da BNCC, o único recorte bloqueante.
+#: Desde a C7 (25/10/2026) `numero-sem-origem` no PRD, no handoff e no pedagógico e as duas guardas do fluxo não saem mais
+#: 🔴 (`tools/severidade.py`); as entradas abaixo ficam para as sessões gravadas antes, que o cartão ainda mostra.
 _SE_BLOQUEIO: Dict[str, Explicacao] = {
     "letramento": _x(
         "Falta habilidade de letramento digital da série",

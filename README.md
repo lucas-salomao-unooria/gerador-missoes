@@ -589,6 +589,20 @@ Para garantir que o pipeline funcione como uma esteira industrial confiável, ad
      ```
 4. **Decisões de Produto Protegidas (🔵):**
    - Decisões estratégicas de produto que dependem de premissas de negócio não fornecidas no briefing são categorizadas com a tag `[DECISÃO PENDENTE — responsável de produto]`. Os agentes são proibidos de inventar tais decisões.
+5. **Política de severidade — só o que o código prova bloqueia (C7, `tools/severidade.py`):**
+   - 🔴 exige prova em código: comparação literal sobre dado estruturado ou texto (igualdade, presença, ausência, diff de linhas, ID, marcador). Quando decidir *se* há defeito depende de ler sentido em texto livre — a porcentagem é meta ou mecânica? o número é «de regra»? a frase do pedido é exigência? a guarda do fluxo exige acerto? —, é interpretação (regex heurística ou LLM) e vai ao PO como 🟡 «a conferir», com a dúvida explicada no achado.
+   - Saíram de 🔴 para 🟡 por esta regra: `numero-sem-origem` (PRD, handoff e pedagógico), `exigencia-dispensada`, `preservacao-sem-prova` sem versão anterior que prove a mudança, e `guarda-exige-acerto`/`guarda-afrouxada` com `ESTEIRA_ESTRITA` (decisão humana). `hipotese-diverge` só bloqueia quando o código e o classificador leem o número como meta.
+6. **Classificador de sentido (`tools/classificador.py`):** uma pergunta estreita por regra, lida pelo Gemini com os parâmetros do juiz determinístico (`TEMPERATURA_JUIZ`, `SEED_JUIZ`), resposta JSON com rótulo de lista fechada e citação literal conferida em código (sem a citação no trecho, vale «não sei»). Cache pelo hash (pergunta, versão, modelo, entrada) no estado da sessão (`classificador_sentido`, com o custo por gate, somado ao custo da missão). Erro, timeout, falta de chave ou o limite de chamadas do gate → «não sei», e o achado fica 🟡. Entra só onde a fase A mediu ganho contra os casos reais, os mutantes das revisões e um held-out às cegas:
+
+     | Pergunta | Regra | O que faz | Fase A (P / R) |
+     |---|---|---|---|
+     | `numero_da_hipotese` | `hipotese-diverge` | segunda leitura: 🔴 só com as duas leituras «meta» | 1,00 / 1,00 (60) |
+     | `rotulo_de_botao` | `rotulo-divergente` | filtra o candidato da prosa sem chave de copy (fica 🟡) | 1,00 / 1,00 (55) |
+     | `item_do_pedido_classe` v2 | `exigencia-dispensada` | segunda leitura do «contexto» do juiz: os dois leem contexto → dispensa | 1,00 / 0,93 (53) |
+     | `decisao_do_po_confirmada` | `decisao-atribuida-ao-po` | só pista: ordena e explica o «a conferir», nunca o apaga | 1,00 / 1,00 (53) |
+     | `ressalva_repete_decisao_do_po` | recontagem dos juízes de produto | só pista, como acima | 0,97 / 1,00 (37) |
+
+     Não entra onde não ganhou: texto de tela × fala, lacuna do texto aprovado, «é o mesmo botão do glossário?» e mesma hipótese. O gabarito (`tests/gabarito_achados/classificador/`) roda no CI pelo cache versionado `fixtures/classificador-cache.json`, sem chamar o modelo; mudar o texto de uma pergunta exige subir a versão e regravar o cache (`scripts/gravar_cache_classificador.py`).
 
 ---
 
@@ -877,6 +891,8 @@ Crie um arquivo `.env` na raiz do projeto a partir do [`.env.example`](file:///U
 | `AUTH_SEGREDO_JWT` | *Obrigatório* | Chave HS256 da sessão, com 32 caracteres ou mais. Girar derruba todas as sessões. |
 | `AUTH_HORAS_SESSAO` | `4` | Validade absoluta da sessão, contada do login. |
 | `PARECER_HUMANO` | `true` | A esteira para ao fim de cada etapa e espera o parecer do dono. |
+| `CLASSIFICADOR_SENTIDO` | `ligado` | Classificador de sentido dos gates (`tools/classificador.py`): `ligado` (cache da sessão, depois o modelo), `so_cache` (CI e regressão: só o cache, o resto é «não sei») ou `desligado` (tudo «não sei»; os achados que dependem dele ficam 🟡). |
+| `CLASSIFICADOR_CACHE_FIXO` | — | O cache versionado lido além do da sessão (`fixtures/classificador-cache.json` nos testes e na regressão). |
 
 ---
 
