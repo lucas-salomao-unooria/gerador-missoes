@@ -141,12 +141,26 @@ class EnvelopeGateAgent(BaseAgent):
     #: Os documentos que o gate avalia (chaves do estado). Com eles, a citação de cada achado bloqueante é conferida
     #: (`tools/citacoes.py`): a que não existe rebaixa o achado, e se todos os bloqueios caem, o veredito vira 🟡.
     documentos: List[str] = Field(default_factory=list)
+    #: Juiz de produto recontado em código (`tools/juizes_produto.py`): a ressalva que só repete decisão que os registros
+    #: do PO confirmam não conta no veredito (exp06ef1b, 08/10/2026: os 29 min que o PO aceitou voltavam em três juízes).
+    recontar_decisoes_do_po: bool = False
+    #: Com a recontagem: o `decisao_humana` que só fala das propostas e parâmetros abertos vai à lista do de acordo de
+    #: produto (PR 3) em vez de rebaixar o gate final — 🟡 em 15 de 15 sessões por construção (levantamento de 24/10).
+    contrato_no_de_acordo: bool = False
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         state = ctx.session.state
         relatorio = str(state.get(self.report_key, "") or "")
         envelope = extrair_envelope(relatorio)
+        nota_recontagem = ""
+        if self.recontar_decisoes_do_po and envelope:
+            from tools import juizes_produto
+
+            novo, nota_recontagem = juizes_produto.recontar(envelope, dict(state), self.contrato_no_de_acordo)
+            if nota_recontagem:
+                envelope = novo
+                relatorio += nota_recontagem + "\n\n```json\n" + json.dumps(envelope, ensure_ascii=False) + "\n```\n"
         status = inferir_status(relatorio, envelope)
         nota_citacao = ""
         if self.documentos and envelope and isinstance(envelope.get("achados"), list) and status == STATUS_BLOQUEADO:
@@ -179,7 +193,7 @@ class EnvelopeGateAgent(BaseAgent):
         # cheios de amarelo. O que o time lia era um verde que o juiz não deu.
         registrado = STATUS_BLOQUEADO if truncado else status_registrado(relatorio, envelope)
         delta = {self.status_key: registrado, f"{self.status_key}_envelope": envelope or {}}
-        if nota_citacao:
+        if nota_citacao or nota_recontagem:
             delta[self.report_key] = relatorio
         if self.round_key:
             delta[self.round_key] = rodada
