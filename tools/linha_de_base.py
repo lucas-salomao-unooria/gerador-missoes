@@ -33,6 +33,7 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from tools import citacoes
+from tools.envelope_relatorio import relatorio_com_envelope, relatorio_do_gate
 
 KEY_LINHA_DE_BASE = "linha_de_base"
 KEY_LINHA_DE_BASE_REPORT = "linha_de_base_report"
@@ -170,15 +171,18 @@ def aplicar(estado: Dict[str, Any], base: Dict[str, Dict[str, Any]], edicoes: It
                 a["resumo"] = f"[não causado pela correção — {motivo}] {a.get('resumo') or ''}".strip()
                 rebaixados += 1
         novo = {**envelope, "achados": achados}
+        nota = ""
         if rebaixados and rebaixados == len(bloqueios) and str(estado.get(k) or "") == "bloqueado":
             novo.update(status="amarelo", veredito_original=envelope.get("status"))
             delta[k] = "amarelo"
-            relatorio_key = k[: -len("_status")] + "_report"
-            if isinstance(estado.get(relatorio_key), str):
-                delta[relatorio_key] = estado[relatorio_key] + (
-                    f"\n\n---\n> 📏 **Linha de base da correção pontual:** {rebaixados} bloqueio(s) não ligados às trocas da "
+            nota = (f"---\n> 📏 **Linha de base da correção pontual:** {rebaixados} bloqueio(s) não ligados às trocas da "
                     "correção (trecho que ela não tocou, ou regra que este gate não aplicava à versão aprovada) — "
                     "rebaixados a atenção. Veredito: 🟡.")
+        relatorio_key = relatorio_do_gate(k)
+        if rebaixados and relatorio_key and isinstance(estado.get(relatorio_key), str):
+            # O relatório termina no envelope novo e o cabeçalho diz o veredito novo. Até 25/10/2026 só a nota entrava, e
+            # a fidelidade de e89e91b3 e 60cfa7f4 seguia «Veredito: 🔴» com o envelope antigo no fim e o status em 🟡
+            delta[relatorio_key] = relatorio_com_envelope(estado[relatorio_key], novo, nota)
         delta[f"{k}_envelope"] = novo
     delta.update(_degradacoes_sem_gate_vivo(estado, delta, chaves_status))
     return delta, linhas
