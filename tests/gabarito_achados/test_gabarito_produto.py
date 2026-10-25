@@ -150,6 +150,82 @@ def test_decisao_gravada_no_de_acordo_confirma_e_valor_diferente_nao():
     assert not registro.decisao_gravada(linha.replace(valor, f"{int(float(numero)) + 7} {unidade}"))
 
 
+# Revisão do PR #80 (24/10/2026): o trecho literal confirmava pelo parágrafo do PO, sem exigir que ele decidisse, e a
+# recusa do de acordo valia como decisão. Os três casos abaixo são o PO recusando ou mandando mudar — TÊM de disparar.
+_STORYPOLL = ("- Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades ao "
+              "final da experiência (aprovado pelo PO no de acordo de 21/10).")
+_RESSALVA_STORYPOLL = {"status": "aprovado_com_ressalvas", "achados": [{"severidade": "atencao", "codigo": "6.2", "resumo": (
+    "Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B, aprovado pelo PO, adiciona carga "
+    "decisória ao fim da experiência.")}]}
+
+
+def test_v_storypoll_que_o_po_mandou_nao_implementar():
+    """60cfa7f4 (exp02em1b), parecer de acordo de produto de 21/10/2026 15:43:51: o StoryPoll vai «→ ignorar / não
+    implementar», no mesmo parágrafo de dois «→ aprovado». A linha que diz que o PO o aprovou é acusada, e a ressalva do
+    juiz que o repete continua contando."""
+    st = estado("acervo:exp02em1b-60cfa7f4")
+    parecer = next(p["comentario"] for p in st["pareceres_humanos"] if p["quando"] == "21/10/2026 15:43:51")
+    exige(parecer, "Canal B das 4 habilidades] → ignorar / não implementar", "o parecer de 21/10")
+    exige(parecer, "em sessão de 50 minutos] → aprovado", "o parecer de 21/10")
+    assert _atribuidas(st, "one_pager") == []
+    st["one_pager"] += "\n" + _STORYPOLL + "\n"
+    achado = _atribuidas(st, "one_pager")
+    assert len(achado) == 1 and achado[0]["severidade"] == "atencao" and "StoryPoll" in achado[0]["resumo"]
+    assert juizes_produto.recontar(_RESSALVA_STORYPOLL, st)[0]["status"] == "aprovado_com_ressalvas"
+
+
+def test_v_storypoll_recusado_no_cartao_do_de_acordo_bloqueia():
+    """O mesmo StoryPoll recusado no cartão do de acordo (`decisoes_do_po`, PR 3): «aprovado pelo PO» contradiz o
+    registro — ⛔ —, e a ressalva do juiz não sai da contagem pela recusa."""
+    from tools import fechar_contrato as fc
+
+    st = estado("acervo:exp02em1b-60cfa7f4")
+    item = next(i for i in fc.itens_em_aberto(st) if "StoryPoll" in i.assunto and i.tipo == fc.PROPOSTA)
+    st["decisoes_do_po"] = fc.decidir([item], {item.id: {"resposta": "recusar"}}, "21/10/2026 15:43:00",
+                                      "produto").decisoes
+    registro = decisoes.ha_registro_do_po(st)
+    assert not registro.decisao_gravada(_STORYPOLL) and not registro.confirma(_STORYPOLL)
+    st["one_pager"] += "\n" + _STORYPOLL + "\n"
+    assert [a["severidade"] for a in _atribuidas(st, "one_pager")] == ["bloqueio"]
+    assert juizes_produto.recontar(_RESSALVA_STORYPOLL, st)[0]["status"] == "aprovado_com_ressalvas"
+
+
+def test_v_moldura_que_o_po_citou_como_texto_atual():
+    """4fd72a9a (exp02ef1b), pedido de 23/10/2026 13:24:21: «Texto atual: “A moldura precisa ter pelo menos 10% da
+    foto!”» para pedir «Aumente a moldura.». O texto que o PO manda trocar não é decisão dele."""
+    st = estado("acervo:exp02ef1b-4fd72a9a")
+    pedido = next(p["texto"] for p in st["pedidos_do_po"] if "Moldura pequena" in p["texto"])
+    exige(pedido, "Texto atual:\n\n> “A moldura precisa ter pelo menos 10% da foto!”", "o pedido de 23/10 13:24")
+    exige(pedido, "Ajuste solicitado:\n\n> “Aumente a moldura.”", "o pedido de 23/10 13:24")
+    st["spec_missao"] += "\n- “A moldura precisa ter pelo menos 10% da foto!” (homologado pelo PO)\n"
+    achado = _atribuidas(st, "spec_missao", "A spec")
+    assert len(achado) == 1 and "A moldura precisa ter pelo menos 10% da foto" in achado[0]["resumo"]
+    ressalva = {"status": "aprovado_com_ressalvas", "achados": [{"severidade": "atencao", "codigo": "6.2", "resumo": (
+        "“A moldura precisa ter pelo menos 10% da foto!”, homologado pelo PO, é texto longo para o 2º ano.")}]}
+    assert juizes_produto.recontar(ressalva, st)[0]["status"] == "aprovado_com_ressalvas"
+
+
+def test_v_mutante_po_manda_reduzir_os_29_min():
+    """727a3c2d com o item 4 do Pedido 13 trocado por «4. Tempo em tela de 29 min: reduzir para 25 min.» (nos pedidos, nas
+    notas de passagem e no pedido corrente): o trecho «tempo em tela de 29 min» continua lá, mas o PO manda mudar. As
+    três atribuições dos 29 min disparam, e os três juízes ficam 🟡."""
+    st = estado("727a3c2d:final")
+    item4 = re.compile(r"4\. Tempo em tela de 29 min: RESSALVA ACEITA\.(?:\n(?:> ?)?O tempo de 29 min[^\n]*)?")
+    reduzir = "4. Tempo em tela de 29 min: reduzir para 25 min."
+    for chave in ("notas_de_passagem", "pedido_correcao"):
+        exige(st[chave], "4. Tempo em tela de 29 min: RESSALVA ACEITA.", f"o {chave}")
+        st[chave] = item4.sub(reduzir, st[chave])
+    for pedido in st["pedidos_do_po"]:
+        pedido["texto"] = item4.sub(reduzir, pedido["texto"])
+    for chave, documento in (("one_pager", "O one-pager"), ("spec_missao", "A spec"),
+                             ("one_pager_resumido", "O resumido")):
+        achado = _atribuidas(st, chave, documento)
+        assert len(achado) == 1 and "29 min" in achado[0]["resumo"], chave
+    for relatorio, contrato in (("experiencia_aluno_report", False), ("avaliacao_pedagogica_report", False),
+                                ("gate_final_report", True)):
+        assert juizes_produto.status_recontado(st[relatorio], st, contrato)["status"] == "amarelo", relatorio
+
+
 # ------------------------------------------------------------------ 3 e 4. juízes de produto recontados
 def _recontado(execucao, relatorio, contrato=False):
     st = estado(execucao)
@@ -226,6 +302,34 @@ def test_gate_final_proposta_aberta_vai_ao_de_acordo_e_nao_rebaixa(execucao, tre
     assert juizes_produto.status_recontado(st["gate_final_report"], st, True)["status"] == "aprovado"
     assert [a["resumo"][:len(trecho)] for a in envelope["na_lista_do_de_acordo"]] == [trecho]
     assert "na lista do de acordo de produto" in texto and envelope["precisa_humano"] is False
+
+
+@pytest.mark.parametrize("execucao, trecho", [
+    ("acervo:exp02em1b-60cfa7f4", "Propostas estruturais e parâmetros de interface registrados no one-pager"),  # P168
+    ("acervo:exp03em1b-b2e7b4a3", "Propostas abertas na Seção 18 aguardando validação do PO"),  # P201
+    ("acervo:exp01em1b-e3980485", "Propostas ergonômicas de P0b"),  # P239
+])
+def test_v_mutante_achado_misto_do_gate_final_fica(execucao, trecho):
+    """Revisão do PR #80: o mesmo 🔵 com uma pendência que nenhum marcador registra — «e a divergência entre o briefing e
+    o critério 6.2» — não sai da contagem. O que o achado diz tem de estar nos itens da lista do de acordo."""
+    st = estado(execucao)
+    exige(st["gate_final_report"], trecho, "o gate final")
+    st["gate_final_report"] = st["gate_final_report"].replace(
+        trecho, trecho + " e a divergência entre o briefing e o critério 6.2")
+    _, envelope = juizes_produto.recontar_relatorio(st["gate_final_report"], st, True)
+    assert not (envelope or {}).get("na_lista_do_de_acordo")
+    assert juizes_produto.status_recontado(st["gate_final_report"], st, True)["status"] == "amarelo"
+
+
+def test_v_mutante_achado_de_outra_missao_nao_casa_com_a_lista():
+    """O 🔵 da b2e7b4a3 (P201: «3ª aba da escola rival e botão de zoom na tabela») no gate final da 60cfa7f4, cuja lista
+    do de acordo tem outros itens (StoryPoll, inatividade no chat, PQ-01…05): fica."""
+    st = estado("acervo:exp02em1b-60cfa7f4")
+    p168 = "Propostas estruturais e parâmetros de interface registrados no one-pager aguardando homologação do PO."
+    exige(st["gate_final_report"], p168, "o gate final")
+    st["gate_final_report"] = st["gate_final_report"].replace(p168, (
+        "Propostas abertas na Seção 18 aguardando validação do PO (3ª aba da escola rival e botão de zoom na tabela)."))
+    assert juizes_produto.status_recontado(st["gate_final_report"], st, True)["status"] == "amarelo"
 
 
 def test_v_mutante_sem_itens_no_de_acordo_o_azul_fica():
@@ -394,3 +498,18 @@ def test_v_na_entrada_do_dev_ped_12_15_03_continuam_cobrados():
     """Os mesmos envelopes na posição da entrada do dev: a rubrica não afrouxou fora do fim de produto."""
     r = _banca(estado("727a3c2d:final"), posicao="entrada")
     assert r["status"] == "amarelo" and {"PED-12", "PED-15"} <= set(_ids(r["achados"])) and not r["outra_posicao"]
+
+
+def test_v_mutante_ped_12_reprovado_na_entrada_nao_culpa_o_fim_de_produto():
+    """727a3c2d com o PED-12 da entrada do dev reprovado (nok): o fim de produto não o avalia — vai a «outra posição» —,
+    e a divergência não diz que ele passou ali (revisão do PR #80). Com o design avaliando, a divergência é dele."""
+    st = estado("727a3c2d:final")
+    produto, entrada = _banca(st), _banca(st, posicao="entrada")
+    assert "PED-12" in _ids(produto["outra_posicao"]) and "PED-12" not in _ids(produto["achados"])
+    reprovado = {**entrada, "achados": [{**a, "severidade": "nok"} if _ids([a]) == ["PED-12"] else a
+                                        for a in entrada["achados"]]}
+    assert not [d for d in bnc.divergencias_com_etapas(reprovado, {"produto": {"achados": produto["achados"]}})
+                if "PED-12" in d]
+    com_design = bnc.divergencias_com_etapas(reprovado, {"produto": {"achados": produto["achados"]},
+                                                         "design": {"achados": []}})
+    assert "`PED-12` passou no fim de design e reprova aqui. No fim de produto ele não é avaliado." in com_design

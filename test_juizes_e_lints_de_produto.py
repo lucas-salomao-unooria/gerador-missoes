@@ -84,6 +84,89 @@ def test_atribuicao_conferida_por_trecho_numero_pedido_e_marca():
             if a["codigo"] == "decisao-atribuida-ao-po"] == ["bloqueio"]
 
 
+def test_trecho_do_po_so_confirma_na_linha_ou_item_que_decide():
+    """Revisão do PR #80: decisão e negação no item numerado ou na linha do PO, e não no parágrafo — e o item tem de
+    decidir. O trecho que o PO cita para recusar, trocar ou reduzir não confirma."""
+    from tools.decisoes import achados, ha_registro_do_po
+    from tools.juizes_produto import recontar
+
+    estado = {"pareceres_humanos": [{"comentario": (
+        "Propostas:\n"
+        "[PROPOSTA: validar com PO: Preservação de duas seções do DS em sessão de 50 minutos] → aprovado\n"
+        "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo como suporte ao Canal B] → "
+        "ignorar / não implementar")}],
+        "pedidos_do_po": [{"texto": "Texto atual: “A moldura precisa ter pelo menos 10% da foto!”\n\nAjuste solicitado: "
+                                    "“Aumente a moldura.”\n\n4. Tempo em tela de 29 min: reduzir para 25 min.\n\n"
+                                    "5. Toast de inatividade: APROVADO. Remover o marcador [PROPOSTA P0b] da Seção 7 e "
+                                    "cravar: após 60 segundos de inatividade na cédula, exibir o toast."}]}
+    reg = ha_registro_do_po(estado)
+    # o «→ aprovado» da linha de cima não decide pelo StoryPoll
+    storypoll = "- Utilização do componente StoryPoll nativo como suporte ao Canal B (aprovado pelo PO)."
+    assert not reg.confirma(storypoll)
+    assert reg.confirma("- Preservação de duas seções do DS em sessão de 50 minutos (aprovado pelo PO).")
+    # «Texto atual», «reduzir»: o PO cita para mudar
+    assert not reg.confirma("“A moldura precisa ter pelo menos 10% da foto!” (homologado pelo PO)")
+    assert not reg.confirma("Tempo em tela de 29 min por aula (homologado pelo PO).")
+    # tirar o marcador é o PO executando a decisão: o item continua decidindo
+    assert reg.confirma("Toast (aprovado pelo PO): após 60 segundos de inatividade na cédula, exibir o toast.")
+    # o item que decide e manda mudar não confirma o que cita — nem pelo trecho, nem pelo «Pedido N»
+    misto = ha_registro_do_po({"pedidos_do_po": [{"texto": "refaça"}, {"texto": (
+        "6. Moldura: manter a regra no sistema, mas trocar “A moldura precisa ter pelo menos 10% da foto!” por "
+        "“Aumente a moldura.”\n\n7. Tempo em tela de 29 min: aceito no piloto, reduzir para 25 min na versão final.\n\n"
+        "8. Não aceito os 40 min de tela por cartão de leitura.")}]})
+    assert not misto.confirma("“A moldura precisa ter pelo menos 10% da foto!” (homologado pelo PO)")
+    assert not misto.confirma("Tempo de 29 min em tela (homologado pelo PO no Pedido 2).")
+    assert not misto.confirma("Tempo de 40 min de tela por cartão (aprovado pelo PO no Pedido 2).")
+    assert [a["severidade"] for a in achados(storypoll, "O one-pager", reg)] == ["atencao"]
+    # a ressalva do juiz que repete o StoryPoll também fica
+    env = {"status": "aprovado_com_ressalvas", "achados": [{"severidade": "atencao", "codigo": "6.2", "resumo": (
+        "Utilização do componente StoryPoll nativo como suporte ao Canal B, aprovado pelo PO, adiciona carga.")}]}
+    assert recontar(env, estado) == (env, "")
+
+
+def test_recusa_no_de_acordo_nunca_confirma_e_a_atribuicao_contraria_bloqueia():
+    """Revisão do PR #80: a decisão recusada no de acordo confirmava «aprovado pelo PO» pelo valor da sugestão."""
+    from tools import fechar_contrato as fc
+    from tools.decisoes import achados, ha_registro_do_po
+    from tools.juizes_produto import recontar
+
+    one_pager = ("- `[PROPOSTA — validar com PO: Utilização do componente StoryPoll nativo como suporte ao Canal B]`\n"
+                 "- Inatividade: `[PARÂMETRO — a definir por produto: tempo de inatividade no chat, sugestão: 90 "
+                 "segundos]`\n")
+    itens = fc.itens_em_aberto({"one_pager": one_pager})
+    assert len(itens) == 2
+
+    def com(resposta):
+        return {"pedidos_do_po": [{"texto": "refaça"}], "decisoes_do_po": fc.decidir(
+            itens, {i.id: {"resposta": resposta} for i in itens}, "21/10/2026 15:43:00", "produto").decisoes}
+
+    estado = com("recusar")
+    reg = ha_registro_do_po(estado)
+    storypoll = "- Utilização do componente StoryPoll nativo como suporte ao Canal B (aprovado pelo PO)."
+    assert not reg.decisao_gravada(storypoll) and not reg.confirma(storypoll) and reg.decisao_recusada(storypoll)
+    achado = [a for a in achados(storypoll, "O one-pager", reg) if a["codigo"] == "decisao-atribuida-ao-po"]
+    assert [a["severidade"] for a in achado] == ["bloqueio"] and "recusou" in achado[0]["resumo"]
+    # o parâmetro recusado, com o valor da sugestão, bloqueia; com outro valor, fica para conferir
+    assert [a["severidade"] for a in achados("Tempo de inatividade no chat: 90 s (homologado pelo PO).", "X", reg)] == [
+        "bloqueio"]
+    assert [a["severidade"] for a in achados("Tempo de inatividade no chat: 120 s (homologado pelo PO).", "X", reg)] == [
+        "atencao"]
+    # duas palavras em comum com o assunto recusado não bastam para o ⛔
+    assert not reg.decisao_recusada("Seções do DS como suporte ao Canal B (aprovado pelo PO).")
+    env = {"status": "aprovado_com_ressalvas", "achados": [{"severidade": "atencao", "codigo": "6.2", "resumo": (
+        "Utilização do componente StoryPoll nativo como suporte ao Canal B, aprovado pelo PO, adiciona carga.")}]}
+    assert recontar(env, estado) == (env, "")
+    # aceitar a mesma sugestão confirma
+    aceito = ha_registro_do_po(com("aceitar"))
+    assert aceito.confirma(storypoll) and aceito.confirma("Tempo de inatividade no chat: 90 s (homologado pelo PO).")
+    # registros que se contradizem — um pedido aprova o que o cartão recusou — não confirmam: uma pessoa confere
+    contraditorio = {**estado, "pedidos_do_po": [{"texto": (
+        "1. Utilização do componente StoryPoll nativo como suporte ao Canal B: APROVADO.")}]}
+    reg = ha_registro_do_po(contraditorio)
+    assert reg.trecho_literal(storypoll) and not reg.confirma(storypoll)
+    assert not reg.decisao_repetida(env["achados"][0]["resumo"]) and recontar(env, contraditorio) == (env, "")
+
+
 def test_numeros_com_unidade_normalizados():
     from tools.decisoes import numeros_com_unidade
 
@@ -142,6 +225,28 @@ def test_proposta_aberta_vai_ao_de_acordo_so_no_gate_final_e_com_itens():
     assert novo["na_lista_do_de_acordo"][0]["itens_no_de_acordo"] == 1 and "lista do de acordo" in nota
     # sem marcador aberto, o 🔵 fica
     assert recontar(env, {"one_pager": "## 15. Tetos\n- Teto: 35 palavras."}, contrato_no_de_acordo=True)[1] == ""
+
+
+def test_achado_misto_do_gate_final_fica_na_contagem():
+    """Revisão do PR #80: o achado que fala de proposta e de outra coisa não sai inteiro para o de acordo — o que ele diz
+    tem de estar nos itens da lista."""
+    from tools.juizes_produto import recontar
+
+    one_pager = ("## 18. Propostas\n- `[PROPOSTA P0b — validar com PO: botão de zoom na tabela de metadados]`\n"
+                 "- `[PROPOSTA — validar com PO: abertura da 3ª aba da conversa com a escola rival]`\n")
+
+    def status(resumo):
+        env = {"status": "aprovado_com_ressalvas", "precisa_humano": True,
+               "achados": [{"severidade": "decisao_humana", "codigo": "F7", "resumo": resumo}]}
+        return recontar(env, {"one_pager": one_pager}, contrato_no_de_acordo=True)[0]["status"]
+
+    assert status("Propostas abertas na Seção 18 aguardando validação do PO (3ª aba da escola rival e botão de zoom "
+                  "na tabela).") == "aprovado"
+    assert status("Propostas e parâmetros do one-pager aguardando homologação do PO.") == "aprovado"
+    assert status("Propostas P0b e a divergência entre o briefing e o critério 6.2 aguardam homologação do "
+                  "PO") == "aprovado_com_ressalvas"
+    assert status("Propostas abertas (botão de zoom na tabela) e o conflito com o briefing aguardam o parecer do "
+                  "PO.") == "aprovado_com_ressalvas"
 
 
 def test_gate_de_envelope_reconta_e_grava_a_nota():
@@ -248,3 +353,16 @@ def test_banca_de_produto_nao_conta_ped_03_12_15_e_as_outras_posicoes_contam():
     # o escopo da posição diz ao juiz o mesmo que o código conta
     assert all(c in bnc.ESCOPOS["produto"] for c in ("PED-03", "PED-12", "PED-15"))
     assert not any(c in bnc.ESCOPOS["entrada"] for c in ("PED-03", "PED-12", "PED-15"))
+
+
+def test_divergencia_da_entrada_nao_diz_que_passou_onde_nao_e_avaliado():
+    """Revisão do PR #80: o PED-12 que reprova na entrada do dev saía «passou no fim de produto», onde não é avaliado."""
+    from tools import banca as bnc
+
+    entrada = {"achados": [{"id": "PED-12", "severidade": "nok"}, {"id": "PROD-07", "severidade": "bloqueio"}]}
+    assert bnc.divergencias_com_etapas(entrada, {"produto": {"achados": []}, "design": {"achados": []}}) == [
+        "`PED-12` passou no fim de design e reprova aqui. No fim de produto ele não é avaliado.",
+        "`PROD-07` passou no fim de produto e de design e reprova aqui."]
+    # só produto rodou: o PED-12 não tem com que comparar
+    assert bnc.divergencias_com_etapas(entrada, {"produto": {"achados": []}, "design": None}) == [
+        "`PROD-07` passou no fim de produto e reprova aqui."]
