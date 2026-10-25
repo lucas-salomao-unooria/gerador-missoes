@@ -89,6 +89,15 @@ _RE_DEFINE_JOGO = re.compile(
 #: A linha «rótulo: valor» da ficha — o rótulo é o que vem antes dos primeiros dois-pontos, sem a marca de lista ou de
 #: título. A linha de tabela fica de fora: as fases em tabela são lidas por `_ler_regras_e_fases`.
 _RE_LINHA_COM_ROTULO = re.compile(r"^\s*(?:#{1,6}\s+)?(?:[-*+]\s+|\d{1,2}[.)]\s+)?([^:\n|]{1,80}):(.*)$")
+#: O sub-rótulo, no valor da linha: o trecho antes de «:» depois do primeiro, desde o último separador («;», «·», «(»,
+#: «,», «—») — «três varais; quantas fases: 3», «Fase 3: como se vence: cinco fotos». O valor vai até o próximo
+#: separador. «https://» não é rótulo.
+_RE_SUBROTULO = re.compile(r"([^:;·(),—–\n]{1,80}):(?!//)([^;·()\n]*)")
+#: «Como o progresso aparece» é sub-rótulo do próprio template do 067 («Mapa de mundo como tela: …; como o progresso
+#: aparece: …»), a tela que mostra o que o bloco 2 decidiu: no sub-rótulo, não define o jogo.
+_RE_PROGRESSO_NO_SUBROTULO = re.compile(r"como\s+o\s+progresso\s+aparece", re.I)
+#: O rótulo «Fase N» (com ou sem o nome depois): a ficha que descreve a fase N que a spec não tem a cria.
+_RE_FASE_NO_ROTULO = re.compile(r"^fase\s+(\d{1,2})\b")
 #: Palavras que fazem da seção citada depois delas, na linha «Seção do DS:», contexto e não seção da ficha: «`unoochat`
 #: (… não o legado `whatsappmobile`)», «sucessora de `whatsappmobile`», «em vez de `instanooria`».
 _RE_SECAO_DE_CONTEXTO = re.compile(
@@ -558,11 +567,25 @@ def jogo_no_bloco_14(bloco: str, spec: str) -> List[str]:
     valor não é o texto do bloco 2 da spec. Na revisão do PR #76 (24/10/2026) bastava a linha citar o termo: as linhas que
     o próprio template do 067 pede — «Demonstração na tela: … o áudio do guia lê a regra da fase», «Estados de tela do jogo:
     … quando a criança vence a fase, confete», «Mapa de mundo como tela: …; como o progresso aparece: …» — bloqueavam a
-    ficha do mini-jogo aprovado."""
+    ficha do mini-jogo aprovado.
+
+    Rótulo é também o sub-rótulo — o trecho antes de «:» depois do primeiro («três varais; quantas fases: 3») —, menos
+    «como o progresso aparece», que o template do 067 pede na linha do mapa; e o rótulo «Fase N», quando N não é fase da
+    spec. Na 3ª revisão do PR #76 (24/10/2026), só o primeiro rótulo contava, e «Fase 3: como se vence: cinco fotos no
+    varal em 10 segundos.» e «Mapa de mundo como tela: três varais; quantas fases: 3.» passavam a ficha do mini-jogo de
+    duas fases."""
     from tools.bncc import secao_bloco
 
     da_spec = {_norm(l) for l in (spec or "").splitlines() if l.strip()}
     bloco2 = f" {_norm(secao_bloco(spec or '', 2) or spec or '')} "
+    fases_da_spec = set(regras_e_fases(spec or "")["fases"])
+
+    def copia(valor: str) -> bool:
+        # «Regra da fase 1: Ponha a foto do café antes da escola.» repete o bloco 2: cópia, não decisão (com três palavras
+        # ou mais — «Quantas fases: 3» não se confere por trecho)
+        v = _norm(valor)
+        return len(v.split()) >= 3 and f" {v} " in bloco2
+
     secao = regras_e_fases(bloco)
     solto = _ler_regras_e_fases(bloco, fora_da_secao=True)
     regras = {**solto["regras"], **secao["regras"]}
@@ -572,14 +595,19 @@ def jogo_no_bloco_14(bloco: str, spec: str) -> List[str]:
     saida += [f"fase {n}: {f['linha']}" for n, f in sorted(fases.items()) if _norm(f["inteira"]) not in da_spec]
     for linha in (bloco or "").splitlines():
         m = _RE_LINHA_COM_ROTULO.match(linha)
-        if not m or not _RE_DEFINE_JOGO.search(m.group(1)) or not m.group(2).strip(" *_`"):
+        if not m or not m.group(2).strip(" *_`") or _norm(linha) in da_spec:
             continue
-        valor = _norm(m.group(2))
-        # «Regra da fase 1: Ponha a foto do café antes da escola.» repete o bloco 2: cópia, não decisão (com três palavras
-        # ou mais — «Quantas fases: 3» não se confere por trecho)
-        if _norm(linha) in da_spec or (len(valor.split()) >= 3 and f" {valor} " in bloco2):
-            continue
-        saida.append(linha.strip()[:200])
+        rotulo, resto = m.group(1), m.group(2)
+        fase = _RE_FASE_NO_ROTULO.match(_norm(rotulo))
+        define = (bool(_RE_DEFINE_JOGO.search(rotulo)) and not copia(resto)) or bool(
+            fase and int(fase.group(1)) not in fases_da_spec)
+        for sub in _RE_SUBROTULO.finditer(resto):
+            if define:
+                break
+            termo = _RE_PROGRESSO_NO_SUBROTULO.sub(" ", sub.group(1))
+            define = bool(_RE_DEFINE_JOGO.search(termo) and sub.group(2).strip(" *_`.") and not copia(sub.group(2)))
+        if define:
+            saida.append(linha.strip()[:200])
     return [s for s in dict.fromkeys(saida) if _norm(s) not in da_spec]
 
 

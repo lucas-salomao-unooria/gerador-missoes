@@ -13,8 +13,9 @@ jornada sem poder de produto.
   refeitas (exp02ef1b, exp02em1b, exp01em1b e exp03em1b) passam.
 
 Mutantes: «D9 cria ambiente novo com a spec calada», «jornada inventa fase 3 do mini-jogo», «bloco 14 troca a secao_ds»;
-da 3ª revisão do PR #76 (24/10/2026), «trava pelo nome da interface deixa o ambiente novo sem o PO» e «o PO grava no
-bloco 0 outra seção que a do briefing». Tudo determinístico, sem modelo, sobre os estados do acervo (`tests/acervo`).
+da 3ª revisão do PR #76 (24/10/2026), «trava pelo nome da interface deixa o ambiente novo sem o PO», «o PO grava no
+bloco 0 outra seção que a do briefing» e «a ficha inventa a fase 3 num sub-rótulo». Tudo determinístico, sem modelo,
+sobre os estados do acervo (`tests/acervo`).
 """
 from __future__ import annotations
 
@@ -1113,3 +1114,38 @@ def test_prompt_046_sugere_a_secao_que_o_briefing_fixou():
     from prompts.loader import get_prompt_raw
 
     assert "Sugestão = a seção que o briefing fixou, quando fixou" in get_prompt_raw("produto/046_completude_spec.md")
+
+
+@pytest.mark.parametrize("linha, bloqueia", [
+    # o sub-rótulo de jogo, depois do primeiro rótulo
+    ("- **Fase 3:** como se vence: cinco fotos no varal em 10 segundos.", True),
+    ("- **Mapa de mundo como tela:** três varais; quantas fases: 3.", True),
+    ("- **Estados de tela do jogo:** em fase · vencida (como se vence: cinco fotos no varal) · perdida", True),
+    # «Fase N» que a spec não tem cria a fase; a da spec é só a tela dela
+    ("- **Fase 3:** o varal da noite aparece com quatro fotos.", True),
+    ("- **Fase 1:** o varal da manhã aparece com duas fotos.", False),
+    # o sub-rótulo que repete o bloco 2 é cópia; «como o progresso aparece» é a linha do mapa do template do 067
+    ("- **Fase 2:** como se vence: três fotos no lugar.", False),
+    ("- **Mapa de mundo como tela:** dois varais; como o progresso aparece: o feito fica colorido.", False),
+    ("- **Referência:** https://exemplo.org/varal", False),
+])
+def test_sub_rotulo_e_fase_da_ficha_do_minijogo_aprovado(linha, bloqueia):
+    """Só o primeiro rótulo da linha contava: «Fase 3: como se vence: …» e «Mapa de mundo como tela: três varais; quantas
+    fases: 3.» passavam a ficha do mini-jogo aprovado de duas fases (24/10/2026). A ficha do template do 067 preenchida
+    continua passando (`test_ficha_do_template_067_preenchida_nao_e_regra_de_jogo`)."""
+    spec = _spec_minijogo().replace("- `secao_ds: minijogo:varal-do-dia`", MINIJOGO_APROVADO)
+    st = _d9(spec, _saida_d9(FICHA_DO_TEMPLATE_067 + linha + "\n", ENV_MINIJOGO), estrito=True)
+    assert ("decisao-de-produto-pelo-agente" in _codigos(_achados(st))) is bloqueia, _achados(st)
+    assert (st["ambiente_status"] == "bloqueado") is bloqueia
+
+
+def test_mutante_ficha_inventa_a_fase_3_num_sub_rotulo():
+    """Mutante «a ficha inventa a fase 3 num sub-rótulo»: a regra de vitória da fase 3, escrita depois do rótulo «Fase 3»
+    na ficha do mini-jogo aprovado — bloqueia, volta ao D9, e a linha aparece no achado."""
+    spec = _spec_minijogo().replace("- `secao_ds: minijogo:varal-do-dia`", MINIJOGO_APROVADO)
+    linha = "- **Fase 3:** Varal da noite · como se vence: cinco fotos no varal em 10 segundos."
+    jogo = amb.jogo_no_bloco_14(FICHA_DO_TEMPLATE_067 + linha + "\n", spec)
+    assert jogo == [linha]
+    st = _d9(spec, _saida_d9(FICHA_DO_TEMPLATE_067 + linha + "\n", ENV_MINIJOGO))
+    produto = [a for a in _achados(st) if a["codigo"] == "decisao-de-produto-pelo-agente"]
+    assert len(produto) == 1 and "Fase 3" in produto[0]["resumo"] and produto[0]["agente_responsavel"] == amb.AGENTE_D9
