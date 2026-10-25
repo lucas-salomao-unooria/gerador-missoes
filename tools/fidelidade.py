@@ -172,6 +172,51 @@ def so_preservacao(texto: str) -> bool:
 _RE_RELATIVA_DESCRITIVA = re.compile(
     r"\bquem?\s+n[ãa]o\s+(?:alter|mud|mex|ger|regener|refaz|reescrev|troc|toc)(?:a|e|am|em)\b", re.IGNORECASE)
 
+#: A ordem de não mexer que não nomeia o que preservar — só «o restante». Lista fechada, comparada com o item inteiro
+#: normalizado (sem o rótulo «(item N)» e sem pontuação): não interpreta prosa, só reconhece a fórmula. É a regra de
+#: toda reexecução (o que o pedido não cita fica como estava, `pipeline.reexecucao`), e não há trecho que a prove: na
+#: exp01em1b (e3980485, 22/10/2026) «Manter o restante» saiu 🔴 `preservacao-sem-prova` no fim de produto e a missão
+#: recomeçou em outra sessão (C2, 25/10/2026). Ordem que nomeia o objeto («não alterar a mecânica») continua cobrada.
+_PRESERVACAO_GENERICA = frozenset({
+    "manter o restante", "manter todo o restante", "manter o resto", "manter tudo o mais", "manter o demais",
+    "manter o restante como esta", "manter o restante sem alteracao", "manter o restante igual",
+    "manter todo o restante sem alteracao", "manter todo o restante como esta", "e manter o restante",
+    "preservar o restante", "preservar todo o restante", "preservar o restante sem alteracao",
+    "preservar todo o restante sem alteracao", "o restante permanece como esta", "o restante fica como esta",
+    "o resto permanece como esta", "o resto fica como esta", "nao alterar mais nada", "nao alterar nada mais",
+    "nao alterar o restante", "nao mudar mais nada", "nao mudar nada mais", "nao mudar o restante",
+    "nao mexer no restante", "nao mexer em mais nada", "nao mexer no resto", "nenhuma outra alteracao",
+    "nenhuma outra mudanca", "sem outras alteracoes", "sem outras mudancas",
+})
+#: O rótulo de lista que o recorte põe no item («(item 5) …»): não é parte da frase do PO.
+_RE_ROTULO_DO_ITEM = re.compile(r"^\s*\(item\s+\d{1,2}\)\s*", re.IGNORECASE)
+
+
+def preservacao_generica(texto: str) -> bool:
+    """O item inteiro é uma das fórmulas de `_PRESERVACAO_GENERICA` («Manter o restante.»)."""
+    alvo = re.sub(r"[^\w\s]", " ", _norm(_RE_ROTULO_DO_ITEM.sub("", texto or "")))
+    return re.sub(r"\s+", " ", alvo).strip() in _PRESERVACAO_GENERICA
+
+
+#: O que só cita ou rotula, e por isso não manda: o texto entre aspas («clicar “fixar aviso”» nomeia um botão) e os
+#: rótulos do pedido organizado por tela («Texto atual:», «Ajuste solicitado:»). Delimitador e rótulo fixo — não
+#: interpreta a frase.
+_RE_SO_CITA = re.compile(r"“[^”]*”|\"[^\"\n]*\"|«[^»]*»|\b(?:texto\s+atual|ajustes?\s+(?:solicitad|necess[áa]ri|pedid)\w*)"
+                         r"\s*:", re.IGNORECASE)
+
+
+def exige_acao(texto: str) -> bool:
+    """Há verbo de ação ou de dever no que o PO escreve com a voz dele — fora das aspas, dos rótulos e da oração
+    relativa que descreve.
+
+    É a régua do `contexto` do juiz: com verbo, a frase é exigência e o `contexto` vira `exigencia-dispensada`. Até
+    25/10/2026 o verbo valia em qualquer lugar da frase, e duas frases do PO que não pedem nada saíram 🔴 na fidelidade
+    de design: «Sobre o rusher: com 5 opções no menu, a chance de clicar “fixar aviso” por acaso é 20%. É alta.»
+    (exp02em1b, 60cfa7f4 — o verbo é o nome do botão) e «> “O que não pode faltar na foto…” Botão: “Publicar no Álbum”
+    Ajuste solicitado: …» (exp02ef1b, 4fd72a9a — o texto atual citado, e «Ajuste» é o rótulo)."""
+    sem = _RE_RELATIVA_DESCRITIVA.sub(" ", _RE_SO_CITA.sub(" ", texto or ""))
+    return bool(_RE_ACAO.search(sem))
+
 
 _RE_REMETE_A_LISTA = re.compile(r"\b(?:cada\s+(?:ponto|item)|(?:pontos|itens)\s+(?:abaixo|a\s+seguir|seguintes)|"
                                 r"abaixo\s*[:.]?\s*$)", re.IGNORECASE)
@@ -609,6 +654,169 @@ def _literal_presente(frase: str, documentos_norm: str) -> bool:
     return bool(alvo) and alvo in documentos_norm
 
 
+def _ditado_no_corpo(citacoes: Sequence[str], texto_item: str, corpo: str, corpo_anterior: str) -> bool:
+    """As citações do juiz são o texto do próprio PO, e ele entrou no corpo do documento.
+
+    Cada citação tem de estar, letra por letra, no item (com `MIN_PALAVRAS_LITERAL` palavras ou mais) e no corpo — e,
+    havendo versão anterior, não estar nela: o texto que já estava no documento antes do pedido (o «texto atual» que o PO
+    cita para trocar) não prova nada. E o texto entre aspas do item que continua no documento como estava
+    (`_citado_ficou`) deixa a prova com o juiz: pode ser o texto que o PO mandou tirar. Comparação literal, sem ler o
+    verbo — por isso só prova sozinha na ordem de não mexer, em que o único verbo é o de preservar; no item com outro
+    verbo, sem a leitura do intérprete, é 🟡 (`texto-ditado-a-conferir`): «não mostrar X» e «usar: X» ficam iguais.
+
+    Na exp03em1b (b2e7b4a3, 21/10/2026) o PO escreveu «Remover “associando a desmontagem geométrica” e usar: marcou
+    corretamente no checklist os elementos de truncamento de eixo e recorte de escala como vetores de distorção.»; o texto
+    novo estava no one-pager e na spec, e o F12 saiu 🔴 `citou-o-pedido` — a citação do juiz era o texto ditado. Com o
+    intérprete (c8a36d2), o texto vai para `inserir` e prova; sem ele, o F12 fica 🟡 (C2, 25/10/2026)."""
+    citacoes = [c for c in citacoes if (c or "").strip()]
+    if not citacoes:
+        return False
+    item = _norm(texto_item)
+    for c in citacoes:
+        alvo = _norm(c)
+        if (_palavras(c) < MIN_PALAVRAS_LITERAL or alvo not in item or alvo not in corpo
+                or (corpo_anterior and alvo in corpo_anterior)):
+            return False
+    return not _citado_ficou(texto_item, [_norm(c) for c in citacoes], corpo, corpo_anterior)
+
+
+def _citado_ficou(texto_item: str, citacoes_norm: Sequence[str], corpo: str, corpo_anterior: str) -> bool:
+    """Um texto entre aspas do item, que não é a citação, continua no corpo como estava: com a versão anterior, o mesmo
+    número de vezes; sem ela, presente. Delimitador e contagem, sem ler o verbo ao lado das aspas."""
+    for q in _entre_aspas(texto_item) + re.findall(r"«([^»]*)»", texto_item or ""):
+        alvo = _norm(q)
+        if _palavras(q) < 2 or not alvo or any(alvo in c or c in alvo for c in citacoes_norm):
+            continue
+        if corpo_anterior and alvo in corpo_anterior and corpo.count(alvo) >= corpo_anterior.count(alvo):
+            return True
+        if not corpo_anterior and alvo in corpo:
+            return True
+    return False
+
+
+#: Data e hora na origem de um pedido («refazer Produto · produto · 22/10/2026 17:59:11»), gravada pela esteira.
+_RE_QUANDO = re.compile(r"\b(\d{2})/(\d{2})/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?")
+_ORIGEM_CORRENTE = "pedido de correção desta execução"
+
+
+def _quando(origem: str) -> Optional[Tuple[int, ...]]:
+    """A ordem de uma origem no tempo: o briefing antes de todo pedido, o pedido desta execução depois de todos."""
+    if origem == "briefing":
+        return (0,)
+    if (origem or "").startswith(_ORIGEM_CORRENTE):
+        return (9999,)
+    m = _RE_QUANDO.search(origem or "")
+    if not m:
+        return None
+    d, mes, a, h, mi, s = m.groups()
+    return (int(a), int(mes), int(d), int(h or 0), int(mi or 0), int(s or 0))
+
+
+def superado_por(item: Dict[str, str], decisao: Dict[str, Any], itens: List[Dict[str, str]],
+                 provados: set) -> Optional[Tuple[str, List[str]]]:
+    """`(origem, [ids])` do pedido mais novo do PO que prevaleceu sobre o item, ou `None`.
+
+    O juiz rotula `conflito_com_regra` o item que um pedido mais novo do PO contrariou, e diz em `superado_por` (lista
+    de ids do checklist) quais itens do pedido novo o documento segue. Só esse campo vale: a `explicacao` é prosa, e
+    o id que ela cita de passagem («o pedido F1 não trata disso») não diz que o documento segue F1. Cada id apontado
+    tem de ser de um pedido mais novo que o item e ter prova — senão o conflito segue para o PO. Entre dois pedidos vale
+    o mais novo (`pipeline.passagem.notas_de_passagem`), e o briefing é mais velho que todos.
+
+    Na exp01em1b (e3980485, 22/10/2026) o PO inverteu a ordem construção → descoberta, o documento seguiu o pedido, e
+    quatro itens do briefing v4.1 saíram 🔵 `conflito-pedido-regra` no núcleo e no fim de produto, com o juiz explicando
+    que o documento «segue o pedido de refazer mais recente do próprio PO (22/10/2026 17:59:11, F1-F5)». O PO já tinha
+    decidido (C2, 25/10/2026). Até a revisão da C2 o código lia os ids e a data na prosa da explicação; a regra 7 do
+    núcleo com «o pedido F1 não trata disso» virava superado e perdia o 🔵. A resposta gravada antes do campo continua
+    🔵 — quem confirma é o PO."""
+    meu = _quando(item.get("origem") or "")
+    bruto = (decisao or {}).get("superado_por")
+    # só a lista que o prompt pede: «F1 e F2» numa string já é prosa
+    if meu is None or not isinstance(bruto, list):
+        return None
+    apontados = list(dict.fromkeys(str(i).strip() for i in bruto if str(i).strip()))
+    novos = {i["id"]: i["origem"] for i in itens
+             if i["id"] != item["id"] and i["origem"] != "briefing" and (_quando(i["origem"]) or (-1,)) > meu}
+    if not apontados or not all(i in novos and i in provados for i in apontados):
+        return None
+    return novos[apontados[0]], apontados
+
+
+#: O campo que fixa a seção do DS num item do briefing («secao_ds: unoogaleria») — dado estruturado, lido como o
+#: `rastro.secao_travada` lê o briefing.
+_RE_SECAO_NO_ITEM = re.compile(r"`?\bsecao_ds`?\s*[:=]\s*`?([a-z][\w:-]*)", re.IGNORECASE)
+
+
+def _secao_declarada(chave: str, texto: str) -> str:
+    """A seção principal que o documento declara: o `secao_ds` da ficha na spec e no anexo; a «Seção do DS» do
+    cabeçalho nos outros (como o lint de contrato a lê, `tools.contrato_produto`). `""` se não declara."""
+    from tools import rastro
+    from tools.contrato_produto import _RE_SECAO_DO_CABECALHO
+
+    texto = _sem_anexo(texto)
+    if chave in ("spec_missao", "anexo_design_spec"):
+        return re.sub(r"\s*:\s*", ":", (rastro._campo(texto, "secao_ds") or "").strip().strip("`").lower())
+    m = _RE_SECAO_DO_CABECALHO.search(texto[:4000])
+    return m.group(1).lower() if m else ""
+
+
+def secao_travada_conferida(texto_item: str, documentos: Dict[str, str],
+                            itens: Sequence[Dict[str, str]] = ()) -> Optional[Tuple[str, str, str]]:
+    """`(severidade, codigo, texto)` da trava de seção do DS do item, conferida em código — `None` se o item não fixa
+    seção ou nenhum documento declara uma. `severidade` é `"provado"` quando todos os documentos declaram a seção fixada.
+
+    A exp03ef1b (274a2e75, 07/10/2026) tinha no briefing «secao_ds: unoogaleria · É PROIBIDO usar qualquer outro design
+    system ou seção», o one-pager e a spec saíram em `unoochat`, e a fidelidade aprovou com 0 itens: o parser não lia o
+    bloco, e a conferência, quando o lia, era do juiz. A seção é dado estruturado: a mesma régua do lint de contrato e do
+    manifesto (`tools.rastro.achado_secao_travada`), documento a documento, e as extras quando o item proíbe outras
+    seções (C2, 25/10/2026). A seção que um pedido do PO nomeia (`itens` de outra origem) fica em atenção: entre o
+    briefing e o pedido, vale o mais novo, e quem confirma é o PO."""
+    from tools import rastro
+    from tools import secoes as sec
+
+    m = _RE_SECAO_NO_ITEM.search(texto_item or "")
+    briefing = f"secao_ds: {m.group(1)}" if m else (texto_item or "")
+    trava = rastro.secao_travada(briefing)
+    if not trava:
+        return None
+    declaradas = {c: s for c, d in documentos.items() if (s := _secao_declarada(c, d))}
+    if not declaradas:
+        return None
+    problemas, severidades = [], []
+    for chave, secao in declaradas.items():
+        a = rastro.achado_secao_travada(secao, briefing, f"`{chave}`")
+        if a:
+            problemas.append(f"`{chave}` declara `{secao}`")
+            severidades.append(a["severidade"])
+    if sec._RE_PROIBE_OUTRAS.search(texto_item or ""):
+        for chave, doc in documentos.items():
+            a_mais = [e for e in sec.extras(_sem_anexo(doc)) if e not in (trava["secao"], sec.SECAO_DA_PLATAFORMA)]
+            if a_mais:
+                problemas.append(f"`{chave}` declara as extras {', '.join(f'`{e}`' for e in a_mais)}")
+                severidades.append("bloqueio")
+    if not problemas:
+        return "provado", "", f"seção do DS declarada em {', '.join(f'`{c}`' for c in declaradas)}: `{trava['secao']}`"
+    pedidas = {s for s in declaradas.values() if any(
+        i.get("origem") != "briefing" and re.search(rf"\b{re.escape(s)}\b", _norm(i.get("texto") or ""))
+        for i in itens)}
+    severidade = "bloqueio" if "bloqueio" in severidades and not pedidas else "atencao"
+    texto = (f"O briefing fixa a seção do DS (“{trava['trecho']}”), e {'; '.join(problemas)}. Seção fixada pelo briefing "
+             f"é trava: a missão monta na `{trava['secao']}`, e a interação que ela não oferece é sinalizada — não troca "
+             "de seção. Se a trava inviabiliza a mecânica, quem decide é o PO.")
+    if pedidas:
+        texto += (f" Um pedido do PO nomeia {', '.join(f'`{s}`' for s in sorted(pedidas))}: se ele mandou trocar, vale o "
+                  "pedido mais novo — confirme com o PO.")
+    elif not trava["explicita"]:
+        texto += " (Seção lida pelo nome da interface; se o PO quis outra, o briefing diz `secao_ds: <seção>`.)"
+    return severidade, "briefing-violado", texto
+
+
+#: O que, no documento parcial (o núcleo), é falta de prova e não contradição: sai do escopo e fica para o fim de
+#: produto, que confere núcleo, one-pager e spec juntos.
+SEM_PROVA_NO_RECORTE = frozenset({"nao-tratado", "sem-prova", "citou-o-pedido", "exigencia-dispensada",
+                                  "preservacao-sem-prova", "preservacao-sem-citacao", "texto-ditado-a-conferir",
+                                  "superado-em-parte"})
+
+
 def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, str],
             etapa: str = "produto", parcial: bool = False,
             anteriores: Optional[Dict[str, str]] = None,
@@ -649,11 +857,20 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
     achados: List[Dict[str, str]] = []
     conferidos: List[Dict[str, str]] = []
     ordens_antigas: set = set()
+    fora_do_recorte: List[Dict[str, str]] = []
 
     def achado(item: Dict[str, str], severidade: str, codigo: str, resumo: str) -> None:
         # `parcial`: o documento é só um pedaço do que o pedido cobre (o núcleo, seções 0/1/3/4). Falta de prova ali é
         # esperada para o item de outra seção — só a contradição explícita bloqueia; a prova completa é cobrada no fim
         # de produto. A exp06ef1b (08/10/2026) saía 🔴 no núcleo por «painel docente na Seção 9», com o fim 🟢 25/25.
+        if parcial and codigo in SEM_PROVA_NO_RECORTE:
+            # A falta de prova no núcleo nem é achado: o item que mora no one-pager ou na spec sai do escopo e é
+            # conferido no fim de produto (A060), que lê os três documentos. Rebaixado a 🟡, ele pintava o núcleo de
+            # amarelo e voltava ao autor: 41 de 41 `nao-tratado` do núcleo de outubro eram falsos positivos — o mesmo
+            # item estava ✅ no fim de produto da mesma execução, e o juiz escrevia que ele «pertence ao one-pager/spec»
+            # (e89e91b3, b2e7b4a3, 317df247, 53e011b6; C2, 25/10/2026). A contradição explícita continua aqui.
+            fora_do_recorte.append({"id": item["id"], "texto": item["texto"][:240], "codigo": codigo})
+            return
         if parcial and severidade == "bloqueio" and codigo not in ("pedido-violado", "frase-do-po-alterada"):
             severidade = "atencao"
         if item["id"] in ordens_antigas and severidade == "bloqueio":
@@ -676,6 +893,14 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
                        f"O briefing traz a frase entre aspas e ela não está, letra por letra, em nenhum documento: «{trecho}». "
                        "Se a missão a reescreveu de propósito, registre `[PROPOSTA — validar com PO: …]`.")
             continue
+        if not do_po and it["tipo"] == "trava":
+            secao = secao_travada_conferida(it["texto"], documentos, itens)
+            if secao and secao[0] == "provado":
+                conferidos.append({"id": it["id"], "texto": trecho, "prova": secao[2]})
+                continue
+            if secao:
+                achado(it, secao[0], secao[1], secao[2])
+                continue
         d = decisoes.get(it["id"])
         veredito = str((d or {}).get("veredito") or "").strip().lower()
         citacao = str((d or {}).get("citacao") or "")
@@ -698,6 +923,11 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
                 conferidos.append({"id": it["id"], "texto": trecho, "prova": (
                     f"correção pontual: {', '.join(provados)} = versão anterior + {len(edicoes)} troca(s) do pedido, "
                     "nada além")})
+                continue
+            if preservacao_generica(it["texto"]) and veredito != "violado":
+                conferidos.append({"id": it["id"], "texto": trecho, "prova": (
+                    "(ordem genérica de não mexer — a regra de toda reexecução: o que o pedido não cita fica como estava, "
+                    "conferido pelos gates de preservação)")})
                 continue
             if origens_correntes is not None and it["origem"] not in origens_correntes:
                 ordens_antigas.add(it["id"])
@@ -736,6 +966,12 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
                     and not any(_norm(c) in _norm(it["texto"]) for c in citadas):
                 # primeira execução, sem versão anterior: o trecho no documento é a prova possível
                 conferidos.append({"id": it["id"], "texto": trecho, "prova": citacao[:240] or varias[0][:240]})
+                continue
+            if veredito == "atendido" and _ditado_no_corpo(citadas, it["texto"], corpo, corpo_anterior):
+                # o «não altera» era do texto que o PO ditou para a régua («Não atingiu: Não altera os parâmetros padrão
+                # de escala…», exp03em1b, b2e7b4a3, 21/10/2026): o texto entrou no documento, e a ordem é essa
+                conferidos.append({"id": it["id"], "texto": trecho, "prova": (
+                    "texto ditado pelo PO no documento: " + " · ".join(c[:120] for c in citadas))[:400]})
                 continue
             if veredito == "violado":
                 achado(it, "bloqueio", "pedido-violado" if do_po else "briefing-violado",
@@ -804,7 +1040,7 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
             prova = (f"texto ditado no documento: {' · '.join(s[:120] for s in inserir)}" if inserir
                      else f"texto retirado do documento: {' · '.join(r[:120] for r in remover)}")
             conferidos.append({"id": it["id"], "texto": trecho, "prova": prova[:400]})
-        elif veredito == "contexto" and (not _RE_ACAO.search(it["texto"]) or _RE_REMETE_A_LISTA.search(it["texto"])):
+        elif veredito == "contexto" and (not exige_acao(it["texto"]) or _RE_REMETE_A_LISTA.search(it["texto"])):
             # título ou contexto do pedido, sem verbo de ação: não há o que provar
             conferidos.append({"id": it["id"], "texto": trecho, "prova": "(contexto do pedido, sem exigência)"})
         elif veredito == "contexto":
@@ -816,6 +1052,18 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         elif veredito == "violado":
             achado(it, "bloqueio", "pedido-violado" if do_po else "briefing-violado",
                    f"O documento contraria {'o pedido do PO' if do_po else 'o briefing'}: «{trecho}». {explicacao}")
+        # O juiz citou o pedido, e o texto é o que o PO escreveu, novo no corpo (`_ditado_no_corpo`), sem a leitura do
+        # intérprete. A comparação é literal e não lê o verbo: «usar: X» e «não mostrar X» ficam iguais, e X novo no
+        # corpo pode ser o pedido cumprido ou o contrário dele. Fica 🟡, com a dúvida dita; com a leitura, a prova é a
+        # do `texto_lido_prova` (o texto em `inserir`). Na revisão da C2 (25/10/2026) «Na tela de abertura, não mostrar
+        # a frase …», com a frase nova no one-pager, saía ✅ «texto ditado pelo PO»; na main era 🔴 `citou-o-pedido`.
+        elif (veredito == "atendido" and not lido
+              and _ditado_no_corpo(ditadas := [citacao] if citacao.strip() else varias, it["texto"], corpo,
+                                   corpo_anterior)):
+            achado(it, "atencao", "texto-ditado-a-conferir",
+                   f"O juiz citou o próprio pedido, e o texto citado é o que o PO escreveu e entrou no documento (não "
+                   f"estava na versão anterior): «{ditadas[0][:160]}». Sem a leitura do intérprete, o código não sabe se "
+                   f"o pedido manda pôr ou tirar esse texto — confira: «{trecho}».")
         elif veredito == "atendido" and len(_norm(citacao)) >= MIN_CITACAO and _norm(citacao) in _norm(it["texto"]):
             achado(it, "bloqueio" if do_po else "atencao", "citou-o-pedido",
                    f"O juiz diz que atende, mas citou o próprio pedido em vez do documento: «{trecho}».")
@@ -825,6 +1073,31 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         else:
             achado(it, "bloqueio" if do_po else "atencao", "nao-tratado" if veredito else "nao-julgado",
                    f"{'Pedido do PO' if do_po else 'Elemento do briefing'} sem prova de que foi aplicado: «{trecho}». {explicacao}")
+    # O item que um pedido mais novo do PO contrariou não é conflito com regra da esteira: o PO já decidiu
+    # (`superado_por`). Depois do laço, para saber quais itens do pedido novo têm prova.
+    provados = {c["id"] for c in conferidos}
+    for it in itens:
+        meus = [a for a in achados if a["id"] == it["id"] and a["codigo"] == "conflito-pedido-regra"]
+        if not meus:
+            continue
+        superado = superado_por(it, decisoes.get(it["id"]) or {}, itens, provados)
+        if not superado:
+            continue
+        achados = [a for a in achados if a not in meus]
+        if _RE_PRESERVACAO.search(it["texto"]):
+            # A ordem de não mexer lista várias coisas, e o pedido novo contraria uma: o resto continua valendo e não
+            # tem prova aqui. Na exp01em1b (e89e91b3, 21/10/2026) «Manter integralmente: o nome da missão, o slug, o
+            # ambiente…, Canal A e Canal B…» foi superada no Canal B pelo pedido de 21/10 09:44:36 — AMBÍGUO no
+            # levantamento (revisão da C2, 25/10/2026).
+            achado(it, "atencao", "superado-em-parte", (
+                f"Um pedido mais novo do PO ({superado[0][:80]}; {', '.join(superado[1])}, com prova) contraria esta "
+                f"ordem de não mexer, e o documento o segue. O que o pedido novo não contrariou continua valendo e não "
+                f"tem prova aqui — confira: «{it['texto'][:240]}». "
+                f"{str((decisoes.get(it['id']) or {}).get('explicacao') or '').strip()}").strip())
+            continue
+        conferidos.append({"id": it["id"], "texto": it["texto"][:240], "prova": (
+            f"superado pelo pedido mais novo do PO ({superado[0][:80]}), que o documento segue: "
+            f"{', '.join(superado[1])} com prova")})
     # O cabeçalho que só anuncia os itens seguintes («Corrigir os critérios das seguintes habilidades.») não tem trecho
     # próprio no documento: vale pela prova dos itens do mesmo pedido, quando todos a têm.
     provados = {c["id"] for c in conferidos}
@@ -845,7 +1118,7 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         status = "bloqueado"
     else:
         status = "amarelo" if achados else "aprovado"
-    return {"status": status, "achados": achados, "conferidos": conferidos}
+    return {"status": status, "achados": achados, "conferidos": conferidos, "fora_do_recorte": fora_do_recorte}
 
 
 def aplicados_a_montante(pedidos: Sequence[Tuple[str, ...]]) -> List[Dict[str, str]]:
@@ -893,6 +1166,13 @@ def relatorio(resultado: Dict[str, Any], itens: List[Dict[str, str]], missao: st
     if resultado["conferidos"]:
         linhas += ["## Conferido", ""]
         linhas += [f"- ✅ **{c['id']}** — {c['texto'][:140]} → «{c['prova'][:160]}»" for c in resultado["conferidos"]]
+        linhas.append("")
+    if resultado.get("fora_do_recorte"):
+        # o núcleo é só parte do que o pedido cobre: o que ele não prova é conferido no fim de produto (C2, 25/10/2026)
+        linhas += ["## Fora do recorte deste documento — conferido no fim de produto", "",
+                   "O núcleo é só parte do que o pedido cobre: o item sem prova aqui não é achado. O fim de produto "
+                   "confere núcleo, one-pager e spec juntos.", ""]
+        linhas += [f"- ⏭️ **{f['id']}** — {f['texto'][:140]}" for f in resultado["fora_do_recorte"]]
         linhas.append("")
     env = {"agente": "fidelidade-check", "missao": missao, "status": resultado["status"],
            "achados": resultado["achados"],

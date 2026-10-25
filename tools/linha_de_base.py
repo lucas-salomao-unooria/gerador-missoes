@@ -29,6 +29,7 @@ cada achado bloqueante de cada gate é classificado contra o veredito do mesmo g
 from __future__ import annotations
 
 import difflib
+import json
 import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -198,6 +199,35 @@ def aplicar(estado: Dict[str, Any], base: Dict[str, Dict[str, Any]], edicoes: It
         delta[f"{k}_envelope"] = novo
     delta.update(_degradacoes_sem_gate_vivo(estado, delta, chaves_status))
     return delta, linhas
+
+
+#: O veredito do cabeçalho de um relatório de gate: «**Veredito: 🔴** · 55 item(ns)…», «**Veredito: 🔴 CONTRADIZ…**».
+_RE_VEREDITO_VERMELHO = re.compile(r"(Veredito:\s*\**\s*)🔴")
+
+
+def relatorio_rebaixado(relatorio: str, envelope: Dict[str, Any], ids: Iterable[str]) -> str:
+    """O relatório com o texto de acordo com o veredito rebaixado: cabeçalho 🟡, a marca de cada achado rebaixado 🟡
+    (`🔴 **F21**` → `🟡 **F21**`) e o envelope JSON do fim igual ao do estado.
+
+    Até 25/10/2026 a linha de base só acrescentava a nota no fim: o `fidelidade_status` ficava 🟡 e o relatório que o PO
+    abria começava por «**Veredito: 🔴**», com o envelope ainda «bloqueado» (exp02em1b, 60cfa7f4, 23/10; exp01em1b,
+    e89e91b3) — o texto contradizia o status (C2)."""
+    texto = _RE_VEREDITO_VERMELHO.sub(r"\1🟡", relatorio or "", count=1)
+    for i in ids:
+        if i:
+            texto = texto.replace(f"🔴 **{i}**", f"🟡 **{i}**")
+    blocos = list(re.finditer(r"```json\s*(.*?)```", texto, re.S))
+    if blocos:
+        try:
+            dados = json.loads(blocos[-1].group(1))
+        except json.JSONDecodeError:
+            dados = None
+        if isinstance(dados, dict) and "status" in dados:
+            ultimo = blocos[-1]
+            novo = {**dados, **{k: envelope[k] for k in ("status", "achados", "veredito_original") if k in envelope}}
+            texto = (texto[:ultimo.start()] + "```json\n" + json.dumps(novo, ensure_ascii=False, indent=1) + "\n```"
+                     + texto[ultimo.end():])
+    return texto
 
 
 def _degradacoes_sem_gate_vivo(estado: Dict[str, Any], delta: Dict[str, Any],

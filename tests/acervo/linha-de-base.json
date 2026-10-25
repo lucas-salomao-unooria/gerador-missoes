@@ -531,15 +531,13 @@
     "fidelidade_status": {
       "status": "bloqueado",
       "codigos": [
-        "nao-julgado",
-        "preservacao-sem-prova"
+        "nao-julgado"
       ]
     },
     "fidelidade_nucleo_status": {
       "status": "bloqueado",
       "codigos": [
-        "nao-julgado",
-        "preservacao-sem-prova"
+        "nao-julgado"
       ]
     }
   },
@@ -899,7 +897,6 @@
     "fidelidade_design_status": {
       "status": "bloqueado",
       "codigos": [
-        "exigencia-dispensada",
         "pedido-violado",
         "remocao-a-conferir"
       ]
@@ -1046,7 +1043,6 @@
     "fidelidade_design_status": {
       "status": "bloqueado",
       "codigos": [
-        "exigencia-dispensada",
         "sem-prova"
       ]
     }
@@ -1398,9 +1394,9 @@
     "fidelidade_status": {
       "status": "bloqueado",
       "codigos": [
-        "citou-o-pedido",
         "nao-julgado",
-        "sem-prova"
+        "sem-prova",
+        "texto-ditado-a-conferir"
       ]
     },
     "fidelidade_nucleo_status": {
@@ -1839,7 +1835,8 @@
       "codigos": [
         "citou-o-pedido",
         "nao-tratado",
-        "preservacao-sem-citacao"
+        "preservacao-sem-citacao",
+        "texto-ditado-a-conferir"
       ]
     },
     "fidelidade_design_status": {
@@ -2027,7 +2024,8 @@
       "codigos": [
         "citou-o-pedido",
         "nao-tratado",
-        "preservacao-sem-citacao"
+        "preservacao-sem-citacao",
+        "texto-ditado-a-conferir"
       ]
     },
     "fidelidade_design_status": {

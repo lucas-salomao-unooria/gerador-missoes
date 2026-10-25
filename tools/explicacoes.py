@@ -229,6 +229,18 @@ CATALOGO: Dict[str, Explicacao] = {
         "O one-pager segue sem esses ajustes, e a esteira não pode decidir sozinha se eles fazem falta.",
         "Leia o ajuste abaixo. Use **Refazer** de produto pedindo o ajuste, ou dê o de acordo registrando que ele "
         "fica de fora.", PO),
+    "texto-ditado-a-conferir": _x(
+        "Texto do PO apareceu no documento — confira se era para pôr ou para tirar",
+        "O texto que o PO escreveu no pedido está agora no documento, mas a esteira não sabe se o pedido mandava "
+        "colocar esse texto ou tirá-lo.",
+        "Se o pedido era para tirar, o documento fez o contrário do que o PO pediu.",
+        "Leia o pedido e o trecho abaixo. Se era para tirar, use **Refazer** repetindo o pedido.", PO),
+    "superado-em-parte": _x(
+        "Pedido antigo trocado por um mais novo — confira o resto dele",
+        "Um pedido mais novo do PO substituiu parte de um pedido antigo, e o antigo também pedia para manter algo "
+        "como estava.",
+        "A parte que o pedido novo não tocou pode ter mudado sem ninguém perceber.",
+        "Confira no documento se o que o pedido antigo mandava manter continua igual.", PO),
     "preservacao-sem-prova": _x(
         "Pedido de «não mexer» sem como conferir",
         "O PO pediu para manter algo como estava, e nenhum verificador consegue provar que ficou igual.",

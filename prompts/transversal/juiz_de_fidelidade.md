@@ -24,6 +24,7 @@ Para cada item, um veredito:
   abertas — exp06ef1b"). Sem citação. **O código recusa `contexto` em frase com verbo de ação** (remover, adicionar,
   trocar, explicitar, manter, não alterar…): essa é exigência, e dispensá-la vira bloqueio.
 - `conflito_com_regra` — o documento deixou de atender porque segue uma **regra da própria esteira** que contradiz o item (exemplo: o briefing pede "o aluno confirma ou muda sua escolha" e o documento impõe decisão irreversível porque a regra do núcleo exige trava). Diga em `explicacao` qual regra e qual trecho. Quem decide é o PO, não você nem o autor.
+  Se o que o documento segue é um **pedido mais novo do PO** que contraria o item (o briefing diz uma coisa, o refazer de depois diz outra), o veredito também é `conflito_com_regra`, e o campo `superado_por` lista os ids dos itens do pedido novo que o documento segue (`"superado_por": ["F2", "F5"]`): o código confere que eles são mais novos e têm prova, e aí o item vale como superado — entre dois pedidos, vale o mais novo. Só o campo conta: id citado na `explicacao` não vale. Conflito com regra da esteira, sem pedido mais novo do PO, vai sem `superado_por`.
 
 Regras de leitura:
 
@@ -47,7 +48,8 @@ Uma linha de resumo e, no fim, **um único** bloco:
 {"decisoes": [
   {"id": "F1", "veredito": "atendido", "citacao": "<trecho literal do documento>", "explicacao": ""},
   {"id": "F2", "veredito": "violado", "citacao": "<trecho literal do documento que contraria>", "explicacao": "<o que o documento faz em vez do pedido>"},
-  {"id": "F3", "veredito": "atendido", "citacoes": ["<trecho do documento do 1º elemento>", "<trecho do 2º>"], "explicacao": ""}
+  {"id": "F3", "veredito": "atendido", "citacoes": ["<trecho do documento do 1º elemento>", "<trecho do 2º>"], "explicacao": ""},
+  {"id": "F9", "veredito": "conflito_com_regra", "citacao": "", "superado_por": ["F2", "F5"], "explicacao": "<o que o pedido novo mandou e o documento seguiu>"}
 ]}
 ```
 
