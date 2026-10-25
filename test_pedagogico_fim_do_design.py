@@ -1060,3 +1060,36 @@ def test_base_do_pedagogico_na_cascata_e_no_iniciar_depois_de_produto(monkeypatc
     monkeypatch.setattr(rx, "base_do_pedagogico_vencida", lambda e: False)
     produto = rx.preparar_estado_pontual(estado, "produto", "Trocar um número.", {}, troca)[0]
     assert "one_pager_pedagogico" in edicao_pontual.documentos_da_etapa(produto, "design", versao_anterior=True)
+
+
+def _a121(estado):
+    from agents.checkers import RastroCheckAgent
+
+    gate = RastroCheckAgent(name="A121", modo="aprovado_pedagogico", rotulo="Pedagógico × one-pager aprovado",
+                            report_key="conteudo_aprovado_pedagogico_report",
+                            status_key="conteudo_aprovado_pedagogico_status", agente="conteudo-aprovado", estrito=False)
+    final = _rodar_sync([gate], estado)
+    return final["conteudo_aprovado_pedagogico_status"], [
+        a["codigo"] for a in (final.get("conteudo_aprovado_pedagogico_status_envelope") or {}).get("achados") or []]
+
+
+def test_subtitulo_do_roteiro_nao_atribui_decisao_ao_po(monkeypatch):
+    """3ª revisão do PR #79 (24/10/2026), p11: o subtítulo da esteira «As perguntas da conversa, como o PO aprovou (§9)»
+    era lido pelo A121 (`tools.decisoes.achados`) como decisão atribuída ao PO: 🟡 na exp02em1b e na exp01em1b, ⛔ sem
+    parecer humano — e o redator não podia tirá-lo. Mutantes: a frase de volta, com e sem o A121 olhar os subtítulos."""
+    sem_parecer = ("pedidos_do_po", "notas_de_passagem", "pedido_correcao", "one_pager_po")
+    for nome in ("exp02em1b-60cfa7f4", "exp01em1b-76d9af6e"):
+        estado = {k: v for k, v in _estado(nome).items() if k not in sem_parecer}
+        doc = pg.montar(_NARRATIVA_MINIMA, estado)
+        assert any("roteiro" in t for t in pg.blocos_presentes(doc)) and "o PO aprovou" not in doc
+        assert _a121({**estado, "one_pager_pedagogico": doc}) == ("aprovado", [])
+        # a narrativa que atribui ao PO continua conferida: só os subtítulos da esteira saem
+        dito = _na_secao(doc, "Em uma frase", "A conversa final, como o PO aprovou, fecha a descoberta.")
+        assert _a121({**estado, "one_pager_pedagogico": dito}) == ("bloqueado", ["decisao-atribuida-ao-po"])
+        # mutante 1: a frase de volta no subtítulo — o A121 não a lê, porque o subtítulo é da esteira
+        velho = doc.replace("como o one-pager aprovado as traz (§9)", "como o PO aprovou (§9)")
+        assert velho != doc and _a121({**estado, "one_pager_pedagogico": velho}) == ("aprovado", [])
+        # mutante 2: e com o A121 lendo os subtítulos, ⛔ como na revisão
+        with monkeypatch.context() as m:
+            m.setattr(pg, "sem_blocos", lambda texto: texto)
+            assert _a121({**estado, "one_pager_pedagogico": velho}) == ("bloqueado", ["decisao-atribuida-ao-po"])

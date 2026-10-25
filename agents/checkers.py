@@ -2170,8 +2170,16 @@ class RastroCheckAgent(BaseAgent):
 
             chave = {"aprovado_spec": self.spec_key, "aprovado_prd": "prd_final",
                      "aprovado_resumido": "one_pager_resumido"}.get(self.modo, "one_pager_pedagogico")
+            texto_decisoes = str(state.get(chave, "") or "")
+            if self.modo == "aprovado_pedagogico":
+                # os subtítulos «Do one-pager aprovado» são da esteira, copiados por código: não atribuem decisão a
+                # ninguém (o do roteiro dizia «como o PO aprovou», e o A121 ficava 🟡, ou ⛔ sem parecer humano — 3ª
+                # revisão do PR #79, 24/10/2026)
+                from tools.pedagogico import sem_blocos
+
+                texto_decisoes = sem_blocos(texto_decisoes)
             resultado = dec.com_achados(resultado, dec.achados(
-                str(state.get(chave, "") or ""), f"A {documento}" if documento == "spec" else f"O {documento}",
+                texto_decisoes, f"A {documento}" if documento == "spec" else f"O {documento}",
                 dec.ha_registro_do_po(dict(state)),
                 # o pedagógico fecha o design desde o PR 10 (24/10/2026)
                 etapa={"aprovado_spec": "produto", "aprovado_resumido": "produto",

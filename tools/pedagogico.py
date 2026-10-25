@@ -305,8 +305,10 @@ def blocos_do_contrato(state: Dict[str, Any]) -> List[Tuple[str, str, str, str]]
 
     roteiro = [t for t in tcs if t.tipo == tk.ROTEIRO]
     if roteiro:
-        corpos["roteiro"] = (["As perguntas da conversa, como o PO aprovou (§9), para ler em voz alta no momento em que o "
-                              "one-pager as põe:", ""]
+        # «como o PO aprovou» era lido pelo A121 (`tools.decisoes.achados`) como decisão atribuída ao PO: 🟡, e ⛔ sem
+        # parecer humano (exp02em1b e exp01em1b; 3ª revisão do PR #79, 24/10/2026)
+        corpos["roteiro"] = (["As perguntas da conversa, como o one-pager aprovado as traz (§9), para ler em voz alta no "
+                              "momento em que o one-pager as põe:", ""]
                              + [f"{n}. «{t.texto}» ({t.id})" for n, t in enumerate(roteiro, 1)])
 
     return [(nome, alvo, f"{PREFIXO_BLOCO} {sufixo}", "\n".join(corpos[nome]).strip())
