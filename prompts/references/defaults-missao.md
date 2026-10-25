@@ -91,7 +91,7 @@ Cada padrão diz de onde saiu. Padrão sem fonte não entra — vira candidato e
 |---|---|---|
 | `teto-por-ato` | Ato dentro do teto da faixa em `literatura-cognitiva.md` §3 (1º–2º: 6–8 min · 3º–5º: 8–10 · 6º–9º: 10–12 · EM: 12–15), e missão inteira ≤ 25 min de tempo-aluno em aula de 50. Sem estimativa na spec, a completude de produto usa o teto da faixa como **máximo** e marca amarelo. Os valores antigos (12/15/20) foram revogados na revisão de setembro de 2026 da fonte. | critério 6.2 · `literatura-cognitiva.md` §3 |
 | `piso-conta-consumo-e-negociacao` | A estimativa inclui consumo de conteúdo, navegação e negociação em grupo — não só a decisão. | critério 6.2 (piso) |
-| `fase-de-minijogo` | Mini-jogo: fase ≤ ~90 s em 1º–2º, ≤ ~180 s em 3º–5º. | d9 (adequação por faixa) |
+| `fase-de-minijogo` | Mini-jogo: fase ≤ ~90 s em 1º–2º, ≤ ~180 s em 3º–5º. | produto (adequação por faixa em `ambiente-e-minijogo.md`; era do d9 até o PR 8) |
 
 ## Tetos de referência (não são padrões — são a régua que a completude e o D0 não podem ultrapassar)
 

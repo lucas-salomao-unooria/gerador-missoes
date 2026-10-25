@@ -51,14 +51,14 @@ Cada texto-chave entra no sheet **palavra por palavra**, numa linha que cita o I
 
 Rótulo nativo do ambiente é reproduzido **caractere a caractere**, nunca reescrito: `COMPARTILHAR` não vira `Compartilhar`. O padrão de conteúdo do ambiente é o schema mínimo dos seus prompts de geração — não invente campo que o ambiente não tem.
 
-**Se a classe do ambiente for mini-jogo**, a seção 5 da jornada traz as regras e as fases, e cada uma vira string com chave:
+**Se a classe do ambiente for mini-jogo**, a seção 5 da jornada traz as regras e as fases — copiadas da spec, que é onde produto as decide desde 24/10/2026 —, e cada uma vira string com chave:
 
 - **A seção é `unooria` em todas as strings do jogo.** Mini-jogo não é clone: não existe plataforma simulada para falar, então o registro "plataforma simulada" não se aplica e sobram dois — personagem-guia e Unooria. O personagem-guia continua com a voz dele (curiosidade genuína, pergunta de verdade), mas a seção dele aqui é `unooria`, porque não há clone a que pertencer.
 - `jogo.regra.<n>` para as invariantes, `f<n>.regra` para a regra da fase. Em 1º–2º ano, **esse texto é o que o áudio fala** — a criança não o lê sozinha, então escreva para ser ouvido: uma ideia, voz ativa, sem subordinada.
 - Estados do jogo têm string própria e ficam **na voz da ficção**, nunca na da plataforma: `f<n>.vencida`, `f<n>.perdida`, `jogo.mapa`, `jogo.fim`.
 - **Perder não repreende.** A string de fase perdida diz o que fazer agora, não o que a criança fez de errado. Nada de "você errou", "tente ser mais rápido", "quase lá".
 - **Nada comparativo, nada cronometrado, nada que ordene.** Sem "melhor tempo", sem "você foi o mais rápido", sem posição. Isso é 🔴 por 8.5 e aparece primeiro na copy, antes de aparecer na tela.
-- Você **não nomeia fase que a jornada não criou** nem inventa regra. Fase sem string é lacuna com dono `jornada`.
+- Você **não nomeia fase que a spec não tem** nem inventa regra: a regra da fase é o texto da spec. Fase sem string é lacuna com dono `jornada`; regra ou fase nova é proposta ao PO, não string.
 
 ## Calibragem por faixa (pisos de segurança ancorados na BNCC de Língua Portuguesa)
 

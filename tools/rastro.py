@@ -908,7 +908,8 @@ def _legada_fixada_pelo_po(secao: str, briefing: str, one_pager_po: str) -> bool
     return bool(re.search(rf"secao_ds\W{{0,4}}{re.escape(secao)}\b", briefing or "", re.IGNORECASE))
 
 
-def validar_manifesto(spec: str, briefing: str = "", one_pager_po: str = "") -> Dict[str, Any]:
+def validar_manifesto(spec: str, briefing: str = "", one_pager_po: str = "", one_pager: str = "",
+                      decisoes_do_po: Optional[List[Any]] = None) -> Dict[str, Any]:
     from tools.bncc import secao_bloco  # bloco 0 da spec, mesmo parser
 
     texto = secao_bloco(spec or "", 0) or (spec or "")[:4000]
@@ -1041,7 +1042,9 @@ def validar_manifesto(spec: str, briefing: str = "", one_pager_po: str = "") -> 
     v = _campo(texto, "secao_ds"); campos["secao_ds"] = v
     secoes = secoes_ds()
     if not v or not (v.lower() in secoes or re.match(r"^(nova|minijogo)\s*:\s*\S+", v, re.IGNORECASE)):
-        falta("secao_ds", f"`secao_ds` ausente ou fora de {sorted(secoes)} / `nova:<nome>` / `minijogo:<nome>` (lido: {v!r}). Dono: design (D9 ambiente-simulado) quando a spec cala; produto quando a spec errou.", etapa="design")
+        # Desde o PR 8 (24/10/2026, decisão D8) a classe e o ambiente são decididos em produto: a spec que cala não é mais
+        # do D9, que não cria ambiente — ele devolve a produto. Até aqui a mensagem dava o dono ao design.
+        falta("secao_ds", f"`secao_ds` ausente ou fora de {sorted(secoes)} / `nova:<nome>` / `minijogo:<nome>` (lido: {v!r}). Dono: produto — a classe (app clonado | mini-jogo) e o ambiente são decididos em produto (`ambiente-e-minijogo.md`), e o D9 não os decide.")
     elif v.lower() in SECOES_LEGADAS and _legada_fixada_pelo_po(v.lower(), briefing, one_pager_po):
         # O PO escolheu a legada — no one-pager que anexou ou no briefing. A decisão é dele (a mensagem sempre disse
         # isso, e o código bloqueava assim mesmo): a exp06ef1b, missão já publicada em `instanooria`, era empurrada
@@ -1071,6 +1074,18 @@ def validar_manifesto(spec: str, briefing: str = "", one_pager_po: str = "") -> 
     trava = achado_secao_travada(v or "", briefing, "a spec", secoes)
     if trava:
         achados.append({"severidade": trava["severidade"], "campo": "secao_ds", "etapa": "produto", "resumo": trava["resumo"]})
+    # PR 8 (decisão D8): a classe do ambiente coerente com a seção, o mini-jogo só no 1º–5º e com as regras e as fases na
+    # spec, e o ambiente novo ou o mini-jogo como escolha do PO — nunca decidido em silêncio. A escolha do PO só quando a
+    # seção nova não repete uma coleção do DS e o briefing não fixa outra com `secao_ds:` (aí o bloqueio é o de cima, mais
+    # preciso; a trava lida pelo nome da interface só avisa, e a escolha continua cobrada): a regra é
+    # `ambiente.escolha_a_conferir`, a mesma do de acordo e do D9
+    from tools import ambiente as amb
+
+    serie_do_manifesto = (series or [None])[0] if series else (id_decomposto or {}).get("serie")
+    for a in amb.conferir_spec(spec or "", serie=serie_do_manifesto, briefing=briefing, one_pager=one_pager,
+                               one_pager_po=one_pager_po, decisoes_do_po=decisoes_do_po):
+        achados.append(a)
+    campos["classe_ambiente"] = amb.classe_e_ambiente(spec or "")["classe"]
     # Várias seções do DS (15/10/2026): `secao_ds` é a principal; as extras, o mapa e as transições vêm do bloco 0 e
     # do bloco 14 — por isso a spec inteira, não só o bloco 0.
     from tools import secoes as sec

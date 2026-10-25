@@ -123,21 +123,21 @@ O D0-UX, no design (desde 24/10/2026 só UI/UX; o que é de produto fecha em pro
 
 ## ambiente-simulado
 
-Dormente conta só as três primeiras linhas; o resto é para quando decidiu.
+Sem poder de produto desde 24/10/2026 (PR 8, decisão D8): a classe e o ambiente vêm do bloco 0 da spec, e as regras e as fases do mini-jogo, do bloco 2. As linhas marcadas **(código)** são conferidas pelo split do D9, que bloqueia.
 
 | Conta | Zero significa |
 |---|---|
 | Verbo do bloco 4 sem rótulo literal e componente do DS na ficha | Ficha incompleta — D2 e D4 vão inventar |
-| Spec de produto ou bloco 13 do anexo alterado | Regenerar do original apaga o D0; o texto de produto é do PO |
+| Texto escrito na spec de produto (blocos 0–12, glossário, bloco 15) **(código)** | O texto de produto é do PO |
+| Texto escrito no bloco 13 do anexo (descartado com atenção 🟡 pelo código, sem bloquear) | O bloco 13 é do D0 |
+| Ambiente ou classe no bloco 14 diferente do bloco 0 da spec **(código)** | Decidir o ambiente é de produto: o que não cabe volta como devolução |
+| Regra ou fase de jogo no bloco 14, ou numa seção `## ` nova fora dele — quantas fases, a regra de cada uma, como vence, como perde, como o progresso aparece **(código)** | É conteúdo de produto, no bloco 2 |
+| Spec calada sobre o ambiente, ou ambiente que não comporta os verbos, sem devolução no Passo 3 e no envelope | O D9 não cria: devolve a produto |
 | Decisões, telas ou dados coletados diferentes de antes do bloco 14 | O cap é do produto |
-| Ambiente novo sem a Passada 1 mostrando em qual critério **cada** um dos cinco falhou | Falha só em (3) ou (4) não justifica criar |
-| Missão de 1º–5º sem a tabela da Passada 1b preenchida (mesmo com resposta "não") | O próximo agente precisa saber que foi considerado |
-| Mini-jogo com uma das quatro condições da 1b falhando | Uma só que falhe e a classe é app clonado |
 | Token, cor ou fonte fora do DS na seção do ambiente | A marca é forma e chrome, não paleta |
 | Componente local novo sem busca no DS registrada e sem marca de candidato | `aprendizado` decide se sobe |
 | Nome do ambiente ou texto lido por pessoa em inglês | Identificadores de contrato ficam; o resto traduz |
-| Mini-jogo: fase desenhada pelo D9 (quantas, ordem, regra) | Fases são da jornada |
-| Mini-jogo: placar entre estudantes, tempo como nota, vida que expulsa, poder permanente | 🔴 por 8.5 e PED-07 |
+| Mini-jogo: placar entre estudantes, tempo como nota, vida que expulsa, poder permanente na casca de UI | 🔴 por 8.5 e PED-07 |
 | Mini-jogo: nome, personagem, som, ícone ou forma de jogo comercial | A referência é a gramática, nunca a marca |
 
 ## Regra de manutenção
