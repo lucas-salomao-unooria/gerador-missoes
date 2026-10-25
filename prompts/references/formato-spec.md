@@ -14,8 +14,8 @@ Emitida pelo agente 1 junto com o veredito 🟢. É a **fonte da verdade da cons
 **Ano/faixa · Ambiente · Rubrica vX.X · Gate 0 aprovado em <data>**
 
 ## 0. Identificação de plataforma
-Nome que o estudante vê · software clonado · por que este viewport · o que a
-seção do DS já traz.
+Nome que o estudante vê · software clonado · classe do ambiente (app clonado | mini-jogo)
+· por que este viewport · o que a seção do DS já traz.
 
 **Ficha do manifesto — obrigatória, uma linha por campo, neste formato exato**
 (um gate determinístico lê estas linhas; campo fora do formato conta como ausente):
@@ -34,6 +34,7 @@ seção do DS já traz.
 - `permissoes: [forms, pointer-lock, downloads]` ou `permissoes: []` — **tudo o que a missão precisa do aparelho, inclusive o que a plataforma ainda não concede**. Tocar áudio e vídeo já é nativo e não se declara; gravar voz (`microphone`), usar a câmera (`camera`) ou gravar a tela (`display-capture`) são pré-requisitos de plataforma: declare, e o PRD sai 🟡 com o caminho de implementação. A tabela das três categorias está em `references/capacidades-plataforma.md`
 - `capabilities: [telemetria, progresso, ia, avaliacao, tempo-real]` (só as usadas)
 - `secao_ds: unooriaai | unoovista | unoochat | tiktooria | unoogaleria | unoojornal | unooblog | nova:<nome> | minijogo:<nome>` — a tradução do ambiente do briefing (ChatGPT → `unooriaai`, Instagram → `unoovista`, WhatsApp → `unoochat`, galeria de fotos → `unoogaleria`) está em `ambientes.md`, e a lista do que existe, no contrato da plataforma e no inventário do DS. **A seção que o briefing fixou é trava:** o bloco 0 a repete, e o que a coleção não oferece vai como pré-requisito do DS — o verificador bloqueia a spec que troca. As legadas (`chatgpt`, `instanooria`, `whatsappmobile`, `unootube`) só por decisão registrada do PO; o verificador as bloqueia (ADR-133 a 138). Nova exige componentes, responsável e prazo, e só quando nenhuma coleção do inventário cobre o app (o verificador bloqueia `nova:galeriadefotos`); `tiktooria`, `unoogaleria`, `unoojornal` e `unooblog` ainda não têm ponte em `@edu/ui` — a ponte é pré-requisito de plataforma.
+- `classe_ambiente: app-clonado | mini-jogo` — campo da esteira, não do `experiencia.json`: **a classe do ambiente, decidida em produto** (desde 24/10/2026, PR 8 do plano «Produto dono do contrato», decisão D8; `ambiente-e-minijogo.md`). Mini-jogo é sempre `secao_ds: minijogo:<nome>`, só no 1º–5º ano; toda outra seção é app clonado — um gate confere que as duas linhas concordam. O D9, no design, lê a classe e a seção daqui e não as decide: spec calada volta a produto. Ambiente novo (`nova:<nome>`) ou mini-jogo que o briefing não fixou é escolha do PO: uma linha do bloco 0 traz `[PROPOSTA — validar com PO: … · por quê: … · alternativa: <a seção existente mais próxima>]` até o de acordo, e a spec que os fixa sem ela é bloqueada. Spec de antes de 24/10/2026, sem a linha, é lida pela `secao_ds`
 - `secoes_ds_extras: [<seção>, …]` — as outras seções do DS que a missão usa além da principal (vazio = nenhuma; `varias-secoes.md`): cada uma da mesma lista de `secao_ds`, dentro do teto do ano, com linha no «Mapa de seções» e transição em «Transições» no bloco 14. O verificador confere as quatro coisas.
 - `versao: 0.1.0` — semver inicial do `experiencia.json` (`versaoAtiva` no contrato da api). O PRD amarra a mesma versão em três lugares; aqui declara-se só a inicial
 - `verbos: {interacted: "…", scored: "…", completed: "…"}` — **o que cada verbo xAPI significa NESTA missão**, uma frase por verbo usado na tabela de eventos do bloco 9. É campo do manifesto real (`experiencia.json#verbos`), não invenção da esteira: sem ele o dado analítico chega sem tradução e ninguém sabe o que `scored` mediu nesta missão
@@ -67,6 +68,15 @@ permitido) · estados latch · reentrada (F5, voltar noutro dia) · segunda
 aplicação (o que re-sorteia, o que preserva, o que "zerar turma" apaga) ·
 modos de erro **na voz da ficção**, como estado próprio, nunca confundidos
 com decisão do aluno.
+
+**Regras e fases do mini-jogo — obrigatória quando `classe_ambiente: mini-jogo`.** A subseção
+`### Regras e fases do mini-jogo`, copiada do §4 do one-pager palavra por palavra, no formato de
+`ambiente-e-minijogo.md`: tipo de jogo, as regras `R1`… (valem em todas as fases), a tabela das fases
+(`| Fase | Nome | Ideia nova | Regra da fase | Verbo do jogo | Como vence | Como perde | Habilidade |`),
+como o progresso aparece e a progressão. É conteúdo de produto desde 24/10/2026 (PR 8): a jornada só
+mapeia as telas para as fases, e regra ou fase que a spec não tem, na jornada, vira proposta ao PO
+(um gate em código confere). Sem ela, a spec de mini-jogo é bloqueada; se a decisão é do PO,
+`[ABERTO — dono: PO: regras e fases do mini-jogo — …]`.
 
 ## 3. Caminhos degenerados — tratamento
 | Caminho | O que acontece | Etapa preservada? |
@@ -333,7 +343,7 @@ do parecer:
 agentes de design gravam num documento à parte, `design/00-anexo-design-spec.md` (`anexo_design_spec`):
 
 - **Bloco 13 — Decisões D0** (`fecha-lacunas`, D0-UX): decisões `[D0-n]` só de UI/UX — a tela de cada estado, gesto, scaffolding, acessibilidade de componente, dispositivo — que preenchem ausências deriváveis da missão, com base declarada, os pedidos de re-spec `[RS-n]` pendentes e os `[ABERTO — dono: PO]` do que é de produto. Preenche ausência, nunca altera presença.
-- **Bloco 14 — Ambiente simulado** (`ambiente-simulado`): a ficha do ambiente — uma por seção quando a missão usa mais de uma, mais o «Mapa de seções» e as «Transições» — nome, seção do DS, verbos do bloco 4 com rótulo literal, dispositivo nativo, estados e o que a plataforma real não tem. Emitido mesmo quando a spec já nomeia o ambiente (dormente).
+- **Bloco 14 — Ambiente simulado** (`ambiente-simulado`): a ficha **de UI** do ambiente que o bloco 0 decidiu — uma por seção quando a missão usa mais de uma, mais o «Mapa de seções» e as «Transições» — nome, seção do DS, chrome, navegação, affordances, verbos do bloco 4 com rótulo literal e componente, dispositivo nativo, estados e o que a plataforma real não tem; para ambiente novo ou mini-jogo, a seção do DS só com tokens existentes. Desde o PR 8 (24/10/2026, decisão D8) o D9 não decide nada: a classe e o ambiente são os do bloco 0, e as regras e as fases do mini-jogo, as do bloco 2. Um gate no split bloqueia o bloco 14 que nomeia ambiente ou classe diferente do bloco 0, que traz regra ou fase de jogo, ou o texto do D9 fora do bloco 14 — decisão de produto; a spec calada e a troca que o D9 julgar necessária voltam a produto como `[PROPOSTA — validar com PO]`.
 
 A fonte da verdade para codar é a spec de produto mais o anexo de design; o PRD deriva delas (D10). O anexo é montado
 pelo código: D0 e D9 emitem o próprio bloco, e o que vier diferente do texto de produto (blocos 0–12, glossário, bloco

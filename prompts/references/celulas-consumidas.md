@@ -21,8 +21,9 @@ Uma linha por célula que algum agente **lê como contrato**. A varredura percor
 |---|---|---|
 | 0.slug `expNNefNb` (o `id` da ficha) | todos (envelope `missao`), artefatos, V1 | Arquivos e envelopes sem identificador |
 | 0.nome que o estudante vê | D4, D7 | Copy sem título canônico |
-| 0.série(s) no formato da plataforma | D2 (tetos), D4 (registro por faixa), D4b (gate CAA), D7 (D6 e D6b: regras do 1º–5º), D9 (Passada 1b) | Ninguém sabe a faixa; tetos e CAA não decidem |
-| 0.software clonado + **seção do DS** | D9 (dormente ou não), D2, D5, D7 (D8) | D9 decide; se nem D9 puder, é vermelho |
+| 0.série(s) no formato da plataforma | D2 (tetos), D4 (registro por faixa), D4b (gate CAA), D7 (D6 e D6b: regras do 1º–5º), D9 (a ficha do mini-jogo adequada à faixa) | Ninguém sabe a faixa; tetos e CAA não decidem; o gate do mini-jogo (1º–5º, produto) não confere |
+| 0.software clonado + **seção do DS** | D9 (lê; não decide desde o PR 8), D2, D5, D7 (D8) | Sem ambiente o design não tem casca: o D9 devolve a produto. Célula de produto, sempre ao PO — vermelha (PR 8, D8) |
+| 0.classe do ambiente (`classe_ambiente: app-clonado · mini-jogo`) — ambiente novo e mini-jogo como escolha do PO | D9 (a ficha de UI da classe), D2 (Seção 5 só no mini-jogo), D4 (registros de voz: dois no mini-jogo), D5 (seção `minijogo-<nome>` sobre `unooria`), D7 (D8c) | O design decidia a classe quando a spec calava. Desde o PR 8 é de produto — vermelha, ao PO; spec de antes sem a linha é lida pela seção do DS |
 | 0.viewport (celular 375×812 dentro do desktop · desktop cheio) e por quê | D2 (cenários), D5 (frames e `deviceType` do Stitch), D8 (moldura de aparelho ou janela do hub), D9 | Frames no tamanho errado; quem revisa o protótipo mede a tela errada |
 | 0.produto (`entre-redes` …) e 0.unidade (1–4) — ficha do manifesto | V1, `ManifestoCheck`, TEC-01 | O CI recusa o manifesto (ADR-87) e a grade da sala não ordena (ADR-69) |
 | 0.permissoes do iframe (`forms`, `pointer-lock`, `downloads`) | D5, V1, TEC-01 | Submit ou download bloqueado em silêncio pelo sandbox |
@@ -32,15 +33,16 @@ Uma linha por célula que algum agente **lê como contrato**. A varredura percor
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
-| 1.frase única da descoberta | D1 (aposta, forma do arco), D9 (Passada 1b condição 3) | Briefing sem eixo; tudo vira "mecânica" |
+| 1.frase única da descoberta | D1 (aposta, forma do arco) | Briefing sem eixo; tudo vira "mecânica"; a condição 3 do gate do mini-jogo (produto) não se confere |
 | 1.beat exato em que é vivida | D1 (PICO/AHA), D2 (tela do aha) | Aha sem tela |
 
 ## Bloco 2 — Mecanismo por etapa
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
-| 2.etapa N: o que o sistema apresenta · ordena · bloqueia · garante (N = 1–6) | D1 (mecanismo por beat), D2 (raias), D3 (estados), D8 (painel da etapa quando o one-pager cala; tempos dos momentos scriptados, teste 8), D9 (mini-jogo: o tipo de jogo carrega a mecânica; intervalo de fases) | Beat sem mecanismo — classe "não-negociável sem mecanismo" |
+| 2.etapa N: o que o sistema apresenta · ordena · bloqueia · garante (N = 1–6) | D1 (mecanismo por beat), D2 (raias), D3 (estados), D8 (painel da etapa quando o one-pager cala; tempos dos momentos scriptados, teste 8), D9 (mini-jogo: a casca de UI que a mecânica pede) | Beat sem mecanismo — classe "não-negociável sem mecanismo" |
 | 2.regra de sequência onde a descoberta depende de ordem | D2, D3 | Fluxo aceita qualquer ordem |
+| 2.regras e fases do mini-jogo (só `classe_ambiente: mini-jogo`): tipo de jogo, regras `R1`…, fases com ideia nova, regra da fase, como vence, como perde e habilidade, como o progresso aparece | D2 (Seção 5: copia as regras e as fases e mapeia as telas de cada fase — regra ou fase nova vai a produto como proposta, conferida em código), D3 (fase = nó com três estados; `perdida` volta ao começo da fase), D4 (strings do jogo, seção `unooria`), D5 (frames de fase, mapa e demonstração), D7 (D8c) | A jornada inventava as fases, e o dev a regra — produto criado no design (PR 8). Célula de produto, sempre ao PO quando falta |
 | 2.contrato de estados: uma linha por transição (inicial, gatilho, regra, seguinte, responsável) | D3 (nós e arestas; inclui o estado da pergunta do Canal B entre o Refletir e a conclusão), V1 (enum) | Grafo inventa estados `DEC_*`/`DEG_*` sem base |
 | 2.estados com nome próprio | D3, D5 (frame por estado), V1 | Estado sem nome não vira frame nem enum |
 | 2.frase que fecha o conjunto ("não existem outros caminhos…") | D3 (teste 1 e 2) | Grafo sem fechamento |
@@ -66,14 +68,14 @@ Uma linha por célula que algum agente **lê como contrato**. A varredura percor
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
-| 4.lista de verbos nativos confirmados (antes / verbo / depois) | D2 (raia "Estudante — faz"), D4 (rótulo literal), D4b (affordance nativa como CAA), D9 (Passada 1 e 1b), D7 (D8) | Verbo inventado na jornada; D9 não consegue testar o ambiente |
+| 4.lista de verbos nativos confirmados (antes / verbo / depois) | D2 (raia "Estudante — faz"), D4 (rótulo literal), D4b (affordance nativa como CAA), D9 (rótulo e componente de cada verbo; verbo que o ambiente decidido não comporta volta a produto), D7 (D8) | Verbo inventado na jornada; o D9 não consegue montar a ficha |
 | 4.affordance por verbo (o que na tela dispara o verbo) | D5 (componente), D4b (modo de resposta) | Wireframe sem alvo de toque definido |
 
 ## Bloco 5 — Ausências declaradas
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
-| 5.o que o ambiente simulado NÃO tem, com o motivo de cada ausência | D1 ("sai de propósito"), D4 (ausência de áudio → `texto+ícone`), D4b (ausência de áudio → pictograma + texto), D5 (não completar por realismo), D6 (nada de texto para o ausente), D7 (D1, D7 e D8: ausência que reapareceu), D8 (monta o chrome e as ausências da spec) | Alguém "completa" a interface e a fidelidade cai; a copy marca áudio numa spec de "zero áudio" (exp01ef1b: 39 strings) |
+| 5.o que o ambiente simulado NÃO tem, com o motivo de cada ausência | D9 (copia na ficha, junto das ausências da seção em `ambientes.md`), D1 ("sai de propósito"), D4 (ausência de áudio → `texto+ícone`), D4b (ausência de áudio → pictograma + texto), D5 (não completar por realismo), D6 (nada de texto para o ausente), D7 (D1, D7 e D8: ausência que reapareceu), D8 (monta o chrome e as ausências da spec) | Alguém "completa" a interface e a fidelidade cai; a copy marca áudio numa spec de "zero áudio" (exp01ef1b: 39 strings) |
 
 ## Bloco 6 — Tetos aplicados
 
@@ -136,7 +138,7 @@ Uma linha por célula que algum agente **lê como contrato**. A varredura percor
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
-| 11.habilidades e códigos confirmados | D2 (coluna "Habilidade"), D7 (D2 curricular), D9 (mini-jogo: uma por fase) | Tela sem momento em tela; fase vira enfeite |
+| 11.habilidades e códigos confirmados | D2 (coluna "Habilidade"; no mini-jogo, a habilidade de cada fase copiada da spec), D7 (D2 curricular) | Tela sem momento em tela; fase vira enfeite |
 | 11.momento em tela de cada habilidade | D2, D7 | QA e banca inferem — e inferência é achado |
 | 11.qual código é o de **letramento digital** (Cultura Digital) | D7 (confere em `references/bncc-computacao-letramento-digital.md`) | Código de outro eixo passa como núcleo |
 
@@ -189,7 +191,7 @@ Fora da varredura: é a saída do passo de completude da spec, em produto (desde
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
-| 15.decisões `[CP-n]` — célula de produto preenchida, decisão, base declarada | D0 (o que o bloco respondeu não se decide de novo), D9 (copia intocado), D1, D2, D3, D4, D5, D7 (leem a célula preenchida como contrato), V1, rastro de lacunas (o mapa célula → decisão só fecha com o `[CP-n]` aqui), gate de `[CP-n]` órfão | O design volta a decidir produto; a pendência fechada volta a barrar |
+| 15.decisões `[CP-n]` — célula de produto preenchida, decisão, base declarada | D0 (o que o bloco respondeu não se decide de novo), D9 (lê; não copia nem muda — texto dele fora do bloco 14 bloqueia), D1, D2, D3, D4, D5, D7 (leem a célula preenchida como contrato), V1, rastro de lacunas (o mapa célula → decisão só fecha com o `[CP-n]` aqui), gate de `[CP-n]` órfão | O design volta a decidir produto; a pendência fechada volta a barrar |
 | 15.padrões da plataforma aplicados | D0 (não reaplica), D7, V1 | O mesmo padrão aplicado duas vezes, com textos diferentes |
 | 15.perguntas ao PO — `[PARÂMETRO]`, `[PROPOSTA]`, `[ABERTO — dono: PO]` com a sugestão | D0 (usa a sugestão como pendente, nunca a fecha), D7, V1 | O design decide no lugar do PO |
 
@@ -199,12 +201,12 @@ Fora da varredura: é a saída do próprio D0.
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
-| 13.decisões `[D0-n]` — célula preenchida, decisão, base, reversível | todos de D1 a D8 (leem a célula preenchida como contrato), D9 (copia o bloco palavra por palavra, teste 4b), D7 (`[D0-n]` que contraria a spec original vira ticket `fecha-lacunas`), rastro de lacunas (o mapa célula → D0 só fecha com o `[D0-n]` aqui), gate de `[D0-n]` órfão (toda citação a jusante precisa existir aqui) | A jusante cita decisão que a spec não tem; a pendência fechada volta a barrar |
+| 13.decisões `[D0-n]` — célula preenchida, decisão, base, reversível | todos de D1 a D8 (leem a célula preenchida como contrato), D9 (lê; não copia nem muda — texto dele no bloco 13 é descartado com atenção), D7 (`[D0-n]` que contraria a spec original vira ticket `fecha-lacunas`), rastro de lacunas (o mapa célula → D0 só fecha com o `[D0-n]` aqui), gate de `[D0-n]` órfão (toda citação a jusante precisa existir aqui) | A jusante cita decisão que a spec não tem; a pendência fechada volta a barrar |
 | 13.`RS-n` pendentes — re-spec que o Gate 0 não respondeu | D7 (riscos aceitos; `RS-n` negado e contornado, ou pendente e honrado pela tela, é ⛔), rastro de lacunas | Os agentes a jusante redescobrem a lacuna, um por um |
 
 ## Bloco 14 — Ambiente simulado
 
-Fora da varredura: o D9 escreve o bloco depois do D0. Cada campo herda de uma célula dos blocos 0–5 — lacuna lá é lacuna aqui, e o D0 a roteia pela célula de origem.
+Fora da varredura: o D9 escreve o bloco depois do D0, e só a ficha de UI do ambiente que o bloco 0 decidiu (PR 8). Cada campo herda de uma célula dos blocos 0–5 — lacuna lá é lacuna aqui, e o D0 a roteia pela célula de origem; ambiente ou classe que falta é de produto, e o D9 devolve.
 
 | Célula | Quem consome | Sem ela |
 |---|---|---|
@@ -213,7 +215,7 @@ Fora da varredura: o D9 escreve o bloco depois do D0. Cada campo herda de uma c�
 | 14.padrão de conteúdo e schema mínimo | D4 (schema mínimo dos prompts de geração) | Prompt de geração com campo que o ambiente não tem |
 | 14.estados que a seção já traz (vazio · carregando · falha de conexão · degradado) | D2 (estados do inventário) | Estado redesenhado que o ambiente já tinha |
 | 14.o que a plataforma real não tem (origem: bloco 5) | D1 (sai de propósito), D4 (ausência de áudio declarada → `texto+ícone`), D5 (o que o ambiente não tem), D6 e D8 (nada do que é ausente), D7 (D8: continua ausente) | O ambiente "completo" volta pela tela ou pela copy |
-| 14.mini-jogo: tipo de jogo, fase, vitória, derrota, mapa de mundo, demonstração, e o pedido à jornada (intervalo de fases, uma habilidade do bloco 11 por fase) | D2 (Seção 5: regras e fases), D3 (fase = nó com três estados; `perdida` nunca vai ao início), D4 (strings do jogo, seção `unooria`), D4b (o verbo do jogo é a affordance nativa), D5 (frames de fase, mapa e demonstração), D7 (D8c) | Área de jogo vazia no wireframe; o dev inventa a regra |
+| 14.mini-jogo: a casca de UI — área de jogo, verbos do jogo com rótulo e componente, como a demonstração aparece na tela, o mapa de mundo como tela, os estados de tela do jogo, a seção `minijogo-<nome>` sobre `unooria` (origem: 0.classe do ambiente e 2.regras e fases do mini-jogo — as regras e as fases são do bloco 2, nunca do 14) | D2 (Seção 5: as telas de cada fase), D3 (fase = nó com três estados; `perdida` nunca vai ao início), D4 (strings do jogo, seção `unooria`), D4b (o verbo do jogo é a affordance nativa), D5 (frames de fase, mapa e demonstração), D7 (D8c) | Área de jogo vazia no wireframe |
 
 ## Lacunas conhecidas dos consumidores
 

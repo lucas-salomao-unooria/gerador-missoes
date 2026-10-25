@@ -85,7 +85,10 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
 
     novos: Dict[str, Dict[str, Any]] = {}
 
-    novos["manifesto_status"] = rastro.validar_manifesto(spec, briefing=state.get("briefing", "") or "")
+    novos["manifesto_status"] = rastro.validar_manifesto(spec, briefing=state.get("briefing", "") or "",
+                                                         one_pager_po=state.get("one_pager_po", "") or "",
+                                                         one_pager=one_pager,
+                                                         decisoes_do_po=state.get("decisoes_do_po") or [])
     novos["telemetria_status"] = rastro.validar_telemetria(handoff)
     novos["bncc_status"] = bncc.validar_spec(spec)
     novos["rastro_lacunas_status"] = rastro.varrer_lacunas(FONTES_LACUNAS, state, etapa_corrente="dev")
@@ -125,8 +128,13 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
     if state.get("copy_strings_revisada"):
         novos["textos_chave_status"] = textos_chave.conferir_copy(str(state["copy_strings_revisada"]),
                                                                   textos_chave.da_sessao(state))
-    if state.get("fluxo_arestas"):
+    if state.get("fluxo_arestas") or state.get("jornada_telas"):
         novos["arestas_status"] = arestas.validar(state)
+    # PR 8: o split do D9 refeito sobre a resposta gravada — bloco 14 × bloco 0, jogo na ficha, texto fora do bloco 14
+    if state.get("ambiente_simulado"):
+        from tools import ambiente
+
+        novos["ambiente_status"] = ambiente.reavaliar_d9(state)
 
     novos["contrato_produto_status"] = contrato_produto.validar_one_pager(
         one_pager, state.get("nucleo_narrativo", "") or "", state.get("briefing", "") or "",

@@ -24,6 +24,10 @@ acerto), e nada nas outras 14 missões.
 Cada achado sai como `[PROPOSTA — validar com PO: …]`, com dono PO: se a mudança deve valer, o PO a pede no Refazer, e a
 triagem do PR 5 leva o item a produto; senão, o design segue a spec. Com ESTEIRA_ESTRITA bloqueia, como a mudança do
 design no texto do Gate 0 (PR 2); sem ela, é decisão humana 🟡 no cartão do parecer de design.
+
+Desde o PR 8 (decisão D8) a mesma régua vale para a Seção 5 da jornada: as regras e as fases do mini-jogo são da spec
+(bloco 2), e a jornada só mapeia as telas para elas — regra ou fase que a spec não tem vira proposta
+(`tools/ambiente.conferir_jornada`). Nas 12 jornadas do acervo a Seção 5 é «n/a — ambiente é app clonado».
 """
 from __future__ import annotations
 
@@ -159,7 +163,8 @@ def validar(state: Dict[str, Any], estrito: bool = False) -> Dict[str, Any]:
     """`{status, achados, contagem}`: as arestas do fluxo e as regras de habilitação das telas contra o bloco 2."""
     spec = _spec_de_produto(state)
     fluxo = str(state.get("fluxo_arestas") or "")
-    if not spec.strip() or not fluxo.strip():
+    jornada = str(state.get("jornada_telas") or "")
+    if not spec.strip() or not (fluxo.strip() or jornada.strip()):
         return {"status": "aprovado", "achados": [], "contagem": {"arestas": 0}}
     etapas = etapas_da_spec(spec)
     contrato = contrato_de_estados(spec)
@@ -201,10 +206,15 @@ def validar(state: Dict[str, Any], estrito: bool = False) -> Dict[str, Any]:
                     f"[PROPOSTA — validar com PO: a regra de habilitação da {rotulo} só libera o aluno com a resposta certa "
                     f"— «{trecho}» em «{linha[:160]}» —, e a etapa {etapa} do bloco 2 da spec não pede acerto]. Se deve "
                     "valer, o PO a pede no **Refazer**; senão, a tela habilita como a spec manda.", estrito))
+    # PR 8: as regras e as fases do mini-jogo na jornada × as da spec (a jornada só mapeia as telas)
+    from tools.ambiente import conferir_jornada
+
+    jogo = conferir_jornada(spec, jornada, estrito=estrito)
+    achados += jogo["achados"]
     status = ("bloqueado" if any(a["severidade"] == "bloqueio" for a in achados) else "amarelo" if achados else "aprovado")
     return {"status": status, "achados": achados,
             "contagem": {"arestas": len(todas), "estados_do_contrato": len(estados), "etapas_da_spec": len(etapas),
-                         "regras_de_habilitacao": habilitacoes}}
+                         "regras_de_habilitacao": habilitacoes, **jogo["contagem"]}}
 
 
 def propostas(resultado: Dict[str, Any]) -> List[str]:
@@ -218,7 +228,10 @@ def relatorio(resultado: Dict[str, Any], missao: str = "") -> str:
     L = [f"# Fluxo e telas × bloco 2 da spec — {missao or 'missão'}", "",
          f"**Veredito: {icone}** · {c.get('arestas', 0)} aresta(s) do fluxo e {c.get('regras_de_habilitacao', 0)} regra(s) "
          "de habilitação das telas conferidas contra a mecânica da spec de produto. Decompor estado é livre (D7); a guarda "
-         "que muda o que o aluno faz, decide ou vê vai ao PO como proposta.", ""]
+         "que muda o que o aluno faz, decide ou vê vai ao PO como proposta."
+         + (f" Mini-jogo: {c.get('fases_da_jornada', 0)} fase(s) e {c.get('regras_da_jornada', 0)} regra(s) na jornada "
+            f"contra {c.get('fases_da_spec', 0)} e {c.get('regras_da_spec', 0)} da spec (PR 8)."
+            if c.get("fases_da_spec") or c.get("fases_da_jornada") or c.get("regras_da_jornada") else ""), ""]
     if not resultado["achados"]:
         L.append("- Nenhuma guarda muda o que a spec manda o aluno fazer: o fluxo só decompõe.")
     for a in resultado["achados"]:

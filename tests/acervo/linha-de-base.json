@@ -69,6 +69,12 @@
         "roteiro-reescrito"
       ]
     },
+    "ambiente_status": {
+      "status": "amarelo",
+      "codigos": [
+        "alterou-fora-do-proprio-bloco"
+      ]
+    },
     "rastro_design_status": {
       "status": "amarelo",
       "codigos": [
@@ -319,6 +325,13 @@
       "status": "aprovado",
       "codigos": []
     },
+    "ambiente_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "alterou-fora-do-proprio-bloco",
+        "decisao-de-produto-pelo-agente"
+      ]
+    },
     "rastro_design_status": {
       "status": "amarelo",
       "codigos": [
@@ -489,6 +502,10 @@
       "status": "aprovado",
       "codigos": []
     },
+    "ambiente_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
     "rastro_design_status": {
       "status": "aprovado",
       "codigos": []
@@ -599,6 +616,12 @@
     "conteudo_aprovado_pedagogico_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "ambiente_status": {
+      "status": "amarelo",
+      "codigos": [
+        "alterou-fora-do-proprio-bloco"
+      ]
     },
     "rastro_design_status": {
       "status": "bloqueado",
@@ -784,6 +807,12 @@
       "status": "aprovado",
       "codigos": []
     },
+    "ambiente_status": {
+      "status": "amarelo",
+      "codigos": [
+        "alterou-fora-do-proprio-bloco"
+      ]
+    },
     "rastro_design_status": {
       "status": "bloqueado",
       "codigos": [
@@ -965,6 +994,13 @@
       "status": "aprovado",
       "codigos": []
     },
+    "ambiente_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "alterou-fora-do-proprio-bloco",
+        "decisao-de-produto-pelo-agente"
+      ]
+    },
     "rastro_design_status": {
       "status": "amarelo",
       "codigos": [
@@ -1075,6 +1111,12 @@
     "conteudo_aprovado_resumido_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "ambiente_status": {
+      "status": "amarelo",
+      "codigos": [
+        "alterou-fora-do-proprio-bloco"
+      ]
     },
     "rastro_design_status": {
       "status": "amarelo",
@@ -1219,6 +1261,10 @@
       "codigos": [
         "podcast-ausente"
       ]
+    },
+    "ambiente_status": {
+      "status": "aprovado",
+      "codigos": []
     },
     "rastro_design_status": {
       "status": "amarelo",
@@ -1407,6 +1453,13 @@
       "status": "aprovado",
       "codigos": []
     },
+    "ambiente_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "alterou-fora-do-proprio-bloco",
+        "decisao-de-produto-pelo-agente"
+      ]
+    },
     "rastro_design_status": {
       "status": "aprovado",
       "codigos": []
@@ -1559,6 +1612,13 @@
     "conteudo_aprovado_pedagogico_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "ambiente_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "alterou-fora-do-proprio-bloco",
+        "decisao-de-produto-pelo-agente"
+      ]
     },
     "rastro_design_status": {
       "status": "aprovado",
@@ -1734,6 +1794,12 @@
         "artefato-inexistente",
         "podcast-ausente",
         "roteiro-reescrito"
+      ]
+    },
+    "ambiente_status": {
+      "status": "amarelo",
+      "codigos": [
+        "alterou-fora-do-proprio-bloco"
       ]
     },
     "rastro_design_status": {
@@ -1927,6 +1993,10 @@
         "podcast-ausente",
         "roteiro-reescrito"
       ]
+    },
+    "ambiente_status": {
+      "status": "aprovado",
+      "codigos": []
     },
     "rastro_design_status": {
       "status": "amarelo",
