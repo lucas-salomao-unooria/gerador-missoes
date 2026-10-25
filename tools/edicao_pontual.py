@@ -198,6 +198,35 @@ def aplicar(documentos: Dict[str, str], edicoes: Iterable[Edicao]) -> Resultado:
     return Resultado(documentos=novos, aplicadas=aplicadas)
 
 
+def aplicar_parcial(documentos: Dict[str, str], edicoes: Iterable[Edicao], validador: Any = None) -> Resultado:
+    """Aplica as trocas que se aplicam, uma a uma, e deixa as outras em `falhas` (uma por troca, com o motivo).
+
+    É o caminho do documento grande demais para ser reescrito (`tools/one_pager_grande.py`): lá não há autor a quem
+    voltar, e o tudo ou nada de `aplicar` jogaria fora as trocas boas por causa de uma ruim. `validador(documentos)`
+    devolve as recusas (texto do one-pager do PO apagado, por exemplo); a troca recusada também vai para `falhas`. Cada
+    falha começa por «edição N» — o número da troca na lista do editor.
+    """
+    edicoes = list(edicoes)
+    tudo = aplicar(documentos, edicoes)
+    if tudo.ok and not (validador and list(validador(tudo.documentos) or [])):
+        return tudo
+    atuais = dict(documentos)
+    aplicadas: List[Edicao] = []
+    falhas: List[str] = []
+    for n, e in enumerate(edicoes, 1):
+        r = aplicar(atuais, [e])
+        if not r.ok:
+            falhas.append(re.sub(r"^edição 1\b", f"edição {n}", r.falhas[0]))
+            continue
+        recusas = list(validador(r.documentos) or []) if validador else []
+        if recusas:
+            falhas.append(f"edição {n} (`{e.documento}`): recusada — {recusas[0]}")
+            continue
+        atuais = r.documentos
+        aplicadas.append(e)
+    return Resultado(documentos=atuais, aplicadas=aplicadas, falhas=falhas)
+
+
 def reaplicar(anterior: str, atual: str, documento: str, edicoes: Iterable[Union[Edicao, Dict[str, Any]]]) -> bool:
     """O documento atual é a versão anterior mais as trocas dele, e nada além? É a prova das ordens de não mexer.
 

@@ -71,7 +71,8 @@ from agents.comite import build_comite_canais_loop, build_comite_final_loop
 from agents.juiz import get_fidelidade_check, get_juiz_de_achados
 from agents.rota import RotaDeAchadosAgent
 from agents.callbacks import (dispensar_ideacao_com_one_pager_do_po, manter_completude_entre_rodadas, marcar_heranca,
-                              preservar_one_pager, tirar_envelope_do_documento)
+                              montar_one_pager_por_trocas, preservar_one_pager, so_a_mensagem_do_po,
+                              tirar_envelope_do_documento)
 from agents.checkers import (
     DocumentoObrigatorioAgent,
     SecaoSplitAgent,
@@ -151,6 +152,8 @@ def get_nucleo_narrativo_agent(**kw) -> LlmAgent:
         instruction=load_prompt("produto/004_nucleo_narrativo.md"),
         output_key="nucleo_narrativo",
         include_contents="default",  # único agente que vê a mensagem original e os anexos
+        # …mas só ela: o resto do histórico da sessão crescia a cada volta do comitê até o 400 da 3ef2b (25/10/2026)
+        before_model_callback=so_a_mensagem_do_po,
         **kw,
     )
 
@@ -203,6 +206,8 @@ def get_secoes_apoio_agent(**kw) -> LlmAgent:
         description="Seções de apoio (2 e 5–18) e brief de escopo sobre o núcleo aprovado: completa o one-pager canônico que o gate estrutural audita.",
         instruction=load_prompt("produto/014_secoes_apoio.md"),
         output_key="one_pager",
+        # com o one-pager do PO grande demais para ser reescrito, o documento é montado por trocas (3ef2b, 25/10/2026)
+        before_agent_callback=montar_one_pager_por_trocas("secoes_apoio"),
         after_agent_callback=preservar_one_pager,
         **kw,
     )
@@ -228,6 +233,7 @@ def get_revisor_one_pager_agent(**kw) -> LlmAgent:
         description="Aplica ao one-pager as correções prontas do gate estrutural, sem inventar decisões de produto.",
         instruction=load_prompt("produto/revisor_one_pager.md"),
         output_key="one_pager",
+        before_agent_callback=montar_one_pager_por_trocas("revisor"),
         **kw,
     )
 
@@ -238,6 +244,7 @@ def get_restaurador_one_pager_po_agent(**kw) -> LlmAgent:
         description="Devolve ao one-pager os trechos do one-pager do PO que a esteira reescreveu sem pedido; o que um gate ou parecer pedia vira proposta ao PO.",
         instruction=load_prompt("produto/037_restaurar_one_pager_po.md"),
         output_key="one_pager",
+        before_agent_callback=montar_one_pager_por_trocas("restaurador"),
         **kw,
     )
 
