@@ -605,6 +605,10 @@ def _decisoes_em_texto(comentario: str) -> List[Tuple[str, str]]:
     return saida
 
 
+#: O marcador citado entre colchetes no lado esquerdo de uma linha «→» do pedido de refazer.
+_RE_MARCADOR_CITADO = re.compile(r"\[(?:PAR[ÂA]METRO|PROPOSTA|ABERTO)\b", re.I)
+
+
 def _assunto_do_texto(esquerda: str) -> str:
     m = re.search(r"\[(PAR[ÂA]METRO|PROPOSTA|ABERTO)\b([^\]]*)\]", esquerda)
     if not m:
@@ -620,9 +624,21 @@ def respostas_anteriores(estado: Dict[str, Any], fluxo: Optional[Dict[str, Any]]
     O refazer de produto invalida o de acordo de produto e reescreve o one-pager: o marcador que o autor reabrir volta
     ao cartão já respondido, e a pessoa confirma. Vale o cartão (`decisoes_contrato` dos pareceres e `decisoes_do_po`
     do estado) e o de acordo escrito à mão com «→», que era como o PO decidia antes deste cartão — o da exp02em1b de
-    21/10/2026 15:43, que o refazer de 23/10 invalidou."""
+    21/10/2026 15:43, que o refazer de 23/10 invalidou.
+
+    O *refazer* também decide: a linha «[PROPOSTA …] → aprovado» num pedido de refazer, de qualquer etapa, é a resposta
+    do PO àquele marcador, e o autor que refaz nem sempre fecha o marcador no texto (R11/R12 da exp02em1b no
+    levantamento de 24/10/2026: as propostas que o PO aprovou seguiam `[PROPOSTA]` no PRD). No refazer só conta a linha
+    cujo lado esquerdo cita o marcador entre colchetes — «Título → Outro título» é pedido de mudança, não resposta."""
     registros: List[Tuple[str, Dict[str, Any]]] = []
     for p in (fluxo or {}).get("pareceres") or []:
+        if p.get("acao") == "refazer":
+            quando = str(p.get("quando") or "")
+            for esquerda, direita in _decisoes_em_texto(str(p.get("comentario") or "")):
+                if _RE_MARCADOR_CITADO.search(esquerda):
+                    registros.append((quando, {"assunto": _assunto_do_texto(esquerda), "texto_direita": direita,
+                                               "origem": f"refazer de {quando}"}))
+            continue
         if p.get("etapa") != "produto" or p.get("acao") not in ("de_acordo", "excecao"):
             continue
         quando = str(p.get("quando") or "")
