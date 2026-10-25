@@ -152,8 +152,16 @@ def test_cache_da_sessao_responde_igual_sem_chamar_de_novo(ligado):
     with C.sessao(estado, "montagem_prd_status") as s2:
         segunda = C.numero_da_hipotese(**HIP)
     assert len(chamadas) == 1 and (segunda.rotulo, segunda.origem) == ("meta", "sessao")
-    assert s2.delta()[C.KEY]["custo"]["chamadas"] == 1
-    assert s2.delta()[C.KEY]["custo"]["por_gate"]["montagem_prd_status"]["do_cache"] == 1
+    # e não regrava o cache inteiro no estado: nada mudou (revisão do PR #85)
+    assert s2.do_cache == 1 and s2.delta() == {}
+
+
+def test_gate_sem_chamada_nem_leitura_nova_nao_regrava_o_estado(monkeypatch):
+    """O «nao_sei» sem chamada (desligado, sem chave, fora do cache de teste) também não mexe no estado."""
+    monkeypatch.setenv(C.ENV_MODO, "desligado")
+    with C.sessao({}, "gate") as s:
+        assert C.numero_da_hipotese(**HIP).nao_sei
+    assert s.nao_sei == 1 and s.delta() == {}
 
 
 def test_gate_que_nao_le_nada_nao_mexe_no_estado():
@@ -200,6 +208,10 @@ def test_cache_de_teste_e_gravado_so_quando_pedido(ligado, monkeypatch, tmp_path
     monkeypatch.delenv(C.ENV_GRAVAR_CACHE_FIXO)
     leitura = C.numero_da_hipotese(**HIP)
     assert (leitura.rotulo, leitura.origem) == ("meta", "cache_de_teste") and len(chamadas) == 1
+    # a leitura que veio do cache de teste entra no da sessão: sem chamada, mas é leitura nova e vai ao estado
+    with C.sessao({}, "gate") as s:
+        C.numero_da_hipotese(**HIP)
+    assert s.chamadas == 0 and len(s.delta()[C.KEY]["cache"]) == 1
 
 
 def test_custo_da_sessao_soma_por_gate():

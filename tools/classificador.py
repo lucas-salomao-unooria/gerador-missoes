@@ -317,8 +317,12 @@ class Sessao:
             self.novas += 1
 
     def registro(self) -> Optional[Dict[str, Any]]:
-        """O valor novo de `estado[KEY]`, ou `None` se o gate não leu nada."""
-        if not (self.chamadas or self.novas or self.do_cache or self.nao_sei):
+        """O valor novo de `estado[KEY]`, ou `None` se o gate não chamou o modelo nem guardou leitura nova.
+
+        O `state_delta` troca a chave inteira (até `MAX_ENTRADAS` leituras, ~125 KB): o gate que só leu do cache — ou só
+        ganhou «nao_sei» sem chamar (sem chave, desligado, fora do cache de teste) — não a regrava a cada passagem, e
+        os contadores dele (`do_cache`, `nao_sei`) ficam fora do custo. Revisão do PR #85 (25/10/2026)."""
+        if not (self.chamadas or self.novas):
             return None
         cache = dict(list(self.cache.items())[-MAX_ENTRADAS:])
         custo = dict(self._anterior.get("custo") or {})
