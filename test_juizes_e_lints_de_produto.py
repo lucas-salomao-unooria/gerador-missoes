@@ -335,6 +335,34 @@ def test_checklist_sem_o_cabecalho_e_sem_como_agir():
     assert sem_texto_da_esteira("Pedido simples, sem cabeçalho.") == "Pedido simples, sem cabeçalho."
 
 
+def test_checklist_tira_so_os_blocos_da_esteira_e_o_que_o_po_escreve_depois_fica():
+    """Revisão do PR #80 (24/10/2026): o corte ia do «Como agir» até o fim, e o pedido novo escrito depois do markdown
+    colado sumia. Saem o cabeçalho, a triagem, os textos-chave citados, o material anexado (mesmo com títulos próprios) e
+    as três regras — também copiadas da tela, sem o negrito."""
+    from pipeline.reexecucao import PedidoCorrecao
+    from tools.fidelidade import montar_checklist, sem_texto_da_esteira
+    from tools.textos_chave import TITULO_CITADOS
+
+    md = PedidoCorrecao(
+        texto="Trocar o título da Etapa 2 para «A Caça ao Boato».", anexos=[("roteiro.md", "### Parte 1\n\nTexto do anexo.")],
+        nota_da_esteira="Estes são os itens de produto de um pedido feito pelo PO em design, triados item a item.",
+        textos_chave_citados=f"### {TITULO_CITADOS}\n\n- `TC-07` — texto aprovado: «Vamos lá»").como_markdown("produto")
+    depois = "\n\nAlém disso:\n\n1. Trocar o título da Etapa 3 para «A plenária decide».\n2. Aumentar o botão Votar para 48 px."
+    for colado in (md, md.replace("**", "")):
+        limpo = sem_texto_da_esteira("Antes do pedido colado.\n\n" + colado + depois)
+        for da_esteira in ("Esta execução refaz", "Pedido, na íntegra", "triados item a item", TITULO_CITADOS, "TC-07",
+                           "Material anexado", "Texto do anexo", "Parte 1", "Como agir", "no que é seu",
+                           "Não invente o resto", "O que mudou nesta versão"):
+            assert da_esteira not in limpo, da_esteira
+        for do_po in ("Antes do pedido colado.", "A Caça ao Boato", "A plenária decide", "48 px"):
+            assert do_po in limpo, do_po
+    itens = [i["texto"] for i in montar_checklist([("pedido", md + depois)], "")]
+    assert any("A plenária decide" in t for t in itens) and any("48 px" in t for t in itens)
+    # sem o «Como agir» depois, o anexo vai só até o próximo título
+    assert sem_texto_da_esteira("### Material anexado ao pedido\n\nNenhum.\n\n## Pedido novo\n\nTrocar X.") == \
+        "## Pedido novo\n\nTrocar X."
+
+
 # --------------------------------------------------------------------------- 7. banca no fim de produto
 def test_banca_de_produto_nao_conta_ped_03_12_15_e_as_outras_posicoes_contam():
     from tools import banca as bnc
