@@ -845,7 +845,9 @@ def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", 
         "veredito": {"aprovado": "verde", "amarelo": "amarelo", "bloqueado": "vermelho"}[r["status"]],
         "por_etapa": pe,
         "achados": [
-            {"severidade": a["severidade"], "classe": a["tipo"], "codigo": a["etapa"], "agente_responsavel": _dono_roteavel(a), "documento": a["documento"], "resumo": (a.get("contexto") or a["trecho"])[:120]}
+            # o trecho inteiro: o corte em 120 caracteres partia a palavra («…EF15AR05 na gra») no cartão do PO, que
+            # é onde esta pendência aparece (25/10/2026); o relatório acima já a trazia inteira
+            {"severidade": a["severidade"], "classe": a["tipo"], "codigo": a["etapa"], "agente_responsavel": _dono_roteavel(a), "documento": a["documento"], "resumo": a.get("contexto") or a["trecho"]}
             for a in r["achados"]
         ],
         "precisa_humano": r["status"] != "aprovado",

@@ -332,6 +332,14 @@ CONTRATO = "contrato"
 PENDENCIA = "pendencia"
 
 
+def lista_inteira(itens: Any) -> str:
+    """Itens como lista em markdown, cada um inteiro, um por linha — para a mensagem de erro que o cartão mostra.
+
+    As mensagens cortavam cada item em 70 caracteres e a lista nos 5 primeiros («e mais N»): o PO via que faltava
+    algo e não via o quê (25/10/2026). Sem limite: a lista é do tamanho do que falta, e a tela quebra a linha."""
+    return "".join(f"\n- {' '.join(str(i).split())}" for i in itens if str(i).strip())
+
+
 def itens_de_conferencia(estado: Dict[str, Any]) -> List[Dict[str, str]]:
     """O que o PO confirma ter lido ou decidido antes do de acordo de produto — vazio quando não há marcador aberto.
 
@@ -380,8 +388,9 @@ def pendencias_de_conferencia(estado: Dict[str, Any], contrato_aberto: Optional[
             if ident in vistos:
                 continue
             vistos.add(ident)
+            # o assunto inteiro: o corte em 400 caracteres deixava o PO ler meia frase no «Li e decidi» (25/10/2026)
             itens.append({"id": ident, "origem": PENDENCIA, "tipo": str(a.get("codigo") or "decisao_humana"),
-                          "assunto": resumo[:400], "gate": chave})
+                          "assunto": resumo, "gate": chave})
     return itens
 
 
@@ -402,14 +411,12 @@ def conferir_leitura(itens: List[Dict[str, str]], decisoes: Optional[Dict[str, D
             faltam.append(item)
             continue
         registro.append({"id": item["id"], "origem": item["origem"], "tipo": item["tipo"],
-                         "assunto": item["assunto"][:200], "como": como})
+                         "assunto": item["assunto"], "como": como})
     if faltam:
-        nomes = "; ".join(f"«{f['assunto'][:70]}»" for f in faltam[:5])
-        mais = f" e mais {len(faltam) - 5}" if len(faltam) > 5 else ""
         raise DecisaoInvalida(
-            f"Há {len(itens)} marcador(es) aberto(s) em produto, e {len(faltam)} ainda sem leitura confirmada: "
-            f"{nomes}{mais}. Antes de liberar, responda cada item na lista do contrato ou marque «Li» nele, e confirme "
-            "cada pendência 🟡 da conferência de leitura do cartão.")
+            f"Há {len(itens)} ponto(s) em aberto em produto, e {len(faltam)} ainda sem leitura confirmada. Antes de "
+            "liberar, responda cada item na lista do contrato ou marque «Li» nele, e confirme cada pendência 🟡 da "
+            "conferência de leitura do cartão. Faltam:" + lista_inteira(f["assunto"] for f in faltam))
     return registro
 
 
@@ -462,11 +469,11 @@ def aplicar(fluxo: Dict[str, Any], acao: str, sessao: Any, comentario: str,
         if lida.indefinidos:
             # D4, opção B: sem saber o dono, o item não vai a design (o one-pager ficaria dizendo outra coisa) nem a
             # produto por conta da esteira — quem decide é o PO, em produto
-            nomes = "; ".join(f"{i.n}. «{i.rotulo(60)}»" for i in lida.indefinidos[:5])
             raise DecisaoInvalida(
-                f"A triagem não soube o dono de {len(lida.indefinidos)} item(ns) do pedido: {nomes}. Mande cada um a "
-                f"Produto na divisão, ou use **Devolver** até Produto com o pedido — {ROTULO_DONO.get(etapa, etapa)} "
-                "não aplica item que pode mudar o one-pager aprovado.")
+                f"A triagem não soube o dono de {len(lida.indefinidos)} item(ns) do pedido. Mande cada um a Produto na "
+                f"divisão, ou use **Devolver** até Produto com o pedido — {ROTULO_DONO.get(etapa, etapa)} não aplica "
+                "item que pode mudar o one-pager aprovado. Sem dono:"
+                + lista_inteira(f"{i.n}. {i.texto}" for i in lida.indefinidos))
     respostas: Dict[str, str] = {}
     for chave, pergunta in perguntas_de_conferencia(etapa, acao):
         resposta = str((conferencia or {}).get(chave) or "").strip()
@@ -558,25 +565,23 @@ def _fechar_contrato(estado: Dict[str, Any], acao: str, decisoes: Optional[Dict[
         raise DecisaoInvalida(str(exc)) from exc
     _, falhas = fc.aplicar_edicoes(estado, decisao.edicoes)
     if falhas:
-        raise DecisaoInvalida("As respostas não puderam ser gravadas — " + "; ".join(falhas[:3])
-                              + ". Recarregue a missão: o texto mudou desde que a lista foi montada. Se é uma mudança do "
-                              "design no Gate 0, use Refazer com ela.")
+        raise DecisaoInvalida("As respostas não puderam ser gravadas. Recarregue a missão: o texto mudou desde que a "
+                              "lista foi montada. Se é uma mudança do design no Gate 0, use Refazer com ela."
+                              + lista_inteira(falhas))
     if decisao.sem_resposta and acao == DE_ACORDO and _estrito(estrito):
-        nomes = "; ".join(f"«{s['assunto'][:70]}»" for s in decisao.sem_resposta[:5])
-        mais = f" e mais {len(decisao.sem_resposta) - 5}" if len(decisao.sem_resposta) > 5 else ""
         raise DecisaoInvalida(
-            f"O contrato de produto tem {len(decisao.sem_resposta)} item(ns) sem resposta: {nomes}{mais}. Com "
-            "ESTEIRA_ESTRITA, o de acordo de produto não sai com [PARÂMETRO] ou [PROPOSTA] aberto: responda cada item na "
-            "lista do cartão (ou «Aceitar as sugestões»), ou peça ao admin a liberação com exceção. «Tudo de acordo» no "
-            "comentário não aprova proposta.")
+            f"O contrato de produto tem {len(decisao.sem_resposta)} item(ns) sem resposta. Com ESTEIRA_ESTRITA, o de "
+            "acordo de produto não sai com [PARÂMETRO] ou [PROPOSTA] aberto: responda cada item na lista do cartão (ou "
+            "«Aceitar as sugestões»), ou peça ao admin a liberação com exceção. «Tudo de acordo» no comentário não "
+            "aprova proposta. Sem resposta:" + lista_inteira(s["assunto"] for s in decisao.sem_resposta))
     if perdidas and acao == DE_ACORDO and _estrito(estrito):
         # O refazer apagou do texto a decisão, e o marcador não voltou: o design não a aplica (065, D3), e ela sumiria a
         # jusante. Com ESTEIRA_ESTRITA, produto a repõe (Refazer) antes do de acordo — ou o admin libera com exceção
-        nomes = "; ".join(f"«{str(d.get('assunto') or '')[:70]}»" for d in perdidas[:5])
         raise DecisaoInvalida(
             f"{len(perdidas)} decisão(ões) do PO no contrato não está(ão) mais no one-pager nem na spec do Gate 0 — um "
-            f"refazer de produto reescreveu o trecho: {nomes}. Com ESTEIRA_ESTRITA, o de acordo de produto não sai assim: "
-            "use Refazer citando cada decisão, para ela voltar ao texto, ou peça ao admin a liberação com exceção.")
+            "refazer de produto reescreveu o trecho. Com ESTEIRA_ESTRITA, o de acordo de produto não sai assim: use "
+            "Refazer citando cada decisão, para ela voltar ao texto, ou peça ao admin a liberação com exceção. "
+            "Decisões fora do texto:" + lista_inteira(str(d.get("assunto") or "") for d in perdidas))
     saida = {"decisoes_contrato": decisao.decisoes, "sem_resposta": decisao.sem_resposta,
              "edicoes_contrato": decisao.edicoes, "itens_no_cartao": len(itens)}
     if perdidas:
@@ -633,7 +638,8 @@ def devolucoes_a_produto(estado: Dict[str, Any]) -> List[Dict[str, Any]]:
         for t in tickets or []:
             if not isinstance(t, dict):
                 continue
-            chave = (gate, str(t.get("id") or ""), str(t.get("resumo") or "")[:120])
+            # o resumo inteiro na chave: com o corte em 120, dois tickets diferentes que começavam igual viravam um só
+            chave = (gate, str(t.get("id") or ""), str(t.get("resumo") or ""))
             if chave not in vistos:
                 vistos.add(chave)
                 saida.append({**t, "gate": gate})
@@ -645,12 +651,14 @@ def _devolver_a_produto(fluxo: Dict[str, Any], tickets: List[Dict[str, Any]]) ->
     etapa = fluxo.get("etapa")
     pareceres: List[Dict[str, Any]] = fluxo.setdefault("pareceres", [])
     rodada = 1 + sum(1 for p in pareceres if p.get("etapa") == "produto" and p.get("acao") in (REFAZER, DEVOLVER))
+    # Todos os tickets, inteiros: o comentário é a devolutiva que o PO lê no cartão e que o refazer de produto leva aos
+    # agentes. Até 25/10/2026 ele cortava cada ticket em 400 caracteres e a lista em 12 («… e mais N»), e o PO
+    # decidia sobre meia frase; o registro do parecer guarda os tickets (`tickets`), e o cartão os explica um a um.
     comentario = "\n".join(
         [f"O QA de {ROTULO_ETAPA.get(etapa, etapa)} endereçou a produto (dono `gate-estrutural`) {len(tickets)} "
          "ticket(s) que o design não pode consertar — a decisão é do PO, no one-pager e na spec:", ""]
-        + [f"- `{t.get('id') or t.get('codigo') or '—'}` ({t.get('gate', '')}) — {str(t.get('resumo') or '')[:400]}"
-           for t in tickets[:12]]
-        + ([f"- … e mais {len(tickets) - 12}"] if len(tickets) > 12 else []))
+        + [f"- `{t.get('id') or t.get('codigo') or '—'}` ({t.get('gate', '')}) — {str(t.get('resumo') or '')}"
+           for t in tickets])
     _invalidar_a_partir_de(pareceres, "produto")
     pareceres.append({"etapa": "produto", "acao": DEVOLVER, "autor": "esteira",
                       "como": f"QA de {ROTULO_ETAPA.get(etapa, etapa)} (devolução automática)", "comentario": comentario,
