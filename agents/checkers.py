@@ -3370,6 +3370,18 @@ class SaidaDeLoopAgent(BaseAgent):
     #: Os documentos que o autor do loop escreve: quando o loop repete, a versão desta rodada vai a ele em
     #: `rodada_anterior_<chave>` (`agents/base.py`).
     autor_keys: List[str] = Field(default_factory=list)
+    #: Na correção pontual, as rodadas só caem a uma quando os autores do loop estão travados: o autor que escreve um
+    #: documento que falta tem a rodada de correção dele (`pipeline.orchestrator.limitar_a_uma_rodada`). É o pedagógico
+    #: da missão desenhada antes do PR 10 (exp02em1b, exp01em1b e exp03em1b, revisão do PR #79, 24/10/2026).
+    rodadas_com_autor_livre: bool = False
+
+    def autores_travados(self, state: Any) -> bool:
+        """Correção pontual em que todos os documentos do autor do loop são travados: repetir julgaria o mesmo texto."""
+        from agents.callbacks import KEY_DOCUMENTOS_TRAVADOS
+
+        travados = state.get(KEY_DOCUMENTOS_TRAVADOS) or []
+        return (state.get(KEY_MODO_CORRECAO) == "pontual" and bool(self.autor_keys)
+                and all(k in travados for k in self.autor_keys))
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -3391,7 +3403,7 @@ class SaidaDeLoopAgent(BaseAgent):
                 exigidos = 0
             if exigidos > 0 and k not in reprovados:
                 reprovados.append(k)
-        esgotou = rodada >= self.max_rounds
+        esgotou = rodada >= self.max_rounds or (self.rodadas_com_autor_livre and self.autores_travados(state))
         delta: Dict[str, Any] = {self.rodada_key: rodada}
 
         if not reprovados:

@@ -110,8 +110,9 @@ def gerado_nesta_correcao(state: Dict[str, Any]) -> bool:
 
     É a missão desenhada antes do PR 10, sem pedagógico (exp02em1b, exp01em1b e exp03em1b): o documento falta, e o
     redator o escreve mesmo na correção pontual de design — os demais documentos seguem travados. Os gates dele o julgam
-    como na geração: o texto é todo desta execução, e a linha de base não o rebaixa como «trecho que a correção não
-    tocou» (`tools.linha_de_base.DOCUMENTO_NOVO`)."""
+    como na geração, com as rodadas de correção da geração (`SaidaDeLoopAgent.rodadas_com_autor_livre`): o texto é todo
+    desta execução, e a linha de base não o rebaixa como «trecho que a correção não tocou»
+    (`tools.linha_de_base.DOCUMENTO_NOVO`)."""
     from agents.callbacks import KEY_MODO_CORRECAO
 
     documento = state.get(KEY)

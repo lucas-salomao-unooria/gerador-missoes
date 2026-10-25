@@ -9,8 +9,8 @@
 
 O loop roda em todo design: na geração, no Iniciar, no refazer e na correção pontual. Na correção pontual com o
 pedagógico travado, o redator não roda (`agents.callbacks.travar_documento_na_correcao_pontual`) e o A120b registra o que
-muda como troca; sem pedagógico (missão desenhada antes do PR 10), o redator escreve o documento que falta, e os outros
-documentos de design seguem travados.
+muda como troca, e o loop decide na primeira rodada; sem pedagógico (missão desenhada antes do PR 10), o redator escreve
+o documento que falta, com as rodadas de correção da geração, e os outros documentos de design seguem travados.
 """
 from __future__ import annotations
 
@@ -217,6 +217,9 @@ def build_fechamento_pedagogico(**kw) -> list:
                     rodada_key="pedagogico_rodada",
                     max_rounds=rodadas,
                     autor_keys=["one_pager_pedagogico"],
+                    # na correção pontual de design sem pedagógico, o redator que o escreve tem as rodadas da geração; com
+                    # o pedagógico travado, a saída decide na primeira (revisão do PR #79)
+                    rodadas_com_autor_livre=True,
                 ),
             ],
         ),
