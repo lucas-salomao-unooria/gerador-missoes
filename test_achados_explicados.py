@@ -388,12 +388,14 @@ def test_itens_do_semaforo_ordem_repeticao_e_verificador_sem_detalhe():
     }
     semaforo = {"fidelidade_status": "🟡", "fidelidade_nucleo_status": "🟡", "gate_final_status": "🔴"}
     itens = ex.itens_do_semaforo(estado, semaforo)
-    assert [i.severidade for i in itens] == ["bloqueio", "bloqueio", "atencao"]
+    # o bloqueio dentro do verificador 🟡 vira decisão de pessoa (revisão do PR #82); o 🔴 sem detalhe impede seguir
+    assert [i.severidade for i in itens] == ["bloqueio", "decisao_humana", "atencao"]
     repetido = next(i for i in itens if i.achado.get("codigo") == "nao-tratado")
     assert repetido.tambem_em == ["fidelidade_nucleo_status"]
     sem_detalhe = next(i for i in itens if i.gate == "gate_final_status")
     assert "sem dizer por quê" in sem_detalhe.explicacao.titulo
-    assert ex.contagem(itens) == "2 impedem seguir · 1 para conferir"
+    assert ex.contagem(itens) == "1 impede seguir · 1 pede decisão · 1 para conferir"
+    assert ex.contagem(itens[:1] * 2) == "2 impedem seguir"
 
 
 # --------------------------------------------------------------------------- passagem.py não corta
@@ -595,3 +597,94 @@ def test_rastro_leva_a_linha_e_o_marcador_inteiros_ao_cartao():
     assert pergunta.strip() in relatorio
     envelope = json.loads(relatorio[relatorio.index("{", relatorio.rindex("```json")):relatorio.rindex("```")])
     assert envelope["achados"][0]["resumo"] == linha
+
+
+# --------------------------------------------------------------------------- revisão 2 do PR #82
+# o envelope real da session_274a2e75 (exp03ef1b, 07/10/2026): adequação 🟡 com um achado do juiz em bloqueio
+_ADEQUACAO_274A2E75 = {
+    "agente": "adequacao-pedagogica", "missao": "exp03ef1b", "status": "aprovado_com_ressalvas", "placar": 16,
+    "ajustes_exigidos": 1, "precisa_humano": False,
+    "achados": [
+        {"id": "E2-A1", "severidade": "bloqueio", "codigo": "demanda_cognitiva", "padrao": "repertorio-nao-declarado",
+         "resumo": "ícone de raio isolado para ação/o quê exige abstração semiótica incompatível com 3º ano"},
+        {"id": "E1-A1", "severidade": "atencao", "codigo": "alinhamento_curricular", "padrao": "verbo-desalinhado",
+         "resumo": "habilidade EF03CO08 figura como foco primário mas tarefa é essencialmente decomposição EF03CO03"},
+    ],
+}
+# o achado real da session_8ce9c32d (exp04ef1b, 25/09/2026): rastro de dev 🟡 com a pendência de produto em bloqueio
+_RASTRO_8CE9C32D = {
+    "agente": "rastro-lacunas", "status": "bloqueado", "veredito": "vermelho", "precisa_humano": True,
+    "achados": [{"severidade": "bloqueio", "classe": "aberto", "codigo": "produto", "agente_responsavel": "produto",
+                 "documento": "ambiente simulado",
+                 "resumo": "- `[ABERTO — dono: produto: Ratificação formal do teto de texto entre 25 e 35 palavras por "
+                           "resumo]` (§6) — Resolvido em "}],
+}
+
+
+def test_bloqueio_dentro_de_verificador_amarelo_vira_decisao_de_pessoa():
+    """O juiz grava bloqueio dentro de envelope 🟡: o «De acordo» aparece, então o cartão não diz «Impede seguir»."""
+    estado = {"adequacao_status": "amarelo", "adequacao_status_envelope": _ADEQUACAO_274A2E75}
+    itens = ex.itens_do_semaforo(estado, {"adequacao_status": "🟡"}, "produto")
+    raio = next(i for i in itens if i.achado["codigo"] == "demanda_cognitiva")
+    assert raio.severidade == ex.DECISAO_HUMANA and raio.rebaixado_pelo_verificador
+    assert "ficou 🟡" in raio.nota and "não impede seguir" in raio.nota
+    assert raio.achado["severidade"] == "bloqueio", "o original continua nos detalhes técnicos"
+    assert "ou siga com ele registrado" in raio.o_que_fazer and ex.NO_VERMELHO not in raio.o_que_fazer
+    assert ex.contagem(itens) == "1 pede decisão · 1 para conferir"
+    # no verificador 🔴, o mesmo achado continua impedindo seguir
+    vermelho = ex.item(_ADEQUACAO_274A2E75["achados"][0], "adequacao_status", "🔴")
+    assert vermelho.severidade == ex.BLOQUEIO and not vermelho.rebaixado_pelo_verificador and not vermelho.nota
+
+
+def test_cartao_de_design_ou_dev_nao_manda_ao_refazer_de_produto():
+    """No cartão de dev não há «Refazer de produto»: o caminho é o Refazer da etapa com o item mandado a Produto (D4)."""
+    estado = {"rastro_lacunas_status": "amarelo", "rastro_lacunas_status_envelope": _RASTRO_8CE9C32D}
+    (i,) = ex.itens_do_semaforo(estado, {"rastro_lacunas_status": "🟡"}, "dev")
+    assert i.severidade == ex.DECISAO_HUMANA
+    assert "Refazer** de produto" not in i.o_que_fazer
+    assert "**Refazer** desta etapa com ela" in i.o_que_fazer and i.o_que_fazer.endswith(ex.PRODUTO_PELA_ETAPA)
+    assert "mandar a Produto" in ex.PRODUTO_PELA_ETAPA and "**Devolver**" in ex.PRODUTO_PELA_ETAPA
+    # no cartão de produto o botão existe, e o texto fica como está
+    (p,) = ex.itens_do_semaforo(estado, {"rastro_lacunas_status": "🟡"}, "produto")
+    assert "use **Refazer** de produto com ela" in p.o_que_fazer and ex.PRODUTO_PELA_ETAPA not in p.o_que_fazer
+    # nenhuma entrada do catálogo sai com «Refazer de produto» em design ou dev, em qualquer severidade
+    for exp in list(ex.CATALOGO.values()) + list(ex.PADROES.values()):
+        for sev in ex.SEVERIDADE:
+            for etapa in ("design", "dev"):
+                assert "Refazer** de produto" not in ex.o_que_fazer(exp, sev, etapa)
+
+
+def test_amarelo_que_manda_ao_de_acordo_avisa_quando_outro_ponto_e_vermelho():
+    """Um 🔴 em qualquer verificador da etapa esconde o «De acordo» (`passagem.acoes_possiveis`)."""
+    estado = {
+        "rastro_lacunas_status": "amarelo", "dev_status": "bloqueado",
+        "rastro_lacunas_status_envelope": {"achados": [
+            {"severidade": "decisao_humana", "codigo": "humano", "resumo": "- `[ABERTO — dono: produto: limiar]`"}]},
+    }
+    semaforo = passagem.semaforo_da_etapa(estado, "dev")
+    assert semaforo == {"dev_status": "🔴", "rastro_lacunas_status": "🟡"}
+    assert passagem.DE_ACORDO not in passagem.acoes_possiveis(
+        {**novo_fluxo(), "etapa": "dev", "situacao": AGUARDANDO}, "dev", estado)
+    humano = next(i for i in ex.itens_do_semaforo(estado, semaforo, "dev") if i.gate == "rastro_lacunas_status")
+    assert humano.etapa_travada and humano.o_que_fazer.endswith(ex.OUTRO_NO_VERMELHO)
+    # sem 🔴 na etapa, o mesmo item manda ao de acordo, sem o aviso
+    (livre,) = ex.itens_do_semaforo(estado, {"rastro_lacunas_status": "🟡"}, "dev")
+    assert not livre.etapa_travada and ex.OUTRO_NO_VERMELHO not in livre.o_que_fazer
+    assert "de acordo" in livre.o_que_fazer
+    # sem etapa (resultado sem parecer humano) não há «De acordo» a esconder
+    (sem,) = [i for i in ex.itens_do_semaforo(estado, semaforo) if i.gate == "rastro_lacunas_status"]
+    assert ex.OUTRO_NO_VERMELHO not in sem.o_que_fazer
+    # o que não fala do de acordo nem manda seguir não ganha o aviso
+    exp = ex._x("t", "a", "b", "Use **Refazer** pedindo que o trecho volte, citando-o.")
+    assert ex.o_que_fazer(exp, ex.ATENCAO, "dev", True) == exp.o_que_fazer
+
+
+def test_cartao_de_dev_com_vermelho_e_amarelo_real(tmp_path, monkeypatch):
+    """No cartão: o bloqueio do juiz em 🟡 sai como decisão com a nota, e o Refazer de produto vira o da etapa."""
+    estado = {"dev_status": "amarelo", "prd_status": "aprovado", "rastro_lacunas_status": "amarelo",
+              "rastro_lacunas_status_envelope": _RASTRO_8CE9C32D}
+    at = _rodar(tmp_path, monkeypatch, estado, "dev", "dev")
+    texto = _textos(at)
+    assert "Refazer** de produto" not in texto
+    assert ex.PRODUTO_PELA_ETAPA in texto
+    assert "o verificador que o reuniu ficou 🟡" in texto
