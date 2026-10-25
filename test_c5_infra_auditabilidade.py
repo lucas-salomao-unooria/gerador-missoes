@@ -282,6 +282,54 @@ def test_linha_de_base_regrava_o_relatorio_com_o_envelope_novo():
     assert not concordam(antigo, delta["fidelidade_status_envelope"])
 
 
+def test_mapa_do_relatorio_cobre_cada_gate_da_arvore_do_orquestrador():
+    """Cada par (status, relatório) dos agentes da árvore real ou bate com `relatorio_do_gate`, ou é de um gate sem
+    relatório próprio. Na revisão do PR #83 (25/10/2026), `stitch_status` (relatório `prototipo_relatorio`) e
+    `completude_status` divergiam."""
+    from pipeline.orchestrator import create_mission_orchestrator
+    from tools.envelope_relatorio import SEM_RELATORIO_PROPRIO, relatorio_do_gate
+
+    pares: Dict[str, set] = {}
+
+    def andar(agente):
+        status = getattr(agente, "status_key", None)
+        relatorio = getattr(agente, "report_key", None) or getattr(agente, "relatorio_key", None)
+        if isinstance(status, str) and isinstance(relatorio, str) and relatorio:
+            pares.setdefault(status, set()).add(relatorio)
+        for filho in getattr(agente, "sub_agents", None) or []:
+            andar(filho)
+
+    andar(create_mission_orchestrator(stages=["produto", "design", "dev"]))
+    assert len(pares) > 30
+    divergem = {k: v for k, v in pares.items() if v != {relatorio_do_gate(k)} and k not in SEM_RELATORIO_PROPRIO}
+    assert divergem == {}
+    assert relatorio_do_gate("stitch_status") == "", "o prototipo_relatorio termina no envelope do protótipo, não no do Stitch"
+
+
+def test_linha_de_base_sem_relatorio_proprio_mantem_a_nota_e_o_envelope_do_agente():
+    """`completude_status`: o relatório é a resposta do agente. A nota «Veredito: 🟡» entra no fim, como na main, e o
+    envelope do agente fica; sem a nota, relatório 🔴 com status 🟡 (revisão do PR #83)."""
+    from tools import linha_de_base
+
+    citacao = "Canal B removido por completo das perguntas de encerramento da missão"
+    envelope = {"agente": "completude", "status": "bloqueado", "achados": [
+        {"id": "C1", "severidade": "bloqueio", "codigo": "lacuna", "citacao": citacao, "resumo": "falta o Canal B"}]}
+    do_agente = {"agente": "completude-agente", "status": "bloqueado"}
+    relatorio = "# Completude\n\n**Veredito: 🔴**\n\n```json\n" + json.dumps(do_agente) + "\n```\n"
+    estado = {"completude_status": "bloqueado", "completude_status_envelope": envelope, "completude_report": relatorio,
+              "stitch_status": "bloqueado", "prototipo_relatorio": "# Protótipo\n\n```json\n{\"agente\": "
+              "\"prototipo-navegavel\", \"status\": \"concluido\"}\n```\n",
+              "stitch_status_envelope": {"agente": "stitch-cobertura", "status": "bloqueado", "achados": [
+                  {"severidade": "bloqueio", "codigo": "stitch", "citacao": citacao, "resumo": "faltam telas"}]}}
+    delta, _ = linha_de_base.aplicar(estado, {}, [{"de": "texto antigo da etapa 3", "para": "texto novo"}],
+                                     ["completude_status", "stitch_status"])
+    assert delta["completude_status"] == "amarelo"
+    novo = delta["completude_report"]
+    assert novo.startswith(relatorio) and novo.rstrip().endswith("Veredito: 🟡."), "a nota no fim"
+    assert extrair_envelope(novo)["agente"] == "completude-agente", "o envelope do agente fica"
+    assert "prototipo_relatorio" not in delta and "stitch_report" not in delta
+
+
 def test_relatorio_com_envelope_sem_bloco_acrescenta_no_fim():
     novo = relatorio_com_envelope("# Gate\n\nSem envelope.\n", {"status": "amarelo", "achados": []}, "nota")
     assert novo.rstrip().endswith("```") and categoria_do_envelope(extrair_envelope(novo)) == "amarelo"
@@ -367,8 +415,41 @@ def test_runner_grava_as_rodadas_no_estado_e_no_arquivo_da_sessao(tmp_path, monk
     assert len(estado[hg.KEY]) == 2, "a execução anterior fica, a nova entra no fim"
     assert [v["status"] for v in hg.rodadas_de(estado[hg.KEY], "gate_estrutural_status")] == ["bloqueado", "aprovado"]
     assert estado["gate_estrutural_status"] == "aprovado", "o estado continua com o valor da última rodada"
-    exportado = json.loads((tmp_path / "sessao" / hg.ARQUIVO).read_text(encoding="utf-8"))
-    assert exportado["execucoes"] == estado[hg.KEY]
+    # o estado leva o resumo, sem os textos; o arquivo da sessão leva os textos (revisão do PR #83)
+    assert not any("texto" in r for e in estado[hg.KEY] for r in e["registros"])
+    assert hg.KEY_EXECUCAO_COMPLETA not in estado
+    exportado = json.loads((tmp_path / "sessao" / hg.ARQUIVO).read_text(encoding="utf-8"))["execucoes"]
+    assert [e.get("id") for e in exportado] == [e.get("id") for e in estado[hg.KEY]]
+    textos = [r["texto"] for r in exportado[-1]["registros"] if r["tipo"] == "relatorio"]
+    assert len(textos) == 2 and "rodada 1" in textos[0] and "rodada 2" in textos[1]
+    # o arquivo regravado sem a execução corrente em mãos (artefatos refeitos depois) mantém os textos que já tinha
+    from pipeline.artifacts import save_run_artifacts
+
+    save_run_artifacts(estado, "s", run_dir=tmp_path / "sessao")
+    de_novo = json.loads((tmp_path / "sessao" / hg.ARQUIVO).read_text(encoding="utf-8"))["execucoes"]
+    assert de_novo == exportado
+    # mutante: sem o arquivo existente, só o resumo do estado sobra e os textos se perdem
+    assert "texto" not in json.loads(hg.exportar(estado))["execucoes"][-1]["registros"][0]
+
+
+def test_estado_restaurado_leva_o_historico_da_execucao_que_falhou_embora(tmp_path):
+    """A execução que falha cria o `historico-gates.json` que não existia: a restauração o apaga, como os demais ausentes."""
+    from pipeline.reexecucao import ARQUIVO_AUSENTES_NO_BACKUP, fazer_backup, restaurar_backup
+
+    sessao = tmp_path / "sessao"
+    sessao.mkdir()
+    (sessao / "estado.json").write_text("{}", encoding="utf-8")
+    backup = fazer_backup(sessao, "dev", [])
+    assert hg.ARQUIVO in json.loads((backup / ARQUIVO_AUSENTES_NO_BACKUP).read_text(encoding="utf-8"))
+    (sessao / hg.ARQUIVO).write_text('{"execucoes": [{"id": "falhou"}]}', encoding="utf-8")
+    restaurar_backup(sessao, backup)
+    assert not (sessao / hg.ARQUIVO).exists()
+    # com o arquivo antes do backup, ele volta como estava
+    (sessao / hg.ARQUIVO).write_text('{"execucoes": [{"id": "antes"}]}', encoding="utf-8")
+    backup = fazer_backup(sessao, "dev", [])
+    (sessao / hg.ARQUIVO).write_text('{"execucoes": [{"id": "falhou"}]}', encoding="utf-8")
+    restaurar_backup(sessao, backup)
+    assert "antes" in (sessao / hg.ARQUIVO).read_text(encoding="utf-8")
 
 
 def test_sessao_antiga_sem_historico_e_lida_como_sempre(tmp_path, monkeypatch):
@@ -409,6 +490,29 @@ def test_ped06_da_76d9af6e_vai_ao_po_e_nao_gasta_a_rodada_do_autor_da_spec():
     assert "PED-06" in sem_rota["retrabalho_spec_missao"]
 
 
+def test_ped06_misto_chega_ao_autor_como_contexto_quando_o_loop_roda_por_outro_gate():
+    """O resumo do PED-06 também aponta «faltar a definição explícita de zero e none na tabela 9b da spec». Quando o loop
+    roda por outro bloqueio, o achado do PO vai ao autor como contexto, sem decidir a rodada (revisão do PR #83)."""
+    from agents.checkers import SaidaDeLoopAgent, motivos_do_retrabalho
+    from agents.rota import RotaDeAchadosAgent
+
+    estado = _estado("exp01em1b-76d9af6e")
+    base = {"one_pager": estado["one_pager"], "spec_missao": estado["spec_missao"],
+            "banca_produto_status": "bloqueado", "banca_produto_status_envelope": estado["banca_produto_status_envelope"],
+            "banca_produto_report": estado["banca_produto_report"], "spec_rodada": 0,
+            "bncc_status": "bloqueado", "bncc_report": "EF06CO10 citada fora do ano."}
+    marcado = _rodar(RotaDeAchadosAgent(name="Rota", status_keys=["banca_produto_status"]), base)
+    depois = _rodar(SaidaDeLoopAgent(name="Saida", status_keys=["bncc_status", "banca_produto_status"],
+                                     rodada_key="spec_rodada", max_rounds=2, autor_keys=["spec_missao"]), marcado)
+    pedido = depois["retrabalho_spec_missao"]
+    assert depois["spec_rodada"] == 1 and "Gate `bncc_status`" in pedido, "o loop roda pelo bncc"
+    assert "Gate `banca_produto_status`" not in pedido, "a banca reprovou só pelo PO: não decide a rodada"
+    contexto = pedido[pedido.index("### Contexto: achados que vão ao PO"):]
+    assert "PED-06" in contexto and "tabela 9b" in contexto and "Não altere o que o one-pager decide" in contexto
+    # mutante: sem os gates do PO no pedido, a parte da spec do achado misto some do retrabalho
+    assert "PED-06" not in motivos_do_retrabalho(marcado, ["bncc_status"])
+
+
 def test_achado_que_a_spec_reproduz_e_o_sem_citacao_ficam_com_o_autor():
     one_pager = "O Canal A registra a escolha da criança na etapa 3 e grava o nível no servidor."
     env = {"achados": [
@@ -419,6 +523,18 @@ def test_achado_que_a_spec_reproduz_e_o_sem_citacao_ficam_com_o_autor():
     assert rota_achados.so_do_po(env) is False and len(rota_achados.bloqueios_do_autor(env)) == 2
     assert [a["id"] for a in rota_achados.marcar(env, one_pager, "spec sem o trecho")] == ["A"]
     assert rota_achados.so_do_po(env) is False, "o B continua com o autor"
+
+
+def test_rota_confere_citacao_pela_funcao_publica():
+    """A rota não importa o que `tools/fidelidade.py` tem de privado (revisão do PR #83): usa `tools.citacoes.existe`."""
+    import inspect
+
+    from tools import citacoes
+
+    assert "_citacao_confere" not in inspect.getsource(rota_achados) and "_norm" not in inspect.getsource(rota_achados)
+    doc = citacoes.normalizar("O Canal A registra a «escolha» da criança na etapa 3.")
+    assert citacoes.existe("registra a escolha da criança na etapa 3", doc)
+    assert not citacoes.existe("registra a nota do professor na etapa 9", doc)
 
 
 # =========================================================================== 7. ajuste exigido que o loop não aplicou
@@ -495,21 +611,61 @@ def test_refazer_com_marcador_e_seta_responde_o_marcador():
 
 
 # =========================================================================== 9. aprendizado conferido em código
-APRENDIZADO_R10 = """# Aprendizado — exp06ef1b — 10/10/2026
+#: A linha do §1 do aprendizado real da 53e011b6 (exp06ef1b, 08/10/2026), copiada do `aprendizado_registro` do acervo:
+#: sozinha num bloco ```markdown, sem cabeçalho de tabela.
+LINHA_R10 = ('| exp06ef1b | 6º EF | 1º | O Júri Estadual de Projetos | unoovista | Cultura Digital / Sistemas de '
+             'Recomendação | "O que aparece no meu feed não é tudo o que existe: minhas próprias curtidas ensinaram o '
+             'aplicativo a esconder projetos inteiros da minha tela." | Avaliar projetos escolares curtindo publicações e '
+             'elegendo o vencedor da mostra | explicar | EF06CO10 | em produção |')
 
-## O que aconteceu nesta execução
-A missão chegou ao PRD sem impedimentos.
+
+def test_r10_status_do_catalogo_e_fatos_em_codigo():
+    """53e011b6 (exp06ef1b, R10), com o aprendizado literal da sessão: «em produção» numa linha sem cabeçalho, dentro de
+    um bloco ```markdown, e repetida em código inline na proposta de atualizar o catálogo; «Nenhuma» sem conferir."""
+    estado = _estado("exp06ef1b-53e011b6")
+    real = estado["aprendizado_registro"]
+    assert "```markdown\n" + LINHA_R10 + "\n```" in real, "o formato real: linha sozinha no bloco, sem cabeçalho"
+    novo = aprendizado.conferir(real, estado)
+    status = catalogo.ficha_da_execucao(estado)["status"]
+    assert f"| {status} (o agente propôs «em produção»: promover é ato humano) |" in novo
+    assert f"| {status} (o agente propôs «em produção»: promover é ato humano) |`" in novo, "a linha em código inline"
+    assert "| em produção |" not in novo, "nenhum status de promoção sobra no documento"
+    fatos = novo[novo.index(aprendizado.TITULO_FATOS):]
+    assert "o agente propôs «em produção»; promover é ato humano" in fatos
+    assert fatos.count("em produção") == 1, "a proposta repetida aparece uma vez"
+    assert "não foi conferida" in novo and "| Status no catálogo |" in fatos and "| Rodadas |" in fatos
+    assert novo.index(aprendizado.TITULO_FATOS) < novo.rindex("```json"), "os fatos entram antes do envelope"
+    assert extrair_envelope(novo)["agente"] == "aprendizado"
+    assert aprendizado.conferir(novo, estado) == novo, "idempotente"
+    # a linha sem cabeçalho também é lida pela ficha do catálogo (antes, ficha_lida=False nesta sessão)
+    proposta = catalogo._linha_do_aprendizado(real, "exp06ef1b")
+    assert proposta["nome"] == "O Júri Estadual de Projetos" and proposta["porta_abstracao"] == "explicar"
+    assert proposta["tipo_decisao"].startswith("Avaliar projetos escolares")
+    assert catalogo._linha_do_aprendizado(novo, "exp06ef1b")["habilidade_primaria"] == "EF06CO10"
+
+
+def test_r10_mutante_sem_o_cabecalho_fixo_o_em_producao_passa(monkeypatch):
+    estado = _estado("exp06ef1b-53e011b6")
+    monkeypatch.setattr(catalogo, "cabecalho_fixo_da_linha", lambda celulas, slug: None)
+    texto, trocados = aprendizado.corrigir_status_do_catalogo(estado["aprendizado_registro"], "em criação", "exp06ef1b")
+    assert trocados == [] and LINHA_R10 in texto, "a correção desligada deixa o «em produção» da sessão real intacto"
+
+
+def test_linha_sem_cabecalho_de_outra_missao_ou_com_outra_forma_nao_e_trocada():
+    """Comparação literal: sem o slug da missão na primeira célula, ou fora das 11 colunas, a linha não é a do catálogo."""
+    for texto, slug in ((LINHA_R10, "exp05ef1b"), (LINHA_R10, ""),
+                        (LINHA_R10.replace("| EF06CO10 |", "|"), "exp06ef1b")):
+        novo, trocados = aprendizado.corrigir_status_do_catalogo(texto, "em criação", slug)
+        assert trocados == [] and novo == texto
+
+
+#: A forma com o cabeçalho literal do prompt 128 (texto sintético, não de sessão): a coluna é achada pelo nome.
+APRENDIZADO_COM_CABECALHO = """# Aprendizado — exp06ef1b — 10/10/2026
 
 ## 1. Catálogo (linha proposta + teste de diferenciação)
 |Slug|Ano|Bim|Nome|Ambiente|Eixo temático|Descoberta central (aha)|Tipo de decisão|Porta de abstração|Habilidade primária|Status|
 |---|---|---|---|---|---|---|---|---|---|---|
 |exp06ef1b|6º EF|1|Vozes|instanooria|Algoritmos|O feed escolhe quem aparece|curadoria|criticar com apoio|EF06CO07|em produção|
-
-## 3. Devoluções ao gate (por classe)
-Mecânicas ausentes encontradas tardiamente: Nenhuma.
-
-## 8. Saúde do pipeline
-Contagem de lacunas fechadas pelo dono errado: 0.
 
 ```json
 {"agente": "aprendizado", "missao": "exp06ef1b", "status": "concluido", "lacunas_abertas": 0, "devolucoes_ao_gate": 0, "candidatos_a_criterio": 0, "documentos_provisorios": 0, "precisa_humano": false}
@@ -517,28 +673,21 @@ Contagem de lacunas fechadas pelo dono errado: 0.
 """
 
 
-def test_r10_status_do_catalogo_e_fatos_em_codigo():
-    """53e011b6 (exp06ef1b, R10): «em produção» e «Nenhuma» sem ninguém conferir."""
+def test_tabela_com_cabecalho_status_trocado_pelo_nome_da_coluna():
     estado = _estado("exp06ef1b-53e011b6")
-    novo = aprendizado.conferir(APRENDIZADO_R10, estado)
+    novo = aprendizado.conferir(APRENDIZADO_COM_CABECALHO, estado)
     status = catalogo.ficha_da_execucao(estado)["status"]
     assert f"| {status} (o agente propôs «em produção»: promover é ato humano) |" in novo
     assert "|em produção|" not in novo
-    fatos = novo[novo.index(aprendizado.TITULO_FATOS):]
-    assert "não foi conferida" in novo and "| Status no catálogo |" in fatos and "| Rodadas |" in fatos
-    assert novo.index(aprendizado.TITULO_FATOS) < novo.index("```json"), "os fatos entram antes do envelope"
-    assert extrair_envelope(novo)["agente"] == "aprendizado"
-    assert aprendizado.conferir(novo, estado) == novo, "idempotente"
-    # a linha do catálogo continua legível pela ficha (o status dela vem do código, não do agente)
     assert catalogo._linha_do_aprendizado(novo)["descoberta"] == "O feed escolhe quem aparece"
 
 
-def test_status_automatico_proposto_fica_e_mutante_sem_conferencia_passa_em_producao():
-    texto, trocados = aprendizado.corrigir_status_do_catalogo(APRENDIZADO_R10.replace("em produção", "em criação"),
-                                                              "em criação")
+def test_status_automatico_proposto_fica_e_promocao_com_formatacao_e_trocada():
+    texto, trocados = aprendizado.corrigir_status_do_catalogo(
+        APRENDIZADO_COM_CABECALHO.replace("em produção", "em criação"), "em criação")
     assert trocados == [] and "|em criação|" in texto
-    _, trocados = aprendizado.corrigir_status_do_catalogo(APRENDIZADO_R10.replace("em produção", "`Aprovada`"),
-                                                          "bloqueada")
+    _, trocados = aprendizado.corrigir_status_do_catalogo(
+        APRENDIZADO_COM_CABECALHO.replace("em produção", "`Aprovada`"), "bloqueada")
     assert trocados == ["Aprovada"]
 
 
@@ -550,7 +699,7 @@ def test_o_callback_do_a128_aplica_a_conferencia():
             self.state = state
 
     estado = _estado("exp06ef1b-53e011b6")
-    ctx = Ctx({**estado, "aprendizado_registro": APRENDIZADO_R10})
+    ctx = Ctx(dict(estado))
     conferir_aprendizado(ctx)
     assert aprendizado.TITULO_FATOS in ctx.state["aprendizado_registro"]
     assert get_aprendizado_agent().after_agent_callback is conferir_aprendizado
