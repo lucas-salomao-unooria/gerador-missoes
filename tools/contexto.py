@@ -23,12 +23,14 @@ Aqui, sem chamar a API:
   Gemini só reaproveita um prefixo idêntico; no meio da instrução, depois de texto que muda por agente, nunca havia
   prefixo comum — a 3ef2b teve 16 mil tokens em cache em 17,27 milhões de entrada.
 
-Puro: recebe textos e o estado, devolve textos. Os callbacks que o usam estão em `agents/callbacks.py`.
+Puro: recebe textos e o estado, devolve textos — exceto `anotar_chamada`, que guarda quem chamou o modelo por último
+para a mensagem de erro do runner. Os callbacks que o usam estão em `agents/callbacks.py`.
 """
 from __future__ import annotations
 
 import re
-from typing import Any, Iterable, List, Mapping, Optional, Tuple
+from contextvars import ContextVar
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 #: Caracteres por token medidos no one-pager da 3ef2b (360.619 caracteres ≈ 107,7 mil tokens).
 CARACTERES_POR_TOKEN = 3.3
@@ -148,6 +150,28 @@ def mensagem_de_tamanho(exc: BaseException, agente: str = "") -> str:
     quem = f"o agente {agente}" if agente else "um agente"
     return (f"{quem} mandou ao modelo uma entrada maior que o teto de {teto} tokens, e o modelo a recusou (400 "
             "INVALID_ARGUMENT). É falha da esteira, não da missão: tentar de novo dá o mesmo erro — avise o time técnico.")
+
+
+# ------------------------------------------------------------------ quem chamou o modelo por último
+#: O agente da última chamada ao modelo nesta execução, anotado pelo orçamento de contexto logo antes de cada chamada. É
+#: um dicionário mutável na contextvar: as tarefas que o ADK cria copiam o contexto, mas o dicionário é o mesmo, e duas
+#: execuções em paralelo (duas sessões no app) têm cada uma o seu.
+_ULTIMA_CHAMADA: ContextVar[Optional[Dict[str, str]]] = ContextVar("ultima_chamada_ao_modelo", default=None)
+
+
+def acompanhar_chamadas() -> Dict[str, str]:
+    """Começa o registro desta execução (`pipeline.runner`) e o devolve: `{"agente": <nome>}` depois da 1ª chamada."""
+    registro: Dict[str, str] = {}
+    _ULTIMA_CHAMADA.set(registro)
+    return registro
+
+
+def anotar_chamada(agente: str) -> None:
+    """Quem vai chamar o modelo agora. O autor do último evento não serve: na 3ef2b o A004 não emite evento antes da
+    chamada, e o «🔁 nova volta» do `…Isolado` vinha logo antes — o 400 citaria o agente errado (revisão do PR #87)."""
+    registro = _ULTIMA_CHAMADA.get()
+    if registro is not None and agente:
+        registro["agente"] = agente
 
 
 # ------------------------------------------------------------------ o que sai da instrução de um juiz

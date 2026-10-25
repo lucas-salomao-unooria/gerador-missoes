@@ -805,18 +805,24 @@ def _juntar_validadores(*validadores):
 
 #: Tentativas do editor quando alguma troca não se aplica (trecho que não existe ou que se repete).
 TENTATIVAS_DO_EDITOR = 3
-#: Acima disto (tokens estimados dos documentos que o editor recebe), uma tentativa só. Na 1em1b do e2e de 25/10/2026, o
-#: retrabalho do one-pager de 71 mil caracteres gastou 3 chamadas de ≈7 min cada para terminar em «o editor não devolveu
-#: uma proposta legível» — 22 dos 63 minutos de produto. A falha em documento grande se repete; o autor (ou, com o
-#: one-pager do PO grande, a pendência ao PO) resolve mais rápido.
+#: No retrabalho dos loops, acima disto (tokens estimados do maior documento), uma tentativa só. Na 1em1b do e2e de
+#: 25/10/2026, o retrabalho do one-pager de 71 mil caracteres gastou 3 chamadas de ≈7 min cada para terminar em «o editor
+#: não devolveu uma proposta legível» — 22 dos 63 minutos de produto. A falha em documento grande se repete, e ali o autor
+#: reescreve mais rápido.
 EDITOR_UMA_TENTATIVA_ACIMA_DE = 20_000
 
 
 def tentativas_do_editor(documentos: Dict[str, str]) -> int:
+    """Tentativas do editor no retrabalho dos loops (`agents.callbacks.retrabalhar_por_trocas`), pelo maior documento.
+
+    Só lá: a correção pontual recebe todos os documentos da etapa, e nas 15 missões do acervo o one-pager de produto e o
+    protótipo de design já passam do limite — com a medida aplicada a ela, a correção pontual validada no PR #52 perdia
+    a 2ª e a 3ª tentativas em toda missão, e o pedido do PO caía no refazer da etapa inteira (revisão do PR #87,
+    25/10/2026). Ela fica com `TENTATIVAS_DO_EDITOR`."""
     from tools.contexto import estimar_tokens
 
-    total = sum(estimar_tokens(t) for t in documentos.values())
-    return 1 if total > EDITOR_UMA_TENTATIVA_ACIMA_DE else TENTATIVAS_DO_EDITOR
+    maior = max((estimar_tokens(t) for t in documentos.values()), default=0)
+    return 1 if maior > EDITOR_UMA_TENTATIVA_ACIMA_DE else TENTATIVAS_DO_EDITOR
 
 
 def texto_para_o_editor(pedido: "PedidoCorrecao") -> str:
@@ -909,7 +915,8 @@ async def editar(
 ) -> Tuple[Any, Any]:
     """`(resultado | None, proposta)`: as trocas aplicadas aos documentos, ou None se o pedido não cabe numa edição.
 
-    O editor tem `TENTATIVAS_DO_EDITOR` chances (uma só com documento grande, `tentativas_do_editor`): troca que não se
+    O editor tem `TENTATIVAS_DO_EDITOR` chances (ou `tentativas`; o retrabalho dos loops passa uma só com documento
+    grande, `tentativas_do_editor`): troca que não se
     aplica volta a ele com o motivo, e também a que o `validador` recusa (`validador(documentos_novos) -> [falhas]`, ex.:
     texto do one-pager do PO apagado). `proponente` troca o editor nos testes (mesma assinatura de `propor_edicao`).
     """
@@ -918,7 +925,7 @@ async def editar(
     proponente = proponente or propor_edicao
     erros = ""
     proposta = Proposta(modo=MODO_ESTRUTURAL)
-    tentativas = tentativas or tentativas_do_editor(documentos)
+    tentativas = tentativas or TENTATIVAS_DO_EDITOR
     for _ in range(tentativas):
         proposta = await proponente(pedido_texto, etapa, documentos, erros=erros, achados=achados)
         if not proposta.pontual:

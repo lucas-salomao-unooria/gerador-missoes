@@ -257,22 +257,95 @@ def test_aplicar_parcial_fica_com_as_boas_e_diz_por_que_cada_ruim_falhou():
     assert ed.aplicar_parcial(docs, [ed.Edicao("d", "um", "1")]).ok
 
 
-def test_editor_tem_uma_tentativa_com_documento_grande():
+def _editor_que_erra(chamadas: List[Any], chave: str = "one_pager"):
+    async def editor(pedido, etapa, documentos, *, erros="", achados=""):
+        chamadas.append(dict(documentos))
+        return ed.Proposta(modo=ed.MODO_PONTUAL, edicoes=[ed.Edicao(chave, "trecho que não existe", "x")])
+
+    return editor
+
+
+def test_editor_tem_uma_tentativa_no_retrabalho_do_documento_grande():
+    from agents import callbacks as cb
     from pipeline import reexecucao as rx
 
     assert rx.tentativas_do_editor({"one_pager": "x" * 70_000}) == 1, "o one-pager de 71 mil caracteres da 1em1b"
     assert rx.tentativas_do_editor({"one_pager": "x" * 60_000}) == rx.TENTATIVAS_DO_EDITOR
-    chamadas = []
+    # pelo maior documento, não pela soma: dois de 12 mil tokens não fazem um grande
+    assert rx.tentativas_do_editor({"a": "x" * 40_000, "b": "x" * 40_000}) == rx.TENTATIVAS_DO_EDITOR
+    chamadas: List[Any] = []
+    for tamanho, esperado in ((70_000, 1), (6_000, rx.TENTATIVAS_DO_EDITOR)):
+        chamadas.clear()
+        ctx = _Ctx({"one_pager": "# One-pager\n" + "y" * tamanho, "retrabalho_one_pager": "o gate reprovou"})
+        with mock.patch.dict(os.environ, {"RETRABALHO_POR_TROCAS": "true"}), \
+                mock.patch.object(cb, "PROPONENTE_DE_RETRABALHO", _editor_que_erra(chamadas)):
+            assert asyncio.run(cb.retrabalhar_por_trocas("one_pager")(ctx)) is None, "volta ao autor"
+        assert len(chamadas) == esperado
+        assert f"em {esperado} tentativa" in ctx.state[cb.KEY_RETRABALHO_AO_AUTOR][-1]["motivo"]
+    # fora do retrabalho, o `editar` continua com as tentativas de sempre, mesmo com documento grande
+    chamadas.clear()
+    resultado, proposta = asyncio.run(rx.editar("p", "produto", {"one_pager": "y" * 70_000},
+                                                proponente=_editor_que_erra(chamadas)))
+    assert resultado is None and len(chamadas) == rx.TENTATIVAS_DO_EDITOR
+    assert f"em {rx.TENTATIVAS_DO_EDITOR} tentativas —" in proposta.motivo
+
+
+@pytest.mark.parametrize("missao", _missoes())
+def test_correcao_pontual_das_missoes_do_acervo_mantem_as_tres_tentativas(missao):
+    """A correção pontual recebe todos os documentos da etapa — produto de 32 a 61 mil tokens, design de 100 a 188 mil:
+    com o limite de documento grande aplicado a ela, toda missão do acervo caía para 1 tentativa e o pedido do PO ia ao
+    refazer da etapa inteira (revisão do PR #87, 25/10/2026)."""
+    from pipeline import reexecucao as rx
+
+    estado = _estado(missao)
+    for etapa in ("produto", "design", "dev"):
+        documentos = ed.documentos_da_etapa(estado, etapa)
+        if not documentos:
+            continue
+        chamadas: List[Any] = []
+        asyncio.run(rx.editar("p", etapa, documentos, proponente=_editor_que_erra(chamadas, next(iter(documentos)))))
+        assert len(chamadas) == rx.TENTATIVAS_DO_EDITOR, (missao, etapa)
+
+
+def test_correcao_pontual_de_uma_missao_do_acervo_volta_ao_editor_com_o_erro(tmp_path):
+    """De ponta a ponta na correção pontual da exp01em1b (o one-pager de 71 mil caracteres): a troca com `de` que não
+    existe volta ao editor com o erro, e a 3ª tentativa entra — como no PR #52."""
+    import pipeline.runner as runner_mod
+    from pipeline.reexecucao import PedidoCorrecao, executar_correcao_stream
+
+    estado = _estado("exp01em1b")
+    (tmp_path / "estado.json").write_text(json.dumps(estado), encoding="utf-8")
+    (tmp_path / "conversa.json").write_text(json.dumps({
+        "session_id": "s", "user_id": "u", "created_at": "25/10/2026 10:00:00", "prompt": "briefing", "messages": []}),
+        encoding="utf-8")
+    one_pager = estado["one_pager"]
+    trecho = _linha_unica(one_pager, len(one_pager) // 2, len(one_pager))
+    chamadas: List[Dict[str, Any]] = []
 
     async def editor(pedido, etapa, documentos, *, erros="", achados=""):
-        chamadas.append(1)
-        return ed.Proposta(modo=ed.MODO_PONTUAL, edicoes=[ed.Edicao("one_pager", "não existe", "x")])
+        chamadas.append({"erros": erros})
+        de = trecho if len(chamadas) == 3 else "trecho que não existe"
+        return ed.Proposta(modo=ed.MODO_PONTUAL, edicoes=[ed.Edicao("one_pager", de, trecho + " (corrigido)")])
 
-    resultado, proposta = asyncio.run(rx.editar("p", "retrabalho", {"one_pager": "y" * 70_000}, proponente=editor))
-    assert resultado is None and len(chamadas) == 1 and "em 1 tentativa —" in proposta.motivo
-    chamadas.clear()
-    asyncio.run(rx.editar("p", "retrabalho", {"one_pager": "y" * 6_000}, proponente=editor))
-    assert len(chamadas) == rx.TENTATIVAS_DO_EDITOR
+    async def runner_falso(**kwargs):
+        from pipeline.runner import PipelineExecutionResult
+
+        (Path(kwargs["run_dir"]) / "estado.json").write_text(json.dumps(kwargs["initial_state"]), encoding="utf-8")
+        yield {"type": "pipeline_completed", "result": PipelineExecutionResult(
+            session_id="s", user_id="u", prompt="briefing", final_output="ok", state=kwargs["initial_state"],
+            status="success", output_dir=str(kwargs["run_dir"]))}
+
+    async def coletar():
+        return [e async for e in executar_correcao_stream(tmp_path, "produto", PedidoCorrecao(texto="corrija o trecho"),
+                                                          None, so_esta_etapa=True, proponente=editor)]
+
+    with mock.patch.dict(os.environ, {"CORRECAO_PONTUAL": "true", "CORRECAO_PONTUAL_PASSADAS": "1"}), \
+            mock.patch.object(runner_mod, "run_orchestrator_pipeline_stream", runner_falso):
+        eventos = asyncio.run(coletar())
+    assert len(chamadas) == 3
+    assert chamadas[0]["erros"] == "" and "não se aplicaram" in chamadas[1]["erros"]
+    registro = next(e for e in eventos if e["type"] == "correcao_completed")["registro"]
+    assert registro["modo"] == "pontual" and len(registro["edicoes"]) == 1
 
 
 def test_motivo_do_corte_do_editor_vai_para_a_proposta():
@@ -357,6 +430,57 @@ def test_saida_do_loop_nao_aprova_documento_cortado_e_para_no_segundo_corte():
     eventos.clear()
     asyncio.run(_rodar(_saida(), dict(base), eventos))
     assert [e for e in eventos if e.author == "Saida"][-1].actions.escalate
+
+
+def _codigos_do_diagnostico(estado: Dict[str, Any]) -> List[str]:
+    from tools import diagnostico
+
+    return [a["codigo"] for a in diagnostico.coletar(estado)["achados"]]
+
+
+def test_corte_sai_quando_outro_agente_da_mesma_chave_reescreve_o_documento():
+    """O registro é por agente; a saída do loop e o diagnóstico o leem por documento. O retrabalho de design com outro nome
+    e o revisor ou o restaurador depois do A014 cortado substituem o documento: o corte velho sai (revisão do PR #87)."""
+    from agents.callbacks import KEY_CORTES_DO_MODELO, registrar_corte_do_modelo
+
+    # (1) design: o A079Prototipo cortado, o A079PrototipoRetrabalho termina inteiro
+    estado: Dict[str, Any] = {}
+    registrar_corte_do_modelo(_Ctx(estado, "A079Prototipo", output_key="prototipo_html"),
+                              _resposta("<html>" + "x" * 200_000, "MAX_TOKENS"))
+    assert "documento-cortado-pelo-modelo" in _codigos_do_diagnostico(estado)
+    # mutante: quem escreve outra chave e termina não limpa o corte do protótipo
+    registrar_corte_do_modelo(_Ctx(estado, "A080ArtefatosDesign", output_key="artefatos_design"),
+                              _resposta("# Artefatos", "STOP"))
+    assert list(estado[KEY_CORTES_DO_MODELO]) == ["A079Prototipo"]
+    registrar_corte_do_modelo(_Ctx(estado, "A079PrototipoRetrabalho", output_key="prototipo_html"),
+                              _resposta("<html>inteiro</html>", "STOP"))
+    assert estado[KEY_CORTES_DO_MODELO] == {}
+    assert "documento-cortado-pelo-modelo" not in _codigos_do_diagnostico(estado)
+    eventos: List[Event] = []
+    from agents.checkers import SaidaDeLoopAgent
+
+    saida = SaidaDeLoopAgent(name="Saida", status_keys=["gate_status"], rodada_key="r", max_rounds=3,
+                             autor_keys=["prototipo_html"])
+    final = asyncio.run(_rodar(saida, {**estado, "gate_status": "aprovado", "prototipo_html": "<html>inteiro</html>"},
+                               eventos))
+    assert [e for e in eventos if e.author == "Saida"][-1].actions.escalate and not final.get("pipeline_bloqueado")
+
+    # (2) produto: o A014 cortado duas vezes; o revisor (A028) reescreve o one-pager inteiro
+    for revisor in ("A028RevisorOnePager", "A037RestaurarOnePagerPo"):
+        estado = {}
+        for _ in range(2):
+            registrar_corte_do_modelo(_Ctx(estado, "A014SecoesApoio", output_key="one_pager"),
+                                      _resposta("# One-pager\n" + "x" * 218_000, "MAX_TOKENS"))
+        assert estado[KEY_CORTES_DO_MODELO]["A014SecoesApoio"]["vezes"] == 2
+        registrar_corte_do_modelo(_Ctx(estado, revisor, output_key="one_pager"), _resposta("# One-pager inteiro", "STOP"))
+        assert estado[KEY_CORTES_DO_MODELO] == {}, revisor
+        assert "documento-cortado-pelo-modelo" not in _codigos_do_diagnostico(estado)
+        eventos = []
+        final = asyncio.run(_rodar(_saida(), {**estado, "gate_status": "aprovado", "one_pager": "# One-pager inteiro"},
+                                   eventos))
+        saida_ev = [e for e in eventos if e.author == "Saida"][-1]
+        assert saida_ev.actions.escalate and "tudo conforme" in saida_ev.content.parts[0].text
+        assert not final.get("pipeline_bloqueado") and not final.get("degradacoes")
 
 
 # --------------------------------------------------------------------------- A004 só com a mensagem do PO (G01)
@@ -584,6 +708,41 @@ def test_prevoo_no_runner_para_antes_de_chamar_o_modelo(tmp_path, monkeypatch):
     erro = [e for e in eventos if e["type"] == "pipeline_error"][0]
     assert "A004Gigante" in erro["error"] and "A chamada não foi feita" in erro["error"] and erro["deterministico"]
     assert "`documento_enorme`" in erro["error"]
+
+
+class _NovaVolta(BaseAgent):
+    """O «🔁 nova volta» do `…Isolado`: o último evento antes de o A004 chamar o modelo, na 3ef2b."""
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        yield Event(invocation_id=ctx.invocation_id, author=self.name,
+                    content=types.Content(role="model", parts=[types.Part(text="🔁 nova volta")]))
+
+
+def test_400_de_tamanho_nomeia_quem_chamou_o_modelo_e_nao_o_autor_do_ultimo_evento(tmp_path, monkeypatch):
+    """O A004 não emite evento antes da chamada: o 400 do modelo citava o `…Isolado` (revisão do PR #87, 25/10/2026)."""
+    import pipeline.runner as runner_mod
+    from google.adk.models.google_llm import Gemini
+    from google.genai.errors import ClientError
+
+    from agents.base import create_llm_agent
+
+    async def quatrocentos(self, llm_request, stream=False):
+        raise ClientError(400, {"error": {"code": 400, "status": "INVALID_ARGUMENT", "message":
+                                          "The input token count exceeds the maximum number of tokens allowed 1048576."}})
+        yield  # pragma: no cover - gerador
+
+    monkeypatch.setenv("OUTPUT_DIR", str(tmp_path / "saida"))
+    monkeypatch.setattr(Gemini, "generate_content_async", quatrocentos)
+    a004 = create_llm_agent(name="A004NucleoNarrativo", instruction="Escreva o núcleo.", description="teste",
+                            output_key="nucleo_narrativo")
+    raiz = SequentialAgent(name="Raiz", sub_agents=[_NovaVolta(name="NucleoIsolado"), a004])
+    monkeypatch.setattr(runner_mod, "create_mission_orchestrator", lambda **kw: raiz)
+    eventos = _rodar_runner(runner_mod, run_dir=tmp_path / "sessao")
+    erro = [e for e in eventos if e["type"] == "pipeline_error"][0]
+    assert erro["agente"] == "A004NucleoNarrativo" and erro["deterministico"]
+    assert erro["error"].startswith("o agente A004NucleoNarrativo mandou ao modelo") and "NucleoIsolado" not in erro["error"]
+    # o erro que não vem do modelo continua com o autor do último evento (`_EscreveECai` nos testes acima)
 
 
 def test_custo_de_cada_execucao_leva_os_tokens_por_agente():

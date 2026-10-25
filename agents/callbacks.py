@@ -444,7 +444,7 @@ def retrabalhar_por_trocas(chave: str):
                 # com o one-pager do PO grande, quem escreve o one-pager já trabalha por trocas e leva estes motivos
                 # (`montar_one_pager_por_trocas`): um editor por rodada, e sem volta ao autor que reescreveria tudo
                 return None
-        from pipeline.reexecucao import editar, validador_do_po
+        from pipeline.reexecucao import editar, tentativas_do_editor, validador_do_po
         from tools import governanca
         from tools.edicao_pontual import como_dicts
 
@@ -453,8 +453,10 @@ def retrabalhar_por_trocas(chave: str):
             documento = governanca.sem_bloco(documento)
         # o voto do comitê pode mudar o texto do PO, mas só com a proposta ao lado ou o voto citado na tabela de
         # alterações: a troca que o apaga volta ao editor (`tools.one_pager_po.perdidos_pela_edicao`)
+        # documento grande, uma tentativa só (`tentativas_do_editor`): aqui o autor reescreve se o editor falhar
         resultado, proposta = await editar(motivos, "retrabalho", {chave: documento},
                                            proponente=PROPONENTE_DE_RETRABALHO,
+                                           tentativas=tentativas_do_editor({chave: documento}),
                                            validador=validador_do_po(state.to_dict() if hasattr(state, "to_dict") else dict(state))
                                            if chave == "one_pager" else None)
         # consumido: o próximo autor da mesma chave nesta rodada (o revisor) não refaz a correção
@@ -757,8 +759,8 @@ _AVISOS_DE_CORTE = {
 
 
 #: Respostas cortadas pelo limite de saída do modelo **com texto**, por agente: `{agente: {chave, caracteres, motivo,
-#: vezes}}`. Sai do registro quando o mesmo agente termina inteiro. Lido pela saída dos loops (`SaidaDeLoopAgent`) e pelo
-#: diagnóstico (`tools/diagnostico.py`).
+#: vezes}}`. Sai do registro quando o mesmo agente, ou outro que escreve a mesma chave, termina inteiro. Lido pela saída
+#: dos loops (`SaidaDeLoopAgent`) e pelo diagnóstico (`tools/diagnostico.py`).
 KEY_CORTES_DO_MODELO = "cortes_do_modelo"
 
 
@@ -807,9 +809,17 @@ def registrar_corte_do_modelo(callback_context: CallbackContext, llm_response: A
     if texto.strip() or getattr(llm_response, "turn_complete", None) is False:
         if state.get(chave):
             state[chave] = ""
-        if texto.strip() and isinstance(cortes, dict) and agente in cortes:
-            # terminou inteiro desta vez: o documento cortado foi substituído
-            state[KEY_CORTES_DO_MODELO] = {k: v for k, v in cortes.items() if k != agente}
+        saida = _chave_de_saida(callback_context)
+
+        def _substituido(k: str, c: Any) -> bool:
+            return k == agente or bool(saida and isinstance(c, dict) and c.get("chave") == saida)
+
+        if texto.strip() and isinstance(cortes, dict) and any(_substituido(k, c) for k, c in cortes.items()):
+            # terminou inteiro desta vez: o documento cortado foi substituído — também quando quem o cortou foi outro
+            # agente da mesma chave. O registro é por agente e a saída do loop o lê por documento: o A028 que reescreve o
+            # one-pager do A014 cortado, ou o A079PrototipoRetrabalho depois do A079Prototipo, deixavam o corte velho no
+            # registro, e o loop saía 🔴 com `pipeline_bloqueado` sobre um documento inteiro (revisão do PR #87, 25/10/2026)
+            state[KEY_CORTES_DO_MODELO] = {k: c for k, c in cortes.items() if not _substituido(k, c)}
         return None
     if motivo and motivo not in ("STOP", "FINISH_REASON_UNSPECIFIED"):
         aviso = _AVISOS_DE_CORTE.get(motivo, f"o modelo devolveu a resposta vazia (motivo `{motivo}`). Escreva o documento inteiro.")
@@ -871,6 +881,8 @@ def orcamento_de_contexto(deterministico: bool):
 
         state = callback_context.state
         agente = callback_context.agent_name
+        # o 400 do modelo, se vier, é desta chamada: a mensagem do runner nomeia este agente (`pipeline.runner`)
+        contexto.anotar_chamada(agente)
         estado = state.to_dict() if hasattr(state, "to_dict") else dict(state)
         config = getattr(llm_request, "config", None)
         instrucao = contexto.instrucao_da_requisicao(llm_request)

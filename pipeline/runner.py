@@ -237,7 +237,7 @@ def mensagem_de_erro(exc: BaseException, agente: str = "") -> str:
     agente que escreve um documento termina sem texto e o seguinte precisa dele (exp03ef1b, 08/10/2026, duas vezes).
 
     A entrada grande demais para o modelo (o 400 da 3ef2b, e2e de 25/10/2026, ou o pré-voo que o evita) diz qual agente
-    e quanto — `agente` é o último que emitiu evento, quando o erro não o traz."""
+    e quanto — `agente` é o que chamou o modelo por último (`tools.contexto.anotar_chamada`), quando o erro não o traz."""
     from tools.contexto import e_erro_de_tamanho, mensagem_de_tamanho
 
     m = _RE_VARIAVEL_AUSENTE.search(str(exc))
@@ -380,6 +380,11 @@ async def run_orchestrator_pipeline_stream(
     session_service: Optional[InMemorySessionService] = None
     session: Any = None
     current_agent: Optional[str] = None
+    # quem chamou o modelo por último (`tools.contexto.anotar_chamada`): o 400 de tamanho é dele, não do autor do último
+    # evento — na 3ef2b o A004 não emite evento antes da chamada (revisão do PR #87, 25/10/2026)
+    from tools.contexto import acompanhar_chamadas
+
+    chamadas = acompanhar_chamadas()
     tokens_por_agente: Dict[str, Dict[str, int]] = {}
     historico_gates: Any = None
     try:
@@ -719,9 +724,15 @@ async def run_orchestrator_pipeline_stream(
     except Exception as exc:
         duration = time.time() - start_time
         logger.exception("Erro durante execução do pipeline ADK: %s", exc)
+        from google.genai.errors import APIError
+
         from tools.contexto import erro_deterministico
 
-        mensagem = mensagem_de_erro(exc, current_agent or "")
+        # o erro do modelo é da última chamada; o que não vem do modelo fica com o autor do último evento
+        do_modelo = isinstance(exc, APIError) or erro_deterministico(exc)
+        agente_do_erro = str(getattr(exc, "agente", "") or (chamadas.get("agente") if do_modelo else "")
+                             or current_agent or "")
+        mensagem = mensagem_de_erro(exc, agente_do_erro)
         parcial_dir: Optional[Path] = None
         if save_artifacts and session_service is not None and session is not None:
             try:
@@ -730,7 +741,7 @@ async def run_orchestrator_pipeline_stream(
                 parcial_dir = salvar_execucao_interrompida(
                     dict(parcial.state) if parcial else {}, session_id=session_id, prompt=prompt, run_dir=run_dir,
                     initial_state=initial_state, stages=stages, tokens_por_agente=tokens_por_agente,
-                    historico_gates=historico_gates, duracao=duration, erro=mensagem, agente=current_agent or "")
+                    historico_gates=historico_gates, duracao=duration, erro=mensagem, agente=agente_do_erro)
             except Exception as exc_salvar:  # pragma: no cover - disco
                 logger.warning("Falha ao salvar o estado parcial da execução interrompida: %s", exc_salvar)
         error_result = PipelineExecutionResult(
@@ -745,7 +756,7 @@ async def run_orchestrator_pipeline_stream(
         # `deterministico`: o mesmo erro volta em toda tentativa (400 do modelo, entrada grande demais) — quem tenta de
         # novo não deve repetir sem mudar a entrada (a 2ª tentativa da 3ef2b custou US$ 10,34 para cair no mesmo 400)
         yield {"type": "pipeline_error", "error": mensagem, "result": error_result, "duration": duration,
-               "timestamp": time.time(), "deterministico": erro_deterministico(exc), "agente": current_agent or "",
+               "timestamp": time.time(), "deterministico": erro_deterministico(exc), "agente": agente_do_erro,
                "estado_parcial": str(parcial_dir) if parcial_dir else ""}
     finally:
         base_plataforma.fixar(None)
