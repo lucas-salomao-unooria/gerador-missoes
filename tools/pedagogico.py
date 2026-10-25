@@ -16,9 +16,10 @@ Quatro peças:
   narrativa de sala de aula e remete aos subtítulos. Idempotente: a montagem de uma rodada anterior é trocada.
 - **Gate de montagem** (`validar`, A121b), no molde do gate do PRD (`tools/montagem.py`, PR 4): na narrativa, número de
   regra sem origem no contrato, hipótese do §17 ou teto do §15 com outro número, texto-chave reescrito, origem de produto
-  falsa, tempo de etapa que não é o do §10, e subtítulo da esteira mexido. Número, hipótese, teto e origem não são
-  cobrados na pendência nem no changelog (`sem_registro`), como a §19 e a §22 do PRD. Habilidade, tempo total e podcast
-  ficam com o A121 (`conteudo_aprovado.validar_pedagogico`), como o A116 ao lado do A116b no PRD.
+  falsa, tempo de etapa que não é o do §10, e subtítulo da esteira mexido. No changelog, só o número de antes de cada
+  mudança fica fora da conferência; na pendência, só a linha marcada como proposta cujo número produto já registrou
+  (`registro_conferido`). Habilidade, tempo total e podcast ficam com o A121 (`conteudo_aprovado.validar_pedagogico`),
+  como o A116 ao lado do A116b no PRD.
 - **O dev só acrescenta** (`no_dev`, A119b): as pendências da banca de dev e do rastro de lacunas do dev vão numa seção
   própria, guardada à parte (`pedagogico_pendencias_dev`) e juntada no fim do documento na exportação (`completo`). O
   texto aprovado no de acordo de design é conferido contra o retrato que o design gravou (`pedagogico_do_design`, A124)
@@ -403,21 +404,95 @@ def sem_preparo(texto: str) -> str:
     return _sem_secoes(texto, lambda nivel, titulo: nivel >= 3 and titulo.startswith("antes da aula"))
 
 
-#: As seções do gabarito (`prompts/dev/120_one_pager_pedagogico.md`) que registram, não afirmam: a de pendências, onde
-#: o prompt manda pôr a proposta ainda aberta («como proposta»), e o changelog, que traz o número de antes da mudança.
-#: São a §19 e a §22 do PRD, que o gate dele pula (`montagem._linhas_do_corpo`). «O que precisamos que você aprove» fica
-#: na conferência: são perguntas ao time pedagógico, e o prompt não manda proposta para lá.
+#: As seções do gabarito (`prompts/dev/120_one_pager_pedagogico.md`) que registram: a de pendências, onde o prompt manda
+#: pôr a proposta ainda aberta («como proposta»), e o changelog, que traz o número de antes da mudança. Correspondem à
+#: §19 e à §22 do PRD, mas não ficam fora da conferência inteiras, como lá (`montagem._linhas_do_corpo`): o changelog
+#: afirma o estado novo da missão, e a pendência pode trazer número que não existe nem como proposta
+#: (`registro_conferido`). «O que precisamos que você aprove» fica na conferência inteira: são perguntas ao time
+#: pedagógico, e o prompt não manda proposta para lá.
 SECOES_DE_REGISTRO = ("o que ainda esta em aberto", "o que mudou nesta versao")
+CHANGELOG = SECOES_DE_REGISTRO[1]
+
+_NUM = r"(?:\d+(?:[.,]\d+)?|(?:um|uma|dois|duas|tr[êe]s|quatro|cinco|seis|sete|oito|nove|dez)\b)"
+_QUALIFICADOR = r"(?:(?:at[ée]|mais\s+de|menos\s+de|cerca\s+de|acima\s+de|abaixo\s+de|no\s+m[áa]ximo|no\s+m[íi]nimo)\s+)?"
+_UNIDADE = (r"(?:\s?%|\s?(?:segundos?|seg|s|minutos?|min|palavras|caracteres|op[çc](?:[ãa]o|[õo]es)|alternativas?|"
+            r"tentativas?|rodadas?)\b)?")
+_VALOR = rf"{_QUALIFICADOR}[<>≤≥~]?\s*{_NUM}{_UNIDADE}"
+#: O número de antes de uma mudança, no changelog: «de 30% para 25%», «de até 12 para até 10 palavras», «de 25% das
+#: duplas para 30%» (o «de X» com «para» e outro número depois), «era 25%», «(antes: 25%)» e «30% → 25%». O «de X a Y»
+#: fica de fora: é também faixa («de 8 a 10 palavras»), e a faixa é o estado novo.
+_RE_NUMERO_DE_ANTES = (
+    re.compile(rf"\bde\s+{_VALOR}(?:\s+[^\s\d]+){{0,3}}?(?=\s+para\s+{_QUALIFICADOR}[<>≤≥~]?\s*{_NUM})", re.I),
+    re.compile(rf"\b(?:era|eram|antes)\b\s*[:,]?\s*{_VALOR}", re.I),
+    re.compile(rf"{_VALOR}\s*(?:→|->|⟶|⇒|=>)", re.I),
+)
+#: Marca de proposta numa linha de pendência: `[PROPOSTA …]`, a palavra «proposta» ou o ID de uma pergunta de produto
+#: (PQ-NN, do 9f da spec).
+_RE_MARCA_DE_PROPOSTA = re.compile(r"\[PROPOSTA|\bpropostas?\b|\bPQ-?\d+\b", re.I)
 
 
-def sem_registro(texto: str) -> str:
-    """A narrativa sem as seções de pendência e de histórico (`SECOES_DE_REGISTRO`): o que ela afirma como a missão.
+def sem_numero_de_antes(linha: str) -> str:
+    """A linha do changelog sem o número de antes de cada mudança (`_RE_NUMERO_DE_ANTES`): o resto é o estado novo."""
+    for r in _RE_NUMERO_DE_ANTES:
+        linha = r.sub(" ", linha)
+    return linha
 
-    Até a revisão do PR #79 (24/10/2026) o A121b conferia a narrativa inteira e bloqueava o que a esteira manda
-    escrever: a proposta em «O que ainda está em aberto» (os 40% da PQ-01 da exp02em1b, os 25% da PQ-01 da exp02ef1b,
-    que só existem em linha `[PROPOSTA]`), a recondução da H1 de 25% para 30% no changelog da exp02ef1b (D11) e as
-    «até 10 palavras» do changelog da exp04ef1b. Na correção pontual de design, com uma rodada só, o 🔴 ficava."""
-    return _sem_secoes(texto, lambda nivel, titulo: nivel == 2 and titulo.startswith(SECOES_DE_REGISTRO))
+
+def _fora_do_registro(linha: str, contrato_inteiro: str, contagens: set) -> List[Dict[str, str]]:
+    """Os números de regra e as contagens da linha que o contrato não tem nem como proposta."""
+    from tools import montagem
+    from tools.propagacao import _fmt, tem_numero
+
+    resumo = re.sub(r"\s+", " ", linha).strip()[:180]
+    saida = [{"numero": _fmt(t), "linha": resumo}
+             for t in montagem.numeros_de_regra(linha) if not tem_numero(contrato_inteiro, t)]
+    if not montagem.de_plataforma(linha):
+        saida += [{"numero": f"{n} {u}", "linha": resumo}
+                  for n, u in montagem._contagens(montagem._RE_CITACAO.sub(" ", linha)) if (n, u) not in contagens]
+    return saida
+
+
+def registro_conferido(texto: str, contrato_inteiro: str) -> Tuple[str, List[Dict[str, str]]]:
+    """`(o que a narrativa afirma, números de proposta sem registro)`: a narrativa como o A121b a confere.
+
+    - No changelog («O que mudou nesta versão») sai só o número de antes de cada mudança (`sem_numero_de_antes`); o de
+      destino («para Y», o que vem depois da seta) é o estado novo da missão e é conferido como na narrativa.
+    - Na pendência («O que ainda está em aberto»), a linha sem marca de proposta é conferida como na narrativa. A linha
+      marcada (`_RE_MARCA_DE_PROPOSTA`) sai da conferência de número, hipótese e teto quando cada número dela está no
+      contrato inteiro, com as propostas (`contrato_inteiro`: one-pager, spec, decisões, marcadores abertos inclusive);
+      o número que não está nem como proposta volta na segunda lista, e bloqueia.
+
+    Até a 2ª revisão do PR #79 (24/10/2026) o A121b conferia a narrativa inteira e bloqueava o que a esteira manda
+    escrever: a proposta em «O que ainda está em aberto» (os 40% da PQ-01 da exp02em1b, os 25% da PQ-01 da exp02ef1b), a
+    recondução da H1 de 25% para 30% no changelog da exp02ef1b (D11). A isenção que veio dela tirava as duas seções
+    inteiras e virou porta (3ª revisão, 24/10/2026): «A hipótese 1 passou de 30% para 25%», «a meta passou para 47%»
+    citando o §15, «Hipótese 1: 25% das crianças» sem marca e «7 alternativas» inventadas passavam 🟢 nas 4 missões a
+    refazer."""
+    from tools import montagem
+
+    texto = texto or ""
+    contagens = set(montagem._contagens(contrato_inteiro))
+    titulos = _titulos(texto)
+    pedacos: List[str] = []
+    sem_registro: List[Dict[str, str]] = []
+    pos = 0
+    for k, (ini, fim_titulo, nivel, titulo) in enumerate(titulos):
+        norm = _titulo_norm(titulo)
+        if nivel != 2 or ini < pos or not norm.startswith(SECOES_DE_REGISTRO):
+            continue
+        fim = next((i for i, _, n, _ in titulos[k + 1:] if n <= 2), len(texto))
+        linhas: List[str] = []
+        for linha in texto[fim_titulo:fim].splitlines(keepends=True):
+            if norm.startswith(CHANGELOG):
+                linhas.append(sem_numero_de_antes(linha))
+            elif _RE_MARCA_DE_PROPOSTA.search(linha):
+                sem_registro += _fora_do_registro(linha, contrato_inteiro, contagens)
+            else:
+                linhas.append(linha)
+        pedacos.append(texto[pos:fim_titulo] + "".join(linhas))
+        pos = fim
+    pedacos.append(texto[pos:])
+    return "".join(pedacos), sem_registro
 
 
 def hipoteses_citadas(texto: str, one_pager: str) -> List[Dict[str, str]]:
@@ -495,11 +570,11 @@ def validar(state: Dict[str, Any]) -> Dict[str, Any]:
         return {"status": "aprovado", "achados": [], "contagem": {"documento": 0}}
     one_pager = str(state.get("one_pager") or "")
     texto = narrativa(documento)
-    # número, hipótese, teto e origem citada, só no que a narrativa afirma: a pendência e o changelog registram a
-    # proposta e o número de antes, como a §19 e a §22 do PRD (revisão do PR #79). Texto-chave e tempo de etapa valem
-    # no texto todo
-    afirmado = sem_registro(texto)
+    # número, hipótese, teto e origem citada, no que a narrativa afirma: sem o número de antes do changelog e sem a
+    # proposta registrada da pendência (`registro_conferido`, revisões do PR #79). Texto-chave e tempo de etapa valem no
+    # texto todo
     docs, origem = contrato_firme(state)
+    afirmado, sem_registro = registro_conferido(texto, "\n".join(docs.values()))
     achados: List[Dict[str, str]] = []
 
     sem_origem = montagem.numeros_sem_origem(sem_preparo(afirmado), origem)
@@ -510,7 +585,17 @@ def validar(state: Dict[str, Any]) -> Dict[str, Any]:
             "produto, decisões da lista branca do anexo de design, decisões do PO no de acordo) — ou só estão numa "
             "proposta ainda aberta: " + montagem._exemplos(f"{i['numero']} em «{i['linha'][:110]}»" for i in sem_origem)
             + ". O pedagógico monta, não decide: copie o número do one-pager, ou remeta ao subtítulo «Do one-pager "
-            "aprovado» que o traz; proposta em aberto entra em «O que ainda está em aberto», como proposta."))
+            "aprovado» que o traz. Proposta em aberto entra em «O que ainda está em aberto», marcada como proposta "
+            "(«[PROPOSTA…]», «proposta» ou o ID da PQ) e com o número que produto registrou. No changelog, só o número de "
+            "antes («de X para…», «era X») fica fora da conferência: o de agora é o da missão."))
+    if sem_registro:
+        achados.append(_achado(
+            "numero-sem-origem",
+            f"{len(sem_registro)} número(s) numa linha de proposta de «O que ainda está em aberto» não estão no contrato "
+            "nem como proposta registrada (one-pager, spec, decisões do PO): "
+            + montagem._exemplos(f"{i['numero']} em «{i['linha'][:110]}»" for i in sem_registro)
+            + ". A pendência registra a proposta que produto já fez, com o número dela; número novo é decisão do PO, "
+            "pedida no Refazer, que a triagem leva a Produto."))
 
     hipoteses = hipoteses_citadas(afirmado, one_pager)
     vistos = {(h["hipotese"], h["corpo"]) for h in hipoteses}
@@ -584,7 +669,7 @@ def validar(state: Dict[str, Any]) -> Dict[str, Any]:
 
     status = "bloqueado" if any(a["severidade"] == "bloqueio" for a in achados) else ("amarelo" if achados else "aprovado")
     return {"status": status, "achados": achados,
-            "contagem": {"documento": 1, "numeros_sem_origem": len(sem_origem),
+            "contagem": {"documento": 1, "numeros_sem_origem": len(sem_origem) + len(sem_registro),
                          "hipoteses": len([a for a in achados if a["codigo"] == "hipotese-diverge"]),
                          "textos_chave_reescritos": len(reescritos), "origens_falsas": len(falsas),
                          "tempos_de_etapa": len(etapas), "blocos": len(presentes), "blocos_esperados": len(esperados),
@@ -599,9 +684,9 @@ def relatorio(resultado: Dict[str, Any], missao: str = "") -> str:
     icone = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
     L = [f"# Pedagógico monta, não decide — {missao or 'missão'}", "",
          f"**Veredito: {icone}** · a narrativa contra o contrato (one-pager, spec de produto, lista branca do anexo de "
-         "design, decisões do PO): números de regra, hipóteses e tetos e origem citada (fora de «O que ainda está em "
-         "aberto» e de «O que mudou nesta versão», que registram a proposta e o número de antes), textos-chave e tempos "
-         "por etapa; e os subtítulos «Do one-pager aprovado», que a esteira monta por código.", ""]
+         "design, decisões do PO): números de regra, hipóteses e tetos e origem citada (no changelog, sem o número de antes "
+         "de cada mudança; na pendência, sem a linha marcada como proposta cujo número produto já registrou), "
+         "textos-chave e tempos por etapa; e os subtítulos «Do one-pager aprovado», que a esteira monta por código.", ""]
     if resultado.get("contagem", {}).get("legado") and resultado.get("contagem", {}).get("documento"):
         L += ["> Pedagógico sem os subtítulos da esteira: gerado antes de 24/10/2026, no dev. A narrativa é conferida do "
               "mesmo jeito; o refazer de design o monta sobre o contrato.", ""]

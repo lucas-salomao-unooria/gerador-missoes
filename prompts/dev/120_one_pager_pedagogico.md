@@ -69,8 +69,10 @@ quase igual, e um gate devolve a você a reescrita mais distante.
 regra que você escrever tem de estar no one-pager aprovado ou na spec, com o mesmo valor — um gate confere («Pedagógico
 monta, não decide») e devolve o documento com o número sem origem. Hipótese do §17 e teto do §15, se você os citar, com
 os números deles. O que está como `[PROPOSTA]` ou `[PARÂMETRO]` ainda não é decisão: entra em «O que ainda está em
-aberto», como proposta, nunca como fato da missão. Essa seção e «O que mudou nesta versão», que traz o número de antes
-de cada mudança, são as únicas em que o gate não cobra a origem do número.
+aberto», marcado como proposta («proposta», `[PROPOSTA…]` ou o ID da PQ) e com o número que produto registrou — nunca
+como fato da missão, e nunca com número que não está em lugar nenhum do one-pager nem da spec. Linha de pendência sem
+essa marca é conferida como o resto do documento. Em «O que mudou nesta versão», só o número de antes de cada mudança
+(«de 25% para 30%», «era 25%») fica fora da conferência: o número de agora é o da missão, e tem de estar no one-pager.
 
 ## Rodada de correção — só quando houver relatório abaixo
 

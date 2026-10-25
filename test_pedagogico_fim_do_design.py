@@ -596,11 +596,12 @@ _NARRATIVA_COM_REGISTRO = (_NARRATIVA_MINIMA + "\n## O que precisamos que você 
 
 
 def test_pendencia_e_changelog_registram_proposta_e_numero_de_antes():
-    """O A121b confere o que a narrativa afirma da missão, como o gate do PRD, que pula a §19 (pendências) e a §22
-    (changelog). Até a revisão do PR #79 (24/10/2026) ele conferia o texto todo e bloqueava o que a esteira manda
-    escrever: a proposta em «O que ainda está em aberto» (prompt: «entra em "O que ainda está em aberto", como
-    proposta») e o número de antes no changelog. Na correção pontual de design das três missões sem pedagógico, o 🔴
-    ficava sem o de acordo de design. As quatro missões que o usuário vai refazer, cada uma com o número dela."""
+    """O A121b confere o que a narrativa afirma da missão. Até a revisão do PR #79 (24/10/2026) ele conferia o texto todo
+    e bloqueava o que a esteira manda escrever: a proposta em «O que ainda está em aberto» (prompt: «entra em "O que
+    ainda está em aberto", como proposta») e o número de antes no changelog. Na correção pontual de design das três
+    missões sem pedagógico, o 🔴 ficava sem o de acordo de design. As quatro missões que o usuário vai refazer, cada uma
+    com o número dela. Desde a 3ª revisão, só a proposta marcada e registrada e o número de antes ficam de fora
+    (`test_registro_nao_e_porta_...`)."""
     from tools import montagem
     from tools.propagacao import numeros, tem_numero
 
@@ -622,12 +623,16 @@ def test_pendencia_e_changelog_registram_proposta_e_numero_de_antes():
             assert r["status"] == "bloqueado" and "numero-sem-origem" in {a["codigo"] for a in r["achados"]}, (nome, secao)
 
     # a exp02ef1b, que vai ser refeita com a H1 reconduzida a 30% (D11): o changelog conta a volta, e a pendência pode
-    # trazer a proposta de mudar a hipótese, com o marcador
+    # trazer a proposta de mudar a hipótese, com o marcador. O changelog afirma o estado novo (3ª revisão): as «até 10
+    # palavras» precisam estar no contrato — aqui o PO fixou o [PARÂMETRO] do teto do §15 em 10
     estado = _montado()
+    parametro = "[PARÂMETRO — a definir por produto: teto de palavras por string de interface, sugestão: 15]"
+    assert parametro in estado["one_pager"]
+    estado["one_pager"] = estado["one_pager"].replace(parametro, "10")
     doc = estado["one_pager_pedagogico"]
     volta = "- A hipótese 1 voltou de 25% para 30%, como o PO aprovou em 23/10."
     proposta_h1 = "- [PROPOSTA — validar com PO: a hipótese 1 passar de 30% para 25%]"
-    teto_de_antes = "- As manchetes passaram de até 12 para até 10 palavras (§15)."
+    teto_de_antes = "- As manchetes passaram de até 12 palavras para até 10 palavras (§15)."
     for secao, linha in (("O que mudou nesta versão", volta), ("O que mudou nesta versão", teto_de_antes),
                          ("O que ainda está em aberto", proposta_h1)):
         r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, secao, linha)})
@@ -641,6 +646,79 @@ def test_pendencia_e_changelog_registram_proposta_e_numero_de_antes():
     r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, "O que ainda está em aberto",
                                                                 f"- A pergunta do fim poderia ser «{longe}»")})
     assert r["status"] == "bloqueado" and {a["codigo"] for a in r["achados"]} == {"texto-chave-reescrito"}
+
+
+def _casos_do_registro(estado):
+    """`[(rótulo, seção, linha, código esperado)]`: o que a isenção inteira das seções de registro deixava passar (p3 da
+    3ª revisão), com o número de cada missão — a H1 do §17 trocada e números que o contrato não tem nem como proposta."""
+    from tools import montagem
+    from tools.montagem import _itens_de_hipotese, _numeros_de_hipotese
+    from tools.propagacao import tem_numero
+
+    docs, _ = pg.contrato_firme(estado)
+    todo = "\n".join(docs.values())
+    h1 = _numeros_de_hipotese(_itens_de_hipotese(ca.secao(estado["one_pager"], 17) or "").get(1) or "")
+    inventado = next(n for n in ("47", "63", "81", "93") if not tem_numero(todo, (n, "%")))
+    opcoes = next(n for n in ("7", "9", "11", "13") if (n, "alternativas") not in set(montagem._contagens(todo)))
+    casos = []
+    pct = [v for v, u in h1 if u == "%"]
+    if pct:
+        errado = str(int(float(pct[0])) - 5)
+        casos += [("changelog: H1 trocada", "O que mudou nesta versão",
+                   f"- A hipótese 1 passou de {pct[0]}% para {errado}%.", "hipotese-diverge"),
+                  ("pendência: H1 trocada sem marca", "O que ainda está em aberto",
+                   f"- Hipótese 1: {errado}% das crianças (quem responde: PO).", "hipotese-diverge")]
+    casos += [
+        ("pendência: número inventado", "O que ainda está em aberto",
+         f"- {inventado}% das crianças acertam a pergunta do fim (quem responde: design).", "numero-sem-origem"),
+        ("pendência: contagem inventada", "O que ainda está em aberto",
+         f"- A pergunta do fim mostra {opcoes} alternativas à criança (quem responde: design).", "numero-sem-origem"),
+        ("pendência: proposta marcada que não existe", "O que ainda está em aberto",
+         f"- [PROPOSTA — validar com PO: {inventado}% das crianças acertam a pergunta do fim]", "numero-sem-origem"),
+        ("changelog: número inventado", "O que mudou nesta versão",
+         f"- A meta passou a ser {inventado}% das crianças acertarem a pergunta do fim.", "numero-sem-origem"),
+        ("changelog: número de destino com origem citada", "O que mudou nesta versão",
+         f"- Conforme o §15 do one-pager, a meta passou para {inventado}% das crianças.", "numero-sem-origem"),
+        ("changelog: origem de produto falsa", "O que mudou nesta versão",
+         f"- A meta passou para {inventado}% das crianças (§15 do one-pager).", "origem-de-produto-falsa"),
+    ]
+    return casos, pct
+
+
+def test_registro_nao_e_porta_no_changelog_nem_na_pendencia(monkeypatch):
+    """3ª revisão do PR #79 (24/10/2026), p3: a isenção inteira de «O que mudou nesta versão» e «O que ainda está em
+    aberto» deixava passar 🟢, nas 4 missões a refazer, a H1 trocada no changelog («passou de 30% para 25%») e na
+    pendência sem marca, números e contagens inventados e origem de produto falsa. Agora só o número de antes do
+    changelog e a proposta marcada e registrada ficam de fora. Mutante: a isenção inteira de volta."""
+    for nome, numero, pq in _PROPOSTAS_DAS_MISSOES_A_REFAZER:
+        estado = _estado(nome)
+        doc = pg.montar(_NARRATIVA_COM_REGISTRO, estado)
+        casos, pct = _casos_do_registro(estado)
+        assert len(casos) == (8 if nome != "exp02em1b-60cfa7f4" else 6), nome  # a H1 da exp02em1b não tem número
+        for rotulo, secao, linha, codigo in casos:
+            r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, secao, linha)})
+            assert r["status"] == "bloqueado" and codigo in {a["codigo"] for a in r["achados"]}, (nome, rotulo, r)
+        # o legítimo continua passando: o número de antes é o que sai, a proposta marcada e registrada também
+        legitimos = [("O que ainda está em aberto", f"- Ainda é proposta, a decidir por produto: {numero} ({pq})."),
+                     ("O que ainda está em aberto", f"- [PROPOSTA — validar com PO: {numero} ({pq})]")]
+        if pct:
+            legitimos.append(("O que mudou nesta versão", f"- A hipótese 1 voltou de 12% para {pct[0]}%."))
+            legitimos.append(("O que mudou nesta versão", f"- A hipótese 1: 12% → {pct[0]}%."))
+            legitimos.append(("O que mudou nesta versão", f"- A hipótese 1 agora é {pct[0]}% (era 12%)."))
+        for secao, linha in legitimos:
+            r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, secao, linha)})
+            assert r["status"] == "aprovado", (nome, linha, r["achados"])
+
+    # mutante: as duas seções inteiras fora da conferência, como na 2ª revisão — tudo passa
+    def isencao_inteira(texto, contrato_inteiro):
+        return pg._sem_secoes(texto, lambda nivel, t: nivel == 2 and t.startswith(pg.SECOES_DE_REGISTRO)), []
+
+    monkeypatch.setattr(pg, "registro_conferido", isencao_inteira)
+    estado = _estado("exp02ef1b-4fd72a9a")
+    doc = pg.montar(_NARRATIVA_COM_REGISTRO, estado)
+    casos, _ = _casos_do_registro(estado)
+    assert all(pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, s, l)})["status"] == "aprovado"
+               for _, s, l, _ in casos)
 
 
 # --------------------------------------------------------------------------- 4. o dev só acrescenta
