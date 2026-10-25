@@ -55,27 +55,34 @@ def test_registro_do_po_e_verdadeiro_nos_mesmos_casos_do_booleano():
         assert ha_registro_do_po(estado)
 
 
-def test_atribuicao_conferida_por_trecho_numero_pedido_e_marca():
+def test_so_o_registro_estruturado_confirma_a_atribuicao():
+    """3ª revisão do PR #80 (25/10/2026): o texto livre dos pedidos e pareceres não confirma mais nada — nem o trecho
+    literal, nem o «Pedido N», nem a marca `[HOMOLOGADO pelo PO]` que o PO mandou escrever. Confirmam só a linha idêntica
+    no one-pager que o PO anexou e a decisão gravada no cartão do de acordo."""
     from tools.decisoes import achados, ha_registro_do_po
 
-    estado = {"pedidos_do_po": [
+    pedidos = {"pedidos_do_po": [
         {"texto": "Refaça a etapa 3."},
         {"texto": "1. Tetos: HOMOLOGADOS. Cravar 60 palavras por legenda de projeto no feed.\n\n"
-                  "2. PQ-01 a PQ-03: trocar o marcador por [HOMOLOGADO pelo PO].\n\n"
-                  "3. Não aceito os 40 min de tela por cartão de leitura."}]}
-    reg = ha_registro_do_po(estado)
-    # trecho literal com o mesmo número
-    assert reg.confirma("Teto (homologado pelo PO): 60 palavras por legenda de projeto no feed.")
-    assert not reg.confirma("Teto (homologado pelo PO): 90 palavras por legenda de projeto no feed.")
-    # o «Pedido 2» decide e traz o número
-    assert reg.confirma("Teto cravado em 60 palavras (aprovado pelo PO no Pedido 2).")
-    assert not reg.confirma("Teto cravado em 60 palavras (aprovado pelo PO no Pedido 1).")
-    # a marca que o PO mandou escrever, só nos itens da ordem
-    assert reg.confirma("| PQ-02 | pergunta | [HOMOLOGADO pelo PO] |")
-    assert not reg.confirma("| PQ-04 | pergunta | [HOMOLOGADO pelo PO] |")
-    # o parágrafo que nega não confirma
-    assert not reg.confirma("Tempo de 40 min de tela por cartão de leitura (aprovado pelo PO).")
-    texto = "- Teto (homologado pelo PO): 60 palavras por legenda de projeto no feed.\n- Corte (aprovado pelo PO): 3 etapas."
+                  "2. PQ-01 a PQ-03: trocar o marcador por [HOMOLOGADO pelo PO]."}]}
+    reg = ha_registro_do_po(pedidos)
+    for linha in ("Teto (homologado pelo PO): 60 palavras por legenda de projeto no feed.",
+                  "Teto cravado em 60 palavras (aprovado pelo PO no Pedido 2).",
+                  "| PQ-02 | pergunta | [HOMOLOGADO pelo PO] |"):
+        assert not reg.confirma(linha), linha
+    # a pista diz de onde a decisão parece vir, e o PO confere
+    achado = [a for a in achados("- Teto cravado em 60 palavras (aprovado pelo PO no Pedido 2).", "O one-pager", reg)
+              if a["codigo"] == "decisao-atribuida-ao-po"]
+    assert [a["severidade"] for a in achado] == ["atencao"]
+    assert "o Pedido 2: «1. Tetos: HOMOLOGADOS" in achado[0]["resumo"] and "registro estruturado" in achado[0]["resumo"]
+
+    # a linha idêntica (a menos de espaços) no one-pager que o PO anexou confirma; a parecida não
+    anexo = {**pedidos, "one_pager_po": "## 15. Tetos\n5. **Tetos (homologados pelo PO):**  60 palavras por legenda.\n"}
+    reg = ha_registro_do_po(anexo)
+    assert reg.confirma("5. **Tetos (homologados pelo PO):** 60 palavras por legenda.")
+    assert not reg.confirma("5. **Tetos (homologados pelo PO):** 60 palavras por legenda. E 90 por cartão.")
+    assert not reg.confirma("**Tetos (homologados pelo PO):** 60 palavras")
+    texto = "5. **Tetos (homologados pelo PO):** 60 palavras por legenda.\n- Corte (aprovado pelo PO): 3 etapas."
     restam = [a for a in achados(texto, "O one-pager", reg) if a["codigo"] == "decisao-atribuida-ao-po"]
     assert len(restam) == 1 and "3 etapas" in restam[0]["resumo"] and "1 outra(s)" in restam[0]["resumo"]
     # com o booleano de antes, nada muda
@@ -84,48 +91,32 @@ def test_atribuicao_conferida_por_trecho_numero_pedido_e_marca():
             if a["codigo"] == "decisao-atribuida-ao-po"] == ["bloqueio"]
 
 
-def test_trecho_do_po_so_confirma_na_linha_ou_item_que_decide():
-    """Revisão do PR #80: decisão e negação no item numerado ou na linha do PO, e não no parágrafo — e o item tem de
-    decidir. O trecho que o PO cita para recusar, trocar ou reduzir não confirma."""
-    from tools.decisoes import achados, ha_registro_do_po
+def test_recusa_em_prosa_nunca_confirma():
+    """M1 da 3ª revisão do PR #80 (p1_recusas, 25/10/2026): sobre o parecer real da exp02em1b (21/10/2026 15:43:51), 12
+    de 27 maneiras de recusar o StoryPoll em prosa («→ não, manter o quiz atual», «→ sem aprovação», «→ aprovado? não»)
+    confirmavam «aprovado pelo PO» pelo trecho literal. Sem a leitura do texto livre, nenhuma confirma — e a ressalva do
+    juiz continua contando."""
+    from tools.decisoes import ha_registro_do_po
     from tools.juizes_produto import recontar
 
-    estado = {"pareceres_humanos": [{"comentario": (
-        "Propostas:\n"
-        "[PROPOSTA: validar com PO: Preservação de duas seções do DS em sessão de 50 minutos] → aprovado\n"
-        "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo como suporte ao Canal B] → "
-        "ignorar / não implementar")}],
-        "pedidos_do_po": [{"texto": "Texto atual: “A moldura precisa ter pelo menos 10% da foto!”\n\nAjuste solicitado: "
-                                    "“Aumente a moldura.”\n\n4. Tempo em tela de 29 min: reduzir para 25 min.\n\n"
-                                    "5. Toast de inatividade: APROVADO. Remover o marcador [PROPOSTA P0b] da Seção 7 e "
-                                    "cravar: após 60 segundos de inatividade na cédula, exibir o toast."}]}
-    reg = ha_registro_do_po(estado)
-    # o «→ aprovado» da linha de cima não decide pelo StoryPoll
     storypoll = "- Utilização do componente StoryPoll nativo como suporte ao Canal B (aprovado pelo PO)."
-    assert not reg.confirma(storypoll)
-    assert reg.confirma("- Preservação de duas seções do DS em sessão de 50 minutos (aprovado pelo PO).")
-    # «Texto atual», «reduzir»: o PO cita para mudar
-    assert not reg.confirma("“A moldura precisa ter pelo menos 10% da foto!” (homologado pelo PO)")
-    assert not reg.confirma("Tempo em tela de 29 min por aula (homologado pelo PO).")
-    # tirar o marcador é o PO executando a decisão: o item continua decidindo
-    assert reg.confirma("Toast (aprovado pelo PO): após 60 segundos de inatividade na cédula, exibir o toast.")
-    # o item que decide e manda mudar não confirma o que cita — nem pelo trecho, nem pelo «Pedido N»
-    misto = ha_registro_do_po({"pedidos_do_po": [{"texto": "refaça"}, {"texto": (
-        "6. Moldura: manter a regra no sistema, mas trocar “A moldura precisa ter pelo menos 10% da foto!” por "
-        "“Aumente a moldura.”\n\n7. Tempo em tela de 29 min: aceito no piloto, reduzir para 25 min na versão final.\n\n"
-        "8. Não aceito os 40 min de tela por cartão de leitura.")}]})
-    assert not misto.confirma("“A moldura precisa ter pelo menos 10% da foto!” (homologado pelo PO)")
-    assert not misto.confirma("Tempo de 29 min em tela (homologado pelo PO no Pedido 2).")
-    assert not misto.confirma("Tempo de 40 min de tela por cartão (aprovado pelo PO no Pedido 2).")
-    assert [a["severidade"] for a in achados(storypoll, "O one-pager", reg)] == ["atencao"]
-    # a ressalva do juiz que repete o StoryPoll também fica
     env = {"status": "aprovado_com_ressalvas", "achados": [{"severidade": "atencao", "codigo": "6.2", "resumo": (
         "Utilização do componente StoryPoll nativo como suporte ao Canal B, aprovado pelo PO, adiciona carga.")}]}
-    assert recontar(env, estado) == (env, "")
+    for resposta in ("ignorar / não implementar", "não, manter o quiz atual", "sem aprovação", "aprovado? não",
+                     "fechado: sem StoryPoll", "aprovado só o Canal A; StoryPoll fica de fora", "aprovado"):
+        estado = {"pareceres_humanos": [{"etapa": "produto", "comentario": (
+            "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo como suporte ao Canal B] → "
+            + resposta)}]}
+        assert not ha_registro_do_po(estado).confirma(storypoll), resposta
+        novo, nota = recontar(env, estado)
+        assert novo["status"] == "aprovado_com_ressalvas" and novo["achados"][0]["a_conferir"], resposta
+        assert "a conferir" in nota
 
 
-def test_recusa_no_de_acordo_nunca_confirma_e_a_atribuicao_contraria_bloqueia():
-    """Revisão do PR #80: a decisão recusada no de acordo confirmava «aprovado pelo PO» pelo valor da sugestão."""
+def test_recusa_no_de_acordo_nunca_confirma_e_a_atribuicao_contraria_fica_para_conferir():
+    """Revisão do PR #80 (24/10/2026): a decisão recusada no de acordo confirmava «aprovado pelo PO» pelo valor da
+    sugestão. Na 3ª revisão (25/10/2026) a linha que parece falar do recusado deixa de ser ⛔: a semelhança com o assunto
+    é comparação de palavras, e interpretação não bloqueia sozinha — fica ⚠️ com a recusa na mensagem."""
     from tools import fechar_contrato as fc
     from tools.decisoes import achados, ha_registro_do_po
     from tools.juizes_produto import recontar
@@ -145,26 +136,38 @@ def test_recusa_no_de_acordo_nunca_confirma_e_a_atribuicao_contraria_bloqueia():
     storypoll = "- Utilização do componente StoryPoll nativo como suporte ao Canal B (aprovado pelo PO)."
     assert not reg.decisao_gravada(storypoll) and not reg.confirma(storypoll) and reg.decisao_recusada(storypoll)
     achado = [a for a in achados(storypoll, "O one-pager", reg) if a["codigo"] == "decisao-atribuida-ao-po"]
-    assert [a["severidade"] for a in achado] == ["bloqueio"] and "recusou" in achado[0]["resumo"]
-    # o parâmetro recusado, com o valor da sugestão, bloqueia; com outro valor, fica para conferir
+    assert [a["severidade"] for a in achado] == ["atencao"] and "recusado pelo PO no de acordo" in achado[0]["resumo"]
     assert [a["severidade"] for a in achados("Tempo de inatividade no chat: 90 s (homologado pelo PO).", "X", reg)] == [
-        "bloqueio"]
-    assert [a["severidade"] for a in achados("Tempo de inatividade no chat: 120 s (homologado pelo PO).", "X", reg)] == [
         "atencao"]
-    # duas palavras em comum com o assunto recusado não bastam para o ⛔
+    # duas palavras em comum com o assunto recusado não bastam para dizer que fala dele
     assert not reg.decisao_recusada("Seções do DS como suporte ao Canal B (aprovado pelo PO).")
     env = {"status": "aprovado_com_ressalvas", "achados": [{"severidade": "atencao", "codigo": "6.2", "resumo": (
         "Utilização do componente StoryPoll nativo como suporte ao Canal B, aprovado pelo PO, adiciona carga.")}]}
-    assert recontar(env, estado) == (env, "")
+    novo, _ = recontar(env, estado)
+    assert novo["status"] == "aprovado_com_ressalvas" and "recusado pelo PO" in novo["achados"][0]["a_conferir"]
     # aceitar a mesma sugestão confirma
     aceito = ha_registro_do_po(com("aceitar"))
     assert aceito.confirma(storypoll) and aceito.confirma("Tempo de inatividade no chat: 90 s (homologado pelo PO).")
-    # registros que se contradizem — um pedido aprova o que o cartão recusou — não confirmam: uma pessoa confere
-    contraditorio = {**estado, "pedidos_do_po": [{"texto": (
-        "1. Utilização do componente StoryPoll nativo como suporte ao Canal B: APROVADO.")}]}
-    reg = ha_registro_do_po(contraditorio)
-    assert reg.trecho_literal(storypoll) and not reg.confirma(storypoll)
-    assert not reg.decisao_repetida(env["achados"][0]["resumo"]) and recontar(env, contraditorio) == (env, "")
+    # registros que se contradizem — o one-pager anexado traz a linha, o cartão a recusou — não confirmam
+    contraditorio = {**estado, "one_pager_po": storypoll}
+    assert ha_registro_do_po(contraditorio).linha_do_anexo(storypoll)
+    assert not ha_registro_do_po(contraditorio).confirma(storypoll)
+
+
+def test_pareceres_da_esteira_invalidados_ou_de_outra_etapa_nao_sao_fonte_do_po():
+    """M2 da 3ª revisão do PR #80 (25/10/2026): a devolução automática da esteira (`autor: "esteira"`), o parecer
+    invalidado por um refazer e o de design não são palavra do PO sobre produto — nem na pista."""
+    from tools.decisoes import ha_registro_do_po
+
+    def parecer(**kw):
+        return {"etapa": "produto", "autor": "po@unooria.com", "quando": "21/10/2026 15:43:51", "valido": True,
+                "comentario": "4. Tempo em tela de 29 min: RESSALVA ACEITA.", **kw}
+
+    achado = "Tempo em tela de 29 min homologado pelo PO."
+    assert "parecer de produto de 21/10/2026" in ha_registro_do_po({"pareceres_humanos": [parecer()]}).decisao_repetida(
+        achado)
+    for outro in (parecer(autor="esteira"), parecer(valido=False), parecer(etapa="design")):
+        assert ha_registro_do_po({"pareceres_humanos": [outro]}).decisao_repetida(achado) == "", outro
 
 
 def test_numeros_com_unidade_normalizados():
@@ -188,20 +191,26 @@ _PROPOSTAS = {"severidade": "decisao_humana", "codigo": "F7",
               "resumo": "Propostas e parâmetros do one-pager aguardando homologação do PO."}
 
 
-def test_ressalva_que_repete_decisao_do_po_nao_conta():
+def test_ressalva_que_repete_decisao_do_po_conta_a_conferir():
+    """3ª revisão do PR #80 (25/10/2026): o achado que diz que o PO decidiu não sai mais da contagem — fica 🟡 com a marca
+    «a conferir» e a pista de onde a decisão parece estar. Separar a repetição da denúncia é interpretar o sentido."""
     from tools.juizes_produto import recontar, status_recontado
 
     novo, nota = recontar({"status": "aprovado_com_ressalvas", "achados": [_REPETE]}, _PEDIDO)
-    assert novo["status"] == "aprovado" and novo["veredito_original"] == "aprovado_com_ressalvas"
-    assert novo["achados"] == [] and novo["decisoes_do_po_registradas"][0]["codigo"] == "6.2"
-    assert "decisão do PO já registrada" in nota
-    # sem a decisão do PO, ou com outro número, a ressalva fica
-    assert recontar({"status": "aprovado_com_ressalvas", "achados": [_REPETE]}, {})[1] == ""
+    assert novo["status"] == "aprovado_com_ressalvas" and "veredito_original" not in novo
+    assert novo["achados"][0]["codigo"] == "6.2"
+    assert novo["achados"][0]["a_conferir"].startswith("a conferir: parece repetir a decisão do PO — o Pedido 1:")
+    assert "a conferir" in nota and "continuam contando" in nota
+    assert status_recontado(_relatorio("aprovado_com_ressalvas", [_REPETE]), _PEDIDO)["status"] == "amarelo"
+    # sem registro do PO, a marca diz que a sessão não tem
+    novo, _ = recontar({"status": "aprovado_com_ressalvas", "achados": [_REPETE]}, {})
+    assert "a sessão não tem" in novo["achados"][0]["a_conferir"]
+    # com outro número, a pista diz o valor divergente
     outro = {**_REPETE, "resumo": _REPETE["resumo"].replace("29 min", "35 min")}
     assert status_recontado(_relatorio("aprovado_com_ressalvas", [outro]), _PEDIDO)["status"] == "amarelo"
-    # ressalva que não diz que o PO decidiu também fica
+    # ressalva que não diz que o PO decidiu não ganha marca
     sem_po = {**_REPETE, "resumo": "Tempo em tela de 29 min acima do teto de 25 min."}
-    assert status_recontado(_relatorio("aprovado_com_ressalvas", [sem_po]), _PEDIDO)["status"] == "amarelo"
+    assert recontar({"status": "aprovado_com_ressalvas", "achados": [sem_po]}, _PEDIDO)[1] == ""
 
 
 def test_bloqueio_do_juiz_nao_e_recontado():
@@ -252,13 +261,19 @@ def test_achado_misto_do_gate_final_fica_na_contagem():
 def test_gate_de_envelope_reconta_e_grava_a_nota():
     from agents.checkers import EnvelopeGateAgent
 
-    gate = EnvelopeGateAgent(name="G", rotulo="Gate final", report_key="r", status_key="s",
-                             block_pipeline_on_fail=False, recontar_decisoes_do_po=True, contrato_no_de_acordo=True)
+    def gate():
+        return EnvelopeGateAgent(name="G", rotulo="Gate final", report_key="r", status_key="s",
+                                 block_pipeline_on_fail=False, recontar_decisoes_do_po=True, contrato_no_de_acordo=True)
+
     one_pager = "- `[PROPOSTA — validar com PO: botão de zoom na tabela]`\n"
-    final = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[gate]), {
+    # o 🔵 do contrato vai ao de acordo; a ressalva que diz que o PO decidiu fica, a conferir (3ª revisão, 25/10/2026)
+    final = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[gate()]), {
         **_PEDIDO, "one_pager": one_pager, "r": _relatorio("aprovado_com_ressalvas", [_REPETE, _PROPOSTAS])}))
+    assert final["s"] == "amarelo" and final["s_envelope"]["achados"][0]["a_conferir"]
+    assert "Recontado em código" in final["r"] and "a conferir" in final["r"] and "lista do de acordo" in final["r"]
+    final = asyncio.run(_rodar(SequentialAgent(name="R", sub_agents=[gate()]), {
+        **_PEDIDO, "one_pager": one_pager, "r": _relatorio("aprovado_com_ressalvas", [_PROPOSTAS])}))
     assert final["s"] == "aprovado" and final["s_envelope"]["veredito_original"] == "aprovado_com_ressalvas"
-    assert "Recontado em código" in final["r"]
     # sem a flag, o gate de sempre
     comum = EnvelopeGateAgent(name="G", rotulo="Gate final", report_key="r", status_key="s",
                               block_pipeline_on_fail=False)

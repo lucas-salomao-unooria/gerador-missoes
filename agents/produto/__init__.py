@@ -889,7 +889,7 @@ def build_produto_stage(
                 status_key="gate_final_status",
                 block_pipeline_on_fail=estrito,
                 # 🟡 em 15 de 15 sessões por construção (levantamento de 24/10/2026): a proposta aberta vai à lista do de
-                # acordo (PR 3), e a decisão que o PO já registrou não é ressalva (`tools/juizes_produto.py`)
+                # acordo (PR 3); a ressalva que diz que o PO decidiu fica, marcada «a conferir» (`tools/juizes_produto.py`)
                 recontar_decisoes_do_po=True,
                 contrato_no_de_acordo=True,
             ),

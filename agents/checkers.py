@@ -141,8 +141,9 @@ class EnvelopeGateAgent(BaseAgent):
     #: Os documentos que o gate avalia (chaves do estado). Com eles, a citação de cada achado bloqueante é conferida
     #: (`tools/citacoes.py`): a que não existe rebaixa o achado, e se todos os bloqueios caem, o veredito vira 🟡.
     documentos: List[str] = Field(default_factory=list)
-    #: Juiz de produto recontado em código (`tools/juizes_produto.py`): a ressalva que só repete decisão que os registros
-    #: do PO confirmam não conta no veredito (exp06ef1b, 08/10/2026: os 29 min que o PO aceitou voltavam em três juízes).
+    #: Juiz de produto recontado em código (`tools/juizes_produto.py`): a ressalva que diz que o PO decidiu continua
+    #: contando, marcada «a conferir» com a pista de onde a decisão parece estar (exp06ef1b, 08/10/2026: os 29 min que o PO
+    #: aceitou voltavam em três juízes; a 3ª revisão do PR #80, 25/10/2026, parou de tirá-la da contagem).
     recontar_decisoes_do_po: bool = False
     #: Com a recontagem: o `decisao_humana` que só fala das propostas e parâmetros abertos vai à lista do de acordo de
     #: produto (PR 3) em vez de rebaixar o gate final — 🟡 em 15 de 15 sessões por construção (levantamento de 24/10).

@@ -73,19 +73,33 @@ def _atribuidas(st, chave, documento="O documento"):
     return [a for a in achados if a["codigo"] == "decisao-atribuida-ao-po"]
 
 
-@pytest.mark.parametrize("execucao, chave, trecho", [
-    # P049: «homologados pelo PO» — o Pedido 13 crava 60/25/35 palavras e aceita os 29 min
-    ("727a3c2d:final", "one_pager", "60 palavras por legenda de projeto, 25 por cartão argumentativo"),
-    # P156: as duas linhas confirmam pela linha idêntica do one-pager que o PO anexou (`one_pager_po`), num item numerado
-    # que decide — o pedido de 08/10 15:11 não tem seis palavras literais em comum com elas
-    ("acervo:exp06ef1b-53e011b6", "one_pager", "Tetos de palavras cravados (homologados pelo PO)"),
-    # P159: o PO mandou trocar o marcador das PQ-01 a PQ-05 por [HOMOLOGADO pelo PO] (parecer de 08/10 15:11, item 8)
-    ("acervo:exp06ef1b-53e011b6", "spec_missao", "[HOMOLOGADO pelo PO]"),
+def test_fp_p156_linha_identica_no_one_pager_que_o_po_anexou():
+    """P156 (53e011b6, one-pager): as duas linhas «homologados pelo PO» estão idênticas no one-pager que o PO anexou
+    (`one_pager_po`) — o registro estruturado que continua confirmando depois da 3ª revisão do PR #80 (25/10/2026)."""
+    st = estado("acervo:exp06ef1b-53e011b6")
+    exige(st["one_pager"], "Tetos de palavras cravados (homologados pelo PO)", "o one-pager de 53e011b6")
+    registro = decisoes.ha_registro_do_po(st)
+    linhas = decisoes._linhas_atribuidas(st["one_pager"])
+    assert len(linhas) == 2 and all(registro.linha_do_anexo(l) for l in linhas)
+    assert _atribuidas(st, "one_pager") == []
+
+
+@pytest.mark.parametrize("execucao, chave, trecho, pista", [
+    # P049 (727a3c2d, one-pager): «homologados pelo PO» — o Pedido 13 crava 60/25/35 palavras e aceita os 29 min, em prosa
+    ("727a3c2d:final", "one_pager", "60 palavras por legenda de projeto, 25 por cartão argumentativo",
+     "o Pedido 13: «2. Tetos de palavras: HOMOLOGADOS."),
+    # P159 (53e011b6, spec): o PO mandou trocar o marcador das PQ-01 a PQ-05 por [HOMOLOGADO pelo PO] num pedido em prosa
+    ("acervo:exp06ef1b-53e011b6", "spec_missao", "[HOMOLOGADO pelo PO]", ""),
 ])
-def test_fp_atribuicao_que_o_registro_do_po_confirma(execucao, chave, trecho):
+def test_fp_que_so_o_texto_livre_do_po_confirmava_volta_a_conferir(execucao, chave, trecho, pista):
+    """3ª revisão do PR #80 (25/10/2026): o texto livre dos pedidos e pareceres não confirma mais — o mesmo código que
+    lia o Pedido 13 aceitava 12 de 27 recusas em prosa do StoryPoll (p1_recusas). P049 e P159 voltam a ⚠️ (🟡, nunca
+    ⛔), com a pista de onde a decisão parece estar: FP ⚠️ → 🟡 a conferir."""
     st = estado(execucao)
     exige(st[chave], trecho, f"o {chave} de {rotulo(execucao)}")
-    assert _atribuidas(st, chave) == []
+    achado = _atribuidas(st, chave)
+    assert [a["severidade"] for a in achado] == ["atencao"]
+    assert pista in achado[0]["resumo"] and "registro estruturado" in achado[0]["resumo"]
 
 
 def test_fp_p159_a_ordem_do_po_esta_no_parecer():
@@ -95,35 +109,36 @@ def test_fp_p159_a_ordem_do_po_esta_no_parecer():
     exige(ordem, "PQ-01 a PQ-05", "o pedido")
 
 
-def test_residuo_p056_a_generalizacao_e_a_linha_com_outros_tempos_ficam_para_conferir():
-    """P056 (727a3c2d, spec): das três atribuições, o Pedido 13 confirma a dos 29 min. A generalização — «Todas as
-    pendências e parâmetros foram homologados e ratificados pelo PO no Pedido 13» — o código não prova. E, desde a 2ª
-    revisão do PR #80 (24/10/2026), a linha da tabela que põe ao lado dos 29 min os 23 min recomendados pelo juiz e os
-    21 min fora de tela também fica: o código não distingue o tempo em tela de outro tempo em minutos
-    (`numeros_divergentes`). O achado já era ⚠️; ganha a linha."""
+def test_residuo_p056_as_tres_linhas_ficam_para_conferir():
+    """P056 (727a3c2d, spec): desde a 3ª revisão do PR #80 (25/10/2026) as três atribuições ficam ⚠️ — a dos 29 min,
+    que só o Pedido 13 em prosa confirmava, a linha da tabela com os 23 min recomendados e os 21 min fora de tela, e a
+    generalização «Todas as pendências e parâmetros foram homologados… no Pedido 13». A pista aponta o item 4 do Pedido 13
+    e, na linha da tabela, os outros valores em minutos."""
     st = estado("727a3c2d:final")
     achado = _atribuidas(st, "spec_missao", "A spec")
-    assert len(achado) == 1 and achado[0]["severidade"] == "atencao"
-    assert "Todas as pendências e parâmetros foram homologados" in achado[0]["resumo"]
-    assert "Reduzir o tempo agregado em tela para 23 min" in achado[0]["resumo"]
-    assert "Tempo em tela de 29 min:" not in achado[0]["resumo"] and "1 outra(s)" in achado[0]["resumo"]
+    assert len(achado) == 1 and achado[0]["severidade"] == "atencao" and "3 decisão(ões)" in achado[0]["resumo"]
+    for trecho in ("Todas as pendências e parâmetros foram homologados", "Reduzir o tempo agregado em tela para 23 min",
+                   "Tempo em tela de 29 min:", "o Pedido 13: «4. Tempo em tela de 29 min: RESSALVA ACEITA.",
+                   "o Pedido 13, sem item com o mesmo número"):
+        assert trecho in achado[0]["resumo"], trecho
 
 
-def test_residuo_p063_o_tempo_fora_de_tela_volta_a_conferir():
-    """P063 (727a3c2d, resumido): a linha dos parâmetros (60 s; 60/25/35 palavras) o Pedido 13 confirma. A da ressalva traz
-    «29 min em tela e 21 min fora de tela para a aula de 50 min»: os 21 min são o resto da aula, não outro tempo em tela,
-    mas o código não distingue a grandeza, e a linha volta a ⚠️ para uma pessoa conferir (2ª revisão do PR #80)."""
+def test_residuo_p063_as_duas_linhas_do_resumido_ficam_para_conferir():
+    """P063 (727a3c2d, resumido): a linha dos parâmetros (60 s; 60/25/35 palavras) e a da ressalva («29 min em tela e 21
+    min fora de tela para a aula de 50 min») ficam ⚠️ desde a 3ª revisão do PR #80 (25/10/2026): só o Pedido 13, em
+    prosa, as confirmava. A pista da ressalva diz os 21 min."""
     st = estado("727a3c2d:final")
     exige(st["one_pager_resumido"], "O PO ratificou e homologou no Pedido 13 esse tempo de tela de 29 min",
           "o resumido")
     achado = _atribuidas(st, "one_pager_resumido", "O resumido")
-    assert len(achado) == 1 and achado[0]["severidade"] == "atencao" and "1 outra(s)" in achado[0]["resumo"]
-    assert "21 min fora de tela" in achado[0]["resumo"] and "Toast de inatividade aos 60s" not in achado[0]["resumo"]
+    assert len(achado) == 1 and achado[0]["severidade"] == "atencao" and "2 decisão(ões)" in achado[0]["resumo"]
+    assert "21 min fora de tela" in achado[0]["resumo"] and "Toast de inatividade aos 60s" in achado[0]["resumo"]
+    assert "outro valor na mesma unidade (21 min)" in achado[0]["resumo"]
 
 
 def test_v_mutante_numero_trocado_na_atribuicao():
-    """O one-pager que diz «homologados pelo PO» com 90 palavras, quando o PO cravou 60, é acusado — o trecho comum de
-    seis palavras não basta, o número tem de ser o dele."""
+    """O one-pager que diz «homologados pelo PO» com 90 palavras, quando o PO cravou 60, é acusado — e a pista diz que o
+    Pedido 13 traz outro valor."""
     st = estado("727a3c2d:final")
     st["one_pager"] = st["one_pager"].replace("cravados (homologados pelo PO):** 60 palavras",
                                               "cravados (homologados pelo PO):** 90 palavras")
@@ -131,13 +146,13 @@ def test_v_mutante_numero_trocado_na_atribuicao():
     assert len(achado) == 1 and "90 palavras" in achado[0]["resumo"]
 
 
-def test_v_mutante_marca_homologado_fora_da_ordem_do_po():
-    """[HOMOLOGADO pelo PO] numa PQ que a ordem do PO (PQ-01 a PQ-05) não cobre é acusado."""
+def test_v_mutante_linha_do_anexo_com_outro_valor():
+    """53e011b6: a linha do one-pager igual à do anexo do PO, mas com 90 palavras no lugar de 60, não é mais a linha
+    idêntica — fica ⚠️."""
     st = estado("acervo:exp06ef1b-53e011b6")
-    linha = next(l for l in st["spec_missao"].splitlines() if l.startswith("| PQ-05 "))
-    st["spec_missao"] += "\n" + linha.replace("| PQ-05 ", "| PQ-06 ") + "\n"
-    achado = _atribuidas(st, "spec_missao", "A spec")
-    assert len(achado) == 1 and "PQ-06" in achado[0]["resumo"] and "PQ-05" not in achado[0]["resumo"]
+    st["one_pager"] = st["one_pager"].replace("(homologados pelo PO):** 60 palavras", "(homologados pelo PO):** 90 palavras")
+    achado = _atribuidas(st, "one_pager")
+    assert len(achado) == 1 and "90 palavras" in achado[0]["resumo"] and "1 outra(s)" in achado[0]["resumo"]
 
 
 def test_v_sem_registro_do_po_continua_bloqueando():
@@ -188,9 +203,11 @@ def test_v_storypoll_que_o_po_mandou_nao_implementar():
     assert juizes_produto.recontar(_RESSALVA_STORYPOLL, st)[0]["status"] == "aprovado_com_ressalvas"
 
 
-def test_v_storypoll_recusado_no_cartao_do_de_acordo_bloqueia():
-    """O mesmo StoryPoll recusado no cartão do de acordo (`decisoes_do_po`, PR 3): «aprovado pelo PO» contradiz o
-    registro — ⛔ —, e a ressalva do juiz não sai da contagem pela recusa."""
+def test_v_storypoll_recusado_no_cartao_do_de_acordo_fica_para_conferir():
+    """O mesmo StoryPoll recusado no cartão do de acordo (`decisoes_do_po`, PR 3): «aprovado pelo PO» não se confirma e a
+    mensagem diz que a linha parece falar do recusado. Era ⛔ até a 3ª revisão do PR #80 (25/10/2026); a semelhança com o
+    assunto é comparação de palavras e não bloqueia sozinha — fica ⚠️. A ressalva do juiz continua contando, a
+    conferir."""
     from tools import fechar_contrato as fc
 
     st = estado("acervo:exp02em1b-60cfa7f4")
@@ -200,8 +217,10 @@ def test_v_storypoll_recusado_no_cartao_do_de_acordo_bloqueia():
     registro = decisoes.ha_registro_do_po(st)
     assert not registro.decisao_gravada(_STORYPOLL) and not registro.confirma(_STORYPOLL)
     st["one_pager"] += "\n" + _STORYPOLL + "\n"
-    assert [a["severidade"] for a in _atribuidas(st, "one_pager")] == ["bloqueio"]
-    assert juizes_produto.recontar(_RESSALVA_STORYPOLL, st)[0]["status"] == "aprovado_com_ressalvas"
+    achado = _atribuidas(st, "one_pager")
+    assert [a["severidade"] for a in achado] == ["atencao"] and "recusado pelo PO no de acordo" in achado[0]["resumo"]
+    novo, _ = juizes_produto.recontar(_RESSALVA_STORYPOLL, st)
+    assert novo["status"] == "aprovado_com_ressalvas" and "recusado pelo PO" in novo["achados"][0]["a_conferir"]
 
 
 def test_v_moldura_que_o_po_citou_como_texto_atual():
@@ -241,8 +260,9 @@ def test_v_mutante_po_manda_reduzir_os_29_min():
 
 
 # 2ª revisão do PR #80 (24/10/2026): bastava o valor decidido aparecer no achado, e a ressalva que denuncia o documento
-# DESCUMPRINDO a decisão do PO saía da contagem como se a repetisse. O número divergente na mesma unidade TEM de disparar,
-# pelos três caminhos — decisão gravada, «Pedido N» e o primeiro número do achado.
+# DESCUMPRINDO a decisão do PO saía da contagem como se a repetisse. 3ª revisão (25/10/2026): nenhum achado que diz que o
+# PO decidiu sai mais da contagem — B1 (achado misto) e B2 (denúncia sem número) escondiam pendência. Todos contam, a
+# conferir, e a pista diz o valor divergente quando há.
 def _ressalva(resumo):
     return {"status": "aprovado_com_ressalvas", "achados": [{"severidade": "atencao", "codigo": "6.2", "resumo": resumo}]}
 
@@ -259,27 +279,42 @@ def _com_parametros_aceitos(st):
     return st
 
 
-@pytest.mark.parametrize("resumo, so_repete", [
+def _a_conferir(resumo, st):
+    """A marca da ressalva, que continua contando; "" quando ela não diz que o PO decidiu («… não foi implementado» pede
+    a decisão, `decisoes._PEDE_DECISAO`) — e então nem marca há, só a ressalva como o juiz a deu."""
+    novo, nota = juizes_produto.recontar(_ressalva(resumo), st)
+    assert (novo or _ressalva(resumo))["status"] == "aprovado_com_ressalvas", resumo
+    assert [a["resumo"] for a in (novo or _ressalva(resumo))["achados"]] == [resumo]
+    return novo["achados"][0].get("a_conferir", "")
+
+
+@pytest.mark.parametrize("resumo, divergente", [
+    # com o valor do documento: a pista diz o outro valor
     ("O teto de 45 palavras por parágrafo aceito pelo PO no de acordo é excedido: o parágrafo 3 do chat tem 62 palavras.",
-     "Teto de 45 palavras por parágrafo aceito pelo PO no de acordo de 21/10."),
+     "62 palavras"),
     ("Tempo de inatividade no chat de 90 segundos homologado pelo PO, mas a Seção 7 dispara o aviso aos 30 segundos.",
-     "Tempo de inatividade no chat de 90 segundos homologado pelo PO."),
-    # a referência só é tolerada depois da comparação («excede o teto de…»): o limite da seção não é critério
+     "30 s"),
     ("Tempo de inatividade no chat de 90 segundos homologado pelo PO, mas a Seção 7 usa o limite de 30 segundos.",
-     "Tempo de inatividade no chat de 90 segundos homologado pelo PO, acima do limite de 30 segundos do critério."),
+     "30 s"),
+    # B2 (p2_denuncia): a denúncia sem número — saía da contagem até a 3ª revisão
+    ("O teto de 45 palavras por parágrafo aceito pelo PO no de acordo é excedido em vários parágrafos do chat.", ""),
+    ("O tempo de inatividade no chat de 90 segundos homologado pelo PO não aparece em nenhuma tela da spec.", ""),
+    ("Tempo de inatividade no chat de 90 segundos homologado pelo PO, mas a Seção 7 dispara o aviso com meio minuto.", ""),
+    # e o que só repete também conta, a conferir
+    ("Teto de 45 palavras por parágrafo aceito pelo PO no de acordo de 21/10.", ""),
 ])
-def test_v_ressalva_que_denuncia_o_descumprimento_da_decisao_gravada(resumo, so_repete):
+def test_v_ressalva_sobre_a_decisao_gravada_conta_a_conferir(resumo, divergente):
+    """exp02em1b (60cfa7f4) com os parâmetros aceitos no cartão: a marca aponta a decisão do de acordo e, havendo, o
+    outro valor na mesma unidade."""
     st = _com_parametros_aceitos(estado("acervo:exp02em1b-60cfa7f4"))
-    registro = decisoes.ha_registro_do_po(st)
-    assert not registro.decisao_gravada(resumo) and not registro.decisao_repetida(resumo)
-    assert juizes_produto.recontar(_ressalva(resumo), st)[0]["status"] == "aprovado_com_ressalvas"
-    # o achado que só repete o valor decidido sai da contagem
-    assert juizes_produto.recontar(_ressalva(so_repete), st)[0]["status"] == "aprovado"
+    marca = _a_conferir(resumo, st)
+    assert "do de acordo de produto (21/10/2026 15:43:00)" in marca
+    assert (f"outro valor na mesma unidade ({divergente})" in marca) if divergente else ("outro valor" not in marca)
 
 
 def test_v_lint_atribuicao_com_o_valor_do_documento_divergente():
     """No lint, a linha que atribui ao PO os 90 s mas diz que o aviso sai aos 30 s fica ⚠️ — e a que só repete os 90 s
-    sai."""
+    sai: a decisão gravada no cartão é registro estruturado."""
     st = _com_parametros_aceitos(estado("acervo:exp02em1b-60cfa7f4"))
     divergente = ("- Aviso de inatividade no chat aos 30 segundos (tempo de inatividade no chat de 90 segundos homologado "
                   "pelo PO).")
@@ -290,35 +325,43 @@ def test_v_lint_atribuicao_com_o_valor_do_documento_divergente():
     assert len(achado) == 1 and achado[0]["severidade"] == "atencao" and "aos 30 segundos" in achado[0]["resumo"]
 
 
-@pytest.mark.parametrize("resumo", [
-    # «Pedido N»
-    "Tempo em tela de 29 min homologado pelo PO no Pedido 13, mas a Seção 10 agora soma 34 min na jornada.",
-    # o primeiro número do achado
-    "O tempo de tela aceito pelo PO (29 min) foi ultrapassado: a jornada da Seção 10 soma 34 min.",
-    "Tetos de 60 palavras homologados pelo PO não são respeitados: a legenda do projeto 2 tem 82 palavras.",
+@pytest.mark.parametrize("resumo, divergente", [
+    ("Tempo em tela de 29 min homologado pelo PO no Pedido 13, mas a Seção 10 agora soma 34 min na jornada.", "34 min"),
+    ("O tempo de tela aceito pelo PO (29 min) foi ultrapassado: a jornada da Seção 10 soma 34 min.", "34 min"),
+    ("Tetos de 60 palavras homologados pelo PO não são respeitados: a legenda do projeto 2 tem 82 palavras.",
+     "82 palavras"),
+    # B2: sem número
+    ("Tempo em tela de 29 min homologado pelo PO no Pedido 13 não é respeitado: a jornada da Seção 10 passou dele.", ""),
+    ("Toast de inatividade de 60s homologado pelo PO no Pedido 13 não foi implementado na Cédula.", ""),
+    # B1 (p2_denuncia): o achado misto — repete a decisão e traz pendência nova
+    ("Tempo em tela de 29 min homologado pelo PO no Pedido 13; além disso, a Etapa 5 não tem estado de erro para a "
+     "votação.", ""),
+    ("Tempo em tela de 29 min aceito pelo PO. Porém a Etapa 4 concentra três decisões seguidas sem feedback, o que "
+     "sobrecarrega o 6º ano.", ""),
 ])
-def test_v_ressalva_que_denuncia_o_descumprimento_do_pedido_13(resumo):
-    """727a3c2d (exp06ef1b): o Pedido 13 aceita os 29 min e crava as 60 palavras; o achado que mostra o documento acima
-    deles continua contando, nos três juízes."""
+def test_v_ressalva_sobre_o_pedido_13_conta_a_conferir(resumo, divergente):
+    """727a3c2d (exp06ef1b): o Pedido 13 aceita os 29 min, crava as 60 palavras e o toast de 60 s. Nenhuma ressalva que
+    fala deles sai da contagem — sozinha ou somada ao envelope real de cada juiz."""
     st = estado("727a3c2d:final")
-    assert not decisoes.ha_registro_do_po(st).decisao_repetida(resumo)
-    assert juizes_produto.recontar(_ressalva(resumo), st)[0]["status"] == "aprovado_com_ressalvas"
+    marca = _a_conferir(resumo, st)
+    assert "Pedido 13" in marca or (not marca and "não foi implementado" in resumo)
+    assert (f"outro valor na mesma unidade ({divergente})" in marca) if divergente else True
     for relatorio, contrato in (("experiencia_aluno_report", False), ("gate_final_report", True)):
         _, envelope = juizes_produto.recontar_relatorio(st[relatorio], st, contrato)
-        assert envelope["status"] == "aprovado", relatorio  # o FP real continua saindo (P053, P054)
-        envelope = {**envelope, "status": "aprovado_com_ressalvas",
-                    "achados": envelope["achados"] + _ressalva(resumo)["achados"]}
-        assert juizes_produto.recontar(envelope, st)[0]["status"] == "aprovado_com_ressalvas", relatorio
+        envelope = {**envelope, "achados": envelope["achados"] + _ressalva(resumo)["achados"]}
+        novo, _ = juizes_produto.recontar(envelope, st, contrato)
+        assert novo["status"] == "aprovado_com_ressalvas" and novo["achados"][-1]["resumo"] == resumo, relatorio
 
 
 def test_v_lint_pedido_13_citado_com_o_tempo_do_documento_acima():
     st = estado("727a3c2d:final")
     linha = "- Jornada de 34 min em tela (tempo em tela de 29 min homologado pelo PO no Pedido 13)."
-    assert not decisoes.ha_registro_do_po(st).confirma(linha)
-    assert decisoes.ha_registro_do_po(st).confirma("- Tempo em tela de 29 min homologado pelo PO no Pedido 13.")
+    for texto in (linha, "- Tempo em tela de 29 min homologado pelo PO no Pedido 13."):
+        assert not decisoes.ha_registro_do_po(st).confirma(texto)
     st["one_pager"] += "\n" + linha + "\n"
     achado = _atribuidas(st, "one_pager")
-    assert len(achado) == 1 and "34 min" in achado[0]["resumo"]
+    assert len(achado) == 1 and "34 min" in achado[0]["resumo"] and "outro valor na mesma unidade (34 min)" in achado[0][
+        "resumo"]
 
 
 def test_fp_p053_p157_a_referencia_do_criterio_nao_e_divergente():
@@ -337,25 +380,34 @@ def _recontado(execucao, relatorio, contrato=False):
     return juizes_produto.status_recontado(st[relatorio], st, contrato)["status"], st
 
 
-@pytest.mark.parametrize("execucao, relatorio, contrato, trecho", [
+@pytest.mark.parametrize("execucao, relatorio, contrato, trecho, pista", [
     # P054 e P055: gate final repete os 29 min e os 60/25/35 «homologados no Pedido 13»
-    ("727a3c2d:final", "gate_final_report", True, "homologada pelo PO no Pedido 13"),
+    ("727a3c2d:final", "gate_final_report", True, "homologada pelo PO no Pedido 13", "o Pedido 13: «4. Tempo em tela"),
     # P053: experiência 6.2
-    ("727a3c2d:final", "experiencia_aluno_report", False, "mantido sob ressalva operacional homologada pelo PO"),
+    ("727a3c2d:final", "experiencia_aluno_report", False, "mantido sob ressalva operacional homologada pelo PO",
+     "o Pedido 13: «4. Tempo em tela"),
     # P052: avaliação 4.1 (decisao_humana)
-    ("727a3c2d:final", "avaliacao_pedagogica_report", False, "homologada formalmente pelo PO no Pedido 13"),
-    # P158 e P157: 53e011b6 — «Todos os itens anteriormente homologados (tempo em tela de 29 min…) permanecem»
-    ("acervo:exp06ef1b-53e011b6", "gate_final_report", True, "registrado como ressalva operacional aceita e homologada"),
-    ("acervo:exp06ef1b-53e011b6", "experiencia_aluno_report", False, "mantido como ressalva operacional homologada"),
+    ("727a3c2d:final", "avaliacao_pedagogica_report", False, "homologada formalmente pelo PO no Pedido 13",
+     "o Pedido 13: «4. Tempo em tela"),
+    # P158 e P157: 53e011b6 — o anexo do PO traz os 29 min e os 50 min da aula
+    ("acervo:exp06ef1b-53e011b6", "gate_final_report", True, "registrado como ressalva operacional aceita e homologada",
+     "o one-pager que o PO anexou: «**Tempo de aula: 50 min · Em tela: 29 min**"),
+    ("acervo:exp06ef1b-53e011b6", "experiencia_aluno_report", False, "mantido como ressalva operacional homologada",
+     "o one-pager que o PO anexou: «**Tempo de aula: 50 min · Em tela: 29 min**"),
 ])
-def test_fp_ressalva_que_so_repete_decisao_do_po(execucao, relatorio, contrato, trecho):
+def test_fp_ressalva_que_repete_decisao_do_po_fica_a_conferir(execucao, relatorio, contrato, trecho, pista):
+    """P052–P055, P157, P158: até a 3ª revisão do PR #80 (25/10/2026) saíam da contagem, e o juiz ficava 🟢. Agora contam
+    como 🟡 com a marca «a conferir» e a pista do registro: FP 🟡 → 🟡 a conferir. O código não separa a repetição da
+    decisão do achado misto ou da denúncia sem número (B1, B2), e esconder pendência é pior que pedir conferência."""
     st = estado(execucao)
     exige(st[relatorio], trecho, f"o {relatorio} de {rotulo(execucao)}")
     status, _ = _recontado(execucao, relatorio, contrato)
-    assert status == "aprovado"
-    _, envelope = juizes_produto.recontar_relatorio(st[relatorio], st, contrato)
-    assert envelope["decisoes_do_po_registradas"]
-    assert envelope.get("veredito_original") in ("aprovado_com_ressalvas", None)
+    assert status == "amarelo"
+    texto, envelope = juizes_produto.recontar_relatorio(st[relatorio], st, contrato)
+    marcados = [a for a in envelope["achados"] if a.get("a_conferir")]
+    assert marcados and all(a["a_conferir"].startswith("a conferir:") for a in marcados)
+    assert any(pista in a["a_conferir"] for a in marcados) and "🔎 **a conferir**" in texto
+    assert "decisoes_do_po_registradas" not in envelope and "veredito_original" not in envelope
 
 
 @pytest.mark.parametrize("execucao, relatorio, trecho", [
@@ -435,6 +487,29 @@ def test_v_mutante_achado_de_outra_missao_nao_casa_com_a_lista():
     st["gate_final_report"] = st["gate_final_report"].replace(p168, (
         "Propostas abertas na Seção 18 aguardando validação do PO (3ª aba da escola rival e botão de zoom na tabela)."))
     assert juizes_produto.status_recontado(st["gate_final_report"], st, True)["status"] == "amarelo"
+
+
+def test_v_p123_palavra_que_nenhum_item_traz_fica_na_contagem():
+    """P123 (e89e91b3): «PROPOSTA P0b pendente de validação pelo PO quanto ao layout Developer Console no DS ChatGPT» —
+    só «layout» falta nos itens da lista. Até a 3ª revisão do PR #80 (25/10/2026) tolerava-se uma palavra de fora e o 🔵
+    ia ao de acordo; a palavra de fora pode ser a pendência que nenhum item registra, e agora o achado conta. O gate da
+    e89e91b3 já era 🟡 por outro achado."""
+    st = estado("acervo:exp01em1b-e89e91b3")
+    exige(st["gate_final_report"], "layout Developer Console no DS ChatGPT", "o gate final")
+    _, envelope = juizes_produto.recontar_relatorio(st["gate_final_report"], st, True)
+    assert not (envelope or {}).get("na_lista_do_de_acordo")
+    assert any("layout Developer Console" in a["resumo"] for a in envelope["achados"])
+    assert juizes_produto.status_recontado(st["gate_final_report"], st, True)["status"] == "amarelo"
+
+
+def test_p168_o_vocabulario_do_contrato_nao_e_assunto():
+    """P168 (60cfa7f4, retrato de 22/10): «Validação com PO das 3 propostas de produto e dos 2 parâmetros declarados na
+    missão» — «declarados» é vocabulário do contrato, como «registrados»: sem assunto fora dos itens, vai ao de acordo."""
+    st = estado("60cfa7f4:22-10")
+    exige(st["gate_final_report"], "Validação com PO das 3 propostas de produto e dos 2 parâmetros declarados na missão",
+          "o gate final de 22/10")
+    _, envelope = juizes_produto.recontar_relatorio(st["gate_final_report"], st, True)
+    assert [a["resumo"][:30] for a in envelope["na_lista_do_de_acordo"]] == ["Validação com PO das 3 propost"]
 
 
 def test_v_mutante_sem_itens_no_de_acordo_o_azul_fica():
