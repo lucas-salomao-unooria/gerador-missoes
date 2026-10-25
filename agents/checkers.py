@@ -3216,8 +3216,11 @@ class CoberturaConceitualAgent(BaseAgent):
 
         state = ctx.session.state
         nucleo = str(state.get("nucleo_narrativo", "") or "")
-        resultado = prof.validar_cobertura(nucleo, str(state.get("mapa_conceitual", "") or ""),
-                                           str(state.get("material_anexado", "") or ""))
+        mapa = str(state.get("mapa_conceitual", "") or "")
+        # o material que o PO colou num pedido ou parecer também é material (exp04ef1b, 25/09/2026)
+        material = "\n\n".join(m for m in (str(state.get("material_anexado", "") or ""), prof.material_do_po(dict(state)))
+                               if m.strip())
+        resultado = prof.validar_cobertura(nucleo, mapa, material)
         relatorio = prof.relatorio_cobertura(resultado, extrair_slug(nucleo) or "")
         bloqueios = [a for a in resultado["achados"] if a["severidade"] == "bloqueio"]
         icone = {"aprovado": "✅", "amarelo": "🟡", "bloqueado": "⛔"}[resultado["status"]]
