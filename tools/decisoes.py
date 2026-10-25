@@ -10,14 +10,14 @@ pedagógico ou funcional claro, e mesmo assim escreve `[PROPOSTA — validar com
 🟡, nunca verde, e a proposta chega ao PO. Este módulo confere as duas metades, em código:
 
 - **decisão atribuída ao PO** sem nenhum registro do PO na sessão (pedido de refazer, parecer, pedido de
-  correção) é ⛔: o autor reescreve como proposta. Com registro, é ⚠️ — o código não sabe se o parecer
-  diz aquilo, e quem confere é uma pessoa;
+  correção) é ⛔: o autor reescreve como proposta. Com registro, é ⚠️ a conferir por uma pessoa — menos a que os
+  textos do PO confirmam (`RegistroDoPO`, desde 24/10/2026), que sai da lista;
 - **proposta do agente** é ⚠️ listada: não bloqueia, mas tira a etapa do verde.
 """
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Sequence
 
 #: Particípio de decisão + "pelo PO". "aprovado pelo PO", "homologadas pelo responsável de produto".
 _PARTICIPIO = r"(?:aprovad|homologad|ratificad|decidid|validad|confirmad|fechad|definid|escolhid|autorizad)[oa]s?"
@@ -46,16 +46,21 @@ _FONTE_BRIEFING = re.compile(r"\bbriefing\b", re.IGNORECASE)
 RE_PROPOSTA = re.compile(r"\[PROPOSTA[^\]\n]{0,300}\]", re.IGNORECASE)
 
 
-def atribuicoes_ao_po(texto: str) -> List[str]:
-    """Linhas que afirmam uma decisão do PO (e não a pedem)."""
+def _linhas_atribuidas(texto: str) -> List[str]:
+    """As linhas inteiras que afirmam uma decisão do PO (e não a pedem), com espaço único."""
     saida: List[str] = []
     from tools.conteudo_aprovado import remover_anexo
 
     # o anexo do PRD é a esteira dizendo que o PO aprovou o one-pager — e aprovou, antes do dev
     for linha in remover_anexo(texto or "").splitlines():
         if RE_ATRIBUIDA_AO_PO.search(linha) and not _PEDE_DECISAO.search(linha) and not _FONTE_BRIEFING.search(linha):
-            saida.append(re.sub(r"\s+", " ", linha).strip()[:220])
+            saida.append(re.sub(r"\s+", " ", linha).strip())
     return saida
+
+
+def atribuicoes_ao_po(texto: str) -> List[str]:
+    """Linhas que afirmam uma decisão do PO (e não a pedem)."""
+    return [linha[:220] for linha in _linhas_atribuidas(texto)]
 
 
 def propostas(texto: str) -> List[str]:
@@ -68,24 +73,254 @@ def propostas(texto: str) -> List[str]:
     return vistos
 
 
-def ha_registro_do_po(state: Dict[str, Any]) -> bool:
+# ------------------------------------------------------------------ a decisão que o registro do PO confirma
+#: Palavra que não conta como conteúdo num trecho comum ao documento e ao PO: o vocabulário da própria atribuição.
+_SEM_CONTEUDO = frozenset("""homologado homologada homologados homologadas homologacao ratificado ratificada ratificados
+ratificadas ratificacao aprovado aprovada aprovados aprovadas aprovacao decidido decidida decisao decisoes pedido pedidos
+parecer pareceres formal formalmente pelo pela pelos pelas como para sobre conforme esta este isso essa esse foram sido
+""".split())
+#: O PO decide no parágrafo: ratifica, homologa, aprova, aceita, crava, mantém.
+_RE_DECIDE = re.compile(r"\b(?:ratific\w*|homolog\w*|aprov[aeo]\w*|aceit\w*|crav\w*|mantenh\w*|mantid\w*|manter|"
+                        r"mant[ée]m|permanec\w*|decid\w*|fechad\w*)\b", re.IGNORECASE)
+#: … mas não quando nega: «não aceito», «não aprovo os 29 min».
+_RE_NEGA = re.compile(r"\bn[ãa]o\s+(?:\S+\s+){0,2}(?:aceit|aprov|homolog|ratific|mant|crav)\w*", re.IGNORECASE)
+_RE_NUMERO_COM_UNIDADE = re.compile(
+    r"(\d+(?:[.,]\d+)?)\s*(%|s\b|seg(?:undos?)?\b|min(?:utos?)?\b|palavras?\b|caracteres\b|itens\b|tentativas\b|"
+    r"rodadas\b|px\b|vagas\b|cart[õo]es\b|perguntas\b)", re.IGNORECASE)
+#: A marca que o PO manda escrever no lugar do marcador: «Trocar o marcador [PROPOSTA — validar com PO] de cada uma por
+#: [HOMOLOGADO pelo PO]» (exp06ef1b, 53e011b6, parecer de 08/10/2026 15:11, item 8).
+_RE_MARCA_DO_PO = re.compile(r"\[\s*(?:homologad|ratificad|aprovad)[oa]s?\s+pel[oa]\s+PO\s*\]", re.IGNORECASE)
+_RE_ID_ITEM = re.compile(r"\b([A-Z]{1,4}\d?)-(\d{1,3})\b")
+_RE_FAIXA_DE_IDS = re.compile(r"\b([A-Z]{1,4}\d?)-(\d{1,3})\s*(?:a|at[ée]|-|–|—|\.\.\.?|…)\s*(?:\1-)?(\d{1,3})\b")
+#: «homologada pelo PO no Pedido 13»: o número é o das notas de passagem («### Pedido 13 · …»), na ordem de
+#: `pedidos_do_po` (`pipeline/passagem.notas_de_passagem`).
+_RE_PEDIDO_N = re.compile(r"\bpedido\s+(?:n[ºo°.]?\s*)?(\d{1,3})\b", re.IGNORECASE)
+#: Tamanho do trecho literal comum ao documento e a um texto do PO, em palavras, e quantas delas são conteúdo.
+TRECHO_LITERAL = 6
+TRECHO_CONTEUDO = 3
+
+
+def _palavras_planas(texto: str) -> List[str]:
+    import unicodedata
+
+    sem = "".join(c for c in unicodedata.normalize("NFD", (texto or "").lower()) if unicodedata.category(c) != "Mn")
+    return re.findall(r"[a-z0-9]+", sem)
+
+
+def _e_conteudo(palavra: str) -> bool:
+    return palavra.isdigit() or (len(palavra) >= 4 and palavra not in _SEM_CONTEUDO)
+
+
+def numeros_com_unidade(texto: str) -> List[str]:
+    """`["29 min", "60 s", "25 palavras"]`, na ordem e normalizados («60 segundos» e «60s» são «60 s»)."""
+    saida: List[str] = []
+    for valor, unidade in _RE_NUMERO_COM_UNIDADE.findall(texto or ""):
+        u = unidade.lower()
+        u = ("s" if u.startswith("s") else "min" if u.startswith("min") else "palavras" if u.startswith("palavra")
+             else "cartoes" if u.startswith("cart") else u)
+        n = f"{valor.replace(',', '.')} {u}"
+        if n not in saida:
+            saida.append(n)
+    return saida
+
+
+def _ids_cobertos(texto: str) -> set:
+    """Os IDs de item que o texto nomeia, com as faixas expandidas («PQ-01 a PQ-05» → PQ-01…PQ-05)."""
+    ids = {f"{p}-{int(n)}" for p, n in _RE_ID_ITEM.findall(texto or "")}
+    for p, a, b in _RE_FAIXA_DE_IDS.findall(texto or ""):
+        if int(a) <= int(b) <= int(a) + 50:
+            ids |= {f"{p}-{n}" for n in range(int(a), int(b) + 1)}
+    return ids
+
+
+def _paragrafos(texto: str) -> List[str]:
+    """O texto em parágrafos: linha em branco ou item numerado («2. Tetos de palavras: HOMOLOGADOS.») separa."""
+    blocos = re.split(r"\n\s*\n|\n(?=\s*\d{1,2}[.)]\s)", texto or "")
+    return [b.strip() for b in blocos if b.strip()]
+
+
+class RegistroDoPO:
+    """O que o PO escreveu na sessão, para conferir a decisão que um documento ou um juiz atribui a ele.
+
+    É o que `ha_registro_do_po` devolve: verdadeiro quando há algum registro — como era o booleano —, e com os textos
+    para a conferência. Até 24/10/2026 toda atribuição ao PO numa sessão com parecer virava ⚠️ «o código não sabe se ele
+    diz isto»: 5 de 5 falsos no levantamento de produto (exp06ef1b 727a3c2d e 53e011b6), a etapa nunca saía verde e o PO
+    relia o que tinha acabado de decidir. A atribuição é conferida quando:
+
+    - a linha traz a marca `[HOMOLOGADO pelo PO]` que o próprio PO mandou escrever, e os itens dela (PQ-01…) estão no
+      parágrafo da ordem dele;
+    - uma decisão gravada no de acordo de produto (`decisoes_do_po`, PR 3) tem o mesmo valor e o mesmo assunto;
+    - a linha tem um trecho literal de ao menos `TRECHO_LITERAL` palavras de um texto do PO (com `TRECHO_CONTEUDO` de
+      conteúdo, fora o vocabulário da atribuição), num parágrafo que não nega a decisão;
+    - a linha cita o «Pedido N» das notas de passagem, e esse pedido decide e traz o mesmo número com unidade.
+
+    O resto continua ⚠️ «confira»: a generalização («Todas as pendências foram homologadas no Pedido 13») o código não
+    prova."""
+
+    def __init__(self, pedidos: Sequence[str] = (), outros: Sequence[str] = (),
+                 decisoes: Sequence[Dict[str, Any]] = (), ha: Optional[bool] = None):
+        from tools.fidelidade import sem_relatos_de_gate
+
+        #: Os pedidos de refazer, na ordem das notas de passagem: o «Pedido N» é `pedidos[N - 1]`.
+        self.pedidos = [sem_relatos_de_gate(str(t or "")) for t in pedidos]
+        self.textos = [t for t in self.pedidos + [sem_relatos_de_gate(str(t or "")) for t in outros] if t.strip()]
+        self.decisoes = [d for d in decisoes or [] if isinstance(d, dict)]
+        self._ha = bool(self.textos or self.decisoes) if ha is None else bool(ha)
+        self._indice: Optional[Dict[tuple, List[int]]] = None
+        self._decisorios: Optional[List[tuple]] = None
+
+    def __bool__(self) -> bool:
+        return self._ha
+
+    # -------------------------------------------------- índices
+    def _paragrafos_do_po(self) -> List[tuple]:
+        """`(texto, palavras, números, decide, nega)` de cada parágrafo dos textos do PO."""
+        if self._decisorios is None:
+            self._decisorios = [(p, _palavras_planas(p), set(numeros_com_unidade(p)), bool(_RE_DECIDE.search(p)),
+                                 bool(_RE_NEGA.search(p))) for t in self.textos for p in _paragrafos(t)]
+        return self._decisorios
+
+    def _ngramas(self) -> Dict[tuple, List[int]]:
+        """Trecho de `TRECHO_LITERAL` palavras → os parágrafos do PO (que não negam) onde ele está."""
+        if self._indice is None:
+            self._indice = {}
+            for k, (_, palavras, _, _, nega) in enumerate(self._paragrafos_do_po()):
+                if nega:
+                    continue
+                for i in range(len(palavras) - TRECHO_LITERAL + 1):
+                    self._indice.setdefault(tuple(palavras[i:i + TRECHO_LITERAL]), []).append(k)
+        return self._indice
+
+    # -------------------------------------------------- conferências
+    def trecho_literal(self, texto: str) -> str:
+        """O primeiro trecho de `TRECHO_LITERAL` palavras que o texto tem em comum com um parágrafo do PO; "" se nenhum.
+
+        Todo número com unidade do texto tem de estar no mesmo parágrafo: «90 palavras por legenda de projeto, 25 por
+        cartão…» repete seis palavras do PO, mas o PO cravou 60."""
+        palavras, indice, paragrafos = _palavras_planas(texto), self._ngramas(), self._paragrafos_do_po()
+        numeros = set(numeros_com_unidade(texto))
+        for i in range(len(palavras) - TRECHO_LITERAL + 1):
+            janela = tuple(palavras[i:i + TRECHO_LITERAL])
+            if sum(_e_conteudo(p) for p in janela) < TRECHO_CONTEUDO:
+                continue
+            if any(numeros <= paragrafos[k][2] for k in indice.get(janela, ())):
+                return " ".join(janela)
+        return ""
+
+    def decisao_gravada(self, texto: str) -> str:
+        """O assunto da decisão do de acordo (`decisoes_do_po`) que o texto repete — mesmo valor e mesmo assunto."""
+        palavras, numeros = set(_palavras_planas(texto)), set(numeros_com_unidade(texto))
+        plano = " ".join(_palavras_planas(texto))
+        for d in self.decisoes:
+            resposta = str(d.get("resposta") or "")
+            valor = str(d.get("valor") or "") if resposta == "outro" else str(d.get("sugestao") or d.get("valor") or "")
+            assunto = str(d.get("assunto") or "")
+            if not (valor or assunto) or resposta in ("", "design"):
+                continue
+            do_valor = set(numeros_com_unidade(valor))
+            mesmo_valor = (bool(do_valor) and do_valor <= numeros) or (
+                len(valor) >= 8 and " ".join(_palavras_planas(valor)) in plano)
+            mesmo_assunto = len({p for p in _palavras_planas(assunto) if _e_conteudo(p)} & palavras) >= 2
+            if mesmo_valor and mesmo_assunto:
+                return f"{assunto[:80]} ({d.get('quando') or 'de acordo de produto'})"
+        return ""
+
+    def marca_ordenada(self, linha: str) -> str:
+        """A linha traz a marca `[HOMOLOGADO pelo PO]` e o PO mandou escrevê-la nos itens dela."""
+        if not _RE_MARCA_DO_PO.search(linha):
+            return ""
+        ids = {f"{p}-{int(n)}" for p, n in _RE_ID_ITEM.findall(linha)}
+        if not ids:
+            return ""
+        for paragrafo, _, _, _, nega in self._paragrafos_do_po():
+            if not nega and _RE_MARCA_DO_PO.search(paragrafo) and ids <= _ids_cobertos(paragrafo):
+                return f"o PO mandou marcar {', '.join(sorted(ids))} assim: «{paragrafo[:120]}»"
+        return ""
+
+    def pedido_citado(self, linha: str) -> str:
+        """A linha cita o «Pedido N», e esse pedido do PO decide e traz o mesmo número com unidade."""
+        numeros = set(numeros_com_unidade(linha))
+        for m in _RE_PEDIDO_N.finditer(linha):
+            n = int(m.group(1))
+            if not 1 <= n <= len(self.pedidos):
+                continue
+            for paragrafo in _paragrafos(self.pedidos[n - 1]):
+                if (_RE_DECIDE.search(paragrafo) and not _RE_NEGA.search(paragrafo)
+                        and numeros & set(numeros_com_unidade(paragrafo))):
+                    return f"Pedido {n}: «{paragrafo[:120]}»"
+        return ""
+
+    def confirma(self, linha: str) -> str:
+        """Por que a atribuição da linha ao PO está nos registros dele; "" quando o código não a acha."""
+        motivo = self.marca_ordenada(linha) or self.decisao_gravada(linha)
+        if motivo:
+            return motivo
+        trecho = self.trecho_literal(linha)
+        if trecho:
+            return f"trecho do PO: «{trecho}»"
+        return self.pedido_citado(linha)
+
+    def decisao_repetida(self, texto: str) -> str:
+        """O registro do PO que um achado de juiz só repete: decisão gravada, trecho literal, «Pedido N», ou o primeiro
+        número com unidade do achado (o valor de que ele fala) num parágrafo em que o PO decide, com o mesmo assunto."""
+        motivo = self.decisao_gravada(texto) or self.pedido_citado(texto)
+        if motivo:
+            return motivo
+        trecho = self.trecho_literal(texto)
+        if trecho:
+            return f"trecho do PO: «{trecho}»"
+        numeros = numeros_com_unidade(texto)
+        if not numeros:
+            return ""
+        palavras = {p for p in _palavras_planas(texto) if _e_conteudo(p) and not p.isdigit()}
+        for paragrafo, do_po, nums, decide, nega in self._paragrafos_do_po():
+            if decide and not nega and numeros[0] in nums and len(palavras & set(do_po)) >= 2:
+                return f"o PO decidiu {numeros[0]}: «{paragrafo[:120]}»"
+        return ""
+
+
+def ha_registro_do_po(state: Dict[str, Any]) -> RegistroDoPO:
     """A sessão tem alguma palavra do PO: pedido de refazer, parecer de acordo com nota, pedido de correção, ou o
     one-pager que ele anexou. Com ela, a atribuição vira ⚠️ a conferir — o que a esteira mudou no one-pager do PO quem
-    barra é a conferência trecho a trecho (`tools/one_pager_po.py`)."""
-    return bool(state.get("pedidos_do_po") or str(state.get("notas_de_passagem") or "").strip()
-                or str(state.get("pedido_correcao") or "").strip() or str(state.get("one_pager_po") or "").strip())
+    barra é a conferência trecho a trecho (`tools/one_pager_po.py`).
+
+    Devolve o `RegistroDoPO`, verdadeiro nos mesmos casos em que o booleano de antes era: com ele, `achados` deixa de
+    pedir conferência da atribuição que os textos do PO confirmam."""
+    from pipeline.reexecucao import texto_do_pedido
+
+    ha = bool(state.get("pedidos_do_po") or str(state.get("notas_de_passagem") or "").strip()
+              or str(state.get("pedido_correcao") or "").strip() or str(state.get("one_pager_po") or "").strip())
+    pedidos = [str(p.get("texto") or "") for p in state.get("pedidos_do_po") or [] if isinstance(p, dict)]
+    outros = [texto_do_pedido(str(state.get("pedido_correcao") or ""))]
+    outros += [str(p.get("comentario") or "") for p in state.get("pareceres_humanos") or [] if isinstance(p, dict)]
+    # nas notas de passagem, o que está citado com «>» é a palavra do PO (pedidos e pareceres); o resto é da esteira
+    outros.append("\n".join(re.sub(r"^>\s?", "", l) for l in str(state.get("notas_de_passagem") or "").splitlines()
+                            if l.startswith(">")))
+    outros += [str(state.get("one_pager_po") or ""), str(state.get("briefing") or "")]
+    return RegistroDoPO(pedidos, outros, state.get("decisoes_do_po") or [], ha=ha)
 
 
-def achados(texto: str, documento: str, registro_do_po: bool, etapa: str = "produto") -> List[Dict[str, str]]:
-    """Achados do documento: decisão atribuída ao PO (⛔ sem registro, ⚠️ com) e propostas a revisar (⚠️)."""
+def achados(texto: str, documento: str, registro_do_po: Any, etapa: str = "produto") -> List[Dict[str, str]]:
+    """Achados do documento: decisão atribuída ao PO (⛔ sem registro, ⚠️ com) e propostas a revisar (⚠️).
+
+    Com o `RegistroDoPO` (e não só o booleano), a atribuição que os textos do PO confirmam sai da lista; se todas saem,
+    não há achado."""
     saida: List[Dict[str, str]] = []
-    atribuidas = atribuicoes_ao_po(texto)
+    linhas = _linhas_atribuidas(texto)
+    conferidas = 0
+    if linhas and registro_do_po and isinstance(registro_do_po, RegistroDoPO):
+        restantes = [linha for linha in linhas if not registro_do_po.confirma(linha)]
+        conferidas, linhas = len(linhas) - len(restantes), restantes
+    atribuidas = [linha[:220] for linha in linhas]
     if atribuidas:
         lista = "\n".join(f"    - «{a}»" for a in atribuidas[:8])
         if registro_do_po:
+            outras = (f" ({conferidas} outra(s) o código achou nos registros do PO e não lista)" if conferidas else "")
+            leu = ("o código não achou isto nos textos dele" if isinstance(registro_do_po, RegistroDoPO)
+                   else "o código não sabe se ele diz isto")
             saida.append({"severidade": "atencao", "codigo": "decisao-atribuida-ao-po", "etapa": etapa, "resumo": (
-                f"{documento}: {len(atribuidas)} decisão(ões) atribuída(s) ao PO. A sessão tem parecer do PO, mas o código "
-                "não sabe se ele diz isto — confira antes do de acordo:\n" + lista)})
+                f"{documento}: {len(atribuidas)} decisão(ões) atribuída(s) ao PO{outras}. A sessão tem parecer do PO, mas "
+                f"{leu} — confira antes do de acordo:\n" + lista)})
         else:
             saida.append({"severidade": "bloqueio", "codigo": "decisao-atribuida-ao-po", "etapa": etapa, "resumo": (
                 f"{documento}: {len(atribuidas)} decisão(ões) atribuída(s) ao PO, e a sessão não tem nenhum parecer, pedido "
