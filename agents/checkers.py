@@ -1349,6 +1349,11 @@ class QaAfirmacoesAgent(BaseAgent):
                         # (`[ABERTO — dono: PO]`) é do PO: outra rodada do autor não a resolve
                         continue
                     tickets.append(a)
+        # [D0-n] citado por jornada, fluxo, copy, telas, CAA ou ambiente e que o bloco 13 não define mais: o dono é quem
+        # escreveu o documento. O rastro de design só o achava depois do loop, sem rodada para consertar (exp02em1b, G07)
+        from tools.rastro import tickets_d0_orfaos
+
+        tickets += tickets_d0_orfaos(state)
         envelope = extrair_envelope(qa)
         if tickets and envelope is not None:
             novo = dict(envelope)
@@ -2795,6 +2800,11 @@ class DespachoTicketsAgent(BaseAgent):
     posfixo_por_dono: Dict[str, List[str]] = Field(default_factory=dict)
     severidades: List[str] = Field(default_factory=lambda: ["bloqueio"])
     tickets_key: str = "tickets_retrabalho"
+    #: Dono cuja cadeia pode apagar uma decisão [D0-n] que outros documentos citam (o `fecha-lacunas` do design). Depois
+    #: dela, os documentos que citam a decisão que saiu do bloco 13 entram na mesma rodada, na `ordem`, antes do posfixo
+    #: (`tools.rastro.tickets_d0_orfaos`). Vazio: sem cascata. Na exp02em1b (25/10/2026) o D0 apagou o D0-9 e jornada,
+    #: copy e ambiente seguiram citando-o até o 🔴 do rastro, depois da última rodada (G07). A cascata não reabre o D0.
+    cascata_d0_apos: str = ""
 
     def _sem_rota(self, achado: Dict[str, Any], dono: str, motivo: str) -> Dict[str, str]:
         return {
@@ -2998,7 +3008,19 @@ class DespachoTicketsAgent(BaseAgent):
             actions=EventActions(state_delta=delta_sem_rota),
         )
 
-        for nome in nomes_na_ordem:
+        def _cadeia(slug: str) -> List[str]:
+            alvo = self.mapa[slug]
+            return [alvo] if isinstance(alvo, str) else list(alvo)
+
+        # a cascata do D0 (G07) dispara depois do último agente da cadeia do dono que apaga decisões, uma vez por rodada
+        gatilho_cascata = (_cadeia(self.cascata_d0_apos)[-1]
+                           if self.cascata_d0_apos and self.cascata_d0_apos in slugs_na_ordem
+                           and all(n in nomes_na_ordem for n in _cadeia(self.cascata_d0_apos)) else "")
+        fila = list(nomes_na_ordem)
+        i = 0
+        while i < len(fila):
+            nome = fila[i]
+            i += 1
             sub = next((s for s in self.sub_agents if s.name == nome), None)
             if sub is None:
                 continue
@@ -3035,6 +3057,74 @@ class DespachoTicketsAgent(BaseAgent):
                 state[anterior] = base_do_refazer
                 yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
                             actions=EventActions(state_delta={anterior: base_do_refazer}))
+
+            if not gatilho_cascata or nome != gatilho_cascata:
+                continue
+            gatilho_cascata = ""
+            from tools.rastro import tickets_d0_orfaos
+
+            # o ticket de órfão escrito antes de o D0 rodar de novo (A089) ficou velho: vale a conta de agora
+            for lista in por_agente.values():
+                lista[:] = [a for a in lista if a.get("codigo") != "d0-orfao"]
+            por_dono: Dict[str, List[Dict[str, Any]]] = {}
+            for k, t in enumerate(tickets_d0_orfaos(state), 1):
+                dono = t["agente_responsavel"]
+                if dono in self.mapa and dono != self.cascata_d0_apos:
+                    por_dono.setdefault(dono, []).append({"id": f"D0-ORFAO-{k}", **t})
+            if not por_dono:
+                continue
+            restantes = fila[i:]
+            pendentes = [s for s in slugs_na_ordem if s != self.cascata_d0_apos and any(n in restantes for n in _cadeia(s))]
+            novos_slugs = [s for s in por_dono if s not in pendentes]
+            ausentes = [n for s in por_dono for n in _cadeia(s) if n not in existentes]
+            novos_nomes: List[str] = []
+            for s in novos_slugs:
+                for n in _cadeia(s):
+                    if n not in restantes and n not in novos_nomes:
+                        novos_nomes.append(n)
+            novos_autores = {_cadeia(s)[0] for s in novos_slugs}
+            extra = sum(1 for n in novos_nomes
+                        if n in novos_autores or _chama_modelo(next((s for s in self.sub_agents if s.name == n), None)))
+            if ausentes or not orcamento_disponivel(state, llm + extra):
+                motivo = (f"o agente de retrabalho {', '.join(ausentes)} não existe nesta etapa" if ausentes
+                          else "orçamento de retrabalho esgotado nesta execução")
+                registrados = list(state.get(KEY_TICKETS_SEM_ROTA) or [])
+                vistos = {(r.get("gate"), r.get("id"), r.get("dono")) for r in registrados}
+                for s, ts in por_dono.items():
+                    for t in ts:
+                        r = self._sem_rota(t, s, motivo)
+                        if (r["gate"], r["id"], r["dono"]) not in vistos:
+                            registrados.append(r)
+                            vistos.add((r["gate"], r["id"], r["dono"]))
+                state[KEY_TICKETS_SEM_ROTA] = registrados
+                yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                            content=types.Content(role="model", parts=[types.Part(text=(
+                                f"⚠️ {self.rotulo}: o fechamento de lacunas tirou do bloco 13 decisão(ões) que "
+                                f"{', '.join(sorted(por_dono))} ainda cita(m), e não há como refazê-los nesta rodada "
+                                f"({motivo}). Vai ao dossiê como pendência."))]),
+                            actions=EventActions(state_delta={KEY_TICKETS_SEM_ROTA: registrados}))
+                continue
+            llm += extra
+            for s, ts in por_dono.items():
+                autores.add(_cadeia(s)[0])
+                for n in _cadeia(s):
+                    por_agente.setdefault(n, []).extend(ts)
+            # os donos pendentes e os novos, na ordem de precedência; da cadeia de um dono pendente, só o que ainda não
+            # rodou (o mesmo de antes); a de um dono novo, inteira — o split e a conferência rodam de novo sobre o D9 novo
+            em_ordem = [s for s in self.ordem if s in pendentes or s in por_dono]
+            em_ordem += [s for s in list(pendentes) + list(por_dono) if s not in em_ordem]
+            refeita: List[str] = []
+            for s in em_ordem:
+                for n in _cadeia(s):
+                    if (s in novos_slugs or n in restantes) and n not in refeita:
+                        refeita.append(n)
+            refeita += [n for n in restantes if n not in refeita]
+            fila = fila[:i] + refeita
+            citados = "; ".join(f"«{t['onde']}» cita {t['trecho']}" for ts in por_dono.values() for t in ts)
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                        content=types.Content(role="model", parts=[types.Part(text=(
+                            f"🔁 {self.rotulo}: o fechamento de lacunas tirou do bloco 13 decisão(ões) ainda citada(s) — "
+                            f"{citados}. Refazendo nesta rodada: {', '.join(sorted(por_dono))}."))]))
 
         state[self.tickets_key] = ""
         gastos = int(state.get(KEY_REEXECUCOES, 0) or 0) + llm

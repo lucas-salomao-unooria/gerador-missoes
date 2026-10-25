@@ -317,6 +317,15 @@ CATALOGO: Dict[str, Explicacao] = {
         "O número e o texto das opções são decisão do PO: mudar isso muda o que a criança decide.",
         "Peça ao design que restaure as opções aprovadas. Se o design quer outra escolha, ela vira proposta para o PO.",
         DESIGN),
+    # 2EM-06 (25/10/2026): o texto-chave com o marcador do professor trocado por um valor fixo na copy
+    "slot-do-professor-fixado": _x(
+        "Texto aprovado perdeu o espaço que o professor preenche",
+        "Um texto que o PO aprovou tem um espaço que o professor preenche ao preparar a aula (por exemplo, «[recorte da "
+        "aula: parâmetro do professor]»), e nos textos das telas esse espaço foi trocado por um tema fixo.",
+        "A missão é para o professor de qualquer disciplina: com o tema fixo, a tela mostra o mesmo assunto em toda "
+        "turma, e o que o professor escolheu não aparece.",
+        "Peça ao design, com **Refazer** de design, que a frase volte com o espaço do professor, como o PO aprovou. O "
+        "exemplo preenchido pode ficar como nota.", DESIGN),
     "texto-de-tela-reescrito": _x(
         "Textos de tela aprovados não chegaram iguais às telas",
         "Textos que o one-pager aprovado põe na tela, entre aspas, não estão nos textos das telas (nem parecidos).",
@@ -850,9 +859,12 @@ CATALOGO: Dict[str, Explicacao] = {
         "O dev não vê como cada habilidade é medida.", "Peça, com **Refazer** de dev, a seção.", DEV),
     "d0-orfao": _x(
         "Documento cita decisões do design que não estão registradas",
-        "Um documento cita decisões do design pelo código, mas o bloco onde elas ficam não existe.",
-        "Quem lê não acha a decisão citada.",
-        "Peça, com **Refazer**, que a citação ou o bloco de decisões seja corrigido.", None),
+        "Um documento cita decisões do design pelo código (por exemplo, «D0-9»), mas a decisão não está no bloco onde "
+        "elas ficam: ela foi tirada ou renumerada ao fechar as lacunas, ou o bloco não existe. Desde 25/10/2026, quando "
+        "a decisão sai, a esteira refaz na mesma rodada os documentos que a citam.",
+        "Quem lê não acha a decisão citada, e a tela pode seguir uma decisão que já foi desfeita.",
+        "Se o aviso continuar, peça, com **Refazer**, que a citação seja tirada do documento — ou que ele cite o ponto "
+        "que ficou em aberto para o PO.", None),
     # ---------------------------------------------------------- indicadores e perguntas de produto
     "kpi-tela-divergente": _x(
         "Indicador medido na tela errada",

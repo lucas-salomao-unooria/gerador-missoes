@@ -1031,6 +1031,10 @@ _RE_MERMAID_ESPECIAL = re.compile(r"^\s*state\s+(\w+)\s*(?:<<\w+>>|\{)", re.M)
 def _estado_da_celula(celula: str) -> Optional[str]:
     """O estado de uma célula: o primeiro identificador entre crases, ou a célula inteira se ela é um identificador."""
     em_codigo = re.findall(r"`([^`\n]+)`", celula or "")
+    # o curinga não é estado: `EST_04_*` (as telas da etapa 4, handoff da exp02em1b de 25/10/2026) virava `EST_04` com o
+    # `*` tirado como ênfase, e o gate o dava como estado inventado
+    if (em_codigo and "*" in em_codigo[0]) or (not em_codigo and re.search(r"[A-Za-z0-9]_\*", celula or "")):
+        return None
     alvo = (em_codigo[0] if em_codigo else (celula or "").strip("*_ ")).strip("*_ `")
     alvo = alvo.split()[0] if alvo.split() else ""
     return alvo if _RE_ID_ESTADO.match(alvo) and (("_" in alvo) or alvo.isupper() or em_codigo) else None
@@ -1089,6 +1093,67 @@ def identificadores_do_design(design: str) -> Set[str]:
     nomes = {t.strip().lower() for t in re.findall(r"`([A-Za-z][A-Za-z0-9_]*)`", design or "")}
     nomes |= {t.lower() for t in re.findall(r"\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\b", design or "")}
     return nomes
+
+
+#: O ID de tela do inventário, com hífen ou sublinhado (o nó do Mermaid não aceita hífen): `E2-ALU-01`, `E2_ALU_01`.
+_RE_ID_TELA = re.compile(r"\b(E\d{1,2})[-_]([A-Z]{2,5})[-_](\d{2})\b")
+
+
+def _ids_de_tela(texto: str) -> List[str]:
+    saida: List[str] = []
+    for m in _RE_ID_TELA.finditer(texto or ""):
+        t = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+        if t not in saida:
+            saida.append(t)
+    return saida
+
+
+def de_para_do_fluxo(fluxo: str, contrato: Sequence[str]) -> Dict[str, List[str]]:
+    """`{tela: [estados do contrato]}` da seção «De-para nó → estado do contrato» do fluxo do design (prompt 072, G09): o
+    estado é o nome do contrato escrito na linha da tela, literal (sem caixa). Sem a seção, vazio."""
+    from tools.cobertura_design import tabelas
+
+    # fronteira de palavra: sem ela, «## Unidade para cada estado» passava por seção de-para (revisão do PR #86)
+    m = re.search(r"^#{1,6}[^\n]*\bde[- ]?para\b[^\n]*\bestados?\b[^\n]*$", fluxo or "", re.I | re.M)
+    if not m:
+        return {}
+    fim = re.search(r"^#{1,6}\s", fluxo[m.end():], re.M)
+    secao = fluxo[m.end(): m.end() + fim.start() if fim else len(fluxo)]
+    por_nome = {e.lower(): e for e in contrato}
+    saida: Dict[str, List[str]] = {}
+    for _, linhas in tabelas(secao):
+        for linha in linhas:
+            texto = " | ".join(linha.values())
+            estados = [por_nome[t.lower()] for t in re.findall(r"[A-Za-z][A-Za-z0-9_]*", texto) if t.lower() in por_nome]
+            for tela in _ids_de_tela(texto):
+                for e in estados:
+                    if e not in saida.setdefault(tela, []):
+                        saida[tela].append(e)
+    return saida
+
+
+def _sugestoes_de_estado(inventados: Sequence[str], texto: str, contrato: Sequence[str],
+                         de_para: Dict[str, List[str]]) -> List[str]:
+    """Para cada estado inventado, o nome do contrato que o autor pode usar — dado copiado, sem leitura de sentido: o que o
+    de-para do fluxo dá às telas da linha onde o nome inventado está; sem de-para, os estados do contrato com o mesmo
+    prefixo de etapa (`EST_02_…`). O handoff da exp02em1b (25/10/2026) ficou 🔴 nas duas rodadas porque a mensagem não
+    dizia qual nome usar (G09)."""
+    saida: List[str] = []
+    linhas = [l for l in (texto or "").splitlines() if l.strip().startswith("|")]
+    for inv in inventados:
+        rx = re.compile(rf"(?<![\w]){re.escape(inv)}(?![\w])", re.I)
+        telas = [t for l in linhas if rx.search(l) for t in _ids_de_tela(l)]
+        telas = list(dict.fromkeys(telas))
+        pares = [(t, e) for t in telas for e in de_para.get(t, [])]
+        if pares:
+            saida.append(f"`{inv}` → na linha da tela " + ", ".join(
+                f"`{t}`, que o de-para do fluxo põe em `{e}`" for t, e in pares[:3]))
+            continue
+        prefixo = re.match(r"[A-Za-z]*_?0*\d+", inv)
+        mesmos = [e for e in contrato if prefixo and re.match(rf"{re.escape(prefixo.group(0))}(?:_|$)", e, re.I)]
+        if mesmos:
+            saida.append(f"`{inv}` → do contrato, com o mesmo prefixo: " + ", ".join(f"`{e}`" for e in mesmos[:4]))
+    return saida
 
 
 # --------------------------------------------------------------------------- d) design citado como produto
@@ -1334,11 +1399,20 @@ def _validar(documento: str, texto: str, state: Dict[str, Any]) -> Dict[str, Any
             "aparece no de-para.", documento))
     if inventados:
         onde = "na §6 do PRD" if documento == "prd" else "nas tabelas e no diagrama do handoff"
+        from tools.cobertura_design import estados_da_spec
+
+        # o nome a usar, copiado do de-para do fluxo ou do contrato (G09): sem ele, o autor da rodada 2 trocava um nome
+        # inventado por outro
+        contrato_estados = estados_da_spec(spec)
+        sugestoes = _sugestoes_de_estado(inventados, corpo, contrato_estados,
+                                         de_para_do_fluxo(str(state.get("fluxo_arestas") or ""), contrato_estados))
         achados.append(_achado(
             "estado-fora-do-contrato",
             f"{len(inventados)} estado(s) {onde} não existem no contrato de estados da spec nem no fluxo do design: "
             f"{_exemplos(f'`{e}`' for e in inventados)}. O {rotulo} não cria vocabulário de estado: use o nome do "
-            "contrato.", documento))
+            "contrato — a tela que a spec põe dentro de um estado usa o nome dele."
+            + (f" Onde usar: {_exemplos(sugestoes)}." if sugestoes else "")
+            + f" Os estados do contrato: {_exemplos((f'`{e}`' for e in contrato_estados), limite=20)}.", documento))
 
     # d) decisão de design citada como produto
     falsas = origens_falsas(corpo, docs)

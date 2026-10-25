@@ -640,6 +640,7 @@
     "textos_chave_status": {
       "status": "bloqueado",
       "codigos": [
+        "slot-do-professor-fixado",
         "texto-chave-divergente"
       ]
     },

@@ -69,8 +69,16 @@ def _dobrar(texto: str) -> str:
     return "".join((unicodedata.normalize("NFD", c)[:1].lower() or c)[:1] for c in (texto or ""))
 
 
+def _sem_simbolos(texto: str) -> str:
+    """Sem emoji e símbolos (categorias Unicode `So` e `Sk`), nem o seletor de variação e o ZWJ que os compõem."""
+    return "".join(" " if unicodedata.category(c) in ("So", "Sk") or c in "️‍" else c for c in texto or "")
+
+
 def _norm(texto: str) -> str:
-    return re.sub(r"\s+", " ", re.sub(r"[`*_]", " ", _dobrar(texto))).strip(" .:")
+    # o emoji e os colchetes da notação de botão não fazem outro rótulo: o PO escreve «[🌿 SÓ UM PEDAÇO]», «🌿 SÓ UM
+    # PEDAÇO» e «SÓ UM PEDAÇO» para o mesmo botão, e o `rotulo-divergente` acusava as três (exp02ef1b, 25/10/2026, G13)
+    t = re.sub(r"\s+", " ", re.sub(r"[`*_]", " ", _sem_simbolos(_dobrar(texto)))).strip(" .:")
+    return re.sub(r"^\[([^\[\]]*)\]$", r"\1", t).strip(" .:")
 
 
 def _limpa(celula: str) -> str:

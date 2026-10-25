@@ -211,6 +211,12 @@ def matriz(state: Dict[str, Any]) -> Dict[str, Any]:
     for r in reqs:
         celulas[r["id"]] = {c: (_presente(r["categoria"], r["texto"], c, textos[c]) if textos[c].strip() else None)
                             for c in CATEGORIAS[r["categoria"]][1]}
+    # O estado inicial do contrato é o `[*]` do `stateDiagram` do fluxo: `[*] --> E1_ALU_01` (exp01em1b, 25/10/2026) tem o
+    # `NAO_INICIADO` do contrato sem escrever o nome, e a matriz o dava como perdido. Só o primeiro estado do bloco 2, e só
+    # na coluna do fluxo: no PRD o nome vira enum e CHECK, e continua exigido
+    estados = [r for r in reqs if r["categoria"] == "estado"]
+    if estados and celulas[estados[0]["id"]].get("fluxo") is False and re.search(r"\[\*\]\s*-->", textos["fluxo"]):
+        celulas[estados[0]["id"]]["fluxo"] = True
     achados: List[Dict[str, str]] = []
     cobertura: Dict[str, Dict[str, Any]] = {}
     for categoria, (rotulo, colunas, severidade) in CATEGORIAS.items():
