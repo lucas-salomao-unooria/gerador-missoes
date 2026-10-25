@@ -324,7 +324,8 @@ def _marcar_escolhas_de_ambiente(estado: Dict[str, Any], itens: Sequence[Item]) 
 
     Duas exceções, da revisão do PR #76 (24/10/2026):
     - a seção nova que o manifesto bloqueia por outro motivo (`ambiente.escolha_a_conferir`: repete uma coleção do DS, ou
-      o briefing fixa outra) não é escolha a aprovar — o «aceitar» não a liberaria. A proposta fica um item comum;
+      o briefing fixa outra com `secao_ds:`) não é escolha a aprovar — o «aceitar» não a liberaria. A proposta fica um
+      item comum;
     - na spec calada (bloco 0 sem `secao_ds`), o marcador que pergunta a classe e o ambiente é `define_secao`: a seção
       que o PO escrever entra também no bloco 0. Até aqui a resposta ficava só no bloco 15, e o manifesto e o D9 seguiam
       acusando a `secao_ds` ausente."""
@@ -391,8 +392,8 @@ def escolhas_de_ambiente(estado: Dict[str, Any]) -> List[Item]:
         return []
     if not amb.escolha_a_conferir(decidido["secao"], str(estado.get("briefing") or "")):
         # a regra do manifesto: a seção nova que repete uma coleção do DS (`nova:galeriadefotos` da exp01ef1b) ou que o
-        # briefing não fixou porque fixou outra é bloqueada lá, e o «aceitar» do PO não a liberaria — o item pedia uma
-        # aprovação que o gate ignora (revisão do PR #76, 24/10/2026)
+        # briefing não fixou porque fixou outra com `secao_ds:` é bloqueada lá, e o «aceitar» do PO não a liberaria — o
+        # item pedia uma aprovação que o gate ignora (revisão do PR #76, 24/10/2026)
         return []
     escolha = amb.escolha_do_po(spec, docs[DOC_ONE_PAGER], str(estado.get("briefing") or ""),
                                 estado.get(KEY_DECISOES) or [], decidido,

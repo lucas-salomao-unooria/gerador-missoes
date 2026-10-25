@@ -12,8 +12,9 @@ jornada sem poder de produto.
 - a spec de antes deste PR, sem a linha `classe_ambiente`, é lida pela `secao_ds`, e as quatro missões que vão ser
   refeitas (exp02ef1b, exp02em1b, exp01em1b e exp03em1b) passam.
 
-Mutantes: «D9 cria ambiente novo com a spec calada», «jornada inventa fase 3 do mini-jogo», «bloco 14 troca a
-secao_ds». Tudo determinístico, sem modelo, sobre os estados do acervo (`tests/acervo`).
+Mutantes: «D9 cria ambiente novo com a spec calada», «jornada inventa fase 3 do mini-jogo», «bloco 14 troca a secao_ds»;
+da 3ª revisão do PR #76 (24/10/2026), «trava pelo nome da interface deixa o ambiente novo sem o PO». Tudo
+determinístico, sem modelo, sobre os estados do acervo (`tests/acervo`).
 """
 from __future__ import annotations
 
@@ -986,3 +987,45 @@ def test_split_do_d9_confere_o_ambiente_e_o_catalogo_diz_o_que_mudou():
     assert "Sem poder de produto" in meta["A067AmbienteSimulado"]
     assert "decisão de produto" in meta["A068AmbienteSimuladoSplit"]
     assert "Seção 5 da jornada" in meta["A083bArestasContrato"]
+
+
+# --------------------------------------------------------------------------- 6. 3ª revisão do PR #76 (24/10/2026)
+#: A trava do briefing lida pelo nome da interface: não é explícita, e o manifesto só avisa.
+TRAVA_PELO_NOME = "Interface forçada: Galeria de Fotos\nA turma organiza as fotos do dia."
+BLOCO14_MINIJOGO = BLOCO14_GALERIA.replace("`unoogaleria` · **Classe:** app clonado",
+                                           "`minijogo:varal-do-dia` · **Classe:** mini-jogo")
+
+
+@pytest.mark.parametrize("spec", [_spec_minijogo(), _spec_app("nova:pistagrama")], ids=["mini-jogo", "ambiente-novo"])
+def test_trava_pelo_nome_da_interface_nao_dispensa_a_escolha_do_po(spec):
+    """«Interface forçada: Galeria de Fotos» gera só atenção no manifesto, e o mini-jogo ou o ambiente novo passava sem o
+    PO: nenhum bloqueio, nenhum item no de acordo, nada no D9 (24/10/2026). A escolha continua cobrada nos três lugares; a
+    trava explícita (`secao_ds: unoochat`) continua dispensando, porque o manifesto bloqueia por ela."""
+    secao = amb.classe_e_ambiente(spec)["secao"]
+    assert amb.escolha_a_conferir(secao, TRAVA_PELO_NOME)
+    manifesto = validar_manifesto(spec, briefing=TRAVA_PELO_NOME)["achados"]
+    trava = [a for a in manifesto if "O briefing fixou a seção" in a["resumo"]]
+    assert trava and trava[0]["severidade"] == "atencao"
+    assert any(a.get("codigo") == "escolha-de-ambiente-sem-o-po" and a["severidade"] == "bloqueio" for a in manifesto)
+    assert [i.tipo for i in fc.escolhas_de_ambiente({"spec_missao": spec, "briefing": TRAVA_PELO_NOME})] == [
+        fc.ESCOLHA_AMBIENTE]
+    ficha = BLOCO14_MINIJOGO if secao.startswith("minijogo:") else BLOCO14_GALERIA.replace("unoogaleria", "pistagrama")
+    d9 = amb.conferir_d9(_saida_d9(ficha), None, {"spec_missao": spec, "briefing": TRAVA_PELO_NOME})
+    assert "escolha-de-ambiente-sem-o-po" in _codigos(d9["achados"])
+    assert not amb.escolha_a_conferir(secao, "secao_ds: unoochat")
+
+
+def test_mutante_trava_pelo_nome_deixa_o_ambiente_novo_sem_o_po():
+    """Mutante «trava pelo nome da interface deixa o ambiente novo sem o PO»: a exp02ef1b-4fd72a9a com «Interface forçada:
+    Galeria de Fotos» no briefing e `nova:pistagrama` escrito no bloco 0 sem decisão do PO — o manifesto bloqueia, e o de
+    acordo pergunta ao PO."""
+    estado = _estado("exp02ef1b-4fd72a9a")
+    spec = estado["spec_missao_gate0"].replace("- `secao_ds: unoogaleria`", "- `secao_ds: nova:pistagrama`")
+    # o de acordo lê a spec do Gate 0 (`fechar_contrato.documentos`)
+    mutado = {**estado, "spec_missao": spec, "spec_missao_gate0": spec,
+              "briefing": str(estado.get("briefing") or "") + "\n" + TRAVA_PELO_NOME}
+    manifesto = validar_manifesto(spec, briefing=mutado["briefing"], one_pager=estado.get("one_pager") or "",
+                                  decisoes_do_po=estado.get("decisoes_do_po") or [])
+    assert [a["codigo"] for a in manifesto["achados"] if a.get("codigo") and a["severidade"] == "bloqueio"] == [
+        "escolha-de-ambiente-sem-o-po"]
+    assert [i.tipo for i in fc.itens_em_aberto(mutado) if i.tipo == fc.ESCOLHA_AMBIENTE] == [fc.ESCOLHA_AMBIENTE]

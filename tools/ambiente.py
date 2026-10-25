@@ -244,9 +244,14 @@ def escolha_a_conferir(secao: str, briefing: str = "", secoes: Optional[Dict[str
     """A escolha do PO sobre o ambiente novo ou o mini-jogo do bloco 0 é conferida — a mesma regra do manifesto
     (`tools.rastro.validar_manifesto`), em todo lugar que a confere ou a pergunta: não quando a seção nova repete uma
     coleção que o DS já tem (`colecao_que_ja_cobre`: `nova:galeriadefotos` → `unoogaleria`) nem quando o briefing fixa
-    outra seção (`achado_secao_travada`). Nos dois casos o manifesto bloqueia por outro motivo, mais preciso, e a seção não
-    vale nem com o PO aprovando. Na revisão do PR #76 (24/10/2026), o de acordo da exp01ef1b pedia ao PO a aprovação do
-    `nova:galeriadefotos`, que o gate ignorava, e o D9 a cobrava como `escolha-de-ambiente-sem-o-po`."""
+    outra seção com `secao_ds: <seção>` (`achado_secao_travada` de bloqueio). Nos dois casos o manifesto bloqueia por outro
+    motivo, mais preciso, e a seção não vale nem com o PO aprovando. Na revisão do PR #76 (24/10/2026), o de acordo da
+    exp01ef1b pedia ao PO a aprovação do `nova:galeriadefotos`, que o gate ignorava, e o D9 a cobrava como
+    `escolha-de-ambiente-sem-o-po`.
+
+    A trava lida pelo nome da interface («Interface forçada: Galeria de Fotos») não é explícita: o manifesto só avisa, não
+    bloqueia — e a escolha continua do PO. Na 3ª revisão do PR #76 (24/10/2026) qualquer achado da trava dispensava a
+    conferência, e o mini-jogo ou o ambiente novo passava sem o PO, com o manifesto só em atenção."""
     from tools import rastro
 
     secao = (secao or "").strip().strip("`").lower()
@@ -256,7 +261,8 @@ def escolha_a_conferir(secao: str, briefing: str = "", secoes: Optional[Dict[str
         secoes = rastro.secoes_ds()
     if re.match(r"^nova\s*:", secao) and rastro.colecao_que_ja_cobre(secao.split(":", 1)[1], secoes):
         return False
-    return not rastro.achado_secao_travada(secao, briefing or "", "a spec", secoes)
+    trava = rastro.achado_secao_travada(secao, briefing or "", "a spec", secoes)
+    return not (trava and trava["severidade"] == "bloqueio")
 
 
 def secoes_para_o_de_acordo() -> List[str]:
@@ -680,8 +686,8 @@ def conferir_d9(texto: str, envelope: Optional[Dict[str, Any]], estado: Dict[str
                            "precisa de outra regra, devolva-a a produto:\n"
                            + "\n".join(f"    - «{l[:180]}»" for l in jogo[:10]))})
         # a escolha do PO pela mesma regra do manifesto: a seção nova que repete uma coleção do DS, ou que o briefing não
-        # fixou porque fixou outra, é bloqueada lá — cobrá-la aqui pedia ao PO o que o gate ignora (exp01ef1b,
-        # `nova:galeriadefotos`; revisão do PR #76, 24/10/2026)
+        # fixou porque fixou outra com `secao_ds:`, é bloqueada lá — cobrá-la aqui pedia ao PO o que o gate ignora
+        # (exp01ef1b, `nova:galeriadefotos`; revisão do PR #76, 24/10/2026)
         if decidido["nova"] and escolha_a_conferir(decidido["secao"], str(estado.get("briefing") or "")):
             escolha = escolha_do_po(spec, str(estado.get("one_pager") or ""), str(estado.get("briefing") or ""),
                                     estado.get("decisoes_do_po") or [], decidido,

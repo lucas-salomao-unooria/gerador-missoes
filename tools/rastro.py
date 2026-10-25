@@ -1076,8 +1076,9 @@ def validar_manifesto(spec: str, briefing: str = "", one_pager_po: str = "", one
         achados.append({"severidade": trava["severidade"], "campo": "secao_ds", "etapa": "produto", "resumo": trava["resumo"]})
     # PR 8 (decisão D8): a classe do ambiente coerente com a seção, o mini-jogo só no 1º–5º e com as regras e as fases na
     # spec, e o ambiente novo ou o mini-jogo como escolha do PO — nunca decidido em silêncio. A escolha do PO só quando a
-    # seção nova não repete uma coleção do DS e o briefing não fixa outra (aí o bloqueio é o de cima, mais preciso): a
-    # regra é `ambiente.escolha_a_conferir`, a mesma do de acordo e do D9
+    # seção nova não repete uma coleção do DS e o briefing não fixa outra com `secao_ds:` (aí o bloqueio é o de cima, mais
+    # preciso; a trava lida pelo nome da interface só avisa, e a escolha continua cobrada): a regra é
+    # `ambiente.escolha_a_conferir`, a mesma do de acordo e do D9
     from tools import ambiente as amb
 
     serie_do_manifesto = (series or [None])[0] if series else (id_decomposto or {}).get("serie")
