@@ -46,8 +46,9 @@ JUSANTE: Tuple[Tuple[str, str], ...] = (
     ("jornada_telas", "design"), ("fluxo_arestas", "design"), ("copy_strings", "design"),
     ("copy_strings_revisada", "design"), ("camada_caa", "design"), ("wireframes_cobertura", "design"),
     ("prototipo_html", "design"), ("prototipo_relatorio", "design"),
+    # o pedagógico fecha o design desde o PR 10 (24/10/2026)
+    ("one_pager_pedagogico", "design"),
     ("handoff_dev", "dev"), ("brief_assets", "dev"), ("banco_conteudo", "dev"), ("prd_final", "dev"),
-    ("one_pager_pedagogico", "dev"),
 )
 #: Colunas da matriz do pedido (a mesma da matriz de 23/10/2026), com abreviação.
 COLUNAS_PEDIDO: Tuple[Tuple[str, str], ...] = (

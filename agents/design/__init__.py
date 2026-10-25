@@ -42,6 +42,15 @@ HTML é o que a revisão humana de fato abre.
   d7c A090QaEntregaveisCheck      → design_status (🔴 impede dev e PRD quando ESTEIRA_ESTRITA)
   d7d A092RastroDesign            → rastro_design_status (determinístico: lacuna de design na spec e
                                  nos documentos de design, cobrada onde o designer ainda refaz)
+  ┌── OnePagerPedagogicoLoop (até PRD_MAX_RODADAS) — o fechamento do design desde o PR 10 ──────────┐
+  │ d10  A120OnePagerPedagogico → one_pager_pedagogico ← o documento sobre o qual o de acordo de     │
+  │        design é dado: a missão inteira em linguagem de sala de aula, com os links do protótipo   │
+  │ d10b A120bContratoNoPedagogico → o que o PO aprovou (habilidades, Canal B, tempos, podcast,      │
+  │        roteiro) num subtítulo «Do one-pager aprovado — …», por código; o LLM só narra            │
+  │ d10c A121ConteudoAprovadoPedagogico · A121bMontagemPedagogico · A122CoerenciaPedagogico          │
+  └──────────────────────────────────────────────────────────────────────────────────────────────────┘
+  d10d A124AnexoPedagogico       → one_pager_pedagogico + anexo literal (§9–12) · pedagogico_do_design
+                                 (o retrato que o dev confere: ele só acrescenta, numa seção própria)
 
 D0 e D9 emitem dois documentos numa única resposta (o bloco deles e o próprio relatório). Um
 `LlmAgent` grava uma só chave, então cada um é seguido por um `SecaoSplitAgent` determinístico que
@@ -70,6 +79,7 @@ from agents.base import create_llm_agent
 from agents.callbacks import copiar_textos_chave, marcar_heranca
 from agents.banca import get_banca
 from agents.juiz import get_fidelidade_check
+from agents.pedagogico import build_fechamento_pedagogico
 from agents.checkers import (
     ArestasContratoAgent,
     ArtefatosDesignAgent,
@@ -529,7 +539,7 @@ def build_design_stage(
     kw = {"thinking_budget": thinking_budget, "include_thoughts": include_thoughts}
     return SequentialAgent(
         name="DesignStage",
-        description="Área de Design: fechamento de lacunas → ambiente simulado → briefing de ofício → jornada e fluxo → copy → camada CAA → wireframes (Stitch) → protótipo navegável → QA de entregáveis.",
+        description="Área de Design: fechamento de lacunas → ambiente simulado → briefing de ofício → jornada e fluxo → copy → camada CAA → wireframes (Stitch) → protótipo navegável → QA de entregáveis → one-pager pedagógico, o documento do de acordo de design.",
         before_agent_callback=marcar_heranca,
         sub_agents=[
             ConteudoAprovadoAgent(
@@ -617,6 +627,9 @@ def build_design_stage(
                 estrito=get_settings().esteira_estrita,
                 before_agent_callback=marcar_heranca,
             ),
+            # O fechamento do design (PR 10): o one-pager pedagógico, montado sobre o contrato, é o documento do de
+            # acordo de design. Depois da banca, do QA e do rastro, que ele lê; antes da matriz e da fidelidade, que o leem.
+            *build_fechamento_pedagogico(**kw),
             # O que o produto especificou, requisito por requisito, em cada artefato de design (auditoria 07/10/2026).
             RastreabilidadeAgent(
                 name="A093RastreabilidadeDesign",
@@ -636,7 +649,9 @@ def build_design_stage(
 #: Onde o pedido de refazer de design tem de aparecer: o que o design escreve — desde o PR 6, o anexo de design no lugar
 #: da spec, que o design não muda (o item de produto é conferido a montante: «aplicado a montante», PR 5).
 FIDELIDADE_DOCUMENTOS_DESIGN = [KEY_ANEXO, "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings_revisada",
-                                "camada_caa", "wireframes_cobertura"]
+                                "camada_caa", "wireframes_cobertura",
+                                # o pedagógico fecha o design desde o PR 10: o pedido do PO sobre ele é editado nele
+                                "one_pager_pedagogico"]
 
 
 DESIGN_METADATA = [
@@ -672,6 +687,15 @@ DESIGN_METADATA = [
     {"id": "A090QaEntregaveisCheck", "name": "090 · Veredito de design (determinístico)", "icon": "🔀", "output_key": "design_status", "prompt_file": None, "description": "Lê o envelope do QA de entregáveis."},
     {"id": "A091DespachoDesign", "name": "091 · Retrabalho de design (determinístico)", "icon": "🔁", "output_key": "tickets_retrabalho", "prompt_file": None, "description": "Reexecuta só os agentes com ticket do QA, na ordem de precedência do prompt, e refaz o protótipo depois."},
     {"id": "A092RastroDesign", "name": "092 · Rastro de lacunas do design (determinístico)", "icon": "🧭", "output_key": "rastro_design_report", "prompt_file": None, "description": "Marcadores de lacuna na spec de produto, no anexo de design e nos documentos de design: o de design bloqueia a etapa; o que o D0 fechou (mapa célula → D0 do bloco 13) e a completude de produto (mapa do bloco 15) não conta; o de produto já aprovado e o de dev ficam 🟡; [D0-n] citado e ausente do bloco 13 do anexo bloqueia."},
-    {"id": "A093RastreabilidadeDesign", "name": "093 · Matriz de rastreabilidade (determinístico)", "icon": "🧷", "output_key": "rastreabilidade_report", "prompt_file": None, "description": "Cada requisito do produto (habilidades, textos literais, tempo, telas, estados, seção do DS) procurado em cada artefato de design; o que se perdeu sai com o dono."},
-    {"id": "A094FidelidadeDesign", "name": "094 · Fidelidade ao refazer de design", "icon": "📌", "output_key": "fidelidade_design_report", "prompt_file": None, "description": "Cada pedido de refazer feito ao design (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) conferido no anexo de design, no brief, na jornada, no fluxo, na copy, na CAA e nas telas: o juiz cita, o código confere. Sem pedido de design, não roda. 🔴 recusa o de acordo."},
+    # O fechamento do design desde o PR 10 (24/10/2026): os passos do pedagógico guardam o número de quando eram o fim do
+    # dev — é o nome dos agentes nas sessões já gravadas —, e rodam aqui, entre o 092 e o 093.
+    {"id": "A120OnePagerPedagogico", "name": "120 · One-pager pedagógico (validação humana)", "icon": "🧑‍🏫", "output_key": "one_pager_pedagogico", "prompt_file": "dev/120_one_pager_pedagogico.md", "description": "O fechamento do design e o documento do de acordo de design: a missão inteira em linguagem de sala de aula, com o papel do professor, os links do protótipo e as perguntas de aprovação. O LLM escreve a narrativa; o contrato entra por código (120b). Salvo em `design/14-one-pager-pedagogico.md`, `.docx` e `.html`."},
+    {"id": "A120bContratoNoPedagogico", "name": "120b · Contrato no pedagógico (determinístico)", "icon": "📎", "output_key": "one_pager_pedagogico", "prompt_file": None, "description": "Monta por código, num subtítulo «Do one-pager aprovado — …» no fim de cinco seções, o que o PO aprovou: as habilidades com o texto oficial da BNCC, a pergunta do Canal B e as alternativas (textos-chave), a tabela de tempos do §10, o podcast do §11 e o roteiro da conversa do §9. A citação quase igual de um texto-chave volta ao texto aprovado. Na correção pontual, o que muda entra como troca."},
+    {"id": "A121ConteudoAprovadoPedagogico", "name": "121 · Pedagógico × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_pedagogico_report", "prompt_file": None, "description": "As habilidades do bloco 11, o tempo em tela, o podcast e os caminhos de artefato do pedagógico contra o one-pager aprovado. Divergência volta ao redator."},
+    {"id": "A121bMontagemPedagogico", "name": "121b · Pedagógico monta, não decide (determinístico)", "icon": "🧩", "output_key": "montagem_pedagogico_report", "prompt_file": None, "description": "A narrativa do pedagógico contra o contrato, no molde do gate do PRD (PR 4): número de regra sem origem (proposta em aberto não é origem), hipótese do §17 ou teto do §15 com outro número, texto-chave reescrito, origem de produto falsa, tempo de etapa fora do §10, e os subtítulos da esteira iguais ao contrato de agora. Divergência volta ao redator."},
+    {"id": "A122CoerenciaPedagogico", "name": "122 · Coerência do pedagógico com o one-pager aprovado", "icon": "⚖️", "output_key": "coerencia_pedagogico_report", "prompt_file": None, "description": "O mesmo juiz do PRD, sobre o documento que o time pedagógico aprova: contradição com o conteúdo aprovado, com as duas citações conferidas, volta ao redator."},
+    {"id": "A123PedagogicoRodada", "name": "123 · Veredito do pedagógico (determinístico)", "icon": "🔁", "output_key": "pedagogico_rodada", "prompt_file": None, "description": "Pedagógico fiel e montado sobre o contrato encerra o loop; divergente volta ao redator com os relatórios, até o teto de rodadas."},
+    {"id": "A124AnexoPedagogico", "name": "124 · Anexo do conteúdo aprovado no pedagógico (determinístico)", "icon": "📎", "output_key": "one_pager_pedagogico", "prompt_file": None, "description": "Cola no fim do pedagógico, literais, o roteiro do professor, os tempos e cenários de aula, o podcast com o roteiro e o contrato de evidência do one-pager aprovado — e grava o retrato do documento (`pedagogico_do_design`): o texto sobre o qual o de acordo de design é dado, que o dev confere sem reescrever."},
+    {"id": "A093RastreabilidadeDesign", "name": "093 · Matriz de rastreabilidade (determinístico)", "icon": "🧷", "output_key": "rastreabilidade_report", "prompt_file": None, "description": "Cada requisito do produto (habilidades, textos literais, tempo, telas, estados, seção do DS) procurado em cada artefato de design, até o pedagógico; o que se perdeu sai com o dono."},
+    {"id": "A094FidelidadeDesign", "name": "094 · Fidelidade ao refazer de design", "icon": "📌", "output_key": "fidelidade_design_report", "prompt_file": None, "description": "Cada pedido de refazer feito ao design (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) conferido no anexo de design, no brief, na jornada, no fluxo, na copy, na CAA, nas telas e, desde o PR 10, no pedagógico: o juiz cita, o código confere. Sem pedido de design, não roda. 🔴 recusa o de acordo."},
 ]

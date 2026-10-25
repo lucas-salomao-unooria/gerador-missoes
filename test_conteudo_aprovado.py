@@ -305,12 +305,16 @@ def test_refazer_entrega_ao_redator_a_versao_sem_anexo():
     from pipeline.reexecucao import preparar_estado
 
     prd = ca.com_anexo(_prd(), ONE_PAGER, ca.SECOES_PRD)
-    limpo, _ = preparar_estado({"one_pager": ONE_PAGER, "spec_missao": _spec(), "prd_final": prd,
-                                "one_pager_pedagogico": ca.com_anexo("# Ped\n", ONE_PAGER, ca.SECOES_PEDAGOGICO)},
-                               "dev")
+    pedagogico = ca.com_anexo("# Ped\n", ONE_PAGER, ca.SECOES_PEDAGOGICO)
+    estado = {"one_pager": ONE_PAGER, "spec_missao": _spec(), "prd_final": prd, "one_pager_pedagogico": pedagogico}
+    limpo, _ = preparar_estado(estado, "dev")
     assert "prd_final" not in limpo
     assert ca.TITULO_ANEXO not in limpo["anterior_prd_final"]
     assert "# 14. Pedagogia e conformidade" in limpo["anterior_prd_final"]
+    # o pedagógico é do design desde o PR 10: refazer dev não o apaga nem o devolve ao redator
+    assert limpo["one_pager_pedagogico"] == pedagogico and "anterior_one_pager_pedagogico" not in limpo
+    limpo, _ = preparar_estado(estado, "design")
+    assert "one_pager_pedagogico" not in limpo
     assert ca.TITULO_ANEXO not in limpo["anterior_one_pager_pedagogico"]
 
 
@@ -318,17 +322,23 @@ def test_etapas_montadas_com_os_gates_e_os_anexos():
     from agents.dev import agentes_em_ordem, build_dev_stage
     from agents.produto import build_produto_stage
 
+    from agents.design import build_design_stage
+
     dev = build_dev_stage()
     nomes = [a.name for a in agentes_em_ordem(dev)]
-    # A51 (07/10/2026): o refazer de dev conferido nos documentos de dev
-    assert nomes[-6:] == ["PrdLoop", "A119AnexoPrd", "OnePagerPedagogicoLoop", "A124AnexoPedagogico", "A125Rastreabilidade",
-                          "A126FidelidadeDev"]
+    # A51 (07/10/2026): o refazer de dev conferido nos documentos de dev. O pedagógico fecha o design desde o PR 10:
+    # no dev fica só o guarda que confere o texto aprovado e acrescenta as pendências do dev (A119b)
+    assert nomes[-5:] == ["PrdLoop", "A119AnexoPrd", "A119bPedagogicoNoDev", "A125Rastreabilidade", "A126FidelidadeDev"]
     prd_loop = next(a for a in agentes_em_ordem(dev) if a.name == "PrdLoop")
     saida = next(a for a in prd_loop.sub_agents if a.name == "A118PrdRodada")
     assert "conteudo_aprovado_prd_status" in saida.status_keys
-    ped_loop = next(a for a in agentes_em_ordem(dev) if a.name == "OnePagerPedagogicoLoop")
+    design = [a.name for a in build_design_stage().sub_agents]
+    assert design[-6:] == ["QaDesignLoop", "A092RastroDesign", "OnePagerPedagogicoLoop", "A124AnexoPedagogico",
+                           "A093RastreabilidadeDesign", "A094FidelidadeDesign"]
+    ped_loop = next(a for a in build_design_stage().sub_agents if a.name == "OnePagerPedagogicoLoop")
     assert [a.name for a in ped_loop.sub_agents] == [
-        "A120OnePagerPedagogico", "A121ConteudoAprovadoPedagogico", "A122CoerenciaPedagogico", "A123PedagogicoRodada"]
+        "A120OnePagerPedagogico", "A120bContratoNoPedagogico", "A121ConteudoAprovadoPedagogico",
+        "A121bMontagemPedagogico", "A122CoerenciaPedagogico", "A123PedagogicoRodada"]
 
     spec_loop = build_produto_stage(a_partir_de="spec").sub_agents[0]
     saida = next(a for a in spec_loop.sub_agents if a.name == "A059SpecCheck")

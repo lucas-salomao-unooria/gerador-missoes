@@ -1980,7 +1980,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria | evidencia | evidencia_one_pager | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico | aprovado_resumido | aprovado_spec_design | montagem_prd | montagem_handoff
+    modo: str  # lacunas | manifesto | telemetria | evidencia | evidencia_one_pager | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico | aprovado_resumido | aprovado_spec_design | montagem_prd | montagem_handoff | montagem_pedagogico
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -2186,10 +2186,20 @@ class RastroCheckAgent(BaseAgent):
 
             chave = {"aprovado_spec": self.spec_key, "aprovado_prd": "prd_final",
                      "aprovado_resumido": "one_pager_resumido"}.get(self.modo, "one_pager_pedagogico")
+            texto_decisoes = str(state.get(chave, "") or "")
+            if self.modo == "aprovado_pedagogico":
+                # os subtítulos «Do one-pager aprovado» são da esteira, copiados por código: não atribuem decisão a
+                # ninguém (o do roteiro dizia «como o PO aprovou», e o A121 ficava 🟡, ou ⛔ sem parecer humano — 3ª
+                # revisão do PR #79, 24/10/2026)
+                from tools.pedagogico import sem_blocos
+
+                texto_decisoes = sem_blocos(texto_decisoes)
             resultado = dec.com_achados(resultado, dec.achados(
-                str(state.get(chave, "") or ""), f"A {documento}" if documento == "spec" else f"O {documento}",
+                texto_decisoes, f"A {documento}" if documento == "spec" else f"O {documento}",
                 dec.ha_registro_do_po(dict(state)),
-                etapa="produto" if self.modo in ("aprovado_spec", "aprovado_resumido") else "dev"))
+                # o pedagógico fecha o design desde o PR 10 (24/10/2026)
+                etapa={"aprovado_spec": "produto", "aprovado_resumido": "produto",
+                       "aprovado_pedagogico": "design"}.get(self.modo, "dev")))
             relatorio = ca.relatorio(resultado, documento, missao)
         elif self.modo == "one_pager_po":
             # O one-pager que o PO anexou é a missão: cada trecho dele está no gerado, ou saiu porque o pedido
@@ -2214,6 +2224,13 @@ class RastroCheckAgent(BaseAgent):
             documento = "prd" if self.modo == "montagem_prd" else "handoff"
             resultado = (montagem.validar_prd if documento == "prd" else montagem.validar_handoff)(dict(state))
             relatorio = montagem.relatorio(resultado, documento, missao)
+        elif self.modo == "montagem_pedagogico":
+            # O pedagógico monta, não decide (PR 10): fecha o design e é a base do de acordo de design; número, hipótese,
+            # teto, texto-chave e tempo da narrativa conferidos contra o contrato, e os subtítulos da esteira contra ele
+            from tools import pedagogico
+
+            resultado = pedagogico.validar(dict(state))
+            relatorio = pedagogico.relatorio(resultado, missao)
         elif self.modo == "aprovado_spec_design":
             # a spec que o D0 e o D9 reescreveram: só o que eles pioraram, com o dono do D0 (07/10/2026)
             from tools import conteudo_aprovado as ca
@@ -2287,6 +2304,10 @@ class AnexoAprovadoAgent(BaseAgent):
     chave: str
     secoes: List[int] = Field(default_factory=list)
     rotulo: str = "Anexo do conteúdo aprovado"
+    #: Onde guardar uma cópia do documento pronto. O A124 grava o retrato do pedagógico no fim do design
+    #: (`tools.pedagogico.KEY_RETRATO`): é o texto sobre o qual o de acordo de design é dado, e o dev confere que ele não
+    #: mudou (PR 10).
+    retrato_key: str = ""
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -2315,6 +2336,8 @@ class AnexoAprovadoAgent(BaseAgent):
                 corpo = governanca.com_pendencias(ca.remover_anexo(corpo), governanca.da_sessao(state), self.chave)
             novo = ca.com_anexo(corpo, one_pager, self.secoes, tk.tabela(tk.da_sessao(dict(state))))
             delta[self.chave] = novo
+            if self.retrato_key:
+                delta[self.retrato_key] = novo
             msg = (f"📎 {self.rotulo}: seções {', '.join(f'§{n}' for n in self.secoes)} do one-pager aprovado, literais."
                    if ca.TITULO_ANEXO in novo else f"⚠️ {self.rotulo}: o one-pager não tem nenhuma das seções.")
         yield Event(
@@ -2618,6 +2641,8 @@ class JuizDeContradicoesAgent(BaseAgent):
     status_key: str
     dono: str
     rotulo: str = "Coerência com o conteúdo aprovado"
+    #: A etapa dona do documento, que os achados levam: o pedagógico é do design desde o PR 10 (24/10/2026).
+    etapa: str = "dev"
     entrada_documento_key: str = "contradicoes_documento"
     entrada_referencia_key: str = "contradicoes_referencia"
 
@@ -2650,7 +2675,7 @@ class JuizDeContradicoesAgent(BaseAgent):
             no_doc, na_ref = str(c.get("citacao_documento") or ""), str(c.get("citacao_referencia") or "")
             if _citacao_confere(no_doc, doc_norm) and _citacao_confere(na_ref, ref_norm):
                 achados.append({
-                    "severidade": "bloqueio", "codigo": f"contradicao-{c.get('tipo') or 'mecanica'}", "etapa": "dev",
+                    "severidade": "bloqueio", "codigo": f"contradicao-{c.get('tipo') or 'mecanica'}", "etapa": self.etapa,
                     "agente_responsavel": self.dono,
                     "resumo": (f"O documento diz «{no_doc[:160]}» e o conteúdo aprovado diz «{na_ref[:160]}». "
                                f"{str(c.get('explicacao') or '').strip()} Siga o aprovado; se a plataforma não permite, "
@@ -3369,6 +3394,18 @@ class SaidaDeLoopAgent(BaseAgent):
     #: Os documentos que o autor do loop escreve: quando o loop repete, a versão desta rodada vai a ele em
     #: `rodada_anterior_<chave>` (`agents/base.py`).
     autor_keys: List[str] = Field(default_factory=list)
+    #: Na correção pontual, as rodadas só caem a uma quando os autores do loop estão travados: o autor que escreve um
+    #: documento que falta tem a rodada de correção dele (`pipeline.orchestrator.limitar_a_uma_rodada`). É o pedagógico
+    #: da missão desenhada antes do PR 10 (exp02em1b, exp01em1b e exp03em1b, revisão do PR #79, 24/10/2026).
+    rodadas_com_autor_livre: bool = False
+
+    def autores_travados(self, state: Any) -> bool:
+        """Correção pontual em que todos os documentos do autor do loop são travados: repetir julgaria o mesmo texto."""
+        from agents.callbacks import KEY_DOCUMENTOS_TRAVADOS
+
+        travados = state.get(KEY_DOCUMENTOS_TRAVADOS) or []
+        return (state.get(KEY_MODO_CORRECAO) == "pontual" and bool(self.autor_keys)
+                and all(k in travados for k in self.autor_keys))
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -3390,7 +3427,7 @@ class SaidaDeLoopAgent(BaseAgent):
                 exigidos = 0
             if exigidos > 0 and k not in reprovados:
                 reprovados.append(k)
-        esgotou = rodada >= self.max_rounds
+        esgotou = rodada >= self.max_rounds or (self.rodadas_com_autor_livre and self.autores_travados(state))
         delta: Dict[str, Any] = {self.rodada_key: rodada}
 
         if not reprovados:
@@ -3510,8 +3547,14 @@ class LinhaDeBaseAgent(BaseAgent):
         a_montante = [e for e in state.get("edicoes_a_montante") or [] if isinstance(e, dict)]
         anteriores = {e.get("documento"): str(state.get(PREFIXO_VERSAO_ANTERIOR + str(e.get("documento"))) or "")
                       for e in edicoes}
+        # O pedagógico que o redator gerou nesta correção, porque a missão foi desenhada antes do PR 10 e não o tinha, é
+        # julgado inteiro pelos gates dele, como na geração (revisão do PR #79, 24/10/2026)
+        from tools import pedagogico
+
+        gates_novos = pedagogico.GATES if pedagogico.gerado_nesta_correcao(state) else ()
         delta, linhas = linha_de_base.aplicar(dict(state), dict(state.get(linha_de_base.KEY_LINHA_DE_BASE) or {}),
-                                              edicoes + a_montante, chaves, anteriores=anteriores)
+                                              edicoes + a_montante, chaves, anteriores=anteriores,
+                                              gates_de_documento_novo=gates_novos)
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
         trocas_md = edicao_pontual.resumo(edicoes) + (
             "\n\n**Trocas a montante (correção de produto desta cascata):**\n\n" + edicao_pontual.resumo(a_montante)

@@ -83,14 +83,14 @@ CHAVES_DEV = frozenset({
     "validacao_dados_lgpd", "validacao_tecnica_arquitetura", "validacao_dev_report",
     "dev_status", "dev_status_envelope", "banca_rodada",
     "prd_final", "prd_check_report", "prd_status", "prd_status_envelope", "prd_rodada",
-    "one_pager_pedagogico",
+    # o pedagógico é do design desde o PR 10 (24/10/2026): refazer só dev não o apaga nem o regenera. Do dev é só a
+    # seção das pendências dele e o guarda que confere o texto aprovado no de acordo de design
+    "pedagogico_pendencias_dev", "pedagogico_dev_report", "pedagogico_dev_status", "pedagogico_dev_status_envelope",
     # gate de KPI do PRD (23/09/2026): sem apagar, uma correção que caísse antes dele deixava
     # no dossiê o veredito da execução anterior como se fosse desta
     "kpis_report", "kpis_status", "kpis_status_envelope",
-    # PRD e pedagógico × one-pager aprovado (06/10/2026)
+    # PRD × one-pager aprovado (06/10/2026)
     "conteudo_aprovado_prd_report", "conteudo_aprovado_prd_status", "conteudo_aprovado_prd_status_envelope",
-    "conteudo_aprovado_pedagogico_report", "conteudo_aprovado_pedagogico_status",
-    "conteudo_aprovado_pedagogico_status_envelope", "pedagogico_rodada",
     "juiz_telemetria_saida",
     # o refazer de dev conferido nos documentos de dev (07/10/2026)
     "fidelidade_dev_report", "fidelidade_dev_status", "fidelidade_dev_status_envelope", "juiz_fidelidade_dev_saida", "interpretacao_fidelidade_dev_saida",
@@ -98,8 +98,6 @@ CHAVES_DEV = frozenset({
     "rastreabilidade_dev_report", "rastreabilidade_dev_status", "rastreabilidade_dev_status_envelope",
     # o corpo do PRD × conteúdo aprovado, pelo juiz de contradições (08/10/2026)
     "coerencia_prd_report", "coerencia_prd_status", "coerencia_prd_status_envelope", "juiz_coerencia_prd_saida",
-    "coerencia_pedagogico_report", "coerencia_pedagogico_status", "coerencia_pedagogico_status_envelope",
-    "juiz_coerencia_pedagogico_saida",
     # a banca de entrada do dev, segunda verificação de produto e design (08/10/2026)
     "banca_entrada_narrativa", "banca_entrada_imersao", "banca_entrada_pedagogia",
     "banca_entrada_report", "banca_entrada_status", "banca_entrada_status_envelope",
@@ -136,6 +134,14 @@ CHAVES_DESIGN = frozenset({
     # os textos-chave na copy e o fluxo × bloco 2 da spec (PR 7 do plano «Produto dono do contrato»)
     "textos_chave_report", "textos_chave_status", "textos_chave_status_envelope",
     "arestas_report", "arestas_status", "arestas_status_envelope",
+    # o one-pager pedagógico fecha o design desde o PR 10 (24/10/2026): o documento, os gates dele, a montagem do
+    # contrato e o retrato que o dev confere. Refazer design o regera sobre a versão anterior (`anterior_<chave>`)
+    "one_pager_pedagogico", "pedagogico_do_design", "pedagogico_rodada",
+    "conteudo_aprovado_pedagogico_report", "conteudo_aprovado_pedagogico_status",
+    "conteudo_aprovado_pedagogico_status_envelope",
+    "montagem_pedagogico_report", "montagem_pedagogico_status", "montagem_pedagogico_status_envelope",
+    "coerencia_pedagogico_report", "coerencia_pedagogico_status", "coerencia_pedagogico_status_envelope",
+    "juiz_coerencia_pedagogico_saida",
 }) | CHAVES_DEV
 #: `spec_missao_gate0` tem de cair: o split do D0 só grava esse backup se ele não existir
 #: (`agents/checkers.py`, SecaoSplitAgent) — senão a spec velha seria preservada como "original".
@@ -224,6 +230,13 @@ CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_r
                              # a cascata do pedido triado (PR 5 do plano «Produto dono do contrato»): a divisão e as
                              # trocas de produto valem para a correção que as gravou, não para a seguinte
                              "divisao_do_pedido", "edicoes_a_montante", "devolucoes_a_produto",
+                             # o modo da correção pontual, os documentos que ela travou e as trocas dela também: ficavam
+                             # gravados no estado (60cfa7f4, b2e7b4a3, 4fd72a9a e e89e91b3 têm «pontual»), e o Iniciar e o
+                             # refazer pelos autores que vinham depois rodavam como se fossem correção pontual — o
+                             # pedagógico não era gerado, e a fidelidade de design recebia as trocas de outra correção
+                             # como se fossem desta (revisão do PR #79, 24/10/2026). A correção pontual os grava de novo
+                             # (`preparar_estado_pontual`)
+                             "modo_correcao", "documentos_travados", "edicoes_pontuais",
                              # a versão da rodada anterior de cada loop: some ao sair do loop, e aqui se a execução caiu
                              *(f"rodada_anterior_{c}" for c in ("one_pager", "spec_missao", "one_pager_resumido", "handoff_dev",
                                                                 "brief_assets", "prd_final", "one_pager_pedagogico"))})
@@ -299,7 +312,11 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Banca de design": "design",
     "Banca de entrada do dev": "dev",
     "Coerência do PRD com o one-pager aprovado": "dev",
-    "Coerência do pedagógico com o one-pager aprovado": "dev",
+    # o pedagógico fecha o design desde o PR 10 (24/10/2026)
+    "Coerência do pedagógico com o one-pager aprovado": "design",
+    "Pedagógico × one-pager aprovado": "design",
+    "Pedagógico monta, não decide": "design",
+    "Pedagógico aprovado, no dev": "dev",
     "Fechamento de lacunas (D0)": "design",
     "Ambiente simulado (D9)": "design",
     "QA de entregáveis (design)": "design",
@@ -318,7 +335,6 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Coerência KPI ↔ evento ↔ tela": "dev",
     "PRD × one-pager aprovado": "dev",
     "PRD monta, não decide": "dev",
-    "Pedagógico × one-pager aprovado": "dev",
     "Consistência do PRD": "dev",
 }
 _ETAPAS_REFEITAS: Dict[str, frozenset] = {
@@ -524,7 +540,8 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
 
     Documento que não vai ser reescrito perde a base velha. Documento já apagado por uma
     reexecução anterior (produto refeito apaga design e dev, que só rodam no próximo *iniciar*)
-    conserva a base que aquela reexecução guardou — senão o design chegaria sem nada.
+    conserva a base que aquela reexecução guardou — senão o design chegaria sem nada —, salvo o
+    pedagógico cuja base é anterior ao design que está na sessão (`base_do_pedagogico_vencida`).
     """
     from tools import governanca
 
@@ -548,9 +565,37 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
             # mantém «palavra por palavra», ele as recopiaria como texto dele; o callback do redator as recoloca como
             # estão agora (revisão do PR #75, 24/10/2026)
             atual = governanca.sem_bloco(atual).strip()
+        if not atual and chave == "one_pager_pedagogico" and base_do_pedagogico_vencida(estado):
+            limpo.pop(anterior, None)
+            limpo.pop(PREFIXO_VERSAO_ANTERIOR + chave, None)
+            continue
         if atual:
             limpo[anterior] = bloco_versao_anterior(chave, atual)
             limpo[PREFIXO_VERSAO_ANTERIOR + chave] = atual
+
+
+def base_do_pedagogico_vencida(estado: Dict[str, Any]) -> bool:
+    """A base guardada do pedagógico (`anterior_`/`versao_anterior_one_pager_pedagogico`) é anterior ao design que está
+    na sessão: o estado tem documentos de design (`jornada_telas`), mas não o pedagógico nem o retrato que o design deixa
+    dele (`pedagogico_do_design`).
+
+    É a missão desenhada antes do PR 10 que teve produto refeito depois do dev: a exp02em1b-60cfa7f4 guarda o pedagógico
+    do dev de 22/10, de antes das duas correções de produto de 23/10 (o overlay de CTA e a Central de Apoio), e o design
+    de 23/10 rodou sem ele. Conservada, a base ia ao redator para manter «palavra por palavra», com o aviso de mudanças no
+    aprovado vazio — o A064 do design o calcula contra o retrato do design, que já tem as mudanças —, e a fidelidade de
+    design provava as ordens de não mexer contra ela (`preservacao-sem-prova`; 3ª revisão do PR #79, 24/10/2026). Sem a
+    base, o redator escreve do zero sobre o contrato de agora, como nas outras missões sem pedagógico. A outra saída —
+    conservar a base e calcular as mudanças do pedagógico contra o retrato do dev (`conteudo_aprovado_base_dev`) — ficou
+    de fora: pedia um aviso de mudanças só do pedagógico no prompt de todos os autores, e a base seria ainda o texto do
+    dev, sem os subtítulos da esteira; nas três missões do acervo com o pedagógico e o retrato do dev (exp02ef1b,
+    exp06ef1b e exp06ef1b-53e011b6), o one-pager não mudou depois dele.
+
+    Sem documento de design no estado, a base é de um refazer de produto à espera do *Iniciar* (o pedagógico que o design
+    gerou, ou o do dev numa sessão anterior): continua valendo."""
+    from tools.pedagogico import KEY_RETRATO
+
+    return (bool(str(estado.get("jornada_telas") or "").strip())
+            and not str(estado.get(KEY_RETRATO) or "").strip())
 
 
 def texto_do_pedido(pedido_md: str) -> str:
@@ -592,6 +637,14 @@ def preparar_estado(
         legada = spec_de_produto_legada(limpo)
         if legada is not None:
             limpo["spec_missao"] = legada
+    if etapa == "dev":
+        # O pedagógico é do design desde o PR 10: refazer só dev não o apaga nem o regenera, e o dev confere que ele
+        # continua o do de acordo de design (A119b). A sessão anterior, com o pedagógico gerado no dev, não tem o retrato
+        # do design: o pedagógico que ela tem passa a ser o retrato (exp02ef1b, refeita depois do PR 10).
+        from tools.pedagogico import KEY, KEY_RETRATO
+
+        if str(limpo.get(KEY) or "").strip() and not str(limpo.get(KEY_RETRATO) or "").strip():
+            limpo[KEY_RETRATO] = limpo[KEY]
     if etapa == "transversal":
         # só diagnóstico e aprendizado: a herança descreve a execução que está sendo diagnosticada
         pass
@@ -833,6 +886,8 @@ def arquivos_das_chaves(chaves: Iterable[str]) -> List[str]:
     Inclui os irmãos exportados com a marca (`.docx`/`.html` do mesmo nome), que não estão em
     `ARTIFACT_FILES` mas nascem da mesma chave.
     """
+    from pipeline.artifacts import CAMINHOS_LEGADOS
+
     chaves = set(chaves)
     caminhos: List[str] = []
     for chave, rel in ARTIFACT_FILES:
@@ -844,14 +899,36 @@ def arquivos_das_chaves(chaves: Iterable[str]) -> List[str]:
             irmao = base + ext
             if irmao != rel and irmao not in caminhos:
                 caminhos.append(irmao)
+        # o arquivo de antes da mudança de pasta (o pedagógico na raiz, até o PR 10) vai junto para o backup: senão
+        # ficava órfão ao lado do novo
+        caminhos += [c for c in CAMINHOS_LEGADOS.get(chave, ()) if c not in caminhos]
     return caminhos
+
+
+#: No backup, a lista dos arquivos reescritos pela reexecução que não existiam antes dela (`reescritos_sem_cair`): a
+#: restauração os apaga. Fica fora do que volta à sessão.
+ARQUIVO_AUSENTES_NO_BACKUP = ".ausentes.json"
+
+
+def reescritos_sem_cair(removidas: Iterable[str]) -> List[str]:
+    """Arquivos que a reexecução regrava sem que a chave deles caia: o pedagógico, quando ele fica no estado. Ele é do
+    design, mas toda gravação o regrava — o refazer só de dev, com a seção de pendências do dev
+    (`pipeline.artifacts.documento_para_gravar`) — e apaga o da raiz da sessão anterior ao PR 10
+    (`pipeline.artifacts.migrar_caminhos_legados`). Sem eles no backup, a execução desfeita deixava o
+    `design/14-one-pager-pedagogico.*` com a seção dela, e o da raiz não voltava (3ª revisão do PR #79, 24/10/2026).
+    Quando a chave cai (refazer de design ou de produto), os arquivos vão ao backup com os das chaves removidas."""
+    from tools.pedagogico import KEY
+
+    return [] if KEY in set(removidas) else arquivos_das_chaves([KEY])
 
 
 def fazer_backup(run_dir: Path, etapa: str, removidas: Sequence[str]) -> Path:
     """Guarda em `.correcoes/<data>-<etapa>/` o que a reexecução vai sobrescrever ou descartar.
 
     Copia os arquivos da raiz e **move** os artefatos das chaves removidas — assim não sobra
-    artefato órfão de uma versão anterior ao lado dos novos. Pasta oculta: fora do manifesto e do ZIP.
+    artefato órfão de uma versão anterior ao lado dos novos. Os arquivos que a reexecução regrava sem
+    que a chave caia (`reescritos_sem_cair`) são **copiados**, e os que não existiam ficam listados em
+    `ARQUIVO_AUSENTES_NO_BACKUP`, para a restauração apagá-los. Pasta oculta: fora do manifesto e do ZIP.
     """
     run_dir = Path(run_dir)
     destino = run_dir / PASTA_CORRECOES / f"{time.strftime('%Y%m%d-%H%M%S')}-{etapa}"
@@ -866,6 +943,17 @@ def fazer_backup(run_dir: Path, etapa: str, removidas: Sequence[str]) -> Path:
             alvo = destino / rel
             alvo.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(origem), str(alvo))
+    ausentes: List[str] = []
+    for rel in reescritos_sem_cair(removidas):
+        origem = run_dir / rel
+        if origem.is_file():
+            alvo = destino / rel
+            alvo.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(origem, alvo)
+        else:
+            ausentes.append(rel)
+    if ausentes:
+        (destino / ARQUIVO_AUSENTES_NO_BACKUP).write_text(json.dumps(ausentes, ensure_ascii=False), encoding="utf-8")
     return destino
 
 
@@ -892,10 +980,21 @@ def restaurar_backup(run_dir: Path, backup: Path, custo_parcial: Optional[Dict[s
     restaurados: List[str] = []
     for arquivo in sorted(p for p in backup.rglob("*") if p.is_file()):
         rel = arquivo.relative_to(backup)
+        if rel.as_posix() == ARQUIVO_AUSENTES_NO_BACKUP:
+            continue
         alvo = run_dir / rel
         alvo.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(arquivo, alvo)
         restaurados.append(rel.as_posix())
+    # o que a execução desfeita criou ao regravar um arquivo que não existia antes dela (`reescritos_sem_cair`)
+    try:
+        ausentes = json.loads((backup / ARQUIVO_AUSENTES_NO_BACKUP).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        ausentes = []
+    for rel in ausentes if isinstance(ausentes, list) else []:
+        alvo = run_dir / str(rel)
+        if alvo.is_file() and alvo.resolve().is_relative_to(run_dir.resolve()):
+            alvo.unlink()
 
     if caminho_estado.exists():
         custo = max((custo_antes, custo_em(caminho_estado)), key=lambda c: len(c.get("execucoes") or []))
@@ -1625,10 +1724,12 @@ def montar_mapa_da_missao(estado: Dict[str, Any], pedido: str = "") -> str:
     cabecalhos = re.findall(r"^#{1,3}\s+(.+)$", spec, flags=re.MULTILINE)[:40]
     if cabecalhos:
         linhas.append("- **Estrutura da spec:** " + " · ".join(c.strip() for c in cabecalhos))
-    docs_design = [k for k in ("brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings_revisada", "wireframes_cobertura", "prototipo_html", "camada_caa") if estado.get(k)]
+    docs_design = [k for k in ("brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings_revisada", "wireframes_cobertura", "prototipo_html", "camada_caa",
+                               # o pedagógico fecha o design desde o PR 10: pedido sobre ele é de design (ou de produto)
+                               "one_pager_pedagogico") if estado.get(k)]
     if docs_design:
         linhas.append("- **Documentos de design:** " + ", ".join(docs_design))
-    docs_dev = [k for k in ("handoff_dev", "brief_assets", "validacao_dev_report", "prd_final", "one_pager_pedagogico") if estado.get(k)]
+    docs_dev = [k for k in ("handoff_dev", "brief_assets", "validacao_dev_report", "prd_final") if estado.get(k)]
     if docs_dev:
         linhas.append("- **Documentos de dev:** " + ", ".join(docs_dev))
     if pedido.strip():

@@ -79,8 +79,11 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "conteudo_aprovado_prd_status", "rotulo": "PRD × one-pager aprovado", "etapa": "dev", "rodada": "prd_rodada"},
     {"status": "montagem_prd_status", "rotulo": "PRD monta, não decide", "etapa": "dev", "rodada": "prd_rodada"},
     {"status": "coerencia_prd_status", "rotulo": "Coerência do PRD com o one-pager aprovado", "etapa": "dev", "rodada": "prd_rodada"},
-    {"status": "coerencia_pedagogico_status", "rotulo": "Coerência do pedagógico com o one-pager aprovado", "etapa": "dev", "rodada": "pedagogico_rodada"},
-    {"status": "conteudo_aprovado_pedagogico_status", "rotulo": "Pedagógico × one-pager aprovado", "etapa": "dev", "rodada": "pedagogico_rodada"},
+    # o pedagógico fecha o design desde o PR 10 (24/10/2026); o dev só acrescenta as pendências dele
+    {"status": "coerencia_pedagogico_status", "rotulo": "Coerência do pedagógico com o one-pager aprovado", "etapa": "design", "rodada": "pedagogico_rodada"},
+    {"status": "conteudo_aprovado_pedagogico_status", "rotulo": "Pedagógico × one-pager aprovado", "etapa": "design", "rodada": "pedagogico_rodada"},
+    {"status": "montagem_pedagogico_status", "rotulo": "Pedagógico monta, não decide", "etapa": "design", "rodada": "pedagogico_rodada"},
+    {"status": "pedagogico_dev_status", "rotulo": "Pedagógico aprovado, no dev", "etapa": "dev", "rodada": None},
     {"status": "rastreabilidade_status", "rotulo": "Matriz de rastreabilidade (produto → design)", "etapa": "design", "rodada": None},
     {"status": "rastreabilidade_dev_status", "rotulo": "Matriz de rastreabilidade (produto → design → dev)", "etapa": "dev", "rodada": None},
 ]

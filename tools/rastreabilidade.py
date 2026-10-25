@@ -228,7 +228,8 @@ def matriz(state: Dict[str, Any]) -> Dict[str, Any]:
             exemplos = "; ".join(f"`{r['id']}` «{r['texto'][:70]}»" for r in faltando[:6])
             achados.append({
                 "severidade": severidade, "codigo": f"perdido-{categoria}-{c}",
-                "etapa": "dev" if c in ("handoff", "banco", "prd", "pedagogico") else ("produto" if c == "spec" else "design"),
+                # o pedagógico é do design desde o PR 10 (24/10/2026)
+                "etapa": "dev" if c in ("handoff", "banco", "prd") else ("produto" if c == "spec" else "design"),
                 "agente_responsavel": dono,
                 "resumo": (f"{len(faltando)} de {len(do_tipo)} — {rotulo} — não chegaram a «{rotulo_col}»: {exemplos}"
                            + ("…" if len(faltando) > 6 else "") + "."),

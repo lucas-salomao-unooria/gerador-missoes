@@ -1063,8 +1063,9 @@ def _artefatos(texto: str, artefatos: Iterable[str], onde: str) -> List[Dict[str
 
 
 def validar_pedagogico(pedagogico: str, spec: str, one_pager: str,
-                       artefatos: Optional[Iterable[str]] = None) -> Dict[str, Any]:
-    """O corpo do one-pager pedagógico (sem o anexo) contra a spec e o one-pager aprovado."""
+                       artefatos: Optional[Iterable[str]] = None, etapa: str = "design") -> Dict[str, Any]:
+    """O corpo do one-pager pedagógico (sem o anexo) contra a spec e o one-pager aprovado. Os achados são do design: o
+    pedagógico fecha o design desde o PR 10 do plano «Produto dono do contrato» (24/10/2026)."""
     achados: List[Dict[str, str]] = []
     corpo = remover_anexo(pedagogico or "")
     da_spec, origem = habilidades_de_referencia(spec, one_pager)
@@ -1086,6 +1087,8 @@ def validar_pedagogico(pedagogico: str, spec: str, one_pager: str,
                          "O professor lê em sala exatamente o texto aprovado: copie do conteúdo aprovado, sem parafrasear.")
     if artefatos is not None:
         achados += _artefatos(corpo, artefatos, "o one-pager pedagógico")
+    for a in achados:
+        a["etapa"] = etapa
     return {"status": _status(achados), "achados": achados, "codigos": da_spec,
             "tempo": tempo_aprovado(one_pager), "podcast": tem_podcast(one_pager)}
 

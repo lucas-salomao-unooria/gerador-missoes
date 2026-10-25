@@ -69,6 +69,12 @@
         "roteiro-reescrito"
       ]
     },
+    "montagem_pedagogico_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-reescrito"
+      ]
+    },
     "ambiente_status": {
       "status": "amarelo",
       "codigos": [
@@ -614,6 +620,12 @@
     "conteudo_aprovado_pedagogico_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "montagem_pedagogico_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-reescrito"
+      ]
     },
     "ambiente_status": {
       "status": "amarelo",
@@ -1258,6 +1270,10 @@
         "podcast-ausente"
       ]
     },
+    "montagem_pedagogico_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
     "ambiente_status": {
       "status": "aprovado",
       "codigos": []
@@ -1449,6 +1465,10 @@
       "status": "aprovado",
       "codigos": []
     },
+    "montagem_pedagogico_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
     "ambiente_status": {
       "status": "bloqueado",
       "codigos": [
@@ -1607,6 +1627,10 @@
       "codigos": []
     },
     "conteudo_aprovado_pedagogico_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "montagem_pedagogico_status": {
       "status": "aprovado",
       "codigos": []
     },
@@ -1792,6 +1816,12 @@
         "artefato-inexistente",
         "podcast-ausente",
         "roteiro-reescrito"
+      ]
+    },
+    "montagem_pedagogico_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-reescrito"
       ]
     },
     "ambiente_status": {
@@ -1991,6 +2021,12 @@
         "canal-b-reescrito",
         "podcast-ausente",
         "roteiro-reescrito"
+      ]
+    },
+    "montagem_pedagogico_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-reescrito"
       ]
     },
     "ambiente_status": {
