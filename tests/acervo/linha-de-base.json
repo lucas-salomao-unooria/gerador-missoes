@@ -164,6 +164,7 @@
     "montagem_handoff_status": {
       "status": "bloqueado",
       "codigos": [
+        "hipotese-a-conferir",
         "hipotese-diverge",
         "numero-sem-origem",
         "texto-chave-reescrito"
