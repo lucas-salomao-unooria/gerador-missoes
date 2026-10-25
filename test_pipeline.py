@@ -1142,8 +1142,10 @@ def test_estagio_produto_parcial_spec():
         # spec × one-pager aprovado (06/10/2026): a spec aplicava ressalvas que o PO tinha recusado —
         # a exp06ef1b perdeu uma habilidade e cinco minutos de tela — e ninguém via
         "A054ConteudoAprovadoSpec",
-        # a banca no fim de produto (08/10/2026): o achado volta ao autor da spec antes do parecer
-        "A055ConteudoAprovado", "A056EscopoBanca", "A057Banca", "A058BancaConsolidacao", "A059SpecCheck"]
+        # a banca no fim de produto (08/10/2026): o achado volta ao autor da spec antes do parecer — menos o que cita o
+        # one-pager e não a spec, que vai ao PO (76d9af6e, PED-06, 23/10/2026)
+        "A055ConteudoAprovado", "A056EscopoBanca", "A057Banca", "A058BancaConsolidacao", "A058bRotaDeAchados",
+        "A059SpecCheck"]
     assert produto.sub_agents[0].max_iterations == max(1, get_settings().spec_max_rodadas)
     nomes = [a.name for _, a in iter_agent_tree(orch)]
     assert "A004NucleoNarrativo" not in nomes and "A026GateEstrutural" not in nomes
@@ -1171,7 +1173,7 @@ def test_estagio_produto_parcial_spec():
         "A047ManifestoCheckProduto", "A048EvidenciaCheck",
         "A050PerguntasCheck", "A051JuizPerguntas", "A052JuizPerguntasCheck",
         "A054ConteudoAprovadoSpec", "A057aBancaProdutoNarrativa", "A057bBancaPedagogiaBncc", "A058BancaConsolidacao",
-        "A059SpecCheck", "A060FidelidadeProduto", "A061OnePagerResumido",
+        "A058bRotaDeAchados", "A059SpecCheck", "A060FidelidadeProduto", "A061OnePagerResumido",
         "A062ConteudoAprovadoResumido", "A063ResumidoRodada"]
     print("   ✓ estágio parcial spec: SpecLoop + resumido, sem núcleo; stages_para_ui resolve spec")
 

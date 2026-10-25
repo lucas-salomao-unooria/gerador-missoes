@@ -281,14 +281,44 @@ ONE_PAGERS_COM_MARCA = [
 ]
 
 
+#: Documentos que gente lê e cujo autor fecha com o envelope de contrato (`references/contrato-saida.md`). O envelope é
+#: da esteira, não do leitor: sai do documento antes de gravar e de exportar.
+DOCUMENTOS_SEM_ENVELOPE = ("one_pager_resumido",)
+#: O envelope que o agente assina no fim do documento, depois de uma divisória opcional: ancorado no fim, como em
+#: `tools.markdown_blocos`, para um ```json citado no corpo continuar onde está.
+_RE_ENVELOPE_NO_FIM = re.compile(r"(?:\n[ \t]*(?:-{3,}|\*{3,})[ \t]*)?\s*```json\s(?:(?!```)[\s\S])*```\s*\Z")
+
+
+def sem_envelope_do_agente(texto: Any) -> Any:
+    """O documento sem o envelope JSON que o agente pôs no fim, e sem a divisória que o anunciava.
+
+    O `061_one_pager_resumido.md` manda fechar o resumido com `---` e o envelope (`habilidades_pendentes`,
+    `precisa_humano`…), e nas 15 sessões do acervo de 24/10/2026 o `produto/00d-one-pager-resumido.md` — o que o time
+    de produto lê para avaliar a missão — terminava no JSON. Só sai o bloco que tem a assinatura `"agente"` e é um
+    envelope (`status`), no fim do texto: outro ```json fica."""
+    if not isinstance(texto, str):
+        return texto
+    m = _RE_ENVELOPE_NO_FIM.search(texto)
+    if not m or '"agente"' not in m.group(0):
+        return texto
+    from agents.callbacks import extrair_envelope
+
+    if extrair_envelope(m.group(0)) is None:
+        return texto
+    return texto[: m.start()].rstrip() + "\n"
+
+
 def documento_para_gravar(state: Dict[str, Any], chave: str) -> Any:
     """O valor que vai para o arquivo da chave. O pedagógico sai como gente o lê: o texto aprovado no de acordo de design
     e, no fim, a seção que o dev acrescenta (`tools.pedagogico.completo`, PR 10) — guardada à parte no estado, para o
-    texto aprovado não mudar."""
+    texto aprovado não mudar. O resumido sai sem o envelope do agente (`sem_envelope_do_agente`), também nas sessões
+    gravadas antes desta correção."""
     if chave == "one_pager_pedagogico":
         from tools.pedagogico import completo
 
         return completo(state)
+    if chave in DOCUMENTOS_SEM_ENVELOPE:
+        return sem_envelope_do_agente(state.get(chave))
     return state.get(chave)
 
 
@@ -455,6 +485,19 @@ def save_run_artifacts(
     # fora do time — a PM encaminha o de produto, o time de produto avalia pelo resumido e a
     # professora aprova o pedagógico.
     exportar_one_pagers(state, run_dir, slug)
+
+    # O histórico por rodada dos gates, ao lado do estado (`tools/historico_gates.py`): entra no zip da sessão e no
+    # manifesto, e quem audita um falso positivo o abre sem ler o `estado.json` inteiro
+    from tools.historico_gates import ARQUIVO as ARQUIVO_HISTORICO, exportar as exportar_historico
+
+    caminho_historico = run_dir / ARQUIVO_HISTORICO
+    try:
+        existente = caminho_historico.read_text(encoding="utf-8") if caminho_historico.is_file() else None
+    except OSError:
+        existente = None
+    historico = exportar_historico(state, existente)
+    if historico:
+        (run_dir / ARQUIVO_HISTORICO).write_text(historico + "\n", encoding="utf-8")
 
     # Estado serializável
     serializable = {k: v for k, v in state.items() if not str(k).startswith("temp:")}

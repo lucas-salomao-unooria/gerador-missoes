@@ -605,6 +605,10 @@ def _decisoes_em_texto(comentario: str) -> List[Tuple[str, str]]:
     return saida
 
 
+#: O marcador citado entre colchetes no lado esquerdo de uma linha «→» do pedido de refazer.
+_RE_MARCADOR_CITADO = re.compile(r"\[(?:PAR[ÂA]METRO|PROPOSTA|ABERTO)\b", re.I)
+
+
 def _assunto_do_texto(esquerda: str) -> str:
     m = re.search(r"\[(PAR[ÂA]METRO|PROPOSTA|ABERTO)\b([^\]]*)\]", esquerda)
     if not m:
@@ -620,9 +624,21 @@ def respostas_anteriores(estado: Dict[str, Any], fluxo: Optional[Dict[str, Any]]
     O refazer de produto invalida o de acordo de produto e reescreve o one-pager: o marcador que o autor reabrir volta
     ao cartão já respondido, e a pessoa confirma. Vale o cartão (`decisoes_contrato` dos pareceres e `decisoes_do_po`
     do estado) e o de acordo escrito à mão com «→», que era como o PO decidia antes deste cartão — o da exp02em1b de
-    21/10/2026 15:43, que o refazer de 23/10 invalidou."""
+    21/10/2026 15:43, que o refazer de 23/10 invalidou.
+
+    O *refazer* também decide: a linha «[PROPOSTA …] → aprovado» num pedido de refazer, de qualquer etapa, é a resposta
+    do PO àquele marcador, e o autor que refaz nem sempre fecha o marcador no texto (R11/R12 da exp02em1b no
+    levantamento de 24/10/2026: as propostas que o PO aprovou seguiam `[PROPOSTA]` no PRD). No refazer só conta a linha
+    cujo lado esquerdo cita o marcador entre colchetes — «Título → Outro título» é pedido de mudança, não resposta."""
     registros: List[Tuple[str, Dict[str, Any]]] = []
     for p in (fluxo or {}).get("pareceres") or []:
+        if p.get("acao") == "refazer":
+            quando = str(p.get("quando") or "")
+            for esquerda, direita in _decisoes_em_texto(str(p.get("comentario") or "")):
+                if _RE_MARCADOR_CITADO.search(esquerda):
+                    registros.append((quando, {"assunto": _assunto_do_texto(esquerda), "texto_direita": direita,
+                                               "origem": f"refazer de {quando}"}))
+            continue
         if p.get("etapa") != "produto" or p.get("acao") not in ("de_acordo", "excecao"):
             continue
         quando = str(p.get("quando") or "")
@@ -704,12 +720,13 @@ def decidir(itens: Sequence[Item], respostas: Optional[Dict[str, Dict[str, str]]
             saida.sem_resposta.append({"id": item.id, "tipo": item.tipo, "assunto": item.assunto})
             continue
         if resposta not in item.opcoes():
-            raise RespostaInvalida(f"«{ROTULO_RESPOSTA.get(resposta, resposta)}» não cabe em «{item.assunto[:80]}»"
+            # o assunto inteiro nas mensagens que o cartão mostra: com o corte em 80, o PO não sabia qual item era
+            raise RespostaInvalida(f"«{ROTULO_RESPOSTA.get(resposta, resposta)}» não cabe em «{item.assunto}»"
                                    + (": deixar para o design só vale para o que é de UI" if resposta == DESIGN else ""))
         if resposta == OUTRO and not valor:
-            raise RespostaInvalida(f"«{item.assunto[:80]}»: escreva o outro valor.")
+            raise RespostaInvalida(f"«{item.assunto}»: escreva o outro valor.")
         if any(c in valor for c in "[]\n|"):
-            raise RespostaInvalida(f"«{item.assunto[:80]}»: o valor não pode ter colchetes nem barra vertical.")
+            raise RespostaInvalida(f"«{item.assunto}»: o valor não pode ter colchetes nem barra vertical.")
         gravado = ""
         if item.tipo == TEXTO_TETO:
             # manter não troca nada; outro texto entra no lugar do texto-chave, em toda linha do one-pager que o traz
@@ -842,7 +859,7 @@ def aplicar_edicoes(estado: Dict[str, Any], edicoes: Iterable[Dict[str, Any]]) -
         if not alguma:
             falhas.append(f"troca {n} ({ROTULO_DOC.get(str(e.get('documento')), e.get('documento'))}): "
                           + ("as linhas do design não estão mais, iguais, na spec do Gate 0" if e.get("tipo") == "trocas"
-                             else f"a linha não está mais no documento: «{str(e.get('de'))[:120]}»"))
+                             else f"a linha não está mais no documento: «{e.get('de')}»"))
     return ({} if falhas else novos), falhas
 
 
@@ -995,7 +1012,7 @@ def notas(fluxo: Optional[Dict[str, Any]]) -> str:
     for chave, d in ultimas.items():
         valor = f" «{d['valor']}»" if d.get("valor") else ""
         marca = " — **não está no texto: vale a decisão**" if chave in fora else ""
-        linhas.append(f"- {ROTULO_TIPO.get(d.get('tipo'), d.get('tipo'))} {d.get('assunto', '')[:160]} → "
+        linhas.append(f"- {ROTULO_TIPO.get(d.get('tipo'), d.get('tipo'))} {d.get('assunto', '')} → "
                       f"**{ROTULO_RESPOSTA.get(d.get('resposta'), d.get('resposta'))}**{valor} "
                       f"({d.get('como', '') or 'parecer anterior'}, {d.get('quando', '')}){marca}")
     return "\n".join(linhas) + "\n"

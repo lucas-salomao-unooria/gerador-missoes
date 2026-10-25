@@ -132,16 +132,25 @@ def _dono(achado: Dict[str, Any], etapa_do_gate: str) -> str:
 
 def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
     """Lê o estado da execução e devolve o dossiê estruturado."""
+    from tools import liberacao
+    from tools.envelope_relatorio import envelope_do_gate
+
     gates: List[Dict[str, Any]] = []
     achados: List[Dict[str, Any]] = []
     precisa_humano = False
+    # O parecer humano em vigor (`pareceres_humanos`, copiados pela rodada final): o 🔴 que uma pessoa viu e liberou não é
+    # impedimento. O dossiê da exp02em1b (60cfa7f4, 22/10/2026) dizia «4 impedimento(s)» com a exceção do admin no design
+    # e o de acordo de dev dados (`tools/liberacao.py`).
+    pareceres = [p for p in (state.get("pareceres_humanos") or []) if isinstance(p, dict)]
 
     for gate in GATES:
         chave = gate["status"]
         if chave not in state:
             continue
         status = str(state.get(chave) or "")
-        envelope = state.get(f"{chave}_envelope") or {}
+        # o envelope que concorda com o status gravado (`tools/envelope_relatorio.py`, 8ce9c32d de 25/09/2026)
+        envelope = envelope_do_gate(state, chave)
+        liberado = liberacao.gate_liberado(state, chave, pareceres) if pareceres else None
         rodada = state.get(gate["rodada"]) if gate["rodada"] else None
         pede_pessoa = isinstance(envelope, dict) and bool(envelope.get("precisa_humano"))
         if pede_pessoa:
@@ -159,6 +168,11 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
                 # reprovado tem impedimento; nos demais o item vira ressalva registrada.
                 if severidade in _BLOQUEIA and status.strip().lower() not in ("bloqueado", "devolvido"):
                     severidade = "atencao"
+                resumo = (achado.get("resumo") or achado.get("trecho") or "").strip()
+                if severidade in _BLOQUEIA and liberado:
+                    # liberado por uma pessoa que viu o gate em 🔴: fica registrado, não impede
+                    severidade = "atencao"
+                    resumo = f"[liberado por pessoa — {liberacao.descricao(liberado)}] {resumo}".strip()
                 normalizado = {
                     "gate": gate["rotulo"],
                     "etapa": gate["etapa"],
@@ -167,7 +181,7 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
                     "classe": achado.get("classe") or "",
                     "severidade": severidade,
                     "dono": _dono(achado, gate["etapa"]),
-                    "resumo": (achado.get("resumo") or achado.get("trecho") or "").strip(),
+                    "resumo": resumo,
                 }
                 deste_gate.append(normalizado)
                 achados.append(normalizado)
@@ -194,6 +208,7 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
             "rodadas": rodada,
             "achados": len(deste_gate),
             "bloqueios": sum(1 for a in deste_gate if a["severidade"] in _BLOQUEIA),
+            "liberado": liberacao.descricao(liberado),
         })
 
     # pareceres consultivos: envelope lido do próprio texto, e todo achado rebaixado a ressalva
@@ -261,7 +276,9 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
     except Exception:  # pragma: no cover - índice ilegível não derruba o dossiê
         pass
 
-    degradacoes = list(state.get("degradacoes") or [])
+    # a reprovação registrada que uma pessoa liberou sai das que impedem e vai para a seção própria, com quem e quando
+    degradacoes, liberadas = liberacao.separar_degradacoes(state, pareceres)
+    liberadas = [l for l in state.get(liberacao.KEY_LIBERADAS) or [] if isinstance(l, dict)] + liberadas
     agentes_degradados = list(state.get("agentes_degradados") or [])
 
     bloqueios = [a for a in achados if a["severidade"] in _BLOQUEIA]
@@ -270,7 +287,7 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
 
     if degradacoes or bloqueios:
         veredito = "bloqueado"
-    elif ressalvas or humanos or agentes_degradados:
+    elif ressalvas or humanos or agentes_degradados or liberadas:
         veredito = "amarelo"
     else:
         veredito = "aprovado"
@@ -283,6 +300,7 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
         "ressalvas": ressalvas,
         "humanos": humanos,
         "degradacoes": degradacoes,
+        "liberadas": liberadas,
         "agentes_degradados": agentes_degradados,
         "precisa_humano": precisa_humano or bool(humanos) or bool(degradacoes),
         "reexecucoes": int(state.get("reexecucoes", 0) or 0),
@@ -351,12 +369,22 @@ def relatorio_markdown(d: Dict[str, Any], missao: str = "", artefatos: Optional[
     ]
     for g in d["gates"]:
         rodadas = str(g["rodadas"]) if g["rodadas"] else "—"
-        linhas.append(f"| {g['etapa']} | {g['rotulo']} | {g['icone']} {g['status'] or '—'} | {rodadas} | {g['achados']} |")
+        liberado = f" · liberado: {g['liberado']}" if g.get("liberado") else ""
+        linhas.append(f"| {g['etapa']} | {g['rotulo']} | {g['icone']} {g['status'] or '—'}{liberado} | {rodadas} | "
+                      f"{g['achados']} |")
 
     if d["degradacoes"]:
         linhas += ["", "## O que reprovou, na ordem em que aconteceu", ""]
         for i, deg in enumerate(d["degradacoes"], 1):
             linhas.append(f"{i}. **{deg.get('gate', '?')}** — {deg.get('motivo', '')}")
+
+    if d.get("liberadas"):
+        linhas += ["", "## Reprovações que uma pessoa liberou no parecer", "",
+                   "O gate reprovou, quem responde pela etapa viu o 🔴 e liberou. Não impedem; ficam registradas:", ""]
+        for lib in d["liberadas"]:
+            acao = {"de_acordo": "de acordo", "excecao": "exceção"}.get(str(lib.get("acao") or ""), lib.get("acao") or "")
+            linhas.append(f"- **{lib.get('gate', '?')}** — {lib.get('motivo', '')} · {acao} de {lib.get('como') or '?'} "
+                          f"em {lib.get('quando') or '?'}")
 
     if d["bloqueios"]:
         linhas += ["", "## O que precisa ser consertado, por dono", ""]
@@ -520,6 +548,7 @@ def envelope(d: Dict[str, Any], missao: str = "") -> Dict[str, Any]:
         "ressalvas": len(d["ressalvas"]),
         "decisoes_humanas": len(d["humanos"]),
         "agentes_provisorios": len(d["agentes_degradados"]),
+        "liberadas_por_pessoa": len(d.get("liberadas") or []),
         "achados": [
             {
                 "id": a["id"],

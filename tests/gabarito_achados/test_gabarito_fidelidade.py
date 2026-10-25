@@ -545,8 +545,9 @@ def test_linha_de_base_reescreve_o_cabecalho_ao_rebaixar():
     delta, _ = lb.aplicar(estado_antes, {}, edicoes, ["fidelidade_status"])
     assert delta["fidelidade_status"] == "amarelo"
     novo = delta["fidelidade_report"]
-    assert novo.startswith(relatorio.split("**Veredito:")[0]) and "**Veredito: 🟡**" in novo
-    assert "**Veredito: 🔴**" not in novo and "🔴 **F21**" not in novo and "🟡 **F21**" in novo
+    # o cabeçalho é o da C5 (#83): «**Veredito: 🟡 amarelo (revisto — ver a nota no fim)**»
+    assert novo.startswith(relatorio.split("**Veredito:")[0]) and "**Veredito: 🟡" in novo
+    assert "**Veredito: 🔴" not in novo and "🔴 **F21**" not in novo and "🟡 **F21**" in novo
     assert extrair_envelope(novo)["status"] == "amarelo"
 
 
