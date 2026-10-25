@@ -104,8 +104,9 @@ _RE_MARCA_NOVO = re.compile(r"\bajuste\s+solicitado\b|\baltera[çc][ãa]o\s+soli
 _RE_MARCA_ATUAL = re.compile(r"\btexto\s+atual\b|\batualmente\b|\bhoje\s+(?:est[áa]|diz|aparece)|\bonde\s+diz\b", re.I)
 _PALAVRAS_VAZIAS = frozenset("""a o as os de da do das dos e em no na nos nas um uma uns umas por para com sem que se
 ao aos ou the""".split())
-#: O item fala do one-pager pedagógico, o documento — não do time pedagógico nem da avaliação pedagógica.
-_RE_PEDAGOGICO = re.compile(r"\bone[- ]?pager\s+pedag[óo]gico\b|\b(?:o|no|do|ao)\s+pedag[óo]gico\b", re.I)
+#: O item nomeia o one-pager pedagógico, o documento. «O pedagógico» sozinho fica de fora: na casa ele é também o time
+#: pedagógico («conforme pedido do pedagógico, …»), e o item de dev iria ao design (revisão do PR #79, 24/10/2026).
+_RE_PEDAGOGICO = re.compile(r"\b(?:one[- ]?pager|documento)[- ]+pedag[óo]gico\b", re.I)
 
 
 # ------------------------------------------------------------------ normalização
@@ -481,9 +482,10 @@ def dividir(pedido: str, etapa: str, estado: Dict[str, Any],
         regra = regra_de_produto(trecho, docs, linhas)
         dono = PRODUTO if regra else (dono_llm or INDEFINIDO)
         motivo = str(resposta.get("motivo") or "").strip()
-        if not regra and dono in (DEV, INDEFINIDO) and etapa == DEV and _RE_PEDAGOGICO.search(trecho):
+        if not regra and dono == DEV and etapa == DEV and _RE_PEDAGOGICO.search(trecho):
             # o one-pager pedagógico é do design desde o PR 10 (24/10/2026): o editor de dev não o edita, e o item sobre
-            # ele que a regra não leva a produto vai ao design — a cascata o aplica lá antes do dev
+            # ele que a regra não leva a produto vai ao design — a cascata o aplica lá antes do dev. O item sem dono
+            # fica sem dono: a triagem que não sabe de quem é leva ao Devolver (D4, opção B), e não ao design
             dono, motivo = DESIGN, "fala do one-pager pedagógico, que é do design desde 24/10/2026" + (
                 f" (a triagem disse: {motivo})" if motivo else "")
         itens.append(ItemDoPedido(n=n, texto=trecho, titulo=titulo, dono=dono, dono_triagem=dono_llm,
