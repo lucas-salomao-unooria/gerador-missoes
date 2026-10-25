@@ -1839,7 +1839,8 @@ def test_one_pagers_com_identidade_visual():
         # O `.html` abre sozinho depois de baixado: logotipo embutido, nada em disco ao lado.
         pagina = (run_dir / "design/14-one-pager-pedagogico.html").read_text(encoding="utf-8")
         assert f"#{marca.NAVY}" in pagina and "data:image/png;base64," in pagina
-        assert "Detetives da Ilha" in pagina and 'href="design/08-prototipo.html"' in pagina
+        # o link é a partir da raiz da sessão no texto, e a partir de design/ no arquivo que está lá (revisão do PR #79)
+        assert "Detetives da Ilha" in pagina and 'href="08-prototipo.html"' in pagina
         assert "<blockquote>" in pagina  # o pedido de aprovação abre o documento
 
         # O `.docx` carrega a marca: fundo navy na capa, Montserrat nos títulos, link clicável.

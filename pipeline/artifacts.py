@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import mimetypes
+import posixpath
 import re
 import time
 from pathlib import Path
@@ -291,6 +292,40 @@ def documento_para_gravar(state: Dict[str, Any], chave: str) -> Any:
     return state.get(chave)
 
 
+#: `[texto](alvo)`: o link do Markdown, como `tools.markdown_blocos` o lê.
+_RE_LINK_MD = re.compile(r"\[([^\]\n]+)\]\(([^)\s]+)\)")
+#: Alvo que não é caminho a partir da raiz da sessão: com esquema (`https:`, `mailto:`), âncora, absoluto ou já relativo
+#: à pasta de cima.
+_RE_ALVO_FORA_DA_SESSAO = re.compile(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|#|/|\.\./)")
+
+
+def links_relativos_a_pasta(documento: str, base: str) -> str:
+    """O documento com cada link para um artefato da sessão relativo à pasta do arquivo exportado (`base`).
+
+    O redator cita os artefatos pelo caminho a partir da raiz da sessão (`design/08-prototipo.html`), e é contra a raiz
+    que o A121 os confere (`caminhos_de_artefato`). Exportado em `design/14-one-pager-pedagogico.{html,docx}` (PR 10), o
+    mesmo link abria `design/design/08-prototipo.html` — justamente o protótipo com que o time valida a missão (exp05ef1b;
+    revisão do PR #79, 24/10/2026). Só o `.docx` e o `.html` mudam: o `.md` é o texto da esteira, e fica como está.
+    Link que não aponta para artefato da sessão fica como está."""
+    pasta = posixpath.dirname(base)
+    if not pasta:
+        return documento
+    da_sessao = set(caminhos_de_artefato())
+    pastas = {c.split("/", 1)[0] for c in da_sessao if "/" in c}
+
+    def trocar(m: "re.Match[str]") -> str:
+        alvo = m.group(2)
+        if _RE_ALVO_FORA_DA_SESSAO.match(alvo):
+            return m.group(0)
+        caminho, sep, ancora = alvo.partition("#")
+        caminho = posixpath.normpath(caminho) if caminho else caminho
+        if not caminho or (caminho not in da_sessao and caminho.split("/", 1)[0] not in pastas):
+            return m.group(0)
+        return f"[{m.group(1)}]({posixpath.relpath(caminho, pasta)}{sep}{ancora})"
+
+    return _RE_LINK_MD.sub(trocar, documento or "")
+
+
 def migrar_caminhos_legados(run_dir: Path, gravados: List[str]) -> List[str]:
     """Apaga o arquivo de antes da mudança de pasta de cada chave cujo arquivo novo foi gravado agora — o conteúdo é o
     mesmo, da mesma chave. Devolve os caminhos apagados."""
@@ -339,6 +374,8 @@ def exportar_one_pagers(state: Dict[str, Any], run_dir: Path, slug: str) -> List
         if not documento or not isinstance(documento, str) or e_mensagem_de_pulo(documento):
             continue
 
+        # o .docx e o .html ficam na pasta de `base`; os links do texto são a partir da raiz da sessão
+        exportado = links_relativos_a_pasta(documento, base)
         ilustracoes = None
         if chave == "one_pager_pedagogico":
             try:
@@ -353,7 +390,7 @@ def exportar_one_pagers(state: Dict[str, Any], run_dir: Path, slug: str) -> List
             from tools.docx_export import markdown_para_docx
 
             if markdown_para_docx(
-                documento, destino_docx, titulo_fallback=slug, etiqueta=etiqueta, subtitulo=subtitulo,
+                exportado, destino_docx, titulo_fallback=slug, etiqueta=etiqueta, subtitulo=subtitulo,
                 ilustracoes=ilustracoes,
             ):
                 gerados.append(destino_docx)
@@ -365,7 +402,7 @@ def exportar_one_pagers(state: Dict[str, Any], run_dir: Path, slug: str) -> List
             from tools.onepager_html import markdown_para_html
 
             pagina = markdown_para_html(
-                documento, titulo_fallback=slug, etiqueta=etiqueta, subtitulo=subtitulo, ilustracoes=ilustracoes
+                exportado, titulo_fallback=slug, etiqueta=etiqueta, subtitulo=subtitulo, ilustracoes=ilustracoes
             )
             destino_html.parent.mkdir(parents=True, exist_ok=True)
             destino_html.write_text(pagina, encoding="utf-8")
