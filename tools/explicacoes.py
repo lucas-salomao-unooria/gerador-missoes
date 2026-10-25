@@ -222,6 +222,13 @@ CATALOGO: Dict[str, Explicacao] = {
         "A missão segue fazendo o que o PO mandou não fazer.",
         "Leia o pedido e o trecho. Use **Refazer** repetindo o pedido, de preferência citando a frase que precisa "
         "mudar.", None),
+    "ajuste-exigido-nao-aplicado": _x(
+        "O revisor pediu ajustes que ninguém aplicou",
+        "Um revisor automático exigiu ajustes no one-pager, e as rodadas de correção acabaram sem que eles fossem "
+        "feitos.",
+        "O one-pager segue sem esses ajustes, e a esteira não pode decidir sozinha se eles fazem falta.",
+        "Leia o ajuste abaixo. Use **Refazer** de produto pedindo o ajuste, ou dê o de acordo registrando que ele "
+        "fica de fora.", PO),
     "preservacao-sem-prova": _x(
         "Pedido de «não mexer» sem como conferir",
         "O PO pediu para manter algo como estava, e nenhum verificador consegue provar que ficou igual.",
