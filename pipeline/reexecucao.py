@@ -365,6 +365,10 @@ ARQUIVOS_DE_BACKUP = (
     # o histórico por rodada dos gates volta com o estado de onde ele sai (`tools/historico_gates.py`)
     "historico-gates.json",
 )
+#: Arquivos da raiz que a própria execução cria: sem eles no backup, a restauração os apaga (`ARQUIVO_AUSENTES_NO_BACKUP`).
+#: O `historico-gates.json` criado por uma execução que falhou ficava ao lado do estado restaurado, com uma execução que
+#: o estado não tem (revisão do PR #83, 25/10/2026).
+CRIADOS_PELA_EXECUCAO = frozenset({"historico-gates.json"})
 PASTA_CORRECOES = ".correcoes"
 
 
@@ -948,17 +952,19 @@ def fazer_backup(run_dir: Path, etapa: str, removidas: Sequence[str]) -> Path:
     run_dir = Path(run_dir)
     destino = run_dir / PASTA_CORRECOES / f"{time.strftime('%Y%m%d-%H%M%S')}-{etapa}"
     destino.mkdir(parents=True, exist_ok=True)
+    ausentes: List[str] = []
     for nome in ARQUIVOS_DE_BACKUP:
         origem = run_dir / nome
         if origem.is_file():
             shutil.copy2(origem, destino / nome)
+        elif nome in CRIADOS_PELA_EXECUCAO:
+            ausentes.append(nome)
     for rel in arquivos_das_chaves(removidas):
         origem = run_dir / rel
         if origem.is_file():
             alvo = destino / rel
             alvo.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(origem), str(alvo))
-    ausentes: List[str] = []
     for rel in reescritos_sem_cair(removidas):
         origem = run_dir / rel
         if origem.is_file():

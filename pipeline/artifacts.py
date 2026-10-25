@@ -490,7 +490,12 @@ def save_run_artifacts(
     # manifesto, e quem audita um falso positivo o abre sem ler o `estado.json` inteiro
     from tools.historico_gates import ARQUIVO as ARQUIVO_HISTORICO, exportar as exportar_historico
 
-    historico = exportar_historico(state)
+    caminho_historico = run_dir / ARQUIVO_HISTORICO
+    try:
+        existente = caminho_historico.read_text(encoding="utf-8") if caminho_historico.is_file() else None
+    except OSError:
+        existente = None
+    historico = exportar_historico(state, existente)
     if historico:
         (run_dir / ARQUIVO_HISTORICO).write_text(historico + "\n", encoding="utf-8")
 

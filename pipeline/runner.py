@@ -523,11 +523,15 @@ async def run_orchestrator_pipeline_stream(
         final_state["execucao"]["custo"] = esta
         final_state[KEY_CUSTO] = acumular((initial_state or {}).get(KEY_CUSTO) or final_state.get(KEY_CUSTO),
                                           esta, list(stages or settings_exec.pipeline_stages))
-        from tools.historico_gates import KEY as _KEY_HISTORICO, acumular as _acumular_historico
+        from tools.historico_gates import (KEY as _KEY_HISTORICO, KEY_EXECUCAO_COMPLETA as _KEY_HISTORICO_COMPLETO,
+                                           acumular as _acumular_historico, resumo as _resumo_historico)
 
-        _historico = _acumular_historico(final_state.get(_KEY_HISTORICO), historico_gates.execucao())
+        # o estado leva o resumo; os textos dos relatórios vão só para `historico-gates.json` (revisão do PR #83)
+        _execucao_historico = historico_gates.execucao()
+        _historico = _acumular_historico(final_state.get(_KEY_HISTORICO), _resumo_historico(_execucao_historico))
         if _historico:
             final_state[_KEY_HISTORICO] = _historico
+            final_state[_KEY_HISTORICO_COMPLETO] = _execucao_historico
 
         output_dir: Optional[Path] = None
         artifacts_manifest: List[Dict[str, Any]] = []

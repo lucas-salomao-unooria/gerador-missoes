@@ -11,7 +11,11 @@ positivo das rodadas intermediárias:
 - dev: `prd_rodada = 2` em 10 de 13 execuções, e só o relatório da última rodada ficou.
 
 O runner já vê cada `state_delta` que os gates emitem (`pipeline/runner.py`): aqui ele vira uma linha do tempo por
-execução, gravada em `historico_gates` no estado e exportada em `historico-gates.json` na pasta da sessão. Só entra o
+execução. Os textos dos relatórios ficam só em `historico-gates.json`, na pasta da sessão; o estado guarda o resumo
+(`historico_gates`: vereditos, achados, tamanho e hash de cada relatório). O `estado.json` real já tem de 1 a 2,9 MB e é
+carregado como estado da sessão do ADK a cada execução: com os textos, até 8 execuções de 400 mil caracteres iam junto
+(revisão do PR #83, 25/10/2026). A execução corrente, com os textos, passa do runner ao gravador dos artefatos numa chave
+`temp:` (fora do `estado.json`), e o arquivo segue as execuções que o estado lista, pelo `id`. Só entra o
 que é de gate: relatórios (`*_report`, `relatorio_*`, `validacao_*`), status (`*_status`, com os achados do envelope) e
 contadores de rodada (`*_rodada`). Documento (one-pager, spec, PRD…) não entra — já está nos artefatos e no backup de
 cada correção. Relatório igual ao último registrado da mesma chave não se repete. Há teto por relatório, por execução e
@@ -24,10 +28,13 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+import uuid
 from typing import Any, Dict, Iterable, List, Optional
 
 KEY = "historico_gates"
 ARQUIVO = "historico-gates.json"
+#: A execução corrente com os textos, do runner ao gravador dos artefatos. `temp:` não entra no `estado.json`.
+KEY_EXECUCAO_COMPLETA = "temp:historico_gates_execucao"
 #: Teto de caracteres de cada relatório guardado: o relatório do rastro de dev passa de 30 mil, e o que audita o falso
 #: positivo é o veredito, os achados e o começo do relatório.
 MAX_CARACTERES_RELATORIO = 12_000
@@ -70,6 +77,7 @@ class Coletor:
     """Recebe os `state_delta` de uma execução, na ordem, e monta a linha do tempo dela."""
 
     def __init__(self, stages: Optional[Iterable[str]] = None, estado_inicial: Optional[Dict[str, Any]] = None):
+        self.id = uuid.uuid4().hex[:12]
         self.inicio = time.strftime("%d/%m/%Y %H:%M:%S")
         self.stages = [str(s) for s in stages or []]
         self.registros: List[Dict[str, Any]] = []
@@ -125,8 +133,8 @@ class Coletor:
                 self._registrar({"tipo": "rodada", "chave": chave, "valor": valor, "autor": autor, "quando": quando})
 
     def execucao(self) -> Dict[str, Any]:
-        saida = {"inicio": self.inicio, "fim": time.strftime("%d/%m/%Y %H:%M:%S"), "stages": self.stages,
-                 "registros": self.registros}
+        saida = {"id": self.id, "inicio": self.inicio, "fim": time.strftime("%d/%m/%Y %H:%M:%S"),
+                 "stages": self.stages, "registros": self.registros}
         if self.omitidos:
             saida["registros_omitidos"] = self.omitidos
         return saida
@@ -134,6 +142,13 @@ class Coletor:
 
 def _hash(texto: str) -> str:
     return hashlib.sha256(texto.encode("utf-8")).hexdigest()[:16]
+
+
+def resumo(execucao: Dict[str, Any]) -> Dict[str, Any]:
+    """A execução sem os textos dos relatórios, para o estado: o resto (vereditos, achados, tamanho e hash) fica."""
+    registros = [{k: v for k, v in r.items() if k != "texto"} for r in execucao.get("registros") or []
+                 if isinstance(r, dict)]
+    return {**execucao, "registros": registros, "textos_em": ARQUIVO}
 
 
 def acumular(anterior: Any, execucao: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -155,11 +170,29 @@ def rodadas_de(historico: Any, chave_status: str) -> List[Dict[str, Any]]:
     return saida
 
 
-def exportar(estado: Dict[str, Any]) -> Optional[str]:
-    """O conteúdo de `historico-gates.json`, ou `None` sem histórico."""
+def _execucoes_do_arquivo(existente: Optional[str]) -> Dict[str, Dict[str, Any]]:
+    try:
+        dados = json.loads(existente) if existente else {}
+    except ValueError:
+        return {}
+    execucoes = dados.get("execucoes") if isinstance(dados, dict) else None
+    return {str(e["id"]): e for e in execucoes or [] if isinstance(e, dict) and e.get("id")}
+
+
+def exportar(estado: Dict[str, Any], existente: Optional[str] = None) -> Optional[str]:
+    """O conteúdo de `historico-gates.json`, ou `None` sem histórico.
+
+    As execuções são as que o estado lista, na ordem dele; cada uma vem com os textos quando os há — da execução
+    corrente (`KEY_EXECUCAO_COMPLETA`) ou do arquivo que já estava na sessão (`existente`). A execução que o estado não
+    lista mais (saiu pelo teto, ou um backup restaurado a desfez) sai também do arquivo."""
     historico = estado.get(KEY)
     if not isinstance(historico, list) or not historico:
         return None
+    completas = _execucoes_do_arquivo(existente)
+    corrente = estado.get(KEY_EXECUCAO_COMPLETA)
+    if isinstance(corrente, dict) and corrente.get("id"):
+        completas[str(corrente["id"])] = corrente
+    historico = [completas.get(str(e.get("id") or ""), e) if isinstance(e, dict) else e for e in historico]
     return json.dumps({"descricao": "Relatórios, vereditos e rodadas de cada gate, por execução, na ordem em que a "
                                     "esteira os gravou (tools/historico_gates.py).",
                        "execucoes": historico}, ensure_ascii=False, indent=1)
