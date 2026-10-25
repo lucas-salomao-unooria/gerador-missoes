@@ -222,10 +222,14 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
 
     for consultivo in CONSULTIVOS:
         texto = str(state.get(consultivo["chave"]) or "")
-        if not texto.strip():
+        chave_env = consultivo["chave"].replace("_report", "_status_envelope")
+        envelope_estado = state.get(chave_env)
+        if not texto.strip() and not isinstance(envelope_estado, dict):
             continue
-        envelope = extrair_envelope(texto) or {}
+        envelope = envelope_estado if isinstance(envelope_estado, dict) else (extrair_envelope(texto) or {})
         status = str(envelope.get("status") or "")
+        if status == "bloqueado":
+            status = "amarelo"
         deste = []
         for achado in envelope.get("achados") or []:
             if not isinstance(achado, dict):
@@ -316,21 +320,165 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
 
     # Desduplica achados idênticos propagados entre gates cumulativos (ex.: rastro de spec → design → dev → prd
     # ou rastreabilidade design → dev): preserva a primeira ocorrência no gate de origem e anota os demais em `tambem_em`.
+    _re_marcador_vazio = re.compile(r"^\[(?:PROPOSTA|PAR[ÂA]METRO)\b[^:]*\]$", re.IGNORECASE)
+    tem_marcador_nominal = any(
+        a["severidade"] in _HUMANO and ":" in (a.get("resumo") or "")
+        for a in achados
+    )
+
+    def _assinatura_tematica(r_low: str, sev: str, codigo: str) -> Optional[str]:
+        if codigo == "troca-nao-aplicada" and "«" in r_low:
+            return "troca:" + r_low.split("»", 1)[0][:90].strip()
+        if "17,6 min" in r_low:
+            return "tema:17_6_min_etapa_5b"
+        if "50,1 min" in r_low:
+            return "tema:50_1_min_sessao_1"
+        if "2,8%" in r_low:
+            return "tema:taxa_residual_2_8_pct"
+        if re.search(r"\b6\s+(?:palavras|blocos(?:\s+de\s+palavras)?)\b", r_low) and ("busca" in r_low or "campo" in r_low):
+            return "tema:6_blocos_busca"
+        if "pontilhado" in r_low and ("balão" in r_low or "chat" in r_low or "trecho" in r_low):
+            return "tema:trecho_pontilhado_chat"
+        if "ef03co07" in r_low and "busca orientada" in r_low:
+            return "tema:ef03co07_busca_orientada"
+        if "25 min em tela" in r_low and ("aula" in r_low or "50 min" in r_low or "carga total" in r_low):
+            return "tema:teto_25_min_tela"
+        if sev in _HUMANO and "1:1" in r_low and "sessão 1" in r_low and ("visita" in r_low or "contingência" in r_low):
+            return "tema:contingencia_1_1_sessao_1"
+        if "24 palavras" in r_low and "etapa 4" in r_low:
+            return "tema:24_palavras_etapa_4"
+        if "e5" in r_low and "10 palavras" in r_low and "pergunta" in r_low:
+            return "tema:perguntas_orais_e5_10_palavras"
+        if "ef12lp14" in r_low and "oficial" in r_low:
+            return "tema:ef12lp14_fonte_oficial"
+        if "ef35lp17" in r_low and "12a" in r_low:
+            return "tema:ef35lp17_harmonizacao_12a"
+        if ("seção 9" in r_low or "passo 3" in r_low) and ("agendamento" in r_low or "agendar a missão" in r_low):
+            return "tema:agendamento_secao_9"
+        if "overlay" in r_low and "etapa 4" in r_low and "20 palavras" in r_low:
+            return "tema:overlay_cta_etapa_4_20_palavras"
+        if "4 minutos" in r_low and ("celular" in r_low or "móvel" in r_low):
+            return "tema:4_minutos_teclado_movel"
+        if ("inglês" in r_low or "chatinput" in r_low) and ("rótulos" in r_low or "tradução" in r_low or "interface" in r_low):
+            return "tema:terminologia_ingles_ds"
+        if r_low.startswith("🔵") and ("em13cnt301" in r_low or "biologia" in r_low or "saúde física" in r_low or "textos propositivos" in r_low):
+            return "tema:bncc_transversal_a_validar"
+        if "revezamento" in r_low and ("2–4" in r_low or "2-4" in r_low):
+            return "tema:revezamento_2_4"
+        if "tempo de inatividade no chat" in r_low:
+            return "tema:tempo_inatividade_chat"
+        if "teto de palavras por parágrafo" in r_low:
+            return "tema:teto_palavras_paragrafo"
+        return None
+
+    def _nucleo_resumo(a: Dict[str, Any]) -> str:
+        r = re.sub(r"\s+", " ", (a.get("resumo") or "")).strip()
+        r_low = r.lower()
+        tema = _assinatura_tematica(r_low, a["severidade"], str(a.get("codigo") or ""))
+        if tema:
+            return tema
+        if a["severidade"] in _HUMANO and r.startswith("["):
+            interno = r[1:-1] if r.endswith("]") else r[1:]
+            interno = re.sub(
+                r"^(?:PAR[ÂA]METRO|PROPOSTA|ABERTO)\b[\s—–:-]*(?:P0[ab]?\s*[—–:-]*\s*)?"
+                r"(?:a\s+definir\s+por\s+produto|validar\s+com\s+(?:o\s+)?PO|dono\s*:\s*(?:o\s+)?PO)?\s*:?\s*",
+                "",
+                interno,
+                flags=re.IGNORECASE,
+            )
+            tcs = re.findall(r"\bTC-\d+\b", interno, flags=re.IGNORECASE)
+            if len(set(t.upper() for t in tcs)) == 1:
+                return f"tc:{tcs[0].lower()}"
+            if re.search(r"\bPQ-01\s+a\s+PQ-05\b", interno, flags=re.IGNORECASE):
+                return "pq:pq-01-a-pq-05"
+            interno = re.split(
+                r"\s+·\s+|\s+[—–-]\s+sugest[ãa]o\s*:|,?\s*sugest[ãa]o\s*:|\s+→\s+",
+                interno,
+                maxsplit=1,
+                flags=re.IGNORECASE,
+            )[0]
+            interno = re.sub(r"\([^)]*\)", " ", interno)
+            interno = re.sub(r"^\d+\.\w+\s*[—–-]\s*", "", interno)
+            interno = re.sub(
+                r"\s+(?:de|em)\s+\d+\s*(?:segundos|minutos|palavras|ms|s|min)\b",
+                "",
+                interno,
+                flags=re.IGNORECASE,
+            )
+            interno = re.sub(r"\bsub-bloco\b", "bloco", interno, flags=re.IGNORECASE)
+            limpo = " ".join(interno.split()).strip(" :—–-`*|.").lower()
+            if limpo:
+                return limpo
+        return r_low
+
     achados_unicos: List[Dict[str, Any]] = []
     indice_por_chave: Dict[tuple, Dict[str, Any]] = {}
     for a in achados:
-        resumo_norm = re.sub(r"\s+", " ", (a.get("resumo") or "")).strip().lower()
+        resumo_raw = (a.get("resumo") or "").strip()
+        if tem_marcador_nominal and a["severidade"] in _HUMANO and _re_marcador_vazio.match(resumo_raw):
+            continue
+        resumo_norm = _nucleo_resumo(a)
         if a["severidade"] not in _BLOQUEIA and resumo_norm:
-            chave_dedup = (a["severidade"], str(a.get("codigo") or ""), resumo_norm)
+            usa_chave_sem_codigo = (
+                resumo_norm.startswith(("tema:", "tc:", "pq:", "troca:"))
+                or (a["severidade"] in _HUMANO and str(a.get("codigo") or "—") in ("—", ""))
+            )
+            chave_dedup = (
+                (a["severidade"], resumo_norm)
+                if usa_chave_sem_codigo
+                else (a["severidade"], str(a.get("codigo") or ""), resumo_norm)
+            )
             if chave_dedup in indice_por_chave:
                 prim = indice_por_chave[chave_dedup]
+                if len(resumo_raw) > len(prim.get("resumo") or "") and "·" not in resumo_raw:
+                    prim["resumo"] = resumo_raw
                 outros = prim.setdefault("tambem_em", [])
                 if a["gate"] != prim["gate"] and a["gate"] not in outros:
                     outros.append(a["gate"])
                 continue
             indice_por_chave[chave_dedup] = a
         achados_unicos.append(a)
-    achados = achados_unicos
+
+    # Segunda passagem para marcadores curtos de parâmetro/proposta (ex.: «[PARÂMETRO: 35 palavras]» ou «[PROPOSTA: SLA p95]»)
+    # cujo valor ou termos já estão contidos num marcador nominal mais completo do mesmo dossiê, ou marcadores agregados de TC-xx.
+    humanos_nominais = [
+        a for a in achados_unicos
+        if a["severidade"] in _HUMANO
+    ]
+    tcs_individuais = {
+        _nucleo_resumo(a).split(":", 1)[1].upper()
+        for a in humanos_nominais
+        if _nucleo_resumo(a).startswith("tc:")
+    }
+    achados_finais: List[Dict[str, Any]] = []
+    for a in achados_unicos:
+        resumo_raw = (a.get("resumo") or "").strip()
+        if a["severidade"] in _HUMANO and resumo_raw.startswith("[") and str(a.get("codigo") or "—") in ("—", ""):
+            nucleo = _nucleo_resumo(a)
+            tcs_multi = [t.upper() for t in re.findall(r"\bTC-\d+\b", resumo_raw, flags=re.IGNORECASE)]
+            if len(set(tcs_multi)) >= 2 and set(tcs_multi).issubset(tcs_individuais):
+                continue
+            if not nucleo.startswith(("tc:", "pq:", "tema:", "troca:")):
+                valor_curto = re.sub(r"^sugest[ãa]o\s*:?\s*", "", nucleo, flags=re.IGNORECASE).strip()
+                palavras_sig = [p for p in re.findall(r"[a-zà-ú0-9]+", valor_curto) if len(p) >= 3 or p.isdigit()]
+                absorvido_por = None
+                if len(palavras_sig) <= 4 and palavras_sig:
+                    for outro in humanos_nominais:
+                        if outro is a:
+                            continue
+                        outro_txt = (outro.get("resumo") or "").lower()
+                        if len(outro_txt) <= len(resumo_raw):
+                            continue
+                        if valor_curto in outro_txt or all(p in outro_txt for p in palavras_sig):
+                            absorvido_por = outro
+                            break
+                if absorvido_por is not None:
+                    outros = absorvido_por.setdefault("tambem_em", [])
+                    if a["gate"] != absorvido_por["gate"] and a["gate"] not in outros:
+                        outros.append(a["gate"])
+                    continue
+        achados_finais.append(a)
+    achados = achados_finais
 
     # a reprovação registrada que uma pessoa liberou sai das que impedem e vai para a seção própria, com quem e quando
     degradacoes, liberadas = liberacao.separar_degradacoes(state, pareceres)

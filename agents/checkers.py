@@ -1598,13 +1598,14 @@ class RastreabilidadeAgent(BaseAgent):
 
     report_key: str = "rastreabilidade_report"
     status_key: str = "rastreabilidade_status"
+    colunas_veredito: Optional[Tuple[str, ...]] = None
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         from tools import rastreabilidade as rb
 
         state = ctx.session.state
-        resultado = rb.matriz(dict(state))
+        resultado = rb.matriz(dict(state), colunas_veredito=self.colunas_veredito)
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
         delta = {
             self.report_key: rb.relatorio(resultado, missao),

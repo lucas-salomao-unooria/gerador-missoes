@@ -636,6 +636,7 @@ def build_design_stage(
             RastreabilidadeAgent(
                 name="A093RastreabilidadeDesign",
                 description="Matriz de rastreabilidade: cada requisito do one-pager e da spec (habilidades, textos literais, tempo, telas, estados, seção do DS) procurado em cada artefato de design.",
+                colunas_veredito=("spec", "jornada", "fluxo", "copy", "telas", "prototipo", "stitch", "pedagogico"),
                 before_agent_callback=marcar_heranca,
             ),
             # O refazer de design, conferido nos documentos de design: até 07/10/2026 só o de produto tinha

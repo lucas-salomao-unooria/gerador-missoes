@@ -524,6 +524,7 @@ def build_dev_stage(
                     description="Matriz de rastreabilidade final: cada requisito do produto em cada artefato de design e de dev, até o PRD e o pedagógico.",
                     report_key="rastreabilidade_dev_report",
                     status_key="rastreabilidade_dev_status",
+                    colunas_veredito=("handoff", "banco", "prd"),
                     before_agent_callback=marcar_heranca,
                 ),
                 # O refazer de dev, conferido nos documentos de dev: até 07/10/2026 só o de produto tinha conferência.

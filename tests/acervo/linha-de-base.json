@@ -988,7 +988,6 @@
     "rastro_design_status": {
       "status": "bloqueado",
       "codigos": [
-        "aberto",
         "d0-orfao",
         "parametro",
         "proposta"

@@ -733,7 +733,23 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                     etapa = classificar_dono(trecho, "externo", contexto=contexto)
                 else:
                     etapa = classificar_dono(dono_raw or trecho, fonte.get("etapa_padrao", "dev"), contexto=contexto)
-                chave = (tipo, " ".join(trecho.split()).lower())
+                if etapa == "humano" and tipo in ("parametro", "proposta", "aberto"):
+                    corpo_m = re.sub(
+                        r"^[\s—–:-]*(?:P0[ab]?\s*[—–:-]*\s*)?(?:a\s+definir\s+por\s+produto|validar\s+com\s+(?:o\s+)?PO|dono\s*:\s*(?:o\s+)?PO)\s*:?\s*",
+                        "",
+                        dono_raw or "",
+                        flags=re.IGNORECASE,
+                    )
+                    cabeca_m = re.split(
+                        r"\s+·\s+|\s+[—–-]\s+sugest[ãa]o\s*:|,?\s*sugest[ãa]o\s*:|\s+→\s+",
+                        corpo_m,
+                        maxsplit=1,
+                        flags=re.IGNORECASE,
+                    )[0]
+                    cabeca_norm = " ".join(cabeca_m.split()).strip(" :—–-`*|.").lower()
+                    chave = ("contrato_po", cabeca_norm) if cabeca_norm else (tipo, " ".join(trecho.split()).lower())
+                else:
+                    chave = (tipo, " ".join(trecho.split()).lower())
                 if chave in vistos:
                     # Mesma pendência propagada para outro documento: conta uma vez, no
                     # documento de origem, e os demais ficam registrados ao lado.

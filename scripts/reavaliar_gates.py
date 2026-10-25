@@ -236,6 +236,11 @@ def avaliar(pasta: Path) -> Optional[Dict[str, Any]]:
     for chave, resultado in novos.items():
         copia[chave] = resultado["status"]
         copia[f"{chave}_envelope"] = {"status": resultado["status"], "achados": resultado.get("achados", [])}
+    if "contrato_produto_status" in novos:
+        copia["contrato_produto_report"] = contrato_produto.relatorio_markdown(
+            novos["contrato_produto_status"],
+            str(state.get("slug_missao") or ""),
+        )
     # Se qa_afirmacoes_status e rastro_design_status deixaram de bloquear e design_status só carregava achados deles
     if (copia.get("qa_afirmacoes_status") != "bloqueado"
             and copia.get("rastro_design_status") != "bloqueado"
