@@ -1093,3 +1093,75 @@ def test_subtitulo_do_roteiro_nao_atribui_decisao_ao_po(monkeypatch):
         with monkeypatch.context() as m:
             m.setattr(pg, "sem_blocos", lambda texto: texto)
             assert _a121({**estado, "one_pager_pedagogico": velho}) == ("bloqueado", ["decisao-atribuida-ao-po"])
+
+
+def test_custo_pior_caso_do_pedagogico_declarado_no_readme(monkeypatch):
+    """3ª revisão do PR #79 (24/10/2026), p9: o PR declarava «de 2 a 4 por passada, até 8 no pior caso», mas na rodada de
+    correção o retrabalho por trocas chama o editor até `TENTATIVAS_DO_EDITOR` vezes antes de devolver ao redator: redator
+    2 + editor 3 + juiz 2 = 7 por passada, 14 com duas. Conta as chamadas com redator, editor e juiz falsos (exp03em1b, o
+    editor devolve trocas que não se aplicam) e confere o README. Mutante: outro número de tentativas do editor."""
+    import agents.callbacks as cb
+    from agents.callbacks import retrabalhar_por_trocas, travar_documento_na_correcao_pontual
+    from agents.pedagogico import build_fechamento_pedagogico
+    from config import get_settings
+    from pipeline import reexecucao as rx
+    from pipeline.orchestrator import limitar_a_uma_rodada
+    from tools import edicao_pontual
+
+    conta = {"redator": 0, "editor": 0, "juiz": 0}
+    ruim = _NARRATIVA_MINIMA + "\nA missão espera que 37% das crianças acertem a pergunta do fim.\n"
+
+    class Redator(BaseAgent):
+        @override
+        async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+            conta["redator"] += 1
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                        actions=EventActions(state_delta={"one_pager_pedagogico": ruim}))
+
+    class Juiz(BaseAgent):
+        @override
+        async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+            conta["juiz"] += 1
+            yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                        actions=EventActions(state_delta={"coerencia_pedagogico_status": "aprovado"}))
+
+    async def editor(pedido_texto, etapa, documentos, **_):
+        conta["editor"] += 1
+        return edicao_pontual.Proposta(modo=edicao_pontual.MODO_PONTUAL, edicoes=[edicao_pontual.Edicao(
+            documento="one_pager_pedagogico", de="trecho que não existe", para="x")])
+
+    def passada():
+        for k in conta:
+            conta[k] = 0
+        loop, anexo = build_fechamento_pedagogico()
+        redator = Redator(name="RedatorFalso", before_agent_callback=[
+            travar_documento_na_correcao_pontual("one_pager_pedagogico"), retrabalhar_por_trocas("one_pager_pedagogico")])
+        loop.sub_agents = [redator] + [Juiz(name="JuizFalso") if a.name.startswith("A122") else a
+                                       for a in loop.sub_agents[1:]]
+        for a in loop.sub_agents:
+            a.parent_agent = None
+        anexo.parent_agent = None
+        raiz = SequentialAgent(name="Design", sub_agents=[loop, anexo])
+        limitar_a_uma_rodada(raiz)
+        estado = _estado("exp03em1b-b2e7b4a3")
+        inicial = rx.preparar_estado_pontual(estado, "design", "Ajustar.",
+                                             edicao_pontual.documentos_da_etapa(estado, "design"), [])[0]
+        asyncio.run(_rodar(raiz, inicial))
+        return dict(conta)
+
+    monkeypatch.setattr(cb, "PROPONENTE_DE_RETRABALHO", editor)
+    monkeypatch.setenv("RETRABALHO_POR_TROCAS", "true")  # o padrão da esteira; a suíte o desliga (conftest)
+    assert get_settings().retrabalho_por_trocas and get_settings().prd_max_rodadas == 2
+    assert passada() == {"redator": 2, "editor": rx.TENTATIVAS_DO_EDITOR, "juiz": 2}
+    total = 2 + rx.TENTATIVAS_DO_EDITOR + 2
+    passadas = get_settings().correcao_pontual_passadas
+    readme = (Path(__file__).resolve().parent / "README.md").read_text(encoding="utf-8")
+    assert (f"redator 2 + editor {rx.TENTATIVAS_DO_EDITOR} + juiz 2 = {total}" in readme
+            and f"até {passadas * total} com `CORRECAO_PONTUAL_PASSADAS` = {passadas}" in readme)
+    assert "até 8 no pior caso" not in readme
+
+    # mutante: mais uma tentativa do editor — a conta muda e o README deixa de dizer a verdade
+    monkeypatch.setattr(rx, "TENTATIVAS_DO_EDITOR", rx.TENTATIVAS_DO_EDITOR + 1)
+    mutante = passada()
+    assert sum(mutante.values()) == total + 1
+    assert f"redator 2 + editor {mutante['editor']} + juiz 2 = {sum(mutante.values())}" not in readme
