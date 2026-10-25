@@ -3487,6 +3487,10 @@ class SaidaDeLoopAgent(BaseAgent):
     #: Os documentos que o autor do loop escreve: quando o loop repete, a versão desta rodada vai a ele em
     #: `rodada_anterior_<chave>` (`agents/base.py`).
     autor_keys: List[str] = Field(default_factory=list)
+    #: Documentos, além dos de `autor_keys`, cujo corte pelo limite de saída do modelo reprova a rodada — sem ganhar a
+    #: versão da rodada nem o retrabalho por trocas. É o núcleo: o A004 da 3ef2b escreve as seções 0, 1, 3 e 4 do
+    #: one-pager do PO (≈150 mil caracteres), perto do limite de saída, e o loop dele não tem `autor_keys`.
+    cortes_de: List[str] = Field(default_factory=list)
     #: Na correção pontual, as rodadas só caem a uma quando os autores do loop estão travados: o autor que escreve um
     #: documento que falta tem a rodada de correção dele (`pipeline.orchestrator.limitar_a_uma_rodada`). É o pedagógico
     #: da missão desenhada antes do PR 10 (exp02em1b, exp01em1b e exp03em1b, revisão do PR #79, 24/10/2026).
@@ -3538,7 +3542,7 @@ class SaidaDeLoopAgent(BaseAgent):
         # de novo, ou no teto, o loop sai 🔴 — outra rodada igual daria o mesmo corte — e o diagnóstico diz por quê.
         from agents.callbacks import cortes_dos_documentos
 
-        cortados = cortes_dos_documentos(state, self.autor_keys)
+        cortados = cortes_dos_documentos(state, list(self.autor_keys) + list(self.cortes_de))
         corte_sem_saida = bool(cortados) and (esgotou or any(int(c.get("vezes") or 0) >= 2 for c in cortados))
         for c in cortados if corte_sem_saida else []:
             registrar_degradacao(state, delta, f"corte_do_modelo_{c.get('chave')}",

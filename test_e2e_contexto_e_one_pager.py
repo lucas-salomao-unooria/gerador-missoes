@@ -343,6 +343,16 @@ def test_saida_do_loop_nao_aprova_documento_cortado_e_para_no_segundo_corte():
     assert saida.actions.escalate, "cortado de novo: outra rodada igual daria o mesmo corte"
     assert final["degradacoes"][0]["gate"] == "corte_do_modelo_one_pager"
     assert "A014SecoesApoio" in final["degradacoes"][0]["motivo"] and final["pipeline_bloqueado"] is True
+    # o núcleo, cujo loop não tem `autor_keys`, também não sai aprovado cortado — e não ganha versão da rodada
+    from agents.checkers import SaidaDeLoopAgent
+
+    eventos.clear()
+    nucleo = SaidaDeLoopAgent(name="Saida", status_keys=["gate_status"], rodada_key="r", max_rounds=2,
+                              cortes_de=["nucleo_narrativo"])
+    final = asyncio.run(_rodar(nucleo, {"gate_status": "aprovado", "cortes_do_modelo": {"A004NucleoNarrativo": {
+        **corte, "agente": "A004NucleoNarrativo", "chave": "nucleo_narrativo", "vezes": 1}}}, eventos))
+    assert not [e for e in eventos if e.author == "Saida"][-1].actions.escalate
+    assert "rodada_anterior_nucleo_narrativo" not in final
     # mutante: sem corte, os gates verdes encerram o loop como antes
     eventos.clear()
     asyncio.run(_rodar(_saida(), dict(base), eventos))

@@ -695,6 +695,8 @@ def build_produto_stage(
                 status_keys=["micro_gate_status", "profundidade_status", "fidelidade_nucleo_status", "mecanica_status"],
                 rodada_key="nucleo_rodada",
                 max_rounds=MICRO_GATE_MAX_RODADAS,
+                # o núcleo cortado pelo limite de saída do modelo não sai aprovado (e2e de 25/10/2026)
+                cortes_de=["nucleo_narrativo"],
             ),
         ],
     )
