@@ -24,6 +24,7 @@ Para cada item, um veredito:
   abertas — exp06ef1b"). Sem citação. **O código recusa `contexto` em frase com verbo de ação** (remover, adicionar,
   trocar, explicitar, manter, não alterar…): essa é exigência, e dispensá-la vira bloqueio.
 - `conflito_com_regra` — o documento deixou de atender porque segue uma **regra da própria esteira** que contradiz o item (exemplo: o briefing pede "o aluno confirma ou muda sua escolha" e o documento impõe decisão irreversível porque a regra do núcleo exige trava). Diga em `explicacao` qual regra e qual trecho. Quem decide é o PO, não você nem o autor.
+  Se o que o documento segue é um **pedido mais novo do PO** que contraria o item (o briefing diz uma coisa, o refazer de depois diz outra), o veredito também é `conflito_com_regra`, e a `explicacao` cita os ids dos itens do pedido novo ("segue F2 e F5"): o código confere que eles são mais novos e têm prova, e aí o item vale como superado — entre dois pedidos, vale o mais novo.
 
 Regras de leitura:
 

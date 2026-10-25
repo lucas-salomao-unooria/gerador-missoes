@@ -2497,7 +2497,7 @@ class FidelidadeCheckAgent(BaseAgent):
     rotulo: str = "Fidelidade ao pedido do PO e ao briefing"
     onde: str = ""
     documentos: List[str] = Field(default_factory=lambda: ["nucleo_narrativo", "one_pager", "spec_missao"])
-    #: Os documentos são só parte do que o pedido cobre (o núcleo): sem prova é 🟡, só violação bloqueia.
+    #: Os documentos são só parte do que o pedido cobre (o núcleo): sem prova sai do recorte, só violação bloqueia.
     parcial: bool = False
     entrada_key: str = "fidelidade_entrada"
     documentos_key: str = "fidelidade_documentos"

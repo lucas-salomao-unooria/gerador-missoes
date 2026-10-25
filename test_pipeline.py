@@ -5247,9 +5247,17 @@ def test_fidelidade_entende_texto_ditado_sem_aspas_pelo_interprete():
         base.update(por_id)
         return "```json\n" + _json.dumps({"itens": [{"id": k, **v} for k, v in base.items()]}, ensure_ascii=False) + "\n```"
 
-    # sem o intérprete, o que a esteira fazia: a citação está no documento, mas também no pedido
+    # sem o intérprete: o texto que o PO ditou é novo no documento e está no corpo — prova em código (C2, 25/10/2026);
+    # até ali saía `citou-o-pedido`. O cabeçalho, sem a leitura do intérprete, continua sem prova própria
     r = fid.aplicar(itens, juiz, docs, anteriores=anterior)
-    assert {(a["id"], a["codigo"]) for a in r["achados"]} == {("F1", "citou-o-pedido"), ("F2", "citou-o-pedido")}
+    assert {(a["id"], a["codigo"]) for a in r["achados"]} == {("F1", "citou-o-pedido")}
+    assert {c["id"]: c["prova"] for c in r["conferidos"]}["F2"].startswith("texto ditado pelo PO no documento")
+    # ...mas não se o texto ditado já estava na versão anterior: não prova que o pedido foi aplicado
+    r = fid.aplicar(itens, juiz, docs, anteriores={"one_pager": anterior["one_pager"] + f"\n{novo}."})
+    assert ("F2", "citou-o-pedido") in {(a["id"], a["codigo"]) for a in r["achados"]}
+    # ...nem se o texto entre aspas do item ficou no documento como estava (pode ser o que o PO mandou tirar)
+    r = fid.aplicar(itens, juiz, {"one_pager": docs["one_pager"] + f"\nDesmonta o gráfico {velho}."}, anteriores=anterior)
+    assert ("F2", "citou-o-pedido") in {(a["id"], a["codigo"]) for a in r["achados"]}
     # com ele: texto ditado no corpo, texto velho fora, e o cabeçalho vale pela prova dos itens que anuncia
     r = fid.aplicar(itens, juiz, docs, anteriores=anterior, interpretacao=fid.interpretacao(leitura(), itens))
     assert r["status"] == "aprovado", r["achados"]
@@ -5272,8 +5280,11 @@ def test_fidelidade_entende_texto_ditado_sem_aspas_pelo_interprete():
     # o que o intérprete devolve só vale se está no item, letra por letra: trecho inventado é descartado
     inventado = fid.interpretacao(leitura(F2={"inserir": ["um critério que o PO nunca escreveu no pedido"],
                                               "outras_exigencias": False}), itens)
-    assert inventado["F2"]["inserir"] == [] and fid.aplicar(itens, juiz, docs, anteriores=anterior,
-                                                           interpretacao=inventado)["status"] == "bloqueado"
+    assert inventado["F2"]["inserir"] == []
+    # (o F2 ainda se prova pelo texto ditado novo no corpo — não pelo que o intérprete inventou)
+    prova = {c["id"]: c["prova"] for c in fid.aplicar(itens, juiz, docs, anteriores=anterior,
+                                                       interpretacao=inventado)["conferidos"]}
+    assert "nunca escreveu" not in prova["F2"] and prova["F2"].startswith("texto ditado pelo PO no documento")
     # item que pede mais do que o texto (ou na dúvida, sem a resposta): a prova em código não basta
     mais = fid.interpretacao(leitura(F2={"inserir": [novo], "remover": [velho]}), itens)
     assert mais["F2"]["outras_exigencias"] is True
