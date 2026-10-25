@@ -194,6 +194,36 @@ def test_secao_que_o_redator_nao_escreveu_e_criada_com_o_bloco():
     assert pg.montar(doc, estado) == doc
 
 
+def test_secoes_fechadas_por_divisoria_montagem_idempotente_e_gate_aprova():
+    """O redator fecha cada seção com `---`, e o A120b põe o bloco antes da divisória. O bloco acaba nela: contada no
+    corpo do bloco, a primeira montagem saía 🔴 no A121b («bloco-do-contrato-alterado») e a segunda apagava a
+    divisória — no modo travado, trocas espúrias (revisão do PR #79, 24/10/2026). Nenhum dos 12 pedagógicos reais tem
+    `---` antes de `## `; o defeito era latente."""
+    from agents.pedagogico import ContratoNoPedagogicoAgent
+    from tools import edicao_pontual
+
+    estado = _estado()
+    narrativa = pg.narrativa(estado["one_pager_pedagogico"])
+    com_divisorias = re.sub(r"\n(?=## )", "\n---\n\n", narrativa)
+    divisorias = com_divisorias.count("\n---\n")
+    assert divisorias >= 15
+    uma = pg.montar(com_divisorias, estado)
+    assert pg.montar(uma, estado) == uma and uma.count("\n---\n") == divisorias
+    # o bloco fica antes da divisória que fecha a seção, e o corpo dele não a leva
+    assert "### Do one-pager aprovado — os tempos" in uma.split("## O podcast do fechamento")[0].rsplit("\n---\n", 1)[0]
+    assert not [t for t, corpo in pg.blocos_presentes(uma).items() if "---" in corpo.splitlines()]
+    assert pg.sem_blocos(uma).count("\n---\n") == divisorias, "tirar os blocos não leva a divisória junto"
+    r = pg.validar({**estado, "one_pager_pedagogico": uma})
+    assert r["status"] == "aprovado", r["achados"]
+    # com o anexo, e na correção pontual com o pedagógico travado: remontar não registra troca
+    com_anexo = ca.com_anexo(uma, estado["one_pager"], ca.SECOES_PEDAGOGICO)
+    assert pg.montar(com_anexo, estado) == com_anexo
+    final = _rodar_sync([ContratoNoPedagogicoAgent(name="A120b")],
+                        {**estado, "one_pager_pedagogico": com_anexo, "modo_correcao": "pontual", "edicoes_pontuais": [],
+                         "documentos_travados": list(edicao_pontual.travados("design"))})
+    assert final["one_pager_pedagogico"] == com_anexo and final["edicoes_pontuais"] == []
+
+
 def test_contrato_no_pedagogico_na_correcao_pontual_entra_como_troca():
     """Na correção pontual com o pedagógico travado o redator não roda; o A120b sim, e o que ele muda (a sessão anterior
     ao PR 10 ganha os subtítulos) entra em `edicoes_pontuais`: o documento continua a versão anterior mais as trocas
@@ -374,6 +404,97 @@ def test_correcao_pontual_de_design_sem_pedagogico_o_gera_e_os_gates_dele_valem(
         assert depois["montagem_pedagogico_status"] == "amarelo", nome
 
 
+
+class _RedatorPorRodada(BaseAgent):
+    """Redator falso do pedagógico: um texto por rodada do loop (o último se repete), e conta as chamadas."""
+
+    textos: list
+
+    @override
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        state = ctx.session.state
+        rodada = int(state.get("pedagogico_rodada", 0) or 0)
+        yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
+                    actions=EventActions(state_delta={
+                        "one_pager_pedagogico": self.textos[min(rodada, len(self.textos) - 1)],
+                        "redator_chamadas": int(state.get("redator_chamadas", 0) or 0) + 1}))
+
+
+def _fechamento_pontual(textos):
+    """O loop do pedagógico (com a saída A123) e o A124 de verdade, limitados como na correção pontual
+    (`limitar_a_uma_rodada`): o redator falso tem a trava do redator de verdade, e o juiz (modelo) aprova."""
+    from agents.callbacks import travar_documento_na_correcao_pontual
+    from agents.pedagogico import build_fechamento_pedagogico
+    from pipeline.orchestrator import limitar_a_uma_rodada
+
+    loop, anexo = build_fechamento_pedagogico()
+    redator = _RedatorPorRodada(name="RedatorFalso", textos=list(textos),
+                                before_agent_callback=travar_documento_na_correcao_pontual("one_pager_pedagogico"))
+    juiz = _Escreve(name="JuizFalso", chave="coerencia_pedagogico_status", texto="aprovado")
+    loop.sub_agents = [redator] + [juiz if a.name.startswith("A122") else a for a in loop.sub_agents[1:]]
+    for a in loop.sub_agents:
+        a.parent_agent = None
+    anexo.parent_agent = None
+    raiz = SequentialAgent(name="DesignPontual", sub_agents=[loop, anexo])
+    limitar_a_uma_rodada(raiz)
+    return raiz, loop
+
+
+def test_correcao_pontual_de_design_sem_pedagogico_tem_a_rodada_de_correcao_do_redator():
+    """Na correção pontual, `limitar_a_uma_rodada` punha uma volta em todo loop: o 🔴 da primeira versão do pedagógico que
+    a correção gera (exp02em1b, exp01em1b e exp03em1b) ficava como documento novo, sem voltar ao redator nem ao editor
+    (revisão do PR #79, 24/10/2026). O loop do pedagógico mantém as rodadas da geração (PRD_MAX_RODADAS) quando o redator
+    está livre; com o pedagógico travado, a saída decide na primeira rodada, como antes."""
+    from agents.checkers import ComiteVotosAgent
+    from agents.design import build_design_stage
+    from config import get_settings
+    from google.adk.agents.loop_agent import LoopAgent
+    from pipeline.orchestrator import iter_agent_tree, limitar_a_uma_rodada
+    from pipeline.reexecucao import preparar_estado_pontual
+    from tools import edicao_pontual
+    from tools.propagacao import tem_numero
+
+    rodadas = max(1, get_settings().prd_max_rodadas)
+    assert rodadas >= 2
+    # a etapa de design montada para a correção pontual: todo loop com uma volta, menos o do pedagógico
+    design = build_design_stage()
+    limitar_a_uma_rodada(design)
+    loops = {a.name: a.max_iterations for _, a in iter_agent_tree(design) if isinstance(a, LoopAgent)}
+    assert loops.pop("OnePagerPedagogicoLoop") == rodadas and set(loops.values()) == {1}, loops
+    gates = {a.name: a.max_rounds for _, a in iter_agent_tree(design)
+             if isinstance(getattr(a, "max_rounds", None), int) and not isinstance(a, ComiteVotosAgent)}
+    assert gates.pop("A123PedagogicoRodada") == rodadas and set(gates.values()) == {1}, gates
+
+    ruim = _NARRATIVA_MINIMA + "\nA missão espera que 37% das crianças acertem a pergunta do fim.\n"
+    boa = _NARRATIVA_MINIMA
+    for nome in ("exp02em1b-60cfa7f4", "exp01em1b-76d9af6e", "exp03em1b-b2e7b4a3"):
+        estado = _estado(nome)
+        documentos = edicao_pontual.documentos_da_etapa(estado, "design")
+        inicial, _ = preparar_estado_pontual(estado, "design", "Trocar o texto do botão.", documentos, [])
+        assert not tem_numero(pg.contrato_firme(inicial)[1], ("37", "%")), nome
+        raiz, loop = _fechamento_pontual([ruim, boa])
+        assert loop.max_iterations == rodadas
+        final = asyncio.run(_rodar(raiz, inicial))
+        # a primeira versão bloqueou (37% sem origem), voltou ao redator, e a segunda passou
+        assert final["redator_chamadas"] == 2 and final["pedagogico_rodada"] == 2, nome
+        assert final["montagem_pedagogico_status"] == "aprovado", (nome, final["montagem_pedagogico_report"][:400])
+        assert "37%" not in final["one_pager_pedagogico"] and final[pg.KEY_RETRATO] == final["one_pager_pedagogico"]
+
+    # o controle: o pedagógico travado (a exp02ef1b já o tem) com o mesmo 🔴 — o redator não roda, e a saída decide na
+    # primeira rodada: repetir só julgaria o mesmo texto
+    estado = _montado()
+    documentos = edicao_pontual.documentos_da_etapa(estado, "design")
+    assert "one_pager_pedagogico" in documentos
+    documentos["one_pager_pedagogico"] = _na_secao(documentos["one_pager_pedagogico"], "Em uma frase",
+                                                   "A missão espera que 37% das crianças acertem a pergunta do fim.")
+    inicial, _ = preparar_estado_pontual(estado, "design", "Trocar o texto do botão.", documentos, [])
+    assert pg.travado_nesta_correcao(inicial)
+    raiz, _ = _fechamento_pontual([boa])
+    final = asyncio.run(_rodar(raiz, inicial))
+    assert "redator_chamadas" not in final and final["pedagogico_rodada"] == 1
+    assert final["montagem_pedagogico_status"] == "bloqueado" and "37%" in final["one_pager_pedagogico"]
+
+
 # --------------------------------------------------------------------------- 3. o gate de montagem
 def test_gate_aprova_o_montado_e_le_o_legado_com_tolerancia():
     for nome in ("exp02ef1b-4fd72a9a", "exp05ef1b", "exp06ef1b-53e011b6", "exp01ef1b"):
@@ -386,16 +507,16 @@ def test_gate_aprova_o_montado_e_le_o_legado_com_tolerancia():
 
 
 def test_mutante_pedagogico_com_h1_25_em_vez_de_30():
-    """A cadeia da exp02ef1b (D11): a H1 do §17 diz 30%, e os 25% eram proposta (PQ-01 `[PROPOSTA]`). No pedagógico, a
-    H1 com 25% bloqueia — citada pelo número ou parafraseada."""
+    """A cadeia da exp02ef1b (D11): a H1 do §17 diz 30%, e os 25% eram proposta (PQ-01 `[PROPOSTA]`). No que o
+    pedagógico afirma da missão, a H1 com 25% bloqueia — citada pelo número ou parafraseada. Em «O que ainda está em
+    aberto», como proposta, não: é onde o prompt a manda pôr (`test_pendencia_e_changelog_registram_...`)."""
     estado = _montado()
     certo = "- A hipótese 1 (usabilidade motora) será observada: mais de 30% das duplas desistirem de ajustar a moldura."
     errado = certo.replace("30%", "25%")
-    ok = pg.validar({**estado, "one_pager_pedagogico": _na_secao(estado["one_pager_pedagogico"],
-                                                                 "O que ainda está em aberto", certo)})
+    secao = "Como a gente sabe que a criança aprendeu"
+    ok = pg.validar({**estado, "one_pager_pedagogico": _na_secao(estado["one_pager_pedagogico"], secao, certo)})
     assert ok["status"] == "aprovado", ok["achados"]
-    r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(estado["one_pager_pedagogico"],
-                                                                "O que ainda está em aberto", errado)})
+    r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(estado["one_pager_pedagogico"], secao, errado)})
     assert r["status"] == "bloqueado"
     assert {"hipotese-diverge", "numero-sem-origem"} <= {a["codigo"] for a in r["achados"]}
     assert all(a["etapa"] == "design" and a["agente_responsavel"] == pg.DONO for a in r["achados"])
@@ -411,8 +532,8 @@ def test_mutante_pedagogico_com_h1_25_em_vez_de_30():
     gate = RastroCheckAgent(name="A121b", modo="montagem_pedagogico", rotulo="Pedagógico monta, não decide",
                             report_key="montagem_pedagogico_report", status_key="montagem_pedagogico_status",
                             estrito=False)
-    final = _rodar_sync([gate], {**estado, "one_pager_pedagogico": _na_secao(
-        estado["one_pager_pedagogico"], "O que ainda está em aberto", errado)})
+    final = _rodar_sync([gate], {**estado, "one_pager_pedagogico": _na_secao(estado["one_pager_pedagogico"], secao,
+                                                                             errado)})
     assert final["montagem_pedagogico_status"] == "bloqueado"
     assert "hipotese-diverge" in final["montagem_pedagogico_report"]
 
@@ -461,6 +582,65 @@ def test_numero_do_preparo_nao_e_regra_da_missao():
     doc = _na_secao(estado["one_pager_pedagogico"], "Em uma frase", "A criança escolhe entre duas opções simples.")
     r = pg.validar({**estado, "one_pager_pedagogico": doc})
     assert "numero-sem-origem" in {a["codigo"] for a in r["achados"]}
+
+
+
+#: O número de cada missão a refazer que só existe em linha `[PROPOSTA]`/`[PARÂMETRO]` do contrato: o limiar de uma PQ
+#: do 9f da spec. Não é decisão: o prompt manda pô-lo em «O que ainda está em aberto», como proposta.
+_PROPOSTAS_DAS_MISSOES_A_REFAZER = (("exp02em1b-60cfa7f4", "40%", "PQ-01"), ("exp03em1b-b2e7b4a3", "30%", "PQ-02"),
+                                    ("exp01em1b-76d9af6e", "75%", "PQ-02"), ("exp02ef1b-4fd72a9a", "25%", "PQ-01"))
+#: O gabarito com as três seções que fecham o documento, como o redator as escreve.
+_NARRATIVA_COM_REGISTRO = (_NARRATIVA_MINIMA + "\n## O que precisamos que você aprove\n\n1. A conversa final fecha a "
+                           "descoberta?\n\n## O que mudou nesta versão\n\nPrimeira versão.\n\n"
+                           "## O que ainda está em aberto\n\nNada em aberto.\n")
+
+
+def test_pendencia_e_changelog_registram_proposta_e_numero_de_antes():
+    """O A121b confere o que a narrativa afirma da missão, como o gate do PRD, que pula a §19 (pendências) e a §22
+    (changelog). Até a revisão do PR #79 (24/10/2026) ele conferia o texto todo e bloqueava o que a esteira manda
+    escrever: a proposta em «O que ainda está em aberto» (prompt: «entra em "O que ainda está em aberto", como
+    proposta») e o número de antes no changelog. Na correção pontual de design das três missões sem pedagógico, o 🔴
+    ficava sem o de acordo de design. As quatro missões que o usuário vai refazer, cada uma com o número dela."""
+    from tools import montagem
+    from tools.propagacao import numeros, tem_numero
+
+    for nome, numero, pq in _PROPOSTAS_DAS_MISSOES_A_REFAZER:
+        estado = _estado(nome)
+        docs, origem = pg.contrato_firme(estado)
+        tok = numeros(numero)[0]
+        assert tem_numero(montagem.texto_do_contrato(docs), tok) and not tem_numero(origem, tok), (nome, "só proposta")
+        doc = pg.montar(_NARRATIVA_COM_REGISTRO, estado)
+        assert pg.validar({**estado, "one_pager_pedagogico": doc})["status"] == "aprovado", nome
+        # sem o marcador `[PROPOSTA`, que o gate já pulava: como o prompt pede
+        proposta = f"- Ainda é proposta, a decidir por produto: {numero} ({pq}, no 9f da spec)."
+        r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, "O que ainda está em aberto", proposta)})
+        assert r["status"] == "aprovado", (nome, r["achados"])
+        # a mesma frase como fato da missão, na narrativa, continua sem origem — e também como pergunta ao time
+        # pedagógico, que fica na conferência (o prompt não manda proposta para lá)
+        for secao in ("O que a missão ensina", "O que precisamos que você aprove"):
+            r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, secao, proposta)})
+            assert r["status"] == "bloqueado" and "numero-sem-origem" in {a["codigo"] for a in r["achados"]}, (nome, secao)
+
+    # a exp02ef1b, que vai ser refeita com a H1 reconduzida a 30% (D11): o changelog conta a volta, e a pendência pode
+    # trazer a proposta de mudar a hipótese, com o marcador
+    estado = _montado()
+    doc = estado["one_pager_pedagogico"]
+    volta = "- A hipótese 1 voltou de 25% para 30%, como o PO aprovou em 23/10."
+    proposta_h1 = "- [PROPOSTA — validar com PO: a hipótese 1 passar de 30% para 25%]"
+    teto_de_antes = "- As manchetes passaram de até 12 para até 10 palavras (§15)."
+    for secao, linha in (("O que mudou nesta versão", volta), ("O que mudou nesta versão", teto_de_antes),
+                         ("O que ainda está em aberto", proposta_h1)):
+        r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, secao, linha)})
+        assert r["status"] == "aprovado", (linha, r["achados"])
+        # fora delas, a mesma linha afirma: hipótese com outro número, número sem origem, origem de produto falsa
+        r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, "Como a gente sabe que a criança aprendeu",
+                                                                    linha)})
+        assert r["status"] == "bloqueado", linha
+    # texto-chave reescrito vale no texto todo: a pendência não é lugar de outra redação da pergunta do fim
+    longe = "Numa foto de duas crianças estudando juntas, o que mais importa aparecer no quadro?"
+    r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, "O que ainda está em aberto",
+                                                                f"- A pergunta do fim poderia ser «{longe}»")})
+    assert r["status"] == "bloqueado" and {a["codigo"] for a in r["achados"]} == {"texto-chave-reescrito"}
 
 
 # --------------------------------------------------------------------------- 4. o dev só acrescenta
