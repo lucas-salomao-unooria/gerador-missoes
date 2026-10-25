@@ -556,6 +556,44 @@ def d0_orfaos(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> List[Dict[
     return saida
 
 
+#: O documento de design que cita [D0-n] → quem o reescreve no retrabalho de design (`agents/design.MAPA_RETRABALHO`). O
+#: rótulo é o de `FONTES_DESIGN`; o anexo e a spec não entram, porque `d0_orfaos` não os lê.
+DONO_DO_DOCUMENTO_DESIGN = {
+    "jornada": "jornada",
+    "fluxo": "fluxo",
+    "copy revisada": "copy-ptbr-revisao",
+    "telas": "telas",
+    "telas no Stitch": "telas",
+    "camada CAA": "caa",
+    "ambiente simulado": "ambiente-simulado",
+}
+
+
+def tickets_d0_orfaos(state: Dict[str, Any], fontes: Optional[List[Dict[str, str]]] = None) -> List[Dict[str, Any]]:
+    """Ticket de retrabalho para cada documento de design que cita [D0-n] que o bloco 13 do anexo não define mais, com o
+    dono que reescreve o documento (`DONO_DO_DOCUMENTO_DESIGN`).
+
+    Na exp02em1b (session_f6ef44de, 25/10/2026) o QA bloqueou o [D0-9], o retrabalho do fecha-lacunas o apagou e reabriu
+    ao PO, e só o D0, o split, a spec consolidada e as telas rodaram de novo: jornada, copy revisada e ambiente seguiram
+    citando «([D0-9])», e o rastro de design deu 🔴 depois da última rodada do QA (G07). A comparação é a de `d0_orfaos`,
+    literal sobre os números. Só entra o órfão de decisão que saiu do bloco (o bloco existe): sem o bloco 13, o conserto é
+    do D0, e o rastro já o cobra."""
+    saida: List[Dict[str, Any]] = []
+    for o in d0_orfaos(fontes if fontes is not None else FONTES_DESIGN, state):
+        dono = DONO_DO_DOCUMENTO_DESIGN.get(o["documento"])
+        if o["codigo"] != "d0-orfao" or o["dono"] != o["documento"] or not dono:
+            continue
+        saida.append({
+            "severidade": "bloqueio", "codigo": "d0-orfao", "etapa": "design", "agente_responsavel": dono,
+            "onde": o["documento"], "trecho": o["trecho"],
+            "resumo": (f"«{o['documento']}» cita {o['trecho']}, que saiu do bloco 13 do anexo de design (o fechamento de "
+                       "lacunas a removeu ou renumerou)."),
+            "como": (f"Tire a citação de {o['trecho']}, ou cite o `[ABERTO — dono: PO: …]` que a substituiu no fechamento "
+                     "de lacunas, sem decidir no lugar dele. Não mude mais nada."),
+        })
+    return saida
+
+
 def _severidade_na_etapa(severidade: str, dono: str, documento: str, etapa_corrente: Optional[str]) -> tuple:
     """`(severidade, motivo)` da lacuna vista pela etapa que está rodando.
 
