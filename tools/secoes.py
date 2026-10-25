@@ -54,16 +54,84 @@ def serie_do_texto(texto: str) -> Optional[str]:
     return f"{int(m.group(1))}{m.group(2).upper()}" if m else None
 
 
-def extras(texto: str) -> List[str]:
-    """As seções extras declaradas (`secoes_ds_extras: [unoochat, unoovista]` ou «Seções extras do DS: …»)."""
-    m = _RE_EXTRAS.search(texto or "")
-    if not m or _norm(m.group(1).strip("[]")) in _VAZIOS:
+#: Onde termina o valor do campo numa linha de metadados: «nenhuma · **Modalidade:** duplas…», «nenhuma — …», «;».
+_RE_FIM_DO_CAMPO = re.compile(r"\s*[·•]\s*|\s+[—–]\s+|;|\*\*|\|")
+#: O valor é uma lista de seções: cada item é um identificador (`unoochat`, `nova:galeria`), não uma frase.
+_RE_ID_SECAO = re.compile(r"^[a-z][a-z0-9]*(?::[a-z0-9-]+)?$")
+_RE_TITULO = re.compile(r"^(#{1,6})\s+(.*)$", re.MULTILINE)
+#: A seção 0 do one-pager («## 0. Identificação») e o bloco 0 da spec — onde o campo é declarado.
+_RE_TITULO_DA_SECAO_0 = re.compile(r"^(?:bloco\s+)?0\s*[.)—–:-]|^identifica|^ficha", re.IGNORECASE)
+#: Changelog e «O que mudou»: o campo citado ali é relato, não declaração.
+_RE_TITULO_DE_RELATO = re.compile(r"changelog|o que mudou|hist[óo]rico|vers[õo]es anteriores", re.IGNORECASE)
+
+
+def _valor_do_campo(bruto: str) -> str:
+    valor = re.sub(r"\([^)]*\)", " ", bruto or "")  # comentário entre parênteses não é seção
+    valor = _RE_FIM_DO_CAMPO.split(valor, maxsplit=1)[0]
+    valor = re.split(r"\.(?:\s|$)", valor, maxsplit=1)[0]  # «nenhuma. A missão usa só a galeria.»
+    return valor.strip(" \t`*_\"'«»“”")
+
+
+def _declaracao(valor: str) -> Optional[List[str]]:
+    """As seções da declaração; `[]` para «nenhuma»; `None` quando o valor é prosa, e não uma lista de seções."""
+    corpo = valor.strip().strip("[]").strip()
+    if _norm(corpo) in _VAZIOS:
         return []
-    valor = re.sub(r"\(.*?\)", " ", m.group(1))  # comentário entre parênteses não é seção
+    secoes: List[str] = []
+    for parte in re.split(r",|\s+e\s+|\s*\+\s*", corpo):
+        s = re.sub(r"\s*:\s*", ":", parte.strip(" \t`*_\"'«»“”[]")).lower()
+        if not s or _norm(s) in _VAZIOS:
+            continue
+        if not _RE_ID_SECAO.match(s):
+            return None
+        if s not in secoes:
+            secoes.append(s)
+    return secoes
+
+
+def _onde(texto: str, pos: int) -> str:
+    """`secao0` | `relato` | `corpo`: o título mais próximo acima da posição diz onde o campo está."""
+    titulo = ""
+    for m in _RE_TITULO.finditer(texto):
+        if m.start() > pos:
+            break
+        titulo = m.group(2).strip(" *_`")
+    if _RE_TITULO_DE_RELATO.search(titulo):
+        return "relato"
+    return "secao0" if _RE_TITULO_DA_SECAO_0.search(titulo) else "corpo"
+
+
+def extras(texto: str) -> List[str]:
+    """As seções extras declaradas (`secoes_ds_extras: [unoochat, unoovista]` ou «Seções extras do DS: …»).
+
+    Só o valor do campo conta, e só quando ele é uma lista de seções. Até 24/10/2026 o resto da linha entrava: na
+    exp02ef1b (4fd72a9a, 22/10) a seção 0 numa linha só («**Seções extras do DS:** nenhuma · **Modalidade:** duplas
+    por aparelho…») virou 26 «seções» (`modalidade`, `duplas`, `por`…), o lint acusou seções acima do teto do 2º ano
+    e o gate estrutural reprovou o 2.1 — uma rodada gasta para reescrever a seção 0. Na exp01em1b (e3980485) o
+    changelog que citava o campo antes da seção 0 era lido no lugar dela, e o gate foi ao teto de 3 rodadas. Vale a
+    declaração da seção 0 (ou do bloco 0); a citada num changelog é relato. Sem declaração em forma de lista, a prosa
+    só conta pelas seções do DS que ela nomeia — o campo mal escrito não esconde uma extra de verdade."""
+    candidatos: List[tuple] = []
+    prosas: List[str] = []
+    for m in _RE_EXTRAS.finditer(texto or ""):
+        valor = _valor_do_campo(m.group(1))
+        lista = _declaracao(valor)
+        onde = _onde(texto, m.start())
+        if lista is None:
+            if onde != "relato":
+                prosas.append(valor)
+            continue
+        candidatos.append(({"secao0": 0, "corpo": 1, "relato": 2}[onde], len(candidatos), lista))
+    if candidatos:
+        return min(candidatos)[2]
+    if not prosas:
+        return []
+    from tools.rastro import SECOES_LEGADAS, secoes_ds
+
+    conhecidas = set(secoes_ds()) | set(SECOES_LEGADAS)
     vistos: List[str] = []
-    for s in _RE_SECAO.findall(valor.strip().strip("[]")):
-        s = s.lower()
-        if s not in _VAZIOS and s not in vistos:
+    for s in _RE_SECAO.findall(_norm(prosas[0])):
+        if (s in conhecidas or re.match(r"^(nova|minijogo):", s)) and s not in vistos:
             vistos.append(s)
     return vistos
 
