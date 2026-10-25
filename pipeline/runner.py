@@ -491,6 +491,17 @@ async def run_orchestrator_pipeline_stream(
         final_state = dict(final_session.state) if final_session else {}
         duration = time.time() - start_time
 
+        # O classificador de sentido chama o modelo fora do ADK (`tools/classificador.py`, C7): o que ele gastou nesta
+        # execução — o custo acumulado no estado menos o que já estava — entra no custo como um agente a mais
+        from tools.classificador import custo_da_sessao as _custo_do_classificador
+
+        _cls_antes, _cls_depois = _custo_do_classificador(initial_state or {}), _custo_do_classificador(final_state)
+        _cls_tokens = {k: int((_cls_depois.get("tokens") or {}).get(k, 0) or 0)
+                       - int((_cls_antes.get("tokens") or {}).get(k, 0) or 0) for k in ("entrada", "saida", "pensamento")}
+        _cls_chamadas = int(_cls_depois.get("chamadas", 0) or 0) - int(_cls_antes.get("chamadas", 0) or 0)
+        if _cls_chamadas > 0:
+            tokens_por_agente["ClassificadorDeSentido"] = {**_cls_tokens, "cache": 0, "chamadas": _cls_chamadas}
+
         # Bloco de execução: o que torna uma execução reproduzível e comparável com a seguinte.
         # Sem ele não havia como responder "quanto custa gerar uma missão", "qual agente pesa"
         # nem "estamos melhorando?" — os mesmos ~20 achados reapareciam sessão após sessão e

@@ -333,7 +333,7 @@ def validar_one_pager(one_pager: str, nucleo: str = "", briefing: str = "",
     # 8. Decisão atribuída ao PO sem registro dele (só a atribuição: proposta do agente é do gate final).
     from tools import decisoes
 
-    for a in decisoes.achados(texto, "O one-pager", registro_do_po):
+    for a in decisoes.achados(texto, "O one-pager", registro_do_po, chave="one_pager"):
         if a["codigo"] == "decisao-atribuida-ao-po":
             (bloqueio if a["severidade"] == "bloqueio" else atencao)(a["codigo"], "9.1", a["resumo"])
 

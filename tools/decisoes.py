@@ -195,8 +195,14 @@ class RegistroDoPO:
     agora só dá a pista de onde a decisão parece estar (`decisao_repetida`), para o PO conferir."""
 
     def __init__(self, fontes: Sequence[Tuple[str, str]] = (), decisoes: Sequence[Dict[str, Any]] = (),
-                 one_pager_po: str = "", pedidos: Sequence[str] = (), ha: Optional[bool] = None):
+                 one_pager_po: str = "", pedidos: Sequence[str] = (), ha: Optional[bool] = None,
+                 estado: Optional[Dict[str, Any]] = None):
         from tools.fidelidade import sem_relatos_de_gate
+
+        #: O que o PO escreveu, como o estado o guarda (pedidos, pareceres, decisões e anexo): a entrada do classificador
+        #: de sentido, que só dá a pista (`leituras_do_classificador`).
+        self.estado = {k: (estado or {}).get(k) for k in ("pedidos_do_po", "pareceres_humanos", "decisoes_do_po",
+                                                          "one_pager_po")}
 
         #: `(de onde, texto)` do que o PO escreveu: os pedidos, o pedido corrente, os pareceres de produto, o anexo, o
         #: briefing. Só para a pista.
@@ -285,6 +291,23 @@ class RegistroDoPO:
             return ""
         return self.decisao_gravada(linha) or self.linha_do_anexo(linha)
 
+    # -------------------------------------------------- pista do classificador: ordena e explica, não confirma
+    def leituras_do_classificador(self, linhas: Sequence[str], documento: str) -> Dict[str, Any]:
+        """`{linha: Leitura}` do classificador de sentido (`tools/classificador.decisao_do_po_confirmada`) sobre o que o
+        PO escreveu na sessão. É pista: ordena a lista do «a conferir» (a que ele não lê como confirmada primeiro) e
+        explica cada linha. Nunca tira a linha da lista: na fase A da C7 (25/10/2026) ele acertou 53 de 53 casos, mas
+        com 0 erro em 38 positivos o erro ainda pode chegar a ~8%, e um falso «confirmada» esconderia uma atribuição
+        falsa ao PO — a confirmação continua sendo só a do registro estruturado (`confirma`)."""
+        from tools import classificador
+
+        linhas = list(dict.fromkeys(linhas))
+        if not linhas:
+            return {}
+        lidas = classificador.ler(classificador.DECISAO_DO_PO_CONFIRMADA, [
+            {"documento": documento, "linha": linha, "registros_do_po": classificador.registros_do_po(self.estado, linha)}
+            for linha in linhas])
+        return dict(zip(linhas, lidas))
+
     # -------------------------------------------------- pista: de onde a decisão parece vir (não confirma nada)
     def decisao_repetida(self, texto: str) -> str:
         """De onde parece vir a decisão que o texto atribui ao PO — a pista do «a conferir» que o PO lê; "" sem pista.
@@ -364,17 +387,27 @@ def ha_registro_do_po(state: Dict[str, Any]) -> RegistroDoPO:
                for p in _pareceres_de_produto(state)]
     fontes += [("o one-pager que o PO anexou", str(state.get("one_pager_po") or "")),
                ("o briefing", str(state.get("briefing") or ""))]
-    return RegistroDoPO(fontes, state.get("decisoes_do_po") or [], str(state.get("one_pager_po") or ""), pedidos, ha=ha)
+    return RegistroDoPO(fontes, state.get("decisoes_do_po") or [], str(state.get("one_pager_po") or ""), pedidos, ha=ha,
+                        estado=state)
 
 
-def achados(texto: str, documento: str, registro_do_po: Any, etapa: str = "produto") -> List[Dict[str, str]]:
+#: A ordem da lista do «a conferir» pela leitura do classificador: a que ele não lê como confirmada vem primeiro.
+_ORDEM_DA_PISTA = {"nao_confirmada": 0, "nao_sei": 1, "confirmada": 2}
+
+
+def achados(texto: str, documento: str, registro_do_po: Any, etapa: str = "produto",
+            chave: str = "") -> List[Dict[str, str]]:
     """Achados do documento: decisão atribuída ao PO (⛔ sem registro, ⚠️ com) e propostas a revisar (⚠️).
 
     Com o `RegistroDoPO` (e não só o booleano), a atribuição que o registro estruturado do PO confirma — a decisão do de
     acordo e a linha idêntica no one-pager anexado — sai da lista; se todas saem, não há achado. As outras ficam ⚠️ com
     a dúvida explicada linha a linha: a que parece falar do que o PO recusou no de acordo, e a pista de onde a decisão
     parece estar nos pedidos e pareceres, que o código não lê como decisão (3ª revisão do PR #80, 25/10/2026). Até ali a
-    que parecia falar do recusado era ⛔ — comparação de palavras bloqueando sozinha."""
+    que parecia falar do recusado era ⛔ — comparação de palavras bloqueando sozinha.
+
+    O classificador de sentido (C7) lê cada linha que fica contra o que o PO escreveu na sessão: a lista sai com a que
+    ele não lê como confirmada primeiro, e a leitura dele vai na dúvida da linha. Ele nunca tira linha da lista.
+    `chave` é a chave do documento no estado (`one_pager`, `spec_missao`, `prd_final`…), como a fase A o mediu."""
     saida: List[Dict[str, str]] = []
     linhas = _linhas_atribuidas(texto)
     conferidas = 0
@@ -387,6 +420,16 @@ def achados(texto: str, documento: str, registro_do_po: Any, etapa: str = "produ
             pista = registro_do_po.decisao_repetida(linha) if not recusada else ""
             duvidas[linha] = (f"parece falar do {recusada}" if recusada
                               else f"o código não lê como decisão o que parece ser {pista}" if pista else "")
+        leituras = registro_do_po.leituras_do_classificador(linhas, chave or documento)
+        for linha, lida in leituras.items():
+            if lida.nao_sei:
+                continue
+            frase = ("o classificador de sentido lê a confirmação do PO" if lida.rotulo == "confirmada"
+                     else "o classificador de sentido não lê confirmação do PO")
+            frase += (f" («{lida.citacao[:140]}»)" if lida.citacao.strip() else "") + (
+                " — é pista, não confirma: confira" if lida.rotulo == "confirmada" else "")
+            duvidas[linha] = f"{duvidas[linha]}; {frase}" if duvidas[linha] else frase
+        linhas = sorted(linhas, key=lambda l: _ORDEM_DA_PISTA.get(getattr(leituras.get(l), "rotulo", "nao_sei"), 1))
     if linhas:
         lista = "\n".join(f"    - «{linha[:220]}»" + (f" — {duvidas[linha][:400]}" if duvidas.get(linha) else "")
                           for linha in linhas[:8])

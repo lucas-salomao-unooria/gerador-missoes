@@ -384,8 +384,15 @@ def rotulos_de_aresta(texto: str) -> Set[str]:
 
 def _candidatos_a_rotulo(texto: str, nomes_da_missao: Set[str] = frozenset(),
                          coluna_de_gesto: bool = False) -> List[Tuple[str, int]]:
+    """`(candidato, posição)` de `_candidatos_com_chave`, sem dizer de onde veio."""
+    return [(c, p) for c, p, _ in _candidatos_com_chave(texto, nomes_da_missao, coluna_de_gesto)]
+
+
+def _candidatos_com_chave(texto: str, nomes_da_missao: Set[str] = frozenset(),
+                          coluna_de_gesto: bool = False) -> List[Tuple[str, int, bool]]:
     """Textos citados como rótulo: entre aspas/crases numa linha que fala de botão, ou na célula de uma
-    linha da tabela de copy cuja chave é de botão (`e0.rotulo.botao_configurar`).
+    linha da tabela de copy cuja chave é de botão (`e0.rotulo.botao_configurar`) — o terceiro campo diz que veio da
+    chave, e aí é dado estruturado, não leitura de prosa.
 
     Não são rótulo de botão (11 dos 16 `rotulo-divergente` do design em 4 sessões de 22–23/10/2026 eram isto; o
     levantamento de deficiências de design de 24/10/2026):
@@ -397,7 +404,7 @@ def _candidatos_a_rotulo(texto: str, nomes_da_missao: Set[str] = frozenset(),
       linha do Mermaid só dispensa o que é rótulo de aresta (revisão do PR #81, 25/10/2026);
     - o nome da missão no card do professor («O Porta-Voz dos Dados», exp03em1b);
     - o trecho entre o fecho de uma citação e a abertura da seguinte («) | Disparar simulação (», exp01em1b)."""
-    cands: List[Tuple[str, int, bool, bool]] = []
+    cands: List[Tuple[str, int, bool, bool, bool]] = []
     pos = 0
     linhas = texto.splitlines(keepends=True)
     gesto: Set[int] = set()  # as colunas de gesto da tabela corrente
@@ -424,13 +431,13 @@ def _candidatos_a_rotulo(texto: str, nomes_da_missao: Set[str] = frozenset(),
                     continue
                 # entre crases ou aspas simples é código: «disparar a transição para `unoovista`», no critério de aceite
                 # do botão de publicar do PRD da exp02em1b, é nome de estado, não rótulo (24/10/2026)
-                cands.append((m.group(1), pos + m.start(), eh_tab or aspa in "`'", de_aresta))
+                cands.append((m.group(1), pos + m.start(), eh_tab or aspa in "`'", de_aresta, False))
         if eh_tab and _RE_CHAVE_DE_BOTAO.search(linha):
-            cands += [(c, pos, True, False) for c in (x.strip() for x in s.strip("|").split("|"))]
+            cands += [(c, pos, True, False, True) for c in (x.strip() for x in s.strip("|").split("|"))]
         pos += len(linha)
     arestas = rotulos_de_aresta(texto)
     saida = []
-    for bruto, p, eh_tabela, de_aresta in cands:
+    for bruto, p, eh_tabela, de_aresta, da_chave in cands:
         c = _limpa(bruto)
         if not c or not re.search(r"[A-Za-zÀ-ú]", c) or re.search(r"[_/]|\w\.\w|^E\d-|^[A-Z0-9_]+$", c):
             continue
@@ -440,16 +447,31 @@ def _candidatos_a_rotulo(texto: str, nomes_da_missao: Set[str] = frozenset(),
             continue
         if not 1 <= len(c.split()) <= 8 or (de_aresta and _norm(c) in arestas) or _norm(c) in nomes_da_missao:
             continue
-        saida.append((c, p))
+        saida.append((c, p, da_chave))
     return saida
+
+
+def _linha_e_cabecalho(texto: str, pos: int) -> Tuple[str, str]:
+    """A linha inteira em `pos` e, se ela é de tabela, o cabeçalho da tabela (a primeira linha do bloco de «|»)."""
+    linhas = texto.splitlines()
+    i = texto.count("\n", 0, pos)
+    if i >= len(linhas):
+        return "", ""
+    linha = linhas[i].strip()
+    if not linha.startswith("|"):
+        return linha, ""
+    j = i
+    while j > 0 and linhas[j - 1].strip().startswith("|"):
+        j -= 1
+    return linha, (linhas[j] if j != i else "")
 
 
 def _rotulos(g: Dict[str, Any], rotulo: str, texto: str, nomes_da_missao: Set[str] = frozenset()) -> List[Dict[str, str]]:
     if not g["rotulos"]:
         return []
     canonicos = {_norm(r["rotulo"]) for r in g["rotulos"]}
-    achados, vistos = [], set()
-    for cand, pos in _candidatos_a_rotulo(texto, nomes_da_missao, coluna_de_gesto=rotulo == "jornada"):
+    parecidos = []
+    for cand, pos, da_chave in _candidatos_com_chave(texto, nomes_da_missao, coluna_de_gesto=rotulo == "jornada"):
         if _norm(cand) in canonicos:
             continue
         palavras = _palavras(cand)
@@ -461,7 +483,30 @@ def _rotulos(g: Dict[str, Any], rotulo: str, texto: str, nomes_da_missao: Set[st
             n = len(palavras & ref) / len(palavras)
             if n > nota:
                 melhor, nota = r, n
-        if not melhor or nota < 0.6 or (melhor["acao"], _norm(cand)) in vistos:
+        if not melhor or nota < 0.6:
+            continue
+        parecidos.append((cand, pos, da_chave, melhor))
+    # «É botão?» na prosa sem chave de copy (C7, 25/10/2026): o candidato entre aspas pode ser o verbo do gesto, um nome de
+    # estado, o rótulo de uma seta do diagrama ou o nome da missão. O classificador (`tools/classificador.rotulo_de_botao`)
+    # filtra o que não é botão; o que ele lê como botão, ou não lê, continua 🟡. Na fase A, a C4 tinha precisão 0,53 por
+    # candidato no held-out de 40 e o classificador, 1,00/1,00 em 55. Qual botão do glossário o candidato é ele não
+    # responde (0,33 de precisão): essa comparação continua a das palavras, acima. A célula da tabela de copy cuja chave é
+    # de botão é dado estruturado e não passa por ele
+    em_prosa = sorted({_linha_e_cabecalho(texto, pos) + (cand,) for cand, pos, da_chave, _ in parecidos if not da_chave})
+    leituras: Dict[Tuple[str, str, str], Any] = {}
+    if em_prosa:
+        from tools import classificador
+
+        lidas = classificador.ler(classificador.ROTULO_DE_BOTAO, [
+            {"documento": rotulo, "cabecalho_da_tabela": cab, "linha": linha, "candidato": cand}
+            for linha, cab, cand in em_prosa])
+        leituras = dict(zip(em_prosa, lidas))
+    achados, vistos = [], set()
+    for cand, pos, da_chave, melhor in parecidos:
+        lida = None if da_chave else leituras.get(_linha_e_cabecalho(texto, pos) + (cand,))
+        if lida is not None and lida.rotulo == "outro":
+            continue
+        if (melhor["acao"], _norm(cand)) in vistos:
             continue
         vistos.add((melhor["acao"], _norm(cand)))
         achados.append(_achado(
