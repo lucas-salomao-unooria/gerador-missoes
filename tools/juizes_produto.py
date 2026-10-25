@@ -17,7 +17,8 @@ Aqui, sem mexer no que o juiz bloqueou:
 - o achado que diz que o PO decidiu e que os registros do PO confirmam (`tools.decisoes.RegistroDoPO.decisao_repetida`)
   sai da contagem e vai para `decisoes_do_po_registradas` no envelope;
 - no gate final, o `decisao_humana` que só fala das propostas e dos parâmetros abertos vai para `na_lista_do_de_acordo`,
-  quando a lista do de acordo tem itens. Sem itens na lista, o achado fica: a pendência que o código não acha não some;
+  quando a lista do de acordo tem itens e o que o achado diz está neles (`_so_do_contrato`). Sem itens na lista, ou com
+  um assunto que eles não têm, o achado fica: a pendência que o código não acha não some;
 - sem nenhum achado que conte, o `aprovado_com_ressalvas` vira `aprovado` (`veredito_original` guarda o do juiz).
 
 O relatório ganha uma nota com cada achado retirado e o porquê: o que saiu da contagem não sai da vista.
@@ -46,6 +47,38 @@ _RE_CONTRATO = re.compile(r"\bpropost\w*|\bpar[âa]metr\w*|\bmarcador\w*|\bP0[ab
 #: … que esperam o PO.
 _RE_ESPERA_O_PO = re.compile(r"aguard\w*|pendente\w*|a\s+validar|valida[çc][ãa]o|homologa[çc][ãa]o|ratifica[çc][ãa]o|"
                              r"parecer\s+do\s+PO", re.IGNORECASE)
+#: O vocabulário com que o juiz nomeia o contrato aberto e a espera, sem dizer de qual item fala: «Propostas estruturais e
+#: parâmetros de interface registrados no one-pager aguardando homologação do PO» (exp02em1b, 60cfa7f4). Sem acento.
+_VOCABULARIO_DO_CONTRATO = frozenset("""
+proposta propostas parametro parametros marcador marcadores aberto abertos aberta abertas pendente pendentes pendencia
+pendencias aguarda aguardam aguardando aguardar homologacao homologar ratificacao ratificar validacao validar parecer
+formal formais registrado registrados registrada registradas definicao decisao decisoes produto pager spec missao
+secao secoes bloco blocos estruturais estrutural ergonomicas ergonomicos numericos numericas interface quanto
+""".split())
+#: «Seção 18», «Bloco 12»: onde o item está, não do que ele trata.
+_RE_ONDE = re.compile(r"\b(?:se[çc](?:[ãa]o|[õo]es)|blocos?)\s+\d{1,2}\b", re.IGNORECASE)
+
+
+def _so_do_contrato(resumo: str, itens: List[Any]) -> bool:
+    """O achado fala só dos itens da lista do de acordo: as palavras de conteúdo dele, fora o vocabulário do contrato
+    (`_VOCABULARIO_DO_CONTRATO`), estão nos itens — assunto, sugestão e a linha de cada marcador. Tolera uma palavra de
+    fora quando há mais palavras dentro («layout Developer Console no DS ChatGPT», e89e91b3, onde só «layout» falta).
+
+    Até a revisão do PR #80 (24/10/2026) bastava falar de proposta e de espera: «Propostas P0b e a divergência entre o
+    briefing e o critério 6.2 aguardam homologação do PO» saía inteiro da contagem, com a divergência junto."""
+    from tools.decisoes import _e_conteudo, _palavras_planas
+
+    def raiz(p: str) -> str:
+        return p[:-1] if len(p) > 4 and p.endswith("s") else p
+
+    texto_itens = " ".join(" ".join([i.assunto, i.sugestao] + [f"{o.descricao} {o.linha}" for o in i.ocorrencias])
+                           for i in itens)
+    dos_itens = {raiz(p) for p in _palavras_planas(texto_itens)}
+    palavras = [p for p in _palavras_planas(_RE_ONDE.sub(" ", resumo))
+                if _e_conteudo(p) and p not in _VOCABULARIO_DO_CONTRATO]
+    dentro = [p for p in palavras if raiz(p) in dos_itens]
+    fora = [p for p in palavras if raiz(p) not in dos_itens]
+    return not fora or (len(fora) == 1 and len(dentro) > len(fora))
 
 
 def _severidade(achado: Dict[str, Any]) -> str:
@@ -93,7 +126,7 @@ def recontar(envelope: Optional[Dict[str, Any]], estado: Dict[str, Any],
                              if i.tipo in (fc.PARAMETRO, fc.PROPOSTA, fc.ABERTO_PO, fc.ESCOLHA_AMBIENTE)]
                 except Exception:  # noqa: BLE001 — sem a lista, o 🔵 fica: a recontagem não derruba o gate
                     itens = []
-            if itens:
+            if itens and _so_do_contrato(resumo, itens):
                 no_de_acordo.append({**achado, "itens_no_de_acordo": len(itens)})
                 continue
         ficam.append(achado)
