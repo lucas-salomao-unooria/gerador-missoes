@@ -903,11 +903,30 @@ def arquivos_das_chaves(chaves: Iterable[str]) -> List[str]:
     return caminhos
 
 
+#: No backup, a lista dos arquivos reescritos pela reexecução que não existiam antes dela (`reescritos_sem_cair`): a
+#: restauração os apaga. Fica fora do que volta à sessão.
+ARQUIVO_AUSENTES_NO_BACKUP = ".ausentes.json"
+
+
+def reescritos_sem_cair(removidas: Iterable[str]) -> List[str]:
+    """Arquivos que a reexecução regrava sem que a chave deles caia: o pedagógico, quando ele fica no estado. Ele é do
+    design, mas toda gravação o regrava — o refazer só de dev, com a seção de pendências do dev
+    (`pipeline.artifacts.documento_para_gravar`) — e apaga o da raiz da sessão anterior ao PR 10
+    (`pipeline.artifacts.migrar_caminhos_legados`). Sem eles no backup, a execução desfeita deixava o
+    `design/14-one-pager-pedagogico.*` com a seção dela, e o da raiz não voltava (3ª revisão do PR #79, 24/10/2026).
+    Quando a chave cai (refazer de design ou de produto), os arquivos vão ao backup com os das chaves removidas."""
+    from tools.pedagogico import KEY
+
+    return [] if KEY in set(removidas) else arquivos_das_chaves([KEY])
+
+
 def fazer_backup(run_dir: Path, etapa: str, removidas: Sequence[str]) -> Path:
     """Guarda em `.correcoes/<data>-<etapa>/` o que a reexecução vai sobrescrever ou descartar.
 
     Copia os arquivos da raiz e **move** os artefatos das chaves removidas — assim não sobra
-    artefato órfão de uma versão anterior ao lado dos novos. Pasta oculta: fora do manifesto e do ZIP.
+    artefato órfão de uma versão anterior ao lado dos novos. Os arquivos que a reexecução regrava sem
+    que a chave caia (`reescritos_sem_cair`) são **copiados**, e os que não existiam ficam listados em
+    `ARQUIVO_AUSENTES_NO_BACKUP`, para a restauração apagá-los. Pasta oculta: fora do manifesto e do ZIP.
     """
     run_dir = Path(run_dir)
     destino = run_dir / PASTA_CORRECOES / f"{time.strftime('%Y%m%d-%H%M%S')}-{etapa}"
@@ -922,6 +941,17 @@ def fazer_backup(run_dir: Path, etapa: str, removidas: Sequence[str]) -> Path:
             alvo = destino / rel
             alvo.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(origem), str(alvo))
+    ausentes: List[str] = []
+    for rel in reescritos_sem_cair(removidas):
+        origem = run_dir / rel
+        if origem.is_file():
+            alvo = destino / rel
+            alvo.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(origem, alvo)
+        else:
+            ausentes.append(rel)
+    if ausentes:
+        (destino / ARQUIVO_AUSENTES_NO_BACKUP).write_text(json.dumps(ausentes, ensure_ascii=False), encoding="utf-8")
     return destino
 
 
@@ -948,10 +978,21 @@ def restaurar_backup(run_dir: Path, backup: Path, custo_parcial: Optional[Dict[s
     restaurados: List[str] = []
     for arquivo in sorted(p for p in backup.rglob("*") if p.is_file()):
         rel = arquivo.relative_to(backup)
+        if rel.as_posix() == ARQUIVO_AUSENTES_NO_BACKUP:
+            continue
         alvo = run_dir / rel
         alvo.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(arquivo, alvo)
         restaurados.append(rel.as_posix())
+    # o que a execução desfeita criou ao regravar um arquivo que não existia antes dela (`reescritos_sem_cair`)
+    try:
+        ausentes = json.loads((backup / ARQUIVO_AUSENTES_NO_BACKUP).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        ausentes = []
+    for rel in ausentes if isinstance(ausentes, list) else []:
+        alvo = run_dir / str(rel)
+        if alvo.is_file() and alvo.resolve().is_relative_to(run_dir.resolve()):
+            alvo.unlink()
 
     if caminho_estado.exists():
         custo = max((custo_antes, custo_em(caminho_estado)), key=lambda c: len(c.get("execucoes") or []))

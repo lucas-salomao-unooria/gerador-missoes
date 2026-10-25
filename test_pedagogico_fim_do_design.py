@@ -1165,3 +1165,49 @@ def test_custo_pior_caso_do_pedagogico_declarado_no_readme(monkeypatch):
     mutante = passada()
     assert sum(mutante.values()) == total + 1
     assert f"redator 2 + editor {mutante['editor']} + juiz 2 = {sum(mutante.values())}" not in readme
+
+
+def test_backup_do_refazer_so_de_dev_leva_o_pedagogico_e_a_restauracao_o_desfaz(tmp_path, monkeypatch):
+    """3ª revisão do PR #79 (24/10/2026), p10: o backup do refazer só de dev não levava o pedagógico, mas a gravação do
+    dev regrava `design/14-one-pager-pedagogico.*` com a seção dele e apaga os da raiz (sessão anterior ao PR 10).
+    Restaurado o backup, os da raiz não voltavam e o design/14 ficava com a seção da execução desfeita. Mutante: o
+    backup sem os arquivos do pedagógico."""
+    from pipeline import reexecucao as rx
+    from pipeline.artifacts import save_run_artifacts
+
+    def refazer_dev_e_desfazer(estado, run_dir, raiz_antiga):
+        run_dir.mkdir()
+        (run_dir / "estado.json").write_text(json.dumps(estado), encoding="utf-8")
+        for ext in (".md", ".docx", ".html"):
+            if raiz_antiga:
+                (run_dir / f"one-pager-pedagogico{ext}").write_text("pedagógico gravado antes do PR 10", encoding="utf-8")
+        if not raiz_antiga:
+            save_run_artifacts(estado, session_id="s", run_dir=run_dir)
+        antes = {p.relative_to(run_dir).as_posix(): p.read_bytes() for p in run_dir.rglob("*pedagogico*")
+                 if p.is_file() and "-pedagogico" in p.name and p.name.startswith(("one-pager", "14-"))}
+        limpo, removidas = rx.preparar_estado(estado, "dev")
+        backup = rx.fazer_backup(run_dir, "dev", removidas)
+        final = {**limpo, pg.KEY_SECAO_DEV: pg.secao_do_dev({**limpo, "dev_status": "bloqueado", "dev_status_envelope": {
+            "achados": [{"severidade": "bloqueio", "codigo": "X1", "resumo": "pendência da execução desfeita"}]}})}
+        save_run_artifacts(final, session_id="s", run_dir=run_dir)
+        assert "pendência da execução desfeita" in (run_dir / "design/14-one-pager-pedagogico.md").read_text("utf-8")
+        assert not list(run_dir.glob("one-pager-pedagogico*"))
+        restaurados = rx.restaurar_backup(run_dir, backup)
+        depois = {p.relative_to(run_dir).as_posix(): p.read_bytes() for p in run_dir.rglob("*pedagogico*")
+                  if p.is_file() and "-pedagogico" in p.name and p.name.startswith(("one-pager", "14-"))
+                  and rx.PASTA_CORRECOES not in p.as_posix()}
+        assert rx.ARQUIVO_AUSENTES_NO_BACKUP not in restaurados and not (run_dir / rx.ARQUIVO_AUSENTES_NO_BACKUP).exists()
+        return antes, depois
+
+    # a sessão anterior ao PR 10 (exp02ef1b): o pedagógico na raiz, sem design/14
+    antes, depois = refazer_dev_e_desfazer(_estado(), tmp_path / "antiga", raiz_antiga=True)
+    assert sorted(antes) == ["one-pager-pedagogico.docx", "one-pager-pedagogico.html", "one-pager-pedagogico.md"]
+    assert depois == antes
+    # a sessão de agora: o design/14 do de acordo de design volta sem a seção da execução desfeita
+    antes, depois = refazer_dev_e_desfazer(_ate_o_fim_do_design(_estado()), tmp_path / "nova", raiz_antiga=False)
+    assert "design/14-one-pager-pedagogico.md" in antes and depois == antes
+
+    # mutante: o backup sem os arquivos do pedagógico — os da raiz não voltam
+    monkeypatch.setattr(rx, "reescritos_sem_cair", lambda removidas: [])
+    antes, depois = refazer_dev_e_desfazer(_estado(), tmp_path / "mutante", raiz_antiga=True)
+    assert antes and not any(c.startswith("one-pager-pedagogico") for c in depois)
