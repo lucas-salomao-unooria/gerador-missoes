@@ -456,9 +456,33 @@ def _recopia_do_d0(chave: str, corpo_d9: str, aceita: str, estado: Optional[Dict
     return _linhas_normalizadas(corpo_d0) == _linhas_normalizadas(corpo_d9)
 
 
+def _sem_marcacao(linha: str) -> str:
+    """A linha sem a marcação de Markdown (título, negrito, crase, citação) e sem a pontuação do fim."""
+    sem = re.sub(r"^\s*(?:>\s*)*(?:#{1,6}\s+)?", "", linha or "")
+    return " ".join(re.sub(r"\*+|`+|__", "", sem).split()).strip(" .;:,")
+
+
+def _reescreve_a_linha(nova: str, aceita: str) -> bool:
+    """A linha nova é a linha do cabeçalho reescrita: parecida com ela (60% ou mais), diferente, sem contê-la por inteiro,
+    e feita quase só dela (75% ou mais dos caracteres vêm da linha aceita) — não uma frase que cita um pedaço dela. No
+    título da spec, a linha que começa por uma palavra que o título não tem é o título de outro documento («# Anexo de
+    design — exp02ef1b v2.1») ou frase, não o título reescrito."""
+    import difflib
+
+    n, a = _sem_marcacao(nova), _sem_marcacao(aceita)
+    if not n or not a or n == a or a in n:
+        return False  # a cópia, ou a linha citada por inteiro na frase («Ficha do ambiente para a Spec — …»)
+    if re.match(r"^\s*#{1,6}\s", aceita or "") and n.split()[0].lower() not in {p.lower() for p in a.split()}:
+        return False
+    comparar = difflib.SequenceMatcher(None, n, a, autojunk=False)
+    if comparar.ratio() < 0.6:
+        return False
+    return sum(b.size for b in comparar.get_matching_blocks()) / len(n) >= 0.75
+
+
 def _so_prosa_do_agente(cabecalho_aceito: List[str], preambulo: List[str]) -> bool:
-    """O preâmbulo da resposta é só a frase do agente: nenhuma linha dele é igual, nem parecida (60% ou mais), a uma
-    linha do cabeçalho da spec aceita.
+    """O preâmbulo da resposta é só a frase do agente: nenhuma linha dele reescreve uma linha do cabeçalho da spec aceita
+    (`_reescreve_a_linha`). A cópia exata e a linha omitida não são mudança.
 
     Desde o PR 2 o D0 emite só o bloco 13, e desde o PR 8 o D9 emite só o bloco 14 — mas 11 das 12 respostas do D9 no
     acervo abrem o Passo 4 com prosa («Abaixo segue a íntegra…», «Abaixo é emitida…», «Abaixo é reapresentada…»), as das
@@ -466,11 +490,28 @@ def _so_prosa_do_agente(cabecalho_aceito: List[str], preambulo: List[str]) -> bo
     tinha «+». Com só o bloco, sobra a frase, o diff ganha o «-» do cabeçalho, e «Abaixo segue o bloco 14…» bloqueava
     como decisão de produto o refazer da exp02ef1b, exp02em1b, exp01em1b e exp03em1b, com ou sem ESTEIRA_ESTRITA; no D0
     virava `[ABERTO — dono: PO]` (revisão do PR #76, 24/10/2026). O cabeçalho reescrito continua sendo mudança: na
-    exp03ef1b-317df247 o título vem igual e o «Gate final: 🟡» vira 🟢."""
-    import difflib
+    exp03ef1b-317df247 o título vem igual e o «Gate final: 🟡» vira 🟢.
 
-    return not any(nova == aceita or difflib.SequenceMatcher(None, nova, aceita).ratio() >= 0.6
-                   for nova in preambulo for aceita in cabecalho_aceito)
+    Na 3ª revisão do PR #76 (24/10/2026) bastava a linha ser igual ou parecida (60%) a uma linha do cabeçalho: o título
+    copiado sem mudança (com a linha do «Gate final» omitida), a frase que cita o título («Ficha do ambiente para a Spec —
+    exp02ef1b v2.1.»), o título do anexo («# Anexo de design — exp02ef1b v2.1») e a frase que começa pela série e pela
+    seção («**2º ano do Ensino Médio · UnooriaAI e Unoovista** — ficha de UI…») bloqueavam o D9 como decisão de produto, e
+    no D0 viravam `[ABERTO — dono: PO]`."""
+    return not _linhas_reescritas(cabecalho_aceito, preambulo)
+
+
+def _linhas_reescritas(cabecalho_aceito: List[str], preambulo: List[str]) -> List[tuple]:
+    """`[(linha aceita, linha nova)]`: as linhas do preâmbulo que reescrevem uma linha do cabeçalho da spec aceita — a
+    primeira reescrita de cada uma."""
+    cabecalho = set(cabecalho_aceito)
+    pares: Dict[str, str] = {}
+    for nova in preambulo:
+        if nova in cabecalho:
+            continue
+        aceita = next((a for a in cabecalho_aceito if a not in pares and _reescreve_a_linha(nova, a)), None)
+        if aceita is not None:
+            pares[aceita] = nova
+    return list(pares.items())
 
 
 def _d9_travado(estado: Optional[Dict[str, Any]]) -> bool:
@@ -552,6 +593,13 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str,
             continue  # frase do agente antes da spec («Abaixo é emitida a especificação…», 4fd72a9a): não é o Gate 0
         if not chave and _so_prosa_do_agente(antes, depois):
             continue  # a mesma frase, sem a cópia da spec atrás dela: a resposta de hoje traz só o bloco do autor
+        trocas = None
+        if not chave:
+            # no cabeçalho a mudança é só a linha reescrita: a omitida e a frase do agente não são mudança. No diff a
+            # omitida aparecia como «-», e o «aceitar» do PO a apagava da spec (3ª revisão do PR #76, 24/10/2026)
+            pares = _linhas_reescritas(antes, depois)
+            diff = [l for aceita, nova in pares for l in (f"-{aceita}", f"+{nova}")]
+            trocas = [{"antes": [aceita], "depois": [nova], "ancora": ""} for aceita, nova in pares]
         nome = f"o bloco {chave}" if chave.isdigit() else ("o cabeçalho" if not chave else f"a seção «{chave}»")
         if etapa == "produto":
             avisos.append({
@@ -641,7 +689,7 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str,
             "etapa": "design", "agente_responsavel": "PO", "autor": agente, "aberto_dono_po": True,
             # as trocas por linha, para o de acordo de produto gravá-las se o PO aceitar (plano, PR 3): devolvida a
             # Produto, a missão mostra a mudança na lista do cartão, e o «aceitar» a põe no texto do Gate 0
-            "bloco": chave, "trocas": trocas_de_linhas(antes, depois),
+            "bloco": chave, "trocas": trocas if trocas is not None else trocas_de_linhas(antes, depois),
             "resumo": (f"[ABERTO — dono: PO: {autor} quis mudar {nome} da spec do Gate 0, e a spec é montada em código — a "
                        "mudança não entrou]. O texto de produto só muda em produto: se ela deve valer, peça-a no "
                        "**Refazer** (a triagem leva o item a produto) ou devolva a Produto com a decisão"

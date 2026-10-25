@@ -12,10 +12,10 @@ jornada sem poder de produto.
 - a spec de antes deste PR, sem a linha `classe_ambiente`, é lida pela `secao_ds`, e as quatro missões que vão ser
   refeitas (exp02ef1b, exp02em1b, exp01em1b e exp03em1b) passam.
 
-Mutantes: «D9 cria ambiente novo com a spec calada», «jornada inventa fase 3 do mini-jogo», «bloco 14 troca a secao_ds»;
-da 3ª revisão do PR #76 (24/10/2026), «trava pelo nome da interface deixa o ambiente novo sem o PO», «o PO grava no
-bloco 0 outra seção que a do briefing» e «a ficha inventa a fase 3 num sub-rótulo». Tudo determinístico, sem modelo,
-sobre os estados do acervo (`tests/acervo`).
+Mutantes: «D9 cria ambiente novo com a spec calada», «jornada inventa fase 3 do mini-jogo», «bloco 14 troca a
+secao_ds»; da 3ª revisão do PR #76 (24/10/2026), «trava pelo nome da interface deixa o ambiente novo sem o PO», «o PO
+grava no bloco 0 outra seção que a do briefing», «a ficha inventa a fase 3 num sub-rótulo» e «D9 reescreve o gate do
+cabeçalho junto da frase dele». Tudo determinístico, sem modelo, sobre os estados do acervo (`tests/acervo`).
 """
 from __future__ import annotations
 
@@ -1149,3 +1149,126 @@ def test_mutante_ficha_inventa_a_fase_3_num_sub_rotulo():
     st = _d9(spec, _saida_d9(FICHA_DO_TEMPLATE_067 + linha + "\n", ENV_MINIJOGO))
     produto = [a for a in _achados(st) if a["codigo"] == "decisao-de-produto-pelo-agente"]
     assert len(produto) == 1 and "Fase 3" in produto[0]["resumo"] and produto[0]["agente_responsavel"] == amb.AGENTE_D9
+
+
+def _cabecalho(missao: str) -> tuple:
+    linhas = [l for l in _estado(missao)["spec_missao_gate0"].splitlines() if l.strip() and l.strip() != "---"]
+    return linhas[0], linhas[1]
+
+
+def _frases_que_citam_o_cabecalho(missao: str) -> list:
+    """As frases do D9 da prova 7 e da prova 1 da revisão: citam o título ou a linha do cabeçalho sem mudá-los."""
+    titulo, status = _cabecalho(missao)
+    serie, secoes = status.strip("*").split(" · ")[:2]
+    nome = titulo.lstrip("# ")
+    return [
+        f"Abaixo segue o bloco 14 da {nome}.",
+        f"Ficha do ambiente para a {nome}.",
+        "# Anexo de design — " + titulo.split("—", 1)[1].strip(),
+        f"**{serie} · {secoes}** — ficha de UI do ambiente decidido em produto.",
+        f"Missão: {nome.replace('Spec — ', '')} · {serie} · {secoes}",
+        titulo,  # o título copiado, sem a linha do «Gate final»
+    ]
+
+
+def _cabecalhos_reescritos(missao: str) -> list:
+    """As reescritas reais da prova 1: o número da versão, uma palavra, o gate, a seção, um item a mais."""
+    import re
+
+    titulo, status = _cabecalho(missao)
+    num = re.search(r"v(\d+)\.(\d+)", titulo)
+    return [
+        f"{titulo[:num.start()]}v{int(num.group(1)) + 1}.0{titulo[num.end():]}\n\n{status}",
+        f"{titulo}\n\n{status.replace('Rubrica', 'Régua')}",
+        f"{titulo}\n\n{status.replace('🟡', '🟢')}",
+        status.replace("🟡", "🟢"),
+        f"{titulo}\n\n{re.sub(r'· [^·]+ · Rubrica', '· Unoovista · Rubrica', status)}",
+        f"{titulo}\n\n{status.replace(' · Rubrica', ' · mini-jogo · Rubrica')}",
+    ]
+
+
+def _refazer_d9(missao: str, antes: str) -> Dict[str, Any]:
+    from agents.callbacks import extrair_envelope
+
+    estado = _estado(missao)
+    gravada = str(estado["ambiente_simulado"])
+    env = extrair_envelope(gravada) or {}
+    novo = {"agente": "ambiente-simulado", "status": "dormente", "ambiente": env.get("ambiente"), "devolucao": None}
+    bloco13 = _bloco(estado["spec_missao"], "13") or _bloco(str(estado["fechamento_lacunas"]), "13")
+    return _d9(estado["spec_missao_gate0"], _saida_d9(amb.bloco_14(amb._passo4(gravada) or ""), novo, antes=antes),
+               estrito=True, anexo=montar_anexo(bloco13))
+
+
+@pytest.mark.parametrize("missao", sorted(REFAZER))
+def test_frase_que_cita_o_cabecalho_sem_mudar_nao_bloqueia_o_d9(missao):
+    """A frase do D9 que cita o título ou a linha do cabeçalho — «Ficha do ambiente para a Spec — exp02ef1b v2.1.», «#
+    Anexo de design — exp02ef1b v2.1», «**2º ano do Ensino Médio · UnooriaAI e Unoovista** — ficha de UI…», o título
+    copiado sem a linha do gate — bloqueava o refazer como decisão de produto (24/10/2026)."""
+    for frase in _frases_que_citam_o_cabecalho(missao):
+        st = _refazer_d9(missao, frase + "\n\n")
+        assert st["ambiente_status"] == "aprovado", (frase, _achados(st))
+
+
+@pytest.mark.parametrize("missao", sorted(REFAZER))
+def test_cabecalho_reescrito_continua_bloqueando_o_d9(missao):
+    """As seis reescritas reais da prova 1 — com ou sem a frase do agente antes — continuam decisão de produto."""
+    for reescrito in _cabecalhos_reescritos(missao):
+        for antes in (reescrito, PROSA_DO_D9 + reescrito):
+            st = _refazer_d9(missao, antes + "\n\n")
+            produto = [a for a in _achados(st) if a["codigo"] == "decisao-de-produto-pelo-agente"]
+            assert produto and produto[0]["bloco"] == "" and st["ambiente_status"] == "bloqueado", reescrito
+
+
+def test_frases_do_acervo_antes_do_bloco_14_continuam_passando():
+    """As frases com que o D9 abriu o Passo 4 no acervo (prova 8), antes do bloco 14 só, nas quatro missões a refazer."""
+    frases = []
+    for p in sorted(ACERVO.glob("*/estado.json")):
+        primeira = [l for l in (amb._passo4(str(json.loads(p.read_text(encoding="utf-8")).get("ambiente_simulado") or ""))
+                                or "").splitlines() if l.strip()][:1]
+        if primeira and not primeira[0].startswith(("#", "```", "|")):
+            frases.append(primeira[0].strip())
+    assert len(frases) >= 10
+    for missao in sorted(REFAZER):
+        for frase in frases:
+            assert _refazer_d9(missao, frase + "\n\n")["ambiente_status"] == "aprovado", (missao, frase)
+
+
+@pytest.mark.parametrize("missao", sorted(REFAZER))
+def test_d0_frase_que_cita_o_cabecalho_nao_vai_ao_po_e_a_reescrita_leva_so_a_linha_trocada(missao):
+    """No D0 a mesma frase virava `[ABERTO — dono: PO]` no cabeçalho, que bloqueia com ESTEIRA_ESTRITA. E a linha do gate
+    reescrita, com o título omitido, levava ao cartão a troca das duas linhas — o «aceitar» apagava o título da spec."""
+    from agents.design import get_fecha_lacunas_split
+
+    estado = _estado(missao)
+    bloco13 = _bloco(estado["spec_missao"], "13") or _bloco(str(estado["fechamento_lacunas"]), "13")
+
+    def d0(antes: str) -> list:
+        resposta = ("# D0\n\n## Passo 5 — Bloco 13\n\n" + antes + bloco13 + "\n## Passo 5b — Relatório\n\n"
+                    + "Nenhuma lacuna de UI/UX encontrada; a spec de produto responde a todas as células. " * 2
+                    + "\n\n## Passo 6 — Devolutiva\n\nnada\n")
+        split = get_fecha_lacunas_split()
+        split.estrito = True
+        st = t._rodar({"spec_missao": estado["spec_missao_gate0"], "fechamento_lacunas": resposta}, split)
+        return [a for a in (st.get("lacunas_status_envelope") or {}).get("achados") or []
+                if a.get("codigo") == "alterou-fora-do-proprio-bloco"]
+
+    for frase in _frases_que_citam_o_cabecalho(missao):
+        assert d0(frase + "\n\n") == [], frase
+    titulo, status = _cabecalho(missao)
+    reescrito = d0(status.replace("🟡", "🟢") + "\n\n")
+    assert reescrito and reescrito[0]["severidade"] == "bloqueio" and reescrito[0].get("aberto_dono_po")
+    assert reescrito[0]["trocas"] == [{"antes": [status], "depois": [status.replace("🟡", "🟢")], "ancora": ""}]
+    aplicada = fc.aplicar_trocas(estado["spec_missao_gate0"], "", reescrito[0]["trocas"])
+    assert aplicada and titulo in aplicada and "🟢" in aplicada
+
+
+def test_mutante_d9_reescreve_o_gate_do_cabecalho_dentro_da_frase():
+    """Mutante «D9 reescreve o gate do cabeçalho junto da frase dele»: a frase que cita o título e, na linha seguinte, o
+    «Gate final: 🟡» como 🟢 — na exp02ef1b-4fd72a9a, bloqueia como decisão de produto, e o achado mostra só a linha
+    trocada."""
+    titulo, status = _cabecalho("exp02ef1b-4fd72a9a")
+    antes = f"Ficha do ambiente para a {titulo.lstrip('# ')}.\n\n{status.replace('🟡', '🟢')}\n\n"
+    st = _refazer_d9("exp02ef1b-4fd72a9a", antes)
+    produto = [a for a in _achados(st) if a["codigo"] == "decisao-de-produto-pelo-agente"]
+    assert len(produto) == 1 and produto[0]["bloco"] == "" and st["ambiente_status"] == "bloqueado"
+    assert "🟢" in produto[0]["resumo"] and "Ficha do ambiente" not in produto[0]["resumo"]
