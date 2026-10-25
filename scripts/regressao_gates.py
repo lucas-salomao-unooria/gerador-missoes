@@ -54,7 +54,7 @@ from tools import (
     bncc, contrato_produto, evidencia, kpis, rastro, consistencia,
     conteudo, conteudo_aprovado, cobertura_design, prd_codavel,
     afirmacoes, telas, prototipo, mecanica, rastreabilidade, componentes_ds, montagem,
-    arestas, textos_chave, pedagogico
+    arestas, textos_chave, ambiente, pedagogico
 )
 from pipeline.artifacts import caminhos_de_artefato
 from tools.anexo_design import spec_consolidada
@@ -102,7 +102,8 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     if spec:
         gates["bncc_status"] = _extrair_status_e_codigos(bncc.validar_spec(spec))
         gates["manifesto_status"] = _extrair_status_e_codigos(
-            rastro.validar_manifesto(spec, briefing=briefing, one_pager_po=one_pager_po)
+            rastro.validar_manifesto(spec, briefing=briefing, one_pager_po=one_pager_po, one_pager=one_pager,
+                                     decisoes_do_po=state.get("decisoes_do_po") or [])
         )
         gates["evidencia_status"] = _extrair_status_e_codigos(evidencia.validar(spec))
         gates["perguntas_status"] = _extrair_status_e_codigos(kpis.validar_9f(spec))
@@ -139,6 +140,10 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         gates["montagem_pedagogico_status"] = _extrair_status_e_codigos(pedagogico.validar(state))
 
     # === DESIGN ===
+    # PR 8 do plano: o split do D9 refeito sobre a resposta gravada — bloco 14 × bloco 0 da spec de produto, regra ou fase
+    # de jogo na ficha, devolução a produto e texto do D9 fora do bloco 14 (`tools/ambiente.reavaliar_d9`)
+    if str(state.get("ambiente_simulado") or "").strip():
+        gates["ambiente_status"] = _extrair_status_e_codigos(ambiente.reavaliar_d9(state))
     if proto_arq or jornada:
         gates["rastro_design_status"] = _extrair_status_e_codigos(
             rastro.varrer_lacunas(rastro.FONTES_DESIGN, state, etapa_corrente="design")
@@ -168,7 +173,8 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         if copy_rev:
             gates["textos_chave_status"] = _extrair_status_e_codigos(
                 textos_chave.conferir_copy(copy_rev, textos_chave.da_sessao(state)))
-        if str(state.get("fluxo_arestas") or "").strip():
+        # PR 8: a jornada também (regras e fases do mini-jogo × spec)
+        if str(state.get("fluxo_arestas") or "").strip() or jornada.strip():
             gates["arestas_status"] = _extrair_status_e_codigos(arestas.validar(state, estrito=False))
         if qa_rep:
             gates["qa_afirmacoes_status"] = _extrair_status_e_codigos(

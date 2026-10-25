@@ -520,7 +520,13 @@ def test_secao_do_ds_usa_a_colecao_que_existe_em_vez_de_inventar_uma():
     assert secao("unoogaleria") == [("atencao", "plataforma")]  # existe no DS, sem ponte: pré-requisito
     assert secao("unoovista") == []
     assert secao("instanooria") == [("bloqueio", "produto")]  # legada: missão nova usa a sucessora
-    assert secao("minijogo:labirinto") == [("atencao", "plataforma")]
+    # PR 8 (decisão D8): o mini-jogo é escolha do PO — sem a proposta e sem decisão gravada, a spec é bloqueada em produto
+    assert secao("minijogo:labirinto") == [("atencao", "plataforma"), ("bloqueio", "produto")]
+    com_proposta = validar_manifesto("## 0. Identificação\n- `secao_ds: minijogo:labirinto`\n- Classe: mini-jogo "
+                                     "`[PROPOSTA — validar com PO: mini-jogo `minijogo:labirinto` · por quê: verbos de "
+                                     "ordenar]`\n")
+    assert [(a["severidade"], a["etapa"]) for a in com_proposta["achados"] if a.get("campo") == "secao_ds"] == [
+        ("atencao", "plataforma"), ("atencao", "produto")]
 
 
 BRIEFING_EXP03 = """BRIEFING DE MISSÃO — 3º ano, 1º bimestre

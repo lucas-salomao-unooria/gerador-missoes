@@ -169,7 +169,10 @@ def test_mudanca_no_texto_do_gate0_vira_aberto_dono_po(estrito, severidade, stat
     assert passagem.semaforo_da_etapa(st, "design")["lacunas_status"] == ("🔴" if estrito else "🟡")
 
 
-def test_d9_que_muda_o_gate0_tambem_vira_aberto_e_o_bloco_13_continua_aviso():
+def test_d9_que_muda_o_gate0_bloqueia_como_decisao_de_produto_e_o_bloco_13_continua_aviso():
+    """Desde o PR 8 (24/10/2026, decisão D8) o D9 não muda produto: a mudança dele no texto do Gate 0 não vai ao PO como
+    troca a aceitar (`[ABERTO — dono: PO]`, PR 2) — bloqueia como decisão de produto e volta a ele, como a do D0 no A066.
+    A mudança no bloco 13 do D0 continua aviso; nenhuma das duas entra."""
     copia = (GATE0 + "\n" + BLOCO13).replace("sugestão: 15]`", "sugestão: 15]` (15 palavras)").replace(
         "mostra a demonstração", "esconde a demonstração")
     d9 = ("# Ambiente simulado\n\n## Passo 4 — Spec consolidada\n\n" + copia + "\n" + BLOCO14
@@ -178,8 +181,11 @@ def test_d9_que_muda_o_gate0_tambem_vira_aberto_e_o_bloco_13_continua_aviso():
     st = _rodar({"spec_missao": GATE0, "anexo_design_spec": montar_anexo(BLOCO13), "ambiente_simulado": d9},
                 _splits(False)[1])
     achados = (st.get("ambiente_status_envelope") or {}).get("achados") or []
-    assert {a["severidade"] for a in achados} == {"decisao_humana", "atencao"}, achados
-    assert any(a.get("aberto_dono_po") and "D9 quis mudar o bloco 6" in a["resumo"] for a in achados)
+    produto = [a for a in achados if a["codigo"] == "decisao-de-produto-pelo-agente"]
+    assert len(produto) == 1 and produto[0]["bloco"] == "6" and produto[0]["agente_responsavel"] == "ambiente-simulado"
+    assert produto[0]["severidade"] == "bloqueio" and not produto[0].get("aberto_dono_po")
+    assert any(a["severidade"] == "atencao" and "bloco 13" in a["resumo"] for a in achados)
+    assert st["ambiente_status"] == "bloqueado"
     assert st["spec_missao"] == GATE0 and "esconde a demonstração" not in st["anexo_design_spec"]
     assert "## 14. Ambiente simulado" in st["anexo_design_spec"] and "## 13. Decisões D0" in st["anexo_design_spec"]
 

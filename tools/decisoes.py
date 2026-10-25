@@ -147,9 +147,10 @@ CLASSES_D0 = ("estado", "gesto", "scaffolding", "acessibilidade", "dispositivo")
 #: padrão de plataforma; painel e PQ/KPI, por missão). `estado` aparece nas duas: em produto, o contrato de estados do
 #: bloco 2 com o padrão da plataforma aplicado (D5); no design, a tela de cada estado.
 CLASSES_DE_PRODUTO = ("estado", "handoff", "evidencia", "copy-fonte", "dados", "retencao", "duracao", "teto", "parametro",
-                      "painel", "pq-kpi", "revezamento", "regra", "mecanica", "curriculo")
-#: Prefixos de classe que são sempre de produto — decisão do PO (plano «Produto dono do contrato», PR 2).
-PREFIXOS_DE_PRODUTO = ("mecanica", "curriculo", "parametro")
+                      "painel", "pq-kpi", "revezamento", "regra", "mecanica", "curriculo", "ambiente")
+#: Prefixos de classe que são sempre de produto — decisão do PO (plano «Produto dono do contrato», PR 2). `ambiente`
+#: desde o PR 8 (D8): a classe do ambiente, o ambiente novo e as regras e fases do mini-jogo.
+PREFIXOS_DE_PRODUTO = ("mecanica", "curriculo", "parametro", "ambiente")
 
 
 def _norm_classe(texto: str) -> str:
@@ -297,6 +298,10 @@ def decisoes_d0_de_produto(fechamento: str, envelope: Dict[str, Any] | None, spe
         if prefixo == "D0" and not classes_na_tabela and d["classe"] not in ("", "?") and classe_de_produto(
                 d["classe"], legado=legado):
             motivos.append(classe_de_produto(d["classe"], legado=legado))
+        if prefixo != "D0" and _norm_classe(d["classe"]).startswith("ambiente"):
+            # PR 8 (D8): a classe do ambiente, o ambiente novo e as regras e fases do mini-jogo são do PO — a completude
+            # pergunta, não decide (prompt 046)
+            motivos.append("classe `ambiente`: classe, ambiente e regras e fases do mini-jogo são decisão do PO")
         if topicos and not motivos:
             topico = topico_de_produto(d)
             if topico:

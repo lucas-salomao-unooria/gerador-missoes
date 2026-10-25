@@ -395,18 +395,26 @@ def _recolher_marcas_resolvido(aceita: str, nova: str) -> tuple:
         achados = marcadores_de_lacuna(limpa) or re.findall(r"\[(?:PAR[ÂA]METRO|PROPOSTA)[^\]\n]{0,300}\]", limpa)
         return achados or [" ".join(limpa.strip(" |").replace("|", "·").split())[:120]]
 
-    da_aceita = set(_linhas_normalizadas(aceita))
+    def chave(linha: str) -> str:
+        # a marca leva o ponto final da linha junto («… Content Designer — Resolvido em [D0-1].», exp02ef1b): a linha é a
+        # mesma sem a pontuação do fim
+        return " ".join(linha.split()).rstrip(" .;,")
+
+    da_aceita: Dict[str, str] = {}
+    for linha_aceita in (aceita or "").splitlines():
+        if _linhas_normalizadas(linha_aceita):
+            da_aceita.setdefault(chave(linha_aceita), linha_aceita)
     mapa: List[tuple] = []
     saida: List[str] = []
     for linha in (nova or "").splitlines():
         m = _RE_MARCA_RESOLVIDO.search(linha)
         if m:
             limpa = (linha[:m.start()] + linha[m.end():]).rstrip()
-            if " ".join(limpa.split()) in da_aceita:
+            if chave(limpa) in da_aceita:
                 for marcador in celula(limpa):
                     if (marcador, int(m.group(1))) not in mapa:
                         mapa.append((marcador, int(m.group(1))))
-                linha = limpa
+                linha = da_aceita[chave(limpa)]
         saida.append(linha)
     return "\n".join(saida), mapa
 
@@ -431,20 +439,90 @@ def _inserir_bloco(base: str, bloco: str, titulo: str, proprio: Optional[str]) -
     return base.rstrip() + "\n\n" + bloco.strip() + "\n"
 
 
-def bloco0_pode_mudar(envelope: Optional[Dict[str, Any]]) -> bool:
-    """O D9 só muda o bloco 0 quando o ambiente é `novo`/`existente` e o Gate 0 aceitou a `[RS-AMB]`."""
-    env = envelope or {}
-    respec = env.get("respec") if isinstance(env.get("respec"), dict) else {}
-    return (str(env.get("status") or "").lower() in ("novo", "existente")
-            and str(respec.get("id") or "").upper() == "RS-AMB"
-            and str(respec.get("status") or "").lower() == "aceito")
-
-
 #: Blocos da spec que não são texto do Gate 0: o 13 é do D0 e o 14 é do D9.
 BLOCOS_DO_DESIGN = ("13", "14")
 
 
-def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool = False,
+def _recopia_do_d0(chave: str, corpo_d9: str, aceita: str, estado: Optional[Dict[str, Any]]) -> bool:
+    """A seção que o D9 trouxe diferente da spec de produto é a que o D0 reescreveu na resposta dele, igual — a resposta do
+    D0 de antes do PR 2 (23/10/2026), que trazia a spec inteira. Na do D0 de hoje (só o bloco 13) a seção não existe."""
+    d0 = str((estado or {}).get("fechamento_lacunas") or "")
+    if not chave or not d0.strip():
+        return False
+    corpo_d0 = _secoes(d0).get(chave)
+    if not corpo_d0:
+        return False
+    corpo_d0, _ = _recolher_marcas_resolvido(aceita, corpo_d0)
+    return _linhas_normalizadas(corpo_d0) == _linhas_normalizadas(corpo_d9)
+
+
+def _sem_marcacao(linha: str) -> str:
+    """A linha sem a marcação de Markdown (título, negrito, crase, citação) e sem a pontuação do fim."""
+    sem = re.sub(r"^\s*(?:>\s*)*(?:#{1,6}\s+)?", "", linha or "")
+    return " ".join(re.sub(r"\*+|`+|__", "", sem).split()).strip(" .;:,")
+
+
+def _reescreve_a_linha(nova: str, aceita: str) -> bool:
+    """A linha nova é a linha do cabeçalho reescrita: parecida com ela (60% ou mais), diferente, sem contê-la por inteiro,
+    e feita quase só dela (75% ou mais dos caracteres vêm da linha aceita) — não uma frase que cita um pedaço dela. No
+    título da spec, a linha que começa por uma palavra que o título não tem é o título de outro documento («# Anexo de
+    design — exp02ef1b v2.1») ou frase, não o título reescrito."""
+    import difflib
+
+    n, a = _sem_marcacao(nova), _sem_marcacao(aceita)
+    if not n or not a or n == a or a in n:
+        return False  # a cópia, ou a linha citada por inteiro na frase («Ficha do ambiente para a Spec — …»)
+    if re.match(r"^\s*#{1,6}\s", aceita or "") and n.split()[0].lower() not in {p.lower() for p in a.split()}:
+        return False
+    comparar = difflib.SequenceMatcher(None, n, a, autojunk=False)
+    if comparar.ratio() < 0.6:
+        return False
+    return sum(b.size for b in comparar.get_matching_blocks()) / len(n) >= 0.75
+
+
+def _so_prosa_do_agente(cabecalho_aceito: List[str], preambulo: List[str]) -> bool:
+    """O preâmbulo da resposta é só a frase do agente: nenhuma linha dele reescreve uma linha do cabeçalho da spec aceita
+    (`_reescreve_a_linha`). A cópia exata e a linha omitida não são mudança.
+
+    Desde o PR 2 o D0 emite só o bloco 13, e desde o PR 8 o D9 emite só o bloco 14 — mas 11 das 12 respostas do D9 no
+    acervo abrem o Passo 4 com prosa («Abaixo segue a íntegra…», «Abaixo é emitida…», «Abaixo é reapresentada…»), as das
+    quatro missões a refazer incluídas. Com a spec inteira atrás, a frase vinha junto da cópia do cabeçalho e o diff só
+    tinha «+». Com só o bloco, sobra a frase, o diff ganha o «-» do cabeçalho, e «Abaixo segue o bloco 14…» bloqueava
+    como decisão de produto o refazer da exp02ef1b, exp02em1b, exp01em1b e exp03em1b, com ou sem ESTEIRA_ESTRITA; no D0
+    virava `[ABERTO — dono: PO]` (revisão do PR #76, 24/10/2026). O cabeçalho reescrito continua sendo mudança: na
+    exp03ef1b-317df247 o título vem igual e o «Gate final: 🟡» vira 🟢.
+
+    Na 3ª revisão do PR #76 (24/10/2026) bastava a linha ser igual ou parecida (60%) a uma linha do cabeçalho: o título
+    copiado sem mudança (com a linha do «Gate final» omitida), a frase que cita o título («Ficha do ambiente para a Spec —
+    exp02ef1b v2.1.»), o título do anexo («# Anexo de design — exp02ef1b v2.1») e a frase que começa pela série e pela
+    seção («**2º ano do Ensino Médio · UnooriaAI e Unoovista** — ficha de UI…») bloqueavam o D9 como decisão de produto, e
+    no D0 viravam `[ABERTO — dono: PO]`."""
+    return not _linhas_reescritas(cabecalho_aceito, preambulo)
+
+
+def _linhas_reescritas(cabecalho_aceito: List[str], preambulo: List[str]) -> List[tuple]:
+    """`[(linha aceita, linha nova)]`: as linhas do preâmbulo que reescrevem uma linha do cabeçalho da spec aceita — a
+    primeira reescrita de cada uma."""
+    cabecalho = set(cabecalho_aceito)
+    pares: Dict[str, str] = {}
+    for nova in preambulo:
+        if nova in cabecalho:
+            continue
+        aceita = next((a for a in cabecalho_aceito if a not in pares and _reescreve_a_linha(nova, a)), None)
+        if aceita is not None:
+            pares[aceita] = nova
+    return list(pares.items())
+
+
+def _d9_travado(estado: Optional[Dict[str, Any]]) -> bool:
+    """Correção pontual de design com o D9 travado: a resposta dele é a da execução anterior, e ele não roda nesta."""
+    from agents.callbacks import KEY_DOCUMENTOS_TRAVADOS, KEY_MODO_CORRECAO
+
+    e = estado or {}
+    return e.get(KEY_MODO_CORRECAO) == "pontual" and "ambiente_simulado" in (e.get(KEY_DOCUMENTOS_TRAVADOS) or [])
+
+
+def montar_sobre_aceita(aceita: str, nova: str, titulo: str,
                         avisos: Optional[List[Dict[str, Any]]] = None, autor: str = "D9",
                         agente: str = "ambiente-simulado", estrito: bool = False,
                         estado: Optional[Dict[str, Any]] = None, etapa: str = "design") -> str:
@@ -461,13 +539,19 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
     nenhum (plano «Produto dono do contrato», PR 2). As marcas «Resolvido em [D0-n]» que a nova acrescentar ao texto do
     Gate 0 viram o mapa célula → D0 no fim do bloco 13 (`_recolher_marcas_resolvido`).
 
-    Única exceção: o bloco 0 da nova entra quando `bloco0_aceito` (`bloco0_pode_mudar`: ambiente novo ou existente
-    com a `[RS-AMB]` aceita). Qualquer outra diferença nas seções copiadas é descartada e vai para `avisos`, com o que
-    mudou — antes era descartada em silêncio (plano padrão ouro, 2.5):
+    Toda diferença nas seções copiadas é descartada e vai para `avisos`, com o que mudou — antes era descartada em
+    silêncio (plano padrão ouro, 2.5):
     - no texto do Gate 0 (preâmbulo, blocos 0–12, glossário), como `[ABERTO — dono: PO]`: a mudança é de produto, e só o
       PO a decide. Até a rota de produto do PR 5, aparece no cartão do parecer de design (`decisao_humana`) e só
       bloqueia com ESTEIRA_ESTRITA (`estrito`);
     - no bloco do outro autor do design (13 ou 14), como 🟡 «alterou fora do bloco».
+
+    Desde o PR 8 (24/10/2026, decisão D8) o D9 (bloco 14) não tem nenhuma exceção: o bloco 0 só mudava por `[RS-AMB]`
+    aceita, e a classe e o ambiente agora são decididos em produto. Texto do D9 no texto de produto é decisão de produto
+    tomada por ele — bloqueia, como a decisão de produto do D0 no A066 (PR 6), e volta ao D9 como ticket: o detalhe de UI
+    vai no bloco 14, e a mudança de produto volta a produto como devolução. Na exp01em1b-76d9af6e (23/10/2026) o D9
+    acrescentou um estado `ERRO_MIDIA_FALHOU` ao bloco 2, uma regra ao bloco 3 e uma «Demonstração de primeiro uso» ao
+    bloco 7 do Gate 0. A marca «Resolvido em [D0-n]» que ele recopia do D0 não é dele, e não conta.
 
     Desde o PR 6 a `aceita` do D0 e do D9 é a spec de produto mais o anexo de design (`tools/anexo_design.py`), e o
     bloco 15 (completude de produto) é texto de produto como os blocos 0–12. `etapa="produto"` é a montagem do passo de
@@ -486,6 +570,10 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
         nova, mapa = _recolher_marcas_resolvido(aceita, nova)
         if mapa:
             bloco = bloco.rstrip() + "\n\n" + tabela_do_mapa(mapa)
+    elif proprio == "14":
+        # a marca do D0 que o D9 recopiou: a linha é a do Gate 0, e o mapa célula → D0 é do bloco 13 (exp02ef1b,
+        # exp03ef1b e exp01ef1b: o bloco 12 recopiado com « — Resolvido em [D0-n]»)
+        nova, _ = _recolher_marcas_resolvido(aceita, nova)
     base = aceita
     dos_aceitos, dos_novos = _secoes(aceita), _secoes(nova)
     for chave, corpo_aceito in dos_aceitos.items():
@@ -495,9 +583,6 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
         antes, depois = _linhas_normalizadas(corpo_aceito), _linhas_normalizadas(corpo_novo)
         if antes == depois:
             continue
-        if chave == "0" and bloco0_aceito:
-            base = base.replace(corpo_aceito.rstrip(), corpo_novo.rstrip(), 1)
-            continue
         if avisos is None:
             continue
         import difflib
@@ -506,6 +591,15 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
                 if l[:1] in "+-" and l[:3] not in ("+++", "---")]
         if not chave and not any(l.startswith("-") for l in diff):
             continue  # frase do agente antes da spec («Abaixo é emitida a especificação…», 4fd72a9a): não é o Gate 0
+        if not chave and _so_prosa_do_agente(antes, depois):
+            continue  # a mesma frase, sem a cópia da spec atrás dela: a resposta de hoje traz só o bloco do autor
+        trocas = None
+        if not chave:
+            # no cabeçalho a mudança é só a linha reescrita: a omitida e a frase do agente não são mudança. No diff a
+            # omitida aparecia como «-», e o «aceitar» do PO a apagava da spec (3ª revisão do PR #76, 24/10/2026)
+            pares = _linhas_reescritas(antes, depois)
+            diff = [l for aceita, nova in pares for l in (f"-{aceita}", f"+{nova}")]
+            trocas = [{"antes": [aceita], "depois": [nova], "ancora": ""} for aceita, nova in pares]
         nome = f"o bloco {chave}" if chave.isdigit() else ("o cabeçalho" if not chave else f"a seção «{chave}»")
         if etapa == "produto":
             avisos.append({
@@ -549,6 +643,45 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
                 + (f"\n    … e mais {len(diff) - 15} linha(s)" if len(diff) > 15 else ""),
             })
             continue
+        if proprio == "14":
+            # PR 8: o D9 não decide produto — a mudança dele no texto de produto não vai ao PO como troca a aceitar; volta
+            # a ele, como a decisão de produto do D0 (`decisao-de-produto-pelo-agente`, A066), e o que for de produto ele
+            # devolve como proposta
+            if _d9_travado(estado):
+                # Correção pontual de design: o D9 não roda, e a resposta é a de antes — na exp01em1b-76d9af6e, a que
+                # escreveu nos blocos 2, 3, 7 e 10. O ticket iria a quem não pode reescrever, e o design ficava 🔴 sem
+                # saída (revisão do PR #76, 24/10/2026). O texto fora do bloco 14 é descartado de qualquer forma: aqui só
+                # o bloco 14 é conferido
+                avisos.append({
+                    "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": "design",
+                    "agente_responsavel": agente,
+                    "resumo": (f"{autor} trazia {nome} diferente da spec de produto numa resposta de antes, travada nesta "
+                               "correção pontual: a cópia foi descartada, e só o bloco 14 foi conferido. Para o D9 "
+                               "reescrever a resposta, use o Refazer completo de design."),
+                })
+                continue
+            if _recopia_do_d0(chave, corpo_novo, aceita, estado):
+                # Antes do PR 2 o D0 reescrevia a spec inteira, e o D9 partia dela: a seção que ele trouxe é a do D0,
+                # palavra por palavra (exp01ef1b, 06/10/2026). Não é decisão dele, e a mudança já foi descartada
+                avisos.append({
+                    "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": "design",
+                    "agente_responsavel": agente,
+                    "resumo": (f"{autor} recopiou {nome} como o D0 o tinha reescrito na spec, e a cópia foi descartada: o "
+                               "texto de produto é o aprovado em produto."),
+                })
+                continue
+            avisos.append({
+                "severidade": "bloqueio", "codigo": "decisao-de-produto-pelo-agente", "etapa": "design",
+                "agente_responsavel": agente, "bloco": chave,
+                "resumo": (f"{autor} escreveu n{nome} da spec de "
+                           "produto, e o D9 não muda produto (PR 8, decisão D8): a mudança não entrou. Reemita só o bloco "
+                           "14 — o detalhe de UI do ambiente (chrome, navegação, affordances, verbos, estados da tela) vai "
+                           "nele; o que muda produto (estado, transição, regra, dispositivo, componente escrito no texto de "
+                           "produto) volta a Produto como devolução `[PROPOSTA — validar com PO: …]` no Passo 3 e no "
+                           "envelope (`devolucao`), sem decidir:\n" + "\n".join(f"    {l[:200]}" for l in diff[:15])
+                           + (f"\n    … e mais {len(diff) - 15} linha(s)" if len(diff) > 15 else "")),
+            })
+            continue
         from tools.fechar_contrato import trocas_de_linhas
 
         avisos.append({
@@ -556,16 +689,36 @@ def montar_sobre_aceita(aceita: str, nova: str, titulo: str, bloco0_aceito: bool
             "etapa": "design", "agente_responsavel": "PO", "autor": agente, "aberto_dono_po": True,
             # as trocas por linha, para o de acordo de produto gravá-las se o PO aceitar (plano, PR 3): devolvida a
             # Produto, a missão mostra a mudança na lista do cartão, e o «aceitar» a põe no texto do Gate 0
-            "bloco": chave, "trocas": trocas_de_linhas(antes, depois),
+            "bloco": chave, "trocas": trocas if trocas is not None else trocas_de_linhas(antes, depois),
             "resumo": (f"[ABERTO — dono: PO: {autor} quis mudar {nome} da spec do Gate 0, e a spec é montada em código — a "
                        "mudança não entrou]. O texto de produto só muda em produto: se ela deve valer, peça-a no "
                        "**Refazer** (a triagem leva o item a produto) ou devolva a Produto com a decisão"
                        + (". Com ESTEIRA_ESTRITA, o de acordo de design espera essa decisão" if estrito else "")
-                       + (" (o bloco 0 só muda por `[RS-AMB]` aceita)" if chave == "0" else "")
+                       + (" (a classe e o ambiente do bloco 0 são decididos em produto)" if chave == "0" else "")
                        + ":\n" + "\n".join(f"    {l[:200]}" for l in diff[:15])
                        + (f"\n    … e mais {len(diff) - 15} linha(s)" if len(diff) > 15 else "")),
         })
     novas = [c for c in dos_novos if c not in dos_aceitos and c != proprio and c and dos_novos[c].strip()]
+    if novas and avisos is not None and proprio == "14" and not _d9_travado(estado):
+        # Seção nova do D9 com regra ou fase de jogo: «## Regras e fases do mini-jogo» depois do bloco 14 era só
+        # descartada, com atenção, e escapava ao gate do jogo (revisão do PR #76, 24/10/2026). É decisão de produto como
+        # a do bloco 14
+        from tools.ambiente import jogo_no_bloco_14
+
+        for c in list(novas):
+            jogo = jogo_no_bloco_14(dos_novos[c], aceita)
+            if not jogo:
+                continue
+            novas.remove(c)
+            avisos.append({
+                "severidade": "bloqueio", "codigo": "decisao-de-produto-pelo-agente", "etapa": "design",
+                "agente_responsavel": agente, "bloco": c,
+                "resumo": (f"{autor} trouxe a seção «{c}» fora do bloco 14, com regra ou fase de jogo que a spec não tem, e "
+                           "ela não entrou: quantas fases, a regra de cada uma, o que vence e o que perde e como o "
+                           "progresso aparece são conteúdo de produto desde o PR 8, no bloco 2 da spec. Tire a seção e, se "
+                           "o jogo precisa de outra regra, devolva-a a produto:\n"
+                           + "\n".join(f"    - «{l[:180]}»" for l in jogo[:10])),
+            })
     if novas and avisos is not None:
         avisos.append({
             "severidade": "atencao", "codigo": "alterou-fora-do-proprio-bloco", "etapa": etapa,
@@ -673,6 +826,9 @@ class SecaoSplitAgent(BaseAgent):
     #: Chave onde os achados do split saem em Markdown, para o autor ler na rodada seguinte do loop dele (a completude da
     #: spec, PR 6). Vazia: só o envelope.
     relatorio_key: str = ""
+    #: O split do D9 (PR 8): a classe e o ambiente do bloco 14 conferidos contra o bloco 0 da spec de produto, a regra ou
+    #: fase de jogo na ficha, e a devolução a produto (`tools/ambiente.conferir_d9`).
+    conferir_ambiente: bool = False
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -708,6 +864,14 @@ class SecaoSplitAgent(BaseAgent):
             perdidas: List[Dict[str, Any]] = []
             fora_do_bloco: List[Dict[str, Any]] = []
             instaveis: List[Dict[str, Any]] = []
+            gate_ambiente: Optional[Dict[str, Any]] = None
+            if self.conferir_ambiente:
+                # PR 8 (decisão D8): o D9 lê a classe e o ambiente da spec de produto e emite só a ficha de UI. O bloco 14
+                # que decide outro ambiente ou outra classe não entra no anexo; spec calada ou troca pedida pelo D9 vira
+                # devolução a produto (`tools/ambiente.py`)
+                from tools import ambiente as amb
+
+                gate_ambiente = amb.conferir_d9(texto, extrair_envelope(texto), dict(state), estrito=self.estrito)
             for ex in self.extracoes:
                 chave = ex["chave"]
                 secao = extrair_secao(texto, ex["inicio"], ex.get("fim"))
@@ -729,9 +893,7 @@ class SecaoSplitAgent(BaseAgent):
                 sem_o_proprio = bool(secao is not None and proprio and ex.get("bloco_obrigatorio")
                                      and not re.search(proprio, secao, re.MULTILINE))
                 if secao is not None and proprio and aceita_montagem.strip() and not sem_o_proprio:
-                    env_fonte = None if self.fonte_sem_veredito else extrair_envelope(texto)
-                    secao = montar_sobre_aceita(aceita_montagem, secao, proprio,
-                                                bloco0_aceito=bloco0_pode_mudar(env_fonte), avisos=fora_do_bloco,
+                    secao = montar_sobre_aceita(aceita_montagem, secao, proprio, avisos=fora_do_bloco,
                                                 autor=ex.get("autor", "D9"), agente=ex.get("preservar") or self.name,
                                                 estrito=self.estrito, estado=state, etapa=ex.get("etapa", "design"))
                 if anexo_de and secao is not None and not sem_o_proprio:
@@ -739,7 +901,10 @@ class SecaoSplitAgent(BaseAgent):
 
                     secao = montar_anexo(blocos_do_anexo(secao), extrair_slug(str(state.get(anexo_de) or "")) or "")
                 motivo: Optional[str] = None
-                if (anexo_de and not sem_o_proprio and bruta and proprio
+                if gate_ambiente and gate_ambiente["descartar"] and anexo_de:
+                    motivo = ("o bloco 14 decide ambiente ou classe que a spec de produto não decidiu — o anexo de design "
+                              "fica como estava")
+                elif (anexo_de and not sem_o_proprio and bruta and proprio
                         and not re.search(proprio, bruta, re.MULTILINE)):
                     # sem o bloco dele, o anexo montado seria a cópia que o autor fez do bloco do outro (o D9 que
                     # recopia o 13 e esquece o 14): o anexo fica como estava
@@ -936,6 +1101,22 @@ class SecaoSplitAgent(BaseAgent):
                                    "…]` ou `[PROPOSTA — validar com PO: …]` —, sem decidir:\n"
                                    + "\n".join(f"    - {l}" for l in sem_parecer[:12])),
                     })
+            if gate_ambiente:
+                for a in gate_ambiente["achados"]:
+                    if a["severidade"] == "bloqueio":
+                        perdidas.append(a)
+                        continue
+                    if delta[self.status_key] != STATUS_BLOQUEADO:
+                        delta[self.status_key] = "amarelo"
+                    env.setdefault("achados", []).append(a)
+                    if a["severidade"] == "decisao_humana":
+                        env["precisa_humano"] = True
+                devolvidas = [a for a in gate_ambiente["achados"] if a["codigo"] == "devolucao-a-produto"]
+                if devolvidas:
+                    linhas.append(f"🧑 {len(devolvidas)} devolução(ões) do D9 a produto — `[PROPOSTA — validar com PO]` no "
+                                  "cartão do parecer de design.")
+                if gate_ambiente["descartar"]:
+                    linhas.append("⛔ O bloco 14 decidia ambiente ou classe no lugar de produto: não entrou no anexo.")
             if fora_do_bloco:
                 if delta[self.status_key] != STATUS_BLOQUEADO:
                     delta[self.status_key] = "amarelo"
@@ -1525,6 +1706,9 @@ class ArestasContratoAgent(BaseAgent):
     resposta certa, ou com uma de duas condições que a spec pede juntas — vira `[PROPOSTA — validar com PO]`, com dono
     PO: bloqueia com ESTEIRA_ESTRITA, e sem ela é decisão humana no cartão de design. Não vira ticket do QA: quem decide
     se a mudança vale é o PO (Refazer → triagem → produto), e sem ela o design segue a spec.
+
+    Desde o PR 8 também a Seção 5 da jornada: regra ou fase do mini-jogo que a spec não tem vira a mesma proposta
+    (`tools/ambiente.conferir_jornada`).
     """
 
     report_key: str = "arestas_report"
@@ -1536,7 +1720,8 @@ class ArestasContratoAgent(BaseAgent):
         from tools import arestas as ar
 
         state = ctx.session.state
-        if not str(state.get("fluxo_arestas", "") or "").strip():
+        # a jornada também: as regras e as fases do mini-jogo nela são conferidas contra a spec (PR 8)
+        if not (str(state.get("fluxo_arestas", "") or "").strip() or str(state.get("jornada_telas", "") or "").strip()):
             return
         resultado = ar.validar(dict(state), estrito=self.estrito)
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
@@ -1825,7 +2010,11 @@ class RastroCheckAgent(BaseAgent):
             # o briefing entra para conferir a seção do DS que ele fixou (exp03ef1b, 07/10/2026)
             resultado = validar_manifesto(self._spec(state),
                                           briefing=str(state.get("briefing", "") or ""),
-                                          one_pager_po=str(state.get("one_pager_po", "") or ""))
+                                          one_pager_po=str(state.get("one_pager_po", "") or ""),
+                                          # PR 8: o ambiente novo ou o mini-jogo é escolha do PO — o marcador no one-pager
+                                          # e a resposta gravada no de acordo contam
+                                          one_pager=str(state.get("one_pager", "") or ""),
+                                          decisoes_do_po=state.get("decisoes_do_po") or [])
             relatorio = relatorio_manifesto(resultado, missao)
         elif self.modo == "telemetria":
             resultado = validar_telemetria(str(state.get(self.fonte_key, "") or ""))
