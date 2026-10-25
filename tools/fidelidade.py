@@ -381,6 +381,31 @@ def sem_relatos_de_gate(texto: str) -> str:
     return "\n".join(saida)
 
 
+#: O texto que a esteira escreve em volta do pedido de refazer (`pipeline.reexecucao.PedidoCorrecao.como_markdown`): o
+#: cabeçalho «Esta execução refaz a etapa…» e as regras de «Como agir».
+_RE_PREAMBULO_DA_ESTEIRA = re.compile(r"Esta execução refaz a etapa `[^`\n]*`.*?(?:não de uma folha em branco\.|\n\s*\n|\Z)",
+                                      re.S)
+_RE_COMO_AGIR = re.compile(r"^#{2,4}\s*Como agir\s*\n.*?(?=^#{1,4}\s|\Z)", re.S | re.M)
+_RE_PEDIDO_NA_INTEGRA = re.compile(r"^#{2,4}\s*Pedido, na íntegra\s*$", re.M)
+
+
+def sem_texto_da_esteira(texto: str) -> str:
+    """O pedido sem o texto que a esteira escreve em volta dele no refazer.
+
+    Na exp06ef1b (727a3c2d, 08/10/2026 11:08) o cabeçalho «Esta execução refaz a etapa `produto`… a pedido de uma
+    pessoa» entrou no checklist como item do PO e saiu 🔴 duas vezes, no núcleo (`sem-prova`) e no fim de produto
+    (`pedido-violado`). A fidelidade passou a ler só o «Pedido, na íntegra» do pedido corrente (`texto_do_pedido`, 84354c2,
+    08/10 12:27); aqui o mesmo vale para qualquer pedido — inclusive o markdown do refazer que o PO cola num pedido novo."""
+    t = texto or ""
+    m = _RE_PEDIDO_NA_INTEGRA.search(t)
+    if m:
+        from pipeline.reexecucao import texto_do_pedido
+
+        t = t[:m.start()].rstrip() + "\n\n" + texto_do_pedido("### Pedido, na íntegra\n" + t[m.end():].lstrip("\n"))
+    t = _RE_COMO_AGIR.sub("", _RE_PREAMBULO_DA_ESTEIRA.sub("", t))
+    return t.strip()
+
+
 def montar_checklist(pedidos: List[Tuple[str, str]], briefing: str) -> List[Dict[str, str]]:
     """`pedidos` = [(origem, texto)], do mais antigo ao mais novo. Ids F1…Fn, sem repetição.
 
@@ -389,7 +414,7 @@ def montar_checklist(pedidos: List[Tuple[str, str]], briefing: str) -> List[Dict
     """
     brutos: List[Dict[str, str]] = []
     for origem, texto in reversed(pedidos):
-        brutos += itens_do_pedido(sem_relatos_de_gate(texto), origem)
+        brutos += itens_do_pedido(sem_relatos_de_gate(sem_texto_da_esteira(texto)), origem)
     brutos += itens_do_briefing(briefing)
     vistos, unicos = set(), []
     for tipo, teto in PRIORIDADE:
