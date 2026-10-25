@@ -45,7 +45,8 @@ def por_prova(severidade: str, sustentacao: str, rebaixada: str = ATENCAO) -> st
 def leitura_dupla(codigo_le: bool, leitura: Any, positivo: str) -> str:
     """O código e o classificador leem a mesma coisa? `CONCORDAM_SIM` quando os dois leem `positivo`, `CONCORDAM_NAO`
     quando nenhum lê, `DUVIDA` quando discordam ou o classificador não respondeu («nao_sei», erro, sem chave, fora do
-    cache): sem as duas leituras, ninguém decide sozinho."""
+    cache): sem as duas leituras, ninguém decide sozinho. A regra que tem prova em código própria decide o «nao_sei» por
+    ela antes de chegar aqui (`tools/montagem._leitura_sem_classificador`, revisão do PR #85)."""
     rotulo = getattr(leitura, "rotulo", "nao_sei")
     if rotulo == "nao_sei":
         return DUVIDA

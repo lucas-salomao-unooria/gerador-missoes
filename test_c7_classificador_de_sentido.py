@@ -4,8 +4,9 @@ sozinha (`tools/severidade.py`).
 O classificador é falso aqui (`_ler_falso`): cada teste diz o que ele lê, e o que se confere é o que o gate faz com a
 leitura — incluindo «nao_sei», que é o que a esteira recebe sem chave, com erro ou fora do cache.
 
-- `hipotese-diverge`: 🔴 só quando o código e o classificador leem a meta e o número diverge; discordância ou «nao_sei»
-  → `hipotese-a-conferir` 🟡 com as duas leituras;
+- `hipotese-diverge`: 🔴 só quando o código e o classificador leem a meta e o número diverge; discordância →
+  `hipotese-a-conferir` 🟡 com as duas leituras; «nao_sei» → só a prova em código decide (a porcentagem no lugar da
+  meta do §17 continua 🔴, o número da mecânica fica calado, a meta que só o código lê é 🟡);
 - `rotulo-divergente`: o «é botão?» filtra o candidato da prosa sem chave; a célula da chave de copy não passa por ele;
 - `exigencia-dispensada`: 🟡; o juiz e o classificador lendo contexto dispensam;
 - decisão do PO e recontagem dos juízes: a leitura ordena e explica o «a conferir», nunca o apaga;
@@ -66,11 +67,56 @@ def test_h1_30x25_bloqueia_so_quando_o_codigo_e_o_classificador_leem_meta(monkey
     h = _situacoes(corpo)
     assert [(x["situacao"], x["corpo"]) for x in h] == [("trocado", "25%")]
 
-    for lido in ("mecanica", C.NAO_SEI):
-        _ler_falso(monkeypatch, lambda p, e, lido=lido: lido)
-        h = _situacoes(corpo)
-        assert [(x["situacao"], x["corpo"]) for x in h] == [("leitura-a-conferir", "25%")], lido
-        assert "o código lê meta" in h[0]["leituras"]
+    _ler_falso(monkeypatch, lambda p, e: "mecanica")
+    h = _situacoes(corpo)
+    assert [(x["situacao"], x["corpo"]) for x in h] == [("leitura-a-conferir", "25%")]
+    assert "o código lê meta" in h[0]["leituras"] and not h[0]["sem_classificador"]
+
+    # sem o classificador, a frase do §17 reproduzida com o número trocado é prova em código: continua 🔴, como na C1
+    # (revisão do PR #85, 25/10/2026)
+    _ler_falso(monkeypatch, lambda p, e: C.NAO_SEI)
+    assert [(x["situacao"], x["corpo"]) for x in _situacoes(corpo)] == [("trocado", "25%")]
+
+
+#: Sem o classificador (erro, 429, timeout, limite do gate, sem chave, `CLASSIFICADOR_SENTIDO=desligado`), só a prova em
+#: código decide (`montagem._leitura_sem_classificador`, revisão do PR #85).
+SEM_CLASSIFICADOR = [
+    # o mesmo predicado do §17 com o critério invertido: a porcentagem está no lugar da meta (revisão do PR #77)
+    ("Se menos de 70% das duplas desistirem de ajustar a moldura e confirmarem na posição default.", "trocado"),
+    # paráfrase sem o predicado do §17: só o código lê meta — interpretação, dúvida 🟡
+    ("Se a desistência das duplas superar 25%.", "leitura-a-conferir"),
+    ("Se 25% das crianças pedirem ajuda ao professor.", "leitura-a-conferir"),
+    # o mesmo predicado negado é o complemento possível, não a meta reproduzida: dúvida
+    ("Se menos de 70% das duplas não desistirem de ajustar a moldura e confirmarem na posição default.",
+     "leitura-a-conferir"),
+]
+
+
+def test_so_a_porcentagem_fica_no_lugar_da_meta_do_17():
+    """A duração que repete o número de uma porcentagem da mesma frase não é a meta reproduzida."""
+    do_17 = "Mais de 30% das duplas desistirem de ajustar a moldura."
+    texto = "Mais de 25% das duplas desistirem de ajustar a moldura em 25 s."
+    assert montagem._meta_do_17_com_outro_numero(texto, ("25", "%"), do_17, [("30", "%")])
+    assert not montagem._meta_do_17_com_outro_numero(texto, ("25", "s"), do_17, [("30", "%")])
+
+
+@pytest.mark.parametrize("caso", SEM_CLASSIFICADOR, ids=lambda c: c[0][:40])
+def test_sem_classificador_so_a_prova_em_codigo_bloqueia(monkeypatch, caso):
+    texto, situacao = caso
+    _ler_falso(monkeypatch, lambda p, e: C.NAO_SEI)
+    h = _situacoes(_hipotese(texto))
+    assert [x["situacao"] for x in h] == [situacao], texto
+    if situacao == "leitura-a-conferir":
+        assert h[0]["sem_classificador"] == "sim" and "o classificador não respondeu" in h[0]["leituras"]
+
+
+def test_sem_classificador_o_numero_da_mecanica_fica_calado(monkeypatch):
+    """Sem segunda leitura, o número que o código lê como mecânica não vira dúvida — como antes da C7: com o Gemini fora,
+    cada parâmetro da mecânica citado numa hipótese virava 🟡 «a conferir» (revisão do PR #85)."""
+    contrato = ONE_PAGER + "\n## 4. Etapas\n- A criança escolhe o pictograma em até 15 s.\n"
+    corpo = "# 2. Objetivos\n\n### Hipóteses de validação\n- **H2 (Leitura):** a criança escolhe o pictograma em até 15 s.\n"
+    _ler_falso(monkeypatch, lambda p, e: C.NAO_SEI)
+    assert montagem.hipoteses_reescritas(ONE_PAGER, corpo, "", contrato) == []
 
 
 def test_meta_que_o_codigo_isenta_e_o_classificador_le_vira_duvida(monkeypatch):
@@ -102,11 +148,20 @@ def test_duvida_da_leitura_sai_como_hipotese_a_conferir_no_prd(monkeypatch):
     _ler_falso(monkeypatch, lambda p, e: "meta")
     r = montagem.validar_prd(estado)
     assert any(a["codigo"] == "hipotese-diverge" and a["severidade"] == "bloqueio" for a in r["achados"])
+    _ler_falso(monkeypatch, lambda p, e: "mecanica")
+    r = montagem.validar_prd(estado)
+    duvida = [a for a in r["achados"] if a["codigo"] == "hipotese-a-conferir"]
+    assert not [a for a in r["achados"] if a["codigo"] == "hipotese-diverge"]
+    assert duvida and duvida[0]["severidade"] == "atencao" and "não leem igual" in duvida[0]["resumo"]
+    # sem o classificador, a paráfrase que só o código lê como meta é dúvida, e a mensagem diz por quê
+    estado = _sintetico(prd_final=_prd({"Mais de 30% das duplas confirmarem na posição default": "A confirmação na posição default superar 25%"}))
     _ler_falso(monkeypatch, lambda p, e: C.NAO_SEI)
     r = montagem.validar_prd(estado)
     duvida = [a for a in r["achados"] if a["codigo"] == "hipotese-a-conferir"]
     assert not [a for a in r["achados"] if a["codigo"] == "hipotese-diverge"]
     assert duvida and duvida[0]["severidade"] == "atencao" and "o classificador não respondeu" in duvida[0]["resumo"]
+    assert "O classificador de sentido não respondeu, e só o código lê" in duvida[0]["resumo"]
+    assert "tem 30%" in duvida[0]["resumo"]
 
 
 # ------------------------------------------------------------------ número sem origem

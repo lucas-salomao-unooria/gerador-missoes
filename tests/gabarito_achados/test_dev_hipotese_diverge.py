@@ -201,3 +201,57 @@ def test_relatorio_separa_divergencia_certa_de_duvida():
     certa = texto.index("**Divergência certa — bloqueia; o redator corrige:**")
     duvida = texto.index("**Dúvida ou registro — não bloqueia; o PO confere antes do de acordo:**")
     assert certa < texto.index("⛔ `hipotese-diverge`") < duvida < texto.index("⚠️ `hipotese-a-conferir`")
+
+
+# ------------------------------------------------------------------ sem o classificador (revisão do PR #85, 25/10/2026)
+#: Com o Gemini fora (erro, 429, timeout, limite do gate, sem chave) ou `CLASSIFICADOR_SENTIDO=desligado`, o gate de
+#: hipótese fica rebaixado: só a prova em código bloqueia. Estes casos travam o que continua 🔴 e o que vira 🟡.
+@pytest.fixture
+def desligado(monkeypatch):
+    monkeypatch.setenv("CLASSIFICADOR_SENTIDO", "desligado")
+
+
+@pytest.mark.parametrize("documento", ("handoff", "prd"))
+def test_sem_classificador_a_h1_30x25_da_exp02ef1b_continua_bloqueando(desligado, documento):
+    """A frase do §17 reproduzida com o número trocado é comparação com o texto do §17 (D11): bloqueia sem a segunda
+    leitura, com ou sem a PQ-01 homologada."""
+    for st in (estado("R13"), _pq01_homologada(estado("R13"))):
+        r = montagem.validar_prd(st) if documento == "prd" else montagem.validar_handoff(st)
+        assert any(a["codigo"] == "hipotese-diverge" and a["severidade"] == "bloqueio" and "30%" in a["resumo"]
+                   and "escreve 25%" in a["resumo"] for a in r["achados"])
+
+
+@pytest.mark.parametrize("caso", MESMO_PREDICADO_INVERTIDO[:2], ids=lambda c: f"{c[0]}/{c[2]}")
+def test_sem_classificador_o_mesmo_predicado_invertido_continua_bloqueando(desligado, caso):
+    test_v_mesmo_predicado_com_o_criterio_invertido_bloqueia(caso)
+
+
+@pytest.mark.parametrize("caso", FP, ids=_id)
+def test_sem_classificador_o_numero_da_mecanica_fica_calado(desligado, caso):
+    test_fp_nao_bloqueia_nem_vira_duvida(caso)
+
+
+@pytest.mark.parametrize("caso", [("R06", "handoff", "H1"), ("R12", "handoff", "H2"), ("R04", "handoff", "H3")],
+                         ids=lambda c: f"{rotulo(c[0])}/{c[1]}/{c[2]}")
+def test_sem_classificador_a_meta_que_so_o_codigo_le_vira_duvida(desligado, caso):
+    """Meta inventada onde o §17 não quantifica e hipótese trocada inteira: só o código lê o número como meta. Sem o
+    classificador é interpretação — 🟡 «a conferir», com o motivo à vista — e não bloqueia. É o rebaixamento que o
+    README registra («Política de severidade»)."""
+    execucao, documento, hipotese = caso
+    assert set(_situacoes(execucao, documento, hipotese)) == {"leitura-a-conferir"}
+    # `achados_da_montagem` guarda o que leu com o classificador: aqui o gate roda de novo, sem ele
+    st = estado(execucao)
+    r = montagem.validar_prd(st) if documento == "prd" else montagem.validar_handoff(st)
+    duvidas = [a for a in r["achados"] if a["codigo"] == "hipotese-a-conferir" and f"a {hipotese} do §17" in a["resumo"]]
+    assert duvidas and duvidas[0]["severidade"] == "atencao"
+    assert "O classificador de sentido não respondeu" in duvidas[0]["resumo"]
+    assert not [a for a in r["achados"] if a["codigo"] == "hipotese-diverge" and f"A {hipotese} do §17" in a["resumo"]]
+    assert "tem nenhum número" not in duvidas[0]["resumo"]
+
+
+def test_hipotese_sem_numero_no_17_diz_nao_tem_numero():
+    """Handoff da exp01ef1b (acervo): a H1 do §17 não tem número e o classificador lê «15 s / 20 s» como meta. A
+    mensagem dizia «a H1 do §17 do one-pager tem nenhum número» (revisão do PR #85)."""
+    duvidas = [a for a in achados_da_montagem("acervo:exp01ef1b", "handoff") if a["codigo"] == "hipotese-a-conferir"]
+    assert duvidas and all("tem nenhum número" not in a["resumo"] for a in duvidas)
+    assert any("a H1 do §17 do one-pager não tem número, e o handoff escreve" in a["resumo"] for a in duvidas)
