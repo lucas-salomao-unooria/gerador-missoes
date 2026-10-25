@@ -119,13 +119,27 @@ def divergencias_com_etapas(resultado: Dict[str, Any], etapas: Dict[str, Optiona
     É o sinal que a segunda verificação existe para dar: a correção pedida na etapa não pegou, ou o juiz da etapa
     foi enganado. `etapas` = nome da etapa → envelope da banca dela (ausente quando a etapa não rodou a banca).
     O critério que a etapa também bloqueou não é divergência: a etapa foi liberada por exceção, e já se sabia.
+
+    A etapa que não cobra o critério (`FORA_DA_POSICAO`) não o deixou passar — não o avaliou: o PED-12 que reprova na
+    entrada do dev saía «passou no fim de produto», como se o juiz de produto tivesse sido enganado (revisão do PR #80,
+    24/10/2026). Ela sai da frase, com a nota de que ali o critério não é avaliado; sem etapa que o avalie, não há o
+    que comparar.
     """
     rodaram = {nome: env for nome, env in etapas.items() if env}
     if not rodaram:
         return []
     bloqueados_nas_etapas = {i for env in rodaram.values() for i in _ids_bloqueio(env.get("achados") or [])}
-    return [f"`{c}` passou no fim de {' e de '.join(rodaram)} e reprova aqui."
-            for c in _ids_bloqueio(resultado.get("achados") or []) if c not in bloqueados_nas_etapas]
+    saida: List[str] = []
+    for c in _ids_bloqueio(resultado.get("achados") or []):
+        if c in bloqueados_nas_etapas:
+            continue
+        avaliaram = [nome for nome in rodaram if c not in FORA_DA_POSICAO.get(nome, frozenset())]
+        if not avaliaram:
+            continue
+        nao = [nome for nome in rodaram if nome not in avaliaram]
+        saida.append(f"`{c}` passou no fim de {' e de '.join(avaliaram)} e reprova aqui."
+                     + (f" No fim de {' e de '.join(nao)} ele não é avaliado." if nao else ""))
+    return saida
 
 
 def bloqueantes() -> Dict[str, List[str]]:
