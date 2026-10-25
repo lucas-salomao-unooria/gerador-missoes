@@ -150,16 +150,31 @@ def _titulos(texto: str) -> List[Tuple[int, int, int, str]]:
     return titulos(texto)
 
 
+#: Divisória de seção (`---`): o redator costuma fechar cada seção com uma, e `_inserir` põe o bloco antes dela.
+_RE_DIVISORIA = re.compile(r"^-{3,}[ \t]*$", re.M)
+
+
+def _fim_do_bloco(texto: str, titulos: List[Tuple[int, int, int, str]], k: int) -> int:
+    """Onde o subtítulo da esteira `titulos[k]` acaba: no próximo título de nível igual ou mais alto, ou antes, na
+    divisória que fecha a seção. A divisória é do redator: contada no bloco, a primeira montagem já saía com o bloco
+    «alterado» no A121b, e a segunda a apagava — no modo travado, trocas espúrias (revisão do PR #79, 24/10/2026)."""
+    _, fim_titulo, nivel, _ = titulos[k]
+    fim = next((i for i, _, n, _ in titulos[k + 1:] if n <= nivel), len(texto))
+    divisoria = _RE_DIVISORIA.search(texto, fim_titulo, fim)
+    return divisoria.start() if divisoria else fim
+
+
 def sem_blocos(texto: str) -> str:
-    """O texto sem os subtítulos da esteira (do título ao próximo título de nível igual ou mais alto)."""
+    """O texto sem os subtítulos da esteira (do título ao próximo título de nível igual ou mais alto, ou à divisória que
+    fecha a seção)."""
     saida = texto or ""
     while True:
         titulos = _titulos(saida)
         k = next((k for k, t in enumerate(titulos) if e_bloco(t[3])), None)
         if k is None:
             return saida
-        ini, _, nivel, _ = titulos[k]
-        fim = next((i for i, _, n, _ in titulos[k + 1:] if n <= nivel), len(saida))
+        ini = titulos[k][0]
+        fim = _fim_do_bloco(saida, titulos, k)
         saida = saida[:ini].rstrip("\n") + ("\n\n" + saida[fim:].lstrip("\n") if fim < len(saida) else "\n")
 
 
@@ -174,11 +189,10 @@ def blocos_presentes(documento: str) -> Dict[str, str]:
     corpo, _, _ = partes(documento)
     titulos = _titulos(corpo)
     saida: Dict[str, str] = {}
-    for k, (_, fim_titulo, nivel, titulo) in enumerate(titulos):
+    for k, (_, fim_titulo, _, titulo) in enumerate(titulos):
         if not e_bloco(titulo):
             continue
-        fim = next((i for i, _, n, _ in titulos[k + 1:] if n <= nivel), len(corpo))
-        saida[_titulo_norm(titulo)] = corpo[fim_titulo:fim].strip()
+        saida[_titulo_norm(titulo)] = corpo[fim_titulo:_fim_do_bloco(corpo, titulos, k)].strip()
     return saida
 
 
