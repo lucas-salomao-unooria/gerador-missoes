@@ -130,6 +130,14 @@ def _rotas(prd: str, achados: List[Dict[str, str]]) -> None:
                 "A seção 12 não diz o que o segundo clique devolve nem qual lock protege a jogada e o gate.")
     if not re.search(r"rate\s*-?\s*limit|rateLimit|\b429\b", s12, re.I):
         _achado(achados, "atencao", "sem-rate-limit", "A seção 12 não declara o `rateLimit` por usuário das rotas.")
+    for linha in s12.splitlines():
+        if re.search(r"\b(?:gestor|dire[cç][aã]o|secretaria)\b", linha, re.I) and re.search(
+            r"\b(?:estudantes?\[\]|estudante_id|aluno_id|lista nominal|por estudante)\b", linha, re.I
+        ) and not re.search(r"\b(?:nunca|n[ãa]o|sem|vedad[oa]|proibid[oa])\b", linha, re.I):
+            _achado(achados, "atencao", "rota-gestor-com-dado-nominal",
+                    f"Rota ou contrato na seção 12 expõe dado individual (`estudante_id` / `estudantes[]`) a perfil "
+                    f"`gestor`: «{linha.strip()[:120]}». Pelo ADR-116 e LGPD, gestor só recebe agregado anonimizado.")
+            break
 
 
 # --------------------------------------------------------------------------- 12.2 IA no preparo
@@ -211,7 +219,9 @@ def _ficha(prd: str, spec: str, achados: List[Dict[str, str]]) -> None:
     from tools.consistencia import _declaracoes
 
     s11 = _secao(prd, 11) or prd
+    s12 = _secao(prd, 12) or ""
     jsonb = {c for cols in _declaracoes(s11).values() for c, fams in cols.items() if "json" in fams}
+    chaves_jsonb_vistas: Set[Tuple[str, str, str]] = set()
     cobertas: Set[str] = set()
     for linha in tabela[1:]:
         def cel(i: Optional[int]) -> str:
@@ -230,15 +240,18 @@ def _ficha(prd: str, spec: str, achados: List[Dict[str, str]]) -> None:
         if tipo == "acao" and "[PROPOSTA" not in regra:
             # Item 4 da Etapa 2 (Plano Padrão Ouro): cada ramo da regra de ação (antes do →) precisa ler coluna
             # e expressar predicado formal (OP valor), e não apenas citar palavra solta
-            operadores = r"(?:=|>=|<=|>|<|!=|<>|\bBETWEEN\b|\bIN\b|\bLIKE\b|\bILIKE\b|\bIS\b)"
+            operadores = r"(?:=|>=|<=|>|<|!=|<>|@>|<@|\?\||\?&|\?|\bBETWEEN\b|\bIN\b|\bLIKE\b|\bILIKE\b|\bIS\b)"
             ramos = [r.strip() for r in regra.strip("`").split(";")]
             erro_encontrado = False
+            tem_ramo_residual = False
             for ramo in ramos:
                 if not ramo or erro_encontrado:
                     continue
-                partes = re.split(r"→|->", ramo, maxsplit=1)
+                # Não cortar `->>` nem `->` de JSONB: a seta de resultado tem espaço antes e depois (` -> `) ou é `→`
+                partes = re.split(r"→|(?<=\s)->(?=\s)", ramo, maxsplit=1)
                 condicao = partes[0].strip()
-                if re.search(r"\b(?:sem\s+a[cç][aã]o|fallback|default|demais|outro[s]?|null)\b", condicao, re.I):
+                if re.search(r"\b(?:sem\s+a[cç][aã]o|fallback|default|demais|outro[s]?|null|restante[s]?|caso\s+contr[áa]rio|sen[ãa]o|else)\b", condicao, re.I):
+                    tem_ramo_residual = True
                     continue
                 citadas = {c.lower() for c in re.findall(r"\b([a-z][a-z0-9_]*)\b", condicao)}
                 intersecao = citadas & colunas
@@ -251,29 +264,48 @@ def _ficha(prd: str, spec: str, achados: List[Dict[str, str]]) -> None:
                     break
                 tem_predicado = False
                 for c in intersecao:
-                    padrao = rf"\b{re.escape(c)}\b(?:\s*[:.]\s*\w+|\s*->>\s*['\"\w]+)?\s*{operadores}"
+                    padrao = (rf"\b{re.escape(c)}\b(?:\s*[:.]\s*\w+|\s*->>?\s*['\"\w]+|\s*#>>?\s*\{{[^}}]+\}})*"
+                              rf"(?:\s*\)\s*)?\s*{operadores}")
+                    padrao_func = rf"\w+\(\s*{re.escape(c)}\b[^)]*\)\s*{operadores}"
                     padrao_json = rf"\b{re.escape(c)}\s*:\s*\w+\s*{operadores}"
-                    if re.search(padrao, condicao, re.IGNORECASE) or re.search(padrao_json, condicao, re.IGNORECASE):
+                    if (re.search(padrao, condicao, re.IGNORECASE)
+                            or re.search(padrao_func, condicao, re.IGNORECASE)
+                            or re.search(padrao_json, condicao, re.IGNORECASE)):
                         tem_predicado = True
                         break
-                # coluna JSONB: a chave lida precisa estar no DEFAULT ou na descrição da seção 11 (plano 2.4)
+                # coluna JSONB: a chave lida precisa estar na seção 11 ou num schema Zod da seção 12 (em snake_case ou camelCase)
                 for c in intersecao & jsonb:
                     for chave in re.findall(rf"\b{re.escape(c)}\s*(?:[:.]\s*|->>?\s*['\"]?)(\w+)", condicao, re.I):
-                        if not re.search(rf"\b{re.escape(chave)}\b", s11, re.I):
+                        partes_chave = chave.split("_")
+                        camel = partes_chave[0] + "".join(p.capitalize() for p in partes_chave[1:]) if len(partes_chave) > 1 else chave
+                        snake = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", chave).lower()
+                        declarada = any(
+                            re.search(rf"\b{re.escape(v)}\b", s11, re.I) or re.search(rf"\b{re.escape(v)}\b", s12, re.I)
+                            for v in {chave, camel, snake}
+                        )
+                        par = (cel(i_hab)[:40], c, chave.lower())
+                        if not declarada and par not in chaves_jsonb_vistas:
+                            chaves_jsonb_vistas.add(par)
                             _achado(achados, "bloqueio", "regra-chave-jsonb-ausente",
-                                    f"Ficha de {cel(i_hab)[:40]}: a condição lê `{c}` → `{chave}`, mas a seção 11 não "
-                                    f"declara a chave `{chave}` na coluna JSONB `{c}` (nem no DEFAULT nem na descrição). "
-                                    "O servidor grava o que o modelo de dados diz; chave fora dele nunca existe.")
+                                    f"Ficha de {cel(i_hab)[:40]}: a condição lê `{c}` → `{chave}`, mas nem a seção 11 "
+                                    f"(DEFAULT/descrição) nem os schemas Zod da seção 12 declaram a chave `{chave}` na "
+                                    f"coluna JSONB `{c}`. O servidor grava o que o modelo de dados diz; chave fora dele nunca existe.")
                             erro_encontrado = True
                 if erro_encontrado:
                     break
                 if not tem_predicado:
                     _achado(achados, "bloqueio", "regra-sem-predicado",
                             f"Ficha de {cel(i_hab)[:40]}: a condição «{condicao[:80]}» cita coluna mas não expressa um predicado "
-                            "formal (`coluna OP valor`, `coluna: chave OP valor`, `coluna->>'chave' OP valor`). "
+                            "formal (`coluna OP valor`, `coluna: chave OP valor`, `(coluna->>'chave')::int OP valor` ou `coluna @> '{...}'`, "
+                            "separando a condição do nível com ` → ` ou ` -> ` com espaços). "
                             "Palavras soltas sem operador de comparação não definem como o servidor afere a evidência.")
                     erro_encontrado = True
                     break
+            if not erro_encontrado and not tem_ramo_residual and len([r for r in ramos if r]) >= 2:
+                _achado(achados, "atencao", "regra-sem-ramo-residual",
+                        f"Ficha de {cel(i_hab)[:40]}: os ramos da regra não incluem um ramo residual explícito "
+                        "(`demais casos → nao_atingiu`, `sem ação → null`). Sem ramo residual, uma combinação "
+                        "intermediária de colunas pode ficar sem nível calculado no servidor.")
     faltam = sorted(set(codigos_do_bloco11(spec)) - cobertas)
     if faltam:
         _achado(achados, "bloqueio", "ficha-sem-habilidade",

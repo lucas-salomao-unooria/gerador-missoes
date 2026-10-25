@@ -1077,7 +1077,17 @@ def aplicar_na_copy(copy: str, tcs: Sequence[TextoChave], anotar_sem_troca: bool
             ligar(i, alvo, anotar=True)
 
     def ja_e_texto_chave(trecho: str) -> bool:
-        return literal(trecho) in do_texto or any(mesmo_texto(t.texto, trecho) for t in com_lacuna)
+        return (literal(trecho) in do_texto
+                or any(mesmo_texto(t.texto, trecho) for t in com_lacuna)
+                or any(presente(t, _documento_literal(trecho)) for t in tcs if t.tipo in TIPOS_DE_TEXTO))
+
+    # G03 + Decisão 2: variantes quase iguais na mesma etapa do one-pager (ex.: TC-09 e TC-10 da exp02em1b) são ambas
+    # aprovadas até o PO escolher uma no de acordo. Quando uma variante irmã já está na copy, a outra não substitui a
+    # irmã nem acusa `texto-chave-divergente`.
+    irmas_por_id: Dict[str, List[TextoChave]] = {}
+    for a, b, _ in variantes_de_texto_chave(tcs):
+        irmas_por_id.setdefault(a.id, []).append(b)
+        irmas_por_id.setdefault(b.id, []).append(a)
 
     # 2. o texto-chave sem linha e sem o literal: a reescrita dele — primeiro na coluna PT-BR das tabelas de strings,
     # depois no resto (texto entre aspas, fala do podcast). A reescrita citada na prosa da copy (a nota «o que mudou») não
@@ -1095,6 +1105,9 @@ def aplicar_na_copy(copy: str, tcs: Sequence[TextoChave], anotar_sem_troca: bool
         celulas_pt = [strings[i][0][strings[i][2]] for i in strings]
         if any(presente(tc, _documento_literal(c)) for c in celulas_pt):
             continue  # numa linha de string, com moldura em volta («Nico investigou no livro: "…"», exp02em1b)
+        if any(ir.id in ligados or any(presente(ir, _documento_literal(c)) for c in celulas_pt)
+               for ir in irmas_por_id.get(tc.id, [])):
+            continue  # variante irmã da mesma etapa já presente na copy (G03 + Decisão 2)
         livres = [(i, t) for i in strings if i not in {j for v in ligados.values() for j in v}
                   for t in _trechos_da_celula(strings[i][0][strings[i][2]])]
         achado = _melhor(tc, [c for c in livres if not ja_e_texto_chave(c[1])])
@@ -1343,6 +1356,24 @@ def relatorio(resultado: Dict[str, Any], missao: str = "") -> str:
 CORTE_DOCUMENTO = 0.85
 
 
+def variantes_de_texto_chave(tcs: Sequence[TextoChave]) -> List[Tuple[TextoChave, TextoChave, float]]:
+    """`(tc_a, tc_b, semelhanca)`: pares de textos-chave da mesma origem/etapa que são variantes quase iguais um do outro
+    (G03 + Decisão 2). Não decide sozinho: o de acordo pergunta ao PO qual vale, e os gates não tratam uma variante
+    aprovada como reescrita da outra."""
+    itens = [t for t in tcs if t.tipo in TIPOS_DE_TEXTO and palavras(t.texto) >= 4]
+    pares: List[Tuple[TextoChave, TextoChave, float]] = []
+    for idx, a in enumerate(itens):
+        for b in itens[idx + 1:]:
+            if a.tipo != b.tipo or a.origem != b.origem or mesmo_texto(a.texto, b.texto):
+                continue
+            if not mesmos_numeros(a, b.texto):
+                continue
+            sim = semelhanca(a.texto, b.texto)
+            if sim >= max(0.75, min(corte(a.texto), corte(b.texto))):
+                pares.append((a, b, sim))
+    return pares
+
+
 def _exato(texto: str) -> str:
     """Para casar uma redação registrada com a citação: `literal`, sem o ponto final — e sem lacuna preenchida."""
     return literal(texto).rstrip(". ")
@@ -1392,8 +1423,8 @@ def aplicar_em_documento(texto: str, tcs: Sequence[TextoChave], propostas: Seque
     pedacos: List[Tuple[int, int, str]] = []
     for m in list(re.finditer(r"[\"“«]([^\"”»\n]{12,400})[\"”»]", corpo)):
         citado = m.group(1).strip().strip("*").strip()
-        if any(mesmo_texto(t.texto, citado) for t in textos):
-            continue  # o texto-chave, com o ponto final ou sem ele (PRD da exp01ef1b)
+        if any(mesmo_texto(t.texto, citado) or presente(t, _documento_literal(citado)) for t in textos):
+            continue  # o texto-chave, com o ponto final, sem ele ou com lacuna preenchida (PRD da exp01ef1b / G03)
         inicio = corpo.rfind("\n", 0, m.start()) + 1
         fim = corpo.find("\n", m.end())
         linha = corpo[inicio: fim if fim >= 0 else len(corpo)]

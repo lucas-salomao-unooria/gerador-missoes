@@ -525,16 +525,28 @@ def _rotulos(g: Dict[str, Any], rotulo: str, texto: str, nomes_da_missao: Set[st
 
 
 def _arquivos(g: Dict[str, Any], rotulo: str, texto: str) -> List[Dict[str, str]]:
+    from pipeline.artifacts import ARTIFACT_FILES
+
+    validos_esteira = {p.rsplit("/", 1)[-1] for _, p in ARTIFACT_FILES} | {"manifesto-artefatos.json", "estado.json"}
     canonicos = {a["arquivo"].rsplit("/", 1)[-1]: a for a in g["arquivos"] if a.get("arquivo")}
     achados, vistos = [], set()
+    if rotulo in ("spec", "spec-missao"):
+        for nome, a in canonicos.items():
+            if re.match(r"\d{2}[a-z]?-", nome) and nome not in validos_esteira:
+                achados.append(_achado(
+                    "atencao", "arquivo-inexistente-no-glossario",
+                    f"{rotulo}: o glossário canônico lista `{a['arquivo']}` para «{a['artefato']}», que não é um "
+                    f"caminho de artefato da esteira.", "spec-missao"))
     for m in _RE_ARQUIVO.finditer(texto):
         base = m.group(1).rsplit("/", 1)[-1]
-        if base in canonicos or base in vistos:
+        if base in canonicos or base in validos_esteira or base in vistos:
             continue
         for nome, a in canonicos.items():
+            if nome not in validos_esteira and re.match(r"\d{2}[a-z]?-", nome):
+                continue
             mesma_ext = base.rsplit(".", 1)[-1] == nome.rsplit(".", 1)[-1]
-            prefixo = re.match(r"\d+[a-z]?-", nome)
-            parecido = (prefixo and base.startswith(prefixo.group(0))) or base[:8] == nome[:8]
+            prefixo = re.match(r"\d{2}[a-z]?-", nome)
+            parecido = (prefixo is not None and len(prefixo.group(0)) >= 4 and base.startswith(prefixo.group(0))) or base[:8] == nome[:8]
             if mesma_ext and parecido:
                 vistos.add(base)
                 achados.append(_achado(

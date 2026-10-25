@@ -644,8 +644,8 @@ def decisoes_d0_de_produto(fechamento: str, envelope: Dict[str, Any] | None, spe
     for d in decisoes_do_agente(fechamento, envelope or {}, prefixo):
         if "vermelh" in _norm_classe(d["cor"]) or "🔴" in d["cor"]:
             continue
-        if prefixo != "D0" and _RE_DEIXA_AO_PO.search(d["decisao"]):
-            continue  # a decisão da completude que escreve o marcador deixa a pergunta ao PO: é o que se pede dela
+        if _RE_DEIXA_AO_PO.search(d["decisao"]):
+            continue  # a decisão que escreve ou preserva o marcador deixa a pergunta ao PO (G16)
         motivos = []
         fechado = fecha_marcador(f"{d['campo']} {d['titulo']}", d["decisao"], marcadores) if marcadores else None
         if fechado:

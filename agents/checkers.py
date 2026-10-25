@@ -3475,28 +3475,61 @@ def bloco_versao_da_rodada(chave: str, documento: str) -> str:
 PREFIXO_RETRABALHO = "retrabalho_"
 
 
-def motivos_do_retrabalho(state: Dict[str, Any], reprovados: List[str], ao_po: Sequence[str] = ()) -> str:
+#: Quando um loop tem mais de um autor (ex.: `handoff_dev` e `brief_assets` no HandoffLoop), cada chave só recebe
+#: retrabalho dos achados que pertencem a ela; se nenhum achado da rodada aponta para `brief_assets`, ele não roda
+#: à toa na rodada seguinte (exp02ef1b, G06, 25/10/2026).
+_DONOS_POR_CHAVE_AUTOR: Dict[str, Tuple[str, ...]] = {
+    "brief_assets": ("brief-assets", "brief_assets", "assets"),
+    "handoff_dev": ("handoff-dev", "handoff_dev", "handoff", "telemetria", "dev", ""),
+}
+
+
+def _achado_pertence_a_chave(achado: Dict[str, Any], chave: str) -> bool:
+    if not chave or chave not in _DONOS_POR_CHAVE_AUTOR:
+        return True
+    dono = str(achado.get("agente_responsavel") or achado.get("dono") or "").strip().lower()
+    resumo = str(achado.get("resumo") or "").lower()
+    if chave == "brief_assets":
+        return dono in _DONOS_POR_CHAVE_AUTOR["brief_assets"] or "brief-assets" in resumo or "01b-brief-assets" in resumo
+    if chave == "handoff_dev":
+        return dono not in ("brief-assets", "brief_assets")
+    return True
+
+
+def motivos_do_retrabalho(state: Dict[str, Any], reprovados: List[str], ao_po: Sequence[str] = (),
+                          chave: str = "") -> str:
     """Os relatórios dos gates reprovados na rodada, como pedido de correção para o editor de trocas.
 
     Os bloqueios que vão ao PO (`tools/rota_achados.py`), dos gates reprovados e dos que reprovaram só por eles (`ao_po`),
     entram no fim como contexto: o achado misto da 76d9af6e (PED-06, 23/10/2026) também apontava uma falta na tabela 9b
-    da spec, e sem o contexto essa parte sumia do retrabalho. Eles não decidem a rodada (`SaidaDeLoopAgent`)."""
+    da spec, e sem o contexto essa parte sumia do retrabalho. Eles não decidem a rodada (`SaidaDeLoopAgent`).
+    Quando `chave` é uma chave com filtro de dono (`brief_assets` / `handoff_dev`), devolve `""` se nenhum gate
+    reprovado tiver achado para essa chave."""
     from tools import citacoes
 
     blocos = ["Os gates desta rodada reprovaram o documento. Corrija exatamente o que eles apontam, com o mínimo de "
               "trocas; o que eles não apontam já passou e não pode mudar.", ""]
+    teve_achado = False
     for k in reprovados:
         relatorio = str(state.get(k[: -len("_status")] + "_report") or "").strip() if k.endswith("_status") else ""
         envelope = state.get(f"{k}_envelope")
         # o bloqueio que vai ao PO (`tools/rota_achados.py`) não é pedido ao autor: ele não pode consertá-lo
-        bloqueios = [a for a in ((envelope or {}).get("achados") or []) if isinstance(a, dict) and citacoes.bloqueante(a)
-                     and a.get("rota") != "po"]
+        todos_bloqueios = [a for a in ((envelope or {}).get("achados") or []) if isinstance(a, dict) and citacoes.bloqueante(a)
+                           and a.get("rota") != "po"]
+        bloqueios = [a for a in todos_bloqueios if _achado_pertence_a_chave(a, chave)]
+        if chave in _DONOS_POR_CHAVE_AUTOR and todos_bloqueios and not bloqueios:
+            continue
+        if chave == "brief_assets" and not bloqueios and "brief" not in relatorio.lower() and "asset" not in relatorio.lower():
+            continue
+        teve_achado = True
         blocos.append(f"### Gate `{k}`")
         blocos += [f"- {a.get('codigo') or a.get('id') or 'achado'}: {a.get('resumo') or ''}"
                    + (f" — trecho: «{citacoes.citacao(a)}»" if citacoes.citacao(a) else "") for a in bloqueios]
         if relatorio:
             blocos += ["", relatorio[:8000]]
         blocos.append("")
+    if chave in _DONOS_POR_CHAVE_AUTOR and not teve_achado:
+        return ""
     do_po = [(k, a) for k in list(reprovados) + [g for g in ao_po if g not in reprovados]
              for a in ((state.get(f"{k}_envelope") or {}).get("achados") or [])
              if isinstance(a, dict) and citacoes.bloqueante(a) and a.get("rota") == "po"]
@@ -3694,7 +3727,7 @@ class SaidaDeLoopAgent(BaseAgent):
             # O que os gates reprovaram, para o retrabalho por trocas (`agents.callbacks.retrabalhar_por_trocas`): na
             # rodada seguinte o documento é corrigido trecho a trecho, e o que já passou não muda.
             delta[f"{PREFIXO_RETRABALHO}{chave}"] = (
-                motivos_do_retrabalho(state, reprovados, ao_po) if documento and not escalate and not cortado else "")
+                motivos_do_retrabalho(state, reprovados, ao_po, chave=chave) if documento and not escalate and not cortado else "")
 
         yield Event(
             invocation_id=ctx.invocation_id,

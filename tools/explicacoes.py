@@ -1817,6 +1817,29 @@ for _codigo_novo, _exp_nova in {
         "A especificação tem o título da lista oficial de nomes, mas nenhuma tabela legível dentro dele.",
         "Sem a lista, cada documento batiza as coisas de um jeito.",
         _REFAZER_PRODUTO, PO),
+    "rota-gestor-com-dado-nominal": _x(
+        "Rota de gestor expõe dado individual de estudante",
+        "Uma rota ou contrato na seção 12 entrega identificadores ou lista individual de estudantes a um perfil de "
+        "gestão (gestor escolar, rede ou secretaria).",
+        "Pela LGPD e pelo contrato da plataforma, gestores só recebem dados agregados e anonimizados da turma.",
+        _REFAZER_DEV + "que a rota de gestor devolva apenas agregados anonimizados.", DEV),
+    "regra-sem-ramo-residual": _x(
+        "Regra de nível sem caso residual",
+        "Os ramos da regra de evidência de uma habilidade por ação não incluem um caso residual explícito (`demais "
+        "casos → nao_atingiu`, `sem ação → null`).",
+        "Uma combinação intermediária de colunas pode ficar sem nível calculado no servidor.",
+        _REFAZER_DEV + "um ramo residual explícito na regra da habilidade.", DEV),
+    "evento-operacional-sem-coluna": _x(
+        "Ação operacional sem a coluna onde é lida",
+        "Uma ação operacional da missão nomeia a tabela onde é lida, mas não a coluna (`tabela.coluna`) em que o "
+        "servidor persiste o dado.",
+        "Quem programa não sabe de qual coluna da tabela ler o registro da ação.",
+        _REFAZER_DEV + "a coluna no formato `tabela.coluna` na tabela de eventos.", DEV),
+    "arquivo-inexistente-no-glossario": _x(
+        "Lista oficial de nomes cita arquivo que não existe na esteira",
+        "O glossário da especificação aponta para um caminho de arquivo que não faz parte dos artefatos da esteira.",
+        "Os documentos seguintes copiam o caminho inexistente e falham na conferência de arquivos.",
+        _REFAZER_PRODUTO, PO),
 }.items():
     # entrada que já existe vence: estas cobrem só o que faltava
     CATALOGO.setdefault(_codigo_novo, _exp_nova)

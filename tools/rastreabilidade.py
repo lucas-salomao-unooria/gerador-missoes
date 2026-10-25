@@ -60,7 +60,7 @@ CATEGORIAS: Dict[str, Tuple[str, Tuple[str, ...], str]] = {
 
 def _secao_md(texto: str, rx: str) -> str:
     """Do título que casa `rx` até o próximo título de nível igual ou maior."""
-    m = re.search(rf"^(#{{1,6}})[^\n]*{rx}[^\n]*$", texto or "", re.I | re.M)
+    m = re.search(rf"^(#{{1,6}})[^\n]*(?:{rx})[^\n]*$", texto or "", re.I | re.M)
     if not m:
         return ""
     nivel = len(m.group(1))
@@ -192,19 +192,35 @@ def _presente(categoria: str, alvo: str, coluna: str, texto: str) -> bool:
         return bool(re.search(rf"(?<![\w:]){re.escape(objeto)}(?![\w:])", corpo))
     if categoria == "proposta":
         # a proposta continua marcada no PRD (o marcador na mesma linha do identificador) ou está na seção de
-        # decisões a revisar; o PRD da exp01ef1b trouxe os KPI de PQ-02..05 sem o marcador da spec
-        secao_revisar = _secao_md(corpo, r"decis[õo]es do agente|a revisar")
+        # decisões a revisar / pendências (19.2 / 19.3); o PRD da exp01ef1b trouxe os KPI de PQ-02..05 sem o marcador
+        # da spec, e o da exp01em1b agrupou «PQ-01 a PQ-04» na 19.3
+        secao_revisar = (
+            _secao_md(corpo, r"decis[õo]es do agente|a revisar|propostas? a validar")
+            + "\n"
+            + _secao_md(corpo, r"19\.2|19\.3|pend[êe]ncias")
+        )
         if alvo in secao_revisar:
             return True
-        return any(alvo in l and "PROPOSTA" in l.upper() for l in corpo.splitlines())
+        m_pq = re.fullmatch(r"PQ-0*(\d+)", alvo, re.I)
+        if m_pq:
+            n_alvo = int(m_pq.group(1))
+            for ini, fim in re.findall(r"PQ-0*(\d+)\s*(?:a|at[ée]|\.\.\.?|–|—|-)\s*(?:PQ-0*)?(\d+)", secao_revisar, re.I):
+                if int(ini) <= n_alvo <= int(fim):
+                    return True
+            if re.search(rf"\bPQ-0*{n_alvo}\b", secao_revisar, re.I):
+                return True
+        return any(alvo in l and ("PROPOSTA" in l.upper() or "PEND-" in l.upper()) for l in corpo.splitlines())
     if categoria == "estado":
         # sem caixa, como o gate do PRD (`e3_voto_lacrado` no CHECK vale), e com fronteira: `E3_VOTO` não é `E3_VOTO_LACRADO`
         return bool(re.search(rf"(?<!\w){re.escape(alvo.lower())}(?!\w)", corpo.lower()))
     return alvo in corpo  # habilidade
 
 
-def matriz(state: Dict[str, Any]) -> Dict[str, Any]:
-    """`{status, requisitos, celulas, cobertura, achados}` — célula é True, False ou None (artefato ausente)."""
+def matriz(state: Dict[str, Any], colunas_veredito: Optional[Tuple[str, ...]] = None) -> Dict[str, Any]:
+    """`{status, requisitos, celulas, cobertura, achados}` — célula é True, False ou None (artefato ausente).
+    Quando `colunas_veredito` é informado (ex.: `("handoff", "banco", "prd")` em `rastreabilidade_dev_status`),
+    a tabela visual (`cobertura`) mostra todas as colunas, mas `achados` e `status` contam apenas as colunas
+    da etapa avaliada — evitando que uma perda de design já reportada em `rastreabilidade_status` reprove o dev."""
     reqs = requisitos(state)
     textos = {c: str(state.get(chave) or "") for c, chave, _, _ in ARTEFATOS}
     celulas: Dict[str, Dict[str, Optional[bool]]] = {}
@@ -227,6 +243,8 @@ def matriz(state: Dict[str, Any]) -> Dict[str, Any]:
         for c in colunas:
             valores = [celulas[r["id"]][c] for r in do_tipo]
             cobertura[categoria][c] = None if all(v is None for v in valores) else (sum(1 for v in valores if v), len(do_tipo))
+            if colunas_veredito is not None and c not in colunas_veredito:
+                continue
             faltando = [r for r in do_tipo if celulas[r["id"]][c] is False]
             if not faltando:
                 continue

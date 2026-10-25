@@ -888,7 +888,7 @@ def relatorio_lacunas(resultado: Dict[str, Any], rotulo: str, missao: str = "", 
         "achados": [
             # o trecho inteiro: o corte em 120 caracteres partia a palavra («…EF15AR05 na gra») no cartão do PO, que
             # é onde esta pendência aparece (25/10/2026); a linha também sai inteira da varredura (`varrer_lacunas`)
-            {"severidade": a["severidade"], "classe": a["tipo"], "codigo": a["etapa"], "agente_responsavel": _dono_roteavel(a), "documento": a["documento"], "resumo": a.get("contexto") or a["trecho"]}
+            {"severidade": a["severidade"], "classe": a["tipo"], "codigo": a["etapa"], "agente_responsavel": _dono_roteavel(a), "documento": a["documento"], "resumo": a.get("contexto") or a["trecho"], "trecho": a["trecho"]}
             for a in r["achados"]
         ],
         "precisa_humano": r["status"] != "aprovado",
@@ -905,7 +905,7 @@ def _campo(texto: str, nome: str) -> Optional[str]:
     # mesmo bloco repete o nome do campo com dois-pontos ("Por que este viewport: Viewport
     # mobile…") e, por vir antes, era devolvida no lugar do valor — a spec estava certa e o
     # gate reprovava (sessão 8f76, 2026-09-21). A linha de ficha manda; a busca solta é fallback.
-    valor = r"\s*:\s*[`*_]*\s*([^`\n|]+?)`?\s*(?:$|\||\(|—|·)"
+    valor = r"[`*_]*\s*:\s*[`*_]*\s*([^`\n|]+?)`?\s*(?:$|\||\(|—|·)"
     ficha = re.search(r"^\s*[-*]\s*[`*_]*" + nome + valor, texto, re.IGNORECASE | re.MULTILINE)
     if ficha:
         return ficha.group(1).strip().strip("*_ ")
@@ -1426,10 +1426,15 @@ _RE_E2E = re.compile(r"\be2e\b|ponta a ponta|end[- ]to[- ]end|playwright", re.I)
 _RE_IMPLEMENTA_TAMBEM = re.compile(
     r"(?:\b(?:implement\w*|constru\w*|cri(?:ar|a|e)|desenvolv\w*|e)\b|\+)\s+(?:\w+\s+){0,3}?"
     r"(?:telas?|m[óo]dulos?|servi[çc]os?|endpoints?|componentes?|rotas?|apis?)\b", re.I)
+#: Um arquivo transversal único do molde da plataforma (schema Prisma, migration SQL ou `contrato-de-rotas.ts`)
+#: concentra por definição todos os RFs que persistem ou trafegam dados (exp01em1b, 25/10/2026).
+_RE_ARQUIVO_TRANSVERSAL = re.compile(
+    r"(?:contrato[-_]de[-_]rotas\.ts|schema\.prisma|prisma/migrations\b|migration\s+sql\b)", re.I)
 
 
 def _tarefa_e2e(linha: str) -> bool:
-    """A descrição da tarefa (a célula logo depois do `T-NNN`) é a suíte E2E e nada mais. Só a descrição: a coluna de
+    """A descrição da tarefa (a célula logo depois do `T-NNN`) é a suíte E2E (ou um único arquivo transversal do
+    molde: `contrato-de-rotas.ts`, `schema.prisma`, `prisma/migrations`) e nada mais. Só a descrição: a coluna de
     teste de uma tarefa de implementação também cita e2e, e essa continua sendo cobrada."""
     celulas = [c.strip() for c in linha.strip().strip("|").split("|")]
     i = next((k for k, c in enumerate(celulas) if re.search(r"\bT-\d{3}\b", c)), None)
@@ -1437,7 +1442,12 @@ def _tarefa_e2e(linha: str) -> bool:
         return False
     descricao = celulas[i + 1]
     m = _RE_TAREFA_E_A_SUITE.match(descricao)
-    return bool(m and _RE_E2E.search(descricao) and not _RE_IMPLEMENTA_TAMBEM.search(descricao[m.end():]))
+    if m and _RE_E2E.search(descricao) and not _RE_IMPLEMENTA_TAMBEM.search(descricao[m.end():]):
+        return True
+    # Entregável único transversal do molde (ex.: `T-001 | Migration SQL e schema Prisma | ...` ou `contrato-de-rotas.ts`)
+    if _RE_ARQUIVO_TRANSVERSAL.search(descricao) and not re.search(r"\b(?:telas?|componentes?|ui|frontend)\b", descricao, re.I):
+        return True
+    return False
 
 
 #: `RF-001..RF-014`, `RF-001 a RF-014`, `RF-001 até RF-014`, `RF-001–RF-014`.

@@ -845,8 +845,8 @@ def conferir_adr(texto: str, c: Dict[str, Any]) -> List[Dict[str, str]]:
 # --------------------------------------------------------------------------- 4. capacidade que a plataforma não tem
 _RE_OFFLINE = re.compile(
     r"service[\s-]?worker|\bPWA\b|workbox|offline[\s-]first|"
-    r"\b(?:oper[ae]r?|funcion[ae]r?|funcione|rod[ae]r?|jog[ae]r?|continu[ae]r?|carreg[ae]r?)\b[^\n.;|]{0,40}\boffline\b|"
-    r"\boffline\b[^\n.;|]{0,30}\b(?:com|via|em)\s+cache\b|"
+    r"\b(?:oper[ae]r?|funcion[ae]r?|funcione|rod[ae]r?|jog[ae]r?|continu[ae]r?|carreg[ae]r?)\b[^\n.;|]{0,40}\boffline\b(?!\s+de\s+IA\b)|"
+    r"\boffline\b(?!\s+de\s+IA\b)[^\n.;|]{0,30}\b(?:com|via|em)\s+cache\b|"
     r"\bcache\s+local\b|\bIndexedDB\b|\bbuffer\s+local\b", re.I)
 _RE_REQUISITO = re.compile(r"\b(?:RF|RNF(?:-[A-Z]+)?|US)-\d{1,3}\b")
 
