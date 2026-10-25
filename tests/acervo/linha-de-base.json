@@ -177,7 +177,6 @@
         "proposta",
         "proposta-perdida",
         "rf-p0-sem-criterio",
-        "rota-do-handoff-mudou",
         "rota-do-molde-ausente",
         "rotas-sem-id",
         "schema-indefinido",
@@ -694,7 +693,9 @@
     "montagem_handoff_status": {
       "status": "bloqueado",
       "codigos": [
+        "hipotese-a-conferir",
         "hipotese-diverge",
+        "numero-sem-origem",
         "texto-chave-reescrito"
       ]
     },
@@ -714,8 +715,7 @@
         "estado-da-spec-sem-mapa",
         "parametro",
         "proposta",
-        "sem-idempotencia",
-        "tarefa-nao-atomica"
+        "sem-idempotencia"
       ]
     },
     "kpis_status": {
@@ -1521,6 +1521,7 @@
     "montagem_handoff_status": {
       "status": "bloqueado",
       "codigos": [
+        "hipotese-a-conferir",
         "hipotese-diverge",
         "numero-sem-origem"
       ]
@@ -1685,6 +1686,7 @@
     "montagem_handoff_status": {
       "status": "bloqueado",
       "codigos": [
+        "hipotese-a-conferir",
         "hipotese-diverge",
         "numero-sem-origem"
       ]
@@ -1920,6 +1922,7 @@
         "manifesto-ausente",
         "modelo-ia-divergente",
         "ponte-legada",
+        "rota-do-handoff-mudou",
         "rota-fora-do-modulo",
         "secao-11-ausente",
         "secao-12-ausente",
