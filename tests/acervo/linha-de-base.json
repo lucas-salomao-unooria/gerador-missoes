@@ -89,6 +89,12 @@
         "roteiro-reescrito"
       ]
     },
+    "montagem_pedagogico_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-reescrito"
+      ]
+    },
     "ambiente_status": {
       "status": "amarelo",
       "codigos": [
@@ -191,7 +197,6 @@
         "proposta",
         "proposta-perdida",
         "rf-p0-sem-criterio",
-        "rota-do-handoff-mudou",
         "rota-do-molde-ausente",
         "rotas-sem-id",
         "schema-indefinido",
@@ -761,6 +766,12 @@
       "status": "aprovado",
       "codigos": []
     },
+    "montagem_pedagogico_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-reescrito"
+      ]
+    },
     "ambiente_status": {
       "status": "amarelo",
       "codigos": [
@@ -826,7 +837,9 @@
     "montagem_handoff_status": {
       "status": "bloqueado",
       "codigos": [
+        "hipotese-a-conferir",
         "hipotese-diverge",
+        "numero-sem-origem",
         "texto-chave-reescrito"
       ]
     },
@@ -846,8 +859,7 @@
         "estado-da-spec-sem-mapa",
         "parametro",
         "proposta",
-        "sem-idempotencia",
-        "tarefa-nao-atomica"
+        "sem-idempotencia"
       ]
     },
     "kpis_status": {
@@ -1512,6 +1524,10 @@
         "podcast-ausente"
       ]
     },
+    "montagem_pedagogico_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
     "ambiente_status": {
       "status": "aprovado",
       "codigos": []
@@ -1722,6 +1738,10 @@
       "status": "aprovado",
       "codigos": []
     },
+    "montagem_pedagogico_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
     "ambiente_status": {
       "status": "bloqueado",
       "codigos": [
@@ -1770,6 +1790,7 @@
     "montagem_handoff_status": {
       "status": "bloqueado",
       "codigos": [
+        "hipotese-a-conferir",
         "hipotese-diverge",
         "numero-sem-origem"
       ]
@@ -1901,6 +1922,10 @@
       "status": "aprovado",
       "codigos": []
     },
+    "montagem_pedagogico_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
     "ambiente_status": {
       "status": "bloqueado",
       "codigos": [
@@ -1949,6 +1974,7 @@
     "montagem_handoff_status": {
       "status": "bloqueado",
       "codigos": [
+        "hipotese-a-conferir",
         "hipotese-diverge",
         "numero-sem-origem"
       ]
@@ -2100,6 +2126,12 @@
         "roteiro-reescrito"
       ]
     },
+    "montagem_pedagogico_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-reescrito"
+      ]
+    },
     "ambiente_status": {
       "status": "amarelo",
       "codigos": [
@@ -2194,6 +2226,7 @@
         "manifesto-ausente",
         "modelo-ia-divergente",
         "ponte-legada",
+        "rota-do-handoff-mudou",
         "rota-fora-do-modulo",
         "secao-11-ausente",
         "secao-12-ausente",
@@ -2316,6 +2349,12 @@
         "canal-b-reescrito",
         "podcast-ausente",
         "roteiro-reescrito"
+      ]
+    },
+    "montagem_pedagogico_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "texto-chave-reescrito"
       ]
     },
     "ambiente_status": {

@@ -34,7 +34,9 @@ CAMPOS_LEITURA = ("chave", "documentos", "status_keys", "fonte_key", "documento_
                   "fontes")
 #: Verificadores cujo `report_key` é o relatório que eles LEEM (o juiz escreveu antes), não o que gravam.
 LEEM_O_RELATORIO = ("EnvelopeGateAgent", "DespachoTicketsAgent")
-CAMPOS_ESCRITA = ("status_key", "report_key", "rodada_key", "round_key")
+CAMPOS_ESCRITA = ("status_key", "report_key", "rodada_key", "round_key",
+                  # o retrato do pedagógico que o A124 grava (PR 10)
+                  "retrato_key")
 #: Chaves de controle que não são artefato (contadores, envelopes, marcas de execução).
 _CONTROLE = re.compile(r"(_rodada|_envelope|^reexecucoes$|^degradacoes$|^heranca_degradada$|^pipeline_|^agentes_degradados$"
                        r"|^tickets_|^juiz_.*_saida$|_entrada$|_documentos$)")

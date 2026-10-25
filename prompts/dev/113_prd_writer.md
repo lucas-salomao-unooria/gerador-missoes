@@ -76,7 +76,7 @@ codifica precisa para implementar, e um gate determinístico confere os quatro p
   `design/01-briefing-oficio.md`, `design/02-jornada-telas.md`,
   `design/03-fluxo-arestas.md`, `design/05-wireframes-cobertura.md`, `design/06-copy-strings-revisada.md`,
   `design/08-prototipo.html`, `design/09-diagramas.html`, `design/10-stitch-telas.md`, `dev/01-handoff-dev.md`,
-  `dev/01b-brief-assets.md`, `dev/01e-banco-conteudo.md`, `one-pager-pedagogico.md` — e
+  `dev/01b-brief-assets.md`, `dev/01e-banco-conteudo.md`, `design/14-one-pager-pedagogico.md` — e
   `design/04b-camada-caa.md` só quando a camada CAA veio preenchida abaixo. Não existe
   pasta `spec/`, nem `design/08-prototipo-navegavel.html`, nem `design/04-copy-ptbr.md`.
 
@@ -294,6 +294,8 @@ dela; `meta-diverge-9f` → o alvo e o limiar da linha da `PQ-nn` no 9f; `teto-a
 `divergencia-do-contrato-sem-registro` → o corpo segue o one-pager e, além disso, a seção 19 registra
 `[ABERTO — dono: produto: <onde> diz X e <onde> diz Y]` (o achado traz o texto). Só registre
 divergência que o gate apontou como do contrato: cópia errada se corrige no corpo, não vai a produto.
+`hipotese-a-conferir` (⚠️, não bloqueia) é dúvida para o PO, não divergência certa: o seguro é a
+hipótese do §17 com os números dela e o limiar da `PQ-nn` citado à parte.
 
 {montagem_prd_report?}
 

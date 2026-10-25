@@ -192,15 +192,25 @@ def limitar_a_uma_rodada(raiz) -> None:
 
     O comitê fica de fora: na última rodada ele vira 🟡 por desenho, e na correção pontual o voto vencido tem de
     chegar como 🔴 à linha de base e ao editor.
+
+    Fica de fora também o loop cuja saída tem `rodadas_com_autor_livre` (o do pedagógico): a saída decide na primeira
+    rodada quando o autor está travado, e, quando ele escreve o documento que falta, o documento tem as rodadas de
+    correção da geração. Com uma rodada só, o 🔴 do pedagógico gerado na correção pontual de design ficava como documento
+    novo, sem voltar ao redator nem ao editor (revisão do PR #79, 24/10/2026).
     """
     from google.adk.agents.loop_agent import LoopAgent
 
-    from agents.checkers import ComiteVotosAgent
+    from agents.checkers import ComiteVotosAgent, SaidaDeLoopAgent
+
+    def com_autor_livre(agente) -> bool:
+        return isinstance(agente, SaidaDeLoopAgent) and agente.rodadas_com_autor_livre
 
     for _, agente in iter_agent_tree(raiz):
         if isinstance(agente, LoopAgent):
-            agente.max_iterations = 1
-        elif not isinstance(agente, ComiteVotosAgent) and isinstance(getattr(agente, "max_rounds", None), int):
+            if not any(com_autor_livre(s) for s in agente.sub_agents or []):
+                agente.max_iterations = 1
+        elif (not isinstance(agente, ComiteVotosAgent) and not com_autor_livre(agente)
+              and isinstance(getattr(agente, "max_rounds", None), int)):
             agente.max_rounds = 1
 
 

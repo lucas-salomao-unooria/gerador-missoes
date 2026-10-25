@@ -121,7 +121,8 @@ def test_prd_embrulhado_e_desembrulhado_ao_ser_gravado_e_antes_do_anexo():
 
 
 def test_writers_do_dev_desembrulham_a_saida():
-    from agents.dev import get_one_pager_pedagogico_agent, get_prd_writer_agent
+    from agents.dev import get_prd_writer_agent
+    from agents.pedagogico import get_one_pager_pedagogico_agent
 
     for agente in (get_prd_writer_agent(), get_one_pager_pedagogico_agent()):
         assert agente.after_agent_callback is not None, agente.name
@@ -322,10 +323,33 @@ def test_handoff_no_prd_tabela_e_evento_nao_somem_sem_registro():
     assert all(a["severidade"] == "atencao" for a in rota)
 
 
-def test_pedagogico_tem_juiz_de_contradicoes():
-    from agents.dev import agentes_em_ordem, build_dev_stage
+def test_handoff_no_prd_rota_confere_o_verbo():
+    """O atalho literal olhava só o caminho: o PRD que trocava o verbo (`POST` → `PUT`), ou que só tinha o caminho dentro
+    de outra rota (`GET /x/sessoes/:id` dentro de `POST /x/sessoes/:id/evento`), passava calado (revisão do PR #77,
+    24/10/2026). A rota na tabela do PRD, com o verbo na célula ao lado, continua valendo."""
+    from tools.prd_codavel import handoff_no_prd
 
-    loop = next(a for a in agentes_em_ordem(build_dev_stage()) if a.name == "OnePagerPedagogicoLoop")
+    def rotas(prd: str, handoff: str) -> str:
+        return " ".join(a["resumo"] for a in handoff_no_prd(prd, handoff) if a["codigo"] == "rota-do-handoff-mudou")
+
+    handoff = "POST /exp06ef1b/turmas/:turmaId/zerar\nGET /exp06ef1b/sessoes/:id\n"
+    assert "`POST /exp06ef1b/turmas/:turmaId/zerar`" in rotas(
+        "PUT /exp06ef1b/turmas/:turmaId/zerar · GET /exp06ef1b/sessoes/:id", handoff)
+    assert "`GET /exp06ef1b/sessoes/:id`" in rotas(
+        "POST /exp06ef1b/turmas/:turmaId/zerar · POST /exp06ef1b/sessoes/:id/evento", handoff)
+    assert rotas("| API-01 | POST | `/exp06ef1b/turmas/:turmaId/zerar` |\n| API-02 | GET | `/exp06ef1b/sessoes/:id` |",
+                 handoff) == ""
+    # o handoff que abrevia a rota sem o prefixo do módulo («`GET /painel`», exp02ef1b-4fd72a9a): vale a do PRD com o
+    # mesmo verbo que termina nela
+    assert rotas("| API-005 | `GET` | `/galeria/turmas/:turmaId/painel` |", "`GET /painel`") == ""
+    assert "`GET /painel`" in rotas("| API-005 | `POST` | `/galeria/turmas/:turmaId/painel` |", "`GET /painel`")
+
+
+def test_pedagogico_tem_juiz_de_contradicoes():
+    from agents.design import build_design_stage
+
+    # o pedagógico fecha o design desde o PR 10 (24/10/2026)
+    loop = next(a for a in build_design_stage().sub_agents if a.name == "OnePagerPedagogicoLoop")
     nomes = [a.name for a in loop.sub_agents]
     assert nomes.index("A122CoerenciaPedagogico") < nomes.index("A123PedagogicoRodada")
     assert "coerencia_pedagogico_status" in loop.sub_agents[-1].status_keys

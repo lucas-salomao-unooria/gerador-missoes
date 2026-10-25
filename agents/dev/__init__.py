@@ -46,15 +46,10 @@ Ordem (SequentialAgent):
   v4d A119AnexoPrd             → prd_final + anexo literal do one-pager aprovado (§2, 9, 10,
                                11, 12, 17): o que nenhum gabarito tinha onde pôr; e, na §19, as
                                pendências de governança da liberação de produto (PR 9, D9)
-  ┌── OnePagerPedagogicoLoop (até PRD_MAX_RODADAS) ─────────────────┐
-  │ v5  A120OnePagerPedagogico → one_pager_pedagogico ← entregável   │
-  │       para GENTE: o documento que o time pedagógico lê para      │
-  │       aprovar a missão antes de alguém codificar. Sem jargão,    │
-  │       com os links do protótipo, exportado também em `.docx`.    │
-  │ v5b A121ConteudoAprovadoPedagogico → habilidades, tempo,        │
-  │       podcast e caminhos × one-pager aprovado                   │
-  └────────────────────────────────────────────────────────────────┘
-  v5c A124AnexoPedagogico      → one_pager_pedagogico + anexo literal (§10, 11, 12)
+  v4e A119bPedagogicoNoDev      → pedagogico_pendencias_dev · pedagogico_dev_status (determinístico, PR 10: o
+                               one-pager pedagógico fecha o design e é aprovado no de acordo de design; o dev só
+                               acrescenta, numa seção própria no fim, as pendências da banca e do rastro de dev, e o
+                               texto aprovado que mudou no dev volta ao retrato do design e bloqueia)
 """
 
 from __future__ import annotations
@@ -70,6 +65,7 @@ from agents.banca import get_banca, pular_se_banca_de_entrada_bloqueou
 from agents.juiz import get_fidelidade_check, get_juiz_de_achados, get_juiz_de_contradicoes
 from agents.base import create_llm_agent
 from agents.callbacks import copiar_textos_chave, desembrulhar_documento, marcar_heranca, registrar_governanca
+from agents.pedagogico import PedagogicoNoDevAgent
 from agents.checkers import (
     AnexoAprovadoAgent,
     ConsolidacaoBancaAgent,
@@ -83,7 +79,7 @@ from agents.checkers import (
 )
 from config import get_settings
 from prompts import load_prompt
-from tools.conteudo_aprovado import SECOES_DEV, SECOES_PEDAGOGICO, SECOES_PRD
+from tools.conteudo_aprovado import SECOES_DEV, SECOES_PRD
 from tools.rastro import FONTES_DEV
 
 
@@ -176,18 +172,6 @@ def get_prd_writer_agent(**kw) -> LlmAgent:
     )
 
 
-def get_one_pager_pedagogico_agent(**kw) -> LlmAgent:
-    return create_llm_agent(
-        name="A120OnePagerPedagogico",
-        description="O documento de validação humana: a missão inteira em linguagem de sala de aula, com o papel do professor, os links do protótipo e as perguntas que só o time pedagógico responde.",
-        instruction=load_prompt("dev/120_one_pager_pedagogico.md"),
-        output_key="one_pager_pedagogico",
-        before_agent_callback=marcar_heranca,
-        after_agent_callback=[desembrulhar_documento("one_pager_pedagogico"), copiar_textos_chave("one_pager_pedagogico")],
-        **kw,
-    )
-
-
 #: Slug do envelope da banca → cadeia de agentes que conserta. Desde 08/10/2026 só documento de dev (decisão do
 #: usuário): a banca de dev reescrevia jornada, fluxo, telas e copy depois do parecer de design. O design agora é
 #: validado no fim da etapa dele, antes do parecer, e de novo na entrada do dev — que bloqueia sem reescrever.
@@ -275,7 +259,7 @@ def build_dev_stage(
     rodadas_prd = max(1, get_settings().prd_max_rodadas)
     return SequentialAgent(
         name="DevStage",
-        description="Área de Dev: ficha do manifesto → handoff + brief de assets → banco de conteúdo → telemetria e rastro de lacunas → banca de validação (5 dimensões em paralelo) → consolidação → PRD → pendências do PRD → one-pager pedagógico para validação humana.",
+        description="Área de Dev: ficha do manifesto → handoff + brief de assets → banco de conteúdo → telemetria e rastro de lacunas → banca de validação (5 dimensões em paralelo) → consolidação → PRD → pendências do PRD → as pendências do dev acrescentadas ao pedagógico aprovado no design.",
         before_agent_callback=marcar_heranca,
         sub_agents=[
             # As mesmas seções do design: até 07/10/2026 esta chave era regravada só com as do PRD, e a banca —
@@ -296,7 +280,7 @@ def build_dev_stage(
                        **kw),
             SequentialAgent(
                 name="DevConstrucao",
-                description="O dev propriamente dito — handoff, banco, banca de dev, PRD e pedagógico —, que só roda quando a banca de entrada libera produto e design.",
+                description="O dev propriamente dito — handoff, banco, banca de dev e PRD, e as pendências dele no pedagógico —, que só roda quando a banca de entrada libera produto e design.",
                 before_agent_callback=pular_se_banca_de_entrada_bloqueou,
                 sub_agents=[
                 RastroCheckAgent(
@@ -523,47 +507,13 @@ def build_dev_stage(
                     rotulo="Anexo do PRD",
                     before_agent_callback=marcar_heranca,
                 ),
-                LoopAgent(
-                    name="OnePagerPedagogicoLoop",
-                    description="One-pager pedagógico ↔ conferência contra o one-pager aprovado, até bater ou esgotar as rodadas.",
-                    max_iterations=rodadas_prd,
-                    before_agent_callback=marcar_heranca,
-                    sub_agents=[
-                        get_one_pager_pedagogico_agent(**kw),
-                        RastroCheckAgent(
-                            name="A121ConteudoAprovadoPedagogico",
-                            description="One-pager pedagógico × one-pager aprovado e spec: as habilidades do bloco 11, o tempo em tela do §10, o podcast do §11 e só caminhos de artefato que a sessão tem.",
-                            modo="aprovado_pedagogico",
-                            rotulo="Pedagógico × one-pager aprovado",
-                            report_key="conteudo_aprovado_pedagogico_report",
-                            status_key="conteudo_aprovado_pedagogico_status",
-                            agente="conteudo-aprovado",
-                            estrito=estrito,
-                            before_agent_callback=marcar_heranca,
-                        ),
-                        # O documento que o time pedagógico aprova também não pode afirmar o contrário do aprovado — e era
-                        # o único sem juiz de contradições (auditoria do padrão ouro, 08/10/2026).
-                        get_juiz_de_contradicoes("A122CoerenciaPedagogico", documento_key="one_pager_pedagogico",
-                                                 referencia_key="conteudo_aprovado", report_key="coerencia_pedagogico_report",
-                                                 status_key="coerencia_pedagogico_status", dono="one-pager-pedagogico",
-                                                 rotulo="Coerência do pedagógico com o one-pager aprovado", **kw),
-                        SaidaDeLoopAgent(
-                            name="A123PedagogicoRodada",
-                            description="Pedagógico fiel encerra o loop; divergente volta ao redator com o relatório.",
-                            rotulo="One-pager pedagógico",
-                            status_keys=["conteudo_aprovado_pedagogico_status", "coerencia_pedagogico_status"],
-                            rodada_key="pedagogico_rodada",
-                            max_rounds=rodadas_prd,
-                            autor_keys=["one_pager_pedagogico"],
-                        ),
-                    ],
-                ),
-                AnexoAprovadoAgent(
-                    name="A124AnexoPedagogico",
-                    description="Cola no fim do pedagógico os tempos e cenários de aula, o podcast com o roteiro e o contrato de evidência do one-pager aprovado, literais — o texto que o time pedagógico aprova.",
-                    chave="one_pager_pedagogico",
-                    secoes=list(SECOES_PEDAGOGICO),
-                    rotulo="Anexo do pedagógico",
+                # O pedagógico fecha o design desde o PR 10 (24/10/2026): o dev não o escreve. Só acrescenta as pendências
+                # dele numa seção própria no fim, guardada à parte, e confere que o texto aprovado no de acordo de design
+                # está como estava — o que mudou volta ao retrato do design e bloqueia.
+                PedagogicoNoDevAgent(
+                    name="A119bPedagogicoNoDev",
+                    description="O pedagógico aprovado no de acordo de design, conferido contra o retrato do design (o que mudou no dev volta a ele e bloqueia), e as pendências da banca de dev e do rastro de lacunas do dev numa seção própria no fim.",
+                    estrito=estrito,
                     before_agent_callback=marcar_heranca,
                 ),
                 # A pergunta do PO, respondida num lugar só: o que o produto especificou chegou ao PRD?
@@ -597,7 +547,8 @@ def agentes_em_ordem(etapa: SequentialAgent) -> list:
 
 
 #: Onde o pedido de refazer de dev tem de aparecer: o que o dev escreve.
-FIDELIDADE_DOCUMENTOS_DEV = ["handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico"]
+#: O pedagógico saiu daqui no PR 10: é documento de design, e o pedido do PO sobre ele vai ao design pela triagem.
+FIDELIDADE_DOCUMENTOS_DEV = ["handoff_dev", "brief_assets", "banco_conteudo", "prd_final"]
 
 
 DEV_METADATA = [
@@ -633,11 +584,7 @@ DEV_METADATA = [
     {"id": "A117CoerenciaPrd", "name": "117 · Coerência do PRD com o one-pager aprovado", "icon": "⚖️", "output_key": "coerencia_prd_report", "prompt_file": None, "description": "Um juiz aponta onde o corpo do PRD afirma o contrário do conteúdo aprovado — mecânica, número, regra, texto —, citando os dois lados; o código confere as citações. Contradição comprovada volta ao redator."},
     {"id": "A118PrdRodada", "name": "118 · Veredito do PRD (determinístico)", "icon": "🔁", "output_key": "prd_rodada", "prompt_file": None, "description": "PRD consistente encerra o loop; reprovado devolve ao redator com o relatório do gate, até o teto de rodadas."},
     {"id": "A119AnexoPrd", "name": "119 · Anexo do conteúdo aprovado no PRD (determinístico)", "icon": "📎", "output_key": "prd_final", "prompt_file": None, "description": "Cola no fim do PRD, literais, as seções do one-pager aprovado que o gabarito não tinha onde pôr: currículo, papel do professor, tempos e cenários de aula, podcast com roteiro, contrato de evidência e hipóteses. E põe na seção 19, por código, as pendências de governança da liberação de produto — liberado sem a conta produto, exceção do admin com gate vermelho — como estão agora, também na correção pontual."},
-    {"id": "A120OnePagerPedagogico", "name": "120 · One-pager pedagógico (validação humana)", "icon": "🧑‍🏫", "output_key": "one_pager_pedagogico", "prompt_file": "dev/120_one_pager_pedagogico.md", "description": "A missão inteira em linguagem de sala de aula, com o papel do professor, os links do protótipo e as perguntas de aprovação. Salvo em Markdown e `.docx`."},
-    {"id": "A121ConteudoAprovadoPedagogico", "name": "121 · Pedagógico × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_pedagogico_report", "prompt_file": None, "description": "As habilidades do bloco 11, o tempo em tela, o podcast e os caminhos de artefato do pedagógico contra o one-pager aprovado. Divergência volta ao redator."},
-    {"id": "A122CoerenciaPedagogico", "name": "122 · Coerência do pedagógico com o one-pager aprovado", "icon": "⚖️", "output_key": "coerencia_pedagogico_report", "prompt_file": None, "description": "O mesmo juiz do PRD, sobre o documento que o time pedagógico aprova: contradição com o conteúdo aprovado, com as duas citações conferidas, volta ao redator."},
-    {"id": "A123PedagogicoRodada", "name": "123 · Veredito do pedagógico (determinístico)", "icon": "🔁", "output_key": "pedagogico_rodada", "prompt_file": None, "description": "Pedagógico fiel encerra o loop; divergente volta ao redator com o relatório, até o teto de rodadas."},
-    {"id": "A124AnexoPedagogico", "name": "124 · Anexo do conteúdo aprovado no pedagógico (determinístico)", "icon": "📎", "output_key": "one_pager_pedagogico", "prompt_file": None, "description": "Cola no fim do pedagógico, literais, os tempos e cenários de aula, o podcast com o roteiro e o contrato de evidência do one-pager aprovado — o texto que o time pedagógico aprova."},
+    {"id": "A119bPedagogicoNoDev", "name": "119b · Pedagógico aprovado, no dev (determinístico)", "icon": "🔏", "output_key": "pedagogico_dev_report", "prompt_file": None, "description": "O one-pager pedagógico fecha o design desde o PR 10 e é aprovado no de acordo de design: o dev não o escreve. Confere o texto contra o retrato do design (o que mudou no dev volta a ele e bloqueia) e acrescenta, numa seção própria no fim, as pendências da banca de dev e do rastro de lacunas do dev, com o dono de cada uma."},
     {"id": "A125Rastreabilidade", "name": "125 · Matriz de rastreabilidade (determinístico)", "icon": "🧷", "output_key": "rastreabilidade_dev_report", "prompt_file": None, "description": "Cada requisito do produto procurado em cada artefato de design e de dev, até o PRD e o pedagógico; o que se perdeu sai com o dono."},
-    {"id": "A126FidelidadeDev", "name": "126 · Fidelidade ao refazer de dev", "icon": "📌", "output_key": "fidelidade_dev_report", "prompt_file": None, "description": "Cada pedido de refazer feito ao dev (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) conferido no handoff, no brief, no banco, no PRD e no pedagógico: o juiz cita, o código confere. Sem pedido de dev, não roda. 🔴 recusa o de acordo."},
+    {"id": "A126FidelidadeDev", "name": "126 · Fidelidade ao refazer de dev", "icon": "📌", "output_key": "fidelidade_dev_report", "prompt_file": None, "description": "Cada pedido de refazer feito ao dev (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) conferido no handoff, no brief, no banco e no PRD (o pedagógico é do design desde o PR 10): o juiz cita, o código confere. Sem pedido de dev, não roda. 🔴 recusa o de acordo."},
 ]

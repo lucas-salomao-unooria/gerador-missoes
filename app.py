@@ -768,6 +768,55 @@ def _render_textos_chave(estado: Dict[str, Any]) -> None:
         st.markdown(tabela)
 
 
+def _url_do_link(run_dir: Path, alvo: str) -> str:
+    """O endereço que abre o link do cartão no navegador. Link externo (Stitch, Miro) fica como está; o arquivo da sessão
+    (o protótipo, os diagramas) é servido pelo Streamlit, como as imagens de `st.image` (`MediaFileManager`), e abre numa
+    aba. Até a 3ª revisão do PR #79 (24/10/2026) o protótipo aparecia como caminho em código, sem clique — e é por ele
+    que o time valida a missão. Sem o arquivo, ou fora do servidor (o AppTest), o caminho relativo à sessão."""
+    if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", alvo):
+        return alvo
+    arquivo = Path(run_dir) / alvo
+    try:
+        from streamlit import runtime
+
+        if arquivo.is_file() and runtime.exists():
+            mime = "text/html" if arquivo.suffix.lower() in (".html", ".htm") else "application/octet-stream"
+            return runtime.get_instance().media_file_mgr.add(str(arquivo), mime, f"documento_a_aprovar/{alvo}")
+    except Exception as exc:  # o link não pode derrubar o cartão do de acordo
+        st.caption(f"⚠️ Não consegui servir `{alvo}`: {exc}")
+    return alvo
+
+
+def _render_documento_a_aprovar(run_dir: Path, estado: Dict[str, Any], etapa: str) -> None:
+    """O documento sobre o qual o *de acordo* da etapa é dado — no design, o one-pager pedagógico, com os links do
+    protótipo (PR 10 do plano «Produto dono do contrato», 24/10/2026). O time validava a missão pelos protótipos contra o
+    one-pager de produto, que não descreve a missão inteira; o pedagógico descreve, e passou a fechar o design."""
+    doc = passagem.documento_a_aprovar(estado, etapa)
+    if not doc:
+        return
+    with st.container(border=True):
+        st.markdown(f"**📄 O documento a aprovar: {doc['titulo']}** — o *de acordo* de design é dado sobre ele.")
+        if not doc["existe"]:
+            st.warning(doc["aviso"])
+        else:
+            st.caption("A missão inteira em linguagem de sala de aula. O que o PO aprovou — habilidades, a pergunta do "
+                       "fim, os tempos, o podcast e o roteiro da conversa — entra por código, nos subtítulos «Do one-pager "
+                       "aprovado»; o resto é a narrativa do design. Mudança: **Refazer** — a triagem leva a Produto o que é "
+                       "de produto e aplica no pedagógico o que é de design.")
+        if doc["links"]:
+            st.markdown("**Protótipo e telas:** " + " · ".join(
+                f"[{l['rotulo']}]({_url_do_link(run_dir, l['alvo'])})" for l in doc["links"]))
+        if doc["existe"]:
+            docx = run_dir / doc["docx"]
+            if docx.exists():
+                download_button_lazy("⬇️ Baixar o pedagógico (.docx)", lambda d=docx: d.read_bytes(),
+                                     file_name=f"one-pager-pedagogico_{run_dir.name}.docx",
+                                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                     key=f"pedagogico_docx_{run_dir.name}")
+            with st.expander("Ler o pedagógico aqui", expanded=False):
+                st.markdown(doc["texto"])
+
+
 def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[str, Any],
                             pode_ficar_sem_resposta: bool = True) -> Dict[str, Dict[str, Any]]:
     """A lista do contrato de produto em aberto, com a resposta do PO a cada item (plano «Produto dono do contrato», PR 3).
@@ -937,6 +986,8 @@ def _painel_decisao(run_dir: Path, fluxo: Dict[str, Any], opts: Dict[str, Any]) 
         st.warning("🔴 Há gate reprovado nesta etapa: ela não pode ser liberada. Refaça com um comentário do que mudar"
                    + (", ou libere com exceção (fica registrado no dossiê)." if passagem.EXCECAO in acoes
                       else ", ou peça ao admin uma liberação com exceção."))
+    if situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA) and etapa == "design":
+        _render_documento_a_aprovar(run_dir, estado, etapa)
     if situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA) and etapa in ("produto", "design"):
         _render_padroes(estado, etapa)
     if situacao in (passagem.AGUARDANDO, passagem.DEVOLVIDA) and etapa == "produto":
@@ -2008,13 +2059,16 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
 
     def _one_pager(chave: str, base: str):
         """O `.docx` com a marca quando a exportação existe; senão o Markdown do estado; `None` se não foi gerado."""
-        from pipeline.artifacts import e_mensagem_de_pulo
+        from pipeline.artifacts import CAMINHOS_LEGADOS, documento_para_gravar, e_mensagem_de_pulo
 
-        docx = pasta / f"{base}.docx" if pasta else None
-        if docx and docx.exists():
+        # a sessão gravada antes do PR 10 tem o pedagógico na raiz
+        candidatos = [pasta / f"{base}.docx"] + [pasta / c for c in CAMINHOS_LEGADOS.get(chave, ()) if c.endswith(".docx")] \
+            if pasta else []
+        docx = next((c for c in candidatos if c.exists()), None)
+        if docx:
             return (lambda d=docx: d.read_bytes()), f"{Path(base).name}_{missao}.docx", \
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        texto = str(result.state.get(chave) or "")
+        texto = str(documento_para_gravar(result.state, chave) or "")
         if not texto.strip() or e_mensagem_de_pulo(texto):
             return None
         return (lambda t=texto: t), f"{Path(base).name}_{missao}.md", "text/markdown"
@@ -2037,7 +2091,8 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
     for col, (rotulo, chave, base, quem) in zip((c2, c3, c4), (
             ("📄 One-pager de produto", "one_pager", "produto/00-one-pager", "a etapa de Produto"),
             ("📄 One-pager resumido", "one_pager_resumido", "produto/00d-one-pager-resumido", "o fim de Produto"),
-            ("📄 One-pager pedagógico", "one_pager_pedagogico", "one-pager-pedagogico", "o fim de Dev"))):
+            # o fechamento do design desde o PR 10 (24/10/2026)
+            ("📄 One-pager pedagógico", "one_pager_pedagogico", "design/14-one-pager-pedagogico", "o fim de Design"))):
         with col:
             pronto = _one_pager(chave, base)
             if pronto:

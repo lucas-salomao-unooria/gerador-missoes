@@ -22,9 +22,11 @@ from typing import Any, Dict, Iterable, List, Tuple, Union
 DOCUMENTOS_POR_ETAPA: Dict[str, Tuple[str, ...]] = {
     "produto": ("nucleo_narrativo", "one_pager", "spec_missao", "one_pager_resumido"),
     "spec": ("spec_missao", "one_pager_resumido"),
+    # o pedagógico fecha o design desde o PR 10 (24/10/2026): o pedido do PO sobre ele é editado aqui, e o dev não o toca
     "design": ("fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas",
-               "copy_strings", "copy_strings_revisada", "camada_caa", "wireframes_cobertura", "prototipo_html"),
-    "dev": ("handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico"),
+               "copy_strings", "copy_strings_revisada", "camada_caa", "wireframes_cobertura", "prototipo_html",
+               "one_pager_pedagogico"),
+    "dev": ("handoff_dev", "brief_assets", "banco_conteudo", "prd_final"),
 }
 #: Documentos autorais que a etapa tem e o editor não toca: ficam travados como estão (o autor não roda). O mapa e a
 #: ideação são a origem do núcleo; refazê-los numa correção pontual sortearia outro mecanismo. A resposta do passo de
