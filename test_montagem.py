@@ -648,13 +648,28 @@ def test_toda_porcentagem_da_hipotese_e_meta_menos_a_marcada_como_mecanica():
                   "Se a taxa de desistência de 25% for atingida.", "A partir de 25% das duplas.",
                   "Igual ou superior a 25%.", "Menor do que 25% das duplas."):
         assert montagem._metas_do_corpo(linha) == [("25", "%")], linha
+    # a mecânica dos 12 de 16 projetos ocultos, que o one-pager da exp06ef1b tem fora do §17 e do 9f
+    mecanica = montagem._contrato_da_mecanica(
+        "## 4. Etapas\n- A taxa de invisibilidade de cada jurado será de 60% a 75%.\n"
+        "## 17. Hipóteses de validação\n- H1: mais de 25% das duplas desistem.\n"
+        "## 18. Decisões\n| PQ-01 | Quantas duplas desistem? | >25% → animação |\n")
     for linha in ("o grid com 12 projetos ocultos (taxa real de ~75% de invisibilidade)",
-                  "o confronto entre a projeção da sala e a taxa de 75% da Galeria Oculta",
-                  "a galeria esconde ~75% dos projetos"):
-        assert montagem._metas_do_corpo(linha) == [], linha
-    # a marca de mecânica não vale contra comparativo nem população
-    assert montagem._metas_do_corpo("taxa de 75% das duplas") == [("75", "%")]
-    assert montagem._metas_do_corpo("mais de ~75% acertam") == [("75", "%")]
+                  "o confronto entre a projeção da sala e a taxa de 75% da Galeria Oculta"):
+        assert montagem._metas_do_corpo(linha, mecanica) == [], linha
+        # sem o contrato, a marca não basta
+        assert montagem._metas_do_corpo(linha) == [("75", "%")], linha
+    # a marca de mecânica não vale contra comparativo nem população, e o «~» solto não marca nada
+    assert montagem._metas_do_corpo("taxa de 75% das duplas", mecanica) == [("75", "%")]
+    assert montagem._metas_do_corpo("mais de ~75% acertam", mecanica) == [("75", "%")]
+    assert montagem._metas_do_corpo("a galeria esconde ~75% dos projetos", mecanica) == [("75", "%")]
+    # revisão do PR #77 (24/10/2026): a porcentagem que o contrato só tem no §17 ou no limiar de uma PQ do 9f é meta,
+    # mesmo marcada como taxa — os 25% da H1 da exp02ef1b
+    assert "25%" not in mecanica
+    for linha in ("Se a desistência chegar a ~25%, ou", "Se ~25% desistirem, ou",
+                  "Se a taxa de 25% de desistência for atingida pelas duplas, ou",
+                  "A taxa de 25% de desistência na moldura for atingida (alimenta PQ-01).",
+                  "Desistência na moldura em ~25% (alimenta PQ-01)."):
+        assert montagem._metas_do_corpo(linha, mecanica) == [("25", "%")], linha
 
 
 def test_direcao_do_comparativo_antes_e_depois_da_porcentagem():
@@ -684,6 +699,40 @@ def test_marcador_do_po_rege_so_a_propria_oracao():
         "manchete com até 10 palavras (8 a 10).") == [("35", "palavras"), ("10", "palavras")]
     assert montagem._valores_afirmados("O balão tem que ter no máximo 35 palavras.") == [("35", "palavras")]
     assert montagem._valores_afirmados("Deve ser 30% ou 40%.") == [("30", "%"), ("40", "%")]
+    assert montagem._valores_afirmados("Ratifico o teto de 35 palavras.") == [("35", "palavras")]
+    assert montagem._valores_afirmados("Ajuste solicitado: timer de 60 s na E3.") == [("60", "s")]
+
+
+def test_marcador_do_po_rege_so_o_numero_logo_depois_dele():
+    """Segunda revisão do PR #77 (24/10/2026): o marcador regia o número seja qual fosse o complemento, e a exclusão
+    dependia de uma lista fechada de verbos de citação — o número que o PO manda tirar ou aponta como inventado virava
+    origem. O ônus inverteu: entre o marcador e o número, só conectores de valor; no item da lista aberta pelos
+    dois-pontos, o rótulo nomeia o valor, sem documento nem verbo; e o número seguido de «removido», «inventado» sai."""
+    for texto in ("No KPI-08 deve ser removido o limiar de 80%, que não está no 9f.",
+                  "Decidi remover o limiar de 80% do KPI-08.",
+                  "Deve ser retirado o timer de 45 s da E3.",
+                  "Tem que ser tirada a meta de 70% da H2, o §17 não quantifica.",
+                  "Ajuste solicitado: o PRD inventou o limiar de 80% do KPI-08.",
+                  "Ajuste solicitado: o limiar de 80% deve ser removido.",
+                  "Decidi: o limiar de 80% inventado sai do KPI-08.",
+                  "O PRD troca para 25%."):
+        assert montagem._valores_afirmados(texto) == [], texto
+    # o valor certo vira origem, o errado não
+    assert montagem._valores_afirmados(
+        "Ajuste solicitado: o handoff baixou o timer para 45 s. O correto é 60 s.") == [("60", "s")]
+    assert montagem._valores_afirmados("O timer deve ser 60 s, o handoff reduziu para 45 s.") == [("60", "s")]
+    assert montagem._valores_afirmados("Ajuste solicitado: timer de 60 s, o handoff reduziu para 45 s.") == [("60", "s")]
+    assert montagem._valores_afirmados("Deve ser 30% e não 25%.") == [("30", "%")]
+    assert montagem._valores_afirmados("Troque para 30%.") == [("30", "%")]
+    assert montagem._valores_afirmados("Deve ser de 8 a 10 palavras.") == [("10", "palavras")]
+    # os dois-pontos depois do número já regido explicam, não abrem lista
+    assert montagem._valores_afirmados("O timer deve ser 60 s: 45 s é pouco.") == [("60", "s")]
+    # o rótulo do item não fala do documento nem tem forma verbal fora das listas de citação e de remoção
+    assert montagem._valores_afirmados("Ajuste solicitado: o handoff com 45 s na E3.") == []
+    assert montagem._valores_afirmados("Decidi: a E3 ganhou o timer de 45 s.") == []
+    # e o marcador não rege por cima de uma fila de conectores
+    assert montagem._valores_afirmados("Deve ser de no máximo até cerca de 30%.") == []
+    assert montagem._valores_afirmados("Deve ser de no máximo 30%.") == [("30", "%")]
 
 
 def test_contexto_do_pedido_com_item_pendente_nao_e_origem():
@@ -718,6 +767,8 @@ def test_teto_posposto_separado_por_virgula_ou_na_celula_anterior():
                           ("| Balão da comissão | Teto | 35 palavras |", "35"),
                           ("| Balão da comissão | 35 palavras (teto) |", "35"),
                           ("Resumo entre 25 e 35 palavras (teto do D0-09).", "35"),
+                          ("Balão de notificação: 35 palavras (teto do §15).", "35"),
+                          ("Balão de notificação: 40 palavras (teto do § 15).", "40"),
                           ("Manchetes de 8 a 10 palavras, sem exceder o teto.", "10"),
                           ("Legenda de 35 palavras ou menos.", "35"),
                           ("Balão com 35 palavras (máx. 2 linhas).", "35")):

@@ -143,6 +143,26 @@ def test_pedido_do_po_ao_refazer_dev_vira_origem_so_no_que_ele_afirma():
     assert {l.split(" — ")[0] for l in pedidos.splitlines()} == {"10 palavras", "35 palavras"}, pedidos
 
 
+@pytest.mark.parametrize("pedido", (
+    "No KPI-08 deve ser removido o limiar de 80%, que não está no 9f.",
+    "Decidi remover o limiar de 80% do KPI-08.",
+    "Ajuste solicitado: o PRD inventou o limiar de 80% do KPI-08.",
+    "Ajuste solicitado: o limiar de 80% do KPI-08 deve ser removido.",
+))
+def test_v_continua_quando_o_po_pede_para_tirar_o_numero(pedido):
+    """Segunda revisão do PR #77 (24/10/2026): o pedido natural contra o 80% inventado do KPI-08 da exp02ef1b
+    («deve ser removido», «decidi remover», «Ajuste solicitado: o PRD inventou») fazia dele origem, e o
+    `numero-sem-origem` desse número calava na reexecução. Continua V."""
+    st = estado("R13")
+    st["pedidos_do_po"] = [{"etapa": "dev", "texto": pedido, "origem": "refazer Dev · completo · 24/10/2026 10:00"}]
+    assert montagem.contrato(st)["pedidos_do_po"] == ""
+    inicios = set(inicios_das_linhas_com("R13", "prd", "KPI-08"))
+    contrato = montagem.texto_do_contrato(montagem.contrato(st))
+    assert any(i["numero"] == "80%" and i["linha"] in inicios
+               for i in montagem.numeros_sem_origem(corpo("R13", "prd"), contrato))
+    assert "numero-sem-origem" in {a["codigo"] for a in montagem.validar_prd(st)["achados"]}
+
+
 def test_pedido_do_po_que_cita_o_texto_atual_nao_vira_origem():
     """exp02ef1b (23/10/2026): o pedido de design cita entre aspas o texto atual («pelo menos 10% da foto») e cola
     relatos de gate; exp02em1b (22/10/2026): o pedido de dev cita as rubricas «… por 4 segundos …» para trocá-las.

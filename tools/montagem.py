@@ -45,6 +45,8 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from tools.propagacao import (
+    _RE_NUMERO,
+    _UNIDADE,
     _fmt,
     bloco_13,
     contrato_no_corpo,
@@ -125,24 +127,58 @@ def _texto_das_decisoes_do_po(decisoes_do_po: Optional[Sequence[Dict[str, Any]]]
 
 
 #: O valor que o PO afirma como novo no pedido: «pode ser até 10 palavras» (exp04ef1b, 25/09/2026), «deve ser 30%»,
-#: «volta para 30%», «passa a ser 45 s», «ratifico», «fica em». Número de pedido sem um desses antes, na mesma frase,
-#: não vira origem: o pedido em prosa livre cita também o número errado («o PRD está com 25%, deve ser 30%»).
+#: «volta para 30%», «passa a ser 45 s», «ratifico», «fica em», «o correto é 60 s». Número de pedido sem um desses que o
+#: reja (`_rege`) não vira origem: o pedido em prosa livre cita também o número errado («o PRD está com 25%, deve ser
+#: 30%»). «Troca para» e «muda para» só no imperativo e no infinitivo: «o PRD troca para 25%» descreve o documento.
 _RE_VALOR_AFIRMADO = re.compile(
     r"\b(?:pode|podem|deve|devem)\s+(?:ser|ficar|ter)\b|\bseja\b|\bpassa(?:r|m)?\s+(?:a\s+ser|a\s+ter|para)\b|"
-    r"\bvolta(?:r|m)?\s+(?:a\s+ser|para)\b|\b(?:mud|troc|alter|ajust|corrig)(?:e|ar|a|em)\s+para\b|"
-    r"\bfi(?:ca|car|que|quem)\s+(?:com|em)\b|\bratific|\bhomolog|\bdecid[oi]\b|\bdefin[oi]\b|\baprovo\b|\bconfirmo\b|"
-    r"\baceito\b|\bsolicitad[oa]\b|\bt[êe]m\s+(?:de|que)\s+(?:ser|ter|ficar)\b", re.I)
-#: O que o PO cita como errado ou antigo, entre o marcador afirmado e o número: «o PRD está com 25%», «hoje», «em vez de
-#: 25%», «não 25%», «o PRD usou 25%», «o §17 diz 30%», «o timer tem 45 s». Esse número não vira origem — a não ser que
-#: um valor afirmado venha depois da citação («a H1 está errada: deve ser 30%»).
+    r"\bvolta(?:r|m)?\s+(?:a\s+ser|para)\b|"
+    r"\b(?:mud(?:e|em|ar)|troqu(?:e|em)|trocar|alter(?:e|em|ar)|ajust(?:e|em|ar)|corrij(?:a|am)|corrigir)\s+para\b|"
+    r"\bfi(?:ca|car|que|quem)\s+(?:com|em)\b|\bratific\w*|\bhomolog\w*|\bdecid[oi]\b|\bdefin[oi]\b|\baprovo\b|"
+    r"\bconfirmo\b|\baceito\b|\bsolicitad[oa]\b|\bt[êe]m\s+(?:de|que)\s+(?:ser|ter|ficar)\b|"
+    r"\b(?:o\s+)?(?:valor\s+)?(?:correto|certo)\s+(?:é|seria|ser[áa])(?!\w)", re.I)
+#: O marcador rege só o número que vem logo depois dele: no meio, só artigo, preposição, quantificador e o nome do
+#: valor — «pode ser até 10 palavras», «fica em 60 s», «tem que ter no máximo 35 palavras», «ratifico o teto de 35
+#: palavras» — e os números de antes com o separador («30% ou 40%», «de 8 a 10 palavras»). Revisão do PR #77
+#: (24/10/2026): bastava o marcador antes do número, e «No KPI-08 deve ser removido o limiar de 80%», «Decidi remover o
+#: limiar de 80%», «Tem que ser tirada a meta de 70%» faziam origem do número que o PO manda tirar — o 80% inventado do
+#: KPI-08 da exp02ef1b-4fd72a9a deixava de ser cobrado. Verbo no meio, seja qual for, tira o número do alcance.
+_CONECTORES_DE_VALOR = frozenset(
+    "a à ao aos o os as um uma de do da dos das em no na nos nas para pra com até ate entre cerca aproximadamente "
+    "apenas só somente exatamente máximo maximo mínimo minimo máx max mín min pelo menos igual "
+    "teto limiar meta alvo limite valor tempo timer prazo duração duracao piso".split())
+_SEPARADORES_DE_VALOR = frozenset({",", "e", "ou", "a", "até", "ate", "-", "–"})
+_LIMITE_DE_CONECTORES = 5
+_RE_TOKEN = re.compile(r"\d+(?:[.,]\d+)?|[^\W\d_]+\.?|%|[~≤≥<>=]+|[,–-]|\S")
+#: O que o PO cita como errado ou antigo, no rótulo do item da lista: «o PRD está com 25%», «hoje», «em vez de 25%»,
+#: «não 25%», «o PRD usou 25%», «o §17 diz 30%», «o timer tem 45 s».
 _RE_VALOR_CITADO = re.compile(
     r"\best[áa]\s+(?:com|em|escrit[oa]|como)\b|\bestava(?:m)?\b|\bhoje\b|\batual(?:mente)?\b|\bem\s+vez\s+de\b|"
     r"\bno\s+lugar\s+de\b|\bao\s+inv[ée]s\s+de\b|\berrad[oa]s?\b|\bincorret[oa]s?\b|\bera(?:m)?\b|\bn[ãa]o\b|"
     r"\bus(?:ou|a|ava|aram|am)\b|\bescrev(?:e|eu|ia|eram|em)\b|\bdi(?:z|zia|sse|zem)\b|"
     r"\bt(?:em|inha|êm)\b(?!\s+(?:de|que)\b)|\btr(?:ouxe|az|aziam?)\b|\bp(?:[ôo]s|[õo]e|useram)\b|"
     r"\bcoloc(?:ou|a|aram)\b|\baparec(?:e|eu|em)\b|\bmostr(?:a|ou|ava)\b|\bcit(?:a|ou)\b", re.I)
-#: Logo depois do número: «de 25% para 30%», «25% → 30%» (o de antes da seta sai); «o 25% está errado».
-_RE_CITADO_DEPOIS = re.compile(r"^\s*(?:para\b|→|->|=>)|^[^\d]{0,30}?\b(?:errad[oa]s?|incorret[oa]s?)\b", re.I)
+#: Verbo de remoção ou de autoria do redator: o número que vem depois é o que o PO manda tirar ou o que o documento
+#: escreveu — «remover», «tirada», «o PRD inventou», «o handoff baixou o timer para 45 s», «reduziu», «subiu».
+_RE_VERBO_DE_REMOCAO_OU_AUTORIA = re.compile(
+    r"\b(?:remov|retir|tir(?:a|am|ar|ad[oa]s?|e|em|ou)\b|elimin|apag|exclu|descart|suprim|invent|"
+    r"cri(?:ou|ad[oa]s?|ar|aram)\b|baix|reduz|diminu|aument|sub(?:iu|ir|iram)\b|troc|mud|encolh|"
+    r"cort(?:ar|ad[oa]s?|ou)\b|alter(?:ar|ad[oa]s?|ou)\b|perd(?:er|eu|id[oa]s?)\b)", re.I)
+#: O rótulo do item de lista que o marcador abre com dois-pontos nomeia o valor: «O teto de texto está ratificado …:
+#: resumo de notícia com 25 a 35 palavras; manchete com até 10 palavras» (exp04ef1b, 25/09/2026). Não fala do
+#: documento, não tem número solto nem verbo — passado, infinitivo, gerúndio ou cópula («Ajuste solicitado: o PRD
+#: inventou o limiar de 80%»).
+_RE_ROTULO_QUE_CITA = re.compile(
+    r"\b(?:PRD|handoff|prot[óo]tipo|redator|agente|Stitch|spec|design|banca|gate|wireframe|verificador|documento|"
+    r"one-pager)\b|§|(?<![\w-])\d", re.I)
+_RE_FORMA_VERBAL = re.compile(r"\w{2,}(?:ou|eu|iu|ar|er|ir|ndo)|é|são|era|eram|foi|foram|est[áa]|est[ãa]o|ficou|"
+                              r"vai|v[ãa]o|h[áa]|deve|devem|pode|podem|precisa", re.I)
+#: Logo depois do número, até o próximo: «de 25% para 30%», «25% → 30%» (o de antes da seta sai); «o 25% está
+#: errado»; «o limiar de 80% do KPI-08 deve ser removido», «80% inventado».
+_RE_CITADO_DEPOIS = re.compile(
+    r"^\s*(?:para\b|→|->|=>)|^[^;:]{0,50}?\b(?:errad[oa]s?|incorret[oa]s?|inventad[oa]s?|"
+    r"(?:remov|retir|tir|elimin|apag|cort|descart|suprim)(?:ad[oa]s?|id[oa]s?|ar|er|ir)|exclu(?:[íi]d[oa]s?|ir)|"
+    r"sai|sair)\b", re.I)
 #: Frase: o ponto seguido de maiúscula ou a quebra de linha — «máx. 10 palavras» não corta a frase.
 _RE_FIM_DE_FRASE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ])|\n")
 #: Fronteira de oração dentro da frase. A adversativa encerra o alcance do marcador: «Decidi: o timer tem 45 s no
@@ -152,49 +188,88 @@ _RE_FIM_DE_FRASE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ])|\
 _RE_FRONTEIRA_DE_ORACAO = re.compile(r"[;:]|\b(?:mas|por[ée]m|contudo|entretanto|todavia)\b", re.I)
 
 
-def _marcador_que_rege(frase: str, inicio: int) -> Optional[int]:
-    """O fim do marcador afirmado que rege o número que começa em `inicio`, ou None. Rege o marcador da própria oração;
-    o de antes vale só pelos dois-pontos que abrem o que ele afirma (com ponto e vírgula entre os itens), nunca por
-    cima de adversativa."""
+def _so_valor(trecho: str) -> bool:
+    """Entre o marcador e o número só há o que rege um valor: até `_LIMITE_DE_CONECTORES` conectores de valor,
+    símbolo de comparação e os números de antes, com a unidade e o separador."""
+    conectores, depois_de_numero = 0, False
+    for tok in _RE_TOKEN.findall(trecho or ""):
+        t = tok.lower().rstrip(".") if tok != "." else tok
+        if re.fullmatch(r"\d+(?:[.,]\d+)?", t):
+            depois_de_numero = True
+        elif depois_de_numero and (t == "%" or t in _UNIDADE):
+            pass
+        elif depois_de_numero and t in _SEPARADORES_DE_VALOR:
+            depois_de_numero = False
+        elif re.fullmatch(r"[~≤≥<>=]+", t):
+            depois_de_numero = False
+        elif t in _CONECTORES_DE_VALOR:
+            depois_de_numero, conectores = False, conectores + 1
+            if conectores > _LIMITE_DE_CONECTORES:
+                return False
+        else:
+            return False
+    return True
+
+
+def _rotulo_de_valor(rotulo: str) -> bool:
+    """O começo do item de lista, antes dos conectores, só nomeia o valor (`_RE_ROTULO_QUE_CITA`): sem documento, sem
+    número solto, sem verbo citado, de remoção ou de autoria, e sem forma verbal fora dos nomes de valor."""
+    if _RE_ROTULO_QUE_CITA.search(rotulo) or _RE_VALOR_CITADO.search(rotulo) or (
+            _RE_VERBO_DE_REMOCAO_OU_AUTORIA.search(rotulo)):
+        return False
+    return not any(_RE_FORMA_VERBAL.fullmatch(p) for p in re.findall(r"[^\W\d_]+", rotulo)
+                   if p.lower() not in _CONECTORES_DE_VALOR)
+
+
+def _item_de_valor(item: str) -> bool:
+    """O item da lista é «rótulo + conectores + número»: o rótulo mais curto cujo resto só rege o valor."""
+    cortes = [0] + [m.end() for m in re.finditer(r"\s+", item)] + [len(item)]
+    corte = next(c for c in cortes if _so_valor(item[c:]))
+    return _rotulo_de_valor(item[:corte])
+
+
+def _rege(frase: str, inicio: int) -> bool:
+    """Um marcador afirmado rege o número que começa em `inicio`: o da própria oração, só com conectores de valor no
+    meio (`_so_valor`); sem marcador na oração, o que abre com dois-pontos a lista de que ela é item — sem número
+    regido antes dos dois-pontos, com ponto e vírgula entre os itens e o item no formato rótulo do valor + conectores
+    (`_item_de_valor`). Nunca por cima de adversativa."""
     fronteiras = list(_RE_FRONTEIRA_DE_ORACAO.finditer(frase, 0, inicio))
-
-    def ultimo_marcador(de: int, ate: int) -> Optional[int]:
-        ms = list(_RE_VALOR_AFIRMADO.finditer(frase, de, ate))
-        return ms[-1].end() if ms else None
-
-    proprio = ultimo_marcador(fronteiras[-1].end() if fronteiras else 0, inicio)
-    if proprio is not None:
-        return proprio
+    oracao = fronteiras[-1].end() if fronteiras else 0
+    proprios = list(_RE_VALOR_AFIRMADO.finditer(frase, oracao, inicio))
+    if proprios:
+        return _so_valor(frase[proprios[-1].end():inicio])
     k = len(fronteiras)
     # sobe pelos itens separados por ponto e vírgula até os dois-pontos que os abrem
     while k and fronteiras[k - 1].group(0) == ";":
         k -= 1
     if not k or fronteiras[k - 1].group(0) != ":":
-        return None
-    return ultimo_marcador(fronteiras[k - 2].end() if k > 1 else 0, fronteiras[k - 1].start())
+        return False
+    dois_pontos = fronteiras[k - 1].start()
+    abre = list(_RE_VALOR_AFIRMADO.finditer(frase, fronteiras[k - 2].end() if k > 1 else 0, dois_pontos))
+    if not abre or _RE_NUMERO.search(frase[abre[-1].end():dois_pontos]):
+        # sem marcador, ou ele já regeu o seu número: os dois-pontos explicam, não abrem lista («Deve ser 30%: o PRD
+        # usou 25%»)
+        return False
+    return _item_de_valor(frase[oracao:inicio])
 
 
 def _valores_afirmados(texto: str) -> List[Tuple[str, str]]:
-    """Os números (com unidade) que o pedido afirma como valor novo, regidos por um `_RE_VALOR_AFIRMADO`
-    (`_marcador_que_rege`) — sem o relato de gate colado, sem o que vem entre aspas (o texto que o PO cita para trocar)
-    e sem o que ele cita como errado ou antigo entre o marcador e o número (`_RE_VALOR_CITADO`, `_RE_CITADO_DEPOIS`).
+    """Os números (com unidade) que o pedido afirma como valor novo, regidos por um `_RE_VALOR_AFIRMADO` (`_rege`) —
+    sem o relato de gate colado, sem o que vem entre aspas (o texto que o PO cita para trocar) e sem o que ele cita
+    como errado, manda tirar ou atribui ao documento logo depois do número (`_RE_CITADO_DEPOIS`).
 
-    Revisão do PR #77 (24/10/2026): bastava o marcador em qualquer lugar antes do número, na mesma frase, e «Deve ser
-    30%; o PRD usou 25%» ou «Decidi: o timer tem 45 s no handoff, mas deve ser 60 s» faziam origem do número citado."""
+    Revisão do PR #77 (24/10/2026), duas vezes: bastava o marcador em qualquer lugar antes do número, na mesma frase,
+    e «Deve ser 30%; o PRD usou 25%» faziam origem do número citado; depois, com o alcance na própria oração e uma lista
+    fechada de verbos de citação, ainda passavam «deve ser removido o limiar de 80%», «Ajuste solicitado: o PRD
+    inventou o limiar de 80%». O ônus inverteu: o marcador só rege o número logo depois dele."""
     from tools.fidelidade import sem_relatos_de_gate
-    from tools.propagacao import _RE_NUMERO, _UNIDADE
 
     saida: List[Tuple[str, str]] = []
     for frase in _RE_FIM_DE_FRASE.split(_RE_CITACAO.sub(" ", sem_relatos_de_gate(texto or ""))):
         ms = list(_RE_NUMERO.finditer(frase))
         for i, m in enumerate(ms):
             depois = frase[m.end():ms[i + 1].start() if i + 1 < len(ms) else len(frase)]
-            rege = _marcador_que_rege(frase, m.start())
-            if rege is None or _RE_CITADO_DEPOIS.search(depois):
-                continue
-            entre = frase[rege:m.start()]
-            citado = list(_RE_VALOR_CITADO.finditer(entre))
-            if citado and not _RE_VALOR_AFIRMADO.search(entre[citado[-1].end():]):
+            if not _rege(frase, m.start()) or _RE_CITADO_DEPOIS.search(depois):
                 continue
             tok = (m.group(1).replace(",", "."), _UNIDADE[m.group(2).lower()])
             if tok not in saida:
@@ -393,9 +468,10 @@ _RE_TETO_OU_PISO = re.compile(r"m[áa]x|teto|limite|\bat[ée]\b|≤|<=|n[ãa]o (
 #: (exp02em1b) — análise de 24/10/2026.
 _RE_TETO_ANTES = re.compile(_RE_TETO_OU_PISO.pattern + r"|\bcap\b|limitad[oa]s?\b", re.I)
 #: «frases com até 17 palavras (teto da faixa: 20 palavras)», «legendas com 39 a 46 palavras (teto: 60)»: o número
-#: seguido do teto com outro número — solto ou da mesma unidade — é a medida, e o teto é o outro. «(teto do D0-09)» e
-#: «(máx. 2 linhas)» não trazem outro número de palavras: são o teto deste.
-_TETO_DEPOIS = (r"^\s*[(,—–]?\s*(?:teto|m[áa]x|limite)[^)\n;|]*?(?<![\w.,-])\d+(?:[.,]\d+)?"
+#: seguido do teto com outro número — solto ou da mesma unidade — é a medida, e o teto é o outro. «(teto do D0-09)»,
+#: «(teto do §15)» e «(máx. 2 linhas)» não trazem outro número de palavras: são o teto deste (o «§15» é a seção onde
+#: moram os tetos, não um teto de 15 — revisão do PR #77, 24/10/2026).
+_TETO_DEPOIS = (r"^\s*[(,—–]?\s*(?:teto|m[áa]x|limite)[^)\n;|]*?(?<![\w.,§-])(?<!§\s)\d+(?:[.,]\d+)?"
                 r"\s*(?:{unidade}\b|[)\n;,|]|$)")
 #: O teto ou o piso logo depois do número: «35 palavras no máximo», «35 palavras (teto)», «(teto do D0-09)», «8 a 10
 #: palavras, sem exceder o teto», «35 palavras ou menos». Revisão do PR #77 (24/10/2026): só o marcador de antes
@@ -702,22 +778,46 @@ _RE_POPULACAO_DEPOIS = re.compile(r"^\s*(?:ou\s+(?:mais|menos)\s+)?d[aeo]s?\s+(?
                                   r"jovens|respondentes|usu[áa]rios|sala)\b", re.I)
 #: A porcentagem da mecânica vem marcada como tal, sem comparativo: «taxa real de ~75% de invisibilidade» do PRD e «a
 #: taxa de 75% da Galeria Oculta» do handoff da exp06ef1b eram os 12 de 16 projetos ocultos, não meta da H2 (análise de
-#: 24/10/2026). «taxa de desistência de 25%» não é esse caso: a taxa ali é a medida da hipótese.
-_RE_MECANICA_ANTES = re.compile(r"(?:\btaxa\s+(?:real\s+)?de\s*~?|~)\s*$", re.I)
+#: 24/10/2026). «taxa de desistência de 25%» não é esse caso: a taxa ali é a medida da hipótese. O «~» solto não marca
+#: nada (revisão do PR #77, 24/10/2026: «Se a desistência chegar a ~25%» tirava a H1 30×25 da exp02ef1b do gate).
+_RE_MECANICA_ANTES = re.compile(r"\btaxa\s+(?:real\s+)?de\s*~?\s*$", re.I)
 
 
-def _metas_do_corpo(texto: str) -> List[Tuple[str, str]]:
+def _contrato_da_mecanica(contrato_texto: str) -> str:
+    """O contrato sem o §17 (as metas) e sem as linhas de tabela com `PQ-nn` (os limiares do 9f): onde a porcentagem
+    marcada como mecânica tem de estar para não ser meta. Os 75% da exp06ef1b estão na conta da invisibilidade do
+    one-pager e da spec; os 25% da exp02ef1b, só no limiar da PQ-01 — «a taxa de 25% de desistência» é a meta."""
+    from tools.kpis import _RE_PQ
+
+    saida: List[str] = []
+    nivel: Optional[int] = None
+    for linha in (contrato_texto or "").splitlines():
+        m = re.match(r"^(#{1,6})\s+(.*)$", linha)
+        if m:
+            if nivel is not None and len(m.group(1)) <= nivel:
+                nivel = None
+            if nivel is None and re.match(r"^(?:§\s*)?17\s*(?:\.(?![\dA-Za-z])|[—–-])", m.group(2).strip("*_ ")):
+                nivel = len(m.group(1))
+                continue
+        if nivel is None and not ("|" in linha and _RE_PQ.search(linha)):
+            saida.append(linha)
+    return "\n".join(saida)
+
+
+def _metas_do_corpo(texto: str, mecanica: str = "") -> List[Tuple[str, str]]:
     """Os números de hipótese do corpo que podem ser meta: a duração (s, min) e toda porcentagem, menos a que vem
-    marcada como mecânica (`_RE_MECANICA_ANTES`) sem comparativo nem população.
+    marcada como mecânica (`_RE_MECANICA_ANTES`) sem comparativo nem população e que o contrato tem fora do §17 e do
+    9f (`mecanica`, de `_contrato_da_mecanica`). Sem o contrato, a marca não basta: a porcentagem é meta.
 
     Revisão do PR #77 (24/10/2026): a leitura pedia o comparativo de uma lista curta ou a população, e fora disso a
     porcentagem sumia em silêncio — «Se a desistência das duplas superar 25%», «25% ou mais das duplas», «maior que
-    25%» tiravam do gate a H1 30×25 da exp02ef1b (D11). O lado conservador é o contrário: só sai a marcada."""
+    25%» tiravam do gate a H1 30×25 da exp02ef1b (D11). O lado conservador é o contrário: só sai a marcada. Na segunda
+    revisão, a marca sozinha ainda tirava «Se a taxa de 25% de desistência for atingida»: a mecânica é a do contrato."""
     limpo = _RE_CITACAO.sub(" ", texto or "").replace("$", "").replace("\\%", "%").replace("\\ge", "≥").replace(
         "\\le", "≤")
     saida = []
     for t in _numeros_de_hipotese(limpo):
-        if t[1] == "%":
+        if t[1] == "%" and tem_numero(mecanica, t):
             num = re.escape(t[0]).replace(r"\.", "[.,]")
             ocorrencias = list(re.finditer(rf"(?<![\w.,]){num}\s?%", limpo))
             if ocorrencias and all(
@@ -787,13 +887,14 @@ def hipoteses_reescritas(one_pager: str, corpo: str, spec: str = "",
     do_17 = _itens_de_hipotese(secao(one_pager or "", 17) or "")
     do_corpo = _itens_de_hipotese(_secoes_de_hipotese(corpo))
     nove_f = _linhas_9f(sem_linhas_abertas(spec)) if spec else {}
+    mecanica = _contrato_da_mecanica(contrato_texto or "")
     saida = []
     for n, texto in do_corpo.items():
         if n not in do_17:
             continue
         aprovados = _numeros_de_hipotese(do_17[n])
         unidades = {u for _, u in aprovados}
-        fora = [t for t in _metas_do_corpo(texto) if not tem_numero(do_17[n], t)
+        fora = [t for t in _metas_do_corpo(texto, mecanica) if not tem_numero(do_17[n], t)
                 and (t[1] == "%" or t[1] in unidades or contrato_texto is None or not tem_numero(contrato_texto, t))]
         if not fora:
             continue

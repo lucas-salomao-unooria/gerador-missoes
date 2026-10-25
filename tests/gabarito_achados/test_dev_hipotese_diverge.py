@@ -99,6 +99,13 @@ MUTANTES_H1 = [
     ("prd", H1_PRD, "25% ou mais das duplas desistem da moldura (alimenta PQ-01)."),
     ("prd", H1_PRD, "A desistência for maior do que 25% das duplas (alimenta PQ-01)."),
     ("prd", H1_PRD, "Se a taxa de desistência ultrapassar 25% (alimenta PQ-01)."),
+    # segunda revisão (24/10/2026): o «~» solto e a «taxa de 25%» marcavam a porcentagem como mecânica, e o 25% só
+    # existe no contrato no limiar da PQ-01
+    ("handoff", H1_HANDOFF, "Se a desistência chegar a ~25%, ou"),
+    ("handoff", H1_HANDOFF, "Se ~25% desistirem, ou"),
+    ("handoff", H1_HANDOFF, "Se a taxa de 25% de desistência for atingida pelas duplas, ou"),
+    ("prd", H1_PRD, "A taxa de 25% de desistência na moldura for atingida (alimenta PQ-01)."),
+    ("prd", H1_PRD, "Desistência na moldura em ~25% (alimenta PQ-01)."),
 ]
 
 
