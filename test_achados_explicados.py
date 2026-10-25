@@ -569,10 +569,11 @@ def test_login_continua_de_pe(tmp_path, monkeypatch):
 
 def test_matriz_de_rastreabilidade_grava_a_lista_inteira_para_o_cartao():
     """O resumo da matriz traz só 6 itens de 70 caracteres (volta aos autores no retrabalho); o cartão mostra todos,
-    inteiros, pelo campo `faltando`."""
+    inteiros, pelo campo `faltando`. A exp03em1b tem 15 itens faltando; a exp02em1b caiu para 6 depois que a C4 (#81)
+    tirou as lacunas e as falas dos textos de tela."""
     from tools import rastreabilidade
 
-    estado = _estado("exp02em1b-60cfa7f4")
+    estado = _estado("exp03em1b-b2e7b4a3")
     achados = [a for a in rastreabilidade.matriz(estado)["achados"] if len(a.get("faltando") or []) > 6]
     assert achados, "o acervo tem matriz com mais de 6 itens faltando"
     for a in achados:
