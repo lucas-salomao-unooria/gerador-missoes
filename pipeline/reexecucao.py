@@ -362,6 +362,8 @@ _ETAPAS_REFEITAS: Dict[str, frozenset] = {
 ARQUIVOS_DE_BACKUP = (
     "estado.json", "conversa.json", "manifesto-artefatos.json",
     "diagnostico-execucao.md", "aprendizado.md",
+    # o histórico por rodada dos gates volta com o estado de onde ele sai (`tools/historico_gates.py`)
+    "historico-gates.json",
 )
 PASTA_CORRECOES = ".correcoes"
 
