@@ -43,10 +43,13 @@ def _norm(texto: str) -> str:
                    if unicodedata.category(c) != "Mn").strip(" `*_")
 
 
-def corrigir_status_do_catalogo(texto: str, status_automatico: str) -> Tuple[str, List[str]]:
+def corrigir_status_do_catalogo(texto: str, status_automatico: str, slug: str = "") -> Tuple[str, List[str]]:
     """O texto com a célula «Status» da linha de catálogo trocada quando o agente pôs um status de promoção. Devolve o
-    texto e os status que ele propôs e foram trocados."""
-    from tools.catalogo import STATUS_HUMANOS
+    texto e os status que ele propôs e foram trocados.
+
+    A coluna é achada pelo cabeçalho da tabela ou, sem cabeçalho, pela linha da própria missão (primeira célula igual ao
+    `slug`, nas 11 colunas do prompt): na 53e011b6 a linha veio sozinha num bloco ```markdown."""
+    from tools.catalogo import STATUS_HUMANOS, cabecalho_fixo_da_linha
 
     humanos = {_norm(s) for s in STATUS_HUMANOS}
     linhas = (texto or "").split("\n")
@@ -54,30 +57,41 @@ def corrigir_status_do_catalogo(texto: str, status_automatico: str) -> Tuple[str
     coluna = None
     for i, bruta in enumerate(linhas):
         linha = bruta.strip()
-        if not (linha.startswith("|") and linha.endswith("|") and len(linha) > 2):
+        # A linha inteira em código inline, «`| exp06ef1b | … | em produção |`»: a 53e011b6 repetiu assim a linha, na
+        # proposta de atualizar `references/catalogo-missoes.md`. Só vale pelo cabeçalho fixo (sem tabela em volta).
+        cerca = "`" if (linha.startswith("`|") and linha.endswith("|`") and len(linha) > 4) else ""
+        if cerca:
+            linha = linha[1:-1]
+        elif not (linha.startswith("|") and linha.endswith("|") and len(linha) > 2):
             coluna = None
             continue
         if set(linha) <= set("|-: "):
             continue
         celulas = linha.strip("|").split("|")
         normal = [_norm(c) for c in celulas]
-        if any("descoberta" in c for c in normal) and "status" in normal:
+        if not cerca and any("descoberta" in c for c in normal) and "status" in normal:
             coluna = normal.index("status")
             continue
-        if coluna is None or coluna >= len(celulas):
+        col = None if cerca else coluna
+        if col is None:
+            fixo = cabecalho_fixo_da_linha(celulas, slug)
+            col = fixo.index("status") if fixo else None
+        if col is None or col >= len(celulas):
             continue
-        proposto = celulas[coluna].strip()
+        proposto = celulas[col].strip()
         ja = _RE_JA_TROCADO.search(proposto)
         if ja:
             # a célula que esta conferência já trocou (o aprendizado conferido de novo): a proposta do agente segue à vista
             trocados.append(ja.group(1))
             continue
         if _norm(proposto) in humanos:
-            celulas[coluna] = (f" {status_automatico} (o agente propôs «{proposto.strip('`* ')}»: promover é ato "
-                               "humano) ")
+            celulas[col] = (f" {status_automatico} (o agente propôs «{proposto.strip('`* ')}»: promover é ato "
+                            "humano) ")
             trocados.append(proposto.strip("`* "))
             recuo = bruta[: len(bruta) - len(bruta.lstrip())]
-            linhas[i] = recuo + "|" + "|".join(celulas) + "|"
+            linhas[i] = recuo + cerca + "|" + "|".join(celulas) + "|" + cerca
+    # a mesma proposta repetida (a linha do §1 e a da atualização do catálogo) aparece uma vez nos fatos
+    trocados = list(dict.fromkeys(trocados))
     return "\n".join(linhas), trocados
 
 
@@ -146,8 +160,9 @@ def conferir(texto: str, state: Dict[str, Any]) -> str:
         return texto
     from tools.catalogo import ficha_da_execucao
 
-    status = str(ficha_da_execucao(state).get("status") or "em criação")
-    corpo, trocados = corrigir_status_do_catalogo(texto, status)
+    ficha = ficha_da_execucao(state)
+    status = str(ficha.get("status") or "em criação")
+    corpo, trocados = corrigir_status_do_catalogo(texto, status, str(ficha.get("slug") or ""))
     m = _RE_TITULO_FATOS.search(corpo)
     envelope = ""
     fim = _RE_ENVELOPE_NO_FIM.search(corpo)

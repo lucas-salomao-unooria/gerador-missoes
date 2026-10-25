@@ -191,7 +191,24 @@ def _norm_cab(celula: str) -> str:
     return sem.strip(" `*_")
 
 
-def _linha_do_aprendizado(aprendizado: str) -> Dict[str, str]:
+#: O cabeçalho literal da linha de catálogo que o prompt 128 fixa, nas 11 colunas. O agente às vezes escreve só a linha de
+#: dados, num bloco ```markdown e sem cabeçalho: na 53e011b6 (exp06ef1b, 08/10/2026) a linha
+#: «| exp06ef1b | 6º EF | … | EF06CO10 | em produção |» não era lida, e o «em produção» passava sem troca.
+CABECALHO_DA_LINHA_PROPOSTA = ("Slug", "Ano", "Bim", "Nome", "Ambiente", "Eixo temático", "Descoberta central (aha)",
+                               "Tipo de decisão", "Porta de abstração", "Habilidade primária", "Status")
+
+
+def cabecalho_fixo_da_linha(celulas: List[str], slug: str) -> Optional[List[str]]:
+    """O cabeçalho fixo (normalizado) para uma linha de tabela sem cabeçalho, quando ela é a linha de catálogo desta missão:
+    a primeira célula é o slug, literalmente, e são as 11 colunas do prompt. Fora disso, None."""
+    if not slug or len(celulas) != len(CABECALHO_DA_LINHA_PROPOSTA):
+        return None
+    if _norm_cab(_limpar(celulas[0])) != _norm_cab(slug):
+        return None
+    return [_norm_cab(c) for c in CABECALHO_DA_LINHA_PROPOSTA]
+
+
+def _linha_do_aprendizado(aprendizado: str, slug: str = "") -> Dict[str, str]:
     """Campos de julgamento da linha que o agente 51 propõe no formato do catálogo.
 
     Lida pelo NOME da coluna. A versão anterior lia por posição, com o slug na primeira: o prompt
@@ -200,6 +217,9 @@ def _linha_do_aprendizado(aprendizado: str) -> Dict[str, str]:
     e o núcleo não tem rótulo de tipo de decisão: 13 das 14 fichas reconstruídas em 23/09/2026
     saíam com `tipo_decisao` vazio, o V5 as ignorava, e o registro automático repetia o defeito
     a cada missão nova. Campo `[preencher…]` volta vazio, para a extração do núcleo tentar.
+
+    Sem cabeçalho, a linha cuja primeira célula é o `slug` da missão e que tem as 11 colunas do prompt é lida pelo
+    cabeçalho fixo (`cabecalho_fixo_da_linha`).
     """
     cabecalho: Optional[List[str]] = None
     for bruta in (aprendizado or "").splitlines():
@@ -217,10 +237,11 @@ def _linha_do_aprendizado(aprendizado: str) -> Dict[str, str]:
         if any("descoberta" in c for c in normal) and any("tipo de decis" in c for c in normal):
             cabecalho = normal
             continue
-        if cabecalho is None:
+        colunas = cabecalho if cabecalho is not None else cabecalho_fixo_da_linha(celulas, slug)
+        if colunas is None:
             continue
         ficha: Dict[str, str] = {}
-        for i, nome_col in enumerate(cabecalho):
+        for i, nome_col in enumerate(colunas):
             if i >= len(celulas):
                 break
             campo = next((c for chave, c in _COLUNAS_CATALOGO if chave in nome_col), None)
@@ -299,11 +320,11 @@ def ficha_da_execucao(state: Dict[str, Any], sessao: str = "") -> Dict[str, Any]
     aprendizado = str(state.get("aprendizado_registro") or "")
     juntos = "\n".join(t for t in (spec, nucleo, one_pager) if t)
 
-    proposta = _linha_do_aprendizado(aprendizado)
+    slug = extrair_slug(spec) or extrair_slug(nucleo) or extrair_slug(one_pager)
+    proposta = _linha_do_aprendizado(aprendizado, slug)
     bloco1 = secao_bloco(nucleo, 1) or secao_bloco(spec, 1) or secao_bloco(one_pager, 1) or ""
     bloco0 = secao_bloco(spec, 0) or secao_bloco(nucleo, 0) or ""
 
-    slug = extrair_slug(spec) or extrair_slug(nucleo) or extrair_slug(one_pager)
     ano, bimestre = _ano_bimestre(slug, bloco0 or juntos[:3000])
     gates = {
         chave.removesuffix("_status"): str(state.get(chave) or "")
