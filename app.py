@@ -831,9 +831,14 @@ def _render_contrato_aberto(run_dir: Path, fluxo: Dict[str, Any], estado: Dict[s
                 # PR 8 (D8): a spec calada — a resposta entra também como `secao_ds` no bloco 0 (`fechar_contrato.decidir`)
                 from tools.ambiente import secoes_para_o_de_acordo
 
-                st.caption("A seção que você escrever entra também como `secao_ds` no bloco 0 da spec (app clonado): "
-                           + ", ".join(f"`{s}`" for s in secoes_para_o_de_acordo())
-                           + ". Ambiente novo ou mini-jogo pedem o **Refazer** de produto, com a spec refeita.")
+                if item.secao_travada:
+                    # a trava explícita do briefing: só ela entra (`fechar_contrato._secao_do_de_acordo`)
+                    st.caption(f"O briefing fixou `secao_ds: {item.secao_travada}`: só ela entra como `secao_ds` no "
+                               "bloco 0 da spec. Outra seção pede o **Refazer** de produto, com o briefing corrigido.")
+                else:
+                    st.caption("A seção que você escrever entra também como `secao_ds` no bloco 0 da spec (app clonado): "
+                               + ", ".join(f"`{s}`" for s in [*secoes_para_o_de_acordo(), *item.legadas_do_po])
+                               + ". Ambiente novo ou mini-jogo pedem o **Refazer** de produto, com a spec refeita.")
             if item.detalhe:
                 with st.expander("O que o design quis mudar", expanded=False):
                     st.code(item.detalhe, language="diff")

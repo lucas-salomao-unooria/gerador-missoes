@@ -127,6 +127,11 @@ class Item:
     define_secao: bool = False
     ancora_secao: str = ""
     secao_sugerida: str = ""
+    #: Só em `define_secao`: a seção que o briefing fixou com `secao_ds: <seção>` (trava explícita, que o manifesto
+    #: bloqueia quando a spec declara outra) e as legadas que o PO fixou no briefing ou no one-pager dele
+    #: (`rastro._legada_fixada_pelo_po`). Com a trava, só ela entra no bloco 0 (3ª revisão do PR #76, 24/10/2026).
+    secao_travada: str = ""
+    legadas_do_po: List[str] = field(default_factory=list)
 
     def opcoes(self) -> List[str]:
         if self.tipo in (MUDANCA_GATE0, ESCOLHA_AMBIENTE) or self.escolha_ambiente:
@@ -328,14 +333,22 @@ def _marcar_escolhas_de_ambiente(estado: Dict[str, Any], itens: Sequence[Item]) 
       item comum;
     - na spec calada (bloco 0 sem `secao_ds`), o marcador que pergunta a classe e o ambiente é `define_secao`: a seção
       que o PO escrever entra também no bloco 0. Até aqui a resposta ficava só no bloco 15, e o manifesto e o D9 seguiam
-      acusando a `secao_ds` ausente."""
+      acusando a `secao_ds` ausente. O item guarda a trava do briefing e as legadas que o PO fixou: com `secao_ds:
+      <seção>` no briefing, só ela entra (a outra, o manifesto bloquearia), e a sugestão diferente dela não vira
+      «aceitar» (3ª revisão do PR #76, 24/10/2026)."""
     from tools import ambiente as amb
+    from tools import rastro
 
     spec = documentos(estado)[DOC_SPEC]
+    briefing = str(estado.get("briefing") or "")
     decidido = amb.classe_e_ambiente(spec)
     secao = decidido["secao"] if decidido["nova"] else ""
-    a_conferir = not decidido["nova"] or amb.escolha_a_conferir(decidido["secao"], str(estado.get("briefing") or ""))
+    a_conferir = not decidido["nova"] or amb.escolha_a_conferir(decidido["secao"], briefing)
     ancora = next((l for l in spec.splitlines() if re.match(r"^##\s*\**\s*0\s*[.—–-]", l)), "")
+    trava = rastro.secao_travada(briefing) if ancora and not decidido["secao"] else None
+    travada = trava["secao"] if trava and trava["explicita"] else ""
+    legadas = [l for l in rastro.SECOES_LEGADAS
+               if rastro._legada_fixada_pelo_po(l, briefing, str(estado.get("one_pager_po") or ""))]
     for item in itens:
         if item.tipo not in (PROPOSTA, ABERTO_PO):
             continue
@@ -343,7 +356,8 @@ def _marcar_escolhas_de_ambiente(estado: Dict[str, Any], itens: Sequence[Item]) 
         if (not decidido["secao"] and ancora
                 and any(amb.pergunta_a_secao(t) and not re.search(r"\bextras?\b", t, re.I) for t in textos)):
             item.define_secao, item.ancora_secao, item.ui = True, ancora, False
-            item.secao_sugerida = _secao_do_de_acordo(item.sugestao, levantar=False)
+            item.secao_travada, item.legadas_do_po = travada, legadas
+            item.secao_sugerida = _secao_do_de_acordo(item.sugestao, levantar=False, travada=travada, legadas=legadas)
             continue
         if any(amb.sobre_a_escolha(t, secao) for t in textos):
             item.ui = False  # o ambiente nunca fica para o design (D8)
@@ -352,24 +366,38 @@ def _marcar_escolhas_de_ambiente(estado: Dict[str, Any], itens: Sequence[Item]) 
                 item.sugestao = item.sugestao or item.assunto
 
 
-def _secao_do_de_acordo(valor: str, levantar: bool = True) -> str:
+def _secao_do_de_acordo(valor: str, levantar: bool = True, travada: str = "", legadas: Sequence[str] = ()) -> str:
     """A seção que o PO escreveu para a spec calada, normalizada (`unoochat`), se ela é uma da lista de missão nova de
-    `ambientes.md`. Fora dela, `RespostaInvalida` com o caminho — ou "" com `levantar` falso (a sugestão do agente)."""
+    `ambientes.md`, ou uma legada que o PO fixou (`legadas`: no briefing ou no one-pager dele). Fora dela,
+    `RespostaInvalida` com o caminho — ou "" com `levantar` falso (a sugestão do agente).
+
+    Com a trava explícita do briefing (`travada`: `secao_ds: <seção>`), só ela entra — inclusive a legada que o briefing
+    fixou. Na 3ª revisão do PR #76 (24/10/2026), com o briefing em `secao_ds: unoochat`, a resposta «unoovista» era gravada
+    no bloco 0 e o manifesto a bloqueava logo depois; a sugestão `unoogaleria` do agente aparecia como «Aceitar»; e com o
+    briefing em `secao_ds: whatsappmobile` a resposta «whatsappmobile» era recusada como legada não fixada."""
     from tools import ambiente as amb
+    from tools import rastro
 
     secao = re.sub(r"^secao_ds\s*:\s*", "", " ".join((valor or "").replace("`", " ").replace("*", " ").split()).lower())
     secao = re.sub(r"\s*:\s*", ":", secao).strip(" .;")
     validas = amb.secoes_para_o_de_acordo()
-    if secao in validas:
+    nova_ou_jogo = bool(re.match(r"^(?:nova|minijogo):", secao))
+    if travada:
+        if secao == travada and not nova_ou_jogo and secao in rastro.secoes_ds():
+            return secao
+    elif secao in validas or secao in legadas:
         return secao
     if not levantar:
         return ""
-    from tools.rastro import SECOES_LEGADAS
-
-    if re.match(r"^(?:nova|minijogo):", secao):
+    if travada and secao != travada:
+        raise RespostaInvalida(
+            f"«{valor}» não é a seção que o briefing fixou: `secao_ds: {travada}` é trava — a missão monta na "
+            f"`{travada}`, e o manifesto bloquearia outra seção no bloco 0. Escreva `{travada}`; se a trava inviabiliza a "
+            "mecânica, recuse este item e peça a troca no **Refazer** de produto, com o briefing corrigido.")
+    if nova_ou_jogo:
         motivo = ("ambiente novo e mini-jogo pedem a spec refeita (os componentes da seção nova; no mini-jogo, as regras e "
                   "as fases no bloco 2): deixe este item sem resposta e peça-o no **Refazer** de produto")
-    elif secao in SECOES_LEGADAS:
+    elif secao in rastro.SECOES_LEGADAS:
         motivo = ("seção legada só vale fixada no briefing ou no one-pager que o PO anexou (ADR-133 a 138): use a "
                   "sucessora da lista, ou peça a legada no **Refazer** de produto")
     else:
@@ -723,7 +751,8 @@ def decidir(itens: Sequence[Item], respostas: Optional[Dict[str, Dict[str, str]]
             # é o campo que o manifesto e o D9 leem. Só ficava no bloco 15, e a missão seguia com `secao_ds` ausente e
             # `ambiente-ausente-na-spec` (revisão do PR #76, 24/10/2026). A classe vem da seção: toda seção da lista é app
             # clonado; ambiente novo e mini-jogo pedem o Refazer (`_secao_do_de_acordo`)
-            secao = _secao_do_de_acordo(valor if resposta == OUTRO else item.secao_sugerida)
+            secao = _secao_do_de_acordo(valor if resposta == OUTRO else item.secao_sugerida,
+                                        travada=item.secao_travada, legadas=item.legadas_do_po)
             atual = por_linha.get((DOC_SPEC, item.ancora_secao), item.ancora_secao)
             por_linha[(DOC_SPEC, item.ancora_secao)] = (atual.rstrip()
                                                          + f"\n- `secao_ds: {secao}` — PO, parecer de {data}")

@@ -13,8 +13,8 @@ jornada sem poder de produto.
   refeitas (exp02ef1b, exp02em1b, exp01em1b e exp03em1b) passam.
 
 Mutantes: «D9 cria ambiente novo com a spec calada», «jornada inventa fase 3 do mini-jogo», «bloco 14 troca a secao_ds»;
-da 3ª revisão do PR #76 (24/10/2026), «trava pelo nome da interface deixa o ambiente novo sem o PO». Tudo
-determinístico, sem modelo, sobre os estados do acervo (`tests/acervo`).
+da 3ª revisão do PR #76 (24/10/2026), «trava pelo nome da interface deixa o ambiente novo sem o PO» e «o PO grava no
+bloco 0 outra seção que a do briefing». Tudo determinístico, sem modelo, sobre os estados do acervo (`tests/acervo`).
 """
 from __future__ import annotations
 
@@ -1029,3 +1029,87 @@ def test_mutante_trava_pelo_nome_deixa_o_ambiente_novo_sem_o_po():
     assert [a["codigo"] for a in manifesto["achados"] if a.get("codigo") and a["severidade"] == "bloqueio"] == [
         "escolha-de-ambiente-sem-o-po"]
     assert [i.tipo for i in fc.itens_em_aberto(mutado) if i.tipo == fc.ESCOLHA_AMBIENTE] == [fc.ESCOLHA_AMBIENTE]
+
+
+@pytest.mark.parametrize("valor, grava", [
+    ("unoovista", None),
+    ("unoogaleria", None),
+    ("`unoochat`", "unoochat"),
+    ("secao_ds: unoochat", "unoochat"),
+])
+def test_spec_calada_com_a_trava_do_briefing_so_grava_a_secao_travada(valor, grava):
+    """Briefing com `secao_ds: unoochat` e a spec calada: a resposta «unoovista» do PO era gravada no bloco 0, e o manifesto
+    a bloqueava logo depois pela trava (24/10/2026). O de acordo recusa a outra seção com o caminho e grava a travada."""
+    briefing = "secao_ds: unoochat\nA turma conversa num chat."
+    estado = {"spec_missao": _spec_app("") + ABERTO_DA_SECAO, "briefing": briefing}
+    itens = [i for i in fc.itens_em_aberto(estado) if i.define_secao]
+    assert itens[0].secao_travada == "unoochat"
+    resposta = {itens[0].id: {"resposta": fc.OUTRO, "valor": valor}}
+    if grava is None:
+        with pytest.raises(fc.RespostaInvalida, match="o briefing fixou"):
+            fc.decidir(itens, resposta, "24/10/2026 10:00:00", "produto")
+        return
+    novos, falhas = fc.aplicar_edicoes(estado, fc.decidir(itens, resposta, "24/10/2026 10:00:00", "produto").edicoes)
+    assert not falhas and amb.classe_e_ambiente(novos["spec_missao"])["secao"] == grava
+    assert not [a for a in validar_manifesto(novos["spec_missao"], briefing=briefing)["achados"]
+                if a.get("campo") == "secao_ds"]
+
+
+@pytest.mark.parametrize("sugerida, opcoes", [
+    ("unoogaleria", [fc.OUTRO, fc.RECUSAR]),
+    ("unoochat", [fc.ACEITAR, fc.OUTRO, fc.RECUSAR]),
+])
+def test_sugestao_diferente_da_trava_do_briefing_nao_vira_aceitar(sugerida, opcoes):
+    """A sugestão `unoogaleria` do agente aparecia como «Aceitar» com o briefing em `secao_ds: unoochat`, e o aceite gravava
+    no bloco 0 a seção que o manifesto bloqueia (24/10/2026). A sugestão que é a trava continua aceitável."""
+    marcador = (f"\n## 15. Completude de produto\n- [ABERTO — dono: PO: classe e ambiente da missão · sugestão: `{sugerida}` "
+                "· alternativas: `unoovista`]\n")
+    estado = {"spec_missao": _spec_app("") + marcador, "briefing": "secao_ds: unoochat"}
+    itens = [i for i in fc.itens_em_aberto(estado) if i.define_secao]
+    assert itens[0].secao_sugerida == ("unoochat" if sugerida == "unoochat" else "")
+    assert itens[0].opcoes() == opcoes
+    # sem a trava, a sugestão da lista é aceitável como antes
+    sem_trava = [i for i in fc.itens_em_aberto({"spec_missao": estado["spec_missao"]}) if i.define_secao]
+    assert sem_trava[0].secao_sugerida == sugerida and fc.ACEITAR in sem_trava[0].opcoes()
+
+
+@pytest.mark.parametrize("briefing, one_pager_po", [
+    ("secao_ds: whatsappmobile", ""),
+    ("", "# One-pager\n- **Seção do DS:** `whatsappmobile`\n"),
+])
+def test_legada_que_o_po_fixou_entra_no_bloco_0_da_spec_calada(briefing, one_pager_po):
+    """Com o briefing em `secao_ds: whatsappmobile`, a resposta «whatsappmobile» era recusada como «legada só vale fixada
+    no briefing» (24/10/2026). A legada que o PO fixou — no briefing ou no one-pager dele — é gravada, e o manifesto a lê
+    como decisão dele (atenção)."""
+    estado = {"spec_missao": _spec_app("") + ABERTO_DA_SECAO, "briefing": briefing, "one_pager_po": one_pager_po}
+    itens = [i for i in fc.itens_em_aberto(estado) if i.define_secao]
+    d = fc.decidir(itens, {itens[0].id: {"resposta": fc.OUTRO, "valor": "whatsappmobile"}}, "24/10/2026 10:00:00",
+                   "produto")
+    spec = fc.aplicar_edicoes(estado, d.edicoes)[0]["spec_missao"]
+    assert amb.classe_e_ambiente(spec)["secao"] == "whatsappmobile"
+    secao = [a for a in validar_manifesto(spec, briefing=briefing, one_pager_po=one_pager_po)["achados"]
+             if a.get("campo") == "secao_ds"]
+    assert [a["severidade"] for a in secao] == ["atencao"] and "decisão do PO" in secao[0]["resumo"]
+
+
+def test_mutante_po_grava_no_bloco_0_outra_secao_que_a_do_briefing():
+    """Mutante «o PO grava no bloco 0 outra seção que a do briefing»: a exp02ef1b-4fd72a9a com a spec calada, o briefing
+    em `secao_ds: unoogaleria` e a resposta «unoochat» no de acordo — recusada; a `unoogaleria` passa no manifesto."""
+    estado = _estado("exp02ef1b-4fd72a9a")
+    spec = estado["spec_missao_gate0"].replace("- `secao_ds: unoogaleria`\n", "") + ABERTO_DA_SECAO
+    mutado = {**estado, "spec_missao": spec, "spec_missao_gate0": spec,
+              "briefing": "secao_ds: unoogaleria\n" + str(estado.get("briefing") or "")}
+    itens = [i for i in fc.itens_em_aberto(mutado) if i.define_secao]
+    assert len(itens) == 1 and itens[0].secao_travada == "unoogaleria"
+    with pytest.raises(fc.RespostaInvalida, match="`secao_ds: unoogaleria` é trava"):
+        fc.decidir(itens, {itens[0].id: {"resposta": fc.OUTRO, "valor": "unoochat"}}, "24/10/2026 10:00:00", "produto")
+    d = fc.decidir(itens, {itens[0].id: {"resposta": fc.OUTRO, "valor": "unoogaleria"}}, "24/10/2026 10:00:00", "produto")
+    gravada = fc.aplicar_edicoes(mutado, d.edicoes)[0]["spec_missao"]
+    assert not [a for a in validar_manifesto(gravada, briefing=mutado["briefing"])["achados"]
+                if a.get("campo") == "secao_ds" and a["severidade"] == "bloqueio"]
+
+
+def test_prompt_046_sugere_a_secao_que_o_briefing_fixou():
+    from prompts.loader import get_prompt_raw
+
+    assert "Sugestão = a seção que o briefing fixou, quando fixou" in get_prompt_raw("produto/046_completude_spec.md")
