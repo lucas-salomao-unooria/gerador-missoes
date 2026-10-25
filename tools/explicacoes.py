@@ -182,6 +182,33 @@ CATALOGO: Dict[str, Explicacao] = {
         "A lista que a esteira usa para comparar esta missão com as anteriores não tem as missões mais novas.",
         "A comparação pode deixar passar uma missão repetida.",
         "Não depende de você: avise o time técnico para atualizar a lista. Não trava a etapa.", ESTEIRA),
+    # o teste de ponta a ponta de 25/10/2026 (G01, G02): o one-pager do PO grande demais para o modelo reescrever
+    "documento-cortado-pelo-modelo": _x(
+        "Um documento saiu cortado pela metade",
+        "O agente que escreve este documento passou do tamanho máximo que o modelo de IA devolve numa resposta, e o "
+        "texto foi cortado antes do fim. A esteira tentou de novo, avisando o agente, e o corte se repetiu (ou acabaram "
+        "as tentativas).",
+        "O que veio depois do corte não está no documento: quem lê depois — design, dev, os outros verificadores — "
+        "trabalha com uma missão incompleta.",
+        "Não é um problema da missão. Peça **Refazer** da etapa; se voltar a acontecer, avise o time técnico com o nome "
+        "do agente e o tamanho que aparecem abaixo.", ESTEIRA),
+    "troca-nao-aplicada": _x(
+        "Uma correção que a esteira não conseguiu fazer no seu one-pager",
+        "O seu one-pager é grande demais para a IA reescrever inteiro, então a esteira o corrige trecho a trecho. Esta "
+        "correção (pedida por um comitê, por um verificador ou pela conferência do seu texto) não se aplicou: o trecho "
+        "que ela queria trocar não foi achado igual no documento, ou a troca apagaria texto seu. O texto ficou como você "
+        "escreveu, e a mudança aparece no fim da seção 18, marcada como pendência sua.",
+        "Se a mudança era necessária e ninguém a fizer, a missão segue sem ela.",
+        "Leia a troca abaixo. Se ela deve entrar, peça com **Refazer** de produto (ou escreva-a você mesmo); se não, "
+        "siga — o texto já é o seu.", PO),
+    "editor-sem-trocas": _x(
+        "A esteira não conseguiu montar as correções desta rodada",
+        "O seu one-pager é corrigido trecho a trecho, e nesta rodada o passo que propõe as trocas não devolveu nenhuma "
+        "que desse para ler (o motivo está abaixo). O documento ficou como estava, com o seu texto intacto.",
+        "As correções que os verificadores pediram nesta rodada não entraram: elas voltam na próxima, ou ficam à vista "
+        "no parecer.",
+        "Não é um problema da missão. Se o ponto se repetir em todas as rodadas, peça **Refazer** de produto ou avise o "
+        "time técnico.", ESTEIRA),
     "existente-sem-decisao": _x(
         "Esta missão já existe na plataforma, e falta a decisão do PO",
         "Já há uma missão publicada com este código, e o texto não registra se esta a substitui ou ganha outro código.",

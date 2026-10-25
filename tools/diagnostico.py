@@ -265,6 +265,33 @@ def coletar(state: Dict[str, Any]) -> Dict[str, Any]:
             "resumo": f"{ticket.get('motivo', '')}: {ticket.get('resumo', '')}".strip(": "),
         })
 
+    # Resposta cortada pelo limite de saída do modelo que ninguém refez (`agents.callbacks.registrar_corte_do_modelo`): o
+    # documento está incompleto. Na 3ef2b (e2e de 25/10/2026) o one-pager cortado em 218 mil caracteres passava calado.
+    cortes = state.get("cortes_do_modelo")
+    for corte in cortes.values() if isinstance(cortes, dict) else []:
+        if not isinstance(corte, dict):
+            continue
+        achados.append({
+            "gate": "Resposta cortada pelo modelo", "etapa": "esteira", "id": corte.get("agente") or "—",
+            "codigo": "documento-cortado-pelo-modelo", "classe": "esteira", "severidade": "bloqueio", "dono": "esteira",
+            "resumo": (f"O {corte.get('agente')} passou do limite de saída do modelo e foi cortado em "
+                       f"{corte.get('caracteres')} caracteres: o documento `{corte.get('chave')}` está incompleto."),
+        })
+    # A troca que a esteira quis fazer no one-pager do PO grande e não se aplicou (`tools/one_pager_grande.py`): o texto
+    # ficou como estava, e a mudança é decisão do PO.
+    for item in state.get("trocas_nao_aplicadas") or []:
+        if not isinstance(item, dict):
+            continue
+        sem_troca = not str(item.get("de") or "").strip()
+        achados.append({
+            "gate": "One-pager montado por trocas", "etapa": "produto", "id": item.get("papel") or "—",
+            "codigo": "editor-sem-trocas" if sem_troca else "troca-nao-aplicada", "classe": "one-pager-grande",
+            "severidade": "atencao" if sem_troca else "decisao_humana", "dono": "esteira" if sem_troca else "PO",
+            "resumo": (f"{item.get('papel')}: {item.get('falha')}" if sem_troca else
+                       f"{item.get('papel')} quis trocar «{str(item.get('de'))[:160]}» por «{str(item.get('para'))[:160]}»"
+                       f" e a troca não se aplicou ({str(item.get('falha'))[:200]})."),
+        })
+
     # Colisão de slug: o registro no catálogo roda DEPOIS deste dossiê, então a checagem é feita aqui.
     try:
         from tools.catalogo import colisao_de_slug, ficha_da_execucao
@@ -320,7 +347,10 @@ def artefatos_esperados(state: Dict[str, Any], mapa: Any) -> Dict[str, List[str]
     Documento ausente é sintoma: ou o agente não rodou, ou devolveu vazio. Nos dois casos
     é a primeira coisa que o operador precisa saber.
     """
+    from pipeline.artifacts import documentos_dispensados
+
     pares = mapa.items() if hasattr(mapa, "items") else mapa
+    dispensados = documentos_dispensados(state)
     # Por arquivo: a matriz de rastreabilidade nasce de duas chaves (a do design e a final do dev), e o arquivo
     # está entregue se qualquer uma delas tem conteúdo.
     por_arquivo: Dict[str, bool] = {}
@@ -330,6 +360,9 @@ def artefatos_esperados(state: Dict[str, Any], mapa: Any) -> Dict[str, List[str]
         if chave in _ESCRITOS_DEPOIS:
             continue
         valor = state.get(chave)
+        # o que a execução não precisava produzir só conta quando existe (G26: «Ausentes (6)» nas três missões do e2e)
+        if chave in dispensados and not (isinstance(valor, str) and valor.strip()):
+            continue
         por_arquivo[arquivo] = por_arquivo.get(arquivo, False) or bool(isinstance(valor, str) and valor.strip())
     return {"entregues": sorted(a for a, ok in por_arquivo.items() if ok),
             "ausentes": sorted(a for a, ok in por_arquivo.items() if not ok)}
