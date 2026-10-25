@@ -236,3 +236,28 @@ def test_decisao2_literais_parafraseados_respeita_variantes_aprovadas():
     assert conteudo_aprovado.literais_parafraseados(prd, one_pager) == []
     assert montagem.textos_chave_reescritos(prd, one_pager) == []
 
+
+def test_mecanica_arquetipos_e_anti_frankenstein_nos_prompts():
+    """Prompts de ideação, núcleo, juízes e seções de apoio carregam os arquétipos interativos, a regra do Core Loop único e a cláusula residual enxuta."""
+    from prompts import load_prompt
+
+    p002 = load_prompt("produto/002_mapa_conceitual.md")
+    p003 = load_prompt("produto/003_ideacao_mecanismos.md")
+    p004 = load_prompt("produto/004_nucleo_narrativo.md")
+    p007 = load_prompt("produto/007_micro_gate.md")
+    p008 = load_prompt("produto/008_juiz_profundidade.md")
+    p014 = load_prompt("produto/014_secoes_apoio.md")
+    p029b = load_prompt("produto/029b_experiencia_estudante.md")
+    p_canal_a = load_prompt("produto/comite_canal_a_medida.md")
+
+    assert "Ancoragem vivencial da idade" in p002
+    assert "6 Arquétipos Criativos Nativos do Design System" in p003
+    assert "Brinquedo Epistêmico" in p003
+    assert "1 Core Loop = 1 Objeto Interativo Central em 3 Voltas" in p004
+    assert "Proibido Efeito Frankenstein" in p007
+    assert "Efeito Frankenstein" in p008
+    assert "complementar lógico de Atingiu e Em processo" in p014
+    assert "anti-Frankenstein" in p029b
+    assert "complementar lógico de Atingiu e Em processo" in p_canal_a
+
+

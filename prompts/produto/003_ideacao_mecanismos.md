@@ -49,13 +49,21 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 
 <!-- include: references/ds-componentes.md -->
 
+## Arquétipos de Gesto Interativo ("Brinquedos Epistêmicos") e Sobriedade Mecânica
+
+<!-- include: references/arquetipos-mecanica-interativa.md -->
+
 ## Regras
 
 1. **O mecanismo do time vem primeiro.** Se o briefing já traz o mecanismo — um one-pager, uma sequência de etapas, "o estudante faz X e descobre Y" —, o candidato **A é o do time, descrito com fidelidade**, e é o escolhido: a Regra 1 do núcleo ("fidelidade acima de criatividade") vale aqui. B e C existem só como comparação. Se A pontua abaixo de 3 em P1, P2 ou P3, diga em uma linha o que B ou C resolveriam e marque `[PROPOSTA — decisão do PO: trocar o mecanismo do briefing por <B|C>]`. Você não troca o mecanismo do time.
 2. **Os três candidatos partem do conceito limiar do mapa** (o `C<n>` marcado `limiar`) e de uma crença de entrada do mapa (`B<n>`). Missão que não põe o limiar na decisão do estudante não é candidata.
-3. **Distintos de verdade.** Os três diferem no **tipo de decisão** (escolher entre itens · prever um resultado · produzir e publicar algo · configurar ou seguir algo e ver o efeito depois · ordenar ou priorizar · responder a alguém) **e** na **virada** (contraste com colegas · o que nunca apareceu · o efeito do que ele publicou sobre quem viu · a própria previsão desmentida pelo próprio dado). Mudar só o ambiente ou o tema não conta como candidato novo. Ao menos um dos três coloca o estudante no **papel de quem produz** o conteúdo (quem fotografa, publica, encaminha, recomenda), e não só de quem consome.
-4. **A virada é mostrada pelo ambiente, não contada.** Nada de painel da Unooria com percentuais dentro do clone, gráfico de "como o algoritmo funciona" nem aviso da plataforma. O que o estudante deixou de ver, os posts que os colegas receberam, a reação de quem viu o que ele publicou — isso, em conteúdo nativo, é a virada. A tela do professor pode ter dados; a do estudante tem o ambiente.
-5. **Profundidade não é carga.** Cada candidato cabe nos tetos da faixa (opções por decisão, duração por ato, missão inteira até 25 minutos de tela, gestos novos por ato) e respeita a porta de abstração do ano. Um candidato que só fica profundo com mais telas, mais opções ou mais tempo perde para um mais simples que derruba a mesma crença.
+3. **Distintos de verdade (3 arquétipos diferentes · proibido candidato-espantalho).**
+   - Os três candidatos **devem usar 3 arquétipos de gesto interativo diferentes** (`arquetipos-mecanica-interativa.md`: *Lente/Fora-de-Quadro*, *Máquina de Consequência/Sandbox de Regras*, *Fio Desconectado/Peça Perdida*, *Relógio de Amplificação*, *Detetive de Camadas*, *Conserto do Robô Literal*).
+   - **Proibido criar candidatos-espantalho:** nunca invente um Candidato B ou C propositalmente passivo, burocrático ou sem aposta só para fazer o Candidato A ganhar na tabela. Todos os três candidatos devem ser desenhados como fortes concorrentes a nota 4/4 em P1–P6.
+   - Evite a "Maldição da Comissão de Auditoria Escolar" (ler 3 fichas de texto e preencher um formulário corporativo): cada candidato deve declarar explicitamente seu **Objeto Interativo Central ("Brinquedo Epistêmico")** — o que o estudante toca, arrasta, liga/desliga, desliza ou simula na tela.
+   - Ao menos um dos três coloca o estudante no **papel de quem produz, publica ou configura** algo cujo efeito recai sobre colegas da escola, e não só de quem julga como observador externo.
+4. **A virada é mostrada pelo ambiente e operada pelo estudante, não contada.** Nada de painel da Unooria com percentuais dentro do clone, gráfico de "como o algoritmo funciona" nem aviso da plataforma. O próprio Objeto Interativo Central revela sua camada oculta (deslizar o fora-de-quadro, ligar o raio-X da regra, girar o relógio do feed, ver a peça que faltava na conversa) e mostra uma consequência dramática que **muda obrigatoriamente conforme a escolha da Etapa 3**.
+5. **Profundidade não é carga (1 Core Loop em 3 Voltas).** Cada candidato gira em torno de **1 único Objeto Interativo Central em 3 voltas** (E2–E3 operar na crença → E4 ver o ponto cego explodir → E5 recalibrar o mesmo objeto), cabe nos tetos da faixa (`arquetipos-mecanica-interativa.md` §3) e respeita a porta de abstração do ano. Em caso de empate nas notas P1–P6, **vence o candidato com menor carga cognitiva estranha (menos leitura burocrática e zero sub-mecânicas paralelas) e maior prazer tátil/visual**.
 5b. **Mais de uma seção do DS, só quando mede.** Um candidato pode combinar seções (`varias-secoes.md`, dentro de `ambientes.md`) — postar no `unoovista` e ver o compartilhamento chegar ao `unoochat`, por exemplo — quando a seção extra torna observável uma habilidade ou carrega a virada. Diga qual, em uma linha. Respeite o teto do ano (1º–3º EF: 1 · 4º–5º EF: 2 · 6º EF ao 3º EM: 3) e diga como o estudante passa de um app ao outro dentro da história. Trocar só a seção não faz um candidato novo.
 6. **Restrições do briefing valem para os três.** Sem áudio, sem telão (tudo na tela do estudante ou do professor), ambiente simplificado nos anos iniciais, número de itens fixado pelo time — o que o briefing proíbe, nenhum candidato usa.
 7. **Guardrails.** Nenhum candidato rotula o estudante (8.4) nem expõe pelo nome quem "errou" ou "caiu" (8.5): o contraste entre colegas é de escolhas, não de pessoas, e a comparação nominal, quando existe, é conduzida pelo professor.
@@ -76,6 +84,7 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 **Mecanismo do briefing:** <resumo em uma linha> | nenhum — ideação livre
 
 ## Candidato A — <nome curto>
+**Arquétipo:** <1 dos 6 arquétipos de `arquetipos-mecanica-interativa.md`> · **Objeto Interativo Central (Brinquedo Epistêmico):** <o que o estudante manipula em E2–E3, revela em E4 e recalibra em E5>
 **Ambiente:** <seção principal> [+ <seções extras>] · **Transições:** <gatilho na história, ou — com uma seção só> · **Tipo de decisão:** <≤ 12 palavras> · **Virada:** <tipo>
 <Um parágrafo: o que o estudante faz, do Desafiar ao Resultado, sem spoiler no Desafiar.>
 

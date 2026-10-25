@@ -38,7 +38,8 @@ Só é ❌ o que a missão fez **além** do que o briefing pediu.
 Antes de julgar cada critério, **simule ativamente o estudante daquela idade** usando a missão, com o perfil cognitivo da literatura:
 
 - Nessa idade, ele mantém na cabeça as opções que a decisão pede, ao mesmo tempo? (M-capacity, Cowan/Gathercole)
-- Se já fez essa decisão N vezes nesta missão, a N-ésima ainda tem a mesma qualidade de atenção?
+- **Sobriedade mecânica por etapa (anti-Frankenstein):** A Etapa 4 exige apenas 1 gesto de revelação antes da roda do professor, ou empurra tarefas administrativas paralelas (denunciar bots, abrir menus de configuração, encaminhar formulários) no meio do clímax? A Etapa 5 tem no máximo 2 sub-passos (nomeação curta ≤ 3 itens + recalibragem `V1` do mesmo objeto), ou empilha 3 a 4 minigames diferentes? (Se empilhar tarefas administrativas na Etapa 4 ou >2 sub-mecânicas na Etapa 5, marque ❌ em 3.5/6.2 por sobrecarga cognitiva estranha).
+- Se já fez essa decisão N vezes nesta missão, a N-ésima ainda tem a mesma qualidade de atenção? (Nos anos iniciais 1º–5º EF, proibido duplicar 2 casos investigativos longos em sequência nas Etapas 2–4).
 - O nível de abstração que a decisão pede (descrever · explicar · criticar com apoio · criticar) cabe na porta da faixa (`literatura-cognitiva.md` §4 — Demetriou e Fischer; Piaget por idade fixa está no registro negativo §7)?
 - Ele tem repertório de leitura para decifrar esse texto sem ajuda? (1º–2º EF: leitura autônoma não pode ser pressuposta — canal de áudio obrigatório)
 - Se terminar antes e depender de handoff coletivo, existe algo útil e compreensível para fazer sem acessar a virada?

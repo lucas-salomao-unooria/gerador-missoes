@@ -39,6 +39,7 @@ O material de cada ano segue a mesma estrutura; a grafia e a caixa dos títulos 
 4. **Conceito é o que o estudante entende, não a atividade.** "Atividade desplugada com cartas" é atividade; "SE eu clico em X, ENTÃO recebo mais de X" é o conceito que a atividade ensina. Escreva o conceito como o estudante o diria depois de entender, em até 20 palavras e na linguagem da faixa.
 5. **A coluna «O que o estudante faz para viver o conceito» descreve uma ação observável**, não um estado mental: "comparar o próprio feed com o de um colega e achar o que só um dos dois recebeu", não "compreender a personalização". É dela que a ideação parte.
 6. **Crenças de entrada: de uma a três**, cada uma o que um estudante **da faixa** acredita ao chegar, dita como ele diria ("o feed mostra o que está bombando para todo mundo"; "quem cai em boato é porque é bobo"). Dê a origem: o material (quando ele a diz ou a pressupõe — cite), a literatura (`literatura-cognitiva.md` §4 e §12, **só** se a seção diz aquilo — não atribua a ela o que ela não trata), ou `[INFERÊNCIA]` quando for leitura sua. Na dúvida, `[INFERÊNCIA]`: origem inventada é pior que origem declarada. Em tema de algoritmo, feed ou viralização, a crença mais robusta costuma ser de **categoria** — "o app (ou alguém) escolhe para mim", quando o que acontece é um processo que emerge de muitos sinais e de um objetivo de engajamento (§12 a). Crença que ninguém da faixa tem não serve: o aha precisa derrubar algo que o estudante de fato carrega. Se o material diz que o fenômeno **não** é o que o senso comum pensa ("não como falha individual, mas como incentivo estrutural"), o senso comum é a crença.
+6b. **Ancoragem vivencial da idade (onde a crença aparece na rotina real daquela série):** liste de 2 a 3 situações cotidianas concretas da idade exata da missão (pátio, recreio, figurinha no grupo da turma, trabalho em grupo, feira da escola, jogo no recreio) onde o estudante age guiado por `B1` sem perceber. Proibido usar jargão corporativo ("comissão de auditoria", "compliance", "homologação de governança") ou situações de adulto para crianças/adolescentes. Esta seção dá repertório humano concreto para a ideação sem decidir tela nem mecânica.
 7. **Vocabulário do Explicar:** de três a seis termos que o material usa e que a missão deve nomear **depois** da vivência ("perfil algorítmico", "bolha informacional", "enquadramento", "fotolegenda"), copiados como estão no material.
 8. **Teto de ambição:** o critério de avaliação ou o produto final mais exigente do material, e o que ele pede do estudante em uma frase. A missão não precisa alcançá-lo — mas o juiz de profundidade compara a demanda da missão com ele (dimensão P6).
 9. **Sem material anexado:** derive o mapa do briefing, escreva no cabeçalho `[SEM MATERIAL — mapa derivado do briefing]`, deixe a coluna de trecho como `—` e use `"fonte": "briefing"` no envelope. Não invente trecho de um material que você não leu.
@@ -69,6 +70,11 @@ O material de cada ano segue a mesma estrutura; a grafia e a caixa dos títulos 
 | ID | Crença de entrada | Origem | Conceito que a derruba |
 |---|---|---|---|
 | B1 | "<como o estudante da faixa diria>" | material: "<trecho>" · literatura-cognitiva.md §<n> · [INFERÊNCIA] | C1 |
+
+## Ancoragem vivencial da idade (cotidiano da série onde a crença aparece)
+
+- <situação concreta 1 do universo escolar/digital da série>
+- <situação concreta 2 do universo escolar/digital da série>
 
 ## Vocabulário do material para o Explicar
 

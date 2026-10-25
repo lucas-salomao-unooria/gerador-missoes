@@ -55,13 +55,14 @@ Leia **apenas** as descrições do Desafiar e do Navegar na seção 4. Depois le
 
 Gap fraco ≠ sem gap. Se o gap existe mas é previsível demais, marque ⚠️ com a razão.
 
-## Verificação 3 — Teste de escolha significativa
+## Verificação 3 — Teste de escolha significativa e sobriedade mecânica ("1 Core Loop em 3 Voltas")
 
-**4 testes, todos precisam passar:**
+**4 testes de escolha significativa, todos precisam passar:**
 1. O estudante percebe que está escolhendo? (não é ação de navegação disfarçada)
-2. A escolha muda algo perceptível? (branch, reação ou conteúdo diferente)
+2. A escolha muda algo perceptível? (branch, reação ou conteúdo diferente — **reprove** se a Etapa 4 exibir o mesmo texto dramático para quem escolheu A, B ou C mudando apenas um número no cabeçalho)
 3. A missão referencia essa escolha depois? (na revelação, reflexão ou debate)
 4. O estudante não pode desfazer e escolher de novo depois de ver o efeito? (A primeira escolha fica registrada. Uma **segunda** decisão depois da virada — "confirma ou muda", também travada — não reprova este teste: é o que o briefing do 9º ano pedia e a esteira cortou.)
+5. **Sobriedade mecânica (Proibido Efeito Frankenstein):** A Etapa 4 vai direto do impacto/gesto de revelação para a Roda do Professor (sem empilhar denúncia de bots, menus de configuração ou encaminhamento administrativo antes da roda), e a Etapa 5 tem no máximo 2 sub-passos (nomeação curta ≤ 3 itens + recalibragem `V1` do mesmo objeto da Etapa 3)?
 
 Qualquer falha → ❌ com o número do teste que falhou.
 

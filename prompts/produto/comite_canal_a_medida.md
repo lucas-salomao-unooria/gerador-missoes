@@ -33,9 +33,9 @@ Para cada habilidade do §12a, leia a ação do Canal A, o evento que o sistema 
 
 1. **Alcançável.** Cada nível descreve um resultado que a interface deixa acontecer. Se a tela não deixa repetir
    categoria, "repetiu a categoria" não é nível → bloqueio.
-2. **Sem buraco e sem sobreposição.** Conte as combinações possíveis da ação (3 escolhas entre 4 itens, por exemplo)
-   e diga onde cai cada uma. Combinação sem nível, ou que cai em dois, deixa quem codifica inventando a
-   classificação → bloqueio (exp03ef1b, 07/10/2026: "4 certas + pânico" sem nível; "3 certas + 1 distrator" em dois).
+2. **Sem buraco e sem sobreposição — com cláusula residual enxuta (proibida explosão combinatória).** `Atingiu`, `Em processo` e `Não atingiu` precisam particionar o que o estudante pode fazer naquela ação, mas **sem exigir tabelas gigantescas por extenso**:
+   - Aceite e recomende que `Não atingiu` seja definido formalmente pelo **complementar lógico (`Nos demais casos — complementar lógico de Atingiu e Em processo, incluindo <caminhos degenerados da seção 7>`)**. Essa cláusula fecha matematicamente 100% do espaço amostral em 1 linha sem buraco e sem sobreposição!
+   - **Proibido pedir sub-mecânicas ou telas extras para medir habilidades secundárias:** Se uma habilidade secundária da seção 2 não puder ser medida pelas interações que **já existem** no Core Loop principal da missão, mande `A014` **retirar a habilidade secundária da seção 2** (critério 5.2) — nunca mande adicionar caça a bots, menus de configuração na Etapa 4 ou novos casos duplicados na Etapa 2/3.
 3. **Teste dos dois estudantes.** Rode o que toca ao acaso e o que investiga. Se o que toca ao acaso chega a Atingiu
    com probabilidade relevante, a regra premia sorte, não a habilidade → bloqueio.
 4. **Em processo não é balde.** Ele descreve um desempenho parcial reconhecível — não "tudo que não é extremo". Se a
