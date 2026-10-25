@@ -307,6 +307,12 @@ def test_de_para_do_fluxo_le_so_a_secao_e_o_nome_literal():
     assert mt.de_para_do_fluxo(arestas, contrato) == {}
     assert mt.de_para_do_fluxo(DE_PARA.replace("EST_04_FEED_NOTURNO", "EST_04_MODERACAO"), contrato).get("E4-ALU-01") \
         is None
+    # mutante: título com «de para» dentro de outra palavra não é a seção de-para
+    unidade = DE_PARA.replace("## De-para nó → estado do contrato (bloco 2)", "## Unidade para cada estado")
+    assert "## Unidade para cada estado" in unidade
+    assert mt.de_para_do_fluxo(unidade, contrato) == {}
+    assert mt.de_para_do_fluxo(DE_PARA.replace("## De-para nó", "## De para nó"), contrato) \
+        == mt.de_para_do_fluxo(DE_PARA, contrato)
 
 
 #: `produto/05-spec-missao.md:105` e `design/03-fluxo-arestas.md:5-9` da exp01em1b

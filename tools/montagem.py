@@ -1113,7 +1113,8 @@ def de_para_do_fluxo(fluxo: str, contrato: Sequence[str]) -> Dict[str, List[str]
     estado é o nome do contrato escrito na linha da tela, literal (sem caixa). Sem a seção, vazio."""
     from tools.cobertura_design import tabelas
 
-    m = re.search(r"^#{1,6}[^\n]*de[- ]?para[^\n]*estado[^\n]*$", fluxo or "", re.I | re.M)
+    # fronteira de palavra: sem ela, «## Unidade para cada estado» passava por seção de-para (revisão do PR #86)
+    m = re.search(r"^#{1,6}[^\n]*\bde[- ]?para\b[^\n]*\bestados?\b[^\n]*$", fluxo or "", re.I | re.M)
     if not m:
         return {}
     fim = re.search(r"^#{1,6}\s", fluxo[m.end():], re.M)

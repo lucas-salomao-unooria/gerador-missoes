@@ -1289,7 +1289,7 @@ def conferir_copy(copy: str, tcs: Sequence[TextoChave]) -> Dict[str, Any]:
             + exemplos + ("…" if len(fixados) > 6 else "") + ". O marcador é o que o professor de qualquer disciplina preenche na preparação "
             "da aula: a string mantém o marcador do one-pager, literal (ou uma variável `{…}`); a amostra preenchida vai "
             "na coluna de notas.", por_prova(BLOQUEIO, PROVA)))
-    ja_relatadas ={(i, literal(p)) for i, _, p in r["propostas_novas"]}
+    ja_relatadas = {(i, literal(p)) for i, _, p in r["propostas_novas"]}
     pendentes = [p for p in r["propostas"] if (p[0], literal(p[2])) not in ja_relatadas]
     if pendentes:
         achados.append(_achado(
