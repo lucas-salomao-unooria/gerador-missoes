@@ -310,7 +310,14 @@ def ficha_da_execucao(state: Dict[str, Any], sessao: str = "") -> Dict[str, Any]
         for chave in ("gate_estrutural_status", "gate_final_status", "bncc_status", "design_status", "dev_status")
         if state.get(chave)
     }
-    bloqueada = bool(state.get("pipeline_bloqueado")) or str(state.get("gate_final_status", "")).lower().startswith("bloq")
+    # O status segue o parecer humano em vigor (`tools/liberacao.py`): reprovação que uma pessoa viu e liberou não bloqueia
+    # a missão. A exp04ef1b (8ce9c32d, 25/09/2026) foi registrada `bloqueada` depois do «De acordo para codificação», e a
+    # exp02em1b (60cfa7f4, 22/10/2026) depois da exceção do admin no design e do de acordo de dev. Promover continua ato
+    # humano: com o parecer, a ficha sai `em criação` e diz qual é o parecer em vigor.
+    from tools import liberacao
+
+    pareceres = [p for p in state.get("pareceres_humanos") or [] if isinstance(p, dict)]
+    bloqueada = liberacao.bloqueada(state, pareceres)
 
     return {
         "sessao": sessao,
@@ -334,6 +341,8 @@ def ficha_da_execucao(state: Dict[str, Any], sessao: str = "") -> Dict[str, Any]
         # «🟡 liberado sem a conta produto — design (como Produto), <data>», ou vazio (PR 9 do plano «Produto dono do
         # contrato», D9): o catálogo diz quem liberou produto, sem mudar o status — é governança, não veredito
         "liberacao_produto": governanca.marca(governanca.da_sessao(state)),
+        # o parecer em vigor da etapa mais adiantada («dev: de acordo — dev, 25/09/2026 16:14:33»), ou vazio sem parecer
+        "parecer_humano": liberacao.parecer_em_vigor(pareceres),
         "gerada_em": time.strftime("%Y-%m-%d"),
         "origem": "esteira",
         # Achados dos pareceres pedagógicos, com o slug de padrão, para `recorrencias()`
@@ -718,6 +727,10 @@ def relatorio_markdown(resultado: Dict[str, Any], missao: str = "") -> str:
     linhas = [f"# Registro no catálogo de missões — {missao or f.get('slug') or 'missão'}", ""]
     linhas.append(f"**Registrada como:** `{f.get('status', '—')}` · índice com **{resultado.get('total', 0)}** missão(ões).")
     linhas.append("")
+    if f.get("parecer_humano"):
+        linhas.append(f"**Parecer humano em vigor:** {f['parecer_humano']}. O status segue o parecer: a reprovação que "
+                      "quem responde pela etapa viu e liberou não bloqueia a missão.")
+        linhas.append("")
     if f.get("liberacao_produto"):
         linhas.append(f"**Liberação de produto:** {f['liberacao_produto']}. O status não muda: é registro de "
                       "governança (plano «Produto dono do contrato», D9).")
