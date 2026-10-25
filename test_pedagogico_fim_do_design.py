@@ -195,45 +195,71 @@ def test_secao_que_o_redator_nao_escreveu_e_criada_com_o_bloco():
 
 
 def test_contrato_no_pedagogico_na_correcao_pontual_entra_como_troca():
-    """Na correção pontual o redator não roda; o A120b sim, e o que ele muda (a sessão anterior ao PR 10 ganha os
-    subtítulos) entra em `edicoes_pontuais`: o documento continua a versão anterior mais as trocas (A094)."""
+    """Na correção pontual com o pedagógico travado o redator não roda; o A120b sim, e o que ele muda (a sessão anterior
+    ao PR 10 ganha os subtítulos) entra em `edicoes_pontuais`: o documento continua a versão anterior mais as trocas
+    (A094)."""
     from agents.pedagogico import ContratoNoPedagogicoAgent
     from tools import edicao_pontual
 
     estado = _estado()
     antes = ca.remover_anexo(estado["one_pager_pedagogico"])
+    travados = list(edicao_pontual.travados("design"))
     final = _rodar_sync([ContratoNoPedagogicoAgent(name="A120b")],
-                        {**estado, "one_pager_pedagogico": antes, "modo_correcao": "pontual", "edicoes_pontuais": []})
+                        {**estado, "one_pager_pedagogico": antes, "modo_correcao": "pontual", "edicoes_pontuais": [],
+                         "documentos_travados": travados})
     depois = final["one_pager_pedagogico"]
     assert depois != antes and pg.blocos_presentes(depois)
     trocas = final["edicoes_pontuais"]
     assert trocas and all(t["motivo"] == pg.MOTIVO_TROCA for t in trocas)
     assert edicao_pontual.reaplicar(antes, depois, "one_pager_pedagogico", trocas)
-    # fora da correção pontual, nenhuma troca é registrada
-    # (a sessão do acervo guardou o modo da última correção dela, que foi pontual)
-    final = _rodar_sync([ContratoNoPedagogicoAgent(name="A120b")],
-                        {**estado, "one_pager_pedagogico": antes, "modo_correcao": ""})
-    assert final.get("edicoes_pontuais") == estado.get("edicoes_pontuais")
+    # Fora da correção pontual do pedagógico, nenhuma troca é registrada: na geração, e também com o modo «pontual» de
+    # uma correção anterior gravado no estado — a 4fd72a9a guardou o da correção de design de 22/10, com os documentos
+    # travados de então, sem o pedagógico (revisão do PR #79)
+    assert estado["modo_correcao"] == "pontual" and "one_pager_pedagogico" not in estado["documentos_travados"]
+    for inicial in ({**estado, "one_pager_pedagogico": antes},
+                    {**estado, "one_pager_pedagogico": antes, "modo_correcao": ""}):
+        final = _rodar_sync([ContratoNoPedagogicoAgent(name="A120b")], inicial)
+        assert final["one_pager_pedagogico"] == depois
+        assert final.get("edicoes_pontuais") == estado.get("edicoes_pontuais")
 
 
-def test_fechamento_do_design_monta_confere_anexa_e_grava_o_retrato():
-    """O loop do pedagógico com um redator falso no lugar do A120 (e sem o juiz, que é modelo): a narrativa sai montada
-    sobre o contrato, os gates aprovam, e o A124 cola o anexo e grava o retrato que o dev confere."""
+#: Uma narrativa mínima, no lugar do que o redator escreveria para a missão sem pedagógico.
+_NARRATIVA_MINIMA = ("# One-pager pedagógico\n\n## Em uma frase\n\nA turma descobre, fazendo, o que a missão ensina.\n\n"
+                     "## O que a missão ensina\n\nA criança aprende fazendo, com a turma.\n")
+
+
+def _fechamento_com_redator_falso(texto: str):
+    """O loop do pedagógico e o A124 de verdade, com um redator falso no lugar do A120 (e sem o juiz, que é modelo)."""
     from agents.pedagogico import build_fechamento_pedagogico
 
-    estado = _estado()
-    narrativa = pg.narrativa(estado["one_pager_pedagogico"])
     loop, anexo = build_fechamento_pedagogico()
     loop.max_iterations = 1
-    loop.sub_agents = [_Escreve(name="RedatorFalso", chave="one_pager_pedagogico", texto=narrativa)] + [
+    loop.sub_agents = [_Escreve(name="RedatorFalso", chave="one_pager_pedagogico", texto=texto)] + [
         a for a in loop.sub_agents[1:] if a.name in ("A120bContratoNoPedagogico", "A121ConteudoAprovadoPedagogico",
                                                      "A121bMontagemPedagogico")]
     for a in loop.sub_agents:
         a.parent_agent = None
     anexo.parent_agent = None
-    # a geração (a sessão do acervo guardou o modo da última correção dela, pontual — em que o loop não roda sem documento)
-    inicial = {**{k: v for k, v in estado.items() if k != "one_pager_pedagogico"}, "modo_correcao": ""}
-    final = _rodar_sync([loop, anexo], inicial)
+    return [loop, anexo]
+
+
+def test_fechamento_do_design_monta_confere_anexa_e_grava_o_retrato():
+    """O refazer de design da exp02ef1b, com um redator falso: a narrativa sai montada sobre o contrato, os gates
+    aprovam, e o A124 cola o anexo e grava o retrato que o dev confere. A sessão guardou o modo «pontual» da última
+    correção dela, e o refazer não o leva adiante (revisão do PR #79: o teste forçava `modo_correcao` vazio)."""
+    from pipeline.reexecucao import preparar_estado
+    from tools import edicao_pontual
+
+    estado = _estado()
+    narrativa = pg.narrativa(estado["one_pager_pedagogico"])
+    assert estado["modo_correcao"] == "pontual"
+    inicial, _ = preparar_estado(estado, "design", "Refazer o design.")
+    assert "one_pager_pedagogico" not in inicial and "modo_correcao" not in inicial
+    # os documentos de design como os autores os deixam antes do fechamento (a copy traz as propostas do design para os
+    # textos-chave, que o A120b devolve ao texto aprovado)
+    inicial.update({k: estado[k] for k in edicao_pontual.DOCUMENTOS_POR_ETAPA["design"]
+                    if k in estado and k != "one_pager_pedagogico"})
+    final = _rodar_sync(_fechamento_com_redator_falso(narrativa), inicial)
     doc = final["one_pager_pedagogico"]
     assert pg.blocos_presentes(doc) and ca.TITULO_ANEXO in doc
     assert final[pg.KEY_RETRATO] == doc
@@ -241,21 +267,111 @@ def test_fechamento_do_design_monta_confere_anexa_e_grava_o_retrato():
     assert final["conteudo_aprovado_pedagogico_status"] == "aprovado", final["conteudo_aprovado_pedagogico_report"]
 
 
-def test_correcao_pontual_sem_pedagogico_nao_roda_o_loop():
-    from agents.pedagogico import PEDAGOGICO_PULADO_NA_CORRECAO, pular_pedagogico_sem_documento_na_correcao_pontual
+def test_o_modo_da_correcao_anterior_nao_vale_para_o_design_seguinte():
+    """Revisão do PR #79: as quatro sessões do bucket com correção pontual guardam `modo_correcao=pontual`, e o refazer
+    de design e o Iniciar que vinham depois rodavam como correção pontual — o loop do pedagógico era pulado, e o de
+    acordo de design saía sem o documento a aprovar. O refazer pelos autores e o Iniciar (`preparar_estado`) apagam os
+    campos da correção pontual; a correção pontual os grava de novo."""
+    from agents.callbacks import KEY_DOCUMENTOS_TRAVADOS, KEY_MODO_CORRECAO
+    from pipeline.reexecucao import preparar_estado, preparar_estado_pontual
+
+    for nome in ("exp02ef1b-4fd72a9a", "exp02em1b-60cfa7f4", "exp03em1b-b2e7b4a3", "exp01em1b-e89e91b3"):
+        estado = _estado(nome)
+        assert estado[KEY_MODO_CORRECAO] == "pontual" and estado["edicoes_pontuais"], nome
+        for etapa in ("produto", "design", "dev"):
+            limpo, removidas = preparar_estado(estado, etapa)
+            assert not {KEY_MODO_CORRECAO, KEY_DOCUMENTOS_TRAVADOS, "edicoes_pontuais"} & set(limpo), (nome, etapa)
+            assert KEY_MODO_CORRECAO in removidas
+        limpo, _ = preparar_estado_pontual(estado, "design", "pedido", {}, [{"documento": "copy_strings", "de": "a",
+                                                                             "para": "b"}])
+        assert limpo[KEY_MODO_CORRECAO] == "pontual" and len(limpo["edicoes_pontuais"]) == 1
+
+
+def test_sessoes_com_o_modo_pontual_gravado_geram_o_pedagogico_no_refazer_de_design():
+    """A exp02ef1b, a exp02em1b e a exp03em1b do bucket, refeitas no design (o mesmo `preparar_estado` do Iniciar): o
+    loop roda, e o pedagógico e o retrato são gravados. E mesmo com o modo «pontual» de outra correção no estado — a
+    guarda do loop é o próprio pedagógico travado, e não o modo —, o redator escreve e o A120b não registra troca."""
+    from pipeline.reexecucao import preparar_estado
+
+    for nome in ("exp02ef1b-4fd72a9a", "exp02em1b-60cfa7f4", "exp03em1b-b2e7b4a3"):
+        estado = _estado(nome)
+        inicial, _ = preparar_estado(estado, "design")
+        final = _rodar_sync(_fechamento_com_redator_falso(_NARRATIVA_MINIMA), inicial)
+        doc = final.get("one_pager_pedagogico") or ""
+        assert "A turma descobre, fazendo" in doc and pg.blocos_presentes(doc), nome
+        assert final[pg.KEY_RETRATO] == doc and ca.TITULO_ANEXO in doc, nome
+        # o estado como ficava antes da revisão: o modo e os documentos travados da correção de design anterior
+        legado = {k: v for k, v in estado.items() if k != "one_pager_pedagogico"}
+        final = _rodar_sync(_fechamento_com_redator_falso(_NARRATIVA_MINIMA), legado)
+        assert "A turma descobre, fazendo" in final["one_pager_pedagogico"] and final[pg.KEY_RETRATO], nome
+        assert final["edicoes_pontuais"] == estado["edicoes_pontuais"], nome
+
+
+def test_produto_pontual_e_depois_iniciar_design_gera_o_pedagogico():
+    """O fluxo da exp01em1b (76d9af6e, sem o campo): correção pontual de produto, de acordo, Iniciar design. Até a
+    revisão do PR #79 o Iniciar herdava `modo_correcao=pontual` do passo de produto e o loop do pedagógico era pulado."""
+    from pipeline.reexecucao import preparar_estado, preparar_estado_pontual
+
+    estado = _estado("exp01em1b-76d9af6e")
+    assert "modo_correcao" not in estado and "one_pager_pedagogico" not in estado
+    trocas = [{"documento": "one_pager", "de": "x", "para": "y"}]
+    produto, _ = preparar_estado_pontual(estado, "produto", "Trocar um número.", {}, trocas)
+    assert produto["modo_correcao"] == "pontual"
+    design, _ = preparar_estado(produto, "design")
+    assert "modo_correcao" not in design and "edicoes_pontuais" not in design
+    final = _rodar_sync(_fechamento_com_redator_falso(_NARRATIVA_MINIMA), design)
+    assert pg.blocos_presentes(final["one_pager_pedagogico"])
+    assert final[pg.KEY_RETRATO] == final["one_pager_pedagogico"]
+    assert "edicoes_pontuais" not in final
+
+
+def test_correcao_pontual_de_design_sem_pedagogico_o_gera_e_os_gates_dele_valem():
+    """O Refazer de design com comentário é correção pontual por padrão (CORRECAO_PONTUAL=true). Nas três missões
+    desenhadas antes do PR 10 que o usuário vai refazer (exp02em1b, exp01em1b e exp03em1b), o pedagógico falta: o
+    redator o escreve — não é a reescrita de um documento aprovado —, os outros documentos de design seguem travados, o
+    A120b não registra troca, e o A124 grava o retrato. A linha de base julga o documento novo inteiro: o 🔴 dos gates
+    dele fica (`DOCUMENTO_NOVO`) e não volta ao editor, em vez de virar «trecho que a correção não tocou»."""
+    from agents.callbacks import travar_documento_na_correcao_pontual
+    from agents.checkers import LinhaDeBaseAgent
+    from pipeline.reexecucao import preparar_estado_pontual
+    from tools import edicao_pontual, linha_de_base
 
     class _Ctx:
         def __init__(self, state):
             self.state = state
 
-    pular = pular_pedagogico_sem_documento_na_correcao_pontual
-    assert pular(_Ctx({"modo_correcao": "pontual"})).parts[0].text == PEDAGOGICO_PULADO_NA_CORRECAO
-    assert pular(_Ctx({"modo_correcao": "pontual", "one_pager_pedagogico": "# Ped\n\ntexto"})) is None
-    # o refazer de design gera o pedagógico das sessões anteriores ao PR 10 (exp02em1b, exp01em1b, exp03em1b)
-    assert pular(_Ctx({})) is None
-    from pipeline.artifacts import e_mensagem_de_pulo
+    for nome in ("exp02em1b-60cfa7f4", "exp01em1b-76d9af6e", "exp03em1b-b2e7b4a3"):
+        estado = _estado(nome)
+        documentos = edicao_pontual.documentos_da_etapa(estado, "design")
+        assert "one_pager_pedagogico" not in documentos and "jornada_telas" in documentos, nome
+        inicial, _ = preparar_estado_pontual(estado, "design", "Trocar o texto do botão.", documentos, [])
+        assert inicial["modo_correcao"] == "pontual" and "jornada_telas" in inicial["documentos_travados"]
+        assert "one_pager_pedagogico" not in inicial["documentos_travados"]
+        # o redator de verdade não é travado (o documento falta), e o autor da jornada é
+        assert travar_documento_na_correcao_pontual("one_pager_pedagogico")(_Ctx(inicial)) is None
+        assert travar_documento_na_correcao_pontual("jornada_telas")(_Ctx(inicial)) is not None
+        final = _rodar_sync(_fechamento_com_redator_falso(_NARRATIVA_MINIMA), inicial)
+        doc = final["one_pager_pedagogico"]
+        assert "A turma descobre, fazendo" in doc and final[pg.KEY_RETRATO] == doc, nome
+        assert final["edicoes_pontuais"] == [], "o que o redator escreveu não é troca"
+        assert pg.gerado_nesta_correcao(final) and not pg.travado_nesta_correcao(final)
 
-    assert e_mensagem_de_pulo(PEDAGOGICO_PULADO_NA_CORRECAO)
+        # um 🔴 do gate de montagem, com citação de texto que nenhuma troca tocou
+        bloqueio = {"severidade": "bloqueio", "codigo": "numero-sem-origem", "etapa": "design",
+                    "citacao": "A turma descobre, fazendo, o que a missão ensina",
+                    "resumo": "A narrativa traz um número de regra sem origem no contrato."}
+        julgado = {**final, "montagem_pedagogico_status": "bloqueado",
+                   "montagem_pedagogico_status_envelope": {"status": "bloqueado", "achados": [dict(bloqueio)]}}
+        depois = _rodar_sync([LinhaDeBaseAgent(name="A000LinhaDeBase")], julgado)
+        assert depois["montagem_pedagogico_status"] == "bloqueado", nome
+        linha = next(l for l in depois["linha_de_base_linhas"] if l["gate"] == "montagem_pedagogico_status")
+        assert linha["origem"] == linha_de_base.DOCUMENTO_NOVO
+        assert not [l for l in linha_de_base.bloqueios_novos(depois["linha_de_base_linhas"])
+                    if l["gate"] in pg.GATES], "não volta ao editor, que não tem o documento"
+        # o controle: o mesmo achado num pedagógico travado (que existia antes) é rebaixado, como sempre
+        travado = {**julgado, "documentos_travados": list(julgado["documentos_travados"]) + ["one_pager_pedagogico"]}
+        depois = _rodar_sync([LinhaDeBaseAgent(name="A000LinhaDeBase")], travado)
+        assert depois["montagem_pedagogico_status"] == "amarelo", nome
 
 
 # --------------------------------------------------------------------------- 3. o gate de montagem
@@ -473,6 +589,33 @@ def test_pedagogico_na_pasta_de_design_com_a_secao_do_dev_e_sem_o_da_raiz(tmp_pa
     assert "design/14-one-pager-pedagogico.md" in caminhos and "one-pager-pedagogico.md" in caminhos
 
 
+def test_links_do_pedagogico_exportado_na_pasta_de_design_abrem(tmp_path):
+    """O redator cita os artefatos a partir da raiz da sessão (`design/08-prototipo.html`, o que o A121 confere), e o
+    pedagógico é exportado em `design/`: no `.html` e no `.docx` o link abria `design/design/08-prototipo.html` — o
+    protótipo com que o time valida a missão (exp05ef1b; revisão do PR #79). O `.md` é o texto da esteira e fica."""
+    from docx import Document
+    from docx.opc.constants import RELATIONSHIP_TYPE as RT
+
+    from pipeline.artifacts import exportar_one_pagers, links_relativos_a_pasta
+
+    doc = _estado("exp05ef1b")["one_pager_pedagogico"]
+    assert "[Protótipo navegável da missão](design/08-prototipo.html)" in doc
+    doc += "\n\nVeja também o [PRD](PRD.md) e a [spec](produto/05-spec-missao.md#bloco-2).\n"
+    exportar_one_pagers({"one_pager_pedagogico": doc}, tmp_path, "exp05ef1b")
+    pagina = (tmp_path / "design" / "14-one-pager-pedagogico.html").read_text(encoding="utf-8")
+    assert 'href="08-prototipo.html"' in pagina and 'href="design/08-prototipo.html"' not in pagina
+    assert 'href="../PRD.md"' in pagina and 'href="../produto/05-spec-missao.md#bloco-2"' in pagina
+    assert 'href="https://stitch.withgoogle.com/projects/1846211594712956033"' in pagina
+    alvos = {r.target_ref for r in Document(str(tmp_path / "design" / "14-one-pager-pedagogico.docx")).part.rels.values()
+             if r.reltype == RT.HYPERLINK}
+    assert {"08-prototipo.html", "../PRD.md", "https://miro.com/app/board/uXjVHkUITyU=/"} <= alvos
+    assert "design/08-prototipo.html" not in alvos
+    # o que não é artefato da sessão fica como está; na raiz, nada muda
+    assert links_relativos_a_pasta("[x](https://a.b/c) [y](#topo) [z](www.exemplo.com)", "design/14") == \
+        "[x](https://a.b/c) [y](#topo) [z](www.exemplo.com)"
+    assert links_relativos_a_pasta(doc, "one-pager-pedagogico") == doc
+
+
 def test_de_acordo_de_design_e_dado_sobre_o_pedagogico():
     from pipeline import passagem
 
@@ -529,21 +672,35 @@ def test_fidelidade_do_design_confere_o_pedagogico_e_a_do_dev_nao():
 
 # --------------------------------------------------------------------------- 6. o pedido do PO sobre o pedagógico
 def test_pedido_sobre_o_pedagogico_feito_no_dev_vai_ao_design_e_o_de_produto_a_produto():
-    from tools.triagem_pedido import DESIGN, DEV, PRODUTO, dividir
+    from tools.triagem_pedido import DESIGN, DEV, INDEFINIDO, PRODUTO, dividir
 
     estado = _estado()
-    pedido = ("1. No pedagógico, a seção «Por que isso importa nesta idade» deve falar mais da roda de conversa.\n"
+    pedido = ("1. No one-pager pedagógico, a seção «Por que isso importa nesta idade» deve falar mais da roda de "
+              "conversa.\n"
               "2. No PRD, o nome da tabela de sessões tem de seguir o prefixo da missão.\n"
-              "3. No pedagógico, tire a habilidade EF02CO05 do que a missão ensina.\n")
+              "3. No one-pager pedagógico, tire a habilidade EF02CO05 do que a missão ensina.\n")
     d = dividir(pedido, "dev", estado, [{"n": 1, "dono": "dev"}, {"n": 2, "dono": "dev"}, {"n": 3, "dono": "dev"}])
     assert [i.dono for i in d.itens] == [DESIGN, DEV, PRODUTO]
     assert "pedagógico" in d.itens[0].motivo_triagem
-    # «o time pedagógico» não é o documento
-    d = dividir("O time pedagógico pediu que o PRD cite a tabela certa.", "dev", estado, [{"n": 1, "dono": "dev"}])
-    assert d.itens[0].dono == DEV
+    # o nome do arquivo também é o documento
+    d = dividir("Em design/14-one-pager-pedagogico.md, a parte da sala fica longa.", "dev", estado,
+                [{"n": 1, "dono": "dev"}])
+    assert d.itens[0].dono == DESIGN
+    # «o pedagógico» sozinho é, na casa, também o time pedagógico: o item de dev fica no dev (revisão do PR #79)
+    for frase in ("Conforme pedido do pedagógico, detalhar no PRD os eventos da etapa 5.",
+                  "O time pedagógico pediu que o PRD cite a tabela certa.",
+                  "No pedagógico, a seção do PRD sobre a tabela de sessões precisa citar o prefixo da missão."):
+        d = dividir(frase, "dev", estado, [{"n": 1, "dono": "dev"}])
+        assert d.itens[0].dono == DEV, frase
+    # a triagem que não sabe o dono não ganha um por esta regra: item sem dono leva ao Devolver (D4, opção B)
+    d = dividir("No one-pager pedagógico, a parte da sala fica longa.", "dev", estado, [{"n": 1, "dono": "indefinido"}])
+    assert d.itens[0].dono == INDEFINIDO
+    d = dividir("No one-pager pedagógico, a parte da sala fica longa.", "dev", estado, [])
+    assert d.itens[0].dono == INDEFINIDO
     # pedido feito ao design: o item do pedagógico é do design — e o texto-alvo que está em produto vai a produto
-    d = dividir("No pedagógico, a parte da sala precisa dizer que a turma usa tablets.", "design", estado,
+    d = dividir("No one-pager pedagógico, a parte da sala precisa dizer que a turma usa tablets.", "design", estado,
                 [{"n": 1, "dono": "design"}])
     assert d.itens[0].dono == DESIGN
-    d = dividir("No pedagógico, a seção «Em uma frase» fica curta demais.", "design", estado, [{"n": 1, "dono": "design"}])
+    d = dividir("No one-pager pedagógico, a seção «Em uma frase» fica curta demais.", "design", estado,
+                [{"n": 1, "dono": "design"}])
     assert d.itens[0].dono == PRODUTO and "one-pager resumido" in d.itens[0].regra[0]
