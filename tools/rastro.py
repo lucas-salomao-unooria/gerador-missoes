@@ -536,7 +536,14 @@ def d0_orfaos(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> List[Dict[
                 # a cópia trazia um D0-7 da rodada anterior do D0, que a spec montada já não tinha
                 texto = "\n".join(m.group(0) for m in re.finditer(r"^##\s*(?:Bloco\s*)?14\b.*?(?=^## |\Z)", texto,
                                                                     re.MULTILINE | re.DOTALL))
-            orfaos = sorted({int(n) for n in citado.findall(texto)} - (definidos or set()))
+            # Ignora menções de histórico de correção («corrigida referência de D0-7 para D0-5 conforme ticket D0-ORFAO-2»)
+            texto_ativo = re.sub(
+                rf"\b(?:de|do|da|antig[ao]|anterior)\s+{prefixo}-0*\d+\s+(?:para|por)\s+{prefixo}-0*\d+\b",
+                "",
+                texto,
+                flags=re.IGNORECASE,
+            )
+            orfaos = sorted({int(n) for n in citado.findall(texto_ativo)} - (definidos or set()))
             if not orfaos:
                 continue
             ids = ", ".join(f"{prefixo}-{n}" for n in orfaos)

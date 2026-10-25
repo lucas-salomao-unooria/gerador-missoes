@@ -91,6 +91,8 @@ Cinco marcadores têm dono fixo, porque o prompt que os cria já sabe quem fecha
         "direitos de uso",
         "validar com o time",
         "aprova[çc][ãa]o human",
+        "humano",
+        "humana",
         "po",
         "pm",
         "product owner",

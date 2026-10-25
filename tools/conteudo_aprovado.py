@@ -228,15 +228,36 @@ def com_anexo(documento: str, one_pager: str, secoes: Sequence[int], textos_chav
 
 
 # --------------------------------------------------------------------------- o que se confere
+_RE_HABILIDADE_FORA_DA_MISSAO = re.compile(
+    r"\b(?:fora\s+d[ae](?:sta)?\s+miss[ãa]o|n[ãa]o\s+reivindicad[ao]s?|n[ãa]o\s+exercid[ao]s?\s+em\s+tela|"
+    r"n[ãa]o\s+podem?\s+entrar|s[óo]\s+em\s+sala)\b",
+    re.I,
+)
+
+
+def _sem_linhas_fora_da_missao(trecho: str) -> str:
+    return "\n".join(l for l in (trecho or "").splitlines() if not _RE_HABILIDADE_FORA_DA_MISSAO.search(l))
+
+
 def codigos_aprovados(one_pager: str) -> List[str]:
-    """Códigos de Computação do contrato de evidência (§12a); sem §12a, os do currículo (§2)."""
+    """Códigos de Computação do contrato de evidência (§12a); sem §12a, os do currículo (§2).
+    Ignora linhas da tabela/prosa que declaram explicitamente que a habilidade está fora da missão ou não é reivindicada."""
     s12 = secao(one_pager or "", 12) or ""
     m = _RE_12A.search(s12)
     if m:
-        codigos = bncc.extrair_codigos(s12[m.start():])
+        codigos = bncc.extrair_codigos(_sem_linhas_fora_da_missao(s12[m.start():]))
         if codigos:
             return codigos
-    return bncc.extrair_codigos(secao(one_pager or "", 2) or "")
+    return bncc.extrair_codigos(_sem_linhas_fora_da_missao(secao(one_pager or "", 2) or ""))
+
+
+def codigos_citados_no_one_pager(one_pager: str) -> List[str]:
+    """Todos os códigos de Computação mencionados no §12a ou no §2 do one-pager (inclusive como registro de exclusão)."""
+    s12 = secao(one_pager or "", 12) or ""
+    m = _RE_12A.search(s12)
+    trecho_12a = s12[m.start():] if m else s12
+    s2 = secao(one_pager or "", 2) or ""
+    return list(dict.fromkeys(bncc.extrair_codigos(trecho_12a) + bncc.extrair_codigos(s2)))
 
 
 #: Texto entre aspas logo depois do rótulo: `**Pergunta:** "…"`, `Pergunta: *"…"*`, `- **Atingiu:** "…"`.
@@ -680,10 +701,12 @@ def _lista(codigos: Iterable[str]) -> str:
 
 
 def _comparar_codigos(aprovados: Sequence[str], declarados: Sequence[str], onde: str, origem: str,
-                      etapa: str, correcao_falta: str, correcao_sobra: str) -> List[Dict[str, str]]:
+                      etapa: str, correcao_falta: str, correcao_sobra: str,
+                      permitidos: Sequence[str] = ()) -> List[Dict[str, str]]:
     achados = []
     faltam = [c for c in aprovados if c not in declarados]
-    sobram = [c for c in declarados if c not in aprovados]
+    aceitos = set(aprovados) | set(permitidos)
+    sobram = [c for c in declarados if c not in aceitos]
     if faltam:
         achados.append(_achado(
             "habilidade-perdida",
@@ -725,7 +748,8 @@ def validar_spec(spec: str, one_pager: str) -> Dict[str, Any]:
             "copiada do §12a (canal, ação, régua ternária). Se um parecer recomendou tirá-la, a recomendação "
             "vai para o bloco 12 como ressalva não incorporada — quem tira habilidade é o PO, no one-pager.",
             "A spec não acrescenta habilidade: tire-a do bloco 11, ou, se a lista oficial obriga a trocá-la, "
-            "marque `[ABERTO — dono: produto: …]` dizendo por quê.")
+            "marque `[ABERTO — dono: produto: …]` dizendo por quê.",
+            permitidos=codigos_citados_no_one_pager(one_pager))
     achados += _tempo(spec, one_pager, "a spec", "produto")
     achados += _literais(spec, one_pager, ("canal_b", "roteiro"), "na spec", "produto",
                          "A spec copia do one-pager, palavra por palavra: a pergunta e as alternativas do Canal B no "
@@ -1030,7 +1054,8 @@ def validar_prd(prd: str, spec: str, one_pager: str, artefatos: Optional[Iterabl
                 "spec a tirou, a divergência é defeito a montante — mantenha a linha e registre-a na seção 19 com "
                 "dono `produto`.",
                 "O PRD não acrescenta habilidade que o one-pager aprovado não tem: tire-a da matriz. Se foi a spec "
-                "que a acrescentou, registre a divergência na seção 19 com dono `produto`.")
+                "que a acrescentou, registre a divergência na seção 19 com dono `produto`.",
+                permitidos=codigos_citados_no_one_pager(one_pager))
         linhas_kpi = _linhas_de_kpi(corpo)
         sem_kpi = [c for c in da_spec if not any(c in l for l in linhas_kpi)]
         if sem_kpi:
@@ -1097,7 +1122,8 @@ def validar_pedagogico(pedagogico: str, spec: str, one_pager: str,
             da_spec, bncc.extrair_codigos(corpo), "o one-pager pedagógico", origem, "dev",
             "Cada habilidade entra em «O que a missão ensina» e em «Como a gente sabe que a criança aprendeu», "
             "com o código entre parênteses.",
-            "O pedagógico não acrescenta habilidade: tire-a.")
+            "O pedagógico não acrescenta habilidade: tire-a.",
+            permitidos=codigos_citados_no_one_pager(one_pager))
     achados += _tempo(corpo, one_pager, "o one-pager pedagógico", "dev")
     if tem_podcast(one_pager) and not _RE_PODCAST.search(corpo):
         achados.append(_achado(
@@ -1141,11 +1167,14 @@ def validar_resumido(resumido: str, spec: str, one_pager: str) -> Dict[str, Any]
                           "o código entre crases.")
         correcao_sobra = ("O resumido não acrescenta habilidade: tire-a, ou cite-a como `[PROPOSTA — validar com PO: …]` "
                           "ou «a confirmar».")
+        permitidos_op = codigos_citados_no_one_pager(one_pager)
         achados += [a for a in _comparar_codigos(da_spec, citadas, "o one-pager resumido", origem,
-                                                 "produto", correcao_falta, correcao_sobra)
+                                                 "produto", correcao_falta, correcao_sobra,
+                                                 permitidos=permitidos_op)
                     if a["codigo"] == "habilidade-perdida"]
         achados += [a for a in _comparar_codigos(da_spec, afirmadas, "o one-pager resumido", origem,
-                                                 "produto", correcao_falta, correcao_sobra)
+                                                 "produto", correcao_falta, correcao_sobra,
+                                                 permitidos=permitidos_op)
                     if a["codigo"] == "habilidade-acrescentada"]
     achados += _tempo(corpo, one_pager, "o one-pager resumido", "produto")
     # 🟡, não ⛔: nas 15 sessões do bucket o resumido não trazia o Canal B literal em 7 — geradas antes de o prompt

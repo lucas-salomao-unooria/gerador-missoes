@@ -178,7 +178,14 @@ def _presente(categoria: str, alvo: str, coluna: str, texto: str) -> bool:
         return not ca.literais_ausentes(fonte, [alvo])
     corpo = ca.remover_anexo(texto) if coluna in ("prd", "pedagogico") else texto
     if categoria == "tempo":
-        return bool(re.search(rf"(?<!\d){re.escape(alvo)}\s*(?:min|minutos)\b", corpo, re.I))
+        if re.search(rf"(?<!\d){re.escape(alvo)}(?:[.,]\d+)?\s*(?:\|\s*)?(?:min|minutos)\b", corpo, re.I):
+            return True
+        if alvo.isdigit():
+            alvo_int = int(alvo)
+            for m_num in re.finditer(r"(?<!\d)(\d+)[.,](\d+)\s*(?:\|\s*)?(?:min|minutos)\b", corpo, re.I):
+                if round(float(f"{m_num.group(1)}.{m_num.group(2)}")) == alvo_int:
+                    return True
+        return False
     if categoria in ("secao_ds", "secao_extra"):
         return alvo in corpo.lower()
     if categoria == "tela":

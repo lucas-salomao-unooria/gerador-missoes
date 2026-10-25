@@ -261,3 +261,37 @@ def test_mecanica_arquetipos_e_anti_frankenstein_nos_prompts():
     assert "complementar lógico de Atingiu e Em processo" in p_canal_a
 
 
+def test_3ef2b_falsos_positivos_deterministicos():
+    """Garante que os 5 falsos positivos revelados na execução E2E de 3ef2b não ocorrem."""
+    # 1. [ABERTO — dono: humano: ...] é reconhecido como decisão humana (🟡), não produto (🔴)
+    rastro._REGRAS_DONOS_CACHE = None
+    assert rastro._etapa_por_tokens("humano: pedagógico") == "humano"
+
+    # 2. Habilidades explicitamente marcadas como fora da missão ou não reivindicadas não entram em codigos_aprovados
+    op = (
+        "## 12. Evidência\n### 12a. Contrato de evidência\n"
+        "| Habilidade | Canal |\n|---|---|\n"
+        "| EF03CO07 | **A + B** |\n"
+        "| EF03CO03 (fora da missão) | **A** (não exercido em tela) |\n"
+        "| EF03CO01 (não reivindicada) | — |\n"
+    )
+    assert conteudo_aprovado.codigos_aprovados(op) == ["EF03CO07"]
+
+    # 3. Tempo aproximado no one-pager (≈ 47 min) aceita decimal que arredonda para 47 na spec (46,9 min ou | 46,9 | minutos)
+    assert rastreabilidade._presente("tempo", "47", "spec", "| **Total Acumulado** | **46,9 min** |")
+    assert rastreabilidade._presente("tempo", "47", "spec", "| Duração total em tela | 46,9 | minutos |")
+
+    # 4. Tabela de tickets resolvidos do QA citando 'arquivo-inexistente' — citação de 'design/00-relatorio-d0.md'
+    qa_rel = "| **QA-A1** ('arquivo-inexistente' — citação de 'design/00-relatorio-d0.md') | **Resolvido** |"
+    res_qa = afirmacoes.conferir_qa(qa_rel)
+    assert res_qa["achados"] == []
+
+    # 5. Nota de histórico de correção («corrigida referência de D0-7 para D0-5») não acusa D0-7 como órfão
+    st_d0 = {
+        "spec_missao": "## 13. Decisões D0\n### [D0-5] Ajuste\nTexto.\n",
+        "copy_strings_revisada": "| `e1.msg` | Olá [D0-5] | 2 | (corrigida referência de D0-7 para D0-5 conforme ticket) |",
+    }
+    assert rastro.d0_orfaos(rastro.FONTES_DESIGN, st_d0) == []
+
+
+

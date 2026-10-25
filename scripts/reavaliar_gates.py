@@ -110,7 +110,7 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
 
     # `Pendências do PRD` é a pior das duas leituras: marcadores abertos + consistência.
     lac_prd = rastro.varrer_lacunas([{"chave": "prd_final", "rotulo": "PRD", "etapa_padrao": "dev"}], state)
-    cons_prd = rastro.validar_prd(prd)
+    cons_prd = rastro.validar_prd(prd, spec=spec, banco=state.get("banco_conteudo", "") or "", aprovado=one_pager)
     pior = "bloqueado" if "bloqueado" in (lac_prd["status"], cons_prd["status"]) else (
         "amarelo" if "amarelo" in (lac_prd["status"], cons_prd["status"]) else "aprovado"
     )
@@ -134,6 +134,8 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
     if state.get("one_pager_pedagogico"):
         from tools import pedagogico
 
+        ped_remontado = pedagogico.montar(str(state["one_pager_pedagogico"]), state)
+        state = {**state, "one_pager_pedagogico": ped_remontado}
         novos["montagem_pedagogico_status"] = pedagogico.validar(state)
 
     # PR 7: os textos-chave na copy e o fluxo × bloco 2 da spec
@@ -175,9 +177,13 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
         novos["consistencia_status"] = r_cons
         novos["cobertura_telas_status"] = telas.cobertura(state)
         novos["rastreabilidade_status"] = rastreabilidade.matriz(state)
-    if state.get("qa_design_report"):
+    if handoff or prd or state.get("banco_conteudo"):
+        novos["rastreabilidade_dev_status"] = rastreabilidade.matriz(state, colunas_veredito=("handoff", "banco", "prd"))
+    qa_texto = str(state.get("qa_design_report") or state.get("qa_entregaveis_report") or "")
+    if qa_texto:
+        qa_base = qa_texto.split("\n\n## Afirmações conferidas em código (A089)")[0]
         novos["qa_afirmacoes_status"] = afirmacoes.conferir_qa(
-            str(state["qa_design_report"]),
+            qa_base,
             str(state.get("stitch_links") or ""),
             str(state.get("jornada_telas") or ""),
             str(state.get("prototipo_html_arquivo") or ""),
@@ -228,6 +234,18 @@ def avaliar(pasta: Path) -> Optional[Dict[str, Any]]:
     for chave, resultado in novos.items():
         copia[chave] = resultado["status"]
         copia[f"{chave}_envelope"] = {"status": resultado["status"], "achados": resultado.get("achados", [])}
+    # Se qa_afirmacoes_status e rastro_design_status deixaram de bloquear e design_status só carregava achados deles
+    if (copia.get("qa_afirmacoes_status") != "bloqueado"
+            and copia.get("rastro_design_status") != "bloqueado"
+            and copia.get("design_status") == "bloqueado"):
+        env_d = copia.get("design_status_envelope") or {}
+        ach_d = [a for a in env_d.get("achados") or [] if a.get("codigo") not in ("arquivo-inexistente", "d0-orfao")]
+        if not ach_d:
+            copia["design_status"] = "aprovado"
+            copia["design_status_envelope"] = {"status": "aprovado", "achados": []}
+    # Se nenhum portão continua bloqueado/devolvido após a recomputação, limpa degradacoes herdadas de gates agora verdes/amarelos
+    if not any(copia.get(g["status"]) in ("bloqueado", "devolvido") for g in GATES):
+        copia["degradacoes"] = []
     depois = matriz_de(copia)
     dossie_depois = coletar(copia)
 

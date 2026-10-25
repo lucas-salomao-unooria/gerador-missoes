@@ -36,7 +36,11 @@ _RE_SUJEITO = re.compile(r"stitch|prot[óo]tipo|\blint\b", re.I)
 #: «Citação ao caminho inexistente `design/04-copy-passada2.md`»: a rodada 2 do QA relata o ticket da 1 (exp01em1b).
 #: A negação tem de estar colada no caminho — «chave inexistente; ver `x.md`» e «`x.md` — não existe divergência»
 #: citam o arquivo como real.
-_RE_INEXISTENTE_ANTES = re.compile(r"(?:inexistentes?|n[ãa]o\s+existe)\W{0,4}$", re.I)
+_RE_INEXISTENTE_ANTES = re.compile(
+    r"(?:(?:inexistentes?|n[ãa]o\s+existe)\W{0,4}|"
+    r"(?:arquivo-inexistente|(?:caminho|chave|arquivo)\s+inexistente)\b[^\n]{0,45})$",
+    re.I,
+)
 #: Depois do caminho, também o aposto: «… citou a chave de caminho 'design/06-copy-revisada.md', arquivo não gravado na
 #: esteira» — o relato do ticket QA-A1 na rodada 2 da exp03em1b, acusado de novo mesmo com o caminho já apontado (V82,
 #: 23/10/2026; levantamento de deficiências de design, 24/10/2026).
@@ -206,8 +210,10 @@ def conferir_qa(qa: str, folha_stitch: str = "", jornada: str = "", prototipo_ht
         if sem_ext not in validos:
             linha = (qa or "")[(qa or "").rfind("\n", 0, m.start()) + 1:].split("\n", 1)[0]
             inicio = m.start() - (qa or "").rfind("\n", 0, m.start()) - 1
-            if citado in apontados and (_RE_INEXISTENTE_ANTES.search(linha[:inicio])
-                                        or _RE_INEXISTENTE_DEPOIS.match(linha[inicio + len(citado):])):
+            if (citado in apontados or (linha.lstrip().startswith("|") and "resolvido" in linha.lower())) and (
+                _RE_INEXISTENTE_ANTES.search(linha[:inicio])
+                or _RE_INEXISTENTE_DEPOIS.match(linha[inicio + len(citado):])
+            ):
                 continue  # o QA relata o ticket da rodada anterior, não aponta para o arquivo
             falha("arquivo-inexistente", f"O QA cita `{citado}`, que a esteira não grava (o protótipo é "
                                          f"`design/08-prototipo.html`; a lista está em `pipeline/artifacts.py`).", linha)
