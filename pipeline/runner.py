@@ -232,13 +232,20 @@ def material_dos_anexos(doc_batch: Optional[DocumentBatch]) -> str:
 _RE_VARIAVEL_AUSENTE = re.compile(r"Context variable not found: `(\w+)` in agent '(\w+)'")
 
 
-def mensagem_de_erro(exc: BaseException) -> str:
+def mensagem_de_erro(exc: BaseException, agente: str = "") -> str:
     """O erro como o PO consegue ler. O ADK diz "Context variable not found: `one_pager` in agent 'A026…'" quando o
-    agente que escreve um documento termina sem texto e o seguinte precisa dele (exp03ef1b, 08/10/2026, duas vezes)."""
+    agente que escreve um documento termina sem texto e o seguinte precisa dele (exp03ef1b, 08/10/2026, duas vezes).
+
+    A entrada grande demais para o modelo (o 400 da 3ef2b, e2e de 25/10/2026, ou o pré-voo que o evita) diz qual agente
+    e quanto — `agente` é o último que emitiu evento, quando o erro não o traz."""
+    from tools.contexto import e_erro_de_tamanho, mensagem_de_tamanho
+
     m = _RE_VARIAVEL_AUSENTE.search(str(exc))
     if m:
         return (f"o documento `{m.group(1)}` não existe quando o agente {m.group(2)} precisou dele — quem o escreve "
                 "terminou sem texto (resposta vazia do modelo). Nada foi alterado; tente de novo.")
+    if e_erro_de_tamanho(exc):
+        return mensagem_de_tamanho(exc, agente)
     return str(exc)
 
 
@@ -270,6 +277,59 @@ def briefing_inicial(initial_state: Optional[Dict[str, Any]], prompt: str) -> st
     a descrever a correção em vez da missão.
     """
     return str((initial_state or {}).get("briefing") or prompt or "")
+
+
+#: Onde fica o estado parcial de uma execução que caiu, quando a pasta da sessão já tinha estado (uma reexecução: quem a
+#: chamou restaura o backup) ou quando não há pasta da sessão. Começa por ponto: não é sessão nem artefato.
+PASTA_DE_FALHAS = ".falhas"
+
+
+def salvar_execucao_interrompida(
+    state: Dict[str, Any], *, session_id: str, prompt: str, run_dir: Optional[Path], initial_state: Optional[Dict[str, Any]],
+    stages: Optional[List[str]], tokens_por_agente: Dict[str, Dict[str, int]], historico_gates: Any, duracao: float,
+    erro: str, agente: str,
+) -> Optional[Path]:
+    """Na queda, o que a execução já tinha: o estado parcial marcado `erro`, os artefatos parciais e a telemetria.
+
+    A 3ef2b (e2e de 25/10/2026) caiu depois de 90 minutos e US$ 8,50, e a sessão ficou só com o `conversa.json`: nenhum
+    documento, nenhum estado, nenhum token por agente — não havia como saber qual agente estourou nem o que custou (G19).
+
+    - pasta da sessão sem estado (a primeira etapa de uma missão nova): grava ali, como no fim de uma execução, com
+      `execucao.status = "erro"` — e o «rodar de novo» passa a ter o material e o briefing salvos para recomeçar;
+    - pasta que já tinha estado (reexecução: quem chamou restaura o backup) ou sem pasta: o parcial vai para
+      `.falhas/<data>-<sessão>/estado.json`, e a sessão fica como estava.
+
+    O custo da execução que caiu entra em `custo_missao` como uma linha `falhou`, com os tokens por agente.
+    """
+    import json
+
+    from tools.custo import KEY_CUSTO, acumular, custo_da_execucao
+
+    settings = get_settings()
+    estado = {k: v for k, v in (state or {}).items() if not str(k).startswith("temp:")}
+    custo = custo_da_execucao(tokens_por_agente, settings.gemini_model, {"A113PrdWriter": settings.gemini_model_prd})
+    estado["execucao"] = {
+        "status": "erro", "erro": erro, "agente": agente,
+        "modelo": settings.gemini_model, "modelo_prd": settings.gemini_model_prd,
+        "duracao_s": round(duracao, 1), "tokens": custo["tokens"],
+        "tokens_por_agente": dict(sorted(tokens_por_agente.items(), key=lambda kv: -(kv[1]["entrada"] + kv[1]["saida"]))),
+        "custo": custo,
+    }
+    estado[KEY_CUSTO] = acumular((initial_state or {}).get(KEY_CUSTO) or estado.get(KEY_CUSTO),
+                                 {**custo, "falhou": True, "erro": erro[:300]}, list(stages or settings.pipeline_stages))
+    if historico_gates is not None:
+        from tools.historico_gates import KEY as _KEY_HISTORICO, acumular as _acumular_historico, resumo as _resumo_historico
+
+        _historico = _acumular_historico(estado.get(_KEY_HISTORICO), _resumo_historico(historico_gates.execucao()))
+        if _historico:
+            estado[_KEY_HISTORICO] = _historico
+    pasta = Path(run_dir) if run_dir else None
+    if pasta is not None and not (pasta / "estado.json").exists():
+        return save_run_artifacts(state=estado, session_id=session_id, prompt=prompt, run_dir=pasta)
+    destino = (pasta or settings.output_path) / PASTA_DE_FALHAS / f"{time.strftime('%Y%m%d-%H%M%S')}-{session_id}"
+    destino.mkdir(parents=True, exist_ok=True)
+    (destino / "estado.json").write_text(json.dumps(estado, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+    return destino
 
 
 def _pick_final_output(state: Dict[str, Any], step_outputs: Dict[str, str], fallback: str) -> str:
@@ -316,6 +376,12 @@ async def run_orchestrator_pipeline_stream(
         "timestamp": start_time,
     }
 
+    # Fora do `try`: na queda, o `except` salva o estado parcial e a telemetria até ali (G19, e2e de 25/10/2026)
+    session_service: Optional[InMemorySessionService] = None
+    session: Any = None
+    current_agent: Optional[str] = None
+    tokens_por_agente: Dict[str, Dict[str, int]] = {}
+    historico_gates: Any = None
     try:
         # A base da plataforma é fixada ANTES de montar os agentes: os prompts são expandidos agora, e
         # os verificadores que leem arquivo durante a execução consultam a mesma base. Sem base, para
@@ -384,12 +450,10 @@ async def run_orchestrator_pipeline_stream(
         step_thoughts: Dict[str, str] = {}
         events_log: List[Dict[str, Any]] = []
         final_text = ""
-        current_agent: Optional[str] = None
         known_status: Dict[str, Any] = {}
-        # Custo por agente. O `usage_metadata` de cada evento era descartado, então ninguém
-        # sabia quanto custa gerar uma missão nem qual agente pesa — e sem isso não há como
+        # Custo por agente (`tokens_por_agente`, declarado antes do `try`). O `usage_metadata` de cada evento era
+        # descartado, então ninguém sabia quanto custa gerar uma missão nem qual agente pesa — e sem isso não há como
         # decidir onde cortar contexto, nem justificar o gasto.
-        tokens_por_agente: Dict[str, Dict[str, int]] = {}
         # Cada rodada de cada gate, antes de a seguinte a sobrescrever no estado (`tools/historico_gates.py`)
         from tools.historico_gates import Coletor as _ColetorHistorico
 
@@ -405,6 +469,10 @@ async def run_orchestrator_pipeline_stream(
                                                             "chamadas": 0})
                 reg["cache"] += int(getattr(uso, "cached_content_token_count", 0) or 0)
                 reg["entrada"] += int(getattr(uso, "prompt_token_count", 0) or 0)
+                # a maior entrada de uma chamada: a do A004 crescia a cada volta do comitê até o 400 (3ef2b, 25/10/2026),
+                # e a soma não mostra isso
+                reg["maior_entrada"] = max(int(reg.get("maior_entrada", 0) or 0),
+                                           int(getattr(uso, "prompt_token_count", 0) or 0))
                 reg["saida"] += int(getattr(uso, "candidates_token_count", 0) or 0)
                 reg["pensamento"] += int(getattr(uso, "thoughts_token_count", 0) or 0)
                 reg["chamadas"] += 1
@@ -515,6 +583,7 @@ async def run_orchestrator_pipeline_stream(
         }
         settings_exec = get_settings()
         final_state["execucao"] = {
+            "status": "concluida",
             "modelo": settings_exec.gemini_model,
             "modelo_prd": settings_exec.gemini_model_prd,
             "seed_juiz": settings_exec.seed_juiz,
@@ -650,17 +719,34 @@ async def run_orchestrator_pipeline_stream(
     except Exception as exc:
         duration = time.time() - start_time
         logger.exception("Erro durante execução do pipeline ADK: %s", exc)
+        from tools.contexto import erro_deterministico
+
+        mensagem = mensagem_de_erro(exc, current_agent or "")
+        parcial_dir: Optional[Path] = None
+        if save_artifacts and session_service is not None and session is not None:
+            try:
+                parcial = await session_service.get_session(app_name=orchestrator_name, user_id=user_id,
+                                                            session_id=session.id)
+                parcial_dir = salvar_execucao_interrompida(
+                    dict(parcial.state) if parcial else {}, session_id=session_id, prompt=prompt, run_dir=run_dir,
+                    initial_state=initial_state, stages=stages, tokens_por_agente=tokens_por_agente,
+                    historico_gates=historico_gates, duracao=duration, erro=mensagem, agente=current_agent or "")
+            except Exception as exc_salvar:  # pragma: no cover - disco
+                logger.warning("Falha ao salvar o estado parcial da execução interrompida: %s", exc_salvar)
         error_result = PipelineExecutionResult(
             session_id=session_id,
             user_id=user_id,
             prompt=prompt,
-            final_output=f"❌ Erro na execução do pipeline: {mensagem_de_erro(exc)}",
+            final_output=f"❌ Erro na execução do pipeline: {mensagem}",
             duration_seconds=duration,
             status="error",
-            error_message=mensagem_de_erro(exc),
+            error_message=mensagem,
         )
-        yield {"type": "pipeline_error", "error": mensagem_de_erro(exc), "result": error_result, "duration": duration,
-               "timestamp": time.time()}
+        # `deterministico`: o mesmo erro volta em toda tentativa (400 do modelo, entrada grande demais) — quem tenta de
+        # novo não deve repetir sem mudar a entrada (a 2ª tentativa da 3ef2b custou US$ 10,34 para cair no mesmo 400)
+        yield {"type": "pipeline_error", "error": mensagem, "result": error_result, "duration": duration,
+               "timestamp": time.time(), "deterministico": erro_deterministico(exc), "agente": current_agent or "",
+               "estado_parcial": str(parcial_dir) if parcial_dir else ""}
     finally:
         base_plataforma.fixar(None)
 
