@@ -32,6 +32,8 @@ import re
 import unicodedata
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from tools.severidade import BLOQUEIO, INTERPRETACAO, por_prova
+
 #: Itens demais tornam o juiz raso. O que passa disto é cortado do fim (briefing primeiro).
 MAX_ITENS = 60
 MIN_PALAVRAS_ITEM = 6
@@ -485,6 +487,24 @@ def sem_texto_da_esteira(texto: str) -> str:
     return "\n".join(linhas).strip()
 
 
+def _plano_de_linha(texto: str) -> str:
+    return re.sub(r"[\s*>]+", " ", texto or "").strip()
+
+
+def linhas_anteriores(pedido: str, item: str) -> str:
+    """As duas linhas não vazias do pedido que antecedem a linha onde o item começa (sem o rótulo «(item N)»); vazio se
+    o item não se acha. É o contexto com que a fase A da C7 mediu a v2 da classe do item («EM13CO13 — substituir … por
+    observáveis:», o título que o checklist separa do critério)."""
+    alvo = re.sub(r"^\(item \d+\)\s*", "", _plano_de_linha(item))[:40]
+    if not alvo:
+        return ""
+    linhas = [l for l in (pedido or "").splitlines() if l.strip()]
+    for i, linha in enumerate(linhas):
+        if alvo in _plano_de_linha(linha):
+            return "\n".join(linhas[max(0, i - 2):i])
+    return ""
+
+
 def montar_checklist(pedidos: List[Tuple[str, str]], briefing: str) -> List[Dict[str, str]]:
     """`pedidos` = [(origem, texto)], do mais antigo ao mais novo. Ids F1…Fn, sem repetição.
 
@@ -493,7 +513,12 @@ def montar_checklist(pedidos: List[Tuple[str, str]], briefing: str) -> List[Dict
     """
     brutos: List[Dict[str, str]] = []
     for origem, texto in reversed(pedidos):
-        brutos += itens_do_pedido(sem_relatos_de_gate(sem_texto_da_esteira(texto)), origem)
+        limpo = sem_relatos_de_gate(sem_texto_da_esteira(texto))
+        for it in itens_do_pedido(limpo, origem):
+            # as duas linhas que antecedem o item no pedido: o título que o anuncia, para a segunda leitura do
+            # classificador (`_segunda_leitura_do_contexto`). Não vai ao juiz nem ao intérprete
+            it["antes"] = linhas_anteriores(limpo, it["texto"])
+            brutos.append(it)
     brutos += itens_do_briefing(briefing)
     vistos, unicos = set(), []
     for tipo, teto in PRIORIDADE:
@@ -810,6 +835,28 @@ def secao_travada_conferida(texto_item: str, documentos: Dict[str, str],
     return severidade, "briefing-violado", texto
 
 
+#: Os rótulos do classificador (`tools/classificador.item_do_pedido_classe`) em palavras, para o achado.
+_NOMES_DA_CLASSE = {"exigencia": "exigência", "preservacao": "ordem de não mexer", "contexto": "contexto",
+                    "texto_da_esteira": "texto da esteira"}
+
+
+def _segunda_leitura_do_contexto(itens: List[Dict[str, str]], decisoes: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    """`{id: Leitura}` dos itens que o juiz leu como contexto e o `_RE_ACAO` acha verbo de ação — os candidatos a
+    `exigencia-dispensada` —, lidos de uma vez pelo classificador (v2: o item com as duas linhas que o antecedem no
+    pedido, `antes`). A ordem de não mexer tem a régua própria e não entra."""
+    alvos = [it for it in itens if it["tipo"] != "literal"
+             and str((decisoes.get(it["id"]) or {}).get("veredito") or "").strip().lower() == "contexto"
+             and exige_acao(it["texto"]) and not _RE_REMETE_A_LISTA.search(it["texto"])
+             and not so_preservacao(it["texto"])]
+    if not alvos:
+        return {}
+    from tools import classificador
+
+    leituras = classificador.ler(classificador.ITEM_DO_PEDIDO_CLASSE, [
+        {"item": it["texto"], "linhas_anteriores_no_pedido": str(it.get("antes") or "")} for it in alvos])
+    return {it["id"]: lida for it, lida in zip(alvos, leituras)}
+
+
 #: O que, no documento parcial (o núcleo), é falta de prova e não contradição: sai do escopo e fica para o fim de
 #: produto, que confere núcleo, one-pager e spec juntos.
 SEM_PROVA_NO_RECORTE = frozenset({"nao-tratado", "sem-prova", "citou-o-pedido", "exigencia-dispensada",
@@ -879,6 +926,7 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         achados.append({"id": item["id"], "severidade": severidade, "codigo": codigo, "etapa": etapa,
                         "origem": item["origem"], "resumo": resumo})
 
+    segunda_leitura = _segunda_leitura_do_contexto(itens, decisoes)
     for it in itens:
         do_po = it["origem"] != "briefing"
         trecho = it["texto"][:240]
@@ -918,8 +966,11 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         if so_preservacao(it["texto"]) and veredito != "conflito_com_regra":
             # Ordem de não mexer: a prova é a versão anterior, nunca a palavra do juiz (plano padrão ouro, 2.3)
             provados = [c for c in documentos if c in anteriores]
-            if edicoes is not None and provados and all(
-                    edicao_pontual.reaplicar(anteriores[c], documentos[c], c, edicoes) for c in provados):
+            # na correção pontual, o documento que não é a versão anterior mais as trocas mudou além delas: é prova em
+            # código, e o `preservacao-sem-prova` abaixo continua 🔴 (C7)
+            alem_das_trocas = [c for c in provados if edicoes is not None
+                               and not edicao_pontual.reaplicar(anteriores[c], documentos[c], c, edicoes)]
+            if edicoes is not None and provados and not alem_das_trocas:
                 conferidos.append({"id": it["id"], "texto": trecho, "prova": (
                     f"correção pontual: {', '.join(provados)} = versão anterior + {len(edicoes)} troca(s) do pedido, "
                     "nada além")})
@@ -981,9 +1032,15 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
                        f"Ordem de não mexer, sem trecho que a prove: «{trecho}». A conferência é dos gates de preservação "
                        "(linhas perdidas, rastreabilidade, Stitch) — confira o que eles dizem.")
             else:
-                achado(it, "bloqueio", "preservacao-sem-prova",
+                # 🟡, não 🔴 (C7, 25/10/2026): aqui não há prova nem de que mudou nem de que ficou — o 🔴 com prova é o
+                # `pedido-violado` acima, pelo diff com a versão anterior, e a correção pontual que mexeu além das
+                # trocas —, e que o item seja ordem de não mexer é leitura de regex (`so_preservacao`). «Manter o
+                # restante» bloqueou duas vezes (e3980485, 22/10/2026)
+                achado(it, BLOQUEIO if alem_das_trocas else por_prova(BLOQUEIO, INTERPRETACAO), "preservacao-sem-prova",
                        f"Ordem de não mexer sobre o que nenhum gate preserva, sem trecho idêntico nas duas versões: "
-                       f"«{trecho}». {explicacao}")
+                       f"«{trecho}». "
+                       + (f"A correção pontual mudou {', '.join(alem_das_trocas)} além das trocas do pedido. "
+                          if alem_das_trocas else "Confira se ficou como estava. ") + explicacao)
             continue
         lido = (interpretacao or {}).get(it["id"]) or {}
         inserir, remover = lido.get("inserir") or [], lido.get("remover") or []
@@ -1043,9 +1100,23 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         elif veredito == "contexto" and (not exige_acao(it["texto"]) or _RE_REMETE_A_LISTA.search(it["texto"])):
             # título ou contexto do pedido, sem verbo de ação: não há o que provar
             conferidos.append({"id": it["id"], "texto": trecho, "prova": "(contexto do pedido, sem exigência)"})
+        elif veredito == "contexto" and segunda_leitura.get(it["id"]) is not None \
+                and segunda_leitura[it["id"]].rotulo in ("contexto", "texto_da_esteira"):
+            # o juiz e o classificador leem contexto: o verbo que o regex achou não é ordem (C7, 25/10/2026)
+            lida = segunda_leitura[it["id"]]
+            conferidos.append({"id": it["id"], "texto": trecho, "prova": (
+                "(contexto do pedido: o juiz e o classificador de sentido o leem assim"
+                + (f" — «{lida.citacao[:160]}»" if lida.citacao.strip() else "") + ")")})
         elif veredito == "contexto":
-            achado(it, "bloqueio" if do_po else "atencao", "exigencia-dispensada",
-                   f"O juiz tratou como contexto uma frase com verbo de ação — é exigência e precisa de prova: «{trecho}».")
+            # 🟡, não 🔴 (C7, 25/10/2026): o `_RE_ACAO` só acha o verbo, e tinha revocação 0,26 e precisão 0,80 contra os
+            # itens reais (bloqueou título e justificativa). O classificador (v2, com as linhas que antecedem o item no
+            # pedido) é a segunda leitura: se ele também lê contexto, o item é dispensado acima; se não, fica a dúvida
+            lida = segunda_leitura.get(it["id"])
+            achado(it, por_prova(BLOQUEIO, INTERPRETACAO), "exigencia-dispensada",
+                   f"O juiz tratou como contexto uma frase com verbo de ação, e o código não sabe se ela pede algo ao "
+                   f"documento — "
+                   + (lida.explicada(_NOMES_DA_CLASSE) if lida is not None else "o classificador não a leu")
+                   + f". Se for exigência, ela precisa de prova no documento: «{trecho}».")
         elif veredito == "conflito_com_regra":
             achado(it, "decisao_humana", "conflito-pedido-regra",
                    f"O pedido conflita com uma regra da esteira — decisão do PO, não do agente: «{trecho}». {explicacao}")

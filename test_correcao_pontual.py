@@ -190,13 +190,15 @@ def test_preservar_todo_o_restante_se_prova_pelas_trocas():
     anteriores = {"spec_missao": SPEC}
     sem_prova = fid.aplicar(itens, "", atual, anteriores=anteriores)
     item = _preservacao(itens)
-    assert any(a["id"] == item["id"] and a["severidade"] == "bloqueio" for a in sem_prova["achados"])
+    # sem as trocas, nada prova que mudou nem que ficou: 🟡 a conferir desde a C7 (25/10/2026)
+    assert any(a["id"] == item["id"] and a["severidade"] == "atencao" for a in sem_prova["achados"])
     pontual = fid.aplicar(itens, "", atual, anteriores=anteriores, edicoes=trocas)
     assert any(c["id"] == item["id"] and "correção pontual" in c["prova"] for c in pontual["conferidos"])
-    # e uma mudança fora das trocas continua sem prova
+    # e uma mudança fora das trocas é prova em código de que a ordem não foi cumprida: continua 🔴
     reescrita = {"spec_missao": atual["spec_missao"].replace("Aplicar os conceitos", "Aplicar conceitos")}
     fora = fid.aplicar(itens, "", reescrita, anteriores=anteriores, edicoes=trocas)
-    assert any(a["id"] == item["id"] and a["severidade"] == "bloqueio" for a in fora["achados"])
+    assert any(a["id"] == item["id"] and a["severidade"] == "bloqueio" and "além das trocas" in a["resumo"]
+               for a in fora["achados"])
 
 
 def test_ordem_de_nao_mexer_de_outra_rodada_nao_trava_o_pedido_novo():

@@ -53,11 +53,26 @@ def test_mutante_crase_fora_da_coluna_de_gesto_continua_acusada():
     assert _cita(rotulos, "Publicar no feed") and not _cita(rotulos, "Publicar")
 
 
-def test_mutante_coluna_de_gesto_so_vale_na_jornada():
-    """Só a jornada tem a coluna e a raia do verbo nativo (071): a mesma tabela no PRD continua conferida."""
+def test_mutante_coluna_de_gesto_so_vale_na_jornada(monkeypatch):
+    """Só a jornada tem a coluna e a raia do verbo nativo (071): a mesma tabela no PRD continua conferida. Desde a C7
+    (25/10/2026), conferida quer dizer que o candidato chega ao «é botão?» do classificador de sentido — e, com o
+    cabeçalho «Ação (verbo nativo)», ele lê o gesto e o tira; lendo botão, o achado fica."""
+    from tools import classificador
+
     linha = "| `E3-ALU-01` | 3 | Card do post, botão publicar | `Publicar no feed` | Grava |\n"
     assert _rotulos("jornada", INVENTARIO + linha) == []
-    assert _cita(_rotulos("PRD", INVENTARIO + linha), "Publicar no feed")
+    assert not _cita(_rotulos("PRD", INVENTARIO + linha), "Publicar no feed")
+    lidos = []
+    original = classificador.ler
+
+    def ler(pergunta, entradas):
+        lidos.extend(e["candidato"] for e in entradas)
+        return [classificador.Leitura("rotulo_de_botao", e["candidato"], "modelo") for e in entradas]
+
+    monkeypatch.setattr(classificador, "ler", ler)
+    assert _rotulos("jornada", INVENTARIO + linha) == [] and lidos == []
+    assert _cita(_rotulos("PRD", INVENTARIO + linha), "Publicar no feed") and lidos == ["Publicar no feed"]
+    monkeypatch.setattr(classificador, "ler", original)
 
 
 def test_raia_estudante_faz_e_coluna_de_gesto():

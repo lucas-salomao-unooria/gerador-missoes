@@ -139,6 +139,7 @@ def recontar(envelope: Optional[Dict[str, Any]], estado: Dict[str, Any],
         ficam.append(achado)
     if not a_conferir and not no_de_acordo:
         return envelope, ""
+    _com_a_leitura_do_classificador(a_conferir, estado)
 
     novo: Dict[str, Any] = {**envelope, "achados": ficam, "recontado_em_codigo": True}
     if no_de_acordo:
@@ -157,14 +158,42 @@ def recontar(envelope: Optional[Dict[str, Any]], estado: Dict[str, Any],
     if a_conferir:
         linhas.append("> Estes achados dizem que o PO decidiu e **continuam contando** (🟡): o código não separa a "
                       "repetição da decisão da denúncia de que o documento a descumpre. O PO confere:")
-        for a in a_conferir:
-            linhas.append(f"> - 🔎 **a conferir** — «{str(a.get('resumo') or '')[:200]}» — {a['a_conferir'][:300]}")
+        # o que o classificador lê como problema vem primeiro (C7): ele ordena e explica, não tira da contagem
+        for a in sorted(a_conferir, key=lambda x: _ORDEM_DA_PISTA.get(str(x.get("leitura_do_classificador")), 1)):
+            linhas.append(f"> - 🔎 **a conferir** — «{str(a.get('resumo') or '')[:200]}» — {a['a_conferir'][:400]}")
     if no_de_acordo:
         linhas.append("> Estes achados não contam no veredito:")
         for a in no_de_acordo:
             linhas.append(f"> - 📋 **na lista do de acordo de produto** ({a['itens_no_de_acordo']} item(ns) do contrato "
                           f"aberto, que o PO responde no cartão do parecer) — «{str(a.get('resumo') or '')[:200]}»")
     return novo, "\n".join(linhas)
+
+
+#: A ordem do «a conferir» pela leitura do classificador: a ressalva que aponta problema primeiro.
+_ORDEM_DA_PISTA = {"aponta_problema": 0, "nao_sei": 1, "repete_decisao_do_po": 2}
+
+
+def _com_a_leitura_do_classificador(a_conferir: List[Dict[str, Any]], estado: Dict[str, Any]) -> None:
+    """Soma à marca de cada achado «a conferir» a leitura do classificador de sentido
+    (`tools/classificador.ressalva_repete_decisao_do_po`) contra o que o PO escreveu na sessão, e a guarda em
+    `leitura_do_classificador` para ordenar a nota. É pista (C7, 25/10/2026): o achado continua contando — na fase A ele
+    acertou 36 de 37, e o erro (P096) foi justamente ler denúncia onde o levantamento viu repetição; o contrário
+    esconderia a denúncia. Muda o dicionário no lugar: o mesmo objeto está em `ficam`."""
+    if not a_conferir:
+        return
+    from tools import classificador
+
+    lidas = classificador.ler(classificador.RESSALVA_REPETE_DECISAO_DO_PO, [
+        {"ressalva": str(a.get("resumo") or ""),
+         "registros_do_po": classificador.registros_do_po(estado, str(a.get("resumo") or ""))} for a in a_conferir])
+    for a, lida in zip(a_conferir, lidas):
+        a["leitura_do_classificador"] = lida.rotulo
+        if lida.nao_sei:
+            continue
+        frase = ("o classificador de sentido lê que a ressalva só repete a decisão do PO" if
+                 lida.rotulo == "repete_decisao_do_po" else "o classificador de sentido lê que a ressalva aponta um "
+                                                            "problema")
+        a["a_conferir"] = f"{a['a_conferir']}; {frase}" + (f" («{lida.citacao[:140]}»)" if lida.citacao.strip() else "")
 
 
 def _a_conferir(resumo: str, registro: Any) -> str:

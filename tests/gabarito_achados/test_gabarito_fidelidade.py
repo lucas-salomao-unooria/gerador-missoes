@@ -285,12 +285,13 @@ def test_fp_fim_de_produto_da_exp01em1b_e3980485_sai_verde():
 
 
 def test_v_ordem_explicita_de_nao_mexer_continua_cobrada():
-    """Mutante: o mesmo item, mas nomeando o que não muda — a citação do juiz (changelog novo) não prova."""
+    """Mutante: o mesmo item, mas nomeando o que não muda — a citação do juiz (changelog novo) não prova. Continua cobrada,
+    como 🟡 desde a C7 (25/10/2026): sem prova de que mudou nem de que ficou, e lida como ordem de não mexer por regex."""
     st = estado(E39)
     itens, r = reavaliar(st, "produto", trocas_no_item={
         "Manter o restante": "Manter a mecânica do banco de critérios da Etapa 5"})
     it = item(itens, "Manter a mecânica do banco de critérios da Etapa 5")
-    assert codigos_do_item(r, it["id"]) == [("preservacao-sem-prova", "bloqueio")]
+    assert codigos_do_item(r, it["id"]) == [("preservacao-sem-prova", "atencao")]
 
 
 def test_fp_criterio_ditado_com_nao_altera_nao_e_ordem_de_preservacao():
@@ -586,13 +587,14 @@ def test_fp_verbo_dentro_das_aspas_nao_faz_exigencia():
 
 
 def test_v_verbo_fora_das_aspas_continua_exigencia():
-    """Mutante: o juiz trata como contexto um item com verbo do PO fora das aspas — `exigencia-dispensada`."""
+    """Mutante: o juiz trata como contexto um item com verbo do PO fora das aspas — `exigencia-dispensada`, 🟡 desde a C7
+    (25/10/2026), e o classificador de sentido também lê exigência: não é dispensado."""
     st = estado(C60)
     st["interpretacao_fidelidade_saida"] = ""  # sem a leitura do intérprete, que prova a troca pelo texto ditado
     trecho = "Trocar o botão “Ver Métricas da Publicação” por “Configuração da Publicação”."
     juiz = juiz_alterado(st, "produto", trecho, veredito="contexto", citacao="", citacoes=[])
     itens, r = reavaliar(st, "produto", juiz=juiz)
-    assert codigos_do_item(r, item(itens, trecho)["id"]) == [("exigencia-dispensada", "bloqueio")]
+    assert codigos_do_item(r, item(itens, trecho)["id"]) == [("exigencia-dispensada", "atencao")]
 
 
 def test_exige_acao_le_so_a_voz_do_po():

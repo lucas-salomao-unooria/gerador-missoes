@@ -1,0 +1,2129 @@
+{
+ "descricao": "Leituras do classificador de sentido (tools/classificador.py) para o CI e a regressão rodarem sem chamar o modelo. Regravar: scripts/gravar_cache_classificador.py.",
+ "leituras": {
+  "012c1d51b68b0685f181e11f0dcca9696244d0a91f60b0af5b41902709359ab1": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "repete_decisao_do_po",
+   "c": "Tempo de inatividade no chat de 90 segundos homologado pelo PO, acima do limite de 30 segundos do critério."
+  },
+  "01613631a34a7717059fbd327e41a3917b617f01c37f29be41ad6709d5dbe9aa": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Em processo: Interage com os parâmetros de escala mas seleciona configuração com distorção alta, OU marca o checklist apenas parcialmente."
+  },
+  "016ed46b7bfb25e47bb0ff5b1c40a034a2b105b5d0fa695d2fc1ae27ff0b6e88": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Em processo: Publicou errata, mas o texto não assume responsabilidade — repete os mesmos parâmetros com cosmética diferente ou culpa o sistema."
+  },
+  "03424bf02276e1e6d5d8de1db1a865be8a97961a9c2be037e851f309fb2c2e8d": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "). Botão expandido"
+  },
+  "03ebf56930a54be4fff117af745c65f2883717bd12c1fd78e0bafb827e7e800d": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "**Estudante — faz (verbo nativo)**"
+  },
+  "0443370f94a929ce51a14f59590c1e42c1549236b4c699fb10c14fdef73b0f1d": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se a taxa de 25% de desistência for atingida pelas duplas"
+  },
+  "04b4c5c56804f40c4b6f6678119722c7143d0913b64d43ec29dfe98d0194a931": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "`Button` `\"Confirmar e Disparar Teste\"`"
+  },
+  "04c235bf74a9fbe1a6f1e67bdbd1ff02c1c75bb9a5698527d2f6597aa2412fe2": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "Como PO da missão, ratifico as decisões abaixo. Executar cada uma no corpo dos documentos e remover os marcadores [PROPOSTA] e [PARÂMETRO] correspondentes."
+  },
+  "04f72bb07a928c11b109417d66301bccec6a00c300c454c027c030d5cb8aac27": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Focar o Canal A nos componentes capturáveis."
+  },
+  "05f53db53abaeb8d3f323e2011546b83d6a1c2325b02db0fc83859e026c441e1": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → fica de fora"
+  },
+  "0839e3aa8f7d7ceffe7d38a93b6686a39121da66784f512873d812fd8890654b": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "- **Contexto:** A missão `exp02em1b` ocupava anteriormente o título \"Missão Tempestade\" (v1.5.0, módulo `unoogpt`, porta 5178), centrada em IA conversacional em tempo real sobre desastres climáticos. O PO homologou a nova missão \"O Efeito Amplificador\" para o 2º ano do Ensino Médio, unidade 1, exigi"
+  },
+  "0a2eda7eb0eae635b66b572df95a1831c494f7e154f61923d594388716c09fa0": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Menos de 40% acertando na primeira tentativa (indica texto de blocos confuso ou abstração desconectada)."
+  },
+  "0b0b093c189dce622b0bd9558ab31ba5cf970c341ae4139379a7bd96efd60ae6": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "clicar em \"Aprovar Pacote\""
+  },
+  "0ba2dbf3e4c929cf5563abbe8ad50d79b9d6539c6d05c7ffaa3b078d38e0454e": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "pelo menos 30% dos conselheiros usarão a caixa facultativa de anotações"
+  },
+  "0bb977a8aa4b2ab8a2d0f183ee744a197274647c20f54206b8fe5affce8f646a": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "> “Aumente a moldura.”"
+  },
+  "0c02a913a0c5245256a095ab68300d5910743ab955a9efa43eba2bc161811eee": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → decidido: não usar"
+  },
+  "0cc8428c78c74bf375c2ae43e2c7df1dcd866b433855a19fc6fc177f5225c761": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "Tempo em tela de 29 min: reduzir para 25 min."
+  },
+  "0d62de1031a5cba83aef64b22eaf4f72b3cf6eac7f5b838241055492b3a3675f": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão `Abrir Painel da Turma`"
+  },
+  "0ee68fd8d812acf8f5f5e38e251c251b6270219c388868b954ededbf007b71b2": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "permite conclusão em ≤ 7 minutos por 80% dos estudantes"
+  },
+  "0f3feb1efd71fe4dd260c0e3825e0f5c2cb5acee3276a2653c272c887e048187": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "* **Botão Banco Padrão:** `Usar Banco Padrão Oficial`"
+  },
+  "0f598612917755a226ec12f84b4dae7a606add9d263ea4646e2e9fe63195ad51": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO."
+  },
+  "10120dd7193046de22dc925e65fa3d79ee5f0686651b09903440c1c791c7eb32": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "Porém a Etapa 4 concentra três decisões seguidas sem feedback, o que sobrecarrega o 6º ano."
+  },
+  "11c4bb16e326da9123d84fad45e29db685a1450561ef233592907547e52be270": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "Provoca a transferência (\"Precisamos ver tudo antes de falar?\")"
+  },
+  "12122b74e5715ae7953840dd46d36b59441f1e588273032f258385c3c0c073dc": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "Tempo em tela de 29 min: reduzir para 25 min."
+  },
+  "12458493ad57aec514f6f55fef0a7b7b14d2f0edb310aab4f4d362e0d686f282": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "repete_decisao_do_po",
+   "c": "Teto de 45 palavras por parágrafo aceito pelo PO no de acordo de 21/10."
+  },
+  "12f85d2e67f6db2acf9f6c13b2e80b48a80f25df547841c74b4f46ff0970e0d1": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "`Acessar`"
+  },
+  "135cbbec0882a0f259694ce057056ab67ac86ede07246fd1922e79fed344761c": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão prioritário \"Usar pacote padrão da Feira de Ciências\""
+  },
+  "143d7140dc2ed019845897381bff6805475f8f01e59b3626c7915884cef61868": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → trocar por quiz"
+  },
+  "1541f14bed40cdac21fc4bd208c4382a9e4019f94576278f2db7324429278aab": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO. Não recalibrar. Registrar como ressalva aceita, não como pendência aberta."
+  },
+  "1584aa48bd37b0ffeb01f80172c607f6d0ccde13aeacd97bb26fa8ca6cb7f7bd": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "pelo menos 70% das crianças reconhecem que a foto não mostrou tudo"
+  },
+  "1585349586892ec1434a91ef903641fd2c0bce74467c4ef5d9b39c7b20ba3f6d": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Observável: evento de abertura do anexo registrado antes do primeiro comando de geração de gráfico."
+  },
+  "1591467f1912174d4450063088df33a376631896e0b9a6b645730f1502ddcd4e": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "o “atingiu” não pode depender da errata"
+  },
+  "15e1abff4788120ba7dd94f119afff4ac98dfa83b389d21b29bbc633f1fc6c80": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "pelo menos 80% dos estudantes"
+  },
+  "1759a785d51d6e79efa521e6f5a974c465a7d8c99fb3790eba3636c96b543e62": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "mas a Seção 7 usa o limite de 30 segundos"
+  },
+  "17a0e0670278abc4b2cbcb3fd154b32bdff88f986237a09ee585d4a6c3f3236c": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Mais de 90% dos estudantes salvam o primeiro post em menos de 45 segundos após a entrada no feed."
+  },
+  "17abf689fcd8b706234f0e82d0b12af867903ee89093803a2f5597285a8711e0": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Remover a habilidade EF67LP08 de todos os documentos."
+  },
+  "18aae36667c29ab6149323ae300029e44ec5c9b01b8d59254e01ac70464e205c": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "a meta é que pelo menos 80% das duplas ajustem a moldura antes de confirmar"
+  },
+  "18e0ee7416e24dd0e3ead960c54fbda89649d7d6901b904272f7fde038010866": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "badges curriculares (\"6º ano EF\", \"1º bimestre\", \"Cultura Digital\")"
+  },
+  "195d06b056e13b7b124317dd3a9dbbbbf0f93ec0748098e3573f34b1f8904e93": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Menos de 40% de adesão à IA"
+  },
+  "198dd886921d27802c5416e3727033f47ffd0aa3368d46c6555c69118c618993": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "mecanica",
+   "c": "taxa de 75% da Galeria Oculta"
+  },
+  "19a77d2f23fde9b741c54fac90e9e7cf63d5d3ce4af8c15118013ebb3fef66b9": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "o botão \"Publicar Unoovista\""
+  },
+  "19e7101fe5a0856475032abfb9037debe8d48c1b902539930719b1f2f70eda7c": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "cravar: 60 palavras por legenda de projeto, 25 por cartão argumentativo, 35 por balão de notificação."
+  },
+  "1a1458b8aee4740b9aca696eb655c636326ee96d5ee31da6a6146ebb23e0b9eb": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "O professor clica em **\"Liberar para a Turma\"**"
+  },
+  "1a98219ab64108d9352e5a310fc2b29fa3b97fb7412ab52e6f242dd7a4b6c3bb": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Liberar Gate E4\""
+  },
+  "1d5c47cea9db3c6f35bad4f10f291e37a360452441070be3d7ab700689504822": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "dispara `interacted previsao:travar`"
+  },
+  "1dcba90eb63ecfa82c4bcb982e97fb50a3e7368d2da0d3e73791e4ec7a4b3eb1": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "rótulo de aresta"
+  },
+  "1dd4bf01f348b628dd2a0ae9f93235fdea3d23a4da310a2be65cc22b57a679bf": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "*Indica falha:* Se a desistência das duplas na moldura superar 25%"
+  },
+  "1e9accb5ef2980e438796efb669d250b916ffb66bc7a25ba04e66c290a21b95d": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Ausência de diretriz sobre a perda de validade formativa na reaplicação da mesma missão na mesma turma sem novo pacote de IA."
+  },
+  "1f83bbc8bc7b66a15b9ad4f6549ce4b2c113edc9541509dcd2bb288349164ec9": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "< 80% dos alunos afunilam o feed após duas curtidas na mesma área."
+  },
+  "206bef162afa428776afc5afb19c644c5e9edd0bded676d3e7f77033d1589c9d": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO."
+  },
+  "20ab253901bee7a6576c1980d17a4c03ed7e35a990f792ab093dcaede5f2f67e": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → fechado: sem StoryPoll"
+  },
+  "20c2dcb5f2e3f867f8bb104bb21e692fb988d4b6df731aa2dd43561398a4abe7": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO."
+  },
+  "20d12bda37acab6c7b686d015fa6460d0bbe53d0c3bbb65ad0632c35a8f2c75c": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "repete_decisao_do_po",
+   "c": "Parâmetros numéricos (60s inatividade, tetos de 60/25/35 palavras) respaldados pela homologação formal do PO no Pedido 13."
+  },
+  "20daba77413c7617f911465bc60ad8f75617772cf9fc2d80be56128b4e79c273": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "mecanica",
+   "c": "transição escalar de zoom-out vetorial de 2,5s sem cortes"
+  },
+  "210911d57971b02da26c9c0b69a8d73a2cf452abd7621388eb09d121ddcdc159": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "toca Abrir Album"
+  },
+  "21509b03089a1c45dbb82d5c6b07f600c182641a832d9ae2179f8424b78b3d53": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Botão de largura total `Abrir Álbum`"
+  },
+  "219cbc4f86a4d3405712d8adb8c623ddb931d281f22158cfbfd8f01e27697353": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "é ultrapassado pela jornada atual da Seção 10"
+  },
+  "21f981e502fd7b7fff24a86c04882ff0ee677bb7f636cd131f8e528682c6706a": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → ignorar / não implementar"
+  },
+  "22a03e7706ce096fe69b374c49ed95623f8d6685aacb077ef39517b9262a3ea3": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "componente `ChatInput`"
+  },
+  "239bca3f455be3a85d4ae8e3c0747523ce2de7cc657adc3693fec0080a61f66b": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "chips (*\"Mochila\"*"
+  },
+  "23a1ea5ef3297eaa170b38177aba5a3203a326b1b25ddbf42617b1d376611552": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "entre 15% e 35% dos estudantes desconfiarão da falta de documentos do Mesa Aberta e farão perguntas sobre registros físicos no chat"
+  },
+  "24b29d3fff14fadab841ce69fa0542b2c89d3f920c06049ec3bb4483444fe38e": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "< 60% da turma escolhendo a lupa ampla, mantendo julgamento imediato pelo recorte pequeno."
+  },
+  "24cdf82df785d4a9ee85e08d06bad8e0c0b39ed5b7104dba0d4261c1a80962c3": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "Rótulo do campo `TextField`"
+  },
+  "25bf5fdee5dcc3c2d03c026111cfd14d04ceaa1bb9284b9483130b4ef0b67afc": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "contexto",
+   "c": "(item 4) Redesenho do Canal A de EM13CO03 (secundária)."
+  },
+  "25f90c6a8dcb15dc76c77b02d2eb702d4dc1a586076d8cc1a45275961d360567": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "adiciona carga"
+  },
+  "267247631e6df069367100dd08383707146d90f7310dbdc0bd6166201e1aea52": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → negado"
+  },
+  "26dadf0f4b5cebf2f958722cb03f480c98cc8c871cd61e9dd3e30946122d021f": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "mecanica",
+   "c": "taxa real de ~75% de invisibilidade"
+  },
+  "2738fc444adeb158f2ef6d3e957442b60bcb5c834e9e0fcef943718a88847939": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão `[Gerar Atividade com IA]`"
+  },
+  "2773def940ddf4d2f50fdafeab36da6caddc1fdc3bbbd5ccf69cc1a57c8bc6a9": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Liberar para a Turma\""
+  },
+  "2864b53710bffbe64b66f5256614600756238b17c94fefd0796208c9b2b0fe35": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "`Publicar no feed`"
+  },
+  "29a46ffc29876780d4cae08cdf042dc8152ba3ce42bd9d8270979a13c197b0c3": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "4. Tempo em tela de 29 min: RESSALVA ACEITA.\nO tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO."
+  },
+  "2ad2317e1cf4a05b36d616ea30c71e2f314ffafc81df18c1f7bbafe78075196f": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Ternário: Atingiu = explorou specs de 2+ módulos E reutilizou templates em 2+ módulos viabilizando o orçamento."
+  },
+  "2c12380a3263706f4caf36cd147b36542c466c6002ff036dbb40b3b04c8e8ba2": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "8. Perguntas de Produto PQ-01 a PQ-05 (Spec): Ratificadas e homologadas pelo PO como métricas de monitoramento pós-lançamento. Trocar o marcador [PROPOSTA — validar com PO] de cada uma por [HOMOLOGADO pelo PO]."
+  },
+  "2cc0f511b97be2e40a48d98179de140328ea84b2a3645d4c479a031bc0ffb58e": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se menos de 70% das duplas confirmarem na posição default."
+  },
+  "2d65c8984d92b3252878b46ae81c1ceac06987f83b2f8c78f8ac7e63f23f4b64": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "remover menções residuais de EF06CO07"
+  },
+  "2f3c3ac9755b2f30aad7589c9be1870db9776bed9d297405b50e96d77a5e5304": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "4. Tempo em tela de 29 min: reduzir para 25 min."
+  },
+  "2f8d0066488f5058a9023683f9b0c92a87ad975c70df2af62c39ec55a0fbb965": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "O que indica falha: Se 25% ou mais das duplas desistirem de ajustar as alças e confirmarem na posição central default"
+  },
+  "302064f526b1aa2081470d491fc878169fdbc6e4210fc8e7d1c83fd1f3ffe076": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Definir formalmente as regras para reaplicação da missão na mesma turma, exigindo alternância de tema e retenção da melhor evidência."
+  },
+  "305c88c9abce3f69de127dd7a4a54b6ff9485e1d4feabf46d04d40fc14932f67": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "| Tratamento de erro por anomalia cômica da fita visual | PO (via One-pager v2.2) | 2026-10-07 | Mensagens punitivas de erro em texto ou bloqueios impeditivos de avanço |"
+  },
+  "308973751199f74607c1fa448d5886df16891fa11d0ad244921429f5c9fbc62a": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → não vamos usar"
+  },
+  "319b1d15411be178fa680df4d1d5dc4cab4a9b483e8ab8c4f0186e8efebe6d58": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Atingiu: Seleciona parâmetros de escala onde a proporção visual se aproxima da proporção real dos dados (Fator de Mentira abaixo do threshold definido) E no checklist do Explicar marca corretamente o ponto de distorção."
+  },
+  "3253221aa44d34cf6bea8b42508ddb30c3ffbf950eddace07e2ea2b5ea4ab8fc": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "> “Aumente a moldura.”"
+  },
+  "33739c933ac922bec816ef4fb19f9579a63c46312de8bd79064f8d570e942d39": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "menos de 5%"
+  },
+  "337bfc12b225001663037121391b7ead6e5e463df9ff9a43b5d9d9cb7e57396c": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Em processo: Campo preenchido com menos de 3 linhas ou texto genérico sem referência ao gráfico."
+  },
+  "33f1bb7245b4f803c30678c652207e014e6f524fd762dc0a65f5179d4913e4b6": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "clicar em `Travar Previsão`"
+  },
+  "345c516260e0ff661b2bd606e44ff854be3814ba2f1f6ec7ffa0ffcf7b2eaf27": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → vetado"
+  },
+  "3544c69c26a8fa6a5e94604afc753bcc793bec05bd6a968f4e151344211026b5": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "falha se menos de 80% das duplas tocarem nas alças"
+  },
+  "35cd54ab1e92d189b8b367cc82b35a1768ee35e269b3028382590b5954d33220": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "[PARÂMETRO: a definir por produto: tempo de inatividade no chat] → 90s"
+  },
+  "3719fa788c9464c09916b71a82399fd6cdff3dee7348f4639d6d42e514ce3d54": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Estudante clica em \"Reautenticar crachá digital\""
+  },
+  "388a10301214d618623dbb41974436a0b8379cac7bdef76ece8af18e60c2dac5": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → adiado para a v2"
+  },
+  "38c338dceff54b1cf8b69bf8f48a2677ba380c96752c38c5135d50af1169227f": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Publicar no feed da rede\""
+  },
+  "38d5d5a57c5025ed0f9d7f7cc7c29ed7a3890b0c03873ac6e5c314fff77a451f": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "Maior rótulo no diagrama (palavras):** 3 palavras (ex.: *\"reconexao bem-sucedida\"*"
+  },
+  "395b18b82615fd2f4c5e658ff0a4d1f4247261eaabbb5396c80961df5af5fcdd": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "substituir “compreendendo a relação” por observáveis:"
+  },
+  "3b4f426988b20ceaf0f796afc74c6ac401b0664b57cd48c958b1ad358a1dc54d": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → ignorar / não implementar"
+  },
+  "3c16dc176b608650ee6ebf4a622fa7481aee4030abda510dc1a80fce2b7517fc": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Especificar o comportamento da ação destrutiva de zerar turma"
+  },
+  "3c431de0345c9442e757ed8f0abd01f28c7208b80f0cd50ac29e023c2eb59fd5": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "preservacao",
+   "c": "Manter o restante"
+  },
+  "3c45c9f9bf1d91a374d61c4515b91fee84fc1468daaa27761ffdcbec0e378070": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "enquete `ChatPollEmbed`"
+  },
+  "3c8607ca7f6e1a8bf7220ce64e62e9091c102e127112448e76bd71560844ea2e": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "Remover o marcador [PARÂMETRO — a definir por produto] da Seção 15 e cravar: 60 palavras por legenda de projeto, 25 por cartão argumentativo, 35 por balão de notificação."
+  },
+  "3fd498dc1a1deb1fac806b33acfae1b0fb3a88c78c3d2dc1bcb183490f90781d": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Clicar em `Liberar Missão para a Turma`"
+  },
+  "3fdd421236ca5edcfec9d3a8411caab4f495c7ae8a8c463fb873f22289128bee": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "substituir “articula perfeitamente” por observáveis"
+  },
+  "405ce4681b2fcf014fc07faaf48bbc920dade7dfbf8f2718b8199440861cc159": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → reprovado"
+  },
+  "4142e745de7b086cf5c2fa4c8f8ab5aec6c17782500c89a3d15c0b851ee35e5a": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → não usar"
+  },
+  "4206c6c814887a3e6b0f1791f620eb04e267be93b85305546f293099221c5691": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → aprovado só o Canal A; StoryPoll fica de fora"
+  },
+  "43954f59f716c16f2224ac3349a6a17625bf7b5cc156d1abc7329b80a84065e1": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se menos de 70% das duplas desistirem de ajustar as alças e confirmarem na posição central default"
+  },
+  "449b2a109013bc44b5c96cd496328c43a8d9fa9cd6aff7ffc3a50c3e7cdb4bee": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "clica em \"Liberar para a Turma\""
+  },
+  "453abf1750d400b3586164ab0ea25aaa034f1742687f2f21ae4310ccf931b337": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "travado pelo briefing do PO"
+  },
+  "487b8db42ee9a440c215b1679c3810ff3af9061a1955c1ddce3fde2319ca7a68": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "< 75% dos jurados inspecionam projetos ocultados na galeria após o destravamento docente."
+  },
+  "49e11671ed75b69db616811b19ef69aa6a90b2aa9f6c5e957c657c4b60c3e825": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "| Analítico |"
+  },
+  "4a08e2888500433237cd3194a2af8cfeab590b4f978c8f064c9b8db08d35a6c2": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "Todos os itens anteriormente homologados (tempo em tela de 29 min, tetos de palavras 60/25/35, toast de inatividade de 60s) permanecem como estão."
+  },
+  "4c5fdfa6907cc0b5d4869d1913c4ce114ee919d7dc8c6fc26a9f84ff8e95aaa8": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão `Publicar no feed`"
+  },
+  "4ce5bf15526e59e11819df5e16c4d3f8b51fe63431d0cb65f5d054c464b40d14": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "é excedido em vários parágrafos do chat"
+  },
+  "4dc6c75d4cd0922a6922d19c2474649f0ee456bb5cf0802e2777d22f9bbc8e0b": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Gerar com IA\""
+  },
+  "4e0a753187e01d12c558b51bc3b9f40b75252d214e02491a44cd5d7ccd8fdfbb": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "mas a Seção 7 dispara o aviso aos 30 segundos."
+  },
+  "4eea1ce9e171fa2e753768f64eeced054e35d952f87109ae5822ff835a9c6dbf": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "não, manter o quiz atual"
+  },
+  "513719a4754f757249ad94671815be842043e4286b71df56625bb27db1208678": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "- **Contexto:** A missão `exp02em1b` ocupava anteriormente o título \"Missão Tempestade\" (v1.5.0, módulo `unoogpt`, porta 5178), centrada em IA conversacional em tempo real sobre desastres climáticos. O PO homologou a nova missão \"O Efeito Amplificador\" para o 2º ano do Ensino Médio, unidade 1, exigi"
+  },
+  "514403ffefa881ddae7b6379ec158f8b2030680d897e2db73d8d76488f12c802": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "1. Tetos: HOMOLOGADOS. Cravar 60 palavras por legenda de projeto no feed."
+  },
+  "521d1944aa8378b06a00d9322e9a937ee03d2d0b64ded363b87fb3a718b89049": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Homologar Voto Irreversível\""
+  },
+  "5245ae7d213c5c0457eb0adc5b9a1cf42a631e26e223ed0e0e8fac402b3ae931": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "mais de 30% das respostas barradas pelo filtro de entropia léxica"
+  },
+  "52cd2cb0ae271beddeeeb7ea5f9f6ef7787966e7f7f2a32e87eb5c909d950310": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "\"resposta\": \"recusar\""
+  },
+  "530939235fd00ace2352a66e537065c43bd55d74fcb3fb7785c973d8779a7512": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Em processo = concluiu mas resetou a seleção 2+ vezes."
+  },
+  "540e27dfdc6ff4f4d76fbeb6f79aeb2f1d9c872da7440c2349e637e74047ac42": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "(a sessão não tem nenhum registro do PO)"
+  },
+  "54dab3847bf2eb45a60b374f6832a077245aea1b31ad9c2c07ece9c82d8e4464": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "(a sessão não tem nenhum registro do PO)"
+  },
+  "555cc2110679724836793726a169798e42b578a9a677b323d7f94d288d7e5f1a": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "- **Botão Primário de Atalho:** `[Usar Banco Padrão e Liberar para Turma]`"
+  },
+  "581eac517b56983a2389a6e3566a0b62f423776d4bc42a8d5819ee3a50035c5d": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Menos de 70% afunilando"
+  },
+  "584b5f66dd643889b022360c195036aeb2957155dca71acbfca24e33b1cb9e30": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Voltar à Galeria\""
+  },
+  "586b3b74d271dbb25bed694a37bcc035ea9dbed29f1538fabf135ec21b491bd2": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "2. Tetos de palavras: HOMOLOGADOS.\nRemover o marcador [PARÂMETRO — a definir por produto] da Seção 15 e cravar: 60 palavras por legenda de projeto, 25 por cartão argumentativo, 35 por balão de notificação.\n\n3. Toast de inatividade na Cédula: APROVADO.\nRemover o marcador [PROPOSTA P0b — a validar pel"
+  },
+  "591e4cedaaef85d9550062ff81414643642a0d22f5c532251a529fc1a50a31f2": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "Ratificação formal do PO e fechamento de pendências — exp06ef1b\n\nComo PO da missão, ratifico as decisões abaixo. Executar cada uma no corpo dos documentos e remover os marcadores [PROPOSTA] e [PARÂMETRO] correspondentes."
+  },
+  "593b61152d9485ae9b93033bf9855d6815babb8e4dfa4c8670550006d46373b1": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "4. Tempo em tela de 29 min: reduzir para 25 min."
+  },
+  "5a1a2ca3aa75530c8cf45dad0b8f5b7e4cd4cea554f1bac0c4dcf6b5b3653c8d": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "8. Perguntas de Produto PQ-01 a PQ-05 (Spec): Ratificadas e homologadas pelo PO como métricas de monitoramento pós-lançamento. Trocar o marcador [PROPOSTA — validar com PO] de cada uma por [HOMOLOGADO pelo PO]."
+  },
+  "5a401fcc68c7fa1fc0c8d8cdc933a11d2a523863f10d2d2ec11b733a363609eb": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "é excedido: o parágrafo 3 do chat tem 62 palavras."
+  },
+  "5ad3f24e6857a157c9ab5919054132dbb22edf152369ebc987022772d8332332": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "mas a Seção 10 agora soma 34 min na jornada"
+  },
+  "5bbff66e7defdcf0622f14ece5e758fd2d1589553ee67659a8c7eb716192f8d5": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "Tetos de 60 palavras homologados pelo PO não são respeitados: a legenda do projeto 2 tem 82 palavras."
+  },
+  "5be5ef2ff10644e1a539fcd7f4b67b08805879d2a63eb923dd4f6e9cfa8e9ed7": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Estudante clica em \"Assumir o Porta-Voz dos Dados\""
+  },
+  "5d76f3d7563823e6c10f9dd741fd92440731ea3f764ffdb23ed7d6be3e55911b": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Aumentar o botão Votar para 48 px."
+  },
+  "5e108ab7615f23edee1a48e24ac31c65f4e77e9ece3dbf5b4b175d897494c8d5": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "rótulo de UI"
+  },
+  "5e832818a72862e38f351efb156d126142e3cf963082642ad7fcafde9b7ac9b4": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "contexto",
+   "c": "(item 5) Redesenho do Canal A de EM13CO18 (secundária)."
+  },
+  "5eecaf2f844bbca039efbe4f4a5293f0b1bb10ab1f9b31bfa0a05b68152cbe0a": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se H2 falhar (< 60% de inspeção mista)"
+  },
+  "5f55c0fd1313e3fef28bd4b3ed366544c3f70a48611f885a36e0d85b9db2352f": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "texto_da_esteira",
+   "c": "Esta execução refaz a etapa `produto` (e a spec, o design e o dev, que derivam dele) de uma missão já gerada, a pedido de uma pessoa."
+  },
+  "5f5fd1aa596947908c6915a702f40a5c0dcdb0be58e80c2bba3159d0ccb977ce": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "< 65% da turma selecionando a alternativa \"Atingiu\" na Pergunta 2 (ordem investigativa), indicando necessidade de mediação prévia mais explícita."
+  },
+  "5ff6d4b12cca4cf20a62256f0045cfd2d3217b94f309c507866046a242ae4561": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "mecanica",
+   "c": "exibição do microbanner de apoio após 90 segundos"
+  },
+  "6016f7a5a0e39694eec399c15c24427b3cfd08d4e54935486fe53b90500a42eb": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "*Indica falha:* Se a taxa de 25% de desistência for atingida pelas duplas."
+  },
+  "6042734bc46b40ba4e6456a20809c20361e0274456386c9fbaad2475838250db": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → ignorar / não implementar"
+  },
+  "606c2e79a199ee00078b86934328ac46f671f8a578a718b3f39bf6fe26acadb1": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "8. Perguntas de Produto PQ-01 a PQ-05 (Spec): Ratificadas e homologadas pelo PO como métricas de monitoramento pós-lançamento. Trocar o marcador [PROPOSTA — validar com PO] de cada uma por [HOMOLOGADO pelo PO]."
+  },
+  "607d7fb90104e948bcfc71059c16d43902080a207f2b35b85158de20de260237": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "< 50% dos alunos utilizam os chips ou a barra de pesquisa na auditoria."
+  },
+  "61e38853c3ce960fcab74fe8be5dbc61495fabb839dd1698555e1e2388c6b5a4": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO."
+  },
+  "62574454592a49d78833642b197fa348452325ced14316f11efb21043b0b2631": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "devem ser literais"
+  },
+  "626531f497a93ba9c4e0be01178b9c3bc73e3c4b39f7042e10eb360a7117bb47": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "contexto",
+   "c": "COMO AS HABILIDADES DEVEM SER EXERCITADAS (não como proxy, literalmente):"
+  },
+  "62bb1e27990decb1f36d378746cfc132ce17a0c7a5289552d6e329f7c20665fe": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO."
+  },
+  "62c913d82bd4586751361f66438de1a3bd75bf0210eb56e28c24c899539faa25": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "A desistência for maior do que 25% das duplas"
+  },
+  "631d93b696707831b8b3984f97b79b30c860b2ed217ce60264ba19581acace1b": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Remover “associando a desmontagem geométrica” e usar:"
+  },
+  "632505a7eb0daac52386ae2da0be40dba33a0fe834d297ffc285748ecac30716": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "≥ 70% das crianças de 6 anos interpretem a cena como susto/acidente (😟) na E3"
+  },
+  "63b9fd8fab1e17642835b961d7781fc8eb1ad1957680a8ed01f6f9c6261dd59b": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "`passo = 'navegar'`"
+  },
+  "64d578604c5341ba794ea2f6a7f2e119b702b23705a5659fdc619526c3caffc3": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "4. Tempo em tela de 29 min: reduzir para 25 min."
+  },
+  "65c0f4f83c25cba2c34c2bc79eb0760d7c4f657abd0854a57452c8f656dcd58c": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "Tempo em tela de 29 min homologado pelo PO no Pedido 13 não é respeitado: a jornada da Seção 10 passou dele."
+  },
+  "664ad1bfb56f6897ef9423cbdc83faa44a5ad08a35d8b238118d7663f21cd0e0": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "O tempo de tela aceito pelo PO (29 min) foi ultrapassado: a jornada da Seção 10 soma 34 min."
+  },
+  "6665c9d24e3bc6e3b89aaf9f76d113fa7ccd3dfd84b14576c3f64b2f9606947b": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Clica em `Liberar Missão para a Turma`"
+  },
+  "668f031b33dbefe9254c15552b992fdd6f1f1b776b624fc18455cdf4df33279c": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "além disso, a Etapa 5 não tem estado de erro para a votação."
+  },
+  "670a31e755aa81665e3c0c3229b5f9caac8c43d0919df0ab2621206c5313a4cb": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → não, manter o quiz atual"
+  },
+  "678f330ab934b282fd5abd4de2f575fde78f7ad29463cb79bca4255fedb99071": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Atingiu: Abriu o anexo da nota metodológica antes de avançar para o Decidir."
+  },
+  "67b061e19923ca5b28d1b6eabdd861b16b92434de19831b1de1abfdbe11204fc": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "ignorar / não implementar"
+  },
+  "68bd944d0c19405278628131780f8c54300424d40603c9355ad3e7de84644d68": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Não atingiu = tentou lançar com saldo negativo repetidamente ou não fechou combinação funcional."
+  },
+  "6935ea262cb3e750090d47f093ca2a493a10d566b405c503c222a41f72cd83fe": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "*O que indica falha:* Se ~25% desistirem"
+  },
+  "6b6084959af9b8454eae17488fe02e6b398b6ce0fbd4d1ca2cd283c52c5aeaf7": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "repete_decisao_do_po",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO."
+  },
+  "6b64a9d51b27fa1889c24152998fb40faa545ba46514ae5491b0ffe3a98fb3e2": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "repete_decisao_do_po",
+   "c": "Tempo de inatividade no chat de 90 segundos homologado pelo PO."
+  },
+  "6b73d2b523e1b4942b6c3f8f8aaa9fc11128d3a31e72f65344b792234a7960c8": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "é texto longo para o 2º ano"
+  },
+  "6d5b17647ed5cce17ff2e529cdbb58bed4f78e714548799ec4e4210305f69c16": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "atualizando `fase = 'reflexao'`"
+  },
+  "710d39ef9f0639b10a047aa4cda5dff4d39e57a66e400fe7f9ca21b3977d50df": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Publicar Unoovista\""
+  },
+  "7364a060796bf77561b2c94f338296f26faf61d0a641b72d9c80a432cf3859dd": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "Tempo em tela de 35 min acima do teto de 25 min, mantido como ressalva homologada pelo PO."
+  },
+  "74087d8f664ed599388446657270dfe3321f56bd1b8ed6e3ac7887d7e4301d4a": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "repete_decisao_do_po",
+   "c": "Tempo em tela de 29 min em aula de 50 min registrado como ressalva operacional aceita e homologada pelo PO."
+  },
+  "740b5d4142ca7791df07b6fb0b612a8be2562436097b6e2659fc3a7f50205074": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "folha `PostConfigSheet`"
+  },
+  "74531f9f6cc89d2c87cd5f84e631cdc7ea7b184904694a5f8075638d4bbcd7c5": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Ternário: Atingiu = planejou e executou o lançamento na primeira sequência dentro do orçamento e prazo."
+  },
+  "75d1a0a2cec9bf2796a84f247f3e967441607b6c8130504c1e8093e8ef95ca65": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Não atingiu: Campo vazio ou imagem enviada sem texto."
+  },
+  "770be6f200d09fc47c0ae6cdbb40452b10ad3743a473dd262cdfcea948568669": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "Tempo total de tela do estudante (29 min) excede o teto de 25 min para aula de 50 min; recomendável recalibrar para 24 min."
+  },
+  "7742762ee884aeb2a6dfcf2e0601bfd4e7e06e853a5d0ca39f7070efbb86992d": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "mecanica",
+   "c": "retenção >5s"
+  },
+  "7781b0cfcfcfdc7862f6914ddb3993b5338359f981fa4dc88e588c33a45a59d0": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "contexto",
+   "c": "Isso resolve P3 (a escolha do aluno tem consequência,  a correção que ele monta muda o resultado) e P6 (o apressado que não mexe no banco e o investigador que monta a correção têm desfechos diferentes no reteste)."
+  },
+  "7825aa60fbb3f93ca6750c9f14e26708efaf0a66f3f3becc640ccaf7304bde3a": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "repete_decisao_do_po",
+   "c": "Parâmetros numéricos (60s inatividade, tetos de 60/25/35 palavras) respaldados pela homologação formal do PO no Pedido 13."
+  },
+  "7873ef5c62b1c07a83b9f2330c7d1c0eab2f185247137d68131a26aa312662e2": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Não atingiu: Não publicou Nota de Intenção, não usou a errata, ou deixou expirar o timer da 2ª chance sem ação."
+  },
+  "78aa3694a4bbb39e1e53790be79c2139440edf219eebcb8423ef8788ff860cbf": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Não atingiu: Não abriu o anexo em nenhum momento."
+  },
+  "794f8790b67ba45dfff685f6ebf3836307b69f9ae2a84802441d7e73180af787": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "| `E4-ALU-04` | `e4.botao.avancar_laudo` | rótulo de UI | `unoochat` | Avançar para Laudo Técnico |"
+  },
+  "7a5f89294494eb3e958b5b7de738b3d68cb6cdcd3495b478a6459b7e2d6b7961": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Mais de 60% dos estudantes ignoram os três pontos e relatam paralisia por não encontrarem botões de denúncia ou privacidade."
+  },
+  "7ab7bafde9702bda710f58302ca8d1aaf5ac519d259866d92c5aef2ce05b6128": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se menos de 60% das duplas concluírem o agrupamento com a justificativa semântica correta (acionando PQ-03)"
+  },
+  "7b46d6e41aaeb4a72d6b4e71917cc9819a298474c0b15f3cb8dff8c3e99a90c6": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "pelo menos 70% dos alunos atingirão o nível \"Atingiu\""
+  },
+  "7d5b060ba1eb67466e77f7da558e6c1082c5a5675da065e4c50c239d63a99eb5": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "repete_decisao_do_po",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO."
+  },
+  "7ebdaf551bde06d14771b32bb6784ec39ce6f5c2de228f02a3c9e1d751fdfd19": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Assume-se que entre 15% e 35% dos estudantes desconfiarão da falta de documentos do Mesa Aberta e farão perguntas sobre registros físicos no chat."
+  },
+  "7f00d241a643879c92017961719fbbba22e3277e1546ca24b829f348bb735bb4": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Toque em `Aprovar Cenário`"
+  },
+  "7f374988e505be0090c248ee49150cbeb23487b14c2a3302bb3b2dc987f1fc3f": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "O teto de 45 palavras por parágrafo aceito pelo PO é excedido: o parágrafo 3 do chat tem 380 caracteres."
+  },
+  "7f601148c246eb2e717ba78d835ad9232f33c160e30b760afff47dc1f372362e": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "- *O que indica falha:* Se menos de 70% das duplas realizarem ao menos uma marcação de elemento ausente na `E4-ALU-02` (acionando PQ-02)."
+  },
+  "803928133b5b99cee85ecf08a0c4e5ffa8266c36458be1705c1c898cea1a07f0": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → ignorar / não implementar"
+  },
+  "8055aa96f313c668cac95d2ef9078bbb5a4a723de8fadd6cd1cecf37e913b4a0": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se menos de 70% das duplas ajustarem a moldura antes de confirmar."
+  },
+  "810763a10bfb0611fdc651d872f10cf94f2c17ce681da6076a4bd6d0c091e3c4": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão primário verde de caminho curto `[Usar Banco Padrão e Liberar para Turma]`"
+  },
+  "819cf7b0bf45c92a85af297482cd3dc7d4b5a081ccf303958387bee2890fe77c": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Clica em *\"Liberar Atividade para a Turma\"*"
+  },
+  "81b227b3eb65c224042fe78b039e9dfef9e32e0a0e7c967d6c30dfbe1a6b4287": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Disparar (Simulação rápida)\""
+  },
+  "8554c478f544fd75d1de4ab4ba3345c3f7be9031a25e6688f9d411a9ab4d4d58": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "Card da missão \"O Porta-Voz dos Dados\""
+  },
+  "8606e07422dc179c2c3d81a87ad2ab78e7ee22e7305354adb176cad163277961": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "disparar a transição para `unoovista`"
+  },
+  "8ba50f43fa8cd428cf9ed5f21324bfe8b2c753369f1a5e7a297f559a0609f804": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se H1 falhar (< 65% de compreensão)"
+  },
+  "8bbb37cf0bb44dc44e8959a041b88142ba3729d46d050cc84c1a14d86454df33": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → por ora não; mantenha o quiz"
+  },
+  "8c216ef597a493f60ee8c352a341fd5511f5f831e5d2fd7342a703ea6045c394": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO."
+  },
+  "8c6a6a3f74c95f3f6a2db0c527cbe94dc4156dddb17e25a008d149ad3ee95267": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "3. Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades: mantido o quiz atual, sem StoryPoll."
+  },
+  "8caf8fb3f3f3e074e20d7a46c43d373a0355ab2e1a608c35350054e34de66f2d": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Restaurar o podcast de recapitulação."
+  },
+  "8d814cc6971c6ecdaea5e8f114e5583a166a0d4ca4f1057c6d0552a7b6c593df": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "O que indica falha:* Mais de 60% descobrindo os cadernos de imediato"
+  },
+  "8d90e480244889fec002bb4f88226387bdd2229d66d2f3d640024299344ebf63": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "repete_decisao_do_po",
+   "c": "Tempo-aluno em tela de 29 min excede o teto de 25 min para aula de 50 min; mantido como ressalva operacional homologada pelo PO."
+  },
+  "8f5945f063b10987599bd822bd3ea506d1cd13aac7394070ec442fc80819c862": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "4. Tempo em tela de 29 min: reduzir para 25 min."
+  },
+  "8f913286c06fe7bbd61e40ab9e39fb2519e03c612e21bc4bce6923e5b69baab1": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "mas a Seção 7 dispara o aviso em 1 min."
+  },
+  "901ff1b4e945443e09353c391213b3265ac3c111626da51c7c67f2ebeb62295c": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "< 15% de revisão"
+  },
+  "918c694f1ffb071480e18872a9afb1d75992536e1e6727566b7013feaa47fb5c": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "não aparece em nenhuma tela da spec"
+  },
+  "91c490a53895944243852201b4078ae7227fd2bdffa57d6673b3e41203f9fca7": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se mais de 25% das duplas desistirem de ajustar as alças e confirmarem na posição central default (acionando gatilho de PQ-01)."
+  },
+  "92723d03850da63017d98454e7a07369073816a7b5d878ca5ee61877acc57e4b": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Mais de 25% das duplas desistirem de ajustar a moldura e clicarem em confirmar na posição default sem interagir"
+  },
+  "936f619145b2f2fee9a27d4652b8106cd34b2968917918d4f78739f67e749586": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "Tempo em tela de 29 min: RESSALVA ACEITA.\nO tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO. Não recalibrar. Registrar como ressalva aceita, não como pendência aberta."
+  },
+  "9688a465084b01dcddef1df480c481a2575942799a3a5d8313f8dda4029f5ba6": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "permite conclusão em ≤ 7 minutos por 80% dos estudantes"
+  },
+  "96da436252aede3f55d9e94c270df084fca4067f47a7e0fce9db261356dce0be": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "8. Perguntas de Produto PQ-01 a PQ-05 (Spec): Ratificadas e homologadas pelo PO como métricas de monitoramento pós-lançamento. Trocar o marcador [PROPOSTA — validar com PO] de cada uma por [HOMOLOGADO pelo PO]."
+  },
+  "97bfb5a07d86814378dec59040604da5253dfa764585a480a16fb73eb9e1e3b3": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Cédula Oficial de Votação — Jurado\""
+  },
+  "98d8ccde50702be6eec9f888c90101f637d585a6f48678492ecfbda6b31c932c": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "| Unooria |"
+  },
+  "9965ab69e3575ef07bbbed82f07b31d9919d6ecddcfddd44c7331d8554efda5f": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Falta documentar plano de playtest analógico prévio com estudantes de 8 anos para testar a metáfora de gavetas de metadados."
+  },
+  "9b38ebc69a0d705371551074b702fcf23791b93df76418538dd07b0eaf09f49c": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se a desistência chegar a ~25%"
+  },
+  "9b724ade811246786034f576c7909e98593f199eb00eaa067a3f7f89e85d38a0": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "mas a Seção 7 dispara o aviso com meio minuto."
+  },
+  "9bbaf6d6d064a0cc288378f6285d3275b412a301b99ce976ec6cdc053caea0d0": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "Maior rótulo no desenho Mermaid: 3 palavras (ex.: *\"Toca modulo teste\"*"
+  },
+  "9df2a5a7b2be0f72fb2a1b1b02f0b1ed6406bc6244f9ddb7235098553352c668": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "), Publicar transparência ("
+  },
+  "9e7806b665466ca8b6d5f1776c7fbd6cc6c920340c27102cb4b57c1e9f7bca29": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "ajustar Navegar e Revisão"
+  },
+  "9f9372efa18b514005410cafb4ff6453ec37198acabaa3926b887f63c444baca": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "Perguntas de Produto PQ-01 a PQ-05 (Spec): Ratificadas e homologadas pelo PO como métricas de monitoramento pós-lançamento. Trocar o marcador [PROPOSTA — validar com PO] de cada uma por [HOMOLOGADO pelo PO]."
+  },
+  "9feeff7b5ada01c5be018b41475f530d025c0e8f5672eeed345c6be93aade8bd": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Atingiu: O aluno assumiu autoria publicamente — publicou com Nota de Intenção desde o início OU usou o 2º slot pra publicar errata com retificação dos parâmetros e justificativa ética."
+  },
+  "a19fccdc92108f127e3a42171006269baf2c659073081fa1c59d6c36c5751dd4": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "sem aprovação"
+  },
+  "a34ce5d6cbd859fac31d6bb82dd7847d24e3631b32f1b95998c13880330b9f88": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "Como PO da missão, ratifico as decisões abaixo. Executar cada uma no corpo dos documentos e remover os marcadores [PROPOSTA] e [PARÂMETRO] correspondentes."
+  },
+  "a362af550d408498f1877042c0bfd9be4536283273ed8f4a64cb91e437405f9c": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "8. Perguntas de Produto PQ-01 a PQ-05 (Spec): Ratificadas e homologadas pelo PO como métricas de monitoramento pós-lançamento. Trocar o marcador [PROPOSTA — validar com PO] de cada uma por [HOMOLOGADO pelo PO]."
+  },
+  "a37a1126a00d5b39cc27cc32535a2b14fe9dcecb71bbfb3f0ebc0dd0a5562ce5": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Publicar Unoovista\""
+  },
+  "a392acb195abe0933edf228c56aae3c1b46cddbdf5988c4ac4ac45658b109c03": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Professora clica em *\"Liberar Etapa 6\"*"
+  },
+  "a3fb7fd07a8f70dd8479dcca59a931dea0333076fab478d17dfb8a6b4913adb8": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Em processo: Abriu o anexo somente após o nudge do sistema."
+  },
+  "a43987c23fdd223c9b5b67097e91c7e8b612081f08cf7fe4488531ff5de45980": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "Crachá analítico duplo de tom (`💬 Neutra`)."
+  },
+  "a492eb5fc36efbbd7e8be40db3453edb6c31f4e1ff6c1b8b0ff68a8ff1d66c58": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Escolha deliberada do pictograma pela criança dentro de 15 segundos após observar a foto fechada."
+  },
+  "a6a50ad9f2087d2c43f18efbe0b991c051b4f187794243f5d7801c9f8c441e4b": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "≥ 70% da turma atinja o nível \"Atingiu\""
+  },
+  "a70065e1cf7beb2dea1d8f01b8029ad0ab0b0616aca51ebbf6b7d76970ac393e": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se a taxa de desistência de 25% for atingida"
+  },
+  "a7e3930cc410397f3afe58357329f57cd876c251916cfe7908c1a899d887334f": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "clica em `Simular Algoritmo`"
+  },
+  "a8aa4d81ea4022351d247e497e249cec89c0cb36fc63377e078e6cfb6f910e91": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "4. Tempo em tela de 29 min: reduzir para 25 min."
+  },
+  "a8d1080eb2815e483105968dcc3f8677514680c5bc40c20892a88e9761c5a424": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "pelo menos 60% dos estudantes de 6º ano"
+  },
+  "a8e65fa77f076e44dbe48e67017c360428caed6aa1f139720d7fd786f95446cd": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "O botão \"Publicar Unoovista no feed\""
+  },
+  "a8f7029a13d9c0694e533f70eb6d691bd09c95408b7eb6f7d76a0bf7c08a71c3": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Publicar Unoovista\""
+  },
+  "a9178bb7ba1c497515f887bef37a4f58cc6a2af4e75c372ff238880065cc9151": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "`e3.modal.botao_cancelar`"
+  },
+  "a9822690fa33924c87e73452a090b2169c5a7bf6fb9a723309eba23355485df3": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Atingiu: Campo de Nota de Intenção preenchido com 3-5 linhas + texto contém referência ao elemento visual publicado (tipo de gráfico, escala, cores)."
+  },
+  "aac6a591011f98fd0ff57fbd30fb9174d1df42b9959aeec7e82b00016917dc3f": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → remover"
+  },
+  "acdb1fb2138a8709db3aff8df78457e0eea1c9fd37ea19719a3bd88d3c68f210": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "**Estudante — faz (verbo nativo)**"
+  },
+  "ad2dc71cb529803f75674c7b6b7a5f9f37ba455a22de173cfa2b0fd56136681e": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "A evidência vem do padrão de alocação na bancada."
+  },
+  "adf37e848e0b3764145d843f4994c4ff187e9b8d7521eba4de0d208417bc818d": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Publicar no feed\""
+  },
+  "ae2c639b5998a87077949055c9070b55571cf6b1c21e8734e2f646ca739c7aa3": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "2. Tetos de palavras: HOMOLOGADOS.\nRemover o marcador [PARÂMETRO — a definir por produto] da Seção 15 e cravar: 60 palavras por legenda de projeto, 25 por cartão argumentativo, 35 por balão de notificação.\n\n3. Toast de inatividade na Cédula: APROVADO.\nRemover o marcador [PROPOSTA P0b — a validar pel"
+  },
+  "aee272404fe1097e1ecb101a0d15a687e8cab000be0ccd745ce3b5bd239348cb": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se a desistência exceder 25% desistirem de ajustar as alças e confirmarem na posição central default (acionando gatilho de PQ-01)"
+  },
+  "af112f15d10ad46dd3efd8b1879a55c3bfa82681594916cf96561eea0929641e": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "2. Tetos de palavras: HOMOLOGADOS.\nRemover o marcador [PARÂMETRO — a definir por produto] da Seção 15 e cravar: 60 palavras por legenda de projeto, 25 por cartão argumentativo, 35 por balão de notificação."
+  },
+  "af977007581871579e36a250725e07ed15e18a57cefed5a59138c2eef7698c6e": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "A Seção 7 contraria o tempo de inatividade no chat de 90 segundos homologado pelo PO."
+  },
+  "b29bfdd1e3adc78ef437551a99bcd9f14629167f6d7a8b5e52ddd32167a163e9": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": ") | Disparar simulação ("
+  },
+  "b30945591a86fd443fe7ead83a2ee8216506a908ec71a292544ed7dd06c78d6b": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Declarar explicitamente que os modificadores “de forma colaborativa” e “integrados às áreas de conhecimento” são limitações aceitas do design da missão individual."
+  },
+  "b3418a636f8f798b21eb19f5fbe052a7b51e33be8a5c19b1dda24942ab15dbb9": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "preservacao",
+   "c": "Não alterar spec, telas, fluxo, copy nem protótipo"
+  },
+  "b3b4910c4de04e6b41ac1729059832d720d313c536688e066cf4d1e9b0d2200f": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → não aprovado"
+  },
+  "b3d54e706d31ec1f574906ec149d443d4405312a0106b8dcc342c934b97a9865": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "aprovado? não"
+  },
+  "b42fc4ba6e76402dcf3629435738606e80819a1d3c49eee86433d1a4fb23df67": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "Pensando melhor: fica de fora desta versão."
+  },
+  "b4c0756f116b56a1e50b49550e2fdfd00f9edbf1ebd6365423d0b3ed18cf4a66": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Explicitar que o estudante não possui botão de reinício avulso em tela, dependendo exclusivamente de nova rodada disparada pelo professor."
+  },
+  "b568f6ec899c47e7eabf9fb6d3816958f629c7c9f42afa2b5b23d6f67bd3b0d9": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "com botão `[Usar Banco Padrão e Liberar]`"
+  },
+  "b5ad6161ff3220fdd04d09f8b50b3b3a39fef885e12e08957049a42b858850bd": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "`tempo_feed_segundos` < 180s"
+  },
+  "b5b097229386f88488a407b598cc688a6dde92597b6d9d0154af0b8c835672ce": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Menos de 50% da turma acionando a busca ou clicando nos chips de hashtag."
+  },
+  "b5ce6d333bc3e86dbbb47b64c7bd22d5f672f3304787f3e1a9d54cba0d89402c": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se mais que 25% das duplas desistirem de ajustar as alças e confirmarem na posição central default"
+  },
+  "b6518e8debdfc88f2ca79a1429674085a4b430cc206d38346bb31c322ac70862": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "Maior rótulo de aresta no diagrama Mermaid:"
+  },
+  "b664bc230ff1553c3866f9090cef270d48ee53d108d40a1371df68154beb47d6": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "Perguntas de Produto PQ-01 a PQ-05 (Spec): Ratificadas e homologadas pelo PO como métricas de monitoramento pós-lançamento. Trocar o marcador [PROPOSTA — validar com PO] de cada uma por [HOMOLOGADO pelo PO]."
+  },
+  "b7a247dfb3818413815e301b1c81fb03e688ee31ee8bc85b0efca738f62ccc67": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO."
+  },
+  "b824dbde2efafe0085957b6018a2f48b28fc7d1cbd7577bb3d648714b5b9f8b8": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "mas a jornada da Seção 10 soma meia hora e quatro minutos."
+  },
+  "b954b3ea5ddccd5bdc0f6ab3ec5cc0509d362485b326d8fcf7c48e6cfd1b968e": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "`Button` `\"Confirmar e Disparar Teste\"`"
+  },
+  "ba6be473761818cc9ba702b809f272f476e77bff8152640e75572dbbcc3e7637": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Trocar o botão “Ver Métricas da Publicação” por “Configuração da Publicação”."
+  },
+  "baa13af254bbdcf824b330d7685fe318e1a4397d26c642d8661d8e10df2ba314": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "contexto",
+   "c": "(item 3) Redesenho do Canal A de EM13CO01 (secundária)."
+  },
+  "babe9140df2f05e2ce03f809687d6fb924d5b788a9082e19ca218b5342e871a9": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → aprovado? não"
+  },
+  "bb3861260ab7823ff17073f7e2a55ea161c54ac96df0a044134074a24d24b1c0": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → manter fora da missão"
+  },
+  "bbfe5b186c4d03f48ae90ad8b300101b214e03fa5a86fcb74de61684bf2d1bf6": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Em processo = montou dentro do orçamento mas precisou desativar módulos que já tinha ativado (tentativa-e-erro)"
+  },
+  "be2921c10b6cecbf4febd888c5bc09a6bf287f716e769db904183250170899ba": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "não foi implementado na Cédula"
+  },
+  "bf44f577bef3b0b069db9dab321c4f2123e697b5b909e9ecdec664e40e31c106": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "Perguntas de Produto PQ-01 a PQ-05 (Spec): Ratificadas e homologadas pelo PO como métricas de monitoramento pós-lançamento. Trocar o marcador [PROPOSTA — validar com PO] de cada uma por [HOMOLOGADO pelo PO]."
+  },
+  "bf853e074a5e066a4ba03722948ddb2fca91d76bdede7d31f1c5443f63e4769f": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → ignorar / não implementar"
+  },
+  "c0d6688ac66aae94ff40f9ca98c89405edd6498924a1393df929824c20df8479": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Taxa de inatividade superior a 25%"
+  },
+  "c0e7263d8d8e517c7c73760da226cdd5525330102a65011772b5ba8a5163a1d0": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "recomenda-se ajustar Navegar (6 min) e Revisão (5 min)."
+  },
+  "c151c2366bee45f4ecb6e51c165e6cb3e9ffb99ff520efb90d631ad34d56b5e8": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "contexto",
+   "c": "Sobre o rusher: com 5 opções no menu, a chance de clicar “fixar aviso” por acaso é 20%. É alta."
+  },
+  "c225b93ac620c5abb3efd788f111b41dfe95240c27abe4129123826d2b7562c2": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "pelo menos 80% das duplas ajustam a moldura antes de confirmar a fotografia."
+  },
+  "c328d3be1d762a570a3e285e151d1887c9de6ed6062a881cba9912d46bc982e3": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "| Mediação do Resultado/Aha 100% livre de telão | PO (via One-pager v2.2) | 2026-10-07 | Dependência de projetor multimídia obrigatório na escola pública |"
+  },
+  "c3613241ab8dfd5b1e7cecd374a7d8985ee51007df2d1330549b10186587fdce": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão `Publicar no feed`"
+  },
+  "c38c5aaf53d0904619683db2ded80ef99f74c4c51a9354494b1a3215a7e24d33": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "é excedido: o parágrafo 3 do chat tem 62"
+  },
+  "c41f1bdb01ad2ff1ae95ef9d1ca99c5a48cc69ef488c641ccc71507376022eb9": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "| `RF-002` |"
+  },
+  "c42f6407d572555bde483084ec66874d3fcb0ff78bf07b381bb3f0b375c89129": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO. Não recalibrar. Registrar como ressalva aceita, não como pendência aberta."
+  },
+  "c4664a641572426fcc7477f3af18bfb439ba5f71c790a4e49e6cb316f5bed82a": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Indica falha:* Se a taxa de desistência ultrapassar 25%"
+  },
+  "c530fffd7946b734bd2e620b3a7fae4856690c68c82e5a933c8b6194e457b5f6": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "O encaminhamento é simulado — não envia mensagem real."
+  },
+  "c58a4674f6240394f3ebca1062d2712ccca7b088e39b1bd22596e132b21d9e96": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "fechado: sem StoryPoll"
+  },
+  "c7e2f1476179bf543559629aa09b29fd2ee326e3506284f279e68a6afe99bd3b": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "`Encaminhar` relato"
+  },
+  "c8ae454dfcff45191ae5c7d0ab68a3ed7dddf2a59a4051b0592449b16ebb0fa0": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se H3 falhar (< 40% de acionamento em PQ-01)"
+  },
+  "ca6f28ea3cc8b00628571ba06e484d2b12f446494de06c7a6c8f7f454893692b": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "Campo `Então`"
+  },
+  "cb65287536449b16c19c2d564988247bef2b9e729c57d8de8c6f43abb79731ce": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "- Corte (aprovado pelo PO): 3 etapas."
+  },
+  "cb7e75aee5076522dcb6969a6c806720a00023377ccb0a99e69218a80903edbc": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "> 25% das crianças hesitando por mais de 20s ou perguntando para a professora o que significa cada carinha."
+  },
+  "cc976336aba196906c8b0f51834b89394a8572e5e6fd3109c3b2cc39b2ce68fa": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Clique em \"Pausar Telas para Debate\""
+  },
+  "ccf14d6d5f9e7cb0bde9d8bf04a48c3116ad361bdf7370ccc7e23067d71b5dbc": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Indica falha:* 25% ou mais das duplas desistem da moldura"
+  },
+  "cd16a4be021c76c60e5a724729ac78b6c142ee0f301cfca3a93146357fd81f40": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "2. Tetos de palavras: HOMOLOGADOS.\nRemover o marcador [PARÂMETRO — a definir por produto] da Seção 15 e cravar: 60 palavras por legenda de projeto, 25 por cartão argumentativo, 35 por balão de notificação."
+  },
+  "ce05365aeba55c329065b90a104f6835b27c7f64072b12b482fbc73c427913ca": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "(item 3) Não atingiu = tentou tudo do zero sem reutilizar nenhum template."
+  },
+  "ce193b1c2cf169870483ac13ee75cc3f1e732e2243fbf6079af8bd67c7b35129": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "A taxa de 25% de desistência na moldura for atingida"
+  },
+  "ce3f894bb9abc9437af95756f928694bc83461d8078847931450254301bdad72": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se menos de 70% das duplas não confirmarem na posição default."
+  },
+  "ce5bc976ef879697a7a1f9974a20ecf1e73049d68e760ea5b2f9306db44f6951": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "preservacao",
+   "c": "Manter integralmente"
+  },
+  "cf1b3bb059b908a90c398ab93994910769440a9a412a3a0f503e19de3a8ddc3c": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Botão fixo inferior \"Cédula Oficial de Votação — Jurado\""
+  },
+  "cf8c226b56fc86b15847f3355e53bd695e08573ca57123d8648e4b4d232f9bf8": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "card da missão \"O Porta-Voz dos Dados\""
+  },
+  "d15fae7b868008d5c9a64d3e5987bcfab26c0263feb7358f2a1d059f21d66e23": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO."
+  },
+  "d200bdbeba66555aa2932776156dc5a21871072fe9146659893aee14abe3af19": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "| Fixação da aposta no Desafiar antes do acesso às imagens | PO (via One-pager v2.2) | 2026-10-07 | Aposta aberta ou tardia que diluía a virada contra o viés de boato |"
+  },
+  "d2252a063fe8cee320370f575ccb8055de8851db491076d844be8f245264a2c7": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "clica no botão verde de caminho curto (`Banco Padrão`)"
+  },
+  "d329b81b60dbcfb9d8af24b26d7f6f60da3cebf4d6aeb0688deb21c9e95d4b6a": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "não é respeitado no chat da Etapa 3"
+  },
+  "d3eb52a0bc98ab740119c2599d2351fb0a6b77ce7419183d6c173e50670f4282": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Trocar o marcador [PROPOSTA — validar com PO] de cada uma por [HOMOLOGADO pelo PO]."
+  },
+  "d41caddfec126ca2c200765de3a21b8284c75a5554d8590ba5506ac95934fe4c": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "Maior rótulo no desenho Mermaid"
+  },
+  "d4ba64c0e91d7d28985653f825018fdb5c52695011489ac736212279d021f9ce": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "Unooria"
+  },
+  "d6756dcfce247ba4b7f2afd1cfcee0a1672c8acf2725b54af6f12989d4c27058": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se a desistência ultrapassar 25% desistirem de ajustar as alças e confirmarem na posição central default (acionando gatilho de PQ-01)."
+  },
+  "d72ef28ed896c36944cdb77d7e26c7243f597cbeac7d57bceb818b54d4537000": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → recusado"
+  },
+  "d8f2cd3393d6436d73309f40b84818874e43726cf4c45d0fd69e11b95fdfa753": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → aprovação negada"
+  },
+  "da3bcbd242cb85d9894f118538191ea6e559951bb32cb6fcab28f5785b65e5ce": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "*Indica falha:* Menos de 70% das duplas desistirem de ajustar a moldura e clicarem em confirmar na posição default sem interagir (alimenta PQ-01)."
+  },
+  "db3b0489fca44fae306e8d898b30fd815d9d24ee7f95a6aecbe416c8cd02315d": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "substituir “cruza os dados” por observáveis"
+  },
+  "dbc5a54f3e7b76eb532db1f9ae9ecf62545361c2c7c06b67313dce7227cfb3bb": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "`Button` `\"Confirmar e Disparar Teste\"`"
+  },
+  "dbeedf9782b99b0337ae601dffcee54e445e45930ab2d18a45bb92a9a9bcac02": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "mas a Seção 7 dispara o aviso antes disso."
+  },
+  "dcc11decf69bcf17cdcf4e6f9894686f2f55f3bba675ee00c0a1f9fb8e17127a": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → dispensado"
+  },
+  "de1bec0a392f5140d825ba24a36e791bcdd0b14522923623baf6dea90c977cce": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Falta tabela classificando explicitamente cada elemento numérico visível como medida/gabarito ou cosmético intencional."
+  },
+  "de4251c7df53818de47271af204f96829f0c1be7a0ca872d30f4c5dba4399498": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Toca \"Publicar no feed\""
+  },
+  "deb21810113bffe9c7289b8f640f46b709bbbd6a558a330ea2b363aa6ccd86b2": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Se menos de 60% das duplas parearem cartas justificando pela cor do uniforme ou pelo fundo (acionando PQ-03)."
+  },
+  "deda5bf4881d4c8735b6331441d5b8359349bbfe3eb4f8dcfa0dcccd7bc545cb": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "contexto",
+   "c": "COMO AS HABILIDADES DEVEM SER EXERCITADAS (não como proxy, literalmente):"
+  },
+  "df19a866f4f6a9a7ce0434864a8c733b86b781ea036de5409da9a3f0b5cf40be": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "aprovado só o Canal A; StoryPoll fica de fora"
+  },
+  "df23d1d7cf095db7f01f124ee71dedceb8c4548d3c78b03a6593a9d9b4fda298": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → decisão: fora"
+  },
+  "dff589641e32a05ac3e93bbbf4638729ce1cb275ee633e35b13c6241c5ea0359": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "rótulo de aresta"
+  },
+  "e2d5c9f15885018f6d59ec3cf470aecc30193b242cfb357bc0086ef7bf8d480c": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "2. Tetos de palavras: HOMOLOGADOS.\nRemover o marcador [PARÂMETRO — a definir por produto] da Seção 15 e cravar: 60 palavras por legenda de projeto, 25 por cartão argumentativo, 35 por balão de notificação.\n\n3. Toast de inatividade na Cédula: APROVADO.\nRemover o marcador [PROPOSTA P0b — a validar pel"
+  },
+  "e3e97343fcf5ae41536562f296c41c9b3ad977405b9b8a6b6acb9a15382bb106": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "*Indica falha:* Desistência na moldura em ~25%"
+  },
+  "e49c09cb24286a3ebfe486a7d722cbbd27fc2a4365b5d01c81310cfc3275cbe3": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → mantido fora do escopo"
+  },
+  "e4bb3318ff83bc1b1657ce23c9fa34afd1a3814a544ae2fb0a4e9b0bf45aa202": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "`ChatPollEmbed`"
+  },
+  "e625bef6249e917dbc5a788f578a1b664fc88e167dcc1409eec9afdef3cf81c8": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "cravar: 60 palavras por legenda de projeto, 25 por cartão argumentativo, 35 por balão de notificação."
+  },
+  "e7b12532870a918b636a5be783ed262514ea80786b80d5138742be137f529c0b": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Menos de 10% de uso"
+  },
+  "e80a0570422e3710d9a651f111f87f84272876a2e4e6d1a1f7a1531ad2980408": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → aprovado"
+  },
+  "e884cd9e59df2aec010cb8e5d00cbb21f8f8863a3e0604eb25c6bb98edb027c7": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "remover os marcadores [PROPOSTA] e [PARÂMETRO] correspondentes"
+  },
+  "e8ce763804beaca1fbbd6df9acfef89a731c6f5a3d7dfe760cc3f7e4d782a3ed": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "O que indica falha:* Se a taxa de desistência for maior que 25% desistirem de ajustar as alças e confirmarem na posição central default"
+  },
+  "e9add26600809d245e57d3416a7257ccecc0936bfd2e23942ceaf129e3ef4f6f": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "preservacao",
+   "c": "permanecem como estão"
+  },
+  "ec496124ee4827891223d9325df89778242a391885c9ff90e047010d23cbcb1b": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "repete_decisao_do_po",
+   "c": "mantido como ressalva homologada pelo PO"
+  },
+  "ed31be85ba335e8f4a59750fcd63e9a5c4cb6cc63a1c22132dee9d5e736ea0e1": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Menos de 60% concluindo dentro da janela de 7 minutos"
+  },
+  "f115f7d2b52868638d504a810c0428c77ceeb090cb6a9cf7b9fb12e7ceb6e4e6": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "| Ratificação do ambiente `unoochat` (WhatsApp simulado) | PO (via One-pager v2.2) | 2026-10-07 | Rejeitada criação prematura de seção nova `unoogaleria` no Design System |"
+  },
+  "f212d12d531c40efb07634460abc1e189ff556e9eaf97e0769801acd58a05a4a": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Tempo médio de envio superior a 180s (indica sobrecarga de leitura)"
+  },
+  "f282a13340b714d813f3e5d6b6adb4c6d9ad61b4fa13b2b812c986fec1c4e00d": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "`e0.rotulo.botao_regenerar_item`"
+  },
+  "f2d1ec53bbe93ed5c2c2b98cfa04f55c4e90b974bcd1b6f807b0dfc86a3f69f2": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "A spec não explicita a visão do gestor escolar/regional, que deve consumir apenas consolidados agregados sem acesso a linhas nominais."
+  },
+  "f30e15fdeba6835476e2c3b650d29b5cab7b8ec238de8038f8fd158b97c26edb": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "(item 3) Em processo = reutilizou em apenas 1 módulo OU reutilizou 2+ sem explorar nenhuma spec."
+  },
+  "f31cf15b56b843f399f305b022b70de2eceacfff1e5bb30fea6adcb68fecd572": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "outro",
+   "c": "incrementar `tentativa = tentativa + 1` em `exp05ef1b_sessoes`"
+  },
+  "f44074636d0d6c4ddb1f9fe83c7fc573f08dfa9f140aa6bfbe362f21ef5469fd": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "tetos de palavras 60/25/35"
+  },
+  "f4ac783cbaafe47b7211980f3f3aadb19d20ccb944219d7987383942c3b910a5": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Clicar em `Publicar no feed`"
+  },
+  "f4dd474255a0545423ddb7be0b46df61d2a6fe000946e1aa937a203333b315ce": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "Clica em `Liberar Missão para a Turma`"
+  },
+  "f54031c057f6d31688f8d368e24f8ffbe22b93a865b54a7b2e38df929977eae9": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → NÃO"
+  },
+  "f54144ed226ef8f27e17d33c4302fd55e02fb731a881b84a10b32e495eed2ef9": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "*O que indica falha:* Se a desistência passar de 25% desistirem de ajustar as alças e confirmarem na posição central default (acionando gatilho de PQ-01)."
+  },
+  "f55058f322584b6219e368960d6794e8abb5ea16e560281ffdd82d508144c064": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "Perguntas de Produto PQ-01 a PQ-05 (Spec): Ratificadas e homologadas pelo PO como métricas de monitoramento pós-lançamento. Trocar o marcador [PROPOSTA — validar com PO] de cada uma por [HOMOLOGADO pelo PO]."
+  },
+  "f67fd24a3ed7a42a04efbe8d081c199d1ccc8c231a7cbf8524c81ac624bcf09c": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "repete_decisao_do_po",
+   "c": "O tempo de 29 min em tela para aula de 50 min é uma ressalva operacional aceita pelo PO."
+  },
+  "f8103d1add7c22371f4ed2a9e0f2db898bcfd4cc42ddd6d1e951cc451411d9dd": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "*O que indica falha:* Mais de 40% da turma punindo Davi"
+  },
+  "f8ccaa96610fd6c35d9ae3aad8e344520ae1d69775d6d132a1f5601a29016268": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "O que indica falha:* Se a desistência das duplas superar 25%"
+  },
+  "f914a5cedc8f42f97951bf8e1b907a21968d0915f8c9a766fe30d968274c4e8a": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão `Configurar Missão`"
+  },
+  "f941e73cc1f047b3fae48f7c67b1bb36d82a81518ffa0d4f24fdc3c1caf69a1a": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Ternário: Atingiu = montou a release com margem de segurança (≥5 créditos) na primeira sequência, sem desativar módulos já ativados."
+  },
+  "fa0ab39a068c926aaabee5d0e3a5b41a2a5a9ba969c69b316d90b01fbef4a849": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "confirmada",
+   "c": "Todos os itens anteriormente homologados (tempo em tela de 29 min, tetos de palavras 60/25/35, toast de inatividade de 60s) permanecem como estão."
+  },
+  "fafaafd3fed04403bbbcdff0032eec23f94d7eb1c466b26756c03786edc12d96": {
+   "p": "item_do_pedido_classe",
+   "v": "v2",
+   "r": "exigencia",
+   "c": "Trocar o título da Etapa 3 para «A plenária decide»."
+  },
+  "fba112db7d9288bd49628d1f5b668db401656189f94912810e7f0a8425a8bde2": {
+   "p": "rotulo_de_botao",
+   "v": "v1",
+   "r": "rotulo_de_botao",
+   "c": "botão \"Avançar para Laudo Técnico\""
+  },
+  "fbc67d64b130492138cc5d4d5b5706e4bb6c50a9840de741527c45cc5f3d3ff0": {
+   "p": "decisao_do_po_confirmada",
+   "v": "v1",
+   "r": "nao_confirmada",
+   "c": "[PROPOSTA P0b: validar com PO: Utilização do componente StoryPoll nativo do Unoovista como suporte ao Canal B das 4 habilidades] → sem aprovação"
+  },
+  "fd00eaaf90b16692d3da85023fd668b0b5eb4a5cfa73e681048709f645e6a438": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "Mais de 25% das duplas confirmarem na posição default."
+  },
+  "fd491f5d73dedcb5990af5a42a3e9d8a303b75540d50d3533ad3ef2f940a3e61": {
+   "p": "ressalva_repete_decisao_do_po",
+   "v": "v1",
+   "r": "aponta_problema",
+   "c": "\"resposta\": \"recusar\""
+  },
+  "fdcd63550b23d69d5c504d77c5a8f55c643baec48a35ec7142b6a9c7e066d42c": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "pelo menos 80% das crianças reconhecem que a foto não mostrou tudo"
+  },
+  "feb83477bb95337197a99940b886f2055b6eb9dc646be100d2ba2c530a867d32": {
+   "p": "numero_da_hipotese",
+   "v": "v1",
+   "r": "meta",
+   "c": "hesitando por mais de 20s"
+  }
+ }
+}

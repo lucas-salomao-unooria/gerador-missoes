@@ -45,6 +45,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
+from tools.severidade import BLOQUEIO, CONCORDAM_NAO, CONCORDAM_SIM, DUVIDA, INTERPRETACAO, leitura_dupla, por_prova
 from tools.propagacao import (
     _ALIAS,
     _fmt,
@@ -723,6 +724,12 @@ def _contrato_da_mecanica(contrato_texto: str) -> str:
     return "\n".join(saida)
 
 
+def _limpo_de_hipotese(texto: str) -> str:
+    """A hipótese sem as citações e sem a marcação LaTeX da porcentagem e do comparativo."""
+    return _RE_CITACAO.sub(" ", texto or "").replace("$", "").replace("\\%", "%").replace("\\ge", "≥").replace(
+        "\\le", "≤")
+
+
 def _metas_do_corpo(texto: str, mecanica: str = "") -> List[Tuple[str, str]]:
     """Os números de hipótese do corpo que podem ser meta: a duração (s, min) e toda porcentagem, menos a que vem
     marcada como mecânica (`_RE_MECANICA_ANTES`) sem comparativo nem população e que o contrato tem fora do §17 e do
@@ -732,8 +739,7 @@ def _metas_do_corpo(texto: str, mecanica: str = "") -> List[Tuple[str, str]]:
     porcentagem sumia em silêncio — «Se a desistência das duplas superar 25%», «25% ou mais das duplas», «maior que
     25%» tiravam do gate a H1 30×25 da exp02ef1b (D11). O lado conservador é o contrário: só sai a marcada. Na segunda
     revisão, a marca sozinha ainda tirava «Se a taxa de 25% de desistência for atingida»: a mecânica é a do contrato."""
-    limpo = _RE_CITACAO.sub(" ", texto or "").replace("$", "").replace("\\%", "%").replace("\\ge", "≥").replace(
-        "\\le", "≤")
+    limpo = _limpo_de_hipotese(texto)
     saida = []
     for t in _numeros_de_hipotese(limpo):
         if t[1] == "%" and tem_numero(mecanica, t):
@@ -781,7 +787,8 @@ def _direcao(texto: str, tok: Tuple[str, str]) -> str:
 
 
 #: Situações de `hipoteses_reescritas` que são dúvida, não divergência certa: saem como `hipotese-a-conferir`, atenção.
-SITUACOES_DE_DUVIDA = ("limiar-do-9f", "complemento")
+#: `leitura-a-conferir` (C7, 25/10/2026): o código e o classificador não leem igual se o número é a meta da hipótese.
+SITUACOES_DE_DUVIDA = ("limiar-do-9f", "complemento", "leitura-a-conferir")
 #: Onde acaba o predicado da porcentagem — o que a hipótese diz da população que o número conta: «Mais de 30% das
 #: duplas desistirem de ajustar a moldura e clicarem em confirmar na posição default sem interagir.»
 _RE_FIM_DO_PREDICADO = re.compile(r"[;:|(\n]|\.(?!\d)")
@@ -830,6 +837,34 @@ def _complemento_pelo_predicado(texto: str, tok: Tuple[str, str], do_17: str, ap
             or bool(_RE_PREDICADO_NEGADO.match(p_corpo)) != bool(_RE_PREDICADO_NEGADO.match(p_17)))
 
 
+def _meta_do_17_com_outro_numero(texto: str, tok: Tuple[str, str], do_17: str,
+                                 aprovados: Sequence[Tuple[str, str]]) -> bool:
+    """A porcentagem do corpo está no lugar da meta do §17: o §17 tem uma porcentagem com o mesmo predicado, sem a
+    negação que faria dela o complemento — com o mesmo comparativo (`_reproduz_a_frase`, a H1 30×25 da exp02ef1b) ou
+    com o critério invertido («menos de 70% das duplas desistirem» × «mais de 30% …», revisão do PR #77). É comparação
+    com o texto do §17, não leitura de sentido: vale como prova quando o classificador não responde (revisão do PR #85,
+    25/10/2026)."""
+    if tok[1] != "%":
+        return False
+    p_corpo = _predicado(texto, tok)
+    return any(a[1] == "%" and _mesmo_predicado(p_corpo, _predicado(do_17, a))
+               and bool(_RE_PREDICADO_NEGADO.match(p_corpo)) == bool(_RE_PREDICADO_NEGADO.match(_predicado(do_17, a)))
+               for a in aprovados)
+
+
+def _leitura_sem_classificador(codigo_le_meta: bool, texto: str, tok: Tuple[str, str], do_17: str,
+                               aprovados: Sequence[Tuple[str, str]]) -> str:
+    """O que vale quando o classificador não respondeu (erro, 429, timeout, limite do gate, sem chave, desligado): sem
+    a segunda leitura, só a prova em código decide. A porcentagem no lugar da meta do §17 (`_meta_do_17_com_outro_numero`)
+    continua divergência certa, como na C1; o número que o código lê como mecânica fica calado, como antes da C7 — a
+    dúvida sem segunda leitura seria ruído em todo número da mecânica; e a meta que só o código lê vira dúvida 🟡,
+    porque é interpretação. Revisão do PR #85 (25/10/2026): com `CLASSIFICADOR_SENTIDO=desligado`, a H1 30×25 da
+    exp02ef1b saía 🟡 e cada número da mecânica, 🟡 «a conferir»."""
+    if not codigo_le_meta:
+        return CONCORDAM_NAO
+    return CONCORDAM_SIM if _meta_do_17_com_outro_numero(texto, tok, do_17, aprovados) else DUVIDA
+
+
 def hipoteses_reescritas(one_pager: str, corpo: str, spec: str = "",
                          contrato_texto: Optional[str] = None) -> List[Dict[str, str]]:
     """Hipótese do corpo com número que a hipótese de mesmo número do §17 não tem: `trocado` quando a do §17 tem
@@ -856,14 +891,51 @@ def hipoteses_reescritas(one_pager: str, corpo: str, spec: str = "",
     do_corpo = _itens_de_hipotese(_secoes_de_hipotese(corpo))
     nove_f = _linhas_9f(sem_linhas_abertas(spec)) if spec else {}
     mecanica = _contrato_da_mecanica(contrato_texto or "")
+    # Cada número da hipótese que o §17 não tem é lido duas vezes (C7, 25/10/2026): pelo código — a meta é toda
+    # porcentagem menos a marcada como mecânica que o contrato tem, e a duração que o contrato não tem — e pelo
+    # classificador (`tools/classificador.numero_da_hipotese`). Só a divergência que os dois leem como meta bloqueia; a
+    # discordância é dúvida (`leitura-a-conferir`), com as duas leituras. Na fase A, o código perdia 4 de 13 metas do
+    # held-out (a isenção «duração que o contrato tem») e a 1ª versão da C1 perdia 15 de 17 paráfrases da H1 30×25; o
+    # classificador acertou os 60 casos — mas interpretação não bloqueia sozinha (`tools/severidade.py`). Quando o
+    # classificador não responde, só a prova em código decide (`_leitura_sem_classificador`).
+    lidos: Dict[Tuple[int, Tuple[str, str]], Any] = {}
+    pedidos = [(n, t) for n, texto in do_corpo.items() if n in do_17
+               for t in _numeros_de_hipotese(_limpo_de_hipotese(texto)) if not tem_numero(do_17[n], t)]
+    if pedidos:
+        from tools import classificador
+
+        leituras = classificador.ler(classificador.NUMERO_DA_HIPOTESE, [
+            {"hipotese_no_documento": do_corpo[n], "hipotese_aprovada_no_17": do_17[n], "numero": _numero_lido(t)}
+            for n, t in pedidos])
+        lidos = dict(zip(pedidos, leituras))
     saida = []
     for n, texto in do_corpo.items():
         if n not in do_17:
             continue
         aprovados = _numeros_de_hipotese(do_17[n])
         unidades = {u for _, u in aprovados}
-        fora = [t for t in _metas_do_corpo(texto, mecanica) if not tem_numero(do_17[n], t)
-                and (t[1] == "%" or t[1] in unidades or contrato_texto is None or not tem_numero(contrato_texto, t))]
+        pelo_codigo = [t for t in _metas_do_corpo(texto, mecanica) if not tem_numero(do_17[n], t)
+                       and (t[1] == "%" or t[1] in unidades or contrato_texto is None
+                            or not tem_numero(contrato_texto, t))]
+        candidatos = [t for (m, t) in lidos if m == n]
+        leitura = {t: _leitura_sem_classificador(t in pelo_codigo, texto, t, do_17[n], aprovados)
+                   if getattr(lidos[(n, t)], "nao_sei", True) else leitura_dupla(t in pelo_codigo, lidos[(n, t)], "meta")
+                   for t in candidatos}
+        fora = [t for t in candidatos if leitura[t] == CONCORDAM_SIM]
+        duvidas = [t for t in candidatos if leitura[t] == DUVIDA]
+        if duvidas:
+            linha_duvida = next((l for l in texto.splitlines() if any(tem_numero(l, t) for t in duvidas)), texto)
+            saida.append({"secao": "§17", "situacao": "leitura-a-conferir", "pq": "",
+                          "contrato": ", ".join(_fmt(a) for a in aprovados if a[1] in {u for _, u in duvidas})
+                          or "nenhum número", "quantifica": "sim" if aprovados else "",
+                          "sem_classificador": "sim" if all(getattr(lidos[(n, t)], "nao_sei", True)
+                                                            for t in duvidas) else "",
+                          "corpo": ", ".join(_fmt(t) for t in duvidas), "hipotese": f"H{n}",
+                          "linha": do_17[n].strip().splitlines()[0][:200], "linha_corpo": linha_duvida.strip()[:200],
+                          "leituras": "; ".join(
+                              f"{_fmt(t)}: o código lê {'meta' if t in pelo_codigo else 'parâmetro da mecânica'}, e "
+                              + lidos[(n, t)].explicada({"meta": "meta", "mecanica": "parâmetro da mecânica"})
+                              for t in duvidas)})
         if not fora:
             continue
         mesma_unidade = [t for t in aprovados if t[1] in {u for _, u in fora}]
@@ -888,6 +960,19 @@ def hipoteses_reescritas(one_pager: str, corpo: str, spec: str = "",
                       "corpo": ", ".join(_fmt(t) for t in fora), "hipotese": f"H{n}",
                       "linha": do_17[n].strip().splitlines()[0][:200], "linha_corpo": linha_corpo.strip()[:200]})
     return saida
+
+
+def _tem_numero_do_17(c: Dict[str, str]) -> str:
+    """«tem 30%», ou «não tem número» quando o §17 não quantifica a hipótese (nessa unidade): «tem nenhum número» saía
+    na mensagem do handoff da exp01ef1b (revisão do PR #85, 25/10/2026)."""
+    if c.get("contrato") != "nenhum número":
+        return f"tem {c['contrato']}"
+    return "não tem número nessa unidade" if c.get("quantifica") else "não tem número"
+
+
+def _numero_lido(tok: Tuple[str, str]) -> str:
+    """O número como o classificador o lê: `25%`, `2,5 s`."""
+    return f"{tok[0].replace('.', ',')}{'%' if tok[1] == '%' else ' ' + tok[1]}"
 
 
 def _linhas_9f(spec: str) -> Dict[str, str]:
@@ -1128,7 +1213,10 @@ def _validar(documento: str, texto: str, state: Dict[str, Any]) -> Dict[str, Any
     pendencias = (secao_numerada(corpo, 19, "pend[êe]ncias") if documento == "prd"
                   else secao_numerada(corpo, 7, "lacunas e pend")) or ""
 
-    # a) números de regra sem origem no contrato
+    # a) números de regra sem origem no contrato. 🟡, não 🔴 (C7, 25/10/2026): a ausência no contrato é literal, mas quem
+    # decide que o número é «de regra» — e não de plataforma, de layout, de espera, de exemplo ou de fonte externa — é
+    # uma heurística de sentido. No levantamento de 24/10/2026 foram 3 verdadeiros, 7 falsos positivos e 9 ambíguos
+    # (`tools/severidade.py`)
     sem_origem = numeros_sem_origem(corpo, contrato_texto)
     if sem_origem:
         achados.append(_achado(
@@ -1138,7 +1226,9 @@ def _validar(documento: str, texto: str, state: Dict[str, Any]) -> Dict[str, Any
             + _exemplos(f"{i['numero']} em «{i['linha'][:110]}»" for i in sem_origem)
             + f". O {rotulo} monta, não decide: copie o número do contrato, tire-o, ou marque a linha "
             "`[PROPOSTA — validar com PO: <o número> · por quê]` (ela vai para a seção 19.3). Polling, TTL, p95 e o que "
-            "mais for da plataforma não precisam de origem no contrato.", documento))
+            "mais for da plataforma não precisam de origem no contrato. Não bloqueia: o código não sabe com certeza se "
+            "cada número é de regra — confira.", documento,
+            severidade=por_prova(BLOQUEIO, INTERPRETACAO)))
 
     # b) hipóteses, tetos e metas — o corpo trocado bloqueia sempre; a divergência do próprio contrato, na origem
     # certa, pede o registro na seção de pendências além do corpo certo
@@ -1151,6 +1241,19 @@ def _validar(documento: str, texto: str, state: Dict[str, Any]) -> Dict[str, Any
         else:
             codigo, o_que = ("teto-ausente", "teto") if c["situacao"] == "ausente" else ("teto-diverge", "teto")
         # dúvida, não divergência certa: atenção, separada do bloqueio pelo código (análise de 24/10/2026)
+        if c["situacao"] == "leitura-a-conferir":
+            achados.append(_achado(
+                "hipotese-a-conferir",
+                f"Dúvida, não divergência certa: a {c['hipotese']} do §17 do one-pager {_tem_numero_do_17(c)}, e o "
+                f"{rotulo} escreve {c['corpo']}: «{c['linha_corpo'][:140]}». "
+                + ("O classificador de sentido não respondeu, e só o código lê o número como a meta da hipótese, não "
+                   "como um parâmetro da mecânica que ela cita — " if c.get("sem_classificador") else
+                   "O código e o classificador de sentido não leem igual se o número é a meta da hipótese ou um "
+                   "parâmetro da mecânica que ela cita — ")
+                + f"{c['leituras'][:400]}. Se for a meta, o corpo diz o que o §17 diz"
+                + (" (ou remete a ele)" if documento == "handoff" else "") + "; se for da mecânica, nada a corrigir. "
+                "Confira com o PO antes do de acordo.", documento, severidade="atencao"))
+            continue
         if c["situacao"] in SITUACOES_DE_DUVIDA:
             if c["situacao"] == "limiar-do-9f":
                 por_que = (f"que é o limiar da {c['pq']} no 9f da spec — a pergunta que a própria hipótese cita, "
@@ -1161,7 +1264,7 @@ def _validar(documento: str, texto: str, state: Dict[str, Any]) -> Dict[str, Any
                            "ficar fora dos dois lados (quem não conclui conta como falha num e não no outro)")
             achados.append(_achado(
                 "hipotese-a-conferir",
-                f"Dúvida, não divergência certa: a {c['hipotese']} do §17 do one-pager tem {c['contrato']}, e o "
+                f"Dúvida, não divergência certa: a {c['hipotese']} do §17 do one-pager {_tem_numero_do_17(c)}, e o "
                 f"{rotulo} escreve {c['corpo']}, {por_que}: «{c['linha_corpo'][:140]}». Confira com o PO antes do de "
                 "acordo; o seguro é copiar o §17" + (" (ou remeter a ele)" if documento == "handoff" else "")
                 + (f" e citar o limiar da {c['pq']} à parte." if c["pq"] else "."), documento, severidade="atencao"))

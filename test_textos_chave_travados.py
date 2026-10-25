@@ -449,7 +449,9 @@ def test_arestas_da_exp02ef1b_que_mudam_o_que_o_aluno_faz_vao_ao_po():
                and a["resumo"].startswith("[PROPOSTA — validar com PO:") for a in r["achados"])
     # o comentário entre parênteses não é guarda: «(cobre pareamento correto e exploração mínima)» da A17
     assert "A17" not in por_aresta
-    assert ar.validar(estado, estrito=True)["status"] == "bloqueado"
+    # C7 (25/10/2026): a guarda lida por regex é interpretação — com ESTEIRA_ESTRITA continua decisão do PO, não 🔴
+    estrito = ar.validar(estado, estrito=True)
+    assert estrito["status"] == "amarelo" and all(a["severidade"] == "decisao_humana" for a in estrito["achados"])
 
 
 @pytest.mark.parametrize("missao", sorted(p.name for p in ACERVO.iterdir() if (p / "estado.json").exists()

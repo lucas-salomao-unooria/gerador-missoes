@@ -28,6 +28,15 @@ from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# O classificador de sentido (C7), como na regressão: lê o cache da própria sessão (`classificador_sentido` no estado,
+# gravado pela esteira) e o versionado de teste, sem chamar o modelo. Fora deles, «nao_sei» — o gate de hipótese fica
+# só com a prova em código (`tools/montagem._leitura_sem_classificador`). `CLASSIFICADOR_SENTIDO=ligado` chama o Gemini;
+# o custo não é gravado, porque o script nunca escreve na sessão. Revisão do PR #85 (25/10/2026): sem isto, cada
+# validador chamava o modelo ao vivo, sem sessão, sem cache e sem limite por gate.
+os.environ.setdefault("CLASSIFICADOR_SENTIDO", "so_cache")
+os.environ.setdefault("CLASSIFICADOR_CACHE_FIXO",
+                      str(Path(__file__).resolve().parent.parent / "fixtures" / "classificador-cache.json"))
+
 from tools import bncc, contrato_produto, evidencia, kpis, rastro  # noqa: E402
 from tools.diagnostico import GATES, coletar  # noqa: E402
 
@@ -162,7 +171,12 @@ def avaliar(pasta: Path) -> Optional[Dict[str, Any]]:
     dossie_antes = coletar(state)
 
     copia = dict(state)
-    novos = recomputar(state)
+    from tools import classificador
+
+    # uma sessão para a recomputação inteira: o cache da sessão gravada responde; com `ligado`, o limite de chamadas
+    # (`classificador.LIMITE_POR_GATE`) vale para a soma dos validadores
+    with classificador.sessao(state, "reavaliar_gates"):
+        novos = recomputar(state)
     for chave, resultado in novos.items():
         copia[chave] = resultado["status"]
         copia[f"{chave}_envelope"] = {"status": resultado["status"], "achados": resultado.get("achados", [])}

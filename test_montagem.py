@@ -275,7 +275,9 @@ def test_sugestao_de_parametro_aberto_nao_e_contrato_e_a_decisao_do_po_e():
     decidido = [{"id": "x", "resposta": "aceitar", "gravado": "45 segundos — PO, parecer de 24/10/2026"}]
     assert montagem.validar_prd(_sintetico(one_pager=op, prd_final=prd, decisoes_do_po=decidido))["status"] == "aprovado"
     recusado = [{"id": "x", "resposta": "recusar", "gravado": "45 segundos"}]
-    assert montagem.validar_prd(_sintetico(one_pager=op, prd_final=prd, decisoes_do_po=recusado))["status"] == "bloqueado"
+    # o número sem origem é 🟡 desde a C7 (25/10/2026): dizer que ele é «de regra» é leitura de sentido
+    r = montagem.validar_prd(_sintetico(one_pager=op, prd_final=prd, decisoes_do_po=recusado))
+    assert r["status"] == "amarelo" and _codigos(r) == ["numero-sem-origem"]
 
 
 def test_bloco_13_pela_lista_branca():

@@ -155,10 +155,14 @@ class EnvelopeGateAgent(BaseAgent):
         relatorio = str(state.get(self.report_key, "") or "")
         envelope = extrair_envelope(relatorio)
         nota_recontagem = ""
+        delta_classificador: Dict[str, Any] = {}
         if self.recontar_decisoes_do_po and envelope:
-            from tools import juizes_produto
+            from tools import classificador, juizes_produto
 
-            novo, nota_recontagem = juizes_produto.recontar(envelope, dict(state), self.contrato_no_de_acordo)
+            # o classificador de sentido dá a pista do «a conferir» (C7): o cache e o custo dele voltam ao estado
+            with classificador.sessao(state, self.status_key) as sessao_cls:
+                novo, nota_recontagem = juizes_produto.recontar(envelope, dict(state), self.contrato_no_de_acordo)
+            delta_classificador = sessao_cls.delta()
             if nota_recontagem:
                 envelope = novo
                 relatorio += nota_recontagem + "\n\n```json\n" + json.dumps(envelope, ensure_ascii=False) + "\n```\n"
@@ -193,7 +197,7 @@ class EnvelopeGateAgent(BaseAgent):
         # 14 execuções nenhum gate de LLM apareceu amarelo embora os relatórios estivessem
         # cheios de amarelo. O que o time lia era um verde que o juiz não deu.
         registrado = STATUS_BLOQUEADO if truncado else status_registrado(relatorio, envelope)
-        delta = {self.status_key: registrado, f"{self.status_key}_envelope": envelope or {}}
+        delta = {self.status_key: registrado, f"{self.status_key}_envelope": envelope or {}, **delta_classificador}
         if nota_citacao or nota_recontagem:
             delta[self.report_key] = relatorio
         if self.round_key:
@@ -2021,6 +2025,11 @@ class RastroCheckAgent(BaseAgent):
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         state = ctx.session.state
         missao = extrair_slug(str(state.get("spec_missao") or state.get("one_pager") or "")) or ""
+        # O classificador de sentido (C7) lê com o cache do estado e conta o custo neste gate; a sessão fecha antes do
+        # evento, e o que ela leu volta ao estado no `delta`. Tudo abaixo é síncrono até o `yield`.
+        from tools import classificador
+
+        sessao_cls, token_cls = classificador.abrir(state, self.status_key)
         if self.modo == "one_pager":
             from tools import decisoes
 
@@ -2214,7 +2223,7 @@ class RastroCheckAgent(BaseAgent):
                 dec.ha_registro_do_po(dict(state)),
                 # o pedagógico fecha o design desde o PR 10 (24/10/2026)
                 etapa={"aprovado_spec": "produto", "aprovado_resumido": "produto",
-                       "aprovado_pedagogico": "design"}.get(self.modo, "dev")))
+                       "aprovado_pedagogico": "design"}.get(self.modo, "dev"), chave=chave))
             relatorio = ca.relatorio(resultado, documento, missao)
         elif self.modo == "one_pager_po":
             # O one-pager que o PO anexou é a missão: cada trecho dele está no gerado, ou saiu porque o pedido
@@ -2260,12 +2269,14 @@ class RastroCheckAgent(BaseAgent):
         else:
             resultado = varrer_lacunas(self.fontes, dict(state), etapa_corrente=self.etapa)
             relatorio = relatorio_lacunas(resultado, self.rotulo, missao, agente=self.agente)
+        classificador.fechar(token_cls)
 
         status = resultado["status"]  # aprovado | amarelo | bloqueado
         delta: Dict[str, Any] = {
             self.report_key: relatorio,
             self.status_key: status,
             f"{self.status_key}_envelope": extrair_envelope(relatorio) or {},
+            **sessao_cls.delta(),
         }
         bloqueios = [a for a in resultado["achados"] if a["severidade"] == "bloqueio"]
         avisos = [a for a in resultado["achados"] if a["severidade"] != "bloqueio"]
@@ -2604,8 +2615,12 @@ class FidelidadeCheckAgent(BaseAgent):
                      | {"pedido de correção desta execução"}) if corrente.strip() else None
         edicoes = (list(state.get("edicoes_pontuais") or [])
                    if state.get(KEY_MODO_CORRECAO) == "pontual" else None)
-        resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa, parcial=self.parcial, anteriores=anteriores,
-                                edicoes=edicoes, origens_correntes=correntes, interpretacao=lidos)
+        from tools import classificador
+
+        # a segunda leitura do item que o juiz trata como contexto (C7): o cache e o custo voltam ao estado
+        with classificador.sessao(state, self.status_key) as sessao_cls:
+            resultado = fid.aplicar(itens, saida, docs, etapa=self.etapa, parcial=self.parcial, anteriores=anteriores,
+                                    edicoes=edicoes, origens_correntes=correntes, interpretacao=lidos)
         resultado["conferidos"] += fid.aplicados_a_montante(a_montante)
         relatorio = fid.relatorio(resultado, itens, missao, self.onde)
         envelope = extrair_envelope(relatorio) or {}
@@ -2623,6 +2638,7 @@ class FidelidadeCheckAgent(BaseAgent):
                         self.entrada_key: "",
                         self.documentos_key: "",
                         self.interpretacao_entrada_key: "",
+                        **sessao_cls.delta(),
                     }))
 
 

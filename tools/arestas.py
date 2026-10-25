@@ -22,8 +22,10 @@ acerto), e nada nas outras 14 missões.
   esse estado é «A e B», sem «ou».
 
 Cada achado sai como `[PROPOSTA — validar com PO: …]`, com dono PO: se a mudança deve valer, o PO a pede no Refazer, e a
-triagem do PR 5 leva o item a produto; senão, o design segue a spec. Com ESTEIRA_ESTRITA bloqueia, como a mudança do
-design no texto do Gate 0 (PR 2); sem ela, é decisão humana 🟡 no cartão do parecer de design.
+triagem do PR 5 leva o item a produto; senão, o design segue a spec. É decisão humana 🟡 no cartão do parecer de
+design, com ou sem ESTEIRA_ESTRITA: até a C7 (25/10/2026) o estrito a promovia a bloqueio, mas dizer que a guarda
+«exige acerto» ou «afrouxa» é leitura de sentido por regex — e interpretação não bloqueia sozinha
+(`tools/severidade.py`). O próprio achado já é uma proposta ao PO.
 
 Desde o PR 8 (decisão D8) a mesma régua vale para a Seção 5 da jornada: as regras e as fases do mini-jogo são da spec
 (bloco 2), e a jornada só mapeia as telas para elas — regra ou fase que a spec não tem vira proposta
@@ -151,7 +153,11 @@ def regras_de_habilitacao(texto: str) -> List[Tuple[Optional[str], str, str]]:
 
 
 def _achado(codigo: str, resumo: str, estrito: bool, **extra: Any) -> Dict[str, Any]:
-    return {"severidade": "bloqueio" if estrito else "decisao_humana", "codigo": codigo, "etapa": "design",
+    from tools.severidade import DECISAO_HUMANA, INTERPRETACAO, por_prova
+
+    # a guarda lida por regex é interpretação: com ESTEIRA_ESTRITA também fica decisão humana (C7)
+    severidade = por_prova("bloqueio" if estrito else DECISAO_HUMANA, INTERPRETACAO, rebaixada=DECISAO_HUMANA)
+    return {"severidade": severidade, "codigo": codigo, "etapa": "design",
             "agente_responsavel": "PO", "resumo": resumo, **extra}
 
 

@@ -49,6 +49,11 @@ def _garantir_base_plataforma() -> None:
                 break
 
 _garantir_base_plataforma()
+# O classificador de sentido (C7) lê o cache versionado e não chama o modelo: a regressão roda sem rede, e a leitura que
+# faltar no cache é «nao_sei» — o achado vira 🟡 (no gate de hipótese, só a prova em código decide) e a comparação
+# acusa (`scripts/gravar_cache_classificador.py` o regrava)
+os.environ.setdefault("CLASSIFICADOR_SENTIDO", "so_cache")
+os.environ.setdefault("CLASSIFICADOR_CACHE_FIXO", str(RAIZ / "fixtures" / "classificador-cache.json"))
 
 from tools import (
     bncc, contrato_produto, evidencia, kpis, rastro, consistencia,
