@@ -1169,6 +1169,70 @@ def _achado(codigo: str, resumo: str, severidade: str, dono: str = "copy-ptbr-re
     return {"severidade": severidade, "codigo": codigo, "etapa": "design", "agente_responsavel": dono, "resumo": resumo}
 
 
+#: O marcador do que o professor preenche na preparação, nas grafias do acervo e das sessões de 25/10/2026:
+#: `[recorte da aula: parâmetro do professor]`, `[recorte da aula]`, `[tema: parâmetro do professor]`, `[tema do professor]`.
+_RE_SLOT_DO_PROFESSOR = re.compile(
+    r"\[\s*(?:recorte\s+da\s+aula\b[^\]\n]{0,100}|[^\[\]\n]{0,60}\bpar[âa]metro\s+do\s+professor\s*|tema\s+do\s+professor\s*)\]",
+    re.I)
+#: A variável de template (`{recorte_da_aula}`) também guarda o lugar do professor.
+_RE_VARIAVEL = re.compile(r"\{[^{}\n]{1,60}\}")
+
+
+def _padrao_dos_slots(texto: str) -> Optional["re.Pattern[str]"]:
+    """O texto-chave como expressão regular em que cada marcador do professor é um grupo (o que a copy pôs no lugar dele)
+    e as outras lacunas aceitam qualquer coisa, como em `_padrao`; None sem marcador do professor. O marcador na ponta do
+    texto não é grupo: sem texto fixo depois (ou antes) dele, a comparação não tem onde parar."""
+    alvo = literal(texto)
+    lacunas = [m.group(0) for m in _RE_LACUNA.finditer(alvo)]
+    partes = _RE_LACUNA.split(alvo)
+    if not any(_RE_SLOT_DO_PROFESSOR.fullmatch(l) for l in lacunas):
+        return None
+    pedacos, grupos = [re.escape(partes[0])], 0
+    for k, lacuna in enumerate(lacunas):
+        na_ponta = (k == 0 and not partes[0].strip()) or (k == len(lacunas) - 1 and not partes[-1].strip())
+        if _RE_SLOT_DO_PROFESSOR.fullmatch(lacuna) and not na_ponta:
+            pedacos.append(r"(.{0,160}?)")
+            grupos += 1
+        else:
+            pedacos.append(r"(?:.{0,160}?)")
+        pedacos.append(re.escape(partes[k + 1]))
+    return re.compile("".join(pedacos)) if grupos else None
+
+
+def slots_do_professor_fixados(copy: str, tcs: Sequence[TextoChave]) -> List[Dict[str, str]]:
+    """As strings da copy que trazem um texto-chave com o marcador do professor trocado por um valor fixo: `{id, chave,
+    valor, marcador}`. Comparação de marcador, literal: o resto do texto-chave está na string, e no lugar do marcador há
+    outra coisa que não é marcador nem variável.
+
+    Na exp02em1b (session_f6ef44de, 25/10/2026) a string canônica do TC-11 (`e4.narrativa.overlay_cta_gremio`) dizia «O
+    post sobre convivência escolar viralizou…», e o one-pager, «O post sobre [recorte da aula: parâmetro do professor]
+    viralizou…»: o texto que o professor de qualquer disciplina parametriza saiu fixo. Nenhum gate pegou, porque a lacuna
+    preenchida conta como o texto-chave (`mesmo_texto`, certo para `{motivo}` e `X%`) e o literal estava inteiro na seção
+    de propostas da copy (2EM-06). Só a coluna PT-BR das tabelas de strings: a amostra preenchida fica nas notas."""
+    alvos = [(t, p) for t in tcs if t.tipo in TIPOS_DE_TEXTO for p in (_padrao_dos_slots(t.texto),) if p is not None]
+    if not alvos or not (copy or "").strip():
+        return []
+    saida: List[Dict[str, str]] = []
+    for _, celulas, cabecalho in _linhas_de_tabela(remover_secao(copy).split("\n")):
+        ipt = _coluna(cabecalho, "pt-br", "pt br", "texto aprovado", "string")
+        if ipt is None or ipt >= len(celulas):
+            continue
+        ichave = _coluna(cabecalho, "chave", "key")
+        chave = celulas[ichave].strip("` ") if ichave is not None and ichave < len(celulas) else ""
+        celula = _documento_literal(celulas[ipt])
+        for tc, padrao in alvos:
+            marcadores = [m.group(0) for m in _RE_SLOT_DO_PROFESSOR.finditer(literal(tc.texto))]
+            for m in padrao.finditer(celula):
+                for valor in m.groups():
+                    valor = (valor or "").strip()
+                    if _RE_SLOT_DO_PROFESSOR.search(valor) or _RE_VARIAVEL.search(valor):
+                        continue
+                    item = {"id": tc.id, "chave": chave, "valor": valor, "marcador": marcadores[0] if marcadores else ""}
+                    if item not in saida:
+                        saida.append(item)
+    return saida
+
+
 def conferir_copy(copy: str, tcs: Sequence[TextoChave]) -> Dict[str, Any]:
     """O gate dos textos-chave na copy: `{status, achados, contagem}`.
 
@@ -1177,6 +1241,8 @@ def conferir_copy(copy: str, tcs: Sequence[TextoChave]) -> Dict[str, Any]:
       PR 7, é a medida de quanto o design reescreveu.
     - `opcoes-divergentes` ⛔: escolha com opção a menos (removida ou renomeada) ou a mais — o nº de opções é texto-chave
       (D1). O código não inventa a linha que falta: volta ao dono da copy.
+    - `slot-do-professor-fixado` ⛔: string que traz o texto-chave com o marcador do professor trocado por um valor fixo
+      (`slots_do_professor_fixados`, 2EM-06). Volta ao dono da copy.
     - `texto-chave-proposta` 🧑: a redação que o design propôs e o código não aplicou, para o PO decidir.
     - `texto-chave-sem-linha` 🟡: texto-chave que nenhuma linha do sheet traz (está só na seção da esteira).
     """
@@ -1209,7 +1275,21 @@ def conferir_copy(copy: str, tcs: Sequence[TextoChave]) -> Dict[str, Any]:
             resumo = (f"A copy cita {', '.join(d.get('a_mais') or [])}, opção que a escolha `{g.id}` ({g.origem}) não "
                       f"tem: o one-pager aprovado dá {g.n} opções — {g.texto}. Opção a mais é decisão do PO (D1).")
         achados.append(_achado("opcoes-divergentes", resumo, "bloqueio"))
-    ja_relatadas = {(i, literal(p)) for i, _, p in r["propostas_novas"]}
+    fixados = slots_do_professor_fixados(r["texto"], tcs)
+    if fixados:
+        from tools.severidade import BLOQUEIO, PROVA, por_prova
+
+        # prova em código — o marcador some da string, comparação literal —, então o 🔴 vale (`tools/severidade.py`)
+        exemplos = "; ".join(
+            f"`{f['id']}`" + (f" (`{f['chave']}`)" if f["chave"] else "")
+            + f" traz «{f['valor'][:60]}» no lugar de «{f['marcador']}»" for f in fixados[:6])
+        achados.append(_achado(
+            "slot-do-professor-fixado",
+            f"{len(fixados)} string(s) da copy trazem um texto-chave com o lugar do professor preenchido por um valor fixo: "
+            + exemplos + ("…" if len(fixados) > 6 else "") + ". O marcador é o que o professor de qualquer disciplina preenche na preparação "
+            "da aula: a string mantém o marcador do one-pager, literal (ou uma variável `{…}`); a amostra preenchida vai "
+            "na coluna de notas.", por_prova(BLOQUEIO, PROVA)))
+    ja_relatadas ={(i, literal(p)) for i, _, p in r["propostas_novas"]}
     pendentes = [p for p in r["propostas"] if (p[0], literal(p[2])) not in ja_relatadas]
     if pendentes:
         achados.append(_achado(
