@@ -545,6 +545,24 @@ def desembrulhar_documento(chave: str):
     return _callback
 
 
+def tirar_envelope_do_documento(chave: str):
+    """after_agent_callback: tira do documento que gente lê o envelope JSON que o autor pôs no fim, logo que ele é gravado
+    (`pipeline.artifacts.sem_envelope_do_agente`). O resumido das 15 sessões do acervo de 24/10/2026 terminava no JSON, e
+    o envelope dele não é lido por ninguém: nenhum gate o confere, e o `.md` é o que o time de produto lê."""
+    def _callback(callback_context: CallbackContext) -> None:
+        from pipeline.artifacts import sem_envelope_do_agente
+
+        texto = callback_context.state.get(chave)
+        if isinstance(texto, str) and texto:
+            limpo = sem_envelope_do_agente(texto)
+            if limpo != texto:
+                callback_context.state[chave] = limpo
+        return None
+
+    _callback.__name__ = f"tirar_envelope_{chave}"
+    return _callback
+
+
 def copiar_textos_chave(chave: str):
     """after_agent_callback: os textos-chave do one-pager copiados por código para o documento que o autor acabou de
     gravar (PR 7 do plano «Produto dono do contrato», D1).

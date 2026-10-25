@@ -390,6 +390,10 @@ async def run_orchestrator_pipeline_stream(
         # sabia quanto custa gerar uma missão nem qual agente pesa — e sem isso não há como
         # decidir onde cortar contexto, nem justificar o gasto.
         tokens_por_agente: Dict[str, Dict[str, int]] = {}
+        # Cada rodada de cada gate, antes de a seguinte a sobrescrever no estado (`tools/historico_gates.py`)
+        from tools.historico_gates import Coletor as _ColetorHistorico
+
+        historico_gates = _ColetorHistorico(stages, initial_state)
 
         async for event in runner.run_async(user_id=user_id, session_id=session.id, new_message=user_message):
             author = getattr(event, "author", None) or "Orchestrator"
@@ -465,6 +469,7 @@ async def run_orchestrator_pipeline_stream(
 
             # mudanças de status dos gates (state_delta dos EnvelopeGateAgent)
             delta = getattr(getattr(event, "actions", None), "state_delta", None) or {}
+            historico_gates.observar(author, delta)
             status_delta = {k: v for k, v in delta.items() if k in STATUS_KEYS}
             if status_delta:
                 known_status.update(status_delta)
@@ -518,6 +523,15 @@ async def run_orchestrator_pipeline_stream(
         final_state["execucao"]["custo"] = esta
         final_state[KEY_CUSTO] = acumular((initial_state or {}).get(KEY_CUSTO) or final_state.get(KEY_CUSTO),
                                           esta, list(stages or settings_exec.pipeline_stages))
+        from tools.historico_gates import (KEY as _KEY_HISTORICO, KEY_EXECUCAO_COMPLETA as _KEY_HISTORICO_COMPLETO,
+                                           acumular as _acumular_historico, resumo as _resumo_historico)
+
+        # o estado leva o resumo; os textos dos relatórios vão só para `historico-gates.json` (revisão do PR #83)
+        _execucao_historico = historico_gates.execucao()
+        _historico = _acumular_historico(final_state.get(_KEY_HISTORICO), _resumo_historico(_execucao_historico))
+        if _historico:
+            final_state[_KEY_HISTORICO] = _historico
+            final_state[_KEY_HISTORICO_COMPLETO] = _execucao_historico
 
         output_dir: Optional[Path] = None
         artifacts_manifest: List[Dict[str, Any]] = []

@@ -29,11 +29,25 @@ def citacao(achado: Dict[str, Any]) -> str:
     return next((str(achado[c]) for c in CAMPOS_DE_CITACAO if str(achado.get(c) or "").strip()), "")
 
 
+def normalizar(texto: str) -> str:
+    """O documento na forma em que `existe` procura a citação (sem acento, marcação nem aspas)."""
+    from tools.fidelidade import _norm
+
+    return _norm(texto or "")
+
+
+def existe(cit: str, documento_normalizado: str) -> bool:
+    """A citação existe no documento já normalizado (`normalizar`). A regra é a dos juízes de fidelidade; este é o ponto
+    único por onde os outros módulos a usam, sem importar o que `tools/fidelidade.py` tem de privado (revisão do PR #83,
+    25/10/2026: `tools/rota_achados.py` importava `_citacao_confere` e `_norm` direto)."""
+    from tools.fidelidade import _citacao_confere
+
+    return _citacao_confere(cit, documento_normalizado)
+
+
 def conferir(achados: Iterable[Dict[str, Any]], documentos: str) -> List[Dict[str, Any]]:
     """Rebaixa, no lugar, cada achado bloqueante cuja citação não existe nos documentos. Devolve os rebaixados."""
-    from tools.fidelidade import _citacao_confere, _norm
-
-    docs = _norm(documentos or "")
+    docs = normalizar(documentos)
     rebaixados: List[Dict[str, Any]] = []
     if not docs:
         return rebaixados
@@ -43,7 +57,7 @@ def conferir(achados: Iterable[Dict[str, Any]], documentos: str) -> List[Dict[st
         cit = citacao(a)
         if not cit or len(cit.split()) < MIN_PALAVRAS:
             continue
-        if not _citacao_confere(cit, docs):
+        if not existe(cit, docs):
             a["severidade_original"] = a.get("severidade")
             a["severidade"] = "atencao"
             a["citacao_nao_confere"] = True

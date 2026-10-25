@@ -33,6 +33,7 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from tools import citacoes
+from tools.envelope_relatorio import relatorio_com_envelope, relatorio_do_gate
 
 KEY_LINHA_DE_BASE = "linha_de_base"
 KEY_LINHA_DE_BASE_REPORT = "linha_de_base_report"
@@ -170,15 +171,30 @@ def aplicar(estado: Dict[str, Any], base: Dict[str, Dict[str, Any]], edicoes: It
                 a["resumo"] = f"[não causado pela correção — {motivo}] {a.get('resumo') or ''}".strip()
                 rebaixados += 1
         novo = {**envelope, "achados": achados}
+        nota = ""
         if rebaixados and rebaixados == len(bloqueios) and str(estado.get(k) or "") == "bloqueado":
             novo.update(status="amarelo", veredito_original=envelope.get("status"))
             delta[k] = "amarelo"
-            relatorio_key = k[: -len("_status")] + "_report"
-            if isinstance(estado.get(relatorio_key), str):
-                delta[relatorio_key] = estado[relatorio_key] + (
-                    f"\n\n---\n> 📏 **Linha de base da correção pontual:** {rebaixados} bloqueio(s) não ligados às trocas da "
+            nota = (f"---\n> 📏 **Linha de base da correção pontual:** {rebaixados} bloqueio(s) não ligados às trocas da "
                     "correção (trecho que ela não tocou, ou regra que este gate não aplicava à versão aprovada) — "
                     "rebaixados a atenção. Veredito: 🟡.")
+        relatorio_key = relatorio_do_gate(k)
+        if rebaixados and relatorio_key and isinstance(estado.get(relatorio_key), str):
+            # O relatório termina no envelope novo e o cabeçalho diz o veredito novo. Até 25/10/2026 só a nota entrava, e
+            # a fidelidade de e89e91b3 e 60cfa7f4 seguia «Veredito: 🔴» com o envelope antigo no fim e o status em 🟡
+            texto = estado[relatorio_key]
+            # e a marca de cada achado rebaixado também: «🔴 **F21**» seguia no corpo da fidelidade de 60cfa7f4 com o achado
+            # já em atenção no envelope (F26 em e89e91b3). É a troca que o #84 (C2) faz em `relatorio_rebaixado`, aqui
+            # para os dois PRs ficarem com uma regra só (revisão do PR #83, 25/10/2026)
+            for a in achados:
+                if isinstance(a, dict) and a.get("linha_de_base") in (TEXTO_INALTERADO, FORA_DA_CORRECAO) and a.get("id"):
+                    texto = texto.replace(f"🔴 **{a['id']}**", f"🟡 **{a['id']}**")
+            delta[relatorio_key] = relatorio_com_envelope(texto, novo, nota)
+        elif nota and not relatorio_key and isinstance(estado.get(k[: -len("_status")] + "_report"), str):
+            # gate sem relatório próprio (`SEM_RELATORIO_PROPRIO`): o relatório é a resposta do agente, com o envelope
+            # dele, e fica; a nota do veredito 🟡 entra no fim, como até 25/10/2026, para relatório e status não divergirem
+            chave_nota = k[: -len("_status")] + "_report"
+            delta[chave_nota] = estado[chave_nota] + "\n\n" + nota
         delta[f"{k}_envelope"] = novo
     delta.update(_degradacoes_sem_gate_vivo(estado, delta, chaves_status))
     return delta, linhas

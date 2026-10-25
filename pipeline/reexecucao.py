@@ -63,6 +63,19 @@ def _com_governanca(estado: Dict[str, Any], conversa: Dict[str, Any]) -> None:
     if fluxo is not None:
         estado[KEY_GOVERNANCA] = governanca(fluxo)
 
+
+def _com_liberacoes(estado: Dict[str, Any], conversa: Dict[str, Any]) -> None:
+    """Tira da herança a reprovação que uma pessoa liberou no parecer em vigor (`tools/liberacao.py`), a cada etapa que
+    começa. Na exp02ef1b (4fd72a9a, 23/10/2026) o admin liberou o design com exceção e o dev rodou com
+    `pipeline_bloqueado` e o motivo do QA de design herdados: 33 agentes provisórios e `status: blocked` no
+    `conversa.json` de uma missão que aguardava o parecer de dev. Sessão sem parecer humano fica como está."""
+    from pipeline.passagem import fluxo_de
+    from tools import liberacao
+
+    fluxo = fluxo_de(conversa or {})
+    if fluxo is not None:
+        estado.update(liberacao.aplicar(estado, fluxo.get("pareceres") or []))
+
 #: Etapas de onde uma correção pode recomeçar, na ordem da esteira. `transversal` refaz só
 #: diagnóstico e aprendizado. `produto` entrou em 23/09/2026: sem ela, a triagem mandava para `spec`
 #: pedidos de mecânica, etapas e narrativa — e a correção a partir da spec não refaz o one-pager nem
@@ -349,7 +362,13 @@ _ETAPAS_REFEITAS: Dict[str, frozenset] = {
 ARQUIVOS_DE_BACKUP = (
     "estado.json", "conversa.json", "manifesto-artefatos.json",
     "diagnostico-execucao.md", "aprendizado.md",
+    # o histórico por rodada dos gates volta com o estado de onde ele sai (`tools/historico_gates.py`)
+    "historico-gates.json",
 )
+#: Arquivos da raiz que a própria execução cria: sem eles no backup, a restauração os apaga (`ARQUIVO_AUSENTES_NO_BACKUP`).
+#: O `historico-gates.json` criado por uma execução que falhou ficava ao lado do estado restaurado, com uma execução que
+#: o estado não tem (revisão do PR #83, 25/10/2026).
+CRIADOS_PELA_EXECUCAO = frozenset({"historico-gates.json"})
 PASTA_CORRECOES = ".correcoes"
 
 
@@ -933,17 +952,19 @@ def fazer_backup(run_dir: Path, etapa: str, removidas: Sequence[str]) -> Path:
     run_dir = Path(run_dir)
     destino = run_dir / PASTA_CORRECOES / f"{time.strftime('%Y%m%d-%H%M%S')}-{etapa}"
     destino.mkdir(parents=True, exist_ok=True)
+    ausentes: List[str] = []
     for nome in ARQUIVOS_DE_BACKUP:
         origem = run_dir / nome
         if origem.is_file():
             shutil.copy2(origem, destino / nome)
+        elif nome in CRIADOS_PELA_EXECUCAO:
+            ausentes.append(nome)
     for rel in arquivos_das_chaves(removidas):
         origem = run_dir / rel
         if origem.is_file():
             alvo = destino / rel
             alvo.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(origem), str(alvo))
-    ausentes: List[str] = []
     for rel in reescritos_sem_cair(removidas):
         origem = run_dir / rel
         if origem.is_file():
@@ -1238,6 +1259,7 @@ async def executar_correcao_stream(
             novo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
         novo[KEY_PEDIDOS_DO_PO] = _pedidos_do_po(conversa)
         _com_governanca(novo, conversa)
+        _com_liberacoes(novo, conversa)
         return novo, chaves
 
     limpo, removidas = estado_inicial()
@@ -1570,6 +1592,7 @@ async def iniciar_etapa_stream(
     limpo[KEY_NOTAS_DE_PASSAGEM] = notas_de_passagem
     limpo[KEY_PEDIDOS_DO_PO] = _pedidos_do_po(conversa)
     _com_governanca(limpo, conversa)
+    _com_liberacoes(limpo, conversa)
     backup = fazer_backup(run_dir, f"passagem-{etapa}", removidas)
     inicio = time.time()
     yield {"type": "etapa_started", "etapa": etapa, "stages": stages, "timestamp": inicio,

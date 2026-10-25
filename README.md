@@ -647,6 +647,7 @@ output/20260904-143000-exp-04-fake-news/
 ├── aprendizado.md                     # 🧠 Registro de aprendizado e catálogo
 ├── briefing-original.md               # 💡 Insumo original enviado pelo usuário
 ├── estado.json                        # 🔍 Estado completo serializado (session.state)
+├── historico-gates.json               # 🧾 Relatório, veredito e rodada de cada gate, por execução (as rodadas reprovadas não somem)
 ├── manifesto-artefatos.json           # 📋 Metadados de todos os arquivos gerados
 ├── produto/
 │   ├── 00g-mapa-conceitual.md         # Conceito limiar, núcleos e crenças do material do bimestre

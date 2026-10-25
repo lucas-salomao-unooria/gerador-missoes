@@ -69,8 +69,9 @@ from agents.base import create_llm_agent
 from agents.banca import get_banca
 from agents.comite import build_comite_canais_loop, build_comite_final_loop
 from agents.juiz import get_fidelidade_check, get_juiz_de_achados
+from agents.rota import RotaDeAchadosAgent
 from agents.callbacks import (dispensar_ideacao_com_one_pager_do_po, manter_completude_entre_rodadas, marcar_heranca,
-                              preservar_one_pager)
+                              preservar_one_pager, tirar_envelope_do_documento)
 from agents.checkers import (
     DocumentoObrigatorioAgent,
     SecaoSplitAgent,
@@ -418,6 +419,7 @@ def get_one_pager_resumido_agent(**kw) -> LlmAgent:
         instruction=load_prompt("produto/061_one_pager_resumido.md"),
         output_key="one_pager_resumido",
         before_agent_callback=marcar_heranca,
+        after_agent_callback=tirar_envelope_do_documento("one_pager_resumido"),
         **kw,
     )
 
@@ -580,6 +582,13 @@ def _build_spec_loop(kw: dict, settings, rodadas_spec: int) -> LoopAgent:
             *get_banca("produto", "AC", 55, rotulo="Banca de produto",
                        titulo="Banca de validação — fim de produto",
                        report_key="banca_produto_report", status_key="banca_produto_status", **kw),
+            # O bloqueio da banca que cita o one-pager, e não a spec, vai ao PO: o autor da spec não pode contrariar o
+            # one-pager (A054), e a rodada dele se gastava à toa (76d9af6e, PED-06, 23/10/2026)
+            RotaDeAchadosAgent(
+                name="A058bRotaDeAchados",
+                description="Bloqueio da banca de produto que cita o one-pager, e não a spec, vai ao PO no parecer de produto — não volta ao autor da spec. O veredito do gate não muda.",
+                status_keys=["banca_produto_status"],
+            ),
             SaidaDeLoopAgent(
                 name="A059SpecCheck",
                 description="Currículo, manifesto, matriz de evidência, perguntas de produto, lacunas e fidelidade ao one-pager aprovado conformes encerram o loop; reprovados devolvem a spec ao autor com os relatórios.",
@@ -926,7 +935,8 @@ SPEC_AGENT_IDS = ["A045SpecMissao", "A045bCompletudeSpec", "A045cCompletudeSpecS
                   "A046BnccCheck", "A047ManifestoCheckProduto", "A048EvidenciaCheck",
                   "A050PerguntasCheck", "A051JuizPerguntas", "A052JuizPerguntasCheck",
                   "A054ConteudoAprovadoSpec", "A057aBancaProdutoNarrativa", "A057bBancaPedagogiaBncc",
-                  "A058BancaConsolidacao", "A059SpecCheck", "A060FidelidadeProduto", "A061OnePagerResumido",
+                  "A058BancaConsolidacao", "A058bRotaDeAchados", "A059SpecCheck", "A060FidelidadeProduto",
+                  "A061OnePagerResumido",
                   "A062ConteudoAprovadoResumido", "A063ResumidoRodada"]
 
 PRODUTO_METADATA = [
@@ -1002,6 +1012,7 @@ PRODUTO_METADATA = [
     {"id": "A057aBancaProdutoNarrativa", "name": "057a · Banca no fim de produto: produto e narrativa", "icon": "🅰️", "output_key": "banca_produto_narrativa", "prompt_file": "dev/validacao_produto_narrativa.md", "description": "Os critérios PROD da banca que a spec decide, antes do parecer do PO. O achado volta ao autor da spec na próxima rodada."},
     {"id": "A057bBancaPedagogiaBncc", "name": "057b · Banca no fim de produto: pedagogia e BNCC", "icon": "🅲", "output_key": "banca_produto_pedagogia", "prompt_file": "dev/validacao_pedagogia_bncc.md", "description": "Os critérios PED da banca sobre a spec, antes do parecer do PO."},
     {"id": "A058BancaConsolidacao", "name": "058 · Banca de produto (determinístico)", "icon": "⚖️", "output_key": "banca_produto_report", "prompt_file": None, "description": "Veredito da banca no fim de produto: o pior das dimensões, com os bloqueantes lidos dos arquivos de critério. 🔴 devolve a spec ao autor e, esgotadas as rodadas, recusa o de acordo."},
+    {"id": "A058bRotaDeAchados", "name": "058b · Rota dos achados da banca (determinístico)", "icon": "🧑", "output_key": "banca_produto_status_envelope", "prompt_file": None, "description": "O bloqueio da banca de produto que cita o one-pager, e não a spec, vai ao PO no parecer de produto (Refazer com a mudança): o autor da spec não pode contrariar o one-pager, e a rodada dele não se gasta nisso. O veredito do gate não muda."},
     {"id": "A059SpecCheck", "name": "059 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
     {"id": "A060FidelidadeProduto", "name": "060 · Fidelidade ao pedido do PO e ao briefing", "icon": "📌", "output_key": "fidelidade_report", "prompt_file": None, "description": "Núcleo, one-pager e spec contra todos os pedidos do PO e o briefing. Pedido sem prova é 🔴 e recusa o de acordo de produto; conflito com regra da esteira vira decisão do PO."},
     {"id": "A061OnePagerResumido", "name": "061 · One-pager resumido", "icon": "🗂️", "output_key": "one_pager_resumido", "prompt_file": "produto/061_one_pager_resumido.md", "description": "O one-pager no formato do time de produto para avaliação pedagógica: ficha, ideia, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário e takeaway. Sai em .md, .docx e .html."},

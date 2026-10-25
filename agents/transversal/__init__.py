@@ -49,7 +49,25 @@ def get_aprendizado_agent(
         output_key="aprendizado_registro",
         thinking_budget=thinking_budget,
         include_thoughts=include_thoughts,
+        after_agent_callback=conferir_aprendizado,
     )
+
+
+def conferir_aprendizado(callback_context) -> None:
+    """after_agent_callback do A128: o status da linha de catálogo e os fatos em código (`tools/aprendizado.py`). Na
+    exp06ef1b (53e011b6, R10 do levantamento de 24/10/2026) o registro dizia «Mecânicas ausentes encontradas
+    tardiamente: Nenhuma» num PRD que trocou a H3, e propunha a missão «em produção»."""
+    from pipeline.artifacts import e_mensagem_de_pulo
+    from tools.aprendizado import conferir
+
+    state = callback_context.state
+    texto = state.get("aprendizado_registro")
+    if not isinstance(texto, str) or not texto.strip() or e_mensagem_de_pulo(texto):
+        return None
+    novo = conferir(texto, state.to_dict() if hasattr(state, "to_dict") else dict(state))
+    if novo != texto:
+        state["aprendizado_registro"] = novo
+    return None
 
 
 def get_triagem_correcao_agent(thinking_budget: Optional[int] = 1024) -> LlmAgent:

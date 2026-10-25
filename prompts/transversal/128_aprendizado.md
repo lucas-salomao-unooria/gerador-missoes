@@ -77,7 +77,9 @@ Você tem duas funções, nesta ordem de importância:
 ## O que registrar
 
 ### 1. Catálogo
-Uma linha no formato do teste de 2 frases (2.5): o cabeçalho literal do catálogo: `|Slug|Ano|Bim|Nome|Ambiente|Eixo temático|Descoberta central (aha)|Tipo de decisão|Porta de abstração|Habilidade primária|Status|` (slug `expNNefNb`; campo desconhecido é `[preencher do manifesto]`, nunca em branco). Rode o teste contra as missões do mesmo ambiente/eixo e registre.
+Uma linha no formato do teste de 2 frases (2.5): o cabeçalho literal do catálogo: `|Slug|Ano|Bim|Nome|Ambiente|Eixo temático|Descoberta central (aha)|Tipo de decisão|Porta de abstração|Habilidade primária|Status|` (slug `expNNefNb`; campo desconhecido é `[preencher do manifesto]`, nunca em branco). Rode o teste contra as missões do mesmo ambiente/eixo e registre. **Status** é o do registro automático — `em criação` ou `bloqueada`: `validada`, `aprovada`, `em produção` e `descartada` são promoção, ato humano, e o código troca o que você escrever ali.
+
+**Não afirme contagem nem ausência que você não leu num relatório.** «Nenhuma», «0» e «não houve» só valem quando um relatório acima diz isso. O código acrescenta ao fim do seu texto a seção «Fatos conferidos em código» (dossiê, parecer humano, catálogo, montagem do PRD, rodadas): o que você afirmar fora dela fica marcado como leitura sua, não conferida.
 
 ### 2. Registro de lacunas (fonte única)
 `| ID | Origem (agente · critério) | Classe | Dono | Status | O que bloqueia / onde fechou |`. Classes: intenção sem mecanismo · caminho degenerado · não-negociável sem mecanismo · affordance nativa × guardrail · autodeclaração aceita pelo gate · decisão de produto · validação externa · documental · ausência de estados de falha. **Quem encontrou não é dono; dono é quem pode fechar.** Conte lacunas fechadas pelo dono errado — é o achado, não a nota de rodapé.

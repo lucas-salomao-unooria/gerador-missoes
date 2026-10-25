@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Dict, List, Optional, Sequence, Tuple
 
 from google.adk.agents.base_agent import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
@@ -3369,8 +3369,12 @@ def bloco_versao_da_rodada(chave: str, documento: str) -> str:
 PREFIXO_RETRABALHO = "retrabalho_"
 
 
-def motivos_do_retrabalho(state: Dict[str, Any], reprovados: List[str]) -> str:
-    """Os relatórios dos gates reprovados na rodada, como pedido de correção para o editor de trocas."""
+def motivos_do_retrabalho(state: Dict[str, Any], reprovados: List[str], ao_po: Sequence[str] = ()) -> str:
+    """Os relatórios dos gates reprovados na rodada, como pedido de correção para o editor de trocas.
+
+    Os bloqueios que vão ao PO (`tools/rota_achados.py`), dos gates reprovados e dos que reprovaram só por eles (`ao_po`),
+    entram no fim como contexto: o achado misto da 76d9af6e (PED-06, 23/10/2026) também apontava uma falta na tabela 9b
+    da spec, e sem o contexto essa parte sumia do retrabalho. Eles não decidem a rodada (`SaidaDeLoopAgent`)."""
     from tools import citacoes
 
     blocos = ["Os gates desta rodada reprovaram o documento. Corrija exatamente o que eles apontam, com o mínimo de "
@@ -3378,14 +3382,69 @@ def motivos_do_retrabalho(state: Dict[str, Any], reprovados: List[str]) -> str:
     for k in reprovados:
         relatorio = str(state.get(k[: -len("_status")] + "_report") or "").strip() if k.endswith("_status") else ""
         envelope = state.get(f"{k}_envelope")
-        bloqueios = [a for a in ((envelope or {}).get("achados") or []) if isinstance(a, dict) and citacoes.bloqueante(a)]
+        # o bloqueio que vai ao PO (`tools/rota_achados.py`) não é pedido ao autor: ele não pode consertá-lo
+        bloqueios = [a for a in ((envelope or {}).get("achados") or []) if isinstance(a, dict) and citacoes.bloqueante(a)
+                     and a.get("rota") != "po"]
         blocos.append(f"### Gate `{k}`")
         blocos += [f"- {a.get('codigo') or a.get('id') or 'achado'}: {a.get('resumo') or ''}"
                    + (f" — trecho: «{citacoes.citacao(a)}»" if citacoes.citacao(a) else "") for a in bloqueios]
         if relatorio:
             blocos += ["", relatorio[:8000]]
         blocos.append("")
+    do_po = [(k, a) for k in list(reprovados) + [g for g in ao_po if g not in reprovados]
+             for a in ((state.get(f"{k}_envelope") or {}).get("achados") or [])
+             if isinstance(a, dict) and citacoes.bloqueante(a) and a.get("rota") == "po"]
+    if do_po:
+        blocos += ["### Contexto: achados que vão ao PO",
+                   "O conteúdo citado é do one-pager, e quem decide é o PO. Não altere o que o one-pager decide nem o "
+                   "contrarie; se o achado também aponta uma falta na spec, conserte só essa falta.", ""]
+        blocos += [f"- `{k}` · {a.get('codigo') or a.get('id') or 'achado'}: {a.get('resumo') or ''}" for k, a in do_po]
+        blocos.append("")
     return "\n".join(blocos).strip()
+
+
+def _ajustes_nao_aplicados(state: Any, envelope_exige: Dict[str, str], rodada: int) -> Dict[str, Any]:
+    """O delta que deixa à vista o ajuste exigido que o loop não aplicou: acabaram as rodadas com o parecer ainda pedindo
+    ajuste, e o status dizia «aprovado com ressalvas» e seguia em silêncio.
+
+    274a2e75 (exp03ef1b, 07/10/2026): o envelope da adequação trazia `"status": "aprovado_com_ressalvas",
+    "ajustes_exigidos": 1` e o achado E2-A1 com severidade «bloqueio»; com `avaliacoes_rodada` = 1 o revisor movido pelo
+    parecer (A034) não rodou, e nada no estado dizia que o ajuste ficou. O teto 2 já é o padrão desde então, mas na última
+    rodada o caso se repete. Caminho conservador (backlog C5, 25/10/2026): o veredito não sobe a 🔴 — o gate é
+    consultivo —, e o ajuste vira decisão de pessoa no envelope e no relatório, com o gate em 🟡 e `precisa_humano`, que o
+    cartão do parecer abre expandido."""
+    from tools.envelope_relatorio import relatorio_com_envelope, relatorio_do_gate
+
+    delta: Dict[str, Any] = {}
+    for k, campo in (envelope_exige or {}).items():
+        envelope = state.get(f"{k}_envelope")
+        if not isinstance(envelope, dict):
+            continue
+        try:
+            exigidos = int(envelope.get(campo) or 0)
+        except (TypeError, ValueError):
+            exigidos = 0
+        if exigidos <= 0 or any(isinstance(a, dict) and a.get("codigo") == "ajuste-exigido-nao-aplicado"
+                                for a in envelope.get("achados") or []):
+            continue
+        novo = {**envelope, "precisa_humano": True,
+                "achados": list(envelope.get("achados") or []) + [{
+                    "severidade": "decisao_humana", "codigo": "ajuste-exigido-nao-aplicado",
+                    "agente_responsavel": "produto",
+                    "resumo": (f"O parecer exigiu {exigidos} ajuste(s) (`{campo}`) e o loop acabou na rodada {rodada} "
+                               "sem o revisor aplicá-los: o one-pager segue sem eles. Decida no parecer de produto — "
+                               "Refazer com o ajuste, ou de acordo registrando que ele fica de fora."),
+                }]}
+        delta[f"{k}_envelope"] = novo
+        if str(state.get(k) or "").strip().lower() in ("aprovado", "aprovado_com_ressalvas", ""):
+            delta[k] = "amarelo"
+        chave_relatorio = relatorio_do_gate(k)
+        if chave_relatorio and isinstance(state.get(chave_relatorio), str):
+            delta[chave_relatorio] = relatorio_com_envelope(
+                state[chave_relatorio], novo,
+                f"---\n> 🧑 **Ajuste exigido não aplicado:** {exigidos} ajuste(s) pedido(s) por este parecer ficaram sem "
+                f"revisão quando o loop acabou (rodada {rodada}). Decisão do PO no parecer de produto.")
+    return delta
 
 
 class SaidaDeLoopAgent(BaseAgent):
@@ -3445,10 +3504,23 @@ class SaidaDeLoopAgent(BaseAgent):
                 exigidos = 0
             if exigidos > 0 and k not in reprovados:
                 reprovados.append(k)
+        # O gate que só reprova por achado sobre o conteúdo do one-pager não volta ao autor do loop: ele não pode
+        # consertá-lo, e o achado vai ao PO no parecer (`tools/rota_achados.py`; 76d9af6e, PED-06, 23/10/2026). O gate
+        # continua 🔴 — só a rodada deixa de ser gasta nele.
+        from tools.rota_achados import so_do_po
+
+        ao_po = [k for k in reprovados if so_do_po(state.get(f"{k}_envelope"))]
+        reprovados = [k for k in reprovados if k not in ao_po]
         esgotou = rodada >= self.max_rounds or (self.rodadas_com_autor_livre and self.autores_travados(state))
         delta: Dict[str, Any] = {self.rodada_key: rodada}
+        if reprovados and esgotou:
+            delta.update(_ajustes_nao_aplicados(state, self.envelope_exige, rodada))
 
-        if not reprovados:
+        if not reprovados and ao_po:
+            # «✅ tudo conforme» com o gate ainda 🔴 contradizia a nota do PO logo abaixo (revisão do PR #83, 25/10/2026)
+            msg = f"🧑 {self.rotulo}: nada para o autor corrigir na rodada {rodada}; o 🔴 restante vai ao PO."
+            escalate = True
+        elif not reprovados:
             msg = f"✅ {self.rotulo}: tudo conforme na rodada {rodada}."
             escalate = True
         elif esgotou:
@@ -3465,6 +3537,9 @@ class SaidaDeLoopAgent(BaseAgent):
                 "O autor do documento recebe o relatório e reescreve."
             )
             escalate = False
+        if ao_po:
+            msg += ("\n🧑 " + ", ".join(f"`{k}`" for k in ao_po) + ": reprovado só por achado sobre o conteúdo do "
+                    "one-pager — vai ao PO no parecer de produto, não ao autor do loop.")
 
         # A versão desta rodada vai ao autor na seguinte, para ele corrigir em vez de reescrever do zero: só o que o
         # gate confere ficava protegido entre rodadas, e o resto podia mudar sem ninguém ver (auditoria de 07/10/2026).
@@ -3483,7 +3558,7 @@ class SaidaDeLoopAgent(BaseAgent):
             # O que os gates reprovaram, para o retrabalho por trocas (`agents.callbacks.retrabalhar_por_trocas`): na
             # rodada seguinte o documento é corrigido trecho a trecho, e o que já passou não muda.
             delta[f"{PREFIXO_RETRABALHO}{chave}"] = (
-                motivos_do_retrabalho(state, reprovados) if documento and not escalate else "")
+                motivos_do_retrabalho(state, reprovados, ao_po) if documento and not escalate else "")
 
         yield Event(
             invocation_id=ctx.invocation_id,
