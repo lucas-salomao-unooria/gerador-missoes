@@ -1276,6 +1276,18 @@ for _codigo_novo, _exp_nova in {
         "O documento declara um tempo total na tela diferente do que o one-pager aprovado dá.",
         "A aula foi planejada com o tempo aprovado.",
         _REFAZER_DA_ETAPA + "o tempo aprovado. Se você quer outro tempo, o pedido é a produto.", None),
+    "secao-trocada": _x(
+        "Etapa num app diferente do aprovado",
+        "A especificação põe uma ou mais etapas num app (seção do design system) diferente do que o one-pager aprovado "
+        "define na verificação de ambiente.",
+        "Design e PRD copiam a especificação: a missão sai com telas num app que você não aprovou.",
+        _REFAZER_PRODUTO + " Se você quer o app novo, o pedido é mudar o one-pager.", PO),
+    "transicao-acrescentada": _x(
+        "Passagem entre apps que o one-pager não tem",
+        "A especificação leva o estudante de um app a outro num ponto em que o one-pager aprovado não prevê essa "
+        "passagem.",
+        "Cada troca de app é uma interface nova para o estudante, e a jornada muda sem a sua decisão.",
+        "Confira a passagem. Se ela não deve existir, use **Refazer** no parecer de produto, citando o ponto.", PO),
     "tempo-de-etapa-divergente": _x(
         "Tempo por etapa diferente do aprovado",
         "O tempo na tela de cada etapa não bate com a tabela de tempos do one-pager aprovado.",

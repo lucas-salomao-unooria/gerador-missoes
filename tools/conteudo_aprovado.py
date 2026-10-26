@@ -735,6 +735,62 @@ def _tempo(texto: str, one_pager: str, onde: str, etapa: str) -> List[Dict[str, 
         f"é do PO decidir no one-pager — aqui ela entra só como ressalva não incorporada.", etapa)]
 
 
+#: Célula do mapa que a spec deixou para o PO: não é troca, é pendência.
+_RE_SECAO_PENDENTE = re.compile(r"\[(?:ABERTO|PROPOSTA|PAR[ÂA]METRO|PEND[ÊE]NCIA|LACUNA)", re.I)
+
+
+def _secoes(spec: str, one_pager: str) -> List[Dict[str, str]]:
+    """O app de cada etapa e as passagens entre apps, como o §5 do one-pager aprovou.
+
+    Na exp02em1b (sessão 19a39981, 25/10/2026) o one-pager punha Explicar e Refletir no `unoovista`, com uma transição
+    só; o bloco 0 da spec as moveu para o `unooriaai` e inventou a volta («Notificação nativa do grêmio»). O design
+    copiou a spec, o PRD seguiu o design, e só o juiz de contradições do dev acusou — e acusou o `prd-writer`. A
+    plataforma (`unooria`) não é app clonado: tela de plataforma numa etapa não troca o app que o PO aprovou."""
+    from tools import secoes as sec
+
+    aprovado: Dict[str, Set[str]] = {}
+    for linha in sec.mapa_por_etapa(one_pager):
+        if linha["etapa"] and linha["secoes"]:
+            aprovado.setdefault(linha["etapa"], set()).update(linha["secoes"])
+    if not aprovado:
+        return []
+    achados: List[Dict[str, str]] = []
+    trocadas: Dict[str, str] = {}
+    for linha in sec.mapa_por_etapa(spec):
+        etapa = linha["etapa"]
+        if etapa not in aprovado or etapa in trocadas or _RE_SECAO_PENDENTE.search(linha["celula"]):
+            continue
+        if any(s not in aprovado[etapa] and s != sec.SECAO_DA_PLATAFORMA for s in linha["secoes"]):
+            trocadas[etapa] = linha["celula"]
+    if trocadas:
+        exemplos = "; ".join(
+            f"{etapa.capitalize()}: a spec diz «{celula.strip()}», o one-pager diz "
+            f"{' ou '.join(f'`{s}`' for s in sorted(aprovado[etapa]))}"
+            for etapa, celula in trocadas.items())
+        achados.append(_achado(
+            "secao-trocada",
+            f"O mapa de seções da spec põe {len(trocadas)} etapa(s) num app diferente do que o one-pager aprovado "
+            f"(§5, Verificação de ambiente) — {exemplos}. A spec copia o app de cada etapa e as transições do §5. "
+            "Trocar o app de uma etapa é decisão do PO, no one-pager; se a plataforma não permite, marque "
+            "`[ABERTO — dono: produto: …]` na linha.", "produto"))
+    aprovadas = sec.passagens_aprovadas(one_pager)
+    novas: List[Tuple[str, str]] = []
+    for t in sec.transicoes(spec):
+        for a in sec.secoes_da_celula(t["de"]):
+            for b in sec.secoes_da_celula(t["para"]):
+                par = (a, b)
+                if a != b and sec.SECAO_DA_PLATAFORMA not in par and par not in aprovadas and par not in novas:
+                    novas.append(par)
+    if novas:
+        achados.append(_achado(
+            "transicao-acrescentada",
+            "A spec tem passagem de app que o one-pager aprovado não tem (§5, Transições e mapa por etapa): "
+            + "; ".join(f"`{a}` → `{b}`" for a, b in novas)
+            + ". A spec não cria ida nem volta entre apps: tire a linha, ou leve a passagem ao PO.",
+            "produto", "atencao"))
+    return achados
+
+
 def validar_spec(spec: str, one_pager: str) -> Dict[str, Any]:
     """A spec traduz o one-pager aprovado: mesmas habilidades, mesmo tempo, o podcast declarado."""
     achados: List[Dict[str, str]] = []
@@ -751,6 +807,7 @@ def validar_spec(spec: str, one_pager: str) -> Dict[str, Any]:
             "marque `[ABERTO — dono: produto: …]` dizendo por quê.",
             permitidos=codigos_citados_no_one_pager(one_pager))
     achados += _tempo(spec, one_pager, "a spec", "produto")
+    achados += _secoes(remover_anexo(spec or ""), one_pager)
     achados += _literais(spec, one_pager, ("canal_b", "roteiro"), "na spec", "produto",
                          "A spec copia do one-pager, palavra por palavra: a pergunta e as alternativas do Canal B no "
                          "bloco 9, as perguntas do debate no bloco 8. Melhorar a redação é decisão do PO, no one-pager.")

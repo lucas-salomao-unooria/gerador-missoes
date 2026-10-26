@@ -108,3 +108,60 @@ def test_rastreabilidade_cobra_a_secao_extra_ate_o_prd():
                           "spec_missao": "", "jornada_telas": ""})
     assert ("secao_extra", "unoochat") in {(r["categoria"], r["texto"]) for r in reqs}
     assert rb._presente("secao_extra", "unoochat", "prd", "secoes_ds_extras: [unoochat]")
+
+
+# o app de cada etapa, como o §5 do one-pager aprovou (exp02em1b, sessão 19a39981, 25/10/2026)
+ONE_PAGER_SECOES = (
+    "## 5. Verificação de ambiente\n\n### Verificação por etapa\n\n"
+    "| Etapa | Seção do DS | Dentro do ambiente? | Escape permitido? | Affordance nativa usada |\n|---|---|---|---|---|\n"
+    "| 1. Desafiar | unooriaai | Sim | Não | PromptSuggestion |\n"
+    "| 3. Decidir | unooriaai → unoovista | Sim (modal de exportação) | Não | Publicar no Unoovista |\n"
+    "| 4. Resultado/Aha | unoovista | Sim | Não | FeedScroll |\n"
+    "| 5. Explicar | unoovista | Sim (painel analítico de bastidores/insights da postagem) | Não | Indicadores |\n"
+    "| 6. Refletir | unoovista | Sim | Não | Campo de texto |\n\n"
+    "### Transições\n\n| De | Para | Gatilho na história (notificação, link, compartilhar) | Etapa |\n|---|---|---|---|\n"
+    "| unooriaai | unoovista | Publicar no Unoovista | Decidir → Resultado/Aha |\n")
+
+
+def _spec_secoes(explicar="unooriaai", refletir="unooriaai", volta=True):
+    return (
+        "### Mapa de seções\n| Etapa | Tela/momento | Seção do DS | Papel na experiência |\n|---|---|---|---|\n"
+        "| 1. Desafiar | Briefing | unooriaai | Chat |\n| 3. Decidir | Modal | unooriaai | Envio |\n"
+        "| 4. Resultado / Aha | Feed noturno | unoovista | Feed |\n"
+        f"| 5. Explicar | Painel analítico de bastidores | {explicar} | Dados |\n"
+        f"| 6. Refletir | Diário de bordo | {refletir} | Reflexão |\n\n"
+        "### Transições\n| De | Para | Gatilho na história | Etapa |\n|---|---|---|---|\n"
+        "| unooriaai | unoovista | Link nativo ao clicar em \"Publicar no Unoovista\" | 3 |\n"
+        + ("| unoovista | unooriaai | Notificação nativa do grêmio para análise | 4 |\n" if volta else ""))
+
+
+def test_spec_que_troca_o_app_de_uma_etapa_bloqueia_em_produto():
+    from tools import conteudo_aprovado as ca
+
+    achados = {a["codigo"]: a for a in ca.validar_spec(_spec_secoes(), ONE_PAGER_SECOES)["achados"]}
+    trocada = achados["secao-trocada"]
+    assert trocada["severidade"] == "bloqueio" and trocada["etapa"] == "produto"
+    assert "Explicar" in trocada["resumo"] and "Refletir" in trocada["resumo"]
+    assert achados["transicao-acrescentada"]["severidade"] == "atencao"
+    assert "`unoovista` → `unooriaai`" in achados["transicao-acrescentada"]["resumo"]
+
+
+def test_spec_fiel_ao_mapa_do_one_pager_passa():
+    from tools import conteudo_aprovado as ca
+
+    fiel = _spec_secoes(explicar="unoovista", refletir="unoovista", volta=False)
+    assert ca._secoes(fiel, ONE_PAGER_SECOES) == []
+    # tela da plataforma numa etapa não troca o app aprovado; célula deixada ao PO é pendência, não troca
+    assert ca._secoes(_spec_secoes(explicar="unoovista + unooria", refletir="`unoovista` (extra)", volta=False),
+                      ONE_PAGER_SECOES) == []
+    assert ca._secoes(_spec_secoes(explicar="unooriaai [ABERTO — dono: produto: insights no app?]",
+                                   refletir="unoovista", volta=False), ONE_PAGER_SECOES) == []
+    # one-pager sem mapa: nada a comparar
+    assert ca._secoes(_spec_secoes(), "## 5. Ambiente\nUma seção só.") == []
+
+
+def test_passagens_aprovadas_pelo_mapa_e_pelas_transicoes():
+    assert sec.secoes_da_celula("unooriaai → unoovista") == ["unooriaai", "unoovista"]
+    assert sec.secoes_da_celula("`unoovista` (painel analítico de bastidores/insights)") == ["unoovista"]
+    assert sec.secoes_da_celula("a definir com o PO") == []
+    assert sec.passagens_aprovadas(ONE_PAGER_SECOES) == {("unooriaai", "unoovista")}

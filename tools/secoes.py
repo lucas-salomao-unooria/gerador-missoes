@@ -181,6 +181,48 @@ def transicoes(texto: str) -> List[Dict[str, str]]:
             for tabela in _tabelas(texto, ["de", "para", "gatilho"]) for l in tabela]
 
 
+def _etapa(celula: str) -> str:
+    """A etapa pela primeira palavra do nome: o número muda entre one-pager e spec («5. Explicar», «Explicar»), e a
+    etapa 4 vem com ou sem o «Aha» («Resultado / Aha», «Resultado/Aha»)."""
+    palavras = [p for p in re.findall(r"[a-z]+", _norm(celula)) if p != "etapa"]
+    return palavras[0] if palavras else ""
+
+
+def secoes_da_celula(celula: str) -> List[str]:
+    """As seções de uma célula «Seção do DS» («unooriaai», «unooriaai → unoovista», «`unoovista` (extra)»). Lê pela
+    forma, não pelo vocabulário do DS: sem a base da plataforma, `secoes_ds()` só conhece as legadas. Prosa não é seção."""
+    secoes: List[str] = []
+    for parte in re.split(r"→|->|,|/|\+|\s+e\s+", re.sub(r"\([^)]*\)", " ", celula or "")):
+        s = re.sub(r"\s*:\s*", ":", parte.strip(" \t`*_\"'«»“”[]")).lower()
+        if _RE_ID_SECAO.match(s) and s not in secoes:
+            secoes.append(s)
+    return secoes
+
+
+def mapa_por_etapa(texto: str) -> List[Dict[str, Any]]:
+    """`{etapa, secoes, celula}` de cada linha das tabelas com «Etapa» e «Seção do DS», na ordem: o «Mapa de seções»
+    e, no one-pager, também a «Verificação por etapa» do §5."""
+    return [{"etapa": _etapa(_coluna(l, "etapa")), "secoes": secoes_da_celula(_coluna(l, "secao do ds")),
+             "celula": _coluna(l, "secao do ds")}
+            for tabela in _tabelas(texto, ["etapa", "secao do ds"]) for l in tabela]
+
+
+def passagens_aprovadas(texto: str) -> set:
+    """Os pares `(de, para)` de app a app que o texto aprova: as linhas de «Transições», a troca de seção entre etapas
+    seguidas de um mapa e a troca dentro de uma etapa, na ordem escrita («unooriaai → unoovista» no Decidir)."""
+    pares = {(a, b) for t in transicoes(texto) for a in secoes_da_celula(t["de"])
+             for b in secoes_da_celula(t["para"]) if a != b}
+    for tabela in _tabelas(texto, ["etapa", "secao do ds"]):
+        anteriores: List[str] = []
+        for l in tabela:
+            atuais = secoes_da_celula(_coluna(l, "secao do ds"))
+            pares |= {(a, b) for a in anteriores for b in atuais if a != b}
+            pares |= {(a, b) for i, a in enumerate(atuais) for b in atuais[i + 1:] if a != b}
+            if atuais:
+                anteriores = atuais
+    return pares
+
+
 def validar(texto: str, principal: str, onde: str, briefing: str = "", serie: Optional[str] = None,
             vocabulario: Optional[Dict[str, Any]] = None) -> List[Dict[str, str]]:
     """Achados sobre as seções extras de `texto` (spec ou one-pager). Sem extra declarada, não há o que conferir."""
