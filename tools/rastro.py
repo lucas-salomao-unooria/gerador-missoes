@@ -1627,9 +1627,12 @@ def validar_prd(prd: str, spec: str = "", banco: str = "", aprovado: str = "") -
     # `exp09ef1b_sessoes.projeto_homologado`, que nenhum DDL declara. Quem codifica escolheria ao acaso.
     from tools.consistencia import conferir_colunas, validar as validar_glossario
     achados.extend(conferir_colunas(texto, referencia=spec))
-    # 9. os nomes do PRD contra o glossário canônico da spec — o PRD é o último a escrever o nome do órgão
+    # 9. os nomes do PRD contra o glossário canônico da spec — o PRD é o último a escrever o nome do órgão. O bloco
+    # de governança não entra: é a esteira que o escreve, e ele cita a conta `admin`, que o glossário da exp01em1b
+    # lista como variante proibida do «Módulo de Homologação» (sessão a38e5b2f, 26/10/2026)
     if spec:
-        achados.extend(validar_glossario(spec, {"PRD": texto}, exigir_glossario=False, etapa="dev",
+        from tools.governanca import sem_bloco
+        achados.extend(validar_glossario(spec, {"PRD": sem_bloco(texto)}, exigir_glossario=False, etapa="dev",
                                          aprovado=aprovado)["achados"])
     # 10. tarefa que consome conteúdo que ninguém escreveu (`tools/conteudo.py`). Sem banco, não se acusa.
     from tools.conteudo import tarefas_sem_conteudo
