@@ -2101,7 +2101,12 @@ def test_base_da_plataforma_lida_do_bucket_e_fixada_por_execucao():
     assert "unooriaai" in get_prompt_raw("references/ds-componentes.md")
     from prompts import list_state_variables
     for copia in ("exemplo-juri-contrato-rotas.md", "openapi-indice.md", "agents-raiz.md"):
-        sobra = list_state_variables(get_prompt_raw(f"references/plataforma/{copia}"))
+        texto = get_prompt_raw(f"references/plataforma/{copia}")
+        sobra = list_state_variables(texto)
+        assert not sobra, f"{copia}: o ADK interpolaria {sobra}"
+        # o critério do próprio ADK, que aceita acento (`{espaço}`, exp03ef1b)
+        sobra = [m.group() for m in instructions_utils._TEMPLATE_VAR_PATTERN.finditer(texto)
+                 if instructions_utils._is_valid_state_name(m.group().lstrip("{").rstrip("}").strip().removesuffix("?"))]
         assert not sobra, f"{copia}: o ADK interpolaria {sobra}"
 
     # cada arquivo da base entra uma vez só por prompt

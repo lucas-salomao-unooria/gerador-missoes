@@ -200,6 +200,32 @@ def test_erro_de_variavel_ausente_vira_mensagem_que_o_po_le():
     assert mensagem_de_erro(RuntimeError("outra coisa")) == "outra coisa"
 
 
+def test_chave_literal_no_prompt_nao_manda_tentar_de_novo():
+    """exp03ef1b, 26/10/2026: o `{espaço}` da base da plataforma não é documento de agente nenhum — repetir dá o mesmo erro."""
+    from pipeline.runner import mensagem_de_erro
+
+    msg = mensagem_de_erro(KeyError("Context variable not found: `espaço` in agent 'A057bBancaPedagogiaBncc'."))
+    assert "`{espaço}`" in msg and "A057bBancaPedagogiaBncc" in msg and "Rodar de novo dá o mesmo erro" in msg
+    assert "terminou sem texto" not in msg
+
+
+def test_neutralizacao_da_base_segue_o_criterio_do_adk():
+    """Tudo o que o ADK interpolaria sai como «nome»; o resto fica como veio (exp03ef1b, `{espaço}` da plataforma@74755cfa)."""
+    from google.adk.utils import instructions_utils
+
+    from prompts.base_plataforma import neutralizar_chaves
+
+    texto = ('E4: "Marque no {espaço} certo" · {turmaId} · { posição? } · {app:tema} · {artifact.capa.png} · '
+             '{{ estilo }} · {"a": 1} · { a, b } · {3} · {x:y}')
+    saida = neutralizar_chaves(texto)
+    for esperado in ("«espaço»", "«turmaId»", "«posição»", "«app:tema»", "«artifact.capa.png»", "{«estilo»}",
+                     '{"a": 1}', "{ a, b }", "{3}", "{x:y}"):
+        assert esperado in saida, (esperado, saida)
+    for match in instructions_utils._TEMPLATE_VAR_PATTERN.finditer(saida):
+        nome = match.group().lstrip("{").rstrip("}").strip().removesuffix("?")
+        assert not instructions_utils._is_valid_state_name(nome) and not nome.startswith("artifact."), match.group()
+
+
 def test_fidelidade_le_so_o_texto_do_pedido_e_nao_o_cabecalho_da_esteira():
     """exp06ef1b: o item F1 citava «Esta execução refaz a etapa produto…» como pedido do PO, e o mesmo pedido entrava
     duas vezes no checklist (o embrulho não casava com o texto registrado no parecer)."""

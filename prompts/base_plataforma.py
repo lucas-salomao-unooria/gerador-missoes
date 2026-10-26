@@ -45,7 +45,9 @@ PREFIXO_PLATAFORMA = "references/plataforma/"
 INCLUDE_CONTRATO = "references/plataforma/contrato-plataforma.md"
 INCLUDE_DS = "references/ds-componentes.md"
 
-_VAR = re.compile(r"\{\s*([A-Za-z_][A-Za-z0-9_]*)\??\s*\}")
+#: Um par de chaves sem chave dentro. Quem decide se ele vira variável é `_o_adk_interpolaria`, com o critério do ADK.
+_VAR = re.compile(r"\{([^{}]*)\}")
+_PREFIXOS_DE_ESTADO = ("app", "user", "temp")
 
 
 class BaseIndisponivel(RuntimeError):
@@ -78,10 +80,24 @@ class Base:
                 "base_plataforma_branch": self.branch, "ds_versao": self.ds_versao}
 
 
+def _o_adk_interpolaria(nome: str) -> bool:
+    """O critério de `google.adk.utils.instructions_utils._is_valid_state_name`, mais `artifact.`: `str.isidentifier`
+    aceita acento. Até 26/10/2026 a troca só via ASCII, e o `{espaço}` do `openapi-indice.md` (plataforma@74755cfa)
+    derrubou a banca de produto da exp03ef1b com «Context variable not found»."""
+    if nome.startswith("artifact."):
+        return True
+    prefixo, _, resto = nome.rpartition(":")
+    return resto.isidentifier() and prefixo in ("", *_PREFIXOS_DE_ESTADO)
+
+
 def neutralizar_chaves(texto: str) -> str:
     """`{turmaId}` → `«turmaId»`. O ADK interpolaria a forma original como variável de estado e
     derrubaria o agente em execução. As cópias chegam cruas do bucket; a troca é feita aqui, na carga."""
-    return _VAR.sub(lambda m: f"«{m.group(1)}»", texto)
+    def _troca(m: re.Match[str]) -> str:
+        nome = m.group(1).strip().removesuffix("?")
+        return f"«{nome}»" if _o_adk_interpolaria(nome) else m.group()
+
+    return _VAR.sub(_troca, texto)
 
 
 def diretorio_base() -> Path:
@@ -211,11 +227,12 @@ def ler_include(rel: str) -> str:
     a partir dos JSONs; o resto de `references/plataforma/` é a cópia publicada pela plataforma.
     """
     rel = _normalizar(rel)
+    # o contrato e o inventário também trazem texto da plataforma (descrições, exemplos de rota)
     if rel == INCLUDE_DS:
-        return render_ds_componentes(ds_componentes())
+        return neutralizar_chaves(render_ds_componentes(ds_componentes()))
     if rel == INCLUDE_CONTRATO:
         base = ativa()
-        return render_contrato(contrato(base), base)
+        return neutralizar_chaves(render_contrato(contrato(base), base))
     if rel.startswith(PREFIXO_PLATAFORMA):
         nome = rel[len(PREFIXO_PLATAFORMA):]
         return neutralizar_chaves(arquivo_plataforma(nome).read_text(encoding="utf-8"))

@@ -232,6 +232,12 @@ def material_dos_anexos(doc_batch: Optional[DocumentBatch]) -> str:
 _RE_VARIAVEL_AUSENTE = re.compile(r"Context variable not found: `(\w+)` in agent '(\w+)'")
 
 
+def _chaves_escritas_por_agentes() -> set:
+    from pipeline.orchestrator import STAGES
+
+    return {a["output_key"] for etapa in STAGES for a in etapa["agents"] if a.get("output_key")}
+
+
 def mensagem_de_erro(exc: BaseException, agente: str = "") -> str:
     """O erro como o PO consegue ler. O ADK diz "Context variable not found: `one_pager` in agent 'A026…'" quando o
     agente que escreve um documento termina sem texto e o seguinte precisa dele (exp03ef1b, 08/10/2026, duas vezes).
@@ -241,6 +247,12 @@ def mensagem_de_erro(exc: BaseException, agente: str = "") -> str:
     from tools.contexto import e_erro_de_tamanho, mensagem_de_tamanho
 
     m = _RE_VARIAVEL_AUSENTE.search(str(exc))
+    if m and m.group(1) not in _chaves_escritas_por_agentes():
+        # `{espaço}` no texto da plataforma (exp03ef1b, 26/10/2026): nenhum agente escreve essa chave, então tentar de
+        # novo repete o erro — a mensagem antiga mandava o PO tentar de novo.
+        return (f"a instrução do agente {m.group(2)} traz `{{{m.group(1)}}}` como texto, e o ADK o leu como variável "
+                "da missão — veio de um prompt ou da base da plataforma, não de um documento que a esteira escreve. "
+                "Rodar de novo dá o mesmo erro; avise o time técnico. Nada foi alterado.")
     if m:
         return (f"o documento `{m.group(1)}` não existe quando o agente {m.group(2)} precisou dele — quem o escreve "
                 "terminou sem texto (resposta vazia do modelo). Nada foi alterado; tente de novo.")
