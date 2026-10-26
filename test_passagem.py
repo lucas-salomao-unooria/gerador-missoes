@@ -71,11 +71,12 @@ class TestRegras(unittest.TestCase):
         self.assertEqual((p["etapa"], p["acao"], p["como"], p["valido"]), ("produto", DE_ACORDO, "produto", True))
         self.assertEqual(p["gates"], {"gate_final_status": "🟢"})
 
-    def test_vermelho_bloqueia_de_acordo_e_so_admin_libera_com_excecao(self):
+    def test_vermelho_bloqueia_de_acordo_e_po_ou_admin_liberam_com_excecao(self):
         estado = {**ESTADO_VERDE, "gate_final_status": "bloqueado"}
         f = _aguardando()
         self.assertNotIn(DE_ACORDO, acoes_possiveis(f, "produto", estado))
-        self.assertNotIn(EXCECAO, acoes_possiveis(f, "produto", estado))
+        # desde 26/10/2026 o PO também libera com exceção em produto (7b8df1c)
+        self.assertIn(EXCECAO, acoes_possiveis(f, "produto", estado))
         self.assertIn(EXCECAO, acoes_possiveis(f, "admin", estado))
         # desde o PR 9 (D9), a exceção com 🔴 em produto pede justificativa escrita
         novo, _ = aplicar(f, EXCECAO, ADMIN, COMENTARIO, estado, CONFERENCIA,

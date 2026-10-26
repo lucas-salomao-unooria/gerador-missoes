@@ -230,7 +230,8 @@ def test_resposta_parcial_com_estrita_lista_o_que_falta():
 def test_excecao_do_admin_sai_com_o_que_ficou_sem_resposta():
     estado = _produto_estado()
     assert EXCECAO in acoes_possiveis(_fluxo(), "admin", estado, estrito=True)
-    assert EXCECAO not in acoes_possiveis(_fluxo(), "produto", estado, estrito=True)
+    # desde 26/10/2026 o PO também libera com exceção em produto (7b8df1c)
+    assert EXCECAO in acoes_possiveis(_fluxo(), "produto", estado, estrito=True)
     assert EXCECAO not in acoes_possiveis(_fluxo(), "admin", estado, estrito=False)
     lidos = [i["id"] for i in passagem.itens_de_conferencia(estado)]
     novo, _ = aplicar(_fluxo(), EXCECAO, ADMIN, "Libero sem fechar: o PO decide os parâmetros depois.", estado,
