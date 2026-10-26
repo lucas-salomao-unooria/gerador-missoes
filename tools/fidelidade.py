@@ -961,6 +961,8 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         # item com vários elementos ("29 min, tetos 60/25/35, toast de 60 s"): uma citação por elemento, todas no
         # documento e nenhuma copiada do pedido — o juiz não prova o conjunto repetindo a frase do PO
         varias = [str(c) for c in ((d or {}).get("citacoes") or []) if str(c).strip()]
+        if not citacao and len(varias) == 1:
+            citacao = varias[0]
         todas_provam = (veredito == "atendido" and len(varias) >= 2
                         and all(_citacao_confere(c, doc) and not _norm(c) in _norm(it["texto"]) for c in varias))
         if so_preservacao(it["texto"]) and veredito != "conflito_com_regra":

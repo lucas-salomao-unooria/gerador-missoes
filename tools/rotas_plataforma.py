@@ -26,7 +26,9 @@ from prompts import base_plataforma
 
 _RE_ROTA = re.compile(r"\b(GET|POST|PUT|PATCH|DELETE)\s+`?(/[A-Za-z0-9_\-/{}:«».]+)", re.IGNORECASE)
 #: Marcação de que a rota ainda não existe e é pedida à plataforma — aí ela não é afirmação falsa.
-_RE_PROPOSTA = re.compile(r"\[\s*nova|nova rota|rota nova|a criar|proposta|pend[êe]ncia de plataforma|verificar no reposit", re.IGNORECASE)
+_RE_PROPOSTA = re.compile(
+    r"\[\s*(?:nova|pend[êe]ncia)|nova rota|rota nova|a criar|proposta|pend[êe]ncia(?:s)?\s+(?:de\s+)?plataforma|"
+    r"verificar no reposit|escopo\s*:\s*`?plataforma|\bdono\s*:\s*`?plataforma", re.IGNORECASE)
 #: Linha que cita a rota para PROIBI-LA: "**NÃO** utilizar rotas inexistentes como `PUT /salas`",
 #: "Eliminada qualquer menção incorreta a `GET /turmas/:id/painel`". O redator escreve isso quando o
 #: pedido de correção aponta a rota errada, e o gate a lia como rota em uso (24/09/2026). Na rodada

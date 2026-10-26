@@ -748,7 +748,8 @@ def conferir_manifesto(texto: str, slug: str, c: Dict[str, Any],
 
 # --------------------------------------------------------------------------- 3. ADR
 #: «ADR-150 (proposta)», «ADR nova», «a criar». O `nova:` da seção de DS (`nova:galeriadefotos`) não é marca.
-_RE_ADR_MARCADA = re.compile(r"propost|\bnova\b(?!:)|a criar|\[\s*PROPOSTA", re.I)
+_RE_ADR_MARCADA = re.compile(
+    r"propost|\bnova\b(?!:)|a criar|\[\s*(?:PROPOSTA|PEND[ÊE]NCIA)|pend[êe]ncia(?:s)?\s+(?:de\s+)?plataforma", re.I)
 _RE_ADR_DECLARADA = re.compile(r"^\s*(?:#{1,6}\s+|(?:[-*+]|\d+[.)])\s+\*\*)\s*\**\s*ADR-(\d{1,4})\b(.*)$")
 
 

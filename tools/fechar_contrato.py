@@ -71,7 +71,7 @@ _RE_MARCADOR = re.compile(
 #: «…», «...», «<x>»: o documento cita o formato do marcador, não abre pendência («L2 — Aplicação do marcador
 #: `[PARÂMETRO — a definir por produto: …]`», one-pager da exp02em1b).
 _RE_PLACEHOLDER = re.compile(r"^\s*(?:…|\.\.\.|<[^>]*>|x)?\s*$")
-_RE_SUGESTAO = re.compile(r"sugest[ãa]o\s*:\s*([^·;|]+)", re.I)
+_RE_SUGESTAO = re.compile(r"sugest[ãa]o(?:\s*:\s*|\s+)([^·;|]+)", re.I)
 _RE_PQ = re.compile(r"\bPQ-\d+\b")
 #: Número que decide regra (tempo, teto, porcentagem): o «deixar para o design» não cabe nele.
 _RE_NUMERO_DE_REGRA = re.compile(r"\d+(?:[.,]\d+)?\s*(?:%|s\b|seg|min|palavras|caracteres|tentativas|rodadas)", re.I)
@@ -179,7 +179,7 @@ def _numeros(texto: str) -> set:
 
 def _cabeca(descricao: str) -> str:
     """A proposta sem o «por quê» e a alternativa; o parâmetro sem a sugestão."""
-    cabeca = re.split(r"\s+·\s+|,?\s*sugest[ãa]o\s*:", descricao or "", maxsplit=1, flags=re.I)[0]
+    cabeca = re.split(r"\s+·\s+|,?\s*sugest[ãa]o(?:\s*:|\s+\d)", descricao or "", maxsplit=1, flags=re.I)[0]
     return cabeca.strip(" :—–-`*|")
 
 

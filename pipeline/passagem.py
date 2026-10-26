@@ -253,7 +253,8 @@ def contrato_pendente(estado: Dict[str, Any]) -> bool:
 
 def acoes_possiveis(fluxo: Dict[str, Any], papel: str, estado: Dict[str, Any],
                     estrito: Optional[bool] = None) -> List[str]:
-    """O que `papel` pode fazer agora. O `admin` pode tudo o que o dono pode, mais a exceção."""
+    """O que `papel` pode fazer agora. O `admin` pode tudo o que o dono pode, e em produto o próprio PO (`produto`)
+    também pode liberar com ressalva/exceção (`EXCECAO`) quando há gate em 🔴 ou contrato com item lido sem resposta."""
     etapa, situacao = fluxo["etapa"], fluxo["situacao"]
     if not pode_agir(papel, etapa):
         return []
@@ -262,11 +263,12 @@ def acoes_possiveis(fluxo: Dict[str, Any], papel: str, estado: Dict[str, Any],
     if situacao in (AGUARDANDO, DEVOLVIDA):
         acoes.append(DE_ACORDO if not vermelho else "")
         acoes.append(REFAZER)
-        # Com ESTEIRA_ESTRITA, produto não sai com [PARÂMETRO]/[PROPOSTA] sem resposta — salvo exceção do admin, que fica
-        # registrada com o que ficou sem resposta (plano «Produto dono do contrato», D3)
-        sem_resposta_possivel = (etapa == "produto" and papel == "admin" and not vermelho and _estrito(estrito)
+        # Com ESTEIRA_ESTRITA, o de acordo de produto exige resposta na lista — mas o PO (`produto`) e o `admin` podem
+        # liberar com ressalva/exceção (marcando leitura do que ficou sem resposta e registrando justificativa quando há 🔴).
+        pode_excecao = papel == "admin" or (etapa == "produto" and papel == "produto")
+        sem_resposta_possivel = (etapa == "produto" and pode_excecao and not vermelho and _estrito(estrito)
                                  and contrato_pendente(estado))
-        if (vermelho or sem_resposta_possivel) and papel == "admin":
+        if (vermelho or sem_resposta_possivel) and pode_excecao:
             acoes.append(EXCECAO)
     if situacao in (AGUARDANDO, DEVOLVIDA) and etapa_anterior(etapa):
         # Quem gerou pode ver que o problema vem de antes. Também depois de receber uma devolução: o Dev

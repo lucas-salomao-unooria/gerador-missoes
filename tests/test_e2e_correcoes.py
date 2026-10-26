@@ -294,4 +294,67 @@ def test_3ef2b_falsos_positivos_deterministicos():
     assert rastro.d0_orfaos(rastro.FONTES_DESIGN, st_d0) == []
 
 
+def test_usuario_produto_pode_aprovar_com_ressalva_e_sugestao_sem_dois_pontos():
+    """O papel 'produto' pode liberar com exceção/ressalva em produto (com gate vermelho ou item lido sem resposta),
+    e [PARÂMETRO ... sugestão 45 segundos] sem dois-pontos extrai a sugestão e oferece 'Aceitar a sugestão'."""
+    from pipeline import passagem
+    from tools.auth import Sessao
 
+    estado_sem_vermelho = {
+        "one_pager": "- Tempo de inatividade: `[PARÂMETRO — a definir por produto: sugestão 45 segundos]`\n",
+        "spec_missao_gate0": "- Timeout de IA: `[PARÂMETRO — a definir por produto: sugestão 3 minutos]`\n",
+        "gate_final_status": "🟡",
+    }
+    itens = fechar_contrato.itens_em_aberto(estado_sem_vermelho)
+    assert len(itens) == 2
+    for it in itens:
+        assert fechar_contrato.ACEITAR in it.opcoes()
+    assert itens[0].sugestao == "45 segundos"
+    assert itens[1].sugestao == "3 minutos"
+
+    fluxo = {"etapa": "produto", "situacao": passagem.AGUARDANDO, "versao": 1, "pareceres": []}
+    acoes_po = passagem.acoes_possiveis(fluxo, "produto", estado_sem_vermelho, estrito=True)
+    assert passagem.DE_ACORDO in acoes_po
+    assert passagem.EXCECAO in acoes_po
+
+    # Com item marcado como lido sem resposta, o próprio PO ('produto') consegue aprovar via EXCECAO no modo estrito
+    sessao_po = Sessao(usuario="po", papel="produto", emitida_em=1.0, expira_em=9999999999.0, jti="j1")
+    decisoes_lidas = {it.id: {"resposta": "", "valor": "", "lido": True} for it in itens}
+    novo_fluxo, _ = passagem.aplicar(
+        fluxo, passagem.EXCECAO, sessao_po,
+        "Aprovado com ressalva deixando os dois parâmetros abertos para calibragem.",
+        estado_sem_vermelho, decisoes=decisoes_lidas, estrito=True,
+    )
+    assert novo_fluxo["etapa"] == "design"
+    assert novo_fluxo["situacao"] == passagem.LIBERADA
+
+    # Com gate em 🔴, o PO ('produto') também recebe EXCECAO (com justificativa obrigatória) e vê o contrato
+    estado_vermelho = dict(estado_sem_vermelho, one_pager_po_status="🔴")
+    acoes_po_vermelho = passagem.acoes_possiveis(fluxo, "produto", estado_vermelho, estrito=True)
+    assert passagem.EXCECAO in acoes_po_vermelho
+    novo_fluxo_v, _ = passagem.aplicar(
+        fluxo, passagem.EXCECAO, sessao_po,
+        "Estou de acordo com o conteúdo do one-pager desta versão.",
+        estado_vermelho,
+        decisoes={it.id: {"resposta": fechar_contrato.ACEITAR, "valor": ""} for it in itens},
+        estrito=True,
+        justificativa="Aceito as duas reformulações textuais apontadas no one_pager_po_status.",
+    )
+    assert novo_fluxo_v["etapa"] == "design"
+
+
+def test_bloco_de_governanca_nao_passa_pelo_glossario_do_prd():
+    """exp01em1b (sessão a38e5b2f): o glossário lista «Admin» como variante do «Módulo de Homologação», e o bloco que a
+    esteira escreve no PRD cita a conta `admin (como Produto)` — o PRD saía 🔴 por um texto que o autor não escreveu."""
+    from tools import governanca
+
+    spec = ("## Glossário canônico\n\n| Nome canônico | Variantes proibidas |\n|---|---|\n"
+            "| Módulo de Homologação | \"Bancada de Testes\", \"Admin\" |\n")
+    gov = {"pendencias": [{"codigo": governanca.LIBERADO_SEM_CONTA, "como": "admin (como Produto)",
+                           "quando": "26/10/2026 01:18:39"}]}
+    prd = "# 19. Pendências\n\n" + governanca.bloco(gov) + "\n# 20. Testes\n\nO Módulo de Homologação abre a bancada.\n"
+    codigos = [a.get("codigo") for a in rastro.validar_prd(prd, spec=spec)["achados"]]
+    assert "variante-proibida" not in codigos
+    # o texto do autor continua conferido
+    codigos = [a.get("codigo") for a in rastro.validar_prd(prd + "\nAbra o **Admin**.\n", spec=spec)["achados"]]
+    assert "variante-proibida" in codigos
