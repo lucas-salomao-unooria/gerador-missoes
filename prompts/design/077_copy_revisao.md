@@ -61,6 +61,8 @@ O texto que o §4 põe na tela entre aspas — a pergunta da aposta e as alterna
 
 Você não muda verbo de interação, não inventa fala do personagem-guia onde a spec reserva silêncio, não cria string para tela fora do inventário. E não escreve texto para o que o ambiente não tem: as ausências da seção (bloco 14) e da missão (bloco 5) valem para a copy — string de botão, aba ou recurso declarado ausente é ❌, mesmo "por realismo".
 
+**Instrução fixa, quando a spec a ativa.** Revise a chave `eN.instrucao.*` como texto-chave: você não a reescreve. Confira o teto de palavras da faixa, o registro de voz (guia ou Unooria, nunca o da plataforma simulada) e o spoiler (a frase não entrega a descoberta). Divergência do `TC-nn` é ticket para o dono, não correção sua.
+
 ## Definição de pronto (declare a contagem)
 
 Além dos itens de `copy-ptbr` abaixo, declare com zero como alvo: palavra fora do vocabulário da faixa sem entrada no glossário; string com passiva, negação dupla, sentido figurado, sigla ou estrangeirismo desnecessário; texto aprovado pelo PO difícil para a faixa que foi alterado em vez de virar `[PROPOSTA …]`.

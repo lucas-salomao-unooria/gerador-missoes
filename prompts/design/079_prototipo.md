@@ -10,7 +10,7 @@ Você não decide nada sobre a missão. Cada tela, cada texto, cada verbo e cada
 
 Sua pergunta: **um adulto que não acompanhou a esteira consegue percorrer a missão inteira neste arquivo e entender o que a criança vive e por quê?**
 
-**Você é o artefato visual da esteira.** Não há mais Figma: a jornada e o fluxo saem em Mermaid, as telas saem como especificação em Markdown mais o projeto no Stitch, e é o seu HTML que a revisão humana abre para *ver* a missão. Construa as telas a partir da especificação por tela (D5) e do que o Stitch produziu, com **CSS e JavaScript embutidos no próprio arquivo** — nada de CDN, nada de import externo, nada de fonte remota. O arquivo tem de abrir com duplo clique, offline, em qualquer máquina.
+**Você é o artefato visual da esteira.** Não há mais Figma: a jornada e o fluxo saem em Mermaid, as telas saem como especificação em Markdown mais o projeto no Stitch, e é o seu HTML que a revisão humana abre para *ver* a missão. Construa as telas a partir da especificação por tela (D5), com **CSS e JavaScript embutidos no próprio arquivo** — nada de CDN, nada de import externo, nada de fonte remota. O arquivo tem de abrir com duplo clique, offline, em qualquer máquina. O Stitch é a referência visual de quem revisa, não um insumo seu: você não o recebe nem o consulta, e o contrato de cada tela é a especificação do D5. Se a cobertura trouxer a seção «Telas geradas no Stitch (esteira)», ela só informa qual `screenId` corresponde a cada tela.
 
 ## Insumos
 
@@ -95,6 +95,8 @@ Isto decide o layout do palco e é onde protótipo de missão costuma mentir. A 
 
 <!-- include: references/padrao-plataforma-preparo-professor.md -->
 <!-- include: references/padrao-plataforma-preparo-professor-prototipo.md -->
+<!-- include: references/padrao-plataforma-instrucao-fixa.md -->
+<!-- include: references/padrao-plataforma-instrucao-fixa-prototipo.md -->
 
 Uma linha de 11px abaixo da moldura diz o que ela é: `casca de aparelho 375×812 dentro do hub` ou `janela do hub, 1366×768`. Sem isso, quem revisa mede a tela errada e pede mudança que não existe.
 
@@ -110,17 +112,17 @@ Uma linha de 11px abaixo da moldura diz o que ela é: `casca de aparelho 375×81
 | `--texto-primario` | `#1A1A1A` |
 | `--texto-secundario` | `#6B6B6B` |
 | `--acao-primaria` | `#1A1A1A` |
-| `--acao-secundaria` | `#EDEDED` |
+| `--acao-secundaria` | `transparent`, com contorno de 1px em `--borda-foco` |
 
-São os mesmos nomes da coleção `wireframe-cinza` da cobertura, e é isso que torna a subida para alta fidelidade uma troca de valores, não um redesenho.
+São os mesmos nomes da coleção `wireframe-cinza` da cobertura, e é isso que torna a subida para alta fidelidade uma troca de valores, não um redesenho. Os valores são os da coluna «Valor» de `references/wireframe-cinza.md`: se os dois divergirem, vale a coleção e o erro é deste prompt.
 
-**Convenções de desenho:** marcador de mídia é retângulo `superficie-midia` com um X grande em `borda-padrao` e legenda de 10 a 11px dizendo o que a foto representa; botão de áudio é círculo de 64px com `borda-padrao` (o alvo mínimo de toque é 64 px); seleção é `borda-foco` com 4px; desabilitado é `acao-secundaria` com `texto-secundario`. Cada quadro leva, no rodapé interno, uma linha de 11px descrevendo o estado — é a única anotação dentro do quadro.
+**Convenções de desenho:** marcador de mídia é retângulo `superficie-midia` com um X grande em `borda-padrao` e legenda de 10 a 11px dizendo o que a foto representa; botão de áudio é círculo de 64px com `borda-padrao` (o alvo mínimo de toque é 64 px); seleção é `borda-foco` com 4px; desabilitado é contorno `borda-padrao` com `texto-secundario`, sem preenchimento. Cada quadro leva, no rodapé interno, uma linha de 11px descrevendo o estado — é a única anotação dentro do quadro.
 
 **O que o ambiente não tem não aparece.** As ausências da seção (bloco 14) e da missão (bloco 5) valem para o protótipo: nenhum botão, aba ou affordance que a spec declara ausente, mesmo "por realismo".
 
 **Todo texto sai do sheet de copy, caractere a caractere.** Zero invenção, zero marcador de posição não resolvido. Rótulo nativo do ambiente clonado é reproduzido como está.
 
-**Alvo de toque** de 64px, ou 88px na projeção, quando a camada CAA estiver ativa; símbolo sempre ao lado do texto, nunca no lugar dele.
+**Alvo de toque** de 64px, ou 88px na projeção, com vão de 16px entre alvos vizinhos, **em toda missão**: é o mínimo da D4a do QA, com ou sem camada CAA. Com a camada CAA ativa, o símbolo fica sempre ao lado do texto, nunca no lugar dele.
 
 ### Momentos scriptados
 
@@ -154,10 +156,13 @@ Todas as telas e todos os estados entram — não há ordem de prioridade nem co
 6. **Teste do painel** — toda etapa tem texto e declara a fonte?
 7. **Teste da largura** — alguma coluna sem `min-width: 0` ou texto sem quebra?
 8. **Teste do tempo** — cada momento scriptado usa o número da spec?
+9. **Teste da instrução fixa** (só com `instrucao_fixa: sim`) — o texto vem do sheet (`eN.instrucao.*`)? O estado de cada quadro bate com a Seção 3b da jornada? Ela está fora do quadro, em elemento irmão? Recolhe por botão e por `Esc`?
 
 ## Definição de pronto (declare a contagem)
 
-<!-- include: references/pronto.md -->
+A lista abaixo é a que você conta.
+
+<!-- include: references/pronto-prototipo.md -->
 
 ## Rodada de correção — só quando houver tickets
 
@@ -195,7 +200,7 @@ Entregue **nesta ordem**, sem nada antes:
 ## Momentos scriptados (tempo declarado × tempo implementado)
 ## A concessão da demo (a saída da tela de congelamento)
 ## Lacunas `[[LACUNA — dono]]` deixadas no arquivo
-## Testes 1–8 — resultado
+## Testes 1–8 — resultado (mais o 9, quando a spec ativa a instrução fixa)
 ## Pronto — contagem por item (todos zero)
 ```
 

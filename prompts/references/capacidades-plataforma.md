@@ -70,6 +70,19 @@ Toda extensão desta lista custa os mesmos cinco pontos, mais o que a captura de
 7. **Contrato de dados, no bloco 9 da spec.** Voz e imagem de criança são dado pessoal, e a regra da casa é que nome, voz e imagem **não** são coletados por padrão. Se a missão os coleta, a spec declara: onde a mídia é gravada (tabela própria com `escola_id` e RLS, arquivo no bucket com caminho não adivinhável), quanto tempo fica, **quem lê** (só o professor da escola, nunca rota de gestor, nunca telemetria, nunca Clarity), e o que acontece quando a família não autoriza. Sem isso a missão não passa pela banca de dados.
 8. **Degradação sem a capacidade.** Toda missão que captura mídia precisa funcionar sem ela: Chromebook sem microfone, criança que não autoriza, escola que bloqueia. O caminho alternativo é parte da mecânica, não um aviso de erro.
 
+### Instrução fixa do estudante — capacidade de layout do hub (não é Permissions Policy)
+
+Esta capacidade não passa por `permissoes` nem pelo `allow` do iframe: é layout do hub em volta dele. Declare no bloco 0 `instrucao_fixa: sim` (campo da esteira; o nome no manifesto é pendência de plataforma). O PRD a leva como pré-requisito de plataforma (tabela 15.1, `aprovado-com-pendencias-de-plataforma`), e a degradação sem ela é a instrução só na tela de contexto antes.
+
+Pontos que a plataforma confirma (a esteira não os decide):
+
+1. O espaço no layout da visão do estudante: painel ao lado do `DispositivoFrame` (viewport mobile) e camada acima do `ExpFrame` (tela cheia de desktop e projeção) — `apps/hub/components/ExpFrame.tsx` e o componente do `DispositivoFrame`.
+2. A origem do texto: campo novo do manifesto (cinco pontos de toque) ou mensagem pela ponte postMessage.
+3. Quem interpola o recorte da aula no texto.
+4. Camada não modal, que não prende o foco, e o que vale para `viewport: <largura>x<altura>` personalizado.
+
+A instrução é camada do hub, **fora do iframe e do DOM do clone**: a exceção à DES-13 só vale assim (`padrao-plataforma-instrucao-fixa.md`).
+
 ## 4. Decisão contrária registrada — não é lacuna, é desenho errado
 
 Aqui a plataforma **já decidiu** não fazer assim, e existe alternativa. Escrever isso no handoff ou no PRD é erro de desenho, não pedido de extensão; o gate bloqueia e a correção é trocar pela alternativa.

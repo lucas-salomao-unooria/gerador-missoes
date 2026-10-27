@@ -38,7 +38,8 @@ logger = logging.getLogger("stitch_geracao")
 TOKENS = (
     ("superficie-base", "#FFFFFF"), ("superficie-elevada", "#FAFAFA"), ("superficie-midia", "#E0E0E0"),
     ("borda-padrao", "#C7C7C7"), ("borda-foco", "#1A1A1A"), ("texto-primario", "#1A1A1A"),
-    ("texto-secundario", "#6B6B6B"), ("acao-primaria", "#1A1A1A"), ("acao-secundaria", "#EDEDED"),
+    ("texto-secundario", "#6B6B6B"), ("acao-primaria", "#1A1A1A"),
+    ("acao-secundaria", "transparent, com contorno de 1 px em `borda-foco`"),
 )
 _RE_TELA = re.compile(r"projects/(\d+)/screens/([0-9a-f]{32})", re.I)
 _RE_PROJETO = re.compile(r"projects/(\d{6,})")
@@ -52,8 +53,8 @@ def design_md() -> str:
     linhas += ["", "## Regras", "",
                "- Escala de cinza apenas: sem cor, sem sombra, sem gradiente, sem imagem decorativa.",
                "- Mídia é um retângulo `superficie-midia` com um X grande em `borda-padrao` e legenda curta.",
-               "- Alvo de toque mínimo de 64 px (88 px na projeção). Uma família tipográfica.",
-               "- Seleção é `borda-foco` com 4 px; desabilitado é `acao-secundaria` com `texto-secundario`."]
+               "- Alvo de toque mínimo de 64 px (88 px na projeção), com vão de 16 px entre alvos vizinhos. Uma família tipográfica.",
+               "- Seleção é `borda-foco` com 4 px; desabilitado é contorno `borda-padrao` com `texto-secundario`, sem preenchimento."]
     return "\n".join(linhas) + "\n"
 
 

@@ -145,7 +145,7 @@ Duas listas curtas para o PM orquestrador e para o agente T (aprendizado):
 ## Testes (rode todos)
 
 1. **Teste da presença** — alguma decisão sua reescreve algo que já estava na spec, ou fecha um `[PARÂMETRO]`/`[PROPOSTA]` sem parecer datado do PO? Falha: remova, ou reabra como `[ABERTO — dono: PO: …]`.
-1b. **Teste do dono** — alguma decisão sua é de classe fora de estado (de tela), gesto, scaffolding, acessibilidade e dispositivo, ou trata de painel, PQ e KPI, retenção, revezamento ou texto do professor? Falha: não decida — `[ABERTO — dono: PO: …]`.
+1b. **Teste do dono** — alguma decisão sua é de classe fora de estado (de tela), gesto, scaffolding, acessibilidade, dispositivo e instrução fixa (posição e estados), ou trata de painel, PQ e KPI, retenção, revezamento ou texto do professor? Falha: não decida — `[ABERTO — dono: PO: …]`.
 2. **Teste da invenção** — alguma base é "inferência" sem ancoragem na descoberta ou na faixa? Falha: vira vermelho.
 3. **Teste do cap** — decisões do estudante, telas e dados coletados após o bloco 13 são iguais aos de antes? Falha: remova.
 4. **Teste do consumo** — cada célula do checklist tem ✅, `[D0-n]` ou `RS-n pendente`? Nenhuma pode sobrar como ⚠️ solta.

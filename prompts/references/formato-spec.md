@@ -39,6 +39,7 @@ Nome que o estudante vê · software clonado · classe do ambiente (app clonado 
 - `versao: 0.1.0` — semver inicial do `experiencia.json` (`versaoAtiva` no contrato da api). O PRD amarra a mesma versão em três lugares; aqui declara-se só a inicial
 - `verbos: {interacted: "…", scored: "…", completed: "…"}` — **o que cada verbo xAPI significa NESTA missão**, uma frase por verbo usado na tabela de eventos do bloco 9. É campo do manifesto real (`experiencia.json#verbos`), não invenção da esteira: sem ele o dado analítico chega sem tradução e ninguém sabe o que `scored` mediu nesta missão
 - `liberacao: por-turma` — **opcional, é o default e o único valor aceito** (ADR-69: a missão só abre na turma em que a professora liberou; o funil de estudante passa por `exigirMissaoLiberada`). Só escreva a linha se houver algo diferente a dizer, e aí ela será conferida.
+- `instrucao_fixa: sim | nao` — **opcional; ausente vale `nao`.** Campo da esteira, não do `experiencia.json` (o nome no manifesto é pendência de plataforma: `capacidades-plataforma.md`). `sim` ativa a instrução fixa do estudante (`padrao-plataforma-instrucao-fixa.md`): só o PO a pede, no one-pager; o agente nunca a ativa por conta própria.
 
 Campo em branco aqui é ❌ em PROD-01 e TEC-01 do gate de dev; sem série a api
 não aplica regra por ano; sem `produto` o CI recusa o manifesto (ADR-87); sem
@@ -78,6 +79,8 @@ mapeia as telas para as fases, e regra ou fase que a spec não tem, na jornada, 
 (um gate em código confere). Sem ela, a spec de mini-jogo é bloqueada; se a decisão é do PO,
 `[ABERTO — dono: PO: regras e fases do mini-jogo — …]`.
 
+**Instrução fixa — só com `instrucao_fixa: sim`.** Uma linha por etapa: o estado da instrução (`visível` · `recolhida` · `oculta`) e o `TC-nn` do texto-chave que ela mostra. Padrão proposto: visível onde o estudante decide; recolhida na tela de pico e no aha. Quem decide é o PO: `[ABERTO — dono: PO: …]` quando faltar.
+
 ## 3. Caminhos degenerados — tratamento
 | Caminho | O que acontece | Etapa preservada? |
 Não escolheu nada · escolheu tudo · não usou a ferramenta ·
@@ -100,7 +103,7 @@ ressalvas do bloco 12; o número não muda aqui.
 
 ## 7. Acessibilidade
 Canais por instrução (áudio / pictograma / texto), teto de palavras,
-gestos que exigem demonstração animada.
+gestos que exigem demonstração animada. Com `instrucao_fixa: sim`: como a instrução é lida (áudio e pictograma no 1º–2º ano, sem narração por padrão a partir do 3º) e como se recolhe por teclado.
 
 ## 8. Professora, preparação e parametrização com IA
 **A missão é transversal: quem a prepara é o professor de qualquer disciplina.** Contrato de customização = **recorte da aula**: `disciplina` (lista fechada dos componentes curriculares da BNCC + `projeto-interdisciplinar`), `tema` (≤ 60 caracteres), `assuntos` (3 a 6 itens, ≤ 600 caracteres no total — os objetos de conhecimento da aula), `contexto` opcional (turma, escola, região, ≤ 120), `foco` opcional (≤ 120). Campos curtos porque alimentam um prompt: o teto é a primeira barreira contra injeção (mesmo desenho do esquema de parâmetros do preparo do Júri, em `references/plataforma/exemplo-juri-contrato-rotas.md`). O professor **não** declara habilidades BNCC da própria disciplina. · Regras e schemas Zod de geração de conteúdo por IA (Vertex AI Gemini, só via `apps/api/src/ai`), no molde dos schemas do Júri (exp06ef1b), incluindo a homologação em que o professor edita **qualquer** texto do pacote antes de aprovar · **Rotas do preparo docente: no módulo da própria missão, no molde do Júri (`juri-estadual`, exp06ef1b; `references/plataforma/exemplo-juri-contrato-rotas.md`) — `POST /<modulo>/turmas/«turmaId»/gerar-conteudo` → `GET …/conteudo` → `POST …/homologar` (o professor edita e aprova) → `POST …/gate` (libera a turma), com o painel em `GET …/turmas/«turmaId»/painel`; é o que `juri-estadual` (exp06ef1b), `quem-mandou-isso` (exp05ef1b) e `foto-conta` (exp01ef1b) fazem. O módulo `/atividades` é o motor do Instanooria (exp08ef1b) e **não se reusa**: citar `/atividades/«id»/aprovar`, `/pacote` ou `/curadoria` é citar rota que não existe** · fluxo de curadoria docente (preview, edição de postagens e aprovação **antes da aula**, ADR-66/67) · banco curado default (fallback imediato sem IA) · **tabela "A mesma missão em três aulas"** copiada do one-pager (Português, Ciências/Biologia, História: recorte · o que a IA gera · o que não muda), ou o marcador `[LIMITE DE TRANSVERSALIDADE — dono: produto]` onde couber · **perfil de quota de IA consumido** (`ia_quotas` por perfil, ADR-105) e o que o estudante e a professora veem sem saldo (429, na voz da ficção) · gatilhos de handoff · comportamento da plataforma em cada mediação e pausas (relógio coletivo = tabela `expNNefNb_gates_turma` por polling, ADR-93/94 — nunca WebSocket) · dados do painel docente · roteiro de perguntas, no momento em que o one-pager o coloca · **podcast de recapitulação** do §11 do one-pager: título, vozes, duração, quando toca, quem toca e o aviso ao professor (o roteiro fica no one-pager e ninguém a jusante o reescreve; nas 11 missões do bucket até 06/10/2026 nenhuma spec o trazia, e design e brief de assets reescreveram o áudio).
@@ -242,7 +245,7 @@ na linha da sessão, o que acontece com linhas antigas quando sobe, e se
 ## 10. Cenários de dispositivo
 Os três, com o que muda e a garantia de que a descoberta chega. **Aparelho compartilhado segue o padrão da plataforma**
 (`references/padrao-plataforma-revezamento.md`): cite `padrão: revezamento-pela-plataforma` — a missão não prescreve
-papéis nem rodízio (o PO recusou na exp06ef1b) — e escreva só o teste da descoberta no cenário 2–4.
+papéis nem rodízio (o PO recusou na exp06ef1b) — e escreva só o teste da descoberta no cenário 2–4. Com `instrucao_fixa: sim`, diga a apresentação em cada cenário (1:1 com aparelho mobile, painel; 2–4 por aparelho, igual ao 1:1; projeção única, overlay no viewport docente).
 
 ## 11. Currículo
 Habilidades e códigos **confirmados**, com o momento em tela de cada um — **os mesmos do contrato

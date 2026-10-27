@@ -65,6 +65,10 @@ A visão do professor é entregável: quem prepara a missão é o professor de q
 <!-- include: references/padrao-plataforma-preparo-professor.md -->
 <!-- include: references/padrao-plataforma-preparo-professor-fluxo.md -->
 
+## A instrução fixa não é nó (só quando a spec a ativa)
+
+Com `instrucao_fixa: sim`, a instrução é camada do hub e anotação de tela (`references/padrao-plataforma-instrucao-fixa.md`): não ganha nó nem aresta. Abrir e recolher é estado de tela, sem aresta. Se o estado precisar sobreviver à reentrada, ele entra na regra de estado salvo do bloco 2; o que o bloco 2 não traz é `[ABERTO — dono: PO: …]`.
+
 ## Os cinco testes (rode todos, sempre)
 
 1. **Toda tela tem saída** (exceção única: a tela final).

@@ -80,6 +80,11 @@ A missão é aplicada pelo professor de **qualquer disciplina**, e a visão dele
 
 ID `E<etapa>-<ator>-<nn>` (`E2-ALU-01`, `E5-PROF-01`, `E3-SIS-01`), sempre com etapa de 0 a 6 e dois dígitos — **qualquer outro formato some do Stitch e da conferência**. Sub-etapa da spec (Sessão B, «Etapa 5b») continua a numeração da etapa: `E5-ALU-04`, `E5-ALU-05`; tela de erro vai para a etapa em que o erro acontece, com ator `SIS` (`E3-SIS-01`), nunca `ERRO-*`. **As telas do professor no preparo são obrigatórias e são as cinco do padrão da plataforma** (`E0-PROF-01…05`, uma por passo da Seção 1c, com o ambiente e o peso de lá — `references/padrao-plataforma-preparo-professor.md`, incluído na Seção 1c). As telas de condução (`E4-PROF-*`, dashboard) continuam como hoje. Peso `pico · alta · média · serviço` derivado das marcas do mapa de beats — **exatamente uma tela `pico`**. Estados obrigatórios quando existirem: primeira vez com scaffolding vs usos seguintes; vazio / carregando / espera de professor; degradado (dispositivo compartilhado); **sem saldo de IA ou IA indisponível (429/503)** em toda tela do estudante que depende de geração ao vivo — o que ele vê e o que faz (só o lado do professor estava descrito). **A pergunta do Canal B (§12a) tem tela própria no inventário**, com ID, na etapa em que a spec a põe: sem ela, nem o Stitch nem o protótipo a desenham. Tela órfã (sem etapa ou ator) é achado.
 
+### Seção 3b — Instrução fixa por tela (só quando a spec a ativa)
+
+<!-- include: references/padrao-plataforma-instrucao-fixa.md -->
+<!-- include: references/padrao-plataforma-instrucao-fixa-jornada.md -->
+
 ### Seção 4 — Direção por tela (só `pico` e `alta`)
 | Tela | Beat que carrega | O que salta primeiro (um único elemento) | O que recua (obrigatório) | Teto de elementos (contado) | Não-negociável honrado |
 
@@ -159,6 +164,7 @@ Uma linha por fase da spec, na ordem da spec, com o número dela. O que é seu �
 ## Seção 1c — Jornada do professor (preparo e condução) — tabela + a linha por disciplina
 ## Seção 2 — Cenários de dispositivo
 ## Seção 3 — Inventário de telas
+## Seção 3b — Instrução fixa por tela (só com `instrucao_fixa: sim`; escreva `n/a — capacidade não ativada` caso contrário)
 ## Seção 4 — Direção por tela + nota de aderência ao mapa de beats (cada marca, a tela que a carrega, e onde você se afastou e por quê)
 ## Seção 5 — Regras, fases e mecânicas (só mini-jogo: as regras e as fases copiadas da spec e as telas de cada fase; escreva `n/a — ambiente é app clonado` caso contrário)
 ## Lacunas (toda célula ⚠️/🔴 com o critério associado, classe e dono)

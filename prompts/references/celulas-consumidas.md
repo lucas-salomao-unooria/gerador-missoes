@@ -27,6 +27,7 @@ Uma linha por célula que algum agente **lê como contrato**. A varredura percor
 | 0.viewport (celular 375×812 dentro do desktop · desktop cheio) e por quê | D2 (cenários), D5 (frames e `deviceType` do Stitch), D8 (moldura de aparelho ou janela do hub), D9 | Frames no tamanho errado; quem revisa o protótipo mede a tela errada |
 | 0.produto (`entre-redes` …) e 0.unidade (1–4) — ficha do manifesto | V1, `ManifestoCheck`, TEC-01 | O CI recusa o manifesto (ADR-87) e a grade da sala não ordena (ADR-69) |
 | 0.permissoes do iframe (`forms`, `pointer-lock`, `downloads`) | D5, V1, TEC-01 | Submit ou download bloqueado em silêncio pelo sandbox |
+| 0.instrucao_fixa (`sim` · `nao`; linha opcional, ausente vale `nao`) | D1, D2, D4, D5, D8, D7 (`padrao-plataforma-instrucao-fixa.md`) | Nada, se ausente. Com `sim`, a instrução existe na spec e ninguém a materializa, ou alguém a materializa sem o PO a ter pedido |
 | 0.liberacao por turma (ADR-69) — linha opcional | V1 (`exigirMissaoLiberada`; manifesto do handoff de dev) | Nada: ausente vale `por-turma`, o default e único valor aceito — não é lacuna. Nenhum agente de design lê a célula: o «pôr no ar» (`E0-PROF-05`) de jornada, fluxo, copy, telas e protótipo é fixo nos prompts (libera na hora, sem agendamento) |
 
 ## Bloco 1 — Descoberta central
@@ -50,6 +51,7 @@ Uma linha por célula que algum agente **lê como contrato**. A varredura percor
 | 2.estados latch / trava síncrona | D2 (raia da professora), D3, D5 | Trava desenhada com escape |
 | 2.reentrada (F5, voltar noutro dia) | D3 (aresta de retorno), V1 | Teste 5 do fluxo sem resposta |
 | 2.segunda aplicação (re-sorteia · preserva · "zerar turma" apaga) | D3, V1 | Estado de turma indefinido |
+| 2.estado da instrução fixa por etapa (`visível` · `recolhida` · `oculta`) e o `TC-nn` que ela mostra — só com `instrucao_fixa: sim` | D1, D2 (Seção 3b), D4, D5, D8, D7 (D1, D3b, D4a) | Instrução aberta no pico, ausente onde o estudante decide, ou sem texto-chave |
 | 2.modos de erro **na voz da ficção**, como estado próprio (conexão, sessão expirada, mídia) | D3 (nós vermelhos), D4 (strings de falha), D5 (frames de falha), D6 (item 6: string própria por estado), D7 (D5: estados de erro existem), D9 (mini-jogo: falhas dentro da casca) | Erro genérico do sistema no meio do clone — DES-13 |
 | 2.falha de mídia: imagem, áudio ou vídeo que não carrega — o que a criança vê na voz da ficção, o que faz, o que se preserva (one-pager §8) | D3 (nó próprio com aresta de volta), D4 e D6 (string da falha), D5 (frame de falha), D4b (prancha imprimível para falha de áudio), D7 (D5), V1 (grau `none` no bloco 9) | Tela de mídia sem estado de falha: até 07/10/2026 a falha de mídia do §8 não chegava a tela nenhuma |
 | 2.estado de espera de professor em toda tela ligada a handoff | D2, D5 (estado "Espera de professor"), D6 (item 6: string própria) | Criança sem tela enquanto a professora fala |
@@ -92,6 +94,7 @@ Uma linha por célula que algum agente **lê como contrato**. A varredura percor
 | Célula | Quem consome | Sem ela |
 |---|---|---|
 | 7.canais por instrução (áudio · pictograma · texto) | D4 (`texto+ícone+áudio` em anos iniciais — **exceto** quando a spec declara ausência de áudio, no bloco 5 ou no 14: aí `texto+ícone` e a pendência `[ABERTO — dono]` com dono PO em «Strings que precisam de decisão»), D4b (pictograma + áudio), D5 (botão de áudio, quando a copy o pede), D6 (item 4: a redundância sobreviveu ao build), D7 (D4: redundância em anos iniciais) | Instrução só escrita para quem não lê; ou áudio prescrito numa spec sem áudio, que o PRD veta |
+| 7.leitura da instrução fixa (áudio e pictograma no 1º–2º ano; recolher por teclado) — só com `instrucao_fixa: sim` | D4, D4b, D7 (D4a) | Instrução que o 1º–2º ano não consegue ouvir ou recolher |
 | 7.teto de palavras por string | D4, D6, D7 (D4: teto por string) | Strings sem régua |
 | 7.gestos que exigem demonstração animada | D5, D4b | Gesto sem demonstração |
 
@@ -132,6 +135,7 @@ Uma linha por célula que algum agente **lê como contrato**. A varredura percor
 |---|---|---|
 | 10.cenário 1:1 — o que muda · a descoberta chega? | D2 (coluna "Cenário"), D5, D7 (D5: três cenários construídos) | Célula "descoberta chega?" em branco |
 | 10.cenário 2–4 por aparelho — o que muda · a descoberta chega? | D2, D4b (prancha imprimível para dispositivo compartilhado), D5 (estado "Degradado"), D6 (string do estado degradado), D7 (D5) | idem |
+| 10.instrução fixa por cenário (painel no aparelho mobile · overlay na projeção e na tela cheia) — só com `instrucao_fixa: sim` | D2, D5, D8, D7 (D5) | Projeção sem regra para a instrução |
 | 10.cenário projeção única — o que muda · a descoberta chega? | D2, D5 (1366×768, `DESKTOP`), D4b (88×88), D8 (desktop cheio; alvo de 88 px), D7 (D4a: alvo ≥ 88×88 na projeção) | idem |
 
 ## Bloco 11 — Currículo

@@ -257,6 +257,8 @@ Cinco marcadores têm dono fixo, porque o prompt que os cria já sabe quem fecha
     "handoff-dev": "handoff-dev",
     "jornada": "jornada",
     "lacunas": "fecha-lacunas",
+    "prototipo": "prototipo",
+    "prototipo-navegavel": "prototipo",
     "spec": "spec-missao",
     "spec-missao": "spec-missao",
     "telas": "telas",

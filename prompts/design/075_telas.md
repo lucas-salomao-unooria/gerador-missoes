@@ -114,7 +114,7 @@ Sequência: **importar** a seção do ambiente (chrome, navegação, affordances
 
 - Alvo de build: **Chromebook/desktop**, frame base 1366×768. Ambiente nativo de celular (TikTok, Instagram, WhatsApp): desenhe o **aparelho simulado (375×812) dentro do viewport desktop**, canvas neutro. Telas de professor são desktop cheio.
 - Chrome real da plataforma: vertical, um item por vez onde a plataforma é vertical; coluna de ações, abas e barra superior nas posições reais; conta do próprio estudante.
-- **Proibido dentro da simulação:** tela, painel, modal ou dashboard "da Unooria". Escapes: contexto antes e reflexão depois (esses usam a seção `unooria`). Nenhum token da seção `unooria` dentro do clone e vice-versa (DES-13). **Isto vale para clone.** Mini-jogo é produto da Unooria e usa a seção `unooria` em tudo — ver a regra de identidade adiante.
+- **Proibido dentro da simulação:** tela, painel, modal ou dashboard "da Unooria". Escapes: contexto antes e reflexão depois (esses usam a seção `unooria`). Nenhum token da seção `unooria` dentro do clone e vice-versa (DES-13). Terceira exceção, restrita: a **instrução fixa** (seção abaixo), camada do hub fora do iframe e do DOM do clone, só com `instrucao_fixa: sim`. **Isto vale para clone.** Mini-jogo é produto da Unooria e usa a seção `unooria` em tudo — ver a regra de identidade adiante.
 - Antes de compor tela `pico`/`alta`, leia a linha dela na direção por tela: o que salta, o que recua, o teto de elementos — **restrição de build**, não sugestão. Se não cabe, devolva ao principal.
 
 ## Estados a construir por tela
@@ -122,6 +122,11 @@ Sequência: **importar** a seção do ambiente (chrome, navegação, affordances
 Padrão · Primeira vez com scaffolding (anos iniciais, decisão com ferramenta de investigação) · Pós-ação · Espera de professor (toda tela ligada a handoff) · Degradado (2–4 por dispositivo) · Vazio/carregando · **Falha na voz da ficção** (do bloco 2 da spec).
 
 **A regra «habilitado só com…» de cada tela é a do bloco 2 da spec** (plano «Produto dono do contrato», D7). Estado de tela a mais é livre; a condição que libera o aluno não. O botão que avança habilita com o que a spec exige, e só com isso: exigir a resposta certa onde a spec deixa o aluno errar, ou nomear a opção que libera (`habilitado após selecionar «Criança lendo»`), muda o que ele decide — e a escolha deixa de medir. Siga a spec e registre `[PROPOSTA — validar com PO: <tela> · o que muda para o aluno · por quê]` em «Lacunas»: um gate confere as regras de habilitação contra o bloco 2 (`arestas_status`) e as leva ao PO. O texto que a tela mostra e que é texto-chave (`TC-nn` na tabela do conteúdo aprovado) é o literal da copy.
+
+## Instrução fixa (só quando a spec a ativa)
+
+<!-- include: references/padrao-plataforma-instrucao-fixa.md -->
+<!-- include: references/padrao-plataforma-instrucao-fixa-telas.md -->
 
 ## Camada CAA — quando o `camada_caa` vier preenchido
 
@@ -133,7 +138,7 @@ As restrições do mapa CAA são **restrição de build**, no mesmo nível do te
 - **Prancha CAA só nos escapes**, na seção `unooria`. Prancha dentro do clone reprova por DES-13 — se o mapa pedir isso, é achado com dono `caa`, não é para construir. Em mini-jogo ela pode ficar dentro do jogo, desde que não compita com a área de jogo nem estoure o teto de elementos da fase.
 - Se a contagem de símbolos de uma tela estoura o teto de elementos da direção por tela, **não encolha o teto**: registre lacuna com dono `jornada` e construa até o teto.
 
-Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica — a redundância `texto+ícone` que a copy já pede continua valendo por outro caminho.
+Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica, **salvo o alvo de toque e o vão da primeira linha, que valem em toda missão** (D4a do QA) — a redundância `texto+ícone` que a copy já pede continua valendo por outro caminho.
 
 ## Telas de professor — obrigatórias (4.3 e 4.4)
 

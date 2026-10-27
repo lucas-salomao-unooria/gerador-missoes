@@ -50,7 +50,7 @@ O banco de dev é lido em versão datada e não é desta esteira — exceto DES-
 | DES-03 | O clone é fiel, com lista do que difere | O3 da rubrica de ofício com a tabela de ausências de `ambientes.md`; 2.3 (diegese, obrigatório); `premissa-imersao.md` |
 | DES-07 | Estados vazios parecem intencionais | O5; padrão `vazio-e-carregando`; 9.4 com o teste de contaminação |
 | DES-08 | Copy real e adequada à série | 6.1 com a cláusula de defasagem; D4 do QA com `literatura-cognitiva-resumo.md` |
-| DES-13 | Marca fora do disfarce | D8b do QA e a regra de `ambientes.md` (já bloqueantes) |
+| DES-13 | Marca fora do disfarce | D8b do QA e a regra de `ambientes.md` (já bloqueantes); exceção escrita: a instrução fixa |
 | DES-14 | Visão do professor completa e transversal | D6 e D6c do QA (bloqueio para tela do professor ausente) — e DES-14 é `[BLOQUEANTE]` também no banco, por decisão desta esteira |
 
 Se a esteira pode acrescentar critério ao banco (DES-14), a objeção "não é nosso" a promover DES-03 enfraquece: fica registrado como decisão de produto em aberto.

@@ -1,6 +1,6 @@
 ---
 name: pronto
-description: Definição de pronto por agente — só o que se conta. Verificada pelo próprio agente antes de entregar, e declarada no envelope. Lido por completude-spec, fecha-lacunas, ambiente-simulado, jornada, fluxo, copy-ptbr, caa, telas e pelo gate de ofício.
+description: Definição de pronto por agente — só o que se conta. Verificada pelo próprio agente antes de entregar, e declarada no envelope. Lido por completude-spec, fecha-lacunas, ambiente-simulado, jornada, fluxo, copy-ptbr, caa, telas, prototipo e pelo gate de ofício.
 sources: [chat]
 ---
 
@@ -24,6 +24,7 @@ Isto não é uma dimensão de auditoria. É a lista que impede o gate de ofício
 | Beat marcado no mapa de beats sem tela que o carregue | Beat perdido antes do build |
 | Verbo na jornada fora da lista de verbos do bloco 4 da spec | Verbo inventado |
 | Cenário de dispositivo com "descoberta chega?" em branco | 10.2 sem resposta |
+| Tela do estudante sem estado da instrução fixa na Seção 3b, com `instrucao_fixa: sim` | A instrução fica sem regra de quando aparece |
 
 ## fluxo
 
@@ -49,6 +50,7 @@ Isto não é uma dimensão de auditoria. É a lista que impede o gate de ofício
 | Chave fora da convenção `eN.tipo.nome` | O dev usa a chave |
 | Tela com dois registros de voz | Guia, plataforma e Unooria não se misturam na mesma tela |
 | Registro sem régua com exemplo e contraexemplo no glossário | Proibição não produz voz |
+| Instrução fixa sem chave `eN.instrucao.*`, ou com texto diferente do `TC-nn`, com `instrucao_fixa: sim` | O texto-chave não se reescreve |
 
 ## caa
 
@@ -86,6 +88,32 @@ Só conta quando o gate de aplicabilidade deu "roda". Em `nao_aplicavel`, a cont
 | Pictograma de gesto ou botão de áudio como caixa cinza | Requisito de acessibilidade |
 | `[[placeholder]]` não resolvido na entrega final | |
 | Elemento contado acima do teto da tela na Seção 4 | Conta como em `rubrica-oficio.md` |
+| Frame do estudante sem a anotação de estado da instrução fixa, ou composição (painel ou overlay) ausente, com `instrucao_fixa: sim` | Quem revisa não vê onde a instrução fica |
+
+## prototipo
+
+Conta-se no arquivo HTML, não no relatório sobre ele. O lint e a esteira tocam o arquivo.
+
+| Conta | Zero significa |
+|---|---|
+| Quadro sem `data-screen-id` ou sem `data-estado` | A esteira conta quadro por atributo: ID só em comentário, trilho ou rodapé não é tela |
+| (ID, estado) da cobertura sem quadro e fora da lista «o que ficou fora» | Cobertura incompleta (teste 2): nunca "completo" com quadro faltando |
+| Texto visível fora do sheet de copy, ou marcador `[[…]]` que não seja `[[LACUNA — dono]]` declarado no relatório | Invenção ou placeholder não resolvido (teste 1) |
+| Hexadecimal fora dos nove tokens dentro de um quadro | Uma exceção abre todas (teste 3) |
+| Escolha da missão com alternativa ou distrator faltando, ou com marca de gabarito (`[Correto]`, `[Distrator …]`, nível do Canal B) | O protótipo entregaria a resposta |
+| Botão, aba ou affordance que a spec declara ausente | O que o ambiente não tem não aparece, nem "por realismo" |
+| Tela `pico` com mais elementos que uma vizinha | Teste 4: a hierarquia invertida bloqueia (O1) |
+| Tela de congelamento com affordance além da saída declarada da demo | Teste 5: a saída é concessão da demo, não a trava |
+| Etapa sem texto no painel, ou sem a fonte declarada | Teste 6 |
+| Coluna de grid ou item de flex sem `min-width: 0`, ou coluna de texto sem quebra de palavra | Rolagem horizontal (teste 7) |
+| Momento scriptado com tempo diferente do da spec | Teste 8 |
+| Alvo acionável abaixo de 64×64 px (88×88 na projeção) ou vão menor que 16 px | Mesma régua da D4a do QA, com ou sem camada CAA |
+| Animação sem regra `prefers-reduced-motion` | Gatilho vestibular que a criança não desliga |
+| Mais de um quadro visível ao mesmo tempo | A navegação parece quebrada (exp03em1b: 61 telas empilhadas) |
+| `localStorage`, `sessionStorage` ou recurso externo (CDN, fonte remota, import) | O arquivo abre offline, com duplo clique, sem guardar estado |
+| Tela `E0-PROF-01…05` ausente do trilho do professor | O preparo é obrigatório e navegável |
+| Instrução fixa dentro do quadro (e não em elemento irmão), ou com estado diferente da Seção 3b | A exceção à DES-13 vale só para a camada do hub |
+| Instrução fixa sem recolher por botão e por `Esc`, ou com alvo abaixo de 64×64 px | O estudante não consegue liberar a tela |
 
 ## completude-spec
 
@@ -112,7 +140,7 @@ O D0-UX, no design (desde 24/10/2026 só UI/UX; o que é de produto fecha em pro
 |---|---|
 | Célula de UI/UX do checklist (`celulas-consumidas.md`) sem ✅, `[D0-n]` ou `[ABERTO — dono: PO]` | Varredura completa — nenhuma ⚠️ solta |
 | Decisão `[D0-n]` que reescreve texto já presente na spec | Preenche ausência, nunca altera presença |
-| Decisão `[D0-n]` de classe fora de estado (de tela), gesto, scaffolding, acessibilidade, dispositivo | O resto é de produto — vira `[ABERTO — dono: PO]` |
+| Decisão `[D0-n]` de classe fora de estado (de tela), gesto, scaffolding, acessibilidade, dispositivo, instrução fixa | O resto é de produto — vira `[ABERTO — dono: PO]` |
 | Decisão com base "inferência" sem frase ancorada na descoberta ou na faixa | Inferência sem âncora é invenção — vira vermelho |
 | Decisão que aumenta decisões do estudante, telas ou dados coletados | O cap é do produto |
 | `[RS-n]` sem "Bloqueia" preenchido | Sem bloqueio não é re-spec, é anotação |

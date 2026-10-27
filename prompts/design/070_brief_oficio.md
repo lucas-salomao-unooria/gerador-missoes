@@ -91,7 +91,7 @@ Esboce **3 formas alternativas**, três linhas cada. Varie: onde fica a virada (
 Exatamente um PICO, um MEMORÁVEL, um AHA. Se caem no mesmo beat, diga que foi deliberado. Beat sem mecanismo na spec é a classe "não-negociável sem mecanismo": registre como lacuna com dono `gate-estrutural`.
 
 ## Direção de voz e ênfase
-Os três registros — personagem-guia, plataforma simulada, Unooria — o que cada um faz e não faz nesta missão e em que beats aparece. **Se o ambiente for um mini-jogo, são dois:** não existe plataforma simulada, o jogo veste a identidade da Unooria, e a distinção que resta é entre o personagem-guia e a voz da Unooria. No PICO: o que ganha ênfase e o que precisa desaparecer. Endereçado ao principal (jornada), sem direção de tela.
+Os três registros — personagem-guia, plataforma simulada, Unooria — o que cada um faz e não faz nesta missão e em que beats aparece. **Se o ambiente for um mini-jogo, são dois:** não existe plataforma simulada, o jogo veste a identidade da Unooria, e a distinção que resta é entre o personagem-guia e a voz da Unooria. No PICO: o que ganha ênfase e o que precisa desaparecer. Endereçado ao principal (jornada), sem direção de tela. Se a spec ativa `instrucao_fixa: sim`, diga também em quais beats a instrução fica visível e em quais recolhe (por padrão, recolhida no PICO e no AHA).
 
 ## Não-negociáveis de ofício (3 a 5)
 - <item> — por que cortar isso mata a aposta — `[MECANISMO: bloco 2, regra <n>]` **ou** `[RS-n → gate-estrutural]`

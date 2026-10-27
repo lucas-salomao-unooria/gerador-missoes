@@ -93,6 +93,8 @@ Nenhum token, fonte, cor ou componente da seção `unooria` dentro das telas do
 clone (e vice-versa). Um `Button` da plataforma no feed quebra a ilusão que a
 experiência está medindo.
 
+**Exceção escrita — instrução fixa do estudante** (`references/padrao-plataforma-instrucao-fixa.md`, só com `instrucao_fixa: sim`). Não é violação a instrução desenhada como camada do hub, fora do iframe e do DOM do clone, não modal, recolhível, fora da ação principal e reconhecível como camada do hub. Dentro do iframe, ou com token da `unooria` no clone, continua violação.
+
 ## DES-14 [BLOQUEANTE] — Visão do professor completa e transversal
 **Severidade decidida por esta esteira em 22/09/2026** (o critério nasceu aqui em 21/09, não no time da plataforma): sem as cinco telas do preparo a missão não é preparável pelo professor de outra disciplina, e o QA de design já bloqueia a mesma ausência (D6) — duas severidades para o mesmo fato eram um defeito.
 A missão é preparada pelo professor de qualquer disciplina. As cinco telas do

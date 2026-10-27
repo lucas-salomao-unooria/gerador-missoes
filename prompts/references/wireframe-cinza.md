@@ -10,15 +10,15 @@ Coleção local de variáveis para wireframes lo-fi. **Os nomes espelham 1:1 os 
 
 | Slot | Valor | Uso |
 |---|---|---|
-| `superficie/base` | Branco | Fundo de tela |
-| `superficie/elevada` | Cinza muito claro | Cards, painéis, barras |
-| `superficie/midia` | Cinza médio | Placeholder de vídeo e imagem, com cruz diagonal |
-| `borda/padrao` | Cinza claro | Divisórias, contorno de container |
-| `borda/foco` | Preto | Estado ativo, seleção, foco de teclado |
-| `texto/primario` | Preto | — |
-| `texto/secundario` | Cinza escuro | — |
-| `acao/primaria` | Preto, texto branco | — |
-| `acao/secundaria` | Contorno preto, fundo transparente | — |
+| `superficie/base` | Branco (`#FFFFFF`) | Fundo de tela |
+| `superficie/elevada` | Cinza muito claro (`#FAFAFA`) | Cards, painéis, barras |
+| `superficie/midia` | Cinza médio (`#E0E0E0`) | Placeholder de vídeo e imagem, com cruz diagonal |
+| `borda/padrao` | Cinza claro (`#C7C7C7`) | Divisórias, contorno de container |
+| `borda/foco` | Preto (`#1A1A1A`) | Estado ativo, seleção, foco de teclado |
+| `texto/primario` | Preto (`#1A1A1A`) | — |
+| `texto/secundario` | Cinza escuro (`#6B6B6B`) | — |
+| `acao/primaria` | Preto (`#1A1A1A`), texto branco | — |
+| `acao/secundaria` | Contorno preto (`#1A1A1A`), fundo transparente | — |
 
 **Sem cor, em nenhuma hipótese** — nem para "só destacar uma coisinha". Uma exceção abre todas as outras.
 

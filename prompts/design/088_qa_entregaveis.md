@@ -200,6 +200,11 @@ Qualquer uma abaixo do mínimo é ❌ com dono `telas`. Até 23/09/2026 estas li
 <!-- include: references/padrao-plataforma-preparo-professor.md -->
 <!-- include: references/padrao-plataforma-preparo-professor-qa.md -->
 
+**Instrução fixa — só quando a spec a ativa (`instrucao_fixa: sim`).** A capacidade tem conferência própria nas dimensões abaixo e uma exceção escrita à DES-13:
+
+<!-- include: references/padrao-plataforma-instrucao-fixa.md -->
+<!-- include: references/padrao-plataforma-instrucao-fixa-qa.md -->
+
 **D7 — Aderência ao briefing de ofício.** Cada não-negociável na tela/string onde deveria; beat memorável com tela própria e peso; pico onde o briefing indicou; ausências continuam ausentes; minutos até a primeira ação; três registros de voz distinguíveis. Divergência **registrada** com bom motivo é decisão, não achado; divergência silenciosa é o achado mais grave. **Marcas dos não-negociáveis:** cada um traz `[MECANISMO: …]` ou `[RS-n → gate-estrutural]`; não-negociável sem marca é ticket com dono `brief-oficio`. `[RS-n]` ainda `pendente` que o wireframe **honra** mesmo assim é ⛔ com dono `gate-estrutural`: a construção materializou um comportamento que a spec não garante.
 
 **D8 — Ambiente simulado.** Sempre que o `ambiente_simulado` vier preenchido. A seção do DS que o D5 importou é a que o bloco 0 da spec decidiu (o D9 não decide ambiente desde 24/10/2026; o código já barra a ficha que troca)? Cada verbo do bloco 4 da spec aparece na especificação com o **rótulo literal** que a ficha do D9 fixou? O que o D9 declarou que o ambiente "não tem" continua ausente das telas? Ambiente novo: os componentes locais estão registrados como candidatos, e nenhum token fora do DS entrou? Com várias seções do DS: cada tela usa a seção que o «Mapa de seções» dá a ela, e cada linha de «Transições» existe no protótipo como ação nativa. Divergência entre ambiente decidido e ambiente construído é ticket com dono `telas`; verbo que o ambiente decidido não comporta é ⛔ com dono `gate-estrutural` — é produto que escolhe outro ambiente (o D9 devolve, não cria).
@@ -241,10 +246,13 @@ Um ticket vai para **um** agente, e o endereço é sempre um `name` do registro 
 | Aresta, estado, dead end, gate sem saída | `fluxo` |
 | Texto final, placeholder não resolvido, registro de voz, áudio de símbolo | `copy-ptbr-revisao` |
 | Frame, componente, token, alvo de toque construído, fidelidade | `telas` |
+| Quadro do **HTML** ausente ou sem `data-screen-id`/`data-estado`, texto do quadro diferente do sheet, alternativa ou distrator faltando ou com marca de gabarito, painel sem o texto do one-pager, tempo scriptado diferente da spec, quadros empilhados ou rolagem horizontal | `prototipo-navegavel` |
 | Símbolo, conceito→símbolo, modo de resposta alternativo, prancha | `caa` |
 | Ambiente construído ≠ ambiente decidido, verbo sem rótulo literal | `ambiente-simulado` |
 | Decisão `[D0-n]` que contraria a spec de produto | `fecha-lacunas` |
 | Mecânica, descoberta, contagem de decisões, coleta de dado | `gate-estrutural` (⛔ devolve) |
+
+O protótipo só recebe ticket de defeito do próprio HTML. Defeito que nasce num documento a montante (jornada, fluxo, copy, telas) vai ao dono do documento, e o protótipo é refeito depois, com as versões novas.
 
 **Achado que depende de pessoa** — licença de pictograma, validação pedagógica, escolha de produto — não tem agente: `agente_responsavel: null`, `severidade: "decisao_humana"`, `precisa_humano: true`, e o dono humano descrito no resumo. Nunca escreva `produto`, `spec`, `PM` ou `revisor` no campo de agente: esse ticket não chega a lugar nenhum.
 
@@ -281,7 +289,7 @@ Na **última rodada permitida**, não adianta endereçar ticket esperando corre�
 Feche com o envelope:
 
 ```json
-{"agente": "qa-entregaveis", "missao": "<slug>", "rodada": <n>, "status": "aprovado" | "bloqueado" | "devolvido", "inspecao": "stitch" | "documental", "veredito": "verde" | "amarelo" | "vermelho" | "devolvido", "achados": [{"id": "T1", "severidade": "bloqueio" | "atencao" | "oficio" | "decisao_humana", "codigo": "D<n> | O<n>", "classe": "<classe>", "agente_responsavel": "brief-oficio | jornada | fluxo | copy-ptbr-revisao | telas | caa | prototipo | ambiente-simulado | fecha-lacunas | gate-estrutural | null", "resumo": "<uma linha>", "onde": "<documento · seção · tela/linha>", "por_que": "<o teste que falhou>", "como": "<o conserto, pronto para aplicar>"}], "devolucao": {"para": "gate-estrutural", "classe": "<classe>"} | null, "precisa_humano": true | false}
+{"agente": "qa-entregaveis", "missao": "<slug>", "rodada": <n>, "status": "aprovado" | "bloqueado" | "devolvido", "inspecao": "stitch" | "documental", "veredito": "verde" | "amarelo" | "vermelho" | "devolvido", "achados": [{"id": "T1", "severidade": "bloqueio" | "atencao" | "oficio" | "decisao_humana", "codigo": "D<n> | O<n>", "classe": "<classe>", "agente_responsavel": "brief-oficio | jornada | fluxo | copy-ptbr-revisao | telas | caa | prototipo-navegavel | ambiente-simulado | fecha-lacunas | gate-estrutural | null", "resumo": "<uma linha>", "onde": "<documento · seção · tela/linha>", "por_que": "<o teste que falhou>", "como": "<o conserto, pronto para aplicar>"}], "devolucao": {"para": "gate-estrutural", "classe": "<classe>"} | null, "precisa_humano": true | false}
 ```
 
 <!-- include: references/citacao-nos-achados.md -->

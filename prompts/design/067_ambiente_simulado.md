@@ -106,6 +106,7 @@ O **bloco 14 completo também vai para `ambiente_simulado`**, que D1, D2, D4, D5
 - **Padrão de conteúdo:** o que circula no ambiente e o schema mínimo que o D4 preenche
 - **Estados que a seção já traz:** vazio · carregando · falha de conexão (na voz da ficção) · degradado (2–4 por dispositivo)
 - **O que a plataforma real NÃO tem:** a linha da seção em `ambientes.md` mais as ausências do bloco 5
+- **Fora do aparelho (só com `instrucao_fixa: sim`):** a instrução fixa é camada do hub, fora do aparelho e do clone; não é affordance do ambiente
 ```
 
 **Ambiente novo que produto decidiu** (`secao_ds: nova:<nome>`, aprovado pelo PO): a mesma ficha e a **seção do DS** — `| Componente | Origem (DS existente · composição de existentes · local novo) | Tokens usados | Verbo que sustenta |`. Composição de componentes existentes é o padrão; componente local novo só quando um verbo do bloco 4 não se materializa de outro jeito, e cada um é candidato registrado para o aprendizado. Cor: só a escala de cinza do lo-fi e os tokens semânticos do DS; a "marca" do ambiente é forma e chrome, não paleta. Nenhum token da seção `unooria` dentro do ambiente (DES-13).

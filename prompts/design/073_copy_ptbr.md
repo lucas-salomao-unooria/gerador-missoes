@@ -106,6 +106,11 @@ Quatro testes (registre o resultado; falha é devolução): **teste da boca** (l
 
 Registro adulto, operacional, sem infantilização e sem jargão de produto: roteiro de perguntas do fechamento (≥ 3, na íntegra), instruções de gatilho (uma linha por momento), leitura do dashboard em linguagem de sala de aula, copy de erro e de conexão perdida para a tela dela.
 
+## Instrução fixa (só quando a spec a ativa)
+
+<!-- include: references/padrao-plataforma-instrucao-fixa.md -->
+<!-- include: references/padrao-plataforma-instrucao-fixa-copy.md -->
+
 ## Definição de pronto (declare a contagem)
 
 ## Régua por idade (resumo gerado da fonte única — tetos, portas de abstração, piso da escola pública, uso por idade)
@@ -136,6 +141,7 @@ Nota: na linha que traz um texto-chave, o ID dele (`TC-07`, a opção `TC-12.2`)
 
 ## Strings do professor (preparação/curadoria com IA, dashboard, gatilhos, roteiro de perguntas, erro) — inclui, obrigatoriamente: rótulos e textos de ajuda do recorte da aula (disciplina, tema, assuntos, contexto), o botão do banco padrão, as mensagens de geração em andamento, de falha e de saldo de IA esgotado, os textos da curadoria (editar, regenerar, aprovar) e de pôr a atividade no ar (sem agendamento: a plataforma libera na hora); e, como amostra de conteúdo dinâmico, o recorte preenchido de cada uma das três aulas da tabela do bloco 8
 ## Prompts e Schemas para Conteúdo Dinâmico gerado por IA (posts, comentários, personas) + Amostras do Banco Curado Default
+## Instrução fixa (só quando a spec a ativa) — as chaves `eN.instrucao.*` e o estado por etapa; `n/a — capacidade não ativada` caso contrário
 ## Roteiro do podcast — as falas do §11 do one-pager, literais (vozes, ordem e texto); só escreva um roteiro se o one-pager não tiver nenhum (5 blocos, falas alternadas, "estudante", 3–5 min). A esteira confere as falas contra o one-pager: na exp01ef1b a copy reescreveu as 9 e o banco gravou outro roteiro
 ## Testes de voz — resultado (boca · exclamativo · quem fala · palavra)
 ## Strings que não couberam / precisam de decisão de design
