@@ -468,6 +468,12 @@ def test_numero_com_origem_citada_que_nao_a_tem():
     assert "origem-de-produto-falsa" in _codigos(r)
     assert "30 s citado como «§17 do one-pager»" in _achado(r, "origem-de-produto-falsa")[0]["resumo"]
 
+    # a citação é da frase dela: o número da frase anterior não responde por ela (exp03ef1b, 28/10/2026)
+    outra_frase = _prd({"cada ato em tela dura no máximo 8 minutos (§15 do one-pager)":
+                        "o Canal B espera 30 segundos. Cada ato em tela dura no máximo 8 minutos (§15 do one-pager)"})
+    r = montagem.validar_prd(_sintetico(prd_final=outra_frase))
+    assert "origem-de-produto-falsa" not in _codigos(r)
+
 
 def test_handoff_nao_precisa_repetir_teto_mas_nao_reescreve_texto_chave():
     handoff = ("# Handoff para dev\n\n## 3. Spec de interação\n- Polling a cada 3 s.\n\n## 6. Hipóteses de validação\n"

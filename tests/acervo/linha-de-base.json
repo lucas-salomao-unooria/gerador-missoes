@@ -1381,8 +1381,7 @@
       "status": "bloqueado",
       "codigos": [
         "hipotese-diverge",
-        "numero-sem-origem",
-        "origem-de-produto-falsa"
+        "numero-sem-origem"
       ]
     },
     "rastro_lacunas_status": {
