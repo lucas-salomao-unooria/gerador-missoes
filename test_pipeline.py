@@ -3088,6 +3088,10 @@ def test_kpi_aponta_para_algo_que_o_mede():
     assert "kpi-tela-divergente" in cods(bom.replace("na tela E3-ALU-02", "na tela E3-ALU-01"))
     # …mas o KPI que declara só a ETAPA casa com qualquer tela dela
     assert "kpi-tela-divergente" not in cods(bom.replace("| E3-ALU-02 | EVT-005 |", "| E3 | EVT-005 |"))
+    # …também ao lado de uma tela de outra etapa: a coluna ampliada como a mensagem manda (KPI-07 da exp03ef1b, 28/10)
+    assert "kpi-tela-divergente" not in cods(bom.replace("| E3-ALU-02 | EVT-005 |", "| `E3`, `E6-ALU-02` | EVT-005 |"))
+    # …e a tela de outra etapa sozinha continua divergente
+    assert "kpi-tela-divergente" in cods(bom.replace("| E3-ALU-02 | EVT-005 |", "| `E4`, `E6-ALU-02` | EVT-005 |"))
 
     assert "baseline-zero" in cods(bom.replace("sem baseline — primeira medição", "0%"))
     assert "baseline-ausente" in cods(bom.replace("sem baseline — primeira medição", "—"))

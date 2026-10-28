@@ -338,9 +338,11 @@ def validar_kpis(prd: str, spec: str = "", one_pager: str = "") -> Dict[str, Any
             if tab_evt and e not in tela_do_evento:
                 falha("kpi-evento-inexistente", f"{nome} cita `{e}`, que não existe na tabela de eventos.")
                 continue
-            telas_kpi = set(_RE_TELA.findall(" ".join(linha.values())))
-            if not telas_kpi:
-                telas_kpi = _etapas(_col(linha, "tela"))
+            # A etapa solta da coluna Tela SOMA às telas: «`E3`, `E4`, `E6-ALU-02`» mede as etapas 3 e 4 inteiras e a
+            # tela da 6. Como fallback, a `E6-ALU-02` apagava o `E3` e o `E4`, e o gate acusava o KPI-07 da exp03ef1b
+            # (28/10/2026) mesmo depois de o redator ampliar a coluna como a própria mensagem manda. `_etapas` tira as
+            # telas antes de procurar etapa, então o "E3" de dentro de "E3-ALU-02" não entra.
+            telas_kpi = set(_RE_TELA.findall(" ".join(linha.values()))) | _etapas(_col(linha, "tela"))
             telas_evt = tela_do_evento.get(e, set())
             if telas_kpi and telas_evt:
                 casa = any(tk == te or tk.startswith(te) or te.startswith(tk) for tk in telas_kpi for te in telas_evt)
