@@ -1189,6 +1189,7 @@ def _sugestoes_de_estado(inventados: Sequence[str], texto: str, contrato: Sequen
 #: Origem de produto citada entre parênteses ao lado do número: «(§17 do one-pager)», «(spec, bloco 9f)».
 _RE_ORIGEM_CITADA = re.compile(r"\(([^()\n]{0,80}?(?:one[- ]?pager|spec|bloco|§)[^()\n]{0,60})\)", re.I)
 _RE_D0_CITADO = re.compile(r"\bD0-0*(\d+)\b")
+_RE_FIM_DE_FRASE = re.compile(r"[.!?]\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ])")
 #: Atribuição de produto ao lado de um [D0-n]: o D0 é decisão do design (do anexo de design; até o PR 6, do bloco 13
 #: dentro da spec).
 _RE_ATRIBUI_PRODUTO = re.compile(
@@ -1242,8 +1243,14 @@ def origens_falsas(corpo: str, docs: Dict[str, str]) -> List[Dict[str, str]]:
                 fonte = _fonte_citada(m.group(1), docs)
                 if not fonte or not fonte[1].strip():
                     continue
-                antes = _RE_CITACAO.sub(" ", celula[: m.start()])
-                for tok in numeros_de_regra(antes[-120:]):
+                antes = _RE_CITACAO.sub(" ", celula[: m.start()])[-120:]
+                # A citação vale para a frase dela: em «pulsar: 20 segundos. Tempo total em 22 minutos (§10 do
+                # one-pager)» o §10 é dos 22 min, e os 20 s viravam origem falsa (exp03ef1b, 28/10/2026). O ponto
+                # seguido de maiúscula fecha a frase; o de «1.8 s» não.
+                fim_da_frase = list(_RE_FIM_DE_FRASE.finditer(antes))
+                if fim_da_frase:
+                    antes = antes[fim_da_frase[-1].end():]
+                for tok in numeros_de_regra(antes):
                     if tem_numero(fonte[1], tok):
                         continue
                     chave = f"{_fmt(tok)}@{fonte[0]}"
