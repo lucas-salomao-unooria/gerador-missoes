@@ -51,6 +51,9 @@ _SECOES_BRIEFING = ("direcionamento pedagógico", "passo a passo", "elementos fi
 
 def _norm(texto: str) -> str:
     sem = "".join(c for c in unicodedata.normalize("NFD", (texto or "").lower()) if unicodedata.category(c) != "Mn")
+    # escape de markdown: o one-pager traz `\*truncamento de eixo\*` e o banco `*truncamento de eixo*`; a barra
+    # sobrava depois de o `*` sumir e a fala do podcast saía «perdida» (exp03em1b-db50c2a9, 28/10/2026)
+    sem = re.sub(r"\\([\\`*_{}\[\]()#+.!|<>~-])", r"\1", sem)
     sem = re.sub(r"[—–-]", " ", sem)
     # marcação some sem deixar espaço: `latch: locked` entre crases virava "( latch: locked )" e não
     # casava com a citação "(latch: locked)" que o juiz copiou (06/10/2026, primeira execução real)
