@@ -2369,9 +2369,10 @@ def explicar(achado: Mapping[str, Any], gate: str = "", sev: Optional[str] = Non
     padrao = str(achado.get("padrao") or "").strip()
     if padrao in PADROES:
         return PADROES[padrao]
-    classe = str(achado.get("classe") or "").strip()
+    # o rastro grava o dono no código e o tipo do marcador na classe, com sublinhado (`d0_orfao`) onde o catálogo tem
+    # hífen (`d0-orfao`): o 🔴 do dev da exp03em1b-db50c2a9 aparecia ao PO com a explicação genérica
+    classe = str(achado.get("classe") or "").strip().replace("_", "-")
     if classe in CATALOGO and gate.startswith("rastro"):
-        # o rastro grava o dono no código e o tipo do marcador na classe
         return CATALOGO[classe]
     if gate in GATES and (GATES[gate][3] or not codigo or _RE_CRITERIO.match(codigo) or _RE_ID_DE_JUIZ.match(codigo)):
         return _do_gate(gate)  # type: ignore[return-value]
