@@ -125,3 +125,13 @@ def test_gate_ligado_a_conferencia_do_prd_e_ao_banco():
 
     fonte = inspect.getsource(checkers.RastroCheckAgent._run_async_impl)
     assert "prd_codavel" in fonte and "validar_intencoes" in fonte
+
+
+def test_regra_com_cast_depois_do_parentese_e_predicado():
+    """`(pericia_resultado->>'sinalizou_B')::boolean = true` saía `regra-sem-predicado` (exp03em1b-db50c2a9, 28/10/2026),
+    e a própria mensagem do gate ensina `(coluna->>'chave')::int OP valor`."""
+    com_cast = PRD.replace("`cadeia_tentativas = 1 → atingiu`", "`(cadeia_tentativas)::int = 1 → atingiu`")
+    assert "regra-sem-predicado" not in _codigos(pc.validar(com_cast, SPEC))
+    # mutante: o cast sem operador continua sem predicado
+    sem_operador = PRD.replace("`cadeia_tentativas = 1 → atingiu`", "`(cadeia_tentativas)::int → atingiu`")
+    assert "regra-sem-predicado" in _codigos(pc.validar(sem_operador, SPEC))

@@ -264,8 +264,10 @@ def _ficha(prd: str, spec: str, achados: List[Dict[str, str]]) -> None:
                     break
                 tem_predicado = False
                 for c in intersecao:
+                    # o cast depois do parêntese é a forma que a mensagem ensina: `(pericia_resultado->>'sinalizou_B')::boolean
+                    # = true` saía sem predicado (exp03em1b-db50c2a9, 28/10/2026)
                     padrao = (rf"\b{re.escape(c)}\b(?:\s*[:.]\s*\w+|\s*->>?\s*['\"\w]+|\s*#>>?\s*\{{[^}}]+\}})*"
-                              rf"(?:\s*\)\s*)?\s*{operadores}")
+                              rf"(?:\s*\)\s*)?(?:::\s*\w+\s*)?\s*{operadores}")
                     padrao_func = rf"\w+\(\s*{re.escape(c)}\b[^)]*\)\s*{operadores}"
                     padrao_json = rf"\b{re.escape(c)}\s*:\s*\w+\s*{operadores}"
                     if (re.search(padrao, condicao, re.IGNORECASE)
