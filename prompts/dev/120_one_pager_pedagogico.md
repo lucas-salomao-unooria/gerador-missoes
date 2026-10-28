@@ -99,7 +99,7 @@ podcast e os caminhos de arquivo que você cita. A correção é copiar de onde 
 
 {anexo_design_spec?}
 
-**One-pager de produto (a intenção original — a narrativa nasce aqui):**
+**One-pager de produto (a intenção original — a narrativa nasce aqui).** As seções `0.1 A ideia` e `0.2 Como a missão funciona passo a passo` contam a missão em linguagem do time, com os números e as falas conferidos em código contra o resto do one-pager: parta delas para contar o passo a passo, na voz da sala de aula, e complete com o que o design desenhou (telas, textos, o que muda em cada tela).
 
 {one_pager?}
 
@@ -256,7 +256,8 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
    em exatamente um passo — inclusive as que a professora usa durante a aula (`E4-PROF-01` vai no
    passo 4). Não invente ID: tela fora do inventário não entra.
  - É o único lugar do documento em que código de tela aparece. A exportação troca esta linha pela
-   imagem de cada tela desenhada no Stitch, com legenda; por isso ela vem sozinha, num parágrafo
+   imagem de cada tela — a desenhada no Stitch ou, sem ela, a tela do protótipo navegável —, com
+   legenda; por isso ela vem sozinha, num parágrafo
    próprio, depois dos itens, sem comentário. Os três itens têm de ser entendidos sem a imagem.
  - Depois do último passo, a exportação acrescenta sozinha o desenho da jornada e do fluxo. Não
    descreva os diagramas nem cole Mermaid aqui.>

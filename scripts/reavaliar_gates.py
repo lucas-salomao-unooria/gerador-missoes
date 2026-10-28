@@ -139,7 +139,8 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
         novos["montagem_pedagogico_status"] = pedagogico.validar(state)
 
     # PR 7: os textos-chave na copy e o fluxo × bloco 2 da spec
-    from tools import afirmacoes, arestas, consistencia, conteudo_aprovado, rastreabilidade, telas, textos_chave
+    from tools import (afirmacoes, arestas, consistencia, conteudo_aprovado, one_pager_completo, rastreabilidade, telas,
+                       textos_chave)
     from pipeline.artifacts import caminhos_de_artefato
 
     spec_c = state.get("spec_missao_consolidada") or spec
@@ -151,10 +152,8 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
         novos["conteudo_aprovado_spec_status"] = r_cas
     if spec_c and one_pager and state.get("spec_missao_consolidada"):
         novos["conteudo_aprovado_spec_design_status"] = conteudo_aprovado.validar_spec(spec_c, one_pager)
-    if state.get("one_pager_resumido") and one_pager:
-        novos["conteudo_aprovado_resumido_status"] = conteudo_aprovado.validar_resumido(
-            str(state["one_pager_resumido"]), spec_gate0, one_pager
-        )
+    if one_pager and all(one_pager_completo.secoes(one_pager)):
+        novos["one_pager_completo_status"] = one_pager_completo.validar(one_pager)
     if state.get("one_pager_pedagogico") and one_pager:
         novos["conteudo_aprovado_pedagogico_status"] = conteudo_aprovado.validar_pedagogico(
             str(state["one_pager_pedagogico"]), spec_c, one_pager, caminhos_de_artefato()

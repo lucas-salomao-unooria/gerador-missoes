@@ -55,6 +55,13 @@ def _figura(figura: "Figura", classe: str) -> str:
     elif figura.svg:
         # Por <img>, e não inline: SVG que veio de fora não executa script dentro de um <img>.
         src = "data:image/svg+xml;base64," + base64.b64encode(figura.svg.encode("utf-8")).decode("ascii")
+    elif figura.html:
+        # O quadro do protótipo (`tools.ilustracoes.quadros_do_prototipo`): a tela de verdade, num iframe sem script
+        # (`sandbox` vazio) e sem acesso à página — o estilo do protótipo não vaza para o documento.
+        link = (f' · <a href="{html.escape(figura.link, quote=True)}">abrir o protótipo</a>' if figura.link else "")
+        return (f'<figure class="{classe} prototipo"><iframe sandbox="" loading="lazy" title="{rotulo}" '
+                f'srcdoc="{html.escape(figura.html, quote=True)}"></iframe>'
+                f"<figcaption>{rotulo}{link}</figcaption></figure>")
     else:
         aviso = f": {html.escape(figura.aviso)}" if figura.aviso else ""
         link = f' · <a href="{html.escape(figura.link, quote=True)}">abrir imagem</a>' if figura.link else ""
@@ -67,7 +74,7 @@ def _telas(bloco: Bloco, ilustracoes: "Ilustracoes") -> str:
     figuras, sem_desenho = ilustracoes.do_passo(bloco.ids)
     partes = [_figura(f, "tela") for f in figuras]
     if sem_desenho:
-        partes.append(f'<p class="figura-ausente">Ainda sem desenho no Stitch: '
+        partes.append(f'<p class="figura-ausente">Ainda sem desenho no Stitch nem no protótipo: '
                       f"{html.escape(ilustracoes.nomes(sem_desenho))}.</p>")
     return "\n".join(partes)
 
@@ -104,7 +111,7 @@ def _corpo(blocos: List[Bloco], ilustracoes: Optional["Ilustracoes"] = None) -> 
         if n == posicao:
             fechar_lista()
             partes.append(_diagramas(ilustracoes, nivel_diagramas))
-        if bloco.tipo == "telas" and ilustracoes is not None and ilustracoes.tem_stitch:
+        if bloco.tipo == "telas" and ilustracoes is not None and ilustracoes.tem_telas:
             fechar_lista()
             partes.append(_telas(bloco, ilustracoes))
             continue
@@ -230,6 +237,10 @@ _PAGINA = """<!doctype html>
     max-width: 100%; height: auto; border: 1px solid var(--linha); border-radius: 6px; background: #fff;
   }}
   figure.tela img {{ max-height: 560px; }}
+  figure.prototipo iframe {{
+    width: 375px; max-width: 100%; height: 640px; border: 1px solid var(--linha); border-radius: 6px; background: #fff;
+  }}
+  @media print {{ figure.prototipo {{ break-inside: avoid; }} }}
   figcaption {{ margin-top: 6px; font-size: 13px; font-style: italic; color: var(--texto); }}
   .figura-ausente {{ font-size: 13px; font-style: italic; text-align: center; }}
   .tabela {{ overflow-x: auto; margin: 0 0 18px; }}

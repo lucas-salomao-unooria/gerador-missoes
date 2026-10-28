@@ -1,7 +1,7 @@
 """Reanálise de 07/10/2026 (noite): o que do one-pager aprovado chega a cada agente, e as conferências novas.
 
 Cada teste reproduz, em miniatura, uma lacuna achada nas 15 sessões do bucket ou na leitura do código: o §4 sem
-proteção, o conteúdo aprovado do dev sem §8/§13/núcleo, o resumido sem conferência, o parâmetro do PO decidido pela
+proteção, o conteúdo aprovado do dev sem §8/§13/núcleo, o resumido sem conferência (até 28/10/2026, quando saiu da esteira), o parâmetro do PO decidido pela
 spec, o PRD ancorado na spec, a spec do D0 sem reconferência, a matriz cega a estados, a base velha depois de refazer
 produto, a fidelidade só em produto, a devolutiva perdida no repasse e o orçamento da banca.
 """
@@ -75,11 +75,6 @@ def test_correcoes_da_auditoria_do_pr_32():
     inatividade = _spec() + "\n- Inatividade: após 45 segundos sem interação, a dica aparece.\n"
     achado = next(a for a in ca.validar_spec(inatividade, op)["achados"] if a["codigo"] == "parametro-decidido")
     assert achado["severidade"] == "bloqueio"
-
-    # o Canal B parafraseado no resumido é 🟡: não recusa o de acordo de produto
-    r = ca.validar_resumido("## 2. Componente\n`EF01CO01`\nA criança escolhe por que as fotos combinam.",
-                            "## 11. Currículo\n`EF01CO01`\n", ONE_PAGER_LITERAIS)
-    assert r["status"] == "amarelo" and _codigos(r) == ["canal-b-reescrito"]
 
     # código do one-pager fora da lista oficial: manda o gate BNCC, a referência volta à spec
     invalido = ONE_PAGER.replace("`EF06CO07` | A + B", "`EF06CO99` | A + B")
@@ -169,35 +164,19 @@ def test_spec_que_decide_parametro_do_po_volta_ao_autor():
     assert ca.parametros_decididos("- Inatividade: 45 s sem toque, a dica pisca.", op)
 
 
-# --------------------------------------------------------------------------- o resumido que o time aprova
-def test_resumido_conferido_contra_o_canonico():
-    spec = "## 11. Currículo\n`EF01CO01`\n"
-    lit = ca.literais(ONE_PAGER_LITERAIS)["canal_b"]
-    fiel = "## 2. Componente curricular\n`EF01CO01`\n\n## 6. Contrato de evidência\n" + "\n".join(f'"{t}"' for t in lit)
-    assert ca.validar_resumido(fiel, spec, ONE_PAGER_LITERAIS)["status"] == "aprovado"
-    parafraseado = "## 2. Componente curricular\n`EF01CO01`\n\n## 6. Contrato\nA criança escolhe por que as fotos combinam."
-    assert _codigos(ca.validar_resumido(parafraseado, spec, ONE_PAGER_LITERAIS)) == ["canal-b-reescrito"]
-    # citar numa proposta de incluir não é acrescentar; afirmar é
-    proposta = fiel + "\n`EF01CO03` [PROPOSTA — validar com PO: incluir a EF01CO03]"
-    assert ca.validar_resumido(proposta, spec, ONE_PAGER_LITERAIS)["status"] == "aprovado"
-    afirmada = fiel + "\nTambém exercita `EF01CO03`."
-    r = ca.validar_resumido(afirmada, spec, ONE_PAGER_LITERAIS)
-    assert _codigos(r) == ["habilidade-acrescentada"] and r["achados"][0]["agente_responsavel"] == "one-pager-resumido"
-    # o tempo em tela do canônico (29 min), não o de um parecer
-    outro_tempo = "`EF06CO10` `EF06CO01` `EF06CO03` `EF06CO07` — 24 minutos em tela."
-    assert _codigos(ca.validar_resumido(outro_tempo, _spec(), ONE_PAGER)) == ["tempo-alterado"]
-
-
-def test_resumido_em_loop_e_o_prompt_manda_o_canonico_vencer():
+# --------------------------------------------------------------------------- o one-pager que o time lê
+def test_one_pager_completo_em_loop_e_o_prompt_manda_o_one_pager_vencer():
+    """O resumido conferido contra o canônico (07/10/2026) deu lugar ao 0.1 e ao 0.2 dentro do próprio one-pager
+    (28/10/2026): não há mais segunda versão da missão para divergir, e o prompt manda o one-pager vencer a spec."""
     from agents.produto import build_produto_stage
     from prompts import load_prompt
 
     loop = build_produto_stage().sub_agents[-1]
-    assert loop.name == "OnePagerResumidoLoop"
-    assert [a.name for a in loop.sub_agents] == ["A061OnePagerResumido", "A062ConteudoAprovadoResumido", "A063ResumidoRodada"]
-    prompt = load_prompt("produto/061_one_pager_resumido.md")
-    assert "a spec vence e você registra" not in prompt and "**vale o canônico**" in prompt
-    assert "{conteudo_aprovado_resumido_report?}" in prompt
+    assert loop.name == "OnePagerCompletoLoop"
+    assert [a.name for a in loop.sub_agents] == ["A061OnePagerCompleto", "A062LeituraOnePagerCheck",
+                                                 "A063OnePagerCompletoRodada"]
+    prompt = load_prompt("produto/061_one_pager_completo.md")
+    assert "vale o one-pager" in prompt and "{one_pager_completo_report?}" in prompt
 
 
 # --------------------------------------------------------------------------- PRD ancorado no one-pager

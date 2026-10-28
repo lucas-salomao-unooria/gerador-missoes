@@ -130,7 +130,7 @@ def _texto_das_decisoes_do_po(decisoes_do_po: Optional[Sequence[Dict[str, Any]]]
 
 #: Documentos de produto: a troca de uma correção pontual de produto já está no one-pager e na spec, que são o
 #: contrato; e a de uma correção de produto antiga, que outra desfez, não pode continuar valendo como origem.
-_DOCUMENTOS_DE_PRODUTO = frozenset({"nucleo_narrativo", "one_pager", "spec_missao", "one_pager_resumido"})
+_DOCUMENTOS_DE_PRODUTO = frozenset({"nucleo_narrativo", "one_pager", "spec_missao"})
 
 
 def _texto_das_trocas_da_correcao(state: Dict[str, Any]) -> str:

@@ -970,9 +970,11 @@ def test_pedido_sobre_o_pedagogico_feito_no_dev_vai_ao_design_e_o_de_produto_a_p
     d = dividir("No one-pager pedagógico, a parte da sala precisa dizer que a turma usa tablets.", "design", estado,
                 [{"n": 1, "dono": "design"}])
     assert d.itens[0].dono == DESIGN
-    d = dividir("No one-pager pedagógico, a seção «Em uma frase» fica curta demais.", "design", estado,
+    # o texto-alvo estava no resumido até 28/10/2026; o 0.1 do one-pager é o lugar dele agora
+    com_ideia = {**estado, "one_pager": estado["one_pager"] + "\n\n## 0.1 A ideia\n\nEm uma frase, a missão.\n"}
+    d = dividir("No one-pager pedagógico, a seção «Em uma frase» fica curta demais.", "design", com_ideia,
                 [{"n": 1, "dono": "design"}])
-    assert d.itens[0].dono == PRODUTO and "one-pager resumido" in d.itens[0].regra[0]
+    assert d.itens[0].dono == PRODUTO and "one-pager" in d.itens[0].regra[0]
 
 
 # --------------------------------------------------------------------------- 7. terceira revisão (24/10/2026)

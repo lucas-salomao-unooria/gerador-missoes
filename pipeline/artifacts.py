@@ -43,7 +43,6 @@ ARTIFACT_FILES = [
     ("one_pager_gate0", "produto/00c-one-pager-original.md"),
     ("spec_missao_gate0", "produto/05a-spec-missao-gate0.md"),
     ("bncc_report", "produto/05b-conformidade-bncc.md"),
-    ("one_pager_resumido", "produto/00d-one-pager-resumido.md"),
     # os textos-chave com ID (PR 7): a tabela que o de acordo mostra e que design e dev recebem
     ("textos_chave_tabela", "produto/00n-textos-chave.md"),
     ("fechamento_lacunas", "design/00-fechamento-lacunas.md"),
@@ -105,7 +104,7 @@ ARTIFACT_FILES = [
     ("conteudo_aprovado_prd_report", "dev/04c-conteudo-aprovado-prd.md"),
     ("montagem_prd_report", "dev/04e-montagem-prd.md"),
     ("coerencia_prd_report", "dev/04d-coerencia-prd.md"),
-    ("conteudo_aprovado_resumido_report", "produto/05h-conteudo-aprovado-resumido.md"),
+    ("one_pager_completo_report", "produto/05h-leitura-clara-one-pager.md"),
     ("banca_produto_report", "produto/05i-banca-produto.md"),
     ("banca_design_report", "design/07c-banca-design.md"),
     ("banca_entrada_report", "dev/00b-banca-entrada.md"),
@@ -287,12 +286,6 @@ async def _save_adk_artifacts(
 ONE_PAGERS_COM_MARCA = [
     ("one_pager", "produto/00-one-pager", "One-pager de produto", "Documento de produto · Unooria"),
     (
-        "one_pager_resumido",
-        "produto/00d-one-pager-resumido",
-        "One-pager resumido",
-        "Para avaliação pedagógica · Unooria",
-    ),
-    (
         "one_pager_pedagogico",
         "design/14-one-pager-pedagogico",
         "One-pager pedagógico",
@@ -301,9 +294,6 @@ ONE_PAGERS_COM_MARCA = [
 ]
 
 
-#: Documentos que gente lê e cujo autor fecha com o envelope de contrato (`references/contrato-saida.md`). O envelope é
-#: da esteira, não do leitor: sai do documento antes de gravar e de exportar.
-DOCUMENTOS_SEM_ENVELOPE = ("one_pager_resumido",)
 #: O envelope que o agente assina no fim do documento, depois de uma divisória opcional: ancorado no fim, como em
 #: `tools.markdown_blocos`, para um ```json citado no corpo continuar onde está.
 _RE_ENVELOPE_NO_FIM = re.compile(r"(?:\n[ \t]*(?:-{3,}|\*{3,})[ \t]*)?\s*```json\s(?:(?!```)[\s\S])*```\s*\Z")
@@ -312,10 +302,10 @@ _RE_ENVELOPE_NO_FIM = re.compile(r"(?:\n[ \t]*(?:-{3,}|\*{3,})[ \t]*)?\s*```json
 def sem_envelope_do_agente(texto: Any) -> Any:
     """O documento sem o envelope JSON que o agente pôs no fim, e sem a divisória que o anunciava.
 
-    O `061_one_pager_resumido.md` manda fechar o resumido com `---` e o envelope (`habilidades_pendentes`,
-    `precisa_humano`…), e nas 15 sessões do acervo de 24/10/2026 o `produto/00d-one-pager-resumido.md` — o que o time
-    de produto lê para avaliar a missão — terminava no JSON. Só sai o bloco que tem a assinatura `"agente"` e é um
-    envelope (`status`), no fim do texto: outro ```json fica."""
+    O resumido de antes (A061, até 28/10/2026) fechava com `---` e o envelope (`habilidades_pendentes`,
+    `precisa_humano`…), e nas 15 sessões do acervo de 24/10/2026 o documento que o time de produto lia terminava no
+    JSON; o redator do 0.1 e do 0.2 passa pelo mesmo filtro (`tools.one_pager_completo.leitura_do_redator`). Só sai o
+    bloco que tem a assinatura `"agente"` e é um envelope (`status`), no fim do texto: outro ```json fica."""
     if not isinstance(texto, str):
         return texto
     m = _RE_ENVELOPE_NO_FIM.search(texto)
@@ -331,14 +321,16 @@ def sem_envelope_do_agente(texto: Any) -> Any:
 def documento_para_gravar(state: Dict[str, Any], chave: str) -> Any:
     """O valor que vai para o arquivo da chave. O pedagógico sai como gente o lê: o texto aprovado no de acordo de design
     e, no fim, a seção que o dev acrescenta (`tools.pedagogico.completo`, PR 10) — guardada à parte no estado, para o
-    texto aprovado não mudar. O resumido sai sem o envelope do agente (`sem_envelope_do_agente`), também nas sessões
-    gravadas antes desta correção."""
+    texto aprovado não mudar. O one-pager de produto sai como o time o lê: com o brief de escopo no fim, que o A023
+    separa dele no estado (`tools.one_pager_completo.documento_para_exportar`, 28/10/2026)."""
     if chave == "one_pager_pedagogico":
         from tools.pedagogico import completo
 
         return completo(state)
-    if chave in DOCUMENTOS_SEM_ENVELOPE:
-        return sem_envelope_do_agente(state.get(chave))
+    if chave == "one_pager":
+        from tools.one_pager_completo import documento_para_exportar
+
+        return documento_para_exportar(state)
     return state.get(chave)
 
 
@@ -502,8 +494,7 @@ def save_run_artifacts(
 
 
     # Os one-pagers também com a marca: quem os lê não lê Markdown, e são eles que circulam
-    # fora do time — a PM encaminha o de produto, o time de produto avalia pelo resumido e a
-    # professora aprova o pedagógico.
+    # fora do time — a PM e o time de negócio leem o de produto e a professora aprova o pedagógico.
     exportar_one_pagers(state, run_dir, slug)
 
     # O histórico por rodada dos gates, ao lado do estado (`tools/historico_gates.py`): entra no zip da sessão e no

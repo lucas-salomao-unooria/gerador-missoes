@@ -68,7 +68,7 @@ STATUS_KEYS = [
     "juiz_perguntas_status", "juiz_perguntas_rodada",
     "telemetria_status",
     "rastro_spec_status", "rastro_design_status", "conteudo_aprovado_spec_status",
-    "conteudo_aprovado_resumido_status", "fidelidade_design_status", "fidelidade_dev_status", "one_pager_po_status",
+    "one_pager_completo_status", "fidelidade_design_status", "fidelidade_dev_status", "one_pager_po_status",
     "rastreabilidade_dev_status", "conteudo_aprovado_spec_design_status",
     "banca_produto_status", "banca_design_status", "banca_entrada_status", "coerencia_prd_status", "coerencia_pedagogico_status",
     "rastro_lacunas_status",
@@ -209,7 +209,7 @@ def material_dos_anexos(doc_batch: Optional[DocumentBatch]) -> str:
     """O texto integral de cada anexo, para o estado — sem limite de tamanho, de propósito.
 
     Até 23/09/2026 o conteúdo dos anexos existia só na mensagem, e só o núcleo narrativo a lê.
-    A spec, a avaliação pedagógica e o one-pager resumido são instruídos a usar o material do
+    A spec, a avaliação pedagógica e o one-pager resumido de então eram instruídos a usar o material do
     Entre Redes como fonte primária de código BNCC e componente curricular e nunca o viam: 5 das
     7 sessões que anexaram o material entregaram um resumido dizendo "material não anexado". E
     a sessão guardava só os nomes, então uma correção que refizesse produto perdia o material.

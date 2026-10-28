@@ -59,7 +59,7 @@ from tools import (
     bncc, contrato_produto, evidencia, kpis, rastro, consistencia,
     conteudo, conteudo_aprovado, cobertura_design, prd_codavel,
     afirmacoes, telas, prototipo, mecanica, rastreabilidade, componentes_ds, montagem,
-    arestas, textos_chave, ambiente, pedagogico
+    arestas, textos_chave, ambiente, pedagogico, one_pager_completo
 )
 from pipeline.artifacts import caminhos_de_artefato
 from tools.anexo_design import spec_consolidada
@@ -88,7 +88,6 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     handoff = str(state.get("handoff_dev", "") or "")
     one_pager = str(state.get("one_pager", "") or "")
     one_pager_po = str(state.get("one_pager_po", "") or "")
-    one_pager_res = str(state.get("one_pager_resumido", "") or "")
     one_pager_ped = str(state.get("one_pager_pedagogico", "") or "")
     banco = str(state.get("banco_conteudo", "") or "")
     brief_assets = str(state.get("brief_assets", "") or "")
@@ -139,10 +138,9 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     # C3 (24/10/2026): a cobertura conceitual com o material da sessão, e os juízes de produto e a banca do fim de produto
     # recontados em código sobre o relatório que a execução gravou
     gates.update(_produto_recontado(state))
-    if one_pager_res:
-        gates["conteudo_aprovado_resumido_status"] = _extrair_status_e_codigos(
-            conteudo_aprovado.validar_resumido(one_pager_res, spec, one_pager)
-        )
+    # a leitura clara do one-pager (0.1 e 0.2, 28/10/2026): só nas sessões que já a têm
+    if one_pager and all(one_pager_completo.secoes(one_pager)):
+        gates["one_pager_completo_status"] = _extrair_status_e_codigos(one_pager_completo.validar(one_pager))
     if one_pager_ped:
         gates["conteudo_aprovado_pedagogico_status"] = _extrair_status_e_codigos(
             conteudo_aprovado.validar_pedagogico(one_pager_ped, spec_c, one_pager, caminhos_de_artefato())

@@ -66,7 +66,7 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "banca_produto_status", "rotulo": "Banca de produto (fim de produto)", "etapa": "produto", "rodada": "spec_rodada"},
     {"status": "banca_design_status", "rotulo": "Banca de design (fim de design)", "etapa": "design", "rodada": "qa_design_rodada"},
     {"status": "banca_entrada_status", "rotulo": "Banca de entrada do dev (segunda verificação)", "etapa": "dev", "rodada": None},
-    {"status": "conteudo_aprovado_resumido_status", "rotulo": "Resumido × one-pager aprovado", "etapa": "produto", "rodada": "resumido_rodada"},
+    {"status": "one_pager_completo_status", "rotulo": "Leitura clara do one-pager", "etapa": "produto", "rodada": "one_pager_completo_rodada"},
     {"status": "one_pager_po_status", "rotulo": "One-pager do PO preservado", "etapa": "produto", "rodada": "one_pager_po_rodada"},
     {"status": "fidelidade_design_status", "rotulo": "Fidelidade ao refazer de design", "etapa": "design", "rodada": None},
     {"status": "fidelidade_dev_status", "rotulo": "Fidelidade ao refazer de dev", "etapa": "dev", "rodada": None},

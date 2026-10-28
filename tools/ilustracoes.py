@@ -12,6 +12,11 @@ cache na pasta da sessão (`.cache-imagens/`), porque o endereço do Stitch venc
 exportação roda de novo a cada etapa. Download com tempo curto; falha não derruba a exportação —
 vira a legenda "imagem indisponível" com o link. Três falhas de rede seguidas e o resto nem é tentado.
 
+Sem desenho no Stitch — ele está desligado por padrão desde 22/10/2026 —, a tela vem do protótipo
+navegável (`quadros_do_prototipo`): o quadro `data-screen-id` do estado padrão, com os estilos do
+protótipo e sem os scripts. No `.html` ele entra como a própria tela, num `iframe` isolado; no
+`.docx`, que não desenha HTML, vira a legenda com o caminho do protótipo.
+
 Os diagramas vêm de `tools.diagrama_imagem`, desligado por padrão; desligado, o documento aponta
 o `design/09-diagramas.html`.
 """
@@ -40,6 +45,9 @@ FALHAS_ATE_DESISTIR = 3
 TAMANHO_MAXIMO = 15 * 1024 * 1024
 
 INDISPONIVEL = "imagem indisponível"
+#: O protótipo navegável (`design/08-prototipo.html`, `pipeline.artifacts.ARTIFACT_FILES`), de onde vêm as telas sem
+#: Stitch — a partir de `design/`, onde o pedagógico fica.
+CAMINHO_PROTOTIPO = "08-prototipo.html"
 SEM_IMAGEM_NO_STITCH = "tela sem imagem no Stitch"
 
 _ID_NO_INICIO = re.compile(r"^\s*E\d[-_](?:ALU|PROF|SIS)[-_]\d{2}[A-Za-z]?\s*(?:[—–:|-]+\s*)?", re.IGNORECASE)
@@ -55,6 +63,7 @@ class Figura:
     imagem: Optional[bytes] = None  # PNG ou JPEG, que o Word e o navegador abrem
     mime: str = "image/png"
     svg: Optional[str] = None  # só o `.html` usa (diagrama do Miro sem conversor)
+    html: Optional[str] = None  # só o `.html` usa: o quadro do protótipo, documento HTML inteiro e sem script
     link: Optional[str] = None
     aviso: str = ""
     largura: int = 0
@@ -75,6 +84,8 @@ class Ilustracoes:
     telas: Dict[str, List[Figura]] = field(default_factory=dict)
     propositos: Dict[str, str] = field(default_factory=dict)
     tem_stitch: bool = False
+    #: Telas que vieram do protótipo porque o Stitch não as desenhou (ou está desligado).
+    do_prototipo: bool = False
     diagramas: List[Figura] = field(default_factory=list)
     #: A frase que entra quando não há figura dos diagramas (ou falta alguma); "" = sessão sem diagrama.
     aviso_diagramas: str = ""
@@ -97,6 +108,11 @@ class Ilustracoes:
     def nomes(self, ids: Sequence[str]) -> str:
         """`E1-ALU-01 — Abertura do álbum` · …, com o propósito do inventário da jornada."""
         return " · ".join(f"{i} — {self.propositos[i]}" if self.propositos.get(i) else i for i in ids)
+
+    @property
+    def tem_telas(self) -> bool:
+        """Há imagem de tela para pôr debaixo dos passos — do Stitch ou do protótipo."""
+        return self.tem_stitch or self.do_prototipo
 
     @property
     def tem_diagramas(self) -> bool:
@@ -165,6 +181,81 @@ def propositos_da_jornada(jornada: Optional[str]) -> Dict[str, str]:
         if ids and col < len(celulas):
             saida.setdefault(ids[0], celulas[col].replace("`", "").strip())
     return saida
+
+
+_RE_QUADRO = re.compile(r"<(\w+)\b[^>]*\bdata-screen-id\s*=\s*[\"']([^\"']+)[\"'][^>]*>", re.IGNORECASE)
+_RE_ESTADO = re.compile(r"\bdata-estado\s*=\s*[\"']([^\"']*)[\"']", re.IGNORECASE)
+_RE_ESTILO = re.compile(r"<style\b[^>]*>.*?</style>", re.IGNORECASE | re.DOTALL)
+_RE_SCRIPT = re.compile(r"<script\b[^>]*>.*?</script>", re.IGNORECASE | re.DOTALL)
+_RE_EVENTO = re.compile(r"\s+on[a-z]+\s*=\s*(?:\"[^\"]*\"|'[^']*')", re.IGNORECASE)
+#: O que os protótipos fazem para mostrar um quadro por vez e prender a página na altura da tela: desfeito no quadro
+#: avulso, que tem de aparecer sozinho e inteiro.
+_CSS_QUADRO_AVULSO = """
+html, body { height: auto !important; overflow: visible !important; display: block !important;
+             background: #FFFFFF !important; margin: 0 !important; }
+body .moldura-mobile { width: 100% !important; max-width: 100% !important; margin: 0 !important; }
+body .moldura-mobile [data-screen-id].tela-ativa { display: flex !important; flex-direction: column; min-height: 600px; }
+.screen-meta-badge { display: none !important; }
+"""
+_RE_CLASSE = re.compile(r"\bclass\s*=\s*([\"'])(.*?)\1", re.IGNORECASE | re.DOTALL)
+
+
+def _ativo(abertura: str) -> str:
+    """A tag de abertura do quadro com a classe `tela-ativa`: os protótipos escondem todo quadro que não a tem."""
+    m = _RE_CLASSE.search(abertura)
+    if m:
+        return abertura[:m.start(2)] + m.group(2) + " tela-ativa" + abertura[m.end(2):]
+    return abertura[:-1].rstrip("/ ") + ' class="tela-ativa">'
+
+
+
+def _fim_do_elemento(texto: str, inicio: int, tag: str) -> int:
+    """O fim do elemento que abre em `inicio` (logo depois do `</tag>` que fecha o `<tag>` de abertura)."""
+    abre = re.compile(rf"<{tag}\b", re.IGNORECASE)
+    fecha = re.compile(rf"</{tag}\s*>", re.IGNORECASE)
+    nivel, pos = 0, inicio
+    while True:
+        a = abre.search(texto, pos)
+        f = fecha.search(texto, pos)
+        if not f:
+            return len(texto)
+        if a and a.start() < f.start():
+            nivel += 1
+            pos = a.end()
+            continue
+        nivel -= 1
+        pos = f.end()
+        if nivel <= 0:
+            return pos
+
+
+def quadros_do_prototipo(prototipo: Optional[str]) -> Dict[str, str]:
+    """ID da tela → o quadro do protótipo como documento HTML avulso (estilos do protótipo, nenhum script).
+
+    O quadro é o do estado padrão (`padrão`, `normal`), ou o primeiro do ID: quem lê a missão precisa ver a tela, não
+    cada variação dela. O protótipo que não marca os quadros com `data-screen-id` (os de antes de 07/10/2026) não dá
+    quadro nenhum.
+    """
+    texto = re.sub(r"^```(?:html)?\s*\n|\n```\s*$", "", (prototipo or "").strip())
+    if "data-screen-id" not in texto:
+        return {}
+    estilos = "\n".join(_RE_ESTILO.findall(texto.split("<body", 1)[0]) or _RE_ESTILO.findall(texto))
+    escolhidos: Dict[str, Tuple[bool, str]] = {}
+    for m in _RE_QUADRO.finditer(texto):
+        tela = m.group(2).strip()
+        estado = _norm((_RE_ESTADO.search(m.group(0)) or [None, ""])[1])
+        padrao = not estado or "padr" in estado or "normal" in estado
+        if tela in escolhidos and (escolhidos[tela][0] or not padrao):
+            continue
+        quadro = _ativo(m.group(0)) + texto[m.end():_fim_do_elemento(texto, m.start(), m.group(1))]
+        quadro = _RE_EVENTO.sub("", _RE_SCRIPT.sub("", quadro))
+        escolhidos[tela] = (padrao, quadro)
+    return {
+        tela: ("<!DOCTYPE html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\">"
+               f"{estilos}<style>{_CSS_QUADRO_AVULSO}</style></head><body>"
+               f"<div class=\"moldura-mobile\">{quadro}</div></body></html>")
+        for tela, (_, quadro) in escolhidos.items()
+    }
 
 
 def ids_citados(blocos: Sequence[Bloco]) -> List[str]:
@@ -459,6 +550,16 @@ def montar_ilustracoes(
     for tela in telas:
         if tela.id in citados:
             ilustracoes.telas.setdefault(tela.id, []).append(baixador.figura(tela))
+    # a tela que o Stitch não desenhou — ou todas, com o Stitch desligado — vem do protótipo navegável
+    quadros = quadros_do_prototipo(str(state.get("prototipo_html") or ""))
+    for tela_id in citados:
+        desenhadas = [f for f in ilustracoes.telas.get(tela_id, []) if f.imagem]
+        if desenhadas or tela_id not in quadros:
+            continue
+        rotulo = f"{tela_id} — {ilustracoes.propositos[tela_id]}" if ilustracoes.propositos.get(tela_id) else tela_id
+        ilustracoes.telas[tela_id] = [Figura(rotulo, html=quadros[tela_id], link=CAMINHO_PROTOTIPO,
+                                             aviso="tela do protótipo navegável")]
+        ilustracoes.do_prototipo = True
 
     if isinstance(renderizador, str) and renderizador == "configurado":
         from tools.diagrama_imagem import renderizador_configurado

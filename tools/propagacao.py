@@ -38,8 +38,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tupl
 #: Contrato de produto: o que o PO aprova (one-pager, núcleo, spec do Gate 0) e o que ele mesmo escreveu (briefing,
 #: one-pager do PO). A `spec_missao` depois do design tem dois autores (blocos 13 e 14 são do D0 e do D9), e entra
 #: só sem esses blocos, como `spec_produto`.
-CONTRATO = ("briefing", "one_pager_po", "nucleo_narrativo", "one_pager", "one_pager_resumido", "spec_missao_gate0",
-            "spec_produto")
+CONTRATO = ("briefing", "one_pager_po", "nucleo_narrativo", "one_pager", "spec_missao_gate0", "spec_produto")
 #: A jusante, na ordem da esteira, com a etapa dona.
 JUSANTE: Tuple[Tuple[str, str], ...] = (
     ("fechamento_lacunas", "design"), ("ambiente_simulado", "design"), ("brief_oficio", "design"),
@@ -52,14 +51,14 @@ JUSANTE: Tuple[Tuple[str, str], ...] = (
 )
 #: Colunas da matriz do pedido (a mesma da matriz de 23/10/2026), com abreviação.
 COLUNAS_PEDIDO: Tuple[Tuple[str, str], ...] = (
-    ("one_pager_po", "po1p"), ("nucleo_narrativo", "nucl"), ("one_pager", "1p"), ("one_pager_resumido", "1pR"),
+    ("one_pager_po", "po1p"), ("nucleo_narrativo", "nucl"), ("one_pager", "1p"),
     ("spec_missao_gate0", "spG0"), ("spec_produto", "spec"), ("fechamento_lacunas", "D0"),
     ("ambiente_simulado", "D9"), ("jornada_telas", "jorn"), ("copy_strings_revisada", "copy"),
     ("prototipo_html", "prot"), ("handoff_dev", "hand"), ("banco_conteudo", "banc"), ("prd_final", "PRD"),
     ("one_pager_pedagogico", "1pPed"),
 )
 #: Os documentos de saída onde se procura `[CONFLITO …]` (as notas de passagem trazem só a instrução).
-DOCUMENTOS_DE_SAIDA = ("nucleo_narrativo", "one_pager", "one_pager_resumido", "spec_missao_gate0", "spec_missao") + tuple(
+DOCUMENTOS_DE_SAIDA = ("nucleo_narrativo", "one_pager", "spec_missao_gate0", "spec_missao") + tuple(
     k for k, _ in JUSANTE)
 
 _RE_TITULO_13_14 = re.compile(r"^#{1,3}\s*\**\s*1[34]\s*[.—–-]", re.M)
@@ -700,7 +699,7 @@ def sem_origem(state: Dict[str, Any], docs: Optional[Dict[str, str]] = None,
 # --------------------------------------------------------------------------- 4. [D0-n] a jusante × spec
 _RE_D0 = re.compile(r"\bD0-(\d+)\b")
 #: Onde uma citação [D0-n] aponta para a spec: produto (que nunca deveria citá-los) e a jusante.
-CITAM_D0 = ("one_pager", "one_pager_resumido", "nucleo_narrativo", "brief_oficio", "jornada_telas", "fluxo_arestas",
+CITAM_D0 = ("one_pager", "nucleo_narrativo", "brief_oficio", "jornada_telas", "fluxo_arestas",
             "copy_strings_revisada", "camada_caa", "wireframes_cobertura", "prototipo_html", "handoff_dev",
             "banco_conteudo", "prd_final", "one_pager_pedagogico")
 

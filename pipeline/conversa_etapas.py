@@ -53,7 +53,7 @@ PEDIDO_RASCUNHO = "[rascunho do comentário do parecer]"
 
 #: Documentos lidos primeiro, nesta ordem. O resto da etapa entra depois, relatórios antes.
 PRIORIDADE: Dict[str, Tuple[str, ...]] = {
-    "produto": ("one_pager", "spec_missao", "nucleo_narrativo", "one_pager_resumido", "gate_final_report"),
+    "produto": ("one_pager", "spec_missao", "nucleo_narrativo", "gate_final_report"),
     # o pedagógico fecha o design desde o PR 10 (24/10/2026): é o documento do de acordo de design, lido primeiro
     "design": ("one_pager_pedagogico", "jornada_telas", "fluxo_arestas", "copy_strings_revisada", "wireframes_cobertura",
                "camada_caa", "brief_oficio", "anexo_design_spec", "ambiente_simulado", "fechamento_lacunas",
@@ -62,7 +62,7 @@ PRIORIDADE: Dict[str, Tuple[str, ...]] = {
 }
 # na conversa única, o principal de cada etapa antes de qualquer relatório
 PRIORIDADE[MISSAO] = ("one_pager", "spec_missao", "jornada_telas", "fluxo_arestas", "copy_strings_revisada",
-                      "prd_final", "one_pager_resumido", "handoff_dev", "brief_assets", "one_pager_pedagogico",
+                      "prd_final", "handoff_dev", "brief_assets", "one_pager_pedagogico",
                       "gate_final_report", "qa_entregaveis_report", "validacao_dev_report", "nucleo_narrativo",
                       "wireframes_cobertura", "camada_caa", "brief_oficio", "ambiente_simulado", "fechamento_lacunas")
 #: O que a etapa recebe da anterior e costuma entrar na pergunta ("o design seguiu a spec?").

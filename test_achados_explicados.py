@@ -29,7 +29,7 @@ CODIGOS_FORA_DO_ACERVO = [
     ("adequacao_status", "alinhamento_curricular"), ("adequacao_status", "carga_cognitiva"),
     ("adequacao_status", "demanda-cognitiva"), ("adequacao_status", "evidencia-aprendizagem"),
     ("adequacao_status", "sem-artefato-observavel"), ("avaliacao_status", "4.1"),
-    ("conteudo_aprovado_resumido_status", "decisao-atribuida-ao-po"), ("contrato_produto_status", "saeb-ausente"),
+    ("contrato_produto_status", "saeb-ausente"),
     ("diagnostico_status", "9.1"), ("diagnostico_status", "F7"), ("fidelidade_nucleo_status", "sem-prova"),
     ("fidelidade_status", "pedido-violado"), ("gate_estrutural_status", "4.6"), ("gate_estrutural_status", "5.6"),
     ("gate_estrutural_status", "7.4"), ("gate_estrutural_status", "9.1(i)"), ("gate_final_status", "F2"),

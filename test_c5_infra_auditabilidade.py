@@ -53,44 +53,30 @@ def _rodar(agente: BaseAgent, estado: Dict[str, Any]) -> Dict[str, Any]:
     return asyncio.run(_executar(SequentialAgent(name="R", sub_agents=[agente]), copy.deepcopy(estado)))
 
 
-# =========================================================================== 1. envelope fora do one-pager resumido
+# =========================================================================== 1. envelope fora do documento que gente lê
+#: O resumido (A061) saiu da esteira em 28/10/2026 — o one-pager de produto é um documento só —, mas o filtro do envelope
+#: ficou: é ele que limpa a saída do redator do 0.1 e do 0.2 (`tools.one_pager_completo.leitura_do_redator`).
 ASSINATURA_RESUMIDO = '"agente": "one-pager-resumido"'
-COM_RESUMIDO = [p.parent.name for p in sorted(ACERVO.glob("*/estado.json"))
-                if (json.loads(p.read_text(encoding="utf-8")).get("one_pager_resumido") or "").strip()]
 
 
-def test_o_resumido_de_cada_sessao_do_acervo_termina_no_envelope():
-    """O defeito existe: nas sessões do acervo o resumido termina no envelope do agente (24/10/2026: 15 de 15 no bucket)."""
-    assert len(COM_RESUMIDO) >= 14
-    for missao in COM_RESUMIDO:
-        texto = _estado(missao)["one_pager_resumido"]
-        assert ASSINATURA_RESUMIDO in texto[-400:], missao
-
-
-@pytest.mark.parametrize("missao", COM_RESUMIDO)
-def test_o_resumido_gravado_sai_sem_o_envelope(missao):
-    from pipeline.artifacts import documento_para_gravar
-
-    estado = _estado(missao)
-    gravado = documento_para_gravar(estado, "one_pager_resumido")
-    assert ASSINATURA_RESUMIDO not in gravado and "```json" not in gravado[-300:]
-    assert not gravado.rstrip().endswith("---"), "a divisória que anunciava o envelope sai junto"
-    # o resto do documento fica como estava
-    assert estado["one_pager_resumido"].startswith(gravado.rstrip())
-
-
-def test_md_html_e_docx_do_resumido_sem_o_envelope(tmp_path, monkeypatch):
-    """O `.md` que o time de produto lê e as exportações: o `.html` e o `.docx` já filtravam pelo `markdown_blocos`, o
-    `.md` não (`pipeline/artifacts.py`, 24/10/2026)."""
+def test_o_resumido_do_acervo_nao_e_mais_gravado_nem_exportado(tmp_path, monkeypatch):
     from pipeline.artifacts import save_run_artifacts
 
     monkeypatch.setenv("OUTPUT_DIR", str(tmp_path / "saida"))
     estado = {k: v for k, v in _estado("exp02ef1b-4fd72a9a").items() if k in ("one_pager_resumido", "spec_missao")}
+    assert ASSINATURA_RESUMIDO in estado["one_pager_resumido"]
     pasta = save_run_artifacts(estado, "s", run_dir=tmp_path / "sessao")
-    md = (pasta / "produto/00d-one-pager-resumido.md").read_text(encoding="utf-8")
-    html = (pasta / "produto/00d-one-pager-resumido.html").read_text(encoding="utf-8")
-    assert ASSINATURA_RESUMIDO not in md and "one-pager-resumido&quot;" not in html and "habilidades_pendentes" not in html
-    assert (pasta / "produto/00d-one-pager-resumido.docx").exists()
+    assert not list(pasta.glob("produto/00d-one-pager-resumido.*"))
+
+
+def test_o_envelope_do_redator_nao_entra_no_one_pager():
+    from tools.one_pager_completo import TITULO_IDEIA, TITULO_PASSO_A_PASSO, leitura_do_redator
+
+    texto = _estado("exp05ef1b")["one_pager_resumido"]
+    envelope = texto[texto.rindex("```json") - 5:]
+    saida = f"{TITULO_IDEIA}\n\nA missão.\n\n{TITULO_PASSO_A_PASSO}\n\n### 1. O professor libera\n\nTexto.\n{envelope}"
+    limpo = leitura_do_redator(saida)
+    assert ASSINATURA_RESUMIDO not in limpo and "```json" not in limpo and not limpo.rstrip().endswith("---")
 
 
 def test_json_citado_no_corpo_e_envelope_sem_assinatura_ficam():
@@ -100,31 +86,6 @@ def test_json_citado_no_corpo_e_envelope_sem_assinatura_ficam():
     assert sem_envelope_do_agente(citado) == citado
     sem_assinatura = "# Resumido\n\nTexto.\n\n```json\n{\"status\": \"concluido\"}\n```\n"
     assert sem_envelope_do_agente(sem_assinatura) == sem_assinatura
-
-
-def test_o_callback_do_autor_tira_o_envelope_do_estado():
-    """O resumido entra no estado sem o envelope: a correção pontual e o refazer o recebem limpo como base."""
-    from agents.callbacks import tirar_envelope_do_documento
-    from agents.produto import get_one_pager_resumido_agent
-
-    class Ctx:
-        def __init__(self, state):
-            self.state = state
-
-    texto = _estado("exp05ef1b")["one_pager_resumido"]
-    ctx = Ctx({"one_pager_resumido": texto})
-    tirar_envelope_do_documento("one_pager_resumido")(ctx)
-    assert ASSINATURA_RESUMIDO not in ctx.state["one_pager_resumido"]
-    callbacks = get_one_pager_resumido_agent().after_agent_callback
-    callbacks = callbacks if isinstance(callbacks, list) else [callbacks]
-    assert any(getattr(c, "__name__", "") == "tirar_envelope_one_pager_resumido" for c in callbacks)
-
-
-def test_mutante_sem_o_filtro_o_envelope_volta(monkeypatch):
-    import pipeline.artifacts as art
-
-    monkeypatch.setattr(art, "DOCUMENTOS_SEM_ENVELOPE", ())
-    assert ASSINATURA_RESUMIDO in art.documento_para_gravar(_estado("exp05ef1b"), "one_pager_resumido")
 
 
 # =========================================================================== 2 e 3. catálogo e diagnóstico × parecer

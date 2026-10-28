@@ -655,22 +655,39 @@ def desembrulhar_documento(chave: str):
     return _callback
 
 
-def tirar_envelope_do_documento(chave: str):
-    """after_agent_callback: tira do documento que gente lê o envelope JSON que o autor pôs no fim, logo que ele é gravado
-    (`pipeline.artifacts.sem_envelope_do_agente`). O resumido das 15 sessões do acervo de 24/10/2026 terminava no JSON, e
-    o envelope dele não é lido por ninguém: nenhum gate o confere, e o `.md` é o que o time de produto lê."""
-    def _callback(callback_context: CallbackContext) -> None:
-        from pipeline.artifacts import sem_envelope_do_agente
+def encaixar_leitura_no_one_pager(callback_context: CallbackContext) -> None:
+    """after_agent_callback do A061: o 0.1 e o 0.2 que o redator escreveu entram no one-pager, logo antes da seção 1
+    (`tools.one_pager_completo.encaixar`), no lugar dos da rodada anterior. Sem as duas seções na saída, o one-pager
+    fica como está e a conferência acusa a falta."""
+    from tools import one_pager_completo as oc
 
-        texto = callback_context.state.get(chave)
-        if isinstance(texto, str) and texto:
-            limpo = sem_envelope_do_agente(texto)
-            if limpo != texto:
-                callback_context.state[chave] = limpo
+    state = callback_context.state
+    leitura = oc.leitura_do_redator(str(state.get("one_pager_leitura") or ""))
+    state["one_pager_leitura"] = leitura
+    one_pager = str(state.get("one_pager") or "")
+    if leitura and one_pager.strip():
+        novo = oc.encaixar(one_pager, leitura)
+        if novo != one_pager:
+            state["one_pager"] = novo
+    return None
+
+
+def manter_leitura_na_correcao_pontual(callback_context: CallbackContext) -> Optional[types.Content]:
+    """before_agent_callback do A061: na correção pontual, o 0.1 e o 0.2 que já estão no one-pager ficam.
+
+    O editor troca o one-pager inteiro, 0.1 e 0.2 inclusive (`tools.edicao_pontual`): reescrevê-los aqui desfaria a troca
+    que o PO pediu nessas seções. Missão sem as duas seções (gerada antes de 28/10/2026) ganha as duas: o redator roda.
+    """
+    from tools import one_pager_completo as oc
+
+    state = callback_context.state
+    if state.get(KEY_MODO_CORRECAO) != "pontual":
         return None
-
-    _callback.__name__ = f"tirar_envelope_{chave}"
-    return _callback
+    ideia, passos = oc.secoes(str(state.get("one_pager") or ""))
+    if not (ideia and passos):
+        return None
+    leitura = f"{oc.TITULO_IDEIA}\n\n{ideia}\n\n{oc.TITULO_PASSO_A_PASSO}\n\n{passos}"
+    return types.Content(role="model", parts=[types.Part(text=leitura)])
 
 
 def copiar_textos_chave(chave: str):

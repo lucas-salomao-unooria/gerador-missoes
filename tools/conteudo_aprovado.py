@@ -1199,55 +1199,6 @@ def validar_pedagogico(pedagogico: str, spec: str, one_pager: str,
             "tempo": tempo_aprovado(one_pager), "podcast": tem_podcast(one_pager)}
 
 
-#: Linha do resumido que cita a habilidade sem afirmá-la: a proposta de tirá-la, «a confirmar», a divergência.
-_RE_HABILIDADE_SO_CITADA = re.compile(r"PROPOSTA|a confirmar|DIVERG[ÊE]NCIA|ABERTO|DECIS[ÃA]O PENDENTE|plaus[íi]vel", re.I)
-
-
-def validar_resumido(resumido: str, spec: str, one_pager: str) -> Dict[str, Any]:
-    """O one-pager resumido contra o canônico aprovado e a spec.
-
-    O resumido é o que o time de produto lê para aprovar a missão pedagogicamente (A061); o canônico é o que
-    segue para design e dev. Até 07/10/2026 nada os comparava, e o prompt mandava a spec vencer quando os dois
-    divergiam. Confere as habilidades do bloco 11 (já conferidas contra o §12a), o tempo em tela do §10 e o Canal
-    B com o texto aprovado — o contrato de evidência do resumido usa as alternativas como tabela de marcadores, e
-    nas sessões de outubro só uma em cada três o trazia. Habilidade citada numa proposta de tirá-la ou «a
-    confirmar» não conta como acrescentada.
-    """
-    achados: List[Dict[str, str]] = []
-    corpo = resumido or ""
-    da_spec, origem = habilidades_de_referencia(spec, one_pager)
-    if da_spec and not _decisao_pendente(bncc.secao_bloco(spec or "", 11) or ""):
-        citadas = bncc.extrair_codigos(corpo)
-        afirmadas = bncc.extrair_codigos("\n".join(l for l in _linhas_fora_de_codigo(corpo)
-                                                   if not _RE_HABILIDADE_SO_CITADA.search(l)))
-        correcao_falta = ("Cada habilidade aprovada entra no componente curricular e no contrato de evidência, com "
-                          "o código entre crases.")
-        correcao_sobra = ("O resumido não acrescenta habilidade: tire-a, ou cite-a como `[PROPOSTA — validar com PO: …]` "
-                          "ou «a confirmar».")
-        permitidos_op = codigos_citados_no_one_pager(one_pager)
-        achados += [a for a in _comparar_codigos(da_spec, citadas, "o one-pager resumido", origem,
-                                                 "produto", correcao_falta, correcao_sobra,
-                                                 permitidos=permitidos_op)
-                    if a["codigo"] == "habilidade-perdida"]
-        achados += [a for a in _comparar_codigos(da_spec, afirmadas, "o one-pager resumido", origem,
-                                                 "produto", correcao_falta, correcao_sobra,
-                                                 permitidos=permitidos_op)
-                    if a["codigo"] == "habilidade-acrescentada"]
-    achados += _tempo(corpo, one_pager, "o one-pager resumido", "produto")
-    # 🟡, não ⛔: nas 15 sessões do bucket o resumido não trazia o Canal B literal em 7 — geradas antes de o prompt
-    # pedir — e travar o de acordo de produto por isso recusaria quase metade das missões (auditoria do PR #32).
-    achados += [{**a, "severidade": "atencao"} for a in _literais(
-        corpo, one_pager, ("canal_b",), "no one-pager resumido", "produto",
-        "O time pedagógico aprova a pergunta e as alternativas que a criança vai ler: no contrato de evidência, a "
-        "tabela de marcadores do Canal B traz o texto do §12a do canônico, palavra por palavra, e só depois a "
-        "explicação de cada nível.")]
-    for a in achados:
-        a["agente_responsavel"] = "one-pager-resumido"
-    return {"status": _status(achados), "achados": achados, "codigos": da_spec,
-            "tempo": tempo_aprovado(one_pager), "podcast": tem_podcast(one_pager)}
-
-
-# --------------------------------------------------------------------------- relatório
 def relatorio(resultado: Dict[str, Any], documento: str, missao: str = "") -> str:
     icone = {"aprovado": "🟢 FIEL AO ONE-PAGER APROVADO", "amarelo": "🟡 COM RESSALVAS",
              "bloqueado": "🔴 DIVERGE DO ONE-PAGER APROVADO"}[resultado["status"]]
