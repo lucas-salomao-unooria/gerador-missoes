@@ -48,11 +48,15 @@ Ordem (SequentialAgent):
                                  o de produto volta para a spec, o do PO fica 🟡 no parecer)
   p5g A054ConteudoAprovadoSpec → conteudo_aprovado_spec_status (determinístico: habilidades,
                                  tempo em tela e podcast iguais aos do one-pager aprovado)
-  ┌── OnePagerResumidoLoop (até SPEC_MAX_RODADAS) ─────────────────────────┐
-  │ p6  A061OnePagerResumido   → one_pager_resumido (o formato curto do time de produto para │
-  │                              avaliação pedagógica, derivado do canônico e da spec conferida) │
-  │ p6b A062ConteudoAprovadoResumido → habilidades, tempo e Canal B × canônico aprovado │
+  ┌── OnePagerCompletoLoop (até SPEC_MAX_RODADAS) ─────────────────────────┐
+  │ p6  A061OnePagerCompleto  → one_pager_leitura, encaixada no one_pager: │
+  │                             §0.1 A ideia e §0.2 Como a missão funciona │
+  │                             passo a passo, em linguagem do time        │
+  │ p6b A062LeituraOnePagerCheck → forma, jargão, números e falas × resto  │
+  │                             do one-pager (determinístico)              │
   └────────────────────────────────────────────────────────────────────────┘
+  O one-pager sai como um documento só (modelo do time, 28/10/2026): §0, §0.1, §0.2, §1–§18 e o brief de escopo no
+  fim (`tools.one_pager_completo.documento_para_exportar`). O resumido de antes deixou de existir.
 """
 
 from __future__ import annotations
@@ -70,9 +74,9 @@ from agents.banca import get_banca
 from agents.comite import build_comite_canais_loop, build_comite_final_loop
 from agents.juiz import get_fidelidade_check, get_juiz_de_achados
 from agents.rota import RotaDeAchadosAgent
-from agents.callbacks import (dispensar_ideacao_com_one_pager_do_po, manter_completude_entre_rodadas, marcar_heranca,
-                              montar_one_pager_por_trocas, preservar_one_pager, so_a_mensagem_do_po,
-                              tirar_envelope_do_documento)
+from agents.callbacks import (dispensar_ideacao_com_one_pager_do_po, encaixar_leitura_no_one_pager,
+                              manter_completude_entre_rodadas, manter_leitura_na_correcao_pontual, marcar_heranca,
+                              montar_one_pager_por_trocas, preservar_one_pager, so_a_mensagem_do_po)
 from agents.checkers import (
     DocumentoObrigatorioAgent,
     SecaoSplitAgent,
@@ -419,52 +423,52 @@ COMPLETUDE_FIM = _H + r"Passo 5\b.*$"        # "## Passo 5 — Relatório de com
 COMPLETUDE_RELATORIO_FIM = _H + r"Passo 6\b.*$"  # "## Passo 6 — Testes"
 
 
-def get_one_pager_resumido_agent(**kw) -> LlmAgent:
+def get_one_pager_completo_agent(**kw) -> LlmAgent:
     return create_llm_agent(
-        name="A061OnePagerResumido",
-        description="One-pager resumido para avaliação pedagógica, no formato do time de produto: ficha, ideia em prosa, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário por habilidade e takeaway. Condensa o canônico e a spec aprovados; não decide nada novo.",
-        instruction=load_prompt("produto/061_one_pager_resumido.md"),
-        output_key="one_pager_resumido",
-        before_agent_callback=marcar_heranca,
-        after_agent_callback=tirar_envelope_do_documento("one_pager_resumido"),
+        name="A061OnePagerCompleto",
+        description="As duas seções que abrem o one-pager de produto — 0.1 A ideia e 0.2 Como a missão funciona passo a passo — em linguagem clara e não técnica, para o time de negócio e de produto. Conta o one-pager já auditado; não decide nada novo. A esteira encaixa as seções no one-pager.",
+        instruction=load_prompt("produto/061_one_pager_completo.md"),
+        output_key="one_pager_leitura",
+        before_agent_callback=[marcar_heranca, manter_leitura_na_correcao_pontual],
+        after_agent_callback=encaixar_leitura_no_one_pager,
         **kw,
     )
 
 
-def _resumido_loop(kw: dict, settings) -> LoopAgent:
-    """O resumido ↔ conferência contra o canônico aprovado.
+def _one_pager_completo_loop(kw: dict, settings) -> LoopAgent:
+    """O 0.1 e o 0.2 do one-pager ↔ conferência em código contra o resto dele (`tools/one_pager_completo.py`).
 
-    O resumido é o que o time de produto lê para aprovar a missão; o canônico é o que segue para design e dev.
-    Até 07/10/2026 nada os comparava: em 7 das 15 sessões do bucket o resumido não trazia o Canal B com o texto
-    aprovado, e numa delas declarava outro tempo em tela.
+    Até 28/10/2026 o fim de Produto escrevia um segundo documento, o resumido, para o time ler; o time de negócio não
+    entendia a missão em nenhum dos dois. Agora é um documento só: o canônico, aberto pela missão contada em linguagem
+    clara. A conferência devolve ao redator o jargão, o número que o resto do one-pager não tem e a fala entre aspas
+    reescrita; esgotadas as rodadas, segue 🟡 — é leitura, não contrato.
     """
     rodadas = max(1, settings.spec_max_rodadas)
     return LoopAgent(
-        name="OnePagerResumidoLoop",
-        description="One-pager resumido ↔ conferência contra o one-pager canônico aprovado, até bater ou esgotar as rodadas.",
+        name="OnePagerCompletoLoop",
+        description="0.1 e 0.2 do one-pager ↔ conferência contra o resto do one-pager (forma, jargão, números e falas), até bater ou esgotar as rodadas.",
         max_iterations=rodadas,
         before_agent_callback=marcar_heranca,
         sub_agents=[
-            get_one_pager_resumido_agent(**kw),
+            get_one_pager_completo_agent(**kw),
             RastroCheckAgent(
-                name="A062ConteudoAprovadoResumido",
-                description="One-pager resumido × canônico aprovado e spec: as habilidades do bloco 11, o tempo em tela do §10 e o Canal B com o texto do §12a. Divergência volta ao autor do resumido.",
-                modo="aprovado_resumido",
-                rotulo="Resumido × one-pager aprovado",
-                report_key="conteudo_aprovado_resumido_report",
-                status_key="conteudo_aprovado_resumido_status",
-                agente="conteudo-aprovado",
-                estrito=settings.esteira_estrita,
+                name="A062LeituraOnePagerCheck",
+                description="O 0.1 e o 0.2 do one-pager contra o resto dele: as duas seções com a forma do modelo, nenhum jargão da esteira, nenhum número sem origem e nenhuma fala entre aspas reescrita. Divergência volta ao redator.",
+                modo="one_pager_completo",
+                rotulo="Leitura clara do one-pager",
+                report_key="one_pager_completo_report",
+                status_key="one_pager_completo_status",
+                agente="one-pager-completo",
+                estrito=False,
                 before_agent_callback=marcar_heranca,
             ),
             SaidaDeLoopAgent(
-                name="A063ResumidoRodada",
-                description="Resumido fiel ao canônico encerra o loop; divergente volta ao autor com o relatório.",
-                rotulo="One-pager resumido",
-                status_keys=["conteudo_aprovado_resumido_status"],
-                rodada_key="resumido_rodada",
+                name="A063OnePagerCompletoRodada",
+                description="0.1 e 0.2 conferidos encerram o loop; com achado, voltam ao redator com o relatório.",
+                rotulo="Leitura clara do one-pager",
+                status_keys=["one_pager_completo_status"],
+                rodada_key="one_pager_completo_rodada",
                 max_rounds=rodadas,
-                autor_keys=["one_pager_resumido"],
             ),
         ],
     )
@@ -620,7 +624,7 @@ def build_produto_stage(
 ) -> SequentialAgent:
     """Monta a etapa de Produto como SequentialAgent aninhado.
 
-    `a_partir_de="spec"` monta só o fim da etapa — SpecLoop e one-pager resumido — para o modo
+    `a_partir_de="spec"` monta só o fim da etapa — SpecLoop e a leitura clara do one-pager (0.1 e 0.2) — para o modo
     correção: núcleo, one-pager e gates da execução anterior ficam como estão no estado.
     """
     settings = get_settings()
@@ -635,9 +639,9 @@ def build_produto_stage(
             raise ValueError(f"a_partir_de inválido: {a_partir_de!r} (só 'spec' é suportado)")
         return SequentialAgent(
             name="ProdutoStage",
-            description="Área de Produto — correção a partir da spec: spec ↔ currículo e manifesto → one-pager resumido (núcleo, one-pager e gates preservados da execução anterior).",
+            description="Área de Produto — correção a partir da spec: spec ↔ currículo e manifesto → 0.1 e 0.2 do one-pager (núcleo, resto do one-pager e gates preservados da execução anterior).",
             sub_agents=[_build_spec_loop(kw, settings, rodadas_spec), _fidelidade_de_produto(kw),
-                        _resumido_loop(kw, settings)],
+                        _one_pager_completo_loop(kw, settings)],
         )
 
     nucleo_loop = LoopAgent(
@@ -875,7 +879,7 @@ def build_produto_stage(
 
     return SequentialAgent(
         name="ProdutoStage",
-        description="Área de Produto: núcleo narrativo ↔ micro-gate → seções de apoio → gate estrutural → avaliações → gate final → spec da missão ↔ currículo e manifesto → one-pager resumido.",
+        description="Área de Produto: núcleo narrativo ↔ micro-gate → seções de apoio → gate estrutural → avaliações → gate final → spec da missão ↔ currículo e manifesto → 0.1 e 0.2 do one-pager, em linguagem do time.",
         sub_agents=[
             # Antes de inventar: o que já existe no ano, lido do índice pelo briefing. Sem isto, a
             # primeira geração nasce cega e a repetição só apareceria na segunda rodada do loop.
@@ -919,9 +923,8 @@ def build_produto_stage(
             ),
             spec_loop,
             _fidelidade_de_produto(kw),
-            # Depois da spec, de propósito: o bloco 11 já passou pelo A046, então o resumido
-            # copia códigos conferidos em vez dos que a seção 2 do canônico ainda podia trocar.
-            _resumido_loop(kw, settings),
+            # Por último, de propósito: o 0.1 e o 0.2 contam o one-pager que os gates e a spec já fecharam.
+            _one_pager_completo_loop(kw, settings),
         ],
     )
 
@@ -945,8 +948,7 @@ SPEC_AGENT_IDS = ["A045SpecMissao", "A045bCompletudeSpec", "A045cCompletudeSpecS
                   "A050PerguntasCheck", "A051JuizPerguntas", "A052JuizPerguntasCheck",
                   "A054ConteudoAprovadoSpec", "A057aBancaProdutoNarrativa", "A057bBancaPedagogiaBncc",
                   "A058BancaConsolidacao", "A058bRotaDeAchados", "A059SpecCheck", "A060FidelidadeProduto",
-                  "A061OnePagerResumido",
-                  "A062ConteudoAprovadoResumido", "A063ResumidoRodada"]
+                  "A061OnePagerCompleto", "A062LeituraOnePagerCheck", "A063OnePagerCompletoRodada"]
 
 PRODUTO_METADATA = [
     {"id": "A001VizinhasCatalogo", "name": "001 · Missões já geradas (determinístico)", "icon": "🗂️", "output_key": "missoes_vizinhas", "prompt_file": None, "description": "Lê o índice de missões e entrega ao núcleo as mais próximas do ano do briefing, para a missão nova não repetir uma anterior."},
@@ -1024,9 +1026,9 @@ PRODUTO_METADATA = [
     {"id": "A058bRotaDeAchados", "name": "058b · Rota dos achados da banca (determinístico)", "icon": "🧑", "output_key": "banca_produto_status_envelope", "prompt_file": None, "description": "O bloqueio da banca de produto que cita o one-pager, e não a spec, vai ao PO no parecer de produto (Refazer com a mudança): o autor da spec não pode contrariar o one-pager, e a rodada dele não se gasta nisso. O veredito do gate não muda."},
     {"id": "A059SpecCheck", "name": "059 · Veredito da spec (determinístico)", "icon": "🔀", "output_key": "spec_rodada", "prompt_file": None, "description": "Currículo e manifesto conformes encerram o loop da spec; reprovados devolvem ao autor com os dois relatórios."},
     {"id": "A060FidelidadeProduto", "name": "060 · Fidelidade ao pedido do PO e ao briefing", "icon": "📌", "output_key": "fidelidade_report", "prompt_file": None, "description": "Núcleo, one-pager e spec contra todos os pedidos do PO e o briefing. Pedido sem prova é 🔴 e recusa o de acordo de produto; conflito com regra da esteira vira decisão do PO."},
-    {"id": "A061OnePagerResumido", "name": "061 · One-pager resumido", "icon": "🗂️", "output_key": "one_pager_resumido", "prompt_file": "produto/061_one_pager_resumido.md", "description": "O one-pager no formato do time de produto para avaliação pedagógica: ficha, ideia, componente curricular, socioemocionais, 6 etapas, professor, contrato de evidência ternário e takeaway. Sai em .md, .docx e .html."},
-    {"id": "A062ConteudoAprovadoResumido", "name": "062 · Resumido × one-pager aprovado (determinístico)", "icon": "📎", "output_key": "conteudo_aprovado_resumido_report", "prompt_file": None, "description": "As habilidades do bloco 11, o tempo em tela do §10 e o Canal B com o texto do §12a no resumido que o time lê para aprovar. Divergência volta ao autor do resumido."},
-    {"id": "A063ResumidoRodada", "name": "063 · Veredito do resumido (determinístico)", "icon": "🔁", "output_key": "resumido_rodada", "prompt_file": None, "description": "Resumido fiel encerra o loop; divergente volta ao autor com o relatório, até o teto de rodadas."},
+    {"id": "A061OnePagerCompleto", "name": "061 · A missão contada para o time (0.1 e 0.2)", "icon": "🗂️", "output_key": "one_pager_leitura", "prompt_file": "produto/061_one_pager_completo.md", "description": "As duas seções que abrem o one-pager de produto: 0.1 A ideia (a missão inteira em prosa) e 0.2 Como a missão funciona passo a passo, em linguagem clara e não técnica, para o time de negócio e de produto. A esteira as encaixa no one-pager, que sai com o brief de escopo no fim, em .md, .docx e .html."},
+    {"id": "A062LeituraOnePagerCheck", "name": "062 · Leitura clara do one-pager (determinístico)", "icon": "📎", "output_key": "one_pager_completo_report", "prompt_file": None, "description": "O 0.1 e o 0.2 contra o resto do one-pager: a forma do modelo (prosa; 8 a 16 passos, do preparo do professor ao fechamento), nenhum jargão da esteira, nenhum número sem origem e nenhuma fala entre aspas reescrita. Divergência volta ao redator."},
+    {"id": "A063OnePagerCompletoRodada", "name": "063 · Veredito da leitura clara (determinístico)", "icon": "🔁", "output_key": "one_pager_completo_rodada", "prompt_file": None, "description": "0.1 e 0.2 conferidos encerram o loop; com achado, voltam ao redator com o relatório, até o teto de rodadas."},
 ]
 
 PRODUTO_METADATA_SPEC = [m for m in PRODUTO_METADATA if m["id"] in SPEC_AGENT_IDS]

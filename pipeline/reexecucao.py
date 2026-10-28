@@ -164,7 +164,9 @@ CHAVES_SPEC = frozenset({
     "completude_spec", "relatorio_completude", "completude_status", "completude_status_envelope",
     "completude_report", "completude_rodada", "completude_chamou_o_modelo",
     "bncc_report", "bncc_status", "bncc_status_envelope",
-    "one_pager_resumido",
+    # o 0.1 e o 0.2 do one-pager (28/10/2026) rodam no fim da correção a partir da spec; o resumido que eles substituem
+    # sai do estado das sessões antigas, para não ficar uma versão da missão que ninguém mais atualiza
+    "one_pager_leitura", "one_pager_resumido",
     # gates da spec criados em 22–23/09/2026. `juiz_perguntas_rodada` é o que doía: sem apagar,
     # a correção começava com as rodadas do juiz já esgotadas e não havia rodada de correção.
     "evidencia_report", "evidencia_status", "evidencia_status_envelope",
@@ -176,9 +178,9 @@ CHAVES_SPEC = frozenset({
     "juiz_perguntas_rodada", "juiz_evidencia_saida",
     "rastro_spec_report", "rastro_spec_status", "rastro_spec_status_envelope",
     "conteudo_aprovado_spec_report", "conteudo_aprovado_spec_status", "conteudo_aprovado_spec_status_envelope",
-    # o resumido × canônico aprovado (07/10/2026): sem apagar, a correção começava com as rodadas esgotadas
-    "conteudo_aprovado_resumido_report", "conteudo_aprovado_resumido_status",
-    "conteudo_aprovado_resumido_status_envelope", "resumido_rodada",
+    # a leitura clara do one-pager (0.1 e 0.2): sem apagar, a correção começava com as rodadas esgotadas
+    "one_pager_completo_report", "one_pager_completo_status", "one_pager_completo_status_envelope",
+    "one_pager_completo_rodada",
     # a banca no fim de produto (08/10/2026)
     "banca_produto_narrativa", "banca_produto_pedagogia",
     "banca_produto_report", "banca_produto_status", "banca_produto_status_envelope",
@@ -254,7 +256,7 @@ CHAVES_EXECUCAO = frozenset({"reexecucoes", "tickets_retrabalho", "tickets_sem_r
                              # (`preparar_estado_pontual`)
                              "modo_correcao", "documentos_travados", "edicoes_pontuais",
                              # a versão da rodada anterior de cada loop: some ao sair do loop, e aqui se a execução caiu
-                             *(f"rodada_anterior_{c}" for c in ("one_pager", "spec_missao", "one_pager_resumido", "handoff_dev",
+                             *(f"rodada_anterior_{c}" for c in ("one_pager", "spec_missao", "handoff_dev",
                                                                 "brief_assets", "prd_final", "one_pager_pedagogico"))})
 #: Em que etapa começou a correção desta execução (vazio sem pedido de correção).
 KEY_ETAPA_DA_CORRECAO = "etapa_da_correcao"
@@ -270,7 +272,7 @@ KEY_EDICOES_A_MONTANTE = "edicoes_a_montante"
 #: Acrescentar uma pergunta de evidência à spec devolvia outra missão inteira.
 CHAVES_AUTORAIS = frozenset({
     "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao", "completude_spec",
-    "one_pager_resumido", "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
+    "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
     "camada_caa", "wireframes_cobertura", "copy_strings_revisada", "prototipo_html",
     "handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico",
 })
@@ -320,9 +322,8 @@ ROTULOS_GATE_POR_ETAPA: Dict[str, str] = {
     "Rastro de lacunas da spec": "spec",
     "Spec × one-pager aprovado": "spec",
     "Spec da missão": "spec",
-    # o resumido roda no fim da correção a partir da spec: refazer spec o refaz
-    "Resumido × one-pager aprovado": "spec",
-    "One-pager resumido": "spec",
+    # o 0.1 e o 0.2 do one-pager rodam no fim da correção a partir da spec: refazer spec os refaz
+    "Leitura clara do one-pager": "spec",
     "Spec consolidada × one-pager aprovado": "design",
     "Banca de produto": "spec",
     "Banca de design": "design",
@@ -1482,7 +1483,7 @@ async def executar_cascata_stream(
     one-pager seguiu dizendo outra coisa, e o pedido custou quatro refazeres de design (~2 h). Aqui:
 
     1. **Produto pontual**, só com os itens que a triagem deu a produto (`tools/triagem_pedido.py`): o editor troca no
-       núcleo, no one-pager, no resumido e na spec do Gate 0, e os gates de produto julgam com a linha de base. A
+       núcleo, no one-pager e na spec do Gate 0, e os gates de produto julgam com a linha de base. A
        decisão que o PO gravou no de acordo (`decisoes_do_po`) não pode sair do texto. Se os itens não cabem numa
        edição, nada é aplicado e o PO devolve a Produto (D4, B); se a correção deixa bloqueio novo em produto que o
        editor não consertou, a sessão volta ao estado de antes da cascata, com o mesmo recado. Se o editor não propõe
@@ -1525,7 +1526,7 @@ async def executar_cascata_stream(
             item_pedido = PedidoCorrecao(
                 texto=d.texto_de(PRODUTO), anexos=list(pedido.anexos), anexos_sem_texto=list(pedido.anexos_sem_texto),
                 nota_da_esteira=(f"Estes são os itens de produto de um pedido feito pelo PO em {etapa}, triados item a "
-                                 "item. Aplique-os onde a decisão mora — núcleo, one-pager, resumido e spec do Gate 0 —; "
+                                 "item. Aplique-os onde a decisão mora — núcleo, one-pager e spec do Gate 0 —; "
                                  f"{etapa} os acompanha depois."))
             kwargs = dict(exigir_pontual=True, pular_sem_trocas=True, guardar_decisoes=True)
         else:

@@ -2190,7 +2190,7 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
             return None
         return (lambda t=texto: t), f"{Path(base).name}_{missao}.md", "text/markdown"
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3 = st.columns(3)
     with c1:
         if pasta and pasta.exists():
             download_button_lazy(
@@ -2205,9 +2205,9 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
             st.button("📦 Download total", disabled=True, use_container_width=True, key=f"zip_total_{prefix}",
                       help="A pasta da missão ainda não foi gravada.")
     # quem gera cada um: sem ele, o botão fica desabilitado em vez de baixar um arquivo vazio
-    for col, (rotulo, chave, base, quem) in zip((c2, c3, c4), (
+    # o de produto é um documento só desde 28/10/2026: a missão em linguagem do time (0.1 e 0.2), as 18 seções e o brief
+    for col, (rotulo, chave, base, quem) in zip((c2, c3), (
             ("📄 One-pager de produto", "one_pager", "produto/00-one-pager", "a etapa de Produto"),
-            ("📄 One-pager resumido", "one_pager_resumido", "produto/00d-one-pager-resumido", "o fim de Produto"),
             # o fechamento do design desde o PR 10 (24/10/2026)
             ("📄 One-pager pedagógico", "one_pager_pedagogico", "design/14-one-pager-pedagogico", "o fim de Design"))):
         with col:

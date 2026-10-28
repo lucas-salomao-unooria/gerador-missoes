@@ -345,9 +345,9 @@ def test_outros_one_pagers_nao_ganham_imagem(tmp_path, monkeypatch, sem_rede):
     from pipeline.artifacts import exportar_one_pagers
 
     monkeypatch.setattr(il, "baixar_http", lambda url: (_ for _ in ()).throw(AssertionError("baixou")))
-    resumido = "# Resumido\n\nTelas deste passo: `E3-ALU-01`\n"
-    exportar_one_pagers({"one_pager_resumido": resumido, "stitch_links": FOLHA_STITCH}, tmp_path, "exp")
-    _, texto = _sequencia(tmp_path / "produto/00d-one-pager-resumido.docx")
+    produto = "# One-pager\n\nTelas deste passo: `E3-ALU-01`\n"
+    exportar_one_pagers({"one_pager": produto, "stitch_links": FOLHA_STITCH}, tmp_path, "exp")
+    _, texto = _sequencia(tmp_path / "produto/00-one-pager.docx")
     assert "Telas deste passo: E3-ALU-01" in texto
 
 
@@ -517,3 +517,39 @@ def test_uma_imagem_por_tela_o_estado_padrao():
                                             Figura("E2-ALU-01 — degradado")]})
     figuras, sem = ilus.do_passo(["E2-ALU-01", "E3-ALU-01"])
     assert [f.rotulo for f in figuras] == ["E2-ALU-01 — padrão"] and sem == ["E3-ALU-01"]
+
+
+# --------------------------------------------------------------------------- 5. telas do protótipo, sem Stitch
+PROTOTIPO_COM_QUADROS = """```html
+<!DOCTYPE html><html><head><style>.quadro-tela:not(.tela-ativa) { display: none !important; }</style>
+<script>alert(1)</script></head><body><div class="moldura-mobile">
+<section class="quadro-tela" data-screen-id="E3-ALU-01" data-estado="erro"><p>Erro</p></section>
+<section class="quadro-tela" data-screen-id="E3-ALU-01" data-estado="padrão">
+  <div><p>Escolha a escala</p><button onclick="go()">Publicar</button></div></section>
+</div><script>go()</script></body></html>
+```"""
+
+
+def test_sem_stitch_a_tela_vem_do_quadro_padrao_do_prototipo(tmp_path, sem_rede):
+    """O Stitch está desligado por padrão (22/10/2026): sem ele, a tela do passo é o quadro do protótipo — o do estado
+    padrão, ativo, sem script nem `onclick` —, no `.html` num iframe isolado e no `.docx` como legenda com o link."""
+    from pipeline.artifacts import exportar_one_pagers
+
+    quadros = il.quadros_do_prototipo(PROTOTIPO_COM_QUADROS)
+    assert list(quadros) == ["E3-ALU-01"]
+    quadro = quadros["E3-ALU-01"]
+    assert "Escolha a escala" in quadro and "Erro" not in quadro and "tela-ativa" in quadro
+    assert "<script" not in quadro and "onclick" not in quadro and ".quadro-tela:not(.tela-ativa)" in quadro
+
+    documento = "# Ped\n\n### Passo 3 — Decidir\n\nA criança escolhe.\n\n**Telas deste passo:** `E3-ALU-01`\n"
+    ilustracoes = il.montar_ilustracoes({"prototipo_html": PROTOTIPO_COM_QUADROS}, documento, tmp_path / "cache")
+    assert ilustracoes.tem_telas and not ilustracoes.tem_stitch
+    exportar_one_pagers({"one_pager_pedagogico": documento, "prototipo_html": PROTOTIPO_COM_QUADROS}, tmp_path, "exp")
+    pagina = (tmp_path / "design/14-one-pager-pedagogico.html").read_text(encoding="utf-8")
+    assert pagina.count('<iframe sandbox=""') == 1 and "Escolha a escala" in pagina and "abrir o protótipo" in pagina
+    _, texto = _sequencia(tmp_path / "design/14-one-pager-pedagogico.docx")
+    assert "tela do protótipo navegável" in texto and "Telas deste passo" not in texto
+
+
+def test_prototipo_sem_marca_de_quadro_nao_da_tela():
+    assert il.quadros_do_prototipo("<html><body><section>tela</section></body></html>") == {}

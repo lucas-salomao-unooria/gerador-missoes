@@ -1271,6 +1271,72 @@ for _codigo_novo, _exp_nova in {
         "Uma habilidade do material aprovado sumiu deste documento.",
         "O que o PO aprovou se perde no caminho.",
         _REFAZER_DA_ETAPA + "que a habilidade volte.", None),
+    # a leitura clara do one-pager (0.1 e 0.2, `tools/one_pager_completo.py`, 28/10/2026)
+    "ideia-ausente": _x(
+        "Falta «A ideia» no one-pager",
+        "O one-pager não abre com a seção 0.1, a missão inteira contada em prosa.",
+        "É a seção que o time de negócio e de produto lê para entender o que a missão faz.",
+        _REFAZER_PRODUTO, PO),
+    "ideia-com-lista": _x(
+        "«A ideia» em lista, não em prosa",
+        "A seção 0.1 traz bullets, lista numerada ou tabela.",
+        "A seção conta a missão como uma história, do professor que libera ao fechamento.",
+        _REFAZER_PRODUTO, PO),
+    "ideia-curta": _x(
+        "«A ideia» curta demais",
+        "A seção 0.1 tem menos parágrafos do que a missão inteira pede.",
+        "Quem lê só essa seção tem de conseguir contar a missão do começo ao fim.",
+        _REFAZER_PRODUTO, PO),
+    "passo-a-passo-ausente": _x(
+        "Falta o passo a passo no one-pager",
+        "O one-pager não traz a seção 0.2, «Como a missão funciona passo a passo».",
+        "É o roteiro, em linguagem do time, do preparo do professor ao fechamento com a turma.",
+        _REFAZER_PRODUTO, PO),
+    "passos-fora-da-faixa": _x(
+        "Passo a passo com passos de menos ou de mais",
+        "A seção 0.2 tem menos de 8 ou mais de 16 passos.",
+        "Com poucos passos a missão não aparece inteira; com muitos, deixa de ser leitura rápida.",
+        _REFAZER_PRODUTO, PO),
+    "passos-fora-de-ordem": _x(
+        "Passo a passo com a numeração quebrada",
+        "Os passos da seção 0.2 não vão numerados de 1 em diante, sem pular.",
+        "Quem lê se perde na ordem da missão.",
+        _REFAZER_PRODUTO, PO),
+    "primeiro-passo-sem-professor": _x(
+        "O passo a passo não começa pelo professor",
+        "O passo 1 da seção 0.2 não fala do professor preparando e liberando a atividade.",
+        "A missão começa antes do estudante: é o professor quem prepara e libera.",
+        _REFAZER_PRODUTO, PO),
+    "passo-vazio": _x(
+        "Passo sem texto",
+        "Um passo da seção 0.2 tem só o título.",
+        "Quem lê não sabe o que acontece nesse momento da missão.",
+        _REFAZER_PRODUTO, PO),
+    "passo-longo": _x(
+        "Passo longo demais",
+        "Um passo da seção 0.2 passa de 120 palavras.",
+        "O passo a passo é leitura rápida: explicação longa vai nas seções de baixo.",
+        _REFAZER_PRODUTO, PO),
+    "jargao": _x(
+        "Termo técnico no começo do one-pager",
+        "As seções 0.1 ou 0.2 usam um termo da esteira ou de engenharia (gate, slot, determinístico, SVG…).",
+        "Essas seções existem para o time de negócio entender a missão sem glossário.",
+        _REFAZER_PRODUTO, PO),
+    "id-de-tela": _x(
+        "Código de tela no começo do one-pager",
+        "As seções 0.1 ou 0.2 citam uma tela pelo código (como `E3-ALU-02`) em vez de dizer o que ela mostra.",
+        "Quem lê não sabe o que é a tela pelo código.",
+        _REFAZER_PRODUTO, PO),
+    "numero-sem-origem": _x(
+        "Número que o one-pager não tem",
+        "As seções 0.1 ou 0.2 trazem um número que não aparece em nenhuma outra parte do one-pager.",
+        "O resumo da missão não pode prometer o que a missão não tem.",
+        _REFAZER_PRODUTO, PO),
+    "fala-reescrita": _x(
+        "Fala entre aspas que a missão não tem",
+        "As seções 0.1 ou 0.2 põem entre aspas um texto de tela que não está, igual, no resto do one-pager.",
+        "Texto entre aspas é o que o estudante lê: reescrito, o time aprova uma fala que a tela não vai mostrar.",
+        _REFAZER_PRODUTO, PO),
     "tempo-alterado": _x(
         "Tempo da missão diferente do aprovado",
         "O documento declara um tempo total na tela diferente do que o one-pager aprovado dá.",
@@ -2132,8 +2198,8 @@ GATES: Dict[str, Tuple[str, str, str, bool]] = {
                                 "plataforma faz e se cada número tem fonte", PO, False),
     "banca_produto_status": ("Banca de produto", "uma revisão independente do conjunto de produto, no fim da etapa",
                              PO, True),
-    "conteudo_aprovado_resumido_status": ("One-pager resumido × aprovado", "se o one-pager resumido traz os textos "
-                                          "aprovados sem reescrever", PO, False),
+    "one_pager_completo_status": ("Leitura clara do one-pager", "se o 0.1 e o 0.2 contam a missão sem jargão, com os "
+                                  "números e as falas do resto do one-pager", PO, False),
     "one_pager_po_status": ("One-pager do PO preservado", "se o que o PO escreveu no one-pager original continua lá",
                             PO, False),
     "lacunas_status": ("Fechamento de lacunas (design)", "se o design completou o que faltava na especificação sem "

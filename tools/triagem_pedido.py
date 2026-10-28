@@ -34,9 +34,8 @@ ROTULO_DONO = {PRODUTO: "Produto", DESIGN: "Design", DEV: "Dev", INDEFINIDO: "se
 
 #: Onde o texto-alvo é procurado: o contrato que o PO aprova. A spec é a do Gate 0 (a consolidada traz os blocos 13 e 14
 #: do design, que não são produto).
-DOCUMENTOS_DE_PRODUTO = ("nucleo_narrativo", "one_pager", "one_pager_resumido", "spec_missao_gate0")
-ROTULO_DOC = {"nucleo_narrativo": "núcleo", "one_pager": "one-pager", "one_pager_resumido": "one-pager resumido",
-              "spec_missao_gate0": "spec do Gate 0"}
+DOCUMENTOS_DE_PRODUTO = ("nucleo_narrativo", "one_pager", "spec_missao_gate0")
+ROTULO_DOC = {"nucleo_narrativo": "núcleo", "one_pager": "one-pager", "spec_missao_gate0": "spec do Gate 0"}
 #: Frase solta do pedido que já está, igual, num documento de produto: o item mira o contrato.
 MIN_PALAVRAS_FRASE = 8
 
@@ -412,7 +411,7 @@ def regra_de_produto(texto: str, docs: Dict[str, str], linhas: Optional[Dict[str
     """Por que o item é de produto, segundo a regra conservadora do plano (PR 5); vazio se ela não o pega.
 
     - o texto-alvo (o que o item cita para trocar ou tirar, ou uma frase dele com 8 palavras ou mais) está em núcleo,
-      one-pager, one-pager resumido ou spec do Gate 0;
+      one-pager ou spec do Gate 0;
     - o item muda opções, número (um número novo, «de N para M», «N, não M», ou tempo, opções, palavras, %, rodadas e
       tentativas fora de citação), regra, gatilho, estado, habilidade ou fases e rodadas da mecânica (a palavra e um
       verbo ou forma de pedido na mesma frase), ou fala de Canal B ou podcast.

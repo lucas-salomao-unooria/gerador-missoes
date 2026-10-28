@@ -277,7 +277,7 @@ class _Fluxo:
         self.run_dir = self.temp / "20261013-000000-session_teste"
         self.run_dir.mkdir(parents=True)
         estado = {"briefing": "briefing", "material_anexado": "material", "nucleo_narrativo": NUCLEO,
-                  "one_pager": ONE_PAGER, "spec_missao": SPEC, "one_pager_resumido": "# Resumido\n\nmais de 70%\n",
+                  "one_pager": ONE_PAGER, "spec_missao": SPEC,
                   "mapa_conceitual": "mapa", "ideacao_mecanismos": "ideação",
                   "gate_final_status": "amarelo", "bncc_status": "aprovado", "jornada_telas": "telas de design"}
         (self.run_dir / "estado.json").write_text(json.dumps(estado), encoding="utf-8")
@@ -364,15 +364,15 @@ def test_bloqueio_causado_pela_correcao_volta_ao_editor_e_os_gates_julgam_de_nov
     f = _Fluxo()
     try:
         novo = {"gate": "conteudo_aprovado_spec_status", "origem": lb.DA_EDICAO, "codigo": "divergente",
-                "resumo": "o resumido ainda diz 70%", "antes": "aprovado"}
-        conserto = _proposta(("one_pager_resumido", "mais de 70%", "cerca de 47%"))
+                "resumo": "a tabela de conceitos ainda diz 70%", "antes": "aprovado"}
+        conserto = _proposta(("one_pager", "aparente é mais de 70%", "aparente é cerca de 47%"))
         eventos = f.rodar("Corrigir 70% para 47%.", [_proposta(_NUMERO, _NUMERO_SPEC), conserto],
                           linhas_por_passada=([novo], []))
         assert len(f.runs) == 2 and len(f.editor) == 2
-        assert "o resumido ainda diz 70%" in f.editor[1]["achados"]
+        assert "a tabela de conceitos ainda diz 70%" in f.editor[1]["achados"]
         assert "cerca de 47%" in f.editor[1]["documentos"]["one_pager"]  # o conserto parte do já editado
         segunda = f.runs[1]["initial_state"]
-        assert "cerca de 47%" in segunda["one_pager_resumido"] and len(segunda["edicoes_pontuais"]) == 3
+        assert "aparente é cerca de 47%" in segunda["one_pager"] and len(segunda["edicoes_pontuais"]) == 3
         registro = next(e for e in eventos if e["type"] == "correcao_completed")["registro"]
         assert registro["passadas"] == 2 and len(registro["edicoes"]) == 3
     finally:

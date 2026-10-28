@@ -83,8 +83,8 @@ def test_pedido_repetido_na_conversa_nao_conta_duas_vezes():
 
 def test_exp02ef1b_pedido_de_23_10_textos_novos_so_a_jusante(exp02ef1b):
     """Linha de base do quadro: os textos novos do pedido de 23/10 13:24 têm 0 ocorrências no contrato e chegam a
-    design, handoff e PRD; dos 10 «textos atuais», só «Publicar no Álbum» e «Pela cor da roupa» (esta no one-pager
-    resumido) existem em produto."""
+    design, handoff e PRD; dos 10 «textos atuais», só «Publicar no Álbum» existe em produto. «Pela cor da roupa» estava
+    só no one-pager resumido, que deixou de ser documento de produto em 28/10/2026."""
     pedido = next(p for p in pg.pedido_x_documentos(exp02ef1b) if "13:24" in p["origem"])
     novos = {f["texto"]: f for f in pedido["frases"] if f["papel"] == "novo"}
     for texto in ("Aumente a moldura.", "Na foto, vi crianças comendo!", "Marque no pátio o que ficou fora da sua foto.",
@@ -93,7 +93,7 @@ def test_exp02ef1b_pedido_de_23_10_textos_novos_so_a_jusante(exp02ef1b):
         assert novos[texto]["em_contrato"] == 0
     atuais = [f for f in pedido["frases"] if f["papel"] == "atual"]
     assert len(atuais) == 10
-    assert sorted(f["texto"] for f in atuais if f["situacao"] == "em-produto") == ["Pela cor da roupa", "Publicar no Álbum"]
+    assert sorted(f["texto"] for f in atuais if f["situacao"] == "em-produto") == ["Publicar no Álbum"]
 
 
 # --------------------------------------------------------------------------- 2. classe real de cada [D0-n]

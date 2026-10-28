@@ -357,7 +357,9 @@ def _figura(doc, figura: "Figura", largura_cm: float, altura_max_cm: float) -> b
 
     if not figura.imagem:
         aviso = f": {figura.aviso}" if figura.aviso else ""
-        _legenda(doc, f"{figura.rotulo}{aviso}", link=figura.link)
+        # o quadro do protótipo é HTML: o Word não o desenha, e a legenda aponta onde a tela abre
+        _legenda(doc, f"{figura.rotulo}{aviso}", link=figura.link,
+                 rotulo_link="abrir o protótipo" if figura.html else "abrir imagem")
         return False
     largura = largura_cm
     if figura.largura and figura.altura and largura_cm * figura.altura / figura.largura > altura_max_cm:
@@ -383,7 +385,7 @@ def _telas(doc, bloco: Bloco, ilustracoes: "Ilustracoes") -> None:
         _figura(doc, figura, LARGURA_TELA_CM, ALTURA_TELA_CM)
     if sem_desenho:
         paragrafo = doc.add_paragraph()
-        run = paragrafo.add_run(f"Ainda sem desenho no Stitch: {ilustracoes.nomes(sem_desenho)}.")
+        run = paragrafo.add_run(f"Ainda sem desenho no Stitch nem no protótipo: {ilustracoes.nomes(sem_desenho)}.")
         run.italic = True
         run.font.size = Pt(9)
         run.font.color.rgb = RGBColor(*marca.rgb(marca.TEXTO))
@@ -439,7 +441,7 @@ def markdown_para_docx(
     for n, bloco in enumerate(blocos):
         if n == posicao:
             _diagramas(doc, ilustracoes, nivel_diagramas)
-        if bloco.tipo == "telas" and ilustracoes is not None and ilustracoes.tem_stitch:
+        if bloco.tipo == "telas" and ilustracoes is not None and ilustracoes.tem_telas:
             _telas(doc, bloco, ilustracoes)
         elif bloco.tipo == "titulo":
             _titulo(doc, bloco)

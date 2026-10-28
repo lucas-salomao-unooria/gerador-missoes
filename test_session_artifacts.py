@@ -965,10 +965,10 @@ class TestReexecucao(unittest.TestCase):
     def test_arquivos_das_chaves_inclui_exportacoes_com_marca(self):
         from pipeline.reexecucao import arquivos_das_chaves
 
-        arquivos = arquivos_das_chaves({"one_pager_resumido", "prd_final"})
-        self.assertIn("produto/00d-one-pager-resumido.md", arquivos)
-        self.assertIn("produto/00d-one-pager-resumido.docx", arquivos)
-        self.assertIn("produto/00d-one-pager-resumido.html", arquivos)
+        arquivos = arquivos_das_chaves({"one_pager", "prd_final"})
+        self.assertIn("produto/00-one-pager.md", arquivos)
+        self.assertIn("produto/00-one-pager.docx", arquivos)
+        self.assertIn("produto/00-one-pager.html", arquivos)
         self.assertIn("PRD.md", arquivos)
 
     def test_backup_fica_oculto_e_restaura(self):

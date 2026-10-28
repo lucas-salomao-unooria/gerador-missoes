@@ -93,7 +93,7 @@ KNOWN_STATE_KEYS = {
     "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida", "interpretacao_fidelidade_saida",
     "interpretacao_fidelidade_nucleo_saida", "interpretacao_fidelidade_design_saida", "interpretacao_fidelidade_dev_saida",
     # a banca nas quatro posições (08/10/2026)
-    *("rodada_anterior_" + c for c in ("spec_missao", "one_pager_resumido", "handoff_dev", "brief_assets",
+    *("rodada_anterior_" + c for c in ("spec_missao", "handoff_dev", "brief_assets",
                                        "prd_final", "one_pager_pedagogico", "banco_conteudo", "mapa_conceitual",
                                        "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "fechamento_lacunas",
                                        "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas",
@@ -106,9 +106,10 @@ KNOWN_STATE_KEYS = {
     "banca_design_report", "banca_design_status", "banca_design_narrativa", "banca_design_imersao",
     "banca_entrada_report", "banca_entrada_status", "banca_entrada_narrativa", "banca_entrada_imersao",
     "banca_entrada_pedagogia",
-    # 07/10/2026 (noite): resumido × canônico, fidelidade ao refazer de design e de dev, matriz final do dev,
-    # spec consolidada × one-pager, o que mudou no one-pager desde a versão anterior e os retratos que o medem
-    "conteudo_aprovado_resumido_report", "conteudo_aprovado_resumido_status", "resumido_rodada",
+    # 07/10/2026 (noite): fidelidade ao refazer de design e de dev, matriz final do dev, spec consolidada × one-pager,
+    # o que mudou no one-pager desde a versão anterior e os retratos que o medem; 28/10/2026: o 0.1 e o 0.2 do
+    # one-pager, em linguagem do time, e a conferência deles
+    "one_pager_leitura", "one_pager_completo_report", "one_pager_completo_status", "one_pager_completo_rodada",
     "fidelidade_design_report", "fidelidade_design_status", "juiz_fidelidade_design_saida",
     "fidelidade_dev_report", "fidelidade_dev_status", "juiz_fidelidade_dev_saida",
     "rastreabilidade_dev_report", "rastreabilidade_dev_status",
@@ -118,7 +119,7 @@ KNOWN_STATE_KEYS = {
     "juiz_perguntas_rodada", "execucao", "prototipo_lint_status", "brief_escopo", "brief_escopo_status", "prd_status", "prd_check_report",
     "validacao_produto_narrativa", "validacao_design_imersao",
     "validacao_pedagogia_bncc", "validacao_dados_lgpd", "validacao_tecnica_arquitetura",
-    "validacao_dev_report", "dev_status", "prd_final", "one_pager_pedagogico", "one_pager_resumido", "aprendizado_registro",
+    "validacao_dev_report", "dev_status", "prd_final", "one_pager_pedagogico", "aprendizado_registro",
     "pipeline_bloqueado", "pipeline_bloqueio_motivo",
     "diagnostico_execucao", "diagnostico_status", "qa_design_rodada", "tickets_retrabalho",
     "one_pager_gate0", "spec_rodada", "handoff_rodada", "banca_rodada", "reexecucoes",
@@ -139,7 +140,7 @@ KNOWN_STATE_KEYS = {
     "etapa_da_conversa", "etapa_do_parecer", "contexto_da_etapa", "conversa_anterior", "resposta_conversa",
     # versão anterior de cada documento autoral, quando a etapa é refeita (pipeline/reexecucao.py)
     *("anterior_" + c for c in (
-        "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao", "one_pager_resumido",
+        "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao",
         "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
         "camada_caa", "wireframes_cobertura", "copy_strings_revisada", "prototipo_html",
         "handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico")),
@@ -160,7 +161,7 @@ EXPECTED_AGENTS = {
     "A033AdequacaoCheck",
     "A034RevisorOnePagerParecer",
     "AvaliacoesLoop", "A043GateFinalProduto",
-    "A044GateFinalProdutoCheck", "A045SpecMissao", "A045bCompletudeSpec", "A045cCompletudeSpecSplit", "A046BnccCheck", "A061OnePagerResumido", "DesignStage", "A065FechaLacunas", "A066FechaLacunasSplit",
+    "A044GateFinalProdutoCheck", "A045SpecMissao", "A045bCompletudeSpec", "A045cCompletudeSpecSplit", "A046BnccCheck", "A061OnePagerCompleto", "DesignStage", "A065FechaLacunas", "A066FechaLacunasSplit",
     "A067AmbienteSimulado", "A068AmbienteSimuladoSplit", "A070BriefOficio", "A071Jornada",
     "A072Fluxo", "A073CopyPtBr", "A074Caa", "A075Telas", "A077CopyRevisao", "A088QaEntregaveis",
     "A079Prototipo", "A080ArtefatosDesign", "A084EspelhoMiro", "A082Consistencia", "A089QaAfirmacoes", "A090QaEntregaveisCheck", "DevStage", "A099ManifestoCheck", "HandoffParalelo", "A100aHandoffDev", "A100bBriefAssets", "A104BancoConteudo", "A105ConteudoCheck",
@@ -1107,7 +1108,7 @@ def test_diagnostico_respeita_veredito_do_gate():
 
 
 def test_estagio_produto_parcial_spec():
-    """Modo correção a partir da spec: só SpecLoop + one-pager resumido, sem núcleo nem gates."""
+    """Modo correção a partir da spec: só SpecLoop + o 0.1 e o 0.2 do one-pager, sem núcleo nem gates."""
     from google.adk.agents.llm_agent import LlmAgent
 
     from agents.produto import build_produto_stage
@@ -1116,10 +1117,10 @@ def test_estagio_produto_parcial_spec():
     orch = create_mission_orchestrator(stages=["spec"])
     assert [a.name for a in orch.sub_agents] == ["ProdutoStage", "A127Diagnostico", "A128Aprendizado", "A129RegistroCatalogo"]
     produto = orch.sub_agents[0]
-    # o resumido em loop com a conferência contra o canônico (07/10/2026)
-    assert [a.name for a in produto.sub_agents] == ["SpecLoop", "A060FidelidadeProduto", "OnePagerResumidoLoop"]
+    # o 0.1 e o 0.2 do one-pager em loop com a conferência contra o resto dele (28/10/2026; antes, o resumido)
+    assert [a.name for a in produto.sub_agents] == ["SpecLoop", "A060FidelidadeProduto", "OnePagerCompletoLoop"]
     assert [a.name for a in produto.sub_agents[2].sub_agents] == [
-        "A061OnePagerResumido", "A062ConteudoAprovadoResumido", "A063ResumidoRodada"]
+        "A061OnePagerCompleto", "A062LeituraOnePagerCheck", "A063OnePagerCompletoRodada"]
     # `A048EvidenciaCheck` entra desde 23/09/2026: grau `scored` com dois sinais, habilidade do
     # bloco 11 com momento e medida, gabarito no servidor. Eram três exigências que a spec
     # declarava em prosa e nenhuma verificação tocava — PED-04 é bloqueante e ninguém o conferia.
@@ -1173,9 +1174,9 @@ def test_estagio_produto_parcial_spec():
         "A047ManifestoCheckProduto", "A048EvidenciaCheck",
         "A050PerguntasCheck", "A051JuizPerguntas", "A052JuizPerguntasCheck",
         "A054ConteudoAprovadoSpec", "A057aBancaProdutoNarrativa", "A057bBancaPedagogiaBncc", "A058BancaConsolidacao",
-        "A058bRotaDeAchados", "A059SpecCheck", "A060FidelidadeProduto", "A061OnePagerResumido",
-        "A062ConteudoAprovadoResumido", "A063ResumidoRodada"]
-    print("   ✓ estágio parcial spec: SpecLoop + resumido, sem núcleo; stages_para_ui resolve spec")
+        "A058bRotaDeAchados", "A059SpecCheck", "A060FidelidadeProduto", "A061OnePagerCompleto",
+        "A062LeituraOnePagerCheck", "A063OnePagerCompletoRodada"]
+    print("   ✓ estágio parcial spec: SpecLoop + 0.1 e 0.2 do one-pager, sem núcleo; stages_para_ui resolve spec")
 
 
 def test_bloco_de_correcao_em_todos_os_agentes():
@@ -1820,11 +1821,6 @@ def test_one_pagers_com_identidade_visual():
 
     estado = {
         "one_pager": "# One-pager — Missão Ilha\n\n## 0. Identificação\n* **Slug:** `exp03ilha`\n",
-        "one_pager_resumido": (
-            "# MISSÃO DIGITAL UNOORIA · 3º ANO EF\n\n## Detetives da Ilha\n\n"
-            "> **Descoberta central:** Eu escolhi a fonte antes de saber o peso da escolha.\n\n"
-            "| Campo | Valor |\n|---|---|\n| Ambiente simulado | YouTube (unitube) |\n"
-        ),
         "one_pager_pedagogico": (
             "# Detetives da Ilha\n\n"
             "> **O que pedimos a você:** aprovar ou recusar.\n\n"
@@ -1841,8 +1837,6 @@ def test_one_pagers_com_identidade_visual():
             "design/14-one-pager-pedagogico.html",
             "produto/00-one-pager.docx",
             "produto/00-one-pager.html",
-            "produto/00d-one-pager-resumido.docx",
-            "produto/00d-one-pager-resumido.html",
         ]
 
         # O `.html` abre sozinho depois de baixado: logotipo embutido, nada em disco ao lado.
@@ -1867,54 +1861,41 @@ def test_one_pagers_com_identidade_visual():
             "exp03ilha",
         )
         assert vazio == [] and not list(Path(tmp).iterdir())
-    print("   ✓ one-pagers de produto, resumido e pedagógico: .docx e .html com a identidade visual da Unooria")
+    print("   ✓ one-pagers de produto e pedagógico: .docx e .html com a identidade visual da Unooria")
 
 
-def test_one_pager_resumido_no_formato_do_time_de_produto():
-    """O resumido tem a forma do documento que o time de produto escrevia à mão: caixas e tabelas.
-
-    Três caixas (descoberta, diferenciação, takeaway) e três tabelas (ficha, etapas, marcadores)
-    é o mínimo que o formato exige — se o exportador perder qualquer uma, o `.docx` que o time
-    lê deixa de ser o formato deles.
-    """
+def test_one_pager_de_produto_no_formato_do_time():
+    """O one-pager de produto é um documento só, no formato do modelo do time (28/10/2026): a missão contada em prosa
+    e passo a passo no topo, as seções do canônico e o brief de escopo no fim — tabelas e títulos sobrevivem ao `.docx`
+    e ao `.html`."""
     import tempfile
 
     import docx
 
     from pipeline.artifacts import exportar_one_pagers
 
-    documento = (
-        "# MISSÃO DIGITAL UNOORIA · 6º ANO EF\n\n"
-        "One-pager para avaliação pedagógica — v1 (primeira versão gerada)\n\n"
-        "## O algoritmo que me formou\n\n"
-        "> **Descoberta central:** Eu só segui 1 conta e isso decidiu quase tudo que eu vi depois.\n\n"
-        "| Campo | Valor |\n|---|---|\n| Ambiente simulado | Instagram (instanooria) |\n| Duração | 2 aulas de 50 min |\n\n"
-        "## 1. A ideia\n\nO professor libera o início.\n\n"
-        "## 2. Componente curricular\n\n> **Diferenciação de mecanismo frente a \"A Seleção\":** cardinalidade 1, não 3.\n\n"
-        "## 4. As 6 etapas da missão\n\n| # | Etapa | Quem conduz | O que o estudante vive |\n|---|---|---|---|\n"
-        "| 1 | Desafiar | Léo | Recebe a DM. |\n| 2 | Navegar | Estudante | Segue 1 conta. |\n\n"
-        "## 6. Contrato de evidência por habilidade (ternário)\n\n"
-        "| Marcador | Critério | Status |\n|---|---|---|\n| Presente | Nomeia o risco | Atingiu |\n"
-        "| Genérico | Risco genérico | Em processo |\n| Ausente | Nenhum risco | Não atingiu |\n\n"
-        "## 7. O takeaway da missão\n\n> O algoritmo aprende com suas interações.\n\n"
-        "---\n\n```json\n{\"agente\": \"one-pager-resumido\", \"status\": \"concluido\"}\n```\n"
+    one_pager = (
+        "# One-pager — O Porta-Voz dos Dados v1.1\n\n## 0. Identificação\nSlug = exp03em1b\n\n"
+        "## 0.1 A ideia\n\nO professor libera a atividade e o estudante entra no Unoochat.\n\n"
+        "## 0.2 Como a missão funciona passo a passo\n\n### 1. O professor prepara e libera a atividade\n\n"
+        "Ele escolhe a missão.\n\n### 2. O estudante assume o papel de porta-voz\n\nEle abre o chat.\n\n"
+        "## 1. Descoberta central\n\n### 1.1 Conceitos do material vividos em tela\n\n"
+        "| Conceito | Etapa | O que o estudante faz em tela | Como o professor aprofunda |\n|---|---|---|---|\n"
+        "| C1 — Gráficos não são neutros | Decidir | Escolhe a escala | Pergunta à turma |\n"
     )
+    brief = "**MISSÃO DIGITAL UNOORIA · BRIEFING DE ESCOPO (LEITURA RÁPIDA)**\n\n# 1. O QUE É ESTA MISSÃO\n\nUma vivência.\n"
     with tempfile.TemporaryDirectory() as tmp:
         run_dir = Path(tmp)
-        gerados = exportar_one_pagers({"one_pager_resumido": documento}, run_dir, "exp06ef1b")
-        assert sorted(p.name for p in gerados) == ["00d-one-pager-resumido.docx", "00d-one-pager-resumido.html"]
-
-        pagina = (run_dir / "produto/00d-one-pager-resumido.html").read_text(encoding="utf-8")
-        assert pagina.count("<blockquote>") == 3, "as três caixas do formato viram blockquote"
-        assert pagina.count("<table>") == 3, "ficha, etapas e marcadores viram tabela"
-        assert "One-pager resumido" in pagina and "avaliação pedagógica" in pagina
-
-        doc = docx.Document(str(run_dir / "produto/00d-one-pager-resumido.docx"))
-        assert len(doc.tables) >= 4  # capa + ficha + etapas + marcadores
+        gerados = exportar_one_pagers({"one_pager": one_pager, "brief_escopo": brief}, run_dir, "exp03em1b")
+        assert sorted(p.name for p in gerados) == ["00-one-pager.docx", "00-one-pager.html"]
+        pagina = (run_dir / "produto/00-one-pager.html").read_text(encoding="utf-8")
+        assert pagina.index("0.2 Como a miss") < pagina.index("1. Descoberta central") < pagina.index("BRIEFING DE ESCOPO")
+        assert "<table>" in pagina and "One-pager de produto" in pagina
+        doc = docx.Document(str(run_dir / "produto/00-one-pager.docx"))
         textos = "\n".join(p.text for p in doc.paragraphs)
-        assert "Descoberta central" in textos and "takeaway" in textos.lower()
-        assert '"agente"' not in textos, "o envelope não vai para o documento que o time lê"
-    print("   ✓ one-pager resumido: três caixas e três tabelas sobrevivem ao .docx e ao .html")
+        assert "0.1 A ideia" in textos and "O professor prepara e libera a atividade" in textos
+        assert "BRIEFING DE ESCOPO" in textos
+    print("   ✓ one-pager de produto: missão contada no topo, canônico e brief de escopo num documento só")
 
 
 # Trechos literais do one-pager gerado para "O algoritmo que me formou" (6º EF), que passou pelo
@@ -3971,7 +3952,7 @@ def test_criterios_da_rubrica_declaram_a_mesma_versao():
 
 def test_material_anexado_chega_a_quem_o_usa_como_fonte():
     """A-19 (23/09/2026). O conteúdo dos anexos existia só na mensagem, que só o núcleo narrativo
-    lê. A spec, a avaliação pedagógica e o one-pager resumido são instruídos a usar o material do
+    lê. A spec, a avaliação pedagógica e o one-pager resumido de então eram instruídos a usar o material do
     Entre Redes como fonte primária e nunca o viam: 5 das 7 sessões que o anexaram entregaram um
     resumido dizendo "material do bimestre não anexado"."""
     import re as _re
@@ -3999,7 +3980,7 @@ def test_material_anexado_chega_a_quem_o_usa_como_fonte():
            if isinstance(a, LlmAgent) and getattr(a, "include_contents", "none") != "default"
            and cita.search(str(a.instruction)) and "{material_anexado" not in str(a.instruction)]
     assert not sem, f"citam o material anexado como fonte e não o recebem: {sem}"
-    print("   ✓ material anexado: guardado inteiro, e chega à spec, à avaliação e ao resumido")
+    print("   ✓ material anexado: guardado inteiro, e chega à spec e à avaliação")
 
 
 def test_correcao_de_produto_refaz_desde_o_nucleo_com_o_material_da_origem():

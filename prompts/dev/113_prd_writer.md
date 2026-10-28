@@ -71,7 +71,7 @@ codifica precisa para implementar, e um gate determinístico confere os quatro p
   gabarito).
 - **Professor:** a story e o RF do professor citam o roteiro de perguntas do debate no momento em
   que o one-pager o coloca, remetendo ao anexo (§9) para o texto.
-- **Caminhos de artefato só os que existem:** `produto/00-one-pager.md`, `produto/00d-one-pager-resumido.md`,
+- **Caminhos de artefato só os que existem:** `produto/00-one-pager.md`,
   `produto/05-spec-missao.md`, `design/00-anexo-design-spec.md` (só quando o anexo veio preenchido acima),
   `design/01-briefing-oficio.md`, `design/02-jornada-telas.md`,
   `design/03-fluxo-arestas.md`, `design/05-wireframes-cobertura.md`, `design/06-copy-strings-revisada.md`,

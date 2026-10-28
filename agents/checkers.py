@@ -2005,7 +2005,7 @@ class RastroCheckAgent(BaseAgent):
     `bloqueado` + `estrito` → pipeline bloqueado (jusante pulado). `amarelo` segue.
     """
 
-    modo: str  # lacunas | manifesto | telemetria | evidencia | evidencia_one_pager | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico | aprovado_resumido | aprovado_spec_design | montagem_prd | montagem_handoff | montagem_pedagogico
+    modo: str  # lacunas | manifesto | telemetria | evidencia | evidencia_one_pager | perguntas | kpis | prd | one_pager | consistencia | conteudo | aprovado_spec | aprovado_prd | aprovado_pedagogico | aprovado_spec_design | one_pager_completo | montagem_prd | montagem_handoff | montagem_pedagogico
     report_key: str
     status_key: str
     rotulo: str = "Rastro"
@@ -2180,7 +2180,7 @@ class RastroCheckAgent(BaseAgent):
                 + "\n\n```json\n" + json.dumps({"agente": "prd-check", "missao": missao, "status": resultado["status"],
                                                  "achados": resultado["achados"]}, ensure_ascii=False) + "\n```\n"
             )
-        elif self.modo in ("aprovado_spec", "aprovado_prd", "aprovado_pedagogico", "aprovado_resumido"):
+        elif self.modo in ("aprovado_spec", "aprovado_prd", "aprovado_pedagogico"):
             # O documento contra o one-pager que o PO aprovou: habilidades, tempo em tela, podcast e, no
             # PRD e no pedagógico, os caminhos de artefato. A exp06ef1b perdeu uma habilidade e cinco
             # minutos de tela na spec, e o PRD seguiu a spec sem nenhum gate acusar (06/10/2026).
@@ -2202,10 +2202,6 @@ class RastroCheckAgent(BaseAgent):
                 resultado = ca.validar_prd(str(state.get("prd_final", "") or ""), spec, one_pager,
                                            caminhos_de_artefato())
                 documento = "PRD"
-            elif self.modo == "aprovado_resumido":
-                # o resumido é o que o time de produto lê para aprovar; nada o comparava ao canônico (07/10/2026)
-                resultado = ca.validar_resumido(str(state.get("one_pager_resumido", "") or ""), spec, one_pager)
-                documento = "one-pager resumido"
             else:
                 resultado = ca.validar_pedagogico(str(state.get("one_pager_pedagogico", "") or ""), spec,
                                                   one_pager, caminhos_de_artefato())
@@ -2214,8 +2210,7 @@ class RastroCheckAgent(BaseAgent):
             # deixa a etapa 🟡 (exp03ef1b, 07/10/2026: "aprovado pelo PO" sem parecer nenhum)
             from tools import decisoes as dec
 
-            chave = {"aprovado_spec": self.spec_key, "aprovado_prd": "prd_final",
-                     "aprovado_resumido": "one_pager_resumido"}.get(self.modo, "one_pager_pedagogico")
+            chave = {"aprovado_spec": self.spec_key, "aprovado_prd": "prd_final"}.get(self.modo, "one_pager_pedagogico")
             texto_decisoes = str(state.get(chave, "") or "")
             if self.modo == "aprovado_pedagogico":
                 # os subtítulos «Do one-pager aprovado» são da esteira, copiados por código: não atribuem decisão a
@@ -2228,8 +2223,7 @@ class RastroCheckAgent(BaseAgent):
                 texto_decisoes, f"A {documento}" if documento == "spec" else f"O {documento}",
                 dec.ha_registro_do_po(dict(state)),
                 # o pedagógico fecha o design desde o PR 10 (24/10/2026)
-                etapa={"aprovado_spec": "produto", "aprovado_resumido": "produto",
-                       "aprovado_pedagogico": "design"}.get(self.modo, "dev"), chave=chave))
+                etapa={"aprovado_spec": "produto", "aprovado_pedagogico": "design"}.get(self.modo, "dev"), chave=chave))
             relatorio = ca.relatorio(resultado, documento, missao)
         elif self.modo == "one_pager_po":
             # O one-pager que o PO anexou é a missão: cada trecho dele está no gerado, ou saiu porque o pedido
@@ -2261,6 +2255,12 @@ class RastroCheckAgent(BaseAgent):
 
             resultado = pedagogico.validar(dict(state))
             relatorio = pedagogico.relatorio(resultado, missao)
+        elif self.modo == "one_pager_completo":
+            # o 0.1 e o 0.2 que abrem o one-pager, em linguagem do time, contra o resto dele (28/10/2026)
+            from tools import one_pager_completo as oc
+
+            resultado = oc.validar(str(state.get("one_pager", "") or ""))
+            relatorio = oc.relatorio(resultado, missao)
         elif self.modo == "aprovado_spec_design":
             # a spec que o D0 e o D9 reescreveram: só o que eles pioraram, com o dono do D0 (07/10/2026)
             from tools import conteudo_aprovado as ca

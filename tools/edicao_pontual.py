@@ -20,8 +20,8 @@ from typing import Any, Dict, Iterable, List, Tuple, Union
 #: Documentos que o editor pode trocar, por etapa da correção. São os autorais da etapa: os gates não escrevem
 #: documento, e os de outras etapas são de outro dono. A ordem é a da esteira, para o editor ler na ordem certa.
 DOCUMENTOS_POR_ETAPA: Dict[str, Tuple[str, ...]] = {
-    "produto": ("nucleo_narrativo", "one_pager", "spec_missao", "one_pager_resumido"),
-    "spec": ("spec_missao", "one_pager_resumido"),
+    "produto": ("nucleo_narrativo", "one_pager", "spec_missao"),
+    "spec": ("spec_missao",),
     # o pedagógico fecha o design desde o PR 10 (24/10/2026): o pedido do PO sobre ele é editado aqui, e o dev não o toca
     "design": ("fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas",
                "copy_strings", "copy_strings_revisada", "camada_caa", "wireframes_cobertura", "prototipo_html",

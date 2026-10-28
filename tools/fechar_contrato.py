@@ -938,7 +938,7 @@ def gravar(run_dir: Path, decisao: Dict[str, Any]) -> Dict[str, str]:
     `decisao` é o registro do parecer (`decisoes_contrato`, `edicoes_contrato`). Devolve o texto anterior de cada arquivo
     que reescreveu (`{"estado.json": …, "produto/00-one-pager.md": …}`), para quem gravou desfazer se o fluxo não puder
     ser registrado — os `.md` também: só o `estado.json` voltava, e o one-pager em disco ficava com a decisão desfeita."""
-    from pipeline.artifacts import ARTIFACT_FILES, desembrulhar_cerca
+    from pipeline.artifacts import ARTIFACT_FILES, desembrulhar_cerca, documento_para_gravar
 
     caminho = Path(run_dir) / "estado.json"
     anterior = caminho.read_text(encoding="utf-8")
@@ -955,10 +955,12 @@ def gravar(run_dir: Path, decisao: Dict[str, Any]) -> Dict[str, str]:
         guardado[relativo] = destino.read_text(encoding="utf-8") if destino.exists() else _NAO_EXISTIA
     try:
         caminho.write_text(json.dumps(estado, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
-        for chave, texto in novos.items():
+        for chave in novos:
             if chave in arquivos:
                 destino = destinos[arquivos[chave]]
                 destino.parent.mkdir(parents=True, exist_ok=True)
+                # como a gravação da esteira grava: o one-pager com o brief de escopo no fim
+                texto = str(documento_para_gravar(estado, chave) or "")
                 destino.write_text(desembrulhar_cerca(texto).strip() + "\n", encoding="utf-8")
     except OSError:
         desfazer(run_dir, guardado)
