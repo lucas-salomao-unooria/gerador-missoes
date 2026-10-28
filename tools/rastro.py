@@ -397,6 +397,8 @@ _POSICAO_NA_ESTEIRA = {"input": 0, "produto": 0, "design": 1, "dev": 2}
 #: Desde o PR 6 as decisões do passo de completude de produto (`[CP-n]`, bloco 15 da spec) fecham célula do mesmo jeito.
 _RE_RESOLVIDO_D0 = re.compile(r"resolvid[oa]s?\s+(?:em|no|na|pel[oa])\s*\[?\s*(D0|CP)-0*(\d+)\s*\]?", re.IGNORECASE)
 _RE_DECISAO_D0 = re.compile(r"\[\s*D0-0*(\d+)\s*\]")
+#: Verbo que encerra a pendência citada logo depois: «encerra a pendência anterior `[ABERTO — …]`».
+_RE_ENCERRA = re.compile(r"\b(?:encerr|fech|resolv|super)\w*\b[^`\n]{0,60}\bpend[êe]ncias?\b", re.IGNORECASE)
 _RE_DECISAO = re.compile(r"\[\s*(D0|CP)-0*(\d+)\s*\]", re.IGNORECASE)
 
 
@@ -507,6 +509,10 @@ _DECISOES_CITAVEIS = (
 )
 
 
+#: Linha que conta que um código órfão foi retirado: o verbo de retirada e «órfão» na mesma linha.
+_RE_RETIRADA_DE_ORFAO = re.compile(r"(?=.*\b(?:expurg|elimin|remov|retir|apag)\w*)(?=.*\b[óo]rf[ãa]os?\b)", re.IGNORECASE)
+
+
 def d0_orfaos(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Achado `d0-orfao` para cada documento que cita [D0-n] que o bloco 13 não define — e `cp-orfao` para [CP-n] que o
     bloco 15 da spec não define.
@@ -543,7 +549,10 @@ def d0_orfaos(fontes: List[Dict[str, str]], state: Dict[str, Any]) -> List[Dict[
                 texto,
                 flags=re.IGNORECASE,
             )
-            orfaos = sorted({int(n) for n in citado.findall(texto_ativo)} - (definidos or set()))
+            # Nem a linha que registra a retirada do código órfão («`[RESOLVIDA]` — Expurgo de D0-4: Código órfão
+            # expurgado…»): o refazer de design mandou sumir com o D0-4, e o handoff anotou que sumiu (exp03em1b-db50c2a9)
+            texto_ativo = "\n".join(l for l in texto_ativo.splitlines() if not _RE_RETIRADA_DE_ORFAO.search(l))
+            orfaos =sorted({int(n) for n in citado.findall(texto_ativo)} - (definidos or set()))
             if not orfaos:
                 continue
             ids = ", ".join(f"{prefixo}-{n}" for n in orfaos)
@@ -702,6 +711,12 @@ def varrer_lacunas(fontes: List[Dict[str, str]], state: Dict[str, Any],
                 # marcadores `[NEEDS CLARIFICATION]` foram saneados" virava pendência humana e deixava
                 # o PRD 🟡 (24/09/2026). Pendência de verdade vem sem crase, ou com a pergunta dentro.
                 if not dono_raw and texto[m.start() - 1:m.start()] == "`" and texto[m.end():m.end() + 1] == "`":
+                    continue
+                # Entre crases e depois de quem o fecha, é o marcador citado como encerrado: «Esta decisão do PO
+                # encerra em definitivo a pendência anterior `[ABERTO — dono: PO: 2.conclusao]`» (exp03em1b-db50c2a9)
+                if texto[m.start() - 1:m.start()] == "`" and texto[m.end():m.end() + 1] == "`" and _RE_ENCERRA.search(
+                    texto[texto.rfind("\n", 0, m.start()) + 1:m.start()]
+                ):
                     continue
                 if tipo == "a_validar" and _e_pictograma_azul(texto, m.start()):
                     continue
