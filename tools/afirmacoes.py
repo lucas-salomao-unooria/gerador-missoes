@@ -48,6 +48,11 @@ _RE_INEXISTENTE_DEPOIS = re.compile(
     r"^\W{0,4}(?:,?\s*que\s+(?:a\s+esteira\s+)?|,?\s*(?:(?:um|o)\s+)?arquivo\s+(?:que\s+(?:a\s+esteira\s+)?)?)?"
     r"(?:(?:[ée]\s+)?inexistente|n[ãa]o\s+grava(?:d[oa])?\b|"
     r"n[ãa]o\s+existe(?=\s*(?:[.;:,)]|$|n[ao]\s+esteira)))", re.I)
+#: A seção em que a rodada 2 do QA relata o que a rodada anterior acusou («## Auditoria da rodada anterior (o que mudou)»,
+#: no molde do prompt): o caminho que a rodada anterior acusou e reaparece aqui é relato, seja qual for a redação. A
+#: negação colada não cobria «que não consta na lista de artefatos persistidos» (exp01em1b-d203ac83, 29/10/2026).
+_RE_SECAO = re.compile(r"^#{1,6}\s+(.*)$", re.M)
+_RE_SECAO_AUDITORIA = re.compile(r"rodada\s+anterior", re.I)
 _RE_ARTEFATO = re.compile(r"(?<![\w/.-])((?:design|dev|produto)/[\w.-]+\.(?:md|html|docx|json)|\d{2}[a-z]?-[\w-]+\.(?:md|html|docx))\b")
 
 
@@ -204,12 +209,16 @@ def conferir_qa(qa: str, folha_stitch: str = "", jornada: str = "", prototipo_ht
                     and total != len(inventario)):
                 falha("afirmacao-inventario", f"O QA afirma {total} telas no inventário; a jornada declara "
                                               f"{len(inventario)}.", linha)
+    secoes = [(s.start(), s.group(1)) for s in _RE_SECAO.finditer(qa or "")]
     for m in _RE_ARTEFATO.finditer(qa or ""):
         citado = m.group(1)
         sem_ext = citado.rsplit(".", 1)[0]
         if sem_ext not in validos:
             linha = (qa or "")[(qa or "").rfind("\n", 0, m.start()) + 1:].split("\n", 1)[0]
             inicio = m.start() - (qa or "").rfind("\n", 0, m.start()) - 1
+            secao = next((t for p, t in reversed(secoes) if p < m.start()), "")
+            if citado in apontados and _RE_SECAO_AUDITORIA.search(secao):
+                continue  # o relato do ticket na auditoria da rodada anterior
             if (citado in apontados or (linha.lstrip().startswith("|") and "resolvido" in linha.lower())) and (
                 _RE_INEXISTENTE_ANTES.search(linha[:inicio])
                 or _RE_INEXISTENTE_DEPOIS.match(linha[inicio + len(citado):])

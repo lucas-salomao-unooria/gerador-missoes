@@ -123,6 +123,27 @@ arquivos que a esteira grava (o protótipo é `design/08-prototipo.html`). Afirm
 reprova a sua rodada — na exp09ef1b o QA escreveu "todas as 16 telas" para um Stitch com 6.
 Conte na folha; não repita o número da jornada.
 
+Os caminhos de design são estes, e só estes — copie daqui, não deduza o nome pelo conteúdo (na
+exp01em1b o QA escreveu `design/06-copy-revisada.md` para a copy revisada, que é
+`design/06-copy-strings-revisada.md`):
+
+<!-- caminhos-de-design: início (conferido contra `pipeline/artifacts.py` em teste) -->
+`design/00-anexo-design-spec.md` · `design/00-fechamento-lacunas.md` · `design/00a-relatorio-lacunas.md` ·
+`design/00b-ambiente-simulado.md` · `design/00c-spec-consolidada-x-one-pager.md` · `design/01-briefing-oficio.md` ·
+`design/02-jornada-telas.md` · `design/03-fluxo-arestas.md` · `design/03b-fluxo-x-spec.md` ·
+`design/04-copy-strings.md` · `design/04b-camada-caa.md` · `design/05-wireframes-cobertura.md` ·
+`design/06-copy-strings-revisada.md` · `design/06b-lint-prototipo.md` · `design/06c-coerencia-documentos.md` ·
+`design/06d-textos-chave.md` · `design/07-qa-entregaveis.md` · `design/07b-qa-afirmacoes.md` ·
+`design/07c-banca-design.md` · `design/08-prototipo.html` · `design/08-prototipo.md` · `design/09-diagramas.html` ·
+`design/10-stitch-telas.md` · `design/11-miro-boards.md` · `design/12-rastro-lacunas-design.md` ·
+`design/13-fidelidade-refazer-design.md` · `design/14-one-pager-pedagogico.md` ·
+`design/14a-conteudo-aprovado-pedagogico.md` · `design/14b-montagem-pedagogico.md` ·
+`design/14c-coerencia-pedagogico.md`
+<!-- caminhos-de-design: fim -->
+
+Ao relatar um ticket `arquivo-inexistente` da rodada anterior, faça-o na seção «Auditoria da rodada
+anterior»: ali o caminho errado é lido como relato do ticket, não como citação nova.
+
 ### D3b — Spoiler a jusante (a descoberta continua sendo do estudante?)
 
 O micro-gate testa spoiler **no núcleo**, e depois disso nada testava: a copy, a tela e o
@@ -276,6 +297,7 @@ Na **última rodada permitida**, não adianta endereçar ticket esperando corre�
 **Veredito: <um só: 🟢 APROVADO PARA REVISÃO HUMANA · 🟡 APROVADO COM RESSALVAS · 🔴 RETRABALHO (<n> tickets ❌) · ⛔ DEVOLVIDO AO PRODUTO>**
 **Inspeção:** Stitch conferido | documental
 
+## Auditoria da rodada anterior (só da rodada 2 em diante: ticket a ticket, resolvido · parcial · ignorado)
 ## Pré-check de lacunas
 ## Veredito por dimensão: D1 · D1b · D2 · D3 · D4 · D4a · D5 · D6 · D6b · D7 · D8 · D8b · D8c · Ofício O1–O5
 ## Matriz D1 (tela a tela)
