@@ -162,6 +162,20 @@ def test_alteracao_pedida_vale_so_com_o_trecho_do_pedido_conferido():
     assert {a["codigo"] for a in r["achados"]} == {"trecho-do-po-perdido", "alteracao-sem-pedido"}
 
 
+def test_alteracao_pedida_pode_citar_so_a_parte_trocada_do_trecho():
+    # exp09ef1b (29/10/2026): a tabela citava «Amara surge…», e o trecho do PO era a «Justificativa pedagógica» inteira
+    antes = "O sistema só valida o esquema se o estudante ordenar corretamente a cadeia conceitual."
+    pedido = "Liberar o botão de validar assim que o estudante posicionar um bloco."
+    novo = ONE_PAGER_PO.replace(antes, "O botão de validar fica liberado assim que o estudante posiciona um bloco.")
+    tabela = ("\n### Alterações sobre o one-pager do PO\n| Trecho do PO | Como ficou | Pedido do PO |\n|---|---|---|\n"
+              f"| «{antes}» | O botão de validar fica liberado | «{pedido}» |\n")
+    r = op.conferir(ONE_PAGER_PO, novo + tabela, BRIEFING, pedidos=pedido)
+    assert r["status"] == "aprovado" and r["declaradas"] == 1, r["achados"]
+    # a linha curta demais não cobre o trecho
+    curta = tabela.replace(f"«{antes}»", "«a cadeia conceitual»")
+    assert op.conferir(ONE_PAGER_PO, novo + curta, BRIEFING, pedidos=pedido)["status"] == "bloqueado"
+
+
 def test_alteracao_pedida_por_voto_de_comite_vale_com_o_trecho_do_voto():
     """Desde 15/10/2026 o comitê pedagógico pode mandar reescrever o texto do PO (decisão do PO); a alteração cita o voto."""
     trecho = "* **Formato:** Diálogo dinâmico entre dois jovens apresentadores da Unooria (Bia e Rafa)."

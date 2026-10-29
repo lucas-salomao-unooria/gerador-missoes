@@ -1239,11 +1239,15 @@ def origens_falsas(corpo: str, docs: Dict[str, str]) -> List[Dict[str, str]]:
         if _RE_PROPOSTA.search(linha):
             continue
         for celula in re.split(r"(?<!\\)\||;", linha):
+            inicio = 0
             for m in _RE_ORIGEM_CITADA.finditer(celula):
+                # o que veio antes da citação anterior é dela: em «KPI-03 (meta < 60% conforme … › Bloco 13) e KPI-04
+                # (meta ≥ 65% conforme §17 do one-pager)» os 60% eram cobrados do §17 (PRD da exp09ef1b, 29/10/2026)
+                trecho, inicio = celula[inicio: m.start()], m.end()
                 fonte = _fonte_citada(m.group(1), docs)
                 if not fonte or not fonte[1].strip():
                     continue
-                antes = _RE_CITACAO.sub(" ", celula[: m.start()])[-120:]
+                antes = _RE_CITACAO.sub(" ", trecho)[-120:]
                 # A citação vale para a frase dela: em «pulsar: 20 segundos. Tempo total em 22 minutos (§10 do
                 # one-pager)» o §10 é dos 22 min, e os 20 s viravam origem falsa (exp03ef1b, 28/10/2026). O ponto
                 # seguido de maiúscula fecha a frase; o de «1.8 s» não.

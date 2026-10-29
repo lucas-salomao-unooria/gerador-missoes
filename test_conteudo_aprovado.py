@@ -160,6 +160,12 @@ def test_secao_respeita_cerca_e_subnumeracao():
     assert "Contrato de evidência" in ca.secao(ONE_PAGER, 12)
     assert ca.secao("# 13. Eventos\n### 13.1 Tabela\nlinha\n# 14. Pedagogia\nx\n", 13).strip().endswith("linha")
     assert ca.secao(ONE_PAGER, 99) is None
+    # o passo `### 12.` do §0.2 é item dele, não a seção 12 (exp09ef1b, 29/10/2026); o `# 4.` do brief no fim não
+    # passa à frente do `## 4.`
+    com_passos = ("## 0.2 Como a missão funciona\n### 12. Analisa o caso bônus\npasso\n## 4. As etapas\netapas\n"
+                  "## 12. Evidências\n### 12a. Contrato\ncontrato\n# 4. BEATS DA MISSÃO\nbrief\n")
+    assert "contrato" in ca.secao(com_passos, 12) and "passo" not in ca.secao(com_passos, 12)
+    assert ca.secao(com_passos, 4).strip() == "etapas"
 
 
 def test_anexo_traz_as_secoes_literais_e_e_idempotente():
