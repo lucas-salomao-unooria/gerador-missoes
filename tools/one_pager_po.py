@@ -205,7 +205,9 @@ def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "", votos:
         if removidos and set(_RE_CODIGO.findall(u["linha"])) & removidos:
             n_removidas += 1
             continue
-        if any(_parecido(n, t) for t in validas):
+        # A linha da tabela pode citar só a parte do trecho que o pedido mandou trocar (exp09ef1b, 29/10/2026: «Amara
+        # surge…» dentro da «Justificativa pedagógica» inteira); vale quando ela está quase toda dentro do trecho do PO.
+        if any(_parecido(n, t) or (len(t.split()) >= MIN_PALAVRAS and _parecido(t, n)) for t in validas):
             n_declaradas += 1
             continue
         perdidas.append(u)

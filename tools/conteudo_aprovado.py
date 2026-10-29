@@ -126,14 +126,25 @@ def secao(texto: str, numero: int) -> Optional[str]:
 
     Vai até o próximo título de nível igual ou mais alto. `12a.` não é a seção 12 e `14.1` não é a
     14 — o `bncc.secao_bloco` cortava a 13 do PRD da exp09ef1b no `### 13.1`, e a seção saía vazia.
+
+    Título numerado dentro de outra seção numerada é item dela, não seção: o §0.2 do one-pager numera os
+    passos (`### 12. O estudante analisa o caso bônus…`), e o primeiro achado escondia o `## 12. Evidências`
+    — o §12a saía «ausente» na exp09ef1b (29/10/2026). Se só houver itens, vale o primeiro.
     """
     titulos = _titulos(texto)
     padrao = re.compile(rf"^{numero}\s*(?:\.(?![\dA-Za-z])|[—–-])")
-    for i, (_, fim, nivel, titulo) in enumerate(titulos):
-        if padrao.match(titulo.strip("*_ ")):
-            fim_secao = next((ini for ini, _, n, _ in titulos[i + 1:] if n <= nivel), len(texto))
-            return texto[fim:fim_secao]
-    return None
+    achados = [i for i, (_, _, _, titulo) in enumerate(titulos) if padrao.match(titulo.strip("*_ "))]
+    if not achados:
+        return None
+
+    def item_de_outra_secao(i: int) -> bool:
+        pai = next((t for t in reversed(titulos[:i]) if t[2] < titulos[i][2]), None)
+        return bool(pai and re.match(r"\d", pai[3].strip("*_ ")))
+
+    i = next((i for i in achados if not item_de_outra_secao(i)), achados[0])
+    nivel = titulos[i][2]
+    fim_secao = next((ini for ini, _, n, _ in titulos[i + 1:] if n <= nivel), len(texto))
+    return texto[titulos[i][1]:fim_secao]
 
 
 def _origem(one_pager: str) -> str:
