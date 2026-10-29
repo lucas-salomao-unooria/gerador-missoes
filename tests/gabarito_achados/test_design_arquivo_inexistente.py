@@ -66,3 +66,38 @@ def test_v82_sem_o_caminho_apontado_continua_acusando():
     """O relato só é dispensado para o caminho que a rodada anterior acusou (816b026): sem ele, o QA que escreve um nome
     que a esteira não grava continua reprovado, mesmo com a negação colada."""
     assert _acusa(_relato_da_v82(), [])
+
+
+#: A rodada 2 da exp01em1b-d203ac83 (29/10/2026) relatou o ticket com «que não consta na lista», sem a negação colada que
+#: as regex conhecem, e a missão travou no design. A seção da auditoria basta, seja qual for a redação.
+_AUDITORIA_D203 = (
+    "# QA de Entregáveis — exp01em1b — rodada 2 de 2\n\n"
+    "## Auditoria da rodada anterior (o que mudou)\n\n"
+    "* **`QA-A1` (severidade `bloqueio`, código `arquivo-inexistente`):** **RESOLVIDO.** Na rodada 1, o relatório citou "
+    "a rota `design/06-copy-revisada.md`, que não consta na lista de artefatos persistidos pela esteira "
+    "(`pipeline/artifacts.py`).\n\n"
+    "## Pré-check de lacunas\n\n* Nada aberto.\n"
+)
+
+
+def test_fp_d203_relato_na_secao_da_auditoria_nao_dispara():
+    assert not _acusa(_AUDITORIA_D203, ["design/06-copy-revisada.md"])
+
+
+def test_v_d203_fora_da_auditoria_ou_sem_o_caminho_apontado_dispara():
+    """Fora da seção, o mesmo caminho volta a ser citação; dentro dela, só o caminho que a rodada anterior acusou é relato."""
+    fora = _AUDITORIA_D203 + "\n## Tickets\n\n* A copy está em `design/06-copy-revisada.md`.\n"
+    assert _acusa(fora, ["design/06-copy-revisada.md"])
+    assert _acusa(_AUDITORIA_D203, [])
+    assert _acusa(_AUDITORIA_D203.replace("06-copy-revisada", "04-copy-final"), ["design/06-copy-revisada.md"])
+
+
+def test_prompt_do_qa_lista_os_caminhos_de_design_que_a_esteira_grava():
+    """O QA copia o caminho da lista do prompt em vez de deduzi-lo; a lista tem de ser a de `pipeline/artifacts.py`."""
+    import re
+
+    from pipeline.artifacts import ARTIFACT_FILES
+    from prompts.loader import get_prompt_raw
+
+    bloco = get_prompt_raw("design/088_qa_entregaveis.md").split("caminhos-de-design: início")[1].split("caminhos-de-design: fim")[0]
+    assert set(re.findall(r"`(design/[^`]+)`", bloco)) == {n for _, n in ARTIFACT_FILES if n.startswith("design/")}
