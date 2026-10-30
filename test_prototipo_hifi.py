@@ -282,3 +282,13 @@ def test_tela_com_mais_de_3_etiquetas_volta_com_a_lista():
                {"id": "E3-ALU-01", "estado": "vazio", "etiquetas": ["Fila de espera", "Fila de espera"]}]
     assert ferramentas.excesso_de_etiquetas(quadros) == [
         "E0-PROF-02 · vazio: 4 etiquetas («Passo 1 de 3», «9º ano», «Unidade 1», «24 vagas»)"]
+
+
+def test_custo_soma_geracao_e_correcao_do_mesmo_lote(monkeypatch):
+    from tools.prototipo_hifi import no_gerador as hifi
+
+    monkeypatch.setenv("COTACAO_USD_BRL", "5")
+    uso = {"prompt": 1_000_000, "cache": 0, "saida": 0, "pensamento": 0}
+    geracao = {"lote": "etapa-2", "modelo": "gemini-4-argon", "uso": uso}
+    correcao = {"lote": "etapa-2", "modelo": "gemini-4-argon", "uso": uso, "correcao": "tirar etiquetas"}
+    assert hifi.custo_da_geracao([geracao, correcao])["tokens"]["entrada"] == 2_000_000

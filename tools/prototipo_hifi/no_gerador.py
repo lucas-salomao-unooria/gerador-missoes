@@ -127,7 +127,8 @@ def custo_da_geracao(relatorios: list) -> Dict[str, Any]:
     imagens = 0
     for r in relatorios:
         uso = r.get("uso") or {}
-        chave = f"hifi:{r.get('lote', '?')}"
+        # a correção roda com os mesmos nomes de lote da geração: sem o prefixo, uma linha apagaria a outra
+        chave = f"hifi:{'correcao-' if r.get('correcao') else ''}{r.get('lote', '?')}"
         por_lote[chave] = {"entrada": uso.get("prompt", 0), "cache": uso.get("cache", 0), "saida": uso.get("saida", 0),
                            "pensamento": uso.get("pensamento", 0), "chamadas": len(r.get("chamadas") or [])}
         modelo = str(r.get("modelo") or "").split(" ")[0]
