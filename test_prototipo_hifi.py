@@ -292,3 +292,37 @@ def test_custo_soma_geracao_e_correcao_do_mesmo_lote(monkeypatch):
     geracao = {"lote": "etapa-2", "modelo": "gemini-4-argon", "uso": uso}
     correcao = {"lote": "etapa-2", "modelo": "gemini-4-argon", "uso": uso, "correcao": "tirar etiquetas"}
     assert hifi.custo_da_geracao([geracao, correcao])["tokens"]["entrada"] == 2_000_000
+
+
+def test_no_cloud_run_o_gerar_dispara_o_job_e_acompanha_pela_api(monkeypatch, tmp_path):
+    from tools.prototipo_hifi import no_gerador as hifi
+
+    monkeypatch.delenv("PROTOTIPO_HIFI_JOB", raising=False)
+    assert hifi.job_na_nuvem() is None  # máquina local: processo, não Job
+    monkeypatch.setenv("K_SERVICE", "gerador-missoes")
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "entre-redes-dev")
+    job = "projects/entre-redes-dev/locations/us-east1/jobs/gerador-missoes-hifi"
+    assert hifi.job_na_nuvem() == job and hifi.indisponivel() is None
+
+    chamadas, respostas = [], {"run": {"metadata": {"name": f"{job}/executions/exec-1"}}, "get": {}}
+
+    def api(metodo, caminho, corpo=None):
+        chamadas.append((metodo, caminho, corpo))
+        return respostas["run"] if metodo == "POST" else respostas["get"]
+
+    monkeypatch.setattr(hifi, "_api", api)
+    sessao = tmp_path / "20261028-154851-session_f4caa98a"
+    sessao.mkdir()
+    info = hifi.iniciar(sessao, "gemini-4-argon")
+    assert info["execucao"].endswith("exec-1")
+    env = chamadas[0][2]["overrides"]["containerOverrides"][0]["env"]
+    assert chamadas[0][:2] == ("POST", f"{job}:run")
+    assert {e["name"]: e["value"] for e in env} == {"SESSAO": sessao.name, "MODELO": "gemini-4-argon"}
+
+    assert hifi.em_andamento(sessao)["lotes_prontos"] == "?"          # sem completionTime: rodando
+    respostas["get"] = {"completionTime": "x", "failedCount": 1,
+                        "conditions": [{"type": "Completed", "message": "Task failed: timeout"}]}
+    assert hifi.em_andamento(sessao) is None
+    assert "timeout" in hifi.falhou(sessao)
+    respostas["get"] = {"completionTime": "x", "succeededCount": 1}
+    assert hifi.falhou(sessao) is None

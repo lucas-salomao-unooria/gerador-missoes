@@ -1,0 +1,46 @@
+# Imagem do Job do Cloud Run que gera o protótipo em alta fidelidade (tools/prototipo_hifi).
+#
+# Parte da imagem do gerador (código, dependências da esteira e Node 20) e acrescenta o que só a geração usa:
+# o Chromium (capturas e Playwright), a venv isolada do Antigravity SDK (protobuf 7, que a esteira não aceita),
+# o Design System com React, esbuild e Playwright para Linux, e o retrato das referências da plataforma.
+#
+# O contexto é a pasta que `scripts/montar_contexto_hifi.py` monta (com este arquivo dentro), e a imagem é
+# construída no Cloud Build do projeto, em amd64 e sem credencial de registro na máquina de quem publica:
+#
+#   .venv/bin/python scripts/montar_contexto_hifi.py --ds <storybook-unooria> --plataforma <plataforma-unooria>
+#   gcloud builds submit build/hifi-contexto --project=entre-redes-dev --config=build/hifi-contexto/cloudbuild.yaml
+#
+# O Job (Terraform, fundação) roda `scripts/job_prototipo_hifi.sh` com SESSAO e MODELO da execução.
+ARG BASE=us-east1-docker.pkg.dev/entre-redes-dev/plataforma-unooria-dev/gerador-missoes:latest
+FROM ${BASE}
+
+# Chromium e fontes: sem fonte com acento e emoji, a captura troca glifos calada e o agente «corrige» o que não existe
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        chromium fonts-liberation fonts-noto-core fonts-noto-color-emoji \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-antigravity.txt .
+RUN python -m venv /app/.venv-antigravity \
+    && /app/.venv-antigravity/bin/pip install --no-cache-dir -U pip \
+    && /app/.venv-antigravity/bin/pip install --no-cache-dir -r requirements-antigravity.txt pillow
+
+# O Design System: o pacote vem do retrato; as dependências de build, nas versões do teste local, para Linux.
+# Elas ficam numa pasta à parte (o `package.json` do DS listaria as dependências de desenvolvimento dele).
+COPY ds /opt/ds
+RUN npm install --prefix /opt/ds-deps --no-save --no-package-lock --no-audit --no-fund \
+        react@19.2.8 react-dom@19.2.8 scheduler@0.27.0 esbuild@0.28.2 playwright-core@1.62.1 \
+    && ln -s /opt/ds-deps/node_modules /opt/ds/node_modules
+
+# A plataforma: a ponte @edu/ui, as regras, o hub do professor e as experiências; o Tailwind do hub, na versão dele
+COPY plataforma /opt/plataforma
+RUN npm install --prefix /opt/plataforma/apps/hub --no-save --no-package-lock --no-audit --no-fund tailwindcss@3.4.19
+
+# o código mais novo do kit por cima do da imagem base (o Job pode sair antes do deploy do gerador)
+COPY tools/ /app/tools/
+COPY scripts/ /app/scripts/
+
+ENV CHROME_BIN=/usr/bin/chromium \
+    PROTOTIPO_HIFI_DS=/opt/ds \
+    PROTOTIPO_HIFI_PLATAFORMA=/opt/plataforma
+
+CMD ["sh", "scripts/job_prototipo_hifi.sh"]

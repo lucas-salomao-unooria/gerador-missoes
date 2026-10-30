@@ -1966,8 +1966,10 @@ def render_prototipo_hifi(output_path: Path, prefix: str) -> None:
                                  key=f"hifi_zip_{prefix}",
                                  help="Telas em React com as pontes @edu/ui, o mock, o CSS da missão e as imagens.")
     elif andamento:
-        st.info(f"⏳ Gerando com `{andamento['modelo']}` desde {andamento['inicio']} · "
-                f"{andamento['lotes_prontos']} lote(s) concluído(s). Leva perto de uma hora; a página pode ser fechada.")
+        onde = "no Job do Cloud Run" if andamento.get("execucao") else "nesta máquina"
+        lotes = "" if andamento["lotes_prontos"] == "?" else f" · {andamento['lotes_prontos']} lote(s) concluído(s)"
+        st.info(f"⏳ Gerando {onde} com `{andamento['modelo']}` desde {andamento['inicio']}{lotes}. "
+                "Leva perto de uma hora; a página pode ser fechada.")
         st.button("🔄 Atualizar", key=f"hifi_atualizar_{prefix}")
     else:
         erro = hifi.falhou(output_path)

@@ -27,3 +27,7 @@ credenciais*.csv
 *.pem
 *.key
 service-account*.json
+
+# protótipo hi-fi: a venv do SDK é local e o retrato do DS e da plataforma é só da imagem do Job
+.venv-antigravity/
+build/
