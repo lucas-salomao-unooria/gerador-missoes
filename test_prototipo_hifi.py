@@ -216,6 +216,7 @@ def test_gerador_acha_publica_e_empacota_o_prototipo_da_sessao(tmp_path):
     import zipfile
     from tools.prototipo_hifi import no_gerador as hifi
 
+    (tmp_path / "sessao").mkdir()
     sessao = _sessao(tmp_path / "sessao")
     assert hifi.tem_insumos(sessao) and not hifi.pronto(sessao) and hifi.em_andamento(sessao) is None
     ws = tmp_path / "ws"
