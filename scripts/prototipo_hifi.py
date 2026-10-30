@@ -147,6 +147,45 @@ def _relatorio_md(ws: Path, sessao: Path, r: dict, texto: dict) -> None:
     (ws / "RELATORIO.md").write_text("\n".join(linhas) + "\n", encoding="utf-8")
 
 
+def verificar_ambiente(ws: Path, modelo: str | None) -> dict:
+    """Confere o ambiente sem gerar: build, auditoria, captura de um quadro e uma chamada mínima ao modelo.
+
+    É o teste do Job do Cloud Run (`VERIFICAR=1`): imagem, bucket, Chromium, DS e Vertex, por centavos.
+    """
+    resultado: dict = {}
+    build = ferramentas.construir(ws)
+    resultado["build"] = {"ok": build["ok"], "kb": build["kb"], "erros": build["erros"][:5], "secoes": build.get("secoes")}
+    if build["ok"]:
+        audit = ferramentas.auditar(ws, build["html"])
+        resultado["auditoria"] = {"ok": bool(audit.get("quadros")), "quadros": len(audit.get("quadros", [])),
+                                  "erro": audit.get("erro")}
+        q = json.loads((ws / "dados" / "missao.json").read_text(encoding="utf-8"))["quadros"][0]
+        resultado["captura"] = ferramentas.capturar(ws, q["id"], q["estado"], build["html"])
+    teste = ("import asyncio\nfrom google.antigravity import Agent, LocalAgentConfig\n"
+             "async def m():\n"
+             f"    async with Agent(LocalAgentConfig(model={json.dumps(modelo)})) as a:\n"
+             "        r = await a.chat('Responda só: ok')\n"
+             "        print((await r.text()).strip()[:40])\n"
+             "asyncio.run(m())\n")
+    proc = subprocess.run([str(PYTHON_MOTOR), "-I", "-c", teste], capture_output=True, text=True, timeout=300,
+                          env=os.environ.copy())
+    resultado["modelo"] = {"ok": proc.returncode == 0, "modelo": modelo,
+                           "resposta": (proc.stdout or proc.stderr).strip().splitlines()[-1:] }
+    resultado["ok"] = all(v.get("ok") for v in resultado.values() if isinstance(v, dict))
+    return resultado
+
+
+def restaurar_codigo(ws: Path, publicado: Path) -> bool:
+    """Para corrigir um protótipo num workspace novo (o do Job nasce vazio): telas, CSS, mock e imagens publicados."""
+    codigo = publicado / "codigo"
+    if (ws / "telas").exists() and any((ws / "telas").glob("E*.tsx")) or not codigo.exists():
+        return False
+    for parte in ("telas", "estilos", "assets", "dados"):
+        if (codigo / parte).exists():
+            shutil.copytree(codigo / parte, ws / parte, dirs_exist_ok=True)
+    return True
+
+
 def publicar(ws: Path, destino: Path) -> None:
     """Copia para a sessão o que alguém vai abrir: o protótipo, o relatório, as capturas e o código.
 
@@ -183,6 +222,7 @@ def main() -> None:
     ap.add_argument("--so-final", action="store_true", help="só o fechamento (build, auditoria, capturas, relatório)")
     ap.add_argument("--publicar", default=None, help="pasta da sessão onde o resultado fica (`<sessão>/design/hifi`)")
     ap.add_argument("--sem-custo", action="store_true", help="publica sem somar o custo à missão (republicação)")
+    ap.add_argument("--verificar-ambiente", action="store_true", help="só confere build, Chromium, DS e modelo, sem gerar")
     ap.add_argument("--correcao", default=None, help="rodada de correção sobre as telas que já existem (texto ou @arquivo)")
     a = ap.parse_args()
     load_dotenv(RAIZ / ".env")
@@ -193,6 +233,12 @@ def main() -> None:
         correcao = Path(correcao[1:]).read_text(encoding="utf-8")
     if not (ws / "dados" / "missao.json").exists():
         montar_workspace(sessao, ws, a.ds, a.plataforma)
+    if a.verificar_ambiente:
+        r = verificar_ambiente(ws, a.modelo)
+        print(json.dumps(r, ensure_ascii=False, indent=1), flush=True)
+        sys.exit(0 if r["ok"] else 1)
+    if correcao and a.publicar and restaurar_codigo(ws, Path(a.publicar)):
+        print("telas publicadas restauradas no workspace para a correção", flush=True)
     missao = json.loads((ws / "dados" / "missao.json").read_text(encoding="utf-8"))
     plano = lotes(missao)
     relatorios: list[dict] = []

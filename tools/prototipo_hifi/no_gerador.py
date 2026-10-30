@@ -5,8 +5,11 @@ protótipo fica com os outros artefatos e sobrevive a deploy. O workspace de tra
 referências da plataforma, builds de lote) fica FORA da sessão, numa pasta temporária: no bucket ele seria
 lento e não serve a ninguém depois.
 
-A geração roda em segundo plano, num processo separado (`scripts/prototipo_hifi.py`): leva perto de uma hora,
-e a aba do Streamlit não pode ficar presa a ela.
+A geração roda em segundo plano: leva perto de uma hora, e a aba do Streamlit não pode ficar presa a ela. Na
+máquina local é um processo separado (`scripts/prototipo_hifi.py`). No Cloud Run é o Job `gerador-missoes-hifi`
+(Terraform na fundação, imagem `Dockerfile.prototipo-hifi`): o serviço do gerador tem uma instância só e perde
+o processo num deploy, e a requisição tem teto de 60 min. O gerador dispara o Job pela API, com a identidade
+dele, e o Job publica em `<sessão>/design/hifi` no bucket.
 """
 from __future__ import annotations
 
@@ -32,6 +35,32 @@ DS_PADRAO = os.getenv("PROTOTIPO_HIFI_DS", "/Volumes/Documentos/Unooria/storyboo
 PLATAFORMA_PADRAO = os.getenv("PROTOTIPO_HIFI_PLATAFORMA", "/Volumes/Documentos/Unooria/plataforma-unooria")
 PYTHON_MOTOR = RAIZ / ".venv-antigravity" / "bin" / "python"
 MODELOS = ("gemini-4-argon", "gemini-3.8-flash")
+#: O Job do Cloud Run que gera na nuvem: `projects/<p>/locations/<r>/jobs/<nome>`. No serviço do gerador
+#: (`K_SERVICE`) ele é deduzido do projeto; fora dele, só com `PROTOTIPO_HIFI_JOB`.
+REGIAO_JOB = "us-east1"
+NOME_JOB = "gerador-missoes-hifi"
+
+
+def job_na_nuvem() -> Optional[str]:
+    explicito = os.getenv("PROTOTIPO_HIFI_JOB")
+    if explicito:
+        return explicito
+    projeto = os.getenv("GOOGLE_CLOUD_PROJECT")
+    if os.getenv("K_SERVICE") and projeto:
+        return f"projects/{projeto}/locations/{REGIAO_JOB}/jobs/{NOME_JOB}"
+    return None
+
+
+def _api(metodo: str, caminho: str, corpo: Optional[dict] = None) -> dict:
+    """Chamada à API do Cloud Run v2 com a identidade do ambiente (no Cloud Run, a conta do gerador)."""
+    import google.auth
+    from google.auth.transport.requests import AuthorizedSession
+
+    credenciais, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+    resposta = AuthorizedSession(credenciais).request(metodo, f"https://run.googleapis.com/v2/{caminho}",
+                                                      json=corpo, timeout=60)
+    resposta.raise_for_status()
+    return resposta.json()
 #: O `DEFAULT_MODEL` do google-antigravity 0.1.23, para relatórios que não gravaram o nome.
 MODELO_PADRAO_SDK = "gemini-3.8-flash"
 
@@ -57,6 +86,8 @@ def tem_insumos(sessao: str | Path) -> bool:
 
 def indisponivel() -> Optional[str]:
     """Por que a geração não pode rodar NESTE ambiente, ou None quando pode."""
+    if job_na_nuvem():
+        return None
     if not PYTHON_MOTOR.exists():
         return ("A venv do Antigravity SDK não está instalada neste ambiente (`.venv-antigravity`). No Cloud Run "
                 "a geração vai rodar num Job próprio, ainda não publicado: por enquanto, gere na máquina local.")
@@ -75,12 +106,28 @@ def _vivo(pid: int) -> bool:
         return False
 
 
+def _execucao_na_nuvem(info: Dict[str, Any]) -> Dict[str, Any]:
+    """`{rodando, falhou, mensagem}` da execução do Job, pela API. Erro de rede conta como «rodando» (tenta de novo)."""
+    try:
+        e = _api("GET", info["execucao"])
+    except Exception as exc:  # a tela não pode quebrar porque a API piscou
+        return {"rodando": True, "falhou": False, "mensagem": f"sem resposta da API do Cloud Run ({exc})"}
+    if not e.get("completionTime"):
+        return {"rodando": True, "falhou": False, "mensagem": ""}
+    falhas = int(e.get("failedCount") or 0) + int(e.get("cancelledCount") or 0)
+    condicao = next((c for c in e.get("conditions") or [] if c.get("type") == "Completed"), {})
+    return {"rodando": False, "falhou": falhas > 0, "mensagem": condicao.get("message", "")}
+
+
 def em_andamento(sessao: str | Path) -> Optional[Dict[str, Any]]:
     """A geração rodando agora para esta sessão: início, modelo e quantos lotes já fecharam."""
     arq = pasta(sessao) / "execucao.json"
     if not arq.exists():
         return None
     info = json.loads(arq.read_text(encoding="utf-8"))
+    if info.get("execucao"):
+        # no Job, os lotes moram no /tmp da tarefa: o andamento que dá para mostrar é o da execução
+        return {**info, "lotes_prontos": "?"} if _execucao_na_nuvem(info)["rodando"] else None
     if not _vivo(int(info.get("pid", 0))):
         return None
     ws = Path(info["workspace"])
@@ -93,13 +140,37 @@ def falhou(sessao: str | Path) -> Optional[str]:
     arq = pasta(sessao) / "execucao.json"
     if not arq.exists() or pronto(sessao) or em_andamento(sessao):
         return None
-    log = Path(json.loads(arq.read_text(encoding="utf-8")).get("log", ""))
+    info = json.loads(arq.read_text(encoding="utf-8"))
+    if info.get("execucao"):
+        estado = _execucao_na_nuvem(info)
+        if not estado["falhou"]:
+            return None
+        nome = info["execucao"].rsplit("/", 1)[-1]
+        return (f"A execução `{nome}` do Job terminou com falha: {estado['mensagem'] or 'sem mensagem'}. Os logs estão "
+                f"no Cloud Run → Jobs → {NOME_JOB} → execuções.")
+    log = Path(info.get("log", ""))
     return log.read_text(encoding="utf-8", errors="ignore")[-1500:] if log.exists() else "a geração parou sem log"
+
+
+def iniciar_na_nuvem(sessao: Path, modelo: str, job: str) -> Dict[str, Any]:
+    """Dispara o Job do Cloud Run para a sessão. Ele lê e publica no bucket, que no serviço é o `output/` montado."""
+    corpo = {"overrides": {"containerOverrides": [{"env": [{"name": "SESSAO", "value": sessao.name},
+                                                           {"name": "MODELO", "value": modelo}]}]}}
+    operacao = _api("POST", f"{job}:run", corpo)
+    execucao = (operacao.get("metadata") or {}).get("name", "")
+    info = {"execucao": execucao, "inicio": time.strftime("%Y-%m-%d %H:%M"), "modelo": modelo, "job": job}
+    destino = pasta(sessao)
+    destino.mkdir(parents=True, exist_ok=True)
+    (destino / "execucao.json").write_text(json.dumps(info, ensure_ascii=False, indent=1), encoding="utf-8")
+    return info
 
 
 def iniciar(sessao: str | Path, modelo: str = MODELOS[0]) -> Dict[str, Any]:
     """Dispara a geração em segundo plano e devolve o registro da execução."""
     sessao = Path(sessao).resolve()
+    job = job_na_nuvem()
+    if job:
+        return iniciar_na_nuvem(sessao, modelo, job)
     destino = pasta(sessao)
     destino.mkdir(parents=True, exist_ok=True)
     ws = Path(tempfile.gettempdir()) / "prototipo-hifi" / f"{sessao.name}-{int(time.time())}"
