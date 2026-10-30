@@ -422,8 +422,9 @@ p. 113–142, 1989. DOI 10.1207/s15326985ep2402_1). A distância da transferênc
 domínio, físico, temporal, funcional, social, modalidade (BARNETT, S. M.; CECI, S. J. *Psychological
 Bulletin*, v. 128, n. 4, p. 612–637, 2002. DOI 10.1037/0033-2909.128.4.612). Em feeds realistas, a
 inoculação quase não transferiu (WANG, S. Y. N. et al. *PNAS Nexus*, v. 4, n. 6, pgaf172, 2025.
-DOI 10.1093/pnasnexus/pgaf172). Consequência: o Refletir muda ao menos uma dimensão de contexto, não nomeia
-o conceito no enunciado, e o professor faz a pergunta-ponte. **[EXTRAPOLAÇÃO]**
+DOI 10.1093/pnasnexus/pgaf172). Consequência: a transferência fica fora da missão (decisão do PO de 29/10/2026, que eliminou a etapa 6,
+Refletir); a missão termina no conserto do mesmo objeto, e a ponte para outros contextos é do professor
+e do resto do bimestre. **[EXTRAPOLAÇÃO]**
 
 **(g) Letramento midiático por jogo: funciona, pouco, e decai.** Assumir o papel de quem produz a
 desinformação é o ingrediente do Bad News (ROOZENBEEK, J.; VAN DER LINDEN, S. *Palgrave Communications*,

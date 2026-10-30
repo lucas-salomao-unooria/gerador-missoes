@@ -43,7 +43,6 @@ _COLUNA = {c: (chave, rotulo, dono) for c, chave, rotulo, dono in ARTEFATOS}
 #: Categoria → (rótulo, colunas onde o requisito TEM de estar, severidade da falta).
 CATEGORIAS: Dict[str, Tuple[str, Tuple[str, ...], str]] = {
     "habilidade": ("Habilidade BNCC (one-pager §2)", ("spec", "jornada", "handoff", "prd", "pedagogico"), "bloqueio"),
-    "canal_b": ("Canal B literal (one-pager §12a)", ("spec", "copy", "prototipo", "prd", "pedagogico"), "bloqueio"),
     "roteiro": ("Pergunta do debate literal (one-pager §9)", ("spec", "copy", "prd", "pedagogico"), "bloqueio"),
     "podcast": ("Fala do podcast literal (one-pager §11)", ("copy", "banco", "prd"), "bloqueio"),
     # 🟡 enquanto o extrator do §4 não é calibrado contra as revisões do time (`conteudo_aprovado.textos_de_tela`)
@@ -151,7 +150,7 @@ def requisitos(state: Dict[str, Any]) -> List[Dict[str, str]]:
     for c in ca.codigos_aprovados(one_pager):
         req("habilidade", c)
     lit = ca.literais(one_pager)
-    for qual in ("canal_b", "roteiro", "podcast", "texto_tela"):
+    for qual in ("roteiro", "podcast", "texto_tela"):
         for t in lit.get(qual) or []:
             req(qual, t)
     tempo = ca.tempo_aprovado(one_pager)
@@ -180,11 +179,11 @@ def _presente(categoria: str, alvo: str, coluna: str, texto: str) -> bool:
     from tools import conteudo_aprovado as ca
     from tools import telas
 
-    if categoria in ("canal_b", "roteiro", "podcast", "texto_tela"):
+    if categoria in ("roteiro", "podcast", "texto_tela"):
         if coluna == "prototipo":
             fonte = ca._texto_visivel(texto)
         elif coluna == "pedagogico":
-            # o gate do pedagógico (A121) cobra o Canal B e o debate no corpo; o anexo que a esteira cola no fim
+            # o gate do pedagógico (A121) cobra o debate no corpo; o anexo que a esteira cola no fim
             # traz o §12 e o §9 inteiros, e contá-lo deixava a coluna sempre ✅. No PRD o anexo conta: o corpo
             # remete a ele por desenho.
             fonte = ca.remover_anexo(texto)

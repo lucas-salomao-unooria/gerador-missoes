@@ -168,6 +168,20 @@ def _pedido_confere(celula: str, fonte: str) -> Optional[str]:
     return None
 
 
+#: O que saiu da missão por decisão do PO de 29/10/2026 — o Canal B (pergunta de avaliação) e a etapa 6 (Refletir, o
+#: caso de transferência). One-pager do PO anterior a isso ainda os traz; tirá-los não é perder o texto dele.
+_RE_REMOVIDO_PELO_PO = re.compile(r"\bcanal\s*b\b|\brefletir\b|\btransfer[eê]ncia\b|\betapa\s*6\b|\bE6[-_]", re.I)
+
+
+def _removido_pelo_po(u: Dict[str, str]) -> bool:
+    """O trecho é do que saiu da missão: a seção trata disso, a linha da tabela é dela (primeira célula) ou o trecho
+    começa por ela. Uma nota que só cita o Refletir de passagem (a dos tempos do §10) continua do PO."""
+    linha = u.get("linha") or ""
+    primeira = linha.strip().strip("|").split("|")[0] if linha.strip().startswith("|") else ""
+    inicio = " ".join((u.get("texto") or "").split()[:6])
+    return any(_RE_REMOVIDO_PELO_PO.search(x) for x in (u.get("secao") or "", primeira, inicio))
+
+
 def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "", votos: str = "") -> Dict[str, Any]:
     """Cada trecho do one-pager do PO está no gerado, ou saiu por ordem do pedido conferida em código.
 
@@ -203,6 +217,9 @@ def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "", votos:
         if tri and len(tri & tri_novo) / len(tri) >= FRACAO and not _ancoras_faltando(u["texto"], palavras_novo):
             continue
         if removidos and set(_RE_CODIGO.findall(u["linha"])) & removidos:
+            n_removidas += 1
+            continue
+        if _removido_pelo_po(u):
             n_removidas += 1
             continue
         # A linha da tabela pode citar só a parte do trecho que o pedido mandou trocar (exp09ef1b, 29/10/2026: «Amara

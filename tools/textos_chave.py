@@ -300,90 +300,15 @@ def _texto_sem_rotulo(parte: str) -> str:
     return literal(re.sub(r"^[\s\-—–•*:]+", "", t))
 
 
-def _ler_canal_b(texto: str) -> Tuple[str, List[str]]:
-    """`(pergunta, alternativas)` do texto do Canal B de uma habilidade."""
-    pergunta, alternativas, esperando = "", [], False
-    for parte in [p for p in re.split(r"<br\s*/?>|\n", texto or "") if p.strip()]:
-        s = parte.strip()
-        if _RE_COMPONENTE.match(s):
-            break
-        citacoes = [q.strip().strip("*").strip() for q in _RE_Q.findall(s)]
-        if not pergunta:
-            com_interrogacao = [q for q in citacoes if q.rstrip().endswith("?")]
-            rotulo = _RE_PERGUNTA_ROTULO.search(s)
-            if com_interrogacao:
-                pergunta = com_interrogacao[0]
-            elif rotulo:
-                resto = literal(s[rotulo.end():])
-                if resto:
-                    pergunta = citacoes[0] if citacoes else resto
-                else:
-                    esperando = True
-            elif esperando:
-                pergunta = citacoes[0] if citacoes else literal(s)
-            continue
-        if re.match(r"^\W*\**\s*Alternativas\s*:?\s*\**\s*$", s, re.I):
-            continue
-        if _RE_NIVEL.search(s) or _RE_ROTULO_ALTERNATIVA.match(s):
-            texto_alt = citacoes[0] if citacoes else _texto_sem_rotulo(s)
-            if texto_alt and texto_alt not in alternativas:
-                alternativas.append(texto_alt)
-    return pergunta, alternativas
-
-
-def canal_b(one_pager: str) -> List[Tuple[str, str, List[str]]]:
-    """`(habilidade, pergunta, alternativas)` de cada Canal B do §12a: a tabela de quatro colunas (a última é o Canal B)
-    ou, sem tabela, cada trecho «Canal B» até o próximo título."""
-    from tools import bncc
-    from tools import conteudo_aprovado as ca
-
-    s12 = ca.secao(one_pager or "", 12) or ""
-    m = ca._RE_12A.search(s12)
-    if not m:
-        return []
-    linhas = s12[m.start():].splitlines()
-    saida: List[Tuple[str, str, List[str]]] = []
-    for linha in linhas:
-        s = linha.strip()
-        if not s.startswith("|") or re.fullmatch(r"\|[\s:|-]+\|?", s):
-            continue
-        celulas = [c.strip() for c in re.split(r"(?<!\\)\|", s.strip("|"))]
-        ultima = celulas[-1] if len(celulas) >= 2 else ""
-        if not (re.search(r"Pergunta|\?", ultima) and (_RE_NIVEL.search(ultima) or _RE_ROTULO_ALTERNATIVA.search(ultima))):
-            continue
-        pergunta, alternativas = _ler_canal_b(ultima)
-        if pergunta:
-            codigos = bncc.extrair_codigos(celulas[0])
-            saida.append((codigos[0] if codigos else "", pergunta, alternativas))
-    if saida:
-        return saida
-    atual, bloco, habilidade = False, [], ""
-    for linha in linhas + ["# fim"]:
-        if re.match(r"^#{1,6}\s", linha):
-            if atual and bloco:
-                pergunta, alternativas = _ler_canal_b("\n".join(bloco))
-                if pergunta:
-                    saida.append((habilidade, pergunta, alternativas))
-            atual, bloco = False, []
-            codigos = bncc.extrair_codigos(linha)
-            habilidade = codigos[0] if codigos else habilidade
-            continue
-        if re.search(r"Canal\s*B", linha):
-            atual = True
-        if atual:
-            bloco.append(linha)
-    return saida
-
-
 def extrair(one_pager: str) -> List[TextoChave]:
-    """Os textos-chave do one-pager, sem ID, na ordem: §4 (textos de tela e escolhas, por etapa), §12a (pergunta e
-    alternativas do Canal B), §9 (roteiro do professor) e §11 (podcast). O mesmo texto em duas fontes entra uma vez, na
-    primeira; a opção de uma escolha não entra de novo como texto de tela."""
+    """Os textos-chave do one-pager, sem ID, na ordem: §4 (textos de tela e escolhas, por etapa), §9 (roteiro do
+    professor) e §11 (podcast). O mesmo texto em duas fontes entra uma vez, na primeira; a opção de uma escolha não entra
+    de novo como texto de tela. O Canal B do §12a não entra mais (removido por decisão do PO de 29/10/2026): o tipo
+    `CANAL_B` fica só para ler os registros das sessões anteriores."""
     from tools import conteudo_aprovado as ca
 
     escolhas = escolhas_do_s4(one_pager)
-    canais = canal_b(one_pager)
-    das_escolhas = {literal(o) for _, ops in escolhas for o in ops} | {literal(a) for _, _, alts in canais for a in alts}
+    das_escolhas = {literal(o) for _, ops in escolhas for o in ops}
     saida: List[TextoChave] = []
     vistos: Set[str] = set()
 
@@ -412,10 +337,6 @@ def extrair(one_pager: str) -> List[TextoChave]:
                 novo(TELA, f"§4 · Etapa {etapa}", valor)
             else:
                 escolha(f"§4 · Etapa {etapa}", valor)
-    for habilidade, pergunta, alternativas in canais:
-        origem = "§12a" + (f" · {habilidade}" if habilidade else "")
-        novo(CANAL_B, origem, pergunta)
-        escolha(origem, alternativas)
     lit = ca.literais(one_pager)
     for t in lit.get("roteiro") or []:
         novo(ROTEIRO, "§9", t)
@@ -613,7 +534,7 @@ def tabela(tcs: Sequence[TextoChave], teto: Optional[Dict[str, Any]] = None, apo
     if not tcs:
         return ""
     linhas = [f"## {TITULO_TABELA}", "",
-              "> Montada pela esteira, por código, do one-pager aprovado (§4, §12a, §9, §11). O ID é estável: o texto "
+              "> Montada pela esteira, por código, do one-pager aprovado (§4, §9, §11). O ID é estável: o texto "
               "trocado no mesmo lugar guarda o ID, e o que sai do one-pager não volta a usá-lo. Cada texto é copiado "
               "palavra por palavra, por código, para a copy e para onde o handoff, o PRD e o pedagógico o citam; o "
               "design não o reescreve — mudança é `[PROPOSTA — validar com PO]`, e o PO a pede no Refazer (a triagem leva "
@@ -1336,7 +1257,7 @@ def relatorio(resultado: Dict[str, Any], missao: str = "") -> str:
     icone = {"aprovado": "🟢", "amarelo": "🟡", "bloqueado": "🔴"}[resultado["status"]]
     c = resultado.get("contagem") or {}
     L = [f"# Textos-chave na copy — {missao or 'missão'}", "",
-         f"**Veredito: {icone}** · {c.get('textos_chave', 0)} texto(s)-chave do one-pager aprovado (§4, §12a, §9, §11) · "
+         f"**Veredito: {icone}** · {c.get('textos_chave', 0)} texto(s)-chave do one-pager aprovado (§4, §9, §11) · "
          f"{c.get('copiados', 0)} copiado(s) por código nesta conferência · {c.get('propostas', 0)} proposta(s) do "
          "design para o PO.", ""]
     if not resultado["achados"]:

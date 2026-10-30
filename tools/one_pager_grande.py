@@ -192,7 +192,6 @@ def com_pendencias(texto: str, linhas: List[str]) -> str:
 _INSUMOS = {
     "secoes_apoio": (("Briefing e pedido do PO", "briefing"),
                      ("Comitê dos canais — painel A (rodada anterior)", "comite_canal_a_report"),
-                     ("Comitê dos canais — painel B (rodada anterior)", "comite_canal_b_report"),
                      ("Comitê final (rodada anterior)", "comite_final_report"),
                      ("Contrato de evidência do one-pager (§12a), conferido em código", "evidencia_one_pager_report"),
                      ("Conferência do one-pager do PO na rodada anterior", "one_pager_po_report")),
@@ -205,7 +204,6 @@ _INSUMOS = {
     "restaurador": (("Briefing e pedido do PO", "briefing"),
                     ("Conferência — one-pager do PO × one-pager atual", "one_pager_po_report"),
                     ("Comitê dos canais — painel A", "comite_canal_a_report"),
-                    ("Comitê dos canais — painel B", "comite_canal_b_report"),
                     ("Comitê final", "comite_final_report")),
 }
 
@@ -257,3 +255,4 @@ def pedido(state: Mapping[str, Any], papel: str, base: str, motivos: str = "") -
                        tarefa_do_papel=load_prompt(PAPEIS[papel]),
                        tamanho_do_po=f"{estimar_tokens(str(state.get('one_pager_po') or '')):,}".replace(",", "."),
                        insumos_do_papel="\n\n".join(insumos) or "(nenhum relatório nesta rodada)")
+

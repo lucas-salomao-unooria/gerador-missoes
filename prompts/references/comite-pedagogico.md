@@ -8,9 +8,9 @@ precisa passar a ser verdade. Quem corrige é quem escreve a missão, na rodada 
 a versão inteira:
 
 - **`A004` — núcleo narrativo:** a mecânica, as seções 0, 1, 3 e 4, as tabelas 1.1–1.3 e o contrato de evidência do
-  **foco primário** (Canal A e, quando há, Canal B), que nasce na seção 4.
+  **foco primário** (Canal A), que nasce na seção 4.
 - **`A014` — seções de apoio:** a seção 2 e as seções 5 a 18, inclusive as linhas do §12a das **demais**
-  habilidades e o texto que a tela mostra fora das 6 etapas.
+  habilidades e o texto que a tela mostra fora das 5 etapas.
 
 Todo achado diz, no campo `autor`, de quem é a correção. Na dúvida, o dono é quem escreveu o trecho que você cita.
 

@@ -24,8 +24,6 @@ sumiram ou foram reescritos sem que o pedido do PO mandasse. Sua tarefa é devol
 
 {comite_canal_a_report?}
 
-{comite_canal_b_report?}
-
 {comite_final_report?}
 
 <!-- include: references/one-pager-do-po.md -->

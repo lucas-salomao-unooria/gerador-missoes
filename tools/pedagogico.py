@@ -10,8 +10,8 @@ o time o lia depois do PRD, com o design já aprovado. Agora ele fecha o design,
 Quatro peças:
 
 - **Montagem sobre o contrato** (`montar`, A120b): o que o PO aprovou entra por código, num subtítulo «Do one-pager
-  aprovado — …» no fim de cinco seções — as habilidades com o texto oficial (§12a), a pergunta do fim e as alternativas
-  (textos-chave do Canal B), a tabela de tempos (§10), o podcast (§11) e o roteiro da conversa (textos-chave do §9) —, e
+  aprovado — …» no fim de cinco seções — as habilidades com o texto oficial (§12a), a régua do Canal A de cada habilidade
+  (§12a), a tabela de tempos (§10), o podcast (§11) e o roteiro da conversa (textos-chave do §9) —, e
   a citação quase igual de um texto-chave volta ao texto aprovado (`tools/textos_chave.py`, PR 7). O LLM escreve só a
   narrativa de sala de aula e remete aos subtítulos. Idempotente: a montagem de uma rodada anterior é trocada.
 - **Gate de montagem** (`validar`, A121b), no molde do gate do PRD (`tools/montagem.py`, PR 4): na narrativa, número de
@@ -64,7 +64,7 @@ GATES = ("conteudo_aprovado_pedagogico_status", "montagem_pedagogico_status", "c
 #: do título, sem acento nem caixa — e o título da seção quando o redator não a escreveu.
 ALVOS: Tuple[Tuple[str, str, str, str], ...] = (
     ("habilidades", "o que a missao ensina", "O que a missão ensina", "as habilidades"),
-    ("canal_b", "como a gente sabe", "Como a gente sabe que a criança aprendeu", "a pergunta do fim (Canal B)"),
+    ("regua", "como a gente sabe", "Como a gente sabe que a criança aprendeu", "a régua de cada habilidade"),
     ("tempos", "quanto tempo leva", "Quanto tempo leva e como dividir em aulas", "os tempos"),
     ("podcast", "o podcast", "O podcast do fechamento", "o podcast"),
     ("roteiro", "o que voce faz", "O que você faz, professora", "o roteiro da conversa"),
@@ -250,7 +250,7 @@ def _metadados_do_podcast(secao11: str) -> List[str]:
 
 def blocos_do_contrato(state: Dict[str, Any]) -> List[Tuple[str, str, str, str]]:
     """`[(nome, alvo, título do bloco, corpo)]`: o que a esteira põe no pedagógico, do one-pager aprovado e da spec de
-    produto mais o anexo de design. Bloco sem conteúdo no contrato fica de fora (sem Canal B, sem roteiro); o podcast
+    produto mais o anexo de design. Bloco sem conteúdo no contrato fica de fora (sem régua, sem roteiro); o podcast
     entra sempre, dizendo se há ou não."""
     from tools import bncc
     from tools import conteudo_aprovado as ca
@@ -271,20 +271,19 @@ def blocos_do_contrato(state: Dict[str, Any]) -> List[Tuple[str, str, str, str]]
             (f"- **{c}** — «{oficiais[c]['habilidade']}»" if (oficiais.get(c) or {}).get("habilidade") else f"- **{c}**")
             for c in codigos]
 
-    perguntas = [t for t in tcs if t.tipo == tk.CANAL_B]
-    if perguntas:
-        linhas = ["Copiada pela esteira dos textos-chave do contrato de evidência (§12a), palavra por palavra."]
-        for p in perguntas:
-            habilidade = p.origem.split("·", 1)[1].strip() if "·" in p.origem else ""
-            linhas += ["", f"**{p.id}{' · ' + habilidade if habilidade else ''}** — a pergunta, como aparece na tela:",
-                       "", f"> {p.texto}"]
-            depois = tcs[tcs.index(p) + 1:]
-            grupo = next((t for t in depois if t.tipo == tk.OPCOES and t.origem == p.origem), None)
-            if grupo and grupo.opcoes:
-                linhas += ["", f"As alternativas ({grupo.id}), na ordem do one-pager:", ""]
-                linhas += [f"{n}. «{o}»" for n, o in enumerate(grupo.opcoes, 1)]
-        linhas += ["", "O nível de cada alternativa e a régua inteira estão no anexo (§12a)."]
-        corpos["canal_b"] = linhas
+    # a régua do Canal A de cada habilidade (§12a), no lugar da pergunta do fim: o Canal B saiu em 29/10/2026
+    from tools import evidencia
+
+    s12 = ca.secao(one_pager, 12) or ""
+    m = evidencia._RE_12A_TITULO.search(s12)
+    contrato = evidencia._contrato_12a(s12[m.start():]) if m else None
+    reguas = [(c, " ".join(item["texto_a"].split())) for c, item in (contrato or {}).items() if item["texto_a"].strip()]
+    if reguas:
+        linhas = ["Copiada pela esteira do contrato de evidência (§12a), palavra por palavra: a ação que o estudante faz "
+                  "na tela e o que separa Atingiu, Em processo e Não atingiu."]
+        for c, regua in reguas:
+            linhas += ["", f"- **{c}** — {regua}"]
+        corpos["regua"] = linhas
 
     tabela = _tabela_de_tempos(ca.secao(one_pager, 10) or "")
     total = ca.tempo_aprovado(one_pager)

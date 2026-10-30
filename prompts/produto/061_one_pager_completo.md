@@ -56,7 +56,7 @@ São **6 parágrafos de prosa**, nesta ordem, cada um aberto pelo rótulo em neg
 
 ### 0.2 Como a missão funciona passo a passo
 
-De **8 a 16 passos**. O passo 1 é o professor preparando e liberando a atividade (seção 9a). O último é o fechamento com a turma: o que o professor retoma, o podcast quando a missão tem (seção 11) e o que o estudante leva para outras situações, numa frase. **Entre eles, cada momento da seção 4 (`#### Momento E.k`) é contado em exatamente um passo, na ordem da seção 4.** Um passo pode juntar até 3 momentos seguidos da mesma etapa e do mesmo caminho, quando juntos são uma ação só para quem lê.
+De **7 a 16 passos**. O passo 1 é o professor preparando e liberando a atividade (seção 9a). O último é o fechamento com a turma: o que o professor retoma, e o podcast quando a missão tem (seção 11). **Entre eles, cada momento da seção 4 (`#### Momento E.k`) é contado em exatamente um passo, na ordem da seção 4.** Um passo pode juntar até 3 momentos seguidos da mesma etapa e do mesmo caminho, quando juntos são uma ação só para quem lê.
 
 Cada passo tem esta forma, com estes rótulos:
 
@@ -71,7 +71,7 @@ Cada passo tem esta forma, com estes rótulos:
 **Libera:** <o que abre o passo seguinte>
 ```
 
-`<Etapa>` é o nome da etapa que o time entende (Desafiar, Navegar, Decidir, Resultado, Explicar); no passo 1, `*Preparo do professor*`; no último, `*Fechamento*`. Cada campo é a ficha do momento contada em uma ou duas frases do dia a dia — **Na tela** vem de «Na tela», **O estudante** de «Gesto», **Acontece** de «Resposta na hora», **Se não fizer** de «Se não fizer», **Libera** de «Libera». Não traga «Se errar» nem «Fica registrado»: são para o design e o dev, e estão na seção 4.
+`<Etapa>` é o nome da etapa que o time entende — a missão tem 5 etapas: Desafiar, Navegar, Decidir, Resultado, Explicar (não há etapa 6); no passo 1, `*Preparo do professor*`; no último, `*Fechamento*`. Cada campo é a ficha do momento contada em uma ou duas frases do dia a dia — **Na tela** vem de «Na tela», **O estudante** de «Gesto», **Acontece** de «Resposta na hora», **Se não fizer** de «Se não fizer», **Libera** de «Libera». Não traga «Se errar» nem «Fica registrado»: são para o design e o dev, e estão na seção 4.
 
 **Sem passo repetido nem contraditório:**
 - Um momento, um passo. Se dois passos parecem fazer a mesma coisa, ou são o mesmo momento (junte) ou são caminhos diferentes (marque os dois com **Só para quem**, com as duas condições).
@@ -105,7 +105,7 @@ O conteúdo já está decidido nas seções de baixo. O que você controla aqui 
 | SVG, JSON, iframe, API, endpoint, hash, renderiza | o gráfico, os dados, a tela, o sistema, a mesma planilha, mostra |
 | parametriza, parametrização | escolhe, configura |
 | diegético, affordance, job-to-be-done, cardinalidade | dentro da história, o que dá pra fazer, o que pedem a ele, o número exato |
-| Canal A, Canal B, contrato de evidência, regra ternária | o que mostra que ele aprendeu: a ação que ele faz na tela |
+| Canal A, contrato de evidência, regra ternária | o que mostra que ele aprendeu: a ação que ele faz na tela |
 | `E3-ALU-02`, §4, Regra 12, P0a | o que a tela mostra, em palavras; o nome da seção, sem número |
 | propicia, oportuniza, mobiliza, ressignifica, problematiza | faz, deixa, abre, repensa, põe em dúvida |
 | protagonismo, mediação docente, discente, aluno | o estudante decide, o professor conduz, estudante |

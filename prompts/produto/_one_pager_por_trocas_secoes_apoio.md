@@ -10,5 +10,5 @@ troque; se uma seção de apoio contradiz o núcleo, ajuste a seção de apoio, 
 - **Comitês pedagógicos:** corrija só os achados atribuídos a `A014` — a seção 2, as linhas do §12a das demais
   habilidades e as seções 5 a 18. Os do `A004` o núcleo já corrigiu.
 - **§12a (contrato de evidência):** habilidade da seção 2 sem linha, sem Canal A, sem a regra ternária por extenso ou
-  com Canal B sem os três níveis — corrija a linha, com o cabeçalho exato do §12a.
+  com Canal B (removido) — corrija a linha, com o cabeçalho exato do §12a.
 - **Conferência do one-pager do PO:** trecho do PO que sumiu volta como o PO escreveu, no mesmo lugar.

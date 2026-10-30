@@ -303,28 +303,8 @@ IDEACAO_DISPENSADA = (
 )
 
 
-def pular_juiz_sem_canal_b(chave: str):
-    """before_agent_callback de um juiz do painel B: missão sem Canal B no §12a não tem pergunta a julgar.
-
-    O juiz não roda e o voto dele é gravado como dispensado (aprova sem custo). O `Content` devolvido não vai sozinho
-    para o `output_key` — só o que o callback põe no estado entra no evento —, por isso a gravação explícita.
-    """
-    def _callback(callback_context: CallbackContext) -> Optional[types.Content]:
-        from tools.comite import envelope_dispensado
-        from tools.evidencia import habilidades_com_canal_b
-
-        com_b = habilidades_com_canal_b(str(callback_context.state.get("one_pager") or ""))
-        if com_b is None or com_b:
-            return None
-        texto = envelope_dispensado("nenhuma habilidade do §12a tem Canal B: não há pergunta a julgar")
-        callback_context.state[chave] = texto
-        return types.Content(role="model", parts=[types.Part(text=texto)])
-
-    return _callback
-
-
 #: Os comitês cujo voto devolve a missão a quem a escreve (`agents/comite.py`).
-STATUS_DOS_COMITES = ("comite_canal_a_status", "comite_canal_b_status", "comite_final_status")
+STATUS_DOS_COMITES = ("comite_canal_a_status", "comite_final_status")
 
 
 def manter_nucleo_sem_achado_do_a004(callback_context: CallbackContext) -> Optional[types.Content]:

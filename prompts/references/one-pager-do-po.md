@@ -7,7 +7,7 @@ Se vier preenchido, **o PO anexou o one-pager da missão, e ele é a missão apr
 completá-lo no formato canônico, conferi-lo e levá-lo ao design — **não para redesenhá-lo**. O pedido do PO
 (briefing e pedidos de correção) diz o que muda; **todo o resto fica como o PO escreveu**, palavra por palavra:
 narrativa, ambiente e seção do DS, mecanismo de cada etapa, verbos, regras do sistema, tempos, cenários, papel e
-falas do professor, roteiro do debate, podcast, Canal B (pergunta, alternativas e feedback), textos de tela,
+falas do professor, roteiro do debate, podcast, textos de tela,
 tetos e números que ele fixou, decisões das seções 17 e 18.
 
 Um código confere isto trecho a trecho: cada linha e cada célula de tabela do one-pager do PO precisa estar no

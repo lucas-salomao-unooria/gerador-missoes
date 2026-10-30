@@ -1,6 +1,6 @@
 ---
 name: teto-palavras-por-faixa
-description: Teto de palavras dos textos-chave que a criança lê (texto de tela do §4, pergunta e alternativas do Canal B, opções de escolha), por faixa, para o lint de produto acusar antes do de acordo o texto aprovado acima do teto. Vale só quando o §15 do one-pager não declara teto de palavras.
+description: Teto de palavras dos textos-chave que a criança lê (texto de tela do §4 e opções de escolha), por faixa, para o lint de produto acusar antes do de acordo o texto aprovado acima do teto. Vale só quando o §15 do one-pager não declara teto de palavras.
 sources: [073_copy_ptbr, criterios-experiencia, literatura-cognitiva]
 status: rascunho v0 — validar com produto (PM) e pedagogia antes de tratar como contrato
 ---
@@ -23,4 +23,4 @@ status: rascunho v0 — validar com produto (PM) e pedagogia antes de tratar com
 | `6-9` | 6º ao 9º ano EF | 20 | 073: até ~20 palavras |
 | `EM` | Ensino Médio | 20 | critério 6.1, cláusula de defasagem (a): o teto do 6º–9º [CONVENÇÃO]; a 073 diz «livre, enxuto» |
 
-**O que o lint conta.** Os textos-chave lidos pela criança: texto de tela do §4, pergunta e alternativas do Canal B (§12a) e as opções de cada escolha. O podcast é ouvido e o roteiro do §9 é lido pelo professor: ficam de fora.
+**O que o lint conta.** Os textos-chave lidos pela criança: texto de tela do §4 e as opções de cada escolha. O podcast é ouvido e o roteiro do §9 é lido pelo professor: ficam de fora.

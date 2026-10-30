@@ -67,12 +67,6 @@ def test_achados_agrupados_por_autor_no_relatorio():
     assert env["status"] == "bloqueado" and env["votos"] == {"j1": "reprova", "j2": "reprova", "j3": "aprova"}
 
 
-def test_juiz_dispensado_aprova_sem_custo():
-    r = comite.consolidar({k: comite.envelope_dispensado("missão sem Canal B") for k in ("b1", "b2", "b3")}, DOC)
-    assert r["status"] == "aprovado"
-    assert all(v["dispensado"] for v in r["votos"].values())
-
-
 def test_relatorio_tem_envelope_legivel_pelo_inferir_status():
     from agents.callbacks import extrair_envelope, inferir_status
 
@@ -202,12 +196,13 @@ _SPEC = ("# Spec — `id: exp06ef1b`\n## 9. Evidências\n"
          "Atingiu: fixa com fonte · Em processo: fixa sem fonte · Não atingiu: não fixa |\n")
 
 
-def test_spec_com_habilidade_so_canal_b_bloqueia():
+def test_spec_com_canal_b_bloqueia():
+    """O Canal B saiu da missão por decisão do PO (29/10/2026): só `A` passa; `B` e `A + B` bloqueiam."""
     assert evidencia.validar(_SPEC.format(canal="A"))["status"] == "aprovado"
-    assert evidencia.validar(_SPEC.format(canal="A + B"))["status"] == "aprovado"
-    so_b = evidencia.validar(_SPEC.format(canal="B"))
-    assert so_b["status"] == "bloqueado"
-    assert [a["codigo"] for a in so_b["achados"]] == ["habilidade-sem-canal-a"]
+    for canal in ("A + B", "B"):
+        r = evidencia.validar(_SPEC.format(canal=canal))
+        assert r["status"] == "bloqueado"
+        assert [a["codigo"] for a in r["achados"]] == ["canal-b-removido"]
 
 
 _REGRA = "**Regra:** • **Atingiu:** fixa com fonte • **Em processo:** fixa sem fonte • **Não atingiu:** não fixa"
@@ -217,24 +212,29 @@ _B = ('Pergunta: "Qual post você mostraria à turma?" • **Atingiu:** "o que c
 
 def _one_pager(linhas: str, s2: str = "`EF06CO09` e `EF06CO01`") -> str:
     return (f"# One-pager\n## 2. Currículo\n- {s2}\n## 12. Evidências e dados\n- capturado\n"
-            f"### 12a. Contrato de evidência por habilidade\n\n{evidencia.CABECALHO_12A}\n|---|---|---|---|\n{linhas}\n"
+            f"### 12a. Contrato de evidência por habilidade\n\n{evidencia.CABECALHO_12A}\n|---|---|---|\n{linhas}\n"
             f"## 13. Professor\n- conduz\n")
 
 
 def test_12a_completo_aprova():
-    op = _one_pager(f"| `EF06CO09` (Foco Primário) | A + B | {_REGRA} | {_B} |\n| `EF06CO01` | `A` | {_REGRA} | — |")
+    op = _one_pager(f"| `EF06CO09` (Foco Primário) | A | {_REGRA} |\n| `EF06CO01` | `A` | {_REGRA} |")
     r = evidencia.conferir_one_pager(op)
     assert r["status"] == "aprovado", r["achados"]
 
 
-def test_12a_cobra_canal_a_regra_e_niveis_do_b():
-    op = _one_pager(f"| `EF06CO09` | A + B | ação sem regra | Pergunta sem níveis |\n| `EF06CO01` | B | — | {_B} |")
+def test_12a_cobra_regra_ternaria_e_proibe_o_canal_b():
+    op = _one_pager(f"| `EF06CO09` | A + B | ação sem regra |\n| `EF06CO01` | B | {_REGRA} |")
     codigos = sorted(a["codigo"] for a in evidencia.conferir_one_pager(op)["achados"])
-    assert codigos == ["canal-b-sem-niveis", "habilidade-sem-canal-a", "regra-ternaria-ausente"]
+    assert codigos == ["canal-b-removido", "canal-b-removido", "regra-ternaria-ausente"]
+    # o one-pager antigo, com a coluna do Canal B preenchida, também bloqueia
+    largo = (f"# One-pager\n## 2. Currículo\n- `EF06CO09`\n## 12. Evidências\n### 12a. Contrato\n\n"
+             f"| Habilidade (código) | Canal de evidência | Canal A: ação | Canal B: pergunta |\n|---|---|---|---|\n"
+             f"| `EF06CO09` | A | {_REGRA} | {_B} |\n## 13. Professor\n")
+    assert [a["codigo"] for a in evidencia.conferir_one_pager(largo)["achados"]] == ["canal-b-removido"]
 
 
 def test_12a_cobra_toda_habilidade_da_secao_2():
-    op = _one_pager(f"| `EF06CO09` | A | {_REGRA} | — |")
+    op = _one_pager(f"| `EF06CO09` | A | {_REGRA} |")
     assert [a["codigo"] for a in evidencia.conferir_one_pager(op)["achados"]] == ["habilidade-sem-contrato"]
 
 
@@ -242,11 +242,10 @@ def test_12a_aceita_uma_linha_por_canal():
     """O formato da exp09ef1b: «| Habilidade | Canal | Evento | Campo | Regra |», uma linha por canal."""
     op = ("# One-pager\n## 2. Currículo\n- `EF09CO07`\n## 12. Evidências\n### 12a. Contrato de evidência por habilidade\n\n"
           "| Habilidade | Canal | Evento registrado | Campo | Regra ternária de cálculo no servidor |\n|---|---|---|---|---|\n"
-          f"| `EF09CO07` | **Canal A** | `submit_decidir` | `opcao` | {_REGRA} |\n"
-          f"| `EF09CO07` | **Canal B** | `submit_poll` | `opcao` | {_B} |\n## 13. Professor\n")
+          f"| `EF09CO07` | **Canal A** | `submit_decidir` | `opcao` | {_REGRA} |\n## 13. Professor\n")
     assert evidencia.conferir_one_pager(op)["status"] == "aprovado"
-    sem_a = op.replace("**Canal A**", "**Canal B**")
-    assert [a["codigo"] for a in evidencia.conferir_one_pager(sem_a)["achados"]] == ["habilidade-sem-canal-a"]
+    com_b = op.replace("## 13. Professor", f"| `EF09CO07` | **Canal B** | `submit_poll` | `opcao` | {_B} |\n## 13. Professor")
+    assert [a["codigo"] for a in evidencia.conferir_one_pager(com_b)["achados"]] == ["canal-b-removido"]
 
 
 def test_12a_ausente_ou_sem_tabela_bloqueia():
@@ -260,13 +259,13 @@ def test_rastro_check_no_modo_evidencia_one_pager_grava_status_e_relatorio():
     from google.adk.agents import SequentialAgent
 
     root = SequentialAgent(name="R", sub_agents=[
-        _Falso(name="OnePager", key="one_pager", text=_one_pager(f"| `EF06CO09` | B | — | {_B} |", "`EF06CO09`")),
+        _Falso(name="OnePager", key="one_pager", text=_one_pager(f"| `EF06CO09` | B | — |", "`EF06CO09`")),
         RastroCheckAgent(name="A0xxEvidenciaOnePager", modo="evidencia_one_pager", rotulo="Contrato de evidência (§12a)",
                          report_key="evidencia_one_pager_report", status_key="evidencia_one_pager_status", estrito=False),
     ])
     state = asyncio.run(_rodar(root))
     assert state["evidencia_one_pager_status"] == "bloqueado"
-    assert "habilidade-sem-canal-a" in state["evidencia_one_pager_report"]
+    assert "canal-b-removido" in state["evidencia_one_pager_report"]
 
 
 # --------------------------------------------------------------------------- callbacks dos comitês
@@ -277,18 +276,6 @@ class _Ctx:
         self.state = state
 
 
-def test_juiz_do_painel_b_e_dispensado_sem_canal_b_e_grava_o_voto():
-    from agents.callbacks import pular_juiz_sem_canal_b
-
-    pular = pular_juiz_sem_canal_b("comite_canal_b_medida")
-    so_a = _Ctx({"one_pager": _one_pager(f"| `EF06CO09` | A | {_REGRA} | — |", "`EF06CO09`")})
-    conteudo = pular(so_a)
-    assert conteudo is not None and comite.voto(so_a.state["comite_canal_b_medida"])["dispensado"]
-    com_b = _Ctx({"one_pager": _one_pager(f"| `EF06CO09` | A + B | {_REGRA} | {_B} |", "`EF06CO09`")})
-    assert pular(com_b) is None and "comite_canal_b_medida" not in com_b.state
-    assert pular(_Ctx({"one_pager": "sem §12a"})) is None, "§12a ilegível: ninguém pula por engano"
-
-
 def test_nucleo_so_e_mantido_quando_nenhum_comite_aponta_para_o_a004():
     from agents.callbacks import manter_nucleo_sem_achado_do_a004 as manter
 
@@ -296,13 +283,13 @@ def test_nucleo_so_e_mantido_quando_nenhum_comite_aponta_para_o_a004():
         return {"status": "bloqueado", "achados": [{"severidade": "bloqueio", "autor": a} for a in autores]}
 
     base = {"nucleo_narrativo": "# Núcleo", "evidencia_one_pager_status": "aprovado"}
-    assert manter(_Ctx({**base, "comite_canal_b_status_envelope": env("A014")})) is not None
-    assert manter(_Ctx({**base, "comite_canal_b_status_envelope": env("A014", "A004")})) is None
+    assert manter(_Ctx({**base, "comite_canal_a_status_envelope": env("A014")})) is not None
+    assert manter(_Ctx({**base, "comite_canal_a_status_envelope": env("A014", "A004")})) is None
     assert manter(_Ctx({**base, "comite_final_status_envelope": env("")})) is None, "sem autor: o núcleo roda"
     assert manter(_Ctx(base)) is None, "primeira passada: nenhum comitê reprovou"
     assert manter(_Ctx({**base, "evidencia_one_pager_status": "bloqueado",
-                        "comite_canal_b_status_envelope": env("A014")})) is None, "§12a fora de forma: o núcleo roda"
-    assert manter(_Ctx({"comite_canal_b_status_envelope": env("A014")})) is None, "sem núcleo ainda: roda"
+                        "comite_canal_a_status_envelope": env("A014")})) is None, "§12a fora de forma: o núcleo roda"
+    assert manter(_Ctx({"comite_canal_a_status_envelope": env("A014")})) is None, "sem núcleo ainda: roda"
 
 
 # --------------------------------------------------------------------------- a fábrica, de ponta a ponta
@@ -322,7 +309,7 @@ class _JuizFalso(BaseAgent):
 
 
 def test_comites_da_fabrica_devolvem_a_missao_a_quem_a_escreve(monkeypatch):
-    """Painel B reprova a 1ª versão por um achado do A014; o comitê final reprova a 2ª por um do A004.
+    """O painel A reprova a 1ª versão por um achado do A014; o comitê final reprova a 2ª por um do A004.
 
     O núcleo só reescreve quando há achado para ele; a cadeia inteira roda de novo quando o comitê final reprova; e a
     missão termina aprovada pelos dois comitês."""
@@ -331,7 +318,7 @@ def test_comites_da_fabrica_devolvem_a_missao_a_quem_a_escreve(monkeypatch):
     from agents import comite as fabrica
     from agents.checkers import DocumentoObrigatorioAgent
 
-    regras = {"comite_canal_b_medida": (2, "A014"), "comite_final_qualidade": (3, "A004")}
+    regras = {"comite_canal_a_medida": (2, "A014"), "comite_final_qualidade": (3, "A004")}
 
     def juizes(painel, numero, letras, **kw):
         return [_JuizFalso(name=f"A{numero:03d}{letra}Falso", key=chave, aprova_na=regras.get(chave, (1,))[0],
@@ -339,7 +326,7 @@ def test_comites_da_fabrica_devolvem_a_missao_a_quem_a_escreve(monkeypatch):
                 for letra, (_, _, chave, _, _) in zip(letras, fabrica.JUIZES[painel])]
 
     monkeypatch.setattr(fabrica, "_juizes", juizes)
-    one_pager = (_one_pager(f"| `EF06CO09` | A + B | {_REGRA} | {_B} |", "`EF06CO09`") + DOC
+    one_pager = (_one_pager(f"| `EF06CO09` | A | {_REGRA} |", "`EF06CO09`") + DOC
                  + "\n### 1.3 Conta da virada\n**Não se aplica:** a missão não tem recomendação de máquina nem ranking.\n")
 
     def loop_simples(nome, chave, marcador):
@@ -362,7 +349,7 @@ def test_comites_da_fabrica_devolvem_a_missao_a_quem_a_escreve(monkeypatch):
         loop_simples("AvaliacoesLoop", "avaliacao_status", ""), loop_simples("OnePagerPoLoop", "one_pager_po_rodada_ok", "")])
     state = asyncio.run(_rodar(SequentialAgent(name="Produto", sub_agents=[final])))
 
-    assert state["comite_canal_b_status"] == "aprovado" and state["comite_final_status"] == "aprovado"
+    assert state["comite_canal_a_status"] == "aprovado" and state["comite_final_status"] == "aprovado"
     assert state["versao_one_pager"] == 3, "as seções de apoio reescreveram a cada reprovação"
     assert state["escritas_nucleo"] == 2, "o núcleo pulou a rodada do achado do A014 e reescreveu na do A004"
     assert state["passadas_gate"] == 2, "o comitê final reprovado refez a cadeia de produto"

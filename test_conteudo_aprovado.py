@@ -408,12 +408,12 @@ ONE_PAGER_LITERAIS = """# One-pager — O Detetive da Foto Misteriosa v5.2
 
 def test_literais_aprovados_e_onde_eles_sao_cobrados():
     lit = ca.literais(ONE_PAGER_LITERAIS)
-    assert lit["canal_b"][0] == "O que faz duas fotos combinarem?" and len(lit["canal_b"]) == 4
+    assert "canal_b" not in lit, "o Canal B saiu da missão em 29/10/2026: não é mais texto aprovado a copiar"
     assert lit["roteiro"][0].startswith("Quem achou que o menino estava assustado") and len(lit["roteiro"]) == 2
     assert len(lit["podcast"]) == 3  # «Duração» aparece uma vez: é metadado, não fala
 
     # desde 07/10/2026 a copy também traz o roteiro do podcast literal (a exp01ef1b o reescreveu)
-    fiel = "\n".join(lit["canal_b"] + lit["roteiro"] + lit["podcast"])
+    fiel = "\n".join(lit["roteiro"] + lit["podcast"] + lit["texto_tela"])
     assert ca.validar_copy(fiel, ONE_PAGER_LITERAIS) == []
     # a spec da exp01ef1b trocou a pergunta 1 do debate por outra redação
     reescrita = fiel.replace(lit["roteiro"][0], "Quem achou que a foto mostrava algo de verdade? O que na imagem fez você pensar isso?")
@@ -887,10 +887,8 @@ def test_o_que_o_autor_anterior_escreveu_nao_some_na_reescrita():
     assert pr.reanexar_secoes(p1, final)["reanexadas"] == [], "idempotente"
 
 
-def test_textos_do_po_conferidos_na_copy_na_caa_e_no_prototipo():
-    """O podcast da exp01ef1b chegou ao banco com 0 de 9 falas do PO (a copy o reescreveu); o protótipo da
-    exp06ef1b tinha 1 de 4 textos do Canal B. O protótipo monta as telas dentro de um `<script>` — o texto
-    de lá conta."""
+def test_textos_do_po_conferidos_na_copy():
+    """O podcast da exp01ef1b chegou ao banco com 0 de 9 falas do PO (a copy o reescreveu)."""
     one_pager = ONE_PAGER
     falas = ca.literais(one_pager)["podcast"]
     assert falas, "o one-pager de teste tem podcast"
@@ -899,13 +897,6 @@ def test_textos_do_po_conferidos_na_copy_na_caa_e_no_prototipo():
     com_podcast = ca.validar_copy("\n".join(falas), one_pager)
     assert not any(a["codigo"] == "podcast-reescrito" for a in com_podcast)
 
-    canal_b = ca.literais(one_pager)["canal_b"]
-    if canal_b:
-        html_script = "<html><body><script>const telas = `" + " ".join(canal_b) + "`;</script></body></html>"
-        assert ca.validar_literais_design("", html_script, one_pager) == []
-        achados = ca.validar_literais_design("Prancha do Canal B: escolha uma.", "<html><body>outra</body></html>", one_pager)
-        assert {a["agente_responsavel"] for a in achados} == {"caa", "prototipo"}
-    assert ca.validar_literais_design("Aplicabilidade: não roda.", "", one_pager) == [], "CAA que não se aplica não é cobrada"
 
 
 def test_meta_de_kpi_so_com_origem_no_one_pager_ou_no_9f():
@@ -1026,8 +1017,8 @@ def test_mutacao_a_matriz_pega_cada_perda_plantada():
         # exp01: o PRD apagou o marcador da proposta
         "perdido-proposta-prd": {**base, "prd_final": base["prd_final"].replace(
             f"| {texto['proposta'][0]} | [PROPOSTA — validar com PO] |", f"| {texto['proposta'][0]} | decidido |")},
-        # exp09: o pedagógico reescreveu a alternativa do Canal B
-        "perdido-canal_b-pedagogico": tirar("one_pager_pedagogico", texto["canal_b"][1]),
+        # exp01: o pedagógico reescreveu uma pergunta do debate
+        "perdido-roteiro-pedagogico": tirar("one_pager_pedagogico", texto["roteiro"][0]),
         # exp03: a seção fixada pelo briefing trocada no PRD
         "perdido-secao_ds-prd": tirar("prd_final", "unoochat"),
         # um evento da 9.4 que o handoff não instrumenta
@@ -1040,15 +1031,15 @@ def test_mutacao_a_matriz_pega_cada_perda_plantada():
     assert not perdidas, f"a matriz deixou passar {len(perdidas)} de {len(pegas)} perdas plantadas: {perdidas}"
 
     # e não acusa o que está certo
-    falso = {**base, "prd_final": base["prd_final"].replace(texto["canal_b"][0], "")
-             + "\n---\n\n# " + ca.TITULO_ANEXO + "\n\n" + texto["canal_b"][0]}
-    assert "perdido-canal_b-prd" not in {a["codigo"] for a in rb.matriz(falso)["achados"]}, "literal no anexo conta"
+    falso = {**base, "prd_final": base["prd_final"].replace(texto["roteiro"][0], "")
+             + "\n---\n\n# " + ca.TITULO_ANEXO + "\n\n" + texto["roteiro"][0]}
+    assert "perdido-roteiro-prd" not in {a["codigo"] for a in rb.matriz(falso)["achados"]}, "literal no anexo conta"
 
-    # no pedagógico o anexo não salva o corpo: o gate dele (A121) cobra o Canal B no corpo, e o anexo que a esteira
-    # cola traz o §12 inteiro — contado, a coluna saía sempre ✅
-    so_no_anexo = ca.com_anexo(base["one_pager_pedagogico"].replace(texto["canal_b"][1], ""), base["one_pager"],
+    # no pedagógico o anexo não salva o corpo: o gate dele (A121) cobra o debate no corpo, e o anexo que a esteira
+    # cola traz o §9 inteiro — contado, a coluna saía sempre ✅
+    so_no_anexo = ca.com_anexo(base["one_pager_pedagogico"].replace(texto["roteiro"][0], ""), base["one_pager"],
                                ca.SECOES_PEDAGOGICO)
-    assert "perdido-canal_b-pedagogico" in {a["codigo"] for a in rb.matriz({**base, "one_pager_pedagogico": so_no_anexo})["achados"]}
+    assert "perdido-roteiro-pedagogico" in {a["codigo"] for a in rb.matriz({**base, "one_pager_pedagogico": so_no_anexo})["achados"]}
 
     # estado sem o prefixo `E1_` (6 das 15 specs do bucket): a matriz o vê, como o gate do PRD
     spec_minusculas = ("## 2. Mecanismo\n\n### Contrato de estados\n\n"

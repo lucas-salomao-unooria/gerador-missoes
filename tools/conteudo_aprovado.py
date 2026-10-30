@@ -39,7 +39,7 @@ TITULOS = {
     1: "Descoberta central e anatomia do aha",
     2: "Currículo",
     3: "Narrativa e personagem-guia",
-    4: "As 6 etapas — mecanismo e o que a tela mostra",
+    4: "As 5 etapas — mecanismo e o que a tela mostra",
     5: "Verificação de ambiente",
     6: "Verbos e affordances",
     7: "Caminhos degenerados",
@@ -79,7 +79,7 @@ SECOES_DEV: Tuple[int, ...] = SECOES_DESIGN
 #: ("ativar ou agendar" no §9 da exp01ef1b) valia tanto quanto a spec que a corrigiu.
 NOTA_CONTEUDO_APROVADO = (
     "> Copiado pela esteira, sem reescrita, do one-pager que o PO aprovou. Para o que a missão ensina e mede, os "
-    "textos literais (Canal B, debate, podcast e o que o §4 põe na tela entre aspas — a pergunta da aposta, as "
+    "textos literais (debate, podcast e o que o §4 põe na tela entre aspas — a pergunta da aposta, as "
     "alternativas, as falas da personagem), os tempos e o papel do professor, se a spec divergir, vale este "
     "texto. Onde a spec detalha o mecanismo (estados, regras, IDs de tela), vale a spec; onde ela contradiz o §4 "
     "num número ou num texto de tela, siga este texto e registre a divergência. Restrição da plataforma não se "
@@ -271,12 +271,6 @@ def codigos_citados_no_one_pager(one_pager: str) -> List[str]:
     return list(dict.fromkeys(bncc.extrair_codigos(trecho_12a) + bncc.extrair_codigos(s2)))
 
 
-#: Texto entre aspas logo depois do rótulo: `**Pergunta:** "…"`, `Pergunta: *"…"*`, `- **Atingiu:** "…"`.
-#: A régua do Canal A vem sem aspas e fica de fora — ela é conferida pelo anexo, não aqui.
-_RE_CANAL_B = re.compile(
-    r"(?:Pergunta|Atingiu|Em processo|N[ãa]o atingiu)\s*\**\s*:\s*\**\s*\*?[\"“]([^\"”\n]{12,}?)[\"”]",
-    re.I,
-)
 _RE_TITULO_ROTEIRO = re.compile(r"^#{2,6}[^\n]*\b(?:roteiro|perguntas)\b[^\n]*$", re.I | re.M)
 _RE_PERGUNTA = re.compile(r"[\"“]([^\"”\n]{12,}\?)[\"”]")
 _RE_FALA = re.compile(r"^\s*(?:[-*]\s+)?\*\*([^*\n]{2,30}?):\*\*\s*(.{20,})$", re.M)
@@ -391,7 +385,6 @@ def textos_de_tela_por_etapa(one_pager: str) -> List[Tuple[str, str]]:
 def literais(one_pager: str) -> Dict[str, List[str]]:
     """O texto que o PO aprovou palavra por palavra e que a criança ou o professor ouvem.
 
-    - `canal_b`: perguntas e alternativas entre aspas do §12a;
     - `roteiro`: as perguntas do debate (bloco «Roteiro…»/«Perguntas…» do §9);
     - `podcast`: as falas do §11 (`**Nome:** fala`): o nome que se repete, ou o nome próprio de uma palavra
       que não é rótulo de metadado (`**Duração:**`, `**Apresentadores:**`);
@@ -401,9 +394,6 @@ def literais(one_pager: str) -> Dict[str, List[str]]:
     as alternativas, a copy reescreveu o podcast e o banco de conteúdo escreveu outro roteiro.
     """
     texto = one_pager or ""
-    s12 = secao(texto, 12) or ""
-    m = _RE_12A.search(s12)
-    canal_b = list(dict.fromkeys(t.strip() for t in _RE_CANAL_B.findall(s12[m.start():] if m else "")))
     s9 = secao(texto, 9) or ""
     roteiro: List[str] = []
     for t in _RE_TITULO_ROTEIRO.finditer(s9):
@@ -421,7 +411,7 @@ def literais(one_pager: str) -> Dict[str, List[str]]:
         return vezes[nome] >= 2 or (" " not in nome and nome[:1].isupper() and nome.lower() not in _ROTULOS_DE_METADADO)
 
     podcast = [fala.strip().strip('"“”*').strip() for nome, fala in falas if e_voz(nome)]
-    return {"canal_b": canal_b, "roteiro": list(dict.fromkeys(roteiro)), "podcast": podcast,
+    return {"roteiro": list(dict.fromkeys(roteiro)), "podcast": podcast,
             "texto_tela": textos_de_tela(texto)}
 
 
@@ -819,9 +809,9 @@ def validar_spec(spec: str, one_pager: str) -> Dict[str, Any]:
             permitidos=codigos_citados_no_one_pager(one_pager))
     achados += _tempo(spec, one_pager, "a spec", "produto")
     achados += _secoes(remover_anexo(spec or ""), one_pager)
-    achados += _literais(spec, one_pager, ("canal_b", "roteiro"), "na spec", "produto",
-                         "A spec copia do one-pager, palavra por palavra: a pergunta e as alternativas do Canal B no "
-                         "bloco 9, as perguntas do debate no bloco 8. Melhorar a redação é decisão do PO, no one-pager.")
+    achados += _literais(spec, one_pager, ("roteiro",), "na spec", "produto",
+                         "A spec copia do one-pager, palavra por palavra, as perguntas do debate no bloco 8. Melhorar a "
+                         "redação é decisão do PO, no one-pager.")
     if tem_podcast(one_pager) and not _RE_PODCAST.search(spec or ""):
         achados.append(_achado(
             "podcast-ausente",
@@ -871,7 +861,7 @@ def validar_spec_consolidada(spec: str, spec_gate0: str, one_pager: str) -> Dict
     return {**resultado, "status": _status(achados), "achados": achados}
 
 
-_ROTULO_LITERAL = {"canal_b": "do Canal B (pergunta ou alternativa)", "roteiro": "do debate",
+_ROTULO_LITERAL = {"roteiro": "do debate",
                    "podcast": "do podcast"}
 
 
@@ -891,15 +881,15 @@ def _literais(documento: str, one_pager: str, quais: Sequence[str], onde: str, e
 
 
 def validar_copy(copy_revisada: str, one_pager: str) -> List[Dict[str, str]]:
-    """A copy revisada traz a pergunta e as alternativas do Canal B e as perguntas do debate como o PO aprovou."""
+    """A copy revisada traz as perguntas do debate, o podcast e os textos de tela como o PO aprovou."""
     if not (copy_revisada or "").strip():
         # vazia com texto aprovado a conferir é o autor mudo, não "nada a cobrar" (auditoria de 08/10/2026)
         lits = literais(one_pager)
-        if any(lits.get(q) for q in ("canal_b", "roteiro", "podcast")):
+        if any(lits.get(q) for q in ("roteiro", "podcast")):
             return [_achado("copy-vazia", "A copy revisada chegou vazia, e o one-pager tem textos aprovados que ela "
-                            "precisa trazer (Canal B, debate, podcast). Dono: `copy-ptbr-revisao`.", "design")]
+                            "precisa trazer (debate, podcast). Dono: `copy-ptbr-revisao`.", "design")]
         return []
-    achados = _literais(copy_revisada, one_pager, ("canal_b", "roteiro"), "na copy revisada", "design",
+    achados = _literais(copy_revisada, one_pager, ("roteiro",), "na copy revisada", "design",
                         "Dono: `copy-ptbr-revisao`. A criança ouve e o professor lê exatamente o texto aprovado: copie "
                         "do conteúdo aprovado, sem parafrasear.")
     # o roteiro do podcast também: a passada 1 o reescrevia ("se não vier pronto, escreva") e a revisão o
@@ -942,28 +932,6 @@ def _texto_visivel(html: str) -> str:
     sem = re.sub(r"<style\b.*?</style>|<!--.*?-->", " ", html or "", flags=re.S | re.I)
     sem = re.sub(r"<[^>]+>", " ", sem)
     return re.sub(r"\s+", " ", sem)
-
-
-def validar_literais_design(camada_caa: str, prototipo_html: str, one_pager: str) -> List[Dict[str, str]]:
-    """O Canal B que o PO aprovou chega literal à prancha CAA e às telas do protótipo.
-
-    A camada CAA parafraseou o Canal B na exp09, na exp06 e na exp04 (0 de 8, 0 de 4, 0 de 3 textos), e o
-    protótipo da exp06 trazia 1 de 4 (auditoria de 07/10/2026). Só a copy revisada era conferida. A CAA só é
-    cobrada quando trata do Canal B — a camada que não se aplica à missão não tem por que trazê-lo.
-    """
-    achados: List[Dict[str, str]] = []
-    if (camada_caa or "").strip() and re.search(r"canal\s*b", camada_caa, re.I):
-        for a in _literais(camada_caa, one_pager, ("canal_b",), "na camada CAA", "design",
-                           "Dono: `caa`. A prancha mostra a pergunta e as alternativas do Canal B com o texto aprovado — "
-                           "o símbolo acompanha o texto, não o substitui."):
-            a["agente_responsavel"] = "caa"
-            achados.append(a)
-    if (prototipo_html or "").strip():
-        for a in _literais(_texto_visivel(prototipo_html), one_pager, ("canal_b",), "nas telas do protótipo", "design",
-                           "Dono: `prototipo`. O texto das telas sai do sheet de copy, que traz o Canal B literal."):
-            a["agente_responsavel"] = "prototipo"
-            achados.append(a)
-    return achados
 
 
 def validar_banco(banco: str, one_pager: str) -> List[Dict[str, str]]:
@@ -1023,13 +991,12 @@ def literais_parafraseados(documento: str, one_pager: str) -> List[Tuple[str, st
     from tools.fidelidade import _norm
 
     lit = literais(one_pager)
-    alvos = [t for qual in ("canal_b", "roteiro", "texto_tela") for t in lit.get(qual) or []]
-    # e os textos-chave do PR 7 (`tools/textos_chave.py`): o Canal B sem os rótulos «Pergunta:»/«Atingiu:» — na exp02ef1b
-    # as alternativas vêm em «*Alt 1:* "…" `[Atingiu]`», e a leitura antiga não achava nenhuma — e as opções de cada escolha
+    alvos = [t for qual in ("roteiro", "texto_tela") for t in lit.get(qual) or []]
+    # e os textos-chave do PR 7 (`tools/textos_chave.py`): os textos de tela, o roteiro e as opções de cada escolha
     from tools import textos_chave as tk
 
     chave = tk.extrair(one_pager)
-    alvos += [t.texto for t in chave if t.tipo in (tk.TELA, tk.CANAL_B, tk.ROTEIRO) and t.texto not in alvos]
+    alvos += [t.texto for t in chave if t.tipo in (tk.TELA, tk.ROTEIRO) and t.texto not in alvos]
     alvos += [o for t in chave if t.tipo == tk.OPCOES for o in t.opcoes if o not in alvos]
     # Decisão 2: todas as variantes aprovadas na mesma etapa (`tk.variantes_de_texto_chave`) são textos legítimos do
     # one-pager — citar uma variante aprovada não é parafrasear a outra
@@ -1061,7 +1028,8 @@ def literais_parafraseados(documento: str, one_pager: str) -> List[Tuple[str, st
     return saida
 
 
-_ETAPAS = ("Desafiar", "Navegar", "Decidir", "Resultado", "Explicar", "Refletir")
+#: As 5 etapas desde 29/10/2026 (o Refletir saiu por decisão do PO).
+_ETAPAS = ("Desafiar", "Navegar", "Decidir", "Resultado", "Explicar")
 
 
 def tempos_por_etapa(one_pager: str) -> Dict[str, int]:
@@ -1118,7 +1086,7 @@ def validar_prd(prd: str, spec: str, one_pager: str, artefatos: Optional[Iterabl
             achados += _comparar_codigos(
                 da_spec, bncc.extrair_codigos(s14), "a matriz da seção 14 do PRD", origem, "dev",
                 "Toda habilidade aprovada tem linha na matriz, com a régua inteira — Atingiu, Em processo e "
-                "Não atingiu — e a pergunta do Canal B remetendo ao anexo (§12a). O PRD não reabre currículo: se a "
+                "Não atingiu — do Canal A (§12a). O PRD não reabre currículo: se a "
                 "spec a tirou, a divergência é defeito a montante — mantenha a linha e registre-a na seção 19 com "
                 "dono `produto`.",
                 "O PRD não acrescenta habilidade que o one-pager aprovado não tem: tire-a da matriz. Se foi a spec "
@@ -1199,8 +1167,8 @@ def validar_pedagogico(pedagogico: str, spec: str, one_pager: str,
             "O one-pager aprovado tem podcast de recapitulação (§11) e o pedagógico não o menciona. A seção "
             "«O podcast do fechamento» diz o título, quem fala, quanto dura, quando tocar e quem toca; o "
             "roteiro vai no anexo, para o time pedagógico aprovar o texto.", "dev"))
-    # a pergunta do Canal B e as perguntas do debate que o professor lê em sala, como o PO aprovou
-    achados += _literais(corpo, one_pager, ("canal_b", "roteiro"), "no corpo do one-pager pedagógico", "dev",
+    # as perguntas do debate que o professor lê em sala, como o PO aprovou
+    achados += _literais(corpo, one_pager, ("roteiro",), "no corpo do one-pager pedagógico", "dev",
                          "O professor lê em sala exatamente o texto aprovado: copie do conteúdo aprovado, sem parafrasear.")
     if artefatos is not None:
         achados += _artefatos(corpo, artefatos, "o one-pager pedagógico")

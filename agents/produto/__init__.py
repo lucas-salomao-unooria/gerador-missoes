@@ -12,9 +12,9 @@ Ordem (SequentialAgent):
   │ │ [isolado] SecoesApoioLoop (≤ 2): A014 seções de apoio → A015 → A016    │ │
   │ │ A017 one-pager existe                                                 │ │
   │ │ A018 contrato de evidência do §12a (determinístico: Canal A em toda   │ │
-  │ │      habilidade, regra ternária, níveis do Canal B)                   │ │
-  │ │ A019a–f painéis A (mecânica e Canal A) e B (Canal B), 3 juízes cada   │ │
-  │ │ A020/A021 votos (unanimidade, citação conferida) → A022 saída: volta  │ │
+  │ │      habilidade, regra ternária, nenhum Canal B — removido em 29/10)  │ │
+  │ │ A019a–c painel A (mecânica e Canal A), 3 juízes                       │ │
+  │ │ A020 votos (unanimidade, citação conferida) → A022 saída: volta       │ │
   │ │      ao A004 e ao A014 com os relatórios; esgotado, segue 🟡           │ │
   │ └───────────────────────────────────────────────────────────────────────┘ │
   │ [isolado] GateEstruturalLoop (≤ N): A023 brief → A024–A025 contrato →      │
@@ -29,7 +29,7 @@ Ordem (SequentialAgent):
   p4  A043GateFinalProduto    → gate_final_report
   p4c GateFinalCheck           → gate_final_status
   p4d A044bTextosChave         → textos_chave (registro de IDs) · textos_chave_tabela (determinístico, PR 7: os
-                                 textos-chave do one-pager — aspas do §4, Canal B, opções, roteiro, podcast — com
+                                 textos-chave do one-pager — aspas do §4, opções, roteiro, podcast — com
                                  ID estável; roda também na correção pontual de produto)
   p5  A045SpecMissao          → spec_missao   (saída final de Produto)
   p5a A045bCompletudeSpec     → completude_spec (o que o D0 fechava no design e é de produto: estado, handoff,
@@ -142,7 +142,7 @@ def get_juiz_profundidade_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A008JuizProfundidade",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
-        description="Juiz de profundidade pedagógica: nota de 1 a 4 em seis dimensões (conceito do material vivido, aposta comprometida, ápice do aha, explicar depois de viver, transferência, demanda à altura do ano), com trecho citado e instrução de reescrita.",
+        description="Juiz de profundidade pedagógica: nota de 1 a 4 em seis dimensões (conceito do material vivido, aposta comprometida, ápice do aha, explicar depois de viver, conserto do objeto no Explicar, demanda à altura do ano), com trecho citado e instrução de reescrita.",
         instruction=load_prompt("produto/008_juiz_profundidade.md"),
         output_key="profundidade_report",
         **kw,
@@ -152,7 +152,7 @@ def get_juiz_profundidade_agent(**kw) -> LlmAgent:
 def get_nucleo_narrativo_agent(**kw) -> LlmAgent:
     return create_llm_agent(
         name="A004NucleoNarrativo",
-        description="Núcleo narrativo da missão (seções 0, 1, 3 e 4): descoberta central, gap de informação, escolha significativa e as 6 etapas.",
+        description="Núcleo narrativo da missão (seções 0, 1, 3 e 4): descoberta central, gap de informação, escolha significativa e as 5 etapas.",
         instruction=load_prompt("produto/004_nucleo_narrativo.md"),
         output_key="nucleo_narrativo",
         include_contents="default",  # único agente que vê a mensagem original e os anexos
@@ -443,7 +443,9 @@ def _one_pager_completo_loop(kw: dict, settings) -> LoopAgent:
     clara. A conferência devolve ao redator o jargão, o número que o resto do one-pager não tem e a fala entre aspas
     reescrita; esgotadas as rodadas, segue 🟡 — é leitura, não contrato.
     """
-    rodadas = max(1, settings.spec_max_rodadas)
+    # pelo menos 3: as regras de linguagem em código (29/10/2026) costumam pedir uma rodada a mais — ao vivo, na
+    # exp09ef1b, 14 achados na 1ª rodada e 1 palavra de relatório na 2ª; cada rodada é só uma chamada do redator
+    rodadas = max(3, settings.spec_max_rodadas)
     return LoopAgent(
         name="OnePagerCompletoLoop",
         description="0.1 e 0.2 do one-pager ↔ conferência contra o resto do one-pager (forma, jargão, números e falas), até bater ou esgotar as rodadas.",
@@ -954,11 +956,11 @@ PRODUTO_METADATA = [
     {"id": "A001VizinhasCatalogo", "name": "001 · Missões já geradas (determinístico)", "icon": "🗂️", "output_key": "missoes_vizinhas", "prompt_file": None, "description": "Lê o índice de missões e entrega ao núcleo as mais próximas do ano do briefing, para a missão nova não repetir uma anterior."},
     {"id": "A002MapaConceitual", "name": "002 · Mapa conceitual do material", "icon": "🧭", "output_key": "mapa_conceitual", "prompt_file": "produto/002_mapa_conceitual.md", "description": "Lê o material do bimestre antes de inventar: um conceito limiar, os conceitos núcleo e de apoio com o trecho citado, as crenças de entrada que o bimestre derruba e o vocabulário do Explicar."},
     {"id": "A003IdeacaoMecanismos", "name": "003 · Ideação de mecanismos", "icon": "💡", "output_key": "ideacao_mecanismos", "prompt_file": "produto/003_ideacao_mecanismos.md", "description": "Três mecanismos distintos para o conceito limiar, cada um com a anatomia do aha, pontuados na rubrica de profundidade. O núcleo desenvolve o escolhido."},
-    {"id": "A004NucleoNarrativo", "name": "004 · Núcleo narrativo", "icon": "🎬", "output_key": "nucleo_narrativo", "prompt_file": "produto/004_nucleo_narrativo.md", "description": "Seções 0, 1, 3 e 4 a partir do briefing, dos anexos, do mapa conceitual e do mecanismo escolhido: descoberta, conceitos vividos em tela, anatomia do aha, narrativa e as 6 etapas."},
+    {"id": "A004NucleoNarrativo", "name": "004 · Núcleo narrativo", "icon": "🎬", "output_key": "nucleo_narrativo", "prompt_file": "produto/004_nucleo_narrativo.md", "description": "Seções 0, 1, 3 e 4 a partir do briefing, dos anexos, do mapa conceitual e do mecanismo escolhido: descoberta, conceitos vividos em tela, anatomia do aha, narrativa e as 5 etapas."},
     {"id": "A005VizinhasCatalogo", "name": "005 · Missões já geradas, pelo núcleo (determinístico)", "icon": "🗂️", "output_key": "missoes_vizinhas", "prompt_file": None, "description": "Refiltra o índice pelo ambiente, eixo e descoberta do núcleo recém-escrito. É esta lista que a verificação V5 do micro-gate julga."},
     {"id": "A006CoberturaConceitual", "name": "006 · Cobertura conceitual (determinístico)", "icon": "🧩", "output_key": "cobertura_report", "prompt_file": None, "description": "Núcleo × mapa: o limiar vive no Decidir ou no aha, todo conceito núcleo tem destino, a anatomia do aha tem os seis passos e o trecho citado pelo mapa existe no material."},
     {"id": "A007MicroGate", "name": "007 · Micro-gate do núcleo", "icon": "🕵️", "output_key": "micro_gate_report", "prompt_file": "produto/007_micro_gate.md", "description": "Spoiler, gap de informação, escolha significativa e job-to-be-done — binário, até 2 rodadas."},
-    {"id": "A008JuizProfundidade", "name": "008 · Juiz de profundidade", "icon": "🎯", "output_key": "profundidade_report", "prompt_file": "produto/008_juiz_profundidade.md", "description": "Nota de 1 a 4 em seis dimensões — conceito do material vivido, aposta comprometida, ápice do aha, explicar depois de viver, transferência e demanda à altura do ano —, com trecho citado e instrução de reescrita."},
+    {"id": "A008JuizProfundidade", "name": "008 · Juiz de profundidade", "icon": "🎯", "output_key": "profundidade_report", "prompt_file": "produto/008_juiz_profundidade.md", "description": "Nota de 1 a 4 em seis dimensões — conceito do material vivido, aposta comprometida, ápice do aha, explicar depois de viver, conserto do objeto no Explicar e demanda à altura do ano —, com trecho citado e instrução de reescrita."},
     {"id": "A009ContaDaVirada", "name": "009 · Conta da virada (determinístico)", "icon": "🧮", "output_key": "mecanica_report", "prompt_file": None, "description": "Refaz o ranking da tabela 1.3 do núcleo: normaliza cada critério, aplica os pesos e confere que o vencedor antes e o depois são os declarados — e diferentes. Pega a virada que não fecha (o custo por vaga da exp09ef1b)."},
     {"id": "A010FidelidadeNucleo", "name": "010 · Fidelidade ao pedido do PO (núcleo)", "icon": "📌", "output_key": "fidelidade_nucleo_report", "prompt_file": None, "description": "O núcleo contra todos os pedidos de refazer do PO (TRAVAS, AJUSTES, VALIDAÇÃO, frases entre aspas) e o briefing: o juiz cita, o código confere. Parcial: o núcleo não tem as outras seções, então item sem prova sai do recorte (listado, sem achado) e só o pedido violado (🔴) devolve o núcleo ao autor; a prova é cobrada no 16c."},
     {"id": "A011ProfundidadeCheck", "name": "011 · Veredito de profundidade (determinístico)", "icon": "🔀", "output_key": "profundidade_status", "prompt_file": None, "description": "Conta o veredito nas notas do juiz, não no que ele escreveu: P1, P2 ou P3 abaixo de 3 é 🔴. Funde a cobertura conceitual."},
@@ -968,16 +970,12 @@ PRODUTO_METADATA = [
     {"id": "A015OnePagerPoCheck", "name": "015 · One-pager do PO preservado (determinístico)", "icon": "📌", "output_key": "one_pager_po_report", "prompt_file": None, "description": "Quando o PO anexou o one-pager: cada trecho dele (linha e célula de tabela) está no one-pager das seções de apoio, ou saiu porque o pedido mandou. Trecho perdido volta ao A014 com a lista. Sem anexo, não se aplica."},
     {"id": "A016SecoesApoioRodada", "name": "016 · Saída das seções de apoio (determinístico)", "icon": "🔀", "output_key": "secoes_apoio_rodada", "prompt_file": None, "description": "One-pager do PO preservado encerra o loop das seções de apoio; trecho perdido devolve ao A014."},
     {"id": "A017OnePagerExiste", "name": "017 · One-pager existe (determinístico)", "icon": "🧱", "output_key": None, "prompt_file": None, "description": "Se o A014 terminou sem texto nas duas tentativas, a etapa para aqui com uma mensagem que diz quem ficou mudo — antes, o gate estrutural quebrava com «Context variable not found»."},
-    {"id": "A018EvidenciaOnePager", "name": "018 · Contrato de evidência do one-pager (determinístico)", "icon": "🔬", "output_key": "evidencia_one_pager_report", "prompt_file": None, "description": "O §12a onde ele nasce: toda habilidade da seção 2 com linha, Canal A e regra ternária por extenso, e Canal B com o nível de cada alternativa. Forma antes de voto: o que falha aqui volta ao autor sem gastar o comitê."},
+    {"id": "A018EvidenciaOnePager", "name": "018 · Contrato de evidência do one-pager (determinístico)", "icon": "🔬", "output_key": "evidencia_one_pager_report", "prompt_file": None, "description": "O §12a onde ele nasce: toda habilidade da seção 2 com linha, Canal A e regra ternária por extenso, e nenhuma com Canal B (removido em 29/10/2026). Forma antes de voto: o que falha aqui volta ao autor sem gastar o comitê."},
     {"id": "A019aComiteCanalACurriculo", "name": "019a · Comitê dos canais: A·1 Currículo", "icon": "🧑‍⚖️", "output_key": "comite_canal_a_curriculo", "prompt_file": "produto/comite_canal_a_curriculo.md", "description": "Painel A: a ação do Canal A de cada habilidade é o verbo e o objeto do texto oficial, na decisão onde o limiar mora."},
     {"id": "A019bComiteCanalAMedida", "name": "019b · Comitê dos canais: A·2 Medida", "icon": "🧑‍⚖️", "output_key": "comite_canal_a_medida", "prompt_file": "produto/comite_canal_a_medida.md", "description": "Painel A: a regra ternária é alcançável, sem buraco, sem Atingiu por sorte e calculável pelo que o evento registra."},
     {"id": "A019cComiteCanalAVivencia", "name": "019c · Comitê dos canais: A·3 Vivência e idade", "icon": "🧑‍⚖️", "output_key": "comite_canal_a_vivencia", "prompt_file": "produto/comite_canal_a_vivencia.md", "description": "Painel A: a ação é verbo nativo, vivida na decisão e dentro dos tetos da faixa."},
-    {"id": "A019dComiteCanalBCurriculo", "name": "019d · Comitê dos canais: B·1 Currículo", "icon": "🧑‍⚖️", "output_key": "comite_canal_b_curriculo", "prompt_file": "produto/comite_canal_b_curriculo.md", "description": "Painel B: a pergunta mede a habilidade da linha, e o Atingiu é domínio pleno e autônomo."},
-    {"id": "A019eComiteCanalBMedida", "name": "019e · Comitê dos canais: B·2 Medida", "icon": "🧑‍⚖️", "output_key": "comite_canal_b_medida", "prompt_file": "produto/comite_canal_b_medida.md", "description": "Painel B: as três alternativas discriminam os níveis e nenhuma se elimina pela linguagem."},
-    {"id": "A019fComiteCanalBExperiencia", "name": "019f · Comitê dos canais: B·3 Experiência", "icon": "🧑‍⚖️", "output_key": "comite_canal_b_experiencia", "prompt_file": "produto/comite_canal_b_experiencia.md", "description": "Painel B: depois do Refletir sem repeti-lo, na língua do ambiente, sem vazar resultado e dentro do teto."},
     {"id": "A020VotosCanalA", "name": "020 · Votos do painel A (determinístico)", "icon": "🗳️", "output_key": "comite_canal_a_report", "prompt_file": None, "description": "Conta os três votos do painel A (mecânica e Canal A) com as citações conferidas: unanimidade aprova; sem ela, a missão volta ao núcleo (A004) e às seções de apoio (A014)."},
-    {"id": "A021VotosCanalB", "name": "021 · Votos do painel B (determinístico)", "icon": "🗳️", "output_key": "comite_canal_b_report", "prompt_file": None, "description": "Conta os três votos do painel B (Canal B): unanimidade aprova; sem ela, a missão volta a quem a escreve. Sem Canal B na missão, os juízes são dispensados sem custo."},
-    {"id": "A022ComiteCanaisRodada", "name": "022 · Saída do comitê dos canais (determinístico)", "icon": "🔁", "output_key": "comite_canais_rodada", "prompt_file": None, "description": "Os dois painéis unânimes e o §12a em forma encerram o loop; senão, núcleo e seções de apoio reescrevem com os relatórios, até COMITE_MAX_RODADAS (padrão 5). Esgotado, segue 🟡 com os votos vencidos no parecer."},
+    {"id": "A022ComiteCanaisRodada", "name": "022 · Saída do comitê dos canais (determinístico)", "icon": "🔁", "output_key": "comite_canais_rodada", "prompt_file": None, "description": "O painel A unânime e o §12a em forma encerram o loop; senão, núcleo e seções de apoio reescrevem com os relatórios, até COMITE_MAX_RODADAS (padrão 5). Esgotado, segue 🟡 com os votos vencidos no parecer."},
     {"id": "A023BriefEscopoSplit", "name": "023 · Brief de escopo separado (determinístico)", "icon": "🔀", "output_key": "brief_escopo_status", "prompt_file": None, "description": "Separa o brief de escopo do one-pager canônico para `brief_escopo`, antes do revisor."},
     {"id": "A024ContratoProdutoCheck", "name": "024 · Contrato de plataforma e origem dos parâmetros (determinístico)", "icon": "📡", "output_key": "contrato_produto_report", "prompt_file": None, "description": "Lint do one-pager a cada rodada do gate: canal de sala por polling (nunca WebSocket), estado no servidor (sem localStorage/IndexedDB), SAEB só nos anos avaliados, número com origem ou marcador. O gate aplica; o revisor corrige."},
     {"id": "A025JuizContratoProduto", "name": "025 · Juiz do contrato de produto", "icon": "⚖️", "output_key": "contrato_produto_status", "prompt_file": None, "description": "Juiz de achados sobre `Contrato de plataforma e origem dos parâmetros`: retira o achado de uso vedado quando o texto só cita para vedar — com citação literal conferida."},
@@ -1004,7 +1002,7 @@ PRODUTO_METADATA = [
     {"id": "A042ComiteFinalRodada", "name": "042 · Saída do comitê final (determinístico)", "icon": "🔁", "output_key": "comite_final_externo_rodada", "prompt_file": None, "description": "Os três de acordo, o §12a em forma e a conta da virada fechando encerram o loop; senão, a cadeia de produto roda de novo a partir do núcleo, até COMITE_FINAL_MAX_RODADAS (padrão 2). Esgotado, segue 🟡."},
     {"id": "A043GateFinalProduto", "name": "043 · Gate final de produto", "icon": "🏁", "output_key": "gate_final_report", "prompt_file": "produto/043_gate_final.md", "description": "Coerência entre missão e vereditos; libera ou bloqueia para design/dev."},
     {"id": "A044GateFinalProdutoCheck", "name": "044 · Veredito final (determinístico)", "icon": "🔀", "output_key": "gate_final_status", "prompt_file": None, "description": "Lê o envelope do gate final."},
-    {"id": "A044bTextosChave", "name": "044b · Textos-chave com ID (determinístico)", "icon": "🔑", "output_key": "textos_chave_tabela", "prompt_file": None, "description": "Os textos-chave do one-pager aprovado — aspas do §4, pergunta e alternativas do Canal B (§12a), opções de cada escolha com o nº de opções, roteiro do professor (§9), podcast (§11) — numa tabela com ID estável (`TC-07`, a opção `TC-12.2`), montada por código. O cartão do de acordo a mostra; design e dev a recebem no conteúdo aprovado, e o código copia cada texto até a copy (PR 7)."},
+    {"id": "A044bTextosChave", "name": "044b · Textos-chave com ID (determinístico)", "icon": "🔑", "output_key": "textos_chave_tabela", "prompt_file": None, "description": "Os textos-chave do one-pager aprovado — aspas do §4, opções de cada escolha com o nº de opções, roteiro do professor (§9), podcast (§11) — numa tabela com ID estável (`TC-07`, a opção `TC-12.2`), montada por código. O cartão do de acordo a mostra; design e dev a recebem no conteúdo aprovado, e o código copia cada texto até a copy (PR 7)."},
     {"id": "A045SpecMissao", "name": "045 · Spec da missão", "icon": "📜", "output_key": "spec_missao", "prompt_file": "produto/045_spec_missao.md", "description": "Os 12 blocos da spec — contrato contra o qual design e dev constroem."},
     {"id": "A045bCompletudeSpec", "name": "045b · Completude da spec", "icon": "🧩", "output_key": "completude_spec", "prompt_file": "produto/046_completude_spec.md", "description": "O que o D0 fechava no design e é de produto (estado, handoff, evidência, dados e retenção, duração e tetos, painel docente, PQ e KPI, texto do professor, revezamento), em produto: decisões [CP-n] com base declarada no bloco 15 da spec, padrões da plataforma aplicados e listados no de acordo, e o que é do PO como [PARÂMETRO]/[PROPOSTA]/[ABERTO — dono: PO] na lista do de acordo. Nas rodadas seguintes do loop só roda se a spec perdeu o bloco 15; na correção pontual não roda."},
     {"id": "A045cCompletudeSpecSplit", "name": "045c · Spec com o bloco 15 (determinístico)", "icon": "✂️", "output_key": "relatorio_completude", "prompt_file": None, "description": "Monta em código a spec de produto — a do A045 com o bloco 15 da completude no lugar, o resto descartado —, separa o relatório de completude e registra `completude_status`. [PARÂMETRO]/[PROPOSTA] fechado pela completude sem parecer datado do PO bloqueia."},
@@ -1032,3 +1030,4 @@ PRODUTO_METADATA = [
 ]
 
 PRODUTO_METADATA_SPEC = [m for m in PRODUTO_METADATA if m["id"] in SPEC_AGENT_IDS]
+

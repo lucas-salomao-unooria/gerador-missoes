@@ -86,9 +86,9 @@ KNOWN_STATE_KEYS = {
     "prototipo_lint_report", "consistencia_report", "qa_afirmacoes_report", "evidencia_report", "evidencia_status", "kpis_report", "kpis_status", "perguntas_po", "material_anexado", "one_pager_po", "one_pager_po_report", "juiz_achados_entrada",
     "juiz_contrato_produto_saida", "juiz_evidencia_saida", "juiz_telemetria_saida",
     # os comitês pedagógicos (15/10/2026)
-    "evidencia_one_pager_report", "mecanica_one_pager_report", "comite_canal_a_report", "comite_canal_b_report",
+    "evidencia_one_pager_report", "mecanica_one_pager_report", "comite_canal_a_report",
     "comite_final_report", "comite_canal_a_curriculo", "comite_canal_a_medida", "comite_canal_a_vivencia",
-    "comite_canal_b_curriculo", "comite_canal_b_medida", "comite_canal_b_experiencia", "comite_final_pedagogia",
+    "comite_final_pedagogia",
     "comite_final_qualidade", "comite_final_imersao",
     "juiz_fidelidade_saida", "juiz_fidelidade_nucleo_saida", "interpretacao_fidelidade_saida",
     "interpretacao_fidelidade_nucleo_saida", "interpretacao_fidelidade_design_saida", "interpretacao_fidelidade_dev_saida",
@@ -178,8 +178,8 @@ EXPECTED_AGENTS = {
     # os comitês pedagógicos (15/10/2026): o dos canais envolve os autores, o final envolve a cadeia de produto
     "ComiteCanaisLoop", "ComiteFinalLoop", "NucleoNarrativoLoopIsolado", "ComiteCanaisLoopIsolado",
     "A018EvidenciaOnePager", "A019ComiteCanais", "A019aComiteCanalACurriculo", "A019bComiteCanalAMedida",
-    "A019cComiteCanalAVivencia", "A019dComiteCanalBCurriculo", "A019eComiteCanalBMedida", "A019fComiteCanalBExperiencia",
-    "A020VotosCanalA", "A021VotosCanalB", "A022ComiteCanaisRodada", "A038EvidenciaOnePagerFinal",
+    "A019cComiteCanalAVivencia",
+    "A020VotosCanalA", "A022ComiteCanaisRodada", "A038EvidenciaOnePagerFinal",
     "A039ContaDaViradaOnePager", "A040ComiteFinal", "A040aComiteFinalPedagogia", "A040bComiteFinalQualidade",
     "A040cComiteFinalImersao", "A041VotosFinal", "A042ComiteFinalRodada",
 }
@@ -263,11 +263,10 @@ def test_arvore_de_agentes():
     canais = produto.find_agent("ComiteCanaisLoop")
     assert [a.name for a in canais.sub_agents] == [
         "NucleoNarrativoLoopIsolado", "SecoesApoioLoopIsolado", "A017OnePagerExiste", "A018EvidenciaOnePager",
-        "A019ComiteCanais", "A020VotosCanalA", "A021VotosCanalB", "A022ComiteCanaisRodada"]
+        "A019ComiteCanais", "A020VotosCanalA", "A022ComiteCanaisRodada"]
     assert canais.max_iterations == settings.comite_max_rodadas
     assert [j.output_key for j in canais.find_agent("A019ComiteCanais").sub_agents] == [
-        "comite_canal_a_curriculo", "comite_canal_a_medida", "comite_canal_a_vivencia",
-        "comite_canal_b_curriculo", "comite_canal_b_medida", "comite_canal_b_experiencia"]
+        "comite_canal_a_curriculo", "comite_canal_a_medida", "comite_canal_a_vivencia"]
 
     loop = next(a for _, a in iter_agent_tree(orchestrator) if a.name == "GateEstruturalLoop")
     assert isinstance(loop, LoopAgent) and loop.max_iterations == settings.gate_estrutural_max_rodadas
@@ -2969,7 +2968,7 @@ def test_pedagogia_falsificavel():
             "## 11. Currículo\n"
             "| Código | Momento em tela | Ação observável | O que não conta | Medida do bloco 9 | Canal de evidência | Regra ternária |\n"
             "|---|---|---|---|---|---|---|\n"
-            "| `EF06CO09` | `E3-ALU-01` (Decidir) | fixa 1 post | rolar o feed | `posts_no_mural` | A + B | "
+            "| `EF06CO09` | `E3-ALU-01` (Decidir) | fixa 1 post | rolar o feed | `posts_no_mural` | A | "
             "Atingiu: fixa post com fonte aberta · Em processo: fixa sem abrir a fonte · Não atingiu: não salva |\n")
     assert validar(base)["status"] == "aprovado", validar(base)["achados"]
 
@@ -2978,12 +2977,12 @@ def test_pedagogia_falsificavel():
     assert "scored-1-sinal" in {a["codigo"] for a in validar(um_sinal)["achados"]}
 
     # (b) habilidade declarada sem dado que a meça é currículo no papel
-    sem_medida = base.replace("| `posts_no_mural` | A + B |", "| — | A + B |")
+    sem_medida = base.replace("| `posts_no_mural` | A |", "| — | A |")
     assert "habilidade-sem-medida" in {a["codigo"] for a in validar(sem_medida)["achados"]}
 
     # (b') v1.21 — a matriz diz de onde sai o nível e a regra que o separa, por extenso
     marcador_antigo = base.replace("| Canal de evidência | Regra ternária |", "| Marcador |").replace(
-        "| A + B | Atingiu: fixa post com fonte aberta · Em processo: fixa sem abrir a fonte · Não atingiu: não salva |",
+        "| A | Atingiu: fixa post com fonte aberta · Em processo: fixa sem abrir a fonte · Não atingiu: não salva |",
         "| ternário |")
     codigos = {a["codigo"] for a in validar(marcador_antigo)["achados"]}
     assert {"habilidade-sem-canal", "regra-ternaria-ausente"} <= codigos, codigos
@@ -4379,7 +4378,7 @@ _ANATOMIA_6ANO = [
     ("Consequência sentida", "cada bloco do feed dele vem reponderado pelo ângulo da conta que ELE seguiu"),
     ("Virada", "os destaques de 4 colegas lado a lado, e depois os 3 posts que nunca apareceram para ele"),
     ("Nomeação", "Léo nomeia perfil algorítmico citando a conta que o próprio estudante seguiu"),
-    ("Transferência", "pesquisa de trabalho só no TikTok: o risco é ___ porque ___, com marcador de mecanismo"),
+    ("Conserto", "volta ao próprio feed e reordena as 3 contas para o algoritmo mostrar o que ficou de fora"),
 ]
 
 
@@ -4393,7 +4392,7 @@ def _nucleo_6ano(linha_c1="| C1 — aprende e devolve | Decidir · Resultado/Aha
         "| Conceito | Etapa | O que o estudante faz em tela | Como o professor aprofunda |",
         "|---|---|---|---|", linha_c1, linha_c2, "",
         "### 1.2 Anatomia do aha", "| Passo | Nesta missão |", "|---|---|",
-        *[f"| {p} | {t} |" for p, t in passos], "", "## 4. As 6 etapas", "…",
+        *[f"| {p} | {t} |" for p, t in passos], "", "## 4. As 5 etapas", "…",
     ])
 
 

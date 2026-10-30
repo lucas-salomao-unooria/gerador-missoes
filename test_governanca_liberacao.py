@@ -276,14 +276,14 @@ def test_excecao_do_admin_tambem_confirma_a_leitura():
 
 def test_pendencias_reais_da_exp01em1b_pedem_leitura():
     """A exp01em1b (e3980485) chegou ao parecer de produto com 4 conflitos «pedido × regra» em 🟡: decisões do PO que o
-    semáforo amarelo não pedia a ninguém. O F7 das propostas P0b, que só resume itens da lista do contrato (19), não pede
+    semáforo amarelo não pedia a ninguém. O F7 das propostas P0b, que só resume itens da lista do contrato (17 desde que o Canal B saiu, 29/10/2026), não pede
     um segundo «Li e decidi»."""
     estado = _estado("exp01em1b-e3980485")
     itens = passagem.itens_de_conferencia(estado)
     pend = [i for i in itens if i["origem"] == passagem.PENDENCIA]
     assert {i["tipo"] for i in pend} == {"conflito-pedido-regra"}
     # os 3 conflitos da fidelidade do one-pager (🔴) citam 3 dos 4 pedidos da do núcleo (🟡): cada pedido é lido uma vez
-    assert len(pend) == 4 and len(itens) - len(pend) == 19
+    assert len(pend) == 4 and len(itens) - len(pend) == 17
 
 
 def test_aberto_de_outro_dono_nao_e_pedido_ao_po_exp01ef1b():
@@ -295,7 +295,7 @@ def test_aberto_de_outro_dono_nao_e_pedido_ao_po_exp01ef1b():
     assert any("[ABERTO — dono: editorial:" in a["resumo"] for a in achados)
     assert passagem.pendencias_de_conferencia(estado) == []
     itens = passagem.itens_de_conferencia(estado)
-    assert len(itens) == 14 and all(i["origem"] == passagem.CONTRATO for i in itens)
+    assert len(itens) == 12 and all(i["origem"] == passagem.CONTRATO for i in itens)  # 14 com o Canal B
     # o mesmo vale para outro dono qualquer; o conflito «pedido × regra» segue pedindo leitura
     sintetico = {**VERDE, "gate_final_status": "amarelo", "gate_final_status_envelope": {"achados": [
         {"severidade": "decisao_humana", "codigo": "humano", "resumo": "[ABERTO — dono: design: altura da moldura]"},
@@ -314,7 +314,7 @@ def test_f7_que_resume_a_lista_do_contrato_nao_pede_leitura_de_novo_exp02ef1b():
           if a.get("codigo") == "F7" and a.get("severidade") == "decisao_humana"]
     assert len(f7) == 1 and "aguardam homologação pelo PO" in f7[0]["resumo"]
     itens = passagem.itens_de_conferencia(estado)
-    assert len(itens) == 16 and all(i["origem"] == passagem.CONTRATO for i in itens)
+    assert len(itens) == 14 and all(i["origem"] == passagem.CONTRATO for i in itens)  # 16 com o Canal B
     # o cartão passa se a lista que ele já montou tem item; sem isso, a lista é montada aqui
     assert passagem.pendencias_de_conferencia(estado) == passagem.pendencias_de_conferencia(estado, True) == []
     assert [i["tipo"] for i in passagem.pendencias_de_conferencia(estado, contrato_aberto=False)] == ["F7"]
@@ -905,7 +905,7 @@ def test_cartao_do_design_liberado_pede_a_leitura_da_pendencia_e_marca_a_liberac
 
 
 def test_cartao_com_a_lista_do_contrato_nao_pede_leitura_do_f7_exp02ef1b(tmp_path, monkeypatch):
-    """O cartão de produto da exp02ef1b: a lista do contrato (16 itens) pede resposta ou «Li» a cada item, e o F7 que a
+    """O cartão de produto da exp02ef1b: a lista do contrato (14 itens sem o Canal B) pede resposta ou «Li» a cada item, e o F7 que a
     resume não aparece de novo como «Li e decidi» — o cartão e o `aplicar` leem a mesma regra."""
     pytest.importorskip("streamlit.testing.v1")
     from streamlit.testing.v1 import AppTest
@@ -920,6 +920,6 @@ def test_cartao_com_a_lista_do_contrato_nao_pede_leitura_do_f7_exp02ef1b(tmp_pat
     at = AppTest.from_function(_roteiro_do_cartao, default_timeout=60)
     at.run()
     assert not at.exception
-    assert any("Contrato de produto em aberto — 16 item(ns)" in m.value for m in at.markdown)
+    assert any("Contrato de produto em aberto — 14 item(ns)" in m.value for m in at.markdown)
     assert not [c for c in at.checkbox if c.label.startswith("Li e decidi:")]
     assert not any("Conferência de leitura" in m.value for m in at.markdown)

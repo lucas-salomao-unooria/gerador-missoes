@@ -46,7 +46,7 @@ Cada padrão diz de onde saiu. Padrão sem fonte não entra — vira candidato e
 | `evidencia-e-a-decisao` | A evidência de uma decisão é **a própria decisão registrada** (o que foi escolhido, entre quais opções, em que ordem, em que etapa) — não uma captura de tela, não um texto explicando. Se a spec define a decisão, a evidência é derivável. | formato-spec bloco 9 |
 | `grau-de-medida-default` | Toda medida nasce `indicative` (1 sinal, texto, fora das médias). Só vira `scored` quando a spec nomeia ≥ 2 sinais independentes. `zero` e `none` são sempre distinguidos: quem não teve a chance não conta como recusa. | formato-spec bloco 9 (graus de medida) |
 | `canal-operacional-so-para-mecanica` | Dado que alimenta a mecânica em tempo real vai no canal **operacional**; todo o resto é **analítico**, em lote. Tempo de exploração e dwell nunca no analítico. | formato-spec bloco 9 (canal por dado) |
-| `reflexao-e-texto-livre-de-menor` | O campo de reflexão do critério 1.6 é texto livre de menor: vai em **tabela própria, lida só pela professora da escola**, nunca na telemetria. Payloads aceitam só número, booleano ou vocabulário fechado. | formato-spec bloco 9 |
+| `texto-livre-de-menor-em-tabela-propria` | Campo de texto livre que a mecânica pede é texto livre de menor: vai em **tabela própria, lida só pela professora da escola**, nunca na telemetria. Payloads aceitam só número, booleano ou vocabulário fechado. | formato-spec bloco 9 |
 
 ## Classe `dispositivo` — cenários (bloco 10)
 
@@ -63,7 +63,7 @@ Cada padrão diz de onde saiu. Padrão sem fonte não entra — vira candidato e
 |---|---|---|
 | `roteiro-tres-perguntas` | A roda de conversa tem **≥ 3 perguntas escritas**, na ordem: (1) o que você viu / o que aconteceu, (2) por que você acha que aconteceu, (3) e fora da simulação, onde isso acontece? Sem lição de moral, sem "certo/errado". | critério 4.2 (pedagógico) · 4.7 (tom) |
 | `instrucao-de-gatilho-para-professora` | Para cada handoff, uma linha de instrução para a professora: o que ela vê no painel, o que aperta, o que diz à turma. É copy-fonte que o D4 reescreve, não texto final. | critério 4.1 · d4b (linha de instrução) |
-| `guia-fala-no-escape-nao-no-clone` 🟡 | O personagem-guia fala nas telas de contexto (antes) e de reflexão (depois). Dentro do clone ele **não aparece**, salvo quando a spec o coloca como conta dentro do ambiente. Onde o one-pager dá direção mas não texto, o D0 escreve o **propósito** da fala, não a fala — a fala é do D4. | DES-13 · d4 (registros de voz) · confirmar |
+| `guia-fala-no-escape-nao-no-clone` 🟡 | O personagem-guia fala nas telas de contexto (antes) e de fechamento (depois). Dentro do clone ele **não aparece**, salvo quando a spec o coloca como conta dentro do ambiente. Onde o one-pager dá direção mas não texto, o D0 escreve o **propósito** da fala, não a fala — a fala é do D4. | DES-13 · d4 (registros de voz) · confirmar |
 | `estudante-nunca-aluno` | Toda copy-fonte usa **estudante**, nunca aluno; mural, publicação, marca, curtida conforme o glossário da missão. | critério 4.7 (tom) · glossário |
 
 ## Classe `acessibilidade` (bloco 7)

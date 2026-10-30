@@ -21,7 +21,7 @@ Vale nas duas classes. Criar só quando a **Passada 1** mostra que nada existent
 
 | Ambiente | Verbos da missão que ele tem nativamente | Verbos que faltam | Dinâmica cabe? (sim · com escape · não) | Missão irmã no catálogo |
 
-Critérios, nesta ordem: (1) todos os verbos existem no app real e no DS; (2) a descoberta central acontece **dentro** do ambiente, sem escape além dos dois permitidos (contexto antes, reflexão depois); (3) a faixa já usa esse ambiente em missão irmã (continuidade > novidade); (4) verossimilhança: o estudante da faixa reconhece o app. Um passa nos quatro → é ele. Mais de um → o da missão irmã mais próxima na trilha, com a alternativa descartada registrada. Nenhum passa em (1) ou (2) → Passada 1b. Falha só em (3) ou (4) não justifica criar.
+Critérios, nesta ordem: (1) todos os verbos existem no app real e no DS; (2) a descoberta central acontece **dentro** do ambiente, sem escape além dos dois permitidos (contexto antes, fechamento depois); (3) a faixa já usa esse ambiente em missão irmã (continuidade > novidade); (4) verossimilhança: o estudante da faixa reconhece o app. Um passa nos quatro → é ele. Mais de um → o da missão irmã mais próxima na trilha, com a alternativa descartada registrada. Nenhum passa em (1) ou (2) → Passada 1b. Falha só em (3) ou (4) não justifica criar.
 
 ## Passada 1b — é caso de mini-jogo? (só anos iniciais)
 

@@ -82,14 +82,14 @@ O rodapé de cada quadro mostra o `Momento E.k`, o gesto e o que destrava o pró
 Um quadro por **estado declarado** no inventário da jornada, não um por tela. Se a tela tem quatro estados, são quatro quadros. **Todo quadro é um elemento com os atributos `data-screen-id` (o ID da tela, `E2-ALU-01`) e `data-estado` (o nome do estado, como na coluna «Estados» do inventário; `padrão` para o estado padrão).** A esteira conta os quadros por esses atributos e devolve como ticket o (ID, estado) que faltar: ID citado em comentário, no trilho ou no rodapé não conta como tela. Os sete protótipos auditados em 07/10/2026 tinham um quadro por tela e nenhum atributo — o relatório dizia "completo" com 16 a 29 quadros para 25 a 46 estados.
 
 **Todo texto do sheet de copy da tela aparece em algum quadro dela, com a redação do sheet.** Um estado que passa por
-vários itens em sequência — as perguntas do Canal B em stories (B1, B2, B3), os passos de um roteiro — vira **um quadro
-por item**, todos com o mesmo `data-screen-id` e o mesmo `data-estado`; a esteira aceita o par repetido. Cada pergunta
-do Canal B leva **todas** as alternativas, sem o rótulo de nível ([Atingiu], [Em processo], [Não atingiu]): o gabarito
-fica no servidor, e a criança não pode vê-lo. Na exp06ef1b (09/10/2026) a tela `E6-ALU-02` tinha um estado de pergunta
-para três perguntas: o protótipo desenhou só a B1, com uma alternativa e o rótulo à mostra, e B2 e B3 sumiram.
-Vale para **toda escolha da missão**, não só o Canal B: cartões, alternativas e **distratores** de qualquer etapa
-aparecem todos, sem `[Correto]`, `[Distrator …]` ou outra marca do gabarito. Na mesma execução, o Refletir mostrou só os
-dois cartões corretos e escondeu os três distratores: o protótipo entregava a resposta.
+vários itens em sequência — os passos de um roteiro, as mensagens de uma conversa — vira **um quadro por item**, todos
+com o mesmo `data-screen-id` e o mesmo `data-estado`; a esteira aceita o par repetido. **Toda escolha da missão** leva
+**todas** as alternativas, sem o rótulo de nível ([Atingiu], [Em processo], [Não atingiu]): a regra ternária do Canal A
+fica no servidor, e a criança não pode vê-la. Cartões, alternativas e **distratores** de qualquer etapa aparecem todos,
+sem `[Correto]`, `[Distrator …]` ou outra marca do gabarito. Na exp06ef1b (09/10/2026) o protótipo desenhou uma pergunta
+com uma alternativa só e o rótulo à mostra, e em outra tela mostrou só os dois cartões corretos e escondeu os três
+distratores: o protótipo entregava a resposta. Desde 29/10/2026 a missão não tem pergunta de avaliação (Canal B) nem
+Etapa 6: tela `E6-*` no inventário é resto de versão antiga — não a desenhe.
 
 ### A moldura: a experiência é um iframe dentro do hub, no desktop
 

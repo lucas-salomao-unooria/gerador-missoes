@@ -160,7 +160,6 @@ def reavaliar_estado(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         )
         r_cons = consistencia.validar_estado(state)
         r_cons["achados"] += conteudo_aprovado.validar_copy(copy_rev, one_pager)
-        r_cons["achados"] += conteudo_aprovado.validar_literais_design(caa, proto_arq, one_pager)
         if any(a.get("severidade") == "bloqueio" for a in r_cons.get("achados", [])):
             r_cons["status"] = "bloqueado"
         elif r_cons.get("achados") and r_cons.get("status") == "aprovado":

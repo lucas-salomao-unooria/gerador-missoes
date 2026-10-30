@@ -405,6 +405,12 @@ CATALOGO: Dict[str, Explicacao] = {
         "O one-pager não tem a parte que diz, para cada habilidade, de qual ação da criança sai o nível dela.",
         "Sem isso, ninguém sabe dizer se a criança aprendeu.",
         _REFAZER_PRODUTO, PO),
+    "canal-b-removido": _x(
+        "Canal B na evidência",
+        "Uma habilidade declara o Canal B (pergunta de múltipla escolha) no contrato de evidência.",
+        "Desde 29/10/2026 o PO decidiu que a evidência é só a ação do estudante na tela (Canal A): a pergunta do fim "
+        "saiu da missão.",
+        _REFAZER_PRODUTO, PO),
     "habilidade-sem-canal-a": _x(
         "Habilidade medida só por pergunta do fim",
         "Uma habilidade é medida só pela pergunta de múltipla escolha do fim, sem nenhuma ação da criança na tela.",
@@ -1356,6 +1362,11 @@ for _codigo_novo, _exp_nova in {
         "Palavra de relatório no começo do one-pager",
         "As seções 0.1 ou 0.2 usam uma palavra formal (deliberar, ranking, formativo, sistematiza…) onde cabe uma do dia a dia.",
         "O leitor é do comercial e do produto, não da secretaria de educação.",
+        _REFAZER_PRODUTO, PO),
+    "numero-por-extenso": _x(
+        "Número escrito por extenso",
+        "As seções 0.1 ou 0.2 escrevem um número por extenso («vinte e quatro vagas») em vez de algarismos.",
+        "O número por extenso é mais difícil de ler e escapa da conferência contra o resto do one-pager.",
         _REFAZER_PRODUTO, PO),
     "futuro-ou-condicional": _x(
         "Missão contada no futuro",

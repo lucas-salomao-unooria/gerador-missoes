@@ -33,7 +33,7 @@ _RE_AUTOR_APOIO = re.compile(r"\b(a0?14|se[cç][oõ]es\s+de\s+apoio|apoio)\b", r
 _VOTO_REPROVA = ("reprova", "reprovado", "reprovada", "bloqueado", "bloqueada", "nao_aprova", "não aprova", "🔴")
 
 #: Relatórios consolidados dos comitês, que os autores leem e que autorizam alterar o texto do PO.
-CHAVES_RELATORIO = ["comite_canal_a_report", "comite_canal_b_report", "comite_final_report"]
+CHAVES_RELATORIO = ["comite_canal_a_report", "comite_final_report"]
 
 
 def autor_do_achado(achado: Dict[str, Any]) -> str:
@@ -182,12 +182,6 @@ def envelope(resultado: Dict[str, Any]) -> Dict[str, Any]:
                      "resumo": str(a.get("resumo") or "")[:400]}
                     for a in resultado["achados"]],
     }
-
-
-def envelope_dispensado(motivo: str) -> str:
-    """O que o juiz pulado devolve: um voto que aprova sem custo (painel B sem Canal B na missão)."""
-    return "```json\n" + json.dumps({"agente": AGENTE, "status": "aprovado", "voto": "aprova", "dispensado": True,
-                                      "motivo": motivo, "achados": []}, ensure_ascii=False) + "\n```"
 
 
 def texto_votos(state: Dict[str, Any], chaves: Optional[List[str]] = None) -> str:

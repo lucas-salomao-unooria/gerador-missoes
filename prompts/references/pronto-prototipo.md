@@ -6,7 +6,7 @@ sources: [pronto.md]
 
 # Definição de pronto — protótipo
 
-> **Gerado automaticamente** de `pronto.md` por `scripts/gerar_pronto_prototipo.py`. Não edite à mão: edite a seção `prototipo` de `pronto.md` e regenere. SHA-256 da fonte (preâmbulo e seção): `4911c826b3c00682d6820a38911508da5af70886bcdfc01fb85c6c00779ace7f`.
+> **Gerado automaticamente** de `pronto.md` por `scripts/gerar_pronto_prototipo.py`. Não edite à mão: edite a seção `prototipo` de `pronto.md` e regenere. SHA-256 da fonte (preâmbulo e seção): `4ae0054d4c31e56c34e4a17f15a616ee3ec4a33a92fdbf355f4828e9c1ade06b`.
 
 Higiene técnica, não ofício. Todo item fecha em **zero**. Item acima de zero **retém a entrega** — o agente corrige antes de acionar o próximo, não depois de tomar ticket.
 
@@ -24,7 +24,7 @@ Conta-se no arquivo HTML, não no relatório sobre ele. O lint e a esteira tocam
 | (ID, estado) da cobertura sem quadro e fora da lista «o que ficou fora» | Cobertura incompleta (teste 2): nunca "completo" com quadro faltando |
 | Texto visível fora do sheet de copy, ou marcador `[[…]]` que não seja `[[LACUNA — dono]]` declarado no relatório | Invenção ou placeholder não resolvido (teste 1) |
 | Hexadecimal fora dos nove tokens dentro de um quadro | Uma exceção abre todas (teste 3) |
-| Escolha da missão com alternativa ou distrator faltando, ou com marca de gabarito (`[Correto]`, `[Distrator …]`, nível do Canal B) | O protótipo entregaria a resposta |
+| Escolha da missão com alternativa ou distrator faltando, ou com marca de gabarito (`[Correto]`, `[Distrator …]`, nível da escolha) | O protótipo entregaria a resposta |
 | Botão, aba ou affordance que a spec declara ausente | O que o ambiente não tem não aparece, nem "por realismo" |
 | Tela `pico` com mais elementos que uma vizinha | Teste 4: a hierarquia invertida bloqueia (O1) |
 | Tela de congelamento com affordance além da saída declarada da demo | Teste 5: a saída é concessão da demo, não a trava |

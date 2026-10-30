@@ -284,7 +284,7 @@ def test_mutacao_pega_troca_negacao_e_renomeacao_nao_so_remocao():
         assert de in base[chave], (chave, de[:60])
         return {**base, chave: base[chave].replace(de, para)}
 
-    alt = texto["canal_b"][1]
+    alt = texto["roteiro"][0]
     ultima = alt.rstrip(" .?!").split()[-1]
     fala = texto["podcast"][0]
     meio = fala.split()[len(fala.split()) // 2]
@@ -292,7 +292,7 @@ def test_mutacao_pega_troca_negacao_e_renomeacao_nao_so_remocao():
     objeto = texto["evento"][0].split(" · ")[1]
     estado = texto["estado"][0]
     mutacoes = {
-        "perdido-canal_b-copy": trocar("copy_strings_revisada", alt, alt.replace(ultima, "diferente", 1)),
+        "perdido-roteiro-pedagogico": trocar("one_pager_pedagogico", alt, alt.replace(ultima, "diferente", 1)),
         "perdido-roteiro-copy": trocar("copy_strings_revisada", pergunta,
                                        pergunta.replace(" ", " não ", 1)),
         "perdido-evento-handoff": trocar("handoff_dev", objeto, objeto + "_v2"),
@@ -323,7 +323,7 @@ def test_gates_que_aprovavam_vazio_agora_reprovam():
                          "wireframes_cobertura": "x"})
     assert any(a["codigo"] == "derivado-vazio" and a["agente_responsavel"] == "fluxo" for a in r["achados"])
     one_pager = _fixture_exp09("one_pager.md")
-    if any(ca.literais(one_pager).get(q) for q in ("canal_b", "roteiro", "podcast")):
+    if any(ca.literais(one_pager).get(q) for q in ("roteiro", "podcast")):
         assert [a["codigo"] for a in ca.validar_copy("", one_pager)] == ["copy-vazia"]
     if ca.literais(one_pager)["podcast"]:
         assert [a["codigo"] for a in ca.validar_banco("", one_pager)] == ["banco-vazio"]
@@ -574,7 +574,7 @@ def test_split_tira_a_moldura_do_agente_e_a_preservacao_nao_faz_ping_pong():
     assert documento_sem_moldura(com_titulo) == com_titulo
 
 
-def test_prototipo_pede_cada_pergunta_do_canal_b_em_quadro_e_sem_gabarito():
+def test_prototipo_pede_cada_escolha_em_quadro_e_sem_gabarito():
     from prompts import load_prompt
 
     p = load_prompt("design/079_prototipo.md")

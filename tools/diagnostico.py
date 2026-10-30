@@ -31,7 +31,6 @@ GATES: List[Dict[str, Optional[str]]] = [
     {"status": "fidelidade_nucleo_status", "rotulo": "Fidelidade ao pedido do PO (núcleo)", "etapa": "produto", "rodada": "nucleo_rodada"},
     {"status": "evidencia_one_pager_status", "rotulo": "Contrato de evidência do one-pager (§12a)", "etapa": "produto", "rodada": "comite_canais_rodada"},
     {"status": "comite_canal_a_status", "rotulo": "Comitê dos canais — painel A (mecânica e Canal A)", "etapa": "produto", "rodada": "comite_canal_a_rodada"},
-    {"status": "comite_canal_b_status", "rotulo": "Comitê dos canais — painel B (Canal B)", "etapa": "produto", "rodada": "comite_canal_b_rodada"},
     {"status": "brief_escopo_status", "rotulo": "Brief de escopo separado do one-pager", "etapa": "produto", "rodada": None},
     {"status": "gate_estrutural_status", "rotulo": "Gate estrutural", "etapa": "produto", "rodada": "gate_estrutural_rodada"},
     {"status": "avaliacao_status", "rotulo": "Avaliação pedagógica", "etapa": "produto", "rodada": "avaliacoes_rodada"},
@@ -772,3 +771,4 @@ def envelope(d: Dict[str, Any], missao: str = "") -> Dict[str, Any]:
         ],
         "precisa_humano": d["precisa_humano"],
     }
+

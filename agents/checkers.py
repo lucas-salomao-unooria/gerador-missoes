@@ -2102,14 +2102,10 @@ class RastroCheckAgent(BaseAgent):
             from tools import conteudo_aprovado as ca
 
             resultado = cons.validar_estado(dict(state))
-            # e o texto que o PO aprovou palavra por palavra — Canal B e debate — chegou literal à copy
+            # e o texto que o PO aprovou palavra por palavra — o debate — chegou literal à copy
             # (a exp01ef1b chegou a dev com a pergunta 1 do debate reescrita, 07/10/2026)
             resultado["achados"] += ca.validar_copy(str(state.get("copy_strings_revisada", "") or ""),
                                                     str(state.get("one_pager", "") or ""))
-            # e o Canal B na prancha CAA e nas telas do protótipo (só a copy era conferida)
-            resultado["achados"] += ca.validar_literais_design(str(state.get("camada_caa", "") or ""),
-                                                               str(state.get("prototipo_arquivo", "") or ""),
-                                                               str(state.get("one_pager", "") or ""))
             if any(a["severidade"] == "bloqueio" for a in resultado["achados"]):
                 resultado["status"] = "bloqueado"
             elif resultado["achados"] and resultado["status"] == "aprovado":

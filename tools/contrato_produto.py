@@ -54,7 +54,7 @@ _RE_NUMERO = re.compile(
 #: número diz de onde veio, e é isso que a regra pede.
 _MARCADORES = ("[PROPOSTA", "[PARÂMETRO", "[PARAMETRO", "[DECISÃO PENDENTE", "[DECISAO PENDENTE", "🔵",
                "[CONVENÇÃO", "[CONVENCAO", "[EXTRAPOLAÇÃO", "[EXTRAPOLACAO", "[INFERÊNCIA", "[INFERENCIA")
-_RE_ETAPA = re.compile(r"desafiar|navegar|decidir|resultado|aha|explicar|refletir|etapa|\bE[1-6]\b", re.IGNORECASE)
+_RE_ETAPA = re.compile(r"desafiar|navegar|decidir|resultado|aha|explicar|etapa|\bE[1-5]\b", re.IGNORECASE)
 #: "Foco primário BNCC (Regra 12): `EF03CO08`" — a linha onde o one-pager crava a habilidade principal.
 _RE_FOCO_PRIMARIO = re.compile(r"foco\s+prim[áa]rio[^\n]{0,240}", re.IGNORECASE)
 #: Linha do briefing que marca a habilidade principal: "EF03CO03 (âncora)".
