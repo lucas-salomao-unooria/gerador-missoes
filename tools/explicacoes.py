@@ -1363,6 +1363,11 @@ for _codigo_novo, _exp_nova in {
         "As seções 0.1 ou 0.2 usam uma palavra formal (deliberar, ranking, formativo, sistematiza…) onde cabe uma do dia a dia.",
         "O leitor é do comercial e do produto, não da secretaria de educação.",
         _REFAZER_PRODUTO, PO),
+    "numero-por-extenso": _x(
+        "Número escrito por extenso",
+        "As seções 0.1 ou 0.2 escrevem um número por extenso («vinte e quatro vagas») em vez de algarismos.",
+        "O número por extenso é mais difícil de ler e escapa da conferência contra o resto do one-pager.",
+        _REFAZER_PRODUTO, PO),
     "futuro-ou-condicional": _x(
         "Missão contada no futuro",
         "As seções 0.1 ou 0.2 usam «deverá», «será capaz de» ou «poderá ser».",

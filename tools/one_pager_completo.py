@@ -141,6 +141,11 @@ NOMES_DO_ASSISTENTE: Tuple[Tuple[str, int], ...] = (
     (r"\brob[ôo]s?\b", re.I), (r"\bm[áa]quinas?\b", re.I), (r"\bintelig[êe]ncia artificial\b", re.I),
     (r"\bIA\b", 0), (r"\bbots?\b", re.I), (r"\balgoritmos?\b", re.I), (r"\bassistente\b", re.I),
 )
+#: Número por extenso acima da contagem do dia a dia: o redator escrevia «vinte e quatro vagas», «doze mil reais» e
+#: «cento e oitenta páginas» e escapava da conferência dos números, que lê dígitos (exp09ef1b ao vivo, 30/10/2026).
+_RE_NUMERO_POR_EXTENSO = re.compile(r"\b(?:treze|quatorze|catorze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte|"
+                                    r"trinta|quarenta|cinquenta|sessenta|setenta|oitenta|noventa|cem|cento|duzent[oa]s|"
+                                    r"trezent[oa]s|quatrocent[oa]s|quinhent[oa]s|mil|milh[ãõ]o|milh[õo]es)\b", re.I)
 _RE_FUTURO = re.compile(r"\b(?:dever[áã]o?|ser[áã]o? capaz(?:es)?|poder[áã]o? ser)\b", re.I)
 _RE_CRENCA = re.compile(r"\b(?:acha|acham|achava|achavam|acredita|acreditam|acreditava|parece|parecia|imagina|"
                         r"aposta|apostam|pensa|pensam|pensava)\b", re.I)
@@ -288,6 +293,11 @@ def _linguagem(nome: str, texto: str) -> List[Dict[str, str]]:
                 continue
             vistos.add(termo.casefold())
             achados.append(_achado("palavra-dificil", f"«{termo}» no {nome}: é palavra de relatório. Escreva {troca}."))
+    extenso = [m.group(0) for m in _RE_NUMERO_POR_EXTENSO.finditer(sem_falas)]
+    if extenso:
+        achados.append(_achado("numero-por-extenso", f"Número escrito por extenso no {nome} («{extenso[0]}»…): escreva "
+                                                     "o número com algarismos, igual ao do resto do one-pager — "
+                                                     "«24 vagas», «R$ 12.000», «180 registros»."))
     for m in _RE_FUTURO.finditer(sem_falas):
         achados.append(_achado("futuro-ou-condicional", f"«{m.group(0)}» no {nome}: conte no presente — «o estudante "
                                                         "escolhe», «a tela trava»."))

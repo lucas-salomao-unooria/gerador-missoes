@@ -149,3 +149,11 @@ def test_fala_que_termina_em_ponto_fecha_a_frase():
              "A decisão é sua, conselheiro.” Três cartões resumem os projetos: Mesa Aberta com 24 vagas, Ponto de Apoio "
              "com 18 vagas e Conexão para Continuar com 20 vagas.")
     assert max(len(f.split()) for f in oc._frases(texto)) <= oc.MAX_PALAVRAS_FRASE
+
+
+def test_numero_por_extenso_volta_ao_redator():
+    """Ao vivo (exp09ef1b, 30/10/2026) o redator escreveu «vinte e quatro vagas» e «doze mil reais»: o número por extenso
+    escapava da conferência dos números. Fala entre aspas e contagem até doze passam."""
+    extenso = IDEIA.replace("A tabela traz 95%, 94%, 92% e 88%.", "A tabela traz noventa e cinco por cento.")
+    assert "numero-por-extenso" in _codigos(oc.validar(oc.encaixar(ONE_PAGER, LEITURA.replace(IDEIA, extenso))))
+    assert "numero-por-extenso" not in _codigos(oc.validar(oc.encaixar(ONE_PAGER, LEITURA)))
