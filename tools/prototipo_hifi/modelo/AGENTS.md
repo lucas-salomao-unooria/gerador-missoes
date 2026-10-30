@@ -8,6 +8,16 @@ Quem decidiu cada tela, cada estado, cada texto e cada regra foram os agentes de
 
 **Economia de contexto.** Cada mensagem reenvia a conversa inteira. Use `search_directory` pelo ID (`E2-ALU-01`) nos `insumos/` e pelo nome do componente em `referencias/`, em vez de abrir arquivos grandes inteiros. Capture cada estado no máximo 3 vezes.
 
+## Sobriedade: a plataforma é limpa
+
+A tela da plataforma é **sóbria**. Quem revisou a primeira versão com o Argon disse que ela tinha «cara de IA»: etiqueta em todo lugar, rótulo sobre rótulo, cartão dentro de cartão. A régua é o código de produção: **uma missão inteira** da plataforma usa de 4 a 9 `Tag`/`Badge` (a exp09ef1b codada usa 6), e o protótipo tinha de 6 a 19 **por tela**.
+
+- **Etiqueta (`Tag`, `Badge`, `PlanTag`, chip) só para um ESTADO que a ficha ou o wireframe nomeia** (como «Fila de espera» num projeto não escolhido, ou «Selecionado»). Nunca para dado ou metadado: série, componente curricular, preço, contagem de vagas ou registros, nome de arquivo, papel do usuário, «Etapa N», «Passo 1 de 3» e percentual são **texto comum**, na hierarquia tipográfica (tamanho, peso e cor do token secundário). O gate devolve a tela com **mais de 3 etiquetas**.
+- **Um título por bloco.** Nada de rótulo em caixa alta repetindo o título logo abaixo («DELIBERAÇÃO ORÇAMENTÁRIA — R$ 12.000» em cima de «R$ 12.000 — Selecione…»).
+- **Sem enfeite no chrome do clone:** o cabeçalho do app imitado mostra só o que o app real mostra. Chip de papel («Conselheiro Relator — …») em toda tela é ruído.
+- **Cartão só onde há um objeto** (um projeto, um documento). Seção não vira cartão, e cartão não entra em cartão.
+- **Menos é mais:** se o wireframe não pede, não entra. Antes de entregar, olhe a captura e pergunte: o que dá para tirar sem perder a mecânica?
+
 ## O que existe neste workspace
 
 | Caminho | O que é | Pode editar? |

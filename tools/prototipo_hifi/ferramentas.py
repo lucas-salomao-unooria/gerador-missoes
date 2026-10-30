@@ -252,7 +252,22 @@ def auditar(ws: str | Path, html_path: Optional[str] = None) -> Dict[str, Any]:
     com_erro = [f"{q['id']} · {q['estado']}: {q['erro']}" for q in quadros if q["erro"]]
     sobrepostos = [f"{q['id']} · {q['estado']}: {s}" for q in quadros for s in q.get("sobreposicoes") or []]
     return {"ok": not com_erro, "quadros": quadros, "faltando": faltando, "com_erro": com_erro,
-            "sobreposicoes": sobrepostos}
+            "sobreposicoes": sobrepostos, "excesso_de_etiquetas": excesso_de_etiquetas(quadros)}
+
+
+#: Etiquetas por tela. As missões codadas usam 4 a 9 `Tag`/`Badge` na missão INTEIRA (exp09ef1b: 6); a primeira
+#: geração com o Argon pôs de 6 a 19 por tela, e o protótipo ficou com «cara de IA» (usuário, 30/10/2026).
+LIMITE_ETIQUETAS = 3
+
+
+def excesso_de_etiquetas(quadros: List[Dict[str, Any]], limite: int = LIMITE_ETIQUETAS) -> List[str]:
+    """`ID · estado: n etiquetas («…», «…»)` de cada quadro acima do limite."""
+    saida = []
+    for q in quadros:
+        e = q.get("etiquetas") or []
+        if len(e) > limite:
+            saida.append(f"{q['id']} · {q['estado']}: {len(e)} etiquetas (" + ", ".join(f"«{x}»" for x in e[:8]) + ")")
+    return saida
 
 
 def indice(ws: str | Path, tela_id: str, estado: str) -> int:

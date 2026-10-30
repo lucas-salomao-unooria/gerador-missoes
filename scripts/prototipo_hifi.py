@@ -37,17 +37,21 @@ PYTHON_MOTOR = RAIZ / ".venv-antigravity" / "bin" / "python"
 MOTOR = RAIZ / "tools" / "prototipo_hifi" / "motor_antigravity.py"
 
 
-def _motor(ws: Path, lote: dict, modelo: str | None) -> dict:
+def _motor(ws: Path, lote: dict, modelo: str | None, correcao: str | None = None) -> dict:
     cmd = [str(PYTHON_MOTOR), "-I", str(MOTOR), "--ws", str(ws), "--lote", lote["nome"], "--ids", ",".join(lote["ids"])]
     if lote["fundacao"]:
         cmd.append("--fundacao")
     if modelo:
         cmd += ["--modelo", modelo]
+    rel = ws / "relatorios" / f"{lote['nome']}.json"
+    if correcao:
+        # o relatório da correção fica AO LADO do da geração (o motor gravaria por cima): o custo soma os dois
+        rel = ws / "relatorios" / f"correcao-{lote['nome']}.json"
+        cmd += ["--correcao", correcao, "--saida", str(rel)]
     (ws / "logs").mkdir(exist_ok=True)
     t0 = time.time()
     with open(ws / "logs" / f"{lote['nome']}.log", "w", encoding="utf-8") as log:
         proc = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, env=os.environ.copy())
-    rel = ws / "relatorios" / f"{lote['nome']}.json"
     dados = json.loads(rel.read_text(encoding="utf-8")) if rel.exists() else {}
     print(f"  {lote['nome']}: saída {proc.returncode}, {round(time.time() - t0)} s, aprovado={dados.get('aprovado')}", flush=True)
     return dados or {"lote": lote["nome"], "aprovado": False, "erro": f"motor saiu com {proc.returncode}, ver logs/{lote['nome']}.log"}
@@ -81,6 +85,7 @@ def fechar(ws: Path, sessao: Path, relatorios: list[dict], segundos: float) -> d
               "build_final": final["ok"], "kb": final["kb"], "faltando": audit.get("faltando", []),
               "com_erro": audit.get("com_erro", []), "lint_estatico": lint_estatico["achados"],
               "sobreposicoes": audit.get("sobreposicoes", []),
+              "excesso_de_etiquetas": audit.get("excesso_de_etiquetas", []),
               "lint_esteira": {"status": lint_esteira.get("status"), "achados": lint_esteira.get("achados", [])},
               "texto_rastreavel_pct": texto["percentual"], "linhas_de_texto": texto["linhas"],
               "lacunas": lacunas, "identificadores_sem_fonte": sem_fonte,
@@ -113,7 +118,7 @@ def _relatorio_md(ws: Path, sessao: Path, r: dict, texto: dict) -> None:
               f"- Quadros: {r['quadros']} ({r['telas']} telas) · capturados: {r['capturas']}",
               f"- Build final: {'ok' if r['build_final'] else 'FALHOU'} · {r['kb']} KB",
               f"- Faltando: {len(r['faltando'])} · com erro de montagem: {len(r['com_erro'])} · achados de lint: {len(r['lint_estatico'])}"
-              f" · sobreposições: {len(r['sobreposicoes'])}",
+              f" · sobreposições: {len(r['sobreposicoes'])} · telas com excesso de etiquetas: {len(r['excesso_de_etiquetas'])}",
               f"- Lint do protótipo da esteira: {r['lint_esteira']['status']}",
               f"- Modelo: {r['modelo']}",
               f"- Identificadores sem fonte nos insumos: {len(r['identificadores_sem_fonte'])}"
@@ -130,6 +135,7 @@ def _relatorio_md(ws: Path, sessao: Path, r: dict, texto: dict) -> None:
     for titulo, itens in (("Lacunas declaradas (decisões que faltam nos documentos)", r["lacunas"]),
                           ("Faltando", r["faltando"]), ("Erro de montagem", r["com_erro"]),
                           ("Elementos sobrepostos", r["sobreposicoes"]),
+                          ("Telas com excesso de etiquetas", r["excesso_de_etiquetas"]),
                           ("Lint", [f"{a['arquivo']}: {a['codigo']} `{a['trecho']}`" for a in r["lint_estatico"]])):
         if itens:
             linhas += ["", f"## {titulo}", ""] + [f"- {i}" for i in itens]
@@ -177,10 +183,14 @@ def main() -> None:
     ap.add_argument("--so-final", action="store_true", help="só o fechamento (build, auditoria, capturas, relatório)")
     ap.add_argument("--publicar", default=None, help="pasta da sessão onde o resultado fica (`<sessão>/design/hifi`)")
     ap.add_argument("--sem-custo", action="store_true", help="publica sem somar o custo à missão (republicação)")
+    ap.add_argument("--correcao", default=None, help="rodada de correção sobre as telas que já existem (texto ou @arquivo)")
     a = ap.parse_args()
     load_dotenv(RAIZ / ".env")
     sessao, ws = Path(a.sessao).resolve(), Path(a.destino).resolve()
     t0 = time.time()
+    correcao = a.correcao
+    if correcao and correcao.startswith("@"):
+        correcao = Path(correcao[1:]).read_text(encoding="utf-8")
     if not (ws / "dados" / "missao.json").exists():
         montar_workspace(sessao, ws, a.ds, a.plataforma)
     missao = json.loads((ws / "dados" / "missao.json").read_text(encoding="utf-8"))
@@ -189,14 +199,18 @@ def main() -> None:
     if not a.so_final:
         if not a.pular_fundacao:
             print("fundação…", flush=True)
-            relatorios.append(_motor(ws, plano[0], a.modelo))
+            relatorios.append(_motor(ws, plano[0], a.modelo, correcao))
         print(f"{len(plano) - 1} lotes em paralelo ({a.paralelo} por vez)…", flush=True)
         with ThreadPoolExecutor(max_workers=a.paralelo) as pool:
-            relatorios += list(pool.map(lambda l: _motor(ws, l, a.modelo), plano[1:]))
-    for l in plano:  # relatórios de lotes de execuções anteriores entram na conta
-        rel = ws / "relatorios" / f"{l['nome']}.json"
-        if rel.exists() and not any(r.get("lote") == l["nome"] for r in relatorios):
-            relatorios.append(json.loads(rel.read_text(encoding="utf-8")))
+            relatorios += list(pool.map(lambda l: _motor(ws, l, a.modelo, correcao), plano[1:]))
+    desta_execucao = list(relatorios)
+    # relatórios de execuções anteriores (a geração, outras correções) entram no relatório e no custo do protótipo
+    for rel in sorted((ws / "relatorios").glob("*.json")) if (ws / "relatorios").exists() else []:
+        if rel.name == "final.json":
+            continue
+        dados = json.loads(rel.read_text(encoding="utf-8"))
+        if not any(r.get("lote") == dados.get("lote") and r.get("correcao") == dados.get("correcao") for r in relatorios):
+            relatorios.append(dados)
     segundos = time.time() - t0
     if a.so_final and (ws / "relatorios" / "final.json").exists():
         # o fechamento refeito à parte não apaga a duração da geração que ele fecha
@@ -206,7 +220,8 @@ def main() -> None:
         publicar(ws, Path(a.publicar))
         # o custo entra na missão: a sessão é a mãe de `<sessão>/design/hifi`
         from tools.prototipo_hifi.no_gerador import registrar_custo
-        linha = None if a.sem_custo else registrar_custo(Path(a.publicar).parents[1], relatorios)
+        # só o que rodou AGORA: a geração anterior já está no custo da missão
+        linha = None if a.sem_custo else registrar_custo(Path(a.publicar).parents[1], desta_execucao)
         if linha:
             print(f"custo somado à missão: US$ {linha['usd']:.2f} · R$ {linha['brl']:.2f}", flush=True)
     print(json.dumps({k: resumo[k] for k in ("build_final", "kb", "capturas", "texto_rastreavel_pct")} |

@@ -72,6 +72,24 @@ def _instrucoes(ws: Path) -> str:
     return (ws / "AGENTS.md").read_text(encoding="utf-8")
 
 
+def _tarefa_de_correcao(ws: Path, lote: str, ids: list[str], fundacao: bool, correcao: str) -> str:
+    """O lote já existe: o agente edita o que está em `telas/` (e, na fundação, os arquivos comuns), sem refazer."""
+    missao = json.loads((ws / "dados" / "missao.json").read_text(encoding="utf-8"))
+    linhas = [f"- `{q['id']}` · estado «{q['estado']}»" for q in missao["quadros"] if q["id"] in ids]
+    comuns = ("Você está no lote de fundação da correção: além das telas abaixo, corrija `telas/_comum.tsx`, "
+              "`estilos/missao.css` e `dados/mock.ts` onde a correção pedir. Os outros lotes vão rodar depois e só "
+              "poderão LER esses arquivos." if fundacao else
+              "`telas/_comum.tsx`, `estilos/missao.css` e `dados/mock.ts` já foram corrigidos na fundação: só leia. "
+              "Não edite as telas de outros lotes.")
+    return (f"Workspace: `{ws}`. Lote `{lote}` da missão {missao['missao']} — **rodada de correção**.\n\n"
+            f"As telas abaixo JÁ EXISTEM e funcionam. Corrija o que se pede, editando os arquivos existentes: "
+            f"**não reescreva do zero**, mantenha as interações, a navegação (`ir`), os estados e o texto da copy. "
+            f"{comuns}\n\n**O que corrigir:**\n{correcao}\n\nLeia `AGENTS.md` (em especial «Sobriedade»). "
+            f"Telas e estados deste lote:\n" + "\n".join(linhas) +
+            "\n\nDepois de editar, rode os passos 2 a 6 de «Como trabalhar» em cada estado (inclusive jogar a tela "
+            "com `interagir_tela`) e chame `finish` com o que mudou em cada tela.")
+
+
 def _tarefa(ws: Path, lote: str, ids: list[str], fundacao: bool) -> str:
     missao = json.loads((ws / "dados" / "missao.json").read_text(encoding="utf-8"))
     linhas = [f"- `{q['id']}` · estado «{q['estado']}» · {q['ator']} · seção `{q.get('secao', '?')}` · "
@@ -113,7 +131,7 @@ def _hash(p: Path) -> str:
 
 
 async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str | None, max_rodadas: int,
-                max_chamadas: int, saida: Path) -> dict:
+                max_chamadas: int, saida: Path, correcao: str | None = None) -> dict:
     chamadas: list[dict] = []
     estado = {"html": None}
     capturadas: dict[tuple[str, str], float] = {}
@@ -149,6 +167,7 @@ async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str
                 "erro_geral": r.get("erro"),
                 "identificadores_sem_fonte": sem_fonte,
                 "sobreposicoes": [f"{q['id']} · {q['estado']}: {s}" for q in quadros for s in q.get("sobreposicoes") or []],
+                "excesso_de_etiquetas": ferramentas.excesso_de_etiquetas(quadros),
                 "estados": [{"id": q["id"], "estado": q["estado"], "faltando": q["faltando"], "erro": q["erro"],
                              "linhas_de_texto": len(q["texto"])} for q in quadros]}
 
@@ -236,7 +255,7 @@ async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str
     gates: dict = {}
     rodadas = 0
     async with Agent(config) as agente:
-        mensagem = _tarefa(ws, lote, ids, fundacao)
+        mensagem = _tarefa_de_correcao(ws, lote, ids, fundacao, correcao) if correcao else _tarefa(ws, lote, ids, fundacao)
         while rodadas < max_rodadas:
             rodadas += 1
             resposta = await agente.chat(mensagem)
@@ -264,10 +283,11 @@ async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str
                      "sem_interacao": [i for i in interativas if i not in exercitadas],
                      "identificadores_sem_fonte": ferramentas.identificadores_sem_fonte(meus, corpus),
                      "sobreposicoes": [f"{q['id']} · {q['estado']}: {s}" for q in meus for s in q.get("sobreposicoes") or []],
+                     "excesso_de_etiquetas": ferramentas.excesso_de_etiquetas(meus),
                      "comum_alterado": (not fundacao) and [_hash(p) for p in comum] != hash_comum}
             pendente = (not gates["build"] or gates["faltando"] or gates["com_erro"] or gates["lint"]
                         or gates["sem_captura"] or gates["sem_interacao"] or gates["identificadores_sem_fonte"]
-                        or gates["sobreposicoes"]
+                        or gates["sobreposicoes"] or gates["excesso_de_etiquetas"]
                         or gates["comum_alterado"])
             if not pendente:
                 break
@@ -275,17 +295,20 @@ async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str
                         + json.dumps({k: v for k, v in gates.items() if v and k != "build"}, ensure_ascii=False, indent=1)
                         + "\n\n`sem_captura` lista estados cujo arquivo mudou depois da última captura: capture e olhe."
                         + "\n`sem_interacao` lista telas que você ainda não exercitou com `interagir_tela`."
+                        + "\n`excesso_de_etiquetas`: a tela tem mais de 3 Tag/Badge/chip. Dado e metadado viram texto comum "
+                          "(seção «Sobriedade» do AGENTS.md); etiqueta fica só para o estado que a ficha nomeia."
                         + "\n`sobreposicoes` são elementos de uma grade ou flex que invadem o vizinho: componente do DS "
                           "com largura fixa numa coluna mais estreita, por exemplo. Corrija o layout da tela."
                         + "\n`identificadores_sem_fonte` são códigos, datas ou horas na tela que não estão nos insumos: "
                           "use o dos documentos ou `[[LACUNA: …]]`."
                         + ("\n`_comum.tsx`, `dados/mock.ts` ou `estilos/missao.css` foi alterado por este lote: desfaça, eles são só para leitura."
                            if gates["comum_alterado"] else ""))
-    relatorio = {"lote": lote, "ids": ids, "fundacao": fundacao, "modelo": modelo or f"{DEFAULT_MODEL} (padrão do SDK)",
+    relatorio = {"lote": lote, "ids": ids, "fundacao": fundacao, "correcao": correcao, "modelo": modelo or f"{DEFAULT_MODEL} (padrão do SDK)",
                  "rodadas": rodadas, "segundos": round(time.time() - t0), "uso": uso, "gates": gates,
                  "imagens": imagens,
                  "aprovado": not (not gates.get("build") or gates.get("faltando") or gates.get("com_erro")
                                   or gates.get("lint") or gates.get("identificadores_sem_fonte") or gates.get("sobreposicoes")
+                                  or gates.get("excesso_de_etiquetas")
                                   or gates.get("comum_alterado")),
                  "chamadas": chamadas, "resumo": textos[-1] if textos else ""}
     saida.parent.mkdir(parents=True, exist_ok=True)
@@ -303,10 +326,12 @@ def main() -> None:
     ap.add_argument("--max-rodadas", type=int, default=4)
     ap.add_argument("--max-chamadas", type=int, default=250, help="teto de chamadas ao modelo no lote")
     ap.add_argument("--saida", default=None)
+    ap.add_argument("--correcao", default=None, help="rodada de correção: o que corrigir nas telas que já existem")
     a = ap.parse_args()
     ws = Path(a.ws).resolve()
     saida = Path(a.saida) if a.saida else ws / "relatorios" / f"{a.lote}.json"
-    r = asyncio.run(rodar(ws, a.lote, a.ids.split(","), a.fundacao, a.modelo, a.max_rodadas, a.max_chamadas, saida))
+    r = asyncio.run(rodar(ws, a.lote, a.ids.split(","), a.fundacao, a.modelo, a.max_rodadas, a.max_chamadas, saida,
+                          a.correcao))
     print(json.dumps({k: r[k] for k in ("lote", "aprovado", "rodadas", "segundos", "uso")}, ensure_ascii=False))
 
 

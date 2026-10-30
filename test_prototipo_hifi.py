@@ -275,3 +275,10 @@ def test_custo_da_geracao_soma_lotes_pelo_modelo_e_as_imagens(monkeypatch, tmp_p
     total = json.loads((tmp_path / "estado.json").read_text())["custo_missao"]
     assert [l["etapas"] for l in total["execucoes"]] == [["produto"], ["prototipo-hifi"]]
     assert total["total"]["usd"] == round(4.0 + linha["usd"], 4)
+
+
+def test_tela_com_mais_de_3_etiquetas_volta_com_a_lista():
+    quadros = [{"id": "E0-PROF-02", "estado": "vazio", "etiquetas": ["Passo 1 de 3", "9º ano", "Unidade 1", "24 vagas"]},
+               {"id": "E3-ALU-01", "estado": "vazio", "etiquetas": ["Fila de espera", "Fila de espera"]}]
+    assert ferramentas.excesso_de_etiquetas(quadros) == [
+        "E0-PROF-02 · vazio: 4 etiquetas («Passo 1 de 3», «9º ano», «Unidade 1», «24 vagas»)"]

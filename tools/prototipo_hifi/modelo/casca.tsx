@@ -207,7 +207,15 @@ function sobreposicoes(quadro: HTMLElement): string[] {
   return Array.from(new Set(achados)).slice(0, 5);
 }
 
-/** Monta todos os quadros fora da tela e escreve cobertura, erros, texto visível e sobreposições de cada um. */
+/** As etiquetas do DS (`Tag`, `Badge`, `PlanTag`, chip) na área que o agente desenha, pelo texto de cada uma. */
+function etiquetas(quadro: HTMLElement): string[] {
+  const area = quadro.querySelector<HTMLElement>(".hifi-experiencia") || quadro.querySelector<HTMLElement>("main") || quadro;
+  return Array.from(area.querySelectorAll<HTMLElement>("[class]"))
+    .filter((e) => /(^|\s)[a-z]+-(tag|badge|plan-tag|chip)(\s|$)/.test(e.className))
+    .map((e) => (e.innerText || "").trim().slice(0, 40));
+}
+
+/** Monta todos os quadros fora da tela e escreve cobertura, erros, texto, sobreposições e etiquetas de cada um. */
 function Auditoria() {
   const raiz = useRef<HTMLDivElement>(null);
   const [saida, setSaida] = useState("");
@@ -220,6 +228,7 @@ function Auditoria() {
         erro: el.querySelector<HTMLElement>(".hifi-erro")?.dataset.erro || null,
         texto: (el.innerText || "").split("\n").map((s) => s.trim()).filter(Boolean),
         sobreposicoes: sobreposicoes(el),
+        etiquetas: etiquetas(el),
       }))));
     }, 1500);
     return () => clearTimeout(t);
