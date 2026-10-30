@@ -78,24 +78,29 @@ def _tarefa(ws: Path, lote: str, ids: list[str], fundacao: bool) -> str:
               f"{q['largura']}×{q['altura']} · {q['proposito']}" for q in missao["quadros"] if q["id"] in ids]
     secoes = sorted({q.get("secao", "unooria") for q in missao["quadros"]})
     if fundacao:
-        papel = ("Você está no **lote de fundação**. Antes das telas, crie:\n"
-                 "1. `dados/mock.ts`: os dados mockados da missão INTEIRA, tirados dos `insumos/` (projetos, "
-                 "personagens, números, documentos, mensagens do assistente, tabelas, critérios, textos de "
-                 "botão que se repetem), tipados e exportados. Todas as telas vão ler daqui. Leia os documentos "
-                 "com atenção: este arquivo é a base de dados do protótipo.\n"
-                 f"2. `telas/_comum.tsx`: uma moldura por seção do DS que a missão usa ({', '.join(secoes)}), "
-                 "composta só com os componentes daquela seção e como nas telas de exemplo do Storybook dela "
-                 "(`children` para o conteúdo), a moldura do Hub para o professor, e os blocos que se repetem "
-                 "entre telas (cartão, balão da personagem-guia, faixa de espera, por exemplo), já interativos.\n"
-                 "3. As imagens que a missão inteira vai usar (`gerar_imagem`), com nomes estáveis.\n"
-                 "Depois construa as telas âncora abaixo. Os outros lotes vão rodar em paralelo e só poderão LER "
-                 "`_comum.tsx` e `dados/mock.ts`: eles precisam ficar estáveis e completos.")
+        papel = ("Você está no **lote de fundação**: define a cara que as outras telas vão seguir. Antes de "
+                 "qualquer tela, leia em `referencias/` as experiências codadas da plataforma que usam as mesmas "
+                 f"seções desta missão ({', '.join(secoes)}) e as telas do hub do professor. Depois crie:\n"
+                 "1. `dados/mock.ts`: os dados mockados da missão INTEIRA, tirados dos `insumos/`, tipados e "
+                 "exportados. É a base de dados do protótipo.\n"
+                 "2. `estilos/missao.css`: o CSS da missão no molde do `src/estilos/globals.css` das experiências de "
+                 "referência (mesma estrutura de `.app`, `.app__tela` e das classes de layout), com todo seletor "
+                 "começando por `.hifi-experiencia`.\n"
+                 "3. `telas/_comum.tsx`: a moldura de cada clone que a missão usa, montada como as experiências de "
+                 "referência montam a delas (pela ponte `@edu/ui/ds-<clone>`), e os blocos que se repetem entre "
+                 "telas. A casca do hub NÃO entra aqui: o professor usa `CascaProfessor` de `../plataforma`, e o "
+                 "header do estudante a casca já desenha.\n"
+                 "4. As imagens que a missão inteira vai usar (`gerar_imagem`), com nomes estáveis.\n"
+                 "Depois construa as telas âncora abaixo, comparando cada captura com a referência da plataforma. "
+                 "Os outros lotes vão rodar em paralelo e só poderão LER `_comum.tsx`, `dados/mock.ts` e "
+                 "`estilos/missao.css`: eles precisam ficar estáveis e completos.")
     else:
-        papel = ("Use os dados de `dados/mock.ts`, as molduras e blocos de `telas/_comum.tsx` e as imagens que já "
-                 "existem em `assets/` (leia esses arquivos e as telas âncora em `telas/` antes de começar), para "
-                 "que todas as telas sejam da mesma família e contem a mesma história. **Não edite `_comum.tsx` "
-                 "nem `dados/mock.ts`** nem as telas de outros lotes: outros agentes estão trabalhando agora. Dado "
-                 "que falta no mock, declare na própria tela, numa constante local, e cite no resumo.")
+        papel = ("Use `dados/mock.ts`, `estilos/missao.css`, os blocos de `telas/_comum.tsx`, a casca do hub de "
+                 "`plataforma.tsx` e as imagens de `assets/`. Leia esses arquivos, as telas âncora em `telas/` e a "
+                 "referência da plataforma equivalente a cada tela sua em `referencias/` antes de começar: todas "
+                 "as telas têm de ser da mesma família e ter a cara da plataforma. **Não edite `_comum.tsx`, "
+                 "`dados/mock.ts` nem `estilos/missao.css`**, nem as telas de outros lotes: outros agentes estão "
+                 "trabalhando agora. Dado que falta no mock vai numa constante local da tela, citada no resumo.")
     return (f"Workspace: `{ws}`. Lote `{lote}` da missão {missao['missao']} ({missao['titulo']}).\n\n{papel}\n\n"
             f"Leia `AGENTS.md` primeiro. Telas e estados deste lote ({len(linhas)} quadros):\n" + "\n".join(linhas) +
             "\n\nConstrua todas as telas como componentes interativos, com as interações da mecânica (ficha de "
@@ -138,9 +143,11 @@ async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str
             return {"ok": False, "erro": "rode construir_lote antes"}
         r = ferramentas.auditar(ws, estado["html"])
         quadros = [q for q in r.get("quadros", []) if q["id"] in ids]
+        sem_fonte = ferramentas.identificadores_sem_fonte(quadros, corpus)
         registrar("auditar_lote", {}, r.get("ok", False))
-        return {"ok": r.get("ok", False) and not any(q["faltando"] or q["erro"] for q in quadros),
+        return {"ok": r.get("ok", False) and not sem_fonte and not any(q["faltando"] or q["erro"] for q in quadros),
                 "erro_geral": r.get("erro"),
+                "identificadores_sem_fonte": sem_fonte,
                 "estados": [{"id": q["id"], "estado": q["estado"], "faltando": q["faltando"], "erro": q["erro"],
                              "linhas_de_texto": len(q["texto"])} for q in quadros]}
 
@@ -216,7 +223,8 @@ async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str
         compaction_config=CompactionConfig(token_threshold=LIMITE_CONTEXTO),
         save_dir=str(ws / ".build" / f"sdk-{lote}"),
     )
-    comum = [ws / "telas" / "_comum.tsx", ws / "dados" / "mock.ts"]
+    comum = [ws / "telas" / "_comum.tsx", ws / "dados" / "mock.ts", ws / "estilos" / "missao.css"]
+    corpus = "\n".join(p.read_text(encoding="utf-8") for p in sorted((ws / "insumos").glob("*.md")))
     hash_comum = [_hash(p) for p in comum]
     missao = json.loads((ws / "dados" / "missao.json").read_text(encoding="utf-8"))
     #: Tela que espera o professor ou o sistema (ação «Aguardar…») não tem o que exercitar.
@@ -253,22 +261,27 @@ async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str
                      "com_erro": [f"{q['id']} · {q['estado']}: {q['erro']}" for q in meus if q["erro"]],
                      "lint": lint["achados"][:20], "sem_captura": sem_captura,
                      "sem_interacao": [i for i in interativas if i not in exercitadas],
+                     "identificadores_sem_fonte": ferramentas.identificadores_sem_fonte(meus, corpus),
                      "comum_alterado": (not fundacao) and [_hash(p) for p in comum] != hash_comum}
             pendente = (not gates["build"] or gates["faltando"] or gates["com_erro"] or gates["lint"]
-                        or gates["sem_captura"] or gates["sem_interacao"] or gates["comum_alterado"])
+                        or gates["sem_captura"] or gates["sem_interacao"] or gates["identificadores_sem_fonte"]
+                        or gates["comum_alterado"])
             if not pendente:
                 break
             mensagem = ("O lote ainda não passou nos gates da esteira. Corrija e confira de novo:\n"
                         + json.dumps({k: v for k, v in gates.items() if v and k != "build"}, ensure_ascii=False, indent=1)
                         + "\n\n`sem_captura` lista estados cujo arquivo mudou depois da última captura: capture e olhe."
                         + "\n`sem_interacao` lista telas que você ainda não exercitou com `interagir_tela`."
-                        + ("\n`_comum.tsx` ou `dados/mock.ts` foi alterado por este lote: desfaça, eles são só para leitura."
+                        + "\n`identificadores_sem_fonte` são códigos, datas ou horas na tela que não estão nos insumos: "
+                          "use o dos documentos ou `[[LACUNA: …]]`."
+                        + ("\n`_comum.tsx`, `dados/mock.ts` ou `estilos/missao.css` foi alterado por este lote: desfaça, eles são só para leitura."
                            if gates["comum_alterado"] else ""))
     relatorio = {"lote": lote, "ids": ids, "fundacao": fundacao, "modelo": modelo or f"{DEFAULT_MODEL} (padrão do SDK)",
                  "rodadas": rodadas, "segundos": round(time.time() - t0), "uso": uso, "gates": gates,
                  "imagens": imagens,
                  "aprovado": not (not gates.get("build") or gates.get("faltando") or gates.get("com_erro")
-                                  or gates.get("lint") or gates.get("comum_alterado")),
+                                  or gates.get("lint") or gates.get("identificadores_sem_fonte")
+                                  or gates.get("comum_alterado")),
                  "chamadas": chamadas, "resumo": textos[-1] if textos else ""}
     saida.parent.mkdir(parents=True, exist_ok=True)
     saida.write_text(json.dumps(relatorio, ensure_ascii=False, indent=1), encoding="utf-8")

@@ -27,11 +27,15 @@ CHROME = os.getenv("CHROME_BIN") or next(
     (c for c in ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", shutil.which("chromium"),
                  shutil.which("google-chrome")) if c and os.path.exists(c)), "")
 
-#: Imports que uma tela pode fazer além das seções do DS: React, os blocos comuns e o mock da fundação, a
-#: API da casca (navegação e sessão) e as imagens geradas em `assets/`.
-IMPORTS_PERMITIDOS = ("react", "./_comum", "../casca-api", "../dados/mock")
-#: Uma seção do pacote (`@unooria/design-system/instanooria`): qualquer uma das que o `package.json` exporta.
-_RE_SECAO = re.compile(r"^@unooria/design-system/([a-z]+)$")
+#: Imports que uma tela pode fazer além das pontes do DS: React, os blocos comuns e o mock da fundação, a
+#: API da casca (navegação e sessão), a casca do hub e as imagens geradas em `assets/`.
+IMPORTS_PERMITIDOS = ("react", "./_comum", "../casca-api", "../dados/mock", "../plataforma")
+#: A ponte da plataforma (`@edu/ui/ds`, `@edu/ui/ds-unooriaai`): como no código de produção, a tela nunca
+#: importa o pacote do DS direto (`packages/ui/AGENTS.md`).
+_RE_PONTE = re.compile(r"^@edu/ui/(ds(?:-[a-z]+)?)$")
+_RE_DS_DIRETO = re.compile(r"^@unooria/design-system(?:/|$)")
+#: Ponte × seção do pacote, quando o nome não é o mesmo (`packages/ui/package.json`).
+PONTE_SECAO = {"ds": "unooria", "ds-insta": "instanooria", "ds-whatsapp": "whatsappmobile"}
 _RE_ASSET = re.compile(r"^\.\./assets/([a-z0-9-]+\.webp)$")
 _RE_IMPORT = re.compile(r"""^\s*import\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]""", re.M)
 #: `ir("E3-SIS-01")` ou `ir("E3-SIS-01", "espera de gate ativa")`: o destino tem de existir no inventário.
@@ -40,6 +44,11 @@ _RE_IR = re.compile(r"""\bir\(\s*["'`]([^"'`]+)["'`]\s*(?:,\s*["'`]([^"'`]+)["'`
 _RE_INTERACAO = re.compile(r"\bon(?:Click|Change|Submit|KeyDown|DragStart|Drop|PointerDown|Select)\b|\bsetTimeout\(|\bir\(")
 #: Cor escrita à mão. Token do DS (`var(--uai-…)`, `var(--unooria-…)`) é o caminho permitido.
 _RE_COR = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(")
+#: O fallback de token (`var(--uai-bg-primary, #fff)`) é a convenção da plataforma: cor só enquanto a folha carrega.
+_RE_FALLBACK = re.compile(r"var\(\s*--[\w-]+\s*,[^()]*(?:\([^()]*\)[^()]*)*\)")
+#: Identificador com cara de documento (protocolo, autos, processo, data, hora): tem de existir nos insumos.
+_RE_IDENTIFICADOR = re.compile(r"\b[A-Z]{2,}(?:-[A-Z0-9]+)*-\d[\w-]*\b|\b\d{1,4}/\d{2,4}-[A-Z]{2,}\b"
+                               r"|\b\d{2}/\d{2}/\d{4}\b|\b\d{2}:\d{2}(?::\d{2})?\b")
 _RE_PROIBIDO = {
     "fonte-propria": re.compile(r"fontFamily|font-family|@font-face|fonts\.googleapis"),
     "armazenamento": re.compile(r"localStorage|sessionStorage"),
@@ -69,6 +78,11 @@ CSS_CASCA = """
 .hifi-rodape{grid-column:2/4;padding:10px 20px;background:#fff;border-top:1px solid #D5D9DD;font-size:13px;overflow-wrap:anywhere}.hifi-rodape b{font-size:11px;color:#5F6B76;margin:0 4px 0 12px}
 .hifi-captura{position:fixed;inset:0}.hifi-captura .hifi-quadro{border-radius:0;box-shadow:none}
 .hifi-auditoria{position:absolute;left:-200000px;top:0}
+.hifi-experiencia{position:relative;height:100%;overflow:hidden}
+/* o preflight do Tailwind do hub, só no chrome do hub: a experiência é um iframe e não o recebe */
+.hifi-hub :where(h1,h2,h3,h4,p,ul,ol,figure,blockquote){margin:0}.hifi-hub :where(ul,ol){list-style:none;padding:0}
+.hifi-hub :where(a){color:inherit;text-decoration:inherit}.hifi-hub :where(img){display:block;max-width:100%}
+:where(.hifi-hub,.hifi-hub *,.hifi-hub ::before,.hifi-hub ::after){border-width:0;border-style:solid;border-color:#e5e7eb}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 """
 
@@ -90,26 +104,61 @@ def pacote_do_ds(ws: str | Path) -> Dict[str, Any]:
             "fontes": {s for s in secoes if f"./fonts/{s}.css" in exports}}
 
 
+def pontes(ws: str | Path) -> List[str]:
+    """As pontes que `@edu/ui` exporta (`ds`, `ds-unooriaai`…), lidas do `package.json` copiado da plataforma."""
+    caminho = Path(ws) / "node_modules" / "@edu" / "ui" / "package.json"
+    if not caminho.exists():
+        return []
+    return sorted(k[2:] for k in json.loads(caminho.read_text(encoding="utf-8")).get("exports", {})
+                  if re.fullmatch(r"\./ds(?:-[a-z]+)?", k))
+
+
+def secao_da_ponte(ponte: str) -> str:
+    return PONTE_SECAO.get(ponte, ponte[3:] if ponte.startswith("ds-") else ponte)
+
+
 def _secoes_usadas(ws: Path, ids: Optional[List[str]]) -> List[str]:
-    """Seções importadas pelas telas (do lote, mais `_comum.tsx`) e as declaradas nos quadros delas."""
-    usadas = set()
+    """Seções das pontes importadas pelas telas (do lote, mais `_comum.tsx`), as dos quadros e a `unooria` do hub."""
+    usadas = {"unooria"}
     for arq in (ws / "telas").glob("*.tsx"):
         if ids and arq.stem not in ids and arq.stem != "_comum":
             continue
         for mod in _RE_IMPORT.findall(arq.read_text(encoding="utf-8")):
-            m = _RE_SECAO.match(mod)
+            m = _RE_PONTE.match(mod)
             if m:
-                usadas.add(m.group(1))
+                usadas.add(secao_da_ponte(m.group(1)))
     usadas |= {q.get("secao") for q in _ler_missao(ws)["quadros"] if q.get("secao") and (not ids or q["id"] in ids)}
     return sorted(usadas)
 
 
+def _tailwind(ws: Path, destino: Path) -> Optional[str]:
+    """Compila as utilitárias de layout do hub (Tailwind 3 do `apps/hub`, sem preflight) para as classes usadas."""
+    cli = ws / "node_modules" / "tailwindcss" / "lib" / "cli.js"
+    config = ws / "tailwind.config.cjs"
+    if not cli.exists() or not config.exists():
+        return "Tailwind do hub ausente no workspace"
+    entrada = destino.with_suffix(".in.css")
+    entrada.write_text("@tailwind utilities;\n", encoding="utf-8")
+    proc = subprocess.run(["node", str(cli), "-c", str(config), "-i", str(entrada), "-o", str(destino), "--minify"],
+                          cwd=ws, capture_output=True, text=True, timeout=120)
+    return None if proc.returncode == 0 else (proc.stderr or proc.stdout)[-800:]
+
+
 def _estilos(ws: Path, destino: Path, ids: Optional[List[str]]) -> List[str]:
-    """`estilos.ts`: CSS e fontes só das seções em uso (as 12 juntas levariam todas as fontes ao HTML)."""
+    """`estilos.ts`: CSS e fontes só das seções em uso, o `plataforma.css` do hub, o Tailwind do hub e o CSS da missão.
+
+    As 12 seções juntas levariam todas as fontes ao HTML. O CSS da missão (`estilos/*.css`) entra por
+    último, como o `globals.css` de uma experiência.
+    """
     pacote = pacote_do_ds(ws)
     secoes = [s for s in _secoes_usadas(ws, ids) if s in pacote["secoes"]]
     linhas = [f'import "@unooria/design-system/{s}.css";' for s in secoes if s in pacote["css"]]
     linhas += [f'import "@unooria/design-system/fonts/{s}.css";' for s in secoes if s in pacote["fontes"]]
+    if (ws / "node_modules" / "@edu" / "ui" / "styles" / "plataforma.css").exists():
+        linhas.append('import "@edu/ui/styles/plataforma.css";')
+    if _tailwind(ws, destino.parent / "tailwind.css") is None and (destino.parent / "tailwind.css").exists():
+        linhas.append('import "./tailwind.css";')
+    linhas += [f'import "{css.resolve().as_posix()}";' for css in sorted((ws / "estilos").glob("*.css"))]
     destino.write_text("\n".join(linhas) + "\nexport {};\n", encoding="utf-8")
     return secoes
 
@@ -150,6 +199,7 @@ def construir(ws: str | Path, ids: Optional[List[str]] = None, saida: Optional[s
     entrada.write_text((ws / "casca.tsx").read_text(encoding="utf-8")
                        .replace('"./dados/missao.json"', f'"{(ws / "dados" / "missao.json").as_posix()}"')
                        .replace('"./casca-api"', f'"{(ws / "casca-api.tsx").as_posix()}"')
+                       .replace('"./plataforma"', f'"{(ws / "plataforma.tsx").as_posix()}"')
                        .replace('"./gerado/registro"', '"./registro"')
                        .replace('"./gerado/estilos"', '"./estilos"'), encoding="utf-8")
     cmd = [_esbuild(ws), str(entrada), "--bundle", "--minify", "--format=iife", "--jsx=automatic",
@@ -225,9 +275,9 @@ def capturar(ws: str | Path, tela_id: str, estado: str, html_path: Optional[str]
     png = ws / "capturas" / f"{tela_id}--{slug(estado)}.png"
     if png.exists():
         png.unlink()
-    _chrome(["--virtual-time-budget=4000", f"--window-size={q['largura']},{q['altura']}",
+    _chrome(["--virtual-time-budget=4000", f"--window-size={q['largura']},{q.get('altura_total', q['altura'])}",
              f"--screenshot={png}", alvo.resolve().as_uri() + f"#captura={n}"])
-    return {"ok": png.exists(), "png": str(png), "largura": q["largura"], "altura": q["altura"]}
+    return {"ok": png.exists(), "png": str(png), "largura": q["largura"], "altura": q.get("altura_total", q["altura"])}
 
 
 def interagir(ws: str | Path, tela_id: str, estado: str, acoes: List[Dict[str, Any]],
@@ -243,7 +293,7 @@ def interagir(ws: str | Path, tela_id: str, estado: str, acoes: List[Dict[str, A
     alvo = Path(html_path) if html_path else ws / ".build" / "final" / "prototipo.html"
     (ws / "capturas").mkdir(exist_ok=True)
     png = ws / "capturas" / f"{tela_id}--{slug(estado)}--interacao.png"
-    entrada = json.dumps({"html": str(alvo.resolve()), "n": n, "largura": q["largura"], "altura": q["altura"],
+    entrada = json.dumps({"html": str(alvo.resolve()), "n": n, "largura": q["largura"], "altura": q.get("altura_total", q["altura"]),
                           "chrome": CHROME, "png": str(png), "acoes": acoes[:30]})
     proc = subprocess.run(["node", str(ws / "interagir.mjs"), entrada], cwd=ws, capture_output=True, text=True, timeout=180)
     try:
@@ -269,23 +319,28 @@ def lint(ws: str | Path, ids: Optional[List[str]] = None) -> Dict[str, Any]:
     for q in quadros:
         estados_por_id.setdefault(q["id"], []).append(q["estado"])
     acao_por_id = {q["id"]: q.get("acao", "") for q in quadros}
-    try:
-        secoes = set(pacote_do_ds(ws)["secoes"])
-    except FileNotFoundError:
-        secoes = set()
+    pontes_ok = set(pontes(ws))
+    for arq in sorted((ws / "telas").iterdir()) if (ws / "telas").exists() else []:
+        if not re.fullmatch(r"E\d-(?:ALU|PROF|SIS)-\d{2}\.tsx|_comum\.tsx", arq.name):
+            achados.append({"arquivo": arq.name, "codigo": "arquivo-fora-do-contrato",
+                            "trecho": "em telas/ só entram <ID>.tsx e _comum.tsx"})
+    for css in sorted((ws / "estilos").glob("*.css")) if (ws / "estilos").exists() else []:
+        achados += _lint_css(css)
     for arq in sorted((ws / "telas").glob("*.tsx")):
         if ids and arq.stem not in ids and arq.stem != "_comum":
             continue
         fonte = arq.read_text(encoding="utf-8")
         sem_comentario = re.sub(r"/\*.*?\*/|(?<![:\w])//[^\n]*", "", fonte, flags=re.S)
         for mod in _RE_IMPORT.findall(sem_comentario):
-            asset, secao = _RE_ASSET.match(mod), _RE_SECAO.match(mod)
+            asset, ponte = _RE_ASSET.match(mod), _RE_PONTE.match(mod)
             if asset:
                 if not (ws / "assets" / asset.group(1)).exists():
                     achados.append({"arquivo": arq.name, "codigo": "imagem-inexistente", "trecho": mod})
-            elif secao:
-                if secoes and secao.group(1) not in secoes:
-                    achados.append({"arquivo": arq.name, "codigo": "secao-fora-do-pacote", "trecho": mod})
+            elif ponte:
+                if pontes_ok and ponte.group(1) not in pontes_ok:
+                    achados.append({"arquivo": arq.name, "codigo": "ponte-inexistente", "trecho": mod})
+            elif _RE_DS_DIRETO.match(mod):
+                achados.append({"arquivo": arq.name, "codigo": "import-direto-do-ds", "trecho": mod})
             elif mod not in IMPORTS_PERMITIDOS:
                 achados.append({"arquivo": arq.name, "codigo": "import-fora-do-ds", "trecho": mod})
         for destino, estado in _RE_IR.findall(sem_comentario):
@@ -295,7 +350,7 @@ def lint(ws: str | Path, ids: Optional[List[str]] = None) -> Dict[str, Any]:
         acao = acao_por_id.get(arq.stem, "")
         if arq.stem.startswith("E") and acao and not re.search(r"aguardar", acao, re.I) and not _RE_INTERACAO.search(sem_comentario):
             achados.append({"arquivo": arq.name, "codigo": "tela-sem-interacao", "trecho": acao[:80]})
-        for m in _RE_COR.finditer(sem_comentario):
+        for m in _RE_COR.finditer(_RE_FALLBACK.sub("", sem_comentario)):
             achados.append({"arquivo": arq.name, "codigo": "cor-escrita-a-mao", "trecho": m.group(0)})
         for codigo, rx in _RE_PROIBIDO.items():
             for m in rx.finditer(sem_comentario):
@@ -303,6 +358,51 @@ def lint(ws: str | Path, ids: Optional[List[str]] = None) -> Dict[str, Any]:
         if arq.stem.startswith("E") and not re.search(r"export\s+const\s+estados\b", fonte):
             achados.append({"arquivo": arq.name, "codigo": "sem-export-estados", "trecho": ""})
     return {"ok": not achados, "achados": achados}
+
+
+def _lint_css(css: Path) -> List[Dict[str, str]]:
+    """O CSS da missão: só tokens (hex só como fallback de `var()`), nada de fonte, e todo seletor escopado.
+
+    `.hifi-experiencia` é a área do iframe e `.hifi-hub` o chrome do hub: no protótipo as duas convivem
+    na mesma página, e um seletor solto (`body`, `.app`) vazaria para a casca e para as outras telas.
+    """
+    achados = []
+    texto = re.sub(r"/\*.*?\*/", "", css.read_text(encoding="utf-8"), flags=re.S)
+    for m in _RE_COR.finditer(_RE_FALLBACK.sub("", texto)):
+        achados.append({"arquivo": f"estilos/{css.name}", "codigo": "cor-escrita-a-mao", "trecho": m.group(0)})
+    for m in re.finditer(r"@font-face|@import|font-family\s*:", texto):
+        achados.append({"arquivo": f"estilos/{css.name}", "codigo": "fonte-propria", "trecho": m.group(0)})
+    for bloco in re.findall(r"(?:^|})\s*([^{}@]+?)\s*{", texto):
+        for seletor in (s.strip() for s in bloco.split(",")):
+            if seletor and not re.match(r"\.hifi-(?:experiencia|hub)\b|from\b|to\b|\d+%", seletor):
+                achados.append({"arquivo": f"estilos/{css.name}", "codigo": "seletor-sem-escopo", "trecho": seletor[:60]})
+    return achados
+
+
+def identificadores_sem_fonte(quadros: List[Dict[str, Any]], corpus: str) -> List[str]:
+    """Códigos de protocolo, autos, datas e horas mostrados na tela que não aparecem nos insumos.
+
+    Na exp09ef1b com o 3.8 a tela ganhou «CMAS-2026-EXP09», «Autos: 2026/09-EF» e «DOC-MUN-2026-0894»: dados
+    com cara de documento oficial que ninguém decidiu. O mock é escrito pelo agente, então não conta como fonte.
+    """
+    base = corpus.lower()
+    vistos: List[str] = []
+    for q in quadros:
+        for linha in q.get("texto", []):
+            for m in _RE_IDENTIFICADOR.finditer(linha):
+                if m.group(0).lower() not in base and m.group(0) not in vistos:
+                    vistos.append(m.group(0))
+    return vistos
+
+
+def lacunas(quadros: List[Dict[str, Any]]) -> List[str]:
+    """As `[[LACUNA: …]]` que o agente deixou visíveis: decisões que faltam nos documentos, uma vez cada."""
+    vistas: List[str] = []
+    for q in quadros:
+        for m in re.finditer(r"\[\[LACUNA:?\s*([^\]]+)\]\]", " ".join(q.get("texto", []))):
+            if m.group(1).strip() not in vistas:
+                vistas.append(m.group(1).strip())
+    return vistas
 
 
 def _norm(texto: str) -> str:
@@ -320,7 +420,8 @@ def rastrear_texto(quadros: List[Dict[str, Any]], corpus: str, minimo: int = 12)
     base = _norm(corpus)
     por_quadro, total, achadas = [], 0, 0
     for q in quadros:
-        linhas = [l for l in q.get("texto", []) if len(l) >= minimo]
+        # o nome do ícone de ligadura («account_balance») é texto no DOM, mas o estudante vê o glifo
+        linhas = [l for l in q.get("texto", []) if len(l) >= minimo and not re.fullmatch(r"[a-z]+(?:_[a-z]+)+", l)]
         fora = [l for l in linhas if _norm(l) not in base]
         total += len(linhas)
         achadas += len(linhas) - len(fora)

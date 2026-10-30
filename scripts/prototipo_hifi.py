@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -61,11 +62,15 @@ def fechar(ws: Path, sessao: Path, relatorios: list[dict], segundos: float) -> d
             return ferramentas.capturar(ws, q["id"], q["estado"], final["html"])
         with ThreadPoolExecutor(max_workers=4) as pool:
             capturas = list(pool.map(cap, missao["quadros"]))
-    corpus = "\n".join((ws / "insumos" / n).read_text(encoding="utf-8") for n in os.listdir(ws / "insumos"))
+    corpus = "\n".join((ws / "insumos" / n).read_text(encoding="utf-8") for n in sorted(os.listdir(ws / "insumos")))
     texto = ferramentas.rastrear_texto(audit.get("quadros", []), corpus)
     lint_estatico = ferramentas.lint(ws)
-    # o lint do protótipo da esteira lê o HTML: aqui os quadros nascem no navegador, então ele lê o DOM da auditoria
-    dom = "".join(f'<div data-screen-id="{q["id"]}" data-estado="{q["estado"]}">{" ".join(q["texto"])}</div>'
+    lacunas = ferramentas.lacunas(audit.get("quadros", []))
+    sem_fonte = ferramentas.identificadores_sem_fonte(audit.get("quadros", []), corpus)
+    # o lint do protótipo da esteira lê o HTML: aqui os quadros nascem no navegador, então ele lê o DOM da
+    # auditoria. A `[[LACUNA: …]]` é declarada de propósito e vai listada à parte: para o lint ela seria rascunho.
+    dom = "".join(f'<div data-screen-id="{q["id"]}" data-estado="{q["estado"]}">'
+                  + re.sub(r"\[\[LACUNA[^\]]*\]\]", "", " ".join(q["texto"])) + "</div>"
                   for q in audit.get("quadros", []) if not q["faltando"] and not q["erro"])
     lint_esteira = lint_prototipo.validar("<html><body>" + dom + "</body></html>",
                                           sorted({q["id"] for q in missao["quadros"]}))
@@ -75,6 +80,8 @@ def fechar(ws: Path, sessao: Path, relatorios: list[dict], segundos: float) -> d
               "com_erro": audit.get("com_erro", []), "lint_estatico": lint_estatico["achados"],
               "lint_esteira": {"status": lint_esteira.get("status"), "achados": lint_esteira.get("achados", [])},
               "texto_rastreavel_pct": texto["percentual"], "linhas_de_texto": texto["linhas"],
+              "lacunas": lacunas, "identificadores_sem_fonte": sem_fonte,
+              "modelo": next((r.get("modelo") for r in relatorios if r.get("modelo")), "?"),
               "segundos": round(segundos), "uso": uso,
               "lotes": [{k: r.get(k) for k in ("lote", "aprovado", "rodadas", "segundos", "uso", "gates", "erro")} for r in relatorios],
               "capturas": sum(1 for c in capturas if c.get("ok"))}
@@ -103,13 +110,18 @@ def _relatorio_md(ws: Path, sessao: Path, r: dict, texto: dict) -> None:
               f"- Build final: {'ok' if r['build_final'] else 'FALHOU'} · {r['kb']} KB",
               f"- Faltando: {len(r['faltando'])} · com erro de montagem: {len(r['com_erro'])} · achados de lint: {len(r['lint_estatico'])}",
               f"- Lint do protótipo da esteira: {r['lint_esteira']['status']}",
+              f"- Modelo: {r['modelo']}",
+              f"- Identificadores sem fonte nos insumos: {len(r['identificadores_sem_fonte'])}"
+              + (f" ({', '.join(r['identificadores_sem_fonte'][:10])})" if r['identificadores_sem_fonte'] else ""),
+              f"- Lacunas declaradas pelo agente: {len(r['lacunas'])}",
               f"- Texto visível rastreável aos documentos: {r['texto_rastreavel_pct']}% de {r['linhas_de_texto']} linhas",
               f"- Tempo total: {r['segundos'] // 60} min · tokens: {r['uso']['total']:,} (saída {r['uso']['saida']:,}, pensamento {r['uso']['pensamento']:,}, cache {r['uso']['cache']:,})",
               "", "## Lotes", "", "| Lote | Aprovado | Rodadas | Tempo | Tokens |", "|---|---|---|---|---|"]
     for l in r["lotes"]:
         linhas.append(f"| {l.get('lote')} | {'sim' if l.get('aprovado') else 'não'} | {l.get('rodadas')} | "
                       f"{(l.get('segundos') or 0) // 60} min | {(l.get('uso') or {}).get('total', 0):,} |")
-    for titulo, itens in (("Faltando", r["faltando"]), ("Erro de montagem", r["com_erro"]),
+    for titulo, itens in (("Lacunas declaradas (decisões que faltam nos documentos)", r["lacunas"]),
+                          ("Faltando", r["faltando"]), ("Erro de montagem", r["com_erro"]),
                           ("Lint", [f"{a['arquivo']}: {a['codigo']} `{a['trecho']}`" for a in r["lint_estatico"]])):
         if itens:
             linhas += ["", f"## {titulo}", ""] + [f"- {i}" for i in itens]
@@ -126,6 +138,7 @@ def main() -> None:
     ap.add_argument("--sessao", required=True)
     ap.add_argument("--destino", required=True)
     ap.add_argument("--ds", required=True, help="raiz do pacote @unooria/design-system (storybook-unooria)")
+    ap.add_argument("--plataforma", default=None, help="raiz do monorepo plataforma-unooria (referências e ponte @edu/ui)")
     ap.add_argument("--paralelo", type=int, default=3)
     ap.add_argument("--modelo", default=None)
     ap.add_argument("--pular-fundacao", action="store_true", help="a fundação já rodou neste workspace")
@@ -135,7 +148,7 @@ def main() -> None:
     sessao, ws = Path(a.sessao).resolve(), Path(a.destino).resolve()
     t0 = time.time()
     if not (ws / "dados" / "missao.json").exists():
-        montar_workspace(sessao, ws, a.ds)
+        montar_workspace(sessao, ws, a.ds, a.plataforma)
     missao = json.loads((ws / "dados" / "missao.json").read_text(encoding="utf-8"))
     plano = lotes(missao)
     relatorios: list[dict] = []

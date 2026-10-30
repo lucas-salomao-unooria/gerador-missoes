@@ -85,7 +85,7 @@ def _ws_com_tela(tmp_path: Path, fonte: str, nome: str = "E2-ALU-01.tsx") -> Pat
 
 
 def test_lint_aceita_tela_so_com_ds_e_tokens(tmp_path):
-    ws = _ws_com_tela(tmp_path, 'import React from "react";\nimport { Button } from "@unooria/design-system/unooriaai";\n'
+    ws = _ws_com_tela(tmp_path, 'import React from "react";\nimport { Button } from "@edu/ui/ds-unooriaai";\n'
                                 'import { JanelaUnooriaAI } from "./_comum";\n'
                                 'export const estados = { "padrão": () => <div style={{ background: "var(--uai-color-bg)" }}><Button /></div> };\n')
     assert ferramentas.lint(ws) == {"ok": True, "achados": []}
@@ -169,3 +169,40 @@ def test_quadro_leva_a_secao_e_a_missao_leva_os_temas(tmp_path):
     m = dados_da_missao(_sessao(tmp_path), ["unooria", "unooriaai"])
     assert {(q["id"], q["secao"]) for q in m["quadros"]} == {("E0-PROF-01", "unooria"), ("E2-ALU-01", "unooriaai"), ("E2-SIS-01", "unooriaai")}
     assert m["temas"]["whatsappmobile"] == ("data-wa-theme", "dark")
+
+
+def test_lint_reprova_import_direto_do_ds_e_arquivo_fora_do_contrato(tmp_path):
+    ws = _ws_com_tela(tmp_path, 'import { Button } from "@unooria/design-system/unooriaai";\nexport const estados = {};\n')
+    (ws / "telas" / "teste-pb.tsx").write_text("export {};\n", encoding="utf-8")
+    assert {a["codigo"] for a in ferramentas.lint(ws)["achados"]} == {"import-direto-do-ds", "arquivo-fora-do-contrato"}
+
+
+def test_lint_do_css_da_missao_exige_token_e_escopo(tmp_path):
+    (tmp_path / "estilos").mkdir()
+    (tmp_path / "estilos" / "missao.css").write_text(
+        "/* #fff em comentário não conta */\n"
+        ".hifi-experiencia .uai-tela, .hifi-hub .x { background: var(--uai-bg-primary, #fff); gap: 8px; }\n"
+        ".app { color: #222; }\n@keyframes pulso { from { opacity: 0 } to { opacity: 1 } }\n", encoding="utf-8")
+    achados = [(a["codigo"], a["trecho"]) for a in ferramentas.lint(tmp_path)["achados"]]
+    assert achados == [("cor-escrita-a-mao", "#222"), ("seletor-sem-escopo", ".app")]
+
+
+def test_identificador_com_cara_de_documento_precisa_estar_nos_insumos():
+    quadros = [{"texto": ["Protocolo: CMAS-2026-EXP09", "Autos: 2026/09-EF", "Prazo 14/02/2026 09:41", "Código DOSSIE-9EF"]}]
+    assert ferramentas.identificadores_sem_fonte(quadros, "o código da turma é DOSSIE-9EF") == [
+        "CMAS-2026-EXP09", "2026/09-EF", "14/02/2026", "09:41"]
+
+
+def test_lacunas_visiveis_sao_listadas_uma_vez():
+    quadros = [{"texto": ["[[LACUNA: código da turma]]", "x"]}, {"texto": ["[[LACUNA: código da turma]]"]}]
+    assert ferramentas.lacunas(quadros) == ["código da turma"]
+
+
+def test_estado_com_barra_ou_crase_dentro_de_parenteses_e_um_estado_so():
+    from tools import telas
+    jornada = ("## Seção 3 — Inventário de telas\n\n| ID | Etapa | Estados |\n|---|---|---|\n"
+               "| `E2-ALU-02` | 2 | processando OCR (0.8s / 1.2s) · dados incorporados |\n"
+               "| `E2-SIS-01` | 2 | visualização normal · `ERRO_MIDIA_FALHOU` (extrato texto) |\n")
+    estados = {t["id"]: t["estados"] for t in telas.inventario(jornada)["telas"]}
+    assert estados == {"E2-ALU-02": ["processando OCR (0.8s / 1.2s)", "dados incorporados"],
+                       "E2-SIS-01": ["visualização normal", "ERRO_MIDIA_FALHOU (extrato texto)"]}

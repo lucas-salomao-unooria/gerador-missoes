@@ -17,10 +17,13 @@ import "./gerado/estilos";
 import missao from "./dados/missao.json";
 import { telas } from "./gerado/registro";
 import { MissaoContexto, type Missao } from "./casca-api";
+import { CascaEstudante } from "./plataforma";
 
 type Quadro = {
   id: string; estado: string; etapa: string; ator: string; ambiente: string; secao: string; proposito: string;
   acao: string; resultado: string; largura: number; altura: number;
+  /** Altura do quadro inteiro: a do estudante soma o header do hub, que fica acima da área do iframe. */
+  altura_total: number;
 };
 /** Atributo de tema de cada seção do DS (`data-insta-theme`…) e o valor: o WhatsApp é só escuro. */
 const TEMAS: Record<string, [string, string]> = (missao as any).temas || {};
@@ -63,14 +66,22 @@ class Limite extends React.Component<{ q: Quadro; children: React.ReactNode }, {
   }
 }
 
+function conteudo(q: Quadro, C: React.FC | null) {
+  return C ? <Limite q={q}><C /></Limite> : <div className="hifi-faltando">{q.id} · {q.estado}<br />tela ainda não gerada</div>;
+}
+
 function Quadro({ q }: { q: Quadro }) {
   const C = componente(q);
   const tema = TEMAS[q.secao];
   return (
     <div className="hifi-quadro" data-screen-id={q.id} data-estado={q.estado} data-secao={q.secao}
-         data-faltando={C ? undefined : "sim"} {...(tema ? { [tema[0]]: tema[1] } : {})}
-         style={{ width: q.largura, height: q.altura }}>
-      {C ? <Limite q={q}><C /></Limite> : <div className="hifi-faltando">{q.id} · {q.estado}<br />tela ainda não gerada</div>}
+         data-faltando={C ? undefined : "sim"} style={{ width: q.largura, height: q.altura_total }}>
+      {q.ator === "PROF" ? conteudo(q, C) : (
+        // o estudante vê a missão como em `/exp/[expId]`: o header do hub em cima, a experiência embaixo
+        <CascaEstudante>
+          <div className="hifi-experiencia" {...(tema ? { [tema[0]]: tema[1] } : {})}>{conteudo(q, C)}</div>
+        </CascaEstudante>
+      )}
     </div>
   );
 }
@@ -82,7 +93,7 @@ function Palco({ q }: { q: Quadro }) {
     const medir = () => {
       const el = caixa.current;
       if (!el) return;
-      setEscala(Math.min(1, (el.clientWidth - 32) / q.largura, (el.clientHeight - 48) / q.altura));
+      setEscala(Math.min(1, (el.clientWidth - 32) / q.largura, (el.clientHeight - 48) / q.altura_total));
     };
     medir();
     window.addEventListener("resize", medir);
@@ -90,10 +101,10 @@ function Palco({ q }: { q: Quadro }) {
   }, [q]);
   return (
     <div className="hifi-palco" ref={caixa}>
-      <div style={{ width: q.largura * escala, height: q.altura * escala }}>
+      <div style={{ width: q.largura * escala, height: q.altura_total * escala }}>
         <div style={{ transform: `scale(${escala})`, transformOrigin: "top left" }}><Quadro key={`${q.id}|${q.estado}`} q={q} /></div>
       </div>
-      <div className="hifi-legenda">{q.ator === "PROF" ? "janela do hub" : "experiência no hub"}, {q.largura}×{q.altura} · as telas respondem a clique: jogue a missão</div>
+      <div className="hifi-legenda">{q.ator === "PROF" ? "janela do hub" : "experiência dentro do hub (área do iframe)"}, {q.largura}×{q.altura} · as telas respondem a clique: jogue a missão</div>
     </div>
   );
 }

@@ -34,6 +34,28 @@ ETAPAS_FORA = {"6"}
 #: do estudante é a área útil do iframe do hub.
 TAMANHO_PADRAO = {"PROF": (1366, 768), "ALU": (1024, 768), "SIS": (1024, 768)}
 _RE_MEDIDA = re.compile(r"(\d{3,4})\s*[×x]\s*(\d{3,4})")
+#: O header do hub acima da área do iframe (`apps/hub/components/header-plataforma.tsx`: h-16 + borda).
+ALTURA_HEADER_HUB = 65
+#: Onde mora o código da plataforma nesta máquina; no Job, o preparo baixa o repositório.
+PLATAFORMA_PADRAO = Path("/Volumes/Documentos/Unooria/plataforma-unooria")
+#: Referências da cara do hub para as telas do professor, relativas a `apps/hub/` da plataforma.
+REFERENCIAS_HUB = (
+    "components/header-plataforma.tsx", "components/casca-plataforma.tsx", "components/menu-da-conta.tsx",
+    "components/trilha.tsx", "components/cartao-missao.tsx", "components/cartao-atividade.tsx",
+    "components/instrucao-da-experiencia.tsx", "app/(plataforma)/professor/layout.tsx",
+    "app/(plataforma)/professor/page.tsx", "app/(plataforma)/professor/entre-redes/[ano]/[unidade]/page.tsx",
+    "app/(plataforma)/professor/entre-redes/[ano]/[unidade]/atividades-da-missao.tsx",
+    "app/(plataforma)/professor/atividades/nova/page.tsx",
+    "app/(plataforma)/professor/atividades/nova/formulario-atividade.tsx",
+    "app/(plataforma)/professor/atividades/[id]/page.tsx",
+    "app/(plataforma)/professor/atividades/[id]/painel-revisao.tsx",
+    "app/(plataforma)/professor/atividades/[id]/painel-etapas.tsx",
+    "app/(plataforma)/professor/atividades/[id]/painel-progresso.tsx",
+)
+#: Regras de DS e de experiência da plataforma, relativas à raiz do monorepo.
+REFERENCIAS_REGRAS = ("docs/regras/design-system.md", "packages/ui/AGENTS.md", "packages/ui/styles/AGENTS.md",
+                      "apps/experiencias/AGENTS.md", "apps/experiencias/_template/src/App.tsx",
+                      "apps/experiencias/_template/src/estilos/globals.css")
 #: Atributo de tema de cada seção do DS, lido dos tokens do pacote 0.2.26. O WhatsApp só tem o escuro;
 #: `unooria` e `tiktooria` não usam atributo. Seção nova sem entrada aqui abre no tema padrão dela.
 TEMAS = {
@@ -113,7 +135,10 @@ def dados_da_missao(sessao: Path, secoes: Optional[List[str]] = None) -> Dict[st
         ator = t["ator"].strip().upper()
         largura, altura = (int(medida.group(1)), int(medida.group(2))) if medida else TAMANHO_PADRAO.get(ator, (1024, 768))
         for estado in t["estados"] or ["padrão"]:
+            # o estudante vê a missão dentro do hub: o quadro soma o header acima da área do iframe
+            altura_total = altura + (0 if ator == "PROF" else ALTURA_HEADER_HUB)
             quadros.append({"id": t["id"], "estado": estado, "etapa": t["etapa"].strip(), "ator": ator,
+                            "altura_total": altura_total,
                             "ambiente": t["ambiente"],
                             "secao": secao_do_ambiente(t["ambiente"], secoes or list(TEMAS) + ["unooria"]),
                             "proposito": _coluna(d, "proposito"),
@@ -132,7 +157,52 @@ def _ligar(origem: Path, destino: Path) -> None:
     destino.symlink_to(origem)
 
 
-def montar_workspace(sessao: str | Path, destino: str | Path, ds: str | Path) -> Path:
+def _copiar(origem: Path, destino: Path) -> None:
+    if origem.is_dir():
+        shutil.copytree(origem, destino, dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns("node_modules", "dist", ".turbo", "*.test.*", "*.map"))
+    elif origem.exists():
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(origem, destino)
+
+
+def _experiencias_de_referencia(plataforma: Path, secoes: List[str], excluir: str) -> Dict[str, List[str]]:
+    """Por seção, as experiências codadas que importam a ponte dela — o padrão que a missão nova deve seguir.
+
+    A missão que está sendo prototipada fica de fora: copiar o código dela seria responder à prova com o gabarito.
+    """
+    raiz = plataforma / "apps" / "experiencias"
+    achadas: Dict[str, List[str]] = {s: [] for s in secoes}
+    # missão primeiro (`exp*`), depois os outros produtos (`app-*`): a referência é como uma MISSÃO se parece
+    for exp in sorted(raiz.iterdir(), key=lambda p: (not p.name.startswith("exp"), p.name)) if raiz.exists() else []:
+        if not exp.is_dir() or exp.name.startswith(("_", "backup")) or exp.name == excluir or not (exp / "src").exists():
+            continue
+        fonte = "\n".join(p.read_text(encoding="utf-8", errors="ignore") for p in (exp / "src").rglob("*.tsx"))
+        for s in secoes:
+            ponte = next((k for k, v in {"ds": "unooria", "ds-insta": "instanooria", "ds-whatsapp": "whatsappmobile"}.items()
+                          if v == s), f"ds-{s}")
+            if re.search(rf"""["']@edu/ui/{re.escape(ponte)}["']""", fonte):
+                achadas[s].append(exp.name)
+    return achadas
+
+
+def montar_referencias(ws: Path, plataforma: Path, secoes: List[str], excluir: str) -> Dict[str, Any]:
+    """`referencias/`: regras, a cara do hub e as experiências codadas que usam as mesmas seções. Só leitura."""
+    ref = ws / "referencias"
+    for rel in REFERENCIAS_REGRAS:
+        _copiar(plataforma / rel, ref / "regras" / rel.replace("/", "__"))
+    for rel in REFERENCIAS_HUB:
+        _copiar(plataforma / "apps" / "hub" / rel, ref / "hub" / rel)
+    por_secao = _experiencias_de_referencia(plataforma, secoes, excluir)
+    for nomes in por_secao.values():
+        for nome in nomes[:4]:
+            _copiar(plataforma / "apps" / "experiencias" / nome / "src", ref / "experiencias" / nome / "src")
+            _copiar(plataforma / "apps" / "experiencias" / nome / "AGENTS.md", ref / "experiencias" / nome / "AGENTS.md")
+    return {"experiencias_por_secao": {s: v[:4] for s, v in por_secao.items()}, "excluida": excluir}
+
+
+def montar_workspace(sessao: str | Path, destino: str | Path, ds: str | Path,
+                     plataforma: Optional[str | Path] = None) -> Path:
     """Monta o projeto em que o agente trabalha. `ds` é a raiz do pacote do DS (com `dist/`, `src/` e `node_modules/`).
 
     O DS e o React entram por link simbólico: o build resolve `@unooria/design-system/<seção>` pelos
@@ -140,9 +210,9 @@ def montar_workspace(sessao: str | Path, destino: str | Path, ds: str | Path) ->
     """
     sessao, ws, ds = Path(sessao), Path(destino), Path(ds).resolve()
     ws.mkdir(parents=True, exist_ok=True)
-    for nome in ("casca.tsx", "casca-api.tsx", "interagir.mjs", "AGENTS.md", "tsconfig.json"):
+    for nome in ("casca.tsx", "casca-api.tsx", "plataforma.tsx", "interagir.mjs", "AGENTS.md", "tsconfig.json"):
         shutil.copy(MODELO / nome, ws / nome)
-    for pasta in ("telas", "dados", "insumos", "capturas", "assets", ".build"):
+    for pasta in ("telas", "dados", "insumos", "capturas", "assets", "estilos", "referencias", ".build"):
         (ws / pasta).mkdir(exist_ok=True)
     for rel in INSUMOS:
         if (sessao / rel).exists():
@@ -152,6 +222,24 @@ def montar_workspace(sessao: str | Path, destino: str | Path, ds: str | Path) ->
     pacote = pacote_do_ds(ws)
     dados = dados_da_missao(sessao, pacote["secoes"])
     dados["ds"] = {"versao": pacote["versao"], "secoes": pacote["secoes"]}
+    plataforma = Path(plataforma) if plataforma else PLATAFORMA_PADRAO
+    if plataforma.exists():
+        # a ponte `@edu/ui` é COPIADA (não ligada): ligada, os imports dela resolveriam no node_modules do
+        # pnpm da plataforma e o bundle levaria um segundo React e um segundo DS
+        for parte in ("package.json", "src", "styles"):
+            _copiar(plataforma / "packages" / "ui" / parte, ws / "node_modules" / "@edu" / "ui" / parte)
+        # o pacote do Tailwind do hub (o real, não o shim do pnpm: ele acha o `cli.js` relativo a si mesmo)
+        tailwind = plataforma / "apps" / "hub" / "node_modules" / "tailwindcss"
+        if tailwind.exists():
+            _ligar(tailwind.resolve(), ws / "node_modules" / "tailwindcss")
+        (ws / "tailwind.config.cjs").write_text(
+            "// O Tailwind do hub (apps/hub/tailwind.config.ts): só utilitárias de layout. Sem preflight: a\n"
+            "// experiência é um iframe e não o recebe; o reset do chrome do hub está na casca (.hifi-hub).\n"
+            f"module.exports = {{ content: [{json.dumps(str(ws / 'telas') + '/**/*.tsx')}, "
+            f"{json.dumps(str(ws / 'plataforma.tsx'))}], theme: {{ extend: {{}} }}, "
+            "corePlugins: { preflight: false }, plugins: [] };\n", encoding="utf-8")
+        secoes_missao = sorted({q["secao"] for q in dados["quadros"]})
+        dados["referencias"] = montar_referencias(ws, plataforma, secoes_missao, dados["missao"])
     (ws / "dados" / "missao.json").write_text(json.dumps(dados, ensure_ascii=False, indent=1), encoding="utf-8")
     for pacote in ("react", "react-dom", "scheduler", "playwright-core"):
         _ligar(ds / "node_modules" / pacote, ws / "node_modules" / pacote)
