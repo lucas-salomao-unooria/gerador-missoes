@@ -1933,6 +1933,7 @@ document.getElementById("abrir").onclick = async () => {{
 
 def render_prototipo_hifi(output_path: Path, prefix: str) -> None:
     """O protótipo em alta fidelidade da sessão: abrir numa guia nova, baixar, ou gerar (`tools/prototipo_hifi`)."""
+    from tools.custo import brl as brl_custo
     from tools.prototipo_hifi import no_gerador as hifi
 
     st.markdown("#### 🖥️ Protótipo em alta fidelidade")
@@ -1941,7 +1942,8 @@ def render_prototipo_hifi(output_path: Path, prefix: str) -> None:
         r = hifi.resumo(output_path) or {}
         st.caption(
             f"{r.get('telas', '?')} telas · {r.get('quadros', '?')} estados · modelo `{r.get('modelo', '?')}` · "
-            f"{r.get('kb', 0) / 1024:.1f} MB · lacunas declaradas: {len(r.get('lacunas', []))}. "
+            f"{r.get('kb', 0) / 1024:.1f} MB · lacunas declaradas: {len(r.get('lacunas', []))}"
+            + (f" · custo {brl_custo(r['custo']['brl'])} (US$ {r['custo']['usd']:.2f})" if r.get("custo") else "") + ". "
             "Feito com o Design System real e a casca do hub: dá para jogar a missão clicando nas telas."
         )
         html = hifi.pasta(output_path) / "prototipo.html"

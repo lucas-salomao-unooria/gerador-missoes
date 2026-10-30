@@ -249,3 +249,29 @@ def test_geracao_que_parou_sem_publicar_mostra_o_fim_do_log(tmp_path):
     (hifi.pasta(sessao) / "execucao.json").write_text(json.dumps({"pid": 999999, "workspace": str(tmp_path), "log": str(log)}))
     assert hifi.em_andamento(sessao) is None
     assert "cota esgotada" in hifi.falhou(sessao)
+
+
+def test_custo_da_geracao_soma_lotes_pelo_modelo_e_as_imagens(monkeypatch, tmp_path):
+    from datetime import date
+    from tools import custo
+    from tools.prototipo_hifi import no_gerador as hifi
+
+    monkeypatch.setenv("COTACAO_USD_BRL", "5")
+    monkeypatch.setattr(custo, "date", type("D", (date,), {"today": staticmethod(lambda: date(2026, 11, 2))}))
+    relatorios = [
+        {"lote": "fundacao", "modelo": "gemini-4-argon", "imagens": ["a", "b"],
+         "uso": {"prompt": 1_000_000, "cache": 800_000, "saida": 50_000, "pensamento": 50_000}},
+        {"lote": "etapa-2", "modelo": "padrão do SDK", "imagens": [],
+         "uso": {"prompt": 2_000_000, "cache": 2_000_000, "saida": 0, "pensamento": 0}},
+    ]
+    linha = hifi.custo_da_geracao(relatorios)
+    # Argon: 0,2M cheia × 2 + 0,8M cache × 0,10 + 0,1M saída × 10 = 1,48; Flash: 2M cache × 0,075 = 0,15; imagens 2 × 0,0336
+    assert linha["usd"] == round(1.48 + 0.15 + 0.0672, 4) and linha["brl"] == round(linha["usd"] * 5, 2)
+    assert linha["modelos_sem_preco"] == [] and linha["imagens"] == {"quantidade": 2, "usd": 0.0672}
+
+    (tmp_path / "estado.json").write_text(json.dumps({"custo_missao": {"execucoes": [{"etapas": ["produto"], "usd": 4.0, "brl": 20.0,
+                                                                                   "tokens": {"entrada": 10}}]}}))
+    hifi.registrar_custo(tmp_path, relatorios)
+    total = json.loads((tmp_path / "estado.json").read_text())["custo_missao"]
+    assert [l["etapas"] for l in total["execucoes"]] == [["produto"], ["prototipo-hifi"]]
+    assert total["total"]["usd"] == round(4.0 + linha["usd"], 4)

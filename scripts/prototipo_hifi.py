@@ -31,6 +31,7 @@ from dotenv import load_dotenv  # noqa: E402
 
 from tools import prototipo as lint_prototipo  # noqa: E402
 from tools.prototipo_hifi import ferramentas, lotes, montar_workspace  # noqa: E402
+from tools.prototipo_hifi.no_gerador import custo_da_geracao  # noqa: E402
 
 PYTHON_MOTOR = RAIZ / ".venv-antigravity" / "bin" / "python"
 MOTOR = RAIZ / "tools" / "prototipo_hifi" / "motor_antigravity.py"
@@ -84,6 +85,7 @@ def fechar(ws: Path, sessao: Path, relatorios: list[dict], segundos: float) -> d
               "lacunas": lacunas, "identificadores_sem_fonte": sem_fonte,
               "modelo": next((r.get("modelo") for r in relatorios if r.get("modelo")), "?"),
               "segundos": round(segundos), "uso": uso,
+              "custo": {k: v for k, v in custo_da_geracao(relatorios).items() if k in ("usd", "brl", "cotacao", "imagens")},
               "lotes": [{k: r.get(k) for k in ("lote", "aprovado", "rodadas", "segundos", "uso", "gates", "erro")} for r in relatorios],
               "capturas": sum(1 for c in capturas if c.get("ok"))}
     (ws / "relatorios").mkdir(exist_ok=True)
@@ -116,6 +118,8 @@ def _relatorio_md(ws: Path, sessao: Path, r: dict, texto: dict) -> None:
               + (f" ({', '.join(r['identificadores_sem_fonte'][:10])})" if r['identificadores_sem_fonte'] else ""),
               f"- Lacunas declaradas pelo agente: {len(r['lacunas'])}",
               f"- Texto visível rastreável aos documentos: {r['texto_rastreavel_pct']}% de {r['linhas_de_texto']} linhas",
+              f"- Custo: US$ {r['custo']['usd']:.2f} · R$ {r['custo']['brl']:.2f} "
+              f"({r['custo']['imagens']['quantidade']} imagens, US$ {r['custo']['imagens']['usd']:.2f})",
               f"- Tempo total: {r['segundos'] // 60} min · tokens: {r['uso']['total']:,} (saída {r['uso']['saida']:,}, pensamento {r['uso']['pensamento']:,}, cache {r['uso']['cache']:,})",
               "", "## Lotes", "", "| Lote | Aprovado | Rodadas | Tempo | Tokens |", "|---|---|---|---|---|"]
     for l in r["lotes"]:
@@ -192,6 +196,11 @@ def main() -> None:
     resumo = fechar(ws, sessao, relatorios, time.time() - t0)
     if a.publicar:
         publicar(ws, Path(a.publicar))
+        # o custo entra na missão: a sessão é a mãe de `<sessão>/design/hifi`
+        from tools.prototipo_hifi.no_gerador import registrar_custo
+        linha = registrar_custo(Path(a.publicar).parents[1], relatorios)
+        if linha:
+            print(f"custo somado à missão: US$ {linha['usd']:.2f} · R$ {linha['brl']:.2f}", flush=True)
     print(json.dumps({k: resumo[k] for k in ("build_final", "kb", "capturas", "texto_rastreavel_pct")} |
                      {"faltando": len(resumo["faltando"]), "com_erro": len(resumo["com_erro"]),
                       "lint": len(resumo["lint_estatico"]), "tokens": resumo["uso"]["total"]}, ensure_ascii=False))

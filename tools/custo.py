@@ -30,7 +30,12 @@ PRECOS: Dict[str, List[Tuple[Optional[date], float, float, float]]] = {
     "gemini-3.8-flash": [(date(2026, 12, 31), 0.75, 3.75, 0.075), (None, 1.50, 7.50, 0.15)],
     "gemini-3.6-flash": [(date(2026, 12, 31), 0.75, 3.75, 0.075), (None, 1.50, 7.50, 0.15)],
     "gemini-3-flash-preview": [(None, 0.50, 3.00, 0.05)],
+    # o modelo do agente de código do protótipo hi-fi (tools/prototipo_hifi); tabela consultada em 30/10/2026
+    "gemini-4-argon": [(date(2026, 11, 30), 2.00, 10.00, 0.10), (None, 4.00, 20.00, 0.20)],
 }
+
+#: US$ por imagem gerada, na resolução 1K (as do protótipo hi-fi são reduzidas depois, mas saem do modelo em 1K).
+PRECO_IMAGEM: Dict[str, float] = {"gemini-3.1-flash-lite-image": 0.0336}
 
 logger = logging.getLogger(__name__)
 

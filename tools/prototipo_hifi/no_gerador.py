@@ -32,6 +32,8 @@ DS_PADRAO = os.getenv("PROTOTIPO_HIFI_DS", "/Volumes/Documentos/Unooria/storyboo
 PLATAFORMA_PADRAO = os.getenv("PROTOTIPO_HIFI_PLATAFORMA", "/Volumes/Documentos/Unooria/plataforma-unooria")
 PYTHON_MOTOR = RAIZ / ".venv-antigravity" / "bin" / "python"
 MODELOS = ("gemini-4-argon", "gemini-3.8-flash")
+#: O `DEFAULT_MODEL` do google-antigravity 0.1.23, para relatórios que não gravaram o nome.
+MODELO_PADRAO_SDK = "gemini-3.8-flash"
 
 
 def pasta(sessao: str | Path) -> Path:
@@ -111,6 +113,48 @@ def iniciar(sessao: str | Path, modelo: str = MODELOS[0]) -> Dict[str, Any]:
             "workspace": str(ws), "log": str(log)}
     (destino / "execucao.json").write_text(json.dumps(info, ensure_ascii=False, indent=1), encoding="utf-8")
     return info
+
+
+def custo_da_geracao(relatorios: list) -> Dict[str, Any]:
+    """Uma linha de `custo_missao` para a geração: tokens de cada lote pelo modelo dele, mais as imagens geradas.
+
+    O relatório do lote guarda o uso do SDK (`prompt`, `cache`, `saida`, `pensamento`); `prompt` já inclui a parte
+    em cache, como a `entrada` do `tools/custo`. O lote que rodou no modelo padrão grava «<modelo> (padrão do SDK)».
+    """
+    from tools.custo import PRECO_IMAGEM, cotacao_usd_brl, custo_da_execucao
+
+    por_lote, modelos = {}, {}
+    imagens = 0
+    for r in relatorios:
+        uso = r.get("uso") or {}
+        chave = f"hifi:{r.get('lote', '?')}"
+        por_lote[chave] = {"entrada": uso.get("prompt", 0), "cache": uso.get("cache", 0), "saida": uso.get("saida", 0),
+                           "pensamento": uso.get("pensamento", 0), "chamadas": len(r.get("chamadas") or [])}
+        modelo = str(r.get("modelo") or "").split(" ")[0]
+        # relatório anterior a 30/10/2026 gravava só «padrão do SDK»: o padrão do google-antigravity 0.1.23
+        modelos[chave] = MODELO_PADRAO_SDK if modelo in ("", "padrão") else modelo
+        imagens += len(r.get("imagens") or [])
+    linha = custo_da_execucao(por_lote, next(iter(modelos.values()), ""), modelos)
+    usd_imagens = imagens * PRECO_IMAGEM["gemini-3.1-flash-lite-image"]
+    cotacao = linha.get("cotacao") or cotacao_usd_brl()[0]
+    linha["usd"] = round(linha["usd"] + usd_imagens, 4)
+    linha["brl"] = round(linha["usd"] * cotacao, 2)
+    linha["imagens"] = {"quantidade": imagens, "usd": round(usd_imagens, 4)}
+    return linha
+
+
+def registrar_custo(sessao: str | Path, relatorios: list) -> Optional[Dict[str, Any]]:
+    """Soma a geração ao `custo_missao` do `estado.json` da sessão, como mais uma execução (etapa `prototipo-hifi`)."""
+    from tools.custo import KEY_CUSTO, acumular
+
+    caminho = Path(sessao) / "estado.json"
+    if not caminho.exists() or not relatorios:
+        return None
+    linha = custo_da_geracao(relatorios)
+    estado = json.loads(caminho.read_text(encoding="utf-8"))
+    estado[KEY_CUSTO] = acumular(estado.get(KEY_CUSTO), linha, ["prototipo-hifi"])
+    caminho.write_text(json.dumps(estado, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+    return linha
 
 
 def html_comprimido(sessao: str | Path) -> str:
