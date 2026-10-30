@@ -45,6 +45,12 @@ Sua pergunta: **o que falta de UI/UX para D1–D8 construírem sem devolver — 
 
 <!-- include: references/celulas-consumidas.md -->
 
+## Ficha de interação — a fonte da tela (seção 4 do one-pager)
+
+Desde 29/10/2026 a seção 4 do one-pager (dentro do one-pager e do conteúdo aprovado que você recebe) traz cada etapa momento a momento: `#### Momento E.k — <quem faz o quê>`, com **Quem age · Só para quem · Na tela · Opções (n) · Gesto · Resposta na hora · Se não fizer · Se errar · Libera · Fica registrado · Texto de tela**. É o contrato de interação de produto: o que aparece, quantos itens, que gesto e quantas vezes, o que muda na hora, o que a tela faz se o estudante não age, o que abre o momento seguinte e o texto exato. **O resumo 0.2 do one-pager é leitura para o time — quando ele e a ficha divergem, vale a ficha.** Campo que falta ou se contradiz é de produto: `[ABERTO — dono: PO: Momento E.k, <campo>]`, nunca decisão sua. One-pager antigo, sem fichas: a seção 4 em prosa continua sendo a fonte, como antes.
+
+Campo da ficha de interação (Na tela, Opções, Gesto, Resposta na hora, Se não fizer, Libera, Texto de tela, a ordem dos momentos) é de produto mesmo quando falta: `[ABERTO — dono: PO]`, nunca preenchimento seu.
+
 ## O limite da sua autoridade
 
 **Você preenche AUSÊNCIAS de UI/UX. Nunca altera PRESENÇAS, e nunca decide produto.**

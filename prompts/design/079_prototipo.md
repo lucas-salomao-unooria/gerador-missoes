@@ -54,6 +54,12 @@ Sua pergunta: **um adulto que não acompanhou a esteira consegue percorrer a mis
 
 {brief_oficio?}
 
+## Ficha de interação — a fonte da tela (seção 4 do one-pager)
+
+Desde 29/10/2026 a seção 4 do one-pager (dentro do one-pager e do conteúdo aprovado que você recebe) traz cada etapa momento a momento: `#### Momento E.k — <quem faz o quê>`, com **Quem age · Só para quem · Na tela · Opções (n) · Gesto · Resposta na hora · Se não fizer · Se errar · Libera · Fica registrado · Texto de tela**. É o contrato de interação de produto: o que aparece, quantos itens, que gesto e quantas vezes, o que muda na hora, o que a tela faz se o estudante não age, o que abre o momento seguinte e o texto exato. **O resumo 0.2 do one-pager é leitura para o time — quando ele e a ficha divergem, vale a ficha.** Campo que falta ou se contradiz é de produto: `[ABERTO — dono: PO: Momento E.k, <campo>]`, nunca decisão sua. One-pager antigo, sem fichas: a seção 4 em prosa continua sendo a fonte, como antes.
+
+O rodapé de cada quadro mostra o `Momento E.k`, o gesto e o que destrava o próximo. O quadro respeita o estado inicial, o gesto, a quantidade e a resposta na hora da ficha. Texto visível que não está no sheet de copy nem na ficha não entra no quadro.
+
 ## O que você entrega
 
 **Um arquivo HTML único.** Sem etapa de compilação, sem dependência externa, sem fonte remota: abre com duplo clique, offline. **Não use `localStorage` nem `sessionStorage`** — o protótipo não guarda estado entre aberturas, e um `catch` em volta de armazenamento é ruído.

@@ -60,6 +60,12 @@ Rótulo nativo do ambiente é reproduzido **caractere a caractere**, nunca reesc
 - **Nada comparativo, nada cronometrado, nada que ordene.** Sem "melhor tempo", sem "você foi o mais rápido", sem posição. Isso é 🔴 por 8.5 e aparece primeiro na copy, antes de aparecer na tela.
 - Você **não nomeia fase que a spec não tem** nem inventa regra: a regra da fase é o texto da spec. Fase sem string é lacuna com dono `jornada`; regra ou fase nova é proposta ao PO, não string.
 
+## Ficha de interação — a fonte da tela (seção 4 do one-pager)
+
+Desde 29/10/2026 a seção 4 do one-pager (dentro do one-pager e do conteúdo aprovado que você recebe) traz cada etapa momento a momento: `#### Momento E.k — <quem faz o quê>`, com **Quem age · Só para quem · Na tela · Opções (n) · Gesto · Resposta na hora · Se não fizer · Se errar · Libera · Fica registrado · Texto de tela**. É o contrato de interação de produto: o que aparece, quantos itens, que gesto e quantas vezes, o que muda na hora, o que a tela faz se o estudante não age, o que abre o momento seguinte e o texto exato. **O resumo 0.2 do one-pager é leitura para o time — quando ele e a ficha divergem, vale a ficha.** Campo que falta ou se contradiz é de produto: `[ABERTO — dono: PO: Momento E.k, <campo>]`, nunca decisão sua. One-pager antigo, sem fichas: a seção 4 em prosa continua sendo a fonte, como antes.
+
+Todo «Texto de tela» da ficha entra no sheet palavra por palavra, com o `Momento E.k` na Nota. Texto que carrega a mecânica (dado, opção, pílula, fala que vira âncora) e que a ficha não traz não é escrito por você: é `[ABERTO — dono: PO]`.
+
 ## Calibragem por faixa (pisos de segurança ancorados na BNCC de Língua Portuguesa)
 
 | Faixa | Frase | Vocabulário | Estrutura | Leitura autônoma |

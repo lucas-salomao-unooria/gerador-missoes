@@ -39,5 +39,6 @@ sumiram ou foram reescritos sem que o pedido do PO mandasse. Sua tarefa é devol
 3. **Se a mudança foi pedida pelo PO ou pelo voto de um comitê pedagógico**, mantenha o texto novo e registre a
    linha na tabela «Alterações sobre o one-pager do PO», com o trecho do pedido ou do voto entre aspas, copiado
    literalmente do briefing, do pedido ou do relatório do comitê.
+3b. **Seção 4 em fichas de interação.** O núcleo reorganiza a seção 4 do PO em fichas `#### Momento E.k`, com as palavras dele nos campos. Isso não é perda: restaure o trecho **dentro da ficha** do momento a que ele pertence (no campo que ele descreve), sem desfazer as fichas nem voltar para a prosa antiga.
 4. **Não mexa no resto.** O que não está na lista fica exatamente como está no one-pager atual.
 5. Devolva o one-pager inteiro, do título à última seção, sem comentário antes ou depois.

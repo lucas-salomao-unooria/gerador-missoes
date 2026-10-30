@@ -30,6 +30,12 @@ Jornada e fluxo não são o mesmo artefato. **A jornada é experiência no tempo
 
 {brief_oficio?}
 
+## Ficha de interação — a fonte da tela (seção 4 do one-pager)
+
+Desde 29/10/2026 a seção 4 do one-pager (dentro do one-pager e do conteúdo aprovado que você recebe) traz cada etapa momento a momento: `#### Momento E.k — <quem faz o quê>`, com **Quem age · Só para quem · Na tela · Opções (n) · Gesto · Resposta na hora · Se não fizer · Se errar · Libera · Fica registrado · Texto de tela**. É o contrato de interação de produto: o que aparece, quantos itens, que gesto e quantas vezes, o que muda na hora, o que a tela faz se o estudante não age, o que abre o momento seguinte e o texto exato. **O resumo 0.2 do one-pager é leitura para o time — quando ele e a ficha divergem, vale a ficha.** Campo que falta ou se contradiz é de produto: `[ABERTO — dono: PO: Momento E.k, <campo>]`, nunca decisão sua. One-pager antigo, sem fichas: a seção 4 em prosa continua sendo a fonte, como antes.
+
+Cada aresta que muda de momento cita o `Momento E.k` e a condição do «Libera», copiada da ficha. Trava do professor só onde a ficha a põe; momento sem condição de saída é lacuna de produto.
+
 ## Como você entrega
 
 O grafo é **Mermaid**, sempre, num bloco ` ```mermaid `. Você não constrói board: depois da etapa, um passo determinístico espelha este bloco num board do Miro, e o texto continua sendo a fonte. Use `stateDiagram-v2` — é o que os dois templates obrigatórios deste prompt fixam, e o que o espelho do Miro renderiza que as telas — o espelho renderiza `flowchart` como diagrama nativo e cai num desenho mais pobre nas outras notações. Junto vai a lista de arestas em tabela, que é o que o dev implementa.

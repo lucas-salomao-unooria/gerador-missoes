@@ -3347,20 +3347,30 @@ class MecanicaCheckAgent(BaseAgent):
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import ficha_interacao as fi
         from tools import mecanica as mec
 
         nucleo = str(ctx.session.state.get(self.chave, "") or "")
+        slug = extrair_slug(nucleo) or ""
         resultado = mec.validar(nucleo)
-        relatorio = mec.relatorio(resultado, extrair_slug(nucleo) or "")
-        icone = {"aprovado": "✅", "amarelo": "🟡", "bloqueado": "⛔"}[resultado["status"]]
+        # A ficha de interação do §4 (29/10/2026) é a outra metade da mecânica: o que o estudante faz, momento a
+        # momento. Vai no mesmo relatório e no mesmo status, para o autor do núcleo e os revisores a receberem onde
+        # já recebem a conta da virada; o envelope do fim (o que vale) junta os achados das duas.
+        ficha = fi.validar(nucleo)
+        status = fi.pior(resultado["status"], ficha["status"])
+        relatorio = mec.relatorio(resultado, slug) + "\n" + fi.relatorio(ficha, slug, envelope={
+            "agente": "mecanica-check", "missao": slug, "status": status,
+            "achados": resultado["achados"] + ficha["achados"], "precisa_humano": False})
+        icone = {"aprovado": "✅", "amarelo": "🟡", "bloqueado": "⛔"}[status]
         calc = resultado.get("calculo") or {}
         resumo = (f" Antes: {calc['antes'][0][0]}; depois: {calc['depois'][0][0]}." if calc.get("antes") and calc.get("depois") else "")
-        msg = f"{icone} Conta da virada: {len(resultado['achados'])} achado(s).{resumo}"
+        msg = (f"{icone} Conta da virada: {len(resultado['achados'])} achado(s).{resumo} Ficha de interação: "
+               f"{ficha['momentos']} momento(s), {len(ficha['achados'])} achado(s).")
         yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
                     content=types.Content(role="model", parts=[types.Part(text=msg)]),
                     actions=EventActions(state_delta={
                         self.report_key: relatorio,
-                        self.status_key: resultado["status"],
+                        self.status_key: status,
                         f"{self.status_key}_envelope": extrair_envelope(relatorio) or {},
                     }))
 
