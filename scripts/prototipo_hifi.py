@@ -17,6 +17,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -133,6 +134,30 @@ def _relatorio_md(ws: Path, sessao: Path, r: dict, texto: dict) -> None:
     (ws / "RELATORIO.md").write_text("\n".join(linhas) + "\n", encoding="utf-8")
 
 
+def publicar(ws: Path, destino: Path) -> None:
+    """Copia para a sessão o que alguém vai abrir: o protótipo, o relatório, as capturas e o código.
+
+    O código (`codigo/`) é o ponto de partida do dev: telas, mock, CSS da missão, imagens e a casca do hub.
+    O resto do workspace (DS por link, referências, builds de lote) não sai daqui.
+    """
+    destino.mkdir(parents=True, exist_ok=True)
+    for nome in ("prototipo.html", "RELATORIO.md"):
+        if (ws / nome).exists():
+            shutil.copy(ws / nome, destino / nome)
+    if (ws / "relatorios" / "final.json").exists():
+        shutil.copy(ws / "relatorios" / "final.json", destino / "final.json")
+    for parte in ("capturas", "codigo"):
+        shutil.rmtree(destino / parte, ignore_errors=True)
+    shutil.copytree(ws / "capturas", destino / "capturas", ignore=shutil.ignore_patterns("*--interacao.png"))
+    for origem, nome in ((ws / "telas", "telas"), (ws / "estilos", "estilos"), (ws / "assets", "assets")):
+        if origem.exists():
+            shutil.copytree(origem, destino / "codigo" / nome)
+    for nome in ("dados/mock.ts", "plataforma.tsx", "casca-api.tsx"):
+        if (ws / nome).exists():
+            (destino / "codigo" / nome).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(ws / nome, destino / "codigo" / nome)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--sessao", required=True)
@@ -143,6 +168,7 @@ def main() -> None:
     ap.add_argument("--modelo", default=None)
     ap.add_argument("--pular-fundacao", action="store_true", help="a fundação já rodou neste workspace")
     ap.add_argument("--so-final", action="store_true", help="só o fechamento (build, auditoria, capturas, relatório)")
+    ap.add_argument("--publicar", default=None, help="pasta da sessão onde o resultado fica (`<sessão>/design/hifi`)")
     a = ap.parse_args()
     load_dotenv(RAIZ / ".env")
     sessao, ws = Path(a.sessao).resolve(), Path(a.destino).resolve()
@@ -164,6 +190,8 @@ def main() -> None:
         if rel.exists() and not any(r.get("lote") == l["nome"] for r in relatorios):
             relatorios.append(json.loads(rel.read_text(encoding="utf-8")))
     resumo = fechar(ws, sessao, relatorios, time.time() - t0)
+    if a.publicar:
+        publicar(ws, Path(a.publicar))
     print(json.dumps({k: resumo[k] for k in ("build_final", "kb", "capturas", "texto_rastreavel_pct")} |
                      {"faltando": len(resumo["faltando"]), "com_erro": len(resumo["com_erro"]),
                       "lint": len(resumo["lint_estatico"]), "tokens": resumo["uso"]["total"]}, ensure_ascii=False))

@@ -206,3 +206,45 @@ def test_estado_com_barra_ou_crase_dentro_de_parenteses_e_um_estado_so():
     estados = {t["id"]: t["estados"] for t in telas.inventario(jornada)["telas"]}
     assert estados == {"E2-ALU-02": ["processando OCR (0.8s / 1.2s)", "dados incorporados"],
                        "E2-SIS-01": ["visualização normal", "ERRO_MIDIA_FALHOU (extrato texto)"]}
+
+
+def test_gerador_acha_publica_e_empacota_o_prototipo_da_sessao(tmp_path):
+    import base64
+    import gzip
+    import importlib.util
+    import io
+    import zipfile
+    from tools.prototipo_hifi import no_gerador as hifi
+
+    sessao = _sessao(tmp_path / "sessao")
+    assert hifi.tem_insumos(sessao) and not hifi.pronto(sessao) and hifi.em_andamento(sessao) is None
+    ws = tmp_path / "ws"
+    for rel, texto in {"prototipo.html": "<!doctype html><title>P</title>", "RELATORIO.md": "# r",
+                       "relatorios/final.json": '{"telas": 3}', "capturas/E2-ALU-01--padrao.png": "png",
+                       "capturas/E2-ALU-01--padrao--interacao.png": "png", "telas/E2-ALU-01.tsx": "export {};",
+                       "dados/mock.ts": "export {};", "estilos/missao.css": "", "plataforma.tsx": ""}.items():
+        (ws / rel).parent.mkdir(parents=True, exist_ok=True)
+        (ws / rel).write_text(texto, encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("ph", "scripts/prototipo_hifi.py")
+    ph = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ph)
+    ph.publicar(ws, hifi.pasta(sessao))
+
+    assert hifi.pronto(sessao) and hifi.resumo(sessao) == {"telas": 3}
+    # a captura da interação é do trabalho do agente, não do resultado
+    assert sorted(p.name for p in (hifi.pasta(sessao) / "capturas").iterdir()) == ["E2-ALU-01--padrao.png"]
+    nomes = zipfile.ZipFile(io.BytesIO(hifi.zip_das_telas(sessao))).namelist()
+    assert sorted(nomes) == ["dados/mock.ts", "estilos/missao.css", "plataforma.tsx", "telas/E2-ALU-01.tsx"]
+    assert gzip.decompress(base64.b64decode(hifi.html_comprimido(sessao))).startswith(b"<!doctype html>")
+
+
+def test_geracao_que_parou_sem_publicar_mostra_o_fim_do_log(tmp_path):
+    from tools.prototipo_hifi import no_gerador as hifi
+
+    sessao = tmp_path
+    log = tmp_path / "geracao.log"
+    log.write_text("…\nRuntimeError: cota esgotada\n", encoding="utf-8")
+    hifi.pasta(sessao).mkdir(parents=True)
+    (hifi.pasta(sessao) / "execucao.json").write_text(json.dumps({"pid": 999999, "workspace": str(tmp_path), "log": str(log)}))
+    assert hifi.em_andamento(sessao) is None
+    assert "cota esgotada" in hifi.falhou(sessao)
