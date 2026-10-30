@@ -153,3 +153,19 @@ def test_lint_aceita_imagem_gerada_e_reprova_a_que_nao_existe(tmp_path):
     ws = _ws_com_tela(tmp_path, 'import a from "../assets/caderno.webp";\nimport b from "../assets/sumiu.webp";\n'
                                 'import { X } from "../dados/mock";\nexport const estados = {};\n')
     assert [(a["codigo"], a["trecho"]) for a in ferramentas.lint(ws)["achados"]] == [("imagem-inexistente", "../assets/sumiu.webp")]
+
+
+def test_secao_do_quadro_vem_do_ambiente_com_hub_e_apelido():
+    from tools.prototipo_hifi import secao_do_ambiente
+    secoes = ["unooria", "unooriaai", "instanooria", "whatsappmobile", "unootube"]
+    assert secao_do_ambiente("`unooriaai`", secoes) == "unooriaai"
+    assert secao_do_ambiente("Unooria Hub", secoes) == "unooria"
+    assert secao_do_ambiente("unitube", secoes) == "unootube"
+    assert secao_do_ambiente("WhatsApp Mobile", secoes) == "whatsappmobile"
+    assert secao_do_ambiente("Instanooria (feed)", secoes) == "instanooria"
+
+
+def test_quadro_leva_a_secao_e_a_missao_leva_os_temas(tmp_path):
+    m = dados_da_missao(_sessao(tmp_path), ["unooria", "unooriaai"])
+    assert {(q["id"], q["secao"]) for q in m["quadros"]} == {("E0-PROF-01", "unooria"), ("E2-ALU-01", "unooriaai"), ("E2-SIS-01", "unooriaai")}
+    assert m["temas"]["whatsappmobile"] == ("data-wa-theme", "dark")

@@ -73,19 +73,19 @@ def _instrucoes(ws: Path) -> str:
 
 def _tarefa(ws: Path, lote: str, ids: list[str], fundacao: bool) -> str:
     missao = json.loads((ws / "dados" / "missao.json").read_text(encoding="utf-8"))
-    linhas = [f"- `{q['id']}` · estado «{q['estado']}» · {q['ator']} · {q['largura']}×{q['altura']} · {q['proposito']}"
-              for q in missao["quadros"] if q["id"] in ids]
+    linhas = [f"- `{q['id']}` · estado «{q['estado']}» · {q['ator']} · seção `{q.get('secao', '?')}` · "
+              f"{q['largura']}×{q['altura']} · {q['proposito']}" for q in missao["quadros"] if q["id"] in ids]
+    secoes = sorted({q.get("secao", "unooria") for q in missao["quadros"]})
     if fundacao:
         papel = ("Você está no **lote de fundação**. Antes das telas, crie:\n"
                  "1. `dados/mock.ts`: os dados mockados da missão INTEIRA, tirados dos `insumos/` (projetos, "
                  "personagens, números, documentos, mensagens do assistente, tabelas, critérios, textos de "
                  "botão que se repetem), tipados e exportados. Todas as telas vão ler daqui. Leia os documentos "
                  "com atenção: este arquivo é a base de dados do protótipo.\n"
-                 "2. `telas/_comum.tsx`: as molduras que todas as telas reutilizam — `JanelaUnooriaAI` (o cliente "
-                 "UnooriaAI do estudante, composto como nas telas de exemplo do Storybook; `children` para a área "
-                 "da conversa e `aside` opcional) e `JanelaHub` (o painel do professor no Unooria Hub, com `titulo` "
-                 "e `children`) — e os blocos que se repetem entre telas (cartão de projeto, balão da assistente, "
-                 "faixa de espera, por exemplo), já interativos.\n"
+                 f"2. `telas/_comum.tsx`: uma moldura por seção do DS que a missão usa ({', '.join(secoes)}), "
+                 "composta só com os componentes daquela seção e como nas telas de exemplo do Storybook dela "
+                 "(`children` para o conteúdo), a moldura do Hub para o professor, e os blocos que se repetem "
+                 "entre telas (cartão, balão da personagem-guia, faixa de espera, por exemplo), já interativos.\n"
                  "3. As imagens que a missão inteira vai usar (`gerar_imagem`), com nomes estáveis.\n"
                  "Depois construa as telas âncora abaixo. Os outros lotes vão rodar em paralelo e só poderão LER "
                  "`_comum.tsx` e `dados/mock.ts`: eles precisam ficar estáveis e completos.")

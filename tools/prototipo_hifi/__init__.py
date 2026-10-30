@@ -34,6 +34,27 @@ ETAPAS_FORA = {"6"}
 #: do estudante é a área útil do iframe do hub.
 TAMANHO_PADRAO = {"PROF": (1366, 768), "ALU": (1024, 768), "SIS": (1024, 768)}
 _RE_MEDIDA = re.compile(r"(\d{3,4})\s*[×x]\s*(\d{3,4})")
+#: Atributo de tema de cada seção do DS, lido dos tokens do pacote 0.2.26. O WhatsApp só tem o escuro;
+#: `unooria` e `tiktooria` não usam atributo. Seção nova sem entrada aqui abre no tema padrão dela.
+TEMAS = {
+    "chatgpt": ("data-gpt-theme", "light"), "instanooria": ("data-insta-theme", "light"),
+    "unooblog": ("data-ubl-theme", "light"), "unoochat": ("data-unc-theme", "light"),
+    "unoogaleria": ("data-ugl-theme", "light"), "unoojornal": ("data-ujn-theme", "light"),
+    "unooriaai": ("data-uai-theme", "light"), "unootube": ("data-uni-theme", "light"),
+    "unoovista": ("data-unv-theme", "light"), "whatsappmobile": ("data-wa-theme", "dark"),
+}
+#: Nome da seção na missão × nome do módulo no pacote (`secao_para_marca` da base da plataforma).
+APELIDOS = {"unitube": "unootube"}
+
+
+def secao_do_ambiente(ambiente: str, secoes: List[str]) -> str:
+    """A seção do DS de um quadro, pela coluna «Ambiente» do inventário. Hub, plataforma e professor são `unooria`."""
+    nome = _telas._norm(ambiente).strip("*_` ")
+    nome = APELIDOS.get(nome, nome)
+    if nome in secoes:
+        return nome
+    achada = next((s for s in sorted(secoes, key=len, reverse=True) if s in nome.replace(" ", "")), None)
+    return achada or "unooria"
 
 
 def _colunas_do_inventario(jornada: str) -> Dict[str, Dict[str, str]]:
@@ -78,8 +99,9 @@ def _etapas(one_pager: str, inventario: List[Dict[str, Any]]) -> Dict[str, Dict[
     return etapas
 
 
-def dados_da_missao(sessao: Path) -> Dict[str, Any]:
-    """`dados/missao.json`: um quadro por (tela, estado) do inventário, mais o texto do painel por etapa."""
+def dados_da_missao(sessao: Path, secoes: Optional[List[str]] = None) -> Dict[str, Any]:
+    """`dados/missao.json`: um quadro por (tela, estado) do inventário, com a seção do DS de cada um, mais o
+    texto do painel por etapa. `secoes` são as do pacote do DS; sem elas, vale o que a coluna «Ambiente» disser."""
     jornada = (sessao / "design" / "02-jornada-telas.md").read_text(encoding="utf-8")
     one_pager = (sessao / "produto" / "00-one-pager.md").read_text(encoding="utf-8")
     inventario = [t for t in _telas.inventario(jornada)["telas"] if t["etapa"].strip() not in ETAPAS_FORA]
@@ -92,13 +114,15 @@ def dados_da_missao(sessao: Path) -> Dict[str, Any]:
         largura, altura = (int(medida.group(1)), int(medida.group(2))) if medida else TAMANHO_PADRAO.get(ator, (1024, 768))
         for estado in t["estados"] or ["padrão"]:
             quadros.append({"id": t["id"], "estado": estado, "etapa": t["etapa"].strip(), "ator": ator,
-                            "ambiente": t["ambiente"], "proposito": _coluna(d, "proposito"),
+                            "ambiente": t["ambiente"],
+                            "secao": secao_do_ambiente(t["ambiente"], secoes or list(TEMAS) + ["unooria"]),
+                            "proposito": _coluna(d, "proposito"),
                             "acao": _coluna(d, "acao"), "resultado": _coluna(d, "resultado"),
                             "largura": largura, "altura": altura})
     titulo = re.search(r"^#\s+.*?\(([^)]+)\)", jornada, re.M)
     slug = re.search(r"\bexp\d{2}[a-z]{2}\d[a-z]\b", jornada)
     return {"missao": slug.group(0) if slug else sessao.name, "titulo": titulo.group(1) if titulo else sessao.name,
-            "quadros": quadros, "etapas": _etapas(one_pager, inventario)}
+            "quadros": quadros, "etapas": _etapas(one_pager, inventario), "temas": TEMAS}
 
 
 def _ligar(origem: Path, destino: Path) -> None:
@@ -123,9 +147,12 @@ def montar_workspace(sessao: str | Path, destino: str | Path, ds: str | Path) ->
     for rel in INSUMOS:
         if (sessao / rel).exists():
             shutil.copy(sessao / rel, ws / "insumos" / Path(rel).name)
-    (ws / "dados" / "missao.json").write_text(json.dumps(dados_da_missao(sessao), ensure_ascii=False, indent=1),
-                                              encoding="utf-8")
     _ligar(ds, ws / "node_modules" / "@unooria" / "design-system")
+    from tools.prototipo_hifi.ferramentas import pacote_do_ds
+    pacote = pacote_do_ds(ws)
+    dados = dados_da_missao(sessao, pacote["secoes"])
+    dados["ds"] = {"versao": pacote["versao"], "secoes": pacote["secoes"]}
+    (ws / "dados" / "missao.json").write_text(json.dumps(dados, ensure_ascii=False, indent=1), encoding="utf-8")
     for pacote in ("react", "react-dom", "scheduler", "playwright-core"):
         _ligar(ds / "node_modules" / pacote, ws / "node_modules" / pacote)
     _ligar((ds / "node_modules" / ".bin" / "esbuild").resolve(), ws / "node_modules" / ".bin" / "esbuild")

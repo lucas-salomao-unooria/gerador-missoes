@@ -27,10 +27,11 @@ CHROME = os.getenv("CHROME_BIN") or next(
     (c for c in ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", shutil.which("chromium"),
                  shutil.which("google-chrome")) if c and os.path.exists(c)), "")
 
-#: Imports que uma tela pode fazer: React, as duas seções do DS da missão, os blocos comuns e o mock da
-#: fundação, a API da casca (navegação e sessão) e as imagens geradas em `assets/`.
-IMPORTS_PERMITIDOS = ("react", "@unooria/design-system/unooriaai", "@unooria/design-system/unooria", "./_comum",
-                      "../casca-api", "../dados/mock")
+#: Imports que uma tela pode fazer além das seções do DS: React, os blocos comuns e o mock da fundação, a
+#: API da casca (navegação e sessão) e as imagens geradas em `assets/`.
+IMPORTS_PERMITIDOS = ("react", "./_comum", "../casca-api", "../dados/mock")
+#: Uma seção do pacote (`@unooria/design-system/instanooria`): qualquer uma das que o `package.json` exporta.
+_RE_SECAO = re.compile(r"^@unooria/design-system/([a-z]+)$")
 _RE_ASSET = re.compile(r"^\.\./assets/([a-z0-9-]+\.webp)$")
 _RE_IMPORT = re.compile(r"""^\s*import\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]""", re.M)
 #: `ir("E3-SIS-01")` ou `ir("E3-SIS-01", "espera de gate ativa")`: o destino tem de existir no inventário.
@@ -76,6 +77,43 @@ def _ler_missao(ws: Path) -> Dict[str, Any]:
     return json.loads((ws / "dados" / "missao.json").read_text(encoding="utf-8"))
 
 
+def pacote_do_ds(ws: str | Path) -> Dict[str, Any]:
+    """As seções do pacote e quais têm CSS e folha de fontes, lidas dos `exports` do `package.json` do DS.
+
+    É o pacote completo, e não uma lista nossa: seção nova publicada no DS entra sem mudar este arquivo.
+    """
+    caminho = Path(ws) / "node_modules" / "@unooria" / "design-system" / "package.json"
+    exports = json.loads(caminho.read_text(encoding="utf-8")).get("exports", {})
+    secoes = sorted(k[2:] for k in exports if re.fullmatch(r"\./[a-z]+", k))
+    return {"versao": json.loads(caminho.read_text(encoding="utf-8")).get("version"), "secoes": secoes,
+            "css": {s for s in secoes if f"./{s}.css" in exports},
+            "fontes": {s for s in secoes if f"./fonts/{s}.css" in exports}}
+
+
+def _secoes_usadas(ws: Path, ids: Optional[List[str]]) -> List[str]:
+    """Seções importadas pelas telas (do lote, mais `_comum.tsx`) e as declaradas nos quadros delas."""
+    usadas = set()
+    for arq in (ws / "telas").glob("*.tsx"):
+        if ids and arq.stem not in ids and arq.stem != "_comum":
+            continue
+        for mod in _RE_IMPORT.findall(arq.read_text(encoding="utf-8")):
+            m = _RE_SECAO.match(mod)
+            if m:
+                usadas.add(m.group(1))
+    usadas |= {q.get("secao") for q in _ler_missao(ws)["quadros"] if q.get("secao") and (not ids or q["id"] in ids)}
+    return sorted(usadas)
+
+
+def _estilos(ws: Path, destino: Path, ids: Optional[List[str]]) -> List[str]:
+    """`estilos.ts`: CSS e fontes só das seções em uso (as 12 juntas levariam todas as fontes ao HTML)."""
+    pacote = pacote_do_ds(ws)
+    secoes = [s for s in _secoes_usadas(ws, ids) if s in pacote["secoes"]]
+    linhas = [f'import "@unooria/design-system/{s}.css";' for s in secoes if s in pacote["css"]]
+    linhas += [f'import "@unooria/design-system/fonts/{s}.css";' for s in secoes if s in pacote["fontes"]]
+    destino.write_text("\n".join(linhas) + "\nexport {};\n", encoding="utf-8")
+    return secoes
+
+
 def _registro(ws: Path, destino: Path, ids: Optional[List[str]]) -> None:
     """`registro.ts`: importa as telas que existem (só as do lote, quando há lote)."""
     linhas, mapa = [], []
@@ -105,13 +143,15 @@ def construir(ws: str | Path, ids: Optional[List[str]] = None, saida: Optional[s
     trabalho = Path(tempfile.mkdtemp(prefix="lote-", dir=ws / ".build")) if ids else ws / ".build" / "final"
     trabalho.mkdir(parents=True, exist_ok=True)
     _registro(ws, trabalho / "registro.ts", ids)
+    secoes = _estilos(ws, trabalho / "estilos.ts", ids)
     entrada = trabalho / "casca.tsx"
     # a cópia da casca aponta para o MESMO arquivo da `casca-api` que as telas importam: dois módulos
     # seriam dois contextos React, e o `ir()` das telas chamaria o contexto vazio
     entrada.write_text((ws / "casca.tsx").read_text(encoding="utf-8")
                        .replace('"./dados/missao.json"', f'"{(ws / "dados" / "missao.json").as_posix()}"')
                        .replace('"./casca-api"', f'"{(ws / "casca-api.tsx").as_posix()}"')
-                       .replace('"./gerado/registro"', '"./registro"'), encoding="utf-8")
+                       .replace('"./gerado/registro"', '"./registro"')
+                       .replace('"./gerado/estilos"', '"./estilos"'), encoding="utf-8")
     cmd = [_esbuild(ws), str(entrada), "--bundle", "--minify", "--format=iife", "--jsx=automatic",
            f"--outdir={trabalho / 'out'}", "--log-level=error", "--define:process.env.NODE_ENV=\"production\"",
            f"--tsconfig={ws / 'tsconfig.json'}",
@@ -132,7 +172,8 @@ def construir(ws: str | Path, ids: Optional[List[str]] = None, saida: Optional[s
               f"<style>{css}{CSS_CASCA}</style></head><body><div id=\"raiz\"></div><script>{js}</script></body></html>")
     destino = Path(saida) if saida else trabalho / "prototipo.html"
     destino.write_text(pagina, encoding="utf-8")
-    return {"ok": True, "html": str(destino), "kb": round(len(pagina.encode("utf-8")) / 1024), "erros": []}
+    return {"ok": True, "html": str(destino), "kb": round(len(pagina.encode("utf-8")) / 1024), "erros": [],
+            "secoes": secoes}
 
 
 def _chrome(args: List[str], timeout: int = 120) -> subprocess.CompletedProcess:
@@ -228,16 +269,23 @@ def lint(ws: str | Path, ids: Optional[List[str]] = None) -> Dict[str, Any]:
     for q in quadros:
         estados_por_id.setdefault(q["id"], []).append(q["estado"])
     acao_por_id = {q["id"]: q.get("acao", "") for q in quadros}
+    try:
+        secoes = set(pacote_do_ds(ws)["secoes"])
+    except FileNotFoundError:
+        secoes = set()
     for arq in sorted((ws / "telas").glob("*.tsx")):
         if ids and arq.stem not in ids and arq.stem != "_comum":
             continue
         fonte = arq.read_text(encoding="utf-8")
         sem_comentario = re.sub(r"/\*.*?\*/|(?<![:\w])//[^\n]*", "", fonte, flags=re.S)
         for mod in _RE_IMPORT.findall(sem_comentario):
-            asset = _RE_ASSET.match(mod)
+            asset, secao = _RE_ASSET.match(mod), _RE_SECAO.match(mod)
             if asset:
                 if not (ws / "assets" / asset.group(1)).exists():
                     achados.append({"arquivo": arq.name, "codigo": "imagem-inexistente", "trecho": mod})
+            elif secao:
+                if secoes and secao.group(1) not in secoes:
+                    achados.append({"arquivo": arq.name, "codigo": "secao-fora-do-pacote", "trecho": mod})
             elif mod not in IMPORTS_PERMITIDOS:
                 achados.append({"arquivo": arq.name, "codigo": "import-fora-do-ds", "trecho": mod})
         for destino, estado in _RE_IR.findall(sem_comentario):

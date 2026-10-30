@@ -12,18 +12,18 @@
  */
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import "@unooria/design-system/unooria.css";
-import "@unooria/design-system/unooriaai.css";
-import "@unooria/design-system/fonts/unooria.css";
-import "@unooria/design-system/fonts/unooriaai.css";
+// CSS e fontes das seções do DS que as telas importam: o build gera este arquivo (`ferramentas.construir`)
+import "./gerado/estilos";
 import missao from "./dados/missao.json";
 import { telas } from "./gerado/registro";
 import { MissaoContexto, type Missao } from "./casca-api";
 
 type Quadro = {
-  id: string; estado: string; etapa: string; ator: string; ambiente: string; proposito: string;
+  id: string; estado: string; etapa: string; ator: string; ambiente: string; secao: string; proposito: string;
   acao: string; resultado: string; largura: number; altura: number;
 };
+/** Atributo de tema de cada seção do DS (`data-insta-theme`…) e o valor: o WhatsApp é só escuro. */
+const TEMAS: Record<string, [string, string]> = (missao as any).temas || {};
 const QUADROS: Quadro[] = (missao as any).quadros;
 const ETAPAS: Record<string, { nome: string; texto: string; fonte: string }> = (missao as any).etapas;
 
@@ -65,9 +65,11 @@ class Limite extends React.Component<{ q: Quadro; children: React.ReactNode }, {
 
 function Quadro({ q }: { q: Quadro }) {
   const C = componente(q);
+  const tema = TEMAS[q.secao];
   return (
-    <div className="hifi-quadro" data-screen-id={q.id} data-estado={q.estado} data-faltando={C ? undefined : "sim"}
-         data-uai-theme="light" style={{ width: q.largura, height: q.altura }}>
+    <div className="hifi-quadro" data-screen-id={q.id} data-estado={q.estado} data-secao={q.secao}
+         data-faltando={C ? undefined : "sim"} {...(tema ? { [tema[0]]: tema[1] } : {})}
+         style={{ width: q.largura, height: q.altura }}>
       {C ? <Limite q={q}><C /></Limite> : <div className="hifi-faltando">{q.id} · {q.estado}<br />tela ainda não gerada</div>}
     </div>
   );

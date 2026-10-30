@@ -12,7 +12,7 @@ Quem decidiu cada tela, cada estado, cada texto e cada regra foram os agentes de
 
 | Caminho | O que é | Pode editar? |
 |---|---|---|
-| `dados/missao.json` | Quadros: `{id, estado, etapa, ator, ambiente, proposito, acao, resultado, largura, altura}` | Não |
+| `dados/missao.json` | Quadros: `{id, estado, etapa, ator, ambiente, secao, proposito, acao, resultado, largura, altura}` e `ds.secoes` (as seções do pacote) | Não |
 | `casca.tsx`, `casca-api.tsx` | A casca de revisão e a API que as telas usam (`useMissao`) | Não |
 | `insumos/` | Documentos da missão: jornada, fluxo, wireframes, copy revisada, ambiente simulado, anexo da spec, spec, one-pager | Não |
 | `dados/mock.ts` | Os dados mockados da missão inteira | **Só no lote de fundação** |
@@ -62,18 +62,21 @@ Use `gerar_imagem(nome, descricao, largura)` onde a missão mostra **foto, docum
 
 ## Regras do Design System (o lint confere e reprova)
 
-1. **Só importe** de `react`, `@unooria/design-system/unooriaai`, `@unooria/design-system/unooria`, `./_comum`, `../casca-api`, `../dados/mock` e `../assets/<nome>.webp` (arquivo que existe).
-2. **Nenhuma cor escrita à mão:** nada de `#hex`, `rgb()` ou `hsl()`. Cor só por componente do DS ou por token: `var(--uai-…)` no UnooriaAI e `var(--unooria-…)` na plataforma, que estão em `node_modules/@unooria/design-system/src/<seção>/tokens/*.css`.
+1. **Só importe** de `react`, `@unooria/design-system/<seção do pacote>`, `./_comum`, `../casca-api`, `../dados/mock` e `../assets/<nome>.webp` (arquivo que existe).
+2. **Nenhuma cor escrita à mão:** nada de `#hex`, `rgb()` ou `hsl()`. Cor só por componente do DS ou pelo token da seção (`var(--uai-…)`, `var(--insta-…)`, `var(--wa-…)`, `var(--unooria-…)`…), que está em `node_modules/@unooria/design-system/src/<seção>/tokens/*.css`.
 3. **Nenhuma fonte própria** (`fontFamily`, `@font-face`). Sem `<style>`, `localStorage`, `fetch` nem URL externa.
 4. Estilo inline só para **layout** (`display`, `flex`, `grid`, `gap`, `padding`, `margin`, `width`, `height`, `overflow`, `position`, `object-fit`), de preferência com tokens de espaçamento.
 5. Tela cuja ação no inventário não é «Aguardar…» tem de responder a alguma coisa (handler, temporizador ou `ir`). Todo `ir()` aponta para tela e estado do inventário.
 
 ## Qual seção do DS usar
 
-- **ALU e SIS no ambiente `unooriaai`:** o cliente de IA UnooriaAI. Chrome, conversa, balões, composer, sugestões e modal vêm de `@unooria/design-system/unooriaai`. As peças da **mecânica** (tabela comparativa, blocos arrastáveis `PuzzleBlock`/`PuzzleTrack`, `ProgressBar`, cartões, `AlertBox`) vêm de `@unooria/design-system/unooria`: é o DS híbrido que o código de produção da plataforma usa.
+O pacote tem uma seção por ambiente (`dados/missao.json` → `ds.secoes`): `unooria` (a plataforma e o Hub), `unooriaai`, `instanooria`, `whatsappmobile`, `chatgpt`, `tiktooria`, `unootube`, `unoochat`, `unoovista`, `unoogaleria`, `unoojornal`, `unooblog`. Cada quadro traz a dele no campo **`secao`**, tirado da coluna «Ambiente» do inventário. Uma missão pode usar várias: a troca de app acontece pelo gatilho declarado em `00b-ambiente-simulado.md` (notificação, link, compartilhar), nunca por um botão da plataforma.
+
+- **O ambiente clonado** (o chrome, a navegação nativa, os balões, os posts, o composer) vem **só** de `@unooria/design-system/<secao>`, a seção do quadro. Nada de imitar outro app com componentes de outra seção.
+- **As peças da mecânica** que não existem no app clonado (tabela comparativa, blocos arrastáveis `PuzzleBlock`/`PuzzleTrack`, `ProgressBar`, `AlertBox`, cartões de decisão) vêm de `@unooria/design-system/unooria`. É o DS híbrido que o código de produção da plataforma usa.
 - **PROF (Unooria Hub):** desktop cheio, só `@unooria/design-system/unooria`.
 
-Antes de usar um componente, abra `node_modules/@unooria/design-system/src/<seção>/components/<Componente>/<Componente>.types.ts`, porque prop inventada quebra o build ou some calada. A composição de referência do UnooriaAI está em `node_modules/@unooria/design-system/stories/unooriaai/telas/Telas.stories.tsx`.
+O build carrega sozinho o CSS e as fontes de cada seção que você importa. Antes de usar um componente, abra `node_modules/@unooria/design-system/src/<seção>/components/<Componente>/<Componente>.types.ts`, porque prop inventada quebra o build ou some calada. A composição de referência de cada clone está em `node_modules/@unooria/design-system/stories/<seção>/telas/` (quando existir) e em `stories/<seção>/componentes/`.
 
 ## Como trabalhar (repita até tudo passar)
 
