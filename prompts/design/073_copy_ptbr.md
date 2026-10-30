@@ -33,13 +33,13 @@ A missão possui dois tipos de texto:
 
 {brief_oficio?}
 
-**One-pager (falas do personagem-guia, provocação de reflexão, roteiro do podcast):**
+**One-pager (falas do personagem-guia, roteiro do podcast):**
 
 {one_pager?}
 
-O texto que o §4 do one-pager põe na tela entre aspas — a pergunta da aposta e as alternativas, as falas do personagem-guia, as mensagens do sistema, o caso de transferência — é a redação que o PO aprovou.
+O texto que o §4 do one-pager põe na tela entre aspas — a pergunta da aposta e as alternativas, as falas do personagem-guia, as mensagens do sistema, a instrução do conserto — é a redação que o PO aprovou.
 
-**Textos-chave do one-pager aprovado — com ID e travados** (plano «Produto dono do contrato», PR 7, D1). A tabela abaixo é montada pela esteira, por código, das aspas do §4, da pergunta e das alternativas do Canal B (§12a), das opções de cada escolha, do roteiro do professor (§9) e do podcast (§11):
+**Textos-chave do one-pager aprovado — com ID e travados** (plano «Produto dono do contrato», PR 7, D1). A tabela abaixo é montada pela esteira, por código, das aspas do §4, das opções de cada escolha, do roteiro do professor (§9) e do podcast (§11):
 
 {textos_chave_tabela?}
 
@@ -103,7 +103,6 @@ Quatro testes (registre o resultado; falha é devolução): **teste da boca** (l
 | Rotular ("você é do tipo curioso") | 8.4 | Nada |
 | Entregar a descoberta antes da vivência | 2.2 | A mecânica revela; a copy nomeia depois |
 | Lição de moral ("nunca acredite em tudo") | 3.4 | Pergunta aberta |
-| Reflexão genérica ("o que você aprendeu?") ou autopredição ("o que você vai fazer da próxima vez?") | 1.6 | Cenário novo com outra pessoa onde o estudante se posiciona |
 | Nome de botão que a plataforma real não tem | 2.6 | O rótulo nativo, literal |
 | Comparação nominal entre estudantes | 8.5 | Agregado da turma, anonimizado |
 | "Aluno" em texto para o estudante | — | "Estudante" |
@@ -139,9 +138,9 @@ Registro adulto, operacional, sem infantilização e sem jargão de produto: rot
 | ID tela | Chave | Tipo | Seção | PT-BR | Palavras | Redundância | Voz | Nota |
 |---|---|---|---|---|---|---|---|---|
 
-Tipo: instrução · narrativa · rótulo de UI · feedback de sistema · pergunta de reflexão · texto do professor · erro/falha.
+Tipo: instrução · narrativa · rótulo de UI · feedback de sistema · texto do professor · erro/falha.
 Chave: `eN.tipo.nome` (ex.: `e3.instrucao.salvar`) — estável; o dev usa a chave.
-Seção: `clone` (personagem-guia e plataforma simulada) ou `unooria` (só na tela de contexto e na reflexão). **Com várias seções do DS** (`secoes_ds_extras`), em vez de `clone` escreva a seção que fala naquela tela (`unoovista`, `unoochat`…), conforme o «Mapa de seções»: cada app tem a voz e os rótulos nativos dele. **Em mini-jogo, `unooria` em tudo** — não há clone.
+Seção: `clone` (personagem-guia e plataforma simulada) ou `unooria` (só na tela de contexto e na de fechamento). **Com várias seções do DS** (`secoes_ds_extras`), em vez de `clone` escreva a seção que fala naquela tela (`unoovista`, `unoochat`…), conforme o «Mapa de seções»: cada app tem a voz e os rótulos nativos dele. **Em mini-jogo, `unooria` em tudo** — não há clone.
 Redundância: `texto` · `texto+ícone` · `texto+ícone+áudio`.
 Nota: na linha que traz um texto-chave, o ID dele (`TC-07`, a opção `TC-12.2`) — é por ele que a esteira copia o texto aprovado.
 

@@ -166,8 +166,6 @@ def recomputar(state: Dict[str, Any]) -> Dict[str, Any]:
         r_cons = consistencia.validar_estado(state)
         r_cons["achados"] = list(r_cons.get("achados", [])) + conteudo_aprovado.validar_copy(
             str(state.get("copy_strings_revisada") or ""), one_pager
-        ) + conteudo_aprovado.validar_literais_design(
-            str(state.get("camada_caa") or ""), str(state.get("prototipo_html_arquivo") or ""), one_pager
         )
         if any(a.get("severidade") == "bloqueio" for a in r_cons["achados"]):
             r_cons["status"] = "bloqueado"

@@ -46,7 +46,9 @@ _RE_TRAVAS = re.compile(r"\bTRAVAS?\b[^:\n]{0,80}:(.*?)(?=\bAJUSTE\s+\d|\bVALIDA
 _RE_AJUSTE = re.compile(r"\b(AJUSTE\s+\d+)\s*[—–-]\s*(.*?)(?=\bAJUSTE\s+\d|\bVALIDA[ÇC][ÃA]O\b|$)", re.S)
 _RE_VALIDACAO = re.compile(r"\bVALIDA[ÇC][ÃA]O\b[^:\n]{0,80}:(.*)$", re.S)
 _RE_FRASE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9\"“])")
-_SECOES_BRIEFING = ("direcionamento pedagógico", "passo a passo", "elementos fixos", "caso de transferência")
+#: Sem «caso de transferência» desde 29/10/2026: a etapa 6 saiu da missão por decisão do PO, e o caso do briefing
+#: antigo não é mais pedido a cumprir.
+_SECOES_BRIEFING = ("direcionamento pedagógico", "passo a passo", "elementos fixos")
 
 
 def _norm(texto: str) -> str:

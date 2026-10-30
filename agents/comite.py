@@ -3,8 +3,8 @@
 Dois comitês (decisão do PO de 15/10/2026):
 
 - **dos canais** — logo depois de o A014 definir o §12a: o painel A julga a mecânica e a ação do Canal A de cada
-  habilidade, o painel B julga a pergunta do Canal B; os dois votam na mesma rodada, cada um com a própria
-  unanimidade, e o loop só sai quando os dois aprovam (até `COMITE_MAX_RODADAS`, padrão 5);
+  habilidade, e o loop só sai com a unanimidade dele (até `COMITE_MAX_RODADAS`, padrão 5). O painel B, que julgava a
+  pergunta do Canal B, saiu com o próprio Canal B (decisão do PO de 29/10/2026): a evidência é só a ação em tela;
 - **final** — sobre a missão completa, antes do gate final: pedagogia, qualidade de produto e imersão (até
   `COMITE_FINAL_MAX_RODADAS`, padrão 2).
 
@@ -23,7 +23,7 @@ from google.adk.agents.loop_agent import LoopAgent
 from google.adk.agents.parallel_agent import ParallelAgent
 
 from agents.base import create_llm_agent
-from agents.callbacks import manter_nucleo_sem_achado_do_a004, marcar_heranca, pular_juiz_sem_canal_b
+from agents.callbacks import manter_nucleo_sem_achado_do_a004, marcar_heranca
 from agents.checkers import ComiteVotosAgent, MecanicaCheckAgent, RastroCheckAgent, SaidaDeLoopAgent, isolar
 from config import get_settings
 from prompts.loader import load_prompt
@@ -37,14 +37,6 @@ JUIZES: Dict[str, List[tuple]] = {
          "Painel A: a regra ternária é alcançável, sem buraco, sem Atingiu por sorte e calculável pelo que o evento registra."),
         ("ComiteCanalAVivencia", "produto/comite_canal_a_vivencia.md", "comite_canal_a_vivencia", "A·3 Vivência e idade",
          "Painel A: a ação é verbo nativo, vivida na decisão e dentro dos tetos da faixa."),
-    ],
-    "canal_b": [
-        ("ComiteCanalBCurriculo", "produto/comite_canal_b_curriculo.md", "comite_canal_b_curriculo", "B·1 Currículo",
-         "Painel B: a pergunta mede a habilidade da linha, e o Atingiu é domínio pleno e autônomo."),
-        ("ComiteCanalBMedida", "produto/comite_canal_b_medida.md", "comite_canal_b_medida", "B·2 Medida",
-         "Painel B: as três alternativas discriminam os níveis e nenhuma se elimina pela linguagem."),
-        ("ComiteCanalBExperiencia", "produto/comite_canal_b_experiencia.md", "comite_canal_b_experiencia", "B·3 Experiência",
-         "Painel B: depois do Refletir sem repeti-lo, na língua do ambiente, sem vazar resultado e dentro do teto."),
     ],
     "final": [
         ("ComiteFinalPedagogia", "produto/comite_final_pedagogia.md", "comite_final_pedagogia", "F·1 Pedagogia",
@@ -68,13 +60,12 @@ def _juizes(painel: str, numero: int, letras: str, **kw: Any) -> List[LlmAgent]:
     """Juízes novos a cada chamada: um agente ADK só tem um pai."""
     juizes = []
     for letra, (sufixo, prompt, chave, _, descricao) in zip(letras, JUIZES[painel]):
-        callbacks = [marcar_heranca] + ([pular_juiz_sem_canal_b(chave)] if painel == "canal_b" else [])
         juizes.append(create_llm_agent(
             name=f"A{numero:03d}{letra}{sufixo}",
             description=descricao,
             instruction=load_prompt(prompt),
             output_key=chave,
-            before_agent_callback=callbacks,
+            before_agent_callback=[marcar_heranca],
             deterministico=True,  # emite voto: mesmo artefato, mesma resposta
             **kw,
         ))
@@ -84,8 +75,8 @@ def _juizes(painel: str, numero: int, letras: str, **kw: Any) -> List[LlmAgent]:
 def _evidencia_one_pager(nome: str) -> RastroCheckAgent:
     return RastroCheckAgent(
         name=nome,
-        description="§12a do one-pager: toda habilidade da seção 2 com linha, Canal A e regra ternária por extenso; Canal B "
-                    "com o nível de cada alternativa. Forma antes de voto. Determinístico.",
+        description="§12a do one-pager: toda habilidade da seção 2 com linha, Canal A e regra ternária por extenso, e "
+                    "nenhuma com Canal B (removido em 29/10/2026). Forma antes de voto. Determinístico.",
         modo="evidencia_one_pager",
         rotulo="Contrato de evidência do one-pager (§12a)",
         report_key="evidencia_one_pager_report",
@@ -96,7 +87,7 @@ def _evidencia_one_pager(nome: str) -> RastroCheckAgent:
 
 
 def build_comite_canais_loop(autores: List[BaseAgent], numero: int = 18, **kw: Any) -> LoopAgent:
-    """Núcleo e seções de apoio (isolados) → forma do §12a → painéis A e B → votos → saída.
+    """Núcleo e seções de apoio (isolados) → forma do §12a → painel A → votos → saída.
 
     `autores`: o loop do núcleo, o das seções de apoio e o que confere que o one-pager existe, nessa ordem. O do núcleo é
     pulado quando os comitês reprovados não têm nada para o A004 (`manter_nucleo_sem_achado_do_a004`).
@@ -108,8 +99,8 @@ def build_comite_canais_loop(autores: List[BaseAgent], numero: int = 18, **kw: A
     nucleo_isolado.before_agent_callback = manter_nucleo_sem_achado_do_a004
     return LoopAgent(
         name="ComiteCanaisLoop",
-        description="Comitê dos canais: núcleo e seções de apoio ↔ painéis A (mecânica e Canal A) e B (Canal B), três "
-                    "juízes cada, até os dois aprovarem por unanimidade ou esgotar as rodadas.",
+        description="Comitê dos canais: núcleo e seções de apoio ↔ painel A (mecânica e Canal A), três juízes, até "
+                    "aprovarem por unanimidade ou esgotar as rodadas.",
         max_iterations=rodadas,
         before_agent_callback=marcar_heranca,
         sub_agents=[
@@ -119,8 +110,8 @@ def build_comite_canais_loop(autores: List[BaseAgent], numero: int = 18, **kw: A
             _evidencia_one_pager(f"A{numero:03d}EvidenciaOnePager"),
             ParallelAgent(
                 name=f"A{numero + 1:03d}ComiteCanais",
-                description="Painéis A e B do comitê dos canais votam em paralelo sobre a mesma versão do one-pager.",
-                sub_agents=_juizes("canal_a", numero + 1, "abc", **kw) + _juizes("canal_b", numero + 1, "def", **kw),
+                description="Os três juízes do painel A votam em paralelo sobre a mesma versão do one-pager.",
+                sub_agents=_juizes("canal_a", numero + 1, "abc", **kw),
                 before_agent_callback=marcar_heranca,
             ),
             ComiteVotosAgent(
@@ -131,20 +122,12 @@ def build_comite_canais_loop(autores: List[BaseAgent], numero: int = 18, **kw: A
                 round_key="comite_canal_a_rodada", max_rounds=rodadas,
                 rotulo="Comitê dos canais — painel A", titulo="Comitê dos canais — painel A (mecânica e Canal A)",
             ),
-            ComiteVotosAgent(
-                name=f"A{numero + 3:03d}VotosCanalB",
-                description="Conta os votos do painel B: unanimidade aprova; sem ela, a missão volta ao A004 e ao A014.",
-                fontes=rotulos("canal_b"), documentos=DOCUMENTOS,
-                report_key="comite_canal_b_report", status_key="comite_canal_b_status",
-                round_key="comite_canal_b_rodada", max_rounds=rodadas,
-                rotulo="Comitê dos canais — painel B", titulo="Comitê dos canais — painel B (Canal B)",
-            ),
             SaidaDeLoopAgent(
                 name=f"A{numero + 4:03d}ComiteCanaisRodada",
-                description="Os dois painéis unânimes e o §12a em forma encerram o loop; senão, a missão volta ao núcleo "
-                            "e às seções de apoio com os relatórios.",
+                description="O painel A unânime e o §12a em forma encerram o loop; senão, a missão volta ao núcleo e às "
+                            "seções de apoio com os relatórios.",
                 rotulo="Comitê dos canais",
-                status_keys=["comite_canal_a_status", "comite_canal_b_status", "evidencia_one_pager_status"],
+                status_keys=["comite_canal_a_status", "evidencia_one_pager_status"],
                 rodada_key="comite_canais_rodada",
                 max_rounds=rodadas,
                 autor_keys=["one_pager"],

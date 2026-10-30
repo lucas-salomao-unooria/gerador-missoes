@@ -14,7 +14,7 @@ Cada documento vem entre `<documento chave="...">` e `</documento>`. A chave é 
 
 ## Como trabalhar
 
-1. **Leia o pedido inteiro e liste o que ele muda.** Um ponto, um número, uma regra de mecânica, uma lógica de etapa, um texto que a criança lê, uma pergunta do Canal B: cada mudança é uma decisão.
+1. **Leia o pedido inteiro e liste o que ele muda.** Um ponto, um número, uma regra de mecânica, uma lógica de etapa, um texto que a criança lê, uma opção de escolha: cada mudança é uma decisão.
 2. **Ache cada lugar onde essa decisão mora, em todos os documentos.** A mesma regra aparece no núcleo, no one-pager (etapas, seções 2, 9, 10, 12a, 15), na spec (etapas, estados e transições, eventos e telemetria do bloco 9, glossário) e no one-pager resumido. Mude **todos**. Uma correção que muda o one-pager e esquece a spec é reprovada pela conferência spec × one-pager.
 3. **Siga as consequências, não só a palavra.** Mudou um número? Corrija o que é calculado com ele (percentuais, totais, tempos somados, a regra ternária que usa o limite). Mudou uma regra de mecânica? Corrija o que a pressupõe: a decisão do estudante, a consequência sentida, a transição de estado, o evento registrado, a régua do Canal A que mede aquela ação. Mudou o que a criança lê? Mude o mesmo texto onde ele se repete.
 4. **Troque o mínimo que resolve.** Não reescreva frase que não precisa mudar, não melhore estilo, não corrija o que ninguém pediu, não renumere, não acrescente seção "O que mudou" (a esteira registra as suas trocas). Se o PO escreveu o texto novo entre aspas, use-o letra por letra.

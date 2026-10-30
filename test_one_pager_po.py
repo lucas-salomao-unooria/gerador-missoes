@@ -296,3 +296,25 @@ def test_fidelidade_le_o_briefing_em_prosa_e_a_ordem_de_nao_mexer_vira_trava():
     # briefing com títulos continua no parser de seções: a prosa só entra quando nada foi reconhecido
     com_titulo = "CONSTRAINT DE INTERFACE — OBRIGATÓRIO\nsecao_ds: unoogaleria\nÉ PROIBIDO usar outra seção do DS."
     assert all(i["tipo"] != "briefing" for i in montar_checklist([], com_titulo))
+
+
+def test_etapa_6_e_canal_b_do_po_saem_sem_contar_como_texto_perdido():
+    """Decisão do PO de 29/10/2026: a missão não tem mais o Refletir (etapa 6, transferência) nem o Canal B. O one-pager
+    do PO feito antes disso os traz; tirá-los não é perder o texto dele. Mas a nota que só cita o Refletir de passagem
+    continua dele."""
+    from tools import one_pager_po as op
+
+    po = ("# One-pager do PO\n\n## 4. As 6 etapas\n\n### Etapa 5 — Explicar\nA Luna nomeia o viés de amostragem na tela.\n\n"
+          "### Etapa 6 — Refletir\nO estudante aplica o conceito a um caso novo sobre o bairro vizinho.\n\n"
+          "## 10. Tempos\nTodo minuto é estimativa do autor, inclusive a leitura do Refletir no fim da aula.\n\n"
+          "## 12. Evidências\n\n| Habilidade | Canal | Texto |\n|---|---|---|\n"
+          "| `EF06CO09` | Canal A | fixa o post com a fonte aberta na mesa |\n"
+          "| Canal B — pergunta | B | Qual post você mostraria para a turma inteira? |\n")
+    gerado = ("# One-pager\n\n## 4. As 5 etapas\n\n### Etapa 5 — Explicar\nA Luna nomeia o viés de amostragem na tela.\n\n"
+              "## 10. Tempos\nTodo minuto é estimativa do autor, inclusive a leitura do Refletir no fim da aula.\n\n"
+              "## 12. Evidências\n\n| Habilidade | Canal | Texto |\n|---|---|---|\n"
+              "| `EF06CO09` | Canal A | fixa o post com a fonte aberta na mesa |\n")
+    r = op.conferir(po, gerado)
+    assert r["status"] == "aprovado", r["achados"]
+    sem_a_nota = gerado.replace("Todo minuto é estimativa do autor, inclusive a leitura do Refletir no fim da aula.", "")
+    assert op.conferir(po, sem_a_nota)["status"] == "bloqueado"

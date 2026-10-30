@@ -64,7 +64,7 @@ A mesma banca roda em quatro posições, com os mesmos critérios — fim de pro
 
 {prototipo_relatorio?}
 
-**Conteúdo aprovado pelo PO — cópia literal do one-pager (o núcleo — descoberta, anatomia do aha, narrativa e as 6 etapas com o texto que a tela mostra —, o debate e o Canal B de PROD-12, o podcast, os tempos, os estados de falha, os cenários de dispositivo, os caminhos degenerados, os guardrails e os tetos da faixa).** Até 07/10/2026 a banca recebia só o currículo, o professor, os tempos, o podcast, a evidência e as hipóteses, e julgava a narrativa e o mecanismo só pela spec. O que a spec, o design ou o handoff contradizem aqui — um número, uma etapa, um texto de tela, uma falha sem tratamento — é achado, com a citação dos dois lados:
+**Conteúdo aprovado pelo PO — cópia literal do one-pager (o núcleo — descoberta, anatomia do aha, narrativa e as 5 etapas com o texto que a tela mostra —, o debate de PROD-12, o podcast, os tempos, os estados de falha, os cenários de dispositivo, os caminhos degenerados, os guardrails e os tetos da faixa).** Até 07/10/2026 a banca recebia só o currículo, o professor, os tempos, o podcast, a evidência e as hipóteses, e julgava a narrativa e o mecanismo só pela spec. O que a spec, o design ou o handoff contradizem aqui — um número, uma etapa, um texto de tela, uma falha sem tratamento — é achado, com a citação dos dois lados:
 
 {conteudo_aprovado?}
 

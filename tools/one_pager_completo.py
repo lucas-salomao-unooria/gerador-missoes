@@ -28,9 +28,9 @@ AGENTE = "one-pager-completo"
 TITULO_IDEIA = "## 0.1 A ideia"
 TITULO_PASSO_A_PASSO = "## 0.2 Como a missão funciona passo a passo"
 
-#: Passos do 0.2: do preparo do professor ao fechamento. O modelo tem 13; menos de 8 não conta as 6 etapas com o
+#: Passos do 0.2: do preparo do professor ao fechamento. O modelo tem 13; menos de 7 não conta as 5 etapas com o
 #: professor antes e depois, e mais de 16 deixa de ser leitura rápida.
-MIN_PASSOS = 8
+MIN_PASSOS = 7
 MAX_PASSOS = 16
 #: Parágrafos do 0.1 e palavras por passo do 0.2: o modelo tem 6 parágrafos e passos de 40 a 60 palavras.
 MIN_PARAGRAFOS_IDEIA = 3

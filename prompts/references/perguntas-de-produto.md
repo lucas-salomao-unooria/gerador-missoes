@@ -53,7 +53,7 @@ gestor, funil, custo e qualidade de IA.
 | `T5` | Quais missões o professor mais abre? | universal | funil | Missão nunca aberta tem problema de descoberta ou de nome na plataforma. Investigar antes de criar missão nova. | missao · serie | plataforma | — |
 | `T6` | De cada X professores que abriram uma missão no painel do professor, quantos liberaram pra turma? | universal | adoção do professor · funil | Conversão baixa aponta pra atrito ou insegurança na tela de preparação. Simplificar antes de mexer em conteúdo. | missao · serie | plataforma | — |
 | `T7` | De cada X turmas liberadas, quantas chegam ao fim da missão? | universal | adoção do aluno · funil | Se a conclusão ficar abaixo de 50%, entra na fila de investigação antes de qualquer feature nova. | missao · serie | missao | `EVT-U01`, `EVT-U03` |
-| `T8` | Comparando entre todas as missões, em que etapa da jornada (abertura, ação central, reflexão, resultado) os alunos mais abandonam? | universal | funil | Etapa com abandono desproporcional em várias missões ao mesmo tempo é sinal estrutural. Prioridade de redesenho transversal, não conserto pontual. | etapa · missao · serie | missao | `EVT-U02` |
+| `T8` | Comparando entre todas as missões, em que etapa da jornada (abertura, ação central, resultado, explicação) os alunos mais abandonam? | universal | funil | Etapa com abandono desproporcional em várias missões ao mesmo tempo é sinal estrutural. Prioridade de redesenho transversal, não conserto pontual. | etapa · missao · serie | missao | `EVT-U02` |
 | `T9` | Que proporção dos alunos de uma turma inicia a missão depois que o professor libera? | universal | adoção do aluno | Participação consistentemente baixa aponta pra problema de acesso (laboratório, dispositivo), não de desinteresse. Investigar antes de mudar a missão. | turma · missao · serie | missao | `EVT-U01` |
 | `T10` | Na etapa em que o aluno travou (T8), ele travou por erro técnico ou simplesmente ficou inativo? | universal | funil | Abandono que coincide com erro técnico registrado é prioridade de bug, não de redesign. Sem erro, entra na fila de investigação de UX. | missao · serie · etapa | missao | `EVT-U04`, `EVT-U05` |
 | `T11` | Quanto tempo o aluno leva entre receber o desafio da missão e avançar pras próximas etapas, da segunda etapa até a etapa final? | universal | funil | Tempo muito curto sugere que pulou sem entender a proposta; tempo muito longo sugere confusão. Os dois pedem revisão de clareza do texto. É aproximação, não medida direta de compreensão. | missao · serie | missao | `EVT-U02` |
@@ -83,7 +83,7 @@ obtém pela matrícula.
 | Sinal | Verbo | Objeto | Quando dispara | `resultado` | `contexto` | Responde |
 |---|---|---|---|---|---|---|
 | `EVT-U01` | `attempted` | `missao:iniciar` | Ao renderizar a primeira tela do estudante — também na reentrada | `{"retomada": false}` | `{"etapa": "E1"}` | T7, T9 |
-| `EVT-U02` | `progressed` | `etapa:entrar` | Ao entrar em cada etapa E1…E6 | `{"etapa": "E2"}` | `{"pedagogical_role": "core_action"}` | T8, T11, T12 |
+| `EVT-U02` | `progressed` | `etapa:entrar` | Ao entrar em cada etapa E1…E5 | `{"etapa": "E2"}` | `{"pedagogical_role": "core_action"}` | T8, T11, T12 |
 | `EVT-U03` | `completed` | o `expId` da missão | Automático, ao chamar `concluir()` da SDK — a missão **tem** de chamá-lo | o que a missão passa a `concluir()` | — | T7 |
 | `EVT-U04` | `interacted` | `aviso:inatividade` | Ao exibir o aviso de inatividade da etapa | `{"segundos_sem_acao": 90}` | `{"etapa": "E2"}` | T10, T12 |
 | `EVT-U05` | `attempted` | `erro:exibir` | Ao exibir um estado de erro diegético (sem sinal, sessão expirada, conteúdo que não carregou, IA sem saldo) | `{"codigo": "sem-sinal"}` | `{"etapa": "E2"}` | T10 |
@@ -154,8 +154,8 @@ para os `EVT-U*`, a tabela do módulo para os `EVT-P*`.
 **Corte:** `rede` · `escola` · `missao` · `serie` · `turma` · `professor` · `etapa` · `aluno` · `disciplina`.
 
 **Papel pedagógico da tela** (`pedagogical_role`), derivado da etapa: E1 Desafiar → `intro` ·
-E2 Navegar e E3 Decidir → `core_action` · E4 Resultado/Aha → `result` · E5 Explicar e E6
-Refletir → `reflection`. É o que `EVT-U02` leva em `contexto`, e é o que permite a `T8`
+E2 Navegar e E3 Decidir → `core_action` · E4 Resultado/Aha → `result` · E5 Explicar → `reflection`
+(não há E6 desde 29/10/2026). É o que `EVT-U02` leva em `contexto`, e é o que permite a `T8`
 comparar a mesma fase em missões de mecânicas diferentes. As telas do professor (`E0-PROF-*`)
 não emitem `EVT-U02`.
 
@@ -189,7 +189,7 @@ não bloqueia, mas fica visível para quem decide.
 
 ## O que NUNCA é medido
 
-Nome, e-mail, CPF, matrícula. Qualquer texto que a criança escreva — reflexão, mensagem,
+Nome, e-mail, CPF, matrícula. Qualquer texto que a criança escreva — resposta, mensagem,
 justificativa, termo de busca: dele sai a **medida** (`respondeu: true`), nunca o conteúdo. E
 as respostas do check-in de bem-estar, que são questionário de saúde mental.
 

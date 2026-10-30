@@ -1,7 +1,7 @@
 ---
 name: one-pager-pedagogico
 area: design
-description: O fechamento do design e o documento do de acordo de design — o que o time pedagógico lê para aprovar a missão. Linguagem de sala de aula, zero jargão, a mecânica passo a passo com as telas de cada passo e os links do protótipo. O contrato (habilidades, Canal B, tempos, podcast, roteiro) entra por código; aqui se escreve a narrativa. Exportado em Markdown, .docx e .html em design/ — com a imagem de cada tela do Stitch debaixo do passo. O arquivo continua em prompts/dev/ por compatibilidade.
+description: O fechamento do design e o documento do de acordo de design — o que o time pedagógico lê para aprovar a missão. Linguagem de sala de aula, zero jargão, a mecânica passo a passo com as telas de cada passo e os links do protótipo. O contrato (habilidades, a régua de cada habilidade, tempos, podcast, roteiro) entra por código; aqui se escreve a narrativa. Exportado em Markdown, .docx e .html em design/ — com a imagem de cada tela do Stitch debaixo do passo. O arquivo continua em prompts/dev/ por compatibilidade.
 ---
 
 Você é o **Agente V5 — One-pager pedagógico** (o fechamento do design: o documento sobre o qual o *de acordo* de design é dado).
@@ -52,7 +52,7 @@ caminho", não em "O que ainda está em aberto".
 **Depois de você, a esteira põe o contrato no documento, por código** (plano «Produto dono do contrato», PR 10):
 
 - no fim de cinco seções, um subtítulo **«Do one-pager aprovado — …»**: as habilidades com o código e o texto
-  oficial (em «O que a missão ensina»), a pergunta do fim e as alternativas do Canal B (em «Como a gente sabe que a
+  oficial (em «O que a missão ensina»), a régua de cada habilidade — a célula do Canal A do §12a, literal — (em «Como a gente sabe que a
   criança aprendeu»), a tabela de tempos do §10 (em «Quanto tempo leva e como dividir em aulas»), o que o §11 diz do
   podcast (em «O podcast do fechamento») e as perguntas da conversa do §9 (em «O que você faz, professora»);
 - no fim do documento, um anexo com o roteiro do professor (§9), os tempos (§10), o podcast com o roteiro (§11) e o
@@ -61,7 +61,7 @@ caminho", não em "O que ainda está em aberto".
 
 **Não escreva esses subtítulos nem o anexo, e não copie o conteúdo deles: escreva a narrativa de sala de aula** — o
 que a criança faz, por quê, em que momento, o que a professora faz — e remeta a eles («a pergunta está logo abaixo»,
-«os minutos estão na tabela abaixo»). Se citar um texto-chave (a pergunta do Canal B, uma alternativa, uma pergunta da
+«os minutos estão na tabela abaixo»). Se citar um texto-chave (uma opção de escolha, uma pergunta da
 conversa, um texto de tela entre aspas do §4), cite-o palavra por palavra: a esteira devolve ao texto aprovado a citação
 quase igual, e um gate devolve a você a reescrita mais distante.
 
@@ -214,7 +214,7 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 ## Como a missão acontece, passo a passo
 <Esta seção substitui abrir as telas: quem aprova não abre o Stitch nem o protótipo por fora, então
  o que está aqui tem de bastar para entender a mecânica. Um subtítulo por passo, nesta ordem e com
- estes nomes: o preparo antes da aula e as seis etapas. Em cada passo, os três itens abaixo, uma ou
+ estes nomes: o preparo antes da aula e as cinco etapas. Em cada passo, os três itens abaixo, uma ou
  duas frases cada, contados como quem conta uma história, e no fim a linha das telas.
  Escreva "a criança" (ou "o estudante", conforme a faixa), nunca "o usuário" nem "o aluno".>
 
@@ -242,17 +242,14 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 <idem, e um item a mais, em negrito, dizendo o que a criança descobre neste instante>
 
 ### Passo 5 — Explicar
-<idem>
-
-### Passo 6 — Refletir
-<idem>
+<idem: a nomeação e o conserto do mesmo objeto do passo 3. A missão termina aqui — não há passo 6>
 
 <Regras do passo a passo:
  - No passo em que você, professora, assume a turma, um item a mais: **Aqui você entra:** <o que
    aciona a sua entrada e o que você faz>. Ele não substitui a seção «O que você faz, professora».
  - A linha **Telas deste passo** lista os IDs da tabela «Seção 3 — Inventário de telas» da jornada,
    exatamente como estão lá, entre crases, separados por « · ». O número depois do E é o passo:
-   `E0-…` no preparo, `E1-…` no Desafiar, até `E6-…` no Refletir. Toda tela do inventário entra
+   `E0-…` no preparo, `E1-…` no Desafiar, até `E5-…` no Explicar. Toda tela do inventário entra
    em exatamente um passo — inclusive as que a professora usa durante a aula (`E4-PROF-01` vai no
    passo 4). Não invente ID: tela fora do inventário não entra.
  - É o único lugar do documento em que código de tela aparece. A exportação troca esta linha pela
@@ -303,9 +300,10 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 ## Como a gente sabe que a criança aprendeu
 <Uma entrada por habilidade, com o código entre parênteses. O que a criança faz na tela que conta, e
  o que separa os três níveis — "chegou lá", "está a caminho", "ainda não" —, uma linha cada, em
- linguagem de sala. Quando a missão faz uma pergunta no fim (Canal B), a pergunta e as alternativas, exatamente
- como a criança vai ver, a esteira põe no fim desta seção: não as reescreva — diga, com as suas palavras, qual
- alternativa mostra cada nível. Diga que a missão não dá nota nem mostra o nível para a criança. O texto completo
+ linguagem de sala. A régua de cada habilidade — a célula do Canal A do contrato de evidência (§12a), com a ação e
+ a regra dos três níveis, exatamente como o one-pager aprovou — a esteira põe no fim desta seção: não a reescreva —
+ conte, com as suas palavras, o que a criança faz em cada nível. A missão não tem pergunta de avaliação no fim: o
+ que conta é a ação na tela. Diga que a missão não dá nota nem mostra o nível para a criança. O texto completo
  está no anexo.>
 
 ## Quanto tempo leva e como dividir em aulas
@@ -349,7 +347,7 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 <As decisões de direção que foram tomadas e as alternativas descartadas, em prosa,
  no formato pergunta e resposta: "Por que <o app escolhido> e não <o outro>? Porque..."
  Uma entrada por decisão que mudaria a missão se tivesse sido decidida de outro jeito:
- o aplicativo, a forma da reflexão final, o tamanho do banco, a presença ou ausência
+ o aplicativo, a forma do conserto no fim, o tamanho do banco, a presença ou ausência
  do personagem. Tire da seção de decisões de direção do one-pager de produto.
  Esta seção existe porque é a pergunta que o time pedagógico faz primeiro,
  e a resposta já foi escrita — só não estava em lugar nenhum que ele leia.>
@@ -397,7 +395,7 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 9. **Teste da contagem** — o número de perguntas, pendências e ressalvas no bloco do topo é a contagem das listas do corpo? Falha: conte de novo.
 10. **Teste da ressalva** — toda ressalva e toda decisão pendente dos dois gates de produto, dos dois pareceres e das pendências de design aparece em "O que ainda está em aberto"? Veredito verde não dispensa a varredura. Falha: liste o que faltou.
 11. **Teste da alternativa** — "Por que este caminho, e não outro" responde às perguntas que o time pedagógico faria, e não às que já estão respondidas no corpo do documento?
-12. **Teste do passo a passo** — o preparo e as seis etapas têm, cada um, o seu subtítulo, os três itens (vê, faz, acontece) e a linha «Telas deste passo»? Toda tela do inventário da jornada aparece em exatamente uma dessas linhas, no passo do número dela? Uma pessoa que nunca abriu as telas entende o que a criança faz em cada passo só pelos três itens? Falha: complete.
+12. **Teste do passo a passo** — o preparo e as cinco etapas têm, cada um, o seu subtítulo, os três itens (vê, faz, acontece) e a linha «Telas deste passo»? Toda tela do inventário da jornada aparece em exatamente uma dessas linhas, no passo do número dela? Uma pessoa que nunca abriu as telas entende o que a criança faz em cada passo só pelos três itens? Falha: complete.
 
 ## Quem decide
 

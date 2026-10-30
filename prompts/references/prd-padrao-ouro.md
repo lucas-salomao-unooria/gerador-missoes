@@ -95,8 +95,8 @@ Lista explícita com motivo. Inclui V2 (o que fica para depois) e o que a rubric
 # 4. Personas e jobs-to-be-done
 Estudante (ano, faixa etária, perfil cognitivo — caps de decisão e leitura), Professor (preparo, condução, leitura), Gestor (só agregado). Cenários de dispositivo (1:1, 2–4 por aparelho, projeção única); com 2 a 4 por aparelho, a missão tem equipes (seção 17.1).
 
-# 5. Experiência — narrativa e mecânica (as 6 etapas)
-Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. Por etapa: o que o sistema apresenta, ordena, bloqueia e garante; verbo nativo; ator. Descoberta central e o beat exato. **Tempos e formatos de aula do §10 do one-pager:** a tabela por etapa (em tela · fora da tela), o total em tela com o mesmo número, os checkpoints com persistência de estado, o controle docente de ritmo e os cenários (aula única, 2 aulas, sessões fracionadas). O podcast de recapitulação no momento que o §11 diz. Ausências declaradas do ambiente. Briefing de ofício (aposta, pico, beat memorável, não-negociáveis).
+# 5. Experiência — narrativa e mecânica (as 5 etapas)
+Desafiar → Navegar → Decidir → Resultado/Aha → Explicar (sem etapa 6, por decisão do PO de 29/10/2026). Por etapa: o que o sistema apresenta, ordena, bloqueia e garante; verbo nativo; ator. Descoberta central e o beat exato. **Tempos e formatos de aula do §10 do one-pager:** a tabela por etapa (em tela · fora da tela), o total em tela com o mesmo número, os checkpoints com persistência de estado, o controle docente de ritmo e os cenários (aula única, 2 aulas, sessões fracionadas). O podcast de recapitulação no momento que o §11 diz. Ausências declaradas do ambiente. Briefing de ofício (aposta, pico, beat memorável, não-negociáveis).
 
 # 6. Fluxo e máquina de estados
 **Vocabulário único de estados.** Os estados são os do contrato de estados da spec (bloco 2), com o
@@ -128,7 +128,7 @@ Cada story:
 
 - Como/Quero/Para · etapa · estado(s) da seção 6 · RFs que sustenta · dependências. Itens 🔒 = requisito de conformidade (rubrica/BNCC/acessibilidade), não negociável.
 - **Especificação da tela** (D5, `design/05-wireframes-cobertura.md`): elementos, ação (verbo nativo), resultado da ação, o que a tela mostra em cada estado, o frame no Stitch.
-- **Copy — todas as chaves** que a copy revisada (`design/06-copy-strings-revisada.md`) dá para a tela, nenhuma de fora, em `| Chave | Onde vive |`. Onde vive: `bundle de textos` (`src/lib/textos.ts` da experiência) · `ficha de evidência no servidor` (enunciado e alternativas do Canal B, critério dos níveis) · `catálogo/guia do hub` (`catalogo.ts`, `guias/<expId>.ts`) · `aria-label`. A chave é citada; o texto final mora no sheet.
+- **Copy — todas as chaves** que a copy revisada (`design/06-copy-strings-revisada.md`) dá para a tela, nenhuma de fora, em `| Chave | Onde vive |`. Onde vive: `bundle de textos` (`src/lib/textos.ts` da experiência) · `ficha de evidência no servidor` (régua do Canal A: critério dos níveis) · `catálogo/guia do hub` (`catalogo.ts`, `guias/<expId>.ts`) · `aria-label`. A chave é citada; o texto final mora no sheet.
 - **Acessibilidade da tela** e, quando a spec declara, a **CAA** da tela (seção 10.2).
 - Critério de aceite da tela em EARS ou Gherkin — o mesmo que o RF repete.
 
@@ -182,7 +182,7 @@ Uma linha `API-xxx` por rota, no molde do Júri (`references/plataforma/exemplo-
 - **Idempotência e lock:** o que o segundo clique devolve; o lock por estudante na sessão e o da turma — exclusivo para gate, zerar, homologar e pôr no ar; compartilhado para as jogadas que marcam evidência, que releem o gate e devolvem 409 `rodada-mudou` se o professor zerou no meio.
 - **Rate limit:** `rateLimit` de `apps/api/src/comum/rate-limit.ts`, chave por usuário (nunca IP: a turma inteira sai pelo mesmo NAT da escola), teto por minuto com origem ou `[PROPOSTA …]`, 429 `muitas-requisicoes`.
 
-Rotas de plataforma consumidas sem criar: `/progresso/:expId`, `/telemetry/batch`, `/salas/minhas`, `/evidencias/:expId/perguntas/:perguntaId` (Canal B), `/equipes/…`, `/podcast/:expId/…`. Missão não pendura rota em `/atividades` (o motor do Instanooria) nem em `/experiencias`.
+Rotas de plataforma consumidas sem criar: `/progresso/:expId`, `/telemetry/batch`, `/salas/minhas`, `/equipes/…`, `/podcast/:expId/…`. Missão não pendura rota em `/atividades` (o motor do Instanooria) nem em `/experiencias`.
 
 ## 12.2 IA no preparo
 A IA só existe do lado do professor, antes da aula — salvo IA que responde ao estudante declarada na spec (molde `unoogpt`, quota do perfil `estudante`). Uma linha por chamada:
@@ -202,14 +202,14 @@ Tabela `EVT-xxx` · `verbo` (sugerido `attempted|interacted|progressed|completed
 
 # 14. Pedagogia e conformidade
 ## 14.1 Matriz
-Matriz habilidade BNCC — **exatamente as do bloco 11 da spec** (código, confirmado ou 🔵 a validar) → evidência observável → interação → dado gravado (as colunas da seção 11) → **régua inteira: Atingiu, Em processo e Não atingiu, por extenso** → canal (A, B, A + B) → no Canal B, remissão à pergunta e às alternativas no anexo (§12a) → onde o nível mora (`evidencias.status`). Competências socioemocionais do §2 do one-pager. Rastreabilidade curricular. Graus de medida.
+Matriz habilidade BNCC — **exatamente as do bloco 11 da spec** (código, confirmado ou 🔵 a validar) → evidência observável → interação → dado gravado (as colunas da seção 11) → **régua inteira: Atingiu, Em processo e Não atingiu, por extenso** → canal (A; o Canal B foi removido em 29/10/2026) → onde o nível mora (`evidencias.status`). Competências socioemocionais do §2 do one-pager. Rastreabilidade curricular. Graus de medida.
 ## 14.2 Ficha de evidência — o que o servidor calcula
 Uma linha por marcador, no formato da `FichaPedagogica` (`references/plataforma/evidencia-fichas-tipos.md`), que vai para `apps/api/src/evidencias/fichas/<expId>.ts` e para `fichas/index.ts`:
 `| Habilidade | Marcador | Tipo | Pergunta | Regra | Nível | Grava na transação de | Critério para o professor |`
 
 - **Tipo:** `acao` (a missão observa e diz o nível; vale a melhor marca) ou `multipla_escolha` (o nível sai do gabarito da pergunta, no servidor; vale a primeira resposta).
 - **Pergunta:** o id, com remissão ao enunciado e às alternativas no anexo (§12a); o `status` de cada alternativa é o gabarito e nunca desce ao estudante.
-- **Regra:** predicado sobre o que o servidor gravou, com o nome das colunas da seção 11 — `cadeia_tentativas = 1 → atingiu; 2–3 → em_processo; mais → nao_atingiu` (Júri). No Canal B, a regra é o gabarito.
+- **Regra:** predicado sobre o que o servidor gravou, com o nome das colunas da seção 11 — `cadeia_tentativas = 1 → atingiu; 2–3 → em_processo; mais → nao_atingiu` (Júri).
 - **Grava na transação de:** a rota e o latch em que `EvidenciasService.marcar(tx, …)` roda; o resolvedor (`registrarContexto` no `onModuleInit`) devolve `null` fora da (atividade, rodada) do gate. Toda rodada mede tudo de novo (ADR-145).
 - **Critério para o professor:** o texto dos três níveis que o painel mostra (`criterios.atingiu`, `em_processo`, `nao_atingiu`; com dois marcadores, a `observacao` — "vale o melhor").
 - **Régua que não vira predicado sobre dado gravado** — "cumpre ordenadamente a rotina", "demonstra compreensão" — é `[PROPOSTA — validar com PO: <o predicado sobre colunas da seção 11> · por quê · alternativa]`, e a coluna que falta entra na seção 11. No PRD da exp01ef1b (07/10/2026) uma habilidade era medida por «cumpre ordenadamente a rotina investigativa da E1 à E4», e nenhuma coluna guardava isso.
@@ -285,7 +285,7 @@ Aqui fica só o histórico de versões deste PRD.
 - Uma ideia por frase. Tabelas para tudo que é lista paralela (RF, RNF, EVT, ENT, T, RISCO).
 - Nunca inventar código BNCC, rota, tabela, componente ou ADR: se a fonte upstream não confirma, marcar `🔵 a validar` ou `[NEEDS CLARIFICATION]`.
 - **Tabela de outra missão não se cita pelo nome completo** (o `exp06ef1b_…` do Júri): o PRD tem um prefixo de tabela só, e o gate de consistência acusa dois. O molde se cita pelo arquivo da base ou pelo módulo (`juri-estadual`, `a-selecao`).
-- **Copy: cite todas as chaves, não reescreva o texto.** Cada story traz todas as chaves da tela e o lugar onde cada uma vive (seção 7); o texto final mora no sheet revisado, e o PRD não o parafraseia. O conteúdo pedagógico aprovado (perguntas e alternativas do Canal B, roteiro do podcast, roteiro do debate) não é copy de tela: está no anexo, e o corpo remete a ele.
+- **Copy: cite todas as chaves, não reescreva o texto.** Cada story traz todas as chaves da tela e o lugar onde cada uma vive (seção 7); o texto final mora no sheet revisado, e o PRD não o parafraseia. O conteúdo pedagógico aprovado (roteiro do podcast, roteiro do debate, régua de cada habilidade) não é copy de tela: está no anexo, e o corpo remete a ele.
 - Todo RF P0 deve ter pelo menos um critério EARS **e** aparecer em pelo menos uma tarefa e um teste nomeado (`arquivo › caso`).
 - O PRD referencia caminhos reais do monorepo (`apps/experiencias/expNNefNb/…`, `apps/api/src/<modulo>/…`) e os exemplares canônicos a imitar (`apps/api/src/juri-estadual/`, `apps/experiencias/exp06ef1b/`, `apps/experiencias/_template/`). O UnooTube está arquivado (`backup-unootube`, ADR-116), e a pasta da exp08ef4b é `apps/experiencias/exp08ef4b/` — não há `exp-08-manifesto-ia`.
 - **Molde da base é só o que existe em `references/plataforma/`:** `exemplo-schema-exp.md`, `exemplo-migration-exp06ef1b.md`, `exemplo-manifesto-exp06ef1b.md`, `exemplo-telemetria-exp06ef1b.md`, `exemplo-juri-contrato-rotas.md`, `exemplo-juri-invariantes.md`, `exemplo-juri-agents.md`, `exemplo-a-selecao-contrato-rotas.md`, `evidencia-fichas-tipos.md`, `openapi-indice.md`. Este gabarito citava `exemplo-migration-exp-04.md` e `exemplo-telemetria-exp-08.md`, que a base nunca publicou.

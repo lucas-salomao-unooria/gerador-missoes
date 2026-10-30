@@ -405,6 +405,12 @@ CATALOGO: Dict[str, Explicacao] = {
         "O one-pager não tem a parte que diz, para cada habilidade, de qual ação da criança sai o nível dela.",
         "Sem isso, ninguém sabe dizer se a criança aprendeu.",
         _REFAZER_PRODUTO, PO),
+    "canal-b-removido": _x(
+        "Canal B na evidência",
+        "Uma habilidade declara o Canal B (pergunta de múltipla escolha) no contrato de evidência.",
+        "Desde 29/10/2026 o PO decidiu que a evidência é só a ação do estudante na tela (Canal A): a pergunta do fim "
+        "saiu da missão.",
+        _REFAZER_PRODUTO, PO),
     "habilidade-sem-canal-a": _x(
         "Habilidade medida só por pergunta do fim",
         "Uma habilidade é medida só pela pergunta de múltipla escolha do fim, sem nenhuma ação da criança na tela.",

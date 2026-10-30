@@ -145,20 +145,19 @@ def test_montagem_poe_o_contrato_no_fim_de_cada_secao():
     doc = pg.montar(estado["one_pager_pedagogico"], estado)
     blocos = pg.blocos_presentes(doc)
     assert set(blocos) == {pg._titulo_norm(f"{pg.PREFIXO_BLOCO} {s}") for s in
-                           ("as habilidades", "a pergunta do fim (Canal B)", "os tempos", "o podcast")}
+                           ("as habilidades", "a régua de cada habilidade", "os tempos", "o podcast")}
     # cada bloco no fim da seção dele, antes da seção seguinte
     for secao, bloco, seguinte in (("O que a missão ensina", "as habilidades", "Como a gente sabe"),
-                                   ("Como a gente sabe que a criança aprendeu", "a pergunta do fim", "Quanto tempo leva"),
+                                   ("Como a gente sabe que a criança aprendeu", "a régua de cada habilidade", "Quanto tempo leva"),
                                    ("Quanto tempo leva e como dividir em aulas", "os tempos", "O podcast do fechamento"),
                                    ("O podcast do fechamento", "o podcast", "O que a missão NÃO faz")):
         i, j, k = (doc.index(f"## {secao}"), doc.index(f"### {pg.PREFIXO_BLOCO} {bloco}"), doc.index(f"## {seguinte}"))
         assert i < j < k, secao
-    # o texto é o do contrato, por código: o texto oficial da BNCC, a pergunta e as alternativas do Canal B, a tabela
-    # do §10 linha por linha e o que o §11 diz do episódio
+    # o texto é o do contrato, por código: o texto oficial da BNCC, a régua do Canal A de cada habilidade (§12a; a
+    # pergunta do Canal B saiu em 29/10/2026), a tabela do §10 linha por linha e o que o §11 diz do episódio
     assert "**EF02CO01** — «Criar e comparar modelos (representações) de objetos" in doc
-    assert "> Para mostrar em uma foto que duas crianças estão estudando juntas, o que é mais importante aparecer no " \
-           "enquadramento?" in doc
-    assert "1. «A ação das crianças lendo ou escrevendo juntas com o material.»" in doc
+    regua = doc[doc.index(f"### {pg.PREFIXO_BLOCO} a régua de cada habilidade"):doc.index("## Quanto tempo leva")]
+    assert "- **EF02CO01** — " in regua and "Atingiu" in regua and "Canal B" not in regua
     assert "| **TOTAL GERAL DA MISSÃO** | **24 min** | **55 min** |" in doc and "**Total em tela:** 24 min." in doc
     assert "- **Duração total:** 3 minutos e 30 segundos." in doc
     # o roteiro da conversa entra quando o one-pager o tem (a exp02ef1b não tem textos-chave do §9; a exp06ef1b tem)
@@ -550,13 +549,12 @@ def test_mutante_pedagogico_com_h1_25_em_vez_de_30():
 
 
 def test_mutante_texto_chave_reescrito_no_pedagogico():
-    """A pergunta do Canal B (TC-02) reescrita na narrativa: quase igual, o código a devolve ao texto aprovado (A120b);
-    mais distante, o gate bloqueia e devolve ao redator."""
+    """Uma fala do podcast (TC-05) reescrita na narrativa: quase igual, o código a devolve ao texto aprovado (A120b);
+    mais distante, o gate bloqueia e devolve ao redator. (Até 29/10/2026 o exemplo era a pergunta do Canal B.)"""
     estado = _montado()
-    perto = "Para mostrar em uma foto que duas crianças estão estudando juntas, o que é mais importante aparecer na foto?"
-    longe = "Numa foto de duas crianças estudando juntas, o que mais importa aparecer no quadro?"
-    aprovado = ("Para mostrar em uma foto que duas crianças estão estudando juntas, o que é mais importante aparecer no "
-                "enquadramento?")
+    perto = "Pois é... parecia fácil. Mas quando a resposta da Visita chegou, todo mundo levou um susto!"
+    longe = "Pois é, parecia fácil. Mas quando a resposta da Visita veio, a turma toda levou um susto!"
+    aprovado = "Pois é... parecia fácil. Mas quando a resposta da Visita chegou, todo mundo tomou um susto!"
     doc = _na_secao(estado["one_pager_pedagogico"], "Como a gente sabe que a criança aprendeu",
                     f"No fim, a criança responde: «{perto}»")
     montado = pg.montar(doc, estado)
@@ -652,10 +650,10 @@ def test_pendencia_e_changelog_registram_proposta_e_numero_de_antes():
         r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, "Como a gente sabe que a criança aprendeu",
                                                                     linha)})
         assert r["status"] == "bloqueado", linha
-    # texto-chave reescrito vale no texto todo: a pendência não é lugar de outra redação da pergunta do fim
-    longe = "Numa foto de duas crianças estudando juntas, o que mais importa aparecer no quadro?"
+    # texto-chave reescrito vale no texto todo: a pendência não é lugar de outra redação de uma fala do podcast
+    longe = "Pois é, parecia fácil. Mas quando a resposta da Visita veio, a turma toda levou um susto!"
     r = pg.validar({**estado, "one_pager_pedagogico": _na_secao(doc, "O que ainda está em aberto",
-                                                                f"- A pergunta do fim poderia ser «{longe}»")})
+                                                                f"- A fala do podcast poderia ser «{longe}»")})
     assert r["status"] == "bloqueado" and {a["codigo"] for a in r["achados"]} == {"texto-chave-reescrito"}
 
 

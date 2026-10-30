@@ -18,7 +18,7 @@ def test_cada_passo_da_esteira_vira_um_bloco_na_ordem():
     passos = fx.coletar()
     metadados = get_pipeline_agents_metadata(active_only=False)
     assert [p.agente for p in passos] == [m["id"] for m in metadados]
-    assert len({p.numero.rstrip("abcdefghij") for p in passos}) == 129
+    assert len({p.numero.rstrip("abcdefghij") for p in passos}) == 128  # o 021 (votos do painel B) saiu com o Canal B
     assert all(p.faz for p in passos) and all(p.grava or p.tipo == "codigo" for p in passos)
     # os ciclos vêm da árvore real: o núcleo roda dentro dos dois comitês
     nucleo = next(p for p in passos if p.agente == "A004NucleoNarrativo")

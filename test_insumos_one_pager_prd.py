@@ -411,7 +411,7 @@ def test_triagem_manda_a_produto_o_que_o_one_pager_fixa():
     linha_spec = next(l for l in texto.splitlines() if l.startswith("| `spec`"))
     linha_produto = next(l for l in texto.splitlines() if l.startswith("| `produto`"))
     assert "códigos BNCC do bloco 11" not in linha_spec
-    assert "§12a" in linha_produto and "Canal B" in linha_produto and "PARÂMETRO" in linha_produto
+    assert "§12a" in linha_produto and "régua do Canal A" in linha_produto and "PARÂMETRO" in linha_produto
 
 
 # --------------------------------------------------------------------------- PRD × conteúdo aprovado (08/10/2026)

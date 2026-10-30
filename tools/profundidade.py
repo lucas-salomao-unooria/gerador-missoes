@@ -39,20 +39,22 @@ NOME_DIMENSAO = {
     "P2": "Aposta comprometida",
     "P3": "Ápice do aha",
     "P4": "Explicar depois de viver",
-    "P5": "Transferência no Refletir",
+    "P5": "Conserto do objeto no Explicar",
     "P6": "Demanda à altura do ano e do material",
 }
 #: Sem estas três em 3 ou mais, não há aha — há informação revelada.
 NUCLEO_DO_AHA: Tuple[str, ...] = ("P1", "P2", "P3")
 
-#: Os seis passos da anatomia do aha, na ordem em que a tabela 1.2 os traz.
+#: Os seis passos da anatomia do aha, na ordem em que a tabela 1.2 os traz. Desde 29/10/2026 o sexto é o conserto — o
+#: estudante aplica o conceito nomeado ao mesmo objeto da Etapa 3, ainda no Explicar —, e não mais a transferência a um
+#: cenário novo no Refletir: a etapa 6 saiu da missão por decisão do PO.
 PASSOS_DO_AHA: Tuple[Tuple[str, str], ...] = (
     ("crenca", "Crença de entrada"),
     ("aposta", "Aposta comprometida"),
     ("consequencia", "Consequência sentida"),
     ("virada", "Virada"),
     ("nomeacao", "Nomeação"),
-    ("transferencia", "Transferência"),
+    ("conserto", "Conserto"),
 )
 _RE_PASSO = {
     "crenca": re.compile(r"cren[cç]a", re.I),
@@ -60,10 +62,10 @@ _RE_PASSO = {
     "consequencia": re.compile(r"consequ", re.I),
     "virada": re.compile(r"virada|contradi", re.I),
     "nomeacao": re.compile(r"nomea", re.I),
-    "transferencia": re.compile(r"transfer", re.I),
+    "conserto": re.compile(r"conserto|consert|recalibr|reconfigur", re.I),
 }
 
-_RE_ETAPA = re.compile(r"\b(desafiar|navegar|decidir|resultado|aha|explicar|refletir)\b", re.I)
+_RE_ETAPA = re.compile(r"\b(desafiar|navegar|decidir|resultado|aha|explicar)\b", re.I)
 _RE_ETAPA_DO_AHA = re.compile(r"\b(decidir|resultado|aha)\b", re.I)
 _RE_FORA = re.compile(r"^\s*[`*_]*\s*(fora|deixad[oa] de fora|fora do escopo)\b", re.I)
 _RE_ID_CONCEITO = re.compile(r"\bC\d{1,2}\b")
@@ -253,7 +255,7 @@ def validar_cobertura(nucleo: str, mapa: str, material: str = "") -> Dict[str, A
             continue
         if not _RE_ETAPA.search(etapa):
             achados.append(_achado("etapa-invalida",
-                                   f"{rotulo}: a coluna Etapa não nomeia uma das seis etapas nem diz «fora»."))
+                                   f"{rotulo}: a coluna Etapa não nomeia uma das cinco etapas nem diz «fora»."))
             continue
         if len(faz) < MIN_PASSO or _RE_PLACEHOLDER.search(faz):
             achados.append(_achado("acao-vazia",

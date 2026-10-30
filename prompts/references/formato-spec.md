@@ -49,7 +49,7 @@ não aplica regra por ano; sem `produto` o CI recusa o manifesto (ADR-87); sem
 <frase única> — e o beat exato em que ela é vivida.
 Logo abaixo, a **anatomia do aha** copiada da tabela 1.2 do one-pager (crença de
 entrada · aposta comprometida · consequência sentida · virada · nomeação ·
-transferência) e o **conceito limiar** do material com a etapa em que é vivido
+conserto) e o **conceito limiar** do material com a etapa em que é vivido
 (tabela 1.1). É o que design protege na tela do pico e dev mede no bloco 9: a
 aposta que trava vira estado latch, e a consequência que muda por escolha vira regra
 de sistema no bloco 2.
@@ -141,10 +141,9 @@ exploração e dwell nunca no analítico.
 **Texto livre de menor.** Existe? Por quê é necessário? **Quem lê?** Se
 existe, vai em **tabela própria, lida só pelo professor da escola** — nunca
 na telemetria analítica. Campos de payload aceitam só número, booleano ou
-string de vocabulário fechado. O registro da reflexão que o critério 1.6
-exige é, por definição, texto livre de menor: é legítimo e **precisa deste
-campo preenchido**. O 1.6 e a regra de dados só colidem quando o destino
-não está escrito.
+string de vocabulário fechado. Desde 29/10/2026 a missão não tem etapa de
+reflexão (o antigo critério 1.6 foi apagado): texto livre só existe quando a
+mecânica o pede, e então precisa deste campo preenchido.
 
 **Segredo de servidor.** Lista do que nunca vai ao bundle: gabarito,
 parâmetros ocultos, calibragem, vieses, prompt de sistema, e qualquer conta
@@ -164,17 +163,6 @@ são registro editorial, fechado fora da esteira.
 
 **Servidor calcula, nunca aceita.** O que o cliente envia (medidas brutas)
 e o que o servidor deriva.
-
-**Pergunta de evidência (Canal B), quando a matriz do bloco 11 a declara.** A pergunta, as três
-alternativas com o nível de cada uma (a spec não fixa a ordem: o servidor sorteia a cada
-exibição), o componente que a renderiza — do DS da seção, ou local com responsável, nunca
-chamado "do DS" sem estar lá — e o retorno ao estudante, que é só a confirmação de envio. A
-resposta vai pela **rota operacional do módulo**, com o identificador opaco da alternativa; o
-servidor calcula o nível pelo mapeamento fixo e grava na tabela do módulo, lida pela tela do
-professor. O nível **nunca** trafega no `track`: quem chama `track` é o cliente, e o cliente que
-conhece o nível conhece o gabarito. Uma resposta é um sinal só — a medida é `indicative`, e vira
-`scored` apenas somada a um sinal de Canal A da mesma habilidade. O bloco 2 ganha o estado da
-pergunta entre o Refletir e a conclusão, e a falha de plataforma nesse estado é `none`.
 
 **Mídia capturada do estudante.** Se a missão grava voz, foto, vídeo ou tela
 (`microphone`, `camera`, `display-capture` no bloco 0), este bloco declara, sem
@@ -264,15 +252,13 @@ A coluna «Medida do bloco 9» precisa nomear uma medida que existe lá — habi
 nada mede é currículo no papel, e some do relatório do professor. Nas primeiras execuções, 40
 códigos de Computação foram declarados e ~38 não tinham nenhum dado ligado.
 
-«Canal de evidência» é `A` (ação do estudante, classificada pelo servidor) ou `A + B` (a ação
-mais a pergunta de múltipla escolha depois do Refletir), copiado da seção 12a do one-pager — `B`
-sozinho não existe: toda habilidade tem Canal A, e um código confere; não confundir com o canal do
-dado (operacional × analítico) do bloco 9. «Regra ternária» diz o que separa
+«Canal de evidência» é sempre `A` (ação do estudante, classificada pelo servidor), copiado da seção
+12a do one-pager. O Canal B (pergunta de múltipla escolha) foi removido por decisão do PO de
+29/10/2026: qualquer `B` na coluna, inclusive `A + B`, bloqueia (`canal-b-removido`), e um código
+confere; não confundir com o canal do dado (operacional × analítico) do bloco 9. «Regra ternária» diz o que separa
 **Atingiu**, **Em processo** e **Não atingiu** — por extenso, porque os círculos coloridos são
-veredito de gate. Com `A + B`, a regra da ação vem primeiro e o mapeamento das três alternativas a acompanha;
-a pergunta com as alternativas vai no bloco 9. O Canal B **soma** evidência: a linha continua com momento em tela e
-ação observável. No 1º e no 2º ano, as três alternativas ficam na tela ao mesmo tempo (opção
-visível sobe o teto da faixa de duas para três, critério 3.5) e são narradas (6.1).
+veredito de gate. `scored` exige dois sinais de Canal A da mesma habilidade; com um só, a medida é
+`indicative`.
 
 A regra ternária tem de ser **alcançável e sem buraco**: cada nível descreve um resultado que a
 interface deixa acontecer (se a tela não deixa repetir categoria, "repetiu a categoria" não é nível),

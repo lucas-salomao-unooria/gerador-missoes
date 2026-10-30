@@ -100,7 +100,7 @@ Conta-se no arquivo HTML, não no relatório sobre ele. O lint e a esteira tocam
 | (ID, estado) da cobertura sem quadro e fora da lista «o que ficou fora» | Cobertura incompleta (teste 2): nunca "completo" com quadro faltando |
 | Texto visível fora do sheet de copy, ou marcador `[[…]]` que não seja `[[LACUNA — dono]]` declarado no relatório | Invenção ou placeholder não resolvido (teste 1) |
 | Hexadecimal fora dos nove tokens dentro de um quadro | Uma exceção abre todas (teste 3) |
-| Escolha da missão com alternativa ou distrator faltando, ou com marca de gabarito (`[Correto]`, `[Distrator …]`, nível do Canal B) | O protótipo entregaria a resposta |
+| Escolha da missão com alternativa ou distrator faltando, ou com marca de gabarito (`[Correto]`, `[Distrator …]`, nível da escolha) | O protótipo entregaria a resposta |
 | Botão, aba ou affordance que a spec declara ausente | O que o ambiente não tem não aparece, nem "por realismo" |
 | Tela `pico` com mais elementos que uma vizinha | Teste 4: a hierarquia invertida bloqueia (O1) |
 | Tela de congelamento com affordance além da saída declarada da demo | Teste 5: a saída é concessão da demo, não a trava |

@@ -100,7 +100,7 @@ Com base em desenho centrado em evidência: para cada objetivo declarado, respon
 
 Objetivo sem artefato observável é objetivo não avaliável. Aponte cada um.
 
-**Os canais de evidência (seção 12a) não são seus.** Desde 15/10/2026 o sentido de cada canal — se a ação do Canal A exercita a habilidade, se a regra ternária distingue os três níveis, se a pergunta do Canal B mede e discrimina — é votado pelo comitê dos canais, que roda antes de você e devolve a missão a quem a escreve. Não reabra esse julgamento nem peça ajuste nele: as três perguntas acima valem para o objetivo de cada etapa, não para o contrato do §12a.
+**Os canais de evidência (seção 12a) não são seus.** Desde 15/10/2026 o sentido do Canal A — se a ação exercita a habilidade e se a regra ternária distingue os três níveis — é votado pelo comitê dos canais, que roda antes de você e devolve a missão a quem a escreve. Não reabra esse julgamento nem peça ajuste nele: as três perguntas acima valem para o objetivo de cada etapa, não para o contrato do §12a.
 
 ### Eixo 6 — Equidade e acessibilidade
 
@@ -151,7 +151,7 @@ Todo achado recebe um identificador estável `E<eixo>-A<n>` (ex.: `E2-A3`). Os a
 - Mudar: <o que precisa passar a ser verdade, em uma frase>
 - Aceite: <teste verificável — como saber, olhando, que foi resolvido>
 
-Com one-pager do PO anexado (seção «One-pager do PO»), **ajuste exigido não altera o que o PO escreveu** — mecanismo, tempos, textos, Canal B, podcast. Se o seu eixo encontra problema nisso, o achado continua valendo, mas o ajuste vai em «Ajustes recomendados», como recomendação ao PO. Exigido é só o que o pedido do PO manda ou o que falta para o formato canônico.
+Com one-pager do PO anexado (seção «One-pager do PO»), **ajuste exigido não altera o que o PO escreveu** — mecanismo, tempos, textos, podcast. Se o seu eixo encontra problema nisso, o achado continua valendo, mas o ajuste vai em «Ajustes recomendados», como recomendação ao PO. Exigido é só o que o pedido do PO manda ou o que falta para o formato canônico.
 
 ## Ajustes recomendados
 <Mesmo formato, prefixo R. Não bloqueiam.>

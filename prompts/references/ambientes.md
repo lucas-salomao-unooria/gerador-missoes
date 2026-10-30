@@ -65,7 +65,7 @@ Se a seção trouxer valor em vez de slot, isso é lacuna a registrar no storybo
 
 ## Nada da marca dentro do disfarce
 
-Nenhum token, fonte, cor ou componente da seção `unooria` dentro das telas do clone — e vice-versa (DES-13). Os dois escapes conhecidos continuam: tela de contexto antes de entrar e reflexão depois que a simulação fecha, e esses **podem** usar a seção `unooria`. Há uma terceira exceção, restrita: a **instrução fixa** do estudante (`references/padrao-plataforma-instrucao-fixa.md`), só com `instrucao_fixa: sim` na spec, camada do hub fora do iframe e do DOM do clone, nas condições escritas ali.
+Nenhum token, fonte, cor ou componente da seção `unooria` dentro das telas do clone — e vice-versa (DES-13). Os dois escapes conhecidos continuam: tela de contexto antes de entrar e tela de fechamento (sem pergunta nem campo de texto) depois que a simulação fecha, e esses **podem** usar a seção `unooria`. Há uma terceira exceção, restrita: a **instrução fixa** do estudante (`references/padrao-plataforma-instrucao-fixa.md`), só com `instrucao_fixa: sim` na spec, camada do hub fora do iframe e do DOM do clone, nas condições escritas ali.
 
 O mapa de qual seção fala em cada tela é entrega do `copy-ptbr` (coluna `seção` no sheet), porque quem decide quem está falando é quem escreve a fala.
 

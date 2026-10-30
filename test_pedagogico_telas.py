@@ -501,7 +501,7 @@ def test_prompt_do_pedagogico_pede_o_passo_a_passo_com_as_telas():
 
     ped = load_prompt("dev/120_one_pager_pedagogico.md")
     for trecho in ("## Como a missão acontece, passo a passo", "### Antes da aula — o preparo da professora",
-                   "### Passo 1 — Desafiar", "### Passo 6 — Refletir", "**Telas deste passo:**",
+                   "### Passo 1 — Desafiar", "### Passo 5 — Explicar", "**Telas deste passo:**",
                    "Seção 3 — Inventário de telas", "Teste do passo a passo",
                    # o que o prompt já exigia continua lá
                    "## O podcast do fechamento", "## Como a gente sabe que a criança aprendeu",

@@ -13,7 +13,7 @@ Sua função: dado o **núcleo narrativo validado** (seções 0, 1, 3, 4 + decis
 
 ## Contexto da plataforma
 
-A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão** é uma experiência imersiva de letramento digital que simula, com fidelidade, um ambiente digital real: a **cópia estrutural do app com a identidade da Unooria**, montada sobre uma **seção do design system** — `unoovista` (rede social de fotos), `unoochat` (mensageiro), `unooriaai` (assistente de IA), `tiktooria` (vídeo curto), `unoogaleria` (galeria de fotos), `unoojornal` (jornal) ou `unooblog` (blog); a tradução do que o briefing diz para a seção está em `ambientes.md`, e os componentes de cada uma, no inventário do DS. As seções legadas (`instanooria`, `chatgpt`, `whatsappmobile`, `unootube`) são só de missão antiga. **Seção que o briefing fixa** (`secao_ds: <seção>`, "Interface forçada: <nome>") **é trava**: a missão monta nela, e a interação que a coleção não oferece vira **pré-requisito do DS, sinalizado** — nunca motivo para trocar de seção. A missão segue um **framework de 6 etapas**: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar → Refletir. A missão é projetada em **duas camadas**: (1) **Engine imersiva estrutural fixa**; (2) **Camada de parametrização e autoria assistida por IA na preparação docente** (o professor insere tema, contexto e foco curricular; a IA da plataforma gera rascunhos de posts, comentários e mídias via Vertex Gemini; e o professor cura, edita e aprova antes de liberar para a turma). O professor conduz com autonomia e controle, com dashboard, roteiro de debate e podcast de recapitulação.
+A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão** é uma experiência imersiva de letramento digital que simula, com fidelidade, um ambiente digital real: a **cópia estrutural do app com a identidade da Unooria**, montada sobre uma **seção do design system** — `unoovista` (rede social de fotos), `unoochat` (mensageiro), `unooriaai` (assistente de IA), `tiktooria` (vídeo curto), `unoogaleria` (galeria de fotos), `unoojornal` (jornal) ou `unooblog` (blog); a tradução do que o briefing diz para a seção está em `ambientes.md`, e os componentes de cada uma, no inventário do DS. As seções legadas (`instanooria`, `chatgpt`, `whatsappmobile`, `unootube`) são só de missão antiga. **Seção que o briefing fixa** (`secao_ds: <seção>`, "Interface forçada: <nome>") **é trava**: a missão monta nela, e a interação que a coleção não oferece vira **pré-requisito do DS, sinalizado** — nunca motivo para trocar de seção. A missão segue um **framework de 5 etapas**: Desafiar → Navegar → Decidir → Resultado/Aha → Explicar (sem etapa 6 nem Canal B, por decisão do PO de 29/10/2026). A missão é projetada em **duas camadas**: (1) **Engine imersiva estrutural fixa**; (2) **Camada de parametrização e autoria assistida por IA na preparação docente** (o professor insere tema, contexto e foco curricular; a IA da plataforma gera rascunhos de posts, comentários e mídias via Vertex Gemini; e o professor cura, edita e aprova antes de liberar para a turma). O professor conduz com autonomia e controle, com dashboard, roteiro de debate e podcast de recapitulação.
 
 ## Insumos
 
@@ -29,15 +29,15 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 
 {one_pager_po_report?}
 
+**Quando o one-pager do PO tem Etapa 6, transferência ou Canal B, remova-os e registre na tabela de alterações "decisão do PO de 29/10/2026".** A missão tem 5 etapas (Desafiar, Navegar, Decidir, Resultado/Aha, Explicar) e a evidência é só Canal A: o Refletir, o caso de transferência e a pergunta de múltipla escolha saem, e os minutos deles não migram para outra etapa — o total do §10 cai.
+
 **Comitês pedagógicos na rodada anterior** (vazios até um comitê reprovar). O comitê não escreve, e a correção é sua: corrija **só os achados atribuídos a `A014`** — a seção 2, as linhas do §12a das demais habilidades e as seções 5 a 18 —, partindo do one-pager que você entregou e mudando só o que os achados pedem. Os achados de `A004` o núcleo acima já corrigiu: copie dele a seção 4 e o contrato do foco primário. Habilidade secundária sem ação que a exercite sai da seção 2 quando o achado manda. Com one-pager do PO anexado, o voto pode mandar mudar o texto dele — registre na tabela «Alterações sobre o one-pager do PO», citando entre aspas o `Corrigir` do achado; se o pedido do PO manda **não mexer** naquele objeto, não mude: escreva `[PROPOSTA — validar com PO: …]` ao lado.
 
 {comite_canal_a_report?}
 
-{comite_canal_b_report?}
-
 {comite_final_report?}
 
-**Contrato de evidência do one-pager (§12a), conferido em código** — habilidade sem Canal A, sem regra ternária por extenso ou com Canal B sem os três níveis volta aqui; o foco primário é seu (seção 4), as demais linhas são das seções de apoio:
+**Contrato de evidência do one-pager (§12a), conferido em código** — habilidade sem Canal A, sem regra ternária por extenso ou com Canal B (removido em 29/10/2026) volta aqui; o foco primário é seu (seção 4), as demais linhas são das seções de apoio:
 
 {evidencia_one_pager_report?}
 
@@ -80,7 +80,7 @@ Habilidades BNCC Computação — Letramento Digital (núcleo da missão, códig
 ## 3. Narrativa e personagem-guia
 [copiado do núcleo — não alterar]
 
-## 4. As 6 etapas — mecanismo, não intenção
+## 4. As 5 etapas — mecanismo, não intenção
 [copiado do núcleo — não alterar]
 
 ## 5. Verificação de ambiente
@@ -113,16 +113,14 @@ Roteiro completo, 2 apresentadores, 5 blocos (abertura ~30s, recapitulação ~1�
 ## 12. Evidências e dados
 O que é capturado, quando, finalidade, retenção, acesso; o que NÃO é coletado; graus de medida; canal; texto livre de menor; segredo de servidor; gabarito. A Atividade guarda `disciplina` e o recorte da aula como metadados do professor (rótulo do relatório pós-aula); nunca são dado do estudante.
 
-**12a. Contrato de evidência por habilidade.** Copie da seção 4 do núcleo o contrato do foco primário (Regra 17 do P0a) e estenda-o a **toda habilidade de Computação da seção 2**, uma linha cada. Os níveis vão por extenso — Atingiu · Em processo · Não atingiu —, nunca com os círculos de veredito dos gates. **Toda habilidade tem Canal A** — o canal é `A` ou `A + B`; `B` sozinho é ❌ (decisão do PO de 15/10/2026). Habilidade secundária que nenhuma ação da missão exercita sai da seção 2 (critério 5.2): a pergunta do Canal B não a sustenta sozinha. Escreva o contrato nesta tabela, com este cabeçalho exato — um código confere a forma dela antes de o comitê votar:
+**12a. Contrato de evidência por habilidade.** Copie da seção 4 do núcleo o contrato do foco primário (Regra 17 do P0a) e estenda-o a **toda habilidade de Computação da seção 2**, uma linha cada. Os níveis vão por extenso — Atingiu · Em processo · Não atingiu —, nunca com os círculos de veredito dos gates. **Toda habilidade tem Canal A** (decisão do PO de 15/10/2026), e **o canal é sempre `A`**: o Canal B (pergunta de múltipla escolha) foi removido por decisão do PO de 29/10/2026, e qualquer `B` na célula do canal ou coluna «Canal B» bloqueia (`canal-b-removido`). Habilidade secundária que nenhuma ação da missão exercita sai da seção 2 (critério 5.2): não há pergunta que a sustente. Escreva o contrato nesta tabela, com este cabeçalho exato — um código confere a forma dela antes de o comitê votar:
 
-  `| Habilidade (código) | Canal de evidência | Canal A: ação · etapa · regra ternária (Atingiu / Em processo / Não atingiu) | Canal B: pergunta · 3 alternativas com o nível de cada uma, sem ordem fixa · componente que renderiza |`
+  `| Habilidade (código) | Canal de evidência | Canal A: ação · etapa · regra ternária (Atingiu / Em processo / Não atingiu) |`
 
-  Com canal `A`, a última coluna fica `—`.
+  Na coluna «Canal de evidência», escreva `A`.
 - **Canal A (Regra Ternária Enxuta e Sem Sub-Mecânicas Extras):** o evento que o sistema registra (verbo + objeto), o campo do `resultado` ou do `contexto` que distingue os três níveis, e a regra ternária explícita ("servidor calcula, nunca aceita"). **Nunca invente sub-mecânicas paralelas nem duplique rodadas** para medir habilidades secundárias: use os eventos do Core Loop principal; se uma habilidade secundária não tiver ação correspondente no Core Loop do núcleo, **retire-a da seção 2** (critério 5.2). Escreva a regra ternária em no máximo **3 a 5 linhas por habilidade** (`Atingiu: <condição positiva>; Em processo: <condição intermediária>; Não atingiu: nos demais casos — complementar lógico de Atingiu e Em processo, incluindo <caminhos degenerados da seção 7>`), sem expandir matrizes combinatórias gigantescas.
-- **Canal B:** a pergunta, as 3 alternativas com o nível de cada uma (sem ordem fixa: o servidor sorteia a cada exibição), o componente que a renderiza sem quebrar a imersão — do DS da seção quando existir; senão, componente local declarado como pré-requisito na seção 16, nunca apresentado como "do DS" — e a confirmação de que o estudante vê apenas "resposta enviada" ou o equivalente diegético: sem nota, sem resultado, sem sinal de acerto.
-- **Gabarito no servidor:** o mapeamento alternativa → nível vive só no servidor. O cliente envia a alternativa escolhida (identificador opaco) pela rota do módulo e nunca recebe qual alternativa corresponde a qual nível.
-- **Grau de medida:** uma resposta de Canal B é um sinal só — `indicative`, nunca `scored` sozinha (quem chuta acerta uma vez em três). Vira `scored` somada a um sinal de Canal A da mesma habilidade.
-- O Canal B vem **depois do Refletir**, como última interação, entra na conta de telas e minutos da seção 15 e, no 1º e no 2º ano, mostra as três alternativas ao mesmo tempo (critério 3.5: opção visível sobe o teto de duas para três), narradas e com imagem ou ícone (6.1). Não substitui o exercício em tela nem o registro do Refletir.
+- **Gabarito no servidor:** a regra ternária é calculada no servidor. O cliente envia a ação observada pela rota do módulo e nunca recebe o nível do estudante nem a regra que o separa.
+- **Grau de medida:** `scored` exige dois sinais de Canal A da mesma habilidade (duas ações que a leem). Com uma ação só, a habilidade fica `indicative` — declare qual.
 - **Quem lê:** o nível de cada estudante chega ao professor pela tabela do módulo e pela tela dele (seção 9), como leitura da evidência daquela habilidade — nunca rótulo do estudante (8.4) nem nota (7.2), e nunca pela telemetria analítica.
 Se o núcleo não trouxe o contrato do foco primário, sinalize `[INCONSISTÊNCIA DETECTADA — o P0a precisa declarar o canal de evidência do foco primário (Regra 17)]`.
 

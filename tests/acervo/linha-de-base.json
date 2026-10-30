@@ -13,7 +13,8 @@
     "evidencia_status": {
       "status": "bloqueado",
       "codigos": [
-        "habilidade-sem-canal-a"
+        "canal-b-removido",
+        "habilidade-sem-momento"
       ]
     },
     "perguntas_status": {
@@ -38,13 +39,14 @@
       "status": "bloqueado",
       "codigos": [
         "agendamento",
+        "codigo-fora-do-eixo",
         "texto-chave-acima-do-teto"
       ]
     },
     "evidencia_one_pager_status": {
       "status": "bloqueado",
       "codigos": [
-        "habilidade-sem-canal-a"
+        "canal-b-removido"
       ]
     },
     "mecanica_one_pager_status": {
@@ -60,8 +62,10 @@
       ]
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -247,8 +251,10 @@
       ]
     },
     "evidencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "perguntas_status": {
       "status": "aprovado",
@@ -274,8 +280,10 @@
       ]
     },
     "evidencia_one_pager_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "mecanica_one_pager_status": {
       "status": "bloqueado",
@@ -290,8 +298,10 @@
       ]
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -320,8 +330,11 @@
       "codigos": []
     },
     "evidencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido",
+        "habilidade-sem-momento"
+      ]
     },
     "perguntas_status": {
       "status": "aprovado",
@@ -346,8 +359,10 @@
       ]
     },
     "evidencia_one_pager_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "mecanica_one_pager_status": {
       "status": "aprovado",
@@ -358,8 +373,11 @@
       "codigos": []
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta",
+        "etapa-invalida"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -458,8 +476,11 @@
       "codigos": []
     },
     "evidencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido",
+        "habilidade-sem-momento"
+      ]
     },
     "perguntas_status": {
       "status": "aprovado",
@@ -482,8 +503,10 @@
       ]
     },
     "evidencia_one_pager_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "mecanica_one_pager_status": {
       "status": "aprovado",
@@ -494,8 +517,11 @@
       "codigos": []
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta",
+        "etapa-invalida"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -572,8 +598,10 @@
       "codigos": []
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -668,8 +696,10 @@
       ]
     },
     "evidencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "perguntas_status": {
       "status": "aprovado",
@@ -687,14 +717,14 @@
       "codigos": []
     },
     "contrato_produto_status": {
-      "status": "amarelo",
-      "codigos": [
-        "texto-chave-acima-do-teto"
-      ]
-    },
-    "evidencia_one_pager_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "evidencia_one_pager_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "mecanica_one_pager_status": {
       "status": "aprovado",
@@ -705,8 +735,10 @@
       "codigos": []
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "amarelo",
@@ -742,10 +774,8 @@
       "codigos": []
     },
     "montagem_pedagogico_status": {
-      "status": "bloqueado",
-      "codigos": [
-        "texto-chave-reescrito"
-      ]
+      "status": "aprovado",
+      "codigos": []
     },
     "ambiente_status": {
       "status": "amarelo",
@@ -811,8 +841,7 @@
       "codigos": [
         "hipotese-a-conferir",
         "hipotese-diverge",
-        "numero-sem-origem",
-        "texto-chave-reescrito"
+        "numero-sem-origem"
       ]
     },
     "conteudo_status": {
@@ -895,8 +924,10 @@
       "codigos": []
     },
     "evidencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "perguntas_status": {
       "status": "aprovado",
@@ -920,8 +951,10 @@
       ]
     },
     "evidencia_one_pager_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "mecanica_one_pager_status": {
       "status": "aprovado",
@@ -932,8 +965,10 @@
       "codigos": []
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -1032,8 +1067,10 @@
       ]
     },
     "evidencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "perguntas_status": {
       "status": "aprovado",
@@ -1060,8 +1097,10 @@
       ]
     },
     "evidencia_one_pager_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "mecanica_one_pager_status": {
       "status": "bloqueado",
@@ -1076,8 +1115,10 @@
       ]
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -1106,8 +1147,10 @@
       ]
     },
     "evidencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "perguntas_status": {
       "status": "aprovado",
@@ -1126,14 +1169,14 @@
       "codigos": []
     },
     "contrato_produto_status": {
-      "status": "amarelo",
-      "codigos": [
-        "texto-chave-acima-do-teto"
-      ]
-    },
-    "evidencia_one_pager_status": {
       "status": "aprovado",
       "codigos": []
+    },
+    "evidencia_one_pager_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "mecanica_one_pager_status": {
       "status": "aprovado",
@@ -1144,8 +1187,10 @@
       "codigos": []
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -1239,8 +1284,10 @@
       ]
     },
     "evidencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "perguntas_status": {
       "status": "aprovado",
@@ -1259,8 +1306,10 @@
       "codigos": []
     },
     "evidencia_one_pager_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "mecanica_one_pager_status": {
       "status": "aprovado",
@@ -1271,8 +1320,10 @@
       "codigos": []
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -1295,8 +1346,10 @@
       "codigos": []
     },
     "montagem_pedagogico_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "bloco-do-contrato-ausente"
+      ]
     },
     "ambiente_status": {
       "status": "aprovado",
@@ -1323,7 +1376,7 @@
     "textos_chave_status": {
       "status": "amarelo",
       "codigos": [
-        "texto-chave-proposta"
+        "texto-chave-id-desconhecido"
       ]
     },
     "arestas_status": {
@@ -1416,6 +1469,7 @@
     "evidencia_status": {
       "status": "bloqueado",
       "codigos": [
+        "canal-b-removido",
         "gabarito-no-cliente"
       ]
     },
@@ -1440,8 +1494,10 @@
       ]
     },
     "evidencia_one_pager_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "mecanica_one_pager_status": {
       "status": "aprovado",
@@ -1452,8 +1508,10 @@
       "codigos": []
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -1592,8 +1650,10 @@
       "codigos": []
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -1616,8 +1676,10 @@
       "codigos": []
     },
     "montagem_pedagogico_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "bloco-do-contrato-ausente"
+      ]
     },
     "ambiente_status": {
       "status": "aprovado",
@@ -1988,8 +2050,10 @@
       "codigos": []
     },
     "evidencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "perguntas_status": {
       "status": "aprovado",
@@ -2010,8 +2074,10 @@
       ]
     },
     "evidencia_one_pager_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "mecanica_one_pager_status": {
       "status": "aprovado",
@@ -2022,8 +2088,10 @@
       "codigos": []
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -2174,8 +2242,10 @@
       "codigos": []
     },
     "evidencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "perguntas_status": {
       "status": "aprovado",
@@ -2196,8 +2266,10 @@
       ]
     },
     "evidencia_one_pager_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "mecanica_one_pager_status": {
       "status": "aprovado",
@@ -2208,8 +2280,10 @@
       "codigos": []
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -2591,8 +2665,11 @@
       ]
     },
     "evidencia_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido",
+        "habilidade-sem-momento"
+      ]
     },
     "perguntas_status": {
       "status": "aprovado",
@@ -2616,8 +2693,10 @@
       ]
     },
     "evidencia_one_pager_status": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "canal-b-removido"
+      ]
     },
     "mecanica_one_pager_status": {
       "status": "bloqueado",
@@ -2632,8 +2711,10 @@
       ]
     },
     "cobertura_conceitual": {
-      "status": "aprovado",
-      "codigos": []
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
     },
     "avaliacao_status": {
       "status": "aprovado",
@@ -2655,7 +2736,6 @@
       "status": "bloqueado",
       "codigos": [
         "artefato-inexistente",
-        "canal-b-reescrito",
         "podcast-ausente",
         "roteiro-reescrito"
       ]
@@ -2716,8 +2796,6 @@
     "rastreabilidade_status": {
       "status": "bloqueado",
       "codigos": [
-        "perdido-canal_b-pedagogico",
-        "perdido-canal_b-prd",
         "perdido-podcast-copy",
         "perdido-podcast-prd",
         "perdido-proposta-prd",

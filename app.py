@@ -833,7 +833,7 @@ def _render_padroes(estado: Dict[str, Any], etapa: str) -> None:
 def _render_textos_chave(estado: Dict[str, Any]) -> None:
     """A tabela dos textos-chave com ID, no cartão do de acordo de produto (plano «Produto dono do contrato», PR 7, D1).
 
-    É o texto que o PO aprova palavra por palavra — aspas do §4, Canal B, opções de cada escolha, roteiro do professor,
+    É o texto que o PO aprova palavra por palavra — aspas do §4, opções de cada escolha, roteiro do professor,
     podcast — e que a esteira copia por código até a copy. A sessão anterior ao PR 7 não tem a tabela gravada: ela é
     montada aqui das mesmas seções, só para mostrar."""
     from tools import textos_chave as tk

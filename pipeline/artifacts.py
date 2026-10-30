@@ -29,7 +29,6 @@ ARTIFACT_FILES = [
     ("one_pager", "produto/00-one-pager.md"),
     ("evidencia_one_pager_report", "produto/00k-contrato-evidencia-12a.md"),
     ("comite_canal_a_report", "produto/00l-comite-canais-painel-a.md"),
-    ("comite_canal_b_report", "produto/00m-comite-canais-painel-b.md"),
     ("brief_escopo", "produto/00f-brief-escopo.md"),
     ("contrato_produto_report", "produto/00e-contrato-produto.md"),
     ("gate_estrutural_report", "produto/01-gate-estrutural.md"),
@@ -542,3 +541,4 @@ def save_run_artifacts(
             logger.debug("Não foi possível registrar no serviço ADK de forma síncrona: %s", exc)
 
     return run_dir if written else run_dir
+

@@ -102,9 +102,7 @@ def achados_de_consistencia(execucao: str) -> List[Dict[str, str]]:
     st = estado(execucao)
     one_pager = str(st.get("one_pager") or "")
     return (consistencia.validar_estado(st)["achados"]
-            + conteudo_aprovado.validar_copy(str(st.get("copy_strings_revisada") or ""), one_pager)
-            + conteudo_aprovado.validar_literais_design(str(st.get("camada_caa") or ""),
-                                                         str(st.get("prototipo_arquivo") or ""), one_pager))
+            + conteudo_aprovado.validar_copy(str(st.get("copy_strings_revisada") or ""), one_pager))
 
 
 def rotulos_divergentes(execucao: str) -> List[str]:

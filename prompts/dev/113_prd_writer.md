@@ -49,8 +49,8 @@ codifica precisa para implementar, e um gate determinístico confere os quatro p
 
 - **Seção 14:** a matriz com **exatamente** as habilidades do contrato de evidência do one-pager aprovado (§12a, no anexo) — as mesmas do bloco 11 da spec; se as duas divergirem, siga o one-pager e registre a divergência na seção 19 com dono `produto` —, cada uma com a régua
   inteira — Atingiu, Em processo e Não atingiu, por extenso, que é a regra que o servidor calcula —,
-  o canal (A, B ou A + B), o grau de medida (`indicative` / `scored`) e, no Canal B, a remissão à
-  pergunta e às alternativas no anexo. Mais as competências socioemocionais do §2. E a **ficha de
+  o canal (A — o Canal B foi removido por decisão do PO de 29/10/2026), o grau de medida (`indicative` /
+  `scored`, que exige dois sinais de Canal A). Mais as competências socioemocionais do §2. E a **ficha de
   evidência** (seção 14.2 do gabarito): cada régua como predicado sobre colunas que o servidor grava.
 - **Seção 2:** um **KPI de evidência por habilidade** (uma linha pode cobrir várias): quantos
   estudantes chegam a Atingiu, os `EVT-` das ações que o servidor classifica e o cálculo sobre **a

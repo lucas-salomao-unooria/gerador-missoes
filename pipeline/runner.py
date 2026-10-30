@@ -51,7 +51,7 @@ STATUS_KEYS = [
     "micro_gate_status",
     "micro_gate_rodada",
     "evidencia_one_pager_status",
-    "comite_canal_a_status", "comite_canal_b_status", "comite_canais_rodada",
+    "comite_canal_a_status", "comite_canais_rodada",
     "gate_estrutural_status",
     "gate_estrutural_rodada",
     "mecanica_one_pager_status", "comite_final_status", "comite_final_externo_rodada",
