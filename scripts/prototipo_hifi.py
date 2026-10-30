@@ -80,6 +80,7 @@ def fechar(ws: Path, sessao: Path, relatorios: list[dict], segundos: float) -> d
     resumo = {"missao": missao["missao"], "quadros": len(missao["quadros"]), "telas": len({q["id"] for q in missao["quadros"]}),
               "build_final": final["ok"], "kb": final["kb"], "faltando": audit.get("faltando", []),
               "com_erro": audit.get("com_erro", []), "lint_estatico": lint_estatico["achados"],
+              "sobreposicoes": audit.get("sobreposicoes", []),
               "lint_esteira": {"status": lint_esteira.get("status"), "achados": lint_esteira.get("achados", [])},
               "texto_rastreavel_pct": texto["percentual"], "linhas_de_texto": texto["linhas"],
               "lacunas": lacunas, "identificadores_sem_fonte": sem_fonte,
@@ -111,7 +112,8 @@ def _relatorio_md(ws: Path, sessao: Path, r: dict, texto: dict) -> None:
               f"- Sessão: `{sessao}`",
               f"- Quadros: {r['quadros']} ({r['telas']} telas) · capturados: {r['capturas']}",
               f"- Build final: {'ok' if r['build_final'] else 'FALHOU'} · {r['kb']} KB",
-              f"- Faltando: {len(r['faltando'])} · com erro de montagem: {len(r['com_erro'])} · achados de lint: {len(r['lint_estatico'])}",
+              f"- Faltando: {len(r['faltando'])} · com erro de montagem: {len(r['com_erro'])} · achados de lint: {len(r['lint_estatico'])}"
+              f" · sobreposições: {len(r['sobreposicoes'])}",
               f"- Lint do protótipo da esteira: {r['lint_esteira']['status']}",
               f"- Modelo: {r['modelo']}",
               f"- Identificadores sem fonte nos insumos: {len(r['identificadores_sem_fonte'])}"
@@ -127,6 +129,7 @@ def _relatorio_md(ws: Path, sessao: Path, r: dict, texto: dict) -> None:
                       f"{(l.get('segundos') or 0) // 60} min | {(l.get('uso') or {}).get('total', 0):,} |")
     for titulo, itens in (("Lacunas declaradas (decisões que faltam nos documentos)", r["lacunas"]),
                           ("Faltando", r["faltando"]), ("Erro de montagem", r["com_erro"]),
+                          ("Elementos sobrepostos", r["sobreposicoes"]),
                           ("Lint", [f"{a['arquivo']}: {a['codigo']} `{a['trecho']}`" for a in r["lint_estatico"]])):
         if itens:
             linhas += ["", f"## {titulo}", ""] + [f"- {i}" for i in itens]
@@ -173,6 +176,7 @@ def main() -> None:
     ap.add_argument("--pular-fundacao", action="store_true", help="a fundação já rodou neste workspace")
     ap.add_argument("--so-final", action="store_true", help="só o fechamento (build, auditoria, capturas, relatório)")
     ap.add_argument("--publicar", default=None, help="pasta da sessão onde o resultado fica (`<sessão>/design/hifi`)")
+    ap.add_argument("--sem-custo", action="store_true", help="publica sem somar o custo à missão (republicação)")
     a = ap.parse_args()
     load_dotenv(RAIZ / ".env")
     sessao, ws = Path(a.sessao).resolve(), Path(a.destino).resolve()
@@ -193,12 +197,16 @@ def main() -> None:
         rel = ws / "relatorios" / f"{l['nome']}.json"
         if rel.exists() and not any(r.get("lote") == l["nome"] for r in relatorios):
             relatorios.append(json.loads(rel.read_text(encoding="utf-8")))
-    resumo = fechar(ws, sessao, relatorios, time.time() - t0)
+    segundos = time.time() - t0
+    if a.so_final and (ws / "relatorios" / "final.json").exists():
+        # o fechamento refeito à parte não apaga a duração da geração que ele fecha
+        segundos = max(segundos, json.loads((ws / "relatorios" / "final.json").read_text(encoding="utf-8")).get("segundos", 0))
+    resumo = fechar(ws, sessao, relatorios, segundos)
     if a.publicar:
         publicar(ws, Path(a.publicar))
         # o custo entra na missão: a sessão é a mãe de `<sessão>/design/hifi`
         from tools.prototipo_hifi.no_gerador import registrar_custo
-        linha = registrar_custo(Path(a.publicar).parents[1], relatorios)
+        linha = None if a.sem_custo else registrar_custo(Path(a.publicar).parents[1], relatorios)
         if linha:
             print(f"custo somado à missão: US$ {linha['usd']:.2f} · R$ {linha['brl']:.2f}", flush=True)
     print(json.dumps({k: resumo[k] for k in ("build_final", "kb", "capturas", "texto_rastreavel_pct")} |

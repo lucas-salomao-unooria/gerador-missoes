@@ -148,6 +148,7 @@ async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str
         return {"ok": r.get("ok", False) and not sem_fonte and not any(q["faltando"] or q["erro"] for q in quadros),
                 "erro_geral": r.get("erro"),
                 "identificadores_sem_fonte": sem_fonte,
+                "sobreposicoes": [f"{q['id']} · {q['estado']}: {s}" for q in quadros for s in q.get("sobreposicoes") or []],
                 "estados": [{"id": q["id"], "estado": q["estado"], "faltando": q["faltando"], "erro": q["erro"],
                              "linhas_de_texto": len(q["texto"])} for q in quadros]}
 
@@ -262,9 +263,11 @@ async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str
                      "lint": lint["achados"][:20], "sem_captura": sem_captura,
                      "sem_interacao": [i for i in interativas if i not in exercitadas],
                      "identificadores_sem_fonte": ferramentas.identificadores_sem_fonte(meus, corpus),
+                     "sobreposicoes": [f"{q['id']} · {q['estado']}: {s}" for q in meus for s in q.get("sobreposicoes") or []],
                      "comum_alterado": (not fundacao) and [_hash(p) for p in comum] != hash_comum}
             pendente = (not gates["build"] or gates["faltando"] or gates["com_erro"] or gates["lint"]
                         or gates["sem_captura"] or gates["sem_interacao"] or gates["identificadores_sem_fonte"]
+                        or gates["sobreposicoes"]
                         or gates["comum_alterado"])
             if not pendente:
                 break
@@ -272,6 +275,8 @@ async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str
                         + json.dumps({k: v for k, v in gates.items() if v and k != "build"}, ensure_ascii=False, indent=1)
                         + "\n\n`sem_captura` lista estados cujo arquivo mudou depois da última captura: capture e olhe."
                         + "\n`sem_interacao` lista telas que você ainda não exercitou com `interagir_tela`."
+                        + "\n`sobreposicoes` são elementos de uma grade ou flex que invadem o vizinho: componente do DS "
+                          "com largura fixa numa coluna mais estreita, por exemplo. Corrija o layout da tela."
                         + "\n`identificadores_sem_fonte` são códigos, datas ou horas na tela que não estão nos insumos: "
                           "use o dos documentos ou `[[LACUNA: …]]`."
                         + ("\n`_comum.tsx`, `dados/mock.ts` ou `estilos/missao.css` foi alterado por este lote: desfaça, eles são só para leitura."
@@ -280,7 +285,7 @@ async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str
                  "rodadas": rodadas, "segundos": round(time.time() - t0), "uso": uso, "gates": gates,
                  "imagens": imagens,
                  "aprovado": not (not gates.get("build") or gates.get("faltando") or gates.get("com_erro")
-                                  or gates.get("lint") or gates.get("identificadores_sem_fonte")
+                                  or gates.get("lint") or gates.get("identificadores_sem_fonte") or gates.get("sobreposicoes")
                                   or gates.get("comum_alterado")),
                  "chamadas": chamadas, "resumo": textos[-1] if textos else ""}
     saida.parent.mkdir(parents=True, exist_ok=True)

@@ -172,7 +172,42 @@ function Captura({ n }: { n: number }) {
   );
 }
 
-/** Monta todos os quadros fora da tela e escreve cobertura, erros e texto visível de cada um. */
+/**
+ * Filhos de grade ou flex que se sobrepõem: o componente do DS com largura fixa numa coluna mais estreita
+ * (o `FeatureCard` do UnooriaAI tem 240 px) monta sem erro, mas invade o vizinho; conta também a célula cujo
+ * conteúdo é mais largo que ela. Filho absoluto ou fixo (selo, balão) sobrepõe de propósito e fica de fora.
+ */
+function sobreposicoes(quadro: HTMLElement): string[] {
+  const achados: string[] = [];
+  const nome = (el: Element) => (el.className && typeof el.className === "string" ? "." + el.className.trim().split(/\s+/)[0] : el.tagName.toLowerCase());
+  // só o que o agente desenha: a área do iframe ou o miolo da página do professor, nunca o header do hub
+  const area = quadro.querySelector<HTMLElement>(".hifi-experiencia") || quadro.querySelector<HTMLElement>("main") || quadro;
+  area.querySelectorAll<HTMLElement>("*").forEach((pai) => {
+    const disp = getComputedStyle(pai).display;
+    if (!/grid|flex/.test(disp)) return;
+    const filhos = Array.from(pai.children).filter((f) => {
+      const s = getComputedStyle(f);
+      return s.position !== "absolute" && s.position !== "fixed" && s.display !== "none" && (f as HTMLElement).offsetWidth > 0;
+    });
+    for (const f of filhos) {
+      // a célula mais estreita que o conteúdo: o filho de largura fixa vaza por cima do vizinho
+      const el = f as HTMLElement;
+      if (getComputedStyle(el).overflowX === "visible" && el.scrollWidth > el.clientWidth + 6 && el.clientWidth > 0)
+        achados.push(`${nome(el)} em ${nome(pai)}: conteúdo de ${el.scrollWidth} px numa célula de ${el.clientWidth} px`);
+    }
+    for (let i = 0; i < filhos.length; i++) {
+      for (let j = i + 1; j < filhos.length; j++) {
+        const a = filhos[i].getBoundingClientRect(), b = filhos[j].getBoundingClientRect();
+        const dx = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const dy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (dx > 2 && dy > 2) achados.push(`${nome(filhos[i])} × ${nome(filhos[j])} em ${nome(pai)} (${Math.round(dx)}×${Math.round(dy)} px)`);
+      }
+    }
+  });
+  return Array.from(new Set(achados)).slice(0, 5);
+}
+
+/** Monta todos os quadros fora da tela e escreve cobertura, erros, texto visível e sobreposições de cada um. */
 function Auditoria() {
   const raiz = useRef<HTMLDivElement>(null);
   const [saida, setSaida] = useState("");
@@ -184,6 +219,7 @@ function Auditoria() {
         faltando: el.dataset.faltando === "sim",
         erro: el.querySelector<HTMLElement>(".hifi-erro")?.dataset.erro || null,
         texto: (el.innerText || "").split("\n").map((s) => s.trim()).filter(Boolean),
+        sobreposicoes: sobreposicoes(el),
       }))));
     }, 1500);
     return () => clearTimeout(t);

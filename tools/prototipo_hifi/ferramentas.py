@@ -250,7 +250,9 @@ def auditar(ws: str | Path, html_path: Optional[str] = None) -> Dict[str, Any]:
     quadros = json.loads(html.unescape(m.group(1)))
     faltando = [f"{q['id']} · {q['estado']}" for q in quadros if q["faltando"]]
     com_erro = [f"{q['id']} · {q['estado']}: {q['erro']}" for q in quadros if q["erro"]]
-    return {"ok": not com_erro, "quadros": quadros, "faltando": faltando, "com_erro": com_erro}
+    sobrepostos = [f"{q['id']} · {q['estado']}: {s}" for q in quadros for s in q.get("sobreposicoes") or []]
+    return {"ok": not com_erro, "quadros": quadros, "faltando": faltando, "com_erro": com_erro,
+            "sobreposicoes": sobrepostos}
 
 
 def indice(ws: str | Path, tela_id: str, estado: str) -> int:
