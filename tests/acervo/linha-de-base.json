@@ -800,10 +800,8 @@
       "codigos": []
     },
     "cobertura_telas_status": {
-      "status": "amarelo",
-      "codigos": [
-        "estados-fora-do-prototipo"
-      ]
+      "status": "aprovado",
+      "codigos": []
     },
     "textos_chave_status": {
       "status": "bloqueado",

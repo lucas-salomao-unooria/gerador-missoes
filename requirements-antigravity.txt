@@ -1,0 +1,4 @@
+# Venv isolada do motor de código do protótipo hi-fi (tools/prototipo_hifi/motor_antigravity.py).
+# Fica FORA do requirements.txt: exige protobuf>=7.35, e a esteira (google-cloud-aiplatform, opentelemetry) exige < 7.
+#   uv venv --python 3.12 .venv-antigravity && uv pip install --python .venv-antigravity/bin/python -r requirements-antigravity.txt
+google-antigravity==0.1.23

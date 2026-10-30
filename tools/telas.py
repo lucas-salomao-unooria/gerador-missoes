@@ -103,7 +103,12 @@ def inventario(jornada: str) -> Dict[str, Any]:
             fora.append(bruto)
             continue
         estados_txt = next((v for k, v in linha_d.items() if k.startswith("estado")), "")
-        estados = [e.strip(" `*_.") for e in re.split(r"[,;·/]|\s\+\s", estados_txt)]
+        # o separador dentro de parênteses é do estado, não da lista: «processando OCR (0.8s / 1.2s)» é UM
+        # estado (exp09ef1b, 30/10/2026: virava «processando OCR (0.8s» e «1.2s)»); a crase no meio do nome
+        # é marcação de código («`ERRO_MIDIA_FALHOU` (extrato texto)»), não parte dele
+        protegido = re.sub(r"\([^()]*\)", lambda m: m.group(0).replace("/", "\0").replace(",", "\1"), estados_txt)
+        estados = [e.replace("\0", "/").replace("\1", ",").replace("`", "").strip(" *_.")
+                   for e in re.split(r"[,;·/]|\s\+\s", protegido)]
         estados = [e for e in estados if e and _norm(e) not in ("—", "-", "n/a", "nenhum", "unico")]
         # a seção do DS da tela, quando a missão usa mais de uma (15/10/2026): a coluna «Ambiente» do inventário
         telas.append({"id": canonico, "etapa": linha_d.get("etapa", ""), "ator": linha_d.get("ator", ""),

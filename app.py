@@ -1888,6 +1888,107 @@ def render_saida_agente(value: str, output_key: str, prefix: str):
     st.markdown(sanear_para_streamlit(value))
 
 
+@st.cache_data(show_spinner=False, max_entries=4)
+def _prototipo_hifi_comprimido(pasta_sessao: str, mtime: float) -> str:
+    from tools.prototipo_hifi import no_gerador as hifi
+    return hifi.html_comprimido(pasta_sessao)
+
+
+def botao_abrir_em_nova_guia(html_gz_b64: str, rotulo: str) -> None:
+    """Abre um HTML numa guia nova direto do navegador, sem rota nova no servidor.
+
+    O botão mora dentro do iframe do `st.iframe` (o sandbox do Streamlit libera popup): a guia é aberta NO
+    clique, para o bloqueador de popup não barrar, e o protótipo (gzip + base64) é descomprimido em seguida.
+    Na guia ele roda dentro de um iframe `sandbox="allow-scripts"`, SEM `allow-same-origin`: o protótipo é
+    código gerado por modelo, e na origem do gerador ele alcançaria o que o app guarda no navegador.
+    """
+    st.iframe(f"""
+<button id="abrir" style="width:100%;height:40px;border:0;border-radius:8px;background:#ff4b4b;color:#fff;
+  font:600 15px 'Source Sans Pro',system-ui,sans-serif;cursor:pointer">{rotulo}</button>
+<script>
+const dados = "{html_gz_b64}";
+async function html() {{
+  const bytes = Uint8Array.from(atob(dados), (c) => c.charCodeAt(0));
+  const fluxo = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return await new Response(fluxo).text();
+}}
+document.getElementById("abrir").onclick = async () => {{
+  const guia = window.open("", "_blank");
+  if (!guia) {{ alert("O navegador bloqueou a guia nova: libere popups para este endereço."); return; }}
+  const d = guia.document;
+  d.title = "Abrindo o protótipo…";
+  d.body.style.cssText = "margin:0;height:100vh;font:16px system-ui";
+  d.body.textContent = "Abrindo o protótipo…";
+  const conteudo = await html();
+  const quadro = d.createElement("iframe");
+  quadro.setAttribute("sandbox", "allow-scripts allow-modals allow-downloads");
+  quadro.style.cssText = "border:0;width:100%;height:100%;display:block";
+  quadro.srcdoc = conteudo;
+  d.body.textContent = "";
+  d.body.appendChild(quadro);
+  d.title = (conteudo.match(/<title>([^<]*)</) || [, "Protótipo"])[1];
+}};
+</script>""", height=46)
+
+
+def render_prototipo_hifi(output_path: Path, prefix: str) -> None:
+    """O protótipo em alta fidelidade da sessão: abrir numa guia nova, baixar, ou gerar (`tools/prototipo_hifi`)."""
+    from tools.custo import brl as brl_custo
+    from tools.prototipo_hifi import no_gerador as hifi
+
+    st.markdown("#### 🖥️ Protótipo em alta fidelidade")
+    andamento = hifi.em_andamento(output_path)
+    if hifi.pronto(output_path):
+        r = hifi.resumo(output_path) or {}
+        st.caption(
+            f"{r.get('telas', '?')} telas · {r.get('quadros', '?')} estados · modelo `{r.get('modelo', '?')}` · "
+            f"{r.get('kb', 0) / 1024:.1f} MB · lacunas declaradas: {len(r.get('lacunas', []))}"
+            + (f" · custo {brl_custo(r['custo']['brl'])} (US$ {r['custo']['usd']:.2f})" if r.get("custo") else "") + ". "
+            "Feito com o Design System real e a casca do hub: dá para jogar a missão clicando nas telas."
+        )
+        html = hifi.pasta(output_path) / "prototipo.html"
+        col_abrir, col_html, col_codigo = st.columns(3)
+        with col_abrir:
+            if st.session_state.get(f"hifi_abrir_{prefix}"):
+                botao_abrir_em_nova_guia(_prototipo_hifi_comprimido(str(output_path), html.stat().st_mtime),
+                                         "↗ Abrir em nova guia")
+            elif st.button("🖥️ Abrir protótipo", key=f"hifi_btn_{prefix}", type="primary", use_container_width=True,
+                           help="Prepara o protótipo (alguns MB) e mostra o botão que abre numa guia nova."):
+                st.session_state[f"hifi_abrir_{prefix}"] = True
+                st.rerun()
+        with col_html:
+            download_button_lazy("📥 Baixar HTML", lambda p=html: p.read_bytes(),
+                                 file_name=f"prototipo-hifi-{output_path.name}.html", mime="text/html",
+                                 key=f"hifi_html_{prefix}")
+        with col_codigo:
+            download_button_lazy("📥 Código das telas (.zip)", lambda p=output_path: hifi.zip_das_telas(p),
+                                 file_name=f"prototipo-hifi-codigo-{output_path.name}.zip", mime="application/zip",
+                                 key=f"hifi_zip_{prefix}",
+                                 help="Telas em React com as pontes @edu/ui, o mock, o CSS da missão e as imagens.")
+    elif andamento:
+        st.info(f"⏳ Gerando com `{andamento['modelo']}` desde {andamento['inicio']} · "
+                f"{andamento['lotes_prontos']} lote(s) concluído(s). Leva perto de uma hora; a página pode ser fechada.")
+        st.button("🔄 Atualizar", key=f"hifi_atualizar_{prefix}")
+    else:
+        erro = hifi.falhou(output_path)
+        if erro:
+            with st.expander("⚠️ A última geração parou antes de terminar", expanded=False):
+                st.code(erro)
+        motivo = hifi.indisponivel() or (None if hifi.tem_insumos(output_path) else
+                                         "A etapa de design desta missão ainda não gerou a jornada de telas.")
+        if motivo:
+            st.caption(f"Gerar o protótipo em alta fidelidade não está disponível aqui: {motivo}")
+            return
+        col_modelo, col_gerar = st.columns([1, 2])
+        with col_modelo:
+            modelo = st.selectbox("Modelo", hifi.MODELOS, key=f"hifi_modelo_{prefix}", label_visibility="collapsed")
+        with col_gerar:
+            if st.button("🖥️ Gerar protótipo em alta fidelidade", key=f"hifi_gerar_{prefix}", use_container_width=True,
+                         help="Agente de código (Antigravity SDK) com o Design System e a cara da plataforma."):
+                hifi.iniciar(output_path, modelo)
+                st.rerun()
+
+
 def render_custo_da_missao(estado: Dict[str, Any], prefix: str) -> None:
     """Tokens e custo da missão inteira — todas as execuções, refazer incluído (`tools/custo.py`)."""
     from tools.custo import KEY_CUSTO, brl, milhares
@@ -2053,6 +2154,10 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
     elif aba == ABAS[1]:
         stage_tab("produto")
     elif aba == ABAS[2]:
+        caminho_sessao = resolve_session_dir(result.output_dir)
+        if caminho_sessao is not None:
+            render_prototipo_hifi(caminho_sessao, f"{prefix}_design")
+            st.markdown("---")
         stage_tab("design")
     elif aba == ABAS[3]:
         stage_tab("dev")
@@ -2113,6 +2218,8 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
                     )
                 with col_info:
                     st.caption(f"{len(manifest)} arquivos · {total_bytes / 1024:.0f} KB")
+                st.markdown("")
+                render_prototipo_hifi(output_path, f"{prefix}_artefatos")
                 st.markdown("")
 
                 grouped: Dict[str, List[Dict[str, Any]]] = {}

@@ -145,3 +145,6 @@ output/*
 !output/.gitkeep
 .figma_mcp_tokens.json
 .miro_mcp_tokens.json
+
+# venv isolada do Antigravity SDK (exige protobuf 7, incompatível com a esteira)
+.venv-antigravity/

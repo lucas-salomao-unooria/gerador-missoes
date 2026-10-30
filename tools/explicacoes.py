@@ -1998,6 +1998,57 @@ for _codigo_novo, _exp_nova in {
         "No protótipo, as telas que deviam aparecer uma de cada vez ficam visíveis ao mesmo tempo.",
         "A navegação parece não funcionar, e o QA confere a coisa errada.",
         _REFAZER_DESIGN, DESIGN),
+    # protótipo em alta fidelidade (tools/prototipo_hifi, 30/10/2026): o lint das telas que o agente de código escreve
+    "import-fora-do-ds": _x(
+        "Tela usando biblioteca de fora do Design System",
+        "Uma tela do protótipo importa uma biblioteca ou um arquivo que não é do Design System nem da casca.",
+        "Componente de fora do DS não existe na plataforma: a tela pareceria pronta e o dev teria de refazê-la.",
+        _REFAZER_DESIGN, DESIGN),
+    "import-direto-do-ds": _x(
+        "Tela importando o Design System sem a ponte da plataforma",
+        "Uma tela importa o pacote do Design System direto, e não pela ponte `@edu/ui`, como o código da plataforma faz.",
+        "Na plataforma, tela nenhuma importa o pacote direto: o código do protótipo deixaria de servir de base ao dev.",
+        _REFAZER_DESIGN, DESIGN),
+    "imagem-inexistente": _x(
+        "Tela usando uma imagem que não foi gerada",
+        "Uma tela aponta para uma imagem que não está na pasta de imagens do protótipo.",
+        "A tela abriria com um buraco no lugar da imagem.",
+        _REFAZER_DESIGN, DESIGN),
+    "cor-escrita-a-mao": _x(
+        "Cor escrita à mão no protótipo",
+        "Uma tela ou o estilo da missão usa uma cor fixa no lugar da cor do Design System.",
+        "A cor não acompanha o DS quando ele muda, e a tela sai diferente da plataforma.",
+        _REFAZER_DESIGN, DESIGN),
+    "fonte-propria": _x(
+        "Fonte própria no protótipo",
+        "Uma tela ou o estilo da missão define uma fonte que não é a do Design System.",
+        "A tipografia é do DS: fonte própria deixa a tela com outra cara.",
+        _REFAZER_DESIGN, DESIGN),
+    "seletor-sem-escopo": _x(
+        "Estilo da missão vazando para fora da tela",
+        "O arquivo de estilo da missão tem uma regra que não está presa à área da experiência.",
+        "No protótipo, a regra mudaria o visual de outras telas e da casca de revisão.",
+        _REFAZER_DESIGN, DESIGN),
+    "sem-export-estados": _x(
+        "Tela do protótipo sem os estados",
+        "Um arquivo de tela não declara os estados da tela, então a casca não tem o que mostrar.",
+        "A tela aparece como «não gerada» no protótipo.",
+        _REFAZER_DESIGN, DESIGN),
+    "tela-sem-interacao": _x(
+        "Tela que não responde a nada",
+        "Uma tela que tem ação prevista na lista de telas não responde a clique, arrasto nem tempo.",
+        "O protótipo é para jogar a missão: a tela parada não mostra a mecânica.",
+        _REFAZER_DESIGN, DESIGN),
+    "ir-para-tela-inexistente": _x(
+        "Botão que leva a uma tela que não existe",
+        "Uma tela manda para uma tela ou um estado que não está na lista de telas da missão.",
+        "No protótipo, o clique não leva a lugar nenhum; no código, seria um caminho quebrado.",
+        _REFAZER_DESIGN, DESIGN),
+    "arquivo-fora-do-contrato": _x(
+        "Arquivo solto entre as telas do protótipo",
+        "Há na pasta de telas um arquivo que não é uma tela da missão nem os blocos comuns (um rascunho, por exemplo).",
+        "Rascunho no meio das telas confunde quem for usar o código como base.",
+        _REFAZER_DESIGN, DESIGN),
     "sem-id-de-tela": _x(
         "Telas do protótipo sem o código de tela",
         "Nenhuma tela do protótipo tem o código de tela (como E3-ALU-01).",
