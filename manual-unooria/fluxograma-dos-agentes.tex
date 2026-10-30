@@ -35,7 +35,7 @@
 \fancyhead[L]{\sffamily\scriptsize\color{unNavy}\textbf{unooria} \textbar\ Fluxograma da esteira}
 \fancyhead[R]{\sffamily\scriptsize\color{unLavanda}\leftmark}
 \fancyfoot[R]{\sffamily\scriptsize\color{unNavy}\thepage}
-\fancyfoot[L]{\sffamily\scriptsize\color{unLavanda}Gerado do código em 29/10/2026 · complementa o Manual do Gerador de Missões}
+\fancyfoot[L]{\sffamily\scriptsize\color{unLavanda}Gerado do código em 30/10/2026 · complementa o Manual do Gerador de Missões}
 \tikzset{
   passo/.style={rectangle,rounded corners=3pt,draw=unLinha,line width=0.6pt,fill=white,text width=14.4cm,
     align=left,inner sep=5pt,font=\scriptsize},
@@ -79,7 +79,7 @@ Transversal & 3 & 127 a 129 \\
 \cod{OnePagerPoLoop} & 2 & 035 a 037 (3 blocos) \\
 \cod{SpecLoop} & 2 & 045 a 059 (20 blocos) \\
 \cod{CompletudeLoop} & 2 & 045b a 045d (3 blocos) \\
-\cod{OnePagerCompletoLoop} & 2 & 061 a 063 (3 blocos) \\
+\cod{OnePagerCompletoLoop} & 3 & 061 a 063 (3 blocos) \\
 \cod{QaDesignLoop} & 2 & 085 a 091 (8 blocos) \\
 \cod{OnePagerPedagogicoLoop} & 2 & 120 a 123 (6 blocos) \\
 \cod{HandoffLoop} & 2 & 100a a 103 (6 blocos) \\
@@ -311,7 +311,7 @@ Transversal & 3 & 127 a 129 \\
 \begin{center}
 \begin{tikzpicture}[node distance=0.42cm]
 \node[pportao] (n70) {{\sffamily\bfseries\small 060\hspace{0.5em}Fidelidade ao pedido do PO e ao briefing}\hfill{\sffamily\tiny\color{white}\colorbox{unAzul!80!unNavy}{PORTÃO}}\\[1pt]{\tiny\ttfamily\color{unLavanda}A060FidelidadeProduto}\\[2pt]\campo{Faz}Núcleo, one-pager e spec contra todos os pedidos do PO e o briefing. Pedido sem prova é  e recusa o de acordo de produto; conflito com regra da esteira vira decisão do PO.\\[1pt]\campo{Objetivo}O que o PO pediu e o briefing fixou está nos documentos?\\[1pt]\campo{Entra}\cod{nucleo\_narrativo}\,\arq{produto/00a-nucleo-narrativo.md}, \cod{one\_pager}\,\arq{produto/00-one-pager.md}, \cod{spec\_missao}\,\arq{produto/05-spec-missao.md}, \cod{divisao\_do\_pedido}, \cod{pedidos\_do\_po}, \cod{pedido\_correcao}, \cod{etapa\_da\_correcao}, \cod{briefing}, \cod{edicoes\_pontuais}, \textit{+3 de controle}\\[1pt]\campo{Sai}\cod{fidelidade\_report}, \cod{fidelidade\_status}};
-\node[pmodelo, below=of n70] (n71) {{\sffamily\bfseries\small 061\hspace{0.5em}A missão contada para o time (0.1 e 0.2)}\hfill{\sffamily\tiny\color{white}\colorbox{unLavanda}{MODELO}}\\[1pt]{\tiny\ttfamily\color{unLavanda}A061OnePagerCompleto}\\[2pt]\ciclo{$\circlearrowright$ começa aqui: \cod{OnePagerCompletoLoop} (até 2 rodadas)}\\[1pt]\campo{Faz}As duas seções que abrem o one-pager de produto: 0.1 A ideia (a missão inteira em prosa) e 0.2 Como a missão funciona passo a passo, em linguagem clara e não técnica, para o time de negócio e de produto. A esteira as encaixa no one-pager, que sai com o brief de escopo no fim, em .md, .docx e .html.\\[1pt]\campo{Objetivo}O one-pager de 18 seções já foi escrito, auditado pelos gates e pelos comitês e traduzido em spec.\\[1pt]\campo{Entra}\cod{briefing}, \cod{one\_pager}\,\arq{produto/00-one-pager.md}, \cod{one\_pager\_completo\_report}\,\arq{produto/05h-leitura-clara-one-pager.md}, \cod{one\_pager\_po}, \cod{spec\_missao}\,\arq{produto/05-spec-missao.md}\\[1pt]\campo{Sai}\cod{one\_pager\_leitura}\\[1pt]\campo{Ciclo}\cod{OnePagerCompletoLoop}};
+\node[pmodelo, below=of n70] (n71) {{\sffamily\bfseries\small 061\hspace{0.5em}A missão contada para o time (0.1 e 0.2)}\hfill{\sffamily\tiny\color{white}\colorbox{unLavanda}{MODELO}}\\[1pt]{\tiny\ttfamily\color{unLavanda}A061OnePagerCompleto}\\[2pt]\ciclo{$\circlearrowright$ começa aqui: \cod{OnePagerCompletoLoop} (até 3 rodadas)}\\[1pt]\campo{Faz}As duas seções que abrem o one-pager de produto: 0.1 A ideia (a missão inteira em prosa) e 0.2 Como a missão funciona passo a passo, em linguagem clara e não técnica, para o time de negócio e de produto. A esteira as encaixa no one-pager, que sai com o brief de escopo no fim, em .md, .docx e .html.\\[1pt]\campo{Objetivo}O one-pager de 18 seções já foi escrito, auditado pelos gates e pelos comitês e traduzido em spec.\\[1pt]\campo{Entra}\cod{briefing}, \cod{one\_pager}\,\arq{produto/00-one-pager.md}, \cod{one\_pager\_completo\_report}\,\arq{produto/05h-leitura-clara-one-pager.md}, \cod{one\_pager\_po}, \cod{spec\_missao}\,\arq{produto/05-spec-missao.md}\\[1pt]\campo{Sai}\cod{one\_pager\_leitura}\\[1pt]\campo{Ciclo}\cod{OnePagerCompletoLoop}};
 \draw[fluxo] (n70.south) -- (n71.north);
 \node[pportao, below=of n71] (n72) {{\sffamily\bfseries\small 062\hspace{0.5em}Leitura clara do one-pager (determinístico)}\hfill{\sffamily\tiny\color{white}\colorbox{unAzul!80!unNavy}{PORTÃO}}\\[1pt]{\tiny\ttfamily\color{unLavanda}A062LeituraOnePagerCheck}\\[2pt]\campo{Faz}O 0.1 e o 0.2 contra o resto do one-pager: a forma do modelo (prosa; 8 a 16 passos, do preparo do professor ao fechamento), nenhum jargão da esteira, nenhum número sem origem e nenhuma fala entre aspas reescrita. Divergência volta ao redator.\\[1pt]\campo{Objetivo}Gate determinístico de rastro: modo decide a verificação de tools/rastro.py.\\[1pt]\campo{Entra}\cod{one\_pager}\,\arq{produto/00-one-pager.md}\\[1pt]\campo{Sai}\cod{one\_pager\_completo\_report}\,\arq{produto/05h-leitura-clara-one-pager.md}, \cod{one\_pager\_completo\_status}\\[1pt]\campo{Ciclo}\cod{OnePagerCompletoLoop}};
 \draw[fluxo] (n71.south) -- (n72.north);
