@@ -140,6 +140,12 @@ A Regra Zero protege o gap. Esta garante que, do outro lado do gap, haja algo qu
    - Não duplica a provocação do Refletir: o Refletir é aplicação a cenário novo (Regra 13); o Canal B é evidência de domínio da habilidade.
    Declare o canal do foco primário (`A` ou `A + B`) e a regra ternária na seção 4, no bloco de evidência. A ação do Canal A tem de ser verbo nativo do ambiente.
 
+18. **Ficha de interação — o design desenha o que você escreve, e só isso.** A seção 4 é a fonte da tela: o designer não decide o que o estudante faz, quantas vezes, o que acontece se ele não age nem o que abre o momento seguinte — e o resumo do time (0.2 do one-pager) só pode contar o que está na ficha. A missão do 9º ano (28/10/2026) saiu com um gesto descrito de dois jeitos na mesma etapa («responder à questão estruturada» e «ranking arrastável»), a Etapa 4 com o debate antes e depois da digitalização, um caminho que nenhuma tela tratava e o texto de espera fora da seção 4 — e o resumo contou a mesma ação duas vezes. Antes de fechar a seção 4, rode três testes:
+   - **Teste do designer:** com uma ficha só, alguém desenha a tela sem perguntar nada? Se ele perguntaria «quantos?», «e se ele não tocar?», «o que abre depois?» ou «o que está escrito?», o campo está vago.
+   - **Teste do caminho:** seguindo os `Libera` do primeiro momento ao `fim da missão`, você passa por todo momento? Todo caminho com letra tem `Só para quem` e volta a um momento comum? A ordem dos momentos é a ordem em que a turma vive a missão — uma ordem só.
+   - **Teste da opção:** o primeiro momento do Resultado/Aha tem uma linha `- Se "<opção>":` para cada opção do Decidir, com relato diferente?
+   O que você não sabe não se inventa nem se omite: o campo leva `[ABERTO — dono: PO: <o que falta>]` ou `[PROPOSTA P0a: …]`. **One-pager do PO sem fichas** (Regra 1): reorganize a seção 4 dele em fichas, com as palavras dele — isso não é perda de texto; o que o texto dele não diz entra como `[PROPOSTA P0a: …]` no campo, nunca como fato.
+
 ## Rodada de correção — só quando o micro-gate já rodou
 
 Na primeira geração os dois blocos abaixo chegam vazios: ignore esta seção e escreva o núcleo do zero.
@@ -160,7 +166,7 @@ Na primeira geração os dois blocos abaixo chegam vazios: ignore esta seção e
 
 {fidelidade_nucleo_report?}
 
-**Conta da virada na rodada anterior** (o código refez o ranking da tabela 1.3). Se a conta não fecha, o problema é de mecanismo: mude o critério, o peso ou o dado que falta na seção 4 — não só os números da tabela — e registre a mudança na 18-parcial.
+**Conta da virada e ficha de interação na rodada anterior** (o código refez o ranking da tabela 1.3 e conferiu os momentos da seção 4: campos, gesto, quantidade, caminho dos `Libera`, caminhos com letra e consequência por opção). Se a conta não fecha, o problema é de mecanismo: mude o critério, o peso ou o dado que falta na seção 4 — não só os números da tabela — e registre a mudança na 18-parcial. Achado da ficha: corrija a ficha no campo que ele aponta; se é de caminho (momento que nada libera, caminho que não volta), a correção é de mecanismo — registre na 18-parcial.
 
 {mecanica_report?}
 
@@ -233,7 +239,25 @@ Se a missão não tem ranking nem recomendação que se inverte, escreva só `**
 Abertura (Desafiar) com job-to-be-done concreto (Regra 9). Decisão deliberada sobre personagem-guia (Regra 6). **Superfície de parametrização docente (Regra 11):** o que o professor de qualquer disciplina customiza nesta missão pelo recorte da aula (disciplina, tema, assuntos, contexto), onde isso aparece no conteúdo do Navegar, o que é camada fixa — e a **tabela do teste das três disciplinas** `| Disciplina | Recorte do professor (exemplo) | O que a IA gera | O que não muda |` com Português, Ciências/Biologia e História.
 
 ## 4. As 6 etapas — mecanismo, não intenção
-Para cada etapa: o que o estudante **vê**, o **verbo nativo** que executa, o que **muda na tela**, quem conduz (Estudante / Professor / Unooria), e a **regra do sistema** (o que a plataforma apresenta, ordena, bloqueia ou garante). Cardinalidades e mínimos/máximos. Quem publica/envia cada conteúdo visível. Onde o conteúdo usa `[tema: parâmetro do professor]`. O texto que a tela mostra vai entre aspas, palavra por palavra — é texto-chave: a esteira lhe dá um ID e o copia literal até a copy (PR 7) —, e a escolha que oferece opções traz as opções numa linha `**Opções (n):** "A" · "B" · "C"`, que a esteira lê para travar o nº de opções. **Etapa Resultado/Aha:** desenhada com mediação do professor e comparação entre colegas reais (Regra 10). **Etapa Refletir:** provocação que exige aplicação a cenário novo (Regra 13).
+Uma subseção `### Etapa <E> — <Nome>` por etapa e, dentro dela, **uma ficha de interação por momento** — de 1 a 4 momentos por etapa, de 6 a 14 na missão. Momento é o trecho em que alguém faz **um tipo de gesto** sobre **uma tela**: dois gestos, dois momentos (escolher o projeto e ordenar os critérios são 3.1 e 3.2). A ficha substitui os bullets soltos de antes («o que vê · verbo · muda na tela · quem conduz · regra do sistema») — não escreva os dois. Os rótulos são exatos, nesta ordem, um por linha, e um código confere cada um (Regra 18):
+
+```
+#### Momento <E>.<k> — <quem faz o quê, frase com sujeito e verbo>
+- **Quem age:** Estudante | Professor | Sistema
+- **Só para quem:** <condição>   ← só em caminho que parte da turma vive: momento com letra (2.2a, 2.2b); momento sem letra não tem esta linha
+- **Na tela:** <tudo o que aparece, com contagem — N cartões, N botões, N mensagens —, de quem é cada conteúdo e onde entra `[tema: parâmetro do professor]`>
+- **Opções (<n>):** "<A>" · "<B>" · "<C>"   ← só quando o gesto é escolher
+- **Gesto:** <tocar | arrastar | deslizar | digitar | escolher | ordenar | marcar | rolar | ler | ouvir | esperar | falar> · <quantidade: "1 de 3 cartões", "3 critérios", "pelo menos 3 mensagens"; `—` só em esperar e falar> — <o quê, com o verbo nativo do app>
+- **Resposta na hora:** <o que muda na tela no mesmo instante>
+  - Se "<opção>": <o que ele vê>   ← uma linha por opção quando a resposta depende da escolha
+- **Se não fizer:** <o que a tela faz enquanto ele não age: botão apagado, lembrete depois de N s, o professor vê no painel>
+- **Se errar:** <o que acontece com a ação fora do esperado, e se a missão diz ou não que errou> | Não há erro aqui: <por quê>
+- **Libera:** <condição exata> → Momento <E>.<k> [; <outra condição> → Momento <E>.<k>] | fim da missão
+- **Fica registrado:** <o dado que o sistema guarda — se for a ação do Canal A, diga a habilidade> | nada
+- **Texto de tela:** "<texto 1>" · "<texto 2>" | nenhum texto novo
+```
+
+O título começa com «Momento», nunca com o número solto (`#### 3.1 …` seria lido como etapa nova). Todo texto que a tela mostra vai em «Texto de tela», entre aspas, palavra por palavra — inclusive aviso de espera, lembrete e mensagem de erro: é texto-chave, a esteira lhe dá um ID e o copia literal até a copy (PR 7). A escolha que oferece opções traz a linha `**Opções (n):**`, que a esteira lê para travar o nº de opções. Cardinalidades, mínimos e máximos vão no «Gesto» e no «Na tela». O momento que congela a tela para a roda é do professor (`Quem age: Professor`, `Gesto: falar · —`), e o `Libera` dele diz o botão do painel que devolve a turma. **Etapa Resultado/Aha:** o primeiro momento é a consequência, com uma linha `- Se "<opção>":` por opção de cada `**Opções (n):**` do Decidir e relato próprio em cada uma (Regra 8b); a mediação do professor e a comparação entre colegas reais (Regra 10) são momentos próprios, na ordem em que acontecem. **Etapa Explicar:** nomeação e recalibragem do mesmo objeto (Volta 3), cada gesto no seu momento. **Etapa Refletir:** provocação que exige aplicação a cenário novo (Regra 13).
 
 **Evidência do foco primário (Regra 17):**
 `| Habilidade (código) | Canal de evidência | Canal A: ação · etapa · regra ternária (Atingiu / Em processo / Não atingiu) | Canal B: pergunta · 3 alternativas com o nível de cada uma, sem ordem fixa · componente que renderiza |`

@@ -1314,7 +1314,7 @@ for _codigo_novo, _exp_nova in {
         _REFAZER_PRODUTO, PO),
     "passo-longo": _x(
         "Passo longo demais",
-        "Um passo da seção 0.2 passa de 120 palavras.",
+        "Um passo da seção 0.2 passa de 150 palavras.",
         "O passo a passo é leitura rápida: explicação longa vai nas seções de baixo.",
         _REFAZER_PRODUTO, PO),
     "jargao": _x(
@@ -1336,6 +1336,176 @@ for _codigo_novo, _exp_nova in {
         "Fala entre aspas que a missão não tem",
         "As seções 0.1 ou 0.2 põem entre aspas um texto de tela que não está, igual, no resto do one-pager.",
         "Texto entre aspas é o que o estudante lê: reescrito, o time aprova uma fala que a tela não vai mostrar.",
+        _REFAZER_PRODUTO, PO),
+    "frase-longa": _x(
+        "Frase longa demais no começo do one-pager",
+        "Uma frase das seções 0.1 ou 0.2 passa de 30 palavras.",
+        "O time de negócio achou o one-pager difícil: frase longa é a primeira coisa que faz o leitor desistir.",
+        _REFAZER_PRODUTO, PO),
+    "frases-longas-em-media": _x(
+        "Frases longas no começo do one-pager",
+        "A média de palavras por frase das seções 0.1 ou 0.2 passa de 18.",
+        "Uma ideia por frase é o que deixa a missão clara para quem não é pedagogo nem engenheiro.",
+        _REFAZER_PRODUTO, PO),
+    "conceitos-numa-frase": _x(
+        "Vários conceitos numa frase só",
+        "Uma frase das seções 0.1 ou 0.2 enfileira mais de um termo do material, cada um com a sua tradução.",
+        "Quatro conceitos numa frase é o erro que mais afastou o leitor na missão do 9º ano.",
+        _REFAZER_PRODUTO, PO),
+    "palavra-dificil": _x(
+        "Palavra de relatório no começo do one-pager",
+        "As seções 0.1 ou 0.2 usam uma palavra formal (deliberar, ranking, formativo, sistematiza…) onde cabe uma do dia a dia.",
+        "O leitor é do comercial e do produto, não da secretaria de educação.",
+        _REFAZER_PRODUTO, PO),
+    "futuro-ou-condicional": _x(
+        "Missão contada no futuro",
+        "As seções 0.1 ou 0.2 usam «deverá», «será capaz de» ou «poderá ser».",
+        "A missão se conta no presente: o estudante escolhe, a tela trava.",
+        _REFAZER_PRODUTO, PO),
+    "ideia-longa": _x(
+        "A ideia longa demais",
+        "A seção 0.1 passa de 600 palavras.",
+        "O 0.1 é a missão inteira em cinco minutos de leitura.",
+        _REFAZER_PRODUTO, PO),
+    "ideia-sem-bloco": _x(
+        "A ideia sem os seis blocos",
+        "A seção 0.1 não abre os parágrafos com os rótulos na ordem: Em uma frase, A situação, O que o estudante faz, A virada, O que o estudante aprende, O papel do professor.",
+        "Sem os blocos, o 0.1 vira uma lista de acontecimentos e deixa de fora o problema, a crença errada e o que o estudante aprende.",
+        _REFAZER_PRODUTO, PO),
+    "bloco-longo": _x(
+        "Bloco da ideia longo demais",
+        "Um bloco da seção 0.1 passa do tamanho dele.",
+        "Cada bloco responde a uma pergunta só; o detalhe fica no passo a passo.",
+        _REFAZER_PRODUTO, PO),
+    "virada-sem-crenca": _x(
+        "A virada não diz o que o estudante achava",
+        "O bloco «A virada» da seção 0.1 não conta a crença de entrada.",
+        "Sem o «antes», o leitor não entende por que a virada surpreende.",
+        _REFAZER_PRODUTO, PO),
+    "um-nome-por-coisa": _x(
+        "O assistente com vários nomes",
+        "As seções 0.1 e 0.2 chamam o mesmo assistente de nomes diferentes (assistente, máquina, robô, inteligência artificial).",
+        "O leitor acha que são personagens diferentes.",
+        _REFAZER_PRODUTO, PO),
+    "passo-sem-campos": _x(
+        "Passo sem dizer o que acontece na tela",
+        "Um passo da seção 0.2 não tem Na tela, O estudante (ou O professor), Acontece ou Libera.",
+        "O time e o design precisam saber o que aparece, o que a pessoa faz, o que muda e o que abre o passo seguinte.",
+        _REFAZER_PRODUTO, PO),
+    "passo-sem-se-nao-fizer": _x(
+        "Passo do estudante sem o «se não fizer»",
+        "Um passo do estudante na seção 0.2 não diz o que a tela faz enquanto ele não age.",
+        "É uma das perguntas que o design fazia e ninguém respondia.",
+        _REFAZER_PRODUTO, PO),
+    "passo-sem-momento": _x(
+        "Passo sem o momento da seção 4",
+        "Um passo da seção 0.2 não diz que momento da seção 4 ele conta.",
+        "Sem o elo, o passo a passo pode contar uma ação que a seção 4 não tem, ou contar a mesma duas vezes.",
+        _REFAZER_PRODUTO, PO),
+    "momento-inexistente": _x(
+        "Passo cita um momento que não existe",
+        "Um passo da seção 0.2 cita um momento que a seção 4 não tem.",
+        "O passo a passo só conta o que a seção 4 decidiu.",
+        _REFAZER_PRODUTO, PO),
+    "momento-nao-contado": _x(
+        "Momento da missão fora do passo a passo",
+        "Um momento da seção 4 não está em nenhum passo da seção 0.2.",
+        "Quem lê só o passo a passo não fica sabendo dessa parte da missão.",
+        _REFAZER_PRODUTO, PO),
+    "momento-contado-duas-vezes": _x(
+        "O mesmo momento em dois passos",
+        "Um momento da seção 4 aparece em dois passos da seção 0.2.",
+        "Foi o que confundiu o time na missão do 9º ano: a mesma ação contada duas vezes.",
+        _REFAZER_PRODUTO, PO),
+    "passos-fora-da-ordem-da-missao": _x(
+        "Passo a passo fora da ordem da missão",
+        "Os passos da seção 0.2 contam os momentos da seção 4 em outra ordem.",
+        "O design desenha as telas na ordem que lê: duas ordens viram duas missões.",
+        _REFAZER_PRODUTO, PO),
+    "ramo-sem-condicao": _x(
+        "Caminho de parte da turma sem dizer para quem",
+        "Um momento ou passo que só parte da turma vive não diz «Só para quem».",
+        "Sem isso, o leitor acha que todo estudante faz a mesma coisa duas vezes.",
+        _REFAZER_PRODUTO, PO),
+    "acao-repetida": _x(
+        "A mesma ação em dois passos",
+        "O estudante toca no mesmo botão em dois passos da seção 0.2 sem que os dois sejam caminhos diferentes.",
+        "Foi o «Digitalizar cadernos» contado duas vezes na missão do 9º ano.",
+        _REFAZER_PRODUTO, PO),
+    "secao-4-sem-fichas": _x(
+        "Seção 4 sem fichas de interação",
+        "A seção 4 não descreve a missão momento a momento, com as fichas de interação.",
+        "Sem as fichas, o design inventa quantos itens, que gesto e o que acontece se o estudante não age.",
+        _REFAZER_PRODUTO, PO),
+    "momento-repetido": _x(
+        "Momento repetido na seção 4",
+        "Dois momentos da seção 4 têm o mesmo número.",
+        "O design e o passo a passo não sabem de qual dos dois se trata.",
+        _REFAZER_PRODUTO, PO),
+    "etapa-sem-momento": _x(
+        "Etapa sem nenhum momento",
+        "Uma etapa da seção 4 não tem nenhuma ficha de interação.",
+        "O design não sabe o que desenhar nessa etapa.",
+        _REFAZER_PRODUTO, PO),
+    "momentos-fora-da-faixa": _x(
+        "Momentos demais ou de menos",
+        "A missão ou uma etapa tem momentos fora da faixa (de 6 a 14 na missão, até 4 por etapa).",
+        "Poucos momentos não descrevem a tela; muitos deixam de caber numa aula.",
+        _REFAZER_PRODUTO, PO),
+    "momento-fora-da-etapa": _x(
+        "Momento na etapa errada",
+        "O número do momento não começa pelo número da etapa em que ele está.",
+        "O design põe a tela na etapa errada.",
+        _REFAZER_PRODUTO, PO),
+    "campo-ausente": _x(
+        "Ficha de interação incompleta",
+        "Uma ficha da seção 4 não tem um dos campos (Na tela, Gesto, Se não fizer, Libera, Texto de tela…).",
+        "Cada campo responde a uma pergunta que o design faria.",
+        _REFAZER_PRODUTO, PO),
+    "campo-vazio": _x(
+        "Campo da ficha vazio",
+        "Um campo de uma ficha da seção 4 está sem conteúdo.",
+        "Campo que ninguém sabe vai como pendência do PO, não vazio.",
+        _REFAZER_PRODUTO, PO),
+    "gesto-fora-da-lista": _x(
+        "Gesto vago na ficha",
+        "O gesto de uma ficha não é um dos gestos da lista (tocar, arrastar, escolher, ordenar, digitar…).",
+        "«Interagir» ou «explorar» não diz ao design que tela desenhar.",
+        _REFAZER_PRODUTO, PO),
+    "gesto-sem-quantidade": _x(
+        "Gesto sem quantidade",
+        "O gesto de uma ficha não diz quantas vezes nem sobre quantos itens.",
+        "«Escolher 1 de 3» e «escolher» são telas diferentes.",
+        _REFAZER_PRODUTO, PO),
+    "escolha-sem-opcoes": _x(
+        "Escolha sem as opções",
+        "Um momento de escolha não traz as opções, ou traz um número diferente do anunciado.",
+        "O design e a copy precisam das opções exatas.",
+        _REFAZER_PRODUTO, PO),
+    "texto-de-tela-ausente": _x(
+        "Ficha sem o texto da tela",
+        "O «Texto de tela» de uma ficha não traz o texto entre aspas.",
+        "O texto da tela é copiado literal até a copy; sem ele, o design o inventa.",
+        _REFAZER_PRODUTO, PO),
+    "libera-sem-destino": _x(
+        "Momento que não diz o que vem depois",
+        "O «Libera» de uma ficha não aponta um momento que existe nem o fim da missão.",
+        "O design não sabe que tela abre em seguida.",
+        _REFAZER_PRODUTO, PO),
+    "momento-inalcancavel": _x(
+        "Momento que nada alcança",
+        "Nenhum «Libera» leva a um momento da seção 4.",
+        "O estudante nunca chegaria a essa tela.",
+        _REFAZER_PRODUTO, PO),
+    "sem-fim": _x(
+        "Missão sem fim",
+        "Nenhum momento da seção 4 termina em «fim da missão».",
+        "O caminho do estudante não fecha.",
+        _REFAZER_PRODUTO, PO),
+    "consequencia-sem-opcao": _x(
+        "Consequência igual para todas as escolhas",
+        "O primeiro momento do Resultado não tem um relato para cada opção do Decidir.",
+        "A virada depende do que o estudante escolheu; consequência igual para todos não é consequência.",
         _REFAZER_PRODUTO, PO),
     "tempo-alterado": _x(
         "Tempo da missão diferente do aprovado",

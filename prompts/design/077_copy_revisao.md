@@ -46,6 +46,12 @@ O texto que o §4 põe na tela entre aspas — a pergunta da aposta e as alterna
 
 {camada_caa?}
 
+## Ficha de interação — a fonte da tela (seção 4 do one-pager)
+
+Desde 29/10/2026 a seção 4 do one-pager (dentro do one-pager e do conteúdo aprovado que você recebe) traz cada etapa momento a momento: `#### Momento E.k — <quem faz o quê>`, com **Quem age · Só para quem · Na tela · Opções (n) · Gesto · Resposta na hora · Se não fizer · Se errar · Libera · Fica registrado · Texto de tela**. É o contrato de interação de produto: o que aparece, quantos itens, que gesto e quantas vezes, o que muda na hora, o que a tela faz se o estudante não age, o que abre o momento seguinte e o texto exato. **O resumo 0.2 do one-pager é leitura para o time — quando ele e a ficha divergem, vale a ficha.** Campo que falta ou se contradiz é de produto: `[ABERTO — dono: PO: Momento E.k, <campo>]`, nunca decisão sua. One-pager antigo, sem fichas: a seção 4 em prosa continua sendo a fonte, como antes.
+
+Confira que todo «Texto de tela» da ficha está no sheet, igual, com o `Momento E.k` na Nota. Texto de mecânica no sheet sem origem na ficha volta como `[ABERTO — dono: PO]`.
+
 ## O que revisar
 
 1. **Placeholders `[[chave]]`** deixados pelo wireframe: escreva a string ou declare por que a tela não deveria existir.
