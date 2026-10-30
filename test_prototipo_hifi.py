@@ -117,3 +117,39 @@ def test_indice_recusa_estado_fora_do_inventario(tmp_path):
     assert ferramentas.indice(tmp_path, "E2-ALU-01", "padrão") == 0
     with pytest.raises(ValueError):
         ferramentas.indice(tmp_path, "E2-ALU-01", "rm -rf /")
+
+
+def _ws_com_inventario(tmp_path: Path) -> Path:
+    (tmp_path / "dados").mkdir(exist_ok=True)
+    (tmp_path / "dados" / "missao.json").write_text(json.dumps({"quadros": [
+        {"id": "E3-ALU-01", "estado": "vazio", "acao": "Marcar 1 projeto / Clicar «Registrar Decisão»"},
+        {"id": "E3-SIS-01", "estado": "espera de gate ativa", "acao": "Aguardar mediação oral"}]}), encoding="utf-8")
+    return tmp_path
+
+
+def test_lint_reprova_tela_com_acao_que_nao_responde_a_nada(tmp_path):
+    ws = _ws_com_tela(_ws_com_inventario(tmp_path), 'export const estados = { "vazio": () => <div>parada</div> };\n', "E3-ALU-01.tsx")
+    assert [a["codigo"] for a in ferramentas.lint(ws)["achados"]] == ["tela-sem-interacao"]
+
+
+def test_lint_aceita_tela_de_espera_sem_interacao(tmp_path):
+    ws = _ws_com_tela(_ws_com_inventario(tmp_path), 'export const estados = { "espera de gate ativa": () => <div>…</div> };\n', "E3-SIS-01.tsx")
+    assert ferramentas.lint(ws)["ok"]
+
+
+def test_lint_reprova_ir_para_tela_ou_estado_fora_do_inventario(tmp_path):
+    ws = _ws_com_tela(_ws_com_inventario(tmp_path),
+                      'import { useMissao } from "../casca-api";\n'
+                      'export const estados = { "vazio": () => { const { ir } = useMissao();\n'
+                      '  return <button onClick={() => { ir("E3-SIS-01"); ir("E3-SIS-01", "inventado"); ir("E9-ALU-01"); }} /> } };\n',
+                      "E3-ALU-01.tsx")
+    trechos = [a["trecho"] for a in ferramentas.lint(ws)["achados"]]
+    assert trechos == ["ir(\"E3-SIS-01\", 'inventado')", 'ir("E9-ALU-01")']
+
+
+def test_lint_aceita_imagem_gerada_e_reprova_a_que_nao_existe(tmp_path):
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "caderno.webp").write_bytes(b"RIFF")
+    ws = _ws_com_tela(tmp_path, 'import a from "../assets/caderno.webp";\nimport b from "../assets/sumiu.webp";\n'
+                                'import { X } from "../dados/mock";\nexport const estados = {};\n')
+    assert [(a["codigo"], a["trecho"]) for a in ferramentas.lint(ws)["achados"]] == [("imagem-inexistente", "../assets/sumiu.webp")]

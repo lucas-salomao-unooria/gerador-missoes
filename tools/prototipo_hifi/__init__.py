@@ -116,9 +116,9 @@ def montar_workspace(sessao: str | Path, destino: str | Path, ds: str | Path) ->
     """
     sessao, ws, ds = Path(sessao), Path(destino), Path(ds).resolve()
     ws.mkdir(parents=True, exist_ok=True)
-    for nome in ("casca.tsx", "AGENTS.md", "tsconfig.json"):
+    for nome in ("casca.tsx", "casca-api.tsx", "interagir.mjs", "AGENTS.md", "tsconfig.json"):
         shutil.copy(MODELO / nome, ws / nome)
-    for pasta in ("telas", "dados", "insumos", "capturas", ".build"):
+    for pasta in ("telas", "dados", "insumos", "capturas", "assets", ".build"):
         (ws / pasta).mkdir(exist_ok=True)
     for rel in INSUMOS:
         if (sessao / rel).exists():
@@ -126,7 +126,7 @@ def montar_workspace(sessao: str | Path, destino: str | Path, ds: str | Path) ->
     (ws / "dados" / "missao.json").write_text(json.dumps(dados_da_missao(sessao), ensure_ascii=False, indent=1),
                                               encoding="utf-8")
     _ligar(ds, ws / "node_modules" / "@unooria" / "design-system")
-    for pacote in ("react", "react-dom", "scheduler"):
+    for pacote in ("react", "react-dom", "scheduler", "playwright-core"):
         _ligar(ds / "node_modules" / pacote, ws / "node_modules" / pacote)
     _ligar((ds / "node_modules" / ".bin" / "esbuild").resolve(), ws / "node_modules" / ".bin" / "esbuild")
     return ws

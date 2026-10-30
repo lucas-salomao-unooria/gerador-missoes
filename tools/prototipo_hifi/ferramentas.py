@@ -27,9 +27,16 @@ CHROME = os.getenv("CHROME_BIN") or next(
     (c for c in ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", shutil.which("chromium"),
                  shutil.which("google-chrome")) if c and os.path.exists(c)), "")
 
-#: Imports que uma tela pode fazer: React, as duas seções do DS da missão e os blocos comuns do lote 0.
-IMPORTS_PERMITIDOS = ("react", "@unooria/design-system/unooriaai", "@unooria/design-system/unooria", "./_comum")
+#: Imports que uma tela pode fazer: React, as duas seções do DS da missão, os blocos comuns e o mock da
+#: fundação, a API da casca (navegação e sessão) e as imagens geradas em `assets/`.
+IMPORTS_PERMITIDOS = ("react", "@unooria/design-system/unooriaai", "@unooria/design-system/unooria", "./_comum",
+                      "../casca-api", "../dados/mock")
+_RE_ASSET = re.compile(r"^\.\./assets/([a-z0-9-]+\.webp)$")
 _RE_IMPORT = re.compile(r"""^\s*import\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]""", re.M)
+#: `ir("E3-SIS-01")` ou `ir("E3-SIS-01", "espera de gate ativa")`: o destino tem de existir no inventário.
+_RE_IR = re.compile(r"""\bir\(\s*["'`]([^"'`]+)["'`]\s*(?:,\s*["'`]([^"'`]+)["'`])?""")
+#: Sinal de que a tela responde a alguma coisa: handler de evento, temporizador ou navegação.
+_RE_INTERACAO = re.compile(r"\bon(?:Click|Change|Submit|KeyDown|DragStart|Drop|PointerDown|Select)\b|\bsetTimeout\(|\bir\(")
 #: Cor escrita à mão. Token do DS (`var(--uai-…)`, `var(--unooria-…)`) é o caminho permitido.
 _RE_COR = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(")
 _RE_PROIBIDO = {
@@ -99,8 +106,11 @@ def construir(ws: str | Path, ids: Optional[List[str]] = None, saida: Optional[s
     trabalho.mkdir(parents=True, exist_ok=True)
     _registro(ws, trabalho / "registro.ts", ids)
     entrada = trabalho / "casca.tsx"
+    # a cópia da casca aponta para o MESMO arquivo da `casca-api` que as telas importam: dois módulos
+    # seriam dois contextos React, e o `ir()` das telas chamaria o contexto vazio
     entrada.write_text((ws / "casca.tsx").read_text(encoding="utf-8")
                        .replace('"./dados/missao.json"', f'"{(ws / "dados" / "missao.json").as_posix()}"')
+                       .replace('"./casca-api"', f'"{(ws / "casca-api.tsx").as_posix()}"')
                        .replace('"./gerado/registro"', '"./registro"'), encoding="utf-8")
     cmd = [_esbuild(ws), str(entrada), "--bundle", "--minify", "--format=iife", "--jsx=automatic",
            f"--outdir={trabalho / 'out'}", "--log-level=error", "--define:process.env.NODE_ENV=\"production\"",
@@ -179,18 +189,64 @@ def capturar(ws: str | Path, tela_id: str, estado: str, html_path: Optional[str]
     return {"ok": png.exists(), "png": str(png), "largura": q["largura"], "altura": q["altura"]}
 
 
+def interagir(ws: str | Path, tela_id: str, estado: str, acoes: List[Dict[str, Any]],
+              html_path: Optional[str] = None) -> Dict[str, Any]:
+    """Abre o quadro, executa as ações (clicar, digitar, arrastar, tecla, esperar) e diz onde a tela foi parar.
+
+    Devolve a tela antes e depois (`ID|estado`), o resultado de cada passo, os erros da página e um PNG
+    do fim em `capturas/<ID>--<estado>--interacao.png`.
+    """
+    ws = Path(ws)
+    n = indice(ws, tela_id, estado)
+    q = _ler_missao(ws)["quadros"][n]
+    alvo = Path(html_path) if html_path else ws / ".build" / "final" / "prototipo.html"
+    (ws / "capturas").mkdir(exist_ok=True)
+    png = ws / "capturas" / f"{tela_id}--{slug(estado)}--interacao.png"
+    entrada = json.dumps({"html": str(alvo.resolve()), "n": n, "largura": q["largura"], "altura": q["altura"],
+                          "chrome": CHROME, "png": str(png), "acoes": acoes[:30]})
+    proc = subprocess.run(["node", str(ws / "interagir.mjs"), entrada], cwd=ws, capture_output=True, text=True, timeout=180)
+    try:
+        return json.loads(proc.stdout.strip().splitlines()[-1])
+    except (IndexError, json.JSONDecodeError):
+        return {"erro": (proc.stderr or proc.stdout)[-1500:]}
+
+
 def lint(ws: str | Path, ids: Optional[List[str]] = None) -> Dict[str, Any]:
-    """Conferência estática das telas: imports só do DS, nenhuma cor escrita à mão, nada de fonte, rede ou armazenamento."""
+    """Conferência estática das telas.
+
+    Imports só do DS, da casca, do mock e de `assets/`; nenhuma cor escrita à mão; nada de fonte, rede ou
+    armazenamento; tela com ação no inventário tem de responder a alguma coisa; e todo `ir()` aponta para
+    uma tela (e um estado) do inventário.
+    """
     ws = Path(ws)
     achados: List[Dict[str, str]] = []
+    try:
+        quadros = _ler_missao(ws)["quadros"]
+    except FileNotFoundError:
+        quadros = []
+    estados_por_id: Dict[str, List[str]] = {}
+    for q in quadros:
+        estados_por_id.setdefault(q["id"], []).append(q["estado"])
+    acao_por_id = {q["id"]: q.get("acao", "") for q in quadros}
     for arq in sorted((ws / "telas").glob("*.tsx")):
         if ids and arq.stem not in ids and arq.stem != "_comum":
             continue
         fonte = arq.read_text(encoding="utf-8")
         sem_comentario = re.sub(r"/\*.*?\*/|(?<![:\w])//[^\n]*", "", fonte, flags=re.S)
         for mod in _RE_IMPORT.findall(sem_comentario):
-            if mod not in IMPORTS_PERMITIDOS:
+            asset = _RE_ASSET.match(mod)
+            if asset:
+                if not (ws / "assets" / asset.group(1)).exists():
+                    achados.append({"arquivo": arq.name, "codigo": "imagem-inexistente", "trecho": mod})
+            elif mod not in IMPORTS_PERMITIDOS:
                 achados.append({"arquivo": arq.name, "codigo": "import-fora-do-ds", "trecho": mod})
+        for destino, estado in _RE_IR.findall(sem_comentario):
+            if estados_por_id and (destino not in estados_por_id or (estado and estado not in estados_por_id[destino])):
+                achados.append({"arquivo": arq.name, "codigo": "ir-para-tela-inexistente",
+                                "trecho": f'ir("{destino}"{", " + repr(estado) if estado else ""})'})
+        acao = acao_por_id.get(arq.stem, "")
+        if arq.stem.startswith("E") and acao and not re.search(r"aguardar", acao, re.I) and not _RE_INTERACAO.search(sem_comentario):
+            achados.append({"arquivo": arq.name, "codigo": "tela-sem-interacao", "trecho": acao[:80]})
         for m in _RE_COR.finditer(sem_comentario):
             achados.append({"arquivo": arq.name, "codigo": "cor-escrita-a-mao", "trecho": m.group(0)})
         for codigo, rx in _RE_PROIBIDO.items():
