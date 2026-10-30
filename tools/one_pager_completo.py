@@ -239,7 +239,8 @@ def _sem_titulos_de_passo(corpo: str) -> str:
 
 def _sem_falas(texto: str) -> str:
     """Cada fala entre aspas vira uma palavra só: texto de tela copiado não conta como frase longa nem palavra difícil."""
-    return _RE_FALA.sub("«fala»", texto or "")
+    # o ponto final de dentro da fala fecha a frase de fora («… conselheiro.” Três cartões…», exp09ef1b ao vivo)
+    return _RE_FALA.sub(lambda m: "«fala»" + ("." if m.group(1).rstrip()[-1:] in ".!?…" else ""), texto or "")
 
 
 def _frases(texto: str) -> List[str]:
