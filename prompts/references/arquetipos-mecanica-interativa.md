@@ -17,7 +17,7 @@ Ao propor os 3 candidatos na ideação (`A003`), **cada candidato deve usar um a
 2. **A Máquina de Consequência / Sandbox de Regras (`unooriaai` · `unooria` — ideal para 6º EF ao 3º EM):**
    - *Gesto tátil (E2–E3):* Testar 2–3 chaves/critérios de um assistente ou filtro automático e homologar a configuração que parece mais justa ou eficiente.
    - *Gesto do Aha (E4):* Rodar a simulação na rotina real de 3 colegas da escola e ver a regra aprovada produzir uma injustiça concreta (ex.: punir quem trabalha à noite ou quem teve queda de Wi-Fi) por confundir dado observado com inferência.
-3. **O Fio Desconectado / Peça Perdida (`unoochat` · `unoomail` — ideal para 2º ao 7º EF):**
+3. **O Fio Desconectado / Peça Perdida (`unoochat` — e-mail não tem seção no DS; ideal para 2º ao 7º EF):**
    - *Gesto tátil (E2–E3):* Investigar uma conversa que gerou um mal-entendido cômico ou injusto na turma usando 1 ferramenta simples de busca/filtro para apostar no que causou a confusão.
    - *Gesto do Aha (E4):* Destravar a mensagem/anexo que havia ficado de fora da janela visível e assistir aos balões da conversa se reencaixarem, invertendo o culpado aparente.
 4. **O Relógio de Amplificação / Efeito Borboleta (`unoovista` · `tiktooria` — ideal para 6º EF ao 3º EM):**

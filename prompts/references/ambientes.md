@@ -18,11 +18,12 @@ O briefing fala a língua do aluno: "ChatGPT", "Instagram", "WhatsApp". A spec e
 | Instagram, feed, rede social de fotos | `unoovista` (tokens `--unv-*`, `data-unv-theme`) | `@edu/ui/ds-unoovista` | **Unoovista** | `instanooria` (exp01ef1b) |
 | WhatsApp, mensageiro, grupo de conversa | `unoochat` (tema CLARO) | `@edu/ui/ds-unoochat` | **Unoochat** | `whatsappmobile` (exp06ef2b, só tema escuro, ADR-68) |
 | YouTube, vídeo | — (o `unootube` está arquivado, ADR-116) | — | — | `unootube` (arquivado) |
-| TikTok, vídeo curto | `tiktooria` (existe no DS, **sem ponte** em `@edu/ui`) | criar a ponte é pré-requisito | — | — |
-| Jornal, blog, galeria | `unoojornal`, `unooblog`, `unoogaleria` (existem no DS, **sem ponte**) | criar a ponte é pré-requisito | — | — |
+| Jornal, notícia, manchete | `unoojornal` (tokens `--ujn-*`, `data-ujn-theme`) | `@edu/ui/ds-unoojornal` (desde 28/10/2026, exp03ef1b, ADR-197) | **Unoojornal** | — |
+| TikTok, vídeo curto | `tiktooria` (existe no DS, **sem ponte** em `@edu/ui` e sem consumidor) | criar a ponte é pré-requisito | — | — |
+| Blog, galeria de fotos | `unooblog`, `unoogaleria` (existem no DS, **sem ponte**) | criar a ponte é pré-requisito | — | — |
 | A escola, a plataforma, o professor | `unooria` | `@edu/ui/ds` | Unooria | — |
 
-**O nome do app que o aluno vê é o da coluna "App que o aluno vê"**, nunca o da marca imitada: a missão do 9º ano (out/2026) saiu da esteira pedindo `chatgpt`, `@edu/ui/ds-chatgpt` e `data-gpt-theme` porque esta tabela não existia. A lista do que existe de fato (seções, pontes, componentes) está no **contrato da plataforma** e no inventário do DS, incluídos ao lado; esta tabela só diz **qual escolher**. Briefing que pedir explicitamente a seção legada é decisão do PO: registre `[ABERTO — PO]`, não escolha sozinho.
+**O nome do app que o aluno vê é o da coluna "App que o aluno vê"**, nunca o da marca imitada: a missão do 9º ano (out/2026) saiu da esteira pedindo `chatgpt`, `@edu/ui/ds-chatgpt` e `data-gpt-theme` porque esta tabela não existia. A lista do que existe de fato (seções, pontes, componentes) está no **contrato da plataforma** e no inventário do DS, incluídos ao lado; esta tabela só diz **qual escolher**. A coluna «Ponte» é uma fotografia (30/10/2026, `@unooria/design-system` 0.2.26): onde o contrato da plataforma listar ponte que ela não lista, ou o contrário, **o contrato vence** — ponte que já existe não é pré-requisito. Briefing que pedir explicitamente a seção legada é decisão do PO: registre `[ABERTO — PO]`, não escolha sozinho.
 
 **Uma peça de outro app dentro de uma tela da Unooria fala na voz de onde veio** (ADR-117): um post que chegou por rede social aparece como `PostCard` do `unoovista` dentro da redação `unooria`, uma mensagem encaminhada como `MessageBubble` do `unoochat`. A regra é por **peça**, nunca por tela: o cromo em volta continua da Unooria. O inverso — peça da plataforma dentro do clone — continua proibido.
 
@@ -66,6 +67,8 @@ Se a seção trouxer valor em vez de slot, isso é lacuna a registrar no storybo
 ## Nada da marca dentro do disfarce
 
 Nenhum token, fonte, cor ou componente da seção `unooria` dentro das telas do clone — e vice-versa (DES-13). Os dois escapes conhecidos continuam: tela de contexto antes de entrar e tela de fechamento (sem pergunta nem campo de texto) depois que a simulação fecha, e esses **podem** usar a seção `unooria`. Há uma terceira exceção, restrita: a **instrução fixa** do estudante (`references/padrao-plataforma-instrucao-fixa.md`), só com `instrucao_fixa: sim` na spec, camada do hub fora do iframe e do DOM do clone, nas condições escritas ali.
+
+**DS híbrido — exceção registrada, não padrão.** A plataforma aceitou, missão a missão, a mecânica da missão (carimbos, etiquetas, esteira de blocos, peças de montar) na seção `unooria` **ao lado** do ambiente: o jornal `unoojornal` com a mecânica `unooria` na exp03ef1b (ADR-197) e o clone `unooriaai` com o `PuzzleBlock`/`PuzzleTrack` da `unooria` na exp09ef1b (ADR-202). Cada peça continua inteira numa seção só, e o chrome do ambiente nunca recebe token da `unooria`. Missão nova que precisar disso registra `[ABERTO — PO: DS híbrido, a mecânica <qual> na seção unooria ao lado de <seção>]` e cita o precedente; não adota o híbrido sozinha.
 
 O mapa de qual seção fala em cada tela é entrega do `copy-ptbr` (coluna `seção` no sheet), porque quem decide quem está falando é quem escreve a fala.
 
