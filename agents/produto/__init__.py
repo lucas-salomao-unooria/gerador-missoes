@@ -443,7 +443,9 @@ def _one_pager_completo_loop(kw: dict, settings) -> LoopAgent:
     clara. A conferência devolve ao redator o jargão, o número que o resto do one-pager não tem e a fala entre aspas
     reescrita; esgotadas as rodadas, segue 🟡 — é leitura, não contrato.
     """
-    rodadas = max(1, settings.spec_max_rodadas)
+    # pelo menos 3: as regras de linguagem em código (29/10/2026) costumam pedir uma rodada a mais — ao vivo, na
+    # exp09ef1b, 14 achados na 1ª rodada e 1 palavra de relatório na 2ª; cada rodada é só uma chamada do redator
+    rodadas = max(3, settings.spec_max_rodadas)
     return LoopAgent(
         name="OnePagerCompletoLoop",
         description="0.1 e 0.2 do one-pager ↔ conferência contra o resto do one-pager (forma, jargão, números e falas), até bater ou esgotar as rodadas.",
