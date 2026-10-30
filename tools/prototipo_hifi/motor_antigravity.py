@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import ferramentas  # noqa: E402
 
 from google.antigravity import Agent, AgentBehavior, CapabilitiesConfig, LocalAgentConfig  # noqa: E402
+from google.antigravity.models import DEFAULT_MODEL  # noqa: E402
 from google.antigravity.types import BudgetConfig, CompactionConfig  # noqa: E402
 
 #: Teto do histórico antes de o SDK compactar. Sem ele, a fundação da exp09ef1b (2 telas, 4 estados)
@@ -263,7 +264,7 @@ async def rodar(ws: Path, lote: str, ids: list[str], fundacao: bool, modelo: str
                         + "\n`sem_interacao` lista telas que você ainda não exercitou com `interagir_tela`."
                         + ("\n`_comum.tsx` ou `dados/mock.ts` foi alterado por este lote: desfaça, eles são só para leitura."
                            if gates["comum_alterado"] else ""))
-    relatorio = {"lote": lote, "ids": ids, "fundacao": fundacao, "modelo": modelo or "padrão do SDK",
+    relatorio = {"lote": lote, "ids": ids, "fundacao": fundacao, "modelo": modelo or f"{DEFAULT_MODEL} (padrão do SDK)",
                  "rodadas": rodadas, "segundos": round(time.time() - t0), "uso": uso, "gates": gates,
                  "imagens": imagens,
                  "aprovado": not (not gates.get("build") or gates.get("faltando") or gates.get("com_erro")
