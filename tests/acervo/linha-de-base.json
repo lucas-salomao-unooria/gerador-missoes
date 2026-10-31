@@ -237,6 +237,209 @@
       ]
     }
   },
+  "exp01ef1b-e41bbc13": {
+    "bncc_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "letramento"
+      ]
+    },
+    "manifesto_status": {
+      "status": "amarelo",
+      "codigos": [
+        "?"
+      ]
+    },
+    "evidencia_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "gabarito-no-cliente"
+      ]
+    },
+    "perguntas_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "pq-acao-sem-evento"
+      ]
+    },
+    "rastro_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "conteudo_aprovado_spec_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "contrato_produto_status": {
+      "status": "amarelo",
+      "codigos": [
+        "numero-sem-origem"
+      ]
+    },
+    "evidencia_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_one_pager_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "mecanica_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_conceitual": {
+      "status": "bloqueado",
+      "codigos": [
+        "anatomia-incompleta"
+      ]
+    },
+    "avaliacao_status": {
+      "status": "amarelo",
+      "codigos": [
+        "5.1"
+      ]
+    },
+    "experiencia_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "gate_final_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "one_pager_completo_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "fala-reescrita",
+        "frase-longa",
+        "frases-longas-em-media",
+        "ideia-longa",
+        "ideia-sem-bloco",
+        "jargao",
+        "numero-sem-origem",
+        "palavra-dificil",
+        "passo-sem-campos"
+      ]
+    },
+    "conteudo_aprovado_pedagogico_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "montagem_pedagogico_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "ambiente_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastro_design_status": {
+      "status": "amarelo",
+      "codigos": [
+        "proposta"
+      ]
+    },
+    "consistencia_status": {
+      "status": "amarelo",
+      "codigos": [
+        "rotulo-divergente"
+      ]
+    },
+    "prototipo_lint_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "cobertura_telas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "textos_chave_status": {
+      "status": "amarelo",
+      "codigos": [
+        "texto-chave-sem-linha"
+      ]
+    },
+    "arestas_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "qa_afirmacoes_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "rastreabilidade_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "telemetria_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "gabarito-no-cliente"
+      ]
+    },
+    "montagem_handoff_status": {
+      "status": "amarelo",
+      "codigos": [
+        "numero-sem-origem"
+      ]
+    },
+    "conteudo_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "prd_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "adr-inexistente",
+        "adr-numero-errado",
+        "capacidade-inexistente",
+        "ponte-inexistente",
+        "proposta",
+        "regra-sem-ramo-residual",
+        "rota-do-handoff-mudou",
+        "rotulo-divergente",
+        "sem-idempotencia",
+        "tarefa-nao-atomica"
+      ]
+    },
+    "kpis_status": {
+      "status": "amarelo",
+      "codigos": [
+        "kpi-operacional-com-resultado"
+      ]
+    },
+    "conteudo_aprovado_prd_status": {
+      "status": "aprovado",
+      "codigos": []
+    },
+    "montagem_prd_status": {
+      "status": "amarelo",
+      "codigos": [
+        "numero-sem-origem"
+      ]
+    },
+    "rastro_lacunas_status": {
+      "status": "amarelo",
+      "codigos": [
+        "proposta"
+      ]
+    },
+    "fidelidade_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "nao-julgado",
+        "preservacao-sem-prova"
+      ]
+    },
+    "fidelidade_nucleo_status": {
+      "status": "bloqueado",
+      "codigos": [
+        "citou-o-pedido",
+        "nao-julgado"
+      ]
+    }
+  },
   "exp01em1b": {
     "bncc_status": {
       "status": "aprovado",
