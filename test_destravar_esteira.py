@@ -50,6 +50,18 @@ def test_variante_curta_so_conta_como_rotulo():
     assert _codigos(validar(GLOSSARIO, {"jornada": "| E4-ALU-02 | **Para todos** |"})) == ["variante-proibida"]
 
 
+def test_variante_citada_pela_regra_que_a_proibe_nao_e_uso():
+    """exp01ef1b, sessão e41bbc13 (30/10/2026): a copy revisada escreveu a própria regra e o gate a leu como uso."""
+    from tools.consistencia import validar
+
+    regra = '- "Unoovista" em vez de "Instagram da Tia" em todas as instâncias e títulos de sistema.'
+    assert _codigos(validar(GLOSSARIO, {"copy revisada": regra})) == []
+    assert _codigos(validar(GLOSSARIO, {"copy revisada": 'Nunca escreva o nome, eliminando a variante proibida "Insta".'})) == []
+    # o uso continua bloqueando, mesmo com o canônico na mesma frase
+    uso = 'Abra o Unoovista e, no "Instagram da Tia", poste a foto.'
+    assert _codigos(validar(GLOSSARIO, {"copy revisada": uso})) == ["variante-proibida"]
+
+
 def test_variante_que_o_po_aprovou_nao_e_proibida_e_volta_ao_autor_da_spec():
     from tools.consistencia import glossario_contra_o_aprovado, validar
 

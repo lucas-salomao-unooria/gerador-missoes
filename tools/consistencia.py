@@ -212,6 +212,18 @@ def _linha_do_glossario(texto: str, pos: int, canonicos: List[str]) -> bool:
     return linha.lstrip().startswith("|") and any(re.search(_padrao_nome(c), _dobrar(linha)) for c in canonicos if c)
 
 
+#: Logo antes da variante, a frase que a proíbe em vez de usá-la: «"Fotos Misteriosas" em vez de "Mistério da Foto"»,
+#: «eliminando a variante proibida "Mistério da Foto"» (exp01ef1b, sessão e41bbc13, 30/10/2026 — a regra da própria
+#: copy derrubou o design). Lido no texto dobrado (minúsculas sem acento).
+_RE_CITADA_COMO_PROIBIDA = re.compile(
+    r"(?:em vez d[eoa]s?|ao inves d[eoa]s?|no lugar d[eoa]s?|variantes? proibidas?:?|nunca|nao (?:use|usar|escreva)"
+    r"|substitui\w*)\s*[\"“”«»'`*]*\s*$")
+
+
+def _citada_como_proibida(d: str, a: int) -> bool:
+    return bool(_RE_CITADA_COMO_PROIBIDA.search(d[max(0, a - 60):a]))
+
+
 def _entidades(g: Dict[str, Any], rotulo: str, texto: str) -> List[Dict[str, str]]:
     """Variante proibida usada. As ocorrências disputam o texto da mais longa para a mais curta: o canônico
     "Conselho Municipal de Recursos Comunitários" protege o trecho, mas a variante "Conselho Municipal de
@@ -219,7 +231,8 @@ def _entidades(g: Dict[str, Any], rotulo: str, texto: str) -> List[Dict[str, str
 
     Não contam (exp01ef1b, 08/10/2026 — 13 dos 21 bloqueios eram isto): a linha de tabela que traz o canônico junto,
     que é o glossário republicado listando as variantes; e a variante de até duas palavras fora de posição de rótulo,
-    que é locução da frase ("ativa a missão para todos os dispositivos" não é o botão «Para todos»)."""
+    que é locução da frase ("ativa a missão para todos os dispositivos" não é o botão «Para todos»); e a variante
+    que a frase proíbe ("em vez de", "variante proibida", "nunca"), que é a regra, não o uso."""
     d = _dobrar(texto)
     achados = []
     canonicos = [e["nome"] for e in g["entidades"]]
@@ -229,6 +242,7 @@ def _entidades(g: Dict[str, Any], rotulo: str, texto: str) -> List[Dict[str, str
             curta = len(nome.split()) <= 2
             cands += [(m.start(), m.end(), nome, proibida) for m in re.finditer(_padrao_nome(nome), d)
                       if not proibida or not (_linha_do_glossario(texto, m.start(), canonicos)
+                                              or _citada_como_proibida(d, m.start())
                                               or (curta and not _como_rotulo(texto, m.start(), m.end())))]
         ocupado: List[Tuple[int, int]] = []
         usos: Dict[str, List[int]] = {}
