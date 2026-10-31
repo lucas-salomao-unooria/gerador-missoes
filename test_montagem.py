@@ -821,3 +821,32 @@ def test_barra_de_progresso_so_e_plataforma_na_espera_do_carregamento():
     assert montagem.numeros_de_regra("Barra de progresso da rodada: a IA avalia a resposta, e o estudante tem 25 "
                                      "segundos para responder.") == [("25", "s")]
     assert montagem.numeros_de_regra("Skeleton da galeria; a dica aparece após 25 segundos sem toque.") == [("25", "s")]
+
+
+def test_origem_dos_numeros_no_15_e_alternativa_considerada_na_hipotese():
+    """A tabela «Origem dos números» na §15 traz a coluna «Alternativa considerada» e recapitula itens do §17 (exp03ef1b):
+    nem a alternativa descartada vira `teto-ausente`, nem citá-la entre parênteses na hipótese vira `hipotese-diverge`."""
+    one_pager = (
+        "## 15. Tetos aplicados à faixa (3º ano EF)\n"
+        "- Legenda de foto com até 8 palavras.\n\n"
+        "### Origem dos números\n"
+        "| Número | Onde aparece | Origem | Alternativa considerada |\n"
+        "|---|---|---|---|\n"
+        "| Legenda de foto até 8 palavras | itens 3 e 15 | decisão de produto | teto único de 5 palavras |\n"
+        "| H2 (Etapa 4): pelo menos 60% das equipes põem o Pátio em Onde | item 17 | decisão de produto | 50% |\n"
+        "| H3: pelo menos 70% das equipes completam a montagem com até 10 recusas | item 17 | decisão de produto | 60% |\n\n"
+        "## 17. Hipóteses de validação\n"
+        "- **H2**: Pelo menos 60% das equipes põem o Pátio em Onde na primeira tentativa. Falha: mais de 30% erram.\n"
+        "- **H3**: Pelo menos 70% das equipes completam a montagem com até 10 recusas.\n"
+    )
+    corpo = (
+        "## Hipóteses de validação (§17 do one-pager aprovado)\n"
+        "- **H2**: Pelo menos 60% das equipes põem o Pátio em Onde na primeira tentativa "
+        "(origem: one-pager §17; alternativa considerada: 50%). Falha: mais de 30% erram.\n"
+        "- **H3**: Pelo menos 70% das equipes completam a montagem com até 10 recusas "
+        "(origem: one-pager §17; alternativa considerada: 60%).\n\n"
+        "## Requisitos não funcionais\n"
+        "- Legenda de foto com até 8 palavras.\n"
+    )
+    assert montagem.hipoteses_e_tetos(one_pager, corpo, exigir_tetos=True) == []
+
