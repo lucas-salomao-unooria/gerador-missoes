@@ -753,10 +753,16 @@ def _contrato_da_mecanica(contrato_texto: str) -> str:
     return "\n".join(saida)
 
 
+_RE_ALTERNATIVA_CITADA = re.compile(
+    r"\b(?:alternativas?\s+(?:consideradas?|descartadas?))\s*:\s*[^);\n\]]+", re.I
+)
+
+
 def _limpo_de_hipotese(texto: str) -> str:
-    """A hipótese sem as citações e sem a marcação LaTeX da porcentagem e do comparativo."""
-    return _RE_CITACAO.sub(" ", texto or "").replace("$", "").replace("\\%", "%").replace("\\ge", "≥").replace(
-        "\\le", "≤")
+    """A hipótese sem as citações, sem alternativas descartadas citadas entre parênteses e sem a marcação LaTeX da
+    porcentagem e do comparativo."""
+    sem_citacao = _RE_ALTERNATIVA_CITADA.sub(" ", _RE_CITACAO.sub(" ", texto or ""))
+    return sem_citacao.replace("$", "").replace("\\%", "%").replace("\\ge", "≥").replace("\\le", "≤")
 
 
 def _metas_do_corpo(texto: str, mecanica: str = "") -> List[Tuple[str, str]]:

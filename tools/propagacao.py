@@ -596,6 +596,37 @@ def _sobreposicao(a: set, b: set) -> float:
     return len(a & b) / max(1, len(a | b))
 
 
+def _linhas_sem_alternativa(bloco: str, n_secao: int) -> List[str]:
+    """Linhas da seção sem colunas de `Alternativa considerada`/`descartada` em tabelas Markdown e, no §15, sem linhas
+    da tabela «Origem dos números» cujo `Onde aparece` é exclusivamente de outra seção (como `item 17` ou `item 10`)."""
+    saida: List[str] = []
+    cols_alt: set = set()
+    col_onde: Optional[int] = None
+    for linha in (bloco or "").splitlines():
+        s = linha.strip()
+        if s.startswith("|") and s.endswith("|"):
+            celulas = [c.strip() for c in s.strip("|").split("|")]
+            if all(re.fullmatch(r"[:\-\s]*", c) for c in celulas if c):
+                continue
+            if any(re.search(r"\balternativas?\b", c, re.I) for c in celulas):
+                cols_alt = {i for i, c in enumerate(celulas) if re.search(r"\balternativas?\b", c, re.I)}
+                col_onde = next((i for i, c in enumerate(celulas) if re.search(r"\bonde\b", c, re.I)), None)
+                continue
+            if cols_alt or col_onde is not None:
+                if n_secao == 15 and col_onde is not None and col_onde < len(celulas):
+                    onde = celulas[col_onde]
+                    if re.search(r"\bite(?:m|ns)\b|§", onde, re.I) and not re.search(r"\b15\b", onde):
+                        continue
+                mantidas = [c for i, c in enumerate(celulas) if i not in cols_alt]
+                saida.append("| " + " | ".join(mantidas) + " |")
+                continue
+        else:
+            cols_alt = set()
+            col_onde = None
+        saida.append(linha)
+    return saida
+
+
 def contrato_no_corpo(one_pager: str, corpo: str, secoes: Sequence[int] = SECOES_DE_NUMERO) -> List[Dict[str, str]]:
     """Números do one-pager (§10, §15, §17) que o corpo não traz: `trocado` quando a linha correspondente do corpo
     (a mais parecida, por palavras) tem outro número da mesma unidade — H1 da exp02ef1b, 30% no one-pager e 25% no
@@ -606,7 +637,7 @@ def contrato_no_corpo(one_pager: str, corpo: str, secoes: Sequence[int] = SECOES
     linhas_corpo = [(l, _assinatura(l)) for l in (corpo or "").splitlines() if l.strip()]
     saida = []
     for n_secao in secoes:
-        for linha in (secao(one_pager or "", n_secao) or "").splitlines():
+        for linha in _linhas_sem_alternativa(secao(one_pager or "", n_secao) or "", n_secao):
             # zero não é regra que propague («0 palavras de leitura autônoma», «0 min» de mediação na tabela de tempos)
             toks = [t for t in numeros(linha) if t[1] != "px" and float(t[0]) != 0]
             if not toks or re.search(r"\[PAR[ÂA]METRO", linha, re.I):
