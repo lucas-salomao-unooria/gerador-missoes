@@ -853,6 +853,109 @@ def _render_textos_chave(estado: Dict[str, Any]) -> None:
         st.markdown(tabela)
 
 
+_MEDIA_PATHS_BY_ID: Dict[str, Tuple[str, str]] = {}
+_MEDIA_BASE_DIRS: List[Path] = []
+
+
+def _registrar_indice_media(base_dir: Path, file_id: str, arquivo: Path, mime: str) -> None:
+    """Registra o vínculo `file_id -> arquivo` em memória e em `.media_index.json` para sobreviver a reinícios."""
+    caminho_str = str(arquivo.resolve())
+    _MEDIA_PATHS_BY_ID[file_id] = (caminho_str, mime)
+    base_resolvido = base_dir.resolve()
+    if base_resolvido not in _MEDIA_BASE_DIRS:
+        _MEDIA_BASE_DIRS.append(base_resolvido)
+    indice_path = base_resolvido / ".media_index.json"
+    try:
+        atual: Dict[str, Any] = {}
+        if indice_path.is_file():
+            atual = json.loads(indice_path.read_text(encoding="utf-8"))
+            if not isinstance(atual, dict):
+                atual = {}
+        rel = str(arquivo.resolve().relative_to(base_resolvido))
+        if atual.get(file_id) != {"rel": rel, "mime": mime}:
+            atual[file_id] = {"rel": rel, "mime": mime}
+            indice_path.write_text(json.dumps(atual, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _instalar_fallback_media_storage() -> None:
+    """Impede 404 em `/media/<id>.html` quando o `MemoryMediaFileStorage` perde o estado (reinício ou nova instância)."""
+    try:
+        from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
+        from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+    except Exception:
+        return
+
+    if getattr(MemoryMediaFileStorage, "_unooria_fallback_instalado", False):
+        return
+
+    orig_get_file = MemoryMediaFileStorage.get_file
+
+    def _get_file_com_fallback(self: Any, filename: str) -> Any:
+        try:
+            return orig_get_file(self, filename)
+        except MediaFileStorageError:
+            file_id = os.path.splitext(os.path.basename(filename))[0]
+            # 1) Consulta o mapa em memória desta instância
+            item_mem = _MEDIA_PATHS_BY_ID.get(file_id)
+            if item_mem and Path(item_mem[0]).is_file():
+                self.load_and_get_id(item_mem[0], item_mem[1], MediaFileKind.MEDIA)
+                if file_id in self._files_by_id:
+                    return orig_get_file(self, filename)
+
+            # 2) Consulta os diretórios de saída conhecidos (.media_index.json e */design/*.html)
+            bases = list(_MEDIA_BASE_DIRS)
+            try:
+                out_dir = Path(get_settings().OUTPUT_DIR).resolve()
+                if out_dir not in bases:
+                    bases.append(out_dir)
+            except Exception:
+                pass
+
+            for base in bases:
+                if not base.is_dir():
+                    continue
+                indice_path = base / ".media_index.json"
+                if indice_path.is_file():
+                    try:
+                        indice = json.loads(indice_path.read_text(encoding="utf-8"))
+                        info = indice.get(file_id) if isinstance(indice, dict) else None
+                        if isinstance(info, dict) and info.get("rel"):
+                            cand = base / str(info["rel"])
+                            mime = str(info.get("mime") or "text/html")
+                            if cand.is_file():
+                                self.load_and_get_id(str(cand), mime, MediaFileKind.MEDIA)
+                                if file_id in self._files_by_id:
+                                    return orig_get_file(self, filename)
+                    except Exception:
+                        pass
+
+                try:
+                    for sess_dir in base.iterdir():
+                        if not sess_dir.is_dir() or sess_dir.name.startswith("."):
+                            continue
+                        design_dir = sess_dir / "design"
+                        if not design_dir.is_dir():
+                            continue
+                        for html_file in design_dir.glob("*.html"):
+                            if not html_file.is_file():
+                                continue
+                            cid = self.load_and_get_id(str(html_file), "text/html", MediaFileKind.MEDIA)
+                            _registrar_indice_media(base, cid, html_file, "text/html")
+                            if cid == file_id and file_id in self._files_by_id:
+                                return orig_get_file(self, filename)
+                except Exception:
+                    pass
+            raise
+
+    MemoryMediaFileStorage.get_file = _get_file_com_fallback  # type: ignore[method-assign]
+    setattr(MemoryMediaFileStorage, "_unooria_fallback_instalado", True)
+
+
+_instalar_fallback_media_storage()
+
+
 def _url_do_link(run_dir: Path, alvo: str) -> str:
     """O endereço que abre o link do cartão no navegador. Link externo (Stitch, Miro) fica como está; o arquivo da sessão
     (o protótipo, os diagramas) é servido pelo Streamlit, como as imagens de `st.image` (`MediaFileManager`), e abre numa
@@ -865,8 +968,19 @@ def _url_do_link(run_dir: Path, alvo: str) -> str:
         from streamlit import runtime
 
         if arquivo.is_file() and runtime.exists():
+            _instalar_fallback_media_storage()
             mime = "text/html" if arquivo.suffix.lower() in (".html", ".htm") else "application/octet-stream"
-            return runtime.get_instance().media_file_mgr.add(str(arquivo), mime, f"documento_a_aprovar/{alvo}")
+            mgr = runtime.get_instance().media_file_mgr
+            coord = f"documento_a_aprovar/{Path(run_dir).name}/{alvo}"
+            url = mgr.add(str(arquivo), mime, coord)
+            file_id = os.path.splitext(url.rsplit("/", 1)[-1])[0]
+            try:
+                with mgr._lock:
+                    mgr._files_by_session_and_coord["__pinned_artefatos__"][coord] = file_id
+            except Exception:
+                pass
+            _registrar_indice_media(Path(run_dir).parent, file_id, arquivo, mime)
+            return url
     except Exception as exc:  # o link não pode derrubar o cartão do de acordo
         st.caption(f"⚠️ Não consegui servir `{alvo}`: {exc}")
     return alvo
