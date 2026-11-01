@@ -156,6 +156,7 @@ def dados_da_missao(sessao: Path, secoes: Optional[List[str]] = None) -> Dict[st
                             "ambiente": t["ambiente"],
                             "secao": secao_do_ambiente(t["ambiente"], secoes or list(TEMAS) + ["unooria"]),
                             "proposito": _coluna(d, "proposito"),
+                            "elementos": _coluna(d, "elementos"),
                             "acao": _coluna(d, "acao"), "resultado": _coluna(d, "resultado"),
                             "largura": largura, "altura": altura})
     titulo = re.search(r"^#\s+.*?\(([^)]+)\)", jornada, re.M)

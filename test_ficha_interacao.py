@@ -203,3 +203,34 @@ def test_fidelidade_pedido_so_remocao_cumprido():
     assert res["achados"] == []
 
 
+def test_edicao_pontual_aspas_curvas_e_gesto_numeral_extenso_e_base_preservada():
+    """Valida as melhorias da 2ª investigação:
+    - fallback de aspas tipográficas em `tools/edicao_pontual.py`;
+    - numeral por extenso em `gesto-sem-quantidade` de `tools/ficha_interacao.py`;
+    - limpeza de `base_preservada_<chave>` em `pipeline/reexecucao.py`;
+    - cobertura de `.moldura-desktop` em `tools/ilustracoes.py`."""
+    from pipeline.reexecucao import preparar_estado
+    from tools import edicao_pontual as ep
+    from tools import ilustracoes
+
+    doc_curvo = 'O estudante toca no botão “Confirmar envio” para concluir.'
+    res_ep = ep.aplicar({"one_pager": doc_curvo}, [ep.Edicao("one_pager", 'botão "Confirmar envio"', 'botão "Enviar agora"')])
+    assert res_ep.ok
+    assert 'botão "Enviar agora" para concluir.' in res_ep.documentos["one_pager"]
+
+    num_extenso = ONE_PAGER.replace("- **Gesto:** tocar · 2 botões", "- **Gesto:** tocar · dois botões")
+    assert "gesto-sem-quantidade" not in _codigos(fi.validar(num_extenso))
+
+    estado_sujo = {
+        "one_pager": "versão atual",
+        "base_preservada_one_pager": "versão antiga reprovada",
+        "anexo_design_spec": "anexo atual",
+        "base_preservada_anexo_design_spec": "anexo antigo",
+    }
+    limpo, _ = preparar_estado(estado_sujo, "produto")
+    assert "base_preservada_one_pager" not in limpo
+
+    assert ".moldura-desktop" in ilustracoes._CSS_QUADRO_AVULSO
+
+
+

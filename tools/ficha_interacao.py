@@ -224,7 +224,10 @@ def validar(texto: str) -> Dict[str, Any]:
                                            "use um destes: " + ", ".join(GESTOS) + "."))
             elif verbo not in GESTOS_SEM_QUANTIDADE:
                 quantidade = re.split(r"\s[—–]\s", gesto, maxsplit=1)[0]
-                if not re.search(r"\d", quantidade) and not _RE_MARCADOR.search(quantidade):
+                tem_num_extenso = bool(re.search(
+                    r"\b(?:um|uma|dois|duas|tr[êe]s|quatro|cinco|seis|sete|oito|nove|dez|ambos|ambas|todos|todas|cada|[úu]nic[oa])\b",
+                    quantidade, re.I))
+                if not re.search(r"\d", quantidade) and not tem_num_extenso and not _RE_MARCADOR.search(quantidade):
                     achados.append(_achado("gesto-sem-quantidade", f"O gesto do {nome} não diz quantas vezes nem "
                                                                    "sobre quantos itens: «escolher · 1 de 3 cartões», "
                                                                    "«ordenar · 3 critérios»."))

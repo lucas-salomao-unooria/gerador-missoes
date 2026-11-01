@@ -41,7 +41,10 @@ _RE_IMPORT = re.compile(r"""^\s*import\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]"
 #: `ir("E3-SIS-01")` ou `ir("E3-SIS-01", "espera de gate ativa")`: o destino tem de existir no inventário.
 _RE_IR = re.compile(r"""\bir\(\s*["'`]([^"'`]+)["'`]\s*(?:,\s*["'`]([^"'`]+)["'`])?""")
 #: Sinal de que a tela responde a alguma coisa: handler de evento, temporizador ou navegação.
-_RE_INTERACAO = re.compile(r"\bon(?:Click|Change|Submit|KeyDown|DragStart|Drop|PointerDown|Select)\b|\bsetTimeout\(|\bir\(")
+_RE_INTERACAO = re.compile(
+    r"\bon(?:Click|Change|Submit|KeyDown|DragStart|Drop|PointerDown|Select|ValueChange|Send|Press|Input|Focus)\b"
+    r"|\bsetTimeout\(|\bir\("
+)
 #: Cor escrita à mão. Token do DS (`var(--uai-…)`, `var(--unooria-…)`) é o caminho permitido.
 _RE_COR = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(")
 #: O fallback de token (`var(--uai-bg-primary, #fff)`) é a convenção da plataforma: cor só enquanto a folha carrega.

@@ -575,6 +575,7 @@ def _guardar_versoes_anteriores(estado: Dict[str, Any], limpo: Dict[str, Any], r
             limpo.pop(anterior, None)
             limpo.pop(PREFIXO_VERSAO_ANTERIOR + chave, None)
             continue
+        limpo.pop(f"base_preservada_{chave}", None)
         # a spec que o autor escreveu é a do Gate 0; `spec_missao` pode já trazer a consolidação do D0 (sessão anterior
         # ao PR 6 — na nova, a `spec_missao` é a de produto e não há cópia do Gate 0)
         atual = estado.get("spec_missao_gate0") if chave == "spec_missao" else None

@@ -25,6 +25,8 @@ A Unooria é uma plataforma educacional B2G (1º EF ao 3º EM). Cada **missão**
 
 {briefing?}
 
+{anterior_brief_escopo?}
+
 **Conferência do one-pager do PO na rodada anterior (só existe se o PO anexou o one-pager e algum trecho dele se perdeu — restaure cada um, literalmente):**
 
 {one_pager_po_report?}

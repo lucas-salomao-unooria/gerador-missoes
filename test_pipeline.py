@@ -140,7 +140,7 @@ KNOWN_STATE_KEYS = {
     "etapa_da_conversa", "etapa_do_parecer", "contexto_da_etapa", "conversa_anterior", "resposta_conversa",
     # versão anterior de cada documento autoral, quando a etapa é refeita (pipeline/reexecucao.py)
     *("anterior_" + c for c in (
-        "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao",
+        "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "brief_escopo", "spec_missao",
         "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
         "camada_caa", "wireframes_cobertura", "copy_strings_revisada", "prototipo_html",
         "handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico")),
