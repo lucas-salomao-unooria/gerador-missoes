@@ -1238,15 +1238,17 @@ def test_prototipo_do_cartao_e_link_clicavel_e_o_guia_aponta_a_pasta_de_design(t
 
     import app
 
-    (tmp_path / "design").mkdir()
+    run_dir = tmp_path / "20261029-094101-session_teste"
+    (run_dir / "design").mkdir(parents=True)
     html = b"<!doctype html><title>prototipo</title>"
-    (tmp_path / "design" / "08-prototipo.html").write_bytes(html)
+    (run_dir / "design" / "08-prototipo.html").write_bytes(html)
     armazenamento = MemoryMediaFileStorage("/media")
     mgr = MediaFileManager(armazenamento)
     with monkeypatch.context() as m:
+        m.setenv("OUTPUT_DIR", str(tmp_path))
         m.setattr(rt, "exists", lambda: True)
         m.setattr(rt, "get_instance", lambda: tipos.SimpleNamespace(media_file_mgr=mgr))
-        url = app._url_do_link(tmp_path, "design/08-prototipo.html")
+        url = app._url_do_link(run_dir, "design/08-prototipo.html")
         assert re.fullmatch(r"/media/[0-9a-f]+\.html", url), url
         file_id = url.rsplit("/", 1)[1].split(".")[0]
         servido = armazenamento.get_file(file_id)
@@ -1255,14 +1257,22 @@ def test_prototipo_do_cartao_e_link_clicavel_e_o_guia_aponta_a_pasta_de_design(t
         mgr.clear_session_refs()
         mgr.remove_orphaned_files()
         assert armazenamento.get_file(file_id).content == html
-        # sobrevivência a reinício do container / nova instância com MemoryMediaFileStorage vazio
+        # sobrevivência a reinício frio do container (memória zerada, resolvendo via get_settings().output_path)
+        app._MEDIA_PATHS_BY_ID.clear()
+        app._MEDIA_BASE_DIRS.clear()
         armazenamento_novo = MemoryMediaFileStorage("/media")
         assert armazenamento_novo.get_file(f"{file_id}.html").content == html
-        assert app._url_do_link(tmp_path, "https://miro.com/app/board/x=/") == "https://miro.com/app/board/x=/"
+        # e mesmo sem .media_index.json (varredura de */design/*.html em output_path)
+        (tmp_path / ".media_index.json").unlink(missing_ok=True)
+        app._MEDIA_PATHS_BY_ID.clear()
+        app._MEDIA_BASE_DIRS.clear()
+        armazenamento_sem_indice = MemoryMediaFileStorage("/media")
+        assert armazenamento_sem_indice.get_file(f"{file_id}.html").content == html
+        assert app._url_do_link(run_dir, "https://miro.com/app/board/x=/") == "https://miro.com/app/board/x=/"
         # sem o arquivo, o caminho — nunca uma exceção no cartão
-        assert app._url_do_link(tmp_path, "design/09-diagramas.html") == "design/09-diagramas.html"
+        assert app._url_do_link(run_dir, "design/09-diagramas.html") == "design/09-diagramas.html"
     # fora do servidor (o AppTest), também o caminho
-    assert app._url_do_link(tmp_path, "design/08-prototipo.html") == "design/08-prototipo.html"
+    assert app._url_do_link(run_dir, "design/08-prototipo.html") == "design/08-prototipo.html"
 
     # o cartão de verdade (AppTest): todo link é link, nenhum caminho em código
     pytest = __import__("pytest")
