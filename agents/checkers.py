@@ -768,10 +768,14 @@ def _instabilidade(state: Dict[str, Any], ex: Dict[str, Any], secao: str) -> Opt
     sumiram = linhas_perdidas(antes, secao)
     if not sumiram:
         return None
-    # spec do Gate 0 refeita (produto/spec reexecutados), retrabalho por achado de gate nesta execução ou pedido de
-    # correção de design: a mudança pode ter motivo
-    com_motivo = bool(str(state.get("tickets_retrabalho") or "").strip()) or bool(str(state.get(f"{PREFIXO_VERSAO_ANTERIOR}spec_missao") or "").strip()) or (
-        str(state.get(KEY_ETAPA_DA_CORRECAO) or "") == "design" and str(state.get("pedido_correcao") or "").strip())
+    # spec do Gate 0 refeita (produto/spec reexecutados, inclusive detectada por `mudancas_no_aprovado` no início do
+    # design), retrabalho por achado de gate nesta execução ou pedido de correção de design: a mudança pode ter motivo
+    com_motivo = (
+        bool(str(state.get("tickets_retrabalho") or "").strip())
+        or bool(str(state.get(f"{PREFIXO_VERSAO_ANTERIOR}spec_missao") or "").strip())
+        or bool(str(state.get("mudancas_no_aprovado") or "").strip())
+        or (str(state.get(KEY_ETAPA_DA_CORRECAO) or "") == "design" and bool(str(state.get("pedido_correcao") or "").strip()))
+    )
     return {
         "severidade": "atencao" if com_motivo else "bloqueio", "codigo": "autor-instavel", "etapa": "design",
         "agente_responsavel": ex.get("preservar") or fonte,

@@ -1242,13 +1242,22 @@ def test_prototipo_do_cartao_e_link_clicavel_e_o_guia_aponta_a_pasta_de_design(t
     html = b"<!doctype html><title>prototipo</title>"
     (tmp_path / "design" / "08-prototipo.html").write_bytes(html)
     armazenamento = MemoryMediaFileStorage("/media")
+    mgr = MediaFileManager(armazenamento)
     with monkeypatch.context() as m:
         m.setattr(rt, "exists", lambda: True)
-        m.setattr(rt, "get_instance", lambda: tipos.SimpleNamespace(media_file_mgr=MediaFileManager(armazenamento)))
+        m.setattr(rt, "get_instance", lambda: tipos.SimpleNamespace(media_file_mgr=mgr))
         url = app._url_do_link(tmp_path, "design/08-prototipo.html")
         assert re.fullmatch(r"/media/[0-9a-f]+\.html", url), url
-        servido = armazenamento.get_file(url.rsplit("/", 1)[1].split(".")[0])
+        file_id = url.rsplit("/", 1)[1].split(".")[0]
+        servido = armazenamento.get_file(file_id)
         assert servido.content == html and servido.mimetype == "text/html" and servido.kind.name == "MEDIA"
+        # sobrevivência a clear_session_refs + remove_orphaned_files (reruns / reconexão de aba)
+        mgr.clear_session_refs()
+        mgr.remove_orphaned_files()
+        assert armazenamento.get_file(file_id).content == html
+        # sobrevivência a reinício do container / nova instância com MemoryMediaFileStorage vazio
+        armazenamento_novo = MemoryMediaFileStorage("/media")
+        assert armazenamento_novo.get_file(f"{file_id}.html").content == html
         assert app._url_do_link(tmp_path, "https://miro.com/app/board/x=/") == "https://miro.com/app/board/x=/"
         # sem o arquivo, o caminho — nunca uma exceção no cartão
         assert app._url_do_link(tmp_path, "design/09-diagramas.html") == "design/09-diagramas.html"

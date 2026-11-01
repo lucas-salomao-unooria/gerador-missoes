@@ -327,3 +327,12 @@ def test_instabilidade_do_d0_compara_so_o_bloco_13():
     st = _rodar({"spec_missao": GATE0, "fechamento_lacunas": sem_decisao,
                  "versao_anterior_fechamento_lacunas": anterior}, _splits()[0])
     assert "autor-instavel" in _achados(st) and "mostra a demonstração" in _achados(st)["autor-instavel"]["resumo"]
+    assert _achados(st)["autor-instavel"]["severidade"] == "bloqueio"
+    # quando produto mudou a montante (mudancas_no_aprovado preenchido por A064 após preparar_estado limpar
+    # versao_anterior_spec_missao), a mudança no D0 sai como atenção (amarelo), não bloqueio
+    st_mudou = _rodar({"spec_missao": GATE0, "fechamento_lacunas": sem_decisao,
+                       "versao_anterior_fechamento_lacunas": anterior,
+                       "mudancas_no_aprovado": "## O aprovado de produto mudou desde o último design\n- E6 mudou"},
+                      _splits()[0])
+    assert _achados(st_mudou)["autor-instavel"]["severidade"] == "atencao"
+    assert st_mudou["lacunas_status"] == "amarelo"
