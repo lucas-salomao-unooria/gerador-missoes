@@ -153,7 +153,7 @@ Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica, **salvo o a
 <!-- include: references/padrao-plataforma-preparo-professor.md -->
 <!-- include: references/padrao-plataforma-preparo-professor-telas.md -->
 
-**Condução (4.4):** dashboard em tempo real (quem está em que etapa, **o que pede ação**) · controles de handoff · evidências agregadas da turma · evidência individual (com o grau da medida ao lado). Dados vêm da raia "Evidência capturada". Nenhuma comparação nominal de mérito (8.5); nenhuma coluna ordenável com medida de criança (PED-07).
+**Condução (4.4):** dashboard em tempo real (quem está em que etapa, **o que pede ação**) · controles de handoff · evidências agregadas da turma · evidência individual (com o grau da medida ao lado) · **podcast de recapitulação (exclusivo da visão do professor: o tocador e qualquer referência ao podcast ficam apenas no painel/guia do professor `PROF`, e nunca aparecem em nenhuma tela do estudante `ALU`/`SIS`)**. Dados vêm da raia "Evidência capturada". Nenhuma comparação nominal de mérito (8.5); nenhuma coluna ordenável com medida de criança (PED-07).
 
 **Sobre que DS as telas do professor nascem:** não é a seção do ambiente simulado. Tela de professor vive no hub da Unooria e usa o **kit do DS da plataforma** (referência abaixo, "Kit por tipo de tela"): configuração → `TextField`/`Selection` + `Modal md`; monitor da turma → `Table` + `AvatarGroup` + `Tag` + `Snackbar`; catálogo → `Card interactive` + `Badge` + `SectionHeader` + `EmptyState`. `DESKTOP`, escala de cinza, os mesmos nove tokens. O DESIGN.md do passo 2 declara as duas superfícies (clone do ambiente para o estudante; hub para o professor) para o Stitch não vestir a tela do professor de Instagram.
 

@@ -64,10 +64,10 @@ Idempotência: o segundo clique devolve a mesma sessão; lock por estudante. Rat
 
 ## 14. Pedagogia e conformidade
 ### 14.2 Ficha de evidência
-| Habilidade | Marcador | Tipo | Pergunta | Regra | Nível | Grava na transação de | Critério |
-|---|---|---|---|---|---|---|---|
-| EF06CO03 | cadeia | acao | — | `cadeia_tentativas = 1 → atingiu` | 3 | API-001 | ... |
-| EF06CO10 | canal B | multipla_escolha | PQ-1 | gabarito | 3 | Canal B | ... |
+| Habilidade | Marcador | Tipo | Regra | Nível | Grava na transação de | Critério |
+|---|---|---|---|---|---|---|
+| EF06CO03 | cadeia | acao | `cadeia_tentativas = 1 → atingiu` | 3 | API-001 | ... |
+| EF06CO10 | voto | acao | `voto_em IS NOT NULL → atingiu` | 3 | API-001 | ... |
 """
 
 
@@ -92,8 +92,8 @@ def test_cada_lacuna_da_exp09ef1b_reprova():
         "modelo-sem-ddl": PRD.replace("```sql", "```mermaid").replace("CREATE TABLE", "erDiagram"),
         "nivel-em-tabela-da-missao": PRD.replace("voto_em TIMESTAMPTZ", "score_ef06co03 INTEGER"),
         "regra-sem-coluna": PRD.replace("`cadeia_tentativas = 1 → atingiu`", "cumpre ordenadamente a rotina"),
-        "ficha-tipo-invalido": PRD.replace("| cadeia | acao |", "| cadeia | observacao |"),
-        "ficha-sem-habilidade": PRD.replace("| EF06CO10 | canal B | multipla_escolha | PQ-1 | gabarito | 3 | Canal B | ... |\n", ""),
+        "ficha-tipo-invalido": PRD.replace("| cadeia | acao |", "| cadeia | multipla_escolha |"),
+        "ficha-sem-habilidade": PRD.replace("| EF06CO10 | voto | acao | `voto_em IS NOT NULL → atingiu` | 3 | API-001 | ... |\n", ""),
     }
     for codigo, prd in casos.items():
         assert codigo in _codigos(pc.validar(prd, SPEC)), (codigo, _codigos(pc.validar(prd, SPEC)))

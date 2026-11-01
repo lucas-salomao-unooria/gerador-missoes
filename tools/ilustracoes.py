@@ -193,8 +193,10 @@ _RE_EVENTO = re.compile(r"\s+on[a-z]+\s*=\s*(?:\"[^\"]*\"|'[^']*')", re.IGNORECA
 _CSS_QUADRO_AVULSO = """
 html, body { height: auto !important; overflow: visible !important; display: block !important;
              background: #FFFFFF !important; margin: 0 !important; }
-body .moldura-mobile { width: 100% !important; max-width: 100% !important; margin: 0 !important; }
-body .moldura-mobile [data-screen-id].tela-ativa { display: flex !important; flex-direction: column; min-height: 600px; }
+body .moldura-mobile, body .moldura-desktop { width: 100% !important; max-width: 100% !important; margin: 0 !important; }
+body .moldura-mobile [data-screen-id].tela-ativa,
+body .moldura-desktop [data-screen-id].tela-ativa,
+body [data-screen-id].tela-ativa { display: flex !important; flex-direction: column; min-height: 600px; }
 .screen-meta-badge { display: none !important; }
 """
 _RE_CLASSE = re.compile(r"\bclass\s*=\s*([\"'])(.*?)\1", re.IGNORECASE | re.DOTALL)

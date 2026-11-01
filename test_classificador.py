@@ -61,10 +61,12 @@ PROMPTS = {
     ("gesto_equivalente_ficha", "v1"): "f5bf4132ad9460ba",
     ("papel_equivalente_glossario", "v1"): "62159fb0db460444",
     ("aspas_conceito_ou_fala", "v1"): "032e6b7bc0b7e760",
+    ("virada_tem_crenca", "v1"): "6cec82521300ac8b",
+    ("nomes_assistente_distintos", "v1"): "e1d2f0d83d390696",
 }
 _CAMPOS = ("hipotese_no_documento", "hipotese_aprovada_no_17", "numero", "documento", "cabecalho_da_tabela", "linha",
            "candidato", "item", "linhas_anteriores_no_pedido", "registros_do_po", "ressalva",
-           "alteracao_declarada", "gesto", "papel_canonico")
+           "alteracao_declarada", "gesto", "papel_canonico", "virada", "termos", "trecho")
 
 
 def test_texto_do_prompt_preso_a_versao():

@@ -150,14 +150,31 @@ def ler_proposta(texto: str) -> Proposta:
                     pendencias=pendencias, bruto=texto or "")
 
 
+_MAPA_ASPAS = str.maketrans({"“": '"', "”": '"', "‘": "'", "’": "'"})
+
+
 def _localizar(texto: str, trecho: str) -> List[int]:
     posicoes, inicio = [], 0
     while True:
         i = texto.find(trecho, inicio)
         if i < 0:
-            return posicoes
+            break
         posicoes.append(i)
         inicio = i + 1
+    if posicoes or not trecho:
+        return posicoes
+    # Fallback de aspas tipográficas («“”‘’» vs «""''»): preserva índices 1:1 no documento original
+    texto_norm = texto.translate(_MAPA_ASPAS)
+    trecho_norm = trecho.translate(_MAPA_ASPAS)
+    if len(texto_norm) == len(texto) and len(trecho_norm) == len(trecho):
+        inicio = 0
+        while True:
+            i = texto_norm.find(trecho_norm, inicio)
+            if i < 0:
+                break
+            posicoes.append(i)
+            inicio = i + 1
+    return posicoes
 
 
 def aplicar(documentos: Dict[str, str], edicoes: Iterable[Edicao]) -> Resultado:

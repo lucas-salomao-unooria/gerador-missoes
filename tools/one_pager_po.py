@@ -203,9 +203,9 @@ def _pedido_confere(celula: str, fonte: str, d_linha: Optional[Dict[str, str]] =
             return citacao
     # Se há texto substantivo tanto na célula quanto na fonte e há interseção de palavras significativas,
     # consulta o classificador de sentido para cobrir paráfrases legítimas sem aprovar pedidos inventados.
-    palavras_cel = {w for w in re.findall(r"\w{4,}", _norm(celula or "")) if w not in _VOCABULARIO_ESTRUTURAL}
-    palavras_fnt = {w for w in re.findall(r"\w{4,}", _norm(fonte))}
-    if d_linha and palavras_cel and len(palavras_cel & palavras_fnt) >= 2:
+    palavras_cel = {w for w in re.findall(r"\w{4,}|\b\d+[a-z%]*\b", _norm(celula or "")) if w not in _VOCABULARIO_ESTRUTURAL}
+    palavras_fnt = {w for w in re.findall(r"\w{4,}|\b\d+[a-z%]*\b", _norm(fonte))}
+    if d_linha and palavras_cel and len(palavras_cel & palavras_fnt) >= 1:
         from tools import classificador
 
         decl = f"Trecho: {d_linha.get('trecho', '')} | Como ficou: {d_linha.get('ficou', '')} | Pedido citado: {celula}"

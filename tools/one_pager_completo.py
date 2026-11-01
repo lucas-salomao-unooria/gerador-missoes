@@ -331,9 +331,13 @@ def _forma_da_ideia(ideia: str) -> List[Dict[str, str]]:
                                    "atencao"))
     virada = achados_por_rotulo.get(_normalizar("A virada"))
     if virada is not None and not _RE_CRENCA.search(_sem_falas(virada)):
-        achados.append(_achado("virada-sem-crenca", "O bloco «A virada» não diz o que o estudante achava antes. "
-                                                    "Comece pela crença de entrada da seção 1.2, com «acha», "
-                                                    "«acredita» ou «parece»."))
+        from tools import classificador
+
+        leitura_v = classificador.virada_tem_crenca(virada)
+        if leitura_v.rotulo != "tem_crenca":
+            achados.append(_achado("virada-sem-crenca", "O bloco «A virada» não diz o que o estudante achava antes. "
+                                                        "Comece pela crença de entrada da seção 1.2, com «acha», "
+                                                        "«acredita» ou «parece»."))
     return achados
 
 
@@ -463,8 +467,17 @@ def validar(one_pager: str) -> Dict[str, Any]:
         achados += _passos_contra_a_ficha(passos, resto)
     nomes = _nomes_do_assistente(f"{ideia}\n\n{passos}")
     if len(nomes) > MAX_NOMES_DA_MESMA_COISA:
-        achados.append(_achado("um-nome-por-coisa", "O assistente da história aparece como " + ", ".join(
-            f"«{n}»" for n in nomes) + ": use um nome só, o mesmo do one-pager, do começo ao fim."))
+        from tools import classificador
+
+        leitura_n = classificador.nomes_assistente_distintos(", ".join(nomes), f"{ideia}\n\n{passos}"[:6000])
+        if leitura_n.rotulo == "usos_compatíveis":
+            pass
+        elif leitura_n.rotulo == "mesmo_objeto_dois_nomes":
+            achados.append(_achado("um-nome-por-coisa", "O assistente da história aparece como " + ", ".join(
+                f"«{n}»" for n in nomes) + ": use um nome só, o mesmo do one-pager, do começo ao fim."))
+        else:
+            achados.append(_achado("um-nome-por-coisa", "O assistente da história aparece como " + ", ".join(
+                f"«{n}»" for n in nomes) + ": use um nome só, o mesmo do one-pager, do começo ao fim."))
     contagem = 0
     if not passos:
         achados.append(_achado("passo-a-passo-ausente", f"Falta a seção `{TITULO_PASSO_A_PASSO}`."))

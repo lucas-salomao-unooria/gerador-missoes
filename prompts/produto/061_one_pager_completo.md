@@ -159,7 +159,7 @@ Exemplos vindos do modelo que o time aprovou. **Copie o jeito de escrever, nunca
 
 **O que o estudante aprende.** Dois números que sobem juntos não bastam para dizer quem causa o quê. O material chama isso de correlação — duas coisas que mudam juntas. Causa é outra coisa — quando uma provoca a outra. O calor é uma variável escondida — um terceiro fator que move as duas. Isso vale para qualquer notícia que junta dois números e promete uma explicação.
 
-**O papel do professor.** O professor escolhe a missão, usa o tema padrão ou troca por um da sua disciplina, e libera a turma. Quando a tela trava, ele mostra no telão quantos publicaram cada manchete e pergunta: se o sorvete não mudou, o que mudou? Só ele libera a volta. No fim, a turma ouve o podcast de 3 minutos, e o professor vê a manchete, a nota de correção de cada estudante.
+**O papel do professor.** O professor escolhe a missão, usa o tema padrão ou troca por um da sua disciplina, e libera a turma. Quando a tela trava, ele mostra no telão quantos publicaram cada manchete e pergunta: se o sorvete não mudou, o que mudou? Só ele libera a volta. No fim, na visão do professor (sem aparecer nada disso na tela do estudante), ele tem o podcast de recapitulação de 3 minutos para tocar na sala se quiser, e vê a manchete e a nota de correção de cada estudante.
 
 **Passo do professor (0.2)**
 - ❌ Gate síncrono acionado via `gate:liberar_aha`; o docente conduz mediação plenária por polling HTTP curto até a liberação.

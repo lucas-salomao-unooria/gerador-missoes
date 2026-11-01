@@ -1874,10 +1874,10 @@ for _codigo_novo, _exp_nova in {
         "Sem ele, dados de uma escola poderiam aparecer para outra.",
         _REFAZER_DEV + "o bloco de proteção.", DEV),
     "ficha-tipo-invalido": _x(
-        "Regra de nível com tipo desconhecido",
-        "Uma linha da ficha de evidência tem um tipo que não existe (só vale ação ou múltipla escolha).",
-        "O servidor não saberia calcular o nível.",
-        _REFAZER_DEV + "o tipo certo.", DEV),
+        "Regra de nível com tipo inválido ou Canal B removido",
+        "Uma linha da ficha de evidência tem um tipo diferente de `acao` (por exemplo, `multipla_escolha` do antigo Canal B).",
+        "O Canal B foi removido da missão: toda evidência é aferida pela ação do estudante (Canal A).",
+        _REFAZER_DEV + "o tipo `acao` na ficha de evidência.", DEV),
     "ficha-sem-habilidade": _x(
         "Habilidade sem regra de nível no PRD",
         "A ficha de evidência do PRD não tem linha para uma habilidade da missão.",
@@ -2156,6 +2156,25 @@ for _codigo_novo, _exp_nova in {
         "descrevem com detalhe o que aparece nem o que muda após a ação.",
         "Sem esse detalhe, o design e o dev precisam adivinhar os elementos da tela e a reação imediata.",
         _REFAZER_PRODUTO, PO),
+    "etapa-6-removida": _x(
+        "Etapa 6 de transferência não faz mais parte da missão",
+        "O documento ou o inventário de telas inclui uma Etapa 6 de transferência (atividade nova para o estudante "
+        "reaplicar as habilidades).",
+        "A missão tem apenas 5 etapas (Desafiar, Navegar, Decidir, Resultado e Explicar) e o conserto acontece na "
+        "Etapa 5 sobre o mesmo objeto da Etapa 3.",
+        _REFAZER_DA_ETAPA + "que a Etapa 6 saia e a missão feche na Etapa 5.", None),
+    "podcast-na-tela-do-estudante": _x(
+        "Podcast de recapitulação colocado para o estudante",
+        "Um momento em que o estudante age menciona o podcast de recapitulação na tela dele.",
+        "O podcast de recapitulação pertence exclusivamente à visão do professor e nada dele deve aparecer para o "
+        "estudante.",
+        _REFAZER_PRODUTO, PO),
+    "podcast-em-tela-do-estudante": _x(
+        "Podcast de recapitulação em tela do estudante",
+        "Uma tela de estudante (`ALU` ou `SIS`) do inventário traz o podcast de recapitulação no propósito.",
+        "O podcast de recapitulação é exclusivo da visão do professor (`PROF`) e nada dele deve aparecer na interface "
+        "do estudante.",
+        _REFAZER_DESIGN, DESIGN),
 }.items():
     # entrada que já existe vence: estas cobrem só o que faltava
     CATALOGO.setdefault(_codigo_novo, _exp_nova)

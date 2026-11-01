@@ -228,6 +228,29 @@ palavra no restante do one-pager.
 A citação é o trecho da LINHA que decide.""",
     lambda e: _bloco("LINHA", e["linha"]) + _bloco("TRECHO ENTRE ASPAS", e["candidato"]))
 
+#: `virada-sem-crenca` (`tools/one_pager_completo.py`): verifica se o bloco «A virada» do 0.1 expressa a crença ou
+#: expectativa inicial do estudante quando não usa os verbos do regex (`acha`, `acredita`, `parece`).
+VIRADA_TEM_CRENCA = Pergunta(
+    "virada_tem_crenca", "v1", ("tem_crenca", "sem_crenca"), """
+No bloco «A virada» da seção 0.1 do one-pager, avalie se o texto expressa o que o estudante pensava, esperava ou
+assumia antes da descoberta (a crença de entrada contrastada com o que acontece na missão).
+- tem_crenca: o texto contrasta uma suposição, intuição ou expectativa prévia do estudante com a descoberta/virada.
+- sem_crenca: o texto descreve apenas a mecânica ou a conclusão final sem indicar o que o estudante pensava antes.
+A citação é o trecho de A VIRADA que decide.""",
+    lambda e: _bloco("A VIRADA", e["virada"]))
+
+#: `um-nome-por-coisa` (`tools/one_pager_completo.py`): distingue se dois termos da lista de IA/assistente batizam o
+#: mesmo assistente com dois nomes ou se são usos compatíveis (ex.: o nome próprio «UnooriaAI» e a categoria «a IA»).
+NOMES_ASSISTENTE_DISTINTOS = Pergunta(
+    "nomes_assistente_distintos", "v1", ("mesmo_objeto_dois_nomes", "usos_compatíveis"), """
+Nas seções 0.1 e 0.2 do one-pager apareceram os TERMOS listados abaixo.
+- usos_compatíveis: um termo é o nome próprio do ambiente/ferramenta (ex.: UnooriaAI) e o outro é apenas referência
+  gramatical ou categoria (ex.: «a IA», «o assistente»), ou nomeiam elementos distintos da história.
+- mesmo_objeto_dois_nomes: o texto batiza o mesmo personagem/assistente com dois nomes conflitantes (ex.: ora «robô»,
+  ora «oráculo»).
+A citação é o trecho do TEXTO que decide.""",
+    lambda e: _bloco("TERMOS", e["termos"]) + _bloco("TEXTO", e["trecho"]))
+
 PERGUNTAS: Dict[str, Pergunta] = {p.id: p for p in (
     NUMERO_DA_HIPOTESE, ROTULO_DE_BOTAO, ITEM_DO_PEDIDO_CLASSE, DECISAO_DO_PO_CONFIRMADA,
     RESSALVA_REPETE_DECISAO_DO_PO,
@@ -236,6 +259,7 @@ PERGUNTAS: Dict[str, Pergunta] = {p.id: p for p in (
 PERGUNTAS_EXTRAS: Dict[str, Pergunta] = {p.id: p for p in (
     ALTERACAO_PO_AUTORIZADA, GESTO_EQUIVALENTE_FICHA,
     PAPEL_EQUIVALENTE_GLOSSARIO, ASPAS_CONCEITO_OU_FALA,
+    VIRADA_TEM_CRENCA, NOMES_ASSISTENTE_DISTINTOS,
 )}
 
 TODAS_AS_PERGUNTAS: Dict[str, Pergunta] = {**PERGUNTAS, **PERGUNTAS_EXTRAS}
@@ -467,10 +491,11 @@ def _chamar_modelo(pergunta: Pergunta, prompt: str, modelo: str) -> Tuple[str, D
         "required": ["rotulo", "citacao"],
         "propertyOrdering": ["citacao", "rotulo"],
     }
+    orcamento_pensamento = min(int(settings.thinking_budget or 512), 512)
     cfg = types.GenerateContentConfig(
         temperature=settings.temperatura_juiz, seed=settings.seed_juiz,
         response_mime_type="application/json", response_schema=schema,
-        thinking_config=types.ThinkingConfig(thinking_budget=settings.thinking_budget),
+        thinking_config=types.ThinkingConfig(thinking_budget=orcamento_pensamento),
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )
     resp = _cliente(settings.google_api_key).models.generate_content(model=modelo, contents=prompt, config=cfg)
@@ -616,9 +641,19 @@ def aspas_conceito_ou_fala(linha: str, candidato: str) -> Leitura:
     return ler(ASPAS_CONCEITO_OU_FALA, [{"linha": linha, "candidato": candidato}])[0]
 
 
+def virada_tem_crenca(virada: str) -> Leitura:
+    """`tem_crenca` · `sem_crenca` · `nao_sei`: o bloco «A virada» expressa o que o estudante pensava antes?"""
+    return ler(VIRADA_TEM_CRENCA, [{"virada": virada}])[0]
+
+
+def nomes_assistente_distintos(termos: str, trecho: str) -> Leitura:
+    """`mesmo_objeto_dois_nomes` · `usos_compatíveis` · `nao_sei`: os termos batizam o mesmo assistente com dois nomes?"""
+    return ler(NOMES_ASSISTENTE_DISTINTOS, [{"termos": termos, "trecho": trecho}])[0]
+
+
 # ------------------------------------------------------------------ os registros do PO, como a fase A os mediu
 def _palavras(texto: str) -> List[str]:
-    return re.findall(r"[a-záàâãéêíóôõúç0-9]{4,}", (texto or "").lower())
+    return re.findall(r"[a-záàâãéêíóôõúç0-9]{4,}|\b\d+[a-z%]*\b", (texto or "").lower())
 
 
 def registros_do_po(estado: Dict[str, Any], linha_alvo: str = "") -> str:

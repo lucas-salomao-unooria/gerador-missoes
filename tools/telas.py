@@ -110,10 +110,12 @@ def inventario(jornada: str) -> Dict[str, Any]:
         estados = [e.replace("\0", "/").replace("\1", ",").replace("`", "").strip(" *_.")
                    for e in re.split(r"[,;·/]|\s\+\s", protegido)]
         estados = [e for e in estados if e and _norm(e) not in ("—", "-", "n/a", "nenhum", "unico")]
+        proposito_txt = next((v for k, v in linha_d.items() if k.startswith("proposito")), "")
         # a seção do DS da tela, quando a missão usa mais de uma (15/10/2026): a coluna «Ambiente» do inventário
         telas.append({"id": canonico, "etapa": linha_d.get("etapa", ""), "ator": linha_d.get("ator", ""),
                       "peso": linha_d.get("peso", ""), "estados": estados,
-                      "ambiente": linha_d.get("ambiente", "").strip("*_` ")})
+                      "ambiente": linha_d.get("ambiente", "").strip("*_` "),
+                      "proposito": proposito_txt})
     return {"telas": telas, "fora_do_padrao": fora, "tabela": cabecalho is not None}
 
 
@@ -168,6 +170,20 @@ def cobertura(state: Dict[str, Any]) -> Dict[str, Any]:
         achado("bloqueio", "preparo-do-professor-ausente", "jornada",
                f"O inventário não tem {', '.join(faltam_prof)}: as cinco telas do preparo do professor são obrigatórias "
                "(escolher a missão, recorte da aula, geração, curadoria, pôr no ar).")
+    telas_e6 = [t["id"] for t in inv["telas"] if t["id"].startswith("E6-")]
+    if telas_e6:
+        achado("bloqueio", "etapa-6-removida", "jornada",
+               f"O inventário traz tela(s) da Etapa 6 ({', '.join(telas_e6)}): a missão tem apenas 5 etapas e não "
+               "deve ter Etapa 6 de transferência nem atividade nova para o estudante reaplicar habilidades.")
+    telas_alu_podcast = [
+        t["id"] for t in inv["telas"]
+        if ("-ALU-" in t["id"] or "-SIS-" in t["id"]) and re.search(r"\bpodcast\b", t.get("proposito", ""), re.I)
+    ]
+    if telas_alu_podcast:
+        achado("bloqueio", "podcast-em-tela-do-estudante", "jornada",
+               f"Tela(s) de estudante com podcast no propósito ({', '.join(telas_alu_podcast)}): o podcast de "
+               "recapitulação pertence exclusivamente à visão do professor (`PROF`) e nada dele deve aparecer para o "
+               "estudante.")
 
     matriz: Dict[str, Dict[str, bool]] = {i: {} for i in esperadas}
     for chave, rotulo, dono in DERIVADOS:
