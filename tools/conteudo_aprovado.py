@@ -143,7 +143,9 @@ def secao(texto: str, numero: int) -> Optional[str]:
 
     i = next((i for i in achados if not item_de_outra_secao(i)), achados[0])
     nivel = titulos[i][2]
-    fim_secao = next((ini for ini, _, n, _ in titulos[i + 1:] if n <= nivel), len(texto))
+    # A seção 0 do one-pager inclui `## 0.1 A ideia` e `## 0.2 A missão passo a passo`, que têm nível 2 como `## 0.`
+    fim_secao = next((ini for ini, _, n, tit in titulos[i + 1:]
+                      if n <= nivel and not (numero == 0 and re.match(r"^0\.[12]\b", tit.strip("*_ ")))), len(texto))
     return texto[titulos[i][1]:fim_secao]
 
 

@@ -92,8 +92,13 @@ def _tarefa_de_correcao(ws: Path, lote: str, ids: list[str], fundacao: bool, cor
 
 def _tarefa(ws: Path, lote: str, ids: list[str], fundacao: bool) -> str:
     missao = json.loads((ws / "dados" / "missao.json").read_text(encoding="utf-8"))
-    linhas = [f"- `{q['id']}` · estado «{q['estado']}» · {q['ator']} · seção `{q.get('secao', '?')}` · "
-              f"{q['largura']}×{q['altura']} · {q['proposito']}" for q in missao["quadros"] if q["id"] in ids]
+    linhas = [
+        f"- `{q['id']}` · estado «{q['estado']}» · {q['ator']} · seção `{q.get('secao', '?')}` · "
+        f"{q['largura']}×{q['altura']} · propósito: {q['proposito']}"
+        + (f" · ação: {q['acao']}" if q.get("acao") else "")
+        + (f" · resultado: {q['resultado']}" if q.get("resultado") else "")
+        for q in missao["quadros"] if q["id"] in ids
+    ]
     secoes = sorted({q.get("secao", "unooria") for q in missao["quadros"]})
     if fundacao:
         papel = ("Você está no **lote de fundação**: define a cara que as outras telas vão seguir. Antes de "

@@ -132,6 +132,11 @@ _RE_DE_PARA_NUMERO = re.compile(r"\bde\s+(\d+(?:[.,]\d+)?)\s*\S{0,12}\s+(?:para|
 _RE_NUMERO = re.compile(r"(?<![\w.,/])(\d+(?:[.,]\d+)?)\s?(%|segundos?\b|seg\b|s\b|minutos?\b|min\b|palavras\b|"
                         r"caracteres\b|op[çc][õo]es\b|alternativas\b|tentativas\b|rodadas\b|pares\b|cartas\b|fotos\b|"
                         r"px\b|vezes\b)", re.I)
+#: Artefatos exclusivos de dev/design nomeados explicitamente no item (ex.: «No PRD.md, …», «No handoff, …», «Em 09-diagramas, …»).
+_RE_ARTEFATO_EXCLUSIVO_ETAPA = re.compile(
+    r"\b(?:PRD(?:\.md)?|ADR-\d+|handoff(?:\s+dev)?|banco\s+de\s+conte[úu]do|brief\s+de\s+assets|"
+    r"09-diagramas|08-prototipo|fluxo-arestas|wireframe\w*)\b", re.I)
+_RE_ARTEFATO_PRODUTO = re.compile(r"\b(?:one[- ]?pager(?!\s+pedag[óo]gico)|spec\b|n[úu]cleo\s+narrativo)\b", re.I)
 #: «sem rótulos como “Brincar 1”», «tirar “Concluir Análise”»: a citação depois disto é texto a sair, não texto novo.
 _RE_ANTES_DE_ALVO = re.compile(r"(?:\bsem\b|\btir\w*|\bretir\w*|\bremov\w*|\bexclu\w*|\bno\s+lugar\s+de|"
                                r"\bonde\s+diz|\btexto\s+atual|\btroc\w*|\bhoje\b|\batualmente\b)[^.\n“\"«‘]{0,40}$", re.I)
@@ -527,6 +532,15 @@ def dividir(pedido: str, etapa: str, estado: Dict[str, Any],
         resposta = respostas.get(n) or {}
         dono_llm = _dono_da_triagem(str(resposta.get("dono") or ""), etapa) if resposta else ""
         regra = regra_de_produto(trecho, docs, linhas)
+        # Quando o item está em design/dev, a triagem do LLM o atribuiu a design/dev, o texto nomeia explicitamente um
+        # artefato exclusivo de design/dev (ex.: PRD.md, ADR-001, handoff, 08-prototipo) sem mencionar one-pager/spec/núcleo,
+        # e a regra conservadora só disparou por palavra genérica (sem achar texto-alvo nem frase nos documentos de produto,
+        # nem texto-chave/Canal B/podcast/ambiente), respeita o dono da etapa.
+        if (regra and etapa in (DESIGN, DEV) and dono_llm in (DESIGN, DEV)
+                and _RE_ARTEFATO_EXCLUSIVO_ETAPA.search(trecho) and not _RE_ARTEFATO_PRODUTO.search(trecho)
+                and not any(r.startswith(("o texto-alvo", "a frase", "cita o texto-chave", "fala de ", "muda o ambiente",
+                                          "proposta de troca do ambiente")) for r in regra)):
+            regra = []
         dono = PRODUTO if regra else (dono_llm or INDEFINIDO)
         motivo = str(resposta.get("motivo") or "").strip()
         if not regra and dono == DEV and etapa == DEV and _RE_PEDAGOGICO.search(trecho):

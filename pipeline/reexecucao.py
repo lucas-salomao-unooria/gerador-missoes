@@ -200,7 +200,8 @@ CHAVES_PRODUTO = frozenset({
     "missoes_vizinhas", "catalogo_indice_status", "catalogo_indice_status_envelope",
     # `one_pager_gate0` só é gravado se não existe (`agents.callbacks.preservar_one_pager`): sem cair aqui, o
     # «one-pager original» de um refazer de produto continuava sendo o da missão anterior
-    "one_pager", "one_pager_gate0", "brief_escopo", "brief_escopo_status", "brief_escopo_status_envelope",
+    "one_pager", "one_pager_gate0", "base_preservada_one_pager", "base_preservada_nucleo_narrativo",
+    "brief_escopo", "brief_escopo_status", "brief_escopo_status_envelope",
     # a conferência do one-pager do PO (08/10/2026). O `one_pager_po` em si fica: é insumo, como o material
     "one_pager_po_report", "one_pager_po_status", "one_pager_po_status_envelope", "one_pager_po_rodada",
     "secoes_apoio_rodada",
@@ -271,7 +272,7 @@ KEY_EDICOES_A_MONTANTE = "edicoes_a_montante"
 #: como estava: apagado o documento, ele escrevia do zero, e a ideação sorteava outro mecanismo.
 #: Acrescentar uma pergunta de evidência à spec devolvia outra missão inteira.
 CHAVES_AUTORAIS = frozenset({
-    "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "spec_missao", "completude_spec",
+    "mapa_conceitual", "ideacao_mecanismos", "nucleo_narrativo", "one_pager", "brief_escopo", "spec_missao", "completude_spec",
     "fechamento_lacunas", "ambiente_simulado", "brief_oficio", "jornada_telas", "fluxo_arestas", "copy_strings",
     "camada_caa", "wireframes_cobertura", "copy_strings_revisada", "prototipo_html",
     "handoff_dev", "brief_assets", "banco_conteudo", "prd_final", "one_pager_pedagogico",
@@ -720,6 +721,9 @@ def preparar_estado_pontual(
     if etapa == "produto" and limpo.get("one_pager"):
         # `agents.callbacks.preservar_one_pager` roda depois do autor, que não roda: o original desta versão é o editado
         limpo["one_pager_gate0"] = limpo["one_pager"]
+    if etapa in ("produto", "spec") and limpo.get("spec_missao"):
+        # mantém `spec_missao_gate0` sincronizada com a spec editada para que leituras subsequentes não voltem à spec pré-edição
+        limpo["spec_missao_gate0"] = limpo["spec_missao"]
     if limpo.get(KEY_PEDIDO_CORRECAO):
         # quem lê o pedido aqui são os gates e juízes: os autores desta etapa não rodam
         limpo[KEY_PEDIDO_CORRECAO] += (
@@ -927,8 +931,16 @@ async def editar(
     erros = ""
     proposta = Proposta(modo=MODO_ESTRUTURAL)
     tentativas = tentativas or TENTATIVAS_DO_EDITOR
+    # Quando `etapa == "design"` e `prototipo_html` é grande (>40 KB), mas o pedido não fala de protótipo/HTML/wireframe,
+    # omite `prototipo_html` do lote enviado ao LLM para não estourar o limite de tokens de saída (caso real: f4caa98a,
+    # cortado em 236 KB) e preserva o `prototipo_html` intacto no resultado.
+    docs_para_llm = dict(documentos)
+    prototipo_omitido = None
+    if (etapa == "design" and "prototipo_html" in docs_para_llm and len(docs_para_llm["prototipo_html"]) > 40_000
+            and not re.search(r"prot[óo]tipo|html|wireframe|08-prototipo", f"{pedido_texto}\n{achados}", re.I)):
+        prototipo_omitido = docs_para_llm.pop("prototipo_html")
     for _ in range(tentativas):
-        proposta = await proponente(pedido_texto, etapa, documentos, erros=erros, achados=achados)
+        proposta = await proponente(pedido_texto, etapa, docs_para_llm, erros=erros, achados=achados)
         if not proposta.pontual:
             return None, proposta
         resultado = aplicar(documentos, proposta.edicoes)

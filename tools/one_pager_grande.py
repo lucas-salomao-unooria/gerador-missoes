@@ -133,7 +133,15 @@ def sincronizar_com_nucleo(base: str, nucleo: str) -> str:
         chave = str(n)
         if chave in b_nucleo and chave in blocos(texto):
             ini, fim = b_nucleo[chave]
-            texto = _trocar_bloco(texto, chave, nucleo[ini:fim])
+            novo_bloco = nucleo[ini:fim]
+            if chave == "0":
+                # Preserva `## 0.1` e `## 0.2` se já existirem na base e não estiverem no núcleo
+                ini_b, fim_b = blocos(texto)["0"]
+                bloco_base = texto[ini_b:fim_b]
+                m_sub = re.search(r"^#{1,3}\s+0\.[12]\b", bloco_base, re.M)
+                if m_sub and not re.search(r"^#{1,3}\s+0\.[12]\b", novo_bloco, re.M):
+                    novo_bloco = novo_bloco.rstrip() + "\n\n" + bloco_base[m_sub.start():].strip() + "\n"
+            texto = _trocar_bloco(texto, chave, novo_bloco)
     if "18-parcial" in b_nucleo:
         ini, fim = b_nucleo["18-parcial"]
         corpo = nucleo[ini:fim]

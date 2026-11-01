@@ -358,3 +358,95 @@ def test_bloco_de_governanca_nao_passa_pelo_glossario_do_prd():
     # o texto do autor continua conferido
     codigos = [a.get("codigo") for a in rastro.validar_prd(prd + "\nAbra o **Admin**.\n", spec=spec)["achados"]]
     assert "variante-proibida" in codigos
+
+
+def test_frente_a_versionamento_e_pedidos_acumulados():
+    """Frente A: pedidos acumulados do PO autorizam mudança sobre one_pager_po, spec_missao_gate0 acompanha spec_missao
+    na edição pontual e brief_escopo não é sobrescrito na correção pontual."""
+    from pipeline.reexecucao import CHAVES_AUTORAIS, CHAVES_PRODUTO, preparar_estado_pontual
+    from tools import edicao_pontual, one_pager_po, triagem_pedido
+
+    # 1. brief_escopo é chave autoral e travada na correção pontual de produto, e base_preservada_one_pager limpa no refazer
+    assert "brief_escopo" in CHAVES_AUTORAIS
+    assert "brief_escopo" in edicao_pontual.TRAVADOS_SEM_EDICAO["produto"]
+    assert "base_preservada_one_pager" in CHAVES_PRODUTO
+
+    # 2. one_pager_po aceita mudança pedida em pedidos acumulados do PO (mesmo sem estar na tabela Alterações)
+    po = "# One-Pager\n\n## 4. Mecânica\n\nO estudante analisa 5 cartões de postagem na tela inicial.\n"
+    gerado = "# One-Pager\n\n## 4. Mecânica\n\nO estudante analisa 3 cartões de postagem na tela inicial.\n"
+    sem_pedido = one_pager_po.conferir(po, gerado)
+    assert sem_pedido["status"] == "bloqueado"
+    com_pedido_acumulado = one_pager_po.conferir(
+        po, gerado, pedidos="Reduzir de 5 cartões de postagem para 3 cartões de postagem na tela inicial."
+    )
+    assert com_pedido_acumulado["status"] == "aprovado"
+
+    # 3. preparar_estado_pontual sincroniza spec_missao_gate0 quando spec_missao é editada
+    estado = {
+        "spec_missao": "# Spec\n\nTempo: 15 min\n",
+        "spec_missao_gate0": "# Spec\n\nTempo: 15 min\n",
+    }
+    ed = edicao_pontual.Edicao(documento="spec_missao", de="Tempo: 15 min", para="Tempo: 20 min", motivo="pedido PO")
+    novo_estado, _ = preparar_estado_pontual(
+        estado, "produto", "Mudar tempo para 20 min", {"spec_missao": "# Spec\n\nTempo: 20 min\n"},
+        edicao_pontual.como_dicts([ed]),
+    )
+    assert "Tempo: 20 min" in novo_estado["spec_missao_gate0"]
+
+    # 4. triagem_pedido respeita dono_llm para artefato exclusivo de design (sem achar frase literal no produto)
+    divisao = triagem_pedido.dividir(
+        "Ajustar o espaçamento visual dos cartões no 08-prototipo para ficar na Etapa 2.",
+        etapa="design",
+        estado={"one_pager": "# One-Pager\n\n## 4. Mecânica\n\nTexto da missão.\n"},
+        triagem_itens=[{"n": 1, "dono": "design", "motivo": "ajuste visual no protótipo"}],
+    )
+    assert divisao.itens[0].dono == "design"
+
+
+def test_frente_b_secao_zero_completa_e_prototipo_hifi_com_fichas():
+    """Frente B: secao(one_pager, 0) inclui 0.1 e 0.2, sincronizar_com_nucleo preserva 0.1/0.2 e quadros PROF usam desktop."""
+    from tools import conteudo_aprovado, ilustracoes, one_pager_completo, one_pager_grande
+
+    op = (
+        "# Missão\n\n"
+        "## 0. Visão Geral\nTexto 0.\n\n"
+        "## 0.1 A ideia\nMecânica de arrastar cartões.\n\n"
+        "## 0.2 A missão passo a passo\nPasso 1.\n\n"
+        "## 1. Narrativa\nHistória.\n"
+    )
+    s0 = conteudo_aprovado.secao(op, 0) or ""
+    assert "0.1 A ideia" in s0
+    assert "0.2 A missão passo a passo" in s0
+    assert "História." not in s0
+
+    nucleo = "## 0. Visão Geral\nTexto 0 atualizado.\n\n## 1. Narrativa\nHistória nova.\n"
+    sincronizado = one_pager_grande.sincronizar_com_nucleo(op, nucleo)
+    assert "Texto 0 atualizado." in sincronizado
+    assert "## 0.1 A ideia" in sincronizado
+    assert "## 0.2 A missão passo a passo" in sincronizado
+
+    # Termos de interação funcional não são mais bloqueados como PALAVRAS_DIFICEIS
+    padroes = [p for p, _ in one_pager_completo.PALAVRAS_DIFICEIS]
+    assert not any("ranking" in p or "arrast" in p or "interface" in p for p in padroes)
+
+    # Quadros de professor usam moldura-desktop e quadros de aluno usam moldura-mobile
+    html = (
+        '<style>.x{}</style><body>'
+        '<div class="quadro-tela" data-screen-id="E0-PROF-01" data-estado="padrão">Prof</div>'
+        '<div class="quadro-tela" data-screen-id="E1-ALU-01" data-estado="padrão">Alu</div>'
+        '</body>'
+    )
+    quadros = ilustracoes.quadros_do_prototipo(html)
+    assert 'class="moldura-desktop"' in quadros["E0-PROF-01"]
+    assert 'class="moldura-mobile"' in quadros["E1-ALU-01"]
+
+
+def test_frente_c_falsos_positivos_classificador_e_duracao_ui():
+    """Frente C: durações curtas de transição/animação/feedback visual não viram numero-sem-origem."""
+    from tools import montagem
+
+    numeros_ui = montagem.numeros_de_regra("Transição suave de fade-in de 0,3 s e toast de confirmação por 2 s.")
+    assert numeros_ui == []
+    numeros_regra = montagem.numeros_de_regra("O estudante tem 45 s para responder cada rodada.")
+    assert ("45", "s") in numeros_regra
+

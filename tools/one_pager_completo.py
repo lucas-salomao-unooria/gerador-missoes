@@ -113,15 +113,12 @@ JARGAO: Tuple[Tuple[str, str], ...] = (
 #: tiradas do 0.1 e do 0.2 da exp09ef1b (28/10/2026), que o time achou difíceis.
 PALAVRAS_DIFICEIS: Tuple[Tuple[str, str], ...] = (
     (r"\bleitura [óo]ptica\b|\bOCR\b", "o sistema lê as páginas fotografadas"),
-    (r"\branking\b", "a ordem — «arrasta para pôr em ordem o que pesa mais»"),
-    (r"\barrast[áa]ve(?:l|is)\b", "a ação: «arrasta para …»"),
     (r"\bformativ[oa]s?\b", "o que o professor vê de cada estudante, em coisas concretas"),
     (r"\bdeliber\w+", "decidir, decisão"),
     (r"\bor[çc]ament[áa]ri[oa]s?\b", "do dinheiro, da verba"),
     (r"\bsistematiz\w+|\bformaliz\w+", "resume, dá nome"),
     (r"\bsubmet\w+", "envia"),
     (r"\bemit[ei]\w*", "dá, mostra, escreve"),
-    (r"\bvisualiz\w+", "vê, mostra"),
     (r"\bm[óo]dulos?\b", "parte, caso extra"),
     (r"\bplen[áa]ri[oa]s?\b", "com a turma toda"),
     (r"\bmedia[çc][ãa]o\b|\bmedeia\b", "o professor conduz a conversa"),
@@ -132,7 +129,6 @@ PALAVRAS_DIFICEIS: Tuple[Tuple[str, str], ...] = (
     (r"\bartefatos?\b", "o gráfico ou o texto que ele faz"),
     (r"\bestruturad[oa]s?\b", "guiado, com opções prontas"),
     (r"\bcontextualiz\w+", "explica o contexto"),
-    (r"\binterface\b", "a tela"),
     (r"\bfuncionalidades?\b", "o que dá pra fazer"),
     (r"\binteragir\b|\binterage\b", "a ação concreta: toca, arrasta, escreve"),
 )
@@ -524,7 +520,7 @@ def validar(one_pager: str) -> Dict[str, Any]:
             fim_f = leitura.find("\n", m.end())
             linha_f = leitura[ini_f:len(leitura) if fim_f < 0 else fim_f].strip()
             leitura_cls = classificador.aspas_conceito_ou_fala(linha_f, m.group(1).strip())
-            sev_fala = "atencao" if leitura_cls.rotulo == "termo_conceito" else "bloqueio"
+            sev_fala = "atencao" if leitura_cls.rotulo in ("termo_ou_conceito", "termo_conceito") else "bloqueio"
             achados.append(_achado("fala-reescrita", f"A fala «{m.group(1).strip()[:120]}» não está, palavra por "
                                                      "palavra, no resto do one-pager: copie o texto da tela ou tire "
                                                      "as aspas e conte com as suas palavras.", sev_fala))

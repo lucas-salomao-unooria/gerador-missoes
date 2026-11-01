@@ -107,12 +107,26 @@ def _coluna(d: Dict[str, str], prefixo: str) -> str:
 
 def _etapas(one_pager: str, inventario: List[Dict[str, Any]]) -> Dict[str, Dict[str, str]]:
     """Texto do painel por etapa: a seção 4 do one-pager (`### Etapa N — Nome`); a Etapa 0 vem do 0.2."""
+    from tools.ficha_interacao import extrair
+
+    fichas_por_etapa: Dict[str, List[str]] = {}
+    for f in extrair(one_pager):
+        et = str(f.etapa_secao or f.etapa)
+        resumo_f = (f"Momento {f.id}: Na tela={f.campos.get('Na tela', '')}; "
+                    f"Gesto={f.campos.get('Gesto', '')}; Resposta={f.campos.get('Resposta na hora', '')}; "
+                    f"Libera={f.campos.get('Libera', '')}")
+        fichas_por_etapa.setdefault(et, []).append(resumo_f)
+
     etapas: Dict[str, Dict[str, str]] = {}
     for m in re.finditer(r"^###\s+Etapa\s+(\d+)\s*[—–-]\s*(.+?)\s*$(.*?)(?=^##|\Z)", one_pager, re.M | re.S):
+        et = m.group(1)
         texto = re.sub(r"\s+", " ", re.sub(r"[*_`>#|]", "", m.group(3))).strip()
-        etapas[m.group(1)] = {"nome": f"Etapa {m.group(1)} — {m.group(2).strip()}",
-                              "texto": texto[:1200] + ("…" if len(texto) > 1200 else ""),
-                              "fonte": "One-pager §4"}
+        if et in fichas_por_etapa:
+            resumo_fichas = " | ".join(fichas_por_etapa[et])
+            texto = f"{texto[:1000]} — Fichas: {resumo_fichas}"
+        etapas[et] = {"nome": f"Etapa {et} — {m.group(2).strip()}",
+                      "texto": texto[:1800] + ("…" if len(texto) > 1800 else ""),
+                      "fonte": "One-pager §4"}
     preparo = re.search(r"^###\s+\d+\.\s+O professor prepara[^\n]*\n(.*?)(?=^###|^##|\Z)", one_pager, re.M | re.S)
     if any(t["etapa"] == "0" for t in inventario):
         etapas["0"] = {"nome": "Etapa 0 — Preparo do professor",
