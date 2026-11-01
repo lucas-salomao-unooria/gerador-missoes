@@ -199,7 +199,11 @@ Se `camada_caa` vier `nao_aplicavel` ou vazio, nada disso se aplica, **salvo o a
 Uma linha por tela do inventário, todas. `Frame (screenId)` leva `—`: o screenId real é o da seção «Telas geradas no Stitch (esteira)» que a esteira anexa a esta cobertura; slug, `*(especificado)*` ou nome montado por você é afirmação falsa (a exp09ef1b declarou dez screenIds que o projeto não tinha).
 
 ## Especificação por tela (obrigatória — uma seção por tela do inventário)
-Para cada tela: zonas (topo/centro/rodapé ou moldura do aparelho), elementos contados vs teto, hierarquia (o que salta / o que recua), verbo, o que muda, estados.
+Para cada tela:
+- **Zonas da tela** (topo / centro / rodapé ou moldura do aparelho) com os componentes exatos em cada zona e quais dados estão visíveis agora vs ocultos até a virada;
+- **Elementos contados vs teto** da faixa etária e **hierarquia visual** (o que salta em primeiro plano / o que recua);
+- **Controles e mecânica de interação**: verbo nativo, tipo de controle (cartões selecionáveis, chips de composição guiada, ordenador, régua/slider — nunca `textarea` aberta quando a avaliação é determinística), condição exata que habilita o CTA primário;
+- **Anatomia de cada estado** listado na tabela de Cobertura: o que muda visualmente do estado inicial para o selecionado/preenchido, confirmado/travado (`latch`), erro/vazio e, nas telas de consequência/Aha (Etapa 4) e de conserto `V1 → V2` (Etapa 5), o que a tela exibe para cada opção escolhida.
 
 ## Fidelidade — frames que eu submeteria ao teste do app sem legenda, e os que não
 

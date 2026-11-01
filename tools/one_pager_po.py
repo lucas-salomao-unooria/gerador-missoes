@@ -46,7 +46,18 @@ _RE_REMOVER = re.compile(r"remov|desvincul|exclu|retir|tirar|tire\b|descart|sem 
 #: Seções do gerado que não contam como presença: o changelog e a própria tabela de alterações citam o
 #: texto do PO, e colar o trecho ali não pode valer como preservá-lo.
 _RE_SECAO_NAO_CONTA = re.compile(r"o que mudou|changelog|altera[çc][õo]es sobre o one-pager", re.IGNORECASE)
-_RE_ASPAS = re.compile(r"[«“\"]([^«»“”\"]{12,})[»”\"]")
+_RE_ASPAS = re.compile(r"[«“\"'‘`]([^«»“”\"'’`\n]{12,})[»”\"'’`]")
+_RE_POS_PONTUACAO = re.compile(r"[:—–\-.!?;\"“«'(1-9/\[]\s*[*_`]*\s*$")
+_VOCABULARIO_ESTRUTURAL = frozenset({
+    "etapa", "etapas", "momento", "momentos", "estudante", "estudantes", "professor", "professora", "sistema",
+    "canal", "atingiu", "processo", "opcao", "opcoes", "criterio", "criterios", "bloco", "blocos", "passo",
+    "passos", "tela", "telas", "gesto", "libera", "resposta", "regra", "formato", "total", "parcial", "missao",
+    "mostra", "turma", "aula", "feed", "painel", "modal", "card", "cards", "slot", "slots", "botao", "botoes",
+    "habilidade", "habilidades", "quando", "como", "onde", "para", "pelo", "pela", "sem", "com", "nao", "sim",
+    "mas", "ou", "se", "quem", "qual", "quais", "cada", "todo", "toda", "todos", "todas", "apos", "antes",
+    "durante", "entre", "sobre", "baixo", "alto", "medio", "inicial", "final", "abertura", "fechamento",
+    "decidir", "explicar", "engajar", "explorar", "resultado", "consequencia", "virada", "situacao",
+})
 
 
 def _norm(texto: str) -> str:
@@ -110,9 +121,21 @@ def _ancoras_faltando(trecho: str, palavras_novo: Set[str]) -> List[str]:
     v1.5.2 da exp06ef1b, a correspondência exata dava 3 falsos positivos e a de 85%, nenhum). Mas ela deixa
     passar a troca de uma palavra no fim da linha — "Bia e Rafa" virando "Bia e Tiago". Na correspondência
     aproximada, então, o que carrega a decisão — número e nome — tem de continuar no documento.
+    Ignora palavras comuns capitalizadas após dois-pontos, travessão, ponto ou abertura de frase interna.
     """
-    tokens = re.findall(r"\w+", trecho or "")
-    ancoras = [t for i, t in enumerate(tokens) if t.isdigit() or (i > 0 and t[:1].isupper() and len(t) >= 3)]
+    texto = trecho or ""
+    ancoras: List[str] = []
+    for i, m in enumerate(re.finditer(r"\w+", texto)):
+        t = m.group(0)
+        if t.isdigit():
+            ancoras.append(t)
+        elif i > 0 and t[:1].isupper() and len(t) >= 3:
+            prefixo = texto[:m.start()]
+            if _RE_POS_PONTUACAO.search(prefixo):
+                continue
+            if _norm(t) in _VOCABULARIO_ESTRUTURAL:
+                continue
+            ancoras.append(t)
     return [a for a in ancoras if _norm(a) not in palavras_novo]
 
 
@@ -156,15 +179,39 @@ def _parecido(a_norm: str, b_norm: str) -> bool:
     return bool(ta) and len(ta & _trigramas(b_norm)) / len(ta) >= FRACAO
 
 
-def _pedido_confere(celula: str, fonte: str) -> Optional[str]:
-    """A citação do pedido na célula, se ela existe no briefing ou nos pedidos do PO."""
+def _pedido_confere(celula: str, fonte: str, d_linha: Optional[Dict[str, str]] = None) -> Optional[str]:
+    """A citação do pedido na célula, se ela existe no briefing ou nos pedidos do PO (literal, trigramas ou semântica)."""
     from tools.fidelidade import _citacao_confere
     from tools.fidelidade import _norm as norm_cit
 
+    if not (fonte or "").strip():
+        return None
     fonte_norm = norm_cit(fonte)
-    for citacao in _RE_ASPAS.findall(celula or ""):
-        if len(citacao.split()) >= 4 and _citacao_confere(citacao, fonte_norm):
+    candidatos = list(_RE_ASPAS.findall(celula or ""))
+    limpa = re.sub(r"^(?:pedido(?:\s+do\s+po)?|voto(?:\s+do\s+comit[êe])?|briefing)\s*[:—–-]\s*", "",
+                   (celula or "").strip(), flags=re.I).strip()
+    if len(limpa.split()) >= 4 and limpa not in candidatos:
+        candidatos.append(limpa)
+    tri_fonte = _trigramas(_norm(fonte))
+    for citacao in candidatos:
+        if len(citacao.split()) < 4:
+            continue
+        if _citacao_confere(citacao, fonte_norm):
             return citacao
+        tri_cit = _trigramas(_norm(citacao))
+        if tri_cit and tri_fonte and len(tri_cit & tri_fonte) / len(tri_cit) >= 0.65:
+            return citacao
+    # Se há texto substantivo tanto na célula quanto na fonte e há interseção de palavras significativas,
+    # consulta o classificador de sentido para cobrir paráfrases legítimas sem aprovar pedidos inventados.
+    palavras_cel = {w for w in re.findall(r"\w{4,}", _norm(celula or "")) if w not in _VOCABULARIO_ESTRUTURAL}
+    palavras_fnt = {w for w in re.findall(r"\w{4,}", _norm(fonte))}
+    if d_linha and palavras_cel and len(palavras_cel & palavras_fnt) >= 2:
+        from tools import classificador
+
+        decl = f"Trecho: {d_linha.get('trecho', '')} | Como ficou: {d_linha.get('ficou', '')} | Pedido citado: {celula}"
+        leitura = classificador.alteracao_po_autorizada(decl, fonte[:30000])
+        if leitura.rotulo == "autorizada":
+            return leitura.citacao or limpa[:160]
     return None
 
 
@@ -202,10 +249,16 @@ def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "", votos:
     removidos = codigos_removidos(po, briefing, pedidos, votos)
     fonte = f"{briefing}\n{pedidos}\n{votos}"
     declaradas = alteracoes_declaradas(gerado)
-    validas = [_norm(d["trecho"]) for d in declaradas if _pedido_confere(d["pedido"], fonte)]
-    sem_prova = [d for d in declaradas if not _pedido_confere(d["pedido"], fonte)]
+    provas_declaradas = {i: _pedido_confere(d["pedido"], fonte, d) for i, d in enumerate(declaradas)}
+    validas = [_norm(d["trecho"]) for i, d in enumerate(declaradas) if provas_declaradas.get(i)]
+    sem_prova = [d for i, d in enumerate(declaradas) if not provas_declaradas.get(i)]
 
     palavras_novo = set(re.findall(r"\w+", novo))
+    # Transição da Regra 18: quando o one-pager do PO tinha a seção 4 em prosa/bullets (sem `#### Momento`)
+    # e o gerado a reorganizou em fichas `#### Momento E.k`, redistribuir a mesma frase entre `Na tela`,
+    # `Gesto` e `Resposta na hora` quebra os trigramas adjacentes na fronteira dos rótulos.
+    transicao_fichas_s4 = ("momento" not in _norm(po) or not re.search(r"#{3,5}\s*\**\s*momento\s+\d", po or "", re.I)) \
+        and bool(re.search(r"#{3,5}\s*\**\s*momento\s+\d", gerado or "", re.I))
     todas = unidades(po)
     perdidas: List[Dict[str, str]] = []
     n_removidas = n_declaradas = 0
@@ -216,6 +269,11 @@ def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "", votos:
         tri = _trigramas(n)
         if tri and len(tri & tri_novo) / len(tri) >= FRACAO and not _ancoras_faltando(u["texto"], palavras_novo):
             continue
+        if transicao_fichas_s4 and re.match(r"^(?:4\b|etapa\s+[1-5]\b)", _norm(u.get("secao") or "")):
+            palavras_sig = [w for w in re.findall(r"\w{4,}", n) if w not in _VOCABULARIO_ESTRUTURAL]
+            if palavras_sig and sum(1 for w in palavras_sig if w in palavras_novo) / len(palavras_sig) >= 0.72 \
+                    and not _ancoras_faltando(u["texto"], palavras_novo):
+                continue
         if removidos and set(_RE_CODIGO.findall(u["linha"])) & removidos:
             n_removidas += 1
             continue

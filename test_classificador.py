@@ -57,13 +57,18 @@ PROMPTS = {
     ("item_do_pedido_classe", "v2"): "b302374d159b1fca",
     ("decisao_do_po_confirmada", "v1"): "36ef4a48645019f4",
     ("ressalva_repete_decisao_do_po", "v1"): "965e9d31b1290aee",
+    ("alteracao_po_autorizada", "v1"): "3ccd0db320ab042d",
+    ("gesto_equivalente_ficha", "v1"): "f5bf4132ad9460ba",
+    ("papel_equivalente_glossario", "v1"): "62159fb0db460444",
+    ("aspas_conceito_ou_fala", "v1"): "032e6b7bc0b7e760",
 }
 _CAMPOS = ("hipotese_no_documento", "hipotese_aprovada_no_17", "numero", "documento", "cabecalho_da_tabela", "linha",
-           "candidato", "item", "linhas_anteriores_no_pedido", "registros_do_po", "ressalva")
+           "candidato", "item", "linhas_anteriores_no_pedido", "registros_do_po", "ressalva",
+           "alteracao_declarada", "gesto", "papel_canonico")
 
 
 def test_texto_do_prompt_preso_a_versao():
-    for p in C.PERGUNTAS.values():
+    for p in C.TODAS_AS_PERGUNTAS.values():
         texto = p.prompt(p.montar({k: f"<{k}>" for k in _CAMPOS}))
         assert (p.id, p.versao) in PROMPTS, f"{p.id} {p.versao}: versão nova sem o hash registrado aqui"
         assert hashlib.sha256(texto.encode()).hexdigest()[:16] == PROMPTS[(p.id, p.versao)], (

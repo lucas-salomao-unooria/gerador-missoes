@@ -137,6 +137,8 @@ stateDiagram-v2
 ## Lista de arestas (o que o dev implementa)
 | # | De | Para | Condição completa | Tipo (principal·alternativo·automático·erro) | Reversível? | Responsável (estudante·professora·plataforma) |
 
+*(Na coluna `Condição completa`, escreva primeiro a guarda exata de habilitação e feche com ponto final `.` — ex.: `Tocar em "Publicar" após selecionar 1 opção e 1 justificativa.` — e, depois do ponto final, detalhe o que o estado de destino carrega ou mostra por opção escolhida.)*
+
 ## Resultado dos cinco testes (teste por teste, com o nó/aresta faltante nomeado)
 
 ## Contagem

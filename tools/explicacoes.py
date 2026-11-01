@@ -2150,6 +2150,12 @@ for _codigo_novo, _exp_nova in {
         "O glossário da especificação aponta para um caminho de arquivo que não faz parte dos artefatos da esteira.",
         "Os documentos seguintes copiam o caminho inexistente e falham na conferência de arquivos.",
         _REFAZER_PRODUTO, PO),
+    "mecanica-pouco-detalhada": _x(
+        "Momento da missão descrito de forma curta demais",
+        "Na ficha de interação de um momento da missão, «Na tela» ou «Resposta na hora» têm poucas palavras e não "
+        "descrevem com detalhe o que aparece nem o que muda após a ação.",
+        "Sem esse detalhe, o design e o dev precisam adivinhar os elementos da tela e a reação imediata.",
+        _REFAZER_PRODUTO, PO),
 }.items():
     # entrada que já existe vence: estas cobrem só o que faltava
     CATALOGO.setdefault(_codigo_novo, _exp_nova)

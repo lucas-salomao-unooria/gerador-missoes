@@ -136,7 +136,7 @@ Aqui o protótipo faz o que uma imagem estática não faz: reproduzir as cadênc
 
 - Indicador de carregamento do pico: dispara ao tocar, dura o tempo declarado e emenda no beat seguinte.
 - Cadência do aha: os elementos aparecem nos tempos da spec, em sequência, com um botão para repetir.
-- Pontos de toque: o elemento primário de cada tela avança um passo.
+- Pontos de toque e reatividade por opção: o elemento primário de cada tela avança um passo, e os seletores/cartões/chips dentro de um quadro destacam visualmente a opção escolhida e exibem o feedback correspondente do sheet de copy — mantendo **todos** os quadros `[data-screen-id][data-estado]` presentes no DOM estático (nunca gere quadros apenas via JS nem oculte quadros do inventário).
 
 Respeite `prefers-reduced-motion`: animação que pisca é gatilho vestibular, e a criança não tem como desligá-la.
 

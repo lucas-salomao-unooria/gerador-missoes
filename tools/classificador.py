@@ -178,8 +178,67 @@ Os REGISTROS DO PO são tudo o que o PO escreveu na sessão.
 A citação é o trecho da RESSALVA (ou dos REGISTROS) que decide.""",
     lambda e: _bloco("RESSALVA", e["ressalva"]) + _bloco("REGISTROS DO PO", e["registros_do_po"]))
 
-PERGUNTAS: Dict[str, Pergunta] = {p.id: p for p in (NUMERO_DA_HIPOTESE, ROTULO_DE_BOTAO, ITEM_DO_PEDIDO_CLASSE,
-                                                     DECISAO_DO_PO_CONFIRMADA, RESSALVA_REPETE_DECISAO_DO_PO)}
+#: `alteracao-sem-pedido` (`tools/one_pager_po.py`): verifica se uma alteração declarada na tabela «Alterações sobre o
+#: one-pager do PO» foi autorizada pelo briefing, pedido do PO ou voto de comitê quando a citação não bate por regex literal.
+ALTERACAO_PO_AUTORIZADA = Pergunta(
+    "alteracao_po_autorizada", "v1", ("autorizada", "sem_pedido"), """
+A ALTERAÇÃO DECLARADA está na tabela «Alterações sobre o one-pager do PO» de um one-pager gerado. Os REGISTROS E VOTOS
+reúnem o briefing, os pedidos do PO e os votos dos comitês pedagógicos da sessão.
+- autorizada: há nos REGISTROS E VOTOS uma ordem, decisão ou recomendação de comitê que pede ou justifica essa alteração
+  de trecho, mesmo que o autor tenha resumido ou parafraseado o pedido na tabela.
+- sem_pedido: nenhum trecho dos REGISTROS E VOTOS pede ou autoriza mudar aquele ponto do one-pager do PO, ou o pedido
+  citado na tabela foi inventado.
+A citação é o trecho dos REGISTROS E VOTOS que autoriza a mudança; se não houver, cite a ALTERAÇÃO DECLARADA.""",
+    lambda e: _bloco("ALTERAÇÃO DECLARADA", e["alteracao_declarada"]) + _bloco("REGISTROS E VOTOS", e["registros_do_po"]))
+
+#: `gesto-fora-da-lista` (`tools/ficha_interacao.py`): verifica se um verbo de gesto da ficha de interação equivale a um
+#: dos 12 gestos canônicos da plataforma quando não está no dicionário determinístico de sinônimos.
+GESTO_EQUIVALENTE_FICHA = Pergunta(
+    "gesto_equivalente_ficha", "v1", ("equivalente", "invalido"), """
+Na ficha de interação de um momento da missão, o campo GESTO descreve a ação física ou cognitiva que o estudante ou o
+professor realiza na tela. Os gestos canônicos são: tocar, arrastar, deslizar, digitar, escolher, ordenar, marcar,
+rolar, ler, ouvir, esperar, falar.
+- equivalente: o GESTO descreve claramente uma ação concreta na interface que equivale a um dos 12 gestos canônicos.
+- invalido: o GESTO não descreve ação observável do usuário na tela ou está vazio/abstrato demais para desenhar a tela.
+A citação é o trecho do GESTO que decide.""",
+    lambda e: _bloco("GESTO", e["gesto"]))
+
+#: `papel-divergente` (`tools/consistencia.py`): verifica se a menção ao personagem na LINHA contradiz o PAPEL CANÔNICO
+#: do glossário ou se é compatível / refere-se a outra pessoa na mesma frase.
+PAPEL_EQUIVALENTE_GLOSSARIO = Pergunta(
+    "papel_equivalente_glossario", "v1", ("compativel", "contradiz"), """
+A LINHA menciona o PERSONAGEM, cujo papel canônico no glossário da missão é PAPEL CANÔNICO.
+- compativel: a LINHA mantém o mesmo papel semântico do glossário (ou usa sinônimo compatível), ou a palavra de gestão/
+  coordenação na frase refere-se a outro ator/órgão e não ao PERSONAGEM.
+- contradiz: a LINHA atribui diretamente ao PERSONAGEM um cargo ou função incompatível com o PAPEL CANÔNICO.
+A citação é o trecho da LINHA que decide.""",
+    lambda e: (_bloco("PERSONAGEM", e["candidato"]) + _bloco("PAPEL CANÔNICO", e["papel_canonico"])
+               + _bloco("LINHA", e["linha"])))
+
+#: `fala-reescrita` (`tools/one_pager_completo.py`): distingue fala literal inventada de personagem/tela vs termo,
+#: conceito ou rótulo curto destacado entre aspas no resumo 0.1/0.2.
+ASPAS_CONCEITO_OU_FALA = Pergunta(
+    "aspas_conceito_ou_fala", "v1", ("termo_ou_conceito", "fala_de_tela"), """
+Na LINHA das seções 0.1 ou 0.2 do one-pager, o TRECHO ENTRE ASPAS apareceu sem correspondência literal palavra por
+palavra no restante do one-pager.
+- termo_ou_conceito: o trecho entre aspas destaca um conceito pedagógico, nome de mecanismo, expressão figurada,
+  parâmetro ou rótulo resumido na prosa, e não uma frase inteira dita por um personagem ou copiada como fala de tela.
+- fala_de_tela: a LINHA apresenta o trecho entre aspas como uma fala literal de personagem, mensagem de chat ou frase
+  completa lida na tela que foi reescrita em relação ao one-pager.
+A citação é o trecho da LINHA que decide.""",
+    lambda e: _bloco("LINHA", e["linha"]) + _bloco("TRECHO ENTRE ASPAS", e["candidato"]))
+
+PERGUNTAS: Dict[str, Pergunta] = {p.id: p for p in (
+    NUMERO_DA_HIPOTESE, ROTULO_DE_BOTAO, ITEM_DO_PEDIDO_CLASSE, DECISAO_DO_PO_CONFIRMADA,
+    RESSALVA_REPETE_DECISAO_DO_PO,
+)}
+
+PERGUNTAS_EXTRAS: Dict[str, Pergunta] = {p.id: p for p in (
+    ALTERACAO_PO_AUTORIZADA, GESTO_EQUIVALENTE_FICHA,
+    PAPEL_EQUIVALENTE_GLOSSARIO, ASPAS_CONCEITO_OU_FALA,
+)}
+
+TODAS_AS_PERGUNTAS: Dict[str, Pergunta] = {**PERGUNTAS, **PERGUNTAS_EXTRAS}
 
 
 # ------------------------------------------------------------------ a leitura
@@ -533,6 +592,28 @@ def decisao_do_po_confirmada(documento: str, linha: str, registros_do_po: str) -
 def ressalva_repete_decisao_do_po(ressalva: str, registros_do_po: str) -> Leitura:
     """`repete_decisao_do_po` · `aponta_problema` · `nao_sei`: a ressalva só repete a decisão do PO?"""
     return ler(RESSALVA_REPETE_DECISAO_DO_PO, [{"ressalva": ressalva, "registros_do_po": registros_do_po}])[0]
+
+
+def alteracao_po_autorizada(alteracao_declarada: str, registros_do_po: str) -> Leitura:
+    """`autorizada` · `sem_pedido` · `nao_sei`: os registros/votos autorizam a alteração declarada na tabela?"""
+    return ler(ALTERACAO_PO_AUTORIZADA, [{"alteracao_declarada": alteracao_declarada,
+                                          "registros_do_po": registros_do_po}])[0]
+
+
+def gesto_equivalente_ficha(gesto: str) -> Leitura:
+    """`equivalente` · `invalido` · `nao_sei`: o gesto descrito equivale a um dos 12 gestos canônicos?"""
+    return ler(GESTO_EQUIVALENTE_FICHA, [{"gesto": gesto}])[0]
+
+
+def papel_equivalente_glossario(candidato: str, papel_canonico: str, linha: str) -> Leitura:
+    """`compativel` · `contradiz` · `nao_sei`: o papel na linha é compatível com o glossário?"""
+    return ler(PAPEL_EQUIVALENTE_GLOSSARIO, [{"candidato": candidato, "papel_canonico": papel_canonico,
+                                              "linha": linha}])[0]
+
+
+def aspas_conceito_ou_fala(linha: str, candidato: str) -> Leitura:
+    """`termo_ou_conceito` · `fala_de_tela` · `nao_sei`: o trecho entre aspas é conceito/termo ou fala reescrita?"""
+    return ler(ASPAS_CONCEITO_OU_FALA, [{"linha": linha, "candidato": candidato}])[0]
 
 
 # ------------------------------------------------------------------ os registros do PO, como a fase A os mediu

@@ -280,6 +280,11 @@ def _personagens(g: Dict[str, Any], rotulo: str, texto: str) -> List[Dict[str, s
             ini, fim = _segmento(texto, m.start())
             trecho = texto[ini:fim]
             if not papel_gestao and not viu_papel and _RE_PAPEL_DE_GESTAO.search(trecho):
+                from tools import classificador
+
+                leitura = classificador.papel_equivalente_glossario(nome, p.get("papel") or "—", trecho)
+                if leitura.rotulo == "compativel":
+                    continue
                 viu_papel = True
                 achados.append(_achado(
                     "atencao", "papel-divergente",
@@ -307,11 +312,21 @@ def _mencoes(g: Dict[str, Any], d: str) -> List[Tuple[int, str]]:
 
 
 def _dono_do_numero(mencoes: List[Tuple[int, str]], d: str, pos: int, alcance: int = 200) -> Optional[str]:
-    """A entidade mais próxima ANTES do número, na mesma linha; sem ela, a mais próxima depois.
+    """A entidade mais próxima ANTES do número, na mesma frase/célula; sem ela, na mesma linha até `alcance`.
     "Mesa Aberta (24 vagas…), Ponto de Apoio (18 vagas…)": as 18 vagas são do Ponto de Apoio."""
     ini = d.rfind("\n", 0, pos) + 1
     fim = d.find("\n", pos)
     fim = len(d) if fim < 0 else fim
+    # Prioriza a mesma frase/célula (separada por `.`, `;`, `|`, `—`) para não contaminar com outra entidade na linha
+    ini_seg = max([ini] + [d.rfind(c, ini, pos) + 1 for c in ".;|"])
+    fim_seg_candidatos = [d.find(c, pos, fim) for c in ".;|"]
+    fim_seg = min([fim] + [i for i in fim_seg_candidatos if i >= 0])
+    antes_seg = [(p, n) for p, n in mencoes if max(ini_seg, pos - alcance) <= p < pos]
+    if antes_seg:
+        return antes_seg[-1][1]
+    depois_seg = [(p, n) for p, n in mencoes if pos < p <= min(fim_seg, pos + alcance)]
+    if depois_seg:
+        return depois_seg[0][1]
     antes = [(p, n) for p, n in mencoes if max(ini, pos - alcance) <= p < pos]
     if antes:
         return antes[-1][1]

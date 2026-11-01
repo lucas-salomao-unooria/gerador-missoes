@@ -31,6 +31,29 @@ CAMPOS_OBRIGATORIOS = ("Quem age", "Na tela", "Gesto", "Resposta na hora", "Se n
 GESTOS = ("tocar", "arrastar", "deslizar", "digitar", "escolher", "ordenar", "marcar", "rolar", "ler", "ouvir",
           "esperar", "falar")
 GESTOS_SEM_QUANTIDADE = ("esperar", "falar")
+#: Sinônimos e flexões frequentes em fichas de interação mapeados para os 12 verbos canônicos.
+_SINONIMOS_GESTO: Dict[str, str] = {
+    "clicar": "tocar", "clica": "tocar", "toca": "tocar", "apertar": "tocar", "aperta": "tocar",
+    "pressionar": "tocar", "pressiona": "tocar", "acionar": "tocar", "aciona": "tocar", "abrir": "tocar",
+    "abre": "tocar", "confirmar": "tocar", "confirma": "tocar", "enviar": "tocar", "envia": "tocar",
+    "selecionar": "escolher", "seleciona": "escolher", "escolhe": "escolher", "optar": "escolher", "opta": "escolher",
+    "votar": "escolher", "vota": "escolher", "definir": "escolher", "define": "escolher",
+    "preencher": "digitar", "preenche": "digitar", "digita": "digitar", "escrever": "digitar", "escreve": "digitar",
+    "inserir": "digitar", "insere": "digitar", "redigir": "digitar", "redige": "digitar",
+    "arrasta": "arrastar", "mover": "arrastar", "move": "arrastar", "puxar": "arrastar", "posicionar": "arrastar",
+    "desliza": "deslizar", "passar": "deslizar", "ajustar": "deslizar", "ajusta": "deslizar", "calibrar": "deslizar",
+    "ordena": "ordenar", "classificar": "ordenar", "classifica": "ordenar", "organizar": "ordenar",
+    "organiza": "ordenar", "priorizar": "ordenar", "prioriza": "ordenar", "ranquear": "ordenar",
+    "marca": "marcar", "assinalar": "marcar", "assinala": "marcar", "checar": "marcar", "destacar": "marcar",
+    "rola": "rolar", "percorrer": "rolar", "percorre": "rolar", "navegar": "rolar", "navega": "rolar",
+    "le": "ler", "observar": "ler", "observa": "ler", "visualizar": "ler", "visualiza": "ler",
+    "examinar": "ler", "examina": "ler", "conferir": "ler", "confere": "ler", "analisar": "ler", "analisa": "ler",
+    "comparar": "ler", "compara": "ler", "inspecionar": "ler",
+    "ouve": "ouvir", "escutar": "ouvir", "escuta": "ouvir", "reproduzir": "ouvir",
+    "espera": "esperar", "aguardar": "esperar", "aguarda": "esperar",
+    "fala": "falar", "debater": "falar", "debate": "falar", "conversar": "falar", "conversa": "falar",
+    "discutir": "falar", "discute": "falar", "explicar": "falar", "explica": "falar", "apresentar": "falar",
+}
 #: Momentos na missão inteira e por etapa: menos que isso não descreve a tela; mais deixa de ser uma missão de aula.
 MIN_MOMENTOS = 6
 MAX_MOMENTOS = 14
@@ -41,11 +64,14 @@ ETAPA_CONSEQUENCIA = 4
 
 _RE_ETAPA = re.compile(r"^#{2,3}\s*\**\s*Etapa\s+(\d)\b[^\n]*$", re.M | re.I)
 _RE_MOMENTO = re.compile(r"^#{3,5}\s*\**\s*Momento\s+(\d)\.(\d{1,2})([a-z]?)\b\s*[—–:-]?\s*(.*?)\**\s*$", re.M | re.I)
-_RE_CAMPO = re.compile(r"^\s*[-*]\s+\*\*\s*(Quem age|Só para quem|Na tela|Op[çc][õo]es(?:\s*\(\s*\d+\s*\))?|Gesto|"
-                       r"Resposta na hora|Se não fizer|Se errar|Libera|Fica registrado|Texto de tela)\s*:?\s*\*\*\s*:?"
+_RE_CAMPO = re.compile(r"^\s*(?:[-*•]\s+)?\*\*\s*(Quem age|S[óo] para quem|Na tela|Op[çc][õo]es(?:\s*\(\s*\d+\s*\))?|Gesto|"
+                       r"Resposta na hora|Se n[ãa]o fizer|Se errar|Libera|Fica registrado|Texto de tela)\s*:?\s*\*\*\s*:?"
                        r"\s*(.*)$", re.M | re.I)
 _RE_DESTINO = re.compile(r"Momento\s+(\d\.\d{1,2}[a-z]?)|\bfim da miss[ãa]o\b", re.I)
-_RE_SE_OPCAO = re.compile(r"^\s*[-*]\s+Se\s+(?:escolheu\s+)?[\"“«]([^\"”»\n]+)[\"”»]\s*:", re.M | re.I)
+_RE_SE_OPCAO = re.compile(
+    r"^\s*(?:[-*•]\s+)?\**\s*(?:Se|Quando)\s+(?:escolheu\s+|escolher\s+|marcou\s+|selecionou\s+)?[\"“«']([^\"”»'\n]+)[\"”»']\s*\**\s*[:—–-]",
+    re.M | re.I,
+)
 _RE_ASPAS = re.compile(r"[\"“«]([^\"”»\n]+)[\"”»]")
 _RE_MARCADOR = re.compile(r"\[(?:ABERTO|PROPOSTA|PAR[ÂA]METRO)\b", re.I)
 _RE_N_OPCOES = re.compile(r"\(\s*(\d+)\s*\)")
@@ -181,10 +207,21 @@ def validar(texto: str) -> Dict[str, Any]:
 
         gesto = m.campos.get("Gesto", "")
         if gesto.split() and not _RE_MARCADOR.match(gesto.strip()):
-            verbo = _normalizar(gesto.split()[0])
+            verbo_bruto = _normalizar(gesto.split()[0])
+            verbo_sem_acento = "".join(c for c in unicodedata.normalize("NFD", verbo_bruto)
+                                       if unicodedata.category(c) != "Mn")
+            verbo = verbo_bruto if verbo_bruto in GESTOS else _SINONIMOS_GESTO.get(verbo_sem_acento, verbo_bruto)
             if verbo not in GESTOS:
-                achados.append(_achado("gesto-fora-da-lista", f"O gesto do {nome} começa com «{gesto.split()[0]}»; "
-                                       "use um destes: " + ", ".join(GESTOS) + "."))
+                from tools import classificador
+
+                leitura = classificador.gesto_equivalente_ficha(gesto)
+                if leitura.rotulo == "equivalente":
+                    achados.append(_achado("gesto-fora-da-lista", f"O gesto do {nome} começa com «{gesto.split()[0]}»; "
+                                           "prefira abrir com um destes verbos canônicos: " + ", ".join(GESTOS) + ".",
+                                           "atencao"))
+                else:
+                    achados.append(_achado("gesto-fora-da-lista", f"O gesto do {nome} começa com «{gesto.split()[0]}»; "
+                                           "use um destes: " + ", ".join(GESTOS) + "."))
             elif verbo not in GESTOS_SEM_QUANTIDADE:
                 quantidade = re.split(r"\s[—–]\s", gesto, maxsplit=1)[0]
                 if not re.search(r"\d", quantidade) and not _RE_MARCADOR.search(quantidade):
@@ -200,6 +237,14 @@ def validar(texto: str) -> Dict[str, Any]:
                 elif not _RE_MARCADOR.search(opcoes) and n and int(n) != len(_RE_ASPAS.findall(opcoes)):
                     achados.append(_achado("escolha-sem-opcoes", f"As opções do {nome} dizem {n} e trazem "
                                                                  f"{len(_RE_ASPAS.findall(opcoes))} entre aspas."))
+
+        for campo_detalhe in ("Na tela", "Resposta na hora"):
+            val_det = m.campos.get(campo_detalhe, "")
+            if val_det and not _RE_MARCADOR.search(val_det) and len(val_det.split()) < 4:
+                achados.append(_achado("mecanica-pouco-detalhada",
+                                       f"O campo «{campo_detalhe}» do {nome} está telegráfico («{val_det}»): detalhe "
+                                       "quais elementos/quantidades aparecem na tela e o que muda visualmente na hora.",
+                                       "atencao"))
 
         tela = m.campos.get("Texto de tela", "")
         if tela and not _RE_ASPAS.search(tela) and "nenhum texto novo" not in _normalizar(tela) \
