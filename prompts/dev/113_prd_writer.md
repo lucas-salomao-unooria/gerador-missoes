@@ -123,6 +123,10 @@ determinístico (`prd-codavel`) lê o PRD como ele e devolve a você o que falta
 7. **Missão em que o estudante escreve para um interlocutor simulado:** a seção 8 ou a 12 remete à **árvore de
    intenções** do banco de conteúdo (`dev/01e-banco-conteudo.md`), diz que ela vive em `conteudo.ts` no servidor e
    que a detecção roda no servidor. Não repita os gatilhos: cite a tabela.
+8. **Detalhamento micro-mecânico nas Seções 5, 6, 7, 8, 9 e 13 (proibido resumir de forma vaga):**
+   - Na **Seção 7 (Stories por tela)**, cada tela do inventário especifica os elementos visíveis vs ocultos, os controles exatos, o estado inicial do CTA, o comportamento em cada estado (`data-estado`), os IDs dos textos-chave (`TC-nn`) e, nas telas da Etapa 4 (Aha) e Etapa 5 (Explicar/Conserto `V1 → V2`), a reação determinística para cada opção escolhida.
+   - Na **Seção 8 (Regras de negócio)**, cada regra (`RN-xx`) detalha a condição exata de validação no servidor, o que trava (`latch`) e o que retorna para cada ramo de escolha.
+   - Na **Seção 13 (Telemetria e KPIs)**, os eventos do catálogo mantêm o mesmíssimo par `(verbo, objeto:slug)` do bloco 9 e do sub-bloco 9f da spec, com os campos do payload nomeados explicitamente em `snake_case`.
 
 ## O PRD monta, não decide — o que o gate confere no corpo
 

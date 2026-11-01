@@ -27,9 +27,46 @@ _RE_EVT = re.compile(r"\bEVT-[UP]?\d{1,3}\b", re.IGNORECASE)
 _RE_T = re.compile(r"\bT(\d{1,2})\b")
 _CANON = Path(__file__).resolve().parent.parent / "prompts" / "references" / "perguntas-de-produto.md"
 _RE_TELA = re.compile(r"\bE[0-6]-(?:ALU|PROF|SIS)-\d{2}\b")
+_RE_INTERVALO_TELA = re.compile(
+    r"\b(E[0-6]-(?:ALU|PROF|SIS)-)(\d{2})\s*(?:\.\.\.?|…|–|—|-|\ba\b|\bat[ée]\b)\s*(?:E[0-6]-(?:ALU|PROF|SIS)-)?(\d{2})\b",
+    re.I,
+)
 _RE_ETAPA = re.compile(r"\bE[0-6]\b")
 #: `E1..E6`, `E1…E6`, `E1–E6`, `E1 a E6`, `E1 até E6`. O hífen só vale seguido de `E`: `E3-ALU-02` é tela.
 _RE_INTERVALO_ETAPA = re.compile(r"\bE([0-6])\s*(?:\.\.\.?|…|–|—|-(?=\s*E)|\ba\b|\bat[ée]\b)\s*E([0-6])\b", re.I)
+_STOPWORDS_PAYLOAD = {
+    "true", "false", "null", "none", "number", "string", "boolean", "integer", "float",
+    "int", "bool", "str", "array", "object", "enum", "uuid", "json", "resultado", "contexto",
+    "nenhum", "vazio", "opcional", "obrigatorio",
+}
+
+
+def _telas_expandidas(texto: str) -> set:
+    """IDs de telas citados em `texto`, expandindo intervalos como `E3-ALU-01..03` ou `E3-ALU-01 a E3-ALU-03`."""
+    t = texto or ""
+    telas = {x.upper() for x in _RE_TELA.findall(t)}
+    for m in _RE_INTERVALO_TELA.finditer(t):
+        prefixo = m.group(1).upper()
+        a, b = sorted((int(m.group(2)), int(m.group(3))))
+        if b - a <= 20:
+            telas.update(f"{prefixo}{n:02d}" for n in range(a, b + 1))
+    return telas
+
+
+def _expandir_conjunto_telas(telas: set) -> set:
+    return set(telas) | _telas_expandidas(" ".join(str(x) for x in telas))
+
+
+def _campos_payload(bruto: str) -> set:
+    """Extrai nomes de campos declarados em JSON (`\"campo\":`), TS (`campo:`) ou crases (`` `campo` ``)."""
+    t = bruto or ""
+    chaves = set(re.findall(r'"(\w+)"\s*:', t))
+    chaves.update(re.findall(r"(?:^|[,{\s])([a-zA-Z_]\w*)\s*:", t))
+    for m in re.findall(r"`([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)?)`", t):
+        chaves.add(m.split(".")[-1])
+    for m in re.findall(r"(?:resultado|contexto)\.(\w+)", t):
+        chaves.add(m)
+    return {c for c in chaves if c.lower() not in _STOPWORDS_PAYLOAD and not c.isdigit()}
 
 
 def _etapas(texto: str) -> set:
@@ -262,7 +299,7 @@ def validar_kpis(prd: str, spec: str = "", one_pager: str = "") -> Dict[str, Any
         # A etapa é FALLBACK, não soma: `\bE[0-6]\b` casa "E3" dentro de "E3-ALU-02" (o hífen é
         # fronteira de palavra), e aí "E3" == "E3" fazia qualquer par de telas casar — o gate
         # aprovava justamente o caso que existe para pegar.
-        telas = set(_RE_TELA.findall(" ".join(linha.values())))
+        telas = _telas_expandidas(" ".join(linha.values()))
         if not telas:
             telas = _etapas(_col(linha, "quando dispara"))
         # O payload vem só de tabela com coluna `resultado`/`contexto`, e SOMA entre tabelas. Antes a
@@ -342,16 +379,19 @@ def validar_kpis(prd: str, spec: str = "", one_pager: str = "") -> Dict[str, Any
             # tela da 6. Como fallback, a `E6-ALU-02` apagava o `E3` e o `E4`, e o gate acusava o KPI-07 da exp03ef1b
             # (28/10/2026) mesmo depois de o redator ampliar a coluna como a própria mensagem manda. `_etapas` tira as
             # telas antes de procurar etapa, então o "E3" de dentro de "E3-ALU-02" não entra.
-            telas_kpi = set(_RE_TELA.findall(" ".join(linha.values()))) | _etapas(_col(linha, "tela"))
-            telas_evt = tela_do_evento.get(e, set())
+            telas_kpi = _telas_expandidas(" ".join(linha.values())) | _etapas(_col(linha, "tela"))
+            telas_evt = _expandir_conjunto_telas(tela_do_evento.get(e, set()))
             if telas_kpi and telas_evt:
                 casa = any(tk == te or tk.startswith(te) or te.startswith(tk) for tk in telas_kpi for te in telas_evt)
                 if not casa:
+                    etapas_kpi = {t[:2] for t in telas_kpi if len(t) >= 2 and t[0] == "E" and t[1].isdigit()}
+                    etapas_evt = {t[:2] for t in telas_evt if len(t) >= 2 and t[0] == "E" and t[1].isdigit()}
+                    mesma_etapa = bool(etapas_kpi & etapas_evt)
                     # a mensagem traz a saída: sem ela o redator consertou 25 de 27 achados na
                     # rodada 2 de 23/09 e deixou estes, que só diziam o que estava errado
                     na_tela = sorted(ev for ev, ts in tela_do_evento.items()
                                      if any(tk == te or tk.startswith(te) or te.startswith(tk)
-                                            for tk in telas_kpi for te in ts))
+                                            for tk in telas_kpi for te in _expandir_conjunto_telas(ts)))
                     saida = (f"Na tela do KPI disparam {', '.join(f'`{x}`' for x in na_tela)}."
                              if na_tela else "Nenhum evento da tabela dispara nessa tela: acrescente o "
                              "evento que a mede, ou corrija a coluna Tela.")
@@ -361,7 +401,8 @@ def validar_kpis(prd: str, spec: str = "", one_pager: str = "") -> Dict[str, Any
                               f"{sorted(telas_kpi | telas_evt)}, não trocar o evento.")
                     falha("kpi-tela-divergente",
                           f"{nome} mede {sorted(telas_kpi)} e é alimentado por `{e}`, que dispara em "
-                          f"{sorted(telas_evt)}. O número vai sair e não vai medir o que o KPI diz. {saida}")
+                          f"{sorted(telas_evt)}. O número vai sair e não vai medir o que o KPI diz. {saida}",
+                          severidade="atencao" if mesma_etapa else "bloqueio")
 
         # O campo do cálculo tem de estar em ALGUM evento que o cálculo usa — não em todos os da célula.
         # Cobrar cada campo de cada evento acusava `count(EVT-U05 com resultado.codigo) vs count(EVT-U04
@@ -385,7 +426,7 @@ def validar_kpis(prd: str, spec: str = "", one_pager: str = "") -> Dict[str, Any
                   f"não da professora, emita o evento também pelo caminho analítico.", severidade="atencao")
         if campos and usados:
             sinais_p = [x for x in usados if x.startswith("EVT-P")]
-            carregam = {x: set(re.findall(r'"(\w+)"\s*:', payload_do_evento.get(x, "")))
+            carregam = {x: _campos_payload(payload_do_evento.get(x, ""))
                         for x in usados if x not in sinais_p}
             disponiveis = set().union(*carregam.values())
             faltando = [c for c in campos if c not in disponiveis]
@@ -453,9 +494,9 @@ def validar_kpis(prd: str, spec: str = "", one_pager: str = "") -> Dict[str, Any
                   f"`{id_evt}` declara leitura em `{onde.strip()[:40]}`. {MENSAGEM_LEITOR}")
         elif onde and id_evt.startswith("EVT-E") and re.search(r"_[a-z0-9_]+\b", onde, re.I) \
                 and not re.search(r"\b[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\b", onde, re.I):
-            atencao("evento-operacional-sem-coluna",
-                    f"`{id_evt}` declara leitura na tabela `{onde.strip()[:50]}` sem nomear a coluna (`tabela.coluna`) "
-                    "onde o evento operacional é persistido.")
+            falha("evento-operacional-sem-coluna",
+                  f"`{id_evt}` declara leitura na tabela `{onde.strip()[:50]}` sem nomear a coluna (`tabela.coluna`) "
+                  "onde o evento operacional é persistido.", severidade="atencao")
 
     # Os sinais universais das transversais de dono `missao` estão na tabela, com o id, o verbo e
     # o objeto do catálogo. É o que a missão deve às perguntas do PO — mesmo sem KPI próprio para
@@ -606,9 +647,19 @@ def _mede(celula: str) -> bool:
     return bool(re.search(r"[a-zA-Z_]{3,}", texto))
 
 
+def _norm_token_acao(s: str) -> str:
+    sem = "".join(c for c in unicodedata.normalize("NFD", (s or "").lower()) if unicodedata.category(c) != "Mn")
+    return sem.strip(" `*_\"'.,;:()[]")
+
+
 def _acao(celula: str) -> Optional[tuple]:
-    m = _RE_ACAO.search(_limpo(celula))
-    return (m.group(1).lower(), m.group(2).lower()) if m else None
+    limpo = _norm_token_acao(_limpo(celula))
+    m = _RE_ACAO.search(limpo)
+    if m:
+        return (m.group(1).lower(), m.group(2).lower())
+    # Aceita também formato `verbo:objeto:slug` com dois-pontos no lugar do espaço
+    m2 = re.search(r"([a-z_][a-z_0-9]{2,}):([a-z_][a-z_0-9]*:[a-z_0-9.\-]+)", limpo, re.I)
+    return (m2.group(1).lower(), m2.group(2).lower()) if m2 else None
 
 
 def _eventos_da_spec(spec: str) -> Dict[tuple, str]:
@@ -616,11 +667,33 @@ def _eventos_da_spec(spec: str) -> Dict[tuple, str]:
     mapa: Dict[tuple, str] = {}
     for tabela in _tabelas(spec, {"verbo", "objeto"}):
         for linha in tabela:
-            verbo = _limpo(_col(linha, "verbo")).lower()
-            objeto = _limpo(_col(linha, "objeto")).lower()
+            verbo = _norm_token_acao(_col(linha, "verbo"))
+            objeto = _norm_token_acao(_col(linha, "objeto"))
             if verbo and objeto:
                 mapa[(verbo, objeto)] = _col(linha, "resultado") + " " + _col(linha, "contexto")
     return mapa
+
+
+def _norm_singular_acao(s: str) -> str:
+    return re.sub(r"s(?=:|$|_|-)", "", _norm_token_acao(s))
+
+
+def _resolver_acao_em_eventos(par: tuple, eventos: Dict[tuple, str]) -> Optional[tuple]:
+    """Encontra a chave correspondente em `eventos` aceitando singular/plural, radical verbal ou `objeto:slug` único."""
+    if par in eventos:
+        return par
+    v_alvo, o_alvo = _norm_token_acao(par[0]), _norm_token_acao(par[1])
+    o_sing = _norm_singular_acao(o_alvo)
+    for (v, o) in eventos:
+        if v == v_alvo and (o == o_alvo or _norm_singular_acao(o) == o_sing):
+            return (v, o)
+        if (o == o_alvo or _norm_singular_acao(o) == o_sing) and (v[:5] == v_alvo[:5] or v.rstrip("r") == v_alvo.rstrip("r")):
+            return (v, o)
+    # Fallback se apenas um evento tem exatamente aquele `objeto:slug`
+    por_obj = [(v, o) for (v, o) in eventos if o == o_alvo or _norm_singular_acao(o) == o_sing]
+    if len(por_obj) == 1:
+        return por_obj[0]
+    return None
 
 
 def validar_9f(spec: str) -> Dict[str, Any]:
@@ -656,7 +729,7 @@ def validar_9f(spec: str) -> Dict[str, Any]:
         if not par:
             falha("core-action-formato",
                   f"`core_action: {fichas['core_action']}` fora do formato `verbo objeto:slug`.")
-        elif par not in eventos:
+        elif _resolver_acao_em_eventos(par, eventos) is None:
             falha("core-action-sem-evento",
                   f"`core_action: {par[0]} {par[1]}` não existe na tabela de eventos do bloco 9. "
                   f"A decisão central da missão não é emitida por nada.")
@@ -764,12 +837,13 @@ def validar_9f(spec: str) -> Dict[str, Any]:
                   f"{nome} não nomeia a ação que a responde no formato `verbo objeto:slug` "
                   f"(célula: «{_limpo(celula_acao)[:40] or 'vazia'}»).")
         elif eventos:
-            acoes.add(par)
-            if par not in eventos:
+            par_resolvido = _resolver_acao_em_eventos(par, eventos)
+            acoes.add(par_resolvido or par)
+            if par_resolvido is None:
                 falha("pq-acao-sem-evento",
                       f"{nome} é respondida por `{par[0]} {par[1]}`, que não existe na tabela de eventos "
                       f"do bloco 9. A pergunta não tem como ser respondida: ninguém emite esse evento.")
-            elif not _mede(eventos[par]):
+            elif not _mede(eventos[par_resolvido]):
                 falha("pq-evento-nao-mede",
                       f"{nome} aponta para `{par[0]} {par[1]}`, um evento sem `resultado` nem `contexto`: "
                       f"ele diz que aconteceu, não quanto. A pergunta pede um número que ninguém emite.")

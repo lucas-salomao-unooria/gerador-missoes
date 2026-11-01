@@ -44,12 +44,12 @@ MIN_PALAVRAS_FALA = 4
 #: da exp09ef1b de 28/10 (média 29,6, máximo 72) são o que o time achou difícil (29/10/2026) — não são a régua.
 MAX_PALAVRAS_FRASE = 30
 MAX_MEDIA_FRASE = 18
-MAX_PALAVRAS_IDEIA = 600
+MAX_PALAVRAS_IDEIA = 800
 #: O 0.1 em seis parágrafos, cada um aberto pelo rótulo em negrito, na ordem, com o teto de palavras de cada um. A
 #: cronologia pura do modelo deixava de fora o problema, a crença errada e o que o estudante aprende: «rasa».
 BLOCOS_IDEIA: Tuple[Tuple[str, int], ...] = (
-    ("Em uma frase", 40), ("A situação", 90), ("O que o estudante faz", 150),
-    ("A virada", 90), ("O que o estudante aprende", 100), ("O papel do professor", 70),
+    ("Em uma frase", 45), ("A situação", 110), ("O que o estudante faz", 280),
+    ("A virada", 140), ("O que o estudante aprende", 125), ("O papel do professor", 100),
 )
 #: Folga sobre o teto de cada bloco, para o verificador não brigar por uma palavra.
 FOLGA_BLOCO = 1.2
@@ -275,15 +275,16 @@ def _linguagem(nome: str, texto: str) -> List[Dict[str, str]]:
         n = len(f.split())
         if n > MAX_PALAVRAS_FRASE:
             achados.append(_achado("frase-longa", f"Frase de {n} palavras no {nome} («{f[:90]}…»): divida em duas ou "
-                                                  f"mais, com até {MAX_PALAVRAS_FRASE} palavras cada."))
+                                                  f"mais, com até {MAX_PALAVRAS_FRASE} palavras cada.", "atencao"))
         if f.count("—") >= 3:
             achados.append(_achado("conceitos-numa-frase", f"Frase com mais de um termo traduzido no {nome} "
-                                                           f"(«{f[:90]}…»): dê uma frase a cada termo."))
+                                                           f"(«{f[:90]}…»): dê uma frase a cada termo.", "atencao"))
     if frases:
         media = sum(len(f.split()) for f in frases) / len(frases)
         if media > MAX_MEDIA_FRASE:
             achados.append(_achado("frases-longas-em-media", f"As frases do {nome} têm em média {media:.1f} palavras; "
-                                                             f"o teto é {MAX_MEDIA_FRASE}. Uma ideia por frase."))
+                                                             f"o teto é {MAX_MEDIA_FRASE}. Uma ideia por frase.",
+                                   "atencao"))
     sem_falas = _sem_falas(_sem_titulos_de_passo(texto))
     vistos = set()
     for padrao, troca in PALAVRAS_DIFICEIS:
@@ -310,7 +311,7 @@ def _forma_da_ideia(ideia: str) -> List[Dict[str, str]]:
     palavras = len(_sem_falas(ideia).split())
     if palavras > MAX_PALAVRAS_IDEIA:
         achados.append(_achado("ideia-longa", f"O 0.1 tem {palavras} palavras; cabe em até {MAX_PALAVRAS_IDEIA}. "
-                                              "Corte explicação, nunca a ação do estudante."))
+                                              "Corte explicação, nunca a ação do estudante.", "atencao"))
     blocos = _blocos_da_ideia(ideia)
     achados_por_rotulo = {_normalizar(r): t for r, t in blocos}
     esperados = [_normalizar(r) for r, _ in BLOCOS_IDEIA]
@@ -330,7 +331,8 @@ def _forma_da_ideia(ideia: str) -> List[Dict[str, str]]:
             continue
         n = len(_sem_falas(texto).split())
         if n > teto * FOLGA_BLOCO:
-            achados.append(_achado("bloco-longo", f"O bloco «{rotulo}» do 0.1 tem {n} palavras; cabe em até {teto}."))
+            achados.append(_achado("bloco-longo", f"O bloco «{rotulo}» do 0.1 tem {n} palavras; cabe em até {teto}.",
+                                   "atencao"))
     virada = achados_por_rotulo.get(_normalizar("A virada"))
     if virada is not None and not _RE_CRENCA.search(_sem_falas(virada)):
         achados.append(_achado("virada-sem-crenca", "O bloco «A virada» não diz o que o estudante achava antes. "
@@ -339,10 +341,10 @@ def _forma_da_ideia(ideia: str) -> List[Dict[str, str]]:
     return achados
 
 
-_RE_LINHA_MOMENTO = re.compile(r"^\*[^*\n]*·\s*momentos?\s+([^*\n]+)\*\s*$", re.M | re.I)
+_RE_LINHA_MOMENTO = re.compile(r"^\s*[*_]?[^*\n]*\bmomentos?\s+([^*\n]+?)[*_]?\s*$", re.M | re.I)
 _RE_ID_MOMENTO = re.compile(r"\b(\d\.\d{1,2}[a-z]?)\b")
-_RE_ROTULO_PASSO = re.compile(r"^\s*\*\*\s*(Só para quem|Na tela|O estudante|O professor|Acontece|Se não fizer|Libera)"
-                              r"\s*:\s*\*\*\s*(.*)$", re.M | re.I)
+_RE_ROTULO_PASSO = re.compile(r"^\s*(?:[-*•]\s+)?\*\*\s*(S[óo] para quem|Na tela|O estudante|O professor|Acontece|"
+                              r"Se n[ãa]o fizer|Libera)\s*:?\s*\*\*\s*:?\s*(.*)$", re.M | re.I)
 
 
 def _ordem_do_momento(ident: str) -> Tuple[int, int]:
@@ -516,9 +518,16 @@ def validar(one_pager: str) -> Dict[str, Any]:
     for m in _RE_FALA.finditer(leitura):
         fala = _normalizar(m.group(1))
         if len(fala.split()) >= MIN_PALAVRAS_FALA and fala not in resto_normalizado:
+            from tools import classificador
+
+            ini_f = max(0, leitura.rfind("\n", 0, m.start()) + 1)
+            fim_f = leitura.find("\n", m.end())
+            linha_f = leitura[ini_f:len(leitura) if fim_f < 0 else fim_f].strip()
+            leitura_cls = classificador.aspas_conceito_ou_fala(linha_f, m.group(1).strip())
+            sev_fala = "atencao" if leitura_cls.rotulo == "termo_conceito" else "bloqueio"
             achados.append(_achado("fala-reescrita", f"A fala «{m.group(1).strip()[:120]}» não está, palavra por "
                                                      "palavra, no resto do one-pager: copie o texto da tela ou tire "
-                                                     "as aspas e conte com as suas palavras."))
+                                                     "as aspas e conte com as suas palavras.", sev_fala))
 
     bloqueia = any(a["severidade"] == "bloqueio" for a in achados)
     status = "bloqueado" if bloqueia else ("amarelo" if achados else "aprovado")

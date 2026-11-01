@@ -1089,8 +1089,12 @@ def aplicar(itens: List[Dict[str, str]], saida_juiz: str, documentos: Dict[str, 
         resto = _norm(re.sub(r"[“”\"«»]", " ", it["texto"]))
         for s in inserir:
             resto = resto.replace(_norm(s), " ")
+        for r in remover:
+            resto = resto.replace(_norm(r), " ")
         so_o_texto = bool(inserir) and len(resto.split()) <= 8 and not _RE_ACAO.search(resto)
-        texto_lido_prova = (bool(inserir or remover) and (so_o_texto or not lido.get("outras_exigencias", True))
+        so_remocao = bool(remover and not inserir) and not lido.get("outras_exigencias", False)
+        texto_lido_prova = (bool(inserir or remover)
+                            and (so_o_texto or so_remocao or not lido.get("outras_exigencias", True))
                             and veredito not in ("violado", "conflito_com_regra")
                             and all(_trecho_confere(s, corpo) for s in inserir))
         if veredito == "atendido" and _citacao_confere(citacao, doc) and not _norm(citacao) in _norm(it["texto"]):

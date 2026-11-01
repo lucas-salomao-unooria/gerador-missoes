@@ -7,6 +7,7 @@ frases de 72 palavras com quatro conceitos enfileirados. Estes testes fixam a fi
 amarrado a ela e as regras de linguagem cobradas em código (`tools/one_pager_completo.py`).
 """
 import asyncio
+import json
 
 from agents.checkers import MecanicaCheckAgent
 from agents.callbacks import extrair_envelope
@@ -157,3 +158,48 @@ def test_numero_por_extenso_volta_ao_redator():
     extenso = IDEIA.replace("A tabela traz 95%, 94%, 92% e 88%.", "A tabela traz noventa e cinco por cento.")
     assert "numero-por-extenso" in _codigos(oc.validar(oc.encaixar(ONE_PAGER, LEITURA.replace(IDEIA, extenso))))
     assert "numero-por-extenso" not in _codigos(oc.validar(oc.encaixar(ONE_PAGER, LEITURA)))
+
+
+def test_sinonimos_de_gesto_e_detalhamento_mecanico():
+    """Sinônimos frequentes (`clicar`, `selecionar`, `observar`) mapeiam aos 12 verbos canônicos sem falso positivo, e
+    descrições curtas demais (< 4 palavras) em `Na tela` ou `Resposta na hora` geram aviso `mecanica-pouco-detalhada`."""
+    sinonimo = ONE_PAGER.replace("- **Gesto:** tocar · 2 botões", "- **Gesto:** clicar · 2 botões")
+    assert "gesto-fora-da-lista" not in _codigos(fi.validar(sinonimo))
+    curto = ONE_PAGER.replace(
+        "- **Na tela:** o chat do assistente com 1 mensagem e o contador de 3 publicações.",
+        "- **Na tela:** tela inicial.",
+    )
+    achados = fi.validar(curto)["achados"]
+    assert any(a["codigo"] == "mecanica-pouco-detalhada" and a["severidade"] == "atencao" for a in achados)
+
+
+def test_kpis_intervalo_telas_ts_payload_e_9f_plural():
+    """Valida que `tools/kpis.py` aceita intervalos `E3-ALU-01..03`, chaves TypeScript sem aspas no payload e plural/singular
+    na ação do sub-bloco 9f."""
+    from tools import kpis
+
+    assert "E3-ALU-02" in kpis._telas_expandidas("Telas `E3-ALU-01..03`")
+    campos = kpis._campos_payload("{ tentativa_n: number, mudou_voto: boolean }")
+    assert {"tentativa_n", "mudou_voto"} <= campos
+    evts = {("ordenar", "criterio:ranking"): {"resultado": "{ordem}", "contexto": "{pesos}"}}
+    assert kpis._resolver_acao_em_eventos(("ordenar", "criterios:ranking"), evts) == ("ordenar", "criterio:ranking")
+
+
+def test_fidelidade_pedido_so_remocao_cumprido():
+    """Pedido do PO que exige apenas remover um trecho (`inserir` vazio) é aprovado deterministicamente quando o trecho já
+    saiu do documento."""
+    from tools import fidelidade
+
+    itens = [{"id": "F1", "origem": "refazer Produto · PO · 30/10/2026 10:00:00", "tipo": "exigencia",
+              "texto": "Remover a pergunta do Canal B do final da missão."}]
+    saida_juiz = json.dumps({"itens": [{"id": "F1", "veredito": "atendido", "citacao": "", "explicacao": "Saiu."}]})
+    res = fidelidade.aplicar(
+        itens,
+        saida_juiz,
+        {"one_pager": "Texto limpo da missão sem a pergunta antiga."},
+        interpretacao={"F1": {"inserir": [], "remover": ["pergunta do Canal B"], "so_remocao": True}},
+    )
+    assert res["status"] == "aprovado"
+    assert res["achados"] == []
+
+

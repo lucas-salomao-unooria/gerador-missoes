@@ -124,6 +124,7 @@ Uma linha por fase da spec, na ordem da spec, com o número dela. O que é seu �
 ## Regras de construção
 
 - Não invente beats. Verbo nativo é literal (copie da spec, bloco 4).
+- **Granularidade micro-mecânica por tela:** na Seção 3 (Inventário de telas), mantenha a coluna `Estados` **estritamente** com os nomes curtos dos estados separados por ` · ` (ex.: `inicial · selecionado · confirmado · bloqueado`), pois o verificador do protótipo extrai cada token dessa coluna como `data-estado`. Todo o detalhamento rico de mecânica — o que aparece em tela, o que está visível vs oculto, qual controle nativo o estudante opera, como cada opção reage e quando o botão primário destrava — vai na Seção 1 (raias) e na Seção 4 (Direção por tela).
 - **Conte as decisões enquanto mapeia** e compare com o cap da faixa (spec, bloco 6). Se estourar, reporte como lacuna ao gate.
 - Legenda no board: ✅ dentro · ⚡ escape · ⚠️ lacuna · 🔴 violação.
 - **Mini-jogo:** você não desenha o jogo nem a casca — as regras e as fases são da spec (produto), a casca de UI é da ficha do D9. Você mapeia as telas para as fases. Se o jogo precisa de outra fase, regra, vitória ou mapa, é `[PROPOSTA — validar com PO]` em «Lacunas»; se precisa de um verbo que a casca não tem, é achado com dono `ambiente-simulado` — não construa em volta.
