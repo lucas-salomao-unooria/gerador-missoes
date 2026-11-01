@@ -907,7 +907,7 @@ def _instalar_fallback_media_storage() -> None:
             # 2) Consulta os diretórios de saída conhecidos (.media_index.json e */design/*.html)
             bases = list(_MEDIA_BASE_DIRS)
             try:
-                out_dir = Path(get_settings().OUTPUT_DIR).resolve()
+                out_dir = get_settings().output_path.resolve()
                 if out_dir not in bases:
                     bases.append(out_dir)
             except Exception:

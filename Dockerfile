@@ -11,6 +11,7 @@ ENV TZ=America/Sao_Paulo \
     STREAMLIT_SERVER_PORT=8080 \
     STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
     STREAMLIT_SERVER_HEADLESS=true \
+    STREAMLIT_SERVER_FILE_WATCHER_TYPE=none \
     STREAMLIT_SERVER_ENABLE_CORS=false \
     STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false \
     STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
@@ -44,4 +45,8 @@ RUN mkdir -p /app/output
 
 EXPOSE 8080
 
-CMD ["streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]
+# Pré-importa `app` durante o startup (aproveitando `--startup-cpu-boost` antes do probe TCP na 8080
+# liberar tráfego e instalando o fallback de `/media/<id>.html` já no boot) e desativa o file watcher
+# (`--server.fileWatcherType=none`) para que o `InotifyObserver` não faça `os.walk("/app")` sobre os
+# buckets GCSFuse montados em `/app/output` e `/app/base-plataforma`.
+CMD ["python", "-c", "import sys, app; from streamlit.web.cli import main; sys.argv = ['streamlit', 'run', 'app.py', '--server.port=8080', '--server.address=0.0.0.0', '--server.fileWatcherType=none']; sys.exit(main())"]
