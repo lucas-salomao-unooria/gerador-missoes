@@ -109,8 +109,8 @@ Conexão cai · sessão expira · mídia não carrega · professor não libera �
 ## 10. Modularidade, tempos sugeridos e controle do professor
 Tabela das etapas com **dois tempos separados**: `Em tela (aluno)` — o estudante está na missão — e `Fora da tela` — mediação oral, debate conduzido pelo professor, fechamento, distribuição de aparelho. Uma linha de total para cada coluna, e a frase `Tempo de aula: N min · Em tela: M min`. **Nunca escreva "N minutos em tela" para a duração da aula**: o teto do critério 6.2 é sobre o tempo em tela, e somar a aula inteira nele reprova a missão por um número que ela não tem. Preparo docente fica fora das duas colunas. Depois: checkpoints de pausa e salvamento; controle docente; cenários: aula única (50 min), 2 aulas (2x 50 min), sessões fracionadas (20–40 min).
 
-## 11. Podcast de recapitulação
-Roteiro completo, 2 apresentadores, 5 blocos (abertura ~30s, recapitulação ~1–1,5 min, revelação ~1–1,5 min, provocação ~30s–1 min, encerramento ~15s), 3–5 min.
+## 11. Podcast de recapitulação (exclusivo da visão do professor — nada disto aparece para o estudante)
+Roteiro completo, 2 apresentadores, 5 blocos (abertura ~30s, recapitulação ~1–1,5 min, revelação ~1–1,5 min, provocação ~30s–1 min, encerramento ~15s), 3–5 min. **O podcast pertence exclusivamente à visão do professor (painel/guia docente no hub):** quem controla e reproduz o áudio na sala (se quiser usar na aula) é o professor na tela dele; **não deve aparecer player, card, botão nem menção ao podcast na interface ou aparelho do estudante**.
 
 ## 12. Evidências e dados
 O que é capturado, quando, finalidade, retenção, acesso; o que NÃO é coletado; graus de medida; canal; texto livre de menor; segredo de servidor; gabarito. A Atividade guarda `disciplina` e o recorte da aula como metadados do professor (rótulo do relatório pós-aula); nunca são dado do estudante.

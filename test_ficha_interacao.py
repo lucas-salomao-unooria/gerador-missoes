@@ -233,4 +233,45 @@ def test_edicao_pontual_aspas_curvas_e_gesto_numeral_extenso_e_base_preservada()
     assert ".moldura-desktop" in ilustracoes._CSS_QUADRO_AVULSO
 
 
+def test_sem_canal_b_podcast_so_professor_e_sem_etapa_6():
+    """Garante os três contratos pedidos pelo PO:
+    1. Canal B (`multipla_escolha`) é rejeitado também na ficha §14.2 do PRD;
+    2. Podcast de recapitulação em momento/tela do estudante (`Estudante` / `ALU` / `SIS`) bloqueia;
+    3. Etapa 6 de transferência (atividade nova para reaplicar habilidades) bloqueia no one-pager e no inventário de telas."""
+    from tools import prd_codavel, telas
+
+    # 1. Etapa 6 e podcast na visão do estudante no one-pager
+    com_etapa_6 = ONE_PAGER.replace(
+        "## 9. Papel",
+        "### Etapa 6 — Transferir\n\n#### Momento 6.1 — Nova atividade\n- **Quem age:** Estudante\n- **Gesto:** tocar · 1 botão\n"
+        "- **Na tela:** o estudante ouve o podcast de recapitulação e aplica em outro caso.\n"
+        "- **Resposta na hora:** o player abre na tela.\n- **Estado gravado:** transferencia_feita\n\n## 9. Papel",
+    )
+    cods_fi = _codigos(fi.validar(com_etapa_6))
+    assert "etapa-6-removida" in cods_fi
+    assert "podcast-na-tela-do-estudante" in cods_fi
+
+    # 2. Etapa 6 e podcast em tela do estudante no inventário da jornada
+    jornada = (
+        "## Seção 3 — Inventário de telas\n\n"
+        "| ID | Etapa | Ator | Peso | Estados | Propósito |\n"
+        "|---|---|---|---|---|---|\n"
+        "| E0-PROF-01 | 0 | PROF | leve | padrão | Escolher missão |\n"
+        "| E0-PROF-02 | 0 | PROF | leve | padrão | Recorte da aula |\n"
+        "| E0-PROF-03 | 0 | PROF | leve | padrão | Geração |\n"
+        "| E0-PROF-04 | 0 | PROF | leve | padrão | Curadoria |\n"
+        "| E0-PROF-05 | 0 | PROF | leve | padrão | Pôr no ar |\n"
+        "| E5-ALU-02 | 5 | ALU | médio | padrão | Ouvir o podcast de recapitulação da missão |\n"
+        "| E6-ALU-01 | 6 | ALU | denso | padrão | Transferência para nova atividade |\n"
+    )
+    res_telas = telas.cobertura({"jornada_telas": jornada, "fluxo_arestas": jornada,
+                                 "copy_strings_revisada": jornada, "wireframes_cobertura": jornada})
+    cods_telas = {a["codigo"] for a in res_telas["achados"]}
+    assert "etapa-6-removida" in cods_telas
+    assert "podcast-em-tela-do-estudante" in cods_telas
+
+    # 3. `multipla_escolha` (Canal B) bloqueado em `prd_codavel`
+    assert "multipla_escolha" not in prd_codavel._TIPOS_FICHA
+
+
 

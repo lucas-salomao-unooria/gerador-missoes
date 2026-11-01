@@ -172,6 +172,12 @@ def validar(texto: str) -> Dict[str, Any]:
         achados.append(_achado("momento-repetido", f"O Momento {repetido} aparece mais de uma vez na seção 4."))
 
     for etapa in etapas_da_secao(texto):
+        if etapa >= 6:
+            achados.append(_achado("etapa-6-removida",
+                                   f"A seção 4 traz a Etapa {etapa}: a missão tem apenas 5 etapas (Desafiar, Navegar, "
+                                   "Decidir, Resultado, Explicar) e não deve gerar Etapa 6 de transferência nem "
+                                   "atividade nova para o estudante reaplicar as habilidades."))
+            continue
         n_etapa = sum(1 for m in momentos if m.etapa_secao == etapa)
         if not n_etapa:
             achados.append(_achado("etapa-sem-momento", f"A Etapa {etapa} não tem nenhuma ficha `#### Momento "
@@ -186,6 +192,16 @@ def validar(texto: str) -> Dict[str, Any]:
 
     for m in momentos:
         nome = f"Momento {m.id}"
+        if m.etapa >= 6:
+            achados.append(_achado("etapa-6-removida",
+                                   f"O {nome} pertence à Etapa {m.etapa}: a missão termina na Etapa 5 (Explicar), sem "
+                                   "Etapa 6 de transferência nem atividade nova para reaplicar habilidades."))
+        if _normalizar(m.campos.get("Quem age", "")) == "estudante":
+            texto_momento = " ".join([m.titulo] + [str(v) for v in m.campos.values()])
+            if re.search(r"\bpodcast\b", texto_momento, re.I):
+                achados.append(_achado("podcast-na-tela-do-estudante",
+                                       f"O {nome} («Quem age: Estudante») menciona podcast: o podcast de recapitulação "
+                                       "é exclusivo da visão do professor e nada dele deve aparecer para o estudante."))
         if m.etapa_secao is not None and m.etapa != m.etapa_secao:
             achados.append(_achado("momento-fora-da-etapa", f"O {nome} está dentro da Etapa {m.etapa_secao}: o número "
                                                             "do momento começa pelo da etapa."))

@@ -40,7 +40,7 @@ _RE_ZOD = re.compile(r"\bz\.object\s*\(")
 _RE_LINHA_API = re.compile(r"^\s*\|\s*\**`?API-\w+", re.M)
 #: Coluna de nível de habilidade em tabela da missão — o nível mora em `evidencias_marcas` (gabarito §11).
 _RE_COLUNA_DE_NIVEL = re.compile(r"^\s*[`\"]?((?:score|nivel|nota)_\w+)[`\"]?\s+[A-Za-z]", re.M | re.I)
-_TIPOS_FICHA = ("acao", "multipla_escolha")
+_TIPOS_FICHA = ("acao",)
 _RE_CHAT_LIVRE = re.compile(r"ia\s+simulada|ia\s+que\s+(?:fala|responde|conversa)|respostas?\s+(?:da|do)\s+(?:ia|chat|bot|assistente)|"
                             r"campo\s+de\s+(?:texto|mensagem)\s+livre|(?:estudante|crian[çc]a|aluno)\s+digita", re.I)
 _RE_IA_NO_PREPARO = re.compile(r"gerar-conteudo|generateJson|\bia-[a-z0-9]+|gera(?:r|ção)\s+(?:com|pela|por)\s+ia", re.I)
@@ -211,7 +211,7 @@ def _ficha(prd: str, spec: str, achados: List[Dict[str, str]]) -> None:
     tabela = _tabela_com(s14, "habilidade", "marcador", "tipo") if s14 else None
     if tabela is None:
         _achado(achados, "bloqueio", "ficha-ausente",
-                "A seção 14 não tem a ficha de evidência «Habilidade · Marcador · Tipo · Pergunta · Regra · Nível · Grava "
+                "A seção 14 não tem a ficha de evidência «Habilidade · Marcador · Tipo · Regra · Nível · Grava "
                 "na transação de · Critério» (gabarito §14.2): o servidor não sabe calcular o nível de ninguém.")
         return
     i_hab, i_tipo, i_regra = _coluna(tabela, "habilidade"), _coluna(tabela, "tipo"), _coluna(tabela, "regra")
@@ -230,7 +230,8 @@ def _ficha(prd: str, spec: str, achados: List[Dict[str, str]]) -> None:
         tipo = _norm(cel(i_tipo)).strip("*` ")
         if tipo not in _TIPOS_FICHA:
             _achado(achados, "bloqueio", "ficha-tipo-invalido",
-                    f"Ficha: tipo «{cel(i_tipo)}» na linha de {cel(i_hab)[:40]}. Só `acao` ou `multipla_escolha`.")
+                    f"Ficha: tipo «{cel(i_tipo)}» na linha de {cel(i_hab)[:40]}. Só `acao` (Canal A) é permitido; "
+                    "`multipla_escolha` (Canal B) foi removido da missão.")
         regra = cel(i_regra)
         if tipo == "acao" and "[PROPOSTA" in regra:
             # regra em proposta: o servidor ainda não sabe calcular o nível — o PO decide, e o achado não some

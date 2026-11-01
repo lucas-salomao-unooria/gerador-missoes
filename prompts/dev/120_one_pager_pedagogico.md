@@ -313,7 +313,7 @@ Use exatamente estes títulos, nesta ordem. Seção sem informação recebe uma 
 
 ## O podcast do fechamento
 <Se o one-pager tem podcast: o que ele diz do episódio — título, quem fala, quanto dura, o aviso — a esteira põe no
- fim desta seção. Escreva em que momento da aula tocar e quem toca, com as palavras do aviso do one-pager ("nunca
+ fim desta seção. Deixe explícito que o podcast pertence exclusivamente à visão da professora no hub (painel/guia docente) e que nada dele aparece na tela da criança/estudante. Escreva em que momento da aula a professora toca e as palavras do aviso do one-pager ("nunca
  antes da aula", por exemplo). O roteiro completo está no anexo, para o time aprovar o texto. Se não tem, uma linha
  dizendo isso.>
 

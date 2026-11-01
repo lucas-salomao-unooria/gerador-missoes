@@ -64,8 +64,7 @@ codifica precisa para implementar, e um gate determinístico confere os quatro p
   hipótese que o §17 não quantifica continua sem número.
 - **Seção 5:** o total em tela **igual ao do §10**, a tabela por etapa (em tela · fora da tela), os
   checkpoints e os cenários de aula (aula única, duas aulas, sessões fracionadas).
-- **Seção 8:** quando o §11 traz podcast, **um RF para ele** — quem toca, em que tela, em que
-  momento (o aviso do §11 diz quando) —, a linha do inventário de conteúdo e a tarefa que o liga. O
+- **Seção 8:** quando o §11 traz podcast, **um RF para ele** — o professor toca na **visão do professor no hub (painel/guia docente — nada do podcast aparece na visão ou aparelho do estudante)**, em que momento (o aviso do §11 diz quando) —, a linha do inventário de conteúdo e a tarefa que o liga. O
   roteiro é o do anexo; não o reescreva. O podcast é recurso da plataforma (ADR-150): o professor
   toca, o áudio é sintetizado por ela, e no inventário entra o roteiro, nunca um mp3 (seção 15.2 do
   gabarito).
@@ -117,8 +116,8 @@ determinístico (`prd-codavel`) lê o PRD como ele e devolve a você o que falta
    (`const XSchema = z.object(…)`) — o `validar` do `generateJson` e a homologação usam o mesmo.
 5. **Seção 11 — DDL em bloco `sql`** (`CREATE TABLE …`), com o bloco manual (`FORCE ROW LEVEL SECURITY`, `GRANT … TO
    app_runtime`). Coluna `score_*`, `nivel_*` ou `nota_*` em tabela da missão reprova: o nível mora em `evidencias_marcas`.
-6. **Seção 14 — a ficha** `| Habilidade | Marcador | Tipo | Pergunta | Regra | Nível | Grava na transação de |
-   Critério |`, uma linha para cada habilidade do bloco 11; `Tipo` é `acao` ou `multipla_escolha`; a `Regra` de `acao`
+6. **Seção 14 — a ficha** `| Habilidade | Marcador | Tipo | Regra | Nível | Grava na transação de |
+   Critério |`, uma linha para cada habilidade do bloco 11; `Tipo` é sempre `acao` (o Canal B / `multipla_escolha` foi removido e é proibido); a `Regra` de `acao`
    cita pelo nome uma coluna que a seção 11 declara (o que não vira predicado é `[PROPOSTA — validar com PO: …]`).
 7. **Missão em que o estudante escreve para um interlocutor simulado:** a seção 8 ou a 12 remete à **árvore de
    intenções** do banco de conteúdo (`dev/01e-banco-conteudo.md`), diz que ela vive em `conteudo.ts` no servidor e
