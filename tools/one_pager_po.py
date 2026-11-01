@@ -229,11 +229,35 @@ def _removido_pelo_po(u: Dict[str, str]) -> bool:
     return any(_RE_REMOVIDO_PELO_PO.search(x) for x in (u.get("secao") or "", primeira, inicio))
 
 
-def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "", votos: str = "") -> Dict[str, Any]:
+def _autorizado_pelo_pedido_direto(u: Dict[str, str], pedidos: str) -> bool:
+    """Na reexecução com pedido de correção do PO (`pedidos`), o trecho do `one_pager_po` cujo conteúdo específico é
+    citado diretamente pelo pedido do PO (ou substituído por citação) sai por ordem soberana dele, mesmo sem linha na
+    tabela «Alterações sobre o one-pager do PO»."""
+    if not (pedidos or "").strip():
+        return False
+    norm_ped = _norm(pedidos)
+    n = _norm(u["texto"])
+    if len(n.split()) >= 4 and n in norm_ped:
+        return True
+    tri = _trigramas(n)
+    if tri and len(tri & _trigramas(norm_ped)) / len(tri) >= 0.45:
+        return True
+    # citação entre aspas no pedido que está contida na unidade do PO (ex.: trocar «texto antigo» por «texto novo»)
+    for m in re.finditer(r'[“"«‘]([^”"»’\n]{8,240})[”"»’]', pedidos):
+        cit = _norm(m.group(1))
+        if len(cit.split()) >= 2 and (cit in n or _parecido(cit, n)):
+            return True
+    return False
+
+
+def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "", votos: str = "",
+             anterior: str = "") -> Dict[str, Any]:
     """Cada trecho do one-pager do PO está no gerado, ou saiu por ordem do pedido conferida em código.
 
     `votos` são os relatórios dos comitês pedagógicos: desde 15/10/2026 o comitê pode mandar reescrever o texto do PO
-    (decisão do PO), e a alteração vale quando cita, entre aspas, o trecho do voto que a pediu."""
+    (decisão do PO), e a alteração vale quando cita, entre aspas, o trecho do voto que a pediu.
+    `anterior` é o one-pager da versão anterior (quando há `pedidos` de refazer): unidade do `one_pager_po` que já não
+    estava na versão anterior aprovada não volta a bloquear nem é revertida pelo restaurador."""
     vazio = {"total": 0, "perdidas": [], "removidas": 0, "declaradas": 0, "codigos_removidos": []}
     # Sem one-pager não há o que conferir — e o autor ficou mudo. Com ou sem anexo do PO, isso reprova, para o loop
     # chamá-lo de novo: na exp03ef1b (08/10/2026) o A014 terminou sem texto duas vezes e o gate estrutural quebrou.
@@ -246,6 +270,9 @@ def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "", votos:
 
     novo = _norm(_sem_secoes_que_nao_contam(gerado))
     tri_novo = _trigramas(novo)
+    ant_norm = _norm(_sem_secoes_que_nao_contam(anterior)) if (anterior or "").strip() and (pedidos or "").strip() else ""
+    tri_ant = _trigramas(ant_norm) if ant_norm else set()
+    palavras_ant = set(re.findall(r"\w+", ant_norm)) if ant_norm else set()
     removidos = codigos_removidos(po, briefing, pedidos, votos)
     fonte = f"{briefing}\n{pedidos}\n{votos}"
     declaradas = alteracoes_declaradas(gerado)
@@ -283,6 +310,14 @@ def conferir(po: str, gerado: str, briefing: str = "", pedidos: str = "", votos:
         # A linha da tabela pode citar só a parte do trecho que o pedido mandou trocar (exp09ef1b, 29/10/2026: «Amara
         # surge…» dentro da «Justificativa pedagógica» inteira); vale quando ela está quase toda dentro do trecho do PO.
         if any(_parecido(n, t) or (len(t.split()) >= MIN_PALAVRAS and _parecido(t, n)) for t in validas):
+            n_declaradas += 1
+            continue
+        if _autorizado_pelo_pedido_direto(u, pedidos):
+            n_declaradas += 1
+            continue
+        if ant_norm and n not in ant_norm and not (
+            tri and len(tri & tri_ant) / len(tri) >= FRACAO and not _ancoras_faltando(u["texto"], palavras_ant)
+        ):
             n_declaradas += 1
             continue
         perdidas.append(u)

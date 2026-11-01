@@ -338,20 +338,28 @@ def de_plataforma(linha: str) -> bool:
 _RE_ESPERA = re.compile(r"spinner|skeleton", re.I)
 _RE_PROGRESSO = re.compile(r"barra de progresso|indicador de progresso", re.I)
 _RE_CONTEXTO_DE_ESPERA = re.compile(r"carreg|gera[çc][ãa]o|gerando|\bIA\b|\bespera\b|aguard|estimativ", re.I)
+_RE_UI_DURACAO = re.compile(
+    r"transi[çc][ãa]o|transition|anima[çc][ãa]o|animation|fade|toast|tooltip|debounce|delay\s+visual|"
+    r"feedback\s+(?:visual|sonoro|t[áa]til)|micro[- ]?intera[çc][ãa]o|hover|ease(?:-in|-out)?|pulse|shake",
+    re.I,
+)
 #: A oração da duração: entre ponto e vírgula, vírgula, célula de tabela e fim de frase.
 _RE_FRONTEIRA_DA_ESPERA = re.compile(r"[;,|]|(?<=[.!?])\s")
 
 
 def _duracao_de_espera(linha: str, tok: Tuple[str, str]) -> bool:
-    """Alguma ocorrência da duração está numa oração de espera de carregamento: spinner, skeleton, ou barra/indicador
-    de progresso com o contexto da espera."""
+    """Alguma ocorrência da duração está numa oração de espera de carregamento (spinner, skeleton, ou barra/indicador
+    de progresso com o contexto da espera) ou de transição/animação/feedback visual curto (≤ 5 s)."""
     num = re.escape(tok[0]).replace(r"\.", "[.,]")
     unidade = "|".join(re.escape(a) for a in _ALIAS[tok[1]])
+    curta_ui = tok[1] == "s" and float(tok[0]) <= 5.0
     for m in re.finditer(rf"(?<![\w.,]){num}\s?(?:{unidade})\b", linha or "", re.I):
         antes = list(_RE_FRONTEIRA_DA_ESPERA.finditer(linha, 0, m.start()))
         depois = _RE_FRONTEIRA_DA_ESPERA.search(linha, m.end())
         oracao = linha[antes[-1].end() if antes else 0:depois.start() if depois else len(linha)]
-        if _RE_ESPERA.search(oracao) or (_RE_PROGRESSO.search(oracao) and _RE_CONTEXTO_DE_ESPERA.search(oracao)):
+        if (_RE_ESPERA.search(oracao)
+                or (_RE_PROGRESSO.search(oracao) and _RE_CONTEXTO_DE_ESPERA.search(oracao))
+                or (curta_ui and _RE_UI_DURACAO.search(oracao))):
             return True
     return False
 

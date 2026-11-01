@@ -31,7 +31,7 @@ DOCUMENTOS_POR_ETAPA: Dict[str, Tuple[str, ...]] = {
 #: Documentos autorais que a etapa tem e o editor não toca: ficam travados como estão (o autor não roda). O mapa e a
 #: ideação são a origem do núcleo; refazê-los numa correção pontual sortearia outro mecanismo. A resposta do passo de
 #: completude (PR 6) já está dentro da spec, no bloco 15, e é lá que o editor a troca: refazê-la desfaria a troca.
-TRAVADOS_SEM_EDICAO: Dict[str, Tuple[str, ...]] = {"produto": ("mapa_conceitual", "ideacao_mecanismos", "completude_spec"),
+TRAVADOS_SEM_EDICAO: Dict[str, Tuple[str, ...]] = {"produto": ("mapa_conceitual", "ideacao_mecanismos", "completude_spec", "brief_escopo"),
                                                    "spec": ("completude_spec",)}
 #: Documento maior que isto não vai ao editor. É folga, não corte: os protótipos HTML do acervo têm de 110 a 135 KB, e
 #: 1 milhão de caracteres (~250 mil tokens) ainda cabe no contexto do modelo com os outros documentos da etapa.

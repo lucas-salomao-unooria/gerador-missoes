@@ -54,6 +54,20 @@ class ContratoNoPedagogicoAgent(BaseAgent):
             estado = dict(state)
             novo = pg.montar(documento, estado)
             blocos = pg.blocos_do_contrato(estado)
+            if pg.travado_nesta_correcao(state):
+                # Se o editor pontual editou diretamente `one_pager_pedagogico` nesta execução (ex.: um texto dentro de um
+                # subtítulo montado ou uma citação que `montar` reverteu), reaplicamos as trocas explícitas de
+                # `one_pager_pedagogico` que não bateram com mudança de `one_pager` nesta execução.
+                edicoes_doc = [e for e in (state.get("edicoes_pontuais") or [])
+                               if isinstance(e, dict) and e.get("documento") == self.chave
+                               and e.get("motivo") != pg.MOTIVO_TROCA]
+                tem_edicao_one_pager = any(isinstance(e, dict) and e.get("documento") == "one_pager"
+                                           for e in (state.get("edicoes_pontuais") or []) + (state.get("edicoes_a_montante") or []))
+                if edicoes_doc and not tem_edicao_one_pager:
+                    for e in edicoes_doc:
+                        de, para = str(e.get("de") or ""), str(e.get("para") or "")
+                        if de and para and para in documento and de in novo and para not in novo:
+                            novo = novo.replace(de, para, 1)
             if novo != documento:
                 delta[self.chave] = novo
                 if pg.travado_nesta_correcao(state):

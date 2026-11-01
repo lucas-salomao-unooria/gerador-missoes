@@ -1040,6 +1040,8 @@ class SecaoSplitAgent(BaseAgent):
             # Seção que o documento TINHA de trazer e não trouxe: o status vinha do envelope da
             # fonte (o one-pager, "aprovado"), e a ausência ficava só no log — no dossiê, verde.
             # Era o GAP-09 (brief de escopo evaporado) com cara de sucesso.
+            # Na correção pontual, se a chave já está preenchida no estado (ex.: `brief_escopo` preservado), não apita.
+            faltou = [(ch, mot) for ch, mot in faltou if not str(state.get(ch) or "").strip()]
             if faltou:
                 if delta[self.status_key] != STATUS_BLOQUEADO:
                     delta[self.status_key] = "amarelo"
@@ -2235,9 +2237,10 @@ class RastroCheckAgent(BaseAgent):
             gerado = "\n\n".join(str(state.get(k, "") or "") for k in ("one_pager", "brief_escopo"))
             from tools.comite import texto_votos
 
+            anterior_op = str(state.get("versao_anterior_one_pager") or state.get("anterior_one_pager") or "")
             resultado = op.conferir(str(state.get("one_pager_po", "") or ""), gerado,
                                     briefing=str(state.get("briefing", "") or ""), pedidos=_pedidos_de_produto(state),
-                                    votos=texto_votos(state))
+                                    votos=texto_votos(state), anterior=anterior_op)
             relatorio = op.relatorio(resultado, missao)
         elif self.modo in ("montagem_prd", "montagem_handoff"):
             # PRD e handoff montam, não decidem (plano «Produto dono do contrato», PR 4, D10): número de regra, hipótese,
@@ -2367,6 +2370,16 @@ class AnexoAprovadoAgent(BaseAgent):
                 # que o redator não roda e o callback dele também não (PR 9 do plano «Produto dono do contrato», D9)
                 corpo = governanca.com_pendencias(ca.remover_anexo(corpo), governanca.da_sessao(state), self.chave)
             novo = ca.com_anexo(corpo, one_pager, self.secoes, tk.tabela(tk.da_sessao(dict(state))))
+            if state.get(KEY_MODO_CORRECAO) == "pontual":
+                edicoes_doc = [e for e in (state.get("edicoes_pontuais") or [])
+                               if isinstance(e, dict) and e.get("documento") == self.chave]
+                tem_edicao_one_pager = any(isinstance(e, dict) and e.get("documento") == "one_pager"
+                                           for e in (state.get("edicoes_pontuais") or []) + (state.get("edicoes_a_montante") or []))
+                if edicoes_doc and not tem_edicao_one_pager:
+                    for e in edicoes_doc:
+                        de, para = str(e.get("de") or ""), str(e.get("para") or "")
+                        if de and para and para in str(documento) and de in novo and para not in novo:
+                            novo = novo.replace(de, para, 1)
             delta[self.chave] = novo
             if self.retrato_key:
                 delta[self.retrato_key] = novo
@@ -2571,7 +2584,7 @@ class FidelidadeCheckAgent(BaseAgent):
         a_montante = [(str(p.get("origem") or "pedido"), str(p.get("texto") or ""), str(p.get("etapa") or ""))
                       for p in state.get("pedidos_do_po") or []
                       if isinstance(p, dict) and str(p.get("a_montante_de") or "") in self.etapas_pedido]
-        if corrente_e_daqui and corrente.strip() and not self.incluir_corrente:
+        if corrente_e_daqui and corrente.strip() and (not self.incluir_corrente or state.get("divisao_do_pedido")):
             corrente, do_corrente = self._corrente_da_etapa(state, corrente)
             # no parecer, o mesmo item já veio registrado como pedido de produto: aparece uma vez só
             a_montante += [(o, t, dono) for o, t, dono in do_corrente
@@ -3036,11 +3049,20 @@ class DespachoTicketsAgent(BaseAgent):
             # A versão que o autor escreveu nesta execução vai como base: sem ela, "corrija exatamente
             # estes pontos" virava reescrever do zero — o retrabalho das telas da exp09ef1b abriu outro
             # projeto no Stitch e perdeu E0-PROF-02/04 (auditoria de 07/10/2026).
+            from agents.callbacks import KEY_DOCUMENTOS_TRAVADOS
             from pipeline.reexecucao import CHAVES_AUTORAIS, PREFIXO_ANTERIOR, bloco_versao_anterior
 
             chave = getattr(sub, "output_key", None) or ""
             anterior = f"{PREFIXO_ANTERIOR}{chave}" if chave in CHAVES_AUTORAIS else ""
             delta_ticket: Dict[str, Any] = {self.tickets_key: tickets}
+            # Se o autor está sendo despachado por ticket na validação, destravamos temporariamente `chave` em
+            # `documentos_travados` para que `travar_documento_na_correcao_pontual` não devolva o texto antigo sem rodar.
+            travados_atuais = list(state.get(KEY_DOCUMENTOS_TRAVADOS) or [])
+            estava_travado = bool(chave and chave in travados_atuais)
+            if estava_travado:
+                sem_chave = [c for c in travados_atuais if c != chave]
+                delta_ticket[KEY_DOCUMENTOS_TRAVADOS] = sem_chave
+                state[KEY_DOCUMENTOS_TRAVADOS] = sem_chave
             # a base do refazer (`preparar_estado`) volta depois do autor: zerá-la apagava a versão anterior
             base_do_refazer = str(state.get(anterior) or "") if anterior else ""
             if anterior and str(state.get(chave) or "").strip():
@@ -3054,10 +3076,16 @@ class DespachoTicketsAgent(BaseAgent):
             )
             async for evento in sub.run_async(ctx):
                 yield evento
+            pos_delta: Dict[str, Any] = {}
             if anterior and anterior in delta_ticket:
                 state[anterior] = base_do_refazer
+                pos_delta[anterior] = base_do_refazer
+            if estava_travado:
+                state[KEY_DOCUMENTOS_TRAVADOS] = travados_atuais
+                pos_delta[KEY_DOCUMENTOS_TRAVADOS] = travados_atuais
+            if pos_delta:
                 yield Event(invocation_id=ctx.invocation_id, author=self.name, branch=ctx.branch,
-                            actions=EventActions(state_delta={anterior: base_do_refazer}))
+                            actions=EventActions(state_delta=pos_delta))
 
             if not gatilho_cascata or nome != gatilho_cascata:
                 continue

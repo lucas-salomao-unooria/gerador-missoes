@@ -20,6 +20,8 @@ sumiram ou foram reescritos sem que o pedido do PO mandasse. Sua tarefa é devol
 
 {briefing?}
 
+{pedido_correcao?}
+
 **Votos dos comitês pedagógicos (o que eles mandaram corrigir também vale como pedido):**
 
 {comite_canal_a_report?}

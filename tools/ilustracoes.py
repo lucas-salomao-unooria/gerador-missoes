@@ -253,7 +253,7 @@ def quadros_do_prototipo(prototipo: Optional[str]) -> Dict[str, str]:
     return {
         tela: ("<!DOCTYPE html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\">"
                f"{estilos}<style>{_CSS_QUADRO_AVULSO}</style></head><body>"
-               f"<div class=\"moldura-mobile\">{quadro}</div></body></html>")
+               f"<div class=\"{'moldura-desktop' if '-PROF-' in tela else 'moldura-mobile'}\">{quadro}</div></body></html>")
         for tela, (_, quadro) in escolhidos.items()
     }
 

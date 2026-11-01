@@ -50,6 +50,10 @@ Sua pergunta: **um adulto que não acompanhou a esteira consegue percorrer a mis
 
 {one_pager?}
 
+**Conteúdo aprovado do one-pager (seções 0, 0.1, 0.2, 4, 10, 11 e 17 — a mecânica e as fichas `#### Momento E.k`):**
+
+{conteudo_aprovado?}
+
 **Briefing de ofício — pico, aha, não-negociáveis:**
 
 {brief_oficio?}
@@ -66,7 +70,7 @@ O rodapé de cada quadro mostra o `Momento E.k`, o gesto e o que destrava o pró
 
 ### Estrutura da casca de revisão
 
-- **Trilho à esquerda**, agrupado pelas etapas da jornada. Cada item traz o ID da tela e o nome do estado. Clicar salta para a tela.
+- **Trilho à esquerda**, agrupado pelas etapas da jornada. Cada item traz o ID da tela e o nome do estado. Clicar salta para a tela. Dentro de cada etapa, liste primeiro os estados do fluxo principal (`padrão`, `selecionado`, `concluído` etc.) e separe visualmente (com subtítulo discreto ou divisória) os estados técnicos/degenerados (`carregando`, `erro`, `offline`, `timeout`, `sem-rede`) para que a navegação linear conte a história sem tropeçar em telas de erro.
 - **Barra superior**: nome da etapa, as marcas da tela (pico, aha, trava), o ID e o contador de posição.
 - **Palco central**: o quadro da tela, em escala automática para caber na janela. **Um quadro por vez**: só o ativo aparece. A classe de moldura (`moldura-mobile`, `moldura-desktop`) não declara `display`; quem esconde os outros quadros é um seletor mais forte que ela (`.quadro-tela:not(.tela-ativa) { display: none !important; }`). Na exp03em1b a moldura declarava `display: flex` depois do `display: none` e as 61 telas apareceram empilhadas — a navegação parecia quebrada. O lint confere.
 - **Painel da etapa**, ao lado do palco: o texto que o one-pager escreveu para aquela etapa, exibido enquanto qualquer tela da etapa estiver aberta. É o que faz a demo ser lida por quem não acompanhou a esteira: a tela mostra o **como**, esse painel diz o **porquê**. Se o one-pager não tiver texto para a etapa, use o mecanismo da spec (bloco 2) e **declare a fonte** numa linha de 13px no rodapé do painel.
@@ -122,7 +126,7 @@ Uma linha de 11px abaixo da moldura diz o que ela é: `casca de aparelho 375×81
 
 São os mesmos nomes da coleção `wireframe-cinza` da cobertura, e é isso que torna a subida para alta fidelidade uma troca de valores, não um redesenho. Os valores são os da coluna «Valor» de `references/wireframe-cinza.md`: se os dois divergirem, vale a coleção e o erro é deste prompt.
 
-**Convenções de desenho:** marcador de mídia é retângulo `superficie-midia` com um X grande em `borda-padrao` e legenda de 10 a 11px dizendo o que a foto representa; botão de áudio é círculo de 64px com `borda-padrao` (o alvo mínimo de toque é 64 px); seleção é `borda-foco` com 4px; desabilitado é contorno `borda-padrao` com `texto-secundario`, sem preenchimento. Cada quadro leva, no rodapé interno, uma linha de 11px descrevendo o estado — é a única anotação dentro do quadro.
+**Convenções de desenho:** marcador de mídia (somente para foto estática ou vídeo ilustrativo) é retângulo `superficie-midia` com um X grande em `borda-padrao` e legenda de 10 a 11px dizendo o que a foto representa — **NUNCA substitua a área interativa da mecânica (canvas de colagem, simulador, mapa interativo, editor, tabuleiro, gráfico manipulável ou cartões arrastáveis) por uma caixa cinza `superficie-midia` com X**: desenhe os componentes interativos reais da mecânica descritos na ficha `#### Momento E.k` e na cobertura de wireframes (botões, cartões, sliders, zonas de encaixe, camadas clicáveis); botão de áudio é círculo de 64px com `borda-padrao` (o alvo mínimo de toque é 64 px); seleção é `borda-foco` com 4px; desabilitado é contorno `borda-padrao` com `texto-secundario`, sem preenchimento. Cada quadro leva, no rodapé interno, uma linha de 11px descrevendo o estado — é a única anotação dentro do quadro.
 
 **O que o ambiente não tem não aparece.** As ausências da seção (bloco 14) e da missão (bloco 5) valem para o protótipo: nenhum botão, aba ou affordance que a spec declara ausente, mesmo "por realismo".
 
