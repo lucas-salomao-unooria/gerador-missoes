@@ -317,14 +317,27 @@ async def responder(texto: str, etapa: str, estado: Dict[str, Any], fluxo: Optio
     from google.genai import types
 
     from agents.transversal import get_conversa_etapa_agent
+    from tools.custo import registrar_uso_externo
 
     app = "ConversaEtapa"
     runner = InMemoryRunner(agent=get_conversa_etapa_agent(), app_name=app)
     sessao = await runner.session_service.create_session(
         app_name=app, user_id="conversa", state=estado_da_conversa(etapa, estado, fluxo, anteriores, execucao))
     mensagem = types.Content(role="user", parts=[types.Part.from_text(text=texto)])
-    async for _ in runner.run_async(user_id="conversa", session_id=sessao.id, new_message=mensagem):
-        pass
+    uso = {"entrada": 0, "saida": 0, "pensamento": 0, "cache": 0, "ferramentas_entrada": 0, "maior_entrada": 0, "chamadas": 0}
+    async for ev in runner.run_async(user_id="conversa", session_id=sessao.id, new_message=mensagem):
+        um = getattr(ev, "usage_metadata", None)
+        if um and (getattr(um, "prompt_token_count", 0) or getattr(um, "candidates_token_count", 0)):
+            ent = int(getattr(um, "prompt_token_count", 0) or 0)
+            uso["entrada"] += ent
+            uso["saida"] += int(getattr(um, "candidates_token_count", 0) or 0)
+            uso["pensamento"] += int(getattr(um, "thoughts_token_count", 0) or 0)
+            uso["cache"] += int(getattr(um, "cached_content_token_count", 0) or 0)
+            uso["ferramentas_entrada"] += int(getattr(um, "tool_use_prompt_token_count", 0) or 0)
+            uso["maior_entrada"] = max(uso["maior_entrada"], ent)
+            uso["chamadas"] += 1
+    if estado is not None and hasattr(estado, "get") and uso["chamadas"] > 0:
+        registrar_uso_externo(estado, "A000ConversaEtapa", uso, etapa=etapa if etapa != MISSAO else "transversal")
     final = await runner.session_service.get_session(app_name=app, user_id="conversa", session_id=sessao.id)
     saida = str((final.state if final else {}).get("resposta_conversa") or "").strip()
     if not saida:

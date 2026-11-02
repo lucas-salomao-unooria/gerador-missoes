@@ -869,7 +869,7 @@ def achados_para_o_editor(linhas: Sequence[Dict[str, Any]], estado: Dict[str, An
 
 async def propor_edicao(
     pedido_texto: str, etapa: str, documentos: Dict[str, str], *, erros: str = "", achados: str = "",
-    thinking_budget: Optional[int] = 4096,
+    thinking_budget: Optional[int] = 4096, estado_uso: Optional[Dict[str, Any]] = None,
 ) -> Any:
     """Roda o editor num runner mínimo, fora da esteira. Falha de rede ou modelo vira proposta estrutural."""
     from tools.edicao_pontual import MODO_ESTRUTURAL, Proposta, ler_proposta, renderizar
@@ -879,6 +879,7 @@ async def propor_edicao(
 
         from agents.transversal import get_editor_pontual_agent
         from pipeline.runner import build_user_message
+        from tools.custo import registrar_uso_externo
 
         app = "EditorPontual"
         runner = InMemoryRunner(agent=get_editor_pontual_agent(thinking_budget=thinking_budget), app_name=app)
@@ -887,9 +888,21 @@ async def propor_edicao(
             "documentos_pontuais": renderizar(documentos),
             "erros_da_edicao": erros, "achados_da_edicao": achados,
         })
-        async for _ in runner.run_async(user_id="editor", session_id=sessao.id,
-                                        new_message=build_user_message("Aplique o pedido como trocas.", None)):
-            pass
+        uso = {"entrada": 0, "saida": 0, "pensamento": 0, "cache": 0, "ferramentas_entrada": 0, "maior_entrada": 0, "chamadas": 0}
+        async for ev in runner.run_async(user_id="editor", session_id=sessao.id,
+                                         new_message=build_user_message("Aplique o pedido como trocas.", None)):
+            um = getattr(ev, "usage_metadata", None)
+            if um and (getattr(um, "prompt_token_count", 0) or getattr(um, "candidates_token_count", 0)):
+                ent = int(getattr(um, "prompt_token_count", 0) or 0)
+                uso["entrada"] += ent
+                uso["saida"] += int(getattr(um, "candidates_token_count", 0) or 0)
+                uso["pensamento"] += int(getattr(um, "thoughts_token_count", 0) or 0)
+                uso["cache"] += int(getattr(um, "cached_content_token_count", 0) or 0)
+                uso["ferramentas_entrada"] += int(getattr(um, "tool_use_prompt_token_count", 0) or 0)
+                uso["maior_entrada"] = max(uso["maior_entrada"], ent)
+                uso["chamadas"] += 1
+        if estado_uso is not None and hasattr(estado_uso, "get") and uso["chamadas"] > 0:
+            registrar_uso_externo(estado_uso, "A000EditorPontual", uso, etapa=etapa)
         final = await runner.session_service.get_session(app_name=app, user_id="editor", session_id=sessao.id)
         estado_final = final.state if final else {}
         proposta = ler_proposta(str(estado_final.get("edicao_pontual") or ""))
@@ -918,6 +931,7 @@ def com_corte_do_editor(proposta: Any, estado_do_editor: Dict[str, Any]) -> Any:
 async def editar(
     pedido_texto: str, etapa: str, documentos: Dict[str, str], *, achados: str = "",
     proponente: Any = None, validador: Any = None, tentativas: Optional[int] = None,
+    estado_uso: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Any, Any]:
     """`(resultado | None, proposta)`: as trocas aplicadas aos documentos, ou None se o pedido não cabe numa edição.
 
@@ -928,6 +942,7 @@ async def editar(
     """
     from tools.edicao_pontual import MODO_ESTRUTURAL, Proposta, aplicar
 
+    usar_padrao = proponente is None
     proponente = proponente or propor_edicao
     erros = ""
     proposta = Proposta(modo=MODO_ESTRUTURAL)
@@ -941,7 +956,11 @@ async def editar(
             and not re.search(r"prot[óo]tipo|html|wireframe|08-prototipo", f"{pedido_texto}\n{achados}", re.I)):
         prototipo_omitido = docs_para_llm.pop("prototipo_html")
     for _ in range(tentativas):
-        proposta = await proponente(pedido_texto, etapa, docs_para_llm, erros=erros, achados=achados)
+        if usar_padrao:
+            proposta = await propor_edicao(pedido_texto, etapa, docs_para_llm, erros=erros, achados=achados,
+                                           estado_uso=estado_uso)
+        else:
+            proposta = await proponente(pedido_texto, etapa, docs_para_llm, erros=erros, achados=achados)
         if not proposta.pontual:
             return None, proposta
         resultado = aplicar(documentos, proposta.edicoes)
@@ -1278,7 +1297,7 @@ async def executar_correcao_stream(
         if guardar_decisoes:
             guarda = _juntar_validadores(guarda, validador_das_decisoes(estado))
         resultado, proposta = await editar(texto_para_o_editor(pedido), etapa, documentos, proponente=proponente,
-                                           validador=guarda)
+                                           validador=guarda, estado_uso=estado)
         if resultado is not None:
             modo, documentos = edicao_pontual.MODO_PONTUAL, resultado.documentos
             edicoes, pendencias = edicao_pontual.como_dicts(resultado.aplicadas), list(proposta.pendencias)
@@ -1387,7 +1406,8 @@ async def executar_correcao_stream(
                                           validador=_juntar_validadores(
                                               validador_do_po({**final, "one_pager": documentos.get("one_pager", "")},
                                                               texto_para_o_editor(pedido)),
-                                              validador_das_decisoes(estado) if guardar_decisoes else None))
+                                              validador_das_decisoes(estado) if guardar_decisoes else None),
+                                          estado_uso=estado)
         if conserto is None or not conserto.aplicadas:
             pendencias += [p for p in getattr(proposta, "pendencias", []) if p not in pendencias]
             yield {"type": "edicao_completed", "etapa": etapa, "modo": "sem-conserto", "motivo": proposta.motivo,
@@ -1844,6 +1864,7 @@ async def triar_pedido(
 
         from agents.transversal import get_triagem_correcao_agent
         from pipeline.runner import build_user_message
+        from tools.custo import registrar_uso_externo
 
         app = "TriagemCorrecao"
         runner = InMemoryRunner(agent=get_triagem_correcao_agent(thinking_budget=thinking_budget), app_name=app)
@@ -1852,10 +1873,23 @@ async def triar_pedido(
             state={"briefing": str(estado.get("briefing") or ""), "mapa_da_missao": montar_mapa_da_missao(estado, pedido.texto),
                    "itens_do_pedido": numerados(pedido.texto)},
         )
-        async for _ in runner.run_async(user_id="triagem", session_id=sessao.id, new_message=build_user_message(pedido.texto, doc_batch)):
-            pass
+        uso = {"entrada": 0, "saida": 0, "pensamento": 0, "cache": 0, "ferramentas_entrada": 0, "maior_entrada": 0, "chamadas": 0}
+        async for ev in runner.run_async(user_id="triagem", session_id=sessao.id, new_message=build_user_message(pedido.texto, doc_batch)):
+            um = getattr(ev, "usage_metadata", None)
+            if um and (getattr(um, "prompt_token_count", 0) or getattr(um, "candidates_token_count", 0)):
+                ent = int(getattr(um, "prompt_token_count", 0) or 0)
+                uso["entrada"] += ent
+                uso["saida"] += int(getattr(um, "candidates_token_count", 0) or 0)
+                uso["pensamento"] += int(getattr(um, "thoughts_token_count", 0) or 0)
+                uso["cache"] += int(getattr(um, "cached_content_token_count", 0) or 0)
+                uso["ferramentas_entrada"] += int(getattr(um, "tool_use_prompt_token_count", 0) or 0)
+                uso["maior_entrada"] = max(uso["maior_entrada"], ent)
+                uso["chamadas"] += 1
         final = await runner.session_service.get_session(app_name=app, user_id="triagem", session_id=sessao.id)
-        return Triagem.de_texto(str((final.state if final else {}).get("triagem_correcao") or ""))
+        triagem_res = Triagem.de_texto(str((final.state if final else {}).get("triagem_correcao") or ""))
+        if isinstance(estado, dict) and uso["chamadas"] > 0:
+            registrar_uso_externo(estado, "A000TriagemCorrecao", uso, etapa=triagem_res.etapa if triagem_res.confiavel else "transversal")
+        return triagem_res
     except Exception as exc:  # pragma: no cover - rede/modelo
         return Triagem(etapa="indefinida", motivo=f"falha na triagem: {exc}")
 

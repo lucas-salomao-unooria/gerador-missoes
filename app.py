@@ -41,6 +41,7 @@ from pipeline.reexecucao import (
 )
 from pipeline.runner import PipelineExecutionResult, run_orchestrator_pipeline_stream
 from pipeline.session_store import (
+    carregar_custos_das_sessoes,
     create_session_zip,
     delete_saved_session,
     extrair_metadados_frontmatter,
@@ -1370,6 +1371,33 @@ def render_conversa_etapas(run_dir: Path, fluxo: Dict[str, Any]) -> Tuple[str, A
     return conversa_etapas.MISSAO, em_andamento
 
 
+def _persistir_uso_conversa(run_dir: Path, estado: Dict[str, Any], etapa: str) -> None:
+    """Registra no `estado.json` o consumo de tokens e custo das perguntas feitas na conversa da missão."""
+    from tools.custo import KEY_CUSTO, acumular, consumir_uso_externo, custo_da_execucao
+
+    por_agente, modelos_ext = consumir_uso_externo(estado)
+    if not por_agente:
+        return
+    etapa_alvo = etapa if etapa in ("produto", "design", "dev") else "transversal"
+    etapas_lista = [etapa_alvo]
+    linha = custo_da_execucao(
+        por_agente,
+        get_settings().gemini_model,
+        modelos_ext,
+        etapas=etapas_lista,
+    )
+    caminho = Path(run_dir) / "estado.json"
+    if not caminho.exists():
+        return
+    try:
+        atual = json.loads(caminho.read_text(encoding="utf-8"))
+        atual[KEY_CUSTO] = acumular(atual.get(KEY_CUSTO), linha, etapas_lista, tipo="conversa")
+        caminho.write_text(json.dumps(atual, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+        _estado_cached.clear()
+    except OSError:
+        pass
+
+
 def _botao_rascunho(run_dir: Path, fluxo: Dict[str, Any], etapa: str, estado: Dict[str, Any],
                     da_etapa: List[Dict[str, Any]]) -> None:
     """Leva a conversa ao comentário do parecer, para quem tem o parecer em mãos."""
@@ -1386,6 +1414,7 @@ def _botao_rascunho(run_dir: Path, fluxo: Dict[str, Any], etapa: str, estado: Di
         except Exception as exc:
             st.error(f"Não consegui escrever o rascunho agora: {exc}")
             return
+    _persistir_uso_conversa(run_dir, estado, etapa)
     st.session_state[f"rascunho_parecer_{run_dir.name}"] = texto
     st.rerun()
 
@@ -1409,6 +1438,7 @@ def _perguntar_a_etapa(run_dir: Path, etapa: str, texto: str, em_andamento: Any)
                 except Exception as exc:
                     st.error(f"Não consegui responder agora: {exc}. A pergunta não foi gravada; tente de novo.")
                     return
+    _persistir_uso_conversa(run_dir, estado, etapa)
     conversa_etapas.registrar(run_dir, pergunta, conversa_etapas.resposta(etapa, saida, pergunta, estado))
     st.rerun()
 
@@ -1447,6 +1477,10 @@ def render_sidebar() -> Dict[str, Any]:
                 "Parecer humano entre etapas", value=settings.parecer_humano, key="parecer_humano",
                 help="Ligado: cada etapa para e espera o parecer do dono (de acordo, refazer, devolver). "
                      "Desligado: a esteira roda direto, como antes — para testes.")
+            if st.button("💰 Painel de Custos e Uso de IA", key="btn_atalho_custos_admin", use_container_width=True,
+                         help="Abre o painel consolidado de custos, tokens e uso de IA de todas as missões e etapas."):
+                st.session_state["secao_principal"] = "💰 Custos e Uso de IA"
+                st.rerun()
 
         st.markdown("---")
         saved_sessions = listar_sessoes()
@@ -1484,13 +1518,20 @@ def render_sidebar() -> Dict[str, Any]:
                         if len(disp_title) > 24:
                             disp_title = disp_title[:22] + "…"
                         btn_label = f"{s['status_icon']} {disp_title}"
+                        cr = s.get("custo_resumo") if isinstance(s.get("custo_resumo"), dict) else {}
+                        custo_txt = (
+                            f" | 💰 R$ {float(cr.get('brl') or 0):.2f}".replace(".", ",")
+                            + f" (US$ {float(cr.get('usd') or 0):.4f})"
+                            if cr and (float(cr.get("brl") or 0) > 0 or float(cr.get("usd") or 0) > 0)
+                            else ""
+                        )
                         with col_btn:
                             if st.button(
                                 btn_label,
                                 key=f"sess_{s['dir_name']}",
                                 use_container_width=True,
                                 type="primary" if is_active else "secondary",
-                                help=f"{s['title']}\n📅 {s['created_at']} | Status: {s.get('status_label', s['status'])} | 📄 {s['files_count']} arquivos",
+                                help=f"{s['title']}\n📅 {s['created_at']} | Status: {s.get('status_label', s['status'])} | 📄 {s['files_count']} arquivos{custo_txt}",
                             ):
                                 loaded = load_saved_session(s["dir_name"])
                                 if loaded:
@@ -2105,40 +2146,767 @@ def render_prototipo_hifi(output_path: Path, prefix: str) -> None:
                 st.rerun()
 
 
-def render_custo_da_missao(estado: Dict[str, Any], prefix: str) -> None:
-    """Tokens e custo da missão inteira — todas as execuções, refazer incluído (`tools/custo.py`)."""
-    from tools.custo import KEY_CUSTO, brl, milhares
+def render_custo_da_etapa(estado: Dict[str, Any], stage_key: str, prefix: str) -> None:
+    """Exibe o detalhamento de custo, tokens e consumo por agente de uma etapa específica dentro da aba dela."""
+    from tools.custo import ROTULOS_ETAPAS, brl, detalhar_missao, milhares
 
-    custo = estado.get(KEY_CUSTO) or {}
-    total = custo.get("total") or {}
-    if not total:
+    det = detalhar_missao(estado)
+    if not det.get("tem_dados"):
+        return
+    por_etapa = det.get("por_etapa") or {}
+    bloco = por_etapa.get(stage_key)
+    # Se for a aba de design e houver protótipo hi-fi, também inclui o bloco dele como subseção
+    bloco_hifi = por_etapa.get("prototipo-hifi") if stage_key == "design" else None
+    if not bloco and not bloco_hifi:
+        st.caption(f"💰 Nenhum consumo de IA registrado especificamente para {ROTULOS_ETAPAS.get(stage_key, stage_key)} nesta missão.")
+        return
+
+    if bloco:
+        tk = bloco.get("tokens") or {}
+        rotulo_etapa = bloco.get("rotulo") or ROTULOS_ETAPAS.get(stage_key, stage_key)
+        with st.container(border=True):
+            st.markdown(f"#### 💰 Custo e Uso de IA — {rotulo_etapa}")
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c1.metric(
+                "Custo da etapa",
+                brl(float(bloco.get("brl") or 0)),
+                help=(
+                    f"US$ {float(bloco.get('usd') or 0):.4f} · "
+                    f"{float(bloco.get('pct_custo') or 0):.1f}% do custo da missão · "
+                    f"Entrada s/ cache: US$ {float(bloco.get('usd_entrada_sem_cache') or 0):.4f} · "
+                    f"Cache: US$ {float(bloco.get('usd_cache') or 0):.4f} · "
+                    f"Saída: US$ {float(bloco.get('usd_saida') or 0):.4f} · "
+                    f"Pensamento: US$ {float(bloco.get('usd_pensamento') or 0):.4f}"
+                ),
+            )
+            c2.metric(
+                "📥 Tokens de entrada",
+                milhares(int(tk.get("entrada") or 0)),
+                help=(
+                    f"Sem cache: {milhares(int(tk.get('entrada_sem_cache') or 0))} · "
+                    f"Ferramentas: {milhares(int(tk.get('ferramentas_entrada') or 0))} · "
+                    f"Maior prompt individual: {milhares(int(tk.get('maior_entrada') or 0))}"
+                ),
+            )
+            c3.metric(
+                "⚡ Tokens em cache",
+                f"{milhares(int(tk.get('cache') or 0))} ({float(tk.get('taxa_cache_pct') or 0):.1f}%)",
+                help=(
+                    f"Economia com prompt cache nesta etapa: {brl(float(bloco.get('economia_cache_brl') or 0))} "
+                    f"(US$ {float(bloco.get('economia_cache_usd') or 0):.4f})"
+                ),
+            )
+            c4.metric(
+                "📤 Tokens de saída",
+                milhares(int(tk.get("saida") or 0)),
+                help=f"Custo da saída visível: US$ {float(bloco.get('usd_saida') or 0):.4f}",
+            )
+            c5.metric(
+                "🧠 Pensamento (raciocínio)",
+                f"{milhares(int(tk.get('pensamento') or 0))} ({float(tk.get('taxa_pensamento_pct') or 0):.1f}%)",
+                help=(
+                    f"Custo de raciocínio: US$ {float(bloco.get('usd_pensamento') or 0):.4f} · "
+                    f"{milhares(int(tk.get('chamadas') or 0))} chamadas ao modelo · "
+                    f"Total de tokens na etapa: {milhares(int(tk.get('total_tokens') or 0))}"
+                ),
+            )
+            agentes_etapa = [a for a in (det.get("por_agente") or []) if a.get("etapa") == stage_key]
+            if agentes_etapa:
+                with st.expander(f"📋 Detalhamento por agente em {rotulo_etapa} ({len(agentes_etapa)} agentes)", expanded=False):
+                    linhas = [
+                        "| Agente | Papel | Modelo | Chamadas | Entrada | Sem cache | Em cache (%) | Ferramentas | Saída | Pensamento (%) | Maior prompt | US$ Ent. | US$ Cache | US$ Saída | US$ Pens. | US$ Total | R$ Total |",
+                        "|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|",
+                    ]
+                    for ag in agentes_etapa:
+                        atk = ag.get("tokens") or {}
+                        linhas.append(
+                            f"| `{ag.get('agente')}` | {ag.get('rotulo')} | `{ag.get('modelo') or '—'}` "
+                            f"| {milhares(int(atk.get('chamadas') or 0))} "
+                            f"| {milhares(int(atk.get('entrada') or 0))} "
+                            f"| {milhares(int(atk.get('entrada_sem_cache') or 0))} "
+                            f"| {milhares(int(atk.get('cache') or 0))} ({float(atk.get('taxa_cache_pct') or 0):.1f}%) "
+                            f"| {milhares(int(atk.get('ferramentas_entrada') or 0))} "
+                            f"| {milhares(int(atk.get('saida') or 0))} "
+                            f"| {milhares(int(atk.get('pensamento') or 0))} ({float(atk.get('taxa_pensamento_pct') or 0):.1f}%) "
+                            f"| {milhares(int(atk.get('maior_entrada') or 0))} "
+                            f"| {float(ag.get('usd_entrada_sem_cache') or 0):.4f} "
+                            f"| {float(ag.get('usd_cache') or 0):.4f} "
+                            f"| {float(ag.get('usd_saida') or 0):.4f} "
+                            f"| {float(ag.get('usd_pensamento') or 0):.4f} "
+                            f"| {float(ag.get('usd') or 0):.4f} "
+                            f"| {brl(float(ag.get('brl') or 0))} |"
+                        )
+                    st.markdown("\n".join(linhas))
+
+    if bloco_hifi:
+        tk_h = bloco_hifi.get("tokens") or {}
+        with st.container(border=True):
+            st.markdown("#### 🖥️ Custo e Uso de IA — Protótipo em Alta Fidelidade")
+            h1, h2, h3, h4, h5 = st.columns(5)
+            h1.metric("Custo Hi-Fi", brl(float(bloco_hifi.get("brl") or 0)),
+                      help=f"US$ {float(bloco_hifi.get('usd') or 0):.4f} (inclui US$ {float(bloco_hifi.get('usd_imagens') or 0):.4f} em imagens)")
+            h2.metric("📥 Entrada", milhares(int(tk_h.get("entrada") or 0)),
+                      help=f"Sem cache: {milhares(int(tk_h.get('entrada_sem_cache') or 0))}")
+            h3.metric("⚡ Em cache", f"{milhares(int(tk_h.get('cache') or 0))} ({float(tk_h.get('taxa_cache_pct') or 0):.1f}%)")
+            h4.metric("📤 Saída", milhares(int(tk_h.get("saida") or 0)))
+            h5.metric("🧠 Pensamento", milhares(int(tk_h.get("pensamento") or 0)),
+                      help=f"{milhares(int(tk_h.get('chamadas') or 0))} chamadas")
+
+
+def render_custo_da_missao(estado: Dict[str, Any], prefix: str) -> None:
+    """Tokens e custo da missão inteira — detalhado por etapa, tipo de token, agente, modelo e execução (`tools/custo.py`)."""
+    from tools.custo import ORDEM_ETAPAS, brl, detalhar_missao, milhares
+
+    det = detalhar_missao(estado)
+    if not det.get("tem_dados"):
         st.caption("💰 Custo: esta missão foi gerada antes da contagem de custo.")
         return
-    t = total.get("tokens") or {}
+
+    t = det.get("tokens") or {}
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("💰 Custo total da missão", brl(float(total.get("brl") or 0)), help=f"US$ {float(total.get('usd') or 0):.4f}")
-    c2.metric("Tokens de entrada", milhares(int(t.get("entrada") or 0)),
-              help=f"{milhares(int(t.get('cache') or 0))} vieram do cache, a 10% do preço")
-    c3.metric("Tokens de saída", milhares(int(t.get("saida") or 0) + int(t.get("pensamento") or 0)),
-              help=f"{milhares(int(t.get('pensamento') or 0))} de pensamento (cobrados como saída)")
-    c4.metric("Execuções", len(custo.get("execucoes") or []), help=f"{milhares(int(t.get('chamadas') or 0))} chamadas ao modelo")
-    with st.expander("💰 Custo por execução", expanded=False):
-        linhas = ["| Quando | Etapas | Entrada | Saída | Pensamento | US$ | Cotação | R$ |",
-                  "|---|---|--:|--:|--:|--:|--:|--:|"]
-        for e in custo.get("execucoes") or []:
+    c1.metric(
+        "💰 Custo total da missão",
+        brl(float(det.get("brl") or 0)),
+        help=(
+            f"US$ {float(det.get('usd') or 0):.4f} · "
+            f"Economia com prompt cache: {brl(float(det.get('economia_cache_brl') or 0))} "
+            f"(US$ {float(det.get('economia_cache_usd') or 0):.4f}) · "
+            f"Entrada s/ cache: US$ {float(det.get('usd_entrada_sem_cache') or 0):.4f} · "
+            f"Cache: US$ {float(det.get('usd_cache') or 0):.4f} · "
+            f"Saída: US$ {float(det.get('usd_saida') or 0):.4f} · "
+            f"Pensamento: US$ {float(det.get('usd_pensamento') or 0):.4f}"
+        ),
+    )
+    c2.metric(
+        "📥 Tokens de entrada",
+        milhares(int(t.get("entrada") or 0)),
+        help=(
+            f"Sem cache: {milhares(int(t.get('entrada_sem_cache') or 0))} · "
+            f"Em cache (10% do preço): {milhares(int(t.get('cache') or 0))} ({float(t.get('taxa_cache_pct') or 0):.1f}%) · "
+            f"Ferramentas: {milhares(int(t.get('ferramentas_entrada') or 0))} · "
+            f"Maior prompt: {milhares(int(t.get('maior_entrada') or 0))}"
+        ),
+    )
+    c3.metric(
+        "📤 Saída + pensamento",
+        milhares(int(t.get("saida_total") or 0)),
+        help=(
+            f"Saída visível: {milhares(int(t.get('saida') or 0))} (US$ {float(det.get('usd_saida') or 0):.4f}) · "
+            f"Pensamento/raciocínio: {milhares(int(t.get('pensamento') or 0))} "
+            f"({float(t.get('taxa_pensamento_pct') or 0):.1f}% da saída · US$ {float(det.get('usd_pensamento') or 0):.4f})"
+        ),
+    )
+    c4.metric(
+        "🔄 Execuções e chamadas",
+        f"{int(det.get('num_execucoes') or 0)} exec. · {milhares(int(t.get('chamadas') or 0))} cham.",
+        help=(
+            f"Total de tokens processados: {milhares(int(t.get('total_tokens') or 0))} · "
+            f"Respostas em cache local do classificador: {milhares(int(t.get('do_cache') or 0))}"
+        ),
+    )
+
+    # Cartões rápidos por etapa da missão
+    por_etapa = det.get("por_etapa") or {}
+    etapas_presentes = [et for et in ORDEM_ETAPAS if et in por_etapa] + [et for et in por_etapa if et not in ORDEM_ETAPAS]
+    if etapas_presentes:
+        cols_et = st.columns(len(etapas_presentes))
+        for col, et in zip(cols_et, etapas_presentes):
+            b = por_etapa[et]
+            btk = b.get("tokens") or {}
+            col.metric(
+                f"{b.get('rotulo', et)} ({float(b.get('pct_custo') or 0):.1f}%)",
+                brl(float(b.get("brl") or 0)),
+                help=(
+                    f"US$ {float(b.get('usd') or 0):.4f} · "
+                    f"{milhares(int(btk.get('chamadas') or 0))} chamadas · "
+                    f"Entrada: {milhares(int(btk.get('entrada') or 0))} "
+                    f"(cache: {milhares(int(btk.get('cache') or 0))} / {float(btk.get('taxa_cache_pct') or 0):.1f}%) · "
+                    f"Saída: {milhares(int(btk.get('saida') or 0))} · "
+                    f"Pensamento: {milhares(int(btk.get('pensamento') or 0))}"
+                ),
+            )
+
+    with st.expander("📊 Custo e tokens detalhados por etapa da missão", expanded=False):
+        if etapas_presentes:
+            linhas_et = [
+                "| Etapa | Chamadas | Entrada total | Sem cache | Em cache (% hit) | Ferramentas | Saída visível | Pensamento (% saída) | Total tokens | US$ Ent. s/ cache | US$ Cache | US$ Saída | US$ Pensamento | Economia cache | US$ Total | R$ Total | % Missão |",
+                "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|",
+            ]
+            for et in etapas_presentes:
+                b = por_etapa[et]
+                btk = b.get("tokens") or {}
+                linhas_et.append(
+                    f"| **{b.get('rotulo', et)}** "
+                    f"| {milhares(int(btk.get('chamadas') or 0))} "
+                    f"| {milhares(int(btk.get('entrada') or 0))} "
+                    f"| {milhares(int(btk.get('entrada_sem_cache') or 0))} "
+                    f"| {milhares(int(btk.get('cache') or 0))} ({float(btk.get('taxa_cache_pct') or 0):.1f}%) "
+                    f"| {milhares(int(btk.get('ferramentas_entrada') or 0))} "
+                    f"| {milhares(int(btk.get('saida') or 0))} "
+                    f"| {milhares(int(btk.get('pensamento') or 0))} ({float(btk.get('taxa_pensamento_pct') or 0):.1f}%) "
+                    f"| {milhares(int(btk.get('total_tokens') or 0))} "
+                    f"| {float(b.get('usd_entrada_sem_cache') or 0):.4f} "
+                    f"| {float(b.get('usd_cache') or 0):.4f} "
+                    f"| {float(b.get('usd_saida') or 0):.4f} "
+                    f"| {float(b.get('usd_pensamento') or 0):.4f} "
+                    f"| {brl(float(b.get('economia_cache_brl') or 0))} "
+                    f"| {float(b.get('usd') or 0):.4f} "
+                    f"| **{brl(float(b.get('brl') or 0))}** "
+                    f"| {float(b.get('pct_custo') or 0):.1f}% |"
+                )
+            linhas_et.append(
+                f"| **Total da Missão** "
+                f"| **{milhares(int(t.get('chamadas') or 0))}** "
+                f"| **{milhares(int(t.get('entrada') or 0))}** "
+                f"| **{milhares(int(t.get('entrada_sem_cache') or 0))}** "
+                f"| **{milhares(int(t.get('cache') or 0))} ({float(t.get('taxa_cache_pct') or 0):.1f}%)** "
+                f"| **{milhares(int(t.get('ferramentas_entrada') or 0))}** "
+                f"| **{milhares(int(t.get('saida') or 0))}** "
+                f"| **{milhares(int(t.get('pensamento') or 0))} ({float(t.get('taxa_pensamento_pct') or 0):.1f}%)** "
+                f"| **{milhares(int(t.get('total_tokens') or 0))}** "
+                f"| **{float(det.get('usd_entrada_sem_cache') or 0):.4f}** "
+                f"| **{float(det.get('usd_cache') or 0):.4f}** "
+                f"| **{float(det.get('usd_saida') or 0):.4f}** "
+                f"| **{float(det.get('usd_pensamento') or 0):.4f}** "
+                f"| **{brl(float(det.get('economia_cache_brl') or 0))}** "
+                f"| **{float(det.get('usd') or 0):.4f}** "
+                f"| **{brl(float(det.get('brl') or 0))}** "
+                f"| **100%** |"
+            )
+            st.markdown("\n".join(linhas_et))
+
+    por_agente = det.get("por_agente") or []
+    if por_agente:
+        with st.expander(f"🤖 Custo e tokens por agente ({len(por_agente)} agentes acionados)", expanded=False):
+            linhas_ag = [
+                "| Etapa | Agente | Papel | Modelo | Chamadas | Entrada | Sem cache | Em cache (%) | Saída | Pensamento (%) | Maior prompt | US$ Total | R$ Total | % Missão |",
+                "|---|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|",
+            ]
+            usd_missao = float(det.get("usd") or 0)
+            for ag in por_agente:
+                atk = ag.get("tokens") or {}
+                usd_ag = float(ag.get("usd") or 0)
+                pct_ag = (usd_ag / usd_missao * 100.0) if usd_missao > 0 else 0.0
+                linhas_ag.append(
+                    f"| {ag.get('rotulo_etapa')} | `{ag.get('agente')}` | {ag.get('rotulo')} | `{ag.get('modelo') or '—'}` "
+                    f"| {milhares(int(atk.get('chamadas') or 0))} "
+                    f"| {milhares(int(atk.get('entrada') or 0))} "
+                    f"| {milhares(int(atk.get('entrada_sem_cache') or 0))} "
+                    f"| {milhares(int(atk.get('cache') or 0))} ({float(atk.get('taxa_cache_pct') or 0):.1f}%) "
+                    f"| {milhares(int(atk.get('saida') or 0))} "
+                    f"| {milhares(int(atk.get('pensamento') or 0))} ({float(atk.get('taxa_pensamento_pct') or 0):.1f}%) "
+                    f"| {milhares(int(atk.get('maior_entrada') or 0))} "
+                    f"| {usd_ag:.4f} "
+                    f"| {brl(float(ag.get('brl') or 0))} "
+                    f"| {pct_ag:.1f}% |"
+                )
+            st.markdown("\n".join(linhas_ag))
+
+    por_modelo = det.get("por_modelo") or {}
+    if por_modelo:
+        with st.expander("🧮 Custo e tokens por modelo de IA", expanded=False):
+            linhas_mod = [
+                "| Modelo | Chamadas | Entrada | Sem cache | Em cache (%) | Saída | Pensamento (%) | Total tokens | US$ Entrada | US$ Cache | US$ Saída | US$ Pensamento | US$ Total | R$ Total |",
+                "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|",
+            ]
+            for mod, bm in sorted(por_modelo.items(), key=lambda kv: float(kv[1].get("usd") or 0), reverse=True):
+                mtk = bm.get("tokens") or {}
+                linhas_mod.append(
+                    f"| `{mod}` "
+                    f"| {milhares(int(mtk.get('chamadas') or 0))} "
+                    f"| {milhares(int(mtk.get('entrada') or 0))} "
+                    f"| {milhares(int(mtk.get('entrada_sem_cache') or 0))} "
+                    f"| {milhares(int(mtk.get('cache') or 0))} ({float(mtk.get('taxa_cache_pct') or 0):.1f}%) "
+                    f"| {milhares(int(mtk.get('saida') or 0))} "
+                    f"| {milhares(int(mtk.get('pensamento') or 0))} ({float(mtk.get('taxa_pensamento_pct') or 0):.1f}%) "
+                    f"| {milhares(int(mtk.get('total_tokens') or 0))} "
+                    f"| {float(bm.get('usd_entrada_sem_cache') or 0):.4f} "
+                    f"| {float(bm.get('usd_cache') or 0):.4f} "
+                    f"| {float(bm.get('usd_saida') or 0):.4f} "
+                    f"| {float(bm.get('usd_pensamento') or 0):.4f} "
+                    f"| {float(bm.get('usd') or 0):.4f} "
+                    f"| {brl(float(bm.get('brl') or 0))} |"
+                )
+            st.markdown("\n".join(linhas_mod))
+
+    with st.expander("⏱️ Custo por execução (geração, refazer, correções e protótipo)", expanded=False):
+        linhas = [
+            "| Quando | Etapas | Chamadas | Entrada | Sem cache | Em cache (%) | Saída | Pensamento | Economia cache | US$ | Cotação | R$ |",
+            "|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|",
+        ]
+        for e in det.get("execucoes") or []:
             tk = e.get("tokens") or {}
             etapas_e = ", ".join(e.get("etapas") or []) + (" · ⚠️ falhou" if e.get("falhou") else "")
-            linhas.append(f"| {e.get('quando', '?')} | {etapas_e} | {milhares(int(tk.get('entrada') or 0))} "
-                          f"| {milhares(int(tk.get('saida') or 0))} | {milhares(int(tk.get('pensamento') or 0))} "
-                          f"| {float(e.get('usd') or 0):.4f} | {float(e.get('cotacao') or 0):.4f} "
-                          f"({e.get('fonte_cotacao', '?')}) | {brl(float(e.get('brl') or 0))} |")
+            linhas.append(
+                f"| {e.get('quando', '?')} | {etapas_e} "
+                f"| {milhares(int(tk.get('chamadas') or 0))} "
+                f"| {milhares(int(tk.get('entrada') or 0))} "
+                f"| {milhares(int(tk.get('entrada_sem_cache') or 0))} "
+                f"| {milhares(int(tk.get('cache') or 0))} ({float(tk.get('taxa_cache_pct') or 0):.1f}%) "
+                f"| {milhares(int(tk.get('saida') or 0))} "
+                f"| {milhares(int(tk.get('pensamento') or 0))} "
+                f"| {brl(float(e.get('economia_cache_brl') or 0))} "
+                f"| {float(e.get('usd') or 0):.4f} "
+                f"| {float(e.get('cotacao') or 0):.4f} ({e.get('fonte_cotacao', '?')}) "
+                f"| {brl(float(e.get('brl') or 0))} |"
+            )
         st.markdown("\n".join(linhas))
-        sem_preco = sorted({m for e in custo.get("execucoes") or [] for m in e.get("modelos_sem_preco") or []})
+        sem_preco = det.get("modelos_sem_preco") or []
         if sem_preco:
             st.warning(f"Modelo sem preço na tabela: {', '.join(sem_preco)}. O consumo dele não entrou no custo.")
-        st.caption("Preço Standard da API do Gemini por 1 milhão de tokens. O real usa a cotação do momento de cada "
-                   "execução: PTAX de venda do Banco Central, ou `COTACAO_USD_BRL` quando definida no ambiente. "
-                   "A conversa sobre a missão e a triagem de correção não entram.")
+        st.caption(
+            "Preço oficial Standard da API do Gemini por 1 milhão de tokens (entrada, cache a 10%, saída e pensamento). "
+            "O real usa a cotação do momento de cada execução: PTAX de venda do Banco Central ou `COTACAO_USD_BRL`. "
+            "Inclui geração da esteira, comitês pedagógicos, bancas, classificadores semânticos, triagem, edição pontual, "
+            "conversa sobre a missão e geração do protótipo em alta fidelidade."
+        )
+
+
+def render_painel_custos_admin(saved_sessions: List[Dict[str, Any]]) -> None:
+    """Painel executivo e analítico de custos e uso de IA para o perfil `admin`."""
+    import csv
+    import io
+    from tools.custo import ORDEM_ETAPAS, ROTULOS_ETAPAS, TABELA_PRECOS, brl, consolidar_missoes, milhares
+
+    st.markdown("### 💰 Painel Administrativo de Custos e Uso de IA")
+    st.caption(
+        "Visão consolidada e auditável de todas as missões do gerador: custo em R$ e US$, decomposição por etapa "
+        "(Produto, Design, Dev, Transversal e Protótipo Hi-Fi), tokens de entrada, cache, ferramentas, saída visível, "
+        "raciocínio (thinking), modelos e agentes."
+    )
+
+    if not saved_sessions:
+        st.info("Nenhuma missão encontrada no diretório de saída.")
+        return
+
+    with st.spinner("Consolidando telemetria de tokens e custos de todas as missões…"):
+        sessoes_com_custo = carregar_custos_das_sessoes(saved_sessions)
+
+    # Filtros organizadores no topo
+    with st.container(border=True):
+        f_col1, f_col2, f_col3 = st.columns([2.2, 1.5, 1.3])
+        with f_col1:
+            busca = st.text_input(
+                "🔍 Filtrar por título, slug ou pasta da missão",
+                placeholder="Ex.: exp01, unootube, 5º ano...",
+                key="admin_custo_busca",
+            ).strip().lower()
+        with f_col2:
+            status_disponiveis = sorted({str(s.get("status_label") or s.get("status") or "—") for s in sessoes_com_custo})
+            filtro_status = st.multiselect(
+                "Status da missão",
+                options=status_disponiveis,
+                default=[],
+                placeholder="Todos os status",
+                key="admin_custo_status",
+            )
+        with f_col3:
+            apenas_com_custo = st.toggle(
+                "Apenas missões com custo",
+                value=False,
+                key="admin_custo_apenas_com_dados",
+                help="Oculta missões antigas geradas antes do rastreamento de tokens.",
+            )
+            ordenar_por = st.selectbox(
+                "Ordenar missões por",
+                options=["Maior custo (R$)", "Mais recentes", "Mais tokens", "Mais chamadas"],
+                key="admin_custo_ordem",
+            )
+
+    filtradas = sessoes_com_custo
+    if busca:
+        filtradas = [
+            s for s in filtradas
+            if busca in str(s.get("title") or "").lower()
+            or busca in str(s.get("dir_name") or "").lower()
+            or busca in str(s.get("slug") or "").lower()
+        ]
+    if filtro_status:
+        filtradas = [
+            s for s in filtradas
+            if str(s.get("status_label") or s.get("status") or "—") in filtro_status
+        ]
+
+    consolidado = consolidar_missoes(filtradas)
+    missoes_lista = consolidado.get("missoes") or []
+    if apenas_com_custo:
+        missoes_lista = [m for m in missoes_lista if m.get("tem_dados")]
+
+    if ordenar_por == "Maior custo (R$)":
+        missoes_lista = sorted(missoes_lista, key=lambda m: (float(m.get("brl") or 0), float(m.get("usd") or 0)), reverse=True)
+    elif ordenar_por == "Mais tokens":
+        missoes_lista = sorted(missoes_lista, key=lambda m: int((m.get("tokens") or {}).get("total_tokens") or 0), reverse=True)
+    elif ordenar_por == "Mais chamadas":
+        missoes_lista = sorted(missoes_lista, key=lambda m: int((m.get("tokens") or {}).get("chamadas") or 0), reverse=True)
+    else:
+        missoes_lista = sorted(missoes_lista, key=lambda m: str(m.get("created_at") or ""), reverse=True)
+
+    tk_global = consolidado.get("tokens") or {}
+    num_com_custo = int(consolidado.get("missoes_com_custo") or 0)
+    num_total = int(consolidado.get("num_missoes") or 0)
+
+    # 1. KPIs Globais — Linha 1 (Financeiro e Volume) + Linha 2 (Decomposição de Tokens)
+    st.markdown("#### 📌 1. Resumo Geral Acumulado")
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric(
+        "💰 Custo Total Acumulado",
+        brl(float(consolidado.get("brl") or 0)),
+        help=(
+            f"US$ {float(consolidado.get('usd') or 0):.4f} · "
+            f"{num_com_custo} de {num_total} missões possuem telemetria de custo"
+        ),
+    )
+    k2.metric(
+        "📐 Custo Médio por Missão",
+        brl(float(consolidado.get("media_brl_por_missao") or 0)),
+        help=(
+            f"US$ {float(consolidado.get('media_usd_por_missao') or 0):.4f} por missão "
+            f"(calculado sobre as {num_com_custo} missões com custo registrado)"
+        ),
+    )
+    k3.metric(
+        "🏷️ Economia com Prompt Cache",
+        brl(float(consolidado.get("economia_cache_brl") or 0)),
+        help=(
+            f"US$ {float(consolidado.get('economia_cache_usd') or 0):.4f} poupados graças ao cache de contexto · "
+            f"Taxa global de cache hit: {float(tk_global.get('taxa_cache_pct') or 0):.1f}%"
+        ),
+    )
+    k4.metric(
+        "🔄 Execuções e Chamadas",
+        f"{milhares(int(consolidado.get('num_execucoes') or 0))} exec. · {milhares(int(tk_global.get('chamadas') or 0))} cham.",
+        help=(
+            f"Total de tokens (entrada + saída + pensamento): {milhares(int(tk_global.get('total_tokens') or 0))} · "
+            f"Hits de cache semântico local: {milhares(int(tk_global.get('do_cache') or 0))}"
+        ),
+    )
+
+    t1, t2, t3, t4 = st.columns(4)
+    t1.metric(
+        "📥 Tokens de Entrada Total",
+        milhares(int(tk_global.get("entrada") or 0)),
+        help=(
+            f"Entrada sem cache: {milhares(int(tk_global.get('entrada_sem_cache') or 0))} "
+            f"(US$ {float(consolidado.get('usd_entrada_sem_cache') or 0):.4f}) · "
+            f"Tokens de ferramentas: {milhares(int(tk_global.get('ferramentas_entrada') or 0))} · "
+            f"Maior prompt registrado: {milhares(int(tk_global.get('maior_entrada') or 0))}"
+        ),
+    )
+    t2.metric(
+        "⚡ Tokens Lidos do Cache",
+        f"{milhares(int(tk_global.get('cache') or 0))} ({float(tk_global.get('taxa_cache_pct') or 0):.1f}%)",
+        help=f"Custo dos tokens em cache (a 10% da tarifa): US$ {float(consolidado.get('usd_cache') or 0):.4f}",
+    )
+    t3.metric(
+        "📤 Tokens de Saída Visível",
+        milhares(int(tk_global.get("saida") or 0)),
+        help=f"Custo dos tokens de saída visível: US$ {float(consolidado.get('usd_saida') or 0):.4f}",
+    )
+    t4.metric(
+        "🧠 Tokens de Pensamento (Raciocínio)",
+        f"{milhares(int(tk_global.get('pensamento') or 0))} ({float(tk_global.get('taxa_pensamento_pct') or 0):.1f}%)",
+        help=(
+            f"Custo dos tokens de pensamento: US$ {float(consolidado.get('usd_pensamento') or 0):.4f} · "
+            f"Representam {float(tk_global.get('taxa_pensamento_pct') or 0):.1f}% de toda a geração (saída + pensamento)"
+        ),
+    )
+
+    st.markdown("---")
+
+    # 2. Custo e Tokens por Etapa (Consolidado de Todas as Missões)
+    st.markdown("#### 🧩 2. Custo e Uso de IA por Etapa (Consolidado)")
+    por_etapa = consolidado.get("por_etapa") or {}
+    etapas_ordem = [et for et in ORDEM_ETAPAS if et in por_etapa] + [et for et in por_etapa if et not in ORDEM_ETAPAS]
+    if etapas_ordem:
+        cols_et = st.columns(len(etapas_ordem))
+        for col, et in zip(cols_et, etapas_ordem):
+            b = por_etapa[et]
+            btk = b.get("tokens") or {}
+            col.metric(
+                f"{b.get('rotulo', et)} ({float(b.get('pct_custo') or 0):.1f}%)",
+                brl(float(b.get("brl") or 0)),
+                help=(
+                    f"US$ {float(b.get('usd') or 0):.4f} · "
+                    f"Média: {brl(float(b.get('media_brl') or 0))}/missão ({int(b.get('missoes_com_etapa') or 0)} missões) · "
+                    f"Chamadas: {milhares(int(btk.get('chamadas') or 0))} · "
+                    f"Tokens totais: {milhares(int(btk.get('total_tokens') or 0))}"
+                ),
+            )
+
+        linhas_et = [
+            "| Etapa | Missões | Chamadas | Entrada total | Sem cache | Em cache (% hit) | Ferramentas | Saída visível | Pensamento (% saída) | Total tokens | US$ Ent. s/ cache | US$ Cache | US$ Saída | US$ Pensamento | Economia cache | Total US$ | Total R$ | Média R$/missão | % Custo |",
+            "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|",
+        ]
+        for et in etapas_ordem:
+            b = por_etapa[et]
+            btk = b.get("tokens") or {}
+            linhas_et.append(
+                f"| **{b.get('rotulo', et)}** "
+                f"| {int(b.get('missoes_com_etapa') or 0)} "
+                f"| {milhares(int(btk.get('chamadas') or 0))} "
+                f"| {milhares(int(btk.get('entrada') or 0))} "
+                f"| {milhares(int(btk.get('entrada_sem_cache') or 0))} "
+                f"| {milhares(int(btk.get('cache') or 0))} ({float(btk.get('taxa_cache_pct') or 0):.1f}%) "
+                f"| {milhares(int(btk.get('ferramentas_entrada') or 0))} "
+                f"| {milhares(int(btk.get('saida') or 0))} "
+                f"| {milhares(int(btk.get('pensamento') or 0))} ({float(btk.get('taxa_pensamento_pct') or 0):.1f}%) "
+                f"| {milhares(int(btk.get('total_tokens') or 0))} "
+                f"| {float(b.get('usd_entrada_sem_cache') or 0):.4f} "
+                f"| {float(b.get('usd_cache') or 0):.4f} "
+                f"| {float(b.get('usd_saida') or 0):.4f} "
+                f"| {float(b.get('usd_pensamento') or 0):.4f} "
+                f"| {brl(float(b.get('economia_cache_brl') or 0))} "
+                f"| {float(b.get('usd') or 0):.4f} "
+                f"| **{brl(float(b.get('brl') or 0))}** "
+                f"| {brl(float(b.get('media_brl') or 0))} "
+                f"| {float(b.get('pct_custo') or 0):.1f}% |"
+            )
+        st.markdown("\n".join(linhas_et))
+
+    st.markdown("---")
+
+    # 3. Matriz Completa por Missão e por Etapa + Exportação CSV
+    col_t_head, col_t_csv = st.columns([3, 1])
+    with col_t_head:
+        st.markdown(f"#### 🗂️ 3. Detalhamento por Missão e por Etapa ({len(missoes_lista)} missões exibidas)")
+    with col_t_csv:
+        def _gerar_csv_custos() -> bytes:
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow([
+                "dir_name", "slug", "titulo", "data", "status", "execucoes", "chamadas",
+                "produto_brl", "produto_usd", "design_brl", "design_usd",
+                "dev_brl", "dev_usd", "transversal_brl", "transversal_usd",
+                "prototipo_hifi_brl", "prototipo_hifi_usd",
+                "tokens_entrada", "tokens_entrada_sem_cache", "tokens_cache", "taxa_cache_pct",
+                "tokens_ferramentas", "tokens_saida", "tokens_pensamento", "taxa_pensamento_pct",
+                "tokens_total", "maior_entrada", "economia_cache_brl", "economia_cache_usd",
+                "total_usd", "total_brl",
+            ])
+            for m in missoes_lista:
+                mtk = m.get("tokens") or {}
+                pe = m.get("por_etapa") or {}
+                writer.writerow([
+                    m.get("dir_name", ""),
+                    m.get("slug", ""),
+                    m.get("title", ""),
+                    m.get("created_at", ""),
+                    m.get("status_label", ""),
+                    m.get("num_execucoes", 0),
+                    mtk.get("chamadas", 0),
+                    (pe.get("produto") or {}).get("brl", 0.0),
+                    (pe.get("produto") or {}).get("usd", 0.0),
+                    (pe.get("design") or {}).get("brl", 0.0),
+                    (pe.get("design") or {}).get("usd", 0.0),
+                    (pe.get("dev") or {}).get("brl", 0.0),
+                    (pe.get("dev") or {}).get("usd", 0.0),
+                    (pe.get("transversal") or {}).get("brl", 0.0),
+                    (pe.get("transversal") or {}).get("usd", 0.0),
+                    (pe.get("prototipo-hifi") or {}).get("brl", 0.0),
+                    (pe.get("prototipo-hifi") or {}).get("usd", 0.0),
+                    mtk.get("entrada", 0),
+                    mtk.get("entrada_sem_cache", 0),
+                    mtk.get("cache", 0),
+                    mtk.get("taxa_cache_pct", 0.0),
+                    mtk.get("ferramentas_entrada", 0),
+                    mtk.get("saida", 0),
+                    mtk.get("pensamento", 0),
+                    mtk.get("taxa_pensamento_pct", 0.0),
+                    mtk.get("total_tokens", 0),
+                    mtk.get("maior_entrada", 0),
+                    m.get("economia_cache_brl", 0.0),
+                    m.get("economia_cache_usd", 0.0),
+                    m.get("usd", 0.0),
+                    m.get("brl", 0.0),
+                ])
+            return buf.getvalue().encode("utf-8-sig")
+
+        download_button_lazy(
+            "📥 Exportar planilha (.CSV)",
+            _gerar_csv_custos,
+            file_name="custos_missoes_unooria.csv",
+            mime="text/csv",
+            key="dl_csv_custos_admin",
+        )
+
+    if not missoes_lista:
+        st.info("Nenhuma missão corresponde aos filtros selecionados.")
+    else:
+        linhas_m = [
+            "| Missão | Pasta / Slug | Data | Status | Exec. | Cham. | 🧭 Produto | 🎨 Design | 🛠️ Dev | 🧠 Transv. | 🖥️ Hi-Fi | Entrada | Em cache (%) | Saída | Pensamento (%) | Total Tokens | Econ. Cache | US$ Total | R$ Total |",
+            "|---|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|",
+        ]
+        for m in missoes_lista:
+            mtk = m.get("tokens") or {}
+            pe = m.get("por_etapa") or {}
+
+            def _cel_etapa(chave_et: str) -> str:
+                bl = pe.get(chave_et)
+                if not bl or (float(bl.get("brl") or 0) == 0 and int((bl.get("tokens") or {}).get("chamadas") or 0) == 0):
+                    return "—"
+                return f"{brl(float(bl.get('brl') or 0))} ({milhares(int((bl.get('tokens') or {}).get('total_tokens') or 0))} tok)"
+
+            titulo_m = str(m.get("title") or m.get("dir_name") or "Missão").replace("|", "·")
+            if len(titulo_m) > 38:
+                titulo_m = titulo_m[:36] + "…"
+            slug_m = str(m.get("slug") or m.get("dir_name") or "—")
+            if not m.get("tem_dados"):
+                linhas_m.append(
+                    f"| {m.get('status_icon', '')} {titulo_m} | `{slug_m}` | {m.get('created_at', '—')} "
+                    f"| {m.get('status_label', '—')} | 0 | 0 | — | — | — | — | — | — | — | — | — | — | — | — | *Sem telemetria* |"
+                )
+                continue
+            linhas_m.append(
+                f"| {m.get('status_icon', '')} **{titulo_m}** "
+                f"| `{slug_m}` "
+                f"| {m.get('created_at', '—')} "
+                f"| {m.get('status_label', '—')} "
+                f"| {int(m.get('num_execucoes') or 0)} "
+                f"| {milhares(int(mtk.get('chamadas') or 0))} "
+                f"| {_cel_etapa('produto')} "
+                f"| {_cel_etapa('design')} "
+                f"| {_cel_etapa('dev')} "
+                f"| {_cel_etapa('transversal')} "
+                f"| {_cel_etapa('prototipo-hifi')} "
+                f"| {milhares(int(mtk.get('entrada') or 0))} "
+                f"| {milhares(int(mtk.get('cache') or 0))} ({float(mtk.get('taxa_cache_pct') or 0):.1f}%) "
+                f"| {milhares(int(mtk.get('saida') or 0))} "
+                f"| {milhares(int(mtk.get('pensamento') or 0))} ({float(mtk.get('taxa_pensamento_pct') or 0):.1f}%) "
+                f"| {milhares(int(mtk.get('total_tokens') or 0))} "
+                f"| {brl(float(m.get('economia_cache_brl') or 0))} "
+                f"| {float(m.get('usd') or 0):.4f} "
+                f"| **{brl(float(m.get('brl') or 0))}** |"
+            )
+        st.markdown("\n".join(linhas_m))
+
+    st.markdown("---")
+
+    # 4. Inspeção Profunda de uma Missão (Drill-down)
+    st.markdown("#### 🔎 4. Inspeção Detalhada por Missão (Etapas, Agentes e Execuções)")
+    if missoes_lista:
+        opcoes_dir = [m["dir_name"] for m in missoes_lista]
+        mapa_missoes = {m["dir_name"]: m for m in missoes_lista}
+        col_sel, col_abrir = st.columns([3.5, 1])
+        with col_sel:
+            escolhida_dir = st.selectbox(
+                "Selecione uma missão para auditar cada etapa, agente e execução:",
+                options=opcoes_dir,
+                format_func=lambda d: (
+                    f"{mapa_missoes[d].get('status_icon', '')} {mapa_missoes[d].get('title', d)} "
+                    f"({d}) — {brl(float(mapa_missoes[d].get('brl') or 0))} · "
+                    f"{milhares(int((mapa_missoes[d].get('tokens') or {}).get('total_tokens') or 0))} tokens"
+                ),
+                key="admin_drilldown_missao",
+            )
+        with col_abrir:
+            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+            if st.button("📂 Abrir missão no Pipeline", key="admin_abrir_missao_pipeline", use_container_width=True):
+                loaded = load_saved_session(escolhida_dir)
+                if loaded:
+                    msgs, _res, _meta = loaded
+                    st.session_state.current_session_id = escolhida_dir
+                    st.session_state.messages = msgs
+                    st.session_state["secao_principal"] = "💬 Pipeline"
+                    st.rerun()
+
+        m_sel = mapa_missoes.get(escolhida_dir)
+        if m_sel:
+            with st.container(border=True):
+                st.markdown(
+                    f"##### {m_sel.get('status_icon', '')} {m_sel.get('title')} (`{m_sel.get('dir_name')}`) · "
+                    f"Slug: `{m_sel.get('slug') or '—'}` · Criada em: {m_sel.get('created_at', '—')}"
+                )
+                render_custo_da_missao({"custo_missao": {"total": m_sel, "execucoes": m_sel.get("execucoes") or []}}, prefix=f"admin_{escolhida_dir}")
+
+    st.markdown("---")
+
+    # 5. Consumo Global por Modelo, Ranking de Agentes e Tabela de Preços
+    st.markdown("#### 🤖 5. Consumo Consolidado por Modelo, Agente e Tabela Tarifária")
+    aba_mod, aba_ag, aba_precos = st.tabs([
+        "🧮 Por Modelo de IA",
+        f"🏆 Ranking de Agentes ({len(consolidado.get('por_agente') or [])})",
+        "💵 Tabela de Preços (US$ / 1M tokens)",
+    ])
+
+    with aba_mod:
+        por_modelo = consolidado.get("por_modelo") or {}
+        if not por_modelo:
+            st.caption("Nenhum modelo contabilizado.")
+        else:
+            linhas_mod = [
+                "| Modelo | Chamadas | Entrada total | Sem cache | Em cache (% hit) | Ferramentas | Saída visível | Pensamento (% saída) | Total tokens | US$ Ent. s/ cache | US$ Cache | US$ Saída | US$ Pensamento | Total US$ | Total R$ | % Custo |",
+                "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|",
+            ]
+            usd_tot = float(consolidado.get("usd") or 0)
+            for mod, bm in sorted(por_modelo.items(), key=lambda kv: float(kv[1].get("usd") or 0), reverse=True):
+                mtk = bm.get("tokens") or {}
+                usd_m = float(bm.get("usd") or 0)
+                pct_m = (usd_m / usd_tot * 100.0) if usd_tot > 0 else 0.0
+                linhas_mod.append(
+                    f"| `{mod}` "
+                    f"| {milhares(int(mtk.get('chamadas') or 0))} "
+                    f"| {milhares(int(mtk.get('entrada') or 0))} "
+                    f"| {milhares(int(mtk.get('entrada_sem_cache') or 0))} "
+                    f"| {milhares(int(mtk.get('cache') or 0))} ({float(mtk.get('taxa_cache_pct') or 0):.1f}%) "
+                    f"| {milhares(int(mtk.get('ferramentas_entrada') or 0))} "
+                    f"| {milhares(int(mtk.get('saida') or 0))} "
+                    f"| {milhares(int(mtk.get('pensamento') or 0))} ({float(mtk.get('taxa_pensamento_pct') or 0):.1f}%) "
+                    f"| {milhares(int(mtk.get('total_tokens') or 0))} "
+                    f"| {float(bm.get('usd_entrada_sem_cache') or 0):.4f} "
+                    f"| {float(bm.get('usd_cache') or 0):.4f} "
+                    f"| {float(bm.get('usd_saida') or 0):.4f} "
+                    f"| {float(bm.get('usd_pensamento') or 0):.4f} "
+                    f"| {usd_m:.4f} "
+                    f"| **{brl(float(bm.get('brl') or 0))}** "
+                    f"| {pct_m:.1f}% |"
+                )
+            st.markdown("\n".join(linhas_mod))
+
+    with aba_ag:
+        por_ag = consolidado.get("por_agente") or []
+        if not por_ag:
+            st.caption("Nenhum agente contabilizado.")
+        else:
+            linhas_ag = [
+                "| # | Etapa | Agente | Papel | Missões | Chamadas | Entrada | Sem cache | Em cache (%) | Saída | Pensamento (%) | Maior prompt | US$ Total | R$ Total | % Custo |",
+                "|--:|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|",
+            ]
+            usd_tot = float(consolidado.get("usd") or 0)
+            for idx_ag, ag in enumerate(por_ag, start=1):
+                atk = ag.get("tokens") or {}
+                usd_a = float(ag.get("usd") or 0)
+                pct_a = (usd_a / usd_tot * 100.0) if usd_tot > 0 else 0.0
+                linhas_ag.append(
+                    f"| {idx_ag} "
+                    f"| {ag.get('rotulo_etapa')} "
+                    f"| `{ag.get('agente')}` "
+                    f"| {ag.get('rotulo')} "
+                    f"| {int(ag.get('missoes') or 0)} "
+                    f"| {milhares(int(atk.get('chamadas') or 0))} "
+                    f"| {milhares(int(atk.get('entrada') or 0))} "
+                    f"| {milhares(int(atk.get('entrada_sem_cache') or 0))} "
+                    f"| {milhares(int(atk.get('cache') or 0))} ({float(atk.get('taxa_cache_pct') or 0):.1f}%) "
+                    f"| {milhares(int(atk.get('saida') or 0))} "
+                    f"| {milhares(int(atk.get('pensamento') or 0))} ({float(atk.get('taxa_pensamento_pct') or 0):.1f}%) "
+                    f"| {milhares(int(atk.get('maior_entrada') or 0))} "
+                    f"| {usd_a:.4f} "
+                    f"| **{brl(float(ag.get('brl') or 0))}** "
+                    f"| {pct_a:.1f}% |"
+                )
+            st.markdown("\n".join(linhas_ag))
+
+    with aba_precos:
+        linhas_p = [
+            "| Modelo | Vigência da Faixa | Entrada s/ Cache (US$/1M) | Entrada em Cache (US$/1M) | Saída e Pensamento (US$/1M) |",
+            "|---|---|--:|--:|--:|",
+        ]
+        for prefixo_m, faixas in TABELA_PRECOS.items():
+            for ate, p_ent, p_sai, p_cache in faixas:
+                faixa_txt = f"Até {ate.strftime('%d/%m/%Y')}" if ate is not None else "Vigência padrão / após promoção"
+                linhas_p.append(
+                    f"| `{prefixo_m}` | {faixa_txt} | US$ {p_ent:.3f} | US$ {p_cache:.3f} | US$ {p_sai:.2f} |"
+                )
+        st.markdown("\n".join(linhas_p))
 
 
 def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = ""):
@@ -2223,6 +2991,11 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
     aba = st.segmented_control("Seções", ABAS, default=ABAS[0], key=f"aba_{prefix}", label_visibility="collapsed") or ABAS[0]
 
     def stage_tab(stage_key: str):
+        from tools.custo import brl as brl_custo, detalhar_missao, milhares as mil_custo
+
+        render_custo_da_etapa(result.state or {}, stage_key, prefix)
+        det_stage = detalhar_missao(result.state or {})
+        agentes_por_id = {a.get("agente"): a for a in (det_stage.get("por_agente") or [])}
         stage = next(s for s in STAGES if s["key"] == stage_key)
         shown = False
         for meta in stage["agents"]:
@@ -2235,7 +3008,19 @@ def render_pipeline_details(result: PipelineExecutionResult, key_prefix: str = "
                 # a saída do A079 vem como ```html … ``` + envelope JSON; o iframe abriria em modo
                 # quirks com as crases e o JSON escritos na página. O arquivo limpo está no estado.
                 value = result.state.get("prototipo_arquivo") or value
-            with st.expander(f"{meta['icon']} {meta['name']}", expanded=False):
+            ag_info = agentes_por_id.get(meta.get("id"))
+            sufixo_custo = ""
+            if ag_info:
+                atk = ag_info.get("tokens") or {}
+                sufixo_custo = (
+                    f" — 💰 {brl_custo(float(ag_info.get('brl') or 0))} · "
+                    f"{mil_custo(int(atk.get('total_tokens') or 0))} tok "
+                    f"(ent {mil_custo(int(atk.get('entrada') or 0))} · "
+                    f"cache {float(atk.get('taxa_cache_pct') or 0):.0f}% · "
+                    f"saí {mil_custo(int(atk.get('saida') or 0))} · "
+                    f"pens {mil_custo(int(atk.get('pensamento') or 0))})"
+                )
+            with st.expander(f"{meta['icon']} {meta['name']}{sufixo_custo}", expanded=False):
                 if meta.get("id") == "A028RevisorOnePager" and "A028RevisorOnePager" not in (result.step_outputs or {}):
                     st.caption("ℹ️ *One-pager aprovado no gate estrutural sem necessidade de revisão. Exibindo a versão aprovada:*")
                 render_saida_agente(value, output_key=key, prefix=f"{prefix}_{key}")
@@ -2704,8 +3489,16 @@ def main():
     # ~380 KB de payload por interação.
     # Os prompts voltam à tela só para leitura (08/10/2026): eles vão dentro da imagem, e uma edição aqui valeria só
     # até o próximo deploy. O .zip baixa todos de uma vez.
-    SECOES = ["💬 Pipeline", "📝 Prompts e referências"]
+    sessao_main = sessao_atual()
+    eh_admin = bool(sessao_main and sessao_main.papel == "admin")
+    SECOES = ["💬 Pipeline", "💰 Custos e Uso de IA", "📝 Prompts e referências"] if eh_admin else ["💬 Pipeline", "📝 Prompts e referências"]
+    if st.session_state.get("secao_principal") not in SECOES:
+        st.session_state["secao_principal"] = SECOES[0]
     secao = st.segmented_control("Seção", SECOES, default=SECOES[0], key="secao_principal", label_visibility="collapsed") or SECOES[0]
+
+    if eh_admin and secao == "💰 Custos e Uso de IA":
+        render_painel_custos_admin(listar_sessoes())
+        return
 
     if secao == SECOES[0]:
         for idx, msg in enumerate(st.session_state.messages):

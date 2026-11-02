@@ -384,6 +384,7 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
         # Parecer humano (`pipeline/passagem.py`): a fila "Aguardando você" sai daqui, sem abrir
         # mais nenhum arquivo. Sessões anteriores ao parecer não têm `fluxo` e ficam de fora da fila.
         fluxo = conversa_data.get("fluxo") if isinstance(conversa_data.get("fluxo"), dict) else {}
+        custo_resumo = conversa_data.get("custo_resumo") if isinstance(conversa_data.get("custo_resumo"), dict) else {}
 
         sessions.append(
             {
@@ -403,12 +404,50 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
                 "fluxo_etapa": fluxo.get("etapa"),
                 "fluxo_situacao": fluxo.get("situacao"),
                 "fluxo_atualizado_em": fluxo.get("atualizado_em"),
+                "custo_resumo": custo_resumo,
             }
         )
 
     # Ordena decrescente pelo tempo de modificação
     sessions.sort(key=lambda s: s["mtime"], reverse=True)
     return sessions
+
+
+_CACHE_CUSTO_SESSAO: Dict[str, Tuple[float, Dict[str, Any], Dict[str, Any]]] = {}
+
+
+def carregar_custos_das_sessoes(sessions: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    """Enriquece as sessões salvas com `custo_missao` e `execucao` do `estado.json` (com cache por `mtime`).
+
+    Usado pelo painel administrativo de custos para consolidar todas as missões e etapas sem reler do disco
+    (ou do GCS FUSE) arquivos `estado.json` que não foram modificados.
+    """
+    lista = list(sessions) if sessions is not None else list_saved_sessions()
+    enriquecidas: List[Dict[str, Any]] = []
+    for s in lista:
+        item = dict(s)
+        caminho_dir = Path(str(s.get("path") or ""))
+        estado_file = caminho_dir / "estado.json"
+        custo_missao: Dict[str, Any] = {}
+        execucao: Dict[str, Any] = {}
+        try:
+            if estado_file.exists():
+                mtime = estado_file.stat().st_mtime
+                chave_cache = str(estado_file)
+                em_cache = _CACHE_CUSTO_SESSAO.get(chave_cache)
+                if em_cache and em_cache[0] == mtime:
+                    custo_missao, execucao = em_cache[1], em_cache[2]
+                else:
+                    bruto = json.loads(estado_file.read_text(encoding="utf-8"))
+                    custo_missao = bruto.get("custo_missao") if isinstance(bruto.get("custo_missao"), dict) else {}
+                    execucao = bruto.get("execucao") if isinstance(bruto.get("execucao"), dict) else {}
+                    _CACHE_CUSTO_SESSAO[chave_cache] = (mtime, custo_missao, execucao)
+        except Exception as exc:
+            logger.warning("Falha ao ler custo de %s: %s", estado_file, exc)
+        item["custo_missao"] = custo_missao
+        item["estado"] = {"custo_missao": custo_missao, "execucao": execucao}
+        enriquecidas.append(item)
+    return enriquecidas
 
 
 def load_saved_session(dir_name_or_id: str) -> Optional[Tuple[List[Dict[str, Any]], Any, Dict[str, Any]]]:
@@ -654,6 +693,14 @@ def save_session_record(
         "has_prd": bool(state.get("prd_final")) or (run_dir / "PRD.md").exists(),
         "files_count": sum(1 for p in list_session_files(run_dir) if p.suffix == ".md"),
     }
+    try:
+        from tools.custo import KEY_CUSTO, resumo_indexado
+
+        resumo_c = resumo_indexado(state.get(KEY_CUSTO), state)
+        if resumo_c:
+            data["custo_resumo"] = resumo_c
+    except Exception:
+        pass
     if historico_correcoes:
         data["historico_correcoes"] = historico_correcoes
 

@@ -206,12 +206,19 @@ def custo_da_geracao(relatorios: list) -> Dict[str, Any]:
         # relatório anterior a 30/10/2026 gravava só «padrão do SDK»: o padrão do google-antigravity 0.1.23
         modelos[chave] = MODELO_PADRAO_SDK if modelo in ("", "padrão") else modelo
         imagens += len(r.get("imagens") or [])
-    linha = custo_da_execucao(por_lote, next(iter(modelos.values()), ""), modelos)
+    linha = custo_da_execucao(por_lote, next(iter(modelos.values()), ""), modelos, etapas=["prototipo-hifi"])
     usd_imagens = imagens * PRECO_IMAGEM["gemini-3.1-flash-lite-image"]
     cotacao = linha.get("cotacao") or cotacao_usd_brl()[0]
+    linha["usd_imagens"] = round(usd_imagens, 6)
     linha["usd"] = round(linha["usd"] + usd_imagens, 4)
     linha["brl"] = round(linha["usd"] * cotacao, 2)
     linha["imagens"] = {"quantidade": imagens, "usd": round(usd_imagens, 4)}
+    if isinstance(linha.get("por_etapa"), dict) and "prototipo-hifi" in linha["por_etapa"]:
+        bloco_etapa = linha["por_etapa"]["prototipo-hifi"]
+        bloco_etapa["usd_imagens"] = round(float(bloco_etapa.get("usd_imagens", 0.0) or 0.0) + usd_imagens, 6)
+        bloco_etapa["usd"] = round(float(bloco_etapa.get("usd", 0.0) or 0.0) + usd_imagens, 4)
+        bloco_etapa["brl"] = round(bloco_etapa["usd"] * cotacao, 2)
+        bloco_etapa["imagens"] = {"quantidade": imagens, "usd": round(usd_imagens, 4)}
     return linha
 
 

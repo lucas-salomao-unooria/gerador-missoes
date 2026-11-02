@@ -729,21 +729,42 @@ def bloco_de_execucao(state: Dict[str, Any]) -> str:
 
     def _n(valor: int) -> str:
         """Milhar com ponto, como se escreve em português."""
-        return f"{valor:,}".replace(",", ".")
+        return f"{int(valor or 0):,}".replace(",", ".")
+
+    cache_tok = int(t.get("cache", 0) or 0)
+    ent_tok = int(t.get("entrada", 0) or 0)
+    taxa_cache = round((cache_tok / ent_tok) * 100.0, 1) if ent_tok > 0 else 0.0
+    extra_tok = ""
+    if cache_tok:
+        extra_tok += f", {_n(cache_tok)} em cache ({taxa_cache}%)"
+    if t.get("pensamento"):
+        extra_tok += f", {_n(t.get('pensamento', 0))} de raciocínio"
+    if t.get("ferramentas_entrada"):
+        extra_tok += f", {_n(t.get('ferramentas_entrada', 0))} de ferramentas"
+
     linhas = ["## Execução", "",
               f"- **Modelo:** `{exec_.get('modelo', '—')}`"
               + (f" · PRD: `{exec_['modelo_prd']}`" if exec_.get("modelo_prd") and exec_["modelo_prd"] != exec_.get("modelo") else ""),
               f"- **Reprodutibilidade:** seed `{exec_.get('seed_juiz', '—')}` · temperatura dos juízes `{exec_.get('temperatura_juiz', '—')}`",
               f"- **Duração:** {exec_.get('duracao_s', 0)} s · **{t.get('chamadas', 0)} chamadas** ao modelo",
-              f"- **Tokens:** {_n(total)} ({_n(t.get('entrada', 0))} de entrada, {_n(t.get('saida', 0))} de saída"
-              + (f", {_n(t.get('pensamento', 0))} de raciocínio" if t.get("pensamento") else "") + ")",
-              ""]
+              f"- **Tokens:** {_n(total)} ({_n(ent_tok)} de entrada, {_n(t.get('saida', 0))} de saída{extra_tok})"]
+    custo_exec = exec_.get("custo") or {}
+    if isinstance(custo_exec, dict) and (custo_exec.get("usd") or custo_exec.get("brl")):
+        linhas.append(
+            f"- **Custo desta execução:** R$ {float(custo_exec.get('brl', 0.0)):.2f} "
+            f"(US$ {float(custo_exec.get('usd', 0.0)):.4f})"
+        )
+    linhas.append("")
     por_agente = exec_.get("tokens_por_agente") or {}
     if por_agente:
         linhas += ["Os cinco agentes mais caros desta execução:", "",
-                   "| Agente | Entrada | Saída | Chamadas |", "|---|---:|---:|---:|"]
+                   "| Agente | Entrada | Em cache | Saída | Raciocínio | Chamadas |",
+                   "|---|---:|---:|---:|---:|---:|"]
         for nome, v in list(por_agente.items())[:5]:
-            linhas.append(f"| {nome} | {_n(v['entrada'])} | {_n(v['saida'])} | {v['chamadas']} |")
+            linhas.append(
+                f"| {nome} | {_n(v.get('entrada', 0))} | {_n(v.get('cache', 0))} "
+                f"| {_n(v.get('saida', 0))} | {_n(v.get('pensamento', 0))} | {v.get('chamadas', 0)} |"
+            )
         linhas.append("")
     return "\n".join(linhas)
 

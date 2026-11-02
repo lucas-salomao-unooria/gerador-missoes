@@ -315,20 +315,27 @@ def salvar_execucao_interrompida(
     """
     import json
 
-    from tools.custo import KEY_CUSTO, acumular, custo_da_execucao
+    from tools.custo import KEY_CUSTO, acumular, consumir_uso_externo, custo_da_execucao, enriquecer_tokens
 
     settings = get_settings()
     estado = {k: v for k, v in (state or {}).items() if not str(k).startswith("temp:")}
-    custo = custo_da_execucao(tokens_por_agente, settings.gemini_model, {"A113PrdWriter": settings.gemini_model_prd})
+    modelo_por_agente = {"A113PrdWriter": settings.gemini_model_prd}
+    consumir_uso_externo(initial_state, tokens_por_agente, modelo_por_agente)
+    consumir_uso_externo(estado, tokens_por_agente, modelo_por_agente)
+    etapas_exec = list(stages or settings.pipeline_stages)
+    custo = custo_da_execucao(tokens_por_agente, settings.gemini_model, modelo_por_agente, etapas=etapas_exec)
     estado["execucao"] = {
         "status": "erro", "erro": erro, "agente": agente,
         "modelo": settings.gemini_model, "modelo_prd": settings.gemini_model_prd,
         "duracao_s": round(duracao, 1), "tokens": custo["tokens"],
-        "tokens_por_agente": dict(sorted(tokens_por_agente.items(), key=lambda kv: -(kv[1]["entrada"] + kv[1]["saida"]))),
+        "tokens_por_agente": {
+            k: enriquecer_tokens(v)
+            for k, v in sorted(tokens_por_agente.items(), key=lambda kv: -(kv[1].get("entrada", 0) + kv[1].get("saida", 0)))
+        },
         "custo": custo,
     }
     estado[KEY_CUSTO] = acumular((initial_state or {}).get(KEY_CUSTO) or estado.get(KEY_CUSTO),
-                                 {**custo, "falhou": True, "erro": erro[:300]}, list(stages or settings.pipeline_stages))
+                                 {**custo, "falhou": True, "erro": erro[:300]}, etapas_exec, duracao_s=duracao)
     if historico_gates is not None:
         from tools.historico_gates import KEY as _KEY_HISTORICO, acumular as _acumular_historico, resumo as _resumo_historico
 
@@ -483,9 +490,12 @@ async def run_orchestrator_pipeline_stream(
             # pedaço parcial de streaming repete o uso acumulado da chamada: conta só o evento final
             if uso is not None and not getattr(event, "partial", False):
                 reg = tokens_por_agente.setdefault(author, {"entrada": 0, "saida": 0, "pensamento": 0, "cache": 0,
-                                                            "chamadas": 0})
+                                                            "ferramentas_entrada": 0, "chamadas": 0})
                 reg["cache"] += int(getattr(uso, "cached_content_token_count", 0) or 0)
                 reg["entrada"] += int(getattr(uso, "prompt_token_count", 0) or 0)
+                reg["ferramentas_entrada"] = int(reg.get("ferramentas_entrada", 0) or 0) + int(
+                    getattr(uso, "tool_use_prompt_token_count", 0) or 0
+                )
                 # a maior entrada de uma chamada: a do A004 crescia a cada volta do comitê até o 400 (3ef2b, 25/10/2026),
                 # e a soma não mostra isso
                 reg["maior_entrada"] = max(int(reg.get("maior_entrada", 0) or 0),
@@ -499,7 +509,8 @@ async def run_orchestrator_pipeline_stream(
                 _cfg = get_settings()
                 yield {"type": "custo_parcial", "timestamp": time.time(),
                        "custo": _custo_da_execucao(tokens_por_agente, _cfg.gemini_model,
-                                                   {"A113PrdWriter": _cfg.gemini_model_prd}),
+                                                   {"A113PrdWriter": _cfg.gemini_model_prd},
+                                                   etapas=list(stages or _cfg.pipeline_stages)),
                        "missao_antes": ((initial_state or {}).get(_KEY_CUSTO) or {}).get("total") or {}}
 
             if author != current_agent and author != "user":
@@ -579,26 +590,40 @@ async def run_orchestrator_pipeline_stream(
         # O classificador de sentido chama o modelo fora do ADK (`tools/classificador.py`, C7): o que ele gastou nesta
         # execução — o custo acumulado no estado menos o que já estava — entra no custo como um agente a mais
         from tools.classificador import custo_da_sessao as _custo_do_classificador
+        from tools.custo import KEY_CUSTO, acumular, consumir_uso_externo, custo_da_execucao, enriquecer_tokens
+
+        settings_exec = get_settings()
+        modelo_por_agente = {"A113PrdWriter": settings_exec.gemini_model_prd}
+        consumir_uso_externo(initial_state, tokens_por_agente, modelo_por_agente)
+        consumir_uso_externo(final_state, tokens_por_agente, modelo_por_agente)
 
         _cls_antes, _cls_depois = _custo_do_classificador(initial_state or {}), _custo_do_classificador(final_state)
-        _cls_tokens = {k: int((_cls_depois.get("tokens") or {}).get(k, 0) or 0)
-                       - int((_cls_antes.get("tokens") or {}).get(k, 0) or 0) for k in ("entrada", "saida", "pensamento")}
+        _cls_tokens = {
+            k: max(0, int((_cls_depois.get("tokens") or {}).get(k, 0) or 0)
+                   - int((_cls_antes.get("tokens") or {}).get(k, 0) or 0))
+            for k in ("entrada", "saida", "pensamento", "cache")
+        }
+        _cls_maior = int((_cls_depois.get("tokens") or {}).get("maior_entrada", 0) or 0)
         _cls_chamadas = int(_cls_depois.get("chamadas", 0) or 0) - int(_cls_antes.get("chamadas", 0) or 0)
+        _cls_do_cache = sum(
+            max(0, int((g or {}).get("do_cache", 0) or 0) - int(((_cls_antes.get("por_gate") or {}).get(gn) or {}).get("do_cache", 0) or 0))
+            for gn, g in (_cls_depois.get("por_gate") or {}).items()
+        )
         if _cls_chamadas > 0:
-            tokens_por_agente["ClassificadorDeSentido"] = {**_cls_tokens, "cache": 0, "chamadas": _cls_chamadas}
+            tokens_por_agente["ClassificadorDeSentido"] = {
+                **_cls_tokens,
+                "maior_entrada": _cls_maior,
+                "chamadas": _cls_chamadas,
+                "do_cache": _cls_do_cache,
+            }
+
+        etapas_exec = list(stages or settings_exec.pipeline_stages)
+        esta = custo_da_execucao(tokens_por_agente, settings_exec.gemini_model, modelo_por_agente, etapas=etapas_exec)
 
         # Bloco de execução: o que torna uma execução reproduzível e comparável com a seguinte.
         # Sem ele não havia como responder "quanto custa gerar uma missão", "qual agente pesa"
         # nem "estamos melhorando?" — os mesmos ~20 achados reapareciam sessão após sessão e
         # nada media a tendência.
-        totais = {
-            "entrada": sum(v["entrada"] for v in tokens_por_agente.values()),
-            "saida": sum(v["saida"] for v in tokens_por_agente.values()),
-            "pensamento": sum(v["pensamento"] for v in tokens_por_agente.values()),
-            "chamadas": sum(v["chamadas"] for v in tokens_por_agente.values()),
-            "cache": sum(v.get("cache", 0) for v in tokens_por_agente.values()),
-        }
-        settings_exec = get_settings()
         final_state["execucao"] = {
             "status": "concluida",
             "modelo": settings_exec.gemini_model,
@@ -606,20 +631,21 @@ async def run_orchestrator_pipeline_stream(
             "seed_juiz": settings_exec.seed_juiz,
             "temperatura_juiz": settings_exec.temperatura_juiz,
             "duracao_s": round(duration, 1),
-            "tokens": totais,
-            "tokens_por_agente": dict(sorted(tokens_por_agente.items(),
-                                             key=lambda kv: -(kv[1]["entrada"] + kv[1]["saida"]))),
+            "tokens": esta["tokens"],
+            "tokens_por_agente": {
+                k: enriquecer_tokens(v)
+                for k, v in sorted(
+                    tokens_por_agente.items(),
+                    key=lambda kv: -(kv[1].get("entrada", 0) + kv[1].get("saida", 0) + kv[1].get("pensamento", 0)),
+                )
+            },
+            "custo": esta,
         }
 
         # Custo em US$ e R$, somado às execuções anteriores desta missão (`tools/custo.py`): um refazer acrescenta
         # uma linha, e o total é o da missão inteira.
-        from tools.custo import KEY_CUSTO, acumular, custo_da_execucao
-
-        modelo_por_agente = {"A113PrdWriter": settings_exec.gemini_model_prd}
-        esta = custo_da_execucao(tokens_por_agente, settings_exec.gemini_model, modelo_por_agente)
-        final_state["execucao"]["custo"] = esta
         final_state[KEY_CUSTO] = acumular((initial_state or {}).get(KEY_CUSTO) or final_state.get(KEY_CUSTO),
-                                          esta, list(stages or settings_exec.pipeline_stages))
+                                          esta, etapas_exec, duracao_s=duration)
         from tools.historico_gates import (KEY as _KEY_HISTORICO, KEY_EXECUCAO_COMPLETA as _KEY_HISTORICO_COMPLETO,
                                            acumular as _acumular_historico, resumo as _resumo_historico)
 

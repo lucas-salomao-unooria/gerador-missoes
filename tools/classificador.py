@@ -372,7 +372,7 @@ class Sessao:
         self.do_cache = 0
         self.nao_sei = 0
         self.novas = 0
-        self.tokens = {"entrada": 0, "saida": 0, "pensamento": 0}
+        self.tokens = {"entrada": 0, "saida": 0, "pensamento": 0, "cache": 0, "maior_entrada": 0}
         self.usd = 0.0
         self._lock = threading.Lock()
 
@@ -389,8 +389,11 @@ class Sessao:
                 self.do_cache += 1
             if leitura.nao_sei:
                 self.nao_sei += 1
-            for k, v in (tokens or {}).items():
-                self.tokens[k] = self.tokens.get(k, 0) + int(v or 0)
+            for k in ("entrada", "saida", "pensamento", "cache"):
+                self.tokens[k] = self.tokens.get(k, 0) + int((tokens or {}).get(k, 0) or 0)
+            if tokens:
+                ent = int(tokens.get("maior_entrada", 0) or tokens.get("entrada", 0) or 0)
+                self.tokens["maior_entrada"] = max(int(self.tokens.get("maior_entrada", 0) or 0), ent)
             self.usd += usd
 
     def _guardar(self, h: str, registro: Dict[str, Any]) -> None:
@@ -409,13 +412,30 @@ class Sessao:
             return None
         cache = dict(list(self.cache.items())[-MAX_ENTRADAS:])
         custo = dict(self._anterior.get("custo") or {})
-        tokens = {k: int((custo.get("tokens") or {}).get(k, 0) or 0) + self.tokens.get(k, 0)
-                  for k in ("entrada", "saida", "pensamento")}
+        tokens_ant = dict(custo.get("tokens") or {})
+        tokens = {
+            k: int(tokens_ant.get(k, 0) or 0) + self.tokens.get(k, 0)
+            for k in ("entrada", "saida", "pensamento", "cache")
+        }
+        tokens["maior_entrada"] = max(
+            int(tokens_ant.get("maior_entrada", 0) or 0),
+            int(self.tokens.get("maior_entrada", 0) or 0),
+        )
         por_gate = dict(custo.get("por_gate") or {})
         g = dict(por_gate.get(self.gate) or {})
+        g_tok_ant = dict(g.get("tokens") or {})
+        g_tokens = {
+            k: int(g_tok_ant.get(k, 0) or 0) + self.tokens.get(k, 0)
+            for k in ("entrada", "saida", "pensamento", "cache")
+        }
+        g_tokens["maior_entrada"] = max(
+            int(g_tok_ant.get("maior_entrada", 0) or 0),
+            int(self.tokens.get("maior_entrada", 0) or 0),
+        )
         g.update({"chamadas": int(g.get("chamadas", 0)) + self.chamadas,
                   "do_cache": int(g.get("do_cache", 0)) + self.do_cache,
                   "nao_sei": int(g.get("nao_sei", 0)) + self.nao_sei,
+                  "tokens": g_tokens,
                   "usd": round(float(g.get("usd", 0.0)) + self.usd, 6),
                   "ultima": time.strftime("%d/%m/%Y %H:%M")})
         por_gate[self.gate] = g
@@ -500,9 +520,12 @@ def _chamar_modelo(pergunta: Pergunta, prompt: str, modelo: str) -> Tuple[str, D
     )
     resp = _cliente(settings.google_api_key).models.generate_content(model=modelo, contents=prompt, config=cfg)
     um = getattr(resp, "usage_metadata", None)
-    tokens = {"entrada": int(getattr(um, "prompt_token_count", 0) or 0),
+    ent = int(getattr(um, "prompt_token_count", 0) or 0)
+    tokens = {"entrada": ent,
               "saida": int(getattr(um, "candidates_token_count", 0) or 0),
-              "pensamento": int(getattr(um, "thoughts_token_count", 0) or 0)}
+              "pensamento": int(getattr(um, "thoughts_token_count", 0) or 0),
+              "cache": int(getattr(um, "cached_content_token_count", 0) or 0),
+              "maior_entrada": ent}
     return (getattr(resp, "text", "") or "").strip(), tokens
 
 

@@ -443,7 +443,8 @@ def retrabalhar_por_trocas(chave: str):
                                            proponente=PROPONENTE_DE_RETRABALHO,
                                            tentativas=tentativas_do_editor({chave: documento}),
                                            validador=validador_do_po(state.to_dict() if hasattr(state, "to_dict") else dict(state))
-                                           if chave == "one_pager" else None)
+                                           if chave == "one_pager" else None,
+                                           estado_uso=state)
         # consumido: o próximo autor da mesma chave nesta rodada (o revisor) não refaz a correção
         state[f"retrabalho_{chave}"] = ""
         if resultado is None or not resultado.aplicadas:
@@ -490,9 +491,13 @@ def montar_one_pager_por_trocas(papel: str):
         estado = state.to_dict() if hasattr(state, "to_dict") else dict(state)
         base = og.base_do_papel(estado, papel)
         motivos = str(state.get("retrabalho_one_pager") or "")
-        proponente = PROPONENTE_DO_ONE_PAGER_GRANDE or propor_edicao
-        proposta = await proponente(og.pedido(estado, papel, base, motivos), "produto", {"one_pager": base},
-                                    erros="", achados="")
+        if PROPONENTE_DO_ONE_PAGER_GRANDE is None:
+            proposta = await propor_edicao(og.pedido(estado, papel, base, motivos), "produto", {"one_pager": base},
+                                           erros="", achados="", estado_uso=state)
+        else:
+            proposta = await PROPONENTE_DO_ONE_PAGER_GRANDE(
+                og.pedido(estado, papel, base, motivos), "produto", {"one_pager": base}, erros="", achados=""
+            )
         # consumido: o retrabalho desta rodada foi ao editor junto com a tarefa do papel
         state["retrabalho_one_pager"] = ""
         edicoes = list(proposta.edicoes) if proposta.pontual else []
