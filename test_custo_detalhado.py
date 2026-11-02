@@ -261,3 +261,81 @@ def test_consolidar_missoes_e_session_store(tmp_path: Path, monkeypatch: pytest.
     assert "produto" in consolidado["por_etapa"]
     assert "dev" in consolidado["por_etapa"]
     assert len(consolidado["por_agente"]) == 2
+
+
+def test_arquitetura_hibrida_modelos_camadas_e_orcamento_juiz(monkeypatch: pytest.MonkeyPatch) -> None:
+    from google.adk.agents.llm_agent import LlmAgent
+
+    from config import get_settings
+    from pipeline.orchestrator import create_mission_orchestrator
+    from tools import custo
+
+    monkeypatch.setenv("COTACAO_USD_BRL", "5.00")
+    settings = get_settings()
+    assert settings.gemini_model == "gemini-3.8-flash"
+    assert settings.gemini_model_classificador == "gemini-3.5-flash-lite"
+    assert settings.gemini_model_parecer == "gemini-3.5-flash-lite"
+    assert settings.thinking_budget == 8192
+    assert settings.thinking_budget_juiz == 2048
+
+    orch = create_mission_orchestrator()
+    agentes: Dict[str, LlmAgent] = {}
+
+    def _coletar(ag: Any) -> None:
+        if isinstance(ag, LlmAgent):
+            agentes[ag.name] = ag
+        for sub in getattr(ag, "sub_agents", []) or []:
+            _coletar(sub)
+
+    _coletar(orch)
+
+    # Autores permanecem em gemini-3.8-flash com thinking_budget=8192
+    for nome_autor in ("A004NucleoNarrativo", "A045SpecMissao", "A061OnePagerCompleto", "A079Prototipo", "A113PrdWriter"):
+        ag = agentes[nome_autor]
+        assert ag.model == settings.gemini_model
+        assert ag.generate_content_config.thinking_config.thinking_budget == 8192
+
+    # Juízes de loop crítico permanecem em gemini-3.8-flash, mas com thinking_budget_juiz=2048
+    for nome_juiz in ("A007MicroGate", "A008JuizProfundidade", "A026GateEstrutural", "A043GateFinalProduto", "A057aBancaProdutoNarrativa", "A088QaEntregaveis"):
+        ag = agentes[nome_juiz]
+        assert ag.model == settings.gemini_model
+        assert ag.generate_content_config.thinking_config.thinking_budget == 2048
+
+    # Camada 1 e Camada 2 usam gemini-3.5-flash-lite e thinking_budget=2048
+    for nome_lite in (
+        "A025JuizContratoProdutoLlm",
+        "A049JuizEvidenciaLlm",
+        "A102JuizTelemetriaLlm",
+        "A010FidelidadeNucleoInterprete",
+        "A060FidelidadeProdutoInterprete",
+        "A094FidelidadeDesignInterprete",
+        "A126FidelidadeDevInterprete",
+        "A029aAvaliacaoPedagogica",
+        "A029bExperienciaEstudante",
+        "A029cAdequacaoPedagogica",
+        "A051JuizPerguntas",
+        "A128Aprendizado",
+    ):
+        ag = agentes[nome_lite]
+        assert ag.model == "gemini-3.5-flash-lite", f"{nome_lite} deveria usar gemini-3.5-flash-lite"
+        assert ag.generate_content_config.thinking_config.thinking_budget == 2048
+
+    # Precificação de gemini-3.5-flash-lite ($0.25/1M input, $1.50/1M output, $0.025/1M cache)
+    mapa = custo.modelos_dos_agentes(settings)
+    res = custo.custo_da_execucao(
+        {
+            "ClassificadorDeSentido": {"entrada": 100_000, "cache": 0, "saida": 10_000, "pensamento": 0, "chamadas": 10},
+            "A029aAvaliacaoPedagogica": {"entrada": 100_000, "cache": 0, "saida": 10_000, "pensamento": 0, "chamadas": 1},
+            "A004NucleoNarrativo": {"entrada": 100_000, "cache": 0, "saida": 10_000, "pensamento": 0, "chamadas": 1},
+        },
+        settings.gemini_model,
+        mapa,
+        etapas=["produto"],
+    )
+    assert res["tokens_por_agente"]["ClassificadorDeSentido"]["modelo"] == "gemini-3.5-flash-lite"
+    assert res["tokens_por_agente"]["A029aAvaliacaoPedagogica"]["modelo"] == "gemini-3.5-flash-lite"
+    assert res["tokens_por_agente"]["A004NucleoNarrativo"]["modelo"] == "gemini-3.8-flash"
+    # Flash-Lite ($0.04) vs Flash 3.8 ($0.1125) na mesma quantidade de tokens
+    assert res["tokens_por_agente"]["ClassificadorDeSentido"]["usd"] == pytest.approx(0.04, abs=1e-6)
+    assert res["tokens_por_agente"]["A004NucleoNarrativo"]["usd"] == pytest.approx(0.1125, abs=1e-6)
+

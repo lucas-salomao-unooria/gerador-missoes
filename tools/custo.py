@@ -36,6 +36,10 @@ KEY_USO_EXTERNO = "_uso_llm_externo"
 PRECOS: Dict[str, List[Tuple[Optional[date], float, float, float]]] = {
     "gemini-3.8-flash": [(date(2026, 12, 31), 0.75, 3.75, 0.075), (None, 1.50, 7.50, 0.15)],
     "gemini-3.6-flash": [(date(2026, 12, 31), 0.75, 3.75, 0.075), (None, 1.50, 7.50, 0.15)],
+    "gemini-3.5-flash-lite": [(None, 0.25, 1.50, 0.025)],
+    "gemini-3.1-flash-lite": [(None, 0.25, 1.50, 0.025)],
+    "gemini-3.1-flash-lite-preview": [(None, 0.25, 1.50, 0.025)],
+    "gemini-2.5-flash-lite": [(None, 0.10, 0.40, 0.01)],
     "gemini-3-flash-preview": [(None, 0.50, 3.00, 0.05)],
     # o modelo do agente de código do protótipo hi-fi (tools/prototipo_hifi); tabela consultada em 30/10/2026
     "gemini-4-argon": [(date(2026, 11, 30), 2.00, 10.00, 0.10), (None, 4.00, 20.00, 0.20)],
@@ -440,6 +444,62 @@ def consumir_uso_externo(
     return tpa, mpa
 
 
+#: Agentes de Camada 1 (micro-classificadores semânticos, juiz de achados, intérprete de pedido e triagem).
+AGENTES_CAMADA_CLASSIFICADOR: Tuple[str, ...] = (
+    "ClassificadorDeSentido",
+    "A000TriagemCorrecao",
+    "A025JuizContratoProdutoLlm",
+    "A049JuizEvidenciaLlm",
+    "A102JuizTelemetriaLlm",
+    "A010FidelidadeNucleoInterprete",
+    "A060FidelidadeProdutoInterprete",
+    "A094FidelidadeDesignInterprete",
+    "A126FidelidadeDevInterprete",
+)
+
+#: Agentes de Camada 2 (pareceres consultivos, juiz de perguntas 9f e síntese de aprendizado).
+AGENTES_CAMADA_PARECER: Tuple[str, ...] = (
+    "A029aAvaliacaoPedagogica",
+    "A029bExperienciaEstudante",
+    "A029cAdequacaoPedagogica",
+    "A051JuizPerguntas",
+    "A128Aprendizado",
+)
+
+
+def modelos_dos_agentes(settings: Any = None) -> Dict[str, str]:
+    """Mapa `{agente: modelo}` com os modelos configurados para PRD, Camada 1 (classificador) e Camada 2 (parecer)."""
+    if settings is None:
+        from config import get_settings
+
+        settings = get_settings()
+    mod_cls = getattr(settings, "gemini_model_classificador", "") or getattr(settings, "gemini_model", "gemini-3.8-flash")
+    mod_par = getattr(settings, "gemini_model_parecer", "") or getattr(settings, "gemini_model", "gemini-3.8-flash")
+    mod_prd = getattr(settings, "gemini_model_prd", "") or getattr(settings, "gemini_model", "gemini-3.8-flash")
+    mapa: Dict[str, str] = {"A113PrdWriter": mod_prd}
+    for ag in AGENTES_CAMADA_CLASSIFICADOR:
+        mapa[ag] = mod_cls
+    for ag in AGENTES_CAMADA_PARECER:
+        mapa[ag] = mod_par
+    return mapa
+
+
+def _modelo_do_agente(agente: str, modelo_padrao: str, modelo_por_agente: Optional[Dict[str, str]]) -> str:
+    """Resolve o modelo de `agente` aceitando chave exata, prefixo antes de `:<etapa>` ou sufixos de subagentes de Camada 1."""
+    mpa = modelo_por_agente or {}
+    if agente in mpa and mpa[agente]:
+        return mpa[agente]
+    base = str(agente or "").split(":", 1)[0].strip()
+    if base in mpa and mpa[base]:
+        return mpa[base]
+    if base.endswith(("FidelidadeNucleoInterprete", "FidelidadeProdutoInterprete", "FidelidadeDesignInterprete", "FidelidadeDevInterprete", "Interprete")) or (
+        base.endswith("Llm") and "Juiz" in base
+    ):
+        if "ClassificadorDeSentido" in mpa and mpa["ClassificadorDeSentido"]:
+            return mpa["ClassificadorDeSentido"]
+    return modelo_padrao
+
+
 def custo_da_execucao(
     tokens_por_agente: Dict[str, Dict[str, int]],
     modelo: str,
@@ -466,7 +526,7 @@ def custo_da_execucao(
 
     for agente, tokens_brutos in tokens_por_agente.items():
         tok = enriquecer_tokens(tokens_brutos)
-        m = (modelo_por_agente or {}).get(agente) or modelo
+        m = _modelo_do_agente(agente, modelo, modelo_por_agente)
         etapa = etapa_do_agente(agente, etapas)
         det = detalhar_custo_usd(tok, m, dia, cotacao=cotacao)
         if det is None:

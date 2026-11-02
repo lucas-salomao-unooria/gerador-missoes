@@ -315,11 +315,11 @@ def salvar_execucao_interrompida(
     """
     import json
 
-    from tools.custo import KEY_CUSTO, acumular, consumir_uso_externo, custo_da_execucao, enriquecer_tokens
+    from tools.custo import KEY_CUSTO, acumular, consumir_uso_externo, custo_da_execucao, enriquecer_tokens, modelos_dos_agentes
 
     settings = get_settings()
     estado = {k: v for k, v in (state or {}).items() if not str(k).startswith("temp:")}
-    modelo_por_agente = {"A113PrdWriter": settings.gemini_model_prd}
+    modelo_por_agente = modelos_dos_agentes(settings)
     consumir_uso_externo(initial_state, tokens_por_agente, modelo_por_agente)
     consumir_uso_externo(estado, tokens_por_agente, modelo_por_agente)
     etapas_exec = list(stages or settings.pipeline_stages)
@@ -327,6 +327,8 @@ def salvar_execucao_interrompida(
     estado["execucao"] = {
         "status": "erro", "erro": erro, "agente": agente,
         "modelo": settings.gemini_model, "modelo_prd": settings.gemini_model_prd,
+        "modelo_classificador": settings.gemini_model_classificador,
+        "modelo_parecer": settings.gemini_model_parecer,
         "duracao_s": round(duracao, 1), "tokens": custo["tokens"],
         "tokens_por_agente": {
             k: enriquecer_tokens(v)
@@ -504,12 +506,12 @@ async def run_orchestrator_pipeline_stream(
                 reg["pensamento"] += int(getattr(uso, "thoughts_token_count", 0) or 0)
                 reg["chamadas"] += 1
                 # o custo ao vivo: a tela mostra, e a reexecução que falhar o devolve ao estado restaurado
-                from tools.custo import KEY_CUSTO as _KEY_CUSTO, custo_da_execucao as _custo_da_execucao
+                from tools.custo import KEY_CUSTO as _KEY_CUSTO, custo_da_execucao as _custo_da_execucao, modelos_dos_agentes as _modelos_dos_agentes
 
                 _cfg = get_settings()
                 yield {"type": "custo_parcial", "timestamp": time.time(),
                        "custo": _custo_da_execucao(tokens_por_agente, _cfg.gemini_model,
-                                                   {"A113PrdWriter": _cfg.gemini_model_prd},
+                                                   _modelos_dos_agentes(_cfg),
                                                    etapas=list(stages or _cfg.pipeline_stages)),
                        "missao_antes": ((initial_state or {}).get(_KEY_CUSTO) or {}).get("total") or {}}
 
@@ -590,10 +592,10 @@ async def run_orchestrator_pipeline_stream(
         # O classificador de sentido chama o modelo fora do ADK (`tools/classificador.py`, C7): o que ele gastou nesta
         # execução — o custo acumulado no estado menos o que já estava — entra no custo como um agente a mais
         from tools.classificador import custo_da_sessao as _custo_do_classificador
-        from tools.custo import KEY_CUSTO, acumular, consumir_uso_externo, custo_da_execucao, enriquecer_tokens
+        from tools.custo import KEY_CUSTO, acumular, consumir_uso_externo, custo_da_execucao, enriquecer_tokens, modelos_dos_agentes
 
         settings_exec = get_settings()
-        modelo_por_agente = {"A113PrdWriter": settings_exec.gemini_model_prd}
+        modelo_por_agente = modelos_dos_agentes(settings_exec)
         consumir_uso_externo(initial_state, tokens_por_agente, modelo_por_agente)
         consumir_uso_externo(final_state, tokens_por_agente, modelo_por_agente)
 
@@ -628,6 +630,8 @@ async def run_orchestrator_pipeline_stream(
             "status": "concluida",
             "modelo": settings_exec.gemini_model,
             "modelo_prd": settings_exec.gemini_model_prd,
+            "modelo_classificador": settings_exec.gemini_model_classificador,
+            "modelo_parecer": settings_exec.gemini_model_parecer,
             "seed_juiz": settings_exec.seed_juiz,
             "temperatura_juiz": settings_exec.temperatura_juiz,
             "duracao_s": round(duration, 1),

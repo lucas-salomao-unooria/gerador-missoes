@@ -15,13 +15,18 @@ from prompts import load_prompt
 def get_juiz_de_achados(nome: str, *, status_key: str, report_key: str, fonte_key: str,
                         gate_rotulo: str, **kw) -> JuizDeAchadosAgent:
     base = status_key.removesuffix("_status")
+    kw_achados = dict(kw)
+    if kw_achados.get("model") is None:
+        kw_achados["model"] = get_settings().gemini_model_classificador
+    if kw_achados.get("thinking_budget") is None:
+        kw_achados["thinking_budget"] = get_settings().thinking_budget_curto
     juiz = create_llm_agent(
         name=f"{nome}Llm",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
         description=f"Lê as linhas que o gate `{gate_rotulo}` marcou e decide, com citação, se o texto afirma o uso do que a plataforma veda ou só cita para vedar.",
         instruction=load_prompt("transversal/juiz_de_achados.md"),
         output_key=f"juiz_{base}_saida",
-        **kw,
+        **kw_achados,
     )
     return JuizDeAchadosAgent(
         name=nome,
@@ -50,6 +55,8 @@ def get_fidelidade_check(nome: str, *, status_key: str, report_key: str, documen
         **kw,
     )
     kw_interprete = dict(kw)
+    if kw_interprete.get("model") is None:
+        kw_interprete["model"] = get_settings().gemini_model_classificador
     if kw_interprete.get("thinking_budget") is None:
         kw_interprete["thinking_budget"] = get_settings().thinking_budget_curto
     interprete = create_llm_agent(

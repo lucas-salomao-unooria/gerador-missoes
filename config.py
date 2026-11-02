@@ -76,9 +76,21 @@ class AppSettings(BaseSettings):
         default_factory=lambda: os.getenv("GEMINI_MODEL_PRD", "") or os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
         description="Modelo usado pelo redator do PRD (pode ser mais forte que o padrão)",
     )
+    gemini_model_classificador: str = Field(
+        default_factory=lambda: os.getenv("GEMINI_MODEL_CLASSIFICADOR", "gemini-3.5-flash-lite"),
+        description="Modelo para micro-classificadores semânticos (C7), juiz de achados, intérprete de pedido e triagem",
+    )
+    gemini_model_parecer: str = Field(
+        default_factory=lambda: os.getenv("GEMINI_MODEL_PARECER", "gemini-3.5-flash-lite"),
+        description="Modelo para pareceres consultivos (029a/b/c), juiz de perguntas (051) e síntese de aprendizado (128)",
+    )
     thinking_budget: int = Field(
         default_factory=lambda: int(os.getenv("THINKING_BUDGET", "8192")),
         description="Orçamento de raciocínio (0 = off, -1 = dinâmico, >0 = tokens)",
+    )
+    thinking_budget_juiz: int = Field(
+        default_factory=lambda: int(os.getenv("THINKING_BUDGET_JUIZ", "2048")),
+        description="Orçamento de raciocínio padrão para juízes e validadores determinísticos",
     )
     thinking_budget_curto: int = Field(
         default_factory=lambda: int(os.getenv("THINKING_BUDGET_CURTO", "2048")),
