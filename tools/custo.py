@@ -1391,6 +1391,8 @@ def consolidar_missoes(sessoes: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
             "status": s.get("status", ""),
             "status_label": s.get("status_label") or s.get("status", ""),
             "status_icon": s.get("status_icon", ""),
+            "excluida": bool(s.get("excluida")),
+            "excluida_em": str(s.get("excluida_em") or ""),
             "prd_gerado": bool(s.get("prd_gerado") or s.get("has_prd")),
             "tem_custo": tem_uso,
             "tem_dados": tem_uso,

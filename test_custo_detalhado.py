@@ -339,3 +339,105 @@ def test_arquitetura_hibrida_modelos_camadas_e_orcamento_juiz(monkeypatch: pytes
     assert res["tokens_por_agente"]["ClassificadorDeSentido"]["usd"] == pytest.approx(0.04, abs=1e-6)
     assert res["tokens_por_agente"]["A004NucleoNarrativo"]["usd"] == pytest.approx(0.1125, abs=1e-6)
 
+
+def test_soft_delete_preserva_sessao_e_custos_e_filtra_por_papel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Missões excluídas não são apagadas fisicamente; somem para dev/produto/design,
+    aparecem para admin com [EXCLUÍDA] e continuam contabilizadas no painel de custos.
+    """
+    import json
+    from pipeline import session_store
+    from tools import custo
+
+    monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+    monkeypatch.setenv("COTACAO_USD_BRL", "5.00")
+
+    linha = custo.custo_da_execucao(
+        {"A004NucleoNarrativo": {"entrada": 10000, "cache": 0, "saida": 2000, "pensamento": 0, "chamadas": 3}},
+        "gemini-3.8-flash",
+        {},
+        etapas=["produto"],
+    )
+    custo_missao = custo.acumular(None, linha, ["produto"])
+
+    s1 = tmp_path / "20261101-100000-session_ativa01"
+    s2 = tmp_path / "20261101-110000-session_excl02"
+
+    class _MockResult:
+        def __init__(self, sid: str, titulo: str) -> None:
+            self.session_id = sid
+            self.user_id = "user_test"
+            self.status = "success"
+            self.duration_seconds = 12.0
+            self.gates = {"gate_final_status": "aprovado"}
+            self.attached_files = []
+            self.step_thoughts = {}
+            self.state = {
+                "one_pager": f"# One-pager\n* **Nome que o estudante vê:** {titulo}\n* **Slug:** `exp-01-teste`",
+                custo.KEY_CUSTO: custo_missao,
+            }
+
+    for pasta, sid, titulo in (
+        (s1, "session_ativa01", "Missão Ativa"),
+        (s2, "session_excl02", "Missão Excluída"),
+    ):
+        pasta.mkdir(parents=True, exist_ok=True)
+        (pasta / "produto").mkdir(exist_ok=True)
+        (pasta / "produto" / "00-one-pager.md").write_text("# Missão\n", encoding="utf-8")
+        mock_res = _MockResult(sid, titulo)
+        (pasta / "estado.json").write_text(json.dumps(mock_res.state, ensure_ascii=False), encoding="utf-8")
+        session_store.save_session_record(
+            run_dir=pasta,
+            session_id=sid,
+            user_id="user_test",
+            prompt=titulo,
+            result=mock_res,
+            messages=[{"role": "user", "content": "Brief"}],
+            fluxo={"etapa": "produto", "situacao": "aguardando_parecer", "atualizado_em": "2026-11-01T10:00:00"},
+        )
+
+    # Exclusão lógica (soft delete): não remove a pasta nem os artefatos
+    ok = session_store.delete_saved_session(s2.name)
+    assert ok is True
+    assert s2.exists() and (s2 / "conversa.json").exists()
+    assert (s2 / ".excluida").exists()
+
+    # Regravar conversa.json (ex.: runner/correção) preserva excluida=True
+    session_store.save_session_record(
+        run_dir=s2,
+        session_id="session_excl02",
+        user_id="user_test",
+        prompt="Missão Excluída",
+        result=_MockResult("session_excl02", "Missão Excluída"),
+        messages=[{"role": "user", "content": "Brief"}],
+    )
+
+    todas = session_store.list_saved_sessions()
+    assert len(todas) == 2
+    por_dir = {s["dir_name"]: s for s in todas}
+    assert por_dir[s1.name]["excluida"] is False
+    assert por_dir[s2.name]["excluida"] is True
+    assert por_dir[s2.name]["excluida_em"] != ""
+
+    # Filtro de visibilidade para perfis não-admin vs admin
+    for papel in ("produto", "design", "dev"):
+        visiveis = todas if papel == "admin" else [s for s in todas if not s.get("excluida")]
+        assert [s["dir_name"] for s in visiveis] == [s1.name]
+
+    visiveis_admin = todas
+    assert len(visiveis_admin) == 2
+    labels_admin = [
+        f"{'[EXCLUÍDA] ' if s.get('excluida') else ''}{s['status_icon']} {s['title']}"
+        for s in visiveis_admin
+    ]
+    assert any(lbl.startswith("[EXCLUÍDA] ") and "Missão Excluída" in lbl for lbl in labels_admin)
+
+    # Consolidação de custos mantém tanto ativas quanto excluídas
+    enriquecidas = session_store.carregar_custos_das_sessoes(todas)
+    painel = custo.consolidar_missoes(enriquecidas)
+    assert painel["num_missoes"] == 2
+    assert painel["missoes_com_custo"] == 2
+    missoes_painel = {m["dir_name"]: m for m in painel["missoes"]}
+    assert missoes_painel[s2.name]["excluida"] is True
+    assert missoes_painel[s2.name]["brl"] > 0
+
+

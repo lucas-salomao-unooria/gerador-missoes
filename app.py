@@ -438,7 +438,8 @@ def render_aguardando_voce(sessoes: List[Dict[str, Any]], sessao: Optional[Sessa
     """Fila das missões paradas no papel de quem está logado. É o aviso: não há Slack nem e-mail."""
     if not sessao:
         return
-    minhas = [s for s in sessoes if s.get("fluxo_situacao") in SITUACOES_PENDENTES
+    minhas = [s for s in sessoes if not s.get("excluida")
+              and s.get("fluxo_situacao") in SITUACOES_PENDENTES
               and passagem.pode_agir(sessao.papel, s.get("fluxo_etapa") or "")]
     if not minhas:
         return
@@ -1484,15 +1485,28 @@ def render_sidebar() -> Dict[str, Any]:
 
         st.markdown("---")
         saved_sessions = listar_sessoes()
-        render_aguardando_voce(saved_sessions, sessao)
-        total_sessions = len(saved_sessions)
+        eh_admin = bool(sessao and sessao.papel == "admin")
+        # Missões excluídas não aparecem mais para dev, produto ou design — apenas para admin, com [EXCLUÍDA] na frente.
+        visiveis_sidebar = saved_sessions if eh_admin else [s for s in saved_sessions if not s.get("excluida")]
+        if not eh_admin and st.session_state.get("current_session_id"):
+            atual_excluida = any(
+                s["dir_name"] == st.session_state.get("current_session_id") and s.get("excluida")
+                for s in saved_sessions
+            )
+            if atual_excluida:
+                st.session_state.current_session_id = None
+                st.session_state.messages = []
+                init_session_state()
+
+        render_aguardando_voce(visiveis_sidebar, sessao)
+        total_sessions = len(visiveis_sidebar)
         header_title = f"#### 🗂️ Histórico de Missões ({total_sessions})" if total_sessions > 0 else "#### 🗂️ Histórico de Missões"
         st.markdown(header_title)
 
-        if not saved_sessions:
+        if not visiveis_sidebar:
             st.caption("Nenhuma missão gravada ainda.")
         else:
-            filtered_sessions = saved_sessions
+            filtered_sessions = visiveis_sidebar
             if total_sessions > 5:
                 search_query = st.text_input(
                     "Filtrar missões",
@@ -1502,8 +1516,10 @@ def render_sidebar() -> Dict[str, Any]:
                 ).strip().lower()
                 if search_query:
                     filtered_sessions = [
-                        s for s in saved_sessions
-                        if search_query in s.get("title", "").lower() or search_query in s.get("dir_name", "").lower()
+                        s for s in visiveis_sidebar
+                        if search_query in s.get("title", "").lower()
+                        or search_query in s.get("dir_name", "").lower()
+                        or (s.get("excluida") and search_query in "[excluída] excluida")
                     ]
 
             if not filtered_sessions:
@@ -1513,11 +1529,14 @@ def render_sidebar() -> Dict[str, Any]:
                 with st.container(height=container_height, border=True):
                     for s in filtered_sessions:
                         is_active = st.session_state.get("current_session_id") == s["dir_name"]
+                        excluida = bool(s.get("excluida"))
                         col_btn, col_del = st.columns([5, 1])
                         disp_title = s["title"]
-                        if len(disp_title) > 24:
-                            disp_title = disp_title[:22] + "…"
-                        btn_label = f"{s['status_icon']} {disp_title}"
+                        limite_titulo = 16 if excluida else 24
+                        if len(disp_title) > limite_titulo:
+                            disp_title = disp_title[:limite_titulo - 2] + "…"
+                        prefixo_excluida = "[EXCLUÍDA] " if excluida else ""
+                        btn_label = f"{prefixo_excluida}{s['status_icon']} {disp_title}"
                         cr = s.get("custo_resumo") if isinstance(s.get("custo_resumo"), dict) else {}
                         custo_txt = (
                             f" | 💰 R$ {float(cr.get('brl') or 0):.2f}".replace(".", ",")
@@ -1525,13 +1544,17 @@ def render_sidebar() -> Dict[str, Any]:
                             if cr and (float(cr.get("brl") or 0) > 0 or float(cr.get("usd") or 0) > 0)
                             else ""
                         )
+                        aviso_excluida = (
+                            f"\n🗑️ Marcada como excluída{(' em ' + s['excluida_em']) if s.get('excluida_em') else ''} (mantida para rastreio e custos)"
+                            if excluida else ""
+                        )
                         with col_btn:
                             if st.button(
                                 btn_label,
                                 key=f"sess_{s['dir_name']}",
                                 use_container_width=True,
                                 type="primary" if is_active else "secondary",
-                                help=f"{s['title']}\n📅 {s['created_at']} | Status: {s.get('status_label', s['status'])} | 📄 {s['files_count']} arquivos{custo_txt}",
+                                help=f"{prefixo_excluida}{s['title']}\n📅 {s['created_at']} | Status: {s.get('status_label', s['status'])} | 📄 {s['files_count']} arquivos{custo_txt}{aviso_excluida}",
                             ):
                                 loaded = load_saved_session(s["dir_name"])
                                 if loaded:
@@ -1540,13 +1563,17 @@ def render_sidebar() -> Dict[str, Any]:
                                     st.session_state.messages = msgs
                                     st.rerun()
                         with col_del:
-                            # qualquer papel exclui (decisão de 24/09/2026); só não com etapa rodando,
-                            # senão a thread em segundo plano seguiria gravando numa pasta apagada
-                            if st.button("🗑️", key=f"del_{s['dir_name']}", help=f"Excluir {s['title']}",
-                                         disabled=s.get("fluxo_situacao") in passagem.EM_EXECUCAO):
+                            # Exclusão é apenas lógica (soft delete): nenhuma missão é apagada do disco/bucket.
+                            # Se já está excluída (visível só para admin), o botão fica desabilitado pois o admin não exclui de fato.
+                            help_del = (
+                                "Missão já marcada como excluída (mantida para rastreio de custos — exclusão física desativada)"
+                                if excluida else f"Marcar {s['title']} como excluída"
+                            )
+                            if st.button("🗑️", key=f"del_{s['dir_name']}", help=help_del,
+                                         disabled=excluida or s.get("fluxo_situacao") in passagem.EM_EXECUCAO):
                                 delete_saved_session(s["dir_name"])
                                 invalidar_cache_sessoes()
-                                if st.session_state.get("current_session_id") == s["dir_name"]:
+                                if not eh_admin and st.session_state.get("current_session_id") == s["dir_name"]:
                                     st.session_state.current_session_id = None
                                     st.session_state.messages = []
                                     init_session_state()
@@ -2746,7 +2773,8 @@ def render_painel_custos_admin(saved_sessions: List[Dict[str, Any]]) -> None:
                     return "—"
                 return f"{brl(float(bl.get('brl') or 0))} ({milhares(int((bl.get('tokens') or {}).get('total_tokens') or 0))} tok)"
 
-            titulo_m = str(m.get("title") or m.get("dir_name") or "Missão").replace("|", "·")
+            prefixo_m = "[EXCLUÍDA] " if m.get("excluida") else ""
+            titulo_m = f"{prefixo_m}{str(m.get('title') or m.get('dir_name') or 'Missão').replace('|', '·')}"
             if len(titulo_m) > 38:
                 titulo_m = titulo_m[:36] + "…"
             slug_m = str(m.get("slug") or m.get("dir_name") or "—")
@@ -2792,6 +2820,7 @@ def render_painel_custos_admin(saved_sessions: List[Dict[str, Any]]) -> None:
                 "Selecione uma missão para auditar cada etapa, agente e execução:",
                 options=opcoes_dir,
                 format_func=lambda d: (
+                    f"{'[EXCLUÍDA] ' if mapa_missoes[d].get('excluida') else ''}"
                     f"{mapa_missoes[d].get('status_icon', '')} {mapa_missoes[d].get('title', d)} "
                     f"({d}) — {brl(float(mapa_missoes[d].get('brl') or 0))} · "
                     f"{milhares(int((mapa_missoes[d].get('tokens') or {}).get('total_tokens') or 0))} tokens"

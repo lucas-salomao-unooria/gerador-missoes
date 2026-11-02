@@ -385,6 +385,8 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
         # mais nenhum arquivo. Sessões anteriores ao parecer não têm `fluxo` e ficam de fora da fila.
         fluxo = conversa_data.get("fluxo") if isinstance(conversa_data.get("fluxo"), dict) else {}
         custo_resumo = conversa_data.get("custo_resumo") if isinstance(conversa_data.get("custo_resumo"), dict) else {}
+        excluida = bool(conversa_data.get("excluida") or (entry / ".excluida").exists())
+        excluida_em = str(conversa_data.get("excluida_em") or "")
 
         sessions.append(
             {
@@ -405,6 +407,8 @@ def list_saved_sessions() -> List[Dict[str, Any]]:
                 "fluxo_situacao": fluxo.get("situacao"),
                 "fluxo_atualizado_em": fluxo.get("atualizado_em"),
                 "custo_resumo": custo_resumo,
+                "excluida": excluida,
+                "excluida_em": excluida_em,
             }
         )
 
@@ -610,6 +614,8 @@ def load_saved_session(dir_name_or_id: str) -> Optional[Tuple[List[Dict[str, Any
         "status": status,
         "status_label": formatar_status_label(status),
         "created_at": conversa_data.get("created_at"),
+        "excluida": bool(conversa_data.get("excluida") or (target_dir / ".excluida").exists()),
+        "excluida_em": str(conversa_data.get("excluida_em") or ""),
         "historico_correcoes": (
             conversa_data.get("historico_correcoes")
             if isinstance(conversa_data.get("historico_correcoes"), list)
@@ -634,9 +640,9 @@ def save_session_record(
 ) -> Path:
     """Grava `conversa.json`.
 
-    O `fluxo` do parecer humano (`pipeline/passagem.py`) é preservado do arquivo em disco quando
-    não vem explícito: este arquivo é regravado do zero pelo runner e pela correção, e perder o
-    fluxo apagaria os pareceres de quem já deu *de acordo*.
+    O `fluxo` do parecer humano (`pipeline/passagem.py`) e a marcação `excluida` (soft delete)
+    são preservados do arquivo em disco quando não vêm explícitos: este arquivo é regravado do zero
+    pelo runner e pela correção, e perder esses campos apagaria os pareceres ou reexibiria missões excluídas.
 
     `created_at` e `historico_correcoes` existem para a correção de uma sessão
     (`pipeline/reexecucao.py`): a data de criação é a original, e o histórico acumula.
@@ -705,20 +711,33 @@ def save_session_record(
         data["historico_correcoes"] = historico_correcoes
 
     conversa_path = run_dir / "conversa.json"
-    if fluxo is None and conversa_path.exists():
+    existente: Dict[str, Any] = {}
+    if conversa_path.exists():
         try:
-            fluxo = json.loads(conversa_path.read_text(encoding="utf-8")).get("fluxo")
+            lido = json.loads(conversa_path.read_text(encoding="utf-8"))
+            if isinstance(lido, dict):
+                existente = lido
         except (OSError, ValueError):
-            fluxo = None
+            existente = {}
+    if fluxo is None:
+        fluxo = existente.get("fluxo")
     if isinstance(fluxo, dict):
         data["fluxo"] = fluxo
+    if existente.get("excluida") or (run_dir / ".excluida").exists():
+        data["excluida"] = True
+        if existente.get("excluida_em"):
+            data["excluida_em"] = existente["excluida_em"]
 
     conversa_path.write_text(json.dumps(data, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
     return conversa_path
 
 
 def delete_saved_session(dir_name_or_id: str) -> bool:
-    """Remove o diretório de uma sessão salva — e só de uma sessão.
+    """Marca uma sessão salva como excluída (soft delete em `conversa.json`), sem apagar arquivos do disco/bucket.
+
+    Nenhuma missão é apagada fisicamente para preservar o rastreamento completo de custos e histórico.
+    Missões marcadas com `"excluida": True` ficam ocultas para `produto`, `design` e `dev`, e aparecem
+    apenas para `admin` na sidebar com o prefixo `[EXCLUÍDA]`.
 
     Recusa nome vazio (`base_dir / ""` é o bucket inteiro), pasta reservada e qualquer alvo que não
     seja filho direto da pasta de saída. A busca por pedaço do nome também pula as reservadas.
@@ -745,10 +764,29 @@ def delete_saved_session(dir_name_or_id: str) -> bool:
 
     if target_dir.exists() and target_dir.is_dir():
         try:
-            shutil.rmtree(target_dir)
+            conversa_path = target_dir / "conversa.json"
+            conversa_data: Dict[str, Any] = {}
+            if conversa_path.exists():
+                try:
+                    lido = json.loads(conversa_path.read_text(encoding="utf-8"))
+                    if isinstance(lido, dict):
+                        conversa_data = lido
+                except (OSError, ValueError):
+                    conversa_data = {}
+            conversa_data["excluida"] = True
+            if not conversa_data.get("excluida_em"):
+                conversa_data["excluida_em"] = time.strftime("%d/%m/%Y %H:%M:%S")
+            conversa_path.write_text(
+                json.dumps(conversa_data, indent=2, ensure_ascii=False, default=str),
+                encoding="utf-8",
+            )
+            try:
+                (target_dir / ".excluida").write_text(str(conversa_data["excluida_em"]), encoding="utf-8")
+            except OSError:
+                pass
             return True
         except Exception as exc:
-            logger.error("Erro ao deletar sessão %s: %s", target_dir, exc)
+            logger.error("Erro ao marcar sessão %s como excluída: %s", target_dir, exc)
             return False
     return False
 

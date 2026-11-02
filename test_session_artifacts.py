@@ -273,10 +273,13 @@ class TestArtifactsAndSessionStore(unittest.TestCase):
         zip_bytes = create_session_zip(run_dir)
         self.assertGreater(len(zip_bytes), 100)
 
-        # Delete session
+        # Delete session (soft delete: preserva arquivos no disco e marca excluida=True)
         ok = delete_saved_session(sessions[0]["dir_name"])
         self.assertTrue(ok)
-        self.assertEqual(len(list_saved_sessions()), 0)
+        after_del = list_saved_sessions()
+        self.assertEqual(len(after_del), 1)
+        self.assertTrue(after_del[0]["excluida"])
+        self.assertEqual(len([s for s in after_del if not s.get("excluida")]), 0)
 
     def test_session_bypassed_shows_yellow_icon(self):
         """Quando um gate é bloqueado mas o pipeline avança (bypass) e gera PRD, status deve ser amarelo (🟡)."""
@@ -661,9 +664,11 @@ class TestBasePlataformaNaoESessao(unittest.TestCase):
         self.assertTrue((self.base / "atual.json").exists())
         self.assertTrue(self.sessao.exists())
 
-        self.assertTrue(delete_saved_session("session_x"))  # pedaço do nome continua valendo para sessão
-        self.assertFalse(self.sessao.exists())
+        self.assertTrue(delete_saved_session("session_x"))  # pedaço do nome continua valendo para sessão (soft delete)
+        self.assertTrue(self.sessao.exists())
+        self.assertTrue((self.sessao / ".excluida").exists())
         self.assertTrue((self.base / "atual.json").exists())
+        self.assertFalse((self.base / ".excluida").exists())
 
 
 class TestSessionZip(unittest.TestCase):
