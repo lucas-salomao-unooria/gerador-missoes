@@ -23,6 +23,7 @@ from agents.base import create_llm_agent
 from agents.callbacks import marcar_heranca
 from agents.checkers import ConsolidacaoBancaAgent, ConteudoAprovadoAgent, EscopoBancaAgent
 from prompts import load_prompt
+from tools.banca import instrucao_da_posicao
 
 #: Letra da dimensão → (sufixo do nome, prompt, sufixo da chave de saída).
 DIMENSOES_LLM: Dict[str, tuple] = {
@@ -52,7 +53,7 @@ def get_banca(posicao: str, dimensoes: str, numero: int, *, rotulo: str, titulo:
         create_llm_agent(
             name=_nome(n + 1, f"Banca{DIMENSOES_LLM[d][0]}", "abcde"[i]),
             description=f"Banca ({posicao}): dimensão {d}, com o escopo desta posição.",
-            instruction=load_prompt(DIMENSOES_LLM[d][1]),
+            instruction=instrucao_da_posicao(load_prompt(DIMENSOES_LLM[d][1]), posicao),
             output_key=chave,
             before_agent_callback=marcar_heranca,
             deterministico=True,

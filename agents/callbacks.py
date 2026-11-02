@@ -900,6 +900,7 @@ def orcamento_de_contexto(deterministico: bool):
                 elif state.get(chave):
                     state[chave] = []  # a chamada desta rodada coube inteira
             nova = contexto.po_primeiro(nova, estado)
+            nova = contexto.prefixo_cache_implicito(nova, estado)
             if nova != instrucao:
                 config.system_instruction = nova
         tokens_instrucao, tokens_historico = contexto.tokens_da_requisicao(llm_request)

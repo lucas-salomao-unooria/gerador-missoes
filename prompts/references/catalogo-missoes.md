@@ -2,7 +2,7 @@
 
 > **A fonte viva deste catálogo não é este arquivo.** Desde 22/09/2026 as missões geradas são
 > registradas automaticamente num índice (`output/_catalogo.json`), que a esteira lê a cada execução
-> e entrega aos prompts pela variável `{catalogo_missoes?}`. Este arquivo define **as colunas, o
+> e entrega aos prompts pela variável `catalogo_missoes`. Este arquivo define **as colunas, o
 > vocabulário e como comparar** — a regra, versionada aqui; o dado vive no índice, que persiste
 > entre execuções e entre revisões do serviço. A tabela ao fim é o **registro legado, congelado**:
 > ela alimentou a carga inicial do índice e não é mais mantida à mão.

@@ -80,6 +80,10 @@ class AppSettings(BaseSettings):
         default_factory=lambda: int(os.getenv("THINKING_BUDGET", "8192")),
         description="Orçamento de raciocínio (0 = off, -1 = dinâmico, >0 = tokens)",
     )
+    thinking_budget_curto: int = Field(
+        default_factory=lambda: int(os.getenv("THINKING_BUDGET_CURTO", "2048")),
+        description="Orçamento de raciocínio enxuto para agentes extratores/intérpretes curtos e juízes de escopo fechado",
+    )
     include_thoughts: bool = Field(
         default_factory=lambda: _env_bool("INCLUDE_THOUGHTS", "true"),
         description="Expor o fluxo de pensamento dos agentes",

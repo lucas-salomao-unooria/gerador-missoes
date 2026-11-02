@@ -57,6 +57,15 @@ DOCUMENTOS_LONGOS = ("one_pager", "one_pager_po", "material_anexado", "nucleo_na
 TITULO_PO_PRIMEIRO = "## One-pager do PO (anexo) — texto integral"
 PONTEIRO_PO_PRIMEIRO = ("(o texto integral do one-pager do PO está no começo desta instrução, no bloco «One-pager do PO "
                         "(anexo) — texto integral»)")
+TITULO_PLATAFORMA_PRIMEIRO = "## Referência da plataforma Unooria (prefixo compartilhado)"
+PONTEIRO_PLATAFORMA_PRIMEIRO = (
+    "(a referência da plataforma Unooria está no começo desta instrução, no bloco «Referência da plataforma Unooria "
+    "(prefixo compartilhado)»)")
+_RE_BLOCO_PLATAFORMA = re.compile(
+    r"<!-- início de (references/plataforma-unooria-(?!software\.md)[a-z0-9_-]+\.md) -->.*?"
+    r"<!-- fim de \1 -->",
+    re.DOTALL,
+)
 PONTEIRO_PO_PRESERVADO = (
     "(o one-pager do PO não é repetido aqui, para caber no contexto: ele está inteiro, palavra por palavra, dentro do "
     "one-pager da missão que você recebeu acima — um código conferiu cada trecho dele nesta execução. O que a esteira "
@@ -318,3 +327,37 @@ def po_primeiro(instrucao: str, state: Mapping[str, Any]) -> str:
     if not grande(po) or instrucao.startswith(TITULO_PO_PRIMEIRO) or not _solto(instrucao, "one_pager_po", state):
         return instrucao
     return f"{TITULO_PO_PRIMEIRO}\n\n{po}\n\n---\n\n" + instrucao.replace(po, PONTEIRO_PO_PRIMEIRO, 1)
+
+
+def prefixo_cache_implicito(instrucao: str, state: Optional[Mapping[str, Any]] = None) -> str:
+    """Posiciona blocos estáticos da plataforma (`references/plataforma-unooria-*.md`) e o documento-base
+    compartilhado da etapa (`spec_missao` ou `one_pager` com pelo menos `LIMIAR_BLOCO` caracteres) no início da
+    instrução para maximizar o hit rate do cache implícito do Gemini entre agentes consecutivos."""
+    if not instrucao or instrucao.startswith(TITULO_PLATAFORMA_PRIMEIRO):
+        return instrucao
+    blocos: List[str] = []
+
+    def _extrair(m: re.Match[str]) -> str:
+        blocos.append(m.group(0))
+        return PONTEIRO_PLATAFORMA_PRIMEIRO
+
+    corpo = _RE_BLOCO_PLATAFORMA.sub(_extrair, instrucao)
+    prefixos: List[str] = []
+    if blocos:
+        prefixos.append(f"{TITULO_PLATAFORMA_PRIMEIRO}\n\n" + "\n\n".join(blocos))
+    if state and not corpo.startswith(TITULO_PO_PRIMEIRO):
+        for chave in ("spec_missao", "one_pager"):
+            doc = str(state.get(chave) or "")
+            if len(doc) < LIMIAR_BLOCO or not _solto(corpo, chave, state):
+                continue
+            pos = corpo.find(doc)
+            if pos >= 500:
+                ponteiro = (f"(o texto integral de `{chave}` está no começo desta instrução, no bloco "
+                            f"«Documento-base compartilhado (`{chave}`)»)")
+                corpo = corpo.replace(doc, ponteiro, 1)
+                prefixos.append(f"## Documento-base compartilhado (`{chave}`)\n\n{doc}")
+                break
+    if not prefixos:
+        return instrucao
+    return "\n\n---\n\n".join(prefixos) + "\n\n---\n\n" + corpo
+
