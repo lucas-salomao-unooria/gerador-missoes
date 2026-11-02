@@ -663,6 +663,16 @@ def validar(state: Dict[str, Any]) -> Dict[str, Any]:
                 faltando.append(titulo)
             elif _linhas(atual) != _linhas(corpo):
                 mexidos.append(titulo)
+    _re_cb = re.compile(r"\bcanal\s*b\b|\bmultipla_escolha\b", re.I)
+    if _re_cb.search(texto) and not _re_cb.search(origem):
+        achados.append(_achado("canal-b-removido", (
+            "A narrativa do one-pager pedagógico cita Canal B ou pergunta de múltipla escolha. O Canal B foi "
+            "removido da esteira: toda evidência pedagógica é exclusivamente do Canal A (ação observada).")))
+    _re_e6 = re.compile(r"\betapa\s*6\b|\bE6[-_](?:ALU|PROF|SIS)\b|\bmomento\s+6\.\d", re.I)
+    if _re_e6.search(texto) and not _re_e6.search(origem):
+        achados.append(_achado("etapa-6-removida", (
+            "A narrativa do one-pager pedagógico cita a Etapa 6 (`E6-*` / `Momento 6.x`): a missão termina na "
+            "Etapa 5 (Explicar) e não tem Etapa 6 de transferência.")))
     if faltando:
         achados.append(_achado("bloco-do-contrato-ausente", (
             f"O pedagógico não traz {len(faltando)} subtítulo(s) da esteira que o contrato tem: "

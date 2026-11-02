@@ -43,6 +43,18 @@ def validar(html: str, telas_declaradas: Optional[List[str]] = None) -> Dict[str
 
     telas = sorted(set(_RE_ID_TELA.findall(texto)))
     declaradas = sorted(set(telas_declaradas or []))
+    telas_e6 = [t for t in telas if t.startswith("E6-")]
+    if telas_e6:
+        falha("etapa-6-removida",
+              f"O protótipo traz tela(s) da Etapa 6 ({', '.join(telas_e6[:6])}): a missão termina na Etapa 5 "
+              "(Explicar) e não deve ter Etapa 6 de transferência.")
+    for m_alu in re.finditer(r'data-screen-id\s*=\s*["\'](E\d-ALU-\d{2})["\']([^>]*>.*?)(?=data-screen-id\s*=|</body>|$)', texto, re.I | re.S):
+        bloco_alu = re.sub(r"<script\b[^>]*>.*?</script>|<style\b[^>]*>.*?</style>", " ", m_alu.group(2), flags=re.I | re.S)
+        if re.search(r"\bpodcast\b", bloco_alu, re.I) and not re.search(r"\b(?:sem|n[ãa]o)\s+podcast\b", bloco_alu, re.I):
+            falha("podcast-na-tela-do-estudante",
+                  f"A tela do estudante `{m_alu.group(1)}` no protótipo menciona podcast: o podcast de recapitulação "
+                  "é exclusivo da visão do professor (`E*-PROF-*`).")
+            break
     if declaradas:
         faltando = [t for t in declaradas if t not in telas]
         if faltando:

@@ -217,16 +217,23 @@ def _pedido_confere(celula: str, fonte: str, d_linha: Optional[Dict[str, str]] =
 
 #: O que saiu da missão por decisão do PO de 29/10/2026 — o Canal B (pergunta de avaliação) e a etapa 6 (Refletir, o
 #: caso de transferência). One-pager do PO anterior a isso ainda os traz; tirá-los não é perder o texto dele.
-_RE_REMOVIDO_PELO_PO = re.compile(r"\bcanal\s*b\b|\brefletir\b|\btransfer[eê]ncia\b|\betapa\s*6\b|\bE6[-_]", re.I)
+_RE_REMOVIDO_PELO_PO = re.compile(
+    r"\bcanal\s*b\b|\bmultipla_escolha\b|\brefletir\b|\btransfer[eê]ncia\b|\betapa\s*6\b|\bE6[-_]|\bmomento\s+6\.\d",
+    re.I,
+)
 
 
 def _removido_pelo_po(u: Dict[str, str]) -> bool:
-    """O trecho é do que saiu da missão: a seção trata disso, a linha da tabela é dela (primeira célula) ou o trecho
-    começa por ela. Uma nota que só cita o Refletir de passagem (a dos tempos do §10) continua do PO."""
+    """O trecho é do que saiu da missão: a seção trata disso, a linha da tabela é dela (primeira célula), o trecho
+    começa por ela, ou fala explicitamente de Canal B / Etapa 6 / Momento 6.x. Uma nota que só cita o Refletir de
+    passagem (a dos tempos do §10) continua do PO."""
     linha = u.get("linha") or ""
     primeira = linha.strip().strip("|").split("|")[0] if linha.strip().startswith("|") else ""
     inicio = " ".join((u.get("texto") or "").split()[:6])
-    return any(_RE_REMOVIDO_PELO_PO.search(x) for x in (u.get("secao") or "", primeira, inicio))
+    if any(_RE_REMOVIDO_PELO_PO.search(x) for x in (u.get("secao") or "", primeira, inicio)):
+        return True
+    return bool(re.search(r"\bcanal\s*b\b|\bmultipla_escolha\b|\betapa\s*6\b|\bE6[-_]\w+|\bmomento\s+6\.\d",
+                          u.get("texto") or "", re.I))
 
 
 def _autorizado_pelo_pedido_direto(u: Dict[str, str], pedidos: str) -> bool:

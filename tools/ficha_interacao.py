@@ -197,8 +197,13 @@ def validar(texto: str) -> Dict[str, Any]:
                                    f"O {nome} pertence à Etapa {m.etapa}: a missão termina na Etapa 5 (Explicar), sem "
                                    "Etapa 6 de transferência nem atividade nova para reaplicar habilidades."))
         if _normalizar(m.campos.get("Quem age", "")) == "estudante":
-            texto_momento = " ".join([m.titulo] + [str(v) for v in m.campos.values()])
-            if re.search(r"\bpodcast\b", texto_momento, re.I):
+            texto_momento = " ".join(
+                [m.titulo] + [str(m.campos.get(k, "")) for k in ("Na tela", "Gesto", "Opções", "Texto de tela", "Resposta na hora")]
+            )
+            if re.search(r"\bpodcast\b", texto_momento, re.I) and not re.search(
+                r"\b(?:sem|n[ãa]o\s+(?:h[áa]|tem|ouve|aparece|inclui)|exclusiv\w+\s+do\s+professor)\b[^\n.]{0,40}\bpodcast\b",
+                texto_momento, re.I
+            ):
                 achados.append(_achado("podcast-na-tela-do-estudante",
                                        f"O {nome} («Quem age: Estudante») menciona podcast: o podcast de recapitulação "
                                        "é exclusivo da visão do professor e nada dele deve aparecer para o estudante."))
@@ -223,7 +228,8 @@ def validar(texto: str) -> Dict[str, Any]:
 
         gesto = m.campos.get("Gesto", "")
         if gesto.split() and not _RE_MARCADOR.match(gesto.strip()):
-            verbo_bruto = _normalizar(gesto.split()[0])
+            primeiro_token = re.split(r"[:/·—–\-]", gesto.split()[0])[0]
+            verbo_bruto = _normalizar(primeiro_token)
             verbo_sem_acento = "".join(c for c in unicodedata.normalize("NFD", verbo_bruto)
                                        if unicodedata.category(c) != "Mn")
             verbo = verbo_bruto if verbo_bruto in GESTOS else _SINONIMOS_GESTO.get(verbo_sem_acento, verbo_bruto)
@@ -231,7 +237,8 @@ def validar(texto: str) -> Dict[str, Any]:
                 from tools import classificador
 
                 leitura = classificador.gesto_equivalente_ficha(gesto)
-                if leitura.rotulo == "equivalente":
+                sev_gesto = "bloqueio" if leitura.rotulo == "invalido" else "atencao"
+                if sev_gesto == "atencao":
                     achados.append(_achado("gesto-fora-da-lista", f"O gesto do {nome} começa com «{gesto.split()[0]}»; "
                                            "prefira abrir com um destes verbos canônicos: " + ", ".join(GESTOS) + ".",
                                            "atencao"))
@@ -239,11 +246,11 @@ def validar(texto: str) -> Dict[str, Any]:
                     achados.append(_achado("gesto-fora-da-lista", f"O gesto do {nome} começa com «{gesto.split()[0]}»; "
                                            "use um destes: " + ", ".join(GESTOS) + "."))
             elif verbo not in GESTOS_SEM_QUANTIDADE:
-                quantidade = re.split(r"\s[—–]\s", gesto, maxsplit=1)[0]
-                tem_num_extenso = bool(re.search(
-                    r"\b(?:um|uma|dois|duas|tr[êe]s|quatro|cinco|seis|sete|oito|nove|dez|ambos|ambas|todos|todas|cada|[úu]nic[oa])\b",
-                    quantidade, re.I))
-                if not re.search(r"\d", quantidade) and not tem_num_extenso and not _RE_MARCADOR.search(quantidade):
+                partes_gesto = re.split(r"\s[—–]\s", gesto, maxsplit=1)
+                quantidade = partes_gesto[0]
+                padrao_extenso = r"\b(?:um|uma|dois|duas|tr[êe]s|quatro|cinco|seis|sete|oito|nove|dez|ambos|ambas|todos|todas|cada|[úu]nic[oa]|par\s+de)\b"
+                tem_num = bool(re.search(r"\d", quantidade) or re.search(padrao_extenso, quantidade, re.I))
+                if not tem_num and not _RE_MARCADOR.search(gesto):
                     achados.append(_achado("gesto-sem-quantidade", f"O gesto do {nome} não diz quantas vezes nem "
                                                                    "sobre quantos itens: «escolher · 1 de 3 cartões», "
                                                                    "«ordenar · 3 critérios»."))
@@ -301,12 +308,16 @@ def validar(texto: str) -> Dict[str, Any]:
 
     opcoes_decidir = [o for m in momentos if m.etapa == ETAPA_DECIDIR and m.campos.get("Opções")
                       for o in _RE_ASPAS.findall(m.campos["Opções"])]
-    consequencia = next((m for m in momentos if m.etapa == ETAPA_CONSEQUENCIA), None)
-    if opcoes_decidir and consequencia is not None:
-        relatos = {_normalizar(o) for o in _RE_SE_OPCAO.findall(consequencia.corpo)}
-        sem_relato = [o for o in opcoes_decidir if _normalizar(o) not in relatos]
+    momentos_conseq = [m for m in momentos if m.etapa == ETAPA_CONSEQUENCIA]
+    if opcoes_decidir and momentos_conseq:
+        corpo_conseq = "\n".join(m.corpo for m in momentos_conseq)
+        relatos = {_normalizar(o) for o in _RE_SE_OPCAO.findall(corpo_conseq)}
+        sem_relato = [
+            o for o in opcoes_decidir
+            if not any(_normalizar(o) == r or _normalizar(o) in r or r in _normalizar(o) for r in relatos if r)
+        ]
         if sem_relato:
-            achados.append(_achado("consequencia-sem-opcao", f"O Momento {consequencia.id} (a consequência) não tem a "
+            achados.append(_achado("consequencia-sem-opcao", f"O Momento {momentos_conseq[0].id} (a consequência) não tem a "
                                    "linha `- Se \"<opção>\": …` para " + ", ".join(f"«{o}»" for o in sem_relato)
                                    + ": cada opção do Decidir tem o seu relato."))
 

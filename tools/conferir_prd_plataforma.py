@@ -170,8 +170,8 @@ def validar_contrato(texto: str, slug: str = "") -> List[Dict[str, str]]:
             uma_vez(f"tabela-{tabela}", _achado(
                 "evidencia-tabela-propria",
                 f"`{tabela}` guarda enquete ou nota por missão. A evidência pedagógica é genérica (módulo "
-                f"`evidencias/`, E14): ficha em `apps/api/src/evidencias/fichas/<expId>.ts`, Canal B pelas rotas "
-                f"`/evidencias/:expId/perguntas/:id`. Não crie tabela própria."))
+                f"`evidencias/`, E14): ficha em `apps/api/src/evidencias/fichas/<expId>.ts` (apenas Canal A; "
+                f"não há Canal B nem perguntas de múltipla escolha). Não crie tabela própria."))
         if _RE_ARQUIVADA.search(linha) and re.search(r"zer|reaplic|reinici|sess", linha, re.IGNORECASE):
             uma_vez("zerar-arquivada", _achado(
                 "zerar-arquiva",

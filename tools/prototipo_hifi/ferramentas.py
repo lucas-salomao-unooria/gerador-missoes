@@ -341,9 +341,12 @@ def lint(ws: str | Path, ids: Optional[List[str]] = None) -> Dict[str, Any]:
     acao_por_id = {q["id"]: q.get("acao", "") for q in quadros}
     pontes_ok = set(pontes(ws))
     for arq in sorted((ws / "telas").iterdir()) if (ws / "telas").exists() else []:
-        if not re.fullmatch(r"E\d-(?:ALU|PROF|SIS)-\d{2}\.tsx|_comum\.tsx", arq.name):
+        if arq.name.startswith("E6-"):
+            achados.append({"arquivo": arq.name, "codigo": "etapa-6-removida",
+                            "trecho": "a missão tem apenas 5 etapas (E0 a E5); Etapa 6 de transferência foi removida"})
+        elif not re.fullmatch(r"E[0-5]-(?:ALU|PROF|SIS)-\d{2}\.tsx|_comum\.tsx", arq.name):
             achados.append({"arquivo": arq.name, "codigo": "arquivo-fora-do-contrato",
-                            "trecho": "em telas/ só entram <ID>.tsx e _comum.tsx"})
+                            "trecho": "em telas/ só entram <ID>.tsx (E0 a E5) e _comum.tsx"})
     for css in sorted((ws / "estilos").glob("*.css")) if (ws / "estilos").exists() else []:
         achados += _lint_css(css)
     for arq in sorted((ws / "telas").glob("*.tsx")):

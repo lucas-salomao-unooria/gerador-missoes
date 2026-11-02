@@ -274,4 +274,46 @@ def test_sem_canal_b_podcast_so_professor_e_sem_etapa_6():
     assert "multipla_escolha" not in prd_codavel._TIPOS_FICHA
 
 
+def test_regressao_terceira_rodada_invariantes_e_falsos_positivos():
+    """3ª rodada de auditoria (01/11/2026):
+    1. Invariantes inegociáveis nunca são rebaixados por `linha_de_base.classificar`.
+    2. Menção negativa a podcast («sem podcast») na tela do estudante não gera falso positivo.
+    3. `evidencia.conferir_one_pager` bloqueia `etapa-6-removida` e `Canal B` por extenso.
+    4. `prototipo.validar` bloqueia `etapa-6-removida` e `podcast-na-tela-do-estudante`."""
+    from tools import evidencia, linha_de_base, prototipo
+
+    for cod in ("etapa-6-removida", "podcast-na-tela-do-estudante", "canal-b-removido", "ficha-tipo-invalido"):
+        achado = {"codigo": cod, "severidade": "bloqueio", "resumo": "Violação de invariante."}
+        assert linha_de_base.classificar(achado, {"status": "aprovado", "achados": []}, "") == linha_de_base.DA_EDICAO
+
+    sem_podcast = ONE_PAGER.replace(
+        "o chat do assistente com 1 mensagem e o contador de 3 publicações.",
+        "o chat do assistente com 1 mensagem, sem podcast para o aluno, e o contador de 3 publicações.",
+    )
+    assert "podcast-na-tela-do-estudante" not in _codigos(fi.validar(sem_podcast))
+
+    op_12a_e6 = (
+        "## 2. Habilidades BNCC\n- `EF06CO01`\n- `EF06CO02`\n\n"
+        "## 12. Evidência\n### 12a. Contrato de evidência por habilidade\n"
+        "| Habilidade (código) | Canal de evidência | Canal A: ação · etapa · regra ternária (Atingiu / Em processo / Não atingiu) |\n"
+        "|---|---|---|\n"
+        "| `EF06CO01` | Canal B | Atingiu se acertar, Em processo se tentar, Não atingiu se errar. |\n"
+        "| `EF06CO02` | A | Etapa 6 (E6-ALU-01): Atingiu se acertar, Em processo se tentar, Não atingiu se errar. |\n"
+    )
+    cods_ev = {a["codigo"] for a in evidencia.conferir_one_pager(op_12a_e6)["achados"]}
+    assert "canal-b-removido" in cods_ev
+    assert "etapa-6-removida" in cods_ev
+
+    html_invalido = (
+        '<!doctype html><html><body>'
+        '<section data-screen-id="E5-ALU-01" data-ator="ALU">Ouça o podcast de recapitulação da missão</section>'
+        '<section data-screen-id="E6-ALU-01" data-ator="ALU">Etapa 6</section>'
+        '</body></html>'
+    )
+    cods_proto = {a["codigo"] for a in prototipo.validar(html_invalido)["achados"]}
+    assert "etapa-6-removida" in cods_proto
+    assert "podcast-na-tela-do-estudante" in cods_proto
+
+
+
 

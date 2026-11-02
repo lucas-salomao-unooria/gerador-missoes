@@ -22,6 +22,11 @@ FRACAO = 0.85
 #: Linha que o próximo agente tem o dever de reescrever: a lacuna que ele fecha.
 _RE_MARCADOR = re.compile(r"\[(?:ABERTO|LACUNA|NEEDS|PAR[ÂA]METRO|PROPOSTA|DECIS[ÃA]O PENDENTE|PENDÊNCIA|PENDENCIA)|🔵|\[\[",
                           re.IGNORECASE)
+#: Linha que descreve Canal B, Etapa 6 / Refletir ou podcast para o estudante: removê-la é cumprir o contrato atual.
+_RE_REMOVIDO_PELO_CONTRATO = re.compile(
+    r"\bcanal\s*b\b|\bmultipla_escolha\b|\betapa\s*6\b|\brefletir\b|\bE6[-_]\w+|\bmomento\s+6\.\d",
+    re.IGNORECASE,
+)
 _RE_SEPARADOR = re.compile(r"^\s*\|?[\s:|-]+\|?\s*$")
 _RE_TITULO = re.compile(r"^(#{2,4})\s+(.+?)\s*$", re.M)
 
@@ -43,7 +48,7 @@ def linhas_perdidas(antes: str, depois: str) -> List[str]:
     tri_novo = _trigramas(novo)
     perdidas: List[str] = []
     for linha in (antes or "").splitlines():
-        if _RE_SEPARADOR.match(linha) or _RE_MARCADOR.search(linha):
+        if _RE_SEPARADOR.match(linha) or _RE_MARCADOR.search(linha) or _RE_REMOVIDO_PELO_CONTRATO.search(linha):
             continue
         n = _norm(linha)
         if len(n.split()) < MIN_PALAVRAS or n in novo:

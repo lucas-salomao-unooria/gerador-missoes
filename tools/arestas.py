@@ -47,7 +47,10 @@ _RE_ACERTO = re.compile(
 _RE_OPCAO_NOMEADA = re.compile(r"(?:selecionad|escolhid|marcad|assinalad)[oa]s?\s*\(?\s*[\"“«]([^\"”»\n]{1,60})[\"”»]",
                                re.I)
 #: A etapa da spec pede acerto em algum lugar: a guarda que o exige não é mudança.
-_RE_ACERTO_NA_SPEC = re.compile(r"corret|acert|exat|incorret|errad|gabarito|v[áa]lid", re.I)
+_RE_ACERTO_NA_SPEC = re.compile(
+    r"corret|acert|exat|incorret|errad|gabarito|v[áa]lid|consert|recalibr|reconfigur|ajustad[oa]\s+para|desbloqu",
+    re.I,
+)
 #: A regra de habilitação de tela: «habilitado apenas após …», «só habilita quando …».
 _RE_HABILITACAO = re.compile(r"habilit\w*", re.I)
 _RE_NEGADA = re.compile(r"\b(?:nenhum|nenhuma|sem|n[ãa]o)\b[^.;|]{0,30}$", re.I)

@@ -733,10 +733,11 @@ def conferir_status_de_gate(prd: str) -> Tuple[List[Dict[str, str]], Dict[str, A
 
 # --------------------------------------------------------------------------- 6. RF P0 com critério
 _RE_RF = re.compile(r"\bRF-\d{2,3}\b")
-#: EARS com o gatilho em caixa alta, como o gabarito escreve (`QUANDO … O SISTEMA DEVE …`, `SE … ENTÃO …`).
-#: A descrição em prosa («O sistema deve permitir…», «Ao confirmar…, o sistema deve…») não é critério.
+#: EARS com o gatilho em caixa alta ou capitalizado (`QUANDO … O SISTEMA DEVE …`, `Quando … o sistema deve …`).
+#: A descrição em prosa («O sistema deve permitir…») sem cláusula condicional não é critério.
 _RE_EARS = re.compile(
-    r"\b(?:QUANDO|ENQUANTO|ONDE|SE|DADO|WHEN|WHILE|WHERE|IF|GIVEN)\b[^\n]*?\b(?:DEVE|DEVER[ÁA]|ENT[ÃA]O|SHALL|THEN)\b")
+    r"\b(?:QUANDO|ENQUANTO|ONDE|SE|DADO|WHEN|WHILE|WHERE|IF|GIVEN|Quando|Enquanto|Onde|Se|Dado)\b[^\n]*?"
+    r"\b(?:DEVE|DEVER[ÁA]|ENT[ÃA]O|SHALL|THEN|deve|dever[áa]|ent[ãa]o)\b")
 _RE_GHERKIN = re.compile(r"\b(?:Dado|DADO|Given)\b.*?\b(?:Quando|QUANDO|When)\b.*?\b(?:Então|ENTÃO|Then)\b", re.S)
 
 
