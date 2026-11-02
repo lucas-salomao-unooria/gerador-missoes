@@ -63,7 +63,8 @@ def create_llm_agent(
     settings = get_settings()
     selected_model = model or settings.gemini_model
 
-    t_budget = thinking_budget if thinking_budget is not None else settings.thinking_budget
+    default_budget = settings.thinking_budget_juiz if deterministico else settings.thinking_budget
+    t_budget = thinking_budget if thinking_budget is not None else default_budget
     inc_thoughts = include_thoughts if include_thoughts is not None else settings.include_thoughts
 
     kwargs: dict[str, Any] = {

@@ -275,6 +275,11 @@ ONE_PAGER_PO_RODADAS = 2
 
 
 def get_avaliacao_pedagogica_agent(**kw) -> LlmAgent:
+    kw_parecer = dict(kw)
+    if kw_parecer.get("model") is None:
+        kw_parecer["model"] = get_settings().gemini_model_parecer
+    if kw_parecer.get("thinking_budget") is None:
+        kw_parecer["thinking_budget"] = get_settings().thinking_budget_curto
     return create_llm_agent(
         name="A029aAvaliacaoPedagogica",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
@@ -282,11 +287,16 @@ def get_avaliacao_pedagogica_agent(**kw) -> LlmAgent:
         instruction=load_prompt("produto/029a_avaliacao_pedagogica.md"),
         output_key="avaliacao_pedagogica_report",
         before_agent_callback=marcar_heranca,
-        **kw,
+        **kw_parecer,
     )
 
 
 def get_adequacao_pedagogica_agent(**kw) -> LlmAgent:
+    kw_parecer = dict(kw)
+    if kw_parecer.get("model") is None:
+        kw_parecer["model"] = get_settings().gemini_model_parecer
+    if kw_parecer.get("thinking_budget") is None:
+        kw_parecer["thinking_budget"] = get_settings().thinking_budget_curto
     return create_llm_agent(
         name="A029cAdequacaoPedagogica",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
@@ -294,11 +304,16 @@ def get_adequacao_pedagogica_agent(**kw) -> LlmAgent:
         instruction=load_prompt("produto/029c_adequacao_pedagogica.md"),
         output_key="adequacao_report",
         before_agent_callback=marcar_heranca,
-        **kw,
+        **kw_parecer,
     )
 
 
 def get_experiencia_aluno_agent(**kw) -> LlmAgent:
+    kw_parecer = dict(kw)
+    if kw_parecer.get("model") is None:
+        kw_parecer["model"] = get_settings().gemini_model_parecer
+    if kw_parecer.get("thinking_budget") is None:
+        kw_parecer["thinking_budget"] = get_settings().thinking_budget_curto
     return create_llm_agent(
         name="A029bExperienciaEstudante",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
@@ -306,7 +321,7 @@ def get_experiencia_aluno_agent(**kw) -> LlmAgent:
         instruction=load_prompt("produto/029b_experiencia_estudante.md"),
         output_key="experiencia_aluno_report",
         before_agent_callback=marcar_heranca,
-        **kw,
+        **kw_parecer,
     )
 
 
@@ -491,6 +506,8 @@ def get_vizinhas_catalogo_agent(nome: str) -> VizinhasCatalogoAgent:
 
 def get_juiz_perguntas_agent(**kw) -> LlmAgent:
     kw_curto = dict(kw)
+    if kw_curto.get("model") is None:
+        kw_curto["model"] = get_settings().gemini_model_parecer
     if kw_curto.get("thinking_budget") is None:
         kw_curto["thinking_budget"] = get_settings().thinking_budget_curto
     return create_llm_agent(

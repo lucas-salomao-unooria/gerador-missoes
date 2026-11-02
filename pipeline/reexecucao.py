@@ -1888,7 +1888,13 @@ async def triar_pedido(
         final = await runner.session_service.get_session(app_name=app, user_id="triagem", session_id=sessao.id)
         triagem_res = Triagem.de_texto(str((final.state if final else {}).get("triagem_correcao") or ""))
         if isinstance(estado, dict) and uso["chamadas"] > 0:
-            registrar_uso_externo(estado, "A000TriagemCorrecao", uso, etapa=triagem_res.etapa if triagem_res.confiavel else "transversal")
+            registrar_uso_externo(
+                estado,
+                "A000TriagemCorrecao",
+                uso,
+                etapa=triagem_res.etapa if triagem_res.confiavel else "transversal",
+                modelo=get_settings().gemini_model_classificador,
+            )
         return triagem_res
     except Exception as exc:  # pragma: no cover - rede/modelo
         return Triagem(etapa="indefinida", motivo=f"falha na triagem: {exc}")

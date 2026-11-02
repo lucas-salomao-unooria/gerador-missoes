@@ -43,12 +43,14 @@ def get_aprendizado_agent(
     thinking_budget: Optional[int] = None,
     include_thoughts: Optional[bool] = None,
 ) -> LlmAgent:
-    orcamento = get_settings().thinking_budget_curto if thinking_budget is None else thinking_budget
+    settings = get_settings()
+    orcamento = settings.thinking_budget_curto if thinking_budget is None else thinking_budget
     return create_llm_agent(
         name="A128Aprendizado",
         description="Registra o que a execução ensinou: catálogo, padrões, lacunas por classe e candidatos a critério.",
         instruction=load_prompt("transversal/128_aprendizado.md"),
         output_key="aprendizado_registro",
+        model=settings.gemini_model_parecer,
         thinking_budget=orcamento,
         include_thoughts=include_thoughts,
         after_agent_callback=conferir_aprendizado,
@@ -84,6 +86,7 @@ def get_triagem_correcao_agent(thinking_budget: Optional[int] = 1024) -> LlmAgen
         description="Triagem de um pedido de correção numa missão já gerada: de qual etapa a esteira recomeça, e o resumo do pedido para quem executa.",
         instruction=load_prompt("transversal/triagem_correcao.md"),
         output_key="triagem_correcao",
+        model=get_settings().gemini_model_classificador,
         include_contents="default",
         thinking_budget=thinking_budget,
         include_thoughts=False,

@@ -112,20 +112,19 @@ def create_mission_orchestrator(
     uma missão pela metade, e o gate de repetição (V5) passaria a acusá-la contra si mesma.
     """
     settings = get_settings()
-    t_budget = thinking_budget if thinking_budget is not None else settings.thinking_budget
     inc_thoughts = include_thoughts if include_thoughts is not None else settings.include_thoughts
     active = stages or settings.pipeline_stages
 
     sub_agents = []
     if "produto" in active:
-        sub_agents.append(build_produto_stage(t_budget, inc_thoughts, modo_estrito=modo_estrito))
+        sub_agents.append(build_produto_stage(thinking_budget, inc_thoughts, modo_estrito=modo_estrito))
     elif "spec" in active:
         # correção a partir da spec: núcleo, one-pager e gates vêm do estado salvo
-        sub_agents.append(build_produto_stage(t_budget, inc_thoughts, modo_estrito=modo_estrito, a_partir_de="spec"))
+        sub_agents.append(build_produto_stage(thinking_budget, inc_thoughts, modo_estrito=modo_estrito, a_partir_de="spec"))
     if "design" in active:
-        sub_agents.append(build_design_stage(t_budget, inc_thoughts))
+        sub_agents.append(build_design_stage(thinking_budget, inc_thoughts))
     if "dev" in active:
-        sub_agents.append(build_dev_stage(t_budget, inc_thoughts))
+        sub_agents.append(build_dev_stage(thinking_budget, inc_thoughts))
     if modo_pontual:
         # Correção pontual (`pipeline/reexecucao.py`): os documentos já vêm editados e os autores não rodam
         # (`agents.callbacks.travar_documento_na_correcao_pontual`). Os gates julgam uma vez — repetir a rodada só os
@@ -140,7 +139,7 @@ def create_mission_orchestrator(
     # e mesmo que abortasse, estes dois são o que explica o que houve.
     if com_transversal:
         sub_agents.append(get_diagnostico_agent())
-        sub_agents.append(get_aprendizado_agent(t_budget, inc_thoughts))
+        sub_agents.append(get_aprendizado_agent(thinking_budget, inc_thoughts))
         # Por último, de propósito: a ficha de catálogo copia do aprendizado os campos de julgamento
         # (descoberta, eixo, tipo de decisão) que só ele redige.
         sub_agents.append(get_registro_catalogo_agent())

@@ -558,6 +558,14 @@ def _ler_um(pergunta: Pergunta, entrada: Dict[str, Any], sessao_: Sessao, modelo
         return leitura
     h = chave(pergunta, texto, modelo)
     guardado = sessao_.cache.get(h) or _cache_fixo().get(h)
+    if not guardado:
+        # Fallback nos caches de sessão e de teste para entradas gravadas sob o modelo principal (ex.: gemini-3.8-flash)
+        for mod_alt in dict.fromkeys((get_settings().gemini_model, "gemini-3.8-flash")):
+            if mod_alt and mod_alt != modelo:
+                h_alt = chave(pergunta, texto, mod_alt)
+                guardado = sessao_.cache.get(h_alt) or _cache_fixo().get(h_alt)
+                if guardado:
+                    break
     if guardado:
         leitura = Leitura(str(guardado.get("r") or NAO_SEI), str(guardado.get("c") or ""),
                           "sessao" if h in sessao_.cache else "cache_de_teste")
@@ -606,7 +614,7 @@ def ler(pergunta: Pergunta, entradas: Sequence[Dict[str, Any]]) -> List[Leitura]
     if not entradas:
         return []
     sessao_ = _SESSAO.get() or Sessao(None, "sem gate")
-    modelo = get_settings().gemini_model
+    modelo = get_settings().gemini_model_classificador
     if len(entradas) == 1:
         return [_ler_um(pergunta, entradas[0], sessao_, modelo)]
     with ThreadPoolExecutor(max_workers=min(PARALELO, len(entradas))) as ex:

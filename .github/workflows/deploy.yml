@@ -108,6 +108,6 @@ jobs:
             --add-volume-mount=volume=artifacts-vol,mount-path=/app/output \
             --add-volume=name=base-plataforma-vol,type=cloud-storage,bucket=entre-redes-dev-base-plataforma,readonly=true \
             --add-volume-mount=volume=base-plataforma-vol,mount-path=/app/base-plataforma \
-            --update-env-vars=STITCH_MCP_MODE=remote,BASE_PLATAFORMA_DIR=/app/base-plataforma \
+            --update-env-vars=STITCH_MCP_MODE=remote,BASE_PLATAFORMA_DIR=/app/base-plataforma,GEMINI_MODEL=gemini-3.8-flash,GEMINI_MODEL_PRD=gemini-3.8-flash,GEMINI_MODEL_CLASSIFICADOR=gemini-3.5-flash-lite,GEMINI_MODEL_PARECER=gemini-3.5-flash-lite,THINKING_BUDGET=8192,THINKING_BUDGET_JUIZ=2048,THINKING_BUDGET_CURTO=2048 \
             --update-secrets=STITCH_API_KEY=plataforma-unooria-dev-stitch-api-key:latest,AUTH_CREDENCIAIS=plataforma-unooria-dev-gerador-credenciais:latest,AUTH_SEGREDO_JWT=plataforma-unooria-dev-gerador-jwt:latest \
             --quiet
