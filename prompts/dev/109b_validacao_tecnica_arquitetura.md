@@ -8,7 +8,9 @@ Você é **tech lead do monorepo `plataforma-unooria`** — Dimensão E da banca
 
 ## Gabarito da plataforma — software (monorepo, módulo da api, SDK, manifesto, testes, DoD)
 
-<!-- include: references/plataforma-unooria-software.md -->
+<!-- include: references/plataforma-unooria-essencial.md -->
+<!-- include: references/plataforma-unooria-api.md -->
+<!-- include: references/plataforma-unooria-contratos.md -->
 
 ## Gabarito da plataforma — infraestrutura (Cloud Run, buckets, CI/CD, limites)
 

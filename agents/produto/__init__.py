@@ -243,13 +243,16 @@ def get_revisor_one_pager_agent(**kw) -> LlmAgent:
 
 
 def get_restaurador_one_pager_po_agent(**kw) -> LlmAgent:
+    kw_curto = dict(kw)
+    if kw_curto.get("thinking_budget") is None:
+        kw_curto["thinking_budget"] = get_settings().thinking_budget_curto
     return create_llm_agent(
         name="A037RestaurarOnePagerPo",
         description="Devolve ao one-pager os trechos do one-pager do PO que a esteira reescreveu sem pedido; o que um gate ou parecer pedia vira proposta ao PO.",
         instruction=load_prompt("produto/037_restaurar_one_pager_po.md"),
         output_key="one_pager",
         before_agent_callback=montar_one_pager_por_trocas("restaurador"),
-        **kw,
+        **kw_curto,
     )
 
 
@@ -487,6 +490,9 @@ def get_vizinhas_catalogo_agent(nome: str) -> VizinhasCatalogoAgent:
 
 
 def get_juiz_perguntas_agent(**kw) -> LlmAgent:
+    kw_curto = dict(kw)
+    if kw_curto.get("thinking_budget") is None:
+        kw_curto["thinking_budget"] = get_settings().thinking_budget_curto
     return create_llm_agent(
         name="A051JuizPerguntas",
         deterministico=True,  # emite veredito: mesmo artefato, mesma resposta
@@ -494,7 +500,7 @@ def get_juiz_perguntas_agent(**kw) -> LlmAgent:
         instruction=load_prompt("produto/051_juiz_perguntas.md"),
         output_key="juiz_perguntas_report",
         before_agent_callback=marcar_heranca,
-        **kw,
+        **kw_curto,
     )
 
 

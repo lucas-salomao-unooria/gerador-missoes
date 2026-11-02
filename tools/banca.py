@@ -85,6 +85,30 @@ ESCOPOS: Dict[str, str] = {
     ),
 }
 
+#: Documentos de etapas futuras que não pertencem à posição da banca: numa reexecução de produto ou design sobre
+#: sessão que já tinha design/dev, interpolar `{jornada_telas?}` ou `{handoff_dev?}` enviava dezenas de milhares de
+#: tokens obsoletos e contradizia o `ESCOPOS[posicao]` ("ainda não existem: vêm vazios").
+CHAVES_FORA_DA_POSICAO: Dict[str, frozenset] = {
+    "produto": frozenset({
+        "anexo_design_spec", "jornada_telas", "fluxo_arestas", "copy_strings_revisada",
+        "caa_report", "wireframes_cobertura", "prototipo_relatorio", "stitch_links",
+        "handoff_dev", "brief_assets", "banco_conteudo",
+    }),
+    "design": frozenset({"handoff_dev", "brief_assets", "banco_conteudo"}),
+    "entrada": frozenset({"handoff_dev", "brief_assets", "banco_conteudo"}),
+    "dev": frozenset(),
+}
+
+
+def instrucao_da_posicao(instrucao: str, posicao: str) -> str:
+    """Remove do prompt da banca os placeholders `{chave?}` de etapas posteriores à `posicao`."""
+    fora = CHAVES_FORA_DA_POSICAO.get(posicao, frozenset())
+    if not fora:
+        return instrucao
+    padrao = re.compile(r"\{(" + "|".join(re.escape(k) for k in sorted(fora)) + r")\?\}")
+    return padrao.sub("*(não aplicável nesta posição da banca)*", instrucao)
+
+
 #: Saída de cada dimensão em cada posição → rótulo no relatório.
 DIMENSOES: Dict[str, str] = {
     "validacao_produto_narrativa": "A — Produto e narrativa",

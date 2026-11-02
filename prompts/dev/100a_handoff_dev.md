@@ -78,7 +78,9 @@ Você fecha os critérios 9.1, 9.2 e 9.3 da rubrica. Seu leitor é o dev — e o
 
 ## Contexto técnico da plataforma (para nomear arquivos, rotas, tabelas e contratos reais)
 
-<!-- include: references/plataforma-unooria-software.md -->
+<!-- include: references/plataforma-unooria-essencial.md -->
+<!-- include: references/plataforma-unooria-api.md -->
+<!-- include: references/plataforma-unooria-contratos.md -->
 
 ## Entregáveis
 

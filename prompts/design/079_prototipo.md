@@ -46,11 +46,7 @@ Sua pergunta: **um adulto que não acompanhou a esteira consegue percorrer a mis
 
 {ambiente_simulado?}
 
-**One-pager — o texto que a pessoa de produto escreveu sobre cada etapa. Vai LITERAL para o painel:**
-
-{one_pager?}
-
-**Conteúdo aprovado do one-pager (seções 0, 0.1, 0.2, 4, 10, 11 e 17 — a mecânica e as fichas `#### Momento E.k`):**
+**Conteúdo aprovado do one-pager (seções 0 a 18 literais, fichas `#### Momento E.k` e tabela de textos-chave — vai LITERAL para o painel da etapa):**
 
 {conteudo_aprovado?}
 

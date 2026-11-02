@@ -16,11 +16,9 @@ sumiram ou foram reescritos sem que o pedido do PO mandasse. Sua tarefa é devol
 
 {one_pager_po_report?}
 
-**Briefing e pedido do PO:**
+**Briefing do PO:**
 
 {briefing?}
-
-{pedido_correcao?}
 
 **Votos dos comitês pedagógicos (o que eles mandaram corrigir também vale como pedido):**
 

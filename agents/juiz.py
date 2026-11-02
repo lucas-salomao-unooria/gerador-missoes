@@ -8,6 +8,7 @@ from typing import Optional
 
 from agents.base import create_llm_agent
 from agents.checkers import FidelidadeCheckAgent, JuizDeAchadosAgent, JuizDeContradicoesAgent
+from config import get_settings
 from prompts import load_prompt
 
 
@@ -48,13 +49,16 @@ def get_fidelidade_check(nome: str, *, status_key: str, report_key: str, documen
         output_key=f"juiz_{base}_saida",
         **kw,
     )
+    kw_interprete = dict(kw)
+    if kw_interprete.get("thinking_budget") is None:
+        kw_interprete["thinking_budget"] = get_settings().thinking_budget_curto
     interprete = create_llm_agent(
         name=f"{nome}Interprete",
         deterministico=True,  # lê o pedido: mesmo pedido, mesma leitura
         description="Lê só o pedido do PO e separa, item a item, o texto que ele ditou do texto que mandou tirar — qualquer verbo, com ou sem aspas.",
         instruction=load_prompt("transversal/interprete_do_pedido.md"),
         output_key=f"interpretacao_{base}_saida",
-        **kw,
+        **kw_interprete,
     )
     return FidelidadeCheckAgent(
         parcial=parcial,

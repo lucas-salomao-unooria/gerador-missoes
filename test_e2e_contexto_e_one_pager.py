@@ -802,3 +802,66 @@ def test_refazer_a_etapa_limpa_o_corte_dos_documentos_dela():
     limpo, _ = preparar_estado(estado, "dev")
     assert list(limpo["cortes_do_modelo"]) == ["A014SecoesApoio"], "refazer o dev não desfaz o corte de produto"
     assert preparar_estado(estado, "produto")[0]["cortes_do_modelo"] == {}, "produto refeito refaz tudo depois dele"
+
+
+def test_catalogo_missoes_nao_interpola_duas_vezes_nos_prompts():
+    from prompts import load_prompt
+
+    for p in sorted((RAIZ / "prompts").rglob("*.md")):
+        rel = p.relative_to(RAIZ / "prompts")
+        if str(rel).startswith("references/"):
+            continue
+        expandido = load_prompt(str(rel))
+        assert expandido.count("{catalogo_missoes") <= 1, f"{rel} interpola catalogo_missoes mais de uma vez"
+    assert "{one_pager" not in load_prompt("design/079_prototipo.md")
+    assert load_prompt("produto/037_restaurar_one_pager_po.md").count("{pedido_correcao") == 0
+
+
+def test_banca_remove_placeholders_de_etapas_posteriores_por_posicao():
+    from agents.banca import get_banca
+    from tools.banca import CHAVES_FORA_DA_POSICAO
+
+    for pos, fora in CHAVES_FORA_DA_POSICAO.items():
+        passos = get_banca(pos, "AC", 57, rotulo="Banca", titulo="Banca", report_key="r", status_key="s")
+        juizes = [a for s in passos for a in getattr(s, "sub_agents", []) or [s]
+                  if hasattr(a, "instruction") and isinstance(a.instruction, str)]
+        assert juizes
+        for j in juizes:
+            for chave in fora:
+                assert f"{{{chave}?}}" not in j.instruction, f"{pos}/{j.name} ainda contém {{{chave}?}}"
+
+
+def test_prefixo_cache_implicito_move_referencia_da_plataforma_e_documento_base():
+    from prompts import load_prompt
+
+    p100a = contexto.prefixo_cache_implicito(load_prompt("dev/100a_handoff_dev.md"))
+    p109a = contexto.prefixo_cache_implicito(load_prompt("dev/109a_validacao_dados_lgpd.md"))
+    p109b = contexto.prefixo_cache_implicito(load_prompt("dev/109b_validacao_tecnica_arquitetura.md"))
+    p113 = contexto.prefixo_cache_implicito(load_prompt("dev/113_prd_writer.md"))
+    assert p100a.startswith(contexto.TITULO_PLATAFORMA_PRIMEIRO)
+    # 100a, 109a, 109b e 113 compartilham >280 mil caracteres idênticos no início da system_instruction
+    assert p100a[:280_000] == p109a[:280_000] == p109b[:280_000] == p113[:280_000]
+    # documento-base compartilhado (>= LIMIAR_BLOCO) vai para o início quando não há referência da plataforma
+    spec = "S" * (contexto.LIMIAR_BLOCO + 500)
+    instr = "Introdução longa.\n" * 40 + f"\n\n{spec}\n\nTarefa final."
+    movida = contexto.prefixo_cache_implicito(instr, {"spec_missao": spec})
+    assert movida.startswith("## Documento-base compartilhado (`spec_missao`)\n\n" + spec[:100])
+    assert movida.count(spec) == 1
+
+
+def test_thinking_budget_curto_aplicado_nos_agentes_leves():
+    from agents.juiz import get_fidelidade_check
+    from agents.produto import get_juiz_perguntas_agent, get_restaurador_one_pager_po_agent
+    from agents.transversal import get_aprendizado_agent
+    from config import get_settings
+
+    curto = get_settings().thinking_budget_curto
+    assert curto == 2048
+    assert get_restaurador_one_pager_po_agent().generate_content_config.thinking_config.thinking_budget == curto
+    assert get_juiz_perguntas_agent().generate_content_config.thinking_config.thinking_budget == curto
+    assert get_aprendizado_agent().generate_content_config.thinking_config.thinking_budget == curto
+    fid = get_fidelidade_check("FidTeste", status_key="fid_status", report_key="fid_report",
+                               documentos=["one_pager"], onde="produto")
+    interprete = [a for a in fid.sub_agents if a.name.endswith("Interprete")][0]
+    assert interprete.generate_content_config.thinking_config.thinking_budget == curto
+

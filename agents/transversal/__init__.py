@@ -21,6 +21,7 @@ from google.adk.agents.llm_agent import LlmAgent
 
 from agents.base import create_llm_agent
 from agents.checkers import DiagnosticoAgent, RegistroCatalogoAgent
+from config import get_settings
 from prompts import load_prompt
 
 
@@ -42,12 +43,13 @@ def get_aprendizado_agent(
     thinking_budget: Optional[int] = None,
     include_thoughts: Optional[bool] = None,
 ) -> LlmAgent:
+    orcamento = get_settings().thinking_budget_curto if thinking_budget is None else thinking_budget
     return create_llm_agent(
         name="A128Aprendizado",
         description="Registra o que a execução ensinou: catálogo, padrões, lacunas por classe e candidatos a critério.",
         instruction=load_prompt("transversal/128_aprendizado.md"),
         output_key="aprendizado_registro",
-        thinking_budget=thinking_budget,
+        thinking_budget=orcamento,
         include_thoughts=include_thoughts,
         after_agent_callback=conferir_aprendizado,
     )

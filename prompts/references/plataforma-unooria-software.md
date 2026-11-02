@@ -6,6 +6,6 @@
 
 <!-- include: references/plataforma-unooria-api.md -->
 
-<!-- include: references/plataforma-unooria-monorepo.md -->
-
 <!-- include: references/plataforma-unooria-contratos.md -->
+
+<!-- include: references/plataforma-unooria-monorepo.md -->
