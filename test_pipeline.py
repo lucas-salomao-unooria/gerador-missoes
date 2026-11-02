@@ -135,7 +135,7 @@ KNOWN_STATE_KEYS = {
     "edicao_pontual", "edicoes_pontuais", "modo_correcao", "documentos_travados", "linha_de_base",
     "linha_de_base_report",
     # parecer humano entre etapas (`pipeline/passagem.py`): notas no rodapé, pareceres no dossiê
-    "notas_de_passagem", "pareceres_humanos",
+    "notas_de_passagem", "pareceres_humanos", "aprovacao_em_linha_de_parametros",
     # conversa com as etapas (`pipeline/conversa_etapas.py`): fora da esteira, só o agente de conversa lê
     "etapa_da_conversa", "etapa_do_parecer", "contexto_da_etapa", "conversa_anterior", "resposta_conversa",
     # versão anterior de cada documento autoral, quando a etapa é refeita (pipeline/reexecucao.py)

@@ -340,7 +340,8 @@ _RE_PROGRESSO = re.compile(r"barra de progresso|indicador de progresso", re.I)
 _RE_CONTEXTO_DE_ESPERA = re.compile(r"carreg|gera[çc][ãa]o|gerando|\bIA\b|\bespera\b|aguard|estimativ", re.I)
 _RE_UI_DURACAO = re.compile(
     r"transi[çc][ãa]o|transition|fade|toast|tooltip|debounce|delay\s+visual|"
-    r"feedback\s+(?:visual|sonoro|t[áa]til)|micro[- ]?intera[çc][ãa]o|hover|ease(?:-in|-out)?|pulse|shake",
+    r"feedback\s+(?:visual|sonoro|t[áa]til)|micro[- ]?intera[çc][ãa]o|hover|ease(?:-in|-out)?|pulse|shake|"
+    r"anima[çc][ãa]o\s+(?:de\s+)?(?:entrada|sa[íi]da|transi[çc][ãa]o|hover|toque|clique|feedback|abertura|fechamento|troca)",
     re.I,
 )
 #: A oração da duração: entre ponto e vírgula, vírgula, célula de tabela e fim de frase.

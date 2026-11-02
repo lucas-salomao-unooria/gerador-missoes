@@ -257,6 +257,11 @@ def validar_cobertura(nucleo: str, mapa: str, material: str = "") -> Dict[str, A
             achados.append(_achado("etapa-invalida",
                                    f"{rotulo}: a coluna Etapa não nomeia uma das cinco etapas nem diz «fora»."))
             continue
+        if re.search(r"\brefletir\b|\betapa\s*6\b|\bE6\b", etapa, re.I):
+            achados.append(_achado("etapa-6-removida",
+                                   f"{rotulo}: a coluna Etapa cita a Etapa 6 / Refletir (`{etapa.strip()}`). "
+                                   "A missão termina na Etapa 5 (Explicar), sem Etapa 6 de transferência."))
+            continue
         if len(faz) < MIN_PASSO or _RE_PLACEHOLDER.search(faz):
             achados.append(_achado("acao-vazia",
                                    f"{rotulo}: a coluna «O que o estudante faz em tela» está vazia ou é um marcador."))

@@ -39,6 +39,8 @@ Cinco é o número fechado — nem quatro por economia, nem oito por zelo.
 
 {perguntas_po?}
 
+{aprovacao_em_linha_de_parametros?}
+
 ## Insumos
 
 **One-pager aprovado:**
@@ -142,7 +144,7 @@ Não aproveite a rodada para melhorar outra coisa: mudança não pedida invalida
 
 ## Regras
 
-1. **Os 12 blocos são obrigatórios.** Bloco sem conteúdo é `[ABERTO — dono]`, nunca omitido.
+1. **Os 12 blocos são obrigatórios.** Bloco sem conteúdo é `[ABERTO — dono]`, nunca omitido. **A missão tem exatamente 5 etapas (1 Desafiar/Engajar · 2 Navegar/Explorar · 3 Decidir · 4 Resultado/Aha · 5 Explicar)** — a Etapa 6 (Refletir / transferência para atividade nova) foi removida por decisão do PO de 29/10/2026: não crie Etapa 6, `E6-*` nem momento `6.x` em nenhum bloco da spec. O **podcast de recapitulação** é exclusivo da visão do professor (`PROF`): nunca o atribua a tela, momento ou ação do estudante (`ALU`/`SIS`).
 2. **Contrato de estados com nomes próprios** (viram enum no código), uma linha por transição: estado inicial · gatilho · regra · estado seguinte · responsável · reversível. Inclua conclusão, latch, reentrada (F5 / outro dia), segunda aplicação, e **modos de erro na voz da ficção como estados próprios**. Feche com a frase "não existem outros caminhos de conclusão, correção antecipada, reabertura de escolha ou mudança de pacote".
 3. **Bloco 0 completo**: slug, nome, séries no formato da plataforma (`["5EF"]`), unidade da trilha, `publico: estudante`, software clonado, **seção do DS** (a que o briefing fixou, quando fixou — é trava, e o que a coleção não oferece vai como pré-requisito do DS; senão, a seção para missão nova da tabela de `ambientes.md`: `unoovista`, `unoochat`, `unooriaai`, `tiktooria`, `unoogaleria`, `unoojornal`, `unooblog`; legada só por decisão registrada do PO), `secoes_ds_extras` copiadas do one-pager (vazio = nenhuma; com extras, o bloco 14 traz uma ficha por seção mais o «Mapa de seções» e as «Transições» do one-pager, palavra por palavra) ou, quando nenhuma coleção do inventário cobre o app, seção nova com componentes/responsável/prazo, viewport (casca 375×812 ou desktop) e por quê. **E a classe do ambiente**, numa linha logo depois da `secao_ds`: `classe_ambiente: app-clonado | mini-jogo`, copiada da seção 0 do one-pager (mini-jogo é sempre `secao_ds: minijogo:<nome>`). Desde 24/10/2026 o design não decide a classe nem o ambiente: o D9 lê os dois daqui, e sem eles devolve a missão a produto. Ambiente novo ou mini-jogo que o briefing não fixou vai com a proposta do one-pager — `[PROPOSTA — validar com PO: …]` numa linha do bloco 0 —, até o PO decidir no de acordo; um gate em código bloqueia a spec que os fixa sem ela.
 3b. **Mini-jogo: as regras e as fases no bloco 2.** Copie do §4 do one-pager, palavra por palavra, a subseção `### Regras e fases do mini-jogo` (tipo de jogo, as regras `R1`…, a tabela das fases com nome, ideia nova, regra da fase, verbo do jogo, como vence, como perde e habilidade, como o progresso aparece) — é conteúdo de produto, e a jornada só mapeia as telas para as fases. Se o one-pager não as traz, não as invente: `[ABERTO — dono: PO: regras e fases do mini-jogo — <o que falta>]`.

@@ -398,7 +398,7 @@ def validar_kpis(prd: str, spec: str = "", one_pager: str = "") -> Dict[str, Any
                     # o KPI-20 da exp01ef1b mede uma sequência E2→E4; a dica antiga só mandava trocar o
                     # evento, e trocá-lo derrubaria a medida (07/10/2026)
                     saida += (f" Se o KPI mede uma sequência de etapas, a correção é ampliar a coluna Tela para "
-                              f"{sorted(telas_kpi | telas_evt)}, não trocar o evento.")
+                              f"{sorted(t for t in (telas_kpi | telas_evt) if not str(t).startswith('E6'))}, não trocar o evento.")
                     falha("kpi-tela-divergente",
                           f"{nome} mede {sorted(telas_kpi)} e é alimentado por `{e}`, que dispara em "
                           f"{sorted(telas_evt)}. O número vai sair e não vai medir o que o KPI diz. {saida}",
@@ -417,7 +417,12 @@ def validar_kpis(prd: str, spec: str = "", one_pager: str = "") -> Dict[str, Any
         # (KPI-16/17) e a exp04ef1b (KPI-02/03/05/06). O voto está em `exp01ef1b_sessoes.voto_emocional`, e é essa
         # coluna que o cálculo lê. ⚠️: o número sai, mas de uma telemetria que ninguém emite.
         operacionais = [x for x in usados if caminho_do_evento.get(x, "").startswith("operac")]
-        if campos and operacionais:
+        analiticos_na_celula = [
+            x for x in (eventos or usados)
+            if not caminho_do_evento.get(x, "").startswith("operac")
+            and (set(campos) <= _campos_payload(payload_do_evento.get(x, "")))
+        ]
+        if campos and operacionais and not analiticos_na_celula:
             falha("kpi-operacional-com-resultado",
                   f"{nome} calcula com `{', '.join(campos)}` de {', '.join(f'`{x}`' for x in operacionais)}, de caminho "
                   f"operacional: evento operacional não passa por `track` — é a rota do módulo gravando uma coluna, e "

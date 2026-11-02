@@ -33,6 +33,15 @@ CONCORDAM_SIM = "concordam_sim"
 CONCORDAM_NAO = "concordam_nao"
 DUVIDA = "duvida"
 
+#: Códigos de invariantes inegociáveis do PO que nunca são rebaixados a 🟡 na linha de base de edição pontual.
+CODIGOS_INVARIANTES_BLOQUEANTES = frozenset({
+    "etapa-6-removida",
+    "podcast-na-tela-do-estudante",
+    "podcast-em-tela-do-estudante",
+    "canal-b-removido",
+    "ficha-tipo-invalido",
+})
+
 
 def por_prova(severidade: str, sustentacao: str, rebaixada: str = ATENCAO) -> str:
     """A severidade que o achado pode ter: o bloqueio sustentado só por interpretação cai para `rebaixada` (🟡, ou a

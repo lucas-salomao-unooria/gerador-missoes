@@ -3375,16 +3375,18 @@ class MecanicaCheckAgent(BaseAgent):
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import classificador
         from tools import ficha_interacao as fi
         from tools import mecanica as mec
 
         nucleo = str(ctx.session.state.get(self.chave, "") or "")
         slug = extrair_slug(nucleo) or ""
-        resultado = mec.validar(nucleo)
-        # A ficha de interação do §4 (29/10/2026) é a outra metade da mecânica: o que o estudante faz, momento a
-        # momento. Vai no mesmo relatório e no mesmo status, para o autor do núcleo e os revisores a receberem onde
-        # já recebem a conta da virada; o envelope do fim (o que vale) junta os achados das duas.
-        ficha = fi.validar(nucleo)
+        with classificador.sessao(ctx.session.state, self.status_key) as sessao_cls:
+            resultado = mec.validar(nucleo)
+            # A ficha de interação do §4 (29/10/2026) é a outra metade da mecânica: o que o estudante faz, momento a
+            # momento. Vai no mesmo relatório e no mesmo status, para o autor do núcleo e os revisores a receberem onde
+            # já recebem a conta da virada; o envelope do fim (o que vale) junta os achados das duas.
+            ficha = fi.validar(nucleo)
         status = fi.pior(resultado["status"], ficha["status"])
         relatorio = mec.relatorio(resultado, slug) + "\n" + fi.relatorio(ficha, slug, envelope={
             "agente": "mecanica-check", "missao": slug, "status": status,
@@ -3400,6 +3402,7 @@ class MecanicaCheckAgent(BaseAgent):
                         self.report_key: relatorio,
                         self.status_key: status,
                         f"{self.status_key}_envelope": extrair_envelope(relatorio) or {},
+                        **sessao_cls.delta(),
                     }))
 
 
@@ -3413,6 +3416,7 @@ class CoberturaConceitualAgent(BaseAgent):
 
     @override
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        from tools import classificador
         from tools import profundidade as prof
 
         state = ctx.session.state
@@ -3421,7 +3425,8 @@ class CoberturaConceitualAgent(BaseAgent):
         # o material que o PO colou num pedido ou parecer também é material (exp04ef1b, 25/09/2026)
         material = "\n\n".join(m for m in (str(state.get("material_anexado", "") or ""), prof.material_do_po(dict(state)))
                                if m.strip())
-        resultado = prof.validar_cobertura(nucleo, mapa, material)
+        with classificador.sessao(state, "profundidade_status") as sessao_cls:
+            resultado = prof.validar_cobertura(nucleo, mapa, material)
         relatorio = prof.relatorio_cobertura(resultado, extrair_slug(nucleo) or "")
         bloqueios = [a for a in resultado["achados"] if a["severidade"] == "bloqueio"]
         icone = {"aprovado": "✅", "amarelo": "🟡", "bloqueado": "⛔"}[resultado["status"]]
@@ -3436,6 +3441,7 @@ class CoberturaConceitualAgent(BaseAgent):
                 "cobertura_report": relatorio,
                 "cobertura_resultado": {"status": resultado["status"], "achados": resultado["achados"],
                                         "cobertos": resultado["cobertos"]},
+                **sessao_cls.delta(),
             }),
         )
 

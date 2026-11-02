@@ -175,9 +175,13 @@ def cobertura(state: Dict[str, Any]) -> Dict[str, Any]:
         achado("bloqueio", "etapa-6-removida", "jornada",
                f"O inventário traz tela(s) da Etapa 6 ({', '.join(telas_e6)}): a missão tem apenas 5 etapas e não "
                "deve ter Etapa 6 de transferência nem atividade nova para o estudante reaplicar habilidades.")
+        esperadas = [i for i in esperadas if not i.startswith("E6-")]
     telas_alu_podcast = [
         t["id"] for t in inv["telas"]
-        if ("-ALU-" in t["id"] or "-SIS-" in t["id"]) and re.search(r"\bpodcast\b", t.get("proposito", ""), re.I)
+        if ("-ALU-" in t["id"] or "-SIS-" in t["id"])
+        and re.search(r"\bpodcast\b", t.get("proposito", ""), re.I)
+        and not re.search(r"\b(?:sem|n[ãa]o\s+(?:tem|inclui|h[áa]|exibe|mostra)|exclusiv\w+\s+do\s+professor)\b[^\n.]{0,40}\bpodcast\b",
+                          t.get("proposito", ""), re.I)
     ]
     if telas_alu_podcast:
         achado("bloqueio", "podcast-em-tela-do-estudante", "jornada",
@@ -194,6 +198,10 @@ def cobertura(state: Dict[str, Any]) -> Dict[str, Any]:
                    f"{rotulo.capitalize()} chegou vazio: as {len(esperadas)} telas do inventário não têm onde ser conferidas.")
             continue
         presentes = set(ids(texto))
+        e6_derivado = sorted(i for i in presentes if i.startswith("E6-"))
+        if e6_derivado:
+            achado("bloqueio", "etapa-6-removida", dono,
+                   f"«{rotulo}» traz tela(s) da Etapa 6 ({', '.join(e6_derivado)}): a missão termina na Etapa 5 (Explicar).")
         faltando = [i for i in esperadas if i not in presentes]
         for i in esperadas:
             matriz[i][rotulo] = i in presentes

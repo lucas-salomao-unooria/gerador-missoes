@@ -38,14 +38,16 @@ _RE_GRAU = re.compile(r"\b(scored|indicative|zero|none)\b", re.IGNORECASE)
 _RE_IDENT = re.compile(r"`([^`]+)`")
 #: As 5 etapas desde 29/10/2026: o Refletir (transferência, etapa 6) saiu da missão por decisão do PO.
 _RE_MOMENTO = re.compile(r"\bE[0-5]-(?:ALU|PROF|SIS)-\d{2}\b|\b(desafiar|navegar|decidir|resultado|aha|explicar)\b", re.I)
-_RE_GABARITO = re.compile(r"^\s*[-*]\s*[`*_]*gabarito_servidor[`*_]*\s*:\s*[`*_]*\s*(sim|n[ãa]o)\b", re.I | re.M)
+_RE_MOMENTO_E6 = re.compile(r"\bE6-(?:ALU|PROF|SIS)-\d{2}\b|\betapa\s*6\b|\brefletir\b", re.I)
+_RE_GABARITO = re.compile(r"^\s*(?:[-*•]\s*)?[`*_]*gabarito_servidor[`*_]*\s*:\s*[`*_]*\s*(sim|n[ãa]o)\b", re.I | re.M)
 _RE_GABARITO_CLIENTE = re.compile(r"gabarito[^\n]{0,90}\b(no cliente|bundle|front-?end|navegador|localstorage)", re.I)
 _RE_LINHA_TABELA = re.compile(r"^\s*\|(.+)\|\s*$", re.M)
 #: A, B ou os dois — tolera «Canal A», «A (ação)», «A + B». Letra maiúscula: «a ação» não é canal. O B ainda se lê
 #: para ser acusado: desde 29/10/2026 ele não existe mais.
 _RE_CANAL = re.compile(r"^[\W_]*(?:(?i:canal)\s+)?(A\s*\+\s*B|B\s*\+\s*A|A|B)(?!\w)")
+_RE_CANAL_B_QUALQUER = re.compile(r"\bcanal\s*b\b|\bm[úu]ltipla[_\s-]escolha\b", re.I)
 #: Os três níveis, sobre o texto normalizado (sem acento, minúsculo). «Não atingiu» contém «atingiu».
-_NIVEIS = (re.compile(r"(?<!nao )\batingiu\b"), re.compile(r"\bem processo\b"), re.compile(r"\bnao atingiu\b"))
+_NIVEIS = (re.compile(r"(?<!nao )\batingiu\b"), re.compile(r"\bem[\s_-]+processo\b"), re.compile(r"\bnao[\s_-]+atingiu\b"))
 
 
 #: Desde 29/10/2026 a evidência é só o Canal A (decisão do PO): a pergunta de múltipla escolha do Canal B saiu da
@@ -57,7 +59,10 @@ _RESUMO_CANAL_B_REMOVIDO = (
 
 
 def _tem_b(canal: str) -> bool:
-    return "B" in re.sub(r"[^AB]", "", (canal or "").upper())
+    if _RE_CANAL_B_QUALQUER.search(canal or ""):
+        return True
+    m = _RE_CANAL.match((canal or "").strip())
+    return bool(m and "B" in re.sub(r"[^AB]", "", m.group(1).upper()))
 
 
 def _norm(texto: str) -> str:
@@ -163,18 +168,23 @@ def validar(spec: str) -> Dict[str, Any]:
         if not _RE_MOMENTO.search(linha.get("momento em tela", "")):
             falha("habilidade-sem-momento",
                   f"`{c}`: a coluna «Momento em tela» não aponta etapa nem tela (`E3-ALU-01`, «Decidir»…).")
+        if _RE_MOMENTO_E6.search(linha.get("momento em tela", "")):
+            falha("etapa-6-removida",
+                  f"`{c}`: a coluna «Momento em tela» cita a Etapa 6 (`{linha.get('momento em tela', '').strip()}`). "
+                  "A missão termina na Etapa 5 (Explicar), sem Etapa 6 de transferência.")
         ligadas = [s for s in _RE_IDENT.findall(linha.get("medida do bloco 9", "")) if _norm(s) in nomes_medidas]
         if not ligadas:
             falha("habilidade-sem-medida",
                   f"`{c}`: nenhuma medida do bloco 9 ligada. Habilidade declarada que nada mede é "
                   f"currículo no papel — some no relatório do professor.")
-        canal = _RE_CANAL.match(linha.get("canal de evidencia", "").strip())
-        if not canal:
+        celula_canal = linha.get("canal de evidencia", "").strip()
+        canal = _RE_CANAL.match(celula_canal)
+        if _tem_b(celula_canal):
+            falha("canal-b-removido", _RESUMO_CANAL_B_REMOVIDO.format(codigo=c))
+        elif not canal:
             falha("habilidade-sem-canal",
                   f"`{c}`: a coluna «Canal de evidência» não diz `A` (ação). "
                   f"Sem canal, quem implementa não sabe de onde sai o nível — e inventa a classificação.")
-        elif _tem_b(canal.group(1)):
-            falha("canal-b-removido", _RESUMO_CANAL_B_REMOVIDO.format(codigo=c))
         regra = _norm(linha.get("regra ternaria", ""))
         if not all(n.search(regra) for n in _NIVEIS):
             falha("regra-ternaria-ausente",
@@ -271,8 +281,11 @@ def _contrato_12a(trecho: str) -> Optional[Dict[str, Dict[str, Any]]]:
                 por_papel[papel] = por_papel.get(papel, "") + " " + celula
             else:
                 resto.append(celula)
-        canal = _RE_CANAL.match(por_papel.get("canal", "").strip())
+        celula_canal_12a = por_papel.get("canal", "").strip()
+        canal = _RE_CANAL.match(celula_canal_12a)
         canais = set(re.sub(r"[^AB]", "", canal.group(1).upper())) if canal else set()
+        if _tem_b(celula_canal_12a):
+            canais.add("B")
         largo = "canal_a" in papeis or "canal_b" in papeis
         for c in bncc.extrair_codigos(por_papel.get("habilidade", "")):
             item = contrato.setdefault(c, {"canais": set(), "texto_a": "", "texto_b": "", "coluna_b": False})
@@ -325,6 +338,10 @@ def conferir_one_pager(one_pager: str) -> Dict[str, Any]:
             if not item["canais"]:
                 falha("habilidade-sem-canal", f"`{c}`: a coluna do canal não diz `A`.")
             continue
+        if _RE_MOMENTO_E6.search(item["texto_a"]):
+            falha("etapa-6-removida",
+                  f"`{c}`: o Canal A no §12a cita a Etapa 6: a missão termina na Etapa 5 (Explicar), sem Etapa 6 de "
+                  "transferência.")
         if not all(n.search(_norm(item["texto_a"])) for n in _NIVEIS):
             falha("regra-ternaria-ausente",
                   f"`{c}`: o Canal A não diz, por extenso, o que separa Atingiu, Em processo e Não atingiu na ação "

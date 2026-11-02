@@ -49,8 +49,11 @@ FALHA_DE_EXECUCAO = "falha-de-execucao"
 DOCUMENTO_NOVO = "documento-novo"
 #: Códigos de achado que dizem que o juiz não respondeu — não são leitura da missão.
 CODIGOS_DE_FALHA = frozenset({"dimensao-ausente"})
-#: Onde um achado sem citação aponta: "Seção 12a", "§9", "bloco 11", "Etapa 5".
-_RE_LUGAR = re.compile(r"(se[cç][aã]o|§|bloco|etapa)\s*(\d+(?:\.\d+)?[a-z]?)", re.I)
+#: Onde um achado sem citação aponta: "Seção 12a", "§9", "bloco 11", "Etapa 5", "Momento 3.1", "E3-ALU-01".
+_RE_LUGAR = re.compile(
+    r"(se[cç][aã]o|§|bloco|etapa|momento)\s*(\d+(?:\.\d+)?[a-z]?)|\b(E[0-6]|E\d-(?:ALU|PROF|SIS)-\d{2})\b",
+    re.I,
+)
 _RE_ASPAS = re.compile(r"[«“\"`]([^«»“”\"`]{12,})[»”\"`]")
 
 
@@ -102,9 +105,20 @@ def lugares_editados(anteriores: Dict[str, str], edicoes: Iterable[Dict[str, Any
 
 def _lugares(texto: str) -> set:
     saida = set()
-    for tipo, numero in _RE_LUGAR.findall(texto or ""):
-        tipo = "etapa" if tipo.lower() == "etapa" else "secao"
-        saida.add((tipo, numero.lower()))
+    for m in _RE_LUGAR.finditer(texto or ""):
+        if m.group(3):
+            tela = m.group(3).upper()
+            saida.add(("tela", tela))
+            saida.add(("etapa", tela[1]))
+            continue
+        tipo_bruto, numero = m.group(1).lower(), m.group(2).lower()
+        if tipo_bruto == "momento":
+            saida.add(("momento", numero))
+            saida.add(("etapa", numero.split(".")[0]))
+        elif tipo_bruto == "etapa":
+            saida.add(("etapa", numero))
+        else:
+            saida.add(("secao", numero))
     return saida
 
 
@@ -113,7 +127,10 @@ def classificar(achado: Dict[str, Any], base_do_gate: Optional[Dict[str, Any]], 
     """De onde vem um achado bloqueante — ver o docstring do módulo. `alterado_norm` é o texto que as trocas tiraram
     e puseram, normalizado; `lugares`, as seções e etapas que elas editaram."""
     from tools.fidelidade import _citacao_confere
+    from tools.severidade import CODIGOS_INVARIANTES_BLOQUEANTES
 
+    if str(achado.get("codigo") or "") in CODIGOS_INVARIANTES_BLOQUEANTES:
+        return DA_EDICAO
     cit = citacoes.citacao(achado)
     if cit and alterado_norm and _citacao_confere(cit, alterado_norm):
         return DA_EDICAO

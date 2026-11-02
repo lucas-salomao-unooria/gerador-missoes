@@ -818,8 +818,9 @@ def validar_spec(spec: str, one_pager: str) -> Dict[str, Any]:
         achados.append(_achado(
             "podcast-ausente",
             "O one-pager aprovado tem podcast de recapitulação (§11) e a spec não o menciona. Declare-o no "
-            "bloco 8: título, vozes, duração, quando toca e quem toca, copiados do §11 — o roteiro fica no "
-            "one-pager. Sem isso, design e dev reescrevem ou esquecem o áudio (aconteceu nas 11 missões).",
+            "bloco 8: título, vozes, duração, quando toca e quem toca (exclusivamente o professor, na visão `PROF`), "
+            "copiados do §11 — o roteiro fica no one-pager. Sem isso, design e dev reescrevem ou esquecem o áudio "
+            "(aconteceu nas 11 missões).",
             "produto"))
     decididos = parametros_decididos(spec, one_pager)
     # no mesmo assunto bloqueia; número igual em outro assunto (a duração de um áudio) só fica 🟡 para o PO ver
@@ -1112,8 +1113,9 @@ def validar_prd(prd: str, spec: str, one_pager: str, artefatos: Optional[Iterabl
             achados.append(_achado(
                 "podcast-sem-requisito",
                 "O one-pager aprovado tem podcast de recapitulação (§11, no anexo) e nenhum requisito funcional "
-                "do PRD o cita. Acrescente o RF (quem toca, em que tela, em que momento — o aviso do §11 diz "
-                "quando), a linha do asset no inventário de conteúdo e a tarefa que o liga.", "dev"))
+                "do PRD o cita. Acrescente o RF (exclusivo do professor na visão `PROF`, em que tela e em que momento "
+                "toca — nada do podcast deve aparecer para o estudante), a linha do asset no inventário de conteúdo e a "
+                "tarefa que o liga.", "dev"))
     if artefatos is not None:
         achados += _artefatos(corpo, artefatos, "o PRD")
     # o corpo que cita o texto aprovado com outra redação: o dev codifica o do corpo, e o anexo diz outra coisa

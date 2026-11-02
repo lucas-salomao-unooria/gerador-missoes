@@ -335,9 +335,23 @@ def _forma_da_ideia(ideia: str) -> List[Dict[str, str]]:
 
         leitura_v = classificador.virada_tem_crenca(virada)
         if leitura_v.rotulo != "tem_crenca":
+            sev_v = "bloqueio" if leitura_v.rotulo == "sem_crenca" else "atencao"
             achados.append(_achado("virada-sem-crenca", "O bloco «A virada» não diz o que o estudante achava antes. "
                                                         "Comece pela crença de entrada da seção 1.2, com «acha», "
-                                                        "«acredita» ou «parece»."))
+                                                        "«acredita» ou «parece».", sev_v))
+    bloco_est = achados_por_rotulo.get(_normalizar("O que o estudante faz"))
+    if bloco_est is not None:
+        if re.search(r"\bpodcast\b", bloco_est, re.I) and not re.search(
+            r"\b(?:sem|n[ãa]o\s+(?:h[áa]|tem|ouve|aparece|inclui)|exclusiv\w+\s+do\s+professor)\b[^\n.]{0,40}\bpodcast\b",
+            bloco_est, re.I
+        ):
+            achados.append(_achado("podcast-na-tela-do-estudante",
+                                   "O bloco «O que o estudante faz» do 0.1 menciona podcast: o podcast de recapitulação "
+                                   "é exclusivo da visão do professor e não aparece para o estudante."))
+    if re.search(r"\betapa\s*6\b|\b6\.\d+\b", ideia, re.I):
+        achados.append(_achado("etapa-6-removida",
+                               "O 0.1 menciona Etapa 6: a missão tem apenas 5 etapas e termina na Etapa 5 (Explicar), "
+                               "sem Etapa 6 de transferência."))
     return achados
 
 
@@ -387,6 +401,21 @@ def _passos_contra_a_ficha(passos: str, resto: str) -> List[Dict[str, str]]:
         if "o estudante" in p["campos"] and "se não fizer" not in p["campos"]:
             achados.append(_achado("passo-sem-se-nao-fizer", f"O passo {p['n']} é do estudante e não diz **Se não "
                                                              "fizer:** — o que a tela faz enquanto ele não age."))
+        if "o estudante" in p["campos"]:
+            texto_passo_est = " ".join(
+                str(p["campos"].get(k, "")) for k in ("na tela", "o estudante", "acontece")
+            )
+            if re.search(r"\bpodcast\b", texto_passo_est, re.I) and not re.search(
+                r"\b(?:sem|n[ãa]o\s+(?:h[áa]|tem|ouve|aparece|inclui)|exclusiv\w+\s+do\s+professor)\b[^\n.]{0,40}\bpodcast\b",
+                texto_passo_est, re.I
+            ):
+                achados.append(_achado("podcast-na-tela-do-estudante",
+                                       f"O passo {p['n']} do 0.2 é do estudante e menciona podcast: o podcast de "
+                                       "recapitulação é exclusivo da visão do professor."))
+        if any(m.startswith("6.") for m in p.get("momentos", [])):
+            achados.append(_achado("etapa-6-removida",
+                                   f"O passo {p['n']} do 0.2 aponta para momento da Etapa 6 ({', '.join(p['momentos'])}): "
+                                   "a missão termina na Etapa 5 (Explicar)."))
     # o mesmo botão na ação de dois passos só é caminho diferente se os dois disserem para quem
     def caminho(p: Dict[str, Any]) -> bool:
         return "só para quem" in p["campos"]
@@ -472,12 +501,10 @@ def validar(one_pager: str) -> Dict[str, Any]:
         leitura_n = classificador.nomes_assistente_distintos(", ".join(nomes), f"{ideia}\n\n{passos}"[:6000])
         if leitura_n.rotulo == "usos_compatíveis":
             pass
-        elif leitura_n.rotulo == "mesmo_objeto_dois_nomes":
-            achados.append(_achado("um-nome-por-coisa", "O assistente da história aparece como " + ", ".join(
-                f"«{n}»" for n in nomes) + ": use um nome só, o mesmo do one-pager, do começo ao fim."))
         else:
+            sev_nome = "bloqueio" if leitura_n.rotulo == "mesmo_objeto_dois_nomes" else "atencao"
             achados.append(_achado("um-nome-por-coisa", "O assistente da história aparece como " + ", ".join(
-                f"«{n}»" for n in nomes) + ": use um nome só, o mesmo do one-pager, do começo ao fim."))
+                f"«{n}»" for n in nomes) + ": use um nome só, o mesmo do one-pager, do começo ao fim.", sev_nome))
     contagem = 0
     if not passos:
         achados.append(_achado("passo-a-passo-ausente", f"Falta a seção `{TITULO_PASSO_A_PASSO}`."))
@@ -533,7 +560,9 @@ def validar(one_pager: str) -> Dict[str, Any]:
             fim_f = leitura.find("\n", m.end())
             linha_f = leitura[ini_f:len(leitura) if fim_f < 0 else fim_f].strip()
             leitura_cls = classificador.aspas_conceito_ou_fala(linha_f, m.group(1).strip())
-            sev_fala = "atencao" if leitura_cls.rotulo in ("termo_ou_conceito", "termo_conceito") else "bloqueio"
+            if leitura_cls.rotulo in ("termo_ou_conceito", "termo_conceito"):
+                continue
+            sev_fala = "bloqueio" if leitura_cls.rotulo == "fala_de_tela" else "atencao"
             achados.append(_achado("fala-reescrita", f"A fala «{m.group(1).strip()[:120]}» não está, palavra por "
                                                      "palavra, no resto do one-pager: copie o texto da tela ou tire "
                                                      "as aspas e conte com as suas palavras.", sev_fala))
